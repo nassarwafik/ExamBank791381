@@ -24,8 +24,8 @@ const { handler: submissionHandler } = require_("../src/functions/student-submis
 const { createMemoryContainer } = require_("./fixtures/memory-container.js");
 
 const CFG = {
-  allowedLanguages: ["python", "javascript"], defaultLanguage: "python",
-  starterCode: { python: "a, b = map(int, input().split())\n", javascript: "const lines = require('fs').readFileSync(0, 'utf8');\n" },
+  allowedLanguages: ["python", "csharp"], defaultLanguage: "python",
+  starterCode: { python: "a, b = map(int, input().split())\n", csharp: "using System;\n" },
   taskMode: "program", inputMode: "stdin", outputMode: "stdout",
   limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 },
   publicTests: [{ id: "pub-1", title: "مثال", input: "2 3\n", sampleOutput: "5\n" }]
@@ -58,6 +58,12 @@ describe("C12 / C13 / C14 — the student payload carries the PUBLIC coding conf
     for (const secret of ["REFERENCE-SOLUTION", "referenceSolution", "HIDDEN-EXPECTED", "hiddenTests", "SECRET-NOTE", "SECRET-TOKEN", "SECRET-EXPECTED", "\"weight\""]) expect(s, secret).not.toContain(secret);
     expect(q.coding).toEqual(CFG);
   });
+  it("stale unregistered languages (javascript / cpp / sql) and their starter code never reach the student", () => {
+    const [q] = sanitizeExamForStudent(examWith(codingQuestion({ coding: { ...CFG, allowedLanguages: ["python", "javascript", "cpp", "sql", "csharp"], starterCode: { ...CFG.starterCode, javascript: "STALE-JS", cpp: "STALE-CPP", sql: "STALE-SQL" } } }))).sections[0].questions;
+    expect(q.coding.allowedLanguages).toEqual(["python", "csharp"]);
+    expect(q.coding.starterCode).toEqual(CFG.starterCode);
+    expect(JSON.stringify(q)).not.toMatch(/STALE/);
+  });
   it("a malformed coding config is not forwarded (fail closed: the student never receives what the projection cannot vouch for)", () => {
     const [q] = sanitizeExamForStudent(examWith(codingQuestion({ coding: "<script>alert(1)</script>" }))).sections[0].questions;
     expect(q.coding).toBeUndefined();
@@ -75,6 +81,14 @@ describe("C8 / C9 — server draft / submit / pause pipeline: canonical code ans
     const r = normalizeDraftAnswers({ big: code("x".repeat(65537)), arabic: code("ب".repeat(32769)), bad: code(42), ok: code("print(1)") });
     expect(Object.keys(r.answers)).toEqual(["ok"]);
     expect(r.rejected.map(x => x.id + ":" + x.code)).toEqual(["big:CODE_SOURCE_TOO_LARGE", "arabic:CODE_SOURCE_TOO_LARGE", "bad:CODE_ANSWER_INVALID"]);
+  });
+  it("generic server normalization is bound to the language REGISTRY: python@1 / java@1 / csharp@1 accepted; javascript / typescript / cpp / sql / ruby @1 and python@2 rejected", () => {
+    const ok = ["python", "java", "csharp"].map(l => ["ok_" + l, code("print(1)", { language: l })]);
+    const bad = [["javascript", 1], ["typescript", 1], ["cpp", 1], ["sql", 1], ["ruby", 1], ["python", 2], ["java", 2], ["csharp", 2]].map(([l, v]) => ["bad_" + l + v, code("x", { language: l, languageVersion: v })]);
+    const r = normalizeDraftAnswers(Object.fromEntries([...ok, ...bad]));
+    expect(Object.keys(r.answers).sort()).toEqual(["ok_csharp", "ok_java", "ok_python"]);
+    expect(r.answers.ok_csharp).toEqual({ kind: "code", language: "csharp", languageVersion: 1, source: "print(1)" });
+    expect(r.rejected.map(x => x.id + ":" + x.code)).toEqual(bad.map(([id]) => id + ":CODE_ANSWER_INVALID"));
   });
   it("isResponseAnswered mirrors answered(): non-whitespace source only", () => {
     expect(isResponseAnswered(code("print(1)"))).toBe(true);
@@ -187,5 +201,85 @@ describe("C34 — provider routing / capability / request minimisation / result 
     expect(p.codingCapabilities(p.resolveCodingExecutionProvider({ codingExecutionProvider: { execute: "eval" } }))).toEqual({ available: false, languages: [] });
     const lying = { capabilities: () => ({ available: true, languages: [{ key: "cobol", languageVersion: 1 }, { key: "python", languageVersion: 1, secret: "x" }] }), execute: async () => ({}) };
     expect(p.codingCapabilities(p.resolveCodingExecutionProvider({ codingExecutionProvider: lying }))).toEqual({ available: true, languages: [{ key: "python", languageVersion: 1 }] });
+  });
+});
+
+// ── Independent Review Fix — server ingestion is BOUND to the authoritative published coding question ───────────────────
+// A code answer is accepted only when (1) its answer id names a coding@1 question of the assignment's exam snapshot (the same
+// snapshot the grader uses), (2) its language is one of THAT question's allowed languages, and (3) its source fits THAT
+// question's limits.sourceBytes. A code answer smuggled onto a non-coding question, an unknown id or a compound part is dropped.
+describe("RF — code answers are bound to the published coding question (language, size, identity)", () => {
+  const BOUND_CFG = { ...CFG, allowedLanguages: ["python", "csharp"], limits: { ...CFG.limits, sourceBytes: 2048 } };
+  const boundExam = () => ({ title: "امتحان", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "القسم", gradingPolicy: "all", questions: [
+    codingQuestion({ examQuestionId: "c1", coding: BOUND_CFG }),
+    { examQuestionId: "t1", presentationType: "shortAnswer", text: "اشرح", marks: 2 },
+    { examQuestionId: "cq", presentationType: "compound", text: "مركّب", marks: 4, parts: [{ id: "p1", type: "shortAnswer", text: "أ", marks: 2 }, { id: "p2", type: "shortAnswer", text: "ب", marks: 2 }] },
+    codingQuestion({ examQuestionId: "c2", questionTypeVersion: 2, coding: BOUND_CFG }),
+    codingQuestion({ examQuestionId: "c3", coding: { ...BOUND_CFG, allowedLanguages: ["cobol"], defaultLanguage: "cobol" } })
+  ] }] });
+  it("bindCodeAnswerToQuestion (shared, pure): allowed language + within the question's limit → kept; otherwise a precise refusal", () => {
+    const { bindCodeAnswerToQuestion } = sharedQuestion();
+    const q = codingQuestion({ coding: BOUND_CFG });
+    expect(bindCodeAnswerToQuestion(code("print(1)"), q)).toEqual({ ok: true, answer: code("print(1)") });
+    expect(bindCodeAnswerToQuestion(code("x", { language: "java" }), q)).toEqual({ ok: false, code: "CODE_LANGUAGE_NOT_ALLOWED" });
+    expect(bindCodeAnswerToQuestion(code("x".repeat(2049)), q)).toEqual({ ok: false, code: "CODE_SOURCE_TOO_LARGE" });
+    expect(bindCodeAnswerToQuestion(code("x".repeat(2048)), q).ok).toBe(true);
+    expect(bindCodeAnswerToQuestion(code("ب".repeat(1025)), q)).toEqual({ ok: false, code: "CODE_SOURCE_TOO_LARGE" });   // 2050 UTF-8 bytes
+    expect(bindCodeAnswerToQuestion(code("x"), { examQuestionId: "t1", presentationType: "shortAnswer" })).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
+    expect(bindCodeAnswerToQuestion(code("x"), undefined)).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
+    expect(bindCodeAnswerToQuestion(code("x"), codingQuestion({ questionTypeVersion: 2 }))).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
+    expect(bindCodeAnswerToQuestion(code("x", { language: "javascript" }), q)).toEqual({ ok: false, code: "CODE_ANSWER_INVALID" });
+  });
+  it("normalizeDraftAnswers(answers, exam) applies the binding to every code answer and leaves other answers untouched", () => {
+    const r = normalizeDraftAnswers({
+      c1: code("print(1)"),
+      t1: code("smuggled onto a text question"),
+      ghost: code("unknown answer id"),
+      c2: code("print(2)"),
+      c3: code("print(3)"),
+      cq: { kind: "compound", parts: { p1: code("hidden in a part"), p2: { kind: "text", value: "ب" } } },
+      other: { kind: "text", value: "حر" }
+    }, boundExam());
+    expect(r.answers).toEqual({ c1: code("print(1)"), cq: { kind: "compound", parts: { p2: { kind: "text", value: "ب" } } }, other: { kind: "text", value: "حر" } });
+    expect(r.rejected.map(x => x.id + ":" + x.code).sort()).toEqual(["c2:CODE_QUESTION_MISMATCH", "c3:CODE_LANGUAGE_NOT_ALLOWED", "cq.p1:CODE_QUESTION_MISMATCH", "ghost:CODE_QUESTION_MISMATCH", "t1:CODE_QUESTION_MISMATCH"]);
+    const lang = normalizeDraftAnswers({ c1: code("x", { language: "java" }) }, boundExam());
+    expect(lang.answers).toEqual({}); expect(lang.rejected).toEqual([{ id: "c1", code: "CODE_LANGUAGE_NOT_ALLOWED" }]);
+    const size = normalizeDraftAnswers({ c1: code("x".repeat(3000)) }, boundExam());
+    expect(size.answers).toEqual({}); expect(size.rejected).toEqual([{ id: "c1", code: "CODE_SOURCE_TOO_LARGE" }]);
+  });
+  it("the REAL handler binds code answers on saveDraft, pauseAttempt AND submit to the assignment's exam snapshot", async () => {
+    const S1 = "22222222-2222-2222-2222-222222222222", AID = "asg-17a-rf";
+    const exam = boundExam();
+    const seed = () => createMemoryContainer({
+      ["platform/users/" + S1 + ".json"]: { schemaVersion: 3, role: "student", userId: S1, displayName: "سارة", code: "S2", classId: "c1", active: true, archived: false, authVersion: 1 },
+      ["platform/classes/c1.json"]: { classId: "c1", name: "الصف", active: true, studentIds: [] },
+      ["platform/assignments/" + AID + ".json"]: { schemaVersion: 2, attemptModelVersion: 3, attemptPolicy: "pausable", assignmentId: AID, classId: "c1", title: "واجب", instructions: "", status: "published", openAt: "", dueAt: new Date(Date.now() + 864e5).toISOString(), maxAttempts: 1, durationMinutes: 30, questionCount: 5, totalMarks: 30, examSnapshot: exam }
+    });
+    const docPath = "platform/submissions/" + AID + "/" + S1 + ".json";
+    const run = async ctx => {
+      const deps = { container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: S1, sv: 1, role: "student" } }), recordAchievementIfEligible: async () => {} };
+      const post = async body => submissionHandler({ method: "POST", params: { assignmentId: AID }, headers: { get: () => null }, json: async () => body }, deps);
+      expect((await post({ action: "startAttempt" })).status).toBe(200);
+      const ident = epoch => ({ expectedAttemptNumber: 1, expectedStartedAt: ctx.getJson(docPath).activeAttempt.startedAt, expectedAttemptEpoch: epoch });
+      return { post, ident };
+    };
+    const bad = { c1: code("x", { language: "java" }), t1: code("on a text question"), c3: code("print(3)") };
+    // saveDraft
+    let ctx = seed(); let h = await run(ctx);
+    expect((await h.post({ action: "saveDraft", ...h.ident(1), answers: { ...bad, other: { kind: "text", value: "z" } } })).status).toBe(200);
+    expect(ctx.getJson(docPath).draftAnswers).toEqual({ other: { kind: "text", value: "z" } });
+    expect((await h.post({ action: "saveDraft", ...h.ident(1), answers: { c1: code("x".repeat(3000)) } })).status).toBe(200);
+    expect(ctx.getJson(docPath).draftAnswers).toEqual({});
+    expect((await h.post({ action: "saveDraft", ...h.ident(1), answers: { c1: code("print(1)", { language: "csharp" }) } })).status).toBe(200);
+    expect(ctx.getJson(docPath).draftAnswers).toEqual({ c1: code("print(1)", { language: "csharp" }) });
+    // pauseAttempt
+    expect((await h.post({ action: "pauseAttempt", ...h.ident(1), answers: { ...bad, c1: code("x".repeat(3000)) } })).status).toBe(200);
+    expect(ctx.getJson(docPath).draftAnswers).toEqual({});
+    // submit
+    ctx = seed(); h = await run(ctx);
+    expect((await h.post({ action: "submit", ...h.ident(1), answers: { ...bad, other: { kind: "text", value: "y" } } })).status).toBe(200);
+    const stored = ctx.getJson(docPath).attempts[0].answers;
+    expect(stored).toEqual({ other: { kind: "text", value: "y" } });
+    expect(JSON.stringify(stored)).not.toMatch(/on a text question|"java"/);
   });
 });

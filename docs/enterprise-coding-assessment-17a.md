@@ -43,15 +43,23 @@ type CodingLanguageDefinition = {
 };
 ```
 
-| key | label | ext | indent | compile | run / stdin / tests |
+> **Coding Assessment V1 intentionally supports only Python, Java and C#. JavaScript, TypeScript, C++, SQL and other
+> languages are not registered and fail closed.**
+
+| Key | Language | ext | indent | compile | run / stdin / tests |
 |---|---|---|---|---|---|
-| javascript | JavaScript | .js | 2 | – | ✓ |
-| typescript | TypeScript | .ts | 2 | ✓ | ✓ |
-| python | Python | .py | 4 | – | ✓ |
-| java | Java | .java | 4 | ✓ | ✓ |
-| csharp | C# | .cs | 4 | ✓ | ✓ |
-| cpp | C++ | .cpp | 4 | ✓ | ✓ |
-| sql | SQL | .sql | 2 | – | – |
+| `python` | Python | .py | 4 | – | ✓ |
+| `java` | Java | .java | 4 | ✓ | ✓ |
+| `csharp` | C# | .cs | 4 | ✓ | ✓ |
+
+**Fail closed for any unregistered key** (`javascript`, `typescript`, `cpp`, `sql`, `ruby`, …):
+- **Finalization** blocks it with `CODING_LANGUAGE_UNKNOWN`. There is no silent migration and no fallback to Python.
+- **The student projection** drops the key and its starter code.
+- **Server answer ingestion** refuses it (`CODE_ANSWER_INVALID`). It accepts only `python@1`, `java@1` and
+  `csharp@1`; any other key or contract version is refused.
+
+The registry stays data-driven, so a language is added later through a reviewed change to `CODING_LANGUAGES`, never by
+branching on a key.
 
 - **Two identities, never confused.** The question type `coding@1` versions SmartAssess behaviour. The language
   identity is `language` key + language **contract** version (`languageVersion: 1`), and it is persisted in every
@@ -60,9 +68,9 @@ type CodingLanguageDefinition = {
   17A. They belong to the execution provider's capability response (17B). This is guard-tested.
 - **Capabilities describe the contract, not availability.** `capabilities` say what the stdin/stdout program model can
   mean for a language. Whether a provider actually offers that language is a separate, provider-reported fact.
-- **SQL.** SQL is authorable for storage and manual review only. A query is not a stdin → stdout program, so its
-  contract has no program semantics. A question that allows SQL **and** has stdin/stdout tests is refused
-  (`CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE`): no fake semantics.
+- **Generic capability check.** `CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE` is a future-proof rule for any registered language
+  whose contract lacks stdin/stdout program semantics. No V1 language triggers it, and there is no V1 manual-review
+  exception for any unregistered language.
 - **No language branches.** Nothing branches on a language literal (`language === "python"`). This is guard-tested.
   Indentation comes from registry data.
 
@@ -118,6 +126,26 @@ Other layers:
     closes this gap, which also bounds simulation states on pause.
   - Why 64 KB: the autosave debounce sends the whole answers map. 64 KB is large enough for any single-file exam answer
     and keeps a draft request small.
+
+### 5a. Independent Review Fix — ingestion bound to the published coding question
+
+Server ingestion runs on `saveDraft`, `submit` and `pauseAttempt`. It now binds every `code` answer to the
+**authoritative** question that its answer id names, using the assignment's `examSnapshot` (the same snapshot the
+grader uses) and the shared, pure `bindCodeAnswerToQuestion`.
+
+A code answer is stored only when all of these hold:
+
+| rule | refusal code |
+|---|---|
+| the answer id names a **coding@1** question of that exam (not another type, not an unknown id, not a different type version) | `CODE_QUESTION_MISMATCH` |
+| the answer's language ∈ **that question's** `allowedLanguages` (registered languages only) | `CODE_LANGUAGE_NOT_ALLOWED` |
+| UTF-8 source bytes ≤ **that question's** `limits.sourceBytes` (never above 64 KB) | `CODE_SOURCE_TOO_LARGE` |
+| registered language at its exact contract version, well-formed | `CODE_ANSWER_INVALID` |
+
+- **Compound parts.** A code answer hidden inside a compound part is dropped. Coding is not compound-capable in V1.
+- **Missing or malformed exam.** Nothing is bound, so every code answer is dropped (fail closed).
+- **Refusal behaviour.** Refused answers are dropped from the stored map. They never crash the save and never replace
+  other answers.
 
 ## 6. Editor architecture (`src/coding/CodingEditor.tsx`)
 
@@ -208,7 +236,8 @@ Behaviour:
 Finalization blocks: no languages · unknown / duplicate language · default not allowed · unsupported task mode ·
 invalid limits · starter code for a non-allowed language or above the source limit · invalid / duplicate test ids ·
 too many / oversized tests · malformed hidden test · invalid weight / zero total · unknown comparator · reference
-solution for a non-allowed language · unknown public-config key · stdin/stdout tests with SQL allowed. Every one of
+solution for a non-allowed language · unknown public-config key · stdin/stdout tests for a registered language without
+program semantics (none in V1). Every one of
 these is a blocking error, shared verbatim with the server finalization build.
 
 ## 10. Output comparison contract (`src/codingContract.ts`, pure)
@@ -335,6 +364,9 @@ The teacher's manual marks are the official grade. The UI never claims automatic
 
 ## 16. Known deferrals (17B and later)
 
+Phase 17B must initially build isolated execution toolchains **only** for **Python, Java and C#** (the V1 registry).
+
+
 - **17B:**
   - isolated workers + gateway, toolchain images, language / runtime capability discovery;
   - compile, run, timeouts, memory / output limits;
@@ -391,3 +423,22 @@ tree fingerprint (md5 of `git status --short` + `git diff` + every untracked fil
 `Storage.prototype.setItem`, which does not observe every implementation's writes. The test now also inspects the storage
 contents themselves (no key / value carries the code), and the whole campaign was re-run on the final tree (table above).
 CM18 is additionally refused by the production bundle guard (coding payload in the initial graph).
+
+### Follow-up campaign — V1 language restriction (L-M) and ingestion binding Review Fix (RF-M)
+
+| id | mutation | targeted suites result | tree after revert | verdict |
+|---|---|---|---|---|
+| L-M1 | re-register JavaScript in the V1 registry | 9 failed / 85 passed (94) | clean | **killed** |
+| L-M2 | normalization accepts any regex-valid language | 3 failed / 62 passed (65) | clean | **killed** |
+| L-M3 | projection keeps unregistered allowed languages | 2 failed / 63 passed (65) | clean | **killed** |
+| L-M4 | projection keeps unregistered starter code | 2 failed / 63 passed (65) | clean | **killed** |
+| RF-M1 | binding ignores the question's allowed languages | 3 failed / 21 passed (24) | clean | **killed** |
+| RF-M2 | binding ignores the question's sourceBytes limit | 3 failed / 21 passed (24) | clean | **killed** |
+| RF-M3 | binding ignores the question type / version | 2 failed / 22 passed (24) | clean | **killed** |
+| RF-M4 | code answers hidden in compound parts kept | 1 failed / 23 passed (24) | clean | **killed** |
+| RF-M5 | unknown answer id falls back to unbound normalization | 1 failed / 23 passed (24) | clean | **killed** |
+| RF-M6 | saveDraft not bound to the exam snapshot | 1 failed / 23 passed (24) | clean | **killed** |
+| RF-M7 | pauseAttempt not bound to the exam snapshot | 1 failed / 23 passed (24) | clean | **killed** |
+| RF-M8 | submit not bound to the exam snapshot | 1 failed / 23 passed (24) | clean | **killed** |
+
+**12 / 12 killed**; fingerprint `2fdc073c4da25df2` → `2fdc073c4da25df2`.

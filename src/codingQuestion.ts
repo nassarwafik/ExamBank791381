@@ -18,16 +18,13 @@ export type CodingLanguageDefinition = { key: string; version: number; label: st
 
 const lang = (key: string, label: string, extension: string, indentUnit: string, flags: string): CodingLanguageDefinition =>
   Object.freeze({ key, version: 1, label, extension, editorLanguage: key, indentUnit, capabilities: Object.freeze({ compile: flags.includes("c"), run: flags.includes("r"), stdin: flags.includes("r"), tests: flags.includes("r") }) });
-/** The initial authorable languages (stable order). SQL is authorable for storage / manual review only: a query is not a
- *  stdin → stdout program, so its contract carries no program semantics (no fake semantics). */
+/** Coding Assessment V1 intentionally supports exactly Python, Java and C# (stable order). No JavaScript, TypeScript, C++ or
+ *  SQL in V1: an unregistered key fails closed everywhere (finalization, student projection, server answer ingestion). The
+ *  registry stays data-driven so a language can be ADDED later through a reviewed change — never by branching on a key. */
 export const CODING_LANGUAGES: readonly CodingLanguageDefinition[] = Object.freeze([
-  lang("javascript", "JavaScript", ".js", "  ", "r"),
-  lang("typescript", "TypeScript", ".ts", "  ", "cr"),
   lang("python", "Python", ".py", "    ", "r"),
   lang("java", "Java", ".java", "    ", "cr"),
-  lang("csharp", "C#", ".cs", "    ", "cr"),
-  lang("cpp", "C++", ".cpp", "    ", "cr"),
-  lang("sql", "SQL", ".sql", "  ", "")
+  lang("csharp", "C#", ".cs", "    ", "cr")
 ]);
 const LANGUAGE_INDEX = new Map(CODING_LANGUAGES.map(l => [l.key, l]));
 export const codingLanguage = (key: unknown): CodingLanguageDefinition | undefined => (typeof key === "string" ? LANGUAGE_INDEX.get(key) : undefined);
@@ -81,6 +78,10 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 export function normalizeCodeAnswer(a: unknown): { ok: true; answer: CodeAnswer } | { ok: false; code: string } {
   if (!isObj(a) || a.kind !== "code" || typeof a.source !== "string" || typeof a.language !== "string" || !CODING_LANGUAGE_KEY_PATTERN.test(a.language)) return { ok: false, code: "CODE_ANSWER_INVALID" };
   if (typeof a.languageVersion !== "number" || !Number.isInteger(a.languageVersion) || a.languageVersion < 1 || a.languageVersion > 1000) return { ok: false, code: "CODE_ANSWER_INVALID" };
+  // Server-authoritative registry binding: a regex-valid key is not enough — only a REGISTERED language at its exact contract
+  // version is a valid code answer (V1: python@1, java@1, csharp@1).
+  const def = codingLanguage(a.language);
+  if (!def || a.languageVersion !== def.version) return { ok: false, code: "CODE_ANSWER_INVALID" };
   if (utf8ByteLength(a.source) > CODE_SOURCE_MAX_BYTES) return { ok: false, code: "CODE_SOURCE_TOO_LARGE" };
   return { ok: true, answer: { kind: "code", language: a.language, languageVersion: a.languageVersion, source: a.source } };
 }
@@ -93,13 +94,28 @@ const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 export function projectCodingConfigForStudent(cfg: unknown): CodingQuestionConfigV1 | undefined {
   if (!isObj(cfg)) return undefined;
   const out: Record<string, unknown> = {};
-  if (Array.isArray(cfg.allowedLanguages)) out.allowedLanguages = cfg.allowedLanguages.filter(l => typeof l === "string");
+  if (Array.isArray(cfg.allowedLanguages)) out.allowedLanguages = cfg.allowedLanguages.filter(l => typeof l === "string" && isCodingLanguage(l));
   if (typeof cfg.defaultLanguage === "string") out.defaultLanguage = cfg.defaultLanguage;
-  if (isObj(cfg.starterCode)) { const sc: Record<string, string> = {}; for (const k of Object.keys(cfg.starterCode)) { const v = cfg.starterCode[k]; if (typeof v === "string" && CODING_LANGUAGE_KEY_PATTERN.test(k)) sc[k] = v; } out.starterCode = sc; }
+  if (isObj(cfg.starterCode)) { const sc: Record<string, string> = {}; for (const k of Object.keys(cfg.starterCode)) { const v = cfg.starterCode[k]; if (typeof v === "string" && isCodingLanguage(k)) sc[k] = v; } out.starterCode = sc; }
   for (const k of ["taskMode", "inputMode", "outputMode"]) if (typeof cfg[k] === "string") out[k] = cfg[k];
   if (isObj(cfg.limits)) { const l: Record<string, number> = {}; for (const k of Object.keys(CODING_LIMIT_RANGES)) { const v = cfg.limits[k]; if (typeof v === "number" && Number.isFinite(v)) l[k] = v; } out.limits = l; }
   if (Array.isArray(cfg.publicTests)) out.publicTests = cfg.publicTests.filter(isObj).map(t => { const p: Record<string, string> = {}; for (const k of ["id", "title", "input", "sampleOutput"]) { const v = str(t[k]); if (v !== undefined) p[k] = v; } return p; });
   return out as CodingQuestionConfigV1;
+}
+
+/** Independent Review Fix — binds a `code` answer to the AUTHORITATIVE published question it claims to answer (the server
+ *  passes the assignment's exam snapshot, the same one the grader uses). Accepted only when the question is coding@1, the
+ *  answer's language is one of THAT question's allowed (registered) languages, and the source fits THAT question's
+ *  limits.sourceBytes (never above CODE_SOURCE_MAX_BYTES). Returns the canonical answer or a precise refusal code. */
+export function bindCodeAnswerToQuestion(a: unknown, question: unknown): { ok: true; answer: CodeAnswer } | { ok: false; code: string } {
+  const base = normalizeCodeAnswer(a);
+  if (!base.ok) return base;
+  if (!isObj(question) || String(question.presentationType ?? question.type ?? "") !== "coding" || (question.questionTypeVersion !== undefined && question.questionTypeVersion !== 1)) return { ok: false, code: "CODE_QUESTION_MISMATCH" };
+  const cfg = projectCodingConfigForStudent(question.coding);
+  if (!cfg || !Array.isArray(cfg.allowedLanguages) || !cfg.allowedLanguages.includes(base.answer.language)) return { ok: false, code: "CODE_LANGUAGE_NOT_ALLOWED" };
+  const configured = cfg.limits && typeof cfg.limits.sourceBytes === "number" && Number.isInteger(cfg.limits.sourceBytes) && cfg.limits.sourceBytes > 0 ? cfg.limits.sourceBytes : CODE_SOURCE_MAX_BYTES;
+  if (utf8ByteLength(base.answer.source) > Math.min(configured, CODE_SOURCE_MAX_BYTES)) return { ok: false, code: "CODE_SOURCE_TOO_LARGE" };
+  return base;
 }
 
 export type CodingIssue = { code: string; message: string; severity: "error"; path?: string };
@@ -159,7 +175,7 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
   if (nHidden > CODING_TEST_LIMITS.hiddenTests) out.push(err("CODING_TOO_MANY_HIDDEN_TESTS", "الحد الأقصى للاختبارات المخفية " + CODING_TEST_LIMITS.hiddenTests + ".", "answer.hiddenTests"));
   if (total > CODING_TEST_LIMITS.totalBytes) out.push(err("CODING_TEST_DATA_TOO_LARGE", "مجموع بيانات الاختبارات أكبر من 256 KB.", "answer.hiddenTests"));
   if (nHidden > 0 && hiddenWeight <= 0 && !out.some(i => i.code === "CODING_WEIGHT_INVALID")) out.push(err("CODING_WEIGHT_TOTAL_ZERO", "مجموع أوزان الاختبارات المخفية يجب أن يكون أكبر من صفر.", "answer.hiddenTests"));
-  if (nPublic + nHidden > 0 && [...allowed].some(l => !codingLanguage(l)!.capabilities.tests)) out.push(err("CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE", "اختبارات الإدخال/الإخراج لا تنطبق على لغة مسموحة في هذا السؤال (مثل SQL).", "coding.allowedLanguages"));
+  if (nPublic + nHidden > 0 && [...allowed].some(l => !codingLanguage(l)!.capabilities.tests)) out.push(err("CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE", "اختبارات الإدخال/الإخراج لا تنطبق على لغة مسموحة في هذا السؤال.", "coding.allowedLanguages"));
   if (key.comparator !== undefined && !CODING_COMPARATORS.includes(key.comparator as CodingComparator)) out.push(err("CODING_COMPARATOR_UNKNOWN", "طريقة مقارنة مخرجات غير معروفة.", "answer.comparator"));
   if (key.referenceSolutions !== undefined) {
     if (!isObj(key.referenceSolutions)) out.push(err("CODING_REFERENCE_INVALID", "الحلول المرجعية غير صالحة.", "answer.referenceSolutions"));

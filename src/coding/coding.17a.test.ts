@@ -19,10 +19,11 @@ const cq = () => load<CQ>("../codingQuestion");
 const cc = () => load<CC>("../codingContract");
 const ct = () => load<CT>("./codingTests");
 
-const LANGS = ["javascript", "typescript", "python", "java", "csharp", "cpp", "sql"];
+const LANGS = ["python", "java", "csharp"];                                              // Coding Assessment V1: exactly these three
+const UNSUPPORTED = ["javascript", "typescript", "cpp", "sql"];                          // not registered in V1 → fail closed
 type Cfg = Record<string, unknown>;
 const cfg = (over: Cfg = {}): Cfg => ({
-  allowedLanguages: ["python", "javascript"], defaultLanguage: "python",
+  allowedLanguages: ["python", "csharp"], defaultLanguage: "python",
   starterCode: { python: "a, b = map(int, input().split())\n" },
   taskMode: "program", inputMode: "stdin", outputMode: "stdout",
   limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 },
@@ -55,7 +56,7 @@ describe("C1 — coding@1 is a real production question type", () => {
 });
 
 describe("C2 — Coding Language Registry (pure, domain-neutral, versioned)", () => {
-  it("the seven initial authorable languages, each with key, contract version 1, Arabic/Latin label, extension, editor language and a contract-level capability descriptor", async () => {
+  it("exactly the three V1 languages (python, java, csharp), each with key, contract version 1, Arabic/Latin label, extension, editor language and a contract-level capability descriptor", async () => {
     const m = await cq();
     expect(m.CODING_LANGUAGES.map(l => l.key)).toEqual(LANGS);
     expect(Object.isFrozen(m.CODING_LANGUAGES)).toBe(true);
@@ -68,10 +69,12 @@ describe("C2 — Coding Language Registry (pure, domain-neutral, versioned)", ()
     expect(m.codingLanguage("python")?.extension).toBe(".py"); expect(m.codingLanguage("csharp")?.extension).toBe(".cs");
     expect(m.codingLanguage("cobol")).toBeUndefined(); expect(m.isCodingLanguage("Python")).toBe(false); expect(m.isCodingLanguage("__proto__")).toBe(false);
   });
-  it("SQL is authorable for storage / manual review but its contract has NO stdin/stdout program semantics (no fake semantics)", async () => {
+  it("JavaScript, TypeScript, C++ and SQL are NOT registered in V1 (no manual-review exception); every supported language keeps run / stdin / tests", async () => {
     const m = await cq();
-    expect(m.codingLanguage("sql")!.capabilities).toEqual({ compile: false, run: false, stdin: false, tests: false });
-    for (const k of ["javascript", "typescript", "python", "java", "csharp", "cpp"]) expect(m.codingLanguage(k)!.capabilities).toMatchObject({ run: true, stdin: true, tests: true });
+    for (const key of UNSUPPORTED) { expect(m.codingLanguage(key)).toBeUndefined(); expect(m.isCodingLanguage(key)).toBe(false); }
+    for (const k of LANGS) expect(m.codingLanguage(k)!.capabilities).toMatchObject({ run: true, stdin: true, tests: true });
+    expect(m.codingLanguage("java")!.capabilities.compile).toBe(true); expect(m.codingLanguage("csharp")!.capabilities.compile).toBe(true);
+    for (const k of LANGS) expect(m.codingLanguage(k)!.indentUnit).toBe("    ");
   });
   it("NO runtime / toolchain versions are promised in 17A (no 'Python 3.x', 'Java 2x' …): those belong to the execution provider's capability response", async () => {
     const m = await cq();
@@ -140,6 +143,12 @@ describe("C8 / C9 — source is TEXT: preserved byte-for-byte, and bounded", () 
     expect(m.normalizeCodeAnswer({ kind: "code", language: "python", languageVersion: 1.5, source: "x" }).ok).toBe(false);
     expect(m.normalizeCodeAnswer(null).ok).toBe(false);
   });
+  it("server normalization is bound to the REGISTRY: only python@1 / java@1 / csharp@1 are valid; any other regex-valid key or version fails", async () => {
+    const m = await cq();
+    for (const language of LANGS) expect(m.normalizeCodeAnswer({ kind: "code", language, languageVersion: 1, source: "x" }).ok, language).toBe(true);
+    for (const language of [...UNSUPPORTED, "ruby"]) expect(m.normalizeCodeAnswer({ kind: "code", language, languageVersion: 1, source: "x" }), language).toEqual({ ok: false, code: "CODE_ANSWER_INVALID" });
+    for (const language of LANGS) expect(m.normalizeCodeAnswer({ kind: "code", language, languageVersion: 2, source: "x" }), language + "@2").toEqual({ ok: false, code: "CODE_ANSWER_INVALID" });
+  });
 });
 
 describe("C10 / C11 / C24 / C43 — finalization blocks every malformed coding configuration", () => {
@@ -147,7 +156,7 @@ describe("C10 / C11 / C24 / C43 — finalization blocks every malformed coding c
     expect(codes({ coding: cfg(), answer: key() })).toEqual([]);
     expect(evaluateExamFinalization(exam([codingQ()])).canFinalize).toBe(true);
   });
-  it("C10 unknown language → CODING_LANGUAGE_UNKNOWN (never silently converted to JavaScript); duplicates refused", () => {
+  it("C10 unknown language → CODING_LANGUAGE_UNKNOWN (never silently converted to another language); duplicates refused", () => {
     expect(codes({ coding: cfg({ allowedLanguages: ["python", "cobol"] }), answer: key() })).toContain("CODING_LANGUAGE_UNKNOWN");
     expect(codes({ coding: cfg({ allowedLanguages: ["python", "python"] }), answer: key() })).toContain("CODING_LANGUAGE_DUPLICATE");
     expect(codes({ coding: cfg({ allowedLanguages: [], defaultLanguage: "" }), answer: key() })).toContain("CODING_NO_LANGUAGES");
@@ -208,9 +217,14 @@ describe("C10 / C11 / C24 / C43 — finalization blocks every malformed coding c
     expect(codes({ coding: cfg({ publicTests: [] }), answer: { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} } })).toEqual([]);
     expect(codes({ coding: cfg({ publicTests: [] }), answer: {} })).toEqual([]);
   });
-  it("SQL: authorable for manual review, but stdin/stdout tests are refused while SQL is allowed (no fake semantics)", () => {
-    expect(codes({ coding: cfg({ allowedLanguages: ["sql"], defaultLanguage: "sql", starterCode: {}, publicTests: [] }), answer: { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} } })).toEqual([]);
-    expect(codes({ coding: cfg({ allowedLanguages: ["python", "sql"] }), answer: key() })).toContain("CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE");
+  it("V1 fail-closed: JavaScript / TypeScript / C++ / SQL are rejected by finalization with CODING_LANGUAGE_UNKNOWN — no silent migration, no fallback to Python", () => {
+    const manualOnly = { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} };
+    for (const l of UNSUPPORTED) {
+      const issues = codes({ coding: cfg({ allowedLanguages: [l], defaultLanguage: l, starterCode: {}, publicTests: [] }), answer: manualOnly });
+      expect(issues, l).toContain("CODING_LANGUAGE_UNKNOWN");
+      expect(evaluateExamFinalization(exam([codingQ({ coding: cfg({ allowedLanguages: [l], defaultLanguage: l, starterCode: {}, publicTests: [] }), answer: manualOnly } as never)])).canFinalize, l).toBe(false);
+    }
+    expect(codes({ coding: cfg({ allowedLanguages: ["python", "sql"] }), answer: key() })).toContain("CODING_LANGUAGE_UNKNOWN");
   });
   it("the same codes surface through structural validation as BLOCKING errors and stop finalization (client == shared server build)", () => {
     const bad = validateStructuredExam(exam([codingQ({ coding: cfg({ defaultLanguage: "cobol" }) } as never)]));
@@ -227,9 +241,16 @@ describe("C12 / C13 / C14 — student projection of the public config (pure, sha
   it("keeps allowed languages, default, starter code, public tests (id / title / input / sampleOutput) and limits; drops anything else", async () => {
     const m = await cq();
     const p = m.projectCodingConfigForStudent({ ...cfg(), hiddenTests: [{ id: "x", expectedOutput: "SECRET" }], referenceSolution: "SECRET", teacherNotes: "SECRET", grading: { weights: [1] }, publicTests: [{ id: "pub-1", title: "مثال", input: "2 3\n", sampleOutput: "5\n", weight: 3, expectedOutput: "SECRET" }] });
-    expect(p).toEqual({ allowedLanguages: ["python", "javascript"], defaultLanguage: "python", starterCode: { python: "a, b = map(int, input().split())\n" }, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [{ id: "pub-1", title: "مثال", input: "2 3\n", sampleOutput: "5\n" }] });
+    expect(p).toEqual({ allowedLanguages: ["python", "csharp"], defaultLanguage: "python", starterCode: { python: "a, b = map(int, input().split())\n" }, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [{ id: "pub-1", title: "مثال", input: "2 3\n", sampleOutput: "5\n" }] });
     expect(JSON.stringify(p)).not.toContain("SECRET");
     expect(m.projectCodingConfigForStudent("nope")).toBeUndefined();
+  });
+  it("the projection keeps ONLY registered languages: stale javascript / cpp / sql entries and their starter code never reach a student", async () => {
+    const m = await cq();
+    const p = m.projectCodingConfigForStudent({ ...cfg(), allowedLanguages: ["python", "javascript", "cpp", "sql", "csharp", 7], starterCode: { python: "p\n", javascript: "STALE-JS", cpp: "STALE-CPP", sql: "STALE-SQL", csharp: "using System;\n" } })!;
+    expect(p.allowedLanguages).toEqual(["python", "csharp"]);
+    expect(p.starterCode).toEqual({ python: "p\n", csharp: "using System;\n" });
+    expect(JSON.stringify(p)).not.toMatch(/STALE/);
   });
 });
 
@@ -327,9 +348,9 @@ describe("C35 — catalog-driven integration: Blueprint ref / five domains", () 
   });
   it("five domain examples (algorithms, networking automation, mathematics, physics, data analysis) are all valid with the SAME type and rules — nothing branches on a subject", () => {
     const tasks: [string, Cfg, Cfg][] = [
-      ["خوارزميات: رتّب الأعداد تصاعديًا", { allowedLanguages: ["cpp", "java"], defaultLanguage: "cpp", publicTests: [{ id: "a1", input: "3\n3 1 2\n", sampleOutput: "1 2 3\n" }] }, { hiddenTests: [{ id: "a2", input: "1\n5\n", expectedOutput: "5\n", weight: 1 }] }],
+      ["خوارزميات: رتّب الأعداد تصاعديًا", { allowedLanguages: ["java", "csharp"], defaultLanguage: "java", publicTests: [{ id: "a1", input: "3\n3 1 2\n", sampleOutput: "1 2 3\n" }] }, { hiddenTests: [{ id: "a2", input: "1\n5\n", expectedOutput: "5\n", weight: 1 }] }],
       ["أتمتة الشبكات: احسب عنوان الشبكة من IP/CIDR", { allowedLanguages: ["python"], defaultLanguage: "python", publicTests: [{ id: "n1", input: "192.168.1.77/24\n", sampleOutput: "192.168.1.0\n" }] }, { hiddenTests: [{ id: "n2", input: "10.0.5.9/16\n", expectedOutput: "10.0.0.0\n", weight: 2 }] }],
-      ["رياضيات: القاسم المشترك الأكبر", { allowedLanguages: ["javascript", "typescript", "python"], defaultLanguage: "javascript", publicTests: [{ id: "m1", input: "12 18\n", sampleOutput: "6\n" }] }, { hiddenTests: [] }],
+      ["رياضيات: القاسم المشترك الأكبر", { allowedLanguages: ["python", "csharp"], defaultLanguage: "python", publicTests: [{ id: "m1", input: "12 18\n", sampleOutput: "6\n" }] }, { hiddenTests: [] }],
       ["فيزياء: السرعة النهائية v = u + a·t", { allowedLanguages: ["csharp"], defaultLanguage: "csharp", publicTests: [{ id: "p1", input: "0 9.8 2\n", sampleOutput: "19.6\n" }] }, { hiddenTests: [{ id: "p2", input: "5 2 3\n", expectedOutput: "11\n", weight: 1 }], comparator: "normalizeWhitespace" }],
       ["تحليل بيانات: المتوسط والوسيط", { allowedLanguages: ["python", "java"], defaultLanguage: "python", publicTests: [{ id: "d1", input: "5\n1 2 3 4 10\n", sampleOutput: "4.0 3\n" }] }, { hiddenTests: [{ id: "d2", input: "1\n7\n", expectedOutput: "7.0 7\n", weight: 4 }], comparator: "exact" }]
     ];

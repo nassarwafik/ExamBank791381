@@ -99,7 +99,7 @@ describe("Coding and SmartSim stay separate products", () => {
 
 describe("Language is data; the engine is domain-neutral", () => {
   it("no coding module branches on a language literal (if language === 'python' …) — behaviour comes from the registry", () => {
-    for (const f of [...CLIENT_FILES, ...SERVER_FILES, "src/codingContract.ts"]) expect(read(f), f).not.toMatch(/[!=]==?\s*["'](javascript|typescript|python|java|csharp|cpp|sql)["']|case\s+["'](javascript|typescript|python|java|csharp|cpp|sql)["']/);
+    for (const f of [...CLIENT_FILES, ...SERVER_FILES, "src/codingContract.ts"]) expect(read(f), f).not.toMatch(/[!=]==?\s*["'](python|java|csharp)["']|case\s+["'](python|java|csharp)["']/);
   });
   it("no subject-specific branch anywhere in the coding engine", () => {
     for (const f of CODING_FILES) expect(read(f), f).not.toMatch(/subject\s*[!=]==|computerScience|networking|physics|mathematics/i);

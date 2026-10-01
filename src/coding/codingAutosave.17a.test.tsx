@@ -17,7 +17,7 @@ const { createMemoryContainer } = nodeRequire("../../api/tests/fixtures/memory-c
 const S1 = "11111111-1111-1111-1111-111111111111";
 const AID = "asg-17a";
 const CFG = {
-  allowedLanguages: ["python", "cpp"], defaultLanguage: "python",
+  allowedLanguages: ["python", "csharp"], defaultLanguage: "python",
   starterCode: { python: "import sys\n" },
   taskMode: "program", inputMode: "stdin", outputMode: "stdout",
   limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 },
@@ -104,13 +104,13 @@ describe("C21 / C22 — code answer autosaves through the existing pipeline and 
     seed("continuous");
     const first = await mount();
     await startAttempt();
-    fireEvent.change(await screen.findByRole("combobox", { name: "لغة البرمجة" }), { target: { value: "cpp" } });
-    fireEvent.change(await editor(), { target: { value: "int main(){}\n" } });
-    await waitFor(() => expect(doc()?.draftAnswers?.q1?.language).toBe("cpp"), { timeout: 4000 });
+    fireEvent.change(await screen.findByRole("combobox", { name: "لغة البرمجة" }), { target: { value: "csharp" } });
+    fireEvent.change(await editor(), { target: { value: "Console.WriteLine(5);\n" } });
+    await waitFor(() => expect(doc()?.draftAnswers?.q1?.language).toBe("csharp"), { timeout: 4000 });
     first.unmount(); cleanup();
     await mount();
-    expect(((await screen.findByRole("combobox", { name: "لغة البرمجة" }, { timeout: 4000 })) as HTMLSelectElement).value).toBe("cpp");
-    expect((await editor()).value).toBe("int main(){}\n");
+    expect(((await screen.findByRole("combobox", { name: "لغة البرمجة" }, { timeout: 4000 })) as HTMLSelectElement).value).toBe("csharp");
+    expect((await editor()).value).toBe("Console.WriteLine(5);\n");
   });
   it("no coding-specific persistence: the editor writes nothing to localStorage / sessionStorage and adds no request of its own", async () => {
     seed("continuous");

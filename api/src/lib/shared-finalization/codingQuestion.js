@@ -5,16 +5,13 @@ exports.defaultCodingAnswerKey = exports.defaultCodingConfig = exports.DEFAULT_C
 exports.utf8ByteLength = utf8ByteLength;
 exports.normalizeCodeAnswer = normalizeCodeAnswer;
 exports.projectCodingConfigForStudent = projectCodingConfigForStudent;
+exports.bindCodeAnswerToQuestion = bindCodeAnswerToQuestion;
 exports.validateCodingQuestion = validateCodingQuestion;
 const lang = (key, label, extension, indentUnit, flags) => Object.freeze({ key, version: 1, label, extension, editorLanguage: key, indentUnit, capabilities: Object.freeze({ compile: flags.includes("c"), run: flags.includes("r"), stdin: flags.includes("r"), tests: flags.includes("r") }) });
 exports.CODING_LANGUAGES = Object.freeze([
-    lang("javascript", "JavaScript", ".js", "  ", "r"),
-    lang("typescript", "TypeScript", ".ts", "  ", "cr"),
     lang("python", "Python", ".py", "    ", "r"),
     lang("java", "Java", ".java", "    ", "cr"),
-    lang("csharp", "C#", ".cs", "    ", "cr"),
-    lang("cpp", "C++", ".cpp", "    ", "cr"),
-    lang("sql", "SQL", ".sql", "  ", "")
+    lang("csharp", "C#", ".cs", "    ", "cr")
 ]);
 const LANGUAGE_INDEX = new Map(exports.CODING_LANGUAGES.map(l => [l.key, l]));
 const codingLanguage = (key) => (typeof key === "string" ? LANGUAGE_INDEX.get(key) : undefined);
@@ -56,6 +53,9 @@ function normalizeCodeAnswer(a) {
         return { ok: false, code: "CODE_ANSWER_INVALID" };
     if (typeof a.languageVersion !== "number" || !Number.isInteger(a.languageVersion) || a.languageVersion < 1 || a.languageVersion > 1000)
         return { ok: false, code: "CODE_ANSWER_INVALID" };
+    const def = (0, exports.codingLanguage)(a.language);
+    if (!def || a.languageVersion !== def.version)
+        return { ok: false, code: "CODE_ANSWER_INVALID" };
     if (utf8ByteLength(a.source) > exports.CODE_SOURCE_MAX_BYTES)
         return { ok: false, code: "CODE_SOURCE_TOO_LARGE" };
     return { ok: true, answer: { kind: "code", language: a.language, languageVersion: a.languageVersion, source: a.source } };
@@ -67,14 +67,14 @@ function projectCodingConfigForStudent(cfg) {
         return undefined;
     const out = {};
     if (Array.isArray(cfg.allowedLanguages))
-        out.allowedLanguages = cfg.allowedLanguages.filter(l => typeof l === "string");
+        out.allowedLanguages = cfg.allowedLanguages.filter(l => typeof l === "string" && (0, exports.isCodingLanguage)(l));
     if (typeof cfg.defaultLanguage === "string")
         out.defaultLanguage = cfg.defaultLanguage;
     if (isObj(cfg.starterCode)) {
         const sc = {};
         for (const k of Object.keys(cfg.starterCode)) {
             const v = cfg.starterCode[k];
-            if (typeof v === "string" && exports.CODING_LANGUAGE_KEY_PATTERN.test(k))
+            if (typeof v === "string" && (0, exports.isCodingLanguage)(k))
                 sc[k] = v;
         }
         out.starterCode = sc;
@@ -98,6 +98,20 @@ function projectCodingConfigForStudent(cfg) {
                 p[k] = v;
         } return p; });
     return out;
+}
+function bindCodeAnswerToQuestion(a, question) {
+    const base = normalizeCodeAnswer(a);
+    if (!base.ok)
+        return base;
+    if (!isObj(question) || String(question.presentationType ?? question.type ?? "") !== "coding" || (question.questionTypeVersion !== undefined && question.questionTypeVersion !== 1))
+        return { ok: false, code: "CODE_QUESTION_MISMATCH" };
+    const cfg = projectCodingConfigForStudent(question.coding);
+    if (!cfg || !Array.isArray(cfg.allowedLanguages) || !cfg.allowedLanguages.includes(base.answer.language))
+        return { ok: false, code: "CODE_LANGUAGE_NOT_ALLOWED" };
+    const configured = cfg.limits && typeof cfg.limits.sourceBytes === "number" && Number.isInteger(cfg.limits.sourceBytes) && cfg.limits.sourceBytes > 0 ? cfg.limits.sourceBytes : exports.CODE_SOURCE_MAX_BYTES;
+    if (utf8ByteLength(base.answer.source) > Math.min(configured, exports.CODE_SOURCE_MAX_BYTES))
+        return { ok: false, code: "CODE_SOURCE_TOO_LARGE" };
+    return base;
 }
 const err = (code, message, path) => ({ code, message, severity: "error", path });
 const validLimit = (k, v) => typeof v === "number" && Number.isInteger(v) && v >= exports.CODING_LIMIT_RANGES[k][0] && v <= exports.CODING_LIMIT_RANGES[k][1];
@@ -196,7 +210,7 @@ function validateCodingQuestion(node) {
     if (nHidden > 0 && hiddenWeight <= 0 && !out.some(i => i.code === "CODING_WEIGHT_INVALID"))
         out.push(err("CODING_WEIGHT_TOTAL_ZERO", "مجموع أوزان الاختبارات المخفية يجب أن يكون أكبر من صفر.", "answer.hiddenTests"));
     if (nPublic + nHidden > 0 && [...allowed].some(l => !(0, exports.codingLanguage)(l).capabilities.tests))
-        out.push(err("CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE", "اختبارات الإدخال/الإخراج لا تنطبق على لغة مسموحة في هذا السؤال (مثل SQL).", "coding.allowedLanguages"));
+        out.push(err("CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE", "اختبارات الإدخال/الإخراج لا تنطبق على لغة مسموحة في هذا السؤال.", "coding.allowedLanguages"));
     if (key.comparator !== undefined && !exports.CODING_COMPARATORS.includes(key.comparator))
         out.push(err("CODING_COMPARATOR_UNKNOWN", "طريقة مقارنة مخرجات غير معروفة.", "answer.comparator"));
     if (key.referenceSolutions !== undefined) {

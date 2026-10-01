@@ -3,13 +3,29 @@
 // rejected simulation answer is DROPPED from the stored map (never stored, never crashes the save); the rest is untouched.
 const { normalizeSimulationState } = require("./shared-finalization/smartsimState");
 // Phase 17A — a `code` answer is TEXT bounded to 64 KB (UTF-8) and reduced to EXACTLY {kind, language, languageVersion, source}:
-// the source is never trimmed / re-indented / re-encoded; client-reported score / passed / testsPassed / stdout are dropped.
-const { normalizeCodeAnswer } = require("./shared-finalization/codingQuestion");
+// the source is never trimmed / re-indented / re-encoded; client-reported score / passed / testsPassed / stdout are dropped;
+// only a REGISTERED language at its exact contract version is accepted (V1: python@1, java@1, csharp@1).
+const { normalizeCodeAnswer, bindCodeAnswerToQuestion } = require("./shared-finalization/codingQuestion");
+const { flattenQuestions } = require("./exam-structure");
 
-/** normalizeDraftAnswers(answers) → { answers, rejected: [{ id, code }] } */
-function normalizeDraftAnswers(answers) {
+// Phase 17A Independent Review Fix — when the caller passes the AUTHORITATIVE exam (the assignment's exam snapshot, the same
+// one the grader uses), every code answer is bound to the question its answer id names: it must be a coding@1 question, the
+// language must be one of that question's allowed languages, and the source must fit that question's limits.sourceBytes.
+// A code answer on a non-coding question, an unknown id, or hidden inside a compound part (coding is not compound-capable)
+// is dropped. A missing / malformed exam binds nothing → every code answer is dropped (fail closed).
+function questionIndex(exam) {
+  const index = new Map();
+  if (!exam || typeof exam !== "object") return index;
+  try { for (const { question, questionId } of flattenQuestions(exam)) index.set(questionId, question); } catch { /* malformed exam → empty index */ }
+  return index;
+}
+const isCode = a => !!a && typeof a === "object" && a.kind === "code";
+
+/** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
+function normalizeDraftAnswers(answers, exam) {
   const out = {}, rejected = [];
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) return { answers: out, rejected };
+  const bound = exam !== undefined, index = bound ? questionIndex(exam) : null;
   for (const id of Object.keys(answers)) {
     const a = answers[id];
     if (a && typeof a === "object" && a.kind === "simulation") {
@@ -18,10 +34,19 @@ function normalizeDraftAnswers(answers) {
       out[id] = { kind: "simulation", state: r.state };
       continue;
     }
-    if (a && typeof a === "object" && a.kind === "code") {
-      const r = normalizeCodeAnswer(a);
+    if (isCode(a)) {
+      const r = bound ? bindCodeAnswerToQuestion(a, index.get(id)) : normalizeCodeAnswer(a);
       if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
       out[id] = r.answer;
+      continue;
+    }
+    if (bound && a && typeof a === "object" && a.kind === "compound" && a.parts && typeof a.parts === "object" && !Array.isArray(a.parts)) {
+      const parts = {};
+      for (const pid of Object.keys(a.parts)) {
+        if (isCode(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
+        parts[pid] = a.parts[pid];
+      }
+      out[id] = { ...a, parts };
       continue;
     }
     out[id] = a;

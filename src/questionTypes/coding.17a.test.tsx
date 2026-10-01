@@ -31,8 +31,8 @@ type EditorMod = typeof import("../coding/CodingEditor");
 type ExecMod = typeof import("../coding/codingExecution");
 
 const CFG = {
-  allowedLanguages: ["python", "javascript"], defaultLanguage: "python",
-  starterCode: { python: "a, b = map(int, input().split())\n", javascript: "const fs = require('fs');\n" },
+  allowedLanguages: ["python", "csharp"], defaultLanguage: "python",
+  starterCode: { python: "a, b = map(int, input().split())\n", csharp: "using System;\n" },
   taskMode: "program", inputMode: "stdin", outputMode: "stdout",
   limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 },
   publicTests: [{ id: "pub-1", title: "مثال أول", input: "2 3\n", sampleOutput: "5\n" }]
@@ -91,10 +91,10 @@ describe("C5 — CodingEditor: lazy, dependency-free, accessible, LTR", () => {
     ta.setSelectionRange(4, 4);
     fireEvent.keyDown(ta, { key: "Tab", shiftKey: true });
     expect(onChange).toHaveBeenLastCalledWith("x");
-    rerender(<CodingEditor value={"x"} onChange={onChange} language="javascript" label="محرر الكود" />);
+    rerender(<CodingEditor value={"y"} onChange={onChange} language="csharp" label="محرر الكود" />);
     ta.setSelectionRange(0, 0);
     fireEvent.keyDown(ta, { key: "Tab" });
-    expect(onChange).toHaveBeenLastCalledWith("  x");                                               // javascript indent unit = 2 spaces
+    expect(onChange).toHaveBeenLastCalledWith("    y");                                             // C# indent unit = 4 spaces (registry data)
     fireEvent.keyDown(ta, { key: "Escape" });
     expect(fireEvent.keyDown(ta, { key: "Tab" })).toBe(true);                                      // released: the browser moves focus
     expect(screen.getByText(/Esc/)).toBeTruthy();                                                   // the escape hatch is documented on screen
@@ -150,25 +150,26 @@ describe("Student response — registered renderer, starter code, language selec
   it("C6 the language selector lists ONLY the allowed languages; switching an untouched editor loads that language's starter; the selection persists in the Answer and on remount", async () => {
     const { unmount } = render(<StudentHarness q={studentQ()} />);
     const sel = (await screen.findByRole("combobox", { name: "لغة البرمجة" }, { timeout: 3000 })) as HTMLSelectElement;
-    expect(Array.from(sel.options).map(o => o.value)).toEqual(["python", "javascript"]);
-    fireEvent.change(sel, { target: { value: "javascript" } });
+    expect(Array.from(sel.options).map(o => o.value)).toEqual(["python", "csharp"]);
+    expect(Array.from(sel.options).map(o => o.textContent)).toEqual(["Python", "C#"]);
+    fireEvent.change(sel, { target: { value: "csharp" } });
     const ta = await editorBox();
-    expect(ta.value).toBe(CFG.starterCode.javascript);
-    expect(answerOut()).toMatchObject({ kind: "code", language: "javascript", source: CFG.starterCode.javascript });
-    fireEvent.change(ta, { target: { value: "console.log(5)\n" } });
+    expect(ta.value).toBe(CFG.starterCode.csharp);
+    expect(answerOut()).toMatchObject({ kind: "code", language: "csharp", source: CFG.starterCode.csharp });
+    fireEvent.change(ta, { target: { value: "Console.WriteLine(5);\n" } });
     const saved = answerOut();
-    expect(saved).toEqual({ kind: "code", language: "javascript", languageVersion: 1, source: "console.log(5)\n" });
+    expect(saved).toEqual({ kind: "code", language: "csharp", languageVersion: 1, source: "Console.WriteLine(5);\n" });
     unmount();
     render(<StudentHarness q={studentQ()} initial={saved} />);
-    expect(((await screen.findByRole("combobox", { name: "لغة البرمجة" })) as HTMLSelectElement).value).toBe("javascript");
-    expect((await editorBox()).value).toBe("console.log(5)\n");
+    expect(((await screen.findByRole("combobox", { name: "لغة البرمجة" })) as HTMLSelectElement).value).toBe("csharp");
+    expect((await editorBox()).value).toBe("Console.WriteLine(5);\n");
   });
   it("switching language after editing keeps the student's source (never destroys work)", async () => {
     render(<StudentHarness q={studentQ()} />);
     const ta = await editorBox();
     fireEvent.change(ta, { target: { value: "my own code\n" } });
-    fireEvent.change(screen.getByRole("combobox", { name: "لغة البرمجة" }), { target: { value: "javascript" } });
-    expect(answerOut()).toEqual({ kind: "code", language: "javascript", languageVersion: 1, source: "my own code\n" });
+    fireEvent.change(screen.getByRole("combobox", { name: "لغة البرمجة" }), { target: { value: "csharp" } });
+    expect(answerOut()).toEqual({ kind: "code", language: "csharp", languageVersion: 1, source: "my own code\n" });
   });
   it("public sample tests are shown (input + sample output, LTR); no hidden test is present anywhere in the DOM", async () => {
     render(<StudentHarness q={studentQ()} />);
@@ -212,11 +213,21 @@ describe("Student response — registered renderer, starter code, language selec
     expect(result.getAttribute("data-status")).toBe("compile-error"); expect(result.textContent).toContain("خطأ في الترجمة");
     expect(result.querySelector("b")).toBeNull(); expect(result.textContent).toContain("<b>bad</b>");    // stderr is TEXT
     expect(answerOut()).toEqual({ kind: "code", language: "python", languageVersion: 1, source: "print(\n" });
-    fireEvent.change(screen.getByRole("combobox", { name: "لغة البرمجة" }), { target: { value: "javascript" } });
-    expect(screen.queryByRole("button", { name: "تشغيل" })).toBeNull();                                // not offered for javascript
+    fireEvent.change(screen.getByRole("combobox", { name: "لغة البرمجة" }), { target: { value: "csharp" } });
+    expect(screen.queryByRole("button", { name: "تشغيل" })).toBeNull();                                // not offered for C#
     expect(screen.getByTestId("coding-run-unavailable")).toBeTruthy();
   });
-  it("C24 / C44 an unknown or malformed language config renders a safe Arabic panel (no editor, no crash) — never silently JavaScript", async () => {
+  it("the student selector lists EXACTLY the teacher-allowed languages drawn from Python / Java / C# — never JavaScript / TypeScript / C++ / SQL", async () => {
+    const { unmount } = render(<StudentHarness q={studentQ({ coding: { ...CFG, allowedLanguages: ["python", "java"], starterCode: {} } })} />);
+    let sel = (await screen.findByRole("combobox", { name: "لغة البرمجة" }, { timeout: 3000 })) as HTMLSelectElement;
+    expect(Array.from(sel.options).map(o => o.textContent)).toEqual(["Python", "Java"]);
+    unmount();
+    render(<StudentHarness q={studentQ({ coding: { ...CFG, allowedLanguages: ["python", "java", "csharp"], starterCode: {} } })} />);
+    sel = (await screen.findByRole("combobox", { name: "لغة البرمجة" }, { timeout: 3000 })) as HTMLSelectElement;
+    expect(Array.from(sel.options).map(o => o.textContent)).toEqual(["Python", "Java", "C#"]);
+    expect(document.body.textContent).not.toMatch(/JavaScript|TypeScript|C\+\+|SQL/);
+  });
+  it("C24 / C44 an unknown or malformed language config renders a safe Arabic panel (no editor, no crash) — never silently another language", async () => {
     const q = { ...studentQ(), coding: { ...CFG, allowedLanguages: ["cobol"], defaultLanguage: "cobol" } } as unknown as Question;
     render(<StudentHarness q={q} />);
     const panel = await screen.findByTestId("coding-config-invalid", {}, { timeout: 3000 });
@@ -301,7 +312,9 @@ describe("Teacher authoring panel inside the REAL Builder", () => {
     const ed = await screen.findByTestId("qt-editor-coding", {}, { timeout: 3000 });
     const insp = within(ed).getByTestId("coding-inspector");
     expect(insp.textContent).toContain("نوع السؤال: برمجة"); expect(insp.textContent).toContain("الإصدار: 1");
-    expect(insp.textContent).toContain("طريقة التقييم الحالية: مراجعة يدوية"); expect(insp.textContent).toContain("Python"); expect(insp.textContent).toContain("JavaScript");
+    expect(insp.textContent).toContain("طريقة التقييم الحالية: مراجعة يدوية"); expect(insp.textContent).toContain("Python"); expect(insp.textContent).toContain("C#");
+    expect(within(ed).getAllByRole("checkbox").map(c => c.getAttribute("aria-label"))).toEqual(["Python", "Java", "C#"]);   // registry-driven, exactly three
+    expect(ed.textContent).not.toMatch(/JavaScript|TypeScript|C\+\+|SQL/);
     expect(ed.textContent).toContain("في هذه المرحلة يمكن للطالب كتابة وتسليم الكود، ويقوم المعلم بمراجعته.");
     expect(ed.textContent).toContain("التشغيل والتصحيح الآلي يحتاجان إلى بيئة تنفيذ معزولة وسيتم ربطهما عبر محرك التنفيذ الآمن.");
     for (const h of ["اللغات المسموحة", "اللغة الافتراضية", "الكود الابتدائي", "أمثلة ظاهرة للطالب", "اختبارات مخفية للتصحيح", "حدود التنفيذ"]) expect(ed.textContent, h).toContain(h);
@@ -310,7 +323,7 @@ describe("Teacher authoring panel inside the REAL Builder", () => {
     const { hist } = await mountBuilder(baseExam([teacherQ()]));
     await screen.findByTestId("qt-editor-coding", {}, { timeout: 3000 });
     fireEvent.click(screen.getByRole("checkbox", { name: "Java" })); await tick();
-    expect(firstQ(hist()).coding.allowedLanguages).toEqual(["python", "javascript", "java"]);
+    expect(firstQ(hist()).coding.allowedLanguages).toEqual(["python", "csharp", "java"]);
     fireEvent.change(screen.getByRole("combobox", { name: "اللغة الافتراضية" }), { target: { value: "java" } }); await tick();
     expect(firstQ(hist()).coding.defaultLanguage).toBe("java");
     fireEvent.change(screen.getByRole("textbox", { name: "محرر الكود — الكود الابتدائي — Java" }), { target: { value: "class Main {}\n" } }); await tick();
@@ -320,9 +333,9 @@ describe("Teacher authoring panel inside the REAL Builder", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "طريقة مقارنة المخرجات" }), { target: { value: "exact" } }); await tick();
     expect(firstQ(hist()).answer.comparator).toBe("exact");
     fireEvent.click(screen.getByRole("checkbox", { name: "Java" })); await tick();                    // un-allow → default falls back, starter for java removed
-    expect(firstQ(hist()).coding.allowedLanguages).toEqual(["python", "javascript"]);
+    expect(firstQ(hist()).coding.allowedLanguages).toEqual(["python", "csharp"]);
     expect(firstQ(hist()).coding.defaultLanguage).toBe("python");
-    expect(Object.keys(firstQ(hist()).coding.starterCode)).toEqual(["python", "javascript"]);
+    expect(Object.keys(firstQ(hist()).coding.starterCode)).toEqual(["python", "csharp"]);
   });
   it("public samples + hidden tests: add / edit / duplicate / reorder / delete with STABLE ids; hidden rows are marked «مخفي عن الطالب»; weights are numbers", async () => {
     const { hist } = await mountBuilder(baseExam([teacherQ({ answer: { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} } })]));
