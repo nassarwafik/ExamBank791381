@@ -249,7 +249,7 @@ describe("P10 / P11 — the gateway validates, maps contracts to FIXED images an
     expect(Object.keys(LANGUAGES).sort()).toEqual(["csharp@1", "java@1", "python@1"]);
     for (const k of ["python", "java", "csharp"]) {
       const e = resolveLanguage(k, 1);
-      expect(e.image).toMatch(/^smartassess-coding-(python|java|csharp):17b-v1$/);
+      expect(e.image).toMatch(/^smartassess-coding-(python|java|csharp):17c-v1$/);
       expect(Object.isFrozen(e)).toBe(true);
     }
     for (const [k, v] of [["javascript", 1], ["python", 2], ["__proto__", 1], ["constructor", 1], ["", 1]]) expect(resolveLanguage(k, v), k).toBeUndefined();
@@ -259,7 +259,7 @@ describe("P10 / P11 — the gateway validates, maps contracts to FIXED images an
     try {
       const ok = await call(g.port);
       expect(ok.status).toBe(200); expect(ok.json).toEqual({ ok: true, result: { status: "success", stdout: "ok", stderr: "", exitCode: 0, durationMs: 1 } });
-      expect(g.runs).toHaveLength(1); expect(g.runs[0].entry.image).toBe("smartassess-coding-python:17b-v1"); expect(g.runs[0].request).toEqual(REQ);
+      expect(g.runs).toHaveLength(1); expect(g.runs[0].entry.image).toBe("smartassess-coding-python:17c-v1"); expect(g.runs[0].request).toEqual(REQ);
       expect((await call(g.port, { sign: false, body: { ...REQ, requestId: rid(2) } })).status).toBe(401);
       expect((await call(g.port, { body: { ...REQ, requestId: rid(3), image: "alpine" } })).json).toEqual({ ok: false, code: "REQUEST_INVALID" });
       expect((await call(g.port, { body: "{not json" })).json).toEqual({ ok: false, code: "REQUEST_INVALID" });   // authentic but unparseable
@@ -329,7 +329,7 @@ describe("P12 — every sandbox is launched with the fixed hardening profile", (
     const tmpfs = a.filter((x, i) => a[i - 1] === "--tmpfs");
     expect(tmpfs.map(t => t.split(":")[0]).sort()).toEqual(["/tmp", "/workspace"]);
     for (const t of tmpfs) { expect(t).toMatch(/noexec/); expect(t).toMatch(/nosuid/); expect(t).toMatch(/size=\d+m/); }
-    expect(a[a.length - 1]).toBe("smartassess-coding-java:17b-v1");                                   // image last: no command / args after it
+    expect(a[a.length - 1]).toBe("smartassess-coding-java:17c-v1");                                   // image last: no command / args after it
   });
   it("never: --privileged, host mounts (-v / --volume / --mount), docker.sock, env injection (-e / --env / --env-file), host namespaces, extra capabilities, entrypoint override", () => {
     const a = args().join(" ");

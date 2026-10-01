@@ -10,6 +10,8 @@ const {recordEventSafely}=require("../lib/notification-events");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {isStudentClassMember}=require("../lib/class-membership");
+// Phase 17C — a teacher-ended attempt records the official coding grading intent in the same CAS and dispatches after it.
+const {planCodingGrading,dispatchPlannedGrading,autoGradingPending}=require("../lib/coding/official-grading");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Additive audit view of a completed attempt for the teacher gradebook (B2A #20 / B2B #16). startedAt/
@@ -28,7 +30,7 @@ function lifecycle(a,s){
 // row and by endActiveAttempt, so the row a teacher action returns is byte-for-byte the row a reload would show.
 function resultFields(s){
  const attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,latestGrading=deriveGradingStatus(latest);
- return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest)}:null};
+ return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x),...(autoGradingPending(x)?{autoGradingPending:true}:{})})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest),...(autoGradingPending(latest)?{autoGradingPending:true}:{})}:null};
 }
 // Phase 7B — the identity a teacher's endActiveAttempt was composed under. STRICT, fail closed (same rules as the student
 // write guard): attemptNumber a real integer >= 1, startedAt a non-empty string, and for model 3 an attemptEpoch integer
@@ -243,7 +245,7 @@ async function handler(request,deps={},obs=null){
    const t=await loadTarget(dl,c,String(b.assignmentId||""),String(b.studentId||""));if(t.error)return {status:t.error.status,jsonBody:{ok:false,error:t.error.error}};
    const {a,student,name}=t;const want=teacherEndIdentity(a,b);
    if(!want)return {status:400,jsonBody:{ok:false,error:"بيانات المحاولة المطلوب إنهاؤها ناقصة. حدّث القائمة ثم حاول مرة أخرى."}};
-   const ALREADY={};let snap=null,auditDetails=null;
+   const ALREADY={};let snap=null,auditDetails=null,codingPlan=null,endedAttemptNumber=0;
    try{
     await mut(c,name,async current=>{
      // The LIVE assignment, re-read on every CAS attempt, is the ONLY authority for every decision below (archived
@@ -270,6 +272,7 @@ async function handler(request,deps={},obs=null){
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(fa.examSnapshot,serverAnswers),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{})};
+     codingPlan=planCodingGrading(fa.examSnapshot,attempt,{assignmentId:a.assignmentId,studentId:student.userId,now});endedAttemptNumber=attempt.attemptNumber;   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      snap={...lifecycle(fa,doc),...resultFields(doc)};
@@ -280,6 +283,7 @@ async function handler(request,deps={},obs=null){
    }catch(e){
     if(e===ALREADY){obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId,alreadyEnded:true});return {status:200,jsonBody:{ok:true,alreadyEnded:true,...snap}}}
     if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}if(e?.httpStatus){obs?.logWarn(e.httpStatus===409?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||""),status:e.httpStatus});return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
+   await dispatchPlannedGrading(c,{assignmentId:a.assignmentId,studentId:student.userId,attemptNumber:endedAttemptNumber},codingPlan,deps,obs);   // AFTER the commit
    await rec(c,{actor:auth.user?.sub,action:"assignment.endActiveAttempt",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:auditDetails});
    obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId,endReason:auditDetails.endReason});
    return {status:200,jsonBody:{ok:true,alreadyEnded:false,...snap}};

@@ -37,7 +37,10 @@ const PUBLIC_BY_DESIGN = {
 };
 /** name → the non-bearer mechanism that protects it. Still asserted to reject anonymous callers. */
 const SIGNED = {
-  questionImage: "question asset download; requires blob + exp + sig produced by createSignedAssetParams (HMAC, 15 min TTL)"
+  questionImage: "question asset download; requires blob + exp + sig produced by createSignedAssetParams (HMAC, 15 min TTL)",
+  // Phase 17C — Runner → SmartAssess official grading callback: no session; SA-CODING-CALLBACK-1 HMAC (its own key) over the
+  // exact body + timestamp (±300 s) + request id; unsigned → 401, unconfigured key → 503 (fail closed), raw evidence only.
+  codingGradeCallback: "official coding grading callback; requires an x-sa-callback-* HMAC signature under CODING_GRADING_CALLBACK_HMAC_KEY"
 };
 
 const SECRETS = {
