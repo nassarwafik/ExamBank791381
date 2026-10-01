@@ -4,7 +4,9 @@
 //                                      OWN key CODING_GRADING_SWEEP_HMAC_KEY. Order of checks, all BEFORE any storage access:
 //                                      unsigned (401) → key configured AND separated from the runner + callback keys on the raw
 //                                      secrets (else 503 SWEEP_UNAVAILABLE) → bounded body (400) → HMAC (401) → timestamp (401)
-//                                      → body exactly {"version":1} (400) → lease (409 SWEEP_BUSY) → engine (200, aggregates).
+//                                      → body exactly {"version":1} (400) → Phase 17D-B1 replay reservation of the authenticated
+//                                      request id (409 REPLAYED_REQUEST; 503 SWEEP_UNAVAILABLE when the ledger cannot reserve)
+//                                      → lease (409 SWEEP_BUSY) → engine (200, aggregates) → one bounded ledger cleanup step.
 //     POST /api/coding/bulk-retry      teacher-only: { assignmentId } — re-dispatch every pending / retryable / stale coding
 //                                      target of the assignment at the SAME revision (bounded; hasMore). Identifiers only.
 // Neither route executes code, computes a grade outside the Phase 17C applier, or returns / logs a student, job id, grading key,
@@ -16,6 +18,7 @@ const { getContainer } = require("../lib/platform-storage");
 const { resolveSweepKey } = require("../lib/coding/hmac-key-separation");
 const { verifySweepRequest, SWEEP_HEADERS } = require("../lib/coding/sweep-protocol");
 const { runCodingGradingRecoverySweep, bulkRetryAssignment } = require("../lib/coding/grading-recovery");
+const { reserveSweepRequest, pruneReplayLedger } = require("../lib/coding/sweep-replay-ledger");
 
 const SWEEP_MAX_BYTES = 1024;
 const BULK_MAX_CHARS = 1024;
@@ -39,13 +42,24 @@ async function sweepHandler(request, deps = {}, obs = null) {
     if (!key) { obs?.logWarn?.("coding.autoGrade.recovery.refused", { reason: "not-configured" }); return reply(503, { ok: false, code: "SWEEP_UNAVAILABLE" }); }
     const text = await readText(request, SWEEP_MAX_BYTES);
     if (text === null) { obs?.logWarn?.("coding.autoGrade.recovery.refused", { reason: "body" }); return reply(400, { ok: false, code: "REQUEST_INVALID" }); }
-    const auth = verifySweepRequest({ key, headers: request.headers, body: Buffer.from(text, "utf8"), nowMs: deps.now ? deps.now() : Date.now() });
+    const nowMs = deps.now ? deps.now() : Date.now();
+    const auth = verifySweepRequest({ key, headers: request.headers, body: Buffer.from(text, "utf8"), nowMs });
     if (!auth.ok) { obs?.logWarn?.("coding.autoGrade.recovery.unauthorized", { reason: auth.reason }); return reply(401, { ok: false, code: "UNAUTHORIZED" }); }
     let body = null;
     try { body = JSON.parse(text); } catch { body = null; }
     if (!exactKeys(body, ["version"]) || body.version !== 1) { obs?.logWarn?.("coding.autoGrade.recovery.refused", { reason: "invalid" }); return reply(400, { ok: false, code: "REQUEST_INVALID" }); }
     const container = (deps.getContainer || getContainer)();
+    // Phase 17D-B1 — the first storage write of this route: an atomic, durable reservation of the AUTHENTICATED request id.
+    // Only a newly created reservation lets the sweep run; a replay never reaches the lease, and an unknown outcome fails closed.
+    const reservation = await reserveSweepRequest(container, { requestId: auth.requestId, timestamp: request.headers.get(SWEEP_HEADERS.timestamp), nowMs });
+    if (!reservation.ok) {
+      if (reservation.code === "REPLAYED_REQUEST") { obs?.logWarn?.("coding.autoGrade.sweepReplay.rejected", { reason: "replayed" }); return reply(409, { ok: false, code: "REPLAYED_REQUEST" }); }
+      obs?.logWarn?.("coding.autoGrade.sweepReplay.storageError", {});
+      return reply(503, { ok: false, code: "SWEEP_UNAVAILABLE" });
+    }
+    obs?.logInfo?.("coding.autoGrade.sweepReplay.accepted", {});
     const r = await runCodingGradingRecoverySweep(container, { requestId: auth.requestId, obs }, deps);
+    await pruneReplayLedger(container, { nowMs: deps.now ? deps.now() : Date.now() });       // bounded, never throws
     if (r.status === "busy") return reply(409, { ok: false, code: "SWEEP_BUSY" });
     return reply(200, r);
   } catch {

@@ -2,7 +2,8 @@
 // Actions workflow .github/workflows/coding-grading-recovery.yml (scripts/coding-grading-sweep.mjs signs with Node crypto).
 //     x-sa-sweep-protocol    "1"
 //     x-sa-sweep-timestamp   Unix seconds (10 digits), accepted within ±300 s of this host's clock
-//     x-sa-sweep-request-id  /^[A-Za-z0-9_-]{8,64}$/ (fresh per trigger; also the lease owner id of the sweep)
+//     x-sa-sweep-request-id  /^[A-Za-z0-9_-]{20,64}$/ — a fresh crypto-random id per trigger, part of the HMAC input; Phase 17D-B1
+//                            reserves it once in a durable replay ledger (sweep-replay-ledger.js); also the sweep lease owner id
 //     x-sa-sweep-signature   "v1=" + hex(HMAC-SHA256(key, "SA-CODING-SWEEP-1\nPOST\n/api/coding/grading-sweep\n" + timestamp +
 //                                                      "\n" + requestId + "\n" + hex(SHA-256(raw body))))
 // The key is CODING_GRADING_SWEEP_HMAC_KEY — a THIRD key, never the runner request key nor the callback key (enforced on the raw
@@ -10,14 +11,16 @@
 // SA-CODING-RUNNER-1 / SA-CODING-CALLBACK-1, so a signature of one protocol can never be presented as another.
 // Verification order: format → HMAC (constant time) → timestamp window. Replay inside the window is harmless by construction:
 // a sweep is idempotent (it re-dispatches the same revision of targets that are still due), bounded, and serialized by the
-// sweep lease — a replay can at most trigger one more bounded sweep (or a 409 SWEEP_BUSY). No nonce store (Phase 17D-B).
+// sweep lease — and since Phase 17D-B1 an exact replay is refused outright (409 REPLAYED_REQUEST): the authenticated request id
+// is reserved once in a durable ledger after this verification and before the sweep runs. The canonical bytes are unchanged
+// (the request id was always signed), so the protocol stays SA-CODING-SWEEP-1; 17D-B1 only tightens the id format (≥ 20).
 const crypto = require("crypto");
 
 const SWEEP_PROTOCOL = "SA-CODING-SWEEP-1";
 const SWEEP_PATH = "/api/coding/grading-sweep";
 const SWEEP_MAX_SKEW_SECONDS = 300;
 const SWEEP_HEADERS = Object.freeze({ protocol: "x-sa-sweep-protocol", timestamp: "x-sa-sweep-timestamp", requestId: "x-sa-sweep-request-id", signature: "x-sa-sweep-signature" });
-const REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/;
+const REQUEST_ID = /^[A-Za-z0-9_-]{20,64}$/;
 const TIMESTAMP = /^\d{10}$/;
 const SIGNATURE = /^v1=([0-9a-f]{64})$/;
 
@@ -50,4 +53,4 @@ function verifySweepRequest({ key, headers, body, nowMs = Date.now() }) {
   return { ok: true, requestId };
 }
 
-module.exports = { SWEEP_PROTOCOL, SWEEP_PATH, SWEEP_MAX_SKEW_SECONDS, SWEEP_HEADERS, signSweepRequest, verifySweepRequest };
+module.exports = { SWEEP_PROTOCOL, SWEEP_PATH, SWEEP_MAX_SKEW_SECONDS, SWEEP_HEADERS, SWEEP_REQUEST_ID: REQUEST_ID, signSweepRequest, verifySweepRequest };

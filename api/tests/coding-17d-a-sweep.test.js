@@ -45,7 +45,7 @@ async function sweep(ctx, { fetch = F.runnerFetch(), env = X.ENV, now = clock(),
   const obs = { logInfo: (e, f) => logs.push([e, f]), logWarn: (e, f) => logs.push([e, f]), logError: (e, f) => logs.push([e, String(f && f.message || f)]) };
   return R().runCodingGradingRecoverySweep(ctx.container, { requestId, ...(limits ? { limits } : {}), obs }, { env, fetch, now });
 }
-const signedHeaders = (body = BODY, { key = SWEEP_KEY, timestamp = Math.floor(Date.now() / 1000), requestId = "sw_" + crypto.randomBytes(6).toString("hex") } = {}) => {
+const signedHeaders = (body = BODY, { key = SWEEP_KEY, timestamp = Math.floor(Date.now() / 1000), requestId = "sw_" + crypto.randomBytes(12).toString("hex") } = {}) => {
   const canonical = ["SA-CODING-SWEEP-1", "POST", "/api/coding/grading-sweep", String(timestamp), requestId, crypto.createHash("sha256").update(Buffer.from(body, "utf8")).digest("hex")].join("\n");
   return { "x-sa-sweep-protocol": "1", "x-sa-sweep-timestamp": String(timestamp), "x-sa-sweep-request-id": requestId, "x-sa-sweep-signature": "v1=" + crypto.createHmac("sha256", Buffer.from(key, "utf8")).update(canonical, "utf8").digest("hex") };
 };
@@ -212,7 +212,7 @@ describe("R22–R26 — SA-CODING-SWEEP-1 and POST /api/coding/grading-sweep", (
     const { signCallbackRequest, verifyCallbackRequest } = require_("../src/lib/coding/callback-protocol.js");
     expect(SWEEP_PROTOCOL).toBe("SA-CODING-SWEEP-1");
     expect(SWEEP_PATH).toBe("/api/coding/grading-sweep");
-    const ts = Math.floor(Date.now() / 1000), rid = "sw_parity0001";
+    const ts = Math.floor(Date.now() / 1000), rid = "sw_parity0001_abcdefghij";
     const ours = signSweepRequest({ key: SWEEP_KEY, timestamp: ts, requestId: rid, body: BODY });
     expect(ours).toEqual(signedHeaders(BODY, { timestamp: ts, requestId: rid }));                   // independent implementation
     const v = (headers, over = {}) => verifySweepRequest({ key: SWEEP_KEY, headers: new Headers(headers), body: Buffer.from(over.body ?? BODY, "utf8"), nowMs: over.nowMs ?? Date.now() });
@@ -349,10 +349,10 @@ describe("R33 — GitHub Actions scheduler (signs with Node crypto; 409 SWEEP_BU
     const { buildSweepRequest, runSweep } = await scheduler();
     const { verifySweepRequest } = P();
     const nowMs = Date.now();
-    const req = buildSweepRequest({ url: URL_OK, key: SWEEP_KEY, nowMs, requestId: "gh_proof00001" });
+    const req = buildSweepRequest({ url: URL_OK, key: SWEEP_KEY, nowMs, requestId: "gh_proof00001_abcdefghij" });
     expect(req.url).toBe(URL_OK);
     expect(req.init).toMatchObject({ method: "POST", redirect: "error", body: BODY });
-    expect(verifySweepRequest({ key: SWEEP_KEY, headers: new Headers(req.init.headers), body: Buffer.from(req.init.body, "utf8"), nowMs })).toEqual({ ok: true, requestId: "gh_proof00001" });
+    expect(verifySweepRequest({ key: SWEEP_KEY, headers: new Headers(req.init.headers), body: Buffer.from(req.init.body, "utf8"), nowMs })).toEqual({ ok: true, requestId: "gh_proof00001_abcdefghij" });
     const ctx = population(1);
     const { sweepHandler } = routes();
     const lines = [];
