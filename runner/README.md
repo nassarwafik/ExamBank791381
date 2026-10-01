@@ -41,7 +41,8 @@ SmartAssess API (after the attempt commit) ──signed POST /v1/official-gradin
 | `gateway/main.js` | entry point (`npm start`); reads `RUNNER_*` settings, sweeps leftover sandboxes, listens |
 | `gateway/server.js` | HTTP surface: `GET /healthz`, signed `GET /v1/capabilities`, signed `POST /v1/execute`, signed `POST /v1/official-grading-jobs` (17C) |
 | `gateway/official.js` | 17C: strict official job validation, payload-hash dedupe (`JOB_ID_CONFLICT`), bounded queue (`RUNNER_BUSY`), server-owned job wall, result cache |
-| `gateway/callback.js` | 17C: fixed callback destination from the host config, SA-CODING-CALLBACK-1 signing, raw-evidence-only body, bounded retry with backoff, no redirects |
+| `gateway/callback.js` | 17C: fixed callback destination from the host config, SA-CODING-CALLBACK-1 signing, raw-evidence-only body, no redirects; 17D-B2: one classified attempt per call (`attempt()`) |
+| `gateway/journal.js` | 17D-B2: the DURABLE journal of official jobs (`RUNNER_JOURNAL_DIR`, file per job, atomic rename + fsync, lock, bounded scans, quarantine, fail-closed on ephemeral storage) |
 | `gateway/auth.js` | request signing / verification (HMAC-SHA256, ±60 s, replay guard, constant-time compare) |
 | `gateway/validate.js` | the one accepted request shape (exact allow-list, bounded fields) |
 | `gateway/registry.js` | `python@1` / `java@1` / `csharp@1` → fixed image + fixed resource ceilings (data only) |
@@ -93,6 +94,12 @@ RUNNER_HMAC_KEY="$(node -e 'console.log(require("crypto").randomBytes(32).toStri
 #    gateway: SMARTASSESS_CALLBACK_BASE_URL=http://127.0.0.1:7071  SMARTASSESS_CALLBACK_HMAC_KEY=<callback TEST key>
 #    API:     CODING_GRADING_CALLBACK_HMAC_KEY=<the same callback TEST key>
 ```
+
+Phase 17D-B2: official grading ALSO needs a durable journal — `RUNNER_JOURNAL_DIR` = an absolute directory on a persistent disk
+of the runner host (never tmpfs / a container layer / the Azure temporary disk); every accepted job is journaled before the
+`202`, so a gateway restart resumes queued jobs, re-runs interrupted ones (bounded) and retries callbacks from durable results
+without re-executing student code. For local development only: `RUNNER_JOURNAL_DIR=$(mktemp -d) RUNNER_JOURNAL_ALLOW_EPHEMERAL=1`.
+See `docs/enterprise-coding-assessment-17d-b.md` (Phase 17D-B2).
 
 Official grading is **disabled** (`503 GRADING_UNAVAILABLE`) unless the callback destination is valid: `https://` (plain
 `http://` only for a loopback host), no credentials / path / query, a key of ≥ 32 characters that differs from

@@ -65,31 +65,46 @@ function fakeSandbox(behaviour) {
   };
 }
 
-test("F2 queue: dedupe by jobId + payload hash; bounded pending; results delivered once; the cache answers a re-dispatch without re-running", async () => {
-  const { createOfficialGradingQueue } = official();
+/** Phase 17D-B2 — the official queue requires a DURABLE journal: a real one in a fresh temporary directory, started (recovered). */
+async function journaledQueue(opts) {
+  const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
+  const { createJournal } = require("../../gateway/journal.js");
+  const journal = createJournal({ dir: fs.mkdtempSync(path.join(os.tmpdir(), "sa-17c-journal-")) });
+  await journal.open();
+  const q = official().createOfficialGradingQueue({ journal, ...opts });
+  await q.start();
+  return q;
+}
+
+test("F2 queue: dedupe by jobId + payload hash; bounded pending; results delivered once; the DURABLE journal answers a re-dispatch without re-running", async () => {
   const delivered = [];
-  const sb = fakeSandbox();
-  const q = createOfficialGradingQueue({ sandbox: sb, deliver: async r => { delivered.push(r); return { delivered: true }; }, maxPending: 2, maxActive: 1, logger: { info() {}, warn() {} } });
-  assert.equal(q.submit(JOB).status, "accepted");
-  assert.equal(q.submit(JSON.parse(JSON.stringify(JOB))).status, "duplicate");
-  assert.equal(q.submit({ ...JOB, source: "print('replacement code')" }).status, "conflict");
-  assert.equal(q.submit({ ...JOB, jobId: "cg_second00000000000000" }).status, "accepted");
-  assert.equal(q.submit({ ...JOB, jobId: "cg_third000000000000000" }).status, "busy");            // maxPending 2 (one active, one queued)
+  let open;
+  const gate = new Promise(r => { open = r; });                                                  // keeps the first job running
+  const sb = fakeSandbox(async job => { await gate; return { cases: job.cases.map(c => ({ token: c.token, status: "success", stdout: "out:" + c.stdin, stderr: "", exitCode: 0, durationMs: 1 })) }; });
+  const q = await journaledQueue({ sandbox: sb, deliver: async r => { delivered.push(r); return { delivered: true }; }, maxPending: 2, maxActive: 1, logger: { info() {}, warn() {} } });
+  assert.equal((await q.submit(JOB)).status, "accepted");
+  assert.equal((await q.submit(JSON.parse(JSON.stringify(JOB)))).status, "duplicate");
+  assert.equal((await q.submit({ ...JOB, source: "print('replacement code')" })).status, "conflict");
+  assert.equal((await q.submit({ ...JOB, jobId: "cg_second00000000000000" })).status, "accepted");
+  assert.equal((await q.submit({ ...JOB, jobId: "cg_third000000000000000" })).status, "busy");    // maxPending 2 (one active, one queued)
+  open();
   await q.idle();
   assert.equal(sb.suites.length, 2);
   assert.deepEqual(delivered.map(d => d.jobId).sort(), ["cg_abcdefghijklmnopqrstuv", "cg_second00000000000000"]);
   assert.equal(delivered[0].outcome, "completed");
   for (const d of delivered) for (const c of d.cases) assert.deepEqual(Object.keys(c).sort().filter(k => !["durationMs", "exitCode"].includes(k)), ["status", "stderr", "stdout", "token"]);
-  // completed job re-dispatched: answered from the cache, re-delivered WITHOUT re-running student code
-  assert.equal(q.submit(JOB).status, "duplicate");
+  // completed job re-dispatched: answered from the journal WITHOUT re-running student code; SmartAssess already CONFIRMED the
+  // result, so it is not delivered again (Phase 17D-B2 — an UNconfirmed result is retried from the journal instead)
+  assert.equal((await q.submit(JOB)).status, "duplicate");
   await q.idle();
   assert.equal(sb.suites.length, 2);
-  assert.equal(delivered.length, 3);
-  assert.equal(q.submit({ ...JOB, source: "print('swap after completion')" }).status, "conflict");
+  assert.equal(delivered.length, 2);
+  assert.equal((await q.submit({ ...JOB, source: "print('swap after completion')" })).status, "conflict");
+  q.stop();
 });
 
 test("F3 the job hard wall is server-owned and bounded; a suite that overruns it is a TECHNICAL failure (never a partial grade)", async () => {
-  const { createOfficialGradingQueue, officialJobWallMs, OFFICIAL_JOB_MAX_MS } = official();
+  const { officialJobWallMs, OFFICIAL_JOB_MAX_MS } = official();
   const java = resolveLanguage("java", 1);
   const maxJob = { ...JOB, language: "java", cases: Array.from({ length: 50 }, (_, i) => ({ token: "c" + String(i + 1).padStart(2, "0"), stdin: "" })), limits: { ...LIMITS, timeMs: 10000 } };
   assert.ok(officialJobWallMs(java, maxJob) <= OFFICIAL_JOB_MAX_MS);
@@ -97,18 +112,18 @@ test("F3 the job hard wall is server-owned and bounded; a suite that overruns it
   assert.ok(officialJobWallMs(java, JOB) < officialJobWallMs(java, maxJob));
   const delivered = [];
   const hang = fakeSandbox((job, opts) => new Promise((_, reject) => { opts.signal.addEventListener("abort", () => reject(new Error("aborted"))); }));
-  const q = createOfficialGradingQueue({ sandbox: hang, deliver: async r => { delivered.push(r); return { delivered: true }; }, jobWallMsFor: () => 50, logger: { info() {}, warn() {} } });
-  q.submit(JOB);
+  const q = await journaledQueue({ sandbox: hang, deliver: async r => { delivered.push(r); return { delivered: true }; }, jobWallMsFor: () => 50, logger: { info() {}, warn() {} } });
+  await q.submit(JOB);
   await q.idle();
+  q.stop();
   assert.equal(delivered.length, 1);
   assert.deepEqual({ outcome: delivered[0].outcome, technicalCode: delivered[0].technicalCode, cases: delivered[0].cases }, { outcome: "failed", technicalCode: "SUITE_TIMEOUT", cases: [] });
 });
 
 test("F4 an internal sandbox failure is reported as a technical outcome, never as a student failure / zero", async () => {
-  const { createOfficialGradingQueue } = official();
   const delivered = [];
-  const q = createOfficialGradingQueue({ sandbox: fakeSandbox(() => { throw new Error("docker daemon gone"); }), deliver: async r => { delivered.push(r); return { delivered: true }; }, logger: { info() {}, warn() {} } });
-  q.submit(JOB); await q.idle();
+  const q = await journaledQueue({ sandbox: fakeSandbox(() => { throw new Error("docker daemon gone"); }), deliver: async r => { delivered.push(r); return { delivered: true }; }, logger: { info() {}, warn() {} } });
+  await q.submit(JOB); await q.idle(); q.stop();
   assert.equal(delivered[0].outcome, "failed"); assert.equal(delivered[0].technicalCode, "RUNNER_INTERNAL");
 });
 
@@ -212,10 +227,9 @@ test("F7 the official frame keeps setup data and the case stdin apart (exact len
 
 /** Starts a gateway with an official queue around a fake sandbox. */
 async function startGateway(opts = {}) {
-  const { createOfficialGradingQueue } = official();
   const delivered = [];
   const sandbox = opts.sandbox || fakeSandbox();
-  const officialQueue = opts.officialQueue === null ? undefined : createOfficialGradingQueue({ sandbox, deliver: async r => { delivered.push(r); return { delivered: true }; }, maxPending: opts.maxPending || 4, logger: { info() {}, warn() {} } });
+  const officialQueue = opts.officialQueue === null ? undefined : await journaledQueue({ sandbox, deliver: async r => { delivered.push(r); return { delivered: true }; }, maxPending: opts.maxPending || 4, logger: { info() {}, warn() {} } });
   const server = createGatewayServer({ key: KEY, sandbox, maxConcurrency: 2, logger: { info() {}, warn() {} }, officialQueue });
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   return { server, port: server.address().port, delivered, sandbox, officialQueue };

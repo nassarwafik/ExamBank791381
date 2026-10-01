@@ -6,8 +6,9 @@
 //     GET  /healthz           → { ok: true }                               (no auth; reveals nothing)
 //     GET  /v1/capabilities   → { ok, available, languages: [{ key, languageVersion }] }   (signed)
 //     POST /v1/execute        → { ok: true, result } | { ok: false, code }                  (signed)
-//     POST /v1/official-grading-jobs → 202 { ok, accepted, duplicate } | 409 JOB_ID_CONFLICT | 503 RUNNER_BUSY |
-//                               503 GRADING_UNAVAILABLE (no callback destination configured)  (signed; Phase 17C, official.js)
+//     POST /v1/official-grading-jobs → 202 { ok, accepted, duplicate } | 409 JOB_ID_CONFLICT | 409 STALE_REVISION (17D-B2) |
+//                               503 RUNNER_BUSY (full, or the job could not be journaled) | 503 GRADING_UNAVAILABLE (no callback
+//                               destination or no durable journal configured)  (signed; Phase 17C, official.js)
 //   An official job is executed asynchronously by the bounded official queue; its raw evidence goes back to SmartAssess through
 //   the callback deliverer (callback.js). The request never carries an expected output, a weight, a mark or an identity.
 // Telemetry is limited to request id, language, status, duration and refusal reasons — never source, stdin, stdout, stderr,
@@ -98,9 +99,10 @@ function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(
     let offered = [];
     try { offered = await sandbox.availableLanguages(); } catch { offered = []; }
     if (!offered.some(l => l.key === entry.key && l.languageVersion === entry.languageVersion)) return send(res, 422, { ok: false, code: "LANGUAGE_UNAVAILABLE" });
-    const r = officialQueue.submit(v.job);
+    const r = await officialQueue.submit(v.job);                                  // Phase 17D-B2: journaled BEFORE the 202
     if (r.status === "accepted" || r.status === "duplicate") return send(res, 202, { ok: true, accepted: true, duplicate: r.status === "duplicate" });
     if (r.status === "conflict") return send(res, 409, { ok: false, code: "JOB_ID_CONFLICT" });
+    if (r.status === "stale") return send(res, 409, { ok: false, code: "STALE_REVISION" });
     return send(res, 503, { ok: false, code: "RUNNER_BUSY" });
   }
 

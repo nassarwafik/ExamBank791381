@@ -18,6 +18,15 @@
 //      stored comparator, weights them, scores `effectiveMax × passedWeight / totalWeight` (rounded once) and rebuilds the attempt
 //      totals with the ONE canonical rebuild (manual overrides always win). Stale / foreign / duplicate results never mutate.
 //
+// Phase 17D-B2 — DURABLE DELIVERY. Every send of a job is preceded by a bounded DELIVERY LEASE on its job record (ETag CAS on
+// platform/coding-grading-jobs/<jobId>.json → delivery { state, attempt, leaseOwner, leaseExpiresAt, lastDeliveryAt,
+// lastDeliveryCode, lastDeliveryErrorClass }): only the claimant sends; the lease is released with the outcome and EXPIRES on its
+// own (DELIVERY_LEASE.ttlMs; a lease claiming to last longer than maxFutureMs is ignored), so a dispatcher that dies mid-delivery
+// never strands a job. The runner request also carries { revision, targetRef } (an opaque hash of the target identity) so the
+// runner's durable journal can refuse an older revision that arrives after a newer one. Delivery is at-least-once; the runner
+// journal (idempotent job identity) and applyOfficialCallback (one official application) make it effectively-once for grading.
+// The delivery state lives in the server-only job record — never in the attempt, never shown to students, never source / tests /
+// keys / signatures.
 // Target: { mode: "hiddenTests", state: "pending" | "dispatched" | "complete" | "retryable", revision, jobId, gradingKey,
 //           answerHash, questionFingerprint, createdAt, updatedAt, technicalCode?, result? }
 // The grading key binds the snapshot identity (assignment + attempt + question fingerprint: question id, type version, mode,
@@ -52,12 +61,20 @@ const ACTIVE_STATES = Object.freeze(["pending", "dispatched", "retryable"]);
 // Phase 17D-A — a "dispatched" target older than this has most likely lost its callback (the Recovery Engine re-dispatches the
 // SAME revision; the gradebook counts it as stale). Shared by the recovery policy and the gradebook status.
 const STALE_DISPATCHED_MS = 30 * 60 * 1000;
+// Phase 17D-B2 — the delivery lease: longer than one dispatch (DISPATCH_TIMEOUT_MS) plus its storage round trips, short enough that
+// a crashed dispatcher delays a retry by seconds; a stored expiry further than maxFutureMs ahead is treated as invalid.
+const DELIVERY_LEASE = Object.freeze({ ttlMs: 30 * 1000, maxFutureMs: 2 * 60 * 1000, claimAttempts: 4 });
 
 const sha256 = text => crypto.createHash("sha256").update(text, "utf8").digest("hex");
 const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
 const nowIso = deps => new Date((deps && deps.now ? deps.now() : Date.now())).toISOString();
 const isCodingNode = q => isObj(q) && String(q.presentationType ?? q.type ?? "") === "coding";
 const jobName = jobId => JOB_PREFIX + jobId + ".json";
+
+/** Phase 17D-B2 — the OPAQUE target reference sent to the runner (orders revisions of one target; reveals no identifier). */
+function officialTargetRef({ assignmentId, studentId, attemptNumber, submittedAt, targetKey }) {
+  return "tr_" + sha256(["cg-target-v1", assignmentId, studentId, attemptNumber, submittedAt, targetKey].join("\n")).slice(0, 40);
+}
 
 /** Deterministic job id for (attempt, target, revision): re-dispatch of the same revision always reuses it (runner dedupe). */
 function officialJobId({ assignmentId, studentId, attemptNumber, submittedAt, targetKey, revision }) {
@@ -116,7 +133,7 @@ function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, re
   const entry = flattenQuestions(exam).find(x => x.questionId === targetKey);
   const grade = (Array.isArray(attempt.questionGrades) ? attempt.questionGrades : []).find(g => String(g.questionId) === targetKey);
   const ids = { assignmentId: String(assignmentId), studentId: String(studentId), attemptNumber: Number(attempt.attemptNumber), submittedAt: String(attempt.submittedAt || ""), targetKey, revision };
-  const jobId = officialJobId(ids);
+  const jobId = officialJobId(ids), targetRef = officialTargetRef(ids);
   if (!entry || !grade) return { ok: false, code: "QUESTION_INVALID", jobId };
   const q = entry.question, g = gradeableQuestion(q), maxMarks = effectiveMaxMarks(grade);
   if (!g.ok) return { ok: false, code: g.code, jobId };
@@ -124,7 +141,7 @@ function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, re
   const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: 1, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0 }));
   const answerHash = sha256(answer ? stableStringify({ language: answer.language, languageVersion: answer.languageVersion, source: answer.source }) : "no-answer");
   const gradingKey = sha256(stableStringify({ v: 1, ...ids, mode: "hiddenTests", questionFingerprint, answerHash }));
-  return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId };
+  return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
 }
 
 function noAnswerResult(auth, revision, at) {
@@ -215,28 +232,29 @@ async function dispatchOfficialJob(job, deps = {}) {
   const config = readCodingRunnerConfig(env);
   // Phase 17D-A — the callback key must also be SEPARATED from the runner request key (Review Fix 1 resolver): with equal keys
   // nothing is sent (a result could not be authenticated anyway) and the target stays retryable.
-  if (!config.enabled || !resolveCallbackKey(env)) return { state: "retryable", technicalCode: "EXECUTION_UNAVAILABLE" };
+  if (!config.enabled || !resolveCallbackKey(env)) return { state: "retryable", technicalCode: "EXECUTION_UNAVAILABLE", errorClass: "config" };
   const fetchImpl = deps.fetch || globalThis.fetch, now = deps.now || Date.now;
   const bodyText = JSON.stringify(job), body = Buffer.from(bodyText, "utf8");
   const requestId = "og_" + crypto.randomBytes(12).toString("hex");
   const headers = { ...signRunnerRequest({ key: config.key, method: "POST", path: OFFICIAL_PATH, timestamp: String(Math.floor(now() / 1000)), requestId, body }), "content-type": "application/json" };
   let res;
   try { res = await fetchImpl(config.baseUrl + OFFICIAL_PATH, { method: "POST", headers, body: bodyText, redirect: "error", signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS) }); }
-  catch { return { state: "retryable", technicalCode: "EXECUTION_FAILED" }; }
+  catch { return { state: "retryable", technicalCode: "EXECUTION_FAILED", errorClass: "network" }; }
   let json = null;
   try { json = JSON.parse(await readBounded(res, DISPATCH_RESPONSE_MAX_BYTES)); } catch { json = null; }
   if (res.status === 202 && json && json.ok === true && json.accepted === true) return { state: "dispatched", duplicate: json.duplicate === true };
   const code = json && typeof json.code === "string" ? json.code : "";
-  if (res.status === 409 && code === "JOB_ID_CONFLICT") return { state: "retryable", technicalCode: "JOB_ID_CONFLICT" };
-  if (res.status === 503 && (code === "RUNNER_BUSY" || code === "GRADING_UNAVAILABLE")) return { state: "retryable", technicalCode: code };
-  if (res.status === 422 && code === "LANGUAGE_UNAVAILABLE") return { state: "retryable", technicalCode: "LANGUAGE_UNAVAILABLE" };
-  if (res.status === 401) return { state: "retryable", technicalCode: "RUNNER_UNAUTHORIZED" };
-  return { state: "retryable", technicalCode: "EXECUTION_FAILED" };
+  if (res.status === 409 && (code === "JOB_ID_CONFLICT" || code === "STALE_REVISION")) return { state: "retryable", technicalCode: code, errorClass: "conflict" };
+  if (res.status === 503 && code === "RUNNER_BUSY") return { state: "retryable", technicalCode: code, errorClass: "busy" };
+  if (res.status === 503 && code === "GRADING_UNAVAILABLE") return { state: "retryable", technicalCode: code, errorClass: "unavailable" };
+  if (res.status === 422 && code === "LANGUAGE_UNAVAILABLE") return { state: "retryable", technicalCode: "LANGUAGE_UNAVAILABLE", errorClass: "unavailable" };
+  if (res.status === 401) return { state: "retryable", technicalCode: "RUNNER_UNAUTHORIZED", errorClass: "auth" };
+  return { state: "retryable", technicalCode: "EXECUTION_FAILED", errorClass: "protocol" };
 }
 
 /** The ONE runner request of a target: identifiers-free (opaque job id + case tokens), no expected output / weight / title / marks. */
 function buildOfficialRunnerJob(auth, jobId) {
-  return { jobId, language: auth.answer.language, languageVersion: auth.answer.languageVersion, source: auth.answer.source, cases: auth.tests.map((t, i) => ({ token: officialCaseToken(i), stdin: t.input })), limits: { timeMs: auth.limits.timeMs, memoryMb: auth.limits.memoryMb, outputBytes: auth.limits.outputBytes } };
+  return { jobId, language: auth.answer.language, languageVersion: auth.answer.languageVersion, source: auth.answer.source, cases: auth.tests.map((t, i) => ({ token: officialCaseToken(i), stdin: t.input })), limits: { timeMs: auth.limits.timeMs, memoryMb: auth.limits.memoryMb, outputBytes: auth.limits.outputBytes }, revision: auth.revision, targetRef: auth.targetRef };
 }
 
 const io = deps => ({ dl: deps.downloadJsonOrNull || storage.downloadJsonOrNull, mut: deps.mutateJsonWithRetry || storage.mutateJsonWithRetry, audit: deps.recordAuditEvent || recordAuditEvent });
@@ -293,22 +311,64 @@ async function setJobState(container, jobId, revision, state, extra, deps) {
   } catch (e) { if (e !== STOP) throw e; }
 }
 
+// ── Phase 17D-B2 delivery lease ───────────────────────────────────────────────────────────────────────────────────────
+const timeOf = v => { const t = typeof v === "string" ? Date.parse(v) : NaN; return Number.isFinite(t) ? t : 0; };
+const leaseHeld = (d, nowMs) => isObj(d) && typeof d.leaseOwner === "string" && d.leaseOwner !== "" && timeOf(d.leaseExpiresAt) > nowMs && timeOf(d.leaseExpiresAt) - nowMs <= DELIVERY_LEASE.maxFutureMs;
+/**
+ * CLAIMS the delivery of one job (ETag CAS on its job record, creating it when absent): refused while another dispatcher holds an
+ * unexpired lease, or when the job is complete / superseded. → { ok: true, attempt } | { ok: false, reason: "leased" | "terminal" }
+ */
+async function claimDelivery(container, seed, owner, nowMs) {
+  const at = new Date(nowMs).toISOString();
+  for (let i = 0; i < DELIVERY_LEASE.claimAttempts; i++) {
+    const { value, etag } = await storage.downloadJsonWithEtagOrNull(container, jobName(seed.jobId));
+    const cur = isObj(value) && value.jobId === seed.jobId ? value : null;
+    if (cur && (cur.state === "complete" || cur.state === "superseded" || cur.revision !== seed.revision)) return { ok: false, reason: "terminal" };
+    const d = cur && isObj(cur.delivery) ? cur.delivery : {};
+    if (leaseHeld(d, nowMs)) return { ok: false, reason: "leased" };
+    const next = cur ? { ...cur } : { schemaVersion: 1, jobId: seed.jobId, assignmentId: seed.assignmentId, studentId: seed.studentId, attemptNumber: seed.attemptNumber, targetKey: seed.targetKey, revision: seed.revision, gradingKey: seed.gradingKey, state: "pending", dispatchCount: 0, createdAt: at };
+    next.gradingKey = seed.gradingKey; next.updatedAt = at; next.dispatchCount = (Number(next.dispatchCount) || 0) + 1;
+    if (next.state !== "complete") next.state = "pending";
+    const attemptNo = (Number.isInteger(d.attempt) && d.attempt >= 0 ? d.attempt : 0) + 1;
+    next.delivery = { state: "delivering", attempt: attemptNo, leaseOwner: owner, leaseExpiresAt: new Date(nowMs + DELIVERY_LEASE.ttlMs).toISOString(), claimedAt: at, lastDeliveryAt: typeof d.lastDeliveryAt === "string" ? d.lastDeliveryAt : null, lastDeliveryCode: typeof d.lastDeliveryCode === "string" ? d.lastDeliveryCode : null, lastDeliveryErrorClass: typeof d.lastDeliveryErrorClass === "string" ? d.lastDeliveryErrorClass : null };
+    try { await storage.uploadJsonConditional(container, jobName(seed.jobId), next, etag || null); return { ok: true, attempt: attemptNo }; }
+    catch (e) { if (!storage.isConcurrencyConflict(e)) throw e; }                       // another dispatcher wrote first: re-read
+  }
+  return { ok: false, reason: "leased" };
+}
+/** Releases the lease with the delivery outcome — only while this dispatcher still owns it (an expired lease is simply gone). */
+async function releaseDelivery(container, jobId, owner, outcome, deps) {
+  const { mut } = io(deps);
+  try {
+    await mut(container, jobName(jobId), cur => {
+      if (!cur || !isObj(cur.delivery) || cur.delivery.leaseOwner !== owner) throw STOP;
+      const ok = outcome.state === "dispatched";
+      cur.delivery = { ...cur.delivery, state: ok ? "received" : "failed", leaseOwner: null, leaseExpiresAt: null, lastDeliveryAt: nowIso(deps), lastDeliveryCode: ok ? (outcome.duplicate ? "DUPLICATE" : "ACCEPTED") : String(outcome.technicalCode || "EXECUTION_FAILED"), lastDeliveryErrorClass: ok ? null : String(outcome.errorClass || "unknown") };
+      return cur;
+    });
+  } catch (e) { if (e !== STOP) throw e; }
+}
+
 async function dispatchTarget(container, assignment, ids, attempt, targetKey, target, deps, obs) {
-  const { mut, audit } = io(deps);
-  const at = nowIso(deps), expect = { revision: target.revision, jobId: target.jobId };
+  const { audit } = io(deps);
+  const expect = { revision: target.revision, jobId: target.jobId };
   const auth = targetAuthority(assignment.examSnapshot, attempt, targetKey, { ...ids, revision: target.revision });
   let outcome;
   if (!auth.ok || auth.gradingKey !== target.gradingKey || auth.jobId !== target.jobId || !auth.answer) {
     outcome = { state: "retryable", technicalCode: auth.ok ? "AUTHORITY_CHANGED" : auth.code };
   } else {
-    // The job record (identifiers + state only) exists BEFORE the runner can call back.
-    await mut(container, jobName(target.jobId), cur => {
-      const d = cur && cur.jobId === target.jobId ? cur : { schemaVersion: 1, jobId: target.jobId, assignmentId: ids.assignmentId, studentId: ids.studentId, attemptNumber: Number(ids.attemptNumber), targetKey, revision: target.revision, gradingKey: target.gradingKey, state: "pending", dispatchCount: 0, createdAt: at };
-      d.gradingKey = target.gradingKey; d.revision = target.revision; d.updatedAt = at; d.dispatchCount = (Number(d.dispatchCount) || 0) + 1;
-      if (d.state !== "complete") d.state = "pending";
-      return d;
-    });
+    // Phase 17D-B2 — the job record (identifiers + state only) exists BEFORE the runner can call back, and the delivery is
+    // CLAIMED on it first: a concurrent dispatcher (any instance, any path) holding an unexpired lease means "already being sent".
+    const owner = "dl_" + crypto.randomBytes(12).toString("hex");
+    const claim = await claimDelivery(container, { jobId: target.jobId, assignmentId: ids.assignmentId, studentId: ids.studentId, attemptNumber: Number(ids.attemptNumber), targetKey, revision: target.revision, gradingKey: target.gradingKey }, owner, deps.now ? deps.now() : Date.now());
+    if (!claim.ok) {
+      obs?.logInfo?.("coding.runner.delivery.duplicate", { jobId: target.jobId, revision: target.revision, reason: claim.reason });
+      return { targetKey, jobId: target.jobId, revision: target.revision, state: target.state, applied: false, deliverySkipped: claim.reason };
+    }
+    obs?.logInfo?.("coding.runner.delivery.claimed", { jobId: target.jobId, revision: target.revision, attempt: claim.attempt });
     outcome = await dispatchOfficialJob(buildOfficialRunnerJob(auth, target.jobId), deps);   // OUTSIDE every storage mutation
+    try { await releaseDelivery(container, target.jobId, owner, outcome, deps); }
+    catch { obs?.logWarn?.("coding.runner.delivery.release.failed", { jobId: target.jobId, revision: target.revision }); }   // the lease expires on its own
   }
   const patch = { state: outcome.state, updatedAt: nowIso(deps), ...(outcome.technicalCode ? { technicalCode: outcome.technicalCode } : {}) };
   const applied = await updateTarget(container, ids, targetKey, expect, patch, deps);
@@ -523,6 +583,6 @@ function codingAutoGradeView(question, attempt) {
 }
 
 module.exports = {
-  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, STALE_DISPATCHED_MS, officialJobId, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, buildOfficialRunnerJob,
+  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, STALE_DISPATCHED_MS, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, buildOfficialRunnerJob,
   dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, codingAutoGradeView, mutateTarget, manualRecovery
 };

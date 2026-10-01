@@ -238,3 +238,265 @@ guard was removed from the code instead of being kept as dead logic.
   ids and now produces 35; no other signer exists (17D-A production activation is still configuration-blocked).
 * Expect one `coding-sweep-replay/*.json` blob per accepted sweep (~144/day at the 10-minute schedule), each pruned within a
   day of expiry.
+
+---
+
+# Phase 17D-B2 — Durable Runner Delivery & Crash Recovery
+
+> Status: implemented on `feature/17d-b2-durable-runner-delivery` (baseline `main` = `a6e26ac`, the PR #237 merge). Awaiting
+> independent reliability / crash-recovery review. Scope: durable delivery and crash recovery of OFFICIAL coding grading jobs
+> only — no evidence-retention redesign (17D-B3), no admin / teacher UI, no Redis / SQL / Service Bus / general queue.
+
+The grading authority is unchanged: **`attempt.codingGrading.targets`** in the committed attempt. The runner remembers
+*delivery and execution* state only; it never decides a grade, never creates or changes a revision and never writes an
+official result.
+
+## B2.1 Audit (written before implementation, baseline `a6e26ac`)
+
+| Question | Answer on `a6e26ac` |
+|---|---|
+| where is `jobId` created? | `officialJobId()` (`official-grading.js`) — `cg_` + SHA-256 of (assignment, student, attempt number, submittedAt, target, **revision**): deterministic, and it binds the revision |
+| where is the revision created? | at plan time (1) and ONLY by `regradeTarget(action: "force")` (revision + 1) |
+| where does retry state live? | `target.recovery` in the attempt (17D-A recovery engine) — API side only |
+| where do callback attempts live? | in the runner's RAM (`callback.js` loop variables) |
+| what survives an API restart? | everything (attempt, job record, recovery cursor, sweep lease, replay ledger — Azure Blob) |
+| what survives a runner restart? | **nothing** — accepted jobs, the queue, executed-but-unconfirmed results and the callback retry loop were RAM-only |
+| where are duplicates handled? | runner RAM dedupe by (jobId, payload hash); API: one application per (job, revision, grading key) |
+| concurrent dispatch? | **no per-job lease**: post-commit hook, teacher retry, bulk retry and the sweep could each send the same job |
+
+Crash windows: (W2) accepted but not started → lost until the 30-min stale window; (W3) during execution → lost; (W4)
+executed but not called back → the result was lost and **student code was executed again** after the stale window;
+(W5) callback outage longer than ~1 min of in-process backoff → result lost on restart; (W6) concurrent dispatchers → duplicate
+requests; (W7) no revision ordering on the runner.
+
+### Deployment-model audit and durability boundary
+
+The gateway is **not containerised**: it is a Node host service on a **dedicated Linux VM with Docker Engine**, bound to
+127.0.0.1 behind a TLS proxy (`docs/enterprise-coding-assessment-17b.md` §18), spawning disposable sandbox containers. It is
+not deployed yet (17D-A activation is configuration-blocked); the repository has no IaC for it.
+
+| Event (Azure Linux VM) | OS disk / managed data disk | temp (resource) disk, tmpfs |
+|---|---|---|
+| gateway process crash / restart | survives | survives (process) / survives |
+| service restart, host reboot, VM stop-start | survives | **lost** (resource disk on deallocate; tmpfs always) |
+| Azure redeploy (host move), live migration | survives | **lost** |
+| VM delete / reimage | **lost** (OS disk) / data disk survives if kept | lost |
+
+Decision: a **file-per-job journal** in `RUNNER_JOURNAL_DIR` on the OS disk or a managed data disk — the smallest
+platform-native durable store for this deployment (no new service). The gateway **refuses to enable official grading** when the
+directory is missing, relative, or on an ephemeral filesystem: tmpfs, ramfs, overlay/aufs (a container's writable layer),
+squashfs, or the Azure resource disk (`/dev/disk/azure/resource`). `RUNNER_JOURNAL_ALLOW_EPHEMERAL=1` exists only for local
+development / tests and is reported as `ephemeral-override` in the startup event — durability is never claimed for it.
+
+Beyond the boundary (journal disk destroyed) correctness still holds, with less efficiency: the API is the authority, the 17D-A
+sweep re-dispatches the stale target, the runner executes it as a new job, the API applies at most one result.
+
+## B2.2 Delivery semantics
+
+**Durable at-least-once delivery + idempotent job identity + a single official grade authority.** Not "exactly once".
+
+| Guarantee | Scope |
+|---|---|
+| official grade application | **at most once** per (job, revision, grading key) — `applyOfficialCallback` (17C), re-proved for the B2 lifecycle (CB4) |
+| completed execution lifecycle | **at most one** per (jobId, payload hash, generation); an EXECUTED job is never executed again to rebuild a callback |
+| physical execution count | 1 per generation, **plus bounded re-runs if the gateway process dies DURING execution** (`maxInterruptions` = 2, then a technical outcome `RUNNER_INTERRUPTED` — never a zero); a new generation (≤ `maxGenerations` = 3) only when SmartAssess confirmed a technical outcome as `retryable` and delivers the same job again |
+| delivery API → runner | at-least-once (dispatch retried by the 17D-A recovery policy); one active delivery per job (lease) |
+| callback runner → API | at-least-once (durable, bounded retry); duplicates are answered `alreadyApplied` |
+
+## B2.3 Runner journal (`runner/gateway/journal.js`)
+
+```
+RUNNER_JOURNAL_DIR/            0700, owned by the gateway user, one gateway process (journal.lock: pid + token)
+  jobs/<jobId>.json            0600  lifecycle record (below) — identifiers, hashes, states, timestamps, counters
+  inputs/<jobId>.json          0600  validated job (source + hidden-test stdin) — ONLY until the result is durable
+  results/<jobId>.json         0600  raw-evidence callback body — ONLY until SmartAssess confirms (or the record is pruned)
+  targets/<targetRef>.json     0600  highest revision seen per opaque target reference
+  quarantine/                  0700  corrupt records, moved (never silently deleted)
+```
+
+Every write is atomic: temp file (`wx`, 0600) → `fsync` → `rename` → `fsync` of the directory. A record holds:
+`schemaVersion, jobId, payloadHash, revision, targetRef, language, state, generation, interruptions, receivedAt, startedAt,
+executedAt, updatedAt, outcome, technicalCode, resultHash, summary (case counts by status only), callback { attempts,
+windowEnd, rearms, nextAt, lastAt, lastStatus, lastErrorClass, confirmedAt, confirmedAs }`. Never source, stdin, output,
+keys, signatures or raw headers. The result file is bound to the record by `resultHash`; a mismatch is corruption.
+
+### State machine
+
+| From | Event | To | Durable effect |
+|---|---|---|---|
+| — | signed delivery, new (jobId, hash), admitted | `received` | input + target index + record written **before the 202** |
+| `received` | worker picks it; newer revision of the target known | `superseded` | input deleted; never executed, never called back |
+| `received` | worker picks it | `running` | `startedAt` written **before the sandbox starts** |
+| `running` | suite finished (any outcome) | `executed` | result written, record (`resultHash`), input deleted, callback due now |
+| `running` | gateway process died (found at startup) | `received` (interruptions + 1) | re-run; after `maxInterruptions`: `executed` with outcome `failed / RUNNER_INTERRUPTED` |
+| `executed` | callback attempt reserved | `executed` | `attempts + 1`, `nextAt = now + backoff` written **before sending** |
+| `executed` | 2xx `applied`/`alreadyApplied` | `confirmed` (`confirmedAs` complete / retryable) | result deleted after the commit |
+| `executed` | retryable failure, window left | `executed` | `lastStatus`, `lastErrorClass` (schedule already reserved) |
+| `executed` | permanent failure, or window exhausted | `callback_failed` | parked; result kept |
+| `executed` / `callback_failed` | same job delivered again | `executed` | callback due now / re-armed (≤ `maxRearms`) — never re-executed |
+| `confirmed` (`retryable`) | same job delivered again | `received` (generation + 1) | input re-written; bounded by `maxGenerations` |
+| `confirmed`, `superseded`, `callback_failed` | retention elapsed | removed | bounded pruning |
+
+The spec's names map as: RECEIVED = `received`; RUNNING = `running`; EXECUTED / CALLBACK_PENDING = `executed` (execution completed
+and its result durable — the crash window the journal exists for); CALLBACK_CONFIRMED = `confirmed`; TERMINAL = `confirmed`,
+`superseded`, or a parked `callback_failed`.
+
+### Idempotent receive
+
+| Existing record for the jobId | Answer | Effect |
+|---|---|---|
+| none | 202 `accepted` | journaled, queued |
+| different payload hash (body or revision differs) | 409 `JOB_ID_CONFLICT` | none — a reused id never runs other code |
+| `received` / `running` | 202 `duplicate` | none — one execution |
+| `executed` | 202 `duplicate` | callback retried now (if not already in flight) |
+| `callback_failed` | 202 `duplicate` | callback re-armed (bounded) |
+| `confirmed` complete | 202 `duplicate` | none |
+| `confirmed` retryable | 202 `duplicate` | new generation (bounded) |
+| `superseded` | 409 `STALE_REVISION` | none |
+| none, but the target index has a newer revision | 409 `STALE_REVISION` | none |
+
+### Restart recovery (bounded)
+
+At startup: lock → **bounded** scan of `jobs/` (≤ `startupScanMax` entries; beyond → `truncated`, new admissions refused) →
+quarantine corrupt entries → `received` re-queued, `running` interrupted, `executed` result verified and callback scheduled at its
+persisted `nextAt`, terminal records left alone (leftover inputs / results of a crash between two steps released) → bounded
+orphan cleanup → serve. Leftover sandbox containers of the dead process are removed by the existing startup sweep.
+
+### Callback retry
+
+One signed attempt per call (`callback.js attempt()`), classified: 2xx → confirmed (`state: "retryable"` in SmartAssess's
+answer → `confirmedAs: retryable`); network / timeout / 5xx / 408 / 429 → retryable; any other 4xx, or a local protocol error →
+permanent. Backoff `2 s · 2^(k−1)` capped at 10 min, 8 attempts per window, ≤ 8 re-arms (only by a fresh delivery from
+SmartAssess), so at most 8 + 8 × 8 = 72 attempts per generation. The attempt is reserved durably before it is sent: a crash never
+resets or under-counts it (at worst one reserved attempt is never sent).
+
+## B2.4 API delivery lease (`api/src/lib/coding/official-grading.js`)
+
+Every send is preceded by a CLAIM on the server-only job record `platform/coding-grading-jobs/<jobId>.json` (ETag CAS):
+
+```
+delivery: { state: "delivering" | "received" | "failed", attempt, leaseOwner, leaseExpiresAt, claimedAt,
+            lastDeliveryAt, lastDeliveryCode, lastDeliveryErrorClass }
+```
+
+- a claim is refused while another dispatcher holds an unexpired lease (`coding.runner.delivery.duplicate`), or when the job is
+  `complete` / `superseded` / of another revision; contention on the ETag re-reads (≤ 4 tries);
+- lease TTL 30 s (> the 8 s dispatch timeout); an expiry claimed more than 2 min ahead is ignored — a crashed dispatcher
+  delays the job by seconds, never strands it;
+- the lease is released with the outcome (`ACCEPTED` / `DUPLICATE` / the technical code, and an error class: network, busy,
+  unavailable, auth, conflict, config, protocol); release failure is harmless (expiry);
+- no delivery field is written to the attempt; nothing of it reaches a student; no source, tests, keys or signatures.
+
+`attempt` counts deliveries per job; the number of automatic deliveries stays bounded by the 17D-A recovery policy (8 per
+manual reset). Each revision has its own job record, so its delivery lifecycle is isolated (DD6).
+
+## B2.5 Revision authority
+
+`jobId` already binds the revision. The signed runner request now also carries `revision` and an opaque `targetRef`
+(`tr_` + SHA-256 of the target identity, 40 hex): the runner refuses an older revision of a target after a newer one
+(`STALE_REVISION`) and supersedes a queued older one; same jobId with another revision is `JOB_ID_CONFLICT`. The API still decides
+authority on every callback (stale revision / job / grading key → `409 STALE_RESULT`). Only `regradeTarget(force)` creates a
+revision; recovery and retries stay on the same revision and job id.
+
+## B2.6 Failure matrix
+
+| # | Crash / fault | Behaviour | Test |
+|---|---|---|---|
+| CR1 | runner never accepts (down, 503, refused) | target stays `retryable`; lease released (`failed`, error class); next delivery succeeds | CR1 (API), CR1r (runner: unjournaled → 503) |
+| CR2 | accepted, not started | re-run once after restart, one callback | CR2, RR1, D2 |
+| CR3 | during execution | interrupted → re-run (bounded); then `RUNNER_INTERRUPTED`; one callback | CR3, RR1, D2 |
+| CR4 | executed, callback not delivered | durable result called back after restart, **no re-execution**, same bytes | CR4, RR2, D1 |
+| CR5 | callback applied, response lost | retried → `alreadyApplied` → confirmed; applied once | CR5, RR3, CB4 |
+| CR6 | duplicate while running | one execution | CR6 |
+| CR7 | duplicate after execution | no re-execution; immediate callback retry | CR7 |
+| CR8 | duplicate after confirmation | acknowledged, nothing runs or is sent (also after restart) | CR8 |
+| CR9 | older revision after newer | refused / superseded, durable across restarts | CR9, DD5 |
+| CR10 | restart during callback backoff | attempts and `nextAt` preserved; window bounded | CR10, CB3 |
+| — | corrupt record / tampered result | quarantined; never executed or called back | JC1, JC2 |
+| — | disk cannot write at receive | 503 `RUNNER_BUSY`, nothing runs | CR1r, J2 |
+
+## B2.7 Bounds
+
+| Bound | Value |
+|---|---|
+| journal records (admission refused beyond) | 1024 |
+| startup / maintenance scan | ≤ 2048 directory entries per walk |
+| live jobs (received + running) | `RUNNER_OFFICIAL_MAX_PENDING` (1..64, default 8) |
+| quarantine | ≤ 256 files |
+| retention | confirmed 24 h; `callback_failed` / superseded / target index 7 days; ≤ 64 removals per pass (every 60 s) |
+| record / input / result size | 64 KB / 3 MB / 8 MB |
+| callback | 8 attempts per window, backoff 2 s → 10 min cap, ≤ 8 re-arms, concurrency 2 |
+| execution | ≤ 2 interruption re-runs, ≤ 3 generations, existing job hard wall (≤ 20 min) |
+| API delivery lease | 30 s TTL, ignored beyond 2 min ahead, ≤ 4 CAS tries per claim |
+| diagnostic text | telemetry carries ids, states, counts, status codes, error classes only (bounded lines) |
+
+## B2.8 Telemetry
+
+API: `coding.runner.delivery.claimed`, `coding.runner.delivery.duplicate`, `coding.runner.delivery.release.failed`.
+Runner: `coding.runner.delivery.duplicate`, `coding.runner.delivery.stale`, `coding.runner.execution.started | resumed |
+interrupted | superseded | regenerated`, `coding.runner.callback.retry | confirmed | failed | rearmed`,
+`coding.runner.journal.corrupt | truncated | orphans | write-failed | recovered`. Identifiers are the opaque job id only; never
+source, hidden tests, output, keys or signed payloads (LK1). `queue.status()` exposes aggregate counts for operations; there is
+no new route and no UI.
+
+## B2.9 Backward compatibility and migration
+
+- **Deploy the runner first.** It accepts both the 17C request shape and the new one (`revision` + `targetRef` together or
+  not at all). An API with B2 against a 17C runner gets `400` (extra keys) → `retryable EXECUTION_FAILED` → recovered once the
+  runner is upgraded.
+- No migration: job records without `delivery` are initialised lazily on the next claim; pending / retryable / exhausted
+  targets keep their 17D-A recovery metadata; complete targets are never touched; a runner restarting with an empty journal
+  simply receives re-dispatches (17D-A stale window).
+- 17C behaviour change: a duplicate delivery of a job whose callback SmartAssess already **confirmed** is acknowledged without
+  re-sending the result (the 17C RAM cache re-sent it); an unconfirmed result is retried from the journal instead.
+
+## B2.10 Production configuration (runner VM)
+
+1. Create a directory on the OS disk or a managed data disk, e.g. `/var/lib/smartassess-runner/journal`, owned by the gateway
+   service user (`0700`). Never `/tmp`, `/run`, `/dev/shm`, `/mnt`/`/mnt/resource` (Azure temp disk) or a container layer.
+2. Set `RUNNER_JOURNAL_DIR` in the gateway service environment (secrets stay in the existing secret settings — the journal
+   holds none). Do not set `RUNNER_JOURNAL_ALLOW_EPHEMERAL` in production.
+3. Restart the gateway; the `runner.gateway.started` event must show `officialGrading.journal: "durable"` and
+   `officialGrading.enabled: true`. One gateway process per journal directory.
+4. Back-up is not required (the API is the authority); the disk only needs to survive restarts and redeploys.
+
+## B2.11 Tests
+
+| Suite | Tests | Covers |
+|---|---|---|
+| `api/tests/coding-17d-b2-delivery.test.js` | 9 | DD1 durable claim before send, bounded expiry · DD2 4 concurrent dispatchers → 1 runner request · DD3 crashed dispatcher's lease blocks only until expiry; a far-future lease is ignored · DD4 same job / revision idempotent, attempts counted · DD5 older revision never delivered after force regrade, late result refused, signed revision ordering · DD6 newer revision's delivery isolated from a stuck older lease · DD7 no source / tests / expected outputs / keys / signatures in job record, delivery state, attempt or logs; opaque `targetRef` · CR1 runner down / busy → recoverable, lease released · CB4 the same callback re-sent 3× applies once; after force regrade it is refused |
+| `runner/tests/unit/crash-recovery.rtest.js` | 13 | CR1r (unjournaled → 503, nothing runs), CR2–CR10 (in-process restarts over the same journal), **RR1–RR3 real gateway processes (production `startGateway()`) killed with SIGKILL** before execution / after execution with a failing callback / after an applied callback whose response was lost |
+| `runner/tests/unit/durable-delivery.rtest.js` | 13 | JK1 fail-closed configuration (tmpfs, overlay, Azure resource disk, override) · J1 durable-before-202, 0600 / 0700, idempotent receive · J2 HTTP mapping incl. `409 STALE_REVISION`, `503` on journal failure · CB1 retryable failures back off (capped) · CB1b single classified attempt · CB2 permanent failure parks, bounded re-arms · CB3 retry state survives restart · JC1 corrupt record quarantined · JC2 tampered result quarantined · BD1 bounded startup scan · BD2 bounded admission · BD3 bounded retention pruning · LK1 no leakage, inputs / results released |
+| `runner/tests/docker-official/restart.rtest.js` | 2 | **D1 / D2: the real `gateway/main.js` + real Docker sandboxes, SIGKILL + restart**: callback from the journal without re-execution; waiting job run once, interrupted job re-run, containers of the dead process swept |
+
+Updated (contract extensions, reviewed): 17C secrecy test pins the new exact request shape (`revision`, opaque `targetRef`);
+17D-A R32 pins the classified dispatch result (`errorClass`); the 17B guard's gateway file list includes `journal.js` (still
+scanned for exec primitives); the 17C runner F-tests run on a journaled queue (F2 now asserts that a CONFIRMED result is not
+re-sent); RK4 requires a durable journal for official grading; the G8 Docker end-to-end runs a journaled queue.
+
+**Fail-first on `a6e26ac` (unchanged source):** API 8 failed / 1 passed (CB4 already held — the callback idempotency of 17C,
+re-proved for the B2 lifecycle; DD2 exposed 4 runner requests from 4 concurrent dispatchers); runner crash-recovery 13 / 13
+failed (no `journal.js`; RR1–RR3: the production entry point had no restart recovery); runner durable-delivery 13 / 13 failed;
+Docker D1 / D2 failed (`waitFor timed out` — no journal record was ever written, a restarted gateway had nothing to recover).
+
+## B2.12 Mutations
+
+Each mutation is applied by an anchored replacement, killed by the named test, restored byte-for-byte (asserted), with a
+fingerprint of `git status` + `git diff` + every untracked file's SHA-256 identical before and after the campaign.
+
+| # | Mutation | Killed by |
+|---|---|---|
+| DM1 | no durable record before the 202 | CR2 (the waiting job is lost across the restart) |
+| DM2 | mark the callback confirmed when the attempt is reserved (before the ACK) | CR4 |
+| DM3 | re-execute EXECUTED jobs after a restart (input kept, executed treated as interrupted) | CR4 |
+| DM4 | ignore a duplicate of the same job / revision | CR6 (second execution) |
+| DM5 | accept a stale older revision | CR9 |
+| DM6 | remove the API delivery lease check | DD2 (4 runner requests) |
+| DM7 | the API delivery lease never expires | DD3 (a crashed dispatcher strands the job) |
+| DM8 | reset the callback attempt count on restart | CR10 (attempts exceed the window) |
+| DM9 | drop result persistence (hash only) | CR4 |
+| DM10 | retry a permanent callback failure | CB2 |
+| DM11 | remove the startup scan bound | BD1 |
+| DM12 | log the source and hidden-test cases | LK1 |
+
+**12 / 12 killed.**

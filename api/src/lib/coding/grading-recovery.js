@@ -148,7 +148,7 @@ async function recoverTarget(container, item, deps, policy, nowMs) {
   }, deps);
   if (!claimed) return "skipped";
   const out = await ensureCodingGradingJobs(container, item.ids, deps, { targets: [item.targetKey], states: [claimedState], expect: { revision: item.revision, jobId: item.jobId } });
-  if (!out[0]) return "skipped";                                     // completed / superseded between the claim and the dispatch
+  if (!out[0] || out[0].deliverySkipped) return "skipped";           // completed / superseded meanwhile, or another dispatcher holds the delivery lease (17D-B2)
   return out[0].state === "dispatched" ? "dispatched" : "retryable";
 }
 

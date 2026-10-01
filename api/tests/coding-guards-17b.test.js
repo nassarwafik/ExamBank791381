@@ -31,7 +31,7 @@ const isTest = f => /(^|\/)tests\/|\.test\.|\.rtest\.|\.d\.ts$/.test(f);
 
 // Phase 17C deliberately adds official.js (the bounded official grading queue) and callback.js (signed evidence delivery); neither
 // may start a process — child_process stays confined to sandbox.js (asserted below).
-const RUNNER_GATEWAY = ["runner/gateway/main.js", "runner/gateway/server.js", "runner/gateway/auth.js", "runner/gateway/registry.js", "runner/gateway/validate.js", "runner/gateway/sandbox.js", "runner/gateway/official.js", "runner/gateway/callback.js"];
+const RUNNER_GATEWAY = ["runner/gateway/main.js", "runner/gateway/server.js", "runner/gateway/auth.js", "runner/gateway/registry.js", "runner/gateway/validate.js", "runner/gateway/sandbox.js", "runner/gateway/official.js", "runner/gateway/callback.js", "runner/gateway/journal.js"];
 const RUNNER_FILES = [...RUNNER_GATEWAY, "runner/workers/supervisor.py", "runner/workers/python/Dockerfile", "runner/workers/java/Dockerfile", "runner/workers/csharp/Dockerfile", "runner/workers/python/toolchain.json", "runner/workers/java/toolchain.json", "runner/workers/csharp/toolchain.json", "runner/package.json", "runner/README.md", "runner/scripts/build-images.sh"];
 const API_FILES = ["api/src/functions/coding-run.js", "api/src/lib/coding/execution-provider.js", "api/src/lib/coding/runner-config.js", "api/src/lib/coding/runner-protocol.js", "api/src/lib/coding/run-rate-limit.js"];
 const CLIENT_FILES = ["src/coding/codingRunClient.ts", "src/questionTypes/student/CodingResponse.tsx", "src/questionTypes/studentAttemptContext.ts"];
