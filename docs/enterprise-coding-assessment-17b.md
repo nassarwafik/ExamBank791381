@@ -248,8 +248,10 @@ the runtime's own working memory). It is **not** claimed that a program is held 
 Python = `(64 + 64) MB`. RF1 Java child → `child-exit=137` (OOM-killed by the runtime cgroup), no sentinel. RF2 C# child →
 `child-exit=137`, no sentinel. RF3 C# native → `runtime-error` (exit 137), no sentinel. RF4 / RF5 normal programs at 64 MB
 succeed; RF6 compilation of a 400-method source at the minimum `memoryMb = 16` succeeds while the program's ceiling stays below
-the compile allowance; RF7 no container / host temporary entry remains after success, memory failure, timeout and compile
-failure; RF8 80 % of 256 / 512 MB succeeds.
+the compile allowance; RF7 no sandbox container remains and the gateway process performs no host-filesystem write after
+success, memory failure, timeout and compile failure (the proof is scoped to resources the runner owns — a labelled / named
+container and the gateway's own filesystem calls — not to a diff of the shared host's `os.tmpdir()`, which systemd / apport /
+Docker / the CI runner change on their own; `runner/tests/helpers/host-fs-guard.js`); RF8 80 % of 256 / 512 MB succeeds.
 
 **Mutation proof.** Temporarily giving the runtime sandbox the compile allowance again
 (`Math.max(compileMemoryMb, memoryMb + overhead)`) makes RF-C, RF1, RF2, RF3 and RF6 fail on real Docker (the 480 MB child
