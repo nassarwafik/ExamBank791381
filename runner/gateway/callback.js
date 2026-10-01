@@ -24,6 +24,10 @@
 // Delivery is at-least-once: bounded retries with exponential backoff on a network error / timeout / 5xx / 408 / 429; any other
 // response (2xx accepted, 4xx stale / unknown / malformed) is final. Redirects are refused. The key, the body (which contains
 // the program's stdout / stderr) and the signature are never logged.
+// Phase 17D-B2: attempt() is ONE signed attempt that CLASSIFIES the answer (the durable official queue owns retries, backoff and
+// their persistence): { delivered: true, status, confirmedAs: "complete" | "retryable" } from SmartAssess's bounded 2xx body
+// ({ applied, state } / { alreadyApplied }), or { delivered: false, retryable, status?, errorClass: "network" | "timeout" |
+// "http" | "protocol" }. Each attempt is freshly signed (new timestamp + request id) over the SAME body bytes.
 const crypto = require("node:crypto");
 
 const CALLBACK_PROTOCOL = "SA-CODING-CALLBACK-1";
@@ -78,32 +82,60 @@ function encodeCallbackBody(result) {
 const RETRYABLE = status => status >= 500 || status === 408 || status === 429;
 const backoffMs = attempt => Math.min(30000, 1000 * 2 ** (attempt - 1));
 
+const RESPONSE_MAX_BYTES = 4096;
+async function readSmall(res) {
+  try {
+    if (!res.body || typeof res.body.getReader !== "function") { const t = await res.text(); return Buffer.byteLength(t, "utf8") > RESPONSE_MAX_BYTES ? "" : t; }
+    const reader = res.body.getReader(), parts = [];
+    let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > RESPONSE_MAX_BYTES) { try { await reader.cancel(); } catch { /* ignore */ } return ""; }
+      parts.push(Buffer.from(value));
+    }
+    return Buffer.concat(parts).toString("utf8");
+  } catch { return ""; }
+}
+
 function createCallbackDeliverer({ config, fetch: fetchImpl = globalThis.fetch, sleep = ms => new Promise(r => setTimeout(r, ms)), now = () => Date.now(), maxAttempts = 6, timeoutMs = 15000, logger = console }) {
   if (!config || !config.enabled || typeof config.key !== "string") throw new Error("callback delivery is not configured");
   const log = (level, event, fields) => { try { (logger[level] || logger.info).call(logger, JSON.stringify({ event, ...fields })); } catch { /* telemetry never breaks delivery */ } };
+  /** ONE freshly signed attempt; classifies the outcome; never throws. */
+  async function attempt(result) {
+    let body;
+    try { body = encodeCallbackBody(result); } catch { return { delivered: false, retryable: false, errorClass: "protocol" }; }
+    const raw = Buffer.from(body, "utf8");
+    const requestId = "cb_" + crypto.randomBytes(18).toString("base64url");
+    const headers = { "content-type": "application/json; charset=utf-8", ...signCallbackRequest({ key: config.key, timestamp: Math.floor(now() / 1000), requestId, body: raw }) };
+    let res;
+    try { res = await fetchImpl(config.url, { method: "POST", headers, body, redirect: "error", signal: AbortSignal.timeout(timeoutMs) }); }
+    catch (e) { return { delivered: false, retryable: true, errorClass: e && (e.name === "TimeoutError" || e.name === "AbortError") ? "timeout" : "network" }; }
+    const status = res.status;
+    if (status >= 200 && status < 300) {
+      let json = null;
+      try { json = JSON.parse(await readSmall(res)); } catch { json = null; }
+      const confirmedAs = json && json.ok === true && json.applied === true && json.state === "retryable" ? "retryable" : "complete";
+      return { delivered: true, status, confirmedAs };
+    }
+    try { if (res.body && typeof res.body.cancel === "function") await res.body.cancel(); } catch { /* the response body is never needed */ }
+    return { delivered: false, retryable: RETRYABLE(status), status, errorClass: "http" };
+  }
   return {
-    /** → { delivered: boolean, attempts: number, status?: number } — never throws for a delivery failure. */
+    attempt,
+    /** In-process bounded retry loop over attempt() (17C behaviour). → { delivered, attempts, status? } — never throws. */
     async deliver(result) {
-      const body = encodeCallbackBody(result);
-      const raw = Buffer.from(body, "utf8");
+      encodeCallbackBody(result);
       let attempts = 0, lastStatus;
       while (attempts < maxAttempts) {
         attempts++;
-        const requestId = "cb_" + crypto.randomBytes(18).toString("base64url");
-        const headers = { "content-type": "application/json; charset=utf-8", ...signCallbackRequest({ key: config.key, timestamp: Math.floor(now() / 1000), requestId, body: raw }) };
-        let retry = true;
-        try {
-          const res = await fetchImpl(config.url, { method: "POST", headers, body, redirect: "error", signal: AbortSignal.timeout(timeoutMs) });
-          lastStatus = res.status;
-          try { if (res.body && typeof res.body.cancel === "function") await res.body.cancel(); } catch { /* the response body is never needed */ }
-          if (res.status >= 200 && res.status < 300) { log("info", "runner.callback.delivered", { jobId: result.jobId, attempts, status: res.status }); return { delivered: true, attempts, status: res.status }; }
-          retry = RETRYABLE(res.status);
-          log("warn", "runner.callback.rejected", { jobId: result.jobId, attempt: attempts, status: res.status, final: !retry });
-        } catch {
-          lastStatus = undefined;
-          log("warn", "runner.callback.unreachable", { jobId: result.jobId, attempt: attempts });
-        }
-        if (!retry) break;
+        const r = await attempt(result);
+        lastStatus = r.status;
+        if (r.delivered) { log("info", "runner.callback.delivered", { jobId: result.jobId, attempts, status: r.status }); return { delivered: true, attempts, status: r.status }; }
+        if (r.status !== undefined) log("warn", "runner.callback.rejected", { jobId: result.jobId, attempt: attempts, status: r.status, final: !r.retryable });
+        else log("warn", "runner.callback.unreachable", { jobId: result.jobId, attempt: attempts });
+        if (!r.retryable) break;
         if (attempts < maxAttempts) await sleep(backoffMs(attempts));
       }
       log("warn", "runner.callback.gave-up", { jobId: result.jobId, attempts, status: lastStatus });

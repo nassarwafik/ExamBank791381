@@ -33,14 +33,18 @@ async function submitted({ fetch = F.runnerFetch(), logs = [] } = {}) {
 }
 
 describe("17C-C — the official Runner request carries NO grading truth and NO identity", () => {
-  it("exact shape: {jobId, language, languageVersion, source, cases[{token, stdin}], limits{timeMs, memoryMb, outputBytes}}", async () => {
+  it("exact shape: {jobId, language, languageVersion, source, cases[{token, stdin}], limits{timeMs, memoryMb, outputBytes}, revision, targetRef (17D-B2: opaque)}", async () => {
     const { fetch } = await submitted();
     const calls = fetch.calls.filter(c => c.path === "/v1/official-grading-jobs");
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe("POST"); expect(calls[0].redirect).toBe("error");
     expect(calls[0].url).toBe("https://runner.example.test/v1/official-grading-jobs");
     const job = JSON.parse(calls[0].body);
-    expect(Object.keys(job).sort()).toEqual(["cases", "jobId", "language", "languageVersion", "limits", "source"]);
+    expect(Object.keys(job).sort()).toEqual(["cases", "jobId", "language", "languageVersion", "limits", "revision", "source", "targetRef"]);
+    // Phase 17D-B2: the revision ordering of ONE target travels as an integer + an OPAQUE hash — never an identifier
+    expect(job.revision).toBe(1);
+    expect(job.targetRef).toMatch(/^tr_[0-9a-f]{40}$/);
+    for (const id of [F.AID, F.S1, F.CLASS_ID, "auto1"]) expect(job.targetRef).not.toContain(id);
     expect(Object.keys(job.limits).sort()).toEqual(["memoryMb", "outputBytes", "timeMs"]);
     expect(job.limits).toEqual({ timeMs: 2000, memoryMb: 128, outputBytes: require_("../src/lib/shared-finalization/codingContract.js").OFFICIAL_STDOUT_CAPTURE_BYTES });
     expect(job.cases).toEqual([{ token: "c01", stdin: "1 2\n" }, { token: "c02", stdin: "-1 -2\n" }, { token: "c03", stdin: "5 5\n" }]);

@@ -247,7 +247,7 @@ describe("R32 / R34 — dispatch hardening", () => {
       expect(X.grade(ctx).manualReview, via).toBe(true);
     }
     const d = await official().dispatchOfficialJob({ jobId: "cg_" + "a".repeat(40) }, { env: { ...X.ENV, CODING_RUNNER_HMAC_KEY: SAME, CODING_GRADING_CALLBACK_HMAC_KEY: SAME }, fetch: F.runnerFetch() });
-    expect(d).toEqual({ state: "retryable", technicalCode: "EXECUTION_UNAVAILABLE" });
+    expect(d).toEqual({ state: "retryable", technicalCode: "EXECUTION_UNAVAILABLE", errorClass: "config" });                 // errorClass: Phase 17D-B2 delivery state
   });
 
   it("R34 authority is re-derived before every recovery dispatch: a changed stored answer fails closed (no runner call)", async () => {

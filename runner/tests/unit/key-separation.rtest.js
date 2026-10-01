@@ -32,10 +32,13 @@ test("RK3 equal keys + MALFORMED callback destination (not https, credentials, q
   }
 });
 
-test("RK4 separate keys + valid destination → official grading enabled; keys never enumerable", () => {
-  const c = readGatewayConfig({ RUNNER_HMAC_KEY: KEY, SMARTASSESS_CALLBACK_BASE_URL: "https://app.example.test", SMARTASSESS_CALLBACK_HMAC_KEY: CB_KEY });
+test("RK4 separate keys + valid destination (+ a durable journal, Phase 17D-B2) → official grading enabled; keys never enumerable", () => {
+  const durable = { journalProbe: { mounts: () => "/dev/vda1 / ext4 rw 0 0", resourceDevice: () => null } };
+  const env = { RUNNER_HMAC_KEY: KEY, SMARTASSESS_CALLBACK_BASE_URL: "https://app.example.test", SMARTASSESS_CALLBACK_HMAC_KEY: CB_KEY };
+  const c = readGatewayConfig({ ...env, RUNNER_JOURNAL_DIR: "/var/lib/smartassess-runner/journal" }, durable);
   assert.equal(c.official.enabled, true);
   assert.doesNotMatch(JSON.stringify(c), new RegExp(KEY + "|" + CB_KEY));
+  assert.equal(readGatewayConfig(env, durable).official.enabled, false);                     // no journal → still fail closed
 });
 
 test("RK5 separate keys + destination missing → starts with official grading DISABLED (unchanged fail-closed behaviour)", () => {

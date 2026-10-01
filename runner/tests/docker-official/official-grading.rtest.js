@@ -159,7 +159,13 @@ test("G8 end-to-end: SmartAssess dispatch → gateway (official queue) → REAL 
   });
   await new Promise(r => api.listen(0, "127.0.0.1", r));
   const cbConfig = readCallbackConfig({ SMARTASSESS_CALLBACK_BASE_URL: "http://127.0.0.1:" + api.address().port, SMARTASSESS_CALLBACK_HMAC_KEY: F.CALLBACK_KEY });
-  const queue = createOfficialGradingQueue({ sandbox: createDockerSandbox(), deliver: createCallbackDeliverer({ config: cbConfig, logger: { info() {}, warn() {} } }).deliver, logger: { info() {}, warn() {} } });
+  // Phase 17D-B2: the official queue is journaled (durable) and makes ONE callback attempt per call (attempt()); retries are its own
+  const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
+  const { createJournal } = require("../../gateway/journal.js");
+  const journal = createJournal({ dir: fs.mkdtempSync(path.join(os.tmpdir(), "sa-17c-g8-journal-")) });
+  await journal.open();
+  const queue = createOfficialGradingQueue({ sandbox: createDockerSandbox(), deliver: createCallbackDeliverer({ config: cbConfig, logger: { info() {}, warn() {} } }).attempt, journal, logger: { info() {}, warn() {} } });
+  await queue.start();
   const gateway = createGatewayServer({ key: F.RUNNER_KEY, sandbox: createDockerSandbox(), maxConcurrency: 2, logger: { info() {}, warn() {} }, officialQueue: queue });
   await new Promise(r => gateway.listen(0, "127.0.0.1", r));
   try {
@@ -179,6 +185,6 @@ test("G8 end-to-end: SmartAssess dispatch → gateway (official queue) → REAL 
     assert.equal(att.codingGrading.targets.auto1.state, "complete");
     assert.deepEqual([att.codingGrading.targets.auto1.result.passedWeight, att.codingGrading.targets.auto1.result.totalWeight], [4, 6]);
     assert.equal(att.score, 6.67); assert.equal(att.finalized, true);
-  } finally { gateway.close(); api.close(); }
+  } finally { queue.stop(); await journal.close(); gateway.close(); api.close(); }
   assert.equal(orphans(), "");
 });
