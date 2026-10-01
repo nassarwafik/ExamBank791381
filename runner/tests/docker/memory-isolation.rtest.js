@@ -5,13 +5,19 @@
 // NATIVE memory. Only the container's cgroup ceiling bounds the whole process tree, so these tests attack exactly that:
 //   RF1 Java child process · RF2 C# child process · RF3 C# unmanaged allocation · RF-C cgroup ceiling read from INSIDE the
 //   student program (runtime ceiling < old compile ceiling) · RF4 / RF5 normal programs still work · RF6 compilation keeps a
-//   bounded compile allowance that the program never gets · RF7 no container / host artifact left behind in any outcome.
+//   bounded compile allowance that the program never gets · RF7 no sandbox container and no gateway host write left behind in
+//   any outcome.
+// RF7 proves what the runner OWNS: (a) `docker ps -a --filter label=…` (and the sa-coding-* name) is empty after every outcome,
+// (b) the gateway process performs no host-filesystem write / temp call while the real executions run (the artifact stays in
+// gateway memory, see tests/helpers/host-fs-guard.js). It no longer diffs the host's whole os.tmpdir(): on a shared CI host
+// systemd / apport / Docker / the Actions runner create temp entries of their own (main run 36840521927 failed on a
+// `systemd-private-…-apport-coredump-hook@…` directory that no SmartAssess code created).
 // Requires Docker and the built worker images (a missing daemon / image FAILS).
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const os = require("node:os");
 const { spawnSync } = require("node:child_process");
+const { installHostWriteGuard } = require("../helpers/host-fs-guard.js");
+const hostWrites = installHostWriteGuard();            // BEFORE the gateway module loads, so even destructured fs imports are wrapped
 const { createDockerSandbox } = require("../../gateway/sandbox.js");
 const { resolveLanguage } = require("../../gateway/registry.js");
 
@@ -23,6 +29,7 @@ const sandbox = createDockerSandbox();
 let n = 0;
 const run = (language, source, limits = {}, stdin = "") => sandbox.run(resolveLanguage(language, 1), { requestId: "req_mem_" + (++n), language, languageVersion: 1, source, stdin, limits: { ...LOW, ...limits } });
 const orphans = () => spawnSync("docker", ["ps", "-aq", "--filter", "label=smartassess.coding-runner=1"], { encoding: "utf8" }).stdout.trim();
+const namedLeftovers = () => spawnSync("docker", ["ps", "-a", "--filter", "name=^sa-coding-", "--format", "{{.Names}}"], { encoding: "utf8" }).stdout.trim();
 const childPy = "x = b'x' * (" + CHILD_MB + " * 1024 * 1024); print('CHILD-ALLOCATED', len(x) // 1048576)";
 
 // The cgroup memory ceiling as the STUDENT PROGRAM sees it (cgroup v2: memory.max, v1: memory.limit_in_bytes).
@@ -105,17 +112,24 @@ test("RF8 the fixed runtime overhead is sufficient: each language can use 80 % o
   }
 });
 
-test("RF7 no container and no host artifact is left behind after success, memory failure, timeout and compile failure", async () => {
-  const tmpBefore = new Set(fs.readdirSync(os.tmpdir()));
-  const outcomes = [
-    await run("java", "public class Main { public static void main(String[] a) { System.out.println(1); } }\n"),
-    await run("csharp", "var l = new System.Collections.Generic.List<byte[]>(); while (true) l.Add(new byte[1 << 20]);\n"),
-    await run("java", "public class Main { public static void main(String[] a) { while (true) {} } }\n", { timeMs: 1000 }),
-    await run("csharp", "int x = ;\n"),
-    await run("java", "public class Main { int x = ; }\n")
+test("RF7 no sandbox container and no gateway host write is left behind after success, memory failure, timeout and compile failure", async () => {
+  const cases = [
+    ["java", "public class Main { public static void main(String[] a) { System.out.println(1); } }\n", {}, "success"],
+    ["csharp", "var l = new System.Collections.Generic.List<byte[]>(); while (true) l.Add(new byte[1 << 20]);\n", {}, "runtime-error"],
+    ["java", "public class Main { public static void main(String[] a) { while (true) {} } }\n", { timeMs: 1000 }, "timeout"],
+    ["csharp", "int x = ;\n", {}, "compile-error"],
+    ["java", "public class Main { int x = ; }\n", {}, "compile-error"]
   ];
-  assert.deepEqual(outcomes.map(r => r.status), ["success", "runtime-error", "timeout", "compile-error", "compile-error"]);
-  assert.equal(orphans(), "");
-  const leaked = fs.readdirSync(os.tmpdir()).filter(f => !tmpBefore.has(f));
-  assert.deepEqual(leaked, [], "new host temp entries: " + leaked.join(", "));
+  assert.equal(orphans(), "", "labelled sandbox containers already present before RF7"); assert.equal(namedLeftovers(), "");
+  hostWrites.reset();                                   // the ownership-scoped window: what THIS gateway process does from here on
+  const statuses = [];
+  for (const [language, source, limits, expected] of cases) {
+    statuses.push((await run(language, source, limits)).status);
+    // (a) runtime cleanup, after EVERY outcome: no container carries the runner label or the sandbox name prefix
+    assert.equal(orphans(), "", "labelled sandbox container left behind after " + expected + " (" + language + ")");
+    assert.equal(namedLeftovers(), "", "sa-coding-* container left behind after " + expected + " (" + language + ")");
+  }
+  assert.deepEqual(statuses, cases.map(c => c[3]));
+  // (b) host filesystem: the gateway wrote nothing to the host while compiling / running — the artifact stayed in memory
+  assert.deepEqual(hostWrites.summary(), [], "the gateway touched the host filesystem during real executions");
 });
