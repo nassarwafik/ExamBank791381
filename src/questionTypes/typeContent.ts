@@ -37,6 +37,14 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
     if (isObj(cfg)) for (const list of Object.values(cfg)) if (Array.isArray(list) && list.some(e => isObj(e) && text(e.label))) return true;
   }
   const answer = isObj(node.answer) ? node.answer : {};
+  // Phase 17A — coding: starter code, public samples, hidden tests or reference solutions are authored content.
+  if (isObj(node.coding)) {
+    const c = node.coding;
+    if (isObj(c.starterCode) && Object.values(c.starterCode).some(v => text(v))) return true;
+    if (Array.isArray(c.publicTests) && c.publicTests.length) return true;
+  }
+  if (Array.isArray(answer.hiddenTests) && answer.hiddenTests.length) return true;
+  if (isObj(answer.referenceSolutions) && Object.values(answer.referenceSolutions).some(v => text(v))) return true;
   if (Array.isArray(answer.correctOptionIds) && answer.correctOptionIds.length) return true;
   if (isObj(answer.correctColumnByRow) && Object.keys(answer.correctColumnByRow).length) return true;
   if (isObj(answer.correctCategoryByItem) && Object.keys(answer.correctCategoryByItem).length) return true;

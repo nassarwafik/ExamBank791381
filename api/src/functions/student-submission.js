@@ -139,7 +139,7 @@ async function handler(request,deps={},obs=null){
   if(action==="saveDraft"){
    const rej=writeRejection(a,s,"saveDraft",Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
-   const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{}).answers; // Phase 16B-A — bounded simulation states
+   const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{},a.examSnapshot||null).answers; // Phase 16B-A — bounded simulation states; 17A — code answers bound to the published coding question
    let savedAt="",finalState=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
@@ -179,7 +179,7 @@ async function handler(request,deps={},obs=null){
   if(action==="submit"){
    const rej=writeRejection(a,s,"submit",Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
-   const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{}).answers,now=new Date().toISOString(); // Phase 16B-A — bounded simulation states
+   const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{},a.examSnapshot||null).answers,now=new Date().toISOString(); // Phase 16B-A — bounded simulation states; 17A — code answers bound to the published coding question
    let resultAttempt=null,finalState=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
@@ -281,7 +281,7 @@ async function handler(request,deps={},obs=null){
   if(action==="pauseAttempt"){
    const rej=pauseRejection(a,s,Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
-   const answers=b.answers&&typeof b.answers==="object"?b.answers:null;
+   const answers=b.answers&&typeof b.answers==="object"?normalizeDraftAnswers(b.answers,a.examSnapshot||null).answers:null; // Phase 17A — the pause path bounds / binds answers like saveDraft / submit
    let finalState=null,already=false;
    try{
     await maybeLock(()=>mut(c,name,async current=>{

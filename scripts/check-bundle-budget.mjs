@@ -15,6 +15,8 @@
 //      the initial graph carries any registered SVG visual implementation, the visuals are not emitted behind lazy
 //      edges of the Reader in several small trusted group chunks, or fewer than the registered 122 implementations
 //      are shipped (signature: the `preserveAspectRatio:` prop every registered visual sets on its root <svg>);
+//   8. (Phase 17A) the coding editor / coding panels reach the initial graph (content signatures of CodingEditor and the
+//      coding renderer / authoring editor: they must ship only behind the registries' lazy edges);
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -36,6 +38,8 @@ const PLATFORM_SIGNATURES = ["eb-students-workspace", "eb-students-layout", "ج�
 // StudentPortal-only: its task-list / notice / assignment-list class names and the task-filter group label (each
 // occurs in no other source file and, in the real build, in no other chunk). Two of four are required.
 const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-list", "تصفية المهام"];
+// Phase 17A — CodingEditor / coding renderer / authoring editor class names (used nowhere else). ANY one in an initial file fails.
+const CODING_SIGNATURES = ["cx-code-input", "cx-code-gutter", "coding-run-unavailable", "qt-editor-coding"];
 // Phase 8E-6 — learning visuals. Every registered SVG visual root sets `preserveAspectRatio`, so the count of that prop in
 // a chunk is the number of visual implementations it carries (0 everywhere on the startup + first-Reader path).
 const VISUAL_IMPL_SIGNATURE = /preserveAspectRatio:/g;
@@ -106,7 +110,11 @@ function main() {
     if (dash.length) failures.push(`${f} (initial) contains the Teacher Dashboard payload (${dash.join(", ")})`);
     if (platform.length >= 2) failures.push(`${f} (initial) contains the Teacher Platform payload (${platform.join(", ")})`);
     if (portal.length >= 2) failures.push(`${f} (initial) contains the Student Portal payload (${portal.join(", ")})`);
+    const coding = CODING_SIGNATURES.filter(s => src.includes(s));
+    if (coding.length) failures.push(`${f} (initial) contains the coding editor payload (${coding.join(", ")}) — it must stay lazy`);
   }
+  const codingChunks = all.filter(f => CODING_SIGNATURES.some(s => read(f).includes(s)));
+  console.log(`Coding editor payload found in: ${codingChunks.join(", ") || "(none)"} — ${codingChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const chartChunks = all.filter(f => CHART_SIGNATURES.filter(s => read(f).includes(s)).length >= 3);
   console.log(`Chart.js payload found in: ${chartChunks.join(", ") || "(none)"} — ${chartChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   console.log(`Teacher Dashboard chunk: ${dashboardChunks.join(", ") || "(missing)"}`);

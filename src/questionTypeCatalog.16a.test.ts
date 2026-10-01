@@ -20,7 +20,7 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LEGACY = ["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"];
 const LEGACY_LABELS: Record<string, string> = { multipleChoice: "اختيار من متعدد", trueFalse: "صح أو خطأ", multiTrueFalse: "صح/خطأ متعدد", shortAnswer: "إجابة قصيرة / مفتوحة", fillBlank: "إكمال فراغات", wordBank: "مخزن كلمات", matching: "مطابقة", ordering: "ترتيب", tableFill: "إكمال جدول", cliFill: "أوامر CLI", compound: "سؤال مركّب" };
 const WAVE1 = ["multipleSelect", "numericResponse", "matrix", "categorization"];
-const UNIVERSAL = ["simulation"];                                                                   // 16B-A — the one universal simulation type
+const UNIVERSAL = ["simulation", "coding"];                                                         // 16B-A simulation · 17A coding
 
 describe("16A A1 — one canonical, React-free, code-owned Question Type Catalog", () => {
   it("lists the 11 legacy types first (stable order) followed by the four Wave 1 types; frozen; every entry carries identity, version, label, category, grading mode and the capability contract", () => {

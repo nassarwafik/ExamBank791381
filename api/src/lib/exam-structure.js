@@ -124,6 +124,9 @@ function isResponseAnswered(a) {
       if (typeof s === "string") return s.trim() !== "";
       return typeof s === "number" ? Number.isFinite(s) : typeof s === "boolean";
     }
+    // Phase 17A — a code answer counts when its source has non-whitespace text (mirror of answerState.ts).
+    case "code":
+      return typeof a.source === "string" && a.source.trim() !== "";
     default:
       return false;
   }

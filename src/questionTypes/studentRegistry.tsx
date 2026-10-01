@@ -35,3 +35,5 @@ registerStudentRenderer("matrix", 1, lazy(() => import("./student/MatrixResponse
 registerStudentRenderer("categorization", 1, lazy(() => import("./student/CategorizationResponse")));
 // Phase 16B-A — the sandboxed simulation host (lazy: loaded only when a simulation question is rendered).
 registerStudentRenderer("simulation", 1, lazy(() => import("./student/SimulationResponse")));
+// Phase 17A — the coding response + CodingEditor (lazy: loaded only when a coding question is rendered; student AND preview).
+registerStudentRenderer("coding", 1, lazy(() => import("./student/CodingResponse")));

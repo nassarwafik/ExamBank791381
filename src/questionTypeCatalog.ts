@@ -58,7 +58,10 @@ const PRODUCTION_ROWS = [
   ["categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"], false],
   // Phase 16B-A — ONE universal interactive type: a sandboxed, teacher-uploaded simulation package (simulation@1). Manual-review
   // only in 16B-A (uploaded code never grades); not a compound part (V1 decision, documented); interactive; offline-capable.
-  ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false]
+  ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false],
+  // Phase 17A — ONE generic coding type (coding@1): the student writes ONE source file in a teacher-allowed language (language
+  // is data, never a type). Designed hybrid; in 17A the official grade is MANUAL (no trusted executor yet, autoGrading false).
+  ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
  *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */

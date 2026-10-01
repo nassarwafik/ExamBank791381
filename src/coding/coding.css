@@ -1,0 +1,62 @@
+/* Phase 17A — coding engine UI (lazy chunk only). The surrounding UI stays RTL; source areas are always LTR + monospace.
+   Horizontal scrolling happens INSIDE the editor / viewer only — the exam page never overflows horizontally. */
+.cx-coding { display: grid; gap: 12px; min-width: 0; }
+.cx-coding-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cx-coding-toolbar label { display: inline-flex; align-items: center; gap: 6px; }
+.cx-coding-toolbar select, .cx-coding-toolbar button, .cx-run-button { min-height: 44px; }
+.cx-lang-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--eb-border, #cbd5e1); font: 600 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; direction: ltr; }
+
+.cx-code-editor { direction: ltr; text-align: left; display: grid; gap: 4px; min-width: 0; }
+.cx-code-frame { display: grid; grid-template-columns: auto minmax(0, 1fr); border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; overflow: hidden; background: var(--eb-surface, #fff); }
+.cx-code-frame:focus-within { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: 2px; }
+.cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter {
+  margin: 0; padding: 10px 12px; font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; tab-size: 4;
+}
+.cx-code-gutter, .cx-code-view-gutter { min-width: 3ch; padding-inline: 8px; text-align: right; color: var(--eb-muted, #64748b); background: var(--eb-surface-2, #f8fafc); border-inline-end: 1px solid var(--eb-border, #e2e8f0); white-space: pre; overflow: hidden; user-select: none; }
+.cx-code-input { display: block; width: 100%; min-height: 12rem; max-height: 70vh; resize: vertical; border: 0; outline: none; background: transparent; color: inherit; white-space: pre; overflow: auto; direction: ltr; text-align: left; }
+.cx-code-input[readonly] { background: var(--eb-surface-2, #f8fafc); }
+.cx-code-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--eb-muted, #64748b); direction: rtl; }
+.cx-code-size.is-near { color: var(--eb-warning, #b45309); font-weight: 600; }
+.cx-code-alert { color: var(--eb-danger, #b91c1c); font-size: 13px; direction: rtl; }
+
+.cx-samples { display: grid; gap: 8px; }
+.cx-sample { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.cx-io-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 8px; }
+.cx-io-block { display: grid; gap: 2px; min-width: 0; }
+.cx-io-block pre, .cx-result pre { margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--eb-surface-2, #f8fafc); direction: ltr; text-align: left; white-space: pre; overflow: auto; max-height: 14rem; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.cx-run-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); font-size: 13px; }
+.cx-result { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.cx-result-status::before { content: "● "; }
+.cx-result[data-status="success"] .cx-result-status { color: var(--eb-success, #15803d); }
+.cx-result:not([data-status="success"]) .cx-result-status { color: var(--eb-danger, #b91c1c); }
+
+/* Teacher authoring */
+.cx-author { display: grid; gap: 14px; }
+.cx-author fieldset { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.cx-author legend { font-weight: 700; padding-inline: 4px; }
+.cx-lang-grid { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.cx-lang-grid label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.cx-inspector { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--eb-surface-2, #f8fafc); font-size: 13px; }
+.cx-help { margin: 0; font-size: 13px; color: var(--eb-muted, #475569); }
+.cx-test-row { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.cx-test-row.is-private { border-style: dashed; }
+.cx-test-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.cx-test-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.cx-test-actions button { min-height: 36px; min-width: 36px; }
+.cx-private-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid currentColor; }
+.cx-io { width: 100%; min-height: 4.5rem; direction: ltr; text-align: left; white-space: pre; overflow: auto; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.cx-limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 8px; }
+.cx-limits label { display: grid; gap: 2px; font-size: 13px; }
+
+/* Teacher review (read-only source) */
+.cx-code-view-wrap { direction: ltr; text-align: left; display: grid; gap: 6px; min-width: 0; }
+.cx-code-view-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; direction: rtl; }
+.cx-code-view-body { display: grid; grid-template-columns: auto minmax(0, 1fr); max-height: 28rem; overflow: auto; border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; }
+.cx-code-view { white-space: pre; overflow: visible; }
+.cx-code-view:focus-visible { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: -3px; }
+.cx-key-summary { display: grid; gap: 6px; direction: rtl; font-size: 13px; }
+
+@media (max-width: 600px) {
+  .cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter { font-size: 13px; padding: 8px; }
+  .cx-code-input { min-height: 10rem; }
+}
