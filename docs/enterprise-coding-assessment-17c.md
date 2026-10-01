@@ -292,7 +292,8 @@ No supervisor stays alive next to student code. Setup failure exits `125` with n
 
 - `SMARTASSESS_CALLBACK_BASE_URL`: `https://` only (plain `http://` only for a loopback host); no credentials, path, query
   or fragment.
-- `SMARTASSESS_CALLBACK_HMAC_KEY`: ≥ 32 characters, and different from `RUNNER_HMAC_KEY`.
+- `SMARTASSESS_CALLBACK_HMAC_KEY`: ≥ 32 characters, and different from `RUNNER_HMAC_KEY`. If both raw secrets are set and
+  equal, the gateway **refuses to start**, whether or not the callback URL is valid (Review Fix 1, §20).
 
 Missing or invalid configuration fails closed: the official endpoint answers `503 GRADING_UNAVAILABLE`.
 
@@ -371,7 +372,9 @@ old revision after a force regrade (E3, E4).
 **Order of checks**
 
 1. Unsigned request: `401`.
-2. Callback key not configured, or equal to the runner key: `503 GRADING_UNAVAILABLE` (fail closed).
+2. Callback key not configured, or equal to the runner request-signing key: `503 GRADING_UNAVAILABLE` (fail closed).
+   The equality check compares the two **raw configured secrets** byte-for-byte (`lib/coding/hmac-key-separation.js`). It
+   does not depend on the runner URL, the `CODING_RUNNER_ENABLED` kill switch or runner validity (Review Fix 1, §20).
 3. Signature check (`SA-CODING-CALLBACK-1`): HMAC-SHA256 over protocol, method, the **fixed** path, timestamp (±300 s),
    request id and SHA-256 of the exact body, compared in constant time. Failure: `401`.
 4. Body bounded to 8 MB and strictly validated: exact keys at every level, `jobId` pattern, `outcome` enum, token
@@ -501,7 +504,7 @@ no second feed post (E2).
 | where | setting | purpose |
 |---|---|---|
 | API | `CODING_RUNNER_URL`, `CODING_RUNNER_HMAC_KEY` | existing 17B runner seam (request signing) |
-| API | `CODING_GRADING_CALLBACK_HMAC_KEY` | **new** — verifies callbacks; must differ from the runner key |
+| API | `CODING_GRADING_CALLBACK_HMAC_KEY` | **new** — verifies callbacks; must differ from `CODING_RUNNER_HMAC_KEY` (checked on the raw secrets, whatever the runner URL or kill switch) |
 | Runner | `RUNNER_HMAC_KEY` | existing — verifies API requests |
 | Runner | `SMARTASSESS_CALLBACK_BASE_URL`, `SMARTASSESS_CALLBACK_HMAC_KEY` | **new** — fixed callback destination and key |
 | Runner | `RUNNER_OFFICIAL_MAX_PENDING` (1..64, 8), `RUNNER_OFFICIAL_MAX_ACTIVE` (1..4, 1), `RUNNER_OFFICIAL_CASE_CONCURRENCY` (1..4, 2) | queue bounds |
@@ -607,6 +610,11 @@ so retry from the review page afterwards.
 **Disable.** Unset the runner callback configuration (`503 GRADING_UNAVAILABLE`) or the API callback key. New targets become
 `retryable`; nothing is ever scored zero.
 
+**Stop new runner traffic only (incident response).** Set `CODING_RUNNER_ENABLED=false` in the Function App. New dispatch
+and teacher retries become `retryable · EXECUTION_UNAVAILABLE`, but a correctly separated callback key still authenticates
+results of jobs that were already dispatched, so outstanding work can still land. Never "fix" an outage by giving both
+directions the same key: equal keys always make the callback route answer `503`.
+
 ---
 
 ## 19. Phase 17D handoff
@@ -620,3 +628,61 @@ so retry from the review page afterwards.
 - **Product scope.** Teacher preview runs of hidden tests against reference solutions, partial credit per test, and per-test
   limits.
 - **Scale.** Multi-instance gateway: a shared replay guard and a shared official result cache.
+
+---
+
+## 20. Independent Security Review Fix 1 — HMAC key separation
+
+**Root cause.** At `68afc136` the callback route refused equal keys only when the runner configuration parsed as enabled:
+
+```js
+const runner = readCodingRunnerConfig(env);
+if (runner.enabled && runner.key === key) return null;
+```
+
+When the runner configuration was disabled, incomplete or malformed, `enabled` was `false` and equality was never checked.
+Examples: `CODING_RUNNER_ENABLED=false`, a missing `CODING_RUNNER_URL`, a malformed URL, a malformed kill switch.
+
+In that state, a callback signed with the API → runner **request** key was accepted as a grading result (`200`, grade
+applied). That breaks the two-key trust boundary.
+
+**Fix (API).**
+
+- `readRunnerSigningKey(env)` in `runner-config.js` returns the raw configured `CODING_RUNNER_HMAC_KEY` and nothing else.
+  It never enables the runner, and `readCodingRunnerConfig()` is unchanged.
+- `resolveCallbackKey(env)` in `hmac-key-separation.js` returns `null` when the callback key is missing or weak, **or**
+  byte-for-byte equal to the raw runner key. It never trims or case-folds.
+- The callback route uses only this authority.
+
+**Fix (Runner, defense in depth).** `readGatewayConfig` refuses startup when the raw `RUNNER_HMAC_KEY` equals the raw
+`SMARTASSESS_CALLBACK_HMAC_KEY`, regardless of callback URL validity. Before the fix, an equal key with an invalid or missing
+URL started the gateway with official grading disabled. The error message never contains a key.
+
+**Lifecycle separation (preserved).** Callback availability never depends on outbound runner availability. With separate
+keys and `CODING_RUNNER_ENABLED=false`, an already-dispatched job's signed result is still applied (§18 incident response).
+
+**Tests.**
+
+| file | covers |
+|---|---|
+| `api/tests/coding-17c-key-separation.test.js` | K1–K7, exact-bytes equality, unsigned request, incident response and its misconfiguration variant |
+| `runner/tests/unit/key-separation.rtest.js` | RK1–RK6: equal keys with valid, missing or malformed destination refused; separate keys unchanged; exact bytes |
+
+Fail-first at `68afc136`:
+
+- API: 11 of 17 failed. K3–K6 (8 variants) and the misconfiguration variant were `200` instead of `503`. The 2 pure-function
+  tests failed because the module did not exist.
+- Runner: RK2 and RK3 failed.
+
+**Mutations.** Each was restored, and the tree fingerprint was identical before and after.
+
+| # | mutation | killed by |
+|---|---|---|
+| KM1 | restore `runner.enabled && runner.key === callbackKey` | K3–K6, misconfiguration variant, pure-function tests |
+| KM2 | ignore equality completely | K2–K6, misconfiguration variant |
+| KM3 | reject every callback when the runner is disabled | K7, incident response, exact-bytes route test |
+| KM4 | compare trimmed / lower-cased secrets | exact-bytes equality (pure + route) |
+| RKM1 | runner: compare only when the callback URL parsed as enabled | RK2, RK3 |
+
+Replay handling is unchanged: ±300 s window, a fresh request id per delivery, idempotent application, no nonce store.
+

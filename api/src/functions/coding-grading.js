@@ -2,7 +2,9 @@
 //     POST /api/coding/grade-callback   the Coding Runner Gateway reports RAW evidence of one official job (SA-CODING-CALLBACK-1,
 //                                       its own HMAC key). The body never carries a score; SmartAssess compares + weights +
 //                                       scores on the server (lib/coding/official-grading.js). Order of checks: unsigned (401)
-//                                       → callback key configured (else 503, fail closed) → signature over the exact body (401)
+//                                       → callback key configured AND different from the runner request key — compared on the
+//                                       raw secrets, whatever the runner URL / kill switch say (else 503, fail closed) →
+//                                       signature over the exact body (401)
 //                                       → strict body shape (400) → job / revision / grading key authority (404 / 409) →
 //                                       idempotent apply.
 //     POST /api/coding/regrade          teacher-only: { action: "retry" | "force", assignmentId, studentId, attemptNumber,
@@ -13,8 +15,8 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
-const { readCallbackKey, verifyCallbackRequest } = require("../lib/coding/callback-protocol");
-const { readCodingRunnerConfig } = require("../lib/coding/runner-config");
+const { verifyCallbackRequest } = require("../lib/coding/callback-protocol");
+const { resolveCallbackKey } = require("../lib/coding/hmac-key-separation");
 const { validateCallbackBody, applyOfficialCallback, regradeTarget } = require("../lib/coding/official-grading");
 
 const CALLBACK_MAX_BYTES = 8 * 1024 * 1024;
@@ -31,21 +33,12 @@ async function readText(request, maxBytes) {
   return text;
 }
 
-/** The callback verification key, refused when it equals the API → runner request key (the two concerns never share a key). */
-function callbackKeyFor(env) {
-  const key = readCallbackKey(env);
-  if (!key) return null;
-  const runner = readCodingRunnerConfig(env);
-  if (runner.enabled && runner.key === key) return null;
-  return key;
-}
-
 async function callbackHandler(request, deps = {}, obs = null) {
   try {
     const env = deps.env || process.env;
     // An unsigned request is refused as unauthenticated whatever the configuration (it is never a public route).
     if (!request.headers || typeof request.headers.get !== "function" || !request.headers.get("x-sa-callback-signature")) { obs?.logWarn?.("coding.autoGrade.callback.unauthorized", { reason: "unsigned" }); return reply(401, { ok: false, code: "UNAUTHORIZED" }); }
-    const key = callbackKeyFor(env);
+    const key = resolveCallbackKey(env);   // Review Fix 1: null when missing / weak / equal to the runner request key
     if (!key) { obs?.logWarn?.("coding.autoGrade.callback.refused", { reason: "not-configured" }); return reply(503, { ok: false, code: "GRADING_UNAVAILABLE" }); }
     const text = await readText(request, CALLBACK_MAX_BYTES);
     if (text === null) { obs?.logWarn?.("coding.autoGrade.callback.refused", { reason: "body" }); return reply(400, { ok: false, code: "REQUEST_INVALID" }); }

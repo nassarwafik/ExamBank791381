@@ -26,8 +26,10 @@ function readGatewayConfig(env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("RUNNER_PORT is invalid.");
   const requested = Number(env.RUNNER_MAX_CONCURRENCY || 2);
   const maxConcurrency = Number.isFinite(requested) ? Math.min(16, Math.max(1, Math.floor(requested))) : 2;
+  // Review Fix 1 — key separation on the RAW secrets, regardless of the callback URL's validity: equal keys refuse startup.
+  const rawCallbackKey = typeof env.SMARTASSESS_CALLBACK_HMAC_KEY === "string" ? env.SMARTASSESS_CALLBACK_HMAC_KEY : "";
+  if (rawCallbackKey && rawCallbackKey === key) throw new Error("SMARTASSESS_CALLBACK_HMAC_KEY must differ from RUNNER_HMAC_KEY.");
   const callback = readCallbackConfig(env);
-  if (callback.enabled && callback.key === key) throw new Error("SMARTASSESS_CALLBACK_HMAC_KEY must differ from RUNNER_HMAC_KEY.");
   const official = { enabled: callback.enabled, maxPending: clampInt(env.RUNNER_OFFICIAL_MAX_PENDING, 1, 64, 8), maxActive: clampInt(env.RUNNER_OFFICIAL_MAX_ACTIVE, 1, 4, 1), caseConcurrency: clampInt(env.RUNNER_OFFICIAL_CASE_CONCURRENCY, 1, 4, 2) };
   const config = { host: env.RUNNER_HOST || "127.0.0.1", port, maxConcurrency, official };
   Object.defineProperty(config, "key", { value: key, enumerable: false });

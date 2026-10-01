@@ -96,7 +96,8 @@ RUNNER_HMAC_KEY="$(node -e 'console.log(require("crypto").randomBytes(32).toStri
 
 Official grading is **disabled** (`503 GRADING_UNAVAILABLE`) unless the callback destination is valid: `https://` (plain
 `http://` only for a loopback host), no credentials / path / query, a key of ≥ 32 characters that differs from
-`RUNNER_HMAC_KEY`. Queue bounds: `RUNNER_OFFICIAL_MAX_PENDING` (1..64, default 8), `RUNNER_OFFICIAL_MAX_ACTIVE` (1..4,
+`RUNNER_HMAC_KEY`. If the two raw secrets are set and equal, the gateway refuses to start, even when the callback URL is
+missing or invalid. Queue bounds: `RUNNER_OFFICIAL_MAX_PENDING` (1..64, default 8), `RUNNER_OFFICIAL_MAX_ACTIVE` (1..4,
 default 1), `RUNNER_OFFICIAL_CASE_CONCURRENCY` (1..4, default 2). Keys are held in memory only and never logged.
 
 `http://` is accepted by the API **only** for `localhost` / `127.0.0.1` / `[::1]`; anything else must be `https://`.
