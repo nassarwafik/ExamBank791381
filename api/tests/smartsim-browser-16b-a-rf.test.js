@@ -12,6 +12,8 @@ import { runtimeHandler } from "../src/functions/simulators.js";
 //   B1 single-file bridge · B2 multi-file (classic JS + CSS + image) · B3 Vite-shaped module graph (+ the React fixture)
 //   B4 direct top-level navigation (HTML and SVG) keeps an opaque origin with no application storage / cookies
 //   B5 popup / top / parent navigation / form submission / network escapes stay blocked, framed and top-level.
+// page.close() resolves only once Chromium has dropped the target (see smartsim-browser-lifecycle.test.js), so B5's page
+// count / exact page-target set can never include a page still closing from the previous test (main run 36835689459).
 // Fail-first on the reviewed head 6d8e22a (RF1: B4 leaks; RF2: B2/B3 sub-resources blocked).
 // A browser is REQUIRED in CI (CI=true) and when SMARTSIM_REQUIRE_BROWSER=1; elsewhere the suite is skipped only when no
 // Chromium / Chrome binary exists at all (the skip is reported, never silent).
@@ -144,6 +146,7 @@ d("real-browser SmartSim isolation (Chromium, production headers over HTTP)", ()
 
   it("B5 — framed escapes stay blocked: popup, top / parent navigation, form submission, fetch (app + external), beacons, images to other origins, modal dialogs", async () => {
     const before = await browser.pageCount();
+    const beforeIds = await browser.pageTargetIds();
     const { page, state } = await framed("escape");
     try {
       expect(state, evidence(page)).not.toBeNull();
@@ -156,11 +159,14 @@ d("real-browser SmartSim isolation (Chromium, production headers over HTTP)", ()
       expect(page.dialogs).toEqual([]);
       expect(server.requests.filter(r => /escape-/.test(r.url)), JSON.stringify(server.requests.slice(-10))).toEqual([]);
       expect(await browser.pageCount()).toBe(before + 1);
+      // exact page set: only this test's page was added — no window.open target, whatever else opened or closed meanwhile
+      expect(await browser.pageTargetIds(), "unexpected page target (popup?)").toEqual([...beforeIds, page.targetId].sort());
     } finally { await page.close(); }
   }, 30000);
 
   it("B5 — the same escapes stay blocked when the runtime URL is opened DIRECTLY (no iframe attribute involved)", async () => {
     const before = await browser.pageCount();
+    const beforeIds = await browser.pageTargetIds();
     const page = await browser.newPage();
     try {
       await page.goto(server.runtimeUrl(server.packages.escape, "index.html"));
@@ -174,6 +180,8 @@ d("real-browser SmartSim isolation (Chromium, production headers over HTTP)", ()
       expect(await page.eval("location.pathname")).toMatch(/^\/api\/simulators\/runtime\/browser-escape\//);   // the form did not navigate
       expect(server.requests.filter(r => /escape-/.test(r.url)), JSON.stringify(server.requests.slice(-10))).toEqual([]);
       expect(await browser.pageCount()).toBe(before + 1);
+      // exact page set: only this test's page was added — no window.open target, whatever else opened or closed meanwhile
+      expect(await browser.pageTargetIds(), "unexpected page target (popup?)").toEqual([...beforeIds, page.targetId].sort());
     } finally { await page.close(); }
   }, 30000);
 

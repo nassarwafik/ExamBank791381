@@ -80,8 +80,9 @@ export async function launchBrowser() {
   const { product } = await cdp.send("Browser.getVersion");
   return {
     exe, product, cdp,
-    newPage: () => newPage(cdp),
-    async pageCount() { const { targetInfos } = await cdp.send("Target.getTargets"); return targetInfos.filter(t => t.type === "page").length; },
+    newPage: () => openPage(cdp),
+    pageTargetIds: () => pageTargetIds(cdp),
+    async pageCount() { return (await pageTargetIds(cdp)).length; },
     // Teardown waits for Chromium to exit before removing its profile (it keeps writing into it while shutting down —
     // CI run #864 hit ENOTEMPTY here), retries the removal, and never lets temp-profile cleanup fail the proof itself.
     async close() {
@@ -96,11 +97,32 @@ export async function launchBrowser() {
   };
 }
 
-async function newPage(cdp) {
+/** The ids of Chromium's real `type === "page"` targets, sorted (iframes, workers and the browser target excluded). */
+export async function pageTargetIds(cdp) {
+  const { targetInfos } = await cdp.send("Target.getTargets");
+  return targetInfos.filter(t => t.type === "page").map(t => t.targetId).sort();
+}
+
+/** Resolves once Chromium no longer lists `targetId` in Target.getTargets (at once if it is already absent); rejects after
+ *  `timeoutMs`. Polls instead of waiting for Target.targetDestroyed, so a destroy that happened before we looked is never missed. */
+export async function waitForTargetGone(cdp, targetId, timeoutMs = 5000) {
+  const end = Date.now() + timeoutMs;
+  for (;;) {
+    const { targetInfos } = await cdp.send("Target.getTargets");
+    if (!targetInfos.some(t => t.targetId === targetId)) return;
+    if (Date.now() >= end) throw new Error("page close: target " + targetId + " is still listed by Chromium after " + timeoutMs + " ms");
+    await sleep(20);
+  }
+}
+
+/** Opens a page target. `page.close()` resolves only once Chromium has actually dropped the target (Target.closeTarget
+ *  replies before that), so a closed page can never be counted by the next test (main run 36835689459, B5). */
+export async function openPage(cdp, { closeTimeoutMs = 5000 } = {}) {
   const { targetId } = await cdp.send("Target.createTarget", { url: "about:blank" });
   const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
   const sessions = new Set([sessionId]);
   const urls = new Map(), failures = [], dialogs = [], console_ = [];
+  let closing = null;
   const off = cdp.on(m => {
     if (!sessions.has(m.sessionId)) return;
     const p = m.params || {};
@@ -129,7 +151,14 @@ async function newPage(cdp) {
       while (Date.now() < end) { try { last = await page.eval(expression); if (last) return last; } catch (e) { last = e.message; } await sleep(50); }
       return null;
     },
-    async close() { off(); await cdp.send("Target.closeTarget", { targetId }).catch(() => {}); }
+    close() {
+      if (!closing) {
+        off();
+        closing = cdp.send("Target.closeTarget", { targetId }).catch(() => { /* already gone: the wait below decides */ })
+          .then(() => waitForTargetGone(cdp, targetId, closeTimeoutMs));
+      }
+      return closing;
+    }
   };
   return page;
 }
