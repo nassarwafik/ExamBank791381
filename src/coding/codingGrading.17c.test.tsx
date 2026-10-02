@@ -71,11 +71,14 @@ describe("17C-H editor — explicit official grading mode", () => {
 });
 
 const A = (over: Record<string, unknown> = {}) => ({ attemptNumber: 1, submittedAt: "2026-03-01T10:00:00.000Z", score: 6.67, totalMarks: 10, percentage: 66.7, manualReviewMarks: 0, finalized: true, gradingStatus: "final", startedAt: "", endedAt: "", endReason: "submitted", timedOut: false, ...over });
-const codingQ = (codingAutoGrade: Record<string, unknown> | null, over: Record<string, unknown> = {}) => ({ questionId: "auto1", questionNumber: 1, text: "اطبع المجموع", marks: 10, type: "coding", studentAnswer: { kind: "code", language: "python", languageVersion: 1, source: "print(1)" }, expectedAnswer: { gradingMode: "hiddenTests", hiddenTests: HIDDEN, comparator: "trimTrailingWhitespace" }, autoGrade: { score: 6.67, manualReview: false }, manualScore: null, teacherComment: "", codingAutoGrade, ...over });
-const COMPLETE = { state: "complete", revision: 1, comparator: "trimTrailingWhitespace", testCount: 2, automaticScore: 6.67, maxMarks: 10, passedWeight: 1, totalWeight: 4, outcome: "graded", cases: [
-  { testId: "h1", title: "صغير", status: "success", passed: true, durationMs: 12, weight: 1, expectedOutput: "3\n" },
-  { testId: "h2", status: "success", passed: false, durationMs: 9, weight: 3, expectedOutput: "10\n", actualPreview: "11\n", stderrPreview: "warn: x" }
-] };
+// Phase 17E-D — the review question now carries the formal teacher evidence contract (`codingEvidence`, contract 1) instead of the
+// 17C ad-hoc `codingAutoGrade` view; the intent of these 17C tests is unchanged (labels updated to the 17E-D vocabulary).
+const codingQ = (codingEvidence: Record<string, unknown> | null, over: Record<string, unknown> = {}) => ({ questionId: "auto1", questionNumber: 1, text: "اطبع المجموع", marks: 10, type: "coding", studentAnswer: { kind: "code", language: "python", languageVersion: 1, source: "print(1)" }, expectedAnswer: { gradingMode: "hiddenTests", hiddenTests: HIDDEN, comparator: "trimTrailingWhitespace" }, autoGrade: { score: 6.67, manualReview: false }, manualScore: null, teacherComment: "", codingEvidence, ...over });
+const EV = (over: Record<string, unknown>) => ({ contract: 1, status: "complete", automaticStatus: "complete", revision: 1, resultRevision: null, resultCurrent: false, gradingMode: "hiddenTests", language: "python", languageVersion: 1, scoringPolicy: "proportional", comparator: "trimTrailingWhitespace", testCount: 2, maxMarks: 10, automaticScore: null, passedCount: null, passedWeight: null, totalWeight: null, outcome: null, completedAt: null, override: { active: false, score: null }, effectiveScore: null, recovery: { state: "none" }, technicalCode: null, incomplete: false, cases: [], ...over });
+const COMPLETE = EV({ resultRevision: 1, resultCurrent: true, automaticScore: 6.67, effectiveScore: 6.67, passedCount: 1, passedWeight: 1, totalWeight: 4, outcome: "graded", completedAt: "2026-03-01T10:00:00.000Z", cases: [
+  { testId: "h1", title: "صغير", weight: 1, outcome: "passed", durationMs: 12, expectedOutput: "3\n" },
+  { testId: "h2", title: "", weight: 3, outcome: "wrong-output", durationMs: 9, expectedOutput: "10\n", actualPreview: "11\n", stderrPreview: "warn: x" }
+] });
 function mountReview(question: Record<string, unknown>, attempt = A(), onRegrade?: (body: Record<string, unknown>) => unknown) {
   const calls: { url: string; method: string; body: unknown }[] = [];
   globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -94,38 +97,40 @@ describe("17C-H teacher review — automatic grading block", () => {
     mountReview(codingQ(COMPLETE));
     const block = await screen.findByTestId("coding-autograde", {}, { timeout: 3000 });
     expect(block.textContent).toMatch(/التصحيح الآلي/);
-    expect(block.textContent).toMatch(/مكتمل/);
+    expect(block.textContent).toMatch(/اكتمل التصحيح الآلي/);
     expect(block.textContent).toMatch(/العلامة الآلية: 6\.67 \/ 10/);
-    expect(block.textContent).toMatch(/طريقة المقارنة: تجاهل المسافات في نهايات الأسطر/);
-    expect(block.textContent).toMatch(/عدد الاختبارات: 2/);
+    expect(block.textContent).toMatch(/طريقة المقارنة\s*تجاهل المسافات في نهايات الأسطر/);
+    expect(block.textContent).toMatch(/عدد الاختبارات\s*2/);
     const rows = within(block).getAllByTestId("coding-autograde-case");
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toMatch(/صغير/); expect(rows[0].textContent).toMatch(/ناجح/);
-    expect(rows[1].textContent).toMatch(/h2/); expect(rows[1].textContent).toMatch(/فاشل/);
+    expect(rows[1].textContent).toMatch(/h2/); expect(rows[1].textContent).toMatch(/مخرجات غير مطابقة/);
     expect(rows[1].textContent).toMatch(/10/); expect(rows[1].textContent).toMatch(/11/); expect(rows[1].textContent).toMatch(/warn: x/);
-    expect(within(block).getByRole("button", { name: "فرض إعادة التصحيح الآلي" })).toBeTruthy();
+    expect(within(block).getByRole("button", { name: "إعادة التصحيح بإصدار جديد" })).toBeTruthy();
   });
   it("a TECHNICAL failure is shown as such (never «wrong answer») with a retry button that posts ONLY identifiers", async () => {
-    const calls = mountReview(codingQ({ state: "retryable", revision: 1, technicalCode: "RUNNER_BUSY", comparator: "exact", testCount: 2 }, { autoGrade: { score: 0, manualReview: true } }), A({ finalized: false, gradingStatus: "pendingReview", manualReviewMarks: 10 }));
+    const calls = mountReview(codingQ(EV({ status: "retrying", automaticStatus: "retrying", technicalCode: "RUNNER_BUSY", comparator: "exact" }), { autoGrade: { score: 0, manualReview: true } }), A({ finalized: false, gradingStatus: "pendingReview", manualReviewMarks: 10 }));
     const block = await screen.findByTestId("coding-autograde", {}, { timeout: 3000 });
-    expect(block.textContent).toMatch(/تعذر التصحيح الآلي لأسباب تقنية/);
+    expect(block.textContent).toMatch(/تعذر إكمال التصحيح الآلي لأسباب تقنية/);
     expect(block.textContent).not.toMatch(/إجابة خاطئة|فاشل/);
-    fireEvent.click(within(block).getByRole("button", { name: "إعادة التصحيح الآلي" }));
+    fireEvent.click(within(block).getByRole("button", { name: "إعادة محاولة التصحيح" }));
     await waitFor(() => expect(calls.some(c => c.url.includes("/api/coding/regrade"))).toBe(true));
     const body = calls.find(c => c.url.includes("/api/coding/regrade"))!.body as Record<string, unknown>;
     expect(body).toEqual({ action: "retry", assignmentId: "a1", studentId: "s1", attemptNumber: 1, questionId: "auto1" });
   });
   it("a pending automatic grade says so, and the manual controls (teacher mark / comment / use automatic mark) still work", async () => {
-    mountReview(codingQ({ state: "dispatched", revision: 1, comparator: "exact", testCount: 2 }, { autoGrade: { score: 0, manualReview: true } }), A({ finalized: false, gradingStatus: "pendingReview", manualReviewMarks: 10 }));
+    mountReview(codingQ(EV({ status: "processing", automaticStatus: "processing", comparator: "exact" }), { autoGrade: { score: 0, manualReview: true } }), A({ finalized: false, gradingStatus: "pendingReview", manualReviewMarks: 10 }));
     const block = await screen.findByTestId("coding-autograde", {}, { timeout: 3000 });
     expect(block.textContent).toMatch(/جارٍ التصحيح الآلي/);
     expect(screen.getByText("استخدم العلامة الآلية")).toBeTruthy();
     expect(screen.getByText(/علامة المعلم/)).toBeTruthy();
   });
-  it("force regrade asks the server (identifiers only) and reloads", async () => {
+  it("force regrade asks the server (identifiers only, after the 17E-D confirmation) and reloads", async () => {
     const calls = mountReview(codingQ(COMPLETE));
     const block = await screen.findByTestId("coding-autograde", {}, { timeout: 3000 });
-    await act(async () => { fireEvent.click(within(block).getByRole("button", { name: "فرض إعادة التصحيح الآلي" })); });
+    fireEvent.click(within(block).getByRole("button", { name: "إعادة التصحيح بإصدار جديد" }));
+    const dlg = await waitFor(() => { const el = document.querySelector('.eb-confirm[role="dialog"]') as HTMLElement | null; if (!el) throw new Error("no confirm"); return el; });
+    await act(async () => { fireEvent.click(within(dlg).getByRole("button", { name: "بدء إعادة التصحيح" })); });
     await waitFor(() => expect(calls.filter(c => c.url.includes("/api/coding/regrade"))).toHaveLength(1));
     expect(calls.find(c => c.url.includes("/api/coding/regrade"))!.body).toEqual({ action: "force", assignmentId: "a1", studentId: "s1", attemptNumber: 1, questionId: "auto1" });
     await waitFor(() => expect(calls.filter(c => c.url.includes("/api/assignment-review") && c.method === "GET").length).toBeGreaterThanOrEqual(2));

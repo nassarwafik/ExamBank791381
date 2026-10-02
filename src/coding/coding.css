@@ -80,18 +80,46 @@
 /* Phase 17C — official grading mode (editor) and the teacher's automatic grading block (review). */
 .cx-grading-mode { display: grid; gap: 6px; }
 .cx-grading-mode label { display: inline-flex; gap: 6px; align-items: center; }
-.cx-autograde { display: grid; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; direction: rtl; font-size: 13px; }
-.cx-autograde-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-.cx-autograde-state { padding: 2px 8px; border-radius: 999px; background: #eef2f7; }
-.cx-autograde-state.is-complete { background: #e6f6ec; color: #17633a; }
-.cx-autograde-state.is-retryable { background: #fff4e0; color: #8a5300; }
-.cx-autograde-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; }
-.cx-autograde-cases { display: grid; gap: 8px; margin: 0; padding-inline-start: 18px; }
-.cx-autograde-cases .is-fail > div:first-child span { color: #a32020; }
-.cx-autograde-cases .is-pass > div:first-child span { color: #17633a; }
-.cx-autograde-io { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 4px; }
-.cx-autograde-io pre, .cx-autograde-compile pre { margin: 2px 0 0; max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #f6f8fa; padding: 6px; border-radius: 6px; font-size: 12px; }
-.cx-autograde-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Phase 17E-D — teacher coding EVIDENCE panel (AssignmentReview). Code / outputs are LTR monospace blocks inside the RTL review;
+   every output block is bounded and scrolls INTERNALLY so a long compiler message or 4 KB preview never widens the page. */
+.cx-ev { display: grid; gap: 10px; grid-column: 1 / -1; min-width: 0; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; direction: rtl; font-size: 13px; }
+.cx-ev-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.cx-ev-head h4 { margin: 0; font-size: 14px; }
+.cx-ev-head h4:focus { outline: 2px solid currentColor; outline-offset: 2px; }
+.cx-ev-status, .cx-ev-badge { padding: 2px 10px; border-radius: 999px; background: #eef2f7; color: #2b3542; }
+.cx-ev-status.is-success { background: #e6f6ec; color: #17633a; }
+.cx-ev-status.is-warn { background: #fff4e0; color: #7a4a00; }
+.cx-ev-status.is-info { background: #e8f0fb; color: #1d4f91; }
+.cx-ev-badge { background: #efe9fb; color: #4b2a8a; font-weight: 600; }
+.cx-ev-note { margin: 0; padding: 6px 10px; border-radius: 8px; background: #f4f6f9; }
+.cx-ev-note.is-warn, .cx-ev-technical { background: #fff8eb; }
+.cx-ev-technical { display: grid; gap: 4px; padding: 8px 10px; border-radius: 8px; }
+.cx-ev-technical p { margin: 0; }
+.cx-ev-support summary { cursor: pointer; }
+.cx-ev-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
+.cx-ev-facts div { display: flex; gap: 6px; }
+.cx-ev-facts dt { color: #5b6573; }
+.cx-ev-facts dd { margin: 0; font-weight: 600; }
+.cx-ev-scores { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.cx-ev-score strong { font-size: 15px; }
+.cx-ev-score.is-evidence { color: #5b6573; }
+.cx-ev-score.is-evidence strong { font-size: 13px; font-weight: 500; }
+.cx-ev-score.is-authority strong { color: #4b2a8a; }
+.cx-ev-summary, .cx-ev-revision, .cx-ev-muted { margin: 0; }
+.cx-ev-muted { color: #5b6573; }
+.cx-ev-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.cx-ev-filter button[aria-pressed="true"] { font-weight: 700; text-decoration: underline; }
+.cx-ev-cases { display: grid; gap: 6px; margin: 0; padding-inline-start: 18px; }
+.cx-ev-case { min-width: 0; }
+.cx-ev-case-toggle { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; width: 100%; text-align: start; background: none; border: 0; padding: 4px 0; cursor: pointer; font: inherit; }
+.cx-ev-case.is-fail .cx-ev-case-outcome { color: #a32020; }
+.cx-ev-case.is-pass .cx-ev-case-outcome { color: #17633a; }
+.cx-ev-io, .cx-ev-compile { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); margin-top: 4px; min-width: 0; }
+.cx-ev-io > div { min-width: 0; }
+.cx-ev-output { max-height: 16rem; overflow: auto; margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; text-align: left; unicode-bidi: isolate; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f6f8fa; padding: 6px 8px; border-radius: 6px; font-size: 12px; min-width: 0; max-width: 100%; }
+.cx-ev-actions { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.cx-ev-actions > div { display: grid; gap: 2px; }
+.cx-ev-actions small { color: #5b6573; max-width: 32ch; }
 /* Phase 17E-A — authoring: limit range hints and the inline validation panel (the canonical validator's issues) */
 .cx-limit-hint { color: var(--eb-muted, #64748b); font-size: 12px; }
 .cx-limit-hint.is-invalid { color: #b91c1c; font-weight: 600; }
