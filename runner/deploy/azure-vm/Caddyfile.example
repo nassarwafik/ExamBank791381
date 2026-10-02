@@ -1,0 +1,68 @@
+# Phase 17F-A1 — Caddy reverse proxy in front of the SmartAssess Coding Runner Gateway.
+# Install as /etc/caddy/Caddyfile after replacing the TWO placeholders (runner.example.invalid, ops@example.invalid), then:
+#     sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+#
+#   Internet ──HTTPS 443──▶ Caddy ──HTTP──▶ 127.0.0.1:8787 (gateway, loopback only) ──docker CLI──▶ sandboxes (--network none)
+#
+# NEVER proxy anything else from this host: not the Docker API, not the journal, not a raw-IP site. Only the gateway's four
+# routes are forwarded; everything else is 404.
+{
+	email ops@example.invalid
+	# HTTP (:80) only redirects to HTTPS; certificates are obtained with TLS-ALPN-01 on :443 (HTTP-01 when :80 is open).
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 30s
+			idle 2m
+		}
+	}
+}
+
+runner.example.invalid {
+	# BODY LIMIT. The gateway's largest valid request is an official grading job ≤ 2 MiB (runner/gateway/server.js
+	# OFFICIAL_MAX_BODY_BYTES: 64 KB source + 256 KB stdin with worst-case JSON escaping); practice ≤ 512 KiB. 3 MiB keeps
+	# headroom while staying bounded — the gateway itself answers 413 above 2 MiB. (nginx's DEFAULT client_max_body_size is
+	# 1 MB: it would reject valid official jobs with 413 — never front the gateway with an unconfigured nginx.)
+	request_body {
+		max_size 3MiB
+	}
+
+	@runner path /healthz /v1/capabilities /v1/execute /v1/official-grading-jobs
+	handle @runner {
+		reverse_proxy 127.0.0.1:8787 {
+			transport http {
+				dial_timeout 5s
+				# TIMEOUT. ≥ the gateway's worst practice wall (Java / C#: compile 30 s + run 20 s = 50 s; registry.js) and ≥ the
+				# SmartAssess API's own runner timeout (60 s; api/src/lib/coding/execution-provider.js). Official jobs answer 202
+				# within milliseconds. NOTE: this cannot extend the Azure Static Web Apps API ceiling (45 s) upstream of the API —
+				# see Pilot Gate P1 in README.md.
+				response_header_timeout 90s
+			}
+		}
+	}
+	handle {
+		respond 404
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+	}
+
+	# Access log WITHOUT request / response headers (the x-sa-runner-* signature headers are never logged). Bodies are never
+	# logged by Caddy.
+	log {
+		output file /var/log/caddy/smartassess-runner-access.log {
+			roll_size 50MiB
+			roll_keep 10
+		}
+		format filter {
+			wrap json
+			fields {
+				request>headers delete
+				resp_headers delete
+			}
+		}
+	}
+}
