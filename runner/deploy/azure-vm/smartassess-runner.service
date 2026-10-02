@@ -33,7 +33,11 @@ StateDirectoryMode=0700
 Environment=HOME=/var/lib/smartassess-runner
 # Gate: journal mount / symlink / filesystem / ownership / free space, Docker daemon + features + images + a real hardened
 # sandbox, keys (strength, separation), https callback, loopback bind, port, vCPU guardrail. Any failure keeps the gateway DOWN.
-ExecStartPre=/usr/bin/node deploy/azure-vm/preflight.js --mode=start --env-file=/etc/smartassess-runner/runner.env --image-manifest=/etc/smartassess-runner/images.manifest
+# `--` terminates NODE's own CLI options (17F-A2 hotfix): Node 22 owns an option named --env-file and pre-scans the whole argv
+# for it, so without `--` Node itself would try to open the root:root 0600 secret file as the service user and die with
+# "not found" before the preflight runs. After `--`, --env-file is the preflight's argument (file contract validation only);
+# the secret VALUES reach the process exclusively through EnvironmentFile= above.
+ExecStartPre=/usr/bin/node -- deploy/azure-vm/preflight.js --mode=start --env-file=/etc/smartassess-runner/runner.env --image-manifest=/etc/smartassess-runner/images.manifest
 ExecStart=/usr/bin/node gateway/main.js
 # After any stop (clean or crash): remove leftover sandbox containers with the gateway's own label sweep.
 ExecStopPost=/usr/bin/node deploy/azure-vm/sweep-containers.js

@@ -65,7 +65,10 @@ test("D2 — systemd: Docker required, storage mounts required, preflight gate, 
   assert.deepEqual(u.Service.SupplementaryGroups, ["docker"]);
   assert.equal(u.Service.WorkingDirectory[0], "/opt/smartassess-runner/current/runner");
   assert.deepEqual(u.Service.EnvironmentFile, ["/etc/smartassess-runner/runner.env"], "exactly one, mandatory (no '-' prefix) environment file");
-  assert.match(u.Service.ExecStartPre[0], /^\/usr\/bin\/node deploy\/azure-vm\/preflight\.js --mode=start\b/);
+  // 17F-A2 hotfix: Node 22 owns a CLI option named --env-file and pre-scans the whole argv for it, so Node's option parsing MUST
+  // be terminated (`--`) before the script path — otherwise Node itself tries to open the root:root 0600 secret file as the
+  // service user and dies with "not found" (tests/unit/deploy-node-cli-boundary.rtest.js).
+  assert.match(u.Service.ExecStartPre[0], /^\/usr\/bin\/node -- deploy\/azure-vm\/preflight\.js --mode=start\b/);
   assert.match(u.Service.ExecStartPre[0], /--env-file=\/etc\/smartassess-runner\/runner\.env/);
   assert.match(u.Service.ExecStartPre[0], /--image-manifest=\//);
   assert.ok(!/--profile=development|--allow-non-loopback-bind/.test(u.Service.ExecStartPre[0]), "production profile only");
