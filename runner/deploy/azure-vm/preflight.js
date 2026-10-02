@@ -29,12 +29,14 @@ const { readJournalConfig, mountFor } = require("../../gateway/journal.js");
 const { LANGUAGES, runtimeMemoryMb } = require("../../gateway/registry.js");
 const { createDockerSandbox } = require("../../gateway/sandbox.js");
 const { createDockerApi } = require("./docker-api.js");
+const { storageSeparation } = require("./mountinfo.js");
+const { parseImageManifest } = require("./image-manifest.js");
 const RUNNER_PACKAGE = require("../../package.json");
 
 const EXIT = Object.freeze({
   OK: 0, USAGE: 2,
   NODE: 10, ENV_FILE: 11, CONFIG: 12, KEYS: 13, CALLBACK: 14, BIND: 15, CAPACITY: 16,
-  JOURNAL: 20, JOURNAL_DISK: 21,
+  JOURNAL: 20, JOURNAL_DISK: 21, STORAGE: 22,
   DOCKER: 30, DOCKER_DISK: 31, IMAGES: 32, SANDBOX: 33,
   PORT: 40, EXPOSURE: 41, LIVENESS: 42
 });
@@ -169,6 +171,7 @@ function realDeps(env) {
     statfs: p => fs.statfsSync(p),
     readFile: read,
     mounts: () => read("/proc/mounts"),
+    mountInfo: () => read("/proc/self/mountinfo"),
     resourceDevice: () => { try { return fs.realpathSync("/dev/disk/azure/resource-part1"); } catch { return null; } },
     listeners: () => [...parseListeners(read("/proc/net/tcp"), false), ...parseListeners(read("/proc/net/tcp6"), true)],
     writeProbe: dir => { const f = path.join(dir, ".preflight-probe-" + process.pid); const fd = fs.openSync(f, "wx", 0o600); try { fs.writeSync(fd, "probe"); fs.fsyncSync(fd); } finally { fs.closeSync(fd); fs.unlinkSync(f); } },
@@ -328,15 +331,29 @@ async function runPreflight({ env = process.env, mode = "start", profile = "prod
   if (!dockerTcp.length && !publicRunner.length) pass("exposure", EXIT.EXPOSURE, "no Docker TCP listener; port " + port + " not publicly bound");
   if (info && info.DockerRootDir) diskCheck("docker-disk", EXIT.DOCKER_DISK, info.DockerRootDir, o.minDockerFreeMb);
 
-  // IMAGES — exactly the registry's images (never invented names), optionally pinned to the IDs recorded at build time
+  // STORAGE — device separation (17F-A1.1 M1): a mount point alone proves nothing about the disk beneath it. From
+  // /proc/self/mountinfo: journal device ≠ OS device, Docker device ≠ OS device, journal device ≠ Docker device, and the
+  // journal path is the filesystem mount of its own device (a bind mount of an OS-disk directory is refused). Fails closed.
+  if (journalOk && info) {
+    const sep = storageSeparation({ mountInfo: d.mountInfo(), journalDir: path.resolve(rawDir), dockerRootDir: info.DockerRootDir });
+    if (sep.ok) pass("storage", EXIT.STORAGE, sep.reason);
+    else (prod ? fail : warn)("storage", EXIT.STORAGE, sep.reason);
+  }
+
+  // IMAGES — exactly the registry's images (never invented names), optionally pinned to the IDs recorded at build time; the
+  // manifest must be structurally exact (image-manifest.js — the same contract record-images.js writes), never "whatever parses"
   if (info) {
     let manifest = null;
-    if (o.imageManifest) { const t = d.readFile(o.imageManifest); try { manifest = t ? JSON.parse(t) : null; } catch { manifest = null; } if (!manifest) fail("images", EXIT.IMAGES, "image manifest unreadable: " + o.imageManifest); }
+    if (o.imageManifest) {
+      const t = d.readFile(o.imageManifest);
+      if (t === null || t === undefined) fail("images", EXIT.IMAGES, "image manifest unreadable: " + o.imageManifest);
+      else { const v = parseImageManifest(t, { images: Object.values(LANGUAGES).map(e => e.image) }); if (v.ok) manifest = v.manifest; else fail("images", EXIT.IMAGES, "image manifest invalid: " + v.reason + " (" + o.imageManifest + ")"); }
+    }
     const missing = [], drift = [];
     for (const e of Object.values(LANGUAGES)) {
       const id = await d.imageId(e.image);
       if (!id) missing.push(e.image);
-      else if (manifest && manifest.images && manifest.images[e.image] !== id) drift.push(e.image);
+      else if (manifest && manifest.images[e.image] !== id) drift.push(e.image);
     }
     if (missing.length) fail("images", EXIT.IMAGES, "worker image missing: " + missing.join(", ") + " (run deploy/azure-vm/build-and-record-images.sh)");
     else if (drift.length) fail("images", EXIT.IMAGES, "worker image differs from the recorded manifest: " + drift.join(", "));

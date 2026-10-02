@@ -6,7 +6,7 @@ Each item maps to a row of [`activation-checklist.md`](activation-checklist.md).
 | # | USER/AZURE ACTION REQUIRED | Details | Checklist row |
 |---|---|---|---|
 | A2-1 | **USER/AZURE ACTION REQUIRED — VM creation** | Standard_D4s_v5, Ubuntu Server 24.04 LTS, dedicated resource group, SSH public key only (no password), no B-series, no extensions beyond the Azure Linux agent / monitor agent, auto-shutdown **off** | 1 |
-| A2-2 | **USER/AZURE ACTION REQUIRED — disk creation/attachment** | data disk A 32 GB Premium SSD (journal), data disk B 64–128 GB Premium SSD (Docker), attached as LUN 0 / LUN 1; never use the temporary disk | 2 |
+| A2-2 | **USER/AZURE ACTION REQUIRED — disk creation/attachment** | data disk A 32 GB Premium SSD (journal), data disk B 64–128 GB Premium SSD (Docker), attached as LUN 0 / LUN 1; never use the temporary disk. **Two separate managed disks, not two directories or partitions of one disk and not bind mounts:** activation requires three distinct storage roles (OS, journal, Docker) on three distinct devices — the preflight `storage` check (exit 22) refuses anything else, and a mount point alone does not qualify | 2, 5, 13 |
 | A2-3 | **USER/AZURE ACTION REQUIRED — static public IP** | Standard SKU, static allocation, attached to the VM NIC | 1 |
 | A2-4 | **USER/AZURE ACTION REQUIRED — NSG** | Inbound allow 443/tcp from Any; 22/tcp only from the admin IP/range (or Bastion / JIT); optional 80/tcp for ACME HTTP-01 + redirect. Deny 8787, 2375, 2376 and all else. Outbound: 443 (SmartAssess host, apt mirrors, ACME CA, image registries during builds). | 1, 16 |
 | A2-5 | **USER/AZURE ACTION REQUIRED — DNS** | `runner.<domain>` A record → the static IP (TTL 300 during the pilot) | 3 |

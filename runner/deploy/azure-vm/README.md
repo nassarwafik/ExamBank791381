@@ -95,10 +95,21 @@ disable preview environments, **before** any production key is added.
 | Data disk A (32 GB Premium SSD) | **`/data/smartassess-runner`** | ext4 | **the Runner journal only** (`RUNNER_JOURNAL_DIR`) |
 | Data disk B (64–128 GB Premium SSD) | `/var/lib/docker` | ext4 | Docker images and container layers |
 
-The journal must **never** silently fall back to the OS disk. Three independent barriers enforce that:
+The journal must **never** silently fall back to the OS disk. Four independent barriers enforce that:
 1. systemd `RequiresMountsFor=/data/smartassess-runner` (the unit will not start without the mount);
 2. the preflight `journal` check (the path must be **exactly** a mount point of ext4/xfs, not a symlink, owned, 0700, writable);
-3. the immutable underlying directory (§5.2: if the disk is ever unmounted, nothing can write into the OS-disk directory).
+3. the preflight `storage` check (17F-A1.1): **a mount point alone is NOT enough.** From `/proc/self/mountinfo` the three
+   storage roles must sit on three **distinct backing devices** — journal ≠ OS disk, Docker root ≠ OS disk, journal ≠ Docker —
+   and the journal path must be the filesystem mount of its own device. A **bind mount from the OS disk does not qualify**
+   (`mount --bind /srv/journal /data/smartassess-runner` is a mount point in `findmnt` / `df` and still writes to the OS disk);
+   a `DockerRootDir` that resolves to `/` is refused; a journal placed on the Docker disk (or Docker inside the journal disk) is
+   refused. Exit `22`, operator message "Journal storage must be on a dedicated device separate from the OS disk." / "Docker
+   storage must be mounted on a dedicated device separate from the OS disk." / "Journal and Docker storage must not share the
+   same backing device.";
+4. the immutable underlying directory (§5.2: if the disk is ever unmounted, nothing can write into the OS-disk directory).
+
+**Activation requires three distinct storage roles — OS, journal, Docker — on three distinct devices.** `findmnt` showing a
+mount point proves barrier 1 only; `sh runner/deploy/azure-vm/readiness.sh --deep` (checklist row 13) proves barrier 3.
 
 ### Network
 | Direction | Rule |
@@ -130,6 +141,8 @@ The journal must **never** silently fall back to the OS disk. Three independent 
 | `docker-daemon.json.example` | `/etc/docker/daemon.json` (unix socket only, local log driver) |
 | `journald-smartassess-runner.conf` | journald caps (`/etc/systemd/journald.conf.d/`) |
 | `preflight.js` | start / readiness / verify-sandbox gate (exit codes below) |
+| `mountinfo.js` | pure `/proc/self/mountinfo` reader: device identity of the OS / journal / Docker storage roles, bind-mount detection (preflight `storage` check, 17F-A1.1) |
+| `image-manifest.js` | the one structural contract of the worker image manifest, shared by `record-images.js` (writer) and the preflight (reader) (17F-A1.1) |
 | `docker-api.js` | read-only Docker Engine API client (GET only, unix socket only, allow-listed endpoints). The tools start **no process**: `gateway/sandbox.js` stays the only process-starting module of `runner/` (architecture guard 17B R1) |
 | `readiness.sh` | runs the preflight in the exact service context (`systemd-run`) |
 | `smoke.js` | signed smoke tool: Runner surface, language matrix, sandbox boundary, Gate P1, callback probe (Gate P2) |
@@ -144,8 +157,11 @@ Worker images (exactly `runner/gateway/registry.js`): `smartassess-coding-python
 ### Preflight exit codes
 `0` ok · `2` usage · `10` Node version · `11` env-file permissions · `12` runner configuration · `13` keys · `14` callback URL ·
 `15` bind · `16` capacity (vCPU / memory) · `20` journal (mount / symlink / fs / owner / mode / writable) · `21` journal free
-space · `30` Docker daemon (reachable, ≥ 20.10, cgroup v2, seccomp) · `31` Docker disk free space · `32` worker images /
-manifest · `33` sandbox controls · `40` port in use · `41` exposure (Docker TCP 2375/2376, public 8787) · `42` liveness.
+space · `22` storage device separation (journal / Docker / OS on three distinct devices, no bind mount; fails closed when
+`/proc/self/mountinfo` is unreadable) · `30` Docker daemon (reachable, ≥ 20.10, cgroup v2, seccomp) · `31` Docker disk free
+space · `32` worker images / manifest (missing image, drift, or a manifest that is not exactly `{ "schemaVersion": 1, "images":
+{ "<registry image>": "sha256:<64 hex>" } }` for all three images) · `33` sandbox controls · `40` port in use · `41` exposure
+(Docker TCP 2375/2376, public 8787) · `42` liveness.
 Output names the check and a reason. It never prints a key, a key-derived value, student code or program output.
 
 ## 5. Runbook
@@ -175,8 +191,12 @@ UUID=<uuid-docker>  /var/lib/docker          ext4 defaults,noatime,x-systemd.dev
 EOF
 systemctl daemon-reload && mount -a
 findmnt /data/smartassess-runner && findmnt /var/lib/docker   # both mounted, ext4
+findmnt -no SOURCE,MAJ:MIN / /data/smartassess-runner /var/lib/docker   # three DIFFERENT devices (MAJ:MIN), three different sources
 ```
 **Never** add `nofail`. A missing journal disk must stop the Runner, not move the journal.
+**Never** satisfy the mount with a bind mount (`mount --bind`) or a directory of the OS disk: the preflight `storage` check
+(exit 22) reads `/proc/self/mountinfo` and refuses a journal or Docker root that shares the OS disk's device, a journal that is
+a bind mount, and a journal that shares the Docker disk. Three roles, three devices — a mount point alone is not enough.
 
 ### 5.3 Docker Engine
 Install Docker Engine from Docker's official apt repository (docs.docker.com → "Install Docker Engine on Ubuntu"). Then:
@@ -231,7 +251,10 @@ cd /opt/smartassess-runner/current && sh runner/deploy/azure-vm/build-and-record
 ```
 This builds the three images with the existing pipeline, runs the real-Docker security suite (and the official suite when
 `api/node_modules` is present), checks that no sandbox container is left behind, and records the image IDs. The preflight
-refuses to start the gateway if an image is missing or differs from this manifest.
+refuses to start the gateway if an image is missing or differs from this manifest — or if the manifest is not structurally exact
+(`{ "schemaVersion": 1, "recordedAt": "<ISO>", "images": { "<registry image>": "sha256:<64 hex>" } }` with all three registry
+images, no unknown keys, no empty or duplicated ids): `{}`, `[]`, `{"schemaVersion":1}` or a hand-edited file exit 32
+(`image manifest invalid: <reason>`). The writer (`record-images.js`) validates with the same `image-manifest.js` contract.
 
 ### 5.9 Environment file
 ```sh

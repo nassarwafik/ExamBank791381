@@ -11,7 +11,7 @@ Evidence is stored in the A2 activation record. **Never** paste keys into eviden
 | 2 | ⚠ USER/AZURE Attach data disks | data disk A 32 GB (journal), B 64–128 GB (Docker), Premium SSD, host caching None/ReadOnly | two LUNs visible (`lsblk`) | detach disks | `lsblk -o NAME,SIZE,SERIAL` |
 | 3 | ⚠ USER/AZURE DNS | `runner.<domain>` A → static IP | `dig +short runner.<domain>` = IP | remove the record | dig output |
 | 4 | Host baseline | README §5.1 (upgrade, chrony) | `NTPSynchronized=yes` | — | `timedatectl` |
-| 5 | Disks + mounts | README §5.2 (ext4, fstab by UUID, **no nofail**, `chattr +i` underlying dir) | `findmnt` shows both; reboot test keeps them | edit fstab back | `findmnt`, `/etc/fstab` |
+| 5 | Disks + mounts | README §5.2 (ext4, fstab by UUID, **no nofail**, `chattr +i` underlying dir, **no bind mounts**) | `findmnt` shows both; `findmnt -no SOURCE,MAJ:MIN / /data/smartassess-runner /var/lib/docker` shows **three different devices** (a mount point alone is not enough — three storage roles: OS, journal, Docker); reboot test keeps them | edit fstab back | `findmnt` (with MAJ:MIN), `/etc/fstab` |
 | 6 | Docker Engine | README §5.3 (daemon.json, hold) | ≥ 20.10, cgroup v2, seccomp, no 2375/2376 | `apt-get remove docker-ce` | `docker info` line, `ss -ltn` |
 | 7 | journald caps + Node 22 | README §5.4–5.5 | `node -v` ≥ 22.12; journald capped | — | versions |
 | 8 | Service account | README §5.6 | user `smartassess-runner` (nologin) in `docker`; journal root `0700` owned by it | `userdel` | `id smartassess-runner`, `stat /data/smartassess-runner` |
@@ -19,7 +19,7 @@ Evidence is stored in the A2 activation record. **Never** paste keys into eviden
 | 10 | Worker images + Docker suites | README §5.8 | security (+ official) Docker suites green; manifest written; no leftover containers | rebuild | suite summary lines, manifest IDs |
 | 11 | ⚠ USER Keys into the secret store | generate request key + callback key (independent, `openssl rand -hex 32`); sweep key already exists | 2 new secret-store entries | delete entries | entry **names** + creation time only |
 | 12 | Env file | README §5.9 (root:root 0600) | `stat -c '%U %a'` = `root 600` | remove the file | stat output |
-| 13 | Preflight (deep) | `sh runner/deploy/azure-vm/readiness.sh --deep` | every check PASS except liveness (not started) | — | the PASS/FAIL list |
+| 13 | Preflight (deep) | `sh runner/deploy/azure-vm/readiness.sh --deep` | every check PASS except liveness (not started); `storage` PASS = "three distinct devices" (exit 22 otherwise: journal / Docker on the OS disk, a bind mount, or journal and Docker on one disk); `images` PASS = "(match manifest)" | — | the PASS/FAIL list |
 | 14 | systemd | README §5.11 (`systemd-analyze verify`, `enable --now`) | `active (running)`; `runner.gateway.started` with `journal:"durable"`, official enabled | `systemctl disable --now smartassess-runner` | status + started event |
 | 15 | Caddy + TLS | README §5.12 | `caddy validate` OK; `https://runner.<domain>/healthz` = `{"ok":true}`, valid certificate | `systemctl stop caddy` | curl -v (certificate issuer / expiry) |
 | 16 | Exposure check | from outside: `nc -vz <ip> 8787`, `nc -vz <ip> 2375` | both fail | — | nc output |
