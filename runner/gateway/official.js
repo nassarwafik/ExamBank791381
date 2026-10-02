@@ -394,7 +394,10 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
           else if (rec.state === "confirmed" || rec.state === "superseded") { await journal.deleteInput(rec.jobId); await journal.deleteResult(rec.jobId); }
         } catch { log("warn", "coding.runner.journal.write-failed", { jobId: rec.jobId, stage: "recovery" }); }
       }
-      try { const removed = await journal.removeOrphans(new Set(records.keys()), { maxEntries: L.startupScanMax }); if (removed) log("info", "coding.runner.journal.orphans", { removed }); } catch { /* bounded best effort */ }
+      // Orphan cleanup needs the COMPLETE index: after a truncated scan, an input / result whose record was simply not scanned is
+      // not an orphan — deleting it would lose an EXECUTED-but-unconfirmed result. Skip it; admissions stay refused (fail closed).
+      if (truncated) log("warn", "coding.runner.journal.orphans-skipped", { reason: "truncated" });
+      else { try { const removed = await journal.removeOrphans(new Set(records.keys()), { maxEntries: L.startupScanMax }); if (removed) log("info", "coding.runner.journal.orphans", { removed }); } catch { /* bounded best effort */ } }
       log("info", "coding.runner.journal.recovered", { ...summary.recovered, scanned: summary.scanned, corrupt: summary.corrupt, truncated });
       pump(); schedule();
       maintenance = setInterval(() => { api.maintain().catch(() => {}); }, MAINTENANCE_INTERVAL_MS);

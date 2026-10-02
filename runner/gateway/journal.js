@@ -130,25 +130,53 @@ async function readBounded(file, maxBytes) {
 const unlinkIfExists = async file => { try { await fsp.unlink(file); return true; } catch (e) { if (e && e.code === "ENOENT") return false; throw e; } };
 const pidAlive = pid => { try { process.kill(pid, 0); return true; } catch (e) { return !!(e && e.code === "EPERM"); } };
 
+// ── The journal lock (one gateway process per directory) ───────────────────────────────────────────────────────────
+// journal.lock = { pid, bootId, token, at }. A PID alone cannot identify the owner across a reboot: the lock lives on the
+// persistent disk, and after an unclean host stop Linux may give the old gateway's PID to an unrelated live process. The lock
+// is therefore bound to the kernel boot identity (/proc/sys/kernel/random/boot_id) as well:
+//   stored and current boot id both readable and DIFFERENT     → stale (written before this boot), replaced — whatever the PID;
+//   same boot, or either boot id unavailable (the 17D-B2 rule) → the PID decides: live foreign PID → JOURNAL_LOCKED; dead → stale;
+//   this process's own PID                                     → this process's lock (17D-B2 semantics), replaced;
+//   malformed (unparseable, no integer PID)                    → JOURNAL_LOCKED while younger than LOCK_MALFORMED_GRACE_MS (it may
+//                                                                still be being written by a starting gateway), stale after it.
+// An unreadable boot id is never taken to mean "stale": it only removes the boot check, never the live-PID check.
+const BOOT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const LOCK_MALFORMED_GRACE_MS = 60 * 1000;
+const validBootId = v => (typeof v === "string" && BOOT_ID.test(v) ? v : null);
+/** The kernel boot identity of this host (Linux), or null when it cannot be read. */
+function readBootId() {
+  try { return validBootId(fs.readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim().toLowerCase()); } catch { return null; }
+}
+/** → "active" (another live gateway owns the journal) or the reason the existing lock is stale. */
+function lockVerdict(held, { bootId, ageMs, alive }) {
+  if (!isObj(held) || !Number.isInteger(held.pid) || held.pid < 1) return ageMs < LOCK_MALFORMED_GRACE_MS ? "active" : "malformed";
+  if (held.pid === process.pid) return "own-pid";
+  const stored = validBootId(held.bootId);
+  if (stored && bootId && stored !== bootId) return "previous-boot";
+  return alive(held.pid) ? "active" : "dead-pid";
+}
+
 /**
  * createJournal({ dir, limits?, now? }) → the journal of ONE gateway process. open() before use; close() releases the lock.
  * A closed journal refuses every write (a stopped / "crashed" instance can never write again).
  */
-function createJournal({ dir, limits = {}, now = () => Date.now() } = {}) {
+function createJournal({ dir, limits = {}, now = () => Date.now(), bootId = readBootId } = {}) {
   if (typeof dir !== "string" || !path.isAbsolute(dir)) throw new Error("journal directory must be an absolute path");
   const L = { ...JOURNAL_LIMITS };
   for (const k of Object.keys(JOURNAL_LIMITS)) if (Number.isInteger(limits[k]) && limits[k] >= 1) L[k] = limits[k];
   const root = path.resolve(dir);
   const sub = name => path.join(root, name);
   const fileOf = (kind, id) => path.join(root, kind, id + ".json");
-  let opened = false, closed = false, lockToken = null;
+  let opened = false, closed = false, lockToken = null, lockRecovered = null;
   const writable = () => { if (!opened || closed) throw Object.assign(new Error("journal is not open"), { code: "JOURNAL_CLOSED" }); };
 
   async function acquireLock() {
     const lockFile = path.join(root, "journal.lock");
     const token = crypto.randomBytes(12).toString("hex");
-    const text = JSON.stringify({ pid: process.pid, token, at: new Date(now()).toISOString() });
-    for (let i = 0; i < 2; i++) {
+    let current = null;
+    try { current = validBootId(bootId()); } catch { current = null; }
+    const text = JSON.stringify({ pid: process.pid, bootId: current, token, at: new Date(now()).toISOString() });
+    for (let i = 0; i < 3; i++) {
       try {
         const fh = await fsp.open(lockFile, "wx", 0o600);
         try { await fh.writeFile(text); await fh.sync(); } finally { await fh.close(); }
@@ -156,10 +184,18 @@ function createJournal({ dir, limits = {}, now = () => Date.now() } = {}) {
         return;
       } catch (e) {
         if (!e || e.code !== "EEXIST") throw e;
+        let heldText = null, ageMs = 0;
+        try { heldText = await fsp.readFile(lockFile, "utf8"); ageMs = now() - (await fsp.stat(lockFile)).mtimeMs; } catch (err) { if (err && err.code === "ENOENT") continue; throw err; }
         let held = null;
-        try { held = JSON.parse(await fsp.readFile(lockFile, "utf8")); } catch { held = null; }
-        if (held && Number.isInteger(held.pid) && held.pid !== process.pid && pidAlive(held.pid)) throw Object.assign(new Error("journal directory is in use by another gateway process"), { code: "JOURNAL_LOCKED" });
-        await unlinkIfExists(lockFile);                                    // a dead (or this) process's stale lock
+        try { held = JSON.parse(heldText); } catch { held = null; }
+        const verdict = lockVerdict(held, { bootId: current, ageMs, alive: pidAlive });
+        if (verdict === "active") throw Object.assign(new Error("journal directory is in use by another gateway process"), { code: "JOURNAL_LOCKED" });
+        // stale: remove it only if it is still the very lock judged above (another starting gateway may have replaced it)
+        let again = null;
+        try { again = await fsp.readFile(lockFile, "utf8"); } catch (err) { if (err && err.code === "ENOENT") continue; throw err; }
+        if (again !== heldText) continue;
+        await unlinkIfExists(lockFile);
+        lockRecovered = verdict;
       }
     }
     throw Object.assign(new Error("journal lock could not be acquired"), { code: "JOURNAL_LOCKED" });
@@ -188,6 +224,8 @@ function createJournal({ dir, limits = {}, now = () => Date.now() } = {}) {
       } catch { /* already gone */ }
     },
     isOpen: () => opened && !closed,
+    /** Why a stale lock was replaced at open() ("previous-boot" | "dead-pid" | "own-pid" | "malformed"), or null. */
+    lockRecovered: () => lockRecovered,
 
     // records
     async readRecord(jobId) {
@@ -321,4 +359,4 @@ function createJournal({ dir, limits = {}, now = () => Date.now() } = {}) {
   };
 }
 
-module.exports = { JOURNAL_LIMITS, SUBDIRS, readJournalConfig, mountFor, validateRecord, createJournal };
+module.exports = { JOURNAL_LIMITS, SUBDIRS, LOCK_MALFORMED_GRACE_MS, readJournalConfig, readBootId, mountFor, validateRecord, createJournal };

@@ -98,7 +98,9 @@ RUNNER_HMAC_KEY="$(node -e 'console.log(require("crypto").randomBytes(32).toStri
 Phase 17D-B2: official grading ALSO needs a durable journal — `RUNNER_JOURNAL_DIR` = an absolute directory on a persistent disk
 of the runner host (never tmpfs / a container layer / the Azure temporary disk); every accepted job is journaled before the
 `202`, so a gateway restart resumes queued jobs, re-runs interrupted ones (bounded) and retries callbacks from durable results
-without re-executing student code. For local development only: `RUNNER_JOURNAL_DIR=$(mktemp -d) RUNNER_JOURNAL_ALLOW_EPHEMERAL=1`.
+without re-executing student code. The journal lock is bound to the PID and the kernel boot id, so a lock left by an
+unclean host stop never blocks the gateway after a reboot, while a second live gateway on the same journal is still refused.
+For local development only: `RUNNER_JOURNAL_DIR=$(mktemp -d) RUNNER_JOURNAL_ALLOW_EPHEMERAL=1`.
 See `docs/enterprise-coding-assessment-17d-b.md` (Phase 17D-B2).
 
 Official grading is **disabled** (`503 GRADING_UNAVAILABLE`) unless the callback destination is valid: `https://` (plain

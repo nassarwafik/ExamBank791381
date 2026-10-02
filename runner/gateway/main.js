@@ -62,7 +62,7 @@ async function startGateway({ env = process.env, sandbox = createDockerSandbox()
   }
   const server = createGatewayServer({ key: config.key, sandbox, maxConcurrency: config.maxConcurrency, officialQueue, logger });
   await new Promise((resolve, reject) => { server.once("error", reject); server.listen(config.port, config.host, () => { server.off("error", reject); resolve(); }); });
-  logger.info(JSON.stringify({ event: "runner.gateway.started", host: config.host, port: config.port, maxConcurrency: config.maxConcurrency, officialGrading: config.official, sweptContainers: removed, ...(recovery ? { recovery: { scanned: recovery.scanned, truncated: recovery.truncated, corrupt: recovery.corrupt, ...recovery.recovered } } : {}) }));
+  logger.info(JSON.stringify({ event: "runner.gateway.started", host: config.host, port: config.port, maxConcurrency: config.maxConcurrency, officialGrading: config.official, sweptContainers: removed, ...(recovery ? { recovery: { scanned: recovery.scanned, truncated: recovery.truncated, corrupt: recovery.corrupt, ...recovery.recovered, staleLock: journal.lockRecovered() } } : {}) }));
   const close = () => new Promise(resolve => {
     if (officialQueue) officialQueue.stop();
     server.close(async () => { if (journal) await journal.close().catch(() => {}); resolve(); });
