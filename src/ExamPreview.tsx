@@ -10,6 +10,7 @@ import { normalizeCoverPage, examMarksDistribution, type ExamCoverPage } from ".
 import { normalizeExamTheme, previousFocusIndex, nextFocusIndex, focusProgressPercent } from "./examTheme";
 import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
+import { TeacherPreviewContext } from "./questionTypes/studentAttemptContext";
 
 // Roadmap #15 — the ONE faithful teacher preview renderer, shared by the structured builder, the legacy
 // flat-exam theme preview (App), and the exam-library preview (AssignmentsPanel). It reproduces the REAL
@@ -81,6 +82,7 @@ export default function ExamPreview({ exam, onClose }: Props) {
         <strong id={titleId}>👁 معاينة الطالب — {exam.title || "امتحان"}</strong>
         <button type="button" className="sb-btn" onClick={onClose}>← إغلاق المعاينة</button>
       </header>
+      <TeacherPreviewContext.Provider value={true}>
       <main className={"interactive-exam-page exam-theme-" + theme} dir="rtl">
         {showCover ? (
           <div className="iex-wrap">
@@ -135,6 +137,7 @@ export default function ExamPreview({ exam, onClose }: Props) {
           </div>
         )}
       </main>
+      </TeacherPreviewContext.Provider>
     </div>
   );
 }

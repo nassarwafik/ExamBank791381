@@ -1,4 +1,4 @@
-# Phase 17E — Enterprise Coding Assessment (17E-A: Coding Question Authoring)
+# Phase 17E — Enterprise Coding Assessment (17E-A: Coding Question Authoring · 17E-B: Student Coding IDE & Run Experience)
 
 Phase 17E turns the secure coding infrastructure of Phases 17A–17D into a first-class enterprise authoring and
 assessment experience. It is split into four reviewable phases:
@@ -6,7 +6,7 @@ assessment experience. It is split into four reviewable phases:
 | Phase | Scope |
 |---|---|
 | **17E-A** (this phase) | **authoring**: the coding question in the Enterprise Exam Builder (schema, editor, validation, grading strategy, secrecy boundary, governance, serialization) |
-| 17E-B | the student coding IDE / runtime UX (run against public tests through the existing runner) |
+| **17E-B** | the student coding IDE / practice-run UX (run against custom and public input through the existing runner) — see §11 |
 | 17E-C | the official submission / asynchronous grading workflow UI |
 | 17E-D | teacher grading evidence and review |
 
@@ -278,3 +278,151 @@ Out of scope:
 - network, math, physics or chemistry simulators;
 - database or Azure SQL work;
 - question-bank v2 (§9).
+
+---
+
+# Phase 17E-B — Student Coding IDE & Run Experience
+
+17E-B is the student's practice workspace for `coding@1`: write code, pick an allowed language, start from the teacher's
+starter code, type stdin, press «تشغيل», see compiler / runtime / output feedback, and run the public examples. It is **not** a
+browser compiler, not a third-party IDE and **not** official grading. Baseline: `2ea7e275` (merge of 17E-A).
+
+## 11. Architecture audit (baseline `2ea7e275`)
+
+17B already built the secure practice path; 17E-B reuses it end to end and adds no second protocol, no schema and no runner change.
+
+| Concern | Existing authority | Existing API / component | Reuse in 17E-B | Gap closed by 17E-B |
+|---|---|---|---|---|
+| Student renderer | 16A student registry → lazy `coding@1` renderer | `src/questionTypes/student/CodingResponse.tsx` | the same component, re-laid out as a workspace | layout order, limits line, output panel, public-test panel |
+| Public projection | `projectCodingConfigForStudent` (shared) + `sanitizeExamForStudent` | `api/src/lib/student-exam-sanitize.js` | unchanged — the renderer reads only the projection | 17EB canary tests (payload, DOM, requests, runner request, storage, console) |
+| Languages | `CODING_LANGUAGES` registry | `codingLanguage()` labels | selector lists `coding.allowedLanguages` with registry labels | per-language drafts (memory, per exam session) |
+| Answer | canonical `Answer {kind:"code", language, languageVersion, source}` | generic `onAnswer` → existing autosave / restore / submit | unchanged — one language is saved and submitted | — |
+| Practice execution | `POST /api/coding/run`, `GET /api/coding/capabilities` | `api/src/functions/coding-run.js` → `execution-provider.js` → signed gateway → Docker sandbox | unchanged | client-side abort + 90 s request ceiling |
+| Authorization / attempt state | active student session + assignment in the student's class + `writeRejection` / `timerState` | `coding-run.js` | unchanged (no parallel attempt model) | regression tests P1–P16 |
+| Limits | question `coding.limits`, bounded by `CODING_LIMIT_RANGES`; strict body (6 keys) | `limitsFor()` in `coding-run.js` | unchanged; the UI only *displays* them | — |
+| Abuse resistance | distributed token bucket 20 runs / 5 min per student + assignment; runner queue → `RUNNER_BUSY` | `run-rate-limit.js`, gateway | unchanged | client single flight per question |
+| Run results | `normalizeExecutionResult` statuses `success / compile-error / runtime-error / timeout / output-limit / internal-error`; request codes `EXECUTION_UNAVAILABLE / RUNNER_BUSY / RATE_LIMITED / NETWORK / …` | `codingContract.ts`, `codingExecution.ts` | the canonical names — no new enum | truncation note, compiler-output label, duration / exit code |
+| Teacher preview | `ExamPreview` renders the same `StudentQuestionCard` | `ExamPreview.tsx` | same renderer | explicit `TeacherPreviewContext` → preview notice, never a run |
+
+## 12. Student workspace
+
+Order (one column, RTL shell): **language bar → editor (+ execution limits) → stdin → run controls → output → public tests**.
+
+- **Editor** — the existing dependency-free `CodingEditor` (native `<textarea>`, LTR, monospace, Tab / Shift+Tab indentation,
+  line-number gutter, bounded by the question's `sourceBytes`). No Monaco, no syntax highlighter, no formatting, no automatic
+  mutation; the cursor never jumps on autosave (the value is the canonical Answer).
+- **Initial source** — a restored answer (language + source, even an empty source) always wins; otherwise
+  `coding.defaultLanguage` with `coding.starterCode[defaultLanguage]` (or `""`).
+- **Languages** — only `coding.allowedLanguages`, labelled from the registry. Switching away from a language remembers its
+  source in an **in-memory per-language draft** (`src/coding/codingDrafts.ts`), keyed by the exam page's attempt seam object
+  and the question id; switching back restores it. Untouched code switches to the next language's starter; edited code with
+  no draft for the target language is carried over (the 17A "never destroy work" contract). When another language holds a
+  draft, the workspace says so explicitly: «تُحفظ وتُسلَّم إجابة لغة واحدة فقط …». **Refresh behaviour:** only the selected
+  language's source is persisted (the canonical Answer); other-language drafts live only in the current exam-page session and
+  never touch localStorage / sessionStorage / the server. A new session (another student or token) starts with an empty store.
+- **stdin** — plain text, LTR, newlines preserved, ≤ 16 KB, never executed on Enter, never stored in the Answer; a public
+  example's input can be loaded with one tap.
+- **Run controls** — «تشغيل» (custom run: current source + stdin) and «تشغيل الأمثلة» (every public example, sequentially, one
+  runner slot and one budget token at a time). `type="button"`, `aria-busy` while running, `aria-disabled` while another run is
+  active or stdin is too large; a `role="status"` progress line.
+- **Output** — an `aria-live="polite"` region labelled «نتيجة التشغيل». Status in Arabic TEXT (never colour only), duration and
+  exit code, stdout as «المخرجات», stderr as «رسائل المترجم» (compile error) or «رسائل الخطأ», a truncation note for
+  `output-limit`; raw output stays LTR monospace inside a bounded scroll box. Public-example rows show the actual output beside
+  the teacher's sample comparison, labelled «للتدريب فقط» and «نتائج الأمثلة للتدريب فقط ولا تؤثر في العلامة.»
+- **Public tests** — title (or «مثال n»), «الإدخال», and «الناتج المتوقع» only when the teacher provided `sampleOutput`.
+- **Limits** — «حدود التنفيذ: الوقت … · الذاكرة … · حجم الكود …» from `coding.limits` (display only; the server stays authoritative).
+
+## 13. Run identity, races and autosave
+
+- **Single flight** — a synchronous `useRef` guard (not render state), so repeated clicks / taps can never start two runs.
+- **Generation + snapshot** — every run gets a generation id and records the `{ language, source }` snapshot it was sent with.
+  A language switch or unmount **supersedes** the in-flight run: its `AbortController` fires, the slot is freed, and its late
+  answer is dropped (Run A can never overwrite Run B). A result whose snapshot differs from the current code is marked
+  «هذه النتيجة لنسخة سابقة من الكود …» — it never implies it validates the edited code.
+- **Editing is never blocked** — the editor stays editable during a run; source changes flow through the canonical Answer, so
+  autosave always persists the newest edit (proved end to end: type → autosave → Run → keep typing → autosave + run resolve →
+  newest edit stored and restored byte-for-byte after refresh, starter not re-inserted).
+- **Failures** — runner unavailable, busy, rate-limited, network errors and refusals never clear the source or the stdin, never
+  submit, never touch grading state; the student can retry. Infrastructure unavailability is never a zero.
+
+## 14. Request flow, authorization and secrecy
+
+```
+Student browser (CodingResponse, attempt seam adds the student token)
+  → POST /api/coding/run { assignmentId, questionId, language, languageVersion, source, stdin }      (exactly six keys)
+  → coding-run.js: active student session → assignment in the student's class, published, class active
+                   → writeRejection + timerState (the SAME attempt authority save / submit use)
+                   → bindCodeAnswerToQuestion (coding@1, allowed language, question source limit)
+                   → limits derived from the question → rate-limit bucket
+  → execution-provider.js: { requestId, language, languageVersion, source, stdin, limits } signed with the server-held HMAC key
+  → Coding Runner Gateway → one disposable Docker sandbox (network none, read-only root, caps dropped, pids / cpu / memory / time bounded)
+  → bounded raw result → normalizeExecutionResult → student
+```
+
+The browser never talks to the runner and never holds a runner key; a browser-supplied signature header is not forwarded.
+Run availability follows `writeRejection` exactly: not yet open → 403; due date passed → 409; paused → 409; timed attempt
+expired / not started → 409; no active attempt (submitted, ended by the teacher, strict exit) → 409; unpublished → 403.
+
+**Secrecy (17EB canaries `HIDDEN_STDIN_CANARY_17EB`, `HIDDEN_EXPECTED_CANARY_17EB`, `HIDDEN_WEIGHT_CANARY_17EB`,
+`REFERENCE_SOLUTION_CANARY_17EB`, plus a hidden-label canary)** — asserted absent from the student assignment payload, the
+renderer props, the rendered DOM, every practice request body, the signed runner practice request (unit and real-Docker), local
+/ session storage and console output. The teacher preview renders the same student projection and shows
+«معاينة المعلم: التشغيل متاح للطالب داخل الامتحان فقط، ولا يُشغَّل أي كود من المعاينة.» — it fetches nothing and runs nothing.
+
+## 15. Practice run versus official hidden-test grading
+
+| | Practice run (17B / 17E-B) | Official grading (17C / 17D) |
+|---|---|---|
+| Initiated by | the student («تشغيل», «تشغيل الأمثلة») | submission / attempt end |
+| Input | the student's stdin or public examples | the teacher's hidden tests |
+| Route | `POST /api/coding/run` → `/v1/execute` | dispatch → `/v1/official-grading-jobs` → signed callback |
+| Output | shown to the student, ephemeral | never shown directly; SmartAssess computes the score |
+| Grade authority | **none** — no write except the rate-limit bucket | the server grading authority (`officialCodingScoreFor`) |
+
+Proved: a successful practice run writes no submission / attempt / `codingGrading` / job record; the following submission still
+dispatches the official job with **every** hidden case, and a wrong official callback scores 0 even though practice "succeeded".
+Manual-grading questions run the same practice path and stay manual; `allOrNothing` questions reveal nothing extra.
+
+## 16. Tests, fail-first and mutations (17E-B)
+
+| Suite | Tests | Scope |
+|---|---|---|
+| `src/questionTypes/coding.17e-b.test.tsx` | 28 | IDE1–IDE28 + drafts across navigation + public-test run + real exam-page E2E (autosave × run race, refresh restore, secrecy) |
+| `api/tests/coding-17e-b-practice.test.js` | 22 | P1–P16 through the REAL handlers (auth, authorization, binding, bounds, limits, server signing, runner secrecy, unavailable / busy / rate limit, practice ≠ official, attempt states, payload canaries) |
+| `runner/tests/docker/student-practice-e2e.rtest.js` | 1 | REAL student route → signed gateway → Docker sandbox, Python / Java / C#: stdin → stdout, compile / syntax error, timeout; nothing stored; canary-free runner request; no leftover containers |
+
+**Fail-first** (final test files against unchanged `2ea7e275`): see the PR body for the exact counts. The API suite passes on
+the baseline by design — the 17B server already enforced every rule it pins — and is kept as a regression gate; every UI
+behaviour new in 17E-B fails on the baseline.
+
+**Mutations (all killed, restored byte-for-byte, tree fingerprint identical before / after):**
+
+| # | Mutation | Killed by |
+|---|---|---|
+| M1 | expose a hidden-test field in the student payload | P16, IDE20, E2E, 17C secrecy |
+| M2 | allow a disallowed language (server binding) | P5, 17B A8 |
+| M2b | allow a disallowed language (student selector) | IDE2, 17A C6 |
+| M3 | Run calls the official grading route | IDE15, IDE21/22, 17B run tests |
+| M4 | practice success mutates official grading state | P13, E2E, 17B storage, 17C secrecy |
+| M5 | late Run A overwrites Run B | IDE16 |
+| M6 | starter code overwrites the restored source | IDE14, IDE15, 17A C6 / C34 |
+| M7 | double click dispatches two runs | IDE9 |
+| M8 | client raises time / memory limits and the API trusts them | P8, 17B limits |
+| M9 | runner unavailable clears the student's code | IDE14 |
+
+## 17. Mobile, accessibility, bundle
+
+Measured in headless Chromium at 360 / 390 / 768 / 1280 px: no horizontal page overflow; code and output scroll inside their
+own boxes; «تشغيل» stays visible with a 44 px target; controls stack below 640 px. No new dependency; the IDE stays in the lazy
+`CodingResponse` chunk — the initial JS graph is unchanged.
+
+## 18. Known limitations / follow-ups (17E-B)
+
+- Other-language drafts are session memory only: after a page reload only the selected language's source remains (documented
+  on screen). Persisting multi-language drafts would need an answer-schema change and is deliberately out of scope.
+- The server rate limit is per student + assignment (20 runs / 5 min) with runner-side queue bounds; there is no separate
+  per-student concurrency cap on the server (the client allows one active run per question). «تشغيل الأمثلة» spends one budget
+  token per example.
+- Abandoning a run in the browser does not cancel the runner job already started; its result is simply discarded.
+- Production runner activation (VM, keys, recovery cron) remains a separate controlled infrastructure step; until then every
+  run answers «تشغيل الكود غير متاح حاليًا …» and the question stays fully answerable and submittable.

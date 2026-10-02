@@ -8,3 +8,7 @@ import { createContext } from "react";
 export type StudentAttemptApi = { assignmentId: string; request: (path: string, init?: RequestInit) => Promise<Response> };
 
 export const StudentAttemptContext = createContext<StudentAttemptApi | undefined>(undefined);
+
+// Phase 17E-B — the teacher preview marks its subtree so a renderer can tell "teacher preview" from "no execution available":
+// the coding IDE then shows an explicit preview notice and never attempts to run code (it has no attempt seam there anyway).
+export const TeacherPreviewContext = createContext<boolean>(false);

@@ -1,6 +1,6 @@
 /* Phase 17A — coding engine UI (lazy chunk only). The surrounding UI stays RTL; source areas are always LTR + monospace.
    Horizontal scrolling happens INSIDE the editor / viewer only — the exam page never overflows horizontally. */
-.cx-coding { display: grid; gap: 12px; min-width: 0; }
+.cx-coding { display: grid; gap: 12px; min-width: 0; max-width: 100%; }
 .cx-coding-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .cx-coding-toolbar label { display: inline-flex; align-items: center; gap: 6px; }
 .cx-coding-toolbar select, .cx-coding-toolbar button, .cx-run-button { min-height: 44px; }
@@ -98,3 +98,27 @@
 .cx-validation { border: 1px dashed var(--eb-border, #e2e8f0); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
 .cx-validation h4 { margin: 0; font-size: 14px; }
 .cx-validation ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
+
+/* Phase 17E-B — the student practice workspace: language bar → editor (+ limits) → stdin → run controls → output → public tests.
+   Every panel may shrink to the column (min-width: 0); code, stdin and output scroll INSIDE their own boxes, so the page never
+   scrolls sideways on a phone; controls wrap and stay ≥ 44 px touch targets; status is always TEXT (colour is only a hint). */
+.cx-editor-panel, .cx-stdin-panel { display: grid; gap: 6px; min-width: 0; }
+.cx-limits { margin: 0; font-size: 12px; color: var(--eb-muted, #475569); }
+.cx-run-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.cx-run-controls .cx-run-button { min-height: 44px; padding: 0 18px; font-weight: 700; }
+.cx-run-button.is-secondary { font-weight: 600; }
+.cx-run-button:focus-visible, .cx-sample-pick button:focus-visible, .cx-stdin:focus-visible { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: 2px; }
+.cx-run-button[aria-busy="true"] { cursor: progress; }
+.cx-result-meta, .cx-result-note { margin: 0; font-size: 12px; color: var(--eb-muted, #475569); }
+.cx-result-stale { margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--eb-warning-soft, #fffbeb); color: var(--eb-warning, #92400e); font-size: 12px; }
+.cx-public-results { display: grid; gap: 8px; min-width: 0; }
+.cx-public-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.cx-public-list .cx-result[data-status="pending"] .cx-result-status { color: var(--eb-muted, #475569); }
+.cx-public-list .cx-result[data-status="pending"] .cx-result-status::before { content: "○ "; }
+.cx-samples, .cx-io-grid, .cx-io-block { min-width: 0; }
+@media (max-width: 640px) {
+  .cx-run-controls { flex-direction: column; align-items: stretch; }
+  .cx-run-controls .cx-run-button { width: 100%; }
+  .cx-sample-pick { flex-direction: column; }
+  .cx-coding-toolbar label { flex-wrap: wrap; }
+}
