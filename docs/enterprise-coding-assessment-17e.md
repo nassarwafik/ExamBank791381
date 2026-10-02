@@ -426,3 +426,211 @@ own boxes; «تشغيل» stays visible with a 44 px target; controls stack belo
 - Abandoning a run in the browser does not cancel the runner job already started; its result is simply discarded.
 - Production runner activation (VM, keys, recovery cron) remains a separate controlled infrastructure step; until then every
   run answers «تشغيل الكود غير متاح حاليًا …» and the question stays fully answerable and submittable.
+
+---
+
+# Phase 17E-C — Enterprise Async Coding Grading Experience
+
+## 19. Architecture audit (baseline `b41451ea`)
+
+Before 17E-C, a completed attempt with open official coding grading reached the student only as
+`autoGradingPending: true`, and `StudentExamPage` printed one generic sentence. The page refreshed only on
+`visibilitychange` / `online` (via `resync`), so a student watching the result never saw grading finish.
+
+| Concern | Current authority | Current public shape | Internal-only data | 17E-C decision |
+|---|---|---|---|---|
+| Overall mark finality | `api/src/lib/grading-status.js` `deriveGradingStatus` (`manualReviewMarks`, `finalized`) | `gradingStatus: notSubmitted \| pendingReview \| final`; frontend `src/gradingStatus.ts` (`resolveGradingStatus`, `scoreLabel`, `gradingClass`) | — | **Unchanged.** Still the only rule for "final" vs "provisional". |
+| Automatic coding progress | `attempt.codingGrading.targets[questionId].state` (`pending` / `dispatched` / `retryable` / `complete`), written by `planCodingGrading`, dispatch, callback and recovery (`official-grading.js`, `grading-recovery.js`) | student: `autoGradingPending: true` only | `jobId`, `revision`, `gradingKey`, `answerHash`, `questionFingerprint`, `technicalCode`, `recovery {automaticAttempts, exhausted, …}`, `result {passed cases …}`, job-record delivery lease | New pure server helper `studentCodingGradingStatus(attempt)` next to the authority, projected as ONE additive aggregate field `codingGradingStatus`. |
+| Recovery exhaustion | `grading-recovery.js` marks `target.recovery.exhausted = true` (state stays `retryable`, never a zero); a teacher retry resets it | invisible | retry counts, backoff, sweep cursor / lease | Derivable safely → student state `delayed` ("will remain under review"), only when EVERY open target is exhausted. |
+| Teacher view of the same | `codingGradingStatus(attempt)` (17D-A) → `{ pending, retryable, stale }` counts in `assignment-results` | teacher only | — | Unchanged (different audience, different name). |
+| Completed-attempt projection (student) | `pub()` in `student-submission.js` (GET state `latestResult` + `attempts[]`, submit / finalize `result`) and `student-dashboard.js` `latestResult` | `autoGradingPending?` | — | Both add `codingGradingStatus?`; `autoGradingPending` kept (backward compatible). |
+| Refresh mechanism | `GET /api/student-submission/{id}` — read-only (session + class + assignment + submission reads, no writes) | full `state` | — | Reused; no new endpoint. Bounded polling only on the result screen while the status is open. |
+| Server-state adoption | `StudentExamPage` `resync` (+ `applyServerAttemptState`, `adoptOrKeepActive`) | — | — | Reused. A monotonic read sequence makes an older in-flight read unable to overwrite a newer one; starting a new attempt invalidates in-flight reads. |
+| Strict-mode exit / write guards | `strictArmed` requires `!result` | — | — | Not touched: polling runs only on the result screen and only reads. |
+| Practice runs (17E-B) | `/api/coding/run` | ephemeral | — | Never an input to 17E-C status. |
+
+## 20. Two independent status dimensions
+
+| Dimension | Question it answers | Authority | Student field | Values |
+|---|---|---|---|---|
+| Mark finality | Is the overall mark final? | `deriveGradingStatus` (unchanged) | `gradingStatus` | `notSubmitted` · `pendingReview` · `final` |
+| Automatic coding grading | Has the official hidden-test grading finished? | `studentCodingGradingStatus` (new, `official-grading.js`) | `autoGradingStatus` (omitted when not applicable) | `queued` · `processing` · `retrying` · `delayed` · `complete` |
+
+They are never merged. Valid combinations include `complete` + `pendingReview` (an essay still awaits the
+teacher) and `processing` + `pendingReview` (the automatic mark has not landed yet). The frontend words mark
+finality ONLY through `resolveGradingStatus` / `scoreLabel` / `gradingClass`; "العلامة النهائية" appears only
+for `gradingStatus === "final"`.
+
+The public field is named `autoGradingStatus` (pairing with the legacy `autoGradingPending`): the existing
+17C / 17D secrecy guards forbid the substring `codingGrading` anywhere in a student payload (the internal
+object's name), and 17E-C keeps those guards unchanged.
+
+## 21. Student-safe mapping (`studentCodingGradingStatus(attempt)`)
+
+Input: `attempt.codingGrading.targets` only (non-object entries ignored).
+
+| Stored targets | Student status |
+|---|---|
+| none / no `codingGrading` / only non-object entries | omitted (not applicable) |
+| every target `complete` (incl. an unanswered target graded 0 at submission) | `complete` |
+| every OPEN target is `retryable` with `recovery.exhausted === true` | `delayed` |
+| otherwise, among open targets still progressing automatically | `retrying` (retryable) > `processing` (dispatched, or an unrecognised state — fail safe) > `queued` (pending) |
+
+`dispatched` is a workflow state ("جارٍ التصحيح الآلي"), not proof that code is executing; a stale
+dispatched target is still `processing` (staleness is a recovery concern, never shown). `autoGradingPending`
+stays exactly as before and agrees with the new field (`autoGradingPending` ⇔ status is open).
+
+Excluded from every student payload (asserted by `api/tests/coding-17e-c-status.test.js`): job ids (`cg_…`),
+`revision`, `targetRef`, `technicalCode`, `gradingKey`, `answerHash`, `questionFingerprint`, recovery
+(`automaticAttempts`, `exhausted`), delivery / lease / callback state, runner URL / HMAC, per-case evidence
+(`cases`, passed counts, weights, comparator), hidden inputs / expected outputs, reference solutions, source.
+
+## 22. Polling lifecycle (`src/useCodingGradingPoll.ts`)
+
+- **Where:** only the `StudentExamPage` result screen, only while `autoGradingStatus` is `queued`,
+  `processing` or `retrying`, and never while a new attempt is being started. No-coding exams, manual-mode
+  coding, `complete` and `delayed` never poll (a `delayed` result changes only through a teacher; it is
+  refreshed on return / visibility / reconnect). An older payload with only `autoGradingPending` keeps the
+  17C sentence and does not poll.
+- **What:** the existing read-only `GET /api/student-submission/{id}` (no new endpoint). It never dispatches,
+  retries, regrades, finalizes or writes; recovery stays with the 17D sweep and teacher retry.
+- **Cadence:** every 3 s for the first 30 s, every 5 s until 2 min, every 10 s until 5 min; then the
+  foreground window ends with "لا يزال التصحيح جاريًا. يمكنك مغادرة الصفحة والعودة لاحقًا لرؤية النتيجة." (not a
+  grading timeout). A visibility return or reconnect starts a new window.
+- **One chain:** the next read is scheduled only after the previous one settled; no overlap, no interval timer.
+- **Hidden tab:** the pending timer is cleared; on return the page's existing visibility resync refreshes
+  immediately and the chain restarts.
+- **Abort:** unmount, completion, a different attempt identity or starting a new attempt tears the chain down
+  and aborts the in-flight request.
+- No `beforeunload` warning is added; leaving is always safe.
+
+## 23. Attempt identity and race safety
+
+- The chain is keyed by the completed attempt (`attemptNumber|submittedAt`).
+- Every authoritative GET (poll or resync) takes a **read ticket**. A response older than one already
+  applied, or issued before `invalidateReads()` (called when starting an attempt and when a submit
+  succeeds), is dropped. A late attempt-1 read can therefore never pull the student out of attempt 2, and a
+  slow poll can never overwrite a newer visibility resync.
+- Adoption reuses the ONE existing reconciliation path (`readAndAdopt`, formerly the body of `resync`):
+  - another tab started attempt 2 → the active attempt is adopted;
+  - another tab saw grading / review finish → the newer result is adopted.
+- The whole result object is replaced at once (score, percentage, manualReviewMarks, finalized,
+  gradingStatus, teacherFeedback, status), so the numbers and the badge never disagree.
+
+## 24. Recovery, runner-down, offline
+
+- **Recovery:** 17D recovery appears only through the aggregate (`processing → retrying → processing →
+  complete`, or `delayed` when exhausted). No sweep / lease / retry-count is shown, and there is no student
+  retry / regrade control.
+- **Runner down after submission:**
+  - the submission succeeds;
+  - the status is `retrying` (or `queued` before the first dispatch) and the mark stays provisional;
+  - the student is told no resubmission is needed;
+  - an outage is never a zero.
+- **Offline / failed refresh:**
+  - the last known result stays on screen;
+  - a subtle note says "تعذّر تحديث حالة التصحيح الآن. قد يستمر التصحيح على الخادم حتى عند انقطاع اتصال جهازك.";
+  - it disappears after the next successful read.
+  - A failed HTTP request is never mapped to `retrying` (that is authoritative server state only).
+- **Strict mode:** polling runs only on the result screen, where `strictArmed` is already false. It sends no
+  integrity exit and re-arms no write guard.
+
+## 25. Security boundary and portal
+
+- Practice runs (17E-B) never influence this status; only official targets of a completed attempt count.
+- The teacher preview never renders `StudentExamPage`, so it never polls.
+- Student portal: `GET /api/student-dashboard` `latestResult` carries the same `autoGradingStatus`. The task
+  card shows one compact line, "التصحيح الآلي لأسئلة البرمجة جارٍ", while it is open. The portal does not
+  poll.
+- No new logging: polls are ordinary GETs of an existing route (generic request telemetry only); nothing logs
+  source, evidence or job ids.
+
+## 26. Read cost
+
+One poll = one `GET /api/student-submission/{id}` = 4 point blob reads:
+- session user;
+- class;
+- assignment;
+- the student's submission.
+
+There are no listings and no writes.
+
+| Window segment | Interval | Polls |
+|---|---|---|
+| 0–30 s | 3 s | ≤ 10 |
+| 30–120 s | 5 s | ≤ 18 |
+| 120–300 s | 10 s | ≤ 18 |
+| **5-minute window** | | **≤ 46 polls ≈ 184 blob reads per student** |
+
+With a healthy runner, grading finishes within seconds, so a typical student polls 1–3 times.
+
+The worst case is N students submitting together while the runner is down. Approximate request rates:
+- ≈ N/3 req/s for 30 s;
+- then N/5 req/s;
+- then N/10 req/s;
+- then zero after 5 minutes.
+
+For example, at N = 1000 that is ≈ 333 → 200 → 100 req/s for at most 5 minutes. Hidden tabs do not poll. The
+dashboard read model (12E) is unaffected.
+
+## 27. Tests, fail-first, mutations (17E-C)
+
+- `api/tests/coding-17e-c-status.test.js` (21 tests) — AS1–AS16 through the REAL handlers.
+- `src/coding/codingGrading.17e-c.test.tsx` (30 tests):
+  - UI1–UI8;
+  - POLL1–POLL10 (+ POLL10b);
+  - RACE1–RACE3 (+ RACE1b, RACE2b);
+  - RET1–RET3;
+  - the recovery flow;
+  - strict mode;
+  - no `beforeunload`;
+  - the portal card;
+  - the pure polling policy.
+
+**Fail-first** (final test files against unchanged `b41451ea`, in a worktree): **42 failed / 9 passed (51)**.
+
+The 9 that pass are deliberate regression gates:
+- the no-coding exam;
+- the manual-mode coding exam;
+- the legacy `autoGradingPending`-only payload;
+- returning after completion;
+- no `beforeunload`;
+- RACE1 (attempt 2 stays authoritative; trivially true when nothing polls);
+- AS11 (history shape);
+- the no-coding / manual API payloads;
+- the read-only GET.
+
+RACE1b fails on the baseline: a pre-existing, non-abortable visibility resync issued before «start» could
+pull the student out of a newly started attempt. The read ticket fixes it.
+
+**Mutations** — all killed. Each file was restored byte-for-byte, with an identical tree fingerprint before
+and after.
+
+| # | Mutation | Killed by |
+|---|---|---|
+| M1 | expose `technicalCode` | AS10–AS15 |
+| M2 | expose `jobId` | AS10–AS15 |
+| M3 | `retrying` derived from a failed refresh | POLL8 / POLL9 |
+| M4 | "final" label while `pendingReview` | UI4 / UI5 |
+| M5 | keep polling after `complete` | POLL1 / POLL2, RET2, policy |
+| M6 | no read-ticket check (stale read overwrites) | POLL10b |
+| M6b | start does not invalidate reads | RACE1b |
+| M7 | poll no-coding / manual exams | UI7, UI8, backward compatibility |
+| M8 | student GET dispatches / retries | §14 read-only test |
+| M9 | no abort on unmount | POLL5 |
+| M10 | expose per-hidden-test progress | AS10–AS15 |
+| M11 | hidden tab never detected | POLL6 / POLL7 |
+| M12 | exhaustion not mapped to `delayed` | AS8b, §30 |
+| M13 | overlapping polls | POLL4, cadence |
+| M14 | no foreground window | cadence |
+| M15 | drop the "still provisional" note | UI4 / UI5 |
+
+## 28. Known limitations / follow-ups (17E-C)
+
+- A teacher manual override of a coding question does not complete its automatic target. If that target
+  stays open, the student still sees the automatic status (the mark itself follows the override). Mapping
+  "overridden" to resolved needs a teacher-facing decision.
+- After the 5-minute foreground window the page stops polling until the student returns to the tab,
+  reconnects or reopens the assignment. A push notification for "grading complete" is a natural later phase
+  (Phase 6B push infrastructure exists).
+- The portal does not poll; it shows the status as of its last load.

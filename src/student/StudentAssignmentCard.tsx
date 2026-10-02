@@ -1,4 +1,5 @@
 import { dashboardStateLabel, gradingClass, resolveGradingStatus, scoreLabel } from "../gradingStatus";
+import { CODING_GRADING_CARD_OPEN, codingGradingStatusOf, isCodingGradingOpen } from "../codingGradingStatus";
 import StatusBadge from "../ui/StatusBadge";
 import { STATE_TONE, actionLabel, formatWhen, stateOf } from "./portalPresentation";
 import type { Summary } from "./types";
@@ -29,6 +30,7 @@ export default function StudentAssignmentCard({ item, busy, onOpen }: { item: Su
           {lrGs === "pendingReview" && lr.manualReviewMarks > 0 && <span>بانتظار مراجعة {lr.manualReviewMarks} علامة</span>}
         </p>
       )}
+      {lr && isCodingGradingOpen(codingGradingStatusOf(lr)) && <p className="eb-sp-task-coding" data-testid="card-coding-grading">{CODING_GRADING_CARD_OPEN}</p>}
       {lr && lr.teacherFeedback && <p className="eb-sp-task-feedback">ملاحظة المعلم: {lr.teacherFeedback}</p>}
       <button type="button" className="eb-button is-primary eb-sp-task-action" onClick={() => onOpen(item)} disabled={busy || item.availability === "scheduled"}>{actionLabel(item)}</button>
     </article>
