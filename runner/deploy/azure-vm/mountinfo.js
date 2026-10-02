@@ -31,7 +31,11 @@ function parseMountInfo(text) {
     const dev = /^(\d+):(\d+)$/.exec(left[2] || "");
     if (left.length < 6 || right.length < 3 || !/^\d+$/.test(left[0]) || !/^\d+$/.test(left[1]) || !dev) { malformed++; continue; }
     const root = unescapeMount(left[3]), mountPoint = unescapeMount(left[4]);
-    if (!root.startsWith("/") || !mountPoint.startsWith("/")) { malformed++; continue; }
+    // The mount point is always an absolute path. The ROOT is a path for a filesystem / bind mount but an opaque token for
+    // pseudo filesystems — Docker bind-mounts every container network namespace as `nsfs` with root `net:[<inode>]` under
+    // /run/docker/netns/<id> — so a non-path root is valid, never malformed (17F-A1.1 review fix MAJOR-1: a production host
+    // WITH running containers must not exit 22). storageSeparation still requires root === "/" for the JOURNAL mount itself.
+    if (!root || !mountPoint.startsWith("/")) { malformed++; continue; }
     entries.push({ mountId: Number(left[0]), parentId: Number(left[1]), device: left[2], major: Number(dev[1]), minor: Number(dev[2]), root, mountPoint, options: left[5], optional: left.slice(6), fsType: right[0], source: unescapeMount(right[1]), superOptions: right.slice(2).join(" ") });
   }
   return { entries, malformed };

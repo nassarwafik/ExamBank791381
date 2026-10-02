@@ -194,3 +194,90 @@ test("PARSE — storageSeparation: the three invariants, bind-mount refusal and 
   assert.equal(judge(GOOD, null).ok, false);
   for (const v of [ok, judge(null), judge("garbage\n")]) assert.ok(v.reason.length < 220 && !/\n/.test(v.reason), "operator message, not a table dump");
 });
+
+// ── 17F-A1.1 review fix MAJOR-1 — a REAL Docker host's mountinfo carries pseudo-filesystem mounts whose ROOT is not a path:
+// Docker bind-mounts every container network namespace as `nsfs` with root `net:[<inode>]` under /run/docker/netns/<id>.
+// The first 17F-A1.1 parser counted such a line as malformed, so a production host WITH running containers exited 22
+// (ExecStartPre, readiness and --deep all failed). Fixture modelled on an Ubuntu 24.04 Azure VM with two data disks and
+// two running containers (the nsfs lines are the kernel's exact format; ids are opaque).
+const HOST = [
+  "24 30 0:22 / /proc rw,nosuid,nodev,noexec,relatime shared:13 - proc proc rw",
+  "25 30 0:23 / /sys rw,nosuid,nodev,noexec,relatime shared:2 - sysfs sysfs rw",
+  "26 30 0:5 / /dev rw,nosuid,relatime shared:8 - devtmpfs udev rw,size=8116224k,nr_inodes=2029056,mode=755,inode64",
+  "28 30 0:24 / /run rw,nosuid,nodev,noexec,relatime shared:5 - tmpfs tmpfs rw,size=1638464k,mode=755,inode64",
+  "30 1 8:1 / / rw,relatime shared:1 - ext4 /dev/sda1 rw,discard,errors=remount-ro,commit=30",
+  "31 25 0:6 / /sys/kernel/security rw,nosuid,nodev,noexec,relatime shared:3 - securityfs securityfs rw",
+  "33 25 0:27 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime shared:4 - cgroup2 cgroup2 rw,nsdelegate,memory_recursiveprot",
+  "40 30 8:15 / /boot/efi rw,relatime shared:36 - vfat /dev/sda15 rw,fmask=0077,dmask=0077,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro",
+  "44 30 8:17 / /var/lib/docker rw,noatime shared:38 - ext4 /dev/sdb1 rw",
+  "46 30 8:33 / /data/smartassess-runner rw,noatime shared:40 - ext4 /dev/sdc1 rw",
+  "48 28 0:24 /snapd/ns /run/snapd/ns rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,size=1638464k,mode=755,inode64",
+  "61 28 0:4 net:[4026532266] /run/docker/netns/1f0e2d3c4b5a rw - nsfs nsfs rw",
+  "62 28 0:4 net:[4026532331] /run/docker/netns/9a8b7c6d5e4f rw - nsfs nsfs rw"
+];
+const host = (map = x => x) => mi(HOST.map(map).filter(Boolean));
+const HOST_MOUNTS = ["/dev/sda1 / ext4 rw,relatime 0 0", "/dev/sda15 /boot/efi vfat rw 0 0", "/dev/sdb1 /var/lib/docker ext4 rw,noatime 0 0", "/dev/sdc1 /data/smartassess-runner ext4 rw,noatime 0 0", "tmpfs /run tmpfs rw 0 0", "nsfs /run/docker/netns/1f0e2d3c4b5a nsfs rw 0 0"].join("\n");
+
+test("NETNS1 — a real Docker host (nsfs netns mounts present) with the three-disk topology → storage PASS, exit 0 (parser + production preflight)", async () => {
+  const M = require("../../deploy/azure-vm/mountinfo.js");
+  const parsed = M.parseMountInfo(host());
+  assert.equal(parsed.malformed, 0, "nsfs lines with a non-path root are valid mountinfo, not malformed");
+  assert.equal(parsed.entries.length, HOST.length);
+  const ns = parsed.entries.find(e => e.fsType === "nsfs");
+  assert.deepEqual([ns.root, ns.mountPoint, ns.device], ["net:[4026532266]", "/run/docker/netns/1f0e2d3c4b5a", "0:4"]);
+  const sep = M.storageSeparation({ mountInfo: host(), journalDir: JDIR, dockerRootDir: "/var/lib/docker" });
+  assert.equal(sep.ok, true, sep.reason);
+  assert.deepEqual(sep.devices, { root: "8:1", journal: "8:33", docker: "8:17" });
+  const r = await run({ deps: deps({ mounts: () => HOST_MOUNTS, mountInfo: () => host() }) });
+  assert.equal(r.exitCode, 0, JSON.stringify(r.results.filter(x => x.status !== "pass")));
+  assert.equal(check(r, "storage").status, "pass");
+  assert.match(check(r, "storage").reason, /three distinct devices \(8:1, 8:33, 8:17\)/);
+});
+
+test("NETNS2 — nsfs present, journal on the root device → FAIL (22): the fix accepts pseudo-fs roots without weakening the device rule", async () => {
+  const text = host(l => l.startsWith("46 ") ? "46 30 8:1 / /data/smartassess-runner rw,noatime shared:40 - ext4 /dev/sda1 rw" : l);
+  const r = await run({ deps: deps({ mounts: () => HOST_MOUNTS.replace("/dev/sdc1 /data/smartassess-runner", "/dev/sda1 /data/smartassess-runner"), mountInfo: () => text }) });
+  assert.equal(r.exitCode, EXIT_STORAGE, JSON.stringify(r.results.filter(x => x.status !== "pass")));
+  assert.match(check(r, "storage").reason, /Journal storage must be on a dedicated device separate from the OS disk/);
+  // bind mount of an OS-disk directory, with nsfs present
+  const bind = host(l => l.startsWith("46 ") ? "46 30 8:1 /srv/journal /data/smartassess-runner rw,noatime shared:1 - ext4 /dev/sda1 rw" : l);
+  const b = await run({ deps: deps({ mounts: () => HOST_MOUNTS.replace("/dev/sdc1 /data/smartassess-runner", "/dev/sda1 /data/smartassess-runner"), mountInfo: () => bind }) });
+  assert.equal(b.exitCode, EXIT_STORAGE); assert.match(check(b, "storage").reason, /bind mount/);
+});
+
+test("NETNS3 — nsfs present, journal and Docker on one device → FAIL (22)", async () => {
+  const text = host(l => l.startsWith("46 ") ? "46 30 8:17 / /data/smartassess-runner rw,noatime shared:38 - ext4 /dev/sdb1 rw" : l);
+  const r = await run({ deps: deps({ mounts: () => HOST_MOUNTS.replace("/dev/sdc1 /data/smartassess-runner", "/dev/sdb1 /data/smartassess-runner"), mountInfo: () => text }) });
+  assert.equal(r.exitCode, EXIT_STORAGE, JSON.stringify(r.results.filter(x => x.status !== "pass")));
+  assert.match(check(r, "storage").reason, /Journal and Docker storage must not share the same backing device/);
+});
+
+test("NETNS4 — nsfs present, Docker root on the OS disk (no /var/lib/docker mount, or a bind of the root fs as on a dev box) → FAIL (22)", async () => {
+  const none = host(l => (l.startsWith("44 ") ? null : l));
+  let r = await run({ deps: deps({ mounts: () => HOST_MOUNTS.split("\n").filter(l => !l.includes("/var/lib/docker")).join("\n"), mountInfo: () => none }) });
+  assert.equal(r.exitCode, EXIT_STORAGE, JSON.stringify(r.results.filter(x => x.status !== "pass")));
+  assert.match(check(r, "storage").reason, /Docker storage must be mounted on a dedicated device separate from the OS disk/);
+  // the exact shape of this CI container: 254:0 /var/lib/docker /var/lib/docker (a bind of the root filesystem)
+  const bind = host(l => (l.startsWith("44 ") ? "44 30 8:1 /var/lib/docker /var/lib/docker rw,relatime shared:1 - ext4 /dev/sda1 rw" : l));
+  r = await run({ deps: deps({ mounts: () => HOST_MOUNTS, mountInfo: () => bind }) });
+  assert.equal(r.exitCode, EXIT_STORAGE);
+  assert.match(check(r, "storage").reason, /Docker storage must be mounted on a dedicated device/);
+});
+
+test("NETNS5 — nsfs present but a RELEVANT storage line is truly malformed → fail closed (22), parser counts it", async () => {
+  const M = require("../../deploy/azure-vm/mountinfo.js");
+  for (const [label, text] of [
+    ["journal line without the ' - ' separator", host(l => l.startsWith("46 ") ? "46 30 8:33 / /data/smartassess-runner rw,noatime shared:40 ext4 /dev/sdc1 rw" : l)],
+    ["journal line with a non-numeric device", host(l => l.startsWith("46 ") ? "46 30 sdc1 / /data/smartassess-runner rw,noatime shared:40 - ext4 /dev/sdc1 rw" : l)],
+    ["root line truncated", host(l => l.startsWith("30 ") ? "30 1 8:1 / /" : l)],
+    ["Docker line with a relative mount point", host(l => l.startsWith("44 ") ? "44 30 8:17 / var/lib/docker rw,noatime shared:38 - ext4 /dev/sdb1 rw" : l)]
+  ]) {
+    assert.ok(M.parseMountInfo(text).malformed >= 1, label);
+    const r = await run({ deps: deps({ mounts: () => HOST_MOUNTS, mountInfo: () => text }) });
+    assert.equal(r.exitCode, EXIT_STORAGE, label);
+    assert.match(check(r, "storage").reason, /malformed/, label);
+  }
+  // and a root line missing entirely (nsfs present) still fails closed
+  const r = await run({ deps: deps({ mounts: () => HOST_MOUNTS, mountInfo: () => host(l => (l.startsWith("30 ") ? null : l)) }) });
+  assert.equal(r.exitCode, EXIT_STORAGE); assert.match(check(r, "storage").reason, /root/);
+});

@@ -114,7 +114,7 @@ regression class was invisible outside the table. The same mutation is HM6 below
 ## 5. Tests
 | Suite | Tests | Runs in |
 |---|---|---|
-| `runner/tests/unit/deploy-storage.rtest.js` (new) | DISK1–DISK7, development profile, PARSE ×2 (10) | `npm --prefix runner test` |
+| `runner/tests/unit/deploy-storage.rtest.js` (new) | DISK1–DISK7, development profile, PARSE ×2, NETNS1–NETNS5 (15) | `npm --prefix runner test` |
 | `runner/tests/unit/deploy-image-manifest.rtest.js` (new) | IMG1–IMG8, validator unit contract (9) | `npm --prefix runner test` |
 | `runner/tests/unit/deploy-file-refs.rtest.js` (new) | FILE1–FILE8 (FILE5 / FILE6 against a real temporary git repository), REAL (9) | `npm --prefix runner test` |
 | `runner/tests/unit/deploy-preflight.rtest.js` | baseline id list now includes `storage`; `deps()` gains `mountInfo` | `npm --prefix runner test` |
@@ -142,7 +142,7 @@ All on the final tree (Node 22, this container), in order:
 
 | Step | Result |
 |---|---|
-| `npm --prefix runner test` | **142 / 142** pass (incl. the 28 new tests) |
+| `npm --prefix runner test` | **147 / 147** pass (incl. the 33 new tests) — re-run after the MAJOR-1 fix, see §7a |
 | `npm test` (root vitest) | **611 files, 7547 tests** pass |
 | `npx tsc -b` | clean |
 | `npm run lint` (oxlint) | 99 warnings / 0 errors (= baseline; the one new warning this branch introduced was removed) |
@@ -154,6 +154,28 @@ All on the final tree (Node 22, this container), in order:
 | `api/tests/coding-guards-17b.test.js` | 22 / 22 (exact inventory incl. the two new pure modules) |
 
 Fresh-clone proof and CI on the pushed head are recorded in the PR description.
+
+## 7a. Independent review fix — MAJOR-1 (nsfs mount roots)
+**Blocker.** The first `parseMountInfo` counted any line whose ROOT does not start with `/` as malformed. A real Docker host
+bind-mounts every container network namespace as `nsfs` with root `net:[<inode>]` (`61 28 0:4 net:[4026532266]
+/run/docker/netns/<id> rw - nsfs nsfs rw`), so a production host **with running containers** failed `storage` with exit 22:
+`ExecStartPre`, readiness and `--deep` all refused a valid host.
+
+**Fix (one line + comment, `mountinfo.js`).** The mount point must still be an absolute path; the root must only be non-empty
+(a path for filesystem / bind mounts, an opaque token for pseudo filesystems). Nothing else changed: `storageSeparation` still
+requires `root === "/"` for the journal mount (bind refusal), the three distinct-device rules, the symlink refusal (journal
+check) and the malformed-line fail-closed are untouched.
+
+**Fail-first (on `3a2a9be`, the first PR head).** NETNS1–NETNS5 in `deploy-storage.rtest.js`, fixture modelled on an Ubuntu
+24.04 Azure VM with two data disks and two running containers (root `8:1`, `/boot/efi`, `/run`, cgroup2, `/var/lib/docker`
+`8:17`, `/data/smartassess-runner` `8:33`, two `nsfs` netns lines): **5 / 5 fail** — every case reported
+`/proc/self/mountinfo has 2 malformed line(s) — storage devices unknown, refusing to start` (NETNS1 `malformed: 2`,
+expected 0). This container's own `dockerd` mounts no netns (`--network none` sandboxes), so the two nsfs lines are the kernel's
+documented format with opaque ids rather than a local capture. After the fix: 15 / 15 (parser level and production-preflight
+level: PASS on the valid topology; journal = root, journal bind, journal = Docker, Docker = root / Docker bind of the root fs →
+22 with the role message; a truly malformed journal / root / Docker line → 22 `malformed`; missing root → 22).
+
+**Mutation NM1** — restore `!root.startsWith("/")`: NETNS1–NETNS5 fail (5 / 15), restored byte-for-byte, suite 15 / 15 again.
 
 ## 8. Existing 17F-A1 protections (unchanged, re-verified by the existing suites)
 Localhost binding, public 8787 refusal, Docker TCP refusal, symlink rejection, env-file permissions, key separation, callback
