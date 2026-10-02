@@ -195,6 +195,24 @@ describe("17E-A enterprise editor — sections, policy, templates, inline valida
     expect(before).not.toBe(X.codingStarterTemplate("csharp"));
     expect(screen.queryByRole("button", { name: "إدراج القالب الأساسي — Python" })).toBeNull();    // python has no template
   });
+  it("enabling Java whose starter code is ALREADY stored keeps the teacher's code byte-for-byte (the registry template is never substituted)", async () => {
+    // teacher-authored Java kept on the node while Java is not allowed (e.g. imported / disabled earlier): tabs, trailing
+    // spaces, CRLF + LF, Arabic and astral Unicode — any substitution or normalisation changes these bytes
+    const mine = "// كود المعلم ✓ 🙂\r\npublic class Main {\n\tpublic static void main(String[] args) {  \n\t\tSystem.out.println(\"مرحبا\");\n\t}\n}\n\n";
+    const { hist } = await mountBuilder(exam([codingQ({ coding: { ...clone(CFG), starterCode: { ...clone(CFG.starterCode), java: mine } } })]));
+    await editor();
+    const others = clone(qAt(hist()).coding.starterCode as Record<string, string>);
+    expect(qAt(hist()).coding.allowedLanguages).toEqual(["csharp", "python"]);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Java" })); await tick();
+    const after = qAt(hist()).coding;
+    expect(after.allowedLanguages).toEqual(["csharp", "python", "java"]);
+    expect(after.starterCode.java).toBe(mine);
+    expect(after.starterCode.java).not.toBe(X.codingStarterTemplate("java"));
+    expect({ csharp: after.starterCode.csharp, python: after.starterCode.python }).toEqual({ csharp: others.csharp, python: others.python });
+    expect(Object.keys(after.starterCode).sort()).toEqual(["csharp", "java", "python"]);
+    expect(screen.queryByRole("button", { name: "إدراج القالب الأساسي — Java" })).toBeNull();      // nothing to restore: the code is there
+    expect(CQ.validateCodingQuestion(qAt(hist()) as never)).toEqual([]);
+  });
   it("COD14 starter code persists byte-for-byte (whitespace, tabs, trailing spaces, Arabic, emoji) through undo / redo", async () => {
     const { hist } = await mountBuilder(exam([codingQ()]));
     await editor();
