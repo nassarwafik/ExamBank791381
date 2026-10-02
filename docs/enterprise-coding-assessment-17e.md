@@ -635,7 +635,7 @@ and after.
 
 - A teacher manual override of a coding question does not complete its automatic target. If that target
   stays open, the student still sees the automatic status (the mark itself follows the override). Mapping
-  "overridden" to resolved needs a teacher-facing decision.
+  "overridden" to resolved needs a teacher-facing decision. **Resolved in 17E-D (§36).**
 - After the 5-minute foreground window the page stops polling until the student returns to the tab,
   reconnects or reopens the assignment. A push notification for "grading complete" is a natural later phase
   (Phase 6B push infrastructure exists).
@@ -647,9 +647,220 @@ and after.
   (no request storm). The page's own visibility / reconnect resyncs still refresh. Follow-up: a client timeout
   (about 20 s) on the poll request.
 - **F3 — teacher override with an open target.** A teacher override can make the mark final while the automatic
-  target is still open, so «العلامة النهائية» and «التصحيح الآلي… جارٍ» appear together. This needs a product
-  decision; it belongs with the 17E-D teacher-evidence work.
+  target is still open, so «العلامة النهائية» and «التصحيح الآلي… جارٍ» appear together. **Resolved in 17E-D**
+  (§36): the open target is "superseded" background evidence for the teacher and is ignored by the student status.
 - **F5 — polling jitter.** The cadence is deterministic, so a mass deadline submission yields aligned polls.
   Follow-up: ±20 % jitter (scale hardening).
 - **F6 — duplicate helper call.** `student-dashboard.js` computes `studentCodingGradingStatus` twice per item.
   It is pure and cheap; compute it once in a later cleanup.
+
+---
+
+# Phase 17E-D — Enterprise Teacher Coding Evidence & Review UI
+
+Baseline `0fd6487b` (merge of 17E-C). 17E-D hardens and extends the EXISTING teacher path
+(`AssignmentReview` → `codingAutoGradeView` → retry / force regrade → manual override). There is still ONE
+teacher review authority and ONE detailed review surface; nothing here creates a second review system.
+
+## 29. Architecture audit (baseline `0fd6487b`)
+
+| Concern | Current implementation (baseline) | Authority | Existing teacher payload | 17E-D decision |
+|---|---|---|---|---|
+| Detailed evidence | `codingAutoGradeView(question, attempt)` in `official-grading.js`, ad-hoc object | stored target + snapshot question | `codingAutoGrade` on each review question: `state, revision, comparator, testCount, technicalCode, resultRevision, automaticScore, maxMarks, passed*, outcome, completedAt, compilePreview, cases[testId,title,status,passed,durationMs,weight,expectedOutput,actualPreview,stderrPreview]` | Replaced by ONE formal projection `teacherCodingEvidence` (contract 1), built field by field, re-bounded, validated; `codingEvidence` replaces `codingAutoGrade` |
+| Snapshot authority | review reads `assignment.examSnapshot` | published snapshot | expected outputs / titles / weights from the snapshot | Kept (TE16 proves it with an edited Builder copy) |
+| Case identity | `Map(testId)` over result cases, snapshot order | server test ids | — | Kept; unknown ids ignored, missing ids → `not-run` (TE15) |
+| Revision model | `target.revision`, `result.revision`; force keeps the previous result until the new one lands | `regradeTarget` + callback CAS | `revision` + `resultRevision`, but the UI showed «مكتمل» from `state` only | `resultCurrent` + `automaticStatus`; a complete target whose result belongs to another revision is never "complete" |
+| Override | `manualOverrides[id]` wins in `rebuildAttemptGrades` | canonical rebuild | `manualScore` (separate field), automatic score in the block | Unchanged authority; the evidence shows `override {active, score}` and the server `effectiveScore` (the rebuilt grade) |
+| Technical failure | `retryable` + technical code; grade `manualReview` | dispatch / callback | raw `technicalCode` shown as text («تعذر التصحيح الآلي لأسباب تقنية») | Safe Arabic labels, raw code only in a closed support disclosure, `effectiveScore: null` (never a zero) |
+| Recovery | `target.recovery {automaticAttempts, exhausted, lastAutomaticAttemptAt, manualRetryAt}` (17D-A) | recovery engine | not shown | `recovery.state`: none / automatic / manual / delayed — no counters, timestamps or leases |
+| Retry / force | `POST /api/coding/regrade` (exact identifier keys) → `regradeTarget` | server re-derives everything | buttons «إعادة التصحيح الآلي» / «فرض إعادة التصحيح الآلي», no confirmation | Labels «إعادة محاولة التصحيح» / «إعادة التصحيح بإصدار جديد», helper texts, force confirmation, synchronous duplicate guards, authoritative reload |
+| Regrade validation | target must exist; retry refuses `complete` | `regradeTarget` | — | Also requires the SNAPSHOT question to be an official hidden-test coding@1 question (manual / non-coding → 404, other versions → 409 `QUESTION_UNSUPPORTED`) |
+| Audit | force → `coding.autoGrade.regraded`; retry → only system dispatch events; review save → `assignment.manualGradeOverride {overriddenQuestions, newScore}` | `audit-log.js` | — | Teacher retry audited (`coding.autoGrade.retryRequested`, mode retry); review save adds `questionIds` (identifiers only) |
+| Gradebook | `codingGrading {pending, retryable, stale}` per attempt + `codingSummary`; badge «تصحيح برمجي جارٍ» / «… يحتاج إعادة محاولة» | `codingGradingStatus` | counts only | Kept unchanged (17D-A shape) + compact `codingEvidenceSummary` per attempt and `codingEvidenceTotals`; still no per-case data |
+| Review races | `load()` applied every response; no ticket | — | — | Read tickets + view context (attempt / student / revision), stale action responses ignored |
+| Review ids | `attemptNumber = Math.max(1, Number(x))`, ids unvalidated | — | — | Ids validated (`[A-Za-z0-9._:-]{1,128}`, no `..`), attemptNumber a positive integer, else 400 |
+| Student F3 | `studentCodingGradingStatus` / `autoGradingPending` counted every open target | 17E-C | — | An open target of an overridden question is ignored for the student (§36) |
+| Authorization | `requireBuilderAuth` (teacher role token; no per-class teacher ACL exists in the product) | builder-auth | — | Unchanged model; attacked with real handlers (AUTH1–AUTH12) |
+
+## 30. Teacher evidence contract (`teacherCodingEvidence`, contract 1)
+
+`questions[i].codingEvidence` (assignment-review GET only, one student / attempt, lazily):
+
+```
+{ contract: 1,
+  status: queued | processing | retrying | delayed | complete | superseded | unsupported | unknown,
+  automaticStatus: the automatic phase underneath (same set minus superseded),
+  revision, resultRevision, resultCurrent,          // resultCurrent ⇔ state complete AND result.revision === revision
+  gradingMode: "hiddenTests", language, languageVersion,   // from the BOUND stored answer (canonical registry key)
+  scoringPolicy: proportional | allOrNothing, comparator, testCount, maxMarks,
+  automaticScore, passedCount, passedWeight, totalWeight, outcome: graded | no-answer | compile-error,
+  completedAt, compilePreview?,                       // compile preview only for a compile error (≤ 4 KB)
+  override: { active, score },                        // a VALID manual override (same rule as the rebuild)
+  effectiveScore,                                     // the canonical rebuilt question grade; null while still under review
+  recovery: { state: none | automatic | manual | delayed },
+  technicalCode,                                      // only an open target, only /^[A-Z][A-Z0-9_]{0,47}$/
+  incomplete,                                         // any malformed stored field degrades here, never a crash
+  cases: [{ testId, title, weight, outcome: passed | wrong-output | runtime-error | timeout | output-limit |
+            compile-error | not-run | unknown, durationMs, expectedOutput, actualPreview?, stderrPreview? }] }
+```
+
+- **Never present:** `jobId`, `gradingKey`, `answerHash`, `questionFingerprint`, `targetRef`, delivery / lease
+  fields, `automaticAttempts`, recovery timestamps, the result's job id / engine, HMAC / callback material, storage
+  paths. The projection is an allowlist built field by field (TE1a / TE1b; mutations M1–M3).
+- **Bounds:** `actualPreview` / `stderrPreview` / `compilePreview` ≤ `OFFICIAL_PREVIEW_BYTES` (4 KB),
+  `expectedOutput` ≤ `OFFICIAL_STDOUT_CAPTURE_BYTES`, titles ≤ 256 B, ≤ 50 cases — re-applied at projection time
+  even for corrupt stored data (TE19, M12).
+- **No evidence (null):** non-coding questions, manual-mode coding (even with a stray stored target: TE17 / M18),
+  no stored target (legacy attempts, firstN-excluded or zero-mark questions: no target is planned).
+- **unsupported:** a snapshot question whose `questionTypeVersion` is not 1 is never interpreted with coding@1
+  semantics (no cases, no score) and cannot be regraded (409 `QUESTION_UNSUPPORTED`).
+- **Compile output:** compiler messages are kept verbatim (bounded). The worker paths they contain are the fixed
+  sandbox path `/workspace` (runner `--workdir /workspace`), not host paths; nothing is rewritten or invented.
+
+## 31. Automatic vs effective score, override semantics
+
+- **Automatic score:** the server's evaluation of the CURRENT or last completed revision (evidence).
+- **Teacher override:** `manualOverrides[id]` — wins in the ONE canonical rebuild (unchanged).
+- **Effective score:** the rebuilt question grade (`questionGrades[].score`), sent as `effectiveScore`; the UI
+  never computes it (UI12b, M16).
+- An automatic callback or a force regrade after an override updates the EVIDENCE only; the override stays
+  authoritative until the teacher changes it (O3, O4/O5, R6; mutations M6, A2).
+- **Removing an override:** the current review model has no "remove override" action (saving with an empty mark
+  keeps the stored override). 17E-D does not invent one; this is a documented limitation (§39).
+
+## 32. Revision semantics
+
+- `resultCurrent` is true only when the target is complete AND `result.revision === target.revision` (TE2).
+- While a newer revision runs, the older result stays visible as «نتيجة سابقة — إعادة التصحيح جارية» with
+  «آخر نتيجة مكتملة: X / Y» and «النتيجة المعروضة من الإصدار N · جارٍ التصحيح بالإصدار M» (UI13). Job ids are
+  never shown.
+- A callback of an older revision is refused (409 `STALE_RESULT`) by two independent layers — the job/revision
+  check and the revision-bound grading key — and can never regress the evidence (R7; M7 / M7b).
+
+## 33. Retry vs force regrade
+
+| | Retry «إعادة محاولة التصحيح» | Force «إعادة التصحيح بإصدار جديد» |
+|---|---|---|
+| Revision | same revision, same job id / grading key | NEW revision (new job id); the previous result stays until it lands |
+| Use | technical failure / recovery; resets automatic exhaustion | intentional fresh grading of the stored answer against the published question |
+| UI | one click, helper «إعادة المحاولة تستخدم نفس نسخة التصحيح.» | confirmation dialog naming student, attempt and question; helper «إعادة التصحيح تنشئ نسخة تصحيح جديدة وتلغي صلاحية النتائج الأقدم عند وصولها.» |
+| Request | `{action, assignmentId, studentId, attemptNumber, questionId}` only — any other key → 400 (AUTH10, M17) | same |
+| After | authoritative reload (no local "processing") | authoritative reload (no local revision) |
+| Audit | `coding.autoGrade.retryRequested` (mode retry, revision) | `coding.autoGrade.regraded` (mode force, revision) |
+
+Force regrade grades the source STORED in the completed attempt — never a draft, editor or practice source (FS1).
+Finalized attempts: the existing product already allows a force regrade on a finalized attempt (the override /
+rebuild rules apply); 17E-D keeps that unchanged.
+
+## 34. Recovery / delayed
+
+`recovery.state`: `automatic` (17D-A backoff running), `delayed` (automatic recovery exhausted → status
+`delayed`, «توقفت المحاولات التلقائية»), `manual` (a teacher retry / bulk retry reset it). A technical state always
+shows «تعذر إكمال التصحيح الآلي لأسباب تقنية.» plus a safe label (EXECUTION_UNAVAILABLE → «خدمة التنفيذ غير
+متاحة حاليًا», RUNNER_BUSY → «خدمة التنفيذ مشغولة مؤقتًا», LANGUAGE_UNAVAILABLE → «بيئة اللغة غير متاحة»,
+RUNNER_UNAUTHORIZED → «تعذر التحقق من خدمة التنفيذ», AUTHORITY_CHANGED → «تغيرت بيانات التصحيح المعتمدة», …; an
+unknown code → the generic message). Never a zero, never «الطالب أخطأ» (REC1–REC7, UI2, UI3; M5, M13, A5).
+
+## 35. Gradebook summary and lazy detail
+
+- Per attempt row: the unchanged 17D-A `codingGrading` plus `codingEvidenceSummary {status, openTargets,
+  delayedTargets, supersededTargets}` (status precedence delayed > retrying > processing > queued > superseded >
+  complete). Badges: «التصحيح البرمجي مكتمل», «التصحيح البرمجي جارٍ», «إعادة المحاولة جارية», «تأخير تقني»,
+  «علامة المعلم معتمدة».
+- Assignment: unchanged `codingSummary` + `codingEvidenceTotals {open, delayed, superseded}`; card «قيد التصحيح /
+  بحاجة لإعادة محاولة / متأخر». The 17D-A bulk retry (server-selected targets, lease, cooldown) is unchanged.
+- Per-case evidence is NEVER in the gradebook response (PAY1, M15). Measured with the real handlers
+  (30 students, 20 hidden tests per question, one completed attempt each):
+
+| Scenario | assignment-results before → after | assignment-review (1 student) before → after |
+|---|---|---|
+| 1 coding question | 34,029 B → 40,270 B (+~208 B / student, summary only) | 9,923 B → 9,970 B |
+| 5 coding questions | 34,089 B → 40,330 B | 45,929 B → 46,164 B |
+
+  Read cost is unchanged: the same blobs are read (no listing, no extra download); detail stays one student /
+  attempt per review open. No polling was added to the teacher review (a manual «تحديث حالة التصحيح» re-reads).
+
+## 36. F3 resolution (product rule)
+
+**Rule:** a valid manual teacher override of a question is the effective authority. An OPEN automatic target of
+that question (pending / dispatched / retryable / exhausted) is background evidence:
+- teacher: status `superseded` — «تم اعتماد علامة المعلم» + «توجد عملية تصحيح آلي أقدم أو جارية لا تؤثر في العلامة
+  المعتمدة حاليًا.» (the underlying `automaticStatus` stays visible);
+- student: the target is ignored by `studentCodingGradingStatus` / `autoGradingPending`, so the student never sees
+  a final mark next to «التصحيح الآلي جارٍ»; when no other target remains the field is omitted.
+
+The stored target is NOT changed (no silent state change, no scoring change); it may still complete and update the
+evidence. Tests F3a / F3b / TE22 / GB1; mutation A6.
+
+## 37. Review races and actions (AssignmentReview)
+
+- Read tickets: only the newest review read is applied — attempt switch (R1), student switch (R2), refresh /
+  revision (R3); mutation M14.
+- View context: an action response that arrives after the review closed or moved to another attempt / student
+  updates nothing and reloads nothing (R4, R4b; A7).
+- Duplicate actions: synchronous ref guards in the panel (retry / force) and the review (actions, save) — one
+  request even for clicks inside one render batch (R5, R5d; M10b, M10d).
+- The force confirmation suspends the review focus trap; Escape closes only the confirmation and focus returns to
+  the action (R5b).
+- Action errors map to safe Arabic messages per status / code; a 5xx / network failure gets the existing tracking
+  suffix; no raw bodies, stacks or codes (R5c).
+- «استخدم العلامة الآلية» copies the EVIDENCE automatic score and is disabled while there is none (a technical
+  failure is never copied as 0).
+
+## 38. Tests, fail-first, mutations (17E-D)
+
+- `api/tests/coding-17e-d-evidence.test.js` (56): TE1a–TE22, RV1–RV3, AUTH1–AUTH12, O1–O6, F3a–F3b, REC1–REC7,
+  R6–R8, AU1–AU3, GB1–GB2, PAY1, STU1, MIX1–MIX2, XA1, FS1, PR1 — real handlers, in-memory blob store.
+- `src/coding/codingEvidence.17e-d.test.tsx` (30): UI1–UI18 (+ UI1b, UI2b, UI12b, UI12c), R1–R5d, GB-UI1, PERF1.
+- `src/coding/codingGrading.17c.test.tsx`: the four 17C teacher-review tests now use the `codingEvidence` contract
+  and the 17E-D labels (intent unchanged; force now confirms first).
+
+**Fail-first on `0fd6487b`:** 67 failed / 19 passed (86). Pre-existing behaviours that already passed: TE1a (no
+internal ids in the 17C view), TE16 (snapshot authority), RV2 (submitted source), RV3 (manual / non-coding have
+no evidence), AUTH1, AUTH2, AUTH4–7, AUTH5b, AUTH8/9, AUTH10 (auth and identifier-only regrade), O6 (canonical
+finality), R8 (concurrent force regrades), PAY1 (gradebook had no cases), STU1 (no teacher evidence for
+students), MIX2 (per-question cases), FS1 (force uses the stored source), PR1 (no practice data), UI16 (no panel
+for manual coding), PERF1 (large lists).
+
+**Mutations** (each restored byte-for-byte, sha256 verified):
+
+| # | Mutation | Verdict / killed by |
+|---|---|---|
+| M1–M3 | expose jobId / gradingKey / answerHash | killed — TE1a, TE1b, RV1 |
+| M4 | evidence from the Builder copy | killed — TE16 |
+| M5 | retryable shown as zero | killed — TE4, REC1/6 |
+| M6 | callback erases the override | killed — O3, O4/5, R6 |
+| M7 | revision/job check removed | survived — equivalent: the revision-bound grading key still refuses the stale result |
+| M7b | revision AND grading-key layers removed | killed — R7 |
+| M8a / M8b | old result as current (server / UI) | killed — TE3, REC7 / UI13 |
+| M9 | no force confirmation | killed — UI14, R5 |
+| M10 | panel duplicate guard removed | survived — equivalent: the review-level guard still holds |
+| M10b | panel AND review guards removed | killed — R5d |
+| M10d | save guard removed | killed — R5d |
+| M11 | cases by array position | killed — TE15 |
+| M12 | unbounded preview | killed — TE19 |
+| M13 | raw technical code as the message | killed — UI2, UI2b |
+| M14 | stale Student-A response applied | killed — R1, R2, R3 |
+| M15 | case evidence in the gradebook | killed — PAY1 |
+| M16 | frontend computes the effective score | killed — UI12b |
+| M17 | forged regrade fields accepted | killed — AUTH10 |
+| M18 | manual-mode coding gets evidence | killed — TE17 |
+| A1 | "complete" without the result-revision check | killed — TE3 |
+| A2 | force regrade clears the override | killed — O4/5 |
+| A3 | review always serves attempt 1 | killed — XA1 |
+| A4 | unknown result ids fabricated as cases | killed — TE15 |
+| A5 | exhausted recovery ignored | killed — TE5, REC2, GB1 |
+| A6 | student status ignores the override (F3) | killed — F3a, F3b |
+| A7 | action response reloads after a context change | killed — R4b |
+| A8 | gradebook ignores the evidence summary | killed — GB-UI1 |
+
+## 39. Known limitations / follow-ups (17E-D)
+
+- No "remove override" action exists in the review model (unchanged; a teacher can only change the mark).
+- Teacher authorization is the single builder (teacher) role; the product has no per-class teacher ACL, so any
+  authenticated teacher can review any assignment (unchanged; AUTH tests attack the existing model).
+- Regrade on an archived assignment follows the existing behaviour (allowed, like the manual review save); only
+  attempt-lifecycle controls are blocked on archived assignments.
+- The teacher review does not poll; a manual «تحديث حالة التصحيح» re-reads (deliberately: read cost).
+- 17E-C follow-ups: F3 resolved (§36); F2 (poll timeout), F5 (poll jitter) and F6 (duplicate dashboard status
+  computation) are not touched by 17E-D and remain follow-ups.

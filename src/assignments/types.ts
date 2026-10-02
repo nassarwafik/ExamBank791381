@@ -13,7 +13,10 @@ export type Exam = { examId?: string; title?: string; totalMarks?: number; quest
 export type SavedExam = { blobName: string; examId: string; title: string; savedAt: string; questionCount: number; totalMarks: number };
 // Phase 17D-A — server-derived aggregate coding grading status of an attempt (present only while something is still open).
 export type CodingGradingStatus = { pending: number; retryable: number; stale: number };
-export type Attempt = { attemptNumber: number; score: number; totalMarks: number; percentage: number; submittedAt: string; finalized: boolean; manualReviewMarks: number; gradingStatus?: GradingStatus; startedAt?: string; endedAt?: string; endReason?: string; timedOut?: boolean; codingGrading?: CodingGradingStatus };
+// Phase 17E-D — the compact teacher evidence summary of an attempt and the assignment totals (server-derived; never per-case).
+export type { CodingEvidenceSummary } from "../coding/codingTeacherEvidence";
+export type CodingEvidenceTotals = { open: number; delayed: number; superseded: number };
+export type Attempt = { attemptNumber: number; score: number; totalMarks: number; percentage: number; submittedAt: string; finalized: boolean; manualReviewMarks: number; gradingStatus?: GradingStatus; startedAt?: string; endedAt?: string; endReason?: string; timedOut?: boolean; codingGrading?: CodingGradingStatus; codingEvidenceSummary?: import("../coding/codingTeacherEvidence").CodingEvidenceSummary };
 export type ActiveAttempt = { attemptNumber: number; startedAt: string; endsAt: string; extendedEndsAt?: string; status?: string; lastSavedAt?: string; attemptEpoch?: number; pauseCount?: number; pausedAt?: string; pausedRemainingMs?: number | null; runEndsAt?: string };
 export type StudentResult = { studentId: string; studentName: string; studentCode: string; attemptsUsed: number; allowedAttempts: number; dueAtOverride: string | null; attemptStatus?: string; gradingStatus?: GradingStatus; activeAttempt?: ActiveAttempt | null; effectiveAttemptEndsAt?: string; attemptDurationEndsAt?: string; attemptExpired?: boolean; canStartAttempt?: boolean; canWrite?: boolean; timed?: boolean; durationMinutes?: number; attempts: Attempt[]; latestResult: Attempt | null };
 // The authoritative lifecycle snapshot every mutating teacher action returns (B2B #18) — merged into the row.

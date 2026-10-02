@@ -6,8 +6,9 @@ import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose } from "../icons";
 import { gradingClass, gradingLabel, type GradingStatus } from "../gradingStatus";
-import { LIFECYCLE_LABEL, type CodingGradingStatus, type GradebookFilter, type GradebookSort, type Item, type StudentResult } from "./types";
+import { LIFECYCLE_LABEL, type CodingEvidenceTotals, type CodingGradingStatus, type GradebookFilter, type GradebookSort, type Item, type StudentResult } from "./types";
 import { codingStatusBadge, needsCodingRetry } from "./codingRecovery";
+import { codingSummaryBadge } from "../coding/codingTeacherEvidence";
 
 export type GradebookProps = {
   assignment: Item;
@@ -31,12 +32,19 @@ export type GradebookProps = {
   /** Phase 17D-A — assignment-level coding grading summary (server-derived) and the ONE bulk retry action. */
   codingSummary?: CodingGradingStatus | null;
   onBulkCodingRetry?: () => void;
+  /** Phase 17E-D — assignment totals of the compact evidence summary (delayed = automatic recovery exhausted). */
+  codingTotals?: CodingEvidenceTotals | null;
 };
 
 const FILTERS: Array<[GradebookFilter, string]> = [["all", "الكل"], ["pendingReview", "بانتظار التصحيح"], ["final", "نهائي"], ["notSubmitted", "لم يسلّم"], ["active", "قيد المحاولة"]];
 
 export default function Gradebook(p: GradebookProps) {
   const archived = p.assignment.status === "archived";
+  // Phase 17E-D — the assignment-level coding summary card (counts only, server-derived). "بحاجة لإعادة محاولة" = retryable / stale
+  // targets whose automatic recovery is still running; "متأخر" = automatic recovery exhausted (needs a teacher retry).
+  const cs = p.codingSummary, ct = p.codingTotals;
+  const codingCard = cs && (cs.pending + cs.retryable + cs.stale > 0 || (ct && ct.superseded > 0))
+    ? { pending: cs.pending, retry: Math.max(0, cs.retryable + cs.stale - (ct ? ct.delayed : 0)), delayed: ct ? ct.delayed : 0, superseded: ct ? ct.superseded : 0 } : null;
   const focusRow = useRef<HTMLTableRowElement | null>(null);
   const focusVisible = !!p.focusStudentId && p.rows.some(s => s.studentId === p.focusStudentId);
   useEffect(() => { if (focusVisible) focusRow.current?.scrollIntoView?.({ block: "nearest" }); }, [p.focusStudentId, focusVisible]);
@@ -59,6 +67,9 @@ export default function Gradebook(p: GradebookProps) {
         <button type="button" className={"eb-button is-small" + (p.sort === "pendingFirst" ? " is-quiet is-active" : "")} aria-pressed={p.sort === "pendingFirst"} onClick={() => p.onSort(p.sort === "pendingFirst" ? "name" : "pendingFirst")}>بانتظار التصحيح أولًا</button>
         {!archived && p.onBulkCodingRetry && needsCodingRetry(p.codingSummary) && <button type="button" className="eb-button is-small coding-bulk-retry" disabled={p.busy} onClick={p.onBulkCodingRetry}>إعادة محاولة التصحيح البرمجي</button>}
       </div>
+      {codingCard && <p className="eb-coding-summary" data-testid="coding-summary-card">
+        <span>قيد التصحيح: {codingCard.pending}</span><span>بحاجة لإعادة محاولة: {codingCard.retry}</span><span>متأخر: {codingCard.delayed}</span>{codingCard.superseded > 0 && <span>علامة المعلم معتمدة: {codingCard.superseded}</span>}
+      </p>}
       {p.rows.length > 0 && (
         <div className="students-table-wrap eb-gradebook-table-wrap"><table className="students-table eb-gradebook-table">
           <thead><tr>
@@ -74,7 +85,7 @@ export default function Gradebook(p: GradebookProps) {
             const gs = p.gradingOf(s);
             const pending = gs === "pendingReview";
             const focused = s.studentId === p.focusStudentId;
-            const coding = codingStatusBadge(s.latestResult?.codingGrading);
+            const coding = s.latestResult?.codingEvidenceSummary ? codingSummaryBadge(s.latestResult.codingEvidenceSummary) : codingStatusBadge(s.latestResult?.codingGrading);
             return (
               <tr key={s.studentId} className={focused ? "is-drill-focus" : undefined} aria-current={focused ? "true" : undefined} ref={focused ? focusRow : undefined}>
                 <td><strong>{s.studentName}</strong><small className="result-code">{s.studentCode}</small>{focused && <small className="eb-drill-focus-note">الطالب المطلوب</small>}</td>
