@@ -14,21 +14,29 @@
 export type CodingLanguageCapabilities = { compile: boolean; run: boolean; stdin: boolean; tests: boolean };
 /** A language CONTRACT (not a runtime): `capabilities` say what the stdin/stdout program model can mean for this language —
  *  whether an execution provider actually offers it is a separate, provider-reported fact. */
-export type CodingLanguageDefinition = { key: string; version: number; label: string; extension: string; editorLanguage: string; indentUnit: string; capabilities: CodingLanguageCapabilities };
+export type CodingLanguageDefinition = { key: string; version: number; label: string; extension: string; editorLanguage: string; indentUnit: string; capabilities: CodingLanguageCapabilities; starterTemplate: string };
 
-const lang = (key: string, label: string, extension: string, indentUnit: string, flags: string): CodingLanguageDefinition =>
-  Object.freeze({ key, version: 1, label, extension, editorLanguage: key, indentUnit, capabilities: Object.freeze({ compile: flags.includes("c"), run: flags.includes("r"), stdin: flags.includes("r"), tests: flags.includes("r") }) });
+const lang = (key: string, label: string, extension: string, indentUnit: string, flags: string, starterTemplate = ""): CodingLanguageDefinition =>
+  Object.freeze({ key, version: 1, label, extension, editorLanguage: key, indentUnit, capabilities: Object.freeze({ compile: flags.includes("c"), run: flags.includes("r"), stdin: flags.includes("r"), tests: flags.includes("r") }), starterTemplate });
+// Phase 17E-A — the MINIMAL, pedagogically neutral starter shell of a language (registry data, one place): what the trusted
+// runner needs to compile an empty stdin/stdout program and nothing else (no solution, no I/O idiom, no test material). Java
+// must be `public class Main` (the runner compiles Main.java and runs Main); C# any class with a static Main (Program.cs).
+// A Python script needs no shell, so its template is empty. Templates are offered to the teacher, never imposed on stored code.
+const JAVA_TEMPLATE = "public class Main {\n    public static void main(String[] args) {\n    }\n}\n";
+const CSHARP_TEMPLATE = "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n    }\n}\n";
 /** Coding Assessment V1 intentionally supports exactly Python, Java and C# (stable order). No JavaScript, TypeScript, C++ or
  *  SQL in V1: an unregistered key fails closed everywhere (finalization, student projection, server answer ingestion). The
  *  registry stays data-driven so a language can be ADDED later through a reviewed change — never by branching on a key. */
 export const CODING_LANGUAGES: readonly CodingLanguageDefinition[] = Object.freeze([
   lang("python", "Python", ".py", "    ", "r"),
-  lang("java", "Java", ".java", "    ", "cr"),
-  lang("csharp", "C#", ".cs", "    ", "cr")
+  lang("java", "Java", ".java", "    ", "cr", JAVA_TEMPLATE),
+  lang("csharp", "C#", ".cs", "    ", "cr", CSHARP_TEMPLATE)
 ]);
 const LANGUAGE_INDEX = new Map(CODING_LANGUAGES.map(l => [l.key, l]));
 export const codingLanguage = (key: unknown): CodingLanguageDefinition | undefined => (typeof key === "string" ? LANGUAGE_INDEX.get(key) : undefined);
 export const isCodingLanguage = (key: unknown): boolean => codingLanguage(key) !== undefined;
+/** The registry starter template of a language ("" for an unknown language or one that needs no shell). */
+export const codingStarterTemplate = (key: unknown): string => codingLanguage(key)?.starterTemplate ?? "";
 export const CODING_LANGUAGE_KEY_PATTERN = /^[a-z][a-z0-9]{0,31}$/;
 
 export type CodingLimits = { sourceBytes: number; outputBytes: number; timeMs: number; memoryMb: number };
@@ -57,13 +65,21 @@ export type CodingQuestionConfigV1 = {
  *  the isolated Coding Runner. Existing 17A questions with hidden tests are NEVER silently switched to automatic grading. */
 export type CodingGradingMode = "manual" | "hiddenTests";
 export const CODING_GRADING_MODES: readonly CodingGradingMode[] = Object.freeze(["manual", "hiddenTests"]);
-export type CodingAnswerKeyV1 = { hiddenTests?: CodingTestCasePrivate[]; comparator?: CodingComparator; referenceSolutions?: Record<string, string>; gradingMode?: CodingGradingMode };
+/** Phase 17E-A — how an AUTOMATIC official mark is derived from the hidden tests (teacher-private, under `answer`; SmartAssess
+ *  decides it, never the runner): "proportional" (the 17C behaviour, also when missing) = marks × passed weight / total weight;
+ *  "allOrNothing" = full marks only when EVERY hidden case passes, otherwise 0. Validated on every finalization (unknown → block). */
+export type CodingScoringPolicy = "proportional" | "allOrNothing";
+export const CODING_SCORING_POLICIES: readonly CodingScoringPolicy[] = Object.freeze(["proportional", "allOrNothing"]);
+export type CodingAnswerKeyV1 = { hiddenTests?: CodingTestCasePrivate[]; comparator?: CodingComparator; referenceSolutions?: Record<string, string>; gradingMode?: CodingGradingMode; scoringPolicy?: CodingScoringPolicy };
 /** The effective official grading mode of an answer key: "hiddenTests" only when explicitly stored as such. */
 export const codingGradingMode = (answerKey: unknown): CodingGradingMode => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).gradingMode === "hiddenTests" ? "hiddenTests" : "manual");
+/** The effective scoring policy: "allOrNothing" only when explicitly stored as such (finalization refuses any unknown value). */
+export const codingScoringPolicy = (answerKey: unknown): CodingScoringPolicy => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).scoringPolicy === "allOrNothing" ? "allOrNothing" : "proportional");
 export type CodeAnswer = { kind: "code"; language: string; languageVersion: number; source: string };
 
 export const defaultCodingConfig = (): CodingQuestionConfigV1 => ({ allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { ...DEFAULT_CODING_LIMITS }, publicTests: [] });
-export const defaultCodingAnswerKey = (): Required<CodingAnswerKeyV1> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {}, gradingMode: "manual" });
+/** The default PRIVATE key (17A / 17C shape, unchanged by 17E-A: a missing scoringPolicy IS proportional). */
+export const defaultCodingAnswerKey = (): Required<Omit<CodingAnswerKeyV1, "scoringPolicy">> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {}, gradingMode: "manual" });
 
 /** UTF-8 byte length without TextEncoder (pure; same result in the browser and the server). */
 export function utf8ByteLength(s: string): number {
@@ -186,6 +202,7 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
   if (key.comparator !== undefined && !CODING_COMPARATORS.includes(key.comparator as CodingComparator)) out.push(err("CODING_COMPARATOR_UNKNOWN", "طريقة مقارنة مخرجات غير معروفة.", "answer.comparator"));
   // Phase 17C — official automatic grading fails CLOSED: the suite must be gradeable before the question can be published.
   if (key.gradingMode !== undefined && !CODING_GRADING_MODES.includes(key.gradingMode as CodingGradingMode)) out.push(err("CODING_GRADING_MODE_UNKNOWN", "طريقة تصحيح رسمي غير معروفة.", "answer.gradingMode"));
+  if (key.scoringPolicy !== undefined && !CODING_SCORING_POLICIES.includes(key.scoringPolicy as CodingScoringPolicy)) out.push(err("CODING_SCORING_POLICY_UNKNOWN", "سياسة احتساب العلامة غير معروفة.", "answer.scoringPolicy"));
   if (key.gradingMode === "hiddenTests") {
     if (nHidden === 0) out.push(err("CODING_AUTO_NO_HIDDEN_TESTS", "التصحيح التلقائي يحتاج إلى اختبار مخفي واحد على الأقل.", "answer.hiddenTests"));
     // the student program's output can never exceed the question's output limit, so an expected output above it is unreachable

@@ -36,8 +36,8 @@ const crypto = require("crypto");
 const { readCodingRunnerConfig } = require("./runner-config");
 const { signRunnerRequest } = require("./runner-protocol");
 const { resolveCallbackKey } = require("./hmac-key-separation");
-const { codingGradingMode, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS } = require("../shared-finalization/codingQuestion");
-const { evaluateOfficialCodingRun, officialCodingScore, officialCaseToken, OFFICIAL_STDOUT_CAPTURE_BYTES, OFFICIAL_STDERR_CAPTURE_BYTES } = require("../shared-finalization/codingContract");
+const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS } = require("../shared-finalization/codingQuestion");
+const { evaluateOfficialCodingRun, officialCodingScoreFor, officialCaseToken, OFFICIAL_STDOUT_CAPTURE_BYTES, OFFICIAL_STDERR_CAPTURE_BYTES } = require("../shared-finalization/codingContract");
 const { flattenQuestions, effectiveMaxMarks } = require("../exam-structure");
 const { stableStringify } = require("../exam-canonical");
 const { rebuildAttemptGrades } = require("../attempt-grade-rebuild");
@@ -114,7 +114,8 @@ function gradeableQuestion(q) {
   }
   if (!(total > 0)) return { ok: false, code: "QUESTION_INVALID" };
   const allowedLanguages = Array.isArray(q.coding.allowedLanguages) ? q.coding.allowedLanguages.map(String) : [];
-  return { ok: true, tests: clean, comparator, limits, allowedLanguages };
+  // Phase 17E-A — the teacher's scoring policy (validated above: an unknown value already made the question QUESTION_INVALID)
+  return { ok: true, tests: clean, comparator, limits, allowedLanguages, scoringPolicy: codingScoringPolicy(key) };
 }
 
 /** The bound, non-blank code answer of a question, or null (no answer / blank / unbindable — graded 0 as "no-answer"). */
@@ -127,7 +128,7 @@ function boundAnswer(q, raw) {
 
 /**
  * The AUTHORITY of one target, recomputed from the attempt as stored and the assignment snapshot. Never reads a client value.
- * → { ok, question, grade, tests, comparator, limits, answer|null, maxMarks, questionFingerprint, answerHash, gradingKey, jobId }
+ * → { ok, question, grade, tests, comparator, limits, scoringPolicy, answer|null, maxMarks, questionFingerprint, answerHash, gradingKey, jobId }
  */
 function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, revision }) {
   const entry = flattenQuestions(exam).find(x => x.questionId === targetKey);
@@ -138,10 +139,10 @@ function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, re
   const q = entry.question, g = gradeableQuestion(q), maxMarks = effectiveMaxMarks(grade);
   if (!g.ok) return { ok: false, code: g.code, jobId };
   const answer = boundAnswer(q, attempt.answers && attempt.answers[targetKey]);
-  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: 1, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0 }));
+  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: 1, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}) }));
   const answerHash = sha256(answer ? stableStringify({ language: answer.language, languageVersion: answer.languageVersion, source: answer.source }) : "no-answer");
   const gradingKey = sha256(stableStringify({ v: 1, ...ids, mode: "hiddenTests", questionFingerprint, answerHash }));
-  return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
+  return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, scoringPolicy: g.scoringPolicy, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
 }
 
 function noAnswerResult(auth, revision, at) {
@@ -542,10 +543,12 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
         target.state = "retryable"; target.technicalCode = ev.code; target.updatedAt = at;
         outcome = { kind: "retryable", code: ev.code };
       } else {
-        const automaticScore = officialCodingScore(auth.maxMarks, ev.passedWeight, ev.totalWeight);
-        target.result = { revision: target.revision, jobId: body.jobId, engine: ENGINE, automaticScore, maxMarks: auth.maxMarks, passedWeight: ev.passedWeight, totalWeight: ev.totalWeight, testCount: ev.testCount, passedCount: ev.passedCount, outcome: ev.compileError ? "compile-error" : "graded", ...(ev.compilePreview !== undefined ? { compilePreview: ev.compilePreview } : {}), cases: ev.cases.map(c => ({ testId: c.testId, status: c.status, passed: c.passed, ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}), ...(c.actualPreview !== undefined ? { actualPreview: c.actualPreview } : {}), ...(c.stderrPreview !== undefined ? { stderrPreview: c.stderrPreview } : {}) })), completedAt: at };
+        // Phase 17E-A — the question's scoring policy decides the mark (proportional = the 17C rule; allOrNothing = all cases pass)
+        const allOrNothing = auth.scoringPolicy === "allOrNothing";
+        const automaticScore = officialCodingScoreFor(auth.scoringPolicy, auth.maxMarks, ev);
+        target.result = { revision: target.revision, jobId: body.jobId, engine: ENGINE, automaticScore, maxMarks: auth.maxMarks, passedWeight: ev.passedWeight, totalWeight: ev.totalWeight, testCount: ev.testCount, passedCount: ev.passedCount, ...(allOrNothing ? { scoringPolicy: "allOrNothing" } : {}), outcome: ev.compileError ? "compile-error" : "graded", ...(ev.compilePreview !== undefined ? { compilePreview: ev.compilePreview } : {}), cases: ev.cases.map(c => ({ testId: c.testId, status: c.status, passed: c.passed, ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}), ...(c.actualPreview !== undefined ? { actualPreview: c.actualPreview } : {}), ...(c.stderrPreview !== undefined ? { stderrPreview: c.stderrPreview } : {}) })), completedAt: at };
         target.state = "complete"; delete target.technicalCode; target.updatedAt = at;
-        applyGrade(auth.grade, automaticScore, !ev.compileError && ev.passedWeight >= ev.totalWeight);
+        applyGrade(auth.grade, automaticScore, allOrNothing ? !ev.compileError && ev.passedCount === ev.testCount : !ev.compileError && ev.passedWeight >= ev.totalWeight);
         rebuildAttemptGrades(attempt);                                                      // the ONE canonical rebuild; an override still wins
         outcome = { kind: "complete", becameFinal: !wasFinal && !!attempt.finalized, outcome: target.result.outcome, passedCount: ev.passedCount, testCount: ev.testCount };
       }

@@ -7,7 +7,7 @@
 // The worker is UNTRUSTED with respect to the application: it never receives identity, tokens, the exam or other answers, it
 // never decides a grade, and anything it returns is bounded and re-labelled here before the application looks at it.
 // Student code is never promised internet access, DNS, HTTP, or package installation (npm / pip / NuGet / Maven / apt).
-import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGE_KEY_PATTERN, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, codingLanguage, utf8ByteLength, type CodingComparator } from "./codingQuestion";
+import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGE_KEY_PATTERN, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, codingLanguage, utf8ByteLength, type CodingComparator, type CodingScoringPolicy } from "./codingQuestion";
 
 // ── Output comparison (pure, deterministic; no fuzzy / AI comparison) ─────────────────────────────────────────────────
 //   exact                   byte-for-byte equality of the two strings.
@@ -156,4 +156,14 @@ export function officialCodingScore(maxMarks: number, passedWeight: number, tota
   const m = typeof maxMarks === "number" && Number.isFinite(maxMarks) && maxMarks > 0 ? maxMarks : 0;
   if (!(totalWeight > 0) || !(passedWeight > 0)) return 0;
   return Number((m * Math.min(passedWeight, totalWeight) / totalWeight).toFixed(2));
+}
+
+/** Phase 17E-A — the official automatic mark under the question's SCORING POLICY (SmartAssess decides; the runner never does):
+ *  "proportional" is exactly officialCodingScore (the 17C rule); "allOrNothing" is full marks only when the evaluation is
+ *  complete, compiled, and EVERY hidden case passed (a zero-weight case still has to pass), otherwise 0. */
+export function officialCodingScoreFor(policy: CodingScoringPolicy, maxMarks: number, ev: { passedWeight: number; totalWeight: number; passedCount: number; testCount: number; compileError: boolean }): number {
+  if (policy !== "allOrNothing") return officialCodingScore(maxMarks, ev.passedWeight, ev.totalWeight);
+  const m = typeof maxMarks === "number" && Number.isFinite(maxMarks) && maxMarks > 0 ? maxMarks : 0;
+  const allPassed = !ev.compileError && Number.isInteger(ev.testCount) && ev.testCount > 0 && ev.passedCount === ev.testCount;
+  return allPassed ? Number(m.toFixed(2)) : 0;
 }

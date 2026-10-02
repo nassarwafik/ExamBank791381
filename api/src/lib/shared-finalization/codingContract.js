@@ -10,6 +10,7 @@ exports.weightedPassFraction = weightedPassFraction;
 exports.utf8Prefix = utf8Prefix;
 exports.evaluateOfficialCodingRun = evaluateOfficialCodingRun;
 exports.officialCodingScore = officialCodingScore;
+exports.officialCodingScoreFor = officialCodingScoreFor;
 const codingQuestion_1 = require("./codingQuestion");
 function normalizeOutput(s, mode) {
     if (mode === "exact")
@@ -165,4 +166,11 @@ function officialCodingScore(maxMarks, passedWeight, totalWeight) {
     if (!(totalWeight > 0) || !(passedWeight > 0))
         return 0;
     return Number((m * Math.min(passedWeight, totalWeight) / totalWeight).toFixed(2));
+}
+function officialCodingScoreFor(policy, maxMarks, ev) {
+    if (policy !== "allOrNothing")
+        return officialCodingScore(maxMarks, ev.passedWeight, ev.totalWeight);
+    const m = typeof maxMarks === "number" && Number.isFinite(maxMarks) && maxMarks > 0 ? maxMarks : 0;
+    const allPassed = !ev.compileError && Number.isInteger(ev.testCount) && ev.testCount > 0 && ev.passedCount === ev.testCount;
+    return allPassed ? Number(m.toFixed(2)) : 0;
 }

@@ -17,9 +17,9 @@
 // Answer-key / solution flags that may appear on options and fields.
 const FLAG_SECRET_KEYS = ["correct", "isCorrect", "correctText", "correctOptionIndex", "correctOptionValue", "correctOptionLabel", "solution", "expectedAnswer", "answerKey"];
 // Teacher-side / secret keys that may appear on a question or a compound part.
-// Phase 17C — official coding grading data (mode, hidden tests, reference solutions, grading intent / keys) is teacher / server
+// Phase 17C / 17E-A — official coding grading data (mode, scoring policy, hidden tests, reference solutions, grading intent / keys) is teacher / server
 // data; it lives under the private answer key, and should any path ever copy it onto a node it is removed here (defense in depth).
-const GRADING_SECRET_KEYS = ["gradingMode", "hiddenTests", "referenceSolutions", "codingGrading", "gradingKey", "answerHash", "questionFingerprint"];
+const GRADING_SECRET_KEYS = ["gradingMode", "hiddenTests", "referenceSolutions", "codingGrading", "gradingKey", "answerHash", "questionFingerprint", "scoringPolicy"];
 const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "redoStack", "explanation", "rationale", ...FLAG_SECRET_KEYS, ...GRADING_SECRET_KEYS];
 // Phase 13C-A — TEACHER PLANNING DATA: the assessment blueprint (exam level) and a question's / part's pedagogical
 // classification are authoring data and never reach a student.
