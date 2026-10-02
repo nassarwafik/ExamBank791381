@@ -32,6 +32,11 @@ const isTest = f => /(^|\/)tests\/|\.test\.|\.rtest\.|\.d\.ts$/.test(f);
 // Phase 17C deliberately adds official.js (the bounded official grading queue) and callback.js (signed evidence delivery); neither
 // may start a process — child_process stays confined to sandbox.js (asserted below).
 const RUNNER_GATEWAY = ["runner/gateway/main.js", "runner/gateway/server.js", "runner/gateway/auth.js", "runner/gateway/registry.js", "runner/gateway/validate.js", "runner/gateway/sandbox.js", "runner/gateway/official.js", "runner/gateway/callback.js", "runner/gateway/journal.js"];
+// Phase 17F-A1 adds the operator DEPLOYMENT tools (runner/deploy/azure-vm/): host-side CLIs run by the operator / systemd, never
+// loaded by the gateway. They obey EVERY rule below unchanged (no child_process, no exec / spawn / shell, literal requires only) —
+// Docker is reached only through a read-only GET client of the local Engine API socket, and the one sandbox the preflight runs
+// goes through gateway/sandbox.js. The list is exact: a new runner file still needs a reviewed guard change.
+const RUNNER_DEPLOY = ["runner/deploy/azure-vm/preflight.js", "runner/deploy/azure-vm/docker-api.js", "runner/deploy/azure-vm/smoke.js", "runner/deploy/azure-vm/journal-status.js", "runner/deploy/azure-vm/recovery-freshness.js", "runner/deploy/azure-vm/record-images.js", "runner/deploy/azure-vm/sweep-containers.js"];
 const RUNNER_FILES = [...RUNNER_GATEWAY, "runner/workers/supervisor.py", "runner/workers/python/Dockerfile", "runner/workers/java/Dockerfile", "runner/workers/csharp/Dockerfile", "runner/workers/python/toolchain.json", "runner/workers/java/toolchain.json", "runner/workers/csharp/toolchain.json", "runner/package.json", "runner/README.md", "runner/scripts/build-images.sh"];
 const API_FILES = ["api/src/functions/coding-run.js", "api/src/lib/coding/execution-provider.js", "api/src/lib/coding/runner-config.js", "api/src/lib/coding/runner-protocol.js", "api/src/lib/coding/run-rate-limit.js"];
 const CLIENT_FILES = ["src/coding/codingRunClient.ts", "src/questionTypes/student/CodingResponse.tsx", "src/questionTypes/studentAttemptContext.ts"];
@@ -54,7 +59,7 @@ describe("R1 — the runner subtree exists, is self-contained and is the ONLY pl
   });
   it("inside runner/, child_process appears ONLY in gateway/sandbox.js; no eval / vm / workers / exec / execFile / shell anywhere", () => {
     const prod = walk("runner").filter(f => !isTest(f));
-    expect(prod.sort()).toEqual([...RUNNER_GATEWAY].sort());
+    expect(prod.sort()).toEqual([...RUNNER_GATEWAY, ...RUNNER_DEPLOY].sort());
     for (const f of prod) {
       const src = read(f);
       if (f !== "runner/gateway/sandbox.js") for (const [n, re] of EXEC) expect(re.test(src), f + " uses " + n).toBe(false);
@@ -63,6 +68,13 @@ describe("R1 — the runner subtree exists, is self-contained and is the ONLY pl
     const sb = read("runner/gateway/sandbox.js");
     expect(sb).toMatch(/require\(["']node:child_process["']\)/);
     expect(sb).toMatch(/shell:\s*false/);
+  });
+  it("17F-A1 deployment tools: never imported by the gateway; Docker only via read-only GET on the unix socket", () => {
+    for (const f of RUNNER_GATEWAY) expect(raw(f), f).not.toMatch(/deploy\//);
+    const api = read("runner/deploy/azure-vm/docker-api.js");
+    expect(api).toMatch(/method:\s*"GET"/);
+    expect(api).not.toMatch(/method:\s*"(POST|PUT|DELETE|PATCH)"|\/containers|\/exec|\/build|\/images\/create|tcp:/);
+    for (const f of RUNNER_DEPLOY) expect(read(f), f).not.toMatch(/child_process|docker\.sock["']?\s*,\s*["']w|\bexecve?\s*\(/);
   });
   it("the runner has zero third-party dependencies and is not an Azure Function / not part of the Vite graph", () => {
     const pkg = JSON.parse(raw("runner/package.json"));

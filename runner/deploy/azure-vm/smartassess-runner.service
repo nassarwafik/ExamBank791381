@@ -1,0 +1,79 @@
+# Phase 17F-A1 — systemd unit of the SmartAssess Coding Runner Gateway on its DEDICATED Azure Linux VM (Ubuntu 24.04 LTS).
+# Install: sudo install -m 0644 runner/deploy/azure-vm/smartassess-runner.service /etc/systemd/system/ && sudo systemctl daemon-reload
+# This file is NOT enabled or started by anything in the repository — enabling it is an explicit operator step (runbook §13).
+#
+# The Runner EXECUTES; the SmartAssess API remains the only grading authority. The gateway listens on 127.0.0.1:8787 only;
+# Caddy terminates TLS on :443 in front of it. Docker access (group "docker") is root-equivalent on this host: that is why the
+# VM is dedicated to the Runner and holds no other application data or secrets.
+[Unit]
+Description=SmartAssess Coding Runner Gateway (executes code; never grades)
+Documentation=file:///opt/smartassess-runner/current/runner/deploy/azure-vm/README.md
+# Docker must be up: every sandbox is a `docker run` through the local unix socket.
+Requires=docker.service
+After=docker.service network-online.target time-sync.target
+Wants=network-online.target time-sync.target
+# FAIL CLOSED on storage: the journal disk and the Docker disk must be MOUNTED before the gateway may start. If the data disk
+# is missing, systemd refuses to start the unit (and the preflight below refuses a journal that is not its own mount point).
+RequiresMountsFor=/data/smartassess-runner /var/lib/docker
+# A crash loop must not hammer Docker: at most 5 starts per 10 minutes, then the unit stays failed (alert + operator).
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=smartassess-runner
+Group=smartassess-runner
+SupplementaryGroups=docker
+WorkingDirectory=/opt/smartassess-runner/current/runner
+# Secrets live ONLY here (root:root 0600, read by systemd PID 1). Never in the repository, never on the command line.
+EnvironmentFile=/etc/smartassess-runner/runner.env
+# The docker CLI wants a writable HOME for its config; give it a private state directory instead of a login home.
+StateDirectory=smartassess-runner
+StateDirectoryMode=0700
+Environment=HOME=/var/lib/smartassess-runner
+# Gate: journal mount / symlink / filesystem / ownership / free space, Docker daemon + features + images + a real hardened
+# sandbox, keys (strength, separation), https callback, loopback bind, port, vCPU guardrail. Any failure keeps the gateway DOWN.
+ExecStartPre=/usr/bin/node deploy/azure-vm/preflight.js --mode=start --env-file=/etc/smartassess-runner/runner.env --image-manifest=/etc/smartassess-runner/images.manifest
+ExecStart=/usr/bin/node gateway/main.js
+# After any stop (clean or crash): remove leftover sandbox containers with the gateway's own label sweep.
+ExecStopPost=/usr/bin/node deploy/azure-vm/sweep-containers.js
+# Restart only on failure (a clean SIGTERM stop exits 0 and stays stopped).
+Restart=on-failure
+RestartSec=10s
+# Graceful stop: SIGTERM to the gateway ONLY (KillMode=mixed) — it stops the official queue (running official jobs are
+# resumed from the journal on the next start) and lets in-flight practice requests finish (≤ ~50 s worst case); anything left
+# after TimeoutStopSec is SIGKILLed and swept by ExecStopPost.
+KillSignal=SIGTERM
+KillMode=mixed
+TimeoutStartSec=180s
+TimeoutStopSec=90s
+# Logs: single-line JSON on stdout → journald (capped by journald.conf.d/smartassess-runner.conf).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=smartassess-runner
+# Sandboxing of the gateway process itself (it only needs: the journal disk, its state dir, the Docker socket, outbound HTTPS).
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/data/smartassess-runner
+ProtectHome=true
+PrivateTmp=true
+# NOT PrivateDevices: the gateway's durability gate reads /dev/disk/azure/resource-part1 to refuse the temporary disk.
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
