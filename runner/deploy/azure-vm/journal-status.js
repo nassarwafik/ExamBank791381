@@ -8,7 +8,7 @@
 // truncated listing) · 2 usage / unreadable journal.
 const fs = require("node:fs");
 const path = require("node:path");
-const { JOURNAL_LIMITS, validateRecord } = require(path.join(__dirname, "..", "..", "gateway", "journal.js"));
+const { JOURNAL_LIMITS, validateRecord } = require("../../gateway/journal.js");
 
 const STATES = ["received", "running", "executed", "confirmed", "callback_failed", "superseded"];
 

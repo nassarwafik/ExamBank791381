@@ -18,6 +18,7 @@ const P = require("../../deploy/azure-vm/preflight.js");
 const { journalStatus } = require("../../deploy/azure-vm/journal-status.js");
 const freshness = require("../../deploy/azure-vm/recovery-freshness.js");
 const smoke = require("../../deploy/azure-vm/smoke.js");
+const dockerApi = require("../../deploy/azure-vm/docker-api.js");
 const { LANGUAGES } = require("../../gateway/registry.js");
 const { createJournal, readJournalConfig } = require("../../gateway/journal.js");
 const { createGatewayServer } = require("../../gateway/server.js");
@@ -370,4 +371,39 @@ test("T6 smoke programs: the P1 gate uses the maximum time limit and Java / C# s
   for (const l of ["java", "csharp"]) assert.deepEqual(smoke.MATRIX[l].map(t => t.id), ["pass", "compile-error", "wrong-output", "runtime-error", "timeout"]);
   assert.ok(smoke.P1_CEILING_MS < 45000, "the gate ceiling stays below the SWA 45 s API limit");
   assert.ok(smoke.SANDBOX.filter(t => t.stagingOnly).every(t => /pressure/.test(t.id)), "pressure tests are staging-only");
+});
+
+test("D9b — DOCKER_HOST on TCP is refused (exit 30) even when a daemon answers there", async () => {
+  const r = await run({ env: goodEnv({ DOCKER_HOST: "tcp://10.0.0.5:2375" }) });
+  assert.equal(r.exitCode, P.EXIT.DOCKER);
+  assert.match(r.results.find(x => x.id === "docker").reason, /unix socket/);
+  assert.equal((await run({ env: goodEnv({ DOCKER_HOST: "unix:///var/run/docker.sock" }) })).exitCode, 0);
+});
+
+test("T7 docker-api: read-only GET of allow-listed endpoints over the unix socket only; TCP refused; bounded; never throws", async () => {
+  assert.equal(dockerApi.socketPathFor({}), "/var/run/docker.sock");
+  assert.equal(dockerApi.socketPathFor({ DOCKER_HOST: "unix:///run/user/1000/docker.sock" }), "/run/user/1000/docker.sock");
+  for (const h of ["tcp://127.0.0.1:2375", "ssh://host", "npipe:////./pipe/docker", "unix://"]) assert.equal(dockerApi.socketPathFor({ DOCKER_HOST: h }), null, h);
+  const seen = [];
+  const { EventEmitter } = require("node:events");
+  const fakeRequest = (body, status = 200) => (opts, cb) => {
+    seen.push({ method: opts.method, path: opts.path, socketPath: opts.socketPath });
+    const req = new EventEmitter(); req.destroy = () => {}; req.end = () => { const res = new EventEmitter(); res.statusCode = status; cb(res); setImmediate(() => { res.emit("data", Buffer.from(typeof body === "string" ? body : JSON.stringify(body))); res.emit("end"); }); };
+    return req;
+  };
+  const api = dockerApi.createDockerApi({ env: {}, request: fakeRequest({ ServerVersion: "27.3.1", Id: "sha256:" + "c".repeat(64) }) });
+  assert.equal((await api.info()).ServerVersion, "27.3.1");
+  assert.equal(await api.imageId("smartassess-coding-python:17c-v1"), "sha256:" + "c".repeat(64));
+  assert.equal(await api.imageId("evil/../../containers/create:x"), null, "an image reference outside the strict syntax is never sent");
+  assert.equal(await api.imageId("alpine"), null, "a tag is required");
+  assert.deepEqual(seen.map(s => s.method), ["GET", "GET"]);
+  assert.deepEqual(seen.map(s => s.path), ["/info", "/images/smartassess-coding-python%3A17c-v1/json"]);
+  assert.ok(seen.every(s => s.socketPath === "/var/run/docker.sock"));
+  const tcp = dockerApi.createDockerApi({ env: { DOCKER_HOST: "tcp://127.0.0.1:2375" }, request: () => { throw new Error("must not connect"); } });
+  assert.equal(await tcp.info(), null);
+  assert.equal(await dockerApi.createDockerApi({ env: {}, request: fakeRequest("x".repeat((1 << 20) + 10)) }).info(), null, "oversize answer refused");
+  assert.equal(await dockerApi.createDockerApi({ env: {}, request: fakeRequest({ message: "no such image" }, 404) }).imageId("smartassess-coding-java:17c-v1"), null);
+  assert.equal(await dockerApi.createDockerApi({ env: {}, request: () => { throw new Error("ECONNREFUSED"); } }).info(), null);
+  const src = fs.readFileSync(path.join(__dirname, "..", "..", "deploy", "azure-vm", "docker-api.js"), "utf8");
+  assert.doesNotMatch(src.replace(/\/\/.*$/gm, ""), /method:\s*"(POST|PUT|DELETE|PATCH|HEAD)"/, "GET only");
 });

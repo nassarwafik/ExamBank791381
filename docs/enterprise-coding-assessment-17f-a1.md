@@ -28,7 +28,7 @@ SmartAssess API = the only official grading authority.
 |---|---|
 | Runbook + checklists | `README.md`, `activation-checklist.md` (23 steps), `a2-live-activation-checklist.md`, `rollback.md`, `smoke-matrix.md`, `crash-tests.md`, `monitoring-checklist.md`, `known-limits-17f-b-backlog.md` |
 | Host configuration | `smartassess-runner.service`, `Caddyfile.example`, `runner.env.example`, `docker-daemon.json.example`, `journald-smartassess-runner.conf` |
-| Operational tooling | `preflight.js` (start / readiness / verify-sandbox), `readiness.sh`, `smoke.js`, `journal-status.js`, `recovery-freshness.js`, `build-and-record-images.sh` + `record-images.js`, `sweep-containers.js` |
+| Operational tooling | `preflight.js` (start / readiness / verify-sandbox), `docker-api.js` (read-only Engine API client), `readiness.sh`, `smoke.js`, `journal-status.js`, `recovery-freshness.js`, `build-and-record-images.sh` + `record-images.js`, `sweep-containers.js` |
 
 The tooling **reuses** the gateway's own modules:
 - `readGatewayConfig`, `readJournalConfig`, `mountFor`, the registry and `createDockerSandbox` (preflight);
@@ -37,6 +37,17 @@ The tooling **reuses** the gateway's own modules:
 - `scripts/build-images.sh` (image build).
 
 There is no second implementation of any protocol, limit or image list.
+
+**Process boundary preserved.** The 17B architecture guard (`api/tests/coding-guards-17b.test.js` R1) requires that inside
+`runner/` only `gateway/sandbox.js` starts processes, with literal requires only. The first version of the tools spawned the
+docker CLI, and the full `npm test` run caught it. The tools were changed to start **no** process:
+- Docker is queried through `docker-api.js`, a read-only `GET` client of the local Engine API socket that refuses TCP;
+- the preflight's sandbox probe runs through `gateway/sandbox.js` itself.
+
+The guard was then extended (test-only change, reviewed) with an **exact** inventory of the seven deployment tools and one new
+assertion: the gateway never imports `deploy/`, and `docker-api.js` is GET-only with no container / exec / build / TCP
+endpoint. **The process rule itself is not relaxed**; mutations PM25–PM27 prove the guard still fails on a process-starting
+tool, a non-GET call or an unlisted file.
 
 ## 3. Key decisions
 | Decision | Evidence |
@@ -68,7 +79,8 @@ There is no second implementation of any protocol, limit or image list.
 | Suite | Tests | Runs in |
 |---|---|---|
 | `runner/tests/unit/deploy-artifacts.rtest.js` | D1–D6, D12, D13, DOC (9) | `npm --prefix runner test` |
-| `runner/tests/unit/deploy-preflight.rtest.js` | D7–D11, GAP, adversarial matrix, capacity / drift, helpers, T1–T6 tools (29) | `npm --prefix runner test` |
+| `runner/tests/unit/deploy-preflight.rtest.js` | D7–D11, D9b, GAP, adversarial matrix, capacity / drift, helpers, T1–T7 tools (31) |
+| `api/tests/coding-guards-17b.test.js` (extended) | R1 exact inventory incl. the deploy tools + the deploy-tool rule | `npm test` | `npm --prefix runner test` |
 | `runner/tests/docker/deploy-preflight.rtest.js` | DP1 real-sandbox controls (3 toolchains), DP2 real daemon unreachable, DP3 smoke vs a real gateway + real sandboxes (3) | `test:docker:security` |
 | `runner/tests/docker-official/deploy-callback-probe.rtest.js` | CP1–CP3 callback probe vs the REAL API handler, near-max, no write (with a positive control) (2) | `test:docker:official` |
 
@@ -85,7 +97,35 @@ There is no second implementation of any protocol, limit or image list.
 into the Azure temporary disk.
 
 ### Mutations (each applied alone, targeted suite run, restored byte-for-byte; tree fingerprint identical before / after)
-See §8 for the campaign result.
+**29 / 29 killed.** Highlights:
+- PM1 remove `RequiresMountsFor`;
+- PM2 public bind in the template;
+- PM3 accept a reused HMAC;
+- PM4 drop the journal mount-point check;
+- PM5 drop the image check;
+- PM6 drop the https rule;
+- PM7 drop the symlink rejection;
+- PM8 / PM8b weaken the bind check;
+- PM9–PM11 Caddy at 1 MiB / 30 s / non-loopback upstream;
+- PM12 a key value in the template;
+- PM13 containers == vCPUs;
+- PM14 a sandbox with network;
+- PM15 smoke never detects replay;
+- PM16 / PM17 / PM21 unit `Restart=always`, no preflight, `PrivateDevices`;
+- PM18–PM20 env-file mode, Docker TCP listener, free space;
+- PM22 slot drift;
+- PM23 TCP `DOCKER_HOST`;
+- PM24 loose image reference;
+- PM25 `child_process` in a tool;
+- PM26 non-GET Docker call;
+- PM27 unlisted runner file.
+
+Two first-round survivors were **equivalent mutants** caused by redundant defences:
+- an http loopback callback is also refused by the "loopback in production" rule;
+- 0.0.0.0 is also refused by the loopback rule.
+
+The tests were strengthened (production refuses `http://127.0.0.1`, `::1` and `localhost`) and the mutants replaced by
+non-equivalent ones (PM6 / PM6b, PM8 / PM8b).
 
 ## 7. Adversarial deployment matrix (all covered by tests)
 | Attack | Result |

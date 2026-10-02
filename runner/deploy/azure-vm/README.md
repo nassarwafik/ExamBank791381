@@ -130,6 +130,7 @@ The journal must **never** silently fall back to the OS disk. Three independent 
 | `docker-daemon.json.example` | `/etc/docker/daemon.json` (unix socket only, local log driver) |
 | `journald-smartassess-runner.conf` | journald caps (`/etc/systemd/journald.conf.d/`) |
 | `preflight.js` | start / readiness / verify-sandbox gate (exit codes below) |
+| `docker-api.js` | read-only Docker Engine API client (GET only, unix socket only, allow-listed endpoints). The tools start **no process**: `gateway/sandbox.js` stays the only process-starting module of `runner/` (architecture guard 17B R1) |
 | `readiness.sh` | runs the preflight in the exact service context (`systemd-run`) |
 | `smoke.js` | signed smoke tool: Runner surface, language matrix, sandbox boundary, Gate P1, callback probe (Gate P2) |
 | `journal-status.js` | local diagnostics: journal state counts only |

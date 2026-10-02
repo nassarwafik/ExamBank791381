@@ -21,14 +21,15 @@ const os = require("node:os");
 const net = require("node:net");
 const path = require("node:path");
 const http = require("node:http");
-const { spawn } = require("node:child_process");
 
-const GATEWAY = path.join(__dirname, "..", "..", "gateway");
-const { readGatewayConfig } = require(path.join(GATEWAY, "main.js"));
-const { readJournalConfig, mountFor } = require(path.join(GATEWAY, "journal.js"));
-const { LANGUAGES, runtimeMemoryMb } = require(path.join(GATEWAY, "registry.js"));
-const { createDockerSandbox } = require(path.join(GATEWAY, "sandbox.js"));
-const RUNNER_PACKAGE = require(path.join(__dirname, "..", "..", "package.json"));
+// Literal requires only; this tool starts NO process (Docker is queried through the read-only Engine API client; the one
+// sandbox it runs goes through the gateway's own sandbox.js — the only process-starting module of runner/).
+const { readGatewayConfig } = require("../../gateway/main.js");
+const { readJournalConfig, mountFor } = require("../../gateway/journal.js");
+const { LANGUAGES, runtimeMemoryMb } = require("../../gateway/registry.js");
+const { createDockerSandbox } = require("../../gateway/sandbox.js");
+const { createDockerApi } = require("./docker-api.js");
+const RUNNER_PACKAGE = require("../../package.json");
 
 const EXIT = Object.freeze({
   OK: 0, USAGE: 2,
@@ -155,18 +156,7 @@ function sandboxViolations(r, { memoryMb = PROBE_LIMITS.memoryMb } = {}) {
 
 // ── real host dependencies (all injectable for the tests) ────────────────────────────────────────────────────────────────
 function realDeps(env) {
-  const dockerEnv = {};
-  for (const k of ["PATH", "HOME", "DOCKER_HOST"]) if (typeof env[k] === "string" && env[k] !== "") dockerEnv[k] = env[k];
-  const docker = (args, timeoutMs = 15000) => new Promise(resolve => {
-    let child;
-    try { child = spawn("docker", args, { shell: false, env: dockerEnv, stdio: ["ignore", "pipe", "pipe"] }); } catch { resolve({ code: -1, out: "" }); return; }
-    const out = []; let size = 0;
-    const timer = setTimeout(() => { try { child.kill("SIGKILL"); } catch { /* gone */ } }, timeoutMs);
-    child.stdout.on("data", d => { size += d.length; if (size <= 1 << 20) out.push(d); });
-    child.stderr.on("data", () => {});
-    child.on("error", () => { clearTimeout(timer); resolve({ code: -1, out: "" }); });
-    child.on("close", code => { clearTimeout(timer); resolve({ code, out: Buffer.concat(out).toString("utf8") }); });
-  });
+  const docker = createDockerApi({ env });
   const read = p => { try { return fs.readFileSync(p, "utf8"); } catch { return null; } };
   return {
     nodeVersion: process.versions.node,
@@ -182,8 +172,8 @@ function realDeps(env) {
     resourceDevice: () => { try { return fs.realpathSync("/dev/disk/azure/resource-part1"); } catch { return null; } },
     listeners: () => [...parseListeners(read("/proc/net/tcp"), false), ...parseListeners(read("/proc/net/tcp6"), true)],
     writeProbe: dir => { const f = path.join(dir, ".preflight-probe-" + process.pid); const fd = fs.openSync(f, "wx", 0o600); try { fs.writeSync(fd, "probe"); fs.fsyncSync(fd); } finally { fs.closeSync(fd); fs.unlinkSync(f); } },
-    async dockerInfo() { const r = await docker(["info", "--format", "{{json .}}"]); if (r.code !== 0) return null; try { return JSON.parse(r.out); } catch { return null; } },
-    async imageId(image) { const r = await docker(["image", "inspect", "--format", "{{.Id}}", image], 10000); return r.code === 0 ? r.out.trim() : null; },
+    dockerInfo: () => docker.info(),
+    imageId: image => docker.imageId(image),
     sandbox: createDockerSandbox({ env }),
     portFree: (host, port) => new Promise(resolve => { const s = net.createServer(); s.once("error", () => resolve(false)); s.listen(port, host, () => s.close(() => resolve(true))); }),
     healthz: (host, port) => new Promise(resolve => {
@@ -323,7 +313,9 @@ async function runPreflight({ env = process.env, mode = "start", profile = "prod
 
   // DOCKER — daemon reachable, recent enough for every flag the sandbox uses, cgroup v2 + seccomp, never on TCP
   const info = await d.dockerInfo();
-  if (!info) fail("docker", EXIT.DOCKER, "Docker daemon unreachable (is docker.service running and is the service user in the docker group?)");
+  const dockerHost = typeof env.DOCKER_HOST === "string" ? env.DOCKER_HOST.trim() : "";
+  if (dockerHost && !dockerHost.startsWith("unix://")) fail("docker", EXIT.DOCKER, "DOCKER_HOST must be a local unix socket (unix://…); a TCP Docker API is refused");
+  else if (!info) fail("docker", EXIT.DOCKER, "Docker daemon unreachable (is docker.service running and is the service user in the docker group?)");
   else if (!versionAtLeast(info.ServerVersion, PRODUCTION.minDockerVersion)) fail("docker", EXIT.DOCKER, "Docker Engine " + info.ServerVersion + " < " + PRODUCTION.minDockerVersion.join(".") + " (required for --pull never and the sandbox flags)");
   else if (prod && String(info.CgroupVersion) !== "2") fail("docker", EXIT.DOCKER, "cgroup v" + info.CgroupVersion + " — the production baseline is cgroup v2 (Ubuntu 24.04)");
   else if (!(Array.isArray(info.SecurityOptions) && info.SecurityOptions.some(s => /name=seccomp/.test(s)))) fail("docker", EXIT.DOCKER, "Docker seccomp is not enabled");

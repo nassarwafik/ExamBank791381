@@ -14,11 +14,9 @@
 // End-to-end OFFICIAL grading (score applied once) is verified with the dedicated test assignment (smoke-matrix.md).
 // Exit: 0 all checks passed · 1 a check failed · 2 usage / configuration.
 const crypto = require("node:crypto");
-const path = require("node:path");
-const GATEWAY = path.join(__dirname, "..", "..", "gateway");
-const { signRequest } = require(path.join(GATEWAY, "auth.js"));
-const { signCallbackRequest, encodeCallbackBody, CALLBACK_PATH } = require(path.join(GATEWAY, "callback.js"));
-const { OFFICIAL_MAX_BODY_BYTES } = require(path.join(GATEWAY, "server.js"));
+const { signRequest } = require("../../gateway/auth.js");
+const { signCallbackRequest, encodeCallbackBody, CALLBACK_PATH } = require("../../gateway/callback.js");
+const { OFFICIAL_MAX_BODY_BYTES } = require("../../gateway/server.js");
 
 const P1_CEILING_MS = 40000;                     // Pilot Gate P1: SWA managed API request ceiling 45 s minus a 5 s margin
 const rid = p => p + crypto.randomBytes(9).toString("hex");
