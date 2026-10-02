@@ -28,13 +28,16 @@ import {countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
 import {deriveSaveState,shouldWarnBeforeUnload} from "./studentSaveState";
 import {scoreLabel,gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingStatus";
+import {codingGradingStatusOf,shouldPollCodingGrading} from "./codingGradingStatus";
+import {useCodingGradingPoll,type PollOutcome} from "./useCodingGradingPoll";
+import CodingGradingStatusPanel from "./student/CodingGradingStatusPanel";
 import {normalizeAttemptPolicy,formatRemaining} from "./assignments/attemptPolicy";
 import {rememberStrictExit,pendingStrictExit,clearStrictExit} from "./student/exam/strictExitMarker";
 
 type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;attemptPolicy?:string;marksDistribution?:MarksDistribution;exam:ExamBody};
 type Answers=Record<string,Answer>;
-type Result={autoGradingPending?:boolean;attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
+type Result={autoGradingPending?:boolean;autoGradingStatus?:string;attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
 // Grading status is server-authoritative (result.gradingStatus). For an older cached result the SHARED
 // resolver derives it from manualReviewMarks/finalized — never from score/percentage. No local copy.
 const resultGradingStatus=(r:Result):GradingStatus=>resolveGradingStatus(r);
@@ -113,6 +116,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // lastSavedAt / dirty / error / retry). The server-side stale-attempt guard remains the final write backstop.
  const saveEpoch=useRef(0);
  const startingRef=useRef(false),finalizingRef=useRef(false);
+ // Phase 17E-C — server-read tickets (see readAndAdopt). invalidateReads() makes every read issued before it stale.
+ const readSeq=useRef(0),appliedRead=useRef(0);
+ const invalidateReads=()=>{appliedRead.current=++readSeq.current};
  // Server-anchored clock: we never trust the device wall clock. On each server response we store the
  // server's effective-end and a performance.now() anchor; the countdown is (effEnd - (serverNow + (perf-anchor))).
  const effEndMs=useRef(0),serverAnchorMs=useRef(0),perfAnchor=useRef(0);
@@ -288,7 +294,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Resync AUTHORITATIVE server state. Returns the fresh State on success, or null on failure (so callers
  // never act on stale state). SAME active attempt → update timer/state only, PRESERVING legitimate unsaved
  // local answers. DIFFERENT attempt → adopt it via applyServerAttemptState (never keep a cross-attempt snapshot).
- const resync=useCallback(async():Promise<State|null>=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return null;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return st;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);if((st.timed||st.activeAttempt.status==="paused")&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{
+ // Phase 17E-C — every authoritative GET takes a ticket. A response OLDER than one already applied (or issued before a transition
+ // called invalidateReads — starting / submitting an attempt) is dropped, so a late read (a slow poll, a visibility resync) can
+ // never overwrite newer state or pull the student out of a newly started attempt. Request ordering is never relied upon.
+ const readAndAdopt=useCallback(async(signal?:AbortSignal):Promise<{st:State}|"failed"|"skipped">=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return "skipped";const ticket=++readSeq.current;let st:State;try{st=(await api<{state:State}>(signal?{signal}:{})).state}catch{return signal?.aborted?"skipped":"failed"}if(!mountedRef.current)return {st};if(signal?.aborted||ticket<=appliedRead.current)return "skipped";appliedRead.current=ticket;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);if((st.timed||st.activeAttempt.status==="paused")&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{
   // LEGACY untimed (no attempt identity — activeAttempt is created lazily). Bind to the GENERATION
   // (attemptsUsed): if it advanced, the attempt we were editing was submitted elsewhere → discard the local
   // snapshot and adopt authoritative server state (result/next attempt). Same generation keeps clean-vs-dirty
@@ -297,7 +306,15 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const hasLocalUnsaved=revision.current>savedRevision.current;
   if(!genChanged&&hasLocalUnsaved){stateRef.current=st;setState(st);anchorClock(st);setResult(st.latestResult)}
   else{applyServerAttemptState(st);if(genChanged)resetPager();anchorClock(st);setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
- }return st}catch{return null/* transient resync failure — caller must not act on stale state */}},[applyServerAttemptState,adoptOrKeepActive,resetPager]);
+ }return {st}},[applyServerAttemptState,adoptOrKeepActive,resetPager]);
+ // Returns the fresh State on success, or null on failure / a superseded read (callers never act on stale state).
+ const resync=useCallback(async():Promise<State|null>=>{const r=await readAndAdopt();return typeof r==="object"?r.st:null/* transient resync failure — caller must not act on stale state */},[readAndAdopt]);
+ // Phase 17E-C — while the RESULT screen shows OPEN automatic coding grading, re-read the read-only GET politely (one chain,
+ // back-off, paused while hidden; see useCodingGradingPoll). Bound to the completed attempt's identity; never while starting a
+ // new attempt. Adoption is the SAME readAndAdopt path as every resync (no second reconciliation model).
+ const codingStatus=!started&&result?codingGradingStatusOf(result):undefined;
+ const pollCodingGrading=useCallback(async(signal:AbortSignal):Promise<PollOutcome>=>{if(startingRef.current)return "skipped";const r=await readAndAdopt(signal);return r==="failed"?"failed":r==="skipped"?"skipped":"ok"},[readAndAdopt]);
+ const codingPoll=useCodingGradingPoll(shouldPollCodingGrading(codingStatus)&&!starting,result?result.attemptNumber+"|"+result.submittedAt:"",pollCodingGrading);
  // Reconnect recovery (#8): server authority FIRST (resync — which also finalizes an expired attempt and
  // adopts a changed one), THEN save the latest dirty snapshot ONLY if the server still reports the SAME
  // attempt writable. A failed resync does nothing (never save/finalize on stale state).
@@ -337,7 +354,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  },[timed,hasActive,result,state?.effectiveAttemptEndsAt]);
 
  async function startTimedAttempt(){
-  if(startingRef.current)return;startingRef.current=true;setStarting(true);setError("");
+  if(startingRef.current)return;startingRef.current=true;setStarting(true);setError("");invalidateReads();
   try{
    // 1) Start on the server (the timer is now running). startAttempt is IDEMPOTENT, so a retry after a
    //    failed exam fetch returns the SAME startedAt/endsAt and never restarts the timer.
@@ -351,6 +368,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // Reveal the new attempt. applyServerAttemptState hydrates its server draft and RESETS all per-attempt
    // bookkeeping (revision/savedRevision/lastSavedAt/save flags) so attempt N+1 never inherits attempt N's
    // state, and no autosave is scheduled by the hydration (ref-marker).
+   // Phase 17E-C review fix (F1): attempt N+1 is now authoritative in the UI. Every read issued under the previous result /
+   // attempt generation — including a visibility resync sent WHILE the start request was in flight and answered with pre-start
+   // state — is stale from here on and can never replace this attempt. Reads issued after this point are accepted as usual.
+   invalidateReads();
    setExam(body);applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
    exitSentRef.current=false;setStrictEnded(false); // Phase 7A: a NEW strict attempt starts un-exited
    resetPager(); // new attempt → first question (presentation only)
@@ -599,7 +620,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // result, the epoch changed: leave that authoritative reconciled UI intact — do NOT submit attempt 1's
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
@@ -613,7 +634,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // attempt N+1 inherits NOTHING (revision/savedRevision/lastSavedAt/flags), no autosave fires from the reset
   // (empty answers marked as hydration), the epoch is refreshed and any pending debounce cleared, and the
   // legacy generation is bound to the current attemptsUsed. Only a real student edit schedules the first save.
-  saveEpoch.current+=1;if(timer.current){window.clearTimeout(timer.current);timer.current=null}
+  saveEpoch.current+=1;invalidateReads();if(timer.current){window.clearTimeout(timer.current);timer.current=null}
   const empty:Answers={};answersRef.current=empty;hydrationRef.current=empty;setAnswers(empty);
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
   dirtyAttemptRef.current=null;dirtyGenerationRef.current=Number(state.attemptsUsed||0);
@@ -633,7 +654,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   }
   if(revision.current>savedRevision.current&&!(await confirm({title:"مغادرة بدون تسليم",message:"توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟",confirmLabel:"المغادرة",cancelLabel:"البقاء",tone:"danger"})))return;onBack()}
  if(loading)return <main className="interactive-exam-page" dir="rtl"><div className="iex-wrap"><p className="iex-loading" role="status">جارٍ تجهيز صفحة الامتحان...</p></div></main>;
- if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
+ if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{codingStatus?<CodingGradingStatusPanel status={codingStatus} gradingStatus={gs} windowEnded={codingPoll.windowEnded} refreshFailed={codingPoll.refreshFailed}/>:result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
  // START GATE (B2A) — questions are NOT delivered by the server until startAttempt succeeds, for TIMED
  // and UNTIMED v2 assignments alike. Shows the structured cover (when enabled) or a compact start card;
  // pressing start calls the server, refetches the exam and reveals the questions. TIMED also anchors the

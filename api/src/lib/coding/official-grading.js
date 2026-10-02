@@ -206,6 +206,32 @@ function codingGradingStatus(attempt, nowMs = Date.now()) {
   return out.pending + out.retryable + out.stale > 0 ? out : null;
 }
 
+/**
+ * Phase 17E-C — the STUDENT-SAFE aggregate of a completed attempt's official coding grading, derived ONLY from the stored targets:
+ *   undefined   no hidden-test coding target (not applicable — the field is omitted);
+ *   "complete"  every target complete (incl. an unanswered target graded 0 at submission);
+ *   "delayed"   every open target is retryable with automatic recovery EXHAUSTED (it stays under review; a teacher retry resets it);
+ *   otherwise the most informative open state among targets still progressing automatically —
+ *   "retrying" (retryable) > "processing" (dispatched, or an unrecognised state: fail safe, never "complete") > "queued" (pending).
+ * One value per attempt: never a per-question state, a technical code, a job id, a timestamp, a retry count or any evidence.
+ * Independent of gradingStatus (mark finality), which stays the canonical deriveGradingStatus.
+ */
+function studentCodingGradingStatus(attempt) {
+  const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
+  if (!t) return undefined;
+  let seen = false, exhausted = 0, best = 0;                          // best: 0 none · 1 queued · 2 processing · 3 retrying
+  for (const x of Object.values(t)) {
+    if (!isObj(x)) continue;
+    seen = true;
+    if (x.state === "complete") continue;
+    if (x.state === "retryable" && isObj(x.recovery) && x.recovery.exhausted === true) { exhausted++; continue; }
+    best = Math.max(best, x.state === "retryable" ? 3 : x.state === "pending" ? 1 : 2);
+  }
+  if (!seen) return undefined;
+  if (best) return ["", "queued", "processing", "retrying"][best];
+  return exhausted ? "delayed" : "complete";
+}
+
 /** true while any official coding target of the attempt is not complete (student-facing: a boolean, nothing else). */
 function autoGradingPending(attempt) {
   const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
@@ -586,6 +612,6 @@ function codingAutoGradeView(question, attempt) {
 }
 
 module.exports = {
-  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, STALE_DISPATCHED_MS, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, buildOfficialRunnerJob,
+  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, STALE_DISPATCHED_MS, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, studentCodingGradingStatus, buildOfficialRunnerJob,
   dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, codingAutoGradeView, mutateTarget, manualRecovery
 };

@@ -12,14 +12,17 @@ const {deriveGradingStatus}=require("../lib/grading-status");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 // Phase 17C — official hidden-test coding grading: the durable intent is planned INSIDE each completed-attempt CAS; the runner
 // is reached only AFTER the commit (dispatchPlannedGrading never fails the submission; an outage is never a zero).
-const {planCodingGrading,dispatchPlannedGrading,autoGradingPending}=require("../lib/coding/official-grading");
+const {planCodingGrading,dispatchPlannedGrading,autoGradingPending,studentCodingGradingStatus}=require("../lib/coding/official-grading");
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // A completed attempt's public shape. timedOut/startedAt/endsAt/endedAt/endReason are additive audit
 // fields; they are "" / false / normalized for legacy/untimed attempts (backward compatible). endReason
 // is normalized from a legacy attempt's timedOut flag when the explicit field is absent (never mutates
 // stored data — normalization is read-time only).
-function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{}),...(autoGradingPending(x)?{autoGradingPending:true}:{})}}
+// Phase 17E-C: autoGradingStatus is the ONE student-safe aggregate of the official coding grading (omitted when not applicable);
+// autoGradingPending is kept for older clients. Neither ever carries a job id, revision, technical code or evidence.
+function codingStatusField(x){const c=studentCodingGradingStatus(x);return c?{autoGradingStatus:c}:{}}
+function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{}),...(autoGradingPending(x)?{autoGradingPending:true}:{}),...codingStatusField(x)}}
 // Unified state from the shared timer/availability helper, so this endpoint agrees with the
 // dashboard/assignment endpoints. `canAttempt` keeps its historical (untimed) meaning; `canWrite`
 // (save/submit gate) and `canStartAttempt` (timed start gate) are explicit and separate. serverNow +
