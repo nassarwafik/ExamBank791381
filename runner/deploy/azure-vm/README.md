@@ -278,6 +278,15 @@ all of these and also placeholders. **Do not generate or rotate keys as part of 
 ```sh
 sh /opt/smartassess-runner/current/runner/deploy/azure-vm/readiness.sh --deep   # liveness fails (not started yet); every other check must PASS
 ```
+**Node CLI option boundary (17F-A2 hotfix).** Node 22 owns a CLI option named `--env-file` and pre-scans the whole command line
+for it, even after the script path. Every invocation of `preflight.js` that passes the preflight's own `--env-file` option must
+therefore terminate Node's option parsing first: `/usr/bin/node -- deploy/azure-vm/preflight.js …` (as `readiness.sh` and the
+unit's `ExecStartPre` do). Without `--`, Node itself tries to open `/etc/smartassess-runner/runner.env` as the service user and
+dies with `node: /etc/smartassess-runner/runner.env: not found` — a misleading message: the file exists and is root:root 0600 **on
+purpose**. The secret values reach the process only through systemd `EnvironmentFile=`; preflight's `--env-file` path is used
+to validate the file contract (root-owned, mode 0600, regular file), never to read it. Do not "fix" that message by relaxing
+the file mode or by granting the service account read access. The guard `tests/unit/deploy-node-cli-boundary.rtest.js` refuses
+any deployment command that reintroduces the unsafe form.
 Fix every `FAIL`. The run proves the container controls inside **real** sandboxes for all three languages: uid 10001, no
 capabilities, no-new-privileges, seccomp, read-only rootfs, network none, no host mounts, no Docker socket, pids / memory / CPU
 bounded.
