@@ -368,6 +368,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // Reveal the new attempt. applyServerAttemptState hydrates its server draft and RESETS all per-attempt
    // bookkeeping (revision/savedRevision/lastSavedAt/save flags) so attempt N+1 never inherits attempt N's
    // state, and no autosave is scheduled by the hydration (ref-marker).
+   // Phase 17E-C review fix (F1): attempt N+1 is now authoritative in the UI. Every read issued under the previous result /
+   // attempt generation — including a visibility resync sent WHILE the start request was in flight and answered with pre-start
+   // state — is stale from here on and can never replace this attempt. Reads issued after this point are accepted as usual.
+   invalidateReads();
    setExam(body);applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
    exitSentRef.current=false;setStrictEnded(false); // Phase 7A: a NEW strict attempt starts un-exited
    resetPager(); // new attempt → first question (presentation only)

@@ -315,6 +315,54 @@ describe("17E-C RACE1–RACE3 — attempt identity and other tabs", () => {
     expect(screen.getByText("سؤال الامتحان الأول")).toBeTruthy();
     expect(screen.queryByText(/تم تسليم المحاولة 1/)).toBeNull();
   });
+  it("RACE1c — a read issued DURING «start new attempt» (start request still in flight) cannot resurrect the previous result once attempt 2 is shown", async () => {
+    // Independent-review probe U1: attempt 1 result visible → «بدء محاولة جديدة» → the start POST is still unresolved → a
+    // visibility resync GET goes out and is answered with PRE-START server state → the start resolves and attempt 2 (timed) is
+    // revealed → the student types → only THEN does the stale GET land. It must not touch attempt 2 in any way.
+    const s = makeServer(stateWith(open("delayed")));                                          // delayed: no poll chain, only the resync
+    const active2 = { attemptNumber: 2, startedAt: "2026-03-01T12:00:00.000Z", endsAt: "2026-03-01T12:30:00.000Z", status: "draft", attemptEpoch: 1 };
+    const started2 = stateWith(open("delayed"), { timed: true, durationMinutes: 30, activeAttempt: active2, effectiveAttemptEndsAt: "2026-03-01T12:30:00.000Z", serverNow: "2026-03-01T12:00:00.000Z", canWrite: true, canStartAttempt: false });
+    let releaseStart!: () => void;
+    const startGate = new Promise<void>(r => { releaseStart = r; });
+    s.onPost = () => ({ ok: true, state: started2 });
+    const scripted = globalThis.fetch;
+    let startRequests = 0;
+    globalThis.fetch = vi.fn(async (url: string, init: RequestInit = {}) => {
+      if ((init.method || "GET").toUpperCase() === "POST" && String(init.body || "").includes("startAttempt")) { startRequests++; await startGate; }
+      return (scripted as unknown as (u: string, i: RequestInit) => Promise<Response>)(url, init);
+    }) as unknown as typeof fetch;
+    await mount(s);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /بدء محاولة جديدة/ })); });
+    await settle();
+    expect(startRequests).toBe(1);                                                             // the start request is in flight
+    expect(screen.queryByText("سؤال الامتحان الأول")).toBeNull();
+    s.hold = true;
+    await setVisibility("visible");                                                            // resync DURING the start window
+    s.hold = false;
+    expect(s.held).toHaveLength(1);
+    releaseStart();
+    await settle();
+    expect(screen.getByText("سؤال الامتحان الأول")).toBeTruthy();                               // attempt 2 revealed
+    const timerBefore = screen.getByRole("timer").textContent;
+    const box = screen.getByRole("textbox") as HTMLInputElement | HTMLTextAreaElement;
+    fireEvent.change(box, { target: { value: "ANSWER-ATTEMPT-2" } });
+    await settle();
+    s.held.splice(0).forEach(d => d.resolve(null));                                            // the stale pre-start read lands
+    await settle();
+    expect(screen.queryByText(/تم تسليم المحاولة 1/)).toBeNull();                              // no setResult(attempt 1) / setStarted(false)
+    expect(panel()).toBeNull();
+    expect(screen.queryByRole("button", { name: /بدء محاولة جديدة/ })).toBeNull();            // attempt 2 not closed
+    expect(screen.getByText("سؤال الامتحان الأول")).toBeTruthy();                               // attempt 2 still active and visible
+    expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("ANSWER-ATTEMPT-2"); // answers not wiped
+    expect(screen.getByRole("timer").textContent).toBe(timerBefore);                          // timer not reset
+    // …while a NEW authoritative read after the transition is still adopted (reconciliation is not disabled): the teacher ends
+    // attempt 2 elsewhere → the next visibility resync shows attempt 2's result.
+    const ended2 = result({ attemptNumber: 2, submittedAt: "2026-03-01T12:10:00.000Z", endReason: "teacherEnded", autoGradingStatus: "complete" });
+    s.state = { ...stateWith(ended2), attemptsUsed: 2, attempts: [result(), ended2], canStartAttempt: false };
+    await setVisibility("visible");
+    await settle();
+    expect(screen.getByText(/تم تسليم المحاولة 2/)).toBeTruthy();
+  });
   it("RACE2 another tab finished grading / review: this stale pending tab adopts the authoritative result safely", async () => {
     const s = makeServer(stateWith(open("retrying")));
     await mount(s);

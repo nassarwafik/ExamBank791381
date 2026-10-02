@@ -508,9 +508,15 @@ Excluded from every student payload (asserted by `api/tests/coding-17e-c-status.
 
 - The chain is keyed by the completed attempt (`attemptNumber|submittedAt`).
 - Every authoritative GET (poll or resync) takes a **read ticket**. A response older than one already
-  applied, or issued before `invalidateReads()` (called when starting an attempt and when a submit
-  succeeds), is dropped. A late attempt-1 read can therefore never pull the student out of attempt 2, and a
-  slow poll can never overwrite a newer visibility resync.
+  applied, or issued before the last `invalidateReads()`, is dropped. `invalidateReads()` is called:
+  - when «start» is pressed (reads sent under the old result are stale);
+  - when the newly started attempt is **adopted** — after the start request and the exam body resolve. This
+    also retires reads sent WHILE the start request was in flight (independent-review finding F1; RACE1c);
+  - when a submit succeeds.
+- Invariant (tested by RACE1, RACE1b, RACE1c and POLL10b): reads issued under the previous result / attempt
+  generation are invalidated once a newly started attempt is adopted. A late pre-start read therefore cannot
+  replace the newer attempt's UI, answers or timer. Reads issued after the transition are accepted as usual,
+  so another tab or a teacher ending the attempt is still reconciled.
 - Adoption reuses the ONE existing reconciliation path (`readAndAdopt`, formerly the body of `resync`):
   - another tab started attempt 2 → the active attempt is adopted;
   - another tab saw grading / review finish → the newer result is adopted.
@@ -576,10 +582,10 @@ dashboard read model (12E) is unaffected.
 ## 27. Tests, fail-first, mutations (17E-C)
 
 - `api/tests/coding-17e-c-status.test.js` (21 tests) — AS1–AS16 through the REAL handlers.
-- `src/coding/codingGrading.17e-c.test.tsx` (30 tests):
+- `src/coding/codingGrading.17e-c.test.tsx` (31 tests):
   - UI1–UI8;
   - POLL1–POLL10 (+ POLL10b);
-  - RACE1–RACE3 (+ RACE1b, RACE2b);
+  - RACE1–RACE3 (+ RACE1b, RACE1c, RACE2b);
   - RET1–RET3;
   - the recovery flow;
   - strict mode;
@@ -634,3 +640,16 @@ and after.
   reconnects or reopens the assignment. A push notification for "grading complete" is a natural later phase
   (Phase 6B push infrastructure exists).
 - The portal does not poll; it shows the status as of its last load.
+
+### Independent review follow-ups (not changed in the review fix)
+
+- **F2 — poll request timeout.** A status GET that never answers holds the single poll chain until it settles
+  (no request storm). The page's own visibility / reconnect resyncs still refresh. Follow-up: a client timeout
+  (about 20 s) on the poll request.
+- **F3 — teacher override with an open target.** A teacher override can make the mark final while the automatic
+  target is still open, so «العلامة النهائية» and «التصحيح الآلي… جارٍ» appear together. This needs a product
+  decision; it belongs with the 17E-D teacher-evidence work.
+- **F5 — polling jitter.** The cadence is deterministic, so a mass deadline submission yields aligned polls.
+  Follow-up: ±20 % jitter (scale hardening).
+- **F6 — duplicate helper call.** `student-dashboard.js` computes `studentCodingGradingStatus` twice per item.
+  It is pure and cheap; compute it once in a later cleanup.

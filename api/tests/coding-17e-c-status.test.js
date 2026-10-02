@@ -93,6 +93,8 @@ describe("17E-C AS10–AS16 — the student projection carries ONLY the safe agg
     await h.submit(ANSWERED);
     const st = (await h.get()).jsonBody.state;
     expect(st.attempts).toHaveLength(1);
+    expect(st.latestResult.autoGradingStatus).toBe("processing");                        // the field is really present (not a vacuous equality)
+    expect(st.attempts[0].autoGradingStatus).toBe("processing");
     expect(st.attempts[0]).toEqual(st.latestResult);
     for (const k of Object.keys(st.attempts[0])) expect(PUBLIC_RESULT_KEYS, k).toContain(k);
   });
