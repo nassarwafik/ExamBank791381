@@ -17,7 +17,7 @@ import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
 import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog} from "./assignments/GradebookRowEditors";
 import {bulkRetryNotice} from "./assignments/codingRecovery";
-import type {CodingGradingStatus,Classroom,Item,Impact,Exam,SavedExam,StudentResult,LifecycleSnap,Stats,GradebookFilter,GradebookSort,QuestionStat,ItemAnalysis,AnalysisSort,SourceMode,WorkspaceMode} from "./assignments/types";
+import type {CodingEvidenceTotals,CodingGradingStatus,Classroom,Item,Impact,Exam,SavedExam,StudentResult,LifecycleSnap,Stats,GradebookFilter,GradebookSort,QuestionStat,ItemAnalysis,AnalysisSort,SourceMode,WorkspaceMode} from "./assignments/types";
 import {gradebookFilterFor,drillStudentId,type AssignmentDrill} from "./assignments/drillTarget";
 
 // Server-authoritative grading status for a student's LATEST result; fall back to the same inputs the
@@ -55,7 +55,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const [showArchived,setShowArchived]=useState(false),[purgeFor,setPurgeFor]=useState<Item|null>(null),[purgeTitle,setPurgeTitle]=useState("");
  const [analysis,setAnalysis]=useState<ItemAnalysis|null>(null),[analysisBusy,setAnalysisBusy]=useState(false),[analysisSort,setAnalysisSort]=useState<AnalysisSort>("number");
  // Roadmap #13 — gradebook search/filter/sort (client-side over the already-loaded results; no request per keystroke).
- const [codingSummary,setCodingSummary]=useState<CodingGradingStatus|null>(null);
+ const [codingSummary,setCodingSummary]=useState<CodingGradingStatus|null>(null),[codingTotals,setCodingTotals]=useState<CodingEvidenceTotals|null>(null);
  const [gbSearch,setGbSearch]=useState(""),[gbFilter,setGbFilter]=useState<GradebookFilter>("all"),[gbSort,setGbSort]=useState<GradebookSort>("name");
  const [savedExams,setSavedExams]=useState<SavedExam[]>([]),[examSource,setExamSource]=useState(current?"current":""),[savedExam,setSavedExam]=useState<Exam|null>(null),[examLoading,setExamLoading]=useState(false);
  const [sourceMode,setSourceMode]=useState<SourceMode>("mine");
@@ -230,11 +230,11 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   resultsBusy.current=true;
   setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);
   try{
-   const r=await api<{students:StudentResult[];stats:Stats;codingSummary?:CodingGradingStatus}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
+   const r=await api<{students:StudentResult[];stats:Stats;codingSummary?:CodingGradingStatus;codingEvidenceTotals?:CodingEvidenceTotals}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
    if(seq!==resultsSeq.current)return;
    if(!matchesMasterScope(item,scopeRef.current))return;
    const students=r.students||[];
-   setResultsFor(item);setResults(students);setStats(r.stats||null);setCodingSummary(r.codingSummary||null);
+   setResultsFor(item);setResults(students);setStats(r.stats||null);setCodingSummary(r.codingSummary||null);setCodingTotals(r.codingEvidenceTotals||null);
    if(drillTarget)applyDrillView(drillTarget,item,students);
   }catch(e){if(seq===resultsSeq.current)setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{if(seq===resultsSeq.current){resultsBusy.current=false;setBusy(false)}}
  }
@@ -464,7 +464,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy} focusStudentId={drillFocus&&drillFocus.assignmentId===resultsFor.assignmentId?drillFocus.studentId:undefined}
      search={gbSearch} onSearch={setGbSearch} filter={gbFilter} onFilter={setGbFilter} sort={gbSort} onSort={setGbSort}
      onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} onEndAttempt={s=>void endAttempt(s)} fmt={fmt}
-     codingSummary={codingSummary} onBulkCodingRetry={()=>void bulkCodingRetry()}/>
+     codingSummary={codingSummary} codingTotals={codingTotals} onBulkCodingRetry={()=>void bulkCodingRetry()}/>
    </AssignmentDetail>}
   </div>
 
