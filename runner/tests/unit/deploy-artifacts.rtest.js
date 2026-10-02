@@ -36,7 +36,7 @@ function parseUnit(text) {
   return out;
 }
 const unit = () => parseUnit(read("smartassess-runner.service"));
-const envLines = () => read("runner.env.example").split("\n").map(l => /^([A-Z_][A-Z0-9_]*)=(.*)$/.exec(l.trim())).filter(Boolean).map(m => ({ key: m[1], value: m[2] }));
+const envLines = () => read("runner-env.example").split("\n").map(l => /^([A-Z_][A-Z0-9_]*)=(.*)$/.exec(l.trim())).filter(Boolean).map(m => ({ key: m[1], value: m[2] }));
 const caddy = () => read("Caddyfile.example").split("\n").filter(l => !l.trim().startsWith("#")).join("\n");
 /** Worst LEGITIMATE-or-killed practice wall of the gateway (compile wall + run wall at the maximum time limit). */
 const practiceWorstMs = () => Math.max(...Object.values(LANGUAGES).map(e => (e.compileSandbox ? compileWallMs(e) : 0) + runWallMs(e, BOUNDS.timeMs[1])));
@@ -100,7 +100,7 @@ test("D3 — env template: no secret values, no dev override, exactly the gatewa
     if (dk) for (const m of dk[1].matchAll(/"([A-Z_]+)"/g)) gatewayKeys.add(m[1]);
   }
   gatewayKeys.delete("PATH"); gatewayKeys.delete("HOME");                     // provided by systemd (HOME = the state directory)
-  const template = read("runner.env.example");
+  const template = read("runner-env.example");
   assert.deepEqual([...gatewayKeys].filter(k => !new RegExp("^#?\\s*" + k + "=", "m").test(template)).sort(), [], "every setting the gateway reads is in the template");
   assert.deepEqual(Object.keys(active).filter(k => !gatewayKeys.has(k)), [], "the template defines no setting the gateway does not read");
   assert.ok(gatewayKeys.has("RUNNER_JOURNAL_DIR") && gatewayKeys.has("RUNNER_JOURNAL_ALLOW_EPHEMERAL"), "the journal knob is the existing RUNNER_JOURNAL_DIR");
@@ -152,7 +152,7 @@ test("D6 — worker images come from the registry; the docs list exactly the reg
 test("D12 — the environment file is root-owned 0600: documented and enforced by the preflight flags in the unit", () => {
   const readme = read("README.md");
   assert.match(readme, /install -o root -g root -m 0600/);
-  assert.match(read("runner.env.example"), /-m 0600/);
+  assert.match(read("runner-env.example"), /-m 0600/);
   assert.match(unit().Service.ExecStartPre[0], /--env-file=/);
 });
 
@@ -186,3 +186,18 @@ test("DOC — the runbook states the two non-negotiable rules and the pilot guar
   for (let i = 1; i <= 10; i++) assert.match(backlog, new RegExp("\\bB" + i + "\\b"), "backlog item B" + i);
   assert.match(backlog, /Force Regrade/);
 });
+
+test("FILES — every file of the runbook table exists, and no deployment file falls under the repo's `*.env.*` git-ignore rule", () => {
+  // CI regression (first PR run): a template named runner.env.example was silently excluded by .gitignore (`*.env.*`)
+  const table = read("README.md").split("## 4. What is in this directory")[1].split("### Preflight exit codes")[0];
+  const listed = [...table.matchAll(/^\| `([A-Za-z0-9._-]+)`(?: \/ `([A-Za-z0-9._-]+)`)? \|/gm)].flatMap(m => [m[1], m[2]]).filter(Boolean);
+  assert.ok(listed.length >= 20, "the runbook lists the package");
+  for (const f of listed) assert.ok(fs.existsSync(path.join(DEPLOY, f)), "README lists " + f + " but it does not exist");
+  const ignoreRules = fs.readFileSync(path.join(REPO, ".gitignore"), "utf8").split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#") && !l.startsWith("!"));
+  const toRe = g => new RegExp("^" + g.replace(/^\//, "").replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*").replace(/\?/g, "[^/]") + "$");
+  for (const f of fs.readdirSync(DEPLOY)) {
+    const hits = ignoreRules.filter(g => !g.includes("/") || g.endsWith("/") ? toRe(g.replace(/\/$/, "")).test(f) : false);
+    assert.deepEqual(hits, [], f + " is git-ignored by " + hits.join(", "));
+  }
+});
+

@@ -27,7 +27,7 @@ SmartAssess API = the only official grading authority.
 | Area | Files |
 |---|---|
 | Runbook + checklists | `README.md`, `activation-checklist.md` (23 steps), `a2-live-activation-checklist.md`, `rollback.md`, `smoke-matrix.md`, `crash-tests.md`, `monitoring-checklist.md`, `known-limits-17f-b-backlog.md` |
-| Host configuration | `smartassess-runner.service`, `Caddyfile.example`, `runner.env.example`, `docker-daemon.json.example`, `journald-smartassess-runner.conf` |
+| Host configuration | `smartassess-runner.service`, `Caddyfile.example`, `runner-env.example`, `docker-daemon.json.example`, `journald-smartassess-runner.conf` |
 | Operational tooling | `preflight.js` (start / readiness / verify-sandbox), `docker-api.js` (read-only Engine API client), `readiness.sh`, `smoke.js`, `journal-status.js`, `recovery-freshness.js`, `build-and-record-images.sh` + `record-images.js`, `sweep-containers.js` |
 
 The tooling **reuses** the gateway's own modules:

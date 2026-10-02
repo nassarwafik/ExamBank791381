@@ -1,0 +1,47 @@
+# Phase 17F-A1 — TEMPLATE of /etc/smartassess-runner/runner.env (the gateway's ONLY configuration source on the VM).
+#
+#   DO NOT put secrets in the repository. This template carries NO values for secrets: every key is left EMPTY on purpose,
+#   so a forgotten value fails closed (the gateway refuses to start; the preflight names the missing setting).
+#
+# Install (root):  install -o root -g root -m 0600 runner-env.example /etc/smartassess-runner/runner.env  — then edit in place.
+# The file is read by systemd (PID 1) through EnvironmentFile=; the service user never needs to read it.
+# Generate EACH key independently in the secret store (e.g. `openssl rand -hex 32`); never reuse a key across purposes or
+# environments, never copy a production key into a staging / preview environment.
+#
+# Inventory = every setting the gateway reads (runner/gateway/*.js). A guard test keeps this list exact.
+
+# ── API → Runner request signing (SA-CODING-RUNNER-1) ────────────────────────────────────────────────────────────────
+# SECRET. ≥ 32 characters, no whitespace. MUST EQUAL the SmartAssess API setting CODING_RUNNER_HMAC_KEY.
+RUNNER_HMAC_KEY=
+
+# ── Runner → SmartAssess callback (SA-CODING-CALLBACK-1) ─────────────────────────────────────────────────────────────
+# SECRET. ≥ 32 characters, no whitespace. MUST EQUAL the API setting CODING_GRADING_CALLBACK_HMAC_KEY.
+# MUST DIFFER from RUNNER_HMAC_KEY (the gateway refuses to start otherwise).
+SMARTASSESS_CALLBACK_HMAC_KEY=
+# The SmartAssess public ORIGIN that serves /api/coding/grade-callback: https://<host> — no path, query or credentials, and
+# the final host (redirects are refused). Production profile: https only.
+SMARTASSESS_CALLBACK_BASE_URL=
+
+# ── Bind (behind Caddy) — production values; the preflight refuses anything else ──────────────────────────────────────
+RUNNER_HOST=127.0.0.1
+RUNNER_PORT=8787
+
+# ── Durable journal (Phase 17D-B2) — the MOUNT POINT of the dedicated journal data disk ───────────────────────────────
+RUNNER_JOURNAL_DIR=/data/smartassess-runner
+# Development / tests ONLY. Must stay UNSET in production (the preflight fails if it is set).
+# RUNNER_JOURNAL_ALLOW_EPHEMERAL=
+
+# ── Pilot concurrency (Standard_D4s_v5: 4 vCPU) ─────────────────────────────────────────────────────────────────────
+# Worst-case sandbox containers = RUNNER_MAX_CONCURRENCY + official (compile containers are NOT under the 2 hard-coded
+# runtime slots). The preflight requires that total < vCPUs (wall-clock time limits must not be starved of CPU).
+# Pilot: 1 practice + 2 official = 3 < 4.
+RUNNER_MAX_CONCURRENCY=1
+# Official queue: received + running jobs (1..64). Pilot guardrail: ≤ 64 official jobs per submission burst.
+RUNNER_OFFICIAL_MAX_PENDING=64
+RUNNER_OFFICIAL_MAX_ACTIVE=1
+# Values above 2 have NO physical effect (official runtime slots are hard-coded to 2 — Phase 17F-B backlog B3).
+RUNNER_OFFICIAL_CASE_CONCURRENCY=2
+
+# ── Docker CLI (optional) — the gateway forwards only PATH, HOME and DOCKER_HOST to the docker CLI ────────────────────
+# Leave unset: the CLI then uses the local unix socket /var/run/docker.sock. NEVER point it at a TCP daemon.
+# DOCKER_HOST=

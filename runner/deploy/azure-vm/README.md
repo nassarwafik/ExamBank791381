@@ -126,7 +126,7 @@ The journal must **never** silently fall back to the OS disk. Three independent 
 | `known-limits-17f-b-backlog.md` | known limits + the Phase 17F-B backlog (B1–B10) |
 | `smartassess-runner.service` | systemd unit (preflight gate, mounts required, dedicated user, hardening) |
 | `Caddyfile.example` | TLS reverse proxy (4 routes → 127.0.0.1:8787, 3 MiB, 90 s, header-free access log) |
-| `runner.env.example` | environment template (**no secret values**) |
+| `runner-env.example` | environment template (**no secret values**) |
 | `docker-daemon.json.example` | `/etc/docker/daemon.json` (unix socket only, local log driver) |
 | `journald-smartassess-runner.conf` | journald caps (`/etc/systemd/journald.conf.d/`) |
 | `preflight.js` | start / readiness / verify-sandbox gate (exit codes below) |
@@ -235,7 +235,7 @@ refuses to start the gateway if an image is missing or differs from this manifes
 
 ### 5.9 Environment file
 ```sh
-install -o root -g root -m 0600 /opt/smartassess-runner/current/runner/deploy/azure-vm/runner.env.example /etc/smartassess-runner/runner.env
+install -o root -g root -m 0600 /opt/smartassess-runner/current/runner/deploy/azure-vm/runner-env.example /etc/smartassess-runner/runner.env
 ${EDITOR:-vi} /etc/smartassess-runner/runner.env   # paste the keys from the secret store; set SMARTASSESS_CALLBACK_BASE_URL
 ```
 
