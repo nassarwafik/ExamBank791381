@@ -8,7 +8,10 @@ import type { CodeExecutionResult, CodeExecutionStatus } from "../codingContract
 // is never stored in the canonical Answer. Nothing here can execute code: it only describes a request / response.
 export type CodingRunRequest = { language: string; languageVersion: number; source: string; stdin: string; testId?: string };
 export type CodingCapabilities = { available: boolean; languages: { key: string; languageVersion: number }[] };
-export type CodingExecutionService = { capabilities: CodingCapabilities; run: (request: CodingRunRequest) => Promise<CodeExecutionResult> };
+/** Phase 17E-B — `signal` lets the renderer abandon a superseded practice run (a language switch, unmount); the server-side run
+ *  may still complete, its result is simply never shown. */
+export type CodingRunOptions = { signal?: AbortSignal };
+export type CodingExecutionService = { capabilities: CodingCapabilities; run: (request: CodingRunRequest, options?: CodingRunOptions) => Promise<CodeExecutionResult> };
 
 export const CodingExecutionContext = createContext<CodingExecutionService | undefined>(undefined);
 
@@ -42,3 +45,11 @@ export function runErrorMessage(code: string, retryAfterSeconds?: number): strin
 }
 /** Bound for the practice stdin box (the platform's per-input ceiling, 16 KB UTF-8). */
 export const RUN_STDIN_MAX_BYTES = 16384;
+
+// Phase 17E-B — the student IDE's own words (one place; the renderer never builds these ad hoc).
+export const RUN_PREVIEW_MESSAGE = "معاينة المعلم: التشغيل متاح للطالب داخل الامتحان فقط، ولا يُشغَّل أي كود من المعاينة.";
+export const RUN_STALE_MESSAGE = "هذه النتيجة لنسخة سابقة من الكود؛ شغّل الكود مجددًا للتحقق من تعديلاتك.";
+export const RUN_TRUNCATED_MESSAGE = "اقتُطعت المخرجات لأنها تجاوزت الحد المسموح.";
+export const PUBLIC_RUN_DISCLAIMER = "نتائج الأمثلة للتدريب فقط ولا تؤثر في العلامة.";
+/** Client-side ceiling for one practice request (the API's own runner timeout is 60 s; this only frees the UI). */
+export const RUN_CLIENT_TIMEOUT_MS = 90000;

@@ -1,6 +1,6 @@
 import type { StudentAttemptApi } from "../questionTypes/studentAttemptContext";
 import type { CodeExecutionResult } from "../codingContract";
-import type { CodingCapabilities, CodingExecutionService, CodingRunRequest } from "./codingExecution";
+import { RUN_CLIENT_TIMEOUT_MS, type CodingCapabilities, type CodingExecutionService, type CodingRunOptions, type CodingRunRequest } from "./codingExecution";
 
 // Phase 17B — the browser client of the authenticated practice-execution routes (lazy: imported ONLY by the coding renderer).
 //     GET  /api/coding/capabilities  → which language contracts the trusted runner offers right now
@@ -36,15 +36,24 @@ const failure = (code: string, retryAfterSeconds?: number): CodingRunFailure => 
 export function createApiCodingService(api: StudentAttemptApi, questionId: string, capabilities: CodingCapabilities): CodingExecutionService {
   return {
     capabilities,
-    async run(req: CodingRunRequest): Promise<CodeExecutionResult> {
+    async run(req: CodingRunRequest, options: CodingRunOptions = {}): Promise<CodeExecutionResult> {
+      // Phase 17E-B — one practice request is bounded on the client too (never an endlessly spinning «تشغيل»), and can be
+      // abandoned by the renderer (superseded run / unmount): an abandoned request is reported as ABORTED and never shown.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), RUN_CLIENT_TIMEOUT_MS);
+      const outer = options.signal;
+      const relay = () => ctrl.abort();
+      if (outer) { if (outer.aborted) ctrl.abort(); else outer.addEventListener("abort", relay, { once: true }); }
       let res: Response;
       try {
         res = await api.request("/api/coding/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assignmentId: api.assignmentId, questionId, language: req.language, languageVersion: req.languageVersion, source: req.source, stdin: req.stdin })
+          body: JSON.stringify({ assignmentId: api.assignmentId, questionId, language: req.language, languageVersion: req.languageVersion, source: req.source, stdin: req.stdin }),
+          signal: ctrl.signal
         });
-      } catch { throw failure("NETWORK"); }
+      } catch { throw failure(outer?.aborted ? "ABORTED" : "NETWORK"); }
+      finally { clearTimeout(timer); outer?.removeEventListener("abort", relay); }
       let body: { ok?: unknown; code?: unknown; result?: unknown; retryAfterSeconds?: unknown } = {};
       try { body = await res.json(); } catch { body = {}; }
       if (res.ok && body.ok === true && body.result && typeof body.result === "object") return body.result as CodeExecutionResult;
