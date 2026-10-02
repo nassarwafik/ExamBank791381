@@ -157,7 +157,7 @@ test("D12 — the environment file is root-owned 0600: documented and enforced b
 });
 
 test("D13 — no secrets, tokens, private keys or production identifiers in the deployment tree / phase doc", () => {
-  const files = [...deployFiles(), path.join(REPO, "docs", "enterprise-coding-assessment-17f-a1.md")];
+  const files = [...deployFiles(), path.join(REPO, "docs", "enterprise-coding-assessment-17f-a1.md"), path.join(REPO, "docs", "enterprise-coding-assessment-17f-a1-1.md")];
   for (const f of files) {
     const t = fs.readFileSync(f, "utf8");
     const name = path.basename(f);
@@ -187,17 +187,21 @@ test("DOC — the runbook states the two non-negotiable rules and the pilot guar
   assert.match(backlog, /Force Regrade/);
 });
 
-test("FILES — every file of the runbook table exists, and no deployment file falls under the repo's `*.env.*` git-ignore rule", () => {
-  // CI regression (first PR run): a template named runner.env.example was silently excluded by .gitignore (`*.env.*`)
+test("FILES — every file of the runbook table exists; the whole package's repository references are judged by git (17F-A1.1 M4, tests/unit/deploy-file-refs.rtest.js)", () => {
+  // CI regression (17F-A1 first PR run): a template named runner.env.example was silently excluded by .gitignore (`*.env.*`).
+  // The reference guard (deploy-file-refs.js) scans EVERY deployment file and the phase notes and asks git — `git ls-files` and
+  // `git check-ignore -v --no-index` — instead of emulating .gitignore by hand; this test keeps the cheap table check and
+  // delegates the authority question to the same helper so the runbook table can never drift from the tree either.
+  const F = require("./deploy-file-refs.js");
   const table = read("README.md").split("## 4. What is in this directory")[1].split("### Preflight exit codes")[0];
   const listed = [...table.matchAll(/^\| `([A-Za-z0-9._-]+)`(?: \/ `([A-Za-z0-9._-]+)`)? \|/gm)].flatMap(m => [m[1], m[2]]).filter(Boolean);
-  assert.ok(listed.length >= 20, "the runbook lists the package");
-  for (const f of listed) assert.ok(fs.existsSync(path.join(DEPLOY, f)), "README lists " + f + " but it does not exist");
-  const ignoreRules = fs.readFileSync(path.join(REPO, ".gitignore"), "utf8").split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#") && !l.startsWith("!"));
-  const toRe = g => new RegExp("^" + g.replace(/^\//, "").replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*").replace(/\?/g, "[^/]") + "$");
-  for (const f of fs.readdirSync(DEPLOY)) {
-    const hits = ignoreRules.filter(g => !g.includes("/") || g.endsWith("/") ? toRe(g.replace(/\/$/, "")).test(f) : false);
-    assert.deepEqual(hits, [], f + " is git-ignored by " + hits.join(", "));
+  assert.ok(listed.length >= 22, "the runbook lists the package");
+  const authority = F.gitAuthority(REPO);
+  for (const f of listed) {
+    assert.ok(fs.existsSync(path.join(DEPLOY, f)), "README lists " + f + " but it does not exist");
+    assert.ok(authority.tracked.has("runner/deploy/azure-vm/" + f), "README lists " + f + " but git does not track it");
+    assert.equal(authority.ignoredBy("runner/deploy/azure-vm/" + f), "", f + " is git-ignored");
   }
+  for (const f of fs.readdirSync(DEPLOY)) assert.ok(listed.includes(f), f + " is in the package but not in the runbook table");
+  assert.deepEqual(F.checkDeployRefs([{ file: "runner/deploy/azure-vm/README.md", text: read("README.md") }], authority), []);
 });
-

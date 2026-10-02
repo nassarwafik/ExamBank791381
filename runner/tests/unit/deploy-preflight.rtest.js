@@ -27,6 +27,8 @@ const { verifyCallbackRequest } = require("../../../api/src/lib/coding/callback-
 const KEY_A = crypto.randomBytes(32).toString("hex"), KEY_B = crypto.randomBytes(32).toString("hex"), KEY_C = crypto.randomBytes(32).toString("hex");
 const JDIR = "/data/smartassess-runner";
 const MOUNTS = ["/dev/sda1 / ext4 rw,relatime 0 0", "/dev/sdb1 /var/lib/docker ext4 rw,noatime 0 0", "/dev/sdc1 /data/smartassess-runner ext4 rw,noatime 0 0", "tmpfs /run tmpfs rw 0 0"].join("\n");
+// the same host in /proc/self/mountinfo (17F-A1.1 M1: three distinct devices 8:1 / 8:33 / 8:17; tests/unit/deploy-storage.rtest.js has the adversarial shapes)
+const MOUNTINFO = ["21 1 8:1 / / rw,relatime shared:1 - ext4 /dev/sda1 rw,errors=remount-ro", "22 21 0:5 / /proc rw,nosuid,nodev,noexec,relatime shared:2 - proc proc rw", "24 21 0:20 / /run rw,nosuid,nodev,noexec,relatime shared:4 - tmpfs tmpfs rw", "25 21 8:17 / /var/lib/docker rw,noatime shared:5 - ext4 /dev/sdb1 rw", "26 21 8:33 / /data/smartassess-runner rw,noatime shared:6 - ext4 /dev/sdc1 rw"].join("\n") + "\n";
 const GOOD_PROBE = { uid: 10001, capEff: "0000000000000000", noNewPrivs: "1", seccomp: "2", dockerSock: false, rootfsWritable: false, network: false, interfaces: ["lo"], hostMounts: [], workspaceNoexec: true, pidsMax: "128", memoryMax: String((128 + 64) * 1024 * 1024), cpuMax: "100000 100000" };
 const IMAGE_IDS = Object.fromEntries(Object.values(LANGUAGES).map((e, i) => [e.image, "sha256:" + String(i + 1).repeat(64)]));
 
@@ -39,7 +41,7 @@ function deps(over = {}) {
     lstat: () => dirStat(), stat: p => p === "/etc/smartassess-runner/runner.env" ? { uid: 0, mode: 0o100600, isFile: () => true } : dirStat(),
     realpath: p => p, statfs: () => ({ bsize: 4096, blocks: 8 * 1024 * 1024, bavail: 7 * 1024 * 1024 }),
     readFile: p => p === "/etc/smartassess-runner/images.manifest" ? JSON.stringify({ schemaVersion: 1, images: IMAGE_IDS }) : null,
-    mounts: () => MOUNTS, resourceDevice: () => "/dev/sdd1", listeners: () => [{ address: "127.0.0.1", port: 8787 }, { address: "0.0.0.0", port: 443 }],
+    mounts: () => MOUNTS, mountInfo: () => MOUNTINFO, resourceDevice: () => "/dev/sdd1", listeners: () => [{ address: "127.0.0.1", port: 8787 }, { address: "0.0.0.0", port: 443 }],
     writeProbe: () => {},
     dockerInfo: async () => ({ ServerVersion: "27.3.1", CgroupVersion: "2", SecurityOptions: ["name=apparmor", "name=seccomp,profile=builtin", "name=cgroupns"], DockerRootDir: "/var/lib/docker" }),
     imageId: async image => IMAGE_IDS[image] || null,
@@ -58,7 +60,7 @@ test("baseline — a correctly prepared pilot host passes every start check (exi
   const d = deps();
   const r = await run({ deps: d });
   assert.equal(r.exitCode, 0, JSON.stringify(r.results.filter(x => x.status !== "pass")));
-  assert.deepEqual([...new Set(r.results.map(x => x.id))], ["node-version", "env-file", "keys", "callback-url", "bind", "runner-config", "capacity", "journal", "journal-disk", "docker", "exposure", "docker-disk", "images", "sandbox", "port"]);
+  assert.deepEqual([...new Set(r.results.map(x => x.id))], ["node-version", "env-file", "keys", "callback-url", "bind", "runner-config", "capacity", "journal", "journal-disk", "docker", "exposure", "docker-disk", "storage", "images", "sandbox", "port"]);
   assert.equal(d.calls.sandbox, 1, "start mode proves the controls in ONE real python sandbox");
 });
 

@@ -35,8 +35,9 @@ const RUNNER_GATEWAY = ["runner/gateway/main.js", "runner/gateway/server.js", "r
 // Phase 17F-A1 adds the operator DEPLOYMENT tools (runner/deploy/azure-vm/): host-side CLIs run by the operator / systemd, never
 // loaded by the gateway. They obey EVERY rule below unchanged (no child_process, no exec / spawn / shell, literal requires only) —
 // Docker is reached only through a read-only GET client of the local Engine API socket, and the one sandbox the preflight runs
-// goes through gateway/sandbox.js. The list is exact: a new runner file still needs a reviewed guard change.
-const RUNNER_DEPLOY = ["runner/deploy/azure-vm/preflight.js", "runner/deploy/azure-vm/docker-api.js", "runner/deploy/azure-vm/smoke.js", "runner/deploy/azure-vm/journal-status.js", "runner/deploy/azure-vm/recovery-freshness.js", "runner/deploy/azure-vm/record-images.js", "runner/deploy/azure-vm/sweep-containers.js"];
+// goes through gateway/sandbox.js. The list is exact: a new runner file still needs a reviewed guard change. 17F-A1.1 adds two
+// PURE modules (mountinfo.js: /proc/self/mountinfo device separation; image-manifest.js: the shared manifest contract).
+const RUNNER_DEPLOY = ["runner/deploy/azure-vm/preflight.js", "runner/deploy/azure-vm/docker-api.js", "runner/deploy/azure-vm/smoke.js", "runner/deploy/azure-vm/journal-status.js", "runner/deploy/azure-vm/recovery-freshness.js", "runner/deploy/azure-vm/record-images.js", "runner/deploy/azure-vm/sweep-containers.js", "runner/deploy/azure-vm/mountinfo.js", "runner/deploy/azure-vm/image-manifest.js"];
 const RUNNER_FILES = [...RUNNER_GATEWAY, "runner/workers/supervisor.py", "runner/workers/python/Dockerfile", "runner/workers/java/Dockerfile", "runner/workers/csharp/Dockerfile", "runner/workers/python/toolchain.json", "runner/workers/java/toolchain.json", "runner/workers/csharp/toolchain.json", "runner/package.json", "runner/README.md", "runner/scripts/build-images.sh"];
 const API_FILES = ["api/src/functions/coding-run.js", "api/src/lib/coding/execution-provider.js", "api/src/lib/coding/runner-config.js", "api/src/lib/coding/runner-protocol.js", "api/src/lib/coding/run-rate-limit.js"];
 const CLIENT_FILES = ["src/coding/codingRunClient.ts", "src/questionTypes/student/CodingResponse.tsx", "src/questionTypes/studentAttemptContext.ts"];
