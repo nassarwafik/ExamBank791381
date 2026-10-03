@@ -28,6 +28,7 @@
 //   production  Q-CORRECTNESS, Q-CALLBACK-TRANSPORT                   nothing is applied, so no idempotency is measured or claimed)
 // A future real staging prepared-job test may add a separate idempotency qualification; this phase does not fabricate one.
 const { P1_CEILING_MS } = require("./gates.js");
+const { LANGUAGES: P1_LANGUAGES } = require("./metrics.js");                    // the canonical language registry: python, java, csharp
 const { EXECUTION_POLICY } = require("../../../gateway/official.js");
 
 const TARGETS = Object.freeze(["local", "staging", "production"]);
@@ -74,17 +75,21 @@ function assertQualificationMetadata(metadata, scenarioId, target) {
   return canon;
 }
 
-/** ONE helper for the recovery invariant — used by the recovery scenario AND by Q-RECOVERY so the two can never drift. */
+/** ONE helper for the recovery invariant — used by the recovery scenario AND by Q-RECOVERY so the two can never drift.
+ *  Malformed shapes (non-boolean flags, negative / non-integer counts, an invalid allowance) are REFUSED; a measured breach FAILS. */
 function recoveryVerdict(rec) {
   const reasons = [];
-  if (!rec || typeof rec !== "object") return { pass: false, reasons: ["no recovery evidence"] };
+  if (!rec || typeof rec !== "object" || Array.isArray(rec)) throw new QualificationError("malformed recovery evidence (not an object)");
+  for (const k of ["accepted", "lost", "duplicateApplications", "executionsPerJobMax", "complete"]) if (!(Number.isInteger(rec[k]) && rec[k] >= 0)) throw new QualificationError("malformed recovery evidence: " + k + " must be a non-negative integer");
+  for (const k of ["settled", "resubmissionNeeded"]) if (typeof rec[k] !== "boolean") throw new QualificationError("malformed recovery evidence: " + k + " must be a boolean");
+  if (rec.maxExecutionsAllowed !== undefined && !(Number.isInteger(rec.maxExecutionsAllowed) && rec.maxExecutionsAllowed >= 1)) throw new QualificationError("malformed recovery evidence: maxExecutionsAllowed must be a positive integer");
   if (rec.settled !== true) reasons.push("not settled");
   if (rec.lost !== 0) reasons.push("lost " + rec.lost);
   if (rec.duplicateApplications !== 0) reasons.push("duplicate applications " + rec.duplicateApplications);
   if (rec.resubmissionNeeded !== false) reasons.push("resubmission needed");
   const allowed = Number.isInteger(rec.maxExecutionsAllowed) ? Math.min(rec.maxExecutionsAllowed, MAX_EXECUTIONS_BOUND) : MAX_EXECUTIONS_BOUND;
-  if (!Number.isInteger(rec.executionsPerJobMax) || rec.executionsPerJobMax > allowed) reasons.push("executions per job " + rec.executionsPerJobMax + " > allowed " + allowed);
-  if (!Number.isInteger(rec.accepted) || rec.accepted < 1) reasons.push("no accepted job");
+  if (rec.executionsPerJobMax > allowed) reasons.push("executions per job " + rec.executionsPerJobMax + " > allowed " + allowed);
+  if (rec.accepted < 1) reasons.push("no accepted job");
   return { pass: reasons.length === 0, reasons };
 }
 
@@ -100,7 +105,17 @@ function evalP1(p1) {
   if (p1.ceilingMs !== P1_CEILING_MS) reasons.push("ceiling " + p1.ceilingMs + " ms is not the canonical " + P1_CEILING_MS + " ms");
   for (const v of p1.violations) reasons.push((v && v.language) + " " + (v && v.ms) + " ms > " + P1_CEILING_MS);
   for (const l of p1.missing) reasons.push(l + " not measured");
-  if (isObj(p1.samples)) for (const [lang, s] of Object.entries(p1.samples)) { if (isObj(s) && typeof s.max === "number" && s.max > P1_CEILING_MS) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS); }
+  // Independent Review Fix 3 (RF3-C): every canonical language must be PROVEN by its raw sample summary (count ≥ 1, finite max ≤ the
+  // ceiling) — `missing` / `violations` are stored summaries and cannot vouch for a language; a malformed sample is refused
+  if (p1.samples !== undefined && p1.samples !== null && !isObj(p1.samples)) throw new QualificationError("malformed P1 evidence (samples must be an object)");
+  const samples = isObj(p1.samples) ? p1.samples : {};
+  for (const lang of P1_LANGUAGES) {
+    const s = samples[lang];
+    if (s === undefined) { reasons.push(lang + " has no sample evidence"); continue; }
+    if (!isObj(s) || !Number.isInteger(s.count) || s.count < 0 || !(s.max === null || (typeof s.max === "number" && Number.isFinite(s.max) && s.max >= 0))) throw new QualificationError("malformed P1 sample evidence for " + lang + " (count must be an integer, max a finite non-negative number)");
+    if (s.count < 1 || s.max === null) { reasons.push(lang + " has no sample (count 0)"); continue; }
+    if (s.max > P1_CEILING_MS) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS);
+  }
   const derived = reasons.length === 0;
   const contradiction = summaryVs("Q-P1", p1.pass, derived);
   return check("Q-P1", derived && !contradiction, derived ? "every language within " + P1_CEILING_MS + " ms" : reasons.join("; "), contradiction);
@@ -130,7 +145,9 @@ function evalIdempotency(bursts) {
   for (const b of list) {
     const i = b.idempotency;
     if (!isObj(i) || typeof i.redeliveryAnswer !== "string") throw new QualificationError("malformed idempotency evidence");
-    const snap = s => isObj(s) && typeof s.state === "string" && (typeof s.score === "number" || s.score === null) && Number.isInteger(s.applications);
+    // RF3-D: a snapshot that is present must be well-formed (state string, score null or finite, applications a non-negative integer)
+    for (const [name, s] of [["before", i.before], ["after", i.after]]) { if (s === null || s === undefined) continue; if (!isObj(s) || typeof s.state !== "string" || !(s.score === null || (typeof s.score === "number" && Number.isFinite(s.score))) || !nonNegInt(s.applications)) throw new QualificationError("malformed idempotency snapshot (" + name + ")"); }
+    const snap = s => isObj(s);
     const ok = i.redeliveryAnswer === "alreadyApplied" && snap(i.before) && snap(i.after) && i.before.state === i.after.state && i.before.score === i.after.score && i.before.applications === i.after.applications;
     if (!ok) derived = false;
     details.push("re-delivery " + i.redeliveryAnswer + ", before " + JSON.stringify(i.before) + ", after " + JSON.stringify(i.after) + (ok ? "" : " ✗"));
@@ -147,12 +164,32 @@ function evalRecovery(rec) {
   return check("Q-RECOVERY", v.pass && !contradiction, v.pass ? "settled, lost 0, duplicate applications 0, no resubmission, executions per job ≤ " + Math.min(Number.isInteger(rec.maxExecutionsAllowed) ? rec.maxExecutionsAllowed : MAX_EXECUTIONS_BOUND, MAX_EXECUTIONS_BOUND) : v.reasons.join("; "), contradiction);
 }
 function evalAdmission(saturation) {
-  const steps = saturation && Array.isArray(saturation.steps) ? saturation.steps : [];
-  const measured = steps.filter(s => s && s.official && typeof s.official.overAdmission === "number");
-  const unmeasured = steps.filter(s => s && s.official && s.official.overAdmission === null);
-  if (!steps.length || unmeasured.length) return check("Q-ADMISSION", null, steps.length ? "the Runner's maxPending is unknown for " + unmeasured.length + " step(s) (declare it with --runner-max-pending)" : "no saturation step measured");
-  const over = measured.filter(s => s.official.overAdmission > 0);
-  return check("Q-ADMISSION", over.length === 0, over.length ? "B10-F1 over-admission: " + over.map(s => s.official.accepted + " accepted with maxPending " + (s.officialMaxPending === undefined ? "?" : s.officialMaxPending) + " (" + s.official.overAdmission + " over)").join("; ") : "every saturation step within the admission bound");
+  // Independent Review Fix 3 (RF3-B): every saturation step must carry an `official` evidence object; overAdmission null = legitimately
+  // NOT measured (INCOMPLETE); a measured value must be a non-negative integer backed by official.accepted (non-negative integer) and
+  // officialMaxPending (positive integer) and is RE-DERIVED — derivedOver = max(0, accepted − maxPending) is authoritative; a stored
+  // value that disagrees FAILS with a recorded contradiction. Malformed shapes are refused.
+  if (saturation === undefined || saturation === null) return check("Q-ADMISSION", null, "no saturation step measured");
+  if (!isObj(saturation) || !Array.isArray(saturation.steps)) throw new QualificationError("malformed admission evidence (saturation.steps must be an array)");
+  const steps = saturation.steps;
+  if (!steps.length) return check("Q-ADMISSION", null, "no saturation step measured");
+  const measured = [], contradictions = [];
+  let unmeasured = 0;
+  for (const s of steps) {
+    if (!isObj(s) || !isObj(s.official)) throw new QualificationError("malformed admission evidence (a saturation step has no official evidence object)");
+    const o = s.official;
+    if (!Object.prototype.hasOwnProperty.call(o, "overAdmission")) throw new QualificationError("malformed admission evidence (official.overAdmission missing)");
+    if (o.overAdmission === null) { unmeasured++; continue; }
+    if (!nonNegInt(o.overAdmission)) throw new QualificationError("malformed admission evidence (official.overAdmission must be null or a non-negative integer)");
+    if (!nonNegInt(o.accepted)) throw new QualificationError("malformed admission evidence (official.accepted must be a non-negative integer)");
+    if (!(Number.isInteger(s.officialMaxPending) && s.officialMaxPending >= 1)) throw new QualificationError("malformed admission evidence (officialMaxPending must be a positive integer when overAdmission is measured)");
+    const derived = Math.max(0, o.accepted - s.officialMaxPending);
+    if (derived !== o.overAdmission) contradictions.push("Q-ADMISSION: stored overAdmission " + o.overAdmission + " contradicts the evidence (accepted " + o.accepted + " − maxPending " + s.officialMaxPending + " → derived " + derived + ")");
+    measured.push({ accepted: o.accepted, maxPending: s.officialMaxPending, over: derived });
+  }
+  if (unmeasured) return check("Q-ADMISSION", null, "the Runner's maxPending is unknown for " + unmeasured + " step(s) (declare it with --runner-max-pending)");
+  const over = measured.filter(m => m.over > 0);
+  const detail = over.length ? "B10-F1 over-admission: " + over.map(m => m.accepted + " accepted with maxPending " + m.maxPending + " (" + m.over + " over)").join("; ") : "every saturation step within the admission bound";
+  return check("Q-ADMISSION", over.length === 0 && !contradictions.length, detail, contradictions.join(" | ") || null);
 }
 
 /**

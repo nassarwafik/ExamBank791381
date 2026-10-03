@@ -164,8 +164,15 @@ async function runScenario(options = {}) {
           const after = practice.summary().totals, off = ledger.reconcile();
           const stats = stack && stack.sandbox.stats ? stack.sandbox.stats() : null;
           saturation = saturation || { steps: [] };
-          saturation.steps.push({ offeredConcurrency: step.concurrency, runnerMaxConcurrency: stack ? stack.config.maxConcurrency : null, officialMaxPending: stack ? stack.config.official.maxPending : null, practice: { offered: after.offered - before.offered, completed: after.completed - before.completed, busy: after.busy - before.busy }, official: { offered: off.offered - beforeOff.offered, accepted: off.accepted - beforeOff.accepted, busy: off.busy - beforeOff.busy, overAdmission: stack ? Math.max(0, off.accepted - beforeOff.accepted - stack.config.official.maxPending) : null }, peakActiveSandboxes: stats ? stats.peak : null });
-          if (stack && saturation.steps[saturation.steps.length - 1].official.overAdmission > 0) warnings.push("B10-F1 observed: " + (off.accepted - beforeOff.accepted) + " concurrent official submissions accepted with RUNNER_OFFICIAL_MAX_PENDING=" + stack.config.official.maxPending + " (admission check is not atomic across concurrent arrivals)");
+          // Independent Review Fix 3 (RF3-A): the admission bound comes from the harness-owned LOCAL Runner (effective configuration) or
+          // from an EXPLICIT operator declaration for a remote Runner (--runner-max-pending=N) — never from a catalog default
+          const declared = plan.params.runnerDeclared || null;
+          const declaredMaxPending = declared && Number.isInteger(declared.maxPending) ? declared.maxPending : null;
+          const maxPending = stack ? stack.config.official.maxPending : declaredMaxPending;
+          const maxPendingSource = stack ? "local-effective" : (maxPending !== null ? "operator-declared" : null);
+          const acceptedInStep = off.accepted - beforeOff.accepted;
+          saturation.steps.push({ offeredConcurrency: step.concurrency, runnerMaxConcurrency: stack ? stack.config.maxConcurrency : (declared && Number.isInteger(declared.maxConcurrency) ? declared.maxConcurrency : null), officialMaxPending: maxPending, maxPendingSource, practice: { offered: after.offered - before.offered, completed: after.completed - before.completed, busy: after.busy - before.busy }, official: { offered: off.offered - beforeOff.offered, accepted: acceptedInStep, busy: off.busy - beforeOff.busy, overAdmission: maxPending === null ? null : Math.max(0, acceptedInStep - maxPending) }, peakActiveSandboxes: stats ? stats.peak : null });
+          if (maxPending !== null && acceptedInStep > maxPending) warnings.push("B10-F1 observed: " + acceptedInStep + " concurrent official submissions accepted with RUNNER_OFFICIAL_MAX_PENDING=" + maxPending + " (" + maxPendingSource + "; admission check is not atomic across concurrent arrivals)");
         }
         if (step.fairness) { fairness = fairness || {}; fairness[step.fairness] = fairnessOf(step, practice.summary(), ledger.reconcile()); }
       } else if (step.kind === "p1") {

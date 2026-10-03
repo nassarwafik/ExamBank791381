@@ -99,4 +99,6 @@ async function main() {
   process.exit(r.report.verdict === "PASS" ? 0 : 1);
 }
 
-main().catch(e => { console.error("harness failed: " + String(e && e.message || e)); process.exit(2); });
+if (require.main === module) main().catch(e => { console.error("harness failed: " + String(e && e.message || e)); process.exit(2); });
+
+module.exports = { parseArgs, paramsFrom };

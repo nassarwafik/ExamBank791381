@@ -133,7 +133,11 @@ function normalizeParams(def, params) {
   const total = (p.jobs || 0) + (p.officialJobs || 0);
   if (def.id !== "CERT-J" && total < 1) return bad("a scenario must offer at least one job");
   if (def.id === "CERT-J" && !(p.jobs >= 1)) return bad("CERT-J needs jobs ≥ 1");
-  if (params.runner !== undefined) { const r = params.runner; if (!r || typeof r !== "object" || ![r.maxConcurrency, r.maxPending, r.maxActive].every(v => v === undefined || posInt(v))) return bad("runner limits must be positive integers"); p.runner = { ...(def.defaults.runner || {}), ...r }; }
+  // Independent Review Fix 3 (RF3-A): `runner` is the EFFECTIVE configuration of the harness-owned LOCAL Runner (catalog default
+  // merged with overrides); `runnerDeclared` is ONLY what the operator explicitly supplied (e.g. --runner-max-pending=N) and is the
+  // sole source of a REMOTE Runner's limits — a catalog default never masquerades as knowledge of a staging Runner.
+  p.runnerDeclared = null;
+  if (params.runner !== undefined) { const r = params.runner; if (!r || typeof r !== "object" || ![r.maxConcurrency, r.maxPending, r.maxActive].every(v => v === undefined || posInt(v))) return bad("runner limits must be positive integers"); p.runnerDeclared = Object.fromEntries(Object.entries(r).filter(([k, v]) => ["maxConcurrency", "maxPending", "maxActive"].includes(k) && v !== undefined)); p.runner = { ...(def.defaults.runner || {}), ...p.runnerDeclared }; }
   if (params.ceilings !== undefined) { if (!params.ceilings || typeof params.ceilings !== "object") return bad("ceilings must be an object"); p.ceilings = { ...params.ceilings }; }
   if (params.settleTimeoutMs !== undefined) { if (!posInt(params.settleTimeoutMs)) return bad("settleTimeoutMs must be a positive integer"); p.settleTimeoutMs = params.settleTimeoutMs; }
   if (params.profile !== undefined) p.profile = params.profile;
@@ -167,7 +171,7 @@ function planScenario({ scenario, target, params = {} } = {}) {
   totals.languages = [...totals.languages].sort(); totals.kinds = [...totals.kinds].sort();
   const over = checkPlanAgainstCeilings(totals, c.ceilings);
   if (over) return { ok: false, ...over, detail: over };
-  const config = { scenario: def.id, concurrency: totals.maxConcurrency, jobs: totals.jobs, practiceJobs: totals.practiceJobs, officialJobs: totals.officialJobs, callbacks: totals.callbacks, casesPerJob: totals.maxCasesPerJob || null, languages: totals.languages, workloadIds: p.workloads.map(w => w.id), limits: { practice: { timeMs: 3000, memoryMb: 128, outputBytes: 4096 }, official: { timeMs: 3000, memoryMb: 128, outputBytes: 17408 } }, runner: p.runner || null, levels: steps.filter(s => s.level).map(s => s.level), students: p.students || null, ceilings: c.ceilings, qualification: requiredChecksFor(def.id, target) };
+  const config = { scenario: def.id, concurrency: totals.maxConcurrency, jobs: totals.jobs, practiceJobs: totals.practiceJobs, officialJobs: totals.officialJobs, callbacks: totals.callbacks, casesPerJob: totals.maxCasesPerJob || null, languages: totals.languages, workloadIds: p.workloads.map(w => w.id), limits: { practice: { timeMs: 3000, memoryMb: 128, outputBytes: 4096 }, official: { timeMs: 3000, memoryMb: 128, outputBytes: 17408 } }, runner: target === "local" ? (p.runner || null) : null, runnerDeclared: p.runnerDeclared && Object.keys(p.runnerDeclared).length ? { ...p.runnerDeclared } : null, levels: steps.filter(s => s.level).map(s => s.level), students: p.students || null, ceilings: c.ceilings, qualification: requiredChecksFor(def.id, target) };
   return { ok: true, scenario: def, params: p, ceilings: c.ceilings, steps, totals, config };
 }
 

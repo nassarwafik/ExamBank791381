@@ -166,7 +166,7 @@ test("EV9 fully consistent evidence still PASSES for every scenario, and a real 
   assert.equal(Q("CERT-J", "local", { p1: p1() }).verdict, "PASS");
   assert.equal(Q("CERT-F", "local", { bursts: [burst({ expectedAnswer: "applied", answers: { applied: 4 }, idempotency: idem() })] }).verdict, "PASS");
   assert.equal(Q("CERT-G", "local", { recovery: recovery() }).verdict, "PASS");
-  assert.equal(Q("CERT-E", "local", { saturation: { steps: [{ official: { offered: 8, accepted: 3, busy: 5, overAdmission: 0 } }] } }).verdict, "PASS");
+  assert.equal(Q("CERT-E", "local", { saturation: { steps: [{ officialMaxPending: 3, official: { offered: 8, accepted: 3, busy: 5, overAdmission: 0 } }] } }).verdict, "PASS");
   assert.equal(Q("CERT-A", "local", {}).verdict, "PASS");
   const g = await L.runScenario({ scenario: "CERT-G", target: "local", env: {}, buildSha: SHA, deps: { fetchImpl: noNet } });
   assert.equal(g.ok, true); assert.equal(g.report.verdict, "PASS"); assert.equal(g.report.recovery.maxExecutionsAllowed, 2); assert.deepEqual(g.report.qualification.contradictions, []);

@@ -97,7 +97,7 @@ function createReceiver({ key, scoreOf }) {
 }
 
 /** createLocalStack(options) → { start, close, crash, restart, baseUrl, key, receiver, journalDir, journalStatus, sandbox } */
-function createLocalStack({ sandbox = "fake", profile, maxConcurrency = 4, official = {}, callbackPolicy, executionPolicy, logger = quiet, scoreOf } = {}) {
+function createLocalStack({ sandbox = "fake", profile, maxConcurrency = 4, official = {}, callbackPolicy, executionPolicy, logger = quiet, scoreOf, callbackBaseUrl = null, callbackKey = null } = {}) {
   const key = "load-harness-local-runner-key-" + crypto.randomBytes(16).toString("hex");            // generated per stack, never printed
   const cbKey = "load-harness-local-callback-key-" + crypto.randomBytes(16).toString("hex");
   const journalDir = fs.mkdtempSync(path.join(os.tmpdir(), "sa-load-journal-"));
@@ -114,7 +114,11 @@ function createLocalStack({ sandbox = "fake", profile, maxConcurrency = 4, offic
       generation++;
       journal = createJournal({ dir: journalDir });
       await journal.open();
-      const cb = readCallbackConfig({ SMARTASSESS_CALLBACK_BASE_URL: stack.callbackUrl, SMARTASSESS_CALLBACK_HMAC_KEY: cbKey });
+      // by default the stack delivers to its OWN receiver; a test may point it at an external destination (e.g. the harness receiver of a
+      // staging rehearsal, where this stack plays the remote Runner)
+      const cb = readCallbackConfig({ SMARTASSESS_CALLBACK_BASE_URL: callbackBaseUrl || stack.callbackUrl, SMARTASSESS_CALLBACK_HMAC_KEY: callbackKey || cbKey });
+      if (!cb.enabled) throw new Error("local stack: callback destination is not valid");
+      stack.callbackDestination = callbackBaseUrl || stack.callbackUrl;
       queue = createOfficialGradingQueue({ sandbox: sb, deliver: createCallbackDeliverer({ config: cb, logger }).attempt, journal, ...opts, logger, ...(callbackPolicy ? { callbackPolicy } : {}), ...(executionPolicy ? { executionPolicy } : {}) });
       const recovery = await queue.start();
       gateway = createGatewayServer({ key, sandbox: sb, maxConcurrency, officialQueue: queue, logger });

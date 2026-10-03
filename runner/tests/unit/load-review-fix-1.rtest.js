@@ -90,7 +90,7 @@ test("Q7 CERT-E on the current Runner (B10-F1): correctness PASS, qualification 
   assert.match(L.toMarkdown(rep), /Q-ADMISSION[^\n]*FAIL/);
 });
 test("Q8 CERT-E with no over-admission (sequential official arrivals) → Q-ADMISSION passes, qualification PASS", async () => {
-  const q = L.evaluateQualification({ scenarioId: "CERT-E", target: "local", correctness: correctnessPass(), saturation: { steps: [{ offeredConcurrency: 8, practice: { offered: 16, busy: 14, completed: 2 }, official: { offered: 0, accepted: 0, busy: 0, overAdmission: 0 } }, { offeredConcurrency: 8, practice: { offered: 0, busy: 0, completed: 0 }, official: { offered: 8, accepted: 3, busy: 5, overAdmission: 0 } }] } });
+  const q = L.evaluateQualification({ scenarioId: "CERT-E", target: "local", correctness: correctnessPass(), saturation: { steps: [{ offeredConcurrency: 8, officialMaxPending: 3, practice: { offered: 16, busy: 14, completed: 2 }, official: { offered: 0, accepted: 0, busy: 0, overAdmission: 0 } }, { offeredConcurrency: 8, officialMaxPending: 3, practice: { offered: 0, busy: 0, completed: 0 }, official: { offered: 8, accepted: 3, busy: 5, overAdmission: 0 } }] } });
   assert.equal(q.verdict, "PASS"); assert.equal(q.checks.find(c => c.id === "Q-ADMISSION").pass, true);
   const rep = okReport(await run("CERT-E", { concurrency: 1, jobs: 4, officialJobs: 6 }), "CERT-E sequential");
   assert.equal(rep.saturation.steps[1].official.overAdmission, 0);

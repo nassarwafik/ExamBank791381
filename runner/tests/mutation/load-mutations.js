@@ -11,7 +11,7 @@ const { spawnSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const LIB = f => path.join(ROOT, "tests", "load", "lib", f);
-const SUITES = ["load-harness.rtest.js", "load-review-fix-1.rtest.js", "load-review-fix-2.rtest.js"].map(f => path.join(ROOT, "tests", "unit", f));
+const SUITES = ["load-harness.rtest.js", "load-review-fix-1.rtest.js", "load-review-fix-2.rtest.js", "load-review-fix-3.rtest.js"].map(f => path.join(ROOT, "tests", "unit", f));
 const sha = file => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 
 const MUTATIONS = [
@@ -37,7 +37,7 @@ const MUTATIONS = [
   // Independent Review Fix 1
   { id: "QM1", title: "ignore a P1 failure in the qualification", file: "qualification.js", from: '  return check("Q-P1", derived && !contradiction,', to: '  return check("Q-P1", true,' },
   { id: "QM2", title: "ignore a callback transport failure", file: "qualification.js", from: '  return check("Q-CALLBACK-TRANSPORT", derived && !contradictions.length,', to: '  return check("Q-CALLBACK-TRANSPORT", true,' },
-  { id: "QM3", title: "ignore official over-admission", file: "qualification.js", from: '  return check("Q-ADMISSION", over.length === 0,', to: '  return check("Q-ADMISSION", true,' },
+  { id: "QM3", title: "ignore official over-admission", file: "qualification.js", from: '  return check("Q-ADMISSION", over.length === 0 && !contradictions.length, detail,', to: '  return check("Q-ADMISSION", true, detail,' },
   { id: "QM4", title: "snapshot the score AFTER the duplicate send", file: "harness.js", from: "    const before = snapshot();\n    const again = await sender.send(bodies[0]);\n    const after = snapshot();", to: "    const again = await sender.send(bodies[0]);\n    const before = snapshot();\n    const after = snapshot();" },
   { id: "QM5", title: "let a duplicate change the score without failing", file: "harness.js", from: 'pass: again.answer === "alreadyApplied" && same("state") && same("score") && same("applications") };', to: 'pass: again.answer === "alreadyApplied" && same("state") && same("applications") };' },
   { id: "QM6", title: "remove the receiver body ceiling (streaming check)", file: "local-stack.js", from: "      if (size > CALLBACK_MAX_BYTES) { refused = true;", to: "      if (false) { refused = true;" },
@@ -53,7 +53,16 @@ const MUTATIONS = [
   { id: "QM13", title: "trust transportOk despite wrong answer counts", file: "qualification.js", from: '    const ok = total === b.count && (b.answers[b.expectedAnswer] || 0) === b.count;', to: '    const ok = b.transportOk === true; void total;' },
   { id: "QM14", title: "trust idempotency.pass despite a score drift", file: "qualification.js", from: '    const ok = i.redeliveryAnswer === "alreadyApplied" && snap(i.before) && snap(i.after) && i.before.state === i.after.state && i.before.score === i.after.score && i.before.applications === i.after.applications;', to: '    const ok = i.pass === true; void snap;' },
   { id: "QM15", title: "trust recovery.pass despite lost work", file: "qualification.js", from: '  const v = recoveryVerdict(rec);\n  const contradiction = summaryVs("Q-RECOVERY", rec.pass, v.pass);', to: '  const v = { pass: rec.pass === true, reasons: [] };\n  const contradiction = null;' },
-  { id: "QM16", title: "accept qualification metadata without validating it (unknown / missing / duplicate checks)", file: "report.js", from: "  if (input.scenario.config.qualification !== undefined) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);", to: "  if (false) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);" }
+  { id: "QM16", title: "accept qualification metadata without validating it (unknown / missing / duplicate checks)", file: "report.js", from: "  if (input.scenario.config.qualification !== undefined) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);", to: "  if (false) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);" },
+  // Independent Review Fix 3
+  { id: "QM17", title: "remote staging ignores the explicit --runner-max-pending declaration", file: "harness.js", from: "          const declaredMaxPending = declared && Number.isInteger(declared.maxPending) ? declared.maxPending : null;", to: "          const declaredMaxPending = null; void declared;" },
+  { id: "QM18", title: "remote uses the CERT-E local default as if the operator had declared it", file: "harness.js", from: "          const maxPending = stack ? stack.config.official.maxPending : declaredMaxPending;", to: "          const maxPending = stack ? stack.config.official.maxPending : ((plan.params.runner && plan.params.runner.maxPending) || declaredMaxPending);" },
+  { id: "QM19", title: "admission ignores a malformed saturation step", file: "qualification.js", from: '    if (!isObj(s) || !isObj(s.official)) throw new QualificationError("malformed admission evidence (a saturation step has no official evidence object)");', to: '    if (!isObj(s) || !isObj(s.official)) continue;' },
+  { id: "QM20", title: "trust the stored overAdmission instead of deriving it from accepted / maxPending", file: "qualification.js", from: "    const derived = Math.max(0, o.accepted - s.officialMaxPending);", to: "    const derived = o.overAdmission;" },
+  { id: "QM21", title: "P1 trusts missing=[] without requiring a sample for every language", file: "qualification.js", from: "  for (const lang of P1_LANGUAGES) {\n    const s = samples[lang];", to: "  for (const lang of P1_LANGUAGES.filter(l => samples[l] !== undefined)) {\n    const s = samples[lang];" },
+  { id: "QM22", title: "P1 trusts violations=[] despite a sample maximum above the ceiling", file: "qualification.js", from: '    if (s.max > P1_CEILING_MS) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS);', to: '    if (false) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS);' },
+  { id: "QM23", title: "idempotency accepts a negative application count", file: "qualification.js", from: "|| !nonNegInt(s.applications)) throw new QualificationError(\"malformed idempotency snapshot (\" + name + \")\"); }", to: "|| !Number.isInteger(s.applications)) throw new QualificationError(\"malformed idempotency snapshot (\" + name + \")\"); }" },
+  { id: "QM24", title: "recovery accepts negative execution / count evidence", file: "qualification.js", from: '  for (const k of ["accepted", "lost", "duplicateApplications", "executionsPerJobMax", "complete"]) if (!(Number.isInteger(rec[k]) && rec[k] >= 0)) throw', to: '  for (const k of ["accepted", "lost", "duplicateApplications", "executionsPerJobMax", "complete"]) if (false) throw' }
 ];
 
 const RUN_TIMEOUT_MS = 5 * 60 * 1000;                 // a mutant that HANGS the suite is reported as TIMEOUT, never waited for indefinitely

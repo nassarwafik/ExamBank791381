@@ -12,7 +12,7 @@ node runner/tests/load/cli.js catalog                           # the scenario c
 node runner/tests/load/cli.js plan --scenario=CERT-D --target=staging --levels=1,2,4
 node runner/tests/load/cli.js run  --scenario=CERT-L --target=local --execute            # real local run → results/*.json + *.md
 npm --prefix runner run test:load            # LOAD1–LOAD25 + SC1–SC14 + review fix 1 (Q/I/R) + review fix 2 (QA/AUTH/EV) (no Docker)
-npm --prefix runner run test:load:mutation   # M1–M18 + QM1–QM16 must all be killed
+npm --prefix runner run test:load:mutation   # M1–M18 + QM1–QM24 must all be killed
 npm --prefix runner run test:docker:load     # bounded REAL-Docker local load (needs the worker images)
 ```
 
@@ -26,7 +26,7 @@ npm --prefix runner run test:docker:load     # bounded REAL-Docker local load (n
 | `lib/gates.js` | G1–G11 correctness gates, P1 gate (performance, separate) |
 | `lib/qualification.js` | scenario qualification (Independent Review Fix 1 / 2): the CANONICAL registry of required checks per scenario and target class (fail closed on unknown scenario / target; report metadata must match it exactly); Q-CORRECTNESS + Q-P1 / Q-CALLBACK-TRANSPORT / Q-IDEMPOTENCY (local only) / Q-RECOVERY / Q-ADMISSION, every one derived from raw evidence with contradictions recorded; `report.verdict` = qualification verdict |
 | `lib/report.js` | JSON report (schemaVersion 1) + Markdown, redaction scan, build-SHA requirement, report comparison |
-| `lib/scenarios.js` | CERT-A … CERT-L catalog + planner (validation, ceilings) |
+| `lib/scenarios.js` | CERT-A … CERT-L catalog + planner (validation, ceilings; `runner` = effective local configuration, `runnerDeclared` = the operator's explicit remote declaration) |
 | `lib/driver.js` | signed Runner client + callback sender (reuses the gateway's own signers) |
 | `lib/fake-sandbox.js` | deterministic sandbox for the local target (markers `LOAD-KIND:` / `LOAD-FN:`) |
 | `lib/local-stack.js` | in-process stack: real gateway + queue + journal + deliverer, a SmartAssess-like callback receiver (apply once / alreadyApplied, body bounded at `CALLBACK_MAX_BYTES` before verification, application counter, test fault modes), crash / restart |

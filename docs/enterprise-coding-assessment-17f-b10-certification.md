@@ -162,6 +162,20 @@ when a stored summary (`p1.pass`, `transportOk`, `idempotency.pass`, `recovery.p
 contradiction is recorded in `qualification.contradictions` (and shown in the Markdown) — a measured failure is a FAIL; malformed
 certification evidence or metadata (wrong shapes, unknown ids) is REFUSED with an error — never a silent optimistic choice.
 
+**Admission evidence (Independent Review Fix 3).** The admission bound used by Q-ADMISSION comes from exactly two sources, kept
+apart in the plan and the report: `scenario.config.runner` is the EFFECTIVE configuration of the harness-owned LOCAL Runner (catalog
+default merged with overrides; `null` on a remote target because the harness does not own that Runner); `scenario.config.runnerDeclared`
+is ONLY what the operator explicitly supplied (`--runner-max-pending=N`). A remote saturation step records `officialMaxPending` and
+`overAdmission` only from the declaration (`maxPendingSource: "operator-declared"`), never from the CERT-E catalog default; without a
+declaration both are `null` and Q-ADMISSION is INCOMPLETE. Every saturation step must carry an `official` evidence object;
+`overAdmission` is `null` (not measured) or a non-negative integer that is RE-DERIVED from `official.accepted` and `officialMaxPending`
+(positive integer) — the derived value is authoritative, a stored `0` that disagrees FAILS with a recorded contradiction, and a
+missing object / field or a NaN / Infinity / negative / string value refuses the report. **P1 evidence:** every canonical language
+(python, java, csharp) must be proven by its own sample summary (count ≥ 1, finite max ≤ 40 000 ms); `missing` and `violations` are
+stored summaries and cannot vouch for a language; malformed sample shapes are refused. **Strict shapes:** idempotency snapshots need a
+string state, a null or finite score and a non-negative integer application count; recovery evidence needs boolean flags, non-negative
+integer counts and a positive integer allowance — malformed shapes are refused, measured breaches FAIL.
+
 **CERT-F / CERT-K requirement matrix (what is measurable under the current architecture):**
 
 | target | required checks | why |
@@ -254,7 +268,8 @@ Suggested attachment shape: `{ "vmSku": "Standard_D4s_v5", "cpuPercent": { "p50"
 **Local (real Docker):** build the images (`npm --prefix runner run build:images`), then `--sandbox=docker` on any local scenario or
 `npm --prefix runner run test:docker:load` (DL1–DL7, bounded).
 **Staging:** `RUNNER_URL=https://runner-staging.<domain> RUNNER_HMAC_KEY=… node runner/tests/load/cli.js run --scenario=CERT-D
---target=staging --execute --levels=1,2,4,8 --vm-sku=Standard_D4s_v5 --attach=vm-metrics.json`; official scenarios additionally need the
+--target=staging --execute --levels=1,2,4,8 --vm-sku=Standard_D4s_v5 --attach=vm-metrics.json`; a staging CERT-E needs the operator's
+explicit `--runner-max-pending=N` (the staging Runner's `RUNNER_OFFICIAL_MAX_PENDING`) or Q-ADMISSION stays INCOMPLETE; official scenarios additionally need the
 harness receiver (`LOAD_CALLBACK_RECEIVER_PORT`, `LOAD_CALLBACK_HMAC_KEY`) and the staging Runner's `SMARTASSESS_CALLBACK_BASE_URL`
 pointing at the harness host. Recovery on staging is the manual `crash-tests.md` procedure.
 **Production approval workflow (later, never automatic):** (1) owner approval recorded; (2) B1 + C1 merged, A2 smoke green;
@@ -297,9 +312,10 @@ harness must catch (R1–R8, I1–I5).
 | fail-first LOAD1–LOAD25 on the baseline | 25 tests, 25 fail (`MODULE_NOT_FOUND`) |
 | LOAD1–LOAD25 after implementation | 25 / 25 pass |
 | local scenario suite SC1–SC14 (fake sandbox, real gateway / queue / journal / deliverer) | 15 / 15 pass (SC5: CERT-E correctness PASS, qualification FAIL on Q-ADMISSION — B10-F1; SC5b is the characterisation) |
-| mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) + QM9–QM16 (8) | 37 / 37 killed, files restored byte-for-byte |
+| mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) + QM9–QM16 (8) + QM17–QM24 (8) | 45 / 45 killed, files restored byte-for-byte |
 | Independent Review Fix 1 fail-first Q1–Q10, I1–I5, R1–R8 | 23 fail on 4c1a416 → 23 / 23 pass |
 | Independent Review Fix 2 fail-first QA1–QA4, AUTH1–AUTH6, EV1–EV9 | 17 of 19 fail on 8b6fe3a → 19 / 19 pass |
+| Independent Review Fix 3 fail-first RA1–RA6, RB1–RB7, RP1–RP6, RE1–RE6 | 18 of 25 fail on 78114c3 → 25 / 25 pass |
 | `load:qualify:local` CERT-L (24 practice + 12 official, concurrency 4) | PASS; practice p50 / p95 94 / 211 ms (fake profile); official end-to-end p50 408 ms; journal clean |
 | Runner unit suite | see the PR for the exact count after reconciliation |
 | real Docker (DL1–DL7) | not runnable in the authoring container (no Docker daemon); executed by the manual `docker-load` CI job / operator |
