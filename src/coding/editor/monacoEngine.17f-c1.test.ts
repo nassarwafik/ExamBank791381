@@ -9,7 +9,8 @@ import type { EditorEngineCreateOptions } from "./editorEngine";
 // synchronised without echo, language switching, read-only, aria, the Esc-then-Tab escape, and disposal.
 
 type Listener<T> = (e: T) => void;
-function fakeMonaco() {
+type Faults = { createEditor?: boolean; subscribe?: boolean };
+function fakeMonaco(faults: Faults = {}) {
   const calls = { defineTheme: [] as [string, unknown][], create: [] as Record<string, unknown>[], createModel: [] as [string, string | undefined][], setModelLanguage: [] as string[], modelSetValue: [] as string[], updateOptions: [] as Record<string, unknown>[], disposed: { editor: 0, model: 0, listeners: 0 } };
   const content: Listener<{ changes: { rangeOffset: number; rangeLength: number; text: string }[] }>[] = [];
   const keys: Listener<{ keyCode: number; preventDefault(): void; browserEvent: KeyboardEvent }>[] = [];
@@ -25,7 +26,7 @@ function fakeMonaco() {
     getLanguageId: () => model.languageId,
     dispose() { calls.disposed.model++; }
   };
-  const sub = <T,>(list: Listener<T>[]) => (cb: Listener<T>) => { list.push(cb); return { dispose() { calls.disposed.listeners++; list.splice(list.indexOf(cb), 1); } }; };
+  const sub = <T,>(list: Listener<T>[]) => (cb: Listener<T>) => { if (faults.subscribe) throw new Error("fault: subscribe"); list.push(cb); return { dispose() { calls.disposed.listeners++; list.splice(list.indexOf(cb), 1); } }; };
   let hostEl: HTMLElement | null = null;
   const editor = {
     options: {} as Record<string, unknown>,
@@ -43,7 +44,7 @@ function fakeMonaco() {
       defineTheme: (n, d) => { calls.defineTheme.push([n, d]); },
       createModel: (v, l) => { calls.createModel.push([v, l]); model.value = v; model.languageId = l ?? "plaintext"; return model; },
       setModelLanguage: (_m, l) => { calls.setModelLanguage.push(l); model.languageId = l; },
-      create: (host, o) => { hostEl = host; calls.create.push(o); const ta = document.createElement("textarea"); ta.className = "inputarea"; ta.setAttribute("aria-autocomplete", "both"); host.appendChild(ta); return editor; }
+      create: (host, o) => { hostEl = host; calls.create.push(o); if (faults.createEditor) throw new Error("fault: editor.create"); const ta = document.createElement("textarea"); ta.className = "inputarea"; ta.setAttribute("aria-autocomplete", "both"); host.appendChild(ta); return editor; }
     },
     KeyCode: { Escape: 9, Tab: 2 }
   };
@@ -168,5 +169,44 @@ describe("17F-C1 Monaco adapter — language, read-only, focus, escape and dispo
     expect(host.childElementCount).toBe(0);
     h.dispose();                                                                                          // idempotent
     expect(f.calls.disposed.editor).toBe(1);
+  });
+});
+
+describe("17F-C1 Review Fix 1 — adapter partial-creation cleanup (RF1-G, RF1-H, RM3)", () => {
+  it("RF1-G editor.create throws → the already created model is disposed, the host is emptied and the error is rethrown (no leak)", () => {
+    const f = fakeMonaco({ createEditor: true }), host = document.createElement("div");
+    expect(() => createMonacoEngine(f.monaco).create(host, opts())).toThrow("fault: editor.create");
+    expect(f.calls.createModel).toHaveLength(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(f.calls.disposed.editor).toBe(0);                                                                // never created
+    expect(host.childElementCount).toBe(0);
+  });
+  it("RF1-H the editor is created but a later setup step throws → editor AND model are disposed, listeners released, error rethrown", () => {
+    const f = fakeMonaco({ subscribe: true }), host = document.createElement("div");
+    expect(() => createMonacoEngine(f.monaco).create(host, opts())).toThrow("fault: subscribe");
+    expect(f.calls.disposed.editor).toBe(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(f.listeners()).toBe(0);
+    expect(host.childElementCount).toBe(0);
+  });
+});
+
+describe("17F-C1 Review Fix 1 — browser-level anti-assist attributes on the Monaco input (RF2-A/B/C, RM4–RM6)", () => {
+  const ANTI_ASSIST: [string, string][] = [["aria-autocomplete", "none"], ["autocomplete", "off"], ["autocorrect", "off"], ["autocapitalize", "off"], ["spellcheck", "false"]];
+  const wait = () => new Promise<void>(r => setTimeout(r, 0));
+  it("RF2-A every anti-assist attribute is explicitly present on the input right after creation", () => {
+    const f = fakeMonaco(); createMonacoEngine(f.monaco).create(document.createElement("div"), opts());
+    for (const [k, v] of ANTI_ASSIST) expect(f.input().getAttribute(k), k).toBe(v);
+  });
+  it("RF2-B when Monaco rewrites or removes one of them, the adapter restores it", async () => {
+    const f = fakeMonaco(); createMonacoEngine(f.monaco).create(document.createElement("div"), opts());
+    f.input().setAttribute("spellcheck", "true"); f.input().removeAttribute("autocomplete"); f.input().setAttribute("aria-autocomplete", "both"); f.input().setAttribute("autocorrect", "on");
+    await wait();
+    for (const [k, v] of ANTI_ASSIST) expect(f.input().getAttribute(k), k).toBe(v);
+  });
+  it("RF2-C setReadOnly / setLabel / setInvalid never drop them", () => {
+    const f = fakeMonaco(), h = createMonacoEngine(f.monaco).create(document.createElement("div"), opts());
+    h.setReadOnly(true); h.setLabel("x"); h.setInvalid(true); h.setReadOnly(false);
+    for (const [k, v] of ANTI_ASSIST) expect(f.input().getAttribute(k), k).toBe(v);
   });
 });

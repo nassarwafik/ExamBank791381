@@ -169,6 +169,14 @@ try {
   check("C4 onChange delivered exactly the typed source (ED20) — one change per keystroke, nothing inserted by the editor", value === SAMPLES.python + "pri(    x)\nSys." && changes > changesBefore, JSON.stringify(value));
   const aria = await page.evaluate(sel => { const t = document.querySelector(sel + " textarea.inputarea"); return t && { role: t.getAttribute("role"), label: t.getAttribute("aria-label"), autocomplete: t.getAttribute("aria-autocomplete"), describedby: !!t.getAttribute("aria-describedby") && !!document.getElementById(t.getAttribute("aria-describedby")) }; }, MAIN);
   check("C5 the input is a labelled multiline textbox that announces NO autocomplete and is described by the on-screen hint", aria && aria.role === "textbox" && aria.label === "محرر الكود" && aria.autocomplete === "none" && aria.describedby, JSON.stringify(aria));
+  // Review Fix 1 (RF2-E): the browser-level anti-assist attributes of the native textarea are enforced on Monaco's real input — and
+  // survive an option change (read-only toggle on the read-only editor is covered below; here the label / focus churn of typing).
+  const antiAssist = await page.evaluate(sel => { const t = document.querySelector(sel + " textarea.inputarea"); return t && Object.fromEntries(["aria-autocomplete", "autocomplete", "autocorrect", "autocapitalize", "spellcheck"].map(a => [a, t.getAttribute(a)])); }, MAIN);
+  check("C6 the Monaco input explicitly carries aria-autocomplete=none, autocomplete=off, autocorrect=off, autocapitalize=off, spellcheck=false (RF2-E)", antiAssist && antiAssist["aria-autocomplete"] === "none" && antiAssist.autocomplete === "off" && antiAssist.autocorrect === "off" && antiAssist.autocapitalize === "off" && antiAssist.spellcheck === "false", JSON.stringify(antiAssist));
+  await page.evaluate(sel => { const t = document.querySelector(sel + " textarea.inputarea"); t.setAttribute("spellcheck", "true"); t.removeAttribute("autocomplete"); t.setAttribute("aria-autocomplete", "list"); }, MAIN);
+  await page.waitForTimeout(100);
+  const restored = await page.evaluate(sel => { const t = document.querySelector(sel + " textarea.inputarea"); return { spellcheck: t.getAttribute("spellcheck"), autocomplete: t.getAttribute("autocomplete"), aria: t.getAttribute("aria-autocomplete") }; }, MAIN);
+  check("C7 after the attributes are rewritten / removed at runtime the adapter restores them (RF2-B in a real browser)", restored.spellcheck === "false" && restored.autocomplete === "off" && restored.aria === "none", JSON.stringify(restored));
 
   // ——— D. keyboard escape, find, long line, byte limit, read-only ——————————————————————————————————————————————————————
   await page.keyboard.press("Escape"); await page.keyboard.press("Tab"); await page.waitForTimeout(100);

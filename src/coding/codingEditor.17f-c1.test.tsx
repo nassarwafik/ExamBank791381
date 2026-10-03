@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, fireEvent, screen, act } from "@testing-library/react";
 import fs from "node:fs";
 import path from "node:path";
@@ -182,6 +182,85 @@ describe("17F-C1 CodingEditor — language switching, focus hand-over, layout an
     second.unmount();
     await act(async () => { resolve(g.engine); await new Promise(r => setTimeout(r, 0)); });
     expect(g.handles).toHaveLength(0);
+  });
+});
+
+describe("17F-C1 Review Fix 1 — engine.create failure falls back to the native editor (RF1-A…F, RM1, RM2)", () => {
+  /** An engine whose create() throws (always, or only the first `failTimes` calls); counts every attempt. */
+  function throwingEngine(failTimes = Infinity) {
+    const inner = fakeEngine("throwing");
+    let attempts = 0;
+    const engine: EditorEngine = { kind: "throwing", create(host, o) { attempts++; if (attempts <= failTimes) throw new Error("fault: engine.create"); return inner.engine.create(host, o); } };
+    return { engine, inner, loader: () => Promise.resolve(engine), attempts: () => attempts };
+  }
+  let errors: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => { errors = vi.spyOn(console, "error").mockImplementation(() => {}); });
+  afterEach(() => { errors.mockRestore(); });
+
+  it("RF1-A a rejecting loader keeps the native editor (unchanged behaviour)", async () => {
+    setEditorEngineLoader(() => Promise.reject(new Error("chunk failed")));
+    render(<CodingEditor value="x" onChange={() => {}} language="python" label="محرر الكود" />);
+    await tick();
+    expect(native()).toBeTruthy(); expect(rich()).toBeNull();
+  });
+  it("RF1-B / RF1-C / RF1-D the loader resolves but engine.create throws → the native editor is restored immediately and usable; no onChange; source byte-identical", async () => {
+    const t = throwingEngine(); setEditorEngineLoader(t.loader);
+    const onChange = vi.fn();
+    const src = "def main():\n    print('سلام 🎉')\n";
+    render(<CodingEditor value={src} onChange={onChange} language="python" label="محرر الكود" />);
+    await tick();
+    const ta = native();
+    expect(ta).toBeTruthy();
+    expect(rich()).toBeNull();
+    expect(ta!.value).toBe(src);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(ta!.closest(".cx-code-editor")!.getAttribute("data-editor-engine")).toBe("native");
+    expect(ta!.closest(".cx-code-editor")!.getAttribute("data-engine-fallback")).toBe("create-failed");
+    fireEvent.change(ta!, { target: { value: src + "x = 1\n" } });                                     // still usable
+    expect(onChange).toHaveBeenCalledWith(src + "x = 1\n");
+    expect(errors).toHaveBeenCalledTimes(1);                                                             // reported once, locally, not thrown into React
+  });
+  it("RF1-E a failed engine is NOT retried on later renders (value / language / readOnly changes): exactly one create attempt", async () => {
+    const t = throwingEngine(1); setEditorEngineLoader(t.loader);                                    // would succeed on a retry — must never get one
+    const { rerender } = render(<CodingEditor value="a" onChange={() => {}} language="python" label="محرر الكود" />);
+    await tick();
+    expect(t.attempts()).toBe(1);
+    rerender(<CodingEditor value="b" onChange={() => {}} language="java" label="محرر الكود" readOnly />);
+    rerender(<CodingEditor value="c" onChange={() => {}} language="csharp" label="محرر الكود" />);
+    await tick();
+    expect(t.attempts()).toBe(1);
+    expect(rich()).toBeNull();
+    expect(native()!.value).toBe("c");
+  });
+  it("RF1-F focus: a user typing in the native editor when the failing hand-over happens gets the native editor back WITH focus and caret", async () => {
+    const t = throwingEngine(); setEditorEngineLoader(t.loader);
+    render(<CodingEditor value="hello world" onChange={() => {}} language="python" label="محرر الكود" />);
+    const before = native()!;
+    before.focus(); before.setSelectionRange(5, 5);
+    await tick();
+    const after = native()!;
+    expect(document.activeElement).toBe(after);
+    expect(after.selectionStart).toBe(5);
+  });
+  it("RF1-F unmount after a failed creation: nothing to dispose, no second error, no leak", async () => {
+    const t = throwingEngine(); setEditorEngineLoader(t.loader);
+    const { unmount } = render(<CodingEditor value="x" onChange={() => {}} language="python" label="محرر الكود" />);
+    await tick();
+    expect(() => unmount()).not.toThrow();
+    expect(t.inner.handles).toHaveLength(0);
+    expect(errors).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("17F-C1 Review Fix 1 — native textarea anti-assist contract (RF2-D)", () => {
+  it("the native textarea keeps autocomplete=off, autocorrect=off, autocapitalize=off, spellcheck=false", () => {
+    setEditorEngineLoader(null);
+    render(<CodingEditor value="x" onChange={() => {}} language="python" label="محرر الكود" />);
+    const ta = native()!;
+    expect(ta.getAttribute("autocomplete")).toBe("off");
+    expect(ta.getAttribute("autocorrect")).toBe("off");
+    expect(ta.getAttribute("autocapitalize")).toBe("off");
+    expect(ta.getAttribute("spellcheck")).toBe("false");
   });
 });
 

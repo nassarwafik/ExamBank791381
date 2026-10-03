@@ -23,9 +23,14 @@ const NATIVE_HINT = "Tab للمسافة البادئة، Shift+Tab لإزالت�
 const RICH_HINT = "Tab للمسافة البادئة، Shift+Tab لإزالتها، Esc ثم Tab (أو Ctrl+M) للخروج من المحرر، Ctrl+F للبحث.";
 const READ_ONLY_HINT = "للقراءة فقط";
 
+type Handover = { offset: number } | null;
+/** The engine state of ONE mount: native (first paint / no engine) → rich (engine handle alive) → or `failed`, which is permanent
+ *  for this mount: a rich engine that could not be created is never retried in a render loop (Review Fix 1). */
+type EngineState = { status: "native" } | { status: "rich"; engine: EditorEngine; handover: Handover } | { status: "failed"; restore: Handover };
+
 export default function CodingEditor(props: Props) {
   const [loader] = useState(() => getEditorEngineLoader());
-  const [rich, setRich] = useState<{ engine: EditorEngine; handover: { offset: number } | null } | null>(null);
+  const [state, setState] = useState<EngineState>({ status: "native" });
   const nativeInput = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!loader) return;
@@ -33,11 +38,20 @@ export default function CodingEditor(props: Props) {
     loader().then(engine => {
       if (!live) return;
       const ta = nativeInput.current;                                               // a keyboard user mid-typing keeps focus + caret
-      setRich({ engine, handover: ta && document.activeElement === ta ? { offset: ta.selectionStart } : null });
+      const handover: Handover = ta && document.activeElement === ta ? { offset: ta.selectionStart } : null;
+      setState(s => (s.status === "failed" ? s : { status: "rich", engine, handover }));
     }, () => { /* the engine chunk did not load (offline, blocked): the native editor simply stays */ });
     return () => { live = false; };
   }, [loader]);
-  return rich ? <RichCodingEditor {...props} engine={rich.engine} handover={rich.handover} /> : <NativeCodingEditor {...props} inputRef={nativeInput} />;
+  // Review Fix 1: a synchronous engine.create failure is local to this editor. The adapter has already released whatever Monaco
+  // allocated; here the native editor is restored at once (same source, no onChange, focus + caret back if the user was typing)
+  // and the engine stays disabled for the rest of this mount. Reported, never thrown into the exam page.
+  const onCreateFailure = (error: unknown, handover: Handover) => {
+    console.error("[CodingEditor] the rich editor engine could not be created; the native editor stays.", error);
+    setState({ status: "failed", restore: handover });
+  };
+  if (state.status === "rich") return <RichCodingEditor {...props} engine={state.engine} handover={state.handover} onCreateFailure={onCreateFailure} />;
+  return <NativeCodingEditor {...props} inputRef={nativeInput} restore={state.status === "failed" ? state.restore : null} fallback={state.status === "failed" ? "create-failed" : undefined} />;
 }
 
 /** Shared meta row: the hint (aria-describedby target), the byte indicator near the limit and the refusal alert. */
@@ -53,7 +67,7 @@ function EditorMeta({ hintId, hint, bytes, maxBytes, refused }: { hintId: string
 }
 
 // ——— the professional editor: React owns the value, the engine handle owns the DOM ———————————————————————————————————————
-function RichCodingEditor({ engine, handover, value, onChange, language, label, readOnly = false, maxBytes, minRows = 8 }: Props & { engine: EditorEngine; handover: { offset: number } | null }) {
+function RichCodingEditor({ engine, handover, onCreateFailure, value, onChange, language, label, readOnly = false, maxBytes, minRows = 8 }: Props & { engine: EditorEngine; handover: Handover; onCreateFailure: (error: unknown, handover: Handover) => void }) {
   const host = useRef<HTMLDivElement>(null), handle = useRef<EditorEngineHandle | null>(null);
   const synced = useRef(value);                                                      // the last text both sides agree on
   const latest = useRef({ onChange, maxBytes });
@@ -63,21 +77,27 @@ function RichCodingEditor({ engine, handover, value, onChange, language, label, 
   const unit = codingLanguage(language)?.indentUnit ?? "    ";
   const lines = useMemo(() => countLines(value), [value]);
   const bytes = useMemo(() => utf8ByteLength(value), [value]);
-  const initial = useRef({ language, label, readOnly, unit, handover });
+  const initial = useRef({ language, label, readOnly, unit, handover, onCreateFailure });
 
   useLayoutEffect(() => {                                                            // created ONCE per engine; props sync below
     const start = initial.current;
-    const h = engine.create(host.current!, {
-      value: synced.current, languageMode: editorLanguageMode(start.language), label: start.label, readOnly: start.readOnly, describedBy: hintId, indentUnit: start.unit,
-      accept: next => {
-        const { maxBytes: limit, onChange: emit } = latest.current;
-        if (limit !== undefined && utf8ByteLength(next) > limit) { setRefused(true); return false; }
-        setRefused(false);
-        synced.current = next;
-        emit(next);
-        return true;
-      }
-    });
+    let h: EditorEngineHandle;
+    try {
+      h = engine.create(host.current!, {
+        value: synced.current, languageMode: editorLanguageMode(start.language), label: start.label, readOnly: start.readOnly, describedBy: hintId, indentUnit: start.unit,
+        accept: next => {
+          const { maxBytes: limit, onChange: emit } = latest.current;
+          if (limit !== undefined && utf8ByteLength(next) > limit) { setRefused(true); return false; }
+          setRefused(false);
+          synced.current = next;
+          emit(next);
+          return true;
+        }
+      });
+    } catch (error) {
+      start.onCreateFailure(error, start.handover);                                // → native editor, before this frame paints
+      return;
+    }
     handle.current = h;
     if (start.handover) { h.focus(); h.setCursorOffset(start.handover.offset); }
     return () => { h.dispose(); handle.current = null; };
@@ -103,8 +123,12 @@ function useSync<T>(dep: T, apply: (next: T) => void) {
 }
 
 // ——— the native editor (Phase 17A, unchanged contract) ——————————————————————————————————————————————————————————————————
-function NativeCodingEditor({ value, onChange, language, label, readOnly = false, maxBytes, minRows = 8, inputRef }: Props & { inputRef: RefObject<HTMLTextAreaElement | null> }) {
+function NativeCodingEditor({ value, onChange, language, label, readOnly = false, maxBytes, minRows = 8, inputRef, restore = null, fallback }: Props & { inputRef: RefObject<HTMLTextAreaElement | null>; restore?: Handover; fallback?: string }) {
   const ta = inputRef, gutter = useRef<HTMLPreElement>(null);
+  useEffect(() => {                                                                  // Review Fix 1: focus + caret back after a failed hand-over
+    const el = ta.current;
+    if (restore && el) { el.focus(); el.setSelectionRange(restore.offset, restore.offset); }
+  }, [restore, ta]);
   const pendingSelection = useRef<[number, number] | null>(null), tabReleased = useRef(false);
   const [refused, setRefused] = useState(false);
   const hintId = useId();
@@ -163,7 +187,7 @@ function NativeCodingEditor({ value, onChange, language, label, readOnly = false
   };
 
   return (
-    <div className="cx-code-editor" dir="ltr" data-editor-engine="native">
+    <div className="cx-code-editor" dir="ltr" data-editor-engine="native" data-engine-fallback={fallback}>
       <div className="cx-code-frame">
         <pre ref={gutter} className="cx-code-gutter" data-testid="code-gutter" aria-hidden="true">{numbers}</pre>
         <textarea

@@ -325,3 +325,40 @@ See the PR body for the table (M1–M14, every mutation killed by a unit test or
 
 Revert the PR commit(s): callers never changed their contract, `CodingEditor` returns to the native editor, the guard
 loses its Monaco rows, `package.json` drops `monaco-editor`. No data, schema, API or storage changed.
+
+---
+
+## 15. Independent Review Fix 1 — engine-creation fallback and browser-level anti-assist hardening
+
+**RF1 — `engine.create` failure falls back to the native editor.** Before the fix, a loader rejection kept the native editor,
+but an exception thrown by `engine.create()` inside `RichCodingEditor`'s layout effect escaped into React. Now:
+
+- `CodingEditor` holds one explicit engine state per mount: `native` → `rich` → or **`failed`** (`{ status: "failed", restore }`),
+  which is permanent for that mount — a failing engine is never retried on later renders, prop changes or a late loader (the
+  loader's resolve keeps a `failed` state as is).
+- `RichCodingEditor` wraps `engine.create()` in a local try / catch (no global error swallow). On failure it calls
+  `onCreateFailure(error, handover)`: the failure is reported once (`console.error`) and the native editor is restored **before
+  the frame paints** (the state update happens in the layout effect) with the same canonical source, no `onChange`, the root
+  marked `data-engine-fallback="create-failed"`, and — if the user was typing in the native editor when the hand-over happened —
+  focus and caret restored to the native textarea (`restore`).
+- `createMonacoEngine().create()` tracks every allocation after `createModel()` (editor, listeners, `MutationObserver`); a
+  failure anywhere before the handle is returned runs `release()` — listeners, observer, editor (if created), the model, the
+  host's children — and **rethrows**. Nothing is hidden, nothing leaks; `dispose()` reuses the same `release()`.
+
+**RF2 — browser-level anti-assist attributes.** The exam-integrity contract no longer depends on Monaco's own input defaults:
+`INPUT_ANTI_ASSIST_ATTRIBUTES` (`aria-autocomplete="none"`, `autocomplete="off"`, `autocorrect="off"`, `autocapitalize="off"`,
+`spellcheck="false"`) are set on Monaco's real input at creation, re-applied after every option update (`setReadOnly`,
+`setLabel`, `setInvalid`, tab-focus toggling) and restored by the `MutationObserver` whenever Monaco rewrites or removes one.
+IME / composition, keyboard entry, copy and paste are untouched. The native textarea keeps its existing attributes.
+
+**Tests (fail-first: 9 failed on the reviewed head `6496f77`, then green).** Component: RF1-A loader reject → native;
+RF1-B/C/D create throws → native restored, usable, no `onChange`, source byte-identical (Arabic + emoji); RF1-E a first-call-only
+failing engine gets exactly one create attempt across value / language / readOnly re-renders; RF1-F focus + caret back on the
+native textarea, and unmount after failure has nothing to dispose and raises nothing; RF2-D native attributes. Adapter: RF1-G
+`editor.create` throws → model disposed, host emptied, rethrown; RF1-H a later setup step throws → editor and model disposed,
+listeners released, rethrown; RF2-A/B/C attributes present, restored after a runtime rewrite / removal, kept across option
+updates. Real browser: C6 (attributes on the real Monaco textarea) and C7 (restored after a runtime rewrite).
+
+**Mutations** RM1 (fallback removed) · RM2 / RM2b (failed engine retried) · RM3 (model leaked on `editor.create` throw) · RM4
+(`autocomplete=off` removed) · RM5 (`spellcheck=false` removed) · RM6 (no observer: rewrites not restored) — each killed; see
+the PR for the run.
