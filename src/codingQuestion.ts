@@ -70,16 +70,28 @@ export const CODING_GRADING_MODES: readonly CodingGradingMode[] = Object.freeze(
  *  "allOrNothing" = full marks only when EVERY hidden case passes, otherwise 0. Validated on every finalization (unknown → block). */
 export type CodingScoringPolicy = "proportional" | "allOrNothing";
 export const CODING_SCORING_POLICIES: readonly CodingScoringPolicy[] = Object.freeze(["proportional", "allOrNothing"]);
-export type CodingAnswerKeyV1 = { hiddenTests?: CodingTestCasePrivate[]; comparator?: CodingComparator; referenceSolutions?: Record<string, string>; gradingMode?: CodingGradingMode; scoringPolicy?: CodingScoringPolicy };
+/** Phase 17F-C2 — what an OFFICIAL compile error means pedagogically (teacher-private, under `answer`; it answers ONLY the Runner's
+ *  structural `compile.status === "compile-error"`, never stderr text). "zero" = the historical behaviour (automatic 0, question
+ *  complete) and the LEGACY RESOLUTION of an absent field, so already-published exams keep their meaning; "manualReview" = the
+ *  compiler's verdict is complete evidence but NO authoritative automatic zero is applied — the question waits for the teacher's
+ *  manual mark. SmartAssess never decides that a syntax error is "minor" and never deducts a fixed amount: the teacher decides.
+ *  Validated on every finalization (an unknown value blocks; nothing is silently normalized). */
+export type CodingCompileErrorPolicy = "zero" | "manualReview";
+export const CODING_COMPILE_ERROR_POLICIES: readonly CodingCompileErrorPolicy[] = Object.freeze(["zero", "manualReview"]);
+export type CodingAnswerKeyV1 = { hiddenTests?: CodingTestCasePrivate[]; comparator?: CodingComparator; referenceSolutions?: Record<string, string>; gradingMode?: CodingGradingMode; scoringPolicy?: CodingScoringPolicy; compileErrorPolicy?: CodingCompileErrorPolicy };
 /** The effective official grading mode of an answer key: "hiddenTests" only when explicitly stored as such. */
 export const codingGradingMode = (answerKey: unknown): CodingGradingMode => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).gradingMode === "hiddenTests" ? "hiddenTests" : "manual");
 /** The effective scoring policy: "allOrNothing" only when explicitly stored as such (finalization refuses any unknown value). */
 export const codingScoringPolicy = (answerKey: unknown): CodingScoringPolicy => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).scoringPolicy === "allOrNothing" ? "allOrNothing" : "proportional");
+/** The effective compile-error policy: "manualReview" only when explicitly stored as such; absent (legacy) resolves to "zero". */
+export const codingCompileErrorPolicy = (answerKey: unknown): CodingCompileErrorPolicy => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).compileErrorPolicy === "manualReview" ? "manualReview" : "zero");
 export type CodeAnswer = { kind: "code"; language: string; languageVersion: number; source: string };
 
 export const defaultCodingConfig = (): CodingQuestionConfigV1 => ({ allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { ...DEFAULT_CODING_LIMITS }, publicTests: [] });
-/** The default PRIVATE key (17A / 17C shape, unchanged by 17E-A: a missing scoringPolicy IS proportional). */
-export const defaultCodingAnswerKey = (): Required<Omit<CodingAnswerKeyV1, "scoringPolicy">> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {}, gradingMode: "manual" });
+/** The default PRIVATE key of a NEW question (17A / 17C shape; a missing scoringPolicy IS proportional). Phase 17F-C2: a newly
+ *  authored question routes a compile error to teacher review ("manualReview") — the NEW-AUTHORING default, deliberately
+ *  different from the LEGACY RESOLUTION of an absent field ("zero"), which existing published exams keep. */
+export const defaultCodingAnswerKey = (): Required<Omit<CodingAnswerKeyV1, "scoringPolicy">> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {}, gradingMode: "manual", compileErrorPolicy: "manualReview" });
 
 /** UTF-8 byte length without TextEncoder (pure; same result in the browser and the server). */
 export function utf8ByteLength(s: string): number {
@@ -203,6 +215,8 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
   // Phase 17C — official automatic grading fails CLOSED: the suite must be gradeable before the question can be published.
   if (key.gradingMode !== undefined && !CODING_GRADING_MODES.includes(key.gradingMode as CodingGradingMode)) out.push(err("CODING_GRADING_MODE_UNKNOWN", "طريقة تصحيح رسمي غير معروفة.", "answer.gradingMode"));
   if (key.scoringPolicy !== undefined && !CODING_SCORING_POLICIES.includes(key.scoringPolicy as CodingScoringPolicy)) out.push(err("CODING_SCORING_POLICY_UNKNOWN", "سياسة احتساب العلامة غير معروفة.", "answer.scoringPolicy"));
+  // Phase 17F-C2 — an explicit unknown compile-error policy blocks finalization (absent = legacy "zero"; never normalized)
+  if (key.compileErrorPolicy !== undefined && !CODING_COMPILE_ERROR_POLICIES.includes(key.compileErrorPolicy as CodingCompileErrorPolicy)) out.push(err("CODING_COMPILE_ERROR_POLICY_UNKNOWN", "سياسة التعامل مع فشل تجميع الكود غير معروفة.", "answer.compileErrorPolicy"));
   if (key.gradingMode === "hiddenTests") {
     if (nHidden === 0) out.push(err("CODING_AUTO_NO_HIDDEN_TESTS", "التصحيح التلقائي يحتاج إلى اختبار مخفي واحد على الأقل.", "answer.hiddenTests"));
     // the student program's output can never exceed the question's output limit, so an expected output above it is unreachable

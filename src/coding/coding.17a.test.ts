@@ -104,7 +104,7 @@ describe("C4 — coding question defaults", () => {
     expect(c).toMatchObject({ allowedLanguages: ["python"], defaultLanguage: "python", taskMode: "program", inputMode: "stdin", outputMode: "stdout", publicTests: [], starterCode: {} });
     const m = await cq();
     expect(c.limits).toEqual(m.DEFAULT_CODING_LIMITS);
-    expect(q.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+    expect(q.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });   // 17F-C2: new authoring defaults to teacher review
     expect(codes(q)).toEqual([]);                                                                  // a fresh question is finalizable as manual-only
   });
   it("the initial-graph default literal equals the shared authority (parity) and the source limit is 64 KB", async () => {
@@ -320,7 +320,7 @@ describe("C25 — type change removes every coding secret", () => {
     const mc = newQuestion("multipleChoice", { examQuestionId: "m1", text: "س", marks: 2 });
     const next = changeQuestionType({ ...mc, answer: { correctOptionIndex: 1 } } as BuilderQuestion, "coding" as never) as unknown as Record<string, unknown>;
     expect(next.questionTypeVersion).toBe(1);
-    expect(next.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+    expect(next.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
     expect(next.options).toBeUndefined();
   });
 });

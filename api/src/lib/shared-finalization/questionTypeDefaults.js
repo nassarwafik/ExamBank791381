@@ -33,7 +33,7 @@ function applyRegisteredTypeDefaults(key, version, ensure, newId) {
 (0, exports.registerTypeDefaults)("simulation", 1, () => { });
 (0, exports.registerTypeDefaults)("coding", 1, ensure => {
     ensure("coding", { allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] });
-    ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+    ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {
     ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });

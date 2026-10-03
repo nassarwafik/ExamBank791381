@@ -41,7 +41,8 @@ registerTypeDefaults("simulation", 1, () => { /* identity only: presentationType
 // against defaultCodingConfig() / defaultCodingAnswerKey() in src/codingQuestion.ts.
 registerTypeDefaults("coding", 1, ensure => {
   ensure("coding", { allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] });
-  ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+  // Phase 17F-C2 — a NEW coding question routes a compile error to teacher review (new-authoring default; absent = legacy "zero")
+  ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });

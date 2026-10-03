@@ -3,6 +3,7 @@ import type { ConfirmOptions } from "../ui/ConfirmDialog";
 import {
   normalizeEvidence, evidenceStatusLabel, evidenceTone, isOpenStatus, technicalLabel, comparatorLabel, languageLabel, fmtScore,
   CASE_OUTCOME_LABEL, SCORING_POLICY_LABEL, RECOVERY_LABEL, SUPERSEDED_NOTE, TECHNICAL_MESSAGE, NOT_ZERO_NOTE, NO_ANSWER_LABEL, INCOMPLETE_LABEL,
+  COMPILE_REVIEW_LABEL, COMPILE_REVIEW_NOTE, COMPILE_REVIEW_HINT,
   RETRY_LABEL, FORCE_LABEL, RETRY_HELP, FORCE_HELP, type TeacherCodingCase
 } from "./codingTeacherEvidence";
 
@@ -123,7 +124,14 @@ export default function CodingAutoGradeBlock({ evidence, questionNumber, student
 
       {!unsupported && e.outcome === "no-answer" && <p className="cx-ev-summary">{NO_ANSWER_LABEL}</p>}
       {!unsupported && e.outcome === "graded" && e.passedCount !== null && <p className="cx-ev-summary">نجح {e.passedCount} من {e.testCount} اختبارات{e.scoringPolicy === "proportional" && e.passedWeight !== null && e.totalWeight !== null ? " · الأوزان الناجحة " + e.passedWeight + " / " + e.totalWeight : ""}</p>}
-      {!unsupported && e.outcome === "compile-error" && <div className="cx-ev-compile"><span>خطأ في الترجمة</span>{e.compilePreview !== undefined && e.compilePreview !== "" && <pre dir="ltr" className="cx-ev-output">{e.compilePreview}</pre>}</div>}
+      {!unsupported && e.outcome === "compile-error" && e.reviewRequired && (
+        <div className="cx-ev-review" data-testid="ev-review-required" role="status">
+          <strong>{COMPILE_REVIEW_LABEL}</strong>
+          <p>{COMPILE_REVIEW_NOTE}{e.maxMarks !== null ? " علامة السؤال " + max + "." : ""}</p>
+          {!e.override.active && <p>{COMPILE_REVIEW_HINT}</p>}
+        </div>
+      )}
+      {!unsupported && e.outcome === "compile-error" && <div className="cx-ev-compile"><span>{e.reviewRequired ? "رسالة المترجم (دليل للمعلم)" : "خطأ في الترجمة"}</span>{e.compilePreview !== undefined && e.compilePreview !== "" && <pre dir="ltr" className="cx-ev-output">{e.compilePreview}</pre>}</div>}
 
       {technical && (
         <div className="cx-ev-technical" data-testid="ev-technical">
