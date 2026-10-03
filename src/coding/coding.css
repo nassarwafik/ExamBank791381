@@ -150,3 +150,12 @@
   .cx-sample-pick { flex-direction: column; }
   .cx-coding-toolbar label { flex-wrap: wrap; }
 }
+
+/* Phase 17F-C1 — the professional (Monaco) editor surface. The host is a bounded, resizable frame inside the question; the engine
+   lays itself out to it (automaticLayout) and scrolls INTERNALLY — the exam page never widens. Colours come from the SmartAssess
+   light theme defined with the engine (editor/editorOptions.ts); this only frames it like the rest of the coding UI. */
+.cx-code-rich { display: block; position: relative; min-height: 10rem; max-height: 70vh; resize: vertical; overflow: hidden; background: var(--eb-surface, #fff); box-sizing: content-box; }
+.cx-code-rich .monaco-editor, .cx-code-rich .monaco-editor .overflow-guard { border-radius: 10px; }
+.cx-code-rich .monaco-editor .margin { border-inline-end: 1px solid var(--eb-border, #e2e8f0); }
+.cx-code-rich .monaco-editor .find-widget { direction: ltr; }
+.cx-code-editor--rich .cx-code-frame:focus-within { outline: 3px solid var(--eb-focus-ring, #2563eb); outline-offset: 2px; }
