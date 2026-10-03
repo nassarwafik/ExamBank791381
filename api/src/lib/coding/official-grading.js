@@ -36,7 +36,7 @@ const crypto = require("crypto");
 const { readCodingRunnerConfig } = require("./runner-config");
 const { signRunnerRequest } = require("./runner-protocol");
 const { resolveCallbackKey } = require("./hmac-key-separation");
-const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS, codingCompileErrorPolicy } = require("../shared-finalization/codingQuestion");
+const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS, codingCompileErrorPolicy, codingQuestionVersion } = require("../shared-finalization/codingQuestion");
 const { evaluateOfficialCodingRun, officialCodingScoreFor, officialCaseToken, OFFICIAL_STDOUT_CAPTURE_BYTES, OFFICIAL_STDERR_CAPTURE_BYTES, OFFICIAL_PREVIEW_BYTES } = require("../shared-finalization/codingContract");
 const { flattenQuestions, effectiveMaxMarks } = require("../exam-structure");
 const { stableStringify } = require("../exam-canonical");
@@ -58,6 +58,13 @@ const JOB_ID = /^cg_[A-Za-z0-9_-]{16,64}$/;
 const TECH_CODE = /^[A-Z][A-Z0-9_]{0,47}$/;
 const SYSTEM_ACTOR = "system:coding-grader";
 const ACTIVE_STATES = Object.freeze(["pending", "dispatched", "retryable"]);
+// Phase 17F-C2 (Review Fix 1) — TWO terminal target states for automatic execution. "complete" = an authoritative automatic result
+// was applied (a score, incl. a real 0, or no-answer). "reviewRequired" = the Runner's execution is COMPLETE (a structural compile
+// error under the question's coding@2 "manualReview" policy) but NO automatic academic score exists: the teacher decides. Its own
+// state (never an overloaded "complete") is the rollback boundary: a PRE-C2 binary treats an unknown non-complete state as
+// "automatic work not finished" (score withheld, not redispatched — not an ACTIVE state), never as a decided zero.
+const TERMINAL_STATES = Object.freeze(["complete", "reviewRequired"]);
+const isTerminalState = s => s === "complete" || s === "reviewRequired";
 // Phase 17D-A — a "dispatched" target older than this has most likely lost its callback (the Recovery Engine re-dispatches the
 // SAME revision; the gradebook counts it as stale). Shared by the recovery policy and the gradebook status.
 const STALE_DISPATCHED_MS = 30 * 60 * 1000;
@@ -67,6 +74,12 @@ const DELIVERY_LEASE = Object.freeze({ ttlMs: 30 * 1000, maxFutureMs: 2 * 60 * 1
 
 const sha256 = text => crypto.createHash("sha256").update(text, "utf8").digest("hex");
 const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
+/** RF1-D — the ONE canonical "review required" derivation of a stored target: state reviewRequired AND a CURRENT result (the same
+ *  revision) whose outcome is the compile error the policy answers AND the stored flag. Anything else in that state is corrupt /
+ *  stale evidence: consumers fail SAFE (status withheld as still processing, evidence incomplete) — never a fabricated zero. */
+function reviewRequiredTarget(t) {
+  return isObj(t) && t.state === "reviewRequired" && isObj(t.result) && Number.isInteger(t.result.revision) && t.result.revision === t.revision && t.result.outcome === "compile-error" && t.result.reviewRequired === true;
+}
 const nowIso = deps => new Date((deps && deps.now ? deps.now() : Date.now())).toISOString();
 const isCodingNode = q => isObj(q) && String(q.presentationType ?? q.type ?? "") === "coding";
 const jobName = jobId => JOB_PREFIX + jobId + ".json";
@@ -93,7 +106,10 @@ function officialLimits(cfg) {
 
 /** The gradeable hidden-test contract of a question (fail closed), or { ok: false, code }. */
 function gradeableQuestion(q) {
-  if (!isCodingNode(q) || (q.questionTypeVersion !== undefined && q.questionTypeVersion !== 1)) return { ok: false, code: "QUESTION_INVALID" };
+  // Review Fix 1 — the catalog decides which coding versions THIS server supports (coding@1 historical, coding@2 policy); any other
+  // version fails closed here, so a server that does not know a version can never grade it under another version's contract.
+  const version = isCodingNode(q) ? codingQuestionVersion(q) : undefined;
+  if (version === undefined) return { ok: false, code: "QUESTION_INVALID" };
   if (codingGradingMode(q.answer) !== "hiddenTests") return { ok: false, code: "QUESTION_INVALID" };
   let issues;
   try { issues = validateCodingQuestion(q); } catch { issues = [{ code: "THROW" }]; }
@@ -115,8 +131,11 @@ function gradeableQuestion(q) {
   if (!(total > 0)) return { ok: false, code: "QUESTION_INVALID" };
   const allowedLanguages = Array.isArray(q.coding.allowedLanguages) ? q.coding.allowedLanguages.map(String) : [];
   // Phase 17E-A — the teacher's scoring policy (validated above: an unknown value already made the question QUESTION_INVALID)
-  // Phase 17F-C2 — the teacher's compile-error policy (absent = legacy "zero"; an unknown value already made the question QUESTION_INVALID)
-  return { ok: true, tests: clean, comparator, limits, allowedLanguages, scoringPolicy: codingScoringPolicy(key), compileErrorPolicy: codingCompileErrorPolicy(key) };
+  // Phase 17F-C2 — the teacher's compile-error policy under the question's OWN version (coding@1: "zero" only; coding@2: explicit).
+  // The validator above already refused the invalid combinations; an unresolvable policy is never graded as zero (fail closed).
+  const compileErrorPolicy = codingCompileErrorPolicy(key, version);
+  if (compileErrorPolicy === undefined) return { ok: false, code: "QUESTION_INVALID" };
+  return { ok: true, version, tests: clean, comparator, limits, allowedLanguages, scoringPolicy: codingScoringPolicy(key), compileErrorPolicy };
 }
 
 /** The bound, non-blank code answer of a question, or null (no answer / blank / unbindable — graded 0 as "no-answer"). */
@@ -140,7 +159,7 @@ function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, re
   const q = entry.question, g = gradeableQuestion(q), maxMarks = effectiveMaxMarks(grade);
   if (!g.ok) return { ok: false, code: g.code, jobId };
   const answer = boundAnswer(q, attempt.answers && attempt.answers[targetKey]);
-  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: 1, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}), ...(g.compileErrorPolicy === "manualReview" ? { compileErrorPolicy: "manualReview" } : {}) }));   // 17F-C2: legacy "zero" adds NO material (in-flight keys unchanged)
+  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: g.version, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}), ...(g.version >= 2 ? { compileErrorPolicy: g.compileErrorPolicy } : {}) }));   // 17F-C2 RF1: coding@1 adds NO material (byte-identical, in-flight keys unchanged); coding@2 binds its explicit policy
   const answerHash = sha256(answer ? stableStringify({ language: answer.language, languageVersion: answer.languageVersion, source: answer.source }) : "no-answer");
   const gradingKey = sha256(stableStringify({ v: 1, ...ids, mode: "hiddenTests", questionFingerprint, answerHash }));
   return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, scoringPolicy: g.scoringPolicy, compileErrorPolicy: g.compileErrorPolicy, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
@@ -203,7 +222,7 @@ function codingGradingStatus(attempt, nowMs = Date.now()) {
   if (!t) return null;
   const out = { pending: 0, retryable: 0, stale: 0 };
   for (const x of Object.values(t)) {
-    if (!isObj(x) || x.state === "complete") continue;
+    if (!isObj(x) || isTerminalState(x.state)) continue;
     if (x.state === "retryable") out.retryable++;
     else if (x.state === "dispatched" && nowMs - (Number.isFinite(Date.parse(x.updatedAt)) ? Date.parse(x.updatedAt) : 0) > STALE_DISPATCHED_MS) out.stale++;   // no timestamp = old (as the recovery policy)
     else out.pending++;
@@ -232,11 +251,15 @@ function studentCodingGradingStatus(attempt) {
     if (!isObj(x)) continue;
     // Phase 17E-D (F3) — an OPEN target of a question the teacher has already marked manually cannot change the mark: it is
     // background evidence for the teacher only. The student never sees "automatic grading in progress" next to that mark.
-    if (x.state !== "complete" && overrideScoreOf(attempt, id) !== null) continue;
+    const override = overrideScoreOf(attempt, id);
+    if (!isTerminalState(x.state) && override !== null) continue;
     seen = true;
-    if (x.state === "complete") {
-      // 17F-C2 — a compile error held for the teacher (no automatic score) is "review required" until the teacher's override lands
-      if (isObj(x.result) && x.result.reviewRequired === true && overrideScoreOf(attempt, id) === null) review++;
+    if (x.state === "complete") continue;
+    if (x.state === "reviewRequired") {
+      // 17F-C2 RF1 — the compile error held for the teacher: "review required" until the teacher's override lands. Corrupt / stale
+      // evidence in that state is withheld as still processing (fail safe) — never counted as complete.
+      if (override !== null) continue;
+      if (reviewRequiredTarget(x)) review++; else best = Math.max(best, 2);
       continue;
     }
     if (x.state === "retryable" && isObj(x.recovery) && x.recovery.exhausted === true) { exhausted++; continue; }
@@ -248,10 +271,21 @@ function studentCodingGradingStatus(attempt) {
   return review ? "reviewRequired" : "complete";
 }
 
-/** true while any official coding target of the attempt that can still change the mark is not complete (a boolean, nothing else). */
+/** true while any official coding target of the attempt that can still change the mark has automatic execution still OPEN (a
+ *  boolean, nothing else). A well-formed review-required target is NOT pending (execution is done); a corrupt one is (fail safe). */
 function autoGradingPending(attempt) {
   const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
-  return !!t && Object.entries(t).some(([id, x]) => x && x.state !== "complete" && overrideScoreOf(attempt, id) === null);   // 17E-D F3
+  return !!t && Object.entries(t).some(([id, x]) => x && x.state !== "complete" && !reviewRequiredTarget(x) && overrideScoreOf(attempt, id) === null);   // 17E-D F3
+}
+/**
+ * Phase 17F-C2 (Review Fix 1) — the PUBLIC legacy field `autoGradingPending` of the student projections (student-submission,
+ * student-dashboard): historically "automatic grading still open"; for OLDER clients it is the SCORE-WITHHOLD compatibility bit.
+ * A pre-C2 (B1) client does not know the word "reviewRequired" and falls back to this boolean, so it must be true while a compile
+ * error awaits the teacher — otherwise a cached browser would render the provisional "0 / 30". ONE helper for both endpoints.
+ * The modern client never polls from it (it polls from autoGradingStatus only).
+ */
+function legacyAutoGradingWithhold(attempt) {
+  return autoGradingPending(attempt) || studentCodingGradingStatus(attempt) === "reviewRequired";
 }
 
 // ── Dispatch ───────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -311,7 +345,7 @@ async function updateTarget(container, ids, targetKey, expect, patch, deps) {
       applied = false;
       const attempt = current && Array.isArray(current.attempts) ? current.attempts.find(x => Number(x.attemptNumber) === Number(ids.attemptNumber)) : null;
       const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets[targetKey] : null;
-      if (!t || t.revision !== expect.revision || t.jobId !== expect.jobId || t.state === "complete") throw STOP;
+      if (!t || t.revision !== expect.revision || t.jobId !== expect.jobId || isTerminalState(t.state)) throw STOP;
       Object.assign(t, patch);
       if (patch.state !== "retryable") delete t.technicalCode;
       applied = true;
@@ -332,7 +366,7 @@ async function mutateTarget(container, ids, targetKey, expect, fn, deps) {
       applied = false;
       const attempt = current && Array.isArray(current.attempts) ? current.attempts.find(x => Number(x.attemptNumber) === Number(ids.attemptNumber)) : null;
       const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets[targetKey] : null;
-      if (!t || t.revision !== expect.revision || t.jobId !== expect.jobId || t.state === "complete") throw STOP;
+      if (!t || t.revision !== expect.revision || t.jobId !== expect.jobId || isTerminalState(t.state)) throw STOP;
       if (fn(t, attempt) === false) throw STOP;
       applied = true;
       return current;
@@ -469,9 +503,10 @@ async function regradeTarget(container, { assignmentId, studentId, attemptNumber
   // is (no longer) an official hidden-test coding question is not found; a version this server cannot validate is refused.
   const entry = flattenQuestions(assignment.examSnapshot).find(x => x.questionId === questionId);
   if (!entry || !isCodingNode(entry.question) || codingGradingMode(entry.question.answer) !== "hiddenTests") return { status: 404, code: "NOT_FOUND" };
-  if (entry.question.questionTypeVersion !== undefined && entry.question.questionTypeVersion !== 1) return { status: 409, code: "QUESTION_UNSUPPORTED" };
+  if (codingQuestionVersion(entry.question) === undefined) return { status: 409, code: "QUESTION_UNSUPPORTED" };
   if (action === "retry") {
-    if (target.state === "complete") return { status: 409, code: "ALREADY_COMPLETE" };
+    // a terminal target (complete, or complete evidence awaiting the teacher) is not technical retryable work; force regrade stays available
+    if (isTerminalState(target.state)) return { status: 409, code: "ALREADY_COMPLETE" };
     // Phase 17D-A — a teacher retry resets automatic backoff / exhaustion (same revision, job id and grading key).
     if (target.recovery) await mutateTarget(container, ids, questionId, { revision: target.revision, jobId: target.jobId }, t => { t.recovery = manualRecovery(deps); }, deps);
     const r = await ensureCodingGradingJobs(container, ids, deps, { obs, targets: [questionId], states: ACTIVE_STATES });
@@ -581,7 +616,7 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
       const attempt = current && Array.isArray(current.attempts) ? current.attempts.find(x => Number(x.attemptNumber) === ids.attemptNumber) : null;
       const target = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets[job.targetKey] : null;
       if (!target || target.jobId !== body.jobId || target.revision !== job.revision) { outcome = { kind: "stale" }; throw STOP; }
-      if (target.state === "complete" && target.result && target.result.jobId === body.jobId) { outcome = { kind: "already" }; throw STOP; }
+      if (isTerminalState(target.state) && target.result && target.result.jobId === body.jobId) { outcome = { kind: "already" }; throw STOP; }
       const auth = targetAuthority(assignment.examSnapshot, attempt, job.targetKey, { ...ids, revision: target.revision });
       if (!auth.ok || !auth.answer || auth.gradingKey !== target.gradingKey || job.gradingKey !== target.gradingKey) { outcome = { kind: "stale" }; throw STOP; }
       const at = nowIso(deps), wasFinal = !!attempt.finalized;
@@ -599,11 +634,12 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
         const reviewRequired = ev.compileError && auth.compileErrorPolicy === "manualReview";
         const automaticScore = reviewRequired ? null : officialCodingScoreFor(auth.scoringPolicy, auth.maxMarks, ev);
         target.result = { revision: target.revision, jobId: body.jobId, engine: ENGINE, ...(reviewRequired ? { reviewRequired: true } : { automaticScore }), maxMarks: auth.maxMarks, passedWeight: ev.passedWeight, totalWeight: ev.totalWeight, testCount: ev.testCount, passedCount: ev.passedCount, ...(allOrNothing ? { scoringPolicy: "allOrNothing" } : {}), outcome: ev.compileError ? "compile-error" : "graded", ...(ev.compilePreview !== undefined ? { compilePreview: ev.compilePreview } : {}), cases: ev.cases.map(c => ({ testId: c.testId, status: c.status, passed: c.passed, ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}), ...(c.actualPreview !== undefined ? { actualPreview: c.actualPreview } : {}), ...(c.stderrPreview !== undefined ? { stderrPreview: c.stderrPreview } : {}) })), completedAt: at };
-        target.state = "complete"; delete target.technicalCode; target.updatedAt = at;
+        // RF1-C — its OWN terminal state: the Runner job is acknowledged complete, the SmartAssess target awaits the teacher
+        target.state = reviewRequired ? "reviewRequired" : "complete"; delete target.technicalCode; target.updatedAt = at;
         if (reviewRequired) holdForReview(auth.grade);
         else applyGrade(auth.grade, automaticScore, allOrNothing ? !ev.compileError && ev.passedCount === ev.testCount : !ev.compileError && ev.passedWeight >= ev.totalWeight);
         rebuildAttemptGrades(attempt);                                                      // the ONE canonical rebuild; an override still wins
-        outcome = { kind: "complete", becameFinal: !wasFinal && !!attempt.finalized, outcome: target.result.outcome, ...(reviewRequired ? { reviewRequired: true } : {}), passedCount: ev.passedCount, testCount: ev.testCount };
+        outcome = { kind: "complete", targetState: target.state, becameFinal: !wasFinal && !!attempt.finalized, outcome: target.result.outcome, ...(reviewRequired ? { reviewRequired: true } : {}), passedCount: ev.passedCount, testCount: ev.testCount };
       }
       current.updatedAt = at;
       return current;
@@ -613,7 +649,7 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
   if (outcome.kind === "already") { obs?.logInfo?.("coding.autoGrade.callback.duplicate", { jobId: body.jobId, revision: job.revision }); return { status: 200, body: { ok: true, alreadyApplied: true } }; }
   const state = outcome.kind === "complete" ? "complete" : "retryable";
   await setJobState(container, job.jobId, job.revision, state, outcome.kind === "retryable" ? { technicalCode: outcome.code } : null, deps);
-  await audit(container, { actor: SYSTEM_ACTOR, action: state === "complete" ? "coding.autoGrade.completed" : "coding.autoGrade.retryable", targetType: "student", targetId: ids.studentId, targetLabel: "", details: { assignmentId: ids.assignmentId, attemptNumber: ids.attemptNumber, questionId: job.targetKey, revision: job.revision, state, ...(outcome.kind === "retryable" ? { technicalCode: outcome.code } : { outcome: outcome.outcome, ...(outcome.reviewRequired ? { reviewRequired: true } : {}), passedCount: outcome.passedCount, testCount: outcome.testCount }) } });
+  await audit(container, { actor: SYSTEM_ACTOR, action: state === "complete" ? "coding.autoGrade.completed" : "coding.autoGrade.retryable", targetType: "student", targetId: ids.studentId, targetLabel: "", details: { assignmentId: ids.assignmentId, attemptNumber: ids.attemptNumber, questionId: job.targetKey, revision: job.revision, state: outcome.kind === "complete" ? outcome.targetState : state, ...(outcome.kind === "retryable" ? { technicalCode: outcome.code } : { outcome: outcome.outcome, ...(outcome.reviewRequired ? { reviewRequired: true } : {}), passedCount: outcome.passedCount, testCount: outcome.testCount }) } });
   obs?.logInfo?.("coding.autoGrade.callback.applied", { jobId: body.jobId, revision: job.revision, state, ...(outcome.kind === "retryable" ? { technicalCode: outcome.code } : { outcome: outcome.outcome, ...(outcome.reviewRequired ? { reviewRequired: true } : {}), becameFinal: outcome.becameFinal }) });
   if (outcome.kind === "complete" && outcome.becameFinal) await finalSideEffects(container, assignment, ids, deps, obs);
   return { status: 200, body: { ok: true, applied: true, state } };
@@ -656,6 +692,7 @@ function overrideScoreOf(attempt, id) {
 function automaticPhase(t) {
   if (!isObj(t)) return "unknown";
   if (t.state === "complete") return isObj(t.result) && Number.isInteger(t.result.revision) && t.result.revision === t.revision ? "complete" : "unknown";
+  if (t.state === "reviewRequired") return reviewRequiredTarget(t) ? "complete" : "unknown";   // execution complete, teacher review required
   if (t.state === "pending") return "queued";
   if (t.state === "dispatched") return "processing";
   if (t.state === "retryable") return isObj(t.recovery) && t.recovery.exhausted === true ? "delayed" : "retrying";
@@ -682,7 +719,7 @@ function teacherCodingEvidence(question, attempt) {
   if (t === null || t === undefined) return null;
   let incomplete = !isObj(t);
   const key = isObj(q.answer) ? q.answer : {};
-  const unsupported = q.questionTypeVersion !== undefined && q.questionTypeVersion !== 1;
+  const unsupported = codingQuestionVersion(q) === undefined;
   const tests = (Array.isArray(key.hiddenTests) ? key.hiddenTests : []).filter(x => isObj(x) && typeof x.id === "string").slice(0, CODING_TEST_LIMITS.hiddenTests);
   const comparator = key.comparator === undefined ? DEFAULT_CODING_COMPARATOR : CODING_COMPARATORS.includes(key.comparator) ? key.comparator : null;
   if (comparator === null) incomplete = true;
@@ -706,7 +743,7 @@ function teacherCodingEvidence(question, attempt) {
     automaticStatus: phase,
     revision,
     resultRevision,
-    resultCurrent: !!(r && isObj(t) && t.state === "complete" && resultRevision !== null && resultRevision === revision),
+    resultCurrent: !!(r && isObj(t) && isTerminalState(t.state) && resultRevision !== null && resultRevision === revision),
     gradingMode: "hiddenTests",
     language: bound.ok ? bound.answer.language : null,
     languageVersion: bound.ok ? bound.answer.languageVersion : null,
@@ -722,14 +759,15 @@ function teacherCodingEvidence(question, attempt) {
     completedAt: pick(r && r.completedAt, isoOrNull)
   };
   if (outcome === "compile-error" && typeof r.compilePreview === "string") ev.compilePreview = prefixBytes(r.compilePreview, OFFICIAL_PREVIEW_BYTES);
-  // 17F-C2 — the compile error was held for the teacher (policy manualReview): no automatic score exists by design (not "incomplete")
-  ev.reviewRequired = outcome === "compile-error" && r.reviewRequired === true;
+  // 17F-C2 RF1 — the compile error was held for the teacher (policy manualReview): no automatic score exists by design (not
+  // "incomplete"). ONE canonical derivation (state + current revision + outcome + flag) — never the stored flag alone.
+  ev.reviewRequired = !unsupported && reviewRequiredTarget(t);
   ev.override = { active: override !== null, score: override !== null ? (gradeScore !== null ? gradeScore : override) : null };
   // The EFFECTIVE (official) question score is the canonical rebuild's grade — never computed here. While the question still
   // awaits review (a technical failure, an open first grading) there is no effective score yet: never a zero.
   ev.effectiveScore = grade && (override !== null || grade.manualReview !== true) ? gradeScore : null;
   ev.recovery = { state: unsupported ? "none" : recoveryState(t, phase) };
-  ev.technicalCode = isObj(t) && t.state !== "complete" && typeof t.technicalCode === "string" && TECH_CODE.test(t.technicalCode) ? t.technicalCode : null;
+  ev.technicalCode = isObj(t) && !isTerminalState(t.state) && typeof t.technicalCode === "string" && TECH_CODE.test(t.technicalCode) ? t.technicalCode : null;
   let cases = [];
   if (r && outcome !== "no-answer") {
     if (!Array.isArray(r.cases)) incomplete = true;
@@ -779,6 +817,6 @@ function teacherCodingSummary(attempt) {
 }
 
 module.exports = {
-  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, STALE_DISPATCHED_MS, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, studentCodingGradingStatus, buildOfficialRunnerJob,
+  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, TERMINAL_STATES, STALE_DISPATCHED_MS, legacyAutoGradingWithhold, reviewRequiredTarget, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, studentCodingGradingStatus, buildOfficialRunnerJob,
   dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, teacherCodingEvidence, teacherCodingSummary, overrideScoreOf, mutateTarget, manualRecovery
 };

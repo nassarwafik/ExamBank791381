@@ -21,3 +21,5 @@ registerAuthoringEditor("categorization", 1, lazy(() => import("./editors/Catego
 registerAuthoringEditor("simulation", 1, lazy(() => import("./editors/SimulationEditor")));
 // Phase 17A — coding@1 authoring (lazy: languages, starter code, public / hidden tests, limits never enter the initial graph).
 registerAuthoringEditor("coding", 1, lazy(() => import("./editors/CodingQuestionEditor")));
+// Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy) uses the same lazy editor module, which reads the node's own version.
+registerAuthoringEditor("coding", 2, lazy(() => import("./editors/CodingQuestionEditor")));

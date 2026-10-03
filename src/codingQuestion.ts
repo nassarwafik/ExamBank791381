@@ -11,6 +11,8 @@
 // public sample tests, limits); every correctness / evaluation truth (hidden tests, comparator, reference solutions) lives
 // under `question.answer`, which the student sanitizer always removes.
 
+import { effectiveQuestionTypeVersion } from "./questionTypeCatalog";
+
 export type CodingLanguageCapabilities = { compile: boolean; run: boolean; stdin: boolean; tests: boolean };
 /** A language CONTRACT (not a runtime): `capabilities` say what the stdin/stdout program model can mean for this language —
  *  whether an execution provider actually offers it is a separate, provider-reported fact. */
@@ -83,14 +85,26 @@ export type CodingAnswerKeyV1 = { hiddenTests?: CodingTestCasePrivate[]; compara
 export const codingGradingMode = (answerKey: unknown): CodingGradingMode => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).gradingMode === "hiddenTests" ? "hiddenTests" : "manual");
 /** The effective scoring policy: "allOrNothing" only when explicitly stored as such (finalization refuses any unknown value). */
 export const codingScoringPolicy = (answerKey: unknown): CodingScoringPolicy => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).scoringPolicy === "allOrNothing" ? "allOrNothing" : "proportional");
-/** The effective compile-error policy: "manualReview" only when explicitly stored as such; absent (legacy) resolves to "zero". */
-export const codingCompileErrorPolicy = (answerKey: unknown): CodingCompileErrorPolicy => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).compileErrorPolicy === "manualReview" ? "manualReview" : "zero");
+/** The effective QUESTION TYPE VERSION of a coding node through the ONE catalog authority: absent = 1 (coding@1), 1 or 2 as stored;
+ *  anything else (coding@3, a fraction, a string) is undefined = unsupported, fail closed. */
+export const codingQuestionVersion = (node: unknown): number | undefined => (isObj(node) ? effectiveQuestionTypeVersion("coding", node.questionTypeVersion) : undefined);
+/** The effective compile-error policy of an answer key UNDER A GIVEN TYPE VERSION (Phase 17F-C2 / Review Fix 1):
+ *    coding@1 — the HISTORICAL contract: absent or "zero" ⇒ "zero"; "manualReview" is NOT a coding@1 semantic (undefined: the
+ *               validator refuses it and asks for an explicit upgrade to coding@2) — a stored legacy question is never reinterpreted;
+ *    coding@2 — the policy must be EXPLICIT: "zero" | "manualReview" ⇒ itself; absent or unknown ⇒ undefined (fail closed).
+ *  undefined is never a grade: every consumer that receives it refuses to grade (QUESTION_INVALID) instead of assuming zero. */
+export function codingCompileErrorPolicy(answerKey: unknown, version = 1): CodingCompileErrorPolicy | undefined {
+  const v = isObj(answerKey) ? answerKey.compileErrorPolicy : undefined;
+  if (version === 1) return v === undefined || v === "zero" ? "zero" : undefined;
+  if (version === 2) return v === "zero" || v === "manualReview" ? v : undefined;
+  return undefined;
+}
 export type CodeAnswer = { kind: "code"; language: string; languageVersion: number; source: string };
 
 export const defaultCodingConfig = (): CodingQuestionConfigV1 => ({ allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { ...DEFAULT_CODING_LIMITS }, publicTests: [] });
-/** The default PRIVATE key of a NEW question (17A / 17C shape; a missing scoringPolicy IS proportional). Phase 17F-C2: a newly
- *  authored question routes a compile error to teacher review ("manualReview") — the NEW-AUTHORING default, deliberately
- *  different from the LEGACY RESOLUTION of an absent field ("zero"), which existing published exams keep. */
+/** The default PRIVATE key of a NEW question — a coding@2 key (17A / 17C shape; a missing scoringPolicy IS proportional). Phase
+ *  17F-C2: a newly authored question routes a compile error to teacher review ("manualReview") — the NEW-AUTHORING default,
+ *  deliberately different from coding@1, whose absent field means the historical "zero" that existing published exams keep. */
 export const defaultCodingAnswerKey = (): Required<Omit<CodingAnswerKeyV1, "scoringPolicy">> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {}, gradingMode: "manual", compileErrorPolicy: "manualReview" });
 
 /** UTF-8 byte length without TextEncoder (pure; same result in the browser and the server). */
@@ -145,7 +159,7 @@ export function projectCodingConfigForStudent(cfg: unknown): CodingQuestionConfi
 export function bindCodeAnswerToQuestion(a: unknown, question: unknown): { ok: true; answer: CodeAnswer } | { ok: false; code: string } {
   const base = normalizeCodeAnswer(a);
   if (!base.ok) return base;
-  if (!isObj(question) || String(question.presentationType ?? question.type ?? "") !== "coding" || (question.questionTypeVersion !== undefined && question.questionTypeVersion !== 1)) return { ok: false, code: "CODE_QUESTION_MISMATCH" };
+  if (!isObj(question) || String(question.presentationType ?? question.type ?? "") !== "coding" || codingQuestionVersion(question) === undefined) return { ok: false, code: "CODE_QUESTION_MISMATCH" };
   const cfg = projectCodingConfigForStudent(question.coding);
   if (!cfg || !Array.isArray(cfg.allowedLanguages) || !cfg.allowedLanguages.includes(base.answer.language)) return { ok: false, code: "CODE_LANGUAGE_NOT_ALLOWED" };
   const configured = cfg.limits && typeof cfg.limits.sourceBytes === "number" && Number.isInteger(cfg.limits.sourceBytes) && cfg.limits.sourceBytes > 0 ? cfg.limits.sourceBytes : CODE_SOURCE_MAX_BYTES;
@@ -157,10 +171,13 @@ export type CodingIssue = { code: string; message: string; severity: "error"; pa
 const err = (code: string, message: string, path?: string): CodingIssue => ({ code, message, severity: "error", path });
 const validLimit = (k: keyof CodingLimits, v: unknown) => typeof v === "number" && Number.isInteger(v) && v >= CODING_LIMIT_RANGES[k][0] && v <= CODING_LIMIT_RANGES[k][1];
 
-/** coding@1 finalization rules. Every problem is BLOCKING; a manual-only question (no hidden tests) is valid. Nothing here
- *  loads, compiles or executes anything. */
+/** coding@1 / coding@2 finalization rules. Every problem is BLOCKING; a manual-only question (no hidden tests) is valid. Nothing
+ *  here loads, compiles or executes anything. The node's own `questionTypeVersion` (absent = 1) selects the compile-error policy
+ *  contract: coding@1 refuses "manualReview" (explicit upgrade required), coding@2 requires an explicit policy. */
 export function validateCodingQuestion(node: Record<string, unknown>): CodingIssue[] {
   const out: CodingIssue[] = [];
+  const version = codingQuestionVersion(node);
+  if (version === undefined) out.push(err("CODING_VERSION_UNSUPPORTED", "إصدار سؤال البرمجة غير مدعوم في هذا الإصدار من التطبيق.", "questionTypeVersion"));
   const cfg = node.coding;
   if (!isObj(cfg)) return [err("CODING_CONFIG_MISSING", "إعداد سؤال البرمجة مفقود أو غير صالح.", "coding")];
   for (const k of Object.keys(cfg)) if (!PUBLIC_KEYS.has(k)) out.push(err("CODING_CONFIG_UNKNOWN_KEY", "حقل غير معروف في إعداد سؤال البرمجة: " + k, "coding." + k));
@@ -215,8 +232,11 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
   // Phase 17C — official automatic grading fails CLOSED: the suite must be gradeable before the question can be published.
   if (key.gradingMode !== undefined && !CODING_GRADING_MODES.includes(key.gradingMode as CodingGradingMode)) out.push(err("CODING_GRADING_MODE_UNKNOWN", "طريقة تصحيح رسمي غير معروفة.", "answer.gradingMode"));
   if (key.scoringPolicy !== undefined && !CODING_SCORING_POLICIES.includes(key.scoringPolicy as CodingScoringPolicy)) out.push(err("CODING_SCORING_POLICY_UNKNOWN", "سياسة احتساب العلامة غير معروفة.", "answer.scoringPolicy"));
-  // Phase 17F-C2 — an explicit unknown compile-error policy blocks finalization (absent = legacy "zero"; never normalized)
+  // Phase 17F-C2 (+ Review Fix 1) — the compile-error policy is VERSIONED: an unknown explicit value never finalizes (never
+  // normalized); coding@1 refuses "manualReview" (the teacher upgrades the question to coding@2 explicitly); coding@2 requires it.
   if (key.compileErrorPolicy !== undefined && !CODING_COMPILE_ERROR_POLICIES.includes(key.compileErrorPolicy as CodingCompileErrorPolicy)) out.push(err("CODING_COMPILE_ERROR_POLICY_UNKNOWN", "سياسة التعامل مع فشل تجميع الكود غير معروفة.", "answer.compileErrorPolicy"));
+  else if (version === 1 && key.compileErrorPolicy === "manualReview") out.push(err("CODING_COMPILE_ERROR_POLICY_REQUIRES_V2", "سياسة المراجعة اليدوية عند فشل التجميع تتطلب ترقية السؤال إلى الإصدار الثاني من سؤال البرمجة.", "answer.compileErrorPolicy"));
+  else if (version === 2 && key.compileErrorPolicy === undefined) out.push(err("CODING_COMPILE_ERROR_POLICY_REQUIRED", "حدّد سياسة التعامل مع فشل تجميع الكود.", "answer.compileErrorPolicy"));
   if (key.gradingMode === "hiddenTests") {
     if (nHidden === 0) out.push(err("CODING_AUTO_NO_HIDDEN_TESTS", "التصحيح التلقائي يحتاج إلى اختبار مخفي واحد على الأقل.", "answer.hiddenTests"));
     // the student program's output can never exceed the question's output limit, so an expected output above it is unreachable

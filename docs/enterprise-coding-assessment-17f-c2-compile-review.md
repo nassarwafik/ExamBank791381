@@ -15,6 +15,7 @@ compile step (Python has no compile phase in the official contract — a Python 
 |---|---|
 | Baseline | `origin/main` `d2ae703b8608d82c0f20b68be495eabf76a048a2` (merge of PR #247, 17F-B1) — re-verified unchanged before the branch was created and before the push |
 | Branch | `feature/17f-c2-compile-error-review-policy` — one branch, one PR, no rebase, no force-push, no amend after push, auto-merge off |
+| Review | `bd4a938` → Independent Review Fix 1 (§14: cached-client fake zero · coding@1 / coding@2 boundary · `reviewRequired` target state · rollback truth) |
 | Parallel work | 17F-B3 (`runner/gateway/official.js`, Window 2) and the PR #249 harness (Window 3) share **no file** with this phase; nothing was copied or cherry-picked from their unmerged branches |
 | Shared source | `src/codingQuestion.ts`, `src/questionTypeDefaults.ts` → `api/src/lib/shared-finalization/*` regenerated with `node scripts/build-shared-finalization.mjs` (never hand-edited; drift guard `api/tests/shared-finalization-drift-14a.test.js` green) |
 
@@ -51,20 +52,33 @@ export const CODING_COMPILE_ERROR_POLICIES = Object.freeze(["zero", "manualRevie
 export const codingCompileErrorPolicy = (answerKey) => (isObj(answerKey) && answerKey.compileErrorPolicy === "manualReview" ? "manualReview" : "zero");
 ```
 
-| Stored value | Resolution | Validation | Fingerprint material |
-|---|---|---|---|
-| absent (every pre-C2 question) | `"zero"` | valid | **none** — byte-identical to the pre-C2 formula (PED28) |
-| `"zero"` | `"zero"` | valid | none — same fingerprint as absent (PED28) |
-| `"manualReview"` | `"manualReview"` | valid | `compileErrorPolicy: "manualReview"` (PED30) |
-| anything else (`"halfCredit"`, `""`, `1`, `null`, `true`) | — | `CODING_COMPILE_ERROR_POLICY_UNKNOWN` "سياسة التعامل مع فشل تجميع الكود غير معروفة." blocks finalization; the server authority fails CLOSED (`QUESTION_INVALID`, no zero committed, no runner call) (PED26, PED26b) | never normalized |
+**Review Fix 1 — the policy is VERSIONED through the Question Type Catalog** (`PRODUCTION_VERSIONS = { coding: 2 }`): `coding@1` is the
+historical contract, `coding@2` carries the policy. `codingCompileErrorPolicy(answerKey, version)` resolves under the node's OWN version
+(`codingQuestionVersion(node)` = `effectiveQuestionTypeVersion("coding", questionTypeVersion)`; absent = 1; anything else = unsupported).
 
-**No migration, no `questionTypeVersion` bump**: a legacy question keeps its exact behaviour, fingerprint and grading key,
-so every pre-C2 in-flight job still applies after deployment (PED29). **New authoring default = `"manualReview"`**:
-`defaultCodingAnswerKey()` and `registerTypeDefaults("coding", 1, …)` both seed it, so `newQuestion("coding")` and a type
-change to coding carry it (PED2); `ensure()` never overwrites an existing `answer`, so no stored node is touched.
-Import / export / clone / bank / preset / snapshot paths copy `answer` as an opaque object (audit: the only production
-modules that touch key fields by name are the editor, the preview stripper, the student sanitizer and `typeContent.ts` —
-none rebuilds the key field-by-field), so the field round-trips unchanged; the editor's `readKey` passes it verbatim.
+| Version | Stored value | Resolution | Validation | Fingerprint material |
+|---|---|---|---|---|
+| coding@1 | absent (every pre-C2 question) | `"zero"` | valid | **none** — byte-identical to the pre-C2 formula (PED28, MV7/MV16) |
+| coding@1 | `"zero"` | `"zero"` | valid | none — same fingerprint as absent |
+| coding@1 | `"manualReview"` | `undefined` (never a coding@1 semantic) | `CODING_COMPILE_ERROR_POLICY_REQUIRES_V2` — the Builder upgrades the node EXPLICITLY to coding@2; the server authority fails closed (MV8) | — |
+| coding@2 | `"zero"` | `"zero"` | valid | `questionTypeVersion: 2, compileErrorPolicy: "zero"` (MV10, MV17) |
+| coding@2 | `"manualReview"` | `"manualReview"` | valid | `questionTypeVersion: 2, compileErrorPolicy: "manualReview"` (MV11, MV17) |
+| coding@2 | absent | `undefined` | `CODING_COMPILE_ERROR_POLICY_REQUIRED` — fails closed, never resolves to zero (MV12) | — |
+| any | anything else (`"halfCredit"`, `""`, `1`, `null`, `true`) | `undefined` | `CODING_COMPILE_ERROR_POLICY_UNKNOWN` blocks finalization; `QUESTION_INVALID` on the server (PED26, PED26b, MV12) | never normalized |
+| coding@3+ | — | — | `UNSUPPORTED_QUESTION_TYPE_VERSION` / `CODING_VERSION_UNSUPPORTED`; no editor, no renderer, no grader | — |
+
+**No migration, no silent reinterpretation**: a stored coding@1 question keeps its exact behaviour, fingerprint and grading key, so every
+pre-C2 in-flight job still applies (PED29). **New authoring = coding@2 + `"manualReview"`**: `newQuestion("coding")` and a type change to
+coding stamp `questionTypeVersion: 2` (`applyTypeDefaults` seeds the CURRENT version's defaults — `registerTypeDefaults("coding", 2)`);
+`registerTypeDefaults("coding", 1)` keeps the historical key shape (no policy field) for a V1 node that lacks an answer. Every runtime
+registry ships BOTH versions (authoring editor, student renderer, validator, defaults, server grader; MV14 / MV15): the family is complete.
+Import / export / clone / bank / preset / snapshot paths copy `answer` and `questionTypeVersion` as opaque data (audit: the only production
+modules that touch key fields by name are the editor, the preview stripper, the student sanitizer and `typeContent.ts`).
+
+**Why a version** — a PRE-C2 server knows coding@1 only: `effectiveQuestionTypeVersion("coding", 2)` is `undefined` there, so it refuses a
+coding@2 question (`QUESTION_INVALID` → retryable technical target, `QUESTION_UNSUPPORTED` on regrade, no editor / renderer on a pre-C2
+client). It can therefore never execute a `manualReview` question under the historical zero contract (MV13). Had `manualReview` lived inside
+coding@1, the old binary would have accepted the question and graded the compile error as 0 — the silent reinterpretation Review 1 found.
 
 ## 3. Server behaviour under `manualReview` (the trusted compile boundary)
 
@@ -74,7 +88,7 @@ none rebuilds the key field-by-field), so the field round-trips unchanged; the e
 const reviewRequired = ev.compileError && auth.compileErrorPolicy === "manualReview";   // the Runner's structural verdict × the teacher's policy
 const automaticScore = reviewRequired ? null : officialCodingScoreFor(auth.scoringPolicy, auth.maxMarks, ev);
 target.result = { …, ...(reviewRequired ? { reviewRequired: true } : { automaticScore }), outcome: "compile-error", compilePreview, cases, completedAt };
-target.state = "complete";
+target.state = reviewRequired ? "reviewRequired" : "complete";   // RF1-C: its OWN terminal state (never an overloaded "complete")
 if (reviewRequired) holdForReview(auth.grade);   // score 0 (provisional base), manualReview = true, correct = false
 else applyGrade(auth.grade, automaticScore, …);
 rebuildAttemptGrades(attempt);                   // manualReviewMarks += marks, finalized = false ⇒ gradingStatus pendingReview
@@ -83,8 +97,14 @@ rebuildAttemptGrades(attempt);                   // manualReviewMarks += marks, 
 * `ev.compileError` is `true` ONLY when the Runner said `compile.status === "compile-error"`. **No stderr parsing, no regex,
   no language heuristic, no "minor error" decision** (grep guard: no `/SyntaxError/`, `/expected/` or similar appears in
   `official-grading.js`, `codingContract.ts` or any C2 UI module).
-* The target is **complete** — not `retryable`, no `technicalCode`, never `RUNNER_FAILED` (PED3 / PED4). Recovery sweeps
-  and the gradebook "retry" path do not touch it; a teacher **regrade** still works.
+* The target is TERMINAL in its own state **`reviewRequired`** — not `retryable`, no `technicalCode`, never `RUNNER_FAILED` (PED3 / PED4,
+  MV18). `TERMINAL_STATES = ["complete", "reviewRequired"]`: recovery (`recoveryDecision` → `review-required`, not eligible; MV22), bulk
+  retry and a teacher "retry" (409 `ALREADY_COMPLETE`; MV23) never touch it; a teacher **force regrade** creates the next revision (MV24);
+  a duplicate callback is `alreadyApplied` (MV21). The Runner JOB record and the callback response still say `complete` (the Runner
+  protocol is unchanged); only the SmartAssess target distinguishes review from a decided score.
+* RF1-D — ONE canonical derivation `reviewRequiredTarget(t)`: state `reviewRequired` AND `result.revision === t.revision` AND
+  `result.outcome === "compile-error"` AND `result.reviewRequired === true`. Every projection uses it; a corrupt / stale combination is
+  withheld as still processing and marked `incomplete` for the teacher — never a fabricated zero (MV27, MV28).
 * No `automaticScore: 0` is stored next to `reviewRequired` (PED7) — the stored result cannot be misread as a zero later.
 * `holdForReview` keeps the same grade shape the submission plan wrote (`score 0, manualReview true`): the rebuild counts
   the full question marks as **awaiting the teacher**, exactly like a manual coding question — never as an awarded zero.
@@ -117,8 +137,17 @@ rebuildAttemptGrades(attempt);                   // manualReviewMarks += marks, 
 
 Server-derived aggregate `studentCodingGradingStatus` (ONE value per attempt, projected as `autoGradingStatus` by
 `student-submission.js` and `student-dashboard.js`): precedence **retrying > processing > queued > delayed > reviewRequired > complete**;
-a target with `result.reviewRequired === true` counts as review-required until a teacher override exists for it
-(PED10, aggregation tests). `autoGradingPending` stays `false` (the automatic part is done).
+a target in state `reviewRequired` (canonical helper) counts as review-required until a teacher override exists for it (PED10,
+aggregation tests). The modern `autoGradingPending(attempt)` is `false` (the automatic part is done).
+
+**Review Fix 1 — the PUBLIC legacy field is a score-withhold compatibility bit.** A cached pre-C2 (B1) client does not know the word
+`reviewRequired`: its `codingGradingStatusOf` returns `undefined` and `scoreWithheld` falls back to `autoGradingPending`. Before RF1 the
+new server sent that boolean as absent, so an open B1 browser rendered the provisional `0 / 30`. Now ONE helper,
+`legacyAutoGradingWithhold(attempt) = autoGradingPending(attempt) || studentCodingGradingStatus(attempt) === "reviewRequired"`, feeds
+BOTH `student-submission.js` and `student-dashboard.js`: the payload is `{ autoGradingStatus: "reviewRequired", autoGradingPending: true }`
+(MV1). The frozen B1 resolver withholds the score from it (MV2 / MV3); the modern client keeps the teacher-review wording and never polls
+from the bit (MV4; `shouldPollCodingGrading("reviewRequired") === false`); open automatic states are unchanged (MV5); a complete real zero
+carries no bit (MV6). The field name stays historical; its purpose for older clients is score withholding — never compile diagnostics.
 
 | Surface | `reviewRequired` | Text |
 |---|---|---|
@@ -147,9 +176,11 @@ read-only mode:
 
 Below the radios: **"SmartAssess لا يقرر تلقائيًا إن كان الخطأ بسيطًا أو يستحق خصمًا معينًا؛ المعلم يحدد العلامة."** and the
 scope note "تنطبق هذه السياسة فقط عندما يُبلغ محرك التنفيذ عن فشل حقيقي في تجميع الكود (حاليًا اللغات المُجمَّعة مثل Java وC#). أخطاء
-التشغيل والمخرجات غير المطابقة تُحتسب حسب سياسة احتساب العلامة كالمعتاد." A legacy node (no field) shows **zero** checked;
-choosing manual review writes ONLY `compileErrorPolicy` (every other key field preserved); switching back writes `"zero"`
-explicitly (PED33 / PED33b / PED33c).
+التشغيل والمخرجات غير المطابقة تُحتسب حسب سياسة احتساب العلامة كالمعتاد." A legacy coding@1 node (no field) shows **zero** checked and the note "اختيار المراجعة اليدوية يرقّي هذا السؤال إلى الإصدار الثاني من
+سؤال البرمجة (coding@2) مع حفظ كل إعداداته؛ الأسئلة المنشورة سابقًا لا تتغير."; choosing manual review writes `questionTypeVersion: 2` **and**
+`compileErrorPolicy: "manualReview"` in ONE change (the EXPLICIT upgrade, every other key field preserved — MV8-UI); clicking the already
+checked "zero" is a no-op (no silent rewrite); a coding@2 node round-trips both values at version 2 and never downgrades (MV10-UI); a
+coding@2 node without a policy shows nothing checked and the canonical validator's message (MV12-UI). PED33 / PED33b / PED33c still hold.
 
 ## 7. Fail-first evidence (new suites on the untouched baseline `d2ae703`)
 
@@ -158,7 +189,11 @@ explicitly (PED33 / PED33b / PED33c).
 | `api/tests/coding-17f-c2-compile-review.test.js` (30) | **18 failed / 12 passed** — the 12 passing are the compatibility pins: PED1 legacy zero, PED22 explicit zero, PED28 legacy fingerprint, PED29 in-flight key, PED34 preview bound, PED31/32 student privacy, unchanged outcomes PED20 / PED21 / PED23 / PED24 / PED25, legacy boolean false | 30 / 30 |
 | `src/coding/compileReview.17f-c2.test.tsx` (13) | **11 failed / 2 passed** — the 2 passing are pins (`halfCredit` is undefined; a complete final score renders) | 13 / 13 |
 
-Records: scratchpad `c2-fail-first-api.txt`, `c2-fail-first-ui.txt` (re-recorded with the final harness).
+| RF1 `api/tests/coding-17f-c2-rf1-mixed-version.test.js` (28, on PR head `bd4a938`) | **24 failed / 4 passed** — the 4 passing are pins: MV6 (real zero shows), MV7/MV16 (coding@1 fingerprint), MV13 (frozen pre-C2 version gate), MV14 (V1 registries) | 28 / 28 |
+| RF1 `src/coding/compileReview.17f-c2-rf1.test.tsx` (12, on `bd4a938`) | **5 failed / 7 passed** — the 7 passing are resolver / modern-client pins fed the RF1 payload directly (MV2–MV6 frontend) and MV14; the server-side defect is MV1 (API) | 12 / 12 |
+
+Records: scratchpad `c2-fail-first-api.txt`, `c2-fail-first-ui.txt`, `rf1/fail-first-api.txt`, `rf1/fail-first-ui.txt`. The "old server" / "old
+client" of the MV proofs are FROZEN verbatim copies of the pre-C2 functions (`api/tests/fixtures/pre-c2-status.js`, header names the SHA).
 
 ## 8. Tests added / changed
 
@@ -190,6 +225,13 @@ Records: scratchpad `c2-fail-first-api.txt`, `c2-fail-first-ui.txt` (re-recorded
 | M13 | headline not withheld for `reviewRequired` (fake `0 / 30`) | UI 4 (PED11, PED14, PED35, card) |
 | M14 | editor writes the wrong key field | UI 2 (PED33, PED33b) |
 | M15 | teacher override no longer resolves the student's `reviewRequired` | API 3 (PED15, PED18, override) |
+| M16 (RF1) | public projection omits the legacy withhold bit for reviewRequired | API 6 (MV1–MV4, MV24, PED10) |
+| M17 (RF1) | coding@1 accepts `manualReview` (validator + resolver) | API 3 (MV8, PED2, PED26) · UI 1 (MV8/MV12) |
+| M18 (RF1) | new coding question stays at version 1 (catalog not bumped) | API 44 (MV9, MV10, MV11, MV15 …) · UI 5 (MV9, MV15, MV8/MV12, MV10-UI, MV12-UI) |
+| M19 (RF1) | coding@2 missing policy silently resolves to zero | API 3 (MV12, PED2, PED26) · UI 2 (MV8/MV12, MV12-UI) |
+| M20 (RF1) | review-required target stored as an ordinary `complete` target | API 22 (MV18, MV19, MV20, MV21, MV1–MV4, MV11 …) |
+| M21 (RF1) | automatic recovery treats reviewRequired as retryable / open | API 1 (MV22) |
+| M22 (RF1) | canonical derivation trusts the state alone (no current revision / outcome / flag) — the "legacy status compatibility" of a stored review target is the stored STATE, so MV19 / MV20 are killed by M20 above | API 2 (MV27, MV28) |
 
 ## 10. Validation (this branch)
 
@@ -223,13 +265,47 @@ not required; the Runner's `compile.status` contract is consumed as-is).
 * The teacher must act for the attempt to become final; the student sees "بانتظار مراجعة المعلم" until then (the same
   state as any manual question).
 
-## 13. Rollback
+## 13. Rollback (rewritten in Review Fix 1 — every claim below is a tested proof)
 
-Revert the single PR commit (or the merge). Effects on stored data, both safe:
-* a question stored with `compileErrorPolicy: "manualReview"` is simply ignored by the pre-C2 code (`answer` has no
-  unknown-key rule; `codingCompileErrorPolicy` disappears) ⇒ it behaves as `zero` again, its fingerprint reverts to the
-  legacy formula, so a job created under C2 for such a question is rejected as stale by the pre-C2 callback — a teacher
-  regrade re-dispatches it;
-* a result stored with `reviewRequired: true` (no `automaticScore`) keeps `grade.manualReview = true` ⇒ the question
-  stays in teacher review; the pre-C2 evidence projection reads `automaticScore: null` without `incomplete`.
-No database migration, no Azure action, no Runner change is needed in either direction.
+Revert the PR (or its merge). What a PRE-C2 binary (main `d2ae703`) then does with data written by C2:
+
+| Stored data | Pre-C2 server behaviour | Pre-C2 client behaviour | Proof |
+|---|---|---|---|
+| coding@1 question (absent / `"zero"`) | unchanged historical contract — same validation, fingerprint, grading key, compile error = automatic 0 | unchanged | PED1, PED22, PED28, PED29, MV7 |
+| coding@2 question (`"zero"` or `"manualReview"`) | **refused, fail closed**: `effectiveQuestionTypeVersion("coding", 2)` is `undefined` → `QUESTION_INVALID` (a retryable technical target, never a score; recovery exhausts to `delayed`), `QUESTION_UNSUPPORTED` on regrade, `unsupported` teacher evidence, `UNSUPPORTED_QUESTION_TYPE_VERSION` in finalization | no authoring editor / no student renderer (`StudentUnsupported`) | MV13 (frozen gate), COD3 / COD35 / TE21 / AUTH12 pattern |
+| target in state `reviewRequired` (+ its result) | an unknown NON-complete state: `autoGradingPending = true`, `studentCodingGradingStatus = "processing"` (generic, withheld), not an ACTIVE state → the recovery sweep and bulk retry never redispatch it, `codingGradingStatus` counts it as pending for the teacher | `autoGradingPending: true` ⇒ the B1 headline withholds the score (`— / N`, generic "automatic grading" wording) | MV19, MV20, MV20b (frozen pre-C2 functions) |
+| grade with `manualReview: true` | the rebuild keeps the question in teacher review (`manualReviewMarks`, `pendingReview`) | provisional mark label | PED5–PED7 |
+
+**Invariant**: no `manualReview` question is ever silently converted into an academic zero by a rollback — the coding@2 refusal and the
+non-complete target state are two independent boundaries. **Fail-safe degradation that IS accepted**: after a rollback the old UI shows
+generic pending wording for a review-required result, and a coding@2 question cannot be rendered or graded by the old binary until the
+new one is restored (the teacher's manual override path still works). **Remaining deployment limitation**: the frontend and the API are
+deployed together by the Static Web App; a browser tab cached on the pre-C2 bundle keeps working against the new API (RF1-A), but a
+pre-C2 bundle cannot author or render a coding@2 question — a teacher who authors coding@2 questions while a student still has the old
+bundle open sees `StudentUnsupported` on that tab until reload. No database migration, no Azure action, no Runner change is needed in
+either direction.
+
+## 14. Independent Review Fix 1 (same branch, one normal commit on top of `bd4a938`)
+
+Review 1 found two mixed-version / rollback blockers in `bd4a938`:
+
+1. **RF1-A — cached old-client fake zero.** C2 sent `autoGradingStatus: "reviewRequired"` with `autoGradingPending` absent; the B1 client
+   (unknown status → fallback to the boolean) rendered `0 / 30`. Fix: `legacyAutoGradingWithhold` (§5), ONE helper for both student
+   endpoints. Modern client unchanged (no polling from the bit).
+2. **RF1-B — `manualReview` inside coding@1.** A pre-C2 server accepted the question and graded the compile error as 0 (silent
+   reinterpretation; the old §13 claimed rollback safety wrongly). Fix: `coding@2` through the existing versioned catalog (§2); coding@1 keeps
+   the historical contract and refuses `manualReview`; the Builder upgrades explicitly (§6); all registries ship both versions.
+3. **RF1-C — stored result under an old server.** C2 overloaded `state: "complete"`, which the pre-C2 status logic read as a decided result
+   (score exposed). Fix: the `reviewRequired` terminal target state (§3) — unknown and non-complete to the old binary (withheld, not
+   redispatched), terminal to the new one.
+4. **RF1-D — canonical derivation** `reviewRequiredTarget` (§3) instead of trusting `result.reviewRequired` alone.
+5. **RF1-E — rollback documentation** rewritten as tested claims (§13).
+
+Fail-first for RF1 (§7): API MV1–MV28 24 failed / 4 pins passed on `bd4a938`; UI 5 failed / 7 pins passed. Mutations M16–M22 (§9) all
+killed, 9 files restored byte-for-byte. Pins moved by the version boundary (recorded, never rewritten "to fit"): the C2 suite's
+`policyQ("manualReview")` is a coding@2 question, PED3 / PED19 / the aggregation fixture read the `reviewRequired` state, PED10 asserts the
+legacy bit, PED26 is version-aware; 17A / 17E-A fixtures are explicit coding@1 nodes while factory / palette / type-change pins expect
+coding@2; "unsupported version" pins (17A, 17E-A COD3 / COD35, 17E-D TE21 / AUTH12, 17B A7, 17A RF bind) use coding@3; the 16A catalog
+pin allows the coding row's current version 2. Everything the brief kept (no AI mark, no fixed deduction, structural compile verdict only,
+Python unchanged, proportional / allOrNothing, no-answer 0, technical retryable, secrecy, bounded preview, override authority, student
+wording, no modern polling, 125 KB budget, lazy Monaco) is unchanged and re-validated.

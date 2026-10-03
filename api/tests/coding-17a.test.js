@@ -214,7 +214,7 @@ describe("RF — code answers are bound to the published coding question (langua
     codingQuestion({ examQuestionId: "c1", coding: BOUND_CFG }),
     { examQuestionId: "t1", presentationType: "shortAnswer", text: "اشرح", marks: 2 },
     { examQuestionId: "cq", presentationType: "compound", text: "مركّب", marks: 4, parts: [{ id: "p1", type: "shortAnswer", text: "أ", marks: 2 }, { id: "p2", type: "shortAnswer", text: "ب", marks: 2 }] },
-    codingQuestion({ examQuestionId: "c2", questionTypeVersion: 2, coding: BOUND_CFG }),
+    codingQuestion({ examQuestionId: "c2", questionTypeVersion: 3, coding: BOUND_CFG }),   // 17F-C2 RF1: coding@2 is supported; coding@3 is the unsupported version
     codingQuestion({ examQuestionId: "c3", coding: { ...BOUND_CFG, allowedLanguages: ["cobol"], defaultLanguage: "cobol" } })
   ] }] });
   it("bindCodeAnswerToQuestion (shared, pure): allowed language + within the question's limit → kept; otherwise a precise refusal", () => {
@@ -227,7 +227,8 @@ describe("RF — code answers are bound to the published coding question (langua
     expect(bindCodeAnswerToQuestion(code("ب".repeat(1025)), q)).toEqual({ ok: false, code: "CODE_SOURCE_TOO_LARGE" });   // 2050 UTF-8 bytes
     expect(bindCodeAnswerToQuestion(code("x"), { examQuestionId: "t1", presentationType: "shortAnswer" })).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
     expect(bindCodeAnswerToQuestion(code("x"), undefined)).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
-    expect(bindCodeAnswerToQuestion(code("x"), codingQuestion({ questionTypeVersion: 2 }))).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
+    expect(bindCodeAnswerToQuestion(code("x"), codingQuestion({ questionTypeVersion: 3 }))).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });   // 17F-C2 RF1: coding@2 binds; coding@3 does not
+    expect(bindCodeAnswerToQuestion(code("x"), codingQuestion({ questionTypeVersion: 2 })).ok).toBe(true);
     expect(bindCodeAnswerToQuestion(code("x", { language: "javascript" }), q)).toEqual({ ok: false, code: "CODE_ANSWER_INVALID" });
   });
   it("normalizeDraftAnswers(answers, exam) applies the binding to every code answer and leaves other answers untouched", () => {

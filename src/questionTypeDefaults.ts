@@ -39,9 +39,17 @@ registerTypeDefaults("simulation", 1, () => { /* identity only: presentationType
 // Phase 17A — a new coding question: one allowed language, empty starter code / samples, bounded default limits; the PRIVATE key
 // (hidden tests, comparator, reference solutions) lives under `answer`. Literal on purpose (initial graph): parity-tested
 // against defaultCodingConfig() / defaultCodingAnswerKey() in src/codingQuestion.ts.
+const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] });
+// Phase 17A — coding@1: the HISTORICAL private key shape (no compile-error policy field: a compile error is an automatic 0).
+// A stored coding@1 node without an answer key is seeded with exactly this shape — never with coding@2 semantics.
 registerTypeDefaults("coding", 1, ensure => {
-  ensure("coding", { allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] });
-  // Phase 17F-C2 — a NEW coding question routes a compile error to teacher review (new-authoring default; absent = legacy "zero")
+  ensure("coding", CODING_DEFAULT_CONFIG());
+  ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+});
+// Phase 17F-C2 (Review Fix 1) — coding@2: the NEW-AUTHORING version. A new coding question routes a compile error to teacher review
+// (`compileErrorPolicy: "manualReview"`, explicit — coding@2 requires the policy to be stated).
+registerTypeDefaults("coding", 2, ensure => {
+  ensure("coding", CODING_DEFAULT_CONFIG());
   ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
 registerTypeDefaults("categorization", 1, (ensure, newId) => {

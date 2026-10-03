@@ -133,13 +133,13 @@ describe("17F-C2 PED2 / PED33 — the Builder: new-authoring default, legacy res
   const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
   const CFG = { allowedLanguages: ["java"], defaultLanguage: "java", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] };
   const KEY = { gradingMode: "hiddenTests", comparator: "trimTrailingWhitespace", hiddenTests: [{ id: "hid-1", input: "1 2\n", expectedOutput: "3\n", weight: 1 }], referenceSolutions: {} };
-  const node = (answer: R) => ({ examQuestionId: "c1", presentationType: "coding", questionTypeVersion: 1, text: "س", marks: 10, coding: clone(CFG), answer });
+  const node = (answer: R, version = 1) => ({ examQuestionId: "c1", presentationType: "coding", questionTypeVersion: version, text: "س", marks: 10, coding: clone(CFG), answer });
   const group = () => screen.getByRole("radiogroup", { name: "عند فشل تجميع الكود" });
   const radio = (label: string) => screen.getByRole("radio", { name: label }) as HTMLInputElement;
   it("PED2 the canonical model: CODING_COMPILE_ERROR_POLICIES, resolver (absent ⇒ zero), NEW default key ⇒ manualReview; a brand-new coding node carries it", () => {
     expect(X.CODING_COMPILE_ERROR_POLICIES).toEqual(["zero", "manualReview"]);
     expect(X.codingCompileErrorPolicy({})).toBe("zero");
-    expect(X.codingCompileErrorPolicy({ compileErrorPolicy: "manualReview" })).toBe("manualReview");
+    expect(X.codingCompileErrorPolicy({ compileErrorPolicy: "manualReview" }, 2)).toBe("manualReview");   // RF1: manualReview is a coding@2 semantic
     expect(X.defaultCodingAnswerKey().compileErrorPolicy).toBe("manualReview");
     const q = newQuestion("coding" as never, { examQuestionId: "n1", text: "س", marks: 5 }) as unknown as Record<string, any>;
     expect(q.answer.compileErrorPolicy).toBe("manualReview");
@@ -162,12 +162,12 @@ describe("17F-C2 PED2 / PED33 — the Builder: new-authoring default, legacy res
   });
   it("PED33b a stored 'manualReview' round-trips (checked on load); switching back writes 'zero' explicitly; disabled mode disables both radios", () => {
     const onChange = vi.fn();
-    render(<CodingQuestionEditor node={node({ ...clone(KEY), compileErrorPolicy: "manualReview" }) as never} onChange={onChange} disabled={false} />);
+    render(<CodingQuestionEditor node={node({ ...clone(KEY), compileErrorPolicy: "manualReview" }, 2) as never} onChange={onChange} disabled={false} />);   // RF1: a stored manualReview lives on a coding@2 node
     expect(radio("إرسال للمراجعة اليدوية").checked).toBe(true);
     fireEvent.click(radio("احتساب صفر تلقائيًا"));
     expect((onChange.mock.calls[0][0] as { answer: Record<string, unknown> }).answer.compileErrorPolicy).toBe("zero");
     cleanup();
-    render(<CodingQuestionEditor node={node({ ...clone(KEY), compileErrorPolicy: "manualReview" }) as never} onChange={vi.fn()} disabled />);
+    render(<CodingQuestionEditor node={node({ ...clone(KEY), compileErrorPolicy: "manualReview" }, 2) as never} onChange={vi.fn()} disabled />);
     expect(radio("إرسال للمراجعة اليدوية").disabled).toBe(true); expect(radio("احتساب صفر تلقائيًا").disabled).toBe(true);
   });
   it("PED33c keyboard: the radios are real inputs in one named group (arrow-key navigable by the browser), each with a description", () => {

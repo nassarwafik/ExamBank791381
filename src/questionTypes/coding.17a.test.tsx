@@ -132,9 +132,9 @@ describe("C5 — CodingEditor: lazy, dependency-free, accessible, LTR", () => {
 });
 
 describe("Student response — registered renderer, starter code, language selection, samples, reset, run gating", () => {
-  it("coding@1 has a lazy authoring editor and student renderer (no V2); the card renders the coding response for the sanitized question", async () => {
-    expect(resolveAuthoringEditor("coding", 1)).toBeTruthy(); expect(resolveAuthoringEditor("coding", 2)).toBeUndefined();
-    expect(resolveStudentRenderer("coding", 1)?.label).toBe("برمجة / كتابة كود"); expect(resolveStudentRenderer("coding", 2)).toBeUndefined();
+  it("coding@1 has a lazy authoring editor and student renderer (coding@2 too since 17F-C2 RF1; no V3); the card renders the coding response for the sanitized question", async () => {
+    expect(resolveAuthoringEditor("coding", 1)).toBeTruthy(); expect(resolveAuthoringEditor("coding", 3)).toBeUndefined();
+    expect(resolveStudentRenderer("coding", 1)?.label).toBe("برمجة / كتابة كود"); expect(resolveStudentRenderer("coding", 3)).toBeUndefined();
     render(<StudentHarness q={studentQ()} />);
     expect(await screen.findByTestId("coding-response", {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.queryByTestId("iex-unsupported")).toBeNull();
@@ -304,7 +304,7 @@ describe("Teacher authoring panel inside the REAL Builder", () => {
     expect(card.textContent).toContain("برمجة / كتابة كود"); expect(card.textContent).toContain("تصحيح يدوي حاليًا"); expect(card.textContent).toContain("إجابة برمجية");
     fireEvent.click(card); await tick(40);
     const q = hist().present!.sections[0].questions[1] as unknown as Record<string, unknown>;
-    expect(q.presentationType).toBe("coding"); expect(q.questionTypeVersion).toBe(1);
+    expect(q.presentationType).toBe("coding"); expect(q.questionTypeVersion).toBe(2);   // 17F-C2 RF1: new authoring = coding@2
     expect(await screen.findByTestId("qt-editor-coding", {}, { timeout: 3000 })).toBeTruthy();
   });
   it("factual inspector + teacher help: type, version, current grading = manual review, languages; the honest 17A explanation", async () => {

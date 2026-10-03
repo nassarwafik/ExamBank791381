@@ -55,7 +55,9 @@ const CSHARP_SOURCE = "using System;\nclass Program { static void Main() { int x
 const CSC_STDERR = "Program.cs(2,47): error CS1002: ; expected\n";
 const ANSWERS = (source = JAVA_MISSING_SEMICOLON, language = "java") => ({ auto1: F.code(source, language), sa1: { kind: "text", value: "x" } });
 const PY = "a,b=map(int,input().split());print('SUM='+str(a+b))\n";
-const policyQ = (compileErrorPolicy, over = {}) => F.autoQ({ answer: { gradingMode: "hiddenTests", comparator: "trimTrailingWhitespace", hiddenTests: JSON.parse(JSON.stringify(F.HIDDEN)), referenceSolutions: { python: F.CANARY.reference }, ...(compileErrorPolicy === undefined ? {} : { compileErrorPolicy }), ...over } });
+// Review Fix 1 — "manualReview" is a coding@2 semantic: a question carrying it is authored at version 2; absent / "zero" / an unknown
+// value stay on the historical coding@1 node (an unknown value must fail closed on BOTH versions — PED26 covers coding@2 too).
+const policyQ = (compileErrorPolicy, over = {}) => F.autoQ({ questionTypeVersion: compileErrorPolicy === "manualReview" ? 2 : 1, answer: { gradingMode: "hiddenTests", comparator: "trimTrailingWhitespace", hiddenTests: JSON.parse(JSON.stringify(F.HIDDEN)), referenceSolutions: { python: F.CANARY.reference }, ...(compileErrorPolicy === undefined ? {} : { compileErrorPolicy }), ...over } });
 const seeded = (compileErrorPolicy, over) => harness({ ctx: F.seed({ a: F.assignment({}, { auto: policyQ(compileErrorPolicy, over) }) }) });
 const compileErrorCallback = (job, stderr = JAVAC_STDERR) => ({ jobId: job.jobId, outcome: "completed", compile: { status: "compile-error", stderr }, cases: [] });
 const compiledCallback = (job, outputs) => ({ ...F.callbackBody(job, outputs), compile: { status: "compiled", durationMs: 900 } });
@@ -113,17 +115,23 @@ describe("17F-C2 PED2 / PED26 / PED27 / PED30 — the policy model: one shared a
     expect(sq().codingCompileErrorPolicy({ compileErrorPolicy: undefined })).toBe("zero");
     expect(sq().codingCompileErrorPolicy(null)).toBe("zero");
     expect(sq().codingCompileErrorPolicy({ compileErrorPolicy: "zero" })).toBe("zero");
-    expect(sq().codingCompileErrorPolicy({ compileErrorPolicy: "manualReview" })).toBe("manualReview");
+    expect(sq().codingCompileErrorPolicy({ compileErrorPolicy: "manualReview" }, 2)).toBe("manualReview");   // RF1: manualReview is coding@2
+    expect(sq().codingCompileErrorPolicy({ compileErrorPolicy: "manualReview" }, 1)).toBeUndefined();        // RF1: never a coding@1 semantic
     // an unknown value is NOT silently resolved to either policy by the resolver's callers: validation refuses it (PED26)
     expect(sq().codingCompileErrorPolicy({ compileErrorPolicy: "halfCredit" })).not.toBe("manualReview");
+    expect(sq().codingCompileErrorPolicy({ compileErrorPolicy: "halfCredit" }, 2)).toBeUndefined();
   });
-  it("PED26 validation: undefined / 'zero' / 'manualReview' are valid; every other explicit value blocks finalization (never normalized)", () => {
-    const codes = answerOver => sq().validateCodingQuestion({ ...policyQ(undefined), answer: { ...policyQ(undefined).answer, ...answerOver } }).map(i => i.code);
-    expect(codes({})).toEqual([]);
-    expect(codes({ compileErrorPolicy: "zero" })).toEqual([]);
-    expect(codes({ compileErrorPolicy: "manualReview" })).toEqual([]);
+  it("PED26 validation (RF1, versioned): coding@1 — undefined / 'zero' valid, 'manualReview' needs the explicit coding@2 upgrade; coding@2 — 'zero' / 'manualReview' valid, absent fails; every other explicit value blocks finalization on both (never normalized)", () => {
+    const codes = (version, answerOver) => sq().validateCodingQuestion({ ...policyQ(undefined), questionTypeVersion: version, answer: { ...policyQ(undefined).answer, ...answerOver } }).map(i => i.code);
+    expect(codes(1, {})).toEqual([]);
+    expect(codes(1, { compileErrorPolicy: "zero" })).toEqual([]);
+    expect(codes(1, { compileErrorPolicy: "manualReview" })).toEqual(["CODING_COMPILE_ERROR_POLICY_REQUIRES_V2"]);
+    expect(codes(2, { compileErrorPolicy: "zero" })).toEqual([]);
+    expect(codes(2, { compileErrorPolicy: "manualReview" })).toEqual([]);
+    expect(codes(2, {})).toEqual(["CODING_COMPILE_ERROR_POLICY_REQUIRED"]);
     for (const bad of ["half", "autoPartial", "ai", "halfCredit", "", null, 0, 1, true, {}, [], ["zero"], "ZERO", "manualreview"]) {
-      expect(codes({ compileErrorPolicy: bad }), JSON.stringify(bad)).toContain("CODING_COMPILE_ERROR_POLICY_UNKNOWN");
+      expect(codes(1, { compileErrorPolicy: bad }), JSON.stringify(bad)).toContain("CODING_COMPILE_ERROR_POLICY_UNKNOWN");
+      expect(codes(2, { compileErrorPolicy: bad }), JSON.stringify(bad)).toContain("CODING_COMPILE_ERROR_POLICY_UNKNOWN");
     }
   });
   it("PED26b the server grading authority fails CLOSED on an unknown policy: not gradeable, no zero committed, no runner call", async () => {
@@ -153,10 +161,10 @@ describe("17F-C2 PED3–PED10 — manualReview policy: a compile error is COMPLE
     expect(r.status).toBe(200); expect(r.jsonBody).toMatchObject({ ok: true, applied: true, state: "complete" });
     return { h, job };
   }
-  it("PED3 / PED4 the target is complete (NOT retryable, NOT technical) with outcome compile-error + reviewRequired; the grade stays manualReview = true and no automatic score is stored", async () => {
+  it("PED3 / PED4 the target is TERMINAL in its own state reviewRequired (RF1-C — NOT retryable, NOT technical, never an overloaded 'complete') with outcome compile-error + reviewRequired; the grade stays manualReview = true and no automatic score is stored", async () => {
     const { h } = await reviewRequired();
     const t = h.target();
-    expect(t.state).toBe("complete");
+    expect(t.state).toBe("reviewRequired");
     expect(t.technicalCode).toBeUndefined();
     expect(t.result).toMatchObject({ outcome: "compile-error", reviewRequired: true, revision: 1, maxMarks: 10, testCount: 3, passedCount: 0, passedWeight: 0, totalWeight: 6 });
     expect(t.result.automaticScore).toBeUndefined();                                      // PED7: no misleading automaticScore: 0
@@ -192,13 +200,13 @@ describe("17F-C2 PED3–PED10 — manualReview policy: a compile error is COMPLE
     expect(ev.compilePreview).not.toContain("TAIL-CANARY-17FC2");
     expect(JSON.stringify(h.doc()).length).toBeLessThan(huge.length);
   });
-  it("PED10 the student-safe status is 'reviewRequired' (server-derived), on the result and on the dashboard; the legacy boolean is false", async () => {
+  it("PED10 the student-safe status is 'reviewRequired' (server-derived), on the result and on the dashboard; the modern pending boolean is false while the PUBLIC legacy field carries the RF1 score-withhold bit", async () => {
     const { h } = await reviewRequired();
     expect(official().studentCodingGradingStatus(h.attempt())).toBe("reviewRequired");
     expect(official().autoGradingPending(h.attempt())).toBe(false);
     const s = await h.studentGet();
     expect(s.jsonBody.state.latestResult.autoGradingStatus).toBe("reviewRequired");
-    expect(s.jsonBody.state.latestResult.autoGradingPending).toBeUndefined();
+    expect(s.jsonBody.state.latestResult.autoGradingPending).toBe(true);   // RF1-A: a cached pre-C2 client must still withhold the score
     const d = await h.dashboard();
     expect(d.status).toBe(200);
     const item = d.jsonBody.assignments.find(a => a.assignmentId === F.AID);
@@ -276,7 +284,7 @@ describe("17F-C2 PED15–PED19 — the EXISTING teacher override is the only mar
     expect(r.status).toBe(200); expect(r.jsonBody.revision).toBe(2);
     const job2 = h.jobs()[h.jobs().length - 1];
     expect((await h.callback(compileErrorCallback(job2, "<string>: compile-error-canary"))).status).toBe(200);
-    expect(h.target()).toMatchObject({ state: "complete", revision: 2, result: expect.objectContaining({ revision: 2, outcome: "compile-error", reviewRequired: true }) });
+    expect(h.target()).toMatchObject({ state: "reviewRequired", revision: 2, result: expect.objectContaining({ revision: 2, outcome: "compile-error", reviewRequired: true }) });
     expect(h.grade()).toMatchObject({ manualReview: true, score: 0 });
     expect(h.attempt()).toMatchObject({ finalized: false, manualReviewMarks: 10 });
     const ev = await h.evidence();
@@ -357,7 +365,7 @@ describe("17F-C2 PED20–PED25 — every other outcome is unchanged under the ma
 
 describe("17F-C2 — studentCodingGradingStatus aggregation with reviewRequired", () => {
   const T = (state, over = {}) => ({ mode: "hiddenTests", state, revision: 1, jobId: "cg_x", gradingKey: "k", answerHash: "a", questionFingerprint: "f", ...over });
-  const RR = T("complete", { result: { revision: 1, outcome: "compile-error", reviewRequired: true } });
+  const RR = T("reviewRequired", { result: { revision: 1, outcome: "compile-error", reviewRequired: true } });   // RF1-C: its own terminal state
   const DONE = T("complete", { result: { revision: 1, outcome: "graded", automaticScore: 5 } });
   const att = (targets, overrides = {}) => ({ attemptNumber: 1, questionGrades: Object.keys(targets).map(q => ({ questionId: q, score: 0, maxMarks: 10, manualReview: true })), manualOverrides: overrides, codingGrading: { version: 1, targets } });
   const s = a => official().studentCodingGradingStatus(a);
