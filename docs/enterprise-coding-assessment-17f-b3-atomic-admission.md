@@ -3,6 +3,7 @@
 Baseline `10b7e78507dc1d63d9ccf105d0a20dfa30a76b9a` (main after PR #248). Runner production code changed:
 `runner/gateway/official.js` only. No Runner protocol, callback, HMAC, revision format, grading, sandbox or Docker change.
 **Not deployed** to the live Azure Runner VM in this window (no systemd / environment / image / secret / Azure CLI change).
+Section 11 documents Independent Review Fix 1 (the durable target revision authority).
 
 ## 1. B10-F1 — root cause
 
@@ -38,9 +39,10 @@ withAdmission(() => withJob(jobId, async () => {
   truncated index?             → busy "journal-truncated"
   target revision authority    → stale / conflict
   LIVE ≥ maxPending?           → busy "max-pending"
-  records ≥ maxRecords?        → maintain, re-check → busy "journal-full"
-  writeInput → writeTarget (+ targets.set) → writeRecord     (the commit point of "accepted")
+  records ≥ maxRecords?        → maintain({ locked }), re-check → busy "journal-full"
+  writeInput → writeRecord                                   (the commit point of "accepted"; a failure leaves NOTHING behind)
   stopped during the write?    → busy "stopped" (record durable, recovered at next start, nothing installed)
+  advanceTarget (targets.set, then writeTarget)              (review fix 1: the index follows the durable record)
   records.set → enqueue, pump() → { status: "accepted" }
 }))
 ```
@@ -54,12 +56,14 @@ under every failure path and the critical section is short (three small file wri
 
 ## 3. Lock ordering (deadlock safety)
 
-Documented order, the only one in the file: **ADMISSION → withJob(jobId) → journal**. `withAdmission` is taken at exactly one
-site (`submit`). Every other `withJob` holder — `runJob` (start / finalize), `sendCallback` (reserve / confirm), `start()`
-(interrupted / quarantine), `maintain()` (prune) — never waits for the admission lock, so no cycle exists: a submit holding
-ADMISSION may wait for `withJob(X)` held by `runJob`, which finishes without ever needing ADMISSION. `maintain({ locked })`
-called from inside `submit` prunes other ids through `withJob(other)`; those holders never wait on ADMISSION either.
-`pump()` → `runJob` → `withJob(jobId)` queues behind the submit's own per-job lock and runs after it releases (unchanged).
+Documented order, the only one in the file: **ADMISSION → withJob(jobId) → journal**. `withAdmission` is taken at three sites
+(`submit`, the periodic target pruning of `maintain()`, the target load + repair of `start()`), none of which holds a per-job
+lock when it asks for ADMISSION. Every `withJob` holder — `runJob` (start / finalize), `sendCallback` (reserve / confirm),
+`start()` (interrupted / quarantine), record pruning — never waits for the admission lock while holding its per-job lock, so no
+cycle exists: a submit holding ADMISSION may wait for `withJob(X)` held by `runJob`, which finishes without ever needing
+ADMISSION. `maintain({ locked })` called from inside `submit` runs inline (ADMISSION + withJob(locked) already held) and prunes
+other ids through `withJob(other)`; those holders never wait on ADMISSION either. `pump()` → `runJob` → `withJob(jobId)`
+queues behind the submit's own per-job lock and runs after it releases (unchanged). See §11.4 for the maintenance paths.
 
 ## 4. Invariants
 
@@ -76,7 +80,10 @@ called from inside `submit` prunes other ids through `withJob(other)`; those hol
 | "accepted" only after the durable `writeRecord` | unchanged commit point, now inside the section | ADM23 |
 | a failed admission consumes no slot, leaves no phantom, releases the authority | catch → cleanup → busy; chain continues | ADM13–ADM16 |
 | stop(): waiters re-check `stopped` after acquiring the lock; nothing is installed or scheduled after stop | re-check at entry and after the write | ADM17 |
-| target revision authority never regresses; same revision + other id → conflict; lower after higher → stale | `targets` read + `writeTarget` + `targets.set` in one section | ADM18–ADM20 |
+| target revision authority never regresses; same revision + other id → conflict; lower after higher → stale | `targets` read + the durable commit + `advanceTarget` in one section | ADM18–ADM20 |
+| a failed admission never creates target authority; the index is advanced only after the durable commit | review fix 1, §11 | TAR1–TAR5 |
+| every mutation of the index (admission, pruning, startup repair) runs under the admission authority | review fix 1, §11 | TAR6–TAR11 |
+| a restart derives the authority from the records before anything executes | review fix 1, §11 | TAR12–TAR14 |
 | truncated index refuses admissions fail-closed | unchanged, inside the section | ADM21 |
 
 `maxPending` keeps its semantic set (`received`, `running`); `executed`, `confirmed`, `callback_failed`, `superseded` are
@@ -86,8 +93,9 @@ never counted. Retention (`maintain`) semantics are unchanged.
 
 Event names relied on by B1 telemetry are unchanged: `runner.official.accepted`, `runner.official.busy`. Every busy now
 carries a bounded fixed-enum `reason`: `max-pending` (with `pending`, and `stage: "regeneration"` for the retryable case),
-`journal-full`, `journal-truncated`, `stopped`. Nothing else is logged (no source, stdin, hidden data, keys, tokens, bodies,
-identities). B1 telemetry is not implemented in this branch.
+`journal-full`, `journal-truncated`, `stopped`. Review fix 1 adds `coding.runner.target.write-failed` / `.repaired` /
+`.inconsistent` (`jobId`, `revision`, `stage` — never the opaque target reference) and `status().targetIndexLag`. Nothing else
+is logged (no source, stdin, hidden data, keys, tokens, bodies, identities). B1 telemetry is not implemented in this branch.
 
 ## 6. HTTP contract (unchanged)
 
@@ -121,3 +129,76 @@ Deployment: a Runner code release (gateway restart) after merge and independent 
 be decided separately; no configuration change is required (`RUNNER_OFFICIAL_MAX_PENDING` / `MAX_ACTIVE` keep their meaning).
 Rollback: revert the commit; the journal format, records and protocol are unchanged, so an older gateway reads the same
 journal.
+
+## 11. Independent Review Fix 1 — the durable target revision authority
+
+Review 1 of PR #250 (head `8f8cfc2`) found two production correctness blockers and one startup gap in B3's handling of the
+target index (`targets/<ref>.json` + the in-memory `targets` map: the highest revision admitted per opaque target reference).
+
+### 11.1 RF1-A — phantom target authority (root cause)
+
+`submit()` wrote the index (`writeTarget` + `targets.set`) BEFORE the durable accepted commit (`writeRecord`). When
+`writeRecord` failed, the admission answered busy and removed its input, but the index — on disk and in memory — kept pointing
+at a job that was never accepted. Every later delivery of that revision under another job id was refused with a false
+`JOB_ID_CONFLICT`, and because the phantom was durable it survived a restart (TAR1 / TAR2 / TAR3 / TAR5 fail-first on `8f8cfc2`).
+
+### 11.2 The protocol now — the record is the authority, the index follows it
+
+```
+writeInput → writeRecord (commit point, unchanged) → [stopped?] → advanceTarget: targets.set, then writeTarget → install
+```
+
+- A revision's authority is its durable record (`{ targetRef, revision, jobId }` inside it). The index is a derived, monotonic
+  cache. It is advanced ONLY after the commit, so an admission that fails before or at the commit leaves nothing behind — no
+  rollback exists because nothing was advanced (TAR1, TAR2, TAR5), and a restart cannot recover a phantom (TAR3).
+- Crash windows (audit of every interleaving, all under the admission mutex):
+  (1) after `writeInput`: an orphan input, removed by `removeOrphans` at the next start (unchanged);
+  (2) after `writeRecord`, before `writeTarget`: a durable accepted record ABOVE its index entry — the next start derives
+  the entry from the record BEFORE anything runs (§11.5, TAR12); the retried delivery is a duplicate (idempotent);
+  (3) after `writeTarget`: consistent. No window can execute a revision under a regressed or missing authority, and no window
+  creates authority for a revision that was never accepted.
+- "accepted" is still answered only after `writeRecord` resolves (ADM23); the durable state it requires is the record.
+
+### 11.3 A failed index write after the commit — explicit, never hidden
+
+The one residual failure is `writeTarget` failing AFTER the record is durable. The admission is accepted (its record is the
+authority and it is durable); memory is advanced first, so every later decision of this process is correct (same revision,
+other id → conflict; lower → stale: TAR4); the lag is counted (`dirtyTargets` → `status().targetIndexLag`), logged
+(`coding.runner.target.write-failed` with `jobId`, `revision`, `stage`), retried under the admission authority by every
+maintenance pass (`coding.runner.target.repaired`, `stage: "maintenance"`), and re-derived from the record at the next start
+(`stage: "startup"`). While an entry is lagging its records are never pruned (the index must hold the revision before the
+record may go) and the entry itself is never pruned. There is no silent optimistic path (mutation M17 is killed by TAR4 / ADM15).
+ADM15 (a `writeTarget` failure) therefore changed from "busy, nothing durable" to "accepted with an explicit, repaired lag".
+
+### 11.4 RF1-B — target pruning under the admission authority, without re-entry
+
+`maintain()` deleted index entries (`journal.deleteTarget` + `targets.delete`) outside any lock: a pass that had decided to
+prune a stale rev 8 entry could delete the entry of rev 9 admitted meanwhile — on disk and in memory (TAR6–TAR9 fail-first).
+
+Now `maintain()` is two phases. Record pruning (`pruneRecords`) runs under the per-job locks only, never holding ADMISSION
+while waiting for one. Target pruning (`pruneTargets`: the durable retry of lagging entries, then the bounded deletes) runs
+under `withAdmission`: the live references, the entries and every delete are read and performed under the same authority as
+admissions, so an entry admitted meanwhile is simply seen (TAR6, TAR7, TAR10) — `targets.delete` additionally checks the
+entry's identity as defence in depth. The path called from inside an admission transaction (`maintain({ locked })`, when
+`records.size ≥ maxRecords`) runs both phases INLINE — it never re-enters `withAdmission` (ADMISSION → maintain → ADMISSION
+would wait for itself; TAR11 bounds both paths running concurrently). No execution or callback work ever runs under the
+authority; the target phase is at most pruneBatch small unlinks per minute.
+
+### 11.5 RF1-C — startup consistency
+
+`start()` loads the index and repairs it from the records under `withAdmission`, before any job is enqueued. Only
+unambiguous states are touched: an entry is pruned legitimately only once it is older than `failedRetentionMs` and no LIVE /
+executed job references it, so a LIVE / executed record, or any record younger than that window, proves that its revision
+reached the authority — a missing or lower entry for such a record is the crash window of §11.2 and is re-derived
+(`summary.targets.repaired`, TAR12, TAR14). An entry without a record is retained history and is never deleted (TAR13); a
+record older than the window is left alone, its entry may have been pruned legitimately (TAR14); two records at one revision
+(impossible under the protocol) are reported (`coding.runner.target.inconsistent`, `summary.targets.inconsistent`), never
+"repaired" by guessing.
+
+### 11.6 Tests and mutations
+
+`runner/tests/unit/target-authority.rtest.js` — TAR1–TAR14 (fail-first on `8f8cfc2`: TAR1–TAR10, TAR12, TAR14 fail for the
+defects above, TAR13 for the new startup summary; TAR11 pins the absence of a deadlock). Mutations M13 (index advanced before
+the commit, no rollback), M14 (memory-only rollback), M15 (target pruning outside the authority), M16 (stale snapshot deleting
+a newer entry), M17 (index write failure ignored), M18 (startup repair removed) are run by a scratch script that restores
+`official.js` byte-for-byte; results in the PR.

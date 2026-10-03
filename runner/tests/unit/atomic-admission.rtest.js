@@ -265,25 +265,51 @@ test("ADM12 a slow execution does not hold the admission authority: a second job
 });
 
 // ── failure release / liveness ────────────────────────────────────────────────────────────────────────────────────────
-for (const method of ["writeInput", "writeRecord", "writeTarget"]) {
-  test(`ADM13–15 a ${method} failure returns busy, leaves no phantom record and releases the admission authority`, async () => {
+for (const method of ["writeInput", "writeRecord"]) {
+  test(`ADM13–14 a ${method} failure returns busy, leaves no phantom record and releases the admission authority`, async () => {
     const dir = tmpJournalDir(), s = holdingSandbox();
     const h = await boot(dir, { maxPending: 4, sandbox: s.sandbox });
     const f = failing(h.journal, method, 1);
-    const versioned = method === "writeTarget" ? { revision: 1, targetRef: TARGET } : {};
     const before = unhandled;
-    assert.equal((await h.q.submit(job(900, versioned))).status, "busy");
+    assert.equal((await h.q.submit(job(900))).status, "busy");
     assert.equal(f.failures(), 1);
     assert.equal(h.q.size().entries, 0);
     assert.equal(fs.readdirSync(path.join(dir, "jobs")).length, 0);
     assert.equal(fs.existsSync(path.join(dir, "inputs", job(900).jobId + ".json")), false);
-    const later = await Promise.race([h.q.submit(job(901, versioned)), sleep(1500).then(() => ({ status: "timeout" }))]);
+    const later = await Promise.race([h.q.submit(job(901)), sleep(1500).then(() => ({ status: "timeout" }))]);
     assert.equal(later.status, "accepted");                                                       // ADM16
-    assert.equal((await h.q.submit(job(900, versioned))).status, method === "writeTarget" ? "conflict" : "accepted");  // same revision, other id → conflict
+    assert.equal((await h.q.submit(job(900))).status, "accepted");
     assert.equal(unhandled, before);
     s.hold.open(); await h.q.idle(); await crash(h);
   });
 }
+
+// Review fix 1 (target authority): the target index is advanced AFTER the durable accepted commit, so a writeTarget failure can
+// no longer refuse an admission whose record is durable — it is accepted, the authority is correct in memory, the durable index
+// lags EXPLICITLY (status().targetIndexLag, logged) and is repaired by maintenance; a crash before that is repaired from the
+// record at the next start (TAR4 / TAR12). The admission authority is released either way.
+test("ADM15 a writeTarget failure (after the durable commit) is accepted with an explicit, repaired index lag; the authority holds and the admission authority is released", async () => {
+  const dir = tmpJournalDir(), s = holdingSandbox();
+  const h = await boot(dir, { maxPending: 4, sandbox: s.sandbox });
+  const f = failing(h.journal, "writeTarget", 1);
+  const versioned = { revision: 1, targetRef: TARGET };
+  const before = unhandled;
+  assert.equal((await h.q.submit(job(900, versioned))).status, "accepted");
+  assert.equal(f.failures(), 1);
+  assert.equal(h.q.size().entries, 1);
+  assert.equal(recordOf(dir, job(900).jobId).state, "received");
+  assert.equal(await h.journal.readTarget(TARGET), null);                                          // the durable index lags …
+  assert.equal(h.q.status().targetIndexLag, 1);                                                    // … visibly
+  const later = await Promise.race([h.q.submit(job(901, versioned)), sleep(1500).then(() => ({ status: "timeout" }))]);
+  assert.equal(later.status, "conflict");                                                          // ADM16: released; rev 1 is owned by 900
+  assert.equal((await h.q.submit(job(900, versioned))).status, "duplicate");
+  assert.equal((await h.q.submit(job(902))).status, "accepted");
+  await h.q.maintain();
+  assert.equal(h.q.status().targetIndexLag, 0);
+  assert.equal((await h.journal.readTarget(TARGET)).jobId, job(900).jobId);
+  assert.equal(unhandled, before);
+  s.hold.open(); await h.q.idle(); await crash(h);
+});
 
 test("ADM16 after an internal admission rejection (maintenance throws) and an injected write failure, later VALID submits on the SAME queue still succeed (no wedged admission authority)", async () => {
   const clock = (start = Date.now()) => { let t = start; const now = () => t; now.advance = ms => { t += ms; }; return now; };
