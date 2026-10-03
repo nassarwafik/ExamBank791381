@@ -362,3 +362,33 @@ updates. Real browser: C6 (attributes on the real Monaco textarea) and C7 (resto
 **Mutations** RM1 (fallback removed) · RM2 / RM2b (failed engine retried) · RM3 (model leaked on `editor.create` throw) · RM4
 (`autocomplete=off` removed) · RM5 (`spellcheck=false` removed) · RM6 (no observer: rewrites not restored) — each killed; see
 the PR for the run.
+
+---
+
+## 16. Independent Review Fix 2 — subscription tracking order and best-effort release
+
+**Defect.** `create()` registered its three Monaco listeners through ONE multi-argument `subscriptions.push(a(), b(), c())`.
+JavaScript evaluates every argument before `push` runs, so if the second registration threw, the first listener was alive
+but never stored, and `release()` could not dispose it. `release()` could also stop early if one cleanup step itself threw.
+
+**Fix.**
+- Each registration is tracked **immediately** after it succeeds — three separate `subscriptions.push(...)` calls — so a
+  failure in the N-th registration leaves exactly the N−1 previous listeners tracked and disposable.
+- `release()` is **best-effort and complete**: every step (each listener's `dispose()`, `observer.disconnect()`,
+  `editor.dispose()`, `model.dispose()`, `host.replaceChildren()`) runs inside its own `attempt()`; a throwing step is recorded
+  and the remaining steps still run; the collected cleanup errors are reported once with `console.error`, locally to the
+  editor. During a `create()` failure the **original setup error** is the one rethrown (a cleanup error never masks it); on
+  React unmount a misbehaving Monaco `dispose()` can no longer throw into the exam page. `release()` is idempotent
+  (`released` flag; `dispose()` keeps its own `disposed` flag).
+
+**Tests (fail-first: 6 failed on head `9f137ee`, then green).** Adapter suite with extended fault injection
+(`failSubscription`, `listenerDisposeThrows`, `editorDisposeThrows`): Fix2 RF2-A second registration throws → first listener,
+editor and model disposed, host empty, original error rethrown; RF2-B third registration throws → both prior listeners,
+editor and model disposed; RF2-C one listener's `dispose()` throws → remaining listeners disposed, observer disconnected,
+editor and model disposed, host emptied, `dispose()` does not throw, reported once; RF2-D `editor.dispose()` throws → model
+disposal and host cleanup still occur; RF2-D′ a cleanup error during a create failure never masks the original error; RF2-E
+idempotent with and without faults; RF2-F the normal lifecycle is unchanged (three listeners registered immediately, all
+released once, nothing reported).
+
+**Mutations** RM7 (first listener tracked only after the others register — the batched evaluation order) · RM8 (a throwing
+listener `dispose()` stops cleanup) · RM9 (a throwing `editor.dispose()` skips model cleanup) — each killed.

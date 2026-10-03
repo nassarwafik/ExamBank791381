@@ -60,16 +60,24 @@ export function createMonacoEngine(monaco: MonacoLike): EditorEngine {
       ensureTheme();
       const model = monaco.editor.createModel(o.value, o.languageMode);
       // Everything allocated after the model is tracked here so that a failure anywhere in build() releases it all before rethrowing.
-      let editor: MonacoEditorLike | undefined, observer: MutationObserver | null = null;
+      let editor: MonacoEditorLike | undefined, observer: MutationObserver | null = null, released = false;
       const subscriptions: Disposable[] = [];
+      // Review Fix 2: cleanup is BEST-EFFORT and complete — every tracked resource is attempted even when an earlier step throws,
+      // so one misbehaving Monaco dispose() can neither leak the rest nor crash the exam page on unmount. Cleanup errors are
+      // reported once, locally; during a create() failure the ORIGINAL setup error is the one rethrown. Idempotent.
       const release = () => {
-        for (const s of subscriptions.splice(0)) s.dispose();
-        observer?.disconnect();
+        if (released) return;
+        released = true;
+        const failures: unknown[] = [];
+        const attempt = (step: () => void) => { try { step(); } catch (error) { failures.push(error); } };
+        for (const s of subscriptions.splice(0)) attempt(() => s.dispose());
+        attempt(() => observer?.disconnect());
         observer = null;
-        editor?.dispose();
+        attempt(() => editor?.dispose());
         editor = undefined;
-        model.dispose();
-        host.replaceChildren();
+        attempt(() => model.dispose());
+        attempt(() => host.replaceChildren());
+        if (failures.length) console.error("[CodingEditor] releasing the editor engine reported " + failures.length + " error(s); every resource was still released best-effort.", ...failures);
       };
       try {
         return build();
@@ -103,8 +111,10 @@ export function createMonacoEngine(monaco: MonacoLike): EditorEngine {
         const update = (options: Record<string, unknown>) => { created.updateOptions(options); harden(); };
         const disarm = () => { armed = false; update({ tabFocusMode: false }); };
 
-        subscriptions.push(
-          created.onDidChangeModelContent(e => {
+        // Review Fix 2: each registration is tracked IMMEDIATELY after it succeeds (one push per listener). A single
+        // multi-argument push would evaluate every registration before storing any, so a throw in the second registration
+        // would leave the first listener alive and untracked.
+        subscriptions.push(created.onDidChangeModelContent(e => {
             if (applying || disposed) return;
             const next = model.getValue();
             if (o.accept(next)) { accepted = next; return; }
@@ -121,15 +131,14 @@ export function createMonacoEngine(monaco: MonacoLike): EditorEngine {
                 created.revealPositionInCenterIfOutsideViewport(position);
               } finally { applying = false; }
             });
-          }),
-          // Esc arms tab-focus mode (Monaco's own escape hatch, also on Ctrl+M): the NEXT Tab moves browser focus instead of
-          // indenting; any other key or leaving the editor disarms it so Tab indents again.
-          created.onKeyDown(e => {
-            if (e.keyCode === monaco.KeyCode.Escape) { armed = true; update({ tabFocusMode: true }); }
-            else if (e.keyCode !== monaco.KeyCode.Tab && armed) disarm();
-          }),
-          created.onDidBlurEditorWidget(() => { if (armed) disarm(); })
-        );
+          }));
+        // Esc arms tab-focus mode (Monaco's own escape hatch, also on Ctrl+M): the NEXT Tab moves browser focus instead of
+        // indenting; any other key or leaving the editor disarms it so Tab indents again.
+        subscriptions.push(created.onKeyDown(e => {
+          if (e.keyCode === monaco.KeyCode.Escape) { armed = true; update({ tabFocusMode: true }); }
+          else if (e.keyCode !== monaco.KeyCode.Tab && armed) disarm();
+        }));
+        subscriptions.push(created.onDidBlurEditorWidget(() => { if (armed) disarm(); }));
 
         return {
           getValue: () => model.getValue(),

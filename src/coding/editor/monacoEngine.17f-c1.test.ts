@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMonacoEngine, type MonacoLike } from "./monacoAdapter";
 import { EDITOR_ASSISTANCE_OFF, EDITOR_EDITING_FEATURES, SMARTASSESS_EDITOR_THEME } from "./editorOptions";
 import type { EditorEngineCreateOptions } from "./editorEngine";
@@ -9,7 +9,9 @@ import type { EditorEngineCreateOptions } from "./editorEngine";
 // synchronised without echo, language switching, read-only, aria, the Esc-then-Tab escape, and disposal.
 
 type Listener<T> = (e: T) => void;
-type Faults = { createEditor?: boolean; subscribe?: boolean };
+/** Fault injection: `subscribe` = every registration throws; `failSubscription` = only the N-th registration (1-based) throws;
+ *  `listenerDisposeThrows` = the N-th registered listener's dispose() throws; `editorDisposeThrows` = editor.dispose() throws. */
+type Faults = { createEditor?: boolean; subscribe?: boolean; failSubscription?: number; listenerDisposeThrows?: number; editorDisposeThrows?: boolean };
 function fakeMonaco(faults: Faults = {}) {
   const calls = { defineTheme: [] as [string, unknown][], create: [] as Record<string, unknown>[], createModel: [] as [string, string | undefined][], setModelLanguage: [] as string[], modelSetValue: [] as string[], updateOptions: [] as Record<string, unknown>[], disposed: { editor: 0, model: 0, listeners: 0 } };
   const content: Listener<{ changes: { rangeOffset: number; rangeLength: number; text: string }[] }>[] = [];
@@ -26,7 +28,15 @@ function fakeMonaco(faults: Faults = {}) {
     getLanguageId: () => model.languageId,
     dispose() { calls.disposed.model++; }
   };
-  const sub = <T,>(list: Listener<T>[]) => (cb: Listener<T>) => { if (faults.subscribe) throw new Error("fault: subscribe"); list.push(cb); return { dispose() { calls.disposed.listeners++; list.splice(list.indexOf(cb), 1); } }; };
+  let registrations = 0;
+  const sub = <T,>(list: Listener<T>[]) => (cb: Listener<T>) => {
+    registrations++;
+    const index = registrations;
+    if (faults.subscribe) throw new Error("fault: subscribe");
+    if (faults.failSubscription === index) throw new Error("fault: subscribe " + index);
+    list.push(cb);
+    return { dispose() { if (faults.listenerDisposeThrows === index) throw new Error("fault: listener dispose " + index); calls.disposed.listeners++; list.splice(list.indexOf(cb), 1); } };
+  };
   let hostEl: HTMLElement | null = null;
   const editor = {
     options: {} as Record<string, unknown>,
@@ -37,7 +47,7 @@ function fakeMonaco(faults: Faults = {}) {
     setPosition(p: { column: number }) { position = p.column - 1; }, getPosition: () => ({ lineNumber: 1, column: position + 1 }),
     revealPositionInCenterIfOutsideViewport: vi.fn(), layout: vi.fn(),
     getDomNode: () => hostEl,
-    dispose() { calls.disposed.editor++; }
+    dispose() { calls.disposed.editor++; if (faults.editorDisposeThrows) throw new Error("fault: editor dispose"); }
   };
   const monaco: MonacoLike = {
     editor: {
@@ -208,5 +218,82 @@ describe("17F-C1 Review Fix 1 — browser-level anti-assist attributes on the Mo
     const f = fakeMonaco(), h = createMonacoEngine(f.monaco).create(document.createElement("div"), opts());
     h.setReadOnly(true); h.setLabel("x"); h.setInvalid(true); h.setReadOnly(false);
     for (const [k, v] of ANTI_ASSIST) expect(f.input().getAttribute(k), k).toBe(v);
+  });
+});
+
+describe("17F-C1 Review Fix 2 — immediate subscription tracking and best-effort cleanup (RM7–RM9)", () => {
+  let errors: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => { errors = vi.spyOn(console, "error").mockImplementation(() => {}); });
+  afterEach(() => { errors.mockRestore(); });
+
+  it("Fix2 RF2-A the first listener registers and the SECOND registration throws → the first listener, the editor and the model are disposed, the host is empty, the original error is rethrown", () => {
+    const f = fakeMonaco({ failSubscription: 2 }), host = document.createElement("div");
+    expect(() => createMonacoEngine(f.monaco).create(host, opts())).toThrow("fault: subscribe 2");
+    expect(f.calls.disposed.listeners).toBe(1);
+    expect(f.listeners()).toBe(0);
+    expect(f.calls.disposed.editor).toBe(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(host.childElementCount).toBe(0);
+  });
+  it("Fix2 RF2-B the first two listeners register and the THIRD registration throws → both prior listeners, the editor and the model are disposed; original error rethrown", () => {
+    const f = fakeMonaco({ failSubscription: 3 }), host = document.createElement("div");
+    expect(() => createMonacoEngine(f.monaco).create(host, opts())).toThrow("fault: subscribe 3");
+    expect(f.calls.disposed.listeners).toBe(2);
+    expect(f.listeners()).toBe(0);
+    expect(f.calls.disposed.editor).toBe(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(host.childElementCount).toBe(0);
+  });
+  it("Fix2 RF2-C one listener's dispose() throws → the remaining listeners are still disposed, the observer disconnected, the editor and model disposed, the host emptied; dispose() itself does not throw", () => {
+    const disconnect = vi.spyOn(MutationObserver.prototype, "disconnect");
+    const f = fakeMonaco({ listenerDisposeThrows: 1 }), host = document.createElement("div");
+    const h = createMonacoEngine(f.monaco).create(host, opts());
+    expect(f.listeners()).toBe(3);
+    expect(() => h.dispose()).not.toThrow();
+    expect(f.calls.disposed.listeners).toBe(2);                                                           // the two whose dispose() works
+    expect(f.listeners()).toBe(1);                                                                        // only the throwing one stays registered in the fake
+    expect(disconnect).toHaveBeenCalled();
+    expect(f.calls.disposed.editor).toBe(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(host.childElementCount).toBe(0);
+    expect(errors).toHaveBeenCalledTimes(1);                                                             // reported once, locally
+    disconnect.mockRestore();
+  });
+  it("Fix2 RF2-D editor.dispose() throws → model disposal and host cleanup still occur; dispose() does not throw", () => {
+    const f = fakeMonaco({ editorDisposeThrows: true }), host = document.createElement("div");
+    const h = createMonacoEngine(f.monaco).create(host, opts());
+    expect(() => h.dispose()).not.toThrow();
+    expect(f.calls.disposed.editor).toBe(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(f.calls.disposed.listeners).toBe(3);
+    expect(host.childElementCount).toBe(0);
+  });
+  it("Fix2 RF2-D' during a CREATE failure a cleanup error never masks the original setup error", () => {
+    const f = fakeMonaco({ failSubscription: 2, listenerDisposeThrows: 1, editorDisposeThrows: true }), host = document.createElement("div");
+    expect(() => createMonacoEngine(f.monaco).create(host, opts())).toThrow("fault: subscribe 2");
+    expect(f.calls.disposed.editor).toBe(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(host.childElementCount).toBe(0);
+  });
+  it("Fix2 RF2-E release / dispose stays idempotent, with and without cleanup faults", () => {
+    const f = fakeMonaco({ editorDisposeThrows: true }), h = createMonacoEngine(f.monaco).create(document.createElement("div"), opts());
+    h.dispose(); h.dispose(); h.dispose();
+    expect(f.calls.disposed.editor).toBe(1);
+    expect(f.calls.disposed.model).toBe(1);
+    expect(f.calls.disposed.listeners).toBe(3);
+    const g = fakeMonaco(), k = createMonacoEngine(g.monaco).create(document.createElement("div"), opts());
+    k.dispose(); k.dispose();
+    expect(g.calls.disposed).toEqual({ editor: 1, model: 1, listeners: 3 });
+  });
+  it("Fix2 RF2-F the normal lifecycle is unchanged: three listeners registered immediately, all released once on dispose, no error reported", () => {
+    const f = fakeMonaco(), host = document.createElement("div");
+    const h = createMonacoEngine(f.monaco).create(host, opts());
+    expect(f.listeners()).toBe(3);
+    f.type("x");
+    h.dispose();
+    expect(f.calls.disposed).toEqual({ editor: 1, model: 1, listeners: 3 });
+    expect(f.listeners()).toBe(0);
+    expect(host.childElementCount).toBe(0);
+    expect(errors).not.toHaveBeenCalled();
   });
 });
