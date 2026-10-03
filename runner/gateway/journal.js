@@ -15,6 +15,7 @@
 //     results/<jobId>.json         0600  the raw-evidence callback body (bounded by the callback contract) — needed only until the
 //                                        callback is CONFIRMED; deleted then (kept while a parked callback may be re-armed)
 //     targets/<targetRef>.json     0600  { targetRef, revision, jobId } — the highest revision seen per OPAQUE target reference
+//                                        (the durable authority; the gateway's in-memory map is a bounded warm cache of it)
 //     quarantine/                  0700  corrupt records are MOVED here (never silently deleted, never executed or called back)
 //
 // Durability is only claimed for a non-ephemeral filesystem: readJournalConfig() refuses tmpfs / ramfs / overlay / squashfs and
@@ -341,17 +342,22 @@ function createJournal({ dir, limits = {}, now = () => Date.now(), bootId = read
       }
       return removed;
     },
-    /** BOUNDED listing of the target index. → [{ targetRef, revision, jobId, updatedAt }] */
+    /**
+     * BOUNDED listing of the target index: at most `maxEntries` directory entries, like scan(). → { targets: [{ targetRef,
+     * revision, jobId, updatedAt }], scanned, truncated }. `truncated` is REPORTED, never silent: the listing is only the warm
+     * cache of the gateway (an entry it did not reach is still authoritative on disk and is resolved through readTarget).
+     */
     async listTargets({ maxEntries = L.startupScanMax } = {}) {
-      const out = [];
+      const out = { targets: [], scanned: 0, truncated: false };
       const d = await fsp.opendir(sub("targets"));
       try {
         for await (const ent of d) {
-          if (out.length >= maxEntries) break;
+          if (out.scanned >= maxEntries) { out.truncated = true; break; }
+          out.scanned++;
           const m = /^(tr_[0-9a-f]{40})\.json$/.exec(ent.name);
           if (!m) continue;
           const t = await this.readTarget(m[1]);
-          if (t) out.push(t);
+          if (t) out.targets.push(t);
         }
       } finally { await d.close().catch(() => {}); }
       return out;

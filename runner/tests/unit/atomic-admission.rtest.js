@@ -369,7 +369,7 @@ test("ADM18 revisions 7 and 8 of one target arriving concurrently: the target au
   const [a, b] = await Promise.all([h.q.submit(r8), h.q.submit(r7)]);
   assert.equal(a.status, "accepted");
   assert.ok(["accepted", "stale"].includes(b.status), JSON.stringify(b));
-  const targets = await h.journal.listTargets({ maxEntries: 10 });
+  const { targets } = await h.journal.listTargets({ maxEntries: 10 });
   assert.equal(targets.length, 1);
   assert.equal(targets[0].revision, 8, "target authority regressed: " + JSON.stringify(targets[0]));
   assert.equal(targets[0].jobId, r8.jobId);
@@ -385,7 +385,7 @@ test("ADM19 revision 8 already authoritative: a later / concurrent revision 7 is
   assert.equal((await h.q.submit(job(950, { revision: 8, targetRef: TARGET }))).status, "accepted");
   const results = await Promise.all([job(951, { revision: 7, targetRef: TARGET }), job(952, { revision: 7, targetRef: TARGET })].map(j => h.q.submit(j)));
   assert.deepEqual(results.map(r => r.status), ["stale", "stale"]);
-  assert.equal((await h.journal.listTargets({ maxEntries: 10 }))[0].revision, 8);
+  assert.equal((await h.journal.listTargets({ maxEntries: 10 })).targets[0].revision, 8);
   s.hold.open(); await h.q.idle(); await crash(h);
 });
 
