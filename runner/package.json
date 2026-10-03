@@ -13,6 +13,12 @@
     "build:images": "sh scripts/build-images.sh",
     "test:docker": "npm run test:docker:security && npm run test:docker:official",
     "test:docker:security": "node --test --test-concurrency=1 --test-reporter=spec tests/docker/*.rtest.js",
-    "test:docker:official": "node --test --test-concurrency=1 --test-reporter=spec tests/docker-official/*.rtest.js"
+    "test:docker:official": "node --test --test-concurrency=1 --test-reporter=spec tests/docker-official/*.rtest.js",
+    "load": "node tests/load/cli.js",
+    "load:catalog": "node tests/load/cli.js catalog",
+    "load:qualify:local": "node tests/load/cli.js run --target=local --execute --scenario=CERT-L",
+    "test:load": "node --test --test-reporter=spec tests/unit/load-harness.rtest.js tests/unit/load-scenarios.rtest.js tests/unit/load-review-fix-1.rtest.js",
+    "test:load:mutation": "node tests/mutation/load-mutations.js",
+    "test:docker:load": "node --test --test-concurrency=1 --test-reporter=spec tests/docker-load/*.rtest.js"
   }
 }
