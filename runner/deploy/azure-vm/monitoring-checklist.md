@@ -15,7 +15,7 @@ state, for a cron / timer, a log shipper or a human.
 | Journal free space | `readiness.sh` (`journal-disk`: ≥ 1 GB and ≥ 10 %) / Azure disk metric | below → alert |
 | Docker disk free space | `readiness.sh` (`docker-disk`: ≥ 5 GB and ≥ 10 %) | below → alert (`docker image prune` of non-runner images) |
 | Worker images | `readiness.sh` (`images`, against the manifest) | FAIL → page |
-| **Telemetry health (17F-B1)** | `journalctl -u smartassess-runner -o cat --since -1h \| coding-telemetry.js --dir=… --json` → `health.state` + `health.reasons` | `saturated` → review burst size; `backlogged` → callback path; `degraded` → page |
+| **Telemetry health (17F-B1)** | `journalctl -u smartassess-runner -o cat --since -1h \| coding-telemetry.js --dir=… --recovery=/run/smartassess/recovery-freshness.json --json` → `health.state` + `health.reasons` (the `--recovery=` file is step 1 of the pipeline below; **without it the record is a diagnostic whose recovery is UNKNOWN and health is always `degraded`** — never alert on that form) | `saturated` → review burst size; `backlogged` → callback path; `degraded` → page |
 | Callback failures | `journal-status.js` ATTENTION `parked-callbacks`; telemetry `journal.counts.callback_failed`, `callbacks.failed`; `journalctl … event=="coding.runner.callback.failed"` | any → alert |
 | Owed callbacks / backlog | `journal-status.js` `executed` older than 15 min; telemetry `journal.callbackBacklog`, `journal.oldestOwedCallbackMinutes` | ATTENTION / `oldestOwedCallbackMinutes` > 15 → alert |
 | Retryable growth (busy) | telemetry `busy.official` / `busy.practice` (counts of `runner.official.busy` / `runner.execute.busy`); teacher gradebook "retrying" counts | > 0 during a pilot burst → review the ≤ 64 burst guardrail (health `saturated`) |
@@ -27,8 +27,19 @@ state, for a cron / timer, a log shipper or a human.
 
 ## Suggested pilot cadence
 - Every 5 minutes: a root cron or systemd timer runs `readiness.sh` and `journal-status.js --json` and mails on a non-zero
-  exit (operator's choice of mailer). 17F-B1: `coding-telemetry.js --json` (exit 3 when `health.state` ≠ `healthy`) can be
-  appended to the same timer; its JSON line is safe to ship to a log platform as-is.
+  exit (operator's choice of mailer).
+- 17F-B1 telemetry in the SAME timer — two steps, in this order (the second can only be `healthy` when it receives the first):
+  ```sh
+  # step 1 — recovery freshness (a host that can reach api.github.com; GITHUB_TOKEN, if needed, exported from the secret store,
+  #          never written on the command line). Writes FRESH / STALE / UNKNOWN + checkedAt; a request failure writes UNKNOWN.
+  node /opt/smartassess-runner/current/runner/deploy/azure-vm/recovery-freshness.js --repo=<owner>/<repo> --max-age-min=240 --json > /run/smartassess/recovery-freshness.json.tmp || true
+  mv -f /run/smartassess/recovery-freshness.json.tmp /run/smartassess/recovery-freshness.json
+  # step 2 — telemetry health (the Runner host, as the service user); exit 3 when health.state ≠ healthy → mail
+  journalctl -u smartassess-runner -o cat --since -1h | sudo -u smartassess-runner node /opt/smartassess-runner/current/runner/deploy/azure-vm/coding-telemetry.js --dir=/data/smartassess-runner --recovery=/run/smartassess/recovery-freshness.json --json
+  ```
+  The freshness file carries `checkedAt`; the telemetry adds the file's own age and re-applies the 240-min policy, and treats a
+  missing, invalid or > 240-min-old file as UNKNOWN (fail-closed). If the Runner VM's outbound policy does not allow api.github.com,
+  run step 1 on the operator's admin machine and copy the small JSON file. The JSON line of step 2 is safe to ship as-is.
 - Daily: `recovery-freshness.js`, `journalctl --disk-usage`, `df -h /data/smartassess-runner /var/lib/docker`.
 
 ## Recovery freshness without the API (manual)

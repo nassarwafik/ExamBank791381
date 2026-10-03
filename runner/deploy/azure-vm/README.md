@@ -325,8 +325,10 @@ Certificates are obtained and renewed automatically (ACME). HTTP is redirected t
 ```sh
 sh /opt/smartassess-runner/current/runner/deploy/azure-vm/readiness.sh          # every check PASS, liveness PASS
 sudo -u smartassess-runner node /opt/smartassess-runner/current/runner/deploy/azure-vm/journal-status.js --dir=/data/smartassess-runner
-# 17F-B1 — one bounded telemetry record (journal aggregate + last hour of gateway events + recovery freshness); exit 0 healthy / 3 otherwise
-journalctl -u smartassess-runner -o cat --since -1h | sudo -u smartassess-runner node /opt/smartassess-runner/current/runner/deploy/azure-vm/coding-telemetry.js --dir=/data/smartassess-runner
+# 17F-B1 — one bounded telemetry record (journal aggregate + last hour of gateway events). DIAGNOSTIC form: without --recovery=
+# the recovery state is UNKNOWN, so health is always "degraded" (exit 3) — read the other fields, do not alert on this exit code.
+journalctl -u smartassess-runner -o cat --since -1h | sudo -u smartassess-runner node /opt/smartassess-runner/current/runner/deploy/azure-vm/coding-telemetry.js --dir=/data/smartassess-runner   # diagnostic (recovery UNKNOWN)
+# For the alert / timer form (can be healthy) see telemetry.md §0: step 1 recovery-freshness.js --json, step 2 --recovery=<that file>.
 ```
 
 ### 5.14 Remote readiness and smoke (from the operator's admin machine, keys from the secret store)
@@ -386,6 +388,10 @@ journald events (piped in as text; the tool starts no process) and the `recovery
 record (`event: runner.coding.telemetry`, `health.state` `healthy` / `saturated` / `backlogged` / `degraded`). It is a
 **local diagnostic**, not a metrics endpoint: the Runner still exposes `/healthz` only, and nothing in the record can carry
 student source, hidden tests, outputs, keys, headers, job ids or any person identifier (`assertSafe` refuses the record otherwise).
+stdin is consumed as a **bounded stream** (100 000 lines · 16 KiB per line, UTF-8 bytes · 64 MiB total; the read stops at a limit
+and `window.truncated` says so). Two invocation forms, deliberately distinct (`telemetry.md` §0): **diagnostic** (no `--recovery=`,
+recovery `UNKNOWN`, health always `degraded` — never wire this into an alert) and **monitoring** (`--recovery=` a *current*
+`recovery-freshness.js --json` result — the only form that can report `healthy`).
 
 ## 8. Recovery sweep — GitHub cron is best-effort
 `.github/workflows/coding-grading-recovery.yml` is scheduled every 10 minutes, but GitHub runs scheduled workflows on a

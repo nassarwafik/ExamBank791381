@@ -42,11 +42,13 @@ if (require.main === module) {
   const repo = typeof args.repo === "string" ? args.repo : process.env.GITHUB_REPOSITORY;
   const maxAgeMin = Number(args["max-age-min"]) || DEFAULT_MAX_AGE_MIN;
   if (args.bad || !repo || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) { console.error("usage: recovery-freshness.js --repo=owner/name [--max-age-min=N] [--json]"); process.exit(2); }
-  const unknown = reason => { const j = freshnessState({ error: reason }, { maxAgeMin }); if (args.json) console.log(JSON.stringify({ event: "runner.recovery.freshness", maxAgeMin, ...j })); console.error("recovery-freshness: UNKNOWN — " + reason); process.exit(2); };
+  // `checkedAt` dates the verdict so coding-telemetry.js --recovery= can judge whether the result is still current (RF3)
+  const emit = j => JSON.stringify({ event: "runner.recovery.freshness", maxAgeMin, checkedAt: new Date().toISOString(), ...j });
+  const unknown = reason => { const j = freshnessState({ error: reason }, { maxAgeMin }); if (args.json) console.log(emit(j)); console.error("recovery-freshness: UNKNOWN — " + reason); process.exit(2); };
   lastSuccessfulSweep({ repo, token: process.env.GITHUB_TOKEN }).then(r => {
     if (r.error) return unknown(r.error);
     const j = freshnessState(r, { maxAgeMin });
-    console.log(args.json ? JSON.stringify({ event: "runner.recovery.freshness", maxAgeMin, ...j }) : j.state + " — last successful recovery sweep " + (j.lastSuccessAt ? j.lastSuccessAt + " (" + j.ageMinutes + " min ago)" : "never") + "; maximum " + maxAgeMin + " min");
+    console.log(args.json ? emit(j) : j.state + " — last successful recovery sweep " + (j.lastSuccessAt ? j.lastSuccessAt + " (" + j.ageMinutes + " min ago)" : "never") + "; maximum " + maxAgeMin + " min");
     process.exit(j.fresh ? 0 : 3);
   }, () => unknown("request failed"));
 }

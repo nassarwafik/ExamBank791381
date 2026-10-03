@@ -6,15 +6,36 @@ the journal aggregate (`journal-status.js`), the gateway's structured journald e
 exists, and `coding-telemetry.js` starts no process (`journalctl` output is piped **in**; `gateway/sandbox.js` remains the only
 process-starting module of `runner/`, architecture guard 17B R1).
 
+## 0. Two invocation forms — do not confuse them
+| Form | Command | `recovery.state` | Can be `healthy`? | Use |
+|---|---|---|---|---|
+| **A. Diagnostic** | `journalctl -u smartassess-runner -o cat --since -1h \| sudo -u smartassess-runner node …/coding-telemetry.js --dir=/data/smartassess-runner` (no `--recovery=`; diagnostic, recovery UNKNOWN) | `UNKNOWN` | **No** — health is always `degraded`, exit 3 | a human reading counts, backlog, busy, durations on the host |
+| **B. Monitoring / timer** | step 1 + step 2 below (`--recovery=` a *current* freshness result) | `FRESH` / `STALE` / `UNKNOWN` | Yes | the alert path; the only form whose exit code means something |
+
 ```sh
-# as the service user (the journal is 0700); the last hour of gateway events on stdin; one JSON line out
+# step 1 — on a host that can reach api.github.com (the Runner VM if its outbound policy allows, else the operator's admin
+#          machine, copying the small file). GITHUB_TOKEN, if the repo needs one, is exported from the secret store — never typed
+#          on a command line. A request failure writes state UNKNOWN (exit 2) — the `|| true` keeps the pipeline going; the file
+#          then makes step 2 report degraded, which is the correct, fail-closed outcome.
+node /opt/smartassess-runner/current/runner/deploy/azure-vm/recovery-freshness.js --repo=<owner>/<repo> --max-age-min=240 --json > /run/smartassess/recovery-freshness.json.tmp || true
+mv -f /run/smartassess/recovery-freshness.json.tmp /run/smartassess/recovery-freshness.json
+# step 2 — on the Runner host, as the service user (the journal is 0700); the last hour of gateway events on stdin; one JSON line out
 journalctl -u smartassess-runner -o cat --since -1h \
   | sudo -u smartassess-runner node /opt/smartassess-runner/current/runner/deploy/azure-vm/coding-telemetry.js \
-      --dir=/data/smartassess-runner [--recovery=/run/smartassess/freshness.json] [--json]
+      --dir=/data/smartassess-runner --recovery=/run/smartassess/recovery-freshness.json --json
 # exit 0 healthy · 3 saturated / backlogged / degraded · 2 usage, unreadable journal or privacy self-check refusal
 ```
-`--recovery` takes the `--json` output of `recovery-freshness.js` (run from a host that may reach the GitHub API — it may be the
-operator's machine); without it `recovery.state` is `UNKNOWN`, which is **degraded** — nothing is assumed fresh.
+The freshness file carries `checkedAt`. Step 2 adds the file's own age to `ageMinutes`, re-applies the **240-min** policy
+(a `FRESH` verdict that aged past 240 min is `STALE` now) and treats a missing, unparsable, future-dated or > 240-min-old file as
+`UNKNOWN`. Nothing is ever assumed fresh. No new secret, process, scheduler or endpoint is introduced: the two steps go into the
+operator's existing timer (`monitoring-checklist.md`).
+
+### Input bounds (Review Fix 1)
+stdin is consumed as a **bounded stream**, never read whole: lines are split at the byte level as chunks arrive; a line is decoded
+only when its **UTF-8 byte** length is ≤ `maxLineBytes` (16 384 — an oversized line's bytes are dropped as they stream in and
+counted under `window.oversized` / `window.malformed`); reading **stops** — the source is destroyed — at `maxInputBytes`
+(64 MiB) or once `maxLines` (100 000) are consumed and more input exists; either sets `window.truncated: true`; at most one line
+of carry-over is held. `window.inputBytes` reports what was accepted. Nothing of a line is retained after it is aggregated.
 
 ## 1. Vocabulary (`event: "runner.coding.telemetry"`, `schemaVersion: 1`)
 | Field | Meaning | Source |
@@ -22,10 +43,10 @@ operator's machine); without it `recovery.state` is `UNKNOWN`, which is **degrad
 | `journal.counts.{received,running,executed,confirmed,callback_failed,superseded}` | journal records per state — the 17D-B2 semantics are unchanged (`received` admitted, `running` executing, `executed` result stored and **owed** to SmartAssess, `confirmed` callback accepted, `callback_failed` parked after the callback budget, `superseded` replaced by a newer revision) | `journal-status.js` |
 | `journal.total` / `journal.capacity` / `journal.utilizationPercent` | records / fixed capacity (`JOURNAL_LIMITS.maxRecords` = 1024) / whole percentage, 0–100 | `journal-status.js` |
 | `journal.callbackBacklog` | `executed + callback_failed`: results SmartAssess does not have yet | `journal-status.js` |
-| `journal.oldestOwedCallbackMinutes` | age of the oldest `executed` record (`null` when none) | `journal-status.js` |
+| `journal.oldestOwedCallbackMinutes` | age of the oldest result still OWED to SmartAssess across `executed` **and** `callback_failed` (parked) records, from `executedAt` (validated `updatedAt` fallback); `null` when none. The legacy `oldestExecutedMinutes` of `journal-status.js` stays executed-only. | `journal-status.js` |
 | `journal.quarantined` / `corrupt` / `truncated` / `lockHeld` / `attention[]` | as in `journal-status.js` (`attention` ⊆ `parked-callbacks`, `executed-result-waiting`, `corrupt-or-quarantined`, `truncated`, `journal-near-capacity`) | `journal-status.js` |
 | `queue.pending` / `queue.active` | official jobs admitted but not started / executing (= `received` / `running`) | journal |
-| `window.{lines,parsed,ignored,malformed,truncated}` | the event window fed on stdin: lines read, parsed gateway events, events the tool does not count, unparsable lines, whether the line cap (100 000) was hit | stdin |
+| `window.{lines,parsed,ignored,malformed,oversized,inputBytes,truncated}` | the event window fed on stdin: lines consumed, parsed gateway events, events the tool does not count, unparsable lines (oversized ones included), lines over the 16 KiB UTF-8 byte bound, bytes accepted, whether a limit (100 000 lines · 64 MiB) stopped the read | stdin |
 | `official.accepted` / `official.completed` / `official.compileErrors` / `official.outcomes.{success,timeout,…}` | `runner.official.accepted` / `runner.official.completed` counts; compile failures; per-outcome **case counts** summed over completed jobs | events |
 | `practice.completed` | `runner.execute.completed` count | events |
 | `busy.official` / `busy.practice` / `busy.total` | `RUNNER_BUSY` refusals: `runner.official.busy` / `runner.execute.busy` | events |
@@ -88,8 +109,9 @@ infers completion from the score. Telemetry never changes a grade.
 - **B2** journal capacity / retention: `JOURNAL_LIMITS` untouched; telemetry only reports `utilizationPercent`. No pruning.
 - **B3 / B4** concurrency: slots and the busy cap untouched; `busy.*` only counts refusals.
 - **B5** scheduler: the GitHub cron and the 240-min freshness policy untouched; only the result became machine-readable.
-- No new public administrative Runner endpoint; no Azure resource; no new secret. If an operator wires the tool into a timer, the
-  journal directory is the only input and that is already in `runner-env.example` (`RUNNER_JOURNAL_DIR`).
+- No new public administrative Runner endpoint; no Azure resource; no new secret; no new production process or scheduler — the two
+  steps of §0 run inside the operator's existing timer. The journal directory is the only Runner-side input and that is already in
+  `runner-env.example` (`RUNNER_JOURNAL_DIR`).
 
 ## 7. Troubleshooting
 | Symptom | Cause | Fix |
@@ -97,6 +119,9 @@ infers completion from the score. Telemetry never changes a grade.
 | `journal unreadable` (exit 2) | not run as the service user, or `/data/smartassess-runner` not mounted | `sudo -u smartassess-runner …`; `findmnt /data/smartassess-runner` |
 | `telemetry refused by the privacy self-check` (exit 2) | a future gateway event added a field the aggregate copies, or a corrupted aggregate | file a bug — the tool fails closed on purpose; nothing was printed |
 | `window.malformed` large | stdin is not `-o cat` journald output (e.g. the default journalctl format) | use `journalctl -u smartassess-runner -o cat --since -1h` |
-| `window.truncated: true` | more than 100 000 lines in the window | shorten `--since` |
-| `recovery.state: UNKNOWN` with `--recovery` given | the freshness file is missing / invalid or the GitHub API call failed | run `recovery-freshness.js --json` again; check `GITHUB_TOKEN` and network |
+| `window.truncated: true` with `lines` = 100 000 | more than 100 000 lines in the window | shorten `--since` |
+| `window.oversized > 0` | gateway lines over 16 KiB (UTF-8 bytes) — not produced by the gateway today | compare the gateway version; the lines were counted, never decoded |
+| `recovery.state: UNKNOWN` **without** `--recovery=` | form A (diagnostic) — expected; health is `degraded` by design | use form B (§0) for monitoring |
+| `recovery.state: UNKNOWN` with `--recovery=` given | the freshness file is missing / invalid / older than 240 min / future-dated, or step 1's GitHub API call failed | re-run step 1 (`recovery-freshness.js --json`); check its `GITHUB_TOKEN` and network; check the timer order (step 1 before step 2) |
+| `window.truncated: true` with `inputBytes` = 67 108 864 | the 64 MiB total input ceiling stopped the read | shorten `--since` |
 | `durations.*.other.count > 0` | a completed event with a language outside the registry | should not happen — compare the gateway version with `registry.js` |

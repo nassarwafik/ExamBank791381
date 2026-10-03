@@ -11,7 +11,8 @@ scheduler (B5), any Azure or GitHub-governance change.
 
 | | |
 |---|---|
-| Baseline | `origin/main` `eb61b5d3ce73ee54f734c3c188e167b0afa8d7c8` (merge of PR #246, 17F-A2 hotfix) — re-verified unchanged before the push |
+| Baseline | `origin/main` `eb61b5d3ce73ee54f734c3c188e167b0afa8d7c8` (merge of PR #246, 17F-A2 hotfix) — re-verified unchanged before each push |
+| Review | first reviewed head `b502816` → Independent Review Fix 1 (§7a) |
 | Branch | `feature/17f-b1-observability-pending-grade-ux` — one branch, one PR, no rebase, no force-push, no amend after push, auto-merge off |
 | Runbook | [`runner/deploy/azure-vm/README.md`](../runner/deploy/azure-vm/README.md) §4, §5.13, §7, §8 · [`telemetry.md`](../runner/deploy/azure-vm/telemetry.md) · [`monitoring-checklist.md`](../runner/deploy/azure-vm/monitoring-checklist.md) |
 
@@ -57,7 +58,8 @@ CSS: `.iex-score[data-pending="true"]` and `.iex-score-pending` (muted, smaller)
   `UNKNOWN` + age; auth unauthorized; per-language duration `{count, minMs, p50Ms, maxMs}`; `health {state, reasons}` with
   `healthy` < `saturated` < `backlogged` < `degraded`); `assertSafe(record)` allow-list / forbidden-key / free-text self-check
   (the CLI exits 2 and prints nothing but the violation when it fails); `LIMITS` 100 000 lines, 16 KB per line, 10 000 samples
-  per bucket. Exit 0 healthy, 3 otherwise, 2 usage. Full vocabulary, thresholds and troubleshooting: `telemetry.md`.
+  per bucket, 64 MiB total input (RF1 — all applied while streaming stdin). Exit 0 healthy, 3 otherwise, 2 usage. Full vocabulary,
+  thresholds and troubleshooting: `telemetry.md`.
 - **`journal-status.js`**: adds `utilizationPercent`, `callbackBacklog` (= `executed + callback_failed`),
   `oldestOwedCallbackMinutes`, `health` (`ok` / `attention`); every 17F-A1 field, attention rule and exit code unchanged; text
   output adds `(N%)` and `callback backlog N`.
@@ -122,6 +124,23 @@ event type → killed. Both passes are recorded in the PR body.
 | `api`: student submission / dashboard / sanitizer / recovery / runner / security-sensitive suites | 24 files / 341 tests |
 | `npm --prefix runner run test:docker:security` · `test:docker:official` (local daemon) | 28 / 28 · 13 / 13 · `docker ps -aq --filter label=smartassess.coding-runner=1` empty |
 | `git diff --check` | clean |
+
+## 7a. Independent Review Fix 1 (same branch, normal commit on top of `b502816`)
+| Finding | Fix |
+|---|---|
+| **RF1 — stdin was buffered whole.** The CLI did `fs.readFileSync(0, "utf8")` and only then applied `maxLines` / `maxLineBytes`, so an arbitrarily large `journalctl` stream was held in memory before any bound. | `aggregateStream(readable, limits)` consumes stdin **as a bounded stream**: Buffer chunks, lines split on `\n` at the byte level, a line decoded only when its **UTF-8 byte** length ≤ `maxLineBytes` (16 384; an oversized line's bytes are dropped as they arrive and counted as `window.oversized` + `malformed`), the read **stopped and the source destroyed** at `maxInputBytes` (**64 MiB**, new) or when `maxLines` (100 000) are consumed and more input exists — both set `window.truncated`; at most one line of carry-over is held; nothing of a line is retained after `feed`. `window.inputBytes` reports what was accepted. The array API `aggregateEvents` shares the same `createAggregator` and now measures `Buffer.byteLength`, not `.length`. The CLI (`async main`) calls `aggregateStream(process.stdin)`; `readFileSync(0)` is gone (guarded by RF1-E). |
+| **RF2 — `oldestOwedCallbackMinutes` ignored parked results.** It equalled `oldestExecutedMinutes` while `callbackBacklog` counted `executed + callback_failed`. | `journalStatus` tracks the oldest age across `executed` **and** `callback_failed` from `executedAt` (validated `updatedAt` fallback), schema unchanged; `oldestExecutedMinutes`, attention rules and exit codes untouched; `buildTelemetry` now carries the owed age (it previously copied the legacy field). |
+| **RF3 — the runbook recommended an always-degraded timer command.** Without `--recovery=` recovery is `UNKNOWN` → `degraded` → exit 3 by design, yet the checklist suggested exactly that command for the timer. | Docs now separate **form A (diagnostic, no `--recovery=`, recovery UNKNOWN, never healthy — never alert on it)** from **form B (monitoring: step 1 `recovery-freshness.js --json > file`, step 2 `--recovery=<file> --json`)** in `telemetry.md` §0, `monitoring-checklist.md` (timer block) and README §5.13 / §7. `recovery-freshness.js --json` now stamps `checkedAt`; `loadRecoveryResult` adds the file's own age, re-applies the 240-min policy (an aged FRESH verdict becomes STALE) and treats a missing / invalid / future / > 240-min-old result as UNKNOWN. No credential, secret, process or scheduler added. **Guard:** RF3 test scans the three documents — every monitoring / timer / `--json` invocation of `coding-telemetry.js` must carry `--recovery=`, every invocation without it must be labelled diagnostic / UNKNOWN; backslash-continued lines are one invocation. |
+
+Fail-first on `b502816` (`runner/tests/unit/deploy-telemetry-rf1.rtest.js`): **10 failed / 2 passed** — RF1-A…E (`aggregateStream` not a
+function; `readFileSync(0` present), RF2-B / C / E (owed age `null` or executed-only), RF3 guard (README diagnostic line unlabelled),
+RF3 currency (`loadRecoveryResult` missing). RF2-A and RF2-D passed by construction (the cases where the old field coincided).
+
+Mutations (each alone, targeted RF + telemetry suites, byte-for-byte restore, fingerprint identical): RM1 restore `readFileSync(0)` → KILLED (RF1-E) ·
+RM2 drop the input-byte cap → KILLED (RF1-B) · RM3 char-count bound, array API → KILLED (RF1-D) · RM3b char-count bound, stream API →
+KILLED (RF1-D; pass 1 survived because `feed` re-measured bytes itself — now the stream hands its wire measurement to the single check) ·
+RM4 owed age ignores `callback_failed` → KILLED (RF2-B/C/E) · RM5 parked-only backlog → null age → KILLED (RF2-B/E) · RM6 timer command
+without `--recovery=` → KILLED (RF3 guard).
 
 ## 8. Security analysis
 - Telemetry reads the journal through the existing validated aggregate and journald text through stdin; it opens no socket,

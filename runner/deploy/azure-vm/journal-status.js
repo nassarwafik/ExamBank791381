@@ -15,7 +15,7 @@ const STATES = ["received", "running", "executed", "confirmed", "callback_failed
 /** Aggregate journal state of `dir` at `nowMs`. Bounded by the gateway's own scan limit. */
 function journalStatus(dir, { nowMs = Date.now(), maxEntries = JOURNAL_LIMITS.startupScanMax, maxExecutedAgeMin = 15 } = {}) {
   const counts = Object.fromEntries(STATES.map(s => [s, 0]));
-  let corrupt = 0, scanned = 0, truncated = false, oldestExecutedMs = null;
+  let corrupt = 0, scanned = 0, truncated = false, oldestExecutedMs = null, oldestOwedMs = null;
   const jobsDir = path.join(dir, "jobs");
   for (const name of fs.readdirSync(jobsDir)) {
     if (scanned >= maxEntries) { truncated = true; break; }
@@ -27,6 +27,9 @@ function journalStatus(dir, { nowMs = Date.now(), maxEntries = JOURNAL_LIMITS.st
     if (!rec || !validateRecord(rec, m[1]).ok) { corrupt++; continue; }
     counts[rec.state]++;
     if (rec.state === "executed") { const t = Date.parse(rec.executedAt || rec.updatedAt); if (Number.isFinite(t)) oldestExecutedMs = Math.max(oldestExecutedMs || 0, nowMs - t); }
+    // Review Fix 1 (RF2): a result is OWED while executed OR parked (callback_failed) — SmartAssess has neither. Age from the
+    // original execution (executedAt) when the record has it, else the validated updatedAt. Journal schema unchanged.
+    if (rec.state === "executed" || rec.state === "callback_failed") { const t = Date.parse(rec.executedAt || rec.updatedAt); if (Number.isFinite(t)) oldestOwedMs = Math.max(oldestOwedMs || 0, nowMs - t); }
   }
   let quarantined = 0;
   try { quarantined = fs.readdirSync(path.join(dir, "quarantine")).length; } catch { quarantined = 0; }
@@ -39,10 +42,12 @@ function journalStatus(dir, { nowMs = Date.now(), maxEntries = JOURNAL_LIMITS.st
   if (truncated) attention.push("truncated");
   if (total >= JOURNAL_LIMITS.maxRecords * 0.8) attention.push("journal-near-capacity");
   const oldestExecutedMinutes = oldestExecutedMs === null ? null : Math.floor(oldestExecutedMs / 60000);
+  const oldestOwedCallbackMinutes = oldestOwedMs === null ? null : Math.floor(oldestOwedMs / 60000);
   // 17F-B1 additions (nothing above renamed or removed): utilization of the fixed record capacity, the callback BACKLOG
-  // (results executed but not yet confirmed + parked callbacks), and a two-valued health flag mirroring `attention`.
+  // (results executed but not yet confirmed + parked callbacks), the age of the oldest OWED result across executed + parked
+// (RF2; `oldestExecutedMinutes` stays the legacy executed-only age), and a two-valued health flag mirroring `attention`.
   const utilizationPercent = JOURNAL_LIMITS.maxRecords > 0 ? Math.min(100, Math.floor((total / JOURNAL_LIMITS.maxRecords) * 100)) : 0;
-  return { counts, total, capacity: JOURNAL_LIMITS.maxRecords, utilizationPercent, live: counts.received + counts.running, owedCallback: counts.executed, callbackBacklog: counts.executed + counts.callback_failed, oldestExecutedMinutes, oldestOwedCallbackMinutes: oldestExecutedMinutes, quarantined, corrupt, truncated, lockHeld, attention, health: attention.length ? "attention" : "ok" };
+  return { counts, total, capacity: JOURNAL_LIMITS.maxRecords, utilizationPercent, live: counts.received + counts.running, owedCallback: counts.executed, callbackBacklog: counts.executed + counts.callback_failed, oldestExecutedMinutes, oldestOwedCallbackMinutes, quarantined, corrupt, truncated, lockHeld, attention, health: attention.length ? "attention" : "ok" };
 }
 
 if (require.main === module) {
@@ -54,7 +59,7 @@ if (require.main === module) {
   if (args.json) console.log(JSON.stringify({ event: "runner.journal.status", ...s }));
   else {
     console.log("records " + s.total + " / " + s.capacity + " (" + s.utilizationPercent + "%) · " + STATES.map(k => k + " " + s.counts[k]).join(" · "));
-    console.log("owed callbacks " + s.owedCallback + " (oldest " + (s.oldestExecutedMinutes === null ? "-" : s.oldestExecutedMinutes + " min") + ") · callback backlog " + s.callbackBacklog + " · quarantined " + s.quarantined + " · corrupt " + s.corrupt + " · lock " + (s.lockHeld ? "held" : "free") + (s.truncated ? " · TRUNCATED" : ""));
+    console.log("owed callbacks " + s.owedCallback + " (oldest " + (s.oldestExecutedMinutes === null ? "-" : s.oldestExecutedMinutes + " min") + ") · callback backlog " + s.callbackBacklog + " (oldest owed " + (s.oldestOwedCallbackMinutes === null ? "-" : s.oldestOwedCallbackMinutes + " min") + ") · quarantined " + s.quarantined + " · corrupt " + s.corrupt + " · lock " + (s.lockHeld ? "held" : "free") + (s.truncated ? " · TRUNCATED" : ""));
     console.log(s.attention.length ? "ATTENTION: " + s.attention.join(", ") : "OK");
   }
   process.exit(s.attention.length ? 3 : 0);
