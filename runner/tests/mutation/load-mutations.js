@@ -36,7 +36,8 @@ const MUTATIONS = [
   { id: "M18", title: "let the P1 gate pass with a missing language", file: "gates.js", from: "return { pass: violations.length === 0 && missing.length === 0, violations, missing, ceilingMs };", to: "return { pass: violations.length === 0, violations, missing, ceilingMs };" }
 ];
 
-function runSuite() { const r = spawnSync(process.execPath, ["--test", SUITE], { cwd: ROOT, encoding: "utf8", shell: false }); return { status: r.status, out: (r.stdout || "") + (r.stderr || "") }; }
+const RUN_TIMEOUT_MS = 5 * 60 * 1000;                 // a mutant that HANGS the suite is reported as TIMEOUT, never waited for indefinitely
+function runSuite() { const r = spawnSync(process.execPath, ["--test", SUITE], { cwd: ROOT, encoding: "utf8", shell: false, timeout: RUN_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 }); return { status: r.status, timedOut: !!(r.error && r.error.code === "ETIMEDOUT"), out: (r.stdout || "") + (r.stderr || "") }; }
 
 // A mutation run that is killed (SIGKILL, a lost shell) cannot run `finally`: every original is therefore copied to a BACKUP
 // directory first, and the next invocation restores from a stale backup before doing anything else. SIGINT / SIGTERM restore too.
@@ -64,7 +65,7 @@ function main() {
   const results = [];
   try {
     const baseline = runSuite();
-    if (baseline.status !== 0) { console.error("baseline suite is not green — refusing to mutate"); restoreAll(); process.exit(2); }
+    if (baseline.status !== 0 || baseline.timedOut) { console.error("baseline suite is not green" + (baseline.timedOut ? " (timed out)" : "") + " — refusing to mutate"); restoreAll(); process.exit(2); }
     for (const m of MUTATIONS) {
       if (only.length && !only.includes(m.id)) continue;
       const file = LIB(m.file), src = originals.get(file).toString("utf8");
@@ -73,15 +74,15 @@ function main() {
       const r = runSuite();
       fs.writeFileSync(file, originals.get(file));
       const failing = (r.out.match(/^✖ (LOAD\d+)/gm) || []).map(s => s.slice(2)).concat((r.out.match(/^# fail (\d+)/m) || []).slice(1).map(n => "fail=" + n));
-      results.push({ id: m.id, title: m.title, outcome: r.status !== 0 ? "KILLED" : "SURVIVED", killedBy: r.status !== 0 ? [...new Set(failing)].slice(0, 6) : [] });
+      results.push({ id: m.id, title: m.title, outcome: r.timedOut ? "TIMEOUT" : r.status !== 0 ? "KILLED" : "SURVIVED", killedBy: r.status !== 0 && !r.timedOut ? [...new Set(failing)].slice(0, 6) : [] });
     }
   } finally {
     restoreAll();
   }
   const restored = files.every(f => sha(f) === before.get(f));
-  for (const r of results) console.log((r.outcome === "KILLED" ? "KILLED   " : r.outcome.startsWith("NOT") ? "N/A      " : "SURVIVED ") + r.id.padEnd(5) + r.title + (r.killedBy && r.killedBy.length ? "  ← " + r.killedBy.join(", ") : ""));
+  for (const r of results) console.log((r.outcome === "KILLED" ? "KILLED   " : r.outcome === "TIMEOUT" ? "TIMEOUT  " : r.outcome.startsWith("NOT") ? "N/A      " : "SURVIVED ") + r.id.padEnd(5) + r.title + (r.killedBy && r.killedBy.length ? "  ← " + r.killedBy.join(", ") : ""));
   console.log("files restored byte-for-byte: " + (restored ? "yes" : "NO"));
-  const survived = results.filter(r => r.outcome === "SURVIVED" || r.outcome.startsWith("NOT"));
+  const survived = results.filter(r => r.outcome === "SURVIVED" || r.outcome === "TIMEOUT" || r.outcome.startsWith("NOT"));
   console.log(survived.length ? "MUTATION CHECK FAILED: " + survived.map(r => r.id).join(", ") : "MUTATION CHECK OK: " + results.length + " mutations killed");
   process.exit(!restored || survived.length ? 1 : 0);
 }

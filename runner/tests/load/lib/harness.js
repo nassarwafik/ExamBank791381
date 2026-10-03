@@ -19,6 +19,8 @@ const { createLocalStack, createReceiver } = require("./local-stack.js");
 
 const LEAK_KEYS = /^(score|passed|passedWeight|totalWeight|expected|expectedOutput|expectedOutputs|weight|mark|marks|grade)$/i;
 const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+/** `promise` or `ms` elapsed, whichever first — the losing timer is CLEARED (a dangling 60 s timer kept every suite process alive). */
+function raceTimeout(promise, ms) { let t; const timer = new Promise(r => { t = setTimeout(r, ms); }); return Promise.race([promise, timer]).finally(() => clearTimeout(t)); }
 const DEFAULT_SETTLE_MS = { local: 60000, staging: 10 * 60000, production: 10 * 60000 };
 const refused = (code, detail) => ({ ok: false, code, ...(detail ? { detail } : {}) });
 
@@ -140,12 +142,12 @@ async function runScenario(options = {}) {
     async function settle(timeoutMs) {
       const until = now() + timeoutMs;
       for (;;) {
-        if (stack) await Promise.race([stack.idle(), sleep(200)]);
+        if (stack) await raceTimeout(stack.idle(), 200);
         drainReceiver();
         const r = ledger.reconcile();
         // every accepted job is acknowledged — but the queue commits `confirmed` AFTER the receiver answered, so the journal is only
         // read once the queue is idle (bounded by the remaining settlement budget)
-        if (r.lost.length === 0) { if (stack) await Promise.race([stack.idle(), sleep(Math.max(1000, until - now()))]); return true; }
+        if (r.lost.length === 0) { if (stack) await raceTimeout(stack.idle(), Math.max(1000, until - now())); return true; }
         if (now() > until) return false;
         await sleep(stack ? 25 : 500);
       }
