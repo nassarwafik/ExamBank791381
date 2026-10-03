@@ -18,7 +18,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { LANGUAGES } = require("../../gateway/registry.js");
 const { journalStatus } = require("./journal-status.js");
-const { DEFAULT_MAX_AGE_MIN, parseMaxAgeMin } = require("./recovery-freshness.js");
+const { DEFAULT_MAX_AGE_MIN, CLOCK_SKEW_TOLERANCE_MS, parseMaxAgeMin } = require("./recovery-freshness.js");   // ONE skew tolerance (RF3)
 
 // BOUNDS (Review Fix 1): applied WHILE stdin is read — lines, UTF-8 BYTES per line, total input bytes — never after buffering.
 // maxRecoveryFileBytes (Review Fix 2): the --recovery file is read through an fd, at most LIMIT + 1 bytes, regular files only.
@@ -198,15 +198,18 @@ function buildTelemetry({ journal, events, recovery, nowMs = Date.now() }) {
 /**
  * Review Fix 1 — a recovery-freshness result handed to the telemetry (`--recovery=<recovery-freshness.js --json output>`) must be
  * CURRENT. `checkedAt` (stamped by recovery-freshness.js) dates the verdict; the file's own age is added to ageMinutes and the
- * 240-min policy is re-applied. Missing / invalid / future checkedAt, or a verdict older than the policy window → UNKNOWN.
+ * 240-min policy is re-applied. Missing / invalid / future (beyond CLOCK_SKEW_TOLERANCE_MS) checkedAt, or a verdict older than the
+ * policy window → UNKNOWN; a checkedAt within the tolerance contributes a file age of 0 (RF3).
  */
 function loadRecoveryResult(r, { nowMs = Date.now(), maxAgeMin = DEFAULT_MAX_AGE_MIN } = {}) {
   const UNKNOWN = { state: "UNKNOWN", ageMinutes: null };
   const policy = parseMaxAgeMin(maxAgeMin) ?? DEFAULT_MAX_AGE_MIN;                      // an invalid policy can never widen the window
   if (!r || typeof r !== "object" || !["FRESH", "STALE", "UNKNOWN"].includes(r.state)) return UNKNOWN;
   const checked = typeof r.checkedAt === "string" ? Date.parse(r.checkedAt) : NaN;
-  if (!Number.isFinite(checked) || checked > nowMs + 60000) return UNKNOWN;
-  const fileAgeMin = Math.floor((nowMs - checked) / 60000);
+  // RF3: the SAME clock-skew tolerance as recovery-freshness.js judge(); beyond it the stamp is impossible ⇒ UNKNOWN; within it the
+  // file age clamps to 0 — never negative, so a skewed stamp can never refund a minute (241 must never read as 240 / FRESH)
+  if (!Number.isFinite(checked) || checked > nowMs + CLOCK_SKEW_TOLERANCE_MS) return UNKNOWN;
+  const fileAgeMin = Math.max(0, Math.floor((nowMs - checked) / 60000));
   if (fileAgeMin > policy) return UNKNOWN;
   // RF2-2: an age must be a finite NON-NEGATIVE number — a negative ("future") age is impossible and fails closed
   if (r.state === "UNKNOWN" || typeof r.ageMinutes !== "number" || !Number.isFinite(r.ageMinutes) || r.ageMinutes < 0) return UNKNOWN;

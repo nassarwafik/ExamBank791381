@@ -12,7 +12,7 @@ scheduler (B5), any Azure or GitHub-governance change.
 | | |
 |---|---|
 | Baseline | `origin/main` `eb61b5d3ce73ee54f734c3c188e167b0afa8d7c8` (merge of PR #246, 17F-A2 hotfix) — re-verified unchanged before each push |
-| Review | first reviewed head `b502816` → Independent Review Fix 1 (§7a) → reviewed head `f63a544` → Independent Review Fix 2 (§7b) |
+| Review | `b502816` → Review Fix 1 (§7a) → `f63a544` → Review Fix 2 (§7b) → `19c7f78` → Review Fix 3 (§7c) |
 | Branch | `feature/17f-b1-observability-pending-grade-ux` — one branch, one PR, no rebase, no force-push, no amend after push, auto-merge off |
 | Runbook | [`runner/deploy/azure-vm/README.md`](../runner/deploy/azure-vm/README.md) §4, §5.13, §7, §8 · [`telemetry.md`](../runner/deploy/azure-vm/telemetry.md) · [`monitoring-checklist.md`](../runner/deploy/azure-vm/monitoring-checklist.md) |
 
@@ -156,6 +156,16 @@ missing; `readFileSync(args.recovery` present), R2-2A (negative age accepted), R
 Mutations (each alone, RF2 + RF1 + telemetry suites, byte-for-byte restore, fingerprint identical): RM7 restore `readFileSync(…).slice(0, 4096)` →
 KILLED · RM8 ignore the recovery-file size → KILLED · RM9 accept a negative age → KILLED · RM10 future sweep reported FRESH → KILLED ·
 RM11 accept `Infinity` as max-age → KILLED (see the PR body for the exact killing tests).
+
+## 7c. Independent Review Fix 3 (same branch, normal commit on top of `19c7f78`)
+| Finding | Fix |
+|---|---|
+| **RF3 — clock-skew arithmetic.** `loadRecoveryResult` tolerated a `checkedAt` up to 60 s in the future (its own hard-coded `60000`) but computed `fileAgeMin = Math.floor((nowMs - checked) / 60000)`: for a file stamped 30 s ahead, `Math.floor(-0.5) === -1`, so the verdict's age was **reduced by one minute** — at the boundary a true 241-min (STALE) result would have read 240 ⇒ FRESH — and a negative `ageMinutes` could be emitted. | `fileAgeMin = Math.max(0, Math.floor((nowMs - checked) / 60000))`; the future check now uses the **shared** `CLOCK_SKEW_TOLERANCE_MS` imported from `recovery-freshness.js` (no independent constant), so `judge()` and `loadRecoveryResult()` apply one policy: beyond the tolerance ⇒ `UNKNOWN`; within it ⇒ age clamps to 0. |
+
+Fail-first on `19c7f78` (`runner/tests/unit/deploy-telemetry-rf3.rtest.js`): **4 failed / 2 passed** — RF3-A (`-1` emitted), RF3-B (241 → 240 / FRESH),
+RF3-E (negative ages in the sweep), RF3-F (literal `60000`, no import, no clamp); RF3-C and RF3-D passed by construction.
+Mutations: RM12 restore the unclamped floor → KILLED · RM13 independent `60000` tolerance → KILLED (RF3-F guard) · RM13b independent
+5-min tolerance → KILLED (RF3-C + RF3-F).
 
 ## 8. Security analysis
 - Telemetry reads the journal through the existing validated aggregate and journald text through stdin; it opens no socket,

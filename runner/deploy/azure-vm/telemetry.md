@@ -32,8 +32,10 @@ The freshness file carries `checkedAt`. Step 2 adds the file's own age to `ageMi
 **Recovery-file bounds (Review Fix 2).** The `--recovery=` file is read through a file descriptor: a **regular file only**
 (a directory, device or FIFO is refused without blocking), **at most 4096 bytes** (`LIMITS.maxRecoveryFileBytes`; a larger file is
 refused as a whole — no prefix is parsed), closed on every path, strict JSON. A negative or non-finite `ageMinutes` is an
-impossible value ⇒ `UNKNOWN`. In `recovery-freshness.js` a last-success timestamp more than **60 s** ahead of the local clock
-(`CLOCK_SKEW_TOLERANCE_MS`) is `UNKNOWN`, never `FRESH`; within the tolerance the age is clamped to 0. `--max-age-min` must be a
+impossible value ⇒ `UNKNOWN`. **One clock-skew tolerance** — `CLOCK_SKEW_TOLERANCE_MS` = **60 s**, defined once in
+`recovery-freshness.js` and imported by `coding-telemetry.js` (Review Fix 3) — governs both timestamps: a `lastSuccessAt` or a
+`checkedAt` more than 60 s ahead of the local clock is `UNKNOWN`, never `FRESH`; within the tolerance the corresponding age
+**clamps to 0** (never negative — a skewed file can never refund a minute, so an age of 241 can never read as 240 / FRESH). `--max-age-min` must be a
 **positive integer** number of minutes (default 240 when absent); `Infinity`, `NaN`, text, `0`, negatives or fractions are a usage
 error (exit 2) — an invalid policy can never disable the guard, and the library functions fall back to 240 for the same reason. No new secret, process, scheduler or endpoint is introduced: the two steps go into the
 operator's existing timer (`monitoring-checklist.md`).
