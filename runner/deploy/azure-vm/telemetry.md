@@ -27,7 +27,15 @@ journalctl -u smartassess-runner -o cat --since -1h \
 ```
 The freshness file carries `checkedAt`. Step 2 adds the file's own age to `ageMinutes`, re-applies the **240-min** policy
 (a `FRESH` verdict that aged past 240 min is `STALE` now) and treats a missing, unparsable, future-dated or > 240-min-old file as
-`UNKNOWN`. Nothing is ever assumed fresh. No new secret, process, scheduler or endpoint is introduced: the two steps go into the
+`UNKNOWN`. Nothing is ever assumed fresh.
+
+**Recovery-file bounds (Review Fix 2).** The `--recovery=` file is read through a file descriptor: a **regular file only**
+(a directory, device or FIFO is refused without blocking), **at most 4096 bytes** (`LIMITS.maxRecoveryFileBytes`; a larger file is
+refused as a whole — no prefix is parsed), closed on every path, strict JSON. A negative or non-finite `ageMinutes` is an
+impossible value ⇒ `UNKNOWN`. In `recovery-freshness.js` a last-success timestamp more than **60 s** ahead of the local clock
+(`CLOCK_SKEW_TOLERANCE_MS`) is `UNKNOWN`, never `FRESH`; within the tolerance the age is clamped to 0. `--max-age-min` must be a
+**positive integer** number of minutes (default 240 when absent); `Infinity`, `NaN`, text, `0`, negatives or fractions are a usage
+error (exit 2) — an invalid policy can never disable the guard, and the library functions fall back to 240 for the same reason. No new secret, process, scheduler or endpoint is introduced: the two steps go into the
 operator's existing timer (`monitoring-checklist.md`).
 
 ### Input bounds (Review Fix 1)
@@ -122,6 +130,7 @@ infers completion from the score. Telemetry never changes a grade.
 | `window.truncated: true` with `lines` = 100 000 | more than 100 000 lines in the window | shorten `--since` |
 | `window.oversized > 0` | gateway lines over 16 KiB (UTF-8 bytes) — not produced by the gateway today | compare the gateway version; the lines were counted, never decoded |
 | `recovery.state: UNKNOWN` **without** `--recovery=` | form A (diagnostic) — expected; health is `degraded` by design | use form B (§0) for monitoring |
-| `recovery.state: UNKNOWN` with `--recovery=` given | the freshness file is missing / invalid / older than 240 min / future-dated, or step 1's GitHub API call failed | re-run step 1 (`recovery-freshness.js --json`); check its `GITHUB_TOKEN` and network; check the timer order (step 1 before step 2) |
+| `recovery.state: UNKNOWN` with `--recovery=` given | the freshness file is missing / not a regular file / over 4096 bytes / invalid JSON / older than 240 min / future-dated / carries a negative age, or step 1's GitHub API call failed or saw a future last-success time | re-run step 1 (`recovery-freshness.js --json`); check its `GITHUB_TOKEN`, network and the host clocks; check the timer order (step 1 before step 2) |
+| `recovery-freshness.js` exits 2 with `usage` | `--max-age-min` is not a positive integer (e.g. `Infinity`, `0`, `abc`) | pass a positive integer number of minutes, or omit it for the default 240 |
 | `window.truncated: true` with `inputBytes` = 67 108 864 | the 64 MiB total input ceiling stopped the read | shorten `--since` |
 | `durations.*.other.count > 0` | a completed event with a language outside the registry | should not happen — compare the gateway version with `registry.js` |

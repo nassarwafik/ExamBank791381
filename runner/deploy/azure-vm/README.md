@@ -397,7 +397,7 @@ recovery `UNKNOWN`, health always `degraded` — never wire this into an alert) 
 `.github/workflows/coding-grading-recovery.yml` is scheduled every 10 minutes, but GitHub runs scheduled workflows on a
 best-effort basis: **3 runs were observed in ~9.5 hours** (17F-A audit). The pilot therefore:
 - treats the cron as a **safety net**, not a guarantee;
-- checks freshness with `recovery-freshness.js` (alert if no successful sweep within the agreed **240 min**; 17F-B1: the result is `FRESH`, `STALE` or `UNKNOWN` — an API / request failure is `UNKNOWN`, exit 2, and is never treated as fresh);
+- checks freshness with `recovery-freshness.js` (alert if no successful sweep within the agreed **240 min**; 17F-B1: the result is `FRESH`, `STALE` or `UNKNOWN` — an API / request failure, or a last-success time more than 60 s in the future, is `UNKNOWN`, exit 2, and is never treated as fresh; `--max-age-min` must be a positive integer, default 240);
 - uses `workflow_dispatch` (Actions → Coding Grading Recovery → Run workflow) or teacher **retry / bulk retry** when recovery
   is needed sooner.
 

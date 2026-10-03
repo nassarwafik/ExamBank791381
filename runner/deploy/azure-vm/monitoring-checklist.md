@@ -32,6 +32,7 @@ state, for a cron / timer, a log shipper or a human.
   ```sh
   # step 1 — recovery freshness (a host that can reach api.github.com; GITHUB_TOKEN, if needed, exported from the secret store,
   #          never written on the command line). Writes FRESH / STALE / UNKNOWN + checkedAt; a request failure writes UNKNOWN.
+  #          --max-age-min must be a positive integer (default 240); the output file must stay a regular file ≤ 4096 bytes.
   node /opt/smartassess-runner/current/runner/deploy/azure-vm/recovery-freshness.js --repo=<owner>/<repo> --max-age-min=240 --json > /run/smartassess/recovery-freshness.json.tmp || true
   mv -f /run/smartassess/recovery-freshness.json.tmp /run/smartassess/recovery-freshness.json
   # step 2 — telemetry health (the Runner host, as the service user); exit 3 when health.state ≠ healthy → mail

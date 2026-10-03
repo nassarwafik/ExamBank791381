@@ -12,7 +12,7 @@ scheduler (B5), any Azure or GitHub-governance change.
 | | |
 |---|---|
 | Baseline | `origin/main` `eb61b5d3ce73ee54f734c3c188e167b0afa8d7c8` (merge of PR #246, 17F-A2 hotfix) — re-verified unchanged before each push |
-| Review | first reviewed head `b502816` → Independent Review Fix 1 (§7a) |
+| Review | first reviewed head `b502816` → Independent Review Fix 1 (§7a) → reviewed head `f63a544` → Independent Review Fix 2 (§7b) |
 | Branch | `feature/17f-b1-observability-pending-grade-ux` — one branch, one PR, no rebase, no force-push, no amend after push, auto-merge off |
 | Runbook | [`runner/deploy/azure-vm/README.md`](../runner/deploy/azure-vm/README.md) §4, §5.13, §7, §8 · [`telemetry.md`](../runner/deploy/azure-vm/telemetry.md) · [`monitoring-checklist.md`](../runner/deploy/azure-vm/monitoring-checklist.md) |
 
@@ -141,6 +141,21 @@ RM2 drop the input-byte cap → KILLED (RF1-B) · RM3 char-count bound, array AP
 KILLED (RF1-D; pass 1 survived because `feed` re-measured bytes itself — now the stream hands its wire measurement to the single check) ·
 RM4 owed age ignores `callback_failed` → KILLED (RF2-B/C/E) · RM5 parked-only backlog → null age → KILLED (RF2-B/E) · RM6 timer command
 without `--recovery=` → KILLED (RF3 guard).
+
+## 7b. Independent Review Fix 2 (same branch, normal commit on top of `f63a544`)
+| Finding | Fix |
+|---|---|
+| **RF2-1 — the `--recovery` file read was unbounded.** `fs.readFileSync(args.recovery).slice(0, 4096)` loaded the whole file before slicing. | `readRecoveryFileBounded(file)`: `openSync(O_RDONLY \| O_NONBLOCK)` (a FIFO never blocks the open) → `fstatSync` → **regular file only** → size ≤ **4096** (`LIMITS.maxRecoveryFileBytes`) → `readSync` loop into a `limit + 1` buffer → `> limit` ⇒ `oversize`; fd closed in `finally`; never throws. `loadRecoveryFile()` = bounded read → strict JSON → `loadRecoveryResult`; any failure ⇒ `UNKNOWN`. The CLI calls `loadRecoveryFile(args.recovery)`; R2-1C guards against `readFileSync(args.recovery` / `.slice(0, 4096)` returning. |
+| **RF2-2 — negative / future freshness.** `loadRecoveryResult` accepted a negative `ageMinutes`; `judge()` would call a future `lastSuccessAt` FRESH (negative age ≤ policy). | `ageMinutes` must be a finite number ≥ 0 (else `UNKNOWN`); `checkedAt` keeps its future protection. `judge()` returns `UNKNOWN` (`fresh: false`) when `lastSuccessAt` leads the clock by more than `CLOCK_SKEW_TOLERANCE_MS` = **60 s**; within it the age is clamped to 0. |
+| **RF2-3 — `--max-age-min` derived from `Number(...)`.** `--max-age-min=Infinity` disabled the guard silently. | `parseMaxAgeMin(raw)`: `undefined` ⇒ 240; a positive **integer** (number or `/^[0-9]{1,9}$/` string) ⇒ itself; everything else (`Infinity`, `NaN`, text, `0`, negatives, fractions, `--max-age-min` without a value) ⇒ `null` ⇒ the CLI prints usage and exits 2 before any network call. `judge()` and `loadRecoveryResult()` fall back to 240 for an invalid policy, so a library caller cannot widen the window either. |
+
+Fail-first on `f63a544` (`runner/tests/unit/deploy-telemetry-rf2.rtest.js`): **9 failed / 1 passed** — R2-1A…F (`readRecoveryFileBounded`
+missing; `readFileSync(args.recovery` present), R2-2A (negative age accepted), R2-2B (future timestamp FRESH), R2-3A–F
+(`parseMaxAgeMin` missing), docs guard. R2-2C/D passed by construction.
+
+Mutations (each alone, RF2 + RF1 + telemetry suites, byte-for-byte restore, fingerprint identical): RM7 restore `readFileSync(…).slice(0, 4096)` →
+KILLED · RM8 ignore the recovery-file size → KILLED · RM9 accept a negative age → KILLED · RM10 future sweep reported FRESH → KILLED ·
+RM11 accept `Infinity` as max-age → KILLED (see the PR body for the exact killing tests).
 
 ## 8. Security analysis
 - Telemetry reads the journal through the existing validated aggregate and journald text through stdin; it opens no socket,

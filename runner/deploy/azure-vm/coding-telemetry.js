@@ -18,9 +18,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { LANGUAGES } = require("../../gateway/registry.js");
 const { journalStatus } = require("./journal-status.js");
+const { DEFAULT_MAX_AGE_MIN, parseMaxAgeMin } = require("./recovery-freshness.js");
 
 // BOUNDS (Review Fix 1): applied WHILE stdin is read — lines, UTF-8 BYTES per line, total input bytes — never after buffering.
-const LIMITS = Object.freeze({ maxLines: 100000, maxLineBytes: 16384, maxInputBytes: 64 * 1024 * 1024, maxSamplesPerBucket: 10000 });
+// maxRecoveryFileBytes (Review Fix 2): the --recovery file is read through an fd, at most LIMIT + 1 bytes, regular files only.
+const LIMITS = Object.freeze({ maxLines: 100000, maxLineBytes: 16384, maxInputBytes: 64 * 1024 * 1024, maxSamplesPerBucket: 10000, maxRecoveryFileBytes: 4096 });
 const LANGS = Object.freeze([...new Set(Object.values(LANGUAGES).map(e => e.key))]);
 const LANG_BUCKETS = Object.freeze([...LANGS, "other"]);
 // every key the output may contain (assertSafe refuses anything else) — bounded cardinality by construction
@@ -198,16 +200,49 @@ function buildTelemetry({ journal, events, recovery, nowMs = Date.now() }) {
  * CURRENT. `checkedAt` (stamped by recovery-freshness.js) dates the verdict; the file's own age is added to ageMinutes and the
  * 240-min policy is re-applied. Missing / invalid / future checkedAt, or a verdict older than the policy window → UNKNOWN.
  */
-function loadRecoveryResult(r, { nowMs = Date.now(), maxAgeMin = 240 } = {}) {
+function loadRecoveryResult(r, { nowMs = Date.now(), maxAgeMin = DEFAULT_MAX_AGE_MIN } = {}) {
   const UNKNOWN = { state: "UNKNOWN", ageMinutes: null };
+  const policy = parseMaxAgeMin(maxAgeMin) ?? DEFAULT_MAX_AGE_MIN;                      // an invalid policy can never widen the window
   if (!r || typeof r !== "object" || !["FRESH", "STALE", "UNKNOWN"].includes(r.state)) return UNKNOWN;
   const checked = typeof r.checkedAt === "string" ? Date.parse(r.checkedAt) : NaN;
   if (!Number.isFinite(checked) || checked > nowMs + 60000) return UNKNOWN;
   const fileAgeMin = Math.floor((nowMs - checked) / 60000);
-  if (fileAgeMin > maxAgeMin) return UNKNOWN;
-  if (r.state === "UNKNOWN" || !Number.isFinite(r.ageMinutes)) return UNKNOWN;
+  if (fileAgeMin > policy) return UNKNOWN;
+  // RF2-2: an age must be a finite NON-NEGATIVE number — a negative ("future") age is impossible and fails closed
+  if (r.state === "UNKNOWN" || typeof r.ageMinutes !== "number" || !Number.isFinite(r.ageMinutes) || r.ageMinutes < 0) return UNKNOWN;
   const ageMinutes = Math.floor(r.ageMinutes) + fileAgeMin;
-  return { state: ageMinutes > maxAgeMin ? "STALE" : r.state, ageMinutes };
+  return { state: ageMinutes > policy ? "STALE" : r.state, ageMinutes };
+}
+
+/**
+ * Review Fix 2 — BOUNDED read of the --recovery file. Opens an fd (O_NONBLOCK: a FIFO can never block the open), accepts a
+ * REGULAR file only, reads at most `limit + 1` bytes and refuses anything larger; the fd is closed on every path. Never throws.
+ * → { ok: true, text, bytes } | { ok: false, reason: "no-path" | "not-a-regular-file" | "oversize" | "unreadable", bytes }
+ */
+function readRecoveryFileBounded(file, limit = LIMITS.maxRecoveryFileBytes) {
+  if (typeof file !== "string" || !file) return { ok: false, reason: "no-path", bytes: 0 };
+  let fd = null;
+  try {
+    fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
+    const st = fs.fstatSync(fd);
+    if (!st.isFile()) return { ok: false, reason: "not-a-regular-file", bytes: 0 };
+    if (st.size > limit) return { ok: false, reason: "oversize", bytes: 0 };
+    const buf = Buffer.alloc(limit + 1);
+    let n = 0;
+    while (n < buf.length) { const r = fs.readSync(fd, buf, n, buf.length - n, null); if (r === 0) break; n += r; }
+    if (n > limit) return { ok: false, reason: "oversize", bytes: n };
+    return { ok: true, text: buf.subarray(0, n).toString("utf8"), bytes: n };
+  } catch { return { ok: false, reason: "unreadable", bytes: 0 }; }
+  finally { if (fd !== null) { try { fs.closeSync(fd); } catch { /* already closed */ } } }
+}
+
+/** The CLI's one call: bounded read → strict JSON → currency judgement. Any failure ⇒ UNKNOWN (never FRESH). */
+function loadRecoveryFile(file, opts) {
+  const r = readRecoveryFileBounded(file);
+  if (!r.ok) return { state: "UNKNOWN", ageMinutes: null };
+  let parsed;
+  try { parsed = JSON.parse(r.text); } catch { return { state: "UNKNOWN", ageMinutes: null }; }
+  return loadRecoveryResult(parsed, opts);
 }
 
 /** Re-checks an emitted record against the privacy contract → { ok, violations: [...] }. */
@@ -240,7 +275,7 @@ async function main() {
   let journal;
   try { journal = journalStatus(dir); } catch { console.error("journal unreadable (run as the service user; is the disk mounted?)"); process.exit(2); }
   let recovery = null;
-  if (typeof args.recovery === "string") { try { recovery = loadRecoveryResult(JSON.parse(fs.readFileSync(args.recovery, { encoding: "utf8", flag: "r" }).slice(0, 4096))); } catch { recovery = { state: "UNKNOWN", ageMinutes: null }; } }
+  if (typeof args.recovery === "string") recovery = loadRecoveryFile(args.recovery);   // bounded fd read (≤ 4096 bytes, regular file) — any failure is UNKNOWN
   // stdin is consumed as a BOUNDED STREAM (maxLines · maxLineBytes · maxInputBytes applied while reading) — never read whole
   let events;
   try { events = process.stdin.isTTY ? aggregateEvents([]) : await aggregateStream(process.stdin); } catch { events = aggregateEvents([]); }
@@ -260,4 +295,4 @@ async function main() {
 
 if (require.main === module) main().catch(() => process.exit(2));
 
-module.exports = { LIMITS, LANG_BUCKETS, FORBIDDEN_KEYS, createAggregator, aggregateEvents, aggregateStream, loadRecoveryResult, buildTelemetry, assertSafe, utilizationPercent };
+module.exports = { LIMITS, LANG_BUCKETS, FORBIDDEN_KEYS, createAggregator, aggregateEvents, aggregateStream, readRecoveryFileBounded, loadRecoveryFile, loadRecoveryResult, buildTelemetry, assertSafe, utilizationPercent };
