@@ -4,7 +4,9 @@
 // student source, hidden test data, keys, signatures or auth headers (redactionScan). Reproducibility metadata (git SHA, Runner SHA,
 // harness version, scenario id + configuration, environment class, VM SKU) is mandatory; two reports from different SHAs are never
 // comparable as "the same build" (compareReports refuses).
-const HARNESS_VERSION = "1.0.0";
+const { evaluateQualification } = require("./qualification.js");
+
+const HARNESS_VERSION = "1.1.0";
 const SHA = /^[0-9a-f]{40}$/;
 const FORBIDDEN_KEYS = /^(source|stdin|stdout|stderr|expectedOutput|expectedOutputs|cases|key|hmac|hmacKey|secret|token|signature|authorization|headers|cookie|bearer|password)$/i;
 const FORBIDDEN_TEXT = [/x-sa-(runner|callback|sweep)-signature/i, /\bv1=[0-9a-f]{64}\b/, /\bbearer\s+[A-Za-z0-9._-]{8,}/i, /\bauthorization\b/i, /(RUNNER_HMAC_KEY|SMARTASSESS_CALLBACK_HMAC_KEY|CODING_[A-Z_]*HMAC_KEY|CODING_RUNNER_HMAC_KEY)/, /print\s*\(|System\.out\.println|Console\.WriteLine|public\s+class\s+Main|import\s+java\./];
@@ -59,7 +61,12 @@ function buildReport(input, { canaries = [] } = {}) {
   // a finished report may be re-validated (e.g. after the operator attached VM metrics): its gates come back from `correctness`
   const g = input.gates || gatesFromCorrectness(input.correctness);
   if (!g || !Array.isArray(g.gates) || typeof g.verdict !== "string") throw new Error("report: gates are required");
-  if (input.verdict !== undefined && input.verdict !== g.verdict) throw new Error("report: verdict contradicts the gates (" + input.verdict + " vs " + g.verdict + ")");
+  // Independent Review Fix 1 — the top-level verdict is the SCENARIO QUALIFICATION: correctness + the scenario's own required checks
+  // (recorded in scenario.config.qualification by the planner; else derived from the catalog for this scenario and target).
+  const required = Array.isArray(input.scenario.config.qualification) ? input.scenario.config.qualification : undefined;
+  const bursts = Array.isArray(input.callbacks) ? input.callbacks : Array.isArray(input.bursts) ? input.bursts : (input.qualificationEvidence && input.qualificationEvidence.bursts) || [];
+  const q = evaluateQualification({ scenarioId: input.scenario.id, target: input.target.name, correctness: g, required, p1: input.p1 || (input.performance && input.performance.p1) || null, bursts, recovery: input.recovery || null, saturation: input.saturation || null });
+  if (input.verdict !== undefined && input.verdict !== q.verdict) throw new Error("report: verdict contradicts the qualification (" + input.verdict + " vs " + q.verdict + ")");
   const practice = input.practice ? plain(input.practice) : null;
   const official = input.official ? plain(input.official) : null;
   const perf = { latency: practice ? practice.latency : null, latencyByOutcome: practice ? practice.latencyByOutcome : null, official: official ? official.timing : null, p1: input.p1 ? plain(input.p1) : null, throughputPerMinute: input.durationMs > 0 && practice ? Math.round((practice.totals.completed / (input.durationMs / 60000)) * 100) / 100 : null };
@@ -69,7 +76,10 @@ function buildReport(input, { canaries = [] } = {}) {
     environmentClass: input.target.name, buildSha: input.buildSha, runnerSha: input.runnerSha || null, vmSku: typeof input.vmSku === "string" && input.vmSku ? input.vmSku : null,
     scenario: { id: input.scenario.id, title: input.scenario.title || null, config: plain(input.scenario.config) },
     startedAt: input.startedAt, durationMs: input.durationMs,
-    verdict: g.verdict, correctness: { pass: g.correctnessPass, failed: g.failed || [], notEvaluated: g.notEvaluated || [], gates: g.gates.map(x => ({ id: x.id, title: x.title, evaluated: x.evaluated, pass: x.pass, detail: x.detail })) },
+    verdict: q.verdict,
+    correctness: { verdict: g.verdict, pass: g.correctnessPass, failed: g.failed || [], notEvaluated: g.notEvaluated || [], gates: g.gates.map(x => ({ id: x.id, title: x.title, evaluated: x.evaluated, pass: x.pass, detail: x.detail })) },
+    qualification: { verdict: q.verdict, pass: q.pass, required: q.required, failed: q.failed, notEvaluated: q.notEvaluated, checks: q.checks.map(c => ({ id: c.id, title: c.title, evaluated: c.evaluated, pass: c.pass, detail: c.detail })) },
+    callbacks: bursts.length ? plain(bursts) : null,
     performance: perf,
     totals: totalsOf(practice, official),
     languages: practice ? practice.languages : {},
@@ -96,7 +106,8 @@ function toMarkdown(r) {
   const lines = [];
   lines.push("# SmartAssess Coding — load / certification result: " + r.scenario.id + (r.scenario.title ? " (" + r.scenario.title + ")" : ""));
   lines.push("");
-  lines.push("**Verdict: " + r.verdict + "** — correctness " + (r.correctness.pass ? "PASS" : r.correctness.failed.length ? "FAIL (" + r.correctness.failed.join(", ") + ")" : "INCOMPLETE (" + r.correctness.notEvaluated.join(", ") + " not evaluated)") + ". Performance is reported separately below and never decides the verdict.");
+  const q = r.qualification || { verdict: r.verdict, failed: [], notEvaluated: [], checks: [] };
+  lines.push("**Verdict: " + r.verdict + "** (scenario qualification) — correctness " + (r.correctness.pass ? "PASS" : r.correctness.failed.length ? "FAIL (" + r.correctness.failed.join(", ") + ")" : "INCOMPLETE (" + r.correctness.notEvaluated.join(", ") + " not evaluated)") + "; scenario checks " + (q.failed.length ? "FAIL (" + q.failed.join(", ") + ")" : q.notEvaluated.length ? "INCOMPLETE (" + q.notEvaluated.join(", ") + " not evaluated)" : "PASS") + ". Performance numbers are reported separately; only the scenario's own pass rule (e.g. P1 for CERT-J) feeds the verdict.");
   lines.push("");
   lines.push("| | |"); lines.push("|---|---|");
   lines.push("| target / environment class | " + r.target.name + (r.target.host ? " (" + r.target.host + ")" : "") + " |");
@@ -109,6 +120,10 @@ function toMarkdown(r) {
   lines.push("## Correctness gates"); lines.push(""); lines.push("| gate | result | detail |"); lines.push("|---|---|---|");
   for (const g of r.correctness.gates) lines.push("| " + g.id + " " + g.title + " | " + (!g.evaluated ? "not evaluated" : g.pass ? "PASS" : "**FAIL**") + " | " + g.detail + " |");
   lines.push("");
+  lines.push("## Qualification (the scenario's own pass rule — decides the verdict)"); lines.push(""); lines.push("| check | result | detail |"); lines.push("|---|---|---|");
+  for (const c of q.checks) lines.push("| " + c.id + " " + c.title + " | " + (!c.evaluated ? "not evaluated" : c.pass ? "PASS" : "**FAIL**") + " | " + c.detail + " |");
+  lines.push("");
+  if (r.callbacks) { lines.push("## Callback bursts"); lines.push(""); for (const b of r.callbacks) lines.push("- " + b.count + " × " + (b.nearMax ? "near-max" : "small") + " body (" + b.bytesPerBody + " bytes) at concurrency " + b.concurrency + ": expected " + b.expectedAnswer + ", answers " + JSON.stringify(b.answers) + ", transport " + (b.transportOk ? "OK" : "**FAILED**") + ", latency " + pct(b.latency) + (b.idempotency ? "; re-delivery " + b.idempotency.redeliveryAnswer + " — before " + JSON.stringify(b.idempotency.before) + ", after " + JSON.stringify(b.idempotency.after) + " → " + (b.idempotency.pass ? "idempotent" : "**NOT idempotent**") : "")); lines.push(""); }
   lines.push("## Totals"); lines.push(""); lines.push("| offered | completed | RUNNER_BUSY | rejected | network errors | failed | official offered | official accepted | official busy |"); lines.push("|---|---|---|---|---|---|---|---|---|");
   const t = r.totals; lines.push("| " + [t.offered, t.completed, t.busy, t.rejected, t.networkErrors, t.failed, t.officialOffered, t.officialAccepted, t.officialBusy].map(fmt).join(" | ") + " |");
   lines.push("");

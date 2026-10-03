@@ -50,8 +50,14 @@ test("SC4 CERT-D concurrency ladder: RUNNER_BUSY appears only above the Runner l
   assert.equal(steps[0].practice.busy, 0, "no busy at concurrency 1"); assert.equal(steps[1].practice.busy, 0, "no busy at the limit");
   assert.deepEqual(rep.scenario.config.levels, [1, 2, 4, 8]);
 });
-test("SC5 CERT-E saturation: safe refusal for practice, peak sandboxes ≤ limit, Runner responsive; official burst over-admission is MEASURED (B10-F1)", async () => {
-  const rep = pass(await run("CERT-E"), "CERT-E");
+test("SC5 CERT-E saturation: safe refusal for practice, peak sandboxes ≤ limit, Runner responsive; official burst over-admission is MEASURED (B10-F1) and FAILS the qualification while correctness passes", async () => {
+  const r = await run("CERT-E");
+  assert.equal(r.ok, true, JSON.stringify(r).slice(0, 300));
+  const rep = r.report;
+  // Independent Review Fix 1: the test suite PASSES because the harness correctly reports the known product defect — the SCENARIO
+  // qualification is FAIL (Q-ADMISSION) on the current Runner; after B3 fixes official.js the same scenario turns PASS unchanged
+  assert.equal(rep.correctness.verdict, "PASS", JSON.stringify(rep.correctness.failed));
+  assert.equal(rep.qualification.verdict, "FAIL"); assert.deepEqual(rep.qualification.failed, ["Q-ADMISSION"]); assert.equal(rep.verdict, "FAIL");
   const [prac, off] = rep.saturation.steps;
   assert.equal(prac.runnerMaxConcurrency, 2); assert.equal(prac.offeredConcurrency, 8);
   assert.ok(prac.practice.busy >= 1, "practice saturation must refuse"); assert.ok(prac.peakActiveSandboxes <= 2, "no uncontrolled sandbox growth");
@@ -59,8 +65,9 @@ test("SC5 CERT-E saturation: safe refusal for practice, peak sandboxes ≤ limit
   assert.equal(rep.correctness.gates.find(g => g.id === "G7").pass, true);
   assert.equal(off.officialMaxPending, 3);
   assert.equal(off.official.offered, off.official.accepted + off.official.busy, "every official submission is accounted (busy is explicit, never lost)");
-  assert.equal(typeof off.official.overAdmission, "number");
-  if (off.official.overAdmission > 0) assert.ok(rep.notes.some(n => n.startsWith("B10-F1 observed")), "over-admission is reported, never hidden");
+  assert.ok(off.official.overAdmission > 0, "the current Runner over-admits (B10-F1)");
+  assert.ok(rep.notes.some(n => n.startsWith("B10-F1 observed")), "over-admission is reported, never hidden");
+  assert.match(rep.qualification.checks.find(c => c.id === "Q-ADMISSION").detail, /B10-F1/);
   assert.equal(rep.official.lost.length, 0); assert.equal(rep.official.remainder, 0);
   clean(rep.journal);
 });

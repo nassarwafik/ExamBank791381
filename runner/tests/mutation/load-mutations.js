@@ -11,7 +11,7 @@ const { spawnSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const LIB = f => path.join(ROOT, "tests", "load", "lib", f);
-const SUITE = path.join(ROOT, "tests", "unit", "load-harness.rtest.js");
+const SUITES = ["load-harness.rtest.js", "load-review-fix-1.rtest.js"].map(f => path.join(ROOT, "tests", "unit", f));
 const sha = file => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 
 const MUTATIONS = [
@@ -33,11 +33,22 @@ const MUTATIONS = [
   { id: "M15", title: "hide callback failures from the summary", file: "accounting.js", from: '  check("callback_failed", "callback-failed");', to: '  // check("callback_failed", "callback-failed");' },
   { id: "M16", title: "count busy official dispatches as lost (break the explicit busy bucket)", file: "accounting.js", from: '        } else if (j.dispatch === "busy") { r.busy++; L.busy++; if (A) A.busy++; }', to: '        } else if (j.dispatch === "busy") { r.lost.push(j.jobId); }' },
   { id: "M17", title: "treat alreadyApplied with a changed score as fine", file: "accounting.js", from: "if (applied.length && already.some(a => a.score !== null && applied[0].score !== null && a.score !== applied[0].score)) r.idempotencyViolations.push(j.jobId);", to: "if (false) r.idempotencyViolations.push(j.jobId);" },
-  { id: "M18", title: "let the P1 gate pass with a missing language", file: "gates.js", from: "return { pass: violations.length === 0 && missing.length === 0, violations, missing, ceilingMs };", to: "return { pass: violations.length === 0, violations, missing, ceilingMs };" }
+  { id: "M18", title: "let the P1 gate pass with a missing language", file: "gates.js", from: "return { pass: violations.length === 0 && missing.length === 0, violations, missing, ceilingMs };", to: "return { pass: violations.length === 0, violations, missing, ceilingMs };" },
+  // Independent Review Fix 1
+  { id: "QM1", title: "ignore a P1 failure in the qualification", file: "qualification.js", from: 'checks.push(p1 && typeof p1.pass === "boolean" ? check(id, p1.pass,', to: 'checks.push(p1 && typeof p1.pass === "boolean" ? check(id, true,' },
+  { id: "QM2", title: "ignore a callback transport failure", file: "qualification.js", from: "checks.push(list.length ? check(id, list.every(b => b && b.transportOk === true),", to: "checks.push(list.length ? check(id, true," },
+  { id: "QM3", title: "ignore official over-admission", file: "qualification.js", from: "checks.push(check(id, over.length === 0,", to: "checks.push(check(id, true," },
+  { id: "QM4", title: "snapshot the score AFTER the duplicate send", file: "harness.js", from: "    const before = snapshot();\n    const again = await sender.send(bodies[0]);\n    const after = snapshot();", to: "    const again = await sender.send(bodies[0]);\n    const before = snapshot();\n    const after = snapshot();" },
+  { id: "QM5", title: "let a duplicate change the score without failing", file: "harness.js", from: 'pass: again.answer === "alreadyApplied" && same("state") && same("score") && same("applications") };', to: 'pass: again.answer === "alreadyApplied" && same("state") && same("applications") };' },
+  { id: "QM6", title: "remove the receiver body ceiling (streaming check)", file: "local-stack.js", from: "      if (size > CALLBACK_MAX_BYTES) { refused = true;", to: "      if (false) { refused = true;" },
+  { id: "QM6b", title: "remove the receiver Content-Length ceiling", file: "local-stack.js", from: "if (Number.isFinite(declared) && declared > CALLBACK_MAX_BYTES) { stats.oversizeRejected++;", to: "if (false) { stats.oversizeRejected++;" },
+  { id: "QM7", title: "check the size only AFTER the whole body was read", file: "local-stack.js", from: "      if (size > CALLBACK_MAX_BYTES) { refused = true; parts.length = 0; stats.oversizeRejected++; answer(413, { ok: false, code: \"REQUEST_TOO_LARGE\" }, { destroy: true }); return; }\n      parts.push(d);", to: "      parts.push(d);\n      if (false) { refused = true; }" },
+  { id: "QM7b", title: "off-by-one at the body ceiling (exactly 8 MiB refused)", file: "local-stack.js", from: "      if (size > CALLBACK_MAX_BYTES) { refused = true;", to: "      if (size >= CALLBACK_MAX_BYTES) { refused = true;" },
+  { id: "QM8", title: "allow a top-level PASS while a required qualification check failed", file: "qualification.js", from: 'const verdict = failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";', to: 'const verdict = notEvaluated.length ? "INCOMPLETE" : "PASS";' }
 ];
 
 const RUN_TIMEOUT_MS = 5 * 60 * 1000;                 // a mutant that HANGS the suite is reported as TIMEOUT, never waited for indefinitely
-function runSuite() { const r = spawnSync(process.execPath, ["--test", SUITE], { cwd: ROOT, encoding: "utf8", shell: false, timeout: RUN_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 }); return { status: r.status, timedOut: !!(r.error && r.error.code === "ETIMEDOUT"), out: (r.stdout || "") + (r.stderr || "") }; }
+function runSuite() { const r = spawnSync(process.execPath, ["--test", ...SUITES], { cwd: ROOT, encoding: "utf8", shell: false, timeout: RUN_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 }); return { status: r.status, timedOut: !!(r.error && r.error.code === "ETIMEDOUT"), out: (r.stdout || "") + (r.stderr || "") }; }
 
 // A mutation run that is killed (SIGKILL, a lost shell) cannot run `finally`: every original is therefore copied to a BACKUP
 // directory first, and the next invocation restores from a stale backup before doing anything else. SIGINT / SIGTERM restore too.

@@ -8,6 +8,7 @@ module.exports = {
   ...require("./accounting.js"),
   ...require("./gates.js"),
   ...require("./report.js"),
+  ...require("./qualification.js"),
   ...require("./scenarios.js"),
   ...require("./driver.js"),
   ...require("./fake-sandbox.js"),

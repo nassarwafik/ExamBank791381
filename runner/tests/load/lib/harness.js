@@ -81,6 +81,7 @@ async function runScenario(options = {}) {
       stack = createLocalStack({ sandbox: plan.params.sandbox || "fake", profile: plan.params.profile, maxConcurrency: (plan.params.runner || {}).maxConcurrency || 4, official: { maxPending: (plan.params.runner || {}).maxPending || 16, maxActive: (plan.params.runner || {}).maxActive || 2, caseConcurrency: 2 }, callbackPolicy: plan.params.callbackPolicy || { baseMs: 50, capMs: 2000, maxAttemptsPerWindow: 6, maxRearms: 2, concurrency: 2 } });
       await stack.start();
       receiver = stack.receiver;
+      if (typeof deps.onStack === "function") deps.onStack(stack);                      // tests: fault injection on the receiver
       client = createRunnerClient({ baseUrl: stack.baseUrl, key: stack.key, fetchImpl: deps.localFetch || globalThis.fetch, now });
       callbackTarget = { baseUrl: stack.callbackUrl, key: cbKeyOf(stack), synthetic: "applied" };
     } else {
@@ -186,7 +187,7 @@ async function runScenario(options = {}) {
     const journal = stack ? journalConsistency(stack.journalStatus(), { expected: plan.params.journalExpected || {} }) : attachments && attachments.journalStatus ? journalConsistency(attachments.journalStatus, { expected: plan.params.journalExpected || {} }) : null;
     const practiceSummary = practice.summary(), official = ledger.reconcile();
     const gates = evaluateGates({ practice: practiceSummary, official, journal: stack ? stack.journalStatus() : attachments && attachments.journalStatus ? attachments.journalStatus : undefined, journalExpected: plan.params.journalExpected, responsive: health.ok, governor: governor.snapshot() });
-    const report = buildReport({ target, buildSha, runnerSha: runnerSha || (target.remote ? null : buildSha), vmSku: vmSku || null, harnessVersion: HARNESS_VERSION, scenario: { id: def.id, title: def.title, config: plan.config }, startedAt, durationMs: now() - t0, gates, practice: practiceSummary, official, journal, recovery, saturation, fairness, p1, attachments: attachments ? sanitizeAttachments(attachments) : null, notes: [...notes, ...warnings, ...(bursts.length ? ["callback bursts: " + JSON.stringify(bursts)] : []), "steps: " + JSON.stringify(steps)] }, { canaries });
+    const report = buildReport({ target, buildSha, runnerSha: runnerSha || (target.remote ? null : buildSha), vmSku: vmSku || null, harnessVersion: HARNESS_VERSION, scenario: { id: def.id, title: def.title, config: plan.config }, startedAt, durationMs: now() - t0, gates, practice: practiceSummary, official, journal, recovery, saturation, fairness, p1, callbacks: bursts, attachments: attachments ? sanitizeAttachments(attachments) : null, notes: [...notes, ...warnings, "steps: " + JSON.stringify(steps)] }, { canaries });
     return { ok: true, report, steps, bursts };
   } finally {
     if (stack) await stack.close().catch(() => {});
@@ -215,16 +216,25 @@ async function callbackBurst({ step, callbackTarget, fetchImpl, governor, now, r
   const results = await runPool(bodies, step.concurrency, async b => { const r = await sender.send(b); answers[r.answer] = (answers[r.answer] || 0) + 1; if (r.httpStatus) lat.push(r.ms); return r; }, governor);
   const out = { count: step.count, concurrency: step.concurrency, nearMax: !!step.nearMax, bytesPerBody: bodies[0] ? Buffer.byteLength(JSON.stringify(bodies[0])) : 0, expectedAnswer: callbackTarget.synthetic, answers, latency: percentiles(lat), transportOk: results.every(r => r && r.answer === callbackTarget.synthetic) };
   if (step.idempotency && callbackTarget.synthetic === "applied" && bodies[0]) {
-    const again = await sender.send(bodies[0]);
-    const scoreBefore = receiver ? (receiver.applied.get(bodies[0].jobId) || {}).score : null;
-    const scoreAfter = receiver ? (receiver.applied.get(bodies[0].jobId) || {}).score : null;
-    out.idempotency = { redeliveryAnswer: again.answer, scoreUnchanged: scoreBefore === scoreAfter, pass: again.answer === "alreadyApplied" && scoreBefore === scoreAfter };
-    // the synthetic jobs are accounted like official jobs: one application each, the re-delivery an idempotent acknowledgement
+    // Independent Review Fix 1 (RF2): 1. the first delivery applied → 2. SNAPSHOT the authoritative state BEFORE the re-delivery →
+    // 3. re-deliver the EXACT same body → 4. snapshot AFTER → 5. alreadyApplied AND state / score / application count unchanged.
     const id = bodies[0].jobId;
+    const snapshot = () => { const a = receiver ? receiver.applied.get(id) : null; return a ? { state: a.state, score: a.score, applications: a.applications } : null; };
+    const before = snapshot();
+    const again = await sender.send(bodies[0]);
+    const after = snapshot();
+    const same = k => !!before && !!after && before[k] === after[k];
+    out.idempotency = { redeliveryAnswer: again.answer, before, after, stateUnchanged: same("state"), scoreUnchanged: same("score"), applicationsUnchanged: same("applications"), pass: again.answer === "alreadyApplied" && same("state") && same("score") && same("applications") };
+    // the synthetic job is accounted like an official job: the first application with its ACTUAL first score, the re-delivery as
+    // whatever the receiver answered with the state it then held (a drift or a second application is a G2 failure)
     ledger.submitted(id, { language: "python", workloadId: "SYNTHETIC-CALLBACK", cases: bodies[0].cases.length, actor: "callback-burst" });
     ledger.dispatched(id, { status: "accepted", httpStatus: 202, ms: 0 });
-    ledger.callbackReceived(id, { outcome: "completed", ms: results[0].ms }); ledger.acknowledged(id, { answer: results[0].answer, state: "complete", score: scoreBefore });
-    ledger.callbackReceived(id, { outcome: "completed", ms: again.ms }); ledger.acknowledged(id, { answer: again.answer, state: "complete", score: scoreAfter });
+    const known = a => (["applied", "alreadyApplied", "stale", "unknown", "rejected", "error"].includes(a) ? a : "error");
+    ledger.callbackReceived(id, { outcome: "completed", ms: results[0].ms }); ledger.acknowledged(id, { answer: known(results[0].answer), state: before ? before.state : "complete", score: before ? before.score : null });
+    ledger.callbackReceived(id, { outcome: "completed", ms: again.ms }); ledger.acknowledged(id, { answer: known(again.answer), state: after ? after.state : "complete", score: after ? after.score : null });
+    // a synthetic job is terminal the moment its burst ends: nothing more will ever arrive, so a failed transport is an EXPLICIT
+    // failed terminal (settlement never waits for it) and Q-CALLBACK-TRANSPORT carries the verdict
+    if (ledger.reconcile().lost.includes(id)) ledger.terminal(id, "failed");
   }
   return out;
 }
@@ -252,4 +262,4 @@ async function recoveryScenario({ step, stack, runItem, governor, settle, ledger
   return { accepted: r.accepted, outstandingAtCrash: outstanding, recoveredAtRestart: recovery ? recovery.recovered : null, corruptAtRestart: recovery ? recovery.corrupt : null, settled, complete: r.complete, retryable: r.retryable, lost: r.lost.length, duplicateApplications: r.duplicateApplications, executionsPerJobMax: perJob.length ? Math.max(...perJob) : 0, reExecutedJobs: perJob.filter(n => n > 1).length, resubmissionNeeded: false, pass: settled && r.lost.length === 0 && r.duplicateApplications === 0 && (perJob.length ? Math.max(...perJob) : 0) <= 2 };
 }
 
-module.exports = { runScenario, P1_CEILING_MS, LANGUAGES };
+module.exports = { runScenario, callbackBurst, P1_CEILING_MS, LANGUAGES };

@@ -17,7 +17,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { createGatewayServer } = require("../../../gateway/server.js");
 const { createOfficialGradingQueue } = require("../../../gateway/official.js");
-const { createCallbackDeliverer, readCallbackConfig, CALLBACK_PATH } = require("../../../gateway/callback.js");
+const { createCallbackDeliverer, readCallbackConfig, CALLBACK_PATH, CALLBACK_MAX_BYTES } = require("../../../gateway/callback.js");
 const { createJournal } = require("../../../gateway/journal.js");
 const { journalStatus } = require("../../../deploy/azure-vm/journal-status.js");
 const { createFakeSandbox } = require("./fake-sandbox.js");
@@ -38,13 +38,29 @@ function createReceiver({ key, scoreOf }) {
     return given.length === mac.length && crypto.timingSafeEqual(given, mac);
   };
   const leakIn = body => { let n = 0; const scan = (o, allowed) => { for (const k of Object.keys(o || {})) if (!allowed.has(k) || LEAK_KEYS.test(k)) n++; }; scan(body, EVIDENCE_TOP); for (const c of Array.isArray(body.cases) ? body.cases : []) scan(c, EVIDENCE_CASE); return n; };
+  // Independent Review Fix 1 (RF3): the body is BOUNDED by the Runner protocol's own callback ceiling (CALLBACK_MAX_BYTES, 8 MiB,
+  // gateway/callback.js) BEFORE any verification — wrong method / path refused before reading; a Content-Length above the bound
+  // refused at once; streamed bytes counted and the body dropped the moment it exceeds the bound (413); exactly-at-limit accepted;
+  // HMAC still computed over the exact accepted bytes. No body, key or signature is ever logged.
+  const stats = { oversizeRejected: 0, peakBufferedBytes: 0, refusedBeforeBody: 0 };
   const server = http.createServer((req, res) => {
+    const answer = (status, json, { destroy = false } = {}) => { if (res.headersSent) return; res.writeHead(status, { "content-type": "application/json", connection: destroy ? "close" : "keep-alive" }); res.end(JSON.stringify(json), () => { if (destroy) req.destroy(); }); };
+    if (req.method !== "POST" || req.url !== CALLBACK_PATH) { stats.refusedBeforeBody++; req.resume(); return answer(404, { ok: false, code: "NOT_FOUND" }, { destroy: true }); }
+    const declared = Number(req.headers["content-length"]);
+    if (Number.isFinite(declared) && declared > CALLBACK_MAX_BYTES) { stats.oversizeRejected++; return answer(413, { ok: false, code: "REQUEST_TOO_LARGE" }, { destroy: true }); }
     const parts = [];
-    req.on("data", d => parts.push(d));
+    let size = 0, refused = false;
+    req.on("error", () => { /* a destroyed oversize request */ });
+    req.on("data", d => {
+      if (refused) return;
+      size += d.length;
+      if (size > CALLBACK_MAX_BYTES) { refused = true; parts.length = 0; stats.oversizeRejected++; answer(413, { ok: false, code: "REQUEST_TOO_LARGE" }, { destroy: true }); return; }
+      parts.push(d);
+      if (size > stats.peakBufferedBytes) stats.peakBufferedBytes = size;
+    });
     req.on("end", async () => {
-      const raw = Buffer.concat(parts);
-      const answer = (status, json) => { res.writeHead(status, { "content-type": "application/json" }); res.end(JSON.stringify(json)); };
-      if (req.method !== "POST" || req.url !== CALLBACK_PATH) return answer(404, { ok: false, code: "NOT_FOUND" });
+      if (refused) return;
+      const raw = Buffer.concat(parts, size);
       if (!verify(req.headers, raw)) return answer(401, { ok: false, code: "UNAUTHORIZED" });
       if (slowMs) await new Promise(r => setTimeout(r, slowMs));
       if (mode === "fail") { calls.push({ jobId: null, answer: "error", at: Date.now() }); return answer(503, { ok: false, code: "INTERNAL" }); }
@@ -57,17 +73,23 @@ function createReceiver({ key, scoreOf }) {
       const rec = { jobId, outcome: body.outcome, technicalCode: body.technicalCode || null, caseStatuses: cases.map(c => c.status), compile: body.compile ? body.compile.status : null, leak, at: Date.now(), bytes: raw.length };
       if (mode === "unknown") { calls.push({ ...rec, answer: "unknown" }); return answer(404, { ok: false, code: "UNKNOWN_JOB" }); }
       const prior = applied.get(jobId);
-      if (prior) { calls.push({ ...rec, answer: "alreadyApplied", score: prior.score }); return answer(200, { ok: true, alreadyApplied: true }); }
+      if (prior) {
+        // test-only FAULT modes (never the contract): "fault-mutate" answers alreadyApplied but silently changes the score;
+        // "fault-reapply" applies the duplicate a second time. Both must be caught by the harness (RF2).
+        if (mode === "fault-mutate") { prior.score = (prior.score || 0) + 1000; calls.push({ ...rec, answer: "alreadyApplied", score: prior.score }); return answer(200, { ok: true, alreadyApplied: true }); }
+        if (mode === "fault-reapply") { prior.applications += 1; calls.push({ ...rec, answer: "applied", state: prior.state, score: prior.score }); return answer(200, { ok: true, applied: true, state: prior.state }); }
+        calls.push({ ...rec, answer: "alreadyApplied", score: prior.score }); return answer(200, { ok: true, alreadyApplied: true });
+      }
       const technical = body.outcome === "failed" || cases.some(c => c.status === "internal-error");
       const state = technical ? "retryable" : "complete";
       const score = technical ? null : (scoreOf ? scoreOf(body) : cases.filter(c => c.status === "success").length);
-      applied.set(jobId, { state, score, outcome: body.outcome, caseStatuses: rec.caseStatuses, compile: rec.compile, stdouts: cases.map(c => String(c.stdout || "").trim()), at: Date.now() });
+      applied.set(jobId, { state, score, applications: 1, outcome: body.outcome, caseStatuses: rec.caseStatuses, compile: rec.compile, stdouts: cases.map(c => String(c.stdout || "").trim()), at: Date.now() });
       calls.push({ ...rec, answer: "applied", state, score });
       return answer(200, { ok: true, applied: true, state });
     });
   });
   return {
-    server, calls, applied,
+    server, calls, applied, stats: () => ({ ...stats }),
     setMode(m) { mode = m; }, setSlow(ms) { slowMs = ms; },
     async listen() { await new Promise(r => server.listen(0, "127.0.0.1", r)); return server.address().port; },
     close: () => new Promise(r => server.close(() => r()))

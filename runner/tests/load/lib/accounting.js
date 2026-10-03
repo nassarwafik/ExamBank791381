@@ -47,6 +47,8 @@ function createOfficialLedger() {
     mismatch(jobId) { get(jobId).mismatches++; },
     terminal(jobId, state) { if (!["complete", "retryable", "failed"].includes(state)) throw new TypeError("ledger: bad terminal state"); get(jobId).terminal = state; },
     jobIds: () => [...jobs.keys()],
+    /** The acknowledgements of one job in arrival order (answer, state, score) — identifiers and numbers only. */
+    acksOf(jobId) { return get(jobId).acks.map(a => ({ answer: a.answer, state: a.state, score: a.score })); },
     size: () => jobs.size,
     /** The reconciliation (counts, lists of ids and durations only). */
     reconcile() {

@@ -7,6 +7,7 @@
 const { WORKLOADS, BY_ID, normalizeWorkload } = require("./workloads.js");
 const { LANGUAGES } = require("./metrics.js");
 const { resolveCeilings, checkPlanAgainstCeilings } = require("./safety.js");
+const { requiredChecksFor } = require("./qualification.js");
 
 const DEFAULT_LEVELS = [1, 2, 4, 8, 16, 32];
 const posInt = v => Number.isInteger(v) && v >= 1;
@@ -54,7 +55,7 @@ const CATALOG = [
     prerequisites: "local / staging: the harness receiver. production: SMARTASSESS_CALLBACK_BASE_URL + SMARTASSESS_CALLBACK_HMAC_KEY in the environment; every production callback names a job that cannot exist (404 UNKNOWN_JOB — nothing is written, like smoke.js).",
     volume: "callbacks = jobs (default 20) · concurrency 4", expected: "local: every callback applied once, re-delivery alreadyApplied; production: 404 UNKNOWN_JOB for all", safety: "Production bodies are small and bounded (≤ 20 by ceiling); nothing is applied.",
     evidence: "callback answers, latency percentiles, idempotency check", passRule: "G2 PASS (0 duplicate applications, 0 score drift); transport answers as expected",
-    defaults: { jobs: 20, concurrency: 4 }, plan: p => [{ kind: "callback-burst", count: p.jobs, concurrency: p.concurrency, idempotency: true }] },
+    defaults: { jobs: 20, concurrency: 4 }, plan: (p, ctx) => [{ kind: "callback-burst", count: p.jobs, concurrency: p.concurrency, idempotency: ctx.target !== "production" }] },
   { id: "CERT-G", title: "Recovery under load", group: "G", modes: [5], targets: ["local"],
     purpose: "Accepted official work exists, the gateway dies, the journal is inspected, the gateway returns, recovery re-dispatches, jobs settle, grades apply at most once, no resubmission is needed.",
     prerequisites: "local stack (in-process crash / restart over the same journal). STAGING / PRODUCTION: the manual procedure in crash-tests.md / smoke-matrix.md §Recovery (a test suite never stops a production service).",
@@ -166,7 +167,7 @@ function planScenario({ scenario, target, params = {} } = {}) {
   totals.languages = [...totals.languages].sort(); totals.kinds = [...totals.kinds].sort();
   const over = checkPlanAgainstCeilings(totals, c.ceilings);
   if (over) return { ok: false, ...over, detail: over };
-  const config = { scenario: def.id, concurrency: totals.maxConcurrency, jobs: totals.jobs, practiceJobs: totals.practiceJobs, officialJobs: totals.officialJobs, callbacks: totals.callbacks, casesPerJob: totals.maxCasesPerJob || null, languages: totals.languages, workloadIds: p.workloads.map(w => w.id), limits: { practice: { timeMs: 3000, memoryMb: 128, outputBytes: 4096 }, official: { timeMs: 3000, memoryMb: 128, outputBytes: 17408 } }, runner: p.runner || null, levels: steps.filter(s => s.level).map(s => s.level), students: p.students || null, ceilings: c.ceilings };
+  const config = { scenario: def.id, concurrency: totals.maxConcurrency, jobs: totals.jobs, practiceJobs: totals.practiceJobs, officialJobs: totals.officialJobs, callbacks: totals.callbacks, casesPerJob: totals.maxCasesPerJob || null, languages: totals.languages, workloadIds: p.workloads.map(w => w.id), limits: { practice: { timeMs: 3000, memoryMb: 128, outputBytes: 4096 }, official: { timeMs: 3000, memoryMb: 128, outputBytes: 17408 } }, runner: p.runner || null, levels: steps.filter(s => s.level).map(s => s.level), students: p.students || null, ceilings: c.ceilings, qualification: requiredChecksFor(def.id, target) };
   return { ok: true, scenario: def, params: p, ceilings: c.ceilings, steps, totals, config };
 }
 

@@ -41,7 +41,14 @@ test("DL3 concurrency ladder 1 → 4 with the Runner limited to 2: RUNNER_BUSY a
   assert.equal(orphans(), "");
 });
 test("DL4 saturation: safe refusal, peak sandboxes ≤ limit, Runner responsive afterwards", { timeout: 600000 }, async () => {
-  const rep = expectPass(await run("CERT-E", { jobs: 8, officialJobs: 3, concurrency: 4, runner: { maxConcurrency: 1, maxPending: 2, maxActive: 1 } }), "CERT-E");
+  const r = await run("CERT-E", { jobs: 8, officialJobs: 3, concurrency: 4, runner: { maxConcurrency: 1, maxPending: 2, maxActive: 1 } });
+  assert.equal(r.ok, true, JSON.stringify(r).slice(0, 400));
+  const rep = r.report;
+  // correctness must PASS; the scenario qualification may FAIL only on Q-ADMISSION (finding B10-F1 — the Runner over-admits
+  // concurrent official submissions); any other failure is a regression
+  assert.equal(rep.correctness.verdict, "PASS", JSON.stringify(rep.correctness.failed));
+  assert.ok(rep.qualification.failed.every(id => id === "Q-ADMISSION"), JSON.stringify(rep.qualification));
+  assert.equal(rep.verdict, rep.qualification.failed.length ? "FAIL" : "PASS");
   assert.ok(rep.saturation.steps[0].practice.busy >= 1);
   assert.equal(rep.correctness.gates.find(g => g.id === "G7").pass, true);
   assert.equal(orphans(), "");

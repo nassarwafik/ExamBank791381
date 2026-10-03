@@ -133,7 +133,27 @@ B1 observability fields and is a known limit); official end-to-end = dispatch + 
 copy** (`p(q) = sorted[ceil(q·n) − 1]`): deterministic, order-independent, always an actual sample value, defined for 0 / 1 / 2 samples.
 `mean` is reported but never used for a decision. Throughput = completed practice executions per minute of the run.
 
-## 10. Correctness gates (machine-evaluated) and the verdict
+## 10. Correctness gates (machine-evaluated), scenario qualification and the verdict
+
+**Two layers, kept apart (Independent Review Fix 1).** *Correctness* (G1–G11 below) answers "did the platform behave correctly".
+*Qualification* answers "did this scenario meet its own pass rule": Q-CORRECTNESS (the correctness verdict is PASS) plus the
+scenario's required checks — **Q-P1** (CERT-J: `performance.p1.pass`, every language ≤ 40 000 ms, a missing language fails),
+**Q-CALLBACK-TRANSPORT** (CERT-F / CERT-K: every burst delivered, every answer as the target contract expects — `applied` on a
+local / staging receiver, `UNKNOWN_JOB` for a production synthetic job), **Q-IDEMPOTENCY** (CERT-F / CERT-K when the plan requested a
+re-delivery: `alreadyApplied` and state / score / application count unchanged between a snapshot taken BEFORE the re-delivery and one
+taken AFTER), **Q-RECOVERY** (CERT-G: `recovery.pass`), **Q-ADMISSION** (CERT-E: every saturation step has `official.overAdmission = 0`).
+The report carries both: `correctness { verdict, gates }` and `qualification { required, checks, failed, notEvaluated, verdict }`;
+**`report.verdict` is the qualification verdict.** PASS requires every required check evaluated and passed; a failed check gives
+FAIL whatever the averages say; an unmeasured required check gives INCOMPLETE, never PASS. Performance numbers never become
+correctness gates — only the scenario's own pass rule reaches the verdict. The required checks are recorded in
+`scenario.config.qualification` for reproducibility.
+
+**Consequence for the current Runner:** CERT-E **FAILS qualification** on Q-ADMISSION because of finding B10-F1 (§11) while its
+correctness gates pass. That is the intended enterprise behaviour: the harness is ready to detect the defect, the test suite passes
+because it proves the detection, and the product is not qualified until Phase B3 fixes `official.js` — after which the identical
+CERT-E scenario turns PASS without any change to the acceptance rule.
+
+### Correctness gates
 
 | gate | rule |
 |---|---|
@@ -149,9 +169,9 @@ copy** (`p(q) = sorted[ceil(q·n) − 1]`): deterministic, order-independent, al
 | G10 | no technical outcome applied as a final zero |
 | G11 | observed outcomes match the workload expectations (status; output for passing programs) |
 
-Verdict: `PASS` only when every gate was evaluated and passed; `FAIL` when any evaluated gate failed; `INCOMPLETE` when a gate could not be
-evaluated (e.g. a remote run without an attached journal status). Performance (`performance.*`, P1) is reported separately and never
-changes the verdict (LOAD23, M11). The P1 gate (≤ 40 000 ms, every language, a missing language fails) lives in `performance.p1`.
+Correctness verdict (`correctness.verdict`): `PASS` only when every gate was evaluated and passed; `FAIL` when any evaluated gate
+failed; `INCOMPLETE` when a gate could not be evaluated (e.g. a remote run without an attached journal status). The P1 measurement
+lives in `performance.p1` and reaches the top-level verdict only through Q-P1 for CERT-J (LOAD21, Q1, Q2).
 
 ## 11. Capacity evidence and the D4s_v5 / D8s_v5 decision model
 
@@ -221,9 +241,12 @@ once per target), with the harness report produced from the attached counts; (7)
 
 ## 14. Report format
 
-`schemaVersion 1`: `{ harnessVersion, target { name, remote, host }, environmentClass, buildSha, runnerSha, vmSku, scenario { id, title,
+`schemaVersion 1` (harness 1.1.0): `{ harnessVersion, target { name, remote, host }, environmentClass, buildSha, runnerSha, vmSku, scenario { id, title,
 config { concurrency, jobs, practiceJobs, officialJobs, callbacks, casesPerJob, languages, workloadIds, limits, runner, levels, students,
-ceilings } }, startedAt, durationMs, verdict, correctness { pass, failed, notEvaluated, gates[] }, performance { latency, latencyByOutcome,
+ceilings, qualification[] } }, startedAt, durationMs, verdict (= qualification.verdict), correctness { verdict, pass, failed, notEvaluated, gates[] },
+qualification { verdict, pass, required[], failed[], notEvaluated[], checks[] }, callbacks[] (bursts: answers, latency, transportOk,
+idempotency { redeliveryAnswer, before { state, score, applications }, after { … }, stateUnchanged, scoreUnchanged, applicationsUnchanged, pass }),
+performance { latency, latencyByOutcome,
 official { dispatch, callback, endToEnd }, p1, throughputPerMinute }, totals { offered, completed, busy, rejected, networkErrors, failed,
 retryable, lost, mismatches, practiceOffered, …, officialAccepted, officialBusy }, languages { python | java | csharp → counts, outcomes,
 latency }, practice, official (ledger reconciliation incl. byLanguage / byActor), journal, recovery, saturation, fairness, attachments,
@@ -231,14 +254,25 @@ notes }` plus a Markdown rendering. Reproducibility: git SHA (required, 40 hex),
 configuration, environment class, VM SKU; `compareReports` refuses two reports from different SHAs. Reports never contain source, stdin,
 stdout, expected outputs, keys, signatures or auth headers (redaction scan; LOAD5–7; M4).
 
+## 14a. The harness callback receiver (local stack and staging receiver)
+
+The receiver that stands in for the SmartAssess API bounds every request **before** verification at the Runner protocol's own
+callback ceiling, `CALLBACK_MAX_BYTES` = 8 MiB from `gateway/callback.js` (no second limit): wrong method / path is refused before
+the body is read; a `Content-Length` above the bound is refused immediately (413) without buffering; streamed bytes are counted and
+the body is discarded the moment it exceeds the bound (413, connection closed); exactly 8 MiB is accepted; the ≈ 6.45 MB P2 body is
+accepted; the HMAC is computed over the exact accepted bytes; nothing of a body, key or signature is logged. It also exposes an
+application counter per job (for the idempotency snapshot) and test-only fault modes (`fault-mutate`, `fault-reapply`) that the
+harness must catch (R1–R8, I1–I5).
+
 ## 15. Evidence from this phase
 
 | evidence | result |
 |---|---|
 | fail-first LOAD1–LOAD25 on the baseline | 25 tests, 25 fail (`MODULE_NOT_FOUND`) |
 | LOAD1–LOAD25 after implementation | 25 / 25 pass |
-| local scenario suite SC1–SC14 (fake sandbox, real gateway / queue / journal / deliverer) | 15 / 15 pass (SC5b is the B10-F1 characterisation) |
-| mutations M1–M18 (19 mutants incl. M4b) | 19 / 19 killed, files restored byte-for-byte |
+| local scenario suite SC1–SC14 (fake sandbox, real gateway / queue / journal / deliverer) | 15 / 15 pass (SC5: CERT-E correctness PASS, qualification FAIL on Q-ADMISSION — B10-F1; SC5b is the characterisation) |
+| mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) | 29 / 29 killed, files restored byte-for-byte |
+| Independent Review Fix 1 fail-first Q1–Q10, I1–I5, R1–R8 | 23 fail on 4c1a416 → 23 / 23 pass |
 | `load:qualify:local` CERT-L (24 practice + 12 official, concurrency 4) | PASS; practice p50 / p95 94 / 211 ms (fake profile); official end-to-end p50 408 ms; journal clean |
 | Runner unit suite | see the PR for the exact count after reconciliation |
 | real Docker (DL1–DL7) | not runnable in the authoring container (no Docker daemon); executed by the manual `docker-load` CI job / operator |
