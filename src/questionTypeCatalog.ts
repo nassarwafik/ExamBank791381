@@ -25,7 +25,8 @@ export type QuestionTypeDefinition = {
 };
 
 // Compact production encoding (initial-graph size matters): capability FLAGS are letters — a autoGrading, m manualGrading,
-// h hybridGrading, p partialCredit, c compoundPart, i interactive, r requiresImage, o offline. Every entry is version 1.
+// h hybridGrading, p partialCredit, c compoundPart, i interactive, r requiresImage, o offline. Every entry is version 1 unless
+// PRODUCTION_VERSIONS names a later CURRENT version (the family then ships every version 1..N — see registerQuestionTypePlugin).
 const FLAG: Record<string, keyof QuestionTypeCapabilities> = { a: "autoGrading", m: "manualGrading", h: "hybridGrading", p: "partialCredit", c: "compoundPart", i: "interactive", r: "requiresImage", o: "offline" };
 const caps = (flags: string): QuestionTypeCapabilities => {
   const c: QuestionTypeCapabilities = { autoGrading: false, manualGrading: false, hybridGrading: false, partialCredit: false, compoundPart: false, interactive: false, requiresImage: false, offline: false };
@@ -33,8 +34,13 @@ const caps = (flags: string): QuestionTypeCapabilities => {
   return Object.freeze(c);
 };
 const def = (d: QuestionTypeDefinition): QuestionTypeDefinition => Object.freeze({ ...d, responseKinds: Object.freeze([...d.responseKinds]) });
-const row = (key: string, label: string, category: QuestionTypeCategory, gradingMode: GradingMode, flags: string, responseKinds: string[], legacy = false): QuestionTypeDefinition =>
-  def({ key, version: 1, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
+const row = (key: string, label: string, category: QuestionTypeCategory, gradingMode: GradingMode, flags: string, responseKinds: string[], legacy = false, version = 1): QuestionTypeDefinition =>
+  def({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
+/** Phase 17F-C2 (Review Fix 1) — the CURRENT version of a production type whose contract was versioned. coding@2 adds the
+ *  teacher-owned compile-error policy (`answer.compileErrorPolicy`, explicit "zero" | "manualReview"); coding@1 remains the
+ *  historical contract (a compile error is an automatic 0) and stored coding@1 questions are never reinterpreted. A pre-C2
+ *  server knows coding@1 only, so it refuses coding@2 (fail closed) instead of grading it under the old contract. */
+const PRODUCTION_VERSIONS: Readonly<Record<string, number>> = Object.freeze({ coding: 2 });
 
 export const LEGACY_QUESTION_TYPE_KEYS: readonly string[] = Object.freeze(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
 
@@ -61,6 +67,7 @@ const PRODUCTION_ROWS = [
   ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false],
   // Phase 17A — ONE generic coding type (coding@1): the student writes ONE source file in a teacher-allowed language (language
   // is data, never a type). Designed hybrid; in 17A the official grade is MANUAL (no trusted executor yet, autoGrading false).
+  // Phase 17F-C2 RF1 — CURRENT version 2 (PRODUCTION_VERSIONS): coding@2 = coding@1 + the explicit compile-error policy.
   ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
@@ -68,7 +75,7 @@ const PRODUCTION_ROWS = [
 export type ProductionQuestionTypeKey = (typeof PRODUCTION_ROWS)[number][0];
 
 /** Production catalog: frozen definitions built from PRODUCTION_ROWS. */
-export const QUESTION_TYPE_CATALOG: readonly QuestionTypeDefinition[] = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6])));
+export const QUESTION_TYPE_CATALOG: readonly QuestionTypeDefinition[] = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
 
 /** Runtime identity of ONE implementation: a type key AND a version. Persisted data carries `presentationType` / `type` +
  *  `questionTypeVersion` (absence = V1); every runtime registry resolves by BOTH. */

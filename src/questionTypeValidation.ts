@@ -109,3 +109,5 @@ registerTypeValidator("simulation", 1, node => validateSimulationReference(node.
 // Phase 17A — coding@1: public config + private key rules (languages, default, limits, tests, ids, weights, comparator). Nothing
 // here compiles or executes anything.
 registerTypeValidator("coding", 1, node => validateCodingQuestion(node));
+// Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy): the SAME canonical validator, which reads the node's own version.
+registerTypeValidator("coding", 2, node => validateCodingQuestion(node));

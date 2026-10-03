@@ -139,3 +139,4 @@ const finite = (v) => typeof v === "number" && Number.isFinite(v);
 });
 (0, exports.registerTypeValidator)("simulation", 1, node => (0, smartsimManifest_1.validateSimulationReference)(node.simulation));
 (0, exports.registerTypeValidator)("coding", 1, node => (0, codingQuestion_1.validateCodingQuestion)(node));
+(0, exports.registerTypeValidator)("coding", 2, node => (0, codingQuestion_1.validateCodingQuestion)(node));

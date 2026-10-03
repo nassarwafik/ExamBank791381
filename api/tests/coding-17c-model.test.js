@@ -36,7 +36,7 @@ describe("17C-A — explicit grading mode (teacher-private, backward compatible)
     expect(sq().codingGradingMode(null)).toBe("manual");
   });
   it("defaultCodingAnswerKey() carries gradingMode manual; the TypeScript source and the server copy agree", () => {
-    expect(sq().defaultCodingAnswerKey()).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, gradingMode: "manual" });
+    expect(sq().defaultCodingAnswerKey()).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, gradingMode: "manual", compileErrorPolicy: "manualReview" });   // 17F-C2: NEW authoring defaults to teacher review
     expect(tsQuestion.defaultCodingAnswerKey()).toEqual(sq().defaultCodingAnswerKey());
     expect([...tsQuestion.CODING_GRADING_MODES]).toEqual([...sq().CODING_GRADING_MODES]);
   });

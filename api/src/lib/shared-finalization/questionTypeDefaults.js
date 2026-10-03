@@ -31,9 +31,14 @@ function applyRegisteredTypeDefaults(key, version, ensure, newId) {
     ensure("answer", { correctColumnByRow: {} });
 });
 (0, exports.registerTypeDefaults)("simulation", 1, () => { });
+const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] });
 (0, exports.registerTypeDefaults)("coding", 1, ensure => {
-    ensure("coding", { allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] });
+    ensure("coding", CODING_DEFAULT_CONFIG());
     ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+});
+(0, exports.registerTypeDefaults)("coding", 2, ensure => {
+    ensure("coding", CODING_DEFAULT_CONFIG());
+    ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {
     ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
