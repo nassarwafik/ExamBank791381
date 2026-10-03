@@ -1,7 +1,14 @@
 "use strict";
-// Phase 17F-B10-A — the PASS / FAIL CONTRACT. Ten machine-evaluable CORRECTNESS gates; performance (percentiles, throughput) is
+// Phase 17F-B10-A — the PASS / FAIL CONTRACT. Eleven machine-evaluable CORRECTNESS gates; performance (percentiles, throughput) is
 // reported beside them and never decides a verdict. A gate whose input was not measured is "not evaluated" and the verdict is then
 // INCOMPLETE — never PASS. Any evaluated gate that fails makes the verdict FAIL, whatever the averages say.
+//
+// AUTHORITY (Independent Review Fix 4, RF4-C): normalizeCorrectness() below is the ONE place where a correctness verdict is derived
+// from the raw gate entries. evaluateGates(), evaluateQualification() (Q-CORRECTNESS) and buildReport() all go through it, so the
+// derivations cannot drift. A correctness object must carry EXACTLY the canonical gate set G1–G11 once each (no missing, duplicate
+// or unknown id) with a consistent `evaluated` / `pass` pair; anything else is REFUSED. Stored summaries (verdict, pass /
+// correctnessPass, failed, notEvaluated) are reproducibility data only: when they disagree with the raw gates the gates win and the
+// contradiction is recorded — never silently repaired into PASS.
 const { journalConsistency } = require("./accounting.js");
 
 const P1_CEILING_MS = 40000;                     // Pilot Gate P1 (A2): end-to-end practice ≤ 40 s (SWA 45 s ceiling − 5 s margin)
@@ -15,6 +22,47 @@ const TITLES = Object.freeze({
 });
 
 const gate = (id, pass, detail) => ({ id, title: TITLES[id], evaluated: pass !== null, pass, detail });
+
+class CorrectnessEvidenceError extends Error { constructor(message) { super("correctness gates: " + message); this.name = "CorrectnessEvidenceError"; } }
+const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
+const sortedIds = a => a.slice().sort().join(",");
+
+/**
+ * normalizeCorrectness(c) → { gates, failed, notEvaluated, correctnessPass, pass, verdict, contradictions }
+ * The canonical correctness authority. `c.gates` (raw G1–G11 entries) is REQUIRED and validated: exactly every canonical gate once,
+ * `evaluated` a boolean, `pass` a boolean when evaluated and null when not. failed / notEvaluated / pass / verdict are DERIVED from
+ * the entries; a stored summary that disagrees is recorded in `contradictions` (and the raw gates win). Malformed → thrown.
+ */
+function normalizeCorrectness(c) {
+  if (!isObj(c)) throw new CorrectnessEvidenceError("correctness evidence must be an object carrying the raw gate entries");
+  if (!Array.isArray(c.gates)) throw new CorrectnessEvidenceError("raw gate entries (gates[]) are required — a summary verdict alone is not evidence");
+  const byId = {};
+  for (const g of c.gates) {
+    if (!isObj(g) || typeof g.id !== "string") throw new CorrectnessEvidenceError("a gate entry is not an object with an id");
+    if (!GATE_IDS.includes(g.id)) throw new CorrectnessEvidenceError("unknown gate id " + JSON.stringify(g.id) + " (canonical: " + GATE_IDS.join(", ") + ")");
+    if (byId[g.id]) throw new CorrectnessEvidenceError("duplicate gate id " + g.id);
+    if (typeof g.evaluated !== "boolean") throw new CorrectnessEvidenceError(g.id + ": evaluated must be a boolean");
+    if (g.evaluated ? typeof g.pass !== "boolean" : g.pass !== null) throw new CorrectnessEvidenceError(g.id + ": pass must be a boolean when evaluated and null when not evaluated (got " + JSON.stringify(g.pass) + ", evaluated " + g.evaluated + ")");
+    byId[g.id] = { id: g.id, title: TITLES[g.id], evaluated: g.evaluated, pass: g.pass, detail: g.detail === undefined || g.detail === null ? "" : String(g.detail) };
+  }
+  for (const id of GATE_IDS) if (!byId[id]) throw new CorrectnessEvidenceError("canonical gate " + id + " is missing");
+  const gates = GATE_IDS.map(id => byId[id]);
+  const failed = gates.filter(g => g.evaluated && g.pass === false).map(g => g.id);
+  const notEvaluated = gates.filter(g => !g.evaluated).map(g => g.id);
+  const correctnessPass = failed.length === 0 && notEvaluated.length === 0;
+  const verdict = failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";
+  const contradictions = [];
+  if (c.verdict !== undefined && (typeof c.verdict !== "string" || c.verdict !== verdict)) contradictions.push("correctness: stored verdict " + (typeof c.verdict === "string" ? c.verdict : JSON.stringify(c.verdict)) + " contradicts the gates (derived " + verdict + ")");
+  for (const k of ["correctnessPass", "pass"]) if (c[k] !== undefined && c[k] !== correctnessPass) contradictions.push("correctness: stored " + k + "=" + JSON.stringify(c[k]) + " contradicts the gates (derived " + correctnessPass + ")");
+  for (const [k, derived] of [["failed", failed], ["notEvaluated", notEvaluated]]) {
+    if (c[k] === undefined) continue;
+    if (!Array.isArray(c[k]) || c[k].some(x => typeof x !== "string")) throw new CorrectnessEvidenceError("stored " + k + " must be an array of gate ids");
+    if (sortedIds(c[k]) !== sortedIds(derived)) contradictions.push("correctness: stored " + k + "=[" + c[k].join(",") + "] contradicts the gates (derived [" + derived.join(",") + "])");
+  }
+  // a contradiction recorded by an earlier (re)validation is evidence of its own and is never dropped by a round trip
+  if (Array.isArray(c.contradictions)) for (const x of c.contradictions) if (typeof x === "string" && x && !contradictions.includes(x)) contradictions.push(x);
+  return { gates, failed, notEvaluated, correctnessPass, pass: correctnessPass, verdict, contradictions };
+}
 
 /**
  * evaluateGates({ practice?, official?, journal?, journalExpected?, responsive?, governor?, leak? }) →
@@ -36,12 +84,8 @@ function evaluateGates({ practice, official, journal, journalExpected, responsiv
   gates.push(official ? gate("G10", official.infrastructureZeroes.length === 0, official.infrastructureZeroes.length + " technical outcome(s) applied as a final zero") : gate("G10", null, "no official ledger"));
   const mism = (practice && Number.isFinite(practice.mismatches) ? practice.mismatches : 0) + (official && Number.isFinite(official.mismatches) ? official.mismatches : 0);
   gates.push(practice || official ? gate("G11", mism === 0, mism + " expectation mismatch(es)") : gate("G11", null, "nothing observed"));
-  const byId = Object.fromEntries(gates.map(g => [g.id, g]));
-  const failed = gates.filter(g => g.evaluated && g.pass === false).map(g => g.id);
-  const notEvaluated = gates.filter(g => !g.evaluated).map(g => g.id);
-  const correctnessPass = failed.length === 0 && notEvaluated.length === 0;
-  const verdict = failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";
-  return { gates, byId, failed, notEvaluated, correctnessPass, verdict };
+  const normalized = normalizeCorrectness({ gates });                          // the ONE derivation (RF4-C)
+  return { ...normalized, byId: Object.fromEntries(normalized.gates.map(g => [g.id, g])) };
 }
 
 /** P1 regression: every sample of every language ≤ 40 s; a missing / empty language FAILS (nothing is assumed). */
@@ -55,4 +99,4 @@ function p1Gate(samplesByLanguage, ceilingMs = P1_CEILING_MS) {
   return { pass: violations.length === 0 && missing.length === 0, violations, missing, ceilingMs };
 }
 
-module.exports = { P1_CEILING_MS, GATE_IDS, TITLES, evaluateGates, p1Gate };
+module.exports = { P1_CEILING_MS, GATE_IDS, TITLES, CorrectnessEvidenceError, normalizeCorrectness, evaluateGates, p1Gate };

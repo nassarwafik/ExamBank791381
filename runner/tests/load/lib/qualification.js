@@ -16,9 +16,11 @@
 //
 //   Q-CORRECTNESS          every scenario: the correctness verdict (gates.js) is PASS
 //   Q-P1                   CERT-J: violations empty, missing empty, canonical ceiling (40 000 ms), every per-language maximum ≤ ceiling
-//   Q-CALLBACK-TRANSPORT   CERT-F / CERT-K: for every burst Σ answers = count AND answers[expectedAnswer] = count (no other bucket)
-//   Q-IDEMPOTENCY          CERT-F / CERT-K on LOCAL only (the local receiver really applies the synthetic job): re-delivery answered
-//                          alreadyApplied, both snapshots present, state / score / application count identical
+//   Q-CALLBACK-TRANSPORT   CERT-F / CERT-K: for every burst Σ answers = count AND answers[CALLBACK_CONTRACT[target]] = count (no other
+//                          bucket); the stored expectedAnswer must equal the target contract (else FAIL + contradiction)
+//   Q-IDEMPOTENCY          CERT-F / CERT-K on LOCAL only (the local receiver really applies the synthetic job): EVERY burst carries
+//                          idempotency evidence; re-delivery answered alreadyApplied, both snapshots present, state / score /
+//                          application count identical
 //   Q-RECOVERY             CERT-G: recoveryVerdict() — settled, lost 0, duplicate applications 0, no resubmission, bounded re-execution
 //   Q-ADMISSION            CERT-E: every saturation step has official.overAdmission = 0 (B10-F1 fails this on the current Runner)
 //
@@ -27,11 +29,20 @@
 //   staging     Q-CORRECTNESS, Q-CALLBACK-TRANSPORT                  (synthetic job cannot exist at the SmartAssess endpoint → UNKNOWN_JOB,
 //   production  Q-CORRECTNESS, Q-CALLBACK-TRANSPORT                   nothing is applied, so no idempotency is measured or claimed)
 // A future real staging prepared-job test may add a separate idempotency qualification; this phase does not fabricate one.
-const { P1_CEILING_MS } = require("./gates.js");
+//
+// Independent Review Fix 4: (RF4-A) the EXPECTED answer of a synthetic callback burst is the TARGET CONTRACT (CALLBACK_CONTRACT below),
+// never the burst's own stored `expectedAnswer` — a stored value that disagrees FAILS Q-CALLBACK-TRANSPORT with a recorded
+// contradiction; (RF4-B) on local EVERY burst must carry idempotency evidence, a burst without it fails Q-IDEMPOTENCY and is never
+// covered by another burst; (RF4-C) Q-CORRECTNESS derives from the raw canonical gate set through normalizeCorrectness() (gates.js),
+// the ONE correctness authority shared with buildReport — a stored correctness summary can never claim PASS.
+const { P1_CEILING_MS, normalizeCorrectness } = require("./gates.js");
 const { LANGUAGES: P1_LANGUAGES } = require("./metrics.js");                    // the canonical language registry: python, java, csharp
 const { EXECUTION_POLICY } = require("../../../gateway/official.js");
 
 const TARGETS = Object.freeze(["local", "staging", "production"]);
+/** The canonical answer a SYNTHETIC callback must receive per target class: the harness receiver applies it on local; at the real
+ *  SmartAssess endpoint (staging / production) the job cannot exist → UNKNOWN_JOB. The target class is the authority (RF4-A). */
+const CALLBACK_CONTRACT = Object.freeze({ local: "applied", staging: "unknown", production: "unknown" });
 const TITLES = Object.freeze({
   "Q-CORRECTNESS": "correctness gates G1–G11 PASS",
   "Q-P1": "P1 regression: every language ≤ 40 000 ms end to end",
@@ -120,17 +131,21 @@ function evalP1(p1) {
   const contradiction = summaryVs("Q-P1", p1.pass, derived);
   return check("Q-P1", derived && !contradiction, derived ? "every language within " + P1_CEILING_MS + " ms" : reasons.join("; "), contradiction);
 }
-function evalTransport(bursts) {
+function evalTransport(bursts, target) {
   if (!Array.isArray(bursts)) throw new QualificationError("malformed callback evidence (bursts must be an array)");
   if (!bursts.length) return check("Q-CALLBACK-TRANSPORT", null, "no callback burst measured");
+  // RF4-A: the target class decides what every synthetic callback must have been answered; the stored expectedAnswer is
+  // reproducibility evidence that must AGREE with the contract — it can never redefine it
+  const expected = CALLBACK_CONTRACT[target];
   const details = [], contradictions = [];
   let derived = true;
   for (const b of bursts) {
     if (!isObj(b) || !nonNegInt(b.count) || b.count < 1 || typeof b.expectedAnswer !== "string" || !isObj(b.answers) || !Object.values(b.answers).every(nonNegInt)) throw new QualificationError("malformed callback burst evidence (count, expectedAnswer, answers)");
+    if (b.expectedAnswer !== expected) { derived = false; contradictions.push("Q-CALLBACK-TRANSPORT: stored expectedAnswer " + JSON.stringify(b.expectedAnswer) + " contradicts the " + target + " target contract (" + expected + ")"); }
     const total = Object.values(b.answers).reduce((s, n) => s + n, 0);
-    const ok = total === b.count && (b.answers[b.expectedAnswer] || 0) === b.count;
+    const ok = total === b.count && (b.answers[expected] || 0) === b.count;
     if (!ok) derived = false;
-    details.push("count " + b.count + ", expected " + b.expectedAnswer + ", answers " + JSON.stringify(b.answers) + (ok ? "" : " ✗"));
+    details.push("count " + b.count + ", contract " + expected + ", answers " + JSON.stringify(b.answers) + (ok && b.expectedAnswer === expected ? "" : " ✗"));
     const c = summaryVs("Q-CALLBACK-TRANSPORT", b.transportOk, ok);
     if (c) contradictions.push(c);
   }
@@ -138,12 +153,15 @@ function evalTransport(bursts) {
 }
 function evalIdempotency(bursts) {
   if (!Array.isArray(bursts)) throw new QualificationError("malformed callback evidence (bursts must be an array)");
-  const list = bursts.filter(b => isObj(b) && b.idempotency !== undefined && b.idempotency !== null);
-  if (!list.length) return check("Q-IDEMPOTENCY", null, "no idempotent re-delivery measured");
+  if (!bursts.length) return check("Q-IDEMPOTENCY", null, "no idempotent re-delivery measured");
   const details = [], contradictions = [];
   let derived = true;
-  for (const b of list) {
+  // RF4-B: EVERY burst of a local CERT-F / CERT-K must carry its own idempotency evidence — a burst that omits it FAILS the check
+  // and is never covered by another burst that has it (fail closed)
+  for (const [n, b] of bursts.entries()) {
+    if (!isObj(b)) throw new QualificationError("malformed callback burst evidence (not an object)");
     const i = b.idempotency;
+    if (i === undefined || i === null) { derived = false; details.push("burst " + (n + 1) + " carries no idempotency evidence ✗"); continue; }
     if (!isObj(i) || typeof i.redeliveryAnswer !== "string") throw new QualificationError("malformed idempotency evidence");
     // RF3-D: a snapshot that is present must be well-formed (state string, score null or finite, applications a non-negative integer)
     for (const [name, s] of [["before", i.before], ["after", i.after]]) { if (s === null || s === undefined) continue; if (!isObj(s) || typeof s.state !== "string" || !(s.score === null || (typeof s.score === "number" && Number.isFinite(s.score))) || !nonNegInt(s.applications)) throw new QualificationError("malformed idempotency snapshot (" + name + ")"); }
@@ -199,11 +217,20 @@ function evalAdmission(saturation) {
  */
 function evaluateQualification({ scenarioId, target, correctness, p1, bursts, recovery, saturation } = {}) {
   const ids = requiredChecksFor(scenarioId, target);
+  // RF4-C: the correctness evidence is normalized from its RAW gate entries by the one canonical authority (gates.js); a bare
+  // summary (no gates), a missing / duplicate / unknown gate or an inconsistent pair is refused — the normalized object is returned
+  // to the caller (buildReport) so no second derivation exists
+  let normalized;
+  try { normalized = normalizeCorrectness(correctness); } catch (e) { throw new QualificationError(String(e && e.message || e)); }
   const checks = [];
   for (const id of ids) {
-    if (id === "Q-CORRECTNESS") checks.push(correctness && typeof correctness.verdict === "string" ? check(id, correctness.verdict === "PASS" ? true : correctness.verdict === "FAIL" ? false : null, "correctness " + correctness.verdict + (correctness.failed && correctness.failed.length ? " (" + correctness.failed.join(", ") + ")" : "") + (correctness.notEvaluated && correctness.notEvaluated.length ? " not evaluated: " + correctness.notEvaluated.join(", ") : "")) : check(id, null, "no correctness result"));
+    if (id === "Q-CORRECTNESS") {
+      const c = normalized, derivedPass = c.verdict === "PASS" ? true : c.verdict === "FAIL" ? false : null;
+      const contradiction = c.contradictions.length ? c.contradictions.join(" | ") : null;
+      checks.push(check(id, derivedPass === null ? null : derivedPass && !contradiction, "correctness " + c.verdict + (c.failed.length ? " (" + c.failed.join(", ") + ")" : "") + (c.notEvaluated.length ? " not evaluated: " + c.notEvaluated.join(", ") : ""), contradiction));
+    }
     else if (id === "Q-P1") checks.push(evalP1(p1));
-    else if (id === "Q-CALLBACK-TRANSPORT") checks.push(evalTransport(bursts || []));
+    else if (id === "Q-CALLBACK-TRANSPORT") checks.push(evalTransport(bursts || [], target));
     else if (id === "Q-IDEMPOTENCY") checks.push(evalIdempotency(bursts || []));
     else if (id === "Q-RECOVERY") checks.push(evalRecovery(recovery));
     else if (id === "Q-ADMISSION") checks.push(evalAdmission(saturation));
@@ -213,7 +240,7 @@ function evaluateQualification({ scenarioId, target, correctness, p1, bursts, re
   const contradictions = checks.map(c => c.contradiction).filter(Boolean);
   const pass = failed.length === 0 && notEvaluated.length === 0;
   const verdict = failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";
-  return { required: ids, checks, failed, notEvaluated, contradictions, pass, verdict };
+  return { required: ids, checks, failed, notEvaluated, contradictions, pass, verdict, correctness: normalized };
 }
 
-module.exports = { TARGETS, TITLES: Object.freeze({ ...TITLES }), KNOWN_CHECKS, SCENARIO_CHECKS, MAX_EXECUTIONS_BOUND, QualificationError, requiredChecksFor, assertQualificationMetadata, recoveryVerdict, evaluateQualification };
+module.exports = { TARGETS, CALLBACK_CONTRACT, TITLES: Object.freeze({ ...TITLES }), KNOWN_CHECKS, SCENARIO_CHECKS, MAX_EXECUTIONS_BOUND, QualificationError, requiredChecksFor, assertQualificationMetadata, recoveryVerdict, evaluateQualification };

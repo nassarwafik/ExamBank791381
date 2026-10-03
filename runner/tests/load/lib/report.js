@@ -4,9 +4,15 @@
 // student source, hidden test data, keys, signatures or auth headers (redactionScan). Reproducibility metadata (git SHA, Runner SHA,
 // harness version, scenario id + configuration, environment class, VM SKU) is mandatory; two reports from different SHAs are never
 // comparable as "the same build" (compareReports refuses).
+//
+// Independent Review Fix 4 (RF4-C / RF4-D): the report's `correctness` object is ALWAYS the canonical derived one — buildReport hands the
+// raw gate entries (fresh `input.gates` from evaluateGates, or `input.correctness` of a report being revalidated) to
+// evaluateQualification, which normalizes them through gates.js normalizeCorrectness() (the ONE authority) and returns the normalized
+// object; there is no second derivation here. Stored summaries that disagree with the raw gates are recorded as contradictions and
+// make Q-CORRECTNESS FAIL; a malformed gate set is refused. A report produced here revalidates to the same verdicts (round trip).
 const { evaluateQualification, assertQualificationMetadata, requiredChecksFor } = require("./qualification.js");
 
-const HARNESS_VERSION = "1.1.0";
+const HARNESS_VERSION = "1.2.0";
 const SHA = /^[0-9a-f]{40}$/;
 const FORBIDDEN_KEYS = /^(source|stdin|stdout|stderr|expectedOutput|expectedOutputs|cases|key|hmac|hmacKey|secret|token|signature|authorization|headers|cookie|bearer|password)$/i;
 const FORBIDDEN_TEXT = [/x-sa-(runner|callback|sweep)-signature/i, /\bv1=[0-9a-f]{64}\b/, /\bbearer\s+[A-Za-z0-9._-]{8,}/i, /\bauthorization\b/i, /(RUNNER_HMAC_KEY|SMARTASSESS_CALLBACK_HMAC_KEY|CODING_[A-Z_]*HMAC_KEY|CODING_RUNNER_HMAC_KEY)/, /print\s*\(|System\.out\.println|Console\.WriteLine|public\s+class\s+Main|import\s+java\./];
@@ -35,11 +41,6 @@ function redactionScan(value, { canaries = [] } = {}) {
 }
 
 const plain = v => JSON.parse(JSON.stringify(v));
-function gatesFromCorrectness(c) {
-  if (!c || !Array.isArray(c.gates)) return null;
-  const failed = c.gates.filter(g => g.evaluated && g.pass === false).map(g => g.id), notEvaluated = c.gates.filter(g => !g.evaluated).map(g => g.id);
-  return { gates: c.gates, failed, notEvaluated, correctnessPass: failed.length === 0 && notEvaluated.length === 0, verdict: failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS" };
-}
 /** Report totals = practice requests + official jobs (every offered unit of work, in exactly one bucket each). */
 function totalsOf(p, o) {
   const pt = p ? p.totals : { offered: 0, completed: 0, busy: 0, rejected: 0, networkErrors: 0, failed: 0, mismatches: 0, leaks: 0 };
@@ -58,9 +59,10 @@ function buildReport(input, { canaries = [] } = {}) {
   if (input.runnerSha !== undefined && input.runnerSha !== null && !SHA.test(String(input.runnerSha))) throw new Error("report: runnerSha must be a git object id when given");
   if (!input.target || typeof input.target.name !== "string") throw new Error("report: target.name is required");
   if (!input.scenario || typeof input.scenario.id !== "string" || !input.scenario.config || typeof input.scenario.config !== "object") throw new Error("report: scenario { id, config } is required");
-  // a finished report may be re-validated (e.g. after the operator attached VM metrics): its gates come back from `correctness`
-  const g = input.gates || gatesFromCorrectness(input.correctness);
-  if (!g || !Array.isArray(g.gates) || typeof g.verdict !== "string") throw new Error("report: gates are required");
+  // a finished report may be re-validated (e.g. after the operator attached VM metrics): its raw gates come back from `correctness`;
+  // either way ONLY the raw gate entries are evidence (normalized below by the canonical authority), never a stored summary
+  const rawCorrectness = input.gates !== undefined && input.gates !== null ? input.gates : input.correctness;
+  if (!rawCorrectness || typeof rawCorrectness !== "object" || !Array.isArray(rawCorrectness.gates)) throw new Error("report: gates are required (the raw G1–G11 gate entries)");
   // Independent Review Fix 1 / 2 — the top-level verdict is the SCENARIO QUALIFICATION: correctness + the scenario's own required
   // checks. The CANONICAL registry (qualification.js) is the authority — an unknown scenario or target class is refused here;
   // scenario.config.qualification is reproducibility metadata and must match the canon EXACTLY (missing / extra / unknown /
@@ -68,12 +70,15 @@ function buildReport(input, { canaries = [] } = {}) {
   const canonical = requiredChecksFor(input.scenario.id, input.target.name);
   if (input.scenario.config.qualification !== undefined) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);
   const bursts = Array.isArray(input.callbacks) ? input.callbacks : Array.isArray(input.bursts) ? input.bursts : [];
-  const q = evaluateQualification({ scenarioId: input.scenario.id, target: input.target.name, correctness: g, p1: input.p1 || (input.performance && input.performance.p1) || null, bursts, recovery: input.recovery || null, saturation: input.saturation || null });
+  // RF4-D: the SAME p1 evidence feeds the qualification and the emitted report, so a revalidated report never loses it
+  const p1 = input.p1 || (input.performance && input.performance.p1) || null;
+  const q = evaluateQualification({ scenarioId: input.scenario.id, target: input.target.name, correctness: rawCorrectness, p1, bursts, recovery: input.recovery || null, saturation: input.saturation || null });
+  const g = q.correctness;                                                     // the canonical derived correctness (RF4-C)
   if (q.required.slice().sort().join(",") !== canonical.slice().sort().join(",")) throw new Error("report: qualification requirements drifted from the canon");
   if (input.verdict !== undefined && input.verdict !== q.verdict) throw new Error("report: verdict contradicts the qualification (" + input.verdict + " vs " + q.verdict + ")");
   const practice = input.practice ? plain(input.practice) : null;
   const official = input.official ? plain(input.official) : null;
-  const perf = { latency: practice ? practice.latency : null, latencyByOutcome: practice ? practice.latencyByOutcome : null, official: official ? official.timing : null, p1: input.p1 ? plain(input.p1) : null, throughputPerMinute: input.durationMs > 0 && practice ? Math.round((practice.totals.completed / (input.durationMs / 60000)) * 100) / 100 : null };
+  const perf = { latency: practice ? practice.latency : null, latencyByOutcome: practice ? practice.latencyByOutcome : null, official: official ? official.timing : null, p1: p1 ? plain(p1) : null, throughputPerMinute: input.durationMs > 0 && practice ? Math.round((practice.totals.completed / (input.durationMs / 60000)) * 100) / 100 : null };
   const report = {
     schemaVersion: 1, harnessVersion: typeof input.harnessVersion === "string" ? input.harnessVersion : HARNESS_VERSION,
     target: { name: input.target.name, remote: !!input.target.remote, host: input.target.host || null },
@@ -81,7 +86,7 @@ function buildReport(input, { canaries = [] } = {}) {
     scenario: { id: input.scenario.id, title: input.scenario.title || null, config: { ...plain(input.scenario.config), qualification: canonical } },
     startedAt: input.startedAt, durationMs: input.durationMs,
     verdict: q.verdict,
-    correctness: { verdict: g.verdict, pass: g.correctnessPass, failed: g.failed || [], notEvaluated: g.notEvaluated || [], gates: g.gates.map(x => ({ id: x.id, title: x.title, evaluated: x.evaluated, pass: x.pass, detail: x.detail })) },
+    correctness: { verdict: g.verdict, pass: g.pass, failed: g.failed, notEvaluated: g.notEvaluated, contradictions: g.contradictions, gates: g.gates.map(x => ({ id: x.id, title: x.title, evaluated: x.evaluated, pass: x.pass, detail: x.detail })) },
     qualification: { verdict: q.verdict, pass: q.pass, required: q.required, failed: q.failed, notEvaluated: q.notEvaluated, contradictions: q.contradictions, checks: q.checks.map(c => ({ id: c.id, title: c.title, evaluated: c.evaluated, pass: c.pass, detail: c.detail, contradiction: c.contradiction || null })) },
     callbacks: bursts.length ? plain(bursts) : null,
     performance: perf,

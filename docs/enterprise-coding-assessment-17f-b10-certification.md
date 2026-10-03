@@ -176,6 +176,25 @@ stored summaries and cannot vouch for a language; malformed sample shapes are re
 string state, a null or finite score and a non-negative integer application count; recovery evidence needs boolean flags, non-negative
 integer counts and a positive integer allowance — malformed shapes are refused, measured breaches FAIL.
 
+**Certification authority (Independent Review Fix 4).** *Callback contract:* the expected answer of a synthetic callback burst is the
+TARGET CONTRACT — `CALLBACK_CONTRACT` in `lib/qualification.js`: local → `applied` (the harness receiver applies the synthetic job),
+staging and production → `unknown` (the job cannot exist at the SmartAssess endpoint → UNKNOWN_JOB). The harness takes its own
+expectation from the same table, and a report's stored `expectedAnswer` is reproducibility evidence only: Q-CALLBACK-TRANSPORT
+evaluates the answer counts against the contract, and a stored value that disagrees FAILS the check with a recorded contradiction
+(a production burst "expecting applied" can never look consistent); a missing or non-string value is refused. *Local idempotency
+completeness:* on local EVERY callback burst of CERT-F / CERT-K must carry its own idempotency evidence — a burst that omits it fails
+Q-IDEMPOTENCY and is never covered by another burst that has it; staging / production require none (nothing is applied there).
+*Canonical correctness:* `normalizeCorrectness()` in `lib/gates.js` is the ONE authority that derives `failed`, `notEvaluated`, `pass`
+and `verdict` from the raw G1–G11 gate entries; `evaluateGates`, `evaluateQualification` (Q-CORRECTNESS) and `buildReport` (fresh
+`gates` and a report revalidated from `correctness` alike) all go through it, so no second derivation can drift. A correctness object
+must contain exactly every canonical gate once (a missing G5, a duplicate G3 or an unknown G12 is refused) with a consistent pair —
+`evaluated=true` needs a boolean `pass`, `evaluated=false` needs `pass=null`, anything else is refused. Stored summaries (`verdict`,
+`pass` / `correctnessPass`, `failed`, `notEvaluated`) are data, never authority: when they disagree with the raw gates the gates win,
+the contradiction is recorded in `correctness.contradictions` and `qualification.contradictions`, and Q-CORRECTNESS FAILS — "G2 FAIL
+but verdict PASS" can never yield a passing report, and a bare summary without gate entries can never claim Q-CORRECTNESS. *Round
+trip:* a report produced by `buildReport` is accepted again by `buildReport` with identical correctness and qualification verdicts
+(the same `p1` evidence now feeds both the qualification and the emitted report, and a recorded contradiction is never dropped).
+
 **CERT-F / CERT-K requirement matrix (what is measurable under the current architecture):**
 
 | target | required checks | why |
@@ -264,7 +283,7 @@ Suggested attachment shape: `{ "vmSku": "Standard_D4s_v5", "cpuPercent": { "p50"
 ## 13. Usage
 
 **Local (no Docker):** `node runner/tests/load/cli.js run --scenario=CERT-L --target=local --execute` (fake sandbox);
-`npm --prefix runner run test:load` runs LOAD1–25 and SC1–14; `test:load:mutation` runs M1–M18.
+`npm --prefix runner run test:load` runs LOAD1–25, SC1–14 and the review-fix suites; `test:load:mutation` runs M1–M18 and QM1–QM30.
 **Local (real Docker):** build the images (`npm --prefix runner run build:images`), then `--sandbox=docker` on any local scenario or
 `npm --prefix runner run test:docker:load` (DL1–DL7, bounded).
 **Staging:** `RUNNER_URL=https://runner-staging.<domain> RUNNER_HMAC_KEY=… node runner/tests/load/cli.js run --scenario=CERT-D
@@ -282,9 +301,9 @@ once per target), with the harness report produced from the attached counts; (7)
 
 ## 14. Report format
 
-`schemaVersion 1` (harness 1.1.0): `{ harnessVersion, target { name, remote, host }, environmentClass, buildSha, runnerSha, vmSku, scenario { id, title,
+`schemaVersion 1` (harness 1.2.0): `{ harnessVersion, target { name, remote, host }, environmentClass, buildSha, runnerSha, vmSku, scenario { id, title,
 config { concurrency, jobs, practiceJobs, officialJobs, callbacks, casesPerJob, languages, workloadIds, limits, runner, levels, students,
-ceilings, qualification[] } }, startedAt, durationMs, verdict (= qualification.verdict), correctness { verdict, pass, failed, notEvaluated, gates[] },
+ceilings, qualification[] } }, startedAt, durationMs, verdict (= qualification.verdict), correctness { verdict, pass, failed, notEvaluated, contradictions[], gates[] } (canonical, derived from the gate entries),
 qualification { verdict, pass, required[], failed[], notEvaluated[], contradictions[], checks[] { …, contradiction } }, callbacks[] (bursts: answers, latency, transportOk,
 idempotency { redeliveryAnswer, before { state, score, applications }, after { … }, stateUnchanged, scoreUnchanged, applicationsUnchanged, pass }),
 performance { latency, latencyByOutcome,
@@ -312,10 +331,11 @@ harness must catch (R1–R8, I1–I5).
 | fail-first LOAD1–LOAD25 on the baseline | 25 tests, 25 fail (`MODULE_NOT_FOUND`) |
 | LOAD1–LOAD25 after implementation | 25 / 25 pass |
 | local scenario suite SC1–SC14 (fake sandbox, real gateway / queue / journal / deliverer) | 15 / 15 pass (SC5: CERT-E correctness PASS, qualification FAIL on Q-ADMISSION — B10-F1; SC5b is the characterisation) |
-| mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) + QM9–QM16 (8) + QM17–QM24 (8) | 45 / 45 killed, files restored byte-for-byte |
+| mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) + QM9–QM16 (8) + QM17–QM24 (8) + QM25–QM30 (6) | 51 / 51 killed, files restored byte-for-byte |
 | Independent Review Fix 1 fail-first Q1–Q10, I1–I5, R1–R8 | 23 fail on 4c1a416 → 23 / 23 pass |
 | Independent Review Fix 2 fail-first QA1–QA4, AUTH1–AUTH6, EV1–EV9 | 17 of 19 fail on 8b6fe3a → 19 / 19 pass |
 | Independent Review Fix 3 fail-first RA1–RA6, RB1–RB7, RP1–RP6, RE1–RE6 | 18 of 25 fail on 78114c3 → 25 / 25 pass |
+| Independent Review Fix 4 fail-first CT0–CT7, ID1–ID4, CG1–CG11, RT1–RT3 | 18 of 26 fail on 332c210 → 26 / 26 pass |
 | `load:qualify:local` CERT-L (24 practice + 12 official, concurrency 4) | PASS; practice p50 / p95 94 / 211 ms (fake profile); official end-to-end p50 408 ms; journal clean |
 | Runner unit suite | see the PR for the exact count after reconciliation |
 | real Docker (DL1–DL7) | not runnable in the authoring container (no Docker daemon); executed by the manual `docker-load` CI job / operator |

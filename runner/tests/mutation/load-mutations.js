@@ -1,5 +1,5 @@
 "use strict";
-// Phase 17F-B10-A — ADVERSARIAL / MUTATION check of the load harness (M1–M15). Each mutation is applied to the harness source
+// Phase 17F-B10-A — ADVERSARIAL / MUTATION check of the load harness (M1–M18, QM1–QM30). Each mutation is applied to the harness source
 // (string replacement), the fail-first suite runs, and the mutation is KILLED when the suite fails. Files are restored
 // byte-for-byte afterwards (verified by SHA-256) — even when a run throws. Exit 0 = every mutation killed · 1 = a mutation survived.
 //     node runner/tests/mutation/load-mutations.js [--only=M4,M5] [--restore]
@@ -11,7 +11,7 @@ const { spawnSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const LIB = f => path.join(ROOT, "tests", "load", "lib", f);
-const SUITES = ["load-harness.rtest.js", "load-review-fix-1.rtest.js", "load-review-fix-2.rtest.js", "load-review-fix-3.rtest.js"].map(f => path.join(ROOT, "tests", "unit", f));
+const SUITES = ["load-harness.rtest.js", "load-review-fix-1.rtest.js", "load-review-fix-2.rtest.js", "load-review-fix-3.rtest.js", "load-review-fix-4.rtest.js"].map(f => path.join(ROOT, "tests", "unit", f));
 const sha = file => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 
 const MUTATIONS = [
@@ -50,7 +50,7 @@ const MUTATIONS = [
   { id: "QM10", title: "unknown scenario falls back to correctness-only", file: "qualification.js", from: 'if (typeof scenarioId !== "string" || !Object.prototype.hasOwnProperty.call(SCENARIO_CHECKS, scenarioId)) throw new QualificationError("unknown scenario " + JSON.stringify(scenarioId));\n  const extra = SCENARIO_CHECKS[scenarioId];', to: 'const extra = SCENARIO_CHECKS[scenarioId] || [];' },
   { id: "QM11", title: "staging CERT-F requires the impossible Q-IDEMPOTENCY", file: "qualification.js", from: '  "CERT-F": target => (target === "local" ? TRANSPORT_AND_IDEMPOTENCY : TRANSPORT_ONLY),', to: '  "CERT-F": target => (target !== "production" ? TRANSPORT_AND_IDEMPOTENCY : TRANSPORT_ONLY),' },
   { id: "QM12", title: "trust p1.pass without checking the violations", file: "qualification.js", from: '  const derived = reasons.length === 0;\n  const contradiction = summaryVs("Q-P1", p1.pass, derived);', to: '  const derived = p1.pass === true;\n  const contradiction = null;' },
-  { id: "QM13", title: "trust transportOk despite wrong answer counts", file: "qualification.js", from: '    const ok = total === b.count && (b.answers[b.expectedAnswer] || 0) === b.count;', to: '    const ok = b.transportOk === true; void total;' },
+  { id: "QM13", title: "trust transportOk despite wrong answer counts", file: "qualification.js", from: '    const ok = total === b.count && (b.answers[expected] || 0) === b.count;', to: '    const ok = b.transportOk === true; void total;' },
   { id: "QM14", title: "trust idempotency.pass despite a score drift", file: "qualification.js", from: '    const ok = i.redeliveryAnswer === "alreadyApplied" && snap(i.before) && snap(i.after) && i.before.state === i.after.state && i.before.score === i.after.score && i.before.applications === i.after.applications;', to: '    const ok = i.pass === true; void snap;' },
   { id: "QM15", title: "trust recovery.pass despite lost work", file: "qualification.js", from: '  const v = recoveryVerdict(rec);\n  const contradiction = summaryVs("Q-RECOVERY", rec.pass, v.pass);', to: '  const v = { pass: rec.pass === true, reasons: [] };\n  const contradiction = null;' },
   { id: "QM16", title: "accept qualification metadata without validating it (unknown / missing / duplicate checks)", file: "report.js", from: "  if (input.scenario.config.qualification !== undefined) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);", to: "  if (false) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);" },
@@ -62,7 +62,14 @@ const MUTATIONS = [
   { id: "QM21", title: "P1 trusts missing=[] without requiring a sample for every language", file: "qualification.js", from: "  for (const lang of P1_LANGUAGES) {\n    const s = samples[lang];", to: "  for (const lang of P1_LANGUAGES.filter(l => samples[l] !== undefined)) {\n    const s = samples[lang];" },
   { id: "QM22", title: "P1 trusts violations=[] despite a sample maximum above the ceiling", file: "qualification.js", from: '    if (s.max > P1_CEILING_MS) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS);', to: '    if (false) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS);' },
   { id: "QM23", title: "idempotency accepts a negative application count", file: "qualification.js", from: "|| !nonNegInt(s.applications)) throw new QualificationError(\"malformed idempotency snapshot (\" + name + \")\"); }", to: "|| !Number.isInteger(s.applications)) throw new QualificationError(\"malformed idempotency snapshot (\" + name + \")\"); }" },
-  { id: "QM24", title: "recovery accepts negative execution / count evidence", file: "qualification.js", from: '  for (const k of ["accepted", "lost", "duplicateApplications", "executionsPerJobMax", "complete"]) if (!(Number.isInteger(rec[k]) && rec[k] >= 0)) throw', to: '  for (const k of ["accepted", "lost", "duplicateApplications", "executionsPerJobMax", "complete"]) if (false) throw' }
+  { id: "QM24", title: "recovery accepts negative execution / count evidence", file: "qualification.js", from: '  for (const k of ["accepted", "lost", "duplicateApplications", "executionsPerJobMax", "complete"]) if (!(Number.isInteger(rec[k]) && rec[k] >= 0)) throw', to: '  for (const k of ["accepted", "lost", "duplicateApplications", "executionsPerJobMax", "complete"]) if (false) throw' },
+  // Independent Review Fix 4
+  { id: "QM25", title: "trust the burst's stored expectedAnswer instead of the target-derived callback contract", file: "qualification.js", from: "  const expected = CALLBACK_CONTRACT[target];\n  const details = [], contradictions = [];", to: "  const expected = bursts.find(b => b && typeof b.expectedAnswer === \"string\") ? bursts.find(b => b && typeof b.expectedAnswer === \"string\").expectedAnswer : CALLBACK_CONTRACT[target];\n  const details = [], contradictions = [];" },
+  { id: "QM26", title: "local idempotency silently skips a burst with no evidence", file: "qualification.js", from: '    if (i === undefined || i === null) { derived = false; details.push("burst " + (n + 1) + " carries no idempotency evidence ✗"); continue; }', to: '    if (i === undefined || i === null) continue;' },
+  { id: "QM27", title: "trust the stored correctness verdict instead of the raw G1–G11 gates", file: "gates.js", from: '  const verdict = failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";\n  const contradictions = [];', to: '  const verdict = typeof c.verdict === "string" ? c.verdict : failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";\n  const contradictions = [];' },
+  { id: "QM28", title: "allow a missing canonical gate", file: "gates.js", from: '  for (const id of GATE_IDS) if (!byId[id]) throw new CorrectnessEvidenceError("canonical gate " + id + " is missing");\n  const gates = GATE_IDS.map(id => byId[id]);', to: '  const gates = GATE_IDS.map(id => byId[id]).filter(Boolean);' },
+  { id: "QM29", title: "allow a duplicate gate id", file: "gates.js", from: '    if (byId[g.id]) throw new CorrectnessEvidenceError("duplicate gate id " + g.id);', to: '    if (false) throw new CorrectnessEvidenceError("duplicate gate id " + g.id);' },
+  { id: "QM30", title: "allow an inconsistent evaluated / pass pair", file: "gates.js", from: '    if (g.evaluated ? typeof g.pass !== "boolean" : g.pass !== null) throw new CorrectnessEvidenceError(', to: '    if (false) throw new CorrectnessEvidenceError(' }
 ];
 
 const RUN_TIMEOUT_MS = 5 * 60 * 1000;                 // a mutant that HANGS the suite is reported as TIMEOUT, never waited for indefinitely

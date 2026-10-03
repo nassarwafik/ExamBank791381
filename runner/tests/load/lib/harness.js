@@ -13,7 +13,7 @@ const { createPracticeAccumulator, percentiles, LANGUAGES } = require("./metrics
 const { createOfficialLedger, journalConsistency } = require("./accounting.js");
 const { evaluateGates, p1Gate, P1_CEILING_MS } = require("./gates.js");
 const { buildReport, HARNESS_VERSION } = require("./report.js");
-const { recoveryVerdict } = require("./qualification.js");
+const { recoveryVerdict, CALLBACK_CONTRACT } = require("./qualification.js");
 const { PRACTICE_LIMITS, OFFICIAL_LIMITS, expectedStdout, officialStdins, expectedCaseStatus } = require("./workloads.js");
 const { createRunnerClient, createCallbackSender, syntheticCallbackBody, rid } = require("./driver.js");
 const { createLocalStack, createReceiver } = require("./local-stack.js");
@@ -66,7 +66,7 @@ async function runScenario(options = {}) {
     if (hasBurst) {
       const base = env.SMARTASSESS_CALLBACK_BASE_URL, ckey = env.SMARTASSESS_CALLBACK_HMAC_KEY;
       if (typeof base !== "string" || !/^https:\/\//.test(base) && !/^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/?$/.test(base) || typeof ckey !== "string" || ckey.length < 32) return refused("TARGET_NOT_CONFIGURED", "the callback burst on a remote target needs SMARTASSESS_CALLBACK_BASE_URL (https, or loopback http for a staging rehearsal) + SMARTASSESS_CALLBACK_HMAC_KEY");
-      callbackTarget = { baseUrl: base, key: ckey, synthetic: "unknown" };
+      callbackTarget = { baseUrl: base, key: ckey, synthetic: CALLBACK_CONTRACT[target.name] };   // RF4-A: the target contract is the authority
     }
   }
 
@@ -84,7 +84,7 @@ async function runScenario(options = {}) {
       receiver = stack.receiver;
       if (typeof deps.onStack === "function") deps.onStack(stack);                      // tests: fault injection on the receiver
       client = createRunnerClient({ baseUrl: stack.baseUrl, key: stack.key, fetchImpl: deps.localFetch || globalThis.fetch, now });
-      callbackTarget = { baseUrl: stack.callbackUrl, key: cbKeyOf(stack), synthetic: "applied" };
+      callbackTarget = { baseUrl: stack.callbackUrl, key: cbKeyOf(stack), synthetic: CALLBACK_CONTRACT.local };
     } else {
       client = createRunnerClient({ baseUrl: target.baseUrl, key: target.key, fetchImpl, now });
       if (hasOfficial) { receiver = createReceiver({ key: env.LOAD_CALLBACK_HMAC_KEY }); await new Promise(r => receiver.server.listen(Number(env.LOAD_CALLBACK_RECEIVER_PORT), r)); }
