@@ -293,7 +293,7 @@ test("T1 journal-status: aggregate counts only, attention for parked callbacks /
 
 test("T2 recovery-freshness: stale when the last successful sweep is older than the interval or absent", async () => {
   const now = Date.parse("2026-10-02T12:00:00Z");
-  assert.deepEqual(freshness.judge({ lastSuccessAt: "2026-10-02T10:00:00Z" }, { nowMs: now, maxAgeMin: 240 }), { fresh: true, ageMinutes: 120, lastSuccessAt: "2026-10-02T10:00:00Z" });
+  assert.deepEqual(freshness.judge({ lastSuccessAt: "2026-10-02T10:00:00Z" }, { nowMs: now, maxAgeMin: 240 }), { state: "FRESH", fresh: true, ageMinutes: 120, lastSuccessAt: "2026-10-02T10:00:00Z" });
   assert.equal(freshness.judge({ lastSuccessAt: "2026-10-02T06:39:53Z" }, { nowMs: now, maxAgeMin: 240 }).fresh, false);
   assert.equal(freshness.judge({ lastSuccessAt: null }, { nowMs: now }).fresh, false);
   let url = null;
