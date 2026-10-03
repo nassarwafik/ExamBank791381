@@ -11,8 +11,8 @@ node runner/tests/load/cli.js                                   # DRY RUN of CER
 node runner/tests/load/cli.js catalog                           # the scenario catalog
 node runner/tests/load/cli.js plan --scenario=CERT-D --target=staging --levels=1,2,4
 node runner/tests/load/cli.js run  --scenario=CERT-L --target=local --execute            # real local run → results/*.json + *.md
-npm --prefix runner run test:load            # fail-first LOAD1–LOAD25 + local scenarios SC1–SC14 + review fix Q1–Q10 / I1–I5 / R1–R8 (no Docker)
-npm --prefix runner run test:load:mutation   # M1–M18 + QM1–QM8 must all be killed
+npm --prefix runner run test:load            # LOAD1–LOAD25 + SC1–SC14 + review fix 1 (Q/I/R) + review fix 2 (QA/AUTH/EV) (no Docker)
+npm --prefix runner run test:load:mutation   # M1–M18 + QM1–QM16 must all be killed
 npm --prefix runner run test:docker:load     # bounded REAL-Docker local load (needs the worker images)
 ```
 
@@ -24,7 +24,7 @@ npm --prefix runner run test:docker:load     # bounded REAL-Docker local load (n
 | `lib/metrics.js` | nearest-rank percentiles, practice accumulator (one bucket per request, busy ≠ failed) |
 | `lib/accounting.js` | official ledger (submitted → dispatched → callback → acknowledged → terminal), reconciliation identity, journal consistency |
 | `lib/gates.js` | G1–G11 correctness gates, P1 gate (performance, separate) |
-| `lib/qualification.js` | scenario qualification (Independent Review Fix 1): Q-CORRECTNESS + Q-P1 / Q-CALLBACK-TRANSPORT / Q-IDEMPOTENCY / Q-RECOVERY / Q-ADMISSION; `report.verdict` = qualification verdict |
+| `lib/qualification.js` | scenario qualification (Independent Review Fix 1 / 2): the CANONICAL registry of required checks per scenario and target class (fail closed on unknown scenario / target; report metadata must match it exactly); Q-CORRECTNESS + Q-P1 / Q-CALLBACK-TRANSPORT / Q-IDEMPOTENCY (local only) / Q-RECOVERY / Q-ADMISSION, every one derived from raw evidence with contradictions recorded; `report.verdict` = qualification verdict |
 | `lib/report.js` | JSON report (schemaVersion 1) + Markdown, redaction scan, build-SHA requirement, report comparison |
 | `lib/scenarios.js` | CERT-A … CERT-L catalog + planner (validation, ceilings) |
 | `lib/driver.js` | signed Runner client + callback sender (reuses the gateway's own signers) |

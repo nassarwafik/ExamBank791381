@@ -11,7 +11,7 @@ const { spawnSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const LIB = f => path.join(ROOT, "tests", "load", "lib", f);
-const SUITES = ["load-harness.rtest.js", "load-review-fix-1.rtest.js"].map(f => path.join(ROOT, "tests", "unit", f));
+const SUITES = ["load-harness.rtest.js", "load-review-fix-1.rtest.js", "load-review-fix-2.rtest.js"].map(f => path.join(ROOT, "tests", "unit", f));
 const sha = file => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 
 const MUTATIONS = [
@@ -35,16 +35,25 @@ const MUTATIONS = [
   { id: "M17", title: "treat alreadyApplied with a changed score as fine", file: "accounting.js", from: "if (applied.length && already.some(a => a.score !== null && applied[0].score !== null && a.score !== applied[0].score)) r.idempotencyViolations.push(j.jobId);", to: "if (false) r.idempotencyViolations.push(j.jobId);" },
   { id: "M18", title: "let the P1 gate pass with a missing language", file: "gates.js", from: "return { pass: violations.length === 0 && missing.length === 0, violations, missing, ceilingMs };", to: "return { pass: violations.length === 0, violations, missing, ceilingMs };" },
   // Independent Review Fix 1
-  { id: "QM1", title: "ignore a P1 failure in the qualification", file: "qualification.js", from: 'checks.push(p1 && typeof p1.pass === "boolean" ? check(id, p1.pass,', to: 'checks.push(p1 && typeof p1.pass === "boolean" ? check(id, true,' },
-  { id: "QM2", title: "ignore a callback transport failure", file: "qualification.js", from: "checks.push(list.length ? check(id, list.every(b => b && b.transportOk === true),", to: "checks.push(list.length ? check(id, true," },
-  { id: "QM3", title: "ignore official over-admission", file: "qualification.js", from: "checks.push(check(id, over.length === 0,", to: "checks.push(check(id, true," },
+  { id: "QM1", title: "ignore a P1 failure in the qualification", file: "qualification.js", from: '  return check("Q-P1", derived && !contradiction,', to: '  return check("Q-P1", true,' },
+  { id: "QM2", title: "ignore a callback transport failure", file: "qualification.js", from: '  return check("Q-CALLBACK-TRANSPORT", derived && !contradictions.length,', to: '  return check("Q-CALLBACK-TRANSPORT", true,' },
+  { id: "QM3", title: "ignore official over-admission", file: "qualification.js", from: '  return check("Q-ADMISSION", over.length === 0,', to: '  return check("Q-ADMISSION", true,' },
   { id: "QM4", title: "snapshot the score AFTER the duplicate send", file: "harness.js", from: "    const before = snapshot();\n    const again = await sender.send(bodies[0]);\n    const after = snapshot();", to: "    const again = await sender.send(bodies[0]);\n    const before = snapshot();\n    const after = snapshot();" },
   { id: "QM5", title: "let a duplicate change the score without failing", file: "harness.js", from: 'pass: again.answer === "alreadyApplied" && same("state") && same("score") && same("applications") };', to: 'pass: again.answer === "alreadyApplied" && same("state") && same("applications") };' },
   { id: "QM6", title: "remove the receiver body ceiling (streaming check)", file: "local-stack.js", from: "      if (size > CALLBACK_MAX_BYTES) { refused = true;", to: "      if (false) { refused = true;" },
   { id: "QM6b", title: "remove the receiver Content-Length ceiling", file: "local-stack.js", from: "if (Number.isFinite(declared) && declared > CALLBACK_MAX_BYTES) { stats.oversizeRejected++;", to: "if (false) { stats.oversizeRejected++;" },
   { id: "QM7", title: "check the size only AFTER the whole body was read", file: "local-stack.js", from: "      if (size > CALLBACK_MAX_BYTES) { refused = true; parts.length = 0; stats.oversizeRejected++; answer(413, { ok: false, code: \"REQUEST_TOO_LARGE\" }, { destroy: true }); return; }\n      parts.push(d);", to: "      parts.push(d);\n      if (false) { refused = true; }" },
   { id: "QM7b", title: "off-by-one at the body ceiling (exactly 8 MiB refused)", file: "local-stack.js", from: "      if (size > CALLBACK_MAX_BYTES) { refused = true;", to: "      if (size >= CALLBACK_MAX_BYTES) { refused = true;" },
-  { id: "QM8", title: "allow a top-level PASS while a required qualification check failed", file: "qualification.js", from: 'const verdict = failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";', to: 'const verdict = notEvaluated.length ? "INCOMPLETE" : "PASS";' }
+  { id: "QM8", title: "allow a top-level PASS while a required qualification check failed", file: "qualification.js", from: 'const verdict = failed.length ? "FAIL" : notEvaluated.length ? "INCOMPLETE" : "PASS";', to: 'const verdict = notEvaluated.length ? "INCOMPLETE" : "PASS";' },
+  // Independent Review Fix 2
+  { id: "QM9", title: "let scenario.config.qualification omit a canonical check", file: "qualification.js", from: '  if (a !== b) throw new QualificationError("scenario.config.qualification [" + a + "]', to: '  if (false) throw new QualificationError("scenario.config.qualification [" + a + "]' },
+  { id: "QM10", title: "unknown scenario falls back to correctness-only", file: "qualification.js", from: 'if (typeof scenarioId !== "string" || !Object.prototype.hasOwnProperty.call(SCENARIO_CHECKS, scenarioId)) throw new QualificationError("unknown scenario " + JSON.stringify(scenarioId));\n  const extra = SCENARIO_CHECKS[scenarioId];', to: 'const extra = SCENARIO_CHECKS[scenarioId] || [];' },
+  { id: "QM11", title: "staging CERT-F requires the impossible Q-IDEMPOTENCY", file: "qualification.js", from: '  "CERT-F": target => (target === "local" ? TRANSPORT_AND_IDEMPOTENCY : TRANSPORT_ONLY),', to: '  "CERT-F": target => (target !== "production" ? TRANSPORT_AND_IDEMPOTENCY : TRANSPORT_ONLY),' },
+  { id: "QM12", title: "trust p1.pass without checking the violations", file: "qualification.js", from: '  const derived = reasons.length === 0;\n  const contradiction = summaryVs("Q-P1", p1.pass, derived);', to: '  const derived = p1.pass === true;\n  const contradiction = null;' },
+  { id: "QM13", title: "trust transportOk despite wrong answer counts", file: "qualification.js", from: '    const ok = total === b.count && (b.answers[b.expectedAnswer] || 0) === b.count;', to: '    const ok = b.transportOk === true; void total;' },
+  { id: "QM14", title: "trust idempotency.pass despite a score drift", file: "qualification.js", from: '    const ok = i.redeliveryAnswer === "alreadyApplied" && snap(i.before) && snap(i.after) && i.before.state === i.after.state && i.before.score === i.after.score && i.before.applications === i.after.applications;', to: '    const ok = i.pass === true; void snap;' },
+  { id: "QM15", title: "trust recovery.pass despite lost work", file: "qualification.js", from: '  const v = recoveryVerdict(rec);\n  const contradiction = summaryVs("Q-RECOVERY", rec.pass, v.pass);', to: '  const v = { pass: rec.pass === true, reasons: [] };\n  const contradiction = null;' },
+  { id: "QM16", title: "accept qualification metadata without validating it (unknown / missing / duplicate checks)", file: "report.js", from: "  if (input.scenario.config.qualification !== undefined) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);", to: "  if (false) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);" }
 ];
 
 const RUN_TIMEOUT_MS = 5 * 60 * 1000;                 // a mutant that HANGS the suite is reported as TIMEOUT, never waited for indefinitely

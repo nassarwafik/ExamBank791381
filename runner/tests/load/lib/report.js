@@ -4,7 +4,7 @@
 // student source, hidden test data, keys, signatures or auth headers (redactionScan). Reproducibility metadata (git SHA, Runner SHA,
 // harness version, scenario id + configuration, environment class, VM SKU) is mandatory; two reports from different SHAs are never
 // comparable as "the same build" (compareReports refuses).
-const { evaluateQualification } = require("./qualification.js");
+const { evaluateQualification, assertQualificationMetadata, requiredChecksFor } = require("./qualification.js");
 
 const HARNESS_VERSION = "1.1.0";
 const SHA = /^[0-9a-f]{40}$/;
@@ -61,11 +61,15 @@ function buildReport(input, { canaries = [] } = {}) {
   // a finished report may be re-validated (e.g. after the operator attached VM metrics): its gates come back from `correctness`
   const g = input.gates || gatesFromCorrectness(input.correctness);
   if (!g || !Array.isArray(g.gates) || typeof g.verdict !== "string") throw new Error("report: gates are required");
-  // Independent Review Fix 1 — the top-level verdict is the SCENARIO QUALIFICATION: correctness + the scenario's own required checks
-  // (recorded in scenario.config.qualification by the planner; else derived from the catalog for this scenario and target).
-  const required = Array.isArray(input.scenario.config.qualification) ? input.scenario.config.qualification : undefined;
-  const bursts = Array.isArray(input.callbacks) ? input.callbacks : Array.isArray(input.bursts) ? input.bursts : (input.qualificationEvidence && input.qualificationEvidence.bursts) || [];
-  const q = evaluateQualification({ scenarioId: input.scenario.id, target: input.target.name, correctness: g, required, p1: input.p1 || (input.performance && input.performance.p1) || null, bursts, recovery: input.recovery || null, saturation: input.saturation || null });
+  // Independent Review Fix 1 / 2 — the top-level verdict is the SCENARIO QUALIFICATION: correctness + the scenario's own required
+  // checks. The CANONICAL registry (qualification.js) is the authority — an unknown scenario or target class is refused here;
+  // scenario.config.qualification is reproducibility metadata and must match the canon EXACTLY (missing / extra / unknown /
+  // duplicate → refused), so a report's own metadata can never weaken the pass rule.
+  const canonical = requiredChecksFor(input.scenario.id, input.target.name);
+  if (input.scenario.config.qualification !== undefined) assertQualificationMetadata(input.scenario.config.qualification, input.scenario.id, input.target.name);
+  const bursts = Array.isArray(input.callbacks) ? input.callbacks : Array.isArray(input.bursts) ? input.bursts : [];
+  const q = evaluateQualification({ scenarioId: input.scenario.id, target: input.target.name, correctness: g, p1: input.p1 || (input.performance && input.performance.p1) || null, bursts, recovery: input.recovery || null, saturation: input.saturation || null });
+  if (q.required.slice().sort().join(",") !== canonical.slice().sort().join(",")) throw new Error("report: qualification requirements drifted from the canon");
   if (input.verdict !== undefined && input.verdict !== q.verdict) throw new Error("report: verdict contradicts the qualification (" + input.verdict + " vs " + q.verdict + ")");
   const practice = input.practice ? plain(input.practice) : null;
   const official = input.official ? plain(input.official) : null;
@@ -74,11 +78,11 @@ function buildReport(input, { canaries = [] } = {}) {
     schemaVersion: 1, harnessVersion: typeof input.harnessVersion === "string" ? input.harnessVersion : HARNESS_VERSION,
     target: { name: input.target.name, remote: !!input.target.remote, host: input.target.host || null },
     environmentClass: input.target.name, buildSha: input.buildSha, runnerSha: input.runnerSha || null, vmSku: typeof input.vmSku === "string" && input.vmSku ? input.vmSku : null,
-    scenario: { id: input.scenario.id, title: input.scenario.title || null, config: plain(input.scenario.config) },
+    scenario: { id: input.scenario.id, title: input.scenario.title || null, config: { ...plain(input.scenario.config), qualification: canonical } },
     startedAt: input.startedAt, durationMs: input.durationMs,
     verdict: q.verdict,
     correctness: { verdict: g.verdict, pass: g.correctnessPass, failed: g.failed || [], notEvaluated: g.notEvaluated || [], gates: g.gates.map(x => ({ id: x.id, title: x.title, evaluated: x.evaluated, pass: x.pass, detail: x.detail })) },
-    qualification: { verdict: q.verdict, pass: q.pass, required: q.required, failed: q.failed, notEvaluated: q.notEvaluated, checks: q.checks.map(c => ({ id: c.id, title: c.title, evaluated: c.evaluated, pass: c.pass, detail: c.detail })) },
+    qualification: { verdict: q.verdict, pass: q.pass, required: q.required, failed: q.failed, notEvaluated: q.notEvaluated, contradictions: q.contradictions, checks: q.checks.map(c => ({ id: c.id, title: c.title, evaluated: c.evaluated, pass: c.pass, detail: c.detail, contradiction: c.contradiction || null })) },
     callbacks: bursts.length ? plain(bursts) : null,
     performance: perf,
     totals: totalsOf(practice, official),
@@ -121,8 +125,9 @@ function toMarkdown(r) {
   for (const g of r.correctness.gates) lines.push("| " + g.id + " " + g.title + " | " + (!g.evaluated ? "not evaluated" : g.pass ? "PASS" : "**FAIL**") + " | " + g.detail + " |");
   lines.push("");
   lines.push("## Qualification (the scenario's own pass rule — decides the verdict)"); lines.push(""); lines.push("| check | result | detail |"); lines.push("|---|---|---|");
-  for (const c of q.checks) lines.push("| " + c.id + " " + c.title + " | " + (!c.evaluated ? "not evaluated" : c.pass ? "PASS" : "**FAIL**") + " | " + c.detail + " |");
+  for (const c of q.checks) lines.push("| " + c.id + " " + c.title + " | " + (!c.evaluated ? "not evaluated" : c.pass ? "PASS" : "**FAIL**") + " | " + c.detail + (c.contradiction ? " — **contradiction:** " + c.contradiction : "") + " |");
   lines.push("");
+  if (q.contradictions && q.contradictions.length) { lines.push("**Evidence contradictions (stored summary vs raw evidence):** " + q.contradictions.join("; ")); lines.push(""); }
   if (r.callbacks) { lines.push("## Callback bursts"); lines.push(""); for (const b of r.callbacks) lines.push("- " + b.count + " × " + (b.nearMax ? "near-max" : "small") + " body (" + b.bytesPerBody + " bytes) at concurrency " + b.concurrency + ": expected " + b.expectedAnswer + ", answers " + JSON.stringify(b.answers) + ", transport " + (b.transportOk ? "OK" : "**FAILED**") + ", latency " + pct(b.latency) + (b.idempotency ? "; re-delivery " + b.idempotency.redeliveryAnswer + " — before " + JSON.stringify(b.idempotency.before) + ", after " + JSON.stringify(b.idempotency.after) + " → " + (b.idempotency.pass ? "idempotent" : "**NOT idempotent**") : "")); lines.push(""); }
   lines.push("## Totals"); lines.push(""); lines.push("| offered | completed | RUNNER_BUSY | rejected | network errors | failed | official offered | official accepted | official busy |"); lines.push("|---|---|---|---|---|---|---|---|---|");
   const t = r.totals; lines.push("| " + [t.offered, t.completed, t.busy, t.rejected, t.networkErrors, t.failed, t.officialOffered, t.officialAccepted, t.officialBusy].map(fmt).join(" | ") + " |");

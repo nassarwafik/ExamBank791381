@@ -148,6 +148,32 @@ FAIL whatever the averages say; an unmeasured required check gives INCOMPLETE, n
 correctness gates — only the scenario's own pass rule reaches the verdict. The required checks are recorded in
 `scenario.config.qualification` for reproducibility.
 
+**Qualification authority (Independent Review Fix 2).** The canonical registry in `lib/qualification.js` is the only source of the
+required checks, derived from the scenario id and the target class. `scenario.config.qualification` in a report is reproducibility
+metadata: `buildReport` refuses a report whose metadata is missing a canonical check, adds an unknown check, repeats a check or is not
+an array — metadata can never weaken the pass rule. An unknown scenario id or an unknown target class (anything but `local`,
+`staging`, `production`) is refused outright and never degrades to "correctness only". **Every check derives its result from the
+raw evidence**, never from a stored summary boolean: Q-P1 from `violations`, `missing`, the canonical 40 000 ms ceiling and the
+per-language maxima; Q-CALLBACK-TRANSPORT from `count` vs the answer counts (Σ answers = count and answers[expectedAnswer] = count);
+Q-IDEMPOTENCY from `redeliveryAnswer`, both snapshots and the state / score / application equality; Q-RECOVERY from the shared
+`recoveryVerdict()` helper (settled, lost 0, duplicate applications 0, no resubmission, executions per job ≤ the allowance, itself
+bounded by the Runner's `maxInterruptions`) that the recovery scenario also uses, so the two can never drift. **Contradiction policy:**
+when a stored summary (`p1.pass`, `transportOk`, `idempotency.pass`, `recovery.pass`) contradicts its evidence the check FAILS and the
+contradiction is recorded in `qualification.contradictions` (and shown in the Markdown) — a measured failure is a FAIL; malformed
+certification evidence or metadata (wrong shapes, unknown ids) is REFUSED with an error — never a silent optimistic choice.
+
+**CERT-F / CERT-K requirement matrix (what is measurable under the current architecture):**
+
+| target | required checks | why |
+|---|---|---|
+| local | Q-CORRECTNESS, Q-CALLBACK-TRANSPORT, Q-IDEMPOTENCY | the harness receiver really applies the synthetic job, so an idempotent re-delivery is meaningful |
+| staging | Q-CORRECTNESS, Q-CALLBACK-TRANSPORT | the synthetic job cannot exist at the SmartAssess endpoint (404 UNKNOWN_JOB): transport only; nothing is applied, so no idempotency is measured or claimed |
+| production | Q-CORRECTNESS, Q-CALLBACK-TRANSPORT | same transport-only contract |
+
+The plan requests the idempotent re-delivery on `local` only. A future real staging prepared-job test (a job SmartAssess knows,
+applied once, then re-delivered) may add a separate idempotency qualification; this phase does not fabricate one. A staging CERT-F /
+CERT-K run therefore reaches PASS once the operator attaches `journal-status.js --json` for the correctness gates G3 / G5 / G6.
+
 **Consequence for the current Runner:** CERT-E **FAILS qualification** on Q-ADMISSION because of finding B10-F1 (§11) while its
 correctness gates pass. That is the intended enterprise behaviour: the harness is ready to detect the defect, the test suite passes
 because it proves the detection, and the product is not qualified until Phase B3 fixes `official.js` — after which the identical
@@ -244,7 +270,7 @@ once per target), with the harness report produced from the attached counts; (7)
 `schemaVersion 1` (harness 1.1.0): `{ harnessVersion, target { name, remote, host }, environmentClass, buildSha, runnerSha, vmSku, scenario { id, title,
 config { concurrency, jobs, practiceJobs, officialJobs, callbacks, casesPerJob, languages, workloadIds, limits, runner, levels, students,
 ceilings, qualification[] } }, startedAt, durationMs, verdict (= qualification.verdict), correctness { verdict, pass, failed, notEvaluated, gates[] },
-qualification { verdict, pass, required[], failed[], notEvaluated[], checks[] }, callbacks[] (bursts: answers, latency, transportOk,
+qualification { verdict, pass, required[], failed[], notEvaluated[], contradictions[], checks[] { …, contradiction } }, callbacks[] (bursts: answers, latency, transportOk,
 idempotency { redeliveryAnswer, before { state, score, applications }, after { … }, stateUnchanged, scoreUnchanged, applicationsUnchanged, pass }),
 performance { latency, latencyByOutcome,
 official { dispatch, callback, endToEnd }, p1, throughputPerMinute }, totals { offered, completed, busy, rejected, networkErrors, failed,
@@ -271,8 +297,9 @@ harness must catch (R1–R8, I1–I5).
 | fail-first LOAD1–LOAD25 on the baseline | 25 tests, 25 fail (`MODULE_NOT_FOUND`) |
 | LOAD1–LOAD25 after implementation | 25 / 25 pass |
 | local scenario suite SC1–SC14 (fake sandbox, real gateway / queue / journal / deliverer) | 15 / 15 pass (SC5: CERT-E correctness PASS, qualification FAIL on Q-ADMISSION — B10-F1; SC5b is the characterisation) |
-| mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) | 29 / 29 killed, files restored byte-for-byte |
+| mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) + QM9–QM16 (8) | 37 / 37 killed, files restored byte-for-byte |
 | Independent Review Fix 1 fail-first Q1–Q10, I1–I5, R1–R8 | 23 fail on 4c1a416 → 23 / 23 pass |
+| Independent Review Fix 2 fail-first QA1–QA4, AUTH1–AUTH6, EV1–EV9 | 17 of 19 fail on 8b6fe3a → 19 / 19 pass |
 | `load:qualify:local` CERT-L (24 practice + 12 official, concurrency 4) | PASS; practice p50 / p95 94 / 211 ms (fake profile); official end-to-end p50 408 ms; journal clean |
 | Runner unit suite | see the PR for the exact count after reconciliation |
 | real Docker (DL1–DL7) | not runnable in the authoring container (no Docker daemon); executed by the manual `docker-load` CI job / operator |

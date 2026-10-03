@@ -13,6 +13,7 @@ const { createPracticeAccumulator, percentiles, LANGUAGES } = require("./metrics
 const { createOfficialLedger, journalConsistency } = require("./accounting.js");
 const { evaluateGates, p1Gate, P1_CEILING_MS } = require("./gates.js");
 const { buildReport, HARNESS_VERSION } = require("./report.js");
+const { recoveryVerdict } = require("./qualification.js");
 const { PRACTICE_LIMITS, OFFICIAL_LIMITS, expectedStdout, officialStdins, expectedCaseStatus } = require("./workloads.js");
 const { createRunnerClient, createCallbackSender, syntheticCallbackBody, rid } = require("./driver.js");
 const { createLocalStack, createReceiver } = require("./local-stack.js");
@@ -64,7 +65,7 @@ async function runScenario(options = {}) {
     }
     if (hasBurst) {
       const base = env.SMARTASSESS_CALLBACK_BASE_URL, ckey = env.SMARTASSESS_CALLBACK_HMAC_KEY;
-      if (typeof base !== "string" || !/^https:\/\//.test(base) || typeof ckey !== "string" || ckey.length < 32) return refused("TARGET_NOT_CONFIGURED", "the callback burst on a remote target needs SMARTASSESS_CALLBACK_BASE_URL (https) + SMARTASSESS_CALLBACK_HMAC_KEY");
+      if (typeof base !== "string" || !/^https:\/\//.test(base) && !/^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/?$/.test(base) || typeof ckey !== "string" || ckey.length < 32) return refused("TARGET_NOT_CONFIGURED", "the callback burst on a remote target needs SMARTASSESS_CALLBACK_BASE_URL (https, or loopback http for a staging rehearsal) + SMARTASSESS_CALLBACK_HMAC_KEY");
       callbackTarget = { baseUrl: base, key: ckey, synthetic: "unknown" };
     }
   }
@@ -259,7 +260,10 @@ async function recoveryScenario({ step, stack, runItem, governor, settle, ledger
   const settled = await settle(30000);
   const r = ledger.reconcile();
   const perJob = [...seen.values()];
-  return { accepted: r.accepted, outstandingAtCrash: outstanding, recoveredAtRestart: recovery ? recovery.recovered : null, corruptAtRestart: recovery ? recovery.corrupt : null, settled, complete: r.complete, retryable: r.retryable, lost: r.lost.length, duplicateApplications: r.duplicateApplications, executionsPerJobMax: perJob.length ? Math.max(...perJob) : 0, reExecutedJobs: perJob.filter(n => n > 1).length, resubmissionNeeded: false, pass: settled && r.lost.length === 0 && r.duplicateApplications === 0 && (perJob.length ? Math.max(...perJob) : 0) <= 2 };
+  // ONE crash → an interrupted job may run at most once more (first run + 1); the shared recoveryVerdict() decides pass for the
+  // scenario AND for Q-RECOVERY, so the two can never drift (Independent Review Fix 2)
+  const evidence = { accepted: r.accepted, outstandingAtCrash: outstanding, recoveredAtRestart: recovery ? recovery.recovered : null, corruptAtRestart: recovery ? recovery.corrupt : null, settled, complete: r.complete, retryable: r.retryable, lost: r.lost.length, duplicateApplications: r.duplicateApplications, executionsPerJobMax: perJob.length ? Math.max(...perJob) : 0, maxExecutionsAllowed: 2, reExecutedJobs: perJob.filter(n => n > 1).length, resubmissionNeeded: r.lost.length > 0 || r.failedTerminal > 0 };
+  return { ...evidence, pass: recoveryVerdict(evidence).pass };
 }
 
 module.exports = { runScenario, callbackBurst, P1_CEILING_MS, LANGUAGES };
