@@ -285,28 +285,32 @@ for (const method of ["writeInput", "writeRecord", "writeTarget"]) {
   });
 }
 
-test("ADM16 after a maintenance failure and an injected write failure, later valid submits still succeed (no wedged admission authority)", async () => {
-  const dir = tmpJournalDir(), s = holdingSandbox();
-  const h = await boot(dir, { maxPending: 8, sandbox: s.sandbox, limits: { maxRecords: 2 } });
+test("ADM16 after an internal admission rejection (maintenance throws) and an injected write failure, later VALID submits on the SAME queue still succeed (no wedged admission authority)", async () => {
+  const clock = (start = Date.now()) => { let t = start; const now = () => t; now.advance = ms => { t += ms; }; return now; };
+  const dir = tmpJournalDir(), s = holdingSandbox(), now = clock();
+  const h = await boot(dir, { now, maxPending: 8, sandbox: s.sandbox, limits: { maxRecords: 2, confirmedRetentionMs: 1000 } });
   assert.equal((await h.q.submit(job(910))).status, "accepted");
   assert.equal((await h.q.submit(job(911))).status, "accepted");
   const realMaintain = h.q.maintain;
-  h.q.maintain = async () => { throw new Error("injected maintenance failure"); };            // records.size ≥ maxRecords → maintain throws inside admission
+  h.q.maintain = async () => { throw new Error("injected maintenance failure"); };            // records.size ≥ maxRecords → maintain REJECTS inside the admission section
   const before = unhandled;
   assert.equal((await h.q.submit(job(912))).status, "busy");
   h.q.maintain = realMaintain;
   assert.equal((await h.q.submit(job(912))).status, "busy");                                        // legitimately full: two live records, nothing expired
-  assert.equal(h.q.size().entries, 2);
-  s.hold.open(); await h.q.idle(); await crash(h);
-  const dir2 = tmpJournalDir(), s2 = holdingSandbox();
-  const g2 = await boot(dir2, { maxPending: 8, sandbox: s2.sandbox });
-  failing(g2.journal, "writeInput", 1);
-  assert.equal((await g2.q.submit(job(914))).status, "busy");
-  const results = await Promise.race([Promise.all(jobs(5, 920).map(j => g2.q.submit(j))), sleep(3000).then(() => null)]);
-  assert.ok(results, "admission authority wedged after a failed admission");
-  assert.equal(count(results, "accepted"), 5);
+  s.hold.open(); await h.q.idle();
+  await waitFor(() => recordOf(dir, job(911).jobId)?.state === "confirmed");
+  now.advance(2000);                                                                                // retention may now free the two confirmed records
+  const later = await Promise.race([h.q.submit(job(912)), sleep(3000).then(() => ({ status: "timeout" }))]);
+  assert.equal(later.status, "accepted", "admission authority wedged after an internal rejection: " + JSON.stringify(later));
+  const origInput = h.journal.writeInput.bind(h.journal);
+  h.journal.writeInput = async () => { throw new Error("injected writeInput failure"); };
+  assert.equal((await h.q.submit(job(913))).status, "busy");
+  h.journal.writeInput = origInput;
+  const results = await Promise.race([Promise.all([job(914), job(915)].map(j => h.q.submit(j))), sleep(3000).then(() => null)]);
+  assert.ok(results, "admission authority wedged after a failed write");
+  assert.ok(count(results, "accepted") + count(results, "busy") === 2 && count(results, "accepted") >= 1, JSON.stringify(results));
   assert.equal(unhandled, before);
-  s2.hold.open(); await g2.q.idle(); await crash(g2);
+  s.hold.open(); await h.q.idle(); await crash(h);
 });
 
 test("ADM17 stop() while submissions wait for admission: no post-stop admission record is committed; waiters get busy", async () => {
