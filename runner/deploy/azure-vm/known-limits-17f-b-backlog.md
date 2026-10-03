@@ -16,7 +16,7 @@ a student zero, **except** L7 / L8, which the pilot authoring policy and the pre
 | L8 | Time limits are wall-clock; an oversubscribed host slows correct programs | false `timeout` | preflight: worst-case containers < vCPUs; no B-series |
 | L9 | GitHub cron is best-effort (3 runs in ~9.5 h observed) | recovery latency of hours | freshness check (240 min), manual `workflow_dispatch` |
 | L10 | No graceful drain API; SIGTERM interrupts running official jobs (counts toward `maxInterruptions` 2) | an upgrade during grading re-runs jobs | upgrade procedure: disable dispatch, wait for an empty journal |
-| L11 | `/healthz` is liveness only; no metrics endpoint | readiness via the local preflight | `readiness.sh` |
+| L11 | `/healthz` is liveness only; no metrics endpoint | readiness via the local preflight | `readiness.sh`; 17F-B1: local `coding-telemetry.js` ([`telemetry.md`](telemetry.md)) — still no network metrics endpoint |
 | L12 | Journal gate in the gateway uses `path.resolve`, not `realpath`, and does not require a mount point | — | deployment preflight + `RequiresMountsFor` + immutable underlying dir |
 | L13 | Single key per direction (no dual-key rotation) | brief coordinated window | README §10 |
 | L14 | Docker CLI stderr is discarded | daemon causes show only as `RUNNER_INTERNAL` | `journalctl -u docker` |
@@ -37,3 +37,8 @@ a student zero, **except** L7 / L8, which the pilot authoring policy and the pre
 
 Also proposed: a graceful drain mode, a loopback-only readiness / metrics endpoint, dual-key rotation, and logging the Docker
 error class.
+
+**Phase 17F-B1 (observability foundation, this repository)** adds the *measurement* side only: `coding-telemetry.js`,
+the extra `journal-status.js` fields, the `FRESH` / `STALE` / `UNKNOWN` freshness state and the student pending-grade display
+rule. It changes **no limit above**: journal capacity / retention (B2), concurrency (B3 / B4) and the scheduler (B5) remain as
+listed, and the telemetry reports them without altering them.

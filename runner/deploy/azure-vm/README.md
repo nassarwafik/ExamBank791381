@@ -146,8 +146,10 @@ mount point proves barrier 1 only; `sh runner/deploy/azure-vm/readiness.sh --dee
 | `docker-api.js` | read-only Docker Engine API client (GET only, unix socket only, allow-listed endpoints). The tools start **no process**: `gateway/sandbox.js` stays the only process-starting module of `runner/` (architecture guard 17B R1) |
 | `readiness.sh` | runs the preflight in the exact service context (`systemd-run`) |
 | `smoke.js` | signed smoke tool: Runner surface, language matrix, sandbox boundary, Gate P1, callback probe (Gate P2) |
-| `journal-status.js` | local diagnostics: journal state counts only |
-| `recovery-freshness.js` | last successful recovery sweep (GitHub API) vs the agreed maximum interval |
+| `journal-status.js` | local diagnostics: journal state counts only (+ 17F-B1: `utilizationPercent`, `callbackBacklog`, `oldestOwedCallbackMinutes`, `health`) |
+| `recovery-freshness.js` | last successful recovery sweep (GitHub API) vs the agreed maximum interval — machine-readable `state` `FRESH` / `STALE` / `UNKNOWN` (17F-B1) |
+| `coding-telemetry.js` | 17F-B1 local, read-only operational telemetry: journal aggregate + gateway journald event counts (fed on stdin) + recovery freshness → one bounded JSON record with `health` ([`telemetry.md`](telemetry.md)) |
+| `telemetry.md` | 17F-B1 telemetry vocabulary, the forbidden-field contract, health-state interpretation, alert-ready signals, troubleshooting |
 | `build-and-record-images.sh` / `record-images.js` | build via `runner/scripts/build-images.sh`, run the Docker suites, record image IDs |
 | `sweep-containers.js` | `ExecStopPost`: removes leftover sandbox containers (the gateway's own label sweep) |
 
@@ -323,6 +325,8 @@ Certificates are obtained and renewed automatically (ACME). HTTP is redirected t
 ```sh
 sh /opt/smartassess-runner/current/runner/deploy/azure-vm/readiness.sh          # every check PASS, liveness PASS
 sudo -u smartassess-runner node /opt/smartassess-runner/current/runner/deploy/azure-vm/journal-status.js --dir=/data/smartassess-runner
+# 17F-B1 — one bounded telemetry record (journal aggregate + last hour of gateway events + recovery freshness); exit 0 healthy / 3 otherwise
+journalctl -u smartassess-runner -o cat --since -1h | sudo -u smartassess-runner node /opt/smartassess-runner/current/runner/deploy/azure-vm/coding-telemetry.js --dir=/data/smartassess-runner
 ```
 
 ### 5.14 Remote readiness and smoke (from the operator's admin machine, keys from the secret store)
@@ -376,13 +380,18 @@ journalctl --disk-usage
 ```
 
 ## 7. Monitoring
-[`monitoring-checklist.md`](monitoring-checklist.md).
+[`monitoring-checklist.md`](monitoring-checklist.md). Phase 17F-B1 adds **local telemetry** ([`telemetry.md`](telemetry.md)):
+`coding-telemetry.js` turns what the host already has — the journal aggregate of `journal-status.js`, the gateway's structured
+journald events (piped in as text; the tool starts no process) and the `recovery-freshness.js` judgement — into one bounded JSON
+record (`event: runner.coding.telemetry`, `health.state` `healthy` / `saturated` / `backlogged` / `degraded`). It is a
+**local diagnostic**, not a metrics endpoint: the Runner still exposes `/healthz` only, and nothing in the record can carry
+student source, hidden tests, outputs, keys, headers, job ids or any person identifier (`assertSafe` refuses the record otherwise).
 
 ## 8. Recovery sweep — GitHub cron is best-effort
 `.github/workflows/coding-grading-recovery.yml` is scheduled every 10 minutes, but GitHub runs scheduled workflows on a
 best-effort basis: **3 runs were observed in ~9.5 hours** (17F-A audit). The pilot therefore:
 - treats the cron as a **safety net**, not a guarantee;
-- checks freshness with `recovery-freshness.js` (alert if no successful sweep within the agreed **240 min**);
+- checks freshness with `recovery-freshness.js` (alert if no successful sweep within the agreed **240 min**; 17F-B1: the result is `FRESH`, `STALE` or `UNKNOWN` — an API / request failure is `UNKNOWN`, exit 2, and is never treated as fresh);
 - uses `workflow_dispatch` (Actions → Coding Grading Recovery → Run workflow) or teacher **retry / bulk retry** when recovery
   is needed sooner.
 

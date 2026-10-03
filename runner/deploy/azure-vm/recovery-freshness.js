@@ -4,7 +4,7 @@
 // SUCCESSFUL run of .github/workflows/coding-grading-recovery.yml from the GitHub REST API and fails when it is older than the
 // agreed maximum interval. No application change, no secret beyond an optional read-only token.
 //     GITHUB_TOKEN=<read-only, optional for a public repo> node deploy/azure-vm/recovery-freshness.js --repo=owner/name [--max-age-min=240] [--json]
-// Exit: 0 fresh · 3 stale (no successful sweep within the interval) · 2 usage / API error.
+// Exit: 0 FRESH · 3 STALE (no successful sweep within the interval) · 2 usage / UNKNOWN (API or request failure — never fresh).
 const WORKFLOW = "coding-grading-recovery.yml";
 const DEFAULT_MAX_AGE_MIN = 240;
 
@@ -18,12 +18,23 @@ async function lastSuccessfulSweep({ repo, token, fetchImpl = globalThis.fetch }
   return { lastSuccessAt: run.updated_at || run.created_at, event: run.event };
 }
 
-/** → { fresh, ageMinutes, lastSuccessAt } at nowMs. */
+/** → { state: "FRESH" | "STALE", fresh, ageMinutes, lastSuccessAt } at nowMs (no / unparsable timestamp = STALE: fail closed). */
 function judge({ lastSuccessAt }, { nowMs = Date.now(), maxAgeMin = DEFAULT_MAX_AGE_MIN } = {}) {
   const t = lastSuccessAt ? Date.parse(lastSuccessAt) : NaN;
-  if (!Number.isFinite(t)) return { fresh: false, ageMinutes: null, lastSuccessAt: null };
+  if (!Number.isFinite(t)) return { state: "STALE", fresh: false, ageMinutes: null, lastSuccessAt: null };
   const ageMinutes = Math.floor((nowMs - t) / 60000);
-  return { fresh: ageMinutes <= maxAgeMin, ageMinutes, lastSuccessAt };
+  const fresh = ageMinutes <= maxAgeMin;
+  return { state: fresh ? "FRESH" : "STALE", fresh, ageMinutes, lastSuccessAt };
+}
+
+/**
+ * 17F-B1 — the machine-readable operational result for ANY outcome of lastSuccessfulSweep (or of a failed request):
+ *   FRESH   a successful sweep within maxAgeMin          STALE   none within maxAgeMin (or never)
+ *   UNKNOWN the GitHub API / request failed or the input is not a sweep result — NEVER reported as fresh (fail closed)
+ */
+function freshnessState(result, opts = {}) {
+  if (!result || typeof result !== "object" || typeof result.error === "string") return { state: "UNKNOWN", fresh: false, ageMinutes: null, lastSuccessAt: null, ...(result && typeof result === "object" && typeof result.error === "string" ? { error: result.error } : {}) };
+  return judge(result, opts);
 }
 
 if (require.main === module) {
@@ -31,12 +42,13 @@ if (require.main === module) {
   const repo = typeof args.repo === "string" ? args.repo : process.env.GITHUB_REPOSITORY;
   const maxAgeMin = Number(args["max-age-min"]) || DEFAULT_MAX_AGE_MIN;
   if (args.bad || !repo || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) { console.error("usage: recovery-freshness.js --repo=owner/name [--max-age-min=N] [--json]"); process.exit(2); }
+  const unknown = reason => { const j = freshnessState({ error: reason }, { maxAgeMin }); if (args.json) console.log(JSON.stringify({ event: "runner.recovery.freshness", maxAgeMin, ...j })); console.error("recovery-freshness: UNKNOWN — " + reason); process.exit(2); };
   lastSuccessfulSweep({ repo, token: process.env.GITHUB_TOKEN }).then(r => {
-    if (r.error) { console.error("recovery-freshness: " + r.error); process.exit(2); }
-    const j = judge(r, { maxAgeMin });
-    console.log(args.json ? JSON.stringify({ event: "runner.recovery.freshness", maxAgeMin, ...j }) : (j.fresh ? "FRESH" : "STALE") + " — last successful recovery sweep " + (j.lastSuccessAt ? j.lastSuccessAt + " (" + j.ageMinutes + " min ago)" : "never") + "; maximum " + maxAgeMin + " min");
+    if (r.error) return unknown(r.error);
+    const j = freshnessState(r, { maxAgeMin });
+    console.log(args.json ? JSON.stringify({ event: "runner.recovery.freshness", maxAgeMin, ...j }) : j.state + " — last successful recovery sweep " + (j.lastSuccessAt ? j.lastSuccessAt + " (" + j.ageMinutes + " min ago)" : "never") + "; maximum " + maxAgeMin + " min");
     process.exit(j.fresh ? 0 : 3);
-  }, () => { console.error("recovery-freshness: request failed"); process.exit(2); });
+  }, () => unknown("request failed"));
 }
 
-module.exports = { WORKFLOW, DEFAULT_MAX_AGE_MIN, lastSuccessfulSweep, judge };
+module.exports = { WORKFLOW, DEFAULT_MAX_AGE_MIN, lastSuccessfulSweep, judge, freshnessState };

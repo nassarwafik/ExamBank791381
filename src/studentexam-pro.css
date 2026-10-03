@@ -253,6 +253,8 @@
 .iex-result-card{ text-align:center; align-items:center; }
 .iex-score{ margin:0; color:var(--eb-primary-strong); font-size:var(--eb-fs-28); font-weight:var(--eb-fw-bold); line-height:1; font-variant-numeric:tabular-nums; }
 .iex-score small{ color:var(--eb-muted); font-size:var(--eb-fs-16); }
+.iex-score[data-pending="true"]{ color:var(--eb-muted); }
+.iex-score-pending{ color:var(--eb-muted) !important; font-size:var(--eb-fs-16) !important; font-weight:var(--eb-fw-semibold); }
 .iex-result-card > strong{ color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-variant-numeric:tabular-nums; }
 .iex-result-card p{ margin:0; color:var(--eb-muted); }
 .iex-result-when{ font-variant-numeric:tabular-nums; }

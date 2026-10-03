@@ -1,5 +1,5 @@
 "use strict";
-// Phase 17F-A1 — LOCAL, read-only DIAGNOSTICS of the official-grading journal (no HTTP route, no new gateway surface).
+// Phase 17F-A1 (+ 17F-B1 fields) — LOCAL, read-only DIAGNOSTICS of the official-grading journal (no HTTP route, no new gateway surface).
 // Prints AGGREGATES ONLY: record counts per state, the age of the oldest record still owed a callback, parked callbacks,
 // quarantine size and whether a lock is held. It never prints a job id, a target reference, source, stdin, output or a key.
 // Run it as the service user (the journal is 0700):
@@ -38,7 +38,11 @@ function journalStatus(dir, { nowMs = Date.now(), maxEntries = JOURNAL_LIMITS.st
   if (quarantined || corrupt) attention.push("corrupt-or-quarantined");
   if (truncated) attention.push("truncated");
   if (total >= JOURNAL_LIMITS.maxRecords * 0.8) attention.push("journal-near-capacity");
-  return { counts, total, capacity: JOURNAL_LIMITS.maxRecords, live: counts.received + counts.running, owedCallback: counts.executed, oldestExecutedMinutes: oldestExecutedMs === null ? null : Math.floor(oldestExecutedMs / 60000), quarantined, corrupt, truncated, lockHeld, attention };
+  const oldestExecutedMinutes = oldestExecutedMs === null ? null : Math.floor(oldestExecutedMs / 60000);
+  // 17F-B1 additions (nothing above renamed or removed): utilization of the fixed record capacity, the callback BACKLOG
+  // (results executed but not yet confirmed + parked callbacks), and a two-valued health flag mirroring `attention`.
+  const utilizationPercent = JOURNAL_LIMITS.maxRecords > 0 ? Math.min(100, Math.floor((total / JOURNAL_LIMITS.maxRecords) * 100)) : 0;
+  return { counts, total, capacity: JOURNAL_LIMITS.maxRecords, utilizationPercent, live: counts.received + counts.running, owedCallback: counts.executed, callbackBacklog: counts.executed + counts.callback_failed, oldestExecutedMinutes, oldestOwedCallbackMinutes: oldestExecutedMinutes, quarantined, corrupt, truncated, lockHeld, attention, health: attention.length ? "attention" : "ok" };
 }
 
 if (require.main === module) {
@@ -49,8 +53,8 @@ if (require.main === module) {
   try { s = journalStatus(dir, { maxExecutedAgeMin: Number(args["max-executed-age-min"]) || 15 }); } catch { console.error("journal unreadable (run as the service user; is the disk mounted?)"); process.exit(2); }
   if (args.json) console.log(JSON.stringify({ event: "runner.journal.status", ...s }));
   else {
-    console.log("records " + s.total + " / " + s.capacity + " · " + STATES.map(k => k + " " + s.counts[k]).join(" · "));
-    console.log("owed callbacks " + s.owedCallback + " (oldest " + (s.oldestExecutedMinutes === null ? "-" : s.oldestExecutedMinutes + " min") + ") · quarantined " + s.quarantined + " · corrupt " + s.corrupt + " · lock " + (s.lockHeld ? "held" : "free") + (s.truncated ? " · TRUNCATED" : ""));
+    console.log("records " + s.total + " / " + s.capacity + " (" + s.utilizationPercent + "%) · " + STATES.map(k => k + " " + s.counts[k]).join(" · "));
+    console.log("owed callbacks " + s.owedCallback + " (oldest " + (s.oldestExecutedMinutes === null ? "-" : s.oldestExecutedMinutes + " min") + ") · callback backlog " + s.callbackBacklog + " · quarantined " + s.quarantined + " · corrupt " + s.corrupt + " · lock " + (s.lockHeld ? "held" : "free") + (s.truncated ? " · TRUNCATED" : ""));
     console.log(s.attention.length ? "ATTENTION: " + s.attention.join(", ") : "OK");
   }
   process.exit(s.attention.length ? 3 : 0);

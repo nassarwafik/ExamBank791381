@@ -1,5 +1,5 @@
 import { dashboardStateLabel, gradingClass, resolveGradingStatus, scoreLabel } from "../gradingStatus";
-import { CODING_GRADING_CARD_OPEN, codingGradingStatusOf, isCodingGradingOpen } from "../codingGradingStatus";
+import { CODING_GRADING_CARD_OPEN, PENDING_SCORE_DASH, codingGradingStatusOf, isCodingGradingOpen, scoreWithheld } from "../codingGradingStatus";
 import StatusBadge from "../ui/StatusBadge";
 import { STATE_TONE, actionLabel, formatWhen, stateOf } from "./portalPresentation";
 import type { Summary } from "./types";
@@ -26,7 +26,7 @@ export default function StudentAssignmentCard({ item, busy, onOpen }: { item: Su
       </ul>
       {lr && lrGs && (
         <p className={"eb-sp-task-result is-" + gradingClass(lrGs)}>
-          <strong>{scoreLabel(lrGs)}: {lr.score}/{lr.totalMarks}{lrGs === "final" ? " (" + lr.percentage + "%)" : ""}</strong>
+          <strong>{scoreLabel(lrGs)}: {scoreWithheld(lr) ? PENDING_SCORE_DASH + " " : lr.score}/{lr.totalMarks}{lrGs === "final" && !scoreWithheld(lr) ? " (" + lr.percentage + "%)" : ""}</strong>
           {lrGs === "pendingReview" && lr.manualReviewMarks > 0 && <span>بانتظار مراجعة {lr.manualReviewMarks} علامة</span>}
         </p>
       )}
