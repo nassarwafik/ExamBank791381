@@ -15,6 +15,7 @@
 //     results/<jobId>.json         0600  the raw-evidence callback body (bounded by the callback contract) — needed only until the
 //                                        callback is CONFIRMED; deleted then (kept while a parked callback may be re-armed)
 //     targets/<targetRef>.json     0600  { targetRef, revision, jobId } — the highest revision seen per OPAQUE target reference
+//                                        (the durable authority; the gateway's in-memory map is a bounded warm cache of it)
 //     quarantine/                  0700  corrupt records are MOVED here (never silently deleted, never executed or called back)
 //
 // Durability is only claimed for a non-ephemeral filesystem: readJournalConfig() refuses tmpfs / ramfs / overlay / squashfs and
@@ -274,11 +275,19 @@ function createJournal({ dir, limits = {}, now = () => Date.now(), bootId = read
     },
     async deleteResult(jobId) { writable(); return unlinkIfExists(fileOf("results", jobId)); },
     // target ordering index (opaque target reference → highest revision seen)
+    /**
+     * Structured like readRecord: → { target } | { missing: true } | { corrupt: "name" | "size" | "json" | "shape" }. An I/O error
+     * throws. MISSING and CORRUPT are never collapsed: after its record was pruned legitimately, an entry can be the only
+     * surviving ordering evidence of a target, so an unreadable entry is uncertainty (the gateway fails closed), not absence.
+     */
     async readTarget(ref) {
-      if (!TARGET_REF.test(ref)) return null;
+      if (!TARGET_REF.test(ref)) return { corrupt: "name" };
       const r = await readBounded(fileOf("targets", ref), 4096);
-      if (!r.text) return null;
-      try { const t = JSON.parse(r.text); return isObj(t) && t.targetRef === ref && isInt(t.revision, 1, 1000000) && JOB_ID.test(String(t.jobId)) ? t : null; } catch { return null; }
+      if (r.missing) return { missing: true };
+      if (r.corrupt) return { corrupt: r.corrupt };
+      let t;
+      try { t = JSON.parse(r.text); } catch { return { corrupt: "json" }; }
+      return isObj(t) && t.targetRef === ref && isInt(t.revision, 1, 1000000) && JOB_ID.test(String(t.jobId)) ? { target: t } : { corrupt: "shape" };
     },
     async writeTarget(doc) { writable(); if (!TARGET_REF.test(doc.targetRef)) throw new Error("invalid target reference"); await atomicWrite(fileOf("targets", doc.targetRef), JSON.stringify(doc)); },
     async deleteTarget(ref) { writable(); return unlinkIfExists(fileOf("targets", ref)); },
@@ -341,17 +350,23 @@ function createJournal({ dir, limits = {}, now = () => Date.now(), bootId = read
       }
       return removed;
     },
-    /** BOUNDED listing of the target index. → [{ targetRef, revision, jobId, updatedAt }] */
+    /**
+     * BOUNDED listing of the target index: at most `maxEntries` directory entries, like scan(). → { targets: [{ targetRef,
+     * revision, jobId, updatedAt }], corrupt: [{ targetRef, reason }], scanned, truncated }. `truncated` is REPORTED, never
+     * silent: the listing is only the warm cache of the gateway (an entry it did not reach is still authoritative on disk and is
+     * resolved through readTarget). A corrupt validly-named entry is REPORTED, never skipped as missing (and never deleted).
+     */
     async listTargets({ maxEntries = L.startupScanMax } = {}) {
-      const out = [];
+      const out = { targets: [], corrupt: [], scanned: 0, truncated: false };
       const d = await fsp.opendir(sub("targets"));
       try {
         for await (const ent of d) {
-          if (out.length >= maxEntries) break;
+          if (out.scanned >= maxEntries) { out.truncated = true; break; }
+          out.scanned++;
           const m = /^(tr_[0-9a-f]{40})\.json$/.exec(ent.name);
           if (!m) continue;
-          const t = await this.readTarget(m[1]);
-          if (t) out.push(t);
+          const r = await this.readTarget(m[1]);
+          if (r.target) out.targets.push(r.target); else if (r.corrupt) out.corrupt.push({ targetRef: m[1], reason: r.corrupt });
         }
       } finally { await d.close().catch(() => {}); }
       return out;
