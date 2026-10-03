@@ -16,6 +16,19 @@ export function codingGradingStatusOf(result: { autoGradingStatus?: unknown } | 
 /** Automatic grading has not finished (the result may still change). */
 export const isCodingGradingOpen = (s: StudentCodingGradingStatus | undefined): boolean => !!s && s !== "complete";
 
+// Phase 17F-B1 — TECHNICAL GRADING DELAY ≠ ACADEMIC ZERO. While the SERVER says official coding grading is still open (an open
+// autoGradingStatus, or the legacy autoGradingPending boolean of an older payload), the headline mark is WITHHELD: the big
+// number shows a neutral dash and the percentage slot shows a pending label — never "0 / 30", never "0%". This is the ONE
+// resolver every student surface uses; it reads only the server's aggregate, never the score, percentage or finality.
+// A real zero (grading complete, a teacher override — the server omits the open state for overridden targets — or no coding
+// question at all) is displayed exactly like any other mark.
+export const PENDING_SCORE_DASH = "—";
+export const PENDING_SCORE_LABEL = "بانتظار التصحيح الآلي";
+export function scoreWithheld(result: { autoGradingStatus?: unknown; autoGradingPending?: unknown } | null | undefined): boolean {
+  if (!result || typeof result !== "object") return false;
+  return isCodingGradingOpen(codingGradingStatusOf(result)) || result.autoGradingPending === true;
+}
+
 /** Whether the result screen should keep re-reading the server: only while grading still progresses AUTOMATICALLY. A "delayed"
  *  status (automatic recovery exhausted) changes only through a teacher, so it is refreshed on return / visibility, not polled. */
 export const shouldPollCodingGrading = (s: StudentCodingGradingStatus | undefined): boolean => s === "queued" || s === "processing" || s === "retrying";
