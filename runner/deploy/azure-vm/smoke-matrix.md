@@ -57,6 +57,12 @@ For every official row, verify:
 Measured on A1 (practice, real Docker, development container): all 14 rows pass (Python 0.5–1.6 s, Java 1.1–3.6 s, C#
 0.7–3.8 s per request).
 
+## Concurrency, saturation, P1 / P2 regressions under load (Phase 17F-B10)
+`smoke.js` measures one request at a time. Concurrency ladders, saturation / admission, official bursts, callback bursts, recovery
+under load, the P1 and P2 regressions as repeatable scenarios (CERT-A … CERT-L) and the machine-evaluated gates G1–G11 live in the
+load / certification harness: `runner/tests/load/` (`node runner/tests/load/cli.js catalog`), specified in
+`docs/enterprise-coding-assessment-17f-b10-certification.md`. Production stays fail closed there too.
+
 ## §P1: Pilot Gate P1 (SWA 45-second API ceiling)
 1. Runner leg: `smoke.js runner --gate-p1`. A1 measurement: Python 9.0 s, Java 10.7 s, C# 10.9 s.
 2. **End to end (A2):** as the test student in the IDE, run the three `p1Programs()` sources from `smoke.js` (time limit 10000 ms on the

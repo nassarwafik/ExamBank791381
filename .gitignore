@@ -34,3 +34,6 @@ scripts/output/
 # Phase 16B-A — committed SmartSim example / template runtime sets are SOURCE (hand-written dist/), not build output
 !examples/smartsim/**/dist/
 !docs/smartsim/templates/**/dist/
+
+# Phase 17F-B10 — load / certification harness results are evidence files produced per run, never committed
+runner/tests/load/results/
