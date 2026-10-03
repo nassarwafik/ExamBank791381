@@ -1,4 +1,4 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import CodingEditor from "../src/coding/CodingEditor";
 import { CODING_LANGUAGES } from "../src/codingQuestion";
@@ -18,7 +18,7 @@ function Harness() {
   const [source, setSource] = useState(SAMPLES.python);
   const [changes] = useState<string[]>([]);
   const [limited, setLimited] = useState("abc");
-  window.__harness = { value: () => source, language: () => language, changes };
+  useEffect(() => { window.__harness = { value: () => source, language: () => language, changes }; });   // read by the driver
   return <>
     <h1 style={{ fontSize: 18, margin: 0 }}>محرر الكود — صفحة التحقق</h1>
     <div data-testid="language-bar" style={{ display: "flex", gap: 8 }}>
@@ -37,4 +37,5 @@ function Harness() {
     <button type="button" data-action="after">زر بعد المحرر</button>
   </>;
 }
+export default Harness;
 createRoot(document.getElementById("root")!).render(<StrictMode><Harness /></StrictMode>);

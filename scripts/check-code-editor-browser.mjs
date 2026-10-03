@@ -16,7 +16,6 @@
 // `npm run build` so the real-app check can read dist/. Screenshots + a JSON report land in HARNESS_OUT (default: .harness-out/).
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
