@@ -34,6 +34,8 @@ const clock = (start = Date.now()) => { let t = start; const now = () => t; now.
 const targetFile = dir => path.join(dir, "targets", TARGET + ".json");
 const targetOnDisk = dir => { try { return JSON.parse(fs.readFileSync(targetFile(dir), "utf8")); } catch { return null; } };
 const authority = t => (t ? { revision: t.revision, jobId: t.jobId } : null);
+/** The durable entry of a reference through journal.readTarget's structured contract ({ target } | { missing } | { corrupt }), or null. */
+const readAuth = async (journal, ref) => { const r = await journal.readTarget(ref); return r && r.target ? r.target : (r && (r.missing || r.corrupt) ? null : r); };
 /** A sandbox that HOLDS every execution open (accepted work stays LIVE). */
 function holdingSandbox() { const hold = latch(); return { sandbox: fakeSandbox(async () => { await hold.promise; }), hold }; }
 /** Gates one journal method: every call waits until `open()`; the real operation runs afterwards. */
@@ -72,7 +74,7 @@ test("TAR1 rev 7 authoritative; a rev 8 admission whose writeRecord fails → bu
   assert.equal(recordOf(dir, failed.jobId), null);
   assert.equal(fs.existsSync(path.join(dir, "inputs", failed.jobId + ".json")), false);
   assert.deepEqual(authority(targetOnDisk(dir)), { revision: 7, jobId: v(700, 7).jobId }, "durable authority advanced by a failed admission");
-  assert.deepEqual(authority(await h.journal.readTarget(TARGET)), { revision: 7, jobId: v(700, 7).jobId });
+  assert.deepEqual(authority(await readAuth(h.journal, TARGET)), { revision: 7, jobId: v(700, 7).jobId });
   const other = v(702, 8);
   assert.equal((await h.q.submit(other)).status, "accepted", "phantom target authority: a valid rev 8 job refused");   // memory authority
   assert.deepEqual(authority(targetOnDisk(dir)), { revision: 8, jobId: other.jobId });
@@ -87,11 +89,11 @@ test("TAR2 no previous target: a rev 1 admission whose writeRecord fails → bus
   const failed = v(710, 1);
   assert.equal((await h.q.submit(failed)).status, "busy");
   assert.equal(recordOf(dir, failed.jobId), null);
-  assert.equal(await h.journal.readTarget(TARGET), null, "a failed admission created target authority");
+  assert.equal(await readAuth(h.journal, TARGET), null, "a failed admission created target authority");
   assert.equal((await h.journal.listTargets({ maxEntries: 10 })).targets.length, 0);
   const other = v(711, 1);
   assert.equal((await h.q.submit(other)).status, "accepted");
-  assert.deepEqual(authority(await h.journal.readTarget(TARGET)), { revision: 1, jobId: other.jobId });
+  assert.deepEqual(authority(await readAuth(h.journal, TARGET)), { revision: 1, jobId: other.jobId });
   assert.equal(unhandled, before);
   await h.q.idle(); await crash(h);
 });
@@ -201,11 +203,11 @@ test("TAR6 maintenance paused right before deleting the stale rev 8 entry, rev 9
 
 test("TAR7 same race, verified on disk (journal.readTarget) and after a restart: the durable authority is rev 9 / the rev 9 job", async () => {
   const dir = tmpJournalDir(), r = await pruneRace(dir);
-  assert.deepEqual(authority(await r.h.journal.readTarget(TARGET)), { revision: 9, jobId: r.newer.jobId }, "durable target authority lost");
+  assert.deepEqual(authority(await readAuth(r.h.journal, TARGET)), { revision: 9, jobId: r.newer.jobId }, "durable target authority lost");
   assert.deepEqual(authority(targetOnDisk(dir)), { revision: 9, jobId: r.newer.jobId });
   await r.h.q.idle(); await crash(r.h);
   const h2 = await boot(dir, { now: r.now, maxPending: 8, limits: { confirmedRetentionMs: 60000, failedRetentionMs: 1000 } });
-  assert.deepEqual(authority(await h2.journal.readTarget(TARGET)), { revision: 9, jobId: r.newer.jobId });
+  assert.deepEqual(authority(await readAuth(h2.journal, TARGET)), { revision: 9, jobId: r.newer.jobId });
   assert.equal((await h2.q.submit(v(762, 8))).status, "stale");
   await crash(h2);
 });
@@ -291,7 +293,7 @@ test("TAR12 crash after the accepted commit and before the durable index write: 
   const h2 = await boot(dir, { maxPending: 8, sandbox, logger });
   assert.equal(h2.summary.recovered.received, 1);
   assert.equal(h2.summary.targets.repaired, 1, "startup did not repair the lagging index");
-  assert.deepEqual(authority(await h2.journal.readTarget(TARGET)), { revision: 8, jobId: accepted.jobId });
+  assert.deepEqual(authority(await readAuth(h2.journal, TARGET)), { revision: 8, jobId: accepted.jobId });
   assert.ok(logger.events().some(e => e.event === "coding.runner.target.repaired" && e.jobId === accepted.jobId && e.revision === 8 && e.stage === "startup"));
   assert.equal((await h2.q.submit(accepted)).status, "duplicate");                                  // the retried delivery
   assert.equal((await h2.q.submit(v(722, 8))).status, "conflict");
@@ -315,8 +317,8 @@ test("TAR13 legitimately retained target history (the confirmed record already p
   assert.equal(recordOf(dir, j.jobId), null);
   await crash(h);
   const h2 = await boot(dir, { now, maxPending: 8, limits });
-  assert.deepEqual(h2.summary.targets, { repaired: 0, inconsistent: 0, blocked: 0, held: 0, scanned: 1, truncated: false });
-  assert.deepEqual(authority(await h2.journal.readTarget(TARGET)), { revision: 5, jobId: j.jobId }, "retained target history destroyed at startup");
+  assert.deepEqual(h2.summary.targets, { repaired: 0, inconsistent: 0, blocked: 0, held: 0, superseded: 0, corrupt: 0, scanned: 1, truncated: false });
+  assert.deepEqual(authority(await readAuth(h2.journal, TARGET)), { revision: 5, jobId: j.jobId }, "retained target history destroyed at startup");
   assert.equal((await h2.q.submit(v(731, 4))).status, "stale");
   assert.equal((await h2.q.submit(v(732, 5))).status, "conflict");
   assert.equal((await h2.q.submit(v(733, 6))).status, "accepted");
@@ -334,18 +336,18 @@ test("TAR14 startup repairs ONLY unambiguous states: a missing index for a recor
   await crash(h);
   fs.unlinkSync(targetFile(dir));                                                                   // the crash window of RF1-A for the YOUNG record (index never written)
   const h2 = await boot(dir, { now, maxPending: 8, limits });
-  assert.deepEqual(h2.summary.targets, { repaired: 1, inconsistent: 0, blocked: 0, held: 0, scanned: 1, truncated: false });
-  assert.deepEqual(authority(await h2.journal.readTarget(TARGET)), { revision: 3, jobId: young.jobId }, "unambiguous crash window not repaired");
-  assert.deepEqual(authority(await h2.journal.readTarget(TARGET2)), { revision: 2, jobId: oldOne.jobId });   // consistent: untouched
+  assert.deepEqual(h2.summary.targets, { repaired: 1, inconsistent: 0, blocked: 0, held: 0, superseded: 0, corrupt: 0, scanned: 1, truncated: false });
+  assert.deepEqual(authority(await readAuth(h2.journal, TARGET)), { revision: 3, jobId: young.jobId }, "unambiguous crash window not repaired");
+  assert.deepEqual(authority(await readAuth(h2.journal, TARGET2)), { revision: 2, jobId: oldOne.jobId });   // consistent: untouched
   now.advance(5000);                                                                                // both entries are now older than failedRetentionMs: pruned legitimately …
   assert.deepEqual(await h2.q.maintain(), { pruned: 0, prunedTargets: 2 });
-  assert.equal(await h2.journal.readTarget(TARGET), null);
-  assert.equal(await h2.journal.readTarget(TARGET2), null);
+  assert.equal(await readAuth(h2.journal, TARGET), null);
+  assert.equal(await readAuth(h2.journal, TARGET2), null);
   await crash(h2);
   const h3 = await boot(dir, { now, maxPending: 8, limits });                                        // … and a restart does NOT re-create them from the old confirmed records
-  assert.deepEqual(h3.summary.targets, { repaired: 0, inconsistent: 0, blocked: 0, held: 0, scanned: 0, truncated: false });
-  assert.equal(await h3.journal.readTarget(TARGET), null, "legitimately pruned history re-created");
-  assert.equal(await h3.journal.readTarget(TARGET2), null, "legitimately pruned history re-created");
+  assert.deepEqual(h3.summary.targets, { repaired: 0, inconsistent: 0, blocked: 0, held: 0, superseded: 0, corrupt: 0, scanned: 0, truncated: false });
+  assert.equal(await readAuth(h3.journal, TARGET), null, "legitimately pruned history re-created");
+  assert.equal(await readAuth(h3.journal, TARGET2), null, "legitimately pruned history re-created");
   assert.equal((await h3.q.submit(v(747, 1, TARGET2))).status, "accepted");                         // retention semantics unchanged: an old target accepts any revision again
   assert.equal((await h3.q.submit(v(748, 2))).status, "accepted");
   await h3.q.idle(); await crash(h3);
@@ -443,7 +445,7 @@ for (const prune of [false, true]) {
     assert.equal(recordOf(s.dir, v(1502, 8).jobId), null);
     const nine = v(1503, 9, s.ref);
     assert.equal((await h2.q.submit(nine)).status, "accepted");
-    assert.deepEqual(authority(await h2.journal.readTarget(s.ref)), { revision: 9, jobId: nine.jobId });
+    assert.deepEqual(authority(await readAuth(h2.journal, s.ref)), { revision: 9, jobId: nine.jobId });
     assert.equal((await h2.q.submit(v(1504, 8, s.ref))).status, "stale");                          // now from the cache
     assert.equal(h2.summary.targets.truncated, true, "the bounded target listing did not report its truncation");   // the warm cache was not complete
     assert.equal(unhandled, before);
@@ -477,7 +479,7 @@ test("TAR18 job scan complete + target warm cache truncated: the queue stays usa
   assert.ok(logger.events().some(e => e.event === "coding.runner.target.listing-truncated" && e.limit === SMALL.startupScanMax), "the truncated warm cache is not logged");
   assert.equal((await h2.q.submit(job(1510))).status, "accepted");                                   // plain job
   assert.equal((await h2.q.submit(v(1511, 1, refOf(0x300)))).status, "accepted");                   // a NEW target: no durable entry, admitted
-  assert.deepEqual(authority(await h2.journal.readTarget(refOf(0x300))), { revision: 1, jobId: v(1511, 1).jobId });
+  assert.deepEqual(authority(await readAuth(h2.journal, refOf(0x300))), { revision: 1, jobId: v(1511, 1).jobId });
   assert.equal((await h2.q.submit(v(1512, 7, s.ref))).status, "stale");                             // the omitted authority still orders
   assert.equal((await h2.q.submit(v(1513, 8, s.ref))).status, "conflict");
   let n = 1514;
@@ -533,7 +535,7 @@ async function expectBlocked(dir, patch = null) {
   assert.equal(h.q.status().targetsBlocked, 1);
   await h.q.idle();
   assert.deepEqual(h.sandbox.runs, [], "an ambiguous same-revision record was executed by scan order");
-  assert.equal(await h.journal.readTarget(TARGET), null, "a scan-order winner was written as authority");
+  assert.equal(await readAuth(h.journal, TARGET), null, "a scan-order winner was written as authority");
   assert.equal(recordOf(dir, A8.jobId).state, "received");
   assert.equal(recordOf(dir, B8.jobId).state, "received");
   for (const [n, rev] of [[1610, 7], [1611, 8], [1612, 9]]) {
@@ -554,20 +556,24 @@ async function expectBlocked(dir, patch = null) {
 async function expectIndexPreserved(dir, patch = null) {
   const h = await bootWith(dir, { maxPending: 8 }, patch);
   assert.equal(h.summary.targets.blocked, 0);
-  assert.equal(h.summary.targets.held, 1);                                                         // the competing record A
+  assert.equal(h.summary.targets.held, 0);                                                         // review fix 3: the competitor is superseded, not held
+  assert.equal(h.summary.targets.superseded, 1);                                                   // the competing record A
   assert.equal(h.summary.targets.inconsistent, 1);
-  assert.deepEqual(authority(await h.journal.readTarget(TARGET)), { revision: 8, jobId: B8.jobId }, "the existing durable authority was replaced by scan order");
+  assert.equal(h.q.status().executionHeld, 0);
+  assert.deepEqual(authority(await readAuth(h.journal, TARGET)), { revision: 8, jobId: B8.jobId }, "the existing durable authority was replaced by scan order");
+  assert.equal(recordOf(dir, A8.jobId).state, "superseded", "the non-authoritative competitor stays LIVE");   // durable, before anything runs
   await h.q.idle();
   assert.deepEqual(h.sandbox.runs, [B8.jobId], "the competing same-revision record executed");
   assert.equal(recordOf(dir, B8.jobId).state, "confirmed");
-  assert.equal(recordOf(dir, A8.jobId).state, "received");                                        // held, never executed as the authority
+  assert.equal(recordOf(dir, A8.jobId).state, "superseded");
+  assert.equal(h.q.status().received, 0);                                                          // no capacity leak
   assert.equal((await h.q.submit(v(1620, 7))).status, "stale");
   assert.equal((await h.q.submit(v(1621, 8))).status, "conflict");
-  assert.deepEqual(await h.q.submit(A8), { status: "duplicate", state: "received" });
+  assert.deepEqual(await h.q.submit(A8), { status: "stale" });                                     // a superseded record answers stale
   const nine = v(1622, 9);
   assert.equal((await h.q.submit(nine)).status, "accepted");
   await h.q.idle();
-  assert.deepEqual(authority(await h.journal.readTarget(TARGET)), { revision: 9, jobId: nine.jobId });
+  assert.deepEqual(authority(await readAuth(h.journal, TARGET)), { revision: 9, jobId: nine.jobId });
   assert.equal(recordOf(dir, nine.jobId).state, "confirmed");
   return h;
 }
@@ -604,7 +610,7 @@ test("TAR23 two records at DIFFERENT revisions (rev 7 A, rev 8 B), no index: the
   assert.equal(h.summary.targets.blocked, 0);
   assert.equal(h.summary.targets.repaired, 1);
   assert.equal(h.summary.targets.held, 0);
-  assert.deepEqual(authority(await h.journal.readTarget(TARGET)), { revision: 8, jobId: B8.jobId });
+  assert.deepEqual(authority(await readAuth(h.journal, TARGET)), { revision: 8, jobId: B8.jobId });
   await h.q.idle();
   assert.deepEqual(h.sandbox.runs, [B8.jobId]);
   assert.equal(recordOf(dir, A7.jobId).state, "superseded");
@@ -619,7 +625,7 @@ test("TAR24 three records (rev 8 A, rev 8 B, rev 9 C), no index: the highest rev
   assert.equal(h.summary.targets.blocked, 0);
   assert.equal(h.summary.targets.repaired, 1);
   assert.equal(h.summary.targets.held, 0);
-  assert.deepEqual(authority(await h.journal.readTarget(TARGET)), { revision: 9, jobId: C9.jobId });
+  assert.deepEqual(authority(await readAuth(h.journal, TARGET)), { revision: 9, jobId: C9.jobId });
   await h.q.idle();
   assert.deepEqual(h.sandbox.runs, [C9.jobId], "a lower duplicate executed");
   assert.equal(recordOf(dir, A8.jobId).state, "superseded");
@@ -638,4 +644,299 @@ test("TAR25 an ambiguous target survives a restart and still fails closed (no «
   await crash(h2);
   const h3 = await expectBlocked(dir, reverseScan);
   await crash(h3);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// Independent Review Fix 3 — corrupt retained authority is never "missing"; target authority guards delivery as well as
+// execution; clearly non-authoritative competitors are superseded, never held forever.
+//   RF3-A  journal.readTarget collapsed MISSING, CORRUPT (size / json / shape) into null; loadTargetAuthority read null as "no
+//          durable authority" and submit accepted an older revision although the (unreadable) entry was the only surviving
+//          ordering evidence after the record's legitimate pruning. The read is now structured ({ target } | { missing } |
+//          { corrupt: reason }), CORRUPT fails closed (busy / target-authority-corrupt; nothing written, no execution, the file is
+//          never deleted), the listing reports corrupt validly-named entries and startup blocks them.
+//   RF3-B  held / blocked authority guarded execution only: an EXECUTED or CALLBACK_FAILED competitor could still deliver or
+//          re-arm its callback. One canonical delivery authority (deliverable) now guards schedule, sendCallback and the
+//          executed / callback_failed duplicate paths.
+//   RF3-C  the competitor of a durably selected authority was held forever (LIVE, counted against maxPending). It is now
+//          SUPERSEDED durably at startup; if that commit fails it is held and released (superseded) when a higher authority
+//          advances. Nothing is superseded for a BLOCKED target (no trustworthy authority).
+// Fail-first on 5cca0c2: TAR26, TAR27, TAR30, TAR31, TAR32, TAR33, TAR34, TAR35, TAR36, TAR37 fail (plus TAR21 / TAR22 / TAR13 /
+// TAR14 / TAR38 on the new summary shape); TAR28 / TAR29 pin existing behaviour.
+const writeRaw = (dir, ref, text) => fs.writeFileSync(path.join(dir, "targets", ref + ".json"), text, { mode: 0o600 });
+/** Corrupts one validly-named index file in a given way. */
+function corruptTargetFile(dir, ref, kind, revision = 8, jobId = job(2600).jobId) {
+  const doc = { schemaVersion: 1, targetRef: ref, revision, jobId, updatedAt: new Date().toISOString() };
+  if (kind === "json") writeRaw(dir, ref, "{ not json");
+  else if (kind === "size") writeRaw(dir, ref, JSON.stringify({ ...doc, pad: "x".repeat(5000) }));
+  else if (kind === "revision") writeRaw(dir, ref, JSON.stringify({ ...doc, revision: 0 }));
+  else if (kind === "jobid") writeRaw(dir, ref, JSON.stringify({ ...doc, jobId: "not-a-job-id" }));
+  else if (kind === "shape") writeRaw(dir, ref, JSON.stringify({ ...doc, targetRef: refOf(0x999) }));
+  else throw new Error("kind");
+  return fs.readFileSync(path.join(dir, "targets", ref + ".json"));
+}
+/** Only the retained rev 8 entry of TARGET survives (the record is pruned legitimately), then the entry is corrupted. */
+async function retainedThenCorrupt(kind) {
+  const dir = tmpJournalDir(), now = clock();
+  const limits = { confirmedRetentionMs: 1000, failedRetentionMs: 60000 };
+  const h = await boot(dir, { now, maxPending: 8, limits });
+  const a = v(2600, 8);
+  assert.equal((await h.q.submit(a)).status, "accepted");
+  await h.q.idle();
+  now.advance(5000);
+  assert.deepEqual(await h.q.maintain(), { pruned: 1, prunedTargets: 0 });
+  assert.equal(recordOf(dir, a.jobId), null);
+  await crash(h);
+  const bytes = kind ? corruptTargetFile(dir, TARGET, kind, 8, a.jobId) : null;
+  return { dir, now, limits, a, bytes };
+}
+const failClosedOn = async (h, dir, j, reason, logger) => {
+  assert.equal((await h.q.submit(j)).status, "busy", "accepted under a corrupt / unreadable authority");
+  assert.ok(logger.events().some(e => e.event === "runner.official.busy" && e.jobId === j.jobId && e.reason === reason), "busy reason not " + reason + ": " + JSON.stringify(logger.events().filter(e => e.jobId === j.jobId)));
+  assert.equal(recordOf(dir, j.jobId), null);
+  assert.equal(fs.existsSync(path.join(dir, "inputs", j.jobId + ".json")), false);
+  assert.equal(h.sandbox.runs.includes(j.jobId), false);
+};
+
+test("TAR26 only the retained rev 8 entry remains (record pruned) and it is corrupt JSON: after a restart rev 7 → busy / target-authority-corrupt — nothing written, no execution, the entry is never overwritten or deleted", async () => {
+  const s = await retainedThenCorrupt("json"), logger = capture(), before = unhandled;
+  const h = await boot(s.dir, { now: s.now, maxPending: 8, limits: s.limits, logger });
+  await failClosedOn(h, s.dir, v(2601, 7), "target-authority-corrupt", logger);
+  await failClosedOn(h, s.dir, v(2602, 9), "target-authority-corrupt", logger);                   // a higher revision is refused as well: no authority to compare with
+  assert.equal(h.summary.targets.corrupt, 1, "startup did not report the corrupt entry: " + JSON.stringify(h.summary.targets));
+  assert.equal(h.q.status().targetIndexCorrupt, 1);
+  assert.ok(fs.readFileSync(targetFile(s.dir)).equals(s.bytes), "the corrupt entry was rewritten or removed");
+  assert.equal((await h.q.submit(job(2603))).status, "accepted");                                   // plain work is unaffected
+  assert.ok(!logger.lines.some(l => l.includes(TARGET)), "the opaque reference is logged");
+  assert.equal(unhandled, before);
+  await h.q.idle(); await crash(h);
+  assert.ok(fs.readFileSync(targetFile(s.dir)).equals(s.bytes));
+});
+
+for (const kind of ["size", "revision", "jobid", "shape"]) {
+  test(`TAR27 corrupt retained entry (${kind}): fails closed exactly like TAR26`, async () => {
+    const s = await retainedThenCorrupt(kind), logger = capture();
+    const h = await boot(s.dir, { now: s.now, maxPending: 8, limits: s.limits, logger });
+    assert.equal(h.summary.targets.corrupt, 1, JSON.stringify(h.summary.targets));
+    await failClosedOn(h, s.dir, v(2610, 7), "target-authority-corrupt", logger);
+    assert.ok(fs.readFileSync(targetFile(s.dir)).equals(s.bytes), "the corrupt entry was rewritten or removed");
+    await crash(h);
+  });
+}
+
+test("TAR28 a GENUINELY missing entry is not corrupt: a new revision is admitted normally (missing ≠ corrupt)", async () => {
+  const s = await retainedThenCorrupt(null);
+  fs.unlinkSync(targetFile(s.dir));
+  const h = await boot(s.dir, { now: s.now, maxPending: 8, limits: s.limits });
+  assert.equal(h.summary.targets.corrupt, 0);
+  assert.equal(h.q.status().targetIndexCorrupt, 0);
+  assert.equal((await h.q.submit(v(2620, 7))).status, "accepted");
+  assert.deepEqual(authority(await readAuth(h.journal, TARGET)), { revision: 7, jobId: v(2620, 7).jobId });
+  await h.q.idle(); await crash(h);
+});
+
+test("TAR29 a durable read I/O failure on a cache miss stays busy / target-authority-unavailable (unchanged from review fix 2) and is distinct from corrupt", async () => {
+  const dir = tmpJournalDir(), logger = capture(), h = await boot(dir, { maxPending: 8, logger });
+  const fresh = refOf(0x500), original = h.journal.readTarget.bind(h.journal);
+  h.journal.readTarget = async r => { if (r === fresh) throw Object.assign(new Error("injected EIO"), { code: "EIO" }); return original(r); };
+  await failClosedOn(h, dir, v(2630, 3, fresh), "target-authority-unavailable", logger);
+  assert.equal(h.q.status().targetIndexCorrupt, 0);
+  h.journal.readTarget = original;
+  assert.equal((await h.q.submit(v(2630, 3, fresh))).status, "accepted");                          // transient
+  await h.q.idle(); await crash(h);
+});
+
+test("TAR30 the bounded listing reports corrupt validly-named entries ({ targets, corrupt: [{ targetRef, reason }], scanned, truncated }) instead of skipping them as missing", async () => {
+  const dir = tmpJournalDir(), h = await boot(dir, { maxPending: 8 });
+  writeTargetFile(dir, refOf(0x601), 1, job(2640).jobId);
+  writeTargetFile(dir, refOf(0x602), 2, job(2641).jobId);
+  corruptTargetFile(dir, refOf(0x603), "json");
+  corruptTargetFile(dir, refOf(0x604), "size");
+  const out = await h.journal.listTargets({ maxEntries: 10 });
+  assert.equal(out.targets.length, 2);
+  assert.equal(out.scanned, 4);
+  assert.equal(out.truncated, false);
+  assert.ok(Array.isArray(out.corrupt), "no corrupt report: " + JSON.stringify(out));
+  assert.deepEqual(out.corrupt.map(c => [c.targetRef, c.reason]).sort(), [[refOf(0x603), "json"], [refOf(0x604), "size"]]);
+  assert.deepEqual(await h.journal.readTarget(refOf(0x603)), { corrupt: "json" });
+  assert.deepEqual(await h.journal.readTarget(refOf(0x604)), { corrupt: "size" });
+  assert.deepEqual(await h.journal.readTarget(refOf(0x605)), { missing: true });
+  assert.deepEqual(authority((await h.journal.readTarget(refOf(0x601))).target), { revision: 1, jobId: job(2640).jobId });
+  await crash(h);
+});
+
+test("TAR31 a corrupt entry OUTSIDE the warm-cache window: the on-demand cache miss detects CORRUPT and fails closed (never «no authority»)", async () => {
+  const dir = tmpJournalDir(), logger = capture();
+  const h0 = await boot(dir, { maxPending: 8 }); await crash(h0);
+  for (let i = 1; i <= 12; i++) writeTargetFile(dir, refOf(0x700 + i), 2, job(2650 + i).jobId);
+  const omitted = targetDirOrder(dir).slice(SMALL.startupScanMax)[0];
+  const bytes = corruptTargetFile(dir, omitted, "json");                                            // rewritten in place: the directory order is unchanged
+  assert.equal(targetDirOrder(dir).indexOf(omitted) >= SMALL.startupScanMax, true);
+  const h = await boot(dir, { maxPending: 8, limits: SMALL, logger });
+  assert.equal(h.summary.targets.truncated, true);
+  assert.equal(h.summary.targets.corrupt, 0);                                                      // not in the window: startup could not see it
+  await failClosedOn(h, dir, v(2670, 1, omitted), "target-authority-corrupt", logger);
+  await failClosedOn(h, dir, v(2671, 9, omitted), "target-authority-corrupt", logger);
+  assert.equal(h.q.status().targetIndexCorrupt, 1);                                                // detected on demand, now blocked
+  assert.ok(fs.readFileSync(path.join(dir, "targets", omitted + ".json")).equals(bytes));
+  assert.ok(!logger.lines.some(l => l.includes(omitted)));
+  await crash(h);
+});
+
+// ── RF3-B / RF3-C — delivery authority, superseding of selected competitors, capacity release ──────────────────────────
+const RESULT = j => ({ jobId: j.jobId, outcome: "completed", cases: j.cases.map(c => ({ token: c.token, status: "success", stdout: "out-" + c.token + "\n", stderr: "", exitCode: 0, durationMs: 3 })) });
+const CB = (over = {}) => ({ attempts: 0, windowEnd: 4, rearms: 0, nextAt: null, lastAt: null, lastStatus: null, lastErrorClass: null, confirmedAt: null, confirmedAs: null, ...over });
+/** A record with a durable result, as the pre-B3 gateway left it: EXECUTED (callback pending) or CALLBACK_FAILED (parked). */
+async function craftWithResult(journal, j, state, at = new Date().toISOString()) {
+  const resultHash = await journal.writeResult(j.jobId, RESULT(j));
+  const callback = state === "executed" ? CB({ nextAt: at }) : CB({ attempts: 4, windowEnd: 4, lastAt: at, lastStatus: 500, lastErrorClass: "http" });
+  await journal.writeRecord({ schemaVersion: 1, jobId: j.jobId, payloadHash: officialPayloadHash(j), revision: j.targetRef ? j.revision : null, targetRef: j.targetRef || null, language: j.language, state, generation: 1, interruptions: 0, receivedAt: at, startedAt: at, executedAt: at, updatedAt: at, outcome: "completed", technicalCode: null, resultHash, summary: { cases: j.cases.length, statuses: { success: j.cases.length }, compile: null }, callback });
+}
+async function preB3WithResults(entries, index = null) {
+  const dir = tmpJournalDir(), j = createJournal({ dir, logger: quiet() });
+  await j.open();
+  for (const [rec, state] of entries) { if (state === "received") await craftReceived(j, rec); else await craftWithResult(j, rec, state); }
+  await j.close();
+  if (index) writeTargetFile(dir, TARGET, index.revision, index.jobId);
+  return dir;
+}
+const resultFile = (dir, j) => path.join(dir, "results", j.jobId + ".json");
+const delivered = h => h.api.calls.map(c => c.jobId);
+
+test("TAR32 two same-revision EXECUTED records, NO index: the target is blocked, ZERO callback deliveries, both durable results preserved", async () => {
+  const dir = await preB3WithResults([[A8, "executed"], [B8, "executed"]]);
+  const h = await boot(dir, { maxPending: 8 });
+  await h.q.idle();
+  await sleep(60);                                                                                 // any due callback would have been sent by now
+  assert.deepEqual(delivered(h), [], "a non-authoritative / ambiguous result was delivered");
+  assert.equal(h.summary.targets.blocked, 1);
+  assert.equal(h.summary.targets.superseded, 0);
+  assert.equal(recordOf(dir, A8.jobId).state, "executed");
+  assert.equal(recordOf(dir, B8.jobId).state, "executed");
+  assert.ok(fs.existsSync(resultFile(dir, A8)) && fs.existsSync(resultFile(dir, B8)), "a durable result was removed");
+  assert.equal(h.q.status().targetsBlocked, 1);
+  assert.equal(await readAuth(h.journal, TARGET), null);
+  await crash(h);
+});
+
+test("TAR33 two same-revision EXECUTED records, index selects B: B delivers, A NEVER delivers and is superseded durably (its result released under the existing rules)", async () => {
+  const dir = await preB3WithResults([[A8, "executed"], [B8, "executed"]], { revision: 8, jobId: B8.jobId });
+  const h = await boot(dir, { maxPending: 8 });
+  await h.q.idle();
+  await waitFor(() => recordOf(dir, B8.jobId).state === "confirmed");
+  await sleep(60);
+  assert.deepEqual(delivered(h), [B8.jobId], "the competitor delivered its result");
+  assert.equal(h.summary.targets.blocked, 0);
+  assert.equal(h.summary.targets.superseded, 1);
+  assert.equal(recordOf(dir, A8.jobId).state, "superseded", "the competing executed record is still deliverable");
+  assert.equal(recordOf(dir, A8.jobId).state, "superseded");
+  assert.equal(fs.existsSync(resultFile(dir, A8)), false);                                         // released by the superseded-record cleanup
+  assert.deepEqual(await h.q.submit(A8), { status: "stale" });
+  await sleep(40);
+  assert.deepEqual(delivered(h), [B8.jobId]);
+  await crash(h);
+});
+
+test("TAR34 a competing CALLBACK_FAILED record never re-arms: superseded when the index selects B; refused (busy) and untouched when the target is blocked", async () => {
+  const selected = await preB3WithResults([[A8, "callback_failed"], [B8, "executed"]], { revision: 8, jobId: B8.jobId });
+  const h = await boot(selected, { maxPending: 8 });
+  assert.equal(recordOf(selected, A8.jobId).state, "superseded");
+  await h.q.idle();
+  assert.deepEqual(await h.q.submit(A8), { status: "stale" });                                     // a redelivery cannot re-arm it
+  await h.q.idle(); await sleep(60);
+  assert.deepEqual(delivered(h), [B8.jobId]);
+  assert.equal(recordOf(selected, A8.jobId).state, "superseded");
+  await crash(h);
+  const blocked = await preB3WithResults([[A8, "callback_failed"], [B8, "executed"]]), logger = capture();
+  const h2 = await boot(blocked, { maxPending: 8, logger });
+  assert.equal(h2.summary.targets.blocked, 1);
+  assert.equal((await h2.q.submit(A8)).status, "busy", "a blocked callback_failed record was re-armed");
+  assert.ok(logger.events().some(e => e.event === "runner.official.busy" && e.jobId === A8.jobId && e.reason === "target-inconsistent"));
+  await h2.q.idle(); await sleep(60);
+  const a = recordOf(blocked, A8.jobId);
+  assert.equal(a.state, "callback_failed");
+  assert.equal(a.callback.rearms, 0);
+  assert.deepEqual(delivered(h2), []);
+  assert.ok(fs.existsSync(resultFile(blocked, A8)) && fs.existsSync(resultFile(blocked, B8)));
+  await crash(h2);
+});
+
+test("TAR35 blocked target + a fresh delivery of an EXECUTED job: fail-closed response, no callback scheduled, result preserved", async () => {
+  const dir = await preB3WithResults([[A8, "executed"], [B8, "executed"]]), logger = capture();
+  const h = await boot(dir, { maxPending: 8, logger });
+  assert.equal(h.summary.targets.blocked, 1);
+  const before = JSON.stringify(recordOf(dir, A8.jobId));
+  assert.equal((await h.q.submit(A8)).status, "busy");
+  assert.ok(logger.events().some(e => e.event === "runner.official.busy" && e.jobId === A8.jobId && e.reason === "target-inconsistent"));
+  await h.q.idle(); await sleep(60);
+  assert.deepEqual(delivered(h), [], "a duplicate scheduled the callback of a blocked target");
+  assert.equal(JSON.stringify(recordOf(dir, A8.jobId)), before);                                   // untouched, result preserved
+  assert.ok(fs.existsSync(resultFile(dir, A8)));
+  await crash(h);
+});
+
+/** A and B rev 8 RECEIVED, index selects B, and the startup supersede of A FAILS once (journal write error): A is held, not leaked forever. */
+async function heldCompetitor(opts = {}) {
+  const dir = await preB3Journal([A8, B8], { revision: 8, jobId: B8.jobId });
+  let failed = 0;
+  const h = await bootWith(dir, { maxPending: 8, ...opts }, journal => {
+    const original = journal.writeRecord.bind(journal);
+    journal.writeRecord = async rec => { if (rec.jobId === A8.jobId && rec.state === "superseded" && failed === 0) { failed++; throw new Error("injected supersede failure"); } return original(rec); };
+  });
+  assert.equal(failed, 1);
+  assert.equal(h.summary.targets.held, 1, JSON.stringify(h.summary.targets));                      // supersede failed → held (fail closed), counted
+  assert.equal(h.summary.targets.superseded, 0);
+  assert.equal(h.q.status().executionHeld, 1);
+  assert.equal(recordOf(dir, A8.jobId).state, "received");
+  return { dir, h };
+}
+
+test("TAR36 a held competitor is released once a higher authority exists: after B completes and rev 9 is admitted, A is superseded durably and leaves the LIVE count", async () => {
+  const { dir, h } = await heldCompetitor();
+  await h.q.idle();
+  assert.deepEqual(h.sandbox.runs, [B8.jobId]);
+  assert.equal(recordOf(dir, B8.jobId).state, "confirmed");
+  assert.equal(h.q.status().received, 1);                                                          // A: held, still LIVE
+  const nine = v(2690, 9);
+  assert.equal((await h.q.submit(nine)).status, "accepted");
+  assert.equal(recordOf(dir, A8.jobId).state, "superseded", "the obsolete held competitor stayed LIVE after a higher authority");
+  assert.equal(h.q.status().executionHeld, 0);
+  await h.q.idle();
+  assert.equal(h.q.status().received, 0);
+  assert.equal(h.q.size().pending, 0);
+  assert.deepEqual(h.sandbox.runs, [B8.jobId, nine.jobId]);
+  assert.deepEqual(await h.q.submit(A8), { status: "stale" });
+  await crash(h);
+});
+
+test("TAR37 maxPending = 2 exposes the leak: the held competitor occupies a slot until the higher authority supersedes it; then new work is admitted again", async () => {
+  const s = holdingSandbox();
+  const { dir, h } = await heldCompetitor({ maxPending: 2, sandbox: s.sandbox });
+  await waitFor(() => recordOf(dir, B8.jobId).state === "running");
+  assert.equal((await h.q.submit(job(2695))).status, "busy");                                       // A (held) + B (running) = 2
+  s.hold.open(); await h.q.idle();
+  assert.equal(recordOf(dir, B8.jobId).state, "confirmed");
+  assert.equal((await h.q.submit(v(2696, 9))).status, "accepted");                                  // 1 slot: A was still counted
+  assert.equal(recordOf(dir, A8.jobId).state, "superseded");
+  assert.equal((await h.q.submit(job(2697))).status, "accepted", "capacity leaked by the obsolete competitor");   // A released: rev 9 + this = 2
+  await h.q.idle(); await crash(h);
+});
+
+test("TAR38 no trustworthy authority (blocked): neither A nor B is superseded by guessing — both preserved, still blocked after a restart", async () => {
+  const dir = await preB3Journal([A8, B8]);
+  const h = await boot(dir, { maxPending: 8 });
+  assert.equal(h.summary.targets.blocked, 1);
+  assert.equal(h.summary.targets.superseded, 0);
+  assert.equal(h.summary.targets.held, 2);
+  await h.q.idle();
+  assert.equal(recordOf(dir, A8.jobId).state, "received");
+  assert.equal(recordOf(dir, B8.jobId).state, "received");
+  await crash(h);
+  const h2 = await boot(dir, { maxPending: 8 });
+  assert.equal(h2.summary.targets.blocked, 1);
+  assert.equal(h2.summary.targets.superseded, 0);
+  await h2.q.idle();
+  assert.equal(recordOf(dir, A8.jobId).state, "received");
+  assert.equal(recordOf(dir, B8.jobId).state, "received");
+  assert.deepEqual(h2.sandbox.runs, []);
+  await crash(h2);
 });

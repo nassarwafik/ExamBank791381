@@ -298,7 +298,7 @@ test("ADM15 a writeTarget failure (after the durable commit) is accepted with an
   assert.equal(f.failures(), 1);
   assert.equal(h.q.size().entries, 1);
   assert.equal(recordOf(dir, job(900).jobId).state, "received");
-  assert.equal(await h.journal.readTarget(TARGET), null);                                          // the durable index lags …
+  assert.deepEqual(await h.journal.readTarget(TARGET), { missing: true });                         // the durable index lags …
   assert.equal(h.q.status().targetIndexLag, 1);                                                    // … visibly
   const later = await Promise.race([h.q.submit(job(901, versioned)), sleep(1500).then(() => ({ status: "timeout" }))]);
   assert.equal(later.status, "conflict");                                                          // ADM16: released; rev 1 is owned by 900
@@ -306,7 +306,7 @@ test("ADM15 a writeTarget failure (after the durable commit) is accepted with an
   assert.equal((await h.q.submit(job(902))).status, "accepted");
   await h.q.maintain();
   assert.equal(h.q.status().targetIndexLag, 0);
-  assert.equal((await h.journal.readTarget(TARGET)).jobId, job(900).jobId);
+  assert.equal((await h.journal.readTarget(TARGET)).target.jobId, job(900).jobId);
   assert.equal(unhandled, before);
   s.hold.open(); await h.q.idle(); await crash(h);
 });

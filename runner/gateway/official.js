@@ -41,6 +41,12 @@
 //            records is preserved (the competitors are held, never executed as the authority); several same-revision records
 //            without such an entry are NEVER resolved by scan order — the target is blocked (fail closed: busy) and its live
 //            records held until a durable authority exists. Pre-B3 gateways could race on same target / same revision (ADM20).
+//   delivery authority (review fix 3): journal.readTarget is structured ({ target } | { missing } | { corrupt }); CORRUPT is never
+//            "missing" (an unreadable entry may be the only surviving ordering evidence): the submission fails closed (busy /
+//            target-authority-corrupt), the reference is blocked, the file is never rewritten or deleted. Target authority
+//            guards DELIVERY as well as execution (deliverable): a record of a blocked target, or a held competitor, never sends,
+//            retries or re-arms a callback; its durable result is preserved. The competitors of a durably SELECTED authority are
+//            superseded durably at startup (or held and superseded once a higher authority advances) — never LIVE forever.
 const crypto = require("node:crypto");
 const { resolveLanguage, compileWallMs, officialCaseWallMs } = require("./registry.js");
 
@@ -169,7 +175,8 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
   const targets = new Map();                         // targetRef → { targetRef, revision, jobId, updatedAt } (derived from the records)
   const dirtyTargets = new Set();                    // targetRefs whose in-memory authority is ahead of the durable index (write failed)
   const blockedTargets = new Map();                  // targetRef → "inconsistent" | "authority-unavailable" (fail closed, startup-decided)
-  const held = new Set();                            // jobIds whose execution is withheld (same-revision competitors of an ambiguous / selected authority)
+  const held = new Set();                            // jobIds withheld from execution AND delivery (records of a blocked target; a competitor whose supersede failed)
+  const corruptTargets = new Set();                  // targetRefs whose durable index entry is unreadable (blocked "authority-corrupt"; never deleted)
   const runQueue = [], queued = new Set(), sending = new Set(), work = new Set(), locks = new Map(), holdUntil = new Map();
   let active = 0, stopped = false, started = false, truncated = false, targetsTruncated = false, timer = null, maintenance = null;
   const log = (level, event, fields) => { try { (logger[level] || logger.info).call(logger, JSON.stringify({ event, ...fields })); } catch { /* telemetry never breaks grading */ } };
@@ -215,19 +222,38 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     targets.set(doc.targetRef, doc);
     try { await journal.writeTarget(doc); dirtyTargets.delete(doc.targetRef); if (stage !== "receive") log("info", "coding.runner.target.repaired", { jobId: doc.jobId, revision: doc.revision, stage }); }
     catch { dirtyTargets.add(doc.targetRef); log("warn", "coding.runner.target.write-failed", { jobId: doc.jobId, revision: doc.revision, stage }); }
+    // a held competitor below the new authority is unambiguously obsolete now: superseded (if that fails it stays held, retried at the next advance / start)
+    for (const id of [...held]) { const r = records.get(id); if (r && r.targetRef === doc.targetRef && r.revision < doc.revision) await supersede(id, "advance"); }
   }
   const targetDoc = (targetRef, revision, jobId, at) => ({ schemaVersion: 1, targetRef, revision, jobId, updatedAt: at });
   /**
    * The authority of ONE target reference (caller holds ADMISSION). `targets` is a cache whose warm load is bounded and may be
    * truncated, so a miss is resolved from the durable index and installed; null means "no durable entry" ONLY when the read
-   * succeeded — an I/O error propagates to the caller, which fails closed (it is never "no authority").
+   * succeeded with { missing }. A CORRUPT entry blocks the reference ("authority-corrupt", counted, logged without the
+   * reference) and throws TARGET_CORRUPT; an I/O error propagates. Either way the caller fails closed — never "no authority".
    */
-  async function loadTargetAuthority(targetRef) {
+  async function loadTargetAuthority(targetRef, stage = "receive") {
     const cached = targets.get(targetRef);
     if (cached) return cached;
-    const doc = await journal.readTarget(targetRef);
-    if (doc) targets.set(targetRef, doc);
-    return doc;
+    const r = await journal.readTarget(targetRef);
+    if (r.corrupt) {
+      if (!corruptTargets.has(targetRef)) { corruptTargets.add(targetRef); blockedTargets.set(targetRef, "authority-corrupt"); log("warn", "coding.runner.target.corrupt", { reason: r.corrupt, stage }); }
+      throw Object.assign(new Error("corrupt target index entry"), { code: "TARGET_CORRUPT" });
+    }
+    if (r.target) targets.set(targetRef, r.target);
+    return r.target || null;
+  }
+  /** Delivery / execution authority of one record: never a record of a blocked target, never a held competitor (plain jobs: always). */
+  const deliverable = rec => !(rec.targetRef && blockedTargets.has(rec.targetRef)) && !held.has(rec.jobId);
+  /** Durably supersedes a record that is unambiguously NOT the authority of its revision (caller holds ADMISSION). → true when committed. */
+  async function supersede(jobId, stage) {
+    try {
+      await withJob(jobId, async () => { const rec = records.get(jobId); if (!rec || rec.state === "superseded" || rec.state === "confirmed") return; await commit(jobId, r => { r.state = "superseded"; r.callback.nextAt = null; }); });
+      held.delete(jobId); queued.delete(jobId);
+      await journal.deleteInput(jobId).catch(() => {}); await journal.deleteResult(jobId).catch(() => {});
+      log("info", "coding.runner.execution.superseded", { jobId, revision: records.get(jobId)?.revision ?? null, stage });
+      return true;
+    } catch { log("warn", "coding.runner.journal.write-failed", { jobId, stage: "supersede" }); return false; }
   }
 
   /** Durable write of the next version of a record (caller holds the job's lock): disk first, then the cache. */
@@ -271,7 +297,7 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     const go = await withJob(jobId, async () => {
       const rec = records.get(jobId);
       if (!rec || rec.state !== "received") return false;
-      if (held.has(jobId) || (rec.targetRef && blockedTargets.has(rec.targetRef))) return false;   // fail closed: no execution without a durable authority
+      if (!deliverable(rec)) return false;                                                        // fail closed: no execution without a durable authority
       if (rec.targetRef) {
         const t = targets.get(rec.targetRef);
         if (t && t.revision > rec.revision) {                                       // a newer revision of the target arrived first
@@ -337,7 +363,7 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     let next = Infinity;
     const due = [];
     for (const r of records.values()) {
-      if (r.state !== "executed" || sending.has(r.jobId)) continue;
+      if (r.state !== "executed" || sending.has(r.jobId) || !deliverable(r)) continue;            // delivery obeys the target authority too
       const hold = holdUntil.get(r.jobId) || 0;
       const at = Math.max(r.callback.nextAt ? timeOf(r.callback.nextAt) : t, hold);
       if (at <= t) due.push(r); else next = Math.min(next, at);
@@ -355,7 +381,7 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
         let result = null;
         const reserved = await withJob(jobId, async () => {
           const rec = records.get(jobId);
-          if (!rec || rec.state !== "executed") return false;
+          if (!rec || rec.state !== "executed" || !deliverable(rec)) return false;
           result = await journal.readResult(jobId, rec.resultHash);
           if (!result) { await quarantineRecord(jobId, "result-hash"); return false; }
           attemptNo = rec.callback.attempts + 1;
@@ -401,6 +427,9 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     if (existing.payloadHash !== hash) { log("warn", "runner.official.conflict", { jobId }); return { status: "conflict" }; }
     log("info", "coding.runner.delivery.duplicate", { jobId, state: existing.state });
     if (existing.state === "superseded") return { status: "stale" };
+    // review fix 3: a record of a blocked target, or a held competitor, is NOT the authority of its revision — a redelivery never
+    // schedules or re-arms its callback (its durable result is preserved; the answer is the deterministic fail-closed busy)
+    if ((existing.state === "executed" || existing.state === "callback_failed") && !deliverable(existing)) return busy(jobId, "target-" + (blockedTargets.get(existing.targetRef) || "inconsistent"), { stage: "callback" });
     if (existing.state === "executed") {
       if (!sending.has(jobId)) { await commit(jobId, r => { r.callback.nextAt = iso(now()); }); schedule(); }   // retry the callback now — never re-execute
       return { status: "duplicate", state: "executed" };
@@ -464,13 +493,13 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
   }
 
   const api = {
-    /** Startup recovery over the durable journal (bounded scan). → { scanned, truncated, corrupt, recovered: { received, interrupted, executed }, targets: { repaired, inconsistent, blocked, held, scanned, truncated } } */
+    /** Startup recovery over the durable journal (bounded scan). → { scanned, truncated, corrupt, recovered: { received, interrupted, executed }, targets: { repaired, inconsistent, blocked, held, superseded, corrupt, scanned, truncated } } */
     async start() {
       if (started) throw new Error("official queue already started");
       started = true;
       const scan = await journal.scan({ maxEntries: L.startupScanMax });
       truncated = scan.truncated;
-      const summary = { scanned: scan.scanned, truncated, corrupt: 0, recovered: { received: 0, interrupted: 0, executed: 0 }, targets: { repaired: 0, inconsistent: 0, blocked: 0, held: 0, scanned: 0, truncated: false } };
+      const summary = { scanned: scan.scanned, truncated, corrupt: 0, recovered: { received: 0, interrupted: 0, executed: 0 }, targets: { repaired: 0, inconsistent: 0, blocked: 0, held: 0, superseded: 0, corrupt: 0, scanned: 0, truncated: false } };
       for (const c of scan.corrupt) {
         let moved = false;
         try { moved = await journal.quarantine(c.file, c.reason); } catch { moved = false; }
@@ -487,6 +516,8 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
         targetsTruncated = listing.truncated;
         summary.targets.scanned = listing.scanned; summary.targets.truncated = listing.truncated;
         if (listing.truncated) log("warn", "coding.runner.target.listing-truncated", { scanned: listing.scanned, limit: L.startupScanMax });
+        // a corrupt validly-named entry is unreadable authority: blocked (fail closed), counted, never rewritten or deleted
+        for (const c of listing.corrupt) { if (!corruptTargets.has(c.targetRef)) { corruptTargets.add(c.targetRef); blockedTargets.set(c.targetRef, "authority-corrupt"); log("warn", "coding.runner.target.corrupt", { reason: c.reason, stage: "startup" }); } }
         // Consistency of the index with the records (review fixes 1 + 2). The index is advanced after the accepted commit, so a
         // crash (or a failed index write) in between leaves a record ABOVE its index entry — repaired here, BEFORE anything runs.
         // Only unambiguous states are touched: an entry is pruned legitimately only once it is older than failedRetentionMs and
@@ -494,10 +525,12 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
         // its revision reached the authority. Per target the HIGHEST relevant revision is a GROUP of records:
         //   one job id                          → repairs a missing / lower entry (an entry above it is simply newer history);
         //   several job ids, durable entry at   → the entry is preserved (never replaced by scan order); the competitors are
-        //   that revision selecting one of them   held — they never execute as the authority;
-        //   several job ids, no such entry      → NEVER guessed: the target is blocked (fail closed: busy) and its live records
-        //   (missing / lower / selecting none)    held until a durable authority exists (pre-B3 gateways could race here, ADM20).
-        // An entry without a record (retained history) is never deleted. An I/O error reading an entry blocks that target too.
+        //   that revision selecting one of them   SUPERSEDED durably (review fix 3) — never executed, never delivered, never
+        //                                         LIVE forever; if that commit fails they are held and superseded on the next advance;
+        //   several job ids, no such entry      → NEVER guessed: the target is blocked (fail closed: busy) and its records held
+        //   (missing / lower / selecting none)    (no execution, no delivery, nothing superseded) until a durable authority exists
+        //                                         (pre-B3 gateways could race here, ADM20).
+        // An entry without a record (retained history) is never deleted. An I/O error or a CORRUPT entry blocks that target too.
         const t0 = now(), groups = new Map();
         for (const rec of records.values()) {
           if (!rec.targetRef || !(LIVE.has(rec.state) || rec.state === "executed" || t0 - timeOf(rec.receivedAt) < L.failedRetentionMs)) continue;
@@ -506,22 +539,25 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
           else if (rec.revision === g.revision) g.records.push(rec);
         }
         const report = recs => { for (const r of recs) { summary.targets.inconsistent++; log("warn", "coding.runner.target.inconsistent", { jobId: r.jobId, revision: r.revision, stage: "startup" }); } };
-        const hold = recs => { for (const r of recs) if (LIVE.has(r.state) && !held.has(r.jobId)) { held.add(r.jobId); summary.targets.held++; } };
-        const block = (ref, g, reason) => { blockedTargets.set(ref, reason); summary.targets.blocked++; report(g.records); hold(g.records); log("warn", "coding.runner.target.blocked", { revision: g.revision, records: g.records.length, reason, stage: "startup" }); };
+        const hold = recs => { for (const r of recs) if (r.state !== "confirmed" && r.state !== "superseded" && !held.has(r.jobId)) { held.add(r.jobId); summary.targets.held++; } };
+        const block = (ref, g, reason) => { if (!blockedTargets.has(ref)) blockedTargets.set(ref, reason); report(g.records); hold(g.records); log("warn", "coding.runner.target.blocked", { revision: g.revision, records: g.records.length, reason: blockedTargets.get(ref), stage: "startup" }); };
+        const retire = async recs => { for (const r of recs) { if (await supersede(r.jobId, "startup")) summary.targets.superseded++; else hold([r]); } };
         for (const [ref, g] of groups) {
+          if (blockedTargets.has(ref)) { hold(g.records); continue; }                             // corrupt entry (listing): nothing runs or delivers
           let doc;
-          try { doc = await loadTargetAuthority(ref); } catch { block(ref, g, "authority-unavailable"); continue; }
+          try { doc = await loadTargetAuthority(ref, "startup"); } catch (e) { block(ref, g, e && e.code === "TARGET_CORRUPT" ? "authority-corrupt" : "authority-unavailable"); continue; }
           if (doc && doc.revision > g.revision) continue;
           const ids = new Set(g.records.map(r => r.jobId));
           if (doc && doc.revision === g.revision) {
             if (ids.size === 1 && ids.has(doc.jobId)) continue;                                   // consistent
-            if (ids.has(doc.jobId)) { const competing = g.records.filter(r => r.jobId !== doc.jobId); report(competing); hold(competing); continue; }
+            if (ids.has(doc.jobId)) { const competing = g.records.filter(r => r.jobId !== doc.jobId); report(competing); await retire(competing); continue; }
             block(ref, g, "inconsistent");                                                        // the durable entry selects none of them
             continue;
           }
           if (ids.size === 1) { summary.targets.repaired++; await advanceTarget(targetDoc(ref, g.revision, g.records[0].jobId, iso(t0)), "startup"); continue; }
           block(ref, g, "inconsistent");
         }
+        summary.targets.blocked = blockedTargets.size; summary.targets.corrupt = corruptTargets.size;
       });
       for (const rec of [...records.values()]) {
         try {
@@ -563,7 +599,7 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
             const block = blockedTargets.get(job.targetRef);
             if (block) return busy(job.jobId, "target-" + block);                                  // fail closed: no decision from a guessed authority
             try { t = (await loadTargetAuthority(job.targetRef)) || null; }                        // cache, then the durable index
-            catch { return busy(job.jobId, "target-authority-unavailable"); }                      // an I/O error is never "no authority"
+            catch (e) { return busy(job.jobId, e && e.code === "TARGET_CORRUPT" ? "target-authority-corrupt" : "target-authority-unavailable"); }   // corrupt / I/O error: never "no authority"
             if (t && t.revision > job.revision) { log("warn", "coding.runner.delivery.stale", { jobId: job.jobId, revision: job.revision }); return { status: "stale" }; }
             if (t && t.revision === job.revision && t.jobId !== job.jobId) { log("warn", "runner.official.conflict", { jobId: job.jobId }); return { status: "conflict" }; }
           }
@@ -613,14 +649,14 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
       for (;;) {
         if (stopped) return;
         const t = now();
-        const due = [...records.values()].some(r => r.state === "executed" && !sending.has(r.jobId) && Math.max(r.callback.nextAt ? timeOf(r.callback.nextAt) : t, holdUntil.get(r.jobId) || 0) <= t);
+        const due = [...records.values()].some(r => r.state === "executed" && deliverable(r) && !sending.has(r.jobId) && Math.max(r.callback.nextAt ? timeOf(r.callback.nextAt) : t, holdUntil.get(r.jobId) || 0) <= t);
         if (!runQueue.length && !active && !work.size && !sending.size && !due) return;
         await (work.size ? Promise.race([...work, sleep(5)]) : sleep(5));
       }
     },
     /** Aggregate operational state (counts only). */
     status() {
-      const out = { received: 0, running: 0, executed: 0, confirmed: 0, callback_failed: 0, superseded: 0, queued: runQueue.length, active, sending: sending.size, truncated, targetIndexLag: dirtyTargets.size, targetIndexTruncated: targetsTruncated, targetsBlocked: blockedTargets.size, executionHeld: held.size };
+      const out = { received: 0, running: 0, executed: 0, confirmed: 0, callback_failed: 0, superseded: 0, queued: runQueue.length, active, sending: sending.size, truncated, targetIndexLag: dirtyTargets.size, targetIndexTruncated: targetsTruncated, targetIndexCorrupt: corruptTargets.size, targetsBlocked: blockedTargets.size, executionHeld: held.size };
       for (const r of records.values()) out[r.state] = (out[r.state] || 0) + 1;
       return out;
     },

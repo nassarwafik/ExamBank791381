@@ -4,8 +4,10 @@ Baseline `10b7e78507dc1d63d9ccf105d0a20dfa30a76b9a` (main after PR #248). Runner
 `runner/gateway/official.js` only. No Runner protocol, callback, HMAC, revision format, grading, sandbox or Docker change.
 **Not deployed** to the live Azure Runner VM in this window (no systemd / environment / image / secret / Azure CLI change).
 Section 11 documents Independent Review Fix 1 (the durable target revision authority); sections 12–13 document Independent
-Review Fix 2 (the in-memory target map as a cache of the durable index, same-revision ambiguity, the pre-B3 migration contract).
-Review fix 2 also changes `runner/gateway/journal.js` (the bounded target listing reports its truncation).
+Review Fix 2 (the in-memory target map as a cache of the durable index, same-revision ambiguity, the pre-B3 migration contract);
+section 14 documents Independent Review Fix 3 (corrupt-vs-missing index entries, delivery authority, superseding of competitors).
+Review fixes 2 and 3 also change `runner/gateway/journal.js` (the bounded target listing reports truncation and corrupt
+entries; `readTarget` is structured).
 
 ## 1. B10-F1 — root cause
 
@@ -39,9 +41,10 @@ withAdmission(() => withJob(jobId, async () => {
   stopped?                     → busy "stopped"              (re-checked AFTER waiting for the lock)
   existing record?             → onDuplicate (idempotent; regeneration decides capacity here too)
   truncated index?             → busy "journal-truncated"
-  blocked target?              → busy "target-inconsistent" | "target-authority-unavailable"   (review fix 2, §12.4)
+  blocked target?              → busy "target-inconsistent" | "target-authority-unavailable" | "target-authority-corrupt"
   target revision authority    → cache, then journal.readTarget on a miss (review fix 2) → stale / conflict
-                                 (the durable read fails → busy "target-authority-unavailable", never "no authority")
+                                 ({ missing } → no authority; { corrupt } → busy "target-authority-corrupt" + blocked (review
+                                 fix 3); an I/O error → busy "target-authority-unavailable" — never "no authority")
   LIVE ≥ maxPending?           → busy "max-pending"
   records ≥ maxRecords?        → maintain({ locked }), re-check → busy "journal-full"
   writeInput → writeRecord                                   (the commit point of "accepted"; a failure leaves NOTHING behind)
@@ -305,3 +308,53 @@ next start repairs or selects as in the table. Counts: `summary.targets.{ blocke
 the new startup summary shape). Mutations M19 (cache miss without the durable read), M20 (I/O error as missing authority),
 M21 (silent listing truncation), M22 (scan-order winner on ambiguity), M23 (existing index overwritten by scan order), M24
 (held records still scheduled) are run by a scratch script that restores `official.js` and `journal.js` byte-for-byte.
+
+## 14. Independent Review Fix 3 — corrupt entries, delivery authority, superseding of competitors
+
+### 14.1 RF3-A — a corrupt durable entry is never "missing"
+
+`journal.readTarget` collapsed a missing file, an oversized / unreadable file, malformed JSON and an invalid shape (wrong
+reference, invalid revision, invalid job id) into `null`, which `loadTargetAuthority` read as "no durable authority". Index
+entries outlive confirmed records (7 days vs 24 h), so a corrupt entry can be the only surviving ordering evidence of a target:
+rev 8 historically authoritative, record pruned, entry corrupt → a new rev 7 was ACCEPTED (TAR26 / TAR27 fail-first on `5cca0c2`:
+`accepted under a corrupt / unreadable authority`).
+
+Read contract now (structured like `readRecord`): `{ target }` | `{ missing: true }` | `{ corrupt: "name" | "size" | "json" |
+"shape" }`; an I/O error throws. Policy per state for a versioned submission: MISSING → no retained authority (TAR28); VALID →
+use it; CORRUPT → fail closed: `busy` / `target-authority-corrupt`, the reference is blocked (`authority-corrupt`), counted
+(`status().targetIndexCorrupt`, `summary.targets.corrupt`) and logged with the reason only — no input, no record, no execution,
+no index write, and the file is NEVER rewritten, quarantined or deleted (deletion would turn uncertainty into apparent absence;
+TAR26 / TAR27 compare the bytes before and after); I/O ERROR → `busy` / `target-authority-unavailable`, transient (TAR29).
+`listTargets` reports corrupt validly-named entries (`corrupt: [{ targetRef, reason }]`, TAR30) and startup blocks them before
+anything runs; an entry outside the warm-cache window is detected the same way on the cache miss (TAR31). The reference is used
+internally only and never logged. Recovery is operator action on the file, then a restart.
+
+### 14.2 RF3-B — target authority guards delivery as well as execution
+
+Held / blocked authority guarded `enqueue` and `runJob` only: an EXECUTED or CALLBACK_FAILED competitor (a pre-B3 record that
+reached its result before the upgrade) could still send or re-arm a callback through `schedule()`, `sendCallback()` and the
+duplicate paths (TAR32 / TAR33 / TAR34 / TAR35 fail-first). One canonical delivery authority now exists — `deliverable(rec)`:
+not a record of a blocked target, not a held competitor; plain jobs always — and is applied by `runJob`, `schedule()`,
+`sendCallback()` (reservation), `idle()` and the `executed` / `callback_failed` duplicate paths. For a BLOCKED target:
+received / running → no execution; executed → the durable result is preserved, no callback is sent (TAR32); callback_failed →
+never re-armed (TAR34); a fresh delivery of such a job → deterministic `busy` (`target-inconsistent` / the block reason,
+`stage: "callback"`), nothing scheduled (TAR35). At-least-once delivery of authoritative records is unchanged (TAR33: B delivers;
+every callback suite unchanged).
+
+### 14.3 RF3-C — competitors of a selected authority are superseded, never LIVE forever
+
+The competitor of a durably SELECTED authority (index rev 8 / B, records A and B at rev 8) was held `received` forever: it stayed
+LIVE, counted against `maxPending`, could contribute to `journal-full` (TAR36 / TAR37 fail-first). Startup now supersedes such
+competitors durably (`supersede`: commit `superseded`, release input / result under the existing rules; TAR33 for executed, TAR34
+for callback_failed, TAR21 / TAR22 for received, in both scan orders). If that commit fails, the record is held (fail closed:
+no execution, no delivery, counted in `executionHeld`) and superseded as soon as a higher authority advances the target
+(`advanceTarget` releases every held record of that reference below the new revision — TAR36; TAR37 shows the slot freed under
+`maxPending = 2`). Nothing is superseded for a BLOCKED target: without a trustworthy authority no record is chosen against
+(TAR38, both records preserved across restarts).
+
+### 14.4 Tests and mutations (review fix 3)
+
+TAR26–TAR38 (fail-first on `5cca0c2`: TAR26, TAR27 ×4, TAR30, TAR31, TAR32, TAR33, TAR34, TAR35, TAR36, TAR37 for the defects;
+TAR28 / TAR29 pin missing ≠ corrupt and the unchanged I/O policy; TAR38 the no-guessing rule). Mutations M25 (corrupt collapses
+to missing), M26 (listing skips corrupt), M27 (delivery ignores the authority), M28 (callback_failed re-arm), M29 (competitor held
+forever), M30 (no release on advance) are run by a scratch script that restores `official.js` and `journal.js` byte-for-byte.
