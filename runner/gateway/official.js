@@ -20,6 +20,11 @@
 //   bounds:  pending + active jobs ≤ maxPending (else RUNNER_BUSY), active jobs ≤ maxActive, cases of one job run with bounded
 //            concurrency through the sandbox's global official container slots; every job has a server-owned hard wall.
 //            An overrun / an infrastructure failure is reported as outcome "failed" with a technical code — never a partial grade.
+//   admission (17F-B3): EVERY decision over shared admission state — started / stopped, the truncated index, job identity,
+//            the target revision authority, LIVE ≤ maxPending, records ≤ maxRecords, the durable commit and the install into
+//            the in-memory records — runs inside ONE queue-wide admission critical section (withAdmission). Lock order, always:
+//            ADMISSION → withJob(jobId) → journal; never withJob → admission. The section covers admission writes only, never
+//            sandbox execution, callback delivery, job walls or lifecycle completion (pump / schedule only start tracked work).
 const crypto = require("node:crypto");
 const { resolveLanguage, compileWallMs, officialCaseWallMs } = require("./registry.js");
 
@@ -166,6 +171,22 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     guard.then(() => { if (locks.get(jobId) === guard) locks.delete(jobId); });
     return run;
   }
+  // ── Phase 17F-B3 — the ONE admission authority ───────────────────────────────────────────────────────────────────────
+  // withJob() serialises ONE job id; the LIVE count, records.size and the target index are SHARED across job ids, so two
+  // concurrent NEW jobs used to read the same stale count, both pass `live < maxPending`, both journal, both install (B10-F1:
+  // maxPending 3, 8 concurrent → 8 accepted). withAdmission() is a queue-wide async mutex: one admission transaction at a time
+  // reads the shared state, journals and installs; the next one sees the installed record. A rejection inside releases the
+  // mutex exactly like a return (the chain continues through a swallowed catch), so a failed admission can never wedge it.
+  let admissionChain = Promise.resolve();
+  function withAdmission(fn) {
+    const prev = admissionChain;
+    const run = prev.then(() => fn());
+    admissionChain = run.catch(() => {});
+    return run;
+  }
+  const liveCount = () => { let n = 0; for (const r of records.values()) if (LIVE.has(r.state)) n++; return n; };
+  const busy = (jobId, reason, extra = {}) => { log("warn", "runner.official.busy", { jobId, reason, ...extra }); return { status: "busy" }; };
+
   /** Durable write of the next version of a record (caller holds the job's lock): disk first, then the cache. */
   async function commit(jobId, mutate) {
     if (stopped) throw stoppedError();
@@ -352,7 +373,12 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     }
     if (existing.state === "confirmed") {
       if (existing.callback.confirmedAs === "retryable" && existing.generation < ep.maxGenerations) {
-        // SmartAssess could not grade the confirmed (technical) outcome and delivered the job again: a NEW, bounded generation
+        // SmartAssess could not grade the confirmed (technical) outcome and delivered the job again: a NEW, bounded generation.
+        // 17F-B3: confirmed → received moves a NON-LIVE record back into LIVE state, so it is an admission against maxPending
+        // (decided under the admission authority, like every new job). Full → busy now, nothing changes; the redelivery that
+        // arrives once a slot is free regenerates exactly once.
+        const live = liveCount();
+        if (live >= maxPending) return busy(jobId, "max-pending", { pending: live, stage: "regeneration" });
         await journal.writeInput(jobId, job);
         await commit(jobId, r => { r.state = "received"; r.generation += 1; r.interruptions = 0; r.startedAt = null; r.executedAt = null; r.outcome = null; r.technicalCode = null; r.resultHash = null; r.summary = null; r.callback = freshCallback(r.callback.attempts); });
         log("info", "coding.runner.execution.regenerated", { jobId, generation: existing.generation + 1 });
@@ -409,20 +435,23 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
       if (!started || stopped) return { status: "busy" };
       const hash = officialPayloadHash(job);
       try {
-        return await withJob(job.jobId, async () => {
+        // 17F-B3 lock order: ADMISSION → withJob(jobId) → journal. The whole decision + durable commit + install is ONE
+        // transaction over the shared admission state; execution and delivery start outside it (pump / schedule are async).
+        return await withAdmission(() => withJob(job.jobId, async () => {
+          if (stopped) return busy(job.jobId, "stopped");                                   // re-checked AFTER waiting for admission
           const existing = records.get(job.jobId);
           if (existing) return onDuplicate(existing, job, hash);
-          if (truncated) { log("warn", "runner.official.busy", { jobId: job.jobId, reason: "journal-truncated" }); return { status: "busy" }; }
+          if (truncated) return busy(job.jobId, "journal-truncated");
           let t = null;
           if (job.targetRef) {
             t = targets.get(job.targetRef) || null;
             if (t && t.revision > job.revision) { log("warn", "coding.runner.delivery.stale", { jobId: job.jobId, revision: job.revision }); return { status: "stale" }; }
             if (t && t.revision === job.revision && t.jobId !== job.jobId) { log("warn", "runner.official.conflict", { jobId: job.jobId }); return { status: "conflict" }; }
           }
-          const live = [...records.values()].filter(r => LIVE.has(r.state)).length;
-          if (live >= maxPending) { log("warn", "runner.official.busy", { jobId: job.jobId, pending: live }); return { status: "busy" }; }
+          const live = liveCount();
+          if (live >= maxPending) return busy(job.jobId, "max-pending", { pending: live });
           if (records.size >= L.maxRecords) await api.maintain({ locked: job.jobId });
-          if (records.size >= L.maxRecords) { log("warn", "runner.official.busy", { jobId: job.jobId, reason: "journal-full" }); return { status: "busy" }; }
+          if (records.size >= L.maxRecords) return busy(job.jobId, "journal-full");
           const at = iso(now());
           const rec = { schemaVersion: 1, jobId: job.jobId, payloadHash: hash, revision: job.targetRef ? job.revision : null, targetRef: job.targetRef || null, language: job.language, state: "received", generation: 1, interruptions: 0, receivedAt: at, startedAt: null, executedAt: null, updatedAt: at, outcome: null, technicalCode: null, resultHash: null, summary: null, callback: freshCallback(0) };
           try {
@@ -438,11 +467,14 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
             try { await journal.deleteInput(job.jobId); } catch { /* orphan cleanup on the next start */ }
             return { status: "busy" };
           }
+          // stop() landed during the durable write: the record is on disk (recovered at the next start, idempotent for
+          // SmartAssess' redelivery) but a stopped instance installs and schedules nothing more — same rule as commit().
+          if (stopped) return busy(job.jobId, "stopped");
           records.set(job.jobId, rec);
           log("info", "runner.official.accepted", { jobId: job.jobId, language: job.language, cases: job.cases.length });
           enqueue(job.jobId); pump();
           return { status: "accepted" };
-        });
+        }));
       } catch { log("warn", "coding.runner.journal.write-failed", { jobId: job.jobId, stage: "duplicate" }); return { status: "busy" }; }
     },
     /** ONE bounded retention pass: at most pruneBatch removals of expired terminal records and stale target index entries. */
