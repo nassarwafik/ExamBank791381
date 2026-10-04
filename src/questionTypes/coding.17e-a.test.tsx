@@ -44,7 +44,7 @@ const CFG = {
 };
 const KEY = { gradingMode: "hiddenTests", comparator: "trimTrailingWhitespace", hiddenTests: [{ id: "hid-1", title: CANARY.label, input: CANARY.stdin + "\n", expectedOutput: CANARY.expected + "\n", weight: 2 }, { id: "hid-2", input: "1 1\n", expectedOutput: "2\n", weight: 1 }], referenceSolutions: { csharp: CANARY.reference } };
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
-const codingQ = (over: Record<string, unknown> = {}) => ({ ...newQuestion("coding" as never, { examQuestionId: "c1", text: "اقرأ عددين واطبع مجموعهما.", marks: 10 }), coding: clone(CFG), answer: clone(KEY), ...over } as unknown as BuilderQuestion);
+const codingQ = (over: Record<string, unknown> = {}) => ({ ...newQuestion("coding" as never, { examQuestionId: "c1", text: "اقرأ عددين واطبع مجموعهما.", marks: 10 }), questionTypeVersion: 1, coding: clone(CFG), answer: clone(KEY), ...over } as unknown as BuilderQuestion);
 const exam = (questions: BuilderQuestion[], extraSections: StructuredExam["sections"] = []): StructuredExam => ({ examId: "EXAM-17EA", title: "امتحان برمجة", status: "draft", schemaVersion: 2, sections: [{ id: "sec-1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, questions }, ...extraSections] });
 const tick = (ms = 10) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
 
@@ -77,13 +77,13 @@ describe("17E-A registry / factory — coding is ONE versioned registry member (
     expect(effectiveQuestionTypeVersion("coding", undefined)).toBe(1);
   });
   it("COD3 unsupported versions fail safely (no editor / renderer, a blocking validation error — never a silent downgrade)", () => {
-    expect(resolveAuthoringEditor("coding", 2)).toBeUndefined();
-    expect(resolveStudentRenderer("coding", 2)).toBeUndefined();
-    expect(validateQuestionTypeNode(codingQ() as never, "coding", 2).map(i => i.code)).toContain("UNSUPPORTED_QUESTION_TYPE_VERSION");
+    expect(resolveAuthoringEditor("coding", 3)).toBeUndefined();   // 17F-C2 RF1: coding@2 exists; coding@3 is the unsupported neighbour
+    expect(resolveStudentRenderer("coding", 3)).toBeUndefined();
+    expect(validateQuestionTypeNode(codingQ() as never, "coding", 3).map(i => i.code)).toContain("UNSUPPORTED_QUESTION_TYPE_VERSION");
   });
   it("COD4 the canonical factory creates a valid coding@1 shell (no hidden test needed for manual grading)", () => {
     const q = newQuestion("coding" as never, { examQuestionId: "n1", text: "س", marks: 5 }) as unknown as Record<string, any>;
-    expect(q.presentationType).toBe("coding"); expect(q.questionTypeVersion).toBe(1);
+    expect(q.presentationType).toBe("coding"); expect(q.questionTypeVersion).toBe(2);   // 17F-C2 RF1: the factory creates coding@2
     expect(CQ.validateCodingQuestion(q)).toEqual([]);
     expect(evaluateExamFinalization(exam([q as never])).canFinalize).toBe(true);
   });
@@ -92,7 +92,7 @@ describe("17E-A registry / factory — coding is ONE versioned registry member (
     expect(mcq.coding).toBeUndefined(); expect(JSON.stringify(mcq)).not.toContain(CANARY.expected);
     expect(mcq.examQuestionId).toBe("c1"); expect(mcq.marks).toBe(10);
     const back = changeQuestionType(newQuestion("multipleChoice", { examQuestionId: "m1", text: "س", marks: 2 }), "coding" as never) as unknown as Record<string, any>;
-    expect(back.questionTypeVersion).toBe(1); expect(CQ.validateCodingQuestion(back)).toEqual([]);
+    expect(back.questionTypeVersion).toBe(2); expect(CQ.validateCodingQuestion(back)).toEqual([]);
   });
 });
 
@@ -292,7 +292,7 @@ describe("17E-A Builder integration (COD19–COD23)", () => {
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     fireEvent.click(within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "coding")!); await tick(40);
-    expect(qAt(hist(), 0, 1)).toMatchObject({ presentationType: "coding", questionTypeVersion: 1 });
+    expect(qAt(hist(), 0, 1)).toMatchObject({ presentationType: "coding", questionTypeVersion: 2 });
     expect(await editor()).toBeTruthy();
   });
   it("COD20 / COD21 clone and move keep coding + private key byte-for-byte with a NEW question identity", () => {
@@ -379,11 +379,11 @@ describe("17E-A finalization / serialization / versioning (COD30, COD31, COD34, 
     expect(q.coding.starterCode).toEqual(CFG.starterCode);
   });
   it("COD35 an unknown coding version fails safely: kept as stored (no downgrade), blocks finalization, students get no renderer", () => {
-    const e = exam([codingQ({ questionTypeVersion: 2 })]);
+    const e = exam([codingQ({ questionTypeVersion: 3 })]);   // 17F-C2 RF1: coding@2 is supported; coding@3 is the unknown version
     expect(evaluateExamFinalization(e).canFinalize).toBe(false);
     const back = JSON.parse(stableStringify(canonicalizeExamContent(e)));
-    expect(back.sections[0].questions[0].questionTypeVersion).toBe(2);
-    expect(resolveStudentRenderer("coding", 2)).toBeUndefined();
+    expect(back.sections[0].questions[0].questionTypeVersion).toBe(3);
+    expect(resolveStudentRenderer("coding", 3)).toBeUndefined();
   });
 });
 

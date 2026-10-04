@@ -101,6 +101,9 @@ registerBuiltIn("simulation", () => ({ score: 0, manualReview: true, correct: fa
 // manual review for every response, whatever it carries (score / passed / testsPassed are never read), and never by comparing
 // the source to a reference solution. The teacher's manual marks are the official grade.
 registerBuiltIn("coding", () => ({ score: 0, manualReview: true, correct: false }));
+// Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy) has the same provisional base; the official grade still comes from
+// the isolated runner's evidence through api/src/lib/coding/official-grading.js, never from here.
+if (!graders.has(identity("coding", 2))) registerGrader("coding", 2, () => ({ score: 0, manualReview: true, correct: false }));
 registerBuiltIn("categorization", (question, response, max) => {
   const c = question.categorization && typeof question.categorization === "object" ? question.categorization : {};
   const answer = question.answer && typeof question.answer === "object" ? question.answer : {};

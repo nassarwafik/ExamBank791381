@@ -28,7 +28,7 @@ describe("16A A1 — one canonical, React-free, code-owned Question Type Catalog
     expect(Object.isFrozen(QUESTION_TYPE_CATALOG)).toBe(true);
     for (const d of QUESTION_TYPE_CATALOG) {
       expect(Object.isFrozen(d)).toBe(true);
-      expect(d.version).toBe(1); expect(typeof d.label).toBe("string"); expect(d.label.length).toBeGreaterThan(0);
+      expect(d.version).toBe(d.key === "coding" ? 2 : 1); expect(typeof d.label).toBe("string");   // 17F-C2 RF1: coding is current version 2 expect(d.label.length).toBeGreaterThan(0);
       expect(["choice", "response", "structured", "interactive", "composite"]).toContain(d.category);
       expect(["auto", "manual", "hybrid", "composed"]).toContain(d.gradingMode);
       for (const cap of ["autoGrading", "manualGrading", "hybridGrading", "partialCredit", "compoundPart", "interactive", "requiresImage", "offline"]) expect(typeof (d.capabilities as Record<string, unknown>)[cap], d.key + "." + cap).toBe("boolean");
@@ -104,9 +104,10 @@ describe("16A A2 — legacy 11-type parity: public contracts derive from the cat
 describe("16A A4 — explicit, backward-compatible type versions", () => {
   it("absence = V1 legacy behaviour; the current version is 1 for every type; integers above the current version, non-integers and 0 are unsupported", () => {
     for (const d of QUESTION_TYPE_CATALOG) {
-      expect(currentQuestionTypeVersion(d.key)).toBe(1);
+      const current = d.key === "coding" ? 2 : 1;   // 17F-C2 RF1: coding@2 carries the compile-error policy; every other type is still version 1
+      expect(currentQuestionTypeVersion(d.key)).toBe(current);
       expect(supportsQuestionTypeVersion(d.key, undefined)).toBe(true); expect(supportsQuestionTypeVersion(d.key, 1)).toBe(true);
-      expect(supportsQuestionTypeVersion(d.key, 2)).toBe(false); expect(supportsQuestionTypeVersion(d.key, 0)).toBe(false); expect(supportsQuestionTypeVersion(d.key, 1.5)).toBe(false); expect(supportsQuestionTypeVersion(d.key, "1")).toBe(false);
+      expect(supportsQuestionTypeVersion(d.key, 2)).toBe(current >= 2); expect(supportsQuestionTypeVersion(d.key, current + 1)).toBe(false); expect(supportsQuestionTypeVersion(d.key, 0)).toBe(false); expect(supportsQuestionTypeVersion(d.key, 1.5)).toBe(false); expect(supportsQuestionTypeVersion(d.key, "1")).toBe(false);
     }
     expect(supportsQuestionTypeVersion("hotspot", undefined)).toBe(false);
   });

@@ -60,6 +60,8 @@ function retryBackoffMs(n, policy = RECOVERY_POLICY) {
 function recoveryDecision(target, nowMs, policy = RECOVERY_POLICY) {
   if (!isObj(target) || typeof target.state !== "string") return { eligible: false, reason: "invalid" };
   if (target.state === "complete") return { eligible: false, reason: "complete" };
+  // Phase 17F-C2 RF1 — a compile error held for the teacher is TERMINAL for automatic execution: never redispatched, never retried
+  if (target.state === "reviewRequired") return { eligible: false, reason: "review-required" };
   if (!ACTIVE.has(target.state)) return { eligible: false, reason: "not-active" };
   if (typeof target.jobId !== "string" || !target.jobId || !Number.isInteger(target.revision) || target.revision < 1) return { eligible: false, reason: "invalid" };
   const state = target.state, updated = timeOf(target.updatedAt), rec = isObj(target.recovery) ? target.recovery : {}, n = automaticAttempts(rec);
