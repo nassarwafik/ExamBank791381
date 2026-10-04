@@ -16,6 +16,10 @@ const { bindInlineClozeAnswerToQuestion } = require("./shared-finalization/inlin
 // claim is discarded); unbound it is shape / bounds checked only. A networkCli answer on another question, an unknown id or a
 // compound part is dropped (not compound-capable). Nothing is ever executed — the engine is a closed, pure grammar.
 const { normalizeNetworkCliAnswer, bindNetworkCliAnswerToQuestion } = require("./shared-finalization/networkCliQuestion");
+// Phase 19B — an answer to a parametricNumeric@1 question is reduced to EXACTLY { kind: "numeric", value, unit? } (bounded strings):
+// a client-sent seed / generated values / expected result / score is dropped and never stored; any other kind is rejected. Every
+// other numeric answer (numericResponse) is passed through exactly as before.
+const { bindParametricNumericAnswer } = require("./shared-finalization/parametricNumericQuestion");
 
 // Phase 17A Independent Review Fix — when the caller passes the AUTHORITATIVE exam (the assignment's exam snapshot, the same
 // one the grader uses), every code answer is bound to the question its answer id names: it must be a coding@1 question, the
@@ -31,6 +35,7 @@ function questionIndex(exam) {
 const isCode = a => !!a && typeof a === "object" && a.kind === "code";
 const isNetworkCli = a => !!a && typeof a === "object" && a.kind === "networkCli";
 const isInlineClozeQuestion = q => !!q && typeof q === "object" && q.presentationType === "inlineCloze";
+const isParametricQuestion = q => !!q && typeof q === "object" && q.presentationType === "parametricNumeric";
 
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
 function normalizeDraftAnswers(answers, exam) {
@@ -53,6 +58,12 @@ function normalizeDraftAnswers(answers, exam) {
     }
     if (isNetworkCli(a)) {
       const r = bound ? bindNetworkCliAnswerToQuestion(a, index.get(id)) : normalizeNetworkCliAnswer(a);
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
+    if (bound && isParametricQuestion(index.get(id))) {
+      const r = bindParametricNumericAnswer(a);
       if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
       out[id] = r.answer;
       continue;

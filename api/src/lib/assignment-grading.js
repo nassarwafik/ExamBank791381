@@ -159,7 +159,10 @@ function gradeCompound(question,response){
 // (Wave 1 / plugin) type uses its handler; a legacy type / alias / absent type uses the LEGACY adapter below, which is the
 // original grader byte-for-byte (response-kind first, then type / answer.mode); an unknown type or an unsupported version
 // fails closed (score 0, manual review). Compound questions compose their parts through the same resolution.
-function gradeQuestion(question,response){
+// Phase 19B — `context` (optional) carries the SERVER-owned generation identity of the attempt being graded ({ generation:
+// { assignmentId, studentId, attemptNumber }, questionKey }); a registered handler receives it as its 4th argument. Only a
+// parametric handler reads it; every other grader ignores it, so all existing grades are byte-for-byte unchanged.
+function gradeQuestion(question,response,context){
   if(isCompound(question)){
     const r=gradeCompound(question,response);
     return {score:r.score,maxMarks:r.maxMarks,correct:r.correct,manualReview:r.manualReview,manualReviewMarks:r.manualReviewMarks,parts:r.parts};
@@ -168,7 +171,7 @@ function gradeQuestion(question,response){
   const handler=resolveGrader(question?.presentationType||question?.type,question?.questionTypeVersion,{legacyFlat:!(typeof question?.presentationType==="string"&&question.presentationType.trim()!=="")});
   if(handler===undefined)return unknownTypeResult(max);
   if(handler!==LEGACY){
-    const r=handler(question,response,max)||{};
+    const r=handler(question,response,max,context)||{};
     const score=Math.min(Math.max(0,Number(r.score)||0),max);
     const manualReview=r.manualReview===true;
     return {score,maxMarks:max,correct:r.correct===true&&!manualReview,manualReview,...(r.parts?{parts:r.parts}:{})};
@@ -214,7 +217,7 @@ function gradeLegacyQuestion(question,response,max){
 // For a part-unit section it grades each part and counts only the parts whose unit key was selected
 // (first-N at part level). For a question-unit section the whole question counts only if selected.
 // Returns display-facing per-question data plus the "counted" contribution used for section totals.
-function gradeQuestionForSection(q,i,section,answers,countedKeys){
+function gradeQuestionForSection(q,i,section,answers,countedKeys,generation){
   const id=sectionQuestionId(section,q,i);
   const resp=answers?.[id];
   if(section.answerUnit==="part"&&isCompound(q)){
@@ -233,7 +236,7 @@ function gradeQuestionForSection(q,i,section,answers,countedKeys){
     });
     return {id,score:countedScore,maxMarks:fullMax,countedMaxMarks:countedMax,manualReviewMarks:countedManual,correct:countedMax>0&&countedScore>=countedMax-1e-9,manualReview:countedManual>0,ignored:countedMax===0&&isResponseAnswered(resp),parts:partOut};
   }
-  const r=gradeQuestion(q,resp),counted=countedKeys.has(id);
+  const r=gradeQuestion(q,resp,generation?{generation,questionKey:id}:undefined),counted=countedKeys.has(id);
   const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
   return {id,score:counted?r.score:0,maxMarks:r.maxMarks,countedMaxMarks:counted?r.maxMarks:0,manualReviewMarks:counted?mr:0,correct:r.correct,manualReview:counted?r.manualReview:false,ignored:!counted&&isResponseAnswered(resp),parts:r.parts||null};
 }
@@ -247,13 +250,16 @@ function gradeQuestionForSection(q,i,section,answers,countedKeys){
 // A legacy flat exam normalizes to a single "all" section, so its output is identical to the original
 // grader (same fields, same numbers). Extra fields (ignored/countedMaxMarks/sectionId/sections) are
 // purely additive.
-function gradeExam(exam,answers){
+// Phase 19B — `context.parametric` = the server-owned { assignmentId, studentId, attemptNumber } of the attempt being graded (see
+// parametricGenerationContext in the callers). Absent ⇒ parametric questions fail closed to manual review; nothing else changes.
+function gradeExam(exam,answers,context){
   const norm=normalizeExamStructure(exam);
+  const generation=context&&context.parametric&&typeof context.parametric==="object"?context.parametric:null;
   let score=0,total=0,manualMarks=0,displayNumber=0;
   const questions=[],sections=[];
   norm.sections.forEach(section=>{
     const {countedKeys}=selectGradedUnits(section,answers);
-    const graded=section.questions.map((q,i)=>gradeQuestionForSection(q,i,section,answers,countedKeys));
+    const graded=section.questions.map((q,i)=>gradeQuestionForSection(q,i,section,answers,countedKeys,generation));
     let rawSum=graded.reduce((s,g)=>s+g.score,0);
     const secManual=graded.reduce((s,g)=>s+g.manualReviewMarks,0);
     let secMax;
@@ -305,4 +311,9 @@ function gradeExam(exam,answers){
   };
 }
 
-module.exports={gradeExam,gradeQuestion,gradeFields,gradeCompound,matchField};
+// Phase 19B — the ONE builder of the server-owned parametric generation identity for an official attempt (delivery and every
+// grading call site use it). Built ONLY from server state (the assignment storage id, the authenticated student / the submission
+// path, the attempt number the server stamped); nothing in a request body can name it. Validated downstream (malformed ⇒ the
+// parametric question fails closed to manual review).
+function parametricGenerationContext(assignmentId,studentId,attemptNumber){return {parametric:{assignmentId:String(assignmentId||""),studentId:String(studentId||""),attemptNumber:Number(attemptNumber)}}}
+module.exports={gradeExam,gradeQuestion,gradeFields,gradeCompound,matchField,parametricGenerationContext};

@@ -5,6 +5,7 @@ import { AI_AUTHOR_LIMITS, verifyAiQuestionNode } from "../aiQuestionDraft";
 import { questionTypeDefinition } from "../questionTypeCatalog";
 import { validateNetworkCliAnswerKey } from "../networkCliQuestion";
 import { inlineClozePreviewText, validateInlineClozeConfig } from "../inlineClozeQuestion";
+import { validateParametricNumericConfig } from "../parametricNumericQuestion";
 import type { AiAuthorIssueView, AiAuthorService } from "./aiAuthorService";
 
 // Phase 19A — «سؤال بالذكاء الاصطناعي» (lazy edge of the Structured Exam Builder). The teacher describes the question in natural
@@ -15,7 +16,7 @@ import type { AiAuthorIssueView, AiAuthorService } from "./aiAuthorService";
 export type AiInsertOutcome = "ok" | "stale";
 type SectionOption = { id: string; title: string };
 type Props = { open: boolean; onClose: () => void; service: AiAuthorService; sections: SectionOption[]; defaultSectionId?: string; onInsert: (question: BuilderQuestion, sectionId: string) => AiInsertOutcome; disabled?: boolean };
-const PREFERRED: [string, string][] = [["", "تلقائي (يختار الذكاء الاصطناعي)"], ["networkCli", "محاكي أوامر الشبكة"], ["inlineCloze", "إكمال نص تفاعلي"], ["fillBlank", "إكمال فراغات"], ["multipleChoice", "اختيار من متعدد"], ["trueFalse", "صح أو خطأ"], ["shortAnswer", "إجابة قصيرة"]];
+const PREFERRED: [string, string][] = [["", "تلقائي (يختار الذكاء الاصطناعي)"], ["networkCli", "محاكي أوامر الشبكة"], ["inlineCloze", "إكمال نص تفاعلي"], ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة"], ["fillBlank", "إكمال فراغات"], ["multipleChoice", "اختيار من متعدد"], ["trueFalse", "صح أو خطأ"], ["shortAnswer", "إجابة قصيرة"]];
 type Ready = { question: BuilderQuestion; notes: string[] };
 type Failure = { message: string; issues: AiAuthorIssueView[] };
 
@@ -25,6 +26,7 @@ function summaryOf(q: BuilderQuestion): string {
   const parts = ["النوع: " + label, "العلامة: " + String(node.marks)];
   if (node.presentationType === "networkCli") { const k = validateNetworkCliAnswerKey(node.answer); if (k.ok) parts.push(k.key.checks + " عناصر للتصحيح على حالة المبدّل"); }
   if (node.presentationType === "inlineCloze") { const c = validateInlineClozeConfig(node.inlineCloze); if (c.ok) parts.push("النص: " + inlineClozePreviewText(c.config)); }
+  if (node.presentationType === "parametricNumeric") { const c = validateParametricNumericConfig(node.parametric); if (c.ok) parts.push(c.config.variables.length + " متغيرات · قيم مختلفة لكل طالب ومحاولة"); }
   if (Array.isArray(node.options)) parts.push(node.options.length + " خيارات");
   return parts.join(" · ");
 }

@@ -43,3 +43,5 @@ registerStudentRenderer("coding", 2, lazy(() => import("./student/CodingResponse
 registerStudentRenderer("networkCli", 1, lazy(() => import("./student/NetworkCliResponse")));
 // Phase 19A — inline cloze passage (lazy: the passage renderer and its stylesheet load only when an inlineCloze question renders).
 registerStudentRenderer("inlineCloze", 1, lazy(() => import("./student/InlineClozeResponse")));
+// Phase 19B — parametric numeric question (lazy: the per-attempt input, and the teacher-preview sample generator, load only when rendered).
+registerStudentRenderer("parametricNumeric", 1, lazy(() => import("./student/ParametricNumericResponse")));

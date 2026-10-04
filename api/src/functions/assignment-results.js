@@ -5,7 +5,7 @@ const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs,attemptPolicyOf,attemptModelVersion,attemptEpochOf}=require("../lib/assignment-availability");
-const {gradeExam}=require("../lib/assignment-grading");
+const {gradeExam,parametricGenerationContext}=require("../lib/assignment-grading");
 const {recordEventSafely}=require("../lib/notification-events");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const {deriveGradingStatus}=require("../lib/grading-status");
@@ -276,7 +276,7 @@ async function handler(request,deps={},obs=null){
      const nowMs=Date.now(),now=new Date(nowMs).toISOString(),ts=timerState(fa,doc,nowMs);
      const previousStatus=ts.activeAttempt?ts.activeAttempt.status:"started",timedOut=!!ts.attemptExpired;
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
-     const g=gradeFn(fa.examSnapshot,serverAnswers),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
+     const g=gradeFn(fa.examSnapshot,serverAnswers,parametricGenerationContext(a.assignmentId,student.userId,active.attemptNumber)),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{})};
      codingPlan=planCodingGrading(fa.examSnapshot,attempt,{assignmentId:a.assignmentId,studentId:student.userId,now});endedAttemptNumber=attempt.attemptNumber;   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);

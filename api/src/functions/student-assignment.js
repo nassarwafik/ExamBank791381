@@ -8,13 +8,22 @@ const {sanitizeExamForStudent}=require("../lib/student-exam-sanitize");
 const {hydrateBankAssets}=require("../lib/bank-asset-hydrate");
 const {getAssignmentAvailability,timerState}=require("../lib/assignment-availability");
 const {normalizeExamStructure,sectionOfficialMaxMarks}=require("../lib/exam-structure");
+const {parametricGenerationContext}=require("../lib/assignment-grading");
 const PREFIX="platform/assignments/",SUB_PREFIX="platform/submissions/";
 // Delegates to the single recursive student-safe sanitizer so BOTH legacy exam.questions and
 // structured exam.sections[].questions (with compound parts and generalized fields) have every
 // answer key / teacher-side field stripped before the exam is sent to the student's browser.
 // Bank image URLs are signed at DELIVERY time (never the authoring-time credential persisted with the snapshot); the
 // sanitizer runs LAST so hidden media / answer keys can never be reintroduced by hydration.
-function studentExam(v){return sanitizeExamForStudent(hydrateBankAssets(v))}
+// Phase 19B — `generation` = the server-owned parametric identity of the attempt being delivered (see deliveryGeneration below).
+function studentExam(v,generation){return sanitizeExamForStudent(hydrateBankAssets(v),generation)}
+// Phase 19B — the attempt a delivery belongs to: the ACTIVE attempt's number (live, draft or expired — the same number the grader
+// will use), else the next attempt (completed attempts + 1, exactly what a legacy untimed lazy save / submit stamps). The student id
+// is the authenticated session's; the assignment id is the storage path. Same attempt ⇒ same instance across refresh / pause / resume.
+function deliveryGeneration(assignmentId,studentId,submission,ts){
+ const attemptNumber=ts&&ts.activeAttempt?ts.activeAttempt.attemptNumber:(Array.isArray(submission&&submission.attempts)?submission.attempts.length:0)+1;
+ return parametricGenerationContext(assignmentId,studentId,attemptNumber);
+}
 // Safe, answer-free marks distribution (section titles + official max marks) for the pre-start cover.
 // Contains NO question text/options/fields/parts — only titles and totals, so it can be shown before
 // the student presses Start without leaking the exam body.
@@ -59,8 +68,8 @@ async function handler(request,deps={},obs=null){
   // (requiresStart false) keeps its historical behavior and receives the full exam immediately.
   if(ts.requiresStart&&(!ts.activeAttempt||ts.activeAttempt.status==="paused")){return {status:200,jsonBody:{ok:true,assignment:preStartAssignment(a,ts.timed,ts.attemptPolicy)}}}
   const effectiveDueAt=av.effectiveDueAt;
-  return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",effectiveDueAt,maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),attemptPolicy:ts.attemptPolicy,exam:studentExam(a.examSnapshot)}}};
+  return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",effectiveDueAt,maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),attemptPolicy:ts.attemptPolicy,exam:studentExam(a.examSnapshot,deliveryGeneration(id,student.userId,s,ts))}}};
  }catch(e){obs?.logError("student.assignment.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر فتح الواجب حاليًا."}}}
 }
 app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler:withObservability("student-assignment",handler)});
-module.exports={studentExam,handler};
+module.exports={studentExam,deliveryGeneration,handler};

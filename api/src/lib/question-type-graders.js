@@ -16,6 +16,10 @@ const networkCli = require("./shared-finalization/networkCliQuestion");
 // Phase 19A — inlineCloze@1: the shared strict authority re-validates the published passage AND the private per-blank key before any
 // blank is compared (malformed authority ⇒ 0 + manual review); the student answer is the existing `fields` Answer.
 const inlineCloze = require("./shared-finalization/inlineClozeQuestion");
+// Phase 19B — parametricNumeric@1: the shared model regenerates the OFFICIAL instance from the server-owned generation identity the
+// caller threads through gradeExam (assignment, student, attempt number + the section-scoped question key), evaluates the private
+// answer expression and applies the numericResponse comparison. No identity / invalid authority ⇒ 0 + manual review.
+const parametricNumeric = require("./shared-finalization/parametricNumericQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -117,6 +121,12 @@ registerBuiltIn("networkCli", (question, response, max) => {
 registerBuiltIn("inlineCloze", (question, response, max) => {
   const r = inlineCloze.scoreInlineCloze({ config: question.inlineCloze, answerKey: question.answer, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("parametricNumeric", (question, response, max, context) => {
+  const generation = context && context.generation && typeof context.generation === "object" ? context.generation : null;
+  const identity = generation ? { ...generation, questionKey: context.questionKey } : null;
+  const r = parametricNumeric.scoreParametricNumeric({ question, response, maxMarks: max, identity });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview };
 });
 registerBuiltIn("categorization", (question, response, max) => {
   const c = question.categorization && typeof question.categorization === "object" ? question.categorization : {};

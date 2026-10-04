@@ -187,6 +187,24 @@ function applyInlineClozeProjection(node) {
   const projected = projectInlineClozeConfigForStudent(node.inlineCloze);
   if (projected) node.inlineCloze = projected; else delete node.inlineCloze;
 }
+// Phase 19B — parametricNumeric@1 is PER ATTEMPT: the authored config (variables, constraints, generator version) and the {{id}} stem
+// template never reach a student. The node's `parametric` is REPLACED by the strict projection of the official instance of THIS
+// attempt (rendered stem + the values it shows + the response presentation), generated from the server-owned identity the delivery
+// passes in and the SAME section-scoped question key the grader uses (sectionQuestionId). No identity (live challenge, practice, a
+// structured exam's stray flat list) or an invalid public contract ⇒ an explicit UNAVAILABLE projection. The private answer
+// expression lives under `answer`, blanked like every key.
+const { projectParametricNumericForStudent } = require("./shared-finalization/parametricNumericQuestion");
+const { sectionQuestionId } = require("./exam-structure");
+function parametricContext(ctx) {
+  return ctx && typeof ctx === "object" && !Array.isArray(ctx) && ctx.generation && typeof ctx.generation === "object" && typeof ctx.questionKey === "string" ? { ...ctx.generation, questionKey: ctx.questionKey } : null;
+}
+function applyParametricProjection(out, source, ctx) {
+  if (!(source && (source.presentationType === "parametricNumeric" || "parametric" in source))) return;
+  const projected = projectParametricNumericForStudent(source, parametricContext(ctx));
+  out.text = projected.text;
+  out.parametric = projected.parametric;
+  delete out.textHtml;                                                         // an HTML twin of the template would carry {{id}} syntax
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -203,6 +221,7 @@ function sanitizePartForStudent(part) {
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
   applyInlineClozeProjection(out);
+  applyParametricProjection(out, part, null);                                  // never compound-capable: no identity ⇒ unavailable
   stripKeys(out, NODE_SECRET_KEYS);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
@@ -215,7 +234,7 @@ function sanitizePartForStudent(part) {
   return out;
 }
 
-function sanitizeQuestionForStudent(question) {
+function sanitizeQuestionForStudent(question, ctx) {
   if (!question || typeof question !== "object") return question;
   // Legacy-identical blanking (answer:{}, hint:"", …) so existing behaviour/tests are unchanged,
   // then strip any additional secret flags and recurse into the new structured children.
@@ -224,6 +243,7 @@ function sanitizeQuestionForStudent(question) {
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
   applyInlineClozeProjection(out);
+  applyParametricProjection(out, question, ctx);
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS, ...GRADING_SECRET_KEYS]);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
@@ -236,10 +256,11 @@ function sanitizeQuestionForStudent(question) {
   return out;
 }
 
-function sanitizeSectionForStudent(section) {
+function sanitizeSectionForStudent(section, ctx) {
   if (!section || typeof section !== "object") return section;
   const out = { ...section }; // keeps id / title / instructions / gradingPolicy / maxMarks / requiredAnswers / answerUnit / stimuli
-  if (Array.isArray(out.questions)) out.questions = out.questions.map(sanitizeQuestionForStudent);
+  const gen = ctx && typeof ctx === "object" && !Array.isArray(ctx) ? ctx.generation : null, sid = ctx && typeof ctx === "object" && typeof ctx.sectionId === "string" ? ctx.sectionId : String(section.id ?? "");
+  if (Array.isArray(out.questions)) out.questions = out.questions.map((q, i) => sanitizeQuestionForStudent(q, gen ? { generation: gen, questionKey: sectionQuestionId({ id: sid }, q, i) } : null));
   if (out.stimuli && typeof out.stimuli === "object" && !Array.isArray(out.stimuli)) {
     const stimuli = {};
     for (const [key, stim] of Object.entries(out.stimuli)) {
@@ -255,15 +276,18 @@ function sanitizeSectionForStudent(section) {
 // structured sections[].questions[]. Top-level presentation fields (presentationTheme, metadata, …)
 // pass through unchanged EXCEPT teacher/import-only provenance (metadata.import), which is removed so
 // import details (source file name, original examId, …) never reach a student.
-function sanitizeExamForStudent(exam) {
+// Phase 19B — `options.parametric` = the server-owned { assignmentId, studentId, attemptNumber } of the attempt being delivered.
+function sanitizeExamForStudent(exam, options) {
   const x = JSON.parse(JSON.stringify(exam || {}));
+  const generation = options && typeof options === "object" && options.parametric && typeof options.parametric === "object" ? options.parametric : null;
+  const structured = Array.isArray(x.sections) && x.sections.length > 0;          // exactly normalizeExamStructure's choice
   x.revisionHistory = [];
   if (x.metadata && typeof x.metadata === "object" && "import" in x.metadata) delete x.metadata.import;
   if ("blueprint" in x) delete x.blueprint;                                   // Phase 13C-A: teacher planning data
   for (const k of TEACHER_ANALYTICS_KEYS) if (k in x) delete x[k];             // Phase 13C-B: live intelligence is never student data
   if ("coverPage" in x) x.coverPage = sanitizeCoverForStudent(x.coverPage);
-  if (Array.isArray(x.questions)) x.questions = x.questions.map(sanitizeQuestionForStudent);
-  if (Array.isArray(x.sections)) x.sections = x.sections.map(sanitizeSectionForStudent);
+  if (Array.isArray(x.questions)) x.questions = x.questions.map((q, i) => sanitizeQuestionForStudent(q, generation && !structured ? { generation, questionKey: sectionQuestionId({ id: "__default__" }, q, i) } : null));
+  if (Array.isArray(x.sections)) x.sections = x.sections.map((s, si) => sanitizeSectionForStudent(s, { generation, sectionId: String(s?.id ?? "section-" + (si + 1)) }));
   return x;
 }
 

@@ -9,15 +9,16 @@ exports.verifyAiQuestionNode = verifyAiQuestionNode;
 exports.normalizeAiQuestionDraft = normalizeAiQuestionDraft;
 const examQuality_1 = require("./examQuality");
 const networkCliEngine_1 = require("./networkCliEngine");
-exports.AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "simulation", "coding", "unsupported"]);
-exports.AI_GENERATED_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli"]);
-exports.AI_AUTHOR_LIMITS = Object.freeze({ requestChars: 2000, textChars: 4000, explanationChars: 1000, capabilities: 20, capabilityChars: 100, options: 8, fillBlanks: 10, pieces: 100, pieceOptions: 12, accepted: 20, stringChars: 500, vlans: 64, interfaces: 32 });
+exports.AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "simulation", "coding", "unsupported"]);
+exports.AI_GENERATED_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric"]);
+exports.AI_AUTHOR_LIMITS = Object.freeze({ requestChars: 2000, textChars: 4000, explanationChars: 1000, capabilities: 20, capabilityChars: 100, options: 8, fillBlanks: 10, pieces: 100, pieceOptions: 12, accepted: 20, stringChars: 500, vlans: 64, interfaces: 32, paramVariables: 20, paramConstraints: 20 });
 exports.AI_DRAFT_QUESTION_ID = "ai-draft";
 const NETWORK_SIGNAL = /(\bswitch(?:es)?\b|سويتش|سويچ|مبدّل|مبدل|\bvlans?\b|\btrunk\b|ترانك|\bcli\b|cisco|سيسكو|switchport|native\s*vlan|\bsvi\b|المنافذ|منفذ|منافذ|network\s+simulator|محاكي\s*(?:أوامر\s*)?(?:الشبكة|شبكة|سويتش))/i;
 const CLOZE_SIGNAL = /(فراغ|فراغات|\bcloze\b|\bblanks?\b|fill[-\s]?in|أكمل|اكمل|منسدلة|dropdowns?|drop-down)/i;
 const PASSAGE_SIGNAL = /(فقرة|نص\s*تفاعلي|\bparagraph\b|\bpassage\b|\bcloze\b|\binline\b|منسدلة|dropdowns?|drop-down|قائمة)/i;
 const CODING_SIGNAL = /(برمجة|برنامج|\bcode\b|\bcoding\b|python|بايثون|\bjava\b|جافا|c#|سي شارب)/i;
 const SIMULATION_SIGNAL = /(smartsim|\.smartsim|حزمة\s*محاكاة|simulation\s+package)/i;
+const PARAMETRIC_SIGNAL = /(\bparametric\b|random\s+(?:integers?|numbers?|values?)|different\s+(?:numeric\s+)?(?:version|numbers?|values?)\s+(?:for|per)\s+(?:each|every)\s+student|per[-\s]student\s+(?:numbers?|values?)|بأرقام\s+مختلفة|أرقام\s+مختلفة|قيم\s+مختلفة|(?:رقمي|حسابي|رياضيات)[^.؟?!]{0,30}(?:متغير|يتغير|متغيرة)|معطيات\s+متغيرة|يتغير\s+لكل\s+طالب)/i;
 const UNSUPPORTED_NETWORK = [
     ["router", /\brouters?\b|\brouting\b|راوتر|الراوتر|موجّه|جهاز\s*التوجيه|بروتوكول(?:ات)?\s*(?:ال)?توجيه|التوجيه\s*(?:الثابت|الديناميكي)/i],
     ["ospf", /\bospf\b/i], ["eigrp", /\beigrp\b/i], ["rip", /\bripv?2?\b/i], ["bgp", /\bbgp\b/i],
@@ -32,6 +33,8 @@ function classifyAuthorRequest(request) {
     let suggestedIntent = null;
     if (SIMULATION_SIGNAL.test(t))
         suggestedIntent = "simulation";
+    else if (PARAMETRIC_SIGNAL.test(t))
+        suggestedIntent = "parametricNumeric";
     else if (CODING_SIGNAL.test(t) && !NETWORK_SIGNAL.test(t))
         suggestedIntent = "coding";
     else if (CLOZE_SIGNAL.test(t))
@@ -47,6 +50,8 @@ const arr = (items, maxItems) => ({ type: "array", items, maxItems });
 const nullable = (s) => ({ anyOf: [{ type: "null" }, s] });
 const VLAN_ROW = obj({ id: int(1, 4094), name: str() });
 const IFACE_ROW = obj({ name: str(), mode: { type: "string", enum: ["", "access", "trunk"] }, accessVlan: int(0, 4094), nativeVlan: int(0, 4094), adminState: { type: "string", enum: ["", "up", "shutdown"] }, ipAddress: str(), subnetMask: str() });
+const numberSchema = () => ({ type: "number" });
+const PARAM_VAR_ROW = obj({ name: str(), min: int(-1000000000, 1000000000), max: int(-1000000000, 1000000000), step: int(1, 1000000000) });
 function buildAiAuthorSchema() {
     return {
         type: "object",
@@ -70,9 +75,14 @@ function buildAiAuthorSchema() {
                 scoring: { type: "string", enum: ["proportional", "allOrNothing"] },
                 initialHostname: str(), initialVlans: arr(VLAN_ROW, exports.AI_AUTHOR_LIMITS.vlans), initialInterfaces: arr(IFACE_ROW, exports.AI_AUTHOR_LIMITS.interfaces),
                 targetHostname: str(), targetVlans: arr(VLAN_ROW, exports.AI_AUTHOR_LIMITS.vlans), targetInterfaces: arr(IFACE_ROW, exports.AI_AUTHOR_LIMITS.interfaces)
+            })),
+            parametricNumeric: nullable(obj({
+                variables: arr(PARAM_VAR_ROW, exports.AI_AUTHOR_LIMITS.paramVariables), constraints: arr(str(), exports.AI_AUTHOR_LIMITS.paramConstraints), answerExpression: str(),
+                mode: { type: "string", enum: ["tolerance", "range"] }, tolerance: numberSchema(), below: numberSchema(), above: numberSchema(),
+                unitMode: { type: "string", enum: ["none", "label", "input"] }, unitLabel: str(), unit: str()
             }))
         },
-        required: ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli"]
+        required: ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric"]
     };
 }
 function buildAiAuthorPrompt(request, signals, preferredType) {
@@ -86,6 +96,7 @@ function buildAiAuthorPrompt(request, signals, preferredType) {
         "  Supported scope ONLY: hostname; VLAN database (VLAN ids 2-4094 except 1002-1005, optional VLAN names); interfaces FastEthernet0/1 to FastEthernet0/24 and GigabitEthernet0/1 to GigabitEthernet0/2 with switchport mode access or trunk, access VLAN, trunk native VLAN, administrative state (up / shutdown); SVIs `Vlan<id>` with an IPv4 address and subnet mask (never on a physical port).",
         "  Fill `networkCli` with the initial state (usually hostname \"Switch\" and nothing else) and the TARGET state the student must reach. Every target value you set is one graded check; use \"\" / 0 for values that are not required. Use only the interface names above.",
         "  NOT supported (never invent them): routers, routing, static routes, OSPF, EIGRP, RIP, BGP, ACLs, NAT, DHCP, spanning-tree, port-security, EtherChannel, VTP, SSH / Telnet, interface range, trunk allowed VLAN lists, ping / traceroute, IPv6. If the request needs any of them, list them in `unsupportedCapabilities` and set intent \"unsupported\" (or choose an ordinary question type).",
+        "- parametricNumeric: a numeric question whose numbers DIFFER for every student and attempt (math, physics, chemistry, subnet arithmetic). `text` is the stem with {{name}} placeholders for every generated value (e.g. \"A network needs {{hosts}} hosts…\"). `variables`: bounded INTEGER variables { name (a letter then letters / digits / _), min, max, step } where (max - min) is a multiple of step. `constraints`: optional single comparisons such as \"a < b\" or \"b != 0\". `answerExpression` computes the correct answer from the variables using ONLY numbers, variable names, + - * / % ^ (integer exponent), parentheses and abs, round(x, digits), floor, ceil, min, max — no other functions, no code. `mode` \"tolerance\" (with `tolerance` >= 0, 0 = exact) or \"range\" (`below` / `above` >= 0 around the result). `unitMode` \"none\", \"label\" (a fixed `unitLabel` shown next to the answer) or \"input\" (the student types the unit; the correct `unit` is graded). Never put the computed answer or the expression in `text`.",
         "- simulation: the teacher wants an uploaded interactive .smartsim simulation. coding: the student must write a program. Recognise them; do not invent their content (fill no payload).",
         "- unsupported: the request cannot be met with the types above; explain why in `explanation`.",
         "If the request is ambiguous, set confidence \"ambiguous\" and prefer a safe ordinary question (shortAnswer or multipleChoice) instead of a simulator.",
@@ -119,13 +130,21 @@ const isStr = (v, max = exports.AI_AUTHOR_LIMITS.stringChars) => typeof v === "s
 const isInt = (v, min, max) => typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 const strArr = (v, maxItems) => Array.isArray(v) && v.length <= maxItems && v.every(x => isStr(x));
 const ROOT_KEYS = ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli"];
+const OPTIONAL_ROOT_KEYS = ["parametricNumeric"];
+const PARAM_KEYS = ["variables", "constraints", "answerExpression", "mode", "tolerance", "below", "above", "unitMode", "unitLabel", "unit"];
 const PIECE_KEYS = ["kind", "text", "accepted", "caseSensitive", "options", "correctIndex"];
 const IFACE_KEYS = ["name", "mode", "accessVlan", "nativeVlan", "adminState", "ipAddress", "subnetMask"];
 const NET_KEYS = ["scoring", "initialHostname", "initialVlans", "initialInterfaces", "targetHostname", "targetVlans", "targetInterfaces"];
 const vlanRow = (v) => isPlain(v) && exactKeys(v, ["id", "name"]) && isInt(v.id, 0, 99999) && isStr(v.name);
 const ifaceRow = (v) => isPlain(v) && exactKeys(v, IFACE_KEYS) && isStr(v.name, 64) && isStr(v.mode, 16) && isInt(v.accessVlan, 0, 99999) && isInt(v.nativeVlan, 0, 99999) && isStr(v.adminState, 16) && isStr(v.ipAddress, 64) && isStr(v.subnetMask, 64);
+const finiteNum = (v) => typeof v === "number" && Number.isFinite(v);
+const paramVarRow = (v) => isPlain(v) && exactKeys(v, ["name", "min", "max", "step"]) && isStr(v.name, 64) && [v.min, v.max, v.step].every(x => typeof x === "number" && Number.isSafeInteger(x));
+const paramShapeOk = (p) => isPlain(p) && exactKeys(p, PARAM_KEYS) && Array.isArray(p.variables) && p.variables.length <= exports.AI_AUTHOR_LIMITS.paramVariables && p.variables.every(paramVarRow)
+    && strArr(p.constraints, exports.AI_AUTHOR_LIMITS.paramConstraints) && isStr(p.answerExpression) && isStr(p.mode, 16) && finiteNum(p.tolerance) && finiteNum(p.below) && finiteNum(p.above) && isStr(p.unitMode, 16) && isStr(p.unitLabel, 64) && isStr(p.unit, 64);
 function shapeOk(raw) {
-    if (!isPlain(raw) || hasForbiddenKey(raw) || !exactKeys(raw, ROOT_KEYS))
+    if (!isPlain(raw) || hasForbiddenKey(raw) || !ROOT_KEYS.every(k => Object.prototype.hasOwnProperty.call(raw, k)) || Object.keys(raw).some(k => !ROOT_KEYS.includes(k) && !OPTIONAL_ROOT_KEYS.includes(k)))
+        return false;
+    if (raw.parametricNumeric !== undefined && raw.parametricNumeric !== null && !paramShapeOk(raw.parametricNumeric))
         return false;
     if (typeof raw.intent !== "string" || (raw.confidence !== "clear" && raw.confidence !== "ambiguous"))
         return false;
@@ -232,6 +251,14 @@ function mapInlineCloze(d, c) {
     }
     return { node: { ...base(d, "inlineCloze"), questionTypeVersion: 1, inlineCloze: { v: 1, segments }, answer: { scoring: c.scoring, blanks } }, issues: [] };
 }
+function mapParametric(d, p) {
+    const response = p.unitMode === "label" ? { unit: "label", label: p.unitLabel } : p.unitMode === "input" ? { unit: "input" } : p.unitMode === "none" ? { unit: "none" } : { unit: p.unitMode };
+    const answer = p.mode === "range" ? { expression: p.answerExpression, mode: "range", below: p.below, above: p.above } : p.mode === "tolerance" ? { expression: p.answerExpression, mode: "tolerance", tolerance: p.tolerance } : { expression: p.answerExpression, mode: p.mode };
+    if (p.unitMode === "input")
+        answer.unit = p.unit;
+    const parametric = { v: 1, generatorVersion: 1, variables: p.variables.map(v => ({ id: v.name, kind: "int", min: v.min, max: v.max, step: v.step })), constraints: [...p.constraints], response };
+    return { node: { ...base(d, "parametricNumeric"), questionTypeVersion: 1, parametric, answer }, issues: [] };
+}
 function mapDraft(d) {
     switch (d.intent) {
         case "multipleChoice": return d.multipleChoice ? { node: { ...base(d, "multipleChoice"), options: d.multipleChoice.options.map(text => ({ text })), answer: { correctOptionIndex: d.multipleChoice.correctIndex } }, issues: [] } : null;
@@ -240,6 +267,7 @@ function mapDraft(d) {
         case "fillBlank": return d.fillBlank ? { node: { ...base(d, "fillBlank"), fields: d.fillBlank.blanks.map((b, i) => ({ id: "f" + (i + 1), kind: "text", label: b.label, correct: b.correctText })), wordBank: [], answer: { mode: "exactSequence", values: d.fillBlank.blanks.map(b => b.correctText) } }, issues: [] } : null;
         case "inlineCloze": return d.inlineCloze ? mapInlineCloze(d, d.inlineCloze) : null;
         case "networkCli": return d.networkCli ? mapNetworkCli(d, d.networkCli) : null;
+        case "parametricNumeric": return d.parametricNumeric ? mapParametric(d, d.parametricNumeric) : null;
         default: return null;
     }
 }
@@ -249,7 +277,8 @@ const NODE_KEYS = Object.freeze({
     shortAnswer: ["examQuestionId", "presentationType", "text", "marks", "answer"],
     fillBlank: ["examQuestionId", "presentationType", "text", "marks", "fields", "wordBank", "answer"],
     inlineCloze: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "inlineCloze", "answer"],
-    networkCli: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "networkCli", "answer"]
+    networkCli: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "networkCli", "answer"],
+    parametricNumeric: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "parametric", "answer"]
 });
 const INVALID_MESSAGE = "مسودة الذكاء الاصطناعي لا تجتاز التحقق القياسي للسؤال؛ لم يُنشأ أي سؤال.";
 function verifyAiQuestionNode(node) {

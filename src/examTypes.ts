@@ -3,6 +3,7 @@ import type { SimulationQuestionConfig } from "./smartsimManifest";
 import type { CodingQuestionConfigV1 } from "./codingQuestion";
 import type { NetworkCliQuestionConfigV1 } from "./networkCliQuestion";
 import type { InlineClozeConfigV1 } from "./inlineClozeQuestion";
+import type { ParametricNumericConfigV1 } from "./parametricNumericQuestion";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
 // Design contract: a builder object is ALREADY in the engine-native shape that PR #51's student
@@ -102,6 +103,9 @@ export type BuilderPart = {
   networkCli?: NetworkCliQuestionConfigV1;
   // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
   inlineCloze?: InlineClozeConfigV1;
+  // Phase 19B — the PUBLIC parametric config (parametricNumeric@1: generator version, variables, constraints, response presentation);
+  // the answer expression / tolerance / required unit live under `answer`. A student receives only the per-attempt projection.
+  parametric?: ParametricNumericConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -132,6 +136,9 @@ export type BuilderQuestion = {
   networkCli?: NetworkCliQuestionConfigV1;
   // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
   inlineCloze?: InlineClozeConfigV1;
+  // Phase 19B — the PUBLIC parametric config (parametricNumeric@1: generator version, variables, constraints, response presentation);
+  // the answer expression / tolerance / required unit live under `answer`. A student receives only the per-attempt projection.
+  parametric?: ParametricNumericConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -165,6 +172,9 @@ export type QuestionBody = {
   networkCli?: NetworkCliQuestionConfigV1;
   // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
   inlineCloze?: InlineClozeConfigV1;
+  // Phase 19B — the PUBLIC parametric config (parametricNumeric@1: generator version, variables, constraints, response presentation);
+  // the answer expression / tolerance / required unit live under `answer`. A student receives only the per-attempt projection.
+  parametric?: ParametricNumericConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;

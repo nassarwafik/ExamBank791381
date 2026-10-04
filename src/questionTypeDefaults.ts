@@ -65,6 +65,12 @@ registerTypeDefaults("inlineCloze", 1, ensure => {
   ensure("inlineCloze", { v: 1, segments: [{ type: "text", text: "اكتب النص هنا، ثم أدرج فراغًا: " }, { type: "blank", id: "b1", control: "text" }] });
   ensure("answer", { scoring: "proportional", blanks: { b1: { accepted: [], caseSensitive: false } } });
 });
+// Phase 19B — parametricNumeric@1: two bounded integer variables and a key whose EMPTY expression blocks finalization.
+// Literal on purpose (initial graph); parity-tested against defaultParametricNumericConfig() / defaultParametricNumericAnswerKey().
+registerTypeDefaults("parametricNumeric", 1, ensure => {
+  ensure("parametric", { v: 1, generatorVersion: 1, variables: [{ id: "a", kind: "int", min: 1, max: 10, step: 1 }, { id: "b", kind: "int", min: 1, max: 10, step: 1 }], constraints: [], response: { unit: "none" } });
+  ensure("answer", { expression: "", mode: "tolerance", tolerance: 0 });
+});
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });

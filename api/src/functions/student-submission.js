@@ -4,7 +4,7 @@ const {normalizeDraftAnswers}=require("../lib/draft-answers");
 const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
-const {gradeExam}=require("../lib/assignment-grading");
+const {gradeExam,parametricGenerationContext}=require("../lib/assignment-grading");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion,attemptPolicyOf,attemptEpochOf,pauseRejection,resumeRejection,toMs}=require("../lib/assignment-availability");
@@ -201,8 +201,8 @@ async function handler(request,deps={},obs=null){
      if(!ts.canWrite){const err=new Error(ts.activeAttempt&&ts.activeAttempt.status==="paused"?"المحاولة محفوظة مؤقتًا. تابع المحاولة أولًا.":ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}
      // Grade ONLY after the published/identity/canWrite guards pass, so a stale or missing-identity submit
      // (409 above) never calls gradeExam or mutates anything.
-     const g=gradeFn(a.examSnapshot,answers);
      const active=activeAttemptOf(doc),attemptNumber=active?active.attemptNumber:(doc.attempts?.length||0)+1;
+     const g=gradeFn(a.examSnapshot,answers,parametricGenerationContext(id,student.userId,attemptNumber));   // Phase 19B — server-owned identity
      // Audit (B2A #12 / B2B #16): a normal submit records endReason "submitted", endedAt = server
      // submission time, and preserves any teacher timer extension (extendedEndsAt) on the completed attempt.
      const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active)};
@@ -244,7 +244,7 @@ async function handler(request,deps={},obs=null){
      const ts=timerState(a,doc,Date.now());
      if(!ts.attemptExpired){const err=new Error("لم تنتهِ مدة المحاولة بعد.");err.httpStatus=409;throw err}
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
-     const g=gradeFn(a.examSnapshot,serverAnswers),now=new Date().toISOString();
+     const g=gradeFn(a.examSnapshot,serverAnswers,parametricGenerationContext(id,student.userId,active.attemptNumber)),now=new Date().toISOString();
      // Audit (B2A #12 / B2B #17): endReason "timedOut"; endedAt = the AUTHORITATIVE effective deadline
      // (teacher-extended duration OR due-clipped — ts.effectiveAttemptEndsAt already accounts for
      // extendedEndsAt), NOT this offline finalization moment. submittedAt stays the real server
@@ -371,7 +371,7 @@ async function handler(request,deps={},obs=null){
      if(!attemptIdentityOk(doc,b)||!attemptEpochOk(a,doc,b))throw stale();
      const nowMs=Date.now(),ts=timerState(a,doc,nowMs),now=new Date(nowMs).toISOString();
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
-     const g=gradeFn(a.examSnapshot,serverAnswers),timedOut=!!ts.attemptExpired;
+     const g=gradeFn(a.examSnapshot,serverAnswers,parametricGenerationContext(id,student.userId,active.attemptNumber)),timedOut=!!ts.attemptExpired;
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:timedOut?(ts.effectiveAttemptEndsAt||now):now,endReason:timedOut?"timedOut":"integrityExit",...modelThreeAudit(a,active)};
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
