@@ -8,6 +8,7 @@
 // The handle is deliberately small: the React side needs a controlled value, a syntax mode, read-only, aria and focus — nothing
 // Monaco-specific leaks into callers (CodingResponse, CodingQuestionEditor). Tests inject a fake engine through
 // setEditorEngineLoader(); production only ever uses the default loader.
+import type { EditorPreferences } from "../workspace/editorPreferences";
 
 export type EditorEngineHandle = {
   /** The engine's current source text (always equal to the last accepted value or the last setValue()). */
@@ -24,6 +25,9 @@ export type EditorEngineHandle = {
   setCursorOffset(offset: number): void;
   getCursorOffset(): number;
   layout(): void;
+  /** Phase 18B — device-level UI preferences (font size, wrap, minimap, line numbers): presentation only, never the text.
+   *  Optional so an engine (or a test fake) that has no presentation knobs is still a valid engine. */
+  setPreferences?(preferences: EditorPreferences): void;
   dispose(): void;
 };
 export type EditorEngineCreateOptions = {

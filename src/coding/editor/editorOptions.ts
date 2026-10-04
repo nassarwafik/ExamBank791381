@@ -1,4 +1,5 @@
 import { CODING_LANGUAGES, codingLanguage } from "../../codingQuestion";
+import { lineHeightFor, type EditorPreferences } from "../workspace/editorPreferences";
 
 // Phase 17F-C1 — the PURE editor contract of the professional code editor. No Monaco import, no DOM, no React: this module is
 // what the Monaco adapter hands to `editor.create` and what the unit tests pin, so every product decision about the editor is
@@ -186,4 +187,10 @@ export function editorCreateOptions(input: EditorCreateInput): Record<string, un
     readOnly: input.readOnly,
     domReadOnly: input.readOnly
   };
+}
+
+/** Phase 18B — the ONE mapping from the device-level UI preferences to Monaco PRESENTATION options (applied with updateOptions on a
+ *  live editor; the defaults reproduce EDITOR_BASE_OPTIONS exactly). Nothing here can touch the text, the language or assistance. */
+export function editorPreferenceOptions(p: EditorPreferences): { fontSize: number; lineHeight: number; wordWrap: "on" | "off"; minimap: { enabled: boolean }; lineNumbers: "on" | "off" } {
+  return { fontSize: p.fontSize, lineHeight: lineHeightFor(p.fontSize), wordWrap: p.wordWrap ? "on" : "off", minimap: { enabled: p.minimap }, lineNumbers: p.lineNumbers ? "on" : "off" };
 }

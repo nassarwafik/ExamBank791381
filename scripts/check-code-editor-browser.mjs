@@ -10,7 +10,12 @@
 //     cannot be typed into; Esc then Tab leaves the editor; Ctrl+F opens Find; a long line never widens the page;
 //   • every network request is same-origin (no CDN / external service), the REAL app entry (dist/index.html) never requests the
 //     Monaco / worker / grammar chunks, and a phone-sized touch context gets the native editor;
-//   • switching languages repeatedly leaks no editor instances and raises no page error.
+//   • switching languages repeatedly leaks no editor instances and raises no page error;
+//   • Phase 18B (RF1-2): the enterprise WORKSPACE — the language / contract-version wording, focus mode keeps the SAME Monaco instance
+//     and the source, a font-size preference is computed style only (never an onChange), line numbers follow the preference, Escape
+//     inside the editor does not exit focus mode while Escape outside does, the exit control stays reachable, the page is inert while
+//     expanded; on the phone the native workspace editor computes the selected font size (RF1-1), keeps the source, survives a
+//     re-render and a reload (localStorage restore), requests no engine and never overflows.
 // It is an optional, explicit check (not part of `npm test`): it needs `playwright-core` (PLAYWRIGHT_CORE_DIR = a directory whose
 // node_modules contains it; defaults to this repository) and a Chromium (CHROMIUM_PATH, else Playwright's own lookup). Run after
 // `npm run build` so the real-app check can read dist/. Screenshots + a JSON report land in HARNESS_OUT (default: .harness-out/).
@@ -207,10 +212,47 @@ try {
   await page.click(`${RO} .monaco-editor .view-lines`); await page.keyboard.type("zzz"); await page.waitForTimeout(200);
   check("D6 a read-only editor cannot be typed into (ED24)", (await lineText(page, RO)).join("\n") === "x = 1\n", JSON.stringify(await lineText(page, RO)));
 
+  // ——— G. Phase 18B workspace (desktop): wording, focus mode, preferences, keyboard, inert ————————————————————————————————
+  const WS = '[data-testid="workspace"]';
+  await page.waitForSelector(`${WS} [data-editor-engine="monaco"]`, { timeout: 30000 });
+  const badge = (await page.locator(`${WS} [data-testid="coding-workspace-language"]`).textContent()) || "";
+  check("G1 the workspace names the SmartAssess language CONTRACT version («Python · عقد v1»), never a runtime-looking «Python · v1» (RF1-3)", badge === "Python · عقد v1", badge);
+  await page.evaluate(sel => { document.querySelector(sel + " .monaco-editor").__mark = "before-focus"; }, WS);
+  const wsChanges0 = await page.evaluate(() => window.__harness.workspace.changes.length);
+  await page.click(`${WS} [data-testid="coding-focus-toggle"]`); await page.waitForTimeout(400);
+  const focusState = await page.evaluate(sel => { const root = document.querySelector(sel), ed = root.querySelector(".monaco-editor"), r = root.getBoundingClientRect(); return { mode: root.getAttribute("data-focus-mode"), sameNode: !!ed && ed.__mark === "before-focus", instances: root.querySelectorAll(".monaco-editor").length, w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight, layout: root.querySelector(".cx-code-editor").getAttribute("data-editor-layout"), editorH: Math.round(ed.getBoundingClientRect().height), pressed: root.querySelector('[data-testid="coding-focus-toggle"]').getAttribute("aria-pressed"), mainInert: document.querySelector('[data-testid="main-editor"]').hasAttribute("inert") }; }, WS);
+  check("G2 entering focus mode keeps the SAME Monaco instance (no remount), fills the viewport, switches to the fill layout and makes the rest of the page inert", focusState.mode === "true" && focusState.sameNode && focusState.instances === 1 && focusState.w === focusState.vw && focusState.h === focusState.vh && focusState.layout === "fill" && focusState.editorH >= focusState.vh * 0.5 && focusState.pressed === "true" && focusState.mainInert, JSON.stringify(focusState));
+  await page.click(`${WS} .monaco-editor .view-lines`); await page.keyboard.press("Control+End"); await page.keyboard.type("z = 9"); await page.waitForTimeout(300);
+  const typedInFocus = await page.evaluate(() => window.__harness.workspace.value());
+  const wsChanges1 = await page.evaluate(() => window.__harness.workspace.changes.length);
+  check("G3 typing while expanded reaches onChange exactly (ED20 inside focus mode)", typedInFocus === SAMPLES.python + "z = 9" && wsChanges1 > wsChanges0, JSON.stringify(typedInFocus));
+  await page.click(`${WS} button[aria-controls]`); await page.waitForTimeout(100);
+  await page.selectOption(`${WS} select[aria-label="حجم الخط"]`, "18"); await page.waitForTimeout(300);
+  const richFont = await page.evaluate(sel => getComputedStyle(document.querySelector(sel + " .monaco-editor .view-lines")).fontSize, WS);
+  await page.getByLabel("أرقام الأسطر").click(); await page.waitForTimeout(300);
+  const lineNumbers = await page.evaluate(sel => document.querySelectorAll(sel + " .monaco-editor .line-numbers").length, WS);
+  await page.getByLabel("أرقام الأسطر").click(); await page.waitForTimeout(300);
+  const lineNumbersBack = await page.evaluate(sel => document.querySelectorAll(sel + " .monaco-editor .line-numbers").length, WS);
+  const afterPrefs = await page.evaluate(() => ({ value: window.__harness.workspace.value(), changes: window.__harness.workspace.changes.length, same: document.querySelector('[data-testid="workspace"] .monaco-editor').__mark === "before-focus" }));
+  check("G4 a font-size preference of 18 px is COMPUTED on the live Monaco lines, line numbers follow their preference, and no preference fires onChange or recreates the editor", richFont === "18px" && lineNumbers === 0 && lineNumbersBack > 0 && afterPrefs.value === typedInFocus && afterPrefs.changes === wsChanges1 && afterPrefs.same, JSON.stringify({ richFont, lineNumbers, lineNumbersBack, afterPrefs }));
+  await page.click(`${WS} .monaco-editor .view-lines`); await page.keyboard.press("Escape"); await page.waitForTimeout(150);
+  const stillFocused = await page.locator(WS).getAttribute("data-focus-mode");
+  await page.keyboard.press("Tab"); await page.waitForTimeout(100);                               // Esc then Tab leaves the editor (17F-C1)
+  const leftEditor = await page.evaluate(sel => !document.activeElement.closest(sel + " .monaco-editor") && !!document.activeElement.closest(sel), WS);
+  await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+  const exitedByEscape = await page.locator(WS).getAttribute("data-focus-mode");
+  check("G5 Escape INSIDE the editor keeps focus mode (editor semantics); Esc-then-Tab leaves the editor inside the workspace; Escape there exits", stillFocused === "true" && leftEditor && exitedByEscape === "false", JSON.stringify({ stillFocused, leftEditor, exitedByEscape }));
+  await page.click(`${WS} [data-testid="coding-focus-toggle"]`); await page.waitForTimeout(300);
+  const exitBtn = await page.evaluate(sel => { const b = document.querySelector(sel + ' [data-testid="coding-focus-toggle"]'), r = b.getBoundingClientRect(); return { label: b.getAttribute("aria-label"), visible: r.width > 0 && r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth }; }, WS);
+  await page.click(`${WS} [data-testid="coding-focus-toggle"]`); await page.waitForTimeout(300);
+  const afterExit = await page.evaluate(sel => ({ mode: document.querySelector(sel).getAttribute("data-focus-mode"), value: window.__harness.workspace.value(), same: document.querySelector(sel + " .monaco-editor").__mark === "before-focus", inertLeft: document.querySelectorAll("[inert]").length, layout: document.querySelector(sel + " .cx-code-editor").getAttribute("data-editor-layout") }), WS);
+  check("G6 the exit control is on screen and named while expanded; leaving restores the page (no inert left), the layout, the same instance and the source", exitBtn.label === "الخروج من وضع التركيز" && exitBtn.visible && afterExit.mode === "false" && afterExit.same && afterExit.inertLeft === 0 && afterExit.layout === "auto" && afterExit.value === typedInFocus, JSON.stringify({ exitBtn, afterExit }));
+  await page.selectOption(`${WS} select[aria-label="حجم الخط"]`, "14"); await page.waitForTimeout(100);   // leave the device default for the phone section
+
   // ——— E. disposal under repeated switching, privacy, errors ———————————————————————————————————————————————————————————
   for (let i = 0; i < 12; i++) { await page.click(`button[data-language="${["python", "java", "csharp"][i % 3]}"]`); await page.waitForTimeout(40); }
   await page.waitForTimeout(500);
-  check("E1 after 12 rapid language switches exactly three editor instances exist (one per CodingEditor) — no leak", (await page.locator(".monaco-editor:not(.rename-box)").count()) === 3 && (await page.evaluate(() => document.querySelectorAll(".cx-code-rich").length)) === 3);
+  check("E1 after 12 rapid language switches exactly four editor instances exist (one per CodingEditor, incl. the workspace) — no leak", (await page.locator(".monaco-editor:not(.rename-box)").count()) === 4 && (await page.evaluate(() => document.querySelectorAll(".cx-code-rich").length)) === 4);
   check("E2 every network request was same-origin: no CDN, no external editor service (ED34)", foreign.length === 0, foreign.slice(0, 5).join(", ") || `${requested.length} same-origin requests`);
   check("E3 no uncaught page error and no console error", pageErrors.length === 0 && consoleErrors.length === 0, [...pageErrors, ...consoleErrors].slice(0, 3).join(" | "));
   await page.close();
@@ -227,6 +269,34 @@ try {
   check("F1 a 375px touch viewport keeps the native editor and never requests the engine chunk", engineOnPhone === "native" && !phoneRequests.some(u => /monacoEngine|editor\.worker/.test(u)), `engine=${engineOnPhone}, requests=${phoneRequests.length}`);
   check("F2 the phone page does not overflow horizontally", phoneWidth.scroll <= phoneWidth.client, JSON.stringify(phoneWidth));
   await phone.locator(MAIN).screenshot({ path: path.join(screens, "phone-native.png") });
+  // Phase 18B RF1-1 / RF1-2 — the workspace on the phone: native editor, the selected font size is COMPUTED on the textarea (it was
+  // overridden to 13 px by the mobile block on head 2680410), the source and onChange are untouched, the preference survives a
+  // re-render and a reload (localStorage), no engine request, no horizontal overflow, focus mode escapable.
+  const WSP = '[data-testid="workspace"]';
+  const phoneFont = () => phone.evaluate(sel => getComputedStyle(document.querySelector(sel + " textarea.cx-code-input")).fontSize, WSP);
+  const wsEngine = await phone.locator(`${WSP} .cx-code-editor`).getAttribute("data-editor-engine");
+  const fontBefore = await phoneFont();
+  await phone.click(`${WSP} button[aria-controls]`); await phone.waitForTimeout(100);
+  await phone.selectOption(`${WSP} select[aria-label="حجم الخط"]`, "18"); await phone.waitForTimeout(200);
+  const fontAfter = await phoneFont();
+  const phoneSrc = await phone.evaluate(() => ({ value: window.__harness.workspace.value(), changes: window.__harness.workspace.changes.length, ta: document.querySelector('[data-testid="workspace"] textarea.cx-code-input').value }));
+  check("F3 phone workspace: native editor; a selected 18 px font size COMPUTES to 18 px on the textarea (default 14 px; was 13 px before RF1-1)", wsEngine === "native" && fontBefore === "14px" && fontAfter === "18px", JSON.stringify({ wsEngine, fontBefore, fontAfter }));
+  check("F4 phone workspace: the source text and the onChange record are untouched by the preference", phoneSrc.value === SAMPLES.python && phoneSrc.ta === SAMPLES.python && phoneSrc.changes === 0, JSON.stringify(phoneSrc));
+  await phone.click(`${WSP} button[data-action="rerender"]`); await phone.waitForTimeout(150);
+  const afterRerender = await phone.evaluate(() => ({ renders: window.__harness.workspace.renders, value: window.__harness.workspace.value() }));
+  const fontRerender = await phoneFont();
+  check("F5 phone workspace: the preference and the source survive a workspace re-render", afterRerender.renders === 1 && fontRerender === "18px" && afterRerender.value === SAMPLES.python, JSON.stringify({ afterRerender, fontRerender }));
+  await phone.reload({ waitUntil: "networkidle" }); await phone.waitForTimeout(500);
+  const fontReload = await phoneFont();
+  const stored = await phone.evaluate(() => localStorage.getItem("smartassessCodeEditorPreferences"));
+  check("F6 phone workspace: after a reload the stored preference is restored from localStorage (18 px) and holds no source", fontReload === "18px" && !!stored && JSON.parse(stored).fontSize === 18 && !/def main|source|language/.test(stored), JSON.stringify({ fontReload, stored }));
+  await phone.click(`${WSP} [data-testid="coding-focus-toggle"]`); await phone.waitForTimeout(300);
+  const phoneFocus = await phone.evaluate(sel => { const root = document.querySelector(sel), b = root.querySelector('[data-testid="coding-focus-toggle"]'), r = b.getBoundingClientRect(); return { mode: root.getAttribute("data-focus-mode"), engine: root.querySelector(".cx-code-editor").getAttribute("data-editor-engine"), exitVisible: r.width > 0 && r.top >= 0 && r.bottom <= innerHeight, scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth, font: getComputedStyle(root.querySelector("textarea.cx-code-input")).fontSize }; }, WSP);
+  await phone.locator(WSP).screenshot({ path: path.join(screens, "phone-workspace-focus.png") });
+  await phone.click(`${WSP} [data-testid="coding-focus-toggle"]`); await phone.waitForTimeout(200);
+  const phoneExit = await phone.locator(WSP).getAttribute("data-focus-mode");
+  check("F7 phone workspace: focus mode keeps the native editor and the 18 px size, the exit control stays on screen, no horizontal overflow, exit works", phoneFocus.mode === "true" && phoneFocus.engine === "native" && phoneFocus.exitVisible && phoneFocus.scroll <= phoneFocus.client && phoneFocus.font === "18px" && phoneExit === "false", JSON.stringify({ phoneFocus, phoneExit }));
+  check("F8 the phone workspace never requested the Monaco engine / worker (preferences and focus mode are native-only there)", !phoneRequests.some(u => /monacoEngine|editor\.worker/.test(u)), `${phoneRequests.length} requests`);
   await ctx.close();
 } finally {
   await browser.close();
