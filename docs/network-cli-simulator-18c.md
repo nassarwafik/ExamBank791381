@@ -241,3 +241,35 @@ and scorer agree on every key), `api/tests/network-cli-18c.test.js` (`gradeExam`
 unknown scoring / mixed field ⇒ 0 marks + the question's marks pending manual review; shared-build parity of the validator),
 `src/questionTypes/networkCli.18c.test.tsx` (teacher review invalid-key state). Mutation campaign MK1–MK5 (table in the PR).
 Initial-graph impact: none (the module is a lazy chunk). Budget untouched.
+
+## 16. Independent Review Fix 2 — one canonical STRICT public-config authority + Phase 18A reconciliation
+
+**Root cause (RF1 head `624775e`).** `validateNetworkCliQuestion` refused a malformed public config (`NETCLI_CONFIG_UNKNOWN_KEY`,
+strict `normalizeDeviceState`), but `scoreNetworkCli` obtained its config through `projectNetworkCliConfigForStudent` — the STUDENT
+PROJECTION, an allow-list rebuild that silently drops unknown fields for secrecy. A published config that finalization would block
+(unknown root key, unknown initial-state / VLAN / interface field) was therefore repaired and graded; the real submission handler
+awarded 12/12 for such a snapshot (`scratchpad/18c/fail-first-rf2-624775e.log`).
+
+**Fix.** `validateNetworkCliConfig(raw)` (`src/networkCliQuestion.ts`, shared build) is the ONE strict authority for the public
+config: root exactly `{ device, initialState }` (`NETCLI_CONFIG_UNKNOWN_KEY` otherwise), `device === "switch"`
+(`NETCLI_DEVICE_UNSUPPORTED`), the ORIGINAL `initialState` through the strict `normalizeDeviceState` — no allow-listing before
+validation (`NETCLI_INITIAL_STATE_INVALID`), then `initialStateOf` for the canonical config (identical to the projection of a VALID
+config). Consumers: `validateNetworkCliQuestion` (finalization codes unchanged), `scoreNetworkCli` (STRICT public config AND STRICT
+private key before any check; either invalid ⇒ `NETWORK_CLI_FAIL_CLOSED`), the teacher review (`assignment-review.js` now carries
+the published `networkCli` config; `NetworkCliAnswerView` validates it and shows the same explicit invalid-configuration / manual-review
+state, never a checklist from a repaired config).
+
+**Projection vs authority — kept deliberately separate.** `projectNetworkCliConfigForStudent` remains the secrecy / public-payload
+projection (sanitizer, student renderer, ingest evidence); a successful projection is never proof that the published contract is
+valid. Ingest (`bindNetworkCliAnswerToQuestion`) still binds through the projection, like coding@1's `bindCodeAnswerToQuestion`: a
+teacher-side defect in the published config never destroys the student's transcript — the stored state is evidence only, and the
+authority re-derives under the strict contract and fails closed (pinned by a test).
+
+**Tests (fail-first on `624775e`: 10 failed).** GCFG1–GCFG7 + the shared-contract test in `src/networkCliQuestion.test.ts`; `gradeExam`,
+the REAL submission handler (0 automatic marks, 10 marks pending, not finalized, no canary in the stored answer / response / logs /
+student payload) and CommonJS parity in `api/tests/network-cli-18c.test.js`; the teacher-review state in
+`src/questionTypes/networkCli.18c.test.tsx`. Mutation campaign MK1–MK9 (table in the PR).
+
+**Reconciliation.** `origin/main` advanced to `edfba415` (Phase 18A governance); merged with a normal merge commit (no conflicts:
+18A adds `AGENTS.md`, the PR template, two development documents and `scripts/repo-governance-contract.test.mjs`, none touched by
+18C). The governance contract test runs green on this branch. Initial-graph impact of RF2: none (lazy chunk); budget untouched.

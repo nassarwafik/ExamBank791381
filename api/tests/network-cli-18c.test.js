@@ -218,3 +218,39 @@ describe("18C RF1 — a corrupted PUBLISHED snapshot can never produce automatic
     }
   });
 });
+
+describe("18C RF2 — a corrupted PUBLISHED public config can never produce automatic credit (fail-first on 624775e)", () => {
+  const FAIL = { score: 0, correct: false, manualReview: true };
+  const MALFORMED = [{ ...CFG, unexpectedField: true }, { device: "switch", initialState: { ...CFG.initialState, unexpectedStateField: true } }, { device: "switch", initialState: { ...CFG.initialState, vlans: { "20": { name: "SALES", expected: true } } } }, { device: "switch", initialState: { ...CFG.initialState, interfaces: { "f0/1": { mode: "access", secretExpectedVlan: 20 } } } }];
+  it("gradeExam: unknown config-root / state / VLAN / interface field ⇒ 0 marks, manual review, the question's marks pending; the valid config still grades", () => {
+    for (const networkCli of MALFORMED) {
+      const r = gradeExam(exam([q({ networkCli, answer: { targetState: { hostname: "LAB-SW" } } })]), { n1: answerOf(["enable"]) });
+      expect(g(r), JSON.stringify(networkCli)).toMatchObject(FAIL); expect(r.manualReviewMarks, JSON.stringify(networkCli)).toBe(10);
+    }
+    expect(g(gradeExam(exam([q({ answer: { targetState: { hostname: "LAB-SW" } } })]), { n1: answerOf(["enable"]) }))).toMatchObject({ score: 10, correct: true, manualReview: false });
+  });
+  it("REAL submission handler: a snapshot whose public config carries an unknown field ⇒ 0 automatic marks, marks pending manual review, not finalized; the field never reaches the student response, the stored answer or the logs", async () => {
+    const submission = () => require_("../src/functions/student-submission.js");
+    const studentAuth = () => ({ ok: true, user: { sub: F.S1, sv: 1, role: "student" } });
+    const corrupted = q({ networkCli: { ...CFG, unexpectedField: "CANARY-PUBLIC-UNKNOWN", initialState: { ...CFG.initialState, interfaces: { "f0/1": { mode: "access", secretExpectedVlan: "CANARY-NESTED" } } } }, answer: { targetState: { hostname: "LAB-SW" } } });
+    const a = F.assignment({ examSnapshot: { title: "exam", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [corrupted, { examQuestionId: "sa1", presentationType: "shortAnswer", text: "x", marks: 2, answer: { text: "x" } }] }] }, totalMarks: 12, questionCount: 2 });
+    const ctx = F.seed({ a });
+    const logs = [], obs = { logInfo: (e, f) => logs.push([e, f]), logWarn: (e, f) => logs.push([e, f]), logError: (e, f) => logs.push([e, String(f)]) };
+    const deps = { container: ctx.container, requireStudentAuth: studentAuth, env: F.ENV, fetch: F.runnerFetch() };
+    const r = await submission().handler(F.studentRequest(F.submitBody({ n1: { kind: "networkCli", commands: ["enable"], state: CFG.initialState }, sa1: { kind: "text", value: "x" } })), deps, obs);
+    expect(r.status).toBe(200);
+    const attempt = ctx.getJson(F.SUB).attempts.find(x => x.attemptNumber === 1);
+    expect(attempt.score).toBe(2); expect(attempt.manualReviewMarks).toBe(10); expect(attempt.finalized).toBe(false);
+    expect(JSON.stringify(attempt.answers.n1)).not.toMatch(/CANARY/); expect(JSON.stringify(r.jsonBody)).not.toMatch(/CANARY/); expect(JSON.stringify(logs)).not.toMatch(/CANARY/);
+    expect(JSON.stringify(sanitizeExamForStudent(a.examSnapshot))).not.toMatch(/CANARY|unexpectedField|secretExpectedVlan/);
+  });
+  it("shared build parity: the committed CommonJS public-config validator refuses exactly what the TypeScript source refuses", async () => {
+    const tsq = await import("../../src/networkCliQuestion.ts");
+    for (const config of [CFG, ...MALFORMED, { device: "router", initialState: CFG.initialState }, null]) {
+      const a = tsq.validateNetworkCliConfig(config), b = shared.validateNetworkCliConfig(config);
+      expect(a.ok, JSON.stringify(config)).toBe(b.ok);
+      expect((a.ok ? [] : a.issues.map(i => i.code)).sort()).toEqual((b.ok ? [] : b.issues.map(i => i.code)).sort());
+      if (a.ok && b.ok) expect(a.config).toEqual(b.config);
+    }
+  });
+});

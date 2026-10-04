@@ -1,5 +1,5 @@
 import { SWITCH_PORTS, displayInterfaceName, effectiveInterfaceConfig, normalizeDeviceState, sortInterfaceNames, type NetworkCliDeviceState } from "../networkCliEngine";
-import { evaluateNetworkCliTarget, validateNetworkCliAnswerKey } from "../networkCliQuestion";
+import { evaluateNetworkCliTarget, validateNetworkCliAnswerKey, validateNetworkCliConfig } from "../networkCliQuestion";
 import "./networkCli.css";
 
 // Phase 18C — teacher-side projections for the manual review screen: the student's CANONICAL device state (the server-derived
@@ -27,17 +27,22 @@ export function NetworkCliStateView({ state }: { state: NetworkCliDeviceState })
 }
 
 /** The student's answer: canonical state + per-check result (when the key is available) + the transcript. */
-export function NetworkCliAnswerView({ answer, answerKey }: { answer: unknown; answerKey: unknown }) {
+export function NetworkCliAnswerView({ answer, answerKey, config }: { answer: unknown; answerKey: unknown; config?: unknown }) {
   const st = isObj(answer) ? normalizeDeviceState(answer.state) : { ok: false as const };
   const commands = isObj(answer) && Array.isArray(answer.commands) ? answer.commands.filter((c): c is string => typeof c === "string") : [];
   // Review Fix 1 — the per-check comparison is shown ONLY under a VALID private contract (the same canonical validator the
   // finalization and the authoritative scorer use); an invalid key is an explicit "grading configuration invalid" state.
+  // Review Fix 2 — the PUBLIC config (when the review payload carries it) goes through the STRICT authority too: checks computed
+  // from a repaired config are never shown; both defects share the same safe presentation.
   const key = validateNetworkCliAnswerKey(answerKey);
-  const checks = st.ok && key.ok ? evaluateNetworkCliTarget(key.key.targetState, st.state) : [];
+  const cfg = config === undefined ? { ok: true as const, issues: [] as { message: string }[] } : validateNetworkCliConfig(config);
+  const valid = key.ok && cfg.ok;
+  const issues = [...(key.ok ? [] : key.issues), ...(cfg.ok ? [] : cfg.issues)];
+  const checks = st.ok && key.ok && cfg.ok ? evaluateNetworkCliTarget(key.key.targetState, st.state) : [];
   return (
     <div className="ncli-review" data-testid="ncli-answer-view">
       {st.ok ? <NetworkCliStateView state={st.state} /> : <p className="ncli-unavailable">حالة الجهاز المحفوظة غير صالحة أو مفقودة.</p>}
-      {!key.ok && <p className="ncli-unavailable" role="note" data-testid="ncli-key-invalid">إعداد التصحيح (الحالة المستهدفة) لهذا السؤال غير صالح؛ لم يُحتسب أي تصحيح آلي والسؤال بحاجة إلى تصحيح يدوي. {key.issues.map(i => i.message).join(" ")}</p>}
+      {!valid && <p className="ncli-unavailable" role="note" data-testid="ncli-key-invalid">إعداد التصحيح لهذا السؤال (الإعداد المنشور أو الحالة المستهدفة) غير صالح؛ لم يُحتسب أي تصحيح آلي والسؤال بحاجة إلى تصحيح يدوي. {issues.map(i => i.message).join(" ")}</p>}
       {checks.length > 0 && <ul className="ncli-checks" aria-label="نتيجة مقارنة الحالة المستهدفة">
         {checks.map(c => <li key={c.id} className="ncli-check" data-ok={c.ok}><span className="ncli-check-mark" aria-hidden="true">{c.ok ? "✓" : "✗"}</span><span>{c.label}</span><span>المطلوب: <code className="ncli-ltr">{c.expected}</code></span><span>الفعلي: <code className="ncli-ltr">{c.actual}</code></span><span className="iex-visually-hidden">{c.ok ? "(صحيح)" : "(غير صحيح)"}</span></li>)}
       </ul>}

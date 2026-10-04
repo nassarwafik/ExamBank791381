@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.isSviName = exports.NETWORK_CLI_STATE_VERSION = exports.networkCliStateFingerprint = exports.NETWORK_CLI_FAIL_CLOSED = exports.targetCheckCount = exports.isNetworkCliAnswerAnswered = exports.networkCliScoringMode = exports.networkCliQuestionVersion = exports.defaultNetworkCliAnswerKey = exports.defaultNetworkCliConfig = exports.NETWORK_CLI_SCORING_MODES = exports.NETWORK_CLI_TYPE_KEY = void 0;
 exports.initialStateOf = initialStateOf;
 exports.projectNetworkCliConfigForStudent = projectNetworkCliConfigForStudent;
+exports.validateNetworkCliConfig = validateNetworkCliConfig;
 exports.validateNetworkCliQuestion = validateNetworkCliQuestion;
 exports.validateNetworkCliAnswerKey = validateNetworkCliAnswerKey;
 exports.normalizeNetworkCliAnswer = normalizeNetworkCliAnswer;
@@ -18,6 +19,8 @@ exports.NETWORK_CLI_TYPE_KEY = "networkCli";
 exports.NETWORK_CLI_SCORING_MODES = Object.freeze(["proportional", "allOrNothing"]);
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const FORBIDDEN = new Set(["__proto__", "constructor", "prototype"]);
+const err = (code, message, path) => ({ code, message, severity: "error", path });
+const PUBLIC_KEYS = new Set(["device", "initialState"]);
 const INTERFACE_TARGET_FIELDS = ["mode", "accessVlan", "nativeVlan", "shutdown", "ipAddress", "subnetMask"];
 const defaultNetworkCliConfig = () => ({ device: "switch", initialState: (0, networkCliEngine_1.createDeviceState)() });
 exports.defaultNetworkCliConfig = defaultNetworkCliConfig;
@@ -86,8 +89,22 @@ function projectNetworkCliConfigForStudent(cfg) {
         return undefined;
     return { device: "switch", initialState: initialStateOf({ device: "switch", initialState: st.state }) };
 }
-const err = (code, message, path) => ({ code, message, severity: "error", path });
-const PUBLIC_KEYS = new Set(["device", "initialState"]);
+function validateNetworkCliConfig(raw) {
+    if (!isObj(raw))
+        return { ok: false, issues: [err("NETCLI_CONFIG_MISSING", "إعداد محاكي الشبكة مفقود أو غير صالح.", "networkCli")] };
+    const out = [];
+    for (const k of Object.keys(raw))
+        if (!PUBLIC_KEYS.has(k))
+            out.push(err("NETCLI_CONFIG_UNKNOWN_KEY", "حقل غير معروف في إعداد المحاكي: " + k, "networkCli." + k));
+    if (raw.device !== "switch")
+        out.push(err("NETCLI_DEVICE_UNSUPPORTED", "نوع الجهاز غير مدعوم في هذا الإصدار (المدعوم: switch).", "networkCli.device"));
+    const st = (0, networkCliEngine_1.normalizeDeviceState)(raw.initialState);
+    if (!st.ok)
+        out.push(err("NETCLI_INITIAL_STATE_INVALID", "الحالة الابتدائية للجهاز غير صالحة (" + st.detail + ").", "networkCli.initialState"));
+    if (out.length || !st.ok)
+        return { ok: false, issues: out };
+    return { ok: true, config: { device: "switch", initialState: initialStateOf({ device: "switch", initialState: st.state }) }, issues: [] };
+}
 const TARGET_KEYS = new Set(["hostname", "vlans", "interfaces"]);
 function validateTargetInterface(rawName, entry, where, out) {
     const name = FORBIDDEN.has(rawName) ? null : (0, networkCliEngine_1.normalizeInterfaceName)(rawName);
@@ -135,17 +152,12 @@ function validateNetworkCliQuestion(node) {
     const out = [];
     if ((0, exports.networkCliQuestionVersion)(node) === undefined)
         out.push(err("NETCLI_VERSION_UNSUPPORTED", "إصدار سؤال محاكي الشبكة غير مدعوم في هذا الإصدار من التطبيق.", "questionTypeVersion"));
-    const cfg = node.networkCli;
-    if (!isObj(cfg))
-        return [...out, err("NETCLI_CONFIG_MISSING", "إعداد محاكي الشبكة مفقود أو غير صالح.", "networkCli")];
-    for (const k of Object.keys(cfg))
-        if (!PUBLIC_KEYS.has(k))
-            out.push(err("NETCLI_CONFIG_UNKNOWN_KEY", "حقل غير معروف في إعداد المحاكي: " + k, "networkCli." + k));
-    if (cfg.device !== "switch")
-        out.push(err("NETCLI_DEVICE_UNSUPPORTED", "نوع الجهاز غير مدعوم في هذا الإصدار (المدعوم: switch).", "networkCli.device"));
-    const st = (0, networkCliEngine_1.normalizeDeviceState)(cfg.initialState);
-    if (!st.ok)
-        out.push(err("NETCLI_INITIAL_STATE_INVALID", "الحالة الابتدائية للجهاز غير صالحة (" + st.detail + ").", "networkCli.initialState"));
+    const cfg = validateNetworkCliConfig(node.networkCli);
+    if (!cfg.ok) {
+        out.push(...cfg.issues);
+        if (cfg.issues.some(i => i.code === "NETCLI_CONFIG_MISSING"))
+            return out;
+    }
     const key = validateNetworkCliAnswerKey(node.answer);
     return key.ok ? out : [...out, ...key.issues];
 }
@@ -301,15 +313,15 @@ exports.targetCheckCount = targetCheckCount;
 exports.NETWORK_CLI_FAIL_CLOSED = Object.freeze({ score: 0, correct: false, manualReview: true, parts: Object.freeze({ correct: 0, total: 0 }) });
 function scoreNetworkCli(input) {
     const max = Number.isFinite(input.maxMarks) ? Math.max(0, input.maxMarks) : 0;
-    const cfg = projectNetworkCliConfigForStudent(input.config);
+    const cfg = validateNetworkCliConfig(input.config);
     const key = validateNetworkCliAnswerKey(input.answerKey);
-    if (!cfg || !key.ok)
+    if (!cfg.ok || !key.ok)
         return { ...exports.NETWORK_CLI_FAIL_CLOSED, parts: { ...exports.NETWORK_CLI_FAIL_CLOSED.parts } };
     const total = key.key.checks;
     const base = normalizeNetworkCliAnswer(input.response);
     if (!base.ok)
         return { score: 0, correct: false, manualReview: false, parts: { correct: 0, total } };
-    const state = (0, networkCliEngine_1.replayCommands)(cfg.initialState, base.answer.commands).session.state;
+    const state = (0, networkCliEngine_1.replayCommands)(cfg.config.initialState, base.answer.commands).session.state;
     const checks = evaluateNetworkCliTarget(key.key.targetState, state);
     const passed = checks.filter(c => c.ok).length;
     const all = passed === checks.length;

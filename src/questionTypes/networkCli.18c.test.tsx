@@ -344,6 +344,24 @@ describe("RF1 — teacher review never presents an invalid private key as author
   });
 });
 
+describe("RF2 — teacher review never presents checks computed from a repaired PUBLIC config", () => {
+  const commands = ["enable", "configure terminal", "hostname LAB-SW"];
+  const studentAnswer = { kind: "networkCli", commands, state: replayCommands(CFG.initialState as never, commands).session.state };
+  const body = (networkCli: unknown) => ({ ok: true, assignment: { assignmentId: "a1", title: "واجب", totalMarks: 10 }, student: { studentId: "s1", studentName: "سارة", studentCode: "S1" }, attempt: { attemptNumber: 1, submittedAt: "2026-03-01T10:00:00.000Z", score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 10, finalized: false, gradingStatus: "pendingReview", teacherFeedback: "" }, attempts: [{ attemptNumber: 1, submittedAt: "2026-03-01T10:00:00.000Z", score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 10, finalized: false, gradingStatus: "pendingReview" }], questions: [{ questionId: "n1", questionNumber: 1, text: "اضبط", marks: 10, type: "networkCli", networkCli, studentAnswer, expectedAnswer: { targetState: { hostname: "LAB-SW" } }, autoGrade: { score: 0, manualReview: true }, manualScore: null, teacherComment: "" }] });
+  it("an unknown field in the published config shows the explicit invalid-configuration / manual-review state and no ✓ / ✗ checklist; a valid config shows the checklist", async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve({ status: 200, ok: true, json: async () => body({ ...CFG, unexpectedField: true }) } as Response)) as unknown as typeof fetch;
+    render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={() => {}} onSaved={() => {}} />);
+    const view = await screen.findByTestId("ncli-answer-view", {}, { timeout: 3000 });
+    expect(within(view).getByTestId("ncli-key-invalid").textContent).toMatch(/غير صالح/);
+    expect(view.querySelectorAll(".ncli-check").length).toBe(0);
+    cleanup();
+    globalThis.fetch = vi.fn(() => Promise.resolve({ status: 200, ok: true, json: async () => body(CFG) } as Response)) as unknown as typeof fetch;
+    render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={() => {}} onSaved={() => {}} />);
+    const view2 = await screen.findByTestId("ncli-answer-view", {}, { timeout: 3000 });
+    expect(within(view2).queryByTestId("ncli-key-invalid")).toBeNull(); expect(view2.querySelectorAll(".ncli-check").length).toBe(1);
+  });
+});
+
 describe("fail closed and lazy", () => {
   it("networkCli@2 is refused everywhere: validator, student card (safe notice), authoring host (unsupported-version state)", async () => {
     expect(validateQuestionTypeNode(teacherQ({ questionTypeVersion: 2 }) as unknown as Record<string, unknown>, "networkCli", 2).map(i => i.code)).toEqual(["UNSUPPORTED_QUESTION_TYPE_VERSION"]);

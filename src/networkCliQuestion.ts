@@ -27,6 +27,9 @@ export type NetworkCliAnswer = { kind: "networkCli"; commands: string[]; state: 
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const FORBIDDEN = new Set(["__proto__", "constructor", "prototype"]);
+export type NetworkCliIssue = { code: string; message: string; severity: "error"; path?: string };
+const err = (code: string, message: string, path?: string): NetworkCliIssue => ({ code, message, severity: "error", path });
+const PUBLIC_KEYS = new Set(["device", "initialState"]);
 const INTERFACE_TARGET_FIELDS = ["mode", "accessVlan", "nativeVlan", "shutdown", "ipAddress", "subnetMask"] as const;
 
 export const defaultNetworkCliConfig = (): NetworkCliQuestionConfigV1 => ({ device: "switch", initialState: createDeviceState() });
@@ -58,8 +61,10 @@ function pickStateShape(raw: unknown): unknown {
   if (isObj(out.interfaces)) { const ifs: Record<string, unknown> = {}; for (const n of Object.keys(out.interfaces)) { if (FORBIDDEN.has(n)) return undefined; const e = (out.interfaces as Record<string, unknown>)[n]; if (!isObj(e)) { ifs[n] = e; continue; } const c: Record<string, unknown> = {}; for (const f of INTERFACE_TARGET_FIELDS) if (e[f] !== undefined) c[f] = e[f]; ifs[n] = c; } out.interfaces = ifs; }
   return out;
 }
-/** The ONLY student projection of a networkCli config: an allow-list rebuild (unknown keys dropped) that must then pass the strict
- *  state normalizer — a private value smuggled into the public object never reaches a student; an INVALID value fails closed. */
+/** STUDENT PROJECTION (secrecy / public payload shaping — NOT grading authority): an allow-list rebuild (unknown keys dropped) that
+ *  must then pass the strict state normalizer — a private value smuggled into the public object never reaches a student; an INVALID
+ *  value fails closed. Review Fix 2: a successful projection is never proof that the PUBLISHED config is valid; the grading authority
+ *  is validateNetworkCliConfig below, which refuses what this function silently repairs. */
 export function projectNetworkCliConfigForStudent(cfg: unknown): NetworkCliQuestionConfigV1 | undefined {
   if (!isObj(cfg) || cfg.device !== "switch") return undefined;
   const st = normalizeDeviceState(pickStateShape(cfg.initialState));
@@ -67,10 +72,25 @@ export function projectNetworkCliConfigForStudent(cfg: unknown): NetworkCliQuest
   return { device: "switch", initialState: initialStateOf({ device: "switch", initialState: st.state }) };
 }
 
+// ── the PUBLIC configuration contract — ONE canonical STRICT authority (Review Fix 2) ──────────────────────────────────
+// Shared by finalization validation, the authoritative scorer and the teacher review. Unlike the student projection it never
+// repairs anything: the config root must be exactly { device, initialState }, the device exactly "switch" (networkCli@1), and the
+// ORIGINAL initial state must pass the strict normalizeDeviceState (unknown fields at any level, bad values, prototype-sensitive
+// keys ⇒ refused). The normalized result is the canonical config (implied access VLANs included), identical to the projection of a
+// VALID config. Any problem makes the whole config invalid: the scorer then returns NETWORK_CLI_FAIL_CLOSED.
+export type NetworkCliConfigResult = { ok: true; config: NetworkCliQuestionConfigV1; issues: [] } | { ok: false; issues: NetworkCliIssue[] };
+export function validateNetworkCliConfig(raw: unknown): NetworkCliConfigResult {
+  if (!isObj(raw)) return { ok: false, issues: [err("NETCLI_CONFIG_MISSING", "إعداد محاكي الشبكة مفقود أو غير صالح.", "networkCli")] };
+  const out: NetworkCliIssue[] = [];
+  for (const k of Object.keys(raw)) if (!PUBLIC_KEYS.has(k)) out.push(err("NETCLI_CONFIG_UNKNOWN_KEY", "حقل غير معروف في إعداد المحاكي: " + k, "networkCli." + k));
+  if (raw.device !== "switch") out.push(err("NETCLI_DEVICE_UNSUPPORTED", "نوع الجهاز غير مدعوم في هذا الإصدار (المدعوم: switch).", "networkCli.device"));
+  const st = normalizeDeviceState(raw.initialState);
+  if (!st.ok) out.push(err("NETCLI_INITIAL_STATE_INVALID", "الحالة الابتدائية للجهاز غير صالحة (" + st.detail + ").", "networkCli.initialState"));
+  if (out.length || !st.ok) return { ok: false, issues: out };
+  return { ok: true, config: { device: "switch", initialState: initialStateOf({ device: "switch", initialState: st.state }) }, issues: [] };
+}
+
 // ── finalization validation ────────────────────────────────────────────────────────────────────────────────────────────
-export type NetworkCliIssue = { code: string; message: string; severity: "error"; path?: string };
-const err = (code: string, message: string, path?: string): NetworkCliIssue => ({ code, message, severity: "error", path });
-const PUBLIC_KEYS = new Set(["device", "initialState"]);
 const TARGET_KEYS = new Set(["hostname", "vlans", "interfaces"]);
 
 /** Validates one target interface entry; returns the canonical name or pushes issues. */
@@ -101,12 +121,8 @@ function validateTargetInterface(rawName: string, entry: unknown, where: string,
 export function validateNetworkCliQuestion(node: Record<string, unknown>): NetworkCliIssue[] {
   const out: NetworkCliIssue[] = [];
   if (networkCliQuestionVersion(node) === undefined) out.push(err("NETCLI_VERSION_UNSUPPORTED", "إصدار سؤال محاكي الشبكة غير مدعوم في هذا الإصدار من التطبيق.", "questionTypeVersion"));
-  const cfg = node.networkCli;
-  if (!isObj(cfg)) return [...out, err("NETCLI_CONFIG_MISSING", "إعداد محاكي الشبكة مفقود أو غير صالح.", "networkCli")];
-  for (const k of Object.keys(cfg)) if (!PUBLIC_KEYS.has(k)) out.push(err("NETCLI_CONFIG_UNKNOWN_KEY", "حقل غير معروف في إعداد المحاكي: " + k, "networkCli." + k));
-  if (cfg.device !== "switch") out.push(err("NETCLI_DEVICE_UNSUPPORTED", "نوع الجهاز غير مدعوم في هذا الإصدار (المدعوم: switch).", "networkCli.device"));
-  const st = normalizeDeviceState(cfg.initialState);
-  if (!st.ok) out.push(err("NETCLI_INITIAL_STATE_INVALID", "الحالة الابتدائية للجهاز غير صالحة (" + st.detail + ").", "networkCli.initialState"));
+  const cfg = validateNetworkCliConfig(node.networkCli);
+  if (!cfg.ok) { out.push(...cfg.issues); if (cfg.issues.some(i => i.code === "NETCLI_CONFIG_MISSING")) return out; }
   const key = validateNetworkCliAnswerKey(node.answer);
   return key.ok ? out : [...out, ...key.issues];
 }
@@ -184,9 +200,11 @@ export function normalizeNetworkCliAnswer(a: unknown): NetworkCliAnswerResult {
   return { ok: true, answer: { kind: "networkCli", commands, state: st.state } };
 }
 /**
- * Binds an answer to the AUTHORITATIVE published question: the question must be networkCli at a supported version with a valid
- * config; the stored state is RE-DERIVED by replaying the command history from the question's initial state (the claimed state
- * is discarded). Returns the canonical answer or a precise refusal.
+ * Binds an answer to the AUTHORITATIVE published question: the question must be networkCli at a supported version with a projectable
+ * config; the stored state is RE-DERIVED by replaying the command history from the question's initial state (the claimed state is
+ * discarded). Returns the canonical answer or a precise refusal. Ingest deliberately uses the student PROJECTION (like coding@1's
+ * bindCodeAnswerToQuestion): a teacher-side defect in the published config never destroys the student's transcript — the stored
+ * state is evidence only, and the grading authority (scoreNetworkCli) re-derives it under the STRICT contract and fails closed.
  */
 export function bindNetworkCliAnswerToQuestion(a: unknown, question: unknown): NetworkCliAnswerResult {
   const base = normalizeNetworkCliAnswer(a);
@@ -232,8 +250,8 @@ export type NetworkCliScore = { score: number; correct: boolean; manualReview: b
 /** The fail-closed result: an INVALID grading contract yields no automatic academic mark and routes the question to manual review. */
 export const NETWORK_CLI_FAIL_CLOSED: Readonly<NetworkCliScore> = Object.freeze({ score: 0, correct: false, manualReview: true, parts: Object.freeze({ correct: 0, total: 0 }) });
 /**
- * The authoritative scorer (server grader + teacher review). Review Fix 1: it validates BOTH the public configuration and the
- * PRIVATE grading contract through the ONE canonical authorities (projectNetworkCliConfigForStudent / validateNetworkCliAnswerKey)
+ * The authoritative scorer (server grader + teacher review). Review Fix 1 / 2: it validates BOTH the public configuration and the
+ * PRIVATE grading contract through the ONE canonical STRICT authorities (validateNetworkCliConfig / validateNetworkCliAnswerKey)
  * BEFORE any check is evaluated; if either is invalid it returns NETWORK_CLI_FAIL_CLOSED — never a partial grade of the valid-looking
  * subset, never a defaulted scoring policy. Under a valid contract it re-derives the canonical state by replaying the response's
  * command history from the question's initial state, evaluates the target and applies the scoring mode; a malformed / missing /
@@ -241,13 +259,15 @@ export const NETWORK_CLI_FAIL_CLOSED: Readonly<NetworkCliScore> = Object.freeze(
  */
 export function scoreNetworkCli(input: { config: unknown; answerKey: unknown; response: unknown; maxMarks: number }): NetworkCliScore {
   const max = Number.isFinite(input.maxMarks) ? Math.max(0, input.maxMarks) : 0;
-  const cfg = projectNetworkCliConfigForStudent(input.config);
+  // Review Fix 2: the PUBLISHED public config is validated by the STRICT authority (never by the student projection, which repairs
+  // unknown fields for secrecy). An invalid public config or an invalid private key ⇒ no automatic academic mark.
+  const cfg = validateNetworkCliConfig(input.config);
   const key = validateNetworkCliAnswerKey(input.answerKey);
-  if (!cfg || !key.ok) return { ...NETWORK_CLI_FAIL_CLOSED, parts: { ...NETWORK_CLI_FAIL_CLOSED.parts } };
+  if (!cfg.ok || !key.ok) return { ...NETWORK_CLI_FAIL_CLOSED, parts: { ...NETWORK_CLI_FAIL_CLOSED.parts } };
   const total = key.key.checks;
   const base = normalizeNetworkCliAnswer(input.response);
   if (!base.ok) return { score: 0, correct: false, manualReview: false, parts: { correct: 0, total } };
-  const state = replayCommands(cfg.initialState, base.answer.commands).session.state;
+  const state = replayCommands(cfg.config.initialState, base.answer.commands).session.state;
   const checks = evaluateNetworkCliTarget(key.key.targetState, state);
   const passed = checks.filter(c => c.ok).length;
   const all = passed === checks.length;

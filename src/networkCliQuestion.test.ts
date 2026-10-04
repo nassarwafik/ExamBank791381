@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   NETWORK_CLI_SCORING_MODES, defaultNetworkCliConfig, defaultNetworkCliAnswerKey, validateNetworkCliQuestion, projectNetworkCliConfigForStudent,
   normalizeNetworkCliAnswer, bindNetworkCliAnswerToQuestion, initialStateOf, evaluateNetworkCliTarget, scoreNetworkCli, targetCheckCount, isNetworkCliAnswerAnswered,
-  networkCliQuestionVersion, validateNetworkCliAnswerKey, type NetworkCliAnswerKeyV1, type NetworkCliQuestionConfigV1
+  networkCliQuestionVersion, validateNetworkCliAnswerKey, validateNetworkCliConfig, type NetworkCliAnswerKeyV1, type NetworkCliQuestionConfigV1
 } from "./networkCliQuestion";
 import { createDeviceState, replayCommands, serializeState } from "./networkCliEngine";
 
@@ -250,6 +250,78 @@ describe("RF1 — invalid PRIVATE grading contract ⇒ no automatic academic mar
       expect(viaQuestion, JSON.stringify(key)).toEqual((direct.ok ? [] : direct.issues.map(i => i.code)).sort());
       const r = grade(key, answerOf(FULL));
       if (direct.ok) expect(r.manualReview, JSON.stringify(key)).toBe(false); else expect(r, JSON.stringify(key)).toEqual(FAIL_CLOSED);
+    }
+  });
+});
+
+// ── Review Fix 2 — ONE canonical STRICT public-config authority. Fail-first on the RF1 head 624775e: the scorer validated the
+// public config through the STUDENT PROJECTION (an allow-list rebuild that silently drops unknown fields), so a published config
+// that finalization refuses (unknown root key, unknown state / VLAN / interface field) was repaired and then graded.
+const HOST_KEY = { targetState: { hostname: "Switch" } };
+const cfgCodes = (config: unknown) => { const r = validateNetworkCliConfig(config); return r.ok ? [] : r.issues.map(i => i.code); };
+const malformedConfigs: [string, unknown][] = [
+  ["GCFG1 unknown config-root key", { ...CFG, unexpectedField: true }],
+  ["GCFG2 unknown initial-state root key", { device: "switch", initialState: { ...CFG.initialState, unexpectedStateField: true } }],
+  ["GCFG3 unknown nested VLAN field", { device: "switch", initialState: { ...CFG.initialState, vlans: { "20": { name: "SALES", expected: true } } } }],
+  ["GCFG4 unknown nested interface field", { device: "switch", initialState: { ...CFG.initialState, interfaces: { "f0/1": { mode: "access", secretExpectedVlan: 20 } } } }]
+];
+describe("RF2 — invalid PUBLIC config ⇒ no automatic academic mark (the scorer never grades a repaired contract)", () => {
+  it("GCFG1–GCFG4 — every malformed published config is refused by the strict authority and fails closed in the scorer, even with an otherwise passing target", () => {
+    for (const [label, config] of malformedConfigs) {
+      expect(cfgCodes(config).length, label).toBeGreaterThan(0);
+      expect(grade(HOST_KEY, fresh(), config), label).toEqual(FAIL_CLOSED);
+      expect(grade(KEY, answerOf(FULL), config), label).toEqual(FAIL_CLOSED);
+      expect(validateNetworkCliQuestion(question({ networkCli: config })).map(i => i.code).some(c => c === "NETCLI_CONFIG_UNKNOWN_KEY" || c === "NETCLI_INITIAL_STATE_INVALID"), label).toBe(true);
+    }
+    expect(cfgCodes({ ...CFG, unexpectedField: true })).toEqual(["NETCLI_CONFIG_UNKNOWN_KEY"]);
+    expect(cfgCodes({ device: "switch", initialState: { ...CFG.initialState, unexpectedStateField: true } })).toEqual(["NETCLI_INITIAL_STATE_INVALID"]);
+  });
+  it("GCFG5 — prototype-sensitive keys at the config / state / VLAN / interface level fail closed; Object.prototype stays untouched; device / shape errors too", () => {
+    const polluted: unknown[] = [
+      JSON.parse('{"device":"switch","initialState":{"v":1,"device":"switch","hostname":"Switch","vlans":{},"interfaces":{}},"__proto__":{"polluted":true}}'),
+      JSON.parse('{"device":"switch","initialState":{"v":1,"device":"switch","hostname":"Switch","vlans":{},"interfaces":{},"__proto__":{"polluted":true}}}'),
+      JSON.parse('{"device":"switch","initialState":{"v":1,"device":"switch","hostname":"Switch","vlans":{"__proto__":{"name":"X"}},"interfaces":{}}}'),
+      JSON.parse('{"device":"switch","initialState":{"v":1,"device":"switch","hostname":"Switch","vlans":{},"interfaces":{"__proto__":{"mode":"access"}}}}'),
+      JSON.parse('{"device":"switch","initialState":{"v":1,"device":"switch","hostname":"Switch","vlans":{},"interfaces":{"f0/1":{"constructor":{"prototype":{"polluted":true}}}}}}'),
+      { device: "router", initialState: CFG.initialState }, { device: "switch" }, { initialState: CFG.initialState }, null, "switch", [], { device: "switch", initialState: { ...CFG.initialState, v: 2 } }, { device: "switch", initialState: { ...CFG.initialState, hostname: "1bad" } }
+    ];
+    for (const config of polluted) { expect(cfgCodes(config).length, JSON.stringify(config)).toBeGreaterThan(0); expect(grade(HOST_KEY, fresh(), config), JSON.stringify(config)).toEqual(FAIL_CLOSED); }
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined(); expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
+  });
+  it("GCFG6 — the valid config keeps exactly the same scores (FULL, EQUIVALENT, partial, allOrNothing) and normalizes to the canonical config", () => {
+    const strict = validateNetworkCliConfig(CFG);
+    expect(strict.ok).toBe(true); if (strict.ok) { expect(strict.config).toEqual(projectNetworkCliConfigForStudent(CFG)); expect(strict.issues).toEqual([]); }
+    expect(grade(KEY, answerOf(FULL))).toEqual({ score: 10, correct: true, manualReview: false, parts: { correct: 10, total: 10 } });
+    expect(grade(KEY, answerOf(EQUIVALENT))).toEqual({ score: 10, correct: true, manualReview: false, parts: { correct: 10, total: 10 } });
+    const partial = answerOf(["enable", "configure terminal", "hostname BR1-SW1", "vlan 20", "name sales", "exit", "interface fa0/5", "switchport mode access", "switchport access vlan 20", "exit", "interface gi0/1", "switchport mode trunk", "exit", "interface vlan 20", "ip address 192.168.20.2 255.255.0.0"]);
+    expect(grade(KEY, partial)).toEqual({ score: 7, correct: false, manualReview: false, parts: { correct: 7, total: 10 } });
+    expect(grade({ ...KEY, scoring: "allOrNothing" }, partial).score).toBe(0); expect(grade({ ...KEY, scoring: "allOrNothing" }, answerOf(FULL)).score).toBe(10);
+    const implied = validateNetworkCliConfig({ device: "switch", initialState: { ...CFG.initialState, interfaces: { "f0/2": { accessVlan: 30 } } } });
+    expect(implied.ok).toBe(true); if (implied.ok) expect(implied.config.initialState.vlans).toEqual({ "30": {} });     // the strict authority still implies access VLANs (same canonical config as the projection)
+  });
+  it("GCFG7 — projection vs authority: the student projection drops a smuggled field (no leak) while the authority refuses the same published config", () => {
+    const smuggled = { device: "switch", initialState: { ...CFG.initialState, interfaces: { "f0/1": { mode: "access", secretExpectedVlan: 20 } } }, unexpectedField: true };
+    const projected = projectNetworkCliConfigForStudent(smuggled);
+    expect(projected).toEqual({ device: "switch", initialState: { ...CFG.initialState, interfaces: { "f0/1": { mode: "access" } } } });
+    expect(JSON.stringify(projected)).not.toMatch(/secretExpectedVlan|unexpectedField/);
+    expect(validateNetworkCliConfig(smuggled).ok).toBe(false);
+    expect(grade(HOST_KEY, fresh(), smuggled)).toEqual(FAIL_CLOSED);
+    expect(grade(HOST_KEY, fresh(), projected)).toMatchObject({ score: 10, manualReview: false });                     // the SANITIZED copy is a valid config — only the published one is refused
+  });
+  it("ingest keeps the student's transcript as evidence under a malformed published config (the authority re-derives under the strict contract and fails closed) — never a forged state", () => {
+    const malformed = question({ networkCli: { ...CFG, unexpectedField: true } });
+    const r = bindNetworkCliAnswerToQuestion({ kind: "networkCli", commands: ["enable", "configure terminal", "hostname X"], state: answerOf(FULL).state }, malformed);
+    expect(r.ok).toBe(true); if (r.ok) { expect(r.answer.commands).toEqual(["enable", "configure terminal", "hostname X"]); expect(r.answer.state.hostname).toBe("X"); expect(r.answer.state.vlans).toEqual({}); }
+    expect(scoreNetworkCli({ config: malformed.networkCli, answerKey: KEY, response: r.ok ? r.answer : undefined, maxMarks: 10 })).toEqual(FAIL_CLOSED);
+  });
+  it("the finalization validator and the scorer share the ONE public-config contract", () => {
+    const configs: unknown[] = [CFG, ...malformedConfigs.map(m => m[1]), { device: "router", initialState: CFG.initialState }, { device: "switch", initialState: { ...CFG.initialState, v: 2 } }, null, { device: "switch", initialState: { ...CFG.initialState, interfaces: { "f0/2": { accessVlan: 30 } } } }];
+    for (const config of configs) {
+      const direct = validateNetworkCliConfig(config);
+      const viaQuestion = validateNetworkCliQuestion(question({ networkCli: config })).filter(i => i.code.startsWith("NETCLI_CONFIG") || i.code === "NETCLI_DEVICE_UNSUPPORTED" || i.code === "NETCLI_INITIAL_STATE_INVALID").map(i => i.code).sort();
+      expect(viaQuestion, JSON.stringify(config)).toEqual((direct.ok ? [] : direct.issues.map(i => i.code)).sort());
+      const r = grade(KEY, answerOf(FULL), config);
+      if (direct.ok) expect(r, JSON.stringify(config)).toMatchObject({ score: 10, manualReview: false }); else expect(r, JSON.stringify(config)).toEqual(FAIL_CLOSED);
     }
   });
 });
