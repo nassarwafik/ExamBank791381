@@ -25,7 +25,9 @@ reviewed and merged by the same party.
 ## 2. Phase lifecycle
 
 A **phase** is one bounded unit of work with a name (for example `17F-B3`, `18A`), one branch, one pull request and one
-design record in `docs/`. Its life:
+phase record in `docs/`: product / architecture phases write a `docs/enterprise-*.md` design record when applicable;
+governance or documentation-only phases use their canonical development document under `docs/development/` as the
+record (Phase 18A's record is `agentic-development-workflow.md` itself). Its life:
 
 1. **Instruction.** The owner issues the phase instruction: mission, scope boundary, expected baseline SHA, required
    evidence, final-report shape. The instruction may tighten `AGENTS.md`; it cannot loosen it.
@@ -152,4 +154,4 @@ The owner may run several implementation windows at once from the same baseline 
 | Reconciliation | a normal merge of `origin/main` into the branch before final review |
 | Review Fix N | the n-th round of changes answering independent review findings, each a normal commit on the same branch |
 | Deployment tier | one of local / CI / PR preview / production Static Web App / live Runner VM (`AGENTS.md` §11) |
-| Design record | the `docs/enterprise-*.md` file written for a phase |
+| Design record / phase record | the document that records a phase: `docs/enterprise-*.md` for product / architecture phases when applicable; the canonical `docs/development/` document for governance or documentation-only phases |

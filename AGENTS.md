@@ -31,7 +31,7 @@ disappear or lose their non-negotiable rules.
 | Load / certification harness | `runner/tests/load/`, `runner/tests/mutation/` | Independent evaluator of the Runner; never weaken a rule to obtain PASS. |
 | Storage | Azure Blob Storage JSON documents (see `README.md`) | No database migrations exist; do not invent one. |
 | CI | `.github/workflows/` | Changing a workflow is a governance change: justify it in the PR, never weaken a gate. |
-| Documentation | `docs/`, `docs/development/` | One `docs/enterprise-*.md` design record per phase. |
+| Documentation | `docs/`, `docs/development/` | Product / architecture phases ship a `docs/enterprise-*.md` design record when applicable; governance or documentation-only phases use their canonical development document under `docs/development/` as the phase record. Never create an enterprise document only to satisfy wording. |
 
 Teacher and student product behaviour, grading semantics, assessment model semantics and the coding question version
 families are **product decisions of the owner**. An agent changes them only when the phase it was given asks for it.
@@ -186,12 +186,14 @@ Five tiers exist. Reports name the tier that was actually exercised; "nothing de
 |---|---|---|
 | 1. Local tests | Vitest, Node test runner, local Docker suites, local harness runs | the agent |
 | 2. CI | GitHub Actions on the exact head (Quality Gate, Runner security & smoke, load harness) | every push / PR, automatically |
-| 3. Azure PR preview | `Build and Deploy Job` creates a Static Web Apps **preview environment for every pull request** that passes the gate | opening or updating a PR creates one automatically |
+| 3. Azure PR preview | `Build and Deploy Job` creates a Static Web Apps **preview environment for a pull request only when it succeeds** after the Quality Gate passed on that head | opening or updating a PR triggers the job automatically; a failed, cancelled or skipped job creates no preview |
 | 4. Production Static Web App | the same workflow on a push to `main` | the owner's merge |
 | 5. Live Coding Runner VM | `runner/deploy/azure-vm/` material applied to the real VM (images, service, settings) | **the owner, explicitly, never an agent** |
 
 - **Never report "nothing deployed" when a PR preview was actually created.** Say "PR preview environment created by the
-  workflow; no production or Runner deployment."
+  workflow; no production or Runner deployment." A preview exists **only when the `Build and Deploy Job` succeeded** on
+  the reported head: report the observed job result, and never claim a preview when that job failed, was cancelled or
+  did not run.
 - **Never deploy the live Runner** (build / push images to the VM, restart the service, change its env file, Caddy, Docker
   daemon or systemd unit) unless the owner explicitly authorizes that deployment in writing.
 - Never run a load or certification scenario against production. The harness refuses without

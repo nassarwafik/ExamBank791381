@@ -61,7 +61,7 @@ Runner isolation; "no security-relevant change" when true>
 ## Deployment boundary
 
 - Tier exercised (see `AGENTS.md` §11): <local tests | CI | PR preview environment created by the workflow | production | live Runner VM>
-- A PR preview environment **is** created by the workflow for every pull request; say so explicitly.
+- PR preview: a preview environment exists **only when the `Build and Deploy Job` succeeded** on the head above. State the observed result: <preview created — job success | no preview — job failed / cancelled / did not run>. Never claim a preview when that job did not succeed.
 - Production Static Web App: <not deployed by this PR; deploys on the owner's merge>
 - Live Coding Runner VM: <not deployed; requires explicit owner authorization>
 - Azure settings / secrets / DNS / NSG / database: <none changed>
