@@ -35,7 +35,7 @@ const key = (over: Cfg = {}): Cfg => ({
   comparator: "trimTrailingWhitespace", referenceSolutions: { python: "a, b = map(int, input().split())\nprint(a + b)\n" },
   ...over
 });
-const codingQ = (over: Partial<BuilderQuestion> = {}): BuilderQuestion => ({ ...newQuestion("coding" as never, { examQuestionId: "c1", text: "اقرأ عددين صحيحين واطبع مجموعهما.", marks: 10 }), coding: cfg(), answer: key(), ...over } as unknown as BuilderQuestion);
+const codingQ = (over: Partial<BuilderQuestion> = {}): BuilderQuestion => ({ ...newQuestion("coding" as never, { examQuestionId: "c1", text: "اقرأ عددين صحيحين واطبع مجموعهما.", marks: 10 }), questionTypeVersion: 1, coding: cfg(), answer: key(), ...over } as unknown as BuilderQuestion);
 const exam = (questions: BuilderQuestion[]): StructuredExam => ({ examId: "EXAM-17A", title: "امتحان", status: "draft", schemaVersion: 2, sections: [{ id: "sec-1", title: "القسم", gradingPolicy: "all", stimuli: {}, questions }] });
 const codes = (node: Cfg) => validateQuestionTypeNode(node, "coding", 1).map(i => i.code);
 
@@ -43,7 +43,7 @@ describe("C1 — coding@1 is a real production question type", () => {
   it("catalog: key 'coding', version 1, «برمجة / كتابة كود», interactive, hybrid (manual today), partial credit, NOT compound, interactive, offline editing, responseKinds ['code'], non-legacy; 17 production types", () => {
     const d = questionTypeDefinition("coding");
     expect(d, "coding is registered").toBeTruthy();
-    expect(d!.version).toBe(1); expect(d!.label).toBe("برمجة / كتابة كود"); expect(d!.category).toBe("interactive"); expect(d!.gradingMode).toBe("hybrid"); expect(d!.legacy).toBe(false);
+    expect(d!.version).toBe(2); expect(d!.label).toBe("برمجة / كتابة كود");   // 17F-C2 RF1: current version 2 (coding@1 historical, coding@2 compile-error policy) expect(d!.category).toBe("interactive"); expect(d!.gradingMode).toBe("hybrid"); expect(d!.legacy).toBe(false);
     expect(d!.capabilities).toMatchObject({ autoGrading: false, manualGrading: true, partialCredit: true, compoundPart: false, interactive: true, offline: true, requiresImage: false });
     expect(d!.responseKinds).toEqual(["code"]);
     expect(QUESTION_TYPE_CATALOG.length).toBe(17);
@@ -97,14 +97,14 @@ describe("C3 — first-class `code` Answer", () => {
 });
 
 describe("C4 — coding question defaults", () => {
-  it("newQuestion('coding') is stamped coding@1 with a valid default public config and an EMPTY private key under answer", async () => {
+  it("newQuestion('coding') is stamped coding@2 (17F-C2 RF1) with a valid default public config and the default private key under answer", async () => {
     const q = newQuestion("coding" as never, { examQuestionId: "c" }) as unknown as Record<string, unknown>;
-    expect(q.questionTypeVersion).toBe(1);
+    expect(q.questionTypeVersion).toBe(2);
     const c = q.coding as Cfg;
     expect(c).toMatchObject({ allowedLanguages: ["python"], defaultLanguage: "python", taskMode: "program", inputMode: "stdin", outputMode: "stdout", publicTests: [], starterCode: {} });
     const m = await cq();
     expect(c.limits).toEqual(m.DEFAULT_CODING_LIMITS);
-    expect(q.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+    expect(q.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });   // 17F-C2: new authoring defaults to teacher review
     expect(codes(q)).toEqual([]);                                                                  // a fresh question is finalizable as manual-only
   });
   it("the initial-graph default literal equals the shared authority (parity) and the source limit is 64 KB", async () => {
@@ -319,8 +319,8 @@ describe("C25 — type change removes every coding secret", () => {
   it("multipleChoice → coding gets the fresh coding defaults and no previous answer key", () => {
     const mc = newQuestion("multipleChoice", { examQuestionId: "m1", text: "س", marks: 2 });
     const next = changeQuestionType({ ...mc, answer: { correctOptionIndex: 1 } } as BuilderQuestion, "coding" as never) as unknown as Record<string, unknown>;
-    expect(next.questionTypeVersion).toBe(1);
-    expect(next.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+    expect(next.questionTypeVersion).toBe(2);   // 17F-C2 RF1: a NEW coding question is coding@2
+    expect(next.answer).toEqual({ hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
     expect(next.options).toBeUndefined();
   });
 });

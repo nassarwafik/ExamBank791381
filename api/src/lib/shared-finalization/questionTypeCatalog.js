@@ -15,7 +15,8 @@ const caps = (flags) => {
     return Object.freeze(c);
 };
 const def = (d) => Object.freeze({ ...d, responseKinds: Object.freeze([...d.responseKinds]) });
-const row = (key, label, category, gradingMode, flags, responseKinds, legacy = false) => def({ key, version: 1, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
+const row = (key, label, category, gradingMode, flags, responseKinds, legacy = false, version = 1) => def({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
+const PRODUCTION_VERSIONS = Object.freeze({ coding: 2 });
 exports.LEGACY_QUESTION_TYPE_KEYS = Object.freeze(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
 const PRODUCTION_ROWS = [
     ["multipleChoice", "اختيار من متعدد", "choice", "auto", "aco", ["choice"], true],
@@ -36,7 +37,7 @@ const PRODUCTION_ROWS = [
     ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false],
     ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code"], false]
 ];
-exports.QUESTION_TYPE_CATALOG = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6])));
+exports.QUESTION_TYPE_CATALOG = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
 const questionTypeIdentityKey = (key, version) => key + "@" + version;
 exports.questionTypeIdentityKey = questionTypeIdentityKey;
 const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{1,63}$/;

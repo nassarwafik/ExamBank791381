@@ -3,7 +3,7 @@ import type { AuthoringEditorProps } from "../registryTypes";
 import type { QuestionBody } from "../../examTypes";
 import CodingEditor from "../../coding/CodingEditor";
 import { duplicateCodingTest, moveCodingTest, newCodingTestId, removeCodingTest, updateCodingTest } from "../../coding/codingTests";
-import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGES, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, DEFAULT_CODING_COMPARATOR, codingGradingMode, codingLanguage, codingScoringPolicy, codingStarterTemplate, defaultCodingConfig, isCodingLanguage, validateCodingQuestion, type CodingComparator, type CodingGradingMode, type CodingLimits, type CodingQuestionConfigV1, type CodingScoringPolicy, type CodingTestCasePrivate, type CodingTestCasePublic } from "../../codingQuestion";
+import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGES, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, DEFAULT_CODING_COMPARATOR, codingCompileErrorPolicy, codingGradingMode, codingQuestionVersion, codingLanguage, codingScoringPolicy, codingStarterTemplate, defaultCodingConfig, isCodingLanguage, validateCodingQuestion, type CodingComparator, type CodingCompileErrorPolicy, type CodingGradingMode, type CodingLimits, type CodingQuestionConfigV1, type CodingScoringPolicy, type CodingTestCasePrivate, type CodingTestCasePublic } from "../../codingQuestion";
 import { OFFICIAL_STDOUT_CAPTURE_BYTES } from "../../codingContract";
 import "../../coding/coding.css";
 
@@ -19,13 +19,26 @@ import "../../coding/coding.css";
 // the registry's minimal starter template (seeded when a language with no starter code is allowed, restorable on demand — never
 // overwriting existing code), accessible limits (range hints, aria-invalid), and INLINE validation through the ONE canonical
 // validator (validateCodingQuestion — the same rules finalization applies; no ad-hoc checks here).
-type Key = { hiddenTests: CodingTestCasePrivate[]; comparator: CodingComparator; referenceSolutions: Record<string, string>; gradingMode: CodingGradingMode; scoringPolicy?: CodingScoringPolicy };
+// Phase 17F-C2 — the PRIVATE compile-error policy (`answer.compileErrorPolicy`). It answers ONLY the Runner's structural compile-error
+// verdict (compiled languages such as Java / C#); nothing here, or anywhere in SmartAssess, decides that a syntax error is "minor" —
+// the teacher sets the mark in the review. Review Fix 1: the policy is VERSIONED — a legacy coding@1 node reads "zero" (its only
+// contract) and choosing manual review upgrades the node EXPLICITLY to coding@2 (version + policy in ONE change); a coding@2 node
+// must carry an explicit policy (none checked + the canonical validator's error otherwise). Never a silent reinterpretation.
+type Key = { hiddenTests: CodingTestCasePrivate[]; comparator: CodingComparator; referenceSolutions: Record<string, string>; gradingMode: CodingGradingMode; scoringPolicy?: CodingScoringPolicy; compileErrorPolicy?: CodingCompileErrorPolicy };
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const COMPARATOR_OPTIONS: Record<CodingComparator, string> = { exact: "مطابقة حرفية تامة", trimTrailingWhitespace: "تجاهل المسافات في نهايات الأسطر (افتراضي)", normalizeWhitespace: "توحيد كل المسافات (اختياري صريح)" };
 const COMPARATOR_SHORT: Record<CodingComparator, string> = { exact: "مطابقة حرفية تامة", trimTrailingWhitespace: "تجاهل المسافات في نهايات الأسطر", normalizeWhitespace: "توحيد كل المسافات" };
 const MODE_LABELS: Record<CodingGradingMode, string> = { manual: "يدوي بواسطة المعلم", hiddenTests: "تلقائي بواسطة الاختبارات المخفية" };
 const POLICY_LABELS: Record<CodingScoringPolicy, string> = { proportional: "علامة نسبية حسب أوزان الاختبارات", allOrNothing: "كل شيء أو لا شيء" };
 const POLICY_HELP: Record<CodingScoringPolicy, string> = { proportional: "العلامة = علامة السؤال × (مجموع أوزان الاختبارات الناجحة ÷ مجموع كل الأوزان).", allOrNothing: "العلامة كاملة فقط إذا نجحت جميع الاختبارات المخفية، وإلا فهي صفر." };
+const COMPILE_POLICY_LABELS: Record<CodingCompileErrorPolicy, string> = { zero: "احتساب صفر تلقائيًا", manualReview: "إرسال للمراجعة اليدوية" };
+const COMPILE_POLICY_HELP: Record<CodingCompileErrorPolicy, string> = {
+  zero: "عند فشل تجميع الكود يُحتسب للسؤال صفر تلقائيًا ويُعدّ التصحيح الآلي مكتملًا (السلوك السابق).",
+  manualReview: "المراجعة اليدوية مناسبة عندما تريد منح الطالب جزءًا من العلامة إذا كان الحل صحيحًا من حيث الفكرة لكن يحتوي خطأً نحويًا يمنع التجميع. لا تُحتسب أي علامة آلية؛ يظهر السؤال للمعلم مع كود الطالب ورسالة المترجم."
+};
+const COMPILE_POLICY_NOTE = "SmartAssess لا يقرر تلقائيًا إن كان الخطأ بسيطًا أو يستحق خصمًا معينًا؛ المعلم يحدد العلامة.";
+const COMPILE_POLICY_UPGRADE = "اختيار المراجعة اليدوية يرقّي هذا السؤال إلى الإصدار الثاني من سؤال البرمجة (coding@2) مع حفظ كل إعداداته؛ الأسئلة المنشورة سابقًا لا تتغير.";
+const COMPILE_POLICY_SCOPE = "تنطبق هذه السياسة فقط عندما يُبلغ محرك التنفيذ عن فشل حقيقي في تجميع الكود (حاليًا اللغات المُجمَّعة مثل Java وC#). أخطاء التشغيل والمخرجات غير المطابقة تُحتسب حسب سياسة احتساب العلامة كالمعتاد.";
 const sumWeights = (tests: CodingTestCasePrivate[]) => Math.round(tests.reduce((s, t) => s + (Number.isFinite(t.weight) && t.weight > 0 ? t.weight : 0), 0) * 100) / 100;
 const LIMIT_FIELDS: [keyof CodingLimits, string][] = [["sourceBytes", "الحد الأقصى لحجم الكود (بايت)"], ["outputBytes", "حد المخرجات (بايت)"], ["timeMs", "حد الوقت (ملّي ثانية)"], ["memoryMb", "حد الذاكرة (ميغابايت)"]];
 const inRange = (k: keyof CodingLimits, v: unknown) => typeof v === "number" && Number.isInteger(v) && v >= CODING_LIMIT_RANGES[k][0] && v <= CODING_LIMIT_RANGES[k][1];
@@ -37,7 +50,7 @@ function readConfig(node: QuestionBody): CodingQuestionConfigV1 {
 function readKey(node: QuestionBody): Key {
   const a = isObj(node.answer) ? (node.answer as Record<string, unknown>) : {};
   // the stored policy value is kept verbatim (an unknown value stays visible to the validator — never silently rewritten)
-  return { hiddenTests: Array.isArray(a.hiddenTests) ? (a.hiddenTests as CodingTestCasePrivate[]) : [], comparator: CODING_COMPARATORS.includes(a.comparator as CodingComparator) ? (a.comparator as CodingComparator) : DEFAULT_CODING_COMPARATOR, referenceSolutions: isObj(a.referenceSolutions) ? (a.referenceSolutions as Record<string, string>) : {}, gradingMode: codingGradingMode(a), ...(a.scoringPolicy !== undefined ? { scoringPolicy: a.scoringPolicy as CodingScoringPolicy } : {}) };
+  return { hiddenTests: Array.isArray(a.hiddenTests) ? (a.hiddenTests as CodingTestCasePrivate[]) : [], comparator: CODING_COMPARATORS.includes(a.comparator as CodingComparator) ? (a.comparator as CodingComparator) : DEFAULT_CODING_COMPARATOR, referenceSolutions: isObj(a.referenceSolutions) ? (a.referenceSolutions as Record<string, string>) : {}, gradingMode: codingGradingMode(a), ...(a.scoringPolicy !== undefined ? { scoringPolicy: a.scoringPolicy as CodingScoringPolicy } : {}), ...(a.compileErrorPolicy !== undefined ? { compileErrorPolicy: a.compileErrorPolicy as CodingCompileErrorPolicy } : {}) };
 }
 const without = (o: Record<string, string>, k: string) => { const c = { ...o }; delete c[k]; return c; };
 
@@ -65,6 +78,16 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
   const labelOf = (l: string) => codingLanguage(l)?.label ?? l;
   const uid = useId(), modeName = uid + "-mode", policyName = uid + "-policy";
   const policy = codingScoringPolicy(key);
+  // Review Fix 1 — the node's own type version decides the compile-error contract (absent = coding@1); an unsupported version
+  // (never produced by this Builder) shows the control with nothing checked and lets the canonical validator speak.
+  const typeVersion = codingQuestionVersion(node) ?? 1;
+  const compilePolicy = codingCompileErrorPolicy(key, typeVersion);
+  const choosePolicy = (p: CodingCompileErrorPolicy) => {
+    if (p === compilePolicy) return;
+    const patch: Partial<QuestionBody> = { answer: { ...key, compileErrorPolicy: p } as unknown as QuestionBody["answer"] };
+    if (p === "manualReview" && typeVersion === 1) patch.questionTypeVersion = 2;   // the EXPLICIT upgrade — version and policy in ONE change
+    onChange(patch);
+  };
   const marks = (node as unknown as { marks?: unknown }).marks;
   const marksText = typeof marks === "number" && Number.isFinite(marks) && marks > 0 ? String(marks) : "—";
   // the ONE canonical validator — exactly the rules finalization blocks on (no second, editor-only rule set)
@@ -189,6 +212,14 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
           <legend>سياسة احتساب العلامة (للتصحيح التلقائي)</legend>
           {(["proportional", "allOrNothing"] as const).map(p => <label key={p}><input type="radio" name={policyName} value={p} checked={policy === p} aria-describedby={uid + "-policy-" + p} onChange={() => setKey({ scoringPolicy: p })} disabled={disabled} /><span>{POLICY_LABELS[p]}</span></label>)}
           {(["proportional", "allOrNothing"] as const).map(p => <p key={p} id={uid + "-policy-" + p} className="cx-help">{POLICY_LABELS[p]}: {POLICY_HELP[p]}</p>)}
+        </fieldset>
+        <fieldset role="radiogroup" aria-label="عند فشل تجميع الكود" className="cx-grading-mode" data-testid="coding-compile-policy">
+          <legend>عند فشل تجميع الكود</legend>
+          {(["zero", "manualReview"] as const).map(p => <label key={p}><input type="radio" name={uid + "-compile"} value={p} checked={compilePolicy === p} aria-describedby={uid + "-compile-" + p} onChange={() => choosePolicy(p)} disabled={disabled} /><span>{COMPILE_POLICY_LABELS[p]}</span></label>)}
+          {(["zero", "manualReview"] as const).map(p => <p key={p} id={uid + "-compile-" + p} className="cx-help">{COMPILE_POLICY_LABELS[p]}: {COMPILE_POLICY_HELP[p]}</p>)}
+          <p className="cx-help">{COMPILE_POLICY_NOTE}</p>
+          {typeVersion === 1 && <p className="cx-help" data-testid="coding-compile-policy-upgrade">{COMPILE_POLICY_UPGRADE}</p>}
+          <p className="cx-help">{COMPILE_POLICY_SCOPE}</p>
         </fieldset>
         <p className="cx-help" data-testid="coding-mark-semantics">علامة السؤال: {marksText}. {key.gradingMode === "hiddenTests" ? POLICY_HELP[policy] + " تحتسبها SmartAssess على الخادم، ولا يقرر محرك التنفيذ أي علامة." : "يضع المعلم العلامة يدويًا عند المراجعة؛ سياسة الاحتساب تُطبَّق فقط عند اختيار التصحيح التلقائي."}</p>
       </fieldset>

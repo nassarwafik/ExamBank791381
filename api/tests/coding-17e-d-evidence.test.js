@@ -77,7 +77,7 @@ const result = (over = {}) => ({ revision: 1, jobId: CANARIES.jobId, engine: CAN
 const target = (over = {}) => ({ mode: "hiddenTests", state: "complete", revision: 1, jobId: CANARIES.jobId, gradingKey: CANARIES.gradingKey, answerHash: CANARIES.answerHash, questionFingerprint: CANARIES.questionFingerprint, targetRef: CANARIES.targetRef, createdAt: "2026-03-01T09:59:00.000Z", updatedAt: "2026-03-01T10:00:00.000Z", delivery: { leaseOwner: CANARIES.leaseOwner, note: CANARIES.delivery }, recovery: { automaticAttempts: 0, exhausted: false }, result: result(), ...over });
 const attemptOf = (t, over = {}) => ({ attemptNumber: 1, submittedAt: "2026-03-01T09:58:00.000Z", answers: { auto1: F.code(SOURCE) }, questionGrades: [grade({ score: 6.67 })], manualOverrides: {}, codingGrading: { version: 1, targets: { auto1: t } }, callbackSecret: CANARIES.callback, runnerHmac: CANARIES.hmac, ...over });
 
-const EVIDENCE_KEYS = ["contract", "status", "automaticStatus", "revision", "resultRevision", "resultCurrent", "gradingMode", "language", "languageVersion", "scoringPolicy", "comparator", "testCount", "maxMarks", "automaticScore", "passedCount", "passedWeight", "totalWeight", "outcome", "completedAt", "compilePreview", "override", "effectiveScore", "recovery", "technicalCode", "incomplete", "cases"];
+const EVIDENCE_KEYS = ["contract", "status", "automaticStatus", "revision", "resultRevision", "resultCurrent", "gradingMode", "language", "languageVersion", "scoringPolicy", "comparator", "testCount", "maxMarks", "automaticScore", "passedCount", "passedWeight", "totalWeight", "outcome", "completedAt", "compilePreview", "reviewRequired", "override", "effectiveScore", "recovery", "technicalCode", "incomplete", "cases"];   // 17F-C2 adds reviewRequired
 const CASE_KEYS = ["testId", "title", "weight", "outcome", "durationMs", "expectedOutput", "actualPreview", "stderrPreview"];
 const INTERNAL = /cg_CANARY|CANARY-GRADING-KEY|CANARY-ANSWER-HASH|CANARY-FINGERPRINT|tr_CANARY|dl_CANARY|CANARY-ENGINE|CANARY-DELIVERY|CANARY-CALLBACK|CANARY-RUNNER-HMAC|"jobId"|"gradingKey"|"answerHash"|"questionFingerprint"|"targetRef"|"leaseOwner"|"leaseExpiresAt"|"delivery"|"engine"|"automaticAttempts"|"lastAutomaticAttemptAt"|"manualRetryAt"|"exhausted"/;
 
@@ -201,8 +201,8 @@ describe("17E-D TE — teacherCodingEvidence: ONE strict, teacher-safe projectio
     expect(project(Q(), attemptOf(target(), { answers: { auto1: F.code("class Main{}", "java") } }))).toMatchObject({ language: "java", languageVersion: 1 });
     expect(project(Q(), attemptOf(target(), { answers: { auto1: { kind: "code", language: "cobol", languageVersion: 1, source: "x" } } }))).toMatchObject({ language: null, languageVersion: null });
   });
-  it("TE21 an unsupported question version (coding@2) is never interpreted with coding@1 semantics", () => {
-    const v = project(Q({ questionTypeVersion: 2 }), attemptOf(target()));
+  it("TE21 an unsupported question version (coding@3 — coding@2 is supported since 17F-C2 RF1) is never interpreted with coding@1 semantics", () => {
+    const v = project(Q({ questionTypeVersion: 3 }), attemptOf(target()));
     expect(v).toMatchObject({ status: "unsupported", cases: [], automaticScore: null });
   });
   it("TE22 F3 (teacher): a valid override while the automatic target is still OPEN → superseded (background evidence)", () => {
@@ -327,7 +327,7 @@ describe("17E-D AUTH — teacher review / regrade / bulk retry attacks (real han
   });
   it("AUTH12 a question whose authority cannot be validated (unsupported version) is never regraded", async () => {
     const a = F.assignment();
-    a.examSnapshot.sections[0].questions[0].questionTypeVersion = 2;
+    a.examSnapshot.sections[0].questions[0].questionTypeVersion = 3;   // 17F-C2 RF1: coding@2 is supported; coding@3 is not
     const h = harness({ ctx: F.seed({ a }) });
     await h.submit(ANSWERS);
     const before = JSON.stringify(h.doc()), dispatched = h.jobs().length;

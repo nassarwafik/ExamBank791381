@@ -37,3 +37,5 @@ registerStudentRenderer("categorization", 1, lazy(() => import("./student/Catego
 registerStudentRenderer("simulation", 1, lazy(() => import("./student/SimulationResponse")));
 // Phase 17A — the coding response + CodingEditor (lazy: loaded only when a coding question is rendered; student AND preview).
 registerStudentRenderer("coding", 1, lazy(() => import("./student/CodingResponse")));
+// Phase 17F-C2 RF1 — coding@2 renders exactly like coding@1 for the student (same lazy module; the policy is private teacher data).
+registerStudentRenderer("coding", 2, lazy(() => import("./student/CodingResponse")));
