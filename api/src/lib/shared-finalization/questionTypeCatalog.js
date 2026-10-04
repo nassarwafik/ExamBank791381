@@ -36,7 +36,8 @@ const PRODUCTION_ROWS = [
     ["categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"], false],
     ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false],
     ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code"], false],
-    ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", "apio", ["networkCli"], false]
+    ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", "apio", ["networkCli"], false],
+    ["inlineCloze", "إكمال نص تفاعلي", "response", "auto", "apo", ["fields"], false]
 ];
 exports.QUESTION_TYPE_CATALOG = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
 const questionTypeIdentityKey = (key, version) => key + "@" + version;

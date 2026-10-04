@@ -33,6 +33,7 @@ import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { GovernanceService } from "./examGovernance";
 import type { SimulationService } from "./smartsim/simulationService";
+import type { AiAuthorResponse, AiAuthorService } from "./aiAuthoring/aiAuthorService";
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
@@ -2050,34 +2051,6 @@ function App() {
       true
     );
 
-    const instruction = [
-      `حوّل طريقة عرض هذا السؤال فقط إلى "${typeNames[targetType]}".`,
-      "ممنوع استبدال السؤال بسؤال آخر أو تغيير موضوعه أو فكرته التعليمية.",
-      "حافظ قدر الإمكان على نفس نص السؤال، السيناريو، الأرقام، عناوين IP، أوامر CLI، المعطيات، والصورة.",
-      "غيّر فقط ما يلزم في الصياغة والبنية حتى يصبح السؤال صالحًا للنوع المطلوب.",
-      "لا تغيّر الصعوبة أو القسم أو الموضوع أو العلامة.",
-      targetType === "open"
-        ? "عند التحويل إلى مفتوح: أزل بدائل الاختيار فقط، وحافظ على نفس المطلوب مع نموذج إجابة صحيح."
-        : "",
-      targetType === "multipleChoice"
-        ? "عند التحويل إلى أمريكي: أنشئ أربعة بدائل معقولة مبنية على نفس السؤال، مع بديل صحيح واحد."
-        : "",
-      targetType === "fillBlank"
-        ? "عند التحويل إلى أكمل الناقص: أنشئ الفراغات من نفس محتوى السؤال دون إدخال موضوع جديد."
-        : "",
-      targetType === "wordBank"
-        ? "عند التحويل إلى مخزن كلمات: أنشئ الحقول والكلمات من نفس محتوى السؤال دون إدخال موضوع جديد."
-        : "",
-      targetType === "matching"
-        ? "عند التحويل إلى طابق: حوّل محتوى السؤال إلى مصطلحات يسارية (حقول) تُطابَق بقائمة يمينية مشتركة (نفس الخيارات لكل حقل)، دون إدخال موضوع جديد."
-        : "",
-      targetType === "ordering"
-        ? "عند التحويل إلى رتّب: حوّل محتوى السؤال إلى عناصر يجب ترتيبها بالتسلسل الصحيح، دون إدخال موضوع جديد."
-        : ""
-    ]
-      .filter(Boolean)
-      .join("\n");
-
     /*
       Do not send image bytes or local history to the AI endpoint.
       The image is restored exactly after conversion.
@@ -2097,6 +2070,8 @@ function App() {
     };
 
     try {
+      // Phase 19A bundle discipline: the conversion wording loads on demand (verbatim; see legacyTypeConversionInstruction.ts).
+      const instruction = (await import("./legacyTypeConversionInstruction")).legacyTypeConversionInstruction(targetType, typeNames[targetType]);
       const result =
         await apiRequest<{
           ok: true;
@@ -2900,6 +2875,9 @@ function App() {
       upload: (file, onProgress) => client().then(c => c.upload(file, onProgress))
     };
   }, []);
+  // Phase 19A — the App-owned AI authoring service: ONE POST to /api/ai-question-author through the same authenticated request
+  // helper; the builder never sees the token. The server returns a canonical draft or a refusal; the builder re-verifies it.
+  const structuredAiAuthor = useMemo<AiAuthorService>(() => ({ author: body => apiRequestRef.current<AiAuthorResponse>("/api/ai-question-author", { method: "POST", body: JSON.stringify(body) }) }), []);
   const structuredGovernance = useMemo<GovernanceService>(() => {
     let clientPromise: Promise<GovernanceService> | null = null;
     const client = () => (clientPromise ??= import("./examGovernanceClient").then(m => m.createGovernanceService(body => apiRequestRef.current<Record<string, unknown>>("/api/exam-governance", { method: "POST", body: JSON.stringify(body) }))));
@@ -7923,6 +7901,7 @@ function App() {
               presets={structuredPresets}
               onOpenExamFromPreset={openExamFromPreset}
               simulations={structuredSimulations}
+              aiAuthor={structuredAiAuthor}
             />
           </Suspense>
         </div>

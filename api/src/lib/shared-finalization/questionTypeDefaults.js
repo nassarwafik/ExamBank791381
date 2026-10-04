@@ -44,6 +44,10 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
     ensure("networkCli", { device: "switch", initialState: { v: 1, device: "switch", hostname: "Switch", vlans: {}, interfaces: {} } });
     ensure("answer", { targetState: {}, scoring: "proportional" });
 });
+(0, exports.registerTypeDefaults)("inlineCloze", 1, ensure => {
+    ensure("inlineCloze", { v: 1, segments: [{ type: "text", text: "اكتب النص هنا، ثم أدرج فراغًا: " }, { type: "blank", id: "b1", control: "text" }] });
+    ensure("answer", { scoring: "proportional", blanks: { b1: { accepted: [], caseSensitive: false } } });
+});
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {
     ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
     ensure("answer", { correctCategoryByItem: {} });

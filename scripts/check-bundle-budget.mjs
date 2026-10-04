@@ -16,6 +16,7 @@
 //      edges of the Reader in several small trusted group chunks, or fewer than the registered 122 implementations
 //      are shipped (signature: the `preserveAspectRatio:` prop every registered visual sets on its root <svg>);
 //  10. (Phase 18C) the network CLI simulator terminal / renderer / authoring editor reaches the initial graph (content signatures);
+//  11. (Phase 19A) the inline cloze renderer / token editor / review or the AI authoring dialog reaches the initial graph (signatures);
 //   8. (Phase 17A) the coding editor / coding panels reach the initial graph (content signatures of CodingEditor and the
 //      coding renderer / authoring editor: they must ship only behind the registries' lazy edges);
 //   9. (Phase 17F-C1) the Monaco engine of the professional code editor is missing, reaches the initial graph, is STATICALLY
@@ -49,6 +50,8 @@ const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-li
 const CODING_SIGNATURES = ["cx-code-input", "cx-code-gutter", "coding-run-unavailable", "qt-editor-coding", "cx-ws-toolbar"];
 // Phase 18C — network CLI terminal / renderer / authoring editor class names (used nowhere else). ANY one in an initial file fails.
 const NETCLI_SIGNATURES = ["ncli-terminal", "ncli-inputrow", "qt-editor-networkCli", "ncli-tryout"];
+// Phase 19A — inline cloze renderer / token editor / review / AI authoring dialog class names (used nowhere else). ANY one in an initial file fails.
+const CLOZE_SIGNATURES = ["cloze-passage", "qt-editor-inlineCloze", "cloze-review-list", "ai-author-dialog"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
 const MONACO_SIGNATURES = ["monaco-editor", "MonacoEnvironment", "monaco-mouse-cursor-text"];
@@ -131,7 +134,11 @@ function main() {
     if (coding.length) failures.push(`${f} (initial) contains the coding editor payload (${coding.join(", ")}) — it must stay lazy`);
     const netcli = NETCLI_SIGNATURES.filter(s => src.includes(s));
     if (netcli.length) failures.push(`${f} (initial) contains the network CLI simulator payload (${netcli.join(", ")}) — it must stay lazy`);
+    const cloze = CLOZE_SIGNATURES.filter(s => src.includes(s));
+    if (cloze.length) failures.push(`${f} (initial) contains the inline cloze / AI authoring payload (${cloze.join(", ")}) — it must stay lazy`);
   }
+  const clozeChunks = all.filter(f => CLOZE_SIGNATURES.some(s => read(f).includes(s)));
+  console.log(`Inline cloze / AI authoring payload found in: ${clozeChunks.join(", ") || "(none)"} — ${clozeChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const netcliChunks = all.filter(f => NETCLI_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Network CLI simulator payload found in: ${netcliChunks.join(", ") || "(none)"} — ${netcliChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const codingChunks = all.filter(f => CODING_SIGNATURES.some(s => read(f).includes(s)));

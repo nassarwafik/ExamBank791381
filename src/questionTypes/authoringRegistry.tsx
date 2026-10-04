@@ -25,3 +25,5 @@ registerAuthoringEditor("coding", 1, lazy(() => import("./editors/CodingQuestion
 registerAuthoringEditor("coding", 2, lazy(() => import("./editors/CodingQuestionEditor")));
 // Phase 18C — networkCli@1 authoring (lazy: the structured device-state tables and the try-out terminal never enter the initial graph).
 registerAuthoringEditor("networkCli", 1, lazy(() => import("./editors/NetworkCliEditor")));
+// Phase 19A — inlineCloze@1 authoring (lazy: the token editor never enters the initial graph).
+registerAuthoringEditor("inlineCloze", 1, lazy(() => import("./editors/InlineClozeEditor")));

@@ -41,3 +41,5 @@ registerStudentRenderer("coding", 1, lazy(() => import("./student/CodingResponse
 registerStudentRenderer("coding", 2, lazy(() => import("./student/CodingResponse")));
 // Phase 18C — the network CLI terminal (lazy: the engine + terminal load only when a networkCli question is rendered; student AND preview).
 registerStudentRenderer("networkCli", 1, lazy(() => import("./student/NetworkCliResponse")));
+// Phase 19A — inline cloze passage (lazy: the passage renderer and its stylesheet load only when an inlineCloze question renders).
+registerStudentRenderer("inlineCloze", 1, lazy(() => import("./student/InlineClozeResponse")));

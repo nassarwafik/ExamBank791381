@@ -59,6 +59,12 @@ registerTypeDefaults("networkCli", 1, ensure => {
   ensure("networkCli", { device: "switch", initialState: { v: 1, device: "switch", hostname: "Switch", vlans: {}, interfaces: {} } });
   ensure("answer", { targetState: {}, scoring: "proportional" });
 });
+// Phase 19A — inlineCloze@1: a one-blank passage and a key whose EMPTY accepted list blocks finalization until the teacher answers.
+// Literal on purpose (initial graph); parity-tested against defaultInlineClozeConfig() / defaultInlineClozeAnswerKey().
+registerTypeDefaults("inlineCloze", 1, ensure => {
+  ensure("inlineCloze", { v: 1, segments: [{ type: "text", text: "اكتب النص هنا، ثم أدرج فراغًا: " }, { type: "blank", id: "b1", control: "text" }] });
+  ensure("answer", { scoring: "proportional", blanks: { b1: { accepted: [], caseSensitive: false } } });
+});
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });
