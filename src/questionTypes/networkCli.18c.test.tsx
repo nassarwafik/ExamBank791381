@@ -249,7 +249,7 @@ describe("authoring — inside the real Builder", () => {
   it("structured tables edit the initial state and the private target; the check count and the inline validation follow; the try-out terminal uses the initial state", async () => {
     const { hist } = await mountBuilder(baseExam([teacherQ({ answer: { targetState: {}, scoring: "proportional" } })]));
     const editor = await screen.findByTestId("qt-editor-networkCli", {}, { timeout: 3000 });
-    expect(within(editor).getByTestId("ncli-check-count").textContent).toMatch(/: 0$/);
+    expect(within(editor).getByTestId("ncli-check-count").textContent).toMatch(/: 0 — مفتاح التصحيح غير صالح/);   // RF1: an empty target is an invalid contract
     fireEvent.change(within(editor).getByLabelText("اسم الجهاز المطلوب"), { target: { value: "BR1-SW1" } }); await tick();
     expect(firstQ(hist()).answer).toEqual({ targetState: { hostname: "BR1-SW1" }, scoring: "proportional" });
     expect(within(editor).getByTestId("ncli-check-count").textContent).toMatch(/: 1$/);
@@ -320,6 +320,27 @@ describe("teacher review — canonical state, per-check comparison, transcript a
     expect(view.querySelector("img")).toBeNull(); expect(view.textContent).toContain("<img src=x onerror=alert(1)>");
     expect(screen.getByTestId("ncli-key-summary").textContent).toContain("hostname BR1-SW1");
     expect(screen.getByLabelText(/علامة المعلم/)).toBeTruthy();
+  });
+});
+
+describe("RF1 — teacher review never presents an invalid private key as authoritative", () => {
+  const commands = ["enable", "configure terminal", "hostname LAB-SW"];
+  const studentAnswer = { kind: "networkCli", commands, state: replayCommands(CFG.initialState as never, commands).session.state };
+  const body = (expectedAnswer: unknown) => ({ ok: true, assignment: { assignmentId: "a1", title: "واجب", totalMarks: 10 }, student: { studentId: "s1", studentName: "سارة", studentCode: "S1" }, attempt: { attemptNumber: 1, submittedAt: "2026-03-01T10:00:00.000Z", score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 10, finalized: false, gradingStatus: "pendingReview", teacherFeedback: "" }, attempts: [{ attemptNumber: 1, submittedAt: "2026-03-01T10:00:00.000Z", score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 10, finalized: false, gradingStatus: "pendingReview" }], questions: [{ questionId: "n1", questionNumber: 1, text: "اضبط", marks: 10, type: "networkCli", studentAnswer, expectedAnswer, autoGrade: { score: 0, manualReview: true }, manualScore: null, teacherComment: "" }] });
+  it("an unknown scoring policy / VLAN 1 target shows an explicit 'grading configuration invalid — manual review' state: no ✓ / ✗ checklist, never summarised as proportional", async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve({ status: 200, ok: true, json: async () => body({ targetState: { hostname: "LAB-SW" }, scoring: "bonus" }) } as Response)) as unknown as typeof fetch;
+    render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={() => {}} onSaved={() => {}} />);
+    const view = await screen.findByTestId("ncli-answer-view", {}, { timeout: 3000 });
+    expect(within(view).getByTestId("ncli-key-invalid").textContent).toMatch(/غير صالح/);
+    expect(view.querySelectorAll(".ncli-check").length).toBe(0);
+    expect(within(view).getByTestId("ncli-state-view").textContent).toContain("LAB-SW");                       // the student's state is still shown
+    const summary = screen.getByTestId("ncli-key-summary");
+    expect(summary.textContent).toMatch(/غير صالح/); expect(summary.textContent).not.toMatch(/نسبية|كل شيء/);
+    cleanup();
+    globalThis.fetch = vi.fn(() => Promise.resolve({ status: 200, ok: true, json: async () => body({ targetState: { vlans: { "1": {} } } }) } as Response)) as unknown as typeof fetch;
+    render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={() => {}} onSaved={() => {}} />);
+    const view2 = await screen.findByTestId("ncli-answer-view", {}, { timeout: 3000 });
+    expect(within(view2).getByTestId("ncli-key-invalid")).toBeTruthy(); expect(view2.querySelectorAll(".ncli-check").length).toBe(0);
   });
 });
 

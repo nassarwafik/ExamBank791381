@@ -182,3 +182,39 @@ describe("18C — shared build parity and architecture guards", () => {
     expect(resolveGrader("networkCli", d.version + 1)).toBeUndefined();
   });
 });
+
+describe("18C RF1 — a corrupted PUBLISHED snapshot can never produce automatic credit (fail-first on 98d9454)", () => {
+  const FAIL = { score: 0, correct: false, manualReview: true };
+  it("gradeExam: VLAN 1 target / unknown scoring / mixed valid + unknown target field ⇒ 0 marks, manual review, the question's marks pending", () => {
+    for (const answer of [{ targetState: { vlans: { "1": {} } }, scoring: "proportional" }, { targetState: { hostname: "LAB-SW" }, scoring: "bonus" }, { targetState: { hostname: "LAB-SW", unexpectedField: true } }, { targetState: { interfaces: { "f0/5": { mode: "access" }, "FastEthernet0/5": { mode: "access" } } } }]) {
+      const r = gradeExam(exam([q({ answer })]), { n1: answerOf(["enable"]) });
+      expect(g(r), JSON.stringify(answer)).toMatchObject(FAIL);
+      expect(r.manualReviewMarks, JSON.stringify(answer)).toBe(10);
+      expect(g(gradeExam(exam([q({ answer })]), { n1: answerOf(FULL) })), JSON.stringify(answer)).toMatchObject(FAIL);
+    }
+    expect(g(gradeExam(exam([q({ answer: { targetState: { hostname: "LAB-SW" } } })]), { n1: answerOf(["enable"]) }))).toMatchObject({ score: 10, correct: true, manualReview: false });   // the same target without the corruption
+  });
+  it("REAL submission handler: a snapshot whose private key targets VLAN 1 yields 0 automatic marks + pending manual review, never full credit", async () => {
+    const submission = () => require_("../src/functions/student-submission.js");
+    const studentAuth = () => ({ ok: true, user: { sub: F.S1, sv: 1, role: "student" } });
+    const corrupted = q({ answer: { targetState: { vlans: { "1": {} } }, scoring: "proportional" } });
+    const a = F.assignment({ examSnapshot: { title: "exam", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [corrupted, { examQuestionId: "sa1", presentationType: "shortAnswer", text: "x", marks: 2, answer: { text: "x" } }] }] }, totalMarks: 12, questionCount: 2 });
+    const ctx = F.seed({ a });
+    const deps = { container: ctx.container, requireStudentAuth: studentAuth, env: F.ENV, fetch: F.runnerFetch() };
+    const r = await submission().handler(F.studentRequest(F.submitBody({ n1: { kind: "networkCli", commands: ["enable"], state: CFG.initialState }, sa1: { kind: "text", value: "x" } })), deps, { logInfo() {}, logWarn() {}, logError() {} });
+    expect(r.status).toBe(200);
+    const attempt = ctx.getJson(F.SUB).attempts.find(x => x.attemptNumber === 1);
+    expect(attempt.score).toBe(2); expect(attempt.manualReviewMarks).toBe(10); expect(attempt.finalized).toBe(false);
+    const unknownScoring = q({ answer: { targetState: { hostname: "LAB-SW" }, scoring: "bonus" } });
+    const r2 = gradeExam(exam([unknownScoring]), { n1: answerOf(["enable"]) });
+    expect(g(r2)).toMatchObject(FAIL); expect(r2.manualReviewMarks).toBe(10);
+  });
+  it("shared build parity: the committed CommonJS validator refuses exactly what the TypeScript source refuses", async () => {
+    const tsq = await import("../../src/networkCliQuestion.ts");
+    for (const key of [KEY, { targetState: { vlans: { "1": {} } } }, { targetState: { hostname: "X" }, scoring: "bonus" }, { targetState: { hostname: "X", unexpectedField: 1 } }, { targetState: { interfaces: { "f0/5": {}, "FastEthernet0/5": { mode: "access" } } } }]) {
+      const a = tsq.validateNetworkCliAnswerKey(key), b = shared.validateNetworkCliAnswerKey(key);
+      expect(a.ok, JSON.stringify(key)).toBe(b.ok);
+      expect((a.ok ? [] : a.issues.map(i => i.code)).sort()).toEqual((b.ok ? [] : b.issues.map(i => i.code)).sort());
+    }
+  });
+});

@@ -1,5 +1,5 @@
 import { SWITCH_PORTS, displayInterfaceName, effectiveInterfaceConfig, normalizeDeviceState, sortInterfaceNames, type NetworkCliDeviceState } from "../networkCliEngine";
-import { evaluateNetworkCliTarget, type NetworkCliTargetStateV1 } from "../networkCliQuestion";
+import { evaluateNetworkCliTarget, validateNetworkCliAnswerKey } from "../networkCliQuestion";
 import "./networkCli.css";
 
 // Phase 18C — teacher-side projections for the manual review screen: the student's CANONICAL device state (the server-derived
@@ -30,11 +30,14 @@ export function NetworkCliStateView({ state }: { state: NetworkCliDeviceState })
 export function NetworkCliAnswerView({ answer, answerKey }: { answer: unknown; answerKey: unknown }) {
   const st = isObj(answer) ? normalizeDeviceState(answer.state) : { ok: false as const };
   const commands = isObj(answer) && Array.isArray(answer.commands) ? answer.commands.filter((c): c is string => typeof c === "string") : [];
-  const target = isObj(answerKey) && isObj(answerKey.targetState) ? (answerKey.targetState as NetworkCliTargetStateV1) : undefined;
-  const checks = st.ok && target ? evaluateNetworkCliTarget(target, st.state) : [];
+  // Review Fix 1 — the per-check comparison is shown ONLY under a VALID private contract (the same canonical validator the
+  // finalization and the authoritative scorer use); an invalid key is an explicit "grading configuration invalid" state.
+  const key = validateNetworkCliAnswerKey(answerKey);
+  const checks = st.ok && key.ok ? evaluateNetworkCliTarget(key.key.targetState, st.state) : [];
   return (
     <div className="ncli-review" data-testid="ncli-answer-view">
       {st.ok ? <NetworkCliStateView state={st.state} /> : <p className="ncli-unavailable">حالة الجهاز المحفوظة غير صالحة أو مفقودة.</p>}
+      {!key.ok && <p className="ncli-unavailable" role="note" data-testid="ncli-key-invalid">إعداد التصحيح (الحالة المستهدفة) لهذا السؤال غير صالح؛ لم يُحتسب أي تصحيح آلي والسؤال بحاجة إلى تصحيح يدوي. {key.issues.map(i => i.message).join(" ")}</p>}
       {checks.length > 0 && <ul className="ncli-checks" aria-label="نتيجة مقارنة الحالة المستهدفة">
         {checks.map(c => <li key={c.id} className="ncli-check" data-ok={c.ok}><span className="ncli-check-mark" aria-hidden="true">{c.ok ? "✓" : "✗"}</span><span>{c.label}</span><span>المطلوب: <code className="ncli-ltr">{c.expected}</code></span><span>الفعلي: <code className="ncli-ltr">{c.actual}</code></span><span className="iex-visually-hidden">{c.ok ? "(صحيح)" : "(غير صحيح)"}</span></li>)}
       </ul>}
@@ -45,12 +48,13 @@ export function NetworkCliAnswerView({ answer, answerKey }: { answer: unknown; a
 
 /** The private key, summarised factually for the teacher (never rendered to a student). */
 export function NetworkCliKeySummary({ answerKey }: { answerKey: unknown }) {
-  const target = isObj(answerKey) && isObj(answerKey.targetState) ? (answerKey.targetState as NetworkCliTargetStateV1) : undefined;
-  if (!target) return <p className="ncli-unavailable">لا توجد حالة مستهدفة محفوظة لهذا السؤال.</p>;
+  const key = validateNetworkCliAnswerKey(answerKey);
+  if (!key.ok) return <div className="ncli-key" data-testid="ncli-key-summary"><p className="ncli-unavailable" role="note">مفتاح التصحيح غير صالح — لا تصحيح آلي، مطلوب تصحيح يدوي.</p><ul className="ncli-issues">{key.issues.map((i, n) => <li key={n}>{i.message}</li>)}</ul></div>;
+  const target = key.key.targetState;
   const rows: string[] = [];
   if (target.hostname) rows.push("hostname " + target.hostname);
   for (const id of Object.keys(target.vlans ?? {})) rows.push("vlan " + id + (target.vlans![id]?.name ? " (name " + target.vlans![id].name + ")" : ""));
   for (const n of Object.keys(target.interfaces ?? {})) { const t = target.interfaces![n]; if (isObj(t)) rows.push(n + ": " + Object.entries(t).map(([k, v]) => k + "=" + (typeof v === "boolean" ? yesNo(v) : String(v))).join(", ")); }
-  const scoring = isObj(answerKey) && answerKey.scoring === "allOrNothing" ? "كل شيء أو لا شيء" : "علامة نسبية لكل عنصر";
+  const scoring = key.key.scoring === "allOrNothing" ? "كل شيء أو لا شيء" : "علامة نسبية لكل عنصر";
   return <div className="ncli-key" data-testid="ncli-key-summary"><p>طريقة الاحتساب: {scoring}</p><pre className="ncli-transcript" dir="ltr">{rows.join("\n")}</pre></div>;
 }

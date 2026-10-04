@@ -3,7 +3,7 @@ import type { AuthoringEditorProps } from "../registryTypes";
 import type { QuestionBody } from "../../examTypes";
 import NetworkCliTerminal, { type NetworkCliTranscriptEntry } from "../../networkCli/NetworkCliTerminal";
 import { NETWORK_CLI_LIMITS, SWITCH_PORTS, createSession, displayInterfaceName, executeCommand, normalizeInterfaceName, promptFor, sortInterfaceNames, type NetworkCliSession } from "../../networkCliEngine";
-import { NETWORK_CLI_SCORING_MODES, defaultNetworkCliConfig, projectNetworkCliConfigForStudent, targetCheckCount, validateNetworkCliQuestion, type NetworkCliScoringMode, type NetworkCliTargetStateV1 } from "../../networkCliQuestion";
+import { NETWORK_CLI_SCORING_MODES, defaultNetworkCliConfig, projectNetworkCliConfigForStudent, validateNetworkCliAnswerKey, validateNetworkCliQuestion, type NetworkCliScoringMode } from "../../networkCliQuestion";
 import "../../networkCli/networkCli.css";
 
 // Phase 18C — networkCli@1 authoring (lazy). Edits the canonical node only: the PUBLIC configuration under `networkCli` (device +
@@ -85,7 +85,8 @@ export default function NetworkCliEditor({ node, onChange, disabled }: Authoring
   const initial = readDraft(cfg.initialState);
   const key: Key = isObj(node.answer) ? { targetState: readDraft((node.answer as Record<string, unknown>).targetState), scoring: (node.answer as Record<string, unknown>).scoring } : { targetState: { vlans: {}, interfaces: {} }, scoring: "proportional" };
   const issues = useMemo(() => validateNetworkCliQuestion(node as unknown as Record<string, unknown>), [node]);
-  const checks = targetCheckCount(key.targetState as NetworkCliTargetStateV1);
+  const contract = useMemo(() => validateNetworkCliAnswerKey(node.answer), [node.answer]);
+  const checks = contract.ok ? contract.key.checks : 0;
   const [tryOut, setTryOut] = useState(false);
   const writeInitial = (d: StateDraft) => onChange({ networkCli: { device: "switch", initialState: { v: 1, device: "switch", hostname: d.hostname === undefined ? "Switch" : d.hostname, vlans: d.vlans, interfaces: d.interfaces } } } as unknown as Partial<QuestionBody>);
   const writeKey = (patch: Partial<Key>) => { const next = { ...key, ...patch }; const target: Record<string, unknown> = {}; if (next.targetState.hostname !== undefined) target.hostname = next.targetState.hostname; if (Object.keys(next.targetState.vlans).length) target.vlans = next.targetState.vlans; if (Object.keys(next.targetState.interfaces).length) target.interfaces = next.targetState.interfaces; onChange({ answer: { targetState: target, scoring: next.scoring ?? "proportional" } } as unknown as Partial<QuestionBody>); };
@@ -105,7 +106,7 @@ export default function NetworkCliEditor({ node, onChange, disabled }: Authoring
             {NETWORK_CLI_SCORING_MODES.map(m => <option key={m} value={m}>{SCORING_LABELS[m]}</option>)}
           </select>
         </label>
-        <p className="sb-hint" data-testid="ncli-check-count">عدد عناصر التقييم: {checks}</p>
+        <p className="sb-hint" data-testid="ncli-check-count">عدد عناصر التقييم: {checks}{!contract.ok && " — مفتاح التصحيح غير صالح حاليًا (لا تصحيح آلي حتى يُصحَّح)"}</p>
       </section>
       <section className="ncli-section" aria-labelledby="ncli-sec-valid"><h4 id="ncli-sec-valid">التحقق</h4>
         {issues.length === 0 ? <p className="ncli-ok" data-testid="ncli-valid">الإعداد صالح للاعتماد النهائي.</p> : <ul className="ncli-issues" data-testid="ncli-issues">{issues.map((i, k) => <li key={k}>{i.message}</li>)}</ul>}

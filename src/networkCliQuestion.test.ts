@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   NETWORK_CLI_SCORING_MODES, defaultNetworkCliConfig, defaultNetworkCliAnswerKey, validateNetworkCliQuestion, projectNetworkCliConfigForStudent,
   normalizeNetworkCliAnswer, bindNetworkCliAnswerToQuestion, initialStateOf, evaluateNetworkCliTarget, scoreNetworkCli, targetCheckCount, isNetworkCliAnswerAnswered,
-  networkCliQuestionVersion, type NetworkCliAnswerKeyV1, type NetworkCliQuestionConfigV1
+  networkCliQuestionVersion, validateNetworkCliAnswerKey, type NetworkCliAnswerKeyV1, type NetworkCliQuestionConfigV1
 } from "./networkCliQuestion";
 import { createDeviceState, replayCommands, serializeState } from "./networkCliEngine";
 
@@ -156,5 +156,100 @@ describe("grading canonical STATE, never the transcript", () => {
     expect(scoreNetworkCli({ config: CFG, answerKey: KEY, response: { kind: "text", value: "hostname BR1-SW1" }, maxMarks: 10 })).toMatchObject({ score: 0, manualReview: false, correct: false });
     expect(scoreNetworkCli({ config: CFG, answerKey: KEY, response: undefined, maxMarks: 10 })).toMatchObject({ score: 0, manualReview: false });
     expect(scoreNetworkCli({ config: CFG, answerKey: KEY, response: { kind: "networkCli", commands: ["enable; rm -rf /", "`id`", "$(whoami)", "a | b"], state: CFG.initialState }, maxMarks: 10 }).score).toBe(0);
+  });
+});
+
+// ── Review Fix 1 — ONE canonical private grading contract shared by finalization, the authoritative scorer and the teacher review.
+// Fail-first on the reviewed head 98d9454: the scorer evaluated whatever target it was handed (VLAN 1 "exists" was satisfied by the
+// implicit VLAN 1, an unknown scoring policy silently became proportional, unknown target fields were ignored).
+const FAIL_CLOSED = { score: 0, correct: false, manualReview: true, parts: { correct: 0, total: 0 } };
+const fresh = () => ({ kind: "networkCli" as const, commands: ["enable"], state: CFG.initialState });
+const grade = (answerKey: unknown, response: unknown = fresh(), config: unknown = CFG) => scoreNetworkCli({ config, answerKey, response, maxMarks: 10 });
+const codesOf = (answerKey: unknown) => { const r = validateNetworkCliAnswerKey(answerKey); return r.ok ? [] : r.issues.map(i => i.code); };
+
+describe("RF1 — invalid PRIVATE grading contract ⇒ no automatic academic mark (score 0, manual review, zero checks)", () => {
+  it("GKEY1 — a VLAN 1 target row is refused by the ONE validator and never earns credit although VLAN 1 always exists", () => {
+    const key = { targetState: { vlans: { "1": {} } }, scoring: "proportional" };
+    expect(codesOf(key)).toContain("NETCLI_TARGET_VLAN_INVALID");
+    expect(grade(key)).toEqual(FAIL_CLOSED);
+    expect(grade(key, answerOf(FULL))).toEqual(FAIL_CLOSED);
+    expect(grade({ targetState: { hostname: "LAB", vlans: { "1": { name: "default" } } } }, answerOf(["enable", "configure terminal", "hostname LAB"]))).toEqual(FAIL_CLOSED);   // the valid hostname check is NOT graded alone
+  });
+  it("GKEY2 — an unknown scoring policy never acquires a meaning: 'bonus' on an otherwise satisfied target fails closed (not proportional, not full marks)", () => {
+    for (const scoring of ["bonus", "PROPORTIONAL", "all-or-nothing", "", null, 1, true, {}]) {
+      const key = { targetState: { hostname: "Switch" }, scoring };
+      expect(codesOf(key), String(scoring)).toContain("NETCLI_SCORING_UNKNOWN");
+      expect(grade(key), String(scoring)).toEqual(FAIL_CLOSED);
+    }
+  });
+  it("GKEY3 — a target mixing valid and unknown fields is invalid AS A WHOLE: the valid hostname check is never graded by itself", () => {
+    const key = { targetState: { hostname: "Switch", unexpectedField: true } };
+    expect(codesOf(key)).toEqual(["NETCLI_TARGET_UNKNOWN_KEY"]);
+    expect(grade(key)).toEqual(FAIL_CLOSED);
+    expect(grade({ targetState: { hostname: "Switch", vlans: { "20": { name: "X", extra: 1 } } } })).toEqual(FAIL_CLOSED);
+    expect(grade({ targetState: { hostname: "Switch" }, scoring: "proportional", extra: "x" })).toEqual(FAIL_CLOSED);                     // unknown ANSWER-root key
+    expect(grade({ targetState: { hostname: "Switch" }, scoring: "proportional" })).toMatchObject({ score: 10, correct: true, manualReview: false });   // the same target without the junk grades
+  });
+  it("GKEY4 — invalid target VLAN ids (0, 4095, reserved 1002–1005, text, leading zeros, floats) fail closed", () => {
+    for (const id of ["0", "4095", "1002", "1003", "1004", "1005", "abc", "010", "1e3", "20.5", "-20", "99999"]) {
+      const key = { targetState: { hostname: "Switch", vlans: { [id]: {} } } };
+      expect(codesOf(key), id).toContain("NETCLI_TARGET_VLAN_INVALID");
+      expect(grade(key), id).toEqual(FAIL_CLOSED);
+    }
+    for (const bad of [{ "20": { name: "a b" } }, { "20": { name: "" } }, { "20": null }, { "20": "SALES" }, { "20": { name: 5 } }, "20"]) expect(grade({ targetState: { hostname: "Switch", vlans: bad } }), JSON.stringify(bad)).toEqual(FAIL_CLOSED);
+  });
+  it("GKEY5 — invalid interface targets (unknown interface, IP on a port, switchport on an SVI, bad VLAN, bad shutdown type, bad address pair) fail closed", () => {
+    const cases: Record<string, unknown>[] = [
+      { "fa0/99": { mode: "access" } }, { "serial0/0/0": { shutdown: true } }, { "fa0/1.10": { mode: "access" } }, { "fa0/1-3": { mode: "trunk" } },
+      { "f0/1": { ipAddress: "10.0.0.1", subnetMask: "255.0.0.0" } }, { "vlan10": { mode: "access" } }, { "vlan10": { accessVlan: 10 } }, { "vlan10": { nativeVlan: 99 } },
+      { "f0/1": { accessVlan: 5000 } }, { "f0/1": { nativeVlan: 1003 } }, { "f0/1": { accessVlan: "20" } }, { "f0/1": { mode: "dynamic" } }, { "f0/1": { shutdown: "no" } }, { "f0/1": { shutdown: 0 } },
+      { "vlan10": { ipAddress: "10.0.0.300", subnetMask: "255.0.0.0" } }, { "vlan10": { ipAddress: "10.0.0.1", subnetMask: "255.0.255.0" } }, { "vlan10": { ipAddress: "192.168.1.0", subnetMask: "255.255.255.0" } },
+      { "f0/1": { mode: "access", description: "x" } }, { "f0/1": null }, { "f0/1": "access" }
+    ];
+    for (const interfaces of cases) {
+      const key = { targetState: { hostname: "Switch", interfaces } };
+      const codes = codesOf(key);
+      expect(codes.some(c => c === "NETCLI_TARGET_INTERFACE_INVALID" || c === "NETCLI_TARGET_EMPTY"), JSON.stringify(interfaces)).toBe(true);
+      expect(grade(key), JSON.stringify(interfaces)).toEqual(FAIL_CLOSED);
+    }
+    expect(grade({ targetState: { hostname: "Switch", interfaces: "f0/1" } })).toEqual(FAIL_CLOSED);
+    expect(grade({ targetState: { hostname: "Switch", interfaces: { "f0/1": {} } } })).toMatchObject({ score: 10, manualReview: false, parts: { correct: 1, total: 1 } });   // an empty row is a zero-check row, not a contract violation
+    expect(grade({ targetState: { hostname: 5 } })).toEqual(FAIL_CLOSED);
+    expect(grade({ targetState: { hostname: "bad name" } })).toEqual(FAIL_CLOSED);
+  });
+  it("GKEY6 — two aliases of the same interface (f0/5 + FastEthernet0/5) in one target are refused: no duplicate target authority", () => {
+    const key = { targetState: { interfaces: { "f0/5": { mode: "access" }, "FastEthernet0/5": { mode: "trunk" } } } };
+    expect(codesOf(key)).toContain("NETCLI_TARGET_INTERFACE_INVALID");
+    expect(grade(key, answerOf(FULL))).toEqual(FAIL_CLOSED);
+    expect(validateNetworkCliQuestion(question({ answer: key })).map(i => i.code)).toContain("NETCLI_TARGET_INTERFACE_INVALID");
+    const svi = { targetState: { interfaces: { "vlan20": { shutdown: false }, "Vlan 20": { shutdown: true } } } };
+    expect(grade(svi, answerOf(FULL))).toEqual(FAIL_CLOSED);
+  });
+  it("GKEY7 — valid historical / default contracts are unchanged: absent scoring = proportional, explicit modes keep their scores, FULL / EQUIVALENT still earn 10 / 10", () => {
+    const absent = validateNetworkCliAnswerKey({ targetState: KEY.targetState });
+    expect(absent.ok).toBe(true); if (absent.ok) { expect(absent.key.scoring).toBe("proportional"); expect(Object.keys(absent.key.targetState.interfaces!)).toEqual(["f0/5", "g0/1", "vlan20"]); }
+    const spelled = validateNetworkCliAnswerKey({ targetState: { interfaces: { "FastEthernet 0/5": { mode: "access" }, "Vlan 20": { shutdown: false } } } });
+    expect(spelled.ok).toBe(true); if (spelled.ok) expect(Object.keys(spelled.key.targetState.interfaces!)).toEqual(["f0/5", "vlan20"]);          // canonical names in the normalized key
+    expect(grade({ targetState: KEY.targetState }, answerOf(FULL))).toEqual({ score: 10, correct: true, manualReview: false, parts: { correct: 10, total: 10 } });
+    expect(grade(KEY, answerOf(EQUIVALENT))).toEqual({ score: 10, correct: true, manualReview: false, parts: { correct: 10, total: 10 } });
+    expect(grade({ ...KEY, scoring: "allOrNothing" }, answerOf(FULL)).score).toBe(10);
+    expect(grade({ ...KEY, scoring: "allOrNothing" }, answerOf(["enable"])).score).toBe(0);
+    expect(grade({ ...KEY, scoring: "allOrNothing" }, answerOf(["enable"])).manualReview).toBe(false);
+    expect(validateNetworkCliQuestion(question())).toEqual([]);
+  });
+  it("GKEY8 — a malformed / missing / foreign STUDENT response under a VALID contract stays an ordinary zero (manualReview false), never a grading-authority failure", () => {
+    for (const response of [undefined, null, {}, { kind: "text", value: "x" }, { kind: "networkCli", commands: "enable", state: CFG.initialState }, { kind: "networkCli", commands: ["enable"], state: { v: 2 } }, { kind: "networkCli", commands: ["x".repeat(201)], state: CFG.initialState }]) {
+      expect(grade(KEY, response), JSON.stringify(response)).toEqual({ score: 0, correct: false, manualReview: false, parts: { correct: 0, total: 10 } });
+    }
+  });
+  it("the finalization validator and the scorer share the ONE contract: every key the validator refuses fails closed in the scorer, every key it accepts grades", () => {
+    const keys: unknown[] = [KEY, { targetState: { hostname: "Switch" } }, { targetState: { vlans: { "1": {} } } }, { targetState: { hostname: "Switch" }, scoring: "bonus" }, { targetState: { hostname: "Switch", unexpectedField: true } }, { targetState: {} }, {}, null, { targetState: { interfaces: { "f0/5": { mode: "access" }, "FastEthernet0/5": { mode: "access" } } } }, { targetState: { interfaces: { "f0/5": { mode: "access" } } }, scoring: "allOrNothing" }];
+    for (const key of keys) {
+      const direct = validateNetworkCliAnswerKey(key);
+      const viaQuestion = validateNetworkCliQuestion(question({ answer: key })).filter(i => i.code.startsWith("NETCLI_TARGET") || i.code.startsWith("NETCLI_SCORING") || i.code === "NETCLI_ANSWER_KEY_INVALID").map(i => i.code).sort();
+      expect(viaQuestion, JSON.stringify(key)).toEqual((direct.ok ? [] : direct.issues.map(i => i.code)).sort());
+      const r = grade(key, answerOf(FULL));
+      if (direct.ok) expect(r.manualReview, JSON.stringify(key)).toBe(false); else expect(r, JSON.stringify(key)).toEqual(FAIL_CLOSED);
+    }
   });
 });

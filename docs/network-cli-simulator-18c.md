@@ -209,3 +209,35 @@ fail-first beyond "module absent" is claimed.
 * Checks are equally weighted; weights, per-check marks, teacher-restricted command scope (`allowedCommands`) and a "strict device
   feedback only" mode (hide Arabic hints in exams) are natural V2 options; a router profile (`networkCli` device `router`, sub-interfaces,
   static routes) and Reader-exercise import (`CliExerciseConfig` → initial / target state) are the recommended next commands / features.
+
+## 15. Independent Review Fix 1 — one canonical PRIVATE grading contract (fail closed)
+
+**Root cause (reviewed head `98d9454`).** `validateNetworkCliQuestion` refused malformed targets and unknown scoring policies at
+finalization, but `scoreNetworkCli` evaluated whatever `answer.targetState` it was handed: a `vlans["1"]` target row was satisfied by
+the implicit VLAN 1, an unknown `scoring` silently became proportional, and unknown target fields were ignored while the remaining
+checks were graded. A historical, imported, migrated or corrupted snapshot could therefore earn automatic credit under a contract
+finalization would have blocked (the real submission handler awarded 12/12 for a VLAN-1-target snapshot — fail-first log
+`scratchpad/18c/fail-first-rf1-98d9454.log`).
+
+**Fix.** `validateNetworkCliAnswerKey(raw)` in `src/networkCliQuestion.ts` (shared build) is the ONE authority for the private key.
+It validates AND normalizes: answer root (`targetState` + optional `scoring` only → `NETCLI_ANSWER_KEY_INVALID`), target root
+(`hostname` / `vlans` / `interfaces` only), canonical hostname, VLAN rows 2–4094 without reserved ids (VLAN 1 is never a target row),
+`{ name? }` entries with canonical names, interface rows that are supported ports / SVIs with the port / SVI field restrictions,
+VLAN ranges, boolean `shutdown`, IPv4 / mask types and a usable host address, no prototype-sensitive keys, and no two aliases of the
+same interface (`f0/5` + `FastEthernet0/5` refused). `scoring`: absent → the historical default `proportional`; `proportional` /
+`allOrNothing` → itself; anything else → `NETCLI_SCORING_UNKNOWN` (never defaulted). The normalized key carries canonical interface
+names and the check count. Consumers:
+
+* `validateNetworkCliQuestion` delegates the whole key to it (finalization codes unchanged, plus `NETCLI_ANSWER_KEY_INVALID`);
+* `scoreNetworkCli` validates the public config AND the private key BEFORE any check; if either is invalid it returns
+  `NETWORK_CLI_FAIL_CLOSED = { score 0, correct false, manualReview true, parts { 0, 0 } }` — never a partial grade of the valid-looking
+  subset. A malformed / missing / foreign STUDENT response under a valid contract stays an ordinary zero (`manualReview false`);
+* the teacher review (`NetworkCliAnswerView` / `NetworkCliKeySummary`) shows an explicit «إعداد التصحيح غير صالح — تصحيح يدوي» state
+  (no ✓ / ✗ checklist, never summarised as proportional) for an invalid key; the editor's check count reads the same contract;
+* `evaluateNetworkCliTarget` no longer treats VLAN 1 as "always exists" (defense in depth — the contract refuses the row anyway).
+
+**Tests (fail-first on `98d9454`: 12 failed).** `src/networkCliQuestion.test.ts` GKEY1–GKEY8 + the shared-contract test (finalization
+and scorer agree on every key), `api/tests/network-cli-18c.test.js` (`gradeExam` and the REAL submission handler: VLAN-1 target /
+unknown scoring / mixed field ⇒ 0 marks + the question's marks pending manual review; shared-build parity of the validator),
+`src/questionTypes/networkCli.18c.test.tsx` (teacher review invalid-key state). Mutation campaign MK1–MK5 (table in the PR).
+Initial-graph impact: none (the module is a lazy chunk). Budget untouched.
