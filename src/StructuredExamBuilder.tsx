@@ -17,6 +17,7 @@ import {
   newSection,
   computeTotalMarks,
   countQuestions,
+  cloneQuestionWithNewIds,
   type StructuredExamUpdater
 } from "./examBuilderState";
 import { hasBlockingErrors, type StructuredIssue } from "./examQuality";
@@ -38,6 +39,7 @@ import {
 import ExamQuestionNavigator from "./ExamQuestionNavigator";
 import BulkActionBar from "./BulkActionBar";
 import type { BankPickerService, InsertOutcome } from "./BankQuestionPicker";
+import type { AiAuthorService } from "./aiAuthoring/aiAuthorService";
 import { withBlueprint, validateBlueprintForExam } from "./assessmentBlueprint";
 import { applyBulkClassification, type BulkClassification } from "./assessmentBulkClassify";
 import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
@@ -69,6 +71,8 @@ const FinalizationPanel = lazy(() => import("./FinalizationPanel"));
 const GovernancePanel = lazy(() => import("./GovernancePanel"));
 // Phase 15A — «القوالب الأكاديمية» (personal Assessment Presets): lazy like the governance panel.
 const PresetLibraryPanel = lazy(() => import("./presets/PresetLibraryPanel"));
+// Phase 19A — «سؤال بالذكاء الاصطناعي»: lazy like the other panels (the dialog + its canonical re-verification never enter the initial graph).
+const AiQuestionAuthorDialog = lazy(() => import("./aiAuthoring/AiQuestionAuthorDialog"));
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -119,6 +123,9 @@ type Props = {
   // Phase 16B-A — the App-owned Simulation service (upload / library). Same pattern: the builder never receives a token; the
   // lazy simulation editor reaches the service through context; without a service the upload / library actions are not offered.
   simulations?: SimulationService;
+  // Phase 19A — the App-owned AI authoring service (one POST to /api/ai-question-author). The builder never receives a token; without
+  // a service the «سؤال بالذكاء الاصطناعي» action is simply not offered.
+  aiAuthor?: AiAuthorService;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
@@ -130,7 +137,7 @@ const FLASH_MS = 1200;
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, aiAuthor }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [showIssues, setShowIssues] = useState(true);
   const { confirm, confirmDialog } = useConfirm();
@@ -391,6 +398,20 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       });
     });
   };
+  // Phase 19A — AI authoring: the dialog is opened FOR one exam id (like the bank picker). The verified draft is inserted as ONE
+  // functional update with fresh ids, re-checked against the latest exam (same id, target section still present) both before and
+  // inside the updater; anything else is "stale" and nothing is inserted.
+  const [aiOpenFor, setAiOpenFor] = useState("");
+  const aiOpen = !!aiAuthor && aiOpenFor === exam.examId;
+  const insertAiQuestion = (openedFor: string) => (question: BuilderQuestion, targetSectionId: string): "ok" | "stale" => {
+    if (!alive.current) return "stale";
+    const fits = (candidate: StructuredExam) => candidate.examId === openedFor && (candidate.sections || []).some(sec => sec.id === targetSectionId);
+    if (!fits(latestExamRef.current)) return "stale";
+    const fresh = cloneQuestionWithNewIds(question);
+    onChange(prev => (fits(prev) ? { ...prev, sections: insertQuestionsIntoSection(prev.sections || [], targetSectionId, [fresh]) } : prev));
+    window.setTimeout(() => focusCard(fresh.examQuestionId), 0);
+    return "ok";
+  };
   const navigator = (asPanel: boolean) => (
     <ExamQuestionNavigator id={asPanel ? navId : undefined} asPanel={asPanel} entries={navEntries} sections={sectionOptions} filters={navFilters}
       onFilters={f => setUi(prev => ({ ...prev, filters: f }))} selected={selected} onToggle={toggleSelect} onSelectMany={selectMany}
@@ -473,6 +494,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
           {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
+          {aiAuthor && <button type="button" className="sb-btn" onClick={() => setAiOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سؤال بالذكاء الاصطناعي</button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
           {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
@@ -567,6 +589,12 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {blueprintOpen && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل مخطط الامتحان…</p>}>
           <BlueprintPanel open onClose={() => setBlueprintOpen(false)} blueprint={exam.blueprint} sections={sectionOptions} onEdit={editBlueprint} disabled={saving} />
+        </Suspense>
+      )}
+
+      {aiOpen && aiAuthor && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل أداة الذكاء الاصطناعي…</p>}>
+          <AiQuestionAuthorDialog key={exam.examId} open onClose={() => setAiOpenFor("")} service={aiAuthor} sections={sectionOptions} onInsert={insertAiQuestion(exam.examId)} disabled={saving} />
         </Suspense>
       )}
 

@@ -178,6 +178,15 @@ function applyNetworkCliProjection(node) {
   const projected = projectNetworkCliConfigForStudent(node.networkCli);
   if (projected) node.networkCli = projected; else delete node.networkCli;
 }
+// Phase 19A — the inline cloze passage is REBUILT through its STRICT projection (shared with the renderer and the grader): only the
+// passage text, blank ids / controls and dropdown option ids / labels survive; a config with ANY unknown field (e.g. a smuggled
+// accepted answer or correct-option marker) is withheld entirely (fail closed). The per-blank key lives under `answer`, blanked above.
+const { projectInlineClozeConfigForStudent } = require("./shared-finalization/inlineClozeQuestion");
+function applyInlineClozeProjection(node) {
+  if (!("inlineCloze" in node)) return;
+  const projected = projectInlineClozeConfigForStudent(node.inlineCloze);
+  if (projected) node.inlineCloze = projected; else delete node.inlineCloze;
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -193,6 +202,7 @@ function sanitizePartForStudent(part) {
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
+  applyInlineClozeProjection(out);
   stripKeys(out, NODE_SECRET_KEYS);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
@@ -213,6 +223,7 @@ function sanitizeQuestionForStudent(question) {
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
+  applyInlineClozeProjection(out);
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS, ...GRADING_SECRET_KEYS]);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);

@@ -2,6 +2,7 @@ import type { AssessmentBlueprintV1, AssessmentMeta, AssessmentActivityDescripto
 import type { SimulationQuestionConfig } from "./smartsimManifest";
 import type { CodingQuestionConfigV1 } from "./codingQuestion";
 import type { NetworkCliQuestionConfigV1 } from "./networkCliQuestion";
+import type { InlineClozeConfigV1 } from "./inlineClozeQuestion";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
 // Design contract: a builder object is ALREADY in the engine-native shape that PR #51's student
@@ -99,6 +100,8 @@ export type BuilderPart = {
   coding?: CodingQuestionConfigV1;
   // Phase 18C — the PUBLIC network CLI simulator configuration (networkCli@1: device + initial state); the private target state lives under `answer`.
   networkCli?: NetworkCliQuestionConfigV1;
+  // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
+  inlineCloze?: InlineClozeConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -127,6 +130,8 @@ export type BuilderQuestion = {
   coding?: CodingQuestionConfigV1;
   // Phase 18C — the PUBLIC network CLI simulator configuration (networkCli@1: device + initial state); the private target state lives under `answer`.
   networkCli?: NetworkCliQuestionConfigV1;
+  // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
+  inlineCloze?: InlineClozeConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -158,6 +163,8 @@ export type QuestionBody = {
   coding?: CodingQuestionConfigV1;
   // Phase 18C — the PUBLIC network CLI simulator configuration (networkCli@1: device + initial state); the private target state lives under `answer`.
   networkCli?: NetworkCliQuestionConfigV1;
+  // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
+  inlineCloze?: InlineClozeConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;

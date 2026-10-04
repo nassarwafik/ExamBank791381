@@ -7,6 +7,7 @@ import { MULTIPLE_SELECT_SCORING } from "./questionTypeScoring";
 import { validateSimulationReference } from "./smartsimManifest";
 import { validateCodingQuestion } from "./codingQuestion";
 import { validateNetworkCliQuestion } from "./networkCliQuestion";
+import { validateInlineClozeQuestion } from "./inlineClozeQuestion";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
 export type TypeValidator = (node: Record<string, unknown>, context: { version: number; part: boolean }) => QuestionTypeIssue[];
@@ -114,3 +115,5 @@ registerTypeValidator("coding", 1, node => validateCodingQuestion(node));
 registerTypeValidator("coding", 2, node => validateCodingQuestion(node));
 // Phase 18C — networkCli@1: public config (device + canonical initial state) and private target-state rules. Nothing here executes anything.
 registerTypeValidator("networkCli", 1, node => validateNetworkCliQuestion(node));
+// Phase 19A — inlineCloze@1: the strict public passage contract AND the private per-blank key (every problem blocks).
+registerTypeValidator("inlineCloze", 1, node => validateInlineClozeQuestion(node));

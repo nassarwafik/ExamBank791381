@@ -51,6 +51,12 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
     if (isObj(st.interfaces) && Object.keys(st.interfaces).length) return true;
   }
   if (isObj(answer.targetState) && Object.values(answer.targetState).some(v => (isObj(v) ? Object.keys(v).length > 0 : text(v) !== ""))) return true;
+  // Phase 19A — inlineCloze: more than the default single blank, any non-default passage text, or any accepted answer / option.
+  if (isObj(node.inlineCloze) && Array.isArray(node.inlineCloze.segments)) {
+    const segs = node.inlineCloze.segments as unknown[];
+    if (segs.length > 2 || segs.some(s => isObj(s) && ((s.type === "text" && s.text !== "اكتب النص هنا، ثم أدرج فراغًا: ") || s.control === "dropdown"))) return true;
+  }
+  if (isObj(answer.blanks) && Object.values(answer.blanks).some(b => isObj(b) && ((Array.isArray(b.accepted) && b.accepted.some(a => text(a))) || text(b.correctOptionId)))) return true;
   if (Array.isArray(answer.hiddenTests) && answer.hiddenTests.length) return true;
   if (isObj(answer.referenceSolutions) && Object.values(answer.referenceSolutions).some(v => text(v))) return true;
   if (Array.isArray(answer.correctOptionIds) && answer.correctOptionIds.length) return true;

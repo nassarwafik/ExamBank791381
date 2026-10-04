@@ -72,7 +72,10 @@ const PRODUCTION_ROWS = [
   // Phase 18C — the first network-device CLI simulator plugin (networkCli@1): a deterministic educational managed SWITCH. Auto-graded
   // on canonical device STATE (per-check partial credit) by the shared engine; interactive; offline; not a compound part (V1 decision:
   // one terminal per question keeps the session, replay and review unambiguous).
-  ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", "apio", ["networkCli"], false]
+  ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", "apio", ["networkCli"], false],
+  // Phase 19A — inline completion passage (inlineCloze@1): text + inline text blanks / dropdowns in any order; auto-graded per blank
+  // (partial credit); the student answer is the existing `fields` Answer (blank id → value); not a compound part (V1 decision).
+  ["inlineCloze", "إكمال نص تفاعلي", "response", "auto", "apo", ["fields"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
  *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */

@@ -7,6 +7,10 @@ const { normalizeSimulationState } = require("./shared-finalization/smartsimStat
 // only a REGISTERED language at its exact contract version is accepted (V1: python@1, java@1, csharp@1).
 const { normalizeCodeAnswer, bindCodeAnswerToQuestion } = require("./shared-finalization/codingQuestion");
 const { flattenQuestions } = require("./exam-structure");
+// Phase 19A — an answer to an inlineCloze@1 question is the existing `fields` Answer; bound to the published question only STRING
+// values for that question's own blank ids survive (bounded). A non-fields answer to a cloze question is dropped with a code.
+// Every other `fields` answer (legacy fillBlank / wordBank / matrix / …) is passed through exactly as before.
+const { bindInlineClozeAnswerToQuestion } = require("./shared-finalization/inlineClozeQuestion");
 // Phase 18C — a `networkCli` answer is a bounded command history + canonical state. Bound to the published question, the server
 // REPLAYS the history from that question's initial state through the shared engine and stores the derived state (the client's
 // claim is discarded); unbound it is shape / bounds checked only. A networkCli answer on another question, an unknown id or a
@@ -26,6 +30,7 @@ function questionIndex(exam) {
 }
 const isCode = a => !!a && typeof a === "object" && a.kind === "code";
 const isNetworkCli = a => !!a && typeof a === "object" && a.kind === "networkCli";
+const isInlineClozeQuestion = q => !!q && typeof q === "object" && q.presentationType === "inlineCloze";
 
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
 function normalizeDraftAnswers(answers, exam) {
@@ -48,6 +53,12 @@ function normalizeDraftAnswers(answers, exam) {
     }
     if (isNetworkCli(a)) {
       const r = bound ? bindNetworkCliAnswerToQuestion(a, index.get(id)) : normalizeNetworkCliAnswer(a);
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
+    if (bound && isInlineClozeQuestion(index.get(id))) {
+      const r = bindInlineClozeAnswerToQuestion(a, index.get(id));
       if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
       out[id] = r.answer;
       continue;

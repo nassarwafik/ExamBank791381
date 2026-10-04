@@ -1,0 +1,37 @@
+/* Phase 19A — inline cloze («إكمال نص تفاعلي») UI (lazy chunk only). The passage keeps its natural reading flow: controls are
+   INLINE boxes inside the running text (never a flex / grid row), wrap with the text on narrow screens and are never wider than
+   the line. The passage direction is decided by its own text (dir="auto"); every answer control uses dir="auto" + plaintext
+   bidi so a typed English / CLI answer is never forced right-to-left inside an Arabic passage. 40px targets, visible focus. */
+.cloze { display: grid; gap: 8px; min-width: 0; max-width: 100%; }
+.cloze-passage { margin: 0; line-height: 2.4; font-size: 1.02rem; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cloze-text { white-space: pre-wrap; }
+.cloze-blank { display: inline-block; vertical-align: baseline; margin: 0 4px; max-width: 100%; }
+.cloze-input { display: inline-block; min-width: 6ch; max-width: 100%; min-height: 40px; box-sizing: border-box; padding: 4px 8px; border: 0; border-bottom: 2px solid var(--eb-primary, #2563eb); border-radius: 6px 6px 0 0; background: var(--eb-surface-2, #f1f5f9); font: inherit; color: inherit; unicode-bidi: plaintext; text-align: start; }
+.cloze-select { display: inline-block; max-width: 100%; min-height: 40px; box-sizing: border-box; padding: 4px 8px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 8px; background: var(--eb-surface, #fff); font: inherit; color: inherit; unicode-bidi: plaintext; }
+.cloze-select[data-chosen="true"] { border-color: var(--eb-primary, #2563eb); background: var(--eb-surface-2, #eef2ff); font-weight: 600; }
+.cloze-input:focus-visible, .cloze-select:focus-visible { outline: 3px solid var(--eb-focus, #f59e0b); outline-offset: 2px; }
+.cloze-input:disabled, .cloze-select:disabled { opacity: .85; cursor: not-allowed; }
+.cloze-note, .cloze-unavailable { margin: 0; padding: 6px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); color: var(--eb-muted, #475569); font-size: 13px; }
+.cloze-unavailable { border: 1px dashed var(--eb-border, #cbd5e1); background: transparent; }
+
+/* Teacher authoring (qt-editor-inlineCloze) */
+.qt-editor-inlineCloze .cloze-pieces { display: grid; gap: 8px; min-width: 0; }
+.qt-editor-inlineCloze .cloze-piece-text { display: grid; gap: 4px; }
+.qt-editor-inlineCloze .cloze-piece-text textarea { width: 100%; min-height: 56px; box-sizing: border-box; font: inherit; resize: vertical; }
+.qt-editor-inlineCloze .cloze-piece-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.qt-editor-inlineCloze .cloze-card { border: 1px solid var(--line, #e5e9f0); border-inline-start: 4px solid var(--eb-primary, #2563eb); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; min-width: 0; }
+.qt-editor-inlineCloze .cloze-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; font-weight: 600; }
+.qt-editor-inlineCloze .cloze-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.qt-editor-inlineCloze .cloze-row input[type="text"] { flex: 1 1 12rem; min-width: 0; min-height: 36px; font: inherit; unicode-bidi: plaintext; }
+.qt-editor-inlineCloze .cloze-issues { margin: 0; padding-inline-start: 18px; color: var(--eb-danger, #b91c1c); font-size: 13px; }
+.qt-editor-inlineCloze .cloze-issues:empty { display: none; }
+.cloze-author-preview { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, #f8fafc); line-height: 2; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cloze-chip { display: inline-block; margin: 0 2px; padding: 0 6px; border-radius: 999px; background: var(--eb-primary, #2563eb); color: #fff; font-size: 12px; }
+
+/* Teacher review */
+.cloze-review { display: grid; gap: 8px; min-width: 0; }
+.cloze-review-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.cloze-review-blank { display: grid; gap: 2px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line, #e5e9f0); }
+.cloze-review-blank[data-ok="true"] { border-color: #16a34a; }
+.cloze-review-blank[data-ok="false"] { border-color: #dc2626; }
+.cloze-review-blank .cloze-given, .cloze-review-blank .cloze-expected { unicode-bidi: plaintext; overflow-wrap: anywhere; }

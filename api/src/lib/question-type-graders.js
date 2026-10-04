@@ -13,6 +13,9 @@ const scoring = require("./shared-finalization/questionTypeScoring");
 // Phase 18C — networkCli@1: the shared engine re-derives the canonical device state from the command history and compares it
 // to the private target (per-check partial credit). The client-claimed state is never read for grading.
 const networkCli = require("./shared-finalization/networkCliQuestion");
+// Phase 19A — inlineCloze@1: the shared strict authority re-validates the published passage AND the private per-blank key before any
+// blank is compared (malformed authority ⇒ 0 + manual review); the student answer is the existing `fields` Answer.
+const inlineCloze = require("./shared-finalization/inlineClozeQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -109,6 +112,10 @@ registerBuiltIn("coding", () => ({ score: 0, manualReview: true, correct: false 
 if (!graders.has(identity("coding", 2))) registerGrader("coding", 2, () => ({ score: 0, manualReview: true, correct: false }));
 registerBuiltIn("networkCli", (question, response, max) => {
   const r = networkCli.scoreNetworkCli({ config: question.networkCli, answerKey: question.answer, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("inlineCloze", (question, response, max) => {
+  const r = inlineCloze.scoreInlineCloze({ config: question.inlineCloze, answerKey: question.answer, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
 registerBuiltIn("categorization", (question, response, max) => {
