@@ -35,5 +35,8 @@ scripts/output/
 !examples/smartsim/**/dist/
 !docs/smartsim/templates/**/dist/
 
+# Phase 17F-C1 — real-browser editor validation output (scripts/check-code-editor-browser.mjs)
+.harness-out/
+
 # Phase 17F-B10 — load / certification harness results are evidence files produced per run, never committed
 runner/tests/load/results/

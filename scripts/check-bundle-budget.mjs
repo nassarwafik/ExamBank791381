@@ -17,6 +17,10 @@
 //      are shipped (signature: the `preserveAspectRatio:` prop every registered visual sets on its root <svg>);
 //   8. (Phase 17A) the coding editor / coding panels reach the initial graph (content signatures of CodingEditor and the
 //      coding renderer / authoring editor: they must ship only behind the registries' lazy edges);
+//   9. (Phase 17F-C1) the Monaco engine of the professional code editor is missing, reaches the initial graph, is STATICALLY
+//      reachable from the coding question chunks (it must stay behind the editor's own dynamic edge so a coding question paints
+//      before the engine downloads), its editor worker is not a separate lazy file, any chunk carries completion / suggestion
+//      machinery (the exam invariant: the editor must never help solve the question), or any chunk references a CDN;
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -40,6 +44,14 @@ const PLATFORM_SIGNATURES = ["eb-students-workspace", "eb-students-layout", "ج�
 const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-list", "تصفية المهام"];
 // Phase 17A — CodingEditor / coding renderer / authoring editor class names (used nowhere else). ANY one in an initial file fails.
 const CODING_SIGNATURES = ["cx-code-input", "cx-code-gutter", "coding-run-unavailable", "qt-editor-coding"];
+// Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
+// (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
+const MONACO_SIGNATURES = ["monaco-editor", "MonacoEnvironment", "monaco-mouse-cursor-text"];
+// The completion machinery Monaco would ship if the suggest / parameter-hint / inline-completion contributions were imported
+// (widget class names and action ids). ANY occurrence in ANY emitted chunk fails the build: no autocomplete in an exam editor.
+const COMPLETION_SIGNATURES = ["suggest-widget", "parameter-hints-widget", "editor.action.triggerSuggest", "editor.action.triggerParameterHints", "editor.action.inlineSuggest.trigger"];
+// Editor assets are served by the SmartAssess deployment only: no chunk may reference a public CDN host.
+const EXTERNAL_ASSET_SIGNATURES = ["cdn.jsdelivr.net", "unpkg.com", "cdnjs.cloudflare.com"];
 // Phase 8E-6 — learning visuals. Every registered SVG visual root sets `preserveAspectRatio`, so the count of that prop in
 // a chunk is the number of visual implementations it carries (0 everywhere on the startup + first-Reader path).
 const VISUAL_IMPL_SIGNATURE = /preserveAspectRatio:/g;
@@ -115,6 +127,32 @@ function main() {
   }
   const codingChunks = all.filter(f => CODING_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Coding editor payload found in: ${codingChunks.join(", ") || "(none)"} — ${codingChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
+  // Phase 17F-C1 — the professional editor engine: present, lazy twice over (initial graph + coding chunk closure), worker separate,
+  // no completion machinery anywhere, no CDN anywhere.
+  const monacoChunks = all.filter(f => MONACO_SIGNATURES.filter(s => read(f).includes(s)).length >= 2);
+  if (!monacoChunks.length) failures.push("no Monaco engine chunk was emitted (is src/coding/editor/monacoEngine.ts still imported by the editor engine loader?)");
+  for (const f of monacoChunks) if (initial.includes(f)) failures.push(`${f} (initial) is the Monaco engine chunk — it must stay behind the coding editor's dynamic edge`);
+  const codingRoots = all.filter(f => /^(CodingResponse|CodingQuestionEditor)-[^.]+\.js$/.test(f));
+  if (codingRoots.length < 2) failures.push("the CodingResponse-*.js / CodingQuestionEditor-*.js lazy chunks were not both emitted");
+  const codingClosure = codingRoots.length ? staticClosure(dist, codingRoots) : [];
+  for (const f of monacoChunks) if (codingClosure.includes(f)) failures.push(`${f} is statically reachable from the coding question chunks (${codingRoots.join(", ")}) — the engine must load through import() only`);
+  const codingDynamic = new Set(codingClosure.flatMap(f => dynamicEdges(dist, f)));
+  for (const f of monacoChunks) if (!codingDynamic.has(f)) failures.push(`${f} (Monaco engine) is not behind a dynamic edge of the coding question chunks`);
+  const workerChunks = all.filter(f => /^editor\.worker-[^.]+\.js$/.test(f));
+  if (!workerChunks.length) failures.push("no editor.worker-*.js file was emitted (the Monaco editor worker must be a separate, same-origin Vite worker)");
+  for (const f of workerChunks) if (initial.includes(f) || codingClosure.includes(f)) failures.push(`${f} (editor worker) is part of a static graph`);
+  for (const f of all) {
+    const src = read(f);
+    const completion = COMPLETION_SIGNATURES.filter(s => src.includes(s));
+    if (completion.length) failures.push(`${f} carries completion / suggestion machinery (${completion.join(", ")}) — the exam editor must not help solve the question`);
+    const external = EXTERNAL_ASSET_SIGNATURES.filter(s => src.includes(s));
+    if (external.length) failures.push(`${f} references an external asset host (${external.join(", ")}) — editor assets are served by SmartAssess only`);
+  }
+  const gzOf = f => zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length;
+  const langChunks = all.filter(f => /^(python|java|csharp)-[^.]+\.js$/.test(f));
+  console.log(`Monaco engine chunk: ${monacoChunks.map(f => `${f} (${kb(gzOf(f))} KB gzip)`).join(", ") || "(missing)"} — ${monacoChunks.every(f => !initial.includes(f) && !codingClosure.includes(f)) ? "lazy behind the coding editor's dynamic edge" : "STATICALLY REACHABLE"}`);
+  console.log(`Monaco language grammars: ${langChunks.map(f => `${f} (${kb(gzOf(f))} KB gzip)`).join(", ") || "(none)"}; editor worker: ${workerChunks.map(f => `${f} (${kb(gzOf(f))} KB gzip)`).join(", ") || "(missing)"}`);
+  console.log(`Coding question chunks static closure (beyond the initial graph): ${codingClosure.filter(f => !initial.includes(f)).length} files, ${kb(codingClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + gzOf(f), 0))} KB gzip — no Monaco, no worker`);
   const chartChunks = all.filter(f => CHART_SIGNATURES.filter(s => read(f).includes(s)).length >= 3);
   console.log(`Chart.js payload found in: ${chartChunks.join(", ") || "(none)"} — ${chartChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   console.log(`Teacher Dashboard chunk: ${dashboardChunks.join(", ") || "(missing)"}`);

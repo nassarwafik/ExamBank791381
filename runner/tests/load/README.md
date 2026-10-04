@@ -3,7 +3,7 @@
 Repeatable engineering harness that **measures** the Coding platform (Runner protocol, official queue, durable journal, signed
 callbacks) under load and evaluates a fixed **pass / fail contract**. It never redefines an invariant, never decides a mark, never
 sends an expected output to the Runner and never writes student source, hidden inputs, keys or signatures into a report.
-Verdict = **scenario qualification** (correctness G1–G11 + the scenario's own required checks); CERT-E currently FAILS on Q-ADMISSION because of finding B10-F1 (the Runner over-admits concurrent official submissions) — by design, until Phase B3 fixes `official.js`.
+Verdict = **scenario qualification** (correctness G1–G11 + the scenario's own required checks). CERT-E FAILED on Q-ADMISSION before Phase B3 because of finding B10-F1 (the Runner over-admitted concurrent official submissions: 8 accepted with `RUNNER_OFFICIAL_MAX_PENDING=3`); B3 (atomic admission, main `d236a75`) fixed `official.js` and the SAME scenario with the SAME rule now PASSES (3 accepted / 5 busy / 0 over).
 Full specification: [`docs/enterprise-coding-assessment-17f-b10-certification.md`](../../../docs/enterprise-coding-assessment-17f-b10-certification.md).
 
 ```

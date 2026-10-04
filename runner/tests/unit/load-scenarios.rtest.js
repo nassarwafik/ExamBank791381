@@ -3,7 +3,8 @@
 // durable queue, real journal, real callback deliverer; deterministic fake sandbox). node:test, no Docker, no network beyond
 // loopback. These are the harness's own qualification: each mode (practice, official, mixed, callback burst, recovery,
 // saturation) produces a PASS report with the accounting identity intact — and the harness DETECTS the admission behaviour it
-// was built to measure (SC5: concurrent official arrivals over-admit past RUNNER_OFFICIAL_MAX_PENDING — finding B10-F1).
+// was built to measure (SC5: concurrent official arrivals and RUNNER_OFFICIAL_MAX_PENDING — finding B10-F1, measured as 8 accepted of
+// 8 with maxPending 3 before Phase B3 and CLOSED BY B3 (main d236a75): the SAME scenario and acceptance rule now measure 3 / 5 / 0).
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const L = require("../load/lib/index.js");
@@ -50,14 +51,14 @@ test("SC4 CERT-D concurrency ladder: RUNNER_BUSY appears only above the Runner l
   assert.equal(steps[0].practice.busy, 0, "no busy at concurrency 1"); assert.equal(steps[1].practice.busy, 0, "no busy at the limit");
   assert.deepEqual(rep.scenario.config.levels, [1, 2, 4, 8]);
 });
-test("SC5 CERT-E saturation: safe refusal for practice, peak sandboxes ≤ limit, Runner responsive; official burst over-admission is MEASURED (B10-F1) and FAILS the qualification while correctness passes", async () => {
+test("SC5 CERT-E saturation: safe refusal for practice, peak sandboxes ≤ limit, Runner responsive; the official burst is MEASURED and, with B3 in the Runner, respects maxPending (B10-F1 closed) — the unchanged qualification PASSES", async () => {
   const r = await run("CERT-E");
   assert.equal(r.ok, true, JSON.stringify(r).slice(0, 300));
   const rep = r.report;
-  // Independent Review Fix 1: the test suite PASSES because the harness correctly reports the known product defect — the SCENARIO
-  // qualification is FAIL (Q-ADMISSION) on the current Runner; after B3 fixes official.js the same scenario turns PASS unchanged
+  // Independent Review Fix 1 measured the known product defect here (qualification FAIL on Q-ADMISSION: 8 accepted with maxPending 3);
+  // B3 (atomic admission, main d236a75) fixed official.js and the SAME scenario, with the SAME acceptance rule, turns PASS.
   assert.equal(rep.correctness.verdict, "PASS", JSON.stringify(rep.correctness.failed));
-  assert.equal(rep.qualification.verdict, "FAIL"); assert.deepEqual(rep.qualification.failed, ["Q-ADMISSION"]); assert.equal(rep.verdict, "FAIL");
+  assert.equal(rep.qualification.verdict, "PASS"); assert.deepEqual(rep.qualification.failed, []); assert.equal(rep.verdict, "PASS");
   const [prac, off] = rep.saturation.steps;
   assert.equal(prac.runnerMaxConcurrency, 2); assert.equal(prac.offeredConcurrency, 8);
   assert.ok(prac.practice.busy >= 1, "practice saturation must refuse"); assert.ok(prac.peakActiveSandboxes <= 2, "no uncontrolled sandbox growth");
@@ -65,13 +66,13 @@ test("SC5 CERT-E saturation: safe refusal for practice, peak sandboxes ≤ limit
   assert.equal(rep.correctness.gates.find(g => g.id === "G7").pass, true);
   assert.equal(off.officialMaxPending, 3);
   assert.equal(off.official.offered, off.official.accepted + off.official.busy, "every official submission is accounted (busy is explicit, never lost)");
-  assert.ok(off.official.overAdmission > 0, "the current Runner over-admits (B10-F1)");
-  assert.ok(rep.notes.some(n => n.startsWith("B10-F1 observed")), "over-admission is reported, never hidden");
-  assert.match(rep.qualification.checks.find(c => c.id === "Q-ADMISSION").detail, /B10-F1/);
+  assert.deepEqual([off.official.offered, off.official.accepted, off.official.busy, off.official.overAdmission], [8, 3, 5, 0], "B3: 8 concurrent official arrivals with maxPending 3 → 3 accepted, 5 busy, 0 over (B10-F1 closed)");
+  assert.ok(!rep.notes.some(n => n.startsWith("B10-F1 observed")), "nothing to report: the bound held");
+  assert.match(rep.qualification.checks.find(c => c.id === "Q-ADMISSION").detail, /within the admission bound/);
   assert.equal(rep.official.lost.length, 0); assert.equal(rep.official.remainder, 0);
   clean(rep.journal);
 });
-test("SC5b finding B10-F1: the official admission bound holds for SEQUENTIAL arrivals and is exceeded by CONCURRENT arrivals (characterisation of the current Runner, not a harness pass rule)", async () => {
+test("SC5b finding B10-F1 CLOSED BY B3: the official admission bound holds for SEQUENTIAL arrivals AND for CONCURRENT arrivals (3 accepted / 5 busy of 8 with maxPending 3; before B3 the concurrent burst measured 8 accepted)", async () => {
   const mk = () => L.createLocalStack({ maxConcurrency: 2, official: { maxPending: 3, maxActive: 1 }, profile: { python: { compileMs: 0, runMs: 300, cpuMs: 300, timeoutMs: 300 } } });
   const job = (tag, i) => ({ jobId: "cg_f1" + tag + String(i).padStart(18, "0"), language: "python", languageVersion: 1, source: L.BY_ID.P1.source, cases: [{ token: "c01", stdin: "1\n" }], limits: { timeMs: 3000, memoryMb: 128, outputBytes: 17408 } });
   const seq = mk(); await seq.start();
@@ -85,11 +86,12 @@ test("SC5b finding B10-F1: the official admission bound holds for SEQUENTIAL arr
   await con.idle(); const j = con.journalStatus(); await con.close();
   const accepted = concurrent.filter(s => s === "accepted").length;
   assert.equal(accepted + concurrent.filter(s => s === "busy").length, 8);
-  assert.ok(accepted >= 3, "at least maxPending are admitted");
-  // the point of the measurement: every ACCEPTED job is still journaled, executed once and confirmed — over-admission is a bounds
-  // violation (RUNNER_OFFICIAL_MAX_PENDING, L1 / B1), not a correctness failure; the harness reports the number instead of hiding it
+  assert.equal(accepted, 3, "B3: exactly maxPending concurrent arrivals are admitted (pre-B3 this measured 8)");
+  assert.equal(concurrent.filter(s => s === "busy").length, 5, "the other five are refused with RUNNER_BUSY, never lost");
+  // every ACCEPTED job is journaled, executed once and confirmed; before B3 the over-admission measured here was a bounds violation
+  // (RUNNER_OFFICIAL_MAX_PENDING, L1 / B1), not a correctness failure — the harness reported the number instead of hiding it
   assert.equal(j.counts.confirmed, accepted); assert.equal(j.counts.callback_failed + j.counts.executed + j.counts.running, 0);
-  console.log("B10-F1 characterisation: sequential accepted 3 / 8; concurrent accepted " + accepted + " / 8 with RUNNER_OFFICIAL_MAX_PENDING=3");
+  console.log("B10-F1 (closed by B3) characterisation: sequential accepted 3 / 8; concurrent accepted " + accepted + " / 8 with RUNNER_OFFICIAL_MAX_PENDING=3");
 });
 test("SC6 CERT-F callback burst + idempotency: every callback applied once, re-delivery alreadyApplied, score unchanged", async () => {
   const r = await run("CERT-F", { jobs: 30, concurrency: 6 });

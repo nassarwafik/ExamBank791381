@@ -16,6 +16,8 @@ export type TeacherCodingEvidence = {
   outcome: "graded" | "no-answer" | "compile-error" | null; completedAt: string | null; compilePreview?: string;
   override: { active: boolean; score: number | null }; effectiveScore: number | null; recovery: "none" | "automatic" | "manual" | "delayed";
   technicalCode: string | null; incomplete: boolean; cases: TeacherCodingCase[];
+  /** 17F-C2 — a compile error held for the teacher under the "manualReview" policy: no automatic score exists by design. */
+  reviewRequired: boolean;
 };
 export type CodingEvidenceSummary = { status: "queued" | "processing" | "retrying" | "delayed" | "complete" | "superseded"; openTargets: number; delayedTargets: number; supersededTargets: number };
 
@@ -52,7 +54,7 @@ export function normalizeEvidence(raw: unknown): TeacherCodingEvidence | null {
     passedWeight: num(e.passedWeight), totalWeight: num(e.totalWeight), outcome: oneOf(e.outcome, ["graded", "no-answer", "compile-error"] as const),
     completedAt: str(e.completedAt), ...(typeof e.compilePreview === "string" ? { compilePreview: e.compilePreview } : {}),
     override, effectiveScore: num(e.effectiveScore), recovery, technicalCode: typeof e.technicalCode === "string" && /^[A-Z][A-Z0-9_]{0,47}$/.test(e.technicalCode) ? e.technicalCode : null,
-    incomplete, cases
+    incomplete, cases, reviewRequired: e.reviewRequired === true
   };
 }
 
@@ -63,10 +65,17 @@ export function evidenceStatusLabel(e: TeacherCodingEvidence): string {
   if (e.status === "unknown") return "بيانات التصحيح غير مكتملة.";
   const historical = e.automaticScore !== null && !e.resultCurrent && e.resultRevision !== null && e.revision !== null && e.resultRevision < e.revision;
   if (historical && e.status !== "complete") return "نتيجة سابقة — إعادة التصحيح جارية";
+  if (e.status === "complete" && e.reviewRequired && !e.override.active) return COMPILE_REVIEW_LABEL;
   return ({ queued: "بانتظار بدء التصحيح الآلي", processing: "جارٍ التصحيح الآلي", retrying: "تعذر التصحيح مؤقتًا — إعادة المحاولة التلقائية جارية", delayed: "توقفت المحاولات التلقائية — بحاجة لإعادة محاولة", complete: "اكتمل التصحيح الآلي" } as Record<string, string>)[e.status] ?? "بيانات التصحيح غير مكتملة.";
 }
 export const evidenceTone = (e: TeacherCodingEvidence): "success" | "info" | "warn" | "neutral" =>
-  e.status === "complete" ? "success" : e.status === "superseded" ? "neutral" : e.status === "retrying" || e.status === "delayed" || e.status === "unknown" || e.status === "unsupported" ? "warn" : "info";
+  e.status === "complete" ? (e.reviewRequired && !e.override.active ? "warn" : "success") : e.status === "superseded" ? "neutral" : e.status === "retrying" || e.status === "delayed" || e.status === "unknown" || e.status === "unsupported" ? "warn" : "info";
+
+// Phase 17F-C2 — compile error routed to the teacher (policy manualReview). The diagnostic is EVIDENCE, not a judgement: nothing
+// here says the solution is correct, "only a semicolon" or "minor"; the teacher reads the source and decides the mark.
+export const COMPILE_REVIEW_LABEL = "فشل تجميع الكود — مطلوب تصحيح يدوي";
+export const COMPILE_REVIEW_NOTE = "لم يمنح SmartAssess علامة صفر تلقائيًا وفق سياسة السؤال.";
+export const COMPILE_REVIEW_HINT = "راجع كود الطالب ورسالة المترجم أدناه، ثم أدخل العلامة التي تراها مناسبة من حقل علامة المعلم؛ لا تُحتسب أي علامة آلية لهذا السؤال.";
 export const isOpenStatus = (s: EvidenceStatus) => s === "queued" || s === "processing" || s === "retrying" || s === "delayed";
 
 export const SUPERSEDED_NOTE = "توجد عملية تصحيح آلي أقدم أو جارية لا تؤثر في العلامة المعتمدة حاليًا.";

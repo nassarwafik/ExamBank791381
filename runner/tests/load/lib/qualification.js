@@ -22,7 +22,7 @@
 //                          idempotency evidence; re-delivery answered alreadyApplied, both snapshots present, state / score /
 //                          application count identical
 //   Q-RECOVERY             CERT-G: recoveryVerdict() — settled, lost 0, duplicate applications 0, no resubmission, bounded re-execution
-//   Q-ADMISSION            CERT-E: every saturation step has official.overAdmission = 0 (B10-F1 fails this on the current Runner)
+//   Q-ADMISSION            CERT-E: every saturation step has official.overAdmission = 0 (finding B10-F1 failed this before Phase B3; closed by B3)
 //
 // Requirement matrix for CERT-F / CERT-K (what is MEASURABLE under the current architecture — never a claim beyond it):
 //   local       Q-CORRECTNESS, Q-CALLBACK-TRANSPORT, Q-IDEMPOTENCY   (synthetic job applied by the harness receiver)

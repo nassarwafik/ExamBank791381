@@ -171,5 +171,5 @@ test("EV9 fully consistent evidence still PASSES for every scenario, and a real 
   const g = await L.runScenario({ scenario: "CERT-G", target: "local", env: {}, buildSha: SHA, deps: { fetchImpl: noNet } });
   assert.equal(g.ok, true); assert.equal(g.report.verdict, "PASS"); assert.equal(g.report.recovery.maxExecutionsAllowed, 2); assert.deepEqual(g.report.qualification.contradictions, []);
   const e = await L.runScenario({ scenario: "CERT-E", target: "local", env: {}, buildSha: SHA, deps: { fetchImpl: noNet } });
-  assert.equal(e.ok, true); assert.equal(e.report.correctness.verdict, "PASS"); assert.deepEqual(e.report.qualification.failed, ["Q-ADMISSION"]); assert.equal(e.report.verdict, "FAIL");
+  assert.equal(e.ok, true); assert.equal(e.report.correctness.verdict, "PASS"); assert.deepEqual(e.report.qualification.failed, []); assert.equal(e.report.verdict, "PASS"); assert.deepEqual(e.report.qualification.contradictions, []);   // B3: Q-ADMISSION passes on measured evidence
 });

@@ -77,17 +77,21 @@ test("Q6 CERT-G recovery.pass = false → qualification FAIL (Q-RECOVERY)", () =
   const built = L.buildReport(reportInput("CERT-G", { recovery: rec }));
   assert.equal(built.verdict, "FAIL"); assert.equal(built.correctness.verdict, "PASS");
 });
-test("Q7 CERT-E on the current Runner (B10-F1): correctness PASS, qualification FAIL on Q-ADMISSION, verdict FAIL, finding recorded", async () => {
+test("Q7 CERT-E on the B3 Runner (B10-F1 closed): correctness PASS, Q-ADMISSION PASS from measured 3 / 5 / 0, verdict PASS; the detection itself is still proven on over-admission evidence", async () => {
   const rep = okReport(await run("CERT-E"), "CERT-E");
   const off = rep.saturation.steps[1].official;
-  assert.ok(off.overAdmission > 0, "the current Runner over-admits concurrent official submissions (B10-F1): " + JSON.stringify(off));
+  assert.deepEqual([off.offered, off.accepted, off.busy, off.overAdmission], [8, 3, 5, 0], "B3: the concurrent burst respects maxPending 3 (pre-B3 this measured 8 accepted / 5 over): " + JSON.stringify(off));
   assert.equal(rep.correctness.verdict, "PASS", JSON.stringify(rep.correctness.failed));
-  assert.equal(rep.qualification.verdict, "FAIL");
-  assert.deepEqual(rep.qualification.failed, ["Q-ADMISSION"]);
-  assert.equal(rep.verdict, "FAIL");
+  assert.equal(rep.qualification.verdict, "PASS");
+  assert.deepEqual(rep.qualification.failed, []);
+  assert.equal(rep.verdict, "PASS");
   const check = rep.qualification.checks.find(c => c.id === "Q-ADMISSION");
-  assert.match(check.detail, /B10-F1|over-admi/i);
-  assert.match(L.toMarkdown(rep), /Q-ADMISSION[^\n]*FAIL/);
+  assert.equal(check.pass, true); assert.match(check.detail, /within the admission bound/);
+  assert.match(L.toMarkdown(rep), /Q-ADMISSION[^\n]*PASS/);
+  // the rule is unchanged: the pre-B3 evidence (8 accepted with maxPending 3) still FAILS it with the finding named
+  const q = L.evaluateQualification({ scenarioId: "CERT-E", target: "local", correctness: correctnessPass(), saturation: { steps: [{ offeredConcurrency: 8, officialMaxPending: 3, practice: { offered: 0, busy: 0, completed: 0 }, official: { offered: 8, accepted: 8, busy: 0, overAdmission: 5 } }] } });
+  assert.equal(q.verdict, "FAIL"); assert.deepEqual(q.failed, ["Q-ADMISSION"]);
+  assert.match(q.checks.find(c => c.id === "Q-ADMISSION").detail, /B10-F1 over-admission: 8 accepted with maxPending 3 \(5 over\)/);
 });
 test("Q8 CERT-E with no over-admission (sequential official arrivals) → Q-ADMISSION passes, qualification PASS", async () => {
   const q = L.evaluateQualification({ scenarioId: "CERT-E", target: "local", correctness: correctnessPass(), saturation: { steps: [{ offeredConcurrency: 8, officialMaxPending: 3, practice: { offered: 16, busy: 14, completed: 2 }, official: { offered: 0, accepted: 0, busy: 0, overAdmission: 0 } }, { offeredConcurrency: 8, officialMaxPending: 3, practice: { offered: 0, busy: 0, completed: 0 }, official: { offered: 8, accepted: 3, busy: 5, overAdmission: 0 } }] } });

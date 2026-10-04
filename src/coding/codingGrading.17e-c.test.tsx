@@ -236,7 +236,9 @@ describe("17E-C POLL1–POLL10 — bounded, read-only, race-safe refresh", () =>
       await flush(3000);
       await settle();
       expect(statusOf(), fail).toBe("processing");
-      expect(document.body.textContent).toMatch(/7\s*\/ 10/);
+      // 17F-B1: while official grading is OPEN the headline withholds the provisional number (— / 10), never a numeric score
+      expect(screen.getByTestId("result-headline").textContent).toMatch(/^—\s*\/ 10$/);
+      expect(document.body.textContent).not.toMatch(/7\s*\/ 10/);
       expect(screen.getByTestId("coding-grading-refresh-note").textContent).toMatch(/قد يستمر التصحيح على الخادم حتى عند انقطاع اتصال جهازك/);
       expect(document.body.textContent).not.toMatch(/فشل التصحيح|تعذّر التصحيح/);
       s.fail = false;
@@ -274,7 +276,8 @@ describe("17E-C POLL1–POLL10 — bounded, read-only, race-safe refresh", () =>
     s.held.splice(0).forEach(d => d.resolve(null));
     await settle();
     expect(statusOf()).toBe("retrying");
-    expect(document.body.textContent).toMatch(/5\s*\/ 10/);
+    expect(screen.getByTestId("result-headline").textContent).toMatch(/^—\s*\/ 10$/);                 // 17F-B1: open ⇒ withheld
+    expect(screen.getByTestId("result-headline").dataset.pending).toBe("true");
   });
 });
 
@@ -387,7 +390,8 @@ describe("17E-C RACE1–RACE3 — attempt identity and other tabs", () => {
   it("RACE3 the same attempt's score changes after the callback: score, percentage, badge and finality update together", async () => {
     const s = makeServer(stateWith(open("processing", { score: 2, percentage: 20 })));
     await mount(s);
-    expect(document.body.textContent).toMatch(/2\s*\/ 10/);
+    expect(screen.getByTestId("result-headline").textContent).toMatch(/^—\s*\/ 10$/);                 // 17F-B1: open ⇒ withheld
+    expect(document.body.textContent).not.toMatch(/20%/);
     s.state = stateWith(result({ autoGradingStatus: "complete", score: 6, percentage: 60, manualReviewMarks: 4 }));
     await flush(3000);
     await settle();

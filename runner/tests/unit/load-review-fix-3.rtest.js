@@ -42,12 +42,12 @@ async function stagingRehearsal(params, { declare = true } = {}) {
 }
 
 // ── RF3-A remote CERT-E maxPending declaration ──────────────────────────────────────────────────────────────────────────
-test("RA1 local CERT-E with the catalog default maxPending=3 keeps Q-ADMISSION measurable exactly as before (B10-F1 still detected)", async () => {
+test("RA1 local CERT-E with the catalog default maxPending=3 keeps Q-ADMISSION measurable exactly as before (B3 Runner: 3 accepted / 5 busy / 0 over → PASS; B10-F1 closed)", async () => {
   const r = await L.runScenario({ scenario: "CERT-E", target: "local", env: {}, buildSha: SHA, deps: { fetchImpl: noNet } });
   assert.equal(r.ok, true);
   const s = r.report.saturation.steps[1];
-  assert.equal(s.officialMaxPending, 3); assert.equal(s.maxPendingSource, "local-effective"); assert.ok(s.official.overAdmission > 0);
-  assert.equal(r.report.correctness.verdict, "PASS"); assert.deepEqual(r.report.qualification.failed, ["Q-ADMISSION"]); assert.equal(r.report.verdict, "FAIL");
+  assert.equal(s.officialMaxPending, 3); assert.equal(s.maxPendingSource, "local-effective"); assert.deepEqual([s.official.accepted, s.official.busy, s.official.overAdmission], [3, 5, 0]);
+  assert.equal(r.report.correctness.verdict, "PASS"); assert.deepEqual(r.report.qualification.failed, []); assert.equal(r.report.verdict, "PASS");
   assert.equal(r.report.scenario.config.runnerDeclared, null, "nothing was declared by an operator on local");
 });
 test("RA2 staging CERT-E with NO explicit --runner-max-pending: officialMaxPending null, overAdmission null, Q-ADMISSION INCOMPLETE", async () => {
@@ -65,12 +65,13 @@ test("RA3 staging CERT-E with declared maxPending=3 and 3 accepted (sequential a
   assert.equal(rep.qualification.checks.find(c => c.id === "Q-ADMISSION").pass, true);
   assert.equal(rep.verdict, "PASS", JSON.stringify(rep.qualification) + JSON.stringify(rep.correctness.notEvaluated));
 });
-test("RA4 staging CERT-E with declared maxPending=3 and 8 accepted (concurrent arrivals) → Q-ADMISSION FAIL with 5 over", async () => {
+test("RA4 staging CERT-E with declared maxPending=3 and CONCURRENT arrivals (8 at once) → the declared bound is measured against the burst: B3 Runner 3 accepted / 5 busy / 0 over → Q-ADMISSION PASS (pre-B3 this measured 8 accepted / 5 over → FAIL)", async () => {
   const rep = await stagingRehearsal({ concurrency: 8 });
   const s = rep.saturation.steps[1];
-  assert.equal(s.officialMaxPending, 3); assert.equal(s.official.accepted, 8); assert.equal(s.official.overAdmission, 5);
-  assert.deepEqual(rep.qualification.failed, ["Q-ADMISSION"]); assert.match(rep.qualification.checks.find(c => c.id === "Q-ADMISSION").detail, /5 over/);
-  assert.equal(rep.correctness.verdict, "PASS"); assert.equal(rep.verdict, "FAIL");
+  assert.equal(s.officialMaxPending, 3); assert.equal(s.maxPendingSource, "operator-declared");
+  assert.deepEqual([s.official.offered, s.official.accepted, s.official.busy, s.official.overAdmission], [8, 3, 5, 0]);
+  assert.deepEqual(rep.qualification.failed, []); assert.equal(rep.qualification.checks.find(c => c.id === "Q-ADMISSION").pass, true);
+  assert.equal(rep.correctness.verdict, "PASS"); assert.equal(rep.verdict, "PASS", JSON.stringify(rep.qualification) + JSON.stringify(rep.correctness.notEvaluated));
 });
 test("RA5 the CERT-E catalog default (runner.maxPending = 3) is the LOCAL effective configuration, never a remote declaration", () => {
   const local = L.planScenario({ scenario: "CERT-E", target: "local", params: {} });

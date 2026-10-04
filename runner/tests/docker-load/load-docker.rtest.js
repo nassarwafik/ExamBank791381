@@ -44,11 +44,14 @@ test("DL4 saturation: safe refusal, peak sandboxes ≤ limit, Runner responsive 
   const r = await run("CERT-E", { jobs: 8, officialJobs: 3, concurrency: 4, runner: { maxConcurrency: 1, maxPending: 2, maxActive: 1 } });
   assert.equal(r.ok, true, JSON.stringify(r).slice(0, 400));
   const rep = r.report;
-  // correctness must PASS; the scenario qualification may FAIL only on Q-ADMISSION (finding B10-F1 — the Runner over-admits
-  // concurrent official submissions); any other failure is a regression
+  // B3 (atomic admission) is in the Runner: correctness AND the scenario qualification must PASS — Q-ADMISSION included (the
+  // pre-B3 allowance for finding B10-F1 is gone); any failure is a regression
   assert.equal(rep.correctness.verdict, "PASS", JSON.stringify(rep.correctness.failed));
-  assert.ok(rep.qualification.failed.every(id => id === "Q-ADMISSION"), JSON.stringify(rep.qualification));
-  assert.equal(rep.verdict, rep.qualification.failed.length ? "FAIL" : "PASS");
+  assert.deepEqual(rep.qualification.failed, [], JSON.stringify(rep.qualification));
+  assert.equal(rep.qualification.checks.find(c => c.id === "Q-ADMISSION").pass, true, JSON.stringify(rep.qualification));
+  assert.equal(rep.verdict, "PASS");
+  const official = rep.saturation.steps[1].official;
+  assert.equal(official.overAdmission, 0); assert.ok(official.accepted <= 2, "never more than maxPending accepted: " + JSON.stringify(official)); assert.equal(official.offered, official.accepted + official.busy);
   assert.ok(rep.saturation.steps[0].practice.busy >= 1);
   assert.equal(rep.correctness.gates.find(g => g.id === "G7").pass, true);
   assert.equal(orphans(), "");

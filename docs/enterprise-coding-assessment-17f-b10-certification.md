@@ -207,10 +207,11 @@ The plan requests the idempotent re-delivery on `local` only. A future real stag
 applied once, then re-delivered) may add a separate idempotency qualification; this phase does not fabricate one. A staging CERT-F /
 CERT-K run therefore reaches PASS once the operator attaches `journal-status.js --json` for the correctness gates G3 / G5 / G6.
 
-**Consequence for the current Runner:** CERT-E **FAILS qualification** on Q-ADMISSION because of finding B10-F1 (§11) while its
-correctness gates pass. That is the intended enterprise behaviour: the harness is ready to detect the defect, the test suite passes
-because it proves the detection, and the product is not qualified until Phase B3 fixes `official.js` — after which the identical
-CERT-E scenario turns PASS without any change to the acceptance rule.
+**Consequence for the pre-B3 Runner (historical):** CERT-E **FAILED qualification** on Q-ADMISSION because of finding B10-F1 (§11)
+while its correctness gates passed. That was the intended enterprise behaviour: the harness detected the defect, the test suite passed
+because it proved the detection, and the product was not qualified until Phase B3 fixed `official.js`. **After B3 (main
+`d236a75be9e45945ce237616e00ba3dc3f5d22d5`, reconciled into this branch, §18) the identical CERT-E scenario turns PASS without any
+change to the acceptance rule** — 3 accepted / 5 busy / 0 over for 8 concurrent official submissions with `maxPending = 3`.
 
 ### Correctness gates
 
@@ -252,7 +253,11 @@ above the agreed grading delay; simultaneous class size above the measured safe 
 `performance.latency.p95`, `totals.busy / totals.offered`, `official.timing.callback`, `saturation.steps[].practice.busy`, the attached CPU
 series. Alternatives to a bigger VM (B3 global semaphore, B4 compile accounting, a second Runner) are decided on the same evidence.
 
-### Finding B10-F1 (measured by the harness on the local stack, real `official.js`)
+### Finding B10-F1 (measured by the harness on the local stack, real `official.js`) — **CLOSED BY B3**
+
+Status: **CLOSED BY B3** (Phase 17F-B3 — Atomic Official Admission & Deterministic Backpressure, PR #250; final reviewed head
+`aaeb3b4ca8ed4ffbd038f594b87a44f7bda77562`, merged into `main` as `d236a75be9e45945ce237616e00ba3dc3f5d22d5`). The paragraph below
+is the ORIGINAL finding, kept verbatim as historical evidence; the before / after measurement is in §18.
 
 With `RUNNER_OFFICIAL_MAX_PENDING=3`, **8 sequential** official submissions give 3 accepted / 5 `RUNNER_BUSY`; **8 concurrent**
 submissions give **8 accepted**. The admission check in `official.js submit()` counts live records before the concurrent submissions have
@@ -330,7 +335,7 @@ harness must catch (R1–R8, I1–I5).
 |---|---|
 | fail-first LOAD1–LOAD25 on the baseline | 25 tests, 25 fail (`MODULE_NOT_FOUND`) |
 | LOAD1–LOAD25 after implementation | 25 / 25 pass |
-| local scenario suite SC1–SC14 (fake sandbox, real gateway / queue / journal / deliverer) | 15 / 15 pass (SC5: CERT-E correctness PASS, qualification FAIL on Q-ADMISSION — B10-F1; SC5b is the characterisation) |
+| local scenario suite SC1–SC14 (fake sandbox, real gateway / queue / journal / deliverer) | 15 / 15 pass (pre-B3: SC5 CERT-E correctness PASS, qualification FAIL on Q-ADMISSION — B10-F1; SC5b the characterisation. After the B3 reconciliation (§18) the same SC5 / SC5b measure 3 / 5 / 0 and PASS) |
 | mutations M1–M18 (19 mutants incl. M4b) + QM1–QM8 (10 mutants incl. QM6b / QM7b) + QM9–QM16 (8) + QM17–QM24 (8) + QM25–QM30 (6) | 51 / 51 killed, files restored byte-for-byte |
 | Independent Review Fix 1 fail-first Q1–Q10, I1–I5, R1–R8 | 23 fail on 4c1a416 → 23 / 23 pass |
 | Independent Review Fix 2 fail-first QA1–QA4, AUTH1–AUTH6, EV1–EV9 | 17 of 19 fail on 8b6fe3a → 19 / 19 pass |
@@ -348,7 +353,7 @@ Fairness is measured, not guaranteed (B9). Official load through the Runner prot
 on production; production official grading evidence comes from the API path (manual counts attached). Recovery is in-process on local
 (the process-kill variant is covered by `tests/unit/crash-recovery.rtest.js` RR1–3 and Docker `restart.rtest.js`). The fake sandbox's
 timings qualify the harness, never the VM. The local stack's receiver mirrors `applyOfficialCallback`'s contract (`applied` / `alreadyApplied`
-/ technical → `retryable`) but is not the API code. Finding B10-F1 is reported, not fixed. P1 end-to-end (browser leg) stays a manual
+/ technical → `retryable`) but is not the API code. Finding B10-F1 was reported by this harness and is CLOSED BY B3 (§18). P1 end-to-end (browser leg) stays a manual
 measurement as in A2.
 
 ## 17. Later final-certification procedure
@@ -359,3 +364,48 @@ measurement as in A2.
 3. Decide the D4s_v5 limits and the D8s_v5 thresholds from the measured reports (§11); record them in `runner-env.example` and the runbook.
 4. Production (approval workflow §13): CERT-A, CERT-D, CERT-J, CERT-F / K part A; API-path official qualification with the test class.
 5. Only then: "SmartAssess Coding — production certification complete", citing the report files (SHA, scenario, date) for each gate.
+
+## 18. Reconciliation with Phase B3 — finding B10-F1 CLOSED BY B3
+
+Phase 17F-B3 (PR #250, final reviewed head `aaeb3b4ca8ed4ffbd038f594b87a44f7bda77562`) made the official admission decision atomic
+(one queue-wide admission critical section: identity, target authority, LIVE ≤ maxPending, records ≤ maxRecords, durable commit,
+install) and was merged into `main` as `d236a75be9e45945ce237616e00ba3dc3f5d22d5`. This branch was reconciled with that `main` by ONE
+normal merge commit (no rebase, no cherry-pick, no manual copy of B3 files; the only conflict was `.gitignore`, resolved as the exact
+union of both sides). The harness itself is unchanged as an evaluator: `qualification.js` (Q-ADMISSION: every saturation step has
+`official.overAdmission = 0`, derived from `accepted − maxPending`, contradictions recorded), `harness.js` (the `B10-F1 observed`
+measurement note), the scenario catalog, the correctness gates and every mutation anchor are byte-identical to the reviewed head
+`1136f4689efeada04b01fa3a10d3b470653bde4a` apart from one comment line. Nothing was mocked, clamped or redefined.
+
+### Before / after — the SAME scenario, the SAME rule (`CERT-E`, local stack, real `official.js`, fake sandbox)
+
+| | pre-B3 head `1136f468` (Runner without B3) | reconciled head (Runner with B3) |
+|---|---|---|
+| configuration | `concurrency 8 · jobs 16 practice + 8 official · runner { maxConcurrency 2, maxPending 3, maxActive 1 }` | identical |
+| practice saturation step | offered 16 · busy 14 · completed 2 (G7 /healthz 200 afterwards) | offered 16 · busy ≥ 1 · peak active ≤ 2 (identical rule) |
+| official saturation step | offered 8 · **accepted 8 · busy 0 · overAdmission 5** (`officialMaxPending 3`, `local-effective`) | offered 8 · **accepted 3 · busy 5 · overAdmission 0** |
+| note | `B10-F1 observed: 8 concurrent official submissions accepted with RUNNER_OFFICIAL_MAX_PENDING=3 (local-effective; admission check is not atomic across concurrent arrivals)` | no `B10-F1 observed` note |
+| Q-CORRECTNESS (G1–G11) | PASS | PASS |
+| Q-ADMISSION | **FAIL** — `B10-F1 over-admission: 8 accepted with maxPending 3 (5 over)` | **PASS** — `every saturation step within the admission bound` |
+| verdict | **FAIL** (scenario qualification) | **PASS** |
+
+The only material behavioural difference between the two reports is the official saturation step: concurrent admission now respects
+the configured capacity (3 accepted, 5 `RUNNER_BUSY`, every submission accounted, nothing lost). Correctness gates, accounting
+identities, callback evidence and the practice saturation behaviour are unchanged. Sequential arrivals measured 3 / 5 before and after
+(`SC5b`).
+
+### What changed in the harness branch for the reconciliation (tests only — no rule, no production code)
+
+* The characterisations of the PRE-B3 Runner were updated to the measured B3 truth, with their history kept in their titles: `SC5`,
+  `SC5b` (sequential AND concurrent 3 / 5 / 0 — tightened from "≥ 3"), `Q7` (which also keeps proving the detection: the pre-B3 evidence
+  `8 accepted with maxPending 3` still FAILS the unchanged rule with the finding named), `EV9`, `RA1`, `RA4` (the operator-declared bound is
+  measured against a concurrent burst: 3 / 5 / 0 → PASS), `RT3` (the post-B3 PASS and the Q-ADMISSION outcome, contradictions and
+  performance evidence survive `buildReport(buildReport(x))`).
+* Docker `DL4` no longer tolerates a Q-ADMISSION failure: with B3 in the Runner the saturation scenario must PASS qualification, with
+  `official.overAdmission = 0` and `accepted ≤ maxPending`; no other Docker qualification changed.
+* The mutation catalog (M1–M18, QM1–QM30) is unchanged; the synthetic over-admission evidence tests (`EV`, `RP`, `Q7`'s rule check) keep
+  QM3 (ignore over-admission) and QM20 (trust the stored overAdmission) killable without an over-admitting Runner.
+* No rule was weakened: `Q-ADMISSION` still derives `overAdmission` from `accepted − maxPending`, still requires a positive-integer
+  `officialMaxPending` when measured, still records contradictions, still answers INCOMPLETE when the bound is unknown.
+
+Local results remain correctness / qualification evidence only; no production capacity number is derived from them, and the real-VM
+qualification procedure (§17) is unchanged.

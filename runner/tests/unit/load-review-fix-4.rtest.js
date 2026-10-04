@@ -227,12 +227,14 @@ test("RT2 a FAIL / INCOMPLETE report round-trips with the same verdict and keeps
   // the stored report-level verdict is still checked against the recomputed qualification
   assert.throws(() => L.buildReport({ ...failed, verdict: "PASS" }), /verdict/);
 });
-test("RT3 real local reports (CERT-F with bursts and idempotency, CERT-E with B10-F1) revalidate identically", async () => {
+test("RT3 real local reports (CERT-F with bursts and idempotency, CERT-E on the B3 Runner with Q-ADMISSION PASS) revalidate identically — the post-B3 PASS survives the round-trip", async () => {
   for (const [scenario, params] of [["CERT-F", { jobs: 6, concurrency: 2 }], ["CERT-E", {}]]) {
     const r = await L.runScenario({ scenario, target: "local", env: {}, buildSha: SHA, params, deps: { fetchImpl: noNet } });
     assert.equal(r.ok, true, scenario);
     const again = L.buildReport(r.report);
     sameVerdicts(r.report, again);
     assert.deepEqual(again.callbacks, r.report.callbacks); assert.deepEqual(again.saturation, r.report.saturation);
+    assert.deepEqual(again.qualification.contradictions, r.report.qualification.contradictions); assert.deepEqual(again.performance, r.report.performance);
+    if (scenario === "CERT-E") { const qa = x => x.qualification.checks.find(c => c.id === "Q-ADMISSION"); assert.equal(qa(r.report).pass, true, "B3: Q-ADMISSION passes on the measured evidence"); assert.deepEqual(qa(again), qa(r.report)); assert.equal(again.verdict, "PASS"); }
   }
 });
