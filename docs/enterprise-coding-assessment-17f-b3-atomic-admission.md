@@ -435,3 +435,55 @@ force-push. The two changes touch disjoint files (B3: `runner/` and this documen
 Runner protocol seen by the C2 server is unchanged: the callback response and the Runner JOB record still say `complete`; the
 `reviewRequired` target state, `compileErrorPolicy`, the coding@1 / coding@2 boundary and the legacy score-withhold bit are
 server-side (C2) semantics that B3 neither reads nor rewrites.
+
+## 16. Independent Review Fix 5 — the at-least-once fallback obeys the current authority
+
+### 16.1 RF5-1 — the in-memory fallback of `runJob` delivered without asking who the authority is
+
+`runJob` keeps the Phase 17D-B2 at-least-once rule: when `finalize` cannot make the sandbox result durable (a journal write fails),
+the result is delivered ONCE from memory and the record stays RUNNING on disk, so the next start re-runs the job (bounded by
+`maxInterruptions`) while the API applies at most one result. After review fix 4, `finalize` is also the fence that retires an
+obsolete RUNNING record (its `superseded` commit). The two met in one reachable state: rev 7 RUNNING, rev 8 admitted, the
+advance's `supersede` commit of rev 7 FAILS, the sandbox returns, `finalize` takes the obsolete branch and ITS `superseded` commit
+fails too → the catch of `runJob` ran the fallback and delivered the rev 7 result — a job that had lost its authority delivered
+(independent review probe P1, now TAR47 fail-first on `dfc6321`: `a NON-AUTHORITATIVE result was delivered from memory`, actual
+1 attempt). The API refuses that callback (409 `STALE_RESULT`: the attempt's target names rev 8), so nothing was applied, but the
+Runner contract of §15 ("never later deliver a result") must hold on the Runner alone.
+
+### 16.2 The rule
+
+The fallback obeys the SAME predicate as every other delivery. Inside the catch, under `withJob(jobId)` (the smallest existing
+lock; never ADMISSION, never over the sandbox or the transport), the current in-memory record is re-read and the result is
+delivered from memory ONLY if the record still exists, is still `running` and `deliverable(rec)` holds (plain jobs: always;
+versioned jobs: the cached authority names this revision and this job, not blocked, not held, no cache miss). Otherwise nothing
+is delivered: the existing `coding.runner.journal.write-failed / result` line is followed by `coding.runner.delivery.withheld`
+`{ jobId, revision, stage: "fallback", reason }` with `reason ∈ { obsolete, not-authoritative, state-changed, record-missing }`
+(fixed identifiers only — never the reference, never payload), and the record is left exactly as the failed writes left it:
+RUNNING on disk. No new state, no success claimed, no bypass of recovery: the next start's review-fix-4 pass supersedes it under
+the durable rev 8 entry (TAR47: `summary.targets.superseded` 1, `recovered.interrupted` 0, input released, redelivery `stale`, no
+re-run, the single pending slot free), or — if it IS the authority — re-runs it as before. The window between this check and the
+transport is the one already described for every delivery (OBS-5 below): the API's `STALE_RESULT` stays the final arbiter.
+
+### 16.3 Tests and mutation (review fix 5)
+
+TAR47 (fail-first on `dfc6321`, final test file against the unmodified `official.js`: ✖ actual 1 / expected 0 attempts): both
+supersede fences fail (`injected` 2), zero rev 7 attempts, record RUNNING, `executedAt` null, no result file, `executed` 0,
+withheld log with `reason: "obsolete"`, no reference logged, rev 8 confirmed with one attempt, then restart: superseded, no
+re-run, redelivery stale, no held / LIVE / executed leftovers, a plain job is admitted into `maxPending = 1`. TAR48 pins the
+PRESERVED contract: a result-write failure for an authoritative versioned job and for a plain job still delivers once from memory
+(records RUNNING, two `write-failed / result` lines, no withheld line); TAR48 passes on `dfc6321` as well (a pin, not a defect).
+Mutation M37 (the guard returns "deliverable" unconditionally) is killed by TAR47; `official.js` restored byte-for-byte
+(sha256-verified). Lock order unchanged: ADMISSION → `withJob` → journal; the catch takes `withJob(jobId)` only.
+
+### 16.4 Scope note — observations OBS-1 … OBS-5 of the independent review (not changed here)
+
+* OBS-1 (minor): a `callback_failed` record of the CURRENT authority whose index entry was pruned (entry age ≥ `failedRetentionMs`,
+  record younger) answers `busy` / `target-authority-unavailable` on redelivery until the record itself is pruned, then a fresh
+  admission re-executes it. Fail closed by the §12 cache-miss rule; bounded by retention. Follow-up candidate.
+* OBS-2 (minor): a held competitor (its startup supersede failed) answers `duplicate / received` on redelivery until a higher
+  revision releases it (§14.3); held records of a BLOCKED target keep their pending slot until operator action — the documented
+  fail-closed design (§14.1, §14.3).
+* OBS-3 (info): a RUNNING record superseded by the advance keeps its sandbox slot until the run ends (bounded by the job wall).
+* OBS-4 (info): `supersede` of an already `confirmed` competitor at startup commits nothing but is counted / logged as superseded.
+* OBS-5 (info): a callback may be reserved between the durable write of the newer record and the cache advance of the same
+  admission; such a delivery is answered `STALE_RESULT` by the API and the record ends superseded (review probe P2).

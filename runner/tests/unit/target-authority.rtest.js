@@ -1159,3 +1159,66 @@ test("TAR46 the start fence alone: when the advance's supersede commit FAILS for
   assert.deepEqual(await h.q.submit(R7), { status: "stale" });
   await crash(h);
 });
+
+test("TAR47 the fallback delivery obeys the authority: an obsolete RUNNING rev 7 whose supersede commits FAIL at the advance AND at finalize is never delivered from memory; the next start retires it", async () => {
+  const dir = tmpJournalDir(), hold = latch(), logger = capture();
+  const sandbox = fakeSandbox(async j => { if (j.jobId === R7.jobId) await hold.promise; });
+  let injected = 0;
+  const h = await bootWith(dir, { maxPending: 8, maxActive: 1, sandbox, logger }, journal => {
+    const original = journal.writeRecord.bind(journal);
+    journal.writeRecord = async rec => { if (rec.jobId === R7.jobId && rec.state === "superseded") { injected++; throw new Error("injected supersede failure"); } return original(rec); };
+  });
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  await waitFor(() => recordOf(dir, R7.jobId).state === "running");
+  assert.equal((await h.q.submit(R8)).status, "accepted");                                           // rev 8 is the authority; the advance's supersede of rev 7 fails
+  assert.equal(injected, 1);
+  assert.equal(recordOf(dir, R7.jobId).state, "running");
+  hold.open();                                                                                        // the late rev 7 result: the finalize fence's supersede fails too
+  await h.q.idle(); await sleep(80);
+  assert.equal(injected, 2, "both supersede fences must have been attempted");
+  assert.equal(attemptsOf(h, R7), 0, "a NON-AUTHORITATIVE result was delivered from memory");
+  const seven = recordOf(dir, R7.jobId);
+  assert.equal(seven.state, "running", "the failed writes leave the durable record RUNNING (never EXECUTED) for the next start to retire");
+  assert.equal(seven.executedAt, null);
+  assert.equal(fs.existsSync(resultFile(dir, R7)), false);
+  assert.equal(h.q.status().executed, 0);
+  assert.ok(logger.events().some(e => e.event === "coding.runner.journal.write-failed" && e.jobId === R7.jobId && e.stage === "result"));
+  assert.ok(logger.events().some(e => e.event === "coding.runner.delivery.withheld" && e.jobId === R7.jobId && e.revision === 7 && e.stage === "fallback" && e.reason === "obsolete"), "the withheld fallback is logged");
+  assert.ok(!logger.lines.some(l => l.includes(TARGET)));
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");                                          // rev 8 completes normally
+  assert.equal(attemptsOf(h, R8), 1);
+  assert.deepEqual(h.sandbox.runs, [R7.jobId, R8.jobId]);
+  await crash(h);
+  // restart (writes work again): the startup pass supersedes the RUNNING rev 7 under the durable rev 8 entry — no re-run, no delivery
+  const sandbox2 = fakeSandbox();
+  const h2 = await boot(dir, { maxPending: 1, sandbox: sandbox2 });
+  assert.equal(h2.summary.targets.superseded, 1);
+  assert.equal(h2.summary.recovered.interrupted, 0);
+  assert.equal(recordOf(dir, R7.jobId).state, "superseded");
+  assert.equal(fs.existsSync(path.join(dir, "inputs", R7.jobId + ".json")), false);
+  await h2.q.idle();
+  assert.equal(sandbox2.count(R7.jobId), 0);
+  assert.equal(attemptsOf(h2, R7), 0);
+  assert.deepEqual(await h2.q.submit(R7), { status: "stale" });
+  const s = h2.q.status();
+  assert.equal(s.received + s.running, 0); assert.equal(s.executionHeld, 0); assert.equal(s.executed, 0);
+  assert.equal((await h2.q.submit(job(3906))).status, "accepted", "no capacity leak: the single pending slot is free");
+  await h2.q.idle();
+  assert.equal(sandbox2.count(R7.jobId), 0);
+  await crash(h2);
+});
+
+test("TAR48 the at-least-once fallback is PRESERVED for the current authority: a result write failure for an authoritative versioned job and for a plain job still delivers once from memory, the records stay RUNNING on disk", async () => {
+  const dir = tmpJournalDir(), logger = capture(), plain = job(3907), seven = v(3908, 7);
+  const h = await bootWith(dir, { maxPending: 8, maxActive: 1, logger }, journal => { journal.writeResult = async () => { throw new Error("injected result write failure"); }; });
+  assert.equal((await h.q.submit(seven)).status, "accepted");
+  assert.equal((await h.q.submit(plain)).status, "accepted");
+  await h.q.idle(); await sleep(60);
+  assert.equal(attemptsOf(h, seven), 1, "the authoritative versioned job must still be delivered once from memory");
+  assert.equal(attemptsOf(h, plain), 1, "the plain job must still be delivered once from memory");
+  assert.equal(recordOf(dir, seven.jobId).state, "running");
+  assert.equal(recordOf(dir, plain.jobId).state, "running");
+  assert.equal(logger.events().filter(e => e.event === "coding.runner.journal.write-failed" && e.stage === "result").length, 2);
+  assert.ok(!logger.events().some(e => e.event === "coding.runner.delivery.withheld"));
+  await crash(h);
+});

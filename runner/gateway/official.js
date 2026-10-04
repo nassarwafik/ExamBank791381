@@ -370,6 +370,16 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
       // the result could not be made durable: deliver it once from memory (at-least-once); the record stays RUNNING on disk, so
       // a restart re-runs the job (bounded by maxInterruptions) — the API applies at most one result.
       log("warn", "coding.runner.journal.write-failed", { jobId, stage: "result" });
+      // review fix 5 — the fallback obeys the SAME authority as every delivery: only a record that is still RUNNING and still
+      // the current authority of its target (deliverable) may be delivered from memory. An obsolete, blocked, held or unknown
+      // record is never delivered (its supersede commits failed too): it stays RUNNING on disk and the next start retires it
+      // under the durable authority (superseded) or re-runs it if it IS the authority. Plain jobs are always deliverable.
+      const withheld = await withJob(jobId, async () => {
+        const cur = records.get(jobId);
+        if (cur && cur.state === "running" && deliverable(cur)) return null;
+        return { revision: cur ? cur.revision : null, reason: !cur ? "record-missing" : cur.state !== "running" ? "state-changed" : obsolete(cur) ? "obsolete" : "not-authoritative" };
+      }).catch(() => ({ revision: null, reason: "not-authoritative" }));
+      if (withheld) { log("warn", "coding.runner.delivery.withheld", { jobId, revision: withheld.revision, stage: "fallback", reason: withheld.reason }); return; }
       try { await deliver(result); } catch { /* the API's recovery re-dispatches */ }
     }
   }
