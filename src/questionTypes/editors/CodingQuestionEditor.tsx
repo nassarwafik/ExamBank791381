@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { AuthoringEditorProps } from "../registryTypes";
 import type { QuestionBody } from "../../examTypes";
-import CodingEditor from "../../coding/CodingEditor";
+import CodingWorkspace from "../../coding/workspace/CodingWorkspace";
 import { duplicateCodingTest, moveCodingTest, newCodingTestId, removeCodingTest, updateCodingTest } from "../../coding/codingTests";
 import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGES, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, DEFAULT_CODING_COMPARATOR, codingCompileErrorPolicy, codingGradingMode, codingQuestionVersion, codingLanguage, codingScoringPolicy, codingStarterTemplate, defaultCodingConfig, isCodingLanguage, validateCodingQuestion, type CodingComparator, type CodingCompileErrorPolicy, type CodingGradingMode, type CodingLimits, type CodingQuestionConfigV1, type CodingScoringPolicy, type CodingTestCasePrivate, type CodingTestCasePublic } from "../../codingQuestion";
 import { OFFICIAL_STDOUT_CAPTURE_BYTES } from "../../codingContract";
@@ -136,7 +136,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
         <p className="cx-help">اختياري لكل لغة؛ يظهر للطالب في بداية المحرر ويمكنه استعادته. لا تضع الحل هنا.</p>
         {known.map(l => { const template = codingStarterTemplate(l), current = cfg.starterCode?.[l] ?? ""; return (
           <div key={l} className="cx-io-block"><span>{labelOf(l)}</span>
-            <CodingEditor value={current} onChange={v => setCfg({ starterCode: v === "" ? without(cfg.starterCode ?? {}, l) : { ...(cfg.starterCode ?? {}), [l]: v } })} language={l} label={"محرر الكود — الكود الابتدائي — " + labelOf(l)} readOnly={disabled} maxBytes={sourceLimit} minRows={4} />
+            <CodingWorkspace value={current} onChange={v => setCfg({ starterCode: v === "" ? without(cfg.starterCode ?? {}, l) : { ...(cfg.starterCode ?? {}), [l]: v } })} language={l} label={"محرر الكود — الكود الابتدائي — " + labelOf(l)} readOnly={disabled} maxBytes={sourceLimit} minRows={4} languageVersion={codingLanguage(l)?.version} title={"الكود الابتدائي — " + labelOf(l)} testId={"coding-starter-workspace-" + l} />
             {template && current === "" && <button type="button" onClick={() => setCfg({ starterCode: { ...(cfg.starterCode ?? {}), [l]: template } })} disabled={disabled}>{"إدراج القالب الأساسي — " + labelOf(l)}</button>}
           </div>); })}
       </fieldset>
@@ -193,7 +193,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
         <legend>الحلول المرجعية (للمعلم فقط)</legend>
         <p className="cx-help">مساعدة للمعلم فقط؛ لا تُرسل إلى الطالب ولا إلى محرك التنفيذ، ولا يُصحَّح بمقارنة نص الكود بها.</p>
         {known.map(l => <div key={l} className="cx-io-block"><span>{labelOf(l)}</span>
-          <CodingEditor value={key.referenceSolutions[l] ?? ""} onChange={v => setKey({ referenceSolutions: v === "" ? without(key.referenceSolutions, l) : { ...key.referenceSolutions, [l]: v } })} language={l} label={"محرر الكود — الحل المرجعي — " + labelOf(l)} readOnly={disabled} maxBytes={CODE_SOURCE_MAX_BYTES} minRows={4} />
+          <CodingWorkspace value={key.referenceSolutions[l] ?? ""} onChange={v => setKey({ referenceSolutions: v === "" ? without(key.referenceSolutions, l) : { ...key.referenceSolutions, [l]: v } })} language={l} label={"محرر الكود — الحل المرجعي — " + labelOf(l)} readOnly={disabled} maxBytes={CODE_SOURCE_MAX_BYTES} minRows={4} languageVersion={codingLanguage(l)?.version} title={"الحل المرجعي — " + labelOf(l)} testId={"coding-reference-workspace-" + l} />
         </div>)}
       </fieldset>
 
