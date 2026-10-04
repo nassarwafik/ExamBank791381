@@ -23,3 +23,5 @@ registerAuthoringEditor("simulation", 1, lazy(() => import("./editors/Simulation
 registerAuthoringEditor("coding", 1, lazy(() => import("./editors/CodingQuestionEditor")));
 // Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy) uses the same lazy editor module, which reads the node's own version.
 registerAuthoringEditor("coding", 2, lazy(() => import("./editors/CodingQuestionEditor")));
+// Phase 18C — networkCli@1 authoring (lazy: the structured device-state tables and the try-out terminal never enter the initial graph).
+registerAuthoringEditor("networkCli", 1, lazy(() => import("./editors/NetworkCliEditor")));
