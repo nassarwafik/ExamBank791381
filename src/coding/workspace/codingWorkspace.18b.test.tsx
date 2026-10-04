@@ -50,7 +50,7 @@ describe("18B workspace — structure and accessibility", () => {
     expect(ws.getAttribute("aria-label")).toBe("مساحة العمل البرمجية — السؤال 1");
     const order = [screen.getByText("لغة"), screen.getByTestId("coding-workspace-language"), screen.getByText("إعدادات المحرر"), toggle(), screen.getByText("استعادة"), native()!, screen.getByTestId("footer"), screen.getByTestId("panels")];
     for (let i = 1; i < order.length; i++) expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING, String(i)).toBeTruthy();
-    expect(screen.getByTestId("coding-workspace-language").textContent).toBe("Python · v1");
+    expect(screen.getByTestId("coding-workspace-language").textContent).toBe("Python · عقد v1");
     expect(toggle().getAttribute("aria-pressed")).toBe("false");
     expect(toggle().getAttribute("aria-label")).toBe("وضع التركيز (توسيع محرر الكود)");
     expect(toggle().getAttribute("type")).toBe("button");                                                  // never a form submit
@@ -74,6 +74,23 @@ describe("18B workspace — structure and accessibility", () => {
     expect(screen.getByRole("checkbox", { name: "أرقام الأسطر" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "إعدادات المحرر" }).textContent).toMatch(/هذا الجهاز فقط/);
     expect(root().querySelector("[tabindex]:not([tabindex='-1']):not(button):not(input):not(select):not(textarea):not(summary)")).toBeNull();
+  });
+});
+
+describe("18B RF1-3 — language / contract-version wording", () => {
+  it("the badge names the SmartAssess language CONTRACT version («Python · عقد v1»), never a bare runtime-looking «Python · v1», and explains itself", () => {
+    render(<CodingWorkspace {...base} onChange={() => {}} languageVersion={1} />);
+    const badge = screen.getByTestId("coding-workspace-language");
+    expect(badge.textContent).toBe("Python · عقد v1");
+    expect(badge.textContent).not.toMatch(/Python · v1|Python 1|Python v1/);
+    expect(badge.getAttribute("title")).toMatch(/عقد/);
+    expect(badge.getAttribute("title")).toMatch(/ليس إصدار بيئة التشغيل/);
+  });
+  it("without a contract version only the language label is shown; an unknown key is shown verbatim (fail closed, no invented version)", () => {
+    const { rerender } = render(<CodingWorkspace {...base} onChange={() => {}} />);
+    expect(screen.getByTestId("coding-workspace-language").textContent).toBe("Python");
+    rerender(<CodingWorkspace {...base} onChange={() => {}} language="cobol" />);
+    expect(screen.getByTestId("coding-workspace-language").textContent).toBe("cobol");
   });
 });
 
@@ -249,6 +266,6 @@ describe("18B workspace — preferences reach the editor, never the value", () =
     render(<CodingWorkspace {...base} onChange={() => {}} languageVersion={1} language="java" />);
     expect(native()!.getAttribute("wrap")).toBe("soft");
     expect((native()!.closest(".cx-code-frame") as HTMLElement).style.getPropertyValue("--cx-font-size")).toBe("20px");
-    expect(screen.getByTestId("coding-workspace-language").textContent).toBe("Java · v1");
+    expect(screen.getByTestId("coding-workspace-language").textContent).toBe("Java · عقد v1");
   });
 });

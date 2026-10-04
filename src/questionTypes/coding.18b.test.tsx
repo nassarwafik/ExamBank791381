@@ -103,11 +103,11 @@ describe("18B — focus mode and preferences never touch the academic answer", (
     render(<StudentHarness q={studentQ()} />);
     await editorBox();
     const badge = screen.getByTestId("coding-workspace-language");
-    expect(badge.textContent).toBe("Python · v1");
+    expect(badge.textContent).toBe("Python · عقد v1");
     fireEvent.click(focusButton());
-    expect(badge.textContent).toBe("Python · v1");
+    expect(badge.textContent).toBe("Python · عقد v1");
     fireEvent.change(screen.getByRole("combobox", { name: "لغة البرمجة" }), { target: { value: "csharp" } });
-    expect(badge.textContent).toBe("C# · v1");
+    expect(badge.textContent).toBe("C# · عقد v1");
     expect(answerOut()).toMatchObject({ language: "csharp", languageVersion: 1 });
   });
   it("mobile-sized context (native editor): the workspace toolbar, focus mode and exit stay reachable; the source survives an orientation-like rerender", async () => {

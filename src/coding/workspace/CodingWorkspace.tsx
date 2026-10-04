@@ -33,6 +33,8 @@ export type CodingWorkspaceProps = {
 
 const FOCUS_ON = "وضع التركيز مفعّل: محرر الكود يملأ الشاشة. زر «الخروج من وضع التركيز» أو مفتاح Escape خارج المحرر يعيد العرض العادي.";
 const FOCUS_OFF = "تم الخروج من وضع التركيز.";
+const CONTRACT_VERSION_WORD = "عقد";
+const CONTRACT_VERSION_TITLE = "لغة البرمجة المختارة وإصدار عقد اللغة في SmartAssess (ليس إصدار بيئة التشغيل أو المترجم)";
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 function focusables(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(el => {
@@ -95,12 +97,14 @@ export default function CodingWorkspace({ value, onChange, language, languageVer
   };
 
   const def = codingLanguage(language);
-  const badge = (def?.label ?? language) + (languageVersion !== undefined ? " · v" + languageVersion : "");
+  // RF1-3: `languageVersion` is the SmartAssess language CONTRACT version of the Answer, not the Python / Java / .NET toolchain version
+  // (no client contract carries that yet), so the label says «عقد v1» and never a bare, runtime-looking «v1».
+  const badge = (def?.label ?? language) + (languageVersion !== undefined ? " · " + CONTRACT_VERSION_WORD + " v" + languageVersion : "");
   return (
     <div ref={rootRef} className={["cx-coding", "cx-workspace", focus ? "is-focus" : "", className ?? ""].filter(Boolean).join(" ")} data-testid={testId} data-focus-mode={focus ? "true" : "false"} role="group" aria-label={"مساحة العمل البرمجية" + (title ? " — " + title : "")} onKeyDown={onKeyDown}>
       <div className="cx-ws-toolbar" data-testid="coding-workspace-toolbar">
         {toolbarStart}
-        <span className="cx-lang-badge cx-ws-lang" data-testid="coding-workspace-language" title="لغة البرمجة المختارة وإصدار عقدها">{badge}</span>
+        <span className="cx-lang-badge cx-ws-lang" data-testid="coding-workspace-language" title={CONTRACT_VERSION_TITLE}>{badge}</span>
         <span className="cx-ws-spacer" aria-hidden="true" />
         <div className="cx-ws-prefs">
           <button type="button" className="cx-ws-button" aria-expanded={prefsOpen} aria-controls={panelId} onClick={() => setPrefsOpen(o => !o)}>إعدادات المحرر</button>

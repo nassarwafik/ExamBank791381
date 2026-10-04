@@ -65,8 +65,10 @@ One frame around the one `CodingEditor`, used by the student renderer (exam + te
 ```
 
 `role="group"` named «مساحة العمل البرمجية — السؤال N». The badge is the registry label plus the **language contract version**
-(`languageVersion`, the value stored in the Answer). A runtime/toolchain version is not shown because no client contract carries
-one (adding it is an API/Runner capability change — reported in §10, not done).
+(`languageVersion`, the value stored in the Answer), worded **«Python · عقد v1»** (RF1-3: «عقد» = the SmartAssess language contract)
+with a title explaining that it is not the runtime / compiler version; a bare «Python · v1» was ambiguous. A runtime/toolchain
+version is not shown because no client contract carries one (adding it is an API/Runner capability change — reported in §10, not
+done).
 
 ### 2.2 Focus mode
 
@@ -133,6 +135,16 @@ starter for the language. No new model field.
 | Read-only | `readOnly` + `domReadOnly` on Monaco, `readOnly` on the textarea; **defence in depth added**: a read-only editor never emits even if a change event reaches it |
 
 ### 2.6 Mobile / tablet
+
+**RF1-1 (Review Fix 1):** the mobile block of `coding.css` (`@media (max-width: 600px)`) used to set a blanket `font-size: 13px` on
+`.cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter`; declared after the preference rule, it beat
+`font-size: var(--cx-font-size)` on the editable editor, so a selected 16 / 18 / 20 px computed to 13 px on phones. The block now
+separates the two surfaces: the **editable** input / gutter keep only the compact padding and are sized by the preference
+variable at every width; the **static review view** (`.cx-code-view`, `.cx-code-view-gutter`) keeps its 13 px. The dead mobile
+override of the variable itself was removed, so the phone default is the preference default (14 px; 12 / 13 px remain selectable).
+Proven by computed style twice: `src/coding/codingCss.18b-rf1.test.tsx` (happy-dom evaluates the real stylesheet at a 375 px
+viewport; 3 / 5 failed on head `2680410` with `13px` ≠ `18px`) and the real-browser harness (F3–F7). The unit suite also carries a
+source guard that fails if any media block declares `font-size` on the editable input or gutter again.
 
 Phones / touch-primary keep the native editor (17F-C1 decision). Focus mode on small screens: toolbar sticky at the top
 (never under browser chrome), editor ≥ 40 dvh, panels scroll inside the panel, safe-area padding, horizontal scrolling inside
@@ -214,8 +226,22 @@ editor's dynamic edge, the worker is separate.
 | `src/coding/workspace/editorPreferences.18b.test.ts` | 7 | import failure (module absent) |
 | `src/coding/editor/monacoEngine.18b.test.ts` | 3 | import failure (mapping absent) |
 | `src/coding/monacoLazy.18b.test.ts` | 5 | 4 fail (workspace absent / guard signature absent); the entry-graph pin is green on the baseline |
+| `src/coding/codingCss.18b-rf1.test.tsx` (RF1) | 5 | 3 fail on head `2680410` (computed `13px` ≠ `18px` at 375 px; source guard); the desktop and review-view pins are green |
+| `codingWorkspace.18b.test.tsx` (RF1-3 wording) | +2 | wording pins |
 
-Total new: 61 tests, 6 files. Required coverage mapping: Monaco lazy (lazy suite + guard) · source survives focus entry / exit
+Total new: 68 tests, 7 files (61 in the original head, 7 added by Review Fix 1).
+
+### Real-browser harness (RF1-2)
+
+`browser-harness/code-editor.tsx` now also mounts `CodingWorkspace` exactly as `CodingResponse` does (own value / onChange record,
+a re-render control). `scripts/check-code-editor-browser.mjs` adds section **G** (desktop, real Monaco): G1 contract-version
+wording · G2 focus mode keeps the same Monaco DOM node, fills the viewport, fill layout, page inert · G3 typing while expanded
+reaches onChange exactly · G4 18 px preference computed on the live `.view-lines`, line numbers follow their preference, no
+onChange / no recreate · G5 Escape inside the editor keeps focus mode, Esc-then-Tab leaves the editor, Escape there exits · G6
+exit control on screen and named, leaving restores layout / inert / instance / source; and phone section **F3–F8** (375 px, touch):
+native workspace editor, 18 px computed on the textarea (default 14 px), source and onChange untouched, preference survives a
+re-render and a reload (localStorage, holds no source), focus mode escapable with no overflow, no engine request. E1 now expects
+four editor instances (the workspace adds one). **41 / 41** on the RF1 head; the earlier 29 / 29 covered the 17F-C1 editor only. Required coverage mapping: Monaco lazy (lazy suite + guard) · source survives focus entry / exit
 (workspace + integration) · survives resize / orientation (both) · preferences never alter the Answer (integration, adapter,
 preferences) · language / version unchanged by focus / preferences (integration badge test) · reset confirmation / cancel /
 exact restore (integration) · Monaco load failure preserves source (editor: load-failed, runtime-failed, create-failed) ·
@@ -272,10 +298,12 @@ loses one signature. No data, schema, API, Runner or storage change; the prefere
 - **Inert page during focus mode** hides the exam page's live regions (timer announcements) from assistive technology while
   expanded — the same trade-off the shared modal Dialog makes; mitigated by the automatic exit when the attempt stops being
   writable.
+- **Phone default font size** is now the preference default (14 px) instead of the former hard-coded 13 px; 12 / 13 px stay
+  selectable (RF1-1).
 - **Native editor + word wrap** hides the line-number gutter (numbers would be wrong across wrapped rows); the rich engine
   numbers wrapped lines itself.
 - **Phones keep the native editor** (17F-C1); the minimap preference has no native equivalent (stored, applied when the rich
   engine is available).
 - **No theme preference** (single application appearance, §2.3).
-- The 17F-C1 real-browser harness is optional tooling (needs `playwright-core`); it was run locally for regression only and
-  does not cover the workspace UI itself.
+- The real-browser harness is optional tooling (needs `playwright-core`, not a dependency); since RF1-2 it covers the workspace
+  (focus mode, preferences, wording, phone font size) in addition to the 17F-C1 editor checks.

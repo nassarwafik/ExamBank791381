@@ -64,8 +64,10 @@
 .cx-key-summary { display: grid; gap: 6px; direction: rtl; font-size: 13px; }
 
 @media (max-width: 600px) {
-  .cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter { font-size: 13px; padding: 8px; }
-  .cx-code-frame { --cx-font-size: 13px; }
+  /* Phase 18B RF1-1 — the EDITABLE editor (.cx-code-input / .cx-code-gutter) is sized by the selected preference (--cx-font-size) at
+     every width: no direct font-size here, only the compact padding. The static teacher review view keeps its compact 13 px. */
+  .cx-code-gutter, .cx-code-input { padding: 8px; }
+  .cx-code-view, .cx-code-view-gutter { font-size: 13px; padding: 8px; }
   .cx-code-input { min-height: 10rem; }
 }
 
