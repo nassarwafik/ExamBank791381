@@ -156,7 +156,10 @@ The frontend reads no runtime environment variables.
 
 ## Change workflow
 
-Every change ships as one phase on its own branch and one pull request:
+The binding operating contract for every contributor and coding agent is the root `AGENTS.md`
+(roles and review protocol: `docs/development/agentic-development-workflow.md`; required checks per change class:
+`docs/development/validation-matrix.md`; PR body skeleton: `.github/pull_request_template.md`). In short, every change
+ships as one phase on its own branch and one pull request:
 
 1. Verify `origin/main` is at the expected SHA and the tree is clean before branching.
 2. Implement, then run `npm test`, `npx tsc -b`, `npm run build` and `npm run lint` locally.
