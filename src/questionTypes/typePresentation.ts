@@ -11,9 +11,10 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   compound: "بنود مستقلة بأنواع مختلفة ضمن سؤال واحد.", multipleSelect: "عدة إجابات صحيحة؛ تصحيح كامل أو جزئي مع أو بدون خصم.", numericResponse: "قيمة عددية بتسامح أو ضمن مدى، مع وحدة اختيارية.",
   matrix: "صفوف وأعمدة؛ إجابة واحدة لكل صف مع علامة جزئية.", categorization: "إسناد كل عنصر إلى فئته الصحيحة مع علامة جزئية.",
   simulation: "محاكاة تفاعلية من حزمة .smartsim مرفوعة تعمل في بيئة معزولة؛ تُحفظ حالة الطالب وتُراجع يدويًا.",
-  coding: "يكتب الطالب برنامجًا كاملًا بلغة يحددها المعلم؛ كود ابتدائي وأمثلة ظاهرة واختبارات مخفية، ومراجعة يدوية حاليًا."
+  coding: "يكتب الطالب برنامجًا كاملًا بلغة يحددها المعلم؛ كود ابتدائي وأمثلة ظاهرة واختبارات مخفية، ومراجعة يدوية حاليًا.",
+  networkCli: "طرفية محاكاة لمبدّل شبكة بأوامر على نمط Cisco (VLAN، منافذ access/trunk، SVI)؛ تُصحَّح الحالة النهائية للجهاز تلقائيًا بعلامة جزئية."
 });
-const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>" });
+const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#" });
 // Phase 17A — factual chips that replace the generic grading-mode chip where the CURRENT behaviour differs from the type's
 // designed mode: coding@1 is designed hybrid but grades manually until a trusted executor exists — never «تصحيح تلقائي».
 const GRADING_CHIP_OVERRIDES: Readonly<Record<string, readonly string[]>> = Object.freeze({ coding: Object.freeze(["تصحيح يدوي حاليًا", "إجابة برمجية"]) });

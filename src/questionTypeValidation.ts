@@ -6,6 +6,7 @@ import { isKnownQuestionType, effectiveQuestionTypeVersion, questionTypeDefiniti
 import { MULTIPLE_SELECT_SCORING } from "./questionTypeScoring";
 import { validateSimulationReference } from "./smartsimManifest";
 import { validateCodingQuestion } from "./codingQuestion";
+import { validateNetworkCliQuestion } from "./networkCliQuestion";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
 export type TypeValidator = (node: Record<string, unknown>, context: { version: number; part: boolean }) => QuestionTypeIssue[];
@@ -111,3 +112,5 @@ registerTypeValidator("simulation", 1, node => validateSimulationReference(node.
 registerTypeValidator("coding", 1, node => validateCodingQuestion(node));
 // Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy): the SAME canonical validator, which reads the node's own version.
 registerTypeValidator("coding", 2, node => validateCodingQuestion(node));
+// Phase 18C — networkCli@1: public config (device + canonical initial state) and private target-state rules. Nothing here executes anything.
+registerTypeValidator("networkCli", 1, node => validateNetworkCliQuestion(node));
