@@ -27,3 +27,5 @@ registerAuthoringEditor("coding", 2, lazy(() => import("./editors/CodingQuestion
 registerAuthoringEditor("networkCli", 1, lazy(() => import("./editors/NetworkCliEditor")));
 // Phase 19A — inlineCloze@1 authoring (lazy: the token editor never enters the initial graph).
 registerAuthoringEditor("inlineCloze", 1, lazy(() => import("./editors/InlineClozeEditor")));
+// Phase 19B — parametricNumeric@1 authoring (lazy: variables / constraints / expression editor and the sample preview).
+registerAuthoringEditor("parametricNumeric", 1, lazy(() => import("./editors/ParametricNumericEditor")));

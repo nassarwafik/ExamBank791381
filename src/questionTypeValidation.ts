@@ -8,6 +8,7 @@ import { validateSimulationReference } from "./smartsimManifest";
 import { validateCodingQuestion } from "./codingQuestion";
 import { validateNetworkCliQuestion } from "./networkCliQuestion";
 import { validateInlineClozeQuestion } from "./inlineClozeQuestion";
+import { validateParametricNumericQuestion } from "./parametricNumericQuestion";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
 export type TypeValidator = (node: Record<string, unknown>, context: { version: number; part: boolean }) => QuestionTypeIssue[];
@@ -117,3 +118,6 @@ registerTypeValidator("coding", 2, node => validateCodingQuestion(node));
 registerTypeValidator("networkCli", 1, node => validateNetworkCliQuestion(node));
 // Phase 19A — inlineCloze@1: the strict public passage contract AND the private per-blank key (every problem blocks).
 registerTypeValidator("inlineCloze", 1, node => validateInlineClozeQuestion(node));
+// Phase 19B — parametricNumeric@1: public config, private answer expression, {{id}} stem template and a deterministic preview-sample
+// check (impossible constraints / an expression that fails on generated values) — every problem blocks finalization.
+registerTypeValidator("parametricNumeric", 1, node => validateParametricNumericQuestion(node));

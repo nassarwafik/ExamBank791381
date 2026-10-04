@@ -1,0 +1,25 @@
+/* Phase 19B — parametric numeric question («سؤال رقمي بمعطيات متغيرة») UI (lazy chunks only). Numbers and expressions are LTR
+   islands inside the RTL interface; every control is a 40px target with a visible focus ring; rows wrap on narrow screens. */
+.param-response { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; min-width: 0; max-width: 100%; }
+.param-unit { align-self: center; padding: 4px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); font-weight: 600; unicode-bidi: isolate; }
+.param-note, .param-unavailable { flex-basis: 100%; margin: 0; padding: 6px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); color: var(--eb-muted, #475569); font-size: 13px; }
+.param-unavailable { border: 1px dashed var(--eb-border, #cbd5e1); background: transparent; }
+.param-preview-text { flex-basis: 100%; margin: 0; font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Teacher authoring (qt-editor-parametricNumeric) */
+.qt-editor-parametricNumeric { display: grid; gap: 12px; min-width: 0; }
+.qt-editor-parametricNumeric fieldset { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 8px 10px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; }
+.qt-editor-parametricNumeric legend { padding: 0 6px; font-weight: 700; }
+.param-var-row, .param-constraint-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; min-width: 0; }
+.param-var-row input, .param-constraint-row input, .param-expression input { min-height: 40px; box-sizing: border-box; font: inherit; max-width: 100%; }
+.param-var-row input[type="number"] { width: 9ch; }
+.param-var-row input[type="text"] { width: 12ch; }
+.param-constraint-row input, .param-expression input { flex: 1 1 16ch; min-width: 0; }
+.param-sample { display: grid; gap: 6px; padding: 10px; border-radius: 10px; background: var(--eb-surface-2, #f1f5f9); min-width: 0; }
+.param-sample p { margin: 0; overflow-wrap: anywhere; }
+.param-issues { margin: 0; padding-inline-start: 18px; color: var(--eb-danger, #b91c1c); font-size: 13px; }
+
+/* Teacher review */
+.param-review { display: grid; gap: 6px; min-width: 0; }
+.param-review p { margin: 0; overflow-wrap: anywhere; }
+.param-review-audit { color: var(--eb-muted, #475569); font-size: 12px; }
