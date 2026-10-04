@@ -225,10 +225,32 @@ reviewRequired (integration pins).
 
 ---
 
-## 8. Validation (exact head — see the PR body for the final run)
+## 8. Validation (head `b4ede01`, `origin/main` = baseline, no reconciliation needed)
 
-Filled in the PR report: test file / test / skipped counts, lint, `tsc -b`, `vite build`, bundle guard (initial graph, Monaco
-chunk, coding closure), `git diff --check`, and the real-browser harness (`scripts/check-code-editor-browser.mjs`) when run.
+| Check | Result |
+|---|---|
+| `npm test` (root, API deps installed) | 626 files, 7773 tests, 0 failed, 0 skipped (baseline 620 / 7712 / 0) |
+| coding-focused (`src/coding` + `src/questionTypes`) | 27 files, 459 tests green (all 17A–17F suites unchanged) |
+| `npm run lint` (oxlint) | 99 warnings / 0 errors — identical to the baseline, none in the changed files |
+| `npx tsc -b` | clean |
+| `npm run build` + `check:bundle` | passed |
+| `git diff --check` | clean |
+| real browser (`scripts/check-code-editor-browser.mjs`, Chromium, production harness build) | 29 / 29 (regression only; the workspace UI is covered by the unit suites) |
+
+Bundle (gzip, level 9; baseline → head):
+
+| Item | Baseline | Head |
+|---|---|---|
+| initial JS graph | 16 files, 124.6 KB (budget 125) | 16 files, 124.6 KB |
+| Monaco engine chunk | 742.6 KB, lazy | 742.6 KB, lazy behind the coding editor's dynamic edge |
+| editor worker / grammars | 90.4 KB / 1.3–1.6 KB each | unchanged |
+| `CodingResponse-*.js` | 5.39 KB | 5.39 KB |
+| `CodingQuestionEditor-*.js` | 5.79 KB | 5.84 KB |
+| shared coding chunk (`codingContract-*.js`, now carrying the workspace) | 5.55 KB | 8.39 KB |
+| coding question chunks static closure beyond the initial graph | 5 files, 20.7 KB — no Monaco, no worker | 5 files, 23.5 KB — no Monaco, no worker |
+
+The whole workspace UI (component + preferences + CSS) costs ≈ 2.8 KB gzip in the lazy coding chunks and nothing in the
+initial graph.
 
 ---
 
