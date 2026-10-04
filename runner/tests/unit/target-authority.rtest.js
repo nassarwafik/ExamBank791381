@@ -940,3 +940,222 @@ test("TAR38 no trustworthy authority (blocked): neither A nor B is superseded by
   assert.deepEqual(h2.sandbox.runs, []);
   await crash(h2);
 });
+
+// ── Independent Review Fix 4 — the CURRENT target authority fences every delivery / regeneration path ───────────────────────
+// Review 4 of PR #250: deliverable(rec) proved only "not blocked, not held" — it never proved that the record IS the current
+// selected authority of its target (authority.revision === rec.revision AND authority.jobId === rec.jobId). The race: rev 7
+// starts / runs or reaches EXECUTED → rev 8 becomes the durable authority → rev 7 must never later be delivered, re-armed or
+// regenerated (SmartAssess superseded its job; a late rev 7 result is a stale academic result). The fence applies to execution
+// start, post-sandbox finalization, callback scheduling, callback reservation / delivery, the callback_failed re-arm and the
+// confirmed-retryable regeneration, and an obsolete record is superseded durably (its result released) as soon as a higher
+// authority advances. Fail-first on 6da48c0: TAR39, TAR40, TAR41, TAR42, TAR43 fail.
+const R7 = v(3900, 7), R8 = v(3901, 8);
+const SLOW = Object.freeze({ ...H.FAST, baseMs: 150, capMs: 400 });
+const attemptsOf = (h, j) => h.api.calls.filter(c => c.jobId === j.jobId).length;
+
+test("TAR39 an old EXECUTED revision (callback pending / retrying) never delivers once a newer authority wins: superseded at the advance, result released, redelivery → stale", async () => {
+  const dir = tmpJournalDir(), logger = capture();
+  const api = H.fakeApi((n, result) => (result.jobId === R7.jobId && n === 1 ? { delivered: false, retryable: true, status: 503, errorClass: "http" } : null));
+  const h = await boot(dir, { maxPending: 8, api, logger, callbackPolicy: SLOW });
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  await waitFor(() => { const r = recordOf(dir, R7.jobId); return r && r.state === "executed" && r.callback.attempts === 1; });   // first attempt failed, retry pending
+  assert.ok(fs.existsSync(resultFile(dir, R7)));
+  assert.equal((await h.q.submit(R8)).status, "accepted");
+  const seven = recordOf(dir, R7.jobId);
+  assert.equal(seven.state, "superseded", "an EXECUTED record below the new authority stayed deliverable");
+  assert.equal(fs.existsSync(resultFile(dir, R7)), false, "the obsolete result was kept");
+  await h.q.idle(); await sleep(600);                                                               // past the rev 7 backoff: nothing is retried
+  assert.equal(attemptsOf(h, R7), 1, "the old revision delivered after the newer authority won");
+  assert.equal(attemptsOf(h, R8), 1);
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" });
+  assert.equal(h.q.status().executed, 0);
+  assert.ok(logger.events().some(e => e.event === "coding.runner.execution.superseded" && e.jobId === R7.jobId && e.revision === 7));
+  assert.ok(!logger.lines.some(l => l.includes(TARGET)));
+  await crash(h);
+});
+
+test("TAR40 an old RUNNING revision finishing after a newer authority wins can never resurrect to a deliverable EXECUTED; an old RECEIVED revision never even starts", async () => {
+  const dir = tmpJournalDir(), hold = latch();
+  const sandbox = fakeSandbox(async j => { if (j.jobId === R7.jobId) await hold.promise; });
+  const h = await boot(dir, { maxPending: 8, maxActive: 1, sandbox });
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  await waitFor(() => recordOf(dir, R7.jobId).state === "running");
+  assert.equal((await h.q.submit(R8)).status, "accepted");                                           // rev 8 is the authority while rev 7 still runs
+  hold.open();
+  await h.q.idle(); await sleep(60);
+  const seven = recordOf(dir, R7.jobId);
+  assert.equal(seven.state, "superseded", "the finished old run resurrected as " + seven.state);
+  assert.equal(seven.executedAt, null);
+  assert.equal(fs.existsSync(resultFile(dir, R7)), false);
+  assert.equal(attemptsOf(h, R7), 0, "the old revision delivered its late result");
+  assert.deepEqual(h.sandbox.runs, [R7.jobId, R8.jobId]);
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" });
+  await crash(h);
+  // RECEIVED, not yet started (the single execution slot is busy with a plain job): superseded when rev 8 advances, never runs
+  const dir2 = tmpJournalDir(), hold2 = latch(), plain = job(3902);
+  const sandbox2 = fakeSandbox(async j => { if (j.jobId === plain.jobId) await hold2.promise; });
+  const h2 = await boot(dir2, { maxPending: 8, maxActive: 1, sandbox: sandbox2 });
+  assert.equal((await h2.q.submit(plain)).status, "accepted");
+  await waitFor(() => recordOf(dir2, plain.jobId).state === "running");
+  assert.equal((await h2.q.submit(R7)).status, "accepted");
+  assert.equal(recordOf(dir2, R7.jobId).state, "received");
+  assert.equal((await h2.q.submit(R8)).status, "accepted");
+  assert.equal(recordOf(dir2, R7.jobId).state, "superseded", "a RECEIVED record below the new authority stayed LIVE");
+  assert.equal(h2.q.status().received, 1);                                                          // rev 8 only
+  hold2.open(); await h2.q.idle();
+  assert.deepEqual(h2.sandbox.runs, [plain.jobId, R8.jobId]);
+  assert.equal(attemptsOf(h2, R7), 0);
+  await crash(h2);
+});
+
+test("TAR41 an old CALLBACK_FAILED revision cannot re-arm after a newer authority wins: the redelivery answers stale, rearms stay 0, nothing is sent", async () => {
+  const dir = tmpJournalDir(), logger = capture();
+  const api = H.fakeApi((n, result) => (result.jobId === R7.jobId ? { delivered: false, retryable: false, status: 400, errorClass: "http" } : null));
+  const h = await boot(dir, { maxPending: 8, api, logger });
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  await waitFor(() => recordOf(dir, R7.jobId).state === "callback_failed");
+  assert.equal(attemptsOf(h, R7), 1);
+  assert.equal((await h.q.submit(R8)).status, "accepted");
+  await h.q.idle();
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
+  const before = attemptsOf(h, R7);
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" }, "a parked old revision was re-armed");
+  await h.q.idle(); await sleep(80);
+  const seven = recordOf(dir, R7.jobId);
+  assert.notEqual(seven.state, "executed");
+  assert.equal(seven.state, "superseded");
+  assert.equal(seven.callback.rearms, 0);
+  assert.equal(attemptsOf(h, R7), before);
+  assert.equal(fs.existsSync(resultFile(dir, R7)), false);
+  assert.ok(!logger.events().some(e => e.event === "coding.runner.callback.rearmed" && e.jobId === R7.jobId));
+  await crash(h);
+});
+
+test("TAR42 an old confirmed-RETRYABLE revision cannot regenerate after a newer authority wins: the redelivery answers stale, generation stays 1, no second execution, no input rewritten", async () => {
+  const dir = tmpJournalDir(), logger = capture();
+  const api = H.fakeApi((n, result) => (result.jobId === R7.jobId ? { delivered: true, status: 200, confirmedAs: "retryable" } : null));
+  const h = await boot(dir, { maxPending: 8, api, logger });
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  await h.q.idle();
+  assert.deepEqual([recordOf(dir, R7.jobId).state, recordOf(dir, R7.jobId).callback.confirmedAs, recordOf(dir, R7.jobId).generation], ["confirmed", "retryable", 1]);
+  assert.equal((await h.q.submit(R8)).status, "accepted");
+  await h.q.idle();
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" }, "an obsolete confirmed-retryable job regenerated");
+  await h.q.idle(); await sleep(40);
+  assert.equal(recordOf(dir, R7.jobId).generation, 1);
+  assert.equal(h.sandbox.count(R7.jobId), 1, "a second execution of the obsolete revision ran");
+  assert.deepEqual(h.sandbox.runs, [R7.jobId, R8.jobId]);
+  assert.equal(fs.existsSync(path.join(dir, "inputs", R7.jobId + ".json")), false);
+  assert.ok(!logger.events().some(e => e.event === "coding.runner.execution.regenerated" && e.jobId === R7.jobId));
+  assert.equal(h.q.status().received, 0);
+  await crash(h);
+});
+
+test("TAR43 startup: an EXECUTED rev 7 record below a durable rev 8 authority (pre-RF4 journal) is superseded before anything is delivered; a callback_failed rev 7 likewise", async () => {
+  const dir = tmpJournalDir(), j = createJournal({ dir, logger: quiet() }), eight = v(3903, 8), failed = v(3904, 6);
+  await j.open();
+  await craftWithResult(j, R7, "executed");
+  await craftWithResult(j, failed, "callback_failed");
+  await craftReceived(j, eight);
+  await j.close();
+  writeTargetFile(dir, TARGET, 8, eight.jobId);
+  const h = await boot(dir, { maxPending: 8 });
+  assert.equal(h.summary.targets.superseded, 2, JSON.stringify(h.summary.targets));
+  assert.equal(h.summary.targets.blocked, 0);
+  assert.equal(recordOf(dir, R7.jobId).state, "superseded", "an obsolete executed record survived startup as deliverable");
+  assert.equal(recordOf(dir, failed.jobId).state, "superseded");
+  await h.q.idle(); await sleep(60);
+  assert.deepEqual(delivered(h), [eight.jobId], "an obsolete revision delivered at startup");
+  assert.equal(recordOf(dir, eight.jobId).state, "confirmed");
+  assert.equal(fs.existsSync(resultFile(dir, R7)), false);
+  assert.equal(fs.existsSync(resultFile(dir, failed)), false);
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" });
+  assert.deepEqual(await h.q.submit(failed), { status: "stale" });
+  await crash(h);
+});
+
+test("TAR44 the delivery fence alone: when the advance's supersede commit FAILS, the obsolete EXECUTED rev 7 stays on disk but never schedules, reserves or sends; the redelivery retires it (stale)", async () => {
+  const dir = tmpJournalDir(), logger = capture();
+  const api = H.fakeApi((n, result) => (result.jobId === R7.jobId && n === 1 ? { delivered: false, retryable: true, status: 503, errorClass: "http" } : null));
+  let injected = 0;
+  const h = await bootWith(dir, { maxPending: 8, api, logger }, journal => {
+    const original = journal.writeRecord.bind(journal);
+    journal.writeRecord = async rec => { if (rec.jobId === R7.jobId && rec.state === "superseded" && injected === 0) { injected++; throw new Error("injected supersede failure"); } return original(rec); };
+  });
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  await waitFor(() => { const r = recordOf(dir, R7.jobId); return r && r.state === "executed" && r.callback.attempts === 1; });
+  assert.equal((await h.q.submit(R8)).status, "accepted");
+  assert.equal(injected, 1);
+  assert.equal(recordOf(dir, R7.jobId).state, "executed");                                         // the supersede did not commit — the fence must hold on its own
+  await h.q.idle(); await sleep(400);                                                               // well past the rev 7 backoff (FAST: 15 ms base, 120 ms cap)
+  assert.equal(attemptsOf(h, R7), 1, "a non-authoritative EXECUTED record was delivered");
+  assert.equal(attemptsOf(h, R8), 1);
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" });                                     // the redelivery retires it durably
+  assert.equal(recordOf(dir, R7.jobId).state, "superseded");
+  assert.equal(fs.existsSync(resultFile(dir, R7)), false);
+  await h.q.idle(); await sleep(60);
+  assert.equal(attemptsOf(h, R7), 1);
+  await crash(h);
+});
+
+test("TAR45 the finalize fence alone: when the advance's supersede commit FAILS for a RUNNING rev 7, its late result is still never stored as EXECUTED — the finalization retires it (superseded, result released, no delivery)", async () => {
+  const dir = tmpJournalDir(), hold = latch(), logger = capture();
+  const sandbox = fakeSandbox(async j => { if (j.jobId === R7.jobId) await hold.promise; });
+  let injected = 0;
+  const h = await bootWith(dir, { maxPending: 8, maxActive: 1, sandbox, logger }, journal => {
+    const original = journal.writeRecord.bind(journal);
+    journal.writeRecord = async rec => { if (rec.jobId === R7.jobId && rec.state === "superseded" && injected === 0) { injected++; throw new Error("injected supersede failure"); } return original(rec); };
+  });
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  await waitFor(() => recordOf(dir, R7.jobId).state === "running");
+  assert.equal((await h.q.submit(R8)).status, "accepted");                                           // rev 8 is the authority; the advance's supersede of rev 7 fails
+  assert.equal(injected, 1);
+  assert.equal(recordOf(dir, R7.jobId).state, "running", "the supersede must not have committed for this proof");
+  hold.open();
+  await h.q.idle(); await sleep(60);
+  const seven = recordOf(dir, R7.jobId);
+  assert.equal(seven.state, "superseded", "the late result of a non-authoritative run was stored as " + seven.state);
+  assert.equal(seven.executedAt, null);
+  assert.equal(fs.existsSync(resultFile(dir, R7)), false);
+  assert.equal(fs.existsSync(path.join(dir, "inputs", R7.jobId + ".json")), false);
+  assert.equal(attemptsOf(h, R7), 0);
+  assert.equal(h.q.status().executed, 0);
+  assert.ok(logger.events().some(e => e.event === "coding.runner.execution.superseded" && e.jobId === R7.jobId && e.stage === "finalize"));
+  assert.deepEqual(h.sandbox.runs, [R7.jobId, R8.jobId]);
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" });
+  await crash(h);
+});
+
+test("TAR46 the start fence alone: when the advance's supersede commit FAILS for a RECEIVED rev 7, the scheduler retires it at start (superseded durably, input released) instead of leaving it LIVE or running it", async () => {
+  const dir = tmpJournalDir(), hold = latch(), logger = capture(), plain = job(3905);
+  const sandbox = fakeSandbox(async j => { if (j.jobId === plain.jobId) await hold.promise; });
+  let injected = 0;
+  const h = await bootWith(dir, { maxPending: 8, maxActive: 1, sandbox, logger }, journal => {
+    const original = journal.writeRecord.bind(journal);
+    journal.writeRecord = async rec => { if (rec.jobId === R7.jobId && rec.state === "superseded" && injected === 0) { injected++; throw new Error("injected supersede failure"); } return original(rec); };
+  });
+  assert.equal((await h.q.submit(plain)).status, "accepted");
+  await waitFor(() => recordOf(dir, plain.jobId).state === "running");                              // the single slot is busy: rev 7 waits as RECEIVED
+  assert.equal((await h.q.submit(R7)).status, "accepted");
+  assert.equal(recordOf(dir, R7.jobId).state, "received");
+  assert.equal((await h.q.submit(R8)).status, "accepted");
+  assert.equal(injected, 1);
+  assert.equal(recordOf(dir, R7.jobId).state, "received", "the supersede must not have committed for this proof");
+  hold.open();
+  await h.q.idle(); await sleep(60);
+  assert.equal(recordOf(dir, R7.jobId).state, "superseded", "a RECEIVED record below the new authority was not retired at start");
+  assert.equal(fs.existsSync(path.join(dir, "inputs", R7.jobId + ".json")), false);
+  assert.equal(h.sandbox.count(R7.jobId), 0, "a non-authoritative RECEIVED record was executed");
+  assert.deepEqual(h.sandbox.runs, [plain.jobId, R8.jobId]);
+  assert.equal(attemptsOf(h, R7), 0);
+  assert.equal(h.q.status().received, 0);
+  assert.ok(logger.events().some(e => e.event === "coding.runner.execution.superseded" && e.jobId === R7.jobId && e.stage === "start"));
+  assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
+  assert.deepEqual(await h.q.submit(R7), { status: "stale" });
+  await crash(h);
+});

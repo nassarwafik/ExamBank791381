@@ -222,8 +222,11 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     targets.set(doc.targetRef, doc);
     try { await journal.writeTarget(doc); dirtyTargets.delete(doc.targetRef); if (stage !== "receive") log("info", "coding.runner.target.repaired", { jobId: doc.jobId, revision: doc.revision, stage }); }
     catch { dirtyTargets.add(doc.targetRef); log("warn", "coding.runner.target.write-failed", { jobId: doc.jobId, revision: doc.revision, stage }); }
-    // a held competitor below the new authority is unambiguously obsolete now: superseded (if that fails it stays held, retried at the next advance / start)
-    for (const id of [...held]) { const r = records.get(id); if (r && r.targetRef === doc.targetRef && r.revision < doc.revision) await supersede(id, "advance"); }
+    // review fix 4 — every record of this reference that is no longer its authority (an older revision, a held competitor, an
+    // EXECUTED / CALLBACK_FAILED result awaiting its callback, even a RUNNING one) is unambiguously obsolete now: superseded
+    // durably (result released; a run still in the sandbox finalizes as superseded). A failed commit leaves it non-deliverable
+    // (deliverable() requires the current authority) and retried at the next advance / start.
+    for (const r of [...records.values()]) { if (r.targetRef === doc.targetRef && SUPERSEDABLE.has(r.state) && obsolete(r)) await supersede(r.jobId, stage === "receive" ? "advance" : stage); }
   }
   const targetDoc = (targetRef, revision, jobId, at) => ({ schemaVersion: 1, targetRef, revision, jobId, updatedAt: at });
   /**
@@ -243,8 +246,27 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     if (r.target) targets.set(targetRef, r.target);
     return r.target || null;
   }
-  /** Delivery / execution authority of one record: never a record of a blocked target, never a held competitor (plain jobs: always). */
-  const deliverable = rec => !(rec.targetRef && blockedTargets.has(rec.targetRef)) && !held.has(rec.jobId);
+  /**
+   * Review fix 4 — the ONE delivery / execution authority of a record. A versioned record may execute, finalize as EXECUTED,
+   * schedule, reserve / send, re-arm or regenerate ONLY while it IS the current selected authority of its target: the (cached,
+   * monotonic) authority entry names ITS revision and ITS job id. Never a record of a blocked target, never a held competitor,
+   * never a record whose target has no cached authority (fail closed). Plain jobs (no target): always.
+   */
+  const authorityOf = rec => (rec.targetRef ? targets.get(rec.targetRef) || null : null);
+  const deliverable = rec => {
+    if (!rec.targetRef) return true;
+    if (blockedTargets.has(rec.targetRef) || held.has(rec.jobId)) return false;
+    const t = authorityOf(rec);
+    return !!t && t.revision === rec.revision && t.jobId === rec.jobId;
+  };
+  /** A record UNAMBIGUOUSLY below / beside a KNOWN, trusted authority (a newer revision, or another selected job of its revision):
+   *  superseded durably, never guessed for a blocked target or a cache miss. */
+  const obsolete = rec => {
+    if (!rec.targetRef || blockedTargets.has(rec.targetRef)) return false;
+    const t = authorityOf(rec);
+    return !!t && (t.revision > rec.revision || (t.revision === rec.revision && t.jobId !== rec.jobId));
+  };
+  const SUPERSEDABLE = new Set(["received", "running", "executed", "callback_failed"]);
   /** Durably supersedes a record that is unambiguously NOT the authority of its revision (caller holds ADMISSION). → true when committed. */
   async function supersede(jobId, stage) {
     try {
@@ -284,8 +306,18 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     }
   }
 
-  /** EXECUTED: the result is durable, the input is released, the callback is due now. */
+  /** EXECUTED: the result is durable, the input is released, the callback is due now. Review fix 4 — only a RUNNING record that
+   *  is still the current authority of its target becomes EXECUTED; a run that lost its authority meanwhile (superseded by the
+   *  advance, or obsolete under a newer entry) ends superseded and its late result is released, never stored as deliverable. */
   async function finalize(jobId, result, extra = {}) {
+    const rec = records.get(jobId);
+    if (!rec || rec.state !== "running") { await journal.deleteInput(jobId).catch(() => {}); return; }        // superseded (or gone) while the sandbox ran
+    if (obsolete(rec)) {
+      await commit(jobId, r => { Object.assign(r, extra); r.state = "superseded"; r.callback.nextAt = null; });
+      await journal.deleteInput(jobId).catch(() => {});
+      log("info", "coding.runner.execution.superseded", { jobId, revision: rec.revision, stage: "finalize" });
+      return;
+    }
     const resultHash = await journal.writeResult(jobId, result);
     await commit(jobId, r => { Object.assign(r, extra); r.state = "executed"; r.executedAt = iso(now()); r.outcome = result.outcome; r.technicalCode = result.technicalCode || null; r.resultHash = resultHash; r.summary = summaryOf(result); r.callback.nextAt = iso(now()); });
     await journal.deleteInput(jobId).catch(() => {});
@@ -297,16 +329,13 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     const go = await withJob(jobId, async () => {
       const rec = records.get(jobId);
       if (!rec || rec.state !== "received") return false;
-      if (!deliverable(rec)) return false;                                                        // fail closed: no execution without a durable authority
-      if (rec.targetRef) {
-        const t = targets.get(rec.targetRef);
-        if (t && t.revision > rec.revision) {                                       // a newer revision of the target arrived first
-          await commit(jobId, r => { r.state = "superseded"; });
-          await journal.deleteInput(jobId).catch(() => {});
-          log("info", "coding.runner.execution.superseded", { jobId, revision: rec.revision });
-          return false;
-        }
+      if (obsolete(rec)) {                                                        // a newer (or another selected) authority of the target arrived first
+        await commit(jobId, r => { r.state = "superseded"; r.callback.nextAt = null; });
+        await journal.deleteInput(jobId).catch(() => {});
+        log("info", "coding.runner.execution.superseded", { jobId, revision: rec.revision, stage: "start" });
+        return false;
       }
+      if (!deliverable(rec)) return false;                                                        // fail closed: no execution without the current durable authority
       const raw = await journal.readInput(jobId);
       const v = raw ? validateOfficialJobRequest(raw) : { ok: false };
       if (!v.ok || officialPayloadHash(v.job) !== rec.payloadHash) { await quarantineRecord(jobId, "input"); return false; }
@@ -427,6 +456,24 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
     if (existing.payloadHash !== hash) { log("warn", "runner.official.conflict", { jobId }); return { status: "conflict" }; }
     log("info", "coding.runner.delivery.duplicate", { jobId, state: existing.state });
     if (existing.state === "superseded") return { status: "stale" };
+    // review fix 4: a redelivery of a record that is no longer the current authority of its target (a newer revision, or another
+    // selected job of its revision, was admitted meanwhile) is STALE — never re-executed, rescheduled, re-armed or regenerated;
+    // the obsolete record is superseded durably here (the caller holds ADMISSION and this job's lock) and its result released.
+    if (existing.targetRef && !blockedTargets.has(existing.targetRef) && !held.has(jobId)) {
+      let t = targets.get(existing.targetRef) || null;
+      if (!t) { try { t = await loadTargetAuthority(existing.targetRef, "duplicate"); } catch (e) { return busy(jobId, e && e.code === "TARGET_CORRUPT" ? "target-authority-corrupt" : "target-authority-unavailable", { stage: "duplicate" }); } }
+      if (t && (t.revision > existing.revision || (t.revision === existing.revision && t.jobId !== jobId))) {
+        if (existing.state !== "confirmed") {
+          await commit(jobId, r => { r.state = "superseded"; r.callback.nextAt = null; });
+          queued.delete(jobId);
+          await journal.deleteInput(jobId).catch(() => {}); await journal.deleteResult(jobId).catch(() => {});
+          log("info", "coding.runner.execution.superseded", { jobId, revision: existing.revision, stage: "duplicate" });
+        }
+        log("warn", "coding.runner.delivery.stale", { jobId, revision: existing.revision });
+        return { status: "stale" };
+      }
+      if (!t) return busy(jobId, "target-authority-unavailable", { stage: "duplicate" });            // no authority at all for a versioned record: fail closed
+    }
     // review fix 3: a record of a blocked target, or a held competitor, is NOT the authority of its revision — a redelivery never
     // schedules or re-arms its callback (its durable result is preserved; the answer is the deterministic fail-closed busy)
     if ((existing.state === "executed" || existing.state === "callback_failed") && !deliverable(existing)) return busy(jobId, "target-" + (blockedTargets.get(existing.targetRef) || "inconsistent"), { stage: "callback" });
@@ -557,6 +604,9 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
           if (ids.size === 1) { summary.targets.repaired++; await advanceTarget(targetDoc(ref, g.revision, g.records[0].jobId, iso(t0)), "startup"); continue; }
           block(ref, g, "inconsistent");
         }
+        // review fix 4 — every record below / beside a KNOWN authority (a pre-RF4 journal may hold an EXECUTED or CALLBACK_FAILED
+        // rev 7 under a durable rev 8 entry) is superseded BEFORE anything runs or delivers; never for a blocked target.
+        for (const rec of [...records.values()]) { if (SUPERSEDABLE.has(rec.state) && obsolete(rec) && !held.has(rec.jobId)) { if (await supersede(rec.jobId, "startup")) summary.targets.superseded++; else hold([rec]); } }
         summary.targets.blocked = blockedTargets.size; summary.targets.corrupt = corruptTargets.size;
       });
       for (const rec of [...records.values()]) {
