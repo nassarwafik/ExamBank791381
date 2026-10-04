@@ -1,0 +1,80 @@
+# Phase 17F-B10-A — the Coding LOAD / CAPACITY / CERTIFICATION HARNESS (runner/tests/load).
+#   fast job (every PR / push touching the harness): the fail-first suite, the local scenario suite (in-process stack, fake sandbox,
+#   loopback only), the mutation check, and one bounded local CERT-L qualification whose JSON + Markdown report is uploaded as an
+#   artifact. Deterministic, a few minutes, no Docker, no secrets, no network target.
+#   docker-load job (MANUAL — workflow_dispatch): builds the worker images and runs the bounded REAL-Docker load suite
+#   (tests/docker-load). Still no secrets and no remote target: it qualifies the harness against real containers on a CI runner;
+#   D4s_v5 capacity numbers come from a staging / pilot VM run performed by the operator, never from CI.
+# Production is never a CI target: the harness refuses it without SMARTASSESS_ALLOW_PRODUCTION_LOAD_TEST=I_UNDERSTAND, which no
+# workflow sets.
+name: Coding Load & Certification Harness
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "runner/tests/load/**"
+      - "runner/tests/unit/load-*.rtest.js"
+      - "runner/tests/mutation/**"
+      - "runner/tests/docker-load/**"
+      - "runner/gateway/**"
+      - ".github/workflows/coding-load-harness.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - "runner/tests/load/**"
+      - "runner/tests/unit/load-*.rtest.js"
+      - "runner/tests/mutation/**"
+      - "runner/tests/docker-load/**"
+      - "runner/gateway/**"
+      - ".github/workflows/coding-load-harness.yml"
+  workflow_dispatch:
+    inputs:
+      docker_load:
+        description: "Also run the bounded REAL-Docker load suite (builds the worker images; ~15–25 min)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  harness:
+    name: Harness fail-first, local scenarios, mutations, bounded local qualification
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Fail-first + local scenario suites (no Docker, loopback only)
+        run: npm --prefix runner run test:load
+      - name: Mutation check (every mutation must be killed; files restored byte-for-byte)
+        run: npm --prefix runner run test:load:mutation
+      - name: Default invocation is a dry run (no request)
+        run: npm --prefix runner run load
+      - name: Bounded local qualification (CERT-L, fake sandbox) → report artifact
+        run: npm --prefix runner run load:qualify:local
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coding-load-harness-local-report
+          path: runner/tests/load/results/
+          retention-days: 30
+  docker-load:
+    name: Bounded REAL-Docker local load (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.docker_load
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Build worker images (python@1, java@1, csharp@1)
+        run: npm --prefix runner run build:images
+      - name: Real-Docker load suite (DL1–DL7)
+        run: npm --prefix runner run test:docker:load
+      - name: No sandbox container left behind
+        run: test -z "$(docker ps -aq --filter label=smartassess.coding-runner=1)"
