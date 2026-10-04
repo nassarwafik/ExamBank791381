@@ -25,5 +25,7 @@ function answered(a) {
         return (0, smartsimState_1.isSimulationStateAnswered)(a.state);
     if (a.kind === "code")
         return typeof a.source === "string" && a.source.trim() !== "";
+    if (a.kind === "networkCli")
+        return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");
     return false;
 }

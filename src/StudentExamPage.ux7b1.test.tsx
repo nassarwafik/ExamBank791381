@@ -413,8 +413,9 @@ describe("UX-7b-1 — source guards", () => {
     }
     // Phase 16A — the six original members stay byte-identical (a permanent prefix); the two additive Wave 1 kinds follow;
     // Phase 16B-A appends the additive "simulation" kind (bounded JSON state from a sandboxed simulator); Phase 17A appends the
-    // additive "code" kind (one source file + language identity; execution results are never part of the Answer).
-    expect(code(RAW_TS["./answerState.ts"])).toContain('export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue}|{kind:"code";language:string;languageVersion:number;source:string};');
+    // additive "code" kind (one source file + language identity; execution results are never part of the Answer); Phase 18C appends the
+    // additive "networkCli" kind (a bounded command history + the canonical device state the shared engine derives from it).
+    expect(code(RAW_TS["./answerState.ts"])).toContain('export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue}|{kind:"code";language:string;languageVersion:number;source:string}|{kind:"networkCli";commands:string[];state:NetworkCliDeviceState};');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('export type {Answer,FieldValue} from "./answerState";');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('<fieldset className="iex-options" aria-labelledby={textId}>');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('<input type="radio" name={id}');

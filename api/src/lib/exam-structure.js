@@ -127,6 +127,9 @@ function isResponseAnswered(a) {
     // Phase 17A — a code answer counts when its source has non-whitespace text (mirror of answerState.ts).
     case "code":
       return typeof a.source === "string" && a.source.trim() !== "";
+    // Phase 18C — a network CLI answer counts when at least one non-blank command was entered (mirror of answerState.ts).
+    case "networkCli":
+      return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");
     default:
       return false;
   }

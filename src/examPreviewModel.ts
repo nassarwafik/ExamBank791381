@@ -28,6 +28,8 @@ export const PREVIEW_SECRET_KEYS: readonly string[] = [
   "solution", "modelAnswer", "rubric",
   // Phase 17A — coding private data (normally under `answer`; defense in depth if ever placed elsewhere)
   "hiddenTests", "referenceSolutions",
+  // Phase 18C — the network CLI simulator's private target (normally under `answer`; defense in depth if ever placed elsewhere)
+  "targetState",
   "gradingKey", "grading", "manualGrade",
   // teacher-side / edit-history / rationale (student sanitizer NODE_SECRET_KEYS)
   "teacherNote", "teacherOnly", "aiInstruction", "hint",

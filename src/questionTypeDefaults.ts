@@ -52,6 +52,13 @@ registerTypeDefaults("coding", 2, ensure => {
   ensure("coding", CODING_DEFAULT_CONFIG());
   ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
+// Phase 18C — networkCli@1: a default switch (hostname «Switch», empty VLAN database, untouched ports) and an EMPTY private target
+// (finalization blocks until the teacher sets at least one check). Literal on purpose (initial graph); parity-tested against
+// defaultNetworkCliConfig() / defaultNetworkCliAnswerKey() in src/networkCliQuestion.ts.
+registerTypeDefaults("networkCli", 1, ensure => {
+  ensure("networkCli", { device: "switch", initialState: { v: 1, device: "switch", hostname: "Switch", vlans: {}, interfaces: {} } });
+  ensure("answer", { targetState: {}, scoring: "proportional" });
+});
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });

@@ -19,7 +19,7 @@ const FLAG_SECRET_KEYS = ["correct", "isCorrect", "correctText", "correctOptionI
 // Teacher-side / secret keys that may appear on a question or a compound part.
 // Phase 17C / 17E-A — official coding grading data (mode, scoring policy, hidden tests, reference solutions, grading intent / keys) is teacher / server
 // data; it lives under the private answer key, and should any path ever copy it onto a node it is removed here (defense in depth).
-const GRADING_SECRET_KEYS = ["gradingMode", "hiddenTests", "referenceSolutions", "codingGrading", "gradingKey", "answerHash", "questionFingerprint", "scoringPolicy", "compileErrorPolicy"];   // 17F-C2: the compile-error policy is teacher data too
+const GRADING_SECRET_KEYS = ["gradingMode", "hiddenTests", "referenceSolutions", "codingGrading", "gradingKey", "answerHash", "questionFingerprint", "scoringPolicy", "compileErrorPolicy", "targetState"];   // 17F-C2: the compile-error policy is teacher data too; 18C: the network CLI target state
 const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "redoStack", "explanation", "rationale", ...FLAG_SECRET_KEYS, ...GRADING_SECRET_KEYS];
 // Phase 13C-A — TEACHER PLANNING DATA: the assessment blueprint (exam level) and a question's / part's pedagogical
 // classification are authoring data and never reach a student.
@@ -170,6 +170,14 @@ function applyCodingProjection(node) {
   const projected = projectCodingConfigForStudent(node.coding);
   if (projected) node.coding = projected; else delete node.coding;
 }
+// Phase 18C — the network CLI config is REBUILT through its allow-list projection (shared with the client renderer and the grader):
+// only the device and the strictly normalized initial state survive; the target state lives under `answer`, blanked above.
+const { projectNetworkCliConfigForStudent } = require("./shared-finalization/networkCliQuestion");
+function applyNetworkCliProjection(node) {
+  if (!("networkCli" in node)) return;
+  const projected = projectNetworkCliConfigForStudent(node.networkCli);
+  if (projected) node.networkCli = projected; else delete node.networkCli;
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -184,6 +192,7 @@ function sanitizePartForStudent(part) {
   delete out.answer; // remove part.answer (grading key)
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
+  applyNetworkCliProjection(out);
   stripKeys(out, NODE_SECRET_KEYS);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
@@ -203,6 +212,7 @@ function sanitizeQuestionForStudent(question) {
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
+  applyNetworkCliProjection(out);
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS, ...GRADING_SECRET_KEYS]);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);

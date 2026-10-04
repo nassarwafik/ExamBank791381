@@ -43,6 +43,14 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
     if (isObj(c.starterCode) && Object.values(c.starterCode).some(v => text(v))) return true;
     if (Array.isArray(c.publicTests) && c.publicTests.length) return true;
   }
+  // Phase 18C — networkCli: a non-default initial state or any target check is authored content.
+  if (isObj(node.networkCli) && isObj(node.networkCli.initialState)) {
+    const st = node.networkCli.initialState;
+    if (text(st.hostname) && st.hostname !== "Switch") return true;
+    if (isObj(st.vlans) && Object.keys(st.vlans).length) return true;
+    if (isObj(st.interfaces) && Object.keys(st.interfaces).length) return true;
+  }
+  if (isObj(answer.targetState) && Object.values(answer.targetState).some(v => (isObj(v) ? Object.keys(v).length > 0 : text(v) !== ""))) return true;
   if (Array.isArray(answer.hiddenTests) && answer.hiddenTests.length) return true;
   if (isObj(answer.referenceSolutions) && Object.values(answer.referenceSolutions).some(v => text(v))) return true;
   if (Array.isArray(answer.correctOptionIds) && answer.correctOptionIds.length) return true;

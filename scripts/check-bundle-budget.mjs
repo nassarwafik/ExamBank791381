@@ -15,6 +15,7 @@
 //      the initial graph carries any registered SVG visual implementation, the visuals are not emitted behind lazy
 //      edges of the Reader in several small trusted group chunks, or fewer than the registered 122 implementations
 //      are shipped (signature: the `preserveAspectRatio:` prop every registered visual sets on its root <svg>);
+//  10. (Phase 18C) the network CLI simulator terminal / renderer / authoring editor reaches the initial graph (content signatures);
 //   8. (Phase 17A) the coding editor / coding panels reach the initial graph (content signatures of CodingEditor and the
 //      coding renderer / authoring editor: they must ship only behind the registries' lazy edges);
 //   9. (Phase 17F-C1) the Monaco engine of the professional code editor is missing, reaches the initial graph, is STATICALLY
@@ -46,6 +47,8 @@ const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-li
 // Phase 18B — the enterprise coding workspace (toolbar / focus mode) carries its own signature: the workspace UI ships with the
 // coding chunks only.
 const CODING_SIGNATURES = ["cx-code-input", "cx-code-gutter", "coding-run-unavailable", "qt-editor-coding", "cx-ws-toolbar"];
+// Phase 18C — network CLI terminal / renderer / authoring editor class names (used nowhere else). ANY one in an initial file fails.
+const NETCLI_SIGNATURES = ["ncli-terminal", "ncli-inputrow", "qt-editor-networkCli", "ncli-tryout"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
 const MONACO_SIGNATURES = ["monaco-editor", "MonacoEnvironment", "monaco-mouse-cursor-text"];
@@ -126,7 +129,11 @@ function main() {
     if (portal.length >= 2) failures.push(`${f} (initial) contains the Student Portal payload (${portal.join(", ")})`);
     const coding = CODING_SIGNATURES.filter(s => src.includes(s));
     if (coding.length) failures.push(`${f} (initial) contains the coding editor payload (${coding.join(", ")}) — it must stay lazy`);
+    const netcli = NETCLI_SIGNATURES.filter(s => src.includes(s));
+    if (netcli.length) failures.push(`${f} (initial) contains the network CLI simulator payload (${netcli.join(", ")}) — it must stay lazy`);
   }
+  const netcliChunks = all.filter(f => NETCLI_SIGNATURES.some(s => read(f).includes(s)));
+  console.log(`Network CLI simulator payload found in: ${netcliChunks.join(", ") || "(none)"} — ${netcliChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const codingChunks = all.filter(f => CODING_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Coding editor payload found in: ${codingChunks.join(", ") || "(none)"} — ${codingChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   // Phase 17F-C1 — the professional editor engine: present, lazy twice over (initial graph + coding chunk closure), worker separate,

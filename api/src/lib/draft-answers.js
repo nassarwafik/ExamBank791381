@@ -7,6 +7,11 @@ const { normalizeSimulationState } = require("./shared-finalization/smartsimStat
 // only a REGISTERED language at its exact contract version is accepted (V1: python@1, java@1, csharp@1).
 const { normalizeCodeAnswer, bindCodeAnswerToQuestion } = require("./shared-finalization/codingQuestion");
 const { flattenQuestions } = require("./exam-structure");
+// Phase 18C — a `networkCli` answer is a bounded command history + canonical state. Bound to the published question, the server
+// REPLAYS the history from that question's initial state through the shared engine and stores the derived state (the client's
+// claim is discarded); unbound it is shape / bounds checked only. A networkCli answer on another question, an unknown id or a
+// compound part is dropped (not compound-capable). Nothing is ever executed — the engine is a closed, pure grammar.
+const { normalizeNetworkCliAnswer, bindNetworkCliAnswerToQuestion } = require("./shared-finalization/networkCliQuestion");
 
 // Phase 17A Independent Review Fix — when the caller passes the AUTHORITATIVE exam (the assignment's exam snapshot, the same
 // one the grader uses), every code answer is bound to the question its answer id names: it must be a coding@1 question, the
@@ -20,6 +25,7 @@ function questionIndex(exam) {
   return index;
 }
 const isCode = a => !!a && typeof a === "object" && a.kind === "code";
+const isNetworkCli = a => !!a && typeof a === "object" && a.kind === "networkCli";
 
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
 function normalizeDraftAnswers(answers, exam) {
@@ -40,10 +46,17 @@ function normalizeDraftAnswers(answers, exam) {
       out[id] = r.answer;
       continue;
     }
+    if (isNetworkCli(a)) {
+      const r = bound ? bindNetworkCliAnswerToQuestion(a, index.get(id)) : normalizeNetworkCliAnswer(a);
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
     if (bound && a && typeof a === "object" && a.kind === "compound" && a.parts && typeof a.parts === "object" && !Array.isArray(a.parts)) {
       const parts = {};
       for (const pid of Object.keys(a.parts)) {
         if (isCode(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
+        if (isNetworkCli(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "NETCLI_QUESTION_MISMATCH" }); continue; }
         parts[pid] = a.parts[pid];
       }
       out[id] = { ...a, parts };

@@ -13,6 +13,7 @@ exports.PREVIEW_SECRET_KEYS = [
     "answerKey", "answerKeys",
     "solution", "modelAnswer", "rubric",
     "hiddenTests", "referenceSolutions",
+    "targetState",
     "gradingKey", "grading", "manualGrade",
     "teacherNote", "teacherOnly", "aiInstruction", "hint",
     "history", "redoStack", "explanation", "rationale",

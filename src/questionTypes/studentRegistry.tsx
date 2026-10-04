@@ -39,3 +39,5 @@ registerStudentRenderer("simulation", 1, lazy(() => import("./student/Simulation
 registerStudentRenderer("coding", 1, lazy(() => import("./student/CodingResponse")));
 // Phase 17F-C2 RF1 — coding@2 renders exactly like coding@1 for the student (same lazy module; the policy is private teacher data).
 registerStudentRenderer("coding", 2, lazy(() => import("./student/CodingResponse")));
+// Phase 18C — the network CLI terminal (lazy: the engine + terminal load only when a networkCli question is rendered; student AND preview).
+registerStudentRenderer("networkCli", 1, lazy(() => import("./student/NetworkCliResponse")));

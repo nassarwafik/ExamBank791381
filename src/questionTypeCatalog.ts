@@ -68,7 +68,11 @@ const PRODUCTION_ROWS = [
   // Phase 17A — ONE generic coding type (coding@1): the student writes ONE source file in a teacher-allowed language (language
   // is data, never a type). Designed hybrid; in 17A the official grade is MANUAL (no trusted executor yet, autoGrading false).
   // Phase 17F-C2 RF1 — CURRENT version 2 (PRODUCTION_VERSIONS): coding@2 = coding@1 + the explicit compile-error policy.
-  ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code"], false]
+  ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code"], false],
+  // Phase 18C — the first network-device CLI simulator plugin (networkCli@1): a deterministic educational managed SWITCH. Auto-graded
+  // on canonical device STATE (per-check partial credit) by the shared engine; interactive; offline; not a compound part (V1 decision:
+  // one terminal per question keeps the session, replay and review unambiguous).
+  ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", "apio", ["networkCli"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
  *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */

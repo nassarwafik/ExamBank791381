@@ -10,6 +10,9 @@
 const shared = require("./shared-finalization/questionTypeCatalog");
 const { resolveQuestionTypeKeyOrAlias } = require("./shared-finalization/questionTypeAliases");
 const scoring = require("./shared-finalization/questionTypeScoring");
+// Phase 18C — networkCli@1: the shared engine re-derives the canonical device state from the command history and compares it
+// to the private target (per-check partial credit). The client-claimed state is never read for grading.
+const networkCli = require("./shared-finalization/networkCliQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -104,6 +107,10 @@ registerBuiltIn("coding", () => ({ score: 0, manualReview: true, correct: false 
 // Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy) has the same provisional base; the official grade still comes from
 // the isolated runner's evidence through api/src/lib/coding/official-grading.js, never from here.
 if (!graders.has(identity("coding", 2))) registerGrader("coding", 2, () => ({ score: 0, manualReview: true, correct: false }));
+registerBuiltIn("networkCli", (question, response, max) => {
+  const r = networkCli.scoreNetworkCli({ config: question.networkCli, answerKey: question.answer, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
 registerBuiltIn("categorization", (question, response, max) => {
   const c = question.categorization && typeof question.categorization === "object" ? question.categorization : {};
   const answer = question.answer && typeof question.answer === "object" ? question.answer : {};

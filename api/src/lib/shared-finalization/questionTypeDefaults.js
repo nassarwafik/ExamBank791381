@@ -40,6 +40,10 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
     ensure("coding", CODING_DEFAULT_CONFIG());
     ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
+(0, exports.registerTypeDefaults)("networkCli", 1, ensure => {
+    ensure("networkCli", { device: "switch", initialState: { v: 1, device: "switch", hostname: "Switch", vlans: {}, interfaces: {} } });
+    ensure("answer", { targetState: {}, scoring: "proportional" });
+});
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {
     ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
     ensure("answer", { correctCategoryByItem: {} });
