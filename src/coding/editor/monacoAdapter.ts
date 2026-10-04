@@ -1,6 +1,6 @@
 import type { EditorEngine, EditorEngineCreateOptions, EditorEngineHandle } from "./editorEngine";
 import { MONACO_ENGINE_KIND } from "./editorEngine";
-import { SMARTASSESS_EDITOR_THEME, editorCreateOptions } from "./editorOptions";
+import { SMARTASSESS_EDITOR_THEME, editorCreateOptions, editorPreferenceOptions } from "./editorOptions";
 
 // Phase 17F-C1 — the Monaco ADAPTER: turns the Monaco API into the small EditorEngine handle that CodingEditor drives. It is a
 // factory over a structural `MonacoLike` type so the unit tests prove it against a fake API (no worker, no layout); the engine
@@ -157,6 +157,8 @@ export function createMonacoEngine(monaco: MonacoLike): EditorEngine {
           setCursorOffset(offset) { const position = model.getPositionAt(Math.max(0, Math.min(offset, model.getValue().length))); created.setPosition(position); created.revealPositionInCenterIfOutsideViewport(position); },
           getCursorOffset() { const p = created.getPosition(); return p ? model.getOffsetAt(p) : 0; },
           layout() { created.layout(); },
+          // Phase 18B — presentation only (font size / line height, wrap, minimap, line numbers): never the model, never accept().
+          setPreferences(preferences) { if (!disposed) update(editorPreferenceOptions(preferences)); },
           dispose() {
             if (disposed) return;
             disposed = true;

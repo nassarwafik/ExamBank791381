@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { StudentRendererProps } from "../registryTypes";
-import CodingEditor from "../../coding/CodingEditor";
+import CodingWorkspace from "../../coding/workspace/CodingWorkspace";
 import { CodingExecutionContext, EXECUTION_STATUS_LABELS, PUBLIC_RUN_DISCLAIMER, RUN_PREVIEW_MESSAGE, RUN_STALE_MESSAGE, RUN_STDIN_MAX_BYTES, RUN_TRUNCATED_MESSAGE, RUN_UNAVAILABLE_MESSAGE, canRun, runErrorMessage, type CodingCapabilities } from "../../coding/codingExecution";
 import { createApiCodingService, loadCodingCapabilities, type CodingRunFailure } from "../../coding/codingRunClient";
 import { otherLanguageDrafts, readLanguageDraft, rememberLanguageDraft, type DraftScope, type LanguageDrafts } from "../../coding/codingDrafts";
@@ -179,20 +179,18 @@ export default function CodingResponse({ q, id, answer, onAnswer, disabled, labe
   const limitsText = lim ? [typeof lim.timeMs === "number" ? "الوقت " + lim.timeMs + " ملّي ثانية" : "", typeof lim.memoryMb === "number" ? "الذاكرة " + lim.memoryMb + " ميغابايت" : "", typeof lim.sourceBytes === "number" ? "حجم الكود " + lim.sourceBytes + " بايت" : ""].filter(Boolean).join(" · ") : "";
 
   return (
-    <div className="cx-coding cx-workspace" data-testid="coding-response">
-      <div className="cx-coding-toolbar" data-testid="coding-language-bar">
-        <label><span>لغة البرمجة</span>
-          <select aria-label="لغة البرمجة" value={language} onChange={e => changeLanguage(e.target.value)} disabled={disabled}>
-            {allowed.map(l => <option key={l} value={l}>{codingLanguage(l)!.label}</option>)}
-          </select>
-        </label>
-        {starter(language) !== "" && <button type="button" onClick={() => void reset()} disabled={disabled}>استعادة الكود الابتدائي</button>}
-      </div>
+    <CodingWorkspace
+      value={source} onChange={next => emit(language, next)} language={language} languageVersion={def.version} label={"محرر الكود — " + labelPrefix} readOnly={disabled} maxBytes={limit}
+      title={labelPrefix} testId="coding-response"
+      toolbarStart={
+          <label data-testid="coding-language-bar"><span>لغة البرمجة</span>
+            <select aria-label="لغة البرمجة" value={language} onChange={e => changeLanguage(e.target.value)} disabled={disabled}>
+              {allowed.map(l => <option key={l} value={l}>{codingLanguage(l)!.label}</option>)}
+            </select>
+          </label>}
+      toolbarEnd={starter(language) !== "" && <button type="button" className="cx-ws-button" onClick={() => void reset()} disabled={disabled}>استعادة الكود الابتدائي</button>}
+      editorFooter={limitsText !== "" && <p className="cx-limits" data-testid="coding-limits">{"حدود التنفيذ: " + limitsText}</p>}>
       {otherDrafts && <p className="cx-run-note" data-testid="coding-drafts-note" role="note">{"تُحفظ وتُسلَّم إجابة لغة واحدة فقط: لغة " + def.label + " المختارة الآن. كود اللغات الأخرى محفوظ مؤقتًا في هذه الصفحة حتى تعود إليه، ولا يبقى بعد إعادة تحميل الصفحة."}</p>}
-      <div className="cx-editor-panel" data-testid="coding-editor-panel">
-        <CodingEditor value={source} onChange={next => emit(language, next)} language={language} label={"محرر الكود — " + labelPrefix} readOnly={disabled} maxBytes={limit} />
-        {limitsText !== "" && <p className="cx-limits" data-testid="coding-limits">{"حدود التنفيذ: " + limitsText}</p>}
-      </div>
       {runnable && !disabled
         ? <>
             <div className="cx-stdin-panel cx-run-panel" data-testid="coding-stdin-panel">
@@ -239,6 +237,6 @@ export default function CodingResponse({ q, id, answer, onAnswer, disabled, labe
         </section>)}
       </section>}
       {confirmDialog}
-    </div>
+    </CodingWorkspace>
   );
 }

@@ -15,6 +15,13 @@
 .cx-code-gutter, .cx-code-view-gutter { min-width: 3ch; padding-inline: 8px; text-align: right; color: var(--eb-muted, #64748b); background: var(--eb-surface-2, #f8fafc); border-inline-end: 1px solid var(--eb-border, #e2e8f0); white-space: pre; overflow: hidden; user-select: none; }
 .cx-code-input { display: block; width: 100%; min-height: 12rem; max-height: 70vh; resize: vertical; border: 0; outline: none; background: transparent; color: inherit; white-space: pre; overflow: auto; direction: ltr; text-align: left; }
 .cx-code-input[readonly] { background: var(--eb-surface-2, #f8fafc); }
+/* Phase 18B — native editor presentation preferences: font size through a CSS variable set on the frame (never on the text), soft wrap
+   through the textarea's own `wrap` attribute (horizontal scrolling stays the default), and a polite engine status row. */
+.cx-code-frame { --cx-font-size: 14px; }
+.cx-code-gutter, .cx-code-input { font-size: var(--cx-font-size, 14px); }
+.cx-code-input[wrap="soft"] { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cx-engine-status { margin: 0; font-size: 12px; color: var(--eb-muted, #64748b); direction: rtl; }
+.cx-code-editor--fill .cx-code-input { max-height: none; }
 .cx-code-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--eb-muted, #64748b); direction: rtl; }
 .cx-code-size.is-near { color: var(--eb-warning, #b45309); font-weight: 600; }
 .cx-code-alert { color: var(--eb-danger, #b91c1c); font-size: 13px; direction: rtl; }
@@ -58,6 +65,7 @@
 
 @media (max-width: 600px) {
   .cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter { font-size: 13px; padding: 8px; }
+  .cx-code-frame { --cx-font-size: 13px; }
   .cx-code-input { min-height: 10rem; }
 }
 

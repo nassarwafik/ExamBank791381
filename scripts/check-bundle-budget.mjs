@@ -43,7 +43,9 @@ const PLATFORM_SIGNATURES = ["eb-students-workspace", "eb-students-layout", "ج�
 // occurs in no other source file and, in the real build, in no other chunk). Two of four are required.
 const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-list", "تصفية المهام"];
 // Phase 17A — CodingEditor / coding renderer / authoring editor class names (used nowhere else). ANY one in an initial file fails.
-const CODING_SIGNATURES = ["cx-code-input", "cx-code-gutter", "coding-run-unavailable", "qt-editor-coding"];
+// Phase 18B — the enterprise coding workspace (toolbar / focus mode) carries its own signature: the workspace UI ships with the
+// coding chunks only.
+const CODING_SIGNATURES = ["cx-code-input", "cx-code-gutter", "coding-run-unavailable", "qt-editor-coding", "cx-ws-toolbar"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
 const MONACO_SIGNATURES = ["monaco-editor", "MonacoEnvironment", "monaco-mouse-cursor-text"];
