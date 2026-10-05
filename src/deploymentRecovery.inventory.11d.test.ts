@@ -28,6 +28,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./teacher/TeacherIdentity.tsx", "TeacherProfileDialog", "./TeacherProfileDialog", "teacher-profile-dialog"],
   // Phase 19E — the teacher rubric grading panel loads on demand inside the assignment review
   ["./AssignmentReview.tsx", "RubricGradingPanel", "./openResponse/RubricGradingPanel", "teacher-rubric-grading"],
+  // Phase 20B — the trusted SmartSim review panel (and its plugin review chunk) loads on demand inside the assignment review
+  ["./AssignmentReview.tsx", "SmartSimReviewView", "./trustedSim/SmartSimReviewView", "teacher-smartsim-review"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],
