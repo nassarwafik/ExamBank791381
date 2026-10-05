@@ -29,6 +29,10 @@ const labelDiagram = require("./shared-finalization/labelDiagramQuestion");
 // similarity, the model answer or AI). The official score comes only from a teacher rubric grade the review endpoint validates and
 // computes against the published rubric.
 const openResponse = require("./shared-finalization/openResponseQuestion");
+// Phase 20A — smartSim@1: the shared trusted core validates the published envelope (exact plugin identity) and the private weighted checks,
+// REPLAYS the student's semantic actions from the canonical initial state (the response's state / score / checks are never read) and
+// computes weighted partial credit from the plugin's facts. Unknown plugin / version or a broken key ⇒ 0 + manual review.
+const smartSim = require("./shared-finalization/trustedSimPlugins");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -148,6 +152,10 @@ registerBuiltIn("parametricNumeric", (question, response, max, context) => {
   const identity = generation ? { ...generation, questionKey: context.questionKey } : null;
   const r = parametricNumeric.scoreParametricNumeric({ question, response, maxMarks: max, identity });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview };
+});
+registerBuiltIn("smartSim", (question, response, max) => {
+  const r = smartSim.scoreSmartSim({ envelope: question.smartSim, answerKey: question.answer, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
 registerBuiltIn("categorization", (question, response, max) => {
   const c = question.categorization && typeof question.categorization === "object" ? question.categorization : {};

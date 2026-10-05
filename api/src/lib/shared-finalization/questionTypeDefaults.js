@@ -63,3 +63,7 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
     ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
     ensure("answer", { correctCategoryByItem: {} });
 });
+(0, exports.registerTypeDefaults)("smartSim", 1, ensure => {
+    ensure("smartSim", { schemaVersion: 1, pluginKey: "networkTopology", pluginVersion: 1, config: { v: 1, devices: [], links: [] } });
+    ensure("answer", { scoring: "proportional", checks: [] });
+});

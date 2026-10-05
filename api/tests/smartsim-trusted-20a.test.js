@@ -108,9 +108,9 @@ describe("20A-S2 — ingest binds to the published question and stores the SERVE
 describe("20A-S3 — the student projection: strict public envelope, private key never shipped", () => {
   it("sanitizeExamForStudent keeps exactly {schemaVersion, pluginKey, pluginVersion, config}; a smuggled field anywhere withholds the whole envelope; unknown plugins are withheld", () => {
     withBalance();
-    const out = sanitizeExamForStudent(exam([balQ({ teacherNote: "n" })])).sections[0].questions[0];
+    const out = sanitizeExamForStudent(exam([balQ({ teacherNote: "CANARY-NOTE-20A" })])).sections[0].questions[0];
     expect(out.smartSim).toEqual(BAL_ENV); expect(out.answer).toEqual({});
-    expect(JSON.stringify(out)).not.toMatch(/المعادلة موزونة|"checks"|"weight"|"scoring"|teacherNote/);
+    expect(JSON.stringify(out)).not.toMatch(/المعادلة موزونة|"checks"|"weight"|"scoring"|CANARY-NOTE-20A/);   // the legacy sanitizer keeps a blanked teacherNote key ("")
     for (const bad of [{ ...BAL_ENV, checks: BAL_KEY.checks }, { ...BAL_ENV, config: { ...BAL_ENV.config, answer: [2, 1, 2] } }, { ...BAL_ENV, pluginKey: "unknownLab" }, { ...BAL_ENV, pluginVersion: 7 }, { ...BAL_ENV, grader: "./x.js" }])
       expect(sanitizeExamForStudent(exam([balQ({ smartSim: bad })])).sections[0].questions[0].smartSim).toBeUndefined();
   });

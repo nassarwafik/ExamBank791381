@@ -135,6 +135,9 @@ function isResponseAnswered(a) {
       return Array.isArray(a.points) && a.points.length > 0;
     // Phase 19F — a locked-template answer counts when at least one gap holds non-blank text (the locked text alone is never an
     // answer); mirror of answerState.ts and codingTemplate.isCodeTemplateAnswered.
+    // Phase 20A — a trusted SmartSim answer counts when it carries at least one action (mirror of answerState.ts).
+    case "smartSim":
+      return Array.isArray(a.actions) && a.actions.length > 0;
     case "codeTemplate":
       return !!a.values && typeof a.values === "object" && !Array.isArray(a.values) && Object.values(a.values).some(v => typeof v === "string" && v.trim() !== "");
     default:

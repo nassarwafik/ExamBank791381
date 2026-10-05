@@ -4,6 +4,8 @@
 // StudentQuestionCard re-exports it, so every existing importer keeps the same function.
 import { isSimulationStateAnswered, type JsonValue } from "./smartsimState";
 import type { NetworkCliDeviceState } from "./networkCliEngine";
+// Phase 20A adds "smartSim" (a trusted SmartSim answer: the plugin identity + bounded SEMANTIC actions + a restore-only state the server
+// re-derives by replay — never grading authority; answered ⇔ ≥ 1 action; a reset simulation is unanswered).
 // Phase 19F adds "codeTemplate" (coding@3 locked template: ONLY the gap values — never a source, never locked text; answered ⇔ some gap
 // holds non-blank text). The official source is reconstructed on the server from the published template.
 // Phase 19D adds "hotspot" (normalized image-content points only — never a score, a target id or pixels; answered ⇔ ≥ 1 point).
@@ -17,7 +19,7 @@ export type FieldValue = string | boolean | string[];
 // visual indexes) and "numeric" (Numeric Response — the raw text the student typed plus an optional unit; parsing happens in
 // the grader). Matrix and Categorization reuse "fields" (rowId → columnId / itemId → categoryId), which is semantically clean.
 // Unknown kinds fail closed in answered() (never counted as answered).
-export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue}|{kind:"code";language:string;languageVersion:number;source:string}|{kind:"networkCli";commands:string[];state:NetworkCliDeviceState}|{kind:"hotspot";points:{x:number;y:number}[]}|{kind:"codeTemplate";language:string;languageVersion:number;values:Record<string,string>};
+export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue}|{kind:"code";language:string;languageVersion:number;source:string}|{kind:"networkCli";commands:string[];state:NetworkCliDeviceState}|{kind:"hotspot";points:{x:number;y:number}[]}|{kind:"codeTemplate";language:string;languageVersion:number;values:Record<string,string>}|{kind:"smartSim";pluginKey:string;pluginVersion:number;actions:JsonValue[];state:JsonValue};
 
 const nonEmptyValue = (v: unknown) => (typeof v === "boolean" ? v : String(v ?? "").trim() !== "");
 export function answered(a: Answer | undefined): boolean {
@@ -33,6 +35,7 @@ export function answered(a: Answer | undefined): boolean {
   if (a.kind === "code") return typeof a.source === "string" && a.source.trim() !== "";   // 17A — source TEXT, never trimmed when stored
   if (a.kind === "networkCli") return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");   // 18C — mirror of networkCliQuestion.isNetworkCliAnswerAnswered
   if (a.kind === "hotspot") return Array.isArray(a.points) && a.points.length > 0;   // 19D — mirror of hotspotQuestion.isHotspotAnswerAnswered
+  if (a.kind === "smartSim") return Array.isArray(a.actions) && a.actions.length > 0;   // 20A — mirror of trustedSimQuestion.isSmartSimAnswerAnswered
   if (a.kind === "codeTemplate") return !!a.values && typeof a.values === "object" && Object.values(a.values).some(v => typeof v === "string" && v.trim() !== "");   // 19F — mirror of codingTemplate.isCodeTemplateAnswered
   return false;
 }

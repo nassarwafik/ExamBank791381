@@ -92,7 +92,12 @@ const PRODUCTION_ROWS = [
   // Phase 19E — ONE open-response family (openResponse@1) for essay / explain / justify / compare / analyze / source-based answers
   // (profiles, never types): plain-text answer (the existing `text` Answer), MANUAL grading with a teacher rubric — the server computes
   // the official score from the published rubric; partial credit through rubric levels; not a compound part (V1 decision).
-  ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", "mpo", ["text"], false]
+  ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", "mpo", ["text"], false],
+  // Phase 20A — ONE trusted, repository-owned simulation family (smartSim@1), distinct from the untrusted uploaded simulation@1: the stored
+  // question names a code-registered plugin by EXACT identity (pluginKey@pluginVersion — networkTopology@1 first) and its public config;
+  // the server replays the student's semantic actions and grades private weighted checks on the derived state (partial credit).
+  // Interactive; offline; not a compound part (V1 decision: one workspace per question keeps replay and review unambiguous).
+  ["smartSim", "محاكاة موثوقة (SmartSim)", "interactive", "auto", "apio", ["smartSim"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
  *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */

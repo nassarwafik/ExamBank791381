@@ -37,6 +37,12 @@ const { bindOpenResponseAnswerToQuestion, isOpenResponseQuestion } = require("./
 // could rewrite locked text). Unbound it is shape / bounds checked only. Not compound-capable.
 const { bindCodingTemplateAnswerToQuestion, codingQuestionVersion } = require("./shared-finalization/codingQuestion");
 const { normalizeCodeTemplateAnswer } = require("./shared-finalization/codingTemplate");
+// Phase 20A — a `smartSim` answer (trusted SmartSim plugin) carries the plugin identity and bounded SEMANTIC actions. Bound to the published
+// question it must answer a smartSim@1 question whose VALID envelope names the SAME plugin identity; every action is normalized by the
+// plugin (unknown / malformed / wrong-device actions refuse the whole answer — nothing is partially applied) and the server REPLAYS them
+// from the canonical initial state, storing the DERIVED state (the client's claim, score or checks are discarded). Any other kind on a
+// smartSim question is refused; a smartSim answer on another question, an unknown id or a compound part is dropped (not compound-capable).
+const { bindSmartSimAnswerToQuestion, normalizeSmartSimAnswer } = require("./shared-finalization/trustedSimPlugins");
 
 // Phase 17A Independent Review Fix — when the caller passes the AUTHORITATIVE exam (the assignment's exam snapshot, the same
 // one the grader uses), every code answer is bound to the question its answer id names: it must be a coding@1 question, the
@@ -58,6 +64,8 @@ const isHotspotQuestion = q => !!q && typeof q === "object" && q.presentationTyp
 const isCodeTemplate = a => !!a && typeof a === "object" && a.kind === "codeTemplate";
 const isCodingV3Question = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "coding" && codingQuestionVersion(q) === 3;
 const isLabelDiagramQuestion = q => !!q && typeof q === "object" && q.presentationType === "labelDiagram";
+const isSmartSim = a => !!a && typeof a === "object" && a.kind === "smartSim";
+const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "smartSim";
 
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
 function normalizeDraftAnswers(answers, exam) {
@@ -80,6 +88,12 @@ function normalizeDraftAnswers(answers, exam) {
     }
     if (isCodeTemplate(a) || (bound && isCodingV3Question(index.get(id)))) {
       const r = bound ? bindCodingTemplateAnswerToQuestion(a, index.get(id)) : normalizeCodeTemplateAnswer(a);
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
+    if (isSmartSim(a) || (bound && isSmartSimQuestion(index.get(id)))) {
+      const r = bound ? bindSmartSimAnswerToQuestion(a, index.get(id)) : normalizeSmartSimAnswer(a);
       if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
       out[id] = r.answer;
       continue;
@@ -126,6 +140,7 @@ function normalizeDraftAnswers(answers, exam) {
         if (isCode(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
         if (isCodeTemplate(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
         if (isNetworkCli(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "NETCLI_QUESTION_MISMATCH" }); continue; }
+        if (isSmartSim(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "SMARTSIM_QUESTION_MISMATCH" }); continue; }
         if (isHotspot(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "HOTSPOT_QUESTION_MISMATCH" }); continue; }
         parts[pid] = a.parts[pid];
       }

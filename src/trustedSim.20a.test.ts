@@ -233,7 +233,7 @@ describe("20A-C6 — architecture: domain-neutral, pure, code-owned", () => {
   it("the core never names a domain (no network / chemistry / math imports) and reaches no I/O, timers, randomness, dynamic code or dynamic import", () => {
     for (const f of ["src/trustedSimRegistry.ts", "src/trustedSimQuestion.ts"]) {
       const s = read(f);
-      expect(s, f).not.toMatch(/network|Topology|router|switch\b|chem|physics/i);
+      expect(s, f).not.toMatch(/network|Topology|router|switch\b|\bchem|physics/i);   // \bchem: "schemaVersion" is not a domain word
       expect(s, f).not.toMatch(/\beval\s*\(|new Function|import\(|require\(|fetch\(|XMLHttpRequest|setTimeout|setInterval|Math\.random|Date\.now|document\.|window\.|from "react/);
     }
     expect(read("src/trustedSimPlugins.ts")).not.toMatch(/import\(|require\(/);
