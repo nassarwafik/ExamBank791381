@@ -223,7 +223,6 @@ describe("19G-S18 — parametric determinism and coding isolation (PINS through 
 });
 
 describe("19G-S21 — snapshot, finalization, canonical content and teacher review", () => {
-  const AID2 = "asg-19g";
   function deps(store) {
     const uploads = [];
     return { uploads, deps: { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), getContainer: () => ({}), downloadJsonOrNull: async (_c, key) => (store.has(key) ? structuredClone(store.get(key)) : null), uploadJson: async (_c, key, value) => { store.set(key, value); uploads.push({ key, value }); }, listJson: async () => [], mutateJsonWithRetry: async () => { throw new Error("not used"); }, recordAuditEvent: async () => {}, ensurePublishedAssignmentIndexed: async () => {} } };
