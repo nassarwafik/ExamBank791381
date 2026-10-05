@@ -83,6 +83,12 @@ describe("19D geometry — containment (boundary counts inside, epsilon 1e-9)", 
     for (const p of [[0.6, 0.4], [0.5, 0.5], [0.4, 0.4], [0.57, 0.47], [0.5, 0.4]]) expect(pointInCircle({ x: p[0], y: p[1] }, c), String(p)).toBe(true);
     for (const p of [[0.6000001, 0.4], [0.58, 0.48], [0.5, 0.29]]) expect(pointInCircle({ x: p[0], y: p[1] }, c), String(p)).toBe(false);
   });
+  it("exactly representable boundary points (no rounding slack) are inside: circle circumference, polygon edge the ray test alone would miss", () => {
+    expect(pointInCircle({ x: 0.75, y: 0.5 }, circle(0.5, 0.5, 0.25) as never)).toBe(true);           // dx = r exactly
+    expect(pointInCircle({ x: 0.5, y: 0.25 }, circle(0.5, 0.5, 0.25) as never)).toBe(true);
+    expect(pointInCircle({ x: 0.7500001, y: 0.5 }, circle(0.5, 0.5, 0.25) as never)).toBe(false);
+    expect(pointInPolygon({ x: 0.625, y: 0.75 }, poly([0.4, 0.6], [0.7, 0.6], [0.55, 0.9]) as never)).toBe(true);   // right edge midpoint
+  });
   it("polygon: vertices and edges inside; exterior points outside; concave shapes and rays through vertices are exact", () => {
     const tri = poly([0.2, 0.2], [0.4, 0.2], [0.3, 0.4]) as never;
     for (const p of [[0.2, 0.2], [0.3, 0.2], [0.25, 0.3], [0.3, 0.4], [0.3, 0.27], [0.344, 0.31]]) expect(pointInPolygon({ x: p[0], y: p[1] }, tri), String(p)).toBe(true);

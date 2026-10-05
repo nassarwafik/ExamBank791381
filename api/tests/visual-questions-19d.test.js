@@ -20,7 +20,8 @@ const IMG = { exists: true, visible: true, assets: [{ dataUrl: "data:image/png;b
 const HCFG = { v: 1, mode: "multiple", selections: 3, alt: "مخطط شبكة فيه موجّه ومبدّل وجدار حماية" };
 const HKEY = { scoring: "proportional", regions: [{ id: "target-router", shape: { kind: "rect", x: 0.137, y: 0.113, width: 0.181, height: 0.173 } }, { id: "target-switch", shape: { kind: "circle", cx: 0.617, cy: 0.311, r: 0.093 } }, { id: "target-firewall", shape: { kind: "polygon", points: [{ x: 0.413, y: 0.611 }, { x: 0.719, y: 0.607 }, { x: 0.557, y: 0.893 }] } }] };
 const HIN = { router: { x: 0.2, y: 0.2 }, sw: { x: 0.62, y: 0.31 }, fw: { x: 0.55, y: 0.7 }, none: { x: 0.95, y: 0.05 } };
-const HCANARIES = /target-router|target-switch|target-firewall|0\.137|0\.181|0\.617|0\.093|0\.413|0\.719|0\.557|"regions"|"shape"|"scoring"|proportional/;
+const HSECRETS = /target-router|target-switch|target-firewall|0\.137|0\.181|0\.617|0\.093|0\.413|0\.719|0\.557|"regions"/;   // hotspot-specific: checked on whole payloads
+const HCANARIES = new RegExp(HSECRETS.source + '|"shape"|"scoring"|proportional');                                                    // + generic key tokens: checked on hotspot-only output
 const LCFG = { v: 1, alt: "مخطط طبقات نموذج OSI", allowReuse: false, zones: [{ id: "z1", shape: { kind: "rect", x: 0.1, y: 0.1, width: 0.2, height: 0.1 }, name: "العليا" }, { id: "z2", shape: { kind: "rect", x: 0.1, y: 0.3, width: 0.2, height: 0.1 } }, { id: "z3", shape: { kind: "circle", cx: 0.7, cy: 0.5, r: 0.1 } }], labels: [{ id: "l-app", text: "Application" }, { id: "l-net", text: "Network" }, { id: "l-phy", text: "Physical" }, { id: "l-ses", text: "Session" }] };
 const LKEY = { scoring: "proportional", correctLabelByZone: { z1: "l-app", z2: "l-net", z3: "l-phy" } };
 const LCANARIES = /correctLabelByZone|"z1":"l-app"|"scoring"/;
@@ -80,6 +81,25 @@ describe("19D — registered graders (gradeExam)", () => {
   });
 });
 
+describe("19D — server geometry edge cases (the compiled engine the grader uses)", () => {
+  const key = regions => ({ scoring: "proportional", regions });
+  const two = { ...clone(HCFG), selections: 2 };
+  it("a rectangle extending past the image is malformed authority (manual review), never graded", () => {
+    const r = g(gradeExam(exam([hq({ answer: key([{ id: "a", shape: { kind: "rect", x: 0.9, y: 0.1, width: 0.3, height: 0.1 } }, HKEY.regions[1], HKEY.regions[2]]) })]), { h1: pts(HIN.router, HIN.sw, HIN.fw) }), "h1");
+    expect(r).toMatchObject({ score: 0, manualReview: true });
+  });
+  it("overlapping targets: one click never satisfies both; two clicks are matched optimally in any order", () => {
+    const O = [{ id: "a", shape: { kind: "rect", x: 0.1, y: 0.1, width: 0.4, height: 0.4 } }, { id: "b", shape: { kind: "rect", x: 0.3, y: 0.3, width: 0.4, height: 0.4 } }];
+    expect(g(gradeExam(exam([hq({ hotspot: two, answer: key(O) })]), { h1: pts({ x: 0.35, y: 0.35 }) }), "h1")).toMatchObject({ score: 1.5, parts: { correct: 1, total: 2 } });
+    expect(g(gradeExam(exam([hq({ hotspot: two, answer: key(O) })]), { h1: pts({ x: 0.35, y: 0.35 }, { x: 0.15, y: 0.15 }) }), "h1")).toMatchObject({ score: 3, parts: { correct: 2, total: 2 } });
+    expect(g(gradeExam(exam([hq({ hotspot: two, answer: key([...O].reverse()) })]), { h1: pts({ x: 0.15, y: 0.15 }, { x: 0.35, y: 0.35 }) }), "h1")).toMatchObject({ score: 3, parts: { correct: 2, total: 2 } });
+  });
+  it("boundary clicks count as inside on the server: a polygon edge the ray test alone misses and an exact circle circumference", () => {
+    const P = [{ id: "p", shape: { kind: "polygon", points: [{ x: 0.4, y: 0.6 }, { x: 0.7, y: 0.6 }, { x: 0.55, y: 0.9 }] } }, { id: "c", shape: { kind: "circle", cx: 0.5, cy: 0.25, r: 0.125 } }];
+    expect(g(gradeExam(exam([hq({ hotspot: two, answer: key(P) })]), { h1: pts({ x: 0.625, y: 0.75 }, { x: 0.625, y: 0.25 }) }), "h1")).toMatchObject({ score: 3, parts: { correct: 2, total: 2 } });
+  });
+});
+
 describe("19D — ingest binding (draft / submit)", () => {
   it("hotspot: rebuilt to normalized points; foreign fields stripped; invalid points / excess points / wrong question rejected; compound parts refused", () => {
     const { answers, rejected } = normalizeDraftAnswers({ h1: { kind: "hotspot", points: [{ x: 0.2, y: 0.2, target: "target-router" }], score: 3, matched: ["target-router"] } }, exam([hq()]));
@@ -115,7 +135,7 @@ describe("19D — student sanitizer secrecy", () => {
     const node = out.sections[0].questions[0];
     expect(node.hotspot).toEqual(HCFG);
     expect(node.image).toEqual(IMG);
-    expect(node.answer).toBeUndefined();
+    expect(node.answer).toEqual({});
     expect(JSON.stringify(out)).not.toMatch(HCANARIES);
   });
   it("a config smuggling targets is withheld entirely (fail closed)", () => {
@@ -153,7 +173,7 @@ describe("19D — end to end through the REAL handlers", () => {
     expect(r.status).toBe(200);
     const [h, d] = r.jsonBody.assignment.exam.sections[0].questions;
     expect(h.hotspot).toEqual(HCFG); expect(h.image.assets[0].dataUrl).toBe(IMG.assets[0].dataUrl); expect(d.labelDiagram).toEqual(LCFG);
-    expect(JSON.stringify(r.jsonBody)).not.toMatch(HCANARIES); expect(JSON.stringify(r.jsonBody)).not.toMatch(LCANARIES);
+    expect(JSON.stringify(h)).not.toMatch(HCANARIES); expect(JSON.stringify(r.jsonBody)).not.toMatch(HSECRETS); expect(JSON.stringify(r.jsonBody)).not.toMatch(LCANARIES);
   });
   it("saveDraft then submit: bound answers stored, graded by the server, nothing private in responses or logs; review shows the overlays' data", async () => {
     const ctx = F.seed({ a: assignment() });
@@ -165,7 +185,7 @@ describe("19D — end to end through the REAL handlers", () => {
     expect(s.status).toBe(200); expect(s.jsonBody.ok).toBe(true);
     const attempt = ctx.getJson(F.SUB).attempts.find(a => a.attemptNumber === 1);
     expect(attempt.answers.h1).toEqual(pts(HIN.router, HIN.sw)); expect(attempt.score).toBe(2 + 3);
-    expect(JSON.stringify(s.jsonBody)).not.toMatch(HCANARIES); expect(JSON.stringify(logs)).not.toMatch(HCANARIES); expect(JSON.stringify(logs)).not.toMatch(LCANARIES);
+    expect(JSON.stringify(s.jsonBody)).not.toMatch(HSECRETS); expect(JSON.stringify(logs)).not.toMatch(HSECRETS); expect(JSON.stringify(logs)).not.toMatch(LCANARIES);
     const rv = await review().handler(F.teacherRequest("/api/assignment-review?assignmentId=" + F.AID + "&studentId=" + F.S1 + "&attemptNumber=1", undefined, "GET"), deps(ctx));
     expect(rv.status).toBe(200);
     const hr = rv.jsonBody.questions.find(x => x.questionId === "h1"), dr = rv.jsonBody.questions.find(x => x.questionId === "d1");

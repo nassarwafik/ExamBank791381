@@ -4,6 +4,7 @@
 // StudentQuestionCard re-exports it, so every existing importer keeps the same function.
 import { isSimulationStateAnswered, type JsonValue } from "./smartsimState";
 import type { NetworkCliDeviceState } from "./networkCliEngine";
+// Phase 19D adds "hotspot" (normalized image-content points only — never a score, a target id or pixels; answered ⇔ ≥ 1 point).
 // Phase 18C adds "networkCli" (a bounded command history + the canonical device state the shared engine derives from it; answered ⇔ ≥ 1 command).
 // Phase 16B-A adds "simulation" (an opaque, bounded JSON state reported by a sandboxed simulator; answered ⇔ non-empty).
 export type FieldValue = string | boolean | string[];
@@ -14,7 +15,7 @@ export type FieldValue = string | boolean | string[];
 // visual indexes) and "numeric" (Numeric Response — the raw text the student typed plus an optional unit; parsing happens in
 // the grader). Matrix and Categorization reuse "fields" (rowId → columnId / itemId → categoryId), which is semantically clean.
 // Unknown kinds fail closed in answered() (never counted as answered).
-export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue}|{kind:"code";language:string;languageVersion:number;source:string}|{kind:"networkCli";commands:string[];state:NetworkCliDeviceState};
+export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue}|{kind:"code";language:string;languageVersion:number;source:string}|{kind:"networkCli";commands:string[];state:NetworkCliDeviceState}|{kind:"hotspot";points:{x:number;y:number}[]};
 
 const nonEmptyValue = (v: unknown) => (typeof v === "boolean" ? v : String(v ?? "").trim() !== "");
 export function answered(a: Answer | undefined): boolean {
@@ -29,5 +30,6 @@ export function answered(a: Answer | undefined): boolean {
   if (a.kind === "simulation") return isSimulationStateAnswered(a.state);
   if (a.kind === "code") return typeof a.source === "string" && a.source.trim() !== "";   // 17A — source TEXT, never trimmed when stored
   if (a.kind === "networkCli") return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");   // 18C — mirror of networkCliQuestion.isNetworkCliAnswerAnswered
+  if (a.kind === "hotspot") return Array.isArray(a.points) && a.points.length > 0;   // 19D — mirror of hotspotQuestion.isHotspotAnswerAnswered
   return false;
 }

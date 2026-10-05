@@ -8,6 +8,8 @@ import { validateSimulationReference } from "./smartsimManifest";
 import { validateCodingQuestion } from "./codingQuestion";
 import { validateNetworkCliQuestion } from "./networkCliQuestion";
 import { validateInlineClozeQuestion } from "./inlineClozeQuestion";
+import { validateHotspotQuestion } from "./hotspotQuestion";
+import { validateLabelDiagramQuestion } from "./labelDiagramQuestion";
 import { validateParametricNumericQuestion } from "./parametricNumericQuestion";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
@@ -121,3 +123,6 @@ registerTypeValidator("inlineCloze", 1, node => validateInlineClozeQuestion(node
 // Phase 19B — parametricNumeric@1: public config, private answer expression, {{id}} stem template and a deterministic preview-sample
 // check (impossible constraints / an expression that fails on generated values) — every problem blocks finalization.
 registerTypeValidator("parametricNumeric", 1, node => validateParametricNumericQuestion(node));
+// Phase 19D — hotspot@1 / labelDiagram@1: public config, private key AND the canonical question image (every problem blocks).
+registerTypeValidator("hotspot", 1, node => validateHotspotQuestion(node));
+registerTypeValidator("labelDiagram", 1, node => validateLabelDiagramQuestion(node));

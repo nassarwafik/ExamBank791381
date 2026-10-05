@@ -131,7 +131,7 @@ describe("19D hotspot — authoritative scoring", () => {
   });
   it("malformed PUBLISHED authority ⇒ 0 + manual review (never partial credit): key, config, geometry, image", () => {
     const right = pts(IN.r1, IN.c1, IN.p1);
-    for (const [cfg, key, image] of [[CFGM, { ...KEYM, scoring: "bonus" }, IMG], [CFGM, { ...KEYM, regions: KEYM.regions.slice(0, 2) }, IMG], [CFGM, { ...KEYM, regions: [KEYM.regions[0], KEYM.regions[1], { id: "p1", shape: { kind: "rect", x: 120, y: 80, width: 200, height: 100 } }] }, IMG], [{ ...CFGM, regions: [] }, KEYM, IMG], [CFGM, KEYM, undefined], [CFGM, KEYM, { ...IMG, visible: false }], [CFGM, null, IMG], [null, KEYM, IMG]] as [unknown, unknown, unknown][]) {
+    for (const [cfg, key, image] of [[CFGM, { ...KEYM, scoring: "bonus" }, IMG], [CFGM, { ...KEYM, regions: KEYM.regions.slice(0, 2) }, IMG], [CFGM, { ...KEYM, regions: [KEYM.regions[0], KEYM.regions[1], { id: "p1", shape: { kind: "rect", x: 120, y: 80, width: 200, height: 100 } }] }, IMG], [{ ...CFGM, regions: [] }, KEYM, IMG], [CFGM, KEYM, null], [CFGM, KEYM, { ...IMG, visible: false }], [CFGM, null, IMG], [null, KEYM, IMG]] as [unknown, unknown, unknown][]) {
       const r = score(cfg, key, right, image);
       expect(r, JSON.stringify([cfg, key, image]).slice(0, 120)).toEqual({ score: 0, correct: false, manualReview: true, parts: { correct: 0, total: 0 } });
     }

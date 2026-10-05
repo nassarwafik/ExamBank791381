@@ -104,7 +104,7 @@ describe("19D labelDiagram — authoritative scoring", () => {
     expect(score(CFG, KEY, fields({ z1: "l-app" }, { score: 3, correct: true, correctLabelByZone: { z1: "l-app" }, parts: { correct: 3, total: 3 } })).score).toBe(1);
   });
   it("malformed PUBLISHED authority ⇒ 0 + manual review", () => {
-    for (const [cfg, key, image] of [[CFG, { ...KEY, scoring: "x" }, IMG], [CFG, { ...KEY, correctLabelByZone: { ...KEY.correctLabelByZone, z3: "l-app" } }, IMG], [{ ...CFG, secret: 1 }, KEY, IMG], [CFG, KEY, undefined], [CFG, { ...KEY, correctLabelByZone: { z1: "l-app" } }, IMG]] as [unknown, unknown, unknown][])
+    for (const [cfg, key, image] of [[CFG, { ...KEY, scoring: "x" }, IMG], [CFG, { ...KEY, correctLabelByZone: { ...KEY.correctLabelByZone, z3: "l-app" } }, IMG], [{ ...CFG, secret: 1 }, KEY, IMG], [CFG, KEY, null], [CFG, { ...KEY, correctLabelByZone: { z1: "l-app" } }, IMG]] as [unknown, unknown, unknown][])
       expect(score(cfg, key, fields({ z1: "l-app", z2: "l-net", z3: "l-phy" }), image)).toEqual({ score: 0, correct: false, manualReview: true, parts: { correct: 0, total: 0 } });
     expect(LABEL_DIAGRAM_FAIL_CLOSED).toEqual({ score: 0, correct: false, manualReview: true, parts: { correct: 0, total: 0 } });
   });

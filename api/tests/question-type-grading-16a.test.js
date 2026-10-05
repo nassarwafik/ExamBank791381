@@ -66,16 +66,16 @@ describe("16A A6–A11 — Wave 1 types grade through gradeExam", () => {
 
 describe("16A A16 / A17 — unknown types and unsupported versions fail closed on the server", () => {
   it("unknown type: score 0, manual review, never full credit, never another grader, no crash; unsupported version of a known type: the same", () => {
-    const unknown = { examQuestionId: "u1", presentationType: "hotspot", text: "x", marks: 5, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } };
+    const unknown = { examQuestionId: "u1", presentationType: "dragAndDrop", text: "x", marks: 5, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } };   // 19D: "hotspot" became a real type; "dragAndDrop" is the unknown-key example
     const r = gradeExam(exam([unknown]), { u1: { kind: "choice", index: 0 } });
     expect(q(r, "u1").score).toBe(0); expect(q(r, "u1").manualReview).toBe(true); expect(q(r, "u1").correct).toBe(false); expect(r.finalized).toBe(false); expect(r.manualReviewMarks).toBe(5);
     const v2 = gradeExam(exam([ms({ questionTypeVersion: 2 })]), { ms1: { kind: "multiChoice", optionIds: ["o1", "o2"] } });
     expect(q(v2, "ms1").score).toBe(0); expect(q(v2, "ms1").manualReview).toBe(true);
     const legacyV2 = gradeExam(exam([{ examQuestionId: "m", presentationType: "multipleChoice", questionTypeVersion: 2, text: "x", marks: 2, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } }]), { m: { kind: "choice", index: 0 } });
     expect(q(legacyV2, "m").score).toBe(0); expect(q(legacyV2, "m").manualReview).toBe(true);
-    expect(resolveGrader("hotspot")).toBeUndefined(); expect(unknownTypeResult(5)).toMatchObject({ score: 0, maxMarks: 5, correct: false, manualReview: true });
+    expect(resolveGrader("dragAndDrop")).toBeUndefined(); expect(unknownTypeResult(5)).toMatchObject({ score: 0, maxMarks: 5, correct: false, manualReview: true });
     // an unknown part inside a compound fails closed for that part only
-    const comp = { examQuestionId: "c", presentationType: "compound", text: "c", marks: 4, parts: [{ id: "a", type: "multipleChoice", marks: 2, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } }, { id: "b", type: "hotspot", marks: 2 }] };
+    const comp = { examQuestionId: "c", presentationType: "compound", text: "c", marks: 4, parts: [{ id: "a", type: "multipleChoice", marks: 2, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } }, { id: "b", type: "dragAndDrop", marks: 2 }] };
     const rc = gradeExam(exam([comp]), { c: { kind: "compound", parts: { a: { kind: "choice", index: 0 }, b: { kind: "choice", index: 0 } } } });
     expect(q(rc, "c").score).toBe(2); expect(q(rc, "c").manualReview).toBe(true); expect(rc.manualReviewMarks).toBe(2);
   });

@@ -20,6 +20,11 @@ const inlineCloze = require("./shared-finalization/inlineClozeQuestion");
 // caller threads through gradeExam (assignment, student, attempt number + the section-scoped question key), evaluates the private
 // answer expression and applies the numericResponse comparison. No identity / invalid authority ⇒ 0 + manual review.
 const parametricNumeric = require("./shared-finalization/parametricNumericQuestion");
+// Phase 19D — hotspot@1 / labelDiagram@1: the shared strict authority re-validates the public config, the PRIVATE key and the canonical
+// question image before any point / label is compared (malformed authority ⇒ 0 + manual review). Only the student's normalized points
+// (hotspot) or zone → label map (labelDiagram, the existing `fields` Answer) are read — never a client score / matched id / mapping.
+const hotspot = require("./shared-finalization/hotspotQuestion");
+const labelDiagram = require("./shared-finalization/labelDiagramQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -116,6 +121,14 @@ registerBuiltIn("coding", () => ({ score: 0, manualReview: true, correct: false 
 if (!graders.has(identity("coding", 2))) registerGrader("coding", 2, () => ({ score: 0, manualReview: true, correct: false }));
 registerBuiltIn("networkCli", (question, response, max) => {
   const r = networkCli.scoreNetworkCli({ config: question.networkCli, answerKey: question.answer, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("hotspot", (question, response, max) => {
+  const r = hotspot.scoreHotspot({ config: question.hotspot, answerKey: question.answer, image: question.image, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("labelDiagram", (question, response, max) => {
+  const r = labelDiagram.scoreLabelDiagram({ config: question.labelDiagram, answerKey: question.answer, image: question.image, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
 registerBuiltIn("inlineCloze", (question, response, max) => {

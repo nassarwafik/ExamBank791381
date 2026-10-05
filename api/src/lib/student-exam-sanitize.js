@@ -205,6 +205,16 @@ function applyParametricProjection(out, source, ctx) {
   out.parametric = projected.parametric;
   delete out.textHtml;                                                         // an HTML twin of the template would carry {{id}} syntax
 }
+// Phase 19D — the visual configs are REBUILT through their STRICT projections (shared with the renderers and the graders): only the
+// public hotspot settings (mode, selections, image description) and the public labelDiagram zones / labels survive; a config smuggling
+// ANY other field (targets, a correct mapping) is withheld entirely (fail closed). Target regions and the correct mapping live under
+// `answer`, blanked like every key. The image is the question's canonical `image`, delivered by the existing media path.
+const { projectHotspotConfigForStudent } = require("./shared-finalization/hotspotQuestion");
+const { projectLabelDiagramConfigForStudent } = require("./shared-finalization/labelDiagramQuestion");
+function applyVisualProjection(node) {
+  if ("hotspot" in node) { const p = projectHotspotConfigForStudent(node.hotspot); if (p) node.hotspot = p; else delete node.hotspot; }
+  if ("labelDiagram" in node) { const p = projectLabelDiagramConfigForStudent(node.labelDiagram); if (p) node.labelDiagram = p; else delete node.labelDiagram; }
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -217,6 +227,7 @@ function sanitizePartForStudent(part) {
   if (!part || typeof part !== "object") return part;
   const out = { ...part }; // keeps id / label / text / textHtml / marks / type / questionTypeVersion / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
+  applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
@@ -239,6 +250,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   // Legacy-identical blanking (answer:{}, hint:"", …) so existing behaviour/tests are unchanged,
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
+  applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);

@@ -104,7 +104,7 @@ describe("19A /api/ai-question-author — inlineCloze, refusals and provider fai
     const { r, calls } = await call({ request: "simulate with my smartsim package", preferredType: "simulation" }, base({ intent: "simulation" }));
     expect(r.jsonBody).toMatchObject({ ok: false, code: "AI_TYPE_NOT_GENERATED", intent: "simulation" });
     expect(calls[0].prompt).toMatch(/preferred type: simulation/i);
-    const bad = await call({ request: "x", preferredType: "hotspot" }, SWITCH);
+    const bad = await call({ request: "x", preferredType: "dragAndDrop" }, SWITCH);   // 19D: "hotspot" became a real (refused) visual intent
     expect(bad.r.status).toBe(400);
   });
   it("a provider failure is a 502 with a safe Arabic message — never a fabricated question", async () => {

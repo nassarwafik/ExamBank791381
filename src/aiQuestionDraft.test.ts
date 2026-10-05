@@ -189,7 +189,7 @@ describe("19A AI authoring — ordinary families, refusals and malformed AI outp
       { ...switchDraft(), networkCli: { ...(switchDraft().networkCli as unknown as Record<string, unknown>), targetState: { hostname: "X" } } },
       { ...switchDraft(), answer: { targetState: {} } },
       JSON.parse(JSON.stringify(draft()).replace("{", '{"__proto__":{"polluted":1},')),
-      { ...draft(), marks: "2" }, { ...draft(), marks: 0 }, { ...draft(), intent: "hotspot" },
+      { ...draft(), marks: "2" }, { ...draft(), marks: 0 }, { ...draft(), intent: "dragAndDrop" },   // 19D: "hotspot" became a real (refused) visual intent
       clozeDraft([{ ...piece({ kind: "textBlank", accepted: ["x"] }), correct: true }])
     ];
     for (const c of cases) {

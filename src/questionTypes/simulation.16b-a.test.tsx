@@ -61,7 +61,7 @@ describe("S1 — the simulation type exists in the production catalog", () => {
     expect(d.version).toBe(1); expect(d.label).toBe("محاكاة تفاعلية"); expect(d.category).toBe("interactive"); expect(d.gradingMode).toBe("manual"); expect(d.legacy).toBe(false);
     expect(d.capabilities).toMatchObject({ autoGrading: false, manualGrading: true, interactive: true, compoundPart: false, requiresImage: false });
     expect(d.responseKinds).toEqual(["simulation"]);
-    expect(QUESTION_TYPE_CATALOG.length).toBe(20);                                                   // Phase 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric
+    expect(QUESTION_TYPE_CATALOG.length).toBe(22);                                                   // Phase 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram
     expect(typeDescription(d)).toMatch(/محاكاة/); expect(typeIcon(d)).not.toBe("▫");
     expect(SIMULATION_RUNTIME_VERSION).toBe(1);
   });
@@ -126,7 +126,7 @@ describe("Editor — inside the real Builder with an injected App-owned service"
     const { hist } = await mount(baseExam([newQuestion("multipleChoice", { examQuestionId: "q1", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(20);                                    // Phase 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric
+    expect(within(d).getAllByTestId("qt-card").length).toBe(22);                                    // Phase 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     const card = within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "simulation")!;
     expect(card.textContent).toContain("محاكاة تفاعلية"); expect(card.textContent).toMatch(/يدوي/);
