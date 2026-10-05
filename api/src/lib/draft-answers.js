@@ -30,6 +30,13 @@ const { bindLabelDiagramAnswerToQuestion } = require("./shared-finalization/labe
 // model answer / comment are dropped), the text kept verbatim and bounded by the question's maxChars (over-long ⇒ rejected, never
 // truncated); any other kind is rejected.
 const { bindOpenResponseAnswerToQuestion, isOpenResponseQuestion } = require("./shared-finalization/openResponseQuestion");
+// Phase 19F — a `codeTemplate` answer (coding@3 locked template) carries ONLY gap values. Bound to the published question it must
+// answer a coding@3 question, in the template's language, naming EXACTLY the template's gaps (missing / unknown / prototype keys and
+// oversized values are refused); the stored answer is rebuilt to exactly { kind, language, languageVersion, values } — a client-sent
+// `source`, score or locked text is dropped and never stored. Any other kind on a coding@3 question is refused (a full-source answer
+// could rewrite locked text). Unbound it is shape / bounds checked only. Not compound-capable.
+const { bindCodingTemplateAnswerToQuestion, codingQuestionVersion } = require("./shared-finalization/codingQuestion");
+const { normalizeCodeTemplateAnswer } = require("./shared-finalization/codingTemplate");
 
 // Phase 17A Independent Review Fix — when the caller passes the AUTHORITATIVE exam (the assignment's exam snapshot, the same
 // one the grader uses), every code answer is bound to the question its answer id names: it must be a coding@1 question, the
@@ -48,6 +55,8 @@ const isInlineClozeQuestion = q => !!q && typeof q === "object" && q.presentatio
 const isParametricQuestion = q => !!q && typeof q === "object" && q.presentationType === "parametricNumeric";
 const isHotspot = a => !!a && typeof a === "object" && a.kind === "hotspot";
 const isHotspotQuestion = q => !!q && typeof q === "object" && q.presentationType === "hotspot";
+const isCodeTemplate = a => !!a && typeof a === "object" && a.kind === "codeTemplate";
+const isCodingV3Question = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "coding" && codingQuestionVersion(q) === 3;
 const isLabelDiagramQuestion = q => !!q && typeof q === "object" && q.presentationType === "labelDiagram";
 
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
@@ -65,6 +74,12 @@ function normalizeDraftAnswers(answers, exam) {
     }
     if (isCode(a)) {
       const r = bound ? bindCodeAnswerToQuestion(a, index.get(id)) : normalizeCodeAnswer(a);
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
+    if (isCodeTemplate(a) || (bound && isCodingV3Question(index.get(id)))) {
+      const r = bound ? bindCodingTemplateAnswerToQuestion(a, index.get(id)) : normalizeCodeTemplateAnswer(a);
       if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
       out[id] = r.answer;
       continue;
@@ -109,6 +124,7 @@ function normalizeDraftAnswers(answers, exam) {
       const parts = {};
       for (const pid of Object.keys(a.parts)) {
         if (isCode(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
+        if (isCodeTemplate(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
         if (isNetworkCli(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "NETCLI_QUESTION_MISMATCH" }); continue; }
         if (isHotspot(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "HOTSPOT_QUESTION_MISMATCH" }); continue; }
         parts[pid] = a.parts[pid];
