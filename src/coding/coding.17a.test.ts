@@ -46,8 +46,8 @@ describe("C1 — coding@1 is a real production question type", () => {
     expect(d!.version).toBe(2); expect(d!.label).toBe("برمجة / كتابة كود");   // 17F-C2 RF1: current version 2 (coding@1 historical, coding@2 compile-error policy) expect(d!.category).toBe("interactive"); expect(d!.gradingMode).toBe("hybrid"); expect(d!.legacy).toBe(false);
     expect(d!.capabilities).toMatchObject({ autoGrading: false, manualGrading: true, partialCredit: true, compoundPart: false, interactive: true, offline: true, requiresImage: false });
     expect(d!.responseKinds).toEqual(["code"]);
-    expect(QUESTION_TYPE_CATALOG.length).toBe(22);                                                   // 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram
-    expect(QUESTION_TYPE_CATALOG.at(-6)!.key).toBe("coding"); expect(QUESTION_TYPE_CATALOG.at(-5)!.key).toBe("networkCli"); expect(QUESTION_TYPE_CATALOG.at(-4)!.key).toBe("inlineCloze"); expect(QUESTION_TYPE_CATALOG.at(-3)!.key).toBe("parametricNumeric");   // 18C appends networkCli after coding · 19A appends inlineCloze · 19B appends parametricNumeric · 19D appends hotspot / labelDiagram
+    expect(QUESTION_TYPE_CATALOG.length).toBe(23);                                                   // 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
+    expect(QUESTION_TYPE_CATALOG.at(-7)!.key).toBe("coding"); expect(QUESTION_TYPE_CATALOG.at(-6)!.key).toBe("networkCli"); expect(QUESTION_TYPE_CATALOG.at(-5)!.key).toBe("inlineCloze"); expect(QUESTION_TYPE_CATALOG.at(-4)!.key).toBe("parametricNumeric");   // 18C appends networkCli after coding · 19A appends inlineCloze · 19B appends parametricNumeric · 19D appends hotspot / labelDiagram · 19E appends openResponse
   });
   it("ONE generic type: no per-language question types exist (language is configuration)", () => {
     const keys = listQuestionTypes().map(d => d.key.toLowerCase());

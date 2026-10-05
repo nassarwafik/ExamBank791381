@@ -16,9 +16,10 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   inlineCloze: "فقرة بفراغات داخل النص نفسه: فراغ كتابة أو قائمة منسدلة بأي ترتيب؛ تصحيح تلقائي لكل فراغ مع علامة جزئية.",
   hotspot: "يرى الطالب صورة وينقر على الموضع أو المواضع المطلوبة؛ يرسم المعلم المناطق الصحيحة على الصورة، وتصحيح تلقائي بعلامة جزئية.",
   labelDiagram: "يضع الطالب تسميات من بنك على مناطق ظاهرة في الرسم (سحبًا أو اختيارًا)؛ تصحيح تلقائي لكل منطقة بعلامة جزئية.",
+  openResponse: "مقال أو شرح أو تعليل أو مقارنة أو تحليل: يكتب الطالب إجابة نصية، ويصحّحها المعلم بسلم تقييم (معايير ومستويات) ويحسب الخادم الدرجة.",
   parametricNumeric: "سؤال رقمي بمعطيات متغيرة: قيم مختلفة لكل طالب ومحاولة من متغيرات وقيود، وتعبير إجابة خاص يُحسب على الخادم؛ تصحيح تلقائي بتسامح أو مدى."
 });
-const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡" });
+const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡", openResponse: "¶" });
 // Phase 17A — factual chips that replace the generic grading-mode chip where the CURRENT behaviour differs from the type's
 // designed mode: coding@1 is designed hybrid but grades manually until a trusted executor exists — never «تصحيح تلقائي».
 const GRADING_CHIP_OVERRIDES: Readonly<Record<string, readonly string[]>> = Object.freeze({ coding: Object.freeze(["تصحيح يدوي حاليًا", "إجابة برمجية"]) });

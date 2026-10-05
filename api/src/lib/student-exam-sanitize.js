@@ -19,7 +19,7 @@ const FLAG_SECRET_KEYS = ["correct", "isCorrect", "correctText", "correctOptionI
 // Teacher-side / secret keys that may appear on a question or a compound part.
 // Phase 17C / 17E-A — official coding grading data (mode, scoring policy, hidden tests, reference solutions, grading intent / keys) is teacher / server
 // data; it lives under the private answer key, and should any path ever copy it onto a node it is removed here (defense in depth).
-const GRADING_SECRET_KEYS = ["gradingMode", "hiddenTests", "referenceSolutions", "codingGrading", "gradingKey", "answerHash", "questionFingerprint", "scoringPolicy", "compileErrorPolicy", "targetState"];   // 17F-C2: the compile-error policy is teacher data too; 18C: the network CLI target state
+const GRADING_SECRET_KEYS = ["gradingMode", "hiddenTests", "referenceSolutions", "codingGrading", "gradingKey", "answerHash", "questionFingerprint", "scoringPolicy", "compileErrorPolicy", "targetState", "modelAnswer", "rubric", "rubricAwards"];   // 19E: a rubric / model answer / awards live under `answer`; stripped here too if ever top-level (defense in depth)   // 17F-C2: the compile-error policy is teacher data too; 18C: the network CLI target state
 const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "redoStack", "explanation", "rationale", ...FLAG_SECRET_KEYS, ...GRADING_SECRET_KEYS];
 // Phase 13C-A — TEACHER PLANNING DATA: the assessment blueprint (exam level) and a question's / part's pedagogical
 // classification are authoring data and never reach a student.
@@ -159,7 +159,7 @@ function sanitizeFieldForStudent(field) {
 // structural fields with a dedicated sanitizer below is passed through the canonical secret-key policy (recursive), so a
 // smuggled `correctColumn` / `expectedState` / `answerKey` inside any plugin object never reaches a student (defense in
 // depth) while public structure (ids, labels, values) passes byte-for-byte. Persisted exam JSON can never name this code.
-const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus"]);
+const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus", "openResponse"]);   // 19E: openResponse is REBUILT by its strict allow-list projection below
 // Phase 17A — the coding config is additionally REBUILT through its allow-list projection (shared with the client renderer):
 // only allowed / default languages, starter code, public sample tests (id / title / input / sampleOutput) and limits survive,
 // so hidden tests, reference solutions, weights or notes smuggled into the public object never reach a student; a malformed
@@ -215,6 +215,17 @@ function applyVisualProjection(node) {
   if ("hotspot" in node) { const p = projectHotspotConfigForStudent(node.hotspot); if (p) node.hotspot = p; else delete node.hotspot; }
   if ("labelDiagram" in node) { const p = projectLabelDiagramConfigForStudent(node.labelDiagram); if (p) node.labelDiagram = p; else delete node.labelDiagram; }
 }
+// Phase 19E — the openResponse config is REBUILT through its STRICT projection (shared with the renderer): only the canonical public
+// settings survive, plus — when the teacher chose a `visible` rubric — the canonical public rubric (titles, public descriptions, max
+// points, level labels / points / descriptions) derived from the VALID private rubric. A config with ANY other field (a smuggled
+// rubric, public rubric or model answer) is withheld entirely; criterion guidance, ids, flags and the model answer never leave `answer`
+// (blanked like every key). Being a full allow-list rebuild, it is a structural key (not re-filtered by the secret-key denylist).
+const { projectOpenResponseForStudent } = require("./shared-finalization/openResponseQuestion");
+function applyOpenResponseProjection(node, source) {
+  if (!("openResponse" in node)) return;
+  const p = projectOpenResponseForStudent(node.openResponse, source && typeof source === "object" ? source.answer : undefined);
+  if (p) node.openResponse = p; else delete node.openResponse;
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -228,6 +239,7 @@ function sanitizePartForStudent(part) {
   const out = { ...part }; // keeps id / label / text / textHtml / marks / type / questionTypeVersion / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
+  applyOpenResponseProjection(out, part);                                       // 19E: never compound-capable; defense in depth
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
@@ -251,6 +263,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
+  applyOpenResponseProjection(out, question);                                   // 19E: the public rubric is derived from the ORIGINAL private key
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);

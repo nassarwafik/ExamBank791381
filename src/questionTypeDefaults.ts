@@ -76,6 +76,9 @@ registerTypeDefaults("parametricNumeric", 1, ensure => {
 // purpose (initial graph); parity-tested against the model defaults.
 registerTypeDefaults("hotspot", 1, ensure => { ensure("hotspot", { v: 1, mode: "single", selections: 1, alt: "" }); ensure("answer", { scoring: "allOrNothing", regions: [] }); });
 registerTypeDefaults("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
+// Phase 19E — openResponse@1: the general profile and an EMPTY rubric that blocks finalization until the teacher builds one (the lazy
+// editor offers the useful 10-point default rubric in one click). Literal on purpose (initial graph); parity-tested against the model.
+registerTypeDefaults("openResponse", 1, ensure => { ensure("openResponse", { v: 1, profile: "general", instructions: "", response: { minChars: 0, maxChars: 6000 }, studentRubricVisibility: "hidden" }); ensure("answer", { rubric: { v: 1, criteria: [] }, modelAnswer: "" }); });
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });

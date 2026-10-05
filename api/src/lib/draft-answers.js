@@ -26,6 +26,10 @@ const { bindParametricNumericAnswer } = require("./shared-finalization/parametri
 // the question's zones and labels (unknown zones stripped; unknown labels / reuse abuse / prototype keys rejected).
 const { bindHotspotAnswerToQuestion, normalizeHotspotAnswer } = require("./shared-finalization/hotspotQuestion");
 const { bindLabelDiagramAnswerToQuestion } = require("./shared-finalization/labelDiagramQuestion");
+// Phase 19E — an answer on an openResponse question is rebuilt to exactly { kind: "text", value } (a client score / rubric awards /
+// model answer / comment are dropped), the text kept verbatim and bounded by the question's maxChars (over-long ⇒ rejected, never
+// truncated); any other kind is rejected.
+const { bindOpenResponseAnswerToQuestion, isOpenResponseQuestion } = require("./shared-finalization/openResponseQuestion");
 
 // Phase 17A Independent Review Fix — when the caller passes the AUTHORITATIVE exam (the assignment's exam snapshot, the same
 // one the grader uses), every code answer is bound to the question its answer id names: it must be a coding@1 question, the
@@ -79,6 +83,12 @@ function normalizeDraftAnswers(answers, exam) {
     }
     if (bound && isLabelDiagramQuestion(index.get(id))) {
       const r = bindLabelDiagramAnswerToQuestion(a, index.get(id));
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
+    if (bound && isOpenResponseQuestion(index.get(id))) {
+      const r = bindOpenResponseAnswerToQuestion(a, index.get(id));
       if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
       out[id] = r.answer;
       continue;

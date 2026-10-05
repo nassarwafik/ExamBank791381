@@ -84,7 +84,11 @@ const PRODUCTION_ROWS = [
   // the student marks points (private target regions, one-to-one matching); labelDiagram@1: the student places bank labels on public
   // zones (the existing `fields` Answer). Auto-graded with partial credit; image-requiring; not compound parts (V1 decision).
   ["hotspot", "تحديد منطقة على صورة", "interactive", "auto", "apiro", ["hotspot"], false],
-  ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", "apiro", ["fields"], false]
+  ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", "apiro", ["fields"], false],
+  // Phase 19E — ONE open-response family (openResponse@1) for essay / explain / justify / compare / analyze / source-based answers
+  // (profiles, never types): plain-text answer (the existing `text` Answer), MANUAL grading with a teacher rubric — the server computes
+  // the official score from the published rubric; partial credit through rubric levels; not a compound part (V1 decision).
+  ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", "mpo", ["text"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
  *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */
