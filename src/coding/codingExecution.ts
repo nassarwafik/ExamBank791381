@@ -6,7 +6,9 @@ import type { CodeExecutionResult, CodeExecutionStatus } from "../codingContract
 // Phase 17B will provide a service that calls the authenticated server route, which forwards to the trusted, isolated
 // execution provider. A browser-side result is NEVER an official score (the server grader is the only grading authority) and
 // is never stored in the canonical Answer. Nothing here can execute code: it only describes a request / response.
-export type CodingRunRequest = { language: string; languageVersion: number; source: string; stdin: string; testId?: string };
+// Phase 19F — `values` (coding@3 locked template): the gap values are what the server receives; it reconstructs the source from the
+// PUBLISHED template itself. `source` then only labels the snapshot shown next to the result (never sent).
+export type CodingRunRequest = { language: string; languageVersion: number; source: string; stdin: string; testId?: string; values?: Record<string, string> };
 export type CodingCapabilities = { available: boolean; languages: { key: string; languageVersion: number }[] };
 /** Phase 17E-B — `signal` lets the renderer abandon a superseded practice run (a language switch, unmount); the server-side run
  *  may still complete, its result is simply never shown. */

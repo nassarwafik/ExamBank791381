@@ -174,8 +174,9 @@ function main() {
   const monacoChunks = all.filter(f => MONACO_SIGNATURES.filter(s => read(f).includes(s)).length >= 2);
   if (!monacoChunks.length) failures.push("no Monaco engine chunk was emitted (is src/coding/editor/monacoEngine.ts still imported by the editor engine loader?)");
   for (const f of monacoChunks) if (initial.includes(f)) failures.push(`${f} (initial) is the Monaco engine chunk — it must stay behind the coding editor's dynamic edge`);
-  const codingRoots = all.filter(f => /^(CodingResponse|CodingQuestionEditor)-[^.]+\.js$/.test(f));
-  if (codingRoots.length < 2) failures.push("the CodingResponse-*.js / CodingQuestionEditor-*.js lazy chunks were not both emitted");
+  // Phase 19F — the coding@3 locked-template renderer is a third coding root: it must be emitted and must not reach Monaco statically either.
+  const codingRoots = all.filter(f => /^(CodingResponse|CodingQuestionEditor|CodingTemplateResponse)-[^.]+\.js$/.test(f));
+  if (codingRoots.length < 3) failures.push("the CodingResponse-*.js / CodingQuestionEditor-*.js / CodingTemplateResponse-*.js lazy chunks were not all emitted");
   const codingClosure = codingRoots.length ? staticClosure(dist, codingRoots) : [];
   for (const f of monacoChunks) if (codingClosure.includes(f)) failures.push(`${f} is statically reachable from the coding question chunks (${codingRoots.join(", ")}) — the engine must load through import() only`);
   const codingDynamic = new Set(codingClosure.flatMap(f => dynamicEdges(dist, f)));

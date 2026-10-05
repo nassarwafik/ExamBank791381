@@ -5,6 +5,8 @@ import CodingWorkspace from "../../coding/workspace/CodingWorkspace";
 import { duplicateCodingTest, moveCodingTest, newCodingTestId, removeCodingTest, updateCodingTest } from "../../coding/codingTests";
 import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGES, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, DEFAULT_CODING_COMPARATOR, codingCompileErrorPolicy, codingGradingMode, codingQuestionVersion, codingLanguage, codingScoringPolicy, codingStarterTemplate, defaultCodingConfig, isCodingLanguage, validateCodingQuestion, type CodingComparator, type CodingCompileErrorPolicy, type CodingGradingMode, type CodingLimits, type CodingQuestionConfigV1, type CodingScoringPolicy, type CodingTestCasePrivate, type CodingTestCasePublic } from "../../codingQuestion";
 import { OFFICIAL_STDOUT_CAPTURE_BYTES } from "../../codingContract";
+import CodingTemplateEditor from "../../coding/CodingTemplateEditor";
+import type { CodingTemplateV1 } from "../../codingTemplate";
 import "../../coding/coding.css";
 
 // Phase 17A — coding@1 authoring (lazy). Edits the canonical node only: the PUBLIC configuration under `coding` (languages,
@@ -24,6 +26,9 @@ import "../../coding/coding.css";
 // the teacher sets the mark in the review. Review Fix 1: the policy is VERSIONED — a legacy coding@1 node reads "zero" (its only
 // contract) and choosing manual review upgrades the node EXPLICITLY to coding@2 (version + policy in ONE change); a coding@2 node
 // must carry an explicit policy (none checked + the canonical validator's error otherwise). Never a silent reinterpretation.
+// Phase 19F — coding@3 (LOCKED TEMPLATE, created only by the «إكمال كود بأجزاء مقفلة» preset): ONE language fixed by the template
+// (allowed = default = template language, kept in step on every template change), no free starter code (each gap carries its own
+// starter), and the template authoring section instead of the starter editor. The inspector shows the node's real version.
 type Key = { hiddenTests: CodingTestCasePrivate[]; comparator: CodingComparator; referenceSolutions: Record<string, string>; gradingMode: CodingGradingMode; scoringPolicy?: CodingScoringPolicy; compileErrorPolicy?: CodingCompileErrorPolicy };
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const COMPARATOR_OPTIONS: Record<CodingComparator, string> = { exact: "مطابقة حرفية تامة", trimTrailingWhitespace: "تجاهل المسافات في نهايات الأسطر (افتراضي)", normalizeWhitespace: "توحيد كل المسافات (اختياري صريح)" };
@@ -88,6 +93,13 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
     if (p === "manualReview" && typeVersion === 1) patch.questionTypeVersion = 2;   // the EXPLICIT upgrade — version and policy in ONE change
     onChange(patch);
   };
+  const isTemplate = typeVersion === 3;
+  const rawTemplate = (cfg as { template?: unknown }).template;
+  const template = isObj(rawTemplate) && typeof rawTemplate.language === "string" && Array.isArray(rawTemplate.segments) ? (rawTemplate as unknown as CodingTemplateV1) : null;
+  const setTemplate = (next: CodingTemplateV1) => {
+    const lang = next.language;
+    onChange({ coding: { ...cfg, template: next, allowedLanguages: [lang], defaultLanguage: lang, starterCode: {} }, answer: { ...key, referenceSolutions: key.referenceSolutions[lang] !== undefined ? { [lang]: key.referenceSolutions[lang] } : {} } } as Partial<QuestionBody>);
+  };
   const marks = (node as unknown as { marks?: unknown }).marks;
   const marksText = typeof marks === "number" && Number.isFinite(marks) && marks > 0 ? String(marks) : "—";
   // the ONE canonical validator — exactly the rules finalization blocks on (no second, editor-only rule set)
@@ -97,7 +109,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
   return (
     <div className="qt-editor cx-author" data-testid="qt-editor-coding">
       <dl className="cx-inspector" data-testid="coding-inspector">
-        <div>نوع السؤال: برمجة</div><div>الإصدار: 1</div><div>طريقة التصحيح الرسمي: {MODE_LABELS[key.gradingMode]}</div><div>اللغات: {known.map(labelOf).join("، ") || "—"}</div>
+        <div>نوع السؤال: برمجة</div><div>الإصدار: {typeVersion}</div>{isTemplate && <div>النمط: إكمال كود بأجزاء مقفلة</div>}<div>طريقة التصحيح الرسمي: {MODE_LABELS[key.gradingMode]}</div><div>اللغات: {known.map(labelOf).join("، ") || "—"}</div>
       </dl>
       <p className="cx-help">يكتب الطالب الكود ويسلّمه، ويمكنه تجربته على الأمثلة الظاهرة عبر محرك التنفيذ المعزول.<br />العلامة الرسمية إما من المعلم، أو تُحتسب تلقائيًا على الخادم من الاختبارات المخفية.</p>
       {unknown.length > 0 && <p className="cx-code-alert" data-testid="coding-unsupported-language" role="alert">لغة غير مدعومة: {unknown.join("، ")} — لن يُقبل السؤال في الاعتماد النهائي ولن تُحوَّل إلى لغة أخرى تلقائيًا.{" "}
@@ -105,7 +117,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
 
       <fieldset data-coding-section="البيئة والتنفيذ">
         <legend>البيئة والتنفيذ</legend>
-        <fieldset>
+        {isTemplate ? <p className="cx-help" data-testid="coding-template-language-note">سؤال القالب المقفل بلغة واحدة هي لغة القالب ({labelOf(template?.language ?? cfg.defaultLanguage)})؛ تغييرها من قسم «القالب المقفل».</p> : <fieldset>
           <legend>اللغات المسموحة</legend>
           <div className="cx-lang-grid">
             {CODING_LANGUAGES.map(l => <label key={l.key}><input type="checkbox" aria-label={l.label} checked={cfg.allowedLanguages.includes(l.key)} onChange={e => toggleLanguage(l.key, e.target.checked)} disabled={disabled} /><span>{l.label}</span>{!l.capabilities.tests && <small> (مراجعة يدوية فقط، بلا اختبارات إدخال/إخراج)</small>}</label>)}
@@ -116,7 +128,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
               {known.map(l => <option key={l} value={l}>{labelOf(l)}</option>)}
             </select>
           </label>
-        </fieldset>
+        </fieldset>}
         <fieldset>
           <legend>حدود التنفيذ</legend>
           <p className="cx-help">تُطبَّق على التجربة وعلى التصحيح الرسمي في محرك التنفيذ المعزول. الحد الأقصى لحجم الكود يُطبَّق على إجابة الطالب فورًا.</p>
@@ -131,7 +143,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
         </fieldset>
       </fieldset>
 
-      <fieldset data-coding-section="الكود الابتدائي">
+      {isTemplate ? <CodingTemplateEditor template={template} onChange={setTemplate} disabled={disabled} /> : <fieldset data-coding-section="الكود الابتدائي">
         <legend>الكود الابتدائي</legend>
         <p className="cx-help">اختياري لكل لغة؛ يظهر للطالب في بداية المحرر ويمكنه استعادته. لا تضع الحل هنا.</p>
         {known.map(l => { const template = codingStarterTemplate(l), current = cfg.starterCode?.[l] ?? ""; return (
@@ -139,7 +151,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
             <CodingWorkspace value={current} onChange={v => setCfg({ starterCode: v === "" ? without(cfg.starterCode ?? {}, l) : { ...(cfg.starterCode ?? {}), [l]: v } })} language={l} label={"محرر الكود — الكود الابتدائي — " + labelOf(l)} readOnly={disabled} maxBytes={sourceLimit} minRows={4} languageVersion={codingLanguage(l)?.version} title={"الكود الابتدائي — " + labelOf(l)} testId={"coding-starter-workspace-" + l} />
             {template && current === "" && <button type="button" onClick={() => setCfg({ starterCode: { ...(cfg.starterCode ?? {}), [l]: template } })} disabled={disabled}>{"إدراج القالب الأساسي — " + labelOf(l)}</button>}
           </div>); })}
-      </fieldset>
+      </fieldset>}
 
       <fieldset data-coding-section="أمثلة ظاهرة للطالب">
         <legend>أمثلة ظاهرة للطالب</legend>

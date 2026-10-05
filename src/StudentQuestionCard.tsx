@@ -1,5 +1,5 @@
 
-import {Suspense} from "react";
+import {Suspense,lazy} from "react";
 import {IconCheck} from "./icons";
 import {parseTable,promptText,resolveTableRowOptions} from "./questionContent";
 import QuestionField from "./QuestionField";
@@ -19,6 +19,8 @@ export const optionsFor=(q:{type?:string;presentationType?:string;options?:Opt[]
 // build); re-exported here so every existing importer is unchanged.
 import type {Answer,FieldValue} from "./answerState";
 import {answered} from "./answerState";
+// Phase 19F — the shared read-only code stimulus (any type): LAZY, loaded only for a question that carries one (initial graph unchanged).
+const CodeStimulusView=lazy(()=>import("./questionTypes/CodeStimulusView"));
 export type {Answer,FieldValue} from "./answerState";
 export {answered} from "./answerState";
 
@@ -88,7 +90,7 @@ export default function StudentQuestionCard({q,index,id,answer,onChoice,onSeq,on
  const textId="iex-qtext-"+String(id).replace(/[^a-zA-Z0-9_-]/g,"_");
  const labelPrefix="السؤال "+(q.displayNumber??(index+1));
  const tableAnswerHeader=table?(table.headers[1]||"الإجابة"):"";
- return <article className={"iex-q "+(answered(a)?"done":"")}><div className="iex-node" aria-hidden="true">{q.displayNumber??(index+1)}</div><div className="iex-card"><div className="iex-qhead"><span>{registered?registered.label:t==="multiplechoice"?"اختيار من متعدد":t==="truefalse"?"صح أو خطأ":t==="multitruefalse"?"صح/خطأ متعدد":t==="clifill"?"أوامر CLI":t==="matching"?"طابق":t==="ordering"?"رتّب العناصر":(table||fieldType)?"أكمل الجدول":seq?"أكمل الناقص":"سؤال"}</span><strong>{q.marks} علامة</strong></div><p className="iex-qtext" id={textId}>{promptText(q.text)}</p>
+ return <article className={"iex-q "+(answered(a)?"done":"")}><div className="iex-node" aria-hidden="true">{q.displayNumber??(index+1)}</div><div className="iex-card"><div className="iex-qhead"><span>{registered?registered.label:t==="multiplechoice"?"اختيار من متعدد":t==="truefalse"?"صح أو خطأ":t==="multitruefalse"?"صح/خطأ متعدد":t==="clifill"?"أوامر CLI":t==="matching"?"طابق":t==="ordering"?"رتّب العناصر":(table||fieldType)?"أكمل الجدول":seq?"أكمل الناقص":"سؤال"}</span><strong>{q.marks} علامة</strong></div><p className="iex-qtext" id={textId}>{promptText(q.text)}</p>{q.codeStimulus!==undefined&&<Suspense fallback={null}><CodeStimulusView stimulus={q.codeStimulus}/></Suspense>}
   {!registered?.ownsImage&&imageList(q).map((im,n)=>im.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
   {registered&&<Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل السؤال…</p>}><registered.Renderer q={q} id={id} answer={a} onAnswer={onAnswer||(()=>{})} disabled={disabled} labelPrefix={labelPrefix} textId={textId}/></Suspense>}
   {unsupported&&<StudentUnsupported/>}

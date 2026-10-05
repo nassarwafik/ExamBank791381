@@ -7,7 +7,8 @@ import type { AiImageRequestQuestion } from "./questionMedia";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import QuestionClassificationEditor from "./QuestionClassificationEditor";
 import ActivityDescriptorEditor from "./ActivityDescriptorEditor";
-import { questionTypeDefinition } from "./questionTypeCatalog";
+import { effectiveQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
+import CodeStimulusEditor from "./CodeStimulusEditor";
 import { GRADING_MODE_LABELS } from "./questionTypeAliases";
 
 // Exam-specific chrome around a question: collapse, the displayed-number badge, and the row actions (preview, move,
@@ -91,6 +92,7 @@ export default function StructuredQuestionEditor(props: Props) {
 
           <QuestionTypeMeta type={q.presentationType} version={q.questionTypeVersion} />
           <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
+          <CodeStimulusEditor question={q} onChange={onChange} disabled={disabled} />
           <QuestionMediaEditor question={q} onChange={onChange} disabled={disabled} requestQuestionImage={requestQuestionImage} onBusyChange={onMediaBusyChange} mediaPending={mediaPending} />
           <QuestionClassificationEditor question={q} blueprint={blueprint} onChange={onChange} disabled={disabled} />
           <ActivityDescriptorEditor value={q.activity} onChange={activity => onChange({ activity })} disabled={disabled} />
@@ -107,7 +109,7 @@ function QuestionTypeMeta({ type, version }: { type: string; version?: number })
   return (
     <dl className="qt-meta" data-testid="qt-meta">
       <dt>نوع السؤال</dt><dd>{d.label}</dd>
-      <dd className="qt-chip">الإصدار {version ?? d.version}</dd>
+      <dd className="qt-chip">الإصدار {effectiveQuestionTypeVersion(type, version) ?? version ?? d.version}</dd>
       <dd className="qt-chip">{GRADING_MODE_LABELS[d.gradingMode]}</dd>
       {d.capabilities.partialCredit && <dd className="qt-chip">يدعم علامة جزئية</dd>}
       {d.capabilities.compoundPart && <dd className="qt-chip">يدعم البنود المركبة</dd>}

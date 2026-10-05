@@ -49,7 +49,9 @@ export function createApiCodingService(api: StudentAttemptApi, questionId: strin
         res = await api.request("/api/coding/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assignmentId: api.assignmentId, questionId, language: req.language, languageVersion: req.languageVersion, source: req.source, stdin: req.stdin }),
+          body: JSON.stringify(req.values !== undefined
+            ? { assignmentId: api.assignmentId, questionId, language: req.language, languageVersion: req.languageVersion, values: req.values, stdin: req.stdin }
+            : { assignmentId: api.assignmentId, questionId, language: req.language, languageVersion: req.languageVersion, source: req.source, stdin: req.stdin }),
           signal: ctrl.signal
         });
       } catch { throw failure(outer?.aborted ? "ABORTED" : "NETWORK"); }

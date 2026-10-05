@@ -117,7 +117,8 @@ describe("R3 — exactly three languages, data-driven", () => {
     const reg = (await import("../../runner/gateway/registry.js")).default || (await import("../../runner/gateway/registry.js"));
     expect(Object.values(reg.LANGUAGES).map(e => e.key).sort()).toEqual(["csharp", "java", "python"]);
     expect(fs.readdirSync(path.join(repo, "runner/workers"), { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name).sort()).toEqual(["csharp", "java", "python"]);
-    expect(read("src/codingQuestion.ts").match(/lang\("([a-z]+)"/g)).toEqual(['lang("python"', 'lang("java"', 'lang("csharp"']);
+    // Phase 19F — the registry moved verbatim into the leaf module src/codingLanguages.ts (re-exported by codingQuestion.ts).
+    expect(read("src/codingLanguages.ts").match(/lang\("([a-z]+)"/g)).toEqual(['lang("python"', 'lang("java"', 'lang("csharp"']);
     for (const w of ["python", "java", "csharp"]) expect(JSON.parse(raw("runner/workers/" + w + "/toolchain.json"))).toMatchObject({ language: w, languageVersion: 1 });
   });
   it("no application / API / gateway logic branches on a language literal (only the registries carry language data)", () => {
@@ -169,7 +170,8 @@ describe("R6 — UI wiring stays lazy and token-safe", () => {
   it("the initial path never imports coding modules; the run client is imported only by the lazy coding renderer", () => {
     for (const f of ["src/StudentExamPage.tsx", "src/StudentQuestionCard.tsx", "src/App.tsx", "src/main.tsx"]) expect(read(f), f).not.toMatch(/from\s*["'][./]*(coding\/|codingQuestion|codingContract)/);
     const importers = [...walk("src")].filter(f => !isTest(f) && /codingRunClient/.test(read(f)));
-    expect(importers).toEqual(["src/questionTypes/student/CodingResponse.tsx"]);
+    // Phase 19F — the coding@3 locked-template renderer (also lazy) runs practice through the same client.
+    expect(importers).toEqual(["src/questionTypes/student/CodingResponse.tsx", "src/questionTypes/student/CodingTemplateResponse.tsx"]);
   });
   it("StudentExamPage provides the generic attempt context; the token stays inside a request function (never in context data, storage or the exam state)", () => {
     const page = read("src/StudentExamPage.tsx");

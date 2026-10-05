@@ -84,6 +84,12 @@
 .iex-card{ min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
 .iex-qhead{ display:flex; justify-content:space-between; gap:var(--eb-space-2); margin-block-end:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
 .iex-qhead strong{ color:var(--eb-text-heading); white-space:nowrap; }
+/* Phase 19F — the read-only code stimulus: always LTR monospace text inside the RTL card, scrollable (never page-wide), focusable.
+   Token-only and phone-first (the larger code size is applied from 768 px below). */
+.iex-code-stimulus{ margin:0 0 var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); min-width:0; }
+.iex-code-stimulus figcaption{ display:flex; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-1) var(--eb-space-3); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); color:var(--eb-muted); border-bottom:1px solid var(--eb-line); }
+.iex-code-stimulus pre{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); max-width:100%; max-height:18rem; overflow:auto; direction:ltr; text-align:left; white-space:pre; tab-size:4; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); color:var(--eb-text); }
+.iex-code-stimulus pre:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
 .iex-qtext{ margin:0 0 var(--eb-space-3); color:var(--eb-text-heading); font-size:var(--eb-fs-17); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); overflow-wrap:anywhere; white-space:pre-wrap; }
 .iex-image{ display:block; max-width:100%; height:auto; margin:var(--eb-space-3) auto; border:1px solid var(--eb-line); border-radius:var(--eb-r); }
 
@@ -265,6 +271,7 @@
 
 /* ---------- Tablet and up ---------- */
 @media (min-width: 768px){
+  .iex-code-stimulus pre{ font-size:var(--eb-fs-14); max-height:24rem; }   /* 19F */
   .interactive-exam-page{ padding:var(--eb-space-4) var(--eb-space-5) var(--eb-space-7); }
   .iex-topbar, .iex-foot{ margin-inline:0; border-radius:var(--eb-r-lg); border:1px solid var(--eb-line); }
   .iex-topbar{ inset-block-start:var(--eb-space-2); }
