@@ -50,6 +50,32 @@ describe("20B-S1 — authoritative grading of the canonical two-LAN exercise", (
   });
 });
 
+describe("20B-S1b — the SERVER copy derives reachability and fails closed on a broken authority", () => {
+  const { evaluateSmartSim } = require_("../src/lib/shared-finalization/trustedSimPlugins.js");
+  it("a foreign gateway, a gateway that is not a router, an administratively shut switch port toward a PC each fail exactly the dependent checks, with the precise reason", async () => {
+    const { q, exam } = await fixture();
+    const run = actions => { const node = q(); const e = evaluateSmartSim({ envelope: node.smartSim, answerKey: node.answer, response: ans(actions), maxMarks: 23 }); return { score: g(gradeExam(exam([node]), { t1: ans(actions) })).score, failed: e.checks.filter(c => !c.passed).map(c => c.id), reason: id => e.checks.find(c => c.id === id).evidence[0] }; };
+    const foreign = run([...FULL, { type: "pc.setGateway", deviceId: "pc1", value: "192.168.20.254" }]);
+    expect(foreign.failed).toEqual(["pc1-gw", "reach-pc1-pc3"]); expect(foreign.score).toBe(19); expect(foreign.reason("reach-pc1-pc3")).toBe("GATEWAY_NOT_IN_LOCAL_SUBNET");
+    const notRouter = run([...FULL, { type: "pc.setGateway", deviceId: "pc1", value: "192.168.10.20" }]);
+    expect(notRouter.failed).toEqual(["pc1-gw", "reach-pc1-pc3"]); expect(notRouter.score).toBe(19); expect(notRouter.reason("reach-pc1-pc3")).toBe("GATEWAY_UNREACHABLE");
+    const shut = run([...FULL, ...sw("sw1", "configure terminal", "interface f0/1", "shutdown", "end")]);
+    expect(shut.failed).toEqual(["reach-pc1-pc3"]); expect(shut.score).toBe(20); expect(shut.reason("reach-pc1-pc3")).toBe("SOURCE_LINK_DOWN");
+  });
+  it("an unknown plugin key / version naming a VALID topology, and non-positive / oversized / non-finite weights ⇒ 0 + manual review and blocked finalization (never another plugin)", async () => {
+    const { q, exam, env, key } = await fixture();
+    for (const smartSim of [{ ...env, pluginKey: "networkTopologyPro" }, { ...env, pluginVersion: 2 }]) {
+      expect(g(gradeExam(exam([q({ smartSim })]), { t1: ans(FULL) }))).toMatchObject({ score: 0, manualReview: true });
+      expect(evaluateServerFinalization(exam([q({ smartSim })])).structuralErrors.map(i => i.code)).toContain("SMARTSIM_PLUGIN_UNKNOWN");
+    }
+    for (const weight of [0, -1, 1001, Number.NaN]) {
+      const answer = { ...key, checks: key.checks.map((c, i) => (i === 0 ? { ...c, weight } : c)) };
+      expect(g(gradeExam(exam([q({ answer })]), { t1: ans(FULL) }))).toMatchObject({ score: 0, manualReview: true });
+      expect(evaluateServerFinalization(exam([q({ answer })])).structuralErrors.map(i => i.code)).toContain("SMARTSIM_CHECK_WEIGHT_INVALID");
+    }
+  });
+});
+
 describe("20B-S2 — the student payload carries the public topology only", () => {
   it("sanitizeExamForStudent: the envelope with the canonical topology; no check, weight, expected address / hostname; the private key is blanked", async () => {
     const { q, exam, env } = await fixture();

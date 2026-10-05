@@ -166,6 +166,19 @@ describe("student workspace — topology, device panels, per-device CLI, ping, r
     expect(await screen.findByTestId("smartsim-unavailable", {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.queryByTestId("nettopo-device-list")).toBeNull();
   });
+  it("defense in depth: the renderer reads ONLY the strict projection (an unsanitized teacher-side envelope with a smuggled / unknown field or another version is unavailable) and the UI registry resolves EXACT identities only", async () => {
+    const raw = (smartSim: unknown) => teacherQ({ smartSim }) as unknown as Question;
+    for (const smartSim of [{ ...ENV(), target: { pcs: { pc1: { address: "192.168.10.10" } } } }, { ...ENV(), config: { ...ENV().config, devices: ENV().config.devices.map((d, i) => (i === 0 ? { ...d, expectedIp: "192.168.10.254" } : d)) } }, { ...ENV(), pluginVersion: 2 }]) {
+      render(<StudentHarness q={raw(smartSim)} />);
+      expect(await screen.findByTestId("smartsim-unavailable", {}, { timeout: 3000 })).toBeTruthy();
+      expect(screen.queryByTestId("nettopo-workspace")).toBeNull(); expect(screen.queryByTestId("nettopo-unavailable")).toBeNull();
+      cleanup();
+    }
+    const { resolveSmartSimUi } = await import("../trustedSim/smartSimUiRegistry");
+    expect(resolveSmartSimUi("networkTopology", 1)).toBeDefined();
+    for (const [k, v] of [["networkTopology", 2], ["networkTopology", 0], ["networkTopology", 1.5], ["networkTopology", "1"], ["networktopology", 1], ["networkTopologyPro", 1], ["__proto__", 1], [undefined, 1]] as const)
+      expect(resolveSmartSimUi(k, v), String(k) + "@" + String(v)).toBeUndefined();
+  });
 });
 
 describe("teacher authoring — lazy editor, one-click template, checks, inline canonical validation, round-trips", () => {
