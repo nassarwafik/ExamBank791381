@@ -16,7 +16,7 @@ const draft = require("../lib/shared-finalization/aiScenarioDraft");
  * re-runs) maps the sources to the canonical SourceStimulusV1 contract, every question through the 19A single-question layer (no hidden
  * test, no reference solution, no visual geometry, no simulator package) and the whole section through the canonical finalization gate —
  * all or nothing. Image sources are never generated (no asset authority). The teacher inserts the result as a DRAFT; finalization gates
- * still apply. Same OpenAI-only strict client as 19A; no key on the frontend, no provider error text returned.
+ * still apply. Same provider-only strict JSON client as 19A; no key on the frontend, no provider error text returned.
  */
 const MAX_REQUEST_CHARS = draft.AI_SCENARIO_LIMITS.requestChars;
 const bad = error => ({ status: 400, jsonBody: { ok: false, error } });

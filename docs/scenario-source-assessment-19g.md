@@ -181,3 +181,8 @@ Fail-first evidence was recorded on `2aa40da`; the mutation table is in the PR b
 - Import treats any scenario violation as fatal (the file cannot open) rather than opening a repairable draft.
 - The pre-start student payload (`student-assignment.js preStartAssignment`) forwards `metadata` / `coverPage` without the
   sanitizer — pre-existing, outside this phase, reported to the owner.
+- Independent final sweep (MINOR, deferred by design, no authority reads these keys): the structured import keeps an inert
+  `exam.scenarios` at the exam root or a stray `question.scenarioId` (neither is membership — the ONLY membership is
+  `section.scenarios[].questionIds`); and a section carrying `scenarios: null` (the in-memory shape the structure
+  normalizers emit, never serialised by any export path) is refused by import with `SCENARIOS_INVALID` rather than read
+  as "no scenarios". Both are V2 candidates (refuse / strip the two inert keys; treat `null` as absent).
