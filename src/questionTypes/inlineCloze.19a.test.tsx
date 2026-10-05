@@ -83,7 +83,7 @@ describe("catalog, defaults, finalization", () => {
     expect(d).toMatchObject({ key: "inlineCloze", version: 1, label: "إكمال نص تفاعلي", category: "response", gradingMode: "auto", legacy: false });
     expect(d.capabilities).toMatchObject({ autoGrading: true, partialCredit: true, offline: true, compoundPart: false, interactive: false, manualGrading: false, requiresImage: false });
     expect(d.responseKinds).toEqual(["fields"]);
-    expect(QUESTION_TYPE_CATALOG.length).toBe(20); expect(QUESTION_TYPE_CATALOG.at(-2)!.key).toBe("inlineCloze"); expect(QUESTION_TYPE_CATALOG.at(-1)!.key).toBe("parametricNumeric");   // 19B appends parametricNumeric
+    expect(QUESTION_TYPE_CATALOG.length).toBe(22); expect(QUESTION_TYPE_CATALOG.at(-4)!.key).toBe("inlineCloze"); expect(QUESTION_TYPE_CATALOG.at(-3)!.key).toBe("parametricNumeric");   // 19B appends parametricNumeric · 19D appends hotspot / labelDiagram
     expect(supportsQuestionTypeVersion("inlineCloze", 1)).toBe(true); expect(supportsQuestionTypeVersion("inlineCloze", 2)).toBe(false);
     expect(typeDescription(d)).toMatch(/قائمة منسدلة/); expect(typeIcon(d)).toBe("▭▾"); expect(chipsFor(d)).toEqual(["تصحيح تلقائي", "علامة جزئية"]);
     expect(resolveAuthoringEditor("inlineCloze", 1)).toBeTruthy(); expect(resolveStudentRenderer("inlineCloze", 1)?.key).toBe("inlineCloze");
@@ -180,7 +180,7 @@ describe("authoring editor inside the REAL Builder", () => {
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q1", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(20);                                    // 19B adds parametricNumeric
+    expect(within(d).getAllByTestId("qt-card").length).toBe(22);                                    // 19B adds parametricNumeric
     fireEvent.click(within(d).getByRole("tab", { name: "إجابات" })); await tick();
     const card = within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "inlineCloze")!;
     expect(card.textContent).toContain("إكمال نص تفاعلي");

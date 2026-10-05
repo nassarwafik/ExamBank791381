@@ -90,7 +90,7 @@ describe("RF1 R1 — version normalization authority", () => {
     expect(effectiveQuestionTypeVersion("multipleSelect", 1)).toBe(1);
     expect(effectiveQuestionTypeVersion("multipleSelect", 2)).toBeUndefined();
     expect(effectiveQuestionTypeVersion("multipleChoice", 0)).toBeUndefined(); expect(effectiveQuestionTypeVersion("multipleChoice", 1.5)).toBeUndefined(); expect(effectiveQuestionTypeVersion("multipleChoice", "1")).toBeUndefined(); expect(effectiveQuestionTypeVersion("multipleChoice", null)).toBeUndefined();
-    expect(effectiveQuestionTypeVersion("hotspot", undefined)).toBeUndefined();
+    expect(effectiveQuestionTypeVersion("dragAndDrop", undefined)).toBeUndefined();   // 19D: "hotspot" became a real type; "dragAndDrop" is the unknown-key example
     const unregister = registerQuestionTypePlugin(versionedFamily());
     try {
       expect(effectiveQuestionTypeVersion("versionedSynthetic", undefined)).toBe(1);                       // absent stays V1 even when current = 2

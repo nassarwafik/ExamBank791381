@@ -136,7 +136,7 @@ describe("16A A11 — Categorization", () => {
 
 describe("16A — validation seam: unknown key / unsupported version / compound capability", () => {
   it("unknown keys and unsupported versions are blocking issues; a part of a non-compound-capable type is refused; legacy types with no version pass through", () => {
-    expect(validateQuestionTypeNode({}, "hotspot", undefined).map(i => i.code)).toEqual(["UNKNOWN_QUESTION_TYPE"]);
+    expect(validateQuestionTypeNode({}, "dragAndDrop", undefined).map(i => i.code)).toEqual(["UNKNOWN_QUESTION_TYPE"]);   // 19D: "hotspot" became a real type; "dragAndDrop" is the unknown-key example
     expect(validateQuestionTypeNode({}, "multipleChoice", 2).map(i => i.code)).toEqual(["UNSUPPORTED_QUESTION_TYPE_VERSION"]);
     expect(validateQuestionTypeNode({}, "multipleChoice", undefined)).toEqual([]);
     expect(validateQuestionTypeNode({}, "compound", undefined, { part: true }).map(i => i.code)).toEqual(["TYPE_NOT_COMPOUND_CAPABLE"]);

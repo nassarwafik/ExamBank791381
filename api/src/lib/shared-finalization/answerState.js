@@ -27,5 +27,7 @@ function answered(a) {
         return typeof a.source === "string" && a.source.trim() !== "";
     if (a.kind === "networkCli")
         return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");
+    if (a.kind === "hotspot")
+        return Array.isArray(a.points) && a.points.length > 0;
     return false;
 }

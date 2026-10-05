@@ -38,7 +38,7 @@ describe("16A A18 — Question Type Palette", () => {
     await mount();
     const d = await openPalette();
     expect(d.getAttribute("dir") === "rtl" || d.closest("[dir=rtl]") !== null || document.documentElement.dir === "rtl").toBe(true);
-    const all = cards(d); expect(all.length).toBe(20);                                            // 16B-A adds simulation · 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric
+    const all = cards(d); expect(all.length).toBe(22);                                            // 16B-A adds simulation · 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram
     const ms = all.find(c => c.getAttribute("data-type-key") === "multipleSelect")!;
     expect(ms.textContent).toContain("اختيار متعدد الإجابات"); expect(ms.textContent).toContain("تصحيح تلقائي"); expect(ms.textContent).toContain("علامة جزئية"); expect(ms.textContent).toContain("يدعم السؤال المركب");
     const mcq = all.find(c => c.getAttribute("data-type-key") === "multipleChoice")!; expect(mcq.textContent).toContain("اختيار من متعدد");
@@ -177,12 +177,12 @@ describe("16A §24 — changing a type is destructive and goes through the share
 
 describe("16A A16 — unknown imported type: unsupported authoring state, no crash, finalization blocked, never converted", () => {
   it("renders the unsupported notice with the raw key and keeps the data verbatim", async () => {
-    const weird = { examQuestionId: "u1", presentationType: "hotspot", text: "انقر الموقع", marks: 2, hotspots: [{ x: 1 }] } as unknown as BuilderQuestion;
+    const weird = { examQuestionId: "u1", presentationType: "dragAndDrop", text: "انقر الموقع", marks: 2, hotspots: [{ x: 1 }] } as unknown as BuilderQuestion;   // 19D: "hotspot" became a real type; "dragAndDrop" is the unknown-key example
     const { hist } = await mount(baseExam([weird]));
     const notice = await screen.findByTestId("qt-unsupported");
-    expect(notice.textContent).toContain("نوع سؤال غير مدعوم"); expect(notice.textContent).toContain("hotspot");
+    expect(notice.textContent).toContain("نوع سؤال غير مدعوم"); expect(notice.textContent).toContain("dragAndDrop");
     const q = hist().present!.sections[0].questions[0];
-    expect(q.presentationType).toBe("hotspot"); expect((q as unknown as { hotspots: unknown[] }).hotspots.length).toBe(1);
+    expect(q.presentationType).toBe("dragAndDrop"); expect((q as unknown as { hotspots: unknown[] }).hotspots.length).toBe(1);
     const issues = validateStructuredExam(hist().present!);
     expect(issues.some(i => i.code === "UNKNOWN_QUESTION_TYPE" && i.severity === "error")).toBe(true);
     expect(screen.getByRole("combobox", { name: "نوع السؤال" })).toBeTruthy();                           // the teacher can still resolve it by choosing a type

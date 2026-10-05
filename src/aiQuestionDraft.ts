@@ -17,7 +17,7 @@ import { validateStructuredExam } from "./examQuality";
 import { normalizeInterfaceName } from "./networkCliEngine";
 import type { BuilderQuestion, StructuredExam } from "./examTypes";
 
-export const AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "simulation", "coding", "unsupported"] as const);
+export const AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "hotspot", "labelDiagram", "simulation", "coding", "unsupported"] as const);
 export type AiAuthorIntent = (typeof AI_AUTHOR_INTENTS)[number];
 /** The intents this layer generates a question for (simulation / coding / unsupported are recognised, never generated). */
 export const AI_GENERATED_TYPES: readonly string[] = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric"]);
@@ -37,6 +37,9 @@ const CODING_SIGNAL = /(برمجة|برنامج|\bcode\b|\bcoding\b|python|با�
 const SIMULATION_SIGNAL = /(smartsim|\.smartsim|حزمة\s*محاكاة|simulation\s+package)/i;
 // Phase 19B — "different numbers for every student / attempt" (Arabic / English).
 const PARAMETRIC_SIGNAL = /(\bparametric\b|random\s+(?:integers?|numbers?|values?)|different\s+(?:numeric\s+)?(?:version|numbers?|values?)\s+(?:for|per)\s+(?:each|every)\s+student|per[-\s]student\s+(?:numbers?|values?)|بأرقام\s+مختلفة|أرقام\s+مختلفة|قيم\s+مختلفة|(?:رقمي|حسابي|رياضيات)[^.؟?!]{0,30}(?:متغير|يتغير|متغيرة)|معطيات\s+متغيرة|يتغير\s+لكل\s+طالب|مختلفة\s+لكل\s+طالب|different\s+values?\s+for\s+(?:each|every)\s+student)/i;
+// Phase 19D — visual requests (diacritics removed first): label the parts of a drawing / mark an area on an image.
+const LABEL_DIAGRAM_SIGNAL = /((?:^|\s)سم\s+(?:أجزاء|اجزاء|مكونات|طبقات)|تسمية\s+(?:أجزاء|اجزاء|مكونات)|اسحب\s+التسميات|التسميات\s+(?:إلى|الى|على)|\blabel(?:l?ing)?\s+(?:the\s+)?(?:parts\s+of\s+(?:the\s+|a\s+)?)?diagram|\blabel\s+diagram|\bdrag\s+(?:the\s+)?labels\b)/i;
+const HOTSPOT_SIGNAL = /((?:ينقر|انقر|النقر|اضغط|يضغط|حدد|يحدد|ظلل)[^.؟?!]{0,40}(?:الصورة|صورة|المخطط|الرسم)|\b(?:click|tap|select|mark|identify)\b[^.?!]{0,40}\b(?:image|picture|photo|diagram)\b|\bhotspot\b)/i;
 const UNSUPPORTED_NETWORK: readonly [string, RegExp][] = [
   ["router", /\brouters?\b|\brouting\b|راوتر|الراوتر|موجّه|جهاز\s*التوجيه|بروتوكول(?:ات)?\s*(?:ال)?توجيه|التوجيه\s*(?:الثابت|الديناميكي)/i],
   ["ospf", /\bospf\b/i], ["eigrp", /\beigrp\b/i], ["rip", /\bripv?2?\b/i], ["bgp", /\bbgp\b/i],
@@ -51,7 +54,10 @@ export function classifyAuthorRequest(request: string): AuthorRequestSignals {
   const t = String(request ?? "");
   const unsupportedCapabilities = UNSUPPORTED_NETWORK.filter(([, re]) => re.test(t)).map(([label]) => label);
   let suggestedIntent: AiAuthorIntent | null = null;
+  const plain = t.replace(/[\u064B-\u0652]/g, "");
   if (SIMULATION_SIGNAL.test(t)) suggestedIntent = "simulation";
+  else if (LABEL_DIAGRAM_SIGNAL.test(plain)) suggestedIntent = "labelDiagram";
+  else if (HOTSPOT_SIGNAL.test(plain)) suggestedIntent = "hotspot";
   else if (PARAMETRIC_SIGNAL.test(t)) suggestedIntent = "parametricNumeric";
   else if (CODING_SIGNAL.test(t) && !NETWORK_SIGNAL.test(t)) suggestedIntent = "coding";
   else if (CLOZE_SIGNAL.test(t)) suggestedIntent = PASSAGE_SIGNAL.test(t) ? "inlineCloze" : "fillBlank";
@@ -122,6 +128,7 @@ export function buildAiAuthorPrompt(request: string, signals: AuthorRequestSigna
     "  NOT supported (never invent them): routers, routing, static routes, OSPF, EIGRP, RIP, BGP, ACLs, NAT, DHCP, spanning-tree, port-security, EtherChannel, VTP, SSH / Telnet, interface range, trunk allowed VLAN lists, ping / traceroute, IPv6. If the request needs any of them, list them in `unsupportedCapabilities` and set intent \"unsupported\" (or choose an ordinary question type).",
     "- parametricNumeric: a numeric question whose numbers DIFFER for every student and attempt (math, physics, chemistry, subnet arithmetic). `text` is the stem with {{name}} placeholders for every generated value (e.g. \"A network needs {{hosts}} hosts…\"). `variables`: bounded variables { name (a letter then letters / digits / _), kind \"integer\" or \"decimal\" (at most 6 decimals), min, max, step, format } where (max - min) is a multiple of step. `derivedVariables`: optional values computed from variables or earlier derived values { name, expression, format } (e.g. area = a * b; never circular). `constraints`: optional single comparisons over variables and derived values such as \"a < b\", \"b != 0\" or \"sqrt(a) < b\". `answerExpression` computes the correct answer from the variables / derived values using ONLY numbers, names, + - * / % ^ (^ is pow), parentheses and abs, round(x, digits), floor, ceil, min, max, sqrt, pow, log (natural), log10, exp — no other functions, no code. `format` only changes how a value is WRITTEN in the stem: \"plain\", \"fixed\" (decimals places) or \"percentage\" (value × 100 with decimals places and %); grading always uses the exact values. For a percentage answer write the expression in percent, e.g. \"100 * correct / total\", with unitLabel \"%\". `mode` \"tolerance\" (with `tolerance` >= 0, 0 = exact) or \"range\" (`below` / `above` >= 0 around the result). `unitMode` \"none\", \"label\" (a fixed `unitLabel` shown next to the answer) or \"input\" (the student types the unit; the correct `unit` is graded). Never put the computed answer or the expression in `text`.",
     "- simulation: the teacher wants an uploaded interactive .smartsim simulation. coding: the student must write a program. Recognise them; do not invent their content (fill no payload).",
+    "- hotspot: the student clicks / taps target areas on an IMAGE. labelDiagram: the student places labels from a bank on zones of a diagram IMAGE. You have no image and no geometry authority: recognise these intents but never invent coordinates, regions or zones — fill no payload; the teacher places them on an attached image.",
     "- unsupported: the request cannot be met with the types above; explain why in `explanation`.",
     "If the request is ambiguous, set confidence \"ambiguous\" and prefer a safe ordinary question (shortAnswer or multipleChoice) instead of a simulator.",
     "Fill ONLY the payload object of the chosen intent; set every other payload to null.",
@@ -332,6 +339,8 @@ const MESSAGES: Readonly<Record<string, string>> = Object.freeze({
   AI_TYPE_NOT_GENERATED_simulation: "أسئلة المحاكاة التفاعلية تحتاج حزمة ‎.smartsim‎ يرفعها المعلم؛ لا يُنشئها الذكاء الاصطناعي. أضف السؤال من «محاكاة تفاعلية».",
   AI_TYPE_NOT_GENERATED_coding: "أسئلة البرمجة تحتاج اختبارات مخفية يكتبها المعلم ويتحقق منها؛ لا يُنشئها الذكاء الاصطناعي. أضف السؤال من «برمجة / كتابة كود».",
   AI_REQUEST_UNSUPPORTED: "الطلب غير مدعوم بأنواع الأسئلة المتاحة.",
+  AI_VISUAL_GEOMETRY_REQUIRED_hotspot: "أسئلة «تحديد منطقة على صورة» تحتاج صورة يحدّد عليها المعلم المناطق الصحيحة بنفسه؛ لا يخمّن الذكاء الاصطناعي إحداثيات من النص. أضف السؤال من «تحديد منطقة على صورة»، ثم ارفع الصورة وارسم المناطق.",
+  AI_VISUAL_GEOMETRY_REQUIRED_labelDiagram: "أسئلة «تسمية أجزاء الرسم» تحتاج صورة يضع المعلم عليها مناطق التسمية بنفسه؛ لا يخمّن الذكاء الاصطناعي إحداثيات من النص. أضف السؤال من «تسمية أجزاء الرسم»، ثم ارفع الصورة وأضف المناطق والتسميات.",
   AI_NETCLI_UNSUPPORTED_CAPABILITY: "محاكي أوامر الشبكة (الإصدار 1) مبدّل تعليمي فقط؛ هذه القدرات غير مدعومة",
   AI_NETCLI_AMBIGUOUS: "الطلب غير واضح بما يكفي لإنشاء سؤال محاكٍ؛ حدّد المطلوب (VLANs، المنافذ access/trunk، native VLAN، عنوان SVI) أو اطلب سؤالًا عاديًا."
 });
@@ -343,6 +352,8 @@ export function normalizeAiQuestionDraft(raw: unknown, context: { request: strin
   if (!(AI_AUTHOR_INTENTS as readonly string[]).includes(raw.intent)) return refuse("AI_INTENT_UNKNOWN", MESSAGES.AI_INTENT_UNKNOWN);
   const intent = raw.intent as AiAuthorIntent;
   if (intent === "simulation" || intent === "coding") return refuse("AI_TYPE_NOT_GENERATED", MESSAGES["AI_TYPE_NOT_GENERATED_" + intent], intent);
+  // Phase 19D — no image, no geometry authority: a visual intent is NEVER generated (no invented coordinates, whatever the payload).
+  if (intent === "hotspot" || intent === "labelDiagram") return refuse("AI_VISUAL_GEOMETRY_REQUIRED", MESSAGES["AI_VISUAL_GEOMETRY_REQUIRED_" + intent], intent);
   if (intent === "unsupported") return refuse("AI_REQUEST_UNSUPPORTED", MESSAGES.AI_REQUEST_UNSUPPORTED + (raw.explanation ? " " + raw.explanation : ""), intent);
   if (intent === "networkCli") {
     const unsupported = [...new Set([...raw.unsupportedCapabilities.filter(c => c.trim() !== ""), ...classifyAuthorRequest(context.request).unsupportedCapabilities])];

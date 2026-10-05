@@ -20,6 +20,12 @@ const { normalizeNetworkCliAnswer, bindNetworkCliAnswerToQuestion } = require(".
 // a client-sent seed / generated values / expected result / score is dropped and never stored; any other kind is rejected. Every
 // other numeric answer (numericResponse) is passed through exactly as before.
 const { bindParametricNumericAnswer } = require("./shared-finalization/parametricNumericQuestion");
+// Phase 19D — a `hotspot` answer is rebuilt to exactly { kind, points: [{ x, y }] } (normalized points only; a client score / matched
+// target ids / regions / pixel sizes are dropped) and bounded by its question's `selections`; on any other question (or inside a
+// compound part — visual types are not compound-capable) it is rejected. A labelDiagram answer is the existing `fields` Answer bound to
+// the question's zones and labels (unknown zones stripped; unknown labels / reuse abuse / prototype keys rejected).
+const { bindHotspotAnswerToQuestion, normalizeHotspotAnswer } = require("./shared-finalization/hotspotQuestion");
+const { bindLabelDiagramAnswerToQuestion } = require("./shared-finalization/labelDiagramQuestion");
 
 // Phase 17A Independent Review Fix — when the caller passes the AUTHORITATIVE exam (the assignment's exam snapshot, the same
 // one the grader uses), every code answer is bound to the question its answer id names: it must be a coding@1 question, the
@@ -36,6 +42,9 @@ const isCode = a => !!a && typeof a === "object" && a.kind === "code";
 const isNetworkCli = a => !!a && typeof a === "object" && a.kind === "networkCli";
 const isInlineClozeQuestion = q => !!q && typeof q === "object" && q.presentationType === "inlineCloze";
 const isParametricQuestion = q => !!q && typeof q === "object" && q.presentationType === "parametricNumeric";
+const isHotspot = a => !!a && typeof a === "object" && a.kind === "hotspot";
+const isHotspotQuestion = q => !!q && typeof q === "object" && q.presentationType === "hotspot";
+const isLabelDiagramQuestion = q => !!q && typeof q === "object" && q.presentationType === "labelDiagram";
 
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
 function normalizeDraftAnswers(answers, exam) {
@@ -62,6 +71,18 @@ function normalizeDraftAnswers(answers, exam) {
       out[id] = r.answer;
       continue;
     }
+    if (isHotspot(a) || (bound && isHotspotQuestion(index.get(id)))) {
+      const r = bound ? (isHotspotQuestion(index.get(id)) ? bindHotspotAnswerToQuestion(a, index.get(id)) : { ok: false, code: "HOTSPOT_QUESTION_MISMATCH" }) : normalizeHotspotAnswer(a);
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
+    if (bound && isLabelDiagramQuestion(index.get(id))) {
+      const r = bindLabelDiagramAnswerToQuestion(a, index.get(id));
+      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+      out[id] = r.answer;
+      continue;
+    }
     if (bound && isParametricQuestion(index.get(id))) {
       const r = bindParametricNumericAnswer(a);
       if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
@@ -79,6 +100,7 @@ function normalizeDraftAnswers(answers, exam) {
       for (const pid of Object.keys(a.parts)) {
         if (isCode(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
         if (isNetworkCli(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "NETCLI_QUESTION_MISMATCH" }); continue; }
+        if (isHotspot(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "HOTSPOT_QUESTION_MISMATCH" }); continue; }
         parts[pid] = a.parts[pid];
       }
       out[id] = { ...a, parts };

@@ -72,6 +72,10 @@ registerTypeDefaults("parametricNumeric", 1, ensure => {
   ensure("parametric", { v: 2, generatorVersion: 2, variables: [{ id: "a", kind: "integer", min: 1, max: 10, step: 1 }, { id: "b", kind: "integer", min: 1, max: 10, step: 1 }], derivedVariables: [], constraints: [], response: { unit: "none" } });
   ensure("answer", { expression: "", mode: "tolerance", tolerance: 0 });
 });
+// Phase 19D — visual types: empty targets / zones block finalization until the teacher places them on the question image. Literal on
+// purpose (initial graph); parity-tested against the model defaults.
+registerTypeDefaults("hotspot", 1, ensure => { ensure("hotspot", { v: 1, mode: "single", selections: 1, alt: "" }); ensure("answer", { scoring: "allOrNothing", regions: [] }); });
+registerTypeDefaults("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });

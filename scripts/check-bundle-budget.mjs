@@ -18,6 +18,8 @@
 //  10. (Phase 18C) the network CLI simulator terminal / renderer / authoring editor reaches the initial graph (content signatures);
 //  11. (Phase 19A) the inline cloze renderer / token editor / review or the AI authoring dialog reaches the initial graph (signatures);
 //  12. (Phase 19B) the parametric engine, the parametric renderer / editor or the parametric review reaches the initial graph (signatures);
+//  13. (Phase 19D) the visual canvas (hotspot / labelDiagram renderers), the region editor / visual editors or the visual review reaches
+//      the initial graph (signatures);
 //   8. (Phase 17A) the coding editor / coding panels reach the initial graph (content signatures of CodingEditor and the
 //      coding renderer / authoring editor: they must ship only behind the registries' lazy edges);
 //   9. (Phase 17F-C1) the Monaco engine of the professional code editor is missing, reaches the initial graph, is STATICALLY
@@ -57,6 +59,8 @@ const CLOZE_SIGNATURES = ["cloze-passage", "qt-editor-inlineCloze", "cloze-revie
 // one in an initial file fails: the engine, the editor and the per-attempt renderer stay out of the initial graph.
 // Phase 19C adds the teacher-only sample inspector and the review constraint list.
 const PARAMETRIC_SIGNATURES = ["param-response", "qt-editor-parametricNumeric", "param-review-audit", "smartassess.parametric", "param-inspector", "param-review-constraints"];
+// Phase 19D — visual canvas / region editor / visual editors / visual review class names (used nowhere else). ANY one in an initial file fails.
+const VISUAL_SIGNATURES = ["vq-canvas", "vq-region-editor", "qt-editor-hotspot", "qt-editor-labelDiagram", "vq-review"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
 const MONACO_SIGNATURES = ["monaco-editor", "MonacoEnvironment", "monaco-mouse-cursor-text"];
@@ -143,7 +147,12 @@ function main() {
     if (cloze.length) failures.push(`${f} (initial) contains the inline cloze / AI authoring payload (${cloze.join(", ")}) — it must stay lazy`);
     const parametric = PARAMETRIC_SIGNATURES.filter(s => src.includes(s));
     if (parametric.length) failures.push(`${f} (initial) contains the parametric engine / question payload (${parametric.join(", ")}) — it must stay lazy`);
+    const visual = VISUAL_SIGNATURES.filter(s => src.includes(s));
+    if (visual.length) failures.push(`${f} (initial) contains the visual question payload (${visual.join(", ")}) — it must stay lazy`);
   }
+  const visualQuestionChunks = all.filter(f => VISUAL_SIGNATURES.some(s => read(f).includes(s)));
+  if (!visualQuestionChunks.length) failures.push("the visual question payload (canvas / region editor / review) was not found in any chunk — the signature list is stale");
+  console.log(`Visual question payload found in: ${visualQuestionChunks.join(", ") || "(none)"} — ${visualQuestionChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const parametricChunks = all.filter(f => PARAMETRIC_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Parametric engine / question payload found in: ${parametricChunks.join(", ") || "(none)"} — ${parametricChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const clozeChunks = all.filter(f => CLOZE_SIGNATURES.some(s => read(f).includes(s)));

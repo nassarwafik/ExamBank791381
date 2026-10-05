@@ -63,6 +63,10 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
   // Phase 19B — parametricNumeric: an answer expression, any constraint, or variables other than the default a / b.
   if (text(answer.expression)) return true;
   if (isObj(node.parametric) && ((Array.isArray(node.parametric.constraints) && node.parametric.constraints.length > 0) || (Array.isArray(node.parametric.derivedVariables) && node.parametric.derivedVariables.length > 0) || !PARAMETRIC_DEFAULT_VARIABLES.includes(JSON.stringify(node.parametric.variables)))) return true;
+  // Phase 19D — visual types: an image description, any target region, drop zone or label counts as content.
+  if (isObj(node.hotspot) && (text(node.hotspot.alt) || node.hotspot.mode === "multiple")) return true;
+  if (Array.isArray(answer.regions) && answer.regions.length) return true;
+  if (isObj(node.labelDiagram) && (text(node.labelDiagram.alt) || (Array.isArray(node.labelDiagram.zones) && node.labelDiagram.zones.length) || (Array.isArray(node.labelDiagram.labels) && node.labelDiagram.labels.length))) return true;
   if (Array.isArray(answer.hiddenTests) && answer.hiddenTests.length) return true;
   if (isObj(answer.referenceSolutions) && Object.values(answer.referenceSolutions).some(v => text(v))) return true;
   if (Array.isArray(answer.correctOptionIds) && answer.correctOptionIds.length) return true;

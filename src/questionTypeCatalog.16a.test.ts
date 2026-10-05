@@ -20,7 +20,7 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LEGACY = ["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"];
 const LEGACY_LABELS: Record<string, string> = { multipleChoice: "اختيار من متعدد", trueFalse: "صح أو خطأ", multiTrueFalse: "صح/خطأ متعدد", shortAnswer: "إجابة قصيرة / مفتوحة", fillBlank: "إكمال فراغات", wordBank: "مخزن كلمات", matching: "مطابقة", ordering: "ترتيب", tableFill: "إكمال جدول", cliFill: "أوامر CLI", compound: "سؤال مركّب" };
 const WAVE1 = ["multipleSelect", "numericResponse", "matrix", "categorization"];
-const UNIVERSAL = ["simulation", "coding", "networkCli", "inlineCloze", "parametricNumeric"];       // 16B-A simulation · 17A coding · 18C networkCli · 19A inlineCloze · 19B parametricNumeric
+const UNIVERSAL = ["simulation", "coding", "networkCli", "inlineCloze", "parametricNumeric", "hotspot", "labelDiagram"];   // 16B-A simulation · 17A coding · 18C networkCli · 19A inlineCloze · 19B parametricNumeric · 19D hotspot / labelDiagram
 
 describe("16A A1 — one canonical, React-free, code-owned Question Type Catalog", () => {
   it("lists the 11 legacy types first (stable order) followed by the four Wave 1 types; frozen; every entry carries identity, version, label, category, grading mode and the capability contract", () => {
@@ -61,7 +61,7 @@ describe("16A A1 — one canonical, React-free, code-owned Question Type Catalog
     expect(resolveQuestionTypeKeyOrAlias("mcq")).toBe("multipleChoice"); expect(resolveQuestionTypeKeyOrAlias("open")).toBe("shortAnswer"); expect(resolveQuestionTypeKeyOrAlias("cli")).toBe("cliFill");
     expect(resolveQuestionTypeKey("mcq")).toBeUndefined();                                             // aliases are an import / server concern, not the student runtime
     expect(resolveQuestionTypeKey("MultipleSelect")).toBe("multipleSelect");
-    expect(resolveQuestionTypeKey("hotspot")).toBeUndefined(); expect(resolveQuestionTypeKey("")).toBeUndefined(); expect(resolveQuestionTypeKey(null)).toBeUndefined();
+    expect(resolveQuestionTypeKey("dragAndDrop")).toBeUndefined(); expect(resolveQuestionTypeKey("")).toBeUndefined(); expect(resolveQuestionTypeKey(null)).toBeUndefined();   // 19D: "hotspot" became a real type; "dragAndDrop" is the unknown-key example
     expect(isKnownQuestionType("categorization")).toBe(true); expect(isKnownQuestionType("networkSimulation")).toBe(false);
     expect(Object.keys(LEGACY_TYPE_ALIASES)).toEqual(expect.arrayContaining(["mcq", "tf", "open", "essay", "cli", "table"]));
     expect(LEGACY_QUESTION_TYPE_KEYS).toEqual(LEGACY);
@@ -109,19 +109,19 @@ describe("16A A4 — explicit, backward-compatible type versions", () => {
       expect(supportsQuestionTypeVersion(d.key, undefined)).toBe(true); expect(supportsQuestionTypeVersion(d.key, 1)).toBe(true);
       expect(supportsQuestionTypeVersion(d.key, 2)).toBe(current >= 2); expect(supportsQuestionTypeVersion(d.key, current + 1)).toBe(false); expect(supportsQuestionTypeVersion(d.key, 0)).toBe(false); expect(supportsQuestionTypeVersion(d.key, 1.5)).toBe(false); expect(supportsQuestionTypeVersion(d.key, "1")).toBe(false);
     }
-    expect(supportsQuestionTypeVersion("hotspot", undefined)).toBe(false);
+    expect(supportsQuestionTypeVersion("dragAndDrop", undefined)).toBe(false);
   });
   it("a new Wave 1 question is created at its current version; an unsupported version or unknown type is a BLOCKING structural issue (finalization) while a legacy question without a version stays valid", () => {
     const ms = newQuestion("multipleSelect"); expect(ms.questionTypeVersion).toBe(1);
     const mcq = newQuestion("multipleChoice", { text: "q" });
     const bad = { ...newQuestion("multipleChoice", { text: "q" }), questionTypeVersion: 2 } as BuilderQuestion;
-    const unknown = { examQuestionId: "u1", presentationType: "hotspot", text: "q", marks: 1 } as unknown as BuilderQuestion;
+    const unknown = { examQuestionId: "u1", presentationType: "dragAndDrop", text: "q", marks: 1 } as unknown as BuilderQuestion;
     const exam = (qs: BuilderQuestion[]): StructuredExam => ({ examId: "E", title: "e", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: qs }] });
     expect(hasBlockingErrors(validateStructuredExam(exam([mcq])))).toBe(false);
     const v = validateStructuredExam(exam([bad])); expect(v.some(i => i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION" && i.severity === "error")).toBe(true);
     const u = validateStructuredExam(exam([unknown])); expect(u.some(i => i.code === "UNKNOWN_QUESTION_TYPE" && i.severity === "error")).toBe(true);
     // a compound part with an unknown / unsupported type blocks too; shortAnswer part keeps its manual-review freedom
-    const comp = newQuestion("compound", { text: "c", parts: [{ id: "p1", type: "hotspot", text: "x" } as never, { ...newPart("shortAnswer"), questionTypeVersion: 3 } as never] });
+    const comp = newQuestion("compound", { text: "c", parts: [{ id: "p1", type: "dragAndDrop", text: "x" } as never, { ...newPart("shortAnswer"), questionTypeVersion: 3 } as never] });
     const c = validateStructuredExam(exam([comp])); expect(c.some(i => i.code === "UNKNOWN_QUESTION_TYPE")).toBe(true); expect(c.some(i => i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION")).toBe(true);
   });
   it("registering a code-owned plugin type is the ONLY way to widen the catalog: duplicate / production keys are refused, registration is reversible, and exam data can never register anything", () => {
@@ -142,7 +142,7 @@ describe("16A A15 — Blueprint questionType dimension validates against the cat
   const bp = (ref: string): AssessmentBlueprintV1 => ({ schemaVersion: 1, subject: { id: "cs", label: "علوم الحاسوب" }, topics: [{ id: "t1", label: "T" }], objectives: [], constraints: [{ id: "c1", dimension: "questionType", ref, metric: "count", unit: "absolute", min: 1 }] });
   it("every legacy and Wave 1 type is a valid questionType reference automatically; an unknown key is INVALID_QUESTION_TYPE", () => {
     for (const d of QUESTION_TYPE_CATALOG) expect(validateBlueprint(bp(d.key), { sectionIds: [] }).filter(i => i.code === "INVALID_QUESTION_TYPE"), d.key).toEqual([]);
-    expect(validateBlueprint(bp("hotspot"), { sectionIds: [] }).some(i => i.code === "INVALID_QUESTION_TYPE")).toBe(true);
+    expect(validateBlueprint(bp("dragAndDrop"), { sectionIds: [] }).some(i => i.code === "INVALID_QUESTION_TYPE")).toBe(true);
     const src = fs.readFileSync(path.join(repo, "src/assessmentBlueprint.ts"), "utf8");
     expect(src).not.toMatch(/"multipleChoice",\s*"trueFalse"/);                                     // no stale literal list in Blueprint code
     expect(src).toMatch(/BUILDER_QUESTION_TYPES|questionTypeCatalog/);

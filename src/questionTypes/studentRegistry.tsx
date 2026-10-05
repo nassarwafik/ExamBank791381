@@ -11,10 +11,13 @@ import type { StudentRendererComponent } from "./registryTypes";
 const renderers = createVersionedRegistry<StudentRendererComponent>("student renderer");
 export const registerStudentRenderer = (key: string, version: number, renderer: StudentRendererComponent): (() => void) => renderers.register(key, version, renderer);
 /** The registered renderer for EXACTLY the question's (type, effective version); legacy types have none — the card keeps its inline path. */
-export function resolveStudentRenderer(rawType: unknown, storedVersion: unknown): { key: string; version: number; label: string; Renderer: StudentRendererComponent } | undefined {
+export function resolveStudentRenderer(rawType: unknown, storedVersion: unknown): { key: string; version: number; label: string; ownsImage: boolean; Renderer: StudentRendererComponent } | undefined {
   const hit = renderers.resolve(rawType, storedVersion);
   if (!hit) return undefined;
-  return { key: hit.key, version: hit.version, label: questionTypeDefinition(hit.key)?.label ?? hit.key, Renderer: hit.impl };
+  const d = questionTypeDefinition(hit.key);
+  // Phase 19D — an image-requiring type (catalog capability `requiresImage`) draws the question image itself (with its overlay), so the
+  // card does not draw it a second time.
+  return { key: hit.key, version: hit.version, label: d?.label ?? hit.key, ownsImage: !!d?.capabilities.requiresImage, Renderer: hit.impl };
 }
 
 /** True when the student runtime must FAIL CLOSED for this stored identity: a known type whose exact version has no
@@ -45,3 +48,6 @@ registerStudentRenderer("networkCli", 1, lazy(() => import("./student/NetworkCli
 registerStudentRenderer("inlineCloze", 1, lazy(() => import("./student/InlineClozeResponse")));
 // Phase 19B — parametric numeric question (lazy: the per-attempt input, and the teacher-preview sample generator, load only when rendered).
 registerStudentRenderer("parametricNumeric", 1, lazy(() => import("./student/ParametricNumericResponse")));
+// Phase 19D — visual questions (lazy: the image canvas, overlay and pointer mapping load only when a visual question renders).
+registerStudentRenderer("hotspot", 1, lazy(() => import("./student/HotspotResponse")));
+registerStudentRenderer("labelDiagram", 1, lazy(() => import("./student/LabelDiagramResponse")));

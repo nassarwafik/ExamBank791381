@@ -14,9 +14,11 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   coding: "يكتب الطالب برنامجًا كاملًا بلغة يحددها المعلم؛ كود ابتدائي وأمثلة ظاهرة واختبارات مخفية، ومراجعة يدوية حاليًا.",
   networkCli: "طرفية محاكاة لمبدّل شبكة بأوامر على نمط Cisco (VLAN، منافذ access/trunk، SVI)؛ تُصحَّح الحالة النهائية للجهاز تلقائيًا بعلامة جزئية.",
   inlineCloze: "فقرة بفراغات داخل النص نفسه: فراغ كتابة أو قائمة منسدلة بأي ترتيب؛ تصحيح تلقائي لكل فراغ مع علامة جزئية.",
+  hotspot: "يرى الطالب صورة وينقر على الموضع أو المواضع المطلوبة؛ يرسم المعلم المناطق الصحيحة على الصورة، وتصحيح تلقائي بعلامة جزئية.",
+  labelDiagram: "يضع الطالب تسميات من بنك على مناطق ظاهرة في الرسم (سحبًا أو اختيارًا)؛ تصحيح تلقائي لكل منطقة بعلامة جزئية.",
   parametricNumeric: "سؤال رقمي بمعطيات متغيرة: قيم مختلفة لكل طالب ومحاولة من متغيرات وقيود، وتعبير إجابة خاص يُحسب على الخادم؛ تصحيح تلقائي بتسامح أو مدى."
 });
-const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx" });
+const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡" });
 // Phase 17A — factual chips that replace the generic grading-mode chip where the CURRENT behaviour differs from the type's
 // designed mode: coding@1 is designed hybrid but grades manually until a trusted executor exists — never «تصحيح تلقائي».
 const GRADING_CHIP_OVERRIDES: Readonly<Record<string, readonly string[]>> = Object.freeze({ coding: Object.freeze(["تصحيح يدوي حاليًا", "إجابة برمجية"]) });

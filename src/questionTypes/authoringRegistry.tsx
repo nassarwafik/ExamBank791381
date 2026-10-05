@@ -29,3 +29,6 @@ registerAuthoringEditor("networkCli", 1, lazy(() => import("./editors/NetworkCli
 registerAuthoringEditor("inlineCloze", 1, lazy(() => import("./editors/InlineClozeEditor")));
 // Phase 19B — parametricNumeric@1 authoring (lazy: variables / constraints / expression editor and the sample preview).
 registerAuthoringEditor("parametricNumeric", 1, lazy(() => import("./editors/ParametricNumericEditor")));
+// Phase 19D — visual authoring (lazy: the region editor, label bank and mapping never enter the initial graph).
+registerAuthoringEditor("hotspot", 1, lazy(() => import("./editors/HotspotEditor")));
+registerAuthoringEditor("labelDiagram", 1, lazy(() => import("./editors/LabelDiagramEditor")));

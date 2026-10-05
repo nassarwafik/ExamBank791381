@@ -130,6 +130,9 @@ function isResponseAnswered(a) {
     // Phase 18C — a network CLI answer counts when at least one non-blank command was entered (mirror of answerState.ts).
     case "networkCli":
       return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");
+    // Phase 19D — a hotspot answer counts when it carries at least one point (mirror of answerState.ts).
+    case "hotspot":
+      return Array.isArray(a.points) && a.points.length > 0;
     default:
       return false;
   }
