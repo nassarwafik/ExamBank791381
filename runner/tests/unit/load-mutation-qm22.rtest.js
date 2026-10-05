@@ -14,7 +14,6 @@ const RUNNER = path.join(__dirname, "..", "mutation", "load-mutations.js");
 const FROM = '    if (s.max > P1_CEILING_MS) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS);';
 const TO = '    if (false) reasons.push(lang + " maximum " + s.max + " ms > " + P1_CEILING_MS);';
 const compileFrom = source => { const m = new Module(QUAL, module); m.filename = QUAL; m.paths = Module._nodeModulePaths(path.dirname(QUAL)); m._compile(source, QUAL); return m.exports; };
-const SHA = "0123456789abcdef0123456789abcdef01234567";
 const gates = () => L.evaluateGates({ practice: L.createPracticeAccumulator().summary(), official: L.createOfficialLedger().reconcile(), journal: { counts: { received: 0, running: 0, executed: 0, confirmed: 1, callback_failed: 0, superseded: 0, corrupt: 0 } } });
 const evidence = () => ({ pass: true, violations: [], missing: [], ceilingMs: 40000, samples: { python: L.percentiles([9000]), java: L.percentiles([41000]), csharp: L.percentiles([10900]) } });
 const p1Check = qual => qual.evaluateQualification({ scenarioId: "CERT-J", target: "local", correctness: gates(), p1: evidence() }).checks.find(c => c.id === "Q-P1");
