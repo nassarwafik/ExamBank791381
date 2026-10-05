@@ -12,6 +12,7 @@ exports.changePartType = changePartType;
 exports.moveInArray = moveInArray;
 exports.changeSectionPolicy = changeSectionPolicy;
 exports.moveSection = moveSection;
+exports.removeQuestionFromScenarios = removeQuestionFromScenarios;
 exports.mergePatch = mergePatch;
 exports.moveQuestion = moveQuestion;
 exports.duplicateQuestion = duplicateQuestion;
@@ -202,7 +203,19 @@ function mapSection(sections, sectionId, fn) {
 }
 const addQuestion = (sections, sectionId, question = newQuestion()) => mapSection(sections, sectionId, s => ({ ...s, questions: [...s.questions, question] }));
 exports.addQuestion = addQuestion;
-const deleteQuestion = (sections, sectionId, questionId) => mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.filter(q => q.examQuestionId !== questionId) }));
+function removeQuestionFromScenarios(section, questionId) {
+    if (!Array.isArray(section.scenarios))
+        return section;
+    let changed = false;
+    const scenarios = section.scenarios.map(sc => {
+        if (!sc || !Array.isArray(sc.questionIds) || !sc.questionIds.includes(questionId))
+            return sc;
+        changed = true;
+        return { ...sc, questionIds: sc.questionIds.filter(id => id !== questionId) };
+    });
+    return changed ? { ...section, scenarios } : section;
+}
+const deleteQuestion = (sections, sectionId, questionId) => mapSection(sections, sectionId, s => removeQuestionFromScenarios({ ...s, questions: s.questions.filter(q => q.examQuestionId !== questionId) }, questionId));
 exports.deleteQuestion = deleteQuestion;
 function mergePatch(base, patch) {
     const out = { ...base, ...patch };
@@ -225,7 +238,9 @@ function duplicateQuestion(sections, sectionId, questionId) {
         if (i < 0)
             return s;
         const copy = cloneQuestionWithNewIds(s.questions[i]);
-        return { ...s, questions: insertAt(s.questions, i + 1, copy) };
+        const sc = Array.isArray(s.scenarios) ? s.scenarios.find(x => x && Array.isArray(x.questionIds) && x.questionIds.includes(questionId)) : undefined;
+        const at = sc ? Math.max(...s.questions.map((q, k) => (sc.questionIds.includes(q.examQuestionId) ? k : -1))) + 1 : i + 1;
+        return { ...s, questions: insertAt(s.questions, at, copy) };
     });
 }
 function moveQuestionToSection(sections, fromSectionId, questionId, toSectionId) {
@@ -237,7 +252,7 @@ function moveQuestionToSection(sections, fromSectionId, questionId, toSectionId)
         return sections;
     return sections.map(s => {
         if (s.id === fromSectionId)
-            return { ...s, questions: s.questions.filter(x => x.examQuestionId !== questionId) };
+            return removeQuestionFromScenarios({ ...s, questions: s.questions.filter(x => x.examQuestionId !== questionId) }, questionId);
         if (s.id === toSectionId)
             return { ...s, questions: [...s.questions, q] };
         return s;
@@ -435,7 +450,14 @@ function structuredExamCopy(exam) {
         title: (exam.title || "امتحان") + " - نسخة",
         createdAt: now,
         updatedAt: now,
-        sections: (clone.sections || []).map(s => ({ ...s, questions: (s.questions || []).map(cloneQuestionWithNewIds) }))
+        sections: (clone.sections || []).map(s => {
+            const idMap = new Map();
+            const questions = (s.questions || []).map(q => { const c = cloneQuestionWithNewIds(q); idMap.set(q.examQuestionId, c.examQuestionId); return c; });
+            const out = { ...s, questions };
+            if (Array.isArray(s.scenarios))
+                out.scenarios = s.scenarios.map(sc => ({ ...sc, id: genId("scn"), sources: Array.isArray(sc.sources) ? sc.sources.map(src => ({ ...src, id: genId("src") })) : sc.sources, questionIds: Array.isArray(sc.questionIds) ? sc.questionIds.map(id => idMap.get(id) ?? id) : sc.questionIds }));
+            return out;
+        })
     };
 }
 function currentCorrectIndex(node) {

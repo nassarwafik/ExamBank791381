@@ -198,8 +198,22 @@ function mapSection(sections: BuilderSection[], sectionId: string, fn: (s: Build
 }
 export const addQuestion = (sections: BuilderSection[], sectionId: string, question = newQuestion()): BuilderSection[] =>
   mapSection(sections, sectionId, s => ({ ...s, questions: [...s.questions, question] }));
+// Phase 19G — referential integrity of the section-owned scenarios: membership lives ONLY in `scenario.questionIds`, so a question that
+// leaves its section (delete / move away) drops out of its scenario and nothing else about the scenario changes (its sources survive; the
+// questions are never touched). Inline on purpose: this module is in the initial graph, the scenario contract lives in the lazy
+// ./scenarioSource and the authoring operations in the lazy ./scenarioBuilderOps.
+export function removeQuestionFromScenarios(section: BuilderSection, questionId: string): BuilderSection {
+  if (!Array.isArray(section.scenarios)) return section;
+  let changed = false;
+  const scenarios = section.scenarios.map(sc => {
+    if (!sc || !Array.isArray(sc.questionIds) || !sc.questionIds.includes(questionId)) return sc;
+    changed = true;
+    return { ...sc, questionIds: sc.questionIds.filter(id => id !== questionId) };
+  });
+  return changed ? { ...section, scenarios } : section;
+}
 export const deleteQuestion = (sections: BuilderSection[], sectionId: string, questionId: string): BuilderSection[] =>
-  mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.filter(q => q.examQuestionId !== questionId) }));
+  mapSection(sections, sectionId, s => removeQuestionFromScenarios({ ...s, questions: s.questions.filter(q => q.examQuestionId !== questionId) }, questionId));
 /** Merge a patch; a key whose patch value is `undefined` is REMOVED (an explicit reset), so no stale key survives — the
  *  serialized form is unchanged (JSON never carried undefined values) while `"key" in q` is now honest. */
 export function mergePatch<T extends object>(base: T, patch: Partial<T>): T {
@@ -216,12 +230,16 @@ export function moveQuestion(sections: BuilderSection[], sectionId: string, ques
   });
 }
 // A duplicate gets a fresh internal id (identity is never shared) but keeps the same displayNumber.
+// Phase 19G — the copy of a scenario member is NEVER a member (membership is by id); it is inserted right AFTER the scenario's last member
+// so the members stay contiguous (a copy inserted between them would break the presentation group).
 export function duplicateQuestion(sections: BuilderSection[], sectionId: string, questionId: string): BuilderSection[] {
   return mapSection(sections, sectionId, s => {
     const i = s.questions.findIndex(q => q.examQuestionId === questionId);
     if (i < 0) return s;
     const copy = cloneQuestionWithNewIds(s.questions[i]);
-    return { ...s, questions: insertAt(s.questions, i + 1, copy) };
+    const sc = Array.isArray(s.scenarios) ? s.scenarios.find(x => x && Array.isArray(x.questionIds) && x.questionIds.includes(questionId)) : undefined;
+    const at = sc ? Math.max(...s.questions.map((q, k) => (sc.questionIds.includes(q.examQuestionId) ? k : -1))) + 1 : i + 1;
+    return { ...s, questions: insertAt(s.questions, at, copy) };
   });
 }
 export function moveQuestionToSection(sections: BuilderSection[], fromSectionId: string, questionId: string, toSectionId: string): BuilderSection[] {
@@ -230,8 +248,8 @@ export function moveQuestionToSection(sections: BuilderSection[], fromSectionId:
   const q = from?.questions.find(x => x.examQuestionId === questionId);
   if (!q) return sections;
   return sections.map(s => {
-    if (s.id === fromSectionId) return { ...s, questions: s.questions.filter(x => x.examQuestionId !== questionId) };
-    if (s.id === toSectionId) return { ...s, questions: [...s.questions, q] };
+    if (s.id === fromSectionId) return removeQuestionFromScenarios({ ...s, questions: s.questions.filter(x => x.examQuestionId !== questionId) }, questionId);   // 19G: leaves its scenario
+    if (s.id === toSectionId) return { ...s, questions: [...s.questions, q] };                                                                                     // never auto-linked in the target
     return s;
   });
 }
@@ -472,6 +490,8 @@ export function reconcileSavedStructuredExam(prev: StructuredExam | null, snapsh
 
 // A copy for the "duplicate exam" flow: new examId, fresh question/part/field ids, preserved section
 // ids (they are not global storage keys), preserved everything else.
+// Phase 19G — the copy's scenarios get fresh scenario / source ids and their `questionIds` are REMAPPED to the fresh question ids, so the
+// copy never references the original exam's questions (no stale membership, no cross-assessment reference).
 export function structuredExamCopy(exam: StructuredExam): StructuredExam {
   const now = new Date().toISOString();
   const clone = JSON.parse(JSON.stringify(exam)) as StructuredExam;
@@ -481,7 +501,13 @@ export function structuredExamCopy(exam: StructuredExam): StructuredExam {
     title: (exam.title || "امتحان") + " - نسخة",
     createdAt: now,
     updatedAt: now,
-    sections: (clone.sections || []).map(s => ({ ...s, questions: (s.questions || []).map(cloneQuestionWithNewIds) }))
+    sections: (clone.sections || []).map(s => {
+      const idMap = new Map<string, string>();
+      const questions = (s.questions || []).map(q => { const c = cloneQuestionWithNewIds(q); idMap.set(q.examQuestionId, c.examQuestionId); return c; });
+      const out: BuilderSection = { ...s, questions };
+      if (Array.isArray(s.scenarios)) out.scenarios = s.scenarios.map(sc => ({ ...sc, id: genId("scn"), sources: Array.isArray(sc.sources) ? sc.sources.map(src => ({ ...src, id: genId("src") })) : sc.sources, questionIds: Array.isArray(sc.questionIds) ? sc.questionIds.map(id => idMap.get(id) ?? id) : sc.questionIds }));
+      return out;
+    })
   };
 }
 

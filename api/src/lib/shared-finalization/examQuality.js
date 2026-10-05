@@ -5,6 +5,7 @@ exports.hasBlockingErrors = void 0;
 exports.validateStructuredExam = validateStructuredExam;
 const questionTypeValidation_1 = require("./questionTypeValidation");
 const codeStimulus_1 = require("./codeStimulus");
+const scenarioSource_1 = require("./scenarioSource");
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const examBuilderState_1 = require("./examBuilderState");
 const num = (v) => {
@@ -24,9 +25,16 @@ function validateStructuredExam(exam) {
         return issues;
     }
     const seenQuestionIds = new Set();
+    const allQuestionIds = new Set();
+    for (const s of sections)
+        for (const q of Array.isArray(s.questions) ? s.questions : [])
+            if (q && q.examQuestionId != null)
+                allQuestionIds.add(String(q.examQuestionId));
     sections.forEach((section, si) => {
         const label = section.title || "القسم " + (si + 1);
         validateSection(section, label, add);
+        for (const i of (0, scenarioSource_1.scenarioSectionIssues)(section, allQuestionIds))
+            add("error", i.code, "القسم «" + label + "»: " + i.message, { sectionId: section.id, ...(i.questionId ? { questionId: i.questionId } : {}) });
         const stimuli = section.stimuli || {};
         section.questions.forEach(q => {
             if (q.groupId && !stimuli[q.groupId]) {

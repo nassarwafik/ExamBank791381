@@ -7,6 +7,7 @@ import type { HotspotConfigV1 } from "./hotspotQuestion";
 import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
+import type { ScenarioV1 } from "./scenarioSource";
 import type { ParametricNumericConfigV1 } from "./parametricNumericQuestion";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
@@ -217,6 +218,10 @@ export type BuilderSection = {
   requiredAnswers?: number | null;
   answerUnit?: AnswerUnit;
   stimuli?: Record<string, Stimulus>;
+  // Phase 19G — the section-owned SCENARIOS (shared sources + the ids of the SAME section's questions that read them). Presentation /
+  // composition only: no grader, no marks, no answer; membership lives ONLY here (a question carries no scenario field). Strictly
+  // validated (./scenarioSource); absent on every existing exam, never inferred from the legacy `stimuli` / `groupId` model.
+  scenarios?: ScenarioV1[];
   questions: BuilderQuestion[];
 };
 

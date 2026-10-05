@@ -7,7 +7,7 @@
 // SAME sections reference, so `updateExamHistory` records no entry.
 import type { BuilderQuestion, BuilderSection, StructuredExam } from "./examTypes";
 import { questionTypeLabel } from "./questionTypeCatalog";
-import { cloneQuestionWithNewIds, genId } from "./examBuilderState";
+import { cloneQuestionWithNewIds, genId, removeQuestionFromScenarios } from "./examBuilderState";
 
 /** The bank-sourced metadata a converted bank question carries next to the engine-native fields (see bank-question-exam.js). */
 export type BankSourcedFields = {
@@ -77,10 +77,16 @@ function rebuild(sections: BuilderSection[], next: (s: BuilderSection) => Builde
 const existing = (sections: BuilderSection[], ids: Set<string>) => { const found = new Set<string>(); for (const s of sections) for (const q of s.questions || []) if (ids.has(q.examQuestionId)) found.add(q.examQuestionId); return found; };
 
 // ── A4 · bulk delete ──────────────────────────────────────────────────────────────────────────────────────────────
+// Phase 19G — a question that leaves a section (bulk delete / bulk move) also leaves that section's scenarios (same rule as the single ops).
+function dropMembership(sections: BuilderSection[], ids: Set<string>): BuilderSection[] {
+  let changed = false;
+  const out = sections.map(s => { let cur = s; for (const id of ids) cur = removeQuestionFromScenarios(cur, id); if (cur !== s) changed = true; return cur; });
+  return changed ? out : sections;   // reference stability for history when no scenario referenced a moved / deleted question
+}
 export function bulkDeleteQuestions(sections: BuilderSection[], ids: Iterable<string>): BuilderSection[] {
   const want = existing(sections, idSet(ids));
   if (!want.size) return sections;
-  return rebuild(sections, s => (s.questions || []).filter(q => !want.has(q.examQuestionId)));
+  return dropMembership(rebuild(sections, s => (s.questions || []).filter(q => !want.has(q.examQuestionId))), want);
 }
 
 // ── A5 · bulk move (global order: section order, then question order; appended to the target) ───────────────────
@@ -91,10 +97,10 @@ export function bulkMoveQuestions(sections: BuilderSection[], ids: Iterable<stri
   if (!want.size) return sections;
   const moving: BuilderQuestion[] = [];
   for (const s of sections) for (const q of s.questions || []) if (want.has(q.examQuestionId)) moving.push(q);
-  return rebuild(sections, s => {
+  return dropMembership(rebuild(sections, s => {
     const kept = (s.questions || []).filter(q => !want.has(q.examQuestionId));
     return s.id === targetSectionId ? [...kept, ...moving] : kept;
-  });
+  }), want);
 }
 
 // ── A6 · bulk duplicate (each copy right after its original; deep identity clone) ────────────────────────────────
