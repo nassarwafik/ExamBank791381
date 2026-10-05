@@ -11,6 +11,7 @@ exports.parseTemplate = parseTemplate;
 exports.renderTemplate = renderTemplate;
 exports.validateParametricFormat = validateParametricFormat;
 exports.formatParametricValue = formatParametricValue;
+exports.displayedParametricValue = displayedParametricValue;
 exports.validateVariablesV2 = validateVariablesV2;
 exports.validateDerivedVariables = validateDerivedVariables;
 exports.explainConstraint = explainConstraint;
@@ -482,6 +483,11 @@ function formatParametricValue(v, format) {
     const scaled = format.kind === "percentage" ? v * 100 : v;
     const r = roundTo(scaled, format.decimals);
     return (r === 0 ? 0 : r).toFixed(format.decimals) + (format.kind === "percentage" ? "%" : "");
+}
+function displayedParametricValue(v, format) {
+    const text = formatParametricValue(v, format);
+    const n = format && format.kind === "percentage" ? Number((Number(text.slice(0, -1)) / 100).toFixed(format.decimals + 2)) : Number(text);
+    return n === 0 ? 0 : n;
 }
 function decimalPlaces(x) {
     for (let k = 0; k <= exports.PARAMETRIC_LIMITS.decimalPlaces; k++)

@@ -105,6 +105,13 @@ numericResponse comparison). Consequences, all tested:
   «18.5» accepted with tolerance 0.05; «0.185» is wrong).
 * If the stem shows rounded values, choose a tolerance that covers the rounding, or round explicitly with `round()`.
 
+**Display-only delivery (Independent Review Fix 1, RF1):** a format must never become a hidden-precision side channel. The student
+projection's `values` therefore carry each displayed symbol **at the precision it is displayed with**, re-read from the displayed text
+(`displayedParametricValue`, same units as the value): t = 3.75 shown as `3.8` is delivered as `3.8`; a derived 8.5333… shown with
+`fixed 2` is delivered as `8.53`; a `plain` value is delivered at its 12 displayed significant digits; a ratio shown as `18.5%` is
+delivered as `0.185`. Integers (every v1 value) are unchanged, so v1 projections are byte-identical. Grading, the teacher review and the
+teacher samples keep the exact values.
+
 ## 8. Examples
 
 | Domain | Stem | Model |
@@ -138,8 +145,11 @@ publication. v1 questions keep the 19B editor plus the explicit upgrade button.
 * **Forgery:** ingest keeps exactly `{ kind: "numeric", value, unit? }`; a forged seed, generated / derived values, expected value,
   format or version override is dropped before storage and ignored by the grader (tested at the grader too).
 * **Secrecy:** the student projection keeps the 19B shape (`v / status / generatorVersion / values / response`) with `values` limited to
-  the symbols the stem shows; formulas, derived values the stem does not show, constraints, the expected value and preview / inspector
-  data never reach a student (projection reader rejects any extra field).
+  the symbols the stem shows, each at its displayed precision (§7); formulas, derived values the stem does not show, constraints, the
+  expected value, exact hidden precision and preview / inspector data never reach a student (projection reader rejects any extra field).
+* **Projection bound (RF2):** the strict student reader bounds `values` per generator version with an explicit contract,
+  `PARAMETRIC_STUDENT_VALUES_MAX` = { 1: 20, 2: 20 base + 20 derived = 40 } — every valid projection is accepted, one above the bound
+  (or an unknown version) is rejected, and unsafe / prototype keys and non-finite values stay rejected.
 * **Bounded work (complexity budgets):** source ≤ 500 chars (constraint ≤ 300), ≤ 200 tokens, ≤ 160 AST nodes (language 2), depth ≤ 32,
   ≤ 20 variables, ≤ 20 derived values, ≤ 20 constraints, ≤ 10 function arguments, ≤ 100 candidates, |value| ≤ 10^15, |exponent| ≤ 64,
   ≤ 6 authored decimals, ≤ 10^7 positions per variable, format / round decimals ≤ 10.

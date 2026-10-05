@@ -36,6 +36,14 @@ describe("19C RF1 — server delivery carries only the displayed precision", () 
     expect(g(gradeExam(exam([pq()]), { pq2: num("30") }, CTX))).toMatchObject({ score: 0, correct: false, manualReview: false });
     expect(shared.parametricReviewInstance(pq(), { assignmentId: F.AID, studentId: F.S1, attemptNumber: 1, questionKey: "pq2" })).toMatchObject({ ok: true, values: { d: 29.5, t: 3 }, derived: { speed: 9.833333333333334 }, expected: 29.5 });
   });
+  it("percentage-formatted derived value on the server: 7 / 24 shown as 29.2% is delivered as 0.292, never 0.29166…", () => {
+    const n = pq({ text: "نسبة النجاح {{ratio}} من {{total}} طالبًا. كم طالبًا نجح؟", parametric: { v: 2, generatorVersion: 2, variables: [{ id: "total", kind: "integer", min: 10, max: 40 }, { id: "correct", kind: "integer", min: 0, max: 40 }], derivedVariables: [{ id: "ratio", expression: "correct / total", format: { kind: "percentage", decimals: 1 } }], constraints: ["correct <= total"], response: { unit: "none" } }, answer: { expression: "correct", mode: "tolerance", tolerance: 0 } });
+    const s = sanitizeExamForStudent(exam([n]), CTX).sections[0].questions[0];
+    expect(s.text).toBe("نسبة النجاح 29.2% من 24 طالبًا. كم طالبًا نجح؟");
+    expect(s.parametric).toEqual({ v: 1, status: "ready", generatorVersion: 2, values: { ratio: 0.292, total: 24 }, response: { unit: "none" } });
+    expect(JSON.stringify(s)).not.toMatch(/0\.2916|29\.16|correct \/ total|"correct"/);
+    expect(shared.parametricReviewInstance(n, { assignmentId: F.AID, studentId: F.S1, attemptNumber: 1, questionKey: "pq2" })).toMatchObject({ values: { total: 24, correct: 7 }, derived: { ratio: 0.2916666666666667 }, expected: 7 });
+  });
   it("the real student GET handler delivers the same display-only projection", async () => {
     const studentAssignment = require_("../src/functions/student-assignment.js");
     const snapshot = { title: "exam", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [pq()] }] };

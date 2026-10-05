@@ -12,7 +12,7 @@
 // The official instance is regenerated from the SERVER-owned identity { assignmentId, studentId, attemptNumber, questionKey } and the
 // generator version; no generated value or computed answer is ever persisted as authority, and a client can never name a seed.
 import {
-  PARAMETRIC_GENERATOR_VERSIONS, PARAMETRIC_ID_RE, PARAMETRIC_LIMITS, evaluateExpression, explainConstraint, generateInstance, generateInstanceV2, officialSeedText, parseConstraint,
+  PARAMETRIC_GENERATOR_VERSIONS, PARAMETRIC_ID_RE, PARAMETRIC_LIMITS, displayedParametricValue, evaluateExpression, explainConstraint, generateInstance, generateInstanceV2, officialSeedText, parseConstraint,
   parseExpression, parseTemplate, previewSeedText, renderTemplate, seedDigest, validateDerivedVariables, validateGenerationIdentity, validateVariables, validateVariablesV2,
   type CompiledDerivedVariable, type ExprNode, type ParametricFormat, type ParametricGenerationIdentity, type ParametricIntVariable, type ParametricIssue, type ParametricVariableV2,
   type ParsedConstraint, type TemplatePart
@@ -24,6 +24,11 @@ export const PARAMETRIC_NUMERIC_CONFIG_VERSION = 1;
 /** Deterministic authoring-time sample count (preview namespace) used by the validator to catch impossible / failing contracts. */
 export const PARAMETRIC_PREVIEW_SAMPLES = 8;
 export const PARAMETRIC_NUMERIC_LIMITS = Object.freeze({ unitChars: 32, responseChars: 64, toleranceMax: 1e9, maxSample: 1_000_000 });
+/**
+ * The most symbols a valid published question can show a student, per generator version: every base variable (v1), plus every derived
+ * value (v2 = 20 + 20). The student projection reader rejects anything above this explicit bound.
+ */
+export const PARAMETRIC_STUDENT_VALUES_MAX: Readonly<Record<number, number>> = Object.freeze({ 1: PARAMETRIC_LIMITS.variables, 2: PARAMETRIC_LIMITS.variables + PARAMETRIC_LIMITS.derivedVariables });
 
 export type ParametricResponsePresentation = { unit: "none" } | { unit: "label"; label: string } | { unit: "input" };
 export type ParametricNumericConfigV1 = { v: 1; generatorVersion: number; variables: ParametricIntVariable[]; constraints: string[]; response: ParametricResponsePresentation };
@@ -35,6 +40,7 @@ export type ParametricNumericConfig = ParametricNumericConfigV1 | ParametricNume
 export type ParametricNumericAnswerKeyV1 =
   | { expression: string; mode: "tolerance"; tolerance: number; unit?: string }
   | { expression: string; mode: "range"; below: number; above: number; unit?: string };
+/** `values` = the symbols the stem shows, each at the precision it is shown with (never the exact hidden value). */
 export type ParametricStudentProjection =
   | { v: 1; status: "ready"; generatorVersion: number; values: Record<string, number>; response: ParametricResponsePresentation }
   | { v: 1; status: "unavailable" };
@@ -228,8 +234,10 @@ export function projectParametricNumericForStudent(node: Record<string, unknown>
   const cfg = checkConfig(node.parametric); if (!cfg.ok) return unavailable();
   const t = checkTemplate(node.text, cfg.value.ids); if (!t.ok) return unavailable();
   const g = instanceOf(cfg.value, officialSeedText(cfg.value.config.generatorVersion, identity)); if (!g.ok) return unavailable();
+  // Only what the stem SHOWS: each displayed symbol's value is re-read from its displayed text (a format is never a hidden-precision
+  // side channel: t = 3.75 shown as "3.8" is delivered as 3.8). Grading and the teacher review use the exact values.
   const values: Record<string, number> = {};
-  for (const id of t.refs) values[id] = g.values[id];
+  for (const id of t.refs) values[id] = displayedParametricValue(g.values[id], has(cfg.value.formats, id) ? cfg.value.formats[id] : undefined);
   return { text: render(cfg.value, t.parts, g.values), parametric: { v: 1, status: "ready", generatorVersion: cfg.value.config.generatorVersion, values, response: { ...cfg.value.config.response } } };
 }
 /** Strict reader of a delivered projection (the renderer never trusts anything else). */
@@ -240,8 +248,8 @@ export function readParametricStudentProjection(raw: unknown): ParametricStudent
   if (typeof raw.generatorVersion !== "number" || !PARAMETRIC_GENERATOR_VERSIONS.includes(raw.generatorVersion)) return null;
   const response = checkResponse(raw.response);
   if (!response || !isPlain(raw.values)) return null;
-  const entries = Object.entries(raw.values);
-  if (entries.length > PARAMETRIC_LIMITS.variables || !entries.every(([k, v]) => PARAMETRIC_ID_RE.test(k) && !FORBIDDEN_KEYS.has(k) && typeof v === "number" && Number.isFinite(v))) return null;
+  const entries = Object.entries(raw.values), max = has(PARAMETRIC_STUDENT_VALUES_MAX, String(raw.generatorVersion)) ? PARAMETRIC_STUDENT_VALUES_MAX[raw.generatorVersion] : 0;
+  if (entries.length > max || !entries.every(([k, v]) => PARAMETRIC_ID_RE.test(k) && !FORBIDDEN_KEYS.has(k) && typeof v === "number" && Number.isFinite(v))) return null;
   return { v: 1, status: "ready", generatorVersion: raw.generatorVersion, values: Object.fromEntries(entries) as Record<string, number>, response };
 }
 

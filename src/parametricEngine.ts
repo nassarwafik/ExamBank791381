@@ -370,6 +370,16 @@ export function formatParametricValue(v: number, format?: ParametricFormat): str
   const r = roundTo(scaled, format.decimals);
   return (r === 0 ? 0 : r).toFixed(format.decimals) + (format.kind === "percentage" ? "%" : "");
 }
+/**
+ * The number a STUDENT may know for a displayed symbol: re-read from the displayed text only (same units as the value; a percentage
+ * "18.5%" ⇒ 0.185), so a format never becomes a hidden-precision side channel. Integers (all v1 values) are returned unchanged.
+ * Display only — grading, the teacher review and teacher samples always use the exact value.
+ */
+export function displayedParametricValue(v: number, format?: ParametricFormat): number {
+  const text = formatParametricValue(v, format);
+  const n = format && format.kind === "percentage" ? Number((Number(text.slice(0, -1)) / 100).toFixed(format.decimals + 2)) : Number(text);
+  return n === 0 ? 0 : n;
+}
 
 // ── Phase 19C: explicit integer / decimal variables on a scaled-integer grid ─────────────────────────────────────────────
 export type ParametricVariableV2 = { id: string; kind: "integer" | "decimal"; min: number; max: number; step: number; format?: ParametricFormat };
