@@ -159,7 +159,11 @@ async function runScenario(options = {}) {
       const st0 = now(), before = practice.summary().totals, beforeOff = ledger.reconcile();
       if (step.kind === "load") {
         if (stack && step.saturation && stack.sandbox.stats) stack.sandbox.statsBefore = stack.sandbox.stats();
-        await runPool(step.items, step.concurrency, runItem, governor);
+        // Hotfix (admission oracle): on the harness-owned fake stack, official executions are held until every arrival of the saturation
+        // burst was answered, so `accepted in the step` equals the peak LIVE count the Runner bounds (a job finishing mid-burst would
+        // free a slot and make a legitimate 4th acceptance look like over-admission). A non-atomic admission still over-admits here.
+        const release = stack && step.saturation && typeof stack.sandbox.holdOfficial === "function" ? stack.sandbox.holdOfficial() : null;
+        try { await runPool(step.items, step.concurrency, runItem, governor); } finally { if (release) release(); }
         if (step.saturation) {
           const after = practice.summary().totals, off = ledger.reconcile();
           const stats = stack && stack.sandbox.stats ? stack.sandbox.stats() : null;

@@ -105,6 +105,10 @@ function createLocalStack({ sandbox = "fake", profile, maxConcurrency = 4, offic
   const receiver = createReceiver({ key: cbKey, scoreOf });
   const opts = { maxPending: official.maxPending || 8, maxActive: official.maxActive || 1, caseConcurrency: official.caseConcurrency || 2 };
   let gateway = null, queue = null, journal = null, port = null, generation = 0;
+  // Hotfix (admission oracle) — a held burst: official executions wait until `remaining` further official submissions were ANSWERED
+  // by this stack's gateway (accepted or busy), then are released; a safety timer releases anyway so a broken run fails, never hangs.
+  let hold = null;
+  const officialAnswered = () => { if (!hold) return; hold.remaining--; if (hold.remaining <= 0) { const h = hold; hold = null; clearTimeout(h.timer); h.release(); } };
   const stack = {
     journalDir, receiver, sandbox: sb, config: { sandbox, maxConcurrency, official: opts },
     get baseUrl() { return "http://127.0.0.1:" + port; },
@@ -122,18 +126,28 @@ function createLocalStack({ sandbox = "fake", profile, maxConcurrency = 4, offic
       queue = createOfficialGradingQueue({ sandbox: sb, deliver: createCallbackDeliverer({ config: cb, logger }).attempt, journal, ...opts, logger, ...(callbackPolicy ? { callbackPolicy } : {}), ...(executionPolicy ? { executionPolicy } : {}) });
       const recovery = await queue.start();
       gateway = createGatewayServer({ key, sandbox: sb, maxConcurrency, officialQueue: queue, logger });
+      gateway.on("request", (req, res) => { if (req.method === "POST" && String(req.url || "").startsWith("/v1/official-grading-jobs")) res.on("finish", officialAnswered); });
       await new Promise((resolve, reject) => { gateway.once("error", reject); gateway.listen(port || 0, "127.0.0.1", () => { gateway.off("error", reject); resolve(); }); });
       port = gateway.address().port;
       return { generation, recovery };
     },
     queueStatus: () => (queue ? queue.status() : null),
+    /** Holds official executions (fake sandbox only) until `n` further official submissions were answered; safety release after `maxMs`. */
+    holdOfficialUntilAnswered(n, { maxMs = 30000 } = {}) {
+      if (typeof sb.holdOfficial !== "function") throw new Error("local stack: holdOfficialUntilAnswered needs the fake sandbox");
+      if (hold) { clearTimeout(hold.timer); hold.release(); }
+      const release = sb.holdOfficial();
+      const timer = setTimeout(() => { if (hold && hold.release === release) hold = null; release(); }, maxMs);
+      if (timer.unref) timer.unref();
+      hold = { remaining: n, release, timer };
+    },
     idle: () => (queue ? queue.idle() : Promise.resolve()),
     journalStatus: () => journalStatus(journalDir),
     /** A dead stop (no drain, no further journal writes) — the process "died"; the receiver keeps running. */
     async crash() { if (queue) queue.stop(); if (gateway) await new Promise(r => gateway.close(() => r())); if (journal) await journal.close().catch(() => {}); gateway = null; queue = null; journal = null; },
     /** A new gateway over the same journal directory (startup recovery runs). */
     async restart() { await stack.crash(); return stack.start(); },
-    async close() { await stack.crash(); await receiver.close(); try { fs.rmSync(journalDir, { recursive: true, force: true }); } catch { /* temp */ } }
+    async close() { if (hold) { clearTimeout(hold.timer); hold.release(); hold = null; } await stack.crash(); await receiver.close(); try { fs.rmSync(journalDir, { recursive: true, force: true }); } catch { /* temp */ } }
   };
   Object.defineProperty(stack, "key", { value: key, enumerable: false });
   Object.defineProperty(stack, "callbackKey", { value: cbKey, enumerable: false });
