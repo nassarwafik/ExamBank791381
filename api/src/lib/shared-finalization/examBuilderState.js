@@ -455,7 +455,7 @@ function structuredExamCopy(exam) {
             const questions = (s.questions || []).map(q => { const c = cloneQuestionWithNewIds(q); idMap.set(q.examQuestionId, c.examQuestionId); return c; });
             const out = { ...s, questions };
             if (Array.isArray(s.scenarios))
-                out.scenarios = s.scenarios.map(sc => ({ ...sc, id: genId("scn"), sources: Array.isArray(sc.sources) ? sc.sources.map(src => ({ ...src, id: genId("src") })) : sc.sources, questionIds: Array.isArray(sc.questionIds) ? sc.questionIds.map(id => idMap.get(id) ?? id) : sc.questionIds }));
+                out.scenarios = s.scenarios.map(sc => (sc && typeof sc === "object" ? { ...sc, id: genId("scn"), sources: Array.isArray(sc.sources) ? sc.sources.map(src => (src && typeof src === "object" ? { ...src, id: genId("src") } : src)) : sc.sources, questionIds: Array.isArray(sc.questionIds) ? sc.questionIds.flatMap(id => (idMap.has(id) ? [idMap.get(id)] : [])) : sc.questionIds } : sc));
             return out;
         })
     };

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as OPS from "./scenarioBuilderOps";
 import { deleteQuestion, duplicateQuestion, moveQuestionToSection, structuredExamCopy, changeQuestionType, newQuestion, newSection, toSavedStructuredExam } from "./examBuilderState";
-import { bulkDeleteQuestions, bulkMoveQuestions } from "./structuredExamProductivity";
+import { bulkDeleteQuestions, bulkDuplicateQuestions, bulkMoveQuestions } from "./structuredExamProductivity";
 import { validateSectionScenarios } from "./scenarioSource";
 import { validateStructuredExam } from "./examQuality";
 import { parseStructuredExamJson } from "./structuredExamImport";
@@ -12,7 +12,9 @@ import type { BuilderQuestion, BuilderSection, StructuredExam } from "./examType
 // delete a scenario, source CRUD + reorder, link an existing same-section question, unlink, reorder linked questions, regroup; and
 // the existing question operations keep referential integrity (delete / move away ⇒ stale ref removed; duplicate ⇒ never a member;
 // exam copy ⇒ ids remapped; type change ⇒ membership untouched). No operation touches marks, answers, type, version or grading.
-// Fail-first on 2aa40da: ./scenarioBuilderOps does not exist and the question operations ignore `scenarios`.
+// Fail-first on 2aa40da: ./scenarioBuilderOps does not exist (the whole file fails to load) and the question operations ignore
+// `scenarios`. PINS (already true on the baseline): B17 (type change carries no scenario key), B19 (toSavedStructuredExam keeps
+// section keys), B23 (the preset allow-list refuses unknown section keys).
 type R = Record<string, unknown>;
 const q = (id: string, over: Partial<BuilderQuestion> = {}): BuilderQuestion => ({ examQuestionId: id, presentationType: "multipleChoice", text: "س " + id, marks: 2, options: [{ text: "أ" }, { text: "ب" }], answer: { correctOptionIndex: 1 }, ...over });
 const TEXT = { id: "src-1", version: 1 as const, kind: "text" as const, title: "النص", text: "اقرأ." };
@@ -140,6 +142,11 @@ describe("19G-B13 — the existing question operations keep referential integrit
     expect(members(del[0])).toEqual(["q2"]);
     const mv = bulkMoveQuestions(sections, new Set(["q2"]), "s2");
     expect(members(mv[0])).toEqual(["q1"]); expect(mv[1].scenarios ?? []).toEqual([]);
+    const same = bulkMoveQuestions(sections, new Set(["q1"]), "s1");                    // staying in its own section keeps membership
+    expect(members(same[0])).toEqual(["q1", "q2"]); expect(ids(same[0])).toEqual(["q2", "q3", "q4", "q1"]);
+    const dup = bulkDuplicateQuestions(sections, new Set(["q1"]));                      // the copy lands AFTER the group, never between members
+    expect(ids(dup[0]).slice(0, 2)).toEqual(["q1", "q2"]); expect(ids(dup[0])[2]).toMatch(/^q-/); expect(validateSectionScenarios(dup[0]).ok).toBe(true);
+    expect(structuredExamCopy({ examId: "e", title: "t", sections: [sec({ scenarios: [null as never, scn()] })] } as StructuredExam).sections[0].scenarios!.length).toBe(2);   // a null entry never crashes the copy
   });
   it("B17 changeQuestionType keeps membership (it is not on the question) and adds no scenario key to the node", () => {
     const changed = changeQuestionType(q("q1"), "shortAnswer");

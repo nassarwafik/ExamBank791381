@@ -1,0 +1,29 @@
+/* Phase 19G — Scenario authoring (Structured Exam Builder). Loaded with the lazy ScenarioBlockEditor chunk; follows the sb-* house
+   style (legacy variables with fallbacks, logical properties, 44px touch targets on phones). */
+.sb-scenario{border:1px solid var(--primary,#2563eb);border-inline-start-width:4px;border-radius:12px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:10px;padding:10px 12px}
+.sb-scenario-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sb-scenario-badge{display:inline-flex;align-items:center;gap:6px;border-radius:var(--pill,999px);background:var(--primary050,#eff4ff);color:var(--primary2,#1d4ed8);font-size:12px;font-weight:800;padding:4px 10px}
+.sb-scenario-count{font-size:12px;color:var(--muted,#64748b);font-weight:700}
+.sb-scenario-body{display:flex;flex-direction:column;gap:10px}
+.sb-scenario-sources,.sb-scenario-links{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sb-scenario-source{border:1px solid var(--line2,#dbe2ec);border-radius:10px;background:var(--surface2,#f9fbff);padding:10px;display:flex;flex-direction:column;gap:8px}
+.sb-scenario-source-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sb-scenario-source-kind{font-size:12px;font-weight:800;color:var(--navy,#1e293b)}
+.sb-scenario-source-body{display:flex;flex-direction:column;gap:8px}
+.sb-scenario-code{width:100%;box-sizing:border-box;direction:ltr;text-align:left;white-space:pre;overflow:auto;tab-size:4;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;min-height:120px}
+.sb-scenario-table{overflow-x:auto}
+.sb-scenario-table .sb-grid th,.sb-scenario-table .sb-grid td{min-width:110px}
+.sb-scenario-table .sb-grid-row-head{background:var(--surface2,#f1f5f9)}
+.sb-scenario-thumb{max-width:100%;max-height:160px;width:auto;height:auto;object-fit:contain;border:1px solid var(--line,#e5e9f0);border-radius:8px;background:#fff}
+.sb-scenario-link{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px dashed var(--line2,#cdd5e0);border-radius:10px;padding:6px 10px;background:var(--surface,#fff)}
+.sb-scenario-link-text{flex:1 1 200px;min-width:0;font-size:13px;color:var(--text,#0f172a);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-scenario-link-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sb-scenario-chip{font-size:11px;padding:3px 9px;border-color:var(--primary,#2563eb);color:var(--primary2,#1d4ed8);background:var(--primary050,#eff4ff)}
+.sb-scenario-issues{margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:700;color:var(--danger,#b91c1c)}
+.sb-scenario-empty{margin:0;font-size:12px;color:var(--muted,#64748b)}
+@media (max-width:640px){
+  .sb-scenario .sb-icon-btn,.sb-scenario .sb-mini-btn,.sb-scenario .sb-btn{min-height:44px}
+  .sb-scenario-link-tools{width:100%;justify-content:flex-end}
+}
+.sb-scenarios{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:10px}
+.sb-section-add-row{display:flex;gap:8px;flex-wrap:wrap}

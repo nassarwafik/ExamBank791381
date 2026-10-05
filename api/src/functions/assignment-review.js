@@ -8,7 +8,7 @@ const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {flattenQuestions,effectiveMaxMarks}=require("../lib/exam-structure");
 // Phase 19D — a visual question's review needs its canonical image (bank assets get a fresh signed delivery URL, never persisted) and
 // its public config; the private targets / mapping arrive as expectedAnswer (teacher only), exactly like every other key.
-const {hydrateBankAssetsInQuestion}=require("../lib/bank-asset-hydrate");
+const {hydrateBankAssetsInQuestion,hydrateBankAssets}=require("../lib/bank-asset-hydrate");
 function visualReviewFields(q){if(q.hotspot===undefined&&q.labelDiagram===undefined)return {};let image=q.image??null;try{image=hydrateBankAssetsInQuestion(q).image??null}catch{}return {...(q.hotspot!==undefined?{hotspot:q.hotspot}:{}),...(q.labelDiagram!==undefined?{labelDiagram:q.labelDiagram}:{}),image}}
 // Phase 17C — the ONE canonical attempt-score rebuild, shared with the automatic coding grading callback.
 const {rebuildAttemptGrades}=require("../lib/attempt-grade-rebuild");
@@ -36,7 +36,7 @@ const {scoreOpenResponseRubric,isOpenResponseQuestion}=require("../lib/shared-fi
 // strict projection the student receives — a scenario has no private field by contract — emitted ONCE per scenario with its sectionId, plus a
 // per-question `scenarioId`. A malformed stored scenario is withheld (fail closed), never the raw object; no server secret is involved.
 const {projectSectionScenariosForStudent}=require("../lib/shared-finalization/scenarioSource");
-function scenarioReviewContext(exam){const out=[];const sections=exam&&Array.isArray(exam.sections)?exam.sections:[];sections.forEach((s,i)=>{const p=projectSectionScenariosForStudent(s);if(!p)return;const sectionId=String(s&&s.id!=null?s.id:"section-"+(i+1));for(const sc of p)out.push({...sc,sectionId})});return out}
+function scenarioReviewContext(exam){const out=[];let hydrated=exam;try{hydrated=hydrateBankAssets(exam)}catch{hydrated=exam}const sections=hydrated&&Array.isArray(hydrated.sections)?hydrated.sections:[];sections.forEach((s,i)=>{const p=projectSectionScenariosForStudent(s);if(!p)return;const sectionId=String(s&&s.id!=null?s.id:"section-"+(i+1));for(const sc of p)out.push({...sc,sectionId})});return out}
 const RUBRIC_MESSAGES={RUBRIC_GRADE_REQUIRED:"هذا السؤال يُصحَّح بسلم التقييم فقط: اختر مستوى لكل معيار.",RUBRIC_AUTHORITY_INVALID:"سلم التقييم المنشور لهذا السؤال غير صالح؛ لا يمكن احتساب درجة منه."};
 function rubricGrades(snapshot,incoming){
  const byId=new Map(flattenQuestions(snapshot).map(x=>[String(x.questionId),x.question])),out=new Map();

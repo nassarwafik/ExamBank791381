@@ -1,6 +1,9 @@
 
-import type {ReactNode} from "react";
+import {lazy,Suspense,type ReactNode} from "react";
 import StudentQuestionCard,{answered} from "./StudentQuestionCard";
+// Phase 19G — the scenario presentation (shared sources + instructions) is LAZY: loaded only for a section that carries scenarios, so the
+// initial graph is unchanged; the view runs the strict projection itself (a malformed scenario renders nothing).
+const ScenarioView=lazy(()=>import("./scenario/ScenarioView"));
 import type {Answer,FieldValue,Question} from "./StudentQuestionCard";
 import CompoundQuestion from "./CompoundQuestion";
 import {IconCheck} from "./icons";
@@ -99,13 +102,17 @@ export type StructuredQuestionProps=SectionHandlers&{
  answers:Record<string,Answer>;
  countedKeys:Set<string>;
  showStimulus:boolean;
+ /** 19G — false when the owner renders the scenario block itself (the paged runtime places it beside the question on wide screens). */
+ showScenario?:boolean;
  disabled?:boolean;
 };
 export function StructuredSectionQuestion(props:StructuredQuestionProps){
- const {section,q,questionIndex,globalIndex,answers,countedKeys,showStimulus,disabled,onChoice,onSeq,onTable,onText,onField,onPart,onAnswer}=props;
+ const {section,q,questionIndex,globalIndex,answers,countedKeys,showStimulus,showScenario=true,disabled,onChoice,onSeq,onTable,onText,onField,onPart,onAnswer}=props;
  const id=sectionQuestionId(section,q,questionIndex);
  let stimulusNode:ReactNode=null;
  if(showStimulus&&q.groupId){const stim=(section.stimuli||{})[q.groupId]||q.stimulus;if(stim)stimulusNode=<StimulusBlock stimulus={stim}/>;}
+ // 19G — the scenario block (sources first, then any legacy stimulus, then the card); rendered on every member's page / before every member.
+ const scenarioNode:ReactNode=showScenario&&Array.isArray(section.scenarios)&&section.scenarios.length>0?<Suspense fallback={null}><ScenarioView section={section} questionId={id}/></Suspense>:null;
  // Question-level interactive context: rendered with the question (before its body); the response controls are untouched.
  const qActivity=(q as {activity?:unknown}).activity;
  const activityNode:ReactNode=qActivity!==undefined?<AssessmentActivityContext descriptor={qActivity} scope="question"/>:null;
@@ -120,8 +127,8 @@ export function StructuredSectionQuestion(props:StructuredQuestionProps){
    questionParts(q).forEach((p,pi)=>{const pid=partId(p,pi),resp=answers[id];const pAns=resp?.kind==="compound"?resp.parts?.[pid]:undefined;if(answered(pAns)&&!countedKeys.has(id+"::"+pid))excessPartIds!.add(pid);});
   }
   const wholeExcess=section.answerUnit==="question"&&answered(answers[id])&&!countedKeys.has(id);
-  return <>{stimulusNode}{activityBefore}{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/>{activityTail}</>;
+  return <>{scenarioNode}{stimulusNode}{activityBefore}{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/>{activityTail}</>;
  }
  const excess=answered(answers[id])&&!countedKeys.has(id);
- return <>{stimulusNode}{activityBefore}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} onAnswer={onAnswer?next=>onAnswer(id,next):undefined} disabled={disabled}/>{activityTail}</>;
+ return <>{scenarioNode}{stimulusNode}{activityBefore}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} onAnswer={onAnswer?next=>onAnswer(id,next):undefined} disabled={disabled}/>{activityTail}</>;
 }

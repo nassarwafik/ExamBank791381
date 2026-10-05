@@ -63,7 +63,7 @@ describe("19G-S1 — the student sanitizer rebuilds scenarios through the strict
     expect(JSON.stringify(out)).not.toContain("LEAK-");
   });
   it("S5 case / separator variants and nesting never slip through (exact-key rebuild)", () => {
-    for (const bad of [{ Correct_Answer: "LEAK" }, { "hidden-tests": "LEAK" }, { "expected output": "LEAK" }, { meta: { hiddenTests: "LEAK" } }, { __proto__: { a: 1 }, constructor: "LEAK" }]) {
+    for (const bad of [{ Correct_Answer: "LEAK" }, { "hidden-tests": "LEAK" }, { "expected output": "LEAK" }, { meta: { hiddenTests: "LEAK" } }, { __proto__: { a: 1 }, constructor: "LEAK" }, JSON.parse('{"__proto__":{"answer":"LEAK"}}')]) {
       const out = sanitizeExamForStudent(exam([section([mcq("q1")], [scn(["q1"], { sources: [{ ...TEXT(), ...bad }] })])]));
       expect(JSON.stringify(out), JSON.stringify(bad)).not.toContain("LEAK");
     }
@@ -268,6 +268,16 @@ describe("19G-S21 — snapshot, finalization, canonical content and teacher revi
     expect(byId.sa1.scenarioId).toBe("scn-1"); expect(byId.o1.scenarioId).toBe("scn-1"); expect("scenarioId" in byId.auto1).toBe(false);
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/gradingKey|answerHash|"jobId"|callbackKey|CODING_RUNNER_HMAC_KEY|CODING_GRADING_CALLBACK_HMAC_KEY/);
     expect(JSON.stringify(r.jsonBody.scenarios)).not.toMatch(/PRIVATE-GUIDE|MODEL/);
+  });
+  it("S24b the review context delivers a bank image source with a freshly SIGNED delivery URL (never the bare durable identity)", async () => {
+    const snap = { ...F.exam(), sections: [{ ...F.exam().sections[0], scenarios: [scn(["sa1"], { sources: [IMAGE(BANK)] })] }] };
+    const att = { attemptNumber: 1, submittedAt: "2026-10-05T10:00:00.000Z", answers: {}, questionGrades: [], score: 0, totalMarks: 12, percentage: 0, manualReviewMarks: 10, finalized: false };
+    const ctx = F.seed({ a: F.assignment({ examSnapshot: snap }), doc: F.activeDoc({}, { attempts: [att], activeAttempt: null }) });
+    const r = await review().handler(F.teacherRequest("/api/assignment-review?assignmentId=" + F.AID + "&studentId=" + F.S1 + "&attemptNumber=1", null, "GET"), { requireBuilderAuth: () => ({ ok: true, user: { sub: "t" } }), getContainer: () => ctx.container, env: F.ENV }, null);
+    const img = r.jsonBody.scenarios[0].sources[0].image;
+    expect(img).toMatchObject(BANK);
+    expect(img.dataUrl).toMatch(/^\/api\/question-image\?blob=bank%2Fimages%2Fb1\.png&exp=\d+&sig=/);
+    expect(JSON.stringify(ctx.getJson("platform/assignments/" + F.AID + ".json"))).not.toMatch(/sig=|exp=/);   // the stored snapshot stays durable
   });
   it("S25 a malformed stored scenario is withheld from the review context too (fail closed, never the raw object)", async () => {
     const snap = { ...F.exam(), sections: [{ ...F.exam().sections[0], scenarios: [scn(["sa1"], { sources: [TEXT({ answer: "LEAK-REVIEW" })] })] }] };

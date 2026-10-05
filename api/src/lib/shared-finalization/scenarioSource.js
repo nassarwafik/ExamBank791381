@@ -78,7 +78,7 @@ function validateImageAsset(raw) {
         out.contentType = raw.contentType;
     }
     if (out.origin === "bank") {
-        if (!isText(raw.blobName, 256) || !SAFE_BLOB_NAME.test(raw.blobName) || raw.blobName.includes(".."))
+        if (!isText(raw.blobName, 256) || !SAFE_BLOB_NAME.test(raw.blobName) || raw.blobName.includes("..") || raw.blobName.includes("//"))
             return null;
         out.blobName = raw.blobName;
         if (own(raw, "dataUrl")) {

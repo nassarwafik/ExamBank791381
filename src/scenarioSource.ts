@@ -81,7 +81,7 @@ function validateImageAsset(raw: unknown): ScenarioImageAsset | null {
   if (own(raw, "origin")) { if (typeof raw.origin !== "string" || !ORIGINS.has(raw.origin)) return null; out.origin = raw.origin as ScenarioImageAsset["origin"]; }
   if (own(raw, "contentType")) { if (!isText(raw.contentType, 100) || !/^image\//.test(raw.contentType)) return null; out.contentType = raw.contentType; }
   if (out.origin === "bank") {
-    if (!isText(raw.blobName, 256) || !SAFE_BLOB_NAME.test(raw.blobName) || raw.blobName.includes("..")) return null;
+    if (!isText(raw.blobName, 256) || !SAFE_BLOB_NAME.test(raw.blobName) || raw.blobName.includes("..") || raw.blobName.includes("//")) return null;
     out.blobName = raw.blobName;
     if (own(raw, "dataUrl")) { if (typeof raw.dataUrl !== "string" || !DELIVERY_URL.test(raw.dataUrl) || raw.dataUrl.length > 2048) return null; out.dataUrl = raw.dataUrl; }
     return out;

@@ -6,6 +6,9 @@ import { lazy, Suspense, useState } from "react";
 import type { BuilderQuestionType } from "./examTypes";
 // Phase 16A — the Question Type Palette is lazy (its own chunk); it hands back a KEY and the canonical factory creates the question.
 const QuestionTypePalette = lazy(() => import("./questionTypes/QuestionTypePalette"));
+// Phase 19G — the Scenario card (shared sources + linked questions) is lazy too: its own chunk, loaded only for a section that has one.
+const ScenarioBlockEditor = lazy(() => import("./scenario/ScenarioBlockEditor"));
+import { addScenario, createQuestionInScenario, scenarioOf } from "./scenarioBuilderOps";
 import { SECTION_INSTRUCTION_TEMPLATES, findSectionInstructionTemplate } from "./instructionTemplates";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import StimulusEditor from "./StimulusEditor";
@@ -48,8 +51,13 @@ type Props = {
 
 export default function ExamSectionEditor(props: Props) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // Phase 19G — when the palette was opened from a scenario, the picked question is created INSIDE that scenario (after its last member) and linked.
+  const [paletteFor, setPaletteFor] = useState<string | null>(null);
   const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
+  const scenarios = Array.isArray(section.scenarios) ? section.scenarios : [];
+  const applySection = (next: BuilderSection) => { if (next !== section) patch({ scenarios: next.scenarios, questions: next.questions }); };
+  const addPicked = (q: BuilderQuestion) => { setPaletteOpen(false); if (paletteFor) { applySection(createQuestionInScenario(section, paletteFor, q)); setPaletteFor(null); } else onAddQuestion(q); };
 
   return (
     <section className="sb-section">
@@ -117,6 +125,14 @@ export default function ExamSectionEditor(props: Props) {
         <StimulusEditor stimuli={section.stimuli || {}} onChange={next => patch({ stimuli: next })} disabled={disabled} />
       </header>
 
+      {scenarios.length > 0 && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر السيناريو…</p>}>
+          <ol className="sb-scenarios" aria-label="سيناريوهات القسم">
+            {scenarios.map((sc, i) => <ScenarioBlockEditor key={sc.id} section={section} scenario={sc} index={i} total={scenarios.length} disabled={disabled} onSection={applySection} onCreateQuestion={() => { setPaletteFor(sc.id); setPaletteOpen(true); }} />)}
+          </ol>
+        </Suspense>
+      )}
+
       <div className="sb-questions">
         {section.questions.map((q, i) => (
           <StructuredQuestionEditor
@@ -127,6 +143,7 @@ export default function ExamSectionEditor(props: Props) {
             sectionOptions={sectionOptions}
             currentSectionId={section.id}
             groupOptions={groupOptions}
+            scenarioLabel={(() => { const sc = scenarioOf(section, q.examQuestionId); return sc ? (sc.title?.trim() || "سيناريو") : undefined; })()}
             onChange={p => onQuestionChange(q.examQuestionId, p)}
             onDelete={() => onQuestionDelete(q.examQuestionId)}
             onMove={d => onQuestionMove(q.examQuestionId, d)}
@@ -146,8 +163,11 @@ export default function ExamSectionEditor(props: Props) {
         ))}
       </div>
 
-      <button type="button" className="sb-add-btn" onClick={() => setPaletteOpen(true)} disabled={disabled} aria-haspopup="dialog">+ إضافة سؤال</button>
-      {paletteOpen && <Suspense fallback={null}><QuestionTypePalette open onClose={() => setPaletteOpen(false)} onPick={key => { setPaletteOpen(false); onAddQuestion(newQuestion(key as BuilderQuestionType)); }} onPickNode={q => { setPaletteOpen(false); onAddQuestion(q); }} /></Suspense>}
+      <div className="sb-section-add-row">
+        <button type="button" className="sb-add-btn" onClick={() => { setPaletteFor(null); setPaletteOpen(true); }} disabled={disabled} aria-haspopup="dialog">+ إضافة سؤال</button>
+        <button type="button" className="sb-add-btn" onClick={() => applySection(addScenario(section))} disabled={disabled}>+ إضافة سيناريو</button>
+      </div>
+      {paletteOpen && <Suspense fallback={null}><QuestionTypePalette open onClose={() => { setPaletteOpen(false); setPaletteFor(null); }} onPick={key => addPicked(newQuestion(key as BuilderQuestionType))} onPickNode={q => addPicked(q)} /></Suspense>}
     </section>
   );
 }

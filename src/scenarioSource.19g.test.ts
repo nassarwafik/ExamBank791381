@@ -7,8 +7,9 @@ import { toSafePreviewExam } from "./examPreviewModel";
 // Phase 19G — the Scenario & Source Assessment Engine DOMAIN contract (pure): ScenarioV1 (one or more shared sources + several
 // ordinary canonical questions of the SAME section, referenced by examQuestionId), the strict SourceStimulusV1 contract (text /
 // image / table / code), the section-level membership rules (exists, same section, at most one scenario, contiguous), the strict
-// student projection and the finalization gate. Fail-first on 2aa40da: ./scenarioSource does not exist; validateStructuredExam
-// ignores `section.scenarios`; the preview scrub leaves unknown section keys as-is.
+// student projection and the finalization gate. Fail-first on 2aa40da: ./scenarioSource does not exist (the whole file fails to load);
+// validateStructuredExam ignores `section.scenarios`. PINS (behaviour that already held on the baseline, kept as the regression gate):
+// D22 (the legacy groupId warning) and D23 (the generic preview scrub).
 type R = Record<string, unknown>;
 const codes = (r: { ok: boolean; issues?: { code: string }[] }) => (r.ok ? [] : (r.issues ?? []).map(i => i.code));
 const TEXT = (over: R = {}): R => ({ id: "src-text", version: 1, kind: "text", title: "النص", text: "اقرأ النص التالي ثم أجب.", ...over });
@@ -61,6 +62,12 @@ describe("19G-D1 — SourceStimulusV1 is strict and never repairs", () => {
     ["image asset unknown key", IMAGE({ image: { dataUrl: "data:image/png;base64,AA", prompt: "x" } }), "SOURCE_IMAGE_INVALID"],
     ["image asset missing", { id: "i", version: 1, kind: "image", alt: "a" }, "SOURCE_IMAGE_INVALID"],
     ["bank asset with unsafe blobName", IMAGE({ image: { origin: "bank", blobName: "../x", id: "x" } }), "SOURCE_IMAGE_INVALID"],
+    ["bank asset with a traversal inside a valid-looking name", IMAGE({ image: { origin: "bank", blobName: "bank/../x.png", id: "x" } }), "SOURCE_IMAGE_INVALID"],
+    ["bank asset with a double slash", IMAGE({ image: { origin: "bank", blobName: "bank//x.png", id: "x" } }), "SOURCE_IMAGE_INVALID"],
+    ["bank asset delivery URL too long", IMAGE({ image: { origin: "bank", blobName: "bank/x.png", id: "x", dataUrl: "/api/question-image?blob=" + "x".repeat(2100) } }), "SOURCE_IMAGE_INVALID"],
+    ["inline image over the byte bound", IMAGE({ image: { dataUrl: "data:image/png;base64," + "A".repeat(4200001) } }), "SOURCE_IMAGE_INVALID"],
+    ["text within the char bound but over the UTF-8 byte bound", TEXT({ text: "\u{1F600}".repeat(17000) }), "SOURCE_TEXT_INVALID"],
+    ["own __proto__ key (parsed JSON)", JSON.parse('{"id":"t","version":1,"kind":"text","text":"x","__proto__":{"a":1}}'), "SOURCE_INVALID"],
     ["table without columns", TABLE({ columnHeaders: [] }), "SOURCE_TABLE_INVALID"],
     ["table 13 columns", TABLE({ columnHeaders: Array.from({ length: 13 }, (_, i) => "c" + i), rows: [Array.from({ length: 13 }, () => "x")], rowHeaders: ["r"] }), "SOURCE_TABLE_INVALID"],
     ["table ragged row", TABLE({ rows: [["0", "1"], ["1"]] }), "SOURCE_TABLE_INVALID"],
