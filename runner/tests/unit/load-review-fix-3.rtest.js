@@ -16,7 +16,6 @@
 // `missing`, snapshots / recovery counts are not shape-checked, cli.js has no exported argument parser.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const net = require("node:net");
 const L = require("../load/lib/index.js");
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -25,12 +24,13 @@ const okGates = () => L.evaluateGates({ practice: L.createPracticeAccumulator().
 const Q = (scenarioId, target, evidence) => L.evaluateQualification({ scenarioId, target, correctness: okGates(), ...evidence });
 const QE = (scenarioId, target, evidence) => L.buildReport({ target: { name: target, remote: target !== "local" }, buildSha: SHA, runnerSha: SHA, scenario: { id: scenarioId, config: { jobs: 1, concurrency: 1, languages: ["python"] } }, startedAt: "2026-01-01T00:00:00.000Z", durationMs: 1, gates: okGates(), ...evidence });
 const step = (official, over = {}) => ({ offeredConcurrency: 8, runnerMaxConcurrency: 2, officialMaxPending: 3, practice: { offered: 0, completed: 0, busy: 0 }, official: { offered: 8, accepted: 3, busy: 5, overAdmission: 0, ...official }, ...over });
-const freePort = () => new Promise((resolve, reject) => { const s = net.createServer(); s.on("error", reject); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => resolve(p)); }); });
 const KEY2 = "test-only-rf3-staging-callback-key-0123456789abcdef";
 
 /** A LOOPBACK STAGING REHEARSAL: the local stack plays the remote staging Runner; its official callbacks go to the HARNESS receiver. */
 async function stagingRehearsal(params, { declare = true } = {}) {
-  const port = await freePort();
+  // QM22 hotfix: a port BELOW the kernel's ephemeral range — a bind-0-and-close probe left an ephemeral port that the stack's own
+  // listen(0) or a concurrently running test file could be handed before the harness bound it (EADDRINUSE ⇒ a hung run)
+  const port = await L.allocateExplicitPort();
   const stack = L.createLocalStack({ maxConcurrency: 2, official: { maxPending: 3, maxActive: 1 }, callbackBaseUrl: "http://127.0.0.1:" + port, callbackKey: KEY2 });
   await stack.start();
   // Hotfix (admission oracle): this stack plays the REMOTE Runner, so the harness cannot hold its executions; the test holds them until
