@@ -18,8 +18,7 @@ import {
   computeTotalMarks,
   countQuestions,
   cloneQuestionWithNewIds,
-  type StructuredExamUpdater
-} from "./examBuilderState";
+  type StructuredExamUpdater, genId } from "./examBuilderState";
 import { hasBlockingErrors, type StructuredIssue } from "./examQuality";
 import { evaluateExamFinalization } from "./examFinalization";
 import { withQualityPolicy } from "./assessmentQualityPolicy";
@@ -73,6 +72,9 @@ const GovernancePanel = lazy(() => import("./GovernancePanel"));
 const PresetLibraryPanel = lazy(() => import("./presets/PresetLibraryPanel"));
 // Phase 19A — «سؤال بالذكاء الاصطناعي»: lazy like the other panels (the dialog + its canonical re-verification never enter the initial graph).
 const AiQuestionAuthorDialog = lazy(() => import("./aiAuthoring/AiQuestionAuthorDialog"));
+// Phase 19G — AI scenario authoring (shared sources + questions), its own lazy chunk.
+const AiScenarioAuthorDialog = lazy(() => import("./aiAuthoring/AiScenarioAuthorDialog"));
+import type { ScenarioV1 } from "./scenarioSource";
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -403,6 +405,21 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // inside the updater; anything else is "stale" and nothing is inserted.
   const [aiOpenFor, setAiOpenFor] = useState("");
   const aiOpen = !!aiAuthor && aiOpenFor === exam.examId;
+  // Phase 19G — AI scenario authoring: the verified scenario + its questions are inserted as ONE functional update with fresh ids (questions,
+  // scenario, sources; the membership remapped to the fresh question ids), re-checked against the latest exam exactly like a question.
+  const [aiScenarioOpenFor, setAiScenarioOpenFor] = useState("");
+  const aiScenarioOpen = !!aiAuthor?.authorScenario && aiScenarioOpenFor === exam.examId;
+  const insertAiScenario = (openedFor: string) => (scenario: ScenarioV1, questions: BuilderQuestion[], targetSectionId: string): "ok" | "stale" => {
+    if (!alive.current) return "stale";
+    const fits = (candidate: StructuredExam) => candidate.examId === openedFor && (candidate.sections || []).some(sec => sec.id === targetSectionId);
+    if (!fits(latestExamRef.current)) return "stale";
+    const idMap = new Map<string, string>();
+    const fresh = questions.map(q => { const c = cloneQuestionWithNewIds(q); idMap.set(q.examQuestionId, c.examQuestionId); return c; });
+    const sc: ScenarioV1 = { ...scenario, id: genId("scn"), sources: scenario.sources.map(s => ({ ...s, id: genId("src") })), questionIds: scenario.questionIds.flatMap(id => (idMap.has(id) ? [idMap.get(id) as string] : [])) };
+    onChange(prev => (fits(prev) ? { ...prev, sections: (prev.sections || []).map(sec => (sec.id === targetSectionId ? { ...sec, questions: [...(sec.questions || []), ...fresh], scenarios: [...(Array.isArray(sec.scenarios) ? sec.scenarios : []), sc] } : sec)) } : prev));
+    if (fresh.length) window.setTimeout(() => focusCard(fresh[0].examQuestionId), 0);
+    return "ok";
+  };
   const insertAiQuestion = (openedFor: string) => (question: BuilderQuestion, targetSectionId: string): "ok" | "stale" => {
     if (!alive.current) return "stale";
     const fits = (candidate: StructuredExam) => candidate.examId === openedFor && (candidate.sections || []).some(sec => sec.id === targetSectionId);
@@ -495,6 +512,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
           {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
           {aiAuthor && <button type="button" className="sb-btn" onClick={() => setAiOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سؤال بالذكاء الاصطناعي</button>}
+          {aiAuthor?.authorScenario && <button type="button" className="sb-btn" onClick={() => setAiScenarioOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سيناريو بالذكاء الاصطناعي</button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
           {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
@@ -595,6 +613,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {aiOpen && aiAuthor && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل أداة الذكاء الاصطناعي…</p>}>
           <AiQuestionAuthorDialog key={exam.examId} open onClose={() => setAiOpenFor("")} service={aiAuthor} sections={sectionOptions} onInsert={insertAiQuestion(exam.examId)} disabled={saving} />
+        </Suspense>
+      )}
+      {aiScenarioOpen && aiAuthor && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل أداة الذكاء الاصطناعي…</p>}>
+          <AiScenarioAuthorDialog key={exam.examId} open onClose={() => setAiScenarioOpenFor("")} service={aiAuthor} sections={sectionOptions} onInsert={insertAiScenario(exam.examId)} disabled={saving} />
         </Suspense>
       )}
 

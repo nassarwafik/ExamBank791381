@@ -249,3 +249,57 @@ describe("19G-U11 — teacher review shows the scenario context above a linked r
     expect(within(articles[1] as HTMLElement).queryByTestId("review-scenario")).toBeNull();
   });
 });
+
+describe("19G-U12 — AI scenario authoring in the Builder", () => {
+  const NONE = { multipleChoice: null, trueFalse: null, shortAnswer: null, fillBlank: null, inlineCloze: null, networkCli: null, parametricNumeric: null, openResponse: null, codeStimulus: null, tableFill: null, coding: null };
+  const AI_Q = (id: string, text: string) => ({ examQuestionId: id, presentationType: "multipleChoice", text, marks: 2, options: [{ text: "DHCP" }, { text: "DNS" }], answer: { correctOptionIndex: 0 } });
+  const AI_SCN = { id: "ai-scenario", version: 1, title: "سيناريو DHCP", instructions: "اقرأ.", sources: [{ id: "ai-src-1", version: 1, kind: "text", title: "النص", text: "DHCP يوزّع العناوين." }], questionIds: ["ai-scn-q1", "ai-scn-q2"] };
+  const ok = { ok: true as const, scenario: AI_SCN, questions: [AI_Q("ai-scn-q1", "س1"), AI_Q("ai-scn-q2", "س2")], notes: [] };
+  it("U12 the action appears only with a scenario-capable service; the draft is re-verified, summarised and inserted as ONE update (fresh ids, remapped membership); a tampered draft is refused client-side", async () => {
+    void NONE;
+    const authorScenario = vi.fn(async () => ok);
+    let hist!: Hist;
+    function HostAi({ service }: { service: { author: () => Promise<never>; authorScenario?: typeof authorScenario } }) {
+      const h = useStructuredExamHistory(); const booted = useRef(false);
+      useEffect(() => { if (!booted.current) { booted.current = true; h.open(examOf(section({ scenarios: [] })), "saved"); } }, [h]);
+      useEffect(() => { hist = h; });
+      if (!h.present) return null;
+      return <StructuredExamBuilder exam={h.present} onChange={h.update} onSave={() => {}} saving={false} onUndo={h.undo} onRedo={h.redo} canUndo={h.canUndo} canRedo={h.canRedo} saveState={examSaveState(h.history, false)} backupStorage={null} onRecover={h.recover} autosaveDelayMs={5} aiAuthor={service as never} />;
+    }
+    render(<HostAi service={{ author: async () => { throw new Error("unused"); } }} />); await tick(30);
+    expect(screen.queryByRole("button", { name: "✨ سيناريو بالذكاء الاصطناعي" })).toBeNull();
+    cleanup();
+    render(<HostAi service={{ author: async () => { throw new Error("unused"); }, authorScenario }} />); await tick(30);
+    fireEvent.click(screen.getByRole("button", { name: "✨ سيناريو بالذكاء الاصطناعي" }));
+    const d = await screen.findByRole("dialog", { name: "إنشاء سيناريو بالذكاء الاصطناعي" }, { timeout: 3000 });
+    fireEvent.change(within(d).getByRole("textbox", { name: "اكتب طلب السيناريو" }), { target: { value: "سيناريو عن DHCP" } });
+    fireEvent.click(within(d).getByRole("button", { name: "إنشاء مسودة السيناريو" }));
+    await tick(30);
+    expect(authorScenario).toHaveBeenCalledWith({ request: "سيناريو عن DHCP" });
+    expect(within(d).getByTestId("ai-scenario-summary").textContent).toContain("المصادر (1): نص");
+    expect(within(d).getByTestId("ai-scenario-summary").textContent).toContain("الأسئلة (2)");
+    const before = hist.history.past.length;
+    fireEvent.click(within(d).getByRole("button", { name: "إدراج السيناريو في القسم" }));
+    await tick(30);
+    const s = hist.present!.sections[0] as BuilderSection;
+    expect(hist.history.past.length).toBe(before + 1);                                     // ONE builder update
+    expect(s.questions.map(x => x.examQuestionId).slice(0, 3)).toEqual(["q1", "q2", "q3"]);
+    expect(s.questions.length).toBe(5);
+    expect(s.questions[3].examQuestionId).not.toBe("ai-scn-q1");                           // fresh ids
+    expect(s.scenarios!.length).toBe(1);
+    expect(s.scenarios![0].id).not.toBe("ai-scenario"); expect(s.scenarios![0].sources[0].id).not.toBe("ai-src-1");
+    expect(s.scenarios![0].questionIds).toEqual([s.questions[3].examQuestionId, s.questions[4].examQuestionId]);
+    // a tampered server result (a smuggled key inside a source) is refused by the client-side re-verification and inserts nothing
+    cleanup();
+    const tampered = vi.fn(async () => ({ ...ok, scenario: { ...AI_SCN, sources: [{ ...AI_SCN.sources[0], answer: "LEAK" }] } }));
+    render(<HostAi service={{ author: async () => { throw new Error("unused"); }, authorScenario: tampered }} />); await tick(30);
+    fireEvent.click(screen.getByRole("button", { name: "✨ سيناريو بالذكاء الاصطناعي" }));
+    const d2 = await screen.findByRole("dialog", { name: "إنشاء سيناريو بالذكاء الاصطناعي" }, { timeout: 3000 });
+    fireEvent.change(within(d2).getByRole("textbox", { name: "اكتب طلب السيناريو" }), { target: { value: "x" } });
+    fireEvent.click(within(d2).getByRole("button", { name: "إنشاء مسودة السيناريو" }));
+    await tick(30);
+    expect(within(d2).getByRole("alert").textContent).toContain("لا يجتاز التحقق");
+    expect(within(d2).queryByTestId("ai-scenario-ready")).toBeNull();
+    expect((hist.present!.sections[0] as BuilderSection).scenarios ?? []).toEqual([]);
+  });
+});

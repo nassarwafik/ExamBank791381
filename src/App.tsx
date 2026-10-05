@@ -33,7 +33,7 @@ import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { GovernanceService } from "./examGovernance";
 import type { SimulationService } from "./smartsim/simulationService";
-import type { AiAuthorResponse, AiAuthorService } from "./aiAuthoring/aiAuthorService";
+import type { AiAuthorResponse, AiAuthorService, AiScenarioResponse } from "./aiAuthoring/aiAuthorService";
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
@@ -2879,7 +2879,7 @@ function App() {
   }, []);
   // Phase 19A — the App-owned AI authoring service: ONE POST to /api/ai-question-author through the same authenticated request
   // helper; the builder never sees the token. The server returns a canonical draft or a refusal; the builder re-verifies it.
-  const structuredAiAuthor = useMemo<AiAuthorService>(() => ({ author: body => apiRequestRef.current<AiAuthorResponse>("/api/ai-question-author", { method: "POST", body: JSON.stringify(body) }) }), []);
+  const structuredAiAuthor = useMemo<AiAuthorService>(() => ({ author: body => apiRequestRef.current<AiAuthorResponse>("/api/ai-question-author", { method: "POST", body: JSON.stringify(body) }), authorScenario: body => apiRequestRef.current<AiScenarioResponse>("/api/ai-scenario-author", { method: "POST", body: JSON.stringify(body) }) }), []);   // 19G: scenario authoring
   const structuredGovernance = useMemo<GovernanceService>(() => {
     let clientPromise: Promise<GovernanceService> | null = null;
     const client = () => (clientPromise ??= import("./examGovernanceClient").then(m => m.createGovernanceService(body => apiRequestRef.current<Record<string, unknown>>("/api/exam-governance", { method: "POST", body: JSON.stringify(body) }))));
