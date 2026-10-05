@@ -76,13 +76,29 @@ describe("19D labelDiagram — question validation and student projection", () =
   it("image required / visible / identity; version", () => {
     expect(validateLabelDiagramQuestion(node())).toEqual([]);
     expect(validateLabelDiagramQuestion(node({ image: undefined })).map(i => i.code)).toEqual(["VISUAL_IMAGE_MISSING"]);
+    // Independent review: delivery ships the image only when `visible` is true, so a missing flag must block publication too.
+    for (const visible of [undefined, 1, "true"]) expect(validateLabelDiagramQuestion(node({ image: { ...clone(IMG), visible } })).map(i => i.code), String(visible)).toEqual(["VISUAL_IMAGE_HIDDEN"]);
     expect(validateLabelDiagramQuestion(node({ image: { exists: true, visible: true, assets: [{ origin: "bank", blobName: "../../etc" }] } })).map(i => i.code)).toEqual(["VISUAL_IMAGE_ASSET_INVALID"]);
     expect(validateLabelDiagramQuestion(node({ questionTypeVersion: 2 })).map(i => i.code)).toContain("LABEL_VERSION_UNSUPPORTED");
   });
   it("projection: zones and labels are public; the correct mapping is never part of it; a smuggling config is withheld", () => {
-    expect(projectLabelDiagramConfigForStudent(CFG)).toEqual(CFG);
+    const p = projectLabelDiagramConfigForStudent(CFG)!;
+    expect({ ...p, labels: [...p.labels].sort((a, b) => a.id.localeCompare(b.id)) }).toEqual({ ...CFG, labels: [...CFG.labels].sort((a, b) => a.id.localeCompare(b.id)) });
     expect(projectLabelDiagramConfigForStudent({ ...CFG, correctLabelByZone: KEY.correctLabelByZone })).toBeNull();
     expect(projectLabelDiagramConfigForStudent({ ...CFG, zones: [{ ...CFG.zones[0], label: "l-app" }] })).toBeNull();
+  });
+  it("independent review: the delivered label bank order is independent of the authored order (never reveals the key); idempotent", () => {
+    const ids = (cfg: unknown) => projectLabelDiagramConfigForStudent(cfg)!.labels.map(l => l.id);
+    const base = ids(CFG);
+    // The fixture is authored in zone order (z1 → l-app, z2 → l-net, z3 → l-phy): the bank must not be delivered in that order.
+    expect(base).not.toEqual(CFG.labels.map(l => l.id));
+    expect([...base].sort()).toEqual(CFG.labels.map(l => l.id).sort());
+    const L = CFG.labels;
+    for (const perm of [[3, 2, 1, 0], [1, 0, 3, 2], [2, 3, 0, 1], [0, 2, 1, 3]]) expect(ids({ ...CFG, labels: perm.map(i => L[i]) }), perm.join()).toEqual(base);
+    expect(ids(projectLabelDiagramConfigForStudent(CFG))).toEqual(base);
+    // Sequential ids authored in zone order are not delivered in that order either.
+    const seq = { ...CFG, labels: [{ id: "l1", text: "A" }, { id: "l2", text: "B" }, { id: "l3", text: "C" }] };
+    expect(ids(seq)).not.toEqual(["l1", "l2", "l3"]);
   });
 });
 
@@ -104,7 +120,7 @@ describe("19D labelDiagram — authoritative scoring", () => {
     expect(score(CFG, KEY, fields({ z1: "l-app" }, { score: 3, correct: true, correctLabelByZone: { z1: "l-app" }, parts: { correct: 3, total: 3 } })).score).toBe(1);
   });
   it("malformed PUBLISHED authority ⇒ 0 + manual review", () => {
-    for (const [cfg, key, image] of [[CFG, { ...KEY, scoring: "x" }, IMG], [CFG, { ...KEY, correctLabelByZone: { ...KEY.correctLabelByZone, z3: "l-app" } }, IMG], [{ ...CFG, secret: 1 }, KEY, IMG], [CFG, KEY, null], [CFG, { ...KEY, correctLabelByZone: { z1: "l-app" } }, IMG]] as [unknown, unknown, unknown][])
+    for (const [cfg, key, image] of [[CFG, KEY, { ...IMG, visible: undefined }], [CFG, { ...KEY, scoring: "x" }, IMG], [CFG, { ...KEY, correctLabelByZone: { ...KEY.correctLabelByZone, z3: "l-app" } }, IMG], [{ ...CFG, secret: 1 }, KEY, IMG], [CFG, KEY, null], [CFG, { ...KEY, correctLabelByZone: { z1: "l-app" } }, IMG]] as [unknown, unknown, unknown][])
       expect(score(cfg, key, fields({ z1: "l-app", z2: "l-net", z3: "l-phy" }), image)).toEqual({ score: 0, correct: false, manualReview: true, parts: { correct: 0, total: 0 } });
     expect(LABEL_DIAGRAM_FAIL_CLOSED).toEqual({ score: 0, correct: false, manualReview: true, parts: { correct: 0, total: 0 } });
   });

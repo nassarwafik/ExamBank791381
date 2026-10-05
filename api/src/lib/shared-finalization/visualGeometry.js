@@ -228,7 +228,7 @@ const SAFE_BLOB_NAME = /^[A-Za-z0-9][A-Za-z0-9._\-/]{0,255}$/;
 function validateVisualImage(raw) {
     if (!isPlain(raw) || raw.exists !== true || !Array.isArray(raw.assets) || raw.assets.length === 0)
         return { ok: false, code: "VISUAL_IMAGE_MISSING" };
-    if (raw.visible === false)
+    if (raw.visible !== true)
         return { ok: false, code: "VISUAL_IMAGE_HIDDEN" };
     const a = raw.assets[0];
     if (!isPlain(a))

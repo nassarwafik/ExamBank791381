@@ -16,6 +16,8 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 type Zone = EditorRegion & { name?: string };
 type Label = { id: string; text: string };
 const nextId = (list: { id: string }[], prefix: string) => { let n = 0; for (const r of list) { const m = /^\D+(\d+)$/.exec(String(r.id)); if (m) n = Math.max(n, Number(m[1])); } return prefix + (Math.max(n, list.length) + 1); };
+// Label ids are PUBLIC and the zone → label key is private: a label id is opaque random text (never "l1, l2, …" beside "z1, z2, …").
+const opaqueLabelId = (list: { id: string }[]) => { const taken = new Set(list.map(l => l.id)); for (;;) { const r = crypto.getRandomValues(new Uint32Array(2)); const id = "l" + r[0].toString(36) + r[1].toString(36); if (!taken.has(id)) return id; } };
 
 export default function LabelDiagramEditor({ node, onChange, disabled }: AuthoringEditorProps) {
   const cfg = isObj((node as { labelDiagram?: unknown }).labelDiagram) ? ((node as { labelDiagram: Record<string, unknown> }).labelDiagram) : {};
@@ -64,7 +66,7 @@ export default function LabelDiagramEditor({ node, onChange, disabled }: Authori
             </li>
           ))}
         </ul>
-        <div className="vq-actions"><button type="button" disabled={disabled || labels.length >= 50} onClick={() => write({ labels: [...labels, { id: nextId(labels, "l"), text: "" }] })}>+ تسمية</button></div>
+        <div className="vq-actions"><button type="button" disabled={disabled || labels.length >= 50} onClick={() => write({ labels: [...labels, { id: opaqueLabelId(labels), text: "" }] })}>+ تسمية</button></div>
       </fieldset>
       <fieldset>
         <legend>التسمية الصحيحة لكل منطقة (لا يراها الطالب)</legend>

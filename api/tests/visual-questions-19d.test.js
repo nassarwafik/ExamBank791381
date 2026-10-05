@@ -24,6 +24,8 @@ const HSECRETS = /target-router|target-switch|target-firewall|0\.137|0\.181|0\.6
 const HCANARIES = new RegExp(HSECRETS.source + '|"shape"|"scoring"|proportional');                                                    // + generic key tokens: checked on hotspot-only output
 const LCFG = { v: 1, alt: "مخطط طبقات نموذج OSI", allowReuse: false, zones: [{ id: "z1", shape: { kind: "rect", x: 0.1, y: 0.1, width: 0.2, height: 0.1 }, name: "العليا" }, { id: "z2", shape: { kind: "rect", x: 0.1, y: 0.3, width: 0.2, height: 0.1 } }, { id: "z3", shape: { kind: "circle", cx: 0.7, cy: 0.5, r: 0.1 } }], labels: [{ id: "l-app", text: "Application" }, { id: "l-net", text: "Network" }, { id: "l-phy", text: "Physical" }, { id: "l-ses", text: "Session" }] };
 const LKEY = { scoring: "proportional", correctLabelByZone: { z1: "l-app", z2: "l-net", z3: "l-phy" } };
+// Independent review — the student receives the label bank in a content-hash order, never in the authored (zone-following) order.
+const LCFG_DELIVERED = { ...LCFG, labels: ["l-net", "l-app", "l-phy", "l-ses"].map(id => LCFG.labels.find(l => l.id === id)) };
 const LCANARIES = /correctLabelByZone|"z1":"l-app"|"scoring"/;
 const hq = (over = {}) => ({ examQuestionId: "h1", presentationType: "hotspot", questionTypeVersion: 1, text: "حدّد الأجهزة الثلاثة على المخطط.", marks: 3, image: clone(IMG), hotspot: clone(HCFG), answer: clone(HKEY), ...over });
 const lq = (over = {}) => ({ examQuestionId: "d1", presentationType: "labelDiagram", questionTypeVersion: 1, text: "سمِّ الطبقات.", marks: 3, image: clone(IMG), labelDiagram: clone(LCFG), answer: clone(LKEY), ...over });
@@ -58,13 +60,17 @@ describe("19D — registered graders (gradeExam)", () => {
     expect(typeof resolveGrader("labelDiagram", 1)).toBe("function"); expect(resolveGrader("labelDiagram", 2)).toBeUndefined();
     expect(g(gradeExam(exam([lq()]), { d1: fields({ z1: "l-app", z2: "l-net", z3: "l-ses" }) }), "d1")).toMatchObject({ score: 2, correct: false, manualReview: false, parts: { correct: 2, total: 3 } });
     expect(g(gradeExam(exam([lq()]), { d1: fields({ z1: "l-app", z2: "l-net", z3: "l-phy" }) }), "d1")).toMatchObject({ score: 3, correct: true });
+    // Independent review — allOrNothing on the server: a partly right diagram earns nothing; a fully right one earns all marks.
+    const aon = { answer: { ...clone(LKEY), scoring: "allOrNothing" } };
+    expect(g(gradeExam(exam([lq(aon)]), { d1: fields({ z1: "l-app", z2: "l-net", z3: "l-ses" }) }), "d1")).toMatchObject({ score: 0, correct: false, manualReview: false });
+    expect(g(gradeExam(exam([lq(aon)]), { d1: fields({ z1: "l-app", z2: "l-net", z3: "l-phy" }) }), "d1")).toMatchObject({ score: 3, correct: true });
   });
   it("malformed PUBLISHED authority (key, config, geometry, image, unsupported version) ⇒ 0 + manual review — never the V1 grader for v2", () => {
-    for (const bad of [{ answer: { ...clone(HKEY), scoring: "bonus" } }, { answer: { ...clone(HKEY), regions: HKEY.regions.slice(0, 1) } }, { answer: { scoring: "proportional", regions: [{ id: "a", shape: { kind: "rect", x: 120, y: 80, width: 200, height: 100 } }, HKEY.regions[1], HKEY.regions[2]] } }, { hotspot: { ...clone(HCFG), regions: HKEY.regions } }, { image: undefined }, { image: { ...clone(IMG), visible: false } }, { questionTypeVersion: 2 }]) {
+    for (const bad of [{ answer: { ...clone(HKEY), scoring: "bonus" } }, { answer: { ...clone(HKEY), regions: HKEY.regions.slice(0, 1) } }, { answer: { scoring: "proportional", regions: [{ id: "a", shape: { kind: "rect", x: 120, y: 80, width: 200, height: 100 } }, HKEY.regions[1], HKEY.regions[2]] } }, { hotspot: { ...clone(HCFG), regions: HKEY.regions } }, { image: undefined }, { image: { ...clone(IMG), visible: false } }, { image: { exists: true, assets: clone(IMG.assets) } }, { questionTypeVersion: 2 }]) {
       const r = g(gradeExam(exam([hq(bad)]), { h1: pts(HIN.router, HIN.sw, HIN.fw) }), "h1");
       expect(r.score, JSON.stringify(bad).slice(0, 80)).toBe(0); expect(r.manualReview).toBe(true); expect(r.correct).toBe(false);
     }
-    for (const bad of [{ answer: { ...clone(LKEY), scoring: "x" } }, { answer: { ...clone(LKEY), correctLabelByZone: { z1: "l-app", z2: "l-app", z3: "l-phy" } } }, { labelDiagram: { ...clone(LCFG), correctLabelByZone: LKEY.correctLabelByZone } }, { image: undefined }, { questionTypeVersion: 2 }]) {
+    for (const bad of [{ answer: { ...clone(LKEY), scoring: "x" } }, { answer: { ...clone(LKEY), correctLabelByZone: { z1: "l-app", z2: "l-app", z3: "l-phy" } } }, { labelDiagram: { ...clone(LCFG), correctLabelByZone: LKEY.correctLabelByZone } }, { image: undefined }, { image: { exists: true, assets: clone(IMG.assets) } }, { questionTypeVersion: 2 }]) {
       const r = g(gradeExam(exam([lq(bad)]), { d1: fields({ z1: "l-app", z2: "l-net", z3: "l-phy" }) }), "d1");
       expect(r.score, JSON.stringify(bad).slice(0, 80)).toBe(0); expect(r.manualReview).toBe(true);
     }
@@ -145,10 +151,20 @@ describe("19D — student sanitizer secrecy", () => {
   });
   it("labelDiagram: zones and labels are public; the correct mapping never reaches the student; smuggled mappings withheld", () => {
     const out = sanitizeExamForStudent(exam([lq()]));
-    expect(out.sections[0].questions[0].labelDiagram).toEqual(LCFG);
+    expect(out.sections[0].questions[0].labelDiagram).toEqual(LCFG_DELIVERED);
+    expect(out.sections[0].questions[0].labelDiagram.labels.map(l => l.id)).not.toEqual(LCFG.labels.map(l => l.id));
     expect(JSON.stringify(out)).not.toMatch(LCANARIES);
     const sm = sanitizeExamForStudent(exam([lq({ labelDiagram: { ...clone(LCFG), zones: [{ ...LCFG.zones[0], answer: "l-app" }, LCFG.zones[1], LCFG.zones[2]] } })]));
     expect(sm.sections[0].questions[0].labelDiagram).toBeUndefined();
+  });
+  it("independent review: an image whose `visible` flag is absent is never delivered, so it is refused at finalization and grading fails closed", () => {
+    const image = { exists: true, assets: clone(IMG.assets) };
+    const out = sanitizeExamForStudent(exam([hq({ image }), lq({ image })]));
+    for (const n of out.sections[0].questions) expect(n.image.assets).toBeUndefined();
+    const shared = require_("../src/lib/shared-finalization/hotspotQuestion.js");
+    expect(shared.validateHotspotQuestion(hq({ image })).map(i => i.code)).toEqual(["VISUAL_IMAGE_HIDDEN"]);
+    const r = gradeExam(exam([hq({ image }), lq({ image })]), { h1: pts(HIN.router, HIN.sw, HIN.fw), d1: fields({ z1: "l-app", z2: "l-net", z3: "l-phy" }) });
+    for (const id of ["h1", "d1"]) { expect(g(r, id).score).toBe(0); expect(g(r, id).manualReview).toBe(true); }
   });
   it("a bank image keeps its durable identity in the snapshot and passes the visual image contract", () => {
     const bank = { exists: true, visible: true, assets: [{ id: "b1", origin: "bank", blobName: "bank/net.png", contentType: "image/png" }] };
@@ -172,7 +188,7 @@ describe("19D — end to end through the REAL handlers", () => {
     const r = await studentAssignment().handler(F.studentRequest(undefined, "GET"), deps(ctx));
     expect(r.status).toBe(200);
     const [h, d] = r.jsonBody.assignment.exam.sections[0].questions;
-    expect(h.hotspot).toEqual(HCFG); expect(h.image.assets[0].dataUrl).toBe(IMG.assets[0].dataUrl); expect(d.labelDiagram).toEqual(LCFG);
+    expect(h.hotspot).toEqual(HCFG); expect(h.image.assets[0].dataUrl).toBe(IMG.assets[0].dataUrl); expect(d.labelDiagram).toEqual(LCFG_DELIVERED);
     expect(JSON.stringify(h)).not.toMatch(HCANARIES); expect(JSON.stringify(r.jsonBody)).not.toMatch(HSECRETS); expect(JSON.stringify(r.jsonBody)).not.toMatch(LCANARIES);
   });
   it("saveDraft then submit: bound answers stored, graded by the server, nothing private in responses or logs; review shows the overlays' data", async () => {

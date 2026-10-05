@@ -138,10 +138,18 @@ export function validateLabelDiagramQuestion(node: Record<string, unknown>): Lab
   return out;
 }
 
-/** The student projection: the strictly valid canonical public config (rebuilt) or null — never a repaired config. */
+// FNV-1a (32-bit) of a label's own public content: the delivery order of the bank depends only on each label, never on where the
+// teacher wrote it (authored order usually follows the zones, so it would reveal the key).
+const labelRank = (l: LabelDiagramLabel) => { let h = 0x811c9dc5; for (const c of l.id + "\u0000" + l.text) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0; return h; };
+/**
+ * The student projection: the strictly valid canonical public config (rebuilt) or null — never a repaired config. The label bank is
+ * re-ordered deterministically by a content hash (ties by id), independent of the authored order; idempotent.
+ */
 export function projectLabelDiagramConfigForStudent(raw: unknown): LabelDiagramConfigV1 | null {
   const r = validateLabelDiagramConfig(raw);
-  return r.ok ? r.config : null;
+  if (!r.ok) return null;
+  const labels = r.config.labels.map(l => ({ l, k: labelRank(l) })).sort((a, b) => a.k - b.k || (a.l.id < b.l.id ? -1 : a.l.id > b.l.id ? 1 : 0)).map(e => e.l);
+  return { ...r.config, labels };
 }
 
 // ── student answers ────────────────────────────────────────────────────────────────────────────────────────────────────────

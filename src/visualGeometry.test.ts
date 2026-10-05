@@ -144,6 +144,12 @@ describe("19D geometry — pointer mapping against the displayed image content (
     const big = { left: 20, top: 20, width: 800, height: 600 };
     expect(clientPointToNormalized({ x: 20 + 200, y: 20 + 100 + 100 }, big, natural)).toEqual(clientPointToNormalized({ x: 110, y: 110 }, box, natural));
     expect(clientPointToNormalized({ x: 110, y: 160 }, box)).toEqual({ x: 0.25, y: 0.5 });             // no natural size given: the box IS the content
+    // Independent review — a TALL image (pillarbox: side bands, content.left = 75): the horizontal offset must be removed too.
+    const tall = { left: 10, top: 10, width: 300, height: 300 }, tallNatural = { width: 100, height: 200 };
+    expect(clientPointToNormalized({ x: 10 + 75 + 75, y: 10 + 150 }, tall, tallNatural)).toEqual({ x: 0.5, y: 0.5 });
+    expect(clientPointToNormalized({ x: 10 + 75, y: 10 }, tall, tallNatural)).toEqual({ x: 0, y: 0 });
+    expect(clientPointToNormalized({ x: 10 + 30, y: 160 }, tall, tallNatural)).toBeNull();               // left pillar band
+    expect(clientPointToNormalized({ x: 10 + 270, y: 160 }, tall, tallNatural)).toBeNull();              // right pillar band
     expect(clientPointToNormalized({ x: 110, y: 110 }, box, { width: 0, height: 0 })).toBeNull();      // image not loaded yet
     expect(clientPointToNormalized({ x: 110, y: 110 }, { left: 0, top: 0, width: 0, height: 0 })).toBeNull();
   });
@@ -163,6 +169,9 @@ describe("19D geometry — the canonical question image as an asset IDENTITY", (
     expect(c({ exists: false, visible: false, assets: [] })).toBe("VISUAL_IMAGE_MISSING");
     expect(c({ exists: true, visible: true, assets: [] })).toBe("VISUAL_IMAGE_MISSING");
     expect(c({ exists: true, visible: false, assets: [{ dataUrl: "data:image/png;base64,iVBORw0KGgo=" }] })).toBe("VISUAL_IMAGE_HIDDEN");
+    // Independent review: the student delivery ships assets only when `visible` is true — anything else is hidden, never "visible".
+    for (const visible of [undefined, null, 1, "true"]) expect(c({ exists: true, visible, assets: [{ dataUrl: "data:image/png;base64,iVBORw0KGgo=" }] }), String(visible)).toBe("VISUAL_IMAGE_HIDDEN");
+    expect(c({ exists: true, assets: [{ origin: "bank", blobName: "bank/img-1.png" }] })).toBe("VISUAL_IMAGE_HIDDEN");
     for (const dataUrl of ["blob:https://app/1234", "https://cdn.example/x.png", "/api/question-image?blob=x&exp=1&sig=y", "file:///C:/x.png", "C:\\images\\x.png", "data:text/html,<b>x</b>", ""])
       expect(c({ exists: true, visible: true, assets: [{ dataUrl }] }), dataUrl).toBe("VISUAL_IMAGE_ASSET_INVALID");
     expect(c({ exists: true, visible: true, assets: [{ origin: "bank", blobName: "../secret" }] })).toBe("VISUAL_IMAGE_ASSET_INVALID");

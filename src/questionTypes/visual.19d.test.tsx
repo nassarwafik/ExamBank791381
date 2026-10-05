@@ -320,13 +320,18 @@ describe("teacher editors inside the REAL Builder", () => {
     fireEvent.click(within(editor).getByRole("button", { name: "+ تسمية" })); await tick();
     fireEvent.change(within(editor).getByRole("textbox", { name: "نص التسمية 1" }), { target: { value: "Application" } }); await tick();
     fireEvent.change(within(editor).getByRole("textbox", { name: "نص التسمية 2" }), { target: { value: "Network" } }); await tick();
-    expect(firstQ(hist()).labelDiagram.labels).toEqual([{ id: "l1", text: "Application" }, { id: "l2", text: "Network" }]);
-    fireEvent.change(within(editor).getByRole("combobox", { name: "التسمية الصحيحة للمنطقة 1" }), { target: { value: "l2" } }); await tick();
-    expect(firstQ(hist()).answer.correctLabelByZone).toEqual({ z1: "l2" });
+    const made = firstQ(hist()).labelDiagram.labels as { id: string; text: string }[];
+    expect(made.map(l => l.text)).toEqual(["Application", "Network"]);
+    // Independent review: label ids are PUBLIC, so they are opaque — never "l1, l2, …" mirroring the zones "z1, z2, …".
+    const [idA, idB] = made.map(l => l.id);
+    for (const id of [idA, idB]) { expect(id).toMatch(/^[A-Za-z][A-Za-z0-9_-]{0,31}$/); expect(id).not.toMatch(/^l\d+$/); }
+    expect(idA).not.toBe(idB);
+    fireEvent.change(within(editor).getByRole("combobox", { name: "التسمية الصحيحة للمنطقة 1" }), { target: { value: idB } }); await tick();
+    expect(firstQ(hist()).answer.correctLabelByZone).toEqual({ z1: idB });
     fireEvent.click(within(editor).getByRole("checkbox", { name: "السماح باستخدام التسمية أكثر من مرة" })); await tick();
     expect(firstQ(hist()).labelDiagram.allowReuse).toBe(true);
     fireEvent.click(within(editor).getByRole("button", { name: "حذف التسمية 2" })); await tick();
-    expect(firstQ(hist()).labelDiagram.labels).toEqual([{ id: "l1", text: "Application" }]);
+    expect(firstQ(hist()).labelDiagram.labels).toEqual([{ id: idA, text: "Application" }]);
     expect(firstQ(hist()).answer.correctLabelByZone).toEqual({});
     expect(within(editor).getByTestId("visual-issues").textContent).toMatch(/المنطقة 1/);
     expect(editor.textContent).not.toMatch(/"zones"|"correctLabelByZone"|\{"x"/);
