@@ -25,6 +25,10 @@ const parametricNumeric = require("./shared-finalization/parametricNumericQuesti
 // (hotspot) or zone → label map (labelDiagram, the existing `fields` Answer) are read — never a client score / matched id / mapping.
 const hotspot = require("./shared-finalization/hotspotQuestion");
 const labelDiagram = require("./shared-finalization/labelDiagramQuestion");
+// Phase 19E — openResponse@1 is teacher-graded: the automatic result is ALWAYS 0 + manual review (never inferred from length, keywords,
+// similarity, the model answer or AI). The official score comes only from a teacher rubric grade the review endpoint validates and
+// computes against the published rubric.
+const openResponse = require("./shared-finalization/openResponseQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -127,6 +131,7 @@ registerBuiltIn("hotspot", (question, response, max) => {
   const r = hotspot.scoreHotspot({ config: question.hotspot, answerKey: question.answer, image: question.image, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
+registerBuiltIn("openResponse", (question, response) => openResponse.gradeOpenResponse(question, response));
 registerBuiltIn("labelDiagram", (question, response, max) => {
   const r = labelDiagram.scoreLabelDiagram({ config: question.labelDiagram, answerKey: question.answer, image: question.image, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };

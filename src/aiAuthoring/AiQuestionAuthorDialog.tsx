@@ -1,3 +1,4 @@
+import { OPEN_RESPONSE_PROFILE_LABELS, type OpenResponseProfile } from "../openResponseQuestion";
 import { useRef, useState } from "react";
 import Dialog from "../ui/Dialog";
 import type { BuilderQuestion } from "../examTypes";
@@ -16,7 +17,7 @@ import type { AiAuthorIssueView, AiAuthorService } from "./aiAuthorService";
 export type AiInsertOutcome = "ok" | "stale";
 type SectionOption = { id: string; title: string };
 type Props = { open: boolean; onClose: () => void; service: AiAuthorService; sections: SectionOption[]; defaultSectionId?: string; onInsert: (question: BuilderQuestion, sectionId: string) => AiInsertOutcome; disabled?: boolean };
-const PREFERRED: [string, string][] = [["", "تلقائي (يختار الذكاء الاصطناعي)"], ["networkCli", "محاكي أوامر الشبكة"], ["inlineCloze", "إكمال نص تفاعلي"], ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة"], ["fillBlank", "إكمال فراغات"], ["multipleChoice", "اختيار من متعدد"], ["trueFalse", "صح أو خطأ"], ["shortAnswer", "إجابة قصيرة"]];
+const PREFERRED: [string, string][] = [["", "تلقائي (يختار الذكاء الاصطناعي)"], ["networkCli", "محاكي أوامر الشبكة"], ["inlineCloze", "إكمال نص تفاعلي"], ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة"], ["openResponse", "إجابة مفتوحة مع سلم تقييم"], ["fillBlank", "إكمال فراغات"], ["multipleChoice", "اختيار من متعدد"], ["trueFalse", "صح أو خطأ"], ["shortAnswer", "إجابة قصيرة"]];
 type Ready = { question: BuilderQuestion; notes: string[] };
 type Failure = { message: string; issues: AiAuthorIssueView[] };
 
@@ -26,6 +27,8 @@ function summaryOf(q: BuilderQuestion): string {
   const parts = ["النوع: " + label, "العلامة: " + String(node.marks)];
   if (node.presentationType === "networkCli") { const k = validateNetworkCliAnswerKey(node.answer); if (k.ok) parts.push(k.key.checks + " عناصر للتصحيح على حالة المبدّل"); }
   if (node.presentationType === "inlineCloze") { const c = validateInlineClozeConfig(node.inlineCloze); if (c.ok) parts.push("النص: " + inlineClozePreviewText(c.config)); }
+  // Phase 19E — profile + rubric size only; the private model answer and grader guidance are never summarised here.
+  if (node.presentationType === "openResponse") { const o = node.openResponse as { profile?: unknown } | undefined, a = node.answer as { rubric?: { criteria?: unknown[] } } | undefined; parts.push("النمط: " + (OPEN_RESPONSE_PROFILE_LABELS[o?.profile as OpenResponseProfile] ?? String(o?.profile ?? "")) + " · " + (Array.isArray(a?.rubric?.criteria) ? a.rubric.criteria.length : 0) + " معايير في سلم التقييم"); }
   if (node.presentationType === "parametricNumeric") { const c = validateParametricNumericConfig(node.parametric); if (c.ok) parts.push(c.config.variables.length + " متغيرات · قيم مختلفة لكل طالب ومحاولة"); }
   if (Array.isArray(node.options)) parts.push(node.options.length + " خيارات");
   return parts.join(" · ");

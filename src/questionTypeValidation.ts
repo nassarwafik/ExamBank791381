@@ -11,6 +11,7 @@ import { validateInlineClozeQuestion } from "./inlineClozeQuestion";
 import { validateHotspotQuestion } from "./hotspotQuestion";
 import { validateLabelDiagramQuestion } from "./labelDiagramQuestion";
 import { validateParametricNumericQuestion } from "./parametricNumericQuestion";
+import { validateOpenResponseQuestion } from "./openResponseQuestion";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
 export type TypeValidator = (node: Record<string, unknown>, context: { version: number; part: boolean }) => QuestionTypeIssue[];
@@ -126,3 +127,5 @@ registerTypeValidator("parametricNumeric", 1, node => validateParametricNumericQ
 // Phase 19D — hotspot@1 / labelDiagram@1: public config, private key AND the canonical question image (every problem blocks).
 registerTypeValidator("hotspot", 1, node => validateHotspotQuestion(node));
 registerTypeValidator("labelDiagram", 1, node => validateLabelDiagramQuestion(node));
+// Phase 19E — openResponse@1: public config, the private rubric (strict, never repaired), the model answer bound and positive marks.
+registerTypeValidator("openResponse", 1, node => validateOpenResponseQuestion(node));

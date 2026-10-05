@@ -54,6 +54,7 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
 });
 (0, exports.registerTypeDefaults)("hotspot", 1, ensure => { ensure("hotspot", { v: 1, mode: "single", selections: 1, alt: "" }); ensure("answer", { scoring: "allOrNothing", regions: [] }); });
 (0, exports.registerTypeDefaults)("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
+(0, exports.registerTypeDefaults)("openResponse", 1, ensure => { ensure("openResponse", { v: 1, profile: "general", instructions: "", response: { minChars: 0, maxChars: 6000 }, studentRubricVisibility: "hidden" }); ensure("answer", { rubric: { v: 1, criteria: [] }, modelAnswer: "" }); });
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {
     ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
     ensure("answer", { correctCategoryByItem: {} });

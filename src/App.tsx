@@ -47,7 +47,9 @@ import "./project794589.css";
 // is fetched the first time teacherView === "platform" renders and then served from the module cache. lazyWithRetry
 // keeps the one-shot stale-chunk deployment recovery. Guarded by scripts/check-bundle-budget.mjs (npm run build).
 const TeacherPlatform = lazy(lazyWithRetry(() => import("./TeacherPlatform"), "teacher-platform"));
-import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
+// Phase 19E bundle relief — the import panel (a teacher destination) loads on demand; the session state stays lifted here.
+const ImportQuestionsPanel = lazy(lazyWithRetry(() => import("./ImportQuestionsPanel"), "teacher-import-questions"));
+import { createEmptyImportSession } from "./importSession";
 import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation, IconAssignments, IconProjects } from "./icons";
 import BrandMark from "./ui/BrandMark";
@@ -5807,6 +5809,7 @@ function App() {
       )}
 
       {teacherView === "import" && (
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل الاستيراد...</p>}>
         <ImportQuestionsPanel
           token={token}
           topicsCatalog={topicsCatalog}
@@ -5817,6 +5820,7 @@ function App() {
           onBuildNewExam={handleBuildExamFromImportedQuestions}
           onAppendToExam={handleAppendImportedQuestions}
         />
+        </Suspense>
       )}
 
       {teacherView === "project" && (

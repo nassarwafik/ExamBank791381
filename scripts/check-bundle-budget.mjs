@@ -61,6 +61,9 @@ const CLOZE_SIGNATURES = ["cloze-passage", "qt-editor-inlineCloze", "cloze-revie
 const PARAMETRIC_SIGNATURES = ["param-response", "qt-editor-parametricNumeric", "param-review-audit", "smartassess.parametric", "param-inspector", "param-review-constraints"];
 // Phase 19D — visual canvas / region editor / visual editors / visual review class names (used nowhere else). ANY one in an initial file fails.
 const VISUAL_SIGNATURES = ["vq-canvas", "vq-region-editor", "qt-editor-hotspot", "qt-editor-labelDiagram", "vq-review"];
+// Phase 19E — the open-response editor / rubric editor / rubric grading panel / student view class names and the rubric engine's award
+// code (used nowhere else). ANY one in an initial file fails: the whole open-response + rubric payload must stay lazy.
+const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
 const MONACO_SIGNATURES = ["monaco-editor", "MonacoEnvironment", "monaco-mouse-cursor-text"];
@@ -149,10 +152,15 @@ function main() {
     if (parametric.length) failures.push(`${f} (initial) contains the parametric engine / question payload (${parametric.join(", ")}) — it must stay lazy`);
     const visual = VISUAL_SIGNATURES.filter(s => src.includes(s));
     if (visual.length) failures.push(`${f} (initial) contains the visual question payload (${visual.join(", ")}) — it must stay lazy`);
+    const openResponse = OPEN_RESPONSE_SIGNATURES.filter(s => src.includes(s));
+    if (openResponse.length) failures.push(`${f} (initial) contains the open-response / rubric payload (${openResponse.join(", ")}) — it must stay lazy`);
   }
   const visualQuestionChunks = all.filter(f => VISUAL_SIGNATURES.some(s => read(f).includes(s)));
   if (!visualQuestionChunks.length) failures.push("the visual question payload (canvas / region editor / review) was not found in any chunk — the signature list is stale");
   console.log(`Visual question payload found in: ${visualQuestionChunks.join(", ") || "(none)"} — ${visualQuestionChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
+  const openResponseChunks = all.filter(f => OPEN_RESPONSE_SIGNATURES.some(s => read(f).includes(s)));
+  if (!openResponseChunks.length) failures.push("the open-response / rubric payload (editor / grading panel / student view / engine) was not found in any chunk — the signature list is stale");
+  console.log(`Open-response + rubric payload found in: ${openResponseChunks.join(", ") || "(none)"} — ${openResponseChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const parametricChunks = all.filter(f => PARAMETRIC_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Parametric engine / question payload found in: ${parametricChunks.join(", ") || "(none)"} — ${parametricChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const clozeChunks = all.filter(f => CLOZE_SIGNATURES.some(s => read(f).includes(s)));

@@ -40,7 +40,8 @@ const PRODUCTION_ROWS = [
     ["inlineCloze", "إكمال نص تفاعلي", "response", "auto", "apo", ["fields"], false],
     ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة", "response", "auto", "ao", ["numeric"], false],
     ["hotspot", "تحديد منطقة على صورة", "interactive", "auto", "apiro", ["hotspot"], false],
-    ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", "apiro", ["fields"], false]
+    ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", "apiro", ["fields"], false],
+    ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", "mpo", ["text"], false]
 ];
 exports.QUESTION_TYPE_CATALOG = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
 const questionTypeIdentityKey = (key, version) => key + "@" + version;

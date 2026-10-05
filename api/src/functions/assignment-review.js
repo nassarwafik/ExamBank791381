@@ -21,6 +21,26 @@ const {teacherCodingEvidence}=require("../lib/coding/official-grading");
 // (assignment storage id + student id + the attempt's own number + the section-scoped question key) — never a preview seed. Teachers only.
 const {parametricReviewInstance}=require("../lib/shared-finalization/parametricNumericQuestion");
 const isParametricQuestion=q=>!!q&&typeof q==="object"&&q.presentationType==="parametricNumeric";
+// Phase 19E — openResponse@1 is graded ONLY through its published rubric: for such a question an override must carry `rubricAwards`
+// ({ criterionId: { levelId } | { points } }); the server binds them to the PUBLISHED rubric of THAT question (the immutable assignment
+// snapshot) and computes the official score itself — a client score / total / maximum never counts. Any malformed, partial, unknown,
+// forged or score-only entry (or a malformed published rubric) rejects the WHOLE save with 400 before anything is written. The
+// canonical awards are persisted additively on the existing override record ({ score, comment, reviewedAt, rubric }) through the SAME
+// CAS write and canonical rebuild; every other type's override is unchanged.
+const {scoreOpenResponseRubric,isOpenResponseQuestion}=require("../lib/shared-finalization/openResponseQuestion");
+const RUBRIC_MESSAGES={RUBRIC_GRADE_REQUIRED:"هذا السؤال يُصحَّح بسلم التقييم فقط: اختر مستوى لكل معيار.",RUBRIC_AUTHORITY_INVALID:"سلم التقييم المنشور لهذا السؤال غير صالح؛ لا يمكن احتساب درجة منه."};
+function rubricGrades(snapshot,incoming){
+ const byId=new Map(flattenQuestions(snapshot).map(x=>[String(x.questionId),x.question])),out=new Map();
+ for(const [questionId,value] of Object.entries(incoming)){
+  const q=byId.get(String(questionId));if(!isOpenResponseQuestion(q))continue;
+  const fail=(code,criterionId)=>({error:{code,questionId:String(questionId),...(criterionId?{criterionId}:{}),message:RUBRIC_MESSAGES[code]||"اختيارات سلم التقييم غير صالحة لهذا السؤال."}});
+  const probe=scoreOpenResponseRubric(q,{});if(!probe.ok&&probe.code==="RUBRIC_AUTHORITY_INVALID")return fail("RUBRIC_AUTHORITY_INVALID");
+  if(!value||typeof value!=="object"||!Object.prototype.hasOwnProperty.call(value,"rubricAwards"))return fail("RUBRIC_GRADE_REQUIRED");
+  const r=scoreOpenResponseRubric(q,value.rubricAwards);if(!r.ok)return fail(r.code,r.criterionId);
+  out.set(String(questionId),{score:r.score,rubric:{v:1,awards:r.awards,awarded:r.awarded,total:r.total}});
+ }
+ return {grades:out};
+}
 // Phase 17E-D — identifiers are validated before they ever become a storage path; attemptNumber must be a real positive integer.
 const SAFE_ID=/^[A-Za-z0-9._:-]{1,128}$/;
 const safeId=v=>typeof v==="string"&&SAFE_ID.test(v)&&!v.includes("..");
@@ -74,7 +94,7 @@ async function handler(request,deps={},obs=null){
    if(!sameClass&&!historicalSubmissionProvesOwnership(submission,assignmentId,studentId,String(assignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
    const attempts=Array.isArray(submission.attempts)?submission.attempts:[],attempt=attempts.find(x=>Number(x.attemptNumber)===attemptNumber);if(!attempt)return {status:404,jsonBody:{ok:false,error:"المحاولة غير موجودة."}};
    const flat=flattenQuestions(assignment.examSnapshot),gradeMap=new Map((attempt.questionGrades||[]).map(x=>[String(x.questionId),x]));
-   const questions=flat.map(({question:q,questionId:id,sectionId,displayNumber})=>{const grade=gradeMap.get(id)||null,o=attempt.manualOverrides?.[id]??null;return {questionId:id,questionNumber:displayNumber,sectionId,text:String(q.text||""),textHtml:String(q.textHtml||""),marks:Number(q.marks||q.points||0),type:String(q.presentationType||q.type||""),options:Array.isArray(q.options)?q.options:[],fields:Array.isArray(q.fields)?q.fields:[],wordBank:Array.isArray(q.wordBank)?q.wordBank:[],parts:Array.isArray(q.parts)?q.parts:null,...(q.networkCli!==undefined?{networkCli:q.networkCli}:{}),...(q.inlineCloze!==undefined?{inlineCloze:q.inlineCloze}:{}),...visualReviewFields(q),...(isParametricQuestion(q)?{parametricInstance:parametricReviewInstance(q,{assignmentId,studentId,attemptNumber:Number(attempt.attemptNumber),questionKey:id})}:{}),studentAnswer:attempt.answers?.[id]??null,expectedAnswer:q.answer??null,autoGrade:grade,manualScore:o?.score??null,teacherComment:String(o?.comment||""),...(()=>{const v=teacherCodingEvidence({questionId:id,node:q},attempt);return v?{codingEvidence:v}:{}})()}});
+   const questions=flat.map(({question:q,questionId:id,sectionId,displayNumber})=>{const grade=gradeMap.get(id)||null,o=attempt.manualOverrides?.[id]??null;return {questionId:id,questionNumber:displayNumber,sectionId,text:String(q.text||""),textHtml:String(q.textHtml||""),marks:Number(q.marks||q.points||0),type:String(q.presentationType||q.type||""),options:Array.isArray(q.options)?q.options:[],fields:Array.isArray(q.fields)?q.fields:[],wordBank:Array.isArray(q.wordBank)?q.wordBank:[],parts:Array.isArray(q.parts)?q.parts:null,...(q.networkCli!==undefined?{networkCli:q.networkCli}:{}),...(q.inlineCloze!==undefined?{inlineCloze:q.inlineCloze}:{}),...visualReviewFields(q),...(q.openResponse!==undefined?{openResponse:q.openResponse}:{}),...(isOpenResponseQuestion(q)?{rubricReview:o?.rubric??null,questionTypeVersion:q.questionTypeVersion??null}:{}),...(isParametricQuestion(q)?{parametricInstance:parametricReviewInstance(q,{assignmentId,studentId,attemptNumber:Number(attempt.attemptNumber),questionKey:id})}:{}),studentAnswer:attempt.answers?.[id]??null,expectedAnswer:q.answer??null,autoGrade:grade,manualScore:o?.score??null,teacherComment:String(o?.comment||""),...(()=>{const v=teacherCodingEvidence({questionId:id,node:q},attempt);return v?{codingEvidence:v}:{}})()}});
    return {status:200,jsonBody:{ok:true,assignment:{assignmentId:assignment.assignmentId,title:assignment.title,totalMarks:assignment.totalMarks},student:{studentId:student.userId,studentName:student.displayName,studentCode:student.code},attempt:{attemptNumber:attempt.attemptNumber,submittedAt:attempt.submittedAt,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:String(attempt.teacherFeedback||""),...attemptAudit(attempt)},attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),questions}};
   }
   let b={};try{b=await request.json()}catch{}if(String(b.action)!=="saveReview")return {status:400,jsonBody:{ok:false,error:"Unsupported review action."}};
@@ -88,6 +108,8 @@ async function handler(request,deps={},obs=null){
   const reviewSameClass=String(reviewStudent.classId||"")===String(reviewAssignment.classId||"");
   if(!reviewSameClass&&!historicalSubmissionProvesOwnership(existingSubmission,assignmentId,studentId,String(reviewAssignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
   const incoming=b.overrides&&typeof b.overrides==="object"?b.overrides:{},teacherFeedback=String(b.teacherFeedback||"").trim(),reviewedAt=new Date().toISOString();
+  const rubric=rubricGrades(reviewAssignment.examSnapshot,incoming);
+  if(rubric.error)return {status:400,jsonBody:{ok:false,error:rubric.error.message,code:rubric.error.code,questionId:rubric.error.questionId,...(rubric.error.criterionId?{criterionId:rubric.error.criterionId}:{})}};
   let resultOut=null,appliedCount=0,change=null,appliedIds=[];
   try{
    await mut(c,name,current=>{
@@ -98,7 +120,7 @@ async function handler(request,deps={},obs=null){
     const factsBefore=reviewFacts(attempt);                     // of the attempt version this CAS attempt commits over
     attempt.manualOverrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
     appliedCount=0;appliedIds=[];
-    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId))}
+    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;const rg=rubric.grades.get(String(questionId));attempt.manualOverrides[String(questionId)]=rg?{score:round(clamp(rg.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt,rubric:rg.rubric}:{score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId))}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttemptGrades(attempt);
     change=reviewChange(factsBefore,reviewFacts(attempt));
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;

@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
+import { lazyWithRetry } from "../lazyWithRetry";
 import ProfileAvatar from "../ui/ProfileAvatar";
 import { useProfilePhoto } from "../ui/useProfilePhoto";
-import TeacherProfileDialog from "./TeacherProfileDialog";
+// Phase 19E bundle relief — the profile dialog opens on click only, so it loads on demand.
+const TeacherProfileDialog = lazy(lazyWithRetry(() => import("./TeacherProfileDialog"), "teacher-profile-dialog"));
 import { resolveTeacherDisplayName, teacherHeaders, type TeacherProfile } from "./teacherProfile";
 
 /**
@@ -19,7 +21,7 @@ export default function TeacherIdentity({ token, profile, sessionDisplayName, on
     <div className={"eb-teacher-identity" + (compact ? " is-compact" : "")}>
       <ProfileAvatar photoUrl={photo} avatarId={profile?.avatarId} name={name} size={40} onClick={profile ? () => setOpen(true) : undefined} label="تعديل صورة وملف المعلم" className="eb-teacher-identity-avatar" />
       <span className="eb-teacher-identity-name eb-nav-label" title={name}>{name}</span>
-      {profile && open && <TeacherProfileDialog open token={token} profile={profile} photoUrl={photo} onClose={() => setOpen(false)} onChange={onProfileChange} />}
+      {profile && open && <Suspense fallback={null}><TeacherProfileDialog open token={token} profile={profile} photoUrl={photo} onClose={() => setOpen(false)} onChange={onProfileChange} /></Suspense>}
     </div>
   );
 }

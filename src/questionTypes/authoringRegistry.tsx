@@ -32,3 +32,4 @@ registerAuthoringEditor("parametricNumeric", 1, lazy(() => import("./editors/Par
 // Phase 19D — visual authoring (lazy: the region editor, label bank and mapping never enter the initial graph).
 registerAuthoringEditor("hotspot", 1, lazy(() => import("./editors/HotspotEditor")));
 registerAuthoringEditor("labelDiagram", 1, lazy(() => import("./editors/LabelDiagramEditor")));
+registerAuthoringEditor("openResponse", 1, lazy(() => import("./editors/OpenResponseEditor")));
