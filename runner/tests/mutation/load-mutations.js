@@ -111,6 +111,9 @@ function main() {
       fs.writeFileSync(file, originals.get(file));
       const failing = (r.out.match(/^✖ (LOAD\d+)/gm) || []).map(s => s.slice(2)).concat((r.out.match(/^# fail (\d+)/m) || []).slice(1).map(n => "fail=" + n));
       results.push({ id: m.id, title: m.title, outcome: r.timedOut ? "TIMEOUT" : r.status !== 0 ? "KILLED" : "SURVIVED", killedBy: r.status !== 0 && !r.timedOut ? [...new Set(failing)].slice(0, 6) : [] });
+      // QM22 hotfix: a TIMEOUT / SURVIVED outcome keeps its evidence — the tail of the suite output is printed (it was discarded, so the
+      // post-merge `TIMEOUT QM22` could not be diagnosed from the CI log)
+      if (r.timedOut || r.status === 0) console.log("---- " + m.id + " " + (r.timedOut ? "TIMEOUT" : "SURVIVED") + ": last suite output ----\n" + r.out.split("\n").slice(-40).join("\n") + "\n---- end " + m.id + " ----");
     }
   } finally {
     restoreAll();

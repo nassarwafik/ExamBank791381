@@ -87,7 +87,20 @@ async function runScenario(options = {}) {
       callbackTarget = { baseUrl: stack.callbackUrl, key: cbKeyOf(stack), synthetic: CALLBACK_CONTRACT.local };
     } else {
       client = createRunnerClient({ baseUrl: target.baseUrl, key: target.key, fetchImpl, now });
-      if (hasOfficial) { receiver = createReceiver({ key: env.LOAD_CALLBACK_HMAC_KEY }); await new Promise(r => receiver.server.listen(Number(env.LOAD_CALLBACK_RECEIVER_PORT), r)); }
+      if (hasOfficial) {
+        // QM22 hotfix — the receiver is bound FAIL-CLOSED: an unavailable port (EADDRINUSE / EACCES) is an explicit refusal. Before, the
+        // bind error was uncaught and this await never settled: the run hung forever with the caller's resources open (a 300 s TIMEOUT
+        // in the mutation runner, post-merge run 37326548273).
+        receiver = createReceiver({ key: env.LOAD_CALLBACK_HMAC_KEY });
+        const bindError = await new Promise(resolve => {
+          const s = receiver.server;
+          const onError = e => { s.off("listening", onListening); resolve(e); };
+          const onListening = () => { s.off("error", onError); resolve(null); };
+          s.once("error", onError); s.once("listening", onListening);
+          s.listen(Number(env.LOAD_CALLBACK_RECEIVER_PORT));
+        });
+        if (bindError) return refused("CALLBACK_RECEIVER_UNAVAILABLE", "the callback receiver could not bind port " + env.LOAD_CALLBACK_RECEIVER_PORT + " (" + (bindError.code || bindError.message) + ")");
+      }
       const h = await client.health();
       if (!h.ok) return refused("TARGET_UNREACHABLE", "/healthz answered HTTP " + h.httpStatus);
     }

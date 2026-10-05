@@ -11,6 +11,7 @@
 // `crash()` stops the gateway dead (no graceful drain, like a SIGKILL) and `restart()` opens a NEW gateway over the SAME journal
 // directory — the recovery scenario. Nothing here is production code; keys are generated per stack and never printed.
 const http = require("node:http");
+const net = require("node:net");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -154,4 +155,31 @@ function createLocalStack({ sandbox = "fake", profile, maxConcurrency = 4, offic
   return stack;
 }
 
-module.exports = { createLocalStack, createReceiver };
+/**
+ * QM22 hotfix — a port for an EXPLICIT bind (a test that must hand the port to someone else before binding it, e.g. the staging
+ * rehearsal's callback receiver). It is chosen BELOW the kernel's ephemeral range, so no implicit bind (listen(0), an outbound
+ * connection's source port) in this or any concurrently running process can be handed it between the probe and the real bind. The
+ * probe binds all interfaces, exactly like the receiver. A bind-0-and-close probe left an ephemeral port free for anyone to take.
+ */
+function ephemeralPortRange() {
+  try {
+    const [lo, hi] = fs.readFileSync("/proc/sys/net/ipv4/ip_local_port_range", "utf8").trim().split(/\s+/).map(Number);
+    if (Number.isInteger(lo) && Number.isInteger(hi) && lo > 1024 && hi > lo) return [lo, hi];
+  } catch { /* not Linux */ }
+  return process.platform === "linux" ? [32768, 60999] : [49152, 65535];
+}
+const canBind = port => new Promise(resolve => {
+  const s = net.createServer();
+  s.once("error", () => resolve(false));
+  s.listen(port, () => s.close(() => resolve(true)));
+});
+async function allocateExplicitPort() {
+  const [lo] = ephemeralPortRange();
+  const min = 20000, max = lo - 1;
+  if (max - min < 100) throw new Error("allocateExplicitPort: no non-ephemeral port window below " + lo);
+  const span = max - min + 1, start = (process.pid * 7919 + Date.now()) % span;
+  for (let i = 0; i < 500; i++) { const port = min + ((start + i * 131) % span); if (await canBind(port)) return port; }
+  throw new Error("allocateExplicitPort: no free port in " + min + "–" + max);
+}
+
+module.exports = { createLocalStack, createReceiver, ephemeralPortRange, allocateExplicitPort };
