@@ -18,6 +18,8 @@
 //  10. (Phase 18C) the network CLI simulator terminal / renderer / authoring editor reaches the initial graph (content signatures);
 //  11. (Phase 19A) the inline cloze renderer / token editor / review or the AI authoring dialog reaches the initial graph (signatures);
 //  12. (Phase 19B) the parametric engine, the parametric renderer / editor or the parametric review reaches the initial graph (signatures);
+//  14. (Phase 20A+20B) the trusted SmartSim renderer / editor / review, the network topology workspace / editor / review or the
+//      connectivity engine reaches the initial graph (signatures);
 //  13. (Phase 19D) the visual canvas (hotspot / labelDiagram renderers), the region editor / visual editors or the visual review reaches
 //      the initial graph (signatures);
 //   8. (Phase 17A) the coding editor / coding panels reach the initial graph (content signatures of CodingEditor and the
@@ -63,6 +65,9 @@ const PARAMETRIC_SIGNATURES = ["param-response", "qt-editor-parametricNumeric", 
 const VISUAL_SIGNATURES = ["vq-canvas", "vq-region-editor", "qt-editor-hotspot", "qt-editor-labelDiagram", "vq-review"];
 // Phase 19E — the open-response editor / rubric editor / rubric grading panel / student view class names and the rubric engine's award
 // code (used nowhere else). ANY one in an initial file fails: the whole open-response + rubric payload must stay lazy.
+// Phase 20A+20B — the trusted SmartSim renderer / editor / review and the networkTopology@1 workspace / editor / review class names and the
+// connectivity engine's reason code (used nowhere else). ANY one in an initial file fails: the plugin UI and its engines stay lazy.
+const SMARTSIM_SIGNATURES = ["nettopo-workspace", "nettopo-editor", "qt-editor-smartSim", "smartsim-review", "GATEWAY_NOT_IN_LOCAL_SUBNET"];
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
@@ -154,7 +159,12 @@ function main() {
     if (visual.length) failures.push(`${f} (initial) contains the visual question payload (${visual.join(", ")}) — it must stay lazy`);
     const openResponse = OPEN_RESPONSE_SIGNATURES.filter(s => src.includes(s));
     if (openResponse.length) failures.push(`${f} (initial) contains the open-response / rubric payload (${openResponse.join(", ")}) — it must stay lazy`);
+    const smartSim = SMARTSIM_SIGNATURES.filter(s => src.includes(s));
+    if (smartSim.length) failures.push(`${f} (initial) contains the trusted SmartSim / network topology payload (${smartSim.join(", ")}) — it must stay lazy`);
   }
+  const smartSimChunks = all.filter(f => SMARTSIM_SIGNATURES.some(s => read(f).includes(s)));
+  if (!smartSimChunks.length) failures.push("the trusted SmartSim / network topology payload (workspace / editor / review / connectivity engine) was not found in any chunk — the signature list is stale");
+  console.log(`Trusted SmartSim / network topology payload found in: ${smartSimChunks.join(", ") || "(none)"} — ${smartSimChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const visualQuestionChunks = all.filter(f => VISUAL_SIGNATURES.some(s => read(f).includes(s)));
   if (!visualQuestionChunks.length) failures.push("the visual question payload (canvas / region editor / review) was not found in any chunk — the signature list is stale");
   console.log(`Visual question payload found in: ${visualQuestionChunks.join(", ") || "(none)"} — ${visualQuestionChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);

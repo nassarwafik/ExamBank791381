@@ -1,0 +1,61 @@
+/* Phase 20B — networkTopology@1 workspace / editor / review. RTL page, LTR technical islands (addresses, ports, CLI). */
+.nettopo { display: grid; gap: 12px; min-width: 0; }
+.nettopo-diagram { border: 1px solid var(--line, #d7dde5); border-radius: 12px; background: var(--surface-2, #f7f9fc); overflow: hidden; }
+.nettopo-diagram svg { display: block; width: 100%; height: auto; max-height: 420px; touch-action: none; }
+.nettopo-link { stroke: #5b6b80; stroke-width: 4; }
+.nettopo-link.is-down { stroke: #b4bcc8; stroke-dasharray: 10 8; }
+.nettopo-port { font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: #415066; }
+.nettopo-node { cursor: pointer; }
+.nettopo-node .nettopo-halo { fill: transparent; stroke: transparent; stroke-width: 6; }
+.nettopo-node.is-selected .nettopo-halo { stroke: #1d6fd6; fill: rgba(29, 111, 214, 0.08); }
+.nettopo-node .nettopo-shape { stroke: #22324a; stroke-width: 3; }
+.nettopo-node[data-kind="router"] .nettopo-shape { fill: #e8f1ff; }
+.nettopo-node[data-kind="switch"] .nettopo-shape { fill: #e9f8ef; }
+.nettopo-node[data-kind="pc"] .nettopo-shape { fill: #fff6e5; }
+.nettopo-node .nettopo-glyph { stroke: #22324a; stroke-width: 3; fill: none; stroke-linecap: round; }
+.nettopo-node text { font: 700 20px/1 system-ui, sans-serif; fill: #1b2738; }
+.nettopo-node.is-draggable { cursor: grab; }
+.nettopo-devices { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.nettopo-devices button { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line, #c9d1dc); border-radius: 999px; background: var(--surface, #fff); font: inherit; cursor: pointer; }
+.nettopo-devices button[aria-pressed="true"] { border-color: #1d6fd6; background: #e8f1ff; font-weight: 700; }
+.nettopo-devices button:focus-visible, .nettopo-panel :focus-visible { outline: 3px solid #1d6fd6; outline-offset: 2px; }
+.nettopo-selected { margin: 0; font-size: 1rem; }
+.nettopo-panel { display: grid; gap: 10px; min-width: 0; }
+.nettopo-fields { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.nettopo-fields label { display: grid; gap: 4px; }
+.nettopo-fields input, .nettopo-ping select { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line, #c9d1dc); border-radius: 8px; font: inherit; }
+.nettopo-ltr { direction: ltr; unicode-bidi: isolate; text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.nettopo-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nettopo-actions button, .nettopo-ping button { min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1px solid #1d6fd6; background: #1d6fd6; color: #fff; font: inherit; cursor: pointer; }
+.nettopo-actions button.is-secondary { background: transparent; color: #1d6fd6; }
+.nettopo-actions button.is-danger { border-color: #b42318; background: #b42318; }
+.nettopo-actions button:disabled, .nettopo-ping button:disabled { opacity: 0.55; cursor: not-allowed; }
+.nettopo-error { margin: 0; color: #b42318; font-weight: 600; }
+.nettopo-ping { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 10px; border: 1px dashed var(--line, #c9d1dc); border-radius: 10px; }
+.nettopo-ping-result { margin: 0; padding: 8px 10px; border-radius: 8px; }
+.nettopo-ping-result[data-ok="true"] { background: #e9f8ef; color: #135c32; }
+.nettopo-ping-result[data-ok="false"] { background: #fdecea; color: #8a1c13; }
+.nettopo-note { margin: 0; color: #4b5a6e; font-size: 0.9rem; }
+.nettopo-table-wrap { overflow-x: auto; max-width: 100%; }
+.nettopo-table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+.nettopo-table th, .nettopo-table td { border: 1px solid var(--line, #d7dde5); padding: 6px 8px; text-align: start; vertical-align: top; }
+.nettopo-editor { display: grid; gap: 14px; }
+.nettopo-editor fieldset { border: 1px solid var(--line, #d7dde5); border-radius: 10px; padding: 10px; min-width: 0; }
+.nettopo-editor legend { font-weight: 700; padding: 0 6px; }
+.nettopo-check { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; padding: 8px; border-bottom: 1px solid var(--line, #e3e8ef); }
+.nettopo-check label, .nettopo-device-row label { display: grid; gap: 3px; font-size: 0.88rem; }
+.nettopo-check input, .nettopo-check select, .nettopo-device-row input, .nettopo-device-row select, .nettopo-editor select, .nettopo-editor input { min-height: 36px; padding: 4px 6px; border: 1px solid var(--line, #c9d1dc); border-radius: 6px; font: inherit; min-width: 0; }
+.nettopo-device-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 6px 0; border-bottom: 1px solid var(--line, #e3e8ef); }
+.nettopo-device-row button, .nettopo-check button, .nettopo-editor .sb-mini-btn { min-height: 36px; }
+.nettopo-review { display: grid; gap: 10px; }
+.nettopo-review pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; text-align: left; font: 0.85rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background: #0f1724; color: #d9e2ef; padding: 8px; border-radius: 8px; max-height: 280px; overflow: auto; }
+.smartsim-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.smartsim-check { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line, #d7dde5); }
+.smartsim-check[data-passed="true"] { background: #f1faf4; }
+.smartsim-check[data-passed="false"] { background: #fdf3f2; }
+.smartsim-check-points { margin-inline-start: auto; font-weight: 700; }
+@media (min-width: 1024px) {
+  .nettopo-student { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  .nettopo-student > .nettopo-diagram-col { grid-column: 1; }
+  .nettopo-student > .nettopo-panel { grid-column: 2; }
+}

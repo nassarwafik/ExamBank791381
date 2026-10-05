@@ -35,3 +35,5 @@ registerAuthoringEditor("parametricNumeric", 1, lazy(() => import("./editors/Par
 registerAuthoringEditor("hotspot", 1, lazy(() => import("./editors/HotspotEditor")));
 registerAuthoringEditor("labelDiagram", 1, lazy(() => import("./editors/LabelDiagramEditor")));
 registerAuthoringEditor("openResponse", 1, lazy(() => import("./editors/OpenResponseEditor")));
+// Phase 20A — trusted SmartSim authoring (lazy: the plugin editor — topology, devices, links, private checks — never enters the initial graph).
+registerAuthoringEditor("smartSim", 1, lazy(() => import("./editors/SmartSimEditor")));

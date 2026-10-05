@@ -1,6 +1,7 @@
 import type { SimulationQuestionConfig } from "./smartsimManifest";
 import type { CodingQuestionConfigV1 } from "./codingQuestion";
 import type { NetworkCliQuestionConfigV1 } from "./networkCliQuestion";
+import type { SmartSimEnvelopeV1 } from "./trustedSimQuestion";
 import type { InlineClozeConfigV1 } from "./inlineClozeQuestion";
 import type { HotspotConfigV1 } from "./hotspotQuestion";
 import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
@@ -20,4 +21,4 @@ export type ImageAsset={dataUrl?:string};
 // A compound question's independent subpart. Reuses the same answer-control vocabulary as a whole
 // question so parts render through the exact same field/choice/text machinery (no second engine).
 export type QuestionPart={id:string;label?:string;text?:string;textHtml?:string;marks?:number;type:string;questionTypeVersion?:number;options?:Opt[];fields?:Field[];wordBank?:string[];cli?:string;tableHeaders?:string[];tableRows?:string[][];image?:{exists?:boolean;visible?:boolean;assets?:ImageAsset[]};images?:ImageAsset[]};
-export type Question={examQuestionId?:string;id?:string;number?:number;displayNumber?:string;text:string;textHtml?:string;marks:number;presentationType?:string;type?:string;questionTypeVersion?:number;options?:Opt[];fields?:Field[];wordBank?:string[];cli?:string;tableHeaders?:string[];tableRows?:string[][];simulation?:SimulationQuestionConfig;coding?:CodingQuestionConfigV1;networkCli?:NetworkCliQuestionConfigV1;inlineCloze?:InlineClozeConfigV1;parametric?:ParametricStudentProjection;hotspot?:HotspotConfigV1;labelDiagram?:LabelDiagramConfigV1;openResponse?:OpenResponseStudentConfig;codeStimulus?:unknown;parts?:QuestionPart[];groupId?:string;stimulus?:{title?:string;text?:string;image?:ImageAsset};image?:{exists?:boolean;visible?:boolean;assets?:ImageAsset[]};images?:ImageAsset[]};
+export type Question={examQuestionId?:string;id?:string;number?:number;displayNumber?:string;text:string;textHtml?:string;marks:number;presentationType?:string;type?:string;questionTypeVersion?:number;options?:Opt[];fields?:Field[];wordBank?:string[];cli?:string;tableHeaders?:string[];tableRows?:string[][];simulation?:SimulationQuestionConfig;coding?:CodingQuestionConfigV1;networkCli?:NetworkCliQuestionConfigV1;smartSim?:SmartSimEnvelopeV1;inlineCloze?:InlineClozeConfigV1;parametric?:ParametricStudentProjection;hotspot?:HotspotConfigV1;labelDiagram?:LabelDiagramConfigV1;openResponse?:OpenResponseStudentConfig;codeStimulus?:unknown;parts?:QuestionPart[];groupId?:string;stimulus?:{title?:string;text?:string;image?:ImageAsset};image?:{exists?:boolean;visible?:boolean;assets?:ImageAsset[]};images?:ImageAsset[]};

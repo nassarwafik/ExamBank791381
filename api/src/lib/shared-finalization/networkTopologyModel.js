@@ -24,12 +24,16 @@ const FORBIDDEN = new Set(["__proto__", "constructor", "prototype"]);
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const DEVICE_ID = /^[a-z][a-z0-9_-]{0,31}$/;
 const LINK_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/;
-const CONTROL = /[\u0000-\u001f\u007f]/;
+const hasControlChar = (text) => { for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c < 32 || c === 127)
+        return true;
+} return false; };
 const isValidDeviceId = (id) => typeof id === "string" && DEVICE_ID.test(id) && !FORBIDDEN.has(id);
 exports.isValidDeviceId = isValidDeviceId;
 const isValidLinkId = (id) => typeof id === "string" && LINK_ID.test(id) && !FORBIDDEN.has(id);
 exports.isValidLinkId = isValidLinkId;
-const isValidDeviceLabel = (label) => typeof label === "string" && !!label.trim() && label.length <= exports.TOPOLOGY_LIMITS.labelChars && !CONTROL.test(label);
+const isValidDeviceLabel = (label) => typeof label === "string" && !!label.trim() && label.length <= exports.TOPOLOGY_LIMITS.labelChars && !hasControlChar(label);
 exports.isValidDeviceLabel = isValidDeviceLabel;
 const isUnit = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1;
 function isValidPcValue(field, value) {

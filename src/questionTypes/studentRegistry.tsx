@@ -54,3 +54,5 @@ registerStudentRenderer("parametricNumeric", 1, lazy(() => import("./student/Par
 registerStudentRenderer("hotspot", 1, lazy(() => import("./student/HotspotResponse")));
 registerStudentRenderer("labelDiagram", 1, lazy(() => import("./student/LabelDiagramResponse")));
 registerStudentRenderer("openResponse", 1, lazy(() => import("./student/OpenResponseResponse")));
+// Phase 20A — trusted SmartSim (lazy: the plugin workspace — topology, device panels, engines — loads only when a smartSim question renders).
+registerStudentRenderer("smartSim", 1, lazy(() => import("./student/SmartSimResponse")));

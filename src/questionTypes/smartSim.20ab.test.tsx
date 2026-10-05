@@ -63,6 +63,8 @@ const pick = async (label: string) => { fireEvent.click(within(await deviceList(
 const terminalInput = () => screen.getByRole("textbox", { name: /سطر الأوامر/ }) as HTMLInputElement;
 const typeLine = (line: string) => { const el = terminalInput(); fireEvent.change(el, { target: { value: line } }); fireEvent.keyDown(el, { key: "Enter" }); };
 const prompt = () => screen.getByTestId("ncli-prompt").textContent;
+// the smartSim host loads first, then the plugin editor (a second lazy chunk resolved through the UI plugin registry)
+const openEditor = async () => { const host = await screen.findByTestId("qt-editor-smartSim", {}, { timeout: 3000 }); await within(host).findByTestId("nettopo-editor", {}, { timeout: 3000 }); return host; };
 const setField = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
 beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); });
@@ -175,7 +177,7 @@ describe("teacher authoring — lazy editor, one-click template, checks, inline 
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     const card = within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "smartSim")!;
     fireEvent.click(card); await tick(50);
-    const editor = await screen.findByTestId("qt-editor-smartSim", {}, { timeout: 3000 });
+    const editor = await openEditor();
     expect(within(editor).getByTestId("smartsim-issues").textContent).toMatch(/جهاز/);
     fireEvent.click(within(editor).getByRole("button", { name: /قالب: راوتر \+ سويتشان \+ 4 حواسيب/ })); await tick();
     const q = () => hist().present!.sections[0].questions[1] as unknown as { smartSim: ReturnType<typeof ENV>; answer: ReturnType<typeof KEY> };
@@ -187,7 +189,7 @@ describe("teacher authoring — lazy editor, one-click template, checks, inline 
   });
   it("devices / links / checks are edited structurally (no raw JSON); invalid edits surface inline; a device used by a check cannot be deleted silently", async () => {
     const { hist } = await mountBuilder(baseExam([teacherQ()]));
-    const editor = await screen.findByTestId("qt-editor-smartSim", {}, { timeout: 3000 });
+    const editor = await openEditor();
     fireEvent.click(within(editor).getByRole("button", { name: "+ حاسوب" })); await tick();
     expect(firstQ(hist()).smartSim.config.devices.map(x => x.id)).toContain("pc5");
     fireEvent.change(within(editor).getByLabelText("وزن الفحص pc1-ip"), { target: { value: "0" } }); await tick();
@@ -213,7 +215,7 @@ describe("teacher authoring — lazy editor, one-click template, checks, inline 
     const future = parseStructuredExamJson(JSON.stringify(baseExam([teacherQ({ smartSim: { ...ENV(), pluginVersion: 2 } })])), "exam.json");
     expect(JSON.stringify(evaluateExamFinalization(future.exam as never).blockers)).toMatch(/SMARTSIM_PLUGIN_UNKNOWN/);
     const { hist } = await mountBuilder(baseExam([q]));
-    const editor = await screen.findByTestId("qt-editor-smartSim", {}, { timeout: 3000 });
+    const editor = await openEditor();
     fireEvent.change(within(editor).getByLabelText("وزن الفحص pc1-ip"), { target: { value: "5" } }); await tick();
     await act(async () => { hist().undo(); }); await tick();
     expect(firstQ(hist()).answer).toEqual(KEY());
