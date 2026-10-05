@@ -145,6 +145,12 @@ describe("19F-S2 — §23 security: an invalid answer is refused at ingest and N
   });
   it("S9 version authority is exact: coding@4 is unsupported everywhere (never read as coding@3)", () => {
     const v4 = v3Q({ questionTypeVersion: 4 });
+    // the SERVER's own catalog / validator / grader registry (not only the downstream guards) refuse coding@4
+    const cat = require_("../src/lib/shared-finalization/questionTypeCatalog.js");
+    expect(cat.currentQuestionTypeVersion("coding")).toBe(3);
+    expect(cat.effectiveQuestionTypeVersion("coding", 4)).toBeUndefined();
+    expect(require_("../src/lib/shared-finalization/questionTypeValidation.js").validateQuestionTypeNode(v4, "coding", 4).map(i => i.code)).toEqual(["UNSUPPORTED_QUESTION_TYPE_VERSION"]);
+    expect(require_("../src/lib/question-type-graders.js").resolveGrader("coding", 4)).toBeUndefined();
     expect(sq().bindCodingTemplateAnswerToQuestion(GOOD(), v4)).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
     expect(sq().codingTemplateOf(v4)).toBe(null);
     expect(official().targetAuthority(examOf(v4), { attemptNumber: 1, answers: { auto1: GOOD() }, questionGrades: [{ questionId: "auto1", maxMarks: 10, score: 0, manualReview: true }] }, "auto1", { assignmentId: F.AID, studentId: F.S1, revision: 1 }).ok).toBe(false);
@@ -169,6 +175,11 @@ describe("19F-S3 — ONE authority for dispatch, callback, regrade and evidence"
     // a changed STARTER alone (public, not part of any submitted program) still re-keys: the template is authority material as published
     const starter = v3Q({ coding: { ...V3_CFG(), template: { ...TEMPLATE(), segments: [{ kind: "locked", text: LOCKED_HEAD }, { kind: "editable", id: "gap1", starter: "s = 1\n" }, { kind: "locked", text: LOCKED_TAIL }] } } });
     expect(official().targetAuthority(examOf(starter), att({ auto1: GOOD() }), "auto1", ids).questionFingerprint).not.toBe(a.questionFingerprint);
+  });
+  it("S10b defense in depth: even a stored raw answer carrying a forged `source` is rebuilt from the template by the authority", () => {
+    const a = official().targetAuthority(examOf(v3Q()), att({ auto1: { ...GOOD(), source: "import os\nos.system('id')\n" } }), "auto1", ids);
+    expect(a.ok).toBe(true);
+    expect(a.answer.source).toBe(EXPECTED_SOURCE);
   });
   it("S11 coding@1 / coding@2 fingerprints carry NO template material (the byte-identical 17C / 17F-C2 recipe — a PIN)", () => {
     for (const v of [1, 2]) {
@@ -270,6 +281,19 @@ describe("19F-S4 — answered predicate, practice run, projection", () => {
     expect(JSON.stringify(sanitizer().sanitizeExamForStudent(secret))).not.toContain("SECRET-19F");
     const seg = examOf(v3Q({ coding: { ...V3_CFG(), template: { ...TEMPLATE(), segments: [{ kind: "locked", text: LOCKED_HEAD, extra: 1 }, { kind: "editable", id: "gap1", starter: "" }] } } }));
     expect(sanitizer().sanitizeExamForStudent(seg).sections[0].questions[0].coding.template).toBeUndefined();
+  });
+});
+
+describe("19F-S6 — the SERVER's AI re-verification never accepts trusted coding material", () => {
+  it("S24 the shared server copy of verifyAiQuestionNode refuses an AI coding node with hidden tests / reference solutions / auto grading", () => {
+    const ai = require_("../src/lib/shared-finalization/aiQuestionDraft.js");
+    const draft = { intent: "coding", confidence: "clear", unsupportedCapabilities: [], explanation: "", text: "أصلح الخطأ", marks: 10, multipleChoice: null, trueFalse: null, shortAnswer: null, fillBlank: null, inlineCloze: null, networkCli: null, parametricNumeric: null, openResponse: null, codeStimulus: null, tableFill: null, coding: { mode: "fixBug", language: "python", starterCode: "print(sum(range(1, int(input()))))\n", publicExamples: [] } };
+    const r = ai.normalizeAiQuestionDraft(draft, { request: "python" });
+    expect(r.ok).toBe(true);
+    expect(r.question.answer).toMatchObject({ hiddenTests: [], referenceSolutions: {}, gradingMode: "manual" });
+    for (const answer of [{ ...r.question.answer, hiddenTests: [{ id: "h1", input: "4\n", expectedOutput: "6\n", weight: 1 }] }, { ...r.question.answer, referenceSolutions: { python: "x" } }, { ...r.question.answer, gradingMode: "hiddenTests" }]) {
+      expect(ai.verifyAiQuestionNode({ ...r.question, answer })).toMatchObject({ ok: false, issues: [{ code: "AI_CODING_TRUSTED_MATERIAL_FORBIDDEN" }] });
+    }
   });
 });
 

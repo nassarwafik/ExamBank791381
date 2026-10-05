@@ -109,8 +109,9 @@ function officialLimits(cfg) {
 
 /** The gradeable hidden-test contract of a question (fail closed), or { ok: false, code }. */
 function gradeableQuestion(q) {
-  // Review Fix 1 — the catalog decides which coding versions THIS server supports (coding@1 historical, coding@2 policy); any other
-  // version fails closed here, so a server that does not know a version can never grade it under another version's contract.
+  // Review Fix 1 — the catalog decides which coding versions THIS server supports (coding@1 historical, coding@2 policy, coding@3 locked
+  // template since 19F); any other version fails closed here, so a server that does not know a version can never grade it under another
+  // version's contract.
   const version = isCodingNode(q) ? codingQuestionVersion(q) : undefined;
   if (version === undefined) return { ok: false, code: "QUESTION_INVALID" };
   if (codingGradingMode(q.answer) !== "hiddenTests") return { ok: false, code: "QUESTION_INVALID" };
