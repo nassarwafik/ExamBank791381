@@ -9,9 +9,9 @@ exports.verifyAiQuestionNode = verifyAiQuestionNode;
 exports.normalizeAiQuestionDraft = normalizeAiQuestionDraft;
 const examQuality_1 = require("./examQuality");
 const networkCliEngine_1 = require("./networkCliEngine");
-exports.AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "hotspot", "labelDiagram", "simulation", "coding", "unsupported"]);
-exports.AI_GENERATED_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric"]);
-exports.AI_AUTHOR_LIMITS = Object.freeze({ requestChars: 2000, textChars: 4000, explanationChars: 1000, capabilities: 20, capabilityChars: 100, options: 8, fillBlanks: 10, pieces: 100, pieceOptions: 12, accepted: 20, stringChars: 500, vlans: 64, interfaces: 32, paramVariables: 20, paramConstraints: 20 });
+exports.AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse", "hotspot", "labelDiagram", "simulation", "coding", "unsupported"]);
+exports.AI_GENERATED_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse"]);
+exports.AI_AUTHOR_LIMITS = Object.freeze({ requestChars: 2000, textChars: 4000, explanationChars: 1000, capabilities: 20, capabilityChars: 100, options: 8, fillBlanks: 10, pieces: 100, pieceOptions: 12, accepted: 20, stringChars: 500, vlans: 64, interfaces: 32, paramVariables: 20, paramConstraints: 20, rubricCriteria: 12, rubricLevels: 8 });
 exports.AI_DRAFT_QUESTION_ID = "ai-draft";
 const NETWORK_SIGNAL = /(\bswitch(?:es)?\b|سويتش|سويچ|مبدّل|مبدل|\bvlans?\b|\btrunk\b|ترانك|\bcli\b|cisco|سيسكو|switchport|native\s*vlan|\bsvi\b|المنافذ|منفذ|منافذ|network\s+simulator|محاكي\s*(?:أوامر\s*)?(?:الشبكة|شبكة|سويتش))/i;
 const CLOZE_SIGNAL = /(فراغ|فراغات|\bcloze\b|\bblanks?\b|fill[-\s]?in|أكمل|اكمل|منسدلة|dropdowns?|drop-down)/i;
@@ -20,6 +20,12 @@ const CODING_SIGNAL = /(برمجة|برنامج|\bcode\b|\bcoding\b|python|با�
 const SIMULATION_SIGNAL = /(smartsim|\.smartsim|حزمة\s*محاكاة|simulation\s+package)/i;
 const PARAMETRIC_SIGNAL = /(\bparametric\b|random\s+(?:integers?|numbers?|values?)|different\s+(?:numeric\s+)?(?:version|numbers?|values?)\s+(?:for|per)\s+(?:each|every)\s+student|per[-\s]student\s+(?:numbers?|values?)|بأرقام\s+مختلفة|أرقام\s+مختلفة|قيم\s+مختلفة|(?:رقمي|حسابي|رياضيات)[^.؟?!]{0,30}(?:متغير|يتغير|متغيرة)|معطيات\s+متغيرة|يتغير\s+لكل\s+طالب|مختلفة\s+لكل\s+طالب|different\s+values?\s+for\s+(?:each|every)\s+student)/i;
 const LABEL_DIAGRAM_SIGNAL = /((?:^|\s)سم\s+(?:أجزاء|اجزاء|مكونات|طبقات)|تسمية\s+(?:أجزاء|اجزاء|مكونات)|اسحب\s+التسميات|التسميات\s+(?:إلى|الى|على)|\blabel(?:l?ing)?\s+(?:the\s+)?(?:parts\s+of\s+(?:the\s+|a\s+)?)?diagram|\blabel\s+diagram|\bdrag\s+(?:the\s+)?labels\b)/i;
+const OPEN_RESPONSE_SIGNAL = /(مقال|مقالي|مقالية|علل|تعليل|اشرح|شرح\s|قارن|مقارنة\s+بين|حلل|تحليل|ناقش|سلم\s+(?:تقييم|التقييم|تصحيح|التصحيح)|روبرك|معايير\s+(?:التصحيح|تصحيح|التقييم|تقييم)|إجابة\s+مفتوحة|اجابة\s+مفتوحة|\bessay\b|\bexplain\b|\bjustify\b|\bcompare\b|\banaly[sz]e\b|\bdiscuss\b|\brubric\b|grading\s+criteria|open[-\s]response|extended\s+response|source[-\s]based)/i;
+const OPEN_RESPONSE_PROFILE_SIGNALS = [
+    ["sourceBased", /(مصدر|النص\s+التالي|اقرأ\s+النص|source[-\s]based|\bsource\b|\bpassage\b)/i],
+    ["compare", /(قارن|مقارنة|\bcompare\b|\bcontrast\b)/i], ["justify", /(علل|تعليل|برر|\bjustify\b|\bwhy\b)/i],
+    ["analyze", /(حلل|تحليل|\banaly[sz]e\b)/i], ["explain", /(اشرح|شرح|وضح|\bexplain\b|\bdescribe\b)/i], ["essay", /(مقال|ناقش|\bessay\b|\bdiscuss\b)/i]
+];
 const HOTSPOT_SIGNAL = /((?:ينقر|انقر|النقر|اضغط|يضغط|حدد|يحدد|ظلل)[^.؟?!]{0,40}(?:الصورة|صورة|المخطط|الرسم)|\b(?:click|tap|select|mark|identify)\b[^.?!]{0,40}\b(?:image|picture|photo|diagram)\b|\bhotspot\b)/i;
 const UNSUPPORTED_NETWORK = [
     ["router", /\brouters?\b|\brouting\b|راوتر|الراوتر|موجّه|جهاز\s*التوجيه|بروتوكول(?:ات)?\s*(?:ال)?توجيه|التوجيه\s*(?:الثابت|الديناميكي)/i],
@@ -42,12 +48,16 @@ function classifyAuthorRequest(request) {
         suggestedIntent = "hotspot";
     else if (PARAMETRIC_SIGNAL.test(t))
         suggestedIntent = "parametricNumeric";
+    else if (OPEN_RESPONSE_SIGNAL.test(plain))
+        suggestedIntent = "openResponse";
     else if (CODING_SIGNAL.test(t) && !NETWORK_SIGNAL.test(t))
         suggestedIntent = "coding";
     else if (CLOZE_SIGNAL.test(t))
         suggestedIntent = PASSAGE_SIGNAL.test(t) ? "inlineCloze" : "fillBlank";
     else if (NETWORK_SIGNAL.test(t))
         suggestedIntent = "networkCli";
+    if (suggestedIntent === "openResponse")
+        return { suggestedIntent, unsupportedCapabilities, suggestedProfile: OPEN_RESPONSE_PROFILE_SIGNALS.find(([, re]) => re.test(plain))?.[0] ?? "general" };
     return { suggestedIntent, unsupportedCapabilities };
 }
 const str = () => ({ type: "string" });
@@ -61,6 +71,8 @@ const numberSchema = () => ({ type: "number" });
 const PARAM_FORMAT = obj({ kind: { type: "string", enum: ["plain", "fixed", "percentage"] }, decimals: int(0, 10) });
 const PARAM_VAR_ROW = obj({ name: str(), kind: { type: "string", enum: ["integer", "decimal"] }, min: numberSchema(), max: numberSchema(), step: numberSchema(), format: PARAM_FORMAT });
 const PARAM_DERIVED_ROW = obj({ name: str(), expression: str(), format: PARAM_FORMAT });
+const OPEN_RESPONSE_LEVEL = obj({ label: str(), score: numberSchema(), description: str() });
+const OPEN_RESPONSE_CRITERION = obj({ title: str(), description: str(), guidance: str(), maxScore: numberSchema(), allowCustomScore: { type: "boolean" }, levels: arr(OPEN_RESPONSE_LEVEL, exports.AI_AUTHOR_LIMITS.rubricLevels) });
 function buildAiAuthorSchema() {
     return {
         type: "object",
@@ -89,16 +101,21 @@ function buildAiAuthorSchema() {
                 variables: arr(PARAM_VAR_ROW, exports.AI_AUTHOR_LIMITS.paramVariables), derivedVariables: arr(PARAM_DERIVED_ROW, exports.AI_AUTHOR_LIMITS.paramVariables), constraints: arr(str(), exports.AI_AUTHOR_LIMITS.paramConstraints), answerExpression: str(),
                 mode: { type: "string", enum: ["tolerance", "range"] }, tolerance: numberSchema(), below: numberSchema(), above: numberSchema(),
                 unitMode: { type: "string", enum: ["none", "label", "input"] }, unitLabel: str(), unit: str()
+            })),
+            openResponse: nullable(obj({
+                profile: { type: "string", enum: ["essay", "explain", "justify", "compare", "analyze", "sourceBased", "general"] }, instructions: str(),
+                minChars: int(0, 20000), maxChars: int(1, 20000), rubricVisibility: { type: "string", enum: ["visible", "hidden"] },
+                criteria: arr(OPEN_RESPONSE_CRITERION, exports.AI_AUTHOR_LIMITS.rubricCriteria), modelAnswer: str()
             }))
         },
-        required: ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric"]
+        required: ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse"]
     };
 }
 function buildAiAuthorPrompt(request, signals, preferredType) {
     return [
         "You author exactly ONE assessment question for SmartAssess from a teacher's request. Return JSON that follows the schema exactly.",
         "Choose `intent` deliberately:",
-        "- multipleChoice: 2-8 options, correctIndex is zero-based. trueFalse: a statement and its truth value. shortAnswer: an open question with an optional model answer.",
+        "- multipleChoice: 2-8 options, correctIndex is zero-based. trueFalse: a statement and its truth value. shortAnswer: a SHORT answer (a word, a phrase or one sentence) with an optional model answer.",
         "- fillBlank: an ordinary short completion with separate answer fields (one field per blank); never use it for passages with mixed controls.",
         "- inlineCloze: a passage whose blanks sit INSIDE the text. `pieces` in reading order: kind \"text\" (passage text), \"textBlank\" (the student types; `accepted` lists every accepted answer — synonyms, abbreviations, multi-word answers; `caseSensitive` only when case matters), \"dropdown\" (2-12 `options`, exactly ONE correct option via zero-based `correctIndex`). Mixed text blanks and dropdowns in any order are allowed.",
         "- networkCli: a deterministic educational managed SWITCH command-line simulator (networkCli@1). It is NOT a router and NOT Packet Tracer. The student types Cisco-like commands; grading compares the final device state with your target.",
@@ -106,6 +123,7 @@ function buildAiAuthorPrompt(request, signals, preferredType) {
         "  Fill `networkCli` with the initial state (usually hostname \"Switch\" and nothing else) and the TARGET state the student must reach. Every target value you set is one graded check; use \"\" / 0 for values that are not required. Use only the interface names above.",
         "  NOT supported (never invent them): routers, routing, static routes, OSPF, EIGRP, RIP, BGP, ACLs, NAT, DHCP, spanning-tree, port-security, EtherChannel, VTP, SSH / Telnet, interface range, trunk allowed VLAN lists, ping / traceroute, IPv6. If the request needs any of them, list them in `unsupportedCapabilities` and set intent \"unsupported\" (or choose an ordinary question type).",
         "- parametricNumeric: a numeric question whose numbers DIFFER for every student and attempt (math, physics, chemistry, subnet arithmetic). `text` is the stem with {{name}} placeholders for every generated value (e.g. \"A network needs {{hosts}} hosts…\"). `variables`: bounded variables { name (a letter then letters / digits / _), kind \"integer\" or \"decimal\" (at most 6 decimals), min, max, step, format } where (max - min) is a multiple of step. `derivedVariables`: optional values computed from variables or earlier derived values { name, expression, format } (e.g. area = a * b; never circular). `constraints`: optional single comparisons over variables and derived values such as \"a < b\", \"b != 0\" or \"sqrt(a) < b\". `answerExpression` computes the correct answer from the variables / derived values using ONLY numbers, names, + - * / % ^ (^ is pow), parentheses and abs, round(x, digits), floor, ceil, min, max, sqrt, pow, log (natural), log10, exp — no other functions, no code. `format` only changes how a value is WRITTEN in the stem: \"plain\", \"fixed\" (decimals places) or \"percentage\" (value × 100 with decimals places and %); grading always uses the exact values. For a percentage answer write the expression in percent, e.g. \"100 * correct / total\", with unitLabel \"%\". `mode` \"tolerance\" (with `tolerance` >= 0, 0 = exact) or \"range\" (`below` / `above` >= 0 around the result). `unitMode` \"none\", \"label\" (a fixed `unitLabel` shown next to the answer) or \"input\" (the student types the unit; the correct `unit` is graded). Never put the computed answer or the expression in `text`.",
+        "- openResponse: an extended written answer graded by the teacher with a RUBRIC — essays, explain, justify, compare, analyze, discuss, source-based or long-form reasoning (one family; choose `profile`). Fill `criteria` with 2-6 pedagogically meaningful criteria specific to THIS question (never generic filler): `title`, a student-facing `description`, private `guidance` for the grader (what a strong answer contains), `maxScore` > 0 and 2-8 `levels` { label, score, description } that are distinct, include one level scoring exactly `maxScore` and one scoring 0, all between 0 and maxScore with at most 2 decimals. `allowCustomScore` true only when intermediate marks make sense. `rubricVisibility` \"visible\" when students should see the criteria. `maxChars` bounds the answer length; `minChars` is guidance only. `modelAnswer` is a private exemplar for the teacher. You only AUTHOR: never grade a student, never claim a student answer is correct; the teacher grades and the server computes the score.",
         "- simulation: the teacher wants an uploaded interactive .smartsim simulation. coding: the student must write a program. Recognise them; do not invent their content (fill no payload).",
         "- hotspot: the student clicks / taps target areas on an IMAGE. labelDiagram: the student places labels from a bank on zones of a diagram IMAGE. You have no image and no geometry authority: recognise these intents but never invent coordinates, regions or zones — fill no payload; the teacher places them on an attached image.",
         "- unsupported: the request cannot be met with the types above; explain why in `explanation`.",
@@ -113,7 +131,7 @@ function buildAiAuthorPrompt(request, signals, preferredType) {
         "Fill ONLY the payload object of the chosen intent; set every other payload to null.",
         "Never put, include or reveal a correct answer, an accepted answer or the target configuration in `text` or in passage text pieces.",
         "Write the question in clear Arabic unless the teacher asks for English; CLI commands, interface names and protocol names stay in English. `marks` is a positive integer.",
-        "Deterministic request signals (advisory only): Suggested intent: " + (signals.suggestedIntent ?? "none") + "; unsupported network capabilities detected: " + (signals.unsupportedCapabilities.join(", ") || "none") + ".",
+        "Deterministic request signals (advisory only): Suggested intent: " + (signals.suggestedIntent ?? "none") + (signals.suggestedProfile ? "; suggested openResponse profile: " + signals.suggestedProfile : "") + "; unsupported network capabilities detected: " + (signals.unsupportedCapabilities.join(", ") || "none") + ".",
         preferredType ? "Teacher preferred type: " + preferredType + "." : "",
         "Teacher request:",
         String(request)
@@ -140,7 +158,7 @@ const isStr = (v, max = exports.AI_AUTHOR_LIMITS.stringChars) => typeof v === "s
 const isInt = (v, min, max) => typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 const strArr = (v, maxItems) => Array.isArray(v) && v.length <= maxItems && v.every(x => isStr(x));
 const ROOT_KEYS = ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli"];
-const OPTIONAL_ROOT_KEYS = ["parametricNumeric"];
+const OPTIONAL_ROOT_KEYS = ["parametricNumeric", "openResponse"];
 const PARAM_KEYS = ["variables", "constraints", "answerExpression", "mode", "tolerance", "below", "above", "unitMode", "unitLabel", "unit"];
 const PIECE_KEYS = ["kind", "text", "accepted", "caseSensitive", "options", "correctIndex"];
 const IFACE_KEYS = ["name", "mode", "accessVlan", "nativeVlan", "adminState", "ipAddress", "subnetMask"];
@@ -154,10 +172,15 @@ const paramVarRowV2 = (v) => isPlain(v) && exactKeys(v, ["name", "kind", "min", 
 const derivedRow = (v) => isPlain(v) && exactKeys(v, ["name", "expression", "format"]) && isStr(v.name, 64) && isStr(v.expression) && formatShape(v.format);
 const paramShapeOk = (p) => isPlain(p) && (Object.prototype.hasOwnProperty.call(p, "derivedVariables") ? exactKeys(p, [...PARAM_KEYS, "derivedVariables"]) && Array.isArray(p.derivedVariables) && p.derivedVariables.length <= exports.AI_AUTHOR_LIMITS.paramVariables && p.derivedVariables.every(derivedRow) && Array.isArray(p.variables) && p.variables.length <= exports.AI_AUTHOR_LIMITS.paramVariables && p.variables.every(paramVarRowV2) : exactKeys(p, PARAM_KEYS) && Array.isArray(p.variables) && p.variables.length <= exports.AI_AUTHOR_LIMITS.paramVariables && p.variables.every(paramVarRow))
     && strArr(p.constraints, exports.AI_AUTHOR_LIMITS.paramConstraints) && isStr(p.answerExpression) && isStr(p.mode, 16) && finiteNum(p.tolerance) && finiteNum(p.below) && finiteNum(p.above) && isStr(p.unitMode, 16) && isStr(p.unitLabel, 64) && isStr(p.unit, 64);
+const orLevel = (l) => isPlain(l) && exactKeys(l, ["label", "score", "description"]) && isStr(l.label) && finiteNum(l.score) && isStr(l.description, exports.AI_AUTHOR_LIMITS.textChars);
+const orCriterion = (c) => isPlain(c) && exactKeys(c, ["title", "description", "guidance", "maxScore", "allowCustomScore", "levels"]) && isStr(c.title) && isStr(c.description, exports.AI_AUTHOR_LIMITS.textChars) && isStr(c.guidance, exports.AI_AUTHOR_LIMITS.textChars) && finiteNum(c.maxScore) && typeof c.allowCustomScore === "boolean" && Array.isArray(c.levels) && c.levels.length <= exports.AI_AUTHOR_LIMITS.rubricLevels && c.levels.every(orLevel);
+const openResponseShapeOk = (o) => isPlain(o) && exactKeys(o, ["profile", "instructions", "minChars", "maxChars", "rubricVisibility", "criteria", "modelAnswer"]) && isStr(o.profile, 32) && isStr(o.instructions, exports.AI_AUTHOR_LIMITS.textChars) && finiteNum(o.minChars) && finiteNum(o.maxChars) && isStr(o.rubricVisibility, 16) && Array.isArray(o.criteria) && o.criteria.length <= exports.AI_AUTHOR_LIMITS.rubricCriteria && o.criteria.every(orCriterion) && isStr(o.modelAnswer, 20000);
 function shapeOk(raw) {
     if (!isPlain(raw) || hasForbiddenKey(raw) || !ROOT_KEYS.every(k => Object.prototype.hasOwnProperty.call(raw, k)) || Object.keys(raw).some(k => !ROOT_KEYS.includes(k) && !OPTIONAL_ROOT_KEYS.includes(k)))
         return false;
     if (raw.parametricNumeric !== undefined && raw.parametricNumeric !== null && !paramShapeOk(raw.parametricNumeric))
+        return false;
+    if (raw.openResponse !== undefined && raw.openResponse !== null && !openResponseShapeOk(raw.openResponse))
         return false;
     if (typeof raw.intent !== "string" || (raw.confidence !== "clear" && raw.confidence !== "ambiguous"))
         return false;
@@ -278,6 +301,11 @@ function mapParametric(d, p) {
     const parametric = { v: 1, generatorVersion: 1, variables: p.variables.map(v => ({ id: v.name, kind: "int", min: v.min, max: v.max, step: v.step })), constraints: [...p.constraints], response };
     return { node: { ...base(d, "parametricNumeric"), questionTypeVersion: 1, parametric, answer }, issues: [] };
 }
+function mapOpenResponse(d, o) {
+    const criteria = o.criteria.map((c, i) => ({ id: "c" + (i + 1), title: c.title, description: c.description, maxPoints: c.maxScore, allowCustomPoints: c.allowCustomScore, guidance: c.guidance, levels: c.levels.map((l, j) => ({ id: "l" + (j + 1), label: l.label, points: l.score, description: l.description })) }));
+    const openResponse = { v: 1, profile: o.profile, instructions: o.instructions, response: { minChars: o.minChars, maxChars: o.maxChars }, studentRubricVisibility: o.rubricVisibility };
+    return { node: { ...base(d, "openResponse"), questionTypeVersion: 1, openResponse, answer: { rubric: { v: 1, criteria }, modelAnswer: o.modelAnswer } }, issues: [] };
+}
 function mapDraft(d) {
     switch (d.intent) {
         case "multipleChoice": return d.multipleChoice ? { node: { ...base(d, "multipleChoice"), options: d.multipleChoice.options.map(text => ({ text })), answer: { correctOptionIndex: d.multipleChoice.correctIndex } }, issues: [] } : null;
@@ -287,6 +315,7 @@ function mapDraft(d) {
         case "inlineCloze": return d.inlineCloze ? mapInlineCloze(d, d.inlineCloze) : null;
         case "networkCli": return d.networkCli ? mapNetworkCli(d, d.networkCli) : null;
         case "parametricNumeric": return d.parametricNumeric ? mapParametric(d, d.parametricNumeric) : null;
+        case "openResponse": return d.openResponse ? mapOpenResponse(d, d.openResponse) : null;
         default: return null;
     }
 }
@@ -297,7 +326,8 @@ const NODE_KEYS = Object.freeze({
     fillBlank: ["examQuestionId", "presentationType", "text", "marks", "fields", "wordBank", "answer"],
     inlineCloze: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "inlineCloze", "answer"],
     networkCli: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "networkCli", "answer"],
-    parametricNumeric: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "parametric", "answer"]
+    parametricNumeric: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "parametric", "answer"],
+    openResponse: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "openResponse", "answer"]
 });
 const INVALID_MESSAGE = "مسودة الذكاء الاصطناعي لا تجتاز التحقق القياسي للسؤال؛ لم يُنشأ أي سؤال.";
 function verifyAiQuestionNode(node) {

@@ -51,3 +51,4 @@ registerStudentRenderer("parametricNumeric", 1, lazy(() => import("./student/Par
 // Phase 19D — visual questions (lazy: the image canvas, overlay and pointer mapping load only when a visual question renders).
 registerStudentRenderer("hotspot", 1, lazy(() => import("./student/HotspotResponse")));
 registerStudentRenderer("labelDiagram", 1, lazy(() => import("./student/LabelDiagramResponse")));
+registerStudentRenderer("openResponse", 1, lazy(() => import("./student/OpenResponseResponse")));

@@ -1,0 +1,54 @@
+/* Phase 19E — openResponse@1 (student response, teacher editor, rubric grading). Prefix `or-`. Logical properties throughout (RTL
+   chrome, `dir="auto"` text); controls are ≥ 40px touch targets; focus uses the canonical ring tokens (never a box-shadow token as an
+   outline). No animation, no canvas. */
+.or-response { display: grid; gap: 10px; }
+.or-profile { justify-self: start; padding: 2px 10px; border-radius: 999px; background: var(--eb-surface-2, #f1f5f9); color: var(--eb-text-muted, #475569); font-size: 13px; }
+.or-instructions { margin: 0; white-space: pre-wrap; unicode-bidi: plaintext; color: var(--eb-text, #0f172a); }
+.or-textarea { box-sizing: border-box; width: 100%; min-height: 220px; padding: 12px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; background: var(--eb-surface, #fff); color: inherit; font: inherit; line-height: 1.7; resize: vertical; unicode-bidi: plaintext; }
+.or-textarea:focus-visible, .or-btn:focus-visible, .or-level:focus-within, .or-field input:focus-visible, .or-field select:focus-visible, .or-field textarea:focus-visible { outline: var(--eb-focus-ring, 3px solid #f59e0b); outline-offset: var(--eb-focus-offset, 2px); }
+.or-textarea[aria-invalid="true"] { border-color: #b91c1c; }
+.or-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; color: var(--eb-text-muted, #475569); font-size: 13px; }
+.or-meta [data-full="true"] { color: #b91c1c; font-weight: 700; }
+.or-hint { margin: 0; color: var(--eb-text-muted, #475569); font-size: 13px; }
+.or-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fffbeb; color: #78350f; font-size: 13px; }
+.or-unavailable { margin: 0; padding: 10px; border-radius: 8px; background: #fef2f2; color: #991b1b; }
+.or-rubric { border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; background: var(--eb-surface-2, #f8fafc); }
+.or-rubric > summary { min-height: 40px; padding: 8px 12px; cursor: pointer; font-weight: 700; display: flex; align-items: center; }
+.or-rubric-list { display: grid; gap: 10px; margin: 0; padding: 0 12px 12px; list-style: none; }
+.or-rubric-criterion h4 { margin: 0 0 4px; font-size: 15px; }
+.or-rubric-criterion p { margin: 0 0 6px; white-space: pre-wrap; unicode-bidi: plaintext; }
+.or-rubric-levels { display: grid; gap: 4px; margin: 0; padding-inline-start: 18px; }
+/* teacher editor */
+.or-editor { display: grid; gap: 14px; }
+.or-editor fieldset { display: grid; gap: 10px; margin: 0; padding: 12px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; min-width: 0; }
+.or-editor legend { padding: 0 6px; font-weight: 700; }
+.or-field { display: grid; gap: 4px; min-width: 0; }
+.or-field input, .or-field select, .or-field textarea { box-sizing: border-box; width: 100%; min-height: 40px; padding: 6px 10px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 8px; background: var(--eb-surface, #fff); color: inherit; font: inherit; }
+.or-field textarea { min-height: 72px; resize: vertical; unicode-bidi: plaintext; }
+.or-field [aria-invalid="true"] { border-color: #b91c1c; }
+.or-field-error { margin: 0; color: #b91c1c; font-size: 13px; }
+.or-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.or-criterion { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; background: var(--eb-surface, #fff); }
+.or-criterion-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.or-levels { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.or-level-row { display: grid; grid-template-columns: minmax(120px, 2fr) minmax(80px, 1fr) minmax(140px, 3fr) auto; gap: 8px; align-items: end; }
+@media (max-width: 640px) { .or-level-row { grid-template-columns: 1fr 1fr; } }
+.or-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.or-btn { min-height: 40px; min-width: 40px; padding: 6px 12px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 8px; background: var(--eb-surface, #fff); color: inherit; font: inherit; cursor: pointer; }
+.or-btn:disabled { cursor: not-allowed; opacity: .6; }
+.or-btn[data-primary="true"] { border-color: var(--eb-primary, #2563eb); background: var(--eb-primary, #2563eb); color: #fff; }
+.or-total { margin: 0; font-weight: 700; }
+.or-issues { margin: 0; padding-inline-start: 18px; color: #b91c1c; }
+.or-private { padding: 8px 10px; border-radius: 8px; background: #f5f3ff; color: #4c1d95; font-size: 13px; }
+/* teacher grading panel */
+.or-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 14px; align-items: start; grid-column: 1 / -1; }
+@media (max-width: 820px) { .or-grade { grid-template-columns: 1fr; } }
+.or-student-answer { position: sticky; top: 0; max-height: 70vh; overflow: auto; margin: 0; padding: 12px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; background: var(--eb-surface, #fff); white-space: pre-wrap; unicode-bidi: plaintext; line-height: 1.7; }
+.or-grade-criteria { display: grid; gap: 10px; }
+.or-grade-criterion { margin: 0; padding: 10px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; min-width: 0; }
+.or-grade-criterion[data-done="true"] { border-color: #15803d; }
+.or-level { display: flex; gap: 8px; align-items: flex-start; min-height: 40px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.or-level:has(input:checked) { background: #ecfdf5; }
+.or-level input { margin-top: 4px; }
+.or-level small { display: block; color: var(--eb-text-muted, #475569); white-space: pre-wrap; unicode-bidi: plaintext; }
+.or-grade-summary { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); font-weight: 700; }
