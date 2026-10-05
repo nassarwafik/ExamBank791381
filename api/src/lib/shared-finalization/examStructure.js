@@ -76,6 +76,7 @@ function normalizeSection(s, si) {
         requiredAnswers: s?.requiredAnswers == null ? null : Math.max(0, Math.floor(num(s.requiredAnswers))),
         answerUnit: s?.answerUnit === "part" ? "part" : "question",
         stimuli: s && s.stimuli && typeof s.stimuli === "object" ? s.stimuli : null,
+        scenarios: Array.isArray(s?.scenarios) ? s.scenarios : null,
         questions: Array.isArray(s?.questions) ? s.questions : []
     };
 }
@@ -96,6 +97,7 @@ function normalizeExamStructure(exam) {
                 requiredAnswers: null,
                 answerUnit: "question",
                 stimuli: null,
+                scenarios: null,
                 questions: Array.isArray(ex.questions) ? ex.questions : []
             }
         ]

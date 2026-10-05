@@ -11,6 +11,7 @@
 import type { BuilderQuestion, BuilderSection, QuestionBody, StructuredExam, BuilderPartType, BuilderQuestionType } from "./examTypes";
 import { validateQuestionTypeNode } from "./questionTypeValidation";
 import { codeStimulusIssues } from "./codeStimulus";
+import { scenarioSectionIssues } from "./scenarioSource";
 import { questionTypeDefinition } from "./questionTypeCatalog";
 import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
 
@@ -47,10 +48,17 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
   }
 
   const seenQuestionIds = new Set<string>();
+  // Phase 19G — the exam-wide question ids let a scenario reference be classified as CROSS-SECTION (exists elsewhere) rather than missing.
+  const allQuestionIds = new Set<string>();
+  for (const s of sections) for (const q of Array.isArray(s.questions) ? s.questions : []) if (q && q.examQuestionId != null) allQuestionIds.add(String(q.examQuestionId));
 
   sections.forEach((section, si) => {
     const label = section.title || "القسم " + (si + 1);
     validateSection(section, label, add);
+    // Phase 19G — every scenario rule (structure, source contract, same-section membership, one scenario per question, contiguity,
+    // required image alt) is a BLOCKING structural error: the student projection would withhold the scenario, so publishing it would
+    // silently lose the shared sources. The legacy `stimuli` / `groupId` model below is untouched (still a warning).
+    for (const i of scenarioSectionIssues(section, allQuestionIds)) add("error", i.code, "القسم «" + label + "»: " + i.message, { sectionId: section.id, ...(i.questionId ? { questionId: i.questionId } : {}) });
 
     const stimuli = section.stimuli || {};
     section.questions.forEach(q => {

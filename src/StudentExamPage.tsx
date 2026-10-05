@@ -1,5 +1,5 @@
 
-import {useEffect,useMemo,useRef,useState,useCallback} from "react";
+import {useEffect,useMemo,useRef,useState,useCallback,lazy,Suspense} from "react";
 import {IconCheck,IconMenu} from "./icons";
 import {useConfirm} from "./ui/useConfirm";
 import {usePrefersReducedMotion} from "./ui/usePrefersReducedMotion";
@@ -15,6 +15,8 @@ import {normalizeExamTheme} from "./examTheme";
 import type {FieldValue} from "./StudentQuestionCard";
 import {normalizeExamStructure,calculateSectionProgress,selectGradedUnits} from "./examStructure";
 import {StructuredSectionQuestion} from "./StructuredExamSection";
+// Phase 19G — the scenario block (shared sources) of a page whose question belongs to a scenario: lazy, rendered beside the question on wide screens.
+const ScenarioView=lazy(()=>import("./scenario/ScenarioView"));
 import {buildQuestionPages,clampPageIndex,countAnsweredPages} from "./student/exam/questionPager";
 import ExamBottomNavigation from "./student/exam/ExamBottomNavigation";
 import QuestionNavigatorDialog from "./student/exam/QuestionNavigatorDialog";
@@ -780,11 +782,16 @@ export default function StudentExamPage({token,assignment,studentName,className,
       compact section context; flat questions through the same StudentQuestionCard as before. Keys are unchanged. */}
   {view==="review"?(
    <ExamReviewScreen title={assignment.title} pages={pages} answers={answers} sections={structured?norm.sections:[]} headingRef={reviewHeadingRef} onJump={goTo} onBackToAnswering={backToAnswering} onSubmit={()=>{void submit()}} submitBusy={submitBusy} submitDisabled={submitBusy||!writable}/>
-  ):currentPage?(()=>{const page=currentPage,id=page.id,q=page.question;return <StudentAttemptContext.Provider value={attemptApi} key={id}><section className="iex-page" aria-labelledby="iex-page-heading">
+  ):currentPage?(()=>{const page=currentPage,id=page.id,q=page.question;
+   // 19G — a page whose question belongs to a scenario gets the two-column layout on wide screens (sources beside the question); the lazy
+   // ScenarioView decides validity, this flag only chooses the layout. Raw check on purpose: this module is in the student chunk, the contract is lazy.
+   const inScenario=!!page.section&&Array.isArray(page.section.scenarios)&&page.section.scenarios.some(s=>!!s&&typeof s==="object"&&Array.isArray((s as {questionIds?:unknown}).questionIds)&&((s as {questionIds:unknown[]}).questionIds).includes(id));
+   return <StudentAttemptContext.Provider value={attemptApi} key={id}><section className={"iex-page"+(inScenario?" has-scenario":"")} aria-labelledby="iex-page-heading" data-scenario-page={inScenario||undefined}>
    <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
    {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers}/>}
+   {inScenario&&page.section&&<div className="iex-page-scenario"><Suspense fallback={null}><ScenarioView section={page.section} questionId={id}/></Suspense></div>}
    {page.section
-    ?<StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/>
+    ?<div className="iex-page-question"><StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} showScenario={false} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/></div>
     :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onAnswer={next=>setAnswer(id,next)} disabled={inputsDisabled}/>}
   </section></StudentAttemptContext.Provider>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
   {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}

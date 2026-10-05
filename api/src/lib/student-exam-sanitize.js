@@ -235,6 +235,34 @@ function applyCodeStimulusProjection(node, part) {
   const p = part ? null : projectCodeStimulusForStudent(node.codeStimulus);
   if (p) node.codeStimulus = p; else delete node.codeStimulus;
 }
+// Phase 19G — the section-owned SCENARIOS (shared sources + the ids of the same section's questions) are REBUILT through the ONE strict
+// shared projection: canonical copies of the scenarios that pass EVERY rule (structure, source contract, same-section membership, one
+// scenario per question, contiguity). A scenario that fails any rule — a source smuggling an answer, a future version, an unknown source
+// kind, a missing / shared / cross-section reference — is withheld whole (fail closed); the stored object is never spread.
+const { projectSectionScenariosForStudent } = require("./shared-finalization/scenarioSource");
+function applyScenariosForStudent(out, section) {
+  if (!("scenarios" in out)) return;
+  const projected = projectSectionScenariosForStudent(section);
+  if (projected === undefined) delete out.scenarios; else out.scenarios = projected;
+}
+// Phase 19G — the LEGACY shared stimulus (section.stimuli[groupId] and the per-question / per-part `stimulus` fallback the renderer reads)
+// is rebuilt through its allow-list — exactly what StructuredExamSection.StimulusBlock renders: title / text (strings only), image →
+// { dataUrl } (string only), activity → the canonical activity projection. Any other key (an answer or solution stored next to the
+// passage) never reaches the student. Narrowest safe fix: nothing a student could see before is lost; the legacy model is not reinterpreted.
+function sanitizeStimulusForStudent(stim) {
+  if (!stim || typeof stim !== "object" || Array.isArray(stim)) return undefined;
+  const out = {};
+  if (typeof stim.title === "string") out.title = stim.title;
+  if (typeof stim.text === "string") out.text = stim.text;
+  if (stim.image && typeof stim.image === "object" && !Array.isArray(stim.image) && typeof stim.image.dataUrl === "string") out.image = { dataUrl: stim.image.dataUrl };
+  if ("activity" in stim) { const a = sanitizeActivityForStudent(stim.activity); if (a) out.activity = a; }
+  return out;
+}
+function applyStimulusForStudent(node) {
+  if (!("stimulus" in node)) return;
+  const clean = sanitizeStimulusForStudent(node.stimulus);
+  if (clean) node.stimulus = clean; else delete node.stimulus;
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -250,6 +278,7 @@ function sanitizePartForStudent(part) {
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyOpenResponseProjection(out, part);                                       // 19E: never compound-capable; defense in depth
   applyCodeStimulusProjection(out, true);                                       // 19F: a part never carries a stimulus
+  applyStimulusForStudent(out);                                                 // 19G: the legacy stimulus fallback is allow-listed
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
@@ -275,6 +304,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyOpenResponseProjection(out, question);                                   // 19E: the public rubric is derived from the ORIGINAL private key
   applyCodeStimulusProjection(out, false);                                      // 19F: strict read-only code stimulus
+  applyStimulusForStudent(out);                                                 // 19G: the legacy stimulus fallback is allow-listed
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
@@ -300,11 +330,12 @@ function sanitizeSectionForStudent(section, ctx) {
   if (out.stimuli && typeof out.stimuli === "object" && !Array.isArray(out.stimuli)) {
     const stimuli = {};
     for (const [key, stim] of Object.entries(out.stimuli)) {
-      if (stim && typeof stim === "object") { const copy = { ...stim, ...(stim.image ? { image: sanitizeImageForStudent(stim.image) } : {}) }; applyActivityForStudent(copy); stimuli[key] = copy; }
-      else stimuli[key] = stim;
+      const clean = sanitizeStimulusForStudent(stim);                           // 19G: allow-list rebuild (title / text / image.dataUrl / activity)
+      if (clean) stimuli[key] = clean;
     }
     out.stimuli = stimuli;
   }
+  applyScenariosForStudent(out, section);                                       // 19G: strict shared projection, never a spread
   return out;
 }
 

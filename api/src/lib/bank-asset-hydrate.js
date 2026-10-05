@@ -69,13 +69,27 @@ function mapNode(node, assetFn) {
   if (parts !== node.parts) out.parts = parts;
   return out;
 }
+// Phase 19G — a scenario IMAGE source reuses the canonical asset model: its single `image` asset is normalized / hydrated exactly like a
+// question's media assets (durable identity in storage, a freshly signed delivery URL at delivery). Other source kinds are untouched.
+function mapScenarioSources(scenarios, assetFn) {
+  return mapArray(scenarios, sc => {
+    if (!sc || typeof sc !== "object") return sc;
+    const sources = mapArray(sc.sources, src => (src && typeof src === "object" && src.kind === "image" && isBankAsset(src.image) ? { ...src, image: assetFn(src.image) } : src));
+    return sources === sc.sources ? sc : { ...sc, sources };
+  });
+}
 function mapExamAssets(exam, assetFn) {
   if (!exam || typeof exam !== "object") return exam;
   const questions = mapArray(exam.questions, q => mapNode(q, assetFn));
   const sections = mapArray(exam.sections, s => {
     if (!s || typeof s !== "object") return s;
     const qs = mapArray(s.questions, q => mapNode(q, assetFn));
-    return qs === s.questions ? s : { ...s, questions: qs };
+    const scenarios = mapScenarioSources(s.scenarios, assetFn);
+    if (qs === s.questions && scenarios === s.scenarios) return s;
+    const out = { ...s };
+    if (qs !== s.questions) out.questions = qs;
+    if (scenarios !== s.scenarios) out.scenarios = scenarios;
+    return out;
   });
   if (questions === exam.questions && sections === exam.sections) return exam;
   const out = { ...exam };

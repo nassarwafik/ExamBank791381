@@ -14,6 +14,7 @@ import { genId } from "./examBuilderState";
 import { isKnownQuestionType } from "./questionTypeCatalog";
 import { resolveQuestionTypeKeyOrAlias } from "./questionTypeAliases";
 import { validateStructuredExam, type StructuredIssue } from "./examQuality";
+import { validateSectionScenarios } from "./scenarioSource";
 
 export type ImportFormat = "json" | "html";
 export type ImportSourceKind = "json" | "html-embedded-json" | "html-annotated";
@@ -24,6 +25,7 @@ export type ImportStats = {
   questions: number;
   parts: number;
   stimuli: number;
+  scenarios: number;   // 19G
   images: number;
   byType: Record<string, number>;
 };
@@ -260,7 +262,23 @@ export function normalizeImportedExam(
   const meta = isObj(raw.metadata) ? { ...raw.metadata } : {};
   meta.import = { sourceFileName: opts.fileName, sourceFormat: opts.sourceFormat, importedAt: new Date().toISOString(), originalExamId: originalExamId || null };
   out.metadata = meta;
-  out.sections = raw.sections.map((s, i) => normalizeSection(s, ctx, i));
+  const sections = raw.sections.map((s, i) => normalizeSection(s, ctx, i));
+  // Phase 19G — imported scenarios are DATA judged by the ONE strict contract (structure, source kinds / versions, same-section membership,
+  // one scenario per question, contiguity, required image alt). Nothing is repaired or guessed and there is no permissive future-version
+  // fallback: a violation is a FATAL parse error (the file cannot open), never a draft that silently lost or rewrote its shared sources.
+  // Sections without the key are untouched (every existing export). The canonical copies (questionIds in section order) are stored.
+  const knownQuestionIds = new Set<string>();
+  for (const s of sections) for (const q of (s.questions as Record<string, unknown>[]) || []) if (typeof q.examQuestionId === "string") knownQuestionIds.add(q.examQuestionId);
+  let scenarioErrors = 0;
+  sections.forEach((s, i) => {
+    if (s.scenarios === undefined) return;
+    const r = validateSectionScenarios(s as { questions?: unknown; scenarios?: unknown }, { knownQuestionIds, path: "section[" + i + "].scenarios" });
+    if (r.ok) { s.scenarios = r.scenarios; return; }
+    scenarioErrors += r.issues.length;
+    for (const issue of r.issues) ctx.errors.push({ code: issue.code, message: issue.message, path: issue.path });
+  });
+  if (scenarioErrors) return null;
+  out.sections = sections;
   // canonical: no top-level questions[] on a structured exam
   delete out.questions;
 
@@ -268,11 +286,12 @@ export function normalizeImportedExam(
 }
 
 export function computeStats(exam: StructuredExam | null): ImportStats {
-  const stats: ImportStats = { sections: 0, questions: 0, parts: 0, stimuli: 0, images: 0, byType: {} };
+  const stats: ImportStats = { sections: 0, questions: 0, parts: 0, stimuli: 0, scenarios: 0, images: 0, byType: {} };
   if (!exam || !Array.isArray(exam.sections)) return stats;
   stats.sections = exam.sections.length;
   for (const s of exam.sections) {
     stats.stimuli += s.stimuli ? Object.keys(s.stimuli).length : 0;
+    if (Array.isArray(s.scenarios)) { stats.scenarios += s.scenarios.length; for (const sc of s.scenarios) for (const src of sc.sources || []) if (src.kind === "image") stats.images++; }   // 19G
     for (const st of Object.values(s.stimuli || {})) stats.images += (st as { image?: { dataUrl?: string } }).image?.dataUrl ? 1 : 0;
     for (const q of s.questions || []) {
       stats.questions++;

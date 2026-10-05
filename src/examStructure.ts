@@ -24,6 +24,7 @@ export type ExamSection = {
   requiredAnswers?: number | null;
   answerUnit?: AnswerUnit;
   stimuli?: Record<string, Stimulus> | null;
+  scenarios?: unknown[] | null;   // 19G — raw section-owned scenarios; the lazy ScenarioView runs the strict projection itself
   questions: Question[];
 };
 
@@ -36,6 +37,7 @@ export type NormalizedSection = {
   requiredAnswers: number | null;
   answerUnit: AnswerUnit;
   stimuli: Record<string, Stimulus> | null;
+  scenarios: unknown[] | null;   // 19G — passed through untouched (presentation only; grading ignores it)
   questions: Question[];
 };
 
@@ -120,6 +122,7 @@ function normalizeSection(s: ExamSection, si: number): NormalizedSection {
     requiredAnswers: s?.requiredAnswers == null ? null : Math.max(0, Math.floor(num(s.requiredAnswers))),
     answerUnit: s?.answerUnit === "part" ? "part" : "question",
     stimuli: s && s.stimuli && typeof s.stimuli === "object" ? s.stimuli : null,
+    scenarios: Array.isArray(s?.scenarios) ? s.scenarios : null,
     questions: Array.isArray(s?.questions) ? s.questions : []
   };
 }
@@ -144,6 +147,7 @@ export function normalizeExamStructure(exam: StructuredExam | null | undefined):
         requiredAnswers: null,
         answerUnit: "question",
         stimuli: null,
+        scenarios: null,
         questions: Array.isArray(ex.questions) ? ex.questions : []
       }
     ]

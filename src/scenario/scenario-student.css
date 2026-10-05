@@ -1,0 +1,26 @@
+/* Phase 19G — the student / preview / review presentation of a scenario (shared sources + linked questions). Loaded with the lazy
+   ScenarioView chunk; design tokens + logical properties; RTL page, LTR code (CodeStimulusView). */
+.iex-scenario{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); background:var(--eb-surface); min-width:0; }
+.iex-scenario-title{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); overflow-wrap:anywhere; }
+.iex-scenario-instructions{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); white-space:pre-wrap; overflow-wrap:anywhere; }
+.iex-scenario-details > summary{ cursor:pointer; min-height:44px; display:flex; align-items:center; gap:var(--eb-space-2); color:var(--eb-primary); font-weight:var(--eb-fw-semibold); border-radius:var(--eb-r-xs); list-style-position:inside; }
+.iex-scenario-details > summary:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.iex-scenario-sources{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.iex-scenario-source{ margin:0; min-width:0; border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); padding:var(--eb-space-2) var(--eb-space-3); }
+.iex-scenario-source > figcaption{ display:flex; justify-content:space-between; gap:var(--eb-space-2); margin-block-end:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
+.iex-scenario-text{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); white-space:pre-wrap; overflow-wrap:anywhere; }
+.iex-scenario-source .iex-image{ margin:var(--eb-space-1) auto; }
+.iex-scenario-source .iex-code-stimulus{ margin:0; }
+.iex-scenario-source .iex-table-wrap table{ min-width:0; }
+.iex-scenario-source caption{ caption-side:top; text-align:start; padding:var(--eb-space-1) var(--eb-space-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.iex-scenario-source tbody th{ font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); background:var(--eb-surface-2); }
+.iex-scenario-unavailable{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.iex-page-scenario, .iex-page-question{ min-width:0; }
+@media (min-width: 1024px){
+  .iex-page.has-scenario{ display:grid; grid-template-columns:minmax(280px, 38%) minmax(0, 1fr); column-gap:var(--eb-space-4); row-gap:var(--eb-space-3); align-items:start; }
+  .iex-page.has-scenario > .iex-page-heading, .iex-page.has-scenario > .iex-section-context{ grid-column:1 / -1; }
+  .iex-page.has-scenario > .iex-page-scenario{ position:sticky; inset-block-start:calc(56px + var(--eb-space-3)); max-height:calc(100vh - 88px); overflow:auto; }
+}
+.review-scenario{ margin:0 0 var(--eb-space-3, 12px); border:1px solid var(--eb-line, #e5e9f0); border-radius:var(--eb-r, 10px); padding:0 var(--eb-space-3, 12px) var(--eb-space-2, 8px); background:var(--eb-surface, #fff); }
+.review-scenario > summary{ cursor:pointer; min-height:40px; display:flex; align-items:center; gap:8px; font-weight:700; }
+.review-scenario-tag{ font-style:normal; font-size:12px; color:var(--eb-primary, #1d4ed8); }

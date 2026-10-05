@@ -24,6 +24,8 @@ type Props = {
   sectionOptions: { id: string; title: string }[];
   currentSectionId: string;
   groupOptions: { id: string; label: string }[];
+  // Phase 19G — the title of the scenario this question is linked to (membership is read from the section, never stored on the question).
+  scenarioLabel?: string;
   onChange: (patch: Partial<BuilderQuestion>) => void;
   onDelete: () => void;
   onMove: (delta: number) => void;
@@ -50,7 +52,7 @@ type Props = {
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint } = props;
   const [open, setOpen] = useState(true);
 
   return (
@@ -60,6 +62,7 @@ export default function StructuredQuestionEditor(props: Props) {
         <button type="button" className="sb-collapse" onClick={() => setOpen(o => !o)} title={open ? "طيّ" : "فتح"} aria-label={open ? "طيّ" : "فتح"} aria-expanded={open}>{open ? "▾" : "▸"}</button>
         <span className="sb-q-badge">{q.displayNumber?.trim() ? q.displayNumber : index + 1}</span>
         {selected && <span className="sb-q-selected-tag">محدد</span>}
+        {scenarioLabel && <span className="sb-chip sb-scenario-chip" data-testid="scenario-chip">ضمن سيناريو: {scenarioLabel}</span>}
         <span className="sb-spacer" />
         <button type="button" className="sb-icon-btn" title="معاينة الطالب" aria-label="معاينة الطالب" onClick={onPreview} disabled={disabled}>👁</button>
         <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>

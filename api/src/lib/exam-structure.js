@@ -156,6 +156,8 @@ function normalizeSection(s, si) {
     // Optional shared-stimulus lookup: { [groupId]: { title?, text?, image? } }. Rendered once before
     // the first question of each group. Passed through untouched (grading ignores it).
     stimuli: s && s.stimuli && typeof s.stimuli === "object" ? s.stimuli : null,
+    // Phase 19G — section-owned scenarios: passed through untouched (presentation / composition only; grading ignores them).
+    scenarios: Array.isArray(s?.scenarios) ? s.scenarios : null,
     questions: Array.isArray(s?.questions) ? s.questions : []
   };
 }
@@ -180,6 +182,7 @@ function normalizeExamStructure(exam) {
         requiredAnswers: null,
         answerUnit: "question",
         stimuli: null,
+        scenarios: null,
         questions: Array.isArray(ex.questions) ? ex.questions : []
       }
     ]
