@@ -36,7 +36,7 @@ const PASSAGE_SIGNAL = /(فقرة|نص\s*تفاعلي|\bparagraph\b|\bpassage\b|
 const CODING_SIGNAL = /(برمجة|برنامج|\bcode\b|\bcoding\b|python|بايثون|\bjava\b|جافا|c#|سي شارب)/i;
 const SIMULATION_SIGNAL = /(smartsim|\.smartsim|حزمة\s*محاكاة|simulation\s+package)/i;
 // Phase 19B — "different numbers for every student / attempt" (Arabic / English).
-const PARAMETRIC_SIGNAL = /(\bparametric\b|random\s+(?:integers?|numbers?|values?)|different\s+(?:numeric\s+)?(?:version|numbers?|values?)\s+(?:for|per)\s+(?:each|every)\s+student|per[-\s]student\s+(?:numbers?|values?)|بأرقام\s+مختلفة|أرقام\s+مختلفة|قيم\s+مختلفة|(?:رقمي|حسابي|رياضيات)[^.؟?!]{0,30}(?:متغير|يتغير|متغيرة)|معطيات\s+متغيرة|يتغير\s+لكل\s+طالب)/i;
+const PARAMETRIC_SIGNAL = /(\bparametric\b|random\s+(?:integers?|numbers?|values?)|different\s+(?:numeric\s+)?(?:version|numbers?|values?)\s+(?:for|per)\s+(?:each|every)\s+student|per[-\s]student\s+(?:numbers?|values?)|بأرقام\s+مختلفة|أرقام\s+مختلفة|قيم\s+مختلفة|(?:رقمي|حسابي|رياضيات)[^.؟?!]{0,30}(?:متغير|يتغير|متغيرة)|معطيات\s+متغيرة|يتغير\s+لكل\s+طالب|مختلفة\s+لكل\s+طالب|different\s+values?\s+for\s+(?:each|every)\s+student)/i;
 const UNSUPPORTED_NETWORK: readonly [string, RegExp][] = [
   ["router", /\brouters?\b|\brouting\b|راوتر|الراوتر|موجّه|جهاز\s*التوجيه|بروتوكول(?:ات)?\s*(?:ال)?توجيه|التوجيه\s*(?:الثابت|الديناميكي)/i],
   ["ospf", /\bospf\b/i], ["eigrp", /\beigrp\b/i], ["rip", /\bripv?2?\b/i], ["bgp", /\bbgp\b/i],
@@ -70,7 +70,10 @@ const VLAN_ROW = obj({ id: int(1, 4094), name: str() });
 const IFACE_ROW = obj({ name: str(), mode: { type: "string", enum: ["", "access", "trunk"] }, accessVlan: int(0, 4094), nativeVlan: int(0, 4094), adminState: { type: "string", enum: ["", "up", "shutdown"] }, ipAddress: str(), subnetMask: str() });
 const numberSchema = (): JsonSchema => ({ type: "number" });
 // Phase 19B — a variable row carries `name` (mapped to the canonical variable id); bounds are integers judged by the canonical validator.
-const PARAM_VAR_ROW = obj({ name: str(), min: int(-1000000000, 1000000000), max: int(-1000000000, 1000000000), step: int(1, 1000000000) });
+// Phase 19C — v2 rows: an explicit kind (integer / decimal), numeric bounds and step (decimals allowed), and a display format.
+const PARAM_FORMAT = obj({ kind: { type: "string", enum: ["plain", "fixed", "percentage"] }, decimals: int(0, 10) });
+const PARAM_VAR_ROW = obj({ name: str(), kind: { type: "string", enum: ["integer", "decimal"] }, min: numberSchema(), max: numberSchema(), step: numberSchema(), format: PARAM_FORMAT });
+const PARAM_DERIVED_ROW = obj({ name: str(), expression: str(), format: PARAM_FORMAT });
 export function buildAiAuthorSchema() {
   return {
     type: "object" as const,
@@ -96,7 +99,7 @@ export function buildAiAuthorSchema() {
         targetHostname: str(), targetVlans: arr(VLAN_ROW, AI_AUTHOR_LIMITS.vlans), targetInterfaces: arr(IFACE_ROW, AI_AUTHOR_LIMITS.interfaces)
       })),
       parametricNumeric: nullable(obj({
-        variables: arr(PARAM_VAR_ROW, AI_AUTHOR_LIMITS.paramVariables), constraints: arr(str(), AI_AUTHOR_LIMITS.paramConstraints), answerExpression: str(),
+        variables: arr(PARAM_VAR_ROW, AI_AUTHOR_LIMITS.paramVariables), derivedVariables: arr(PARAM_DERIVED_ROW, AI_AUTHOR_LIMITS.paramVariables), constraints: arr(str(), AI_AUTHOR_LIMITS.paramConstraints), answerExpression: str(),
         mode: { type: "string", enum: ["tolerance", "range"] }, tolerance: numberSchema(), below: numberSchema(), above: numberSchema(),
         unitMode: { type: "string", enum: ["none", "label", "input"] }, unitLabel: str(), unit: str()
       }))
@@ -117,7 +120,7 @@ export function buildAiAuthorPrompt(request: string, signals: AuthorRequestSigna
     "  Supported scope ONLY: hostname; VLAN database (VLAN ids 2-4094 except 1002-1005, optional VLAN names); interfaces FastEthernet0/1 to FastEthernet0/24 and GigabitEthernet0/1 to GigabitEthernet0/2 with switchport mode access or trunk, access VLAN, trunk native VLAN, administrative state (up / shutdown); SVIs `Vlan<id>` with an IPv4 address and subnet mask (never on a physical port).",
     "  Fill `networkCli` with the initial state (usually hostname \"Switch\" and nothing else) and the TARGET state the student must reach. Every target value you set is one graded check; use \"\" / 0 for values that are not required. Use only the interface names above.",
     "  NOT supported (never invent them): routers, routing, static routes, OSPF, EIGRP, RIP, BGP, ACLs, NAT, DHCP, spanning-tree, port-security, EtherChannel, VTP, SSH / Telnet, interface range, trunk allowed VLAN lists, ping / traceroute, IPv6. If the request needs any of them, list them in `unsupportedCapabilities` and set intent \"unsupported\" (or choose an ordinary question type).",
-    "- parametricNumeric: a numeric question whose numbers DIFFER for every student and attempt (math, physics, chemistry, subnet arithmetic). `text` is the stem with {{name}} placeholders for every generated value (e.g. \"A network needs {{hosts}} hosts…\"). `variables`: bounded INTEGER variables { name (a letter then letters / digits / _), min, max, step } where (max - min) is a multiple of step. `constraints`: optional single comparisons such as \"a < b\" or \"b != 0\". `answerExpression` computes the correct answer from the variables using ONLY numbers, variable names, + - * / % ^ (integer exponent), parentheses and abs, round(x, digits), floor, ceil, min, max — no other functions, no code. `mode` \"tolerance\" (with `tolerance` >= 0, 0 = exact) or \"range\" (`below` / `above` >= 0 around the result). `unitMode` \"none\", \"label\" (a fixed `unitLabel` shown next to the answer) or \"input\" (the student types the unit; the correct `unit` is graded). Never put the computed answer or the expression in `text`.",
+    "- parametricNumeric: a numeric question whose numbers DIFFER for every student and attempt (math, physics, chemistry, subnet arithmetic). `text` is the stem with {{name}} placeholders for every generated value (e.g. \"A network needs {{hosts}} hosts…\"). `variables`: bounded variables { name (a letter then letters / digits / _), kind \"integer\" or \"decimal\" (at most 6 decimals), min, max, step, format } where (max - min) is a multiple of step. `derivedVariables`: optional values computed from variables or earlier derived values { name, expression, format } (e.g. area = a * b; never circular). `constraints`: optional single comparisons over variables and derived values such as \"a < b\", \"b != 0\" or \"sqrt(a) < b\". `answerExpression` computes the correct answer from the variables / derived values using ONLY numbers, names, + - * / % ^ (^ is pow), parentheses and abs, round(x, digits), floor, ceil, min, max, sqrt, pow, log (natural), log10, exp — no other functions, no code. `format` only changes how a value is WRITTEN in the stem: \"plain\", \"fixed\" (decimals places) or \"percentage\" (value × 100 with decimals places and %); grading always uses the exact values. For a percentage answer write the expression in percent, e.g. \"100 * correct / total\", with unitLabel \"%\". `mode` \"tolerance\" (with `tolerance` >= 0, 0 = exact) or \"range\" (`below` / `above` >= 0 around the result). `unitMode` \"none\", \"label\" (a fixed `unitLabel` shown next to the answer) or \"input\" (the student types the unit; the correct `unit` is graded). Never put the computed answer or the expression in `text`.",
     "- simulation: the teacher wants an uploaded interactive .smartsim simulation. coding: the student must write a program. Recognise them; do not invent their content (fill no payload).",
     "- unsupported: the request cannot be met with the types above; explain why in `explanation`.",
     "If the request is ambiguous, set confidence \"ambiguous\" and prefer a safe ordinary question (shortAnswer or multipleChoice) instead of a simulator.",
@@ -153,7 +156,12 @@ const ROOT_KEYS = ["intent", "confidence", "unsupportedCapabilities", "explanati
 const OPTIONAL_ROOT_KEYS = ["parametricNumeric"];
 const PARAM_KEYS = ["variables", "constraints", "answerExpression", "mode", "tolerance", "below", "above", "unitMode", "unitLabel", "unit"];
 type AiParamVar = { name: string; min: number; max: number; step: number };
-type AiParametric = { variables: AiParamVar[]; constraints: string[]; answerExpression: string; mode: string; tolerance: number; below: number; above: number; unitMode: string; unitLabel: string; unit: string };
+type AiFormat = { kind: string; decimals: number };
+type AiParamVarV2 = { name: string; kind: string; min: number; max: number; step: number; format: AiFormat };
+type AiDerived = { name: string; expression: string; format: AiFormat };
+// Phase 19C — a payload carrying `derivedVariables` is the v2 shape (variable rows with kind + format); without it, the Phase 19B
+// shape (integer rows) maps to the v1 contract exactly as before. The strict schema sent to the model always requires the v2 keys.
+type AiParametric = { variables: (AiParamVar | AiParamVarV2)[]; derivedVariables?: AiDerived[]; constraints: string[]; answerExpression: string; mode: string; tolerance: number; below: number; above: number; unitMode: string; unitLabel: string; unit: string };
 const PIECE_KEYS = ["kind", "text", "accepted", "caseSensitive", "options", "correctIndex"];
 const IFACE_KEYS = ["name", "mode", "accessVlan", "nativeVlan", "adminState", "ipAddress", "subnetMask"];
 const NET_KEYS = ["scoring", "initialHostname", "initialVlans", "initialInterfaces", "targetHostname", "targetVlans", "targetInterfaces"];
@@ -169,7 +177,10 @@ const vlanRow = (v: unknown): v is AiVlan => isPlain(v) && exactKeys(v, ["id", "
 const ifaceRow = (v: unknown): v is AiIface => isPlain(v) && exactKeys(v, IFACE_KEYS) && isStr(v.name, 64) && isStr(v.mode, 16) && isInt(v.accessVlan, 0, 99999) && isInt(v.nativeVlan, 0, 99999) && isStr(v.adminState, 16) && isStr(v.ipAddress, 64) && isStr(v.subnetMask, 64);
 const finiteNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const paramVarRow = (v: unknown): v is AiParamVar => isPlain(v) && exactKeys(v, ["name", "min", "max", "step"]) && isStr(v.name, 64) && [v.min, v.max, v.step].every(x => typeof x === "number" && Number.isSafeInteger(x));
-const paramShapeOk = (p: unknown): p is AiParametric => isPlain(p) && exactKeys(p, PARAM_KEYS) && Array.isArray(p.variables) && p.variables.length <= AI_AUTHOR_LIMITS.paramVariables && p.variables.every(paramVarRow)
+const formatShape = (f: unknown): f is AiFormat => isPlain(f) && exactKeys(f, ["kind", "decimals"]) && isStr(f.kind, 16) && typeof f.decimals === "number" && Number.isInteger(f.decimals);
+const paramVarRowV2 = (v: unknown): v is AiParamVarV2 => isPlain(v) && exactKeys(v, ["name", "kind", "min", "max", "step", "format"]) && isStr(v.name, 64) && isStr(v.kind, 16) && finiteNum(v.min) && finiteNum(v.max) && finiteNum(v.step) && formatShape(v.format);
+const derivedRow = (v: unknown): v is AiDerived => isPlain(v) && exactKeys(v, ["name", "expression", "format"]) && isStr(v.name, 64) && isStr(v.expression) && formatShape(v.format);
+const paramShapeOk = (p: unknown): p is AiParametric => isPlain(p) && (Object.prototype.hasOwnProperty.call(p, "derivedVariables") ? exactKeys(p, [...PARAM_KEYS, "derivedVariables"]) && Array.isArray(p.derivedVariables) && p.derivedVariables.length <= AI_AUTHOR_LIMITS.paramVariables && p.derivedVariables.every(derivedRow) && Array.isArray(p.variables) && p.variables.length <= AI_AUTHOR_LIMITS.paramVariables && p.variables.every(paramVarRowV2) : exactKeys(p, PARAM_KEYS) && Array.isArray(p.variables) && p.variables.length <= AI_AUTHOR_LIMITS.paramVariables && p.variables.every(paramVarRow))
   && strArr(p.constraints, AI_AUTHOR_LIMITS.paramConstraints) && isStr(p.answerExpression) && isStr(p.mode, 16) && finiteNum(p.tolerance) && finiteNum(p.below) && finiteNum(p.above) && isStr(p.unitMode, 16) && isStr(p.unitLabel, 64) && isStr(p.unit, 64);
 function shapeOk(raw: unknown): raw is AiDraft {
   if (!isPlain(raw) || hasForbiddenKey(raw) || !ROOT_KEYS.every(k => Object.prototype.hasOwnProperty.call(raw, k)) || Object.keys(raw).some(k => !ROOT_KEYS.includes(k) && !OPTIONAL_ROOT_KEYS.includes(k))) return false;
@@ -259,7 +270,15 @@ function mapParametric(d: AiDraft, p: AiParametric): Mapped {
   const response = p.unitMode === "label" ? { unit: "label", label: p.unitLabel } : p.unitMode === "input" ? { unit: "input" } : p.unitMode === "none" ? { unit: "none" } : { unit: p.unitMode };
   const answer: Record<string, unknown> = p.mode === "range" ? { expression: p.answerExpression, mode: "range", below: p.below, above: p.above } : p.mode === "tolerance" ? { expression: p.answerExpression, mode: "tolerance", tolerance: p.tolerance } : { expression: p.answerExpression, mode: p.mode };
   if (p.unitMode === "input") answer.unit = p.unit;
-  const parametric = { v: 1, generatorVersion: 1, variables: p.variables.map(v => ({ id: v.name, kind: "int", min: v.min, max: v.max, step: v.step })), constraints: [...p.constraints], response };
+  if (p.derivedVariables) {
+    // v2: kinds and formats as written ("plain" is the default, so it is omitted); an unknown kind / format kind is kept so the
+    // canonical validator refuses it.
+    const fmt = (f: AiFormat) => (f.kind === "plain" ? {} : { format: { kind: f.kind, decimals: f.decimals } });
+    const variables = (p.variables as AiParamVarV2[]).map(v => ({ id: v.name, kind: v.kind, min: v.min, max: v.max, step: v.step, ...fmt(v.format) }));
+    const derivedVariables = p.derivedVariables.map(dv => ({ id: dv.name, expression: dv.expression, ...fmt(dv.format) }));
+    return { node: { ...base(d, "parametricNumeric"), questionTypeVersion: 1, parametric: { v: 2, generatorVersion: 2, variables, derivedVariables, constraints: [...p.constraints], response }, answer }, issues: [] };
+  }
+  const parametric = { v: 1, generatorVersion: 1, variables: (p.variables as AiParamVar[]).map(v => ({ id: v.name, kind: "int", min: v.min, max: v.max, step: v.step })), constraints: [...p.constraints], response };
   return { node: { ...base(d, "parametricNumeric"), questionTypeVersion: 1, parametric, answer }, issues: [] };
 }
 

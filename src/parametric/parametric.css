@@ -23,3 +23,11 @@
 .param-review { display: grid; gap: 6px; min-width: 0; }
 .param-review p { margin: 0; overflow-wrap: anywhere; }
 .param-review-audit { color: var(--eb-muted, #475569); font-size: 12px; }
+
+/* Phase 19C — v2 editor: sample list, solution inspector, v1 upgrade note */
+.param-samples { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.param-sample { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; min-width: 0; }
+.param-sample p { margin: 0; overflow-wrap: anywhere; }
+.param-inspector { display: grid; gap: 4px; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); }
+.param-inspector p, .param-inspector ul { margin: 0; overflow-wrap: anywhere; }
+.param-upgrade { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 6px 10px; border: 1px dashed var(--eb-border, #cbd5e1); border-radius: 8px; }

@@ -49,7 +49,7 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
     ensure("answer", { scoring: "proportional", blanks: { b1: { accepted: [], caseSensitive: false } } });
 });
 (0, exports.registerTypeDefaults)("parametricNumeric", 1, ensure => {
-    ensure("parametric", { v: 1, generatorVersion: 1, variables: [{ id: "a", kind: "int", min: 1, max: 10, step: 1 }, { id: "b", kind: "int", min: 1, max: 10, step: 1 }], constraints: [], response: { unit: "none" } });
+    ensure("parametric", { v: 2, generatorVersion: 2, variables: [{ id: "a", kind: "integer", min: 1, max: 10, step: 1 }, { id: "b", kind: "integer", min: 1, max: 10, step: 1 }], derivedVariables: [], constraints: [], response: { unit: "none" } });
     ensure("answer", { expression: "", mode: "tolerance", tolerance: 0 });
 });
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {

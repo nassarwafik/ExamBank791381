@@ -151,7 +151,7 @@ describe("19B engine — versioned deterministic generation (generatorVersion 1)
     expect(officialSeedText(1, id())).toBe('["smartassess.parametric",1,"official","asg-19b","stu-1",1,"q1"]');
     expect(previewSeedText(1, "q1", 1)).toBe('["smartassess.parametric",1,"preview","q1",1]');
     expect(seedDigest(officialSeedText(1, id()))).toBe("896b187e1b0615f2313ff4fd48a8a628");
-    expect([...PARAMETRIC_GENERATOR_VERSIONS]).toEqual([1]);
+    expect([...PARAMETRIC_GENERATOR_VERSIONS]).toEqual([1, 2]);                                   // Phase 19C adds generatorVersion 2 (v1 unchanged)
   });
   it("identity validation: non-empty bounded ids, a positive integer attempt number; anything else is null (fail closed)", () => {
     expect(id()).toEqual({ assignmentId: "asg-19b", studentId: "stu-1", attemptNumber: 1, questionKey: "q1" });

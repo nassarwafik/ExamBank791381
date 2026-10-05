@@ -55,7 +55,8 @@ const NETCLI_SIGNATURES = ["ncli-terminal", "ncli-inputrow", "qt-editor-networkC
 const CLOZE_SIGNATURES = ["cloze-passage", "qt-editor-inlineCloze", "cloze-review-list", "ai-author-dialog"];
 // Phase 19B — parametric numeric renderer / editor / review class names and the generator's seed namespace (used nowhere else). ANY
 // one in an initial file fails: the engine, the editor and the per-attempt renderer stay out of the initial graph.
-const PARAMETRIC_SIGNATURES = ["param-response", "qt-editor-parametricNumeric", "param-review-audit", "smartassess.parametric"];
+// Phase 19C adds the teacher-only sample inspector and the review constraint list.
+const PARAMETRIC_SIGNATURES = ["param-response", "qt-editor-parametricNumeric", "param-review-audit", "smartassess.parametric", "param-inspector", "param-review-constraints"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
 const MONACO_SIGNATURES = ["monaco-editor", "MonacoEnvironment", "monaco-mouse-cursor-text"];
