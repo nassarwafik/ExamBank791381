@@ -43,9 +43,9 @@ describe("C1 — coding@1 is a real production question type", () => {
   it("catalog: key 'coding', version 1, «برمجة / كتابة كود», interactive, hybrid (manual today), partial credit, NOT compound, interactive, offline editing, responseKinds ['code'], non-legacy; 17 production types", () => {
     const d = questionTypeDefinition("coding");
     expect(d, "coding is registered").toBeTruthy();
-    expect(d!.version).toBe(2); expect(d!.label).toBe("برمجة / كتابة كود");   // 17F-C2 RF1: current version 2 (coding@1 historical, coding@2 compile-error policy) expect(d!.category).toBe("interactive"); expect(d!.gradingMode).toBe("hybrid"); expect(d!.legacy).toBe(false);
+    expect(d!.version).toBe(3); expect(d!.label).toBe("برمجة / كتابة كود");   // 17F-C2 RF1: coding@2 compile-error policy · 19F: current version 3 (locked template; new questions are still authored at @2) expect(d!.category).toBe("interactive"); expect(d!.gradingMode).toBe("hybrid"); expect(d!.legacy).toBe(false);
     expect(d!.capabilities).toMatchObject({ autoGrading: false, manualGrading: true, partialCredit: true, compoundPart: false, interactive: true, offline: true, requiresImage: false });
-    expect(d!.responseKinds).toEqual(["code"]);
+    expect(d!.responseKinds).toEqual(["code", "codeTemplate"]);   // 19F: coding@3 answers carry gap values only
     expect(QUESTION_TYPE_CATALOG.length).toBe(23);                                                   // 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
     expect(QUESTION_TYPE_CATALOG.at(-7)!.key).toBe("coding"); expect(QUESTION_TYPE_CATALOG.at(-6)!.key).toBe("networkCli"); expect(QUESTION_TYPE_CATALOG.at(-5)!.key).toBe("inlineCloze"); expect(QUESTION_TYPE_CATALOG.at(-4)!.key).toBe("parametricNumeric");   // 18C appends networkCli after coding · 19A appends inlineCloze · 19B appends parametricNumeric · 19D appends hotspot / labelDiagram · 19E appends openResponse
   });

@@ -10,6 +10,7 @@
 
 import type { BuilderQuestion, BuilderSection, QuestionBody, StructuredExam, BuilderPartType, BuilderQuestionType } from "./examTypes";
 import { validateQuestionTypeNode } from "./questionTypeValidation";
+import { codeStimulusIssues } from "./codeStimulus";
 import { questionTypeDefinition } from "./questionTypeCatalog";
 import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
 
@@ -142,6 +143,9 @@ function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: Bui
   if (!Number.isFinite(num(q.marks)) || num(q.marks) <= 0) {
     add("error", "MARKS_PROBLEM", "سؤال " + disp + " في «" + sectionLabel + "» علامته غير صالحة.", where);
   }
+  // Phase 19F — the optional read-only code stimulus (any top-level type, compound included) is strict: a malformed one blocks
+  // finalization (the student projection would withhold it, so the question would silently lose its code).
+  for (const i of codeStimulusIssues(q)) add("error", i.code, "سؤال " + disp + " في «" + sectionLabel + "»: " + i.message, where);
   if (q.presentationType === "compound") {
     validateCompound(q, disp, sectionLabel, where, add);
   } else {

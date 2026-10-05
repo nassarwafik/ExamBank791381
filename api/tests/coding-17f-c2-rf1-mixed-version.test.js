@@ -156,7 +156,9 @@ describe("RF1-B — coding@1 is the historical contract, coding@2 carries the co
     expect(h.attempt().finalized).toBe(false);
   });
   it("MV9 the NEW-authoring defaults are coding@2 + manualReview (shared defaults registry, server copy)", () => {
-    expect(catalog().currentQuestionTypeVersion("coding")).toBe(2);
+    // Phase 19F — coding@3 (locked template) is the CURRENT version, but a NEW coding question is still AUTHORED at coding@2.
+    expect(catalog().currentQuestionTypeVersion("coding")).toBe(3);
+    expect(catalog().authoringQuestionTypeVersion("coding")).toBe(2);
     expect(defaults().hasRegisteredTypeDefaults("coding", 1)).toBe(true);
     expect(defaults().hasRegisteredTypeDefaults("coding", 2)).toBe(true);
     const seed = v => { const out = {}; defaults().applyRegisteredTypeDefaults("coding", v, (k, val) => { if (out[k] === undefined) out[k] = val; }, p => p + "-x"); return out; };
@@ -212,17 +214,18 @@ describe("RF1-B — coding@1 is the historical contract, coding@2 carries the co
     expect(defaults().hasRegisteredTypeDefaults("coding", 1)).toBe(true);
     expect(official().targetAuthority(F.exam({ auto: V1_LEGACY() }), { attemptNumber: 1, submittedAt: "2026-10-03T10:00:00.000Z", answers: ANSWERS(), questionGrades: [{ questionId: "auto1", maxMarks: 10, score: 0, manualReview: true }] }, "auto1", { assignmentId: F.AID, studentId: F.S1, revision: 1 }).ok).toBe(true);
   });
-  it("MV15 every required V2 runtime registry resolves coding@2 (catalog, server grader, defaults, grading authority); coding@3 stays unsupported", () => {
+  // Phase 19F — coding@3 is now a supported version (the locked template); the "next, unsupported" version this pin guards is coding@4.
+  it("MV15 every required V2 runtime registry resolves coding@2 (catalog, server grader, defaults, grading authority); coding@4 stays unsupported", () => {
     const c = catalog();
     expect(c.supportsQuestionTypeVersion("coding", 2)).toBe(true);
     expect(c.effectiveQuestionTypeVersion("coding", 2)).toBe(2);
-    expect(c.effectiveQuestionTypeVersion("coding", 3)).toBeUndefined();
+    expect(c.effectiveQuestionTypeVersion("coding", 4)).toBeUndefined();
     expect(typeof graders().resolveGrader("coding", 2)).toBe("function");
-    expect(graders().resolveGrader("coding", 3)).toBeUndefined();
+    expect(graders().resolveGrader("coding", 4)).toBeUndefined();
     expect(defaults().hasRegisteredTypeDefaults("coding", 2)).toBe(true);
     const att = { attemptNumber: 1, submittedAt: "2026-10-03T10:00:00.000Z", answers: ANSWERS(), questionGrades: [{ questionId: "auto1", maxMarks: 10, score: 0, manualReview: true }] };
     expect(official().targetAuthority(F.exam({ auto: V2_REVIEW() }), att, "auto1", { assignmentId: F.AID, studentId: F.S1, revision: 1 }).ok).toBe(true);
-    expect(official().targetAuthority(F.exam({ auto: vQ(3, "manualReview") }), att, "auto1", { assignmentId: F.AID, studentId: F.S1, revision: 1 })).toMatchObject({ ok: false, code: "QUESTION_INVALID" });
+    expect(official().targetAuthority(F.exam({ auto: vQ(4, "manualReview") }), att, "auto1", { assignmentId: F.AID, studentId: F.S1, revision: 1 })).toMatchObject({ ok: false, code: "QUESTION_INVALID" });
   });
   it("MV17 coding@2 zero and coding@2 manualReview have DIFFERENT fingerprints / grading keys, and both differ from coding@1", async () => {
     const fp = async q => { const h = seeded(q); await submitted(h); return h.target(); };

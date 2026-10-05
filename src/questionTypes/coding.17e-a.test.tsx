@@ -77,9 +77,9 @@ describe("17E-A registry / factory — coding is ONE versioned registry member (
     expect(effectiveQuestionTypeVersion("coding", undefined)).toBe(1);
   });
   it("COD3 unsupported versions fail safely (no editor / renderer, a blocking validation error — never a silent downgrade)", () => {
-    expect(resolveAuthoringEditor("coding", 3)).toBeUndefined();   // 17F-C2 RF1: coding@2 exists; coding@3 is the unsupported neighbour
-    expect(resolveStudentRenderer("coding", 3)).toBeUndefined();
-    expect(validateQuestionTypeNode(codingQ() as never, "coding", 3).map(i => i.code)).toContain("UNSUPPORTED_QUESTION_TYPE_VERSION");
+    expect(resolveAuthoringEditor("coding", 4)).toBeUndefined();   // 17F-C2 RF1: coding@2 exists · 19F: coding@3 too; coding@4 is the unsupported neighbour
+    expect(resolveStudentRenderer("coding", 4)).toBeUndefined();
+    expect(validateQuestionTypeNode(codingQ() as never, "coding", 4).map(i => i.code)).toContain("UNSUPPORTED_QUESTION_TYPE_VERSION");
   });
   it("COD4 the canonical factory creates a valid coding@1 shell (no hidden test needed for manual grading)", () => {
     const q = newQuestion("coding" as never, { examQuestionId: "n1", text: "س", marks: 5 }) as unknown as Record<string, any>;
@@ -379,11 +379,11 @@ describe("17E-A finalization / serialization / versioning (COD30, COD31, COD34, 
     expect(q.coding.starterCode).toEqual(CFG.starterCode);
   });
   it("COD35 an unknown coding version fails safely: kept as stored (no downgrade), blocks finalization, students get no renderer", () => {
-    const e = exam([codingQ({ questionTypeVersion: 3 })]);   // 17F-C2 RF1: coding@2 is supported; coding@3 is the unknown version
+    const e = exam([codingQ({ questionTypeVersion: 4 })]);   // 17F-C2 RF1: coding@2 is supported · 19F: coding@3 too; coding@4 is the unknown version
     expect(evaluateExamFinalization(e).canFinalize).toBe(false);
     const back = JSON.parse(stableStringify(canonicalizeExamContent(e)));
-    expect(back.sections[0].questions[0].questionTypeVersion).toBe(3);
-    expect(resolveStudentRenderer("coding", 3)).toBeUndefined();
+    expect(back.sections[0].questions[0].questionTypeVersion).toBe(4);
+    expect(resolveStudentRenderer("coding", 4)).toBeUndefined();
   });
 });
 

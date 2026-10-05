@@ -22,7 +22,7 @@ const KEY = { hiddenTests: [{ id: "hid-1", input: "HIDDEN-INPUT-17B\n", expected
 const EXAM = { title: "امتحان", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "القسم", gradingPolicy: "all", questions: [
   { examQuestionId: "c1", presentationType: "coding", questionTypeVersion: 1, text: "اجمع", marks: 10, coding: CFG, answer: KEY },
   { examQuestionId: "t1", presentationType: "shortAnswer", text: "نص", marks: 2, answer: "x" },
-  { examQuestionId: "c2", presentationType: "coding", questionTypeVersion: 3, text: "نسخة مستقبلية", marks: 1, coding: CFG, answer: KEY }   // 17F-C2 RF1: coding@3 is the future version
+  { examQuestionId: "c2", presentationType: "coding", questionTypeVersion: 4, text: "نسخة مستقبلية", marks: 1, coding: CFG, answer: KEY }   // 17F-C2 RF1 · 19F: coding@4 is the future version (coding@3 is the locked template)
 ] }] };
 const nowIso = () => new Date().toISOString();
 const assignment = (over = {}) => ({ schemaVersion: 2, attemptModelVersion: 3, attemptPolicy: "pausable", assignmentId: AID, classId: "c1", title: "واجب", instructions: "", status: "published", openAt: "", dueAt: new Date(Date.now() + 864e5).toISOString(), maxAttempts: 1, durationMinutes: 30, questionCount: 3, totalMarks: 13, examSnapshot: EXAM, ...over });

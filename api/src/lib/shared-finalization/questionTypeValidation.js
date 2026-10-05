@@ -46,6 +46,8 @@ function validateQuestionTypeNode(node, type, version, options = {}) {
     for (const f of exports.EXECUTABLE_NODE_FIELDS)
         if (f in n)
             issues.push(err("EXECUTABLE_FIELD", "حقل غير مسموح في بيانات السؤال: " + f, f));
+    if (options.part && "codeStimulus" in n)
+        issues.push(err("CODE_STIMULUS_PART_UNSUPPORTED", "الكود المرفق يوضع على السؤال المركّب كله، لا على بند منه.", "codeStimulus"));
     if (!(0, questionTypeCatalog_1.isKnownQuestionType)(type)) {
         issues.push(err("UNKNOWN_QUESTION_TYPE", "نوع سؤال غير معروف: " + String(type ?? "")));
         return issues;
@@ -146,6 +148,7 @@ const finite = (v) => typeof v === "number" && Number.isFinite(v);
 (0, exports.registerTypeValidator)("simulation", 1, node => (0, smartsimManifest_1.validateSimulationReference)(node.simulation));
 (0, exports.registerTypeValidator)("coding", 1, node => (0, codingQuestion_1.validateCodingQuestion)(node));
 (0, exports.registerTypeValidator)("coding", 2, node => (0, codingQuestion_1.validateCodingQuestion)(node));
+(0, exports.registerTypeValidator)("coding", 3, node => (0, codingQuestion_1.validateCodingQuestion)(node));
 (0, exports.registerTypeValidator)("networkCli", 1, node => (0, networkCliQuestion_1.validateNetworkCliQuestion)(node));
 (0, exports.registerTypeValidator)("inlineCloze", 1, node => (0, inlineClozeQuestion_1.validateInlineClozeQuestion)(node));
 (0, exports.registerTypeValidator)("parametricNumeric", 1, node => (0, parametricNumericQuestion_1.validateParametricNumericQuestion)(node));

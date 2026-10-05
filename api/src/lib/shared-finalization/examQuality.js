@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBlockingErrors = void 0;
 exports.validateStructuredExam = validateStructuredExam;
 const questionTypeValidation_1 = require("./questionTypeValidation");
+const codeStimulus_1 = require("./codeStimulus");
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const examBuilderState_1 = require("./examBuilderState");
 const num = (v) => {
@@ -101,6 +102,8 @@ function validateQuestion(q, sectionLabel, section, add) {
     if (!Number.isFinite(num(q.marks)) || num(q.marks) <= 0) {
         add("error", "MARKS_PROBLEM", "سؤال " + disp + " في «" + sectionLabel + "» علامته غير صالحة.", where);
     }
+    for (const i of (0, codeStimulus_1.codeStimulusIssues)(q))
+        add("error", i.code, "سؤال " + disp + " في «" + sectionLabel + "»: " + i.message, where);
     if (q.presentationType === "compound") {
         validateCompound(q, disp, sectionLabel, where, add);
     }

@@ -125,7 +125,7 @@ describe("RF1-B — coding@2 carries the compile-error policy; coding@1 stays th
     const next = changeQuestionType(mc, "coding" as never) as unknown as R;
     expect(next.questionTypeVersion).toBe(2);
     expect((next.answer as R).compileErrorPolicy).toBe("manualReview");
-    expect(currentQuestionTypeVersion("coding")).toBe(2);
+    expect(currentQuestionTypeVersion("coding")).toBe(3);   // 19F: coding@3 (locked template) is current; NEW questions are still authored at coding@2 (above)
   });
   it("MV14 every V1 frontend registry still resolves coding@1 (editor, renderer, defaults, validator; absent version = V1)", () => {
     expect(supportsQuestionTypeVersion("coding", 1)).toBe(true);
@@ -137,17 +137,18 @@ describe("RF1-B — coding@2 carries the compile-error policy; coding@1 stays th
     expect(validateQuestionTypeNode(node(1, KEY), "coding", 1).map(i => i.code)).toEqual([]);
     expect(validateQuestionTypeNode(node(undefined, KEY), "coding", undefined).map(i => i.code)).toEqual([]);
   });
-  it("MV15 every V2 frontend registry resolves coding@2 (editor, renderer, defaults, validator); coding@3 is unsupported", () => {
+  // Phase 19F — coding@3 (locked template) is supported now; the unsupported neighbour this pin guards is coding@4.
+  it("MV15 every V2 frontend registry resolves coding@2 (editor, renderer, defaults, validator); coding@4 is unsupported", () => {
     expect(supportsQuestionTypeVersion("coding", 2)).toBe(true);
     expect(effectiveQuestionTypeVersion("coding", 2)).toBe(2);
-    expect(effectiveQuestionTypeVersion("coding", 3)).toBeUndefined();
+    expect(effectiveQuestionTypeVersion("coding", 4)).toBeUndefined();
     expect(resolveAuthoringEditor("coding", 2)).toBeTruthy();
     expect(resolveStudentRenderer("coding", 2)?.version).toBe(2);
-    expect(resolveStudentRenderer("coding", 3)).toBeUndefined();
+    expect(resolveStudentRenderer("coding", 4)).toBeUndefined();
     expect(hasRegisteredTypeDefaults("coding", 2)).toBe(true);
     expect(validateQuestionTypeNode(node(2, { ...KEY, compileErrorPolicy: "manualReview" }), "coding", 2).map(i => i.code)).toEqual([]);
     expect(validateQuestionTypeNode(node(2, { ...KEY, compileErrorPolicy: "zero" }), "coding", 2).map(i => i.code)).toEqual([]);
-    expect(validateQuestionTypeNode(node(3, KEY), "coding", 3).map(i => i.code)).toEqual(["UNSUPPORTED_QUESTION_TYPE_VERSION"]);
+    expect(validateQuestionTypeNode(node(4, KEY), "coding", 4).map(i => i.code)).toEqual(["UNSUPPORTED_QUESTION_TYPE_VERSION"]);
   });
   it("MV8 / MV12 the shared model: V1 manualReview is refused (upgrade required), V2 needs an explicit valid policy, unknown values fail everywhere", () => {
     const codes = (n: BuilderQuestion) => CQ.validateCodingQuestion(n as unknown as Record<string, unknown>).map(i => i.code);
