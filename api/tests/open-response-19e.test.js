@@ -190,6 +190,7 @@ describe("19E — end to end through the REAL handlers", () => {
       [{ o1: { rubricAwards: { ...AW, accuracy: { levelId: "legendary" } } } }, "RUBRIC_AWARD_UNKNOWN_LEVEL"],
       [{ o1: { rubricAwards: { ...AW, accuracy: { points: 3 } } } }, "RUBRIC_AWARD_CUSTOM_NOT_ALLOWED"],
       [{ o1: { rubricAwards: { ...AW, reasoning: { points: 2.5 } } } }, "RUBRIC_AWARD_POINTS_INVALID"],
+      [{ o1: { rubricAwards: { ...AW, reasoning: { points: -0.5 } } } }, "RUBRIC_AWARD_POINTS_INVALID"],     // negative custom points
       [{ o1: { rubricAwards: { ...AW, accuracy: { levelId: "full", maxPoints: 100 } } } }, "RUBRIC_AWARD_INVALID"],
       [{ o1: { rubricAwards: JSON.parse('{"__proto__":{"levelId":"full"},"accuracy":{"levelId":"full"},"reasoning":{"levelId":"full"}}') } }, "RUBRIC_AWARD_UNKNOWN_CRITERION"],
       [{ o2: { rubricAwards: AW } }, "RUBRIC_AWARD_UNKNOWN_CRITERION"],                 // o1's rubric selections cannot grade o2
@@ -213,6 +214,19 @@ describe("19E — end to end through the REAL handlers", () => {
     }
     expect(attemptOf(ctx).questionGrades.find(q => q.questionId === "o1")).toMatchObject({ score: 0, manualReview: true });
     expect(attemptOf(ctx).finalized).toBe(false);
+  });
+  it("an unsupported published version or a published rubric with a negative level never grades on the server (400, nothing written); finalization refuses both", async () => {
+    const shared = require_("../src/lib/shared-finalization/openResponseQuestion.js");
+    const negative = { rubric: { ...clone(RUBRIC), criteria: [{ ...clone(RUBRIC.criteria[0]), levels: [lv("full", "كامل", 4), lv("neg", "سالب", -1), lv("none", "لا شيء", 0)] }, clone(RUBRIC.criteria[1])] }, modelAnswer: "" };
+    expect(shared.validateOpenResponseQuestion(oq({ questionTypeVersion: 2 })).map(i => i.code)).toContain("OPEN_RESPONSE_VERSION_UNSUPPORTED");
+    expect(shared.validateOpenResponseQuestion(oq({ answer: negative })).map(i => i.code)).toContain("RUBRIC_LEVEL_POINTS_INVALID");
+    for (const bad of [oq({ questionTypeVersion: 2 }), oq({ answer: negative })]) {
+      const ctx = await submitted([bad, ob(), shortQ()]);
+      const before = clone(ctx.getJson(F.SUB));
+      const r = await save(ctx, { o1: { rubricAwards: AW } });
+      expect(r.status).toBe(400); expect(r.jsonBody.code).toBe("RUBRIC_AUTHORITY_INVALID");
+      expect(ctx.getJson(F.SUB)).toEqual(before);
+    }
   });
   it("legacy manual overrides are unchanged: { score, comment } on other types (a stray rubric field is inert)", async () => {
     const ctx = await submitted();
