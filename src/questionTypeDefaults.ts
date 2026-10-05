@@ -66,9 +66,10 @@ registerTypeDefaults("inlineCloze", 1, ensure => {
   ensure("answer", { scoring: "proportional", blanks: { b1: { accepted: [], caseSensitive: false } } });
 });
 // Phase 19B — parametricNumeric@1: two bounded integer variables and a key whose EMPTY expression blocks finalization.
-// Literal on purpose (initial graph); parity-tested against defaultParametricNumericConfig() / defaultParametricNumericAnswerKey().
+// Phase 19C — new questions use the v2 contract (generatorVersion 2). Literal on purpose (initial graph); parity-tested against
+// defaultParametricNumericConfig() / defaultParametricNumericAnswerKey(). Existing v1 questions are never rewritten.
 registerTypeDefaults("parametricNumeric", 1, ensure => {
-  ensure("parametric", { v: 1, generatorVersion: 1, variables: [{ id: "a", kind: "int", min: 1, max: 10, step: 1 }, { id: "b", kind: "int", min: 1, max: 10, step: 1 }], constraints: [], response: { unit: "none" } });
+  ensure("parametric", { v: 2, generatorVersion: 2, variables: [{ id: "a", kind: "integer", min: 1, max: 10, step: 1 }, { id: "b", kind: "integer", min: 1, max: 10, step: 1 }], derivedVariables: [], constraints: [], response: { unit: "none" } });
   ensure("answer", { expression: "", mode: "tolerance", tolerance: 0 });
 });
 registerTypeDefaults("categorization", 1, (ensure, newId) => {

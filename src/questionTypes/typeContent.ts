@@ -3,8 +3,9 @@
 // form the builder hosts merge. Pure, builder-only: kept out of the shared build and the initial graph.
 import type { BuilderPart, BuilderPartType, BuilderQuestion, BuilderQuestionType } from "../examTypes";
 import { changePartType, changeQuestionType } from "../examBuilderState";
-// Phase 19B — the default parametric variables (questionTypeDefaults) serialized, so an untouched default never counts as content.
-const PARAMETRIC_DEFAULT_VARIABLES = JSON.stringify([{ id: "a", kind: "int", min: 1, max: 10, step: 1 }, { id: "b", kind: "int", min: 1, max: 10, step: 1 }]);
+// Phase 19B / 19C — the default parametric variables (v1 and the v2 questionTypeDefaults) serialized, so an untouched default never
+// counts as content.
+const PARAMETRIC_DEFAULT_VARIABLES = [JSON.stringify([{ id: "a", kind: "int", min: 1, max: 10, step: 1 }, { id: "b", kind: "int", min: 1, max: 10, step: 1 }]), JSON.stringify([{ id: "a", kind: "integer", min: 1, max: 10, step: 1 }, { id: "b", kind: "integer", min: 1, max: 10, step: 1 }])];
 
 /** The PATCH form of changeQuestionType for hosts that merge patches: every key of the previous question that the new
  *  shape does not carry is reset explicitly (undefined → removed by mergePatch), so no stale option / field / key survives. */
@@ -61,7 +62,7 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
   if (isObj(answer.blanks) && Object.values(answer.blanks).some(b => isObj(b) && ((Array.isArray(b.accepted) && b.accepted.some(a => text(a))) || text(b.correctOptionId)))) return true;
   // Phase 19B — parametricNumeric: an answer expression, any constraint, or variables other than the default a / b.
   if (text(answer.expression)) return true;
-  if (isObj(node.parametric) && ((Array.isArray(node.parametric.constraints) && node.parametric.constraints.length > 0) || JSON.stringify(node.parametric.variables) !== PARAMETRIC_DEFAULT_VARIABLES)) return true;
+  if (isObj(node.parametric) && ((Array.isArray(node.parametric.constraints) && node.parametric.constraints.length > 0) || (Array.isArray(node.parametric.derivedVariables) && node.parametric.derivedVariables.length > 0) || !PARAMETRIC_DEFAULT_VARIABLES.includes(JSON.stringify(node.parametric.variables)))) return true;
   if (Array.isArray(answer.hiddenTests) && answer.hiddenTests.length) return true;
   if (isObj(answer.referenceSolutions) && Object.values(answer.referenceSolutions).some(v => text(v))) return true;
   if (Array.isArray(answer.correctOptionIds) && answer.correctOptionIds.length) return true;

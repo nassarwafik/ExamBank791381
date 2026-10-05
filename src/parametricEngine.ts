@@ -13,10 +13,15 @@
 //     declared order, at most 100 candidates, then an explicit failure. A future algorithm is a NEW version — v1 never changes.
 // This is NOT a general-purpose programming engine and executes no code.
 
-export const PARAMETRIC_GENERATOR_VERSIONS: readonly number[] = Object.freeze([1]);
+// Phase 19C — generatorVersion 2 (+ expression language 2) is ADDITIVE: version 1 keeps its exact parser, evaluator and generator,
+// so every Phase 19B instance replays unchanged. Version 2 = explicit integer / decimal variables on a scaled-integer grid, derived
+// values in a validated topological order, the language-2 functions (`^` ≡ pow) and presentation formats.
+export const PARAMETRIC_GENERATOR_VERSIONS: readonly number[] = Object.freeze([1, 2]);
 export const PARAMETRIC_LIMITS = Object.freeze({
   variables: 20, idChars: 32, intAbs: 1_000_000_000, valueAbs: 1e15, expressionChars: 500, tokens: 200, depth: 32, constraints: 20, constraintChars: 300,
-  attempts: 100, exponentAbs: 64, roundDigits: 10, functionArgs: 10, templateChars: 4000, placeholders: 100, identityChars: 200, maxAttemptNumber: 1_000_000
+  attempts: 100, exponentAbs: 64, roundDigits: 10, functionArgs: 10, templateChars: 4000, placeholders: 100, identityChars: 200, maxAttemptNumber: 1_000_000,
+  // Phase 19C (language / generator 2 only): AST-node budget, derived values, grid positions per variable, authored decimals, format precision.
+  astNodes: 160, derivedVariables: 20, positions: 10_000_000, decimalPlaces: 6, formatDecimals: 10
 });
 export const PARAMETRIC_FUNCTIONS = Object.freeze(["abs", "round", "floor", "ceil", "min", "max"] as const);
 export type ParametricFunction = (typeof PARAMETRIC_FUNCTIONS)[number];
@@ -25,6 +30,13 @@ const ARITY: Readonly<Record<ParametricFunction, readonly [number, number]>> = O
 export const PARAMETRIC_FORBIDDEN_IDENTIFIERS: ReadonlySet<string> = new Set(["__proto__", "constructor", "prototype", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toString", "toLocaleString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"]);
 export const PARAMETRIC_ID_RE = /^[A-Za-z][A-Za-z0-9_]{0,31}$/;
 const isFunctionName = (s: string): s is ParametricFunction => (PARAMETRIC_FUNCTIONS as readonly string[]).includes(s);
+/** Language 2 = language 1 + sqrt, pow, log (natural), log10, exp. In language 2 `a ^ b` IS `pow(a, b)` (one semantics). */
+export const PARAMETRIC_FUNCTIONS_V2 = Object.freeze([...PARAMETRIC_FUNCTIONS, "sqrt", "pow", "log", "log10", "exp"] as const);
+export type ParametricFunctionV2 = (typeof PARAMETRIC_FUNCTIONS_V2)[number];
+const ARITY_V2: Readonly<Record<ParametricFunctionV2, readonly [number, number]>> = Object.freeze({ ...ARITY, sqrt: [1, 1], pow: [2, 2], log: [1, 1], log10: [1, 1], exp: [1, 1] });
+const isFunctionNameV2 = (s: string): s is ParametricFunctionV2 => (PARAMETRIC_FUNCTIONS_V2 as readonly string[]).includes(s);
+export type ParametricLanguage = 1 | 2;
+export type ParseOptions = { language?: ParametricLanguage };
 
 export type ParametricIssue = { code: string; message: string; path?: string };
 export type ExprNode =
@@ -32,7 +44,7 @@ export type ExprNode =
   | { t: "var"; id: string }
   | { t: "neg"; a: ExprNode }
   | { t: "bin"; op: "+" | "-" | "*" | "/" | "%" | "^"; a: ExprNode; b: ExprNode }
-  | { t: "call"; fn: ParametricFunction; args: ExprNode[] };
+  | { t: "call"; fn: ParametricFunctionV2; args: ExprNode[] };
 export type ComparisonOp = "<" | "<=" | ">" | ">=" | "==" | "!=";
 export type ParsedConstraint = { left: ExprNode; op: ComparisonOp; right: ExprNode };
 
@@ -70,9 +82,14 @@ function tokenize(src: string): Token[] {
 class Parser {
   private pos = 0;
   private depth = 0;
+  private nodes = 0;
+  private readonly language: ParametricLanguage;
   readonly refs = new Set<string>();
   private readonly tokens: Token[];
-  constructor(tokens: Token[]) { this.tokens = tokens; }
+  constructor(tokens: Token[], language: ParametricLanguage = 1) { this.tokens = tokens; this.language = language; }
+  /** Language 2 has an explicit AST-node budget (language 1 stays bounded by its token limit, exactly as in Phase 19B). */
+  private node<T extends ExprNode>(n: T): T { if (this.language === 2 && ++this.nodes > PARAMETRIC_LIMITS.astNodes) throw new ExprError("EXPR_TOO_COMPLEX"); return n; }
+  private isFn(name: string): boolean { return this.language === 2 ? isFunctionNameV2(name) : isFunctionName(name); }
   private peek(): Token | undefined { return this.tokens[this.pos]; }
   private isOp(v: string): boolean { const t = this.peek(); return !!t && t.k === "op" && t.v === v; }
   private expectOp(v: string) { if (!this.isOp(v)) throw new ExprError("EXPR_SYNTAX"); this.pos++; }
@@ -83,38 +100,43 @@ class Parser {
   additive(): ExprNode {
     let a = this.multiplicative();
     for (;;) {
-      if (this.isOp("+") || this.isOp("-")) { const op = (this.tokens[this.pos++] as { v: "+" | "-" }).v; a = { t: "bin", op, a, b: this.multiplicative() }; }
+      if (this.isOp("+") || this.isOp("-")) { const op = (this.tokens[this.pos++] as { v: "+" | "-" }).v; a = this.node({ t: "bin", op, a, b: this.multiplicative() }); }
       else return a;
     }
   }
   private multiplicative(): ExprNode {
     let a = this.unary();
     for (;;) {
-      if (this.isOp("*") || this.isOp("/") || this.isOp("%")) { const op = (this.tokens[this.pos++] as { v: "*" | "/" | "%" }).v; a = { t: "bin", op, a, b: this.unary() }; }
+      if (this.isOp("*") || this.isOp("/") || this.isOp("%")) { const op = (this.tokens[this.pos++] as { v: "*" | "/" | "%" }).v; a = this.node({ t: "bin", op, a, b: this.unary() }); }
       else return a;
     }
   }
   private unary(): ExprNode {
     this.enter();
     try {
-      if (this.isOp("-")) { this.pos++; return { t: "neg", a: this.unary() }; }
+      if (this.isOp("-")) { this.pos++; return this.node({ t: "neg", a: this.unary() }); }
       return this.power();
     } finally { this.depth--; }
   }
   private power(): ExprNode {
     const base = this.primary();
-    if (this.isOp("^")) { this.pos++; return { t: "bin", op: "^", a: base, b: this.unary() }; }   // right associative
+    if (this.isOp("^")) {                                                                       // right associative
+      this.pos++;
+      const exponent = this.unary();
+      return this.language === 2 ? this.node({ t: "call", fn: "pow", args: [base, exponent] }) : { t: "bin", op: "^", a: base, b: exponent };
+    }
     return base;
   }
   private primary(): ExprNode {
     const t = this.peek();
     if (!t) throw new ExprError("EXPR_SYNTAX");
-    if (t.k === "num") { this.pos++; return { t: "num", v: t.v }; }
+    if (t.k === "num") { this.pos++; return this.node({ t: "num", v: t.v }); }
     if (t.k === "op" && t.v === "(") { this.pos++; const e = this.additive(); this.expectOp(")"); return e; }
     if (t.k === "id") {
       this.pos++;
       if (this.isOp("(")) {
-        if (!isFunctionName(t.v)) throw new ExprError("EXPR_UNKNOWN_FUNCTION");
+        if (!this.isFn(t.v)) throw new ExprError("EXPR_UNKNOWN_FUNCTION");
+        const fn = t.v as ParametricFunctionV2;
         this.pos++;
         const args: ExprNode[] = [];
         if (!this.isOp(")")) {
@@ -126,13 +148,13 @@ class Parser {
           }
         }
         this.expectOp(")");
-        const [lo, hi] = ARITY[t.v];
+        const [lo, hi] = ARITY_V2[fn];
         if (args.length < lo || args.length > hi) throw new ExprError("EXPR_ARITY");
-        return { t: "call", fn: t.v, args };
+        return this.node({ t: "call", fn, args });
       }
-      if (isFunctionName(t.v)) throw new ExprError("EXPR_SYNTAX");
+      if (this.isFn(t.v)) throw new ExprError("EXPR_SYNTAX");
       this.refs.add(t.v);
-      return { t: "var", id: t.v };
+      return this.node({ t: "var", id: t.v });
     }
     throw new ExprError("EXPR_SYNTAX");
   }
@@ -145,9 +167,9 @@ function prepare(src: unknown, maxChars: number): Token[] {
 }
 
 /** Parses an ARITHMETIC expression (never a comparison). */
-export function parseExpression(src: unknown): { ok: true; ast: ExprNode; refs: string[] } | { ok: false; code: string } {
+export function parseExpression(src: unknown, options: ParseOptions = {}): { ok: true; ast: ExprNode; refs: string[] } | { ok: false; code: string } {
   try {
-    const p = new Parser(prepare(src, PARAMETRIC_LIMITS.expressionChars));
+    const p = new Parser(prepare(src, PARAMETRIC_LIMITS.expressionChars), options.language === 2 ? 2 : 1);
     const ast = p.additive();
     if (p.peekCmp()) return { ok: false, code: "EXPR_COMPARISON_NOT_ALLOWED" };
     if (!p.atEnd()) return { ok: false, code: "EXPR_SYNTAX" };
@@ -155,9 +177,9 @@ export function parseExpression(src: unknown): { ok: true; ast: ExprNode; refs: 
   } catch (e) { if (e instanceof ExprError) return { ok: false, code: e.code }; throw e; }
 }
 /** Parses a constraint: exactly ONE comparison of two arithmetic expressions. */
-export function parseConstraint(src: unknown): { ok: true; constraint: ParsedConstraint; refs: string[] } | { ok: false; code: string } {
+export function parseConstraint(src: unknown, options: ParseOptions = {}): { ok: true; constraint: ParsedConstraint; refs: string[] } | { ok: false; code: string } {
   try {
-    const p = new Parser(prepare(src, PARAMETRIC_LIMITS.constraintChars));
+    const p = new Parser(prepare(src, PARAMETRIC_LIMITS.constraintChars), options.language === 2 ? 2 : 1);
     const left = p.additive();
     const op = p.takeCmp();
     const right = p.additive();
@@ -180,6 +202,19 @@ function powInt(base: number, e: number): number {
   return e < 0 ? 1 / r : r;
 }
 /** Round half AWAY from zero to `digits` decimals; binary noise is removed first (toPrecision(15) is exactly specified). */
+/** Transcendental results (log, log10, exp, fractional powers) are normalized to 12 significant digits, absorbing last-ulp
+ *  differences between math libraries; the server's value is the authority in any case. A non-finite value stays non-finite. */
+const normalize12 = (v: number): number => (Number.isFinite(v) ? Number(v.toPrecision(12)) : v);
+/** Language-2 exponentiation (`^` and pow): integer exponents exactly as language 1 (|e| ≤ 64, repeated squaring); a fractional
+ *  exponent needs a positive base (a negative base is a domain error) and is normalized to 12 significant digits. */
+function powV2(a: number, b: number): number {
+  if (Math.abs(b) > PARAMETRIC_LIMITS.exponentAbs) throw new ExprError("EVAL_EXPONENT_INVALID");
+  if (a === 0 && b < 0) throw new ExprError("EVAL_DIVIDE_BY_ZERO");
+  if (Number.isInteger(b)) return powInt(a, b);
+  if (a < 0) throw new ExprError("EVAL_DOMAIN");
+  if (a === 0) return 0;
+  return normalize12(Math.pow(a, b));
+}
 function roundTo(x: number, digits: number): number {
   const f = powInt(10, digits), y = bounded(Math.abs(x) * f);
   const r = Math.round(Number(y.toPrecision(15))) / f;
@@ -223,6 +258,12 @@ function evalNode(n: ExprNode, values: ReadonlyMap<string, number>): number {
           if (!Number.isInteger(d) || d < 0 || d > PARAMETRIC_LIMITS.roundDigits) throw new ExprError("EVAL_ROUND_DIGITS_INVALID");
           return bounded(roundTo(args[0], d));
         }
+        // Language 2 only (a language-1 parse can never produce these nodes).
+        case "sqrt": if (args[0] < 0) throw new ExprError("EVAL_DOMAIN"); return bounded(Math.sqrt(args[0]));
+        case "pow": return bounded(powV2(args[0], args[1]));
+        case "log": if (args[0] <= 0) throw new ExprError("EVAL_DOMAIN"); return bounded(normalize12(Math.log(args[0])));
+        case "log10": if (args[0] <= 0) throw new ExprError("EVAL_DOMAIN"); return bounded(normalize12(Math.log10(args[0])));
+        case "exp": return bounded(normalize12(Math.exp(args[0])));
       }
     }
   }
@@ -254,6 +295,8 @@ const safeInt = (v: unknown): v is number => typeof v === "number" && Number.isS
 const issue = (code: string, message: string, path?: string): ParametricIssue => (path ? { code, message, path } : { code, message });
 /** True for a name that may never be a variable id (function names and prototype-sensitive names). */
 export const isReservedParametricId = (id: string): boolean => isFunctionName(id) || PARAMETRIC_FORBIDDEN_IDENTIFIERS.has(id);
+/** Language-2 reserved names (adds the new function names). */
+export const isReservedParametricIdV2 = (id: string): boolean => isFunctionNameV2(id) || PARAMETRIC_FORBIDDEN_IDENTIFIERS.has(id);
 export function validateVariables(raw: unknown): { ok: true; variables: ParametricIntVariable[] } | { ok: false; issues: ParametricIssue[] } {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > PARAMETRIC_LIMITS.variables) return { ok: false, issues: [issue("PARAM_VARIABLES_INVALID", "يجب تعريف من 1 إلى " + PARAMETRIC_LIMITS.variables + " متغيرًا.", "variables")] };
   const issues: ParametricIssue[] = [], out: ParametricIntVariable[] = [], seen = new Set<string>();
@@ -304,8 +347,126 @@ export function parseTemplate(text: unknown, declared: ReadonlySet<string> | nul
 }
 /** A generated value as plain text (integers verbatim; anything else to 12 significant digits). */
 export const formatParametricNumber = (v: number): string => (Number.isInteger(v) ? String(v) : String(Number(v.toPrecision(12))));
-export function renderTemplate(parts: readonly TemplatePart[], values: Readonly<Record<string, number>>): string {
-  return parts.map(p => (p.t === "text" ? p.v : Object.prototype.hasOwnProperty.call(values, p.id) ? formatParametricNumber(values[p.id]) : "…")).join("");
+/** Renders the stem. `formats` (generator 2) only changes how a value is WRITTEN; grading always uses the exact value. */
+export function renderTemplate(parts: readonly TemplatePart[], values: Readonly<Record<string, number>>, formats?: Readonly<Record<string, ParametricFormat | undefined>>): string {
+  return parts.map(p => (p.t === "text" ? p.v : Object.prototype.hasOwnProperty.call(values, p.id) ? formatParametricValue(values[p.id], formats && Object.prototype.hasOwnProperty.call(formats, p.id) ? formats[p.id] : undefined) : "…")).join("");
+}
+
+// ── Phase 19C: presentation formats (display only) ──────────────────────────────────────────────────────────────────────
+export type ParametricFormat = { kind: "plain" } | { kind: "fixed"; decimals: number } | { kind: "percentage"; decimals: number };
+const formatDecimalsOk = (d: unknown): d is number => typeof d === "number" && Number.isInteger(d) && d >= 0 && d <= PARAMETRIC_LIMITS.formatDecimals;
+/** Strict format reader: plain | fixed(decimals 0..10) | percentage(decimals 0..10), exact keys; anything else is null. */
+export function validateParametricFormat(raw: unknown): ParametricFormat | null {
+  if (!isPlain(raw)) return null;
+  if (raw.kind === "plain" && exactKeys(raw, ["kind"])) return { kind: "plain" };
+  if ((raw.kind === "fixed" || raw.kind === "percentage") && exactKeys(raw, ["kind", "decimals"]) && formatDecimalsOk(raw.decimals)) return { kind: raw.kind, decimals: raw.decimals };
+  return null;
+}
+/** plain = 12 significant digits (integers verbatim); fixed = exactly `decimals` places; percentage = value × 100 with `decimals`
+ *  places and «%». Rounding is half away from zero (the engine's round()); a negative zero is written as zero. */
+export function formatParametricValue(v: number, format?: ParametricFormat): string {
+  if (!format || format.kind === "plain") return formatParametricNumber(v === 0 ? 0 : v);
+  const scaled = format.kind === "percentage" ? v * 100 : v;
+  const r = roundTo(scaled, format.decimals);
+  return (r === 0 ? 0 : r).toFixed(format.decimals) + (format.kind === "percentage" ? "%" : "");
+}
+
+// ── Phase 19C: explicit integer / decimal variables on a scaled-integer grid ─────────────────────────────────────────────
+export type ParametricVariableV2 = { id: string; kind: "integer" | "decimal"; min: number; max: number; step: number; format?: ParametricFormat };
+type Grid = { base: number; step: number; count: number; decimals: number; scale: number };
+/** The smallest k ≤ 6 such that x has exactly k decimals (x === Number(x.toFixed(k))), or -1. */
+function decimalPlaces(x: number): number {
+  for (let k = 0; k <= PARAMETRIC_LIMITS.decimalPlaces; k++) if (Number(x.toFixed(k)) === x) return k;
+  return -1;
+}
+function gridOf(v: { min: number; max: number; step: number }): Grid | null {
+  const dm = decimalPlaces(v.min), dx = decimalPlaces(v.max), ds = decimalPlaces(v.step);
+  if (dm < 0 || dx < 0 || ds < 0) return null;
+  const decimals = Math.max(dm, dx, ds), scale = powInt(10, decimals);
+  const base = Math.round(v.min * scale), top = Math.round(v.max * scale), step = Math.round(v.step * scale);
+  if (step < 1 || top < base || (top - base) % step !== 0) return null;
+  return { base, step, count: (top - base) / step + 1, decimals, scale };
+}
+/** The value at grid position `index` — computed from integers (no step accumulation), normalized to the grid's decimals. */
+const gridValue = (g: Grid, index: number): number => { const v = Number(((g.base + index * g.step) / g.scale).toFixed(g.decimals)); return v === 0 ? 0 : v; };
+const finiteBound = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= PARAMETRIC_LIMITS.intAbs;
+const VAR2_REQUIRED = ["id", "kind", "min", "max"], VAR2_OPTIONAL = ["step", "format"];
+export function validateVariablesV2(raw: unknown): { ok: true; variables: ParametricVariableV2[] } | { ok: false; issues: ParametricIssue[] } {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > PARAMETRIC_LIMITS.variables) return { ok: false, issues: [issue("PARAM_VARIABLES_INVALID", "يجب تعريف من 1 إلى " + PARAMETRIC_LIMITS.variables + " متغيرًا.", "variables")] };
+  const issues: ParametricIssue[] = [], out: ParametricVariableV2[] = [], seen = new Set<string>();
+  raw.forEach((v, i) => {
+    const path = "variables." + i, n = i + 1;
+    if (!isPlain(v) || !VAR2_REQUIRED.every(k => Object.prototype.hasOwnProperty.call(v, k)) || Object.keys(v).some(k => !VAR2_REQUIRED.includes(k) && !VAR2_OPTIONAL.includes(k))) { issues.push(issue("PARAM_VAR_INVALID", "تعريف المتغير " + n + " يحتوي حقولًا غير معروفة أو ناقصة (النوع مطلوب صراحةً).", path)); return; }
+    if (typeof v.id !== "string" || !PARAMETRIC_ID_RE.test(v.id)) { issues.push(issue("PARAM_VAR_ID_INVALID", "معرّف المتغير " + n + " غير صالح (حرف إنجليزي أولًا ثم حروف أو أرقام أو _، حتى 32 حرفًا).", path + ".id")); return; }
+    if (isReservedParametricIdV2(v.id)) { issues.push(issue("PARAM_VAR_ID_RESERVED", "الاسم «" + v.id + "» محجوز ولا يصلح معرّفًا لمتغير.", path + ".id")); return; }
+    if (seen.has(v.id)) { issues.push(issue("PARAM_VAR_ID_DUPLICATE", "المتغير «" + v.id + "» معرّف أكثر من مرة.", path + ".id")); return; }
+    seen.add(v.id);
+    if (v.kind !== "integer" && v.kind !== "decimal") { issues.push(issue("PARAM_VAR_KIND_UNSUPPORTED", "نوع المتغير «" + v.id + "» يجب أن يكون عددًا صحيحًا أو عشريًا.", path + ".kind")); return; }
+    let format: ParametricFormat | undefined;
+    if (v.format !== undefined) { const f = validateParametricFormat(v.format); if (!f) { issues.push(issue("PARAM_FORMAT_INVALID", "تنسيق عرض المتغير «" + v.id + "» غير صالح.", path + ".format")); return; } format = f; }
+    const integer = v.kind === "integer";
+    if (!finiteBound(v.min) || !finiteBound(v.max) || (integer && (!Number.isSafeInteger(v.min) || !Number.isSafeInteger(v.max)))) { issues.push(issue("PARAM_VAR_BOUNDS_INVALID", "حدّا المتغير «" + v.id + "» يجب أن يكونا عددين" + (integer ? " صحيحين" : "") + " بين ‎-1,000,000,000‎ و‎1,000,000,000‎.", path)); return; }
+    const step = v.step === undefined && integer ? 1 : v.step;
+    if (typeof step !== "number" || !Number.isFinite(step) || step <= 0 || step > PARAMETRIC_LIMITS.intAbs || (integer && !Number.isSafeInteger(step))) { issues.push(issue("PARAM_VAR_STEP_INVALID", "خطوة المتغير «" + v.id + "» يجب أن تكون عددًا موجبًا" + (integer ? " صحيحًا" : "") + ".", path + ".step")); return; }
+    if (decimalPlaces(v.min) < 0 || decimalPlaces(v.max) < 0 || decimalPlaces(step) < 0) { issues.push(issue("PARAM_VAR_PRECISION", "قيم المتغير «" + v.id + "» تحتمل 6 منازل عشرية على الأكثر.", path)); return; }
+    if (v.min > v.max) { issues.push(issue("PARAM_VAR_RANGE_IMPOSSIBLE", "الحد الأدنى للمتغير «" + v.id + "» أكبر من الحد الأعلى.", path)); return; }
+    const g = gridOf({ min: v.min, max: v.max, step });
+    if (!g) { issues.push(issue("PARAM_VAR_STEP_MISALIGNED", "الخطوة لا تصل من الحد الأدنى إلى الحد الأعلى للمتغير «" + v.id + "» (الفرق يجب أن يكون مضاعفًا للخطوة).", path + ".step")); return; }
+    if (g.count > PARAMETRIC_LIMITS.positions) { issues.push(issue("PARAM_VAR_TOO_MANY_POSITIONS", "عدد القيم الممكنة للمتغير «" + v.id + "» أكبر من الحد المسموح (" + PARAMETRIC_LIMITS.positions + ").", path)); return; }
+    out.push({ id: v.id, kind: v.kind, min: v.min, max: v.max, step, ...(format ? { format } : {}) });
+  });
+  return issues.length ? { ok: false, issues } : { ok: true, variables: out };
+}
+
+// ── Phase 19C: derived variables (validated dependency graph, deterministic topological order) ──────────────────────────
+export type CompiledDerivedVariable = { id: string; expression: string; format?: ParametricFormat; ast: ExprNode; refs: string[] };
+const DERIVED_KEYS = ["id", "expression", "format"];
+/**
+ * Validates derived values against the base variables: exact keys, ids (not reserved, unique, not a base name), language-2
+ * expressions referencing only base / other derived names (never themselves), and an ACYCLIC dependency graph. The returned list is in
+ * topological order (ties broken by declaration order — deterministic), which is the evaluation order.
+ */
+export function validateDerivedVariables(raw: unknown, baseIds: ReadonlySet<string>): { ok: true; derived: CompiledDerivedVariable[]; order: string[] } | { ok: false; issues: ParametricIssue[] } {
+  if (!Array.isArray(raw)) return { ok: false, issues: [issue("PARAM_DERIVED_INVALID", "القيم المشتقة يجب أن تكون قائمة.", "derivedVariables")] };
+  if (raw.length > PARAMETRIC_LIMITS.derivedVariables) return { ok: false, issues: [issue("PARAM_DERIVED_TOO_MANY", "عدد القيم المشتقة أكبر من " + PARAMETRIC_LIMITS.derivedVariables + ".", "derivedVariables")] };
+  const issues: ParametricIssue[] = [], compiled: CompiledDerivedVariable[] = [];
+  const ids = raw.map(d => (isPlain(d) && typeof d.id === "string" ? d.id : ""));
+  const seen = new Set<string>();
+  raw.forEach((d, i) => {
+    const path = "derivedVariables." + i, n = i + 1;
+    if (!isPlain(d) || !["id", "expression"].every(k => Object.prototype.hasOwnProperty.call(d, k)) || Object.keys(d).some(k => !DERIVED_KEYS.includes(k))) { issues.push(issue("PARAM_DERIVED_INVALID", "تعريف القيمة المشتقة " + n + " يحتوي حقولًا غير معروفة أو ناقصة.", path)); return; }
+    if (typeof d.id !== "string" || !PARAMETRIC_ID_RE.test(d.id) || isReservedParametricIdV2(d.id)) { issues.push(issue("PARAM_DERIVED_ID_INVALID", "اسم القيمة المشتقة " + n + " غير صالح أو محجوز.", path + ".id")); return; }
+    if (seen.has(d.id)) { issues.push(issue("PARAM_DERIVED_ID_DUPLICATE", "القيمة المشتقة «" + d.id + "» معرّفة أكثر من مرة.", path + ".id")); return; }
+    seen.add(d.id);
+    if (baseIds.has(d.id)) { issues.push(issue("PARAM_DERIVED_COLLISION", "الاسم «" + d.id + "» مستخدم لمتغير أساسي؛ اختر اسمًا آخر للقيمة المشتقة.", path + ".id")); return; }
+    let format: ParametricFormat | undefined;
+    if (d.format !== undefined) { const f = validateParametricFormat(d.format); if (!f) { issues.push(issue("PARAM_FORMAT_INVALID", "تنسيق عرض القيمة المشتقة «" + d.id + "» غير صالح.", path + ".format")); return; } format = f; }
+    const p = parseExpression(d.expression, { language: 2 });
+    if (!p.ok) { issues.push(issue("PARAM_DERIVED_EXPRESSION_INVALID", "صيغة القيمة المشتقة «" + d.id + "» غير صالحة (" + p.code + ").", path + ".expression")); return; }
+    if (p.refs.includes(d.id)) { issues.push(issue("PARAM_DERIVED_SELF_REFERENCE", "صيغة القيمة المشتقة «" + d.id + "» تشير إلى نفسها.", path + ".expression")); return; }
+    const unknown = p.refs.filter(r => !baseIds.has(r) && !ids.includes(r));
+    if (unknown.length) { issues.push(issue("PARAM_DERIVED_UNKNOWN_REFERENCE", "صيغة القيمة المشتقة «" + d.id + "» تستخدم رمزًا غير معرّف: " + unknown.join("، "), path + ".expression")); return; }
+    compiled.push({ id: d.id, expression: d.expression as string, ...(format ? { format } : {}), ast: p.ast, refs: p.refs });
+  });
+  if (issues.length) return { ok: false, issues };
+  const derivedIds = new Set(compiled.map(c => c.id)), done = new Set<string>(), order: CompiledDerivedVariable[] = [];
+  for (let round = 0; round < compiled.length; round++) {
+    const next = compiled.find(c => !done.has(c.id) && c.refs.every(r => !derivedIds.has(r) || done.has(r)));
+    if (!next) break;
+    done.add(next.id); order.push(next);
+  }
+  if (order.length !== compiled.length) {
+    const stuck = compiled.filter(c => !done.has(c.id)).map(c => c.id);
+    return { ok: false, issues: [issue("PARAM_DERIVED_CYCLE", "القيم المشتقة تعتمد على بعضها في حلقة دورية: " + stuck.join("، "), "derivedVariables")] };
+  }
+  return { ok: true, derived: order, order: order.map(c => c.id) };
+}
+/** A constraint with both evaluated sides (teacher inspection). */
+export function explainConstraint(c: ParsedConstraint, values: ReadonlyMap<string, number>): { ok: true; left: number; right: number; holds: boolean } | { ok: false; code: string } {
+  const l = evaluateExpression(c.left, values); if (!l.ok) return l;
+  const r = evaluateExpression(c.right, values); if (!r.ok) return r;
+  const h = evaluateConstraint(c, values);
+  return h.ok ? { ok: true, left: l.value, right: r.value, holds: h.holds } : h;
 }
 
 // ── generation identity and the versioned deterministic generator ───────────────────────────────────────────────────────
@@ -364,6 +525,33 @@ export function generateInstance(input: GenerationInput, seedText: string): Gene
     let accepted = true;
     for (const c of input.constraints) { const r = evaluateConstraint(c, env); if (!r.ok || !r.holds) { accepted = false; break; } }    // an erroring constraint never holds
     if (accepted) return { ok: true, values, attempt };
+  }
+  return { ok: false, code: "GEN_CONSTRAINTS_UNSATISFIED" };
+}
+
+// ── Phase 19C: generatorVersion 2 ───────────────────────────────────────────────────────────────────────────────────────
+// Same seeded stream as v1 (cyrb128 → sfc32, 12 warm-up outputs, one 53-bit float per draw) over the version-2 seed text; per candidate
+// every base variable takes grid position floor(float × count) (integers only — no step accumulation, no drift), derived values are
+// evaluated in their validated topological order, then the constraints in declared order. A candidate whose derived value or
+// constraint cannot be evaluated is rejected. At most PARAMETRIC_LIMITS.attempts candidates (a counted for-loop), then an explicit failure.
+export type GenerationInputV2 = { variables: readonly ParametricVariableV2[]; derived: readonly CompiledDerivedVariable[]; constraints: readonly ParsedConstraint[] };
+export type GenerationResultV2 = { ok: true; values: Record<string, number>; derived: Record<string, number>; attempt: number } | { ok: false; code: "GEN_INVALID_INPUT" | "GEN_CONSTRAINTS_UNSATISFIED" };
+export function generateInstanceV2(input: GenerationInputV2, seedText: string): GenerationResultV2 {
+  if (!Array.isArray(input.variables) || !Array.isArray(input.derived) || !Array.isArray(input.constraints) || typeof seedText !== "string") return { ok: false, code: "GEN_INVALID_INPUT" };
+  const grids: Grid[] = [];
+  for (const v of input.variables) { const g = gridOf(v); if (!g || g.count > PARAMETRIC_LIMITS.positions) return { ok: false, code: "GEN_INVALID_INPUT" }; grids.push(g); }
+  const [a, b, c, d] = cyrb128(seedText);
+  const next = sfc32(a, b, c, d);
+  for (let i = 0; i < 12; i++) next();
+  const float = () => { const u1 = next(), u2 = next(); return ((u1 >>> 5) * 67108864 + (u2 >>> 6)) / 9007199254740992; };
+  for (let attempt = 1; attempt <= PARAMETRIC_LIMITS.attempts; attempt++) {
+    const values: Record<string, number> = {};
+    input.variables.forEach((v, i) => { values[v.id] = gridValue(grids[i], Math.floor(float() * grids[i].count)); });
+    const env = new Map(Object.entries(values)), derived: Record<string, number> = {};
+    let accepted = true;
+    for (const dv of input.derived) { const r = evaluateExpression(dv.ast, env); if (!r.ok) { accepted = false; break; } derived[dv.id] = r.value; env.set(dv.id, r.value); }
+    if (accepted) for (const cn of input.constraints) { const r = evaluateConstraint(cn, env); if (!r.ok || !r.holds) { accepted = false; break; } }
+    if (accepted) return { ok: true, values, derived, attempt };
   }
   return { ok: false, code: "GEN_CONSTRAINTS_UNSATISFIED" };
 }
