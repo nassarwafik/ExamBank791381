@@ -3,8 +3,11 @@
 //
 // The AI only PROPOSES: one typed draft in a strict JSON schema (intent + the payload of that intent). This module
 //   1. checks the AI output SHAPE strictly (exact keys, types, no prototype-sensitive keys) — malformed output is refused;
-//   2. resolves the intent: ordinary families, inlineCloze and networkCli are generated; simulation / coding are recognised but
-//      never generated (they need a teacher package / teacher-verified hidden tests); "unsupported" is refused;
+//   2. resolves the intent: ordinary families, inlineCloze and networkCli are generated; simulation is recognised but never
+//      generated (it needs a teacher package); "unsupported" is refused. Phase 19F: a coding@2 draft IS generated — but only its
+//      PUBLIC material (mode, language, starter code, public examples); hidden tests, reference solutions and automatic grading are
+//      never accepted from the AI (manual grading until the teacher writes and verifies hidden tests). A read-only `codeStimulus`
+//      (predict the output / trace the execution) may accompany multipleChoice, shortAnswer and tableFill (trace table) drafts;
 //   3. guards the simulator: a networkCli draft is refused when the AI declares, or the request clearly asks for, a capability the
 //      V1 managed SWITCH does not have (routing, OSPF, ACL, NAT, DHCP, …) or when the AI marks its intent ambiguous;
 //   4. MAPS the draft to the canonical node of its type (deterministic, field by field — nothing invented, nothing repaired);
@@ -17,12 +20,13 @@ import { validateStructuredExam } from "./examQuality";
 import { normalizeInterfaceName } from "./networkCliEngine";
 import type { BuilderQuestion, StructuredExam } from "./examTypes";
 import type { OpenResponseProfile } from "./openResponseQuestion";
+import { codingStarterTemplate } from "./codingLanguages";
 
-export const AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse", "hotspot", "labelDiagram", "simulation", "coding", "unsupported"] as const);
+export const AI_AUTHOR_INTENTS = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse", "hotspot", "labelDiagram", "simulation", "coding", "tableFill", "unsupported"] as const);
 export type AiAuthorIntent = (typeof AI_AUTHOR_INTENTS)[number];
 /** The intents this layer generates a question for (simulation / coding / unsupported are recognised, never generated). */
-export const AI_GENERATED_TYPES: readonly string[] = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse"]);
-export const AI_AUTHOR_LIMITS = Object.freeze({ requestChars: 2000, textChars: 4000, explanationChars: 1000, capabilities: 20, capabilityChars: 100, options: 8, fillBlanks: 10, pieces: 100, pieceOptions: 12, accepted: 20, stringChars: 500, vlans: 64, interfaces: 32, paramVariables: 20, paramConstraints: 20, rubricCriteria: 12, rubricLevels: 8 });
+export const AI_GENERATED_TYPES: readonly string[] = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse", "tableFill", "coding"]);   // 19F: tableFill (trace table) + coding@2 public material only
+export const AI_AUTHOR_LIMITS = Object.freeze({ requestChars: 2000, textChars: 4000, explanationChars: 1000, capabilities: 20, capabilityChars: 100, options: 8, fillBlanks: 10, pieces: 100, pieceOptions: 12, accepted: 20, stringChars: 500, vlans: 64, interfaces: 32, paramVariables: 20, paramConstraints: 20, rubricCriteria: 12, rubricLevels: 8, tableColumns: 6, tableRows: 20, tableAnswerCells: 60, publicExamples: 10, codeChars: 16000 });
 export const AI_DRAFT_QUESTION_ID = "ai-draft";
 
 export type AiAuthorIssue = { code: string; message: string };
@@ -35,6 +39,9 @@ const NETWORK_SIGNAL = /(\bswitch(?:es)?\b|سويتش|سويچ|مبدّل|مبد
 const CLOZE_SIGNAL = /(فراغ|فراغات|\bcloze\b|\bblanks?\b|fill[-\s]?in|أكمل|اكمل|منسدلة|dropdowns?|drop-down)/i;
 const PASSAGE_SIGNAL = /(فقرة|نص\s*تفاعلي|\bparagraph\b|\bpassage\b|\bcloze\b|\binline\b|منسدلة|dropdowns?|drop-down|قائمة)/i;
 const CODING_SIGNAL = /(برمجة|برنامج|\bcode\b|\bcoding\b|python|بايثون|\bjava\b|جافا|c#|سي شارب)/i;
+// Phase 19F — code-reading modes (advisory): tracing a program ⇒ a trace table; predicting what it prints ⇒ multipleChoice + stimulus.
+const TRACE_SIGNAL = /(تتبع|تتبّع|\btrace\b|tracing|dry[-\s]?run|جدول\s+(?:التتبع|تتبع|القيم))/i;
+const PREDICT_OUTPUT_SIGNAL = /((?:توقع|توقّع|ما|ماذا)[^.؟?!]{0,30}(?:ناتج|مخرجات|يطبع|تطبع)|\bpredict\b[^.?!]{0,30}\boutput\b|what\s+(?:does|will)[^.?!]{0,40}\bprint)/i;
 const SIMULATION_SIGNAL = /(smartsim|\.smartsim|حزمة\s*محاكاة|simulation\s+package)/i;
 // Phase 19B — "different numbers for every student / attempt" (Arabic / English).
 const PARAMETRIC_SIGNAL = /(\bparametric\b|random\s+(?:integers?|numbers?|values?)|different\s+(?:numeric\s+)?(?:version|numbers?|values?)\s+(?:for|per)\s+(?:each|every)\s+student|per[-\s]student\s+(?:numbers?|values?)|بأرقام\s+مختلفة|أرقام\s+مختلفة|قيم\s+مختلفة|(?:رقمي|حسابي|رياضيات)[^.؟?!]{0,30}(?:متغير|يتغير|متغيرة)|معطيات\s+متغيرة|يتغير\s+لكل\s+طالب|مختلفة\s+لكل\s+طالب|different\s+values?\s+for\s+(?:each|every)\s+student)/i;
@@ -68,6 +75,8 @@ export function classifyAuthorRequest(request: string): AuthorRequestSignals {
   else if (LABEL_DIAGRAM_SIGNAL.test(plain)) suggestedIntent = "labelDiagram";
   else if (HOTSPOT_SIGNAL.test(plain)) suggestedIntent = "hotspot";
   else if (PARAMETRIC_SIGNAL.test(t)) suggestedIntent = "parametricNumeric";
+  else if (CODING_SIGNAL.test(t) && !NETWORK_SIGNAL.test(t) && TRACE_SIGNAL.test(plain)) suggestedIntent = "tableFill";
+  else if (CODING_SIGNAL.test(t) && !NETWORK_SIGNAL.test(t) && PREDICT_OUTPUT_SIGNAL.test(plain)) suggestedIntent = "multipleChoice";
   else if (OPEN_RESPONSE_SIGNAL.test(plain)) suggestedIntent = "openResponse";
   else if (CODING_SIGNAL.test(t) && !NETWORK_SIGNAL.test(t)) suggestedIntent = "coding";
   else if (CLOZE_SIGNAL.test(t)) suggestedIntent = PASSAGE_SIGNAL.test(t) ? "inlineCloze" : "fillBlank";
@@ -94,6 +103,10 @@ const PARAM_DERIVED_ROW = obj({ name: str(), expression: str(), format: PARAM_FO
 // Phase 19E — the AI-facing rubric: criteria / levels WITHOUT ids (the mapper assigns c1.. / l1..) and with `maxScore` / `score`
 // mapped to the canonical maxPoints / points; every value is judged by the canonical rubric validator (never repaired).
 const OPEN_RESPONSE_LEVEL = obj({ label: str(), score: numberSchema(), description: str() });
+// Phase 19F — the read-only code stimulus, the trace table and the coding@2 PUBLIC material (no hidden test, no reference solution).
+const CODE_STIMULUS_LANGS = ["python", "java", "csharp", "pseudocode"];
+const AI_CODING_MODES = ["writeProgram", "fixBug", "completeCode"];
+const AI_CODING_LANGS = ["python", "java", "csharp"];
 const OPEN_RESPONSE_CRITERION = obj({ title: str(), description: str(), guidance: str(), maxScore: numberSchema(), allowCustomScore: { type: "boolean" }, levels: arr(OPEN_RESPONSE_LEVEL, AI_AUTHOR_LIMITS.rubricLevels) });
 export function buildAiAuthorSchema() {
   return {
@@ -128,9 +141,12 @@ export function buildAiAuthorSchema() {
         profile: { type: "string", enum: ["essay", "explain", "justify", "compare", "analyze", "sourceBased", "general"] }, instructions: str(),
         minChars: int(0, 20000), maxChars: int(1, 20000), rubricVisibility: { type: "string", enum: ["visible", "hidden"] },
         criteria: arr(OPEN_RESPONSE_CRITERION, AI_AUTHOR_LIMITS.rubricCriteria), modelAnswer: str()
-      }))
+      })),
+      codeStimulus: nullable(obj({ language: { type: "string", enum: CODE_STIMULUS_LANGS }, source: str(), label: str() })),
+      tableFill: nullable(obj({ headers: arr(str(), AI_AUTHOR_LIMITS.tableColumns), rows: arr(arr(str(), AI_AUTHOR_LIMITS.tableColumns), AI_AUTHOR_LIMITS.tableRows), answerCells: arr(obj({ row: int(0, AI_AUTHOR_LIMITS.tableRows - 1), column: int(0, AI_AUTHOR_LIMITS.tableColumns - 1), correct: str() }), AI_AUTHOR_LIMITS.tableAnswerCells) })),
+      coding: nullable(obj({ mode: { type: "string", enum: AI_CODING_MODES }, language: { type: "string", enum: AI_CODING_LANGS }, starterCode: str(), publicExamples: arr(obj({ input: str(), sampleOutput: str() }), AI_AUTHOR_LIMITS.publicExamples) }))
     },
-    required: ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse"]
+    required: ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli", "parametricNumeric", "openResponse", "codeStimulus", "tableFill", "coding"]
   };
 }
 
@@ -148,7 +164,11 @@ export function buildAiAuthorPrompt(request: string, signals: AuthorRequestSigna
     "  NOT supported (never invent them): routers, routing, static routes, OSPF, EIGRP, RIP, BGP, ACLs, NAT, DHCP, spanning-tree, port-security, EtherChannel, VTP, SSH / Telnet, interface range, trunk allowed VLAN lists, ping / traceroute, IPv6. If the request needs any of them, list them in `unsupportedCapabilities` and set intent \"unsupported\" (or choose an ordinary question type).",
     "- parametricNumeric: a numeric question whose numbers DIFFER for every student and attempt (math, physics, chemistry, subnet arithmetic). `text` is the stem with {{name}} placeholders for every generated value (e.g. \"A network needs {{hosts}} hosts…\"). `variables`: bounded variables { name (a letter then letters / digits / _), kind \"integer\" or \"decimal\" (at most 6 decimals), min, max, step, format } where (max - min) is a multiple of step. `derivedVariables`: optional values computed from variables or earlier derived values { name, expression, format } (e.g. area = a * b; never circular). `constraints`: optional single comparisons over variables and derived values such as \"a < b\", \"b != 0\" or \"sqrt(a) < b\". `answerExpression` computes the correct answer from the variables / derived values using ONLY numbers, names, + - * / % ^ (^ is pow), parentheses and abs, round(x, digits), floor, ceil, min, max, sqrt, pow, log (natural), log10, exp — no other functions, no code. `format` only changes how a value is WRITTEN in the stem: \"plain\", \"fixed\" (decimals places) or \"percentage\" (value × 100 with decimals places and %); grading always uses the exact values. For a percentage answer write the expression in percent, e.g. \"100 * correct / total\", with unitLabel \"%\". `mode` \"tolerance\" (with `tolerance` >= 0, 0 = exact) or \"range\" (`below` / `above` >= 0 around the result). `unitMode` \"none\", \"label\" (a fixed `unitLabel` shown next to the answer) or \"input\" (the student types the unit; the correct `unit` is graded). Never put the computed answer or the expression in `text`.",
     "- openResponse: an extended written answer graded by the teacher with a RUBRIC — essays, explain, justify, compare, analyze, discuss, source-based or long-form reasoning (one family; choose `profile`). Fill `criteria` with 2-6 pedagogically meaningful criteria specific to THIS question (never generic filler): `title`, a student-facing `description`, private `guidance` for the grader (what a strong answer contains), `maxScore` > 0 and 2-8 `levels` { label, score, description } that are distinct, include one level scoring exactly `maxScore` and one scoring 0, all between 0 and maxScore with at most 2 decimals. `allowCustomScore` true only when intermediate marks make sense. `rubricVisibility` \"visible\" when students should see the criteria. `maxChars` bounds the answer length; `minChars` is guidance only. `modelAnswer` is a private exemplar for the teacher. You only AUTHOR: never grade a student, never claim a student answer is correct; the teacher grades and the server computes the score.",
-    "- simulation: the teacher wants an uploaded interactive .smartsim simulation. coding: the student must write a program. Recognise them; do not invent their content (fill no payload).",
+    "- simulation: the teacher wants an uploaded interactive .smartsim simulation. Recognise it; do not invent its content (fill no payload).",
+    "- coding: the student writes, fixes or completes a whole program (stdin → stdout). Fill `coding`: `mode` \"writeProgram\" (starterCode = an empty or minimal shell), \"fixBug\" (starterCode = a complete program with ONE deliberate bug described by the question) or \"completeCode\" (starterCode = a program with a clearly marked missing part); `language` python, java (class Main) or csharp; up to 10 `publicExamples` { input, sampleOutput } that the student may see. NEVER put the full correct solution in starterCode. You cannot create hidden tests, reference solutions or automatic grading: the teacher writes and verifies hidden tests; until then the question is graded manually.",
+    "- Predict the output of a program: use multipleChoice (preferred) or shortAnswer (the exact printed output as the model answer) and put the program in `codeStimulus` { language (python, java, csharp or pseudocode), source (the program, verbatim), label (a short caption) }. Never put the program inside `text`.",
+    "- tableFill (trace the execution): a table the student fills while tracing the program in `codeStimulus`. `headers` (2-6 columns), `rows` (the cell text row by row; cells the student fills are \"\"), `answerCells` { row, column, correct } — zero-based, one per value to fill, `correct` the exact value. Never reveal answer values in `text` or in non-answer cells.",
+    "- `codeStimulus` is null unless the intent is multipleChoice, shortAnswer or tableFill and the question is about a given program.",
     "- hotspot: the student clicks / taps target areas on an IMAGE. labelDiagram: the student places labels from a bank on zones of a diagram IMAGE. You have no image and no geometry authority: recognise these intents but never invent coordinates, regions or zones — fill no payload; the teacher places them on an attached image.",
     "- unsupported: the request cannot be met with the types above; explain why in `explanation`.",
     "If the request is ambiguous, set confidence \"ambiguous\" and prefer a safe ordinary question (shortAnswer or multipleChoice) instead of a simulator.",
@@ -181,7 +201,7 @@ const isInt = (v: unknown, min: number, max: number): v is number => typeof v ==
 const strArr = (v: unknown, maxItems: number): v is string[] => Array.isArray(v) && v.length <= maxItems && v.every(x => isStr(x));
 const ROOT_KEYS = ["intent", "confidence", "unsupportedCapabilities", "explanation", "text", "marks", "multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "networkCli"];
 // Phase 19B — `parametricNumeric` is required in the schema sent to the model; a 19A-shaped draft without it means "no payload".
-const OPTIONAL_ROOT_KEYS = ["parametricNumeric", "openResponse"];   // 19E: `openResponse` likewise (absent ⇒ no payload)
+const OPTIONAL_ROOT_KEYS = ["parametricNumeric", "openResponse", "codeStimulus", "tableFill", "coding"];   // 19E: `openResponse` likewise (absent ⇒ no payload) · 19F: the code stimulus, trace table and coding@2 public material too
 const PARAM_KEYS = ["variables", "constraints", "answerExpression", "mode", "tolerance", "below", "above", "unitMode", "unitLabel", "unit"];
 type AiParamVar = { name: string; min: number; max: number; step: number };
 type AiFormat = { kind: string; decimals: number };
@@ -200,7 +220,16 @@ type AiNet = { scoring: string; initialHostname: string; initialVlans: AiVlan[];
 type AiOrLevel = { label: string; score: number; description: string };
 type AiOrCriterion = { title: string; description: string; guidance: string; maxScore: number; allowCustomScore: boolean; levels: AiOrLevel[] };
 type AiOpenResponse = { profile: string; instructions: string; minChars: number; maxChars: number; rubricVisibility: string; criteria: AiOrCriterion[]; modelAnswer: string };
-type AiDraft = { intent: string; confidence: string; unsupportedCapabilities: string[]; explanation: string; text: string; marks: number; multipleChoice: { options: string[]; correctIndex: number } | null; trueFalse: { correct: boolean } | null; shortAnswer: { modelAnswer: string } | null; fillBlank: { blanks: { label: string; correctText: string }[] } | null; inlineCloze: { scoring: string; pieces: AiPiece[] } | null; networkCli: AiNet | null; parametricNumeric?: AiParametric | null; openResponse?: AiOpenResponse | null };
+type AiCodeStimulus = { language: string; source: string; label: string };
+type AiTable = { headers: string[]; rows: string[][]; answerCells: { row: number; column: number; correct: string }[] };
+type AiCoding = { mode: string; language: string; starterCode: string; publicExamples: { input: string; sampleOutput: string }[] };
+const codeStimulusShapeOk = (c: unknown): c is AiCodeStimulus => isPlain(c) && exactKeys(c, ["language", "source", "label"]) && isStr(c.language, 16) && isStr(c.source, AI_AUTHOR_LIMITS.codeChars) && isStr(c.label, 120);
+const tableShapeOk = (t: unknown): t is AiTable => isPlain(t) && exactKeys(t, ["headers", "rows", "answerCells"]) && strArr(t.headers, AI_AUTHOR_LIMITS.tableColumns)
+  && Array.isArray(t.rows) && t.rows.length <= AI_AUTHOR_LIMITS.tableRows && t.rows.every(r => strArr(r, AI_AUTHOR_LIMITS.tableColumns))
+  && Array.isArray(t.answerCells) && t.answerCells.length <= AI_AUTHOR_LIMITS.tableAnswerCells && t.answerCells.every(a => isPlain(a) && exactKeys(a, ["row", "column", "correct"]) && isInt(a.row, 0, 999) && isInt(a.column, 0, 999) && isStr(a.correct));
+const codingShapeOk = (c: unknown): c is AiCoding => isPlain(c) && exactKeys(c, ["mode", "language", "starterCode", "publicExamples"]) && isStr(c.mode, 32) && isStr(c.language, 16) && isStr(c.starterCode, AI_AUTHOR_LIMITS.codeChars)
+  && Array.isArray(c.publicExamples) && c.publicExamples.length <= AI_AUTHOR_LIMITS.publicExamples && c.publicExamples.every(e => isPlain(e) && exactKeys(e, ["input", "sampleOutput"]) && isStr(e.input, AI_AUTHOR_LIMITS.textChars) && isStr(e.sampleOutput, AI_AUTHOR_LIMITS.textChars));
+type AiDraft = { intent: string; confidence: string; unsupportedCapabilities: string[]; explanation: string; text: string; marks: number; multipleChoice: { options: string[]; correctIndex: number } | null; trueFalse: { correct: boolean } | null; shortAnswer: { modelAnswer: string } | null; fillBlank: { blanks: { label: string; correctText: string }[] } | null; inlineCloze: { scoring: string; pieces: AiPiece[] } | null; networkCli: AiNet | null; parametricNumeric?: AiParametric | null; openResponse?: AiOpenResponse | null; codeStimulus?: AiCodeStimulus | null; tableFill?: AiTable | null; coding?: AiCoding | null };
 
 // SHAPE only (types + generous bounds): semantic ranges (VLAN 1 / reserved / > 4094, ports, masks, …) are judged by the CANONICAL
 // validator so the teacher sees its exact issue, never a generic "malformed" for a value the contract itself refuses.
@@ -221,6 +250,9 @@ function shapeOk(raw: unknown): raw is AiDraft {
   if (!isPlain(raw) || hasForbiddenKey(raw) || !ROOT_KEYS.every(k => Object.prototype.hasOwnProperty.call(raw, k)) || Object.keys(raw).some(k => !ROOT_KEYS.includes(k) && !OPTIONAL_ROOT_KEYS.includes(k))) return false;
   if (raw.parametricNumeric !== undefined && raw.parametricNumeric !== null && !paramShapeOk(raw.parametricNumeric)) return false;
   if (raw.openResponse !== undefined && raw.openResponse !== null && !openResponseShapeOk(raw.openResponse)) return false;
+  if (raw.codeStimulus !== undefined && raw.codeStimulus !== null && !codeStimulusShapeOk(raw.codeStimulus)) return false;
+  if (raw.tableFill !== undefined && raw.tableFill !== null && !tableShapeOk(raw.tableFill)) return false;
+  if (raw.coding !== undefined && raw.coding !== null && !codingShapeOk(raw.coding)) return false;
   if (typeof raw.intent !== "string" || (raw.confidence !== "clear" && raw.confidence !== "ambiguous")) return false;
   if (!strArr(raw.unsupportedCapabilities, AI_AUTHOR_LIMITS.capabilities) || !raw.unsupportedCapabilities.every(c => c.length <= AI_AUTHOR_LIMITS.capabilityChars)) return false;
   if (!isStr(raw.explanation, AI_AUTHOR_LIMITS.explanationChars) || !isStr(raw.text, AI_AUTHOR_LIMITS.textChars) || !isInt(raw.marks, 1, 100)) return false;
@@ -327,31 +359,68 @@ function mapOpenResponse(d: AiDraft, o: AiOpenResponse): Mapped {
   return { node: { ...base(d, "openResponse"), questionTypeVersion: 1, openResponse, answer: { rubric: { v: 1, criteria }, modelAnswer: o.modelAnswer } }, issues: [] };
 }
 
+// Phase 19F — the read-only code stimulus (validated by the canonical stimulus contract in the quality gate); empty label ⇒ omitted.
+const stimulusOf = (d: AiDraft): Record<string, unknown> => (d.codeStimulus ? { codeStimulus: { language: d.codeStimulus.language, source: d.codeStimulus.source, ...(d.codeStimulus.label.trim() !== "" ? { label: d.codeStimulus.label } : {}) } } : {});
+const STIMULUS_INTENTS = new Set(["multipleChoice", "shortAnswer", "tableFill"]);
+function mapTableFill(d: AiDraft, t: AiTable): Mapped {
+  // a cell the student fills is EMPTY in the static grid (the AI may never leak its value into the visible table)
+  const answer = new Set(t.answerCells.map(a => a.row + ":" + a.column));
+  const tableRows = t.rows.map((r, ri) => r.map((cell, ci) => (answer.has(ri + ":" + ci) ? "" : cell)));
+  return { node: { ...base(d, "tableFill"), ...stimulusOf(d), tableHeaders: [...t.headers], tableRows, fields: t.answerCells.map((a, i) => ({ id: "f" + (i + 1), kind: "text", row: a.row, column: a.column, correct: a.correct })) }, issues: [] };
+}
+function mapCoding(d: AiDraft, c: AiCoding): Mapped {
+  if (!AI_CODING_MODES.includes(c.mode) || !AI_CODING_LANGS.includes(c.language)) return { node: {}, issues: [{ code: "AI_CODING_INVALID", message: "نمط سؤال البرمجة أو لغته غير مدعوم." }] };
+  const starter = c.starterCode !== "" ? c.starterCode : c.mode === "writeProgram" ? codingStarterTemplate(c.language) : "";
+  if ((c.mode === "fixBug" || c.mode === "completeCode") && starter.trim() === "") return { node: {}, issues: [{ code: "AI_CODING_STARTER_REQUIRED", message: "سؤال إصلاح الخطأ أو إكمال الكود يحتاج كودًا ابتدائيًا." }] };
+  return {
+    node: {
+      ...base(d, "coding"), questionTypeVersion: 2,
+      coding: { allowedLanguages: [c.language], defaultLanguage: c.language, starterCode: starter === "" ? {} : { [c.language]: starter }, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: c.publicExamples.map((e, i) => ({ id: "pub" + (i + 1), title: "مثال " + (i + 1), input: e.input, sampleOutput: e.sampleOutput })) },
+      // PUBLIC material only: no hidden test, no reference solution, manual grading (the teacher writes and verifies hidden tests)
+      answer: { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, gradingMode: "manual", compileErrorPolicy: "manualReview" }
+    },
+    issues: []
+  };
+}
 function mapDraft(d: AiDraft): Mapped | null {
+  if (d.codeStimulus && !STIMULUS_INTENTS.has(d.intent)) return { node: {}, issues: [{ code: "AI_CODE_STIMULUS_UNSUPPORTED", message: "الكود المرفق يُستخدم فقط مع أسئلة الاختيار من متعدد والإجابة القصيرة وتتبع التنفيذ." }] };
   switch (d.intent) {
-    case "multipleChoice": return d.multipleChoice ? { node: { ...base(d, "multipleChoice"), options: d.multipleChoice.options.map(text => ({ text })), answer: { correctOptionIndex: d.multipleChoice.correctIndex } }, issues: [] } : null;
+    case "multipleChoice": return d.multipleChoice ? { node: { ...base(d, "multipleChoice"), ...stimulusOf(d), options: d.multipleChoice.options.map(text => ({ text })), answer: { correctOptionIndex: d.multipleChoice.correctIndex } }, issues: [] } : null;
     case "trueFalse": return d.trueFalse ? { node: { ...base(d, "trueFalse"), answer: { correct: d.trueFalse.correct } }, issues: [] } : null;
-    case "shortAnswer": return { node: { ...base(d, "shortAnswer"), answer: d.shortAnswer && d.shortAnswer.modelAnswer.trim() !== "" ? { text: d.shortAnswer.modelAnswer } : {} }, issues: [] };
+    case "shortAnswer": return { node: { ...base(d, "shortAnswer"), ...stimulusOf(d), answer: d.shortAnswer && d.shortAnswer.modelAnswer.trim() !== "" ? { text: d.shortAnswer.modelAnswer } : {} }, issues: [] };
     case "fillBlank": return d.fillBlank ? { node: { ...base(d, "fillBlank"), fields: d.fillBlank.blanks.map((b, i) => ({ id: "f" + (i + 1), kind: "text", label: b.label, correct: b.correctText })), wordBank: [], answer: { mode: "exactSequence", values: d.fillBlank.blanks.map(b => b.correctText) } }, issues: [] } : null;
     case "inlineCloze": return d.inlineCloze ? mapInlineCloze(d, d.inlineCloze) : null;
     case "networkCli": return d.networkCli ? mapNetworkCli(d, d.networkCli) : null;
     case "parametricNumeric": return d.parametricNumeric ? mapParametric(d, d.parametricNumeric) : null;
     case "openResponse": return d.openResponse ? mapOpenResponse(d, d.openResponse) : null;
+    case "tableFill": return d.tableFill ? mapTableFill(d, d.tableFill) : null;
+    case "coding": return d.coding ? mapCoding(d, d.coding) : null;
     default: return null;
   }
 }
 
 // ── the canonical judgment (shared with the Builder dialog's client-side re-verification) ──────────────────────────────────
 const NODE_KEYS: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  multipleChoice: ["examQuestionId", "presentationType", "text", "marks", "options", "answer"],
+  multipleChoice: ["examQuestionId", "presentationType", "text", "marks", "options", "answer", "codeStimulus"],
   trueFalse: ["examQuestionId", "presentationType", "text", "marks", "answer"],
-  shortAnswer: ["examQuestionId", "presentationType", "text", "marks", "answer"],
+  shortAnswer: ["examQuestionId", "presentationType", "text", "marks", "answer", "codeStimulus"],
   fillBlank: ["examQuestionId", "presentationType", "text", "marks", "fields", "wordBank", "answer"],
   inlineCloze: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "inlineCloze", "answer"],
   networkCli: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "networkCli", "answer"],
   parametricNumeric: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "parametric", "answer"],
-  openResponse: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "openResponse", "answer"]
+  openResponse: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "openResponse", "answer"],
+  tableFill: ["examQuestionId", "presentationType", "text", "marks", "tableHeaders", "tableRows", "fields", "codeStimulus"],   // 19F: trace table
+  coding: ["examQuestionId", "presentationType", "questionTypeVersion", "text", "marks", "coding", "answer"]                // 19F: coding@2 public material
 });
+// Phase 19F — an AI-authored coding question carries NO trusted grading material: version 2, manual grading, no hidden test, no
+// reference solution, no scoring policy. Checked here too because the Builder re-verifies the node the server returns.
+const isEmptyObj = (v: unknown) => isPlain(v) && Object.keys(v).length === 0;
+function aiCodingIssues(node: Record<string, unknown>): AiAuthorIssue[] {
+  const a = node.answer;
+  const ok = node.questionTypeVersion === 2 && isPlain(a) && exactKeys(a, ["hiddenTests", "comparator", "referenceSolutions", "gradingMode", "compileErrorPolicy"])
+    && Array.isArray(a.hiddenTests) && a.hiddenTests.length === 0 && isEmptyObj(a.referenceSolutions) && a.gradingMode === "manual";
+  return ok ? [] : [{ code: "AI_CODING_TRUSTED_MATERIAL_FORBIDDEN", message: "سؤال البرمجة المقترح لا يجوز أن يحمل اختبارات مخفية أو حلولًا مرجعية أو تصحيحًا آليًا؛ يكتبها المعلم ويتحقق منها." }];
+}
 const INVALID_MESSAGE = "مسودة الذكاء الاصطناعي لا تجتاز التحقق القياسي للسؤال؛ لم يُنشأ أي سؤال.";
 /**
  * Judges a generated node with the canonical validators manual authoring uses: the type must be a generated type, the node may
@@ -367,6 +436,7 @@ export function verifyAiQuestionNode(node: unknown): { ok: true; question: Build
   const extra = Object.keys(node).filter(k => !allowed.includes(k));
   if (extra.length) return fail([{ code: "AI_NODE_UNKNOWN_FIELD", message: "السؤال المقترح يحتوي حقولًا غير متوقعة: " + extra.join("، ") }]);
   if (typeof node.examQuestionId !== "string" || node.examQuestionId === "") return fail([{ code: "AI_NODE_MALFORMED", message: "معرّف السؤال المقترح مفقود." }]);
+  if (type === "coding") { const codingIssues = aiCodingIssues(node); if (codingIssues.length) return fail(codingIssues); }
   const exam = { examId: "ai-authoring", title: "AI", status: "draft", schemaVersion: 2, sections: [{ id: "ai-section", title: "AI", instructions: "", maxMarks: null, gradingPolicy: "all", requiredAnswers: null, answerUnit: "question", stimuli: {}, questions: [node] }] } as unknown as StructuredExam;
   const errors = validateStructuredExam(exam).filter(i => i.severity === "error");
   if (errors.length) return fail(errors.map(i => ({ code: i.code, message: i.message })));
@@ -377,13 +447,14 @@ const MESSAGES: Readonly<Record<string, string>> = Object.freeze({
   AI_DRAFT_MALFORMED: "استجابة الذكاء الاصطناعي لا تطابق البنية المطلوبة؛ لم يُنشأ أي سؤال.",
   AI_INTENT_UNKNOWN: "نوع السؤال الذي اقترحه الذكاء الاصطناعي غير معروف؛ لم يُنشأ أي سؤال.",
   AI_TYPE_NOT_GENERATED_simulation: "أسئلة المحاكاة التفاعلية تحتاج حزمة ‎.smartsim‎ يرفعها المعلم؛ لا يُنشئها الذكاء الاصطناعي. أضف السؤال من «محاكاة تفاعلية».",
-  AI_TYPE_NOT_GENERATED_coding: "أسئلة البرمجة تحتاج اختبارات مخفية يكتبها المعلم ويتحقق منها؛ لا يُنشئها الذكاء الاصطناعي. أضف السؤال من «برمجة / كتابة كود».",
   AI_REQUEST_UNSUPPORTED: "الطلب غير مدعوم بأنواع الأسئلة المتاحة.",
   AI_VISUAL_GEOMETRY_REQUIRED_hotspot: "أسئلة «تحديد منطقة على صورة» تحتاج صورة يحدّد عليها المعلم المناطق الصحيحة بنفسه؛ لا يخمّن الذكاء الاصطناعي إحداثيات من النص. أضف السؤال من «تحديد منطقة على صورة»، ثم ارفع الصورة وارسم المناطق.",
   AI_VISUAL_GEOMETRY_REQUIRED_labelDiagram: "أسئلة «تسمية أجزاء الرسم» تحتاج صورة يضع المعلم عليها مناطق التسمية بنفسه؛ لا يخمّن الذكاء الاصطناعي إحداثيات من النص. أضف السؤال من «تسمية أجزاء الرسم»، ثم ارفع الصورة وأضف المناطق والتسميات.",
   AI_NETCLI_UNSUPPORTED_CAPABILITY: "محاكي أوامر الشبكة (الإصدار 1) مبدّل تعليمي فقط؛ هذه القدرات غير مدعومة",
   AI_NETCLI_AMBIGUOUS: "الطلب غير واضح بما يكفي لإنشاء سؤال محاكٍ؛ حدّد المطلوب (VLANs، المنافذ access/trunk، native VLAN، عنوان SVI) أو اطلب سؤالًا عاديًا."
 });
+/** Phase 19F — said with every AI-authored coding question. */
+export const AI_CODING_NOTE = "سؤال البرمجة المقترح بلا اختبارات مخفية ويُصحَّح يدويًا. لتفعيل التصحيح التلقائي أضف اختبارات مخفية بنفسك وتحقق منها.";
 const refuse = (code: string, message: string, intent?: AiAuthorIntent, issues: AiAuthorIssue[] = []): AiAuthorResult => ({ ok: false, code, message, ...(intent ? { intent } : {}), issues });
 
 /** AI draft → canonical question (or a refusal with the canonical issues). Deterministic for a given draft and request. */
@@ -391,7 +462,7 @@ export function normalizeAiQuestionDraft(raw: unknown, context: { request: strin
   if (!shapeOk(raw)) return refuse("AI_DRAFT_MALFORMED", MESSAGES.AI_DRAFT_MALFORMED);
   if (!(AI_AUTHOR_INTENTS as readonly string[]).includes(raw.intent)) return refuse("AI_INTENT_UNKNOWN", MESSAGES.AI_INTENT_UNKNOWN);
   const intent = raw.intent as AiAuthorIntent;
-  if (intent === "simulation" || intent === "coding") return refuse("AI_TYPE_NOT_GENERATED", MESSAGES["AI_TYPE_NOT_GENERATED_" + intent], intent);
+  if (intent === "simulation") return refuse("AI_TYPE_NOT_GENERATED", MESSAGES["AI_TYPE_NOT_GENERATED_" + intent], intent);
   // Phase 19D — no image, no geometry authority: a visual intent is NEVER generated (no invented coordinates, whatever the payload).
   if (intent === "hotspot" || intent === "labelDiagram") return refuse("AI_VISUAL_GEOMETRY_REQUIRED", MESSAGES["AI_VISUAL_GEOMETRY_REQUIRED_" + intent], intent);
   if (intent === "unsupported") return refuse("AI_REQUEST_UNSUPPORTED", MESSAGES.AI_REQUEST_UNSUPPORTED + (raw.explanation ? " " + raw.explanation : ""), intent);
@@ -405,5 +476,6 @@ export function normalizeAiQuestionDraft(raw: unknown, context: { request: strin
   if (mapped.issues.length) return refuse("AI_DRAFT_INVALID", INVALID_MESSAGE, intent, mapped.issues);
   const verdict = verifyAiQuestionNode(mapped.node);
   if (!verdict.ok) return refuse(verdict.code, verdict.message, intent, verdict.issues);
-  return { ok: true, intent, question: verdict.question, notes: raw.explanation ? [raw.explanation] : [] };
+  const notes = [...(raw.explanation ? [raw.explanation] : []), ...(intent === "coding" ? [AI_CODING_NOTE] : [])];
+  return { ok: true, intent, question: verdict.question, notes };
 }

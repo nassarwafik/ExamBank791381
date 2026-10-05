@@ -147,7 +147,7 @@ export default function ExamSectionEditor(props: Props) {
       </div>
 
       <button type="button" className="sb-add-btn" onClick={() => setPaletteOpen(true)} disabled={disabled} aria-haspopup="dialog">+ إضافة سؤال</button>
-      {paletteOpen && <Suspense fallback={null}><QuestionTypePalette open onClose={() => setPaletteOpen(false)} onPick={key => { setPaletteOpen(false); onAddQuestion(newQuestion(key as BuilderQuestionType)); }} /></Suspense>}
+      {paletteOpen && <Suspense fallback={null}><QuestionTypePalette open onClose={() => setPaletteOpen(false)} onPick={key => { setPaletteOpen(false); onAddQuestion(newQuestion(key as BuilderQuestionType)); }} onPickNode={q => { setPaletteOpen(false); onAddQuestion(q); }} /></Suspense>}
     </section>
   );
 }

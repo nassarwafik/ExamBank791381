@@ -3,17 +3,27 @@ import Dialog from "../ui/Dialog";
 import { listQuestionTypes, type QuestionTypeCategory } from "../questionTypeCatalog";
 import { CATEGORY_LABELS, CATEGORY_ORDER } from "../questionTypeAliases";
 import { chipsFor, typeDescription, typeIcon } from "./typePresentation";
+import { CODING_PRESETS, CODING_PRESET_LANGUAGES, buildCodingPreset, type CodingPresetLanguage } from "../codingPresets";
+import type { BuilderQuestion } from "../examTypes";
 import "./questionTypes.css";
 
 // Phase 16A — the Question Type Palette (lazy): one card per catalog / plugin type with icon, Arabic label, description,
 // grading mode and capability chips; search, category tabs, arrow-key navigation, empty state, RTL, narrow screens. UI state
 // lives here only — nothing is persisted into the exam. Selecting a card hands the KEY to the host, which creates the
 // question through the canonical factory.
-type Props = { open: boolean; onClose: () => void; onPick: (key: string) => void };
+// Phase 19F — the «أنماط أسئلة البرمجة» group: six AUTHORING PRESETS (write a program, fix a bug, complete code, complete code with
+// locked parts, predict the output, trace the execution). Each card says exactly what it creates (an existing type + version); picking
+// one hands the host a COMPLETE question built by the pure preset factory (src/codingPresets.ts). Shown only when the host accepts
+// a node (`onPickNode`).
+type Props = { open: boolean; onClose: () => void; onPick: (key: string) => void; onPickNode?: (q: BuilderQuestion) => void };
+const LANGUAGE_LABELS: Record<CodingPresetLanguage, string> = { python: "Python", java: "Java", csharp: "C#" };
 const norm = (s: string) => s.normalize("NFKC").toLowerCase().replace(/[ً-ْ]/g, "").replace(/\s+/g, " ").trim();
 
-export default function QuestionTypePalette({ open, onClose, onPick }: Props) {
+export default function QuestionTypePalette({ open, onClose, onPick, onPickNode }: Props) {
   const [query, setQuery] = useState("");
+  const [presetLanguage, setPresetLanguage] = useState<CodingPresetLanguage>("python");
+  const [predictVehicle, setPredictVehicle] = useState<"multipleChoice" | "shortAnswer">("multipleChoice");
+  const presetsId = useId();
   const [category, setCategory] = useState<QuestionTypeCategory | "all">("all");
   const listRef = useRef<HTMLDivElement>(null);
   const searchId = useId();
@@ -35,6 +45,11 @@ export default function QuestionTypePalette({ open, onClose, onPick }: Props) {
     e.preventDefault(); cards[next].focus();
   };
   const categories: (QuestionTypeCategory | "all")[] = ["all", ...CATEGORY_ORDER];
+  const presets = useMemo(() => {
+    if (!onPickNode || (category !== "all" && category !== "interactive")) return [];
+    const q = norm(query);
+    return CODING_PRESETS.filter(p => !q || norm(p.label).includes(q) || norm(p.description).includes(q) || norm("برمجة كود").includes(q) || p.key.toLowerCase().includes(q));
+  }, [onPickNode, category, query]);
   return (
     <Dialog open={open} onClose={onClose} size="lg" title="إضافة سؤال" className="qt-palette-dialog">
       <div className="qt-palette" dir="rtl">
@@ -45,6 +60,43 @@ export default function QuestionTypePalette({ open, onClose, onPick }: Props) {
             {categories.map(c => <button key={c} type="button" role="tab" aria-selected={category === c} className={"qt-tab" + (category === c ? " is-active" : "")} onClick={() => setCategory(c)}>{c === "all" ? "الكل" : CATEGORY_LABELS[c]}</button>)}
           </div>
         </div>
+        {presets.length > 0 && onPickNode && (
+          <section className="qt-presets" aria-labelledby={presetsId} data-testid="qt-coding-presets">
+            <div className="qt-presets-head">
+              <h3 id={presetsId}>أنماط أسئلة البرمجة</h3>
+              <label className="qt-presets-lang"><span>لغة الأمثلة</span>
+                <select className="sb-input" value={presetLanguage} onChange={e => setPresetLanguage(e.target.value as CodingPresetLanguage)} aria-label="لغة البرمجة لأمثلة الأنماط">
+                  {CODING_PRESET_LANGUAGES.map(l => <option key={l} value={l}>{LANGUAGE_LABELS[l]}</option>)}
+                </select>
+              </label>
+            </div>
+            <p className="sb-hint">النمط ينشئ سؤالًا من نوع موجود بمحتوى مثال تعدّله؛ لا يُنشئ أي اختبار مخفي — التصحيح الآلي يحتاج اختبارات مخفية تكتبها وتتحقق منها بنفسك.</p>
+            <div className="qt-grid" role="list" aria-label="أنماط أسئلة البرمجة">
+              {presets.map(p => (
+                <div key={p.key} role="listitem" className="qt-preset-item">
+                  <button type="button" className="qt-card qt-preset-card" data-testid="qt-preset-card" data-preset-key={p.key}
+                    aria-describedby={presetsId + "-" + p.key}
+                    onClick={() => { const node = buildCodingPreset(p.key, { language: presetLanguage, vehicle: predictVehicle }); if (node) onPickNode(node); }}>
+                    <span className="qt-card-icon" aria-hidden="true">{"</>"}</span>
+                    <span className="qt-card-body">
+                      <strong className="qt-card-label">{p.label}</strong>
+                      <span className="qt-card-desc">{p.description}</span>
+                      <span className="qt-preset-creates" id={presetsId + "-" + p.key} data-testid="qt-preset-creates">{"ينشئ: " + (p.key === "predictOutput" ? (predictVehicle === "shortAnswer" ? "إجابة قصيرة مع كود مرفق للقراءة فقط؛ لا يُشغَّل أي كود. انتبه: المطابقة نصية وتتجاهل المسافات وحالة الأحرف، وما لا يطابق يذهب للمراجعة اليدوية." : "اختيار من متعدد مع كود مرفق للقراءة فقط؛ لا يُشغَّل أي كود.") : p.creates)}</span>
+                    </span>
+                  </button>
+                  {p.key === "predictOutput" && (
+                    <label className="qt-presets-lang"><span>طريقة الإجابة</span>
+                      <select className="sb-input" value={predictVehicle} onChange={e => setPredictVehicle(e.target.value as "multipleChoice" | "shortAnswer")} aria-label="طريقة إجابة توقع الناتج">
+                        <option value="multipleChoice">اختيار من متعدد (موصى به)</option>
+                        <option value="shortAnswer">إجابة قصيرة</option>
+                      </select>
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         {visible.length === 0
           ? <div className="qt-empty" data-testid="qt-empty" role="status">لا توجد أنواع مطابقة لبحثك.</div>
           : <div className="qt-grid" ref={listRef} onKeyDown={onKey} role="list" aria-label="أنواع الأسئلة">
