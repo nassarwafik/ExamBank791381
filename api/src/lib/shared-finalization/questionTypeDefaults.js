@@ -40,6 +40,10 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
     ensure("coding", CODING_DEFAULT_CONFIG());
     ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
+(0, exports.registerTypeDefaults)("coding", 3, ensure => {
+    ensure("coding", { ...CODING_DEFAULT_CONFIG(), template: { language: "python", segments: [{ kind: "locked", text: "def solve(text):\n" }, { kind: "editable", id: "gap1", starter: "    return text\n" }, { kind: "locked", text: "\n\nprint(solve(input()))\n" }] } });
+    ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
+});
 (0, exports.registerTypeDefaults)("networkCli", 1, ensure => {
     ensure("networkCli", { device: "switch", initialState: { v: 1, device: "switch", hostname: "Switch", vlans: {}, interfaces: {} } });
     ensure("answer", { targetState: {}, scoring: "proportional" });

@@ -162,6 +162,11 @@
 .sb-media-thumb.sb-media-hidden{opacity:.45}
 .sb-media-hidden-tag{font-size:11px;font-weight:700;color:var(--muted,#64748b);background:var(--surface2,#f6f8fc);border-radius:var(--pill,999px);padding:2px 8px;align-self:center}
 .sb-media-actions{display:flex;flex-wrap:wrap;gap:8px}
+/* Phase 19F — the read-only code stimulus authoring control (same frame as the media editor). */
+.sb-code-stimulus{border:1px solid var(--line2,#dbe2ec);border-radius:10px;background:var(--surface,#fff);padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.sb-code-stimulus legend{font-weight:800;font-size:13px;color:var(--navy,#1e293b);padding:0 4px}
+.sb-code-stimulus-source{width:100%;box-sizing:border-box;direction:ltr;text-align:left;white-space:pre;overflow:auto;tab-size:4;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px}
+.sb-code-stimulus-error{margin:0;font-size:12px;font-weight:700;color:var(--danger,#b91c1c)}
 .sb-media-actions .sb-btn{padding:6px 10px;font-size:12.5px}
 .sb-media-notice{margin:0;font-size:12px;font-weight:700;color:var(--success2,#047857)}
 .sb-media-error{margin:0;font-size:12px;font-weight:700;color:#b91c1c}

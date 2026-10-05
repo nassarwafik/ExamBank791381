@@ -40,7 +40,11 @@ const row = (key: string, label: string, category: QuestionTypeCategory, grading
  *  teacher-owned compile-error policy (`answer.compileErrorPolicy`, explicit "zero" | "manualReview"); coding@1 remains the
  *  historical contract (a compile error is an automatic 0) and stored coding@1 questions are never reinterpreted. A pre-C2
  *  server knows coding@1 only, so it refuses coding@2 (fail closed) instead of grading it under the old contract. */
-const PRODUCTION_VERSIONS: Readonly<Record<string, number>> = Object.freeze({ coding: 2 });
+const PRODUCTION_VERSIONS: Readonly<Record<string, number>> = Object.freeze({ coding: 3 });
+/** Phase 19F — coding@3 (the LOCKED TEMPLATE contract) is supported but is NOT the version a new question gets: it is created only by
+ *  the explicit «إكمال كود بأجزاء مقفلة» preset. A newly authored coding question stays coding@2 (full source editable — write a
+ *  program, fix a bug, complete code). Types without an entry are authored at their current version. */
+const AUTHORING_VERSIONS: Readonly<Record<string, number>> = Object.freeze({ coding: 2 });
 
 export const LEGACY_QUESTION_TYPE_KEYS: readonly string[] = Object.freeze(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
 
@@ -68,7 +72,7 @@ const PRODUCTION_ROWS = [
   // Phase 17A — ONE generic coding type (coding@1): the student writes ONE source file in a teacher-allowed language (language
   // is data, never a type). Designed hybrid; in 17A the official grade is MANUAL (no trusted executor yet, autoGrading false).
   // Phase 17F-C2 RF1 — CURRENT version 2 (PRODUCTION_VERSIONS): coding@2 = coding@1 + the explicit compile-error policy.
-  ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code"], false],
+  ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code", "codeTemplate"], false],
   // Phase 18C — the first network-device CLI simulator plugin (networkCli@1): a deterministic educational managed SWITCH. Auto-graded
   // on canonical device STATE (per-check partial credit) by the shared engine; interactive; offline; not a compound part (V1 decision:
   // one terminal per question keeps the session, replay and review unambiguous).
@@ -125,6 +129,9 @@ export const isKnownQuestionType = (key: unknown): boolean => typeof key === "st
 export const listQuestionTypes = (): readonly QuestionTypeDefinition[] => [...registry.values()];
 export const compoundPartTypeKeys = (): string[] => listQuestionTypes().filter(d => d.capabilities.compoundPart).map(d => d.key);
 export const currentQuestionTypeVersion = (key: unknown): number => questionTypeDefinition(key)?.version ?? 0;
+/** The version a NEW question of this type is created at (Phase 19F): the explicit authoring version when one is declared, else the
+ *  current version; never above the current version. */
+export const authoringQuestionTypeVersion = (key: unknown): number => { const d = questionTypeDefinition(key); if (!d) return 0; const a = AUTHORING_VERSIONS[d.key]; return a !== undefined && a >= 1 && a <= d.version ? a : d.version; };
 /** Absence means the canonical V1 behaviour of a known type; otherwise an integer 1..current. Unknown types support nothing. */
 export function supportsQuestionTypeVersion(key: unknown, version: unknown): boolean {
   const d = questionTypeDefinition(key);

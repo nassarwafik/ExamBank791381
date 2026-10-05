@@ -17,7 +17,7 @@ import type { AiAuthorIssueView, AiAuthorService } from "./aiAuthorService";
 export type AiInsertOutcome = "ok" | "stale";
 type SectionOption = { id: string; title: string };
 type Props = { open: boolean; onClose: () => void; service: AiAuthorService; sections: SectionOption[]; defaultSectionId?: string; onInsert: (question: BuilderQuestion, sectionId: string) => AiInsertOutcome; disabled?: boolean };
-const PREFERRED: [string, string][] = [["", "تلقائي (يختار الذكاء الاصطناعي)"], ["networkCli", "محاكي أوامر الشبكة"], ["inlineCloze", "إكمال نص تفاعلي"], ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة"], ["openResponse", "إجابة مفتوحة مع سلم تقييم"], ["fillBlank", "إكمال فراغات"], ["multipleChoice", "اختيار من متعدد"], ["trueFalse", "صح أو خطأ"], ["shortAnswer", "إجابة قصيرة"]];
+const PREFERRED: [string, string][] = [["", "تلقائي (يختار الذكاء الاصطناعي)"], ["networkCli", "محاكي أوامر الشبكة"], ["inlineCloze", "إكمال نص تفاعلي"], ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة"], ["openResponse", "إجابة مفتوحة مع سلم تقييم"], ["fillBlank", "إكمال فراغات"], ["multipleChoice", "اختيار من متعدد"], ["trueFalse", "صح أو خطأ"], ["shortAnswer", "إجابة قصيرة"], ["tableFill", "تتبع تنفيذ كود (جدول)"], ["coding", "برمجة (بلا اختبارات مخفية)"]];
 type Ready = { question: BuilderQuestion; notes: string[] };
 type Failure = { message: string; issues: AiAuthorIssueView[] };
 
@@ -31,6 +31,10 @@ function summaryOf(q: BuilderQuestion): string {
   if (node.presentationType === "openResponse") { const o = node.openResponse as { profile?: unknown } | undefined, a = node.answer as { rubric?: { criteria?: unknown[] } } | undefined; parts.push("النمط: " + (OPEN_RESPONSE_PROFILE_LABELS[o?.profile as OpenResponseProfile] ?? String(o?.profile ?? "")) + " · " + (Array.isArray(a?.rubric?.criteria) ? a.rubric.criteria.length : 0) + " معايير في سلم التقييم"); }
   if (node.presentationType === "parametricNumeric") { const c = validateParametricNumericConfig(node.parametric); if (c.ok) parts.push(c.config.variables.length + " متغيرات · قيم مختلفة لكل طالب ومحاولة"); }
   if (Array.isArray(node.options)) parts.push(node.options.length + " خيارات");
+  // Phase 19F — the code-reading modes and the AI coding draft (public material only).
+  if (node.codeStimulus !== undefined) parts.push("مع كود مرفق للقراءة فقط");
+  if (node.presentationType === "tableFill" && Array.isArray(node.fields)) parts.push(node.fields.length + " خلايا للتعبئة");
+  if (node.presentationType === "coding") parts.push("بلا اختبارات مخفية — تصحيح يدوي حتى تضيفها وتتحقق منها");
   return parts.join(" · ");
 }
 

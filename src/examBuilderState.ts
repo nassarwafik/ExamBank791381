@@ -17,7 +17,7 @@ import type {
 } from "./examTypes";
 import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 import { applyRegisteredTypeDefaults, hasRegisteredTypeDefaults } from "./questionTypeDefaults";
-import { currentQuestionTypeVersion, effectiveQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
+import { authoringQuestionTypeVersion, effectiveQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
 
 // ── Identity ────────────────────────────────────────────────────────────────
 // Stable unique ids. crypto.randomUUID when available (browser / modern Node), else a random string.
@@ -72,7 +72,7 @@ function applyTypeDefaults<T extends { presentationType?: BuilderQuestionType; t
   // V1 node is only ever seeded with V1 defaults); a new node takes the catalog's CURRENT version — and the defaults of
   // EXACTLY that version are applied. The legacy 11 keep the byte-for-byte factory shapes below and are NEVER stamped.
   if (t && !questionTypeDefinition(t)?.legacy) {
-    const version = out.questionTypeVersion === undefined ? currentQuestionTypeVersion(t) : effectiveQuestionTypeVersion(t, out.questionTypeVersion);
+    const version = out.questionTypeVersion === undefined ? authoringQuestionTypeVersion(t) : effectiveQuestionTypeVersion(t, out.questionTypeVersion);   // 19F: the AUTHORING version (coding stays @2)
     if (version !== undefined && hasRegisteredTypeDefaults(t, version)) {
       applyRegisteredTypeDefaults(t, version, ensure, genId);
       ensure("questionTypeVersion", version);
@@ -138,6 +138,7 @@ export function changeQuestionType(q: BuilderQuestion, type: BuilderQuestionType
   if (q.activity !== undefined) carried.activity = q.activity;
   if (q.image !== undefined) carried.image = q.image;
   if (q.images !== undefined) carried.images = q.images;
+  if (q.codeStimulus !== undefined) carried.codeStimulus = q.codeStimulus;   // 19F: the read-only code stimulus is type-neutral, like media
   return applyTypeDefaults(carried);
 }
 export function changePartType(p: BuilderPart, type: BuilderPartType): BuilderPart {

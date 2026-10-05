@@ -6,6 +6,7 @@ import type { InlineClozeConfigV1 } from "./inlineClozeQuestion";
 import type { HotspotConfigV1 } from "./hotspotQuestion";
 import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
+import type { CodeStimulus } from "./codeStimulus";
 import type { ParametricNumericConfigV1 } from "./parametricNumericQuestion";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
@@ -109,6 +110,9 @@ export type BuilderPart = {
   // Phase 19B — the PUBLIC parametric config (parametricNumeric@1: generator version, variables, constraints, response presentation);
   // the answer expression / tolerance / required unit live under `answer`. A student receives only the per-attempt projection.
   parametric?: ParametricNumericConfigV1;
+  // Phase 19F — an optional, PUBLIC, read-only code stimulus (predict the output / trace the execution) on any top-level question; the
+  // answer stays the type's own. Strictly validated (./codeStimulus); never a part field.
+  codeStimulus?: CodeStimulus;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -148,6 +152,9 @@ export type BuilderQuestion = {
   // Phase 19B — the PUBLIC parametric config (parametricNumeric@1: generator version, variables, constraints, response presentation);
   // the answer expression / tolerance / required unit live under `answer`. A student receives only the per-attempt projection.
   parametric?: ParametricNumericConfigV1;
+  // Phase 19F — an optional, PUBLIC, read-only code stimulus (predict the output / trace the execution) on any top-level question; the
+  // answer stays the type's own. Strictly validated (./codeStimulus); never a part field.
+  codeStimulus?: CodeStimulus;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;

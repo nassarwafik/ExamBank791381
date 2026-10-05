@@ -1,5 +1,5 @@
 
-import {Suspense} from "react";
+import {Suspense,lazy} from "react";
 import {IconCheck} from "./icons";
 import QuestionField from "./QuestionField";
 import {resolveStudentRenderer,studentUnsupported} from "./questionTypes/studentRegistry";
@@ -8,6 +8,8 @@ import {promptText} from "./questionContent";
 import {answered,optionsFor} from "./StudentQuestionCard";
 import type {Question,QuestionPart,Answer,FieldValue} from "./StudentQuestionCard";
 import {distributePartMarks,partId,partLabel} from "./examStructure";
+// Phase 19F — the shared read-only code stimulus: LAZY, loaded only when the question carries one.
+const CodeStimulusView=lazy(()=>import("./questionTypes/CodeStimulusView"));
 
 // Renders ONE displayed question that is composed of several independent subparts. The shared prompt
 // / stimulus is drawn once, then each part renders its own answer control — parts may use DIFFERENT
@@ -38,6 +40,7 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
  return <article className={"iex-q iex-compound "+(answered(answer)?"done":"")}><div className="iex-node">{q.displayNumber??(index+1)}</div><div className="iex-card">
   <div className="iex-qhead"><span>سؤال مركّب — {parts.length} فروع</span><strong>{q.marks} علامة</strong></div>
   <p className="iex-qtext" id={"iex-qtext-"+String(id).replace(/[^a-zA-Z0-9_-]/g,"_")}>{promptText(q.text)}</p>
+  {q.codeStimulus!==undefined&&<Suspense fallback={null}><CodeStimulusView stimulus={q.codeStimulus}/></Suspense>}
   {(q.image?.exists&&q.image.visible?q.image.assets:q.images||[])?.map((im,n)=>im?.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
   <div className="iex-parts">{parts.map((p:QuestionPart,pi)=>{
    const pid=partId(p,pi),t=String(p.type||"").toLowerCase(),pAns=partAnswers[pid];

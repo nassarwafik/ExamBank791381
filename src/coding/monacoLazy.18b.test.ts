@@ -64,7 +64,7 @@ describe("18B Monaco stays lazy — source-level import graph", () => {
     const g = staticClosure([at("coding/workspace/CodingWorkspace.tsx")]);
     expect(g.packages.filter(p => /monaco|chart/.test(p))).toEqual([]);
     expect(g.files.filter(f => /^(App|StudentExamPage|StudentPortal|TeacherPlatform|TeacherDashboard|AssignmentReview)\.tsx$/.test(f))).toEqual([]);
-    for (const f of g.files) expect(f, f).toMatch(/^(coding\/|ui\/|codingQuestion\.ts$|questionTypeCatalog\.ts$|questionTypeAliases\.ts$|examTypes\.ts$|answerState\.ts$)/);
+    for (const f of g.files) expect(f, f).toMatch(/^(coding\/|ui\/|codingQuestion\.ts$|codingLanguages\.ts$|codingTemplate\.ts$|questionTypeCatalog\.ts$|questionTypeAliases\.ts$|examTypes\.ts$|answerState\.ts$)/);
     const bytes = ["coding/workspace/CodingWorkspace.tsx", "coding/workspace/editorPreferences.ts", "coding/workspace/workspace.css"].reduce((n, f) => n + fs.statSync(at(f)).size, 0);
     expect(bytes).toBeLessThan(40 * 1024);
   });

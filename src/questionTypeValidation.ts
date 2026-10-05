@@ -40,6 +40,8 @@ export function validateQuestionTypeNode(node: unknown, type: unknown, version: 
   const issues: QuestionTypeIssue[] = [];
   const n: Record<string, unknown> = isObj(node) ? node : {};
   for (const f of EXECUTABLE_NODE_FIELDS) if (f in n) issues.push(err("EXECUTABLE_FIELD", "حقل غير مسموح في بيانات السؤال: " + f, f));
+  // Phase 19F — a code stimulus belongs to the whole question (validated with it); a compound PART never carries one.
+  if (options.part && "codeStimulus" in n) issues.push(err("CODE_STIMULUS_PART_UNSUPPORTED", "الكود المرفق يوضع على السؤال المركّب كله، لا على بند منه.", "codeStimulus"));
   if (!isKnownQuestionType(type)) { issues.push(err("UNKNOWN_QUESTION_TYPE", "نوع سؤال غير معروف: " + String(type ?? ""))); return issues; }
   const key = type as string;
   const effective = effectiveQuestionTypeVersion(key, version);
@@ -117,6 +119,8 @@ registerTypeValidator("simulation", 1, node => validateSimulationReference(node.
 registerTypeValidator("coding", 1, node => validateCodingQuestion(node));
 // Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy): the SAME canonical validator, which reads the node's own version.
 registerTypeValidator("coding", 2, node => validateCodingQuestion(node));
+// Phase 19F — coding@3 (locked template): the SAME canonical validator; the node's version selects the strict template rules.
+registerTypeValidator("coding", 3, node => validateCodingQuestion(node));
 // Phase 18C — networkCli@1: public config (device + canonical initial state) and private target-state rules. Nothing here executes anything.
 registerTypeValidator("networkCli", 1, node => validateNetworkCliQuestion(node));
 // Phase 19A — inlineCloze@1: the strict public passage contract AND the private per-blank key (every problem blocks).

@@ -29,5 +29,7 @@ function answered(a) {
         return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");
     if (a.kind === "hotspot")
         return Array.isArray(a.points) && a.points.length > 0;
+    if (a.kind === "codeTemplate")
+        return !!a.values && typeof a.values === "object" && Object.values(a.values).some(v => typeof v === "string" && v.trim() !== "");
     return false;
 }

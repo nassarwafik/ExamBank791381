@@ -36,7 +36,10 @@ const crypto = require("crypto");
 const { readCodingRunnerConfig } = require("./runner-config");
 const { signRunnerRequest } = require("./runner-protocol");
 const { resolveCallbackKey } = require("./hmac-key-separation");
-const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS, codingCompileErrorPolicy, codingQuestionVersion } = require("../shared-finalization/codingQuestion");
+const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS, codingCompileErrorPolicy, codingQuestionVersion, codingTemplateOf, bindCodingTemplateAnswerToQuestion } = require("../shared-finalization/codingQuestion");
+// Phase 19F — coding@3 (locked template): the official source is RECONSTRUCTED here, on the server, from the PUBLISHED template and the
+// bound gap values — the single seam below (boundAnswer) feeds dispatch, answerHash, gradingKey, callback, regrade and recovery alike.
+const { isCodeTemplateAnswered } = require("../shared-finalization/codingTemplate");
 const { evaluateOfficialCodingRun, officialCodingScoreFor, officialCaseToken, OFFICIAL_STDOUT_CAPTURE_BYTES, OFFICIAL_STDERR_CAPTURE_BYTES, OFFICIAL_PREVIEW_BYTES } = require("../shared-finalization/codingContract");
 const { flattenQuestions, effectiveMaxMarks } = require("../exam-structure");
 const { stableStringify } = require("../exam-canonical");
@@ -106,8 +109,9 @@ function officialLimits(cfg) {
 
 /** The gradeable hidden-test contract of a question (fail closed), or { ok: false, code }. */
 function gradeableQuestion(q) {
-  // Review Fix 1 — the catalog decides which coding versions THIS server supports (coding@1 historical, coding@2 policy); any other
-  // version fails closed here, so a server that does not know a version can never grade it under another version's contract.
+  // Review Fix 1 — the catalog decides which coding versions THIS server supports (coding@1 historical, coding@2 policy, coding@3 locked
+  // template since 19F); any other version fails closed here, so a server that does not know a version can never grade it under another
+  // version's contract.
   const version = isCodingNode(q) ? codingQuestionVersion(q) : undefined;
   if (version === undefined) return { ok: false, code: "QUESTION_INVALID" };
   if (codingGradingMode(q.answer) !== "hiddenTests") return { ok: false, code: "QUESTION_INVALID" };
@@ -135,12 +139,22 @@ function gradeableQuestion(q) {
   // The validator above already refused the invalid combinations; an unresolvable policy is never graded as zero (fail closed).
   const compileErrorPolicy = codingCompileErrorPolicy(key, version);
   if (compileErrorPolicy === undefined) return { ok: false, code: "QUESTION_INVALID" };
-  return { ok: true, version, tests: clean, comparator, limits, allowedLanguages, scoringPolicy: codingScoringPolicy(key), compileErrorPolicy };
+  // Phase 19F — coding@3: the validated published template is grading authority (it is part of every official source).
+  const template = version === 3 ? codingTemplateOf(q) : null;
+  if (version === 3 && !template) return { ok: false, code: "QUESTION_INVALID" };
+  return { ok: true, version, tests: clean, comparator, limits, allowedLanguages, scoringPolicy: codingScoringPolicy(key), compileErrorPolicy, ...(template ? { template } : {}) };
 }
 
 /** The bound, non-blank code answer of a question, or null (no answer / blank / unbindable — graded 0 as "no-answer"). */
 function boundAnswer(q, raw) {
   if (!raw) return null;
+  // Phase 19F — coding@3: ONLY a codeTemplate answer binds; the official source = published locked text + bound gap values, rebuilt
+  // HERE (never a client-sent source); an answer whose gaps are all blank is "no-answer" (the locked text alone is never an answer).
+  if (codingQuestionVersion(q) === 3) {
+    const t = bindCodingTemplateAnswerToQuestion(raw, q);
+    if (!t.ok || !isCodeTemplateAnswered(t.answer)) return null;
+    return { kind: "code", language: t.answer.language, languageVersion: t.answer.languageVersion, source: t.source };
+  }
   const b = bindCodeAnswerToQuestion(raw, q);
   if (!b.ok || !String(b.answer.source).trim()) return null;
   return b.answer;
@@ -159,7 +173,7 @@ function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, re
   const q = entry.question, g = gradeableQuestion(q), maxMarks = effectiveMaxMarks(grade);
   if (!g.ok) return { ok: false, code: g.code, jobId };
   const answer = boundAnswer(q, attempt.answers && attempt.answers[targetKey]);
-  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: g.version, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}), ...(g.version >= 2 ? { compileErrorPolicy: g.compileErrorPolicy } : {}) }));   // 17F-C2 RF1: coding@1 adds NO material (byte-identical, in-flight keys unchanged); coding@2 binds its explicit policy
+  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: g.version, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}), ...(g.version >= 2 ? { compileErrorPolicy: g.compileErrorPolicy } : {}), ...(g.version >= 3 ? { template: g.template } : {}) }));   // 17F-C2 RF1: coding@1 adds NO material (byte-identical, in-flight keys unchanged); coding@2 binds its explicit policy
   const answerHash = sha256(answer ? stableStringify({ language: answer.language, languageVersion: answer.languageVersion, source: answer.source }) : "no-answer");
   const gradingKey = sha256(stableStringify({ v: 1, ...ids, mode: "hiddenTests", questionFingerprint, answerHash }));
   return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, scoringPolicy: g.scoringPolicy, compileErrorPolicy: g.compileErrorPolicy, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
@@ -724,7 +738,7 @@ function teacherCodingEvidence(question, attempt) {
   const comparator = key.comparator === undefined ? DEFAULT_CODING_COMPARATOR : CODING_COMPARATORS.includes(key.comparator) ? key.comparator : null;
   if (comparator === null) incomplete = true;
   const grade = (Array.isArray(attempt.questionGrades) ? attempt.questionGrades : []).find(g => isObj(g) && String(g.questionId) === id) || null;
-  const bound = attempt.answers && attempt.answers[id] ? bindCodeAnswerToQuestion(attempt.answers[id], q) : { ok: false };
+  const bound = attempt.answers && attempt.answers[id] ? (codingQuestionVersion(q) === 3 ? bindCodingTemplateAnswerToQuestion(attempt.answers[id], q) : bindCodeAnswerToQuestion(attempt.answers[id], q)) : { ok: false };   // 19F: a coding@3 answer binds to its template
   const revision = isObj(t) && Number.isInteger(t.revision) && t.revision >= 1 ? t.revision : null;
   if (isObj(t) && revision === null) incomplete = true;
   const r = !unsupported && isObj(t) && isObj(t.result) ? t.result : null;

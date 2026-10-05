@@ -89,7 +89,7 @@ function applyTypeDefaults(node) {
     const ensure = (key, value) => { if (out[key] === undefined)
         out[key] = value; };
     if (t && !(0, questionTypeCatalog_1.questionTypeDefinition)(t)?.legacy) {
-        const version = out.questionTypeVersion === undefined ? (0, questionTypeCatalog_1.currentQuestionTypeVersion)(t) : (0, questionTypeCatalog_1.effectiveQuestionTypeVersion)(t, out.questionTypeVersion);
+        const version = out.questionTypeVersion === undefined ? (0, questionTypeCatalog_1.authoringQuestionTypeVersion)(t) : (0, questionTypeCatalog_1.effectiveQuestionTypeVersion)(t, out.questionTypeVersion);
         if (version !== undefined && (0, questionTypeDefaults_1.hasRegisteredTypeDefaults)(t, version)) {
             (0, questionTypeDefaults_1.applyRegisteredTypeDefaults)(t, version, ensure, genId);
             ensure("questionTypeVersion", version);
@@ -152,6 +152,8 @@ function changeQuestionType(q, type) {
         carried.image = q.image;
     if (q.images !== undefined)
         carried.images = q.images;
+    if (q.codeStimulus !== undefined)
+        carried.codeStimulus = q.codeStimulus;
     return applyTypeDefaults(carried);
 }
 function changePartType(p, type) {

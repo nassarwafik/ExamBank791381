@@ -133,6 +133,10 @@ function isResponseAnswered(a) {
     // Phase 19D — a hotspot answer counts when it carries at least one point (mirror of answerState.ts).
     case "hotspot":
       return Array.isArray(a.points) && a.points.length > 0;
+    // Phase 19F — a locked-template answer counts when at least one gap holds non-blank text (the locked text alone is never an
+    // answer); mirror of answerState.ts and codingTemplate.isCodeTemplateAnswered.
+    case "codeTemplate":
+      return !!a.values && typeof a.values === "object" && !Array.isArray(a.values) && Object.values(a.values).some(v => typeof v === "string" && v.trim() !== "");
     default:
       return false;
   }

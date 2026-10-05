@@ -132,9 +132,9 @@ describe("C5 — CodingEditor: lazy, dependency-free, accessible, LTR", () => {
 });
 
 describe("Student response — registered renderer, starter code, language selection, samples, reset, run gating", () => {
-  it("coding@1 has a lazy authoring editor and student renderer (coding@2 too since 17F-C2 RF1; no V3); the card renders the coding response for the sanitized question", async () => {
-    expect(resolveAuthoringEditor("coding", 1)).toBeTruthy(); expect(resolveAuthoringEditor("coding", 3)).toBeUndefined();
-    expect(resolveStudentRenderer("coding", 1)?.label).toBe("برمجة / كتابة كود"); expect(resolveStudentRenderer("coding", 3)).toBeUndefined();
+  it("coding@1 has a lazy authoring editor and student renderer (coding@2 too since 17F-C2 RF1, coding@3 since 19F; no V4); the card renders the coding response for the sanitized question", async () => {
+    expect(resolveAuthoringEditor("coding", 1)).toBeTruthy(); expect(resolveAuthoringEditor("coding", 4)).toBeUndefined();
+    expect(resolveStudentRenderer("coding", 1)?.label).toBe("برمجة / كتابة كود"); expect(resolveStudentRenderer("coding", 4)).toBeUndefined();
     render(<StudentHarness q={studentQ()} />);
     expect(await screen.findByTestId("coding-response", {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.queryByTestId("iex-unsupported")).toBeNull();
@@ -311,7 +311,7 @@ describe("Teacher authoring panel inside the REAL Builder", () => {
     await mountBuilder(baseExam([teacherQ()]));
     const ed = await screen.findByTestId("qt-editor-coding", {}, { timeout: 3000 });
     const insp = within(ed).getByTestId("coding-inspector");
-    expect(insp.textContent).toContain("نوع السؤال: برمجة"); expect(insp.textContent).toContain("الإصدار: 1");
+    expect(insp.textContent).toContain("نوع السؤال: برمجة"); expect(insp.textContent).toContain("الإصدار: 2");   // 19F: the inspector shows the node's REAL version (it was a hard-coded «1»; this question is authored at coding@2)
     expect(insp.textContent).toContain("طريقة التصحيح الرسمي: يدوي بواسطة المعلم");   // Phase 17C: explicit official mode (default manual) expect(insp.textContent).toContain("Python"); expect(insp.textContent).toContain("C#");
     expect(within(ed).getAllByRole("checkbox").map(c => c.getAttribute("aria-label"))).toEqual(["Python", "Java", "C#"]);   // registry-driven, exactly three
     expect(ed.textContent).not.toMatch(/JavaScript|TypeScript|C\+\+|SQL/);

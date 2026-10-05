@@ -178,9 +178,11 @@ describe("19A AI authoring — ordinary families, refusals and malformed AI outp
     expect(sa.presentationType).toBe("shortAnswer");
     expect(normalizeAiQuestionDraft(draft({ intent: "multipleChoice", multipleChoice: { options: ["a", "b"], correctIndex: 7 } }), { request: "x" })).toMatchObject({ ok: false, code: "AI_DRAFT_INVALID" });
   });
-  it("simulation and coding are recognised but never generated (they need a teacher package / hidden tests); 'unsupported' is refused", () => {
+  // Phase 19F — coding is now generated from its PUBLIC material only (src/aiCodingModes.19f.test.ts); a coding intent WITHOUT that
+  // payload is still refused and nothing (least of all a hidden test) is invented.
+  it("simulation is recognised but never generated (it needs a teacher package); coding without a payload is refused; 'unsupported' is refused", () => {
     expect(normalizeAiQuestionDraft(draft({ intent: "simulation" }), { request: "smartsim" })).toMatchObject({ ok: false, code: "AI_TYPE_NOT_GENERATED", intent: "simulation" });
-    expect(normalizeAiQuestionDraft(draft({ intent: "coding" }), { request: "python" })).toMatchObject({ ok: false, code: "AI_TYPE_NOT_GENERATED", intent: "coding" });
+    expect(normalizeAiQuestionDraft(draft({ intent: "coding" }), { request: "python" })).toMatchObject({ ok: false, code: "AI_DRAFT_INVALID", intent: "coding", issues: [{ code: "AI_TYPE_PAYLOAD_MISSING" }] });
     expect(normalizeAiQuestionDraft(draft({ intent: "unsupported", explanation: "router labs are not supported" }), { request: "router" })).toMatchObject({ ok: false, code: "AI_REQUEST_UNSUPPORTED" });
   });
   it("malformed AI output fails closed: unknown keys, smuggled private fields, prototype keys, wrong types, unknown intent", () => {

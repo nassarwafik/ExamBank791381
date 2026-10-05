@@ -201,8 +201,8 @@ describe("17E-D TE — teacherCodingEvidence: ONE strict, teacher-safe projectio
     expect(project(Q(), attemptOf(target(), { answers: { auto1: F.code("class Main{}", "java") } }))).toMatchObject({ language: "java", languageVersion: 1 });
     expect(project(Q(), attemptOf(target(), { answers: { auto1: { kind: "code", language: "cobol", languageVersion: 1, source: "x" } } }))).toMatchObject({ language: null, languageVersion: null });
   });
-  it("TE21 an unsupported question version (coding@3 — coding@2 is supported since 17F-C2 RF1) is never interpreted with coding@1 semantics", () => {
-    const v = project(Q({ questionTypeVersion: 3 }), attemptOf(target()));
+  it("TE21 an unsupported question version (coding@4 — coding@2 is supported since 17F-C2 RF1, coding@3 since 19F) is never interpreted with coding@1 semantics", () => {
+    const v = project(Q({ questionTypeVersion: 4 }), attemptOf(target()));
     expect(v).toMatchObject({ status: "unsupported", cases: [], automaticScore: null });
   });
   it("TE22 F3 (teacher): a valid override while the automatic target is still OPEN → superseded (background evidence)", () => {
@@ -327,7 +327,7 @@ describe("17E-D AUTH — teacher review / regrade / bulk retry attacks (real han
   });
   it("AUTH12 a question whose authority cannot be validated (unsupported version) is never regraded", async () => {
     const a = F.assignment();
-    a.examSnapshot.sections[0].questions[0].questionTypeVersion = 3;   // 17F-C2 RF1: coding@2 is supported; coding@3 is not
+    a.examSnapshot.sections[0].questions[0].questionTypeVersion = 4;   // 17F-C2 RF1: coding@2 is supported · 19F: coding@3 too; coding@4 is not
     const h = harness({ ctx: F.seed({ a }) });
     await h.submit(ANSWERS);
     const before = JSON.stringify(h.doc()), dispatched = h.jobs().length;

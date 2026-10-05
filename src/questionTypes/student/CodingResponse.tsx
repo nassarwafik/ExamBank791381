@@ -1,12 +1,14 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { StudentRendererProps } from "../registryTypes";
 import CodingWorkspace from "../../coding/workspace/CodingWorkspace";
-import { CodingExecutionContext, EXECUTION_STATUS_LABELS, PUBLIC_RUN_DISCLAIMER, RUN_PREVIEW_MESSAGE, RUN_STALE_MESSAGE, RUN_STDIN_MAX_BYTES, RUN_TRUNCATED_MESSAGE, RUN_UNAVAILABLE_MESSAGE, canRun, runErrorMessage, type CodingCapabilities } from "../../coding/codingExecution";
+import { CodingExecutionContext, EXECUTION_STATUS_LABELS, PUBLIC_RUN_DISCLAIMER, RUN_PREVIEW_MESSAGE, RUN_STALE_MESSAGE, RUN_STDIN_MAX_BYTES, RUN_UNAVAILABLE_MESSAGE, canRun, runErrorMessage, type CodingCapabilities } from "../../coding/codingExecution";
 import { createApiCodingService, loadCodingCapabilities, type CodingRunFailure } from "../../coding/codingRunClient";
 import { otherLanguageDrafts, readLanguageDraft, rememberLanguageDraft, type DraftScope, type LanguageDrafts } from "../../coding/codingDrafts";
 import { StudentAttemptContext, TeacherPreviewContext } from "../studentAttemptContext";
 import { CODE_SOURCE_MAX_BYTES, codingLanguage, isCodingLanguage, projectCodingConfigForStudent, utf8ByteLength } from "../../codingQuestion";
-import { compareOutput, normalizeExecutionResult, type CodeExecutionResult } from "../../codingContract";
+import { normalizeExecutionResult, type CodeExecutionResult } from "../../codingContract";
+import { ResultBody } from "../../coding/CodingRunResult";
+import { matchOf, sampleTitle } from "../../coding/runResultModel";
 import { useConfirm } from "../../ui/useConfirm";
 
 // Phase 17A / 17B / 17E-B — coding@1 student renderer (lazy). ONE component for the student exam AND the teacher preview
@@ -32,23 +34,6 @@ type CustomView = { mode: "custom"; snap: Snapshot; title?: string; result: Code
 type PublicRow = { key: string; title: string; sample?: string; result?: CodeExecutionResult };
 type PublicView = { mode: "public"; snap: Snapshot; rows: PublicRow[] };
 type View = CustomView | PublicView;
-
-const sampleTitle = (t: { title?: string }, i: number) => t.title || "مثال " + (i + 1);
-const matchOf = (r: CodeExecutionResult | undefined, sample: string | undefined) =>
-  !r || r.status !== "success" || sample === undefined ? "none" : compareOutput(r.stdout, sample, "trimTrailingWhitespace") ? "match" : "mismatch";
-const MATCH_TEXT = { match: "يطابق المخرجات النموذجية (للتدريب فقط)", mismatch: "لا يطابق المخرجات النموذجية (للتدريب فقط)" } as const;
-
-function ResultBody({ result, sample }: { result: CodeExecutionResult; sample?: string }) {
-  const m = matchOf(result, sample);
-  const meta = [typeof result.durationMs === "number" ? "زمن التنفيذ: " + Math.round(result.durationMs) + " ملّي ثانية" : "", typeof result.exitCode === "number" ? "رمز الخروج: " + result.exitCode : ""].filter(Boolean).join(" · ");
-  return <>
-    {m !== "none" && <span>{MATCH_TEXT[m]}</span>}
-    {meta !== "" && <span className="cx-result-meta" data-testid="coding-result-meta">{meta}</span>}
-    {result.status === "output-limit" && <p className="cx-result-note" data-testid="coding-output-truncated">{RUN_TRUNCATED_MESSAGE}</p>}
-    {result.stdout !== "" && <div className="cx-io-block"><span>المخرجات</span><pre className="cx-run-output" dir="ltr">{result.stdout}</pre></div>}
-    {result.stderr !== "" && <div className="cx-io-block"><span>{result.status === "compile-error" ? "رسائل المترجم" : "رسائل الخطأ"}</span><pre className="cx-run-output" dir="ltr">{result.stderr}</pre></div>}
-  </>;
-}
 
 export default function CodingResponse({ q, id, answer, onAnswer, disabled, labelPrefix }: StudentRendererProps) {
   const cfg = useMemo(() => projectCodingConfigForStudent((q as { coding?: unknown }).coding), [q]);

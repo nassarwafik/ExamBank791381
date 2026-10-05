@@ -159,7 +159,7 @@ function sanitizeFieldForStudent(field) {
 // structural fields with a dedicated sanitizer below is passed through the canonical secret-key policy (recursive), so a
 // smuggled `correctColumn` / `expectedState` / `answerKey` inside any plugin object never reaches a student (defense in
 // depth) while public structure (ids, labels, values) passes byte-for-byte. Persisted exam JSON can never name this code.
-const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus", "openResponse"]);   // 19E: openResponse is REBUILT by its strict allow-list projection below
+const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus", "openResponse", "codeStimulus"]);   // 19E: openResponse is REBUILT by its strict allow-list projection below · 19F: codeStimulus too
 // Phase 17A — the coding config is additionally REBUILT through its allow-list projection (shared with the client renderer):
 // only allowed / default languages, starter code, public sample tests (id / title / input / sampleOutput) and limits survive,
 // so hidden tests, reference solutions, weights or notes smuggled into the public object never reach a student; a malformed
@@ -226,6 +226,15 @@ function applyOpenResponseProjection(node, source) {
   const p = projectOpenResponseForStudent(node.openResponse, source && typeof source === "object" ? source.answer : undefined);
   if (p) node.openResponse = p; else delete node.openResponse;
 }
+// Phase 19F — the read-only code stimulus is REBUILT through its STRICT projection (shared with the renderer and the finalization gate):
+// exactly { language, source, label? }; anything else in it (a smuggled answer / expected value) withholds the whole stimulus. A part
+// never carries one (finalization refuses it), so a part's is always removed.
+const { projectCodeStimulusForStudent } = require("./shared-finalization/codeStimulus");
+function applyCodeStimulusProjection(node, part) {
+  if (!("codeStimulus" in node)) return;
+  const p = part ? null : projectCodeStimulusForStudent(node.codeStimulus);
+  if (p) node.codeStimulus = p; else delete node.codeStimulus;
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -240,6 +249,7 @@ function sanitizePartForStudent(part) {
   delete out.answer; // remove part.answer (grading key)
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyOpenResponseProjection(out, part);                                       // 19E: never compound-capable; defense in depth
+  applyCodeStimulusProjection(out, true);                                       // 19F: a part never carries a stimulus
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
@@ -264,6 +274,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyOpenResponseProjection(out, question);                                   // 19E: the public rubric is derived from the ORIGINAL private key
+  applyCodeStimulusProjection(out, false);                                      // 19F: strict read-only code stimulus
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);

@@ -14,7 +14,7 @@ const draft = require("../lib/shared-finalization/aiQuestionDraft");
  * SHARED deterministic normalizer (src/aiQuestionDraft.ts, the same code the Builder dialog re-runs) maps it to the canonical node of
  * its type and the SAME canonical validators manual authoring uses decide validity — an invalid draft is refused with their issues,
  * never repaired. networkCli is generated only inside the V1 managed-switch scope (routing / OSPF / ACL / … are refused even when the
- * model invents a switch contract); simulation / coding are recognised but never generated. The teacher inserts the returned
+ * model invents a switch contract); simulation is recognised but never generated; coding (19F) carries public material only, never hidden tests. The teacher inserts the returned
  * question as a DRAFT; finalization gates still apply. The configured OpenAI client (quality-fix-ai-client.js: OpenAI only, strict
  * structured output, no SDK retries) is reused unchanged — no new provider, no key on the frontend, no provider error text returned.
  */

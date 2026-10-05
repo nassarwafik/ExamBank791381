@@ -12,41 +12,18 @@
 // under `question.answer`, which the student sanitizer always removes.
 
 import { effectiveQuestionTypeVersion } from "./questionTypeCatalog";
+import { CODE_SOURCE_MAX_BYTES, CODING_LANGUAGE_KEY_PATTERN, codingLanguage, isCodingLanguage, utf8ByteLength } from "./codingLanguages";
+// Phase 19F — the language registry and the byte counter live in ./codingLanguages (moved verbatim); re-exported so every importer
+// of this module keeps exactly the same names.
+export { CODING_LANGUAGES, CODING_LANGUAGE_KEY_PATTERN, CODE_SOURCE_MAX_BYTES, codingLanguage, codingStarterTemplate, isCodingLanguage, utf8ByteLength } from "./codingLanguages";
+export type { CodingLanguageCapabilities, CodingLanguageDefinition } from "./codingLanguages";
+import { bindCodeTemplateAnswer, validateCodingTemplate, type BoundTemplateAnswer, type CodingTemplateV1 } from "./codingTemplate";
 
-export type CodingLanguageCapabilities = { compile: boolean; run: boolean; stdin: boolean; tests: boolean };
-/** A language CONTRACT (not a runtime): `capabilities` say what the stdin/stdout program model can mean for this language —
- *  whether an execution provider actually offers it is a separate, provider-reported fact. */
-export type CodingLanguageDefinition = { key: string; version: number; label: string; extension: string; editorLanguage: string; indentUnit: string; capabilities: CodingLanguageCapabilities; starterTemplate: string };
-
-const lang = (key: string, label: string, extension: string, indentUnit: string, flags: string, starterTemplate = ""): CodingLanguageDefinition =>
-  Object.freeze({ key, version: 1, label, extension, editorLanguage: key, indentUnit, capabilities: Object.freeze({ compile: flags.includes("c"), run: flags.includes("r"), stdin: flags.includes("r"), tests: flags.includes("r") }), starterTemplate });
-// Phase 17E-A — the MINIMAL, pedagogically neutral starter shell of a language (registry data, one place): what the trusted
-// runner needs to compile an empty stdin/stdout program and nothing else (no solution, no I/O idiom, no test material). Java
-// must be `public class Main` (the runner compiles Main.java and runs Main); C# any class with a static Main (Program.cs).
-// A Python script needs no shell, so its template is empty. Templates are offered to the teacher, never imposed on stored code.
-const JAVA_TEMPLATE = "public class Main {\n    public static void main(String[] args) {\n    }\n}\n";
-const CSHARP_TEMPLATE = "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n    }\n}\n";
-/** Coding Assessment V1 intentionally supports exactly Python, Java and C# (stable order). No JavaScript, TypeScript, C++ or
- *  SQL in V1: an unregistered key fails closed everywhere (finalization, student projection, server answer ingestion). The
- *  registry stays data-driven so a language can be ADDED later through a reviewed change — never by branching on a key. */
-export const CODING_LANGUAGES: readonly CodingLanguageDefinition[] = Object.freeze([
-  lang("python", "Python", ".py", "    ", "r"),
-  lang("java", "Java", ".java", "    ", "cr", JAVA_TEMPLATE),
-  lang("csharp", "C#", ".cs", "    ", "cr", CSHARP_TEMPLATE)
-]);
-const LANGUAGE_INDEX = new Map(CODING_LANGUAGES.map(l => [l.key, l]));
-export const codingLanguage = (key: unknown): CodingLanguageDefinition | undefined => (typeof key === "string" ? LANGUAGE_INDEX.get(key) : undefined);
-export const isCodingLanguage = (key: unknown): boolean => codingLanguage(key) !== undefined;
-/** The registry starter template of a language ("" for an unknown language or one that needs no shell). */
-export const codingStarterTemplate = (key: unknown): string => codingLanguage(key)?.starterTemplate ?? "";
-export const CODING_LANGUAGE_KEY_PATTERN = /^[a-z][a-z0-9]{0,31}$/;
 
 export type CodingLimits = { sourceBytes: number; outputBytes: number; timeMs: number; memoryMb: number };
 /** Bounded ranges for every resource a future runner request may ask for. A teacher can never request unlimited resources. */
 export const CODING_LIMIT_RANGES: Readonly<Record<keyof CodingLimits, readonly [number, number]>> = Object.freeze({ sourceBytes: [1024, 65536], outputBytes: [1024, 262144], timeMs: [250, 10000], memoryMb: [16, 512] });
 export const DEFAULT_CODING_LIMITS: Readonly<CodingLimits> = Object.freeze({ sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 });
-/** The absolute ceiling of a stored source (UTF-8 bytes) — enforced by the client editor AND by the server on every ingest. */
-export const CODE_SOURCE_MAX_BYTES = 65536;
 export const CODING_TEST_LIMITS = Object.freeze({ publicTests: 10, hiddenTests: 50, ioBytes: 16384, totalBytes: 262144 });
 export const CODING_TEST_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -61,6 +38,8 @@ export type CodingTestCasePrivate = { id: string; title?: string; input: string;
 export type CodingQuestionConfigV1 = {
   allowedLanguages: string[]; defaultLanguage: string; starterCode?: Record<string, string>;
   taskMode: "program"; inputMode: "stdin"; outputMode: "stdout"; limits: CodingLimits; publicTests?: CodingTestCasePublic[];
+  /** Phase 19F — coding@3 ONLY: the published locked template (public by design; validated by ./codingTemplate). */
+  template?: CodingTemplateV1;
 };
 /** Phase 17C — the OFFICIAL grading mode (teacher-private, under `answer`). Missing / unknown → "manual" (the Phase 17A behaviour:
  *  score 0, manual review); "hiddenTests" → the SmartAssess server grades the stored submission against the hidden tests through
@@ -96,7 +75,8 @@ export const codingQuestionVersion = (node: unknown): number | undefined => (isO
 export function codingCompileErrorPolicy(answerKey: unknown, version = 1): CodingCompileErrorPolicy | undefined {
   const v = isObj(answerKey) ? answerKey.compileErrorPolicy : undefined;
   if (version === 1) return v === undefined || v === "zero" ? "zero" : undefined;
-  if (version === 2) return v === "zero" || v === "manualReview" ? v : undefined;
+  // Phase 19F — coding@3 (locked template) keeps the coding@2 compile-error contract exactly (explicit policy required).
+  if (version === 2 || version === 3) return v === "zero" || v === "manualReview" ? v : undefined;
   return undefined;
 }
 export type CodeAnswer = { kind: "code"; language: string; languageVersion: number; source: string };
@@ -107,18 +87,6 @@ export const defaultCodingConfig = (): CodingQuestionConfigV1 => ({ allowedLangu
  *  deliberately different from coding@1, whose absent field means the historical "zero" that existing published exams keep. */
 export const defaultCodingAnswerKey = (): Required<Omit<CodingAnswerKeyV1, "scoringPolicy">> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {}, gradingMode: "manual", compileErrorPolicy: "manualReview" });
 
-/** UTF-8 byte length without TextEncoder (pure; same result in the browser and the server). */
-export function utf8ByteLength(s: string): number {
-  let n = 0;
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c < 0x80) n += 1;
-    else if (c < 0x800) n += 2;
-    else if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length && (s.charCodeAt(i + 1) & 0xfc00) === 0xdc00) { n += 4; i++; }
-    else n += 3;
-  }
-  return n;
-}
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
@@ -136,6 +104,8 @@ export function normalizeCodeAnswer(a: unknown): { ok: true; answer: CodeAnswer 
 }
 
 const PUBLIC_KEYS = new Set(["allowedLanguages", "defaultLanguage", "starterCode", "taskMode", "inputMode", "outputMode", "limits", "publicTests"]);
+// Phase 19F — coding@3 adds exactly one public key, the locked template; coding@1 / coding@2 keep refusing it as unknown.
+const PUBLIC_KEYS_V3 = new Set([...PUBLIC_KEYS, "template"]);
 const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 /** The ONLY student projection of a coding config: an allow-list rebuilt field by field (never a copy-and-delete), so a
  *  private value smuggled into the public object (hidden tests, reference solutions, weights, notes, tokens) never reaches a
@@ -149,6 +119,8 @@ export function projectCodingConfigForStudent(cfg: unknown): CodingQuestionConfi
   for (const k of ["taskMode", "inputMode", "outputMode"]) if (typeof cfg[k] === "string") out[k] = cfg[k];
   if (isObj(cfg.limits)) { const l: Record<string, number> = {}; for (const k of Object.keys(CODING_LIMIT_RANGES)) { const v = cfg.limits[k]; if (typeof v === "number" && Number.isFinite(v)) l[k] = v; } out.limits = l; }
   if (Array.isArray(cfg.publicTests)) out.publicTests = cfg.publicTests.filter(isObj).map(t => { const p: Record<string, string> = {}; for (const k of ["id", "title", "input", "sampleOutput"]) { const v = str(t[k]); if (v !== undefined) p[k] = v; } return p; });
+  // Phase 19F — a locked template is public by design, but only its STRICT canonical form is delivered (a malformed one is dropped).
+  if (cfg.template !== undefined) { const t = validateCodingTemplate(cfg.template); if (t.ok) out.template = t.template; }
   return out as CodingQuestionConfigV1;
 }
 
@@ -159,12 +131,36 @@ export function projectCodingConfigForStudent(cfg: unknown): CodingQuestionConfi
 export function bindCodeAnswerToQuestion(a: unknown, question: unknown): { ok: true; answer: CodeAnswer } | { ok: false; code: string } {
   const base = normalizeCodeAnswer(a);
   if (!base.ok) return base;
-  if (!isObj(question) || String(question.presentationType ?? question.type ?? "") !== "coding" || codingQuestionVersion(question) === undefined) return { ok: false, code: "CODE_QUESTION_MISMATCH" };
+  // Phase 19F — a coding@3 (locked template) question accepts ONLY a codeTemplate answer: a full-source answer could rewrite locked text.
+  if (!isObj(question) || String(question.presentationType ?? question.type ?? "") !== "coding" || codingQuestionVersion(question) === undefined || codingQuestionVersion(question) === 3) return { ok: false, code: "CODE_QUESTION_MISMATCH" };
   const cfg = projectCodingConfigForStudent(question.coding);
   if (!cfg || !Array.isArray(cfg.allowedLanguages) || !cfg.allowedLanguages.includes(base.answer.language)) return { ok: false, code: "CODE_LANGUAGE_NOT_ALLOWED" };
   const configured = cfg.limits && typeof cfg.limits.sourceBytes === "number" && Number.isInteger(cfg.limits.sourceBytes) && cfg.limits.sourceBytes > 0 ? cfg.limits.sourceBytes : CODE_SOURCE_MAX_BYTES;
   if (utf8ByteLength(base.answer.source) > Math.min(configured, CODE_SOURCE_MAX_BYTES)) return { ok: false, code: "CODE_SOURCE_TOO_LARGE" };
   return base;
+}
+
+/** The configured source ceiling of a question (its limits.sourceBytes when valid, never above CODE_SOURCE_MAX_BYTES). */
+function sourceLimitOf(question: Record<string, unknown>): number {
+  const cfg = projectCodingConfigForStudent(question.coding);
+  const configured = cfg && cfg.limits && typeof cfg.limits.sourceBytes === "number" && Number.isInteger(cfg.limits.sourceBytes) && cfg.limits.sourceBytes > 0 ? cfg.limits.sourceBytes : CODE_SOURCE_MAX_BYTES;
+  return Math.min(configured, CODE_SOURCE_MAX_BYTES);
+}
+/** Phase 19F — the VALID published locked template of a coding@3 question, else null (any other version / malformed ⇒ null). */
+export function codingTemplateOf(question: unknown): CodingTemplateV1 | null {
+  if (!isObj(question) || String(question.presentationType ?? question.type ?? "") !== "coding" || codingQuestionVersion(question) !== 3 || !isObj(question.coding)) return null;
+  const t = validateCodingTemplate(question.coding.template, sourceLimitOf(question));
+  return t.ok ? t.template : null;
+}
+/**
+ * Phase 19F — binds a `codeTemplate` answer to the PUBLISHED coding@3 question it answers and returns the canonical answer together
+ * with the SERVER-RECONSTRUCTED official source (published locked text + bound gap values). Any other question / version, a malformed
+ * template, a foreign language, a missing / unknown gap or an oversized result is refused — nothing reaches a runner from a refusal.
+ */
+export function bindCodingTemplateAnswerToQuestion(a: unknown, question: unknown): BoundTemplateAnswer {
+  const t = codingTemplateOf(question);
+  if (!t) return { ok: false, code: "CODE_QUESTION_MISMATCH" };
+  return bindCodeTemplateAnswer(a, t, sourceLimitOf(question as Record<string, unknown>));
 }
 
 export type CodingIssue = { code: string; message: string; severity: "error"; path?: string };
@@ -180,7 +176,7 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
   if (version === undefined) out.push(err("CODING_VERSION_UNSUPPORTED", "إصدار سؤال البرمجة غير مدعوم في هذا الإصدار من التطبيق.", "questionTypeVersion"));
   const cfg = node.coding;
   if (!isObj(cfg)) return [err("CODING_CONFIG_MISSING", "إعداد سؤال البرمجة مفقود أو غير صالح.", "coding")];
-  for (const k of Object.keys(cfg)) if (!PUBLIC_KEYS.has(k)) out.push(err("CODING_CONFIG_UNKNOWN_KEY", "حقل غير معروف في إعداد سؤال البرمجة: " + k, "coding." + k));
+  for (const k of Object.keys(cfg)) if (!(version === 3 ? PUBLIC_KEYS_V3 : PUBLIC_KEYS).has(k)) out.push(err("CODING_CONFIG_UNKNOWN_KEY", "حقل غير معروف في إعداد سؤال البرمجة: " + k, "coding." + k));
   const langs = Array.isArray(cfg.allowedLanguages) ? cfg.allowedLanguages : [];
   if (!langs.length) out.push(err("CODING_NO_LANGUAGES", "اختر لغة برمجة واحدة على الأقل.", "coding.allowedLanguages"));
   const allowed = new Set<string>();
@@ -201,6 +197,14 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
       else if (!allowed.has(k)) out.push(err("CODING_STARTER_LANGUAGE_NOT_ALLOWED", "كود ابتدائي للغة غير مسموحة: " + k, "coding.starterCode." + k));
       else if (utf8ByteLength(v) > sourceLimit) out.push(err("CODING_STARTER_TOO_LARGE", "الكود الابتدائي أكبر من حد حجم الكود: " + k, "coding.starterCode." + k));
     }
+  }
+  // Phase 19F — coding@3: the locked template is REQUIRED and strict; it fixes the ONE language (allowed = default = template's) and
+  // replaces free starter code (each gap carries its own starter), so no second, conflicting starting point exists.
+  if (version === 3) {
+    const t = validateCodingTemplate(cfg.template, sourceLimit);
+    if (!t.ok) out.push(...t.issues);
+    else if (!(langs.length === 1 && langs[0] === t.template.language && cfg.defaultLanguage === t.template.language)) out.push(err("CODING_TEMPLATE_LANGUAGE_MISMATCH", "سؤال القالب المقفل يستخدم لغة واحدة هي لغة القالب.", "coding.allowedLanguages"));
+    if (isObj(cfg.starterCode) && Object.keys(cfg.starterCode).length > 0) out.push(err("CODING_TEMPLATE_STARTER_CONFLICT", "في سؤال القالب المقفل يكون النص الابتدائي داخل الفراغات فقط، لا في الكود الابتدائي.", "coding.starterCode"));
   }
   const key = isObj(node.answer) ? node.answer : {};
   const ids = new Set<string>();
@@ -236,7 +240,7 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
   // normalized); coding@1 refuses "manualReview" (the teacher upgrades the question to coding@2 explicitly); coding@2 requires it.
   if (key.compileErrorPolicy !== undefined && !CODING_COMPILE_ERROR_POLICIES.includes(key.compileErrorPolicy as CodingCompileErrorPolicy)) out.push(err("CODING_COMPILE_ERROR_POLICY_UNKNOWN", "سياسة التعامل مع فشل تجميع الكود غير معروفة.", "answer.compileErrorPolicy"));
   else if (version === 1 && key.compileErrorPolicy === "manualReview") out.push(err("CODING_COMPILE_ERROR_POLICY_REQUIRES_V2", "سياسة المراجعة اليدوية عند فشل التجميع تتطلب ترقية السؤال إلى الإصدار الثاني من سؤال البرمجة.", "answer.compileErrorPolicy"));
-  else if (version === 2 && key.compileErrorPolicy === undefined) out.push(err("CODING_COMPILE_ERROR_POLICY_REQUIRED", "حدّد سياسة التعامل مع فشل تجميع الكود.", "answer.compileErrorPolicy"));
+  else if ((version === 2 || version === 3) && key.compileErrorPolicy === undefined) out.push(err("CODING_COMPILE_ERROR_POLICY_REQUIRED", "حدّد سياسة التعامل مع فشل تجميع الكود.", "answer.compileErrorPolicy"));
   if (key.gradingMode === "hiddenTests") {
     if (nHidden === 0) out.push(err("CODING_AUTO_NO_HIDDEN_TESTS", "التصحيح التلقائي يحتاج إلى اختبار مخفي واحد على الأقل.", "answer.hiddenTests"));
     // the student program's output can never exceed the question's output limit, so an expected output above it is unreachable

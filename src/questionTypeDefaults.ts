@@ -52,6 +52,12 @@ registerTypeDefaults("coding", 2, ensure => {
   ensure("coding", CODING_DEFAULT_CONFIG());
   ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
 });
+// Phase 19F — coding@3 (LOCKED TEMPLATE; created only by the explicit preset): one language, a small valid template (locked shell +
+// one editable gap with its starter), no free starter code, and the coding@2 private key shape (explicit compile-error policy).
+registerTypeDefaults("coding", 3, ensure => {
+  ensure("coding", { ...CODING_DEFAULT_CONFIG(), template: { language: "python", segments: [{ kind: "locked", text: "def solve(text):\n" }, { kind: "editable", id: "gap1", starter: "    return text\n" }, { kind: "locked", text: "\n\nprint(solve(input()))\n" }] } });
+  ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {}, compileErrorPolicy: "manualReview" });
+});
 // Phase 18C — networkCli@1: a default switch (hostname «Switch», empty VLAN database, untouched ports) and an EMPTY private target
 // (finalization blocks until the teacher sets at least one check). Literal on purpose (initial graph); parity-tested against
 // defaultNetworkCliConfig() / defaultNetworkCliAnswerKey() in src/networkCliQuestion.ts.

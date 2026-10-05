@@ -123,6 +123,9 @@ registerBuiltIn("coding", () => ({ score: 0, manualReview: true, correct: false 
 // Phase 17F-C2 RF1 — coding@2 (explicit compile-error policy) has the same provisional base; the official grade still comes from
 // the isolated runner's evidence through api/src/lib/coding/official-grading.js, never from here.
 if (!graders.has(identity("coding", 2))) registerGrader("coding", 2, () => ({ score: 0, manualReview: true, correct: false }));
+// Phase 19F — coding@3 (locked template): the same provisional base; the official grade comes from the SAME official pipeline, which
+// grades the SERVER-RECONSTRUCTED source (published locked text + bound gap values).
+if (!graders.has(identity("coding", 3))) registerGrader("coding", 3, () => ({ score: 0, manualReview: true, correct: false }));
 registerBuiltIn("networkCli", (question, response, max) => {
   const r = networkCli.scoreNetworkCli({ config: question.networkCli, answerKey: question.answer, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
