@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useId, useMemo } from "react";
 import { openResponseReviewModel, scoreOpenResponseRubric } from "../openResponseQuestion";
 import "./openResponse.css";
 
@@ -6,27 +6,19 @@ import "./openResponse.css";
 // rubric; per criterion the teacher picks ONE level (native radio group: keyboard + screen reader) or, only where the rubric allows it,
 // bounded custom points; the private grading guidance and the model answer are shown to the teacher only. The live total is an ESTIMATE
 // computed with the same shared engine — the server recomputes the official score from the published rubric on save and ignores any
-// client number. A stale stored selection (the published rubric changed) is never shown as a grade.
+// client number. A stale stored selection (the published rubric changed) is never hydrated by the host, so never shown as a grade.
 export type RubricAwardInput = { levelId: string } | { points: number };
 export type RubricAwardsInput = Record<string, RubricAwardInput>;
-export type RubricGradingState = { touched: boolean; complete: boolean; score: number | null };
 type ReviewQuestion = { questionId: string; questionNumber: number; marks: number; openResponse?: unknown; questionTypeVersion?: unknown; expectedAnswer: unknown; studentAnswer: unknown; rubricReview?: unknown };
-type Props = { question: ReviewQuestion; awards: RubricAwardsInput; onChange: (next: RubricAwardsInput) => void; onState: (state: RubricGradingState) => void; disabled?: boolean };
+type Props = { question: ReviewQuestion; awards: RubricAwardsInput; onChange: (next: RubricAwardsInput) => void; disabled?: boolean };
 
-export default function RubricGradingPanel({ question: q, awards, onChange, onState, disabled }: Props) {
+export default function RubricGradingPanel({ question: q, awards, onChange, disabled }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const node = useMemo(() => ({ presentationType: "openResponse", questionTypeVersion: q.questionTypeVersion ?? undefined, marks: q.marks, openResponse: q.openResponse, answer: q.expectedAnswer }), [q]);
   const model = useMemo(() => openResponseReviewModel(node, q.rubricReview), [node, q.rubricReview]);
   const done = model.ok ? model.rubric.criteria.filter(c => awards[c.id] !== undefined).length : 0;
   const total = model.ok ? model.rubric.criteria.length : 0;
   const live = useMemo(() => (model.ok && done === total ? scoreOpenResponseRubric(node, awards) : null), [model, node, awards, done, total]);
-  const touched = Object.keys(awards).length > 0, complete = !!live && live.ok, score = live && live.ok ? live.score : null;
-  const onStateRef = useRef(onState), onChangeRef = useRef(onChange);
-  useEffect(() => { onStateRef.current = onState; onChangeRef.current = onChange; });
-  useEffect(() => { onStateRef.current({ touched, complete, score }); }, [touched, complete, score]);
-  // a stored selection that no longer binds to the published rubric is never kept as a grade: the teacher chooses again
-  const stale = model.ok && model.stale;
-  useEffect(() => { if (stale) onChangeRef.current({}); }, [stale]);
 
   const text = q.studentAnswer && typeof q.studentAnswer === "object" && (q.studentAnswer as { kind?: unknown }).kind === "text" ? String((q.studentAnswer as { value?: unknown }).value ?? "") : "";
   if (!model.ok) return <p className="or-unavailable" role="note" data-testid="rubric-authority-invalid">سلم التقييم المنشور لهذا السؤال غير صالح؛ لا يمكن احتساب درجة منه، ويبقى السؤال بانتظار المراجعة.</p>;

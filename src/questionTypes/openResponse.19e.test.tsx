@@ -237,6 +237,10 @@ describe("teacher rubric grading inside the REAL AssignmentReview", () => {
     const stale = await mount({ manualScore: 4, rubricReview: { v: 1, awards: { accuracy: { levelId: "gone", points: 2 }, examples: { levelId: "full", points: 2 } } } });
     expect(within(stale.panel).getByTestId("rubric-stale")).toBeTruthy();
     expect(within(stale.panel).getByTestId("rubric-grade-summary").textContent).toMatch(/0 \/ 2/);
+    // the stale selection is never sent and never blocks the save (nothing to grade yet ⇒ no override for o1)
+    fireEvent.click(screen.getByRole("button", { name: /حفظ واعتماد التصحيح/ })); await tick(30);
+    expect(stale.posts).toHaveLength(1);
+    expect((stale.posts[0] as { overrides: Record<string, unknown> }).overrides.o1).toBeUndefined();
     cleanup();
     globalThis.fetch = vi.fn(() => Promise.resolve({ status: 200, ok: true, json: async () => review({ expectedAnswer: { rubric: { ...RUBRIC, v: 2 }, modelAnswer: "" } }) } as Response)) as unknown as typeof fetch;
     render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={() => {}} onSaved={() => {}} />);
