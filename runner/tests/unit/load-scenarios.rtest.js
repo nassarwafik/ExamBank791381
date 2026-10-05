@@ -75,12 +75,13 @@ test("SC5 CERT-E saturation: safe refusal for practice, peak sandboxes ≤ limit
 test("SC5b finding B10-F1 CLOSED BY B3: the official admission bound holds for SEQUENTIAL arrivals AND for CONCURRENT arrivals (3 accepted / 5 busy of 8 with maxPending 3; before B3 the concurrent burst measured 8 accepted)", async () => {
   const mk = () => L.createLocalStack({ maxConcurrency: 2, official: { maxPending: 3, maxActive: 1 }, profile: { python: { compileMs: 0, runMs: 300, cpuMs: 300, timeoutMs: 300 } } });
   const job = (tag, i) => ({ jobId: "cg_f1" + tag + String(i).padStart(18, "0"), language: "python", languageVersion: 1, source: L.BY_ID.P1.source, cases: [{ token: "c01", stdin: "1\n" }], limits: { timeMs: 3000, memoryMb: 128, outputBytes: 17408 } });
-  const seq = mk(); await seq.start();
+  // Hotfix (admission oracle): executions are HELD until all 8 arrivals were answered (the slow profile alone was a timing assumption)
+  const seq = mk(); await seq.start(); seq.holdOfficialUntilAnswered(8);
   const cs = L.createRunnerClient({ baseUrl: seq.baseUrl, key: seq.key, fetchImpl: globalThis.fetch });
   const sequential = []; for (let i = 0; i < 8; i++) sequential.push((await cs.submitOfficial(job("s", i))).status);
   await seq.idle(); await seq.close();
   assert.deepEqual(sequential, ["accepted", "accepted", "accepted", "busy", "busy", "busy", "busy", "busy"]);
-  const con = mk(); await con.start();
+  const con = mk(); await con.start(); con.holdOfficialUntilAnswered(8);
   const cc = L.createRunnerClient({ baseUrl: con.baseUrl, key: con.key, fetchImpl: globalThis.fetch });
   const concurrent = (await Promise.all(Array.from({ length: 8 }, (_, i) => cc.submitOfficial(job("c", i))))).map(r => r.status);
   await con.idle(); const j = con.journalStatus(); await con.close();

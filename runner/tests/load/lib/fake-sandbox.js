@@ -22,6 +22,19 @@ const stdoutFor = (fn, stdin) => {
 
 function createFakeSandbox({ profile = DEFAULT_PROFILE, sleep = ms => new Promise(r => setTimeout(r, ms)), now = () => Date.now(), onRun } = {}) {
   let active = 0, peak = 0, runs = 0, official = 0;
+  // Hotfix (admission oracle) — while a hold is set, an official suite waits before executing (it stays LIVE in the gateway: received /
+  // running). The harness holds during a saturation burst so that no accepted job can leave LIVE before every arrival of the burst
+  // was answered: then "accepted in the step" equals the peak LIVE count the gateway bounds. Practice runs are never held.
+  let gate = null;
+  const waitGate = signal => {
+    const g = gate;
+    if (!g) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      if (signal && signal.aborted) return reject(new Error("aborted"));
+      g.promise.then(resolve);
+      if (signal) signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+    });
+  };
   const wait = async (ms, signal) => { if (ms <= 0) return; await new Promise(r => { const t = setTimeout(r, ms); if (signal) signal.addEventListener("abort", () => { clearTimeout(t); r(); }, { once: true }); }); void sleep; };
   const enter = () => { active++; peak = Math.max(peak, active); };
   const leave = () => { active--; };
@@ -34,6 +47,12 @@ function createFakeSandbox({ profile = DEFAULT_PROFILE, sleep = ms => new Promis
   };
   return {
     stats: () => ({ active, peak, runs, official }),
+    /** Holds official executions until the returned release() is called (idempotent). Nested holds share one gate. */
+    holdOfficial() {
+      if (!gate) { let release; const promise = new Promise(r => { release = r; }); gate = { promise, release }; }
+      const g = gate;
+      return () => { if (gate === g) gate = null; g.release(); };
+    },
     availableLanguages: async () => LANGUAGES.map(key => ({ key, languageVersion: 1 })),
     sweep: async () => 0,
     async run(entry, request) {
@@ -50,7 +69,9 @@ function createFakeSandbox({ profile = DEFAULT_PROFILE, sleep = ms => new Promis
       } finally { leave(); }
     },
     async runOfficialSuite(entry, job, { signal, caseConcurrency = 2 } = {}) {
-      official++; enter();
+      official++;
+      await waitGate(signal);
+      enter();
       try {
         const kind = kindOf(job.source), fn = fnOf(job.source), cost = costOf(entry.key, kind);
         if (onRun) onRun({ phase: "official", language: entry.key, kind, cases: job.cases.length });

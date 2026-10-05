@@ -33,6 +33,9 @@ async function stagingRehearsal(params, { declare = true } = {}) {
   const port = await freePort();
   const stack = L.createLocalStack({ maxConcurrency: 2, official: { maxPending: 3, maxActive: 1 }, callbackBaseUrl: "http://127.0.0.1:" + port, callbackKey: KEY2 });
   await stack.start();
+  // Hotfix (admission oracle): this stack plays the REMOTE Runner, so the harness cannot hold its executions; the test holds them until
+  // the 8 official arrivals of the burst were answered (no accepted job leaves LIVE mid-burst ⇒ accepted = peak live).
+  stack.holdOfficialUntilAnswered(params.officialJobs || 8);
   try {
     const env = { RUNNER_URL: stack.baseUrl, RUNNER_HMAC_KEY: stack.key, LOAD_CALLBACK_RECEIVER_PORT: String(port), LOAD_CALLBACK_HMAC_KEY: KEY2 };
     const r = await L.runScenario({ scenario: "CERT-E", target: "staging", env, buildSha: SHA, params: { jobs: 4, officialJobs: 8, casesPerJob: 1, settleTimeoutMs: 30000, ...(declare ? { runner: { maxPending: 3 } } : {}), ...params }, attachments: { journalStatus: stack.journalStatus() }, deps: { fetchImpl: globalThis.fetch } });
