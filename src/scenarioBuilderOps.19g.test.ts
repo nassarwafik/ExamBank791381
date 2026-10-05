@@ -193,12 +193,13 @@ describe("19G-B20 — import / export round-trip and strict rejection", () => {
   for (const [name, over, code] of rejected) it("B21 import rejects " + name + " (fatal parse error, cannot open)", () => {
     const r = parseStructuredExamJson(examJson(over), "exam.json");
     expect(r.canOpen).toBe(false);
+    expect(r.exam).toBeNull();                                                          // no half-normalized exam object leaves the parser
     expect(r.parseErrors.map(e => e.code)).toContain(code);
   });
   it("B22 a cross-section reference is rejected at import", () => {
     const json = JSON.stringify({ examId: "E", title: "t", schemaVersion: 2, sections: [{ ...sec(), scenarios: [scn({ questionIds: ["q1", "z1"] })] }, { ...newSection({ id: "s2" }), questions: [q("z1")] }] });
     const r = parseStructuredExamJson(json, "exam.json");
-    expect(r.canOpen).toBe(false); expect(r.parseErrors.map(e => e.code)).toContain("SCENARIO_QUESTION_CROSS_SECTION");
+    expect(r.canOpen).toBe(false); expect(r.exam).toBeNull(); expect(r.parseErrors.map(e => e.code)).toContain("SCENARIO_QUESTION_CROSS_SECTION");
   });
   it("B23 presets never carry scenarios (structure templates only): a preset section with `scenarios` is a FORBIDDEN_FIELD", () => {
     const issues = validateAssessmentPreset({ schemaVersion: 1, presetId: "apr-1", title: "قالب", blueprint: {}, sections: [{ presetSectionId: "ps-1", title: "x", gradingPolicy: "all", scenarios: [] }] });

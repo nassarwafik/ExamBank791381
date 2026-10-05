@@ -70,7 +70,7 @@ describe("19G-S1 — the student sanitizer rebuilds scenarios through the strict
   });
   it("S6 a future scenario version / future source kind / malformed table / unsafe image URL / missing alt fail CLOSED", () => {
     const cases = [
-      [scn(["q1"], { version: 2 })], [scn(["q1"], { sources: [{ id: "v", version: 1, kind: "video", url: "https://x/y.mp4" }] })],
+      [scn(["q1"], { version: 2 })], [scn(["q1"], { sources: [{ ...TEXT(), version: 2 }] })], [scn(["q1"], { sources: [{ ...TEXT(), version: "1" }] })], [scn(["q1"], { sources: [{ id: "v", version: 1, kind: "video", url: "https://x/y.mp4" }] })],
       [scn(["q1"], { sources: [{ ...TABLE(), rows: [[{ answer: "x" }, "2"]] }] })], [scn(["q1"], { sources: [IMAGE({ dataUrl: "javascript:alert(1)" })] })],
       [scn(["q1"], { sources: [IMAGE({ dataUrl: "data:image/svg+xml,<svg onload=alert(1)>" })] })], [scn(["q1"], { sources: [{ ...IMAGE(), alt: "" }] })],
       [{ ...scn(["q1"]), questionIds: ["q1", "q1"] }], [scn(["q1", "ghost"])]
@@ -255,6 +255,12 @@ describe("19G-S21 — snapshot, finalization, canonical content and teacher revi
       expect(d.canFinalize, JSON.stringify(scenarios).slice(0, 60)).toBe(false);
       expect(d.structuralErrors.some(i => /^(SCENARIO|SOURCE)/.test(i.code))).toBe(true);
     }
+    // the SPECIFIC rule is reported (never only a downstream symptom): a missing reference, a source version 2, a scenario version 2
+    const codesOf = scenarios => evaluateServerFinalization(exam([section([mcq("q1"), mcq("q2")], scenarios)])).structuralErrors.map(i => i.code);
+    expect(codesOf([scn(["q1", "zz"])])).toContain("SCENARIO_QUESTION_MISSING");
+    expect(codesOf([scn(["q1"], { sources: [{ ...TEXT(), version: 2 }] })])).toContain("SOURCE_VERSION_UNSUPPORTED");
+    expect(codesOf([scn(["q1"], { version: 2 })])).toContain("SCENARIO_VERSION_UNSUPPORTED");
+    expect(codesOf([scn(["q1", "q2"], { id: "a" }), scn(["q2"], { id: "b", sources: [TEXT({ id: "t2" })] })])).toContain("SCENARIO_QUESTION_SHARED");
   });
   it("S24 the REAL teacher review carries the scenario CONTEXT (title, instructions, sources) once per scenario + a per-question scenarioId — and no server secret", async () => {
     const o1 = { examQuestionId: "o1", presentationType: "openResponse", questionTypeVersion: 1, text: "قارن.", marks: 6, openResponse: { v: 1, profile: "sourceBased", instructions: "اعتمد على النص.", response: { minChars: 0, maxChars: 500 }, studentRubricVisibility: "hidden" }, answer: { rubric: { v: 1, criteria: [{ id: "c1", title: "الدقة", description: "", maxPoints: 6, allowCustomPoints: false, guidance: "PRIVATE-GUIDE", levels: [{ id: "full", label: "كامل", points: 6, description: "" }, { id: "none", label: "لا", points: 0, description: "" }] }] }, modelAnswer: "MODEL" } };
