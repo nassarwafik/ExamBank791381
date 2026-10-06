@@ -14,6 +14,7 @@ describe("20F-RUN client orchestration", () => {
     const t: ComposerTransport = async body => { bodies.push(body); return { ok: false, code: "PLAN_INVALID", issues: [{ code: "PLAN_TOTAL_MISMATCH", message: "x" }], draft: { bad: true } }; };
     const r = await runGeneration(t, A.intent, { examId: "E", report: noop });
     expect(r).toMatchObject({ ok: false, failure: { kind: "validation" } });
+    expect(r.ok ? [] : r.failure.issues.map(i => i.code)).toEqual(["PLAN_TOTAL_MISMATCH"]);   // the LAST refusal's issues reach the teacher
     expect(bodies.length).toBe(1 + COMPOSER_LIMITS.repairAttempts);
     expect(bodies.map(b => b.attempt)).toEqual([0, 1, 2]);
     expect(bodies[1].previous).toEqual({ bad: true });
