@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildSimFromSpec } from "./composerSim";
+import { buildSimFromSpec, probeFunctionFeatures } from "./composerSim";
+import { compileFunction, evaluateFunctionAt } from "../functionStudyModel";
 import * as F from "./testing/composerFakeAi";
 
 // Phase 20F — Review Fix 5 (fresh re-review of 838e7f4: 0 BLOCKER, 0 MAJOR, 3 MINOR). Principle: the function-study key check FAILS CLOSED —
@@ -38,5 +39,23 @@ describe("20F-RF5 MINOR-2 an undecidable behaviour at ±∞ never accepts a one-
 describe("20F-RF5 MINOR-3 a pole that grows too slowly to confirm refuses the key", () => {
   it("√|log|x|| beside a rational pole: the key without the slow pole is not accepted", () => {
     refused("sqrt(abs(log(abs(x))))+1/(x-3)", ["verticalAsymptotes"], { verticalAsymptotes: [3] });
+  });
+});
+
+describe("20F-RF5 each fail-closed layer holds on its own", () => {
+  it("a domain point hidden inside an overflow run refuses the key (no vertical-asymptote task involved)", () => {
+    expect(codes(buildSimFromSpec(fn("1/(x-2)^10+1/(x-3)", ["domainExclusions"], { domainExclusions: [3] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+  });
+  it("a coarse grid does not see the overflow around a steep pole: the pole itself is uncertain, never assumed", () => {
+    expect(codes(buildSimFromSpec(fn("1/(x-2)^10+1/(x-100)", ["verticalAsymptotes"], { xMin: -500, xMax: 500, verticalAsymptotes: [100] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+  });
+  it("one side a fast pole, the other side growth too slow to decide: uncertain, never a pole", () => {
+    expect(codes(buildSimFromSpec(fn("sqrt(abs(log(abs(x))))+(x+abs(x))/x^2", ["verticalAsymptotes"], { verticalAsymptotes: [0] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+  });
+  it("an undecided approach at ±∞ is reported as such (code and probe), not as 'no limit'", () => {
+    expect(codes(buildSimFromSpec(fn("1+100/sqrt(abs(x)+1)", ["horizontalAsymptotes"], { horizontalAsymptotes: [1] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+    const c = compileFunction("1+100/sqrt(abs(x)+1)"); if (!c.ok) throw new Error("compile");
+    const r = probeFunctionFeatures(x => { const v = evaluateFunctionAt(c.ast, x); return v.ok ? v.value : null; }, -5, 5, 10, { roots: false, points: false, poles: false, extrema: false, limits: true, slope: false }, c.ast);
+    expect(r.overflow).toBe("uncertain");
   });
 });
