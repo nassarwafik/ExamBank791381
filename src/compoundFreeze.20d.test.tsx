@@ -172,8 +172,12 @@ describe("20D compound@1 FREEZE (PINS captured on caac213)", () => {
   });
 
   it("F-12 compound authoring editor renders unchanged (DOM digest after the lazy part editors load)", async () => {
+    // the four lazy Wave-1 part editors are loaded BEFORE rendering (same module instances React.lazy imports), so the digest never races
+    // the first module transform under a loaded full-suite run; the pin itself is unchanged, and a still-loading editor fails loudly
+    await Promise.all([import("./questionTypes/editors/MultipleSelectEditor"), import("./questionTypes/editors/NumericResponseEditor"), import("./questionTypes/editors/MatrixEditor"), import("./questionTypes/editors/CategorizationEditor")]);
     const { container } = render(<CompoundQuestionEditor question={MIXED()} onChange={() => {}} />);
     for (let i = 0; i < 40; i++) await act(async () => { await new Promise(r => setTimeout(r, 25)); });
+    expect(container.querySelector('[role="status"]'), "a lazy part editor is still loading").toBeNull();
     pin("editorMixed", digest(container.innerHTML.replace(/id="[^"]*"|for="[^"]*"|aria-labelledby="[^"]*"|aria-describedby="[^"]*"|aria-controls="[^"]*"/g, "")));
   });
 });
