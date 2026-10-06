@@ -32,7 +32,7 @@ describe("20D-UI1 registries and laziness", () => {
   it("the renderer, editor and review are literal lazy imports; the bundle guard knows their signatures; the budget is unchanged", () => {
     expect(read("src/questionTypes/studentRegistry.tsx")).toContain('registerStudentRenderer("composite", 1, lazy(() => import("./student/CompositeResponse")));');
     expect(read("src/questionTypes/authoringRegistry.tsx")).toContain('registerAuthoringEditor("composite", 1, lazy(() => import("./editors/CompositeEditor")));');
-    expect(read("src/AssignmentReview.tsx")).toMatch(/lazyWithRetry\(\(\) => import\("\.\/composite\/CompositeReviewView"\)[^)]*\), "teacher-composite-review"\)/);
+    expect(read("src/AssignmentReview.tsx")).toContain('const CompositeReviewView=lazy(lazyWithRetry(() => import("./composite/CompositeReviewView"), "teacher-composite-review"));');
     const guard = read("scripts/check-bundle-budget.mjs");
     expect(guard).toMatch(/COMPOSITE_SIGNATURES/);
     for (const s of ["cmp-response", "cmp-editor", "cmp-review", "COMPOSITE_CHILD_TYPE_REFUSED"]) expect(guard).toContain('"' + s + '"');

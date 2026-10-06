@@ -35,6 +35,12 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
   if (Array.isArray(node.tableRows) && node.tableRows.some(r => Array.isArray(r) && r.some(c => text(c)))) return true;
   if (Array.isArray(node.tableHeaders) && node.tableHeaders.some(h => text(h))) return true;
   if (Array.isArray(node.parts) && node.parts.some(p => isObj(p) && (text(p.text) || typeSpecificContentPresent(p)))) return true;
+  // Phase 20D — composite: any shared context, or any group title / instructions, or any part carrying a prompt or authored type content.
+  if (isObj(node.composite)) {
+    const c = node.composite;
+    if (Array.isArray(c.contexts) && c.contexts.length) return true;
+    if (Array.isArray(c.groups) && c.groups.some(g => isObj(g) && (text(g.title) || text(g.instructions) || (Array.isArray(g.parts) && g.parts.some(p => isObj(p) && (text(p.text) || typeSpecificContentPresent({ ...p, presentationType: p.type }))))))) return true;
+  }
   for (const cfgKey of ["matrix", "categorization"]) {
     const cfg = node[cfgKey];
     if (isObj(cfg)) for (const list of Object.values(cfg)) if (Array.isArray(list) && list.some(e => isObj(e) && text(e.label))) return true;

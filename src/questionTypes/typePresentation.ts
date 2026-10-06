@@ -8,7 +8,8 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   multipleChoice: "إجابة صحيحة واحدة من عدة خيارات.", trueFalse: "عبارة واحدة يحكم عليها الطالب.", multiTrueFalse: "عدة عبارات مستقلة، لكل منها حكم.",
   shortAnswer: "نص حر، مع إجابة نموذجية اختيارية أو مراجعة يدوية.", fillBlank: "فراغات تُكمَل من قائمة أو كتابة.", wordBank: "فراغات تُملأ من مخزن كلمات مشترك.",
   matching: "مطابقة كل عنصر بإجابته الصحيحة.", ordering: "ترتيب عناصر في تسلسل صحيح.", tableFill: "خلايا جدول قابلة للإجابة.", cliFill: "فراغات داخل أوامر سطر الأوامر.",
-  compound: "بنود مستقلة بأنواع مختلفة ضمن سؤال واحد.", multipleSelect: "عدة إجابات صحيحة؛ تصحيح كامل أو جزئي مع أو بدون خصم.", numericResponse: "قيمة عددية بتسامح أو ضمن مدى، مع وحدة اختيارية.",
+  compound: "بنود مستقلة بأنواع مختلفة ضمن سؤال واحد.",
+  composite: "سؤال مركّب متقدّم: مجموعات بنود من أنواع حديثة (برمجة، محاكاة، رقمي متغير، صور، إجابة مفتوحة…) مع نص أو كود أو محاكاة مشتركة واحدة تخدم عدة بنود، وقاعدة «أول عدد محدد» لكل مجموعة.", multipleSelect: "عدة إجابات صحيحة؛ تصحيح كامل أو جزئي مع أو بدون خصم.", numericResponse: "قيمة عددية بتسامح أو ضمن مدى، مع وحدة اختيارية.",
   matrix: "صفوف وأعمدة؛ إجابة واحدة لكل صف مع علامة جزئية.", categorization: "إسناد كل عنصر إلى فئته الصحيحة مع علامة جزئية.",
   simulation: "محاكاة تفاعلية من حزمة .smartsim مرفوعة تعمل في بيئة معزولة؛ تُحفظ حالة الطالب وتُراجع يدويًا.",
   coding: "يكتب الطالب برنامجًا كاملًا بلغة يحددها المعلم؛ كود ابتدائي وأمثلة ظاهرة واختبارات مخفية، ومراجعة يدوية حاليًا.",
@@ -20,7 +21,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   smartSim: "محاكاة موثوقة من المنصة نفسها (أولها مخطط شبكة: راوتر وسويتش وحواسيب): يضبط الطالب الأجهزة داخل الامتحان، ويُعاد بناء الحالة على الخادم وتُصحَّح فحوص خاصة بأوزان مع علامة جزئية.",
   parametricNumeric: "سؤال رقمي بمعطيات متغيرة: قيم مختلفة لكل طالب ومحاولة من متغيرات وقيود، وتعبير إجابة خاص يُحسب على الخادم؛ تصحيح تلقائي بتسامح أو مدى."
 });
-const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡", openResponse: "¶", smartSim: "⧉" });
+const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", composite: "▣▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡", openResponse: "¶", smartSim: "⧉" });
 // Phase 17A — factual chips that replace the generic grading-mode chip where the CURRENT behaviour differs from the type's
 // designed mode: coding@1 is designed hybrid but grades manually until a trusted executor exists — never «تصحيح تلقائي».
 const GRADING_CHIP_OVERRIDES: Readonly<Record<string, readonly string[]>> = Object.freeze({ coding: Object.freeze(["تصحيح يدوي حاليًا", "إجابة برمجية"]) });
