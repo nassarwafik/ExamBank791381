@@ -17,6 +17,12 @@ describe("20F-RUN client orchestration", () => {
     expect(bodies.length).toBe(1 + COMPOSER_LIMITS.repairAttempts);
     expect(bodies.map(b => b.attempt)).toEqual([0, 1, 2]);
     expect(bodies[1].previous).toEqual({ bad: true });
+    // the same bound holds for a section stage and a modify stage (never a 4th call)
+    const mod: Record<string, unknown>[] = [];
+    const tm: ComposerTransport = async body => { mod.push(body); return { ok: false, code: "PATCH_INVALID", issues: [], draft: { n: mod.length } }; };
+    expect(await runModify(tm, { exam: { examId: "E", title: "t", sections: [] }, mode: "modifyExam", scope: { kind: "exam" }, instruction: "x", report: noop })).toMatchObject({ ok: false, failure: { kind: "validation" } });
+    expect(mod.map(b => b.attempt)).toEqual([0, 1, 2]);
+    expect(mod[2].previous).toEqual({ n: 2 });
   });
   it("failures are classified (provider / timeout / rate limit / malformed), never a generic error", async () => {
     const one = (body: Record<string, unknown>) => (async () => body) as ComposerTransport;

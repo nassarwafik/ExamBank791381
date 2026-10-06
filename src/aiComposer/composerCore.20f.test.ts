@@ -134,6 +134,11 @@ describe("20F-SIM SmartSim through the catalog: code-owned config and private ch
     expect((byId["impact-point"].expected as { x: number }).x).toBeCloseTo(impactTime(m), 5);
     expect(byId["impact-speed"].kind).toBe("physics.impactSpeed"); void impactSpeed;
     expect(JSON.stringify(F.physSim(30, 10, 10, ["maxHeight"]))).not.toMatch(/expected/);
+    const m2 = { initialHeight: 12, initialVelocity: 7, gravity: 9.8 };
+    const r2 = buildSimFromSpec(F.physSim(12, 7, 9.8, ["maxHeight", "impactTime"], ["apexPoint"])); expect(r2.ok).toBe(true); if (!r2.ok) return;
+    const by2 = Object.fromEntries(r2.value.checks.map(c => [c.id, c]));
+    expect(by2["max-height"].expected).toBeCloseTo(peakHeight(m2), 5);
+    expect((by2["apex-point"].expected as { y: number }).y).toBeCloseTo(peakHeight(m2), 5);
   });
   it("physics refuses apex tasks for a drop, a probe time outside the flight, an out-of-bounds model", () => {
     expect(codes(buildSimFromSpec(F.physSim(20, 0, 9.8, ["maxHeight"])))).toEqual(["AI_SIM_TASK_INVALID"]);
@@ -146,6 +151,11 @@ describe("20F-SIM SmartSim through the catalog: code-owned config and private ch
     expect(codes(buildSimFromSpec(F.funcSim({ verticalAsymptotes: [-2, 2] })))).toContain("AI_FUNCTION_KEY_INCONSISTENT");
     expect(codes(buildSimFromSpec(F.funcSim({ xIntercepts: [3] })))).toContain("AI_FUNCTION_KEY_INCONSISTENT");
     expect(codes(buildSimFromSpec(F.funcSim({ source: "eval(x)" })))).toContain("AI_SIM_CONFIG_INVALID");
+  });
+  it("the network scenario and the plugin must match the plan item", () => {
+    expect(buildSimFromSpec(F.netSim("vtp"), "x", "networkTopology", "vtp").ok).toBe(true);
+    expect(codes(buildSimFromSpec(F.netSim("vtp"), "x", "networkTopology", "dhcp"))).toEqual(["AI_SIM_PLUGIN_MISMATCH"]);
+    expect(codes(buildSimFromSpec(F.netSim("vtp"), "x", "physicsFreeFall", null))).toEqual(["AI_SIM_PLUGIN_MISMATCH"]);
   });
   it("unknown plugins, mixed payloads and prototype keys fail closed", () => {
     expect(buildSimFromSpec({ ...F.netSim("roas"), plugin: "ospfSim" }).ok).toBe(false);
@@ -220,6 +230,22 @@ describe("20F-EXAM verdict, history, revision, projection", () => {
     expect(composerVerdict(manual(), { intent: intent({ totalMarks: 8 }) }).blocking.map(i => i.code)).toEqual(["COMPOSER_TOTAL_MISMATCH"]);
     expect(verifyAiQuestion(cs.sections[0].questions[0]).length).toBeGreaterThan(0);
   });
+  it("composer gates: an unsupported type VERSION, a nested composite and coding grading material are each named", () => {
+    const v = manual(); (v.sections[0].questions[0] as unknown as { questionTypeVersion: number }).questionTypeVersion = 99;
+    expect(supportsQuestionTypeVersion("multipleChoice", 99)).toBe(false);
+    expect(composerVerdict(v).blocking.filter(i => i.code === "COMPOSER_UNSUPPORTED_TYPE").map(i => i.questionId)).toEqual(["a-q1"]);
+    expect(composerVerdict(manual()).blocking.map(i => i.code)).not.toContain("COMPOSER_UNSUPPORTED_TYPE");
+    const nest = fixture("composite-20d/arabic.json");
+    const groups = (nest.sections[0].questions[0] as unknown as { composite: { groups: { parts: Record<string, unknown>[] }[] } }).composite.groups;
+    groups[0].parts.push({ ...groups[0].parts[0], id: "nested", type: "composite" });
+    expect(composerVerdict(nest).blocking.map(i => i.code)).toContain("COMPOSITE_NESTED");
+    expect(composerVerdict(fixture("composite-20d/arabic.json")).blocking.map(i => i.code)).not.toContain("COMPOSITE_NESTED");
+    for (const answer of [{ gradingMode: "hiddenTests" }, { hiddenTests: [{ id: "t" }] }, { referenceSolutions: { python: "print(1)" } }]) {
+      const e = manual(); const q = e.sections[0].questions[0] as unknown as Record<string, unknown>;
+      q.presentationType = "coding"; q.questionTypeVersion = 2; q.answer = answer;
+      expect(composerVerdict(e).blocking.filter(i => i.code === "AI_CODING_TRUSTED_MATERIAL_FORBIDDEN").map(i => i.questionId), JSON.stringify(answer)).toEqual(["a-q1"]);
+    }
+  });
   it("history is bounded and carries no prompt / reasoning; the student never receives it", () => {
     let e = manual();
     for (let i = 0; i < COMPOSER_LIMITS.historyEntries + 5; i++) e = withComposerHistory(e, { at: "t" + i, mode: "modifyExam", summary: "x".repeat(500), baseRevision: "rev1-0000000000000000", status: "applied", operations: 1, warnings: 0 });
@@ -268,6 +294,26 @@ describe("20F-PATCH domain patches: scope lock, protected fields, stale protecti
     expect(codes(normalizeComposerPatch(F.patch([F.op("updateQuestionMarks", { questionId: "a-q2", marks: 9 })]), c))).toEqual(["PATCH_SCOPE_VIOLATION"]);
     expect(codes(normalizeComposerPatch(F.patch([F.op("updatePresentation", { preset: "focus" })]), c))).toEqual(["PATCH_SCOPE_VIOLATION"]);
     expect(codes(normalizeComposerPatch(F.patch([F.op("removeSection", { sectionId: "a-s1" })]), c))).toEqual(["PATCH_SCOPE_VIOLATION"]);
+  });
+  it("scope lock: a section-scoped request adds questions only to its own section", () => {
+    const e = manual();
+    e.sections.push({ ...e.sections[0], id: "a-s2", title: "قسم ثان", questions: [{ ...e.sections[0].questions[0], examQuestionId: "b-q1" }] });
+    const c = ctxOf(e, "modifyExam", { kind: "section", sectionId: "a-s1" });
+    const add = (sectionId: string) => F.op("addQuestion", { sectionId, marks: 2, item: F.item("multipleChoice", { question: F.mcq("سؤال جديد", ["أ", "ب"]) }) });
+    expect(normalizeComposerPatch(F.patch([add("a-s1")]), c).ok).toBe(true);
+    expect(codes(normalizeComposerPatch(F.patch([add("a-s2")]), c))).toEqual(["PATCH_SCOPE_VIOLATION"]);
+    expect(codes(normalizeComposerPatch(F.patch([F.op("updateQuestionText", { questionId: "b-q1", text: "x" })]), c))).toEqual(["PATCH_SCOPE_VIOLATION"]);
+  });
+  it("the presentation after a patch must be valid (an invalid stored presentation is never stamped as AI output)", () => {
+    const e = manual(); (e.presentation as unknown as Record<string, unknown>).components = { table: { variant: "neon" } };
+    const n = normalizeComposerPatch(F.patch([F.op("updatePresentation", { preset: "classicPaper" })]), ctxOf(e, "presentation", { kind: "presentation" }));
+    expect(n.ok).toBe(true); if (!n.ok) return;
+    const a = applyComposerPatch(e, n.patch, { now: "t", request: "r" });
+    expect(a.ok).toBe(false); if (a.ok) return;
+    expect(a.code).toBe("PATCH_INVALID");
+    const ok = manual();
+    const n2 = normalizeComposerPatch(F.patch([F.op("updatePresentation", { preset: "classicPaper", tableVariant: "striped" })]), ctxOf(ok, "presentation", { kind: "presentation" }));
+    expect(n2.ok && applyComposerPatch(ok, n2.patch, { now: "t", request: "r" }).ok).toBe(true);
   });
   it("targets must exist; conflicting operations and composite mark edits are refused", () => {
     const c = ctxOf(manual(), "modifyExam", { kind: "exam" });

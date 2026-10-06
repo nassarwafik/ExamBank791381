@@ -146,6 +146,27 @@ describe("20F AI Full Exam Composer dialog", () => {
     expect(hist().present).toBe(before);
   });
 
+  it("a4: a staged exam whose LOCAL re-verification fails (server section tampered) shows FAIL and «فتح في المحرر» stays disabled", async () => {
+    const { t: real } = realTransport({ ai_exam_plan: [GEN_PLAN], ai_exam_section: [...GEN_SECTIONS] });
+    const t: ComposerTransport = async (body, signal) => {
+      const r = await real(body, signal);
+      if (body.stage === "section" && body.sectionIndex === 1) ((r.section as { questions: { marks: number }[] }).questions[0]).marks = 7;
+      return r;
+    };
+    const { hist } = await mount(t);
+    const before = hist().present!;
+    const d = await openDialog();
+    fillGenerate(d, "الشبكات", "5");
+    fireEvent.click(within(d).getByRole("button", { name: "إنشاء الامتحان" }));
+    const summary = await within(d).findByTestId("ai-composer-summary", {}, { timeout: 3000 });
+    expect(summary.textContent).toContain("FAIL");
+    const open = within(d).getByRole("button", { name: "فتح في المحرر" }) as HTMLButtonElement;
+    expect(open.disabled).toBe(true);
+    fireEvent.click(open); await tick(30);
+    expect(within(d).queryByText("سيستبدل هذا محتوى الامتحان الحالي (يمكنك التراجع)")).toBeNull();
+    expect(hist().present).toBe(before);
+  });
+
   it("c + h: presentation mode shows a textual before → after diff; applying changes only the presentation (ids, marks, answers unchanged)", async () => {
     const { t } = realTransport({ ai_exam_patch: [F.patch([F.op("updatePresentation", { preset: "classicPaper", reason: "مظهر رسمي" })], "تصميم رسمي")] });
     const { hist } = await mount(t);
