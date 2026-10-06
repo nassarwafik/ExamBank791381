@@ -72,6 +72,8 @@ describe("20E-N1 probe: (x, f(x)) from the shared safe engine", () => {
   it("RF1-F3: an accepted but absurdly narrow window (step underflow) never produces NaN on the slider, trace or probe line", async () => {
     windowOverride = { xMin: 0, xMax: 5e-322 };
     const w = await mount();
+    const step = Number(probe(w).step);
+    expect(Number.isFinite(step) && step > 0).toBe(true);                  // a usable slider step, never 0 / NaN
     fireEvent.click(within(w).getByRole("button", { name: "تتبّع المنحنى" }));
     act(() => runFrame(0)); act(() => runFrame(100));
     expect(w.innerHTML).not.toMatch(/NaN/);

@@ -108,6 +108,11 @@ describe("20E-RF1 review fixes (pure helpers)", () => {
       const s = linearScale(d0, d1, 100, 0);
       for (const v of [d0, d1, 0, (d0 + d1) / 2]) expect(Number.isFinite(s(v)), d0 + ".." + d1 + " @ " + v).toBe(true);
     }
+    const tiny = linearScale(0, 5e-324, 100, 0);                            // still a CORRECT map, not merely a finite one
+    expect(tiny(0)).toBe(100); expect(tiny(5e-324)).toBe(0);
+    expect(Number.isFinite(tiny(1))).toBe(true); expect(Number.isFinite(tiny(-1))).toBe(true);   // far outside the domain: bounded
+    const huge = linearScale(-1e308, 1e308, 0, 100);
+    expect(huge(-1e308)).toBe(0); expect(huge(0)).toBe(50); expect(huge(1e308)).toBe(100);
     expect(linearScale(0, 10, 0, 100)(5)).toBe(50);                       // the ordinary case is unchanged
   });
   it("NIT: the visible prefix never exceeds plotPointsMax INCLUDING the exact current point, which is always the last point", () => {
