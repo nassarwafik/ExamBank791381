@@ -1,5 +1,5 @@
 import { memo, useId } from "react";
-import { DYNAMIC_LIMITS } from "./simulationClock";
+import { DYNAMIC_LIMITS, SIMULATION_CLOCK_VERSION } from "./simulationClock";
 import { linearScale, niceTicks, pathData } from "./progressivePath";
 import "./dynamic.css";
 
@@ -42,7 +42,7 @@ function DynamicPlot2D({ width, height, xDomain, yDomain, xLabel, yLabel, title,
   );
   const showMarker = marker && finite(marker.x) && finite(marker.y);
   return (
-    <svg className="xp-dyn-plot" viewBox={"0 0 " + W + " " + H} role="img" aria-label={title} data-testid={testId} preserveAspectRatio="xMidYMid meet">
+    <svg className="xp-dyn-plot" viewBox={"0 0 " + W + " " + H} role="img" aria-label={title} data-testid={testId} data-clock={SIMULATION_CLOCK_VERSION}>
       <defs><clipPath id={clip}><rect x={PAD.left} y={PAD.top} width={Math.max(0, W - PAD.left - PAD.right)} height={Math.max(0, H - PAD.top - PAD.bottom)} /></clipPath></defs>
       {grid && xt.map(v => <line key={"gx" + v} className="xp-dyn-grid" x1={sx(v)} x2={sx(v)} y1={PAD.top} y2={H - PAD.bottom} />)}
       {grid && yt.map(v => <line key={"gy" + v} className="xp-dyn-grid" x1={PAD.left} x2={W - PAD.right} y1={sy(v)} y2={sy(v)} />)}
