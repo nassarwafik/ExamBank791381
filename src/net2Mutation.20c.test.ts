@@ -233,3 +233,43 @@ describe("20C-MK — checks, secrecy, review details, canonical state, view cach
     expect(JSON.stringify(second.replay)).toBe(JSON.stringify(replayNet2(c.config, b)));
   });
 });
+
+describe("20C-M4 — strengthening after mutation round 4 (DHCP order / gateway, Port Security maximum, ARP, tracert)", () => {
+  it("a server lease carries exactly the pool's default gateway (none when the pool has none)", () => {
+    const SRV = () => cfg([dev("sw1", "switch"), dev("srv", "server", { initial: { v: 2, device: "host", adapters: { eth0: { mode: "static", address: "10.0.0.10", mask: "255.255.255.0" } } } }), dev("pc1", "pc")],
+      [link("s", "sw1", "f0/5", "srv", "eth0"), link("a", "sw1", "f0/1", "pc1", "eth0")]);
+    const pool = (defaultRouter: string) => ({ type: "server.setDhcp", deviceId: "srv", enabled: true, pool: { defaultRouter, dns: "", start: "10.0.0.100", mask: "255.255.255.0", max: 10 } });
+    expect(run(SRV(), [pool("10.0.0.1"), dhcp("pc1")]).state.ops.adapters["pc1/eth0"]).toMatchObject({ status: "dhcp", gateway: "10.0.0.1" });
+    expect(run(SRV(), [pool(""), dhcp("pc1")]).state.ops.adapters["pc1/eth0"]).not.toHaveProperty("gateway");
+    expect(run(SRV(), [pool(""), dhcp("pc1")]).state.ops.adapters["pc1/eth0"]).not.toHaveProperty("dns");
+  });
+  it("simultaneous DHCP clients are served in device-id order, whatever the configuration order", () => {
+    const router = { v: 2, device: "router", hostname: "R", interfaces: { "g0/0": { ipAddress: "10.0.0.1", subnetMask: "255.255.255.0", shutdown: false } }, subinterfaces: {}, dhcp: { excluded: [], pools: { P: { network: "10.0.0.0", mask: "255.255.255.0" } } }, security: {} };
+    const host = { v: 2, device: "host", adapters: { eth0: { mode: "dhcp" } } };
+    const c = cfg([dev("r1", "router", { initial: router }), dev("sw1", "switch"), dev("pc2", "pc", { initial: host }), dev("pc1", "pc", { initial: host })],
+      [link("u", "r1", "g0/0", "sw1", "g0/1"), link("b", "sw1", "f0/1", "pc2", "eth0"), link("a", "sw1", "f0/2", "pc1", "eth0")]);
+    const r = run(c, []);
+    expect(r.state.ops.adapters["pc1/eth0"]).toMatchObject({ address: "10.0.0.2" });
+    expect(r.state.ops.adapters["pc2/eth0"]).toMatchObject({ address: "10.0.0.3" });
+  });
+  it("maximum 2 behind an AP: two laptops work, the third MAC violates", () => {
+    const c = cfg([dev("sw1", "switch"), dev("ap1", "ap", { initial: { v: 2, device: "ap", enabled: true, ssid: "LAB", security: "open", passphrase: "" } }), dev("pc1", "pc"), dev("l1", "laptop"), dev("l2", "laptop"), dev("l3", "laptop")],
+      [link("a", "sw1", "f0/2", "ap1", "eth0"), link("p", "sw1", "f0/1", "pc1", "eth0")]);
+    const wifi = (id: string, address: string) => [{ type: "host.wifiConnect", deviceId: id, ssid: "LAB", passphrase: "" }, ip(id, address, "255.255.255.0", "", "wlan0")];
+    const r = run(c, [ip("pc1", "10.0.0.1"), ...wifi("l1", "10.0.0.11"), ...wifi("l2", "10.0.0.12"), ...wifi("l3", "10.0.0.13"),
+      ...sw("sw1", ...CONF, "interface f0/2", "switchport mode access", "switchport port-security", "switchport port-security maximum 2", "switchport port-security violation restrict", "end"),
+      ...host("l1", "ping 10.0.0.1"), ...host("l2", "ping 10.0.0.1"), ...host("l3", "ping 10.0.0.1")]);
+    expect(text(r, "l1")).toMatch(/Received = 4/); expect(text(r, "l2")).toMatch(/Received = 4/); expect(text(r, "l3")).toMatch(/Received = 0/);
+    expect(r.state.ops.portSecurity["sw1|f0/2"]).toMatchObject({ violations: 1 });
+  });
+  it("the requester learns the ARP answer even when the echo reply then fails", () => {
+    const r = run(LAN(), [ip("pc1", "10.0.0.5"), ip("pc2", "10.0.0.2", "255.255.255.252"), ...host("pc1", "ping 10.0.0.2", "arp -a")]);
+    expect(text(r, "pc1")).toMatch(new RegExp("10\\.0\\.0\\.2\\s+" + MAC("pc2").replace(/\./g, "\\.") + "\\s+dynamic"));
+  });
+  it("tracert on the local LAN shows the destination as the only hop (switches are never hops)", () => {
+    const r = run(LAN(), [...LAN_IPS, ...host("pc1", "tracert 10.0.0.2")]);
+    const out = text(r, "pc1");
+    expect(out).toMatch(/^\s+1\s+0 ms\s+0 ms\s+0 ms\s+10\.0\.0\.2$/m);
+    expect(out.split("\n").filter(l => /^\s+\d+\s/.test(l))).toHaveLength(1);
+  });
+});
