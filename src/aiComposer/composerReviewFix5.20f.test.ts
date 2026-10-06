@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSimFromSpec, probeFunctionFeatures } from "./composerSim";
+import { buildSimFromSpec, poleKindAt, probeFunctionFeatures } from "./composerSim";
 import { compileFunction, evaluateFunctionAt } from "../functionStudyModel";
 import * as F from "./testing/composerFakeAi";
 
@@ -64,6 +64,10 @@ describe("20F-RF5 each fail-closed layer holds on its own", () => {
   });
   it("weak growth that ends in the evaluator's overflow is not a pole (undefined point on a near-limit plateau)", () => {
     expect(codes(buildSimFromSpec(fn("999999999000000+1000500*(1-abs(x))+0/x", ["verticalAsymptotes"], { xMin: -0.5, xMax: 0.5, verticalAsymptotes: [0] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+    // the key-soundness layer on its own (the completeness probe's overflow-run layer also refuses this function)
+    const c = compileFunction("999999999000000+1000500*(1-abs(x))+0/x"); if (!c.ok) throw new Error("compile");
+    const atRaw = (x: number) => { const r = evaluateFunctionAt(c.ast, x); return r.ok ? r.value : r.code === "EVAL_OUT_OF_RANGE" || r.code === "EVAL_NON_FINITE" ? Infinity : null; };
+    expect(poleKindAt(atRaw, 0)).toBe("uncertain");
   });
   it("a key value that is not a limit is refused even when every real limit is listed", () => {
     expect(codes(buildSimFromSpec(fn("(2*x+1)/(x-3)", ["horizontalAsymptotes"], { horizontalAsymptotes: [2, 3] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
