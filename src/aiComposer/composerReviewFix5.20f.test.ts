@@ -47,7 +47,8 @@ describe("20F-RF5 each fail-closed layer holds on its own", () => {
     expect(codes(buildSimFromSpec(fn("1/(x-2)^10+1/(x-3)", ["domainExclusions"], { domainExclusions: [3] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
   });
   it("a coarse grid does not see the overflow around a steep pole: the pole itself is uncertain, never assumed", () => {
-    expect(codes(buildSimFromSpec(fn("1/(x-2)^10+1/(x-100)", ["verticalAsymptotes"], { xMin: -500, xMax: 500, verticalAsymptotes: [100] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+    // grid step 0.07 ≫ the overflow radius (≈ 0.013) of an order-8 pole placed between two samples; |x|⁸ stays inside the evaluator's range
+    expect(codes(buildSimFromSpec(fn("1/(x-0.035)^8+1/(x-20)", ["verticalAsymptotes"], { xMin: -70, xMax: 70, verticalAsymptotes: [20] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
   });
   it("one side a fast pole, the other side growth too slow to decide: uncertain, never a pole", () => {
     expect(codes(buildSimFromSpec(fn("sqrt(abs(log(abs(x))))+(x+abs(x))/x^2", ["verticalAsymptotes"], { verticalAsymptotes: [0] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
