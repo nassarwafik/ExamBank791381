@@ -82,8 +82,11 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   - **uncertain**: anything else, such as overflow already at 10⁻² (an overflow edge is not a pole) or growth too slow to decide
     (√|log|x||).
 
-  A candidate that lands on an overflow plateau is moved to its centre. An uncertain candidate, an uncertain key point, or an overflow run
-  inside the window **refuses** the key (`AI_FUNCTION_TOO_COMPLEX`) rather than guessing. This covers rational poles of order 1 to about 8
+  A candidate that lands on an overflow plateau, or on its finite edge, is moved to the plateau's centre. Grid points are snapped to 12
+  significant digits, so a pole at a terminating decimal (1.3) is met exactly instead of one rounding step off (Review Fix 6). A
+  **narrow** overflow run (at most 2 samples, finite on both sides) is classified at its centre and must be a pole. An uncertain
+  candidate, an uncertain key point, or any wider overflow run inside the window **refuses** the key (`AI_FUNCTION_TOO_COMPLEX`) rather
+  than guessing. This covers rational poles of order 1 to about 8
   (1000/(x−2)⁴, 10⁶/(x−2)³) and logarithmic poles at any window height. A hole, a cusp or a finite edge is not a pole. Very steep poles
   (1/(x−2)¹⁰) and exp(1/x) are refused, never keyed incompletely.
 
@@ -92,15 +95,21 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   (ratio ≤ 0.8) and already be small, and the limit adds the geometric tail. That handles rational, root-like and exponential approaches
   (sigmoid, tanh and logistic at moderate rates). Each side is decided **three ways**:
   - a limit;
-  - none: steps of one sign that do not shrink (polynomial, exp, log, x^0.01);
-  - uncertain: noise, a non-monotone approach, or a side defined at moderate |x| but at no evaluable magnitude (a very steep logistic).
-    An uncertain side refuses the key.
+  - none: steps of one sign that do not shrink (ratios ≥ 0.999: polynomial, exp, log, x^0.01);
+  - uncertain: noise, a non-monotone approach, steps shrinking too slowly to tell (ratios between 0.8 and 0.999: x^−0.15, 1/log x —
+    Review Fix 6), or a side defined at moderate |x| but at no evaluable magnitude (a very steep logistic). An uncertain side refuses the
+    key.
 
-  Limits are compared relatively, and evaluator rounding counts as flat.
+  Evaluator rounding counts as flat.
 
-  The key's **soundness** checks use the same pole test and the same limits, so a correct log asymptote or a slowly converging limit is
-  never refused. The probe refuses a key that:
+  The key's **soundness** checks use the same pole test and the same limits, so a correct log asymptote is never refused. Since
+  Review Fix 6, key and probe must agree **in both directions within 0.005**, half the grading tolerance of 0.01. The grader compares
+  a student's answer with the key, so a key off by more would fail a student who answers correctly. The probe refuses a key that:
   - omits a root, a pole, a domain point, an extremum, a horizontal limit or a monotonic stretch (`AI_FUNCTION_KEY_INCOMPLETE`);
+  - lists a root, an extremum or a limit the probe does not find within 0.005, gives f(0) or an extremum's value off by more than 0.005,
+    or lists two values closer than 0.01 (`AI_FUNCTION_KEY_INCONSISTENT`);
+  - has a monotonic interval that does not hold over its whole length, or does not end at an extremum, a pole or a domain edge, or
+    crosses a pole, a domain point or a domain edge, or overlaps another interval (`AI_FUNCTION_KEY_INCONSISTENT`);
   - names a point outside the window (`AI_FUNCTION_KEY_OUTSIDE_WINDOW`).
 
   The grader compares sets, so an incomplete key would fail correct students.
@@ -548,7 +557,8 @@ accepted wrong key fails correct students. The probe therefore fails closed:
 | an overflow run inside the window, an uncertain candidate or an uncertain key point refuses the key (`AI_FUNCTION_TOO_COMPLEX`) | MINOR-1, MINOR-3 |
 | three-way limits (limit / none / uncertain); an uncertain side refuses the key | MINOR-2 |
 
-Battery: 25 correct curriculum keys are accepted, and 7 wrong or incomplete keys are refused. The battery covers rationals, poles of order
+Battery (an uncommitted probe script; the cases that matter are pinned by the tests below): 25 correct curriculum keys are accepted,
+and 7 wrong or incomplete keys are refused. The battery covers rationals, poles of order
 1–4, log poles, sqrt, abs, plateaus, slowly converging and logistic / tanh limits, and extrema / monotonic keys. The expected changes from
 earlier rounds are exp(1/x), now refused (an RF4 test updated to expect the refusal), and the round-based test expressions, rewritten in
 the allowed vocabulary with the same intent.
@@ -561,7 +571,8 @@ failed**. Sample assertions:
 - `expected [] to deeply equal [ 'AI_FUNCTION_UNSUPPORTED' ]`
 - `sqrt(abs(log(abs(x))))+1/(x-3) {"verticalAsymptotes":[3]}: expected true to be false`
 
-All pass on the head. The four layer-isolating tests were added after the first mutation run.
+All pass on the head. The layer-isolating tests (seven in the last `describe` block: four in `8396f15` / `0fc0b33`, then `4e462ef` and
+the two of `2ae0362` / `20257aa`) were added after the first mutation run.
 
 **RF5 mutation campaign.** 20 mutants: the 13 RF5 mutants (V01–V13) and 7 re-targets of earlier mutants whose lines RF5 rewrote
 (T02b, S03c, S06c, S07c, T04c, T05c, U05c). Result: **20 KILLED, 0 SURVIVED, 0 TIMEOUT**. Some first survived because another
@@ -569,7 +580,8 @@ fail-closed layer caught the same input:
 - V03, V04, V05, V08 and V09, now killed by the layer-isolating tests (`8396f15`, `0fc0b33`);
 - S07c and T05c, now killed by `2ae0362` and `20257aa`, which assert the pole classification directly.
 
-T02b, the old T02 change, is killed by the order-6 pole test (`4e462ef`) and by the slow-growth test.
+T02b, the old T02 change, is killed by several tests: the RF4 steep-pole test (listed in the table, the first to fail), the order-6
+pole test (`4e462ef`) and the slow-growth test.
 
 | Id | File | Planted defect | Outcome | Killed by |
 |---|---|---|---|---|
@@ -619,6 +631,112 @@ the 2 RF4 re-targets).
 Every planted defect in the current code is killed except the 4 proven equivalents (C19, C42, U02, T07b). There were 0 timeouts, and
 every file was restored byte-for-byte with a clean `git status` after every campaign.
 
+### 11.11 Fresh re-review and Review Fix 6: key values must match the probe within half the grading tolerance
+
+A fresh re-review of `f27d136` found 0 BLOCKER, 1 MAJOR, 3 MINOR findings and 4 notes. The MAJOR finding was not an RF5 regression: it
+had been in the code since RF1. MINOR-1 was an RF5 regression.
+
+| Finding | Fix |
+|---|---|
+| MAJOR-1 a monotonic-interval key was checked only at its midpoint: an endpoint sign slip (`dec(−∞,2), inc(−2,+∞)` for x²−4x+3), an interval past a turning point or across a pole was accepted, and the grader then failed a correct student | every probed slope inside an interval must have its direction; finite endpoints must lie within 0.005 of an extremum, a pole, a domain point or a domain edge; no pole, domain point or domain edge inside an interval; no overlapping intervals. Probing after the first mutation run also found `(x+1)/(x−2)` keyed as one decreasing interval over (−∞, +∞), accepted on `f27d136`: refused now |
+| MINOR-1 (RF5 regression) correct keys for poles at one-decimal positions (34–38 of 89 per family) and some order-4 poles were refused: a grid sample one rounding step off the pole overflowed, and an even pole's search stopped on the overflow plateau's finite edge | grid snapped to 12 significant digits; a narrow overflow run (≤ 2 samples) classified at its plateau centre; a search on the finite edge moved inside. Probing also found a pole at the window's edge refused (the gap bisection treated overflow as undefined): the gap now starts where f is undefined |
+| MINOR-2 slowly converging approaches at ±∞ (x^−0.15, 1/(1+log x) on one side) were read as "no limit", so a one-sided key was accepted | "no limit" only when steps do not shrink (ratios ≥ 0.999); between 0.8 and 0.999 the side is uncertain and refuses the key |
+| MINOR-3 key tolerances (0.02, 1 %, 0.1 %·\|l\|) were looser than the grading tolerance 0.01: ±1.4 for 0.2x²−0.4 was accepted and a student answering ±1.414 failed | one key tolerance, 0.005 (half the grading tolerance), in both directions: completeness, roots / extrema / limits matched to the probe, f(0) and extremum values absolute; key values closer than 0.01 refused; a very flat extremum ((x−2)⁶) the probe does not record is checked at x ± 0.005 |
+| N1 the RF5 battery was not committed | stated in §11.10; the RF6 cases are pinned by tests |
+| N2 / N3 T02b killer and the count of layer-isolating tests | aligned in §11.10 |
+| N4 an environment-variable name in negative test assertions | not a model identifier; no change |
+
+The prompt's function-study rule now also asks for values to at least three decimals, and for monotonic intervals that end only at an
+extremum, a pole or a domain edge and never overlap.
+
+**Fail-first.** `composerReviewFix6.20f.test.ts` was executed on `f27d136` in a detached worktree (`0d18a62`'s version of the file, 10
+tests): **7 failed and 3 passed**. The 3 that passed are pins: correct keys that must keep passing, and the grader's verdict on the slip.
+The commit message of `0d18a62` says "6 of 9" because the window-edge test was added before that commit but after the first run. Sample
+assertions on `f27d136`:
+- `x^2-4*x+3 {"intervals":[…"decreasing","-inf","2"…"increasing","-2","+inf"…]}: expected true to be false`
+- `1/(x-1.3) {"verticalAsymptotes":[1.3],"horizontalAsymptotes":[0]}: expected '[{"code":"AI_FUNCTION_TOO_COMPLEX",…' to be 'ok'`
+- `2/(x-3)^4-1 {"xMin":-3,"xMax":3,…}: expected '[{"code":"AI_FUNCTION_TOO_COMPLEX",…' to be 'ok'`
+- `1/(1+log(1+abs(x)+x)) {"horizontalAsymptotes":[1]}: expected true to be false`
+- `0.2*x^2-0.4 {"xIntercepts":[-1.4,1.4]}: expected true to be false`
+
+The tests added later were checked on `f27d136` through its generated module:
+- **Accepted there, refused on the head (fail-first):**
+  - the near-duplicate root and the extra limit value (`836aab8`);
+  - `(x+1)/(x-2)` over (−∞, +∞);
+  - the removable hole at 1.3;
+  - the flat-line extra intercept.
+- **Already refused there:**
+  - the duplicated interval was refused later, by the plugin validator (`AI_SIM_CHECKS_INVALID`); its test isolates the earlier,
+    clearer refusal;
+  - the narrow overflow spike is a **pin** of the new narrow-run path.
+
+**Batteries on the head:**
+- The reviewer's three rational batteries: decimal poles refused **0 / 89** per family (was 34–38), order-4 poles **0** (was 6 / 64 and
+  6 / 53), and **0 of 672** in the window × pole-position battery (was 2). The only other refusals are correct ones: `(2x+1)/(x+0.5)`
+  has a removable hole, not a pole.
+- A monotonic / extrema / root battery: **23 of 23** correct curriculum keys accepted and **10 of 10** wrong keys refused.
+- The fuzzer: **0 exceptions** in 3 000 expressions, worst build 38 ms.
+
+**RF6 mutation campaign.** 21 mutants: **21 KILLED, 0 SURVIVED, 0 TIMEOUT**. W01, W03, W04, W06 and W11 first survived because another
+layer caught the same inputs. The layer-isolating tests (`94bb3ea`) now kill them. W01's outcome (refused) is also reached through
+completeness plus the overlap check, so its test asserts the repair message that names the wrong stretch.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| W01 | `composerSim.ts` | interval slope direction not checked | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 each new layer holds on its own › a wrong direction inside  |
+| W02 | `composerSim.ts` | interval endpoint need not be a breakpoint | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole l |
+| W03 | `composerSim.ts` | overlapping intervals accepted | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 each new layer holds on its own › a duplicated interval is  |
+| W04 | `composerSim.ts` | grid not snapped | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 each new layer holds on its own › a removable hole at a dec |
+| W05 | `composerSim.ts` | every overflow run refused (no narrow-run classification) | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-1 poles at decimal positions keep their correct keys  |
+| W06 | `composerSim.ts` | narrow-run centre not classified | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 each new layer holds on its own › PIN (new path): a narrow  |
+| W07 | `composerSim.ts` | search on the plateau edge not moved inside | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-1 poles at decimal positions keep their correct keys  |
+| W08 | `composerSim.ts` | gap edge bisected on 'not finite' (overflow = undefined) | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-1 poles at decimal positions keep their correct keys  |
+| W09 | `composerSim.ts` | 'no limit' at ratios >= 0.9 (slow convergence) | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-2 a slowly converging approach is undecided, never 'n |
+| W10 | `composerSim.ts` | key tolerance 0.02 | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole l |
+| W11 | `composerSim.ts` | key roots not matched to probed roots | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 each new layer holds on its own › an x-intercept the probe  |
+| W12 | `composerSim.ts` | key extrema not matched to probed extrema | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-3 key values are held to half the grading tolerance › |
+| W13 | `composerSim.ts` | flat-extremum fallback never accepts | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-3 key values are held to half the grading tolerance › |
+| W14 | `composerSim.ts` | flat-extremum fallback slack 1e-9 | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-3 key values are held to half the grading tolerance › |
+| W15 | `composerSim.ts` | near-duplicate key values accepted | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-3 key values are held to half the grading tolerance › |
+| W16 | `composerSim.ts` | touching-root search started on rounding noise | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-3 flat stretches are not touching roots › piecewise-l |
+| W17 | `composerSim.ts` | relative tolerance for intercept / extremum values | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-3 key values are held to half the grading tolerance › |
+| W18 | `composerSim.ts` | limit key soundness tolerance 0.5 | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-3 key values are held to half the grading tolerance › |
+| W19 | `composerSim.ts` | domain-gap edges not recorded | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole l |
+| W20 | `composerSim.ts` | completeness tolerance 0.02 | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole l |
+| W21 | `composerSim.ts` | an interval may cross a pole / domain point / edge | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole l |
+| R04c | `composerSim.ts` | horizontal asymptote completeness removed (RF6 code) | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside the window ( |
+| T03b | `composerSim.ts` | plateau points start touching-root searches (RF6 code) | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-3 flat stretches are not touching roots › piecewise-l |
+| V03b | `composerSim.ts` | wide overflow run inside the window not refused (RF6 code) | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-C very steep poles and exp(1/x) are vertical asymptot |
+| T05d | `composerSim.ts` | horizontal-asymptote key soundness skipped (RF6 code) | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › a key value that  |
+
+The table also lists 4 re-targets (R04c, T03b, V03b, T05d) of earlier mutants whose lines RF6 rewrote; all 4 are KILLED.
+
+**Final re-run on the Review Fix 6 code.** Every mutant list was re-run, 146 mutants in all:
+- the 105 of the RF5 final re-run;
+- RF5's 13 and its 7 re-targets;
+- RF6's 21.
+
+Mutants on `composerSim.ts` ran against every function-study suite, RF5 and RF6 included.
+- **119 KILLED.** This includes T02, now that its suite list includes the RF5 tests, and R04, whose original line RF6 restored.
+- **4 EQUIVALENT:** C19, C42, U02 and T07b, as proved in §11.4, §11.9 and §11.10.
+- **23 INVALID,** because their target lines were rewritten. Each is re-targeted or covered:
+  - R04b by R04c (the same planted defect as R04, which is also KILLED);
+  - R08 and R12 by R08b and R12b;
+  - R09, R10 and R11 by S09, S06c and U04;
+  - S01 by S01b;
+  - S03 and S03b by S03c;
+  - S06 and S06b by S06c;
+  - S07 and S07b by S07c;
+  - S08 by U04;
+  - T03 by T03b;
+  - T04 by T04c, T05 and T05c by T05d, T06 by U06 and T07 by T07b;
+  - U03: the steep-pole branch was removed by RF5;
+  - U05 by U05c;
+  - V03 by V03b.
+
+Every planted defect in the current code is killed except the 4 proven equivalents. There were 0 timeouts, and every file was restored
+byte-for-byte with a clean `git status` after every campaign.
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -632,7 +750,12 @@ every file was restored byte-for-byte with a clean `git status` after every camp
   - functions the probe cannot decide (very steep poles, exp(1/x), growth too slow to confirm, undecidable behaviour at ±∞, overflow
     inside the window) are refused, never keyed: the teacher authors them;
   - round / floor / ceil / min / max / % are not AI vocabulary for function study;
-  - vertical asymptotes at non-terminating decimals (1/(3x−1)), which can only be keyed with the exact double; refusing them is safe.
+  - vertical asymptotes at non-terminating decimals (1/(3x−1)), which can only be keyed with the exact double; refusing them is safe;
+  - key values must be within 0.005 of the truth (half the grading tolerance), so a key rounded to two decimals for an irrational
+    value (±1.41 for √2) is refused;
+  - slowly converging limits (x^−0.15, 1/log x) are undecided and refused;
+  - monotonic intervals are checked inside the window only, and a function with a flat stretch has no extremum to end an interval on,
+    so its monotonic key is refused.
 - No live provider call was made (no network in the development environment): the provider schemas are checked against the documented
   strict-mode limits by a test, not by a live acceptance call. The first production composer call is the live check.
 - Notes accepted from the review: a replaceQuestion may change the marks of the selected question (shown in the diff); removing a composite
