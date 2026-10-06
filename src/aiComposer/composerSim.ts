@@ -95,36 +95,54 @@ const parseBound = (s: string): number | "-inf" | "+inf" | null => {
   const n = Number(t);
   return t !== "" && Number.isFinite(n) ? n : null;
 };
-/** COMPLETENESS probe (Review Fixes 1–2): what a student can find inside the window, located by code on a fixed grid (sign changes refined
- *  by bisection, touching roots / even poles / extrema by ternary search, limits from f(±10⁷) / f(±10⁹)). The grader compares SETS, so a
- *  key that omits a root, a pole, an extremum, a limit or a monotonic stretch would fail correct students: such a key is refused.
- *  POLES are recognized by GROWTH, never by an absolute height: |f| keeps increasing, without slowing down, as the probe closes in over
- *  four decades (10⁻³ … 10⁻¹²) — rational and logarithmic poles alike, whatever the window height; a removable hole or a finite edge does
- *  not grow. BOUNDED: only the features of the enabled tasks are located, every evaluation counts against PROBE_BUDGET, and a feature list
- *  longer than a key can hold stops the probe — an exhausted budget is a refusal (`overflow`), never a silent pass. A probe, not a proof:
- *  features finer than the grid, or growing too slowly to show over four decades, are left to the teacher's review. */
+/** COMPLETENESS probe (Review Fixes 1–4): what a student can find inside the window, located by code on a fixed grid (sign changes refined
+ *  by bisection; touching roots — strict local minima of |f| — even poles and extrema by ternary search; limits by `functionLimits`). The
+ *  grader compares SETS, so a key that omits a root, a pole, an extremum, a limit or a monotonic stretch would fail correct students: such
+ *  a key is refused. POLES are recognized by GROWTH, never by an absolute height: |f| keeps increasing, without slowing down, decade by
+ *  decade as the probe closes in (10⁻² … 10⁻¹²), or rises past 10⁶ before the evaluator overflows (steep poles, checked from 10⁻¹) —
+ *  rational poles, logarithmic poles and exp(1/x) alike, whatever the window height; a hole, a cusp or a finite edge does not grow.
+ *  BOUNDED: only the features of the enabled tasks are located; evaluations are capped (PROBE_BUDGET) and so is their weighted cost
+ *  (PROBE_NODE_BUDGET, calls and powers weigh 10); a feature list longer than a key can hold stops the probe — an exhausted budget is a
+ *  refusal (`overflow`), never a silent pass. A probe, not a proof: features finer than the grid are left to the teacher's review. */
 type Probe = (x: number) => number | null;
 export type FunctionFeatures = { roots: number[]; points: number[]; poles: number[]; extrema: { kind: "min" | "max"; x: number }[]; limits: number[]; slope: { x: number; dir: 1 | -1 }[]; overflow: null | "budget" | "roots" | "points" | "poles" | "extrema" };
 export type FeatureNeeds = { roots: boolean; points: boolean; poles: boolean; extrema: boolean; limits: boolean; slope: boolean };
 const PROBE_N = 2001;
 export const PROBE_BUDGET = 20000;                                              // evaluations per simulator (sampling uses 2001)
 export const PROBE_NODE_BUDGET = 600000;                                        // …and expression-node evaluations (a large expression gets fewer)
-/** The size of a compiled expression (every AST object counts) — the cost weight of one evaluation. */
+/** The cost weight of one evaluation of a compiled expression: 1 per arithmetic node, 10 per function call or power (exp / log / pow /
+ *  round normalise with toPrecision and cost ~10× an addition), so nested call chains get proportionally fewer evaluations. */
+const COSTLY_NODE = 10;
 export function expressionCost(ast: unknown): number {
   if (!ast || typeof ast !== "object") return 0;
-  let n = 1;
-  for (const v of Object.values(ast as Record<string, unknown>)) n += Array.isArray(v) ? v.reduce<number>((t, w) => t + expressionCost(w), 0) : expressionCost(v);
-  return n;
+  const n = ast as Record<string, unknown>;
+  let total = n.t === "call" || (n.t === "bin" && n.op === "^") ? COSTLY_NODE : 1;
+  for (const k of ["a", "b"]) total += expressionCost(n[k]);
+  if (Array.isArray(n.args)) for (const a of n.args) total += expressionCost(a);
+  return total;
 }
 // growth on one side of x: |f| strictly increasing as the probe closes in decade by decade (10⁻² … 10⁻¹²), the last decade not slowing
 // below half the first, total > 1 — rational poles of any order and logarithmic poles alike; a cusp, a hole or a finite edge does not grow.
 // The safe evaluator refuses huge values, so a strongly growing sequence (×10 at least) may end in "undefined" (overflow).
 const POLE_STEPS = [1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12];
+// A STEEP pole (|f| beyond the evaluator's range within 10⁻²) is checked from 10⁻¹ in half-decades: a strictly increasing run that is
+// already ≥ 10⁶ when the evaluator overflows (1000/(x−2)⁴, exp(1/x) from the right).
+const STEEP_STEPS = [1e-1, 10 ** -1.5, 1e-2, 1e-3];
+function overflowGrowth(v: number[], minLast: number): boolean {
+  const k = v.findIndex(t => !Number.isFinite(t));
+  if (k < 1 || !v.slice(k).every(t => !Number.isFinite(t))) return false;
+  const fin = v.slice(0, k);
+  return fin.every((t, i) => i === 0 || t > fin[i - 1]) && fin[fin.length - 1] >= minLast;
+}
 function growsToward(g: (x: number) => number, x: number, side: 1 | -1): boolean {
   const v = POLE_STEPS.map(d => g(x + side * d));
   const k = v.findIndex(t => !Number.isFinite(t)), fin = k < 0 ? v : v.slice(0, k);
-  if (fin.length < 2 || !fin.every((t, i) => i === 0 || t > fin[i - 1])) return false;
-  if (k >= 0) return v.slice(k).every(t => !Number.isFinite(t)) && fin[fin.length - 1] > 10 * Math.max(1, fin[0]);
+  if (k >= 0) {
+    if (fin.length >= 2 && overflowGrowth(v, 10 * Math.max(1, fin[0]))) return true;
+    if (fin.length === 1 && overflowGrowth(v, 1e6)) return true;
+    return overflowGrowth(STEEP_STEPS.map(d => g(x + side * d)), 1e6);
+  }
+  if (!fin.every((t, i) => i === 0 || t > fin[i - 1])) return false;
   const last = v.length - 1;
   return v[last] - v[0] > 1 && v[last] - v[last - 1] >= 0.5 * (v[1] - v[0]);
 }
@@ -133,25 +151,30 @@ const absOf = (at: Probe) => (x: number) => { const v = at(x); return v === null
 export const isPoleAt = (at: Probe, x: number): boolean => growsToward(absOf(at), x, 1) || growsToward(absOf(at), x, -1);
 /** A horizontal limit matches a key value within 0.02, or within 0.1 % of its size (large limits converge slowly). */
 export const limitTolerance = (l: number) => Math.max(0.02, 1e-3 * Math.abs(l));
-// sample points avoid round numbers (periodic round / floor expressions would alias there); a tier is used only when it can be evaluated
-// (the safe evaluator refuses huge values: exp(−x) at −10⁵), falling back to smaller magnitudes — never when the values merely do not settle
-const LIMIT_TIERS = [[1e5, 3e5, 1e6], [1e3, 3e3, 1e4], [10, 20, 30]].map(t => t.map(x => x * 1.0137291379));
-/** Horizontal limits at +∞ / −∞: the values must settle (within 1 %) and the first-order extrapolation L ≈ (x₂f₂ − x₁f₁)/(x₂ − x₁) of both
- *  pairs must agree — slowly converging rational limits are estimated exactly, oscillations and logs are not limits. */
+// Limits at ±∞ (Review Fix 4): at the LARGEST magnitude t where f(t), f(t/2), f(t/4), f(t/8), f(t/16) can all be evaluated (searched
+// downward by halving from 10⁶ — the safe evaluator refuses huge values, so a logistic curve is read near x = ∓60), the successive
+// differences must shrink geometrically (ratio ≤ 0.8: c/x → ½, c/√x → 0.71, exponential approach → ≈ 0; a log, x^0.01 or an oscillation
+// does not) and already be small (≤ 1 % of |f|); the limit is f(t) plus the geometric tail (a Richardson extrapolation). Sample points are
+// scaled off round numbers so periodic round / floor expressions cannot alias.
+const LIMIT_ALIAS = 1.0137291379;
+const LIMIT_TOPS = Array.from({ length: 19 }, (_, i) => 1e6 / 2 ** i);       // 10⁶ … ≈ 3.8
+function limitAt(at: Probe, sgn: 1 | -1): number | null {
+  for (const top of LIMIT_TOPS) {
+    const F = [0, 1, 2, 3, 4].map(k => { const v = at(sgn * LIMIT_ALIAS * top / 2 ** k); return v !== null && Number.isFinite(v) ? v : null; });
+    if (F.some(v => v === null)) continue;
+    const f = F as number[], d = [0, 1, 2, 3].map(k => f[k] - f[k + 1]), scale = Math.max(1, Math.abs(f[0]));
+    if (d.every(x => Math.abs(x) <= 1e-12 * scale)) return f[0];                // already flat
+    if (Math.abs(d[0]) > 1e-2 * scale) return null;                            // not settled yet at the largest evaluable magnitude
+    const r = [d[0] / d[1], d[1] / d[2]];
+    if (!r.every(x => Number.isFinite(x) && x >= 0 && x <= 0.8)) return null;
+    return f[0] + d[0] * r[0] / (1 - r[0]);
+  }
+  return null;
+}
+/** Horizontal limits at +∞ / −∞ (shared by the completeness probe and the key's soundness check). */
 export function functionLimits(at: Probe): number[] {
   const out: number[] = [];
-  for (const sgn of [1, -1]) {
-    for (const tier of LIMIT_TIERS) {
-      const X = tier.map(x => sgn * x), F = X.map(x => { const v = at(x); return v !== null && Number.isFinite(v) ? v : null; });
-      if (F.some(v => v === null)) continue;
-      const [f1, f2, f3] = F as number[], [x1, x2, x3] = X;
-      if (Math.abs(f3 - f1) <= 1e-2 * Math.max(1, Math.abs(f3))) {
-        const L1 = (x3 * f3 - x1 * f1) / (x3 - x1), L2 = (x3 * f3 - x2 * f2) / (x3 - x2);
-        if (Math.abs(L1 - L2) <= limitTolerance(L1) / 2 && !out.some(l => Math.abs(l - L1) <= limitTolerance(l))) out.push(L1);
-      }
-      break;
-    }
-  }
+  for (const sgn of [1, -1] as const) { const L = limitAt(at, sgn); if (L !== null && !out.some(l => Math.abs(l - L) <= limitTolerance(l))) out.push(L); }
   return out;
 }
 const KEY_CAP = 10;                                                             // the longest key list a function-study spec may hold
@@ -186,7 +209,8 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
             if (inside < 0 || inside >= PROBE_N) continue;
             let lo = xs[inside], hi = xs[edge];
             for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (at(m) === null) hi = m; else lo = m; }
-            if (grows(hi, inside < edge ? -1 : 1)) add(poles, hi, "poles");
+            // both sides: a run of "undefined" may be the evaluator's overflow next to a steep pole (exp(1/x) right of 0), not a domain gap
+            if (isPole(hi)) add(poles, hi, "poles");
           }
         }
         i = j; continue;

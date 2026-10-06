@@ -111,22 +111,40 @@ const parseBound = (s) => {
 const PROBE_N = 2001;
 exports.PROBE_BUDGET = 20000;
 exports.PROBE_NODE_BUDGET = 600000;
+const COSTLY_NODE = 10;
 function expressionCost(ast) {
     if (!ast || typeof ast !== "object")
         return 0;
-    let n = 1;
-    for (const v of Object.values(ast))
-        n += Array.isArray(v) ? v.reduce((t, w) => t + expressionCost(w), 0) : expressionCost(v);
-    return n;
+    const n = ast;
+    let total = n.t === "call" || (n.t === "bin" && n.op === "^") ? COSTLY_NODE : 1;
+    for (const k of ["a", "b"])
+        total += expressionCost(n[k]);
+    if (Array.isArray(n.args))
+        for (const a of n.args)
+            total += expressionCost(a);
+    return total;
 }
 const POLE_STEPS = [1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12];
+const STEEP_STEPS = [1e-1, 10 ** -1.5, 1e-2, 1e-3];
+function overflowGrowth(v, minLast) {
+    const k = v.findIndex(t => !Number.isFinite(t));
+    if (k < 1 || !v.slice(k).every(t => !Number.isFinite(t)))
+        return false;
+    const fin = v.slice(0, k);
+    return fin.every((t, i) => i === 0 || t > fin[i - 1]) && fin[fin.length - 1] >= minLast;
+}
 function growsToward(g, x, side) {
     const v = POLE_STEPS.map(d => g(x + side * d));
     const k = v.findIndex(t => !Number.isFinite(t)), fin = k < 0 ? v : v.slice(0, k);
-    if (fin.length < 2 || !fin.every((t, i) => i === 0 || t > fin[i - 1]))
+    if (k >= 0) {
+        if (fin.length >= 2 && overflowGrowth(v, 10 * Math.max(1, fin[0])))
+            return true;
+        if (fin.length === 1 && overflowGrowth(v, 1e6))
+            return true;
+        return overflowGrowth(STEEP_STEPS.map(d => g(x + side * d)), 1e6);
+    }
+    if (!fin.every((t, i) => i === 0 || t > fin[i - 1]))
         return false;
-    if (k >= 0)
-        return v.slice(k).every(t => !Number.isFinite(t)) && fin[fin.length - 1] > 10 * Math.max(1, fin[0]);
     const last = v.length - 1;
     return v[last] - v[0] > 1 && v[last] - v[last - 1] >= 0.5 * (v[1] - v[0]);
 }
@@ -135,22 +153,31 @@ const isPoleAt = (at, x) => growsToward(absOf(at), x, 1) || growsToward(absOf(at
 exports.isPoleAt = isPoleAt;
 const limitTolerance = (l) => Math.max(0.02, 1e-3 * Math.abs(l));
 exports.limitTolerance = limitTolerance;
-const LIMIT_TIERS = [[1e5, 3e5, 1e6], [1e3, 3e3, 1e4], [10, 20, 30]].map(t => t.map(x => x * 1.0137291379));
+const LIMIT_ALIAS = 1.0137291379;
+const LIMIT_TOPS = Array.from({ length: 19 }, (_, i) => 1e6 / 2 ** i);
+function limitAt(at, sgn) {
+    for (const top of LIMIT_TOPS) {
+        const F = [0, 1, 2, 3, 4].map(k => { const v = at(sgn * LIMIT_ALIAS * top / 2 ** k); return v !== null && Number.isFinite(v) ? v : null; });
+        if (F.some(v => v === null))
+            continue;
+        const f = F, d = [0, 1, 2, 3].map(k => f[k] - f[k + 1]), scale = Math.max(1, Math.abs(f[0]));
+        if (d.every(x => Math.abs(x) <= 1e-12 * scale))
+            return f[0];
+        if (Math.abs(d[0]) > 1e-2 * scale)
+            return null;
+        const r = [d[0] / d[1], d[1] / d[2]];
+        if (!r.every(x => Number.isFinite(x) && x >= 0 && x <= 0.8))
+            return null;
+        return f[0] + d[0] * r[0] / (1 - r[0]);
+    }
+    return null;
+}
 function functionLimits(at) {
     const out = [];
     for (const sgn of [1, -1]) {
-        for (const tier of LIMIT_TIERS) {
-            const X = tier.map(x => sgn * x), F = X.map(x => { const v = at(x); return v !== null && Number.isFinite(v) ? v : null; });
-            if (F.some(v => v === null))
-                continue;
-            const [f1, f2, f3] = F, [x1, x2, x3] = X;
-            if (Math.abs(f3 - f1) <= 1e-2 * Math.max(1, Math.abs(f3))) {
-                const L1 = (x3 * f3 - x1 * f1) / (x3 - x1), L2 = (x3 * f3 - x2 * f2) / (x3 - x2);
-                if (Math.abs(L1 - L2) <= (0, exports.limitTolerance)(L1) / 2 && !out.some(l => Math.abs(l - L1) <= (0, exports.limitTolerance)(l)))
-                    out.push(L1);
-            }
-            break;
-        }
+        const L = limitAt(at, sgn);
+        if (L !== null && !out.some(l => Math.abs(l - L) <= (0, exports.limitTolerance)(l)))
+            out.push(L);
     }
     return out;
 }
@@ -217,7 +244,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                                 else
                                     lo = m;
                             }
-                            if (grows(hi, inside < edge ? -1 : 1))
+                            if (isPole(hi))
                                 add(poles, hi, "poles");
                         }
                 }
