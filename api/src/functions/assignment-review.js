@@ -40,9 +40,13 @@ function scenarioReviewContext(exam){const out=[];let hydrated=exam;try{hydrated
 // Phase 20A — a trusted SmartSim answer is reviewed with the SAME shared authority that graded it: the server re-validates the published
 // envelope + private weighted checks, REPLAYS the stored actions (never the stored state) and returns the per-check facts with derived points,
 // the derived canonical state and the plugin's review evidence (e.g. per-device command histories, as text). Teachers only; never a grade.
-const {evaluateSmartSim}=require("../lib/shared-finalization/trustedSimPlugins");
+// Review Fix 1 — the outer question-type version is decided by the SAME catalog authority the official grader is bound to
+// (smartSimQuestionVersion: absent ⇒ 1; anything but the registered version ⇒ undefined). An unsupported version fails CLOSED
+// here too: no v1 score, checks, state or transcripts — never a v1 fallback, never a reinterpretation of a future version.
+const {evaluateSmartSim,smartSimQuestionVersion}=require("../lib/shared-finalization/trustedSimPlugins");
 const isSmartSimQuestion=q=>!!q&&typeof q==="object"&&String(q.presentationType??q.type??"")==="smartSim";
-function smartSimReviewOf(q,response){try{const e=evaluateSmartSim({envelope:q.smartSim,answerKey:q.answer,response,maxMarks:Number(q.marks||q.points||0)},{withDetails:true});return {valid:e.valid,score:e.score,maxMarks:e.maxMarks,totalWeight:e.totalWeight,passedWeight:e.passedWeight,manualReview:e.manualReview,checks:e.checks,...(e.state!==undefined?{state:e.state}:{}),...(e.details||{}),...(e.issues?{issues:e.issues.map(i=>i.message)}:{})}}catch{return {valid:false,checks:[]}}}
+const SMARTSIM_REVIEW_VERSION_UNSUPPORTED={valid:false,manualReview:true,checks:[],issues:["إصدار نوع السؤال غير مدعوم في هذا الإصدار من التطبيق؛ لا تُعرض نتيجة آلية والسؤال بحاجة إلى تصحيح يدوي."]};
+function smartSimReviewOf(q,response){if(smartSimQuestionVersion(q)!==1)return {...SMARTSIM_REVIEW_VERSION_UNSUPPORTED,checks:[],issues:[...SMARTSIM_REVIEW_VERSION_UNSUPPORTED.issues]};try{const e=evaluateSmartSim({envelope:q.smartSim,answerKey:q.answer,response,maxMarks:Number(q.marks||q.points||0)},{withDetails:true});return {valid:e.valid,score:e.score,maxMarks:e.maxMarks,totalWeight:e.totalWeight,passedWeight:e.passedWeight,manualReview:e.manualReview,checks:e.checks,...(e.state!==undefined?{state:e.state}:{}),...(e.details||{}),...(e.issues?{issues:e.issues.map(i=>i.message)}:{})}}catch{return {valid:false,checks:[]}}}
 const RUBRIC_MESSAGES={RUBRIC_GRADE_REQUIRED:"هذا السؤال يُصحَّح بسلم التقييم فقط: اختر مستوى لكل معيار.",RUBRIC_AUTHORITY_INVALID:"سلم التقييم المنشور لهذا السؤال غير صالح؛ لا يمكن احتساب درجة منه."};
 function rubricGrades(snapshot,incoming){
  const byId=new Map(flattenQuestions(snapshot).map(x=>[String(x.questionId),x.question])),out=new Map();

@@ -134,6 +134,46 @@ describe("20B-S3 — end to end through the REAL handlers (delivery → draft �
     expect(r.transcripts.r1.map(e => e.input)).toEqual(["enable", "configure terminal", "interface g0/0", "ip address 192.168.10.254 255.255.255.0", "no shutdown", "interface g0/1", "ip address 192.168.20.254 255.255.255.0"]);
     expect(r.transcripts.sw2.map(e => e.prompt)).toEqual(["Switch>", "Switch#", "Switch(config)#", "BR1-SW2(config)#"]);
   });
+
+  // Review Fix 1 — the teacher review obeys the SAME exact question-type version authority as the official grader. The attempt is
+  // submitted at smartSim@1 through the real handler (valid stored actions); the stored snapshot then names another question-type
+  // version (a future version, a corrupted / hand-edited record). The review must never fall back to v1 semantics.
+  const ASG = "platform/assignments/" + F.AID + ".json";
+  async function reviewAt(version) {
+    const f = await fixture();
+    const ctx = F.seed({ a: F.assignment({ examSnapshot: f.exam([f.q()]), totalMarks: 23, questionCount: 1 }) });
+    const s = await submission().handler(F.studentRequest(F.submitBody({ t1: ans(FULL) })), deps(ctx), quiet([]));
+    expect(s.status).toBe(200); expect(s.jsonBody.ok).toBe(true);
+    const a = ctx.getJson(ASG); const node = a.examSnapshot.sections[0].questions[0];
+    if (version === "absent") delete node.questionTypeVersion; else node.questionTypeVersion = version;
+    ctx.setJson(ASG, a);
+    const stored = ctx.getJson(F.SUB).attempts.find(x => x.attemptNumber === 1).answers.t1;
+    const rv = await review().handler(F.teacherRequest("/api/assignment-review?assignmentId=" + F.AID + "&studentId=" + F.S1 + "&attemptNumber=1", undefined, "GET"), deps(ctx));
+    expect(rv.status).toBe(200);
+    return { exam: a.examSnapshot, stored, r: rv.jsonBody.questions.find(x => x.questionId === "t1").smartSimReview };
+  }
+  it("RF1 — an UNSUPPORTED question-type version (2, \"1\", 1.5, 0, null) fails closed in the official grader AND in the teacher review: no v1 score, checks, state or transcripts", async () => {
+    for (const version of [2, "1", 1.5, 0, null]) {
+      const { exam, stored, r } = await reviewAt(version);
+      expect(stored.actions.length, String(version)).toBe(FULL.length);                                            // valid stored student actions
+      expect(g(gradeExam(exam, { t1: stored })), String(version)).toMatchObject({ score: 0, manualReview: true });  // official authority: unsupported
+      expect(r, String(version)).toMatchObject({ valid: false, manualReview: true, checks: [] });
+      expect(r.score ?? 0, String(version)).toBe(0); expect(r.passedWeight ?? 0, String(version)).toBe(0);
+      expect(r, String(version)).not.toHaveProperty("state"); expect(r, String(version)).not.toHaveProperty("transcripts");
+      expect(Array.isArray(r.issues) && r.issues.length > 0, String(version)).toBe(true);
+      expect(JSON.stringify(r), String(version)).not.toMatch(/BR1-SW1|reach-pc|192\.168\.10\.254/);
+    }
+  });
+  it("RF1 — questionTypeVersion 1 and an ABSENT version (canonical v1) keep the normal valid review", async () => {
+    for (const version of [1, "absent"]) {
+      const { exam, stored, r } = await reviewAt(version);
+      expect(g(gradeExam(exam, { t1: stored })), String(version)).toMatchObject({ score: 23, manualReview: false });
+      expect(r, String(version)).toMatchObject({ valid: true, manualReview: false, score: 23, maxMarks: 23, totalWeight: 23, passedWeight: 23 });
+      expect(r.checks.length).toBe(17); expect(r.checks.every(c => c.passed)).toBe(true);
+      expect(r.state.routers.r1.interfaces["g0/0"]).toEqual({ ipAddress: "192.168.10.254", subnetMask: M24, shutdown: false });
+      expect(Object.keys(r.transcripts).sort()).toEqual(["r1", "sw1", "sw2"]);
+    }
+  });
 });
 
 describe("20B-S4 — server finalization blocks invalid topologies and checks (the canonical gate, no second publish gate)", () => {
