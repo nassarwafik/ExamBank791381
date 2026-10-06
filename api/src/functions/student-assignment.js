@@ -4,7 +4,8 @@ const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
-const {sanitizeExamForStudent}=require("../lib/student-exam-sanitize");
+const {sanitizeExamForStudent,sanitizeCoverForStudent}=require("../lib/student-exam-sanitize");
+const {projectPresentationForStudent}=require("../lib/shared-finalization/presentation/presentationModel");
 const {hydrateBankAssets}=require("../lib/bank-asset-hydrate");
 const {getAssignmentAvailability,timerState}=require("../lib/assignment-availability");
 const {normalizeExamStructure,sectionOfficialMaxMarks}=require("../lib/exam-structure");
@@ -45,8 +46,11 @@ function preStartAssignment(a,timed,attemptPolicy){
   effectiveDueAt:"",maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:timed?Number(a.durationMinutes||0):0,
   sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),
   requiresStart:true,timed:!!timed,attemptPolicy:attemptPolicy||"continuous",marksDistribution:safeMarksDistribution(snap),
-  exam:{title:snap.title||a.title,metadata:snap.metadata||{},presentationTheme:snap.presentationTheme||"",coverPage:snap.coverPage||null}};
+  exam:{title:snap.title||a.title,metadata:snap.metadata||{},presentationTheme:snap.presentationTheme||"",coverPage:snap.coverPage?sanitizeCoverForStudent(snap.coverPage)||null:null,   // 20D.1: the strict cover allow-list (rich instructions projected)
+   // Phase 20D.1 — the strictly projected enterprise presentation (canonical copy or absent) so the cover / start screen is themed.
+   ...(presentationForPreStart(snap.presentation)?{presentation:presentationForPreStart(snap.presentation)}:{})}};
 }
+function presentationForPreStart(raw){return raw===undefined||raw===null?undefined:projectPresentationForStudent(raw)}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
 async function handler(request,deps={},obs=null){
  const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull;
@@ -72,4 +76,4 @@ async function handler(request,deps={},obs=null){
  }catch(e){obs?.logError("student.assignment.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر فتح الواجب حاليًا."}}}
 }
 app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler:withObservability("student-assignment",handler)});
-module.exports={studentExam,deliveryGeneration,handler};
+module.exports={studentExam,deliveryGeneration,preStartAssignment,handler};

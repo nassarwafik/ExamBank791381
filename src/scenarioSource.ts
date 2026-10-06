@@ -13,15 +13,20 @@
 //   • validation / projection — this module: a scenario that fails ANY rule is withheld whole (fail closed); the student copy is the
 //                    canonical rebuilt copy, never a spread of the stored object.
 import { validateCodeStimulus } from "./codeStimulus";
+import { validateImageAsset as validateCanonicalImageAsset } from "./imageAsset";
+import { validateRichContent, richContentPlainText, type RichContentV1 } from "./richContent/richContentModel";
 
 export type SourceStimulusKind = "text" | "image" | "table" | "code";
+/** Phase 20D.1 — an ADDITIVE, explicitly versioned source kind carrying a RichContentV1 document. The four 19G kinds are frozen. */
+export const SCENARIO_RICH_SOURCE_KIND = "rich" as const;
 /** The canonical ExamBank image asset shape (examTypes.BuilderImageAsset), reused — never a second image system. */
 export type ScenarioImageAsset = { dataUrl?: string; id?: string; origin?: "uploaded" | "ai-generated" | "bank"; contentType?: string; blobName?: string };
 export type TextSourceV1 = { id: string; version: 1; kind: "text"; title?: string; text: string };
 export type ImageSourceV1 = { id: string; version: 1; kind: "image"; title?: string; alt: string; image: ScenarioImageAsset };
 export type TableSourceV1 = { id: string; version: 1; kind: "table"; title?: string; columnHeaders: string[]; rowHeaders?: string[]; rows: string[][] };
 export type CodeSourceV1 = { id: string; version: 1; kind: "code"; title?: string; language: string; source: string };
-export type SourceStimulusV1 = TextSourceV1 | ImageSourceV1 | TableSourceV1 | CodeSourceV1;
+export type RichSourceV1 = { id: string; version: 1; kind: "rich"; title?: string; richContent: RichContentV1 };
+export type SourceStimulusV1 = TextSourceV1 | ImageSourceV1 | TableSourceV1 | CodeSourceV1 | RichSourceV1;
 export type ScenarioV1 = { id: string; version: 1; title?: string; instructions?: string; sources: SourceStimulusV1[]; questionIds: string[] };
 export type ScenarioIssue = { code: string; message: string; severity: "error"; path: string; questionId?: string };
 
@@ -37,11 +42,6 @@ export const SCENARIO_SOURCE_KIND_LABELS: Readonly<Record<SourceStimulusKind, st
 
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const SAFE_RASTER_DATA_URL = /^data:image\/(png|jpe?g|webp)[;,]/i;
-const DELIVERY_URL = /^\/api\/question-image\?/;
-const SAFE_BLOB_NAME = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/;
-const ORIGINS = new Set(["uploaded", "ai-generated", "bank"]);
-const ASSET_KEYS = new Set(["dataUrl", "id", "origin", "contentType", "blobName"]);
 const BASE_KEYS = ["id", "version", "kind", "title"];
 const KIND_KEYS: Readonly<Record<SourceStimulusKind, readonly string[]>> = Object.freeze({ text: ["text"], image: ["alt", "image"], table: ["columnHeaders", "rowHeaders", "rows"], code: ["language", "source"] });
 const SCENARIO_KEYS = new Set(["id", "version", "title", "instructions", "sources", "questionIds"]);
@@ -71,32 +71,15 @@ const issue = (code: string, message: string, path: string, questionId?: string)
 export type SourceStimulusResult = { ok: true; source: SourceStimulusV1 } | { ok: false; issues: ScenarioIssue[] };
 export type ScenarioResult = { ok: true; scenario: ScenarioV1 } | { ok: false; issues: ScenarioIssue[] };
 
-/** The image asset of an image source: the canonical asset shape, exact keys, a safe inline raster data URL for an uploaded / AI image
- *  or the DURABLE bank identity (whose `dataUrl`, when present, is the server-minted delivery URL — never an external address). */
-function validateImageAsset(raw: unknown): ScenarioImageAsset | null {
-  if (!isPlain(raw)) return null;
-  for (const k of Object.keys(raw)) if (!ASSET_KEYS.has(k)) return null;
-  const out: ScenarioImageAsset = {};
-  if (own(raw, "id")) { if (!isText(raw.id, 200) || blank(raw.id)) return null; out.id = raw.id; }
-  if (own(raw, "origin")) { if (typeof raw.origin !== "string" || !ORIGINS.has(raw.origin)) return null; out.origin = raw.origin as ScenarioImageAsset["origin"]; }
-  if (own(raw, "contentType")) { if (!isText(raw.contentType, 100) || !/^image\//.test(raw.contentType)) return null; out.contentType = raw.contentType; }
-  if (out.origin === "bank") {
-    if (!isText(raw.blobName, 256) || !SAFE_BLOB_NAME.test(raw.blobName) || raw.blobName.includes("..") || raw.blobName.includes("//")) return null;
-    out.blobName = raw.blobName;
-    if (own(raw, "dataUrl")) { if (typeof raw.dataUrl !== "string" || !DELIVERY_URL.test(raw.dataUrl) || raw.dataUrl.length > 2048) return null; out.dataUrl = raw.dataUrl; }
-    return out;
-  }
-  if (own(raw, "blobName")) return null;
-  if (typeof raw.dataUrl !== "string" || !SAFE_RASTER_DATA_URL.test(raw.dataUrl) || raw.dataUrl.length > SCENARIO_LIMITS.imageDataUrlChars) return null;
-  out.dataUrl = raw.dataUrl;
-  return out;
-}
+/** The image asset of an image source: the ONE canonical asset authority (imageAsset.ts, shared with the 20D.1 rich-content blocks). */
+const validateImageAsset = (raw: unknown): ScenarioImageAsset | null => validateCanonicalImageAsset(raw);
 
 /** Strict validation of ONE source; returns the canonical copy (exact keys, nothing repaired, nothing trimmed) or every issue found. */
 export function validateSourceStimulus(raw: unknown, path = "source"): SourceStimulusResult {
   const fail = (code: string, message: string, p = path): SourceStimulusResult => ({ ok: false, issues: [issue(code, message, p)] });
   if (!isPlain(raw)) return fail("SOURCE_INVALID", "المصدر المشترك غير صالح.");
   const kind = raw.kind;
+  if (kind === SCENARIO_RICH_SOURCE_KIND) return validateRichSource(raw, path);
   if (typeof kind !== "string" || !(SCENARIO_SOURCE_KINDS as readonly string[]).includes(kind)) return fail("SOURCE_KIND_UNSUPPORTED", "نوع المصدر المشترك غير مدعوم (نص أو صورة أو جدول أو كود فقط).", path + ".kind");
   const k = kind as SourceStimulusKind;
   const allowed = new Set([...BASE_KEYS, ...KIND_KEYS[k]]);
@@ -136,12 +119,28 @@ export function validateSourceStimulus(raw: unknown, path = "source"): SourceSti
   return { ok: true, source };
 }
 
+/** Phase 20D.1 — the rich source: base keys + `richContent` (exact), validated by the ONE RichContentV1 authority. */
+function validateRichSource(raw: Record<string, unknown>, path: string): SourceStimulusResult {
+  const fail = (code: string, message: string, p = path): SourceStimulusResult => ({ ok: false, issues: [issue(code, message, p)] });
+  for (const key of Object.keys(raw)) if (![...BASE_KEYS, "richContent"].includes(key)) return fail("SOURCE_INVALID", "المصدر المشترك يحتوي حقولًا غير معروفة.", path + "." + key);
+  const issues: ScenarioIssue[] = [];
+  if (!isId(raw.id)) issues.push(issue("SOURCE_ID_INVALID", "معرّف المصدر المشترك غير صالح.", path + ".id"));
+  if (raw.version !== 1) issues.push(issue("SOURCE_VERSION_UNSUPPORTED", "إصدار المصدر المشترك غير مدعوم (الإصدار 1 فقط).", path + ".version"));
+  let title: string | undefined;
+  if (own(raw, "title")) { if (!isText(raw.title, SCENARIO_LIMITS.sourceTitle)) issues.push(issue("SOURCE_TITLE_INVALID", "عنوان المصدر يجب أن يكون نصًا حتى 200 حرف.", path + ".title")); else if (!blank(raw.title)) title = raw.title; }
+  const rc = validateRichContent(raw.richContent, path + ".richContent");
+  if (!rc.ok || !rc.value) issues.push(...rc.issues.slice(0, 5).map(i => issue("SOURCE_RICH_INVALID", "المحتوى المنسق للمصدر غير صالح: " + i.message, i.path)));
+  if (issues.length || !rc.value) return { ok: false, issues };
+  return { ok: true, source: { id: raw.id as string, version: 1, kind: "rich", ...(title !== undefined ? { title } : {}), richContent: rc.value } };
+}
+
 /** The text payload of a canonical source (image bytes excluded) — the per-scenario bound counts every string a student will read. */
 function sourcePayloadBytes(s: SourceStimulusV1): number {
   let n = utf8Bytes(s.title ?? "");
   if (s.kind === "text") n += utf8Bytes(s.text);
   else if (s.kind === "image") n += utf8Bytes(s.alt);
   else if (s.kind === "code") n += utf8Bytes(s.source);
+  else if (s.kind === "rich") n += utf8Bytes(richContentPlainText(s.richContent));
   else { for (const h of s.columnHeaders) n += utf8Bytes(h); for (const h of s.rowHeaders ?? []) n += utf8Bytes(h); for (const r of s.rows) for (const c of r) n += utf8Bytes(c); }
   return n;
 }
@@ -267,4 +266,4 @@ export function scenarioForQuestion(scenarios: readonly ScenarioV1[] | undefined
 /** True for the first linked question of its scenario (where the long-form presentation renders the sources once). */
 export const isFirstScenarioMember = (scenario: ScenarioV1 | undefined, questionId: string): boolean => !!scenario && scenario.questionIds[0] === questionId;
 
-export const sourceKindLabel = (kind: string): string => (Object.prototype.hasOwnProperty.call(SCENARIO_SOURCE_KIND_LABELS, kind) ? SCENARIO_SOURCE_KIND_LABELS[kind as SourceStimulusKind] : kind);
+export const sourceKindLabel = (kind: string): string => (kind === SCENARIO_RICH_SOURCE_KIND ? "محتوى منسق" : Object.prototype.hasOwnProperty.call(SCENARIO_SOURCE_KIND_LABELS, kind) ? SCENARIO_SOURCE_KIND_LABELS[kind as SourceStimulusKind] : kind);

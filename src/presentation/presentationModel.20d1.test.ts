@@ -11,14 +11,14 @@ describe("20D1-P1 vocabulary and presets", () => {
   it("eleven code-owned production presets, each resolving to complete tokens, layout, components and type variants", () => {
     expect(Object.keys(P.PRESENTATION_PRESETS)).toEqual(["default", "classicPaper", "modernAcademic", "cards", "focus", "compact", "scienceLab", "networkLab", "developerWorkspace", "friendly", "highContrast"]);
     for (const id of Object.keys(P.PRESENTATION_PRESETS)) {
-      const r = P.resolvePresentation({ schemaVersion: 1, preset: id });
+      const r = P.resolvePresentation({ schemaVersion: 1, preset: id })!;
       expect(r.fallback, id).toBe(false);
       expect(Object.keys(r.tokens.colors).sort()).toEqual(["accent", "background", "border", "danger", "muted", "primary", "success", "surface", "surfaceAlt", "text", "warning"]);
       for (const slot of Object.keys(P.PRESENTATION_VOCABULARY.slots)) expect(P.PRESENTATION_VOCABULARY.slots[slot as keyof typeof P.PRESENTATION_VOCABULARY.slots]).toContain(r.components[slot as keyof typeof r.components]);
     }
   });
   it("every preset passes the documented WCAG contrast policy", () => {
-    for (const id of Object.keys(P.PRESENTATION_PRESETS)) expect(P.presentationContrastIssues(P.resolvePresentation({ schemaVersion: 1, preset: id }).tokens.colors), id).toEqual([]);
+    for (const id of Object.keys(P.PRESENTATION_PRESETS)) expect(P.presentationContrastIssues(P.resolvePresentation({ schemaVersion: 1, preset: id })!.tokens.colors), id).toEqual([]);
   });
   it("the vocabulary is discoverable, frozen data (for safe future generation): slots, variants, type variants, token words", () => {
     const v = P.PRESENTATION_VOCABULARY;

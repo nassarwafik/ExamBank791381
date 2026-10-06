@@ -97,6 +97,8 @@ function sanitizeCoverForStudent(cover) {
     showMarksDistribution: bool(cover.showMarksDistribution, true)
   };
   if (typeof bannerUrl === "string" && SAFE_BANNER_DATA_URL.test(bannerUrl)) out.banner = { dataUrl: bannerUrl };
+  const rich = projectRichContentForStudent(cover.instructionsRichContent);    // 20D.1: strict canonical rebuild or nothing
+  if (rich) out.instructionsRichContent = rich;
   return out;
 }
 
@@ -285,6 +287,24 @@ function applySmartSimProjection(node, part) {
 // domain: after the per-type projection it removes the private key and the legacy blank teacher fields structurally. A SmartSim part linked
 // to a shared context carries no envelope of its own (identity + text + marks only). sanitizePartForStudent (legacy compound) is untouched.
 const { compositeStructure, compositeChildNode, compositeChildKey, projectCompositeContextForStudent, isCompositeQuestionNode } = require("./shared-finalization/compositeQuestion");
+// Phase 20D.1 — presentation-only fields are PROJECTED, never spread and never passed through the generic deep secret stripper: the rich
+// stem / rich instructions are the strict canonical RichContentV1 rebuild (malformed → omitted → the plain text fallback), the question /
+// section / exam presentation is the strict canonical copy (malformed → omitted → the default design). A parametric stem never carries
+// rich content (the generated instance replaces `text`; a rich twin would leak the {{id}} template). Academically inert.
+const { projectRichContentForStudent } = require("./shared-finalization/richContent/richContentModel");
+const { projectPresentationForStudent, projectSectionPresentationForStudent, projectQuestionPresentationForStudent } = require("./shared-finalization/presentation/presentationModel");
+function takePresentationFields(out) {
+  const taken = { richContent: out.richContent, presentation: out.presentation };
+  delete out.richContent; delete out.presentation;
+  return taken;
+}
+function applyPresentationFields(out, taken, source) {
+  const parametric = String((source && (source.presentationType ?? source.type)) || "") === "parametricNumeric";
+  const rich = parametric ? undefined : projectRichContentForStudent(taken.richContent);
+  if (rich) out.richContent = rich;
+  const pres = projectQuestionPresentationForStudent(taken.presentation);
+  if (pres && taken.presentation !== undefined) out.presentation = pres;
+}
 const COMPOSITE_CHILD_DROP_KEYS = ["answer", "hint", "teacherNote", "aiInstruction", "history", "redoStack", "presentationType", "textHtml", "assessmentMeta"];
 function applyCompositeProjection(out, source, ctx) {
   if (!isCompositeQuestionNode(source)) return;
@@ -294,7 +314,7 @@ function applyCompositeProjection(out, source, ctx) {
   const qkey = ctx && typeof ctx === "object" && typeof ctx.questionKey === "string" ? ctx.questionKey : null;
   const generation = ctx && typeof ctx === "object" && ctx.generation && typeof ctx.generation === "object" ? ctx.generation : null;
   const child = p => {
-    if (p.linkedSmartSim) return { id: p.id, ...(typeof p.raw.label === "string" ? { label: p.raw.label } : {}), type: p.type, ...(p.raw.questionTypeVersion !== undefined ? { questionTypeVersion: p.raw.questionTypeVersion } : {}), ...(typeof p.raw.text === "string" ? { text: p.raw.text } : {}), marks: p.marks, contextId: p.contextId };
+    if (p.linkedSmartSim) { const rich = projectRichContentForStudent(p.raw.richContent); return { id: p.id, ...(typeof p.raw.label === "string" ? { label: p.raw.label } : {}), type: p.type, ...(p.raw.questionTypeVersion !== undefined ? { questionTypeVersion: p.raw.questionTypeVersion } : {}), ...(typeof p.raw.text === "string" ? { text: p.raw.text } : {}), ...(rich ? { richContent: rich } : {}), marks: p.marks, contextId: p.contextId }; }
     const s = sanitizeQuestionForStudent(compositeChildNode(p.raw), generation && qkey ? { generation, questionKey: compositeChildKey(qkey, p.id) } : null);
     const o = { ...s };
     stripKeys(o, COMPOSITE_CHILD_DROP_KEYS);
@@ -321,6 +341,7 @@ function sanitizePartForStudent(part) {
   if (!part || typeof part !== "object") return part;
   const out = { ...part }; // keeps id / label / text / textHtml / marks / type / questionTypeVersion / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
+  delete out.richContent; delete out.presentation;                          // 20D.1: compound@1 parts never carry presentation fields
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyOpenResponseProjection(out, part);                                       // 19E: never compound-capable; defense in depth
   applyCodeStimulusProjection(out, true);                                       // 19F: a part never carries a stimulus
@@ -348,6 +369,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   // Legacy-identical blanking (answer:{}, hint:"", …) so existing behaviour/tests are unchanged,
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
+  const presentationFields = takePresentationFields(out);                    // 20D.1: projected below, never deep-stripped / spread
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyOpenResponseProjection(out, question);                                   // 19E: the public rubric is derived from the ORIGINAL private key
   applyCodeStimulusProjection(out, false);                                      // 19F: strict read-only code stimulus
@@ -368,6 +390,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   if (Array.isArray(out.options)) out.options = out.options.map(sanitizeOptionForStudent);
   if (Array.isArray(out.fields)) out.fields = out.fields.map(sanitizeFieldForStudent);
   if (Array.isArray(out.parts)) out.parts = out.parts.map(sanitizePartForStudent);
+  applyPresentationFields(out, presentationFields, question);
   return out;
 }
 
@@ -385,12 +408,16 @@ function sanitizeSectionForStudent(section, ctx) {
     out.stimuli = stimuli;
   }
   applyScenariosForStudent(out, section);                                       // 19G: strict shared projection, never a spread
+  const rich = projectRichContentForStudent(section.instructionsRichContent), pres = projectSectionPresentationForStudent(section.presentation);   // 20D.1
+  delete out.instructionsRichContent; delete out.presentation;
+  if (rich) out.instructionsRichContent = rich;
+  if (pres && section.presentation !== undefined) out.presentation = pres;
   return out;
 }
 
 // The one entry point. Deep-copies, drops revisionHistory, and sanitizes both legacy questions[] and
 // structured sections[].questions[]. Top-level presentation fields (presentationTheme, metadata, …)
-// pass through unchanged EXCEPT teacher/import-only provenance (metadata.import), which is removed so
+// pass through unchanged (Phase 20D.1: the versioned `presentation` object is a strict canonical projection) EXCEPT teacher/import-only provenance (metadata.import), which is removed so
 // import details (source file name, original examId, …) never reach a student.
 // Phase 19B — `options.parametric` = the server-owned { assignmentId, studentId, attemptNumber } of the attempt being delivered.
 function sanitizeExamForStudent(exam, options) {
@@ -402,6 +429,7 @@ function sanitizeExamForStudent(exam, options) {
   if ("blueprint" in x) delete x.blueprint;                                   // Phase 13C-A: teacher planning data
   for (const k of TEACHER_ANALYTICS_KEYS) if (k in x) delete x[k];             // Phase 13C-B: live intelligence is never student data
   if ("coverPage" in x) x.coverPage = sanitizeCoverForStudent(x.coverPage);
+  if ("presentation" in x) { const p = projectPresentationForStudent(x.presentation); if (p) x.presentation = p; else delete x.presentation; }   // 20D.1: canonical or nothing
   if (Array.isArray(x.questions)) x.questions = x.questions.map((q, i) => sanitizeQuestionForStudent(q, generation && !structured ? { generation, questionKey: sectionQuestionId({ id: "__default__" }, q, i) } : null));
   if (Array.isArray(x.sections)) x.sections = x.sections.map((s, si) => sanitizeSectionForStudent(s, { generation, sectionId: String(s?.id ?? "section-" + (si + 1)) }));
   return x;

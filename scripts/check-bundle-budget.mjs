@@ -78,6 +78,11 @@ const SMARTSIM_SIGNATURES = ["nettopo-workspace", "nettopo-editor", "qt-editor-s
 // refusal code (the strict validator, its source / SmartSim dependencies and every child surface it reaches stay lazy; only the light ids /
 // marks module may sit in the initial graph). ANY one in an initial file fails; none in any chunk means the list is stale.
 const COMPOSITE_SIGNATURES = ["cmp-response", "cmp-editor", "cmp-review", "COMPOSITE_CHILD_TYPE_REFUSED"];
+// Phase 20D.1 — the enterprise presentation / rich-content engine: the Presentation Studio and the block editor class names, the strict
+// rich-content authority's raw-HTML refusal code, the Markdown converter's HTML-refusal code, the MathML renderer's element name and the
+// presentation contrast code. The initial graph may carry ONLY the tiny presentation context (StudentQuestionCard reads it); ANY one of
+// these in an initial file fails; EACH must exist in some chunk (a missing one means the list is stale).
+const PRESENTATION_SIGNATURES = ["xp-studio", "rc-editor", "RICH_CONTENT_RAW_HTML", "MARKDOWN_HTML_REFUSED", "mfrac", "PRESENTATION_CONTRAST"];
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
@@ -173,7 +178,19 @@ function main() {
     if (smartSim.length) failures.push(`${f} (initial) contains the trusted SmartSim / network topology payload (${smartSim.join(", ")}) — it must stay lazy`);
     const composite = COMPOSITE_SIGNATURES.filter(s => src.includes(s));
     if (composite.length) failures.push(`${f} (initial) contains the composite question payload (${composite.join(", ")}) — it must stay lazy`);
+    const presentation = PRESENTATION_SIGNATURES.filter(s => src.includes(s));
+    if (presentation.length) failures.push(`${f} (initial) contains the presentation / rich-content engine payload (${presentation.join(", ")}) — it must stay lazy`);
   }
+  for (const sig of PRESENTATION_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the presentation / rich-content signature "${sig}" was not found in any chunk — the signature list is stale`);
+  const presentationChunks = all.filter(f => PRESENTATION_SIGNATURES.some(s => read(f).includes(s)));
+  console.log(`Presentation / rich-content engine payload found in: ${presentationChunks.join(", ") || "(none)"} — ${presentationChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
+  // Phase 20D.1 — CSS growth is measured separately (reported, not budgeted): the initial stylesheet(s) linked by index.html and the lazy
+  // presentation / rich-content stylesheets (chunk CSS named after their owning lazy module).
+  const indexHtml = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+  const initialCss = [...indexHtml.matchAll(/<link[^>]+href="\/assets\/([^"]+\.css)"/g)].map(m => m[1]);
+  const cssGz = list => list.reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0);
+  const presentationCss = fs.readdirSync(assets).filter(f => f.endsWith(".css") && /^(PresentationRoot|RichContentRenderer|RichPrompt|PresentationStudio|RichContentEditor)-/.test(f));
+  console.log(`CSS: initial ${initialCss.length} file(s) ${kb(cssGz(initialCss))} KB gzip; presentation / rich-content (lazy) ${presentationCss.length} file(s) ${kb(cssGz(presentationCss))} KB gzip`);
   const compositeChunks = all.filter(f => COMPOSITE_SIGNATURES.some(s => read(f).includes(s)));
   if (!compositeChunks.length) failures.push("the composite question payload (renderer / editor / review / strict authority) was not found in any chunk — the signature list is stale");
   console.log(`Composite question payload found in: ${compositeChunks.join(", ") || "(none)"} — ${compositeChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);

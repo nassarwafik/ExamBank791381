@@ -50,6 +50,12 @@ function buildAssetData(asset) {
   return signedBankAsset({ id: asset.id || asset.key || asset.blobName, origin: "bank", blobName: asset.blobName, contentType: asset.contentType || "image/png" });
 }
 
+const { validateRichContent } = require("./shared-finalization/richContent/richContentModel");
+function richStemOf(q) {
+  if (!q || q.richContent === undefined) return {};
+  const r = validateRichContent(q.richContent);
+  return r.ok && r.value ? { richContent: r.value } : {};
+}
 function buildExamQuestion(fullQuestion, indexQuestion, currentQuestion) {
   const renderedAssets = (Array.isArray(fullQuestion.assets) ? fullQuestion.assets : []).map(buildAssetData).filter(Boolean);
   const presentationType = presentationTypeFromFullQuestion(fullQuestion);
@@ -82,6 +88,9 @@ function buildExamQuestion(fullQuestion, indexQuestion, currentQuestion) {
     // Additive: a stored word bank (teacher-entered wordBank questions carry one) travels with the question so the
     // Builder's quality checks see the same choices the fields offer. Sources without one are unchanged.
     ...(Array.isArray(fullQuestion.wordBank) && fullQuestion.wordBank.length ? { wordBank: fullQuestion.wordBank.slice() } : {}),
+    // Phase 20D.1 — a bank question that carries a VALID rich stem keeps it on insertion (canonical copy; an invalid one is not copied, the
+    // plain `text` remains). Exam-level presentation is never copied by a bank insertion.
+    ...richStemOf(fullQuestion),
     teacherNote: currentQuestion.teacherNote || "",
     aiInstruction: "",
     wasModified: false,

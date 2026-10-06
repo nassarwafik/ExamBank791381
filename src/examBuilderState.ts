@@ -140,6 +140,9 @@ export function changeQuestionType(q: BuilderQuestion, type: BuilderQuestionType
   if (q.image !== undefined) carried.image = q.image;
   if (q.images !== undefined) carried.images = q.images;
   if (q.codeStimulus !== undefined) carried.codeStimulus = q.codeStimulus;   // 19F: the read-only code stimulus is type-neutral, like media
+  // 20D.1: the rich stem and the presentation override are type-neutral presentation (a parametric stem never carries rich content).
+  if (q.richContent !== undefined && type !== "parametricNumeric") carried.richContent = q.richContent;
+  if (q.presentation !== undefined) carried.presentation = q.presentation;
   return applyTypeDefaults(carried);
 }
 export function changePartType(p: BuilderPart, type: BuilderPartType): BuilderPart {

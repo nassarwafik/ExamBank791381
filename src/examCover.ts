@@ -29,6 +29,9 @@ export type ExamCoverPage = {
   showDuration?: boolean;
   showTotalMarks?: boolean;
   showMarksDistribution?: boolean;
+  // Phase 20D.1 — OPTIONAL rich instructions (a RichContentV1 document; plain `instructions` stays the fallback). Carried as data here
+  // (this module is in the initial graph); the lazy renderer and the finalization / student-projection authorities validate it.
+  instructionsRichContent?: unknown;
 };
 
 // Only safe embedded raster images may be a renderable banner source (same policy as the importer).
@@ -82,7 +85,8 @@ export function normalizeCoverPage(raw: unknown): ExamCoverPage | undefined {
     showExamDate: boolOr(r.showExamDate, true),
     showDuration: boolOr(r.showDuration, false),
     showTotalMarks: boolOr(r.showTotalMarks, true),
-    showMarksDistribution: boolOr(r.showMarksDistribution, true)
+    showMarksDistribution: boolOr(r.showMarksDistribution, true),
+    ...(r.instructionsRichContent && typeof r.instructionsRichContent === "object" && !Array.isArray(r.instructionsRichContent) ? { instructionsRichContent: r.instructionsRichContent } : {})
   };
 }
 

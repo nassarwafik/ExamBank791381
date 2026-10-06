@@ -12,6 +12,7 @@ import { compositeArabicExam, compositePhysicsExam, compositeCsExam, compositeNe
 // bank-asset hydration of rich images, the pre-start payload, and GRADING INERTNESS. Fail-first on 0b22080: rich content and presentation
 // are unknown keys (spread through or refused by strict composite / scenario contracts), finalization ignores them.
 const require_ = createRequire(import.meta.url);
+process.env.BUILDER_SESSION_SECRET = process.env.BUILDER_SESSION_SECRET || "test-signing-secret-20d1";   // bank delivery URLs are HMAC-signed (test-only value)
 const clone = x => JSON.parse(JSON.stringify(x));
 const errors = e => validateStructuredExam(e).filter(i => i.severity === "error").map(i => i.code);
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
@@ -73,7 +74,7 @@ describe("20D1-S1 strict student projection", () => {
     expect(errors(e)).toEqual([]);
     expect(sanitizeExamForStudent(e).sections[0].scenarios[0].sources[0].richContent).toEqual(RICH());
     const bad = exam([mcq("q1")], {}, { scenarios: [{ ...sec.scenarios[0], sources: [{ id: "r1", version: 1, kind: "rich", richContent: { schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "<script>x</script>" }] }] } }] }] });
-    expect(errors(bad)).toContain("SCENARIO_SOURCE_INVALID");
+    expect(errors(bad)).toContain("SOURCE_RICH_INVALID");
   });
   it("the pre-start payload carries the (strictly projected) presentation so the cover / start screen is themed", () => {
     const { preStartAssignment } = require_("../src/functions/student-assignment.js");

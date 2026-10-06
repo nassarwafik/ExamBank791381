@@ -156,6 +156,10 @@ function changeQuestionType(q, type) {
         carried.images = q.images;
     if (q.codeStimulus !== undefined)
         carried.codeStimulus = q.codeStimulus;
+    if (q.richContent !== undefined && type !== "parametricNumeric")
+        carried.richContent = q.richContent;
+    if (q.presentation !== undefined)
+        carried.presentation = q.presentation;
     return applyTypeDefaults(carried);
 }
 function changePartType(p, type) {

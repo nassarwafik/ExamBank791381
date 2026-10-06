@@ -8,6 +8,8 @@ import type { HotspotConfigV1 } from "./hotspotQuestion";
 import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
+import type { RichContentV1 } from "./richContent/richContentModel";
+import type { ExamPresentationV1, SectionPresentationV1, QuestionPresentationV1 } from "./presentation/presentationModel";
 import type { ScenarioV1 } from "./scenarioSource";
 import type { ParametricNumericConfigV1 } from "./parametricNumericQuestion";
 import type { CompositeRootV1 } from "./compositeModel";
@@ -123,6 +125,8 @@ export type BuilderPart = {
   tableRows?: string[][];
   answer?: Record<string, unknown>; // SECRET (e.g. { correctOptionIndex }, { correct }, { text }, { mode, values })
   assessmentMeta?: AssessmentMeta;
+  // Phase 20D.1 — a composite@1 part's OPTIONAL rich prompt (never on compound@1 parts, which are frozen).
+  richContent?: RichContentV1;
   activity?: AssessmentActivityDescriptor;
 };
 
@@ -133,6 +137,10 @@ export type BuilderQuestion = {
   // Phase 16A — explicit type version (absent = V1; a newly created Wave 1 question is stamped with its current version).
   questionTypeVersion?: number;
   text: string;
+  // Phase 20D.1 — OPTIONAL rich stem (presentation only; `text` stays the plain fallback / search text) and the bounded question
+  // presentation override. Academically inert: no grader, identity or marks function reads them.
+  richContent?: RichContentV1;
+  presentation?: QuestionPresentationV1;
   marks: number;
   options?: BuilderOption[];
   numeric?: NumericConfig;
@@ -230,6 +238,9 @@ export type BuilderSection = {
   // composition only: no grader, no marks, no answer; membership lives ONLY here (a question carries no scenario field). Strictly
   // validated (./scenarioSource); absent on every existing exam, never inferred from the legacy `stimuli` / `groupId` model.
   scenarios?: ScenarioV1[];
+  // Phase 20D.1 — OPTIONAL rich section instructions (plain `instructions` stays the fallback) and the bounded section override.
+  instructionsRichContent?: RichContentV1;
+  presentation?: SectionPresentationV1;
   questions: BuilderQuestion[];
 };
 
@@ -240,6 +251,8 @@ export type StructuredExam = {
   examId: string;
   title: string;
   presentationTheme?: ExamTheme;
+  // Phase 20D.1 — OPTIONAL enterprise presentation (absent ⇒ the legacy presentationTheme path, unchanged). Never migrated automatically.
+  presentation?: ExamPresentationV1;
   metadata?: Record<string, unknown>;
   totalMarks?: number;
   status?: "draft" | "final";

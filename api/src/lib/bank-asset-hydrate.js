@@ -8,7 +8,8 @@
 // student receiving an assignment — mints a fresh URL at delivery time (hydrateBankAssets).
 //
 // Scope: canonical question media only — exam.sections[].questions[] and legacy exam.questions[], each question's
-// image.assets[] and compound parts[].image.assets[]. Uploaded / AI-generated embedded rasters (origin !== "bank") and
+// image.assets[] and compound parts[].image.assets[] (Phase 20D.1: plus the image / figure blocks of every RichContentV1 document —
+// question / composite part stems, section and cover rich instructions, rich scenario / context sources). Uploaded / AI-generated embedded rasters (origin !== "bank") and
 // anything with an unsafe blobName are returned by the SAME reference, untouched. Nothing here mutates its input: every
 // changed node is copied on the way down (path copy), unchanged subtrees keep their identity. Never touches storage.
 const { createSignedAssetParams } = require("./builder-auth");
@@ -59,16 +60,35 @@ function mapImage(image, assetFn) {
   const assets = mapArray(image.assets, a => (isBankAsset(a) ? assetFn(a) : a));
   return assets === image.assets ? image : { ...image, assets };
 }
+// Phase 20D.1 — a RichContentV1 document's image / figure blocks (top level and inside the one-level columns block) reuse the canonical
+// asset model exactly like question media: durable identity in storage, a freshly signed delivery URL at delivery. Path copy; no bank
+// asset ⇒ the same reference. Structure-only (the strict validators remain the authority).
+function mapRichContent(rc, assetFn) {
+  if (!rc || typeof rc !== "object" || Array.isArray(rc) || !Array.isArray(rc.blocks)) return rc;
+  const mapBlocks = blocks => mapArray(blocks, b => {
+    if (!b || typeof b !== "object") return b;
+    if ((b.type === "image" || b.type === "figure") && isBankAsset(b.asset)) return { ...b, asset: assetFn(b.asset) };
+    if (b.type === "columns" && Array.isArray(b.columns)) {
+      const columns = mapArray(b.columns, c => { if (!c || typeof c !== "object" || !Array.isArray(c.blocks)) return c; const inner = mapBlocks(c.blocks); return inner === c.blocks ? c : { ...c, blocks: inner }; });
+      return columns === b.columns ? b : { ...b, columns };
+    }
+    return b;
+  });
+  const blocks = mapBlocks(rc.blocks);
+  return blocks === rc.blocks ? rc : { ...rc, blocks };
+}
 function mapNode(node, assetFn) {
   if (!node || typeof node !== "object") return node;
   const image = mapImage(node.image, assetFn);
   const parts = mapArray(node.parts, p => mapNode(p, assetFn));
   const composite = mapComposite(node.composite, assetFn);
-  if (image === node.image && parts === node.parts && composite === node.composite) return node;
+  const richContent = mapRichContent(node.richContent, assetFn);              // 20D.1
+  if (image === node.image && parts === node.parts && composite === node.composite && richContent === node.richContent) return node;
   const out = { ...node };
   if (image !== node.image) out.image = image;
   if (parts !== node.parts) out.parts = parts;
   if (composite !== node.composite) out.composite = composite;
+  if (richContent !== node.richContent) out.richContent = richContent;
   return out;
 }
 // Phase 20D — composite@1 media: every child's canonical image (exactly like a question / part) and every IMAGE source of a shared source
@@ -92,7 +112,11 @@ function mapComposite(root, assetFn) {
 function mapScenarioSources(scenarios, assetFn) {
   return mapArray(scenarios, sc => {
     if (!sc || typeof sc !== "object") return sc;
-    const sources = mapArray(sc.sources, src => (src && typeof src === "object" && src.kind === "image" && isBankAsset(src.image) ? { ...src, image: assetFn(src.image) } : src));
+    const sources = mapArray(sc.sources, src => {
+      if (src && typeof src === "object" && src.kind === "image" && isBankAsset(src.image)) return { ...src, image: assetFn(src.image) };
+      if (src && typeof src === "object" && src.kind === "rich") { const rc = mapRichContent(src.richContent, assetFn); return rc === src.richContent ? src : { ...src, richContent: rc }; }   // 20D.1
+      return src;
+    });
     return sources === sc.sources ? sc : { ...sc, sources };
   });
 }
@@ -103,16 +127,21 @@ function mapExamAssets(exam, assetFn) {
     if (!s || typeof s !== "object") return s;
     const qs = mapArray(s.questions, q => mapNode(q, assetFn));
     const scenarios = mapScenarioSources(s.scenarios, assetFn);
-    if (qs === s.questions && scenarios === s.scenarios) return s;
+    const instructionsRichContent = mapRichContent(s.instructionsRichContent, assetFn);   // 20D.1
+    if (qs === s.questions && scenarios === s.scenarios && instructionsRichContent === s.instructionsRichContent) return s;
     const out = { ...s };
     if (qs !== s.questions) out.questions = qs;
     if (scenarios !== s.scenarios) out.scenarios = scenarios;
+    if (instructionsRichContent !== s.instructionsRichContent) out.instructionsRichContent = instructionsRichContent;
     return out;
   });
-  if (questions === exam.questions && sections === exam.sections) return exam;
+  const cover = exam.coverPage && typeof exam.coverPage === "object" && !Array.isArray(exam.coverPage) ? exam.coverPage : null;
+  const coverRich = cover ? mapRichContent(cover.instructionsRichContent, assetFn) : undefined;   // 20D.1
+  if (questions === exam.questions && sections === exam.sections && (!cover || coverRich === cover.instructionsRichContent)) return exam;
   const out = { ...exam };
   if (questions !== exam.questions) out.questions = questions;
   if (sections !== exam.sections) out.sections = sections;
+  if (cover && coverRich !== cover.instructionsRichContent) out.coverPage = { ...cover, instructionsRichContent: coverRich };
   return out;
 }
 

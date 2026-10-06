@@ -102,7 +102,7 @@ describe("20D.1 FREEZE — legacy themes and plain-text rendering (PINS captured
     pin("parse", samples.map(s => ({ t: parseTable(s), p: promptText(s) })));
   });
   it("L-6 the cover page and the scenario view are unchanged", async () => {
-    const cover = normalizeCoverPage(COVER);
+    const cover = normalizeCoverPage(COVER)!;
     const norm = normalizeExamStructure(MIXED("default") as never);
     const c = render(<StructuredExamCover cover={cover} title="امتحان العرض" distribution={examMarksDistribution(norm as never)} preview onStart={() => {}} />);
     const coverDom = domDigest(c.container.innerHTML); c.unmount();

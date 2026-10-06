@@ -15,6 +15,8 @@ import { scenarioSectionIssues } from "./scenarioSource";
 import { questionTypeDefinition } from "./questionTypeCatalog";
 import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
 import { validateCompositeQuestion, compositeStructure, compositeChildNode, isSupportedCompositeChild, isCompositeQuestionId, COMPOSITE_CHILD_SEPARATOR } from "./compositeQuestion";
+import { validatePresentation, validateSectionPresentation, validateQuestionPresentation } from "./presentation/presentationModel";
+import { validateRichContent, richContentPlainText } from "./richContent/richContentModel";
 
 export type Severity = "error" | "warning";
 export type StructuredIssue = {
@@ -48,6 +50,12 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
     return issues;
   }
 
+  // Phase 20D.1 — the OPTIONAL exam presentation and the cover's rich instructions: strict, versioned, data-only; every violation BLOCKS
+  // (a published exam never carries a malformed / unreadable presentation — the runtime would silently fall back to the default design).
+  if (exam.presentation !== undefined && exam.presentation !== null) for (const i of validatePresentation(exam.presentation).issues) add("error", i.code, "إعدادات العرض: " + i.message);
+  const cover = exam.coverPage as Record<string, unknown> | undefined;
+  if (cover && typeof cover === "object" && cover.instructionsRichContent !== undefined) for (const i of validateRichContent(cover.instructionsRichContent, "coverPage.instructionsRichContent").issues) add("error", i.code, "تعليمات الغلاف المنسقة: " + i.message);
+
   const seenQuestionIds = new Set<string>();
   // Phase 19G — the exam-wide question ids let a scenario reference be classified as CROSS-SECTION (exists elsewhere) rather than missing.
   const allQuestionIds = new Set<string>();
@@ -56,6 +64,10 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
   sections.forEach((section, si) => {
     const label = section.title || "القسم " + (si + 1);
     validateSection(section, label, add);
+    // Phase 20D.1 — bounded section presentation override and rich section instructions (plain `instructions` stays the fallback).
+    const sec = section as unknown as Record<string, unknown>;
+    if (sec.presentation !== undefined) for (const i of validateSectionPresentation(sec.presentation).issues) add("error", i.code, "إعدادات عرض القسم «" + label + "»: " + i.message, { sectionId: section.id });
+    if (sec.instructionsRichContent !== undefined) for (const i of validateRichContent(sec.instructionsRichContent, "section.instructionsRichContent").issues) add("error", i.code, "تعليمات القسم «" + label + "» المنسقة: " + i.message, { sectionId: section.id });
     // Phase 19G — every scenario rule (structure, source contract, same-section membership, one scenario per question, contiguity,
     // required image alt) is a BLOCKING structural error: the student projection would withhold the scenario, so publishing it would
     // silently lose the shared sources. The legacy `stimuli` / `groupId` model below is untouched (still a warning).
@@ -148,9 +160,13 @@ function validateSection(section: BuilderSection, label: string, add: Add): void
 function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: BuilderSection, add: Add): void {
   const where: Where = { sectionId: section.id, questionId: q.examQuestionId };
   const disp = q.displayNumber ? "«" + q.displayNumber + "»" : "";
-  if ((!q.text || !q.text.trim()) && q.presentationType !== "compound") {
+  // Phase 20D.1 — a VALID rich stem with readable text is the question's content (plain `text` is then only the fallback / search text).
+  const richStem = (q as unknown as Record<string, unknown>).richContent;
+  const hasRichStem = richStem !== undefined && validateRichContent(richStem).ok && richContentPlainText(richStem).trim() !== "";
+  if ((!q.text || !q.text.trim()) && q.presentationType !== "compound" && !hasRichStem) {
     add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص.", where);
   }
+  validatePresentationFields(q as unknown as Record<string, unknown>, String(q.presentationType ?? ""), "سؤال " + disp + " في «" + sectionLabel + "»", where, add, true);
   if (!Number.isFinite(num(q.marks)) || num(q.marks) <= 0) {
     add("error", "MARKS_PROBLEM", "سؤال " + disp + " في «" + sectionLabel + "» علامته غير صالحة.", where);
   }
@@ -301,6 +317,17 @@ function validateCompound(q: BuilderQuestion, disp: string, sectionLabel: string
   }
 }
 
+// Phase 20D.1 — the presentation-only fields of a question (or a composite part): the rich stem and (top-level only) the bounded
+// question override. Both are academically inert; a malformed value BLOCKS (the runtime would fall back to plain text / the default).
+// A parametric stem never carries rich content: the generated instance replaces `text`, so a rich twin would leak the {{id}} template.
+function validatePresentationFields(node: Record<string, unknown>, type: string, label: string, where: Where, add: Add, topLevel: boolean): void {
+  if (node.richContent !== undefined) {
+    if (type === "parametricNumeric") add("error", "PARAMETRIC_RICH_CONTENT_FORBIDDEN", label + ": السؤال المولّد بمعاملات لا يقبل محتوى منسقًا (القالب يُولَّد من النص).", where);
+    else for (const i of validateRichContent(node.richContent).issues) add("error", i.code, label + " — المحتوى المنسق: " + i.message, where);
+  }
+  if (topLevel && node.presentation !== undefined) for (const i of validateQuestionPresentation(node.presentation).issues) add("error", i.code, label + " — إعدادات العرض: " + i.message, where);
+}
+
 // Phase 20D — composite@1: the identity seam (version, executable fields), then the ONE strict composite authority (structure, contexts,
 // sources, linked SmartSim keys, exact child identities, marks), then EVERY child body through the SAME validateBody a standalone question of
 // its type runs — never a second set of child rules. A linked SmartSim part has no body of its own (its envelope is the context's; its
@@ -313,6 +340,7 @@ function validateComposite(q: BuilderQuestion, disp: string, sectionLabel: strin
   for (const i of validateCompositeQuestion(q as unknown as Record<string, unknown>)) add("error", i.code, label + ": " + i.message, where);
   const st = compositeStructure(q);
   if (!st.ok) return;
+  for (const g of st.model.groups) for (const p of g.parts) validatePresentationFields(p.raw as unknown as Record<string, unknown>, p.type, "البند " + p.label + " من " + disp, where, add, false);
   for (const g of st.model.groups) for (const p of g.parts) {
     if (p.linkedSmartSim || !isSupportedCompositeChild(p.type, p.raw.questionTypeVersion)) continue;
     validateBody(compositeChildNode(p.raw) as unknown as QuestionBody, p.type as BuilderPartType, "البند " + p.label + " من " + disp, where, add);

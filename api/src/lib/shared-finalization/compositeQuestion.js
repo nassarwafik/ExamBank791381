@@ -43,8 +43,8 @@ const ROOT_KEYS = new Set(["v", "contexts", "groups"]);
 const SOURCE_CONTEXT_KEYS = new Set(["id", "version", "kind", "title", "instructions", "sources"]);
 const SMARTSIM_CONTEXT_KEYS = new Set(["id", "version", "kind", "title", "instructions", "smartSim"]);
 const GROUP_KEYS = new Set(["id", "title", "instructions", "gradingPolicy", "requiredAnswers", "maxMarks", "parts"]);
-const QUESTION_KEYS = new Set(["examQuestionId", "id", "number", "displayNumber", "presentationType", "type", "questionTypeVersion", "text", "marks", "composite", "answer", "assessmentMeta", "groupId", "activity", "codeStimulus", "image", "images"]);
-const PART_COMMON_KEYS = ["id", "label", "type", "questionTypeVersion", "text", "marks", "contextId", "answer", "image", "images", "assessmentMeta"];
+const QUESTION_KEYS = new Set(["examQuestionId", "id", "number", "displayNumber", "presentationType", "type", "questionTypeVersion", "text", "marks", "composite", "answer", "assessmentMeta", "groupId", "activity", "codeStimulus", "image", "images", "richContent", "presentation"]);
+const PART_COMMON_KEYS = ["id", "label", "type", "questionTypeVersion", "text", "marks", "contextId", "answer", "image", "images", "assessmentMeta", "richContent"];
 const PART_TYPE_KEYS = Object.freeze({
     multipleChoice: ["options"], trueFalse: ["options"], multiTrueFalse: ["fields"], shortAnswer: [], fillBlank: ["fields", "wordBank"], wordBank: ["fields", "wordBank"],
     matching: ["fields", "tableHeaders"], ordering: ["fields", "wordBank"], tableFill: ["fields", "tableHeaders", "tableRows"], cliFill: ["fields", "cli"],
