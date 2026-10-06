@@ -2,7 +2,7 @@
 //
 // A preset carries the academic design of an exam — Blueprint (subject / curriculum / course / level, topics, objectives,
 // cognitive vocabulary, difficulty scale, targets, constraints, Quality Policy), the section STRUCTURE (title, instructions,
-// grading policy, caps) and the presentation theme — and nothing else: no questions, no answer keys, no stimuli, no bank
+// grading policy, caps), the presentation theme and (Phase 20D.1) the canonical enterprise presentation — and nothing else: no questions, no answer keys, no stimuli, no bank
 // identities or assets, no cover-page sitting data, no governance / revision / audit / history / autosave state.
 //
 // Three pure authorities live here and are compiled unchanged into the server build (scripts/build-shared-finalization.mjs)
@@ -31,6 +31,7 @@ import { validateBlueprint } from "./assessmentBlueprint";
 import { validateAssessmentQualityPolicy } from "./assessmentQualityPolicy";
 import { EXAM_THEMES, type ExamTheme } from "./examTheme";
 import { genId } from "./examBuilderState";
+import { validatePresentation, validateSectionPresentation, type ExamPresentationV1, type SectionPresentationV1 } from "./presentation/presentationModel";
 
 export const ASSESSMENT_PRESET_SCHEMA_VERSION = 1 as const;
 export const PRESET_LABEL = "قالب أكاديمي";
@@ -49,6 +50,8 @@ export type AssessmentPresetSection = {
   maxMarks?: number | null;
   requiredAnswers?: number | null;
   answerUnit?: AnswerUnit;
+  /** Phase 20D.1 — bounded section presentation override (canonical validated copy only). */
+  presentation?: SectionPresentationV1;
 };
 export type AssessmentPresetV1 = {
   schemaVersion: typeof ASSESSMENT_PRESET_SCHEMA_VERSION;
@@ -58,6 +61,8 @@ export type AssessmentPresetV1 = {
   blueprint: AssessmentBlueprintV1;
   sections: AssessmentPresetSection[];
   presentationTheme?: ExamTheme;
+  /** Phase 20D.1 — enterprise ExamPresentationV1 (canonical validated copy only; absent on legacy presets). */
+  presentation?: ExamPresentationV1;
 };
 /** Server-owned envelope (owner, version, timestamps are minted by the API, never by the client). */
 export type AssessmentPresetRecordV1 = { schemaVersion: 1; presetId: string; ownerId: string; version: number; createdAt: string; updatedAt: string; preset: AssessmentPresetV1 };
@@ -66,14 +71,14 @@ export type AssessmentPresetSummary = {
   presetId: string; version: number; title: string; description?: string; subject: string; course?: string; level?: string;
   sectionCount: number; topicCount: number; objectiveCount: number; constraintCount: number; qualityRuleCount: number; updatedAt: string; presentationTheme?: ExamTheme;
 };
-export type PresetIssueCode = "UNSUPPORTED_SCHEMA_VERSION" | "TITLE_REQUIRED" | "TITLE_TOO_LONG" | "DESCRIPTION_TOO_LONG" | "INVALID_PRESET_ID" | "SECTIONS_REQUIRED" | "TOO_MANY_SECTIONS" | "INVALID_SECTION" | "INVALID_SECTION_ID" | "DUPLICATE_SECTION_ID" | "SECTION_TITLE_INVALID" | "INVALID_GRADING_POLICY" | "INVALID_SECTION_NUMBER" | "INVALID_ANSWER_UNIT" | "FORBIDDEN_FIELD" | "BLUEPRINT_REQUIRED" | "BLUEPRINT_INVALID" | "QUALITY_POLICY_INVALID" | "INVALID_THEME"
+export type PresetIssueCode = "UNSUPPORTED_SCHEMA_VERSION" | "TITLE_REQUIRED" | "TITLE_TOO_LONG" | "DESCRIPTION_TOO_LONG" | "INVALID_PRESET_ID" | "SECTIONS_REQUIRED" | "TOO_MANY_SECTIONS" | "INVALID_SECTION" | "INVALID_SECTION_ID" | "DUPLICATE_SECTION_ID" | "SECTION_TITLE_INVALID" | "INVALID_GRADING_POLICY" | "INVALID_SECTION_NUMBER" | "INVALID_ANSWER_UNIT" | "FORBIDDEN_FIELD" | "BLUEPRINT_REQUIRED" | "BLUEPRINT_INVALID" | "QUALITY_POLICY_INVALID" | "INVALID_THEME" | "INVALID_PRESENTATION"
   | "INVALID_SOURCE_SECTIONS" | "INVALID_SOURCE_SECTION" | "INVALID_SOURCE_SECTION_ID" | "DUPLICATE_SOURCE_SECTION_ID";
 export type PresetIssue = { code: PresetIssueCode; message: string; path?: string; refId?: string };
 
 // Every key a preset (root) or a preset section may carry. Anything else is FORBIDDEN — questions, stimuli, answers, exam /
 // governance / revision / history / autosave / owner fields can never ride along, now or when new exam fields appear.
-const PRESET_KEYS: ReadonlySet<string> = new Set(["schemaVersion", "presetId", "title", "description", "blueprint", "sections", "presentationTheme"]);
-const SECTION_KEYS: ReadonlySet<string> = new Set(["presetSectionId", "title", "instructions", "gradingPolicy", "maxMarks", "requiredAnswers", "answerUnit"]);
+const PRESET_KEYS: ReadonlySet<string> = new Set(["schemaVersion", "presetId", "title", "description", "blueprint", "sections", "presentationTheme", "presentation"]);
+const SECTION_KEYS: ReadonlySet<string> = new Set(["presetSectionId", "title", "instructions", "gradingPolicy", "maxMarks", "requiredAnswers", "answerUnit", "presentation"]);
 const isPlainObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const isNullableCount = (v: unknown) => v === undefined || v === null || (typeof v === "number" && Number.isInteger(v) && v >= 0);
 const isNullableMarks = (v: unknown) => v === undefined || v === null || (typeof v === "number" && Number.isFinite(v) && v >= 0);
@@ -90,6 +95,7 @@ export function validateAssessmentPreset(input: unknown): PresetIssue[] {
   else if (title.length > PRESET_TITLE_MAX) add("TITLE_TOO_LONG", "عنوان القالب أطول من " + PRESET_TITLE_MAX + " حرفًا.", "title");
   if (input.description !== undefined && (typeof input.description !== "string" || input.description.length > PRESET_DESCRIPTION_MAX)) add("DESCRIPTION_TOO_LONG", "وصف القالب أطول من " + PRESET_DESCRIPTION_MAX + " حرفًا.", "description");
   if (input.presentationTheme !== undefined && !(EXAM_THEMES as string[]).includes(input.presentationTheme as string)) add("INVALID_THEME", "مظهر العرض غير معروف.", "presentationTheme");
+  if (input.presentation !== undefined) for (const pi of presentationIssues(input.presentation, "presentation")) add("INVALID_PRESENTATION", pi.message, pi.path);
   const sections = input.sections;
   const sectionIds: string[] = [];
   if (!Array.isArray(sections) || sections.length === 0) add("SECTIONS_REQUIRED", "يجب أن يحوي القالب قسمًا واحدًا على الأقل.", "sections");
@@ -109,6 +115,7 @@ export function validateAssessmentPreset(input: unknown): PresetIssue[] {
       if (!isNullableMarks(s.maxMarks)) add("INVALID_SECTION_NUMBER", "الحد الأعلى لعلامات القسم غير صالح.", path + ".maxMarks");
       if (!isNullableCount(s.requiredAnswers)) add("INVALID_SECTION_NUMBER", "عدد الإجابات المطلوبة غير صالح.", path + ".requiredAnswers");
       if (s.answerUnit !== undefined && !ANSWER_UNITS.includes(s.answerUnit as AnswerUnit)) add("INVALID_ANSWER_UNIT", "وحدة الإجابة غير معروفة.", path + ".answerUnit");
+      if (s.presentation !== undefined) for (const pi of presentationIssues(s.presentation, path + ".presentation", true)) add("INVALID_PRESENTATION", pi.message, pi.path);
     });
   }
   if (input.blueprint === undefined || input.blueprint === null) add("BLUEPRINT_REQUIRED", "يحتاج القالب الأكاديمي إلى مخطط امتحان.", "blueprint");
@@ -122,6 +129,15 @@ export function validateAssessmentPreset(input: unknown): PresetIssue[] {
   }
   return issues;
 }
+
+// Phase 20D.1 — the canonical presentation authorities judge a preset's presentation (structure, vocabulary, blocking contrast);
+// only their canonical output is ever copied, so a preset never carries a reference into the source exam.
+function presentationIssues(raw: unknown, path: string, section = false): { message: string; path?: string }[] {
+  const r = section ? validateSectionPresentation(raw, path) : validatePresentation(raw, path);
+  return r.ok ? [] : r.issues.length ? r.issues : [{ message: "إعدادات العرض غير صالحة.", path }];
+}
+function canonicalPresentation(raw: unknown): ExamPresentationV1 | undefined { const r = validatePresentation(raw); return r.ok ? r.value : undefined; }
+function canonicalSectionPresentation(raw: unknown): SectionPresentationV1 | undefined { const r = validateSectionPresentation(raw); return r.ok ? r.value : undefined; }
 
 // ── allow-list copies (no spreading of unknown fields) ────────────────────────────────────────────────────────────────
 function copyIdentity(v: { id: string; label: string } | undefined) { return v ? { id: v.id, label: v.label } : undefined; }
@@ -170,6 +186,8 @@ function presetSectionOf(s: BuilderSection, presetSectionId: string): Assessment
   out.maxMarks = s.maxMarks === undefined ? null : s.maxMarks;
   out.requiredAnswers = s.requiredAnswers === undefined ? null : s.requiredAnswers;
   out.answerUnit = s.answerUnit ?? "question";
+  const presentation = s.presentation === undefined ? undefined : canonicalSectionPresentation(s.presentation);
+  if (presentation) out.presentation = presentation;
   return out;
 }
 export const newPresetId = () => genId("apr");
@@ -218,6 +236,10 @@ export function validateSourceDesign(exam: unknown): { issues: PresetIssue[]; se
       for (const qi of validateAssessmentQualityPolicy(bp.qualityPolicy, bp as unknown as AssessmentBlueprintV1)) add("QUALITY_POLICY_INVALID", qi.message, "blueprint.qualityPolicy." + (qi.path ?? ""), qi.ruleId);
     }
   }
+  if (exam.presentation !== undefined) for (const pi of presentationIssues(exam.presentation, "presentation")) add("INVALID_PRESENTATION", pi.message, pi.path);
+  if (Array.isArray(sections)) sections.forEach((s, i) => {
+    if (isPlainObject(s) && s.presentation !== undefined) for (const pi of presentationIssues(s.presentation, "sections[" + i + "].presentation", true)) add("INVALID_PRESENTATION", pi.message, pi.path);
+  });
   return { issues, sectionIds };
 }
 
@@ -242,6 +264,8 @@ export function extractAssessmentPresetFromExam(exam: StructuredExam, options: E
   const description = text(options.description);
   if (description) preset.description = description.slice(0, PRESET_DESCRIPTION_MAX);
   if (exam.presentationTheme && (EXAM_THEMES as string[]).includes(exam.presentationTheme)) preset.presentationTheme = exam.presentationTheme;
+  const presentation = exam.presentation === undefined ? undefined : canonicalPresentation(exam.presentation);
+  if (presentation) preset.presentation = presentation;
   const check = validateAssessmentPreset(preset);
   if (check.length) return { ok: false, reason: "invalid-source", issues: check };
   return { ok: true, preset };
@@ -260,7 +284,10 @@ export function instantiateExamFromPreset(preset: AssessmentPresetV1, options: I
   const map = new Map<string, string>();
   const sections: BuilderSection[] = preset.sections.map((s, i) => {
     const id = sectionIdFor(s, i); map.set(s.presetSectionId, id);
-    return { id, title: s.title, instructions: s.instructions ?? "", maxMarks: s.maxMarks ?? null, gradingPolicy: s.gradingPolicy, requiredAnswers: s.requiredAnswers ?? null, answerUnit: s.answerUnit ?? "question", stimuli: {}, questions: [] };
+    const section: BuilderSection = { id, title: s.title, instructions: s.instructions ?? "", maxMarks: s.maxMarks ?? null, gradingPolicy: s.gradingPolicy, requiredAnswers: s.requiredAnswers ?? null, answerUnit: s.answerUnit ?? "question", stimuli: {}, questions: [] };
+    const presentation = s.presentation === undefined ? undefined : canonicalSectionPresentation(s.presentation);
+    if (presentation) section.presentation = presentation;
+    return section;
   });
   const exam: StructuredExam = {
     schemaVersion: 2,
@@ -271,6 +298,8 @@ export function instantiateExamFromPreset(preset: AssessmentPresetV1, options: I
     sections
   };
   if (preset.presentationTheme) exam.presentationTheme = preset.presentationTheme;
+  const presentation = preset.presentation === undefined ? undefined : canonicalPresentation(preset.presentation);
+  if (presentation) exam.presentation = presentation;
   return exam;
 }
 

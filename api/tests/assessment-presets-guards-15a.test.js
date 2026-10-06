@@ -24,7 +24,7 @@ const CSS = fs.readFileSync(path.join(repo, "src/presets/presetLibrary.css"), "u
 describe("15A §62 — pure model guards", () => {
   it("the model depends only on assessment / exam / theme types, the canonical validators and genId — never on governance, the bank, the grader, student state or React", () => {
     const imports = [...MODEL.matchAll(/from "([^"]+)"/g)].map(m => m[1]).sort();
-    expect(imports).toEqual(["./assessmentBlueprint", "./assessmentQualityPolicy", "./assessmentTypes", "./assessmentTypes", "./examBuilderState", "./examTheme", "./examTypes"]);
+    expect(imports).toEqual(["./assessmentBlueprint", "./assessmentQualityPolicy", "./assessmentTypes", "./assessmentTypes", "./examBuilderState", "./examTheme", "./examTypes", "./presentation/presentationModel"]);
     expect(MODEL).not.toMatch(/react|examGovernance|bank|grader|student|fetch\(|localStorage|window\.|document\./i);
   });
   it("extraction is an ALLOW-LIST: the preset and its blueprint are constructed field by field; no spread of the exam / section / blueprint, no delete-after-copy", () => {
@@ -33,8 +33,8 @@ describe("15A §62 — pure model guards", () => {
     expect(extract).toMatch(/presetSectionId, title: String\(s\.title \?\? ""\), gradingPolicy: s\.gradingPolicy/);
     expect(extract).toMatch(/dimension === "section" \? sectionRef\(c\.ref\) : c\.ref/);
     // the model's key allow-lists are closed sets: questions / stimuli / governance / owner can never ride along
-    expect(MODEL).toMatch(/const PRESET_KEYS: ReadonlySet<string> = new Set\(\["schemaVersion", "presetId", "title", "description", "blueprint", "sections", "presentationTheme"\]\)/);
-    expect(MODEL).toMatch(/const SECTION_KEYS: ReadonlySet<string> = new Set\(\["presetSectionId", "title", "instructions", "gradingPolicy", "maxMarks", "requiredAnswers", "answerUnit"\]\)/);
+    expect(MODEL).toMatch(/const PRESET_KEYS: ReadonlySet<string> = new Set\(\["schemaVersion", "presetId", "title", "description", "blueprint", "sections", "presentationTheme", "presentation"\]\)/);
+    expect(MODEL).toMatch(/const SECTION_KEYS: ReadonlySet<string> = new Set\(\["presetSectionId", "title", "instructions", "gradingPolicy", "maxMarks", "requiredAnswers", "answerUnit", "presentation"\]\)/);
     expect(MODEL).toMatch(/if \(!PRESET_KEYS\.has\(key\)\) add\("FORBIDDEN_FIELD"/); expect(MODEL).toMatch(/if \(!SECTION_KEYS\.has\(key\)\) add\("FORBIDDEN_FIELD"/);
   });
   it("Review Fix 1 — extraction is FAIL-CLOSED: validateSourceDesign (section identity → validateBlueprint with the SOURCE ids → validateAssessmentQualityPolicy) runs and returns BEFORE any copy; duplicates are refused, never repaired", () => {
