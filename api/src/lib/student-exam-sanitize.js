@@ -273,6 +273,42 @@ function applySmartSimProjection(node, part) {
   const p = part ? undefined : projectSmartSimForStudent(node.smartSim);
   if (p) node.smartSim = p; else delete node.smartSim;
 }
+// Phase 20D — composite@1 is REBUILT through its STRICT projection (never spread, never only deny-listed): the ONE structure authority
+// (shared build) validates the whole composite first — any broken authority (unknown key, smuggled field, malformed / future context, invalid
+// source or envelope, nested composite, mark mismatch …) withholds it as an explicit UNAVAILABLE object, so the student never receives a
+// partial or repaired composite. Otherwise: each shared SOURCE context → its canonical SourceStimulusV1 copies; each shared SMARTSIM context →
+// its canonical PUBLIC envelope (private checks live on the parts' `answer`, never on the context); each group → id / title / instructions /
+// rule; each CHILD → the SAME per-type projection a standalone question of its type receives (sanitizeQuestionForStudent on the child node:
+// coding allow-list, open-response public rubric, inline-cloze / visual strict configs, SmartSim envelope, parametric per-attempt instance
+// generated from the SERVER-owned child key <questionId>::part::<partId>). The structure authority already admits on a child ONLY the common
+// part keys + its OWN type's config keys (exact keys, a foreign / unknown key withholds the whole composite), so this function never names a
+// domain: after the per-type projection it removes the private key and the legacy blank teacher fields structurally. A SmartSim part linked
+// to a shared context carries no envelope of its own (identity + text + marks only). sanitizePartForStudent (legacy compound) is untouched.
+const { compositeStructure, compositeChildNode, compositeChildKey, projectCompositeContextForStudent, isCompositeQuestionNode } = require("./shared-finalization/compositeQuestion");
+const COMPOSITE_CHILD_DROP_KEYS = ["answer", "hint", "teacherNote", "aiInstruction", "history", "redoStack", "presentationType", "textHtml", "assessmentMeta"];
+function applyCompositeProjection(out, source, ctx) {
+  if (!isCompositeQuestionNode(source)) return;
+  delete out.parts;                                                                                   // a composite never carries legacy parts
+  const st = compositeStructure(source);
+  if (!st.ok) { out.composite = { v: 1, status: "unavailable" }; return; }
+  const qkey = ctx && typeof ctx === "object" && typeof ctx.questionKey === "string" ? ctx.questionKey : null;
+  const generation = ctx && typeof ctx === "object" && ctx.generation && typeof ctx.generation === "object" ? ctx.generation : null;
+  const child = p => {
+    if (p.linkedSmartSim) return { id: p.id, ...(typeof p.raw.label === "string" ? { label: p.raw.label } : {}), type: p.type, ...(p.raw.questionTypeVersion !== undefined ? { questionTypeVersion: p.raw.questionTypeVersion } : {}), ...(typeof p.raw.text === "string" ? { text: p.raw.text } : {}), marks: p.marks, contextId: p.contextId };
+    const s = sanitizeQuestionForStudent(compositeChildNode(p.raw), generation && qkey ? { generation, questionKey: compositeChildKey(qkey, p.id) } : null);
+    const o = { ...s };
+    stripKeys(o, COMPOSITE_CHILD_DROP_KEYS);
+    for (const k of Object.keys(o)) if (o[k] === undefined) delete o[k];
+    o.type = p.type;
+    if (p.contextId !== undefined) o.contextId = p.contextId;
+    return o;
+  };
+  out.composite = {
+    v: 1,
+    contexts: st.model.contexts.map(projectCompositeContextForStudent),
+    groups: st.model.groups.map(g => ({ id: g.id, ...(g.title !== undefined ? { title: g.title } : {}), ...(g.instructions !== undefined ? { instructions: g.instructions } : {}), gradingPolicy: g.gradingPolicy, requiredAnswers: g.requiredAnswers, maxMarks: g.maxMarks, parts: g.parts.map(child) }))
+  };
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -322,6 +358,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   applyNetworkCliProjection(out);
   applyInlineClozeProjection(out);
   applyParametricProjection(out, question, ctx);
+  applyCompositeProjection(out, question, ctx);                                 // 20D: strict composite rebuild (after the generic deep strip)
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS, ...GRADING_SECRET_KEYS]);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);

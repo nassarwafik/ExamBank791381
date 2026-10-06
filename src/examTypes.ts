@@ -10,6 +10,7 @@ import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
 import type { ScenarioV1 } from "./scenarioSource";
 import type { ParametricNumericConfigV1 } from "./parametricNumericQuestion";
+import type { CompositeRootV1 } from "./compositeModel";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
 // Design contract: a builder object is ALREADY in the engine-native shape that PR #51's student
@@ -42,7 +43,7 @@ export type AnswerUnit = "question" | "part";
 export type BuilderQuestionType = ProductionQuestionTypeKey;
 
 // Part types = every catalog type whose capability contract says `compoundPart` (compound never nests).
-export type BuilderPartType = Exclude<BuilderQuestionType, "compound">;
+export type BuilderPartType = Exclude<BuilderQuestionType, "compound" | "composite">;
 
 export const BUILDER_QUESTION_TYPES: readonly BuilderQuestionType[] = Object.freeze(QUESTION_TYPE_CATALOG.map(d => d.key as BuilderQuestionType));
 export const BUILDER_PART_TYPES: readonly BuilderPartType[] = Object.freeze(compoundPartTypeKeys().filter(k => (BUILDER_QUESTION_TYPES as readonly string[]).includes(k)) as BuilderPartType[]);
@@ -165,6 +166,8 @@ export type BuilderQuestion = {
   tableHeaders?: string[];
   tableRows?: string[][];
   parts?: BuilderPart[];
+  // Phase 20D — composite@1: the type-owned root (contexts + groups of heterogeneous children). NEVER `parts` (legacy compound detection).
+  composite?: CompositeRootV1;
   groupId?: string; // links the question to a section stimulus
   image?: BuilderImage;
   images?: BuilderImageAsset[];

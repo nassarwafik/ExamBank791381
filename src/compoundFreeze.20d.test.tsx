@@ -14,8 +14,10 @@ import { parseStructuredExamJson } from "./structuredExamImport";
 import { validateStructuredExam } from "./examQuality";
 import { compoundPartTypeKeys, QUESTION_TYPE_CATALOG } from "./questionTypeCatalog";
 import { gradeExam, gradeQuestion, gradeFields } from "../api/src/lib/assignment-grading.js";
+// @ts-expect-error — the server module is CommonJS without (complete) type declarations; the pins need the REAL server helpers.
 import { questionMaxMarks as serverQuestionMaxMarks, examOfficialStats, selectGradedUnits as serverSelect, normalizeExamStructure as serverNormalize, isCompound as serverIsCompound, isResponseAnswered } from "../api/src/lib/exam-structure.js";
 import { sanitizeExamForStudent, sanitizePartForStudent } from "../api/src/lib/student-exam-sanitize.js";
+// @ts-expect-error — the server module is CommonJS without (complete) type declarations; the pins need the REAL server helpers.
 import { normalizeDraftAnswers } from "../api/src/lib/draft-answers.js";
 
 // Phase 20D — the compound@1 FREEZE. composite@1 is a NEW family; the legacy `compound` family (rendering, authoring, answers, grading,
@@ -113,8 +115,8 @@ describe("20D compound@1 FREEZE (PINS captured on caac213)", () => {
   });
 
   it("F-5 first-N unit selection (client mirror === server) on part-unit and question-unit sections", () => {
-    const sel = (norm: { sections: unknown[] }, select: (s: never, a: never) => { countedKeys: Set<string> }) => norm.sections.map(s => [...select(s as never, ANSWERS as never).countedKeys]);
-    const server = sel(serverNormalize(EXAM()), serverSelect as never), client = sel(clientNormalize(EXAM()), clientSelect as never);
+    const sel = (norm: unknown, select: (s: never, a: never) => { countedKeys: Set<string> }) => (norm as { sections: unknown[] }).sections.map(s => [...select(s as never, ANSWERS as never).countedKeys]);
+    const server = sel(serverNormalize(EXAM()), serverSelect as never), client = sel(clientNormalize(EXAM() as never), clientSelect as never);
     expect(client).toEqual(server);
     pin("firstN", digest(server));
   });

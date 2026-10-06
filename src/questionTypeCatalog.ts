@@ -62,6 +62,11 @@ const PRODUCTION_ROWS = [
   ["tableFill", "إكمال جدول", "structured", "auto", "acop", ["fields", "table"], true],
   ["cliFill", "أوامر CLI", "response", "auto", "acop", ["fields"], true],
   ["compound", "سؤال مركّب", "composite", "composed", "amhpo", ["compound"], true],
+  // Phase 20D — the ADVANCED composite family (composite@1), a NEW type beside the frozen legacy compound: groups of heterogeneous modern
+  // children (every Wave-1 / interactive family incl. coding, SmartSim, parametric, visual, open response), shared static sources and shared
+  // SmartSim contexts, group-level firstNAnswered, per-part manual / automatic grading. Its children live under the type-owned root
+  // `composite` (never `parts`, which is how legacy compound is detected); composite never nests (not a compound part, never its own child).
+  ["composite", "سؤال مركّب متقدّم", "composite", "composed", "amhpio", ["composite"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],

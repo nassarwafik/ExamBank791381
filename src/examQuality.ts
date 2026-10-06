@@ -14,6 +14,7 @@ import { codeStimulusIssues } from "./codeStimulus";
 import { scenarioSectionIssues } from "./scenarioSource";
 import { questionTypeDefinition } from "./questionTypeCatalog";
 import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
+import { validateCompositeQuestion, compositeStructure, compositeChildNode, isSupportedCompositeChild, COMPOSITE_CHILD_SEPARATOR } from "./compositeQuestion";
 
 export type Severity = "error" | "warning";
 export type StructuredIssue = {
@@ -80,6 +81,7 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
     });
   });
 
+  for (const x of compositeTargetKeyIssues(exam)) add("error", "COMPOSITE_TARGET_KEY_AMBIGUOUS", "معرّف السؤال «" + x.questionId + "» يحتوي الفاصل ::part::، وهو محجوز لهويات بنود الأسئلة المركّبة.", x);
   return issues;
 }
 
@@ -156,6 +158,8 @@ function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: Bui
   for (const i of codeStimulusIssues(q)) add("error", i.code, "سؤال " + disp + " في «" + sectionLabel + "»: " + i.message, where);
   if (q.presentationType === "compound") {
     validateCompound(q, disp, sectionLabel, where, add);
+  } else if (q.presentationType === "composite") {
+    validateComposite(q, disp, sectionLabel, where, add);
   } else {
     validateBody(q, q.presentationType, disp, where, add);
   }
@@ -294,6 +298,35 @@ function validateCompound(q: BuilderQuestion, disp: string, sectionLabel: string
   if (info.mismatch) {
     add("warning", "MARKS_MISMATCH", "مجموع علامات البنود (" + info.total + ") لا يساوي علامة السؤال المركّب " + disp + " (" + info.questionMarks + ").", where);
   }
+}
+
+// Phase 20D — composite@1: the identity seam (version, executable fields), then the ONE strict composite authority (structure, contexts,
+// sources, linked SmartSim keys, exact child identities, marks), then EVERY child body through the SAME validateBody a standalone question of
+// its type runs — never a second set of child rules. A linked SmartSim part has no body of its own (its envelope is the context's; its
+// private checks were validated against that envelope above). Every issue BLOCKS finalization; nothing is repaired.
+function validateComposite(q: BuilderQuestion, disp: string, sectionLabel: string, where: Where, add: Add): void {
+  const label = "السؤال المركّب " + disp + " في «" + sectionLabel + "»";
+  const typeIssues = validateQuestionTypeNode(q as unknown as Record<string, unknown>, "composite", q.questionTypeVersion);
+  for (const i of typeIssues) add(i.severity, i.code, label + ": " + i.message, where);
+  if (typeIssues.some(i => i.code === "UNKNOWN_QUESTION_TYPE" || i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION")) return;
+  for (const i of validateCompositeQuestion(q as unknown as Record<string, unknown>)) add("error", i.code, label + ": " + i.message, where);
+  const st = compositeStructure(q);
+  if (!st.ok) return;
+  for (const g of st.model.groups) for (const p of g.parts) {
+    if (p.linkedSmartSim || !isSupportedCompositeChild(p.type, p.raw.questionTypeVersion)) continue;
+    validateBody(compositeChildNode(p.raw) as unknown as QuestionBody, p.type as BuilderPartType, "البند " + p.label + " من " + disp, where, add);
+  }
+}
+
+// Phase 20D — exam-level: the composite child identity <questionId>::part::<partId> is the coding target / review / parametric key. In an
+// exam that contains a composite, no OTHER question id may contain the separator (a literal "x::part::y" id would make that key ambiguous).
+export function compositeTargetKeyIssues(exam: StructuredExam): { questionId: string; sectionId: string }[] {
+  const sections = Array.isArray(exam.sections) ? exam.sections : [];
+  const hasComposite = sections.some(s => (s.questions || []).some(q => q && q.presentationType === "composite"));
+  if (!hasComposite) return [];
+  const out: { questionId: string; sectionId: string }[] = [];
+  for (const s of sections) for (const q of s.questions || []) if (q && q.presentationType !== "composite" && typeof q.examQuestionId === "string" && q.examQuestionId.includes(COMPOSITE_CHILD_SEPARATOR)) out.push({ questionId: q.examQuestionId, sectionId: s.id });
+  return out;
 }
 
 export const hasBlockingErrors = (issues: StructuredIssue[]): boolean => issues.some(i => i.severity === "error");

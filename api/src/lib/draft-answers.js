@@ -67,87 +67,91 @@ const isLabelDiagramQuestion = q => !!q && typeof q === "object" && q.presentati
 const isSmartSim = a => !!a && typeof a === "object" && a.kind === "smartSim";
 const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "smartSim";
 
+// Phase 20D — the per-answer binding chain, extracted VERBATIM (same branch order, same results, same refusal codes) from the original
+// loop so a composite@1 child answer is bound by EXACTLY the binder a standalone question of its type uses. `reject(id, code)` records the
+// nested refusals the compound branch reports; `q` is the published question (undefined when unbound or unknown).
+function bindAnswer(id, a, q, bound, reject) {
+  if (a && typeof a === "object" && a.kind === "simulation") {
+    const r = normalizeSimulationState(a.state);
+    return r.ok ? { ok: true, answer: { kind: "simulation", state: r.state } } : { ok: false, code: r.code };
+  }
+  if (isCode(a)) return bound ? bindCodeAnswerToQuestion(a, q) : normalizeCodeAnswer(a);
+  if (isCodeTemplate(a) || (bound && isCodingV3Question(q))) return bound ? bindCodingTemplateAnswerToQuestion(a, q) : normalizeCodeTemplateAnswer(a);
+  if (isSmartSim(a) || (bound && isSmartSimQuestion(q))) return bound ? bindSmartSimAnswerToQuestion(a, q) : normalizeSmartSimAnswer(a);
+  if (isNetworkCli(a)) return bound ? bindNetworkCliAnswerToQuestion(a, q) : normalizeNetworkCliAnswer(a);
+  if (isHotspot(a) || (bound && isHotspotQuestion(q))) return bound ? (isHotspotQuestion(q) ? bindHotspotAnswerToQuestion(a, q) : { ok: false, code: "HOTSPOT_QUESTION_MISMATCH" }) : normalizeHotspotAnswer(a);
+  if (bound && isLabelDiagramQuestion(q)) return bindLabelDiagramAnswerToQuestion(a, q);
+  if (bound && isOpenResponseQuestion(q)) return bindOpenResponseAnswerToQuestion(a, q);
+  if (bound && isParametricQuestion(q)) return bindParametricNumericAnswer(a);
+  if (bound && isInlineClozeQuestion(q)) return bindInlineClozeAnswerToQuestion(a, q);
+  if (bound && a && typeof a === "object" && a.kind === "compound" && a.parts && typeof a.parts === "object" && !Array.isArray(a.parts)) {
+    const parts = {};
+    for (const pid of Object.keys(a.parts)) {
+      if (isCode(a.parts[pid])) { reject(id + "." + pid, "CODE_QUESTION_MISMATCH"); continue; }
+      if (isCodeTemplate(a.parts[pid])) { reject(id + "." + pid, "CODE_QUESTION_MISMATCH"); continue; }
+      if (isNetworkCli(a.parts[pid])) { reject(id + "." + pid, "NETCLI_QUESTION_MISMATCH"); continue; }
+      if (isSmartSim(a.parts[pid])) { reject(id + "." + pid, "SMARTSIM_QUESTION_MISMATCH"); continue; }
+      if (isHotspot(a.parts[pid])) { reject(id + "." + pid, "HOTSPOT_QUESTION_MISMATCH"); continue; }
+      parts[pid] = a.parts[pid];
+    }
+    return { ok: true, answer: { ...a, parts } };
+  }
+  return { ok: true, answer: a };
+}
+
+// Phase 20D — composite@1: the composite answer is only the CONTAINING authority. Bound to the published composite (the ONE strict
+// structure authority, shared build): exactly { kind: "composite", parts, contexts } survives (extra keys dropped); the serialized answer and
+// the Σ of shared-context actions are bounded; an unknown part / context id is removed and reported; a SmartSim part linked to a shared
+// context never carries an answer of its own; every child answer is bound by bindAnswer() against the child node — the SAME binder (and the
+// same refusal codes) a standalone question of that type uses; a shared context answer is REPLAYED against the context's envelope and stored
+// with the server-derived state. A refused child / context is dropped ALONE; a malformed composite answer, a broken published composite or
+// an oversized answer refuses the whole answer. Unbound (no exam) answers are shape / bounds checked only.
+const { compositeStructure, compositeChildNode, isCompositeQuestionNode, COMPOSITE_LIMITS } = require("./shared-finalization/compositeQuestion");
+const ownKeys = o => (o && typeof o === "object" && !Array.isArray(o) ? Object.keys(o) : null);
+function bindCompositeAnswer(id, a, q, bound, reject) {
+  if (!a || typeof a !== "object" || Array.isArray(a) || a.kind !== "composite") return { ok: false, code: "COMPOSITE_ANSWER_INVALID" };
+  const partIds = a.parts === undefined ? [] : ownKeys(a.parts), ctxIds = a.contexts === undefined ? [] : ownKeys(a.contexts);
+  if (!partIds || !ctxIds) return { ok: false, code: "COMPOSITE_ANSWER_INVALID" };
+  let bytes;
+  try { bytes = Buffer.byteLength(JSON.stringify({ parts: a.parts || {}, contexts: a.contexts || {} }), "utf8"); } catch { return { ok: false, code: "COMPOSITE_ANSWER_INVALID" }; }
+  if (bytes > COMPOSITE_LIMITS.answerBytes) return { ok: false, code: "COMPOSITE_ANSWER_TOO_LARGE" };
+  const actions = ctxIds.reduce((n, cid) => n + (a.contexts[cid] && Array.isArray(a.contexts[cid].actions) ? a.contexts[cid].actions.length : 0), 0);
+  if (actions > COMPOSITE_LIMITS.contextActions) return { ok: false, code: "COMPOSITE_ANSWER_TOO_LARGE" };
+  const st = bound ? compositeStructure(q) : null;
+  if (bound && !st.ok) return { ok: false, code: "COMPOSITE_QUESTION_INVALID" };
+  const parts = {}, contexts = {};
+  for (const pid of partIds) {
+    const value = a.parts[pid];
+    if (!bound) { const r = bindAnswer(id + "." + pid, value, undefined, false, reject); if (r.ok) parts[pid] = r.answer; else reject(id + "." + pid, r.code); continue; }
+    const part = st.model.partById.get(pid);
+    if (!part) { reject(id + "." + pid, "COMPOSITE_PART_UNKNOWN"); continue; }
+    if (part.linkedSmartSim) { reject(id + "." + pid, "COMPOSITE_PART_ANSWER_FORBIDDEN"); continue; }
+    const r = bindAnswer(id + "." + pid, value, compositeChildNode(part.raw), true, reject);
+    if (r.ok) parts[pid] = r.answer; else reject(id + "." + pid, r.code);
+  }
+  for (const cid of ctxIds) {
+    const value = a.contexts[cid];
+    if (!bound) { const r = normalizeSmartSimAnswer(value); if (r.ok) contexts[cid] = r.answer; else reject(id + "." + cid, r.code); continue; }
+    const ctx = st.model.contextById.get(cid);
+    if (!ctx || ctx.kind !== "smartSim") { reject(id + "." + cid, "COMPOSITE_CONTEXT_UNKNOWN"); continue; }
+    const r = bindSmartSimAnswerToQuestion(value, { presentationType: "smartSim", questionTypeVersion: 1, smartSim: ctx.envelope });
+    if (r.ok) contexts[cid] = r.answer; else reject(id + "." + cid, r.code);
+  }
+  return { ok: true, answer: { kind: "composite", parts, contexts } };
+}
+
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
 function normalizeDraftAnswers(answers, exam) {
   const out = {}, rejected = [];
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) return { answers: out, rejected };
   const bound = exam !== undefined, index = bound ? questionIndex(exam) : null;
+  const reject = (rid, code) => rejected.push({ id: rid, code });
   for (const id of Object.keys(answers)) {
-    const a = answers[id];
-    if (a && typeof a === "object" && a.kind === "simulation") {
-      const r = normalizeSimulationState(a.state);
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = { kind: "simulation", state: r.state };
-      continue;
-    }
-    if (isCode(a)) {
-      const r = bound ? bindCodeAnswerToQuestion(a, index.get(id)) : normalizeCodeAnswer(a);
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (isCodeTemplate(a) || (bound && isCodingV3Question(index.get(id)))) {
-      const r = bound ? bindCodingTemplateAnswerToQuestion(a, index.get(id)) : normalizeCodeTemplateAnswer(a);
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (isSmartSim(a) || (bound && isSmartSimQuestion(index.get(id)))) {
-      const r = bound ? bindSmartSimAnswerToQuestion(a, index.get(id)) : normalizeSmartSimAnswer(a);
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (isNetworkCli(a)) {
-      const r = bound ? bindNetworkCliAnswerToQuestion(a, index.get(id)) : normalizeNetworkCliAnswer(a);
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (isHotspot(a) || (bound && isHotspotQuestion(index.get(id)))) {
-      const r = bound ? (isHotspotQuestion(index.get(id)) ? bindHotspotAnswerToQuestion(a, index.get(id)) : { ok: false, code: "HOTSPOT_QUESTION_MISMATCH" }) : normalizeHotspotAnswer(a);
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (bound && isLabelDiagramQuestion(index.get(id))) {
-      const r = bindLabelDiagramAnswerToQuestion(a, index.get(id));
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (bound && isOpenResponseQuestion(index.get(id))) {
-      const r = bindOpenResponseAnswerToQuestion(a, index.get(id));
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (bound && isParametricQuestion(index.get(id))) {
-      const r = bindParametricNumericAnswer(a);
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (bound && isInlineClozeQuestion(index.get(id))) {
-      const r = bindInlineClozeAnswerToQuestion(a, index.get(id));
-      if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-      out[id] = r.answer;
-      continue;
-    }
-    if (bound && a && typeof a === "object" && a.kind === "compound" && a.parts && typeof a.parts === "object" && !Array.isArray(a.parts)) {
-      const parts = {};
-      for (const pid of Object.keys(a.parts)) {
-        if (isCode(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
-        if (isCodeTemplate(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "CODE_QUESTION_MISMATCH" }); continue; }
-        if (isNetworkCli(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "NETCLI_QUESTION_MISMATCH" }); continue; }
-        if (isSmartSim(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "SMARTSIM_QUESTION_MISMATCH" }); continue; }
-        if (isHotspot(a.parts[pid])) { rejected.push({ id: id + "." + pid, code: "HOTSPOT_QUESTION_MISMATCH" }); continue; }
-        parts[pid] = a.parts[pid];
-      }
-      out[id] = { ...a, parts };
-      continue;
-    }
-    out[id] = a;
+    const a = answers[id], q = bound ? index.get(id) : undefined;
+    const isComposite = (bound && isCompositeQuestionNode(q)) || (!bound && a && typeof a === "object" && a.kind === "composite");
+    const r = isComposite ? bindCompositeAnswer(id, a, q, bound, reject) : bindAnswer(id, a, q, bound, reject);
+    if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
+    out[id] = r.answer;
   }
   return { answers: out, rejected };
 }

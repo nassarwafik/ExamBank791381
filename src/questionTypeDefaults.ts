@@ -95,3 +95,8 @@ registerTypeDefaults("smartSim", 1, ensure => {
   ensure("smartSim", { schemaVersion: 1, pluginKey: "networkTopology", pluginVersion: 1, config: { v: 1, devices: [], links: [] } });
   ensure("answer", { scoring: "proportional", checks: [] });
 });
+// Phase 20D — composite@1: ONE "all" group holding ONE multiple-choice child (1 mark; the question mark of a new question is 1, so the mark
+// invariant holds from the start) and no shared context. Literal on purpose (initial graph); the enterprise editor (lazy) does the rest.
+registerTypeDefaults("composite", 1, (ensure, newId) => {
+  ensure("composite", { v: 1, contexts: [], groups: [{ id: newId("g"), title: "", gradingPolicy: "all", requiredAnswers: null, maxMarks: null, parts: [{ id: newId("p"), label: "أ", type: "multipleChoice", text: "", marks: 1, options: [{ text: "" }, { text: "" }], answer: { correctOptionIndex: 0 } }] }] });
+});

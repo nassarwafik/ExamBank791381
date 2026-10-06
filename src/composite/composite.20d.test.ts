@@ -6,6 +6,7 @@ import type { StructuredExam, BuilderQuestion } from "../examTypes";
 import { questionMaxMarks as clientQuestionMaxMarks } from "../examStructure";
 import { questionMaxMarks as builderQuestionMaxMarks, computeTotalMarks, cloneQuestionWithNewIds, duplicateQuestion, structuredExamCopy } from "../examBuilderState";
 import { answered } from "../answerState";
+// @ts-expect-error — the server module is CommonJS without (complete) type declarations; parity needs the REAL server helpers.
 import { questionMaxMarks as serverQuestionMaxMarks, examOfficialStats, isCompound as serverIsCompound } from "../../api/src/lib/exam-structure.js";
 import * as model from "../compositeQuestion";
 import { compositeArabicExam, compositePhysicsExam, compositeCsExam, compositeNetworkExam } from "./compositeFixtures";
@@ -55,7 +56,7 @@ describe("20D-2 the four acceptance fixtures are valid and finalizable", () => {
 describe("20D-3 strict contract — every violation blocks finalization (fail closed, never repaired)", () => {
   const cases: [string, (q: Q) => void, string][] = [
     ["unknown root key", q => { (q.composite as Record<string, unknown>).script = "x"; }, "COMPOSITE_UNKNOWN_KEY"],
-    ["schema v2", q => { q.composite.v = 2; }, "COMPOSITE_SCHEMA_UNSUPPORTED"],
+    ["schema v2", q => { (q.composite as { v: number }).v = 2; }, "COMPOSITE_SCHEMA_UNSUPPORTED"],
     ["missing composite root", q => { delete (q as Partial<Q>).composite; }, "COMPOSITE_MISSING"],
     ["question version 2", q => { q.questionTypeVersion = 2; }, "UNSUPPORTED_QUESTION_TYPE_VERSION"],
     ["question-level answer key", q => { q.answer = { correct: 1 }; }, "COMPOSITE_ANSWER_KEY_FORBIDDEN"],
@@ -97,7 +98,7 @@ describe("20D-3 strict contract — every violation blocks finalization (fail cl
 
   it("a child body runs the SAME validator as a standalone question of its type (missing MCQ key, invalid inline cloze key)", () => {
     expect(errors(withQ(q => { delete ((q.composite.groups[0].parts as Record<string, unknown>[])[0] as Record<string, unknown>).answer; }))).toContain("MISSING_ANSWER");
-    expect(errors(withQ(q => { (q.composite.groups[0].parts as Record<string, unknown>[])[3].answer = { scoring: "nope", blanks: {} }; })).some(c => c.startsWith("INLINE_CLOZE"))).toBe(true);
+    expect(errors(withQ(q => { (q.composite.groups[0].parts as Record<string, unknown>[])[3].answer = { scoring: "nope", blanks: {} }; })).some(c => c.startsWith("CLOZE_"))).toBe(true);
   });
   it("an exam containing a composite refuses any OTHER question id that contains the child separator (target-key ambiguity)", () => {
     const e = compositeArabicExam();
@@ -138,7 +139,7 @@ describe("20D-5 structural marks — answer-independent, client / builder / serv
     }
   });
   it("a malformed composite contributes its stored marks (never a guessed structural total)", () => {
-    const q = qOf(withQ(q => { q.composite.v = 9; }));
+    const q = qOf(withQ(q => { (q.composite as { v: number }).v = 9; }));
     expect(model.compositeOfficialMaxMarks(q as never)).toBeUndefined();
     expect(serverQuestionMaxMarks(q)).toBe(20); expect(clientQuestionMaxMarks(q as never)).toBe(20);
   });

@@ -137,7 +137,7 @@ describe("20D-C2 composite coding child — the full official lifecycle", () => 
     const rq = (await h.reviewGet()).jsonBody.questions[0];
     const c1 = rq.compositeReview.parts.find(p => p.partId === "c1");
     expect(c1.childKey).toBe(KEY);
-    expect(c1.codingEvidence).toMatchObject({ phase: "complete" });
+    expect(c1.codingEvidence).toMatchObject({ automaticStatus: "complete", resultCurrent: true, passedCount: 1, testCount: 2 });
     expect(JSON.stringify(rq)).not.toMatch(/"gradingKey"|"answerHash"|"questionFingerprint"|cg_[A-Za-z0-9]{20}/);
     const retry = await h.regrade({ action: "retry", assignmentId: F.AID, studentId: F.S1, attemptNumber: 1, questionId: KEY });
     expect(retry.status).toBe(409); expect(retry.jsonBody.code).toBe("ALREADY_COMPLETE");

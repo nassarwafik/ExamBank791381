@@ -18,6 +18,7 @@ import type {
 import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 import { applyRegisteredTypeDefaults, hasRegisteredTypeDefaults } from "./questionTypeDefaults";
 import { authoringQuestionTypeVersion, effectiveQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
+import { isCompositeQuestionNode, compositeQuestionMaxMarks, cloneCompositeWithNewIds } from "./compositeModel";
 
 // ── Identity ────────────────────────────────────────────────────────────────
 // Stable unique ids. crypto.randomUUID when available (browser / modern Node), else a random string.
@@ -261,6 +262,8 @@ export function cloneQuestionWithNewIds(q: BuilderQuestion): BuilderQuestion {
   copy.examQuestionId = genId("q");
   if (Array.isArray(copy.fields)) copy.fields = copy.fields.map(f => ({ ...f, id: genId("f") }));
   if (Array.isArray(copy.parts)) copy.parts = copy.parts.map(p => ({ ...p, id: genId("p"), fields: Array.isArray(p.fields) ? p.fields.map(f => ({ ...f, id: genId("f") })) : p.fields }));
+  // Phase 20D — composite@1: fresh group / part / context ids, part → context references remapped (never a stale reference to the original)
+  if (isCompositeQuestionNode(copy as unknown) && copy.composite !== undefined) copy.composite = cloneCompositeWithNewIds(copy.composite, genId) as BuilderQuestion["composite"];
   return copy;
 }
 
@@ -431,6 +434,7 @@ function distributePartMarks(q: BuilderQuestion): number[] {
 // mixed overflow (12 + unset, marks 10 → [12, 0] = 12) and a negative explicit part (-5 + 15 → 15)
 // both agree with the backend / grader / cover. Non-compound: max(0, marks).
 export function questionMaxMarks(q: BuilderQuestion): number {
+  if (isCompositeQuestionNode(q as unknown)) return compositeQuestionMaxMarks(q as unknown as Record<string, unknown>);   // 20D: the shared official authority
   const parts = q.parts || [];
   if (parts.length) return distributePartMarks(q).reduce((s, m) => s + Math.max(0, Number(m) || 0), 0);
   return Math.max(0, Number(q.marks) || 0);

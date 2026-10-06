@@ -18,7 +18,7 @@ import { compositeArabicExam, compositePhysicsExam, compositeCsExam, ARABIC_PASS
 afterEach(cleanup);
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (p: string) => fs.readFileSync(path.join(repo, p), "utf8");
-const studentQ = (e: { sections: { questions: unknown[] }[] }) => sanitizeExamForStudent(e).sections[0].questions[0] as Question;
+const studentQ = (e: unknown) => (sanitizeExamForStudent(e) as { sections: { questions: unknown[] }[] }).sections[0].questions[0] as Question;
 const settle = async (container: HTMLElement) => { for (let i = 0; i < 60; i++) { await act(async () => { await new Promise(r => setTimeout(r, 20)); }); if (!container.querySelector('[role="status"]')) break; } };
 const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
 

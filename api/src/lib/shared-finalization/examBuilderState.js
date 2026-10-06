@@ -50,6 +50,7 @@ exports.stripAnswersForPreview = stripAnswersForPreview;
 const examPreviewModel_1 = require("./examPreviewModel");
 const questionTypeDefaults_1 = require("./questionTypeDefaults");
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
+const compositeModel_1 = require("./compositeModel");
 function genId(prefix = "id") {
     const g = globalThis.crypto;
     if (g && typeof g.randomUUID === "function")
@@ -265,6 +266,8 @@ function cloneQuestionWithNewIds(q) {
         copy.fields = copy.fields.map(f => ({ ...f, id: genId("f") }));
     if (Array.isArray(copy.parts))
         copy.parts = copy.parts.map(p => ({ ...p, id: genId("p"), fields: Array.isArray(p.fields) ? p.fields.map(f => ({ ...f, id: genId("f") })) : p.fields }));
+    if ((0, compositeModel_1.isCompositeQuestionNode)(copy) && copy.composite !== undefined)
+        copy.composite = (0, compositeModel_1.cloneCompositeWithNewIds)(copy.composite, genId);
     return copy;
 }
 function updateQuestionParts(sections, sectionId, questionId, fn) {
@@ -407,6 +410,8 @@ function distributePartMarks(q) {
     return parts.map((p, i) => (hasMark[i] ? (Number(p.marks) || 0) : each));
 }
 function questionMaxMarks(q) {
+    if ((0, compositeModel_1.isCompositeQuestionNode)(q))
+        return (0, compositeModel_1.compositeQuestionMaxMarks)(q);
     const parts = q.parts || [];
     if (parts.length)
         return distributePartMarks(q).reduce((s, m) => s + Math.max(0, Number(m) || 0), 0);

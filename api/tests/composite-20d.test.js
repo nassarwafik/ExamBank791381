@@ -48,9 +48,11 @@ describe("20D-S1 official grading of a composite (ordinary children, first-N, ma
       expect(part(r, "q4", p.id).score, p.id).toBe(Number(standalone.score.toFixed(2)));
     }
   });
-  it("no answer at all: 0 with only the counted open-response marks pending; an unanswered firstN group counts nothing", () => {
+  it("no answer at all: 0; pending marks are exactly what each child's OWN grader leaves for review (open response 6 + the legacy field children 3 + 2, as standalone); an unanswered firstN group counts nothing", () => {
     const r = gradeExam(compositeArabicExam(), {});
-    expect([r.score, r.totalMarks, r.manualReviewMarks]).toEqual([0, 20, 6]);
+    expect([r.score, r.totalMarks, r.manualReviewMarks]).toEqual([0, 20, 11]);
+    for (const pid of ["pA2", "pA3"]) expect(part(r, "q4", pid).manualReview).toBe(gradeQuestion({ ...qOf(compositeArabicExam()).composite.groups[0].parts.find(p => p.id === pid), presentationType: pid === "pA2" ? "multiTrueFalse" : "matching" }, undefined).manualReview);
+    expect(["pB1", "pB2", "pB3"].map(pid => part(r, "q4", pid).countedMaxMarks)).toEqual([0, 0, 0]);
     expect(part(r, "q4", "pB1").ignored).toBe(false);
   });
   it("an unsupported child version (bypassing finalization) fails closed for THAT part only; a malformed composite fails closed as a whole", () => {
@@ -157,12 +159,17 @@ describe("20D-S3 parametric child identity — server-owned <questionId>::part::
 });
 
 describe("20D-S4 student projection — strict, rebuilt, no secret authority", () => {
-  const SECRET = /PRIVATE-GUIDANCE-20D|MODEL-ANSWER-20D|REFERENCE-SOLUTION-20D|HIDDEN-TITLE-20D|SUM=10|"correct"|"correctOptionIndex"|"correctOptionId"|"accepted"|"hiddenTests"|"checks"|"tolerance"|"guidance"|"modelAnswer"|"rubric"|"correctColumnByRow"|"correctCategoryByItem"|"expected"|"answer":\{"|teacherNote|assessmentMeta|"impact-time"/;
+  const SECRET = /PRIVATE-GUIDANCE-20D|MODEL-ANSWER-20D|REFERENCE-SOLUTION-20D|HIDDEN-TITLE-20D|SUM=10|"correct"|"correctOptionIndex"|"correctOptionId"|"accepted"|"hiddenTests"|"checks"|"tolerance"|"guidance"|"modelAnswer"|"rubric"|"correctColumnByRow"|"correctCategoryByItem"|"expected"|"answer":\{"|"impact-time"/;
   it("fixtures A–D: no answer key, check, hidden test, rubric guidance, model answer or teacher data anywhere in the delivered copy", () => {
     for (const f of [compositeArabicExam, compositePhysicsExam, compositeCsExam, compositeNetworkExam]) {
-      const e = f(); const p = qOf(e).composite.groups[0].parts[0]; p.teacherNote = "teacherNote"; p.assessmentMeta = { bloom: "x" };
-      const out = JSON.stringify(sanitizeExamForStudent(e, { parametric: GEN.parametric }));
+      const e = f(); const p = qOf(e).composite.groups[0].parts[0]; p.assessmentMeta = { bloom: "BLOOM-CANARY-20D" };
+      const delivered = sanitizeExamForStudent(e, { parametric: GEN.parametric });
+      expect(qOf(delivered).composite.groups, e.examId).toBeTruthy();                                // projected, not withheld
+      const out = JSON.stringify(delivered);
       expect(out, e.examId).not.toMatch(SECRET);
+      expect(out).not.toContain("BLOOM-CANARY-20D");
+      const t = f(); qOf(t).composite.groups[0].parts[0].teacherNote = "TEACHER-NOTE-CANARY-20D";   // a non-contract field ⇒ the whole composite is withheld
+      expect(qOf(sanitizeExamForStudent(t)).composite).toEqual({ v: 1, status: "unavailable" });
     }
   });
   it("shared static sources and the shared SmartSim envelope are projected ONCE on the context; linked SmartSim parts carry no envelope", () => {
@@ -203,7 +210,7 @@ describe("20D-S5 answer binding — every nested answer is bound to the PUBLISHE
   it("a child refused by its binder is dropped alone (over-long open response, wrong kind on inline cloze)", () => {
     const r = normalizeDraftAnswers({ q4: comp({ pC1: { kind: "text", value: "x".repeat(801) }, pA4: { kind: "choice", index: 0 }, pA1: { kind: "choice", index: 0 } }) }, E());
     expect(r.answers.q4.parts).toEqual({ pA1: { kind: "choice", index: 0 } });
-    expect(r.rejected).toEqual(expect.arrayContaining([{ id: "q4.pC1", code: "OPEN_RESPONSE_ANSWER_TOO_LONG" }, { id: "q4.pA4", code: expect.stringMatching(/^INLINE_CLOZE/) }]));
+    expect(r.rejected).toEqual(expect.arrayContaining([{ id: "q4.pC1", code: "OPEN_RESPONSE_ANSWER_TOO_LONG" }, { id: "q4.pA4", code: expect.stringMatching(/^CLOZE_/) }]));
   });
   it("the shared context answer is REPLAYED against the context envelope (derived state stored); a linked SmartSim part never carries its own answer", () => {
     const r = normalizeDraftAnswers({ phys1: comp({ s1: FF(GOOD_FF) }, { ctxSim: FF(GOOD_FF, { forged: true }) }) }, compositePhysicsExam());

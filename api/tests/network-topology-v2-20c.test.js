@@ -51,7 +51,7 @@ describe("20C-S1 — registration, shared build, pins", () => {
     }
   });
   it("PIN — the catalog stays 24, simulation@1 stays manual, networkTopology@1 still grades its exercise unchanged", async () => {
-    expect(loadShared("questionTypeCatalog").QUESTION_TYPE_CATALOG.length).toBe(24);
+    expect(loadShared("questionTypeCatalog").QUESTION_TYPE_CATALOG.length).toBe(25);   /* 20D adds composite (after compound) */
     expect(resolveGrader("simulation", 1)({}, { kind: "simulation", state: { score: 100 } }, 10)).toEqual({ score: 0, manualReview: true, correct: false });
     const v1 = await import("../../src/networkTopology/networkTopologyTemplates.ts");
     const node = { examQuestionId: "v1", presentationType: "smartSim", questionTypeVersion: 1, text: "v1", marks: 23, smartSim: { schemaVersion: 1, pluginKey: "networkTopology", pluginVersion: 1, config: v1.routerTwoSwitchesFourPcsTemplate() }, answer: { scoring: "proportional", checks: v1.twoLanDemoChecks() } };

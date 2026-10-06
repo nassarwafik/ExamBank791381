@@ -171,7 +171,7 @@ describe("18C — shared build parity and architecture guards", () => {
     }
     for (const f of ["api/src/lib/question-type-graders.js", "api/src/lib/draft-answers.js", "api/src/lib/student-exam-sanitize.js", "api/src/lib/exam-structure.js"]) expect(read(f), f).not.toMatch(/learning\/cli|child_process|\beval\s*\(|new Function/);
     const catalog = require_("../src/lib/shared-finalization/questionTypeCatalog.js");
-    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(24);                                         // 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
+    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(25);   /* 20D adds composite (after compound) */                                         // 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
     expect(catalog.questionTypeDefinition("networkCli")).toMatchObject({ version: 1, gradingMode: "auto", legacy: false, responseKinds: ["networkCli"] });
     expect(catalog.questionTypeDefinition("networkCli").capabilities).toMatchObject({ autoGrading: true, partialCredit: true, compoundPart: false, interactive: true, offline: true });
   });

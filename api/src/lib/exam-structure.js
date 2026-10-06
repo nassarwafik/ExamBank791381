@@ -12,6 +12,9 @@
 // NOTHING in this file mutates its input; every function is pure so it can be unit-tested directly.
 
 const GRADING_POLICIES = ["all", "capScore", "firstNAnswered"];
+// Phase 20D — composite@1 (the advanced composite family) keeps its children under the type-owned root `composite`, never `parts`, so every
+// legacy compound path below is untouched; its answer-independent official maximum and answered-ness come from the ONE shared authority.
+const { isCompositeQuestionNode, compositeQuestionMaxMarks, isCompositeAnswerAnswered } = require("./shared-finalization/compositeModel");
 
 // Stable identity helpers. These MUST match src/StudentQuestionCard.tsx's qid() and the front-end
 // mirror so a draft saved by the browser is keyed exactly the way the grader looks it up. Display
@@ -138,6 +141,9 @@ function isResponseAnswered(a) {
       return Array.isArray(a.actions) && a.actions.length > 0;
     // Phase 19F — a locked-template answer counts when at least one gap holds non-blank text (the locked text alone is never an
     // answer); mirror of answerState.ts and codingTemplate.isCodeTemplateAnswered.
+    // Phase 20D — a composite answer counts when some part or some shared context is answered (mirror of answerState.ts).
+    case "composite":
+      return isCompositeAnswerAnswered(a);
     case "codeTemplate":
       return !!a.values && typeof a.values === "object" && !Array.isArray(a.values) && Object.values(a.values).some(v => typeof v === "string" && v.trim() !== "");
     default:
@@ -231,6 +237,7 @@ function round2(n) {
 //    ALL explicitly marked is worth the SUM of the part marks even when that differs from the
 //    question's own top-level marks (e.g. parts 3+3+2 = 8 while question.marks = 10 → official 8).
 function questionMaxMarks(q) {
+  if (isCompositeQuestionNode(q)) return compositeQuestionMaxMarks(q);   // 20D: answer-independent official maximum (shared authority)
   if (isCompound(q)) {
     const pmarks = distributePartMarks(q);
     return pmarks.reduce((s, m) => s + Math.max(0, num(m, 0)), 0);

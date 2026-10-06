@@ -74,7 +74,7 @@ const answerOut = () => JSON.parse(screen.getByTestId("answer").textContent || "
 
 describe("catalog, palette and defaults", () => {
   it("22 types; hotspot@1 / labelDiagram@1 are appended with factual chips; renderers and editors exist for exactly version 1", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(24);
+    expect(QUESTION_TYPE_CATALOG.length).toBe(25);   /* 20D adds composite (after compound) */
     expect(QUESTION_TYPE_CATALOG.at(-4)!.key).toBe("hotspot"); expect(QUESTION_TYPE_CATALOG.at(-3)!.key).toBe("labelDiagram");
     for (const key of ["hotspot", "labelDiagram"]) {
       const d = questionTypeDefinition(key)!;
@@ -94,7 +94,7 @@ describe("catalog, palette and defaults", () => {
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q0", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(24);
+    expect(within(d).getAllByTestId("qt-card").length).toBe(25);   /* 20D adds composite */
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     const keys = within(d).getAllByTestId("qt-card").map(c => c.getAttribute("data-type-key"));
     expect(keys).toContain("hotspot"); expect(keys).toContain("labelDiagram");

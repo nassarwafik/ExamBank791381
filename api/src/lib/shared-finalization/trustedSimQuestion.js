@@ -10,6 +10,9 @@ exports.normalizeSmartSimAnswer = normalizeSmartSimAnswer;
 exports.replaySmartSimActions = replaySmartSimActions;
 exports.bindSmartSimAnswerToQuestion = bindSmartSimAnswerToQuestion;
 exports.evaluateSmartSim = evaluateSmartSim;
+exports.prepareSmartSimEvaluation = prepareSmartSimEvaluation;
+exports.describePreparedSmartSim = describePreparedSmartSim;
+exports.evaluatePreparedSmartSimChecks = evaluatePreparedSmartSimChecks;
 exports.scoreSmartSim = scoreSmartSim;
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const trustedSimRegistry_1 = require("./trustedSimRegistry");
@@ -231,9 +234,49 @@ exports.isSmartSimAnswerAnswered = isSmartSimAnswerAnswered;
 exports.SMART_SIM_FAIL_CLOSED = Object.freeze({ score: 0, correct: false, manualReview: true, parts: Object.freeze({ correct: 0, total: 0 }) });
 const str = (v) => (typeof v === "string" ? v : String(v));
 function evaluateSmartSim(input, options = {}) {
+    return evaluatePreparedSmartSimChecks(prepareSmartSimEvaluation({ envelope: input.envelope, response: input.response }), { answerKey: input.answerKey, maxMarks: input.maxMarks }, options);
+}
+const PREPARED = new WeakMap();
+function prepareSmartSimEvaluation(input) {
+    const env = validateSmartSimEnvelope(input.envelope);
+    let replay = { ok: false };
+    if (env.ok) {
+        const base = normalizeSmartSimAnswer(input.response);
+        if (base.ok && base.answer.pluginKey === env.envelope.pluginKey && base.answer.pluginVersion === env.envelope.pluginVersion) {
+            const r = replaySmartSimActions(env.plugin, env.envelope.config, base.answer.actions);
+            if (r.ok)
+                replay = { ok: true, actions: r.actions, state: r.state };
+        }
+    }
+    const handle = Object.freeze({ envelopeOk: env.ok });
+    PREPARED.set(handle, { envelope: env, replay });
+    return handle;
+}
+function describePreparedSmartSim(prepared) {
+    const p = prepared && typeof prepared === "object" ? PREPARED.get(prepared) : undefined;
+    if (!p)
+        return { valid: false, answered: false, issues: [issue("SMARTSIM_PREPARED_INVALID", "تعذّر تقييم المحاكاة؛ بحاجة إلى تصحيح يدوي.")] };
+    if (!p.envelope.ok)
+        return { valid: false, answered: false, issues: p.envelope.issues };
+    if (!p.replay.ok)
+        return { valid: true, answered: false };
+    const out = { valid: true, answered: p.replay.actions.length > 0, state: p.replay.state };
+    const plugin = p.envelope.plugin;
+    if (plugin.reviewDetails) {
+        try {
+            out.details = plugin.reviewDetails(p.replay.actions, p.envelope.envelope.config);
+        }
+        catch { }
+    }
+    return out;
+}
+function evaluatePreparedSmartSimChecks(prepared, input, options = {}) {
     const max = Number.isFinite(input.maxMarks) ? Math.max(0, input.maxMarks) : 0;
     const closed = (issues) => ({ ...exports.SMART_SIM_FAIL_CLOSED, parts: { correct: 0, total: 0 }, valid: false, maxMarks: max, totalWeight: 0, passedWeight: 0, checks: [], issues });
-    const env = validateSmartSimEnvelope(input.envelope);
+    const p = prepared && typeof prepared === "object" ? PREPARED.get(prepared) : undefined;
+    if (!p)
+        return closed([issue("SMARTSIM_PREPARED_INVALID", "تعذّر تقييم المحاكاة؛ بحاجة إلى تصحيح يدوي.")]);
+    const env = p.envelope;
     if (!env.ok)
         return closed(env.issues);
     const key = validateSmartSimAnswerKey(input.answerKey, env.plugin, env.envelope.config);
@@ -241,12 +284,9 @@ function evaluateSmartSim(input, options = {}) {
         return closed(key.issues);
     const total = key.key.checks.length;
     const zero = () => ({ score: 0, correct: false, manualReview: false, parts: { correct: 0, total }, valid: true, maxMarks: max, totalWeight: key.key.totalWeight, passedWeight: 0, checks: [] });
-    const base = normalizeSmartSimAnswer(input.response);
-    if (!base.ok || base.answer.pluginKey !== env.envelope.pluginKey || base.answer.pluginVersion !== env.envelope.pluginVersion)
+    if (!p.replay.ok)
         return zero();
-    const replay = replaySmartSimActions(env.plugin, env.envelope.config, base.answer.actions);
-    if (!replay.ok)
-        return zero();
+    const replay = p.replay;
     const checks = [];
     let passedWeight = 0;
     try {
