@@ -140,6 +140,11 @@ describe("20C-ML — L3 edge cases", () => {
     const r = run(c, [ip("pc1", "10.0.0.1", "255.255.255.0", "10.0.0.250"), ...sw("sw1", ...CONF, "vlan 10", "interface vlan 1", "ip address 10.0.0.250 255.255.255.0", "no shutdown", "interface vlan 10", "ip address 10.10.0.250 255.255.255.0", "no shutdown", "end"), ...host("pc1", "ping 10.10.0.250")]);
     expect(text(r, "pc1")).toMatch(/Received = 0/);
     expect(reach(c, r, "pc1", "sw1")).toMatchObject({ reachable: true });                                 // its own VLAN's SVI answers
+    // a host in VLAN 10 using the VLAN 10 SVI as its gateway: the L2 switch never routes between the two VLANs
+    const c2 = cfg([dev("sw1", "switch"), dev("pc1", "pc"), dev("pc2", "pc")], [link("a", "sw1", "f0/1", "pc1", "eth0"), link("b", "sw1", "f0/2", "pc2", "eth0")]);
+    const r2 = run(c2, [ip("pc1", "10.0.0.1", "255.255.255.0", "10.0.0.250"), ip("pc2", "10.10.0.2", "255.255.255.0", "10.10.0.250"),
+      ...sw("sw1", ...CONF, "vlan 10", "interface f0/2", "switchport mode access", "switchport access vlan 10", "interface vlan 1", "ip address 10.0.0.250 255.255.255.0", "no shutdown", "interface vlan 10", "ip address 10.10.0.250 255.255.255.0", "no shutdown", "end")]);
+    expect(reach(c2, r2, "pc1", "pc2")).toMatchObject({ reachable: false, reason: "GATEWAY_NOT_ROUTER" });
   });
   it("the reply leg is real: a destination whose own mask puts the source off-subnet (no gateway) never answers", () => {
     const r = run(LAN(), [ip("pc1", "10.0.0.5"), ip("pc2", "10.0.0.2", "255.255.255.252"), ...host("pc1", "ping 10.0.0.2")]);
