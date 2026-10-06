@@ -241,6 +241,18 @@ An independent internal reviewer (fresh context, read-only worktree at `127c0b2`
 `expected { partId: 'pC1', … } to match object { score: 0, manualReview: true }` and
 `TypeError: Cannot read properties of undefined (reading 'trim')`. On the fix commit: **10 / 10 passed**.
 
+**Re-review of `095d59b`: CLEAN** (F1 / F2 / F3 / N1 verified fixed; 32 legitimate child answer variants across 23 child families bind
+byte-identically inside a composite and standalone). It reported one MINOR over-refusal and three NOTEs, all failing closed:
+
+| Finding | Severity | Resolution |
+|---|---|---|
+| R1 | MINOR | the client effective-id mirror ignored the server's `section-<n>` id for an id-less section → fixed in Review Fix 2 (`10d949a`) |
+| R2 | NOTE | an empty `examQuestionId` was treated as present → fixed in Review Fix 2 (absent, as `sectionQuestionId` does) |
+| R3 | NOTE | a well-formed answer of another kind on a child (e.g. text on an MC child) is kept and grades 0 — the SAME as a top-level question (parity, only the sender is affected); kept |
+| B1 | NOTE | a forged `composite` answer on a non-composite question is now dropped (`COMPOSITE_QUESTION_MISMATCH`) — intended hardening |
+
+Review Fix 2 fail-first: the `20D-RF2` cases ran **2 failed / 1 passed** (guard) on the `095d59b` code; **13 / 13** on `10d949a`.
+
 Notes kept as documented behaviour: N2 — every SmartSim plugin's `evaluateCheck` / rule view is pure (a plugin contract since 20A); the
 prepared state is shared read-only by the linked parts of one context. N3 — after a part override the rebuild counts pending marks the
 same way the top-level rebuild does (parity, unchanged).
@@ -257,18 +269,19 @@ the TypeScript source when the killing suite is a client suite, and in the gener
 | broad re-run (wider existing suites for the shared seams) | 8 | 1 | 7 | 0 |
 | 2 (after the hardening tests + 9 Review-Fix mutants R001–R009) | 36 | 30 | 6 (4 equivalent) | 0 |
 | 3 | 2 | 2 | 0 | 0 |
-| **Final** | **154** | **150** | **0 non-equivalent** | **0** |
+| Review Fix 2 (R010, R011) | 2 | 2 | 0 | 0 |
+| **Final** | **156** | **152** | **0 non-equivalent** | **0** |
 
 Every round-1 survivor was a missing assertion, not a product defect; each got a focused test (commits `9505526`, `e14d7df`) that was
 proven to kill it. The four EQUIVALENT mutants and their proofs are in the appendix (U013 catalog-owned version resolution; U021 / U023
 the server invariant "ignored ⇒ countedMaxMarks 0"; U032 `Math.min(0, …)` adds nothing).
 
-## 18. Validation evidence (head `fdf6b81`)
+## 18. Validation evidence (head `10d949a`)
 
 | Check | Result |
 |---|---|
-| `npm test` (root: app + API + scripts) | 715 files, **9354 / 9354 passed** |
-| 20D suites | freeze 12, model 62, SmartSim 16, server 28, coding 10, acceptance 11, hardening 14, review fix 10, student / editor UI 15 + 7, review UI 5 — **190 / 190** |
+| `npm test` (root: app + API + scripts) | 715 files, **9357 / 9357 passed** |
+| 20D suites | freeze 12, model 62, SmartSim 16, server 28, coding 10, acceptance 11, hardening 14, review fix 13, student / editor UI 15 + 7, review UI 5 — **193 / 193** |
 | `npm run lint` | 0 errors; no warning in a 20D file (the two on `AssignmentReview.tsx:99` pre-exist on `caac213`) |
 | `npx tsc -b` | clean |
 | `npm run build` + bundle guard | initial JS graph **123.3 KB gzip (budget 125 KB, unchanged)**; every composite chunk lazy |
@@ -404,6 +417,8 @@ timing-sensitive `src/GovernancePanel.14b.test.tsx` (AGENTS.md §12) once; it wa
 | R007 | `src/examQuality.ts` | RF1: composite effective id not validated | KILLED | api/tests/composite-review-fix-20d.test.js |
 | R008 | `src/compositeQuestion.ts` | RF1: every data:-prefixed string exempt from the 1 MB bound | KILLED | api/tests/composite-review-fix-20d.test.js |
 | R009 | `api/src/lib/draft-answers.js` | RF1: choice index shape not checked | KILLED | api/tests/composite-review-fix-20d.test.js |
+| R010 | `src/examQuality.ts` | RF2: id-less section not mirrored as section-<n> | KILLED | api/tests/composite-review-fix-20d.test.js |
+| R011 | `src/compositeQuestion.ts` | RF2: empty examQuestionId treated as present | KILLED | api/tests/composite-review-fix-20d.test.js |
 | U001 | `src/questionTypes/student/CompositeResponse.tsx` | malformed root rendered (no fail-closed note) | KILLED | src/questionTypes/composite.20d.test.tsx |
 | U002 | `src/questionTypes/student/CompositeResponse.tsx` | registered child renderer receives the bare part id (not the child key) | KILLED | src/questionTypes/composite.20d.test.tsx |
 | U003 | `src/questionTypes/student/CompositeResponse.tsx` | excess first-N part not marked | KILLED | src/questionTypes/composite.20d.test.tsx |
