@@ -429,7 +429,7 @@ function PartEditor({ part: p, group: g, index, count, label, ops, disabled, con
       </div>
       <textarea className="sb-input sb-textarea sb-part-text" aria-label={"نص " + name} value={str(p.text)} placeholder="نص البند" onChange={e => ops.patchPart(p.id, x => ({ ...x, text: e.target.value }))} disabled={disabled} />
       {type === "parametricNumeric"
-        ? (p.richContent !== undefined && <p className="sb-hint sb-warn-text" role="note">بند القالب العددي لا يقبل محتوى منسقًا؛ سيُتجاهل المحتوى المنسق لهذا البند. <button type="button" className="sb-mini-btn" onClick={() => ops.patchPart(p.id, x => mergePatch(x, { richContent: undefined }))} disabled={disabled}>{"إزالة المحتوى المنسق من " + name}</button></p>)
+        ? (p.richContent !== undefined && <p className="sb-hint sb-warn-text" role="note">بند القالب العددي لا يقبل محتوى منسقًا (القالب يُولَّد من النص)؛ أزله قبل الاعتماد. <button type="button" className="sb-mini-btn" onClick={() => ops.patchPart(p.id, x => mergePatch(x, { richContent: undefined }))} disabled={disabled}>{"إزالة المحتوى المنسق من " + name}</button></p>)
         : (
           <div className="rc-host">
             <div className="rc-host-actions">

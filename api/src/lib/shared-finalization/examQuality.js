@@ -127,10 +127,10 @@ function validateSection(section, label, add) {
 function validateQuestion(q, sectionLabel, section, add) {
     const where = { sectionId: section.id, questionId: q.examQuestionId };
     const disp = q.displayNumber ? "«" + q.displayNumber + "»" : "";
-    const richStem = q.richContent;
-    const hasRichStem = richStem !== undefined && (0, richContentModel_1.validateRichContent)(richStem).ok && (0, richContentModel_1.richContentPlainText)(richStem).trim() !== "";
-    if ((!q.text || !q.text.trim()) && q.presentationType !== "compound" && !hasRichStem) {
-        add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص.", where);
+    if ((!q.text || !q.text.trim()) && q.presentationType !== "compound") {
+        const richStem = q.richContent;
+        const hasRichStem = richStem !== undefined && (0, richContentModel_1.validateRichContent)(richStem).ok && (0, richContentModel_1.richContentPlainText)(richStem).trim() !== "";
+        add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص." + (hasRichStem ? " للسؤال محتوى منسق: استخدم «استخدام نص المحتوى كنص بديل» ليبقى نص عادي تقرؤه صفحات التصحيح والمراجعة." : ""), where);
     }
     validatePresentationFields(q, String(q.presentationType ?? ""), "سؤال " + disp + " في «" + sectionLabel + "»", where, add, true);
     if (!Number.isFinite(num(q.marks)) || num(q.marks) <= 0) {
@@ -304,7 +304,7 @@ function validateCompound(q, disp, sectionLabel, where, add) {
 }
 function validatePresentationFields(node, type, label, where, add, topLevel) {
     if (node.richContent !== undefined) {
-        if (type === "parametricNumeric")
+        if (type === "parametricNumeric" || "parametric" in node)
             add("error", "PARAMETRIC_RICH_CONTENT_FORBIDDEN", label + ": السؤال المولّد بمعاملات لا يقبل محتوى منسقًا (القالب يُولَّد من النص).", where);
         else
             for (const i of (0, richContentModel_1.validateRichContent)(node.richContent).issues)

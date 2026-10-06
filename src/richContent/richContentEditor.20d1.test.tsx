@@ -97,14 +97,15 @@ describe("20D1-MD markdownToRichContent — blocks", () => {
     expect(bad.warningCodes).toContain("MARKDOWN_MATH_REFUSED");
     expect(errorsOf(bad.value)).toEqual([]);
   });
-  it("GitHub alerts become callouts, nested lists are flattened, loose lists stay one list, prose that looks like markup is neutralized", () => {
+  it("GitHub alerts become callouts, nested lists are flattened, loose lists stay one list, math prose with '<' stays literal (review fix 1: no full-width rewrite)", () => {
     const r = md("> [!WARNING]\n> انتبه للجهد\n\n- أ\n  - أ1\n\n- ب\n\nإذا كان x < a فإن …");
     expect(r.ok).toBe(true);
     expect(errorsOf(r.value)).toEqual([]);
     expect(r.value!.blocks[0]).toEqual({ type: "callout", variant: "warning", runs: [{ text: "انتبه للجهد" }] });
     expect((r.value!.blocks[1] as { items: unknown[] }).items).toHaveLength(3);
-    expect(runsOf(r.value!.blocks[2])[0].text).toContain("x ＜ a");
-    expect(r.warningCodes).toEqual(expect.arrayContaining(["MARKDOWN_NESTED_LIST", "MARKDOWN_TEXT_ADJUSTED"]));
+    expect(runsOf(r.value!.blocks[2])[0].text).toContain("x < a");
+    expect(r.warningCodes).toEqual(expect.arrayContaining(["MARKDOWN_NESTED_LIST"]));
+    expect(r.warningCodes).not.toContain("MARKDOWN_TEXT_ADJUSTED");
   });
   it("respects RICH_LIMITS: block count, table columns, list items (split, never lost), empty input", () => {
     const many = md(Array.from({ length: 260 }, (_, i) => "فقرة " + i).join("\n\n"));

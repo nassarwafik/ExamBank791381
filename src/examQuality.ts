@@ -160,11 +160,12 @@ function validateSection(section: BuilderSection, label: string, add: Add): void
 function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: BuilderSection, add: Add): void {
   const where: Where = { sectionId: section.id, questionId: q.examQuestionId };
   const disp = q.displayNumber ? "«" + q.displayNumber + "»" : "";
-  // Phase 20D.1 — a VALID rich stem with readable text is the question's content (plain `text` is then only the fallback / search text).
-  const richStem = (q as unknown as Record<string, unknown>).richContent;
-  const hasRichStem = richStem !== undefined && validateRichContent(richStem).ok && richContentPlainText(richStem).trim() !== "";
-  if ((!q.text || !q.text.trim()) && q.presentationType !== "compound" && !hasRichStem) {
-    add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص.", where);
+  // Phase 20D.1 (review fix 1) — the plain `text` stays REQUIRED even with a rich stem: teacher grading / review, item analysis,
+  // revisions, training review, search and AI requests read `text`; a rich stem replaces only the student's visual stem.
+  if ((!q.text || !q.text.trim()) && q.presentationType !== "compound") {
+    const richStem = (q as unknown as Record<string, unknown>).richContent;
+    const hasRichStem = richStem !== undefined && validateRichContent(richStem).ok && richContentPlainText(richStem).trim() !== "";
+    add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص." + (hasRichStem ? " للسؤال محتوى منسق: استخدم «استخدام نص المحتوى كنص بديل» ليبقى نص عادي تقرؤه صفحات التصحيح والمراجعة." : ""), where);
   }
   validatePresentationFields(q as unknown as Record<string, unknown>, String(q.presentationType ?? ""), "سؤال " + disp + " في «" + sectionLabel + "»", where, add, true);
   if (!Number.isFinite(num(q.marks)) || num(q.marks) <= 0) {
@@ -322,7 +323,7 @@ function validateCompound(q: BuilderQuestion, disp: string, sectionLabel: string
 // A parametric stem never carries rich content: the generated instance replaces `text`, so a rich twin would leak the {{id}} template.
 function validatePresentationFields(node: Record<string, unknown>, type: string, label: string, where: Where, add: Add, topLevel: boolean): void {
   if (node.richContent !== undefined) {
-    if (type === "parametricNumeric") add("error", "PARAMETRIC_RICH_CONTENT_FORBIDDEN", label + ": السؤال المولّد بمعاملات لا يقبل محتوى منسقًا (القالب يُولَّد من النص).", where);
+    if (type === "parametricNumeric" || "parametric" in node) add("error", "PARAMETRIC_RICH_CONTENT_FORBIDDEN", label + ": السؤال المولّد بمعاملات لا يقبل محتوى منسقًا (القالب يُولَّد من النص).", where);
     else for (const i of validateRichContent(node.richContent).issues) add("error", i.code, label + " — المحتوى المنسق: " + i.message, where);
   }
   if (topLevel && node.presentation !== undefined) for (const i of validateQuestionPresentation(node.presentation).issues) add("error", i.code, label + " — إعدادات العرض: " + i.message, where);

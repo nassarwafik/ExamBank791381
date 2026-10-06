@@ -195,6 +195,8 @@ function parseMath(source) {
         return fail("قوس غير مسموح بعد \\left أو \\right.");
     };
     const atom = (depth) => {
+        if (depth > exports.MATH_LIMITS.depth)
+            fail("الصيغة الرياضية متداخلة أكثر من الحد المسموح.");
         const t = peek();
         if (!t)
             return fail("الصيغة الرياضية ناقصة.");

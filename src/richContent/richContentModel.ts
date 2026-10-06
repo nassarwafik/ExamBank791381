@@ -50,7 +50,11 @@ const BLOCK_KEYS: Readonly<Record<RichBlockType, readonly string[]>> = Object.fr
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 // Policy: rich PROSE never carries markup or script URLs. Rendering is text-only anyway (React text nodes); this is the authoring /
 // import refusal the contract promises ("no raw HTML is accepted"). Code / CLI sources are exempt (they are displayed verbatim as code).
-const RAW_HTML = /<\s*\/?\s*(script|style|iframe|object|embed|svg|math|link|meta|img|a|div|span|p|table|tbody|thead|tr|td|th|html|head|body|form|input|button|textarea|select|base|frame|frameset|template|noscript|br|hr|h[1-6]|ul|ol|li|video|audio|source|picture|canvas)\b[^>]*>?|<!--|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/i;
+// Linear by construction (independent review fix 1): no whitespace run between "<" and the name (HTML tokenizers never treat "< a" as a
+// tag, and the old `<\s*\/?\s*` split was quadratic on "<" + spaces). Dangerous elements are refused on their opening token alone;
+// common structural names only as a complete `<…>` tag whose body cannot contain "<" (so "x<a.length" / "0 < a < 1" stay prose and
+// every scan stops at the next "<").
+const RAW_HTML = /<\/?(script|style|iframe|object|embed|svg|math|link|meta|img|form|input|button|textarea|select|base|frame|frameset|template|noscript|html|head|body|video|audio|source|picture|canvas)\b|<\/?(a|div|span|p|table|tbody|thead|tr|td|th|br|hr|h[1-6]|ul|ol|li)\b[^<>]*>|<!--|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/i;
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 

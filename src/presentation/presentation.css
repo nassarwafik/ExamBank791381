@@ -22,7 +22,9 @@
 .exam-presentation[data-xp-width="narrow"] .iex-wrap{ width:min(var(--eb-container-reading),100%); }
 .exam-presentation[data-xp-width="wide"] .iex-wrap{ width:min(var(--eb-container),100%); }
 .exam-presentation[data-xp-width="full"] .iex-wrap{ width:100%; }
-.exam-presentation[data-xp-sticky="false"] .iex-topbar{ position:static; }
+/* direction:ltr applies to the CONTENT only — the lifecycle chrome (top bar, timer, exit, bottom navigation, submit) keeps the page's rtl
+   layout so a vocabulary value can never relocate it (review fix 1). */
+.exam-presentation[data-xp-direction="ltr"] :is(.iex-q,.xp-section-header,.iex-section-context,.iex-cover-card,.iex-general-instructions,.xp-rich){ direction:ltr; }
 .exam-presentation .iex-flow{ gap:calc(var(--eb-space-3) * var(--xp-q-gap)); }
 .exam-presentation .xp-section + .xp-section{ margin-block-start:calc(var(--eb-space-4) * var(--xp-section-gap)); }
 
@@ -31,7 +33,7 @@
 .exam-presentation[data-xp-exam-header="banded"] :is(.iex-topbar,.iex-cover-card){ border-block-end:3px solid var(--xp-primary); }
 .exam-presentation[data-xp-exam-header="minimal"] .iex-topbar{ box-shadow:none; }
 .exam-presentation[data-xp-navigation="modern"] .iex-bottom-nav .eb-button{ border-radius:999px; }
-.exam-presentation[data-xp-navigation="minimal"] .iex-bottom-nav{ box-shadow:none; background:transparent; }
+.exam-presentation[data-xp-navigation="minimal"] .iex-bottom-nav{ box-shadow:none; background:var(--xp-surface); }   /* sticky chrome stays opaque (review fix 1) */
 
 /* section header (shared shell) */
 .exam-presentation .xp-section-header{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:var(--eb-space-2) var(--eb-space-4); padding-block:var(--eb-space-2); }

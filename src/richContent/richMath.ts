@@ -138,6 +138,8 @@ export function parseMath(source: unknown): MathParse {
     return fail("قوس غير مسموح بعد \\left أو \\right.");
   };
   const atom = (depth: number): MathNode => {
+    // unbraced command arguments (\vec \vec x, \sqrt \sqrt 2) recurse through arg → atom, not row: bound them too (review fix 1)
+    if (depth > MATH_LIMITS.depth) fail("الصيغة الرياضية متداخلة أكثر من الحد المسموح.");
     const t = peek();
     if (!t) return fail("الصيغة الرياضية ناقصة.");
     pos++;

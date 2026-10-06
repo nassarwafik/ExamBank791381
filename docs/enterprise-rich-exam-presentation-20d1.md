@@ -18,7 +18,8 @@ acceptance suite). They are data in a closed vocabulary; the only code that turn
 
 Raw HTML or CSS of any kind: `<style>`, `<script>`, `iframe`, `object`, `embed`, SVG source, event handlers, `javascript:` /
 `vbscript:` / `data:text/html`, external stylesheet / font / image URLs, selectors, class / component / module names, `url(...)`,
-`expression(...)`, CSS variables or free-form CSS values. Colours are strict `#RRGGBB` (or `#RGB`, normalized). Every other value
+`expression(...)`, CSS variables or free-form CSS values. Stored colours are strict `#RRGGBB` (`#RGB` is refused; authoring UIs expand it before
+writing). Every other value
 is a word from the frozen vocabulary (`PRESENTATION_VOCABULARY`). Unknown keys, unknown versions and prototype keys
 (`__proto__`, `constructor`, `prototype`) are refused, never ignored. No exam data ever reaches `dangerouslySetInnerHTML`,
 `innerHTML`, `eval` or `new Function` (source guard in `richContentRenderer.20d1.test.tsx`).
@@ -33,8 +34,8 @@ is a word from the frozen vocabulary (`PRESENTATION_VOCABULARY`). Unknown keys, 
              typography?: { family: systemArabic|systemSans|academicSerif|developerMono, scale: compact|normal|comfortable|large,
                             lineHeight: tight|normal|relaxed, questionWeight: regular|medium|bold },
              spacing?: compact|normal|comfortable|spacious, radius?: none|sm|md|lg|xl, shadow?: none|subtle|medium|strong },
-  layout?: { pageWidth: narrow|normal|wide|full, questionSpacing, sectionSpacing: compact|normal|large, stickyTopBar: boolean,
-             scenarioPlacement: inline|responsiveSide },
+  layout?: { pageWidth: narrow|normal|wide|full, questionSpacing, sectionSpacing: compact|normal|large,
+             scenarioPlacement: inline|responsiveSide },   // no top-bar control: lifecycle chrome is code-owned
   components?: { <slot>: { variant } },          // slots and variants below
   questionTypeVariants?: { <catalog type key>: standard|writingPaper|developerWorkspace|laboratory|networkWorkspace|storyWorkspace|visualWorkspace },
   motion?: { level: none|subtle }, print?: { mode: academic|compact } }
@@ -105,8 +106,10 @@ No macros, no `\def`, `\href`, `\url`, `\style`, `\class`, `\html`. The lazy ren
 `SOURCE_RICH_INVALID`; the four legacy kinds are unchanged). Not on frozen `compound@1` parts.
 
 **Rendering precedence.** A valid `richContent` replaces the visual stem (same `iex-qtext-<id>` id, so `aria-describedby` keeps
-working); `q.text` stays the plain fallback / search / accessibility text and renders exactly as on the baseline when rich content
-is absent or invalid. The legacy pipe-table parser still derives tableFill answer UIs from `q.text`.
+working); `q.text` stays **required** (`EMPTY_TEXT` blocks finalization even with a rich stem — teacher grading / review, item
+analysis, revisions, training review, search and AI requests read it) and renders exactly as on the baseline when rich content is
+absent or invalid. A node generated per attempt (`parametricNumeric`, or any node carrying a `parametric` config) never shows a rich
+stem (finalization blocker, server projection and client renderer all use the same predicate). The legacy pipe-table parser still derives tableFill answer UIs from `q.text`.
 
 ## 5. Runtime (student and preview are the same code)
 
@@ -121,14 +124,17 @@ is absent or invalid. The legacy pipe-table parser still derives tableFill answe
 
 `StudentExamPage` and `ExamPreview` both render `PresentationRoot` → `SectionShellHeader` → `StudentQuestionCard` (+ `RichPrompt`)
 with the same CSS (`presentationParity.20d1.test.tsx` compares the article and section header markup of both views).
-The root carries `class="exam-presentation"`, `dir`, `data-xp-*` vocabulary attributes and **only** `--xp-*` custom properties
+The root carries `class="exam-presentation"`, `dir="rtl"` (always — `direction: "ltr"` is applied by CSS to the content only, never to
+the lifecycle chrome), `data-xp-*` vocabulary attributes and **only** `--xp-*` custom properties
 computed by code from validated tokens. All rules live under `.exam-presentation` / `.xp-rich`; breakpoints (768 / 1024 px) are
 code-owned; `prefers-reduced-motion` and `motion: none` disable the entrance animation; a `@media print` block keeps tables,
 code and figures intact.
 
 **Lifecycle chrome is not presentation-controlled.** Submit, timer, save status, strict-mode notices, exit and logout are styled
 only by code-owned rules; no vocabulary value can hide, move or cover them (the root style never contains `display`, `position`,
-`z-index`, `opacity`, `visibility` or `url`, pinned by the parity suite).
+`z-index`, `opacity`, `visibility` or `url`, pinned by the parity suite; a static guard in
+`presentationReviewFix1.20d1.test.tsx` refuses any screen rule in the presentation stylesheets that targets the top bar, bottom
+navigation, save status, countdown, strict notices or pause row with a placement / visibility property or a transparent background).
 
 ## 6. Server authorities
 
@@ -137,8 +143,10 @@ only by code-owned rules; no vocabulary value can hide, move or cover them (the 
 - **Student projection** (`api/src/lib/student-exam-sanitize.js`): every field is rebuilt from the canonical validator output
   (`projectPresentationForStudent`, `projectSectionPresentationForStudent`, `projectQuestionPresentationForStudent`,
   `projectRichContentForStudent`) — never spread, never passed through the deep secret stripper (which would mangle it). A
-  malformed object is dropped whole (the student sees the plain text / default preset). The pre-start payload
-  (`preStartAssignment`) now sanitizes the cover and carries the projected presentation.
+  malformed object is dropped whole: the student sees the plain text, and a malformed exam presentation leaves the student on the legacy
+  theme path (the teacher preview resolves the same value to the default preset flagged `data-xp-fallback`; finalization blocks it). The pre-start payload
+  (`preStartAssignment`) now sanitizes the cover (with bank images in its rich instructions hydrated) and carries the projected
+  presentation.
 - **Bank hydration** (`api/src/lib/bank-asset-hydrate.js`): rich images with a bank identity are hydrated to signed delivery URLs
   and normalized back to identities for storage, like every other bank image.
 - **Shared build** (`scripts/build-shared-finalization.mjs`): now compiles sub-directories (`presentation/`, `richContent/`); the
@@ -209,3 +217,31 @@ presentation CSS.
 - Math is a LaTeX subset (no matrices / aligned environments in v1).
 - Legacy question-type aliases (e.g. `open`) do not receive a `data-xp-type`; catalog keys do.
 - No visual regression run in a real browser in CI; DOM-level parity and freeze pins are the evidence.
+- The Studio's tablet / phone frames narrow the preview only; runtime breakpoints follow the real window width.
+- `data-xp-label` on stacked table cells carries the author's column header text (rendered through a React attribute and CSS
+  `attr()`; never HTML) — the "vocabulary only" rule applies to the root and question-shell `data-xp-*` attributes.
+- Very long bank blob names without an asset id fail the image contract (fail-closed: the image is refused, the stem still renders).
+
+## 11. Independent review and Review Fix 1
+
+The internal independent review (read-only, at `679513f`/`1eb2c21`) found 0 blockers, 3 majors, 7 minors. All were fixed with
+fail-first tests (`src/presentation/presentationReviewFix1.20d1.test.tsx`, `api/tests/presentation-reviewfix1-20d1.test.js`;
+24 + 4 cases failed on `1eb2c21`):
+
+| Finding | Fix |
+|---|---|
+| MAJOR-1 quadratic raw-HTML regex (≈2 s of CPU per student delivery per crafted question) | linear policy regex: dangerous elements on their opening token, structural tags only as a complete `<…>` without inner `<`; server copy regenerated |
+| MAJOR-2 `stickyTopBar:false` unpinned the timer / exit bar; `navigation: minimal` made the sticky bottom nav transparent | `stickyTopBar` removed from the v1 vocabulary and the Studio; minimal navigation keeps an opaque surface; static CSS guard |
+| MAJOR-3 rich-only stems passed finalization with empty `text` (blank stems in grading / review / training) | `EMPTY_TEXT` stays blocking, with a hint to «استخدام نص المحتوى كنص بديل» |
+| MINOR-1 legitimate `0 < a < 1` prose refused / rewritten to `＜` | resolved by the MAJOR-1 policy |
+| MINOR-2 unbraced `\vec \vec … x` bypassed the math depth limit | depth checked in `atom()` |
+| MINOR-3 two parametric predicates | one predicate (`parametricNumeric` or a `parametric` config) in finalization, sanitizer and `RichPrompt` |
+| MINOR-4 rich section instructions invisible without an exam presentation | rendered by the legacy student section context and preview section too (lazy) |
+| MINOR-5 `direction: "ltr"` mirrored the lifecycle chrome | root stays `rtl`; `data-xp-direction` + content-only CSS `direction` |
+| MINOR-6 Markdown converter quadratic paths (heading regex, unmatched emphasis rescans, per-candidate slice/split) | linear heading parser, 32-miss closer budget per segment, running `*` count |
+| MINOR-7 pre-start cover bank images not hydrated | cover hydrated before projection |
+| Nits | strict stored `#RRGGBB`; no empty `<figcaption>`; surrogate-safe chunking; composite parametric hint wording; doc corrections |
+
+Tests written in this PR that pinned the corrected behaviours were updated with the fix (each change is the review finding itself):
+`presentationModel.20d1` (sticky key → unknown key; `#RGB` refused), `presentationStudio.20d1` (no sticky switch),
+`presentation-20d1` S2 (rich-only stem → `EMPTY_TEXT`), `richContentEditor.20d1` (`x < a` stays literal).

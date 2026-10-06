@@ -74,7 +74,7 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "orderedList": return <ol className="xp-list">{b.items.map((it, i) => <li key={i}><Runs runs={it.runs} /></li>)}</ol>;
     case "table": return <Table b={b} />;
     case "image": return <div className="xp-media"><Img asset={b.asset} alt={b.alt} /></div>;
-    case "figure": return <figure className="xp-figure"><Img asset={b.asset} alt={b.alt} /><figcaption><Runs runs={b.caption} /></figcaption></figure>;
+    case "figure": return <figure className="xp-figure"><Img asset={b.asset} alt={b.alt} />{b.caption.length > 0 && <figcaption><Runs runs={b.caption} /></figcaption>}</figure>;
     case "code": return (
       <figure className="xp-code-block" data-xp-lang={b.language}>
         {b.title && <figcaption>{b.title}</figcaption>}

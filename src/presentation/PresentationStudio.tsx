@@ -279,8 +279,6 @@ export default function PresentationStudio({ exam, onChange, onClose }: Props) {
       );
       case "layout": {
         const paths = [["layout"], ["tokens", "spacing"], ["tokens", "radius"], ["tokens", "shadow"]] as const;
-        const sticky = getPath(raw, ["layout", "stickyTopBar"]);
-        const stickyOn = typeof sticky === "boolean" ? sticky : P.layout.stickyTopBar;
         return (
           <>
             <TabHead title="التخطيط" onReset={() => { void resetGroup("التخطيط", paths); }} canReset={has(paths)} />
@@ -290,9 +288,6 @@ export default function PresentationStudio({ exam, onChange, onClose }: Props) {
               <Choice label="المسافة بين الأسئلة" value={getPath(raw, ["layout", "questionSpacing"])} inherited={P.layout.questionSpacing} options={V.spacings} onPick={v => set(["layout", "questionSpacing"], v)} />
               <Choice label="المسافة بين الأقسام" value={getPath(raw, ["layout", "sectionSpacing"])} inherited={P.layout.sectionSpacing} options={V.sectionSpacings} onPick={v => set(["layout", "sectionSpacing"], v)} />
               <Choice label="موضع السيناريو المشترك" value={getPath(raw, ["layout", "scenarioPlacement"])} inherited={P.layout.scenarioPlacement} options={V.scenarioPlacements} onPick={v => set(["layout", "scenarioPlacement"], v)} />
-              <div className="xp-studio-field is-check">
-                <label><input type="checkbox" checked={stickyOn} onChange={e => set(["layout", "stickyTopBar"], e.target.checked === P.layout.stickyTopBar ? undefined : e.target.checked)} /> تثبيت الشريط العلوي أثناء التمرير</label>
-              </div>
               <Choice label="كثافة المسافات الداخلية" value={getPath(raw, ["tokens", "spacing"])} inherited={P.spacing} options={V.spacings} onPick={v => set(["tokens", "spacing"], v)} />
               <Choice label="استدارة الزوايا" value={getPath(raw, ["tokens", "radius"])} inherited={P.radius} options={V.radii} group="radius" onPick={v => set(["tokens", "radius"], v)} />
               <Choice label="الظلال" value={getPath(raw, ["tokens", "shadow"])} inherited={P.shadow} options={V.shadows} group="shadow" onPick={v => set(["tokens", "shadow"], v)} />

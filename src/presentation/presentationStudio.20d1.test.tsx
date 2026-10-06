@@ -124,13 +124,13 @@ describe("20D1-S2 Presentation Studio — components, question types, sections",
     await openTab("التخطيط");
     await pick("عرض الصفحة", "narrow");
     await pick("الظلال", "strong");
-    fireEvent.click(screen.getByLabelText(/تثبيت الشريط العلوي/));
-    await settle();
+    // review fix 1: the lifecycle top bar is never JSON-controlled — the Studio offers no "sticky top bar" switch
+    expect(screen.queryByLabelText(/تثبيت الشريط العلوي/)).toBeNull();
     await openTab("الطباعة");
     await pick("نمط الطباعة", "compact");
     await openTab("إمكانية الوصول");
     await pick("الحركة والانتقالات", "none");
-    expect(pres(box)).toEqual({ schemaVersion: 1, preset: "default", tokens: { typography: { family: "academicSerif" }, shadow: "strong" }, layout: { pageWidth: "narrow", stickyTopBar: false }, print: { mode: "compact" }, motion: { level: "none" } });
+    expect(pres(box)).toEqual({ schemaVersion: 1, preset: "default", tokens: { typography: { family: "academicSerif" }, shadow: "strong" }, layout: { pageWidth: "narrow" }, print: { mode: "compact" }, motion: { level: "none" } });
     const root = document.querySelector("[data-testid=xp-studio-preview] .exam-presentation")!;
     expect(root.getAttribute("data-xp-width")).toBe("narrow");
     expect(root.getAttribute("data-xp-print")).toBe("compact");
@@ -139,7 +139,7 @@ describe("20D1-S2 Presentation Studio — components, question types, sections",
     fireEvent.click(screen.getByRole("button", { name: "إعادة ضبط التخطيط" }));
     await settle();
     await cancelTop();
-    expect(pres(box)!.layout).toEqual({ pageWidth: "narrow", stickyTopBar: false });
+    expect(pres(box)!.layout).toEqual({ pageWidth: "narrow" });
     fireEvent.click(screen.getByRole("button", { name: "إعادة ضبط التخطيط" }));
     await settle();
     await confirmTop();

@@ -100,6 +100,7 @@ export default function ExamPreview({ exam, onClose }: Props) {
                 section={section}
                 sectionNumber={si + 1}
                 startIndex={startIndex}
+                richInstructions={(rawSections[si] as { instructionsRichContent?: unknown } | undefined)?.instructionsRichContent}
                 answers={answers}
                 onChoice={onChoice}
                 onSeq={onSeq}

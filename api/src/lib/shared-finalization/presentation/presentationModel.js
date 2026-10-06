@@ -59,7 +59,7 @@ exports.PRESENTATION_VOCABULARY = Object.freeze({
 });
 const STD_TYPES = { coding: "developerWorkspace", smartSim: "laboratory", simulation: "laboratory", composite: "storyWorkspace", openResponse: "writingPaper", networkCli: "networkWorkspace", hotspot: "visualWorkspace", labelDiagram: "visualWorkspace" };
 const COMPONENTS = { examHeader: "plain", sectionHeader: "plain", questionCard: "outlined", questionNumber: "badge", marksBadge: "pill", questionStem: "normal", table: "striped", callout: "soft", answerArea: "contained", navigation: "standard", figure: "framed", code: "light" };
-const LAYOUT = { pageWidth: "normal", questionSpacing: "normal", sectionSpacing: "normal", stickyTopBar: true, scenarioPlacement: "responsiveSide" };
+const LAYOUT = { pageWidth: "normal", questionSpacing: "normal", sectionSpacing: "normal", scenarioPlacement: "responsiveSide" };
 const TYPO = { family: "systemArabic", scale: "normal", lineHeight: "normal", questionWeight: "medium" };
 const def = (label, description, colors, over = {}) => ({
     label, description, colors, typography: { ...TYPO, ...(over.typography || {}) }, spacing: over.spacing || "normal", radius: over.radius || "md", shadow: over.shadow || "subtle",
@@ -69,13 +69,13 @@ const SLATE = { success: "#15803D", warning: "#A16207", danger: "#B91C1C" };
 exports.PRESENTATION_PRESETS = Object.freeze({
     default: def("الافتراضي المؤسسي", "تصميم متوازن وواضح يناسب معظم الامتحانات", { primary: "#1D4ED8", accent: "#0369A1", background: "#F8FAFC", surface: "#FFFFFF", surfaceAlt: "#F1F5F9", text: "#0F172A", muted: "#475569", border: "#CBD5E1", ...SLATE }),
     classicPaper: def("ورقة امتحان رسمية", "شكل ورقي رسمي بخط أكاديمي وحدود هادئة", { primary: "#1F2937", accent: "#7C2D12", background: "#F7F3E8", surface: "#FFFDF7", surfaceAlt: "#F3EEE0", text: "#1C1917", muted: "#57534E", border: "#D6CFC0", ...SLATE }, { typography: { family: "academicSerif", scale: "normal", lineHeight: "relaxed", questionWeight: "medium" }, radius: "none", shadow: "none", components: { examHeader: "banded", sectionHeader: "underline", questionCard: "paper", questionNumber: "plain", marksBadge: "text", table: "bordered", callout: "outline", answerArea: "lined", navigation: "minimal" }, motion: "none" }),
-    modernAcademic: def("أكاديمي حديث", "واجهة عصرية مريحة مع تمييز واضح للعلامات", { primary: "#1D4ED8", accent: "#0EA5E9", background: "#F8FAFC", surface: "#FFFFFF", surfaceAlt: "#F1F5F9", text: "#172033", muted: "#64748B", border: "#CBD5E1", ...SLATE }, { typography: { family: "systemArabic", scale: "comfortable", lineHeight: "relaxed", questionWeight: "medium" }, spacing: "comfortable", radius: "lg", shadow: "medium", layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "large", stickyTopBar: true, scenarioPlacement: "responsiveSide" }, components: { examHeader: "hero", sectionHeader: "band", questionCard: "elevated", navigation: "modern" } }),
+    modernAcademic: def("أكاديمي حديث", "واجهة عصرية مريحة مع تمييز واضح للعلامات", { primary: "#1D4ED8", accent: "#0EA5E9", background: "#F8FAFC", surface: "#FFFFFF", surfaceAlt: "#F1F5F9", text: "#172033", muted: "#64748B", border: "#CBD5E1", ...SLATE }, { typography: { family: "systemArabic", scale: "comfortable", lineHeight: "relaxed", questionWeight: "medium" }, spacing: "comfortable", radius: "lg", shadow: "medium", layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "large", scenarioPlacement: "responsiveSide" }, components: { examHeader: "hero", sectionHeader: "band", questionCard: "elevated", navigation: "modern" } }),
     cards: def("بطاقات", "كل سؤال في بطاقة مستقلة مرتفعة", { primary: "#4338CA", accent: "#7C3AED", background: "#EEF2FF", surface: "#FFFFFF", surfaceAlt: "#F5F7FF", text: "#1E1B4B", muted: "#4B5563", border: "#C7D2FE", ...SLATE }, { radius: "xl", shadow: "medium", components: { questionCard: "elevated", sectionHeader: "card", questionNumber: "circle" } }),
-    focus: def("تركيز", "تصميم هادئ بأقل قدر من المشتتات", { primary: "#0F766E", accent: "#0E7490", background: "#F8FAFA", surface: "#FFFFFF", surfaceAlt: "#F0F5F5", text: "#132A2A", muted: "#4B5F5F", border: "#CFDCDC", ...SLATE }, { typography: { family: "systemArabic", scale: "comfortable", lineHeight: "relaxed", questionWeight: "regular" }, spacing: "spacious", shadow: "none", layout: { pageWidth: "narrow", questionSpacing: "spacious", sectionSpacing: "large", stickyTopBar: true, scenarioPlacement: "inline" }, components: { questionCard: "flat", sectionHeader: "plain", navigation: "minimal" }, motion: "none" }),
-    compact: def("مدمج", "مسافات أقل لرؤية محتوى أكثر", { primary: "#1D4ED8", accent: "#0369A1", background: "#F8FAFC", surface: "#FFFFFF", surfaceAlt: "#F1F5F9", text: "#0F172A", muted: "#475569", border: "#CBD5E1", ...SLATE }, { typography: { family: "systemSans", scale: "compact", lineHeight: "tight", questionWeight: "medium" }, spacing: "compact", radius: "sm", layout: { pageWidth: "wide", questionSpacing: "compact", sectionSpacing: "compact", stickyTopBar: true, scenarioPlacement: "responsiveSide" }, components: { questionStem: "compact", questionCard: "flat" } }),
-    scienceLab: def("مختبر العلوم", "تصميم علمي للصيغ والجداول والمحاكاة", { primary: "#0E7490", accent: "#16A34A", background: "#F0F9FF", surface: "#FFFFFF", surfaceAlt: "#ECFEFF", text: "#0C2A3A", muted: "#3F5966", border: "#BAE6FD", ...SLATE }, { radius: "lg", shadow: "subtle", layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "normal", stickyTopBar: true, scenarioPlacement: "responsiveSide" }, components: { sectionHeader: "band", questionCard: "elevated", callout: "solid" } }),
-    networkLab: def("مختبر الشبكات", "مساحة عمل شبكية بجداول أجهزة وأوامر CLI", { primary: "#0F4C81", accent: "#0284C7", background: "#F5F8FC", surface: "#FFFFFF", surfaceAlt: "#EEF4FB", text: "#172033", muted: "#4A5B70", border: "#C9D7E8", ...SLATE }, { radius: "lg", shadow: "medium", spacing: "comfortable", layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "large", stickyTopBar: true, scenarioPlacement: "responsiveSide" }, components: { sectionHeader: "band", questionCard: "elevated", table: "striped", code: "dark" }, typeVariants: { smartSim: "networkWorkspace" } }),
-    developerWorkspace: def("بيئة المطوّر", "مساحة برمجة بخط أحادي وكتل كود واضحة", { primary: "#6D28D9", accent: "#0891B2", background: "#F6F7FB", surface: "#FFFFFF", surfaceAlt: "#F1F2F8", text: "#111827", muted: "#4B5563", border: "#D1D5E4", ...SLATE }, { radius: "md", shadow: "subtle", layout: { pageWidth: "wide", questionSpacing: "normal", sectionSpacing: "normal", stickyTopBar: true, scenarioPlacement: "responsiveSide" }, components: { code: "dark", questionCard: "outlined", sectionHeader: "underline" } }),
+    focus: def("تركيز", "تصميم هادئ بأقل قدر من المشتتات", { primary: "#0F766E", accent: "#0E7490", background: "#F8FAFA", surface: "#FFFFFF", surfaceAlt: "#F0F5F5", text: "#132A2A", muted: "#4B5F5F", border: "#CFDCDC", ...SLATE }, { typography: { family: "systemArabic", scale: "comfortable", lineHeight: "relaxed", questionWeight: "regular" }, spacing: "spacious", shadow: "none", layout: { pageWidth: "narrow", questionSpacing: "spacious", sectionSpacing: "large", scenarioPlacement: "inline" }, components: { questionCard: "flat", sectionHeader: "plain", navigation: "minimal" }, motion: "none" }),
+    compact: def("مدمج", "مسافات أقل لرؤية محتوى أكثر", { primary: "#1D4ED8", accent: "#0369A1", background: "#F8FAFC", surface: "#FFFFFF", surfaceAlt: "#F1F5F9", text: "#0F172A", muted: "#475569", border: "#CBD5E1", ...SLATE }, { typography: { family: "systemSans", scale: "compact", lineHeight: "tight", questionWeight: "medium" }, spacing: "compact", radius: "sm", layout: { pageWidth: "wide", questionSpacing: "compact", sectionSpacing: "compact", scenarioPlacement: "responsiveSide" }, components: { questionStem: "compact", questionCard: "flat" } }),
+    scienceLab: def("مختبر العلوم", "تصميم علمي للصيغ والجداول والمحاكاة", { primary: "#0E7490", accent: "#16A34A", background: "#F0F9FF", surface: "#FFFFFF", surfaceAlt: "#ECFEFF", text: "#0C2A3A", muted: "#3F5966", border: "#BAE6FD", ...SLATE }, { radius: "lg", shadow: "subtle", layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "normal", scenarioPlacement: "responsiveSide" }, components: { sectionHeader: "band", questionCard: "elevated", callout: "solid" } }),
+    networkLab: def("مختبر الشبكات", "مساحة عمل شبكية بجداول أجهزة وأوامر CLI", { primary: "#0F4C81", accent: "#0284C7", background: "#F5F8FC", surface: "#FFFFFF", surfaceAlt: "#EEF4FB", text: "#172033", muted: "#4A5B70", border: "#C9D7E8", ...SLATE }, { radius: "lg", shadow: "medium", spacing: "comfortable", layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "large", scenarioPlacement: "responsiveSide" }, components: { sectionHeader: "band", questionCard: "elevated", table: "striped", code: "dark" }, typeVariants: { smartSim: "networkWorkspace" } }),
+    developerWorkspace: def("بيئة المطوّر", "مساحة برمجة بخط أحادي وكتل كود واضحة", { primary: "#6D28D9", accent: "#0891B2", background: "#F6F7FB", surface: "#FFFFFF", surfaceAlt: "#F1F2F8", text: "#111827", muted: "#4B5563", border: "#D1D5E4", ...SLATE }, { radius: "md", shadow: "subtle", layout: { pageWidth: "wide", questionSpacing: "normal", sectionSpacing: "normal", scenarioPlacement: "responsiveSide" }, components: { code: "dark", questionCard: "outlined", sectionHeader: "underline" } }),
     friendly: def("ودود", "ألوان دافئة وزوايا مستديرة للمراحل الأصغر", { primary: "#C2410C", accent: "#DB2777", background: "#FFF7ED", surface: "#FFFFFF", surfaceAlt: "#FFF1E6", text: "#1F2937", muted: "#57534E", border: "#FED7AA", ...SLATE }, { typography: { family: "systemArabic", scale: "large", lineHeight: "relaxed", questionWeight: "bold" }, radius: "xl", shadow: "subtle", spacing: "comfortable", components: { questionNumber: "circle", sectionHeader: "card", questionCard: "elevated" } }),
     highContrast: def("تباين عالٍ", "أقصى وضوح بصري لإمكانية الوصول", { primary: "#000000", accent: "#0000CC", background: "#FFFFFF", surface: "#FFFFFF", surfaceAlt: "#F2F2F2", text: "#000000", muted: "#222222", border: "#000000", success: "#006400", warning: "#6B4E00", danger: "#8B0000" }, { typography: { family: "systemSans", scale: "large", lineHeight: "relaxed", questionWeight: "bold" }, radius: "sm", shadow: "none", components: { questionCard: "outlined", sectionHeader: "underline", marksBadge: "outline", table: "bordered", callout: "outline", answerArea: "contained", code: "light" }, motion: "none" })
 });
@@ -185,7 +185,7 @@ function validatePresentation(raw, path = "presentation") {
                     const colors = {};
                     for (const k of exports.COLOR_TOKENS)
                         if (own(c, k)) {
-                            const h = normalizeHexColor(c[k]);
+                            const ck = c[k], h = typeof ck === "string" && HEX6.test(ck) ? ck.toUpperCase() : null;
                             if (!h)
                                 add("PRESENTATION_COLOR", "اللون يجب أن يكون بصيغة #RRGGBB فقط.", tp + ".colors." + k);
                             else
@@ -247,7 +247,7 @@ function validatePresentation(raw, path = "presentation") {
         if (!isPlain(l))
             add("PRESENTATION_TOKEN", "إعدادات التخطيط غير صالحة.", lp);
         else {
-            keys(l, ["pageWidth", "questionSpacing", "sectionSpacing", "stickyTopBar", "scenarioPlacement"], lp);
+            keys(l, ["pageWidth", "questionSpacing", "sectionSpacing", "scenarioPlacement"], lp);
             const o = {};
             if (own(l, "pageWidth")) {
                 const v = word(l.pageWidth, PAGE_WIDTHS, lp + ".pageWidth");
@@ -263,12 +263,6 @@ function validatePresentation(raw, path = "presentation") {
                 const v = word(l.sectionSpacing, SECTION_SPACINGS, lp + ".sectionSpacing");
                 if (v)
                     o.sectionSpacing = v;
-            }
-            if (own(l, "stickyTopBar")) {
-                if (typeof l.stickyTopBar !== "boolean")
-                    add("PRESENTATION_TOKEN", "خيار الشريط العلوي الثابت يجب أن يكون منطقيًا.", lp + ".stickyTopBar");
-                else
-                    o.stickyTopBar = l.stickyTopBar;
             }
             if (own(l, "scenarioPlacement")) {
                 const v = word(l.scenarioPlacement, SCENARIO_PLACEMENTS, lp + ".scenarioPlacement");
@@ -499,7 +493,7 @@ function presentationCssVars(r) {
 function presentationRootAttributes(r) {
     const a = {
         "data-xp-preset": r.preset, "data-xp-width": r.layout.pageWidth, "data-xp-density": r.tokens.spacing, "data-xp-motion": r.motion,
-        "data-xp-print": r.print, "data-xp-sticky": String(r.layout.stickyTopBar), "data-xp-scenario": r.layout.scenarioPlacement,
+        "data-xp-print": r.print, "data-xp-direction": r.direction, "data-xp-scenario": r.layout.scenarioPlacement,
         "data-xp-family": r.tokens.typography.family, "data-xp-stem": r.components.questionStem
     };
     if (r.fallback)

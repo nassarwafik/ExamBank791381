@@ -28,5 +28,7 @@ export function RichText({ raw, id, className, fallback }: { raw: unknown; id?: 
 
 /** A question stem: valid q.richContent → rich stem (same id, so every aria-labelledby keeps working); else the baseline prompt. */
 export default function RichPrompt({ q, textId }: { q: Question; textId: string }) {
-  return <RichText raw={q.richContent} id={textId} className="iex-qtext" fallback={<p className="iex-qtext" id={textId}>{promptText(q.text)}</p>} />;
+  // A node generated per attempt (parametric config present) shows its GENERATED text only — never an authored rich template (review fix 1).
+  const generated = (q as { parametric?: unknown }).parametric !== undefined || String((q as { presentationType?: unknown }).presentationType ?? "") === "parametricNumeric";
+  return <RichText raw={generated ? undefined : q.richContent} id={textId} className="iex-qtext" fallback={<p className="iex-qtext" id={textId}>{promptText(q.text)}</p>} />;
 }

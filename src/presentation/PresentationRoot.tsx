@@ -26,7 +26,7 @@ export default function PresentationRoot({ presentation, as = "div", className, 
   return (
     <ResolvedPresentationContext.Provider value={scope}>
       <ExamPresentationContext.Provider value={runtime}>
-        <Tag className={(className ? className + " " : "") + "exam-presentation"} dir={resolved.direction} {...presentationRootAttributes(resolved)} style={presentationCssVars(resolved) as CSSProperties}>{children}</Tag>
+        <Tag className={(className ? className + " " : "") + "exam-presentation"} dir="rtl" {...presentationRootAttributes(resolved)} style={presentationCssVars(resolved) as CSSProperties}>{children}</Tag>
       </ExamPresentationContext.Provider>
     </ResolvedPresentationContext.Provider>
   );

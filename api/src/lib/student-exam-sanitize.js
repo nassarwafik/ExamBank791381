@@ -299,7 +299,9 @@ function takePresentationFields(out) {
   return taken;
 }
 function applyPresentationFields(out, taken, source) {
-  const parametric = String((source && (source.presentationType ?? source.type)) || "") === "parametricNumeric";
+  // ONE parametric predicate (review fix 1) — the same one applyParametricProjection uses: the authored {{id}} template must never ride
+  // along as a rich stem on any node that is generated per attempt.
+  const parametric = !!source && (String(source.presentationType ?? source.type ?? "") === "parametricNumeric" || "parametric" in source);
   const rich = parametric ? undefined : projectRichContentForStudent(taken.richContent);
   if (rich) out.richContent = rich;
   const pres = projectQuestionPresentationForStudent(taken.presentation);

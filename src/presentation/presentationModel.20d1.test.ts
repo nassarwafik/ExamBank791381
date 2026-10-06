@@ -52,7 +52,7 @@ describe("20D1-P2 strict validation — every violation blocks, nothing is repai
     ["unknown type key", { ...base(), questionTypeVariants: { essay: "writingPaper" } }, "PRESENTATION_TYPE_VARIANT"],
     ["unknown type variant", { ...base(), questionTypeVariants: { coding: "Monaco" } }, "PRESENTATION_TYPE_VARIANT"],
     ["unknown layout value", { ...base(), layout: { pageWidth: "100vw" } }, "PRESENTATION_TOKEN"],
-    ["non-boolean sticky", { ...base(), layout: { stickyTopBar: "yes" } }, "PRESENTATION_TOKEN"],
+    ["sticky top bar is lifecycle chrome, not vocabulary (review fix 1)", { ...base(), layout: { stickyTopBar: false } }, "PRESENTATION_UNKNOWN_KEY"],
     ["unknown motion", { ...base(), motion: { level: "wild" } }, "PRESENTATION_TOKEN"],
     ["unknown print", { ...base(), print: { mode: "poster" } }, "PRESENTATION_TOKEN"],
     ["unsupported appearance", { ...base(), appearance: "neon" }, "PRESENTATION_TOKEN"],
@@ -63,7 +63,7 @@ describe("20D1-P2 strict validation — every violation blocks, nothing is repai
   it("a complete valid presentation (the documented example) has no issue and its canonical value equals the input", () => {
     const full = { schemaVersion: 1, preset: "networkLab", direction: "rtl", appearance: "light",
       tokens: { colors: { primary: "#0F4C81", accent: "#0284C7", background: "#F5F8FC", surface: "#FFFFFF", text: "#172033" }, typography: { family: "systemArabic", scale: "comfortable", lineHeight: "relaxed", questionWeight: "medium" }, spacing: "comfortable", radius: "lg", shadow: "medium" },
-      layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "large", stickyTopBar: true, scenarioPlacement: "responsiveSide" },
+      layout: { pageWidth: "wide", questionSpacing: "comfortable", sectionSpacing: "large", scenarioPlacement: "responsiveSide" },
       components: { sectionHeader: { variant: "band" }, questionCard: { variant: "elevated" }, marksBadge: { variant: "pill" }, table: { variant: "striped" } },
       questionTypeVariants: { smartSim: "networkWorkspace", coding: "developerWorkspace", composite: "storyWorkspace", openResponse: "writingPaper" },
       motion: { level: "subtle" }, print: { mode: "academic" } };
@@ -71,8 +71,10 @@ describe("20D1-P2 strict validation — every violation blocks, nothing is repai
     expect(r.issues).toEqual([]);
     expect(r.value).toEqual(full);
   });
-  it("#RGB is normalized to #RRGGBB in the canonical value", () => {
-    expect(P.validatePresentation({ ...base(), tokens: { colors: { primary: "#14d" } } }).value!.tokens!.colors!.primary).toBe("#1144DD");
+  it("stored colours are strict #RRGGBB (review fix 1: #RGB is refused; authoring UIs expand it with normalizeHexColor before writing); case is canonicalized", () => {
+    expect(codes({ ...base(), tokens: { colors: { primary: "#14d" } } })).toContain("PRESENTATION_COLOR");
+    expect(P.normalizeHexColor("#14d")).toBe("#1144DD");
+    expect(P.validatePresentation({ ...base(), tokens: { colors: { primary: "#1144dd" } } }).value!.tokens!.colors!.primary).toBe("#1144DD");
   });
 });
 

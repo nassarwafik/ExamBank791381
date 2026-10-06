@@ -46,10 +46,13 @@ function preStartAssignment(a,timed,attemptPolicy){
   effectiveDueAt:"",maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:timed?Number(a.durationMinutes||0):0,
   sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),
   requiresStart:true,timed:!!timed,attemptPolicy:attemptPolicy||"continuous",marksDistribution:safeMarksDistribution(snap),
-  exam:{title:snap.title||a.title,metadata:snap.metadata||{},presentationTheme:snap.presentationTheme||"",coverPage:snap.coverPage?sanitizeCoverForStudent(snap.coverPage)||null:null,   // 20D.1: the strict cover allow-list (rich instructions projected)
+  exam:{title:snap.title||a.title,metadata:snap.metadata||{},presentationTheme:snap.presentationTheme||"",coverPage:snap.coverPage?sanitizeCoverForStudent(preStartCover(snap.coverPage))||null:null,   // 20D.1: the strict cover allow-list (rich instructions projected)
    // Phase 20D.1 — the strictly projected enterprise presentation (canonical copy or absent) so the cover / start screen is themed.
    ...(presentationForPreStart(snap.presentation)?{presentation:presentationForPreStart(snap.presentation)}:{})}};
 }
+// Review fix 1 — bank-origin images in the cover's rich instructions are stored as durable identities; sign them for delivery (the same
+// hydration every exam read path applies) before the strict cover projection.
+function preStartCover(cover){return hydrateBankAssets({coverPage:cover}).coverPage||cover}
 function presentationForPreStart(raw){return raw===undefined||raw===null?undefined:projectPresentationForStudent(raw)}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
 async function handler(request,deps={},obs=null){

@@ -59,6 +59,7 @@ function stripHtml(s: string, warn: Warn): string {
 
 /** Index of the closing delimiter `d` starting the scan at `from`, or -1 (skips escapes and code spans; a single-char delimiter skips doubled runs). */
 function findClose(s: string, from: number, d: string): number {
+  let stars = 0, counted = from;   // running "*" count in s[from, j) — replaces a per-candidate slice/split (quadratic; review fix 1)
   for (let j = from; j < s.length; j++) {
     const c = s[j];
     if (c === "\\") { j++; continue; }
@@ -69,7 +70,7 @@ function findClose(s: string, from: number, d: string): number {
       if (s[j + 2] === d && j > from && !isSpace(s[j - 1])) return j + 2;
       j++; continue;
     }
-    if (d === "**" && s[j + 2] === "*" && s.slice(from, j).split("*").length % 2 === 0) return j + 1;   // `**a *b***` → strong closes after the italic
+    if (d === "**" && s[j + 2] === "*") { while (counted < j) { if (s[counted] === "*") stars++; counted++; } if ((stars + 1) % 2 === 0) return j + 1; }   // `**a *b***` → strong closes after the italic
     if (j > from && !isSpace(s[j - 1])) {
       if (d === "_" || d === "__") { if (isWordChar(s[j + d.length])) continue; }   // snake_case is never emphasis
       return j;
@@ -81,7 +82,12 @@ function findClose(s: string, from: number, d: string): number {
 type Seg = { text: string; marks: RichMark[] } | { math: string };
 function addMark(marks: readonly RichMark[], m: RichMark): RichMark[] { return marks.includes(m) ? [...marks] : [...marks, m]; }
 
+// A segment may try at most MAX_CLOSE_MISSES closer scans that find nothing; past that, further openers are literal text. Each miss scans
+// to the end of the segment, so an adversarial run of unmatched delimiters ("*a *a *a …") stays linear (review fix 1).
+const MAX_CLOSE_MISSES = 32;
 function parseSegs(s: string, marks: readonly RichMark[], out: Seg[], warn: Warn, depth: number): void {
+  let misses = 0;
+  const close = (from: number, d: string): number => { if (misses >= MAX_CLOSE_MISSES) return -1; const e = findClose(s, from, d); if (e < 0) misses++; return e; };
   let buf = "";
   const flush = () => { if (buf) { out.push({ text: buf, marks: [...marks] }); buf = ""; } };
   let i = 0;
@@ -117,11 +123,11 @@ function parseSegs(s: string, marks: readonly RichMark[], out: Seg[], warn: Warn
       if (m) { warn(MARKDOWN_LINK_TEXT_ONLY); flush(); if (depth < 8) parseSegs(m[1], marks, out, warn, depth + 1); else buf += m[1]; i += m[0].length; continue; }
     }
     if (c === "~" && s[i + 1] === "~" && !isSpace(s[i + 2])) {
-      const e = findClose(s, i + 2, "~~");
+      const e = close(i + 2, "~~");
       if (e > 0) { flush(); if (depth < 8) parseSegs(s.slice(i + 2, e), marks, out, warn, depth + 1); else buf += s.slice(i + 2, e); i = e + 2; continue; }
     }
     if (c === "+" && s[i + 1] === "+" && !isSpace(s[i + 2]) && depth < 8) {
-      const e = findClose(s, i + 2, "++");
+      const e = close(i + 2, "++");
       if (e > 0) { flush(); parseSegs(s.slice(i + 2, e), addMark(marks, "underline"), out, warn, depth + 1); i = e + 2; continue; }
     }
     if ((c === "^" || (c === "~" && s[i + 1] !== "~")) && !isSpace(s[i + 1]) && s[i + 1] !== c && depth < 8) {
@@ -133,15 +139,15 @@ function parseSegs(s: string, marks: readonly RichMark[], out: Seg[], warn: Warn
       const prevOk = c === "*" || !isWordChar(s[i - 1]);
       const triple = c.repeat(3), double = c.repeat(2);
       if (prevOk && s.startsWith(triple, i) && !isSpace(s[i + 3])) {
-        const e = findClose(s, i + 3, triple);
+        const e = close(i + 3, triple);
         if (e > 0) { flush(); parseSegs(s.slice(i + 3, e), addMark(addMark(marks, "bold"), "italic"), out, warn, depth + 1); i = e + 3; continue; }
       }
       if (prevOk && s.startsWith(double, i) && !isSpace(s[i + 2])) {
-        const e = findClose(s, i + 2, double);
+        const e = close(i + 2, double);
         if (e > 0) { flush(); parseSegs(s.slice(i + 2, e), addMark(marks, "bold"), out, warn, depth + 1); i = e + 2; continue; }
       }
       if (prevOk && !s.startsWith(double, i) && !isSpace(s[i + 1])) {
-        const e = findClose(s, i + 1, c);
+        const e = close(i + 1, c);
         if (e > 0) { flush(); parseSegs(s.slice(i + 1, e), addMark(marks, "italic"), out, warn, depth + 1); i = e + 1; continue; }
       }
       // an unmatched run of delimiters is literal text
@@ -230,7 +236,6 @@ const CALLOUT_ALERTS: Readonly<Record<string, "info" | "note" | "warning" | "suc
 
 const RE = {
   fence: /^ {0,3}(`{3,}|~{3,})\s*([^\s`]*)[^`]*$/,
-  heading: /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/,
   hr: /^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/,
   setext: /^ {0,3}(=+|-+)[ \t]*$/,
   quote: /^ {0,3}>[ ]?(.*)$/,
@@ -384,12 +389,12 @@ export function markdownToRichContent(md: string): MarkdownConversion {
 
     if (RE.hr.test(line)) { flushPara(); push({ type: "divider" }); i++; continue; }
 
-    const h = RE.heading.exec(line);
+    const h = parseHeading(line);
     if (h) {
       flushPara();
-      const n = h[1].length;
+      const n = h.n;
       const level = (n <= 2 ? 2 : n === 3 ? 3 : 4) as 2 | 3 | 4;
-      textBlock((h[2] ?? "").trim(), runs => ({ type: "heading", level, runs }));
+      textBlock(h.text, runs => ({ type: "heading", level, runs }));
       i++;
       continue;
     }
@@ -446,7 +451,7 @@ export function markdownToRichContent(md: string): MarkdownConversion {
           break;   // a sibling list of the other kind starts a new block
         }
         if (/^\s+\S/.test(l) && items.length && !RE.quote.test(l) && !RE.fence.test(l)) { items[items.length - 1] += "\n" + l.trim(); i++; continue; }
-        if (items.length && !RE.heading.test(l) && !RE.quote.test(l) && !RE.fence.test(l) && !RE.hr.test(l) && !RE.htmlLine.test(l) && !l.includes("|")) { items[items.length - 1] += "\n" + l.trim(); i++; continue; }
+        if (items.length && !parseHeading(l) && !RE.quote.test(l) && !RE.fence.test(l) && !RE.hr.test(l) && !RE.htmlLine.test(l) && !l.includes("|")) { items[items.length - 1] += "\n" + l.trim(); i++; continue; }
         break;
       }
       for (let s = 0; s < items.length; s += RICH_LIMITS.listItems) {
@@ -472,6 +477,22 @@ function trimRuns(runs: RichRun[]): RichRun[] {
   return out.filter(r => !("text" in r) || r.text !== "");
 }
 
+/** ATX heading (`# … ######`, optional closing `#` run) parsed in linear time — the former regex backtracked quadratically on
+ *  whitespace-heavy lines (review fix 1). */
+function parseHeading(line: string): { n: number; text: string } | null {
+  let i = 0;
+  while (i < 3 && line[i] === " ") i++;
+  let n = 0;
+  while (n < 7 && line[i + n] === "#") n++;
+  if (n < 1 || n > 6) return null;
+  const rest = line.slice(i + n);
+  if (rest !== "" && rest[0] !== " " && rest[0] !== "\t") return null;
+  let text = rest.trim();
+  let e = text.length;
+  while (e > 0 && text[e - 1] === "#") e--;
+  if (e < text.length && (e === 0 || text[e - 1] === " " || text[e - 1] === "\t")) text = text.slice(0, e).trim();
+  return { n, text };
+}
 function chunkText(t: string, max: number, warn: Warn): string[] {
   if (t.length <= max) return [t];
   warn(MARKDOWN_LIMIT);
@@ -481,6 +502,8 @@ function chunkText(t: string, max: number, warn: Warn): string[] {
     let cut = rest.lastIndexOf("\n", max);
     if (cut < max / 2) cut = rest.lastIndexOf(" ", max);
     if (cut < max / 2) cut = max;
+    const code = rest.charCodeAt(cut - 1);
+    if (code >= 0xd800 && code <= 0xdbff) cut--;   // never split a surrogate pair (review fix 1)
     out.push(rest.slice(0, cut));
     rest = rest.slice(cut).replace(/^\s+/, "");
   }

@@ -98,8 +98,8 @@ describe("20D1-S2 finalization blockers", () => {
     ["malformed rich cover instructions", exam([mcq("q1")], { coverPage: { enabled: true, instructionsRichContent: { schemaVersion: 1, blocks: [{ type: "image", asset: { dataUrl: "https://x/y.png" }, alt: "x" }] } } }), "RICH_CONTENT_IMAGE"]
   ];
   for (const [name, e, code] of cases) it(name + " → " + code, () => expect(errors(e)).toContain(code));
-  it("a question with valid rich content and empty plain text is not EMPTY_TEXT (the rich stem is its content)", () => {
-    expect(errors(exam([mcq("q1", { text: "", richContent: RICH() })]))).not.toContain("EMPTY_TEXT");
+  it("review fix 1: plain text stays required with a rich stem (teacher grading / review / training surfaces read it) → EMPTY_TEXT", () => {
+    expect(errors(exam([mcq("q1", { text: "", richContent: RICH() })]))).toContain("EMPTY_TEXT");
   });
 });
 

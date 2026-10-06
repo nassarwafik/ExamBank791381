@@ -25,7 +25,7 @@ const BLOCK_KEYS = Object.freeze({
     callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"]
 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const RAW_HTML = /<\s*\/?\s*(script|style|iframe|object|embed|svg|math|link|meta|img|a|div|span|p|table|tbody|thead|tr|td|th|html|head|body|form|input|button|textarea|select|base|frame|frameset|template|noscript|br|hr|h[1-6]|ul|ol|li|video|audio|source|picture|canvas)\b[^>]*>?|<!--|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/i;
+const RAW_HTML = /<\/?(script|style|iframe|object|embed|svg|math|link|meta|img|form|input|button|textarea|select|base|frame|frameset|template|noscript|html|head|body|video|audio|source|picture|canvas)\b|<\/?(a|div|span|p|table|tbody|thead|tr|td|th|br|hr|h[1-6]|ul|ol|li)\b[^<>]*>|<!--|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/i;
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 const isPlain = (v) => {
     if (!v || typeof v !== "object" || Array.isArray(v))
