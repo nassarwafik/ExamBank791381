@@ -17,7 +17,7 @@
 // The reconcile loop is bounded (≤ 6 rounds) and stops as soon as the operational state is stable.
 import { SWITCH_PORTS } from "./networkCliEngine";
 import { ROUTER_PORTS } from "./routerCliEngine";
-import { broadcastAddress, fnv1a, intToIpv4, ipCompare, ipv4ToInt, networkAddress, prefixLength, sameSubnet } from "./net2Common";
+import { broadcastAddress, fnv1a, intToIpv4, ipCompare, ipv4ToInt, isUsableHostAddress, networkAddress, prefixLength, sameSubnet } from "./net2Common";
 import { effectiveSwitchIf, trunkAllows, type EffectiveSwitchIf, type Net2PortSecurity, type Net2SwitchState, type Switch2Context } from "./net2SwitchCli";
 import { parentOf, router2IfUp, physicalAdminUp, routerAddresses, type Net2RouterState, type Router2Context } from "./net2RouterCli";
 import { adapterNames, deriveMac, isHostKind, type Net2ApState, type Net2Config, type Net2Device, type Net2DeviceState, type Net2Endpoint, type Net2HostState } from "./net2Model";
@@ -138,7 +138,7 @@ export function l3Of(net: Net, ep: Ep): L3 | undefined {
     }
     case "ap": {
       const st = apState(net, ep.dev);
-      return ep.iface === "mgmt" && st.address && st.mask ? { ip: st.address, mask: st.mask, ...(st.gateway ? { gateway: st.gateway } : {}) } : undefined;
+      return ep.iface === "mgmt" && st.address && st.mask && isUsableHostAddress(st.address, st.mask) ? { ip: st.address, mask: st.mask, ...(st.gateway ? { gateway: st.gateway } : {}) } : undefined;
     }
     case undefined: return undefined;
     default: {
@@ -191,10 +191,13 @@ function settlePortSecurity(net: Net): void {
     const cfg = psConfig(net, sw, port);
     if (!cfg) continue;
     const k = key(sw, port);
-    let seen = net.ops.portSecurity[k]?.seen ?? [];
-    if (effIf(net, sw, port).shutdown) { const d = derivePortSecurity(cfg, seen); seen = cfg.sticky ? d.secure.filter(m => !cfg.macs.includes(m)) : []; }
+    const prev = net.ops.portSecurity[k];
+    let seen = prev?.seen ?? [];
+    const shut = effIf(net, sw, port).shutdown;
+    if (shut) { const d = derivePortSecurity(cfg, seen); seen = cfg.sticky ? d.secure.filter(m => !cfg.macs.includes(m)) : []; }
     const d = derivePortSecurity(cfg, seen);
-    out[k] = { seen: d.seen, secure: d.secure, violations: d.violations, errDisabled: d.errDisabled };
+    // err-disable is LATCHED (as in IOS): only shutdown / no shutdown recovers the port — a new violation mode or maximum does not
+    out[k] = { seen: d.seen, secure: d.secure, violations: d.violations, errDisabled: d.errDisabled || (prev?.errDisabled === true && !shut) };
   }
   net.ops.portSecurity = out;
 }

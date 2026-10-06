@@ -488,10 +488,12 @@ export function switchShow(state: Net2SwitchState, what: Show, ctx: Switch2Conte
     }
     case "ip-interface-brief": {
       const out = [pad("Interface", 23) + pad("IP-Address", 16) + "OK? Method " + pad("Status", 22) + "Protocol"];
+      const db = new Set(vlanIdsOf(effVlans(st, ctx)));
       for (const name of [...SWITCH_PORTS, ...sviNames(st)]) {
         const e = effectiveSwitchIf(st, name);
         const physical = isPhysicalPort(name);
-        const status = e.shutdown ? "administratively down" : physical && (!linkUp(ctx, name) || errDis(ctx, name)) ? "down" : "up";
+        // an SVI is down while its VLAN is missing from the (VTP-effective) database — the same rule connectivity uses
+        const status = e.shutdown ? "administratively down" : physical ? (!linkUp(ctx, name) || errDis(ctx, name) ? "down" : "up") : db.has(Number(name.slice(4))) ? "up" : "down";
         out.push(pad(displayInterfaceName(name), 23) + pad(e.ipAddress ?? "unassigned", 16) + "YES " + pad(e.ipAddress ? "manual" : "unset", 7) + pad(status, 22) + (status === "up" ? "up" : "down"));
       }
       return out;

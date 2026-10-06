@@ -620,10 +620,11 @@ function switchShow(state, what, ctx = {}, iface) {
         }
         case "ip-interface-brief": {
             const out = [(0, net2Common_1.pad)("Interface", 23) + (0, net2Common_1.pad)("IP-Address", 16) + "OK? Method " + (0, net2Common_1.pad)("Status", 22) + "Protocol"];
+            const db = new Set(vlanIdsOf(effVlans(st, ctx)));
             for (const name of [...networkCliEngine_1.SWITCH_PORTS, ...sviNames(st)]) {
                 const e = effectiveSwitchIf(st, name);
                 const physical = (0, networkCliEngine_1.isPhysicalPort)(name);
-                const status = e.shutdown ? "administratively down" : physical && (!linkUp(ctx, name) || errDis(ctx, name)) ? "down" : "up";
+                const status = e.shutdown ? "administratively down" : physical ? (!linkUp(ctx, name) || errDis(ctx, name) ? "down" : "up") : db.has(Number(name.slice(4))) ? "up" : "down";
                 out.push((0, net2Common_1.pad)((0, networkCliEngine_1.displayInterfaceName)(name), 23) + (0, net2Common_1.pad)(e.ipAddress ?? "unassigned", 16) + "YES " + (0, net2Common_1.pad)(e.ipAddress ? "manual" : "unset", 7) + (0, net2Common_1.pad)(status, 22) + (status === "up" ? "up" : "down"));
             }
             return out;

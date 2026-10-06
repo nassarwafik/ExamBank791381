@@ -186,8 +186,6 @@ function applyNet2Action(rt, a, config) {
         case "ap.set": {
             const cur = rt.devices[a.deviceId];
             const next = { ...cur, [a.field]: a.value };
-            if (next.address && next.mask && !isUsableAp(next))
-                return rt;
             return settle({ ...rt, devices: { ...rt.devices, [a.deviceId]: (0, net2Model_1.canonicalApState)(next) } }, config);
         }
         case "host.browse": {
@@ -220,10 +218,6 @@ function applyNet2Action(rt, a, config) {
             return afterTraffic({ ...rt, transcripts: pushT(rt, a.deviceId, entry(a.command, net2Host_1.HOST_PROMPT, traffic.result)) }, traffic.ops, config);
         }
     }
-}
-function isUsableAp(s) {
-    const r = (0, net2Model_1.validStaticFields)({ address: s.address ?? "", mask: s.mask ?? "", gateway: s.gateway ?? "", dns: "" });
-    return r;
 }
 function net2State(rt) {
     return JSON.parse(JSON.stringify({ v: 2, devices: runtimeDevices(rt), ops: rt.ops }));
@@ -591,7 +585,7 @@ function evaluateNet2Check(c, state, config) {
         case "switch.accessVlan": return same(e.accessVlan);
         case "switch.nativeVlan": return same(e.nativeVlan);
         case "switch.allowedVlans": return same(e.allowed === "all" ? "all" : (0, net2Common_1.compressVlans)(e.allowed));
-        case "switch.interfaceEnabled": return flag(!e.shutdown);
+        case "switch.interfaceEnabled": return flag((0, networkCliEngine_1.isSviName)(c.interface) && c.interface !== "vlan1" && !(0, net2Common_1.hasOwn)(s.interfaces, c.interface) ? undefined : !e.shutdown);
         case "switch.sviAddress": return same(e.ipAddress);
         case "switch.sviMask": return same(e.subnetMask);
         case "switch.portSecurity": return flag(ps ? ps.enabled : undefined);

@@ -16,7 +16,7 @@ const net2Common_1 = require("./net2Common");
 exports.NET2_ROUTER_LIMITS = Object.freeze({ inputChars: 200, tokens: 24, subinterfaces: 16, pools: 8, exclusions: 16, poolNameChars: 32 });
 exports.ROUTER2_MODE_SUFFIX = Object.freeze({ user: ">", privileged: "#", global: "(config)#", interface: "(config-if)#", subif: "(config-subif)#", dhcp: "(dhcp-config)#", line: "(config-line)#" });
 exports.ROUTER2_MODE_LABEL = Object.freeze({ user: "وضع المستخدم (User EXEC)", privileged: "الوضع المتقدّم (Privileged EXEC)", global: "وضع الإعداد العام (Global configuration)", interface: "وضع إعداد الواجهة (Interface configuration)", subif: "وضع إعداد الواجهة الفرعية (Sub-interface configuration)", dhcp: "وضع إعداد مجمّع DHCP (DHCP pool)", line: "وضع إعداد الخط (Line configuration)" });
-const isPoolName = (v) => typeof v === "string" && v.length >= 1 && v.length <= exports.NET2_ROUTER_LIMITS.poolNameChars && /^[A-Za-z0-9_-]+$/.test(v);
+const isPoolName = (v) => typeof v === "string" && v.length >= 1 && v.length <= exports.NET2_ROUTER_LIMITS.poolNameChars && /^[A-Za-z0-9_-]+$/.test(v) && !net2Common_1.FORBIDDEN_KEYS.has(v);
 exports.isPoolName = isPoolName;
 const SUB_RE = /^(g\d{1,2}\/\d{1,3})\.(\d{1,4})$/;
 function normalizeRouter2Interface(raw) {
@@ -545,11 +545,15 @@ function routerShow(state, what, ctx = {}) {
 }
 function excludedCount(st, network, mask) {
     const lo = (0, net2Common_1.ipv4ToInt)(network) + 1, hi = (0, net2Common_1.ipv4ToInt)((0, net2Common_1.broadcastAddress)(network, mask)) - 1;
-    const set = new Set();
-    for (const [a, b] of st.dhcp.excluded)
-        for (let v = Math.max(lo, (0, net2Common_1.ipv4ToInt)(a)); v <= Math.min(hi, (0, net2Common_1.ipv4ToInt)(b)) && set.size < 70000; v++)
-            set.add(v);
-    return set.size;
+    const ranges = st.dhcp.excluded.map(([a, b]) => [Math.max(lo, (0, net2Common_1.ipv4ToInt)(a)), Math.min(hi, (0, net2Common_1.ipv4ToInt)(b))]).filter(([a, b]) => a <= b).sort((x, y) => x[0] - y[0]);
+    let total = 0, end = -1;
+    for (const [a, b] of ranges) {
+        const from = Math.max(a, end + 1);
+        if (b >= from)
+            total += b - from + 1;
+        end = Math.max(end, b);
+    }
+    return total;
 }
 const router2SyntaxFor = (mode) => { const seen = new Set(); return exports.ROUTER2_COMMANDS.filter(c => c.modes.includes(mode) && c.id !== "help" && !seen.has(c.syntax) && (seen.add(c.syntax), true)).map(c => c.syntax); };
 exports.router2SyntaxFor = router2SyntaxFor;

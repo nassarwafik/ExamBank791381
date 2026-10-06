@@ -132,7 +132,7 @@ function l3Of(net, ep) {
         }
         case "ap": {
             const st = apState(net, ep.dev);
-            return ep.iface === "mgmt" && st.address && st.mask ? { ip: st.address, mask: st.mask, ...(st.gateway ? { gateway: st.gateway } : {}) } : undefined;
+            return ep.iface === "mgmt" && st.address && st.mask && (0, net2Common_1.isUsableHostAddress)(st.address, st.mask) ? { ip: st.address, mask: st.mask, ...(st.gateway ? { gateway: st.gateway } : {}) } : undefined;
         }
         case undefined: return undefined;
         default: {
@@ -188,13 +188,15 @@ function settlePortSecurity(net) {
             if (!cfg)
                 continue;
             const k = key(sw, port);
-            let seen = net.ops.portSecurity[k]?.seen ?? [];
-            if (effIf(net, sw, port).shutdown) {
+            const prev = net.ops.portSecurity[k];
+            let seen = prev?.seen ?? [];
+            const shut = effIf(net, sw, port).shutdown;
+            if (shut) {
                 const d = derivePortSecurity(cfg, seen);
                 seen = cfg.sticky ? d.secure.filter(m => !cfg.macs.includes(m)) : [];
             }
             const d = derivePortSecurity(cfg, seen);
-            out[k] = { seen: d.seen, secure: d.secure, violations: d.violations, errDisabled: d.errDisabled };
+            out[k] = { seen: d.seen, secure: d.secure, violations: d.violations, errDisabled: d.errDisabled || (prev?.errDisabled === true && !shut) };
         }
     net.ops.portSecurity = out;
 }

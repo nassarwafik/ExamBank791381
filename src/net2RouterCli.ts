@@ -24,7 +24,7 @@ export type Net2RouterState = { v: 2; device: "router"; hostname: string; interf
 export type Router2Session = { state: Net2RouterState; mode: RouterMode2; selectedInterface?: string; selectedPool?: string; selectedLine?: "con" | "vty" };
 export type Router2Context = { linkUp?: (port: string) => boolean; bindings?: readonly { address: string; mac: string; pool: string }[] };
 
-export const isPoolName = (v: unknown): v is string => typeof v === "string" && v.length >= 1 && v.length <= NET2_ROUTER_LIMITS.poolNameChars && /^[A-Za-z0-9_-]+$/.test(v);
+export const isPoolName = (v: unknown): v is string => typeof v === "string" && v.length >= 1 && v.length <= NET2_ROUTER_LIMITS.poolNameChars && /^[A-Za-z0-9_-]+$/.test(v) && !FORBIDDEN_KEYS.has(v);
 const SUB_RE = /^(g\d{1,2}\/\d{1,3})\.(\d{1,4})$/;
 /** Canonical router interface name: physical "g0/0" or sub-interface "g0/0.10" (1–4094); null otherwise. */
 export function normalizeRouter2Interface(raw: string): string | null {
@@ -437,9 +437,11 @@ export function routerShow(state: Net2RouterState, what: Show, ctx: Router2Conte
 }
 /** Number of excluded addresses that fall inside a pool network (for `show ip dhcp pool`). */
 function excludedCount(st: Net2RouterState, network: string, mask: string): number {
+  // arithmetic over the clipped, merged ranges (≤ 16 exclusions): never enumerates addresses, whatever the pool size
   const lo = ipv4ToInt(network) + 1, hi = ipv4ToInt(broadcastAddress(network, mask)) - 1;
-  const set = new Set<number>();
-  for (const [a, b] of st.dhcp.excluded) for (let v = Math.max(lo, ipv4ToInt(a)); v <= Math.min(hi, ipv4ToInt(b)) && set.size < 70000; v++) set.add(v);
-  return set.size;
+  const ranges = st.dhcp.excluded.map(([a, b]) => [Math.max(lo, ipv4ToInt(a)), Math.min(hi, ipv4ToInt(b))] as const).filter(([a, b]) => a <= b).sort((x, y) => x[0] - y[0]);
+  let total = 0, end = -1;
+  for (const [a, b] of ranges) { const from = Math.max(a, end + 1); if (b >= from) total += b - from + 1; end = Math.max(end, b); }
+  return total;
 }
 export const router2SyntaxFor = (mode: RouterMode2): string[] => { const seen = new Set<string>(); return ROUTER2_COMMANDS.filter(c => c.modes.includes(mode) && c.id !== "help" && !seen.has(c.syntax) && (seen.add(c.syntax), true)).map(c => c.syntax); };

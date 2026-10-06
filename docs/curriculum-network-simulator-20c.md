@@ -269,8 +269,14 @@ VTP `transparent` / `off`, `write` / `copy` (the running configuration is what c
 * Wireless range has no geometry; association picks the first enabled AP (by id) for the SSID.
 * Passwords are configuration only (no login prompts / privilege enforcement); `enable secret 5` and type-7 forms are educational
   displays.
-* Port Security derives secure / violating addresses from the ordered sightings; raising `maximum` re-derives them; `shutdown`
-  clears violators (and non-sticky learned addresses).
+* Port Security derives secure / violating addresses from the ordered sightings. Err-disable is **latched** (Review Fix 1): a new
+  violation mode or a raised `maximum` does not recover the port; `shutdown` + `no shutdown` does (it clears violators and non-sticky
+  learned addresses). Simplification: `no switchport port-security` removes the port's security record, including a latched
+  err-disable.
+* A reachability / browse *check* is evaluated purely (it records no sightings): an unseen MAC is admitted while a secure slot is free,
+  exactly as the first live frame would be.
+* The workspace does not pre-warn before an answer approaches the core's 256 KB bound; the bounds above keep realistic answers far
+  below it (measured worst case ≈ 94 KB).
 * Lease negotiation is not shown in MAC tables; timing (latency, lease expiry) is not simulated.
 
 ## 19. Tests and mutation campaign
@@ -299,7 +305,22 @@ IPv6 addressing, wireless range / multiple-AP roaming and a richer Browser — e
 engines or as a new exact version where semantics would change. Non-goals for the curriculum core: routing protocols, MPLS, HSRP,
 QoS, VPN, AAA, complex NAT, packet capture, uploaded protocol plugins.
 
-## 22. Earlier pins updated (production-set / unknown-version examples)
+## 22. Review Fix 1 (independent review of `a7230ba`)
+
+| Finding | Severity | Fix | Evidence |
+|---|---|---|---|
+| `show ip dhcp pool` enumerated excluded addresses (≈ 560 k Set insertions per command with 8 /8 pools; 300 valid commands replayed in 74.6 s) and capped the count at 70 000 | BLOCKER | counted arithmetically from clipped, merged ranges | fail-first: 59.4 s on `42c35c9`, < 5 s after; exact count 16 777 214 |
+| `switch.interfaceEnabled` passed for an SVI never created | MINOR | absent SVI ⇒ “—” (fails) | fail-first test F2 |
+| pool names `__proto__` / `constructor` / `prototype` accepted (silent no-op) | MINOR | refused by the CLI and by check validation | F3 |
+| err-disable cleared by a new violation mode / raised maximum | MINOR | latched until shutdown / no shutdown | F4 |
+| SVI shown up/up while its VLAN is missing | MINOR | down/down, the same rule connectivity uses | F5 |
+| an unusable AP address / mask pair dropped silently | NOTE | stored as entered; operational only when usable | F6 |
+| no engine signature in the bundle guard; `net2Common` missing from the API dynamic-code scan | NOTE | added | guard / API test |
+
+All tests are in `src/net2ReviewFix1.20c.test.ts` (6 fail-first on `42c35c9`, 1 pin: overlapping exclusions were already merged correctly
+for small pools).
+
+## 23. Earlier pins updated (production-set / unknown-version examples)
 
 Registering a new identity legitimately changes pins that listed the production set or used `networkTopology@2` as an example of an
 *unregistered* version. The intent of each pin is preserved:
