@@ -18,11 +18,14 @@ function round(n) { return Number(Number(n || 0).toFixed(2)); }
 function clamp(v, min, max) { return Math.min(max, Math.max(min, Number(v) || 0)); }
 const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
 const validOverride = o => !!o && o.score !== undefined && o.score !== null;
-function rebuildCompositeGrade(g, id, overrides) {
+function rebuildCompositeGrade(g, id, overrides, topIds) {
   const cap = effectiveMaxMarks(g);
   const parts = g.parts.map(p => {
     if (!isObj(p)) return p;
-    const o = overrides[compositeChildKey(id, String(p.partId))], pcap = effectiveMaxMarks(p);
+    // 20D RF1 — a child key that is ALSO a top-level question id of this attempt is ambiguous: that override belongs to the top-level
+    // question (legacy path), never to the part (the part stays as graded / pending — fail closed, never a borrowed score).
+    const ck = compositeChildKey(id, String(p.partId));
+    const o = topIds.has(ck) ? undefined : overrides[ck], pcap = effectiveMaxMarks(p);
     if (validOverride(o)) { const s = clamp(o.score, 0, pcap); return { ...p, score: round(s), manualScore: round(s), manualReview: false, reviewed: true, teacherComment: String(o.comment || "") }; }
     return { ...p, reviewed: !p.manualReview };
   });
@@ -48,10 +51,11 @@ function rebuildCompositeGrade(g, id, overrides) {
 function rebuildAttemptGrades(attempt) {
   const grades = Array.isArray(attempt.questionGrades) ? attempt.questionGrades : [], overrides = attempt.manualOverrides && typeof attempt.manualOverrides === "object" ? attempt.manualOverrides : {};
   let remaining = 0; const scoreById = new Map();
+  const topIds = new Set(grades.filter(isObj).map(g => String(g.questionId || "")));
   attempt.questionGrades = grades.map(g => {
     const id = String(g.questionId || ""), o = overrides[id], cap = effectiveMaxMarks(g);
     if (isObj(g) && isObj(g.composite) && Array.isArray(g.composite.groups) && Array.isArray(g.parts)) {
-      const c = rebuildCompositeGrade(g, id, overrides);
+      const c = rebuildCompositeGrade(g, id, overrides, topIds);
       if (o && o.score !== undefined && o.score !== null) { const s = clamp(o.score, 0, cap); scoreById.set(id, s); return { ...c.grade, score: round(s), manualScore: round(s), manualReview: false, reviewed: true, teacherComment: String(o.comment || "") }; }
       scoreById.set(id, c.score); remaining += c.pending; return c.grade;
     }

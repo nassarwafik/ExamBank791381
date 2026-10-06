@@ -196,11 +196,18 @@ function compositeQuestionMaxMarks(node) {
     const n = Number(node.marks ?? node.points);
     return Number.isFinite(n) ? Math.max(0, n) : 0;
 }
+const answeredSafe = (a) => { if (!isObj(a))
+    return false; try {
+    return (0, answerState_1.answered)(a);
+}
+catch {
+    return false;
+} };
 function isCompositeAnswerAnswered(a) {
     if (!isObj(a) || a.kind !== "composite")
         return false;
     const parts = isObj(a.parts) ? Object.values(a.parts) : [], contexts = isObj(a.contexts) ? Object.values(a.contexts) : [];
-    return parts.some(p => (0, answerState_1.answered)(p)) || contexts.some(c => (0, answerState_1.answered)(c));
+    return parts.some(answeredSafe) || contexts.some(answeredSafe);
 }
 const partAnswerOf = (a, pid) => (isObj(a) && a.kind === "composite" && isObj(a.parts) && Object.prototype.hasOwnProperty.call(a.parts, pid) ? a.parts[pid] : undefined);
 function selectCompositeCountedParts(node, answer) {
@@ -211,7 +218,7 @@ function selectCompositeCountedParts(node, answer) {
     for (const g of s.shape.groups) {
         let taken = 0;
         for (const p of g.parts) {
-            const isAnswered = (0, answerState_1.answered)(partAnswerOf(answer, p.id));
+            const isAnswered = answeredSafe(partAnswerOf(answer, p.id));
             if (g.gradingPolicy !== "firstNAnswered") {
                 out.set(p.id, { counted: true, answered: isAnswered, ignored: false });
                 continue;

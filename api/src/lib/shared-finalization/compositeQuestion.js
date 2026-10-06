@@ -66,7 +66,7 @@ function utf8Bytes(s) {
 }
 function configBytes(root) {
     try {
-        return utf8Bytes(JSON.stringify(root, (_k, v) => (typeof v === "string" && v.startsWith("data:") ? "" : v)) ?? "");
+        return utf8Bytes(JSON.stringify(root, (k, v) => (k === "dataUrl" && typeof v === "string" && v.startsWith("data:image/") ? "" : v)) ?? "");
     }
     catch {
         return Infinity;

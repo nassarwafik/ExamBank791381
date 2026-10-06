@@ -155,11 +155,15 @@ export function compositeQuestionMaxMarks(node: Record<string, unknown>): number
   return Number.isFinite(n) ? Math.max(0, n) : 0;
 }
 
+// 20D RF1 — the shared answered predicate also runs on the SERVER over student-controlled nested answers (stored drafts, legacy data):
+// it is TOTAL — a malformed child (e.g. { kind: "text" } without a string value) is "not answered", never a TypeError that would make
+// submit / end-attempt fail. Binding already drops such children; this is the defence for anything that bypassed binding.
+const answeredSafe = (a: unknown): boolean => { if (!isObj(a)) return false; try { return answered(a as Answer); } catch { return false; } };
 /** answered ⇔ some part answered or some context carries at least one action (mirror: api exam-structure.js isResponseAnswered). */
 export function isCompositeAnswerAnswered(a: unknown): boolean {
   if (!isObj(a) || a.kind !== "composite") return false;
   const parts = isObj(a.parts) ? Object.values(a.parts) : [], contexts = isObj(a.contexts) ? Object.values(a.contexts) : [];
-  return parts.some(p => answered(p as Answer)) || contexts.some(c => answered(c as Answer));
+  return parts.some(answeredSafe) || contexts.some(answeredSafe);
 }
 const partAnswerOf = (a: unknown, pid: string): Answer | undefined => (isObj(a) && a.kind === "composite" && isObj(a.parts) && Object.prototype.hasOwnProperty.call(a.parts, pid) ? (a.parts[pid] as Answer) : undefined);
 
@@ -178,7 +182,7 @@ export function selectCompositeCountedParts(node: unknown, answer: unknown): Map
   for (const g of s.shape.groups) {
     let taken = 0;
     for (const p of g.parts) {
-      const isAnswered = answered(partAnswerOf(answer, p.id));
+      const isAnswered = answeredSafe(partAnswerOf(answer, p.id));
       if (g.gradingPolicy !== "firstNAnswered") { out.set(p.id, { counted: true, answered: isAnswered, ignored: false }); continue; }
       if (isAnswered && taken < (g.requiredAnswers as number)) { taken++; out.set(p.id, { counted: true, answered: true, ignored: false }); }
       // an unanswered firstN part fills no slot (no counted marks, never pending review — mirror of a section's firstN unit); an answered

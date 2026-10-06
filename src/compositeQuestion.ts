@@ -64,7 +64,9 @@ function utf8Bytes(s: string): number {
   return n;
 }
 function configBytes(root: unknown): number {
-  try { return utf8Bytes(JSON.stringify(root, (_k, v) => (typeof v === "string" && v.startsWith("data:") ? "" : v)) ?? ""); } catch { return Infinity; }
+  // 20D RF1 (review note N1) — only an IMAGE payload (a `dataUrl` field holding a data: image, bounded by its own media validator) is
+  // excluded from the 1 MB authoring bound; any other string counts, whatever it starts with.
+  try { return utf8Bytes(JSON.stringify(root, (k, v) => (k === "dataUrl" && typeof v === "string" && v.startsWith("data:image/") ? "" : v)) ?? ""); } catch { return Infinity; }
 }
 const optText = (v: unknown, max: number): boolean => v === undefined || (typeof v === "string" && v.length <= max);
 

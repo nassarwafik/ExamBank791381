@@ -108,6 +108,23 @@ function bindAnswer(id, a, q, bound, reject) {
 // an oversized answer refuses the whole answer. Unbound (no exam) answers are shape / bounds checked only.
 const { compositeStructure, compositeChildNode, isCompositeQuestionNode, COMPOSITE_LIMITS } = require("./shared-finalization/compositeQuestion");
 const ownKeys = o => (o && typeof o === "object" && !Array.isArray(o) ? Object.keys(o) : null);
+// 20D RF1 — a composite CHILD answer must be one of the existing single-question Answer kinds, well-formed for its kind (the generic
+// binder passes the legacy kinds through untouched, as it always has for top-level answers). A malformed shape ({ kind: "text" } without a
+// string, { kind: "fields" } without values, …), a nested compound / composite, an unknown kind or a non-object is refused for THAT child
+// (reported), so nothing student-controlled and malformed is ever stored inside a composite or reaches the grader / answered predicate.
+const isPlain = v => !!v && typeof v === "object" && !Array.isArray(v);
+const CHILD_ANSWER_SHAPES = {
+  choice: a => Number.isInteger(a.index) && a.index >= 0,
+  text: a => typeof a.value === "string",
+  sequence: a => Array.isArray(a.values),
+  table: a => Array.isArray(a.values),
+  fields: a => isPlain(a.values),
+  multiChoice: a => Array.isArray(a.optionIds),
+  numeric: a => typeof a.value === "string" && (a.unit === undefined || typeof a.unit === "string"),
+  // rebuilt / normalized by their own binders above (the binder already refused anything malformed)
+  simulation: () => true, code: () => true, codeTemplate: () => true, smartSim: () => true, networkCli: () => true, hotspot: () => true
+};
+const childAnswerWellFormed = a => isPlain(a) && typeof a.kind === "string" && Object.prototype.hasOwnProperty.call(CHILD_ANSWER_SHAPES, a.kind) && CHILD_ANSWER_SHAPES[a.kind](a);
 function bindCompositeAnswer(id, a, q, bound, reject) {
   if (!a || typeof a !== "object" || Array.isArray(a) || a.kind !== "composite") return { ok: false, code: "COMPOSITE_ANSWER_INVALID" };
   const partIds = a.parts === undefined ? [] : ownKeys(a.parts), ctxIds = a.contexts === undefined ? [] : ownKeys(a.contexts);
@@ -122,12 +139,12 @@ function bindCompositeAnswer(id, a, q, bound, reject) {
   const parts = {}, contexts = {};
   for (const pid of partIds) {
     const value = a.parts[pid];
-    if (!bound) { const r = bindAnswer(id + "." + pid, value, undefined, false, reject); if (r.ok) parts[pid] = r.answer; else reject(id + "." + pid, r.code); continue; }
+    if (!bound) { const r = bindAnswer(id + "." + pid, value, undefined, false, reject); if (r.ok && childAnswerWellFormed(r.answer)) parts[pid] = r.answer; else reject(id + "." + pid, r.ok ? "COMPOSITE_CHILD_ANSWER_INVALID" : r.code); continue; }
     const part = st.model.partById.get(pid);
     if (!part) { reject(id + "." + pid, "COMPOSITE_PART_UNKNOWN"); continue; }
     if (part.linkedSmartSim) { reject(id + "." + pid, "COMPOSITE_PART_ANSWER_FORBIDDEN"); continue; }
     const r = bindAnswer(id + "." + pid, value, compositeChildNode(part.raw), true, reject);
-    if (r.ok) parts[pid] = r.answer; else reject(id + "." + pid, r.code);
+    if (r.ok && childAnswerWellFormed(r.answer)) parts[pid] = r.answer; else reject(id + "." + pid, r.ok ? "COMPOSITE_CHILD_ANSWER_INVALID" : r.code);
   }
   for (const cid of ctxIds) {
     const value = a.contexts[cid];
@@ -149,6 +166,9 @@ function normalizeDraftAnswers(answers, exam) {
   for (const id of Object.keys(answers)) {
     const a = answers[id], q = bound ? index.get(id) : undefined;
     const isComposite = (bound && isCompositeQuestionNode(q)) || (!bound && a && typeof a === "object" && a.kind === "composite");
+    // 20D RF1 — bound to the published exam, a composite answer belongs ONLY to a composite question (on any other question it was never
+    // an answer — the baseline answered-predicate ignored it — and it must not be stored, take a first-N slot or reach a grader).
+    if (bound && !isComposite && a && typeof a === "object" && a.kind === "composite") { rejected.push({ id, code: "COMPOSITE_QUESTION_MISMATCH" }); continue; }
     const r = isComposite ? bindCompositeAnswer(id, a, q, bound, reject) : bindAnswer(id, a, q, bound, reject);
     if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
     out[id] = r.answer;

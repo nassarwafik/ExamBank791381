@@ -35,6 +35,7 @@ function compositeReviewOf(q, questionId, attempt, { assignmentId, studentId }) 
   const grade = (Array.isArray(attempt.questionGrades) ? attempt.questionGrades : []).find(g => isObj(g) && String(g.questionId) === questionId) || null;
   const partGrades = new Map((grade && Array.isArray(grade.parts) ? grade.parts : []).filter(isObj).map(p => [String(p.partId), p]));
   const overrides = isObj(attempt.manualOverrides) ? attempt.manualOverrides : {};
+  const topIds = new Set((Array.isArray(attempt.questionGrades) ? attempt.questionGrades : []).filter(isObj).map(g => String(g.questionId)));
   const prepared = new Map();
   const prep = c => { if (!prepared.has(c.id)) prepared.set(c.id, prepareSmartSimEvaluation({ envelope: c.envelope, response: own(ctxAnswers, c.id) })); return prepared.get(c.id); };
   const contexts = st.model.contexts.map(c => {
@@ -46,7 +47,7 @@ function compositeReviewOf(q, questionId, attempt, { assignmentId, studentId }) 
   const parts = [];
   for (const g of st.model.groups) for (const p of g.parts) {
     const childKey = compositeChildKey(questionId, p.id), child = { ...compositeChildNode(p.raw), marks: p.marks };
-    const studentAnswer = own(partAnswers, p.id) ?? null, pg = partGrades.get(p.id) || null, o = own(overrides, childKey);
+    const studentAnswer = own(partAnswers, p.id) ?? null, pg = partGrades.get(p.id) || null, o = topIds.has(childKey) ? undefined : own(overrides, childKey);   // RF1: an ambiguous key is never the part's
     const entry = {
       partId: p.id, groupId: g.id, childKey, label: p.label, type: p.type, questionTypeVersion: p.raw.questionTypeVersion ?? null, marks: p.marks,
       text: typeof p.raw.text === "string" ? p.raw.text : "", ...(p.contextId !== undefined ? { contextId: p.contextId } : {}),

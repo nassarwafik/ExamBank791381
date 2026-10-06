@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBlockingErrors = void 0;
 exports.validateStructuredExam = validateStructuredExam;
 exports.compositeTargetKeyIssues = compositeTargetKeyIssues;
+exports.compositeEffectiveIdIssues = compositeEffectiveIdIssues;
 const questionTypeValidation_1 = require("./questionTypeValidation");
 const codeStimulus_1 = require("./codeStimulus");
 const scenarioSource_1 = require("./scenarioSource");
@@ -54,6 +55,8 @@ function validateStructuredExam(exam) {
             validateQuestion(q, label, section, add);
         });
     });
+    for (const x of compositeEffectiveIdIssues(exam))
+        add("error", "COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب «" + x.questionId + "» غير صالح: يجب أن يكون من حروف لاتينية وأرقام و . _ : - فقط، دون الفاصل ::part::.", x);
     for (const x of compositeTargetKeyIssues(exam))
         add("error", "COMPOSITE_TARGET_KEY_AMBIGUOUS", "معرّف السؤال «" + x.questionId + "» يحتوي الفاصل ::part::، وهو محجوز لهويات بنود الأسئلة المركّبة.", x);
     return issues;
@@ -299,6 +302,15 @@ function validateComposite(q, disp, sectionLabel, where, add) {
             validateBody((0, compositeQuestion_1.compositeChildNode)(p.raw), p.type, "البند " + p.label + " من " + disp, where, add);
         }
 }
+const effectiveQuestionId = (section, q, i) => {
+    if (q.examQuestionId != null && q.examQuestionId !== "")
+        return String(q.examQuestionId);
+    if (q.id != null && q.id !== "")
+        return String(q.id);
+    if (section && section.id && section.id !== "__default__")
+        return section.id + "::q" + (i + 1);
+    return String(q.number || i + 1);
+};
 function compositeTargetKeyIssues(exam) {
     const sections = Array.isArray(exam.sections) ? exam.sections : [];
     const hasComposite = sections.some(s => (s.questions || []).some(q => q && q.presentationType === "composite"));
@@ -306,9 +318,25 @@ function compositeTargetKeyIssues(exam) {
         return [];
     const out = [];
     for (const s of sections)
-        for (const q of s.questions || [])
-            if (q && q.presentationType !== "composite" && typeof q.examQuestionId === "string" && q.examQuestionId.includes(compositeQuestion_1.COMPOSITE_CHILD_SEPARATOR))
-                out.push({ questionId: q.examQuestionId, sectionId: s.id });
+        (s.questions || []).forEach((q, i) => {
+            if (!q || q.presentationType === "composite")
+                return;
+            const id = effectiveQuestionId(s, q, i);
+            if (id.includes(compositeQuestion_1.COMPOSITE_CHILD_SEPARATOR))
+                out.push({ questionId: id, sectionId: s.id });
+        });
+    return out;
+}
+function compositeEffectiveIdIssues(exam) {
+    const out = [];
+    for (const s of Array.isArray(exam.sections) ? exam.sections : [])
+        (s.questions || []).forEach((q, i) => {
+            if (!q || q.presentationType !== "composite" || (q.examQuestionId != null && q.examQuestionId !== ""))
+                return;
+            const id = effectiveQuestionId(s, q, i);
+            if (!(0, compositeQuestion_1.isCompositeQuestionId)(id))
+                out.push({ questionId: id, sectionId: s.id });
+        });
     return out;
 }
 const hasBlockingErrors = (issues) => issues.some(i => i.severity === "error");
