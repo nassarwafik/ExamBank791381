@@ -69,20 +69,34 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   reported as a structured `CAPABILITY_UNSUPPORTED` warning with a safe theory alternative.
 - **physicsFreeFall@1**: the model picks a bounded model and task kinds; every expected value (impact time / speed, peak height, apex time,
   apex / impact points) is computed by code; apex tasks only for an upward throw; probe time inside the flight.
-- **functionStudy2d@1**: safe expression language 2 only; the model's key is probed numerically for **soundness** (f(0), roots, poles,
+- **functionStudy2d@1**: safe expression language 2, restricted for AI-authored keys (Review Fix 5) to numbers, x, + − × ÷ ^, abs, sqrt,
+  exp, log and log10. round / floor / ceil / min / max / % are refused (`AI_FUNCTION_UNSUPPORTED`; the teacher authors those manually)
+  because their jumps and noise defeat a numerical probe. The model's key is probed numerically for **soundness** (f(0), roots, poles,
   horizontal asymptotes, local extrema, monotonic intervals: an inconsistent key is refused) and, since Review Fix 1, for **completeness**
   inside the window. Code samples the function (2001 points; sign changes refined by bisection; touching roots, even poles and extrema by
   ternary search, a touching root only at a strict local minimum of |f|; one-sided poles at a domain edge). Poles are recognized by
-  **growth**: |f| keeps increasing without slowing down, decade by decade, as the probe closes in (10⁻² … 10⁻¹²). A steep pole may
-  instead rise past 10⁶ before the safe evaluator overflows; that is checked from 10⁻¹ in half-decades, and a run of overflow beside a
-  pole is tested on both sides. This covers rational poles of any order the evaluator can show, logarithmic poles, steep poles
-  (1000/(x−2)⁴) and exp(1/x), at any window height, while a removable hole, a cusp or a finite edge is not a pole.
+  **growth** and classified **fail-closed** (Review Fix 5). Each side of a candidate is sampled at 10⁻² … 10⁻¹², with the evaluator's
+  overflow told apart from undefined points, and classified as:
+  - **pole**: |f| keeps increasing without slowing down, or rises strongly until the evaluator overflows;
+  - **bounded**: undefined on that side, not increasing, or increasing with geometrically vanishing steps (a cusp);
+  - **uncertain**: anything else, such as overflow already at 10⁻² (an overflow edge is not a pole) or growth too slow to decide
+    (√|log|x||).
+
+  A candidate that lands on an overflow plateau is moved to its centre. An uncertain candidate, an uncertain key point, or an overflow run
+  inside the window **refuses** the key (`AI_FUNCTION_TOO_COMPLEX`) rather than guessing. This covers rational poles of order 1 to about 8
+  (1000/(x−2)⁴, 10⁶/(x−2)³) and logarithmic poles at any window height. A hole, a cusp or a finite edge is not a pole. Very steep poles
+  (1/(x−2)¹⁰) and exp(1/x) are refused, never keyed incompletely.
 
   **Horizontal limits** are read at the largest magnitude t where f(t), f(t/2), f(t/4), f(t/8) and f(t/16) can all be evaluated, searched
   downward by halving from 10⁶; a logistic curve is therefore read near x = ∓60. The successive differences must shrink geometrically
   (ratio ≤ 0.8) and already be small, and the limit adds the geometric tail. That handles rational, root-like and exponential approaches
-  (sigmoid, tanh, logistic), while a log, x^0.01 or an oscillation is not a limit. Limits are compared relatively. The sample points avoid
-  round numbers so periodic `round` / `floor` expressions cannot alias.
+  (sigmoid, tanh and logistic at moderate rates). Each side is decided **three ways**:
+  - a limit;
+  - none: steps of one sign that do not shrink (polynomial, exp, log, x^0.01);
+  - uncertain: noise, a non-monotone approach, or a side defined at moderate |x| but at no evaluable magnitude (a very steep logistic).
+    An uncertain side refuses the key.
+
+  Limits are compared relatively, and evaluator rounding counts as flat.
 
   The key's **soundness** checks use the same pole test and the same limits, so a correct log asymptote or a slowly converging limit is
   never refused. The probe refuses a key that:
@@ -107,8 +121,8 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
 
   A valid echoed draft is judged once.
 
-  It is a probe, not a proof: features finer than the grid, or growing too slowly to show over the probed decades, are left to the
-  teacher's review.
+  It is a probe, not a proof, and it **fails closed**: whatever it cannot decide is refused. A refused key is a teacher task; an accepted
+  wrong or incomplete key would fail correct students. Features finer than the grid remain the teacher's review.
 - **No free credit**: every SmartSim key (and every composite SmartSim part) is evaluated on an empty action stream and must award nothing.
 - **composite@1**: one shared context (SmartSim spec or rich source), groups of child parts, exact part-mark sums (never redistributed),
   first-N groups with equal marks and code-computed maxima, no nesting, no code stimulus in a part, and a SmartSim check id grades at most
@@ -477,7 +491,8 @@ The other notes need no change:
 - NOTE-3: a non-terminating decimal pole can be keyed only with the exact double (§12).
 - NOTE-4: aliasing occurs only at an adversarial frequency.
 
-**Fail-first.** `composerReviewFix4.20f.test.ts` was executed on `ce23bdd`: **3 of 3 failed**, with:
+**Fail-first.** `composerReviewFix4.20f.test.ts` was executed on `ce23bdd`. The first three tests **failed 3 of 3**; the fourth, added in
+`8b33d7e`, also fails there (4 of 4, confirmed by the RF5 reviewer). The assertions were:
 - `expected 8955 to be less than or equal to 5000`
 - `5/(1+exp(-0.5*x)) ["AI_FUNCTION_KEY_INCONSISTENT"]: expected false to be true`
 - `1/(x+3)+1000/(x-2)^4 ["AI_FUNCTION_KEY_INCONSISTENT"]: expected false to be true`
@@ -503,8 +518,8 @@ re-targets 3, RF2 14, the RF2 re-targets 3 and RF3 9.
 - **81 KILLED.**
 - **3 EQUIVALENT:**
   - C19 and C42 (proved in §11.4);
-  - T02 (pole growth starting at 10⁻³): RF4's steep check from 10⁻¹ already recognizes the high-order poles that the 10⁻² start was
-    added for, so dropping the first decade changes no outcome.
+  - T02 (pole growth starting at 10⁻³) was claimed equivalent here. **That claim was wrong**: the RF5 re-review showed √|log|x|| changes
+    outcome under it. §11.10 records how it is answered.
 - **13 INVALID,** because their target lines were rewritten; each is re-targeted or covered:
   - R04, R08 and R12 by R04b, R08b and R12b (KILLED in this run);
   - R09, R10 and R11 by S09, S06b / S07b and U04;
@@ -512,8 +527,97 @@ re-targets 3, RF2 14, the RF2 re-targets 3 and RF3 9.
   - S07 by S07b and T07 by T07b (both re-targeted at the RF4 code and KILLED);
   - S08 by U04 and T06 by U06.
 
-With RF4's 6 (5 KILLED, U02 equivalent), every planted defect in the current code is killed except 4 proven equivalents (C19, C42, T02,
-U02). There were 0 timeouts, and every file was restored byte-for-byte with a clean `git status` after every campaign.
+With RF4's 6 (5 KILLED, U02 equivalent), every planted defect in the RF4 code was killed except 4 claimed equivalents (C19, C42, T02,
+U02); the T02 claim was later withdrawn (§11.10). There were 0 timeouts, and every file was restored byte-for-byte with a clean `git status` after every campaign.
+
+### 11.10 Fresh re-review and Review Fix 5: the function-study key check fails closed
+
+A fresh re-review of `838e7f4` found 0 BLOCKER, 0 MAJOR, 3 MINOR findings and 4 notes.
+- **MINOR-1** was an RF4 regression: the steep branch jumped across an overflow run, so its edges were accepted as asymptotes.
+- **MINOR-2:** noisy, non-monotone or very steep approaches at ±∞ lost a limit and accepted the one-sided key.
+- **MINOR-3:** the T02 equivalence claim was wrong (√|log|x||).
+
+Four rounds had shown that every heuristic refinement of the numerical probe opened new corner cases. So Review Fix 5 (`34ac5d7`, then
+the tests `8396f15`, `0fc0b33`, `4e462ef`, `2ae0362` and `20257aa`) changes the **principle** instead of adding a fifth heuristic. A refused key costs the teacher a manual question; an
+accepted wrong key fails correct students. The probe therefore fails closed:
+
+| Change | Answers |
+|---|---|
+| AI vocabulary for function study: numbers, x, + − × ÷ ^, abs, sqrt, exp, log, log10 (round / floor / ceil / min / max / % → `AI_FUNCTION_UNSUPPORTED`; stated in the prompt rules) | MINOR-2 noisy / periodic cases |
+| three-way pole classification (pole / bounded / uncertain) with evaluator overflow distinguished from undefined; the steep branch removed; plateau candidates moved to the plateau centre | MINOR-1 |
+| an overflow run inside the window, an uncertain candidate or an uncertain key point refuses the key (`AI_FUNCTION_TOO_COMPLEX`) | MINOR-1, MINOR-3 |
+| three-way limits (limit / none / uncertain); an uncertain side refuses the key | MINOR-2 |
+
+Battery: 25 correct curriculum keys are accepted, and 7 wrong or incomplete keys are refused. The battery covers rationals, poles of order
+1–4, log poles, sqrt, abs, plateaus, slowly converging and logistic / tanh limits, and extrema / monotonic keys. The expected changes from
+earlier rounds are exp(1/x), now refused (an RF4 test updated to expect the refusal), and the round-based test expressions, rewritten in
+the allowed vocabulary with the same intent.
+
+**Fail-first.** `composerReviewFix5.20f.test.ts` (the first five tests) was executed on `838e7f4` in a detached worktree: **5 of 5
+failed**. Sample assertions:
+- `1/(x-2)^10 {"verticalAsymptotes":[1.97,2.03]}: expected true to be false`
+- `expected [ 'AI_FUNCTION_KEY_INCOMPLETE' ] to deeply equal [ 'AI_FUNCTION_TOO_COMPLEX' ]`
+- `exp(x)*exp(-abs(x)) {"horizontalAsymptotes":[0]}: expected true to be false`
+- `expected [] to deeply equal [ 'AI_FUNCTION_UNSUPPORTED' ]`
+- `sqrt(abs(log(abs(x))))+1/(x-3) {"verticalAsymptotes":[3]}: expected true to be false`
+
+All pass on the head. The four layer-isolating tests were added after the first mutation run.
+
+**RF5 mutation campaign.** 20 mutants: the 13 RF5 mutants (V01–V13) and 7 re-targets of earlier mutants whose lines RF5 rewrote
+(T02b, S03c, S06c, S07c, T04c, T05c, U05c). Result: **20 KILLED, 0 SURVIVED, 0 TIMEOUT**. Some first survived because another
+fail-closed layer caught the same input:
+- V03, V04, V05, V08 and V09, now killed by the layer-isolating tests (`8396f15`, `0fc0b33`);
+- S07c and T05c, now killed by `2ae0362` and `20257aa`, which assert the pole classification directly.
+
+T02b, the old T02 change, is killed by the order-6 pole test (`4e462ef`) and by the slow-growth test.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| V01 | `composerSim.ts` | AI vocabulary check removed | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 MINOR-2 an undecidable behaviour at ±∞ never accepts a one- |
+| V02 | `composerSim.ts` | evaluator overflow treated as undefined | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 MINOR-1 the edges of an overflow run are never vertical asy |
+| V03 | `composerSim.ts` | overflow run inside the window not refused | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › a domain point hi |
+| V04 | `composerSim.ts` | overflow already at 1e-2 counted as a pole | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › a coarse grid doe |
+| V05 | `composerSim.ts` | a pole side outweighs an uncertain side | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › one side a fast p |
+| V06 | `composerSim.ts` | slow growth counted as bounded | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 MINOR-3 a pole that grows too slowly to confirm refuses the |
+| V07 | `composerSim.ts` | uncertain candidate ignored by the probe | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 MINOR-3 a pole that grows too slowly to confirm refuses the |
+| V08 | `composerSim.ts` | uncertain limits ignored by the probe | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › an undecided appr |
+| V09 | `composerSim.ts` | undecided approach treated as no limit | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › an undecided appr |
+| V10 | `composerSim.ts` | defined-but-unevaluable side treated as no limit | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 MINOR-2 an undecidable behaviour at ±∞ never accepts a one- |
+| V11 | `composerSim.ts` | candidate left on the edge of an overflow plateau | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-2 high-order poles are found › poles of order 3 and 4 |
+| V12 | `composerSim.ts` | uncertain key pole reported as inconsistent | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-C very steep poles and exp(1/x) are vertical asymptot |
+| V13 | `composerSim.ts` | growth toward a tiny gap always uncertain | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-m1 / N-m2 poles and limits are recognized by growth, limi |
+| T02b | `composerSim.ts` | pole growth starts at 1e-3 (RF5 code) | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-C very steep poles and exp(1/x) are vertical asymptot |
+| S03c | `composerSim.ts` | task gating removed (RF5 code) | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 task gating: only the enabled tasks' features are located › |
+| S06c | `composerSim.ts` | slowing growth counted as a pole (RF5 code) | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-m1 / N-m2 poles and limits are recognized by growth, limi |
+| S07c | `composerSim.ts` | overflow after weak growth counted as a pole (RF5 code) | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › weak growth that  |
+| T04c | `composerSim.ts` | vertical-asymptote key soundness skipped (RF5 code) | KILLED | composerCore.20f.test.ts › 20F-SIM SmartSim through the catalog: code-owned config and private check |
+| T05c | `composerSim.ts` | horizontal-asymptote key soundness skipped (RF5 code) | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › a key value that  |
+| U05c | `composerSim.ts` | limit = last sample, no geometric tail (RF5 code) | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-B sigmoid and tanh limits are found on both sides › a |
+
+**Final re-run on the Review Fix 5 code.** Every earlier mutant list was re-run: 105 mutants (the 97 of the RF4 re-run, RF4's 6 and
+the 2 RF4 re-targets).
+- **80 KILLED.**
+- **4 EQUIVALENT:**
+  - C19 and C42 (proved in §11.4);
+  - U02 (`^` is parsed as a `pow` call, so the `bin "^"` cost branch is unreachable);
+  - T07b (the off-round limit sample offset only prevents periodic aliasing, and the AI vocabulary no longer contains a periodic
+    operator).
+- **T02** survived here only because its suite list predates `composerReviewFix5`. The identical change, re-run with the current suites
+  as T02b, is **KILLED** (table above). The RF4 equivalence claim for T02 is withdrawn.
+- **20 INVALID,** because RF5 rewrote their target lines. Each is re-targeted or covered:
+  - R04, R08 and R12 by R04b, R08b and R12b;
+  - R09, R10 and R11 by S09, S06c and U04;
+  - S01 by S01b;
+  - S03 and S03b by S03c;
+  - S06 and S06b by S06c;
+  - S07 and S07b by S07c;
+  - S08 by U04;
+  - T04 by T04c, T05 by T05c, T06 by U06 and T07 by T07b;
+  - U03: the steep-pole branch it mutated was removed by RF5;
+  - U05 by U05c.
+
+Every planted defect in the current code is killed except the 4 proven equivalents (C19, C42, U02, T07b). There were 0 timeouts, and
+every file was restored byte-for-byte with a clean `git status` after every campaign.
 
 ## 12. Known limitations
 
@@ -525,7 +629,9 @@ U02). There were 0 timeouts, and every file was restored byte-for-byte with a cl
   step, confirmed first.
 - The function-study completeness probe is a probe, not a proof. These cases are left to the teacher's review:
   - features finer than the 2001-point grid;
-  - poles that overflow the safe evaluator before growth shows, beyond the steep check;
+  - functions the probe cannot decide (very steep poles, exp(1/x), growth too slow to confirm, undecidable behaviour at ±∞, overflow
+    inside the window) are refused, never keyed: the teacher authors them;
+  - round / floor / ceil / min / max / % are not AI vocabulary for function study;
   - vertical asymptotes at non-terminating decimals (1/(3x−1)), which can only be keyed with the exact double; refusing them is safe.
 - No live provider call was made (no network in the development environment): the provider schemas are checked against the documented
   strict-mode limits by a test, not by a live acceptance call. The first production composer call is the live check.
