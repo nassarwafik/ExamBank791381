@@ -1,0 +1,56 @@
+/* Phase 20F — «المؤلف الذكي للامتحان» (lazy; imported by AiExamComposerDialog only). Every state is readable as text: colour only reinforces. */
+.ai-composer{display:flex;flex-direction:column;gap:var(--eb-space-3,12px)}
+.ai-composer-tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--eb-border,#cbd5e1);padding-bottom:4px}
+.ai-composer-tab{appearance:none;border:1px solid transparent;background:transparent;color:var(--eb-text-secondary,#475569);font:inherit;font-weight:700;font-size:13px;padding:6px 12px;border-radius:var(--eb-r-sm,6px) var(--eb-r-sm,6px) 0 0;cursor:pointer}
+.ai-composer-tab:hover{background:var(--eb-surface-2,#f1f5f9)}
+.ai-composer-tab.is-active{border-color:var(--eb-border,#cbd5e1);border-bottom-color:var(--eb-surface,#fff);background:var(--eb-surface,#fff);color:var(--eb-primary,#1d4ed8);box-shadow:inset 0 -2px 0 var(--eb-primary,#1d4ed8)}
+.ai-composer-tab:focus-visible,.ai-composer :focus-visible{outline:2px solid var(--eb-focus,#2563eb);outline-offset:2px}
+.ai-composer-panel{display:flex;flex-direction:column;gap:var(--eb-space-3,12px)}
+.ai-composer-form{display:flex;flex-direction:column;gap:10px}
+.ai-composer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.ai-composer-grid input,.ai-composer-grid select,.ai-composer-form textarea,.ai-composer-form select{font:inherit;padding:6px 8px;border:1px solid var(--eb-border,#cbd5e1);border-radius:var(--eb-r-sm,6px);background:var(--eb-surface,#fff);color:var(--eb-text,#0f172a);min-width:0}
+.ai-composer-fieldset{border:1px solid var(--eb-border,#cbd5e1);border-radius:var(--eb-r-sm,6px);padding:8px 10px;margin:0}
+.ai-composer-fieldset legend{font-size:12px;font-weight:800;color:var(--eb-text-secondary,#475569);padding:0 4px}
+.ai-composer-checks{display:flex;flex-wrap:wrap;gap:6px 14px}
+.ai-composer-check{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.ai-composer-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ai-composer-progress{display:flex;flex-direction:column;gap:8px}
+.ai-composer-stages{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none;counter-reset:stage}
+.ai-composer-stages li{counter-increment:stage;font-size:12px;padding:4px 10px;border-radius:var(--eb-pill,999px);border:1px solid var(--eb-border,#cbd5e1);color:var(--eb-text-secondary,#475569)}
+.ai-composer-stages li::before{content:counter(stage) ". "}
+.ai-composer-stages li.is-current{border-color:var(--eb-primary,#1d4ed8);color:var(--eb-primary,#1d4ed8);font-weight:800}
+.ai-composer-stages li.is-current::after{content:" ←"}
+.ai-composer-status{font-weight:700;margin:0}
+.ai-composer-detail{margin:0}
+.ai-composer-result{display:flex;flex-direction:column;gap:10px}
+.ai-composer-result h3,.ai-composer-alert-title{margin:0;font-size:16px}
+.ai-composer-result h3:focus,.ai-composer-alert-title:focus{outline:none}
+.ai-composer-result h4{margin:0 0 4px;font-size:13px}
+.ai-composer-trust{margin:0;font-size:12px;color:var(--eb-text-secondary,#475569)}
+.ai-composer-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px 12px;margin:0;padding:10px;border:1px solid var(--eb-border,#cbd5e1);border-radius:var(--eb-r,8px);background:var(--eb-surface-2,#f8fafc)}
+.ai-composer-summary div{display:flex;flex-direction:column;gap:2px}
+.ai-composer-summary dt{font-size:11px;font-weight:800;color:var(--eb-text-secondary,#475569)}
+.ai-composer-summary dd{margin:0;font-size:13px}
+.ai-composer-summary dd.is-pass{color:var(--eb-success-tx,#166534);font-weight:800}
+.ai-composer-summary dd.is-fail{color:var(--eb-danger-tx,#991b1b);font-weight:800}
+.ai-composer-coverage{border-collapse:collapse;font-size:12px;width:100%}
+.ai-composer-coverage caption{text-align:start;font-weight:800;padding-bottom:4px}
+.ai-composer-coverage th,.ai-composer-coverage td{border:1px solid var(--eb-border,#cbd5e1);padding:4px 8px;text-align:start}
+.ai-composer-issues{margin:0;padding-inline-start:18px;font-size:12px;max-height:180px;overflow:auto}
+.ai-composer-blocking{border-inline-start:3px solid var(--eb-danger,#dc2626);padding-inline-start:8px}
+.ai-composer-warnings{border-inline-start:3px solid var(--eb-warn,#d97706);padding-inline-start:8px}
+.ai-composer-plan ol{margin:0;padding-inline-start:18px;font-size:12px}
+.ai-composer-confirm,.ai-composer-staged-note{border:1px solid var(--eb-warn,#d97706);background:var(--eb-warn-bg,#fffbeb);color:var(--eb-warn-tx,#92400e);border-radius:var(--eb-r-sm,6px);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.ai-composer-confirm p,.ai-composer-staged-note p{margin:0;font-weight:700}
+.ai-composer-alert{border:1px solid var(--eb-danger,#dc2626);background:var(--eb-danger-bg,#fef2f2);color:var(--eb-danger-tx,#991b1b);border-radius:var(--eb-r-sm,6px);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.ai-composer-alert p{margin:0}
+.ai-composer-diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto}
+.ai-composer-diff-group{border:1px solid var(--eb-border,#cbd5e1);border-radius:var(--eb-r-sm,6px);padding:8px 10px}
+.ai-composer-diff-pick{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px}
+.ai-composer-diff-entries{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ai-composer-diff-entry p{margin:0;font-size:12px}
+.ai-composer-field{font-weight:800}
+.ai-composer-before{text-decoration:line-through;text-decoration-thickness:1px}
+.ai-composer-after{font-weight:700}
+.ai-composer-diff-warning{color:var(--eb-warn-tx,#92400e)}
+@media (max-width:640px){.ai-composer-grid,.ai-composer-summary{grid-template-columns:1fr}}

@@ -76,6 +76,8 @@ const AiQuestionAuthorDialog = lazy(() => import("./aiAuthoring/AiQuestionAuthor
 const AiScenarioAuthorDialog = lazy(() => import("./aiAuthoring/AiScenarioAuthorDialog"));
 // Phase 20D.1 — «العرض والتصميم» (Presentation Studio): its own lazy chunk, opened on demand; it edits exam.presentation through `update`.
 const PresentationStudio = lazy(() => import("./presentation/PresentationStudio"));
+// Phase 20F — «المؤلف الذكي للامتحان» (AI Full Exam Composer): its own lazy chunk (dialog + composer pipeline + catalog), opened on demand.
+const AiExamComposerDialog = lazy(() => import("./aiComposer/AiExamComposerDialog"));
 import type { ScenarioV1 } from "./scenarioSource";
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
@@ -422,6 +424,15 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     if (fresh.length) window.setTimeout(() => focusCard(fresh[0].examQuestionId), 0);
     return "ok";
   };
+  // Phase 20F — the AI Full Exam Composer: opened FOR one exam id; a staged result is applied as ONE functional update through `update`
+  // (one undo step), refused ("stale") when this builder closed or the owner now holds another exam. The dialog re-checks the revision.
+  const [composerOpenFor, setComposerOpenFor] = useState("");
+  const composerOpen = !!aiAuthor?.composeExam && composerOpenFor === exam.examId;
+  const applyComposer = (openedFor: string) => (updater: (prev: StructuredExam) => StructuredExam): "ok" | "stale" => {
+    if (!alive.current || latestExamRef.current.examId !== openedFor) return "stale";
+    update(prev => (prev.examId === openedFor ? updater(prev) : prev));
+    return "ok";
+  };
   const insertAiQuestion = (openedFor: string) => (question: BuilderQuestion, targetSectionId: string): "ok" | "stale" => {
     if (!alive.current) return "stale";
     const fits = (candidate: StructuredExam) => candidate.examId === openedFor && (candidate.sections || []).some(sec => sec.id === targetSectionId);
@@ -516,6 +527,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
           {aiAuthor && <button type="button" className="sb-btn" onClick={() => setAiOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سؤال بالذكاء الاصطناعي</button>}
           {aiAuthor?.authorScenario && <button type="button" className="sb-btn" onClick={() => setAiScenarioOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سيناريو بالذكاء الاصطناعي</button>}
+          {aiAuthor?.composeExam && <button type="button" className="sb-btn" onClick={() => setComposerOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">🧠 المؤلف الذكي للامتحان</button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
           {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
@@ -622,6 +634,13 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {aiScenarioOpen && aiAuthor && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل أداة الذكاء الاصطناعي…</p>}>
           <AiScenarioAuthorDialog key={exam.examId} open onClose={() => setAiScenarioOpenFor("")} service={aiAuthor} sections={sectionOptions} onInsert={insertAiScenario(exam.examId)} disabled={saving} />
+        </Suspense>
+      )}
+
+      {composerOpen && aiAuthor?.composeExam && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المؤلف الذكي للامتحان…</p>}>
+          <AiExamComposerDialog key={exam.examId} open onClose={() => setComposerOpenFor("")} transport={aiAuthor.composeExam} exam={exam} getLatestExam={() => latestExamRef.current}
+            onApply={applyComposer(exam.examId)} onPreview={setPreview} onUndo={onUndo} selectedQuestionId={selected.size === 1 ? [...selected][0] : null} disabled={saving} />
         </Suspense>
       )}
 
