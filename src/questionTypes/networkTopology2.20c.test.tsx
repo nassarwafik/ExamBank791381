@@ -136,6 +136,9 @@ describe("networkTopology@2 — student workspace (immutable topology, device su
     const w2 = await ws();
     const lap2 = await open(w2, /^LAP1/);
     expect(within(lap2).queryAllByRole("button", { name: /حفظ|Connect/ }).length).toBe(0);
+    fireEvent.click(within(within(lap2).getByTestId("net2-desktop")).getByRole("button", { name: /Wireless/ })); await tick();   // strengthened after mutation round 1
+    expect(within(lap2).getByTestId("net2-wireless")).toBeTruthy();
+    expect(within(lap2).queryAllByRole("button", { name: /Connect|Disconnect/ }).length).toBe(0);
   });
 });
 
