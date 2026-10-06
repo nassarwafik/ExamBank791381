@@ -135,7 +135,7 @@ const isPoleAt = (at, x) => growsToward(absOf(at), x, 1) || growsToward(absOf(at
 exports.isPoleAt = isPoleAt;
 const limitTolerance = (l) => Math.max(0.02, 1e-3 * Math.abs(l));
 exports.limitTolerance = limitTolerance;
-const LIMIT_TIERS = [[1e5, 3e5, 1e6], [1e3, 3e3, 1e4], [10, 20, 30]].map(t => t.map(x => x * 1.0137));
+const LIMIT_TIERS = [[1e5, 3e5, 1e6], [1e3, 3e3, 1e4], [10, 20, 30]].map(t => t.map(x => x * 1.0137291379));
 function functionLimits(at) {
     const out = [];
     for (const sgn of [1, -1]) {
@@ -364,7 +364,7 @@ function buildFunction(f, path) {
     const keyLimits = tasks.horizontalAsymptotes ? functionLimits(at) : [];
     if (tasks.horizontalAsymptotes)
         for (const y of ha)
-            if (!keyLimits.some(l => Math.abs(l - y) <= (0, exports.limitTolerance)(l)) && !near(at(1e4), y, 0.02) && !near(at(-1e4), y, 0.02))
+            if (!keyLimits.some(l => Math.abs(l - y) <= (0, exports.limitTolerance)(l)))
                 bad("لا يقترب منحنى الدالة من y = " + y + ".");
     if (tasks.extrema)
         for (const e of ext) {

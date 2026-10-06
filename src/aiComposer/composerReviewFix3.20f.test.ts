@@ -49,6 +49,9 @@ describe("20F-RF3 MINOR-4 soundness uses the same pole / limit logic as complete
     expect(buildSimFromSpec(fn("5/(1+exp(-x))", ["horizontalAsymptotes"], { horizontalAsymptotes: [0, 5] })).ok).toBe(true);
     expect(codes(buildSimFromSpec(fn("5/(1+exp(-x))", ["horizontalAsymptotes"], { horizontalAsymptotes: [5] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
   });
+  it("a periodic expression sampled at round magnitudes has no fake horizontal limit", () => {
+    expect(codes(buildSimFromSpec(fn("1000+1000*abs(100*x-round(100*x))", ["horizontalAsymptotes"], { horizontalAsymptotes: [1000] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+  });
 });
 
 describe("20F-RF3 MINOR-5 the plan respects the per-section function-simulator cap", () => {

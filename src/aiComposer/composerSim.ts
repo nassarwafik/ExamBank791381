@@ -135,7 +135,7 @@ export const isPoleAt = (at: Probe, x: number): boolean => growsToward(absOf(at)
 export const limitTolerance = (l: number) => Math.max(0.02, 1e-3 * Math.abs(l));
 // sample points avoid round numbers (periodic round / floor expressions would alias there); a tier is used only when it can be evaluated
 // (the safe evaluator refuses huge values: exp(−x) at −10⁵), falling back to smaller magnitudes — never when the values merely do not settle
-const LIMIT_TIERS = [[1e5, 3e5, 1e6], [1e3, 3e3, 1e4], [10, 20, 30]].map(t => t.map(x => x * 1.0137));
+const LIMIT_TIERS = [[1e5, 3e5, 1e6], [1e3, 3e3, 1e4], [10, 20, 30]].map(t => t.map(x => x * 1.0137291379));
 /** Horizontal limits at +∞ / −∞: the values must settle (within 1 %) and the first-order extrapolation L ≈ (x₂f₂ − x₁f₁)/(x₂ − x₁) of both
  *  pairs must agree — slowly converging rational limits are estimated exactly, oscillations and logs are not limits. */
 export function functionLimits(at: Probe): number[] {
@@ -264,7 +264,7 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   if (tasks.xIntercepts) for (const x of xi) if (!near(at(x), 0)) bad("f(" + x + ") ≠ 0.");
   if (tasks.yIntercept) { if (f.yIntercept === null) bad("المقطع الصادي مفقود."); else if (!near(at(0), f.yIntercept as number)) bad("f(0) ≠ " + f.yIntercept + "."); }
   const keyLimits = tasks.horizontalAsymptotes ? functionLimits(at) : [];      // the same extrapolated limits as the completeness probe
-  if (tasks.horizontalAsymptotes) for (const y of ha) if (!keyLimits.some(l => Math.abs(l - y) <= limitTolerance(l)) && !near(at(1e4), y, 0.02) && !near(at(-1e4), y, 0.02)) bad("لا يقترب منحنى الدالة من y = " + y + ".");
+  if (tasks.horizontalAsymptotes) for (const y of ha) if (!keyLimits.some(l => Math.abs(l - y) <= limitTolerance(l))) bad("لا يقترب منحنى الدالة من y = " + y + ".");
   if (tasks.extrema) for (const e of ext) {
     const y = at(e.x), l = at(e.x - 1e-3), r = at(e.x + 1e-3);
     if (!near(y, e.y) || l === null || r === null || (e.kind === "min" ? !(l >= (y as number) - 1e-9 && r >= (y as number) - 1e-9) : !(l <= (y as number) + 1e-9 && r <= (y as number) + 1e-9))) bad("النقطة (" + e.x + ", " + e.y + ") ليست " + (e.kind === "min" ? "قيمة صغرى" : "قيمة عظمى") + " محلية.");
