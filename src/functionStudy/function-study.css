@@ -34,7 +34,25 @@
 .fnstudy-review dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
 .fnstudy-review dt { font-weight: 700; }
 .fnstudy-review dd { margin: 0; }
+/* Phase 20E — the presentation probe / trace (never saved, never an answer). */
+.fnstudy-probe-panel { display: grid; gap: 8px; min-width: 0; }
+.fnstudy-probe-line { stroke: var(--xp-primary, #1d6fd6); stroke-width: 1.2; stroke-dasharray: 4 3; opacity: 0.75; }
+.fnstudy-probe-point { fill: var(--xp-surface, #fff); stroke: var(--xp-primary, #1d6fd6); stroke-width: 3; }
+.fnstudy-probe-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fnstudy .fnstudy-probe-slider { flex: 1 1 220px; min-width: 0; min-height: 40px; padding: 0; border: 0; accent-color: var(--xp-primary, #1d6fd6); }
+.fnstudy-probe-x { display: inline-flex; gap: 6px; align-items: center; }
+.fnstudy .fnstudy-probe-x input { inline-size: 7.5em; }
+.fnstudy-probe-readout { margin: 0; min-height: 1.4em; font-weight: 600; color: var(--xp-text, #172033); }
+.fnstudy-probe-off { color: #5b6b80; font-weight: 400; }
+@media (max-width: 480px) {
+  .fnstudy .fnstudy-probe-slider { flex-basis: 100%; }
+}
+@media print {
+  .fnstudy-probe-controls, .fnstudy-probe-trace { display: none !important; }
+}
 @media (prefers-color-scheme: dark) {
   .fnstudy-formula code { background: #1b2a3d; }
   .fnstudy-saved { color: #7fd1a0; }
+  .fnstudy-probe-point { fill: #10192a; }
+  .fnstudy-probe-readout { color: inherit; }
 }

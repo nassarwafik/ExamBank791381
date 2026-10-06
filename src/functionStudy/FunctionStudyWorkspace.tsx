@@ -1,9 +1,14 @@
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { SmartSimWorkspaceProps } from "../trustedSim/smartSimUiRegistry";
-import { sampleFunction, validateFunctionStudyConfig, type FunctionStudyConfigV1, type FunctionStudyTask } from "../functionStudyModel";
+import { compileFunction, evaluateFunctionAt, sampleFunction, validateFunctionStudyConfig, type FunctionSample, type FunctionStudyConfigV1, type FunctionStudyTask } from "../functionStudyModel";
 import { initialFunctionStudyState, normalizeFunctionStudyAction, replayFunctionStudy, type FunctionStudyStateV1 } from "../functionStudyPlugin";
 import { parseNumberInput, parseNumberList, showNumber } from "../trustedSim/smartSimNumberInput";
 import { EXTREMUM_LABEL, INTERVAL_LABEL, TASK_TITLE, endpointToken, showEndpoint, showList, showPoint } from "./functionStudyLabels";
+import { clockProgress } from "../smartsim/dynamic/simulationClock";
+import { useSimulationClock } from "../smartsim/dynamic/useSimulationClock";
+import { usePrefersReducedMotion } from "../smartsim/dynamic/usePrefersReducedMotion";
+import DynamicErrorBoundary from "../smartsim/dynamic/DynamicErrorBoundary";
+import "../smartsim/dynamic/dynamic.css";
 import "./function-study.css";
 
 // Phase 20A.2 — the functionStudy2d@1 STUDENT workspace (lazy; also the teacher preview). It shows the PUBLIC function (an LTR island
@@ -11,9 +16,125 @@ import "./function-study.css";
 // no asymptote, intercept, extremum or interval is ever drawn or labelled by the workspace itself. Only the student's OWN saved analysis
 // is drawn back (dashed lines, markers, open circles). Every graded group is entered through labelled forms (the keyboard path); a save
 // emits ONE semantic action that replaces the group, validated by the same normalizer the server replays. Invalid input never emits.
+//
+// Phase 20E — a PRESENTATION probe over x: a slider / number input (and, without reduced motion, a timed trace driven by the shared
+// simulation clock) shows (x, f(x)) evaluated by the same safe engine, or "undefined" where the engine refuses — never a guessed value.
+// The probe is local view state: it never calls onChange, is never saved and never draws a graded feature. A probe renderer failure
+// falls back to the plain static graph (the forms are outside the boundary and keep working).
 const W = 480, H = 320, PAD = 28;
+const TRACE_SECONDS = 8;
 type Act = { type?: unknown };
 const typeOf = (a: unknown) => (a && typeof a === "object" ? (a as Act).type : undefined);
+
+type Frame = { px: (x: number) => number; py: (y: number) => number; cy: (y: number) => number; inX: (x: number) => boolean; inY: (y: number) => boolean };
+function frameOf(cfg: FunctionStudyConfigV1): Frame {
+  const { xMin, xMax, yMin, yMax } = cfg.window;
+  const span = yMax - yMin;
+  const py = (y: number) => H - PAD - ((y - yMin) / (yMax - yMin)) * (H - 2 * PAD);
+  return {
+    px: (x: number) => PAD + ((x - xMin) / (xMax - xMin)) * (W - 2 * PAD),
+    py,
+    cy: (y: number) => py(Math.min(yMax + span, Math.max(yMin - span, y))),
+    inX: (x: number) => x >= xMin && x <= xMax,
+    inY: (y: number) => y >= yMin && y <= yMax,
+  };
+}
+const ticks = (lo: number, hi: number) => { const step = Math.pow(10, Math.floor(Math.log10((hi - lo) / 4))); const k = (hi - lo) / step > 10 ? step * 2 : step; const out: number[] = []; for (let v = Math.ceil(lo / k) * k; v <= hi + 1e-9 && out.length < 30; v += k) out.push(Number(v.toPrecision(10))); return out; };
+
+/** The graph: grid, axes, the sampled curve (broken at singularities), the student's OWN saved analysis and an optional probe overlay. */
+function FunctionGraph({ cfg, segments, st, probe }: { cfg: FunctionStudyConfigV1; segments: FunctionSample[][]; st: FunctionStudyStateV1; probe?: ReactNode }) {
+  const clip = useId().replace(/[^A-Za-z0-9_-]/g, "");
+  const { xMin, xMax, yMin, yMax } = cfg.window;
+  const { px, py, cy, inX, inY } = frameOf(cfg);
+  return (
+    <div className="fnstudy-graph" data-testid="fnstudy-graph" dir="ltr">
+      <svg viewBox={"0 0 " + W + " " + H} role="img" aria-label={"منحنى الدالة على النافذة من " + showNumber(xMin) + " إلى " + showNumber(xMax)}>
+        <defs><clipPath id={clip}><rect x={PAD} y={PAD} width={W - 2 * PAD} height={H - 2 * PAD} /></clipPath></defs>
+        {ticks(xMin, xMax).map(v => <g key={"x" + v}><line className="fnstudy-gridline" x1={px(v)} x2={px(v)} y1={PAD} y2={H - PAD} /><text className="fnstudy-tick" x={px(v) - 6} y={H - PAD + 14}>{showNumber(v)}</text></g>)}
+        {ticks(yMin, yMax).map(v => <g key={"y" + v}><line className="fnstudy-gridline" x1={PAD} x2={W - PAD} y1={py(v)} y2={py(v)} /><text className="fnstudy-tick" x={2} y={py(v) + 4}>{showNumber(v)}</text></g>)}
+        {inY(0) && <line className="fnstudy-axis" x1={PAD} x2={W - PAD} y1={py(0)} y2={py(0)} />}
+        {inX(0) && <line className="fnstudy-axis" x1={px(0)} x2={px(0)} y1={PAD} y2={H - PAD} />}
+        <g clipPath={"url(#" + clip + ")"}>
+          {segments.filter(s => s.length > 1).map((s, i) => <polyline key={i} className="fnstudy-curve" data-testid="fnstudy-curve" points={s.map(p => px(p.x).toFixed(2) + "," + cy(p.y).toFixed(2)).join(" ")} />)}
+          {st.verticalAsymptotes.filter(inX).map(v => <line key={"va" + v} className="fnstudy-vline" data-testid="fnstudy-vline" x1={px(v)} x2={px(v)} y1={PAD} y2={H - PAD} />)}
+          {st.horizontalAsymptotes.filter(inY).map(v => <line key={"ha" + v} className="fnstudy-hline" data-testid="fnstudy-hline" x1={PAD} x2={W - PAD} y1={py(v)} y2={py(v)} />)}
+          {st.domainExclusions.filter(inX).map(v => <circle key={"ex" + v} className="fnstudy-exclusion" data-testid="fnstudy-exclusion" cx={px(v)} cy={inY(0) ? py(0) : H - PAD} r="5" />)}
+          {st.xIntercepts.map(p => <circle key={"xi" + p.x} className="fnstudy-marker" data-testid="fnstudy-marker" cx={px(p.x)} cy={cy(p.y)} r="5" />)}
+          {st.yIntercept && <circle className="fnstudy-marker" data-testid="fnstudy-marker" cx={px(0)} cy={cy(st.yIntercept.y)} r="5" />}
+          {st.extrema.map(p => <circle key={"e" + p.x} className="fnstudy-marker is-extremum" data-testid="fnstudy-marker" cx={px(p.x)} cy={cy(p.y)} r="6" />)}
+          {probe}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+/** Slider step: the power of ten at or below 1/400 of the window width (window [-6, 8] ⇒ 0.01). */
+const probeStep = (xMin: number, xMax: number) => Math.pow(10, Math.floor(Math.log10((xMax - xMin) / 400)));
+/** Snaps x to the slider grid (anchored at xMin) and clamps it to the window; non-finite input is refused (undefined). */
+function snapProbe(x: number, xMin: number, xMax: number, step: number): number | undefined {
+  if (!Number.isFinite(x)) return undefined;
+  const k = Math.round((Math.min(xMax, Math.max(xMin, x)) - xMin) / step);
+  return Math.min(xMax, Math.max(xMin, Number((xMin + k * step).toPrecision(12))));
+}
+
+/** The graph with the presentation probe / trace. Local view state only: nothing here reaches onChange. */
+function FunctionProbeGraph({ cfg, segments, st }: { cfg: FunctionStudyConfigV1; segments: FunctionSample[][]; st: FunctionStudyStateV1 }) {
+  const { xMin, xMax } = cfg.window;
+  const step = probeStep(xMin, xMax);
+  const reduced = usePrefersReducedMotion();
+  const clock = useSimulationClock(TRACE_SECONDS, { reducedMotion: reduced });
+  const { pause, seek, play } = clock;
+  const [manualX, setManualX] = useState(xMin);
+  const [follow, setFollow] = useState(false);          // true once a trace started: x follows the clock (frozen while paused)
+  const [draft, setDraft] = useState<string | null>(null);
+  const tracing = clock.state.playing;
+  const x = follow ? snapProbe(xMin + clockProgress(clock.state) * (xMax - xMin), xMin, xMax, step) ?? xMin : manualX;
+  const compiled = useMemo(() => compileFunction(cfg.expression.source), [cfg.expression.source]);
+  const value = useMemo(() => (compiled.ok ? evaluateFunctionAt(compiled.ast, x) : null), [compiled, x]);
+  useEffect(() => { if (reduced && tracing) pause(); }, [reduced, tracing, pause]);
+  const setProbe = (raw: number) => {
+    const next = snapProbe(raw, xMin, xMax, step);
+    if (next === undefined) return;
+    pause(); setFollow(false); setManualX(next);
+  };
+  const toggleTrace = () => {
+    if (tracing) { pause(); return; }
+    setDraft(null);
+    seek(((x - xMin) / (xMax - xMin)) * TRACE_SECONDS);       // continue from the current probe; at the end the clock restarts at xMin
+    setFollow(true); play();
+  };
+  const { px, py, inY } = frameOf(cfg);
+  const defined = value !== null && value.ok;
+  const probe = (
+    <g className="fnstudy-probe" data-testid="fnstudy-probe" aria-hidden="true">
+      <line className="fnstudy-probe-line" data-testid="fnstudy-probe-line" x1={px(x)} x2={px(x)} y1={PAD} y2={H - PAD} />
+      {defined && inY(value.value) && <circle className="fnstudy-probe-point" data-testid="fnstudy-probe-point" cx={px(x)} cy={py(value.value)} r="5.5" />}
+    </g>
+  );
+  return (
+    <div className="fnstudy-probe-panel smartsim-dyn">
+      <FunctionGraph cfg={cfg} segments={segments} st={st} probe={probe} />
+      <div className="fnstudy-probe-controls smartsim-dyn-controls">
+        <input type="range" className="fnstudy-probe-slider" dir="ltr" aria-label="موضع المسبار x" min={xMin} max={xMax} step={step} value={x}
+          aria-valuetext={"x = " + showNumber(x)} onChange={e => setProbe(Number(e.target.value))} />
+        <label className="fnstudy-probe-x"><span className="fnstudy-ltr">x</span>
+          <input type="number" dir="ltr" inputMode="decimal" min={xMin} max={xMax} step={step} value={draft ?? showNumber(x)}
+            onChange={e => { setDraft(e.target.value); if (e.target.value.trim() !== "") setProbe(Number(e.target.value)); }} onBlur={() => setDraft(null)} />
+        </label>
+        {!reduced && <button type="button" className="fnstudy-probe-trace is-secondary" onClick={toggleTrace}>{tracing ? "إيقاف التتبّع" : "تتبّع المنحنى"}</button>}
+      </div>
+      <p className="fnstudy-probe-readout" data-testid="fnstudy-probe-readout" aria-live={tracing ? "off" : "polite"} aria-atomic="true">
+        <span className="fnstudy-ltr" dir="ltr">x = {showNumber(x)}</span>{" · "}
+        {defined
+          ? <span className="fnstudy-ltr" dir="ltr">f(x) = {showNumber(value.value)}</span>
+          : <><span className="fnstudy-ltr" dir="ltr">f(x)</span> غير معرّفة عند هذه القيمة</>}
+        {defined && !inY(value.value) && <span className="fnstudy-probe-off"> (خارج نافذة الرسم)</span>}
+      </p>
+      <p className="fnstudy-note">المسبار للاستكشاف فقط: لا يُحفظ ولا يُعدّ جزءًا من إجابتك.</p>
+    </div>
+  );
+}
 
 function Task({ task, children }: { task: FunctionStudyTask; children: ReactNode }) {
   return <fieldset className="fnstudy-task" data-testid="fnstudy-task" data-task={task}><legend>{TASK_TITLE[task]}</legend>{children}</fieldset>;
@@ -70,7 +191,6 @@ function RowsTask({ task, addLabel, rowLabel, rows: initial, fields, disabled, t
 const numberOrError = (text: string, what: string): number | string => { const n = parseNumberInput(text); return n === undefined ? "أدخل رقمًا صالحًا في " + what + "." : n; };
 
 export default function FunctionStudyWorkspace({ config: rawConfig, actions, onChange, disabled, label }: SmartSimWorkspaceProps) {
-  const clip = useId().replace(/[^A-Za-z0-9_-]/g, "");
   const cfg = useMemo<FunctionStudyConfigV1 | null>(() => { const r = validateFunctionStudyConfig(rawConfig); return r.ok ? r.config : null; }, [rawConfig]);
   const replay = useMemo(() => (cfg ? replayFunctionStudy(cfg, actions) : null), [cfg, actions]);
   const sample = useMemo(() => (cfg ? sampleFunction(cfg) : null), [cfg]);
@@ -86,35 +206,14 @@ export default function FunctionStudyWorkspace({ config: rawConfig, actions, onC
     onChange(next, r.state);
     return "";
   };
-  const { xMin, xMax, yMin, yMax } = cfg.window;
-  const px = (x: number) => PAD + ((x - xMin) / (xMax - xMin)) * (W - 2 * PAD);
-  const py = (y: number) => H - PAD - ((y - yMin) / (yMax - yMin)) * (H - 2 * PAD);
-  const span = yMax - yMin, cy = (y: number) => py(Math.min(yMax + span, Math.max(yMin - span, y)));
-  const inX = (x: number) => x >= xMin && x <= xMax, inY = (y: number) => y >= yMin && y <= yMax;
-  const ticks = (lo: number, hi: number) => { const step = Math.pow(10, Math.floor(Math.log10((hi - lo) / 4))); const k = (hi - lo) / step > 10 ? step * 2 : step; const out: number[] = []; for (let v = Math.ceil(lo / k) * k; v <= hi + 1e-9 && out.length < 30; v += k) out.push(Number(v.toPrecision(10))); return out; };
   const t = cfg.tasks;
   return (
     <div className="fnstudy" data-testid="fnstudy-workspace" aria-label={label ? label + " — دراسة دالة" : "دراسة دالة"}>
       <p className="fnstudy-formula">ادرس الدالة <span className="fnstudy-ltr">f(x)</span>: <code className="fnstudy-ltr" dir="ltr" data-testid="fnstudy-expression">{cfg.expression.source}</code></p>
       <p className="fnstudy-note">الرسم للاستكشاف فقط ولا يحدد الإجابات؛ أدخل تحليلك في النماذج ثم احفظ كل مجموعة. يُرسم ما تحفظه على المنحنى.</p>
-      <div className="fnstudy-graph" data-testid="fnstudy-graph" dir="ltr">
-        <svg viewBox={"0 0 " + W + " " + H} role="img" aria-label={"منحنى الدالة على النافذة من " + showNumber(xMin) + " إلى " + showNumber(xMax)}>
-          <defs><clipPath id={clip}><rect x={PAD} y={PAD} width={W - 2 * PAD} height={H - 2 * PAD} /></clipPath></defs>
-          {ticks(xMin, xMax).map(v => <g key={"x" + v}><line className="fnstudy-gridline" x1={px(v)} x2={px(v)} y1={PAD} y2={H - PAD} /><text className="fnstudy-tick" x={px(v) - 6} y={H - PAD + 14}>{showNumber(v)}</text></g>)}
-          {ticks(yMin, yMax).map(v => <g key={"y" + v}><line className="fnstudy-gridline" x1={PAD} x2={W - PAD} y1={py(v)} y2={py(v)} /><text className="fnstudy-tick" x={2} y={py(v) + 4}>{showNumber(v)}</text></g>)}
-          {inY(0) && <line className="fnstudy-axis" x1={PAD} x2={W - PAD} y1={py(0)} y2={py(0)} />}
-          {inX(0) && <line className="fnstudy-axis" x1={px(0)} x2={px(0)} y1={PAD} y2={H - PAD} />}
-          <g clipPath={"url(#" + clip + ")"}>
-            {sample.segments.filter(s => s.length > 1).map((s, i) => <polyline key={i} className="fnstudy-curve" data-testid="fnstudy-curve" points={s.map(p => px(p.x).toFixed(2) + "," + cy(p.y).toFixed(2)).join(" ")} />)}
-            {st.verticalAsymptotes.filter(inX).map(v => <line key={"va" + v} className="fnstudy-vline" data-testid="fnstudy-vline" x1={px(v)} x2={px(v)} y1={PAD} y2={H - PAD} />)}
-            {st.horizontalAsymptotes.filter(inY).map(v => <line key={"ha" + v} className="fnstudy-hline" data-testid="fnstudy-hline" x1={PAD} x2={W - PAD} y1={py(v)} y2={py(v)} />)}
-            {st.domainExclusions.filter(inX).map(v => <circle key={"ex" + v} className="fnstudy-exclusion" data-testid="fnstudy-exclusion" cx={px(v)} cy={inY(0) ? py(0) : H - PAD} r="5" />)}
-            {st.xIntercepts.map(p => <circle key={"xi" + p.x} className="fnstudy-marker" data-testid="fnstudy-marker" cx={px(p.x)} cy={cy(p.y)} r="5" />)}
-            {st.yIntercept && <circle className="fnstudy-marker" data-testid="fnstudy-marker" cx={px(0)} cy={cy(st.yIntercept.y)} r="5" />}
-            {st.extrema.map(p => <circle key={"e" + p.x} className="fnstudy-marker is-extremum" data-testid="fnstudy-marker" cx={px(p.x)} cy={cy(p.y)} r="6" />)}
-          </g>
-        </svg>
-      </div>
+      <DynamicErrorBoundary resetKey={cfg} fallback={<FunctionGraph cfg={cfg} segments={sample.segments} st={st} />}>
+        <FunctionProbeGraph key={cfg.expression.source + "|" + cfg.window.xMin + "|" + cfg.window.xMax} cfg={cfg} segments={sample.segments} st={st} />
+      </DynamicErrorBoundary>
       <div className="fnstudy-tasks">
         {t.domainExclusions && <NumberListTask task="domainExclusions" field="values" type="domain.setExclusions" saved={st.domainExclusions} disabled={disabled} label="استثناءات المجال: قيم x غير المعرّفة (مفصولة بفواصل)" submit={submit} />}
         {t.xIntercepts && <RowsTask task="xIntercepts" addLabel="+ نقطة" rowLabel="النقطة" disabled={disabled} submit={submit} savedText={st.xIntercepts.length ? st.xIntercepts.map(showPoint).join("، ") : "—"}
