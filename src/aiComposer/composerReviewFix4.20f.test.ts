@@ -19,10 +19,18 @@ describe("20F-RF4 MINOR-A expensive calls weigh more in the probe budget", () =>
     let n = 0;
     probeFunctionFeatures(x => { n++; const r = evaluateFunctionAt(c.ast, x); return r.ok ? r.value : null; }, -5, 5, 10, undefined, c.ast);
     expect(n).toBeLessThanOrEqual(5000);
+    const powers = "x*(1+abs(11.3*x-round(11.3*x)))+0*(" + "(".repeat(24) + "x" + "^1)".repeat(24) + ")";
+    const p = compileFunction(powers); if (!p.ok) throw new Error("compile");
+    let m = 0;
+    probeFunctionFeatures(x => { m++; const r = evaluateFunctionAt(p.ast, x); return r.ok ? r.value : null; }, -5, 5, 10, undefined, p.ast);
+    expect(m).toBeLessThanOrEqual(5000);                                                               // powers weigh like calls
   });
 });
 
 describe("20F-RF4 MINOR-B sigmoid and tanh limits are found on both sides", () => {
+  it("a slowly converging limit is extrapolated (the geometric tail is added, not the last sample)", () => {
+    expect(buildSimFromSpec(fn("500+1000/sqrt(abs(x)+1)", ["horizontalAsymptotes"], { yMin: -600, yMax: 600, horizontalAsymptotes: [500] })).ok).toBe(true);
+  });
   it("correct two-sided keys pass; one-sided keys are incomplete", () => {
     for (const [src, both, one] of [["5/(1+exp(-0.5*x))", [0, 5], [5]], ["100/(1+9*exp(-0.2*x))", [0, 100], [100]], ["5/(1+exp(-2*x))", [0, 5], [5]], ["(exp(2*x)-1)/(exp(2*x)+1)", [-1, 1], [-1]]] as const) {
       const ok = buildSimFromSpec(fn(src, ["horizontalAsymptotes"], { yMin: -120, yMax: 120, horizontalAsymptotes: both }));
