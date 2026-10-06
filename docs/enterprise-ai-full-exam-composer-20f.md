@@ -69,11 +69,18 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   reported as a structured `CAPABILITY_UNSUPPORTED` warning with a safe theory alternative.
 - **physicsFreeFall@1**: the model picks a bounded model and task kinds; every expected value (impact time / speed, peak height, apex time,
   apex / impact points) is computed by code; apex tasks only for an upward throw; probe time inside the flight.
-- **functionStudy2d@1**: safe expression language 2 only; the model's key is probed numerically (f(0), roots, poles, horizontal asymptotes,
-  local extrema, monotonic intervals) and an inconsistent key is refused.
+- **functionStudy2d@1**: safe expression language 2 only; the model's key is probed numerically for **soundness** (f(0), roots, poles,
+  horizontal asymptotes, local extrema, monotonic intervals: an inconsistent key is refused) and, since Review Fix 1, for **completeness**
+  inside the window: code samples the function (2001 points, sign changes refined by bisection, touching roots / even poles / extrema by
+  ternary search, one-sided poles at a domain edge, limits at ±10⁵ / ±10⁶) and refuses a key that omits a root, a pole, a domain point, an
+  extremum, a horizontal limit or a monotonic stretch (`AI_FUNCTION_KEY_INCOMPLETE`) or names a point outside the window
+  (`AI_FUNCTION_KEY_OUTSIDE_WINDOW`) — the grader compares sets, so an incomplete key would fail correct students. A probe, not a proof:
+  features finer than the grid are left to the teacher's review.
 - **No free credit**: every SmartSim key (and every composite SmartSim part) is evaluated on an empty action stream and must award nothing.
 - **composite@1**: one shared context (SmartSim spec or rich source), groups of child parts, exact part-mark sums (never redistributed),
-  first-N groups with equal marks and code-computed maxima, no nesting, no code stimulus in a part; then the composite authority decides.
+  first-N groups with equal marks and code-computed maxima, no nesting, no code stimulus in a part, and a SmartSim check id grades at most
+  one part (`AI_COMPOSITE_SIM_CHECK_OVERLAP`); then the composite authority decides. On the wire the composite is flat (item fields
+  `compositeText / compositeContext / compositeGroups / compositeParts`, each part naming its group) and code rebuilds the nested shape.
 - **Coding**: public material only (statement, language, starter, public examples). Hidden tests, reference solutions and automatic grading
   are never AI-authored (19F policy, re-checked by the verdict and the client): generated coding questions are graded manually until the
   teacher adds verified hidden tests.
@@ -83,7 +90,8 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   javascript: URLs refused). CLI / code / math / tables are their own LTR blocks.
 - **PresentationV1**: preset selection (+ table variant) only, validated by the 20D.1 validator.
 - **Images**: the model never invents a URL. An image need becomes an explicit `assetRequest` (teacher TODO) that **blocks finalization**
-  until the teacher attaches the image and removes the request; it never reaches students.
+  until the teacher attaches the image and resolves the request in the Builder's question editor («تم إرفاق الصورة — إزالة الطلب»); it
+  never reaches students.
 
 ## 6. Modify existing exams — patches, scope lock, protected fields, stale revision, diff, undo
 
@@ -118,8 +126,11 @@ coding / parametric / tables, preset, blocking / warnings) and the topic coverag
 - Provider: the existing server-side provider client (strict json_schema, no SDK retries); no key, SDK or provider call in the browser.
 - Teacher session required; per-teacher distributed token bucket (40 calls / 10 min, hashed blob names) failing closed; request ≤ 2 MB;
   instruction ≤ 4000 chars; ≤ 8 sections, ≤ 60 items, ≤ 40 patch operations, ≤ 12 composite parts, AI context ≤ 60 KB.
-- Prompt-injection defence: role separation; exam content, previous drafts and teacher text are fenced as UNTRUSTED DATA; the strict
-  schemas, the scope lock and every deterministic gate remain the authority.
+- Prompt-injection defence: role separation; exam content, previous drafts and teacher text are fenced as UNTRUSTED DATA (the fenced JSON
+  escapes `<` / `>`, so content can never open or close a fence); the strict schemas, the scope lock and every deterministic gate remain
+  the authority.
+- Provider schema size: every composer schema stays inside the strict json_schema limits with margin (object nesting: plan 3, section 7,
+  patch 8 — limit 10; properties, enum values and schema characters far below the limits), guarded by a test.
 - Provider failures map to fixed messages (502 / 504 / 429 / 503 / malformed); provider text and keys are never returned; logs carry
   bounded metadata only (stage, attempt, error name).
 - No student data: the composer works on teacher-authored exams only; the projection is allow-listed; tests scan the provider payload.
@@ -128,7 +139,9 @@ coding / parametric / tables, preset, blocking / warnings) and the topic coverag
 
 Lazy dialog with five modes; structured controls + free instruction; meaningful stage progress (one polite status line, no token streaming,
 no fake percentage); cancel; summary, coverage, issues, warnings; «فتح في المحرر» only when the verdict passes (replacing a non-empty exam
-asks first and is undoable); diff with atomic group checkboxes; stale handling; undo; distinct error messages per failure kind;
+asks first and is undoable; the generated exam replaces the title, sections and presentation, while the cover page, the blueprint, the
+theme and other metadata are kept and the status returns to draft); diff with atomic group checkboxes; stale handling (an apply whose
+functional update finds a changed exam is reported STALE, never «تم التطبيق»); undo; distinct error messages per failure kind;
 «مسودة من الذكاء الاصطناعي — راجعها قبل الاعتماد».
 
 ## 10. Bundle
@@ -233,12 +246,67 @@ Equivalence proofs:
   revision comparison and whose `STALE_REVISION` result dispatches the same `STALE` event; the observable behaviour is identical. The
   authoritative stale guard in `applyComposerPatch` is mutant C17, KILLED.
 
-### 11.5 Full validation on the head
+### 11.5 Full validation (before the review; the counts on the final head and its exact-head CI are recorded in the pull request)
 
 `npm test` 745 files / 9856 tests passed; `npm run lint` 0 errors (warnings are pre-existing, plus two `no-control-regex` warnings in the
 generated CJS copy of `composerSchemaKit`, the same pattern as the existing generated `richContentModel.js`: the shared build drops the
 source's disable comments); `npx tsc -b` clean; `npm run build` + bundle guard: initial JS graph 124.1 KB gzip (budget 125 KB, unchanged),
 composer payload only in the lazy `AiExamComposerDialog` chunk; `git diff --check` clean; shared-finalization drift test green.
+
+### 11.6 Independent review and Review Fix 1
+
+A read-only independent review of `50fd21f`, run in a separate worktree, found 0 BLOCKER, 3 MAJOR and 7 MINOR findings.
+- **m5, m6 and m7** (an EOF blank line, a vendor name in a comment, the missing design record) were already fixed at `470a99b`.
+- **Every other finding** was answered in Review Fix 1 (`4056f86`, `8c8996f`, `9fd0260`):
+
+| Finding | Fix |
+|---|---|
+| M1 function-study keys checked for soundness only (an incomplete key passed) | completeness probe inside the window + key points must lie in the window |
+| M2 an AI image request could not be resolved in the Builder | the question editor shows the request and resolves it |
+| M3 provider schemas nested 9 / 11 object levels (strict-mode limit 10) | flat composite + addSection items beside the header: section 7, patch 8; limits test |
+| m1 a fence could be closed by content | fenced JSON escapes `<` / `>` |
+| m2 «فتح في المحرر» dropped cover page / blueprint / metadata | only title, sections, presentation replaced; status draft |
+| m3 a refused functional update was reported as applied | the updater's verdict decides APPLIED vs STALE |
+| m4 two SmartSim parts could grade the same check | `AI_COMPOSITE_SIM_CHECK_OVERLAP` |
+| note: the handler's ISO clock reached the limiter | the limiter keeps its own millisecond clock |
+
+**Fail-first.** `composerReviewFix1.20f.test.ts` and `composerReviewFix1Ui.20f.test.tsx` were executed on `470a99b` before any fix: **13 of 15 failed**. Sample assertions:
+- `expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]`
+- `section: expected 9 to be less than or equal to 8` and `patch: expected 11 to be less than or equal to 8`
+- `expected 4 to be 2` (END fence markers)
+- `expected [] to include 'AI_COMPOSITE_SIM_CHECK_OVERLAP'`
+- `Unable to find … [data-testid="ai-asset-request"]`
+- `expected <h3 … applied-head> to be null`
+
+The limiter-clock test returns 503 instead of 200 against the unfixed handler. All of these pass on the head.
+
+**RF1 mutation campaign.** 23 mutants: **23 KILLED, 0 SURVIVED, 0 TIMEOUT**, with byte-for-byte restore and a clean `git status`. R08, R09 and R12 survived the first run because the test features sat exactly on grid samples; off-grid cases were added in `9fd0260` and all three were re-run KILLED.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| R01 | `composerSim.ts` | roots completeness removed | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R02 | `composerSim.ts` | vertical asymptote completeness removed | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R03 | `composerSim.ts` | domain exclusion completeness removed | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R04 | `composerSim.ts` | horizontal asymptote completeness removed | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R05 | `composerSim.ts` | extrema completeness removed | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R06 | `composerSim.ts` | monotonic coverage removed | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R07 | `composerSim.ts` | key outside the window accepted | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R08 | `composerSim.ts` | touching roots not detected | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R09 | `composerSim.ts` | even poles between samples not detected | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R10 | `composerSim.ts` | pole test without growth ratio (removable hole = pole) | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R11 | `composerSim.ts` | one-sided pole at a domain edge not detected | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R12 | `composerSim.ts` | sign-change root classification dropped | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| R13 | `composerPrompts.ts` | fence content not escaped | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 m1 an UNTRUSTED DATA fence cannot be closed by it |
+| R14 | `composerDraft.ts` | overlapping SmartSim check ids accepted | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 m4 SmartSim parts of one composite never grade th |
+| R15 | `composerDraft.ts` | part of a missing group accepted | KILLED | composerCore.20f.test.ts › 20F-DRAFT section items: 19A normalizer reused unchanged, compo |
+| R16 | `composerDraft.ts` | composite fields on a non-composite item ignored | KILLED | composerCore.20f.test.ts › 20F-DRAFT section items: 19A normalizer reused unchanged, compo |
+| R17 | `AiExamComposerDialog.tsx` | generate apply drops the teacher's other exam fields | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
+| R18 | `AiExamComposerDialog.tsx` | generate apply drops non-composer metadata | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
+| R19 | `AiExamComposerDialog.tsx` | settle reports applied for any outcome | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
+| R20 | `AiExamComposerDialog.tsx` | modify updater claims applied when refused | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
+| R21 | `AiExamComposerDialog.tsx` | generate updater claims applied when stale | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
+| R22 | `StructuredQuestionEditor.tsx` | image request cannot be resolved | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
+| R23 | `ai-exam-composer.js` | handler's ISO clock passed to the limiter | KILLED | ai-exam-composer-20f.test.js › 20F-API privacy boundary, prompt injection, provider failur |
 
 ## 12. Known limitations
 
@@ -246,4 +314,10 @@ composer payload only in the lazy `AiExamComposerDialog` chunk; `git diff --chec
 - No source-material (RAG) mode yet: the intent / prompt contracts leave room for excerpts and objectives.
 - Selective apply is per target group; rebasing a stale patch is not offered (regenerate instead).
 - A section with many items can hit the 30 s provider timeout; the teacher is told to reduce items per section.
-- Applying a generated exam replaces the current exam content (cover page, blueprint included) — one undoable step, confirmed first.
+- Applying a generated exam replaces the title, sections and presentation (cover page, blueprint and other settings kept) — one undoable
+  step, confirmed first.
+- No live provider call was made (no network in the development environment): the provider schemas are checked against the documented
+  strict-mode limits by a test, not by a live acceptance call. The first production composer call is the live check.
+- Notes accepted from the review: a replaceQuestion may change the marks of the selected question (shown in the diff); removing a composite
+  part clamps a first-N group's required answers (the marks warning is shown); the client trusts the server's scope lock (it re-verifies
+  revision, verdict, node policy, duplicate ids and presentation).
