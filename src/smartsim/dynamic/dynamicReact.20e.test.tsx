@@ -22,8 +22,8 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 let api: ReturnType<typeof useSimulationClock> | null = null;
-function Probe({ duration, autoPlay, reducedMotion }: { duration: number; autoPlay?: boolean; reducedMotion?: boolean }) {
-  const clock = useSimulationClock(duration, { autoPlay, reducedMotion });
+function Probe({ duration, autoPlay, reducedMotion, resume }: { duration: number; autoPlay?: boolean; reducedMotion?: boolean; resume?: boolean }) {
+  const clock = useSimulationClock(duration, { autoPlay, reducedMotion, resumeOnVisible: resume });
   useEffect(() => { api = clock; });
   return <output data-testid="t">{clock.state.time.toFixed(3)}|{clock.state.playing ? "p" : "s"}|{clock.state.rate}</output>;
 }
@@ -89,6 +89,16 @@ describe("20E-H1 useSimulationClock: one frame loop, deterministic advancement",
     act(() => api!.play());
     act(() => runFrame(60000)); act(() => runFrame(60050));
     expect(out(r.container)).toBe("0.150|p|1");
+  });
+  it("RF2-N1: resumeOnVisible never replays a presentation that reached its END in the same task the tab was hidden", () => {
+    const vis = (v: string) => { Object.defineProperty(document, "visibilityState", { configurable: true, get: () => v }); document.dispatchEvent(new Event("visibilitychange")); };
+    const r = render(<Probe duration={0.2} autoPlay resume />);
+    act(() => runFrame(0)); act(() => runFrame(100));
+    act(() => { runFrame(200); vis("hidden"); });                      // end reached and tab hidden before the effects flushed
+    expect(out(r.container)).toBe("0.200|s|1");
+    act(() => vis("visible"));
+    expect(out(r.container)).toBe("0.200|s|1");
+    expect(frames.length).toBe(0);
   });
   it("autoPlay starts playback, but never under reduced motion", () => {
     const a = render(<Probe duration={3} autoPlay />);

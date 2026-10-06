@@ -41,7 +41,8 @@ export function useSimulationClock(duration: number, opts: { autoPlay?: boolean;
     if (typeof document === "undefined") return;
     const onVisibility = () => {
       if (document.visibilityState === "hidden") { hiddenPaused.current = playingRef.current; setState(clockPause); return; }
-      if (hiddenPaused.current && resumeRef.current) setState(clockPlay);
+      // resume only a presentation still mid-way (one that reached its end while being hidden is never replayed from 0)
+      if (hiddenPaused.current && resumeRef.current) setState(s => (s.time < s.duration ? clockPlay(s) : s));
       hiddenPaused.current = false;
     };
     document.addEventListener("visibilitychange", onVisibility);
