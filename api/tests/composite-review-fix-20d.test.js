@@ -94,3 +94,23 @@ describe("20D-RF1-N1 the 1 MB authoring bound exempts only image payloads", () =
     expect(errors(e)).toContain("COMPOSITE_LIMIT");
   });
 });
+
+// Phase 20D — REVIEW FIX 2 (re-review of 095d59b, fail-first on 095d59b): the client effective-id mirror must equal the server's
+// flattenQuestions identity EXACTLY — a section without an id is "section-<n>" there (normalizeSection), and an empty examQuestionId is
+// absent (sectionQuestionId). A mismatch over-refused safe composites (fail closed, but wrong).
+describe("20D-RF2 the effective-id mirror equals the server identity", () => {
+  it("a composite in a section WITHOUT an id (no examQuestionId / id) gets the server id section-1::q1 and is accepted", () => {
+    const e = compositeCsExam(); delete qOf(e).examQuestionId; delete e.sections[0].id; qOf(e).number = "س٢";
+    expect(errors(e)).not.toContain("COMPOSITE_QUESTION_ID_INVALID");
+  });
+  it("an EMPTY examQuestionId is absent (the server falls back to `id`): a safe `id` is accepted, an unsafe one refused", () => {
+    const ok = compositeCsExam(); qOf(ok).examQuestionId = ""; qOf(ok).id = "cs1";
+    expect(errors(ok)).not.toContain("COMPOSITE_QUESTION_ID_INVALID");
+    const bad = compositeCsExam(); qOf(bad).examQuestionId = ""; qOf(bad).id = "سؤال 2";
+    expect(errors(bad)).toContain("COMPOSITE_QUESTION_ID_INVALID");
+  });
+  it("a top-level question in a section without an id never collides by derivation (section-N::qM carries no separator)", () => {
+    const e = compositeArabicExam(); e.sections.push({ ...clone(e.sections[0]), questions: [{ presentationType: "shortAnswer", text: "x", marks: 1, answer: {} }] }); delete e.sections[1].id;
+    expect(errors(e)).not.toContain("COMPOSITE_TARGET_KEY_AMBIGUOUS");
+  });
+});

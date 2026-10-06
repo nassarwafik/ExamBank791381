@@ -171,7 +171,8 @@ export function validateCompositeQuestion(node: Record<string, unknown>): Compos
   const out: CompositeIssue[] = [];
   if (compositeQuestionVersion(node) === undefined) out.push(err("UNSUPPORTED_QUESTION_TYPE_VERSION", "إصدار السؤال المركّب المتقدّم غير مدعوم في هذا الإصدار من التطبيق.", "questionTypeVersion"));
   for (const k of Object.keys(node)) if (!QUESTION_KEYS.has(k) && k !== "parts") out.push(err("COMPOSITE_UNKNOWN_KEY", "حقل غير مسموح في السؤال المركّب: " + k, k));
-  if (node.examQuestionId !== undefined && !isCompositeQuestionId(node.examQuestionId)) out.push(err("COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب يجب أن يكون من حروف لاتينية وأرقام و . _ : - (حتى 80) دون الفاصل ::part::.", "examQuestionId"));
+  // RF2 — an empty / null examQuestionId is ABSENT (sectionQuestionId falls back to `id`); the effective id is then checked by examQuality.
+  if (node.examQuestionId !== undefined && node.examQuestionId !== null && node.examQuestionId !== "" && !isCompositeQuestionId(node.examQuestionId)) out.push(err("COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب يجب أن يكون من حروف لاتينية وأرقام و . _ : - (حتى 80) دون الفاصل ::part::.", "examQuestionId"));
   if (node.answer !== undefined && !(isObj(node.answer) && Object.keys(node.answer).length === 0)) out.push(err("COMPOSITE_ANSWER_KEY_FORBIDDEN", "مفاتيح الإجابة تُحفظ في البنود فقط، لا على السؤال المركّب.", "answer"));
   const st = compositeStructure(node);
   if (!st.ok) return [...out, ...st.issues.filter(i => !(i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION" && out.some(o => o.code === i.code)))];

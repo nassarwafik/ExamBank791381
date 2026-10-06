@@ -201,7 +201,7 @@ function validateCompositeQuestion(node) {
     for (const k of Object.keys(node))
         if (!QUESTION_KEYS.has(k) && k !== "parts")
             out.push(err("COMPOSITE_UNKNOWN_KEY", "حقل غير مسموح في السؤال المركّب: " + k, k));
-    if (node.examQuestionId !== undefined && !(0, compositeModel_1.isCompositeQuestionId)(node.examQuestionId))
+    if (node.examQuestionId !== undefined && node.examQuestionId !== null && node.examQuestionId !== "" && !(0, compositeModel_1.isCompositeQuestionId)(node.examQuestionId))
         out.push(err("COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب يجب أن يكون من حروف لاتينية وأرقام و . _ : - (حتى 80) دون الفاصل ::part::.", "examQuestionId"));
     if (node.answer !== undefined && !(isObj(node.answer) && Object.keys(node.answer).length === 0))
         out.push(err("COMPOSITE_ANSWER_KEY_FORBIDDEN", "مفاتيح الإجابة تُحفظ في البنود فقط، لا على السؤال المركّب.", "answer"));

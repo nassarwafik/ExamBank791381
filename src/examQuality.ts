@@ -325,10 +325,12 @@ function validateComposite(q: BuilderQuestion, disp: string, sectionLabel: strin
 // sectionQuestionId, which keys answers, grades, overrides and coding targets), never to examQuestionId alone: a top-level question whose
 // `id` or derived id carries the separator is refused, and so is a composite whose effective id is not a safe composite id (its child
 // keys could never be parsed — coding children would never be planned, part overrides would be dropped).
-const effectiveQuestionId = (section: { id?: string }, q: Record<string, unknown>, i: number): string => {
+// RF2 — EXACT mirror of the server identity: normalizeSection gives an id-less section "section-<n>" (1-based), then sectionQuestionId.
+const effectiveQuestionId = (section: { id?: string }, si: number, q: Record<string, unknown>, i: number): string => {
   if (q.examQuestionId != null && q.examQuestionId !== "") return String(q.examQuestionId);
   if (q.id != null && q.id !== "") return String(q.id);
-  if (section && section.id && section.id !== "__default__") return section.id + "::q" + (i + 1);
+  const sectionId = String(section?.id ?? "section-" + (si + 1));
+  if (sectionId && sectionId !== "__default__") return sectionId + "::q" + (i + 1);
   return String(q.number || i + 1);
 };
 export function compositeTargetKeyIssues(exam: StructuredExam): { questionId: string; sectionId: string }[] {
@@ -336,21 +338,21 @@ export function compositeTargetKeyIssues(exam: StructuredExam): { questionId: st
   const hasComposite = sections.some(s => (s.questions || []).some(q => q && q.presentationType === "composite"));
   if (!hasComposite) return [];
   const out: { questionId: string; sectionId: string }[] = [];
-  for (const s of sections) (s.questions || []).forEach((q, i) => {
+  sections.forEach((s, si) => (s.questions || []).forEach((q, i) => {
     if (!q || q.presentationType === "composite") return;
-    const id = effectiveQuestionId(s, q as unknown as Record<string, unknown>, i);
+    const id = effectiveQuestionId(s, si, q as unknown as Record<string, unknown>, i);
     if (id.includes(COMPOSITE_CHILD_SEPARATOR)) out.push({ questionId: id, sectionId: s.id });
-  });
+  }));
   return out;
 }
 /** Composites whose EFFECTIVE id is not a safe composite id (the examQuestionId case is reported by validateCompositeQuestion itself). */
 export function compositeEffectiveIdIssues(exam: StructuredExam): { questionId: string; sectionId: string }[] {
   const out: { questionId: string; sectionId: string }[] = [];
-  for (const s of Array.isArray(exam.sections) ? exam.sections : []) (s.questions || []).forEach((q, i) => {
+  (Array.isArray(exam.sections) ? exam.sections : []).forEach((s, si) => (s.questions || []).forEach((q, i) => {
     if (!q || q.presentationType !== "composite" || (q.examQuestionId != null && q.examQuestionId !== "")) return;
-    const id = effectiveQuestionId(s, q as unknown as Record<string, unknown>, i);
+    const id = effectiveQuestionId(s, si, q as unknown as Record<string, unknown>, i);
     if (!isCompositeQuestionId(id)) out.push({ questionId: id, sectionId: s.id });
-  });
+  }));
   return out;
 }
 

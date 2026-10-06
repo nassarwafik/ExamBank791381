@@ -302,13 +302,14 @@ function validateComposite(q, disp, sectionLabel, where, add) {
             validateBody((0, compositeQuestion_1.compositeChildNode)(p.raw), p.type, "البند " + p.label + " من " + disp, where, add);
         }
 }
-const effectiveQuestionId = (section, q, i) => {
+const effectiveQuestionId = (section, si, q, i) => {
     if (q.examQuestionId != null && q.examQuestionId !== "")
         return String(q.examQuestionId);
     if (q.id != null && q.id !== "")
         return String(q.id);
-    if (section && section.id && section.id !== "__default__")
-        return section.id + "::q" + (i + 1);
+    const sectionId = String(section?.id ?? "section-" + (si + 1));
+    if (sectionId && sectionId !== "__default__")
+        return sectionId + "::q" + (i + 1);
     return String(q.number || i + 1);
 };
 function compositeTargetKeyIssues(exam) {
@@ -317,26 +318,24 @@ function compositeTargetKeyIssues(exam) {
     if (!hasComposite)
         return [];
     const out = [];
-    for (const s of sections)
-        (s.questions || []).forEach((q, i) => {
-            if (!q || q.presentationType === "composite")
-                return;
-            const id = effectiveQuestionId(s, q, i);
-            if (id.includes(compositeQuestion_1.COMPOSITE_CHILD_SEPARATOR))
-                out.push({ questionId: id, sectionId: s.id });
-        });
+    sections.forEach((s, si) => (s.questions || []).forEach((q, i) => {
+        if (!q || q.presentationType === "composite")
+            return;
+        const id = effectiveQuestionId(s, si, q, i);
+        if (id.includes(compositeQuestion_1.COMPOSITE_CHILD_SEPARATOR))
+            out.push({ questionId: id, sectionId: s.id });
+    }));
     return out;
 }
 function compositeEffectiveIdIssues(exam) {
     const out = [];
-    for (const s of Array.isArray(exam.sections) ? exam.sections : [])
-        (s.questions || []).forEach((q, i) => {
-            if (!q || q.presentationType !== "composite" || (q.examQuestionId != null && q.examQuestionId !== ""))
-                return;
-            const id = effectiveQuestionId(s, q, i);
-            if (!(0, compositeQuestion_1.isCompositeQuestionId)(id))
-                out.push({ questionId: id, sectionId: s.id });
-        });
+    (Array.isArray(exam.sections) ? exam.sections : []).forEach((s, si) => (s.questions || []).forEach((q, i) => {
+        if (!q || q.presentationType !== "composite" || (q.examQuestionId != null && q.examQuestionId !== ""))
+            return;
+        const id = effectiveQuestionId(s, si, q, i);
+        if (!(0, compositeQuestion_1.isCompositeQuestionId)(id))
+            out.push({ questionId: id, sectionId: s.id });
+    }));
     return out;
 }
 const hasBlockingErrors = (issues) => issues.some(i => i.severity === "error");
