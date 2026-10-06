@@ -73,7 +73,9 @@ describe("20A.1-S2 — the end-to-end server proof with a TEST-ONLY universal pl
     const r = normalizeDraftAnswers({ u1: { ...ans([{ type: "object.select", objectId: "c" }], forged), score: 8, checks: [] } }, exam([q()]));
     expect(r.rejected).toEqual([]);
     expect(r.answers.u1).toEqual({ kind: "smartSim", pluginKey: "testSelection", pluginVersion: 1, actions: [{ type: "object.select", objectId: "c" }], state: { v: 1, selected: ["c"], points: {}, values: {}, sequence: [] } });
-    expect(g(gradeExam(exam([q()]), { u1: ans([], forged) }), "u1")).toMatchObject({ score: 0 });
+    // a forged state earns NOTHING beyond the initial state (only "A not selected" holds initially: 1 of 4 weight → 2 of 8)
+    expect(g(gradeExam(exam([q()]), { u1: ans([]) }), "u1")).toMatchObject({ score: 2 });
+    expect(g(gradeExam(exam([q()]), { u1: ans([], forged) }), "u1")).toMatchObject({ score: 2 });
     for (const gesture of [{ type: "camera.rotate", x: 10 }, { type: "pointer.down", screenX: 3, screenY: 4 }, { type: "wheel.delta", delta: 120 }])
       expect(normalizeDraftAnswers({ u1: ans([gesture]) }, exam([q()])).rejected, gesture.type).toEqual([{ id: "u1", code: "SMARTSIM_ACTION_PRESENTATION_ONLY" }]);
   });

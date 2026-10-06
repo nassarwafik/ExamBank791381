@@ -38,7 +38,7 @@ describe("20A.1-V — a versioned, bounded vocabulary (metadata, never behaviour
     expect(Object.isFrozen(SMART_SIM_CAPABILITIES)).toBe(true);
     expect(new Set(SMART_SIM_CAPABILITIES).size).toBe(SMART_SIM_CAPABILITIES.length);
     expect(SMART_SIM_CAPABILITIES.length).toBeLessThanOrEqual(128);
-    for (const c of SMART_SIM_CAPABILITIES) expect(c).toMatch(/^[a-z][a-z0-9]*(\.[a-z][A-Za-z0-9]*)+$/);
+    for (const c of SMART_SIM_CAPABILITIES) expect(c).toMatch(/^[a-z][a-z0-9]*(\.[a-z0-9][A-Za-z0-9]*)+$/);
     for (const c of ["scene.2d", "scene.3d", "camera.pan", "camera.zoom", "camera.rotate", "object.select", "object.drag", "object.label", "point.place", "line.draw",
       "region.select", "graph.2d", "graph.3d", "network.cli", "network.links", "simulation.play", "simulation.pause", "simulation.scrub", "measure.distance",
       "measure.angle", "measure.elevation", "asset.mesh3d", "asset.image", "asset.dataset", "asset.terrain"]) expect(isSmartSimCapability(c), c).toBe(true);

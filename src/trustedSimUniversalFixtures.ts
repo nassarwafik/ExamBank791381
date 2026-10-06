@@ -8,6 +8,7 @@
 // is the module namespace that provides them: the TypeScript sources in client tests, the generated CommonJS shared build in server
 // tests — the SAME authority either way.
 import type { SmartSimPluginDescriptorV1 } from "./trustedSimDescriptor";
+import type { SmartSimRuleView } from "./trustedSimRules";
 
 /** The subset of the universal helpers a test plugin composes (identical exports in src/ and in the shared server build). */
 export type UniversalLib = {
@@ -16,7 +17,7 @@ export type UniversalLib = {
   normalizeUniversalAction(raw: unknown, config: unknown, descriptor: SmartSimPluginDescriptorV1): { ok: true; action: unknown } | { ok: false; code: string };
   applyUniversalAction(state: unknown, action: unknown): unknown;
   canonicalUniversalState(state: unknown): unknown;
-  universalRuleView(state: unknown, config: unknown): unknown;
+  universalRuleView(state: unknown, config: unknown): SmartSimRuleView;
 };
 
 export type UniversalTestPluginSpec = {

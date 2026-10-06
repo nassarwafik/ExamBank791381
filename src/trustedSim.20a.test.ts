@@ -26,6 +26,8 @@ type FakeCheck = SmartSimCheckBase & { value: number };
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const fakePlugin = (version = 1, label = "عدّاد ذرات (اختبار)"): SmartSimPlugin<FakeConfig, FakeRuntime, FakeState, FakeAction, FakeCheck> => ({
   key: "fakeCounter", version, label, maxActions: 50, checkKinds: ["count.equals", "count.atLeast"],
+  // Phase 20A.1 — every registered plugin carries its code-owned descriptor (metadata only)
+  descriptor: { descriptorVersion: 1, key: "fakeCounter", version, label, domain: "general", sceneKinds: ["2d"], rendererFamilies: ["custom"], capabilities: ["scene.2d", "value.set"], actionKinds: ["inc", "dec", "set"], checkKinds: ["count.equals", "count.atLeast"], genericRules: [], assetKinds: [], tools: ["select"], accessibility: ["keyboardAlternative"], supports: { autosave: true, restore: true, reset: true, partialCredit: true, offline: true, twoDimensional: true, threeDimensional: false } },
   validateConfig(raw) {
     if (!isObj(raw) || Object.keys(raw).some(k => !["v", "start", "max"].includes(k)) || raw.v !== 1 || !Number.isInteger(raw.start) || !Number.isInteger(raw.max) || (raw.max as number) < 1) return { ok: false, issues: [{ code: "FAKE_CONFIG_INVALID", message: "bad config" }] };
     return { ok: true, config: { v: 1, start: raw.start as number, max: raw.max as number } };

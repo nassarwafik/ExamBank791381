@@ -155,7 +155,7 @@ describe("20A.1-A — SEMANTIC actions are the academic truth; gestures and came
     expect(c({ requiredCapabilities: ["scene.2d", "camera.rotate"] })).toContain("SMARTSIM_CAPABILITY_UNDECLARED");
     expect(c({ requiredCapabilities: ["scene.2d", "scene.4d"] })).toContain("SMARTSIM_CAPABILITY_UNKNOWN");
     expect(c({ requiredCapabilities: ["scene.2d", "scene.2d"] })).toContain("SMARTSIM_CAPABILITY_DUPLICATE");
-    expect(c({ scene: { ...SELECTION_CONFIG.scene, space: "3d" } })).toContain("SMARTSIM_CONFIG_SCENE_KIND_UNSUPPORTED");
+    expect(c({ scene: { v: 1, space: "3d", objects: [{ id: "a", primitive: "node" }] } })).toContain("SMARTSIM_CONFIG_SCENE_KIND_UNSUPPORTED");
     for (const k of ["rules", "renderer", "component", "module", "grader", "capabilities", "descriptor"]) expect(c({ [k]: k === "rules" ? [{ kind: "perfectScore", value: true }] : "x" }), k).toContain("SMARTSIM_CONFIG_UNKNOWN_KEY");
     expect(c({ v: 2 })).toContain("SMARTSIM_CONFIG_VERSION_UNSUPPORTED");
     withAssets();

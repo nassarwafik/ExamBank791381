@@ -11,6 +11,13 @@
 //
 // The plugin contract separates the pure AUTHORITY (validation, replay, canonical state, objective checks) from presentation: React
 // components live in src/trustedSim/smartSimUiRegistry.ts, never here.
+//
+// Phase 20A.1 — every plugin also carries a code-owned, exactly versioned DESCRIPTOR (src/trustedSimDescriptor.ts): validated at
+// registration against the versioned vocabulary and against the plugin's own code (identity, label and check kinds must agree), stored
+// deep-frozen, and exposed only as plain data. A plugin that opts into generic trusted rules (descriptor.genericRules) must provide the
+// neutral `ruleView` those rules read.
+import { validateSmartSimDescriptor, descriptorData, type SmartSimPluginDescriptorV1 } from "./trustedSimDescriptor";
+import type { SmartSimRuleView } from "./trustedSimRules";
 
 /** Hard bounds shared by every plugin (a plugin may be stricter, never looser). */
 export const SMART_SIM_LIMITS = Object.freeze({ actions: 1000, answerBytes: 262144, depth: 8, checks: 100, checkLabelChars: 120, maxWeight: 1000, keysPerObject: 64 });
@@ -52,12 +59,17 @@ export type SmartSimPlugin<C = unknown, R = unknown, S = unknown, A = unknown, K
   evaluateCheck(check: K, state: S, config: C): SmartSimCheckOutcome;
   /** Optional teacher-review evidence derived from the (normalized) actions, e.g. per-device command histories. Never grading input. */
   reviewDetails?(actions: readonly A[], config: C): Record<string, unknown>;
+  /** Phase 20A.1 — the code-owned metadata descriptor (exact identity; data only). */
+  descriptor: SmartSimPluginDescriptorV1;
+  /** Phase 20A.1 — the neutral view generic trusted rules read; REQUIRED when the descriptor opts into generic rules. */
+  ruleView?(state: S, config: C): SmartSimRuleView;
 };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnySmartSimPlugin = SmartSimPlugin<any, any, any, any, any>;
 
 export const smartSimPluginId = (key: string, version: number): string => key + "@" + version;
 const plugins = new Map<string, AnySmartSimPlugin>();
+const descriptors = new Map<string, Readonly<SmartSimPluginDescriptorV1>>();
 const FUNCTIONS = ["validateConfig", "createRuntime", "normalizeAction", "applyAction", "canonicalState", "serializeState", "validateCheck", "evaluateCheck"] as const;
 
 /** Registers a CODE-OWNED plugin. Refuses duplicates, malformed identities and incomplete implementations. Returns the unregister function. */
@@ -67,14 +79,21 @@ export function registerSmartSimPlugin(plugin: AnySmartSimPlugin): () => void {
   if (typeof key !== "string" || !KEY_PATTERN.test(key) || FORBIDDEN_KEYS.has(key)) throw new Error("invalid smartSim plugin key: " + String(key));
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) throw new Error("invalid smartSim plugin version for " + key);
   for (const f of FUNCTIONS) if (typeof plugin[f] !== "function") throw new Error("smartSim plugin " + key + "@" + version + ": " + f + " must be a function");
-  for (const f of ["validateActions", "reviewDetails"] as const) if (plugin[f] !== undefined && typeof plugin[f] !== "function") throw new Error("smartSim plugin " + key + "@" + version + ": " + f + " must be a function");
+  for (const f of ["validateActions", "reviewDetails", "ruleView"] as const) if (plugin[f] !== undefined && typeof plugin[f] !== "function") throw new Error("smartSim plugin " + key + "@" + version + ": " + f + " must be a function");
   if (typeof plugin.label !== "string" || !plugin.label.trim()) throw new Error("smartSim plugin " + key + "@" + version + ": label required");
   if (!Number.isInteger(plugin.maxActions) || plugin.maxActions < 1 || plugin.maxActions > SMART_SIM_LIMITS.actions) throw new Error("smartSim plugin " + key + "@" + version + ": maxActions must be 1.." + SMART_SIM_LIMITS.actions);
   if (!Array.isArray(plugin.checkKinds) || plugin.checkKinds.length === 0 || plugin.checkKinds.some(k => typeof k !== "string" || !k)) throw new Error("smartSim plugin " + key + "@" + version + ": checkKinds required");
+  const checked = validateSmartSimDescriptor(plugin.descriptor);
+  if (!checked.ok) throw new Error("smartSim plugin " + key + "@" + version + ": invalid descriptor (" + checked.issues.map(i => i.code).join(", ") + ")");
+  const d = checked.descriptor;
+  if (d.key !== key || d.version !== version || d.label !== plugin.label) throw new Error("smartSim plugin " + key + "@" + version + ": descriptor identity / label does not match the plugin");
+  if (d.checkKinds.length !== plugin.checkKinds.length || d.checkKinds.some(k => !plugin.checkKinds.includes(k))) throw new Error("smartSim plugin " + key + "@" + version + ": descriptor checkKinds do not match the plugin");
+  if (d.genericRules.length && typeof plugin.ruleView !== "function") throw new Error("smartSim plugin " + key + "@" + version + ": generic rules require a ruleView");
   const id = smartSimPluginId(key, version);
   if (plugins.has(id)) throw new Error("smartSim plugin already registered: " + id);
   plugins.set(id, plugin);
-  return () => { if (plugins.get(id) === plugin) plugins.delete(id); };
+  descriptors.set(id, d);
+  return () => { if (plugins.get(id) === plugin) { plugins.delete(id); descriptors.delete(id); } };
 }
 /** The plugin registered for EXACTLY (key, version); undefined for anything else (no case folding, no coercion, no fallback). */
 export function resolveSmartSimPlugin(key: unknown, version: unknown): AnySmartSimPlugin | undefined {
@@ -82,6 +101,14 @@ export function resolveSmartSimPlugin(key: unknown, version: unknown): AnySmartS
   return plugins.get(smartSimPluginId(key, version));
 }
 export const listSmartSimPlugins = (): { key: string; version: number; label: string }[] => [...plugins.values()].map(p => ({ key: p.key, version: p.version, label: p.label }));
+/** The descriptor registered for EXACTLY (key, version) — deep-frozen; undefined for anything else (no coercion, no latest). */
+export function resolveSmartSimDescriptor(key: unknown, version: unknown): Readonly<SmartSimPluginDescriptorV1> | undefined {
+  if (typeof key !== "string" || typeof version !== "number" || !Number.isInteger(version)) return undefined;
+  return descriptors.get(smartSimPluginId(key, version));
+}
+/** Every registered descriptor as plain DATA (fresh copies, sorted by identity): no function, no module, no secret. */
+export const listSmartSimPluginDescriptors = (): SmartSimPluginDescriptorV1[] =>
+  [...descriptors.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, d]) => descriptorData(d));
 
 /**
  * The bounded-JSON guard for untrusted student payloads: plain data only (objects, arrays, strings, finite numbers, booleans, null),

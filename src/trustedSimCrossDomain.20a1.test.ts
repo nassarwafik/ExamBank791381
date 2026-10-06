@@ -44,7 +44,10 @@ describe("20A.1-X1 — the end-to-end proof: JSON → action → replay → cano
     use(SELECTION_SPEC);
     const q = question(SELECTION_SPEC, SELECTION_CONFIG, CHECKS);
     const forged = { v: 1, selected: ["b"], points: {}, values: {}, sequence: [] };
-    expect(grade(q, ans(SELECTION_SPEC, [], forged))).toMatchObject({ score: 0 });
+    // a forged state earns NOTHING beyond the initial state (only "A not selected" holds initially: 1 of 5 weight)
+    const initial = grade(q, ans(SELECTION_SPEC, [])).score;
+    expect(initial).toBe(2);
+    expect(grade(q, ans(SELECTION_SPEC, [], forged))).toMatchObject({ score: initial, passedWeight: 1 });
     const bound = bindSmartSimAnswerToQuestion(ans(SELECTION_SPEC, [{ type: "object.select", objectId: "c" }], forged), q);
     expect(bound).toEqual({ ok: true, answer: { kind: "smartSim", pluginKey: "testSelection", pluginVersion: 1, actions: [{ type: "object.select", objectId: "c" }], state: { v: 1, selected: ["c"], points: {}, values: {}, sequence: [] } } });
   });
