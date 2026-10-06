@@ -73,11 +73,16 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   horizontal asymptotes, local extrema, monotonic intervals: an inconsistent key is refused) and, since Review Fix 1, for **completeness**
   inside the window. Code samples the function (2001 points; sign changes refined by bisection; touching roots, even poles and extrema by
   ternary search, a touching root only at a strict local minimum of |f|; one-sided poles at a domain edge). Poles are recognized by
-  **growth**: |f| keeps increasing without slowing down, decade by decade, as the probe closes in (10⁻² … 10⁻¹²). That covers rational
-  poles of order 1 to 4 and logarithmic poles at any window height, while a removable hole, a cusp or a finite edge is not a pole.
-  Horizontal limits come from a first-order extrapolation of f at about 10⁵, 3·10⁵ and 10⁶, compared relatively. The sample points
-  avoid round numbers so periodic `round` / `floor` expressions cannot alias, and the estimate falls back to smaller magnitudes only when
-  the evaluator overflows (a logistic curve at −∞).
+  **growth**: |f| keeps increasing without slowing down, decade by decade, as the probe closes in (10⁻² … 10⁻¹²). A steep pole may
+  instead rise past 10⁶ before the safe evaluator overflows; that is checked from 10⁻¹ in half-decades, and a run of overflow beside a
+  pole is tested on both sides. This covers rational poles of any order the evaluator can show, logarithmic poles, steep poles
+  (1000/(x−2)⁴) and exp(1/x), at any window height, while a removable hole, a cusp or a finite edge is not a pole.
+
+  **Horizontal limits** are read at the largest magnitude t where f(t), f(t/2), f(t/4), f(t/8) and f(t/16) can all be evaluated, searched
+  downward by halving from 10⁶; a logistic curve is therefore read near x = ∓60. The successive differences must shrink geometrically
+  (ratio ≤ 0.8) and already be small, and the limit adds the geometric tail. That handles rational, root-like and exponential approaches
+  (sigmoid, tanh, logistic), while a log, x^0.01 or an oscillation is not a limit. Limits are compared relatively. The sample points avoid
+  round numbers so periodic `round` / `floor` expressions cannot alias.
 
   The key's **soundness** checks use the same pole test and the same limits, so a correct log asymptote or a slowly converging limit is
   never refused. The probe refuses a key that:
@@ -88,17 +93,22 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
 
   The probe is **bounded**:
   - it locates only the features of the enabled tasks;
-  - it has a hard budget of 20 000 evaluations and 600 000 expression-node evaluations per simulator (a large expression gets fewer
-    evaluations; `AI_FUNCTION_TOO_COMPLEX` when exhausted, never a silent pass);
+  - it has a hard budget of 20 000 evaluations and 600 000 weighted expression-node evaluations per simulator. Function calls and powers
+    weigh 10, so a large or call-heavy expression gets fewer evaluations; `AI_FUNCTION_TOO_COMPLEX` when exhausted, never a silent pass;
   - it stops as soon as a feature list exceeds what a key can hold (10);
   - a section draft or a patch may carry at most 6 function-study simulators (`AI_FUNCTION_SIM_LIMIT`), and the plan already refuses more
     than 6 in one section (`PLAN_FUNCTION_SIM_LIMIT`).
 
-  Measured: a curriculum simulator costs about 9 ms; the worst padded simulator about 107 ms; one request with 6 worst-case simulators
-  about 350 ms. A valid echoed draft is judged once.
+  Measured after Review Fix 4, on the reviewer's nested `log(exp(…))` chains with every completeness task enabled:
+  - a curriculum simulator costs about 3–13 ms;
+  - the worst simulator costs 25–47 ms;
+  - the worst request, which judges an invalid echoed draft and then the provider's draft (12 probes, one reservation), takes about
+    300 ms.
 
-  It is a probe, not a proof: features finer than the grid, or growing too slowly to show over four decades, are left to the teacher's
-  review.
+  A valid echoed draft is judged once.
+
+  It is a probe, not a proof: features finer than the grid, or growing too slowly to show over the probed decades, are left to the
+  teacher's review.
 - **No free credit**: every SmartSim key (and every composite SmartSim part) is evaluated on an empty action stream and must award nothing.
 - **composite@1**: one shared context (SmartSim spec or rich source), groups of child parts, exact part-mark sums (never redistributed),
   first-N groups with equal marks and code-computed maxima, no nesting, no code stimulus in a part, and a SmartSim check id grades at most
@@ -450,6 +460,61 @@ All of them pass on the head.
 
 Together with RF3's 9: every planted defect in the current code is killed except the 2 proven equivalents. There were 0 timeouts, and every file was restored byte-for-byte with a clean `git status` after each campaign.
 
+### 11.9 Fresh re-review and Review Fix 4
+
+A fresh re-review of `ce23bdd` found 0 BLOCKER, 0 MAJOR, 3 MINOR findings and 4 notes. MINOR-C was a regression introduced by RF3. Review
+Fix 4 (`be566ca`, `8b33d7e`, `9f2d3e6`) answers them:
+
+| Finding | Fix |
+|---|---|
+| MINOR-A the budget weighed every AST node 1, though exp / log / pow / round cost ~10×; the documented timings were too low | calls and powers weigh 10; measured worst simulator 25–47 ms, worst request ~300 ms (was 1.9–2.4 s) |
+| MINOR-B sigmoid / tanh / logistic limits missed (correct keys refused, one-sided keys accepted) | limits read at the largest evaluable magnitude with a geometric-convergence test and tail |
+| MINOR-C (RF3 regression) a very steep pole overflowed after one finite sample; exp(1/x) refused | steep-pole check from 10⁻¹; overflow runs tested on both sides |
+| NOTE-1 stale probe comments | updated |
+
+The other notes need no change:
+- NOTE-2: a long expression may be refused as too complex, which is a safe refusal.
+- NOTE-3: a non-terminating decimal pole can be keyed only with the exact double (§12).
+- NOTE-4: aliasing occurs only at an adversarial frequency.
+
+**Fail-first.** `composerReviewFix4.20f.test.ts` was executed on `ce23bdd`: **3 of 3 failed**, with:
+- `expected 8955 to be less than or equal to 5000`
+- `5/(1+exp(-0.5*x)) ["AI_FUNCTION_KEY_INCONSISTENT"]: expected false to be true`
+- `1/(x+3)+1000/(x-2)^4 ["AI_FUNCTION_KEY_INCONSISTENT"]: expected false to be true`
+
+All pass on the head. A battery of 17 correct curriculum keys (rationals, roots, exp, log, logistic, plateaus, sqrt) is all accepted, and
+5 incomplete or unsound keys are all refused.
+
+**RF4 mutation campaign.** 6 mutants: **5 KILLED, 1 EQUIVALENT, 0 TIMEOUT**. U02 is equivalent: function-study expressions are always
+parsed in expression language 2, where `^` becomes a `pow` call (`parametricEngine.ts:126`). The `bin "^"` weight is therefore unreachable,
+and powers are already weighted as calls.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| U01 | `composerSim.ts` | function calls weigh 1 in the probe cost | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-A expensive calls weigh more in the probe b |
+| U02 | `composerSim.ts` | powers weigh 1 in the probe cost | EQUIVALENT |  |
+| U03 | `composerSim.ts` | steep-pole check removed | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-C very steep poles and exp(1/x) are vertica |
+| U04 | `composerSim.ts` | gap edges tested on one side only | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-m1 / N-m2 poles and limits are recognized by gr |
+| U05 | `composerSim.ts` | limit = last sample (no geometric tail) | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-B sigmoid and tanh limits are found on both |
+| U06 | `composerSim.ts` | no downward search for an evaluable magnitude | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-B sigmoid and tanh limits are found on both |
+
+**Final re-run on the Review Fix 4 code.** Every earlier mutant list was re-run, 97 mutants in total: the original 45, RF1 23, the RF1
+re-targets 3, RF2 14, the RF2 re-targets 3 and RF3 9.
+- **81 KILLED.**
+- **3 EQUIVALENT:**
+  - C19 and C42 (proved in §11.4);
+  - T02 (pole growth starting at 10⁻³): RF4's steep check from 10⁻¹ already recognizes the high-order poles that the 10⁻² start was
+    added for, so dropping the first decade changes no outcome.
+- **13 INVALID,** because their target lines were rewritten; each is re-targeted or covered:
+  - R04, R08 and R12 by R04b, R08b and R12b (KILLED in this run);
+  - R09, R10 and R11 by S09, S06b / S07b and U04;
+  - S01, S03 and S06 by S01b, S03b and S06b (KILLED in this run);
+  - S07 by S07b and T07 by T07b (both re-targeted at the RF4 code and KILLED);
+  - S08 by U04 and T06 by U06.
+
+With RF4's 6 (5 KILLED, U02 equivalent), every planted defect in the current code is killed except 4 proven equivalents (C19, C42, T02,
+U02). There were 0 timeouts, and every file was restored byte-for-byte with a clean `git status` after every campaign.
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -458,8 +523,10 @@ Together with RF3's 9: every planted defect in the current code is killed except
 - A section with many items can hit the 30 s provider timeout; the teacher is told to reduce items per section.
 - Applying a generated exam replaces the title, sections and presentation (cover page, blueprint and other settings kept) — one undoable
   step, confirmed first.
-- The function-study completeness probe is a probe, not a proof. Features finer than the 2001-point grid, poles of order ≥ 5 (they overflow
-  the safe evaluator before growth shows) and essential singularities such as exp(1/x) are left to the teacher's review.
+- The function-study completeness probe is a probe, not a proof. These cases are left to the teacher's review:
+  - features finer than the 2001-point grid;
+  - poles that overflow the safe evaluator before growth shows, beyond the steep check;
+  - vertical asymptotes at non-terminating decimals (1/(3x−1)), which can only be keyed with the exact double; refusing them is safe.
 - No live provider call was made (no network in the development environment): the provider schemas are checked against the documented
   strict-mode limits by a test, not by a live acceptance call. The first production composer call is the live check.
 - Notes accepted from the review: a replaceQuestion may change the marks of the selected question (shown in the diff); removing a composite
