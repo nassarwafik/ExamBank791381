@@ -24,6 +24,12 @@ describe("20F-RF3 MINOR-1 the probe budget is weighted by the expression's size"
   });
 });
 
+describe("20F-RF3 task gating: only the enabled tasks' features are located", () => {
+  it("a zigzag with two roots but dozens of extrema keeps its roots-only key", () => {
+    expect(buildSimFromSpec(fn("x+0.2*abs(10*x-round(10*x))", ["xIntercepts"], { xIntercepts: [-0.066667, 0] })).ok).toBe(true);
+  });
+});
+
 describe("20F-RF3 MINOR-2 high-order poles are found", () => {
   it("poles of order 3 and 4 are required in the key", () => {
     expect(codes(buildSimFromSpec(fn("1/(x-1)^3+1/(x+3)", ["verticalAsymptotes"], { verticalAsymptotes: [-3] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
