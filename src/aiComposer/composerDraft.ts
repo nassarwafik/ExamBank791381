@@ -25,21 +25,25 @@ const PART_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, "smartSim"] as const)
 const POLICIES = ["all", "firstNAnswered"] as const;
 const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل"];
 
+// The composite is FLAT on the wire (Review Fix 1 — provider strict-mode nesting): its text / context / group headers / parts are item
+// fields, and every part names its group (1-based). Code rebuilds the nested composite before any judgement; the depth of the deepest
+// path is item → part → 19A question → payload → entry → format.
 export function buildItemSchema(): JsonSchema {
   const q = buildAiAuthorSchema() as unknown as JsonSchema;
-  const part = sObj({ kind: sEnum(PART_KINDS), linked: sBool(), marks: sInt(1, L.itemMarksMax), label: sStr(), simChecks: sArr(sStr(), 40), simText: sStr(), question: sNull(q) });
-  const group = sObj({ title: sStr(), policy: sEnum(POLICIES), requiredAnswers: sNull(sInt(1, L.compositeParts)), parts: sArr(part, L.compositeParts) });
+  const part = sObj({ group: sInt(1, L.compositeGroups), kind: sEnum(PART_KINDS), linked: sBool(), marks: sInt(1, L.itemMarksMax), label: sStr(), simChecks: sArr(sStr(), 40), simText: sStr(), question: sNull(q) });
+  const group = sObj({ title: sStr(), policy: sEnum(POLICIES), requiredAnswers: sNull(sInt(1, L.compositeParts)) });
   const context = sObj({ kind: sEnum(["smartSim", "source"]), sim: sNull(buildSimSpecSchema()), sourceTitle: sStr(), sourceBlocks: buildRichBlocksSchema() });
   return sObj({
     kind: sEnum(COMPOSER_ITEM_KINDS), topic: sStr(), difficulty: sEnum(PLAN_DIFFICULTIES), rationale: sStr(), stem: buildRichBlocksSchema(),
     question: sNull(q), smartSim: sNull(sObj({ text: sStr(), sim: buildSimSpecSchema() })),
-    composite: sNull(sObj({ text: sStr(), context: sNull(context), groups: sArr(group, L.compositeGroups) })),
+    compositeText: sStr(), compositeContext: sNull(context), compositeGroups: sArr(group, L.compositeGroups), compositeParts: sArr(part, L.compositeParts),
     assetRequest: sNull(sObj({ description: sStr() }))
   });
 }
 export const buildSectionDraftSchema = (): JsonSchema => sObj({ items: sArr(buildItemSchema(), L.itemsPerSection) });
 
-const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "smartSim", "composite", "assetRequest"] as const;
+const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"] as const;
+const FLAT_GROUP_KEYS = ["title", "policy", "requiredAnswers"] as const;
 const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question"] as const;
 const GROUP_KEYS = ["title", "policy", "requiredAnswers", "parts"] as const;
 const CTX_KEYS = ["kind", "sim", "sourceTitle", "sourceBlocks"] as const;
@@ -89,6 +93,7 @@ function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPl
   }
   if (plan.simulator && !sim) issues.push(issue("AI_PLAN_SIMULATOR_MISSING", "الخطة تتطلب سياق محاكاة مشتركًا لهذا السؤال المركّب.", path, qid));
   let partNo = 0, official = 0;
+  const usedChecks = new Set<string>();                                         // a check id grades at most ONE part (no double credit)
   const groups: Record<string, unknown>[] = [];
   (raw.groups as unknown[]).forEach((g, gi) => {
     const gp = path + ".groups[" + gi + "]";
@@ -104,6 +109,9 @@ function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPl
         if (p.question !== null || !p.simChecks.length || new Set(p.simChecks).size !== p.simChecks.length) { issues.push(issue("AI_COMPOSITE_MALFORMED", "بند المحاكاة يحتاج إلى قائمة فحوص من السياق المشترك.", pp, qid)); return; }
         const picked = (p.simChecks as string[]).map(cid => sim!.checks.find(k => k.id === cid));
         if (picked.some(k => !k)) { issues.push(issue("AI_SIM_CHECK_UNKNOWN", "فحص غير موجود في سيناريو المحاكاة: " + (p.simChecks as string[]).filter((_, i) => !picked[i]).join(", "), pp, qid)); return; }
+        const reused = (p.simChecks as string[]).filter(cid => usedChecks.has(cid));
+        if (reused.length) { issues.push(issue("AI_COMPOSITE_SIM_CHECK_OVERLAP", "فحص المحاكاة مستخدم في بند آخر من السؤال نفسه (يُحتسب مرتين): " + reused.join(", "), pp, qid)); return; }
+        for (const cid of p.simChecks as string[]) usedChecks.add(cid);
         const checks = picked.map(k => ({ ...k! }));
         issues.push(...simFreeCreditIssues(sim.envelope, checks, pp).map(i => ({ ...i, questionId: qid })));
         parts.push({ id, label, type: "smartSim", questionTypeVersion: 1, contextId: "ctx1", text: cleanText(p.simText) || label, marks: p.marks, answer: { scoring: "proportional", checks } });
@@ -135,13 +143,28 @@ function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPl
   return { ok: true, value: { examQuestionId: qid, presentationType: "composite", questionTypeVersion: 1, text: cleanText(raw.text), marks, composite: { v: 1, contexts, groups } } as unknown as BuilderQuestion };
 }
 
+/** The flat wire composite → the nested shape the composite gates judge; `null` when the item carries no composite at all. A part whose
+ *  group does not exist, or a malformed header, is refused (never re-homed). */
+function nestedComposite(raw: Record<string, unknown>, qid: string, path: string): { present: boolean; value?: unknown; issues?: ComposerIssue[] } {
+  const groups = raw.compositeGroups, parts = raw.compositeParts;
+  if (!isStr(raw.compositeText, L.richTextChars) || !isArr(groups, L.compositeGroups) || !isArr(parts, L.compositeParts)) return { present: true, issues: [issue("AI_COMPOSITE_MALFORMED", "السؤال المركّب غير صالح البنية.", path, qid)] };
+  const present = raw.compositeText !== "" || raw.compositeContext !== null || groups.length > 0 || parts.length > 0;
+  if (!present) return { present: false };
+  if (!groups.every(g => hasExactKeys(g, FLAT_GROUP_KEYS)) || !parts.every(p => p !== null && typeof p === "object" && !Array.isArray(p) && isInt((p as Record<string, unknown>).group, 1, groups.length)))
+    return { present: true, issues: [issue("AI_COMPOSITE_MALFORMED", "مجموعات البنود أو انتماء البنود إليها غير صالح.", path, qid)] };
+  const nested = (groups as Record<string, unknown>[]).map((g, gi) => ({ ...g, parts: (parts as Record<string, unknown>[]).filter(p => p.group === gi + 1).map(p => { const { group: _g, ...rest } = p; void _g; return rest; }) }));
+  return { present: true, value: { text: raw.compositeText, context: raw.compositeContext, groups: nested } };
+}
+
 /** One AI item → one canonical question (or issues). */
 function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: string, path: string): R<{ question: BuilderQuestion; meta: Omit<ComposerItemMeta, "questionId">; warnings: ComposerIssue[] }> {
   const warnings: ComposerIssue[] = [];
   if (!hasExactKeys(raw, ITEM_KEYS) || !isEnum(raw.kind, COMPOSER_ITEM_KINDS) || !isStr(raw.topic, L.topicChars) || !isEnum(raw.difficulty, PLAN_DIFFICULTIES) || !isStr(raw.rationale, L.rationaleChars)) return { ok: false, issues: [issue("AI_ITEM_MALFORMED", "بند السؤال غير صالح البنية.", path, qid)] };
   if (raw.kind !== plan.kind) return { ok: false, issues: [issue("AI_ITEM_KIND_MISMATCH", "نوع البند (" + raw.kind + ") لا يطابق الخطة (" + plan.kind + ").", path, qid)] };
   const kind = raw.kind as ComposerItemKind;
-  const present = (["question", "smartSim", "composite"] as const).filter(k => raw[k] !== null);
+  const comp = nestedComposite(raw, qid, path + ".composite");
+  if (comp.issues) return { ok: false, issues: comp.issues };
+  const present = [...(["question", "smartSim"] as const).filter(k => raw[k] !== null), ...(comp.present ? ["composite" as const] : [])];
   const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : "question";
   if (present.length !== 1 || present[0] !== want) return { ok: false, issues: [issue("AI_ITEM_PAYLOAD", "البند يجب أن يحمل محتوى نوعه فقط.", path, qid)] };
   let q: BuilderQuestion;
@@ -155,7 +178,7 @@ function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: strin
     if (free.length) return { ok: false, issues: free.map(i => ({ ...i, questionId: qid })) };
     const id = composerItemIdentity("smartSim");
     q = { examQuestionId: qid, presentationType: "smartSim", questionTypeVersion: id.version, text: cleanText(s.text), marks: plan.marks, smartSim: b.value.envelope, answer: { scoring: "proportional", checks: b.value.checks } } as unknown as BuilderQuestion;
-  } else { const c = buildComposite(raw.composite, qid, plan.marks, plan, request, path + ".composite"); if (!c.ok) return c; q = c.value; }
+  } else { const c = buildComposite(comp.value, qid, plan.marks, plan, request, path + ".composite"); if (!c.ok) return c; q = c.value; }
   const stem = mapAiRichBlocks(raw.stem, path + ".stem");
   if (!stem.ok) return { ok: false, issues: stem.issues.map(i => ({ ...i, questionId: qid })) };
   if (stem.richContent) {

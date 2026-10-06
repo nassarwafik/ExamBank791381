@@ -159,6 +159,14 @@ describe("20F-API privacy boundary, prompt injection, provider failures, rate li
     const y = deps({ ai_exam_plan: [NET.plan] }, { reserveComposerCall: async () => { throw new Error("storage down"); } });
     expect((await handler(req({ stage: "plan", intent: INTENT }), y.d)).status).toBe(503); expect(y.ai.calls.length).toBe(0);
   });
+  it("the real limiter keeps its own millisecond clock: the handler's ISO `now` never reaches the bucket (Review Fix 1)", async () => {
+    const written = [];
+    const mutateJsonWithRetry = async (_c, _name, fn) => { written.push(fn(null)); };
+    const x = deps({ ai_exam_plan: [NET.plan] }, { reserveComposerCall: undefined, rateLimitDeps: { mutateJsonWithRetry } });
+    const r = await handler(req({ stage: "plan", intent: INTENT }), x.d);
+    expect(r.status).toBe(200);
+    expect(written.length).toBe(1); expect(Number.isFinite(written[0].updatedAt)).toBe(true); expect(written[0].tokens).toBe(39);
+  });
   it("the endpoint never persists, publishes, approves or assigns (source guard) and keys stay server-side", () => {
     const src = fs.readFileSync(path.resolve(here, "../src/functions/ai-exam-composer.js"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");   // code only
     expect(src).not.toMatch(/uploadJson|save-exam|governance|transition\(|publish\(|assign/i);

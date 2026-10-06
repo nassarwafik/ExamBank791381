@@ -95,6 +95,83 @@ const parseBound = (s: string): number | "-inf" | "+inf" | null => {
   const n = Number(t);
   return t !== "" && Number.isFinite(n) ? n : null;
 };
+/** COMPLETENESS probe (Review Fix 1): what a student can find inside the window, located by code on a fixed grid (sign changes refined by
+ *  bisection, touching roots / even poles / extrema refined by ternary search, limits at ±10⁵ / ±10⁶). The grader compares SETS, so a key
+ *  that omits a root, a pole, an extremum, a limit or a monotonic stretch would fail correct students: such a key is refused. A probe, not
+ *  a proof — features finer than the grid (or removable gaps the grid never hits) are left to the teacher's review. */
+type Probe = (x: number) => number | null;
+export type FunctionFeatures = { roots: number[]; points: number[]; poles: number[]; extrema: { kind: "min" | "max"; x: number }[]; limits: number[]; slope: { x: number; dir: 1 | -1 }[] };
+const PROBE_N = 2001;
+export function probeFunctionFeatures(at: Probe, xMin: number, xMax: number, scale: number): FunctionFeatures {
+  const g = (x: number) => { const v = at(x); return v === null || !Number.isFinite(v) ? Infinity : Math.abs(v); };
+  const ternary = (lo: number, hi: number, f: (x: number) => number, max: boolean) => {
+    for (let k = 0; k < 80; k++) { const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3; if (max ? f(a) < f(b) : f(a) > f(b)) lo = a; else hi = b; }
+    return (lo + hi) / 2;
+  };
+  const step = (xMax - xMin) / (PROBE_N - 1);
+  const xs: number[] = [], ys: (number | null)[] = [];
+  for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : xMin + i * step; const v = at(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); }
+  const roots: number[] = [], points: number[] = [], poles: number[] = [];
+  const add = (list: number[], x: number) => { if (!list.some(v => Math.abs(v - x) < 1e-3)) list.push(x); };
+  // a pole keeps growing as the probe closes in (×1000 closer ⇒ much larger, and large against the window); a removable gap does not
+  const blowsUp = (x: number) => { const far = Math.max(g(x - 1e-4), g(x + 1e-4)), near = Math.max(g(x - 1e-7), g(x + 1e-7)); return near > 1e3 * scale && near > 50 * far; };
+  for (let i = 0; i < PROBE_N; i++) {
+    const y = ys[i];
+    if (y === null) {
+      let j = i; while (j + 1 < PROBE_N && ys[j + 1] === null) j++;
+      if (j - i <= 1 && i > 0 && j < PROBE_N - 1) { const x = (xs[i] + xs[j]) / 2; add(points, x); if (blowsUp(x)) add(poles, x); }
+      else for (const [edge, inside] of [[i, i - 1], [j, j + 1]] as const) {                                  // the edge of a domain gap
+        if (inside < 0 || inside >= PROBE_N) continue;
+        let lo = xs[inside], hi = xs[edge];
+        for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (at(m) === null) hi = m; else lo = m; }
+        if (g(lo) > 1e3 * scale && g(lo) > 50 * g(inside === i - 1 ? lo - 1e-4 : lo + 1e-4)) add(poles, (lo + hi) / 2);
+      }
+      i = j; continue;
+    }
+    if (y === 0) { add(roots, xs[i]); continue; }
+    const n = i + 1 < PROBE_N ? ys[i + 1] : null;
+    if (n !== null && n !== 0 && Math.sign(n) !== Math.sign(y)) {                                         // sign change: root or pole
+      let a = xs[i], b = xs[i + 1], fa = y, fb = n, undefinedAt: number | null = null;
+      for (let k = 0; k < 80; k++) { const m = (a + b) / 2, fm = at(m); if (fm === null || !Number.isFinite(fm)) { undefinedAt = m; break; } if (fm === 0) { a = b = m; fa = fb = 0; break; } if (Math.sign(fm) === Math.sign(fa)) { a = m; fa = fm; } else { b = m; fb = fm; } }
+      const x = undefinedAt ?? (a + b) / 2;
+      if (undefinedAt !== null || Math.min(Math.abs(fa), Math.abs(fb)) > 1e-6) { if (blowsUp(x)) { add(poles, x); add(points, x); } }
+      else add(roots, x);
+    }
+    const p = i > 0 ? ys[i - 1] : null;
+    if (p !== null && n !== null && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && Math.sign(p) === Math.sign(y) && Math.sign(n) === Math.sign(y)) {
+      const x = ternary(xs[i - 1], xs[i + 1], g, false);                                                     // touching root
+      if (g(x) < 1e-9 * scale) add(roots, x);
+    }
+    if (p !== null && n !== null && Math.abs(y) > 10 * scale && Math.abs(y) >= Math.abs(p) && Math.abs(y) >= Math.abs(n)) {
+      const x = ternary(xs[i - 1], xs[i + 1], g, true);                                                      // even pole between samples
+      if (blowsUp(x)) { add(poles, x); add(points, x); }
+    }
+  }
+  const nearSingular = (x: number, d: number) => poles.some(v => Math.abs(v - x) < d) || points.some(v => Math.abs(v - x) < d);
+  const extrema: { kind: "min" | "max"; x: number }[] = [];
+  for (let i = 1; i < PROBE_N - 1; i++) {
+    const p = ys[i - 1], y = ys[i], n = ys[i + 1];
+    if (p === null || y === null || n === null || nearSingular(xs[i], 3 * step)) continue;
+    const eps = 1e-12 * Math.max(1, Math.abs(y));
+    const kind = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null;
+    if (!kind) continue;
+    const fx = (x: number) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
+    const x = ternary(xs[i - 1], xs[i + 1], fx, kind === "max");
+    const v = fx(x), side = Math.min(Math.abs(v - fx(x - step)), Math.abs(v - fx(x + step)));
+    if (side > 1e-10 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) extrema.push({ kind, x });
+  }
+  const limits: number[] = [];
+  for (const sgn of [1, -1]) { const a = at(sgn * 1e5), b = at(sgn * 1e6); if (a !== null && b !== null && Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 1e-3 * Math.max(1, Math.abs(b))) add(limits, b); }
+  const slope: { x: number; dir: 1 | -1 }[] = [];
+  for (let i = 0; i + 1 < PROBE_N; i++) {
+    const y = ys[i], n = ys[i + 1], x = (xs[i] + xs[i + 1]) / 2;
+    if (y === null || n === null || nearSingular(x, 3 * step) || extrema.some(e => Math.abs(e.x - x) < 3 * step)) continue;
+    const d = n - y;
+    if (Math.abs(d) > 1e-12 * Math.max(1, Math.abs(y))) slope.push({ x, dir: d > 0 ? 1 : -1 });
+  }
+  return { roots, points, poles, extrema, limits, slope };
+}
+
 function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: SimCheck[] }> {
   const keys = ["source", "xMin", "xMax", "yMin", "yMax", "tasks", "domainExclusions", "xIntercepts", "yIntercept", "verticalAsymptotes", "horizontalAsymptotes", "extrema", "intervals"] as const;
   if (!hasExactKeys(f, keys) || !isStr(f.source, 400, 1) || ![f.xMin, f.xMax, f.yMin, f.yMax].every(v => isNum(v, -1e9, 1e9))) return fail("AI_SIM_SPEC_MALFORMED", "مواصفة دراسة الدالة غير صالحة.", path);
@@ -133,6 +210,27 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     if (!(lo < hi)) { bad("فترة فارغة."); continue; }
     const m = (lo + hi) / 2, y1 = at(m - 1e-4), y2 = at(m + 1e-4);
     if (y1 === null || y2 === null || (iv.kind === "increasing" ? !(y2 > y1) : !(y2 < y1))) bad("الدالة ليست " + (iv.kind === "increasing" ? "متزايدة" : "متناقصة") + " على (" + iv.from + ", " + iv.to + ").");
+  }
+  // window + completeness (Review Fix 1): every key point must be findable inside the window, and every feature the probe finds there
+  // must be in the key — the grader compares sets, so an incomplete key would fail the students who answer correctly.
+  const xMin = f.xMin as number, xMax = f.xMax as number;
+  const inWin = (x: number) => x >= xMin - 1e-9 && x <= xMax + 1e-9;
+  const outside = [...(tasks.domainExclusions ? ex : []), ...(tasks.xIntercepts ? xi : []), ...(tasks.verticalAsymptotes ? va : []), ...(tasks.extrema ? ext.map(e => e.x) : [])].filter(x => !inWin(x));
+  if (outside.length) issues.push({ code: "AI_FUNCTION_KEY_OUTSIDE_WINDOW", message: "نقاط في المفتاح خارج نافذة الرسم فلا يستطيع الطالب تحديدها: " + outside.join("، ") + ".", path });
+  if (!issues.length) {
+    const ft = probeFunctionFeatures(at, xMin, xMax, Math.max(1, Math.abs(f.yMin as number), Math.abs(f.yMax as number)));
+    const K = 0.02;
+    const missing = (label: string, found: number[], key: number[]) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= K)); if (miss.length) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };
+    if (tasks.xIntercepts) missing("المقاطع السينية", ft.roots, xi);
+    if (tasks.domainExclusions) missing("استثناءات المجال", ft.points, ex);
+    if (tasks.verticalAsymptotes) missing("خطوط التقارب الرأسية", ft.poles, va);
+    if (tasks.horizontalAsymptotes) missing("خطوط التقارب الأفقية", ft.limits, ha);
+    if (tasks.extrema) { const miss = ft.extrema.filter(e => !ext.some(k => k.kind === e.kind && Math.abs(k.x - e.x) <= K)); if (miss.length) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (القيم القصوى): " + miss.map(e => (e.kind === "min" ? "صغرى" : "عظمى") + " عند x = " + Number(e.x.toFixed(4))).join("، ") + ".", path }); }
+    if (tasks.monotonicIntervals && intervals.length === (f.intervals as unknown[]).length) {
+      const covers = (x: number, dir: 1 | -1) => intervals.some(iv => iv.kind === (dir > 0 ? "increasing" : "decreasing") && (iv.from === "-inf" || (typeof iv.from === "number" && iv.from < x)) && (iv.to === "+inf" || (typeof iv.to === "number" && x < iv.to)));
+      const miss = ft.slope.find(s => !covers(s.x, s.dir));
+      if (miss) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (فترات التزايد والتناقص): الدالة " + (miss.dir > 0 ? "متزايدة" : "متناقصة") + " قرب x = " + Number(miss.x.toFixed(3)) + " ولا تغطيها أي فترة.", path });
+    }
   }
   if (issues.length) return { ok: false, issues };
   const checks: SimCheck[] = [];

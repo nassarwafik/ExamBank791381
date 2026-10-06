@@ -111,7 +111,7 @@ describe("20F AI Full Exam Composer dialog", () => {
     fireEvent.click(within(d).getByRole("button", { name: "معاينة الخطة" }));
     expect(within(d).getByTestId("ai-composer-plan").textContent).toContain("أساسيات الشبكات");
     fireEvent.click(within(d).getByRole("button", { name: "فتح في المحرر" }));
-    expect(within(d).getByText("سيستبدل هذا محتوى الامتحان الحالي (يمكنك التراجع)")).toBeTruthy();
+    expect(within(d).getByText("سيستبدل هذا محتوى الامتحان الحالي: العنوان والأقسام والأسئلة والتصميم؛ تبقى صفحة الغلاف والمخطط وبقية إعدادات الامتحان (يمكنك التراجع)")).toBeTruthy();
     expect(hist().present).toBe(before);                                                  // confirmation first
     fireEvent.click(within(d).getByRole("button", { name: "تأكيد الاستبدال" }));
     await tick(30);
@@ -163,7 +163,7 @@ describe("20F AI Full Exam Composer dialog", () => {
     const open = within(d).getByRole("button", { name: "فتح في المحرر" }) as HTMLButtonElement;
     expect(open.disabled).toBe(true);
     fireEvent.click(open); await tick(30);
-    expect(within(d).queryByText("سيستبدل هذا محتوى الامتحان الحالي (يمكنك التراجع)")).toBeNull();
+    expect(within(d).queryByText(/سيستبدل هذا محتوى الامتحان الحالي/)).toBeNull();
     expect(hist().present).toBe(before);
   });
 

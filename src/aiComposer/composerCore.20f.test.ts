@@ -187,13 +187,13 @@ describe("20F-DRAFT section items: 19A normalizer reused unchanged, composite / 
     expect(codes(normalizeSectionDraft({ items: [F.item("multipleChoice", { question: F.mcq("x", ["a", "b"]), smartSim: { text: "x", sim: F.netSim("roas") } }), okItems().items[1]] }, sec, 0, { nonce: "abc123" }))).toEqual(["AI_ITEM_PAYLOAD"]);
   });
   it("composite marks must add up exactly (never redistributed); first-N needs equal marks", () => {
-    const bad = okItems(); (bad.items[1] as { composite: { groups: { parts: { marks: number }[] }[] } }).composite.groups[0].parts[0].marks = 5;
+    const bad = okItems(); (bad.items[1] as { compositeParts: { marks: number }[] }).compositeParts[0].marks = 5;
     expect(codes(normalizeSectionDraft(bad, sec, 0, { nonce: "abc123" }))).toEqual(["AI_COMPOSITE_MARKS_MISMATCH"]);
     const firstN = F.item("composite", { composite: F.composite("ن", null, [F.group([F.part("multipleChoice", 4, { question: F.mcq("a", ["1", "2"]) }), F.part("multipleChoice", 2, { question: F.mcq("b", ["1", "2"]) })], { policy: "firstNAnswered", requiredAnswers: 1 })]) });
     expect(codes(normalizeComposerItem(firstN, { marks: 4, qid: "q1", request: "", path: "$" }))).toEqual(["AI_COMPOSITE_MARKS_MISMATCH"]);
   });
   it("SmartSim parts: unknown check ids, missing context, broken links, code stimulus in a part — refused", () => {
-    const unknown = okItems(); (unknown.items[1] as { composite: { groups: { parts: { simChecks: string[] }[] }[] } }).composite.groups[0].parts[0].simChecks = ["k99"];
+    const unknown = okItems(); (unknown.items[1] as { compositeParts: { simChecks: string[] }[] }).compositeParts[0].simChecks = ["k99"];
     expect(codes(normalizeSectionDraft(unknown, sec, 0, { nonce: "abc123" }))).toEqual(["AI_SIM_CHECK_UNKNOWN"]);
     const noCtx = F.item("composite", { composite: F.composite("ن", null, [F.group([F.part("smartSim", 6, { linked: true, simChecks: ["k1"] })])]) });
     expect(codes(normalizeComposerItem(noCtx, { marks: 6, qid: "q1", request: "", path: "$" }))).toEqual(["AI_COMPOSITE_SMARTSIM_CONTEXT"]);
@@ -211,9 +211,13 @@ describe("20F-DRAFT section items: 19A normalizer reused unchanged, composite / 
     expect(normalizeComposerItem(JSON.parse('{"__proto__":{"x":1}}'), { marks: 5, qid: "q1", request: "", path: "$" }).ok).toBe(false);
     let deep: Record<string, unknown> = {}; for (let i = 0; i < 500; i++) deep = { a: deep };
     expect(normalizeComposerItem(deep, { marks: 5, qid: "q1", request: "", path: "$" }).ok).toBe(false);
-    const nan = okItems(); (nan.items[1] as { composite: { groups: { parts: { marks: unknown }[] }[] } }).composite.groups[0].parts[0].marks = "NaN";
+    const nan = okItems(); (nan.items[1] as { compositeParts: { marks: unknown }[] }).compositeParts[0].marks = "NaN";
     expect(normalizeSectionDraft(nan, sec, 0, { nonce: "abc123" }).ok).toBe(false);
-    const neg = okItems(); (neg.items[1] as { composite: { groups: { parts: { marks: unknown }[] }[] } }).composite.groups[0].parts[0].marks = -4;
+    const neg = okItems(); (neg.items[1] as { compositeParts: { marks: unknown }[] }).compositeParts[0].marks = -4;
+    const orphan = okItems(); (orphan.items[1] as { compositeParts: { group: unknown }[] }).compositeParts[0].group = 3;   // a part of a missing group
+    expect(codes(normalizeSectionDraft(orphan, sec, 0, { nonce: "abc123" }))).toEqual(["AI_COMPOSITE_MALFORMED"]);
+    const mixed = okItems(); (mixed.items[0] as { compositeText: string }).compositeText = "نص مركّب داخل سؤال اختيار";   // composite fields on a non-composite item
+    expect(codes(normalizeSectionDraft(mixed, sec, 0, { nonce: "abc123" }))).toEqual(["AI_ITEM_PAYLOAD"]);
     expect(normalizeSectionDraft(neg, sec, 0, { nonce: "abc123" }).ok).toBe(false);
     expect(normalizeComposerItem(F.item("hotspotLatest"), { marks: 5, qid: "q1", request: "", path: "$" }).ok).toBe(false);
     expect(JSON.stringify(buildSectionDraftSchema())).not.toMatch(/"hiddenTests"|"checks"|"examQuestionId"/);

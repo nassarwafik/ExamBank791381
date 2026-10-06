@@ -138,7 +138,8 @@ async function handler(request, deps = {}) {
     try {
       const reserve = deps.reserveComposerCall || reserveComposerCall;
       const container = deps.container !== undefined ? deps.container : getContainer();
-      budget = await reserve(container, String((auth.user && auth.user.sub) || "teacher"), deps);
+      // the bucket's clock is its own (milliseconds); the handler's `now` (ISO, for history entries) is never passed to it
+      budget = await reserve(container, String((auth.user && auth.user.sub) || "teacher"), deps.rateLimitDeps || {});
     } catch { log("ai.composer.refused", { code: "AI_UNAVAILABLE", reason: "rate-limit-storage" }); return reply(503, { ok: false, code: "AI_UNAVAILABLE", error: "خدمة الذكاء الاصطناعي غير متاحة حاليًا." }); }
     if (!budget.allowed) return reply(429, { ok: false, code: "RATE_LIMITED", error: "طلبات كثيرة خلال وقت قصير؛ أعد المحاولة بعد قليل.", retryAfterSeconds: budget.retryAfterSeconds }, { "Retry-After": String(budget.retryAfterSeconds) });
     let result;

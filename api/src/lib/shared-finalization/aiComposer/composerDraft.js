@@ -19,19 +19,20 @@ const POLICIES = ["all", "firstNAnswered"];
 const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل"];
 function buildItemSchema() {
     const q = (0, aiQuestionDraft_1.buildAiAuthorSchema)();
-    const part = (0, composerSchemaKit_1.sObj)({ kind: (0, composerSchemaKit_1.sEnum)(PART_KINDS), linked: (0, composerSchemaKit_1.sBool)(), marks: (0, composerSchemaKit_1.sInt)(1, L.itemMarksMax), label: (0, composerSchemaKit_1.sStr)(), simChecks: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), 40), simText: (0, composerSchemaKit_1.sStr)(), question: (0, composerSchemaKit_1.sNull)(q) });
-    const group = (0, composerSchemaKit_1.sObj)({ title: (0, composerSchemaKit_1.sStr)(), policy: (0, composerSchemaKit_1.sEnum)(POLICIES), requiredAnswers: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sInt)(1, L.compositeParts)), parts: (0, composerSchemaKit_1.sArr)(part, L.compositeParts) });
+    const part = (0, composerSchemaKit_1.sObj)({ group: (0, composerSchemaKit_1.sInt)(1, L.compositeGroups), kind: (0, composerSchemaKit_1.sEnum)(PART_KINDS), linked: (0, composerSchemaKit_1.sBool)(), marks: (0, composerSchemaKit_1.sInt)(1, L.itemMarksMax), label: (0, composerSchemaKit_1.sStr)(), simChecks: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), 40), simText: (0, composerSchemaKit_1.sStr)(), question: (0, composerSchemaKit_1.sNull)(q) });
+    const group = (0, composerSchemaKit_1.sObj)({ title: (0, composerSchemaKit_1.sStr)(), policy: (0, composerSchemaKit_1.sEnum)(POLICIES), requiredAnswers: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sInt)(1, L.compositeParts)) });
     const context = (0, composerSchemaKit_1.sObj)({ kind: (0, composerSchemaKit_1.sEnum)(["smartSim", "source"]), sim: (0, composerSchemaKit_1.sNull)((0, composerSim_1.buildSimSpecSchema)()), sourceTitle: (0, composerSchemaKit_1.sStr)(), sourceBlocks: (0, composerRich_1.buildRichBlocksSchema)() });
     return (0, composerSchemaKit_1.sObj)({
         kind: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_ITEM_KINDS), topic: (0, composerSchemaKit_1.sStr)(), difficulty: (0, composerSchemaKit_1.sEnum)(composerPlan_1.PLAN_DIFFICULTIES), rationale: (0, composerSchemaKit_1.sStr)(), stem: (0, composerRich_1.buildRichBlocksSchema)(),
         question: (0, composerSchemaKit_1.sNull)(q), smartSim: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ text: (0, composerSchemaKit_1.sStr)(), sim: (0, composerSim_1.buildSimSpecSchema)() })),
-        composite: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ text: (0, composerSchemaKit_1.sStr)(), context: (0, composerSchemaKit_1.sNull)(context), groups: (0, composerSchemaKit_1.sArr)(group, L.compositeGroups) })),
+        compositeText: (0, composerSchemaKit_1.sStr)(), compositeContext: (0, composerSchemaKit_1.sNull)(context), compositeGroups: (0, composerSchemaKit_1.sArr)(group, L.compositeGroups), compositeParts: (0, composerSchemaKit_1.sArr)(part, L.compositeParts),
         assetRequest: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ description: (0, composerSchemaKit_1.sStr)() }))
     });
 }
 const buildSectionDraftSchema = () => (0, composerSchemaKit_1.sObj)({ items: (0, composerSchemaKit_1.sArr)(buildItemSchema(), L.itemsPerSection) });
 exports.buildSectionDraftSchema = buildSectionDraftSchema;
-const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "smartSim", "composite", "assetRequest"];
+const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"];
+const FLAT_GROUP_KEYS = ["title", "policy", "requiredAnswers"];
 const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question"];
 const GROUP_KEYS = ["title", "policy", "requiredAnswers", "parts"];
 const CTX_KEYS = ["kind", "sim", "sourceTitle", "sourceBlocks"];
@@ -87,6 +88,7 @@ function buildComposite(raw, qid, marks, plan, request, path) {
     if (plan.simulator && !sim)
         issues.push(issue("AI_PLAN_SIMULATOR_MISSING", "الخطة تتطلب سياق محاكاة مشتركًا لهذا السؤال المركّب.", path, qid));
     let partNo = 0, official = 0;
+    const usedChecks = new Set();
     const groups = [];
     raw.groups.forEach((g, gi) => {
         const gp = path + ".groups[" + gi + "]";
@@ -117,6 +119,13 @@ function buildComposite(raw, qid, marks, plan, request, path) {
                     issues.push(issue("AI_SIM_CHECK_UNKNOWN", "فحص غير موجود في سيناريو المحاكاة: " + p.simChecks.filter((_, i) => !picked[i]).join(", "), pp, qid));
                     return;
                 }
+                const reused = p.simChecks.filter(cid => usedChecks.has(cid));
+                if (reused.length) {
+                    issues.push(issue("AI_COMPOSITE_SIM_CHECK_OVERLAP", "فحص المحاكاة مستخدم في بند آخر من السؤال نفسه (يُحتسب مرتين): " + reused.join(", "), pp, qid));
+                    return;
+                }
+                for (const cid of p.simChecks)
+                    usedChecks.add(cid);
                 const checks = picked.map(k => ({ ...k }));
                 issues.push(...(0, composerSim_1.simFreeCreditIssues)(sim.envelope, checks, pp).map(i => ({ ...i, questionId: qid })));
                 parts.push({ id, label, type: "smartSim", questionTypeVersion: 1, contextId: "ctx1", text: (0, composerSchemaKit_1.cleanText)(p.simText) || label, marks: p.marks, answer: { scoring: "proportional", checks } });
@@ -168,6 +177,18 @@ function buildComposite(raw, qid, marks, plan, request, path) {
         return { ok: false, issues };
     return { ok: true, value: { examQuestionId: qid, presentationType: "composite", questionTypeVersion: 1, text: (0, composerSchemaKit_1.cleanText)(raw.text), marks, composite: { v: 1, contexts, groups } } };
 }
+function nestedComposite(raw, qid, path) {
+    const groups = raw.compositeGroups, parts = raw.compositeParts;
+    if (!(0, composerSchemaKit_1.isStr)(raw.compositeText, L.richTextChars) || !(0, composerSchemaKit_1.isArr)(groups, L.compositeGroups) || !(0, composerSchemaKit_1.isArr)(parts, L.compositeParts))
+        return { present: true, issues: [issue("AI_COMPOSITE_MALFORMED", "السؤال المركّب غير صالح البنية.", path, qid)] };
+    const present = raw.compositeText !== "" || raw.compositeContext !== null || groups.length > 0 || parts.length > 0;
+    if (!present)
+        return { present: false };
+    if (!groups.every(g => (0, composerSchemaKit_1.hasExactKeys)(g, FLAT_GROUP_KEYS)) || !parts.every(p => p !== null && typeof p === "object" && !Array.isArray(p) && (0, composerSchemaKit_1.isInt)(p.group, 1, groups.length)))
+        return { present: true, issues: [issue("AI_COMPOSITE_MALFORMED", "مجموعات البنود أو انتماء البنود إليها غير صالح.", path, qid)] };
+    const nested = groups.map((g, gi) => ({ ...g, parts: parts.filter(p => p.group === gi + 1).map(p => { const { group: _g, ...rest } = p; void _g; return rest; }) }));
+    return { present: true, value: { text: raw.compositeText, context: raw.compositeContext, groups: nested } };
+}
 function mapItem(raw, plan, qid, request, path) {
     const warnings = [];
     if (!(0, composerSchemaKit_1.hasExactKeys)(raw, ITEM_KEYS) || !(0, composerSchemaKit_1.isEnum)(raw.kind, composerCatalog_1.COMPOSER_ITEM_KINDS) || !(0, composerSchemaKit_1.isStr)(raw.topic, L.topicChars) || !(0, composerSchemaKit_1.isEnum)(raw.difficulty, composerPlan_1.PLAN_DIFFICULTIES) || !(0, composerSchemaKit_1.isStr)(raw.rationale, L.rationaleChars))
@@ -175,7 +196,10 @@ function mapItem(raw, plan, qid, request, path) {
     if (raw.kind !== plan.kind)
         return { ok: false, issues: [issue("AI_ITEM_KIND_MISMATCH", "نوع البند (" + raw.kind + ") لا يطابق الخطة (" + plan.kind + ").", path, qid)] };
     const kind = raw.kind;
-    const present = ["question", "smartSim", "composite"].filter(k => raw[k] !== null);
+    const comp = nestedComposite(raw, qid, path + ".composite");
+    if (comp.issues)
+        return { ok: false, issues: comp.issues };
+    const present = [...["question", "smartSim"].filter(k => raw[k] !== null), ...(comp.present ? ["composite"] : [])];
     const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : "question";
     if (present.length !== 1 || present[0] !== want)
         return { ok: false, issues: [issue("AI_ITEM_PAYLOAD", "البند يجب أن يحمل محتوى نوعه فقط.", path, qid)] };
@@ -200,7 +224,7 @@ function mapItem(raw, plan, qid, request, path) {
         q = { examQuestionId: qid, presentationType: "smartSim", questionTypeVersion: id.version, text: (0, composerSchemaKit_1.cleanText)(s.text), marks: plan.marks, smartSim: b.value.envelope, answer: { scoring: "proportional", checks: b.value.checks } };
     }
     else {
-        const c = buildComposite(raw.composite, qid, plan.marks, plan, request, path + ".composite");
+        const c = buildComposite(comp.value, qid, plan.marks, plan, request, path + ".composite");
         if (!c.ok)
             return c;
         q = c.value;

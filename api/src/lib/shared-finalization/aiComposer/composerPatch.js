@@ -44,12 +44,13 @@ function buildPatchSchema() {
         op: (0, composerSchemaKit_1.sEnum)(exports.PATCH_OPS), sectionId: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sStr)()), questionId: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sStr)()), partId: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sStr)()), position: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sInt)(0, 200)),
         text: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sStr)()), title: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sStr)()), marks: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sInt)(1, L.itemMarksMax)), preset: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_PRESETS)),
         tableVariant: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_TABLE_VARIANTS)), variant: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sEnum)(presentationModel_1.TYPE_VARIANTS)), richBlocks: (0, composerSchemaKit_1.sNull)((0, composerRich_1.buildRichBlocksSchema)()), richMode: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sEnum)(RICH_MODES)),
-        item: (0, composerSchemaKit_1.sNull)((0, composerDraft_1.buildItemSchema)()), section: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ title: (0, composerSchemaKit_1.sStr)(), instructions: (0, composerSchemaKit_1.sStr)(), itemMarks: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sInt)(1, L.itemMarksMax), L.itemsPerSection), items: (0, composerSchemaKit_1.sArr)((0, composerDraft_1.buildItemSchema)(), L.itemsPerSection) })),
+        item: (0, composerSchemaKit_1.sNull)((0, composerDraft_1.buildItemSchema)()), section: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ title: (0, composerSchemaKit_1.sStr)(), instructions: (0, composerSchemaKit_1.sStr)(), itemMarks: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sInt)(1, L.itemMarksMax), L.itemsPerSection) })),
+        items: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sArr)((0, composerDraft_1.buildItemSchema)(), L.itemsPerSection)),
         reason: (0, composerSchemaKit_1.sStr)()
     });
     return (0, composerSchemaKit_1.sObj)({ summary: (0, composerSchemaKit_1.sStr)(), operations: (0, composerSchemaKit_1.sArr)(op, L.patchOperations) });
 }
-const OP_KEYS = ["op", "sectionId", "questionId", "partId", "position", "text", "title", "marks", "preset", "tableVariant", "variant", "richBlocks", "richMode", "item", "section", "reason"];
+const OP_KEYS = ["op", "sectionId", "questionId", "partId", "position", "text", "title", "marks", "preset", "tableVariant", "variant", "richBlocks", "richMode", "item", "section", "items", "reason"];
 function locate(exam, questionId) {
     for (let si = 0; si < (exam.sections || []).length; si++) {
         const qi = (exam.sections[si].questions || []).findIndex(q => q.examQuestionId === questionId);
@@ -210,15 +211,15 @@ function normalizeComposerPatch(raw, ctx) {
                 return;
             }
             case "addSection": {
-                const s = o.section;
-                if (!(0, composerSchemaKit_1.hasExactKeys)(s, ["title", "instructions", "itemMarks", "items"]) || !(0, composerSchemaKit_1.isStr)(s.title, L.titleChars, 1) || !(0, composerSchemaKit_1.isStr)(s.instructions, L.goalChars * 4) || !(0, composerSchemaKit_1.isArr)(s.items, L.itemsPerSection) || !s.items.length || !(0, composerSchemaKit_1.isArr)(s.itemMarks, L.itemsPerSection) || s.itemMarks.length !== s.items.length || !s.itemMarks.every(m => (0, composerSchemaKit_1.isInt)(m, 1, L.itemMarksMax))) {
+                const s = o.section, items = o.items;
+                if (!(0, composerSchemaKit_1.hasExactKeys)(s, ["title", "instructions", "itemMarks"]) || !(0, composerSchemaKit_1.isStr)(s.title, L.titleChars, 1) || !(0, composerSchemaKit_1.isStr)(s.instructions, L.goalChars * 4) || !(0, composerSchemaKit_1.isArr)(items, L.itemsPerSection) || !items.length || !(0, composerSchemaKit_1.isArr)(s.itemMarks, L.itemsPerSection) || s.itemMarks.length !== items.length || !s.itemMarks.every(m => (0, composerSchemaKit_1.isInt)(m, 1, L.itemMarksMax))) {
                     issues.push({ code: "PATCH_OP_MALFORMED", message: "القسم الجديد غير صالح.", path: p });
                     return;
                 }
                 const sid = "ai" + ctx.nonce + "-ms" + ++newS;
                 const questions = [], meta = [];
                 let bad = false;
-                s.items.forEach((it, k) => { const qid = sid + "-" + (k + 1); const m = mapItem(it, s.itemMarks[k], qid); if (!m)
+                items.forEach((it, k) => { const qid = sid + "-" + (k + 1); const m = mapItem(it, s.itemMarks[k], qid); if (!m)
                     bad = true;
                 else {
                     questions.push(m.question);

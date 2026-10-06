@@ -29,7 +29,20 @@ export const netSim = (scenario: string, title = "شبكة المختبر"): Jso
 export const physSim = (h: number, v: number, g: number, measurements: string[], points: string[] = [], probeTime = 0.5): Json => ({ plugin: "physicsFreeFall", title: "تجربة السقوط", instructions: "", network: null, physics: { initialHeight: h, initialVelocity: v, gravity: g, measurements, probeTime, points }, function: null });
 export const funcSim = (over: Json): Json => ({ plugin: "functionStudy2d", title: "دراسة دالة", instructions: "", network: null, physics: null, function: { source: "(2*x-4)/((x-1)*(x+2))", xMin: -6, xMax: 8, yMin: -6, yMax: 6, tasks: ["domainExclusions", "xIntercepts", "yIntercept", "verticalAsymptotes", "horizontalAsymptotes"], domainExclusions: [-2, 1], xIntercepts: [2], yIntercept: 2, verticalAsymptotes: [-2, 1], horizontalAsymptotes: [0], extrema: [], intervals: [], ...over } });
 
-export const item = (kind: string, over: Json = {}): Json => ({ kind, topic: "", difficulty: "medium", rationale: "", stem: [], question: null, smartSim: null, composite: null, assetRequest: null, ...over });
+/** A composite written NESTED (readable in tests) → the FLAT wire shape of the provider schema (parts name their 1-based group). */
+export const flatComposite = (c: Json | null): Json => {
+  if (!c) return { compositeText: "", compositeContext: null, compositeGroups: [], compositeParts: [] };
+  const groups = (c.groups as Json[]) ?? [];
+  return {
+    compositeText: c.text, compositeContext: c.context,
+    compositeGroups: groups.map(g => { const { parts: _p, ...head } = g; void _p; return head; }),
+    compositeParts: groups.flatMap((g, gi) => ((g.parts as Json[]) ?? []).map(p => ({ group: gi + 1, ...p })))
+  };
+};
+export const item = (kind: string, over: Json = {}): Json => {
+  const { composite: c, ...rest } = over;
+  return { kind, topic: "", difficulty: "medium", rationale: "", stem: [], question: null, smartSim: null, ...flatComposite((c as Json | null | undefined) ?? null), assetRequest: null, ...rest };
+};
 export const part = (kind: string, marks: number, over: Json = {}): Json => ({ kind, linked: false, marks, label: "", simChecks: [], simText: "", question: null, ...over });
 export const group = (parts: Json[], over: Json = {}): Json => ({ title: "", policy: "all", requiredAnswers: null, parts, ...over });
 export const composite = (text: string, context: Json | null, groups: Json[]): Json => ({ text, context, groups });
@@ -40,8 +53,13 @@ export const planItem = (kind: string, marks: number, over: Json = {}): Json => 
 export const planSection = (title: string, items: Json[], over: Json = {}): Json => ({ title, instructions: "", marks: items.reduce((n, i) => n + (i.marks as number), 0), topics: [], items, ...over });
 export const plan = (title: string, preset: string, sections: Json[], over: Json = {}): Json => ({ title, learningGoals: [], presentationPreset: preset, coverageNote: "", sections, unsupportedRequests: [], ...over });
 
-export const OP_BASE: Json = { op: "updateQuestionText", sectionId: null, questionId: null, partId: null, position: null, text: null, title: null, marks: null, preset: null, tableVariant: null, variant: null, richBlocks: null, richMode: null, item: null, section: null, reason: "" };
-export const op = (name: string, over: Json = {}): Json => ({ ...OP_BASE, op: name, ...over });
+export const OP_BASE: Json = { op: "updateQuestionText", sectionId: null, questionId: null, partId: null, position: null, text: null, title: null, marks: null, preset: null, tableVariant: null, variant: null, richBlocks: null, richMode: null, item: null, section: null, items: null, reason: "" };
+/** addSection written with `section.items` (readable in tests) → the wire shape (items beside the section header). */
+export const op = (name: string, over: Json = {}): Json => {
+  const sec = over.section as Json | null | undefined;
+  if (sec && Array.isArray(sec.items)) { const { items, ...head } = sec; return { ...OP_BASE, op: name, ...over, section: head, items }; }
+  return { ...OP_BASE, op: name, ...over };
+};
 export const patch = (operations: Json[], summary = "تعديل"): Json => ({ summary, operations });
 
 /** A scripted provider: responses are consumed in order per schemaName; every call is recorded. */

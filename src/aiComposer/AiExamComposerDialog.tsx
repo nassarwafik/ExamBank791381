@@ -223,6 +223,14 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
   const close = () => { if (busy) cancel(); onClose(); };
   const discardAll = () => { setStaged(null); setModifyTarget("builder"); setConfirmReplace(false); setApplyIssues([]); dispatch({ type: "RESET" }); };
 
+  // An apply is ONE functional builder update; only that updater knows whether the exam it received was still the one the result was
+  // computed for (an edit may be queued between the dry run and the update). Its verdict is read after the update ran (next task), so a
+  // refused update is reported STALE — never «تم التطبيق» with nothing applied.
+  const applyBox = () => ({ v: "pending" as "pending" | "applied" | "stale" });
+  const settle = (box: { v: "pending" | "applied" | "stale" }, onApplied?: () => void) => {
+    setTimeout(() => { if (box.v === "applied") { onApplied?.(); dispatch({ type: "APPLIED" }); } else dispatch({ type: "STALE" }); }, 0);
+  };
+
   // ── apply: generated exam → builder ─────────────────────────────────────────────────────────────────────────────────────────────
   const applyGenerated = () => {
     if (!staged || m.name !== "ready" || !staged.verdict.ok || disabled) return;
@@ -233,16 +241,21 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
     const s = staged;
     const entry = { at: new Date().toISOString(), mode: "generate", summary: s.summaryText, baseRevision: s.revisionAtStart, status: "applied" as const, operations: 0, warnings: s.verdict.warnings.length };
     dispatch({ type: "APPLY" });
+    const box = applyBox();
     const outcome = onApply(prev => {
-      if (prev.examId !== s.expectedExamId || examRevision(prev) !== s.revisionAtStart) return prev;
-      const keep: Partial<StructuredExam> = {};
-      if (prev.createdAt !== undefined) keep.createdAt = prev.createdAt;
-      if (prev.updatedAt !== undefined) keep.updatedAt = prev.updatedAt;
-      return withComposerHistory({ ...s.result.exam, examId: prev.examId, ...keep }, entry);
+      if (prev.examId !== s.expectedExamId || examRevision(prev) !== s.revisionAtStart) { box.v = "stale"; return prev; }
+      box.v = "applied";
+      // the generated exam owns its title, sections and presentation; everything else the teacher set (cover page, blueprint, theme,
+      // other metadata, creation time…) is KEPT; status returns to draft (new content must be finalized again)
+      const gen = s.result.exam;
+      const next: StructuredExam = { ...prev, schemaVersion: gen.schemaVersion, title: gen.title, status: "draft", sections: gen.sections, metadata: { ...((prev.metadata as Record<string, unknown> | undefined) ?? {}), aiComposer: (gen.metadata as Record<string, unknown>).aiComposer } };
+      if (gen.presentation !== undefined) next.presentation = gen.presentation; else delete next.presentation;
+      if (prev.totalMarks !== undefined) next.totalMarks = allQuestions(gen).reduce((n, q) => n + (Number(q.marks) || 0), 0);
+      delete next.questions;
+      return withComposerHistory(next, entry);
     });
     if (outcome !== "ok") { dispatch({ type: "STALE" }); return; }
-    setStaged(null); setModifyTarget("builder");
-    dispatch({ type: "APPLIED" });
+    settle(box, () => { setStaged(null); setModifyTarget("builder"); });
   };
 
   // ── apply: a patch → builder exam, or → the staged generated draft ────────────────────────────────────────────────────────────────
@@ -269,9 +282,10 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
     const dry = applyComposerPatch(latest, mod.patch, { selected, now, request });
     if (!dry.ok) { if (dry.code === "STALE_REVISION") dispatch({ type: "STALE" }); else setApplyIssues(dry.issues); return; }
     dispatch({ type: "APPLY" });
-    const outcome = onApply(prev => { const r = applyComposerPatch(prev, mod.patch, { selected, now, request }); return r.ok ? r.exam : prev; });
+    const box = applyBox();
+    const outcome = onApply(prev => { const r = applyComposerPatch(prev, mod.patch, { selected, now, request }); box.v = r.ok ? "applied" : "stale"; return r.ok ? r.exam : prev; });
     if (outcome !== "ok") { dispatch({ type: "STALE" }); return; }
-    dispatch({ type: "APPLIED" });
+    settle(box);
   };
   const cancelPatch = () => { setApplyIssues([]); if (readyModify?.target === "staged" && staged) showStaged(); else dispatch({ type: "RESET" }); };
   const refineStaged = () => { setModifyTarget("staged"); setTab("modifyExam"); setInstruction(""); setSectionScope(""); dispatch({ type: "RESET" }); };
@@ -370,7 +384,7 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
         )}
         {confirmReplace && (
           <div className="ai-composer-confirm" role="group" aria-label="تأكيد الاستبدال">
-            <p>سيستبدل هذا محتوى الامتحان الحالي (يمكنك التراجع)</p>
+            <p>سيستبدل هذا محتوى الامتحان الحالي: العنوان والأقسام والأسئلة والتصميم؛ تبقى صفحة الغلاف والمخطط وبقية إعدادات الامتحان (يمكنك التراجع)</p>
             <div className="ai-composer-actions">
               <button type="button" className="sb-btn sb-btn-primary" onClick={applyGenerated} disabled={disabled}>تأكيد الاستبدال</button>
               <button type="button" className="sb-btn" onClick={() => setConfirmReplace(false)}>تراجع عن الاستبدال</button>

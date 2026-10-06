@@ -49,12 +49,13 @@ export function buildPatchSchema(): JsonSchema {
     op: sEnum(PATCH_OPS), sectionId: sNull(sStr()), questionId: sNull(sStr()), partId: sNull(sStr()), position: sNull(sInt(0, 200)),
     text: sNull(sStr()), title: sNull(sStr()), marks: sNull(sInt(1, L.itemMarksMax)), preset: sNull(sEnum(COMPOSER_PRESETS as readonly string[])),
     tableVariant: sNull(sEnum(COMPOSER_TABLE_VARIANTS)), variant: sNull(sEnum(TYPE_VARIANTS)), richBlocks: sNull(buildRichBlocksSchema()), richMode: sNull(sEnum(RICH_MODES)),
-    item: sNull(buildItemSchema()), section: sNull(sObj({ title: sStr(), instructions: sStr(), itemMarks: sArr(sInt(1, L.itemMarksMax), L.itemsPerSection), items: sArr(buildItemSchema(), L.itemsPerSection) })),
+    item: sNull(buildItemSchema()), section: sNull(sObj({ title: sStr(), instructions: sStr(), itemMarks: sArr(sInt(1, L.itemMarksMax), L.itemsPerSection) })),
+    items: sNull(sArr(buildItemSchema(), L.itemsPerSection)),                  // addSection's items sit beside its header (one level shallower)
     reason: sStr()
   });
   return sObj({ summary: sStr(), operations: sArr(op, L.patchOperations) });
 }
-const OP_KEYS = ["op", "sectionId", "questionId", "partId", "position", "text", "title", "marks", "preset", "tableVariant", "variant", "richBlocks", "richMode", "item", "section", "reason"] as const;
+const OP_KEYS = ["op", "sectionId", "questionId", "partId", "position", "text", "title", "marks", "preset", "tableVariant", "variant", "richBlocks", "richMode", "item", "section", "items", "reason"] as const;
 
 export type NormOp =
   | { op: "updatePresentation"; preset: string; tableVariant: string | null; reason: string }
@@ -164,12 +165,12 @@ export function normalizeComposerPatch(raw: unknown, ctx: NormalizeContext): { o
         ops.push({ op: "moveQuestion", questionId: o.questionId, sectionId: o.sectionId, position: isInt(o.position, 0, 200) ? o.position : null, reason }); return;
       }
       case "addSection": {
-        const s = o.section;
-        if (!hasExactKeys(s, ["title", "instructions", "itemMarks", "items"]) || !isStr(s.title, L.titleChars, 1) || !isStr(s.instructions, L.goalChars * 4) || !isArr(s.items, L.itemsPerSection) || !s.items.length || !isArr(s.itemMarks, L.itemsPerSection) || s.itemMarks.length !== s.items.length || !s.itemMarks.every(m => isInt(m, 1, L.itemMarksMax))) { issues.push({ code: "PATCH_OP_MALFORMED", message: "القسم الجديد غير صالح.", path: p }); return; }
+        const s = o.section, items = o.items;
+        if (!hasExactKeys(s, ["title", "instructions", "itemMarks"]) || !isStr(s.title, L.titleChars, 1) || !isStr(s.instructions, L.goalChars * 4) || !isArr(items, L.itemsPerSection) || !items.length || !isArr(s.itemMarks, L.itemsPerSection) || s.itemMarks.length !== items.length || !s.itemMarks.every(m => isInt(m, 1, L.itemMarksMax))) { issues.push({ code: "PATCH_OP_MALFORMED", message: "القسم الجديد غير صالح.", path: p }); return; }
         const sid = "ai" + ctx.nonce + "-ms" + ++newS;
         const questions: BuilderQuestion[] = [], meta: ComposerItemMeta[] = [];
         let bad = false;
-        (s.items as unknown[]).forEach((it, k) => { const qid = sid + "-" + (k + 1); const m = mapItem(it, (s.itemMarks as number[])[k], qid); if (!m) bad = true; else { questions.push(m.question); meta.push({ questionId: qid, ...m.meta }); } });
+        (items as unknown[]).forEach((it, k) => { const qid = sid + "-" + (k + 1); const m = mapItem(it, (s.itemMarks as number[])[k], qid); if (!m) bad = true; else { questions.push(m.question); meta.push({ questionId: qid, ...m.meta }); } });
         if (bad) return;
         const instructions = cleanText(s.instructions);
         ops.push({ op: "addSection", position: isInt(o.position, 0, 200) ? o.position : null, section: { id: sid, title: cleanText(s.title), ...(instructions ? { instructions } : {}), gradingPolicy: "all", questions }, meta, reason });

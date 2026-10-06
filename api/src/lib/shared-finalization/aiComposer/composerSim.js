@@ -2,6 +2,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildSimSpecSchema = buildSimSpecSchema;
+exports.probeFunctionFeatures = probeFunctionFeatures;
 exports.buildSimFromSpec = buildSimFromSpec;
 exports.simFreeCreditIssues = simFreeCreditIssues;
 const trustedSimQuestion_1 = require("../trustedSimQuestion");
@@ -104,6 +105,145 @@ const parseBound = (s) => {
     const n = Number(t);
     return t !== "" && Number.isFinite(n) ? n : null;
 };
+const PROBE_N = 2001;
+function probeFunctionFeatures(at, xMin, xMax, scale) {
+    const g = (x) => { const v = at(x); return v === null || !Number.isFinite(v) ? Infinity : Math.abs(v); };
+    const ternary = (lo, hi, f, max) => {
+        for (let k = 0; k < 80; k++) {
+            const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3;
+            if (max ? f(a) < f(b) : f(a) > f(b))
+                lo = a;
+            else
+                hi = b;
+        }
+        return (lo + hi) / 2;
+    };
+    const step = (xMax - xMin) / (PROBE_N - 1);
+    const xs = [], ys = [];
+    for (let i = 0; i < PROBE_N; i++) {
+        const x = i === PROBE_N - 1 ? xMax : xMin + i * step;
+        const v = at(x);
+        xs.push(x);
+        ys.push(v !== null && Number.isFinite(v) ? v : null);
+    }
+    const roots = [], points = [], poles = [];
+    const add = (list, x) => { if (!list.some(v => Math.abs(v - x) < 1e-3))
+        list.push(x); };
+    const blowsUp = (x) => { const far = Math.max(g(x - 1e-4), g(x + 1e-4)), near = Math.max(g(x - 1e-7), g(x + 1e-7)); return near > 1e3 * scale && near > 50 * far; };
+    for (let i = 0; i < PROBE_N; i++) {
+        const y = ys[i];
+        if (y === null) {
+            let j = i;
+            while (j + 1 < PROBE_N && ys[j + 1] === null)
+                j++;
+            if (j - i <= 1 && i > 0 && j < PROBE_N - 1) {
+                const x = (xs[i] + xs[j]) / 2;
+                add(points, x);
+                if (blowsUp(x))
+                    add(poles, x);
+            }
+            else
+                for (const [edge, inside] of [[i, i - 1], [j, j + 1]]) {
+                    if (inside < 0 || inside >= PROBE_N)
+                        continue;
+                    let lo = xs[inside], hi = xs[edge];
+                    for (let k = 0; k < 80; k++) {
+                        const m = (lo + hi) / 2;
+                        if (at(m) === null)
+                            hi = m;
+                        else
+                            lo = m;
+                    }
+                    if (g(lo) > 1e3 * scale && g(lo) > 50 * g(inside === i - 1 ? lo - 1e-4 : lo + 1e-4))
+                        add(poles, (lo + hi) / 2);
+                }
+            i = j;
+            continue;
+        }
+        if (y === 0) {
+            add(roots, xs[i]);
+            continue;
+        }
+        const n = i + 1 < PROBE_N ? ys[i + 1] : null;
+        if (n !== null && n !== 0 && Math.sign(n) !== Math.sign(y)) {
+            let a = xs[i], b = xs[i + 1], fa = y, fb = n, undefinedAt = null;
+            for (let k = 0; k < 80; k++) {
+                const m = (a + b) / 2, fm = at(m);
+                if (fm === null || !Number.isFinite(fm)) {
+                    undefinedAt = m;
+                    break;
+                }
+                if (fm === 0) {
+                    a = b = m;
+                    fa = fb = 0;
+                    break;
+                }
+                if (Math.sign(fm) === Math.sign(fa)) {
+                    a = m;
+                    fa = fm;
+                }
+                else {
+                    b = m;
+                    fb = fm;
+                }
+            }
+            const x = undefinedAt ?? (a + b) / 2;
+            if (undefinedAt !== null || Math.min(Math.abs(fa), Math.abs(fb)) > 1e-6) {
+                if (blowsUp(x)) {
+                    add(poles, x);
+                    add(points, x);
+                }
+            }
+            else
+                add(roots, x);
+        }
+        const p = i > 0 ? ys[i - 1] : null;
+        if (p !== null && n !== null && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && Math.sign(p) === Math.sign(y) && Math.sign(n) === Math.sign(y)) {
+            const x = ternary(xs[i - 1], xs[i + 1], g, false);
+            if (g(x) < 1e-9 * scale)
+                add(roots, x);
+        }
+        if (p !== null && n !== null && Math.abs(y) > 10 * scale && Math.abs(y) >= Math.abs(p) && Math.abs(y) >= Math.abs(n)) {
+            const x = ternary(xs[i - 1], xs[i + 1], g, true);
+            if (blowsUp(x)) {
+                add(poles, x);
+                add(points, x);
+            }
+        }
+    }
+    const nearSingular = (x, d) => poles.some(v => Math.abs(v - x) < d) || points.some(v => Math.abs(v - x) < d);
+    const extrema = [];
+    for (let i = 1; i < PROBE_N - 1; i++) {
+        const p = ys[i - 1], y = ys[i], n = ys[i + 1];
+        if (p === null || y === null || n === null || nearSingular(xs[i], 3 * step))
+            continue;
+        const eps = 1e-12 * Math.max(1, Math.abs(y));
+        const kind = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null;
+        if (!kind)
+            continue;
+        const fx = (x) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
+        const x = ternary(xs[i - 1], xs[i + 1], fx, kind === "max");
+        const v = fx(x), side = Math.min(Math.abs(v - fx(x - step)), Math.abs(v - fx(x + step)));
+        if (side > 1e-10 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3))
+            extrema.push({ kind, x });
+    }
+    const limits = [];
+    for (const sgn of [1, -1]) {
+        const a = at(sgn * 1e5), b = at(sgn * 1e6);
+        if (a !== null && b !== null && Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 1e-3 * Math.max(1, Math.abs(b)))
+            add(limits, b);
+    }
+    const slope = [];
+    for (let i = 0; i + 1 < PROBE_N; i++) {
+        const y = ys[i], n = ys[i + 1], x = (xs[i] + xs[i + 1]) / 2;
+        if (y === null || n === null || nearSingular(x, 3 * step) || extrema.some(e => Math.abs(e.x - x) < 3 * step))
+            continue;
+        const d = n - y;
+        if (Math.abs(d) > 1e-12 * Math.max(1, Math.abs(y)))
+            slope.push({ x, dir: d > 0 ? 1 : -1 });
+    }
+    return { roots, points, poles, extrema, limits, slope };
+}
 function buildFunction(f, path) {
     const keys = ["source", "xMin", "xMax", "yMin", "yMax", "tasks", "domainExclusions", "xIntercepts", "yIntercept", "verticalAsymptotes", "horizontalAsymptotes", "extrema", "intervals"];
     if (!(0, composerSchemaKit_1.hasExactKeys)(f, keys) || !(0, composerSchemaKit_1.isStr)(f.source, 400, 1) || ![f.xMin, f.xMax, f.yMin, f.yMax].every(v => (0, composerSchemaKit_1.isNum)(v, -1e9, 1e9)))
@@ -179,6 +319,36 @@ function buildFunction(f, path) {
             if (y1 === null || y2 === null || (iv.kind === "increasing" ? !(y2 > y1) : !(y2 < y1)))
                 bad("الدالة ليست " + (iv.kind === "increasing" ? "متزايدة" : "متناقصة") + " على (" + iv.from + ", " + iv.to + ").");
         }
+    const xMin = f.xMin, xMax = f.xMax;
+    const inWin = (x) => x >= xMin - 1e-9 && x <= xMax + 1e-9;
+    const outside = [...(tasks.domainExclusions ? ex : []), ...(tasks.xIntercepts ? xi : []), ...(tasks.verticalAsymptotes ? va : []), ...(tasks.extrema ? ext.map(e => e.x) : [])].filter(x => !inWin(x));
+    if (outside.length)
+        issues.push({ code: "AI_FUNCTION_KEY_OUTSIDE_WINDOW", message: "نقاط في المفتاح خارج نافذة الرسم فلا يستطيع الطالب تحديدها: " + outside.join("، ") + ".", path });
+    if (!issues.length) {
+        const ft = probeFunctionFeatures(at, xMin, xMax, Math.max(1, Math.abs(f.yMin), Math.abs(f.yMax)));
+        const K = 0.02;
+        const missing = (label, found, key) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= K)); if (miss.length)
+            issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };
+        if (tasks.xIntercepts)
+            missing("المقاطع السينية", ft.roots, xi);
+        if (tasks.domainExclusions)
+            missing("استثناءات المجال", ft.points, ex);
+        if (tasks.verticalAsymptotes)
+            missing("خطوط التقارب الرأسية", ft.poles, va);
+        if (tasks.horizontalAsymptotes)
+            missing("خطوط التقارب الأفقية", ft.limits, ha);
+        if (tasks.extrema) {
+            const miss = ft.extrema.filter(e => !ext.some(k => k.kind === e.kind && Math.abs(k.x - e.x) <= K));
+            if (miss.length)
+                issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (القيم القصوى): " + miss.map(e => (e.kind === "min" ? "صغرى" : "عظمى") + " عند x = " + Number(e.x.toFixed(4))).join("، ") + ".", path });
+        }
+        if (tasks.monotonicIntervals && intervals.length === f.intervals.length) {
+            const covers = (x, dir) => intervals.some(iv => iv.kind === (dir > 0 ? "increasing" : "decreasing") && (iv.from === "-inf" || (typeof iv.from === "number" && iv.from < x)) && (iv.to === "+inf" || (typeof iv.to === "number" && x < iv.to)));
+            const miss = ft.slope.find(s => !covers(s.x, s.dir));
+            if (miss)
+                issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (فترات التزايد والتناقص): الدالة " + (miss.dir > 0 ? "متزايدة" : "متناقصة") + " قرب x = " + Number(miss.x.toFixed(3)) + " ولا تغطيها أي فترة.", path });
+        }
+    }
     if (issues.length)
         return { ok: false, issues };
     const checks = [];
