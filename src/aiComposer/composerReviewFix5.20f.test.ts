@@ -59,4 +59,7 @@ describe("20F-RF5 each fail-closed layer holds on its own", () => {
     const r = probeFunctionFeatures(x => { const v = evaluateFunctionAt(c.ast, x); return v.ok ? v.value : null; }, -5, 5, 10, { roots: false, points: false, poles: false, extrema: false, limits: true, slope: false }, c.ast);
     expect(r.overflow).toBe("uncertain");
   });
+  it("the first growth sample at 10⁻² confirms an order-6 pole whose next sample already overflows (window step 0.01, pole between samples)", () => {
+    expect(buildSimFromSpec(fn("1/(x-2.005)^6+1/(x+3)", ["verticalAsymptotes"], { xMin: -10, xMax: 10, verticalAsymptotes: [-3, 2.005] })).ok).toBe(true);
+  });
 });
