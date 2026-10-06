@@ -33,6 +33,15 @@ describe("20F-RF1 M1 function-study keys must be COMPLETE inside the window (cod
     expect(buildSimFromSpec(fn(src, ["verticalAsymptotes", "domainExclusions"], { verticalAsymptotes: [-2, 1], domainExclusions: [-2, 1] })).ok).toBe(true);
     expect(codes(buildSimFromSpec(fn("1/x^2", ["verticalAsymptotes"], { verticalAsymptotes: [] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);   // even pole
   });
+  it("features BETWEEN grid samples are still found: a crossing root, a touching root, an even pole", () => {
+    const r = 0.3333;                                                                                     // not a grid point of −5..5
+    expect(codes(buildSimFromSpec(fn("(x-0.3333)*(x+2.7171)", ["xIntercepts"], { xIntercepts: [-2.7171] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    expect(buildSimFromSpec(fn("(x-0.3333)*(x+2.7171)", ["xIntercepts"], { xIntercepts: [-2.7171, r] })).ok).toBe(true);
+    expect(codes(buildSimFromSpec(fn("(x-0.3333)^2*(x+2.7171)", ["xIntercepts"], { xIntercepts: [-2.7171] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    expect(buildSimFromSpec(fn("(x-0.3333)^2*(x+2.7171)", ["xIntercepts"], { xIntercepts: [-2.7171, r] })).ok).toBe(true);
+    expect(codes(buildSimFromSpec(fn("1/(x-0.3333)^2+1/(x+2.7171)", ["verticalAsymptotes"], { verticalAsymptotes: [-2.7171] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    expect(buildSimFromSpec(fn("1/(x-0.3333)^2+1/(x+2.7171)", ["verticalAsymptotes"], { verticalAsymptotes: [-2.7171, r] })).ok).toBe(true);
+  });
   it("a removable hole is a domain point, not a pole; a one-sided pole at the edge of the domain is found", () => {
     // (an empty expected list is itself refused by the plugin's check validator, so each case carries one real pole at x = 2)
     expect(buildSimFromSpec(fn("1000000*x/x+1/(x-2)", ["domainExclusions", "verticalAsymptotes"], { domainExclusions: [0, 2], verticalAsymptotes: [2] })).ok).toBe(true);
