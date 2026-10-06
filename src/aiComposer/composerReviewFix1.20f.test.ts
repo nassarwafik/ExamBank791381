@@ -33,6 +33,13 @@ describe("20F-RF1 M1 function-study keys must be COMPLETE inside the window (cod
     expect(buildSimFromSpec(fn(src, ["verticalAsymptotes", "domainExclusions"], { verticalAsymptotes: [-2, 1], domainExclusions: [-2, 1] })).ok).toBe(true);
     expect(codes(buildSimFromSpec(fn("1/x^2", ["verticalAsymptotes"], { verticalAsymptotes: [] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);   // even pole
   });
+  it("a removable hole is a domain point, not a pole; a one-sided pole at the edge of the domain is found", () => {
+    // (an empty expected list is itself refused by the plugin's check validator, so each case carries one real pole at x = 2)
+    expect(buildSimFromSpec(fn("1000000*x/x+1/(x-2)", ["domainExclusions", "verticalAsymptotes"], { domainExclusions: [0, 2], verticalAsymptotes: [2] })).ok).toBe(true);
+    expect(codes(buildSimFromSpec(fn("1/sqrt(x)", ["verticalAsymptotes"], { verticalAsymptotes: [] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    expect(buildSimFromSpec(fn("1/sqrt(x)", ["verticalAsymptotes"], { verticalAsymptotes: [0] })).ok).toBe(true);
+    expect(buildSimFromSpec(fn("sqrt(x)+1/(x-2)", ["verticalAsymptotes"], { verticalAsymptotes: [2] })).ok).toBe(true);                       // a gap edge without a pole
+  });
   it("extrema: a missing local extremum is refused", () => {
     expect(codes(buildSimFromSpec(fn("x^3-3*x", ["extrema"], { extrema: [{ kind: "max", x: -1, y: 2 }] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
     expect(buildSimFromSpec(fn("x^3-3*x", ["extrema"], { extrema: [{ kind: "max", x: -1, y: 2 }, { kind: "min", x: 1, y: -2 }] })).ok).toBe(true);

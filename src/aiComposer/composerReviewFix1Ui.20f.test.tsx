@@ -86,6 +86,26 @@ describe("20F-RF1 UI findings", () => {
     expect((after.metadata as Record<string, unknown>).aiComposer).toBeTruthy();
   });
 
+  it("m3 (generate): «فتح في المحرر» whose update finds a changed exam reports STALE and keeps the staged result", async () => {
+    const exam: StructuredExam = { examId: "E-RF1", title: "t", status: "draft", schemaVersion: 2, sections: [] };
+    const plan = F.plan("امتحان مولّد", "classicPaper", [F.planSection("قسم", [F.planItem("multipleChoice", 2)])]);
+    const section = { items: [F.item("multipleChoice", { question: F.mcq("ما وظيفة VLAN؟", ["تقسيم الشبكة", "تسريع المعالج"]) })] };
+    let result: StructuredExam | null = null;
+    const edited = { ...exam, title: "عدّله المعلم في الأثناء" };
+    render(<AiExamComposerDialog open onClose={() => {}} transport={realTransport({ ai_exam_plan: [plan], ai_exam_section: [section] })} exam={exam} getLatestExam={() => exam}
+      onApply={upd => { result = upd(edited); return "ok"; }} onPreview={() => {}} onUndo={() => {}} selectedQuestionId={null} disabled={false} />);
+    const d = await screen.findByRole("dialog", { name: "المؤلف الذكي للامتحان" }, { timeout: 3000 });
+    fireEvent.change(within(d).getByRole("textbox", { name: "المادة (مطلوب)" }), { target: { value: "الشبكات" } });
+    fireEvent.change(within(d).getByRole("spinbutton", { name: "مجموع العلامات (مطلوب)" }), { target: { value: "2" } });
+    fireEvent.click(within(d).getByRole("button", { name: "إنشاء الامتحان" }));
+    await within(d).findByTestId("ai-composer-summary", {}, { timeout: 3000 });
+    fireEvent.click(within(d).getByRole("button", { name: "فتح في المحرر" }));
+    await tick(40);
+    expect(result).toBe(edited);
+    expect(within(d).queryByRole("heading", { name: "تم التطبيق" })).toBeNull();
+    expect(within(d).getByRole("alert").textContent).toContain("تم تعديل الامتحان أثناء عمل الذكاء الاصطناعي.");
+  });
+
   it("m3: an apply whose update finds a changed exam reports STALE, never «تم التطبيق»", async () => {
     const exam: StructuredExam = { examId: "E-RF1", title: "t", status: "draft", schemaVersion: 2, sections: [{ id: "s1", title: "قسم", gradingPolicy: "all", stimuli: {}, questions: [mcqQ("q1", "س")] }] };
     let result: StructuredExam | null = null;
