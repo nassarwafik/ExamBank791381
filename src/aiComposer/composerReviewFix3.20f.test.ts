@@ -26,7 +26,10 @@ describe("20F-RF3 MINOR-1 the probe budget is weighted by the expression's size"
 
 describe("20F-RF3 task gating: only the enabled tasks' features are located", () => {
   it("a zigzag with two roots but dozens of extrema keeps its roots-only key", () => {
-    expect(buildSimFromSpec(fn("x+0.2*abs(10*x-round(10*x))", ["xIntercepts"], { xIntercepts: [-0.066667, 0] })).ok).toBe(true);
+    // (x − 0.5)·(2 + zigzag): one root, many slope changes — probing every feature exhausts the budget, roots alone do not
+    const gate = "(x-0.5)*(2+abs(abs(abs(abs(abs(abs(x)-2.5)-1.25)-0.625)-0.3125)-0.15625))";
+    expect(buildSimFromSpec(fn(gate, ["xIntercepts"], { xIntercepts: [0.5] })).ok).toBe(true);
+    expect(codes(buildSimFromSpec(fn(gate, ["xIntercepts", "extrema"], { xIntercepts: [0.5] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
   });
 });
 
@@ -55,8 +58,8 @@ describe("20F-RF3 MINOR-4 soundness uses the same pole / limit logic as complete
     expect(buildSimFromSpec(fn("5/(1+exp(-x))", ["horizontalAsymptotes"], { horizontalAsymptotes: [0, 5] })).ok).toBe(true);
     expect(codes(buildSimFromSpec(fn("5/(1+exp(-x))", ["horizontalAsymptotes"], { horizontalAsymptotes: [5] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
   });
-  it("a periodic expression sampled at round magnitudes has no fake horizontal limit", () => {
-    expect(codes(buildSimFromSpec(fn("1000+1000*abs(100*x-round(100*x))", ["horizontalAsymptotes"], { horizontalAsymptotes: [1000] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+  it("a periodic expression is never given an AI key (round / floor / ceil / min / max / % are not AI vocabulary — Review Fix 5)", () => {
+    expect(codes(buildSimFromSpec(fn("1000+1000*abs(100*x-round(100*x))", ["horizontalAsymptotes"], { horizontalAsymptotes: [1000] })))).toEqual(["AI_FUNCTION_UNSUPPORTED"]);
   });
 });
 

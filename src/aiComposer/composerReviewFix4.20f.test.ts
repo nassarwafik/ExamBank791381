@@ -41,8 +41,12 @@ describe("20F-RF4 MINOR-B sigmoid and tanh limits are found on both sides", () =
 });
 
 describe("20F-RF4 MINOR-C very steep poles and exp(1/x) are vertical asymptotes", () => {
+  it("exp(1/x) overflows the evaluator beside its pole: refused fail-closed (Review Fix 5), never an incomplete key accepted", () => {
+    expect(codes(buildSimFromSpec(fn("exp(1/x)+1/(x-3)", ["verticalAsymptotes"], { verticalAsymptotes: [0, 3] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+    expect(codes(buildSimFromSpec(fn("exp(1/x)+1/(x-3)", ["verticalAsymptotes"], { verticalAsymptotes: [3] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+  });
   it("correct keys pass; keys missing the steep pole are incomplete", () => {
-    for (const [src, both, one] of [["1/(x+3)+1000/(x-2)^4", [-3, 2], [-3]], ["1/(x+3)+1000000/(x-2)^3", [-3, 2], [-3]], ["exp(1/x)+1/(x-3)", [0, 3], [3]]] as const) {
+    for (const [src, both, one] of [["1/(x+3)+1000/(x-2)^4", [-3, 2], [-3]], ["1/(x+3)+1000000/(x-2)^3", [-3, 2], [-3]]] as const) {
       const ok = buildSimFromSpec(fn(src, ["verticalAsymptotes"], { verticalAsymptotes: both }));
       expect(ok.ok, src + " " + JSON.stringify(codes(ok))).toBe(true);
       expect(codes(buildSimFromSpec(fn(src, ["verticalAsymptotes"], { verticalAsymptotes: one }))), src).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);

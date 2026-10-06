@@ -18,7 +18,11 @@ import * as F from "./testing/composerFakeAi";
 //   note  the repair prompt carried AI-authored issue text outside the UNTRUSTED DATA fences.
 const codes = (r: { ok: boolean; issues?: { code: string }[] }) => (r.ok ? [] : (r.issues ?? []).map(i => i.code));
 const fn = (source: string, tasks: string[], over: Record<string, unknown> = {}) => F.funcSim({ source, xMin: -5, xMax: 5, yMin: -10, yMax: 10, tasks, domainExclusions: [], xIntercepts: [], yIntercept: null, verticalAsymptotes: [], horizontalAsymptotes: [], extrema: [], intervals: [], ...over });
-const SAW = "1000+1000*abs(100*x-round(100*x))";
+const SAW = "1000+1000*abs(100*x-round(100*x))";                                                            // probe-level only (round is not AI vocabulary)
+const ZIG = "abs(abs(abs(abs(abs(abs(x)-2.5)-1.25)-0.625)-0.3125)-0.15625)";                         // many kinks, allowed vocabulary
+const GATE = "(x-0.5)*(2+" + ZIG + ")";                                                                      // one root (0.5), many slope changes
+const HEAVY = ZIG + "+0*(" + "log(exp(".repeat(12) + "x" + "))".repeat(12) + ")";                          // expensive: exhausts the budget
+
 
 describe("20F-RF2 N-M1 the completeness probe is bounded", () => {
   it("a pathological expression costs a bounded number of evaluations", () => {
@@ -28,7 +32,7 @@ describe("20F-RF2 N-M1 the completeness probe is bounded", () => {
     expect(n).toBeLessThanOrEqual(25000);
   });
   it("a spec whose features exceed the probe budget is refused (never silently accepted)", () => {
-    expect(codes(buildSimFromSpec(fn(SAW, ["extrema"], { extrema: [{ kind: "min", x: 0, y: 1000 }] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+    expect(codes(buildSimFromSpec(fn(GATE, ["xIntercepts", "monotonicIntervals"], { xIntercepts: [0.5] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
   });
   it("more features than a key can hold (11 roots) stop the probe with an explicit reason", () => {
     const r = buildSimFromSpec(fn("x*(x^2-1)*(x^2-4)*(x^2-9)*(x^2-16)*(x^2-25)", ["xIntercepts"], { xMin: -5.5, xMax: 5.5, yMin: -1000, yMax: 1000, xIntercepts: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4] }));
@@ -36,7 +40,7 @@ describe("20F-RF2 N-M1 the completeness probe is bounded", () => {
     expect(r.ok ? "" : r.issues[0].message).toContain("أكثر مما يتسع له المفتاح");
   });
   it("only the features of the enabled tasks are probed (a yIntercept-only spec of the same expression is accepted)", () => {
-    expect(buildSimFromSpec(fn(SAW, ["yIntercept"], { yIntercept: 1000 })).ok).toBe(true);
+    expect(buildSimFromSpec(fn(HEAVY, ["yIntercept"], { yIntercept: 0.15625 })).ok).toBe(true);
   });
   it("a patch carries at most a bounded number of function-study simulators", () => {
     const exam = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../docs/fixtures/presentation-20d1/A-classic-arabic.json"), "utf8")) as StructuredExam;
