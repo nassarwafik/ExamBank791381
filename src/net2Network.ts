@@ -53,7 +53,15 @@ export type Net = {
   /** Memoized administrative link state (both ends up, err-disable excluded). */
   up: Map<string, Map<string, { peer: Net2Endpoint; up: boolean } | null>>;
   swPorts: Map<string, { port: string; e: EffectiveSwitchIf }[]>;
+  /**
+   * Opt-in, inert OBSERVATION of the traffic (a presentation trace for the transient flow view). Absent on every view the engine itself
+   * builds; when present it is only written to, never read by a forwarding / addressing / reachability decision.
+   */
+  trace?: NetTrace;
 };
+/** One resolved ARP exchange: the requester device, the owner device and the switches the request frame crossed (in order). */
+export type NetTraceSegment = { phase: "request" | "reply"; from: string; to: string; switches: string[] };
+export type NetTrace = { phase: "request" | "reply"; lastTrail: string[]; segments: NetTraceSegment[] };
 export type Ep = { dev: string; iface: string };
 export type L3 = { ip: string; mask: string; gateway?: string };
 const key = (dev: string, port: string) => dev + "|" + port;
@@ -277,6 +285,7 @@ export function l2Deliver(net: Net, from: Ep, mac: string, accept: (ep: Ep) => b
     else if (kind && a.port === "eth0" && a.tag === null) offer({ dev: a.dev, iface: "eth0" }, a.trail);
   }
   const hit = found as { ep: Ep; trail: Learn[] } | null;
+  if (hit && net.trace) { const ids: string[] = []; for (const l of hit.trail) if (ids[ids.length - 1] !== l.sw) ids.push(l.sw); net.trace.lastTrail = ids; }
   if (net.record && net.learn) for (const l of mode === "broadcast" ? learned : hit ? hit.trail : []) learnMac(net, l, mac);
   return hit ? hit.ep : null;
 }
@@ -295,7 +304,9 @@ export function arpResolve(net: Net, from: Ep, ip: string): Ep | null {
   if (!src) return null;
   const owner = l2Deliver(net, from, macOf(from), ep => l3Of(net, ep)?.ip === ip, "broadcast");
   if (!owner) return null;
+  const trail = net.trace?.lastTrail;
   if (!l2Deliver(net, owner, macOf(owner), ep => sameEp(ep, from), "unicast")) return null;
+  if (net.trace && trail) net.trace.segments.push({ phase: net.trace.phase, from: from.dev, to: owner.dev, switches: trail });
   arpLearn(net, from, ip, macOf(owner));
   arpLearn(net, owner, src.ip, macOf(from));
   return owner;
@@ -348,9 +359,11 @@ export function forwardLeg(net: Net, from: Ep, dst: string): Leg {
 export type Probe = { ok: boolean; reason: string; target?: Ep; routers: string[]; replyRouters: string[]; gateway?: string; ttl?: number };
 /** A two-way exchange (request + reply). The reply must reach exactly the requesting endpoint. */
 export function probe(net: Net, from: Ep, dst: string): Probe {
+  if (net.trace) net.trace.phase = "request";
   const f = forwardLeg(net, from, dst);
   if (!f.ok) return { ok: false, reason: f.reason, routers: f.routers, replyRouters: [], ...(f.gateway ? { gateway: f.gateway } : {}) };
   const src = l3Of(net, from)!;
+  if (net.trace) net.trace.phase = "reply";
   const back = sameEp(f.target, from) ? { ok: true as const, target: from, routers: [] as string[] } : forwardLeg(net, f.target, src.ip);
   const g = f.gateway ? { gateway: f.gateway } : {};
   if (!back.ok || !sameEp(back.target, from)) return { ok: false, reason: "REPLY_FAILED", target: f.target, routers: f.routers, replyRouters: [], ...g };
