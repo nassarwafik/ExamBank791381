@@ -108,13 +108,60 @@ export type FunctionFeatures = { roots: number[]; points: number[]; poles: numbe
 export type FeatureNeeds = { roots: boolean; points: boolean; poles: boolean; extrema: boolean; limits: boolean; slope: boolean };
 const PROBE_N = 2001;
 export const PROBE_BUDGET = 20000;                                              // evaluations per simulator (sampling uses 2001)
+export const PROBE_NODE_BUDGET = 600000;                                        // …and expression-node evaluations (a large expression gets fewer)
+/** The size of a compiled expression (every AST object counts) — the cost weight of one evaluation. */
+export function expressionCost(ast: unknown): number {
+  if (!ast || typeof ast !== "object") return 0;
+  let n = 1;
+  for (const v of Object.values(ast as Record<string, unknown>)) n += Array.isArray(v) ? v.reduce<number>((t, w) => t + expressionCost(w), 0) : expressionCost(v);
+  return n;
+}
+// growth on one side of x: |f| strictly increasing as the probe closes in decade by decade (10⁻² … 10⁻¹²), the last decade not slowing
+// below half the first, total > 1 — rational poles of any order and logarithmic poles alike; a cusp, a hole or a finite edge does not grow.
+// The safe evaluator refuses huge values, so a strongly growing sequence (×10 at least) may end in "undefined" (overflow).
+const POLE_STEPS = [1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10, 1e-11, 1e-12];
+function growsToward(g: (x: number) => number, x: number, side: 1 | -1): boolean {
+  const v = POLE_STEPS.map(d => g(x + side * d));
+  const k = v.findIndex(t => !Number.isFinite(t)), fin = k < 0 ? v : v.slice(0, k);
+  if (fin.length < 2 || !fin.every((t, i) => i === 0 || t > fin[i - 1])) return false;
+  if (k >= 0) return v.slice(k).every(t => !Number.isFinite(t)) && fin[fin.length - 1] > 10 * Math.max(1, fin[0]);
+  const last = v.length - 1;
+  return v[last] - v[0] > 1 && v[last] - v[last - 1] >= 0.5 * (v[1] - v[0]);
+}
+const absOf = (at: Probe) => (x: number) => { const v = at(x); return v === null || !Number.isFinite(v) ? Infinity : Math.abs(v); };
+/** A vertical asymptote at x (either side grows) — shared by the completeness probe and the key's soundness check. */
+export const isPoleAt = (at: Probe, x: number): boolean => growsToward(absOf(at), x, 1) || growsToward(absOf(at), x, -1);
+/** A horizontal limit matches a key value within 0.02, or within 0.1 % of its size (large limits converge slowly). */
+export const limitTolerance = (l: number) => Math.max(0.02, 1e-3 * Math.abs(l));
+// sample points avoid round numbers (periodic round / floor expressions would alias there); a tier is used only when it can be evaluated
+// (the safe evaluator refuses huge values: exp(−x) at −10⁵), falling back to smaller magnitudes — never when the values merely do not settle
+const LIMIT_TIERS = [[1e5, 3e5, 1e6], [1e3, 3e3, 1e4], [10, 20, 30]].map(t => t.map(x => x * 1.0137));
+/** Horizontal limits at +∞ / −∞: the values must settle (within 1 %) and the first-order extrapolation L ≈ (x₂f₂ − x₁f₁)/(x₂ − x₁) of both
+ *  pairs must agree — slowly converging rational limits are estimated exactly, oscillations and logs are not limits. */
+export function functionLimits(at: Probe): number[] {
+  const out: number[] = [];
+  for (const sgn of [1, -1]) {
+    for (const tier of LIMIT_TIERS) {
+      const X = tier.map(x => sgn * x), F = X.map(x => { const v = at(x); return v !== null && Number.isFinite(v) ? v : null; });
+      if (F.some(v => v === null)) continue;
+      const [f1, f2, f3] = F as number[], [x1, x2, x3] = X;
+      if (Math.abs(f3 - f1) <= 1e-2 * Math.max(1, Math.abs(f3))) {
+        const L1 = (x3 * f3 - x1 * f1) / (x3 - x1), L2 = (x3 * f3 - x2 * f2) / (x3 - x2);
+        if (Math.abs(L1 - L2) <= limitTolerance(L1) / 2 && !out.some(l => Math.abs(l - L1) <= limitTolerance(l))) out.push(L1);
+      }
+      break;
+    }
+  }
+  return out;
+}
 const KEY_CAP = 10;                                                             // the longest key list a function-study spec may hold
 const ALL_NEEDS: FeatureNeeds = { roots: true, points: true, poles: true, extrema: true, limits: true, slope: true };
 class ProbeStop extends Error { why: Exclude<FunctionFeatures["overflow"], null>; constructor(why: Exclude<FunctionFeatures["overflow"], null>) { super(why); this.why = why; } }
-export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, scale: number, need: FeatureNeeds = ALL_NEEDS): FunctionFeatures {
+export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, scale: number, need: FeatureNeeds = ALL_NEEDS, ast?: unknown): FunctionFeatures {
   void scale;
+  const budget = Math.min(PROBE_BUDGET, Math.floor(PROBE_NODE_BUDGET / Math.max(1, ast === undefined ? 1 : expressionCost(ast))));
   let evaluations = 0;
-  const at: Probe = x => { if (++evaluations > PROBE_BUDGET) throw new ProbeStop("budget"); const v = rawAt(x); return v !== null && Number.isFinite(v) ? v : null; };
+  const at: Probe = x => { if (++evaluations > budget) throw new ProbeStop("budget"); const v = rawAt(x); return v !== null && Number.isFinite(v) ? v : null; };
   const g = (x: number) => { const v = at(x); return v === null ? Infinity : Math.abs(v); };
   const ternary = (lo: number, hi: number, f: (x: number) => number, max: boolean) => {
     for (let k = 0; k < 80; k++) { const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3; if (max ? f(a) < f(b) : f(a) > f(b)) lo = a; else hi = b; }
@@ -122,15 +169,7 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
   };
   const roots: number[] = [], points: number[] = [], poles: number[] = [], extrema: { kind: "min" | "max"; x: number }[] = [], limits: number[] = [], slope: { x: number; dir: 1 | -1 }[] = [];
   const add = (list: number[], x: number, why: "roots" | "points" | "poles") => { if (list.some(v => Math.abs(v - x) < 1e-3)) return; list.push(x); if (list.length > KEY_CAP && need[why]) throw new ProbeStop(why); };
-  // growth on one side of x: |f| strictly increasing over four decades, the last step not slowing below half the first, total > 1; the
-  // safe evaluator refuses huge values, so a strongly growing sequence (×10 at least) may end in "undefined" (overflow)
-  const grows = (x: number, side: 1 | -1) => {
-    const v = [1e-3, 1e-6, 1e-9, 1e-12].map(d => g(x + side * d));
-    const k = v.findIndex(t => !Number.isFinite(t)), fin = k < 0 ? v : v.slice(0, k);
-    if (fin.length < 2 || !fin.every((t, i) => i === 0 || t > fin[i - 1])) return false;
-    if (k >= 0) return v.slice(k).every(t => !Number.isFinite(t)) && fin[fin.length - 1] > 10 * Math.max(1, fin[0]);
-    return v[3] - v[0] > 1 && v[3] - v[2] >= 0.5 * (v[1] - v[0]);
-  };
+  const grows = (x: number, side: 1 | -1) => growsToward(g, x, side);
   const isPole = (x: number) => grows(x, 1) || grows(x, -1);
   try {
     const step = (xMax - xMin) / (PROBE_N - 1);
@@ -163,7 +202,8 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       }
       const p = i > 0 ? ys[i - 1] : null;
       if (p === null || n === null || Math.sign(p) !== Math.sign(y) || Math.sign(n) !== Math.sign(y)) continue;
-      if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n)) {                        // touching root
+      // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample)
+      if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(y) < Math.abs(p) || Math.abs(y) < Math.abs(n))) {
         const x = ternary(xs[i - 1], xs[i + 1], g, false);
         if (g(x) < 1e-9) add(roots, x, "roots");
       }
@@ -184,16 +224,7 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       const v = fx(x), side = Math.min(Math.abs(v - fx(x - step)), Math.abs(v - fx(x + step)));
       if (side > 1e-10 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) { extrema.push({ kind, x }); if (extrema.length > KEY_CAP && need.extrema) throw new ProbeStop("extrema"); }
     }
-    // limits: f(10⁵), f(3·10⁵), f(10⁶) must settle (within 1 %), and the first-order extrapolation L ≈ (x₂f₂ − x₁f₁)/(x₂ − x₁) of both
-    // pairs must agree — slowly converging rational limits (500x/(x+100) → 500) are estimated exactly, oscillations and logs are not limits
-    if (need.limits) for (const sgn of [1, -1]) {
-      const X = [1e5, 3e5, 1e6].map(x => sgn * x), F = X.map(at);
-      if (F.some(v => v === null)) continue;
-      const [f1, f2, f3] = F as number[], [x1, x2, x3] = X;
-      if (Math.abs(f3 - f1) > 1e-2 * Math.max(1, Math.abs(f3))) continue;
-      const L1 = (x3 * f3 - x1 * f1) / (x3 - x1), L2 = (x3 * f3 - x2 * f2) / (x3 - x2);
-      if (Math.abs(L1 - L2) <= limitTolerance(L1) / 2 && !limits.some(l => Math.abs(l - L1) <= limitTolerance(l))) limits.push(L1);
-    }
+    if (need.limits) limits.push(...functionLimits(at));
     if (need.slope) for (let i = 0; i + 1 < PROBE_N; i++) {
       const y = ys[i], n = ys[i + 1], x = (xs[i] + xs[i + 1]) / 2;
       if (y === null || n === null || nearSingular(x, 3 * step) || extrema.some(e => Math.abs(e.x - x) < 3 * step)) continue;
@@ -206,8 +237,6 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     throw e;
   }
 }
-/** A horizontal limit matches a key value within 0.02, or within 0.1 % of its size (large limits converge slowly). */
-export const limitTolerance = (l: number) => Math.max(0.02, 1e-3 * Math.abs(l));
 
 function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: SimCheck[] }> {
   const keys = ["source", "xMin", "xMax", "yMin", "yMax", "tasks", "domainExclusions", "xIntercepts", "yIntercept", "verticalAsymptotes", "horizontalAsymptotes", "extrema", "intervals"] as const;
@@ -230,10 +259,12 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   const ex = f.domainExclusions as number[], xi = f.xIntercepts as number[], va = f.verticalAsymptotes as number[], ha = f.horizontalAsymptotes as number[];
   const ext = f.extrema as { kind: "min" | "max"; x: number; y: number }[];
   if (tasks.domainExclusions) for (const x of ex) if (at(x) !== null) bad("الدالة معرّفة عند x = " + x + ".");
-  if (tasks.verticalAsymptotes) for (const x of va) { const a = at(x - 1e-6), b = at(x + 1e-6); if (at(x) !== null || (a !== null && Math.abs(a) < 1e3 && b !== null && Math.abs(b) < 1e3)) bad("لا يوجد خط تقارب رأسي عند x = " + x + "."); }
+  // the same growth test as the completeness probe: |f| must keep growing toward x on at least one side (rational or logarithmic)
+  if (tasks.verticalAsymptotes) for (const x of va) if (at(x) !== null || !isPoleAt(at, x)) bad("لا يوجد خط تقارب رأسي عند x = " + x + ".");
   if (tasks.xIntercepts) for (const x of xi) if (!near(at(x), 0)) bad("f(" + x + ") ≠ 0.");
   if (tasks.yIntercept) { if (f.yIntercept === null) bad("المقطع الصادي مفقود."); else if (!near(at(0), f.yIntercept as number)) bad("f(0) ≠ " + f.yIntercept + "."); }
-  if (tasks.horizontalAsymptotes) for (const y of ha) if (!near(at(1e4), y, 0.02) && !near(at(-1e4), y, 0.02)) bad("لا يقترب منحنى الدالة من y = " + y + ".");
+  const keyLimits = tasks.horizontalAsymptotes ? functionLimits(at) : [];      // the same extrapolated limits as the completeness probe
+  if (tasks.horizontalAsymptotes) for (const y of ha) if (!keyLimits.some(l => Math.abs(l - y) <= limitTolerance(l)) && !near(at(1e4), y, 0.02) && !near(at(-1e4), y, 0.02)) bad("لا يقترب منحنى الدالة من y = " + y + ".");
   if (tasks.extrema) for (const e of ext) {
     const y = at(e.x), l = at(e.x - 1e-3), r = at(e.x + 1e-3);
     if (!near(y, e.y) || l === null || r === null || (e.kind === "min" ? !(l >= (y as number) - 1e-9 && r >= (y as number) - 1e-9) : !(l <= (y as number) + 1e-9 && r <= (y as number) + 1e-9))) bad("النقطة (" + e.x + ", " + e.y + ") ليست " + (e.kind === "min" ? "قيمة صغرى" : "قيمة عظمى") + " محلية.");
@@ -256,7 +287,7 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   if (outside.length) issues.push({ code: "AI_FUNCTION_KEY_OUTSIDE_WINDOW", message: "نقاط في المفتاح خارج نافذة الرسم فلا يستطيع الطالب تحديدها: " + outside.join("، ") + ".", path });
   if (!issues.length) {
     const need: FeatureNeeds = { roots: tasks.xIntercepts, points: tasks.domainExclusions, poles: tasks.verticalAsymptotes, extrema: tasks.extrema, limits: tasks.horizontalAsymptotes, slope: tasks.monotonicIntervals };
-    const ft: FunctionFeatures = Object.values(need).some(Boolean) ? probeFunctionFeatures(at, xMin, xMax, Math.max(1, Math.abs(f.yMin as number), Math.abs(f.yMax as number)), need)
+    const ft: FunctionFeatures = Object.values(need).some(Boolean) ? probeFunctionFeatures(at, xMin, xMax, Math.max(1, Math.abs(f.yMin as number), Math.abs(f.yMax as number)), need, c.ast)
       : { roots: [], points: [], poles: [], extrema: [], limits: [], slope: [], overflow: null };
     if (ft.overflow === "budget") return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
     if (ft.overflow) return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);

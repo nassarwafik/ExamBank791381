@@ -87,7 +87,7 @@ async function handler(request, deps = {}) {
           return v.blocking.length ? { ok: false, issues: v.blocking } : { ok: true, plan: v.plan, warnings: v.warnings };
         };
         prompt = buildPlanPrompt(intent); schema = buildPlanSchema(); schemaName = "ai_exam_plan";
-        finish = raw => { const j = judge(raw); return j.ok ? reply(200, { ok: true, plan: j.plan, planRaw: raw, warnings: j.warnings, coverage: planCoverage(j.plan) }) : reply(200, { ok: false, code: "PLAN_INVALID", issues: issueList(j.issues), draft: draftOf(raw) }); };
+        finish = (raw, j = judge(raw)) => { return j.ok ? reply(200, { ok: true, plan: j.plan, planRaw: raw, warnings: j.warnings, coverage: planCoverage(j.plan) }) : reply(200, { ok: false, code: "PLAN_INVALID", issues: issueList(j.issues), draft: draftOf(raw) }); };
         judgePrevious = () => judge(body.previous);
       } else {
         const allowed = ["stage", "intent", "planRaw", "sectionIndex", "nonce", "previous", "attempt"];
@@ -101,7 +101,7 @@ async function handler(request, deps = {}) {
         if (!isComposerNonce(body.nonce)) return bad("REQUEST_INVALID", "معرّف التوليد غير صالح.");
         const judge = raw => normalizeSectionDraft(raw, plan.sections[si], si, { nonce: body.nonce });
         prompt = buildSectionPrompt(intent, plan, si); schema = buildSectionDraftSchema(); schemaName = "ai_exam_section";
-        finish = raw => { const r = judge(raw); return r.ok ? reply(200, { ok: true, section: r.section, meta: r.meta, warnings: r.warnings }) : reply(200, { ok: false, code: "SECTION_INVALID", issues: issueList(r.issues), draft: draftOf(raw) }); };
+        finish = (raw, r = judge(raw)) => { return r.ok ? reply(200, { ok: true, section: r.section, meta: r.meta, warnings: r.warnings }) : reply(200, { ok: false, code: "SECTION_INVALID", issues: issueList(r.issues), draft: draftOf(raw) }); };
         judgePrevious = () => judge(body.previous);
       }
     } else {
@@ -128,7 +128,7 @@ async function handler(request, deps = {}) {
         return dry.ok ? { ok: true, patch: n.patch } : { ok: false, issues: dry.issues };
       };
       prompt = buildModifyPrompt(projection, body.mode, scope, instruction); schema = buildPatchSchema(); schemaName = "ai_exam_patch";
-      finish = raw => { const j = judge(raw); return j.ok ? reply(200, { ok: true, patch: j.patch, diff: buildPatchDiff(exam, j.patch), warnings }) : reply(200, { ok: false, code: "PATCH_INVALID", issues: issueList(j.issues), draft: draftOf(raw), warnings }); };
+      finish = (raw, j = judge(raw)) => { return j.ok ? reply(200, { ok: true, patch: j.patch, diff: buildPatchDiff(exam, j.patch), warnings }) : reply(200, { ok: false, code: "PATCH_INVALID", issues: issueList(j.issues), draft: draftOf(raw), warnings }); };
       judgePrevious = () => judge(body.previous);
     }
 
@@ -142,7 +142,7 @@ async function handler(request, deps = {}) {
       budget = await reserve(container, String((auth.user && auth.user.sub) || "teacher"), deps.rateLimitDeps || {});
     } catch { log("ai.composer.refused", { code: "AI_UNAVAILABLE", reason: "rate-limit-storage" }); return reply(503, { ok: false, code: "AI_UNAVAILABLE", error: "خدمة الذكاء الاصطناعي غير متاحة حاليًا." }); }
     if (!budget.allowed) return reply(429, { ok: false, code: "RATE_LIMITED", error: "طلبات كثيرة خلال وقت قصير؛ أعد المحاولة بعد قليل.", retryAfterSeconds: budget.retryAfterSeconds }, { "Retry-After": String(budget.retryAfterSeconds) });
-    if (hasPrevious) { const j = judgePrevious(); if (j.ok) return finish(body.previous); previousIssues = j.issues; }
+    if (hasPrevious) { const j = judgePrevious(); if (j.ok) return finish(body.previous, j); previousIssues = j.issues; }   // judged ONCE
     if (previousIssues) prompt = buildRepairPrompt(prompt, body.previous, previousIssues);
     let result;
     try {

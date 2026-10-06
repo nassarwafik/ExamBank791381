@@ -21,6 +21,7 @@ const RULES = [
   "- Structured constraints override the free instruction whenever they conflict.",
   "- A requested capability that is not supported (e.g. OSPF, ACL, NAT, static routing) is never simulated: report it in unsupportedRequests with a safe alternative (a theory MCQ / open-response / CLI-text question) or omit it.",
   "- Prefer ONE composite question with ONE shared simulator context and several child parts over several separate simulators about the same topology.",
+  "- At most " + COMPOSER_LIMITS.functionSims + " function-study (functionStudy2d) simulators per section, counting composite contexts.",
   "- Keep technical tokens (IP addresses, CLI commands, code, equations, C#, Java, Python) as LTR text; put CLI in cli blocks, code in code blocks, tables in table blocks, formulas in math blocks.",
   "- Coding questions carry public material only (statement, language, starter code, public examples); you cannot write hidden tests, reference solutions or automatic grading.",
   "- Never put an answer, an expected value or a hint to the answer in a student-visible stem.",

@@ -74,6 +74,8 @@ export function validatePlan(plan: AiExamPlanV1, intent: AiExamIntentV1): PlanVa
   for (const s of out.sections) {
     const sum = s.items.reduce((n, i) => n + i.marks, 0);
     if (sum !== s.marks) blocking.push({ code: "PLAN_SECTION_MARKS_MISMATCH", message: "مجموع علامات بنود القسم «" + s.title + "» " + sum + " وعلامة القسم " + s.marks + ".", path: s.key });
+    const fnSims = s.items.filter(i => i.simulator === "functionStudy2d").length;   // a section draft may carry at most this many (bounded probes)
+    if (fnSims > COMPOSER_LIMITS.functionSims) blocking.push({ code: "PLAN_FUNCTION_SIM_LIMIT", message: "القسم «" + s.title + "» يحوي " + fnSims + " محاكاة دراسة دالة؛ الحد الأقصى " + COMPOSER_LIMITS.functionSims + " في القسم الواحد.", path: s.key });
     for (const i of s.items) {
       items++;
       if (!allowed.has(i.kind)) blocking.push({ code: "PLAN_KIND_NOT_ALLOWED", message: "نوع البند «" + i.kind + "» غير مسموح بحسب خيارات المعلم.", path: i.key });
