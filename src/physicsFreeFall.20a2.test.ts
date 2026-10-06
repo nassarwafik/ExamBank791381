@@ -167,9 +167,9 @@ describe("F14–F19 — checks, scoring, unanswered / reset", () => {
     expect(r.state).toEqual({ v: 1, measurements: { heightAt1s: 15.1, impactSpeed: 19.8, impactTime: 2.02, velocityAt1s: -9.8 }, points: { impactPoint: { t: 2.02, y: 0 }, pointAt1s: { t: 1, y: 15.1 } } });
   });
   it("F15 physics checks derive the expected value from the public model and use the PRIVATE tolerance", () => {
-    const q = question([{ id: "t", label: "زمن", weight: 1, kind: "physics.impactTime", measurementId: "impactTime", tolerance: 0.001 }]);
-    expect(grade(q, [set("impactTime", 2.0203)]).score).toBe(12);
-    expect(grade(q, [set("impactTime", 2.02)]).score).toBe(0);                                                  // outside ±0.001
+    const q = question([{ id: "t", label: "زمن", weight: 1, kind: "physics.impactTime", measurementId: "impactTime", tolerance: 0.0001 }]);
+    expect(grade(q, [set("impactTime", 2.0203)]).score).toBe(12);                                               // |2.0203 − 2.020305…| ≈ 5e-6
+    expect(grade(q, [set("impactTime", 2.02)]).score).toBe(0);                                                  // ≈ 3.05e-4: outside ±0.0001
     const v = question([{ id: "v", label: "سرعة", weight: 1, kind: "physics.velocityAtTime", measurementId: "velocityAt1s", time: 1, tolerance: 0.05 }]);
     expect(grade(v, [set("velocityAt1s", -9.8)]).score).toBe(12); expect(grade(v, [set("velocityAt1s", 9.8)]).score).toBe(0);
     const s = question([{ id: "s", label: "سرعة الارتطام", weight: 1, kind: "physics.impactSpeed", measurementId: "impactSpeed", tolerance: 0.05 }]);

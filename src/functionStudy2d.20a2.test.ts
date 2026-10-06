@@ -63,7 +63,7 @@ describe("M1–M5 — strict config; the SAFE parametric parser is the only expr
     for (const src of ["x.constructor", "globalThis", "window", "document", "process", "require(x)", "import(x)", "fetch(x)", "Math.random()", "alert(1)", "\"string\"", "[x]", "{x:1}", "x = 5", "x; 1", "this", "x => x", "x.__proto__", "constructor", "eval(x)", "Function(x)", "new Function", "`x`", "x?.y", "x[0]"])
       expect(compileFunction(src).ok, src).toBe(false);
     const code = fs.readFileSync(path.join(here, "functionStudyModel.ts"), "utf8").replace(/^\s*\/\/.*$/gm, "");
-    expect(code).not.toMatch(/eval\(|new Function|Function\(|import\(|require\(|fetch\(|Math\.random|Date\.now/);
+    expect(code).not.toMatch(/\beval\(|new Function|\bFunction\(|\bimport\(|\brequire\(|\bfetch\(|Math\.random|Date\.now/);       // \b: the exported name compileFunction( is not the Function constructor
     expect(code).toMatch(/from "\.\/parametricEngine"/);                                                       // the ONE expression engine
   });
   it("certification facts of the authored function, evaluated by the shared safe evaluator (independent literals)", () => {
