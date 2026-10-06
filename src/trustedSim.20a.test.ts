@@ -79,8 +79,8 @@ describe("20A-C1 — a code-owned plugin registry resolved by EXACT identity", (
     expect(resolveSmartSimPlugin("fakeCounter", 1)).toBe(v1); expect(resolveSmartSimPlugin("fakeCounter", 2)).toBe(v2);
     expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(expect.arrayContaining(["fakeCounter@1", "fakeCounter@2"]));
   });
-  it("the PRODUCTION plugin set is exactly networkTopology@1 (repository code), never anything exam data names", () => {
-    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1"]);
+  it("the PRODUCTION plugin set is exactly networkTopology@1 + the 20A.2 pilots physicsFreeFall@1 / functionStudy2d@1 (repository code), never anything exam data names", () => {
+    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1"]);   // Phase 20A.2 extended the production set
     expect(resolveSmartSimPlugin("networkTopology", 1)?.label).toBeTruthy();
   });
   it("the bounded-JSON guard refuses prototype-sensitive keys at any depth, non-finite numbers, functions, excessive depth / size", () => {

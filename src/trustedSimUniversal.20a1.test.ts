@@ -137,10 +137,10 @@ describe("20A.1-D — the plugin DESCRIPTOR: exact, strict, immutable, data only
   it("the listing is DATA ONLY (plain JSON, no functions), deterministic, and a copy (mutating it never changes the registry)", () => {
     undo.push(registerSmartSimPlugin(createUniversalTestPlugin(universal, SELECTION_SPEC)));
     const list = listSmartSimPluginDescriptors();
-    expect(list.map(d => d.key + "@" + d.version)).toEqual(["networkTopology@1", "testSelection@1"]);
+    expect(list.map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "physicsFreeFall@1", "testSelection@1"]);   // Phase 20A.2 pilots included
     expect(JSON.parse(JSON.stringify(list))).toEqual(list);
     walk(list, v => expect(typeof v).not.toBe("function"));
-    (list[0].capabilities as string[]).push?.("scene.3d");
+    (list.find(d => d.key === "networkTopology")!.capabilities as string[]).push?.("scene.3d");
     expect(resolveSmartSimDescriptor("networkTopology", 1)!.capabilities).not.toContain("scene.3d");
   });
 });
@@ -149,8 +149,8 @@ describe("20A.1-C — the AUTHORING / AI-composer catalog: safe metadata only", 
   it("lists exactly the production plugins with their declared metadata; plain data; no function / module / grader / secret / answer", () => {
     const c = smartSimAuthoringCatalog();
     expect(c).toMatchObject({ catalogVersion: 1, vocabularyVersion: 1, descriptorVersion: 1 });
-    expect(c.plugins.map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1"]);
-    expect(c.plugins[0]).toMatchObject({ domain: "networking", capabilities: expect.arrayContaining(["scene.2d", "network.cli"]), actionKinds: expect.arrayContaining(["router.command"]), checkKinds: expect.arrayContaining(["reachability", "router.ipAddress"]) });
+    expect(c.plugins.map(p => p.key + "@" + p.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "physicsFreeFall@1"]);   // Phase 20A.2 pilots included
+    expect(c.plugins.find(p => p.key === "networkTopology")).toMatchObject({ domain: "networking", capabilities: expect.arrayContaining(["scene.2d", "network.cli"]), actionKinds: expect.arrayContaining(["router.command"]), checkKinds: expect.arrayContaining(["reachability", "router.ipAddress"]) });
     expect(c.genericRules.map(r => r.id)).toEqual(["numericNear@1", "objectNotSelected@1", "objectSelected@1", "orderEquals@1", "pointNear@1", "relationExists@1", "setEquals@1"]);
     expect([...c.capabilities]).toEqual([...SMART_SIM_CAPABILITIES]);
     expect(JSON.parse(JSON.stringify(c))).toEqual(c);
@@ -158,7 +158,7 @@ describe("20A.1-C — the AUTHORING / AI-composer catalog: safe metadata only", 
       expect(typeof v, k).not.toBe("function");
       expect(k).not.toMatch(/^(validate|evaluate|apply|normalize|create|serialize|canonical|ruleView|reviewDetails|module|import|component|grader|path|url|secret|answer|checks|weight)/i);
     });
-    expect(JSON.stringify(c)).not.toMatch(/192\.168|BR1-SW|reach-pc|=>|function|require\(|import\(/);
+    expect(JSON.stringify(c)).not.toMatch(/192\.168|BR1-SW|reach-pc|=>|\bfunction\s*[\w$]*\s*\(|require\(|import\(/);   // function SYNTAX (the 20A.2 plugin key "functionStudy2d" is data)
   });
   it("a code-registered (test) plugin appears with its opt-in generic rules; nothing exam data says can add one", () => {
     undo.push(registerSmartSimPlugin(createUniversalTestPlugin(universal, SELECTION_SPEC)));

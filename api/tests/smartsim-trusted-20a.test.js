@@ -53,13 +53,13 @@ afterEach(() => { while (undo.length) undo.pop()(); });
 const withBalance = () => { undo.push(loadShared("trustedSimRegistry").registerSmartSimPlugin(balancePlugin())); };
 
 describe("20A-S1 — smartSim@1 is a registered, version-bound authoritative grader", () => {
-  it("catalog: 24 types, smartSim last, auto / partial / interactive / offline, not compound; grader for v1 only; the production plugin set is networkTopology@1", () => {
+  it("catalog: 24 types, smartSim last, auto / partial / interactive / offline, not compound; grader for v1 only; the production plugin set is networkTopology@1 + the 20A.2 pilots", () => {
     expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(24);
     expect(catalog.QUESTION_TYPE_CATALOG.at(-1).key).toBe("smartSim");
     expect(catalog.questionTypeDefinition("smartSim")).toMatchObject({ version: 1, gradingMode: "auto", legacy: false, responseKinds: ["smartSim"] });
     expect(catalog.questionTypeDefinition("smartSim").capabilities).toMatchObject({ autoGrading: true, partialCredit: true, compoundPart: false, interactive: true, offline: true });
     expect(typeof resolveGrader("smartSim", 1)).toBe("function"); expect(resolveGrader("smartSim", 2)).toBeUndefined();
-    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1"]);
+    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1"]);
   });
   it("domain-neutral: a test-only plugin registered in the server registry is graded by gradeExam with weighted partial credit from replayed state", () => {
     withBalance();

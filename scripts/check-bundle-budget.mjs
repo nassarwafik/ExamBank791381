@@ -67,7 +67,9 @@ const VISUAL_SIGNATURES = ["vq-canvas", "vq-region-editor", "qt-editor-hotspot",
 // code (used nowhere else). ANY one in an initial file fails: the whole open-response + rubric payload must stay lazy.
 // Phase 20A+20B — the trusted SmartSim renderer / editor / review and the networkTopology@1 workspace / editor / review class names and the
 // connectivity engine's reason code (used nowhere else). ANY one in an initial file fails: the plugin UI and its engines stay lazy.
-const SMARTSIM_SIGNATURES = ["nettopo-workspace", "nettopo-editor", "qt-editor-smartSim", "smartsim-review", "GATEWAY_NOT_IN_LOCAL_SUBNET"];
+// Phase 20A.2 adds the two pilots' workspaces / editors / reviews (physicsFreeFall@1, functionStudy2d@1): each stays in its own lazy chunk.
+const SMARTSIM_SIGNATURES = ["nettopo-workspace", "nettopo-editor", "qt-editor-smartSim", "smartsim-review", "GATEWAY_NOT_IN_LOCAL_SUBNET",
+  "freefall-workspace", "freefall-editor", "freefall-review", "fnstudy-workspace", "fnstudy-editor", "fnstudy-review"];
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.

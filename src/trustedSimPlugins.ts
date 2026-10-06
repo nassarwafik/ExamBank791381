@@ -3,10 +3,15 @@
 // ingest, grader, sanitizer, review) imports THIS module, so the client and the server always know exactly the same identities.
 // Exam data can only name one of these identities; it can never add one. A future plugin (chemistryBalance@1, functionGraph@1,
 // geometryWorkspace@1, physicsMotion@1 …) is added here as one more registration — nothing else in the platform changes.
-import { listSmartSimPlugins, registerSmartSimPlugin, resolveSmartSimPlugin } from "./trustedSimRegistry";
+import { listSmartSimPlugins, listSmartSimPluginDescriptors, registerSmartSimPlugin, resolveSmartSimDescriptor, resolveSmartSimPlugin } from "./trustedSimRegistry";
 import { networkTopologyPluginV1 } from "./networkTopologyPlugin";
+import { physicsFreeFallPluginV1 } from "./physicsFreeFallPlugin";
+import { functionStudy2dPluginV1 } from "./functionStudyPlugin";
 
 registerSmartSimPlugin(networkTopologyPluginV1);
+// Phase 20A.2 — the two enterprise pilots: physics (free fall) and mathematics (rational function study).
+registerSmartSimPlugin(physicsFreeFallPluginV1);
+registerSmartSimPlugin(functionStudy2dPluginV1);
 
-export { listSmartSimPlugins, resolveSmartSimPlugin };
+export { listSmartSimPlugins, listSmartSimPluginDescriptors, resolveSmartSimDescriptor, resolveSmartSimPlugin };
 export * from "./trustedSimQuestion";
