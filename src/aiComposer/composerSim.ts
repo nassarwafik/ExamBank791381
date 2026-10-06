@@ -95,17 +95,17 @@ const parseBound = (s: string): number | "-inf" | "+inf" | null => {
   const n = Number(t);
   return t !== "" && Number.isFinite(n) ? n : null;
 };
-/** COMPLETENESS probe (Review Fixes 1–4): what a student can find inside the window, located by code on a fixed grid (sign changes refined
+/** COMPLETENESS probe (Review Fixes 1–6): what a student can find inside the window, located by code on a fixed grid (sign changes refined
  *  by bisection; touching roots — strict local minima of |f| — even poles and extrema by ternary search; limits by `functionLimits`). The
  *  grader compares SETS, so a key that omits a root, a pole, an extremum, a limit or a monotonic stretch would fail correct students: such
- *  a key is refused. POLES are recognized by GROWTH, never by an absolute height: |f| keeps increasing, without slowing down, decade by
- *  decade as the probe closes in (10⁻² … 10⁻¹²), or rises past 10⁶ before the evaluator overflows (steep poles, checked from 10⁻¹) —
- *  rational poles, logarithmic poles and exp(1/x) alike, whatever the window height; a hole, a cusp or a finite edge does not grow.
+ *  a key is refused — and so is a key value the probe does not find within KEY_TOL. POLES are recognized by GROWTH, never by an absolute
+ *  height (`poleKindAt`, fail-closed): rational and logarithmic poles at any window height; a hole, a cusp or a finite edge does not grow;
+ *  what cannot be decided (overflow at 10⁻², growth too slow, a wide overflow run) refuses the key.
  *  BOUNDED: only the features of the enabled tasks are located; evaluations are capped (PROBE_BUDGET) and so is their weighted cost
  *  (PROBE_NODE_BUDGET, calls and powers weigh 10); a feature list longer than a key can hold stops the probe — an exhausted budget is a
  *  refusal (`overflow`), never a silent pass. A probe, not a proof: features finer than the grid are left to the teacher's review. */
 type Probe = (x: number) => number | null;
-export type FunctionFeatures = { roots: number[]; points: number[]; poles: number[]; extrema: { kind: "min" | "max"; x: number }[]; limits: number[]; slope: { x: number; dir: 1 | -1 }[]; overflow: null | "budget" | "uncertain" | "roots" | "points" | "poles" | "extrema" };
+export type FunctionFeatures = { roots: number[]; points: number[]; poles: number[]; extrema: { kind: "min" | "max"; x: number }[]; limits: number[]; slope: { x: number; dir: 1 | -1 }[]; edges: number[]; overflow: null | "budget" | "uncertain" | "roots" | "points" | "poles" | "extrema" };
 export type FeatureNeeds = { roots: boolean; points: boolean; poles: boolean; extrema: boolean; limits: boolean; slope: boolean };
 const PROBE_N = 2001;
 export const PROBE_BUDGET = 20000;                                              // evaluations per simulator (sampling uses 2001)
@@ -156,14 +156,16 @@ export function poleKindAt(at: Probe, x: number): PoleKind {
   const a = sideKind(at, x, 1), b = sideKind(at, x, -1);
   return a === "uncertain" || b === "uncertain" ? "uncertain" : a === "pole" || b === "pole" ? "pole" : "bounded";
 }
-/** A horizontal limit matches a key value within 0.02, or within 0.1 % of its size (large limits converge slowly). */
-export const limitTolerance = (l: number) => Math.max(0.02, 1e-3 * Math.abs(l));
+/** A key value must lie within HALF the grading tolerance (0.01) of the probed truth (Review Fix 6): the grader compares a student's
+ *  answer with the key, so a key off by more would fail a student who answers correctly to the stated precision. */
+export const KEY_TOL = 0.005;
 // Limits at ±∞ (Review Fixes 4–5), FAIL-CLOSED: at the LARGEST magnitude t where f(t), f(t/2), f(t/4), f(t/8), f(t/16) can all be
 // evaluated (searched downward by halving from 10⁶ — the safe evaluator refuses huge values, so a logistic curve is read near x = ∓60):
 //   flat (all steps ≤ 10⁻¹⁰·|f|, the evaluator's rounding)                        → the limit f(t);
 //   steps small (≤ 1 % of |f|) and shrinking geometrically (ratios in [0, 0.8])   → a limit: f(t) plus the geometric tail;
-//   steps of one sign that do not shrink (ratios ≥ 0.9: polynomial, exp, log, x^0.01) → no limit (diverges);
-//   anything else (noise, a non-monotone approach), or f defined at moderate |x| but at no evaluable magnitude → UNCERTAIN (refused).
+//   steps of one sign that do not shrink (ratios ≥ 0.999: polynomial, exp, log, x^0.01) → no limit (diverges);
+//   anything else — noise, a non-monotone approach, steps shrinking too slowly to tell (ratios in (0.8, 0.999): x^-0.15, 1/log x,
+//   Review Fix 6), or f defined at moderate |x| but at no evaluable magnitude → UNCERTAIN (refused).
 // Sample points are scaled off round numbers so periodic expressions cannot alias.
 const LIMIT_ALIAS = 1.0137291379;
 const LIMIT_TOPS = Array.from({ length: 19 }, (_, i) => 1e6 / 2 ** i);       // 10⁶ … ≈ 3.8
@@ -177,7 +179,7 @@ function limitAt(at: Probe, sgn: 1 | -1): LimitKind {
     if (d.every(x => Math.abs(x) <= 1e-10 * scale)) return { kind: "limit", L: f[0] };
     const r = [d[0] / d[1], d[1] / d[2]];
     if (Math.abs(d[0]) <= 1e-2 * scale && r.every(x => Number.isFinite(x) && x >= 0 && x <= 0.8)) return { kind: "limit", L: f[0] + d[0] * r[0] / (1 - r[0]) };
-    if (d.every(x => Math.sign(x) === Math.sign(d[0]) && x !== 0) && r.every(x => Number.isFinite(x) && x >= 0.9)) return { kind: "none" };
+    if (d.every(x => Math.sign(x) === Math.sign(d[0]) && x !== 0) && r.every(x => Number.isFinite(x) && x >= 0.999)) return { kind: "none" };
     return { kind: "uncertain" };
   }
   return [1, 2, 3].some(m => at(sgn * m) !== null) ? { kind: "uncertain" } : { kind: "none" };
@@ -189,7 +191,7 @@ export function functionLimits(at: Probe): { limits: number[]; uncertain: boolea
   for (const sgn of [1, -1] as const) {
     const r = limitAt(at, sgn);
     if (r.kind === "uncertain") uncertain = true;
-    else if (r.kind === "limit" && !limits.some(l => Math.abs(l - r.L) <= limitTolerance(l))) limits.push(r.L);
+    else if (r.kind === "limit" && !limits.some(l => Math.abs(l - r.L) <= KEY_TOL)) limits.push(r.L);
   }
   return { limits, uncertain };
 }
@@ -207,13 +209,18 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     for (let k = 0; k < 80; k++) { const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3; if (max ? f(a) < f(b) : f(a) > f(b)) lo = a; else hi = b; }
     return (lo + hi) / 2;
   };
-  const roots: number[] = [], points: number[] = [], poles: number[] = [], extrema: { kind: "min" | "max"; x: number }[] = [], limits: number[] = [], slope: { x: number; dir: 1 | -1 }[] = [];
+  const roots: number[] = [], points: number[] = [], poles: number[] = [], extrema: { kind: "min" | "max"; x: number }[] = [], limits: number[] = [], slope: { x: number; dir: 1 | -1 }[] = [], edges: number[] = [];
   const add = (list: number[], x: number, why: "roots" | "points" | "poles") => { if (list.some(v => Math.abs(v - x) < 1e-3)) return; list.push(x); if (list.length > KEY_CAP && need[why]) throw new ProbeStop(why); };
   // a candidate that lands on an OVERFLOW PLATEAU (|f| beyond the evaluator's range around a steep pole) is moved to the plateau's centre —
   // the pole — never left on its edge (lo / hi are finite points on either side)
   const finiteAt = (x: number) => { const v = atRaw(x); return v !== null && Number.isFinite(v); };
+  // a search that converged onto the plateau's FINITE edge (Review Fix 6) is moved inside it first: a point a few rounding steps away
   const plateauCentre = (lo: number, x: number, hi: number) => {
-    if (finiteAt(x)) return x;
+    if (finiteAt(x)) {
+      const seed = [1e-14, 1e-12, 1e-10].flatMap(d => [x + d * Math.max(1, Math.abs(x)), x - d * Math.max(1, Math.abs(x))]).find(s => { if (s <= lo || s >= hi) return false; const v = atRaw(s); return v !== null && !Number.isFinite(v); });
+      if (seed === undefined) return x;
+      x = seed;
+    }
     let a = lo, b = x, c = x, d = hi;
     for (let k = 0; k < 60; k++) { const m = (a + b) / 2; if (finiteAt(m)) a = m; else b = m; }
     for (let k = 0; k < 60; k++) { const m = (c + d) / 2; if (finiteAt(m)) d = m; else c = m; }
@@ -225,22 +232,32 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     const step = (xMax - xMin) / (PROBE_N - 1);
     const xs: number[] = [], ys: (number | null)[] = [];
     const overflowAt: boolean[] = [];
-    for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : xMin + i * step; const v = atRaw(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); overflowAt.push(v !== null && !Number.isFinite(v)); }
+    // grid points are snapped to 12 significant digits so a pole at a terminating decimal (1.3) is met exactly — not one rounding step off,
+    // where |f| would exceed the evaluator's range (Review Fix 6)
+    for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : Number((xMin + i * step).toPrecision(12)); const v = atRaw(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); overflowAt.push(v !== null && !Number.isFinite(v)); }
     const singular = need.points || need.poles || need.extrema || need.slope;     // extrema / slopes skip the neighbourhood of poles
     for (let i = 0; i < PROBE_N; i++) {
       const y = ys[i];
       if (y === null) {
         let j = i; while (j + 1 < PROBE_N && ys[j + 1] === null) j++;
-        // a run where the evaluator OVERFLOWS hides what is inside (a steep pole, its domain point, extrema): refuse, never guess
-        if (singular && overflowAt.slice(i, j + 1).some(Boolean)) throw new ProbeStop("uncertain");
+        // a run where the evaluator OVERFLOWS hides what is inside (a steep pole, its domain point, extrema): refuse, never guess — except
+        // a NARROW run (≤ 2 samples, all overflow, finite on both sides; Review Fix 6): its plateau centre must then classify as a pole
+        if (singular && overflowAt.slice(i, j + 1).some(Boolean)) {
+          if (!(j - i <= 1 && i > 0 && j < PROBE_N - 1 && overflowAt.slice(i, j + 1).every(Boolean))) throw new ProbeStop("uncertain");
+          const x = plateauCentre(xs[i - 1], xs[i], xs[j + 1]);
+          if (!isPole(x)) throw new ProbeStop("uncertain");
+          add(poles, x, "poles"); add(points, x, "points");
+          i = j; continue;
+        }
         if (singular) {
           if (j - i <= 1 && i > 0 && j < PROBE_N - 1) { const x = (xs[i] + xs[j]) / 2; add(points, x, "points"); if (isPole(x)) add(poles, x, "poles"); }
           else for (const [edge, inside] of [[i, i - 1], [j, j + 1]] as const) {                              // the edge of a domain gap
             if (inside < 0 || inside >= PROBE_N) continue;
             let lo = xs[inside], hi = xs[edge];
-            for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (at(m) === null) hi = m; else lo = m; }
-            // both sides: a run of "undefined" may be the evaluator's overflow next to a steep pole (exp(1/x) right of 0), not a domain gap
+            // the gap starts where f is UNDEFINED — an overflow between the samples is the defined side (a pole at the window's edge)
+            for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (atRaw(m) === null) hi = m; else lo = m; }
             if (isPole(hi)) add(poles, hi, "poles");
+            else if (!edges.some(v => Math.abs(v - hi) < 1e-3)) edges.push(hi);                             // a monotonic stretch may end here
           }
         }
         i = j; continue;
@@ -256,8 +273,10 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       }
       const p = i > 0 ? ys[i - 1] : null;
       if (p === null || n === null || Math.sign(p) !== Math.sign(y) || Math.sign(n) !== Math.sign(y)) continue;
-      // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample)
-      if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(y) < Math.abs(p) || Math.abs(y) < Math.abs(n))) {
+      // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample — nor is the
+      // evaluator's rounding noise along it)
+      const noise = 1e-12 * Math.max(1, Math.abs(y));
+      if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)) {
         const x = ternary(xs[i - 1], xs[i + 1], g, false);
         if (g(x) < 1e-9) add(roots, x, "roots");
       }
@@ -285,9 +304,9 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       const d = n - y;
       if (Math.abs(d) > 1e-12 * Math.max(1, Math.abs(y))) slope.push({ x, dir: d > 0 ? 1 : -1 });
     }
-    return { roots, points, poles, extrema, limits, slope, overflow: null };
+    return { roots, points, poles, extrema, limits, slope, edges, overflow: null };
   } catch (e) {
-    if (e instanceof ProbeStop) return { roots, points, poles, extrema, limits, slope, overflow: e.why };
+    if (e instanceof ProbeStop) return { roots, points, poles, extrema, limits, slope, edges, overflow: e.why };
     throw e;
   }
 }
@@ -325,7 +344,7 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   // the probe sees `Infinity` where the safe evaluator's range was exceeded (|f| huge) and `null` where f is undefined
   const atRaw = (x: number): number | null => { const r = evaluateFunctionAt(c.ast, x); return r.ok ? r.value : r.code === "EVAL_OUT_OF_RANGE" || r.code === "EVAL_NON_FINITE" ? Infinity : null; };
   const at = (x: number): number | null => { const v = atRaw(x); return v !== null && Number.isFinite(v) ? v : null; };
-  const near = (a: number | null, b: number, tol = 0.01) => a !== null && Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
+  const near = (a: number | null, b: number, tol = KEY_TOL) => a !== null && Math.abs(a - b) <= tol;
   const issues: ComposerIssue[] = [];
   const bad = (m: string) => issues.push({ code: "AI_FUNCTION_KEY_INCONSISTENT", message: "مفتاح دراسة الدالة لا يطابق التعبير: " + m, path });
   const ex = f.domainExclusions as number[], xi = f.xIntercepts as number[], va = f.verticalAsymptotes as number[], ha = f.horizontalAsymptotes as number[];
@@ -334,11 +353,18 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   // the same growth test as the completeness probe: |f| must keep growing toward x on at least one side (rational or logarithmic)
   let uncertain = false;
   if (tasks.verticalAsymptotes) for (const x of va) { const k = at(x) !== null ? "bounded" : poleKindAt(atRaw, x); if (k === "uncertain") uncertain = true; else if (k !== "pole") bad("لا يوجد خط تقارب رأسي عند x = " + x + "."); }
-  if (tasks.xIntercepts) for (const x of xi) if (!near(at(x), 0)) bad("f(" + x + ") ≠ 0.");
+  if (tasks.xIntercepts) for (const x of xi) if (!near(at(x), 0, 0.01)) bad("f(" + x + ") ≠ 0.");     // its x is checked against the probe below
+  // two key values closer than the grading tolerance cannot both be matched by one correct answer
+  const crowded = (label: string, v: number[]) => { if (v.some((a, i) => v.some((b, j) => j > i && Math.abs(a - b) <= 2 * KEY_TOL))) bad("قيم متقاربة جدًا أو مكررة في " + label + "."); };
+  if (tasks.domainExclusions) crowded("استثناءات المجال", ex);
+  if (tasks.xIntercepts) crowded("المقاطع السينية", xi);
+  if (tasks.verticalAsymptotes) crowded("خطوط التقارب الرأسية", va);
+  if (tasks.horizontalAsymptotes) crowded("خطوط التقارب الأفقية", ha);
+  if (tasks.extrema) crowded("القيم القصوى", ext.map(e => e.x));
   if (tasks.yIntercept) { if (f.yIntercept === null) bad("المقطع الصادي مفقود."); else if (!near(at(0), f.yIntercept as number)) bad("f(0) ≠ " + f.yIntercept + "."); }
   const keyLimits = tasks.horizontalAsymptotes ? functionLimits(atRaw) : { limits: [], uncertain: false };   // the probe's own limits
   if (keyLimits.uncertain) uncertain = true;
-  else if (tasks.horizontalAsymptotes) for (const y of ha) if (!keyLimits.limits.some(l => Math.abs(l - y) <= limitTolerance(l))) bad("لا يقترب منحنى الدالة من y = " + y + ".");
+  else if (tasks.horizontalAsymptotes) for (const y of ha) if (!keyLimits.limits.some(l => Math.abs(l - y) <= KEY_TOL)) bad("لا يقترب منحنى الدالة من y = " + y + ".");
   if (uncertain) return fail("AI_FUNCTION_TOO_COMPLEX", "لا يمكن التحقق آليًا من خطوط تقارب هذه الدالة (نمو بطيء جدًا أو قيم تتجاوز حدود الحساب)؛ اختر دالة أبسط أو أنشئ السؤال يدويًا.", path);
   if (tasks.extrema) for (const e of ext) {
     const y = at(e.x), l = at(e.x - 1e-3), r = at(e.x + 1e-3);
@@ -363,21 +389,39 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   if (!issues.length) {
     const need: FeatureNeeds = { roots: tasks.xIntercepts, points: tasks.domainExclusions, poles: tasks.verticalAsymptotes, extrema: tasks.extrema, limits: tasks.horizontalAsymptotes, slope: tasks.monotonicIntervals };
     const ft: FunctionFeatures = Object.values(need).some(Boolean) ? probeFunctionFeatures(atRaw, xMin, xMax, Math.max(1, Math.abs(f.yMin as number), Math.abs(f.yMax as number)), need, c.ast)
-      : { roots: [], points: [], poles: [], extrema: [], limits: [], slope: [], overflow: null };
+      : { roots: [], points: [], poles: [], extrema: [], limits: [], slope: [], edges: [], overflow: null };
     if (ft.overflow === "uncertain") return fail("AI_FUNCTION_TOO_COMPLEX", "لا يمكن التحقق آليًا من بعض نقاط الدالة داخل النافذة (قيم تتجاوز حدود الحساب أو سلوك غير محسوم)؛ اختر دالة أبسط أو أنشئ السؤال يدويًا.", path);
     if (ft.overflow === "budget") return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
     if (ft.overflow) return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
-    const K = 0.02;
-    const missing = (label: string, found: number[], key: number[], tol: (x: number) => number = () => K) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= tol(x))); if (miss.length) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };
+    const K = KEY_TOL;
+    const missing = (label: string, found: number[], key: number[]) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= K)); if (miss.length) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };
     if (tasks.xIntercepts) missing("المقاطع السينية", ft.roots, xi);
     if (tasks.domainExclusions) missing("استثناءات المجال", ft.points, ex);
     if (tasks.verticalAsymptotes) missing("خطوط التقارب الرأسية", ft.poles, va);
-    if (tasks.horizontalAsymptotes) missing("خطوط التقارب الأفقية", ft.limits, ha, limitTolerance);
+    if (tasks.horizontalAsymptotes) missing("خطوط التقارب الأفقية", ft.limits, ha);
     if (tasks.extrema) { const miss = ft.extrema.filter(e => !ext.some(k => k.kind === e.kind && Math.abs(k.x - e.x) <= K)); if (miss.length) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (القيم القصوى): " + miss.map(e => (e.kind === "min" ? "صغرى" : "عظمى") + " عند x = " + Number(e.x.toFixed(4))).join("، ") + ".", path }); }
     if (tasks.monotonicIntervals && intervals.length === (f.intervals as unknown[]).length) {
       const covers = (x: number, dir: 1 | -1) => intervals.some(iv => iv.kind === (dir > 0 ? "increasing" : "decreasing") && (iv.from === "-inf" || (typeof iv.from === "number" && iv.from < x)) && (iv.to === "+inf" || (typeof iv.to === "number" && x < iv.to)));
       const miss = ft.slope.find(s => !covers(s.x, s.dir));
       if (miss) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (فترات التزايد والتناقص): الدالة " + (miss.dir > 0 ? "متزايدة" : "متناقصة") + " قرب x = " + Number(miss.x.toFixed(3)) + " ولا تغطيها أي فترة.", path });
+    }
+    // …and every key value must be a feature the probe found (Review Fix 6): a root rounded too coarsely, an extremum beside the turning
+    // point, or a monotonic interval that runs past a turning point, crosses a pole, ends elsewhere or overlaps another is refused
+    const near1 = (x: number, found: number[]) => found.some(v => Math.abs(v - x) <= K);
+    if (tasks.xIntercepts) for (const x of xi) if (!near1(x, ft.roots)) bad("لا يوجد مقطع سيني ضمن ±" + K + " من x = " + x + ".");
+    // a very flat extremum ((x−2)⁶) may escape the probe: the key point is then accepted only if f at x ± K lies on the right side of f(x)
+    const flatExtremum = (e: { kind: "min" | "max"; x: number }) => { const y = at(e.x), l = at(e.x - K), r = at(e.x + K), slack = 1e-12 * Math.max(1, Math.abs(y ?? 0));
+      return y !== null && l !== null && r !== null && (e.kind === "min" ? l >= y - slack && r >= y - slack : l <= y + slack && r <= y + slack); };
+    if (tasks.extrema) for (const e of ext) if (!ft.extrema.some(p => p.kind === e.kind && Math.abs(p.x - e.x) <= K) && !flatExtremum(e)) bad("لا توجد قيمة " + (e.kind === "min" ? "صغرى" : "عظمى") + " ضمن ±" + K + " من x = " + e.x + ".");
+    if (tasks.monotonicIntervals && intervals.length === (f.intervals as unknown[]).length) {
+      const lo = (e: number | "-inf" | "+inf") => (e === "-inf" ? -Infinity : e === "+inf" ? Infinity : e);
+      const breaks = [...ft.extrema.map(p => p.x), ...ft.poles, ...ft.points, ...ft.edges];
+      for (const v of intervals) {
+        for (const end of [v.from, v.to]) if (typeof end === "number" && !near1(end, breaks)) bad("طرف الفترة x = " + end + " ليس نقطة تحوّل ولا خط تقارب ولا حدًّا للمجال.");
+        const dir = v.kind === "increasing" ? 1 : -1, wrong = ft.slope.find(sl => sl.x > lo(v.from) && sl.x < lo(v.to) && sl.dir !== dir);
+        if (wrong) bad("الدالة " + (wrong.dir > 0 ? "متزايدة" : "متناقصة") + " قرب x = " + Number(wrong.x.toFixed(3)) + " داخل الفترة (" + v.from + ", " + v.to + ").");
+      }
+      if (intervals.some((a, i) => intervals.some((b, j) => j > i && lo(a.from) < lo(b.to) && lo(b.from) < lo(a.to)))) bad("فترات التزايد والتناقص متداخلة.");
     }
   }
   if (issues.length) return { ok: false, issues };
