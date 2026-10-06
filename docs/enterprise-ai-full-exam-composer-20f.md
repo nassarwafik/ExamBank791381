@@ -71,11 +71,24 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   apex / impact points) is computed by code; apex tasks only for an upward throw; probe time inside the flight.
 - **functionStudy2d@1**: safe expression language 2 only; the model's key is probed numerically for **soundness** (f(0), roots, poles,
   horizontal asymptotes, local extrema, monotonic intervals: an inconsistent key is refused) and, since Review Fix 1, for **completeness**
-  inside the window: code samples the function (2001 points, sign changes refined by bisection, touching roots / even poles / extrema by
-  ternary search, one-sided poles at a domain edge, limits at ±10⁵ / ±10⁶) and refuses a key that omits a root, a pole, a domain point, an
-  extremum, a horizontal limit or a monotonic stretch (`AI_FUNCTION_KEY_INCOMPLETE`) or names a point outside the window
-  (`AI_FUNCTION_KEY_OUTSIDE_WINDOW`) — the grader compares sets, so an incomplete key would fail correct students. A probe, not a proof:
-  features finer than the grid are left to the teacher's review.
+  inside the window. Code samples the function (2001 points; sign changes refined by bisection; touching roots, even poles and extrema by
+  ternary search; one-sided poles at a domain edge). Poles are recognized by **growth**: |f| keeps increasing without slowing down over
+  four decades of approach (10⁻³ … 10⁻¹²). That covers rational and logarithmic poles at any window height, while a removable hole, a cusp
+  or a finite edge is not a pole. Horizontal limits come from a first-order extrapolation of f(10⁵), f(3·10⁵) and f(10⁶), compared
+  relatively. The probe refuses a key that:
+  - omits a root, a pole, a domain point, an extremum, a horizontal limit or a monotonic stretch (`AI_FUNCTION_KEY_INCOMPLETE`);
+  - names a point outside the window (`AI_FUNCTION_KEY_OUTSIDE_WINDOW`).
+
+  The grader compares sets, so an incomplete key would fail correct students.
+
+  The probe is **bounded**:
+  - it locates only the features of the enabled tasks;
+  - it has a hard budget of 20 000 evaluations per simulator (`AI_FUNCTION_TOO_COMPLEX` when exhausted, never a silent pass);
+  - it stops as soon as a feature list exceeds what a key can hold (10);
+  - a section draft or a patch may carry at most 6 function-study simulators (`AI_FUNCTION_SIM_LIMIT`).
+
+  It is a probe, not a proof: features finer than the grid, or growing too slowly to show over four decades, are left to the teacher's
+  review.
 - **No free credit**: every SmartSim key (and every composite SmartSim part) is evaluated on an empty action stream and must award nothing.
 - **composite@1**: one shared context (SmartSim spec or rich source), groups of child parts, exact part-mark sums (never redistributed),
   first-N groups with equal marks and code-computed maxima, no nesting, no code stimulus in a part, and a SmartSim check id grades at most
@@ -124,10 +137,15 @@ coding / parametric / tables, preset, blocking / warnings) and the topic coverag
 ## 8. Security, privacy, provider boundary
 
 - Provider: the existing server-side provider client (strict json_schema, no SDK retries); no key, SDK or provider call in the browser.
-- Teacher session required; per-teacher distributed token bucket (40 calls / 10 min, hashed blob names) failing closed; request ≤ 2 MB;
-  instruction ≤ 4000 chars; ≤ 8 sections, ≤ 60 items, ≤ 40 patch operations, ≤ 12 composite parts, AI context ≤ 60 KB.
+- **Session and rate limit.** A teacher session is required. A per-teacher distributed token bucket (40 calls / 10 min, hashed blob
+  names) fails closed. **One reservation per request, taken before any heavy work**: judging a client-echoed `previous` draft (SmartSim
+  builds, completeness probes, dry-run applies) is charged even when it needs no provider call, and a refused reservation means nothing is
+  judged.
+- **Bounds.** Request ≤ 2 MB; instruction ≤ 4000 chars; ≤ 8 sections, ≤ 60 items, ≤ 40 patch operations, ≤ 12 composite parts, ≤ 6
+  function-study simulators per draft / patch; AI context ≤ 60 KB.
 - Prompt-injection defence: role separation; exam content, previous drafts and teacher text are fenced as UNTRUSTED DATA (the fenced JSON
-  escapes `<` / `>`, so content can never open or close a fence); the strict schemas, the scope lock and every deterministic gate remain
+  escapes `<` / `>`, so content can never open or close a fence; validator issues quoting AI-authored text travel inside a fence of their
+  own in the repair prompt); the strict schemas, the scope lock and every deterministic gate remain
   the authority.
 - Provider schema size: every composer schema stays inside the strict json_schema limits with margin (object nesting: plan 3, section 7,
   patch 8 — limit 10; properties, enum values and schema characters far below the limits), guarded by a test.
@@ -140,7 +158,7 @@ coding / parametric / tables, preset, blocking / warnings) and the topic coverag
 Lazy dialog with five modes; structured controls + free instruction; meaningful stage progress (one polite status line, no token streaming,
 no fake percentage); cancel; summary, coverage, issues, warnings; «فتح في المحرر» only when the verdict passes (replacing a non-empty exam
 asks first and is undoable; the generated exam replaces the title, sections and presentation, while the cover page, the blueprint, the
-theme and other metadata are kept and the status returns to draft); diff with atomic group checkboxes; stale handling (an apply whose
+theme, other metadata and the exam's earlier composer history are kept and the status returns to draft); diff with atomic group checkboxes; stale handling (an apply whose
 functional update finds a changed exam is reported STALE, never «تم التطبيق»); undo; distinct error messages per failure kind;
 «مسودة من الذكاء الاصطناعي — راجعها قبل الاعتماد».
 
@@ -307,6 +325,71 @@ The limiter-clock test returns 503 instead of 200 against the unfixed handler. A
 | R21 | `AiExamComposerDialog.tsx` | generate updater claims applied when stale | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
 | R22 | `StructuredQuestionEditor.tsx` | image request cannot be resolved | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
 | R23 | `ai-exam-composer.js` | handler's ISO clock passed to the limiter | KILLED | ai-exam-composer-20f.test.js › 20F-API privacy boundary, prompt injection, provider failur |
+
+### 11.7 Fresh re-review and Review Fix 2
+
+A fresh read-only re-review of `4799542` confirmed every Review Fix 1 item. It found one new MAJOR, introduced by the RF1 probe, plus 2 MINOR
+findings and 4 notes. Review Fix 2 (`407751f`, `dc50ad5`, `82d1d1a`) answers them:
+
+| Finding | Fix |
+|---|---|
+| N-M1 the completeness probe was unbounded (~650 000 evaluations for a crafted expression), and a client-echoed draft was judged before the rate-limit reservation | 20 000-evaluation budget per simulator; task-gated probing; key-sized early stop; ≤ 6 function simulators per draft / patch; one reservation per request before any judging |
+| N-m1 logarithmic poles and poles in a tall window were missed | growth-based pole test |
+| N-m2 a correct large horizontal asymptote was refused | extrapolated limits, relative comparison |
+| note: issue text outside a fence | validator issues fenced |
+| note: «فتح في المحرر» dropped earlier composer history | builder history + staged history kept |
+
+The two remaining notes need no change. React flushes a click handler's update before the timer that reads the apply outcome, so the
+`settle()` ordering holds. The provider key name appears only in leak assertions, which already exist in baseline tests.
+
+**Fail-first.** `composerReviewFix2.20f.test.ts` and `ai-exam-composer-rf2-20f.test.js` were executed on `4799542` before any fix: **8 of 9
+failed**. The ninth, a 429 before any judging, already held there and is labelled a **pin**. Sample assertions:
+- `expected 652681 to be less than or equal to 25000`
+- `expected [ 'AI_FUNCTION_KEY_INCOMPLETE' ] to deeply equal [ 'AI_FUNCTION_TOO_COMPLEX' ]`
+- `expected [] to deeply equal [ 'AI_FUNCTION_SIM_LIMIT' ]`
+- `expected [] to deeply equal [ 'teacher-1' ]` (no reservation)
+- `expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]` (log poles, tall window)
+- `expected false to be true` (HA 500)
+- issue text outside a fence
+
+The history test failed on `4799542` with `expected [ 'generate' ] to deeply equal [ 'modifyExam', 'generate' ]`. All of them pass on the
+head.
+
+**The reviewer's CPU reproduction on the head:**
+- 30 function simulators are refused by the cap (9 ms), with one reservation.
+- 6 `yIntercept`-only sawtooth simulators are judged in 23 ms (the probe is skipped).
+- The worst case per simulator, with every completeness task on a crafted expression, is about 60 ms (`AI_FUNCTION_TOO_COMPLEX`).
+
+**RF2 mutation campaign.** 14 mutants: **14 KILLED, 0 SURVIVED, 0 TIMEOUT**, with byte-for-byte restore and a clean `git status`. S10
+(feature overflow ignored) first survived: the outcome code is the same, because a key holds at most 10 values. A test asserting the
+explicit overflow reason now kills it (`82d1d1a`).
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| S01 | `composerSim.ts` | probe evaluation budget removed | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-M1 the completeness probe is bounded |
+| S02 | `composerSim.ts` | exhausted budget not reported as too complex | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-M1 the completeness probe is bounded |
+| S03 | `composerSim.ts` | task gating removed (every feature probed) | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-M1 the completeness probe is bounded |
+| S04 | `composerDraft.ts` | section simulator cap removed | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-M1 the completeness probe is bounded |
+| S05 | `composerPatch.ts` | patch simulator cap removed | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-M1 the completeness probe is bounded |
+| S06 | `composerSim.ts` | growth test accepts slowing growth | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-m1 / N-m2 poles and limits are recognized by gr |
+| S07 | `composerSim.ts` | growth ending in overflow accepted without strong growth | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-m1 / N-m2 poles and limits are recognized by gr |
+| S08 | `composerSim.ts` | domain-edge growth probed on the wrong side | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-m1 / N-m2 poles and limits are recognized by gr |
+| S09 | `composerSim.ts` | even-pole candidates ignored | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside th |
+| S10 | `composerSim.ts` | overflow of a key-sized list ignored for growth / extrema stop | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 N-M1 the completeness probe is bounded |
+| S11 | `composerPrompts.ts` | repair issues outside a fence | KILLED | composerReviewFix2.20f.test.ts › 20F-RF2 note: AI-authored issue text stays inside a fence |
+| S12 | `AiExamComposerDialog.tsx` | earlier composer history dropped on apply | KILLED | composerReviewFix1Ui.20f.test.tsx › 20F-RF1 UI findings |
+| S13 | `AiExamComposerDialog.tsx` | staged draft history dropped on apply | KILLED | aiComposerUi.20f.test.tsx › 20F AI Full Exam Composer dialog |
+| S14 | `ai-exam-composer.js` | echoed previous judged before the reservation | KILLED | ai-exam-composer-rf2-20f.test.js › 20F-RF2 N-M1 a client-echoed previous draft is charged  |
+
+**Final re-run on the Review Fix 2 code.** All 68 earlier mutants (the original 45 plus RF1's 23) were re-run:
+- **60 KILLED.**
+- **2 EQUIVALENT:** C19 and C42 (proved in §11.4).
+- **6 INVALID,** because RF2 rewrote their target lines:
+  - R04, R08 and R12 were re-targeted at the new code as R04b, R08b and R12b, and all three were KILLED;
+  - R09, R10 and R11 are covered by RF2's S09, S06/S07 and S08.
+
+Across the phase, every planted defect in current code is killed except the 2 proven equivalents. There were 0 timeouts, and every file
+was restored byte-for-byte with a clean `git status`.
 
 ## 12. Known limitations
 
