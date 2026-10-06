@@ -62,4 +62,10 @@ describe("20F-RF5 each fail-closed layer holds on its own", () => {
   it("the first growth sample at 10⁻² confirms an order-6 pole whose next sample already overflows (window step 0.01, pole between samples)", () => {
     expect(buildSimFromSpec(fn("1/(x-2.005)^6+1/(x+3)", ["verticalAsymptotes"], { xMin: -10, xMax: 10, verticalAsymptotes: [-3, 2.005] })).ok).toBe(true);
   });
+  it("weak growth that ends in the evaluator's overflow is not a pole (undefined point on a near-limit plateau)", () => {
+    expect(codes(buildSimFromSpec(fn("999999999000000+1000500*(1-abs(x))+0/x", ["verticalAsymptotes"], { xMin: -0.5, xMax: 0.5, verticalAsymptotes: [0] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+  });
+  it("a key value that is not a limit is refused even when every real limit is listed", () => {
+    expect(codes(buildSimFromSpec(fn("(2*x+1)/(x-3)", ["horizontalAsymptotes"], { horizontalAsymptotes: [2, 3] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+  });
 });
