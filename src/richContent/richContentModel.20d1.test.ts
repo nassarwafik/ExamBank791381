@@ -121,3 +121,36 @@ describe("20D1-R5 math parser — allow-listed LaTeX subset", () => {
     for (const s of ["\\href{x}{y}", "\\url{x}", "\\html{x}", "\\style{x}", "\\class{x}{y}", "\\def\\a{1}", "\\newcommand{\\a}{1}", "\\input{x}", "\\unknown"]) expect(parseMath(s).ok, s).toBe(false);
   });
 });
+
+describe("20D1-R9 mutation-gap closure — size and math bounds (internal mutation round 1)", () => {
+  const limit = (raw: unknown) => R.validateRichContent(raw).issues.map(i => i.code);
+  it("a single text block over blockChars is refused, one at the bound is accepted", () => {
+    expect(limit(doc(p("ب".repeat(R.RICH_LIMITS.blockChars + 1))))).toContain("RICH_CONTENT_LIMIT");
+    expect(limit(doc(p("ب".repeat(R.RICH_LIMITS.blockChars))))).toEqual([]);
+    // several runs, each under the bound, together over it (the per-block sum, not only the per-run check)
+    const half = Math.ceil(R.RICH_LIMITS.blockChars / 2) + 1;
+    expect(limit(doc({ type: "paragraph", runs: [{ text: "د".repeat(half) }, { text: "ه".repeat(half), marks: ["bold"] }] }))).toContain("RICH_CONTENT_LIMIT");
+  });
+  it("many blocks each under blockChars but together over totalChars are refused", () => {
+    const n = Math.ceil(R.RICH_LIMITS.totalChars / (R.RICH_LIMITS.blockChars - 1)) + 1;
+    const blocks = Array.from({ length: n }, () => p("ج".repeat(R.RICH_LIMITS.blockChars - 1)));
+    expect(limit(doc(...blocks))).toContain("RICH_CONTENT_LIMIT");
+  });
+  it("structure-heavy documents (many tiny runs with every mark) over serializedBytes are refused even when text totals are small", () => {
+    const run = { text: "a", marks: ["bold", "italic", "underline", "code", "sup", "sub"] };
+    const blocks = Array.from({ length: 60 }, () => ({ type: "paragraph", runs: Array.from({ length: R.RICH_LIMITS.runs }, () => run) }));
+    expect(JSON.stringify(doc(...blocks)).length).toBeGreaterThan(R.RICH_LIMITS.serializedBytes);
+    expect(limit(doc(...blocks))).toContain("RICH_CONTENT_LIMIT");
+  });
+  it("math nesting deeper than MATH_LIMITS.depth and node counts over MATH_LIMITS.nodes are refused", async () => {
+    const { MATH_LIMITS } = await import("./richMath");
+    const deep = "\\sqrt{".repeat(MATH_LIMITS.depth + 2) + "x" + "}".repeat(MATH_LIMITS.depth + 2);
+    expect(deep.length).toBeLessThan(MATH_LIMITS.chars);
+    expect(parseMath(deep).ok).toBe(false);
+    const wide = "x+".repeat(MATH_LIMITS.nodes) + "x";
+    expect(wide.length).toBeLessThan(MATH_LIMITS.chars);
+    expect(parseMath(wide).ok).toBe(false);
+    expect(parseMath("\\sqrt{\\sqrt{x}}").ok).toBe(true);
+    expect(parseMath("x+".repeat(50) + "x").ok).toBe(true);
+  });
+});

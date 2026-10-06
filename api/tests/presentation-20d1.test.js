@@ -151,3 +151,45 @@ describe("20D1-S4 GRADING INERTNESS — presentation and rich content never chan
     expect(strip(netD)).toEqual(strip(net));
   });
 });
+
+describe("20D1-S5 mutation-gap closure — server projections (internal mutation round 1)", () => {
+  const SCRIPT_RICH = { schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "<script>alert(1)</script>" }] }] };
+  it("the server copy of the rich authority refuses raw HTML: a question whose richContent carries <script> reaches the student without it", () => {
+    const out = sanitizeExamForStudent(exam([mcq("q1", { richContent: SCRIPT_RICH })]));
+    expect(qOf(out)).not.toHaveProperty("richContent");
+    expect(JSON.stringify(out)).not.toMatch(/<script>/);
+  });
+  it("a parametricNumeric stem never carries rich content to the student, even when a (blocked) draft stored a valid one", () => {
+    const param = { examQuestionId: "pn1", presentationType: "parametricNumeric", text: "x", marks: 1, richContent: RICH() };
+    for (const ctx of [undefined, { parametric: { assignmentId: "a", studentId: "s", attemptNumber: 1 } }]) {
+      const out = sanitizeExamForStudent(exam([param]), ctx);
+      expect(JSON.stringify(qOf(out) ?? {})).not.toMatch(/معطيات|richContent/);
+    }
+  });
+  it("a linked SmartSim composite child's rich prompt is strictly projected (malformed → dropped)", () => {
+    const e = compositeNetworkExam();
+    const parts = qOf(e).composite.groups.flatMap(g => g.parts);
+    const sim = parts.find(p => p.type === "smartSim");
+    sim.richContent = SCRIPT_RICH;
+    const outParts = qOf(sanitizeExamForStudent(e)).composite.groups.flatMap(g => g.parts);
+    expect(outParts.find(p => p.id === sim.id)).not.toHaveProperty("richContent");
+    sim.richContent = RICH();
+    const ok = qOf(sanitizeExamForStudent(e)).composite.groups.flatMap(g => g.parts);
+    expect(ok.find(p => p.id === sim.id).richContent).toEqual(RICH());
+  });
+  it("the pre-start cover is the strict allow-list (no teacher-only key, malformed rich instructions dropped)", () => {
+    const { preStartAssignment } = require_("../src/functions/student-assignment.js");
+    const a = { assignmentId: "a", title: "t", examSnapshot: { title: "t", coverPage: { enabled: true, instructions: "تعليمات", teacherNote: "SECRET-COVER", instructionsRichContent: SCRIPT_RICH }, sections: [] } };
+    const cover = preStartAssignment(a, false, "continuous").exam.coverPage;
+    expect(cover.instructions).toBe("تعليمات");
+    expect(JSON.stringify(cover)).not.toMatch(/SECRET-COVER|<script>|instructionsRichContent/);
+  });
+  it("bank insertion copies only a VALID rich stem (canonical copy), never a malformed one", () => {
+    const { buildExamQuestion } = require_("../src/lib/bank-question-exam.js");
+    const idx = { section: "s", topic: "t", difficulty: 1 }, cur = { examQuestionId: "q9", marks: 2 };
+    const good = buildExamQuestion({ id: "b1", type: "mcq", text: "x", richContent: RICH() }, idx, cur);
+    expect(good.richContent).toEqual(RICH());
+    const bad = buildExamQuestion({ id: "b2", type: "mcq", text: "x", richContent: SCRIPT_RICH }, idx, cur);
+    expect(bad).not.toHaveProperty("richContent");
+  });
+});

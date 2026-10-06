@@ -133,3 +133,14 @@ describe("20D1-P4 CSS variables come only from validated tokens; the student pro
     expect(P.contrastRatio("#777777", "#FFFFFF")).toBeCloseTo(4.48, 2);
   });
 });
+
+describe("20D1-P9 mutation-gap closure — question override precedence (internal mutation round 1)", () => {
+  it("a question override variant / width / card / answer area beats the section and the type-variant map", () => {
+    const exam = P.resolvePresentation({ schemaVersion: 1, preset: "networkLab" })!;
+    const section = P.resolveSectionPresentation(exam, { schemaVersion: 1, components: { questionCard: { variant: "flat" }, answerArea: { variant: "plain" } } });
+    expect(P.resolveQuestionPresentation(section, { presentationType: "coding" }).variant).toBe("developerWorkspace");
+    expect(P.resolveQuestionPresentation(section, { presentationType: "coding", presentation: { schemaVersion: 1, variant: "writingPaper", width: "full", card: "paper", answerArea: "lined" } }))
+      .toEqual({ variant: "writingPaper", width: "full", card: "paper", answerArea: "lined" });
+    expect(P.resolveQuestionPresentation(section, { presentationType: "coding", presentation: { schemaVersion: 1, variant: "nope" } }).variant).toBe("developerWorkspace");
+  });
+});
