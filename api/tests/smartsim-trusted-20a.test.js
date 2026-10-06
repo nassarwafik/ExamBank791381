@@ -29,6 +29,8 @@ const exam = questions => ({ examId: "E20A", title: "e", sections: [{ id: "s1", 
 // ── a TEST-ONLY plugin registered into the SERVER's shared registry (chemistry-balance shaped: H2 + O2 → H2O coefficients) ─────────
 const balancePlugin = () => ({
   key: "testBalance", version: 1, label: "موازنة (اختبار)", maxActions: 20, checkKinds: ["balanced", "coefficient"],
+  // Phase 20A.1 — every registered plugin carries its code-owned descriptor (metadata only)
+  descriptor: { descriptorVersion: 1, key: "testBalance", version: 1, label: "موازنة (اختبار)", domain: "chemistry", sceneKinds: ["2d"], rendererFamilies: ["custom"], capabilities: ["scene.2d", "value.set"], actionKinds: ["setCoefficient"], checkKinds: ["balanced", "coefficient"], genericRules: [], assetKinds: [], tools: ["select"], accessibility: ["keyboardAlternative"], supports: { autosave: true, restore: true, reset: true, partialCredit: true, offline: true, twoDimensional: true, threeDimensional: false } },
   validateConfig: raw => (raw && typeof raw === "object" && !Array.isArray(raw) && Object.keys(raw).join() === "species" && Array.isArray(raw.species) && raw.species.length === 3 ? { ok: true, config: { species: [...raw.species] } } : { ok: false, issues: [{ code: "BAL_CONFIG_INVALID", message: "x" }] }),
   createRuntime: () => ({ coefficients: [1, 1, 1] }),
   normalizeAction: raw => (raw && typeof raw === "object" && Object.keys(raw).sort().join() === "index,type,value" && raw.type === "setCoefficient" && [0, 1, 2].includes(raw.index) && Number.isInteger(raw.value) && raw.value >= 1 && raw.value <= 9 ? { ok: true, action: { type: "setCoefficient", index: raw.index, value: raw.value } } : { ok: false, code: "BAL_ACTION_INVALID" }),

@@ -19,6 +19,7 @@ import {
 } from "./networkTopologyModel";
 import { canReach, routerLinkContext } from "./networkConnectivity";
 import type { SmartSimCheckBase, SmartSimIssue, SmartSimPlugin } from "./trustedSimRegistry";
+import type { SmartSimPluginDescriptorV1 } from "./trustedSimDescriptor";
 
 // ── actions ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export const PC_ACTION_FIELD: Readonly<Record<string, PcField>> = Object.freeze({ "pc.setAddress": "address", "pc.setMask": "mask", "pc.setGateway": "gateway", "pc.setDns": "dns" });
@@ -225,11 +226,27 @@ export function defaultCheckLabel(c: Partial<NetworkTopologyCheck>, config: Netw
 
 // ── the plugin ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const MAX_REVIEW_OUTPUT_LINES = 40;
+const NETWORK_TOPOLOGY_LABEL = "مخطط شبكة تفاعلي (راوتر / سويتش / حاسوب)";
+/**
+ * Phase 20A.1 — the code-owned DESCRIPTOR of networkTopology@1 (metadata only: it changes no config, state, action or grading semantics,
+ * and nothing is added to the persisted envelope). The topology keeps its own config (not the universal scene) and opts into no generic
+ * rule: its checks are its own, domain-specific kinds.
+ */
+export const NETWORK_TOPOLOGY_DESCRIPTOR_V1: SmartSimPluginDescriptorV1 = {
+  descriptorVersion: 1, key: NETWORK_TOPOLOGY_PLUGIN_KEY, version: NETWORK_TOPOLOGY_PLUGIN_VERSION, label: NETWORK_TOPOLOGY_LABEL, domain: "networking",
+  sceneKinds: ["2d"], rendererFamilies: ["svg2d", "terminal", "form"],
+  capabilities: ["scene.2d", "object.select", "object.label", "network.links", "network.cli", "network.hostConfig", "network.ping"],
+  actionKinds: ["pc.setAddress", "pc.setMask", "pc.setGateway", "pc.setDns", "switch.command", "router.command"],
+  checkKinds: Object.keys(NETWORK_CHECK_KINDS), genericRules: [], assetKinds: [],
+  tools: ["select", "terminal", "form", "probe"], accessibility: ["keyboardAlternative", "objectList", "semanticLabels", "toolLabels", "textTranscript"],
+  supports: { autosave: true, restore: true, reset: true, partialCredit: true, offline: true, twoDimensional: true, threeDimensional: false }
+};
 export const networkTopologyPluginV1: SmartSimPlugin<NetworkTopologyConfigV1, NetworkTopologyRuntime, NetworkTopologyStateV1, NetworkTopologyAction, NetworkTopologyCheck> = Object.freeze({
   key: NETWORK_TOPOLOGY_PLUGIN_KEY,
   version: NETWORK_TOPOLOGY_PLUGIN_VERSION,
-  label: "مخطط شبكة تفاعلي (راوتر / سويتش / حاسوب)",
+  label: NETWORK_TOPOLOGY_LABEL,
   maxActions: TOPOLOGY_LIMITS.actions,
+  descriptor: NETWORK_TOPOLOGY_DESCRIPTOR_V1,
   checkKinds: Object.freeze(Object.keys(NETWORK_CHECK_KINDS)),
   validateConfig: (raw: unknown) => { const r = validateTopologyConfig(raw); return r.ok ? { ok: true as const, config: r.config } : { ok: false as const, issues: r.issues }; },
   createRuntime: createTopologyRuntime,

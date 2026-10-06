@@ -12,7 +12,22 @@
 // here from positive finite weights: proportional = marks × passedWeight / totalWeight, or allOrNothing. A broken AUTHORITY (envelope,
 // plugin identity, private key) fails CLOSED (no automatic mark, manual review); a broken STUDENT response is an ordinary zero.
 import { effectiveQuestionTypeVersion } from "./questionTypeCatalog";
-import { SMART_SIM_LIMITS, checkBoundedJson, isForbiddenKey, resolveSmartSimPlugin, type AnySmartSimPlugin, type SmartSimCheckBase, type SmartSimIssue, type SmartSimPlugin } from "./trustedSimRegistry";
+import { SMART_SIM_LIMITS, checkBoundedJson, isForbiddenKey, resolveSmartSimPlugin, resolveSmartSimDescriptor, type AnySmartSimPlugin, type SmartSimCheckBase, type SmartSimIssue, type SmartSimPlugin } from "./trustedSimRegistry";
+import { isPresentationActionType } from "./trustedSimVocabulary";
+import { resolveSmartSimRule, validateSmartSimRuleCheck, evaluateSmartSimRuleCheck, type SmartSimRuleView, type SmartSimRuleCheck } from "./trustedSimRules";
+
+// Phase 20A.1 — generic trusted rules. A check whose kind is a generic rule id ("objectSelected@1") is accepted ONLY when the plugin's
+// code-owned descriptor opts into exactly that rule (and the plugin provides a ruleView); otherwise it is an unknown kind (fail closed).
+// The rule validates its parameters against the plugin's view of the INITIAL state and evaluates on the view of the REPLAYED state.
+const isGenericRuleFor = (plugin: AnySmartSimPlugin, kind: unknown): kind is string =>
+  typeof kind === "string" && !plugin.checkKinds.includes(kind) && typeof plugin.ruleView === "function" && resolveSmartSimRule(kind) !== undefined
+  && resolveSmartSimPlugin(plugin.key, plugin.version) === plugin && (resolveSmartSimDescriptor(plugin.key, plugin.version)?.genericRules.includes(kind) ?? false);
+function ruleViewOf(plugin: AnySmartSimPlugin, state: unknown, config: unknown): SmartSimRuleView | undefined {
+  try { return plugin.ruleView ? plugin.ruleView(state, config) : undefined; } catch { return undefined; }
+}
+function initialRuleView(plugin: AnySmartSimPlugin, config: unknown): SmartSimRuleView | undefined {
+  try { return ruleViewOf(plugin, plugin.canonicalState(plugin.createRuntime(config), config), config); } catch { return undefined; }
+}
 
 export const SMART_SIM_TYPE_KEY = "smartSim";
 export const SMART_SIM_SCHEMA_VERSION = 1 as const;
@@ -89,10 +104,14 @@ export function validateSmartSimAnswerKey(raw: unknown, plugin: AnySmartSimPlugi
       if (typeof c.label !== "string" || !c.label.trim() || c.label.length > SMART_SIM_LIMITS.checkLabelChars) { out.push(issue("SMARTSIM_CHECK_LABEL_INVALID", "اكتب وصفًا قصيرًا للفحص رقم " + (i + 1) + " (حتى " + SMART_SIM_LIMITS.checkLabelChars + " حرفًا).", where + ".label")); ok = false; }
       const w = c.weight;
       if (typeof w !== "number" || !Number.isFinite(w) || w <= 0 || w > SMART_SIM_LIMITS.maxWeight) { out.push(issue("SMARTSIM_CHECK_WEIGHT_INVALID", "الوزن في الفحص رقم " + (i + 1) + " يجب أن يكون عددًا موجبًا حتى " + SMART_SIM_LIMITS.maxWeight + ".", where + ".weight")); ok = false; }
-      if (typeof c.kind !== "string" || !plugin.checkKinds.includes(c.kind)) { out.push(issue("SMARTSIM_CHECK_KIND_UNKNOWN", "نوع فحص غير معروف في الفحص رقم " + (i + 1) + ": " + String(c.kind), where + ".kind")); ok = false; }
+      const generic = isGenericRuleFor(plugin, c.kind);
+      if (typeof c.kind !== "string" || (!plugin.checkKinds.includes(c.kind) && !generic)) { out.push(issue("SMARTSIM_CHECK_KIND_UNKNOWN", "نوع فحص غير معروف في الفحص رقم " + (i + 1) + ": " + String(c.kind), where + ".kind")); ok = false; }
       if (!ok || config === undefined) return;
       let r: ReturnType<AnySmartSimPlugin["validateCheck"]>;
-      try { r = plugin.validateCheck(c, config); } catch { r = { ok: false, issues: [issue("SMARTSIM_CHECK_INVALID", "الفحص رقم " + (i + 1) + " غير صالح.")] }; }
+      if (generic) {
+        const view = initialRuleView(plugin, config);
+        r = view ? validateSmartSimRuleCheck(c, view) : { ok: false, issues: [issue("SMARTSIM_RULE_VIEW_INVALID", "تعذّر التحقق من الفحص رقم " + (i + 1) + ".")] };
+      } else try { r = plugin.validateCheck(c, config); } catch { r = { ok: false, issues: [issue("SMARTSIM_CHECK_INVALID", "الفحص رقم " + (i + 1) + " غير صالح.")] }; }
       if (!r.ok) { out.push(...r.issues.map(x => ({ ...x, path: x.path ?? where }))); return; }
       checks.push(r.check);
       totalWeight += w as number;
@@ -139,6 +158,8 @@ export function replaySmartSimActions<C, R, S, A>(plugin: SmartSimPlugin<C, R, S
     const actions: A[] = [];
     for (const raw of rawActions) {
       if (checkBoundedJson(raw) !== undefined) return { ok: false, code: "SMARTSIM_ACTION_INVALID" };
+      // Phase 20A.1 — a camera / view / pointer / wheel / hover / UI gesture is never an academic action, for every plugin
+      if (isObj(raw) && isPresentationActionType(raw.type)) return { ok: false, code: "SMARTSIM_ACTION_PRESENTATION_ONLY" };
       const n = plugin.normalizeAction(raw, config);
       if (!n.ok) return { ok: false, code: "SMARTSIM_ACTION_INVALID" };
       actions.push(n.action);
@@ -202,8 +223,14 @@ export function evaluateSmartSim(input: SmartSimEvaluationInput, options: { with
   const checks: SmartSimCheckFact[] = [];
   let passedWeight = 0;
   try {
+    let view: SmartSimRuleView | undefined;
     for (const c of key.key.checks) {
-      const o = env.plugin.evaluateCheck(c, replay.state, env.envelope.config);
+      let o: ReturnType<AnySmartSimPlugin["evaluateCheck"]>;
+      if (isGenericRuleFor(env.plugin, c.kind)) {
+        view = view ?? ruleViewOf(env.plugin, replay.state, env.envelope.config);
+        if (!view) throw new Error("rule view unavailable");
+        o = evaluateSmartSimRuleCheck(c as SmartSimRuleCheck, view);
+      } else o = env.plugin.evaluateCheck(c, replay.state, env.envelope.config);
       const passed = o.passed === true;
       const maxPoints = key.key.totalWeight > 0 ? (max * c.weight) / key.key.totalWeight : 0;
       if (passed) passedWeight += c.weight;

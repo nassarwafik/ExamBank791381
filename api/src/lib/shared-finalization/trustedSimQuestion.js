@@ -13,6 +13,26 @@ exports.evaluateSmartSim = evaluateSmartSim;
 exports.scoreSmartSim = scoreSmartSim;
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const trustedSimRegistry_1 = require("./trustedSimRegistry");
+const trustedSimVocabulary_1 = require("./trustedSimVocabulary");
+const trustedSimRules_1 = require("./trustedSimRules");
+const isGenericRuleFor = (plugin, kind) => typeof kind === "string" && !plugin.checkKinds.includes(kind) && typeof plugin.ruleView === "function" && (0, trustedSimRules_1.resolveSmartSimRule)(kind) !== undefined
+    && (0, trustedSimRegistry_1.resolveSmartSimPlugin)(plugin.key, plugin.version) === plugin && ((0, trustedSimRegistry_1.resolveSmartSimDescriptor)(plugin.key, plugin.version)?.genericRules.includes(kind) ?? false);
+function ruleViewOf(plugin, state, config) {
+    try {
+        return plugin.ruleView ? plugin.ruleView(state, config) : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function initialRuleView(plugin, config) {
+    try {
+        return ruleViewOf(plugin, plugin.canonicalState(plugin.createRuntime(config), config), config);
+    }
+    catch {
+        return undefined;
+    }
+}
 exports.SMART_SIM_TYPE_KEY = "smartSim";
 exports.SMART_SIM_SCHEMA_VERSION = 1;
 exports.SMART_SIM_SCORING_MODES = Object.freeze(["proportional", "allOrNothing"]);
@@ -102,19 +122,25 @@ function validateSmartSimAnswerKey(raw, plugin, config) {
                 out.push(issue("SMARTSIM_CHECK_WEIGHT_INVALID", "الوزن في الفحص رقم " + (i + 1) + " يجب أن يكون عددًا موجبًا حتى " + trustedSimRegistry_1.SMART_SIM_LIMITS.maxWeight + ".", where + ".weight"));
                 ok = false;
             }
-            if (typeof c.kind !== "string" || !plugin.checkKinds.includes(c.kind)) {
+            const generic = isGenericRuleFor(plugin, c.kind);
+            if (typeof c.kind !== "string" || (!plugin.checkKinds.includes(c.kind) && !generic)) {
                 out.push(issue("SMARTSIM_CHECK_KIND_UNKNOWN", "نوع فحص غير معروف في الفحص رقم " + (i + 1) + ": " + String(c.kind), where + ".kind"));
                 ok = false;
             }
             if (!ok || config === undefined)
                 return;
             let r;
-            try {
-                r = plugin.validateCheck(c, config);
+            if (generic) {
+                const view = initialRuleView(plugin, config);
+                r = view ? (0, trustedSimRules_1.validateSmartSimRuleCheck)(c, view) : { ok: false, issues: [issue("SMARTSIM_RULE_VIEW_INVALID", "تعذّر التحقق من الفحص رقم " + (i + 1) + ".")] };
             }
-            catch {
-                r = { ok: false, issues: [issue("SMARTSIM_CHECK_INVALID", "الفحص رقم " + (i + 1) + " غير صالح.")] };
-            }
+            else
+                try {
+                    r = plugin.validateCheck(c, config);
+                }
+                catch {
+                    r = { ok: false, issues: [issue("SMARTSIM_CHECK_INVALID", "الفحص رقم " + (i + 1) + " غير صالح.")] };
+                }
             if (!r.ok) {
                 out.push(...r.issues.map(x => ({ ...x, path: x.path ?? where })));
                 return;
@@ -165,6 +191,8 @@ function replaySmartSimActions(plugin, config, rawActions) {
         for (const raw of rawActions) {
             if ((0, trustedSimRegistry_1.checkBoundedJson)(raw) !== undefined)
                 return { ok: false, code: "SMARTSIM_ACTION_INVALID" };
+            if (isObj(raw) && (0, trustedSimVocabulary_1.isPresentationActionType)(raw.type))
+                return { ok: false, code: "SMARTSIM_ACTION_PRESENTATION_ONLY" };
             const n = plugin.normalizeAction(raw, config);
             if (!n.ok)
                 return { ok: false, code: "SMARTSIM_ACTION_INVALID" };
@@ -222,8 +250,17 @@ function evaluateSmartSim(input, options = {}) {
     const checks = [];
     let passedWeight = 0;
     try {
+        let view;
         for (const c of key.key.checks) {
-            const o = env.plugin.evaluateCheck(c, replay.state, env.envelope.config);
+            let o;
+            if (isGenericRuleFor(env.plugin, c.kind)) {
+                view = view ?? ruleViewOf(env.plugin, replay.state, env.envelope.config);
+                if (!view)
+                    throw new Error("rule view unavailable");
+                o = (0, trustedSimRules_1.evaluateSmartSimRuleCheck)(c, view);
+            }
+            else
+                o = env.plugin.evaluateCheck(c, replay.state, env.envelope.config);
             const passed = o.passed === true;
             const maxPoints = key.key.totalWeight > 0 ? (max * c.weight) / key.key.totalWeight : 0;
             if (passed)
