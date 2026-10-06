@@ -1,4 +1,4 @@
-import { Suspense, useId, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useId, useMemo, useRef, useState } from "react";
 import type { AuthoringEditorProps } from "../registryTypes";
 import type { BuilderPart, BuilderPartType, QuestionBody } from "../../examTypes";
 import { COMPOSITE_CHILD_IDENTITIES, COMPOSITE_LIMITS, compositeOfficialMaxMarks, validateCompositeQuestion } from "../../compositeQuestion";
@@ -15,6 +15,13 @@ import { CODE_STIMULUS_LANGUAGES } from "../../codeStimulus";
 import { readImageFile, MEDIA_MSG } from "../../questionMedia";
 import { useConfirm } from "../../ui/useConfirm";
 import "../../composite/composite-editor.css";
+import { SCENARIO_RICH_SOURCE_KIND } from "../../scenarioSource";
+import type { RichContentV1 } from "../../richContent/richContentModel";
+// Phase 20D.1 — the rich-content block editor (per-part rich prompt, rich shared sources) is lazy: loaded only when a teacher opens it.
+const RichContentEditor = lazy(() => import("../../richContent/RichContentEditor"));
+const RICH_SOURCE_LABEL = "محتوى منسق";
+/** A new rich shared source: an EMPTY document (the validator asks for content until the teacher adds blocks — no placeholder leaks). */
+const newRichSource = (overrides: Obj = {}): Obj => ({ id: genId("src"), version: 1, kind: SCENARIO_RICH_SOURCE_KIND, richContent: { schemaVersion: 1, blocks: [] }, ...overrides });
 
 // Phase 20D — composite@1 ENTERPRISE authoring (lazy). It edits the type-owned root `composite` only, always emitting a FRESH root
 // ({ composite }) through onChange; the question mark is changed ONLY by the explicit "use the official total" button ({ marks }).
@@ -69,7 +76,8 @@ function rebuildPart(p: Obj, type: string, version: number | undefined, contexts
   const base = version === undefined
     ? (changePartType(p as unknown as BuilderPart, type as BuilderPartType) as unknown as Obj)
     : (newPart(type as BuilderPartType, { ...carried, questionTypeVersion: version } as Partial<BuilderPart>) as unknown as Obj);
-  const next = clean({ ...base, ...clean(carried), image: p.image, images: p.images });
+  // Phase 20D.1 — the rich prompt is presentation and is carried too, except into parametricNumeric (a template stem: rich is forbidden).
+  const next = clean({ ...base, ...clean(carried), image: p.image, images: p.images, richContent: type === "parametricNumeric" ? undefined : p.richContent });
   delete next.activity;
   const ctx = typeof p.contextId === "string" ? contexts.find(c => c.id === p.contextId) : undefined;
   if (!ctx) return next;
@@ -358,6 +366,7 @@ function PartEditor({ part: p, group: g, index, count, label, ops, disabled, con
   const name = "البند " + label;
   const otherGroups = objs(ops.groups).filter(x => x.id !== g.id);
   const hasContent = () => typeSpecificContentPresent({ ...p, presentationType: type });
+  const [richOpen, setRichOpen] = useState(() => p.richContent !== undefined);
 
   const changeType = async (next: string) => {
     if (next === type) return;
@@ -419,6 +428,20 @@ function PartEditor({ part: p, group: g, index, count, label, ops, disabled, con
         )}
       </div>
       <textarea className="sb-input sb-textarea sb-part-text" aria-label={"نص " + name} value={str(p.text)} placeholder="نص البند" onChange={e => ops.patchPart(p.id, x => ({ ...x, text: e.target.value }))} disabled={disabled} />
+      {type === "parametricNumeric"
+        ? (p.richContent !== undefined && <p className="sb-hint sb-warn-text" role="note">بند القالب العددي لا يقبل محتوى منسقًا؛ سيُتجاهل المحتوى المنسق لهذا البند. <button type="button" className="sb-mini-btn" onClick={() => ops.patchPart(p.id, x => mergePatch(x, { richContent: undefined }))} disabled={disabled}>{"إزالة المحتوى المنسق من " + name}</button></p>)
+        : (
+          <div className="rc-host">
+            <div className="rc-host-actions">
+              <button type="button" className="sb-mini-btn" aria-expanded={richOpen} onClick={() => setRichOpen(o => !o)}>{"محتوى منسق لـ" + name}</button>
+            </div>
+            {richOpen && (
+              <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر المحتوى المنسق…</p>}>
+                <RichContentEditor value={p.richContent as RichContentV1 | undefined} onChange={next => ops.patchPart(p.id, x => mergePatch(x, { richContent: next }))} disabled={disabled} plainText={str(p.text)} label={"نص " + name + " المنسق"} />
+              </Suspense>
+            )}
+          </div>
+        )}
       {linkedSim
         ? <LinkedSmartSimBody part={p} ctx={ctx} ops={ops} disabled={disabled} />
         : <QuestionBodyEditor node={p as unknown as QuestionBody} type={type} onChange={patch => ops.patchPart(p.id, x => mergePatch(x, patch as Obj))} disabled={disabled} />}
@@ -514,16 +537,18 @@ function SourcesEditor({ ctx: c, ops, disabled, confirm }: { ctx: Obj; ops: Ops;
   const remove = async (i: number) => {
     if (await confirm({ title: "حذف المصدر", message: "سيُحذف المصدر " + (i + 1) + " من هذا السياق المشترك.", confirmLabel: "حذف المصدر", tone: "danger" })) setSources(sources.filter((_, k) => k !== i));
   };
-  const changeKind = async (i: number, kind: SourceStimulusKind) => {
+  const changeKind = async (i: number, kind: SourceStimulusKind | typeof SCENARIO_RICH_SOURCE_KIND) => {
     const s = sources[i];
     if (!isObj(s) || s.kind === kind) return;
     if (!(await confirm({ title: "تغيير نوع المصدر", message: "تغيير نوع المصدر " + (i + 1) + " يحذف محتواه الحالي.", confirmLabel: "تغيير النوع", tone: "danger" }))) return;
-    setSources(sources.map((x, k) => (k === i ? newSourceStimulus(kind, { id: s.id, ...(typeof s.title === "string" ? { title: s.title } : {}) }) : x)));
+    const keep = { id: s.id, ...(typeof s.title === "string" ? { title: s.title } : {}) };
+    setSources(sources.map((x, k) => (k === i ? (kind === SCENARIO_RICH_SOURCE_KIND ? newRichSource(keep) : newSourceStimulus(kind as SourceStimulusKind, keep)) : x)));
   };
   return (
     <div className="cmp-editor-sources">
       <div className="cmp-editor-tools">
         {SCENARIO_SOURCE_KINDS.map(k => <button key={k} type="button" className="sb-mini-btn" disabled={disabled || sources.length >= COMPOSITE_LIMITS.sourcesPerContext} onClick={() => setSources([...sources, newSourceStimulus(k)])}>+ {SCENARIO_SOURCE_KIND_LABELS[k]}</button>)}
+        <button type="button" className="sb-mini-btn" disabled={disabled || sources.length >= COMPOSITE_LIMITS.sourcesPerContext} onClick={() => setSources([...sources, newRichSource()])}>+ {RICH_SOURCE_LABEL}</button>
       </div>
       {sources.length === 0 && <p className="sb-hint sb-warn-text">أضف مصدرًا واحدًا على الأقل.</p>}
       <ol className="sb-scenario-sources">
@@ -535,7 +560,7 @@ function SourcesEditor({ ctx: c, ops, disabled, confirm }: { ctx: Obj; ops: Ops;
   );
 }
 
-type SourceItemProps = { source: Obj; index: number; total: number; disabled?: boolean; onPatch: (patch: Obj) => void; onKind: (k: SourceStimulusKind) => void; onMove: (delta: number) => void; onDelete: () => void };
+type SourceItemProps = { source: Obj; index: number; total: number; disabled?: boolean; onPatch: (patch: Obj) => void; onKind: (k: SourceStimulusKind | typeof SCENARIO_RICH_SOURCE_KIND) => void; onMove: (delta: number) => void; onDelete: () => void };
 function SourceItem({ source: s, index, total, disabled, onPatch, onKind, onMove, onDelete }: SourceItemProps) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [mediaError, setMediaError] = useState("");
@@ -557,8 +582,9 @@ function SourceItem({ source: s, index, total, disabled, onPatch, onKind, onMove
       <div className="sb-scenario-source-head">
         <span className="sb-q-badge">{n}</span>
         <select className="sb-input sb-input-sm" value={kind} aria-label={"نوع المصدر " + n} disabled={disabled} onChange={e => onKind(e.target.value as SourceStimulusKind)}>
-          {!(SCENARIO_SOURCE_KINDS as readonly string[]).includes(kind) && <option value={kind}>{"غير مدعوم: " + kind}</option>}
+          {!(SCENARIO_SOURCE_KINDS as readonly string[]).includes(kind) && kind !== SCENARIO_RICH_SOURCE_KIND && <option value={kind}>{"غير مدعوم: " + kind}</option>}
           {SCENARIO_SOURCE_KINDS.map(k => <option key={k} value={k}>{SCENARIO_SOURCE_KIND_LABELS[k]}</option>)}
+          <option value={SCENARIO_RICH_SOURCE_KIND}>{RICH_SOURCE_LABEL}</option>
         </select>
         <input className="sb-input sb-input-sm" value={str(s.title)} maxLength={SCENARIO_LIMITS.sourceTitle} placeholder="عنوان المصدر (اختياري)" aria-label={"عنوان المصدر " + n} disabled={disabled} onChange={e => onPatch({ title: e.target.value || undefined })} />
         <span className="sb-spacer" />
@@ -584,6 +610,11 @@ function SourceItem({ source: s, index, total, disabled, onPatch, onKind, onMove
         {mediaError && <p className="sb-media-error" role="alert">{mediaError}</p>}
       </>}
       {kind === "table" && <TableSource source={s} index={index} disabled={disabled} onPatch={onPatch} />}
+      {kind === SCENARIO_RICH_SOURCE_KIND && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر المحتوى المنسق…</p>}>
+          <RichContentEditor value={isObj(s.richContent) && Array.isArray(s.richContent.blocks) && s.richContent.blocks.length ? (s.richContent as RichContentV1) : undefined} onChange={next => onPatch({ richContent: next ?? { schemaVersion: 1, blocks: [] } })} disabled={disabled} label={"المحتوى المنسق للمصدر " + n} />
+        </Suspense>
+      )}
     </li>
   );
 }

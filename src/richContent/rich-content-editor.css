@@ -1,0 +1,64 @@
+/* Phase 20D.1 — the Rich Content block editor (lazy builder chunk only). sb-* house style (legacy variables with fallbacks), logical
+   properties so RTL and LTR both hold, visible focus, 44px touch targets on phones. Every selector is scoped under .rc-editor. */
+.rc-editor{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line2,#dbe2ec);border-inline-start:4px solid #7c3aed;border-radius:12px;background:var(--surface,#fff);padding:10px 12px;margin-block:8px}
+.rc-editor-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.rc-editor-title{font-size:14px;font-weight:800;color:var(--navy,#1e293b)}
+.rc-editor-count{font-size:12px;font-weight:700;color:var(--muted,#64748b)}
+.rc-editor .rc-spacer{flex:1 1 auto}
+.rc-editor .rc-hint,.rc-editor .rc-empty{margin:0;font-size:12.5px;line-height:1.7;color:var(--muted,#64748b)}
+.rc-editor .rc-empty{padding:10px;border:1px dashed var(--line2,#cdd5e0);border-radius:10px;text-align:center}
+.rc-editor .rc-list{display:flex;flex-direction:column;gap:8px}
+.rc-editor .rc-blocks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rc-editor .rc-block{border:1px solid var(--line,#e5e9f0);border-radius:10px;background:var(--surface2,#f9fbff);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.rc-editor .rc-block-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.rc-editor .rc-block-badge{min-width:24px;height:24px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.rc-editor .rc-block-body{display:flex;flex-direction:column;gap:6px}
+.rc-editor .rc-collapsed-summary{margin:0;font-size:12.5px;color:var(--muted,#64748b)}
+.rc-editor .rc-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.rc-editor .rc-row-grow > .sb-input:not(select){flex:1 1 220px;min-width:0}
+.rc-editor .rc-field{inline-size:100%;box-sizing:border-box}
+.rc-editor .rc-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;direction:ltr;text-align:left;inline-size:100%;box-sizing:border-box;white-space:pre;tab-size:4}
+.rc-editor .rc-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-block-start:4px;border-block-start:1px dashed var(--line2,#cdd5e0)}
+.rc-editor .rc-items{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:6px}
+.rc-editor .rc-items-bullets{list-style:disc}
+.rc-editor .rc-item{display:flex;gap:6px;align-items:center}
+.rc-editor .rc-item > .rc-field{flex:1 1 auto}
+.rc-editor .rc-table-scroll{overflow-x:auto;max-inline-size:100%}
+.rc-editor .rc-grid{border-collapse:collapse;min-inline-size:100%}
+.rc-editor .rc-grid th,.rc-editor .rc-grid td{border:1px solid var(--line,#e5e9f0);padding:4px;vertical-align:top;min-inline-size:110px}
+.rc-editor .rc-grid .rc-grid-actions{min-inline-size:0;border:0}
+.rc-editor .rc-grid .rc-row-head{background:#f1f5f9}
+.rc-editor .rc-cell-tools{display:flex;gap:4px;align-items:center}
+.rc-editor .rc-image-editor,.rc-editor .rc-kv-editor,.rc-editor .rc-math-editor,.rc-editor .rc-table-editor{display:flex;flex-direction:column;gap:6px}
+.rc-editor .rc-thumb{max-inline-size:220px;max-block-size:160px;border-radius:8px;border:1px solid var(--line,#e5e9f0);object-fit:contain;background:#fff}
+.rc-editor .rc-kv-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto;gap:6px;align-items:center}
+.rc-editor .rc-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rc-editor .rc-column{border:1px dashed var(--line2,#cdd5e0);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:6px;min-inline-size:0}
+.rc-editor .rc-column-title{font-size:12px;font-weight:800;color:var(--muted,#64748b)}
+.rc-editor .rc-math-status{margin:0;font-size:12.5px}
+.rc-editor .rc-math-ok{color:#047857;font-weight:700}
+.rc-editor .rc-math-bad{color:#b91c1c}
+.rc-editor .rc-issues{margin:0;padding-block:6px;padding-inline:26px 10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:12.5px;line-height:1.7}
+.rc-editor .rc-error{margin:0;color:#b91c1c;font-size:12.5px}
+.rc-editor .rc-note{margin:0;color:#92400e;font-size:12px}
+.rc-editor .rc-preview{border:1px solid var(--line,#e5e9f0);border-radius:10px;background:#fff;padding:8px 12px}
+.rc-editor .rc-preview-title{margin:0 0 6px;font-size:13px;font-weight:800;color:var(--muted,#64748b)}
+.rc-editor .rc-visually-hidden,.rc-host .rc-visually-hidden{position:absolute;inline-size:1px;block-size:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.rc-editor button:focus-visible,.rc-editor input:focus-visible,.rc-editor select:focus-visible,.rc-editor textarea:focus-visible,
+.rc-host button:focus-visible{outline:3px solid var(--primary,#2563eb);outline-offset:2px}
+/* host chrome (question / section / cover / composite part / sources): a toggle + conversion actions next to the plain text */
+.rc-host{display:flex;flex-direction:column;gap:6px;margin-block:6px}
+.rc-host-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rc-host-note{margin:0;font-size:12.5px;color:var(--muted,#64748b)}
+/* the Markdown conversion preview dialog */
+.rc-convert-preview{border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px 12px;max-block-size:50vh;overflow:auto;background:#fff}
+.rc-convert-warnings{margin:0;padding-block:6px;padding-inline:26px 10px;border:1px solid #fcd34d;background:#fffbeb;color:#92400e;border-radius:8px;font-size:12.5px;line-height:1.7}
+@media (max-width:640px){
+  .rc-editor{padding:8px}
+  .rc-editor .sb-icon-btn,.rc-editor .sb-mini-btn,.rc-editor select,.rc-editor input:not([type=checkbox]),.rc-host .sb-mini-btn{min-block-size:44px}
+  .rc-editor .sb-icon-btn{min-inline-size:44px}
+  .rc-editor .rc-columns{grid-template-columns:minmax(0,1fr)}
+  .rc-editor .rc-kv-row{grid-template-columns:minmax(0,1fr) auto}
+  .rc-editor .rc-kv-row > input:nth-child(2){grid-column:1 / -1;grid-row:2}
+}
+@media (prefers-reduced-motion:reduce){.rc-editor *{transition:none!important}}

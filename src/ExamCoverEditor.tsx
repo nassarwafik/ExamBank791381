@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import type { ExamCoverPage, ActivityType } from "./examCover";
+import type { RichContentV1 } from "./richContent/richContentModel";
 import { defaultCoverPage, validateBannerDataUrl, MAX_BANNER_BYTES } from "./examCover";
 import { COVER_TEMPLATES, findCoverTemplate, applyCoverTemplate } from "./coverTemplates";
 import { GENERAL_INSTRUCTION_TEMPLATES, findGeneralInstructionTemplate } from "./instructionTemplates";
@@ -17,6 +18,8 @@ type Props = {
 };
 
 const SAFE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+// Phase 20D.1 — optional RICH cover instructions (cover.instructionsRichContent): lazy builder-only editor; the plain instructions stay.
+const RichContentEditor = lazy(() => import("./richContent/RichContentEditor"));
 
 export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disabled }: Props) {
   const [bannerError, setBannerError] = useState("");
@@ -26,6 +29,13 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
   const c = cover;
 
   const patch = (p: Partial<ExamCoverPage>) => onChange({ ...(c ?? defaultCoverPage()), ...p });
+  const richInstructions = (c as (ExamCoverPage & { instructionsRichContent?: RichContentV1 }) | undefined)?.instructionsRichContent;
+  const [richOpen, setRichOpen] = useState(() => richInstructions !== undefined);
+  const setRichInstructions = (next: RichContentV1 | undefined) => {
+    const base = { ...(c ?? defaultCoverPage()) } as ExamCoverPage & { instructionsRichContent?: RichContentV1 };
+    if (next === undefined) delete base.instructionsRichContent; else base.instructionsRichContent = next;
+    onChange(base);
+  };
 
   // Roadmap #16 — apply a built-in cover template EXPLICITLY. Preserves the teacher's safe banner; when the
   // cover already has edited text, a clear confirm is required so nothing is silently overwritten. Never
@@ -144,6 +154,17 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
             <textarea className="sb-input sb-textarea sb-cover-instructions-input" value={c?.instructions ?? ""} placeholder={"الصق التعليمات هنا (كل سطر يظهر كبند):\nأجب عن جميع الأسئلة.\nاقرأ السؤال جيدًا قبل الإجابة.\nتأكد من إجاباتك قبل التسليم."} onChange={e => patch({ instructions: e.target.value })} disabled={disabled} rows={5} />
             <p className="sb-hint">نص عادي فقط — يُعرض بأمان دون أي وسوم HTML. القالب نقطة بداية يمكنك تعديلها.</p>
           </label>
+          <div className="sb-field rc-host">
+            <div className="rc-host-actions">
+              <button type="button" className="sb-mini-btn" aria-expanded={richOpen} onClick={() => setRichOpen(o => !o)}>تعليمات منسقة للغلاف</button>
+            </div>
+            {richInstructions !== undefined && !richOpen && <p className="sb-hint rc-host-note">للغلاف تعليمات منسقة تُعرض للطالب بدل التعليمات العادية (تبقى العادية احتياطيًا).</p>}
+            {richOpen && (
+              <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر المحتوى المنسق…</p>}>
+                <RichContentEditor value={richInstructions} onChange={setRichInstructions} disabled={disabled} plainText={c?.instructions} label="تعليمات الغلاف المنسقة" />
+              </Suspense>
+            )}
+          </div>
 
           <div className="sb-field">
             <span className="sb-field-label">خيارات العرض</span>

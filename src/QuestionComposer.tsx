@@ -1,10 +1,15 @@
 
+import { lazy, Suspense, useState } from "react";
 import type { BuilderQuestion, BuilderQuestionType } from "./examTypes";
+import type { RichContentV1 } from "./richContent/richContentModel";
 import { typeChangePatch, typeSpecificContentPresent } from "./questionTypes/typeContent";
 import { isKnownQuestionType, questionTypeLabel, listQuestionTypes } from "./questionTypeCatalog";
 import { useConfirm } from "./ui/useConfirm";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 import CompoundQuestionEditor from "./CompoundQuestionEditor";
+// Phase 20D.1 — the rich-content block editor and the Markdown conversion dialog are LAZY (builder-only chunks, loaded on demand).
+const RichContentEditor = lazy(() => import("./richContent/RichContentEditor"));
+const MarkdownConvertDialog = lazy(() => import("./richContent/MarkdownConvertDialog"));
 
 // The SHARED question-authoring core: everything about editing a question's CONTENT and nothing about where it lives.
 // It owns the type selector, the question prompt, and the type-specific body (delegating to QuestionBodyEditor, or to
@@ -27,13 +32,30 @@ export default function QuestionComposer({ question: q, onChange, disabled }: Pr
   // resets ONLY the body, initialising the new type at its current version.
   const { confirm, confirmDialog } = useConfirm();
   const currentKnown = isKnownQuestionType(q.presentationType);
+  // Phase 20D.1 — optional RICH prompt (question.richContent). The plain `text` stays the fallback / search text and is never rewritten
+  // by the rich editor or the conversion; only the explicit "use as fallback" action fills an EMPTY text. Not offered for compound@1
+  // (frozen) nor for parametricNumeric (its stem is a template — rich content is forbidden there).
+  const rich = (q as BuilderQuestion & { richContent?: RichContentV1 }).richContent;
+  const [richOpen, setRichOpen] = useState(() => rich !== undefined);
+  const [converting, setConverting] = useState(false);
+  const richAllowed = q.presentationType !== "parametricNumeric" && q.presentationType !== "compound";
+  const setRich = (next: RichContentV1 | undefined) => onChange({ richContent: next });
+  const applyRichAsFallback = async () => {
+    if (!rich || (q.text ?? "").trim()) return;
+    const { richContentPlainText } = await import("./richContent/richContentModel");
+    const text = richContentPlainText(rich);
+    if (text) onChange({ text });
+  };
   const requestTypeChange = async (next: BuilderQuestionType) => {
     if (next === q.presentationType) return;
     if (typeSpecificContentPresent(q as unknown as Record<string, unknown>)) {
       const ok = await confirm({ title: "تغيير نوع السؤال", message: "تغيير النوع إلى «" + (questionTypeLabel(next) ?? next) + "» سيحذف الخيارات / الحقول / مفتاح الإجابة الخاصة بالنوع الحالي.\nسيبقى نص السؤال والعلامة والرقم والتصنيف والصورة.", confirmLabel: "تغيير النوع", cancelLabel: "إلغاء", tone: "danger" });
       if (!ok) return;
     }
-    onChange(typeChangePatch(q, next));
+    // Phase 20D.1 — a parametricNumeric stem is a template: an existing rich prompt is removed with the change (confirmed, never silent).
+    const dropRich = next === "parametricNumeric" && (q as BuilderQuestion & { richContent?: unknown }).richContent !== undefined;
+    if (dropRich && !(await confirm({ title: "إزالة المحتوى المنسق", message: "أسئلة القوالب العددية لا تقبل محتوى منسقًا؛ سيُحذف المحتوى المنسق لهذا السؤال ويبقى النص العادي.", confirmLabel: "متابعة", cancelLabel: "إلغاء", tone: "danger" }))) return;
+    onChange(dropRich ? { ...typeChangePatch(q, next), richContent: undefined } : typeChangePatch(q, next));
   };
   return (
     <div className="sb-composer">
@@ -59,6 +81,27 @@ export default function QuestionComposer({ question: q, onChange, disabled }: Pr
         onChange={e => onChange({ text: e.target.value })}
         disabled={disabled}
       />
+      {q.presentationType === "parametricNumeric" && <p className="sb-hint rc-host-note">المحتوى المنسق غير متاح لأسئلة القوالب العددية: نص القالب هو المرجع الوحيد للسؤال.</p>}
+      {richAllowed && (
+        <div className="rc-host">
+          <div className="rc-host-actions">
+            <button type="button" className="sb-mini-btn" aria-expanded={richOpen} onClick={() => setRichOpen(o => !o)}>محتوى منسق للسؤال</button>
+            <button type="button" className="sb-mini-btn" onClick={() => setConverting(true)} disabled={disabled || !(q.text ?? "").trim()}>تحويل النص إلى محتوى منسق</button>
+            {rich !== undefined && !(q.text ?? "").trim() && <button type="button" className="sb-mini-btn" onClick={() => void applyRichAsFallback()} disabled={disabled}>استخدام نص المحتوى كنص بديل</button>}
+          </div>
+          {rich !== undefined && !richOpen && <p className="sb-hint rc-host-note">لهذا السؤال محتوى منسق يُعرض للطالب بدل النص العادي (يبقى النص العادي احتياطيًا وللبحث).</p>}
+          {richOpen && (
+            <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر المحتوى المنسق…</p>}>
+              <RichContentEditor value={rich} onChange={setRich} disabled={disabled} plainText={q.text} label="محتوى السؤال المنسق" />
+            </Suspense>
+          )}
+          {converting && (
+            <Suspense fallback={null}>
+              <MarkdownConvertDialog source={q.text ?? ""} replacing={rich !== undefined} onCancel={() => setConverting(false)} onConfirm={value => { setRich(value); setRichOpen(true); setConverting(false); }} />
+            </Suspense>
+          )}
+        </div>
+      )}
 
       {q.presentationType === "compound"
         ? <CompoundQuestionEditor question={q} onChange={onChange} disabled={disabled} />
