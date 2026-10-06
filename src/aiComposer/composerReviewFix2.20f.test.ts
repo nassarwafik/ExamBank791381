@@ -30,6 +30,11 @@ describe("20F-RF2 N-M1 the completeness probe is bounded", () => {
   it("a spec whose features exceed the probe budget is refused (never silently accepted)", () => {
     expect(codes(buildSimFromSpec(fn(SAW, ["extrema"], { extrema: [{ kind: "min", x: 0, y: 1000 }] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
   });
+  it("more features than a key can hold (11 roots) stop the probe with an explicit reason", () => {
+    const r = buildSimFromSpec(fn("x*(x^2-1)*(x^2-4)*(x^2-9)*(x^2-16)*(x^2-25)", ["xIntercepts"], { xMin: -5.5, xMax: 5.5, yMin: -1000, yMax: 1000, xIntercepts: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4] }));
+    expect(codes(r)).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    expect(r.ok ? "" : r.issues[0].message).toContain("أكثر مما يتسع له المفتاح");
+  });
   it("only the features of the enabled tasks are probed (a yIntercept-only spec of the same expression is accepted)", () => {
     expect(buildSimFromSpec(fn(SAW, ["yIntercept"], { yIntercept: 1000 })).ok).toBe(true);
   });
