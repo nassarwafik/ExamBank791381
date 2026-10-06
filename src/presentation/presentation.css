@@ -1,0 +1,127 @@
+/* ============================================================
+   Phase 20D.1 — the enterprise presentation design system. EVERY selector is
+   scoped under .exam-presentation (the PresentationRoot element), so a legacy
+   exam (no presentation object → no such root) is untouched. Presets differ ONLY
+   through the --xp-* variables (validated colours / code-owned values) and the
+   code-owned data-xp-* attributes; there is no per-preset stylesheet.
+   Mobile-first (min-width 768 / 1024 / 1280), logical properties, visible focus,
+   reduced motion honoured. Lifecycle chrome stays present and code-owned: only
+   its colours follow the validated palette (the contrast policy guarantees them).
+   ============================================================ */
+.exam-presentation{
+  /* the platform tokens follow the validated palette inside the scope, so the existing runtime adopts the preset coherently */
+  --eb-bg:var(--xp-background); --eb-surface:var(--xp-surface); --eb-surface-2:var(--xp-surface-alt); --eb-text:var(--xp-text); --eb-text-heading:var(--xp-text);
+  --eb-text-secondary:var(--xp-muted); --eb-muted:var(--xp-muted); --eb-line:var(--xp-border); --eb-line-2:var(--xp-border);
+  --eb-primary:var(--xp-primary); --eb-primary-strong:var(--xp-primary); --eb-primary-050:color-mix(in srgb,var(--xp-primary) 7%,var(--xp-surface));
+  --eb-primary-100:color-mix(in srgb,var(--xp-primary) 14%,var(--xp-surface)); --eb-focus:var(--xp-primary); --eb-r-lg:var(--xp-radius); --eb-sh-xs:var(--xp-shadow);
+  --_xp-gap:calc(var(--eb-space-3) * var(--xp-space));
+  background:var(--xp-background); color:var(--xp-text); font-family:var(--xp-font); line-height:var(--xp-line); overflow-x:clip;
+}
+.exam-presentation :focus-visible{ outline:3px solid var(--xp-primary); outline-offset:2px; }
+.exam-presentation .iex-wrap{ gap:var(--_xp-gap); }
+.exam-presentation[data-xp-width="narrow"] .iex-wrap{ width:min(var(--eb-container-reading),100%); }
+.exam-presentation[data-xp-width="wide"] .iex-wrap{ width:min(var(--eb-container),100%); }
+.exam-presentation[data-xp-width="full"] .iex-wrap{ width:100%; }
+.exam-presentation[data-xp-sticky="false"] .iex-topbar{ position:static; }
+.exam-presentation .iex-flow{ gap:calc(var(--eb-space-3) * var(--xp-q-gap)); }
+.exam-presentation .xp-section + .xp-section{ margin-block-start:calc(var(--eb-space-4) * var(--xp-section-gap)); }
+
+/* exam header (top bar / cover) and navigation variants — colours / weight only */
+.exam-presentation[data-xp-exam-header="hero"] :is(.iex-topbar,.iex-cover-card){ background:color-mix(in srgb,var(--xp-primary) 6%,var(--xp-surface)); }
+.exam-presentation[data-xp-exam-header="banded"] :is(.iex-topbar,.iex-cover-card){ border-block-end:3px solid var(--xp-primary); }
+.exam-presentation[data-xp-exam-header="minimal"] .iex-topbar{ box-shadow:none; }
+.exam-presentation[data-xp-navigation="modern"] .iex-bottom-nav .eb-button{ border-radius:999px; }
+.exam-presentation[data-xp-navigation="minimal"] .iex-bottom-nav{ box-shadow:none; background:transparent; }
+
+/* section header (shared shell) */
+.exam-presentation .xp-section-header{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:var(--eb-space-2) var(--eb-space-4); padding-block:var(--eb-space-2); }
+.exam-presentation .xp-section-titles{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.exam-presentation .xp-section-eyebrow{ color:var(--xp-primary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.exam-presentation .xp-section-title{ margin:0; color:var(--xp-text); font-size:calc(var(--eb-fs-20) * var(--xp-scale)); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.exam-presentation .xp-section-marks{ padding:2px var(--eb-space-3); border:1px solid var(--xp-border); border-radius:999px; background:var(--xp-surface); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); white-space:nowrap; }
+.exam-presentation .xp-section-instructions{ flex:1 0 100%; margin:0; color:var(--xp-text); }
+.exam-presentation .xp-section-header[data-xp-variant="band"]{ padding:var(--eb-space-3) var(--eb-space-4); border-inline-start:4px solid var(--xp-primary); border-radius:var(--xp-radius); background:color-mix(in srgb,var(--xp-primary) 7%,var(--xp-surface)); }
+.exam-presentation .xp-section-header[data-xp-variant="underline"]{ border-block-end:2px solid var(--xp-primary); }
+.exam-presentation .xp-section-header[data-xp-variant="card"]{ padding:var(--eb-space-4); border:1px solid var(--xp-border); border-radius:var(--xp-radius); background:var(--xp-surface); box-shadow:var(--xp-shadow); }
+
+/* question stem */
+.exam-presentation .iex-qtext{ font-size:calc(var(--eb-fs-16) * var(--xp-scale)); font-weight:var(--xp-q-weight); line-height:var(--xp-line); }
+.exam-presentation[data-xp-stem="compact"] .iex-qtext{ line-height:var(--eb-lh-body); }
+.exam-presentation[data-xp-stem="comfortable"] .iex-qtext{ font-size:calc(var(--eb-fs-17) * var(--xp-scale)); }
+.exam-presentation .xp-rich-stem{ margin-block-end:var(--eb-space-3); font-weight:var(--eb-fw-regular); }
+.exam-presentation .iex-q[data-xp-width="normal"] :is(.iex-qtext:not(.xp-rich-stem),.xp-rich-stem .xp-p){ max-width:75ch; }
+
+/* question card variants (article attributes, section-scoped) */
+.exam-presentation .iex-card{ position:relative; padding:calc(var(--eb-space-4) * var(--xp-space)); }
+.exam-presentation .iex-q[data-xp-card="flat"] .iex-card{ border-color:transparent; box-shadow:none; }
+.exam-presentation .iex-q[data-xp-card="outlined"] .iex-card{ box-shadow:none; }
+.exam-presentation .iex-q[data-xp-card="elevated"] .iex-card{ border-color:transparent; box-shadow:var(--xp-shadow),0 0 0 1px var(--xp-border); }
+.exam-presentation .iex-q[data-xp-card="paper"] .iex-card{ border-radius:0; box-shadow:none; border-block-start:3px solid var(--xp-text); }
+
+/* question number + marks badge (marks are always TEXT; the badge only frames it) */
+.exam-presentation .iex-q[data-xp-question-number="plain"] .iex-node{ background:transparent; border-color:transparent; }
+.exam-presentation .iex-q[data-xp-question-number="badge"] .iex-node{ border-radius:var(--eb-r-sm); }
+.exam-presentation .iex-q[data-xp-question-number="square"] .iex-node{ border-radius:0; }
+.exam-presentation .iex-q:not(.done)[data-xp-question-number="circle"] .iex-node{ background:var(--xp-surface); border:2px solid var(--xp-primary); }
+.exam-presentation .iex-qhead strong{ color:var(--xp-text); }
+.exam-presentation .iex-q[data-xp-marks-badge="pill"] .iex-qhead strong{ padding:2px var(--eb-space-3); border-radius:999px; background:color-mix(in srgb,var(--xp-primary) 10%,var(--xp-surface)); }
+.exam-presentation .iex-q[data-xp-marks-badge="outline"] .iex-qhead strong{ padding:1px var(--eb-space-2); border:1px solid var(--xp-primary); border-radius:var(--eb-r-sm); }
+.exam-presentation .iex-q[data-xp-marks-badge="corner"] .iex-qhead strong{ position:absolute; inset-block-start:0; inset-inline-end:0; padding:2px var(--eb-space-3);
+  border-end-start-radius:var(--xp-radius); border-start-end-radius:var(--xp-radius); background:color-mix(in srgb,var(--xp-primary) 10%,var(--xp-surface)); }
+
+/* answer area */
+.exam-presentation .iex-q[data-xp-answer="contained"] :is(.iex-options,.iex-open,.iex-seq,.iex-table-wrap){ padding:var(--eb-space-2); border-radius:var(--xp-radius); background:var(--xp-surface-alt); }
+.exam-presentation .iex-q[data-xp-answer="lined"] .iex-open{ line-height:2em; border-radius:0; border-width:0 0 1px; background:repeating-linear-gradient(transparent 0 calc(2em - 1px),var(--xp-border) calc(2em - 1px) 2em); }
+
+/* type variants: a code-owned accent per workspace kind (no per-preset CSS) */
+.exam-presentation .iex-q:not([data-xp-variant="standard"]) .iex-card{ border-inline-start:4px solid var(--_xp-v,var(--xp-accent)); }
+.exam-presentation .iex-q[data-xp-variant="developerWorkspace"]{ --_xp-v:var(--xp-primary); }
+.exam-presentation .iex-q[data-xp-variant="developerWorkspace"] .iex-qhead span{ font-family:"Cascadia Code",Consolas,monospace; }
+.exam-presentation .iex-q[data-xp-variant="laboratory"]{ --_xp-v:var(--xp-success); }
+.exam-presentation .iex-q[data-xp-variant="networkWorkspace"]{ --_xp-v:var(--xp-accent); }
+.exam-presentation .iex-q[data-xp-variant="networkWorkspace"] :is(td,dd){ font-variant-numeric:tabular-nums; }
+.exam-presentation .iex-q[data-xp-variant="storyWorkspace"]{ --_xp-v:var(--xp-warning); }
+.exam-presentation .iex-q[data-xp-variant="writingPaper"]{ --_xp-v:var(--xp-muted); }
+.exam-presentation .iex-q[data-xp-variant="writingPaper"] .iex-open{ min-height:12em; }
+.exam-presentation .iex-q[data-xp-variant="visualWorkspace"] .iex-image{ margin-inline:auto; }
+
+/* tables (rich + legacy answer tables), callouts, figures, code — slot variants on the root */
+.exam-presentation[data-xp-table="striped"] :is(.xp-table,.iex-table-wrap table) tbody tr:nth-child(even){ background:var(--xp-surface-alt); }
+.exam-presentation[data-xp-table="bordered"] :is(.xp-table,.iex-table-wrap table) :is(th,td){ border:1px solid var(--xp-border); }
+.exam-presentation[data-xp-table="minimal"] .xp-table-wrap{ border-inline:0; border-radius:0; }
+.exam-presentation[data-xp-table="minimal"] .xp-table tbody :is(th,td){ border-block-start-color:transparent; }
+.exam-presentation[data-xp-table="plain"] .xp-table thead th{ background:transparent; }
+.exam-presentation[data-xp-callout="solid"] .xp-callout{ background:color-mix(in srgb,var(--_c) 16%,var(--xp-surface)); border-color:var(--_c); }
+.exam-presentation[data-xp-callout="outline"] .xp-callout{ background:var(--xp-surface); border:2px solid var(--_c); }
+.exam-presentation[data-xp-figure="framed"] .xp-figure{ padding:var(--eb-space-3); border:1px solid var(--xp-border); border-radius:var(--xp-radius); background:var(--xp-surface); }
+.exam-presentation[data-xp-code="dark"] .xp-code{ background:var(--xp-text); color:var(--xp-surface); border-color:var(--xp-text); }
+.exam-presentation[data-xp-code="dark"] .xp-code .xp-line::before{ color:var(--xp-border); }
+
+/* motion: a subtle entrance only when allowed by the preset AND the user */
+@media (prefers-reduced-motion:no-preference){
+  .exam-presentation[data-xp-motion="subtle"] .iex-q{ animation:xp-enter .18s ease-out both; }
+}
+.exam-presentation[data-xp-motion="none"] .iex-q{ animation:none; }
+@keyframes xp-enter{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
+
+@media (min-width:768px){
+  .exam-presentation .xp-section-title{ font-size:calc(var(--eb-fs-24) * var(--xp-scale)); }
+}
+@media (min-width:1024px){
+  .exam-presentation[data-xp-width="wide"] .iex-q[data-xp-width="normal"] .iex-card{ max-width:none; }
+}
+@media (min-width:1280px){
+  .exam-presentation[data-xp-width="full"] .iex-wrap{ padding-inline:var(--eb-space-6); }
+}
+
+@media print{
+  .exam-presentation{ background:var(--xp-surface); overflow:visible; }
+  .exam-presentation :is(.iex-topbar,.iex-bottom-nav,.iex-progress,.iex-save,.iex-nav-trigger,.iex-pause-row,.iex-details,.sb-preview-note){ display:none !important; }
+  .exam-presentation .iex-q{ animation:none; }
+  .exam-presentation :is(.iex-qhead,.iex-qtext,.xp-section-header){ break-inside:avoid; break-after:avoid; }
+  .exam-presentation :is(.iex-table-wrap,.xp-table-wrap){ overflow:visible; }
+  .exam-presentation :is(table,img){ max-width:100%; break-inside:avoid; }
+  .exam-presentation .iex-card{ box-shadow:none; }
+  .exam-presentation[data-xp-print="compact"] .iex-card{ padding:var(--eb-space-2); }
+  .exam-presentation[data-xp-print="compact"] .iex-flow{ gap:var(--eb-space-2); }
+}

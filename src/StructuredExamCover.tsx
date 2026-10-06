@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import type { ExamCoverPage } from "./examCover";
 import {
   isSafeBannerDataUrl,
@@ -7,6 +8,8 @@ import {
   type MarksDistribution
 } from "./examCover";
 import "./structured-cover.css";
+// Phase 20D.1 — optional rich instructions (a valid RichContentV1 document) through the lazy trusted renderer; else the plain lines below.
+const RichText = lazy(() => import("./richContent/RichPrompt").then(m => ({ default: m.RichText })));
 
 // ONE reusable cover/start page, shared by the real student exam page and the teacher builder preview.
 // It renders ONLY safe, display data: a wide school banner (safe raster data URL, aspect-ratio kept),
@@ -45,6 +48,7 @@ export default function StructuredExamCover({ cover, title, distribution, runtim
   const bannerUrl = cover.banner?.dataUrl;
   const showBanner = isSafeBannerDataUrl(bannerUrl);
   const lines = instructionLines(cover.instructions);
+  const list = <ul>{lines.map((l, i) => <li key={i}>{l}</li>)}</ul>;
   const startLabel = activityStartLabel(cover.activityType);
   const instructionsTitle = activityInstructionsTitle(cover.activityType);
 
@@ -86,10 +90,10 @@ export default function StructuredExamCover({ cover, title, distribution, runtim
           </div>
         )}
 
-        {lines.length > 0 && (
+        {(lines.length > 0 || !!cover.instructionsRichContent) && (
           <div className="iex-cover-instructions">
             <strong className="iex-cover-section-title">{instructionsTitle}</strong>
-            <ul>{lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
+            {cover.instructionsRichContent ? <Suspense fallback={list}><RichText raw={cover.instructionsRichContent} className="iex-cover-rich" fallback={list} /></Suspense> : list}
           </div>
         )}
 

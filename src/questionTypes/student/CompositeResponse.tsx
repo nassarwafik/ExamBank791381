@@ -1,4 +1,4 @@
-import { Suspense, useContext, useMemo } from "react";
+import { Suspense, lazy, useContext, useMemo } from "react";
 import type { StudentRendererProps } from "../registryTypes";
 import type { Question, QuestionPart } from "../../studentQuestionTypes";
 import { answered, type Answer } from "../../answerState";
@@ -14,6 +14,9 @@ import { resolveSmartSimUi } from "../../trustedSim/smartSimUiRegistry";
 import { TeacherPreviewContext } from "../studentAttemptContext";
 import type { JsonValue } from "../../smartsimState";
 import "../../composite/composite-student.css";
+// Phase 20D.1 — a part's (already strictly projected) richContent is its prompt, through the shared trusted renderer (lazy; the strict
+// authority re-checks it, memoized); anything else keeps the plain part text. Answers, identities and the first-N rule are untouched.
+const RichText = lazy(() => import("../../richContent/RichPrompt").then(m => ({ default: m.RichText })));
 
 // Phase 20D — the composite@1 student renderer (lazy; student exam AND teacher preview). It reads ONLY the public projection `q.composite`
 // (the server sanitizer already removed every private key) and fails closed as a whole: a malformed or unavailable root renders one explicit
@@ -106,7 +109,8 @@ export default function CompositeResponse({ q, id, answer, onAnswer, disabled, l
             {g.instructions && <p className="cmp-group-instructions">{g.instructions}</p>}
             <div className="cmp-parts">{g.parts.map(child => {
               const pid = child.id, label = partLabel(child, ordinal++), pAns = parts[pid];
-              const key = compositeChildKey(id, pid), textId = child.text ? "cmp-part-" + safeId(key) : undefined;
+              const rich = (child as { richContent?: unknown }).richContent, hasRich = !!rich && typeof rich === "object";
+              const key = compositeChildKey(id, pid), textId = child.text || hasRich ? "cmp-part-" + safeId(key) : undefined;
               const name = labelPrefix + (g.title ? " — " + g.title : "") + " — البند " + label;
               const linked = child.type === "smartSim" && typeof child.contextId === "string";
               const registered = linked ? undefined : resolveStudentRenderer(child.type, child.questionTypeVersion);
@@ -120,7 +124,9 @@ export default function CompositeResponse({ q, id, answer, onAnswer, disabled, l
                     {done && <span className="cmp-part-state">تمت الإجابة</span>}
                     {pAns !== undefined && !disabled && <button type="button" className="cmp-reset" aria-label={"مسح إجابة البند " + label} onClick={() => emit(without(parts, pid), contexts)}>مسح</button>}
                   </div>
-                  {child.text && <p className="cmp-part-text" id={textId}>{child.text}</p>}
+                  {hasRich
+                    ? <Suspense fallback={child.text ? <p className="cmp-part-text" id={textId}>{child.text}</p> : null}><RichText raw={rich} id={textId} className="cmp-part-text" fallback={child.text ? <p className="cmp-part-text" id={textId}>{child.text}</p> : null} /></Suspense>
+                    : child.text && <p className="cmp-part-text" id={textId}>{child.text}</p>}
                   {!registered?.ownsImage && imageList(child).map((im, n) => im?.dataUrl ? <img className="iex-image" src={im.dataUrl} alt={"صورة البند " + label} key={n} /> : null)}
                   {linked && <p className="cmp-part-linked" role="note">{"تُجاب في «" + ctxTitle(model.contexts.find(c => c.id === child.contextId)) + "» أعلاه"}</p>}
                   {registered && <Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل البند…</p>}><registered.Renderer q={{ ...child, presentationType: child.type } as unknown as Question} id={key} answer={pAns} onAnswer={a => setPart(pid, a)} disabled={disabled} labelPrefix={name} textId={textId} /></Suspense>}

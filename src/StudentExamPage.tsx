@@ -1,5 +1,5 @@
 
-import {useEffect,useMemo,useRef,useState,useCallback,lazy,Suspense} from "react";
+import {useEffect,useMemo,useRef,useState,useCallback,lazy,Suspense,type ReactNode} from "react";
 import {IconCheck,IconMenu} from "./icons";
 import {useConfirm} from "./ui/useConfirm";
 import {usePrefersReducedMotion} from "./ui/usePrefersReducedMotion";
@@ -35,8 +35,12 @@ import {useCodingGradingPoll,type PollOutcome} from "./useCodingGradingPoll";
 import CodingGradingStatusPanel from "./student/CodingGradingStatusPanel";
 import {normalizeAttemptPolicy,formatRemaining} from "./assignments/attemptPolicy";
 import {rememberStrictExit,pendingStrictExit,clearStrictExit} from "./student/exam/strictExitMarker";
+// Phase 20D.1 — the enterprise presentation engine (opt-in by a delivered `presentation` object; absent ⇒ the legacy themed page, unchanged).
+import PresentationRoot,{SectionPresentationScope} from "./presentation/PresentationRoot";
+import SectionShellHeader from "./presentation/SectionShellHeader";
+import {sectionShellOf,sectionMarksLabel} from "./presentation/presentationRuntime";
 
-type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
+type ExamBody={presentation?:unknown;title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;attemptPolicy?:string;marksDistribution?:MarksDistribution;exam:ExamBody};
 type Answers=Record<string,Answer>;
 type Result={autoGradingPending?:boolean;autoGradingStatus?:string;attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
@@ -655,27 +659,30 @@ export default function StudentExamPage({token,assignment,studentName,className,
    return;
   }
   if(revision.current>savedRevision.current&&!(await confirm({title:"مغادرة بدون تسليم",message:"توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟",confirmLabel:"المغادرة",cancelLabel:"البقاء",tone:"danger"})))return;onBack()}
+ // 20D.1 — the page root: the scoped presentation root when the delivered exam carries a presentation object, else the legacy theme root.
+ const xpRaw=exam.presentation!==undefined?exam.presentation:assignment.exam.presentation,xpOn=xpRaw!==undefined&&xpRaw!==null;
+ const shell=(children:ReactNode)=>xpOn?<PresentationRoot as="main" className="interactive-exam-page" presentation={xpRaw}>{children}</PresentationRoot>:<main className={"interactive-exam-page exam-theme-"+theme} dir="rtl">{children}</main>;
  if(loading)return <main className="interactive-exam-page" dir="rtl"><div className="iex-wrap"><p className="iex-loading" role="status">جارٍ تجهيز صفحة الامتحان...</p></div></main>;
- if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}{(()=>{const withheld=scoreWithheld(result);return <><div className="iex-score" data-testid="result-headline" data-pending={withheld?"true":"false"}>{withheld?PENDING_SCORE_DASH:result.score}<small> / {result.totalMarks}</small></div><strong className={withheld?"iex-score-pending":undefined} data-testid="result-percent">{withheld?withheldScoreLabel(result):result.percentage+"%"}</strong></>})()}{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{codingStatus?<CodingGradingStatusPanel status={codingStatus} gradingStatus={gs} windowEnded={codingPoll.windowEnded} refreshFailed={codingPoll.refreshFailed}/>:result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
+ if(!started&&result)return shell(<div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}{(()=>{const withheld=scoreWithheld(result);return <><div className="iex-score" data-testid="result-headline" data-pending={withheld?"true":"false"}>{withheld?PENDING_SCORE_DASH:result.score}<small> / {result.totalMarks}</small></div><strong className={withheld?"iex-score-pending":undefined} data-testid="result-percent">{withheld?withheldScoreLabel(result):result.percentage+"%"}</strong></>})()}{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{codingStatus?<CodingGradingStatusPanel status={codingStatus} gradingStatus={gs} windowEnded={codingPoll.windowEnded} refreshFailed={codingPoll.refreshFailed}/>:result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div>);
  // START GATE (B2A) — questions are NOT delivered by the server until startAttempt succeeds, for TIMED
  // and UNTIMED v2 assignments alike. Shows the structured cover (when enabled) or a compact start card;
  // pressing start calls the server, refetches the exam and reveals the questions. TIMED also anchors the
  // countdown; UNTIMED never shows a countdown.
  // Phase 7A — a strict attempt that ended because the student left: never show its questions again.
  if(strictEnded&&!result){
-  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+  return shell(<div className="iex-wrap">
    <section className="iex-start-card iex-strict-ended" role="status"><span className="iex-eyebrow">وضع صارم</span><h1>انتهت المحاولة</h1>
     <p>تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان. ستُصحَّح الإجابات المحفوظة وتظهر النتيجة هنا.</p>
     {error&&<div className="platform-error iex-error">{error}</div>}
     <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void confirmStrictExit()}}>عرض النتيجة</button></div>
    </section>
-  </div></main>;
+  </div>);
  }
  // Phase 7A — a PAUSED (save & resume) attempt: its questions stay hidden and its clock stopped until «متابعة المحاولة».
  if(paused&&!result&&state?.activeAttempt){
   const aa=state.activeAttempt;
   const rem=typeof aa.pausedRemainingMs==="number"?aa.pausedRemainingMs:null;
-  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+  return shell(<div className="iex-wrap">
    {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
    <section className="iex-start-card iex-paused-card" aria-labelledby="iex-paused-title"><span className="iex-eyebrow">حفظ مؤقت</span>
     <h1 id="iex-paused-title">لديك محاولة محفوظة مؤقتًا</h1>
@@ -689,7 +696,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
     <p className="iex-start-hint">{rem!==null?"إجاباتك محفوظة. عند المتابعة يُستأنف المؤقت بالوقت المتبقي فقط، ولا يتجاوز آخر موعد للواجب.":"إجاباتك محفوظة. ستتابع المحاولة نفسها قبل آخر موعد للواجب."}</p>
     <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void resumePausedAttempt()}} disabled={starting}>{starting?"جارٍ المتابعة...":"متابعة المحاولة"}</button></div>
    </section>
-  </div></main>;
+  </div>);
  }
  if(needsStart){
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
@@ -704,15 +711,15 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // Phase 7A — the strict warning is shown BEFORE the student starts (nothing is armed until the attempt runs).
   const strictWarning=policy==="strict"&&!resumeMode?<div className="iex-strict-warning" role="note"><strong>تنبيه:</strong> هذا امتحان بوضع صارم. بعد بدء المحاولة، مغادرة صفحة الامتحان أو الانتقال إلى تطبيق أو تبويب آخر ستؤدي إلى إنهاء المحاولة.</div>:null;
   if(cover?.enabled){
-   return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+   return shell(<div className="iex-wrap">
     {error&&<div className="platform-error iex-error">{error}</div>}
     {strictWarning}
     <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
      runtime={{studentName,className:className||exam.metadata?.className||"",examDate,duration:timed?dur:""}}
      starting={starting} onStart={()=>{void startTimedAttempt()}}/>
-   </div></main>;
+   </div>);
   }
-  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+  return shell(<div className="iex-wrap">
    {error&&<div className="platform-error iex-error">{error}</div>}
    <section className="iex-start-card"><span className="iex-eyebrow">{timed?"محاولة مؤقتة":"محاولة"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p>
     {strictWarning}
@@ -721,18 +728,18 @@ export default function StudentExamPage({token,assignment,studentName,className,
     <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!canStartOrResume}>{startLabel}</button></div>
     {!canStartOrResume&&!starting&&<div className="iex-no-retry">لا يمكن بدء المحاولة الآن (قد يكون الموعد انتهى أو استُنفدت المحاولات).</div>}
    </section>
-  </div></main>;
+  </div>);
  }
  // Legacy untimed cover (no server start): reveal locally on press. v2 untimed uses the START GATE above,
  // so this is gated on !requiresStart to keep the two flows separate.
  if(structured&&cover?.enabled&&!coverStarted&&!timed&&!requiresStart){
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
   const examDate=formatDateLatn(rawDate);
-  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+  return shell(<div className="iex-wrap">
    <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
     runtime={{studentName,className:className||exam.metadata?.className||"",examDate}}
     onStart={()=>{setCoverStarted(true);scrollTop()}}/>
-  </div></main>;
+  </div>);
  }
  const inputsDisabled=submitBusy||expired||strictEnded||pausing;
  // Roadmap #10/#11 — ONE authoritative derived save state for rendering; server-confirmed lastSavedAt only.
@@ -742,7 +749,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const hasGeneralInstructions=!!String(exam.metadata?.generalInstructions||"").trim();
  // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
  // one progress row with the SINGLE live save-status region, then the unchanged question rendering.
- return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+ return shell(<div className="iex-wrap">
   <ExamTopBar title={assignment.title} context={classLine+" · "+attemptLine} onBack={()=>{void backWithoutSubmit()}} timer={timed&&hasActive&&remainingMs!==null?{remainingMs,tone:countdownTone(remainingMs)}:null}/>
   {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
   {policy==="strict"&&hasActive&&<div className="iex-strict-badge" role="note"><strong>وضع صارم</strong><span>مغادرة هذه الصفحة أو التبديل إلى تطبيق أو تبويب آخر تنهي المحاولة.</span></div>}
@@ -786,16 +793,19 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // 19G — a page whose question belongs to a scenario gets the two-column layout on wide screens (sources beside the question); the lazy
    // ScenarioView decides validity, this flag only chooses the layout. Raw check on purpose: this module is in the student chunk, the contract is lazy.
    const inScenario=!!page.section&&Array.isArray(page.section.scenarios)&&page.section.scenarios.some(s=>!!s&&typeof s==="object"&&Array.isArray((s as {questionIds?:unknown}).questionIds)&&((s as {questionIds:unknown[]}).questionIds).includes(id));
-   return <StudentAttemptContext.Provider value={attemptApi} key={id}><section className={"iex-page"+(inScenario?" has-scenario":"")} aria-labelledby="iex-page-heading" data-scenario-page={inScenario||undefined}>
+   // 20D.1 — presentation mode: the shared section shell above the page and the section-scoped presentation around it (no-op otherwise).
+   const rawSection=page.section?(exam.sections||[])[page.sectionIndex]:undefined;
+   const scoped=(n:ReactNode)=>xpOn?<SectionPresentationScope section={rawSection}>{n}</SectionPresentationScope>:n;
+   return <StudentAttemptContext.Provider value={attemptApi} key={id}>{xpOn&&page.section&&<SectionShellHeader section={sectionShellOf(page.section,rawSection)} index={page.sectionIndex} marksLabel={sectionMarksLabel(page.section)}/>}{scoped(<section className={"iex-page"+(inScenario?" has-scenario":"")} aria-labelledby="iex-page-heading" data-scenario-page={inScenario||undefined}>
    <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
-   {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers}/>}
+   {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers} shellHeader={xpOn}/>}
    {inScenario&&page.section&&<div className="iex-page-scenario"><Suspense fallback={null}><ScenarioView section={page.section} questionId={id}/></Suspense></div>}
    {page.section
     ?<div className="iex-page-question"><StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} showScenario={false} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/></div>
     :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onAnswer={next=>setAnswer(id,next)} disabled={inputsDisabled}/>}
-  </section></StudentAttemptContext.Provider>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
+  </section>)}</StudentAttemptContext.Provider>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
   {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}
   <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages}/>
   {confirmDialog}
- </div></main>
+ </div>)
 }
