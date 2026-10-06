@@ -1,0 +1,61 @@
+/* Phase 20C — networkTopology@2 workspace / desktop / editor / review. RTL page, LTR technical islands (addresses, ports, CLI, URLs). */
+.net2 { display: grid; gap: 12px; min-width: 0; }
+.net2-diagram { border: 1px solid var(--line, #d7dde5); border-radius: 12px; background: var(--surface-2, #f7f9fc); overflow: hidden; }
+.net2-diagram svg { display: block; width: 100%; height: auto; max-height: 440px; touch-action: none; }
+.net2-link { stroke: #5b6b80; stroke-width: 4; }
+.net2-link.is-down { stroke: #b4bcc8; stroke-dasharray: 10 8; }
+.net2-wifi { stroke: #7a52c7; stroke-width: 3; stroke-dasharray: 3 9; stroke-linecap: round; }
+.net2-port { font: 600 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: #415066; }
+.net2-node { cursor: pointer; }
+.net2-node.is-movable { cursor: grab; }
+.net2-node .net2-halo { fill: transparent; stroke: transparent; stroke-width: 6; }
+.net2-node.is-selected .net2-halo { stroke: #1d6fd6; fill: rgba(29, 111, 214, 0.08); }
+.net2-node .net2-shape { stroke: #22324a; stroke-width: 3; fill: #fff6e5; }
+.net2-node[data-kind="router"] .net2-shape { fill: #e8f1ff; }
+.net2-node[data-kind="switch"] .net2-shape { fill: #e9f8ef; }
+.net2-node[data-kind="ap"] .net2-shape { fill: #f3ecff; }
+.net2-node[data-kind="server"] .net2-shape { fill: #eef1f5; }
+.net2-node .net2-glyph { stroke: #22324a; stroke-width: 3; fill: none; stroke-linecap: round; }
+.net2-node text { font: 700 20px/1 system-ui, sans-serif; fill: #1b2738; }
+.net2-devices { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.net2-devices button, .net2-apps button { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line, #c9d1dc); border-radius: 999px; background: var(--surface, #fff); font: inherit; cursor: pointer; }
+.net2-devices button[aria-pressed="true"], .net2-apps button[aria-pressed="true"] { border-color: #1d6fd6; background: #e8f1ff; font-weight: 700; }
+.net2 :focus-visible, .net2-editor :focus-visible { outline: 3px solid #1d6fd6; outline-offset: 2px; }
+.net2-panel { display: grid; gap: 10px; min-width: 0; }
+.net2-panel h4 { margin: 0; font-size: 1rem; }
+.net2-desktop { display: grid; gap: 10px; padding: 10px; border: 1px solid var(--line, #d7dde5); border-radius: 12px; background: var(--surface, #fff); }
+.net2-apps { display: flex; flex-wrap: wrap; gap: 6px; }
+.net2-app { display: grid; gap: 8px; min-width: 0; }
+.net2-fields { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.net2-fields label, .net2-field { display: grid; gap: 4px; }
+.net2 input, .net2 select, .net2 textarea, .net2-editor input, .net2-editor select, .net2-editor textarea { min-height: 38px; padding: 5px 8px; border: 1px solid var(--line, #c9d1dc); border-radius: 8px; font: inherit; max-width: 100%; }
+.net2 input[readonly] { background: #f1f4f8; color: #4b5a6e; }
+.net2-radios { display: flex; flex-wrap: wrap; gap: 14px; border: 0; padding: 0; margin: 0; }
+.net2-radios label { display: inline-flex; gap: 6px; align-items: center; }
+.net2-ltr { direction: ltr; unicode-bidi: isolate; text-align: left; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.net2-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.net2-actions button { min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1px solid #1d6fd6; background: #1d6fd6; color: #fff; font: inherit; cursor: pointer; }
+.net2-actions button.is-secondary { background: transparent; color: #1d6fd6; }
+.net2-actions button.is-danger { border-color: #b42318; background: #b42318; }
+.net2-actions button:disabled { opacity: 0.55; cursor: not-allowed; }
+.net2-error { margin: 0; color: #b42318; font-weight: 600; }
+.net2-note { margin: 0; color: #4b5a6e; font-size: 0.9rem; }
+.net2-status { margin: 0; padding: 8px 10px; border-radius: 8px; background: #eef3f9; }
+.net2-status[data-ok="true"] { background: #e9f8ef; color: #135c32; }
+.net2-status[data-ok="false"] { background: #fdecea; color: #8a1c13; }
+.net2-pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; text-align: left; font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; background: #0f1724; color: #d9e2ef; padding: 8px; border-radius: 8px; }
+.net2-table-wrap { overflow-x: auto; max-width: 100%; }
+.net2-table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+.net2-table th, .net2-table td { border: 1px solid var(--line, #d7dde5); padding: 6px 8px; text-align: start; vertical-align: top; }
+.net2-editor { display: grid; gap: 14px; }
+.net2-editor fieldset { border: 1px solid var(--line, #d7dde5); border-radius: 10px; padding: 10px; min-width: 0; display: grid; gap: 8px; }
+.net2-editor legend { font-weight: 700; padding: 0 6px; }
+.net2-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 6px 0; border-bottom: 1px solid var(--line, #e3e8ef); }
+.net2-row label { display: grid; gap: 3px; font-size: 0.88rem; }
+.net2-sandbox { border: 2px solid #7a52c7; border-radius: 12px; padding: 10px; display: grid; gap: 10px; background: #fbf9ff; }
+.net2-review { display: grid; gap: 10px; }
+.net2-review section { display: grid; gap: 6px; }
+.net2-review h5 { margin: 0; }
+@media (min-width: 1024px) {
+  .net2-student { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+}

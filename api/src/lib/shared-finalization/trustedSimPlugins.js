@@ -24,7 +24,9 @@ Object.defineProperty(exports, "resolveSmartSimPlugin", { enumerable: true, get:
 const networkTopologyPlugin_1 = require("./networkTopologyPlugin");
 const physicsFreeFallPlugin_1 = require("./physicsFreeFallPlugin");
 const functionStudyPlugin_1 = require("./functionStudyPlugin");
+const net2Plugin_1 = require("./net2Plugin");
 (0, trustedSimRegistry_1.registerSmartSimPlugin)(networkTopologyPlugin_1.networkTopologyPluginV1);
 (0, trustedSimRegistry_1.registerSmartSimPlugin)(physicsFreeFallPlugin_1.physicsFreeFallPluginV1);
 (0, trustedSimRegistry_1.registerSmartSimPlugin)(functionStudyPlugin_1.functionStudy2dPluginV1);
+(0, trustedSimRegistry_1.registerSmartSimPlugin)(net2Plugin_1.networkTopologyPluginV2);
 __exportStar(require("./trustedSimQuestion"), exports);

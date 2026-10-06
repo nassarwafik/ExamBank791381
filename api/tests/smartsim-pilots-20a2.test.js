@@ -42,7 +42,7 @@ const ans = (key, actions, state = {}) => ({ kind: "smartSim", pluginKey: key, p
 describe("20A.2-S1 — registration, descriptors, shared build", () => {
   it("production plugins = functionStudy2d@1, networkTopology@1, physicsFreeFall@1 (code-owned; descriptors data-only; client = server catalog)", async () => {
     const reg = loadShared("trustedSimRegistry"); loadShared("trustedSimPlugins");
-    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "physicsFreeFall@1"]);
+    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1"]);   // Phase 20C added networkTopology@2 (a NEW exact identity; v1 unchanged)
     const ts = await import("../../src/trustedSimCatalog.ts");
     expect(loadShared("trustedSimCatalog").smartSimAuthoringCatalog()).toEqual(ts.smartSimAuthoringCatalog());
     for (const m of ["physicsFreeFallModel", "physicsFreeFallPlugin", "functionStudyModel", "functionStudyPlugin"]) {

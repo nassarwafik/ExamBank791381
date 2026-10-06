@@ -131,13 +131,13 @@ describe("20A.1-D — the plugin DESCRIPTOR: exact, strict, immutable, data only
     expect(resolveSmartSimDescriptor("testSelection", 1)).toBeUndefined();
     expect(resolveSmartSimDescriptor("testSelection", 2)!.label).toBe("اختيار v2");
     for (const v of ["2", 2.0000001, 0, null, undefined]) expect(resolveSmartSimDescriptor("testSelection", v), String(v)).toBeUndefined();
-    expect(resolveSmartSimDescriptor("networkTopology", 2)).toBeUndefined();
+    expect(resolveSmartSimDescriptor("networkTopology", 3)).toBeUndefined();   // Phase 20C: @2 is now registered; @3 is the unknown version
     expect(resolveSmartSimDescriptor("NetworkTopology", 1)).toBeUndefined();
   });
   it("the listing is DATA ONLY (plain JSON, no functions), deterministic, and a copy (mutating it never changes the registry)", () => {
     undo.push(registerSmartSimPlugin(createUniversalTestPlugin(universal, SELECTION_SPEC)));
     const list = listSmartSimPluginDescriptors();
-    expect(list.map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "physicsFreeFall@1", "testSelection@1"]);   // Phase 20A.2 pilots included
+    expect(list.map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1", "testSelection@1"]);   // Phase 20A.2 pilots + 20C networkTopology@2 included
     expect(JSON.parse(JSON.stringify(list))).toEqual(list);
     walk(list, v => expect(typeof v).not.toBe("function"));
     (list.find(d => d.key === "networkTopology")!.capabilities as string[]).push?.("scene.3d");
@@ -149,7 +149,7 @@ describe("20A.1-C — the AUTHORING / AI-composer catalog: safe metadata only", 
   it("lists exactly the production plugins with their declared metadata; plain data; no function / module / grader / secret / answer", () => {
     const c = smartSimAuthoringCatalog();
     expect(c).toMatchObject({ catalogVersion: 1, vocabularyVersion: 1, descriptorVersion: 1 });
-    expect(c.plugins.map(p => p.key + "@" + p.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "physicsFreeFall@1"]);   // Phase 20A.2 pilots included
+    expect(c.plugins.map(p => p.key + "@" + p.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1"]);   // Phase 20A.2 pilots + 20C networkTopology@2 included
     expect(c.plugins.find(p => p.key === "networkTopology")).toMatchObject({ domain: "networking", capabilities: expect.arrayContaining(["scene.2d", "network.cli"]), actionKinds: expect.arrayContaining(["router.command"]), checkKinds: expect.arrayContaining(["reachability", "router.ipAddress"]) });
     expect(c.genericRules.map(r => r.id)).toEqual(["numericNear@1", "objectNotSelected@1", "objectSelected@1", "orderEquals@1", "pointNear@1", "relationExists@1", "setEquals@1"]);
     expect([...c.capabilities]).toEqual([...SMART_SIM_CAPABILITIES]);
@@ -194,7 +194,7 @@ describe("20A.1-P — backward compatibility PINS (persisted data unchanged)", (
     const src = fs.readFileSync(path.join(here, "trustedSim/smartSimUiRegistry.ts"), "utf8");
     const imports = [...src.matchAll(/import\(([^)]*)\)/g)].map(m => m[1]);
     expect(imports.length).toBeGreaterThan(0);
-    for (const i of imports) expect(i).toMatch(/^"\.\.\/[A-Za-z/]+"$/);
+    for (const i of imports) expect(i).toMatch(/^"\.\.\/[A-Za-z0-9/]+"$/);   // Phase 20C: literal paths may contain digits (networkTopology2/); still no dots, variables or data
     expect(src).not.toMatch(/import\([^")]/); expect(src).not.toMatch(/\bconfig\.(component|module|renderer)/);
     for (const f of ["trustedSimVocabulary.ts", "trustedSimDescriptor.ts", "trustedSimScene.ts", "trustedSimAssets.ts", "trustedSimSemanticActions.ts", "trustedSimRules.ts", "trustedSimCatalog.ts"]) {
       const code = fs.readFileSync(path.join(here, f), "utf8").replace(/^\s*\/\/.*$/gm, "");
