@@ -245,8 +245,9 @@ at the end of playback (readout turning `polite` while the impact status is anno
 
 ### 12.5 Bundle
 
-Initial JS graph: 18 files, 127 009 B gzip on the head build of `009275a` vs 127 025 B on `78445fd` (reviewer measured 127 033 B vs
-127 025 B on `0d59fd9`: byte-identical initial files apart from content-hash names — gzip noise, not growth). Budget 125 KB unchanged.
+Initial JS graph: 18 files, 127 031 B gzip on `94c2bfc` vs 127 025 B on `78445fd` (independently measured by the reviewer; the initial
+files are byte-identical apart from their content-hash names, so the few bytes are gzip noise from the hash strings, not growth — the
+intermediate `009275a` measured 127 009 B, `0d59fd9` 127 033 B). Budget 125 KB unchanged; the guard prints 124.1 KB (rounding of 127 031 B).
 The dynamic payload (`SIMULATION_CLOCK_V1`, `xp-dyn-plot`, `dyn-flow`, `fnstudy-probe`) is present only in lazy chunks; the guard refuses it
 in initial files and fails if a signature disappears.
 
