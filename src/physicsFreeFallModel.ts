@@ -47,10 +47,9 @@ export function impactTime(m: FreeFallModel): number {
 export const impactSpeed = (m: FreeFallModel): number => Math.sqrt(m.initialVelocity * m.initialVelocity + 2 * m.gravity * m.initialHeight);
 /** The highest point reached (h0 when thrown down or dropped). */
 export const peakHeight = (m: FreeFallModel): number => (m.initialVelocity > 0 ? m.initialHeight + (m.initialVelocity * m.initialVelocity) / (2 * m.gravity) : m.initialHeight);
-/** The body's state at a presentation time: frozen on the ground after impact (presentation only). */
+/** The body's state at a presentation time: at rest on the ground after impact (presentation only — never v(t_impact)). */
 export function bodyAt(m: FreeFallModel, t: number): { t: number; y: number; v: number; landed: boolean } {
-  const ti = impactTime(m);
-  if (!(t < ti)) return { t, y: 0, v: velocityAt(m, ti), landed: true };
+  if (!(t < impactTime(m))) return { t, y: 0, v: 0, landed: true };
   const time = t > 0 ? t : 0;
   return { t: time, y: heightAt(m, time), v: velocityAt(m, time), landed: false };
 }

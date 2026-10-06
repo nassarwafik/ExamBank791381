@@ -36,9 +36,8 @@ exports.impactSpeed = impactSpeed;
 const peakHeight = (m) => (m.initialVelocity > 0 ? m.initialHeight + (m.initialVelocity * m.initialVelocity) / (2 * m.gravity) : m.initialHeight);
 exports.peakHeight = peakHeight;
 function bodyAt(m, t) {
-    const ti = impactTime(m);
-    if (!(t < ti))
-        return { t, y: 0, v: (0, exports.velocityAt)(m, ti), landed: true };
+    if (!(t < impactTime(m)))
+        return { t, y: 0, v: 0, landed: true };
     const time = t > 0 ? t : 0;
     return { t: time, y: (0, exports.heightAt)(m, time), v: (0, exports.velocityAt)(m, time), landed: false };
 }
