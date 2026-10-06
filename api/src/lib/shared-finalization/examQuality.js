@@ -138,6 +138,8 @@ function validateQuestion(q, sectionLabel, section, add) {
     }
     for (const i of (0, codeStimulus_1.codeStimulusIssues)(q))
         add("error", i.code, "سؤال " + disp + " في «" + sectionLabel + "»: " + i.message, where);
+    if (q.assetRequest !== undefined)
+        add("error", "AI_ASSET_REQUEST_UNRESOLVED", "سؤال " + disp + " في «" + sectionLabel + "» يحتاج إلى صورة لم تُرفق بعد" + (q.assetRequest && typeof q.assetRequest.description === "string" ? ": " + q.assetRequest.description.slice(0, 300) : "") + ". أرفق الصورة ثم أزل طلب الصورة.", where);
     if (q.presentationType === "compound") {
         validateCompound(q, disp, sectionLabel, where, add);
     }

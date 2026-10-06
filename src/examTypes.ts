@@ -184,7 +184,12 @@ export type BuilderQuestion = {
   assessmentMeta?: AssessmentMeta;
   // Phase 13C-A — OPTIONAL interactive CONTEXT (data descriptor only; never a scored response).
   activity?: AssessmentActivityDescriptor;
+  // Phase 20F — an UNRESOLVED image request left by the AI composer (it never invents an image URL): a teacher-facing description of the
+  // image the question needs. While present it BLOCKS finalization; the teacher attaches the image and removes the request. Teacher-only
+  // (stripped for students); never academic data.
+  assetRequest?: AssetRequestV1;
 };
+export type AssetRequestV1 = { v: 1; description: string };
 
 // The type-specific answer body shared by both a question and a compound part, so one set of body
 // editors and one set of pure helpers work for both. Identity/label/marks live outside this.

@@ -371,6 +371,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   // Legacy-identical blanking (answer:{}, hint:"", …) so existing behaviour/tests are unchanged,
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
+  delete out.assetRequest;                                                      // 20F: a teacher-only AI composer image request
   const presentationFields = takePresentationFields(out);                    // 20D.1: projected below, never deep-stripped / spread
   applyVisualProjection(out);          // 19D: strict projection of the RAW config first (a smuggled field withholds it)
   applyOpenResponseProjection(out, question);                                   // 19E: the public rubric is derived from the ORIGINAL private key
@@ -428,6 +429,7 @@ function sanitizeExamForStudent(exam, options) {
   const structured = Array.isArray(x.sections) && x.sections.length > 0;          // exactly normalizeExamStructure's choice
   x.revisionHistory = [];
   if (x.metadata && typeof x.metadata === "object" && "import" in x.metadata) delete x.metadata.import;
+  if (x.metadata && typeof x.metadata === "object" && "aiComposer" in x.metadata) delete x.metadata.aiComposer;   // 20F: teacher-only authoring history / coverage
   if ("blueprint" in x) delete x.blueprint;                                   // Phase 13C-A: teacher planning data
   for (const k of TEACHER_ANALYTICS_KEYS) if (k in x) delete x[k];             // Phase 13C-B: live intelligence is never student data
   if ("coverPage" in x) x.coverPage = sanitizeCoverForStudent(x.coverPage);
