@@ -289,8 +289,8 @@ VTP `transparent` / `off`, `write` / `copy` (the running configuration is what c
 * **New / pin suites written with the implementation:** `src/net2Bounds.20c.test.ts` (bounded JSON, DoS, worst-case performance,
   purity, incremental replay) and `src/net2Mutation.20c.test.ts` (strengthening tests added after mutation rounds 1 and 4; not
   fail-first).
-* **Mutation campaign:** 157 mutants, applied one at a time with SHA-256-verified byte restore and a clean tree after every run;
-  **155 KILLED, 2 EQUIVALENT, 0 SURVIVED, 0 TIMEOUT**. Every §72 category is covered (connectivity, DHCP, VTP, Port Security, host
+* **Mutation campaign:** 165 mutants (157 before review + 8 on the Review Fix 1 code), applied one at a time with SHA-256-verified
+  byte restore and a clean tree after every run; **163 KILLED, 2 EQUIVALENT, 0 SURVIVED, 0 TIMEOUT**. Every §72 category is covered (connectivity, DHCP, VTP, Port Security, host
   tools, authority / security, compatibility). Round 1 left 38 survivors (36 test gaps + the two equivalents); round 2 re-ran the 36 against the
   round-1 strengthening tests (35 killed) and round 3 killed M091 with one more test; round 4 (16 category mutants) left 5, killed by the round-4 tests.
   Equivalents: **M096** (router egress choosing the shortest prefix) — overlapping networks are refused by the CLI and the initial-state
