@@ -5,6 +5,7 @@ import type { RichContentV1 } from "./richContent/richContentModel";
 import { typeChangePatch, typeSpecificContentPresent } from "./questionTypes/typeContent";
 import { isKnownQuestionType, questionTypeLabel, listQuestionTypes } from "./questionTypeCatalog";
 import { useConfirm } from "./ui/useConfirm";
+import { PRESENTATION_VOCABULARY, validateQuestionPresentation, type QuestionPresentationV1 } from "./presentation/presentationModel";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 import CompoundQuestionEditor from "./CompoundQuestionEditor";
 // Phase 20D.1 — the rich-content block editor and the Markdown conversion dialog are LAZY (builder-only chunks, loaded on demand).
@@ -103,9 +104,66 @@ export default function QuestionComposer({ question: q, onChange, disabled }: Pr
         </div>
       )}
 
+      <QuestionPresentationControl value={q.presentation} onChange={presentation => onChange({ presentation })} disabled={disabled} />
+
       {q.presentationType === "compound"
         ? <CompoundQuestionEditor question={q} onChange={onChange} disabled={disabled} />
         : <QuestionBodyEditor node={q} type={q.presentationType} onChange={onChange} disabled={disabled} />}
+    </div>
+  );
+}
+
+// Phase 20D.1 — the bounded per-question presentation override («عرض السؤال»): collapsed by default, it SELECTS vocabulary values only
+// (width, type variant, card, answer area). A "default" choice removes the key; an override left with no key is removed entirely. A
+// malformed stored override is never rewritten silently: it is reported and can only be removed explicitly.
+const QP_WORDS: Record<string, string> = {
+  normal: "عادي", wide: "عريض", full: "كامل العرض", standard: "قياسي", writingPaper: "ورقة كتابة", developerWorkspace: "بيئة مطوّر", laboratory: "مساحة مختبرية",
+  networkWorkspace: "مساحة عمل شبكية", storyWorkspace: "مساحة سيناريو", visualWorkspace: "مساحة بصرية", flat: "مسطّح", outlined: "بإطار", elevated: "مرتفع بظل",
+  paper: "ورقي", plain: "بسيط", contained: "داخل إطار", lined: "مسطّر"
+};
+type QpKey = "width" | "variant" | "card" | "answerArea";
+const QP_FIELDS: readonly { key: QpKey; label: string; options: readonly string[] }[] = [
+  { key: "width", label: "اتساع السؤال", options: PRESENTATION_VOCABULARY.questionWidths },
+  { key: "variant", label: "مساحة العرض", options: PRESENTATION_VOCABULARY.typeVariants },
+  { key: "card", label: "بطاقة السؤال", options: PRESENTATION_VOCABULARY.slots.questionCard },
+  { key: "answerArea", label: "منطقة الإجابة", options: PRESENTATION_VOCABULARY.slots.answerArea }
+];
+function QuestionPresentationControl({ value, onChange, disabled }: { value: unknown; onChange: (next: QuestionPresentationV1 | undefined) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const checked = value === undefined ? null : validateQuestionPresentation(value);
+  const current = checked?.ok ? checked.value : undefined;
+  const malformed = !!checked && !checked.ok;
+  const pick = (key: QpKey, next: string) => {
+    if (malformed) return;
+    const field = QP_FIELDS.find(f => f.key === key);
+    if (!field || (next && !field.options.includes(next))) return;
+    const draft: Record<string, unknown> = { ...(current ?? {}), schemaVersion: 1 };
+    if (next) draft[key] = next; else delete draft[key];
+    if (Object.keys(draft).length === 1) { onChange(undefined); return; }
+    const r = validateQuestionPresentation(draft);
+    if (r.ok) onChange(r.value);
+  };
+  return (
+    <div className="rc-host qp-host">
+      <div className="rc-host-actions">
+        <button type="button" className="sb-mini-btn" aria-expanded={open} onClick={() => setOpen(o => !o)}>عرض السؤال</button>
+        {value !== undefined && <button type="button" className="sb-mini-btn" onClick={() => onChange(undefined)} disabled={disabled}>إزالة تخصيص العرض</button>}
+      </div>
+      {!open && value !== undefined && !malformed && <p className="sb-hint rc-host-note">لهذا السؤال تخصيص عرض خاص (الشكل فقط؛ لا يؤثر في التصحيح أو العلامة).</p>}
+      {malformed && <p className="sb-hint rc-host-note" role="alert">تخصيص العرض المخزّن لهذا السؤال غير صالح ويُتجاهَل عند العرض؛ أزله ثم اختر من جديد.</p>}
+      {open && !malformed && (
+        <div className="qp-fields" role="group" aria-label="تخصيص عرض السؤال">
+          {QP_FIELDS.map(f => (
+            <label key={f.key} className="sb-field">
+              <span>{f.label}</span>
+              <select className="sb-input sb-input-sm" value={current?.[f.key] ?? ""} onChange={e => pick(f.key, e.target.value)} disabled={disabled} aria-label={f.label}>
+                <option value="">الافتراضي</option>
+                {f.options.map(o => <option key={o} value={o}>{QP_WORDS[o] ?? o}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
