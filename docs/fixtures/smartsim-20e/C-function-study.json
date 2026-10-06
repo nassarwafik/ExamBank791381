@@ -1,0 +1,162 @@
+{
+  "examId": "SS-20E-C",
+  "title": "دراسة الدالة النسبية",
+  "status": "draft",
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "fn-c",
+          "displayNumber": "1",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "ادرس الدالة f(x) = (2x − 4) / ((x − 1)(x + 2)). استخدم المسبار لاستكشاف القيم.",
+          "marks": 13,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "functionStudy2d",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "expression": {
+                "language": 2,
+                "variable": "x",
+                "source": "(2*x-4)/((x-1)*(x+2))"
+              },
+              "window": {
+                "xMin": -6,
+                "xMax": 8,
+                "yMin": -6,
+                "yMax": 6,
+                "sampleCount": 701
+              },
+              "tasks": {
+                "domainExclusions": true,
+                "xIntercepts": true,
+                "yIntercept": true,
+                "verticalAsymptotes": true,
+                "horizontalAsymptotes": true,
+                "extrema": true,
+                "monotonicIntervals": true
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "domain",
+                "label": "استثناءات المجال",
+                "weight": 2,
+                "kind": "domain.exclusions",
+                "expected": [
+                  -2,
+                  1
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "x-intercepts",
+                "label": "المقاطع السينية",
+                "weight": 1,
+                "kind": "intercepts.x",
+                "expected": [
+                  {
+                    "x": 2,
+                    "y": 0
+                  }
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "y-intercept",
+                "label": "المقطع الصادي",
+                "weight": 1,
+                "kind": "intercept.y",
+                "expected": 2,
+                "tolerance": 0.01
+              },
+              {
+                "id": "vertical-asymptotes",
+                "label": "خطوط التقارب الرأسية",
+                "weight": 2,
+                "kind": "asymptotes.vertical",
+                "expected": [
+                  -2,
+                  1
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "horizontal-asymptotes",
+                "label": "خطوط التقارب الأفقية",
+                "weight": 1,
+                "kind": "asymptotes.horizontal",
+                "expected": [
+                  0
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "extrema",
+                "label": "القيم القصوى المحلية",
+                "weight": 3,
+                "kind": "extrema.points",
+                "expected": [
+                  {
+                    "kind": "min",
+                    "x": 0,
+                    "y": 2
+                  },
+                  {
+                    "kind": "max",
+                    "x": 4,
+                    "y": 0.2222222222222222
+                  }
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "monotonic",
+                "label": "فترات التزايد والتناقص",
+                "weight": 3,
+                "kind": "monotonic.intervals",
+                "tolerance": 0.01,
+                "expected": [
+                  {
+                    "kind": "decreasing",
+                    "from": "-inf",
+                    "to": -2
+                  },
+                  {
+                    "kind": "decreasing",
+                    "from": -2,
+                    "to": 0
+                  },
+                  {
+                    "kind": "increasing",
+                    "from": 0,
+                    "to": 1
+                  },
+                  {
+                    "kind": "increasing",
+                    "from": 1,
+                    "to": 4
+                  },
+                  {
+                    "kind": "decreasing",
+                    "from": 4,
+                    "to": "+inf"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

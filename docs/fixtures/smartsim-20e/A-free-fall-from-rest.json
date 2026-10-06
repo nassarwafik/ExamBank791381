@@ -1,0 +1,132 @@
+{
+  "examId": "SS-20E-A",
+  "title": "السقوط الحر من السكون",
+  "status": "draft",
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "phys-a",
+          "displayNumber": "1",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "يسقط جسم من السكون من ارتفاع 20 m. شغّل المحاكاة وراقب المنحنيين ثم سجّل قياساتك.",
+          "marks": 12,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsFreeFall",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "model": {
+                "initialHeight": 20,
+                "initialVelocity": 0,
+                "gravity": 9.8
+              },
+              "view": {
+                "maxTime": 3,
+                "showVelocityGraph": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى الأرض",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "impactSpeed",
+                    "label": "سرعة الارتطام بالأرض (مقدار)",
+                    "unit": "m/s"
+                  },
+                  {
+                    "id": "heightAt1s",
+                    "label": "الارتفاع عند الزمن 1 ث",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "velocityAt1s",
+                    "label": "السرعة المتجهة عند الزمن 1 ث (الأعلى موجب)",
+                    "unit": "m/s"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "impactPoint",
+                    "label": "نقطة الارتطام على منحنى الارتفاع–الزمن"
+                  },
+                  {
+                    "id": "pointAt1s",
+                    "label": "نقطة من منحنى الارتفاع–الزمن عند 1 ث"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول إلى الأرض",
+                "weight": 3,
+                "kind": "physics.impactTime",
+                "measurementId": "impactTime",
+                "tolerance": 0.05
+              },
+              {
+                "id": "impact-speed",
+                "label": "سرعة الارتطام",
+                "weight": 3,
+                "kind": "physics.impactSpeed",
+                "measurementId": "impactSpeed",
+                "tolerance": 0.1
+              },
+              {
+                "id": "height-1s",
+                "label": "الارتفاع عند 1 ث",
+                "weight": 2,
+                "kind": "physics.heightAtTime",
+                "measurementId": "heightAt1s",
+                "time": 1,
+                "tolerance": 0.05
+              },
+              {
+                "id": "velocity-1s",
+                "label": "السرعة المتجهة عند 1 ث",
+                "weight": 1,
+                "kind": "numericNear@1",
+                "valueId": "velocityAt1s",
+                "expected": -9.8,
+                "tolerance": 0.05
+              },
+              {
+                "id": "impact-point",
+                "label": "نقطة الارتطام على المنحنى",
+                "weight": 2,
+                "kind": "pointNear@1",
+                "pointId": "impactPoint",
+                "expected": {
+                  "x": 2.0203,
+                  "y": 0
+                },
+                "tolerance": 0.05
+              },
+              {
+                "id": "point-1s",
+                "label": "نقطة على منحنى الحركة",
+                "weight": 1,
+                "kind": "physics.pointOnTrajectory",
+                "pointId": "pointAt1s",
+                "tolerance": 0.1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
