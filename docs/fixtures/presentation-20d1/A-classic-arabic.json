@@ -1,0 +1,185 @@
+{
+  "examId": "XP-20D1-A",
+  "title": "امتحان اللغة العربية — الفصل الأول",
+  "status": "draft",
+  "presentationTheme": "classic",
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "classicPaper",
+    "direction": "rtl",
+    "print": {
+      "mode": "academic"
+    }
+  },
+  "coverPage": {
+    "enabled": true,
+    "instructionsRichContent": {
+      "schemaVersion": 1,
+      "blocks": [
+        {
+          "type": "orderedList",
+          "items": [
+            {
+              "runs": [
+                {
+                  "text": "اقرأ الأسئلة بعناية قبل الإجابة."
+                }
+              ]
+            },
+            {
+              "runs": [
+                {
+                  "text": "مدة الامتحان "
+                },
+                {
+                  "text": "ساعتان",
+                  "marks": [
+                    "bold"
+                  ]
+                },
+                {
+                  "text": "."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "variant": "warning",
+          "title": "تنبيه",
+          "runs": [
+            {
+              "text": "لا يُسمح باستخدام المعجم."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "sections": [
+    {
+      "id": "a-s1",
+      "title": "القسم الأول: النصوص",
+      "instructions": "أجب عن جميع الأسئلة.",
+      "gradingPolicy": "all",
+      "instructionsRichContent": {
+        "schemaVersion": 1,
+        "blocks": [
+          {
+            "type": "paragraph",
+            "runs": [
+              {
+                "text": "اقرأ الأبيات الآتية ثم أجب عمّا يليها."
+              }
+            ]
+          }
+        ]
+      },
+      "presentation": {
+        "schemaVersion": 1,
+        "components": {
+          "sectionHeader": {
+            "variant": "underline"
+          }
+        }
+      },
+      "questions": [
+        {
+          "examQuestionId": "a-q1",
+          "displayNumber": "1",
+          "presentationType": "multipleChoice",
+          "text": "ما الغرض الشعري للأبيات؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "الفخر"
+            },
+            {
+              "text": "الرثاء"
+            },
+            {
+              "text": "الغزل"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "quote",
+                "runs": [
+                  {
+                    "text": "الخيلُ والليلُ والبيداءُ تعرفني ... والسيفُ والرمحُ والقرطاسُ والقلمُ"
+                  }
+                ],
+                "citation": "المتنبي"
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ما "
+                  },
+                  {
+                    "text": "الغرض الشعري",
+                    "marks": [
+                      "bold"
+                    ]
+                  },
+                  {
+                    "text": " للبيت السابق؟"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "a-q2",
+          "displayNumber": "2",
+          "presentationType": "multiTrueFalse",
+          "text": "حدّد صحّة كل عبارة:",
+          "marks": 3,
+          "fields": [
+            {
+              "id": "a-q2f1",
+              "statement": "المتنبي شاعر عباسي",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "a-q2f2",
+              "statement": "البيت من بحر الرجز",
+              "kind": "boolean",
+              "correct": false
+            }
+          ]
+        },
+        {
+          "examQuestionId": "a-q3",
+          "displayNumber": "3",
+          "presentationType": "multipleChoice",
+          "text": "ما إعراب كلمة (الخيلُ)؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "مبتدأ مرفوع"
+            },
+            {
+              "text": "خبر مرفوع"
+            },
+            {
+              "text": "فاعل مرفوع"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    }
+  ]
+}

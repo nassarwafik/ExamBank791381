@@ -1,0 +1,84 @@
+{
+  "examId": "XP-20D1-F",
+  "title": "امتحان قديم بالمظهر الكلاسيكي",
+  "status": "draft",
+  "presentationTheme": "classic",
+  "sections": [
+    {
+      "id": "f-s1",
+      "title": "القسم الأول",
+      "instructions": "أجب عن جميع الأسئلة.",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "f-q1",
+          "displayNumber": "1",
+          "presentationType": "multipleChoice",
+          "text": "أي عنوان مما يلي خاص؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "8.8.8.8"
+            },
+            {
+              "text": "172.16.5.10"
+            },
+            {
+              "text": "200.1.1.1"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          }
+        },
+        {
+          "examQuestionId": "f-q2",
+          "displayNumber": "2",
+          "presentationType": "tableFill",
+          "text": "أكمل الجدول:\n| الجهاز | IP |\n| --- | --- |\n| PC1 | 192.168.1.10 |",
+          "marks": 2,
+          "tableHeaders": [
+            "العنوان/القناع",
+            "جزء الشبكة"
+          ],
+          "tableRows": [
+            [
+              "10.0.0.5 / 8",
+              ""
+            ]
+          ],
+          "fields": [
+            {
+              "id": "f-q2-net",
+              "row": 0,
+              "column": 1,
+              "kind": "text",
+              "correct": "10.0.0.0"
+            }
+          ]
+        },
+        {
+          "examQuestionId": "f-q3",
+          "displayNumber": "3",
+          "presentationType": "multiTrueFalse",
+          "text": "حدّد صحّة كل عبارة:",
+          "marks": 3,
+          "fields": [
+            {
+              "id": "f-q3f1",
+              "statement": "DNS يحوّل الأسماء إلى عناوين",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "f-q3f2",
+              "statement": "FTP يستخدم المنفذ 53",
+              "kind": "boolean",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,414 @@
+{
+  "examId": "XP-20D1-E",
+  "title": "عرض شامل لمحرك العرض المنسق",
+  "status": "draft",
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic",
+    "direction": "rtl",
+    "tokens": {
+      "colors": {
+        "primary": "#1E40AF",
+        "accent": "#0F766E"
+      },
+      "typography": {
+        "scale": "comfortable",
+        "lineHeight": "relaxed"
+      },
+      "radius": "lg",
+      "shadow": "medium"
+    },
+    "layout": {
+      "pageWidth": "wide",
+      "questionSpacing": "comfortable"
+    },
+    "components": {
+      "examHeader": {
+        "variant": "hero"
+      },
+      "questionNumber": {
+        "variant": "circle"
+      },
+      "marksBadge": {
+        "variant": "pill"
+      },
+      "figure": {
+        "variant": "framed"
+      }
+    },
+    "questionTypeVariants": {
+      "multipleChoice": "standard"
+    },
+    "motion": {
+      "level": "subtle"
+    },
+    "print": {
+      "mode": "academic"
+    }
+  },
+  "coverPage": {
+    "enabled": true,
+    "instructionsRichContent": {
+      "schemaVersion": 1,
+      "blocks": [
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "هذا الامتحان يعرض كل "
+            },
+            {
+              "text": "كتل المحتوى المنسق",
+              "marks": [
+                "bold"
+              ]
+            },
+            {
+              "text": " المدعومة."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "sections": [
+    {
+      "id": "e-s1",
+      "title": "كتل المحتوى",
+      "gradingPolicy": "all",
+      "instructionsRichContent": {
+        "schemaVersion": 1,
+        "blocks": [
+          {
+            "type": "keyValueGrid",
+            "items": [
+              {
+                "label": "عدد الأسئلة",
+                "value": "2"
+              },
+              {
+                "label": "العلامة",
+                "value": "5"
+              }
+            ]
+          }
+        ]
+      },
+      "presentation": {
+        "schemaVersion": 1,
+        "components": {
+          "sectionHeader": {
+            "variant": "card"
+          },
+          "questionCard": {
+            "variant": "elevated"
+          }
+        },
+        "layout": {
+          "questionSpacing": "spacious"
+        }
+      },
+      "questions": [
+        {
+          "examQuestionId": "e-q1",
+          "displayNumber": "1",
+          "presentationType": "multipleChoice",
+          "text": "عرض شامل",
+          "marks": 3,
+          "options": [
+            {
+              "text": "أ"
+            },
+            {
+              "text": "ب"
+            },
+            {
+              "text": "ج"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 2
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "heading",
+                "level": 3,
+                "runs": [
+                  {
+                    "text": "عنوان فرعي"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "نص "
+                  },
+                  {
+                    "text": "عريض",
+                    "marks": [
+                      "bold"
+                    ]
+                  },
+                  {
+                    "text": " و"
+                  },
+                  {
+                    "text": "مائل",
+                    "marks": [
+                      "italic"
+                    ]
+                  },
+                  {
+                    "text": " و"
+                  },
+                  {
+                    "text": "مسطر",
+                    "marks": [
+                      "underline"
+                    ]
+                  },
+                  {
+                    "text": " و"
+                  },
+                  {
+                    "text": "code",
+                    "marks": [
+                      "code"
+                    ]
+                  },
+                  {
+                    "text": " وH"
+                  },
+                  {
+                    "text": "2",
+                    "marks": [
+                      "sub"
+                    ]
+                  },
+                  {
+                    "text": "O وx"
+                  },
+                  {
+                    "text": "2",
+                    "marks": [
+                      "sup"
+                    ]
+                  },
+                  {
+                    "text": "."
+                  }
+                ]
+              },
+              {
+                "type": "unorderedList",
+                "items": [
+                  {
+                    "runs": [
+                      {
+                        "text": "عنصر أول"
+                      }
+                    ]
+                  },
+                  {
+                    "runs": [
+                      {
+                        "text": "عنصر ثانٍ"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "orderedList",
+                "items": [
+                  {
+                    "runs": [
+                      {
+                        "text": "خطوة أولى"
+                      }
+                    ]
+                  },
+                  {
+                    "runs": [
+                      {
+                        "text": "خطوة ثانية"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "table",
+                "caption": "جدول بيانات",
+                "columnHeaders": [
+                  "العمود أ",
+                  "العمود ب"
+                ],
+                "rows": [
+                  [
+                    "1",
+                    "2"
+                  ],
+                  [
+                    "3",
+                    "4"
+                  ]
+                ],
+                "responsive": "stack"
+              },
+              {
+                "type": "figure",
+                "asset": {
+                  "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+                  "origin": "uploaded"
+                },
+                "alt": "شكل توضيحي",
+                "caption": [
+                  {
+                    "text": "الشكل 1: مثال"
+                  }
+                ]
+              },
+              {
+                "type": "image",
+                "asset": {
+                  "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+                  "origin": "uploaded"
+                },
+                "alt": "صورة"
+              },
+              {
+                "type": "code",
+                "language": "javascript",
+                "source": "const a = [1, 2, 3];\nconsole.log(a.length);"
+              },
+              {
+                "type": "cli",
+                "source": "Switch> enable\nSwitch# show vlan brief"
+              },
+              {
+                "type": "quote",
+                "runs": [
+                  {
+                    "text": "العلم في الصغر كالنقش في الحجر"
+                  }
+                ],
+                "citation": "مثل"
+              },
+              {
+                "type": "callout",
+                "variant": "info",
+                "title": "معلومة",
+                "runs": [
+                  {
+                    "text": "هذه ملاحظة."
+                  }
+                ]
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "columns",
+                "columns": [
+                  {
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "runs": [
+                          {
+                            "text": "عمود أيمن"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "type": "math",
+                        "source": "\\sqrt{a^{2} + b^{2}}"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "math",
+                "source": "E = m c^{2}"
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "أي الخيارات هو الأخير؟"
+                  }
+                ]
+              }
+            ]
+          },
+          "presentation": {
+            "schemaVersion": 1,
+            "width": "wide",
+            "card": "paper"
+          }
+        },
+        {
+          "examQuestionId": "e-q2",
+          "displayNumber": "2",
+          "presentationType": "multiTrueFalse",
+          "text": "حدّد صحّة كل عبارة:",
+          "marks": 2,
+          "fields": [
+            {
+              "id": "e-q2f1",
+              "statement": "الجدول يعرض بعناوين أعمدة",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "e-q2f2",
+              "statement": "المحتوى المنسق يغيّر التصحيح",
+              "kind": "boolean",
+              "correct": false
+            }
+          ],
+          "presentation": {
+            "schemaVersion": 1,
+            "answerArea": "lined"
+          }
+        }
+      ]
+    },
+    {
+      "id": "e-s2",
+      "title": "قسم بالنص العادي",
+      "gradingPolicy": "all",
+      "instructions": "تعليمات نصية عادية.",
+      "questions": [
+        {
+          "examQuestionId": "e-q3",
+          "displayNumber": "3",
+          "presentationType": "multipleChoice",
+          "text": "سؤال بنص عادي دون محتوى منسق",
+          "marks": 2,
+          "options": [
+            {
+              "text": "نعم"
+            },
+            {
+              "text": "لا"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    }
+  ]
+}

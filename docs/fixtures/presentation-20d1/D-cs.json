@@ -1,0 +1,133 @@
+{
+  "examId": "XP-20D1-D",
+  "title": "علوم الحاسوب — البرمجة",
+  "status": "draft",
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "developerWorkspace",
+    "tokens": {
+      "typography": {
+        "family": "systemSans"
+      }
+    }
+  },
+  "sections": [
+    {
+      "id": "d-s1",
+      "title": "تتبع البرامج",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d-q1",
+          "displayNumber": "1",
+          "presentationType": "multipleChoice",
+          "text": "ما ناتج تنفيذ البرنامج؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "6"
+            },
+            {
+              "text": "10"
+            },
+            {
+              "text": "15"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ما ناتج تنفيذ البرنامج الآتي؟"
+                  }
+                ]
+              },
+              {
+                "type": "code",
+                "language": "python",
+                "title": "sum.py",
+                "lineNumbers": true,
+                "source": "total = 0\nfor i in range(5):\n    total += i\nprint(total)"
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "d-q2",
+          "displayNumber": "2",
+          "presentationType": "multiTrueFalse",
+          "text": "حدّد صحّة كل عبارة عن الدالة:",
+          "marks": 3,
+          "fields": [
+            {
+              "id": "d-q2f1",
+              "statement": "الدالة تعيد قيمة صحيحة",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "d-q2f2",
+              "statement": "الدالة تعدّل القائمة الأصلية",
+              "kind": "boolean",
+              "correct": false
+            }
+          ],
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "code",
+                "language": "java",
+                "source": "static int count(int[] a) {\n  int c = 0;\n  for (int x : a) if (x > 0) c++;\n  return c;\n}"
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "حدّد صحّة كل عبارة عن الدالة "
+                  },
+                  {
+                    "text": "count",
+                    "marks": [
+                      "code"
+                    ]
+                  },
+                  {
+                    "text": ":"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "d-q3",
+          "displayNumber": "3",
+          "presentationType": "multipleChoice",
+          "text": "ما تعقيد البحث الثنائي؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "O(n)"
+            },
+            {
+              "text": "O(log n)"
+            },
+            {
+              "text": "O(n log n)"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          }
+        }
+      ]
+    }
+  ]
+}
