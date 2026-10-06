@@ -23,7 +23,7 @@ describe("20F-RF4 MINOR-A expensive calls weigh more in the probe budget", () =>
     const p = compileFunction(powers); if (!p.ok) throw new Error("compile");
     let m = 0;
     probeFunctionFeatures(x => { m++; const r = evaluateFunctionAt(p.ast, x); return r.ok ? r.value : null; }, -5, 5, 10, undefined, p.ast);
-    expect(m).toBeLessThanOrEqual(5000);                                                               // powers weigh like calls
+    expect(m).toBeLessThanOrEqual(3000);                                                               // powers weigh like calls (~2000)
   });
 });
 
