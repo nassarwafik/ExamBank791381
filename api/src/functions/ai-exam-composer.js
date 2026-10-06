@@ -71,7 +71,7 @@ async function handler(request, deps = {}) {
     if (hasPrevious && attempt < 1) return bad("REQUEST_INVALID", "مسودة سابقة بلا رقم محاولة إصلاح.");
 
     // ── build the stage: validate inputs (no provider call before this) ──
-    let prompt, schema, schemaName, finish, previousIssues = null;
+    let prompt, schema, schemaName, finish, judgePrevious, previousIssues = null;
     const warnings = [];
     if (stage === "plan" || stage === "section") {
       const ir = normalizeComposerIntent(body.intent);
@@ -88,7 +88,7 @@ async function handler(request, deps = {}) {
         };
         prompt = buildPlanPrompt(intent); schema = buildPlanSchema(); schemaName = "ai_exam_plan";
         finish = raw => { const j = judge(raw); return j.ok ? reply(200, { ok: true, plan: j.plan, planRaw: raw, warnings: j.warnings, coverage: planCoverage(j.plan) }) : reply(200, { ok: false, code: "PLAN_INVALID", issues: issueList(j.issues), draft: draftOf(raw) }); };
-        if (hasPrevious) { const j = judge(body.previous); if (j.ok) return finish(body.previous); previousIssues = j.issues; }
+        judgePrevious = () => judge(body.previous);
       } else {
         const allowed = ["stage", "intent", "planRaw", "sectionIndex", "nonce", "previous", "attempt"];
         if (Object.keys(body).some(k => !allowed.includes(k))) return bad("REQUEST_INVALID", "حقول غير معروفة في الطلب.");
@@ -102,7 +102,7 @@ async function handler(request, deps = {}) {
         const judge = raw => normalizeSectionDraft(raw, plan.sections[si], si, { nonce: body.nonce });
         prompt = buildSectionPrompt(intent, plan, si); schema = buildSectionDraftSchema(); schemaName = "ai_exam_section";
         finish = raw => { const r = judge(raw); return r.ok ? reply(200, { ok: true, section: r.section, meta: r.meta, warnings: r.warnings }) : reply(200, { ok: false, code: "SECTION_INVALID", issues: issueList(r.issues), draft: draftOf(raw) }); };
-        if (hasPrevious) { const r = judge(body.previous); if (r.ok) return finish(body.previous); previousIssues = r.issues; }
+        judgePrevious = () => judge(body.previous);
       }
     } else {
       const allowed = ["stage", "exam", "mode", "scope", "instruction", "nonce", "previous", "attempt"];
@@ -129,11 +129,11 @@ async function handler(request, deps = {}) {
       };
       prompt = buildModifyPrompt(projection, body.mode, scope, instruction); schema = buildPatchSchema(); schemaName = "ai_exam_patch";
       finish = raw => { const j = judge(raw); return j.ok ? reply(200, { ok: true, patch: j.patch, diff: buildPatchDiff(exam, j.patch), warnings }) : reply(200, { ok: false, code: "PATCH_INVALID", issues: issueList(j.issues), draft: draftOf(raw), warnings }); };
-      if (hasPrevious) { const j = judge(body.previous); if (j.ok) return finish(body.previous); previousIssues = j.issues; }
+      judgePrevious = () => judge(body.previous);
     }
-    if (previousIssues) prompt = buildRepairPrompt(prompt, body.previous, previousIssues);
 
-    // ── rate limit (fail closed), then ONE provider call ──
+    // ── rate limit (fail closed): ONE reservation per request, BEFORE any heavy judging — a client-echoed `previous` draft (SmartSim
+    //    builds, completeness probes, dry-run applies) is CPU work charged to the teacher's budget even when it needs no provider call ──
     let budget;
     try {
       const reserve = deps.reserveComposerCall || reserveComposerCall;
@@ -142,6 +142,8 @@ async function handler(request, deps = {}) {
       budget = await reserve(container, String((auth.user && auth.user.sub) || "teacher"), deps.rateLimitDeps || {});
     } catch { log("ai.composer.refused", { code: "AI_UNAVAILABLE", reason: "rate-limit-storage" }); return reply(503, { ok: false, code: "AI_UNAVAILABLE", error: "خدمة الذكاء الاصطناعي غير متاحة حاليًا." }); }
     if (!budget.allowed) return reply(429, { ok: false, code: "RATE_LIMITED", error: "طلبات كثيرة خلال وقت قصير؛ أعد المحاولة بعد قليل.", retryAfterSeconds: budget.retryAfterSeconds }, { "Retry-After": String(budget.retryAfterSeconds) });
+    if (hasPrevious) { const j = judgePrevious(); if (j.ok) return finish(body.previous); previousIssues = j.issues; }
+    if (previousIssues) prompt = buildRepairPrompt(prompt, body.previous, previousIssues);
     let result;
     try {
       ({ result } = await ai({ instructions: COMPOSER_INSTRUCTIONS, prompt, schema, schemaName, timeoutMs: TIMEOUT[stage] }));

@@ -48,7 +48,8 @@ export function buildSectionPrompt(intent: AiExamIntentV1, plan: AiExamPlanV1, s
 
 export function buildRepairPrompt(base: string, previous: unknown, issues: readonly ComposerIssue[]): string {
   return [base, "REPAIR: your previous answer was rejected by the deterministic validators. Fix EVERY issue below and return the complete corrected JSON. Change only what is needed.",
-    "ISSUES:\n" + issuesText(issues), fence("your previous answer", previous)].join("\n\n");
+    // issue messages / paths quote AI-authored text (titles, ids…): they are data too, so they travel inside a fence
+    fence("validator issues (fix every one)", issuesText(issues)), fence("your previous answer", previous)].join("\n\n");
 }
 
 const MODE_TEXT: Record<ComposerMode, string> = {

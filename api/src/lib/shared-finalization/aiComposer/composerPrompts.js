@@ -43,7 +43,7 @@ function buildSectionPrompt(intent, plan, sectionIndex) {
 }
 function buildRepairPrompt(base, previous, issues) {
     return [base, "REPAIR: your previous answer was rejected by the deterministic validators. Fix EVERY issue below and return the complete corrected JSON. Change only what is needed.",
-        "ISSUES:\n" + issuesText(issues), fence("your previous answer", previous)].join("\n\n");
+        fence("validator issues (fix every one)", issuesText(issues)), fence("your previous answer", previous)].join("\n\n");
 }
 const MODE_TEXT = {
     modifyExam: "Modify the exam as the teacher asks, touching only what the request needs.",

@@ -88,6 +88,9 @@ function normalizeComposerPatch(raw, ctx) {
         return fail("PATCH_MALFORMED", "اقتراح التعديل غير صالح البنية.");
     if (!raw.operations.length)
         return fail("PATCH_EMPTY", "لم يقترح الذكاء الاصطناعي أي تعديل.");
+    const opItems = raw.operations.flatMap(o => (o && typeof o === "object" ? [o.item, ...(Array.isArray(o.items) ? o.items : [])] : []));
+    if ((0, composerDraft_1.countFunctionSims)(opItems) > L.functionSims)
+        return { ok: false, issues: [(0, composerDraft_1.functionSimLimitIssue)("$.operations")] };
     const allowed = MODE_OPS[ctx.mode];
     const issues = [];
     const ops = [];

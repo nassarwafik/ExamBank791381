@@ -202,12 +202,24 @@ export function normalizeComposerItem(raw: unknown, ctx: { marks: number; qid: s
   return mapItem(raw, plan, ctx.qid, ctx.request, ctx.path);
 }
 
+/** How many function-study simulators a list of raw items asks the code to build (each one runs a bounded completeness probe). */
+export function countFunctionSims(items: readonly unknown[]): number {
+  const isFn = (sim: unknown) => !!sim && typeof sim === "object" && (sim as Record<string, unknown>).plugin === "functionStudy2d";
+  return items.reduce<number>((n, it) => {
+    if (!it || typeof it !== "object") return n;
+    const r = it as Record<string, unknown>, ss = r.smartSim as Record<string, unknown> | null | undefined, cc = r.compositeContext as Record<string, unknown> | null | undefined;
+    return n + (ss && typeof ss === "object" && isFn(ss.sim) ? 1 : 0) + (cc && typeof cc === "object" && isFn(cc.sim) ? 1 : 0);
+  }, 0);
+}
+export const functionSimLimitIssue = (path: string): ComposerIssue => issue("AI_FUNCTION_SIM_LIMIT", "عدد محاكاة دراسة الدالة في الطلب الواحد أكبر من المسموح (" + L.functionSims + ")؛ وزّعها على أقسام أو طلبات أخرى.", path);
+
 export type SectionDraftResult = { ok: true; section: BuilderSection; meta: ComposerItemMeta[]; warnings: ComposerIssue[] } | { ok: false; issues: ComposerIssue[] };
 /** The section stage: AI section draft + its validated plan section → one canonical section (or structured issues for a bounded repair). */
 /** `request` for the 19A per-question normalizer is the ITEM's own plan text (topic + note): its advisory simulator guard must judge the
  *  item, not every topic of the whole exam (a DHCP section elsewhere must not refuse a VLAN switch question). */
 export function normalizeSectionDraft(raw: unknown, planSection: AiExamPlanSection, sectionIndex: number, ids: ComposerIds): SectionDraftResult {
   if (!hasExactKeys(raw, ["items"]) || !isArr(raw.items, L.itemsPerSection)) return { ok: false, issues: [issue("AI_SECTION_MALFORMED", "مسودة القسم غير صالحة البنية.", "$")] };
+  if (countFunctionSims(raw.items) > L.functionSims) return { ok: false, issues: [functionSimLimitIssue("$.items")] };
   if (raw.items.length !== planSection.items.length) return { ok: false, issues: [issue("AI_SECTION_ITEM_COUNT", "عدد البنود " + raw.items.length + " ويجب أن يطابق الخطة (" + planSection.items.length + ").", "$.items")] };
   const issues: ComposerIssue[] = [], warnings: ComposerIssue[] = [], questions: BuilderQuestion[] = [], meta: ComposerItemMeta[] = [];
   raw.items.forEach((it, i) => {

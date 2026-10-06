@@ -27,6 +27,7 @@ export const COMPOSER_LIMITS = Object.freeze({
   richSourceChars: 4000,
   patchOperations: 40,
   repairAttempts: 2,
+  functionSims: 6,                // function-study simulators judged per section draft / patch (each runs a bounded completeness probe)
   aiContextBytes: 60000,
   requestBytes: 2_000_000,
   historyEntries: 20,

@@ -7,7 +7,7 @@ import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, t
 import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS, type ComposerItemKind } from "./composerCatalog";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
 import type { ComposerScope } from "./composerProjection";
-import { allQuestions, composerVerdict, verifyAiQuestion, withComposerHistory, type ComposerVerdict } from "./composerExam";
+import { allQuestions, composerMetadataOf, composerVerdict, verifyAiQuestion, withComposerHistory, type ComposerVerdict } from "./composerExam";
 import { examRevision } from "./composerRevision";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { PRESENTATION_PRESETS } from "../presentation/presentationModel";
@@ -248,7 +248,10 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
       // the generated exam owns its title, sections and presentation; everything else the teacher set (cover page, blueprint, theme,
       // other metadata, creation time…) is KEPT; status returns to draft (new content must be finalized again)
       const gen = s.result.exam;
-      const next: StructuredExam = { ...prev, schemaVersion: gen.schemaVersion, title: gen.title, status: "draft", sections: gen.sections, metadata: { ...((prev.metadata as Record<string, unknown> | undefined) ?? {}), aiComposer: (gen.metadata as Record<string, unknown>).aiComposer } };
+      // coverage belongs to the new questions; the exam's earlier composer HISTORY is kept, then the staged draft's own entries (staged
+      // modifications), then the new entry (withComposerHistory keeps the newest, bounded)
+      const aiComposer = { ...((gen.metadata as Record<string, unknown>).aiComposer as Record<string, unknown>), history: [...(composerMetadataOf(prev)?.history ?? []), ...(composerMetadataOf(gen)?.history ?? [])] };
+      const next: StructuredExam = { ...prev, schemaVersion: gen.schemaVersion, title: gen.title, status: "draft", sections: gen.sections, metadata: { ...((prev.metadata as Record<string, unknown> | undefined) ?? {}), aiComposer } };
       if (gen.presentation !== undefined) next.presentation = gen.presentation; else delete next.presentation;
       if (prev.totalMarks !== undefined) next.totalMarks = allQuestions(gen).reduce((n, q) => n + (Number(q.marks) || 0), 0);
       delete next.questions;

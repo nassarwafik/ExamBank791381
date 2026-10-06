@@ -14,7 +14,7 @@ import { validatePresentation, validateQuestionPresentation, TYPE_VARIANTS } fro
 import type { RichContentV1 } from "../richContent/richContentModel";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_PRESETS, COMPOSER_TABLE_VARIANTS } from "./composerCatalog";
-import { buildItemSchema, normalizeComposerItem, type ComposerItemMeta } from "./composerDraft";
+import { buildItemSchema, countFunctionSims, functionSimLimitIssue, normalizeComposerItem, type ComposerItemMeta } from "./composerDraft";
 import { composerVerdict, withComposerHistory, allQuestions, verifyAiQuestion } from "./composerExam";
 import { examRevision, isRevision } from "./composerRevision";
 import { buildRichBlocksSchema, mapAiRichBlocks } from "./composerRich";
@@ -106,6 +106,8 @@ export function normalizeComposerPatch(raw: unknown, ctx: NormalizeContext): { o
   if (!modeScopeOk(ctx.mode, ctx.scope)) return fail("PATCH_SCOPE_INVALID", "نطاق الطلب لا يناسب نوع التعديل.");
   if (!hasExactKeys(raw, ["summary", "operations"]) || !isStr(raw.summary, L.goalChars * 2) || !isArr(raw.operations, L.patchOperations)) return fail("PATCH_MALFORMED", "اقتراح التعديل غير صالح البنية.");
   if (!raw.operations.length) return fail("PATCH_EMPTY", "لم يقترح الذكاء الاصطناعي أي تعديل.");
+  const opItems = (raw.operations as unknown[]).flatMap(o => (o && typeof o === "object" ? [(o as Record<string, unknown>).item, ...(Array.isArray((o as Record<string, unknown>).items) ? ((o as Record<string, unknown>).items as unknown[]) : [])] : []));
+  if (countFunctionSims(opItems) > L.functionSims) return { ok: false, issues: [functionSimLimitIssue("$.operations")] };
   const allowed = MODE_OPS[ctx.mode];
   const issues: ComposerIssue[] = [];
   const ops: NormOp[] = [];

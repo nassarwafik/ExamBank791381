@@ -86,6 +86,26 @@ describe("20F-RF1 UI findings", () => {
     expect((after.metadata as Record<string, unknown>).aiComposer).toBeTruthy();
   });
 
+  it("RF2 note: «فتح في المحرر» keeps the exam's earlier composer history (and appends the new entry)", async () => {
+    const plan = F.plan("امتحان مولّد", "classicPaper", [F.planSection("قسم", [F.planItem("multipleChoice", 2)])]);
+    const section = { items: [F.item("multipleChoice", { question: F.mcq("ما وظيفة VLAN؟", ["تقسيم الشبكة", "تسريع المعالج"]) })] };
+    const earlier = { at: "2026-10-01T10:00:00.000Z", mode: "modifyExam", summary: "تعديل سابق", baseRevision: "rev1-0000000000000000", status: "applied", operations: 1, warnings: 0 };
+    const exam: StructuredExam = { examId: "E-RF2", title: "قديم", status: "draft", schemaVersion: 2, metadata: { aiComposer: { v: 1, catalog: "AI_COMPOSER_CATALOG_V1", coverage: [], history: [earlier] } }, sections: [{ id: "s1", title: "قسم", gradingPolicy: "all", stimuli: {}, questions: [mcqQ("q1", "قديم")] }] };
+    const hist = await mount(exam, realTransport({ ai_exam_plan: [plan], ai_exam_section: [section] }));
+    fireEvent.click(screen.getByRole("button", { name: "🧠 المؤلف الذكي للامتحان" }));
+    const d = await screen.findByRole("dialog", { name: "المؤلف الذكي للامتحان" }, { timeout: 3000 });
+    fireEvent.change(within(d).getByRole("textbox", { name: "المادة (مطلوب)" }), { target: { value: "الشبكات" } });
+    fireEvent.change(within(d).getByRole("spinbutton", { name: "مجموع العلامات (مطلوب)" }), { target: { value: "2" } });
+    fireEvent.click(within(d).getByRole("button", { name: "إنشاء الامتحان" }));
+    await within(d).findByTestId("ai-composer-summary", {}, { timeout: 3000 });
+    fireEvent.click(within(d).getByRole("button", { name: "فتح في المحرر" }));
+    fireEvent.click(within(d).getByRole("button", { name: "تأكيد الاستبدال" }));
+    await tick(40);
+    const history = ((hist().present!.metadata as Record<string, unknown>).aiComposer as { history: { mode: string; summary: string }[] }).history;
+    expect(history.map(h => h.mode)).toEqual(["modifyExam", "generate"]);
+    expect(history[0].summary).toBe("تعديل سابق");
+  });
+
   it("m3 (generate): «فتح في المحرر» whose update finds a changed exam reports STALE and keeps the staged result", async () => {
     const exam: StructuredExam = { examId: "E-RF1", title: "t", status: "draft", schemaVersion: 2, sections: [] };
     const plan = F.plan("امتحان مولّد", "classicPaper", [F.planSection("قسم", [F.planItem("multipleChoice", 2)])]);

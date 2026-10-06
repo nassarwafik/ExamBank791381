@@ -28,6 +28,7 @@ exports.COMPOSER_LIMITS = Object.freeze({
     richSourceChars: 4000,
     patchOperations: 40,
     repairAttempts: 2,
+    functionSims: 6,
     aiContextBytes: 60000,
     requestBytes: 2_000_000,
     historyEntries: 20,
