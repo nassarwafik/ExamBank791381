@@ -1,0 +1,48 @@
+/* Phase 20A.2 — physicsFreeFall@1 workspace / editor / review. RTL page; numbers, units and graphs are LTR islands. */
+.freefall { display: grid; gap: 12px; min-width: 0; }
+.freefall-stage { display: grid; gap: 12px; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); align-items: start; }
+@media (max-width: 640px) { .freefall-stage { grid-template-columns: minmax(0, 1fr); } }
+.freefall-scene, .freefall-graph { border: 1px solid var(--line, #d7dde5); border-radius: 12px; background: var(--surface-2, #f7f9fc); overflow: hidden; direction: ltr; }
+.freefall-scene svg, .freefall-graph svg { display: block; width: 100%; height: auto; }
+.freefall-scene svg { max-height: 320px; }
+.freefall-ground { fill: #c9b48a; }
+.freefall-ground-line { stroke: #6b5a36; stroke-width: 2; }
+.freefall-ball { fill: #1d6fd6; stroke: #0d3f80; stroke-width: 2; }
+.freefall-start { stroke: #8a96a8; stroke-dasharray: 4 4; }
+.freefall-axis { stroke: #5b6b80; stroke-width: 1.5; }
+.freefall-grid { stroke: #dde3ea; stroke-width: 1; }
+.freefall-curve { fill: none; stroke: #1d6fd6; stroke-width: 2.5; }
+.freefall-curve.is-velocity { stroke: #b4561d; stroke-dasharray: 6 4; }
+.freefall-now { stroke: #22324a; stroke-width: 1.5; stroke-dasharray: 3 3; }
+.freefall-mark { fill: #fff; stroke: #c0392b; stroke-width: 2.5; }
+.freefall-tick { font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: #415066; }
+.freefall-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.freefall-controls button, .freefall-task button, .freefall-editor button { min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1px solid #1d6fd6; background: #1d6fd6; color: #fff; font: inherit; cursor: pointer; }
+.freefall-controls button.is-secondary, .freefall-task button.is-secondary, .freefall-editor button.is-secondary { background: transparent; color: #1d6fd6; }
+.freefall-controls button.is-danger, .freefall-editor button.is-danger { background: #b42318; border-color: #b42318; }
+.freefall button:focus-visible, .freefall input:focus-visible, .freefall select:focus-visible, .freefall-editor :focus-visible { outline: 3px solid #1d6fd6; outline-offset: 2px; }
+.freefall-timeline { display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.freefall-timeline input[type="range"] { width: 100%; min-height: 32px; }
+.freefall input[type="number"], .freefall input[type="text"], .freefall-editor input, .freefall-editor select { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line, #c9d1dc); border-radius: 8px; font: inherit; max-width: 100%; box-sizing: border-box; }
+.freefall-readout { margin: 0; padding: 8px 12px; border-radius: 8px; background: #eef4fb; font-variant-numeric: tabular-nums; }
+.freefall-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.freefall-tasks { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.freefall-task { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; min-width: 0; }
+.freefall-task legend { font-weight: 700; padding: 0 4px; }
+.freefall-task label { display: grid; gap: 4px; }
+.freefall-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.freefall-saved { margin: 0; color: #22603a; }
+.freefall-error { margin: 0; color: #b42318; }
+.freefall-note { margin: 0; color: #5b6b80; font-size: 0.92rem; }
+.freefall-editor { display: grid; gap: 14px; }
+.freefall-editor fieldset { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; min-width: 0; }
+.freefall-editor label { display: grid; gap: 4px; }
+.freefall-fields { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.freefall-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.freefall-list li { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 8px; border: 1px dashed var(--line, #d7dde5); border-radius: 8px; }
+.freefall-review table { border-collapse: collapse; width: 100%; }
+.freefall-review th, .freefall-review td { border: 1px solid var(--line, #d7dde5); padding: 4px 8px; text-align: start; }
+@media (prefers-color-scheme: dark) {
+  .freefall-readout { background: #1b2a3d; }
+  .freefall-saved { color: #7fd1a0; }
+}

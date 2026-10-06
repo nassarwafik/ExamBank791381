@@ -29,6 +29,17 @@ const entries = new Map<string, SmartSimUi>([
     Workspace: lazy(() => import("../networkTopology/NetworkTopologyWorkspace")),
     Editor: lazy(() => import("../networkTopology/NetworkTopologyEditor")),
     ReviewDetails: lazy(() => import("../networkTopology/NetworkTopologyReview"))
+  }],
+  // Phase 20A.2 — the enterprise pilots (each in its own lazy chunks).
+  ["physicsFreeFall@1", {
+    Workspace: lazy(() => import("../physicsFreeFall/FreeFallWorkspace")),
+    Editor: lazy(() => import("../physicsFreeFall/FreeFallEditor")),
+    ReviewDetails: lazy(() => import("../physicsFreeFall/FreeFallReview"))
+  }],
+  ["functionStudy2d@1", {
+    Workspace: lazy(() => import("../functionStudy/FunctionStudyWorkspace")),
+    Editor: lazy(() => import("../functionStudy/FunctionStudyEditor")),
+    ReviewDetails: lazy(() => import("../functionStudy/FunctionStudyReview"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */

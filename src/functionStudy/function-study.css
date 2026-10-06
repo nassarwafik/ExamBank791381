@@ -1,0 +1,40 @@
+/* Phase 20A.2 — functionStudy2d@1 workspace / editor / review. RTL page; the function, the graph and every number are LTR islands. */
+.fnstudy { display: grid; gap: 12px; min-width: 0; }
+.fnstudy-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.fnstudy-formula { margin: 0; font-size: 1.05rem; }
+.fnstudy-formula code { padding: 2px 6px; border-radius: 6px; background: var(--surface-2, #f1f4f8); }
+.fnstudy-graph { border: 1px solid var(--line, #d7dde5); border-radius: 12px; background: var(--surface-2, #f7f9fc); overflow: hidden; }
+.fnstudy-graph svg { display: block; width: 100%; height: auto; max-height: 420px; }
+.fnstudy-gridline { stroke: #e1e6ed; stroke-width: 1; }
+.fnstudy-axis { stroke: #5b6b80; stroke-width: 1.5; }
+.fnstudy-tick { font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: #415066; }
+.fnstudy-curve { fill: none; stroke: #1d6fd6; stroke-width: 2.5; stroke-linejoin: round; }
+.fnstudy-vline, .fnstudy-hline { stroke: #b4561d; stroke-width: 1.8; stroke-dasharray: 7 5; }
+.fnstudy-marker { fill: #c0392b; stroke: #fff; stroke-width: 1.5; }
+.fnstudy-marker.is-extremum { fill: #7a3fb0; }
+.fnstudy-exclusion { fill: #fff; stroke: #22324a; stroke-width: 2; }
+.fnstudy-tasks { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.fnstudy-task { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; min-width: 0; }
+.fnstudy-task legend { font-weight: 700; padding: 0 4px; }
+.fnstudy-task label, .fnstudy-editor label { display: grid; gap: 4px; }
+.fnstudy-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.fnstudy input, .fnstudy select, .fnstudy-editor input, .fnstudy-editor select { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line, #c9d1dc); border-radius: 8px; font: inherit; max-width: 100%; box-sizing: border-box; }
+.fnstudy-row input { width: 7.5em; }
+.fnstudy button, .fnstudy-editor button { min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1px solid #1d6fd6; background: #1d6fd6; color: #fff; font: inherit; cursor: pointer; }
+.fnstudy button.is-secondary, .fnstudy-editor button.is-secondary { background: transparent; color: #1d6fd6; }
+.fnstudy :focus-visible, .fnstudy-editor :focus-visible { outline: 3px solid #1d6fd6; outline-offset: 2px; }
+.fnstudy-saved { margin: 0; color: #22603a; }
+.fnstudy-error { margin: 0; color: #b42318; }
+.fnstudy-note { margin: 0; color: #5b6b80; font-size: 0.92rem; }
+.fnstudy-editor { display: grid; gap: 14px; }
+.fnstudy-editor fieldset { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; min-width: 0; }
+.fnstudy-fields { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.fnstudy-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.fnstudy-list li { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 8px; border: 1px dashed var(--line, #d7dde5); border-radius: 8px; }
+.fnstudy-review dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+.fnstudy-review dt { font-weight: 700; }
+.fnstudy-review dd { margin: 0; }
+@media (prefers-color-scheme: dark) {
+  .fnstudy-formula code { background: #1b2a3d; }
+  .fnstudy-saved { color: #7fd1a0; }
+}

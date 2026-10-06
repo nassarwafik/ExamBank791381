@@ -40,9 +40,9 @@ async function withSelection() {
 }
 
 describe("20A.1-S1 — descriptors and the authoring catalog on the server", () => {
-  it("production = networkTopology@1 only, with a descriptor; the listing / catalog are plain data and IDENTICAL to the client build", async () => {
+  it("production = networkTopology@1 + the 20A.2 pilots, each with a descriptor; the listing / catalog are plain data and IDENTICAL to the client build", async () => {
     const reg = loadShared("trustedSimRegistry"); loadShared("trustedSimPlugins");
-    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["networkTopology@1"]);
+    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "physicsFreeFall@1"]);
     const cat = loadShared("trustedSimCatalog").smartSimAuthoringCatalog();
     expect(JSON.parse(JSON.stringify(cat))).toEqual(cat);
     const ts = await import("../../src/trustedSimCatalog.ts");
@@ -141,7 +141,7 @@ describe("20A.1-S3 — PINS: networkTopology@1 and simulation@1 are unchanged", 
     expect(Object.keys(r.manifest.capabilities).sort()).toEqual(["autosave", "offline", "partialCredit", "reset", "restore"]);
     expect(r.manifest).not.toHaveProperty("pluginKey"); expect(r.manifest).not.toHaveProperty("descriptor");
     expect(resolveGrader("simulation", 1)({}, { kind: "simulation", state: { score: 100, trusted: true } }, 10)).toEqual({ score: 0, manualReview: true, correct: false });
-    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(d => d.key)).toEqual(["networkTopology"]);
+    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(d => d.key)).toEqual(["networkTopology", "physicsFreeFall", "functionStudy2d"]);
   });
 });
 

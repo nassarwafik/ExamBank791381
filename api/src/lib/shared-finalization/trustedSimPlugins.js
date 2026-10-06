@@ -15,10 +15,16 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resolveSmartSimPlugin = exports.listSmartSimPlugins = void 0;
+exports.resolveSmartSimPlugin = exports.resolveSmartSimDescriptor = exports.listSmartSimPluginDescriptors = exports.listSmartSimPlugins = void 0;
 const trustedSimRegistry_1 = require("./trustedSimRegistry");
 Object.defineProperty(exports, "listSmartSimPlugins", { enumerable: true, get: function () { return trustedSimRegistry_1.listSmartSimPlugins; } });
+Object.defineProperty(exports, "listSmartSimPluginDescriptors", { enumerable: true, get: function () { return trustedSimRegistry_1.listSmartSimPluginDescriptors; } });
+Object.defineProperty(exports, "resolveSmartSimDescriptor", { enumerable: true, get: function () { return trustedSimRegistry_1.resolveSmartSimDescriptor; } });
 Object.defineProperty(exports, "resolveSmartSimPlugin", { enumerable: true, get: function () { return trustedSimRegistry_1.resolveSmartSimPlugin; } });
 const networkTopologyPlugin_1 = require("./networkTopologyPlugin");
+const physicsFreeFallPlugin_1 = require("./physicsFreeFallPlugin");
+const functionStudyPlugin_1 = require("./functionStudyPlugin");
 (0, trustedSimRegistry_1.registerSmartSimPlugin)(networkTopologyPlugin_1.networkTopologyPluginV1);
+(0, trustedSimRegistry_1.registerSmartSimPlugin)(physicsFreeFallPlugin_1.physicsFreeFallPluginV1);
+(0, trustedSimRegistry_1.registerSmartSimPlugin)(functionStudyPlugin_1.functionStudy2dPluginV1);
 __exportStar(require("./trustedSimQuestion"), exports);
