@@ -34,8 +34,9 @@ const SOURCE_CONTEXT_KEYS: ReadonlySet<string> = new Set(["id", "version", "kind
 const SMARTSIM_CONTEXT_KEYS: ReadonlySet<string> = new Set(["id", "version", "kind", "title", "instructions", "smartSim"]);
 const GROUP_KEYS: ReadonlySet<string> = new Set(["id", "title", "instructions", "gradingPolicy", "requiredAnswers", "maxMarks", "parts"]);
 /** Question-level keys a composite may carry (its children live ONLY under `composite`; `parts` would make it a legacy compound). */
-const QUESTION_KEYS: ReadonlySet<string> = new Set(["examQuestionId", "id", "number", "displayNumber", "presentationType", "type", "questionTypeVersion", "text", "marks", "composite", "answer", "assessmentMeta", "groupId", "activity", "codeStimulus", "image", "images"]);
-const PART_COMMON_KEYS: readonly string[] = ["id", "label", "type", "questionTypeVersion", "text", "marks", "contextId", "answer", "image", "images", "assessmentMeta"];
+const QUESTION_KEYS: ReadonlySet<string> = new Set(["examQuestionId", "id", "number", "displayNumber", "presentationType", "type", "questionTypeVersion", "text", "marks", "composite", "answer", "assessmentMeta", "groupId", "activity", "codeStimulus", "image", "images", "richContent", "presentation"]);
+// Phase 20D.1 — `richContent` (a RichContentV1 prompt, presentation only; validated by examQuality, strictly projected by the sanitizer).
+const PART_COMMON_KEYS: readonly string[] = ["id", "label", "type", "questionTypeVersion", "text", "marks", "contextId", "answer", "image", "images", "assessmentMeta", "richContent"];
 /** Type-owned configuration keys a child of that type may carry (every other config key is FOREIGN to it). */
 const PART_TYPE_KEYS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   multipleChoice: ["options"], trueFalse: ["options"], multiTrueFalse: ["fields"], shortAnswer: [], fillBlank: ["fields", "wordBank"], wordBank: ["fields", "wordBank"],

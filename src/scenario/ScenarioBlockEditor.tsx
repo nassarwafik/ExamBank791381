@@ -1,7 +1,9 @@
-import { useId, useRef, useState } from "react";
+import { lazy, Suspense, useId, useRef, useState } from "react";
 import type { BuilderSection } from "../examTypes";
 import type { ScenarioV1, SourceStimulusKind, SourceStimulusV1 } from "../scenarioSource";
-import { SCENARIO_LIMITS, SCENARIO_SOURCE_KINDS, SCENARIO_SOURCE_KIND_LABELS, validateSectionScenarios } from "../scenarioSource";
+import { SCENARIO_LIMITS, SCENARIO_RICH_SOURCE_KIND, SCENARIO_SOURCE_KINDS, SCENARIO_SOURCE_KIND_LABELS, validateSectionScenarios } from "../scenarioSource";
+import type { RichContentV1 } from "../richContent/richContentModel";
+import { genId } from "../examBuilderState";
 import { CODE_STIMULUS_LANGUAGES } from "../codeStimulus";
 import { readImageFile, MEDIA_MSG } from "../questionMedia";
 import { useConfirm } from "../ui/useConfirm";
@@ -10,6 +12,15 @@ import {
   newSourceStimulus, regroupScenario, replaceScenarioSource, unlinkScenarioQuestion, updateScenario, updateScenarioSource
 } from "../scenarioBuilderOps";
 import "./scenario-builder.css";
+// Phase 20D.1 — an ADDITIVE source kind "rich" (a RichContentV1 document) edited by the lazy block editor; the four 19G kinds are unchanged.
+const RichContentEditor = lazy(() => import("../richContent/RichContentEditor"));
+const RICH_SOURCE_LABEL = "محتوى منسق";
+type AnySourceKind = SourceStimulusKind | typeof SCENARIO_RICH_SOURCE_KIND;
+/** A new rich source starts EMPTY (the validator asks for content until blocks are added — no placeholder text can leak to students). */
+const newRichSource = (overrides: Partial<SourceStimulusV1> = {}): SourceStimulusV1 => ({ id: genId("src"), version: 1, kind: SCENARIO_RICH_SOURCE_KIND, richContent: { schemaVersion: 1, blocks: [] }, ...overrides } as SourceStimulusV1);
+/** Replaces one source of one scenario (the rich kind is not known to replaceScenarioSource's legacy factory). */
+const withSource = (section: BuilderSection, scenarioId: string, sourceId: string, make: (s: SourceStimulusV1) => SourceStimulusV1): BuilderSection =>
+  ({ ...section, scenarios: (section.scenarios ?? []).map(sc => (sc.id === scenarioId ? { ...sc, sources: sc.sources.map(x => (x.id === sourceId ? make(x) : x)) } : sc)) });
 
 // Phase 19G — the teacher's SCENARIO card inside a section: title, instructions, the ordered SHARED SOURCES (text / image / table / code —
 // a source is edited in place through typed controls, never raw JSON) and the LINKED QUESTIONS (link an existing same-section question,
@@ -67,13 +78,16 @@ export default function ScenarioBlockEditor({ section, scenario, index, total, o
             <div className="sb-row-between"><h4 id={"sb-scn-src-h-" + uid} className="sb-scenario-source-kind">المصادر المشتركة</h4>
               <div className="sb-scenario-link-tools">
                 {SCENARIO_SOURCE_KINDS.map(k => <button key={k} type="button" className="sb-mini-btn" disabled={disabled || sc.sources.length >= SCENARIO_LIMITS.sources} onClick={() => apply(addScenarioSource(section, sc.id, newSourceStimulus(k)))}>+ {SCENARIO_SOURCE_KIND_LABELS[k]}</button>)}
+                <button type="button" className="sb-mini-btn" disabled={disabled || sc.sources.length >= SCENARIO_LIMITS.sources} onClick={() => apply(addScenarioSource(section, sc.id, newRichSource()))}>+ {RICH_SOURCE_LABEL}</button>
               </div>
             </div>
             {sc.sources.length === 0 && <p className="sb-scenario-empty">أضف مصدرًا مشتركًا واحدًا على الأقل: نصًا أو صورة أو جدولًا أو كودًا للقراءة.</p>}
             <ol className="sb-scenario-sources">
               {sc.sources.map((src, i) => <SourceEditor key={src.id} source={src} index={i} total={sc.sources.length} disabled={disabled}
                 onPatch={patch => apply(updateScenarioSource(section, sc.id, src.id, patch))}
-                onKind={k => apply(replaceScenarioSource(section, sc.id, src.id, k))}
+                onKind={k => apply(k === SCENARIO_RICH_SOURCE_KIND
+                  ? withSource(section, sc.id, src.id, x => newRichSource({ id: x.id, ...(x.title !== undefined ? { title: x.title } : {}) }))
+                  : replaceScenarioSource(section, sc.id, src.id, k))}
                 onMove={d => apply(moveScenarioSource(section, sc.id, src.id, d))}
                 onDelete={() => apply(deleteScenarioSource(section, sc.id, src.id))} />)}
             </ol>
@@ -117,7 +131,7 @@ export default function ScenarioBlockEditor({ section, scenario, index, total, o
   );
 }
 
-type SourceProps = { source: SourceStimulusV1; index: number; total: number; disabled?: boolean; onPatch: (patch: Record<string, unknown>) => void; onKind: (kind: SourceStimulusKind) => void; onMove: (delta: number) => void; onDelete: () => void };
+type SourceProps = { source: SourceStimulusV1; index: number; total: number; disabled?: boolean; onPatch: (patch: Record<string, unknown>) => void; onKind: (kind: AnySourceKind) => void; onMove: (delta: number) => void; onDelete: () => void };
 function SourceEditor({ source: src, index, total, disabled, onPatch, onKind, onMove, onDelete }: SourceProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -137,8 +151,9 @@ function SourceEditor({ source: src, index, total, disabled, onPatch, onKind, on
       <div className="sb-scenario-source-head">
         <span className="sb-q-badge">{index + 1}</span>
         <label className="sb-inline"><span>النوع</span>
-          <select className="sb-input sb-input-sm" value={src.kind} aria-label={"نوع المصدر " + (index + 1)} disabled={disabled} onChange={e => onKind(e.target.value as SourceStimulusKind)}>
+          <select className="sb-input sb-input-sm" value={src.kind} aria-label={"نوع المصدر " + (index + 1)} disabled={disabled} onChange={e => onKind(e.target.value as AnySourceKind)}>
             {SCENARIO_SOURCE_KINDS.map(k => <option key={k} value={k}>{SCENARIO_SOURCE_KIND_LABELS[k]}</option>)}
+            <option value={SCENARIO_RICH_SOURCE_KIND}>{RICH_SOURCE_LABEL}</option>
           </select>
         </label>
         <label className="sb-inline"><span>العنوان</span><input className="sb-input sb-input-sm" value={src.title ?? ""} maxLength={SCENARIO_LIMITS.sourceTitle} placeholder="اختياري" aria-label={"عنوان المصدر " + (index + 1)} disabled={disabled} onChange={e => onPatch({ title: e.target.value || undefined })} /></label>
@@ -173,6 +188,11 @@ function SourceEditor({ source: src, index, total, disabled, onPatch, onKind, on
           <label className="sb-field-label" htmlFor={"sb-src-code-" + uid}>الكود (للقراءة فقط، لا يُشغَّل)</label>
           <textarea id={"sb-src-code-" + uid} className="sb-input sb-scenario-code" dir="ltr" lang="en" value={src.source} rows={Math.min(18, Math.max(5, src.source.split("\n").length + 1))} spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off" disabled={disabled} onChange={e => onPatch({ source: e.target.value })} />
         </>}
+        {src.kind === SCENARIO_RICH_SOURCE_KIND && (
+          <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر المحتوى المنسق…</p>}>
+            <RichContentEditor value={src.richContent && Array.isArray(src.richContent.blocks) && src.richContent.blocks.length ? src.richContent : undefined} onChange={(next: RichContentV1 | undefined) => onPatch({ richContent: next ?? { schemaVersion: 1, blocks: [] } })} disabled={disabled} label={"المحتوى المنسق للمصدر " + (index + 1)} />
+          </Suspense>
+        )}
       </div>
     </li>
   );

@@ -1,0 +1,166 @@
+{
+  "examId": "XP-20D1-C",
+  "title": "الفيزياء — السقوط الحر",
+  "status": "draft",
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "scienceLab",
+    "components": {
+      "callout": {
+        "variant": "solid"
+      }
+    }
+  },
+  "sections": [
+    {
+      "id": "c-s1",
+      "title": "الحركة في بعد واحد",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c-q1",
+          "displayNumber": "1",
+          "presentationType": "multipleChoice",
+          "text": "سقط جسم من السكون مدة 2 s. ما المسافة التي قطعها؟ (g = 10)",
+          "marks": 3,
+          "options": [
+            {
+              "text": "10 m"
+            },
+            {
+              "text": "20 m"
+            },
+            {
+              "text": "40 m"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "keyValueGrid",
+                "items": [
+                  {
+                    "label": "السرعة الابتدائية",
+                    "value": "0 m/s"
+                  },
+                  {
+                    "label": "الزمن",
+                    "value": "2 s"
+                  },
+                  {
+                    "label": "تسارع الجاذبية",
+                    "value": "10 m/s²"
+                  }
+                ]
+              },
+              {
+                "type": "math",
+                "source": "h = \\frac{1}{2} g t^{2}"
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "سقط جسم من السكون، احسب المسافة "
+                  },
+                  {
+                    "math": "h"
+                  },
+                  {
+                    "text": " التي قطعها."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "c-q2",
+          "displayNumber": "2",
+          "presentationType": "multipleChoice",
+          "text": "ما سرعة الجسم بعد 2 s؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "10 m/s"
+            },
+            {
+              "text": "20 m/s"
+            },
+            {
+              "text": "5 m/s"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "columns",
+                "columns": [
+                  {
+                    "blocks": [
+                      {
+                        "type": "paragraph",
+                        "runs": [
+                          {
+                            "text": "العلاقة المستخدمة:"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "type": "math",
+                        "source": "v = v_{0} + g t"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "callout",
+                "variant": "note",
+                "title": "تلميح",
+                "runs": [
+                  {
+                    "text": "الجسم بدأ من السكون."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "c-q3",
+          "displayNumber": "3",
+          "presentationType": "multiTrueFalse",
+          "text": "حدّد صحّة كل عبارة:",
+          "marks": 3,
+          "fields": [
+            {
+              "id": "c-q3f1",
+              "statement": "تسارع السقوط الحر ثابت قرب سطح الأرض",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "c-q3f2",
+              "statement": "تتناسب المسافة طرديًا مع الزمن",
+              "kind": "boolean",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

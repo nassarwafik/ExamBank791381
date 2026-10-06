@@ -11,6 +11,8 @@ const scenarioSource_1 = require("./scenarioSource");
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const examBuilderState_1 = require("./examBuilderState");
 const compositeQuestion_1 = require("./compositeQuestion");
+const presentationModel_1 = require("./presentation/presentationModel");
+const richContentModel_1 = require("./richContent/richContentModel");
 const num = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : NaN;
@@ -27,6 +29,13 @@ function validateStructuredExam(exam) {
         add("error", "NO_SECTIONS", "الامتحان لا يحتوي على أي قسم.");
         return issues;
     }
+    if (exam.presentation !== undefined && exam.presentation !== null)
+        for (const i of (0, presentationModel_1.validatePresentation)(exam.presentation).issues)
+            add("error", i.code, "إعدادات العرض: " + i.message);
+    const cover = exam.coverPage;
+    if (cover && typeof cover === "object" && cover.instructionsRichContent !== undefined)
+        for (const i of (0, richContentModel_1.validateRichContent)(cover.instructionsRichContent, "coverPage.instructionsRichContent").issues)
+            add("error", i.code, "تعليمات الغلاف المنسقة: " + i.message);
     const seenQuestionIds = new Set();
     const allQuestionIds = new Set();
     for (const s of sections)
@@ -36,6 +45,13 @@ function validateStructuredExam(exam) {
     sections.forEach((section, si) => {
         const label = section.title || "القسم " + (si + 1);
         validateSection(section, label, add);
+        const sec = section;
+        if (sec.presentation !== undefined)
+            for (const i of (0, presentationModel_1.validateSectionPresentation)(sec.presentation).issues)
+                add("error", i.code, "إعدادات عرض القسم «" + label + "»: " + i.message, { sectionId: section.id });
+        if (sec.instructionsRichContent !== undefined)
+            for (const i of (0, richContentModel_1.validateRichContent)(sec.instructionsRichContent, "section.instructionsRichContent").issues)
+                add("error", i.code, "تعليمات القسم «" + label + "» المنسقة: " + i.message, { sectionId: section.id });
         for (const i of (0, scenarioSource_1.scenarioSectionIssues)(section, allQuestionIds))
             add("error", i.code, "القسم «" + label + "»: " + i.message, { sectionId: section.id, ...(i.questionId ? { questionId: i.questionId } : {}) });
         const stimuli = section.stimuli || {};
@@ -112,8 +128,11 @@ function validateQuestion(q, sectionLabel, section, add) {
     const where = { sectionId: section.id, questionId: q.examQuestionId };
     const disp = q.displayNumber ? "«" + q.displayNumber + "»" : "";
     if ((!q.text || !q.text.trim()) && q.presentationType !== "compound") {
-        add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص.", where);
+        const richStem = q.richContent;
+        const hasRichStem = richStem !== undefined && (0, richContentModel_1.validateRichContent)(richStem).ok && (0, richContentModel_1.richContentPlainText)(richStem).trim() !== "";
+        add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص." + (hasRichStem ? " للسؤال محتوى منسق: استخدم «استخدام نص المحتوى كنص بديل» ليبقى نص عادي تقرؤه صفحات التصحيح والمراجعة." : ""), where);
     }
+    validatePresentationFields(q, String(q.presentationType ?? ""), "سؤال " + disp + " في «" + sectionLabel + "»", where, add, true);
     if (!Number.isFinite(num(q.marks)) || num(q.marks) <= 0) {
         add("error", "MARKS_PROBLEM", "سؤال " + disp + " في «" + sectionLabel + "» علامته غير صالحة.", where);
     }
@@ -283,6 +302,18 @@ function validateCompound(q, disp, sectionLabel, where, add) {
         add("warning", "MARKS_MISMATCH", "مجموع علامات البنود (" + info.total + ") لا يساوي علامة السؤال المركّب " + disp + " (" + info.questionMarks + ").", where);
     }
 }
+function validatePresentationFields(node, type, label, where, add, topLevel) {
+    if (node.richContent !== undefined) {
+        if (type === "parametricNumeric" || "parametric" in node)
+            add("error", "PARAMETRIC_RICH_CONTENT_FORBIDDEN", label + ": السؤال المولّد بمعاملات لا يقبل محتوى منسقًا (القالب يُولَّد من النص).", where);
+        else
+            for (const i of (0, richContentModel_1.validateRichContent)(node.richContent).issues)
+                add("error", i.code, label + " — المحتوى المنسق: " + i.message, where);
+    }
+    if (topLevel && node.presentation !== undefined)
+        for (const i of (0, presentationModel_1.validateQuestionPresentation)(node.presentation).issues)
+            add("error", i.code, label + " — إعدادات العرض: " + i.message, where);
+}
 function validateComposite(q, disp, sectionLabel, where, add) {
     const label = "السؤال المركّب " + disp + " في «" + sectionLabel + "»";
     const typeIssues = (0, questionTypeValidation_1.validateQuestionTypeNode)(q, "composite", q.questionTypeVersion);
@@ -295,6 +326,9 @@ function validateComposite(q, disp, sectionLabel, where, add) {
     const st = (0, compositeQuestion_1.compositeStructure)(q);
     if (!st.ok)
         return;
+    for (const g of st.model.groups)
+        for (const p of g.parts)
+            validatePresentationFields(p.raw, p.type, "البند " + p.label + " من " + disp, where, add, false);
     for (const g of st.model.groups)
         for (const p of g.parts) {
             if (p.linkedSmartSim || !(0, compositeQuestion_1.isSupportedCompositeChild)(p.type, p.raw.questionTypeVersion))

@@ -1,8 +1,11 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useId, useRef, type ReactNode } from "react";
 import CodeStimulusView from "../questionTypes/CodeStimulusView";
 import { isFirstScenarioMember, projectSectionScenariosForStudent, scenarioForQuestion, sourceKindLabel, type ScenarioV1, type SourceStimulusV1 } from "../scenarioSource";
 import { useMediaQuery } from "../ui/useMediaQuery";
 import "./scenario-student.css";
+// Phase 20D.1 — the additive "rich" source kind renders through the trusted RichContent renderer (lazy). RichText re-checks the document
+// with the strict authority (memoized) because composite source contexts reach ScenarioSources without this module's projection.
+const RichText = lazy(() => import("../richContent/RichPrompt").then(m => ({ default: m.RichText })));
 
 // Phase 19G — the ONE presentation of a scenario's shared sources (student exam, teacher preview, teacher review). It renders ONLY the
 // strict canonical projection (a scenario that fails any rule renders nothing — the same authority the server applies), as a labelled
@@ -30,6 +33,7 @@ function SourceBody({ source: s }: { source: SourceStimulusV1 }) {
       </table>
     </div>
   );
+  if (s.kind === "rich") return <Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل المصدر…</p>}><RichText raw={s.richContent} className="iex-scenario-rich" fallback={<p className="iex-scenario-unavailable" role="note">هذا المصدر غير متاح حاليًا.</p>} /></Suspense>;
   return <CodeStimulusView stimulus={{ language: s.language, source: s.source }} testId="scenario-code" />;
 }
 

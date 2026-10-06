@@ -8,6 +8,10 @@ import type { BuilderQuestionType } from "./examTypes";
 const QuestionTypePalette = lazy(() => import("./questionTypes/QuestionTypePalette"));
 // Phase 19G — the Scenario card (shared sources + linked questions) is lazy too: its own chunk, loaded only for a section that has one.
 const ScenarioBlockEditor = lazy(() => import("./scenario/ScenarioBlockEditor"));
+// Phase 20D.1 — optional RICH section instructions: the block editor and the Markdown conversion are lazy (builder-only chunks).
+const RichContentEditor = lazy(() => import("./richContent/RichContentEditor"));
+const MarkdownConvertDialog = lazy(() => import("./richContent/MarkdownConvertDialog"));
+import type { RichContentV1 } from "./richContent/richContentModel";
 import { addScenario, createQuestionInScenario, scenarioOf } from "./scenarioBuilderOps";
 import { SECTION_INSTRUCTION_TEMPLATES, findSectionInstructionTemplate } from "./instructionTemplates";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
@@ -57,6 +61,11 @@ export default function ExamSectionEditor(props: Props) {
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
   const scenarios = Array.isArray(section.scenarios) ? section.scenarios : [];
   const applySection = (next: BuilderSection) => { if (next !== section) patch({ scenarios: next.scenarios, questions: next.questions }); };
+  // Phase 20D.1 — section.instructionsRichContent (presentation only); the plain `instructions` stay the fallback and are never rewritten.
+  const richInstructions = (section as BuilderSection & { instructionsRichContent?: RichContentV1 }).instructionsRichContent;
+  const [richOpen, setRichOpen] = useState(() => richInstructions !== undefined);
+  const [converting, setConverting] = useState(false);
+  const setRichInstructions = (next: RichContentV1 | undefined) => patch({ instructionsRichContent: next });
   const addPicked = (q: BuilderQuestion) => { setPaletteOpen(false); if (paletteFor) { applySection(createQuestionInScenario(section, paletteFor, q)); setPaletteFor(null); } else onAddQuestion(q); };
 
   return (
@@ -91,6 +100,23 @@ export default function ExamSectionEditor(props: Props) {
           </select>
         </div>
         <textarea className="sb-input sb-textarea" value={section.instructions ?? ""} placeholder="تعليمات القسم" onChange={e => patch({ instructions: e.target.value })} disabled={disabled} />
+        <div className="rc-host">
+          <div className="rc-host-actions">
+            <button type="button" className="sb-mini-btn" aria-expanded={richOpen} onClick={() => setRichOpen(o => !o)}>تعليمات منسقة للقسم</button>
+            <button type="button" className="sb-mini-btn" onClick={() => setConverting(true)} disabled={disabled || !(section.instructions ?? "").trim()}>تحويل التعليمات إلى محتوى منسق</button>
+          </div>
+          {richInstructions !== undefined && !richOpen && <p className="sb-hint rc-host-note">للقسم تعليمات منسقة تُعرض للطالب بدل التعليمات العادية (تبقى العادية احتياطيًا).</p>}
+          {richOpen && (
+            <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر المحتوى المنسق…</p>}>
+              <RichContentEditor value={richInstructions} onChange={setRichInstructions} disabled={disabled} plainText={section.instructions} label="تعليمات القسم المنسقة" />
+            </Suspense>
+          )}
+          {converting && (
+            <Suspense fallback={null}>
+              <MarkdownConvertDialog source={section.instructions ?? ""} replacing={richInstructions !== undefined} title="تحويل تعليمات القسم إلى محتوى منسق" onCancel={() => setConverting(false)} onConfirm={value => { setRichInstructions(value); setRichOpen(true); setConverting(false); }} />
+            </Suspense>
+          )}
+        </div>
 
         <div className="sb-policy">
           <label className="sb-field-label">قاعدة التصحيح</label>

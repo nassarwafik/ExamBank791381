@@ -1,6 +1,9 @@
 import type { Answer } from "../../StudentQuestionCard";
 import { type NormalizedSection, calculateSectionProgress } from "../../examStructure";
 import { sectionRuleLine } from "./sectionRule";
+import { Suspense, lazy } from "react";
+// Phase 20D.1 (review fix 1) — rich section instructions render without an exam presentation too (lazy trusted renderer; plain fallback).
+const RichText = lazy(() => import("../../richContent/RichPrompt").then(m => ({ default: m.RichText })));
 
 /**
  * ExamSectionContext (UX-7b-2) — the compact section header shown above the CURRENT question of a structured
@@ -8,17 +11,21 @@ import { sectionRuleLine } from "./sectionRule";
  * its instructions). Presentation only: it reuses the long-form section's rule text and the shared
  * calculateSectionProgress, and never renders the section's questions.
  */
-export default function ExamSectionContext({ section, sectionNumber, positionInSection, sectionSize, firstInSection, answers }: { section: NormalizedSection; sectionNumber: number; positionInSection: number; sectionSize: number; firstInSection: boolean; answers: Record<string, Answer> }) {
+// Phase 20D.1 — shellHeader: the presented exam renders the section title / marks / instructions in the shared SectionShellHeader above the
+// page, so this context keeps only the position, rule and live progress (no duplicate). Absent ⇒ the baseline markup, unchanged.
+export default function ExamSectionContext({ section, sectionNumber, positionInSection, sectionSize, firstInSection, answers, shellHeader, richInstructions }: { section: NormalizedSection; sectionNumber: number; positionInSection: number; sectionSize: number; firstInSection: boolean; answers: Record<string, Answer>; shellHeader?: boolean; richInstructions?: unknown }) {
   const progress = calculateSectionProgress(section, answers);
   const rule = sectionRuleLine(section);
   return (
     <div className={"iex-section-context" + (firstInSection ? " is-first" : "")}>
       <div className="iex-section-context-row">
         <span className="iex-section-eyebrow">القسم {sectionNumber} · السؤال {positionInSection + 1} / {sectionSize}</span>
-        {section.maxMarks != null && <span className="iex-section-mark">العلامة: {section.maxMarks}</span>}
+        {!shellHeader && section.maxMarks != null && <span className="iex-section-mark">العلامة: {section.maxMarks}</span>}
       </div>
-      <p className="iex-section-context-title">{section.title || "القسم " + sectionNumber}</p>
-      {section.instructions && <p className="iex-section-instructions">{section.instructions}</p>}
+      {!shellHeader && <p className="iex-section-context-title">{section.title || "القسم " + sectionNumber}</p>}
+      {!shellHeader && (richInstructions && typeof richInstructions === "object"
+        ? <Suspense fallback={section.instructions ? <p className="iex-section-instructions">{section.instructions}</p> : null}><RichText raw={richInstructions} className="iex-section-instructions" fallback={section.instructions ? <p className="iex-section-instructions">{section.instructions}</p> : null} /></Suspense>
+        : section.instructions && <p className="iex-section-instructions">{section.instructions}</p>)}
       <div className="iex-section-meta">
         {rule && <span className="iex-section-rule">{rule}</span>}
         <span className="iex-section-progress">

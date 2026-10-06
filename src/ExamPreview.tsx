@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import useFocusTrap from "./ui/useFocusTrap";
 import useBodyScrollLock from "./ui/useBodyScrollLock";
 import StudentQuestionCard, { qid } from "./StudentQuestionCard";
@@ -11,6 +11,10 @@ import { normalizeExamTheme, previousFocusIndex, nextFocusIndex, focusProgressPe
 import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import { TeacherPreviewContext } from "./questionTypes/studentAttemptContext";
+// Phase 20D.1 — an exam WITH a `presentation` object renders through the shared (lazy) presentation root and section shell — the same
+// components the student page uses; without one, the legacy themed preview below is unchanged.
+const PresentationRoot = lazy(() => import("./presentation/PresentationRoot"));
+const PresentationExamSection = lazy(() => import("./presentation/PresentationRoot").then(m => ({ default: m.PresentationExamSection })));
 
 // Roadmap #15 — the ONE faithful teacher preview renderer, shared by the structured builder, the legacy
 // flat-exam theme preview (App), and the exam-library preview (AssignmentsPanel). It reproduces the REAL
@@ -73,7 +77,65 @@ export default function ExamPreview({ exam, onClose }: Props) {
     return { ...a, [id]: { kind: "compound", parts: { ...prev, [partId]: answer } } };
   });
 
+  const xpRaw = (safe as Record<string, unknown>).presentation, xp = xpRaw !== undefined && xpRaw !== null;
+  const rawSections = (Array.isArray(safe.sections) ? safe.sections : []) as unknown[];
   let offset = 0;
+  const body = (
+    showCover ? (
+      <div className="iex-wrap">
+        <StructuredExamCover cover={cover!} title={exam.title || ""} distribution={distribution} preview onStart={() => setCoverStarted(true)} />
+      </div>
+    ) : (
+      <div className="iex-wrap">
+        <p className="sb-preview-note">هذه معاينة تفاعلية للطالب — يمكنك تجربة الإجابة، لكن لا تُحفظ أي إجابة ولا تظهر مفاتيح الإجابة.</p>
+        <ExamGeneralInstructions text={generalInstructions} />
+        {norm.structured ? (
+          norm.sections.map((section, si) => {
+            const startIndex = offset;
+            offset += section.questions.length;
+            if (xp) return <PresentationExamSection key={section.id} section={section} raw={rawSections[si]} sectionNumber={si + 1} startIndex={startIndex} answers={answers} onChoice={onChoice} onSeq={onSeq} onTable={onTable} onText={onText} onField={onField} onPart={onPart} onAnswer={onAnswer} />;
+            return (
+              <StructuredExamSection
+                key={section.id}
+                section={section}
+                sectionNumber={si + 1}
+                startIndex={startIndex}
+                richInstructions={(rawSections[si] as { instructionsRichContent?: unknown } | undefined)?.instructionsRichContent}
+                answers={answers}
+                onChoice={onChoice}
+                onSeq={onSeq}
+                onTable={onTable}
+                onText={onText}
+                onField={onField}
+                onPart={onPart}
+                onAnswer={onAnswer}
+              />
+            );
+          })
+        ) : !xp && theme === "focus" && flatQs.length > 0 ? (() => {
+          const i = Math.min(focusIndex, flatQs.length - 1), q = flatQs[i], id = qid(q, i);
+          return (
+            <div className="iex-focus-mode">
+              <div className="iex-focus-nav">
+                <button onClick={() => setFocusIndex(x => previousFocusIndex(x, flatQs.length))} disabled={i === 0}>◀ السابق</button>
+                <span>السؤال {i + 1} من {flatQs.length}</span>
+                <button onClick={() => setFocusIndex(x => nextFocusIndex(x, flatQs.length))} disabled={i === flatQs.length - 1}>التالي ▶</button>
+              </div>
+              <div className="iex-focus-progress"><i style={{ width: focusProgressPercent(i, flatQs.length) + "%" }} /></div>
+              <StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} onAnswer={next => onAnswer(id, next)} />
+            </div>
+          );
+        })() : (
+          <section className="iex-flow">
+            {flatQs.map((q, i) => {
+              const id = qid(q, i);
+              return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} onAnswer={next => onAnswer(id, next)} />;
+            })}
+          </section>
+        )}
+      </div>
+    )
+  );
   // NOT self-portaling: each call site wraps this in createPortal(document.body) so the fixed overlay
   // escapes any transformed ancestor. Rendering plain here also lets tests query the returned container.
   return (
@@ -83,60 +145,9 @@ export default function ExamPreview({ exam, onClose }: Props) {
         <button type="button" className="sb-btn" onClick={onClose}>← إغلاق المعاينة</button>
       </header>
       <TeacherPreviewContext.Provider value={true}>
-      <main className={"interactive-exam-page exam-theme-" + theme} dir="rtl">
-        {showCover ? (
-          <div className="iex-wrap">
-            <StructuredExamCover cover={cover!} title={exam.title || ""} distribution={distribution} preview onStart={() => setCoverStarted(true)} />
-          </div>
-        ) : (
-          <div className="iex-wrap">
-            <p className="sb-preview-note">هذه معاينة تفاعلية للطالب — يمكنك تجربة الإجابة، لكن لا تُحفظ أي إجابة ولا تظهر مفاتيح الإجابة.</p>
-            <ExamGeneralInstructions text={generalInstructions} />
-            {norm.structured ? (
-              norm.sections.map((section, si) => {
-                const startIndex = offset;
-                offset += section.questions.length;
-                return (
-                  <StructuredExamSection
-                    key={section.id}
-                    section={section}
-                    sectionNumber={si + 1}
-                    startIndex={startIndex}
-                    answers={answers}
-                    onChoice={onChoice}
-                    onSeq={onSeq}
-                    onTable={onTable}
-                    onText={onText}
-                    onField={onField}
-                    onPart={onPart}
-                    onAnswer={onAnswer}
-                  />
-                );
-              })
-            ) : theme === "focus" && flatQs.length > 0 ? (() => {
-              const i = Math.min(focusIndex, flatQs.length - 1), q = flatQs[i], id = qid(q, i);
-              return (
-                <div className="iex-focus-mode">
-                  <div className="iex-focus-nav">
-                    <button onClick={() => setFocusIndex(x => previousFocusIndex(x, flatQs.length))} disabled={i === 0}>◀ السابق</button>
-                    <span>السؤال {i + 1} من {flatQs.length}</span>
-                    <button onClick={() => setFocusIndex(x => nextFocusIndex(x, flatQs.length))} disabled={i === flatQs.length - 1}>التالي ▶</button>
-                  </div>
-                  <div className="iex-focus-progress"><i style={{ width: focusProgressPercent(i, flatQs.length) + "%" }} /></div>
-                  <StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} onAnswer={next => onAnswer(id, next)} />
-                </div>
-              );
-            })() : (
-              <section className="iex-flow">
-                {flatQs.map((q, i) => {
-                  const id = qid(q, i);
-                  return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} onAnswer={next => onAnswer(id, next)} />;
-                })}
-              </section>
-            )}
-          </div>
-        )}
-      </main>
+      {xp
+        ? <Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل المعاينة…</p>}><PresentationRoot as="main" className="interactive-exam-page" presentation={xpRaw}>{body}</PresentationRoot></Suspense>
+        : <main className={"interactive-exam-page exam-theme-" + theme} dir="rtl">{body}</main>}
       </TeacherPreviewContext.Provider>
     </div>
   );

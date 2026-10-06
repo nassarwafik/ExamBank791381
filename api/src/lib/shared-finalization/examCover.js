@@ -51,7 +51,8 @@ function normalizeCoverPage(raw) {
         showExamDate: boolOr(r.showExamDate, true),
         showDuration: boolOr(r.showDuration, false),
         showTotalMarks: boolOr(r.showTotalMarks, true),
-        showMarksDistribution: boolOr(r.showMarksDistribution, true)
+        showMarksDistribution: boolOr(r.showMarksDistribution, true),
+        ...(r.instructionsRichContent && typeof r.instructionsRichContent === "object" && !Array.isArray(r.instructionsRichContent) ? { instructionsRichContent: r.instructionsRichContent } : {})
     };
 }
 function defaultCoverPage(activityType = "exam") {

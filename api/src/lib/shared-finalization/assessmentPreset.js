@@ -14,6 +14,7 @@ const assessmentBlueprint_1 = require("./assessmentBlueprint");
 const assessmentQualityPolicy_1 = require("./assessmentQualityPolicy");
 const examTheme_1 = require("./examTheme");
 const examBuilderState_1 = require("./examBuilderState");
+const presentationModel_1 = require("./presentation/presentationModel");
 exports.ASSESSMENT_PRESET_SCHEMA_VERSION = 1;
 exports.PRESET_LABEL = "قالب أكاديمي";
 exports.PRESET_TITLE_MAX = 120;
@@ -22,8 +23,8 @@ exports.PRESET_SECTIONS_MAX = 50;
 const GRADING_POLICIES = ["all", "capScore", "firstNAnswered"];
 const ANSWER_UNITS = ["question", "part"];
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
-const PRESET_KEYS = new Set(["schemaVersion", "presetId", "title", "description", "blueprint", "sections", "presentationTheme"]);
-const SECTION_KEYS = new Set(["presetSectionId", "title", "instructions", "gradingPolicy", "maxMarks", "requiredAnswers", "answerUnit"]);
+const PRESET_KEYS = new Set(["schemaVersion", "presetId", "title", "description", "blueprint", "sections", "presentationTheme", "presentation"]);
+const SECTION_KEYS = new Set(["presetSectionId", "title", "instructions", "gradingPolicy", "maxMarks", "requiredAnswers", "answerUnit", "presentation"]);
 const isPlainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const isNullableCount = (v) => v === undefined || v === null || (typeof v === "number" && Number.isInteger(v) && v >= 0);
 const isNullableMarks = (v) => v === undefined || v === null || (typeof v === "number" && Number.isFinite(v) && v >= 0);
@@ -49,6 +50,9 @@ function validateAssessmentPreset(input) {
         add("DESCRIPTION_TOO_LONG", "وصف القالب أطول من " + exports.PRESET_DESCRIPTION_MAX + " حرفًا.", "description");
     if (input.presentationTheme !== undefined && !examTheme_1.EXAM_THEMES.includes(input.presentationTheme))
         add("INVALID_THEME", "مظهر العرض غير معروف.", "presentationTheme");
+    if (input.presentation !== undefined)
+        for (const pi of presentationIssues(input.presentation, "presentation"))
+            add("INVALID_PRESENTATION", pi.message, pi.path);
     const sections = input.sections;
     const sectionIds = [];
     if (!Array.isArray(sections) || sections.length === 0)
@@ -86,6 +90,9 @@ function validateAssessmentPreset(input) {
                 add("INVALID_SECTION_NUMBER", "عدد الإجابات المطلوبة غير صالح.", path + ".requiredAnswers");
             if (s.answerUnit !== undefined && !ANSWER_UNITS.includes(s.answerUnit))
                 add("INVALID_ANSWER_UNIT", "وحدة الإجابة غير معروفة.", path + ".answerUnit");
+            if (s.presentation !== undefined)
+                for (const pi of presentationIssues(s.presentation, path + ".presentation", true))
+                    add("INVALID_PRESENTATION", pi.message, pi.path);
         });
     }
     if (input.blueprint === undefined || input.blueprint === null)
@@ -101,6 +108,12 @@ function validateAssessmentPreset(input) {
     }
     return issues;
 }
+function presentationIssues(raw, path, section = false) {
+    const r = section ? (0, presentationModel_1.validateSectionPresentation)(raw, path) : (0, presentationModel_1.validatePresentation)(raw, path);
+    return r.ok ? [] : r.issues.length ? r.issues : [{ message: "إعدادات العرض غير صالحة.", path }];
+}
+function canonicalPresentation(raw) { const r = (0, presentationModel_1.validatePresentation)(raw); return r.ok ? r.value : undefined; }
+function canonicalSectionPresentation(raw) { const r = (0, presentationModel_1.validateSectionPresentation)(raw); return r.ok ? r.value : undefined; }
 function copyIdentity(v) { return v ? { id: v.id, label: v.label } : undefined; }
 function copyConstraint(c, ref = c.ref) {
     const out = { id: c.id, dimension: c.dimension, ref, metric: c.metric, unit: c.unit };
@@ -165,6 +178,9 @@ function presetSectionOf(s, presetSectionId) {
     out.maxMarks = s.maxMarks === undefined ? null : s.maxMarks;
     out.requiredAnswers = s.requiredAnswers === undefined ? null : s.requiredAnswers;
     out.answerUnit = s.answerUnit ?? "question";
+    const presentation = s.presentation === undefined ? undefined : canonicalSectionPresentation(s.presentation);
+    if (presentation)
+        out.presentation = presentation;
     return out;
 }
 const newPresetId = () => (0, examBuilderState_1.genId)("apr");
@@ -215,6 +231,15 @@ function validateSourceDesign(exam) {
                 add("QUALITY_POLICY_INVALID", qi.message, "blueprint.qualityPolicy." + (qi.path ?? ""), qi.ruleId);
         }
     }
+    if (exam.presentation !== undefined)
+        for (const pi of presentationIssues(exam.presentation, "presentation"))
+            add("INVALID_PRESENTATION", pi.message, pi.path);
+    if (Array.isArray(sections))
+        sections.forEach((s, i) => {
+            if (isPlainObject(s) && s.presentation !== undefined)
+                for (const pi of presentationIssues(s.presentation, "sections[" + i + "].presentation", true))
+                    add("INVALID_PRESENTATION", pi.message, pi.path);
+        });
     return { issues, sectionIds };
 }
 function extractAssessmentPresetFromExam(exam, options = {}) {
@@ -236,6 +261,9 @@ function extractAssessmentPresetFromExam(exam, options = {}) {
         preset.description = description.slice(0, exports.PRESET_DESCRIPTION_MAX);
     if (exam.presentationTheme && examTheme_1.EXAM_THEMES.includes(exam.presentationTheme))
         preset.presentationTheme = exam.presentationTheme;
+    const presentation = exam.presentation === undefined ? undefined : canonicalPresentation(exam.presentation);
+    if (presentation)
+        preset.presentation = presentation;
     const check = validateAssessmentPreset(preset);
     if (check.length)
         return { ok: false, reason: "invalid-source", issues: check };
@@ -253,7 +281,11 @@ function instantiateExamFromPreset(preset, options = {}) {
     const sections = preset.sections.map((s, i) => {
         const id = sectionIdFor(s, i);
         map.set(s.presetSectionId, id);
-        return { id, title: s.title, instructions: s.instructions ?? "", maxMarks: s.maxMarks ?? null, gradingPolicy: s.gradingPolicy, requiredAnswers: s.requiredAnswers ?? null, answerUnit: s.answerUnit ?? "question", stimuli: {}, questions: [] };
+        const section = { id, title: s.title, instructions: s.instructions ?? "", maxMarks: s.maxMarks ?? null, gradingPolicy: s.gradingPolicy, requiredAnswers: s.requiredAnswers ?? null, answerUnit: s.answerUnit ?? "question", stimuli: {}, questions: [] };
+        const presentation = s.presentation === undefined ? undefined : canonicalSectionPresentation(s.presentation);
+        if (presentation)
+            section.presentation = presentation;
+        return section;
     });
     const exam = {
         schemaVersion: 2,
@@ -265,6 +297,9 @@ function instantiateExamFromPreset(preset, options = {}) {
     };
     if (preset.presentationTheme)
         exam.presentationTheme = preset.presentationTheme;
+    const presentation = preset.presentation === undefined ? undefined : canonicalPresentation(preset.presentation);
+    if (presentation)
+        exam.presentation = presentation;
     return exam;
 }
 function presetSummary(record) {

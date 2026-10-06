@@ -74,6 +74,8 @@ const PresetLibraryPanel = lazy(() => import("./presets/PresetLibraryPanel"));
 const AiQuestionAuthorDialog = lazy(() => import("./aiAuthoring/AiQuestionAuthorDialog"));
 // Phase 19G — AI scenario authoring (shared sources + questions), its own lazy chunk.
 const AiScenarioAuthorDialog = lazy(() => import("./aiAuthoring/AiScenarioAuthorDialog"));
+// Phase 20D.1 — «العرض والتصميم» (Presentation Studio): its own lazy chunk, opened on demand; it edits exam.presentation through `update`.
+const PresentationStudio = lazy(() => import("./presentation/PresentationStudio"));
 import type { ScenarioV1 } from "./scenarioSource";
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
@@ -477,6 +479,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [governanceOpen, setGovernanceOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
   const editPolicy = (fn: Parameters<typeof withQualityPolicy>[1]) => update(prev => withBlueprint(prev, bp => withQualityPolicy(bp, fn)));
   // The FINAL action re-checks the LATEST committed exam (never a stale render or a re-enabled button): a refused request
   // opens the readiness panel instead of calling the owner. The owner (App) applies the same authority again on the exact
@@ -518,6 +521,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
           {presets && <button type="button" className={"sb-btn" + (presetsOpen ? " is-active" : "")} onClick={() => setPresetsOpen(true)} aria-haspopup="dialog" title="القوالب الأكاديمية">📋 <span className="sb-btn-label">القوالب الأكاديمية</span></button>}
           <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
+          <button type="button" className={"sb-btn" + (studioOpen ? " is-active" : "")} onClick={() => setStudioOpen(true)} disabled={saving} aria-haspopup="dialog" title="العرض والتصميم">🎨 <span className="sb-btn-label">العرض والتصميم</span></button>
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
@@ -641,6 +645,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {presetsOpen && presets && (
         <Suspense fallback={null}>
           <PresetLibraryPanel open onClose={() => setPresetsOpen(false)} exam={exam} service={presets} getLatestExam={() => latestExamRef.current} onCreateExam={openExamFromPreset} />
+        </Suspense>
+      )}
+      {studioOpen && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل استوديو العرض…</p>}>
+          <PresentationStudio exam={exam} onChange={fn => update(prev => fn(prev) as StructuredExam)} onClose={() => setStudioOpen(false)} />
         </Suspense>
       )}
       {governanceOpen && governance && (

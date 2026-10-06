@@ -4,6 +4,8 @@ import StudentQuestionCard,{answered} from "./StudentQuestionCard";
 // Phase 19G — the scenario presentation (shared sources + instructions) is LAZY: loaded only for a section that carries scenarios, so the
 // initial graph is unchanged; the view runs the strict projection itself (a malformed scenario renders nothing).
 const ScenarioView=lazy(()=>import("./scenario/ScenarioView"));
+// Phase 20D.1 (review fix 1) — rich section instructions (valid RichContentV1) through the lazy trusted renderer; else the plain line.
+const RichText=lazy(()=>import("./richContent/RichPrompt").then(m=>({default:m.RichText})));
 import type {Answer,FieldValue,Question} from "./StudentQuestionCard";
 import CompoundQuestion from "./CompoundQuestion";
 import {IconCheck} from "./icons";
@@ -58,18 +60,19 @@ type Props=SectionHandlers&{
  startIndex:number; // global 0-based display offset so question node numbers stay continuous
  answers:Record<string,Answer>;
  disabled?:boolean;
+ richInstructions?:unknown;
 };
 
 
 export default function StructuredExamSection(props:Props){
- const {section,sectionNumber,startIndex,answers,disabled,onChoice,onSeq,onTable,onText,onField,onPart,onAnswer}=props;
+ const {section,sectionNumber,startIndex,answers,disabled,onChoice,onSeq,onTable,onText,onField,onPart,onAnswer,richInstructions}=props;
  const {countedKeys}=selectGradedUnits(section,answers);
  const progress=calculateSectionProgress(section,answers);
  const rule=sectionRuleLine(section);
  return <section className="iex-section">
   <header className="iex-section-head">
    <div className="iex-section-title"><span className="iex-section-eyebrow">القسم {sectionNumber}</span><h2>{section.title||"القسم "+sectionNumber}</h2></div>
-   {section.instructions&&<p className="iex-section-instructions">{section.instructions}</p>}
+   {richInstructions&&typeof richInstructions==="object"?<Suspense fallback={section.instructions?<p className="iex-section-instructions">{section.instructions}</p>:null}><RichText raw={richInstructions} className="iex-section-instructions" fallback={section.instructions?<p className="iex-section-instructions">{section.instructions}</p>:null}/></Suspense>:section.instructions&&<p className="iex-section-instructions">{section.instructions}</p>}
    <div className="iex-section-meta">
     {rule&&<span className="iex-section-rule">{rule}</span>}
     {section.maxMarks!=null&&<span className="iex-section-mark">العلامة: {section.maxMarks}</span>}
