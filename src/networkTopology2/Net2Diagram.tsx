@@ -1,5 +1,8 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { Net2Config, Net2Device, Net2Link } from "../net2Model";
+import { useSimulationClock } from "../smartsim/dynamic/useSimulationClock";
+import { usePrefersReducedMotion } from "../smartsim/dynamic/usePrefersReducedMotion";
+import { clockProgress } from "../smartsim/dynamic/simulationClock";
 import "./net2.css";
 
 // Phase 20C — the networkTopology@2 diagram (original ExamBank artwork: no third-party device icons or branding). A responsive inline SVG
@@ -22,6 +25,43 @@ function Glyph({ kind }: { kind: Net2Device["kind"] }) {
   }
 }
 
+// Phase 20E — the TRANSIENT flow overlay: the engine's own hops of the last ping / tracert (computed by net2Flow from the operational engine,
+// never here) drawn as a straight polyline through the hop device centres. Consecutive hops are joined straight even when they are not
+// cabled to each other: a wireless host's frames cross its access point, which the engine's switch trail does not list (the AP is a
+// transparent bridge), so the line goes host → first switch directly. A moving dot travels the path driven by the presentation clock
+// (0.5 s per hop, ONE frame loop, autoplay); under reduced motion the static path is shown with no frame loop and no dot. A failed flow
+// is drawn up to the last device the engine reached, with a failure marker there — never as a success. Presentation only: nothing here
+// decides reachability, and the overlay is remounted (fresh clock) for every new flow by its `id`.
+export type Net2DiagramFlow = { id: number; ok: boolean; hops: readonly string[] };
+const FLOW_SECONDS_PER_HOP = 0.5;
+type Pt = { x: number; y: number };
+function FlowOverlay({ ok, hops, points }: { ok: boolean; hops: readonly string[]; points: readonly Pt[] }) {
+  const reduced = usePrefersReducedMotion();
+  const segments = Math.max(0, points.length - 1);
+  const clock = useSimulationClock(segments * FLOW_SECONDS_PER_HOP, { autoPlay: true, reducedMotion: reduced, resumeOnVisible: true });
+  const { pause } = clock;
+  useEffect(() => { if (reduced) pause(); }, [reduced, pause]);
+  const progress = reduced ? 1 : clockProgress(clock.state);
+  const at = progress * segments, i = Math.min(Math.floor(at), Math.max(0, segments - 1)), f = segments ? at - i : 0;
+  const a = points[i], b = points[Math.min(i + 1, points.length - 1)];
+  const dot = a && b ? { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f } : undefined;
+  const line = (ps: readonly Pt[]) => ps.map(p => p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+  const last = points[points.length - 1];
+  return (
+    <g className={"dyn-flow " + (ok ? "is-ok" : "is-failed")} data-testid="net2-flow" data-ok={ok ? "true" : "false"} data-hops={hops.join(" ")} aria-hidden="true" pointerEvents="none">
+      {segments > 0 && <polyline className="dyn-flow-path" points={line(points)} />}
+      {segments > 0 && !reduced && dot && <polyline className="dyn-flow-done" points={line([...points.slice(0, i + 1), dot])} />}
+      {segments > 0 && !reduced && dot && <circle className="dyn-flow-dot" data-testid="net2-flow-dot" r={13} cx={dot.x.toFixed(1)} cy={dot.y.toFixed(1)} />}
+      {ok && last && <circle className="dyn-flow-end" r={56} cx={last.x} cy={last.y} />}
+      {!ok && last && (
+        <g className="dyn-flow-fail" data-testid="net2-flow-fail" transform={"translate(" + last.x + " " + (last.y - 52) + ")"}>
+          <circle r={20} /><path d="M-9-9L9 9M9-9L-9 9" />
+        </g>
+      )}
+    </g>
+  );
+}
+
 export type Net2DiagramProps = {
   config: Net2Config;
   title: string;
@@ -33,9 +73,11 @@ export type Net2DiagramProps = {
   editable?: boolean;
   onMove?: (id: string, x: number, y: number) => void;
   testId?: string;
+  /** The transient flow of the last ping / tracert (presentation only; never stored). */
+  flow?: Net2DiagramFlow | null;
 };
 
-export default function Net2Diagram({ config, title, selectedId, onSelect, linkDown, wireless, editable, onMove, testId }: Net2DiagramProps) {
+export default function Net2Diagram({ config, title, selectedId, onSelect, linkDown, wireless, editable, onMove, testId, flow }: Net2DiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
   const byId = new Map(config.devices.map(d => [d.id, d]));
@@ -85,6 +127,7 @@ export default function Net2Diagram({ config, title, selectedId, onSelect, linkD
             </g>
           );
         })}
+        {flow && <FlowOverlay key={flow.id} ok={flow.ok} hops={flow.hops} points={flow.hops.flatMap(id => { const d = byId.get(id); return d ? [{ x: px(pos(d).x), y: py(pos(d).y) }] : []; })} />}
       </svg>
     </div>
   );

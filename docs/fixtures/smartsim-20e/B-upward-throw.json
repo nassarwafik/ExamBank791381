@@ -1,0 +1,116 @@
+{
+  "examId": "SS-20E-B",
+  "title": "القذف إلى الأعلى",
+  "status": "draft",
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "phys-b",
+          "displayNumber": "1",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "يُقذف جسم إلى الأعلى بسرعة 10 m/s من ارتفاع 30 m (g = 10 m/s²). لاحظ أعلى نقطة وتغيّر إشارة السرعة.",
+          "marks": 10,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsFreeFall",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "model": {
+                "initialHeight": 30,
+                "initialVelocity": 10,
+                "gravity": 10
+              },
+              "view": {
+                "maxTime": 4,
+                "showVelocityGraph": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى الأرض",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "impactSpeed",
+                    "label": "سرعة الارتطام (مقدار)",
+                    "unit": "m/s"
+                  },
+                  {
+                    "id": "maxHeight",
+                    "label": "أقصى ارتفاع يبلغه الجسم",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "apexTime",
+                    "label": "زمن الوصول إلى أعلى نقطة",
+                    "unit": "s"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "apexPoint",
+                    "label": "أعلى نقطة على منحنى الارتفاع–الزمن"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول إلى الأرض",
+                "weight": 3,
+                "kind": "physics.impactTime",
+                "measurementId": "impactTime",
+                "tolerance": 0.05
+              },
+              {
+                "id": "impact-speed",
+                "label": "سرعة الارتطام",
+                "weight": 2,
+                "kind": "physics.impactSpeed",
+                "measurementId": "impactSpeed",
+                "tolerance": 0.1
+              },
+              {
+                "id": "max-height",
+                "label": "أقصى ارتفاع",
+                "weight": 2,
+                "kind": "numericNear@1",
+                "valueId": "maxHeight",
+                "expected": 35,
+                "tolerance": 0.05
+              },
+              {
+                "id": "apex-time",
+                "label": "زمن أعلى نقطة",
+                "weight": 2,
+                "kind": "numericNear@1",
+                "valueId": "apexTime",
+                "expected": 1,
+                "tolerance": 0.05
+              },
+              {
+                "id": "apex-point",
+                "label": "أعلى نقطة على المنحنى",
+                "weight": 1,
+                "kind": "physics.pointOnTrajectory",
+                "pointId": "apexPoint",
+                "tolerance": 0.1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -56,6 +56,26 @@
 .net2-review { display: grid; gap: 10px; }
 .net2-review section { display: grid; gap: 6px; }
 .net2-review h5 { margin: 0; }
+/* Phase 20E — the transient ping / tracert flow overlay (presentation only; drawn from the engine's hops, never stored, not printed). */
+.dyn-flow { --flow-color: var(--xp-success, #15803d); pointer-events: none; }
+.dyn-flow.is-failed { --flow-color: var(--xp-danger, #b42318); }
+.dyn-flow .dyn-flow-path { fill: none; stroke: var(--flow-color); stroke-width: 6; stroke-opacity: 0.35; stroke-linejoin: round; stroke-linecap: round; }
+.dyn-flow.is-failed .dyn-flow-path { stroke-dasharray: 12 10; }
+.dyn-flow .dyn-flow-done { fill: none; stroke: var(--flow-color); stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+.dyn-flow .dyn-flow-dot { fill: var(--flow-color); stroke: #fff; stroke-width: 4; }
+.dyn-flow .dyn-flow-end { fill: none; stroke: var(--flow-color); stroke-width: 4; stroke-opacity: 0.7; }
+.dyn-flow .dyn-flow-fail circle { fill: var(--xp-danger, #b42318); stroke: #fff; stroke-width: 3; }
+.dyn-flow .dyn-flow-fail path { stroke: #fff; stroke-width: 4; stroke-linecap: round; fill: none; }
+.net2-flow-status { margin: 0; padding: 6px 10px; border-radius: 8px; font-weight: 600; }
+.net2-flow-status[data-ok="true"] { background: #e9f8ef; color: var(--xp-success, #15803d); }
+.net2-flow-status[data-ok="false"] { background: #fdecea; color: var(--xp-danger, #b42318); }
+.net2-flow-status:empty { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .dyn-flow * { transition: none !important; animation: none !important; }
+}
+@media print {
+  .dyn-flow, .net2-flow-status { display: none !important; }
+}
 @media (min-width: 1024px) {
   .net2-student { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
 }

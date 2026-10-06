@@ -1,0 +1,290 @@
+{
+  "examId": "SS-20E-D",
+  "title": "Router-on-a-Stick — تتبّع المسار",
+  "status": "draft",
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "net-d",
+          "displayNumber": "1",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "اضبط الشبكة ثم نفّذ ping من PC1 إلى PC3 وراقب مسار الحزمة.",
+          "marks": 13,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "networkTopology",
+            "pluginVersion": 2,
+            "config": {
+              "v": 2,
+              "devices": [
+                {
+                  "id": "r1",
+                  "kind": "router",
+                  "label": "R1",
+                  "x": 0.5,
+                  "y": 0.1
+                },
+                {
+                  "id": "sw1",
+                  "kind": "switch",
+                  "label": "SW1",
+                  "x": 0.5,
+                  "y": 0.45
+                },
+                {
+                  "id": "pc1",
+                  "kind": "pc",
+                  "label": "PC1",
+                  "x": 0.12,
+                  "y": 0.85,
+                  "initial": {
+                    "v": 2,
+                    "device": "host",
+                    "adapters": {
+                      "eth0": {
+                        "mode": "static",
+                        "address": "192.168.10.11",
+                        "mask": "255.255.255.0",
+                        "gateway": "192.168.10.1"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "pc2",
+                  "kind": "pc",
+                  "label": "PC2",
+                  "x": 0.37,
+                  "y": 0.85,
+                  "initial": {
+                    "v": 2,
+                    "device": "host",
+                    "adapters": {
+                      "eth0": {
+                        "mode": "static",
+                        "address": "192.168.10.12",
+                        "mask": "255.255.255.0",
+                        "gateway": "192.168.10.1"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "pc3",
+                  "kind": "pc",
+                  "label": "PC3",
+                  "x": 0.63,
+                  "y": 0.85,
+                  "initial": {
+                    "v": 2,
+                    "device": "host",
+                    "adapters": {
+                      "eth0": {
+                        "mode": "static",
+                        "address": "192.168.20.11",
+                        "mask": "255.255.255.0",
+                        "gateway": "192.168.20.1"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "pc4",
+                  "kind": "pc",
+                  "label": "PC4",
+                  "x": 0.88,
+                  "y": 0.85,
+                  "initial": {
+                    "v": 2,
+                    "device": "host",
+                    "adapters": {
+                      "eth0": {
+                        "mode": "static",
+                        "address": "192.168.20.12",
+                        "mask": "255.255.255.0",
+                        "gateway": "192.168.20.1"
+                      }
+                    }
+                  }
+                }
+              ],
+              "links": [
+                {
+                  "id": "u",
+                  "a": {
+                    "deviceId": "r1",
+                    "port": "g0/0"
+                  },
+                  "b": {
+                    "deviceId": "sw1",
+                    "port": "g0/1"
+                  }
+                },
+                {
+                  "id": "a",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/1"
+                  },
+                  "b": {
+                    "deviceId": "pc1",
+                    "port": "eth0"
+                  }
+                },
+                {
+                  "id": "b",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/2"
+                  },
+                  "b": {
+                    "deviceId": "pc2",
+                    "port": "eth0"
+                  }
+                },
+                {
+                  "id": "c",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/11"
+                  },
+                  "b": {
+                    "deviceId": "pc3",
+                    "port": "eth0"
+                  }
+                },
+                {
+                  "id": "d",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/12"
+                  },
+                  "b": {
+                    "deviceId": "pc4",
+                    "port": "eth0"
+                  }
+                }
+              ]
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "k1",
+                "label": "SW1: VLAN 10 موجودة",
+                "weight": 1,
+                "kind": "switch.vlanExists",
+                "deviceId": "sw1",
+                "vlan": 10
+              },
+              {
+                "id": "k2",
+                "label": "SW1: VLAN 20 موجودة",
+                "weight": 1,
+                "kind": "switch.vlanExists",
+                "deviceId": "sw1",
+                "vlan": 20
+              },
+              {
+                "id": "k3",
+                "label": "SW1 Fa0/1 في وضع access",
+                "weight": 1,
+                "kind": "switch.portMode",
+                "deviceId": "sw1",
+                "interface": "f0/1",
+                "value": "access"
+              },
+              {
+                "id": "k4",
+                "label": "SW1 Fa0/1 في VLAN 10",
+                "weight": 1,
+                "kind": "switch.accessVlan",
+                "deviceId": "sw1",
+                "interface": "f0/1",
+                "value": 10
+              },
+              {
+                "id": "k5",
+                "label": "SW1 Fa0/11 في VLAN 20",
+                "weight": 1,
+                "kind": "switch.accessVlan",
+                "deviceId": "sw1",
+                "interface": "f0/11",
+                "value": 20
+              },
+              {
+                "id": "k6",
+                "label": "SW1 Gi0/1 في وضع trunk",
+                "weight": 1,
+                "kind": "switch.portMode",
+                "deviceId": "sw1",
+                "interface": "g0/1",
+                "value": "trunk"
+              },
+              {
+                "id": "k7",
+                "label": "R1 G0/0 مفعّلة",
+                "weight": 1,
+                "kind": "router.interfaceEnabled",
+                "deviceId": "r1",
+                "interface": "g0/0",
+                "value": true
+              },
+              {
+                "id": "k8",
+                "label": "R1 G0/0.10 بـ dot1Q 10",
+                "weight": 1,
+                "kind": "router.subinterfaceVlan",
+                "deviceId": "r1",
+                "interface": "g0/0.10",
+                "value": 10
+              },
+              {
+                "id": "k9",
+                "label": "R1 G0/0.10 = 192.168.10.1",
+                "weight": 1,
+                "kind": "router.ipAddress",
+                "deviceId": "r1",
+                "interface": "g0/0.10",
+                "value": "192.168.10.1"
+              },
+              {
+                "id": "k10",
+                "label": "R1 G0/0.20 بـ dot1Q 20",
+                "weight": 1,
+                "kind": "router.subinterfaceVlan",
+                "deviceId": "r1",
+                "interface": "g0/0.20",
+                "value": 20
+              },
+              {
+                "id": "k11",
+                "label": "R1 G0/0.20 = 192.168.20.1",
+                "weight": 1,
+                "kind": "router.ipAddress",
+                "deviceId": "r1",
+                "interface": "g0/0.20",
+                "value": "192.168.20.1"
+              },
+              {
+                "id": "k12",
+                "label": "PC1 ⇄ PC3 (توجيه بين الشبكات)",
+                "weight": 2,
+                "kind": "reachability",
+                "source": "pc1",
+                "destination": "pc3",
+                "value": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

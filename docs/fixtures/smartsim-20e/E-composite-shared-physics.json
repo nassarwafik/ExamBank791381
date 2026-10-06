@@ -1,0 +1,263 @@
+{
+  "examId": "SS-20E-E",
+  "title": "سؤال مركّب — محاكاة مشتركة",
+  "status": "draft",
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "cmp-e",
+          "displayNumber": "1",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "marks": 16,
+          "text": "استخدم محاكاة القذف إلى الأعلى المشتركة للإجابة عن البنود التالية.",
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxSim",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "محاكاة القذف إلى الأعلى",
+                "instructions": "شغّل المحاكاة مرة واحدة؛ كل البنود تستخدمها.",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "physicsFreeFall",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "model": {
+                      "initialHeight": 30,
+                      "initialVelocity": 10,
+                      "gravity": 10
+                    },
+                    "view": {
+                      "maxTime": 4,
+                      "showVelocityGraph": true
+                    },
+                    "tasks": {
+                      "measurements": [
+                        {
+                          "id": "impactTime",
+                          "label": "زمن الوصول إلى الأرض",
+                          "unit": "s"
+                        },
+                        {
+                          "id": "impactSpeed",
+                          "label": "سرعة الارتطام (مقدار)",
+                          "unit": "m/s"
+                        },
+                        {
+                          "id": "maxHeight",
+                          "label": "أقصى ارتفاع يبلغه الجسم",
+                          "unit": "m"
+                        },
+                        {
+                          "id": "apexTime",
+                          "label": "زمن الوصول إلى أعلى نقطة",
+                          "unit": "s"
+                        }
+                      ],
+                      "points": [
+                        {
+                          "id": "apexPoint",
+                          "label": "أعلى نقطة على منحنى الارتفاع–الزمن"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gSim",
+                "title": "القياس بالمحاكاة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "s1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "زمن الوصول إلى الأرض",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "impact-time",
+                          "label": "زمن الوصول",
+                          "weight": 1,
+                          "kind": "physics.impactTime",
+                          "measurementId": "impactTime",
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "أقصى ارتفاع",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "max-height",
+                          "label": "أقصى ارتفاع",
+                          "weight": 1,
+                          "kind": "numericNear@1",
+                          "valueId": "maxHeight",
+                          "expected": 35,
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s3",
+                    "label": "ج",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "أعلى نقطة على المنحنى",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "apex-point",
+                          "label": "أعلى نقطة",
+                          "weight": 1,
+                          "kind": "physics.pointOnTrajectory",
+                          "pointId": "apexPoint",
+                          "tolerance": 0.1
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gInt",
+                "title": "التفسير",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "n1",
+                    "label": "د",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "ما مقدار السرعة عند أعلى نقطة (m/s)؟",
+                    "marks": 2,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 0,
+                      "tolerance": 0.01
+                    }
+                  },
+                  {
+                    "id": "m1",
+                    "label": "هـ",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "متى تتغيّر إشارة السرعة؟",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "عند أعلى نقطة"
+                      },
+                      {
+                        "text": "عند الارتطام"
+                      },
+                      {
+                        "text": "لا تتغيّر"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  },
+                  {
+                    "id": "o1",
+                    "label": "و",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "فسّر شكل منحنى السرعة مع الزمن.",
+                    "marks": 4,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 600
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "physics",
+                            "title": "الفهم الفيزيائي",
+                            "description": "",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "منحنى خطي ميله −g",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "كامل",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "half",
+                                "label": "جزئي",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "لا شيء",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "السرعة دالة خطية في الزمن ميلها −g لأن التسارع ثابت."
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

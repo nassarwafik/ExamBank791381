@@ -316,6 +316,13 @@ function l2Deliver(net, from, mac, accept, mode) {
             offer({ dev: a.dev, iface: "eth0" }, a.trail);
     }
     const hit = found;
+    if (hit && net.trace) {
+        const ids = [];
+        for (const l of hit.trail)
+            if (ids[ids.length - 1] !== l.sw)
+                ids.push(l.sw);
+        net.trace.lastTrail = ids;
+    }
     if (net.record && net.learn)
         for (const l of mode === "broadcast" ? learned : hit ? hit.trail : [])
             learnMac(net, l, mac);
@@ -338,8 +345,11 @@ function arpResolve(net, from, ip) {
     const owner = l2Deliver(net, from, (0, exports.macOf)(from), ep => l3Of(net, ep)?.ip === ip, "broadcast");
     if (!owner)
         return null;
+    const trail = net.trace?.lastTrail;
     if (!l2Deliver(net, owner, (0, exports.macOf)(owner), ep => sameEp(ep, from), "unicast"))
         return null;
+    if (net.trace && trail)
+        net.trace.segments.push({ phase: net.trace.phase, from: from.dev, to: owner.dev, switches: trail });
     arpLearn(net, from, ip, (0, exports.macOf)(owner));
     arpLearn(net, owner, src.ip, (0, exports.macOf)(from));
     return owner;
@@ -400,10 +410,14 @@ function forwardLeg(net, from, dst) {
     return t ? { ok: true, target: t, routers, gateway: gw } : { ok: false, reason: "DESTINATION_UNREACHABLE", routers, gateway: gw };
 }
 function probe(net, from, dst) {
+    if (net.trace)
+        net.trace.phase = "request";
     const f = forwardLeg(net, from, dst);
     if (!f.ok)
         return { ok: false, reason: f.reason, routers: f.routers, replyRouters: [], ...(f.gateway ? { gateway: f.gateway } : {}) };
     const src = l3Of(net, from);
+    if (net.trace)
+        net.trace.phase = "reply";
     const back = sameEp(f.target, from) ? { ok: true, target: from, routers: [] } : forwardLeg(net, f.target, src.ip);
     const g = f.gateway ? { gateway: f.gateway } : {};
     if (!back.ok || !sameEp(back.target, from))

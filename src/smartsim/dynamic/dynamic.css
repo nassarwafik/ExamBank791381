@@ -1,0 +1,34 @@
+/* ============================================================
+   Phase 20E — dynamic SmartSim runtime (lazy, loaded only with a plugin workspace).
+   Colours come from the validated presentation variables (--xp-*, Phase 20D.1) with code-owned fallbacks for exams without a presentation;
+   no second theming system. Logical properties, visible focus, reduced motion, print = static snapshot (controls and moving decorations hidden).
+   ============================================================ */
+.smartsim-dyn { --dyn-primary: var(--xp-primary, #1d6fd6); --dyn-accent: var(--xp-accent, #b4561d); --dyn-text: var(--xp-text, #172033);
+  --dyn-muted: var(--xp-muted, #4a5b70); --dyn-surface: var(--xp-surface, #ffffff); --dyn-border: var(--xp-border, #c9d7e8); --dyn-danger: var(--xp-danger, #b42318);
+  --dyn-success: var(--xp-success, #15803d); display: grid; gap: 10px; min-width: 0; }
+.xp-dyn-plot { direction: ltr; display: block; width: 100%; height: auto; max-width: 100%; background: var(--dyn-surface, #fff); border: 1px solid var(--dyn-border, #c9d7e8); border-radius: 10px; }
+.xp-dyn-axis { stroke: var(--dyn-muted, #4a5b70); stroke-width: 1.5; }
+.xp-dyn-grid { stroke: var(--dyn-border, #c9d7e8); stroke-width: 1; opacity: 0.6; }
+.xp-dyn-tick, .xp-dyn-label { font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--dyn-muted, #4a5b70); }
+.xp-dyn-label { font-weight: 700; }
+.xp-dyn-series { fill: none; stroke: var(--dyn-primary, #1d6fd6); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.xp-dyn-series.is-reference { stroke: var(--dyn-border, #c9d7e8); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.xp-dyn-series.is-dashed { stroke-dasharray: 6 4; }
+.xp-dyn-series.is-velocity { stroke: var(--dyn-accent, #b4561d); }
+.xp-dyn-now { stroke: var(--dyn-text, #172033); stroke-width: 1.2; stroke-dasharray: 3 3; opacity: 0.7; }
+.xp-dyn-zero { stroke: var(--dyn-muted, #4a5b70); stroke-width: 1; stroke-dasharray: 2 3; }
+.xp-dyn-marker { fill: var(--dyn-surface, #fff); stroke: var(--dyn-primary, #1d6fd6); stroke-width: 3; }
+.xp-dyn-event rect { fill: var(--dyn-surface, #fff); stroke: var(--dyn-accent, #b4561d); stroke-width: 2; }
+.xp-dyn-event[data-kind="impact"] rect { stroke: var(--dyn-danger, #b42318); }
+.smartsim-dyn-controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.smartsim-dyn-controls button[aria-pressed="true"] { background: var(--dyn-primary, #1d6fd6); color: #fff; border-color: var(--dyn-primary, #1d6fd6); }
+.smartsim-dyn :focus-visible { outline: 3px solid var(--dyn-primary, #1d6fd6); outline-offset: 2px; }
+.smartsim-dyn-status { margin: 0; min-height: 1.4em; color: var(--dyn-muted, #4a5b70); font-size: 0.92rem; }
+.smartsim-dyn-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .smartsim-dyn *, .xp-dyn-plot * { transition: none !important; animation: none !important; }
+}
+@media print {
+  .smartsim-dyn-controls, .dyn-flow-dot, .smartsim-dyn-status { display: none !important; }
+  .xp-dyn-plot { break-inside: avoid; }
+}

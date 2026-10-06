@@ -1,0 +1,62 @@
+{
+  "examId": "SS-20E-F",
+  "title": "سقوط على سطح القمر (حركة مخففة)",
+  "status": "draft",
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "phys-f",
+          "displayNumber": "1",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "يُقذف جسم إلى الأسفل بسرعة 5 m/s من ارتفاع 50 m على سطح القمر (g = 1.62 m/s²). استخدم شريط الزمن والخطوات اليدوية.",
+          "marks": 4,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsFreeFall",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "model": {
+                "initialHeight": 50,
+                "initialVelocity": -5,
+                "gravity": 1.62
+              },
+              "view": {
+                "maxTime": 10,
+                "showVelocityGraph": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى سطح القمر",
+                    "unit": "s"
+                  }
+                ],
+                "points": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول",
+                "weight": 1,
+                "kind": "physics.impactTime",
+                "measurementId": "impactTime",
+                "tolerance": 0.05
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

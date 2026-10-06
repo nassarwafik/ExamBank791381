@@ -1,14 +1,32 @@
-/* Phase 20A.2 — physicsFreeFall@1 workspace / editor / review. RTL page; numbers, units and graphs are LTR islands. */
+/* Phase 20A.2 — physicsFreeFall@1 workspace / editor / review. RTL page; numbers, units and graphs are LTR islands.
+   Phase 20E — dynamic experience: colours come from the validated presentation variables (--xp-*) with code-owned fallbacks;
+   desktop = scene | graphs, mobile = one column, no horizontal overflow; print = static snapshot (controls / timeline hidden). */
 .freefall { display: grid; gap: 12px; min-width: 0; }
-.freefall-stage { display: grid; gap: 12px; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); align-items: start; }
+.freefall-stage { display: grid; gap: 12px; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr); align-items: start; min-width: 0; }
 @media (max-width: 640px) { .freefall-stage { grid-template-columns: minmax(0, 1fr); } }
-.freefall-scene, .freefall-graph { border: 1px solid var(--line, #d7dde5); border-radius: 12px; background: var(--surface-2, #f7f9fc); overflow: hidden; direction: ltr; }
-.freefall-scene svg, .freefall-graph svg { display: block; width: 100%; height: auto; }
-.freefall-scene svg { max-height: 320px; }
+.freefall-scene { border: 1px solid var(--xp-border, var(--line, #d7dde5)); border-radius: 12px; background: var(--xp-surface-alt, var(--surface-2, #f7f9fc)); overflow: hidden; direction: ltr; min-width: 0; }
+.freefall-graph { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); direction: ltr; min-width: 0; }
+.freefall-scene svg, .freefall-graph svg { display: block; width: 100%; height: auto; max-width: 100%; }
+.freefall-scene svg { max-height: 340px; }
 .freefall-ground { fill: #c9b48a; }
 .freefall-ground-line { stroke: #6b5a36; stroke-width: 2; }
-.freefall-ball { fill: #1d6fd6; stroke: #0d3f80; stroke-width: 2; }
-.freefall-start { stroke: #8a96a8; stroke-dasharray: 4 4; }
+.freefall-ball { fill: var(--xp-primary, #1d6fd6); stroke: var(--xp-text, #0d3f80); stroke-width: 2; }
+.freefall-ball.is-landed { fill: var(--xp-accent, #b4561d); }
+.freefall-start { stroke: var(--xp-muted, #8a96a8); stroke-dasharray: 4 4; }
+.freefall-scale line, .freefall-scale-axis { stroke: var(--xp-muted, #5b6b80); stroke-width: 1; }
+.freefall-scale text, .freefall-scale-unit { font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--xp-muted, #415066); }
+.freefall-vector line { stroke-width: 3; stroke-linecap: round; }
+.freefall-vector text { font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.freefall-vector.is-v line { stroke: var(--xp-success, #15803d); }
+.freefall-vector.is-v polygon, .freefall-vector.is-v circle, .freefall-vector.is-v text { fill: var(--xp-success, #15803d); }
+.freefall-vector.is-a line { stroke: var(--xp-danger, #b42318); }
+.freefall-vector.is-a polygon, .freefall-vector.is-a circle, .freefall-vector.is-a text { fill: var(--xp-danger, #b42318); }
+.freefall-dyn .xp-dyn-event[data-kind="student-point"] rect { fill: var(--xp-surface, #fff); stroke: var(--xp-danger, #c0392b); transform: none; }
+.freefall-dyn .xp-dyn-event[data-kind="apex"] rect { stroke: var(--xp-success, #15803d); }
+.freefall-points-legend { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 2px; color: var(--xp-text, #172033); font-size: 0.92rem; }
+.freefall-rates, .freefall-toggles { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.freefall-controls button[aria-pressed="true"].is-secondary { background: var(--xp-primary, #1d6fd6); border-color: var(--xp-primary, #1d6fd6); color: #fff; }
+.freefall-fallback { margin: 0; padding: 8px 12px; border: 1px dashed var(--xp-border, #c9d7e8); border-radius: 8px; color: var(--xp-muted, #4a5b70); }
 .freefall-axis { stroke: #5b6b80; stroke-width: 1.5; }
 .freefall-grid { stroke: #dde3ea; stroke-width: 1; }
 .freefall-curve { fill: none; stroke: #1d6fd6; stroke-width: 2.5; }
@@ -24,7 +42,7 @@
 .freefall-timeline { display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
 .freefall-timeline input[type="range"] { width: 100%; min-height: 32px; }
 .freefall input[type="number"], .freefall input[type="text"], .freefall-editor input, .freefall-editor select { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line, #c9d1dc); border-radius: 8px; font: inherit; max-width: 100%; box-sizing: border-box; }
-.freefall-readout { margin: 0; padding: 8px 12px; border-radius: 8px; background: #eef4fb; font-variant-numeric: tabular-nums; }
+.freefall-readout { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--xp-surface-alt, #eef4fb); color: var(--xp-text, inherit); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .freefall-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
 .freefall-tasks { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .freefall-task { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; min-width: 0; }
@@ -42,6 +60,10 @@
 .freefall-list li { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 8px; border: 1px dashed var(--line, #d7dde5); border-radius: 8px; }
 .freefall-review table { border-collapse: collapse; width: 100%; }
 .freefall-review th, .freefall-review td { border: 1px solid var(--line, #d7dde5); padding: 4px 8px; text-align: start; }
+@media print {
+  .freefall-timeline { display: none !important; }
+  .freefall-stage { grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); }
+}
 @media (prefers-color-scheme: dark) {
   .freefall-readout { background: #1b2a3d; }
   .freefall-saved { color: #7fd1a0; }
