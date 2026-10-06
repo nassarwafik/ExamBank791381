@@ -23,10 +23,11 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   reduce(false);
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); windowOverride = {}; });
 
+let windowOverride: { xMax?: number } = {};
 const q = () => sanitizeExamForStudent({ examId: "E", title: "t", schemaVersion: 2, sections: [{ id: "s", title: "S", gradingPolicy: "all", stimuli: {}, questions: [{ examQuestionId: "t1", presentationType: "smartSim", questionTypeVersion: 1, text: "دراسة دالة", marks: 13,
-  smartSim: { schemaVersion: 1, pluginKey: "functionStudy2d", pluginVersion: 1, config: rationalCertificationConfig() }, answer: { scoring: "proportional", checks: rationalCertificationChecks() } }] }] }).sections[0].questions[0];
+  smartSim: { schemaVersion: 1, pluginKey: "functionStudy2d", pluginVersion: 1, config: { ...rationalCertificationConfig(), window: { ...rationalCertificationConfig().window, ...windowOverride } } }, answer: { scoring: "proportional", checks: rationalCertificationChecks() } }] }] }).sections[0].questions[0];
 const answers: Answer[] = [];
 function Harness() {
   const [a, setA] = useState<Answer | undefined>(undefined);
@@ -56,6 +57,17 @@ describe("20E-N1 probe: (x, f(x)) from the shared safe engine", () => {
       expect(readout(w)).toMatch(/غير معرّفة/);
       expect(within(w).queryByTestId("fnstudy-probe-point")).toBeNull();
     }
+  });
+  it("a typed x outside the window snaps to the last slider grid point INSIDE it (anchored at xMin), never off the grid", async () => {
+    windowOverride = { xMax: 8.004 };                                       // span 14.004 is not a whole number of 0.01 steps
+    const w = await mount();
+    const typed = within(w).getByRole("spinbutton") as HTMLInputElement;
+    fireEvent.change(typed, { target: { value: "100" } });
+    expect(Number(probe(w).value)).toBe(8);                                 // −6 + 1400 × 0.01, not the off-grid 8.004
+    expect(readout(w)).toMatch(/x\s*=\s*8(?![.\d])/);
+    fireEvent.change(typed, { target: { value: "-100" } });
+    expect(Number(probe(w).value)).toBe(-6);
+    expect(answers).toEqual([]);
   });
   it("the graded features are still never drawn by the workspace; probing adds no answer state", async () => {
     const w = await mount();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { traceHostCommandFlow } from "./net2Flow";
+import { boundedHops, NET2_FLOW_HOPS_MAX, traceHostCommandFlow } from "./net2Flow";
 import { replayNet2 } from "./net2Plugin";
 import { validateNet2Config, type Net2Config } from "./net2Model";
 import { makeNet, endpointsOf, l3Of } from "./net2Network";
@@ -73,6 +73,14 @@ describe("20E-W1 flow = the engine's own decision and traversal", () => {
     expect(traceHostCommandFlow(cfg, pre, "sw1", "ping 192.168.10.11")).toBeNull();
     const unresolved = traceHostCommandFlow(cfg, pre, "pc1", "ping server.unknown")!;
     expect(unresolved).toMatchObject({ ok: false, hops: ["pc1"] });
+  });
+  it("boundedHops: consecutive duplicates collapse; above the bound the first hops and the LAST reached device are kept", () => {
+    expect(boundedHops(["pc1", "pc1", "sw1", "sw1", "r1", "sw1", "pc3", "pc3"])).toEqual(["pc1", "sw1", "r1", "sw1", "pc3"]);
+    const long = Array.from({ length: NET2_FLOW_HOPS_MAX + 9 }, (_, i) => "d" + i);
+    const b = boundedHops(long);
+    expect(b.length).toBe(NET2_FLOW_HOPS_MAX);
+    expect(b.slice(0, NET2_FLOW_HOPS_MAX - 1)).toEqual(long.slice(0, NET2_FLOW_HOPS_MAX - 1));
+    expect(b[b.length - 1]).toBe(long[long.length - 1]);
   });
   it("hops are bounded", () => {
     const cfg = cfgOf("capstone"), pre = stateOf(cfg, []);

@@ -133,6 +133,14 @@ describe("20E-P1 DynamicPlot2D: trusted SVG, progressive series, synchronized ma
     expect(r.container.querySelector("script, foreignObject")).toBeNull();
     expect(r.container.innerHTML).not.toContain("<script>");
   });
+  it("series beyond seriesMax are ignored; an event kind that is not a safe class token is replaced by \"event\"", () => {
+    const series = Array.from({ length: DYNAMIC_LIMITS.seriesMax + 3 }, (_, i) => ({ id: "s" + i, points: [{ x: 0, y: 0 }, { x: 1, y: 1 }] }));
+    const r = render(<DynamicPlot2D width={300} height={150} xDomain={[0, 1]} yDomain={[0, 1]} xLabel="x" yLabel="y" title="t" progress={series} reference={series}
+      events={[{ x: 0.5, y: 0.5, label: "e", kind: "impact\" onload=\"x" }, { x: 0.2, y: 0.2, label: "f", kind: "Apex Point" }]} />);
+    expect(r.container.querySelectorAll("path[data-series]").length).toBe(DYNAMIC_LIMITS.seriesMax);
+    expect(r.container.querySelectorAll("path[data-reference]").length).toBe(DYNAMIC_LIMITS.seriesMax);
+    expect([...r.container.querySelectorAll("g.xp-dyn-event")].map(g => g.getAttribute("data-kind"))).toEqual(["event", "event"]);
+  });
   it("non-finite domains / points never produce NaN attributes", () => {
     const r = render(<DynamicPlot2D width={300} height={150} xDomain={[NaN, Infinity]} yDomain={[5, 5]} xLabel="x" yLabel="y" title="t" progress={[{ id: "s", points: [{ x: NaN, y: 1 }, { x: 1, y: Infinity }] }]} marker={{ x: NaN, y: 2 }} nowX={Infinity} />);
     expect(r.container.innerHTML).not.toMatch(/NaN|Infinity/);

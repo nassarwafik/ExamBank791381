@@ -27,14 +27,14 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const q = () => sanitizeExamForStudent({ examId: "E", title: "t", schemaVersion: 2, sections: [{ id: "s", title: "S", gradingPolicy: "all", stimuli: {}, questions: [{ examQuestionId: "t1", presentationType: "smartSim", questionTypeVersion: 1, text: "شبكات", marks: 10,
   smartSim: { schemaVersion: 1, pluginKey: "networkTopology", pluginVersion: 2, config: net2TemplateById("roas")!.config() }, answer: { scoring: "proportional", checks: net2TemplateById("roas")!.checks() } }] }] }).sections[0].questions[0];
 const answers: Answer[] = [];
-function Harness({ initial }: { initial?: Answer }) {
+function Harness({ initial, restoreTo }: { initial?: Answer; restoreTo?: Answer }) {
   const [a, setA] = useState<Answer | undefined>(initial);
-  return <StudentQuestionCard q={q()} index={0} id="t1" answer={a} onChoice={() => {}} onSeq={() => {}} onTable={() => {}} onText={() => {}} onAnswer={next => { answers.push(next); setA(next); }} />;
+  return <>{restoreTo && <button type="button" onClick={() => setA(restoreTo)}>استعادة خارجية</button>}<StudentQuestionCard q={q()} index={0} id="t1" answer={a} onChoice={() => {}} onSeq={() => {}} onTable={() => {}} onText={() => {}} onAnswer={next => { answers.push(next); setA(next); }} /></>;
 }
 const tick = (ms = 10) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-async function cmdOf(initial?: Answer) {
+async function cmdOf(initial?: Answer, restoreTo?: Answer) {
   answers.length = 0;
-  render(<Harness initial={initial} />);
+  render(<Harness initial={initial} restoreTo={restoreTo} />);
   const w = await screen.findByTestId("net2-workspace", {}, { timeout: 4000 });
   fireEvent.click(within(within(w).getByTestId("net2-device-list")).getByRole("button", { name: /^PC1/ })); await tick();
   const panel = await within(w).findByTestId("net2-device-panel", {}, { timeout: 4000 });
@@ -86,6 +86,15 @@ describe("20E-W2 transient flow overlay", () => {
     expect(frames.length).toBe(0);
     expect(cancelled.length).toBeGreaterThanOrEqual(1);
   });
+  it("an external replacement of the answer (restore / reset from outside the workspace) hides the shown flow", async () => {
+    const other = { kind: "smartSim", pluginKey: "networkTopology", pluginVersion: 2, actions: [{ type: "host.command", deviceId: "pc1", command: "ipconfig" }, { type: "host.command", deviceId: "pc1", command: "ipconfig" }], state: {} } as unknown as Answer;
+    const { w, cmd } = await cmdOf(undefined, other);
+    await run(cmd, "ping 192.168.10.12");
+    expect(within(w).getByTestId("net2-flow")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "استعادة خارجية" })); await tick();
+    expect(within(screen.getByTestId("net2-workspace")).queryByTestId("net2-flow")).toBeNull();
+    expect(screen.getByTestId("net2-flow-status").textContent).toBe("");
+  });
   it("non-flow commands draw nothing; reduced motion shows the static path without a frame loop", async () => {
     const { w, cmd } = await cmdOf();
     await run(cmd, "ipconfig");
@@ -94,6 +103,7 @@ describe("20E-W2 transient flow overlay", () => {
     const b = await cmdOf();
     await run(b.cmd, "ping 192.168.10.12");
     expect(within(b.w).getByTestId("net2-flow").getAttribute("data-ok")).toBe("true");
+    expect(within(b.w).queryByTestId("net2-flow-dot")).toBeNull();                 // static path: no moving dot
     expect(frames.length).toBe(0);
   });
 });

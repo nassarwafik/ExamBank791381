@@ -221,6 +221,7 @@ describe("20E-F4 reduced motion", () => {
     reduce(true);
     const w = await mount();
     expect(within(w).queryByRole("button", { name: "تشغيل" })).toBeNull();
+    for (const r of [0.25, 0.5, 1, 2]) expect(within(w).queryByTestId("freefall-rate-" + r)).toBeNull();   // no dead playback-rate controls
     expect(frames.length).toBe(0);
     fireEvent.click(within(w).getByRole("button", { name: /خطوة للأمام/ }));
     expect(markerOf(w, "freefall-height-plot").getAttribute("data-x")).toBe("0.1000");

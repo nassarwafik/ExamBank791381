@@ -16,7 +16,8 @@ export type Net2Flow = { kind: "ping" | "tracert"; target: string; address?: str
 /** The most hops one flow may carry (the presentation runtime's bound; the first hops and the last reached device are kept). */
 export const NET2_FLOW_HOPS_MAX = 32;
 
-function boundedHops(hops: string[]): string[] {
+/** Consecutive duplicate hops collapsed; above the bound, the first hops and the LAST reached device are kept. */
+export function boundedHops(hops: readonly string[]): string[] {
   const out: string[] = [];
   for (const h of hops) if (out[out.length - 1] !== h) out.push(h);
   return out.length > NET2_FLOW_HOPS_MAX ? [...out.slice(0, NET2_FLOW_HOPS_MAX - 1), out[out.length - 1]] : out;
