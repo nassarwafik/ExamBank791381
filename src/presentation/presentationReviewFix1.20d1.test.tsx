@@ -190,3 +190,16 @@ describe("RF1 nits", () => {
     expect(r.container.querySelector("figure.xp-figure figcaption")).toBeNull();
   });
 });
+
+describe("RF1 final mutation round — pins for the two non-equivalent survivors (P02, RF14)", () => {
+  it("normalizeHexColor (authoring input expansion) accepts only #RGB / #RRGGBB and refuses everything else", () => {
+    expect(P.normalizeHexColor("#14d")).toBe("#1144DD");
+    expect(P.normalizeHexColor("#1144dd")).toBe("#1144DD");
+    for (const bad of ["red", "url(x)", "#12345", "#1234567", "1144DD", "#GGGGGG", "", "#14d;", "var(--x)"]) expect(P.normalizeHexColor(bad), bad).toBeNull();
+    expect(P.normalizeHexColor(0x1144dd)).toBeNull();
+  });
+  it("strong closing after a nested italic (**a *b***) keeps the exact mark structure", () => {
+    expect(markdownToRichContent("**a *b***").value!.blocks[0]).toEqual({ type: "paragraph", runs: [{ text: "a ", marks: ["bold"] }, { text: "b", marks: ["bold", "italic"] }] });
+    expect(markdownToRichContent("**x *y* z**").value!.blocks[0]).toEqual({ type: "paragraph", runs: [{ text: "x ", marks: ["bold"] }, { text: "y", marks: ["bold", "italic"] }, { text: " z", marks: ["bold"] }] });
+  });
+});

@@ -245,3 +245,97 @@ fail-first tests (`src/presentation/presentationReviewFix1.20d1.test.tsx`, `api/
 Tests written in this PR that pinned the corrected behaviours were updated with the fix (each change is the review finding itself):
 `presentationModel.20d1` (sticky key → unknown key; `#RGB` refused), `presentationStudio.20d1` (no sticky switch),
 `presentation-20d1` S2 (rich-only stem → `EMPTY_TEXT`), `richContentEditor.20d1` (`x < a` stays literal).
+
+## 12. Mutation campaign
+
+Runner: one mutant at a time, exact single-occurrence replacement, SHA-256-verified byte-for-byte restore in `finally`, the listed
+suites per mutant, `git status` checked clean after the run. Round 1 (62 mutants on `679513f`): 50 KILLED, 11 SURVIVED (test gaps —
+closed in `1eb2c21`), 1 invalid replacement re-planted. Final campaign on `f9d4eb7` (62 original + 20 Review Fix 1 mutants, anchors
+re-pointed where Review Fix 1 moved code): 79 KILLED, 3 SURVIVED → two pins added (P02, RF14 now KILLED), MA2 judged **equivalent**
+(the row-level depth check is redundant: every nested row is entered through `atom()`, which enforces the same bound since Review
+Fix 1). **Final: 81 KILLED, 1 EQUIVALENT, 0 non-equivalent survivors, 0 timeouts.**
+
+| Id | File | Planted defect | Outcome | Killed by (suite) |
+|---|---|---|---|---|
+| P01 | `src/presentation/presentationModel.ts` | unknown exam-presentation keys accepted | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P02 | `src/presentation/presentationModel.ts` | any string accepted as a colour | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| P03 | `src/presentation/presentationModel.ts` | contrast policy never fails | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P04 | `src/presentation/presentationModel.ts` | unknown preset accepted | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P05 | `src/presentation/presentationModel.ts` | vocabulary word check removed | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P06 | `src/presentation/presentationModel.ts` | malformed presentation not flagged as fallback | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P07 | `src/presentation/presentationModel.ts` | absent presentation no longer null (legacy path lost) | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P08 | `src/presentation/presentationModel.ts` | section override may carry any slot | KILLED | src/assessmentPreset.20d1.test.ts |
+| P09 | `src/presentation/presentationModel.ts` | question width not checked | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P10 | `src/presentation/presentationModel.ts` | student projection returns raw input | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P11 | `src/presentation/presentationModel.ts` | question override precedence lost (variant) | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| P12 | `src/presentation/presentationModel.ts` | section override ignored by resolver | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| R01 | `src/richContent/richContentModel.ts` | raw HTML in prose accepted | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R02 | `src/richContent/richContentModel.ts` | control characters in prose accepted | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R03 | `src/richContent/richContentModel.ts` | unknown rich keys accepted | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R04 | `src/richContent/richContentModel.ts` | image asset not validated | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R05 | `src/richContent/richContentModel.ts` | table column limit on rows removed | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R06 | `src/richContent/richContentModel.ts` | nested columns allowed | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R07 | `src/richContent/richContentModel.ts` | total text limit removed | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R08 | `src/richContent/richContentModel.ts` | serialized size limit removed | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R09 | `src/richContent/richContentModel.ts` | block text limit removed | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| R10 | `src/richContent/richContentModel.ts` | student projection returns raw input | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| MA1 | `src/richContent/richMath.ts` | unknown math command accepted | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| MA2 | `src/richContent/richMath.ts` | math depth limit removed (row) | EQUIVALENT | — (atom() applies the same bound to every nested row since Review Fix 1) |
+| MA3 | `src/richContent/richMath.ts` | math node limit removed | KILLED | src/richContent/richContentModel.20d1.test.ts |
+| S01 | `api/src/lib/student-exam-sanitize.js` | parametric stem keeps rich content | KILLED | api/tests/presentation-20d1.test.js |
+| S02 | `api/src/lib/student-exam-sanitize.js` | question rich content passed through raw | KILLED | api/tests/presentation-20d1.test.js |
+| S03 | `api/src/lib/student-exam-sanitize.js` | question presentation passed through raw | KILLED | api/tests/presentation-20d1.test.js |
+| S04 | `api/src/lib/student-exam-sanitize.js` | rich/presentation fields not taken out before deep strip | KILLED | api/tests/presentation-20d1.test.js |
+| S05 | `api/src/lib/student-exam-sanitize.js` | section rich instructions passed raw | KILLED | api/tests/presentation-20d1.test.js |
+| S06 | `api/src/lib/student-exam-sanitize.js` | malformed exam presentation kept | KILLED | api/tests/presentation-20d1.test.js |
+| S07 | `api/src/lib/student-exam-sanitize.js` | cover rich instructions passed raw | KILLED | api/tests/presentation-20d1.test.js |
+| S08 | `api/src/functions/student-assignment.js` | pre-start cover not sanitized | KILLED | api/tests/presentation-20d1.test.js |
+| S09 | `api/src/functions/student-assignment.js` | pre-start presentation not projected | KILLED | api/tests/presentation-20d1.test.js |
+| S10 | `api/src/lib/student-exam-sanitize.js` | linked SmartSim composite child rich prompt passed raw | KILLED | api/tests/presentation-20d1.test.js |
+| S11 | `api/src/lib/shared-finalization/richContent/richContentModel.js` | server copy accepts raw HTML | KILLED | api/tests/presentation-20d1.test.js |
+| S12 | `api/src/lib/student-exam-sanitize.js` | section presentation passed raw | KILLED | api/tests/presentation-20d1.test.js |
+| H01 | `api/src/lib/bank-asset-hydrate.js` | question rich images not hydrated | KILLED | api/tests/presentation-20d1.test.js |
+| H02 | `api/src/lib/bank-asset-hydrate.js` | section rich images not hydrated | KILLED | api/tests/presentation-20d1.test.js |
+| H03 | `api/src/lib/bank-asset-hydrate.js` | cover rich images not hydrated | KILLED | api/tests/presentation-20d1.test.js |
+| B01 | `api/src/lib/bank-question-exam.js` | bank insertion copies an unvalidated rich stem | KILLED | api/tests/presentation-20d1.test.js |
+| Q01 | `src/examQuality.ts` | exam presentation not a finalization blocker | KILLED | api/tests/presentation-20d1.test.js |
+| Q02 | `src/examQuality.ts` | parametric rich content not forbidden | KILLED | api/tests/presentation-20d1.test.js |
+| Q03 | `src/examQuality.ts` | question rich content not validated | KILLED | api/tests/presentation-20d1.test.js |
+| Q04 | `src/examQuality.ts` | section override not validated | KILLED | api/tests/presentation-20d1.test.js |
+| Q05 | `src/examQuality.ts` | cover rich instructions not validated | KILLED | api/tests/presentation-20d1.test.js |
+| Q06 | `src/examQuality.ts` | question override not validated | KILLED | api/tests/presentation-20d1.test.js |
+| SS1 | `src/scenarioSource.ts` | rich scenario source not validated | KILLED | api/tests/presentation-20d1.test.js |
+| A01 | `src/assessmentPreset.ts` | preset extraction does not fail closed on malformed presentation | KILLED | src/assessmentPreset.20d1.test.ts |
+| A02 | `src/assessmentPreset.ts` | preset copies the source presentation by reference | KILLED | src/assessmentPreset.20d1.test.ts |
+| U01 | `src/richContent/RichContentRenderer.tsx` | column headers lose scope | KILLED | src/richContent/richContentRenderer.20d1.test.tsx |
+| U02 | `src/richContent/RichContentRenderer.tsx` | row header rendered as td | KILLED | src/richContent/richContentRenderer.20d1.test.tsx |
+| U03 | `src/richContent/RichContentRenderer.tsx` | content heading rendered as h2 | KILLED | src/richContent/richContentRenderer.20d1.test.tsx |
+| U04 | `src/richContent/RichContentRenderer.tsx` | callout loses role=note | KILLED | src/richContent/richContentRenderer.20d1.test.tsx |
+| U05 | `src/richContent/RichContentRenderer.tsx` | code block loses dir=ltr | KILLED | src/richContent/richContentRenderer.20d1.test.tsx |
+| U06 | `src/richContent/RichPrompt.tsx` | invalid rich content rendered instead of plain fallback | KILLED | src/presentation/presentationParity.20d1.test.tsx |
+| U07 | `src/StudentQuestionCard.tsx` | question article loses presentation attributes | KILLED | src/presentation/presentationParity.20d1.test.tsx |
+| U08 | `src/StudentQuestionCard.tsx` | rich stem never rendered | KILLED | src/presentation/presentationParity.20d1.test.tsx |
+| U09 | `src/presentation/presentationRuntime.ts` | question card variant ignored | KILLED | src/presentation/presentationParity.20d1.test.tsx |
+| MD1 | `src/richContent/markdownToRichContent.ts` | Markdown HTML tags kept | KILLED | src/richContent/richContentEditor.20d1.test.tsx |
+| MD2 | `src/richContent/markdownToRichContent.ts` | Markdown image URL kept | KILLED | src/richContent/richContentEditor.20d1.test.tsx |
+| BG1 | `scripts/check-bundle-budget.mjs` | bundle guard loses the Studio signature | KILLED | src/presentation/presentationAuthoring.20d1.test.tsx |
+| RF01 | `src/richContent/richContentModel.ts` | raw-HTML regex back to quadratic whitespace split | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF02 | `src/richContent/richContentModel.ts` | structural tags refused on the opening token alone | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF03 | `api/src/lib/shared-finalization/richContent/richContentModel.js` | server copy regex back to quadratic | KILLED | api/tests/presentation-reviewfix1-20d1.test.js |
+| RF04 | `src/richContent/richMath.ts` | atom depth check removed | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF05 | `api/src/lib/student-exam-sanitize.js` | sanitizer ignores a stray parametric config | KILLED | api/tests/presentation-reviewfix1-20d1.test.js |
+| RF06 | `src/examQuality.ts` | finalization ignores a stray parametric config | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF07 | `src/richContent/RichPrompt.tsx` | client renders a rich stem on a generated node | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF08 | `src/examQuality.ts` | rich stem again excuses empty text | KILLED | api/tests/presentation-20d1.test.js |
+| RF09 | `src/presentation/presentation.css` | top bar unpinned by a presentation rule | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF10 | `src/presentation/presentation.css` | minimal navigation transparent again | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF11 | `src/presentation/PresentationRoot.tsx` | root dir follows the presentation direction | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF12 | `api/src/functions/student-assignment.js` | pre-start cover not hydrated | KILLED | api/tests/presentation-reviewfix1-20d1.test.js |
+| RF13 | `src/richContent/markdownToRichContent.ts` | closer-miss budget removed | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF14 | `src/richContent/markdownToRichContent.ts` | running star parity inverted | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF15 | `src/richContent/markdownToRichContent.ts` | surrogate-safe cut removed | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF16 | `src/richContent/RichContentRenderer.tsx` | empty figcaption rendered | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF17 | `src/StructuredExamSection.tsx` | legacy preview ignores rich section instructions | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF18 | `src/student/exam/ExamSectionContext.tsx` | legacy student context ignores rich section instructions | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
+| RF19 | `src/presentation/presentationModel.ts` | #RGB accepted again in stored JSON | KILLED | src/presentation/presentationModel.20d1.test.ts |
+| RF20 | `src/presentation/presentationModel.ts` | root direction attribute removed | KILLED | src/presentation/presentationReviewFix1.20d1.test.tsx |
