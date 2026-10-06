@@ -42,12 +42,12 @@ async function withSelection() {
 describe("20A.1-S1 — descriptors and the authoring catalog on the server", () => {
   it("production = networkTopology@1 + the 20A.2 pilots, each with a descriptor; the listing / catalog are plain data and IDENTICAL to the client build", async () => {
     const reg = loadShared("trustedSimRegistry"); loadShared("trustedSimPlugins");
-    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "physicsFreeFall@1"]);
+    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1"]);   // Phase 20C added networkTopology@2 (a NEW exact identity; v1 unchanged)
     const cat = loadShared("trustedSimCatalog").smartSimAuthoringCatalog();
     expect(JSON.parse(JSON.stringify(cat))).toEqual(cat);
     const ts = await import("../../src/trustedSimCatalog.ts");
     expect(cat).toEqual(ts.smartSimAuthoringCatalog());
-    expect(reg.resolveSmartSimDescriptor("networkTopology", 2)).toBeUndefined();
+    expect(reg.resolveSmartSimDescriptor("networkTopology", 3)).toBeUndefined();   // Phase 20C: @2 is now registered; @3 is the unknown version
   });
   it("every new pure module is in SHARED_ENTRIES and its committed server copy reaches no I/O, dynamic code, timers or randomness", () => {
     for (const m of NEW_MODULES) {
@@ -141,7 +141,7 @@ describe("20A.1-S3 — PINS: networkTopology@1 and simulation@1 are unchanged", 
     expect(Object.keys(r.manifest.capabilities).sort()).toEqual(["autosave", "offline", "partialCredit", "reset", "restore"]);
     expect(r.manifest).not.toHaveProperty("pluginKey"); expect(r.manifest).not.toHaveProperty("descriptor");
     expect(resolveGrader("simulation", 1)({}, { kind: "simulation", state: { score: 100, trusted: true } }, 10)).toEqual({ score: 0, manualReview: true, correct: false });
-    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(d => d.key)).toEqual(["networkTopology", "physicsFreeFall", "functionStudy2d"]);
+    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(d => d.key)).toEqual(["networkTopology", "physicsFreeFall", "functionStudy2d", "networkTopology"]);   // Phase 20C added networkTopology@2 (a NEW exact identity; v1 unchanged)
   });
 });
 

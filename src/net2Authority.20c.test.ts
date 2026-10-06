@@ -207,6 +207,10 @@ describe("20C-SC — curriculum scenarios 1–7 and the certification capstone",
     expect(canReachNet2(cfgOf("roas"), run(cfgOf("roas"), ROAS_SOLUTION).state as never, "pc1", "pc4").reachable).toBe(true);
     expect(full("roas", [])).toMatchObject({ score: 0 });
   });
+  it("Scenario 1b — router DHCP: the template's independent solution earns every private check", () => {
+    expect(full("dhcp", DHCP_SOLUTION)).toMatchObject({ correct: true });
+    expect(full("dhcp", DHCP_SOLUTION.slice(0, -2)).correct).toBe(false);                                   // no dns-server ⇒ not complete
+  });
   it("Scenario 2 — DHCP for VLAN 10 behind a trunk that does not allow VLAN 10 fails until the allowed list is repaired", () => {
     const c = cfgOf("roas");
     const dhcpRoas = [...ROAS_SOLUTION, mode("pc1", "dhcp"), ...rt("r1", ...CONF, "ip dhcp excluded-address 192.168.10.1 192.168.10.20", "ip dhcp pool V10", "network 192.168.10.0 255.255.255.0", "default-router 192.168.10.1", "end")];
@@ -235,7 +239,7 @@ describe("20C-SC — curriculum scenarios 1–7 and the certification capstone",
     const c = tpl("capstone").config();
     const checks = [{ id: "s", label: "s", weight: 1, kind: "switch.enableSecret", deviceId: "sw1", value: "Class2026" }, { id: "r", label: "r", weight: 1, kind: "router.enableSecret", deviceId: "r1", value: "Class2026" }];
     expect(grade(question(c, checks, 2), CAPSTONE_SOLUTION)).toMatchObject({ score: 2 });
-    expect(grade(question(c, checks, 2), CAPSTONE_SOLUTION.map(a => (a.command === "enable secret Class2026" && a.deviceId === "r1" ? { ...a, command: "enable secret wrong" } : a))).score).toBe(1);
+    expect(grade(question(c, checks, 2), CAPSTONE_SOLUTION.map(a => ((a as { command?: string }).command === "enable secret Class2026" && a.deviceId === "r1" ? { ...a, command: "enable secret wrong" } : a))).score).toBe(1);
   });
   it("Scenario 7 — fault diagnosis: one wrong dot1Q VLAN; ping and DHCP reveal it until corrected", () => {
     const c = cfgOf("roas");

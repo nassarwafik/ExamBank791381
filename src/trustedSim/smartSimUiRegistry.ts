@@ -40,6 +40,12 @@ const entries = new Map<string, SmartSimUi>([
     Workspace: lazy(() => import("../functionStudy/FunctionStudyWorkspace")),
     Editor: lazy(() => import("../functionStudy/FunctionStudyEditor")),
     ReviewDetails: lazy(() => import("../functionStudy/FunctionStudyReview"))
+  }],
+  // Phase 20C — the curriculum network simulator: a NEW exact identity with its own lazy chunks (networkTopology@1 above is unchanged).
+  ["networkTopology@2", {
+    Workspace: lazy(() => import("../networkTopology2/Net2Workspace")),
+    Editor: lazy(() => import("../networkTopology2/Net2Editor")),
+    ReviewDetails: lazy(() => import("../networkTopology2/Net2Review"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */

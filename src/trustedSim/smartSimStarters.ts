@@ -5,6 +5,7 @@ import { freeFallClassroomConfig } from "../physicsFreeFall/freeFallTemplates";
 // validator then shows what is missing). The private key always restarts EMPTY: checks are plugin-specific and never carried over.
 const STARTERS: ReadonlyMap<string, () => unknown> = new Map<string, () => unknown>([
   ["networkTopology@1", () => ({ v: 1, devices: [], links: [] })],
+  ["networkTopology@2", () => ({ v: 2, devices: [], links: [] })],
   ["physicsFreeFall@1", () => freeFallClassroomConfig()],
   ["functionStudy2d@1", () => ({ v: 1, expression: { language: 2, variable: "x", source: "x^2-4" }, window: { xMin: -5, xMax: 5, yMin: -6, yMax: 6, sampleCount: 401 }, tasks: { domainExclusions: false, xIntercepts: true, yIntercept: true, verticalAsymptotes: false, horizontalAsymptotes: false, extrema: true, monotonicIntervals: true } })]
 ]);

@@ -64,7 +64,7 @@ describe("20B-S1b — the SERVER copy derives reachability and fails closed on a
   });
   it("an unknown plugin key / version naming a VALID topology, and non-positive / oversized / non-finite weights ⇒ 0 + manual review and blocked finalization (never another plugin)", async () => {
     const { q, exam, env, key } = await fixture();
-    for (const smartSim of [{ ...env, pluginKey: "networkTopologyPro" }, { ...env, pluginVersion: 2 }]) {
+    for (const smartSim of [{ ...env, pluginKey: "networkTopologyPro" }, { ...env, pluginVersion: 3 }]) {   // Phase 20C: @2 is now registered; @3 is the unknown version
       expect(g(gradeExam(exam([q({ smartSim })]), { t1: ans(FULL) }))).toMatchObject({ score: 0, manualReview: true });
       expect(evaluateServerFinalization(exam([q({ smartSim })])).structuralErrors.map(i => i.code)).toContain("SMARTSIM_PLUGIN_UNKNOWN");
     }
@@ -185,6 +185,6 @@ describe("20B-S4 — server finalization blocks invalid topologies and checks (t
     expect(codes(q({ smartSim: { ...env, config: { ...env.config, links: [...env.config.links, { id: "bad", a: { deviceId: "pc1", port: "eth0" }, b: { deviceId: "pc2", port: "eth0" } }] } } }))).toContain("NETTOPO_PORT_IN_USE");
     expect(codes(q({ answer: { ...key, checks: [...key.checks, { id: "ghost", label: "x", weight: 1, kind: "pc.address", deviceId: "pc9", value: "10.0.0.1" }] } }))).toContain("NETTOPO_CHECK_DEVICE_UNKNOWN");
     expect(codes(q({ answer: { ...key, checks: [] } }))).toContain("SMARTSIM_CHECKS_EMPTY");
-    expect(codes(q({ smartSim: { ...env, pluginVersion: 2 } }))).toContain("SMARTSIM_PLUGIN_UNKNOWN");
+    expect(codes(q({ smartSim: { ...env, pluginVersion: 3 } }))).toContain("SMARTSIM_PLUGIN_UNKNOWN");   // Phase 20C: @2 is now registered; @3 is the unknown version
   });
 });

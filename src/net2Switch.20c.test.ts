@@ -10,7 +10,6 @@ const dev = (id: string, kind: string, extra: Json = {}) => ({ id, kind, label: 
 const link = (id: string, a: string, ap: string, b: string, bp: string) => ({ id, a: { deviceId: a, port: ap }, b: { deviceId: b, port: bp } });
 const cfg = (devices: Json[], links: Json[]) => { const r = validateNet2Config({ v: 2, devices, links }); if (!r.ok) throw new Error(JSON.stringify(r.issues)); return r.config; };
 const sw = (id: string, ...c: string[]) => c.map(command => ({ type: "switch.command", deviceId: id, command }));
-const rt = (id: string, ...c: string[]) => c.map(command => ({ type: "router.command", deviceId: id, command }));
 const host = (id: string, ...c: string[]) => c.map(command => ({ type: "host.command", deviceId: id, command }));
 const ip = (id: string, address: string, mask = "255.255.255.0", gateway = "", dns = "") => ({ type: "host.setStatic", deviceId: id, adapter: "eth0", address, mask, gateway, dns });
 type R = { ok: true; state: { devices: Record<string, Json>; ops: Json }; transcripts: Record<string, { input: string; result: { status: string; output: string[] } }[]> };

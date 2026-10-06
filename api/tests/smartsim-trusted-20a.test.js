@@ -59,7 +59,7 @@ describe("20A-S1 — smartSim@1 is a registered, version-bound authoritative gra
     expect(catalog.questionTypeDefinition("smartSim")).toMatchObject({ version: 1, gradingMode: "auto", legacy: false, responseKinds: ["smartSim"] });
     expect(catalog.questionTypeDefinition("smartSim").capabilities).toMatchObject({ autoGrading: true, partialCredit: true, compoundPart: false, interactive: true, offline: true });
     expect(typeof resolveGrader("smartSim", 1)).toBe("function"); expect(resolveGrader("smartSim", 2)).toBeUndefined();
-    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1"]);
+    expect(loadShared("trustedSimPlugins").listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2"]);   // Phase 20C added networkTopology@2 (a NEW exact identity; v1 unchanged)
   });
   it("domain-neutral: a test-only plugin registered in the server registry is graded by gradeExam with weighted partial credit from replayed state", () => {
     withBalance();

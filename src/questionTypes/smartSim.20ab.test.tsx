@@ -162,7 +162,7 @@ describe("student workspace — topology, device panels, per-device CLI, ping, r
     expect(document.body.innerHTML).not.toMatch(/BR1-SW1|reach-pc|192\.168\.10\.254/);
   });
   it("an unknown plugin / version renders an explicit unavailable state, never another plugin", async () => {
-    render(<StudentHarness q={studentQ({ smartSim: { ...ENV(), pluginVersion: 2 } })} />);
+    render(<StudentHarness q={studentQ({ smartSim: { ...ENV(), pluginVersion: 3 } })} />);   // Phase 20C: @2 is registered now; @3 is the future version
     expect(await screen.findByTestId("smartsim-unavailable", {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.queryByTestId("nettopo-device-list")).toBeNull();
   });
@@ -176,7 +176,8 @@ describe("student workspace — topology, device panels, per-device CLI, ping, r
     }
     const { resolveSmartSimUi } = await import("../trustedSim/smartSimUiRegistry");
     expect(resolveSmartSimUi("networkTopology", 1)).toBeDefined();
-    for (const [k, v] of [["networkTopology", 2], ["networkTopology", 0], ["networkTopology", 1.5], ["networkTopology", "1"], ["networktopology", 1], ["networkTopologyPro", 1], ["__proto__", 1], [undefined, 1]] as const)
+    for (const [k, v] of [["networkTopology", 3], ["networkTopology", 0],   // Phase 20C: @2 is registered now; @3 is unknown
+    ["networkTopology", 1.5], ["networkTopology", "1"], ["networktopology", 1], ["networkTopologyPro", 1], ["__proto__", 1], [undefined, 1]] as const)
       expect(resolveSmartSimUi(k, v), String(k) + "@" + String(v)).toBeUndefined();
   });
 });
@@ -225,7 +226,7 @@ describe("teacher authoring — lazy editor, one-click template, checks, inline 
     expect(imported.canOpen).toBe(true);
     const iq = imported.exam!.sections[0].questions[0] as unknown as Record<string, unknown>;
     expect(iq.smartSim).toEqual(ENV()); expect(iq.answer).toEqual(KEY());
-    const future = parseStructuredExamJson(JSON.stringify(baseExam([teacherQ({ smartSim: { ...ENV(), pluginVersion: 2 } })])), "exam.json");
+    const future = parseStructuredExamJson(JSON.stringify(baseExam([teacherQ({ smartSim: { ...ENV(), pluginVersion: 3 } })])), "exam.json");   // Phase 20C: @2 is registered now; @3 is the future version
     expect(JSON.stringify(evaluateExamFinalization(future.exam as never).blockers)).toMatch(/SMARTSIM_PLUGIN_UNKNOWN/);
     const { hist } = await mountBuilder(baseExam([q]));
     const editor = await openEditor();
