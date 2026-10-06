@@ -208,18 +208,57 @@ const str = (v: unknown): string => (typeof v === "string" ? v : String(v));
  * state and the plugin's optional review details (e.g. per-device histories) for the teacher review.
  */
 export function evaluateSmartSim(input: SmartSimEvaluationInput, options: { withDetails?: boolean } = {}): SmartSimEvaluation {
+  return evaluatePreparedSmartSimChecks(prepareSmartSimEvaluation({ envelope: input.envelope, response: input.response }), { answerKey: input.answerKey, maxMarks: input.maxMarks }, options);
+}
+
+// ── Phase 20D — prepare ONCE, evaluate MANY (a shared SmartSim context serving several independently scored composite parts) ─────────
+// prepareSmartSimEvaluation validates the public envelope and normalizes + REPLAYS the student's actions exactly once; the prepared object
+// is frozen and BRANDED (a module-private WeakSet): only an object this module created is ever evaluated — a copied, deserialized or
+// hand-built "prepared" object (e.g. a forged state) fails closed. evaluatePreparedSmartSimChecks then validates ONE private key against the
+// prepared envelope and scores it on the prepared server-derived state. evaluateSmartSim above is exactly prepare + evaluatePrepared, so its
+// output is byte-identical to the 20A implementation (pinned by tests); the response's state / score / checks are never read.
+type PreparedReplay = { ok: true; actions: unknown[]; state: unknown } | { ok: false };
+export type PreparedSmartSimEvaluation = Readonly<{ envelopeOk: boolean }>;
+type PreparedInternal = { envelope: SmartSimEnvelopeResult; replay: PreparedReplay };
+const PREPARED = new WeakMap<object, PreparedInternal>();
+export function prepareSmartSimEvaluation(input: { envelope: unknown; response: unknown }): PreparedSmartSimEvaluation {
+  const env = validateSmartSimEnvelope(input.envelope);
+  let replay: PreparedReplay = { ok: false };
+  if (env.ok) {
+    const base = normalizeSmartSimAnswer(input.response);
+    if (base.ok && base.answer.pluginKey === env.envelope.pluginKey && base.answer.pluginVersion === env.envelope.pluginVersion) {
+      const r = replaySmartSimActions(env.plugin, env.envelope.config, base.answer.actions);
+      if (r.ok) replay = { ok: true, actions: r.actions, state: r.state };
+    }
+  }
+  const handle: PreparedSmartSimEvaluation = Object.freeze({ envelopeOk: env.ok });
+  PREPARED.set(handle, { envelope: env, replay });
+  return handle;
+}
+/** Teacher-review evidence of a prepared context (the server-derived state and the plugin's review details) — evidence only, never a grade. */
+export function describePreparedSmartSim(prepared: unknown): { valid: boolean; answered: boolean; state?: unknown; details?: Record<string, unknown>; issues?: SmartSimIssue[] } {
+  const p = prepared && typeof prepared === "object" ? PREPARED.get(prepared) : undefined;
+  if (!p) return { valid: false, answered: false, issues: [issue("SMARTSIM_PREPARED_INVALID", "تعذّر تقييم المحاكاة؛ بحاجة إلى تصحيح يدوي.")] };
+  if (!p.envelope.ok) return { valid: false, answered: false, issues: p.envelope.issues };
+  if (!p.replay.ok) return { valid: true, answered: false };
+  const out: { valid: boolean; answered: boolean; state?: unknown; details?: Record<string, unknown> } = { valid: true, answered: p.replay.actions.length > 0, state: p.replay.state };
+  const plugin = p.envelope.plugin;
+  if (plugin.reviewDetails) { try { out.details = plugin.reviewDetails(p.replay.actions, p.envelope.envelope.config); } catch { /* details are evidence only */ } }
+  return out;
+}
+export function evaluatePreparedSmartSimChecks(prepared: unknown, input: { answerKey: unknown; maxMarks: number }, options: { withDetails?: boolean } = {}): SmartSimEvaluation {
   const max = Number.isFinite(input.maxMarks) ? Math.max(0, input.maxMarks) : 0;
   const closed = (issues: SmartSimIssue[]): SmartSimEvaluation => ({ ...SMART_SIM_FAIL_CLOSED, parts: { correct: 0, total: 0 }, valid: false, maxMarks: max, totalWeight: 0, passedWeight: 0, checks: [], issues });
-  const env = validateSmartSimEnvelope(input.envelope);
+  const p = prepared && typeof prepared === "object" ? PREPARED.get(prepared) : undefined;
+  if (!p) return closed([issue("SMARTSIM_PREPARED_INVALID", "تعذّر تقييم المحاكاة؛ بحاجة إلى تصحيح يدوي.")]);
+  const env = p.envelope;
   if (!env.ok) return closed(env.issues);
   const key = validateSmartSimAnswerKey(input.answerKey, env.plugin, env.envelope.config);
   if (!key.ok) return closed(key.issues);
   const total = key.key.checks.length;
   const zero = (): SmartSimEvaluation => ({ score: 0, correct: false, manualReview: false, parts: { correct: 0, total }, valid: true, maxMarks: max, totalWeight: key.key.totalWeight, passedWeight: 0, checks: [] });
-  const base = normalizeSmartSimAnswer(input.response);
-  if (!base.ok || base.answer.pluginKey !== env.envelope.pluginKey || base.answer.pluginVersion !== env.envelope.pluginVersion) return zero();
-  const replay = replaySmartSimActions(env.plugin, env.envelope.config, base.answer.actions);
-  if (!replay.ok) return zero();
+  if (!p.replay.ok) return zero();
+  const replay = p.replay;
   const checks: SmartSimCheckFact[] = [];
   let passedWeight = 0;
   try {

@@ -9,6 +9,7 @@ exports.getAnswerUnits = getAnswerUnits;
 exports.selectGradedUnits = selectGradedUnits;
 exports.calculateSectionProgress = calculateSectionProgress;
 const answerState_1 = require("./answerState");
+const compositeModel_1 = require("./compositeModel");
 const POLICIES = ["all", "capScore", "firstNAnswered"];
 const questionId = (q, i) => String(q?.examQuestionId ?? q?.id ?? q?.number ?? i + 1);
 exports.questionId = questionId;
@@ -55,6 +56,8 @@ function distributePartMarks(q) {
     return parts.map((p, i) => (hasMark[i] ? num(p.marks) : each));
 }
 function questionMaxMarks(q) {
+    if ((0, compositeModel_1.isCompositeQuestionNode)(q))
+        return (0, compositeModel_1.compositeQuestionMaxMarks)(q);
     if ((0, exports.isCompound)(q)) {
         return distributePartMarks(q).reduce((s, m) => s + Math.max(0, num(m, 0)), 0);
     }

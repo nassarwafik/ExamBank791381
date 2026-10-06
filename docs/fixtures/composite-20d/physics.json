@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "examId": "CMP-20D-B",
+  "title": "السقوط الحر — محاكاة واحدة",
+  "status": "draft",
+  "metadata": {},
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "phys1",
+          "displayNumber": "1",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "marks": 18,
+          "text": "يسقط جسم سقوطًا حرًا من ارتفاع 20 m. استخدم المحاكاة للإجابة عن البنود.",
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxSim",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "محاكاة السقوط الحر",
+                "instructions": "سجّل قياساتك ونقاطك في المحاكاة.",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "physicsFreeFall",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "model": {
+                      "initialHeight": 20,
+                      "initialVelocity": 0,
+                      "gravity": 9.8
+                    },
+                    "view": {
+                      "maxTime": 3,
+                      "showVelocityGraph": true
+                    },
+                    "tasks": {
+                      "measurements": [
+                        {
+                          "id": "impactTime",
+                          "label": "زمن الوصول إلى الأرض",
+                          "unit": "s"
+                        },
+                        {
+                          "id": "impactSpeed",
+                          "label": "سرعة الارتطام بالأرض (مقدار)",
+                          "unit": "m/s"
+                        },
+                        {
+                          "id": "heightAt1s",
+                          "label": "الارتفاع عند الزمن 1 ث",
+                          "unit": "m"
+                        },
+                        {
+                          "id": "velocityAt1s",
+                          "label": "السرعة المتجهة عند الزمن 1 ث (الأعلى موجب)",
+                          "unit": "m/s"
+                        }
+                      ],
+                      "points": [
+                        {
+                          "id": "impactPoint",
+                          "label": "نقطة الارتطام على منحنى الارتفاع–الزمن"
+                        },
+                        {
+                          "id": "pointAt1s",
+                          "label": "نقطة من منحنى الارتفاع–الزمن عند 1 ث"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gSim",
+                "title": "القياس بالمحاكاة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "s1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "زمن الوصول إلى الأرض",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "impact-time",
+                          "label": "زمن الوصول",
+                          "weight": 1,
+                          "kind": "physics.impactTime",
+                          "measurementId": "impactTime",
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "سرعة الارتطام",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "impact-speed",
+                          "label": "سرعة الارتطام",
+                          "weight": 1,
+                          "kind": "physics.impactSpeed",
+                          "measurementId": "impactSpeed",
+                          "tolerance": 0.1
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s3",
+                    "label": "ج",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "الارتفاع عند 1 ث",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "height-1s",
+                          "label": "الارتفاع عند 1 ث",
+                          "weight": 1,
+                          "kind": "physics.heightAtTime",
+                          "measurementId": "heightAt1s",
+                          "time": 1,
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s4",
+                    "label": "د",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "السرعة المتجهة عند 1 ث",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "velocity-1s",
+                          "label": "السرعة عند 1 ث",
+                          "weight": 1,
+                          "kind": "physics.velocityAtTime",
+                          "measurementId": "velocityAt1s",
+                          "time": 1,
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s5",
+                    "label": "هـ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "نقطة على منحنى الحركة",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "point-1s",
+                          "label": "نقطة على المنحنى",
+                          "weight": 1,
+                          "kind": "physics.pointOnTrajectory",
+                          "pointId": "pointAt1s",
+                          "tolerance": 0.1
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gInt",
+                "title": "التفسير",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "n1",
+                    "label": "و",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "ما مقدار تسارع السقوط الحر المستخدم في المحاكاة (m/s²)؟",
+                    "marks": 2,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 9.8,
+                      "tolerance": 0.05
+                    }
+                  },
+                  {
+                    "id": "o1",
+                    "label": "ز",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSim",
+                    "text": "فسّر لماذا تزداد السرعة بانتظام.",
+                    "marks": 4,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 600
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "physics",
+                            "title": "الفهم الفيزيائي",
+                            "description": "",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "PRIVATE-GUIDANCE-20D-B",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "كامل",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "half",
+                                "label": "جزئي",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "لا شيء",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "MODEL-ANSWER-20D-B"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

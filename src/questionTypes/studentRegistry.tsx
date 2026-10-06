@@ -56,3 +56,5 @@ registerStudentRenderer("labelDiagram", 1, lazy(() => import("./student/LabelDia
 registerStudentRenderer("openResponse", 1, lazy(() => import("./student/OpenResponseResponse")));
 // Phase 20A — trusted SmartSim (lazy: the plugin workspace — topology, device panels, engines — loads only when a smartSim question renders).
 registerStudentRenderer("smartSim", 1, lazy(() => import("./student/SmartSimResponse")));
+// Phase 20D — composite@1 (lazy: groups, shared source / SmartSim contexts and the per-part renderers load only when a composite renders).
+registerStudentRenderer("composite", 1, lazy(() => import("./student/CompositeResponse")));

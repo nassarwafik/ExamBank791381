@@ -14,6 +14,7 @@ import { codeStimulusIssues } from "./codeStimulus";
 import { scenarioSectionIssues } from "./scenarioSource";
 import { questionTypeDefinition } from "./questionTypeCatalog";
 import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
+import { validateCompositeQuestion, compositeStructure, compositeChildNode, isSupportedCompositeChild, isCompositeQuestionId, COMPOSITE_CHILD_SEPARATOR } from "./compositeQuestion";
 
 export type Severity = "error" | "warning";
 export type StructuredIssue = {
@@ -80,6 +81,8 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
     });
   });
 
+  for (const x of compositeEffectiveIdIssues(exam)) add("error", "COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب «" + x.questionId + "» غير صالح: يجب أن يكون من حروف لاتينية وأرقام و . _ : - فقط، دون الفاصل ::part::.", x);
+  for (const x of compositeTargetKeyIssues(exam)) add("error", "COMPOSITE_TARGET_KEY_AMBIGUOUS", "معرّف السؤال «" + x.questionId + "» يحتوي الفاصل ::part::، وهو محجوز لهويات بنود الأسئلة المركّبة.", x);
   return issues;
 }
 
@@ -156,6 +159,8 @@ function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: Bui
   for (const i of codeStimulusIssues(q)) add("error", i.code, "سؤال " + disp + " في «" + sectionLabel + "»: " + i.message, where);
   if (q.presentationType === "compound") {
     validateCompound(q, disp, sectionLabel, where, add);
+  } else if (q.presentationType === "composite") {
+    validateComposite(q, disp, sectionLabel, where, add);
   } else {
     validateBody(q, q.presentationType, disp, where, add);
   }
@@ -294,6 +299,61 @@ function validateCompound(q: BuilderQuestion, disp: string, sectionLabel: string
   if (info.mismatch) {
     add("warning", "MARKS_MISMATCH", "مجموع علامات البنود (" + info.total + ") لا يساوي علامة السؤال المركّب " + disp + " (" + info.questionMarks + ").", where);
   }
+}
+
+// Phase 20D — composite@1: the identity seam (version, executable fields), then the ONE strict composite authority (structure, contexts,
+// sources, linked SmartSim keys, exact child identities, marks), then EVERY child body through the SAME validateBody a standalone question of
+// its type runs — never a second set of child rules. A linked SmartSim part has no body of its own (its envelope is the context's; its
+// private checks were validated against that envelope above). Every issue BLOCKS finalization; nothing is repaired.
+function validateComposite(q: BuilderQuestion, disp: string, sectionLabel: string, where: Where, add: Add): void {
+  const label = "السؤال المركّب " + disp + " في «" + sectionLabel + "»";
+  const typeIssues = validateQuestionTypeNode(q as unknown as Record<string, unknown>, "composite", q.questionTypeVersion);
+  for (const i of typeIssues) add(i.severity, i.code, label + ": " + i.message, where);
+  if (typeIssues.some(i => i.code === "UNKNOWN_QUESTION_TYPE" || i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION")) return;
+  for (const i of validateCompositeQuestion(q as unknown as Record<string, unknown>)) add("error", i.code, label + ": " + i.message, where);
+  const st = compositeStructure(q);
+  if (!st.ok) return;
+  for (const g of st.model.groups) for (const p of g.parts) {
+    if (p.linkedSmartSim || !isSupportedCompositeChild(p.type, p.raw.questionTypeVersion)) continue;
+    validateBody(compositeChildNode(p.raw) as unknown as QuestionBody, p.type as BuilderPartType, "البند " + p.label + " من " + disp, where, add);
+  }
+}
+
+// Phase 20D — exam-level: the composite child identity <questionId>::part::<partId> is the coding target / review / parametric key. In an
+// exam that contains a composite, no OTHER question id may contain the separator (a literal "x::part::y" id would make that key ambiguous).
+// 20D RF1 — every rule is applied to the EFFECTIVE runtime id (examQuestionId ?? id ?? "<section>::qN" — the mirror of the server's
+// sectionQuestionId, which keys answers, grades, overrides and coding targets), never to examQuestionId alone: a top-level question whose
+// `id` or derived id carries the separator is refused, and so is a composite whose effective id is not a safe composite id (its child
+// keys could never be parsed — coding children would never be planned, part overrides would be dropped).
+// RF2 — EXACT mirror of the server identity: normalizeSection gives an id-less section "section-<n>" (1-based), then sectionQuestionId.
+const effectiveQuestionId = (section: { id?: string }, si: number, q: Record<string, unknown>, i: number): string => {
+  if (q.examQuestionId != null && q.examQuestionId !== "") return String(q.examQuestionId);
+  if (q.id != null && q.id !== "") return String(q.id);
+  const sectionId = String(section?.id ?? "section-" + (si + 1));
+  if (sectionId && sectionId !== "__default__") return sectionId + "::q" + (i + 1);
+  return String(q.number || i + 1);
+};
+export function compositeTargetKeyIssues(exam: StructuredExam): { questionId: string; sectionId: string }[] {
+  const sections = Array.isArray(exam.sections) ? exam.sections : [];
+  const hasComposite = sections.some(s => (s.questions || []).some(q => q && q.presentationType === "composite"));
+  if (!hasComposite) return [];
+  const out: { questionId: string; sectionId: string }[] = [];
+  sections.forEach((s, si) => (s.questions || []).forEach((q, i) => {
+    if (!q || q.presentationType === "composite") return;
+    const id = effectiveQuestionId(s, si, q as unknown as Record<string, unknown>, i);
+    if (id.includes(COMPOSITE_CHILD_SEPARATOR)) out.push({ questionId: id, sectionId: s.id });
+  }));
+  return out;
+}
+/** Composites whose EFFECTIVE id is not a safe composite id (the examQuestionId case is reported by validateCompositeQuestion itself). */
+export function compositeEffectiveIdIssues(exam: StructuredExam): { questionId: string; sectionId: string }[] {
+  const out: { questionId: string; sectionId: string }[] = [];
+  (Array.isArray(exam.sections) ? exam.sections : []).forEach((s, si) => (s.questions || []).forEach((q, i) => {
+    if (!q || q.presentationType !== "composite" || (q.examQuestionId != null && q.examQuestionId !== "")) return;
+    const id = effectiveQuestionId(s, si, q as unknown as Record<string, unknown>, i);
+    if (!isCompositeQuestionId(id)) out.push({ questionId: id, sectionId: s.id });
+  }));
+  return out;
 }
 
 export const hasBlockingErrors = (issues: StructuredIssue[]): boolean => issues.some(i => i.severity === "error");

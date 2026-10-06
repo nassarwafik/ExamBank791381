@@ -67,3 +67,6 @@ const CODING_DEFAULT_CONFIG = () => ({ allowedLanguages: ["python"], defaultLang
     ensure("smartSim", { schemaVersion: 1, pluginKey: "networkTopology", pluginVersion: 1, config: { v: 1, devices: [], links: [] } });
     ensure("answer", { scoring: "proportional", checks: [] });
 });
+(0, exports.registerTypeDefaults)("composite", 1, (ensure, newId) => {
+    ensure("composite", { v: 1, contexts: [], groups: [{ id: newId("g"), title: "", gradingPolicy: "all", requiredAnswers: null, maxMarks: null, parts: [{ id: newId("p"), label: "أ", type: "multipleChoice", text: "", marks: 1, options: [{ text: "" }, { text: "" }], answer: { correctOptionIndex: 0 } }] }] });
+});

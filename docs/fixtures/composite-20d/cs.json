@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "examId": "CMP-20D-C",
+  "title": "تتبّع الكود وكتابته",
+  "status": "draft",
+  "metadata": {},
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "cs1",
+          "displayNumber": "2",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "marks": 18,
+          "text": "ادرس الكود الآتي ثم أجب.",
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxCode",
+                "version": 1,
+                "kind": "source",
+                "title": "الكود",
+                "sources": [
+                  {
+                    "id": "code1",
+                    "version": 1,
+                    "kind": "code",
+                    "title": "sum.py",
+                    "language": "python",
+                    "source": "def f(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total\n\nprint(f(4))\n"
+                  }
+                ]
+              }
+            ],
+            "groups": [
+              {
+                "id": "gTrace",
+                "title": "تتبّع",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "t1",
+                    "label": "أ",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxCode",
+                    "text": "ما مخرجات البرنامج؟",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "4"
+                      },
+                      {
+                        "text": "10"
+                      },
+                      {
+                        "text": "6"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 1
+                    }
+                  },
+                  {
+                    "id": "t2",
+                    "label": "ب",
+                    "type": "shortAnswer",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxCode",
+                    "text": "ما قيمة f(3)؟",
+                    "marks": 2,
+                    "answer": {
+                      "text": "6"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gCode",
+                "title": "البرمجة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "c1",
+                    "label": "ج",
+                    "type": "coding",
+                    "questionTypeVersion": 2,
+                    "text": "اكتب برنامجًا يقرأ عددين ويطبع SUM=<المجموع>.",
+                    "marks": 10,
+                    "coding": {
+                      "allowedLanguages": [
+                        "python",
+                        "java",
+                        "csharp"
+                      ],
+                      "defaultLanguage": "python",
+                      "starterCode": {},
+                      "taskMode": "program",
+                      "inputMode": "stdin",
+                      "outputMode": "stdout",
+                      "limits": {
+                        "sourceBytes": 65536,
+                        "outputBytes": 65536,
+                        "timeMs": 2000,
+                        "memoryMb": 128
+                      },
+                      "publicTests": [
+                        {
+                          "id": "pub-1",
+                          "input": "2 3\n",
+                          "sampleOutput": "SUM=5\n"
+                        }
+                      ]
+                    },
+                    "answer": {
+                      "gradingMode": "hiddenTests",
+                      "comparator": "trimTrailingWhitespace",
+                      "compileErrorPolicy": "manualReview",
+                      "hiddenTests": [
+                        {
+                          "id": "h1",
+                          "title": "HIDDEN-TITLE-20D-C",
+                          "input": "1 2\n",
+                          "expectedOutput": "SUM=3\n",
+                          "weight": 1
+                        },
+                        {
+                          "id": "h2",
+                          "input": "5 5\n",
+                          "expectedOutput": "SUM=10\n",
+                          "weight": 3
+                        }
+                      ],
+                      "referenceSolutions": {
+                        "python": "REFERENCE-SOLUTION-20D-C"
+                      }
+                    }
+                  },
+                  {
+                    "id": "e1",
+                    "label": "د",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxCode",
+                    "text": "اشرح عمل الحلقة في الكود.",
+                    "marks": 4,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 600
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "loop",
+                            "title": "شرح الحلقة",
+                            "description": "",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "PRIVATE-GUIDANCE-20D-C",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "كامل",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "لا شيء",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "MODEL-ANSWER-20D-C"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

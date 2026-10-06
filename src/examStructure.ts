@@ -7,6 +7,7 @@
 import type { Question, QuestionPart } from "./studentQuestionTypes";
 import type { Answer } from "./answerState";
 import { answered } from "./answerState";
+import { isCompositeQuestionNode, compositeQuestionMaxMarks } from "./compositeModel";
 
 export type GradingPolicy = "all" | "capScore" | "firstNAnswered";
 export type AnswerUnit = "question" | "part";
@@ -98,6 +99,8 @@ export function distributePartMarks(q: Question): number[] {
 // non-compound question is worth max(0, marks). Keeps the cover / builder total in lock-step with
 // the grader for compound questions.
 export function questionMaxMarks(q: Question): number {
+  // Phase 20D — composite@1 (type-owned root, never `parts`): the answer-independent official maximum, ONE shared authority client / server.
+  if (isCompositeQuestionNode(q as unknown)) return compositeQuestionMaxMarks(q as unknown as Record<string, unknown>);
   if (isCompound(q)) {
     return distributePartMarks(q).reduce((s, m) => s + Math.max(0, num(m, 0)), 0);
   }

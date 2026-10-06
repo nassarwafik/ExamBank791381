@@ -298,7 +298,7 @@ describe("Teacher authoring panel inside the REAL Builder", () => {
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q1", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(24);                                    // 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
+    expect(within(d).getAllByTestId("qt-card").length).toBe(25);   /* 20D adds composite */                                    // 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     const card = within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "coding")!;
     expect(card.textContent).toContain("برمجة / كتابة كود"); expect(card.textContent).toContain("تصحيح يدوي حاليًا"); expect(card.textContent).toContain("إجابة برمجية");

@@ -30,6 +30,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./AssignmentReview.tsx", "RubricGradingPanel", "./openResponse/RubricGradingPanel", "teacher-rubric-grading"],
   // Phase 20B — the trusted SmartSim review panel (and its plugin review chunk) loads on demand inside the assignment review
   ["./AssignmentReview.tsx", "SmartSimReviewView", "./trustedSim/SmartSimReviewView", "teacher-smartsim-review"],
+  // Phase 20D — the composite review tree loads on demand inside the assignment review
+  ["./AssignmentReview.tsx", "CompositeReviewView", "./composite/CompositeReviewView", "teacher-composite-review"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],

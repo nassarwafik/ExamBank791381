@@ -3,11 +3,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBlockingErrors = void 0;
 exports.validateStructuredExam = validateStructuredExam;
+exports.compositeTargetKeyIssues = compositeTargetKeyIssues;
+exports.compositeEffectiveIdIssues = compositeEffectiveIdIssues;
 const questionTypeValidation_1 = require("./questionTypeValidation");
 const codeStimulus_1 = require("./codeStimulus");
 const scenarioSource_1 = require("./scenarioSource");
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const examBuilderState_1 = require("./examBuilderState");
+const compositeQuestion_1 = require("./compositeQuestion");
 const num = (v) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : NaN;
@@ -52,6 +55,10 @@ function validateStructuredExam(exam) {
             validateQuestion(q, label, section, add);
         });
     });
+    for (const x of compositeEffectiveIdIssues(exam))
+        add("error", "COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب «" + x.questionId + "» غير صالح: يجب أن يكون من حروف لاتينية وأرقام و . _ : - فقط، دون الفاصل ::part::.", x);
+    for (const x of compositeTargetKeyIssues(exam))
+        add("error", "COMPOSITE_TARGET_KEY_AMBIGUOUS", "معرّف السؤال «" + x.questionId + "» يحتوي الفاصل ::part::، وهو محجوز لهويات بنود الأسئلة المركّبة.", x);
     return issues;
 }
 function validateSection(section, label, add) {
@@ -114,6 +121,9 @@ function validateQuestion(q, sectionLabel, section, add) {
         add("error", i.code, "سؤال " + disp + " في «" + sectionLabel + "»: " + i.message, where);
     if (q.presentationType === "compound") {
         validateCompound(q, disp, sectionLabel, where, add);
+    }
+    else if (q.presentationType === "composite") {
+        validateComposite(q, disp, sectionLabel, where, add);
     }
     else {
         validateBody(q, q.presentationType, disp, where, add);
@@ -272,6 +282,61 @@ function validateCompound(q, disp, sectionLabel, where, add) {
     if (info.mismatch) {
         add("warning", "MARKS_MISMATCH", "مجموع علامات البنود (" + info.total + ") لا يساوي علامة السؤال المركّب " + disp + " (" + info.questionMarks + ").", where);
     }
+}
+function validateComposite(q, disp, sectionLabel, where, add) {
+    const label = "السؤال المركّب " + disp + " في «" + sectionLabel + "»";
+    const typeIssues = (0, questionTypeValidation_1.validateQuestionTypeNode)(q, "composite", q.questionTypeVersion);
+    for (const i of typeIssues)
+        add(i.severity, i.code, label + ": " + i.message, where);
+    if (typeIssues.some(i => i.code === "UNKNOWN_QUESTION_TYPE" || i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION"))
+        return;
+    for (const i of (0, compositeQuestion_1.validateCompositeQuestion)(q))
+        add("error", i.code, label + ": " + i.message, where);
+    const st = (0, compositeQuestion_1.compositeStructure)(q);
+    if (!st.ok)
+        return;
+    for (const g of st.model.groups)
+        for (const p of g.parts) {
+            if (p.linkedSmartSim || !(0, compositeQuestion_1.isSupportedCompositeChild)(p.type, p.raw.questionTypeVersion))
+                continue;
+            validateBody((0, compositeQuestion_1.compositeChildNode)(p.raw), p.type, "البند " + p.label + " من " + disp, where, add);
+        }
+}
+const effectiveQuestionId = (section, si, q, i) => {
+    if (q.examQuestionId != null && q.examQuestionId !== "")
+        return String(q.examQuestionId);
+    if (q.id != null && q.id !== "")
+        return String(q.id);
+    const sectionId = String(section?.id ?? "section-" + (si + 1));
+    if (sectionId && sectionId !== "__default__")
+        return sectionId + "::q" + (i + 1);
+    return String(q.number || i + 1);
+};
+function compositeTargetKeyIssues(exam) {
+    const sections = Array.isArray(exam.sections) ? exam.sections : [];
+    const hasComposite = sections.some(s => (s.questions || []).some(q => q && q.presentationType === "composite"));
+    if (!hasComposite)
+        return [];
+    const out = [];
+    sections.forEach((s, si) => (s.questions || []).forEach((q, i) => {
+        if (!q || q.presentationType === "composite")
+            return;
+        const id = effectiveQuestionId(s, si, q, i);
+        if (id.includes(compositeQuestion_1.COMPOSITE_CHILD_SEPARATOR))
+            out.push({ questionId: id, sectionId: s.id });
+    }));
+    return out;
+}
+function compositeEffectiveIdIssues(exam) {
+    const out = [];
+    (Array.isArray(exam.sections) ? exam.sections : []).forEach((s, si) => (s.questions || []).forEach((q, i) => {
+        if (!q || q.presentationType !== "composite" || (q.examQuestionId != null && q.examQuestionId !== ""))
+            return;
+        const id = effectiveQuestionId(s, si, q, i);
+        if (!(0, compositeQuestion_1.isCompositeQuestionId)(id))
+            out.push({ questionId: id, sectionId: s.id });
+    }));
+    return out;
 }
 const hasBlockingErrors = (issues) => issues.some(i => i.severity === "error");
 exports.hasBlockingErrors = hasBlockingErrors;

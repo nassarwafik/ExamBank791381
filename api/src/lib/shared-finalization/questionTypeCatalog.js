@@ -31,6 +31,7 @@ const PRODUCTION_ROWS = [
     ["tableFill", "إكمال جدول", "structured", "auto", "acop", ["fields", "table"], true],
     ["cliFill", "أوامر CLI", "response", "auto", "acop", ["fields"], true],
     ["compound", "سؤال مركّب", "composite", "composed", "amhpo", ["compound"], true],
+    ["composite", "سؤال مركّب متقدّم", "composite", "composed", "amhpio", ["composite"], false],
     ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
     ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
     ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],

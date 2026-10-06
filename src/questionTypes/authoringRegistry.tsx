@@ -37,3 +37,5 @@ registerAuthoringEditor("labelDiagram", 1, lazy(() => import("./editors/LabelDia
 registerAuthoringEditor("openResponse", 1, lazy(() => import("./editors/OpenResponseEditor")));
 // Phase 20A — trusted SmartSim authoring (lazy: the plugin editor — topology, devices, links, private checks — never enters the initial graph).
 registerAuthoringEditor("smartSim", 1, lazy(() => import("./editors/SmartSimEditor")));
+// Phase 20D — composite@1 enterprise authoring (lazy: groups, parts, shared sources / SmartSim contexts never enter the initial graph).
+registerAuthoringEditor("composite", 1, lazy(() => import("./editors/CompositeEditor")));

@@ -63,10 +63,28 @@ function mapNode(node, assetFn) {
   if (!node || typeof node !== "object") return node;
   const image = mapImage(node.image, assetFn);
   const parts = mapArray(node.parts, p => mapNode(p, assetFn));
-  if (image === node.image && parts === node.parts) return node;
+  const composite = mapComposite(node.composite, assetFn);
+  if (image === node.image && parts === node.parts && composite === node.composite) return node;
   const out = { ...node };
   if (image !== node.image) out.image = image;
   if (parts !== node.parts) out.parts = parts;
+  if (composite !== node.composite) out.composite = composite;
+  return out;
+}
+// Phase 20D — composite@1 media: every child's canonical image (exactly like a question / part) and every IMAGE source of a shared source
+// context (exactly like a scenario image source). Other context kinds and non-bank assets are returned by the same reference.
+function mapComposite(root, assetFn) {
+  if (!root || typeof root !== "object" || Array.isArray(root)) return root;
+  const groups = mapArray(root.groups, g => {
+    if (!g || typeof g !== "object") return g;
+    const ps = mapArray(g.parts, p => mapNode(p, assetFn));
+    return ps === g.parts ? g : { ...g, parts: ps };
+  });
+  const contexts = mapScenarioSources(root.contexts, assetFn);
+  if (groups === root.groups && contexts === root.contexts) return root;
+  const out = { ...root };
+  if (groups !== root.groups) out.groups = groups;
+  if (contexts !== root.contexts) out.contexts = contexts;
   return out;
 }
 // Phase 19G — a scenario IMAGE source reuses the canonical asset model: its single `image` asset is normalized / hydrated exactly like a

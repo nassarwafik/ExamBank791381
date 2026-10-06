@@ -1,0 +1,26 @@
+/* Phase 20D — composite@1 student renderer (loaded only with the lazy CompositeResponse). Logical properties only (RTL-safe); reuses the
+   design tokens and the compound-part conventions of studentexam-pro.css. Code / CLI surfaces inside parts keep their own direction. */
+.cmp-response{ display:flex; flex-direction:column; gap:var(--eb-space-3); margin-block-start:var(--eb-space-2); }
+.cmp-context{ padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); background:var(--eb-surface-2); }
+.cmp-context-head, .cmp-group-head, .cmp-part-head{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.cmp-context-head{ justify-content:space-between; margin-block-end:var(--eb-space-2); }
+.cmp-context-title, .cmp-group-title{ display:flex; flex-direction:column; margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-bold); overflow-wrap:anywhere; }
+.cmp-context-instructions, .cmp-group-instructions{ margin:0 0 var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.cmp-group{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding-block-start:var(--eb-space-2); border-block-start:1px solid var(--eb-line-2); }
+.cmp-group-head{ justify-content:space-between; }
+.cmp-group-rule{ padding:2px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.cmp-parts{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.cmp-part{ min-width:0; padding:var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); }
+.cmp-part.done{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.cmp-part.cmp-part-excess{ border-style:dashed; border-color:var(--eb-warn); }
+.cmp-part-head{ margin-block-end:var(--eb-space-2); }
+.cmp-part-label{ display:grid; place-items:center; min-width:26px; height:26px; padding-inline:4px; border:1px solid var(--eb-line); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+.cmp-part-marks, .cmp-part-state{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.cmp-part-state{ color:var(--eb-primary-strong); }
+.cmp-part-text{ margin:0 0 var(--eb-space-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.cmp-part-linked{ margin:0; padding:var(--eb-space-1) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.cmp-reset{ margin-inline-start:auto; padding:2px var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-muted); font:inherit; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); cursor:pointer; }
+.cmp-reset:hover{ color:var(--eb-text-heading); border-color:var(--eb-primary); }
+.cmp-reset:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.cmp-actions{ display:flex; justify-content:flex-end; }
+.cmp-actions .cmp-reset{ margin-inline-start:0; }

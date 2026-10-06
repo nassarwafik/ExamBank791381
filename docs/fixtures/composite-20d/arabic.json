@@ -1,0 +1,393 @@
+{
+  "schemaVersion": 1,
+  "examId": "CMP-20D-A",
+  "title": "فهم المقروء — الماء",
+  "status": "draft",
+  "metadata": {},
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "q4",
+          "displayNumber": "4",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "marks": 20,
+          "text": "اقرأ النص الآتي ثم أجب عن الأسئلة التي تليه.",
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxText",
+                "version": 1,
+                "kind": "source",
+                "title": "النص",
+                "sources": [
+                  {
+                    "id": "src1",
+                    "version": 1,
+                    "kind": "text",
+                    "title": "الماء",
+                    "text": "الماءُ أصلُ الحياة، وتعتمد عليه الكائنات الحية جميعها. ويغطي الماء نحو سبعين في المئة من سطح الأرض، غير أن معظمه مالح لا يصلح للشرب. لذلك يجب أن نحافظ على المياه العذبة ونقتصد في استهلاكها."
+                  }
+                ]
+              }
+            ],
+            "groups": [
+              {
+                "id": "gA",
+                "title": "مجموعة أ — فهم النص",
+                "instructions": "أجب عن جميع البنود.",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "pA1",
+                    "label": "أ",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "ما الفكرة الرئيسة للنص؟",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "أهمية الماء والمحافظة عليه"
+                      },
+                      {
+                        "text": "مساحة اليابسة"
+                      },
+                      {
+                        "text": "أنواع الكائنات الحية"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  },
+                  {
+                    "id": "pA2",
+                    "label": "ب",
+                    "type": "multiTrueFalse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "ضع إشارة صح أو خطأ:",
+                    "marks": 3,
+                    "fields": [
+                      {
+                        "id": "r1",
+                        "statement": "يغطي الماء نحو سبعين في المئة من سطح الأرض.",
+                        "kind": "boolean",
+                        "correct": true
+                      },
+                      {
+                        "id": "r2",
+                        "statement": "معظم مياه الأرض عذبة صالحة للشرب.",
+                        "kind": "boolean",
+                        "correct": false
+                      },
+                      {
+                        "id": "r3",
+                        "statement": "يدعو النص إلى الاقتصاد في استهلاك الماء.",
+                        "kind": "boolean",
+                        "correct": true
+                      }
+                    ]
+                  },
+                  {
+                    "id": "pA3",
+                    "label": "ج",
+                    "type": "matching",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "صِل الكلمة بمعناها:",
+                    "marks": 2,
+                    "fields": [
+                      {
+                        "id": "m1",
+                        "label": "نقتصد",
+                        "kind": "select",
+                        "options": [
+                          {
+                            "text": "نقلّل"
+                          },
+                          {
+                            "text": "نزيد"
+                          }
+                        ],
+                        "correct": "نقلّل"
+                      },
+                      {
+                        "id": "m2",
+                        "label": "مالح",
+                        "kind": "select",
+                        "options": [
+                          {
+                            "text": "عذب"
+                          },
+                          {
+                            "text": "غير عذب"
+                          }
+                        ],
+                        "correct": "غير عذب"
+                      }
+                    ],
+                    "answer": {
+                      "text": "نقتصد=نقلّل;مالح=غير عذب"
+                    }
+                  },
+                  {
+                    "id": "pA4",
+                    "label": "د",
+                    "type": "inlineCloze",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "أكمل:",
+                    "marks": 3,
+                    "inlineCloze": {
+                      "v": 1,
+                      "segments": [
+                        {
+                          "type": "text",
+                          "text": "الماء أصل "
+                        },
+                        {
+                          "type": "blank",
+                          "id": "b1",
+                          "control": "text"
+                        },
+                        {
+                          "type": "text",
+                          "text": "، ومعظمه "
+                        },
+                        {
+                          "type": "blank",
+                          "id": "b2",
+                          "control": "dropdown",
+                          "options": [
+                            {
+                              "id": "o1",
+                              "label": "عذب"
+                            },
+                            {
+                              "id": "o2",
+                              "label": "مالح"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "answer": {
+                      "scoring": "proportional",
+                      "blanks": {
+                        "b1": {
+                          "accepted": [
+                            "الحياة"
+                          ],
+                          "caseSensitive": false
+                        },
+                        "b2": {
+                          "correctOptionId": "o2"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gB",
+                "title": "مجموعة ب — التحليل",
+                "instructions": "أجب عن بندين فقط من الثلاثة.",
+                "gradingPolicy": "firstNAnswered",
+                "requiredAnswers": 2,
+                "maxMarks": 4,
+                "parts": [
+                  {
+                    "id": "pB1",
+                    "label": "هـ",
+                    "type": "categorization",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "صنّف:",
+                    "marks": 2,
+                    "categorization": {
+                      "categories": [
+                        {
+                          "id": "k1",
+                          "label": "مصدر عذب"
+                        },
+                        {
+                          "id": "k2",
+                          "label": "مصدر مالح"
+                        }
+                      ],
+                      "items": [
+                        {
+                          "id": "t1",
+                          "label": "النهر"
+                        },
+                        {
+                          "id": "t2",
+                          "label": "البحر"
+                        }
+                      ]
+                    },
+                    "answer": {
+                      "correctCategoryByItem": {
+                        "t1": "k1",
+                        "t2": "k2"
+                      }
+                    }
+                  },
+                  {
+                    "id": "pB2",
+                    "label": "و",
+                    "type": "matrix",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "حدّد نوع كل جملة:",
+                    "marks": 2,
+                    "matrix": {
+                      "rows": [
+                        {
+                          "id": "x1",
+                          "label": "الماء أصل الحياة."
+                        },
+                        {
+                          "id": "x2",
+                          "label": "حافظوا على الماء!"
+                        }
+                      ],
+                      "columns": [
+                        {
+                          "id": "c1",
+                          "label": "خبرية"
+                        },
+                        {
+                          "id": "c2",
+                          "label": "إنشائية"
+                        }
+                      ]
+                    },
+                    "answer": {
+                      "correctColumnByRow": {
+                        "x1": "c1",
+                        "x2": "c2"
+                      }
+                    }
+                  },
+                  {
+                    "id": "pB3",
+                    "label": "ز",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "ما النسبة المئوية لمساحة سطح الأرض التي يغطيها الماء بحسب النص؟",
+                    "marks": 2,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 70,
+                      "tolerance": 0
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gC",
+                "title": "مجموعة ج — الاستنتاج",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "pC1",
+                    "label": "ح",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxText",
+                    "text": "اقترح طريقتين للمحافظة على الماء، وعلّل.",
+                    "marks": 6,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "justify",
+                      "instructions": "اكتب فقرة قصيرة.",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 800
+                      },
+                      "studentRubricVisibility": "visible"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "ideas",
+                            "title": "الأفكار",
+                            "description": "طريقتان صحيحتان",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "PRIVATE-GUIDANCE-20D-A",
+                            "levels": [
+                              {
+                                "id": "two",
+                                "label": "طريقتان",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "one",
+                                "label": "طريقة",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "لا شيء",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          },
+                          {
+                            "id": "reason",
+                            "title": "التعليل",
+                            "description": "",
+                            "maxPoints": 2,
+                            "allowCustomPoints": true,
+                            "guidance": "",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "كامل",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "لا شيء",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "MODEL-ANSWER-20D-A"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

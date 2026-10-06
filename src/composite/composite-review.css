@@ -1,0 +1,38 @@
+/* Phase 20D — the teacher review tree of a composite@1 question (lazy chunk; RTL-safe logical properties; review-pro.css tokens). */
+.cmp-review{display:flex;flex-direction:column;gap:12px;margin-block:10px}
+.cmp-review-contexts{display:flex;flex-direction:column;gap:10px}
+.cmp-review-context{border:1px solid var(--line);border-radius:var(--rlg);padding:12px 14px;background:var(--surface2)}
+.cmp-review-context h4{margin:0 0 8px;font-size:14px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cmp-review-eyebrow{font-size:11px;font-weight:800;color:var(--primary);background:var(--primary050);border-radius:var(--pill);padding:2px 8px}
+.cmp-review-instructions{margin:0 0 8px;color:var(--text);line-height:1.8}
+.cmp-review-note{margin:4px 0;color:var(--muted);font-size:12.5px}
+.cmp-review-warn{margin:4px 0;padding:8px 12px;border-radius:var(--r);background:var(--warnbg);color:#b45309;font-size:12.5px}
+.cmp-review-group{border:1px solid var(--line);border-radius:var(--rlg);padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+.cmp-review-group-head{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap;color:var(--navy)}
+.cmp-review-group-head span{color:var(--muted);font-size:12px;font-weight:700}
+.cmp-review-part{border:1px solid var(--line);border-inline-start:4px solid var(--primary);border-radius:var(--r);padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:8px;min-width:0}
+.cmp-review-part.needs-review{border-inline-start-color:var(--warn);background:#fffdf8}
+.cmp-review-part-ignored{border-inline-start-color:var(--line2);background:var(--surface2);opacity:.9}
+.cmp-review-part-head{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;color:var(--navy);font-size:12.5px}
+.cmp-review-chip{font-style:normal;padding:2px 8px;border-radius:var(--pill);background:var(--primary050);color:var(--navy);font-size:11px;font-weight:700}
+.cmp-review-chip-muted{background:var(--surface2);color:var(--muted);border:1px solid var(--line2)}
+.cmp-review-chip-warn{background:var(--warnbg);color:#b45309}
+.cmp-review-auto{margin-inline-start:auto;color:var(--muted);font-weight:700}
+.cmp-review-part-text{margin:0;line-height:1.8;color:var(--text)}
+.cmp-review-answer{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp-review-cell{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;background:var(--surface);min-width:0}
+.cmp-review-cell>span{display:block;font-size:12px;font-weight:800;color:var(--muted);margin-block-end:6px}
+.cmp-review-expected{background:#f0fdf4;border-color:#bbe7c9}
+.cmp-review-expected>span{color:#15803d}
+.cmp-review pre{white-space:pre-wrap;word-break:break-word;margin:0;font-family:inherit;line-height:1.7;max-block-size:260px;overflow:auto}
+.cmp-review-coding{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.cmp-review-actions{display:flex;gap:6px;flex-wrap:wrap}
+.cmp-review-actions button{border:1px solid var(--line2);background:#fff;border-radius:9px;padding:6px 10px;font-weight:700;cursor:pointer}
+.cmp-review-grade{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px}
+.cmp-review-grade p{margin:0}
+.cmp-review-grade>label:first-child{display:flex;align-items:center;gap:6px;font-weight:800;color:var(--navy)}
+.cmp-review-grade input[type="number"]{inline-size:80px;text-align:center;font-weight:800;border:1px solid var(--line2);border-radius:9px;padding:6px}
+.cmp-review-comment{display:flex;align-items:center;gap:6px;flex:1;min-inline-size:200px}
+.cmp-review-comment textarea{inline-size:100%;box-sizing:border-box;border:1px solid var(--line2);border-radius:9px;padding:6px 8px;font:inherit;resize:vertical}
+.cmp-review input:disabled,.cmp-review textarea:disabled{background:var(--surface2);cursor:not-allowed}
+@media (max-width:640px){.cmp-review-answer{grid-template-columns:1fr}.cmp-review-auto{margin-inline-start:0}}

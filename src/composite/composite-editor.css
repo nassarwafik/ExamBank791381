@@ -1,0 +1,20 @@
+/* Phase 20D — composite@1 authoring (lazy CompositeEditor chunk only). Follows the sb-* house style of structured-builder.css / scenario-builder.css
+   (legacy variables with fallbacks, logical properties so RTL and LTR both hold, 44px touch targets on phones). */
+.cmp-editor{display:flex;flex-direction:column;gap:12px;border-top:1px dashed var(--line2,#cdd5e0);padding-top:10px}
+.cmp-marks-summary{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:13px;color:var(--navy,#1e293b);background:var(--surface2,#f6f8fc);border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px 12px}
+.cmp-marks-mismatch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:8px 12px}
+.cmp-editor-contexts{display:flex;flex-direction:column;gap:8px}
+.cmp-editor-tools,.cmp-editor-policy,.cmp-editor-part-links{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.cmp-editor-group,.cmp-editor-context{border:1px solid var(--line2,#dbe2ec);border-inline-start:4px solid var(--primary,#2563eb);border-radius:12px;background:var(--surface,#fff);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.cmp-editor-context{border-inline-start-color:#0d9488;background:var(--surface2,#f9fbff)}
+.cmp-editor-group-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cmp-editor-group-title{margin:0;font-size:14px;font-weight:800;color:var(--navy,#1e293b)}
+.cmp-editor-group-body{display:flex;flex-direction:column;gap:8px}
+.cmp-editor-count{font-size:12px;font-weight:700;color:var(--muted,#64748b)}
+.cmp-editor-badge{white-space:nowrap}
+.cmp-editor-linked-sim,.cmp-editor-sim,.cmp-editor-sources{display:flex;flex-direction:column;gap:8px}
+.cmp-editor-issues{margin:0;padding-block:8px;padding-inline:28px 12px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:10px;font-size:13px;line-height:1.7}
+@media (max-width:640px){
+  .cmp-editor .sb-icon-btn,.cmp-editor .sb-mini-btn,.cmp-editor .sb-collapse{min-height:44px;min-width:44px}
+  .cmp-editor-group,.cmp-editor-context{padding:8px}
+}

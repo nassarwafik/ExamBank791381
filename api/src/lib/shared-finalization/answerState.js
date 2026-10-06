@@ -31,6 +31,8 @@ function answered(a) {
         return Array.isArray(a.points) && a.points.length > 0;
     if (a.kind === "smartSim")
         return Array.isArray(a.actions) && a.actions.length > 0;
+    if (a.kind === "composite")
+        return (!!a.parts && typeof a.parts === "object" && Object.values(a.parts).some(answered)) || (!!a.contexts && typeof a.contexts === "object" && Object.values(a.contexts).some(answered));
     if (a.kind === "codeTemplate")
         return !!a.values && typeof a.values === "object" && Object.values(a.values).some(v => typeof v === "string" && v.trim() !== "");
     return false;

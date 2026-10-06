@@ -42,6 +42,11 @@ const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, valida
 const { isCodeTemplateAnswered } = require("../shared-finalization/codingTemplate");
 const { evaluateOfficialCodingRun, officialCodingScoreFor, officialCaseToken, OFFICIAL_STDOUT_CAPTURE_BYTES, OFFICIAL_STDERR_CAPTURE_BYTES, OFFICIAL_PREVIEW_BYTES } = require("../shared-finalization/codingContract");
 const { flattenQuestions, effectiveMaxMarks } = require("../exam-structure");
+// Phase 20D — composite@1 coding children: the SAME lifecycle under a NEW server-owned target identity <questionId>::part::<partId> (the
+// shared child key, ≤ 128 chars, SAFE_ID charset). Top-level targets are resolved first and EXACTLY as before (their keys, fingerprints,
+// grading keys, job ids and target refs are byte-identical); a child key resolves only to a coding child of a VALID composite parent; a key
+// that resolves both ways is ambiguous and fails closed (finalization also refuses such ids).
+const { parseCompositeChildKey, compositeStructure, compositeChildNode, compositeChildKey, isCompositeQuestionNode, isCompositeQuestionId } = require("../shared-finalization/compositeQuestion");
 const { stableStringify } = require("../exam-canonical");
 const { rebuildAttemptGrades } = require("../attempt-grade-rebuild");
 const storage = require("../platform-storage");
@@ -145,6 +150,36 @@ function gradeableQuestion(q) {
   return { ok: true, version, tests: clean, comparator, limits, allowedLanguages, scoringPolicy: codingScoringPolicy(key), compileErrorPolicy, ...(template ? { template } : {}) };
 }
 
+/**
+ * Phase 20D — THE target resolution: → { question, grade, rawAnswer, composite? } | { ambiguous: true } | null. A top-level target reads the
+ * snapshot question, its question grade and attempt.answers[key] (unchanged); a composite child reads the CHILD node (its own marks), the
+ * PART grade inside the parent's grade (a live reference: applying a result mutates the part, the canonical rebuild recomputes the parent)
+ * and attempt.answers[parent].parts[part]. A linked SmartSim part, an unknown part or an invalid composite never resolves.
+ */
+function resolveCodingTarget(exam, attempt, targetKey) {
+  const flat = flattenQuestions(exam);
+  const grades = attempt && Array.isArray(attempt.questionGrades) ? attempt.questionGrades : [];
+  const answers = attempt && isObj(attempt.answers) ? attempt.answers : {};
+  const top = flat.find(x => x.questionId === targetKey);
+  let child = null;
+  const c = parseCompositeChildKey(targetKey);
+  if (c) {
+    const parent = flat.find(x => x.questionId === c.questionId);
+    const st = parent && isCompositeQuestionNode(parent.question) ? compositeStructure(parent.question) : null;
+    const part = st && st.ok ? st.model.partById.get(c.partId) : undefined;
+    if (part && !part.linkedSmartSim) {
+      const pg = grades.find(g => isObj(g) && String(g.questionId) === c.questionId);
+      const grade = pg && Array.isArray(pg.parts) ? pg.parts.find(x => isObj(x) && String(x.partId) === c.partId) || null : null;
+      const pa = answers[c.questionId];
+      const rawAnswer = isObj(pa) && pa.kind === "composite" && isObj(pa.parts) && Object.prototype.hasOwnProperty.call(pa.parts, c.partId) ? pa.parts[c.partId] : undefined;
+      child = { question: { ...compositeChildNode(part.raw), marks: part.marks }, grade, rawAnswer, composite: { questionId: c.questionId, partId: c.partId } };
+    }
+  }
+  if (top && child) return { ambiguous: true };
+  if (top) return { question: top.question, grade: grades.find(g => String(g.questionId) === targetKey) || null, rawAnswer: answers[targetKey] };
+  return child;
+}
+
 /** The bound, non-blank code answer of a question, or null (no answer / blank / unbindable — graded 0 as "no-answer"). */
 function boundAnswer(q, raw) {
   if (!raw) return null;
@@ -165,15 +200,15 @@ function boundAnswer(q, raw) {
  * → { ok, question, grade, tests, comparator, limits, scoringPolicy, answer|null, maxMarks, questionFingerprint, answerHash, gradingKey, jobId }
  */
 function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, revision }) {
-  const entry = flattenQuestions(exam).find(x => x.questionId === targetKey);
-  const grade = (Array.isArray(attempt.questionGrades) ? attempt.questionGrades : []).find(g => String(g.questionId) === targetKey);
+  const entry = resolveCodingTarget(exam, attempt, targetKey);                                     // 20D: top-level unchanged, or a composite child
+  const grade = entry && !entry.ambiguous ? entry.grade : null;
   const ids = { assignmentId: String(assignmentId), studentId: String(studentId), attemptNumber: Number(attempt.attemptNumber), submittedAt: String(attempt.submittedAt || ""), targetKey, revision };
   const jobId = officialJobId(ids), targetRef = officialTargetRef(ids);
-  if (!entry || !grade) return { ok: false, code: "QUESTION_INVALID", jobId };
+  if (!entry || entry.ambiguous || !grade) return { ok: false, code: "QUESTION_INVALID", jobId };
   const q = entry.question, g = gradeableQuestion(q), maxMarks = effectiveMaxMarks(grade);
   if (!g.ok) return { ok: false, code: g.code, jobId };
-  const answer = boundAnswer(q, attempt.answers && attempt.answers[targetKey]);
-  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: g.version, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}), ...(g.version >= 2 ? { compileErrorPolicy: g.compileErrorPolicy } : {}), ...(g.version >= 3 ? { template: g.template } : {}) }));   // 17F-C2 RF1: coding@1 adds NO material (byte-identical, in-flight keys unchanged); coding@2 binds its explicit policy
+  const answer = boundAnswer(q, entry.rawAnswer);
+  const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: g.version, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}), ...(g.version >= 2 ? { compileErrorPolicy: g.compileErrorPolicy } : {}), ...(g.version >= 3 ? { template: g.template } : {}), ...(entry.composite ? { target: { kind: "compositePart", questionId: entry.composite.questionId, partId: entry.composite.partId } } : {}) }));   // 17F-C2 RF1: coding@1 adds NO material (byte-identical, in-flight keys unchanged); coding@2 binds its explicit policy · 20D: only a composite child adds its target material
   const answerHash = sha256(answer ? stableStringify({ language: answer.language, languageVersion: answer.languageVersion, source: answer.source }) : "no-answer");
   const gradingKey = sha256(stableStringify({ v: 1, ...ids, mode: "hiddenTests", questionFingerprint, answerHash }));
   return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, scoringPolicy: g.scoringPolicy, compileErrorPolicy: g.compileErrorPolicy, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
@@ -219,6 +254,26 @@ function planCodingGrading(exam, attempt, { assignmentId, studentId, now } = {})
     targets[questionId] = built.target;
     changed = changed || built.changed;
     if (built.target.state === "pending") dispatch.push(questionId);
+  }
+  // Phase 20D — composite@1 coding children (hidden-test mode): planned only when the composite AND the part are COUNTED (an excess first-N
+  // composite / part never becomes a job), under the child key; a key that would collide with a top-level id is never planned (fail closed).
+  const topIds = new Set(flattenQuestions(exam).map(x => x.questionId));
+  for (const { question: q, questionId } of flattenQuestions(exam)) {
+    if (!isCompositeQuestionNode(q) || !isCompositeQuestionId(questionId)) continue;
+    const pg = grades.find(g => String(g.questionId) === questionId);
+    if (!pg || !(effectiveMaxMarks(pg) > 0) || !Array.isArray(pg.parts)) continue;
+    const st = compositeStructure(q);
+    if (!st.ok) continue;
+    for (const grp of st.model.groups) for (const part of grp.parts) {
+      if (part.type !== "coding" || codingGradingMode(isObj(part.raw.answer) ? part.raw.answer : undefined) !== "hiddenTests") continue;
+      const partGrade = pg.parts.find(x => isObj(x) && String(x.partId) === part.id);
+      const key = compositeChildKey(questionId, part.id);
+      if (!partGrade || !(effectiveMaxMarks(partGrade) > 0) || topIds.has(key)) continue;
+      const built = buildTarget(exam, attempt, key, { assignmentId, studentId }, 1, at, null);
+      targets[key] = built.target;
+      changed = changed || built.changed;
+      if (built.target.state === "pending") dispatch.push(key);
+    }
   }
   if (!Object.keys(targets).length) return { dispatch: [] };
   attempt.codingGrading = { version: 1, targets };
@@ -515,8 +570,8 @@ async function regradeTarget(container, { assignmentId, studentId, attemptNumber
   if (!isObj(target)) return { status: 404, code: "NOT_FOUND" };
   // Phase 17E-D — the PUBLISHED snapshot question is the authority for whether this target may be graded at all: a question that
   // is (no longer) an official hidden-test coding question is not found; a version this server cannot validate is refused.
-  const entry = flattenQuestions(assignment.examSnapshot).find(x => x.questionId === questionId);
-  if (!entry || !isCodingNode(entry.question) || codingGradingMode(entry.question.answer) !== "hiddenTests") return { status: 404, code: "NOT_FOUND" };
+  const entry = resolveCodingTarget(assignment.examSnapshot, attempt, questionId);                 // 20D: top-level unchanged, or a composite child
+  if (!entry || entry.ambiguous || !isCodingNode(entry.question) || codingGradingMode(entry.question.answer) !== "hiddenTests") return { status: 404, code: "NOT_FOUND" };
   if (codingQuestionVersion(entry.question) === undefined) return { status: 409, code: "QUESTION_UNSUPPORTED" };
   if (action === "retry") {
     // a terminal target (complete, or complete evidence awaiting the teacher) is not technical retryable work; force regrade stays available
@@ -696,11 +751,21 @@ const finiteNonNeg = v => (typeof v === "number" && Number.isFinite(v) && v >= 0
 const countOf = v => (Number.isInteger(v) && v >= 0 ? v : null);
 const isoOrNull = v => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null);
 /** The score of a VALID manual teacher override of question `id` (the same rule as the canonical rebuild), or null. */
-function overrideScoreOf(attempt, id) {
+function directOverrideScore(attempt, id) {
   const o = attempt && isObj(attempt.manualOverrides) ? attempt.manualOverrides[id] : null;
   if (!isObj(o) || o.score === undefined || o.score === null) return null;
   const n = Number(o.score);
   return Number.isFinite(n) ? n : null;
+}
+/** Phase 20D — for a composite child target the part's own override wins, and a whole-question override of its COMPOSITE parent supersedes
+ *  the child too (the canonical rebuild applies it over every part). A top-level id keeps the exact original rule. */
+function overrideScoreOf(attempt, id) {
+  const own = directOverrideScore(attempt, id);
+  if (own !== null) return own;
+  const c = parseCompositeChildKey(id);
+  if (!c) return null;
+  const pg = attempt && Array.isArray(attempt.questionGrades) ? attempt.questionGrades.find(g => isObj(g) && String(g.questionId) === c.questionId) : null;
+  return pg && isObj(pg.composite) ? directOverrideScore(attempt, c.questionId) : null;
 }
 /** The automatic grading PHASE of one stored target: queued | processing | retrying | delayed | complete | unknown (fail safe). */
 function automaticPhase(t) {
@@ -737,8 +802,12 @@ function teacherCodingEvidence(question, attempt) {
   const tests = (Array.isArray(key.hiddenTests) ? key.hiddenTests : []).filter(x => isObj(x) && typeof x.id === "string").slice(0, CODING_TEST_LIMITS.hiddenTests);
   const comparator = key.comparator === undefined ? DEFAULT_CODING_COMPARATOR : CODING_COMPARATORS.includes(key.comparator) ? key.comparator : null;
   if (comparator === null) incomplete = true;
-  const grade = (Array.isArray(attempt.questionGrades) ? attempt.questionGrades : []).find(g => isObj(g) && String(g.questionId) === id) || null;
-  const bound = attempt.answers && attempt.answers[id] ? (codingQuestionVersion(q) === 3 ? bindCodingTemplateAnswerToQuestion(attempt.answers[id], q) : bindCodeAnswerToQuestion(attempt.answers[id], q)) : { ok: false };   // 19F: a coding@3 answer binds to its template
+  // Phase 20D — a composite child passes its PART grade and its raw child answer explicitly (`grade` / `rawAnswer`); top-level callers pass
+  // neither and keep the original lookups byte-for-byte.
+  const hasOwn = k => Object.prototype.hasOwnProperty.call(question, k);
+  const grade = hasOwn("grade") ? (isObj(question.grade) ? question.grade : null) : (Array.isArray(attempt.questionGrades) ? attempt.questionGrades : []).find(g => isObj(g) && String(g.questionId) === id) || null;
+  const rawAnswer = hasOwn("rawAnswer") ? question.rawAnswer : attempt.answers && attempt.answers[id];
+  const bound = rawAnswer ? (codingQuestionVersion(q) === 3 ? bindCodingTemplateAnswerToQuestion(rawAnswer, q) : bindCodeAnswerToQuestion(rawAnswer, q)) : { ok: false };   // 19F: a coding@3 answer binds to its template
   const revision = isObj(t) && Number.isInteger(t.revision) && t.revision >= 1 ? t.revision : null;
   if (isObj(t) && revision === null) incomplete = true;
   const r = !unsupported && isObj(t) && isObj(t.result) ? t.result : null;
@@ -832,5 +901,5 @@ function teacherCodingSummary(attempt) {
 
 module.exports = {
   JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, TERMINAL_STATES, STALE_DISPATCHED_MS, legacyAutoGradingWithhold, reviewRequiredTarget, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, studentCodingGradingStatus, buildOfficialRunnerJob,
-  dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, teacherCodingEvidence, teacherCodingSummary, overrideScoreOf, mutateTarget, manualRecovery
+  dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, teacherCodingEvidence, teacherCodingSummary, overrideScoreOf, mutateTarget, manualRecovery, resolveCodingTarget
 };

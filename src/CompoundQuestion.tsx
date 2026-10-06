@@ -1,12 +1,11 @@
 
 import {Suspense,lazy} from "react";
-import {IconCheck} from "./icons";
-import QuestionField from "./QuestionField";
+import CompoundPartControl from "./CompoundPartControl";
 import {resolveStudentRenderer,studentUnsupported} from "./questionTypes/studentRegistry";
 import StudentUnsupported from "./questionTypes/StudentUnsupported";
 import {promptText} from "./questionContent";
-import {answered,optionsFor} from "./StudentQuestionCard";
-import type {Question,QuestionPart,Answer,FieldValue} from "./StudentQuestionCard";
+import {answered} from "./StudentQuestionCard";
+import type {Question,QuestionPart,Answer} from "./StudentQuestionCard";
 import {distributePartMarks,partId,partLabel} from "./examStructure";
 // Phase 19F — the shared read-only code stimulus: LAZY, loaded only when the question carries one.
 const CodeStimulusView=lazy(()=>import("./questionTypes/CodeStimulusView"));
@@ -15,10 +14,8 @@ const CodeStimulusView=lazy(()=>import("./questionTypes/CodeStimulusView"));
 // / stimulus is drawn once, then each part renders its own answer control — parts may use DIFFERENT
 // answer types. Each part's answer is stored under {kind:"compound",parts:{[partId]:Answer}} and every
 // change bubbles up through onPart. Field-type parts reuse QuestionField, so there is no second
-// rendering engine; choice/text parts are drawn inline.
-
-const isChoice=(t:string)=>t==="multiplechoice"||t==="truefalse";
-const fieldPartTypes=new Set(["multitruefalse","clifill","tablefill","wordbank","matching"]);
+// rendering engine; choice/text parts are drawn by CompoundPartControl (Phase 20D: extracted unchanged so
+// composite@1 legacy children share it).
 
 type Props={
  q:Question;
@@ -34,21 +31,17 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
  const parts=Array.isArray(q.parts)?q.parts:[];
  const marks=distributePartMarks(q);
  const partAnswers=answer?.kind==="compound"?answer.parts:{};
- const setChoice=(pid:string,idx:number)=>onPart(pid,{kind:"choice",index:idx});
- const setText=(pid:string,value:string)=>onPart(pid,{kind:"text",value});
- const setField=(pid:string,fieldId:string,value:FieldValue)=>{const prev=partAnswers[pid]?.kind==="fields"?partAnswers[pid].values:{};onPart(pid,{kind:"fields",values:{...prev,[fieldId]:value}});};
  return <article className={"iex-q iex-compound "+(answered(answer)?"done":"")}><div className="iex-node">{q.displayNumber??(index+1)}</div><div className="iex-card">
   <div className="iex-qhead"><span>سؤال مركّب — {parts.length} فروع</span><strong>{q.marks} علامة</strong></div>
   <p className="iex-qtext" id={"iex-qtext-"+String(id).replace(/[^a-zA-Z0-9_-]/g,"_")}>{promptText(q.text)}</p>
   {q.codeStimulus!==undefined&&<Suspense fallback={null}><CodeStimulusView stimulus={q.codeStimulus}/></Suspense>}
   {(q.image?.exists&&q.image.visible?q.image.assets:q.images||[])?.map((im,n)=>im?.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
   <div className="iex-parts">{parts.map((p:QuestionPart,pi)=>{
-   const pid=partId(p,pi),t=String(p.type||"").toLowerCase(),pAns=partAnswers[pid];
+   const pid=partId(p,pi),pAns=partAnswers[pid];
    // Phase 16A — a registered (Wave 1 / plugin) part type renders through the SAME student registry a standalone question uses;
    // its answer bubbles through the existing onPart seam. Legacy part types keep the inline path below unchanged.
    const registered=resolveStudentRenderer(p.type,p.questionTypeVersion);
    const unsupported=!registered&&studentUnsupported(p.type,p.questionTypeVersion);
-   const isField=!registered&&!unsupported&&(fieldPartTypes.has(t)||((p.fields?.length||0)>0&&!isChoice(t)&&t!=="shortanswer"&&t!=="open"));
    const excess=excessPartIds?.has(pid);
    // UX-7b-1 accessibility (additive): each part's controls are named by the part text (or the part label when
    // the part has no text) — same answer shapes and handlers as before.
@@ -59,9 +52,7 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
     {p.text&&<p className="iex-part-text" id={partTextId}>{p.text}</p>}
     {registered&&<Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل البند…</p>}><registered.Renderer q={p as unknown as Question} id={id+"-"+pid} answer={pAns} onAnswer={ans=>onPart(pid,ans)} disabled={disabled} labelPrefix={partName} textId={p.text?partTextId:undefined}/></Suspense>}
     {unsupported&&<StudentUnsupported/>}
-    {!registered&&!unsupported&&isChoice(t)&&<fieldset className="iex-options" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})}>{optionsFor(p).map((o,n)=><label className={"iex-option "+(pAns?.kind==="choice"&&pAns.index===n?"selected":"")} key={n}><input type="radio" name={id+"-"+pid} checked={pAns?.kind==="choice"&&pAns.index===n} onChange={()=>setChoice(pid,n)} disabled={disabled}/><span className="iex-pick" aria-hidden="true">{pAns?.kind==="choice"&&pAns.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</fieldset>}
-    {isField&&<QuestionField q={p} idBase={id+"-"+pid} values={pAns?.kind==="fields"?pAns.values:{}} onField={(fid,v)=>setField(pid,fid,v)} disabled={disabled} labelPrefix={partName}/>}
-    {!registered&&!unsupported&&!isChoice(t)&&!isField&&<textarea className="iex-open" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})} value={pAns?.kind==="text"?pAns.value:""} onChange={e=>setText(pid,e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
+    {!registered&&!unsupported&&<CompoundPartControl p={p} idBase={id+"-"+pid} answer={pAns} onAnswer={ans=>onPart(pid,ans)} disabled={disabled} textId={p.text?partTextId:undefined} name={partName}/>}
     {excess&&<div className="iex-extra-hint">إجابة إضافية — لن تدخل في التصحيح</div>}
    </div>;
   })}</div>

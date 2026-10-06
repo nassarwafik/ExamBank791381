@@ -74,6 +74,10 @@ const SMARTSIM_SIGNATURES = ["nettopo-workspace", "nettopo-editor", "qt-editor-s
   "net2-workspace", "net2-editor", "net2-desktop", "net2-ap-config", "net2-review",
   // … and so do its engines (Review Fix 1: an engine signature, not only UI ones).
   "NET2_WIFI_ACTIONS_TOO_MANY", "NET2_SECURE_PORTS_TOO_MANY"];
+// Phase 20D — the composite@1 student renderer / enterprise editor / teacher review tree class names and the STRICT composite authority's
+// refusal code (the strict validator, its source / SmartSim dependencies and every child surface it reaches stay lazy; only the light ids /
+// marks module may sit in the initial graph). ANY one in an initial file fails; none in any chunk means the list is stale.
+const COMPOSITE_SIGNATURES = ["cmp-response", "cmp-editor", "cmp-review", "COMPOSITE_CHILD_TYPE_REFUSED"];
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
@@ -167,7 +171,12 @@ function main() {
     if (openResponse.length) failures.push(`${f} (initial) contains the open-response / rubric payload (${openResponse.join(", ")}) — it must stay lazy`);
     const smartSim = SMARTSIM_SIGNATURES.filter(s => src.includes(s));
     if (smartSim.length) failures.push(`${f} (initial) contains the trusted SmartSim / network topology payload (${smartSim.join(", ")}) — it must stay lazy`);
+    const composite = COMPOSITE_SIGNATURES.filter(s => src.includes(s));
+    if (composite.length) failures.push(`${f} (initial) contains the composite question payload (${composite.join(", ")}) — it must stay lazy`);
   }
+  const compositeChunks = all.filter(f => COMPOSITE_SIGNATURES.some(s => read(f).includes(s)));
+  if (!compositeChunks.length) failures.push("the composite question payload (renderer / editor / review / strict authority) was not found in any chunk — the signature list is stale");
+  console.log(`Composite question payload found in: ${compositeChunks.join(", ") || "(none)"} — ${compositeChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   const smartSimChunks = all.filter(f => SMARTSIM_SIGNATURES.some(s => read(f).includes(s)));
   if (!smartSimChunks.length) failures.push("the trusted SmartSim / network topology payload (workspace / editor / review / connectivity engine) was not found in any chunk — the signature list is stale");
   console.log(`Trusted SmartSim / network topology payload found in: ${smartSimChunks.join(", ") || "(none)"} — ${smartSimChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
