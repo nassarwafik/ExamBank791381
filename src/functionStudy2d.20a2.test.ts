@@ -225,3 +225,31 @@ describe("M16 / M20 / M21 / M28 — identity, descriptor and privacy", () => {
     expect(JSON.stringify(p)).not.toMatch(/0\.2222|"\+inf"|"-inf"|"min"|"max"|decreasing|increasing/);
   });
 });
+
+describe("mutation-driven strengthening (round 1 survivors F3 / F11 / F12)", () => {
+  it("F3 a domain GAP without a jump (√(x² − 1) on [−2, 2]) is never bridged by one segment", () => {
+    const r = validateFunctionStudyConfig(cfg({ expression: { language: 2, variable: "x", source: "sqrt(x^2-1)" }, window: { xMin: -2, xMax: 2, yMin: -1, yMax: 3, sampleCount: 401 } })); if (!r.ok) throw new Error("cfg");
+    const s = sampleFunction(r.config);
+    expect(s.segments.length).toBe(2);
+    expect(s.segments.some(seg => seg.some(p => p.x < 0) && seg.some(p => p.x > 0))).toBe(false);
+  });
+  it("F11 an infinite endpoint only matches the same infinity; a finite end where +∞ is expected fails (and vice versa)", () => {
+    const q = question();
+    const failed = (intervals: unknown[]) => grade(q, PERFECT.map(x => (x.type === "intervals.set" ? { type: "intervals.set", intervals } : x))).checks.filter(c => !c.passed).map(c => c.kind);
+    const good = [{ kind: "decreasing", from: "-inf", to: -2 }, { kind: "decreasing", from: -2, to: 0 }, { kind: "increasing", from: 0, to: 1 }, { kind: "increasing", from: 1, to: 4 }];
+    expect(failed([...good, { kind: "decreasing", from: 4, to: 10 }])).toEqual(["monotonic.intervals"]);
+    expect(failed([{ kind: "decreasing", from: -10, to: -2 }, ...good.slice(1), { kind: "decreasing", from: 4, to: "+inf" }])).toEqual(["monotonic.intervals"]);
+    expect(failed([...good, { kind: "decreasing", from: 4, to: "+inf" }])).toEqual([]);
+  });
+  it("F12 an EMPTY expected answer is refused for every list check (an empty initial state would otherwise earn free credit)", () => {
+    const issues = (c: Record<string, unknown>) => validateSmartSimQuestion(question([c])).map(i => i.code);
+    for (const kind of ["domain.exclusions", "intercepts.x", "asymptotes.vertical", "asymptotes.horizontal", "extrema.points", "monotonic.intervals"])
+      expect(issues({ id: "k", label: "فحص", weight: 1, kind, expected: [], tolerance: 0.01 }), kind).toContain("FUNCSTUDY_CHECK_INVALID");
+    expect(issues({ id: "k", label: "فحص", weight: 1, kind: "intercept.y", expected: null, tolerance: 0.01 })).toContain("FUNCSTUDY_CHECK_INVALID");
+  });
+  it("an author's expected set in any order is compared as a set (the key is not required to be sorted)", () => {
+    const q = question([{ id: "va", label: "تقارب", weight: 1, kind: "asymptotes.vertical", expected: [1, -2], tolerance: 0.01 }, { id: "ex", label: "قصوى", weight: 1, kind: "extrema.points", expected: [{ kind: "max", x: 4, y: TWO_NINTHS }, { kind: "min", x: 0, y: 2 }], tolerance: 0.01 }]);
+    expect(grade(q, PERFECT).score).toBe(13);
+  });
+});
+

@@ -210,6 +210,16 @@ describe("authoring — the code-owned plugin picker, the plugin editors and the
     fireEvent.change(within(ed).getByLabelText(/الدالة f\(x\)/), { target: { value: "x^2-4" } }); await tick();
     expect(within(ed).getByTestId("fnstudy-expression-status").textContent).toMatch(/صالح/);
   });
+  it("switching plugin restarts the private key EMPTY (checks are plugin-specific and never carried over) with the plugin's starter config", async () => {
+    const { host, q } = await addSmartSim();
+    fireEvent.change(within(host).getByTestId("smartsim-plugin-select"), { target: { value: "physicsFreeFall@1" } }); await tick(50);
+    fireEvent.click(within(await within(host).findByTestId("freefall-editor", {}, { timeout: 3000 })).getByRole("button", { name: /القالب الصفي/ })); await tick();
+    expect(q().answer.checks.length).toBe(6);
+    fireEvent.change(within(host).getByTestId("smartsim-plugin-select"), { target: { value: "functionStudy2d@1" } }); await tick(50);
+    await within(host).findByTestId("fnstudy-editor", {}, { timeout: 3000 });
+    expect(q().smartSim.pluginKey).toBe("functionStudy2d");
+    expect(q().answer).toEqual({ scoring: "proportional", checks: [] });
+  });
 });
 
 describe("teacher review — server-computed state as text", () => {

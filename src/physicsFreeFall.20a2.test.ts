@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  FREE_FALL_PLUGIN_KEY, FREE_FALL_PLUGIN_VERSION, FREE_FALL_LIMITS, validateFreeFallConfig, heightAt, velocityAt, impactTime, impactSpeed, sampleTrajectory
+  FREE_FALL_PLUGIN_KEY, FREE_FALL_PLUGIN_VERSION, FREE_FALL_LIMITS, validateFreeFallConfig, heightAt, velocityAt, impactTime, impactSpeed, sampleTrajectory, bodyAt
 } from "./physicsFreeFallModel";
 import {
   FREE_FALL_ACTION_KINDS, FREE_FALL_CHECK_KINDS, PHYSICS_FREE_FALL_DESCRIPTOR_V1, physicsFreeFallPluginV1, normalizeFreeFallAction, replayFreeFall
@@ -207,3 +207,35 @@ describe("F14–F19 — checks, scoring, unanswered / reset", () => {
     expect(JSON.stringify(p)).not.toMatch(/tolerance|weight|physics\.|pointNear|numericNear|"expected"/);
   });
 });
+
+describe("mutation-driven strengthening (round 1 survivors P11–P14)", () => {
+  it("P11 a point AFTER the impact is never on the trajectory, even when it matches the parabola's continuation", () => {
+    const p = question([{ id: "p", label: "نقطة", weight: 1, kind: "physics.pointOnTrajectory", pointId: "pointAt1s", tolerance: 0.1 }]);
+    expect(grade(p, [point("pointAt1s", 2.5, 20 - 4.9 * 2.5 * 2.5)]).score).toBe(0);            // y(2.5) of the unbounded parabola = −10.625 (below ground)
+    expect(grade(p, [point("pointAt1s", 2, 20 - 4.9 * 4)]).score).toBe(12);                       // still in flight at t = 2 s
+  });
+  it("P12 / P13 a check is refused when the measurement unit does not fit its kind, or its time lies after the impact", () => {
+    const issues = (c: Record<string, unknown>) => validateSmartSimQuestion(question([c])).map(i => i.code);
+    expect(issues({ id: "x", label: "x", weight: 1, kind: "physics.impactTime", measurementId: "heightAt1s", tolerance: 0.1 })).toContain("FREEFALL_CHECK_INVALID");      // unit m, not s
+    expect(issues({ id: "x", label: "x", weight: 1, kind: "physics.velocityAtTime", measurementId: "impactTime", time: 1, tolerance: 0.1 })).toContain("FREEFALL_CHECK_INVALID");   // unit s, not m/s
+    expect(issues({ id: "x", label: "x", weight: 1, kind: "physics.heightAtTime", measurementId: "heightAt1s", time: 2.5, tolerance: 0.1 })).toContain("FREEFALL_CHECK_INVALID");  // 2.5 s < maxTime 3 s, but after the impact
+    expect(issues({ id: "x", label: "x", weight: 1, kind: "physics.heightAtTime", measurementId: "heightAt1s", time: 2, tolerance: 0.1 })).toEqual([]);
+  });
+  it("P14 the canonical state serializes with sorted ids whatever the entry order (byte-identical replay)", () => {
+    const c = freeFallClassroomConfig();
+    const a = replayFreeFall(c, [set("velocityAt1s", -9.8), set("impactTime", 2.02), point("pointAt1s", 1, 15.1), point("impactPoint", 2.02, 0)]);
+    const b = replayFreeFall(c, [point("impactPoint", 2.02, 0), set("impactTime", 2.02), point("pointAt1s", 1, 15.1), set("velocityAt1s", -9.8)]);
+    if (!a.ok || !b.ok) throw new Error("replay");
+    expect(JSON.stringify(a.state)).toBe('{"v":1,"measurements":{"impactTime":2.02,"velocityAt1s":-9.8},"points":{"impactPoint":{"t":2.02,"y":0},"pointAt1s":{"t":1,"y":15.1}}}');
+    expect(JSON.stringify(b.state)).toBe(JSON.stringify(a.state));
+  });
+});
+
+describe("security self-review finding — the presentation never hands over the impact speed", () => {
+  it("after landing the body RESTS (y = 0, v = 0): the readout never shows v(t_impact)", () => {
+    const m = model(20, 0, 9.8);
+    expect(bodyAt(m, 2.5)).toEqual({ t: 2.5, y: 0, v: 0, landed: true });
+    expect(bodyAt(m, 1)).toMatchObject({ y: 15.1, v: -9.8, landed: false });
+  });
+});
+
