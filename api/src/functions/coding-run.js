@@ -67,10 +67,25 @@ function limitsFor(question) {
   return { timeMs: pick("timeMs"), memoryMb: pick("memoryMb"), outputBytes: pick("outputBytes") };
 }
 
+// Phase 20D — a composite@1 coding child is addressed by its server-owned child key <questionId>::part::<partId> (the composite renderer
+// passes it as the child's id). A top-level id resolves first, EXACTLY as before; a child key resolves only to a coding child of a VALID
+// published composite (its node as a standalone question of its type); anything else (ambiguity included) is not found.
+const { parseCompositeChildKey, compositeStructure, compositeChildNode, isCompositeQuestionNode } = require("../lib/shared-finalization/compositeQuestion");
 function findQuestion(exam, questionId) {
   if (!exam || typeof exam !== "object") return undefined;
-  try { for (const { question, questionId: id } of flattenQuestions(exam)) if (id === questionId) return question; } catch { return undefined; }
-  return undefined;
+  let flat;
+  try { flat = flattenQuestions(exam); } catch { return undefined; }
+  const top = flat.find(x => x.questionId === questionId);
+  const c = parseCompositeChildKey(questionId);
+  let child;
+  if (c) {
+    const parent = flat.find(x => x.questionId === c.questionId);
+    const st = parent && isCompositeQuestionNode(parent.question) ? compositeStructure(parent.question) : null;
+    const part = st && st.ok ? st.model.partById.get(c.partId) : undefined;
+    if (part && part.type === "coding") child = { ...compositeChildNode(part.raw), marks: part.marks };
+  }
+  if (top && child) return undefined;
+  return top ? top.question : child;
 }
 
 async function runHandler(request, deps = {}, obs = null) {

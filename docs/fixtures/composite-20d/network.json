@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "examId": "CMP-20D-D",
+  "title": "Router-on-a-Stick — طوبولوجيا واحدة",
+  "status": "draft",
+  "metadata": {},
+  "sections": [
+    {
+      "id": "s1",
+      "title": "القسم الأول",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "net1",
+          "displayNumber": "3",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "marks": 14,
+          "text": "اضبط الشبكة في المحاكاة ثم أجب.",
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxNet",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "شبكة المدرسة",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "networkTopology",
+                  "pluginVersion": 2,
+                  "config": {
+                    "v": 2,
+                    "devices": [
+                      {
+                        "id": "r1",
+                        "kind": "router",
+                        "label": "R1",
+                        "x": 0.5,
+                        "y": 0.1
+                      },
+                      {
+                        "id": "sw1",
+                        "kind": "switch",
+                        "label": "SW1",
+                        "x": 0.5,
+                        "y": 0.45
+                      },
+                      {
+                        "id": "pc1",
+                        "kind": "pc",
+                        "label": "PC1",
+                        "x": 0.12,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.10.11",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.10.1"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "pc2",
+                        "kind": "pc",
+                        "label": "PC2",
+                        "x": 0.37,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.10.12",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.10.1"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "pc3",
+                        "kind": "pc",
+                        "label": "PC3",
+                        "x": 0.63,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.20.11",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.20.1"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "pc4",
+                        "kind": "pc",
+                        "label": "PC4",
+                        "x": 0.88,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.20.12",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.20.1"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "links": [
+                      {
+                        "id": "u",
+                        "a": {
+                          "deviceId": "r1",
+                          "port": "g0/0"
+                        },
+                        "b": {
+                          "deviceId": "sw1",
+                          "port": "g0/1"
+                        }
+                      },
+                      {
+                        "id": "a",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/1"
+                        },
+                        "b": {
+                          "deviceId": "pc1",
+                          "port": "eth0"
+                        }
+                      },
+                      {
+                        "id": "b",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/2"
+                        },
+                        "b": {
+                          "deviceId": "pc2",
+                          "port": "eth0"
+                        }
+                      },
+                      {
+                        "id": "c",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/11"
+                        },
+                        "b": {
+                          "deviceId": "pc3",
+                          "port": "eth0"
+                        }
+                      },
+                      {
+                        "id": "d",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/12"
+                        },
+                        "b": {
+                          "deviceId": "pc4",
+                          "port": "eth0"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gCfg",
+                "title": "الإعداد",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "k1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxNet",
+                    "text": "أنشئ VLAN 10 و VLAN 20 على SW1.",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "k1",
+                          "label": "SW1: VLAN 10 موجودة",
+                          "weight": 1,
+                          "kind": "switch.vlanExists",
+                          "deviceId": "sw1",
+                          "vlan": 10
+                        },
+                        {
+                          "id": "k2",
+                          "label": "SW1: VLAN 20 موجودة",
+                          "weight": 1,
+                          "kind": "switch.vlanExists",
+                          "deviceId": "sw1",
+                          "vlan": 20
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "k2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxNet",
+                    "text": "اجعل Gi0/1 منفذ Trunk.",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "k6",
+                          "label": "SW1 Gi0/1 في وضع trunk",
+                          "weight": 1,
+                          "kind": "switch.portMode",
+                          "deviceId": "sw1",
+                          "interface": "g0/1",
+                          "value": "trunk"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "k3",
+                    "label": "ج",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxNet",
+                    "text": "أنشئ الواجهات الفرعية dot1Q على R1.",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "k8",
+                          "label": "R1 G0/0.10 بـ dot1Q 10",
+                          "weight": 1,
+                          "kind": "router.subinterfaceVlan",
+                          "deviceId": "r1",
+                          "interface": "g0/0.10",
+                          "value": 10
+                        },
+                        {
+                          "id": "k10",
+                          "label": "R1 G0/0.20 بـ dot1Q 20",
+                          "weight": 1,
+                          "kind": "router.subinterfaceVlan",
+                          "deviceId": "r1",
+                          "interface": "g0/0.20",
+                          "value": 20
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "k4",
+                    "label": "د",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxNet",
+                    "text": "تحقّق من الاتصال بين PC1 و PC3.",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "k12",
+                          "label": "PC1 ⇄ PC3 (توجيه بين الشبكات)",
+                          "weight": 2,
+                          "kind": "reachability",
+                          "source": "pc1",
+                          "destination": "pc3",
+                          "value": true
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gWhy",
+                "title": "الفهم",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "m1",
+                    "label": "هـ",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxNet",
+                    "text": "لماذا نحتاج منفذ Trunk بين SW1 و R1؟",
+                    "marks": 4,
+                    "options": [
+                      {
+                        "text": "لنقل أكثر من VLAN عبر وصلة واحدة"
+                      },
+                      {
+                        "text": "لزيادة السرعة فقط"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
