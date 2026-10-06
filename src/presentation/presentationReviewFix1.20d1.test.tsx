@@ -36,7 +36,7 @@ describe("RF1-M1 raw-HTML detection is linear (no CPU denial of service) and leg
     expect(r.issues.map(i => i.code)).toContain("RICH_CONTENT_LIMIT");
   });
   it("math / CS prose with '<' is accepted; real tags are still refused", () => {
-    for (const ok of ["إذا كان 0 < a < 1 فإن", "for i < a.length", "x < p", "a<b و b>c"]) expect(validateRichContent(doc(p(ok))).ok, ok).toBe(true);
+    for (const ok of ["إذا كان 0 < a < 1 فإن", "for i < a.length", "for (i=0; i<a.length; i++)", "x < p", "a<b و b>c", "if x<p then"]) expect(validateRichContent(doc(p(ok))).ok, ok).toBe(true);
     for (const bad of ["<script>alert(1)</script>", "</a>", "<img src=x>", "<p>نص</p>", "<!-- x -->", "javascript:alert(1)", "<SVG onload=x>"]) expect(validateRichContent(doc(p(bad))).issues.map(i => i.code), bad).toContain("RICH_CONTENT_RAW_HTML");
   });
   it("the Markdown converter keeps a literal '<' in prose (no full-width rewrite)", () => {
@@ -137,8 +137,19 @@ describe("RF1-m4 rich section instructions are shown without an exam presentatio
     expect(r.container.textContent).toContain("تعليمات منسقة فريدة");
     expect(r.container.querySelector("table caption")?.textContent).toBe("جدول");
   });
-  it("the student page's section context renders rich instructions without a presentation", () => {
-    expect(read("src/student/exam/ExamSectionContext.tsx")).toMatch(/richInstructions[\s\S]*<RichText raw=\{richInstructions\}/);
+  it("the student page's section context renders rich instructions without a presentation (rendered, not only wired)", async () => {
+    (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
+    window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
+    const json = (status: number, body: unknown) => Promise.resolve({ ok: status >= 200 && status < 300, status, json: async () => body } as Response);
+    const STATE = { attemptsUsed: 0, allowedAttempts: 1, canAttempt: true, canWrite: true, dueClosed: false, availability: "open", draftAnswers: {}, draftSavedAt: "", latestResult: null, attempts: [], timed: false, attemptModelVersion: 0, requiresStart: false, serverNow: "2026-03-01T10:00:00.000Z", activeAttempt: null, effectiveAttemptEndsAt: "", attemptExpired: false, canStartAttempt: false, durationMinutes: 0 };
+    globalThis.fetch = vi.fn((url: string, init?: RequestInit) => String(url).includes("/api/student-submission/") ? ((init && init.method) === "POST" ? json(200, { ok: true, savedAt: "x" }) : json(200, { ok: true, state: STATE })) : json(404, {})) as unknown as typeof fetch;
+    const exam = { title: "t", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "S", gradingPolicy: "all", instructions: "", instructionsRichContent: RICH, questions: [{ examQuestionId: "q1", presentationType: "multipleChoice", text: "سؤال", marks: 1, options: [{ text: "A" }, { text: "B" }] }] }] };
+    const assignment = { assignmentId: "asg1", title: "واجب", instructions: "", openAt: "", dueAt: "2026-05-01T10:30:00.000Z", effectiveDueAt: "", maxAttempts: 1, durationMinutes: 0, requiresStart: false, timed: false, questionCount: 1, totalMarks: 1, exam };
+    const { default: StudentExamPage } = await import("../StudentExamPage");
+    const r = render(<StudentExamPage token="t" assignment={assignment as never} studentName="أ" className="ب" onBack={() => {}} onLogout={() => {}} />);
+    await settle();
+    expect(r.container.querySelector(".exam-presentation")).toBeNull();
+    expect(r.container.querySelector(".iex-section-context")?.textContent).toContain("تعليمات منسقة فريدة");
     expect(read("src/StudentExamPage.tsx")).toMatch(/richInstructions=\{\(rawSection as[\s\S]{0,80}?\)\?\.instructionsRichContent\}/);
   });
 });
