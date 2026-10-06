@@ -72,10 +72,15 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
 - **functionStudy2d@1**: safe expression language 2 only; the model's key is probed numerically for **soundness** (f(0), roots, poles,
   horizontal asymptotes, local extrema, monotonic intervals: an inconsistent key is refused) and, since Review Fix 1, for **completeness**
   inside the window. Code samples the function (2001 points; sign changes refined by bisection; touching roots, even poles and extrema by
-  ternary search; one-sided poles at a domain edge). Poles are recognized by **growth**: |f| keeps increasing without slowing down over
-  four decades of approach (10⁻³ … 10⁻¹²). That covers rational and logarithmic poles at any window height, while a removable hole, a cusp
-  or a finite edge is not a pole. Horizontal limits come from a first-order extrapolation of f(10⁵), f(3·10⁵) and f(10⁶), compared
-  relatively. The probe refuses a key that:
+  ternary search, a touching root only at a strict local minimum of |f|; one-sided poles at a domain edge). Poles are recognized by
+  **growth**: |f| keeps increasing without slowing down, decade by decade, as the probe closes in (10⁻² … 10⁻¹²). That covers rational
+  poles of order 1 to 4 and logarithmic poles at any window height, while a removable hole, a cusp or a finite edge is not a pole.
+  Horizontal limits come from a first-order extrapolation of f at about 10⁵, 3·10⁵ and 10⁶, compared relatively. The sample points
+  avoid round numbers so periodic `round` / `floor` expressions cannot alias, and the estimate falls back to smaller magnitudes only when
+  the evaluator overflows (a logistic curve at −∞).
+
+  The key's **soundness** checks use the same pole test and the same limits, so a correct log asymptote or a slowly converging limit is
+  never refused. The probe refuses a key that:
   - omits a root, a pole, a domain point, an extremum, a horizontal limit or a monotonic stretch (`AI_FUNCTION_KEY_INCOMPLETE`);
   - names a point outside the window (`AI_FUNCTION_KEY_OUTSIDE_WINDOW`).
 
@@ -83,9 +88,14 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
 
   The probe is **bounded**:
   - it locates only the features of the enabled tasks;
-  - it has a hard budget of 20 000 evaluations per simulator (`AI_FUNCTION_TOO_COMPLEX` when exhausted, never a silent pass);
+  - it has a hard budget of 20 000 evaluations and 600 000 expression-node evaluations per simulator (a large expression gets fewer
+    evaluations; `AI_FUNCTION_TOO_COMPLEX` when exhausted, never a silent pass);
   - it stops as soon as a feature list exceeds what a key can hold (10);
-  - a section draft or a patch may carry at most 6 function-study simulators (`AI_FUNCTION_SIM_LIMIT`).
+  - a section draft or a patch may carry at most 6 function-study simulators (`AI_FUNCTION_SIM_LIMIT`), and the plan already refuses more
+    than 6 in one section (`PLAN_FUNCTION_SIM_LIMIT`).
+
+  Measured: a curriculum simulator costs about 9 ms; the worst padded simulator about 107 ms; one request with 6 worst-case simulators
+  about 350 ms. A valid echoed draft is judged once.
 
   It is a probe, not a proof: features finer than the grid, or growing too slowly to show over four decades, are left to the teacher's
   review.
@@ -355,10 +365,11 @@ failed**. The ninth, a 429 before any judging, already held there and is labelle
 The history test failed on `4799542` with `expected [ 'generate' ] to deeply equal [ 'modifyExam', 'generate' ]`. All of them pass on the
 head.
 
-**The reviewer's CPU reproduction on the head:**
-- 30 function simulators are refused by the cap (9 ms), with one reservation.
-- 6 `yIntercept`-only sawtooth simulators are judged in 23 ms (the probe is skipped).
-- The worst case per simulator, with every completeness task on a crafted expression, is about 60 ms (`AI_FUNCTION_TOO_COMPLEX`).
+**The reviewer's CPU reproduction on the RF2 head:**
+- 30 function simulators were refused by the cap (9 ms), with one reservation.
+- 6 `yIntercept`-only sawtooth simulators were judged in 23 ms (the probe is skipped).
+
+The "about 60 ms" worst case per simulator measured for RF2 was too low for large expressions. Review Fix 3 corrects it (§11.8).
 
 **RF2 mutation campaign.** 14 mutants: **14 KILLED, 0 SURVIVED, 0 TIMEOUT**, with byte-for-byte restore and a clean `git status`. S10
 (feature overflow ignored) first survived: the outcome code is the same, because a key holds at most 10 values. A test asserting the
@@ -391,6 +402,54 @@ explicit overflow reason now kills it (`82d1d1a`).
 Across the phase, every planted defect in current code is killed except the 2 proven equivalents. There were 0 timeouts, and every file
 was restored byte-for-byte with a clean `git status`.
 
+### 11.8 Fresh re-review and Review Fix 3
+
+A fresh re-review of `bd71428` found 0 BLOCKER, 0 MAJOR and 5 MINOR findings. Two of them, MINOR-2 and MINOR-3, were regressions introduced
+by RF2. Review Fix 3 (`8dc1113`, `899233e`) answers all five:
+
+| Finding | Fix |
+|---|---|
+| MINOR-1 the evaluation budget ignored expression size (a large expression cost ~470 ms per simulator, ~4 s per request), and a valid echoed draft was judged twice | budget also in expression-node evaluations; the judgement of a valid echoed draft is reused (judged once); now ~107 ms worst simulator, ~350 ms per request |
+| MINOR-2 (RF2 regression) poles of order ≥ 3 overflowed before the growth test saw them | growth measured decade by decade from 10⁻² |
+| MINOR-3 (RF2 regression) flat stretches started a ternary search at every sample (false TOO_COMPLEX) | a touching root needs a strict local minimum of \|f\| |
+| MINOR-4 the older soundness checks used absolute thresholds (log poles, slowly converging / logistic limits refused) | soundness uses the same pole test and the same extrapolated limits (tiered, alias-free sample points; no round-number fallback) |
+| MINOR-5 the plan accepted more function simulators than a section may carry | `PLAN_FUNCTION_SIM_LIMIT`; the cap is stated in the prompt rules |
+
+**Fail-first.**
+- `composerReviewFix3.20f.test.ts` was executed on `bd71428`: **6 of 6 failed**, with:
+  - `expected 20000 to be less than or equal to 8000`
+  - `expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]` (order-3 / order-4 poles)
+  - `expected false to be true` (plateau keys, log asymptote, slow and logistic limits)
+  - `expected [] to include 'PLAN_FUNCTION_SIM_LIMIT'`
+- `ai-exam-composer-rf3-20f.test.js` against the `bd71428` handler: `expected 2 to be 1` (two dry-run applies).
+- The periodic-limit test against `8dc1113`: `expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCONSISTENT' ]`.
+
+All of them pass on the head.
+
+**RF3 mutation campaign.** 9 mutants: **9 KILLED, 0 SURVIVED, 0 TIMEOUT**, with byte-for-byte restore and a clean `git status`.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| T01 | `composerSim.ts` | probe budget not weighted by expression size | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-1 the probe budget is weighted by the expre |
+| T02 | `composerSim.ts` | pole growth starts at 1e-3 (high-order poles overflow) | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-2 high-order poles are found |
+| T03 | `composerSim.ts` | plateau points start touching-root searches | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-3 flat stretches are not touching roots |
+| T04 | `composerSim.ts` | vertical-asymptote soundness by absolute height | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-4 soundness uses the same pole / limit logi |
+| T05 | `composerSim.ts` | horizontal-asymptote soundness ignores the extrapolated limits | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-4 soundness uses the same pole / limit logi |
+| T06 | `composerSim.ts` | limit tiers do not fall back on overflow | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-4 soundness uses the same pole / limit logi |
+| T07 | `composerSim.ts` | limit sample points at round magnitudes | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-4 soundness uses the same pole / limit logi |
+| T08 | `composerPlan.ts` | plan simulator cap removed | KILLED | composerReviewFix3.20f.test.ts › 20F-RF3 MINOR-5 the plan respects the per-section functio |
+| T09 | `ai-exam-composer.js` | valid echoed draft judged twice | KILLED | ai-exam-composer-rf3-20f.test.js › 20F-RF3 a valid echoed draft is judged once |
+
+**Final re-run on the Review Fix 3 code.** Every earlier mutant list was re-run (the original 45, RF1 23, the RF1 re-targets 3, RF2 14; 85 in total):
+- **74 KILLED.**
+- **2 EQUIVALENT:** C19 and C42 (proved in §11.4).
+- **9 INVALID,** because their target lines were rewritten:
+  - S01, S03 and S06 were re-targeted at the RF3 code as S01b, S03b and S06b, and all three were KILLED. S03b first survived; a task-gating test (`67b2550`) now kills it.
+  - R04, R08 and R12 are covered by the re-targets R04b, R08b and R12b, which were KILLED in this run.
+  - R09, R10 and R11 are covered by S09, S06b / S07 and S08.
+
+Together with RF3's 9: every planted defect in the current code is killed except the 2 proven equivalents. There were 0 timeouts, and every file was restored byte-for-byte with a clean `git status` after each campaign.
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -399,6 +458,8 @@ was restored byte-for-byte with a clean `git status`.
 - A section with many items can hit the 30 s provider timeout; the teacher is told to reduce items per section.
 - Applying a generated exam replaces the title, sections and presentation (cover page, blueprint and other settings kept) — one undoable
   step, confirmed first.
+- The function-study completeness probe is a probe, not a proof. Features finer than the 2001-point grid, poles of order ≥ 5 (they overflow
+  the safe evaluator before growth shows) and essential singularities such as exp(1/x) are left to the teacher's review.
 - No live provider call was made (no network in the development environment): the provider schemas are checked against the documented
   strict-mode limits by a test, not by a live acceptance call. The first production composer call is the live check.
 - Notes accepted from the review: a replaceQuestion may change the marks of the selected question (shown in the diff); removing a composite
