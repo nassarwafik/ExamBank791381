@@ -78,6 +78,10 @@ describe("20F-RF6 MINOR-3 key values are held to half the grading tolerance", ()
     refused("x+100.5", ["yIntercept"], { yIntercept: 100.52 });
     refused("500*x/(x+100)", ["horizontalAsymptotes"], { horizontalAsymptotes: [500.3] });
   });
+  it("a near-duplicate key value, or an extra value just off a real limit, is refused (one correct answer cannot match both)", () => {
+    expect(codes(buildSimFromSpec(fn("x^3-x", ["xIntercepts"], { xIntercepts: [-1, 0, 0.001, 1] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+    expect(codes(buildSimFromSpec(fn("500*x/(x+100)", ["horizontalAsymptotes"], { horizontalAsymptotes: [500, 500.3] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+  });
   it("keys rounded to three decimals pass", () => {
     accepted("0.2*x^2-0.4", ["xIntercepts"], { xIntercepts: [-1.414, 1.414] });
     accepted("(x-2)^6", ["extrema"], { extrema: [{ kind: "min", x: 2, y: 0 }] });
