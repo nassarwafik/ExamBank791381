@@ -418,6 +418,9 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
       const breaks = [...ft.extrema.map(p => p.x), ...ft.poles, ...ft.points, ...ft.edges];
       for (const v of intervals) {
         for (const end of [v.from, v.to]) if (typeof end === "number" && !near1(end, breaks)) bad("طرف الفترة x = " + end + " ليس نقطة تحوّل ولا خط تقارب ولا حدًّا للمجال.");
+        // a pole, a domain point or a domain edge inside the interval splits it, even when f keeps its direction on both sides
+        const cut = [...ft.poles, ...ft.points, ...ft.edges].find(p => p > lo(v.from) + K && p < lo(v.to) - K);
+        if (cut !== undefined) bad("الفترة (" + v.from + ", " + v.to + ") تعبر نقطة خارج المجال أو خط تقارب عند x = " + Number(cut.toFixed(4)) + ".");
         const dir = v.kind === "increasing" ? 1 : -1, wrong = ft.slope.find(sl => sl.x > lo(v.from) && sl.x < lo(v.to) && sl.dir !== dir);
         if (wrong) bad("الدالة " + (wrong.dir > 0 ? "متزايدة" : "متناقصة") + " قرب x = " + Number(wrong.x.toFixed(3)) + " داخل الفترة (" + v.from + ", " + v.to + ").");
       }

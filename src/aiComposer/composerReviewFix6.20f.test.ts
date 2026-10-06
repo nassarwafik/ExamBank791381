@@ -23,6 +23,11 @@ describe("20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole leng
     refused("x^2-4*x+3", ["monotonicIntervals"], { intervals: [iv("decreasing", "-inf", "4"), iv("increasing", "2", "+inf")] });
     refused("1/x", ["monotonicIntervals"], { intervals: [iv("decreasing", "-inf", "1"), iv("decreasing", "-1", "+inf")] });
   });
+  it("one interval across a pole is refused even when f decreases on both sides", () => {
+    refused("(x+1)/(x-2)", ["monotonicIntervals"], { intervals: [iv("decreasing", "-inf", "+inf")] });
+    refused("x^2/(x-1)", ["monotonicIntervals"], { intervals: [iv("increasing", "-inf", "0"), iv("decreasing", "0", "2"), iv("increasing", "2", "+inf")] });
+    accepted("(x+1)/(x-2)", ["monotonicIntervals"], { intervals: [iv("decreasing", "-inf", "2"), iv("decreasing", "2", "+inf")] });
+  });
   it("an endpoint just beside the turning point (closer than the probe's slope samples, farther than the grading tolerance) is refused", () => {
     refused("x^2-4*x+3", ["monotonicIntervals"], { intervals: [iv("decreasing", "-inf", "2.012"), iv("increasing", "2.012", "+inf")] });
   });
@@ -90,5 +95,24 @@ describe("20F-RF6 MINOR-3 key values are held to half the grading tolerance", ()
     accepted("500*x/(x+100)", ["horizontalAsymptotes"], { horizontalAsymptotes: [500] });
     accepted("3*x/(x+500)", ["horizontalAsymptotes"], { horizontalAsymptotes: [3] });
     accepted("x/3", ["xIntercepts", "yIntercept"], { xIntercepts: [0], yIntercept: 0 });
+  });
+});
+
+describe("20F-RF6 each new layer holds on its own", () => {
+  it("a wrong direction inside an interval is named in the repair message (the model is told where)", () => {
+    const r = buildSimFromSpec(fn("x^2-4*x+3", ["monotonicIntervals"], { intervals: [iv("decreasing", "-inf", "2"), iv("increasing", "-2", "+inf")] }));
+    expect(r.ok ? [] : r.issues.map(i => i.message).filter(m => m.includes("داخل الفترة (-2, +inf)"))).toHaveLength(1);
+  });
+  it("a duplicated interval is refused here, with a clear message (layer isolation: the plugin validator also refuses it later)", () => {
+    expect(codes(buildSimFromSpec(fn("x^3-3*x", ["monotonicIntervals"], { intervals: [iv("increasing", "-inf", "-1"), iv("increasing", "-inf", "-1"), iv("decreasing", "-1", "1"), iv("increasing", "1", "+inf")] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+  });
+  it("a removable hole at a decimal grid position is found (a key without it is incomplete)", () => {
+    expect(codes(buildSimFromSpec(fn("(x^2-1.69)/(x-1.3)+1/(x+2)", ["domainExclusions"], { domainExclusions: [-2] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+  });
+  it("an x-intercept the probe does not find is refused even when |f| there is small (a flat line)", () => {
+    expect(codes(buildSimFromSpec(fn("0.01*(x-1)", ["xIntercepts"], { xIntercepts: [1, 1.5] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+  });
+  it("PIN (new path): a narrow overflow spike that is not a pole is never recorded as a domain point", () => {
+    expect(codes(buildSimFromSpec(fn("999999999000000+1000500*(1-abs(x))", ["domainExclusions"], { domainExclusions: [0] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
   });
 });
