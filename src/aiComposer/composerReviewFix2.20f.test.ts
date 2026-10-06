@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { buildSimFromSpec, probeFunctionFeatures } from "./composerSim";
+import fs from "node:fs";
+import path from "node:path";
 import { normalizeSectionDraft } from "./composerDraft";
+import { normalizeComposerPatch } from "./composerPatch";
+import type { StructuredExam } from "../examTypes";
 import { normalizePlanShape } from "./composerPlan";
 import { buildRepairPrompt } from "./composerPrompts";
 import { compileFunction, evaluateFunctionAt } from "../functionStudyModel";
@@ -26,6 +30,16 @@ describe("20F-RF2 N-M1 the completeness probe is bounded", () => {
   it("a spec whose features exceed the probe budget is refused (never silently accepted)", () => {
     expect(codes(buildSimFromSpec(fn(SAW, ["extrema"], { extrema: [{ kind: "min", x: 0, y: 1000 }] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
   });
+  it("only the features of the enabled tasks are probed (a yIntercept-only spec of the same expression is accepted)", () => {
+    expect(buildSimFromSpec(fn(SAW, ["yIntercept"], { yIntercept: 1000 })).ok).toBe(true);
+  });
+  it("a patch carries at most a bounded number of function-study simulators", () => {
+    const exam = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../docs/fixtures/presentation-20d1/A-classic-arabic.json"), "utf8")) as StructuredExam;
+    const add = () => F.op("addQuestion", { sectionId: "a-s1", marks: 2, item: F.item("smartSim", { smartSim: { text: "ادرس الدالة", sim: F.funcSim({}) } }) });
+    const ctx = { exam, mode: "modifyExam" as never, scope: { kind: "exam" } as never, nonce: "abc123", request: "r" };
+    expect(codes(normalizeComposerPatch(F.patch(Array.from({ length: 7 }, add)), ctx))).toEqual(["AI_FUNCTION_SIM_LIMIT"]);
+    expect(normalizeComposerPatch(F.patch(Array.from({ length: 2 }, add)), ctx).ok).toBe(true);
+  });
   it("a section draft carries at most a bounded number of function-study simulators", () => {
     const n = 7;
     const p = normalizePlanShape(F.plan("t", "default", [F.planSection("أ", Array.from({ length: n }, () => F.planItem("smartSim", 1, { simulator: "functionStudy2d" })))]));
@@ -45,6 +59,10 @@ describe("20F-RF2 N-m1 / N-m2 poles and limits are recognized by growth, limits 
     const o = { yMin: -100000, yMax: 100000 };
     expect(codes(buildSimFromSpec(fn("1/(x-1)+1/(x+2)", ["verticalAsymptotes"], { ...o, verticalAsymptotes: [1] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
     expect(buildSimFromSpec(fn("1/(x-1)+1/(x+2)", ["verticalAsymptotes"], { ...o, verticalAsymptotes: [-2, 1] })).ok).toBe(true);
+  });
+  it("bounded behaviour is never a pole: a cusp rising toward a finite value, a finite value beside a tiny domain gap", () => {
+    expect(buildSimFromSpec(fn("10-10*abs(x)^0.1+1/(x-2)", ["verticalAsymptotes"], { verticalAsymptotes: [2] })).ok).toBe(true);
+    expect(buildSimFromSpec(fn("1-sqrt(abs(x)-0.0000000001)+1/(x-2)", ["verticalAsymptotes"], { verticalAsymptotes: [2] })).ok).toBe(true);
   });
   it("a correct large horizontal asymptote of a slowly converging function is accepted", () => {
     expect(buildSimFromSpec(fn("500*x/(x+100)", ["horizontalAsymptotes"], { horizontalAsymptotes: [500] })).ok).toBe(true);
