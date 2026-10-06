@@ -1,4 +1,4 @@
-// Phase 20F — tiny helpers for the STRICT provider schemas (OpenAI strict json_schema: every object closed, every property required,
+// Phase 20F — tiny helpers for the STRICT provider schemas (strict json_schema mode: every object closed, every property required,
 // optionality only through `null`) and for re-checking an AI value locally. Provider-side schema validation is never trusted alone: every
 // normalizer below re-checks the exact shape with these guards (prototype-sensitive keys refused, bounded strings / numbers / arrays).
 export type JsonSchema = Record<string, unknown>;
