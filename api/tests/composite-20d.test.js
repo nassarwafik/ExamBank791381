@@ -294,6 +294,7 @@ describe("20D-S7 end to end through the REAL handlers: autosave, submit, review,
     expect(r2.status).toBe(200);
     at = attemptOf(ctx);
     expect(at.questionGrades[0].parts.find(p => p.partId === "pA3").score).toBe(2);             // clamped to the part's counted max
+    expect(at.manualOverrides["q4::part::pA3"].score).toBe(2);                                    // and STORED clamped (never a raw client score)
     expect(at.score).toBe(18);
     const r3 = await save(ctx, { q4: { score: 15, comment: "parent" } });                        // the existing whole-question override still wins
     expect(r3.status).toBe(200); expect(attemptOf(ctx).score).toBe(15);

@@ -3,6 +3,8 @@ import { createRequire } from "node:module";
 import { gradeExam } from "../src/lib/assignment-grading.js";
 import { rebuildAttemptGrades } from "../src/lib/attempt-grade-rebuild.js";
 import { sanitizeExamForStudent } from "../src/lib/student-exam-sanitize.js";
+import { normalizeDraftAnswers } from "../src/lib/draft-answers.js";
+import { compositeReviewOf } from "../src/lib/composite-review.js";
 import { validateStructuredExam } from "../../src/examQuality";
 import { compositeArabicExam, compositePhysicsExam, compositeCsExam, compositeNetworkExam } from "../../src/composite/compositeFixtures";
 
@@ -98,5 +100,40 @@ describe("20D-H4 coding child identity, ambiguity and override precedence", () =
     expect(official().autoGradingPending(at)).toBe(false);
     at.manualOverrides = { "cs1::part::c1": { score: 3 } };
     expect(official().overrideScoreOf(at, "cs1::part::c1")).toBe(3);
+  });
+});
+
+describe("20D-H5 mutation hardening — each guard proven on its own", () => {
+  const graded = (exam, answers) => { const g = gradeExam(exam, answers); return { attemptNumber: 1, submittedAt: "2026-01-01T00:00:00.000Z", answers, questionGrades: g.questions, sections: g.sections, manualOverrides: {}, totalMarks: g.totalMarks }; };
+  it("rebuild: an IGNORED (excess) part never affects the parent's correctness — a wrong excess answer keeps a fully-correct first-N composite correct", () => {
+    const e = compositeArabicExam(); qOf(e).composite.groups = [qOf(e).composite.groups[1]]; qOf(e).marks = 4;
+    const r = gradeExam(e, { q4: comp({ pB1: { kind: "fields", values: { t1: "k1", t2: "k2" } }, pB2: { kind: "fields", values: { x1: "c1", x2: "c2" } }, pB3: { kind: "numeric", value: "-1" } }) });
+    expect(r.questions[0]).toMatchObject({ score: 4, correct: true });
+    const at = { questionGrades: clone(r.questions), sections: clone(r.sections), manualOverrides: {}, totalMarks: r.totalMarks };
+    rebuildAttemptGrades(at);
+    expect(at.questionGrades[0]).toMatchObject({ score: 4, correct: true, manualReview: false });
+  });
+  it("binding: a composite answer over 1 MB is refused AS TOO LARGE even with few shared-context actions", () => {
+    const b = normalizeDraftAnswers({ q4: comp({ pA1: { kind: "choice", index: 0 }, pC1: { kind: "text", value: "ن".repeat(600_000) } }) }, compositeArabicExam());
+    expect(b.rejected).toEqual([{ id: "q4", code: "COMPOSITE_ANSWER_TOO_LARGE" }]);
+    expect(b.answers.q4).toBeUndefined();
+  });
+  it("coding: a composite whose OWN grade is ignored (countedMaxMarks 0) plans no child target even if a stored part record still looks counted", () => {
+    const at = graded(compositeCsExam(), { cs1: comp({ c1: code("print(1)\n") }) });
+    at.questionGrades[0] = { ...at.questionGrades[0], countedMaxMarks: 0 };                       // a corrupted / inconsistent authority record
+    expect(official().planCodingGrading(compositeCsExam(), at, { assignmentId: "a", studentId: "s" }).dispatch).toEqual([]);
+  });
+  it("coding: a child's teacher evidence is computed from the PART grade (its maximum), never from a top-level lookup", () => {
+    const at = graded(compositeCsExam(), { cs1: comp({ c1: code("print(1)\n") }) });
+    official().planCodingGrading(compositeCsExam(), at, { assignmentId: "a", studentId: "s" });
+    const rv = compositeReviewOf(qOf(compositeCsExam()), "cs1", at, { assignmentId: "a", studentId: "s" });
+    const c1 = rv.parts.find(p => p.partId === "c1");
+    expect(c1.codingEvidence).toBeTruthy();
+    expect(c1.codingEvidence.maxMarks).toBe(10);
+  });
+  it("coding: a linked SmartSim part (or any non-coding child) never resolves as a coding target", () => {
+    const at = graded(compositePhysicsExam(), {});
+    const linked = qOf(compositePhysicsExam()).composite.groups.flatMap(g => g.parts).find(p => p.type === "smartSim" && p.contextId);
+    expect(official().resolveCodingTarget(compositePhysicsExam(), at, "phys1::part::" + linked.id)).toBeNull();
   });
 });

@@ -106,4 +106,24 @@ describe("20D-UI4c AssignmentReview composite integration", () => {
     expect((posted as unknown as { action: string }).action).toBe("saveReview");
     expect(overrides).toEqual({ "q4::part::pA1": { score: 1.5, comment: "" }, "q4::part::pC1": { rubricAwards: { ideas: { levelId: "two" }, reason: { levelId: "full" } }, comment: "" } });
   });
+  it("never sends an override for an UNCOUNTED part, even when a score is stored on it (the server would refuse the whole save)", async () => {
+    let posted: Json | null = null;
+    const q = reviewQuestion();
+    const pB3 = (q.compositeReview.parts as Json[]).find(p => p.partId === "pB3")!;
+    pB3.manualScore = 1; pB3.teacherComment = "قديم";                                              // a stored value on an ignored part (legacy / inconsistent record)
+    const attempt = { attemptNumber: 1, submittedAt: "2026-03-01T10:00:00.000Z", score: 14, totalMarks: 20, percentage: 70, manualReviewMarks: 6, finalized: false, gradingStatus: "pendingReview", startedAt: "", endedAt: "", endReason: "submitted", timedOut: false };
+    globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input), method = (init && init.method) || "GET";
+      if (url.includes("/api/assignment-review") && method === "GET") return Promise.resolve({ status: 200, ok: true, json: async () => ({ ok: true, assignment: { assignmentId: "a1", title: "واجب", totalMarks: 20 }, student: { studentId: "s1", studentName: "أ", studentCode: "S1" }, attempt: { ...attempt, teacherFeedback: "" }, attempts: [attempt], questions: [q] }) } as Response);
+      if (url.includes("/api/assignment-review")) { posted = JSON.parse(String(init!.body)); return Promise.resolve({ status: 200, ok: true, json: async () => ({ ok: true, result: { finalized: false, score: 15, totalMarks: 20, percentage: 75, manualReviewMarks: 6 } }) } as Response); }
+      return Promise.resolve({ status: 404, ok: false, json: async () => ({ ok: false }) } as Response);
+    }) as unknown as typeof fetch;
+    const { container } = render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={() => {}} onSaved={() => {}} />);
+    await waitFor(() => expect(container.querySelector('[data-child-key="q4::part::pA1"] input[type="number"]')).toBeTruthy());
+    fireEvent.change(container.querySelector('[data-child-key="q4::part::pA1"] input[type="number"]')!, { target: { value: "1" } });
+    fireEvent.click(screen.getByText(/حفظ واعتماد التصحيح/));
+    await waitFor(() => expect(posted).not.toBeNull());
+    const overrides = (posted as unknown as { overrides: Record<string, unknown> }).overrides;
+    expect(Object.keys(overrides)).toEqual(["q4::part::pA1"]);
+  });
 });

@@ -33,6 +33,22 @@ async function confirmWith(label: string) {
   await act(async () => { await Promise.resolve(); });
 }
 
+describe("20D-ED1b duplicate group (mutation hardening)", () => {
+  it("duplicating a group gives the copy AND every part in it fresh ids (one id namespace — no duplicate part id ever reaches the authority)", async () => {
+    const question = compositeArabicExam().sections[0].questions[0] as unknown as Obj;
+    const { container, box } = mount(question);
+    await settle(container);
+    fireEvent.click(screen.getByRole("button", { name: "تكرار المجموعة 1" }));
+    const gs = groupsOf(box.q);
+    expect(gs).toHaveLength(4);
+    const [orig, copy] = [gs[0], gs[1]];
+    expect(copy.id).not.toBe(orig.id);
+    expect(copy.parts.map(p => p.type)).toEqual(orig.parts.map(p => p.type));
+    for (const p of copy.parts) expect(orig.parts.map(o => o.id)).not.toContain(p.id);
+    expect(errors(box.q)).not.toContain("COMPOSITE_ID_DUPLICATE");
+  });
+});
+
 describe("20D-ED1 parts and groups", () => {
   it("add / duplicate / delete (confirmed) / move a part between groups — fresh ids, valid composite, marks never rewritten silently", async () => {
     const question = compositeArabicExam().sections[0].questions[0] as unknown as Obj;
@@ -166,5 +182,7 @@ describe("20D-ED2 shared contexts", () => {
     expect(typeSpecificContentPresent(box.q)).toBe(true);
     const fresh = { presentationType: "composite", composite: { v: 1, contexts: [], groups: [{ id: "g1", title: "", gradingPolicy: "all", requiredAnswers: null, maxMarks: null, parts: [{ id: "p1", type: "multipleChoice", text: "", marks: 1, options: [{ text: "" }, { text: "" }], answer: { correctOptionIndex: 0 } }] }] } };
     expect(typeSpecificContentPresent(fresh)).toBe(false);
+    // a shared context alone (even with an empty text source) is authored content: a type change must ask first
+    expect(typeSpecificContentPresent({ ...fresh, composite: { ...fresh.composite, contexts: [{ id: "c1", version: 1, kind: "source", sources: [{ id: "s1", version: 1, kind: "text", text: "" }] }] } })).toBe(true);
   });
 });

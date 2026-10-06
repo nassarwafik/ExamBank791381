@@ -107,6 +107,29 @@ describe("20D-3 strict contract — every violation blocks finalization (fail cl
   });
 });
 
+describe("20D-3b first-N violations in ISOLATION — each rule blocks on its own (mutation hardening: one violation, everything else consistent)", () => {
+  const firstN = (e: StructuredExam) => validateStructuredExam(e).filter(i => i.severity === "error");
+  const REQUIRED = /عدد الإجابات المطلوبة/;
+  it("requiredAnswers above the part count blocks even when maxMarks and the question mark are consistent with it", () => {
+    const issues = firstN(withQ(q => { const g = q.composite.groups[1]; g.requiredAnswers = 4; g.maxMarks = 8; q.marks = 24; }));
+    expect(issues.map(i => i.code)).toEqual(["COMPOSITE_FIRSTN_INVALID"]);
+    expect(issues[0].message).toMatch(REQUIRED);
+  });
+  it("requiredAnswers 0 is reported as an invalid quota (not only as a maxMarks mismatch)", () => {
+    const issues = firstN(withQ(q => { q.composite.groups[1].requiredAnswers = 0; }));
+    expect(issues.map(i => i.code)).toEqual(["COMPOSITE_FIRSTN_INVALID"]);
+    expect(issues[0].message).toMatch(REQUIRED);
+  });
+  it("a non-numeric maxMarks (\"4\") blocks — it is never coerced into an explicit maximum", () => {
+    expect(errors(withQ(q => { (q.composite.groups[1] as Record<string, unknown>).maxMarks = "4"; }))).toContain("COMPOSITE_FIRSTN_INVALID");
+  });
+  it("unequal part marks block even when maxMarks = N × the FIRST part's mark", () => {
+    const issues = firstN(withQ(q => { (q.composite.groups[1].parts as Record<string, unknown>[])[1].marks = 3; }));
+    expect(issues.map(i => i.code)).toEqual(["COMPOSITE_FIRSTN_INVALID"]);
+    expect(issues[0].message).toMatch(/علامات متساوية/);
+  });
+});
+
 describe("20D-4 shared SmartSim context rules", () => {
   const sim = (q: Q) => q.composite.groups[0].parts as Record<string, unknown>[];
   it("a linked SmartSim part reads ONLY the context envelope and carries ONLY its private checks", () => {
@@ -151,6 +174,17 @@ describe("20D-6 answers — the containing authority only", () => {
     expect(answered({ kind: "composite", parts: { pA1: { kind: "choice", index: 0 } }, contexts: {} } as never)).toBe(true);
     expect(answered({ kind: "composite", parts: {}, contexts: { ctxSim: { kind: "smartSim", pluginKey: "physicsFreeFall", pluginVersion: 1, actions: [{ type: "measurement.clear", measurementId: "impactTime" }], state: null } } } as never)).toBe(true);
     expect(answered({ kind: "composite", parts: { pA1: { kind: "text", value: "  " } }, contexts: {} } as never)).toBe(false);
+  });
+  it("the shared model's isCompositeAnswerAnswered (the SERVER authority, compiled into the shared build) agrees with the client for every shape", () => {
+    const sim = { kind: "smartSim", pluginKey: "physicsFreeFall", pluginVersion: 1, actions: [{ type: "measurement.set", measurementId: "impactTime", value: 2 }], state: null };
+    const samples: [unknown, boolean][] = [
+      [{ kind: "composite", parts: {}, contexts: {} }, false],
+      [{ kind: "composite", parts: {}, contexts: { ctxSim: sim } }, true],                       // a context-only answer IS an answer
+      [{ kind: "composite", parts: { pA1: { kind: "choice", index: 0 } }, contexts: {} }, true],
+      [{ kind: "composite", parts: { pA1: { kind: "text", value: "  " } }, contexts: {} }, false],
+      [{ kind: "choice", index: 0 }, false]
+    ];
+    for (const [a, want] of samples) { expect(model.isCompositeAnswerAnswered(a), JSON.stringify(a)).toBe(want); if (want) expect(answered(a as never)).toBe(true); }
   });
   it("child target identity: <questionId>::part::<partId>, parsed unambiguously, bounded", () => {
     expect(model.compositeChildKey("q4", "pA1")).toBe("q4::part::pA1");

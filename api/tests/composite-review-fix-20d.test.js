@@ -3,7 +3,7 @@ import { gradeExam } from "../src/lib/assignment-grading.js";
 import { rebuildAttemptGrades } from "../src/lib/attempt-grade-rebuild.js";
 import { isResponseAnswered } from "../src/lib/exam-structure.js";
 import { normalizeDraftAnswers } from "../src/lib/draft-answers.js";
-import { compositePartOverrides } from "../src/lib/composite-review.js";
+import { compositePartOverrides, compositeReviewOf } from "../src/lib/composite-review.js";
 import { validateStructuredExam } from "../../src/examQuality";
 import { compositeArabicExam, compositeCsExam } from "../../src/composite/compositeFixtures";
 
@@ -35,6 +35,8 @@ describe("20D-RF1-F2 the composite child identity is reserved against the EFFECT
     const g = gradeExam(e, { q4: comp({ pC1: { kind: "text", value: "x" } }), "q4::part::pC1": { kind: "text", value: "y" } });
     const at = { attemptNumber: 1, questionGrades: clone(g.questions), manualOverrides: { "q4::part::pC1": { score: 6, comment: "top-level" } }, gradedStructured: true, sections: clone(g.sections), totalMarks: g.totalMarks };
     expect(compositePartOverrides(e, at, { "q4::part::pC1": { score: 6 } }).entries.size).toBe(0);
+    const rv = compositeReviewOf(qOf(e), "q4", at, { assignmentId: "a", studentId: "s" });
+    expect(rv.parts.find(p => p.partId === "pC1")).toMatchObject({ manualScore: null, teacherComment: "" });   // the review never shows it as the part's
     rebuildAttemptGrades(at);
     const pc1 = at.questionGrades.find(x => x.questionId === "q4").parts.find(p => p.partId === "pC1");
     expect(pc1).toMatchObject({ score: 0, manualReview: true });                          // stays pending: the ambiguous key is not its authority

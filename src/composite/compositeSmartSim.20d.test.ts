@@ -76,6 +76,13 @@ describe("20D-SS2 one replay serves many independently validated private keys", 
     expect(ok).toMatchObject({ valid: true, score: 3, manualReview: false });
     expect(bad).toMatchObject({ valid: false, score: 0, manualReview: true });
   });
+  it("a response whose actions do not REPLAY is scored on NO state (0, no fabricated check facts) — never on an empty / default state", () => {
+    undo.push(registerSmartSimPlugin(counting()));
+    const env = { schemaVersion: 1, pluginKey: "countingSim", pluginVersion: 1, config: { v: 1, start: 0 } };
+    const prepared = prepareSmartSimEvaluation({ envelope: env, response: { kind: "smartSim", pluginKey: "countingSim", pluginVersion: 1, actions: [{ type: "inc" }, { type: "dec" }], state: { count: 0 } } });
+    const r = evaluatePreparedSmartSimChecks(prepared, { answerKey: { checks: [{ id: "c", label: "c", weight: 1, kind: "count.equals", value: 0 }] }, maxMarks: 4 });
+    expect(r).toMatchObject({ valid: true, score: 0, passedWeight: 0, checks: [] });
+  });
   it("the prepared object is code-owned: frozen, and a forged / copied / foreign object is refused (fail closed, never graded)", () => {
     const prepared = prepareSmartSimEvaluation({ envelope: FF_ENV, response: ffAnswer(GOOD) });
     expect(Object.isFrozen(prepared)).toBe(true);

@@ -97,6 +97,57 @@ describe("20D-UI2 student CompositeResponse", () => {
   });
 });
 
+describe("20D-UI2b student renderer guards (mutation hardening)", () => {
+  const card = (q: Question, id: string, answer: unknown, onAnswer: (a: unknown) => void) => render(<StudentQuestionCard q={q} index={0} id={id} answer={answer as never} onAnswer={onAnswer as never} onChoice={() => {}} onSeq={() => {}} onTable={() => {}} onText={() => {}} onField={() => {}} />);
+  it("a projection that fails the shape authority (marks ≠ Σ group maxima) renders the unavailable note, never a partial question", async () => {
+    const q = { ...studentQ(compositeArabicExam()), marks: 99 } as Question;
+    const { container } = card(q, "q4", undefined, () => {});
+    await settle(container);
+    expect(container.querySelector('[data-testid="composite-unavailable"]')).toBeTruthy();
+    expect(container.querySelector(".cmp-part")).toBeNull();
+  });
+  it("an \"unavailable\" status always wins, even next to arrays", async () => {
+    const base = studentQ(compositeArabicExam()) as unknown as { composite: Record<string, unknown> };
+    const { container } = card({ ...base, composite: { ...base.composite, status: "unavailable" } } as unknown as Question, "q4", undefined, () => {});
+    await settle(container);
+    expect(container.querySelector('[data-testid="composite-unavailable"]')).toBeTruthy();
+  });
+  it("a child renders under its server-owned child key (the same identity coding runs, review and parametric generation use)", async () => {
+    const { container } = card(studentQ(compositeArabicExam()), "q4", undefined, () => {});
+    await settle(container);
+    const radios = [...container.querySelectorAll('.cmp-part[data-part-id="pA1"] input[type="radio"]')];
+    expect(radios.length).toBeGreaterThan(0);
+    for (const r of radios) expect(r.getAttribute("name")).toBe("q4::part::pA1");
+  });
+  it("answering a part keeps the shared-context answers; answering the shared context keeps the part answers", async () => {
+    const onAnswer = vi.fn();
+    const sim = { kind: "smartSim", pluginKey: "physicsFreeFall", pluginVersion: 1, actions: [{ type: "measurement.set", measurementId: "impactTime", value: 2 }], state: null };
+    const answer = { kind: "composite", parts: { n1: { kind: "numeric", value: "9" } }, contexts: { ctxSim: sim } };
+    const { container } = card(studentQ(compositePhysicsExam()), "phys1", answer, onAnswer);
+    await settle(container);
+    fireEvent.change(container.querySelector('.cmp-part[data-part-id="n1"] input') as HTMLInputElement, { target: { value: "9.8" } });
+    expect(onAnswer).toHaveBeenLastCalledWith(expect.objectContaining({ kind: "composite", parts: { n1: expect.objectContaining({ kind: "numeric", value: "9.8" }) }, contexts: { ctxSim: sim } }));
+    fireEvent.change(screen.getByLabelText("زمن الوصول إلى الأرض (ث)"), { target: { value: "2.02" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "حفظ القياس" })[0]);
+    const last = onAnswer.mock.calls.at(-1)![0] as { parts: unknown; contexts: Record<string, { actions: unknown[] }> };
+    expect(last.parts).toEqual({ n1: { kind: "numeric", value: "9" } });
+    expect(JSON.stringify(last.contexts.ctxSim.actions)).toContain("2.02");                // the emission came from the shared context
+  });
+  it("a legacy field child (rendered by the extracted compound control) merges a new field into its existing values", async () => {
+    const onAnswer = vi.fn();
+    const answer = { kind: "composite", parts: { pA2: { kind: "fields", values: { r1: "KEEP" } } }, contexts: {} };
+    const { container } = card(studentQ(compositeArabicExam()), "q4", answer, onAnswer);
+    await settle(container);
+    const sel = container.querySelector('.cmp-part[data-part-id="pA2"] select[name="q4::part::pA2-r2"], .cmp-part[data-part-id="pA2"] select#q4\\:\\:part\\:\\:pA2-r2') as HTMLSelectElement
+      ?? (container.querySelectorAll('.cmp-part[data-part-id="pA2"] select')[1] as HTMLSelectElement);
+    const opt = [...sel.options].find(o => o.value !== "")!;
+    fireEvent.change(sel, { target: { value: opt.value } });
+    const last = onAnswer.mock.calls.at(-1)![0] as { parts: Record<string, { values: Record<string, unknown> }> };
+    expect(last.parts.pA2.values.r1).toBe("KEEP");
+    expect(Object.keys(last.parts.pA2.values).length).toBe(2);
+  });
+});
+
 describe("20D-UI3 authoring CompositeEditor", () => {
   const Editor = () => resolveAuthoringEditor("composite", 1) as unknown as React.ComponentType<{ node: unknown; onChange: (p: unknown) => void }>;
   it("renders groups / parts / contexts with a marks summary; adding a group or a part patches the canonical root", async () => {
