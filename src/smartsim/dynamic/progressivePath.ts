@@ -12,7 +12,7 @@ export function countAtOrBefore(samples: readonly { t: number }[], t: number): n
 }
 /** The visible prefix at time t: every sample strictly before the current point's time, then the current point (never duplicated). */
 export function visiblePrefix<T extends { t: number }>(samples: readonly T[], t: number, current: T): T[] {
-  const limit = Math.min(samples.length, DYNAMIC_LIMITS.plotPointsMax);
+  const limit = Math.min(samples.length, DYNAMIC_LIMITS.plotPointsMax - 1);       // + the current point ⇒ at most plotPointsMax
   let n = Math.min(countAtOrBefore(samples, t), limit);
   while (n > 0 && samples[n - 1].t >= current.t) n--;
   const out = samples.slice(0, n);
@@ -21,11 +21,17 @@ export function visiblePrefix<T extends { t: number }>(samples: readonly T[], t:
 }
 
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
-/** A linear map from [d0, d1] to [r0, r1]; a degenerate or non-finite domain maps everything to r0. */
+/** A linear map from [d0, d1] to [r0, r1]; a degenerate or non-finite domain maps everything to r0. A finite domain whose span or slope
+ *  overflows (e.g. [0, 5e-324]) is mapped through the normalized position instead, and a finite input never yields a non-finite output. */
 export function linearScale(d0: number, d1: number, r0: number, r1: number): (v: number) => number {
   if (!finite(d0) || !finite(d1) || d1 === d0 || !finite(r0) || !finite(r1)) return () => (finite(r0) ? r0 : 0);
-  const k = (r1 - r0) / (d1 - d0);
-  return v => r0 + (v - d0) * k;
+  const span = d1 - d0, k = (r1 - r0) / span;
+  const bounded = (out: number, v: number) => (finite(out) || !finite(v) ? out : out > 0 ? 1e9 : out < 0 ? -1e9 : r0);
+  if (finite(span) && finite(k)) return v => bounded(r0 + (v - d0) * k, v);
+  return v => {
+    const t = finite(span) ? (v - d0) / span : (v / 2 - d0 / 2) / (d1 / 2 - d0 / 2);
+    return bounded(r0 + t * (r1 - r0), v);
+  };
 }
 /** "Nice" axis ticks (1 / 2 / 5 × 10ⁿ steps), ascending, finite, at most maxTicks + 1 of them. */
 export function niceTicks(lo: number, hi: number, maxTicks = 6): number[] {

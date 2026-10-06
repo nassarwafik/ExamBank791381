@@ -69,13 +69,18 @@ function FunctionGraph({ cfg, segments, st, probe }: { cfg: FunctionStudyConfigV
   );
 }
 
-/** Slider step: the power of ten at or below 1/400 of the window width (window [-6, 8] ⇒ 0.01). */
-const probeStep = (xMin: number, xMax: number) => Math.pow(10, Math.floor(Math.log10((xMax - xMin) / 400)));
+/** Slider step: the power of ten at or below 1/400 of the window width (window [-6, 8] ⇒ 0.01). A window so narrow that this underflows
+ *  (or any non-finite result) falls back to the whole span, so the step is always finite and positive. */
+const probeStep = (xMin: number, xMax: number) => {
+  const step = Math.pow(10, Math.floor(Math.log10((xMax - xMin) / 400)));
+  return Number.isFinite(step) && step > 0 ? step : Number.isFinite(xMax - xMin) && xMax - xMin > 0 ? xMax - xMin : 1;
+};
 /** Snaps x to the slider grid (anchored at xMin) and clamps it to the window; non-finite input is refused (undefined). */
 function snapProbe(x: number, xMin: number, xMax: number, step: number): number | undefined {
   if (!Number.isFinite(x)) return undefined;
   const k = Math.round((Math.min(xMax, Math.max(xMin, x)) - xMin) / step);
-  return Math.min(xMax, Math.max(xMin, Number((xMin + k * step).toPrecision(12))));
+  const snapped = Math.min(xMax, Math.max(xMin, Number((xMin + k * step).toPrecision(12))));
+  return Number.isFinite(snapped) ? snapped : undefined;
 }
 
 /** The graph with the presentation probe / trace. Local view state only: nothing here reaches onChange. */

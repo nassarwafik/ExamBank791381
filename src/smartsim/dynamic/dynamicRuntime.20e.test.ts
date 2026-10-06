@@ -101,3 +101,20 @@ describe("20E-C2 progressive path and plot helpers", () => {
     expect(pathData([{ x: 0, y: 0 }], v => v, v => v)).toBe("M0.00,0.00");
   });
 });
+
+describe("20E-RF1 review fixes (pure helpers)", () => {
+  it("RF1-F2: linearScale with a finite domain whose slope overflows maps every finite value to a finite coordinate", () => {
+    for (const [d0, d1] of [[0, 5e-324], [0, 1e-320], [-1e308, 1e308]] as const) {
+      const s = linearScale(d0, d1, 100, 0);
+      for (const v of [d0, d1, 0, (d0 + d1) / 2]) expect(Number.isFinite(s(v)), d0 + ".." + d1 + " @ " + v).toBe(true);
+    }
+    expect(linearScale(0, 10, 0, 100)(5)).toBe(50);                       // the ordinary case is unchanged
+  });
+  it("NIT: the visible prefix never exceeds plotPointsMax INCLUDING the exact current point, which is always the last point", () => {
+    const many = Array.from({ length: C.DYNAMIC_LIMITS.plotPointsMax + 999 }, (_, i) => ({ t: i }));
+    const cur = { t: 2500.5 };
+    const out = visiblePrefix(many, cur.t, cur);
+    expect(out.length).toBeLessThanOrEqual(C.DYNAMIC_LIMITS.plotPointsMax);
+    expect(out[out.length - 1]).toBe(cur);
+  });
+});

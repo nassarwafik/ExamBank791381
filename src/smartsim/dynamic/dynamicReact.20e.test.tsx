@@ -84,6 +84,8 @@ describe("20E-H1 useSimulationClock: one frame loop, deterministic advancement",
     expect(frames.length).toBe(0);
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
     act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(out(r.container)).toBe("0.100|s|1");                       // by default nothing resumes on its own (the student presses play)
+    expect(frames.length).toBe(0);
     act(() => api!.play());
     act(() => runFrame(60000)); act(() => runFrame(60050));
     expect(out(r.container)).toBe("0.150|p|1");
@@ -140,6 +142,11 @@ describe("20E-P1 DynamicPlot2D: trusted SVG, progressive series, synchronized ma
     expect(r.container.querySelectorAll("path[data-series]").length).toBe(DYNAMIC_LIMITS.seriesMax);
     expect(r.container.querySelectorAll("path[data-reference]").length).toBe(DYNAMIC_LIMITS.seriesMax);
     expect([...r.container.querySelectorAll("g.xp-dyn-event")].map(g => g.getAttribute("data-kind"))).toEqual(["event", "event"]);
+  });
+  it("RF1-F2: a finite but numerically extreme domain (5e-324) never produces NaN attributes", () => {
+    const r = render(<DynamicPlot2D width={300} height={150} xDomain={[0, 1]} yDomain={[0, 5e-324 * 1.05]} xLabel="x" yLabel="y" title="t" zeroLine
+      progress={[{ id: "s", points: [{ x: 0, y: 5e-324 }, { x: 1, y: 0 }] }]} marker={{ x: 0.5, y: 0 }} nowX={0.5} events={[{ x: 1, y: 0, label: "e", kind: "impact" }]} />);
+    expect(r.container.innerHTML).not.toMatch(/NaN|Infinity/);
   });
   it("non-finite domains / points never produce NaN attributes", () => {
     const r = render(<DynamicPlot2D width={300} height={150} xDomain={[NaN, Infinity]} yDomain={[5, 5]} xLabel="x" yLabel="y" title="t" progress={[{ id: "s", points: [{ x: NaN, y: 1 }, { x: 1, y: Infinity }] }]} marker={{ x: NaN, y: 2 }} nowX={Infinity} />);

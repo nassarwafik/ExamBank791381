@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); windowOverride = {}; });
 
-let windowOverride: { xMax?: number } = {};
+let windowOverride: { xMin?: number; xMax?: number } = {};
 const q = () => sanitizeExamForStudent({ examId: "E", title: "t", schemaVersion: 2, sections: [{ id: "s", title: "S", gradingPolicy: "all", stimuli: {}, questions: [{ examQuestionId: "t1", presentationType: "smartSim", questionTypeVersion: 1, text: "دراسة دالة", marks: 13,
   smartSim: { schemaVersion: 1, pluginKey: "functionStudy2d", pluginVersion: 1, config: { ...rationalCertificationConfig(), window: { ...rationalCertificationConfig().window, ...windowOverride } } }, answer: { scoring: "proportional", checks: rationalCertificationChecks() } }] }] }).sections[0].questions[0];
 const answers: Answer[] = [];
@@ -67,6 +67,18 @@ describe("20E-N1 probe: (x, f(x)) from the shared safe engine", () => {
     expect(readout(w)).toMatch(/x\s*=\s*8(?![.\d])/);
     fireEvent.change(typed, { target: { value: "-100" } });
     expect(Number(probe(w).value)).toBe(-6);
+    expect(answers).toEqual([]);
+  });
+  it("RF1-F3: an accepted but absurdly narrow window (step underflow) never produces NaN on the slider, trace or probe line", async () => {
+    windowOverride = { xMin: 0, xMax: 5e-322 };
+    const w = await mount();
+    fireEvent.click(within(w).getByRole("button", { name: "تتبّع المنحنى" }));
+    act(() => runFrame(0)); act(() => runFrame(100));
+    expect(w.innerHTML).not.toMatch(/NaN/);
+    fireEvent.click(within(w).getByRole("button", { name: "إيقاف التتبّع" }));
+    fireEvent.change(probe(w), { target: { value: "1e-322" } });
+    expect(w.innerHTML).not.toMatch(/NaN/);
+    expect(Number.isFinite(Number(probe(w).value))).toBe(true);
     expect(answers).toEqual([]);
   });
   it("the graded features are still never drawn by the workspace; probing adds no answer state", async () => {

@@ -216,6 +216,15 @@ describe("20E-F3 presentation controls never touch the academic answer; academic
   });
 });
 
+describe("20E-RF1 numerically extreme accepted model", () => {
+  it("RF1-F2: h0 = 5e-324 (accepted by the model validator) renders the scene, both plots and the readout with no NaN", async () => {
+    const w = await mount({ ...UPWARD, model: { initialHeight: 5e-324, initialVelocity: -1000, gravity: 100 }, view: { maxTime: 1, showVelocityGraph: true } }, []);
+    expect(w.innerHTML).not.toMatch(/NaN/);
+    fireEvent.change(slider(w), { target: { value: "0" } });
+    expect(w.innerHTML).not.toMatch(/NaN/);
+  });
+});
+
 describe("20E-F4 reduced motion", () => {
   it("no play control and no autoplay; manual stepping and the slider keep every value available", async () => {
     reduce(true);

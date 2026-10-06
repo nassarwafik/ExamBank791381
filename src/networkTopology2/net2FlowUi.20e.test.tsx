@@ -95,6 +95,34 @@ describe("20E-W2 transient flow overlay", () => {
     expect(within(screen.getByTestId("net2-workspace")).queryByTestId("net2-flow")).toBeNull();
     expect(screen.getByTestId("net2-flow-status").textContent).toBe("");
   });
+  it("RF1-F1: an external replacement with the SAME action count (409 server-wins reconcile) also hides the shown flow", async () => {
+    const same = { kind: "smartSim", pluginKey: "networkTopology", pluginVersion: 2, actions: [{ type: "host.command", deviceId: "pc1", command: "ipconfig" }], state: {} } as unknown as Answer;
+    const { w, cmd } = await cmdOf(undefined, same);
+    await run(cmd, "ping 192.168.10.12");
+    expect(within(w).getByTestId("net2-flow")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "استعادة خارجية" })); await tick();
+    expect(within(screen.getByTestId("net2-workspace")).queryByTestId("net2-flow")).toBeNull();
+    expect(screen.getByTestId("net2-flow-status").textContent).toBe("");
+  });
+  it("RF1-F4: a flow paused by a hidden tab resumes when visible again (no catch-up) and completes its path", async () => {
+    const { w, cmd } = await cmdOf();
+    await run(cmd, "ping 192.168.10.12");
+    act(() => runFrame(0)); act(() => runFrame(100));
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(frames.length).toBe(0);
+    const paused = within(w).getByTestId("net2-flow-dot").getAttribute("cx");
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(frames.length).toBe(1);
+    act(() => runFrame(90000));                                             // first frame after resuming contributes 0 s (no catch-up)
+    expect(within(w).getByTestId("net2-flow-dot").getAttribute("cx")).toBe(paused);
+    for (let i = 1; i <= 40; i++) act(() => runFrame(90000 + i * 100));
+    expect(frames.length).toBe(0);
+    const end = w.querySelector("circle.dyn-flow-end")!;
+    expect(Number(within(w).getByTestId("net2-flow-dot").getAttribute("cx"))).toBeCloseTo(Number(end.getAttribute("cx")), 0);
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+  });
   it("non-flow commands draw nothing; reduced motion shows the static path without a frame loop", async () => {
     const { w, cmd } = await cmdOf();
     await run(cmd, "ipconfig");

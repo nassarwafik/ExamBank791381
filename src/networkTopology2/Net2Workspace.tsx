@@ -31,7 +31,7 @@ function cachedReplay(cfg: Net2Config, actions: readonly unknown[]) {
 // Phase 20E — the transient flow of the last ping / tracert this workspace emitted. It is computed by the operational engine (net2Flow) on the
 // PRE-command state — exactly the state the replay applies the command to — and kept in ephemeral React state only: never in the answer /
 // onChange payload, never autosaved, never restored from a stored answer, replaced by the next action and cleared on reset / unmount.
-type ShownFlow = { id: number; at: number; flow: Net2Flow };
+type ShownFlow = { id: number; at: number; fingerprint: string; flow: Net2Flow };
 const isHostCommand = (a: unknown): a is { type: "host.command"; deviceId: string; command: unknown } =>
   !!a && typeof a === "object" && (a as { type?: unknown }).type === "host.command" && typeof (a as { deviceId?: unknown }).deviceId === "string";
 
@@ -56,11 +56,12 @@ export default function Net2Workspace({ config: rawConfig, actions, onChange, di
     setNotice("");
     const added = next.length === base.length + 1 ? next[next.length - 1] : undefined;
     const traced = isHostCommand(added) ? traceHostCommandFlow(cfg, view.state, added.deviceId, added.command) : null;
-    setFlow(traced ? { id: ++flowSeq.current, at: next.length, flow: traced } : null);
+    setFlow(traced ? { id: ++flowSeq.current, at: next.length, fingerprint: JSON.stringify(next), flow: traced } : null);
     onChange(next, r.state);
   };
-  // shown only while the action list is the one the flow was emitted with (an external restore / reset hides it)
-  const shown = flow && flow.at === base.length ? flow : null;
+  // shown only while the action list IS the one the flow was emitted with — same length and same content — so an external restore,
+  // reset or server-wins reconcile hides it even when the replacement has the same number of actions
+  const shown = flow && flow.at === base.length && flow.fingerprint === JSON.stringify(base) ? flow : null;
   const flowStatus = !shown ? "" : (() => {
     const f = shown.flow, what = f.kind + " من " + name(f.hops[0]) + " إلى " + f.target;
     if (f.ok) return "نجح " + what + "؛ المسار: " + f.hops.map(name).join(" ← ") + ".";

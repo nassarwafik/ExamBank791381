@@ -12,13 +12,17 @@ export type SimulationClockApi = {
   seek: (t: number) => void; step: (dt: number) => void; setRate: (r: number) => void;
 };
 
-export function useSimulationClock(duration: number, opts: { autoPlay?: boolean; reducedMotion?: boolean } = {}): SimulationClockApi {
+/** `resumeOnVisible`: for autoplay-only presentations WITHOUT a play control (e.g. a transient network flow) — playback paused by a hidden
+ *  document resumes when it becomes visible again, from the same simulation time (still no catch-up: the first frame contributes 0 s). */
+export function useSimulationClock(duration: number, opts: { autoPlay?: boolean; reducedMotion?: boolean; resumeOnVisible?: boolean } = {}): SimulationClockApi {
   const autoPlay = !!opts.autoPlay && !opts.reducedMotion;
   const [state, setState] = useState<ClockState>(() => { const c = createClock(duration); return autoPlay ? clockPlay(c) : c; });
   // duration change ⇒ a fresh clock at the clamped current time (paused)
   const sameDuration = createClock(duration).duration === state.duration;
   if (!sameDuration) setState(s => clockSeek(createClock(duration, s.rate), s.time));
   const last = useRef<number | null>(null);
+  const playingRef = useRef(state.playing), hiddenPaused = useRef(false), resumeRef = useRef(!!opts.resumeOnVisible && !opts.reducedMotion);
+  useEffect(() => { playingRef.current = state.playing; resumeRef.current = !!opts.resumeOnVisible && !opts.reducedMotion; });
   useEffect(() => {
     if (!state.playing || typeof requestAnimationFrame !== "function") return;
     let id = 0;
@@ -35,12 +39,16 @@ export function useSimulationClock(duration: number, opts: { autoPlay?: boolean;
   }, [state.playing, state.duration]);
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const onVisibility = () => { if (document.visibilityState === "hidden") setState(clockPause); };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") { hiddenPaused.current = playingRef.current; setState(clockPause); return; }
+      if (hiddenPaused.current && resumeRef.current) setState(clockPlay);
+      hiddenPaused.current = false;
+    };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
-  const play = useCallback(() => setState(clockPlay), []);
-  const pause = useCallback(() => setState(clockPause), []);
+  const play = useCallback(() => { hiddenPaused.current = false; setState(clockPlay); }, []);
+  const pause = useCallback(() => { hiddenPaused.current = false; setState(clockPause); }, []);
   const toggle = useCallback(() => setState(s => (s.playing ? clockPause(s) : clockPlay(s))), []);
   const restart = useCallback(() => setState(clockRestart), []);
   const seek = useCallback((t: number) => setState(s => clockSeek(s, t)), []);

@@ -38,7 +38,7 @@ type Pt = { x: number; y: number };
 function FlowOverlay({ ok, hops, points }: { ok: boolean; hops: readonly string[]; points: readonly Pt[] }) {
   const reduced = usePrefersReducedMotion();
   const segments = Math.max(0, points.length - 1);
-  const clock = useSimulationClock(segments * FLOW_SECONDS_PER_HOP, { autoPlay: true, reducedMotion: reduced });
+  const clock = useSimulationClock(segments * FLOW_SECONDS_PER_HOP, { autoPlay: true, reducedMotion: reduced, resumeOnVisible: true });
   const { pause } = clock;
   useEffect(() => { if (reduced) pause(); }, [reduced, pause]);
   const progress = reduced ? 1 : clockProgress(clock.state);
