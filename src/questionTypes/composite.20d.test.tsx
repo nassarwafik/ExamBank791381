@@ -118,6 +118,10 @@ describe("20D-UI2b student renderer guards (mutation hardening)", () => {
     const radios = [...container.querySelectorAll('.cmp-part[data-part-id="pA1"] input[type="radio"]')];
     expect(radios.length).toBeGreaterThan(0);
     for (const r of radios) expect(r.getAttribute("name")).toBe("q4::part::pA1");
+    // a child with a REGISTERED renderer (categorization) receives the child key as its id too
+    const selects = [...container.querySelectorAll('.cmp-part[data-part-id="pB1"] select')];
+    expect(selects.length).toBeGreaterThan(0);
+    for (const s of selects) expect(s.getAttribute("name")).toMatch(/^q4::part::pB1-/);
   });
   it("answering a part keeps the shared-context answers; answering the shared context keeps the part answers", async () => {
     const onAnswer = vi.fn();

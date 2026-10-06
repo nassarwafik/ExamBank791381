@@ -109,7 +109,7 @@ describe("20D-3 strict contract — every violation blocks finalization (fail cl
 
 describe("20D-3b first-N violations in ISOLATION — each rule blocks on its own (mutation hardening: one violation, everything else consistent)", () => {
   const firstN = (e: StructuredExam) => validateStructuredExam(e).filter(i => i.severity === "error");
-  const REQUIRED = /عدد الإجابات المطلوبة/;
+  const REQUIRED = /بين 1 وعدد البنود/;                                                       // the QUOTA message (not the maxMarks = N × m one)
   it("requiredAnswers above the part count blocks even when maxMarks and the question mark are consistent with it", () => {
     const issues = firstN(withQ(q => { const g = q.composite.groups[1]; g.requiredAnswers = 4; g.maxMarks = 8; q.marks = 24; }));
     expect(issues.map(i => i.code)).toEqual(["COMPOSITE_FIRSTN_INVALID"]);
