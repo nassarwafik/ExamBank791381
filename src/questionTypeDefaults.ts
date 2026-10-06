@@ -89,3 +89,9 @@ registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });
 });
+// Phase 20A — smartSim@1: an EMPTY networkTopology@1 workspace (the teacher starts from the one-click template or adds devices) and an EMPTY
+// private key (finalization blocks until devices and weighted checks exist). Literal on purpose (initial graph): parity-tested in the 20AB UI suite.
+registerTypeDefaults("smartSim", 1, ensure => {
+  ensure("smartSim", { schemaVersion: 1, pluginKey: "networkTopology", pluginVersion: 1, config: { v: 1, devices: [], links: [] } });
+  ensure("answer", { scoring: "proportional", checks: [] });
+});

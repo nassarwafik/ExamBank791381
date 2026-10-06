@@ -12,6 +12,7 @@ import { validateHotspotQuestion } from "./hotspotQuestion";
 import { validateLabelDiagramQuestion } from "./labelDiagramQuestion";
 import { validateParametricNumericQuestion } from "./parametricNumericQuestion";
 import { validateOpenResponseQuestion } from "./openResponseQuestion";
+import { validateSmartSimQuestion } from "./trustedSimPlugins";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
 export type TypeValidator = (node: Record<string, unknown>, context: { version: number; part: boolean }) => QuestionTypeIssue[];
@@ -133,3 +134,6 @@ registerTypeValidator("hotspot", 1, node => validateHotspotQuestion(node));
 registerTypeValidator("labelDiagram", 1, node => validateLabelDiagramQuestion(node));
 // Phase 19E — openResponse@1: public config, the private rubric (strict, never repaired), the model answer bound and positive marks.
 registerTypeValidator("openResponse", 1, node => validateOpenResponseQuestion(node));
+// Phase 20A — smartSim@1: the strict public envelope (exact plugin identity, plugin-validated config) and the private weighted checks
+// (generic rules + plugin parameter rules) — every problem blocks finalization. Nothing here executes anything.
+registerTypeValidator("smartSim", 1, node => validateSmartSimQuestion(node));

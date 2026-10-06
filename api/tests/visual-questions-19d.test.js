@@ -37,8 +37,8 @@ const fields = values => ({ kind: "fields", values });
 describe("19D — catalog identity", () => {
   it("22 production types; hotspot@1 / labelDiagram@1 are auto-graded, partial-credit, image-requiring, interactive, never compound parts", () => {
     const catalog = require_("../src/lib/shared-finalization/questionTypeCatalog.js");
-    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(23);
-    expect(catalog.QUESTION_TYPE_CATALOG.slice(-3, -1).map(d => [d.key, d.version, d.label, d.legacy])).toEqual([["hotspot", 1, "تحديد منطقة على صورة", false], ["labelDiagram", 1, "تسمية أجزاء الرسم", false]]);
+    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(24);
+    expect(catalog.QUESTION_TYPE_CATALOG.slice(-4, -2).map(d => [d.key, d.version, d.label, d.legacy])).toEqual([["hotspot", 1, "تحديد منطقة على صورة", false], ["labelDiagram", 1, "تسمية أجزاء الرسم", false]]);
     for (const key of ["hotspot", "labelDiagram"]) {
       const c = catalog.questionTypeDefinition(key).capabilities;
       expect([c.autoGrading, c.partialCredit, c.requiresImage, c.interactive, c.compoundPart], key).toEqual([true, true, true, true, false]);

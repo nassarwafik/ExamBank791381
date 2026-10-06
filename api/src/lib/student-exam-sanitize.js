@@ -159,7 +159,7 @@ function sanitizeFieldForStudent(field) {
 // structural fields with a dedicated sanitizer below is passed through the canonical secret-key policy (recursive), so a
 // smuggled `correctColumn` / `expectedState` / `answerKey` inside any plugin object never reaches a student (defense in
 // depth) while public structure (ids, labels, values) passes byte-for-byte. Persisted exam JSON can never name this code.
-const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus", "openResponse", "codeStimulus"]);   // 19E: openResponse is REBUILT by its strict allow-list projection below · 19F: codeStimulus too
+const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus", "openResponse", "codeStimulus", "smartSim"]);   // 20A: smartSim is REBUILT by its strict plugin projection below   // 19E: openResponse is REBUILT by its strict allow-list projection below · 19F: codeStimulus too
 // Phase 17A — the coding config is additionally REBUILT through its allow-list projection (shared with the client renderer):
 // only allowed / default languages, starter code, public sample tests (id / title / input / sampleOutput) and limits survive,
 // so hidden tests, reference solutions, weights or notes smuggled into the public object never reach a student; a malformed
@@ -263,6 +263,16 @@ function applyStimulusForStudent(node) {
   const clean = sanitizeStimulusForStudent(node.stimulus);
   if (clean) node.stimulus = clean; else delete node.stimulus;
 }
+// Phase 20A — the trusted SmartSim envelope is REBUILT through the ONE strict authority shared with the renderer and the grader: exactly
+// { schemaVersion, pluginKey, pluginVersion, config } with the plugin's canonical public config (topology, initial states). An unknown plugin
+// identity / version, an unknown envelope key or ANY field outside the plugin's config contract (a smuggled expected value) withholds the whole
+// envelope (fail closed). The private weighted checks live under `answer`, blanked like every key; a part never carries one (not compound).
+const { projectSmartSimForStudent } = require("./shared-finalization/trustedSimPlugins");
+function applySmartSimProjection(node, part) {
+  if (!("smartSim" in node)) return;
+  const p = part ? undefined : projectSmartSimForStudent(node.smartSim);
+  if (p) node.smartSim = p; else delete node.smartSim;
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -279,6 +289,7 @@ function sanitizePartForStudent(part) {
   applyOpenResponseProjection(out, part);                                       // 19E: never compound-capable; defense in depth
   applyCodeStimulusProjection(out, true);                                       // 19F: a part never carries a stimulus
   applyStimulusForStudent(out);                                                 // 19G: the legacy stimulus fallback is allow-listed
+  applySmartSimProjection(out, true);                                           // 20A: never compound-capable; defense in depth
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);
@@ -305,6 +316,7 @@ function sanitizeQuestionForStudent(question, ctx) {
   applyOpenResponseProjection(out, question);                                   // 19E: the public rubric is derived from the ORIGINAL private key
   applyCodeStimulusProjection(out, false);                                      // 19F: strict read-only code stimulus
   applyStimulusForStudent(out);                                                 // 19G: the legacy stimulus fallback is allow-listed
+  applySmartSimProjection(out, false);                                          // 20A: strict trusted-plugin envelope
   applyTypeConfigForStudent(out);
   applyCodingProjection(out);
   applyNetworkCliProjection(out);

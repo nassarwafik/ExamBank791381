@@ -17,9 +17,10 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   hotspot: "يرى الطالب صورة وينقر على الموضع أو المواضع المطلوبة؛ يرسم المعلم المناطق الصحيحة على الصورة، وتصحيح تلقائي بعلامة جزئية.",
   labelDiagram: "يضع الطالب تسميات من بنك على مناطق ظاهرة في الرسم (سحبًا أو اختيارًا)؛ تصحيح تلقائي لكل منطقة بعلامة جزئية.",
   openResponse: "مقال أو شرح أو تعليل أو مقارنة أو تحليل: يكتب الطالب إجابة نصية، ويصحّحها المعلم بسلم تقييم (معايير ومستويات) ويحسب الخادم الدرجة.",
+  smartSim: "محاكاة موثوقة من المنصة نفسها (أولها مخطط شبكة: راوتر وسويتش وحواسيب): يضبط الطالب الأجهزة داخل الامتحان، ويُعاد بناء الحالة على الخادم وتُصحَّح فحوص خاصة بأوزان مع علامة جزئية.",
   parametricNumeric: "سؤال رقمي بمعطيات متغيرة: قيم مختلفة لكل طالب ومحاولة من متغيرات وقيود، وتعبير إجابة خاص يُحسب على الخادم؛ تصحيح تلقائي بتسامح أو مدى."
 });
-const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡", openResponse: "¶" });
+const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡", openResponse: "¶", smartSim: "⧉" });
 // Phase 17A — factual chips that replace the generic grading-mode chip where the CURRENT behaviour differs from the type's
 // designed mode: coding@1 is designed hybrid but grades manually until a trusted executor exists — never «تصحيح تلقائي».
 const GRADING_CHIP_OVERRIDES: Readonly<Record<string, readonly string[]>> = Object.freeze({ coding: Object.freeze(["تصحيح يدوي حاليًا", "إجابة برمجية"]) });

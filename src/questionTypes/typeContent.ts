@@ -54,6 +54,9 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
     if (isObj(st.interfaces) && Object.keys(st.interfaces).length) return true;
   }
   if (isObj(answer.targetState) && Object.values(answer.targetState).some(v => (isObj(v) ? Object.keys(v).length > 0 : text(v) !== ""))) return true;
+  // Phase 20A — smartSim: any topology device / link or any private check is authored content.
+  if (isObj(node.smartSim) && isObj(node.smartSim.config) && ((Array.isArray(node.smartSim.config.devices) && node.smartSim.config.devices.length) || (Array.isArray(node.smartSim.config.links) && node.smartSim.config.links.length))) return true;
+  if (node.presentationType === "smartSim" && Array.isArray(answer.checks) && answer.checks.length) return true;
   // Phase 19A — inlineCloze: more than the default single blank, any non-default passage text, or any accepted answer / option.
   if (isObj(node.inlineCloze) && Array.isArray(node.inlineCloze.segments)) {
     const segs = node.inlineCloze.segments as unknown[];

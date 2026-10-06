@@ -2,6 +2,7 @@ import type { AssessmentBlueprintV1, AssessmentMeta, AssessmentActivityDescripto
 import type { SimulationQuestionConfig } from "./smartsimManifest";
 import type { CodingQuestionConfigV1 } from "./codingQuestion";
 import type { NetworkCliQuestionConfigV1 } from "./networkCliQuestion";
+import type { SmartSimEnvelopeV1 } from "./trustedSimQuestion";
 import type { InlineClozeConfigV1 } from "./inlineClozeQuestion";
 import type { HotspotConfigV1 } from "./hotspotQuestion";
 import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
@@ -142,6 +143,8 @@ export type BuilderQuestion = {
   coding?: CodingQuestionConfigV1;
   // Phase 18C — the PUBLIC network CLI simulator configuration (networkCli@1: device + initial state); the private target state lives under `answer`.
   networkCli?: NetworkCliQuestionConfigV1;
+  // Phase 20A — the PUBLIC trusted SmartSim envelope (smartSim@1: plugin identity + public config); the private weighted checks live under `answer`.
+  smartSim?: SmartSimEnvelopeV1;
   // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
   inlineCloze?: InlineClozeConfigV1;
   // Phase 19D — the PUBLIC visual configs (hotspot@1 / labelDiagram@1) on the canonical `image`; target regions / the correct mapping live under `answer`.
@@ -187,6 +190,8 @@ export type QuestionBody = {
   coding?: CodingQuestionConfigV1;
   // Phase 18C — the PUBLIC network CLI simulator configuration (networkCli@1: device + initial state); the private target state lives under `answer`.
   networkCli?: NetworkCliQuestionConfigV1;
+  // Phase 20A — the PUBLIC trusted SmartSim envelope (smartSim@1: plugin identity + public config); the private weighted checks live under `answer`.
+  smartSim?: SmartSimEnvelopeV1;
   // Phase 19A — the PUBLIC inline cloze passage (inlineCloze@1: text + blank controls); accepted answers / correct options live under `answer`.
   inlineCloze?: InlineClozeConfigV1;
   // Phase 19D — the PUBLIC visual configs (hotspot@1 / labelDiagram@1) on the canonical `image`; target regions / the correct mapping live under `answer`.
