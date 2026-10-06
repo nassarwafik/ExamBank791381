@@ -83,6 +83,10 @@ const COMPOSITE_SIGNATURES = ["cmp-response", "cmp-editor", "cmp-review", "COMPO
 // presentation contrast code. The initial graph may carry ONLY the tiny presentation context (StudentQuestionCard reads it); ANY one of
 // these in an initial file fails; EACH must exist in some chunk (a missing one means the list is stale).
 const PRESENTATION_SIGNATURES = ["xp-studio", "rc-editor", "RICH_CONTENT_RAW_HTML", "MARKDOWN_HTML_REFUSED", "mfrac", "PRESENTATION_CONTRAST"];
+// Phase 20E — the dynamic SmartSim runtime: the presentation clock's version marker, the trusted plot class, the network flow overlay class
+// and the function-probe class. They live ONLY in the lazy plugin workspace chunks: ANY one in an initial file fails; EACH must exist in
+// some chunk (a missing one means the list is stale).
+const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "fnstudy-probe"];
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
@@ -180,7 +184,12 @@ function main() {
     if (composite.length) failures.push(`${f} (initial) contains the composite question payload (${composite.join(", ")}) — it must stay lazy`);
     const presentation = PRESENTATION_SIGNATURES.filter(s => src.includes(s));
     if (presentation.length) failures.push(`${f} (initial) contains the presentation / rich-content engine payload (${presentation.join(", ")}) — it must stay lazy`);
+    const dynamic = DYNAMIC_SIGNATURES.filter(s => src.includes(s));
+    if (dynamic.length) failures.push(`${f} (initial) contains the dynamic SmartSim runtime payload (${dynamic.join(", ")}) — it must stay lazy`);
   }
+  for (const sig of DYNAMIC_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the dynamic SmartSim signature "${sig}" was not found in any chunk — the signature list is stale`);
+  const dynamicChunks = all.filter(f => DYNAMIC_SIGNATURES.some(s => read(f).includes(s)));
+  console.log(`Dynamic SmartSim runtime payload found in: ${dynamicChunks.join(", ") || "(none)"} — ${dynamicChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   for (const sig of PRESENTATION_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the presentation / rich-content signature "${sig}" was not found in any chunk — the signature list is stale`);
   const presentationChunks = all.filter(f => PRESENTATION_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Presentation / rich-content engine payload found in: ${presentationChunks.join(", ") || "(none)"} — ${presentationChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);

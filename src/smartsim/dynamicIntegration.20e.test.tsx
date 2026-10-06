@@ -93,7 +93,7 @@ describe("20E-I2 bundle, laziness, security and presentation integration", () =>
     expect(dynamicFiles.length).toBeGreaterThanOrEqual(6);
     for (const f of dynamicFiles) {
       const src = fs.readFileSync(f, "utf8").replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, "");
-      expect(src, f).not.toMatch(/\beval\s*\(|new Function|innerHTML|dangerouslySetInnerHTML|insertAdjacentHTML|foreignObject|https?:\/\/|url\(|import\(\s*[^"'\s]/);
+      expect(src, f).not.toMatch(/\beval\s*\(|new Function|innerHTML|dangerouslySetInnerHTML|insertAdjacentHTML|foreignObject|https?:\/\/|url\((?!#)|import\(\s*[^"'\s]/);   // url(#id) = an internal clip-path reference
     }
   });
   it("dynamic styling uses the validated presentation variables (no second theming system) and has a print / reduced-motion policy", () => {

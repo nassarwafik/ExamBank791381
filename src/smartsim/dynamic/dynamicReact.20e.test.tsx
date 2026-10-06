@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { useEffect } from "react";
 import { render, cleanup, act, fireEvent } from "@testing-library/react";
 import { useSimulationClock } from "./useSimulationClock";
 import DynamicPlot2D from "./DynamicPlot2D";
@@ -22,8 +23,9 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 let api: ReturnType<typeof useSimulationClock> | null = null;
 function Probe({ duration, autoPlay, reducedMotion }: { duration: number; autoPlay?: boolean; reducedMotion?: boolean }) {
-  api = useSimulationClock(duration, { autoPlay, reducedMotion });
-  return <output data-testid="t">{api.state.time.toFixed(3)}|{api.state.playing ? "p" : "s"}|{api.state.rate}</output>;
+  const clock = useSimulationClock(duration, { autoPlay, reducedMotion });
+  useEffect(() => { api = clock; });
+  return <output data-testid="t">{clock.state.time.toFixed(3)}|{clock.state.playing ? "p" : "s"}|{clock.state.rate}</output>;
 }
 const out = (c: HTMLElement) => c.querySelector("[data-testid=t]")!.textContent!;
 
