@@ -228,23 +228,34 @@ function collectGuards(ast: unknown, out: Guard[] = [], seen = new Set<string>()
 }
 function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
   const z: number[] = [], put = (x: number) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v)))) z.push(v); };
-  let pp: { x: number; v: number } | null = null, p: { x: number; v: number } | null = null;
+  // a zero at the EDGE of g's own domain (√(x + 2) at −2 — Review Fix 9): g is defined on one side only and vanishes there
+  const edgeZero = (def: number, undef: number) => {
+    let lo = def, hi = undef;
+    for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (g(m) === null) hi = m; else lo = m; }
+    const sn = Number(lo.toPrecision(12)), g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
+    if (g(sn) === 0) put(sn);
+    else if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far))) put(lo);
+  };
+  let pp: { x: number; v: number } | null = null, p: { x: number; v: number } | null = null, undefAt: number | null = null;
   for (const x of xs) {
     const v = g(x);
-    if (v === null) { pp = p = null; continue; }
+    if (v === null) { if (p) edgeZero(p.x, x); pp = p = null; undefAt = x; continue; }
+    if (undefAt !== null) { edgeZero(x, undefAt); undefAt = null; }
     if (v === 0) put(x);
     else if (p && p.v !== 0 && Math.sign(p.v) !== Math.sign(v)) {
       let a = p.x, b = x, fa = p.v;
       for (let k = 0; k < 60; k++) { const m = (a + b) / 2, fm = g(m); if (fm === null || fm === 0) { a = b = m; break; } if (Math.sign(fm) === Math.sign(fa)) { a = m; fa = fm; } else b = m; }
       put((a + b) / 2);
-    } else if (pp && p && Math.abs(p.v) < Math.abs(pp.v) && Math.abs(p.v) < Math.abs(v) && Math.sign(pp.v) === Math.sign(v)) {     // touching zero
+    } else if (pp && p && Math.abs(p.v) <= Math.abs(pp.v) && Math.abs(p.v) <= Math.abs(v) && (Math.abs(p.v) < Math.abs(pp.v) || Math.abs(p.v) < Math.abs(v)) && Math.sign(pp.v) === Math.sign(v)) {
+      // touching zero — a local minimum of |g|, ties included (a zero exactly halfway between two samples leaves them equal — RF9)
       let a = pp.x, b = x;
       for (let k = 0; k < 60; k++) { const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r); if (gl === null || gr === null) break; if (Math.abs(gl) > Math.abs(gr)) a = l; else b = r; }
-      // a touching zero: negligible at the minimum, or small and STEEP around it (√|x − a| is ≈ 10⁻⁸ there, 10⁻² just beside it); a shallow
-      // minimum (x² + 10⁻⁷) is not a zero
-      const m = (a + b) / 2, gm = g(m), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
+      // a zero: exactly 0 at the point rounded to 12 digits, negligible at the minimum, or small and STEEP around it (√(10|x − a|) is
+      // ≈ 10⁻⁶ there and 10⁻¹ just beside it — judged by the ratio, not an absolute level, RF9); a shallow minimum (x² + 10⁻⁷) is not one
+      const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
       const steep = (t: number) => { const u = g(t); return u !== null && Math.abs(u) >= 1e3 * Math.abs(gm as number); };
-      if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-6 * scale && steep(m - dm) && steep(m + dm)))) put(m);
+      if (g(sn) === 0) put(sn);
+      else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-3 * scale && steep(m - dm) && steep(m + dm)))) put(m);
     }
     pp = p; p = { x, v };
   }
@@ -294,6 +305,8 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
     const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge, ...xs]) : null;
     for (const z of gi ? gi.excluded : []) {
       if (dir * (z - edge) <= 0) continue;
+      const d = 1e-7 * Math.max(1, Math.abs(z));
+      if (raw(z - d) === null && raw(z + d) === null) continue;                     // f is not defined there at all (√x/(x² − 4) at −2, RF9)
       if (need.points || need.slope) return z;
       if (need.poles && poleKindAt(raw, z) !== "bounded") return z;
     }

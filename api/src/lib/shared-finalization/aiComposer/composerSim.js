@@ -225,12 +225,34 @@ function collectGuards(ast, out = [], seen = new Set()) {
 function zerosOf(g, xs) {
     const z = [], put = (x) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v))))
         z.push(v); };
-    let pp = null, p = null;
+    const edgeZero = (def, undef) => {
+        let lo = def, hi = undef;
+        for (let k = 0; k < 80; k++) {
+            const m = (lo + hi) / 2;
+            if (g(m) === null)
+                hi = m;
+            else
+                lo = m;
+        }
+        const sn = Number(lo.toPrecision(12)), g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
+        if (g(sn) === 0)
+            put(sn);
+        else if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far)))
+            put(lo);
+    };
+    let pp = null, p = null, undefAt = null;
     for (const x of xs) {
         const v = g(x);
         if (v === null) {
+            if (p)
+                edgeZero(p.x, x);
             pp = p = null;
+            undefAt = x;
             continue;
+        }
+        if (undefAt !== null) {
+            edgeZero(x, undefAt);
+            undefAt = null;
         }
         if (v === 0)
             put(x);
@@ -251,7 +273,7 @@ function zerosOf(g, xs) {
             }
             put((a + b) / 2);
         }
-        else if (pp && p && Math.abs(p.v) < Math.abs(pp.v) && Math.abs(p.v) < Math.abs(v) && Math.sign(pp.v) === Math.sign(v)) {
+        else if (pp && p && Math.abs(p.v) <= Math.abs(pp.v) && Math.abs(p.v) <= Math.abs(v) && (Math.abs(p.v) < Math.abs(pp.v) || Math.abs(p.v) < Math.abs(v)) && Math.sign(pp.v) === Math.sign(v)) {
             let a = pp.x, b = x;
             for (let k = 0; k < 60; k++) {
                 const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r);
@@ -262,9 +284,11 @@ function zerosOf(g, xs) {
                 else
                     b = r;
             }
-            const m = (a + b) / 2, gm = g(m), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
+            const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
             const steep = (t) => { const u = g(t); return u !== null && Math.abs(u) >= 1e3 * Math.abs(gm); };
-            if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-6 * scale && steep(m - dm) && steep(m + dm))))
+            if (g(sn) === 0)
+                put(sn);
+            else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-3 * scale && steep(m - dm) && steep(m + dm))))
                 put(m);
         }
         pp = p;
@@ -323,6 +347,9 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
         const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge, ...xs]) : null;
         for (const z of gi ? gi.excluded : []) {
             if (dir * (z - edge) <= 0)
+                continue;
+            const d = 1e-7 * Math.max(1, Math.abs(z));
+            if (raw(z - d) === null && raw(z + d) === null)
                 continue;
             if (need.points || need.slope)
                 return z;
