@@ -13,7 +13,7 @@ import * as K from "./certification-20g/kit.js";
 //   otherwise MANUAL (0, teacher review). The denominator is always the number of rendered rows.
 // Cases T01 … T30 of the directive (+ the extra defects found by the audit); the ones that only PIN existing behaviour say "(pin)".
 const require_ = createRequire(import.meta.url);
-const { gradeQuestion, gradeExam } = require_("../src/lib/assignment-grading.js");
+const { gradeQuestion, gradeExam, legacyTableMode } = require_("../src/lib/assignment-grading.js");
 const { normalizeDraftAnswers } = require_("../src/lib/draft-answers.js");
 const { A } = K;
 
@@ -237,6 +237,12 @@ describe("20G.3 Review Fix 1 — no silent zero for a correct all-unticked answe
     expect(grade(BS("R1=false;R2=false"), table(["false", "false"]))).toEqual({ score: 4, maxMarks: 4, correct: true, manualReview: false });
     expect(grade(BS("R1=false;R2=false"), table(["true", "false"]))).toEqual({ score: 2, maxMarks: 4, correct: false, manualReview: false });
     expect(grade({ ...KT(), answer: { text: "Router=false;Switch=false;Hub=false" } }, table(["false", "false", "false"])).score).toBe(6);   // text rows typed "false"
+    // Review Fix 2 (re-review mutant N04): a MIXED table whose first row is a checkbox and whose second is a boolean select (field.order
+    // maps the boolean field to row 1 only) is answered by choosing on row 1 — it stays auto-graded; the rule needs EVERY row a checkbox
+    const mixed = { ...ALL_FALSE(), fields: [{ order: 5 }, { order: 1, kind: "boolean" }] };
+    expect(legacyTableMode(mixed).controls).toEqual(["checkbox", "select"]);
+    expect(grade(mixed, table([null, "false"]))).toEqual({ score: 2, maxMarks: 2, correct: true, manualReview: false });
+    expect(grade(mixed, table([true, "false"]))).toEqual({ score: 1, maxMarks: 2, correct: false, manualReview: false });
   });
   it("RF1-F2 malformed question fields never crash the grader: they are not row options (ebf023c: TypeError; c2a49e9: graded)", () => {
     const base = { examQuestionId: "mf", marks: 2, text: "| Item | Ans |\n|---|---|\n| A | |\n| B | |", answer: { text: "A=1;B=2" } };
@@ -252,6 +258,12 @@ describe("20G.3 Review Fix 1 — no silent zero for a correct all-unticked answe
     expect(grade(q, table([true, true, false]))).toEqual(REVIEW(3));
     expect(grade(q, table([false, false, true]))).toEqual(REVIEW(3));
     expect(grade({ ...q, text: q.text.replace("A/B", "10.0.0.0/8"), answer: { text: "A" } }, table([true, false, false]))).toEqual(REVIEW(3));
+    // Review Fix 2 (re-review mutant N06): the comma branch — a Latin or Arabic comma inside a label (both clean() to ",")
+    const dns = { ...CB(), marks: 3, text: "ضع علامة ✓\n| x | y |\n|---|---|\n| DNS | |\n| DHCP | |\n| DNS, DHCP | |", answer: { text: "DNS, DHCP" } };
+    expect(grade(dns, table([false, false, true]))).toEqual(REVIEW(3));
+    expect(grade(dns, table([true, true, false]))).toEqual(REVIEW(3));
+    expect(grade({ ...dns, text: dns.text.replace("| DNS, DHCP |", "| DNS، DHCP |"), answer: { text: "DNS، DHCP" } }, table([false, false, true]))).toEqual(REVIEW(3));
+    expect(grade({ ...dns, text: dns.text.replace("| DNS, DHCP |", "| DNS؛ DHCP |"), answer: { text: "DHCP" } }, table([false, true, false]))).toEqual(REVIEW(3));
     // keyed (row=value) grading of such labels is unambiguous and unchanged
     expect(grade({ ...KT(), text: "أكمل\n| a | b |\n|---|---|\n| TCP/IP | |\n| DNS, DHCP | |", marks: 4, answer: { text: "TCP/IP=4؛ DNS, DHCP=7" } }, table(["4", "7"])).score).toBe(4);
   });
