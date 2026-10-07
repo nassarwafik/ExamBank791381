@@ -168,6 +168,9 @@ describe("20G.1 D3 — valid answers and specialized contracts are unchanged", (
     expect(normalizeDraftAnswers({ q1: sim }, null)).toEqual({ answers: {}, rejected: [{ id: "q1", code: "ANSWER_QUESTION_UNKNOWN" }] });
     expect(normalizeDraftAnswers({ q1: sim }, EX())).toEqual({ answers: { q1: sim }, rejected: [] });   // a known id keeps the historical simulation path (pin)
   });
+  it("D3-S a compound answer on an unknown id is refused whole with exactly ANSWER_QUESTION_UNKNOWN (no per-part noise)", () => {
+    expect(normalizeDraftAnswers({ ghostC: { kind: "compound", parts: { p1: A.text("UDP"), p2: A.choice(0) } } }, EX())).toEqual({ answers: {}, rejected: [{ id: "ghostC", code: "ANSWER_QUESTION_UNKNOWN" }] });
+  });
   it("D3-A'' the answer-id set is EXACTLY the grader's: a client-shaped positional id (s1::q1, 1) is refused when the exam names its questions", () => {
     const r = normalizeDraftAnswers({ "s1::q1": A.text("TCP"), "1": A.text("TCP"), p1: A.text("UDP"), q1: A.text("TCP") }, EX());   // p1 is a PART of q3, never a top-level unit
     expect(r.answers).toEqual({ q1: A.text("TCP") });
