@@ -263,13 +263,24 @@ function moveQuestionToSection(sections, fromSectionId, questionId, toSectionId)
         return s;
     });
 }
+function withFreshFieldIds(node) {
+    if (!Array.isArray(node.fields))
+        return node;
+    const ids = new Map();
+    const fields = node.fields.map(f => { const id = genId("f"); if (typeof f.id === "string")
+        ids.set(f.id.trim(), id); return { ...f, id }; });
+    const out = { ...node, fields };
+    if (typeof node.cli === "string")
+        out.cli = node.cli.replace(/\[\[([^\]]+)\]\]/g, (m, raw) => { const id = ids.get(raw.trim()); return id ? "[[" + id + "]]" : m; });
+    return out;
+}
 function cloneQuestionWithNewIds(q) {
     const copy = JSON.parse(JSON.stringify(q));
     copy.examQuestionId = genId("q");
     if (Array.isArray(copy.fields))
-        copy.fields = copy.fields.map(f => ({ ...f, id: genId("f") }));
+        Object.assign(copy, withFreshFieldIds(copy));
     if (Array.isArray(copy.parts))
-        copy.parts = copy.parts.map(p => ({ ...p, id: genId("p"), fields: Array.isArray(p.fields) ? p.fields.map(f => ({ ...f, id: genId("f") })) : p.fields }));
+        copy.parts = copy.parts.map(p => ({ ...withFreshFieldIds(p), id: genId("p") }));
     if ((0, compositeModel_1.isCompositeQuestionNode)(copy) && copy.composite !== undefined)
         copy.composite = (0, compositeModel_1.cloneCompositeWithNewIds)(copy.composite, genId);
     return copy;
@@ -295,10 +306,7 @@ function duplicatePart(parts, id) {
     if (i < 0)
         return parts;
     const src = parts[i];
-    const copy = JSON.parse(JSON.stringify(src));
-    copy.id = genId("p");
-    if (Array.isArray(copy.fields))
-        copy.fields = copy.fields.map(f => ({ ...f, id: genId("f") }));
+    const copy = { ...withFreshFieldIds(JSON.parse(JSON.stringify(src))), id: genId("p") };
     return insertAt(parts, i + 1, copy);
 }
 const addField = (fields, field = newField()) => [...(fields || []), field];

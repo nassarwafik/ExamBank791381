@@ -44,6 +44,7 @@ const SOURCE_CONTEXT_KEYS = new Set(["id", "version", "kind", "title", "instruct
 const SMARTSIM_CONTEXT_KEYS = new Set(["id", "version", "kind", "title", "instructions", "smartSim"]);
 const GROUP_KEYS = new Set(["id", "title", "instructions", "gradingPolicy", "requiredAnswers", "maxMarks", "parts"]);
 const QUESTION_KEYS = new Set(["examQuestionId", "id", "number", "displayNumber", "presentationType", "type", "questionTypeVersion", "text", "marks", "composite", "answer", "assessmentMeta", "groupId", "activity", "codeStimulus", "image", "images", "richContent", "presentation"]);
+const canonicalBookkeeping = (k, v) => (k === "history" || k === "redoStack") && Array.isArray(v) && v.length === 0;
 const PART_COMMON_KEYS = ["id", "label", "type", "questionTypeVersion", "text", "marks", "contextId", "answer", "image", "images", "assessmentMeta", "richContent"];
 const PART_TYPE_KEYS = Object.freeze({
     multipleChoice: ["options"], trueFalse: ["options"], multiTrueFalse: ["fields"], shortAnswer: [], fillBlank: ["fields", "wordBank"], wordBank: ["fields", "wordBank"],
@@ -199,7 +200,7 @@ function validateCompositeQuestion(node) {
     if ((0, compositeModel_1.compositeQuestionVersion)(node) === undefined)
         out.push(err("UNSUPPORTED_QUESTION_TYPE_VERSION", "إصدار السؤال المركّب المتقدّم غير مدعوم في هذا الإصدار من التطبيق.", "questionTypeVersion"));
     for (const k of Object.keys(node))
-        if (!QUESTION_KEYS.has(k) && k !== "parts")
+        if (!QUESTION_KEYS.has(k) && k !== "parts" && !canonicalBookkeeping(k, node[k]))
             out.push(err("COMPOSITE_UNKNOWN_KEY", "حقل غير مسموح في السؤال المركّب: " + k, k));
     if (node.examQuestionId !== undefined && node.examQuestionId !== null && node.examQuestionId !== "" && !(0, compositeModel_1.isCompositeQuestionId)(node.examQuestionId))
         out.push(err("COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب يجب أن يكون من حروف لاتينية وأرقام و . _ : - (حتى 80) دون الفاصل ::part::.", "examQuestionId"));

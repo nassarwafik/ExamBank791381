@@ -1,0 +1,791 @@
+{
+  "schemaVersion": 2,
+  "examId": "CERT20G-D-MATH",
+  "title": "شهادة 20G — امتحان الرياضيات: الدوال والتفاضل",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "الصف الثاني عشر — الرياضيات",
+    "instructions": "قرّب الإجابات العشرية إلى منزلتين. تُولَّد معطيات بعض الأسئلة لكل طالب.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "d-s1",
+      "title": "القسم الأول: أساسيات",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1-1",
+          "presentationType": "numericResponse",
+          "text": "حلّ المعادلة 2x + 3 = 11.",
+          "marks": 3,
+          "questionTypeVersion": 1,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 4,
+            "tolerance": 0
+          }
+        },
+        {
+          "examQuestionId": "d1-2",
+          "presentationType": "numericResponse",
+          "text": "إذا كان f(x) = x²، فما قيمة f′(3)؟",
+          "marks": 3,
+          "questionTypeVersion": 1,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 6,
+            "tolerance": 0
+          }
+        },
+        {
+          "examQuestionId": "d1-3",
+          "presentationType": "matrix",
+          "text": "صنّف كل دالة:",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "matrix": {
+            "rows": [
+              {
+                "id": "r1",
+                "label": "f(x) = x²"
+              },
+              {
+                "id": "r2",
+                "label": "f(x) = x³"
+              },
+              {
+                "id": "r3",
+                "label": "f(x) = x + 1"
+              },
+              {
+                "id": "r4",
+                "label": "f(x) = |x|"
+              }
+            ],
+            "columns": [
+              {
+                "id": "even",
+                "label": "زوجية"
+              },
+              {
+                "id": "odd",
+                "label": "فردية"
+              },
+              {
+                "id": "none",
+                "label": "ليست زوجية ولا فردية"
+              }
+            ]
+          },
+          "answer": {
+            "correctColumnByRow": {
+              "r1": "even",
+              "r2": "odd",
+              "r3": "none",
+              "r4": "even"
+            }
+          }
+        },
+        {
+          "examQuestionId": "d1-4",
+          "presentationType": "categorization",
+          "text": "صنّف الدوال الآتية:",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "categorization": {
+            "categories": [
+              {
+                "id": "poly",
+                "label": "كثيرة حدود"
+              },
+              {
+                "id": "rat",
+                "label": "نسبية"
+              }
+            ],
+            "items": [
+              {
+                "id": "i1",
+                "label": "x³ − 2x"
+              },
+              {
+                "id": "i2",
+                "label": "1 / (x − 1)"
+              },
+              {
+                "id": "i3",
+                "label": "(x + 1) / (x² + 1)"
+              },
+              {
+                "id": "i4",
+                "label": "5x + 2"
+              }
+            ]
+          },
+          "answer": {
+            "correctCategoryByItem": {
+              "i1": "poly",
+              "i2": "rat",
+              "i3": "rat",
+              "i4": "poly"
+            }
+          }
+        },
+        {
+          "examQuestionId": "d1-5",
+          "presentationType": "matching",
+          "text": "صِل كل دالة بمشتقتها:",
+          "marks": 4,
+          "fields": [
+            {
+              "id": "m1",
+              "label": "x²",
+              "kind": "select",
+              "options": [
+                {
+                  "text": "2x"
+                },
+                {
+                  "text": "3x²"
+                },
+                {
+                  "text": "x"
+                }
+              ],
+              "correct": "2x"
+            },
+            {
+              "id": "m2",
+              "label": "x³",
+              "kind": "select",
+              "options": [
+                {
+                  "text": "2x"
+                },
+                {
+                  "text": "3x²"
+                },
+                {
+                  "text": "x"
+                }
+              ],
+              "correct": "3x²"
+            }
+          ],
+          "answer": {
+            "text": "x²=2x;x³=3x²"
+          }
+        },
+        {
+          "examQuestionId": "d1-6",
+          "presentationType": "parametricNumeric",
+          "text": "حلّ المعادلة {{a}}x + {{b}} = {{c}}.",
+          "marks": 7,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "a",
+                "kind": "integer",
+                "min": 2,
+                "max": 9,
+                "step": 1
+              },
+              {
+                "id": "b",
+                "kind": "integer",
+                "min": 1,
+                "max": 20,
+                "step": 1
+              },
+              {
+                "id": "c",
+                "kind": "integer",
+                "min": 30,
+                "max": 60,
+                "step": 1
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "none"
+            }
+          },
+          "answer": {
+            "expression": "(c-b)/a",
+            "mode": "tolerance",
+            "tolerance": 0.01
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-s2",
+      "title": "القسم الثاني: مسائل بمعطيات متغيرة",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d2-1",
+          "presentationType": "parametricNumeric",
+          "text": "إذا كان f(x) = {{a}}x² + {{b}}x، فاحسب f′({{c}}).",
+          "marks": 8,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "a",
+                "kind": "integer",
+                "min": 1,
+                "max": 6,
+                "step": 1
+              },
+              {
+                "id": "b",
+                "kind": "integer",
+                "min": -5,
+                "max": 5,
+                "step": 1
+              },
+              {
+                "id": "c",
+                "kind": "integer",
+                "min": 1,
+                "max": 5,
+                "step": 1
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "none"
+            }
+          },
+          "answer": {
+            "expression": "2*a*c+b",
+            "mode": "tolerance",
+            "tolerance": 0
+          }
+        },
+        {
+          "examQuestionId": "d2-2",
+          "presentationType": "parametricNumeric",
+          "text": "حلّ المعادلة log₁₀(x) = {{k}}.",
+          "marks": 7,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "k",
+                "kind": "integer",
+                "min": 1,
+                "max": 4,
+                "step": 1
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "none"
+            }
+          },
+          "answer": {
+            "expression": "10^k",
+            "mode": "range",
+            "below": 0,
+            "above": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-s3",
+      "title": "القسم الثالث: دراسة دالة بالمحاكاة",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d3-1",
+          "presentationType": "smartSim",
+          "text": "ادرس الدالة f(x) = (2x − 4) / ((x − 1)(x + 2)) في نافذة الرسم وسجّل خصائصها.",
+          "marks": 26,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "functionStudy2d",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "expression": {
+                "language": 2,
+                "variable": "x",
+                "source": "(2*x-4)/((x-1)*(x+2))"
+              },
+              "window": {
+                "xMin": -6,
+                "xMax": 8,
+                "yMin": -6,
+                "yMax": 6,
+                "sampleCount": 701
+              },
+              "tasks": {
+                "domainExclusions": true,
+                "xIntercepts": true,
+                "yIntercept": true,
+                "verticalAsymptotes": true,
+                "horizontalAsymptotes": true,
+                "extrema": true,
+                "monotonicIntervals": true
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "domain",
+                "label": "استثناءات المجال",
+                "weight": 2,
+                "kind": "domain.exclusions",
+                "expected": [
+                  -2,
+                  1
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "x-intercepts",
+                "label": "المقاطع السينية",
+                "weight": 1,
+                "kind": "intercepts.x",
+                "expected": [
+                  {
+                    "x": 2,
+                    "y": 0
+                  }
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "y-intercept",
+                "label": "المقطع الصادي",
+                "weight": 1,
+                "kind": "intercept.y",
+                "expected": 2,
+                "tolerance": 0.01
+              },
+              {
+                "id": "vertical-asymptotes",
+                "label": "خطوط التقارب الرأسية",
+                "weight": 2,
+                "kind": "asymptotes.vertical",
+                "expected": [
+                  -2,
+                  1
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "horizontal-asymptotes",
+                "label": "خطوط التقارب الأفقية",
+                "weight": 1,
+                "kind": "asymptotes.horizontal",
+                "expected": [
+                  0
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "extrema",
+                "label": "القيم القصوى المحلية",
+                "weight": 3,
+                "kind": "extrema.points",
+                "expected": [
+                  {
+                    "kind": "min",
+                    "x": 0,
+                    "y": 2
+                  },
+                  {
+                    "kind": "max",
+                    "x": 4,
+                    "y": 0.2222222222222222
+                  }
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "monotonic",
+                "label": "فترات التزايد والتناقص",
+                "weight": 3,
+                "kind": "monotonic.intervals",
+                "tolerance": 0.01,
+                "expected": [
+                  {
+                    "kind": "decreasing",
+                    "from": "-inf",
+                    "to": -2
+                  },
+                  {
+                    "kind": "decreasing",
+                    "from": -2,
+                    "to": 0
+                  },
+                  {
+                    "kind": "increasing",
+                    "from": 0,
+                    "to": 1
+                  },
+                  {
+                    "kind": "increasing",
+                    "from": 1,
+                    "to": 4
+                  },
+                  {
+                    "kind": "decreasing",
+                    "from": 4,
+                    "to": "+inf"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d-s4",
+      "title": "القسم الرابع: سؤال مركّب",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d4-1",
+          "presentationType": "composite",
+          "text": "استخدم دراسة الدالة المشتركة للإجابة عن البنود.",
+          "marks": 34,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxFn",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "الدالة f(x) = (2x − 4) / ((x − 1)(x + 2))",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "functionStudy2d",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "expression": {
+                      "language": 2,
+                      "variable": "x",
+                      "source": "(2*x-4)/((x-1)*(x+2))"
+                    },
+                    "window": {
+                      "xMin": -6,
+                      "xMax": 8,
+                      "yMin": -6,
+                      "yMax": 6,
+                      "sampleCount": 701
+                    },
+                    "tasks": {
+                      "domainExclusions": true,
+                      "xIntercepts": true,
+                      "yIntercept": true,
+                      "verticalAsymptotes": true,
+                      "horizontalAsymptotes": true,
+                      "extrema": true,
+                      "monotonicIntervals": true
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gStudy",
+                "title": "الدراسة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "f1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFn",
+                    "text": "حدّد مجال الدالة (القيم المستثناة).",
+                    "marks": 4,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "domain",
+                          "label": "استثناءات المجال",
+                          "weight": 2,
+                          "kind": "domain.exclusions",
+                          "expected": [
+                            -2,
+                            1
+                          ],
+                          "tolerance": 0.01
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "f2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFn",
+                    "text": "حدّد خطوط التقارب الرأسية.",
+                    "marks": 4,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "vertical-asymptotes",
+                          "label": "خطوط التقارب الرأسية",
+                          "weight": 2,
+                          "kind": "asymptotes.vertical",
+                          "expected": [
+                            -2,
+                            1
+                          ],
+                          "tolerance": 0.01
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "f3",
+                    "label": "ج",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFn",
+                    "text": "حدّد القيم القصوى المحلية.",
+                    "marks": 6,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "extrema",
+                          "label": "القيم القصوى المحلية",
+                          "weight": 3,
+                          "kind": "extrema.points",
+                          "expected": [
+                            {
+                              "kind": "min",
+                              "x": 0,
+                              "y": 2
+                            },
+                            {
+                              "kind": "max",
+                              "x": 4,
+                              "y": 0.2222222222222222
+                            }
+                          ],
+                          "tolerance": 0.01
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gReason",
+                "title": "الاستنتاج",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "q1",
+                    "label": "د",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "ما خط التقارب الأفقي للدالة؟",
+                    "marks": 4,
+                    "options": [
+                      {
+                        "text": "y = 0"
+                      },
+                      {
+                        "text": "y = 2"
+                      },
+                      {
+                        "text": "لا يوجد"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    },
+                    "contextId": "ctxFn"
+                  },
+                  {
+                    "id": "q2",
+                    "label": "هـ",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "text": "ما قيمة f(0)؟",
+                    "marks": 4,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 2,
+                      "tolerance": 0
+                    },
+                    "contextId": "ctxFn"
+                  },
+                  {
+                    "id": "q3",
+                    "label": "و",
+                    "type": "parametricNumeric",
+                    "questionTypeVersion": 1,
+                    "text": "احسب f({{t}}) للدالة g(x) = x² − {{t}}.",
+                    "marks": 6,
+                    "parametric": {
+                      "v": 2,
+                      "generatorVersion": 2,
+                      "variables": [
+                        {
+                          "id": "t",
+                          "kind": "integer",
+                          "min": 2,
+                          "max": 9,
+                          "step": 1
+                        }
+                      ],
+                      "derivedVariables": [],
+                      "constraints": [],
+                      "response": {
+                        "unit": "none"
+                      }
+                    },
+                    "answer": {
+                      "expression": "t^2-t",
+                      "mode": "tolerance",
+                      "tolerance": 0
+                    }
+                  },
+                  {
+                    "id": "o1",
+                    "label": "ز",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "text": "برّر لماذا تكون x = 1 خط تقارب رأسيًا وليست نقطة مستثناة فقط.",
+                    "marks": 6,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 4000
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "limit",
+                            "title": "النهايات",
+                            "description": "",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "CERT20G-PRIVATE-GUIDANCE-D41-limit",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "full",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "half",
+                                "label": "half",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "none",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          },
+                          {
+                            "id": "notation",
+                            "title": "الرموز",
+                            "description": "",
+                            "maxPoints": 2,
+                            "allowCustomPoints": false,
+                            "guidance": "CERT20G-PRIVATE-GUIDANCE-D41-notation",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "full",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "none",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "CERT20G-PRIVATE-MODEL-D41"
+                    },
+                    "contextId": "ctxFn"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

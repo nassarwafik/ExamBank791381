@@ -258,13 +258,24 @@ export function moveQuestionToSection(sections: BuilderSection[], fromSectionId:
   });
 }
 
+/** Fresh ids for a node's fields. Phase 20G (D4) — a cliFill template names its blanks by field id ([[fieldId]]): every placeholder is remapped
+ *  to its field's NEW id (same order, same text), so a duplicate / copy never points at the original's fields. */
+function withFreshFieldIds<T extends { fields?: BuilderField[]; cli?: string }>(node: T): T {
+  if (!Array.isArray(node.fields)) return node;
+  const ids = new Map<string, string>();
+  const fields = node.fields.map(f => { const id = genId("f"); if (typeof f.id === "string") ids.set(f.id.trim(), id); return { ...f, id }; });
+  const out = { ...node, fields };
+  if (typeof node.cli === "string") out.cli = node.cli.replace(/\[\[([^\]]+)\]\]/g, (m, raw: string) => { const id = ids.get(raw.trim()); return id ? "[[" + id + "]]" : m; });
+  return out;
+}
+
 // Deep clone a question assigning fresh ids to the question, its parts and fields (used by duplicate
 // and by legacy import when ids might collide). Preserves displayNumber, marks, answers, everything.
 export function cloneQuestionWithNewIds(q: BuilderQuestion): BuilderQuestion {
   const copy: BuilderQuestion = JSON.parse(JSON.stringify(q));
   copy.examQuestionId = genId("q");
-  if (Array.isArray(copy.fields)) copy.fields = copy.fields.map(f => ({ ...f, id: genId("f") }));
-  if (Array.isArray(copy.parts)) copy.parts = copy.parts.map(p => ({ ...p, id: genId("p"), fields: Array.isArray(p.fields) ? p.fields.map(f => ({ ...f, id: genId("f") })) : p.fields }));
+  if (Array.isArray(copy.fields)) Object.assign(copy, withFreshFieldIds(copy));
+  if (Array.isArray(copy.parts)) copy.parts = copy.parts.map(p => ({ ...withFreshFieldIds(p), id: genId("p") }));
   // Phase 20D — composite@1: fresh group / part / context ids, part → context references remapped (never a stale reference to the original)
   if (isCompositeQuestionNode(copy as unknown) && copy.composite !== undefined) copy.composite = cloneCompositeWithNewIds(copy.composite, genId) as BuilderQuestion["composite"];
   return copy;
@@ -288,9 +299,7 @@ export function duplicatePart(parts: BuilderPart[], id: string): BuilderPart[] {
   const i = parts.findIndex(p => p.id === id);
   if (i < 0) return parts;
   const src = parts[i];
-  const copy: BuilderPart = JSON.parse(JSON.stringify(src));
-  copy.id = genId("p");
-  if (Array.isArray(copy.fields)) copy.fields = copy.fields.map(f => ({ ...f, id: genId("f") }));
+  const copy: BuilderPart = { ...withFreshFieldIds(JSON.parse(JSON.stringify(src)) as BuilderPart), id: genId("p") };
   return insertAt(parts, i + 1, copy);
 }
 

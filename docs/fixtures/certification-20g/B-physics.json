@@ -1,0 +1,1002 @@
+{
+  "schemaVersion": 2,
+  "examId": "CERT20G-B-PHY",
+  "title": "شهادة 20G — امتحان الفيزياء: السقوط الحر",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "الصف العاشر — الفيزياء",
+    "instructions": "استخدم المحاكاة لتسجيل القياسات. تُصحَّح القياسات على الخادم من خطواتك فقط.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "scienceLab"
+  },
+  "sections": [
+    {
+      "id": "b-s1",
+      "title": "القسم الأول: المفاهيم",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1-1",
+          "presentationType": "multipleChoice",
+          "text": "ما مقدار تسارع السقوط الحر قرب سطح الأرض تقريبًا؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "9.8 m/s²"
+            },
+            {
+              "text": "98 m/s²"
+            },
+            {
+              "text": "0.98 m/s²"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-b1-1"
+        },
+        {
+          "examQuestionId": "b1-2",
+          "presentationType": "multipleChoice",
+          "text": "عند إهمال مقاومة الهواء، يسقط جسمان مختلفا الكتلة من الارتفاع نفسه:",
+          "marks": 2,
+          "options": [
+            {
+              "text": "يصلان معًا"
+            },
+            {
+              "text": "الأثقل أولًا"
+            },
+            {
+              "text": "الأخف أولًا"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-b1-2"
+        },
+        {
+          "examQuestionId": "b1-3",
+          "presentationType": "trueFalse",
+          "text": "عند أعلى نقطة في القذف الرأسي تكون السرعة صفرًا والتسارع صفرًا.",
+          "marks": 2,
+          "options": [
+            {
+              "text": "صحيح"
+            },
+            {
+              "text": "غير صحيح"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          }
+        },
+        {
+          "examQuestionId": "b1-4",
+          "presentationType": "multiTrueFalse",
+          "text": "ضع صح أو خطأ:",
+          "marks": 3,
+          "fields": [
+            {
+              "id": "r1",
+              "statement": "السرعة في السقوط الحر تزداد بانتظام.",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "r2",
+              "statement": "الإزاحة تتناسب طرديًا مع الزمن.",
+              "kind": "boolean",
+              "correct": false
+            },
+            {
+              "id": "r3",
+              "statement": "منحنى (الارتفاع–الزمن) قطع مكافئ.",
+              "kind": "boolean",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "examQuestionId": "b1-5",
+          "presentationType": "numericResponse",
+          "text": "ما مقدار g المستخدم في المحاكاة الأولى (m/s²)؟",
+          "marks": 3,
+          "questionTypeVersion": 1,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 9.8,
+            "tolerance": 0.05
+          }
+        }
+      ]
+    },
+    {
+      "id": "b-s2",
+      "title": "القسم الثاني: المسائل العددية",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b2-1",
+          "presentationType": "numericResponse",
+          "text": "يسقط حجر من السكون من ارتفاع 45 m (g = 9.8 m/s²). احسب زمن وصوله إلى الأرض بالثانية.",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 3.0305,
+            "tolerance": 0.02
+          }
+        },
+        {
+          "examQuestionId": "b2-2",
+          "presentationType": "parametricNumeric",
+          "text": "يسقط جسم من السكون من ارتفاع {{h}} m (g = 10 m/s²). احسب زمن وصوله إلى الأرض بالثانية.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "h",
+                "kind": "integer",
+                "min": 20,
+                "max": 80,
+                "step": 5
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "label",
+              "label": "s"
+            }
+          },
+          "answer": {
+            "expression": "sqrt(2*h/10)",
+            "mode": "tolerance",
+            "tolerance": 0.02
+          }
+        },
+        {
+          "examQuestionId": "b2-3",
+          "presentationType": "parametricNumeric",
+          "text": "يُقذف جسم رأسيًا إلى الأعلى بسرعة {{v}} m/s (g = 10 m/s²). احسب أقصى ارتفاع يبلغه فوق نقطة القذف بالمتر.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "v",
+                "kind": "integer",
+                "min": 10,
+                "max": 30,
+                "step": 2
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "label",
+              "label": "m"
+            }
+          },
+          "answer": {
+            "expression": "v^2/20",
+            "mode": "tolerance",
+            "tolerance": 0.05
+          }
+        }
+      ]
+    },
+    {
+      "id": "b-s3",
+      "title": "القسم الثالث: المحاكاة",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b3-1",
+          "presentationType": "smartSim",
+          "text": "يسقط جسم من السكون من ارتفاع 20 m. شغّل المحاكاة وراقب المنحنيين ثم سجّل قياساتك.",
+          "marks": 12,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsFreeFall",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "model": {
+                "initialHeight": 20,
+                "initialVelocity": 0,
+                "gravity": 9.8
+              },
+              "view": {
+                "maxTime": 3,
+                "showVelocityGraph": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى الأرض",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "impactSpeed",
+                    "label": "سرعة الارتطام بالأرض (مقدار)",
+                    "unit": "m/s"
+                  },
+                  {
+                    "id": "heightAt1s",
+                    "label": "الارتفاع عند الزمن 1 ث",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "velocityAt1s",
+                    "label": "السرعة المتجهة عند الزمن 1 ث (الأعلى موجب)",
+                    "unit": "m/s"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "impactPoint",
+                    "label": "نقطة الارتطام على منحنى الارتفاع–الزمن"
+                  },
+                  {
+                    "id": "pointAt1s",
+                    "label": "نقطة من منحنى الارتفاع–الزمن عند 1 ث"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول إلى الأرض",
+                "weight": 3,
+                "kind": "physics.impactTime",
+                "measurementId": "impactTime",
+                "tolerance": 0.05
+              },
+              {
+                "id": "impact-speed",
+                "label": "سرعة الارتطام",
+                "weight": 3,
+                "kind": "physics.impactSpeed",
+                "measurementId": "impactSpeed",
+                "tolerance": 0.1
+              },
+              {
+                "id": "height-1s",
+                "label": "الارتفاع عند 1 ث",
+                "weight": 2,
+                "kind": "physics.heightAtTime",
+                "measurementId": "heightAt1s",
+                "time": 1,
+                "tolerance": 0.05
+              },
+              {
+                "id": "velocity-1s",
+                "label": "السرعة المتجهة عند 1 ث",
+                "weight": 1,
+                "kind": "numericNear@1",
+                "valueId": "velocityAt1s",
+                "expected": -9.8,
+                "tolerance": 0.05
+              },
+              {
+                "id": "impact-point",
+                "label": "نقطة الارتطام على المنحنى",
+                "weight": 2,
+                "kind": "pointNear@1",
+                "pointId": "impactPoint",
+                "expected": {
+                  "x": 2.0203,
+                  "y": 0
+                },
+                "tolerance": 0.05
+              },
+              {
+                "id": "point-1s",
+                "label": "نقطة على منحنى الحركة",
+                "weight": 1,
+                "kind": "physics.pointOnTrajectory",
+                "pointId": "pointAt1s",
+                "tolerance": 0.1
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "b3-2",
+          "presentationType": "smartSim",
+          "text": "يُقذف جسم إلى الأعلى بسرعة 10 m/s من ارتفاع 30 m (g = 10 m/s²). لاحظ أعلى نقطة وتغيّر إشارة السرعة.",
+          "marks": 12,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsFreeFall",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "model": {
+                "initialHeight": 30,
+                "initialVelocity": 10,
+                "gravity": 10
+              },
+              "view": {
+                "maxTime": 4,
+                "showVelocityGraph": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى الأرض",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "impactSpeed",
+                    "label": "سرعة الارتطام (مقدار)",
+                    "unit": "m/s"
+                  },
+                  {
+                    "id": "maxHeight",
+                    "label": "أقصى ارتفاع",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "apexTime",
+                    "label": "زمن أعلى نقطة",
+                    "unit": "s"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "apexPoint",
+                    "label": "أعلى نقطة على المنحنى"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول إلى الأرض",
+                "weight": 3,
+                "kind": "physics.impactTime",
+                "measurementId": "impactTime",
+                "tolerance": 0.05
+              },
+              {
+                "id": "impact-speed",
+                "label": "سرعة الارتطام",
+                "weight": 2,
+                "kind": "physics.impactSpeed",
+                "measurementId": "impactSpeed",
+                "tolerance": 0.1
+              },
+              {
+                "id": "max-height",
+                "label": "أقصى ارتفاع",
+                "weight": 2,
+                "kind": "numericNear@1",
+                "valueId": "maxHeight",
+                "expected": 35,
+                "tolerance": 0.05
+              },
+              {
+                "id": "apex-time",
+                "label": "زمن أعلى نقطة",
+                "weight": 2,
+                "kind": "numericNear@1",
+                "valueId": "apexTime",
+                "expected": 1,
+                "tolerance": 0.05
+              },
+              {
+                "id": "apex-point",
+                "label": "أعلى نقطة على المنحنى",
+                "weight": 1,
+                "kind": "physics.pointOnTrajectory",
+                "pointId": "apexPoint",
+                "tolerance": 0.1
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "b3-3",
+          "presentationType": "smartSim",
+          "text": "يُقذف جسم إلى الأسفل بسرعة 5 m/s من ارتفاع 50 m على سطح القمر (g = 1.62 m/s²). استخدم شريط الزمن والخطوات اليدوية.",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsFreeFall",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "model": {
+                "initialHeight": 50,
+                "initialVelocity": -5,
+                "gravity": 1.62
+              },
+              "view": {
+                "maxTime": 10,
+                "showVelocityGraph": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى سطح القمر",
+                    "unit": "s"
+                  }
+                ],
+                "points": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول",
+                "weight": 1,
+                "kind": "physics.impactTime",
+                "measurementId": "impactTime",
+                "tolerance": 0.05
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b-s4",
+      "title": "القسم الرابع: التحليل والتفسير",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b4-1",
+          "presentationType": "composite",
+          "text": "يسقط جسم سقوطًا حرًا من ارتفاع 20 m. استخدم المحاكاة المشتركة للإجابة عن البنود.",
+          "marks": 24,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxFall",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "محاكاة السقوط الحر",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "physicsFreeFall",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "model": {
+                      "initialHeight": 20,
+                      "initialVelocity": 0,
+                      "gravity": 9.8
+                    },
+                    "view": {
+                      "maxTime": 3,
+                      "showVelocityGraph": true
+                    },
+                    "tasks": {
+                      "measurements": [
+                        {
+                          "id": "impactTime",
+                          "label": "زمن الوصول إلى الأرض",
+                          "unit": "s"
+                        },
+                        {
+                          "id": "impactSpeed",
+                          "label": "سرعة الارتطام بالأرض (مقدار)",
+                          "unit": "m/s"
+                        },
+                        {
+                          "id": "heightAt1s",
+                          "label": "الارتفاع عند الزمن 1 ث",
+                          "unit": "m"
+                        },
+                        {
+                          "id": "velocityAt1s",
+                          "label": "السرعة المتجهة عند الزمن 1 ث (الأعلى موجب)",
+                          "unit": "m/s"
+                        }
+                      ],
+                      "points": [
+                        {
+                          "id": "impactPoint",
+                          "label": "نقطة الارتطام على منحنى الارتفاع–الزمن"
+                        },
+                        {
+                          "id": "pointAt1s",
+                          "label": "نقطة من منحنى الارتفاع–الزمن عند 1 ث"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gSim",
+                "title": "القياس بالمحاكاة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "s1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFall",
+                    "text": "زمن الوصول إلى الأرض",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "impact-time",
+                          "label": "زمن الوصول",
+                          "weight": 1,
+                          "kind": "physics.impactTime",
+                          "measurementId": "impactTime",
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFall",
+                    "text": "سرعة الارتطام",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "impact-speed",
+                          "label": "سرعة الارتطام",
+                          "weight": 1,
+                          "kind": "physics.impactSpeed",
+                          "measurementId": "impactSpeed",
+                          "tolerance": 0.1
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s3",
+                    "label": "ج",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFall",
+                    "text": "الارتفاع عند 1 ث",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "height-1s",
+                          "label": "الارتفاع عند 1 ث",
+                          "weight": 1,
+                          "kind": "physics.heightAtTime",
+                          "measurementId": "heightAt1s",
+                          "time": 1,
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s4",
+                    "label": "د",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFall",
+                    "text": "السرعة المتجهة عند 1 ث",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "velocity-1s",
+                          "label": "السرعة عند 1 ث",
+                          "weight": 1,
+                          "kind": "physics.velocityAtTime",
+                          "measurementId": "velocityAt1s",
+                          "time": 1,
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "s5",
+                    "label": "هـ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxFall",
+                    "text": "نقطة على منحنى الحركة",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "point-1s",
+                          "label": "نقطة على المنحنى",
+                          "weight": 1,
+                          "kind": "physics.pointOnTrajectory",
+                          "pointId": "pointAt1s",
+                          "tolerance": 0.1
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gChoice",
+                "title": "أجب عن بندين فقط",
+                "gradingPolicy": "firstNAnswered",
+                "requiredAnswers": 2,
+                "maxMarks": 4,
+                "parts": [
+                  {
+                    "id": "c1",
+                    "label": "و",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "text": "ما مقدار سرعة الجسم بعد 2 ث من بدء سقوطه (m/s)؟ (g = 9.8)",
+                    "marks": 2,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 19.6,
+                      "tolerance": 0.05
+                    }
+                  },
+                  {
+                    "id": "c2",
+                    "label": "ز",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "text": "ما المسافة التي يقطعها الجسم في أول 1 ث (m)؟",
+                    "marks": 2,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 4.9,
+                      "tolerance": 0.05
+                    }
+                  },
+                  {
+                    "id": "c3",
+                    "label": "ح",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "text": "ما ارتفاع الجسم بعد 1.5 ث (m)؟",
+                    "marks": 2,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 8.975,
+                      "tolerance": 0.05
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gWhy",
+                "title": "التفسير",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "m1",
+                    "label": "ط",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "ماذا يمثّل ميل منحنى (السرعة–الزمن)؟",
+                    "marks": 4,
+                    "options": [
+                      {
+                        "text": "التسارع"
+                      },
+                      {
+                        "text": "الإزاحة"
+                      },
+                      {
+                        "text": "الارتفاع"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    },
+                    "contextId": "ctxFall"
+                  },
+                  {
+                    "id": "o1",
+                    "label": "ي",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "text": "فسّر لماذا تزداد السرعة بانتظام.",
+                    "marks": 4,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 4000
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "physics",
+                            "title": "الفهم الفيزيائي",
+                            "description": "",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "CERT20G-PRIVATE-GUIDANCE-B41-physics",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "full",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "half",
+                                "label": "half",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "none",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "CERT20G-PRIVATE-MODEL-B41"
+                    },
+                    "contextId": "ctxFall"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "b4-2",
+          "presentationType": "openResponse",
+          "text": "اشرح لماذا تكون السرعة صفرًا عند أعلى نقطة في القذف الرأسي بينما التسارع لا يساوي صفرًا.",
+          "marks": 10,
+          "questionTypeVersion": 1,
+          "openResponse": {
+            "v": 1,
+            "profile": "explain",
+            "instructions": "",
+            "response": {
+              "minChars": 0,
+              "maxChars": 4000
+            },
+            "studentRubricVisibility": "hidden"
+          },
+          "answer": {
+            "rubric": {
+              "v": 1,
+              "criteria": [
+                {
+                  "id": "concept",
+                  "title": "الفهم الفيزيائي",
+                  "description": "",
+                  "maxPoints": 6,
+                  "allowCustomPoints": false,
+                  "guidance": "CERT20G-PRIVATE-GUIDANCE-B42-concept",
+                  "levels": [
+                    {
+                      "id": "full",
+                      "label": "full",
+                      "points": 6,
+                      "description": ""
+                    },
+                    {
+                      "id": "half",
+                      "label": "half",
+                      "points": 3,
+                      "description": ""
+                    },
+                    {
+                      "id": "none",
+                      "label": "none",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                },
+                {
+                  "id": "terms",
+                  "title": "المصطلحات",
+                  "description": "",
+                  "maxPoints": 4,
+                  "allowCustomPoints": false,
+                  "guidance": "CERT20G-PRIVATE-GUIDANCE-B42-terms",
+                  "levels": [
+                    {
+                      "id": "full",
+                      "label": "full",
+                      "points": 4,
+                      "description": ""
+                    },
+                    {
+                      "id": "half",
+                      "label": "half",
+                      "points": 2,
+                      "description": ""
+                    },
+                    {
+                      "id": "none",
+                      "label": "none",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                }
+              ]
+            },
+            "modelAnswer": "CERT20G-PRIVATE-MODEL-B42"
+          }
+        },
+        {
+          "examQuestionId": "b4-3",
+          "presentationType": "multipleSelect",
+          "text": "اختر العبارات الصحيحة عن السقوط الحر:",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "options": [
+            {
+              "id": "q1",
+              "text": "التسارع ثابت"
+            },
+            {
+              "id": "q2",
+              "text": "السرعة ثابتة"
+            },
+            {
+              "id": "q3",
+              "text": "منحنى السرعة–الزمن مستقيم"
+            },
+            {
+              "id": "q4",
+              "text": "الكتلة تغيّر زمن السقوط"
+            }
+          ],
+          "answer": {
+            "correctOptionIds": [
+              "q1",
+              "q3"
+            ],
+            "scoring": "partialWithPenalty"
+          }
+        },
+        {
+          "examQuestionId": "b4-4",
+          "presentationType": "openResponse",
+          "text": "قارن بين حركة الجسم على الأرض وعلى القمر من الارتفاع نفسه.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "openResponse": {
+            "v": 1,
+            "profile": "compare",
+            "instructions": "",
+            "response": {
+              "minChars": 0,
+              "maxChars": 4000
+            },
+            "studentRubricVisibility": "visible"
+          },
+          "answer": {
+            "rubric": {
+              "v": 1,
+              "criteria": [
+                {
+                  "id": "compare",
+                  "title": "المقارنة",
+                  "description": "",
+                  "maxPoints": 6,
+                  "allowCustomPoints": false,
+                  "guidance": "CERT20G-PRIVATE-GUIDANCE-B44-compare",
+                  "levels": [
+                    {
+                      "id": "full",
+                      "label": "full",
+                      "points": 6,
+                      "description": ""
+                    },
+                    {
+                      "id": "half",
+                      "label": "half",
+                      "points": 3,
+                      "description": ""
+                    },
+                    {
+                      "id": "none",
+                      "label": "none",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                }
+              ]
+            },
+            "modelAnswer": "CERT20G-PRIVATE-MODEL-B44"
+          }
+        }
+      ]
+    }
+  ]
+}

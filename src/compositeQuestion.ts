@@ -35,6 +35,10 @@ const SMARTSIM_CONTEXT_KEYS: ReadonlySet<string> = new Set(["id", "version", "ki
 const GROUP_KEYS: ReadonlySet<string> = new Set(["id", "title", "instructions", "gradingPolicy", "requiredAnswers", "maxMarks", "parts"]);
 /** Question-level keys a composite may carry (its children live ONLY under `composite`; `parts` would make it a legacy compound). */
 const QUESTION_KEYS: ReadonlySet<string> = new Set(["examQuestionId", "id", "number", "displayNumber", "presentationType", "type", "questionTypeVersion", "text", "marks", "composite", "answer", "assessmentMeta", "groupId", "activity", "codeStimulus", "image", "images", "richContent", "presentation"]);
+/** Phase 20G (D2) — the ONE canonical exam content form (api exam-canonical.js: every saved working copy and every immutable governance
+ *  revision) stamps per-question edit bookkeeping `history: []` / `redoStack: []`. Exactly that form — both keys as EMPTY arrays — is
+ *  academically inert and tolerated; any other value of them stays an unknown key (refused). */
+const canonicalBookkeeping = (k: string, v: unknown): boolean => (k === "history" || k === "redoStack") && Array.isArray(v) && v.length === 0;
 // Phase 20D.1 — `richContent` (a RichContentV1 prompt, presentation only; validated by examQuality, strictly projected by the sanitizer).
 const PART_COMMON_KEYS: readonly string[] = ["id", "label", "type", "questionTypeVersion", "text", "marks", "contextId", "answer", "image", "images", "assessmentMeta", "richContent"];
 /** Type-owned configuration keys a child of that type may carry (every other config key is FOREIGN to it). */
@@ -171,7 +175,7 @@ export function compositeChildNode(part: Record<string, unknown>): Record<string
 export function validateCompositeQuestion(node: Record<string, unknown>): CompositeIssue[] {
   const out: CompositeIssue[] = [];
   if (compositeQuestionVersion(node) === undefined) out.push(err("UNSUPPORTED_QUESTION_TYPE_VERSION", "إصدار السؤال المركّب المتقدّم غير مدعوم في هذا الإصدار من التطبيق.", "questionTypeVersion"));
-  for (const k of Object.keys(node)) if (!QUESTION_KEYS.has(k) && k !== "parts") out.push(err("COMPOSITE_UNKNOWN_KEY", "حقل غير مسموح في السؤال المركّب: " + k, k));
+  for (const k of Object.keys(node)) if (!QUESTION_KEYS.has(k) && k !== "parts" && !canonicalBookkeeping(k, node[k])) out.push(err("COMPOSITE_UNKNOWN_KEY", "حقل غير مسموح في السؤال المركّب: " + k, k));
   // RF2 — an empty / null examQuestionId is ABSENT (sectionQuestionId falls back to `id`); the effective id is then checked by examQuality.
   if (node.examQuestionId !== undefined && node.examQuestionId !== null && node.examQuestionId !== "" && !isCompositeQuestionId(node.examQuestionId)) out.push(err("COMPOSITE_QUESTION_ID_INVALID", "معرّف السؤال المركّب يجب أن يكون من حروف لاتينية وأرقام و . _ : - (حتى 80) دون الفاصل ::part::.", "examQuestionId"));
   if (node.answer !== undefined && !(isObj(node.answer) && Object.keys(node.answer).length === 0)) out.push(err("COMPOSITE_ANSWER_KEY_FORBIDDEN", "مفاتيح الإجابة تُحفظ في البنود فقط، لا على السؤال المركّب.", "answer"));
