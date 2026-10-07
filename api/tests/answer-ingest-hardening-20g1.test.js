@@ -169,9 +169,9 @@ describe("20G.1 D3 — valid answers and specialized contracts are unchanged", (
     expect(normalizeDraftAnswers({ q1: sim }, EX())).toEqual({ answers: { q1: sim }, rejected: [] });   // a known id keeps the historical simulation path (pin)
   });
   it("D3-A'' the answer-id set is EXACTLY the grader's: a client-shaped positional id (s1::q1, 1) is refused when the exam names its questions", () => {
-    const r = normalizeDraftAnswers({ "s1::q1": A.text("TCP"), "1": A.text("TCP"), q1: A.text("TCP") }, EX());
+    const r = normalizeDraftAnswers({ "s1::q1": A.text("TCP"), "1": A.text("TCP"), p1: A.text("UDP"), q1: A.text("TCP") }, EX());   // p1 is a PART of q3, never a top-level unit
     expect(r.answers).toEqual({ q1: A.text("TCP") });
-    expect(r.rejected).toEqual([{ id: "1", code: "ANSWER_QUESTION_UNKNOWN" }, { id: "s1::q1", code: "ANSWER_QUESTION_UNKNOWN" }]);
+    expect(r.rejected).toEqual([{ id: "1", code: "ANSWER_QUESTION_UNKNOWN" }, { id: "s1::q1", code: "ANSWER_QUESTION_UNKNOWN" }, { id: "p1", code: "ANSWER_QUESTION_UNKNOWN" }]);
     const positional = { examId: "POS", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [{ presentationType: "shortAnswer", text: "?", marks: 1 }] }] };
     expect(normalizeDraftAnswers({ "s1::q1": A.text("x") }, positional)).toEqual({ answers: { "s1::q1": A.text("x") }, rejected: [] });   // the grader's own fallback id (pin)
     const flat = { examId: "FLAT", questions: [{ type: "shortAnswer", text: "?", marks: 1 }, { number: 7, type: "shortAnswer", text: "?", marks: 1 }] };
