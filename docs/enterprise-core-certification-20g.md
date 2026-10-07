@@ -135,7 +135,7 @@ For every persona the test asserts the following:
 | B modify (section scope) | Only that section's marks change; keys are untouched; the diff shows each change; the exam stays finalizable. |
 | C generate section | Exactly one new section with code ids (`aicert20-ms1-k`); existing sections are byte-identical. |
 | D replace question | Only the target changes and its id is kept. The same patch on an edited exam is `STALE_REVISION` and applies nothing. |
-| E improve content | Text only. The hidden tests are preserved byte for byte. A marks change or an operation on another question is refused (protected-field and scope lock). |
+| E improve content | Text only. The hidden tests are preserved byte for byte. A marks change or an operation on another question is refused with exactly `PATCH_SCOPE_VIOLATION`, a validation verdict repeated on every bounded repair attempt (protected-field and scope lock, at the server authority). |
 
 **Also proven:**
 - Selective apply changes only the selected operation.
@@ -429,7 +429,7 @@ The agent cannot drive a browser against the preview with credentials. These ite
 
 ## 27. Validation and CI
 
-See the PR body for the exact counts per suite on the head and the exact-head CI table (workflow, run, attempt, conclusion).
+Local full validation (tier 1) on the head: root `npm test` 778 files / 10229 tests passed; the 20G suites 17 files / 196 tests; `npm run lint` clean; `npx tsc -b --force` clean; `npm run build` with the bundle guard passing (initial JS 124.2 KB of an unchanged 125 KB budget); `git diff --check` clean; `npm --prefix runner test` 407 / 407 in isolation. `runner/` is unchanged by this PR. A first Runner run concurrent with the root suite failed one timing assertion (TAR44, `injected === 1`); the isolated re-run passed. The exact-head CI table (workflow, run, attempt, conclusion) is in the PR body.
 
 ## 28. Known limitations, open finding D3, future phases
 
