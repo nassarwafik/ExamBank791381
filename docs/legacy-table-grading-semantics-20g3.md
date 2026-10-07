@@ -90,7 +90,9 @@ Archaeology across the repository:
 `src/legacyTableSemantics.ts` is pure, uses no React, and is compiled into the shared build for the API. It is the **one**
 legacy table authority:
 
-- `parseTable` and `resolveTableRowOptions` moved here verbatim (`questionContent.tsx` re-exports them);
+- `parseTable` and `resolveTableRowOptions` moved here verbatim (`questionContent.tsx` re-exports them). Review Fix 1 hardened
+  `resolveTableRowOptions`: a non-array `fields`, a null field, non-array `options` or a null option is not row options, and never
+  crashes the card or the grader;
 - `isCheckboxTableText` is the check-box phrasing;
 - `legacyTableCellControl(q, row)` returns `"select" | "checkbox" | "text"`, the control the card draws for a row.
 
@@ -101,13 +103,15 @@ Consumers:
 - The server's `legacyTableMode(question)` (in `assignment-grading.js`) decides the grading mode from the question alone, using
   the same parse and the same per-row control.
 - The 20G.2 binding's `textHasTable` now calls the same `parseTable`; this is equivalent to its old inline copy.
+- `exam-quality-fix.js` (the AI quality-fix endpoint that writes `row=value` keys) uses the same `parseTable` instead of a
+  private copy of the removed grader parser (Review Fix 1, F5), so the keys it writes name exactly the graded rows.
 
 | Mode | When (decided from the question alone) |
 |---|---|
 | `none` | no markdown table in the text |
 | `keyed` | `answer.text` has `row=value` pairs, every drawn row has a non-empty expected value, and that value is valid for the row's control: a select row's value is one of its options (normalized); a checkbox row's value is `true` or `false` |
 | `checkbox` | no pairs, **every** drawn row is a checkbox, and `answer.text` is a list (separators `, ، ; ؛ / \|` or newline) whose items are each **exactly** a row label |
-| `manual` | anything else: a blank or duplicated label, conflicting or incomplete keys, an empty value, an unofferable select value, a non-boolean checkbox value, a membership key on non-checkbox rows, an empty list, or a list item that names no row |
+| `manual` | anything else: a blank or duplicated label, conflicting or incomplete keys, an empty value, an unofferable select value, a non-boolean checkbox value, a key that leaves **nothing to tick or type** (every row a checkbox keyed `false`; Review Fix 1), a membership key on non-checkbox rows, a row label that itself contains a list separator (Review Fix 1), an empty list, or a list item that names no row |
 
 `gradeTable`:
 
@@ -144,9 +148,12 @@ rows to tick by exact, normalized label. Then:
 - any other value (`"yes"`, `"x"`, `"on"`, a string `"false"`, `null` or a hole) is unticked.
 
 A key that names no row, or names a row that does not exist, cannot tell ticked from unticked rows, so it goes to review (T11).
+The same applies when a row label itself contains a list separator (`A`, `B`, `A/B` with the key `A/B`): the list cannot be
+split unambiguously, so it goes to review (Review Fix 1, F4; `ebf023c` mis-graded it 3/3).
 
 A checkbox table may also carry an explicit `row=true` / `row=false` key (keyed mode). Its rows are graded through ticks, so an
-untouched row reads as `false` (T31). Any other keyed value (`نعم`, `✓`, `1`) goes to review (T32).
+untouched row reads as `false` (T31). Any other keyed value (`نعم`, `✓`, `✗`, `1`) goes to review (T32, RF1-F3d). A key that
+expects **every** row unticked leaves nothing to tick, so it goes to review (Review Fix 1, F1; see §13).
 
 ## 9. Select behaviour
 
@@ -189,9 +196,18 @@ correctly takes the slot and scores.
 
 **Negative-answer decision (§13 of the directive):** `isResponseAnswered` treats a table with no ticked or non-empty cell as
 **unanswered**. The grader agrees: an all-unticked answer scores 0 with no review, and earns no credit for rows the key leaves
-unticked (the baseline gave 2/6). Answered-ness was deliberately **not** changed. Consequence: a checkbox table whose correct
-answer is "tick nothing" cannot be auto-graded. A membership key always names at least one row; an all-`false` keyed checkbox
-table scores 0 when left untouched. No repository data has this shape. Recorded as a follow-up (§25).
+unticked (the baseline gave 2/6). Answered-ness was deliberately **not** changed.
+
+**Review Fix 1 (F1, MAJOR) corrected the consequence.** The first head (`ebf023c`) graded a keyed checkbox table whose key expects
+**every** row unticked (`A=false;B=false`) like this:
+
+- a **correct** answer (the student ticked, then unticked: `[false, false]`) scored a **silent 0** and the attempt finalized;
+- an **untouched** table (no stored answer) went to teacher review.
+
+So the correct answer was treated worse than no answer, a breach of the AGENTS.md §10 grading-safety rule. The earlier version
+of this section described the untouched case wrongly. Such a key cannot tell a correct answer from an untouched table, so the
+mode is now `manual`: 0 + teacher review for every response (RF1-F1). A membership key always names at least one row, so it is
+unaffected.
 
 ## 14. Compound / composite behaviour
 
@@ -237,6 +253,24 @@ the real ingest and grader instead (§21).
 
 **T31–T33 were written after the implementation**, to close mutation survivors (§20). They also fail on c2a49e9 (e.g. T31: 4 vs
 6), but they are reported as post-implementation tests, not fail-first.
+
+**Review Fix 1 fail-first.** The final Review Fix 1 block has nine tests.
+
+**Against the pre-fix head `ebf023c`: 3 failed, 6 passed.**
+
+- **RF1-F1 fails:** `{score: 0, manualReview: false}` instead of review; the attempt finalized.
+- **RF1-F2 fails:** `TypeError: Cannot read properties of null (reading 'order')`.
+- **RF1-F4 fails:** 3/3 instead of review.
+- **Pins that pass there:** RF1-F1b and the five F3 pins (RF1-F3a to F3e, covering the reviewer's survivors R01, R02, R03, R07,
+  R08, R09, R10 and R15).
+
+**Against c2a49e9: 5 failed, 4 passed.**
+
+- F1 scored 2/2 there.
+- F4, and the mixed / per-row / `✓`-key shapes (F3b, F3c, F3d), were mis-graded by the old check-mark mode.
+- F2 passes there, because the old grader did not crash.
+
+All nine pass on the fixed head.
 
 **Existing tests whose expectation moved (each justified in place):**
 
@@ -286,49 +320,54 @@ run fails on any oracle mismatch, any unclassified difference, any head crash, o
   prose; empty; absent; numeric; prototype names);
 - responses of 0 to rows+1 cells, with holes, every tick spelling, key values, option values and non-primitive objects.
 
+**Re-run on the Review Fix 1 code.** The oracle gained the two new manual rules and robust field reading. The generator gained
+malformed `fields` shapes and all-`false` keys.
+
 **Two seeds × 30,000 = 60,000 table cases, plus 240,000 control answers:**
 
 | | count |
 |---|---|
-| identical | 25,762 |
-| different | 34,238 |
+| identical | 26,090 |
+| different | 33,910 |
 | head ≠ independent oracle | **0** |
 | unclassified differences | **0** |
-| head crashes | **0** (baseline crashed 2,256 times on non-primitive cells) |
+| head crashes | **0** (baseline crashed 2,220 times on non-primitive cells) |
 | non-table control answers (text / fields / choice / sequence on the same questions) differing | **0** of 240,000 |
-| **valid authoritative keyed answers** (keyed text / select rows, every drawn row sent as a primitive, same parse) differing | **0** of 4,024 |
+| **valid authoritative keyed answers** (keyed text / select rows, every drawn row sent as a primitive, same parse) differing | **0** of 3,989 |
 
 **Direction of every difference:**
 
-- 30,899 auto → review;
-- 1,000 lower scores;
-- 2,256 baseline crashes;
-- 83 higher scores;
+- 30,606 auto → review;
+- 978 lower scores;
+- 2,220 baseline crashes;
+- 106 higher scores;
 - **0** review → auto.
 
 **Classes (a difference can carry several):**
 
 | Class | Cases | Meaning |
 |---|---|---|
-| R | 9,126 | auto → review: membership key on text / select rows (**L-F2**) |
-| R | 5,199 | auto → review: incomplete / empty key |
-| R | 4,836 | auto → review: duplicate labels |
-| R | 3,385 | auto → review: non-boolean key on a checkbox row |
-| R | 2,441 | auto → review: unofferable select value |
-| R | 2,243 | auto → review: conflicting key |
-| R | 2,200 | auto → review: list item naming no row |
-| R | 1,469 | auto → review: blank label |
-| X | 2,256 | baseline crash on a non-primitive cell |
-| P | 1,296 | the baseline's header parse differs from the card's (§16) |
-| D | 940 | denominator: fewer cells than drawn rows |
-| O | 537 | a non-primitive cell is read as blank |
-| U | 488 | unanswered (nothing ticked / typed in a drawn row) → 0 |
-| C | 97 | keyed checkbox rows graded through ticks |
-| S | 60 | substring membership → exact tokens |
+| R | 8,887 | auto → review: membership key on text / select rows (**L-F2**) |
+| R | 5,180 | auto → review: incomplete / empty key |
+| R | 4,724 | auto → review: duplicate labels |
+| R | 3,399 | auto → review: non-boolean key on a checkbox row |
+| R | 2,376 | auto → review: unofferable select value |
+| R | 2,278 | auto → review: conflicting key |
+| R | 1,862 | auto → review: list item naming no row |
+| R | 1,441 | auto → review: blank label |
+| R | 310 | auto → review: row label contains a list separator (RF1) |
+| R | 149 | auto → review: nothing-to-tick key (RF1) |
+| X | 2,220 | baseline crash on a non-primitive cell |
+| P | 1,326 | the baseline's header parse differs from the card's (§16) |
+| D | 942 | denominator: fewer cells than drawn rows |
+| O | 520 | a non-primitive cell is read as blank |
+| U | 450 | unanswered (nothing ticked / typed in a drawn row) → 0 |
+| C | 81 | keyed checkbox rows graded through ticks |
+| S | 68 | substring membership → exact tokens |
 
-All 83 higher scores need a valid key and come only from D, C, S, O and P. In each, the head credits a row the student
-answered correctly as drawn, and the baseline did not: the denominator now counts every row, an unticked row reads as unticked,
-an exact label replaces a substring, and the student's row is now aligned with the row they were shown.
+All the higher scores need a valid key and come only from D, C, S, O and P. In each, the head credits a row the student answered
+correctly as drawn, and the baseline did not. The pre-fix head `ebf023c` gave the same zero counts over 60,000 cases (25,762
+identical, 34,238 different, 4,024 valid keyed answers unchanged).
 
 ## 20. Mutation campaign
 
@@ -383,9 +422,27 @@ search text matched two lines). D-M12 was re-targeted with unique context as D-M
 | M29 | tick parsing broadened (yes / x / on / صحيح) | KILLED |
 | M30 | conflicting key auto-grades | KILLED |
 
-**Totals on the final code: 64 plants, every one KILLED.** That is 30 design plants, 30 directive classes and the 4 re-run
+**Totals before the review: 64 plants, every one KILLED.** That is 30 design plants, 30 directive classes and the 4 re-run
 survivors; D-M12 was re-targeted once. There were no timeouts and no unexplained survivors. `git status` was unchanged after
 every round.
+
+**Round 3 — Review Fix 1 plants (17).** These are the reviewer's eight survivors re-created on the fixed code, plus nine plants on
+the new guards. RF-P1 to RF-P9 cover:
+
+- removing the nothing-to-tick guard;
+- widening or narrowing it;
+- removing the separator-in-label guard;
+- each of the four malformed-field guards (TS + JS);
+- shifting the quality-fix row list.
+
+**16 KILLED.** RF-P3 (the nothing-to-tick guard applied to any all-`false` key) **survived**. It is a real gap: a boolean-select
+or text table keyed all `false` is answerable and must stay auto-graded. RF1-F1b now pins it, and the re-run killed it.
+
+**Round 4 — every earlier plant re-run on the Review Fix 1 code (60).** 59 KILLED. D-M01 was INVALID (its search text spans the
+block where Review Fix 1 inserted a line); it was re-targeted and KILLED in round 5.
+
+**Totals on the final code: 77 plants, every one KILLED.** That is the 60 re-run plants and 17 Review Fix 1 plants, each after an
+unmutated pre-check. There were no timeouts and no unexplained survivors. `git status` was unchanged after every round.
 
 ## 21. Full validation
 
@@ -432,16 +489,37 @@ The initial JS graph, measured with the guard's own static-closure walk using ex
 | | files | gzip bytes |
 |---|---|---|
 | c2a49e9 | 18 | 127,169 (124.19 KB) |
-| head | 18 | **127,267 (124.28 KB)** |
-| delta | | **+98 B** |
+| first head `ebf023c` | 18 | 127,267 (+98 B) |
+| Review Fix 1 | 18 | **127,298 (124.31 KB, +129 B)** |
 
-The budget is unchanged at 125 KB, with 733 B of headroom. The growth is the shared check-box phrasing and per-row control in the
-`questionContent` chunk (+141 B); `StudentQuestionCard` shrank by 50 B. No new chunk was added to the initial graph.
+The budget is unchanged at 125 KB, with 702 B of headroom. The growth is the shared check-box phrasing, the per-row control and
+the malformed-field guards, all in the `questionContent` chunk (+177 B); `StudentQuestionCard` shrank by 49 B. No new chunk was
+added to the initial graph.
 
 ## 23. Independent review
 
-An independent, read-only, adversarial review with its own mutants runs on the exact PR head. Its verdict, and any re-review of
-a new head, are recorded in the pull-request body.
+**Round 1, on `ebf023c`:** NOT READY. The reviewer worked read-only in its own worktree:
+
+- 169 focused and 10,366 root tests;
+- 40,000 generated keyed questions compared with baseline;
+- 1,776 renderer / binding combinations;
+- 21 mutants of its own: 13 KILLED, 8 SURVIVED, 0 timeouts.
+
+**Its findings, all fixed in Review Fix 1:**
+
+- **F1, MAJOR:** a nothing-to-tick key gave a silent 0 (§13).
+- **F2, MINOR:** malformed `fields` crashed the grader (§6).
+- **F3:** test gaps from the eight survivors, now pinned.
+- **F4, NOTE:** an ambiguous `/` split mis-graded (§8).
+- **F5, NOTE:** the quality-fix endpoint kept a private parser copy (§6).
+
+**Its pre-existing notes, recorded as follow-ups (§25):**
+
+- **N1:** the renderer and the binding disagree about typeless / unknown-type questions carrying a `questionTypeVersion`.
+- **N2:** `correct:true` with `manualReview:true` when marks are 0; a forged `"false"` string takes a first-N slot; the card draws a
+  stored `"false"` string as ticked.
+
+The new head is re-reviewed. Its verdict is recorded in the pull-request body; a document commit cannot certify its own head.
 
 ## 24. Exact-head CI
 
@@ -455,14 +533,22 @@ The run IDs, attempts and conclusions for the exact head are recorded in the pul
 ## 25. Limitations
 
 1. **Stored grades are not recomputed.** Attempts graded before this phase keep their stored table scores (§15); no migration.
-2. **Negative-only checkbox answers.** A checkbox table whose correct answer is "tick nothing" cannot be auto-graded, because an
-   all-unticked answer is unanswered (§13). This is a follow-up; no data has this shape.
+2. **Negative-only checkbox answers.** A checkbox table whose correct answer is "tick nothing" is never auto-graded. It goes to
+   teacher review for every response (Review Fix 1, §13), because an all-unticked answer is unanswered. No data has this shape.
 3. **LIB-F06-Q41's key** (`1=1؛ 2=3`) is a library content defect. It now goes to teacher review. Correcting the key to its
    option values is an owner content decision, not part of this phase.
 4. **Membership lists:** a row label containing a list separator (`,`, `،`, `;`, `؛`, `/`, `|`) cannot be named in a membership
    key, so such a table goes to review. No data has this shape.
 5. **The library quality report's `manualReviewCount`** is a conversion statistic (questions without a key). It still counts
    Q41 as auto-gradable. The report is generated from source HTML that is not in the repository, so it was not edited by hand.
+6. **Pre-existing, outside this phase (reviewer notes N1 / N2):**
+   - A typeless, alias or unknown-type question carrying a `questionTypeVersion` is shown as unsupported by the card, while the
+     server admits a table. It is graded only with keyed authority, so it is not a free-credit path.
+   - A 0-mark table result reports `correct:true` together with `manualReview:true`.
+   - A forged `"false"` string cell takes a first-N slot; this only hurts the student who forged it.
+   - The card draws a stored `"false"` string as ticked.
+
+   All are recorded as follow-ups.
 
 ## 26. Final verdict
 
