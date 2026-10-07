@@ -1,0 +1,95 @@
+import { describe, it, expect } from "vitest";
+import { buildSimFromSpec } from "./composerSim";
+import * as F from "./testing/composerFakeAi";
+
+// Phase 20F — Review Fix 11 (fresh re-review of 20966d8: 0 BLOCKER, 1 MAJOR, 2 MINOR, 3 NOTE). Fail-first on 20966d8.
+//   MAJOR-1 an extremum exactly on the window's edge (x⁴ − 2x² on [−1, 1]) was never required: the scan skipped the first and last
+//           sample, and the scan beyond the window does not compare the slope inside with the slope beyond;
+//   MINOR-1 RF10's vanishing rule took a floored fractional cusp (|x − 1.3|^0.25 + 0.001) for a root;
+//   MINOR-2 a steep root within ≈ 2 % of another root (x − 8.89)·√|x − 8.74| bent the 10⁻² sample and was missed;
+//   NOTE-1  the exponent floor (0.05) was not pinned, and a root of |x − a|^0.04 was never a root;
+//   NOTE-2  touching features in the last grid cell or just beyond the edge were missed.
+// Found while fixing them (fail-first on 20966d8 too): features in the first cells past the edge (before the scan beyond the window
+// starts, 10⁻³ out), a root of an even smaller power where f is exactly 0, and a steep root whose dip falls between two samples of a
+// wide window — found at the expression's cusps (zeros of a power's base or a square root's argument).
+const codes = (r: { ok: boolean; issues?: { code: string }[] }) => (r.ok ? [] : (r.issues ?? []).map(i => i.code));
+const fn = (source: string, tasks: string[], over: Record<string, unknown> = {}) => F.funcSim({ source, xMin: -5, xMax: 5, yMin: -10, yMax: 10, tasks, domainExclusions: [], xIntercepts: [], yIntercept: null, verticalAsymptotes: [], horizontalAsymptotes: [], extrema: [], intervals: [], ...over });
+const accepted = (src: string, tasks: string[], over: Record<string, unknown>) => { const r = buildSimFromSpec(fn(src, tasks, over)); expect(r.ok ? "ok" : JSON.stringify(r.issues), src + " " + JSON.stringify(over)).toBe("ok"); };
+const refused = (src: string, tasks: string[], over: Record<string, unknown>) => expect(buildSimFromSpec(fn(src, tasks, over)).ok, src + " " + JSON.stringify(over)).toBe(false);
+const mn = (x: number, y: number) => ({ kind: "min", x, y }), mx = (x: number, y: number) => ({ kind: "max", x, y });
+
+describe("20F-RF11 MAJOR-1 an extremum on the window's edge is a feature like any other", () => {
+  it("is required when it sits on the edge", () => {
+    refused("x^4-2*x^2", ["extrema"], { xMin: -1, xMax: 1, extrema: [mx(0, 0)] });
+    accepted("x^4-2*x^2", ["extrema"], { xMin: -1, xMax: 1, extrema: [mn(-1, -1), mx(0, 0), mn(1, -1)] });
+    refused("x^3-3*x", ["extrema"], { xMin: -1, xMax: 3, extrema: [mn(1, -2)] });
+    accepted("x^3-3*x", ["extrema"], { xMin: -1, xMax: 3, extrema: [mx(-1, 2), mn(1, -2)] });
+  });
+  it("refuses the key (widen the window) when it sits just beyond the edge", () => {
+    expect(codes(buildSimFromSpec(fn("x^3-3*x", ["extrema"], { xMin: -0.9995, xMax: 3, extrema: [mn(1, -2)] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+});
+
+describe("20F-RF11 MINOR-1 / NOTE-1 the vanishing rule follows the power down to 10⁻¹²", () => {
+  it("a floored cusp is not a root", () => {
+    refused("(x+2)*(abs(x-1.3)^(0.25)+0.001)", ["xIntercepts"], { xIntercepts: [-2, 1.3] });
+    accepted("(x+2)*(abs(x-1.3)^(0.25)+0.001)", ["xIntercepts"], { xIntercepts: [-2] });
+  });
+  it("a root of a very small power is a root", () => {
+    refused("(x+2)*abs(x-1.3)^(0.04)", ["xIntercepts"], { xIntercepts: [-2] });
+    refused("(x+2)*abs(x-1.3333333333333333)^(0.04)", ["xIntercepts"], { xIntercepts: [-2] });
+  });
+});
+
+describe("20F-RF11 MINOR-2 a steep root next to another root is found", () => {
+  it("(x − 8.89)·√|x − 8.74| on [−10, 10]", () => {
+    refused("(x-8.89)*sqrt(abs(x-8.74))", ["xIntercepts"], { xMin: -10, xMax: 10, yMin: -50, yMax: 50, xIntercepts: [8.89] });
+    accepted("(x-8.89)*sqrt(abs(x-8.74))", ["xIntercepts"], { xMin: -10, xMax: 10, yMin: -50, yMax: 50, xIntercepts: [8.74, 8.89] });
+  });
+});
+
+describe("20F-RF11 NOTE-2 touching features in the last grid cell or just beyond the edge", () => {
+  it("a touching root and a double pole between the last sample and the edge, or just past it", () => {
+    refused("(x+1)*(x-4.998)^2", ["xIntercepts"], { xIntercepts: [-1] });
+    accepted("(x+1)*(x-4.998)^2", ["xIntercepts"], { xIntercepts: [-1, 4.998] });
+    refused("1/(x-4.998)^2+1/(x+1)", ["verticalAsymptotes"], { verticalAsymptotes: [-1] });
+    refused("1/(x-5.0005)^2+1/(x+1)", ["verticalAsymptotes"], { verticalAsymptotes: [-1] });
+  });
+});
+
+describe("20F-RF11 the edge strip: features just past the window's edge, up to where the scan beyond the window takes over", () => {
+  it("a root of an even smaller power is still a root where f is exactly 0 at the 12-digit point", () => {
+    refused("(x+2)*abs(x-1.3)^(0.005)", ["xIntercepts"], { xIntercepts: [-2] });
+    accepted("(x+2)*abs(x-1.3)^(0.005)", ["xIntercepts"], { xIntercepts: [-2, 1.3] });
+  });
+  it("two roots in two cells just past the edge (f has the same sign on the edge and 10⁻³ past it)", () => {
+    expect(codes(buildSimFromSpec(fn("(x+0.2)*(x-0.5003)*(x-0.5008)", ["xIntercepts"], { xMin: -0.5, xMax: 0.5, xIntercepts: [-0.2] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a touching root 3·10⁻⁴ past the edge", () => {
+    expect(codes(buildSimFromSpec(fn("(x+1)*(x-5.0003)^2", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a touching root exactly on the first sample past the edge (a dyadic grid: 2⁻¹⁰ apart)", () => {
+    const w = { xMin: -0.9765625, xMax: 0.9765625 };
+    expect(codes(buildSimFromSpec(fn("(x+0.5)*(x-0.9775390625)^2", ["xIntercepts"], { ...w, xIntercepts: [-0.5] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a narrow window: an extremum 5·10⁻⁴ past the edge, 10 grid steps out", () => {
+    const src = "(x-0.0505)^2*(x+0.03)", top = mx(-0.0031667, 0.0000773);
+    expect(codes(buildSimFromSpec(fn(src, ["extrema"], { xMin: -0.05, xMax: 0.05, extrema: [top] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    accepted(src, ["extrema"], { xMin: -0.05, xMax: 0.06, extrema: [top, mn(0.0505, 0)] });
+  });
+});
+
+describe("20F-RF11 the expression's cusps: a steep root whose dip falls between two samples", () => {
+  it("(x − 41.34)·|x − 41.47|^(1/3) and (x − 4.64)·|x² − 4.7²|^0.1 on [−50, 50] (no local minimum of |f| on the grid)", () => {
+    const w = { xMin: -50, xMax: 50 };
+    refused("(x-41.34)*abs(x-41.47)^(1/3)", ["xIntercepts"], { ...w, xIntercepts: [41.34] });
+    accepted("(x-41.34)*abs(x-41.47)^(1/3)", ["xIntercepts"], { ...w, xIntercepts: [41.34, 41.47] });
+    refused("(x-4.64)*abs(x^2-4.7^2)^(0.1)", ["xIntercepts"], { ...w, xIntercepts: [-4.7, 4.64] });
+    accepted("(x-4.64)*abs(x^2-4.7^2)^(0.1)", ["xIntercepts"], { ...w, xIntercepts: [-4.7, 4.64, 4.7] });
+  });
+  it("a cusp just past the edge that is a root, and one that is not (a floor)", () => {
+    expect(codes(buildSimFromSpec(fn("(x+1)*abs(x-5.0004)^(1/3)", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    expect(codes(buildSimFromSpec(fn("(x+1)*abs(x-5.7)^(1/3)", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    accepted("(x+1)*(abs(x-5.7)^(0.25)+0.001)", ["xIntercepts"], { xIntercepts: [-1] });
+  });
+});

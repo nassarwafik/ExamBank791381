@@ -113,6 +113,7 @@ const parseBound = (s) => {
     return t !== "" && Number.isFinite(n) ? n : null;
 };
 const PROBE_N = 2001;
+const STRIP_MAX = 2000;
 exports.PROBE_BUDGET = 20000;
 exports.PROBE_NODE_BUDGET = 600000;
 const COSTLY_NODE = 10;
@@ -223,9 +224,10 @@ function collectGuards(ast, out = [], seen = new Set()) {
         collectGuards(a, out, seen);
     return out;
 }
+const VANISH_STEPS = [1e-4, 1e-6, 1e-8, 1e-10, 1e-12];
 function vanishesAt(g, m, sides = [-1, 1]) {
     for (const s of sides) {
-        const a = [1e-2, 1e-4, 1e-6, 1e-8].map(d => g(m + s * d * Math.max(1, Math.abs(m))));
+        const a = VANISH_STEPS.map(d => g(m + s * d * Math.max(1, Math.abs(m))));
         if (a.some(t => t === null))
             return false;
         const v = a.map(t => Math.abs(t));
@@ -233,12 +235,23 @@ function vanishesAt(g, m, sides = [-1, 1]) {
             continue;
         if (v.some(t => t === 0))
             return false;
-        const p = [0, 1, 2].map(k => Math.log(v[k] / v[k + 1]) / Math.log(100));
-        if (!p.every(q => q > 0.05) || Math.min(...p) < 0.75 * Math.max(...p))
+        const p = [0, 1, 2, 3].map(k => Math.log(v[k] / v[k + 1]) / Math.log(100));
+        if (!p.every(q => q > 0.01) || Math.min(...p) < 0.75 * Math.max(...p))
             return false;
     }
     return true;
 }
+function argMin(h, a, b) {
+    for (let k = 0; k < 120 && b - a > 4 * Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)); k++) {
+        const l = a + (b - a) / 3, r = b - (b - a) / 3;
+        if (h(l) > h(r))
+            a = l;
+        else
+            b = r;
+    }
+    return (a + b) / 2;
+}
+const absOr = (g) => (x) => { const v = g(x); return v === null ? Infinity : Math.abs(v); };
 function zerosOf(g, xs) {
     const z = [], put = (x) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v))))
         z.push(v); };
@@ -289,17 +302,7 @@ function zerosOf(g, xs) {
             put((a + b) / 2);
         }
         else if (pp && p && Math.abs(p.v) <= Math.abs(pp.v) && Math.abs(p.v) <= Math.abs(v) && (Math.abs(p.v) < Math.abs(pp.v) || Math.abs(p.v) < Math.abs(v)) && Math.sign(pp.v) === Math.sign(v)) {
-            let a = pp.x, b = x;
-            for (let k = 0; k < 60; k++) {
-                const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r);
-                if (gl === null || gr === null)
-                    break;
-                if (Math.abs(gl) > Math.abs(gr))
-                    a = l;
-                else
-                    b = r;
-            }
-            const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v));
+            const m = argMin(absOr(g), pp.x, x), gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v));
             if (g(sn) === 0)
                 put(sn);
             else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || vanishesAt(g, m)))
@@ -311,28 +314,45 @@ function zerosOf(g, xs) {
     return z;
 }
 const GUARD_MAX = 12;
-function guardInfo(ast, xs) {
+function guardInfo(ast, xs, wantCusps = false) {
     const gs = collectGuards(ast);
     if (gs.length > GUARD_MAX || gs.reduce((t, g) => t + expressionCost(g.node) + (g.exp ? expressionCost(g.exp) : 0), 0) * (xs.length + 400) > exports.PROBE_NODE_BUDGET)
         return null;
     const val = (n, x) => { const r = (0, functionStudyModel_1.evaluateFunctionAt)(n, x); return r.ok ? r.value : null; };
-    const excluded = [];
+    const excluded = [], cusps = [];
+    const keep = (list, z) => { if (!list.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z))))
+        list.push(z); return list.length <= 4 * KEY_CAP; };
     for (const g of gs) {
-        if (g.kind === "sqrt")
+        if (g.kind === "sqrt" && !wantCusps)
             continue;
         for (const z of zerosOf(x => val(g.node, x), xs)) {
+            if (g.kind === "sqrt") {
+                if (!keep(cusps, z))
+                    return null;
+                continue;
+            }
             if (g.kind === "pow") {
                 const e = g.exp ? val(g.exp, z) : null;
-                if (e !== null && e >= 0)
+                if (e !== null && e >= 0) {
+                    if (wantCusps && e > 0 && !keep(cusps, z))
+                        return null;
                     continue;
+                }
             }
-            if (!excluded.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z))))
-                excluded.push(z);
-            if (excluded.length > 4 * KEY_CAP)
+            if (!keep(excluded, z))
                 return null;
         }
     }
-    return { excluded, open: excluded };
+    return { excluded, open: excluded, cusps };
+}
+function rootAtCusp(at, z) {
+    const v = at(z);
+    if (v === null)
+        return false;
+    if (Math.abs(v) < 1e-9)
+        return true;
+    const d = 1e-9 * Math.max(1, Math.abs(z));
+    return vanishesAt(at, argMin(absOr(at), z - d, z + d));
 }
 function edgeIsRoot(at, e, dir, open) {
     const f0 = at(e);
@@ -358,7 +378,11 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
         let def = null, last = null, slope = 0, prevX = edge, zeroAt = null;
         let pp = null, p = null;
         const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));
-        const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge, ...xs]) : null;
+        const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge - dir * 1e-3, edge, ...xs], wantRoots) : null;
+        if (wantRoots)
+            for (const z of gi ? gi.cusps : [])
+                if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z))
+                    return z;
         for (const z of gi ? gi.excluded : []) {
             if (dir * (z - edge) <= 0)
                 continue;
@@ -443,19 +467,9 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
                 }
             }
             if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {
-                let lo = pp.x, hi = x;
-                for (let t = 0; t < 60; t++) {
-                    const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3, fa = at(a), fb = at(b);
-                    if (fa === null || fb === null)
-                        break;
-                    if (Math.abs(fa) > Math.abs(fb))
-                        lo = a;
-                    else
-                        hi = b;
-                }
-                const m = at((lo + hi) / 2);
-                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, (lo + hi) / 2)))
-                    return (lo + hi) / 2;
+                const z = argMin(absOr(at), pp.x, x), m = at(z);
+                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)))
+                    return z;
             }
             pp = p;
             p = { x, a: Math.abs(v) };
@@ -472,16 +486,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         throw new ProbeStop("budget"); return rawAt(x); };
     const at = x => { const v = atRaw(x); return v !== null && Number.isFinite(v) ? v : null; };
     const g = (x) => { const v = at(x); return v === null ? Infinity : Math.abs(v); };
-    const ternary = (lo, hi, f, max) => {
-        for (let k = 0; k < 80; k++) {
-            const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3;
-            if (max ? f(a) < f(b) : f(a) > f(b))
-                lo = a;
-            else
-                hi = b;
-        }
-        return (lo + hi) / 2;
-    };
+    const ternary = (lo, hi, f, max) => argMin(max ? x => -f(x) : f, lo, hi);
     const roots = [], points = [], poles = [], extrema = [], limits = [], slope = [], edges = [];
     const add = (list, x, why) => { if (list.some(v => Math.abs(v - x) < 1e-3))
         return; list.push(x); if (list.length > KEY_CAP && need[why])
@@ -535,6 +540,14 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         }
         return (b + c) / 2;
     };
+    const touchingRoot = (p, y, n, xl, xr) => {
+        const noise = 1e-12 * Math.max(1, Math.abs(y));
+        if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)))
+            return;
+        const x = ternary(xl, xr, g, false);
+        if (g(x) < 1e-9 || at(Number(x.toPrecision(12))) === 0 || vanishesAt(at, x))
+            add(roots, x, "roots");
+    };
     try {
         const step = (xMax - xMin) / (PROBE_N - 1);
         const xs = [], ys = [];
@@ -548,10 +561,14 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         }
         const singular = need.points || need.poles || need.extrema || need.slope;
         if (ast !== undefined && (singular || need.roots)) {
-            const gi = guardInfo(ast, xs);
+            const gi = guardInfo(ast, [xMin - step, ...xs, xMax + step], need.roots);
             if (gi === null)
                 throw new ProbeStop("budget");
             guardOpen = gi.open;
+            if (need.roots)
+                for (const z of gi.cusps)
+                    if (rootAtCusp(at, z))
+                        add(roots, z, "roots");
             if (singular)
                 for (const z of gi.excluded) {
                     if (z < xMin - 1e-9 || z > xMax + 1e-9)
@@ -660,25 +677,67 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
             const p = i > 0 ? ys[i - 1] : null;
             if (p === null || n === null || Math.sign(p) !== Math.sign(y) || Math.sign(n) !== Math.sign(y))
                 continue;
-            const noise = 1e-12 * Math.max(1, Math.abs(y));
-            if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)) {
-                const x = ternary(xs[i - 1], xs[i + 1], g, false);
-                if (g(x) < 1e-9 || vanishesAt(at, x))
-                    add(roots, x, "roots");
-            }
+            if (need.roots)
+                touchingRoot(p, y, n, xs[i - 1], xs[i + 1]);
         }
+        const B = Math.min(STRIP_MAX, Math.ceil(1.1e-3 / step) + 2), beyondY = new Map();
+        const X = (j) => (j < 0 ? xMin + j * step : j >= PROBE_N ? xMax + (j - PROBE_N + 1) * step : xs[j]);
+        const Y = (j) => { if (j >= 0 && j < PROBE_N)
+            return ys[j]; let v = beyondY.get(j); if (v === undefined)
+            beyondY.set(j, (v = at(X(j)))); return v; };
+        if (need.roots)
+            for (const [lo, hi] of [[-B, 0], [PROBE_N - 1, PROBE_N - 1 + B]])
+                for (let j = lo; j <= hi; j++) {
+                    const y = Y(j);
+                    if (y === null)
+                        continue;
+                    if (y === 0) {
+                        if (j < 0 || j >= PROBE_N)
+                            add(roots, X(j), "roots");
+                        continue;
+                    }
+                    const q = j < hi ? Y(j + 1) : null;
+                    if (q !== null && q !== 0 && Math.sign(q) !== Math.sign(y)) {
+                        let a = X(j), b = X(j + 1), fa = y, fb = q, gap = false;
+                        for (let k = 0; k < 80; k++) {
+                            const m = (a + b) / 2, fm = at(m);
+                            if (fm === null) {
+                                gap = true;
+                                break;
+                            }
+                            if (fm === 0) {
+                                a = b = m;
+                                fa = fb = 0;
+                                break;
+                            }
+                            if (Math.sign(fm) === Math.sign(fa)) {
+                                a = m;
+                                fa = fm;
+                            }
+                            else {
+                                b = m;
+                                fb = fm;
+                            }
+                        }
+                        if (!gap && Math.min(Math.abs(fa), Math.abs(fb)) <= 1e-6)
+                            add(roots, (a + b) / 2, "roots");
+                    }
+                    const p = Y(j - 1), n = Y(j + 1);
+                    if (p !== null && n !== null && Math.sign(p) === Math.sign(y) && Math.sign(n) === Math.sign(y))
+                        touchingRoot(p, y, n, X(j - 1), X(j + 1));
+                }
         const nearSingular = (x, d) => poles.some(v => Math.abs(v - x) < d) || points.some(v => Math.abs(v - x) < d);
         if (need.extrema || need.slope)
-            for (let i = 1; i < PROBE_N - 1; i++) {
-                const p = ys[i - 1], y = ys[i], n = ys[i + 1];
-                if (p === null || y === null || n === null || nearSingular(xs[i], 3 * step))
+            for (let i = -B; i < PROBE_N + B; i++) {
+                const p = Y(i - 1), y = Y(i), n = Y(i + 1);
+                if (p === null || y === null || n === null || nearSingular(X(i), 3 * step))
                     continue;
                 const eps = 1e-12 * Math.max(1, Math.abs(y));
                 let kind = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null, m = 1;
                 if (!kind && Math.abs(p - y) <= eps && Math.abs(n - y) <= eps)
                     for (const k of [4, 16]) {
-                        const pk = i - k >= 0 ? ys[i - k] : null, nk = i + k < PROBE_N ? ys[i + k] : null;
-                        if (pk === null || nk === null || nearSingular(xs[i], (k + 2) * step))
+                        const pk = Y(i - k), nk = Y(i + k);
+                        if (pk === null || nk === null || nearSingular(X(i), (k + 2) * step))
                             break;
                         if (pk - y > eps && nk - y > eps) {
                             kind = "min";
@@ -696,7 +755,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                 if (!kind)
                     continue;
                 const fx = (x) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
-                const x = flatCentre(ternary(xs[i - m], xs[i + m], fx, kind === "max"), fx, step);
+                const x = flatCentre(ternary(X(i - m), X(i + m), fx, kind === "max"), fx, step);
                 const v = fx(x), side = Math.max(...[1, 4, 16].map(m => Math.min(Math.abs(v - fx(x - m * step)), Math.abs(v - fx(x + m * step)))));
                 if (side > 1e-12 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) {
                     extrema.push({ kind, x });
@@ -857,7 +916,8 @@ function buildFunction(f, path) {
             return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
         if (ft.overflow)
             return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
-        const beyond = featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
+        const past = [...ft.roots, ...ft.extrema.map(e => e.x)].find(x => x < xMin - 1e-6 * Math.max(1, Math.abs(xMin)) || x > xMax + 1e-6 * Math.max(1, Math.abs(xMax)));
+        const beyond = past ?? featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
         if (beyond !== null)
             return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);
         if (tasks.monotonicIntervals)

@@ -109,6 +109,7 @@ type Probe = (x: number) => number | null;
 export type FunctionFeatures = { roots: number[]; points: number[]; poles: number[]; extrema: { kind: "min" | "max"; x: number }[]; limits: number[]; slope: { x: number; dir: 1 | -1 }[]; edges: number[]; overflow: null | "budget" | "uncertain" | "roots" | "points" | "poles" | "extrema" };
 export type FeatureNeeds = { roots: boolean; points: boolean; poles: boolean; extrema: boolean; limits: boolean; slope: boolean };
 const PROBE_N = 2001;
+const STRIP_MAX = 2000;                                                         // samples past each edge (RF11: 1.1·10⁻³ / step + 2, at most)
 export const PROBE_BUDGET = 20000;                                              // evaluations per simulator (sampling uses 2001)
 export const PROBE_NODE_BUDGET = 600000;                                        // …and expression-node evaluations (a large expression gets fewer)
 /** The cost weight of one evaluation of a compiled expression: 1 per arithmetic node, 10 per function call or power (exp / log / pow /
@@ -226,22 +227,32 @@ function collectGuards(ast: unknown, out: Guard[] = [], seen = new Set<string>()
   for (const a of args) collectGuards(a, out, seen);
   return out;
 }
-/** g VANISHES at m (Review Fix 10) when |g| falls like a power of the distance as x closes in on m, on both sides (or on `sides` only, at a
- *  domain edge): |g| at 10⁻², 10⁻⁴, 10⁻⁶ and 10⁻⁸ from m shrinks by a steady factor each time (exponent > 0.05, the three within 25 % of
- *  each other). √|x − a|, |x − a|^0.25 and (x − a)² vanish; a shallow minimum (x² + 10⁻⁷) or an offset cusp (|x − a| + 10⁻⁷) does not.
- *  One rule for every "is it zero here" question: f's touching roots and the guards' zeros, inside and beyond the window. */
+/** g VANISHES at m (Review Fixes 10–11) when |g| falls like a power of the distance as x closes in on m, on both sides (or on `sides` only,
+ *  at a domain edge): |g| at 10⁻⁴, 10⁻⁶, 10⁻⁸, 10⁻¹⁰ and 10⁻¹² from m (relative to max(1, |m|)) shrinks by a steady factor each time
+ *  (exponent > 0.01, the four within 25 % of each other). √|x − a|, |x − a|^0.04 and (x − a)² vanish; a shallow minimum (x² + 10⁻⁷), an
+ *  offset cusp (|x − a| + 10⁻⁷) or a floored one (|x − a|^0.25 + 10⁻³) does not — a floor shows as the factor shrinks toward 10⁻¹². The
+ *  samples start at 10⁻⁴ so that another root 1 % away does not bend them (RF11). One rule for every "is it zero here" question: f's
+ *  touching roots and the guards' zeros, inside and beyond the window. */
+const VANISH_STEPS = [1e-4, 1e-6, 1e-8, 1e-10, 1e-12];
 export function vanishesAt(g: (x: number) => number | null, m: number, sides: readonly number[] = [-1, 1]): boolean {
   for (const s of sides) {
-    const a = [1e-2, 1e-4, 1e-6, 1e-8].map(d => g(m + s * d * Math.max(1, Math.abs(m))));
+    const a = VANISH_STEPS.map(d => g(m + s * d * Math.max(1, Math.abs(m))));
     if (a.some(t => t === null)) return false;
     const v = a.map(t => Math.abs(t as number));
     if (v.every(t => t === 0)) continue;                                          // identically 0 beside m
     if (v.some(t => t === 0)) return false;
-    const p = [0, 1, 2].map(k => Math.log(v[k] / v[k + 1]) / Math.log(100));
-    if (!p.every(q => q > 0.05) || Math.min(...p) < 0.75 * Math.max(...p)) return false;
+    const p = [0, 1, 2, 3].map(k => Math.log(v[k] / v[k + 1]) / Math.log(100));
+    if (!p.every(q => q > 0.01) || Math.min(...p) < 0.75 * Math.max(...p)) return false;
   }
   return true;
 }
+/** The minimum of h on [a, b] by ternary search, down to the last digits of x (at most 120 steps): the vanishing rule samples 10⁻¹²
+ *  from the point it is given, so the point must be that close to the zero (RF11). */
+function argMin(h: (x: number) => number, a: number, b: number): number {
+  for (let k = 0; k < 120 && b - a > 4 * Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)); k++) { const l = a + (b - a) / 3, r = b - (b - a) / 3; if (h(l) > h(r)) a = l; else b = r; }
+  return (a + b) / 2;
+}
+const absOr = (g: (x: number) => number | null) => (x: number) => { const v = g(x); return v === null ? Infinity : Math.abs(v); };
 function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
   const z: number[] = [], put = (x: number) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v)))) z.push(v); };
   // a zero at the EDGE of g's own domain (√(x + 2) at −2 — Review Fix 9): g is defined on one side only and vanishes there
@@ -263,10 +274,8 @@ function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
       put((a + b) / 2);
     } else if (pp && p && Math.abs(p.v) <= Math.abs(pp.v) && Math.abs(p.v) <= Math.abs(v) && (Math.abs(p.v) < Math.abs(pp.v) || Math.abs(p.v) < Math.abs(v)) && Math.sign(pp.v) === Math.sign(v)) {
       // touching zero — a local minimum of |g|, ties included (a zero exactly halfway between two samples leaves them equal — RF9)
-      let a = pp.x, b = x;
-      for (let k = 0; k < 60; k++) { const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r); if (gl === null || gr === null) break; if (Math.abs(gl) > Math.abs(gr)) a = l; else b = r; }
       // a zero: exactly 0 at the point rounded to 12 digits, negligible at the minimum, or vanishing like a power there (RF10)
-      const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v));
+      const m = argMin(absOr(g), pp.x, x), gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v));
       if (g(sn) === 0) put(sn);
       else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || vanishesAt(g, m))) put(m);
     }
@@ -275,22 +284,36 @@ function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
   return z;
 }
 const GUARD_MAX = 12;
-type GuardInfo = { excluded: number[]; open: number[] };
+type GuardInfo = { excluded: number[]; open: number[]; cusps: number[] };
 /** The excluded zeros (also the open domain edges) of every guard, sampled on `xs`; null when the guards are too many or too costly. */
-function guardInfo(ast: unknown, xs: number[]): GuardInfo | null {
+function guardInfo(ast: unknown, xs: number[], wantCusps = false): GuardInfo | null {
   const gs = collectGuards(ast);
   if (gs.length > GUARD_MAX || gs.reduce((t, g) => t + expressionCost(g.node) + (g.exp ? expressionCost(g.exp) : 0), 0) * (xs.length + 400) > PROBE_NODE_BUDGET) return null;
   const val = (n: ExprNode, x: number) => { const r = evaluateFunctionAt(n, x); return r.ok ? r.value : null; };
-  const excluded: number[] = [];
+  const excluded: number[] = [], cusps: number[] = [];
+  const keep = (list: number[], z: number) => { if (!list.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z)))) list.push(z); return list.length <= 4 * KEY_CAP; };
   for (const g of gs) {
-    if (g.kind === "sqrt") continue;                                                // √0 = 0: a closed edge, never an exclusion
+    if (g.kind === "sqrt" && !wantCusps) continue;                                  // √0 = 0: a closed edge, never an exclusion
     for (const z of zerosOf(x => val(g.node, x), xs)) {
-      if (g.kind === "pow") { const e = g.exp ? val(g.exp, z) : null; if (e !== null && e >= 0) continue; }   // 0^e excludes only for e < 0
-      if (!excluded.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z)))) excluded.push(z);
-      if (excluded.length > 4 * KEY_CAP) return null;
+      if (g.kind === "sqrt") { if (!keep(cusps, z)) return null; continue; }
+      if (g.kind === "pow") {                                                       // 0^e excludes only for e < 0
+        const e = g.exp ? val(g.exp, z) : null;
+        if (e !== null && e >= 0) { if (wantCusps && e > 0 && !keep(cusps, z)) return null; continue; }
+      }
+      if (!keep(excluded, z)) return null;
     }
   }
-  return { excluded, open: excluded };
+  return { excluded, open: excluded, cusps };
+}
+/** A CUSP of the expression (Review Fix 11) — a zero of a power's base (e > 0) or of a square root's argument — is where a steep root
+ *  hides between two samples ((x − 41.34)·|x − 41.47|^(1/3) dips to 0 between 41.45 and 41.5 without a local minimum on the grid). It is a
+ *  root when f is (almost) 0 there or vanishes like a power at the point closest to it (its 12-digit rounding is refined first). */
+function rootAtCusp(at: (x: number) => number | null, z: number): boolean {
+  const v = at(z);
+  if (v === null) return false;
+  if (Math.abs(v) < 1e-9) return true;
+  const d = 1e-9 * Math.max(1, Math.abs(z));
+  return vanishesAt(at, argMin(absOr(at), z - d, z + d));
 }
 /** A domain edge e (f defined on the `dir` side) is a ROOT when |f| shrinks steadily toward it (10⁻² … 10⁻⁸), is negligible at e, and
  *  the edge itself belongs to the domain: with the expression's guards (Review Fix 8) an edge is OPEN when it is a zero of a denominator
@@ -315,7 +338,9 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
     let pp: { x: number; a: number } | null = null, p: { x: number; a: number } | null = null;                     // |f| history (touching roots)
     const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));                      // strictly beyond the window
     // the expression's own exclusions beyond the window (a removable hole, a pole) — Review Fix 8
-    const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge, ...xs]) : null;
+    // (one sample inside the window too: a zero in the first cell beyond the edge is then a local minimum of |g| — RF11)
+    const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge - dir * 1e-3, edge, ...xs], wantRoots) : null;
+    if (wantRoots) for (const z of gi ? gi.cusps : []) if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z)) return z;   // RF11
     for (const z of gi ? gi.excluded : []) {
       if (dir * (z - edge) <= 0) continue;
       const d = 1e-7 * Math.max(1, Math.abs(z));
@@ -349,10 +374,8 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
         if (Math.abs(dv) > 1e-9 * Math.max(1, Math.abs(v), Math.abs(last.v))) { const sg = Math.sign(dv); if (slope !== 0 && sg !== slope) return x; slope = sg; }
       }
       if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {                                             // a local minimum of |f|
-        let lo = pp.x, hi = x;
-        for (let t = 0; t < 60; t++) { const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3, fa = at(a), fb = at(b); if (fa === null || fb === null) break; if (Math.abs(fa) > Math.abs(fb)) lo = a; else hi = b; }
-        const m = at((lo + hi) / 2);
-        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, (lo + hi) / 2))) return (lo + hi) / 2;
+        const z = argMin(absOr(at), pp.x, x), m = at(z);
+        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z))) return z;
       }
       pp = p; p = { x, a: Math.abs(v) }; last = { x, v };
     }
@@ -366,10 +389,7 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
   const atRaw: Probe = x => { if (++evaluations > budget) throw new ProbeStop("budget"); return rawAt(x); };       // keeps Infinity (overflow)
   const at: Probe = x => { const v = atRaw(x); return v !== null && Number.isFinite(v) ? v : null; };
   const g = (x: number) => { const v = at(x); return v === null ? Infinity : Math.abs(v); };
-  const ternary = (lo: number, hi: number, f: (x: number) => number, max: boolean) => {
-    for (let k = 0; k < 80; k++) { const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3; if (max ? f(a) < f(b) : f(a) > f(b)) lo = a; else hi = b; }
-    return (lo + hi) / 2;
-  };
+  const ternary = (lo: number, hi: number, f: (x: number) => number, max: boolean) => argMin(max ? x => -f(x) : f, lo, hi);
   const roots: number[] = [], points: number[] = [], poles: number[] = [], extrema: { kind: "min" | "max"; x: number }[] = [], limits: number[] = [], slope: { x: number; dir: 1 | -1 }[] = [], edges: number[] = [];
   const add = (list: number[], x: number, why: "roots" | "points" | "poles") => { if (list.some(v => Math.abs(v - x) < 1e-3)) return; list.push(x); if (list.length > KEY_CAP && need[why]) throw new ProbeStop(why); };
   // a candidate that lands on an OVERFLOW PLATEAU (|f| beyond the evaluator's range around a steep pole) is moved to the plateau's centre —
@@ -397,6 +417,15 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     for (let k = 0; k < 50; k++) { const m = (c + d) / 2; if (same(m)) c = m; else d = m; }
     return (b + c) / 2;
   };
+  // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample — nor is the
+  // evaluator's rounding noise along it); a root when |f| is negligible there, exactly 0 at the point rounded to 12 digits (RF11), or
+  // vanishing like a power (a steep touching root, x·√|x − 1.3| — RF10)
+  const touchingRoot = (p: number, y: number, n: number, xl: number, xr: number) => {
+    const noise = 1e-12 * Math.max(1, Math.abs(y));
+    if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise))) return;
+    const x = ternary(xl, xr, g, false);
+    if (g(x) < 1e-9 || at(Number(x.toPrecision(12))) === 0 || vanishesAt(at, x)) add(roots, x, "roots");
+  };
   try {
     const step = (xMax - xMin) / (PROBE_N - 1);
     const xs: number[] = [], ys: (number | null)[] = [];
@@ -404,8 +433,9 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : xMin + i * step; const v = atRaw(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); overflowAt.push(v !== null && !Number.isFinite(v)); }
     const singular = need.points || need.poles || need.extrema || need.slope;     // extrema / slopes skip the neighbourhood of poles
     if (ast !== undefined && (singular || need.roots)) {                          // the expression's own exclusions (Review Fix 8)
-      const gi = guardInfo(ast, xs); if (gi === null) throw new ProbeStop("budget");
+      const gi = guardInfo(ast, [xMin - step, ...xs, xMax + step], need.roots); if (gi === null) throw new ProbeStop("budget");   // + the edge cells (RF11)
       guardOpen = gi.open;
+      if (need.roots) for (const z of gi.cusps) if (rootAtCusp(at, z)) add(roots, z, "roots");   // a steep root between two samples (RF11)
       if (singular) for (const z of gi.excluded) {
         if (z < xMin - 1e-9 || z > xMax + 1e-9) continue;
         const d = 1e-7 * Math.max(1, Math.abs(z));
@@ -454,27 +484,41 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       }
       const p = i > 0 ? ys[i - 1] : null;
       if (p === null || n === null || Math.sign(p) !== Math.sign(y) || Math.sign(n) !== Math.sign(y)) continue;
-      // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample — nor is the
-      // evaluator's rounding noise along it)
-      const noise = 1e-12 * Math.max(1, Math.abs(y));
-      if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)) {
-        const x = ternary(xs[i - 1], xs[i + 1], g, false);
-        if (g(x) < 1e-9 || vanishesAt(at, x)) add(roots, x, "roots");               // a steep touching root (x·√|x − 1.3|, RF10)
-      }
+      if (need.roots) touchingRoot(p, y, n, xs[i - 1], xs[i + 1]);
       // an even pole between samples needs no search of its own: it is a zero of a denominator, a negative power's base or a log argument,
       // found by the guards (Review Fix 8)
     }
+    // THE EDGE CELLS AND JUST BEYOND (Review Fix 11): the first and the last sample have a neighbour on one side only, so an extremum or a
+    // touching root ON an edge (x⁴ − 2x² on [−1, 1]), in the last cell or just past it was never examined. The grid is continued B steps
+    // past each edge (1.1·10⁻³ and more, where the scan beyond the window takes over): what is found there is recorded like any feature —
+    // on the edge it belongs to the key, past it the key is refused ("widen the window", buildFunction).
+    const B = Math.min(STRIP_MAX, Math.ceil(1.1e-3 / step) + 2), beyondY = new Map<number, number | null>();
+    const X = (j: number) => (j < 0 ? xMin + j * step : j >= PROBE_N ? xMax + (j - PROBE_N + 1) * step : xs[j]);
+    const Y = (j: number) => { if (j >= 0 && j < PROBE_N) return ys[j]; let v = beyondY.get(j); if (v === undefined) beyondY.set(j, (v = at(X(j)))); return v; };
+    if (need.roots) for (const [lo, hi] of [[-B, 0], [PROBE_N - 1, PROBE_N - 1 + B]] as const) for (let j = lo; j <= hi; j++) {
+      const y = Y(j);
+      if (y === null) continue;
+      if (y === 0) { if (j < 0 || j >= PROBE_N) add(roots, X(j), "roots"); continue; }
+      const q = j < hi ? Y(j + 1) : null;                                         // a sign change past the edge (the cells inside are scanned above)
+      if (q !== null && q !== 0 && Math.sign(q) !== Math.sign(y)) {
+        let a = X(j), b = X(j + 1), fa = y, fb = q, gap = false;
+        for (let k = 0; k < 80; k++) { const m = (a + b) / 2, fm = at(m); if (fm === null) { gap = true; break; } if (fm === 0) { a = b = m; fa = fb = 0; break; } if (Math.sign(fm) === Math.sign(fa)) { a = m; fa = fm; } else { b = m; fb = fm; } }
+        if (!gap && Math.min(Math.abs(fa), Math.abs(fb)) <= 1e-6) add(roots, (a + b) / 2, "roots");
+      }
+      const p = Y(j - 1), n = Y(j + 1);
+      if (p !== null && n !== null && Math.sign(p) === Math.sign(y) && Math.sign(n) === Math.sign(y)) touchingRoot(p, y, n, X(j - 1), X(j + 1));
+    }
     const nearSingular = (x: number, d: number) => poles.some(v => Math.abs(v - x) < d) || points.some(v => Math.abs(v - x) < d);
-    if (need.extrema || need.slope) for (let i = 1; i < PROBE_N - 1; i++) {
-      const p = ys[i - 1], y = ys[i], n = ys[i + 1];
-      if (p === null || y === null || n === null || nearSingular(xs[i], 3 * step)) continue;
+    if (need.extrema || need.slope) for (let i = -B; i < PROBE_N + B; i++) {               // the edge cells and past them too (RF11)
+      const p = Y(i - 1), y = Y(i), n = Y(i + 1);
+      if (p === null || y === null || n === null || nearSingular(X(i), 3 * step)) continue;
       const eps = 1e-12 * Math.max(1, Math.abs(y));
       let kind: "min" | "max" | null = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null, m = 1;
       // both neighbours equal to f within rounding (a very flat extremum beside a large value, (x−2)⁸ + 1000): compare 4, then 16 samples
       // away, where it must rise (or fall) on BOTH sides — a plateau or a slope does not (Review Fix 7)
       if (!kind && Math.abs(p - y) <= eps && Math.abs(n - y) <= eps) for (const k of [4, 16]) {
-        const pk = i - k >= 0 ? ys[i - k] : null, nk = i + k < PROBE_N ? ys[i + k] : null;
-        if (pk === null || nk === null || nearSingular(xs[i], (k + 2) * step)) break;
+        const pk = Y(i - k), nk = Y(i + k);
+        if (pk === null || nk === null || nearSingular(X(i), (k + 2) * step)) break;
         if (pk - y > eps && nk - y > eps) { kind = "min"; m = k; break; }
         if (y - pk > eps && y - nk > eps) { kind = "max"; m = k; break; }
         if (Math.abs(pk - y) > eps || Math.abs(nk - y) > eps) break;
@@ -483,7 +527,7 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       const fx = (x: number) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
       // a very flat extremum ((x−2)⁶ + 10) is equal to f(x) over a stretch of rounding: the search lands anywhere on it, so it is moved to
       // the stretch's centre; its rise is measured 1, 4 and 16 steps away (x⁵ − 5x⁴ + 50 at 0 rises 3·10⁻⁹ one step away) — Review Fix 7
-      const x = flatCentre(ternary(xs[i - m], xs[i + m], fx, kind === "max"), fx, step);
+      const x = flatCentre(ternary(X(i - m), X(i + m), fx, kind === "max"), fx, step);
       const v = fx(x), side = Math.max(...[1, 4, 16].map(m => Math.min(Math.abs(v - fx(x - m * step)), Math.abs(v - fx(x + m * step)))));
       if (side > 1e-12 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) { extrema.push({ kind, x }); if (extrema.length > KEY_CAP && need.extrema) throw new ProbeStop("extrema"); }
     }
@@ -583,7 +627,9 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     if (ft.overflow === "uncertain") return fail("AI_FUNCTION_TOO_COMPLEX", "لا يمكن التحقق آليًا من بعض نقاط الدالة داخل النافذة (قيم تتجاوز حدود الحساب أو سلوك غير محسوم)؛ اختر دالة أبسط أو أنشئ السؤال يدويًا.", path);
     if (ft.overflow === "budget") return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
     if (ft.overflow) return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
-    const beyond = featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
+    // a root or an extremum the probe found PAST an edge (its edge cells, RF11) — further than the search's precision — is outside the window
+    const past = [...ft.roots, ...ft.extrema.map(e => e.x)].find(x => x < xMin - 1e-6 * Math.max(1, Math.abs(xMin)) || x > xMax + 1e-6 * Math.max(1, Math.abs(xMax)));
+    const beyond = past ?? featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
     if (beyond !== null) return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);
     // the stretch just beyond each window edge belongs to the key too (a pole ON the edge starts one: 1/(x² − 4) on [−2, 2], RF10); the scan
     // beyond the window has ruled out any change of slope further out

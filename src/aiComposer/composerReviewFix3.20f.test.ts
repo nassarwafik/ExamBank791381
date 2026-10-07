@@ -26,10 +26,12 @@ describe("20F-RF3 MINOR-1 the probe budget is weighted by the expression's size"
 
 describe("20F-RF3 task gating: only the enabled tasks' features are located", () => {
   it("a zigzag with two roots but dozens of extrema keeps its roots-only key", () => {
-    // (x − 0.5)·(2 + zigzag): one root, many slope changes — probing every feature exhausts the budget, roots alone do not
+    // (x − 0.5)·(2 + zigzag): one root, many slope changes — probing the extrema refuses the key, roots alone do not. Since Review Fix 11
+    // the searches stop at the precision of x (fewer evaluations than a fixed 80 steps), so the probe now reaches the 11th extremum —
+    // more than a key can hold — before its budget runs out: still refused, now with the reason that names it.
     const gate = "(x-0.5)*(2+abs(abs(abs(abs(abs(abs(x)-2.5)-1.25)-0.625)-0.3125)-0.15625))";
     expect(buildSimFromSpec(fn(gate, ["xIntercepts"], { xIntercepts: [0.5] })).ok).toBe(true);
-    expect(codes(buildSimFromSpec(fn(gate, ["xIntercepts", "extrema"], { xIntercepts: [0.5] })))).toEqual(["AI_FUNCTION_TOO_COMPLEX"]);
+    expect(codes(buildSimFromSpec(fn(gate, ["xIntercepts", "extrema"], { xIntercepts: [0.5] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
   });
 });
 
