@@ -328,11 +328,12 @@ function guardInfo(ast: unknown, xs: number[], wantCusps = false): GuardInfo | n
 }
 /** A CUSP of the expression (Review Fix 11) — a zero of a power's base (e > 0) or of a square root's argument — is where a steep root
  *  hides between two samples ((x − 41.34)·|x − 41.47|^(1/3) dips to 0 between 41.45 and 41.5 without a local minimum on the grid). It is a
- *  root when f is exactly 0 there (|x − 1.3|^0.005 at 1.3), negligible there (a cancelling expression, RF12) or vanishes like a power (the
- *  zero's 12-digit rounding is off by at most half of the vanishing rule's smallest step, which keeps the four steps within 25 %). */
+ *  root when f is negligible there (exactly 0 — |x − 1.3|^0.005 at 1.3 — or a cancelling expression's noise, RF12) or vanishes like a
+ *  power (the zero's 12-digit rounding is off by at most half of the vanishing rule's smallest step, which keeps the four steps within
+ *  25 %: |x − a|^0.04 at an irrational a). The cusps carry every steep root — a power or a root is what makes a root steep — so f's own
+ *  touching minima need only the level and the negligible rule (RF12). */
 function rootAtCusp(at: (x: number) => number | null, z: number): boolean {
-  const v = at(z);
-  return (v !== null && (v === 0 || vanishesAt(at, z))) || negligibleAt(at, z);
+  return negligibleAt(at, z) || (at(z) !== null && vanishesAt(at, z));
 }
 /** A domain edge e (f defined on the `dir` side) is a ROOT when |f| shrinks steadily toward it (10⁻² … 10⁻⁸), is negligible at e, and
  *  the edge itself belongs to the domain: with the expression's guards (Review Fix 8) an edge is OPEN when it is a zero of a denominator
@@ -402,8 +403,8 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
       }
       if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {                                             // a local minimum of |f|
         const z = argMin(absOr(at), pp.x, x), m = at(z);
-        // (the level is relative to the samples 2.6 % away, which absorbs a cancelling expression's noise: no negligible rule needed here)
-        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z))) return z;
+        // (the level is relative to the samples 2.6 % away, which absorbs a cancelling expression's noise; a steep root is a cusp — RF12)
+        if (m !== null && Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v))) return z;
       }
       pp = p; p = { x, a: Math.abs(v) }; last = { x, v };
     }
@@ -446,14 +447,13 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     return (b + c) / 2;
   };
   // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample — nor is the
-  // evaluator's rounding noise along it); a root when |f| is below 10⁻⁹ there, negligible beside f one step away (a cancelling
-  // expression, RF12) or vanishing like a power (a steep touching root, x·√|x − 1.3| — RF10; a steeper one, whose power fails the
-  // vanishing rule, is found at the expression's cusps — RF11)
+  // evaluator's rounding noise along it); a root when |f| is below 10⁻⁹ there or negligible beside f one step away (a cancelling
+  // expression, RF12). A steep touching root (x·√|x − 1.3|) is also a cusp of the expression, where the vanishing rule applies (RF11–12)
   const touchingRoot = (p: number, y: number, n: number, xl: number, xr: number) => {
     const noise = 1e-12 * Math.max(1, Math.abs(y));
     if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise))) return;
     const x = ternary(xl, xr, g, false);
-    if (g(x) < 1e-9 || vanishesAt(at, x) || negligibleAt(at, x)) add(roots, x, "roots");
+    if (g(x) < 1e-9 || negligibleAt(at, x)) add(roots, x, "roots");
   };
   try {
     const step = (xMax - xMin) / (PROBE_N - 1);

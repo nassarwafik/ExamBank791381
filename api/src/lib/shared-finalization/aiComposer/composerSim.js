@@ -357,8 +357,7 @@ function guardInfo(ast, xs, wantCusps = false) {
     return { excluded, open: excluded, cusps, excludedCapped };
 }
 function rootAtCusp(at, z) {
-    const v = at(z);
-    return (v !== null && (v === 0 || vanishesAt(at, z))) || negligibleAt(at, z);
+    return negligibleAt(at, z) || (at(z) !== null && vanishesAt(at, z));
 }
 function edgeIsRoot(at, e, dir, open) {
     const f0 = at(e);
@@ -477,7 +476,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
             }
             if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {
                 const z = argMin(absOr(at), pp.x, x), m = at(z);
-                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)))
+                if (m !== null && Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)))
                     return z;
             }
             pp = p;
@@ -554,7 +553,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)))
             return;
         const x = ternary(xl, xr, g, false);
-        if (g(x) < 1e-9 || vanishesAt(at, x) || negligibleAt(at, x))
+        if (g(x) < 1e-9 || negligibleAt(at, x))
             add(roots, x, "roots");
     };
     try {
