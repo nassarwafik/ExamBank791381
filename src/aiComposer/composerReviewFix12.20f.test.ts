@@ -69,3 +69,36 @@ describe("20F-RF12 NOTE-1 / NOTE-2", () => {
     only("(x-1)*exp(x)", ["extrema"], { xMin: -8, xMax: 0, extrema: [] }, "AI_FUNCTION_KEY_INCOMPLETE");
   });
 });
+
+describe("20F-RF12 each new rule holds on its own (mutation campaign on a814604)", () => {
+  const Z6 = "abs(abs(abs(abs(abs(abs(x)-2.5)-1.25)-0.625)-0.3125)-0.15625)-0.078125";
+  const Zu = "abs(abs(abs(abs(abs(abs(log(abs(x)+1)-8)-2.5)-1.25)-0.625)-0.3125)-0.15625)-0.078125";
+  it("negligible means a thousandth of |f| on BOTH sides: a 5× asymmetric factor with a √ floor of 10⁻⁵ is not a root", () => {
+    const src = "(x+1)*(sqrt(abs(x-1.3))+0.00001)*(1+100000000*(x-1.3+0.0001)^2)";
+    refused(src, ["xIntercepts"], { yMin: -100, yMax: 100, xIntercepts: [-1, 1.3] });
+    accepted(src, ["xIntercepts"], { yMin: -100, yMax: 100, xIntercepts: [-1] });
+  });
+  it("negligible is judged 10⁻⁴ away, not further: a √ floor of 3·10⁻⁵ is not a root", () => {
+    refused("(x+2)*(sqrt(abs(x-1.3))+0.00003)", ["xIntercepts"], { xIntercepts: [-2, 1.3] });
+    accepted("(x+2)*(sqrt(abs(x-1.3))+0.00003)", ["xIntercepts"], { xIntercepts: [-2] });
+  });
+  it("a cancelling cusp one grid step from a sign-change root, in a wide window (only the cusp sees it)", () => {
+    only("(x-41.34)*sqrt(x^2-82.76*x+1712.3044)", ["xIntercepts"], { xMin: -50, xMax: 50, xIntercepts: [41.34] }, "AI_FUNCTION_KEY_INCOMPLETE");
+    only("(x-23.11)*sqrt(x^2-46.26*x+534.9969)", ["xIntercepts"], { xMin: -50, xMax: 50, xIntercepts: [23.11] }, "AI_FUNCTION_KEY_INCOMPLETE");
+  });
+  it("a cancelling touching root that is no cusp (|x² − 6.6x + 10.89|·10⁷, no root or power): only f's own minimum sees it", () => {
+    only("(x+1)*abs(x^2-6.6*x+10.89)*10000000", ["xIntercepts"], { xMin: -2, xMax: 5, yMin: -1000, yMax: 1000, xIntercepts: [-1] }, "AI_FUNCTION_KEY_INCOMPLETE");
+    only("(x+1)*abs(x^2-5.4*x+7.29)*10000000", ["xIntercepts"], { yMin: -1000, yMax: 1000, xIntercepts: [-1] }, "AI_FUNCTION_KEY_INCOMPLETE");
+  });
+  it("a cusp root within EDGE_TOL past the edge is on the edge: required, and a key point there is in the window", () => {
+    accepted("(x+1)*abs(x-5.000005)^(1/3)", ["xIntercepts"], { xIntercepts: [-1, 5.000005] });
+    only("(x+1)*abs(x-5.000005)^(1/3)", ["xIntercepts"], { xIntercepts: [-1] }, "AI_FUNCTION_KEY_INCOMPLETE");
+  });
+  it("more exclusions beyond the window than can be reported: fail closed for a pole key, no effect on a roots key", () => {
+    only("1/(x-2)+0/(" + Zu + ")", ["verticalAsymptotes"], { verticalAsymptotes: [2] }, "AI_FUNCTION_WINDOW_TOO_NARROW");
+    accepted("(x+1)*(x-2)+0/(" + Zu + ")", ["xIntercepts"], { xIntercepts: [-1, 2] });
+  });
+  it("more exclusions inside the window than can be reported: too complex, never a silent pass", () => {
+    only("(x+1)/(" + Z6 + ")", ["domainExclusions"], { domainExclusions: [4.921875] }, "AI_FUNCTION_TOO_COMPLEX");
+  });
+});

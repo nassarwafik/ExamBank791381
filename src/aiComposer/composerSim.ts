@@ -353,9 +353,9 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
   const n = Math.max(100, Math.min(OUTER_N, Math.floor(PROBE_NODE_BUDGET / 4 / Math.max(1, ast === undefined ? 1 : expressionCost(ast)))));
   const raw = (x: number) => rawAt(x), at = (x: number) => { const r = rawAt(x); return r !== null && Number.isFinite(r) ? r : null; };
   for (const [edge, dir] of [[xMax, 1], [xMin, -1]] as const) {
-    // the edge's own definedness starts the scan (RF12), so a domain edge less than 10⁻³ past it is seen; an UNDEFINED edge is a pole
-    // or a hole ON the edge, inside the window, and starts nothing
-    let def: boolean | null = raw(edge) !== null ? true : null, last: { x: number; v: number } | null = null, slope = 0, prevX = edge, zeroAt: number | null = null;
+    // the edge's own definedness starts the scan (RF12), so a domain edge less than 10⁻³ past it is seen (a pole or a hole ON the edge
+    // is inside the window: its transition ends on the edge and is skipped below)
+    let def: boolean | null = raw(edge) !== null, last: { x: number; v: number } | null = null, slope = 0, prevX = edge, zeroAt: number | null = null;
     let pp: { x: number; a: number } | null = null, p: { x: number; a: number } | null = null;                     // |f| history (touching roots)
     const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));                      // strictly beyond the window
     // the expression's own exclusions beyond the window (a removable hole, a pole) — Review Fix 8
@@ -402,7 +402,8 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
       }
       if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {                                             // a local minimum of |f|
         const z = argMin(absOr(at), pp.x, x), m = at(z);
-        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)) || negligibleAt(at, z)) return z;
+        // (the level is relative to the samples 2.6 % away, which absorbs a cancelling expression's noise: no negligible rule needed here)
+        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z))) return z;
       }
       pp = p; p = { x, a: Math.abs(v) }; last = { x, v };
     }
@@ -656,7 +657,7 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   // window + completeness (Review Fix 1): every key point must be findable inside the window, and every feature the probe finds there
   // must be in the key — the grader compares sets, so an incomplete key would fail the students who answer correctly.
   const xMin = f.xMin as number, xMax = f.xMax as number;
-  const inWin = (x: number) => x >= xMin - 1e-9 && x <= xMax + 1e-9;
+  const inWin = (x: number) => (x >= xMin && x <= xMax) || onEdge(x, xMin) || onEdge(x, xMax);   // on the edge is in (RF12)
   const outside = [...(tasks.domainExclusions ? ex : []), ...(tasks.xIntercepts ? xi : []), ...(tasks.verticalAsymptotes ? va : []), ...(tasks.extrema ? ext.map(e => e.x) : [])].filter(x => !inWin(x));
   if (outside.length) issues.push({ code: "AI_FUNCTION_KEY_OUTSIDE_WINDOW", message: "نقاط في المفتاح خارج نافذة الرسم فلا يستطيع الطالب تحديدها: " + outside.join("، ") + ".", path });
   if (!issues.length) {

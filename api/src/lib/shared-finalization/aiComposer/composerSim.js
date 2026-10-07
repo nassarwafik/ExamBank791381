@@ -381,7 +381,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
     const n = Math.max(100, Math.min(OUTER_N, Math.floor(exports.PROBE_NODE_BUDGET / 4 / Math.max(1, ast === undefined ? 1 : expressionCost(ast)))));
     const raw = (x) => rawAt(x), at = (x) => { const r = rawAt(x); return r !== null && Number.isFinite(r) ? r : null; };
     for (const [edge, dir] of [[xMax, 1], [xMin, -1]]) {
-        let def = raw(edge) !== null ? true : null, last = null, slope = 0, prevX = edge, zeroAt = null;
+        let def = raw(edge) !== null, last = null, slope = 0, prevX = edge, zeroAt = null;
         let pp = null, p = null;
         const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));
         const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge - dir * 1e-3, edge, ...xs], wantRoots) : null;
@@ -477,7 +477,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
             }
             if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {
                 const z = argMin(absOr(at), pp.x, x), m = at(z);
-                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)) || negligibleAt(at, z))
+                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)))
                     return z;
             }
             pp = p;
@@ -927,7 +927,7 @@ function buildFunction(f, path) {
                 bad("الدالة ليست " + (iv.kind === "increasing" ? "متزايدة" : "متناقصة") + " على (" + iv.from + ", " + iv.to + ").");
         }
     const xMin = f.xMin, xMax = f.xMax;
-    const inWin = (x) => x >= xMin - 1e-9 && x <= xMax + 1e-9;
+    const inWin = (x) => (x >= xMin && x <= xMax) || onEdge(x, xMin) || onEdge(x, xMax);
     const outside = [...(tasks.domainExclusions ? ex : []), ...(tasks.xIntercepts ? xi : []), ...(tasks.verticalAsymptotes ? va : []), ...(tasks.extrema ? ext.map(e => e.x) : [])].filter(x => !inWin(x));
     if (outside.length)
         issues.push({ code: "AI_FUNCTION_KEY_OUTSIDE_WINDOW", message: "نقاط في المفتاح خارج نافذة الرسم فلا يستطيع الطالب تحديدها: " + outside.join("، ") + ".", path });
