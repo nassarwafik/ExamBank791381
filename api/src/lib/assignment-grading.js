@@ -19,6 +19,8 @@ const { resolveGrader, unknownTypeResult, legacyResponseAdmitted, LEGACY } = req
 // Phase 20D — composite@1: the ONE strict structure authority (shared build) + the trusted SmartSim "prepare once / evaluate many" seam.
 const { compositeStructure, compositeChildNode, compositeChildKey, compositeQuestionVersion, isCompositeQuestionNode, compositeQuestionMaxMarks, selectCompositeCountedParts } = require("./shared-finalization/compositeQuestion");
 const { prepareSmartSimEvaluation, evaluatePreparedSmartSimChecks } = require("./shared-finalization/trustedSimPlugins");
+// Phase 20G.3 — the ONE legacy table authority (shared build): the rows the student card draws and the control it draws for each row.
+const { parseTable, resolveTableRowOptions, legacyTableCellControl } = require("./shared-finalization/legacyTableSemantics");
 
 function clean(v){
   return String(v??"")
@@ -32,13 +34,6 @@ function clean(v){
     .toLowerCase();
 }
 function round(n){return Number(Number(n||0).toFixed(2))}
-function tableRows(text){
-  const lines=String(text||"").split(/\r?\n/).map(x=>x.trim()).filter(x=>x.startsWith("|")&&x.endsWith("|"));
-  if(lines.length<2)return [];
-  const split=line=>line.slice(1,-1).split("|").map(x=>x.trim());
-  const rows=lines.map(split).filter(c=>!c.every(x=>/^:?-{3,}:?$/.test(x.replace(/\s/g,""))));
-  return rows.length>1?rows.slice(1):[];
-}
 function marks(question){return Math.max(0,Number(question?.marks??question?.points??0)||0)}
 function gradeChoice(question,response,answer){
   const idx=Number(response?.index);
@@ -62,38 +57,68 @@ function gradeSequence(response,answer,max){
   expected.forEach((v,i)=>{if(clean(actual[i])===clean(v))correct++});
   return {score:max*(correct/expected.length),manualReview:false,parts:{correct,total:expected.length}};
 }
-function pairMap(answerText){
-  const m=new Map();
-  String(answerText||"").split(/[؛;]/).forEach(part=>{
+// Phase 20G.3 — legacy table grading semantics. A table is auto-graded ONLY with positive, server-owned authority over EVERY row the
+// student card draws (legacyTableSemantics: the same parse + per-row control the renderer uses); the absence of a row label from the key is
+// never read as a correct negative answer. legacyTableMode decides, from the question alone:
+//   keyed    — answer.text is a row=value key giving every drawn row a non-empty expected value: a select row's value must be one of the
+//              options it offers, a checkbox row's value must be true / false;
+//   checkbox — no row=value pairs, EVERY row is drawn as a checkbox, and answer.text lists the rows to tick, each list item EXACTLY a row
+//              label (no substring membership);
+//   manual   — anything else (a blank or duplicated row label, a conflicting / incomplete / unofferable key, a key naming no row, a
+//              text-input or select table without a row key): score 0, teacher review;
+//   none     — the question text holds no table.
+const TABLE_TICKS=new Set(["true","1","✓"]);
+// a stored cell's text: only primitives carry an answer (a stored object / array is never coerced, so it can neither crash nor match)
+function cellText(v){return typeof v==="string"||typeof v==="number"||typeof v==="boolean"?String(v):""}
+function isTick(v){return v===true||TABLE_TICKS.has(clean(cellText(v)))}
+function legacyTableMode(question,answer=question?.answer){
+  const parsed=parseTable(cellText(question?.text));
+  if(!parsed)return {mode:"none"};
+  const labels=parsed.rows.map(r=>clean(r[0])),controls=labels.map((_l,i)=>legacyTableCellControl(question,i));
+  const manual={mode:"manual",labels,controls};
+  if(labels.some(l=>!l)||new Set(labels).size!==labels.length)return manual;
+  const keyText=cellText(answer?.text),pairs=new Map();
+  let conflict=false;
+  keyText.split(/[؛;]/).forEach(part=>{
     const p=part.split("=");
-    if(p.length>=2)m.set(clean(p[0]),clean(p.slice(1).join("=")));
+    if(p.length<2)return;
+    const k=clean(p[0]),v=clean(p.slice(1).join("="));
+    if(pairs.has(k)&&pairs.get(k)!==v)conflict=true;
+    pairs.set(k,v);
   });
-  return m;
+  if(pairs.size){
+    if(conflict)return manual;
+    const expected=[];
+    for(let i=0;i<labels.length;i++){
+      const e=pairs.get(labels[i]);
+      if(!e)return manual;
+      if(controls[i]==="select"&&!resolveTableRowOptions(question,i).values.some(v=>clean(cellText(v))===e))return manual;
+      if(controls[i]==="checkbox"&&e!=="true"&&e!=="false")return manual;
+      expected.push(e);
+    }
+    return {mode:"keyed",labels,controls,expected};
+  }
+  if(!controls.every(c=>c==="checkbox"))return manual;
+  const tokens=keyText.split(/[,،;؛\n\r|/]+/).map(clean).filter(Boolean);
+  if(!tokens.length||tokens.some(t=>!labels.includes(t)))return manual;
+  const ticked=new Set(tokens);
+  return {mode:"checkbox",labels,controls,expected:labels.map(l=>ticked.has(l))};
 }
 function gradeTable(question,response,answer,max){
-  const rows=tableRows(question?.text);
+  const m=legacyTableMode(question,answer);
   const vals=Array.isArray(response?.values)?response.values:[];
-  if(!rows.length||!vals.length)return {score:0,manualReview:true};
-  const amap=pairMap(answer?.text);
-  if(amap.size){
-    let ok=0,total=Math.min(rows.length,vals.length);
-    for(let i=0;i<total;i++){
-      const key=clean(rows[i][0]),expected=amap.get(key);
-      if(expected!==undefined&&clean(vals[i])===expected)ok++;
-    }
-    return {score:total?max*(ok/total):0,manualReview:false,parts:{correct:ok,total}};
-  }
-  const answerText=clean(answer?.text);
-  if(answerText){
-    let ok=0,total=Math.min(rows.length,vals.length);
-    for(let i=0;i<total;i++){
-      const expected=answerText.includes(clean(rows[i][0]));
-      const actual=vals[i]===true||clean(vals[i])==="true"||clean(vals[i])==="1"||clean(vals[i])==="✓";
-      if(actual===expected)ok++;
-    }
-    return {score:total?max*(ok/total):0,manualReview:false,parts:{correct:ok,total}};
-  }
-  return {score:0,manualReview:true};
+  if((m.mode!=="keyed"&&m.mode!=="checkbox")||!vals.length)return {score:0,manualReview:true};
+  // the denominator is EVERY drawn row: a missing cell (the UI's sparse array) is a blank / unticked row, never a smaller table
+  const total=m.expected.length,cells=m.expected.map((_e,i)=>vals[i]);
+  // nothing ticked / typed in any drawn row: unanswered (isResponseAnswered), 0 — never credit for rows the key leaves unticked
+  const answered=cells.some((v,i)=>m.controls[i]==="checkbox"?isTick(v):cellText(v).trim()!=="");
+  if(!answered)return {score:0,manualReview:false,parts:{correct:0,total}};
+  let ok=0;
+  cells.forEach((v,i)=>{
+    const e=m.expected[i];
+    if(m.mode==="checkbox"?isTick(v)===e:m.controls[i]==="checkbox"?isTick(v)===(e==="true"):clean(cellText(v))===e)ok++;
+  });
+  return {score:max*(ok/total),manualReview:false,parts:{correct:ok,total}};
 }
 
 // Compares one submitted field value against its stored correct value. Handles the three field
@@ -398,4 +423,4 @@ function gradeExam(exam,answers,context){
 // path, the attempt number the server stamped); nothing in a request body can name it. Validated downstream (malformed ⇒ the
 // parametric question fails closed to manual review).
 function parametricGenerationContext(assignmentId,studentId,attemptNumber){return {parametric:{assignmentId:String(assignmentId||""),studentId:String(studentId||""),attemptNumber:Number(attemptNumber)}}}
-module.exports={gradeExam,gradeQuestion,gradeFields,gradeCompound,matchField,parametricGenerationContext};
+module.exports={gradeExam,gradeQuestion,gradeFields,gradeCompound,matchField,parametricGenerationContext,legacyTableMode};

@@ -2,6 +2,7 @@
 // build; used by structured import, the Blueprint / palette / inspector chrome and the server grading registry — deliberately
 // NOT by the student runtime, so the student initial graph carries only the catalog identities).
 import { resolveQuestionTypeKey, isKnownQuestionType, questionTypeDefinition, type QuestionTypeCategory, type GradingMode } from "./questionTypeCatalog";
+import { parseTable } from "./legacyTableSemantics";
 
 export const CATEGORY_LABELS: Readonly<Record<QuestionTypeCategory, string>> = Object.freeze({ choice: "اختيار", response: "إجابات", structured: "منظّم", interactive: "تفاعلي", composite: "مركّب" });
 export const CATEGORY_ORDER: readonly QuestionTypeCategory[] = Object.freeze(["choice", "response", "structured", "interactive", "composite"]);
@@ -30,13 +31,10 @@ export function resolveQuestionTypeKeyOrAlias(raw: unknown): string | undefined 
   return alias && isKnownQuestionType(alias) ? alias : undefined;
 }
 
-/** A markdown "| … |" table in a question's text: exactly the detection the legacy student card (questionContent.parseTable) and the
- *  legacy table grader (assignment-grading tableRows) use — ≥ 2 pipe-delimited lines and ≥ 1 non-separator row after the header. */
+/** A markdown "| … |" table in a question's text: the ONE legacy table parse (legacyTableSemantics.parseTable) the student card draws
+ *  from and the legacy table grader grades from (Phase 20G.3) — ≥ 2 pipe-delimited lines and ≥ 1 non-separator row after the header. */
 function textHasTable(text: unknown): boolean {
-  if (typeof text !== "string") return false;
-  const lines = text.split(/\r?\n/).map(x => x.trim()).filter(x => x.startsWith("|") && x.endsWith("|"));
-  if (lines.length < 2) return false;
-  return lines.slice(1).some(l => !l.slice(1, -1).split("|").every(c => /^:?-{3,}:?$/.test(c.trim().replace(/\s/g, ""))));
+  return typeof text === "string" && parseTable(text) !== null;
 }
 /** Where a legacy question is answered: "question" = the top-level card (StudentQuestionCard); "part" = a compound@1 part or a
  *  composite@1 legacy child (CompoundPartControl — radios / field set / textarea only, never a table or a word-bank sequence UI). */

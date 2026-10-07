@@ -146,11 +146,23 @@ describe("gradeExam - table questions with dropdown-sourced answers", () => {
     expect(result.questions[0].score).toBe(0);
   });
 
-  it("legacy checkbox-style table (plain membership answer.text, no '=' pairs) keeps working exactly as before", () => {
-    const checkboxText = "ضع علامة أمام الشبكات الخاصة:\n| العنوان | خاص؟ |\n| --- | --- |\n| 192.168.1.10 | |\n| 8.8.8.8 | |";
+  // Phase 20G.3 — a membership key (no '=' pairs) grades a table ONLY where the student card draws a checkbox on every row: check-box
+  // phrasing ("وضع علامة" / ✓ / private?) and no row options. This test's original text, "ضع علامة …" (no leading و), is NOT check-box
+  // phrasing for the student card (tableCheckbox): it draws TEXT inputs, which can never send [true, false], and the old check-mark rule
+  // credited any cells against a key naming no row (L-F2). The check-box table keeps its grade; the text-input table goes to teacher review.
+  it("legacy checkbox-style table (plain membership answer.text, no '=' pairs) keeps its grade where the card draws checkboxes", () => {
+    const checkboxText = "وضع علامة أمام الشبكات الخاصة:\n| العنوان | خاص؟ |\n| --- | --- |\n| 192.168.1.10 | |\n| 8.8.8.8 | |";
     const exam = { questions: [{ examQuestionId: "q1", marks: 2, text: checkboxText, answer: { text: "192.168.1.10" } }] };
     const result = gradeExam(exam, { q1: { kind: "table", values: [true, false] } });
     expect(result.questions[0].score).toBe(2);
+    expect(result.questions[0].manualReview).toBe(false);
+  });
+  it("a membership key on a table the card draws as TEXT inputs ('ضع علامة' is not check-box phrasing) goes to teacher review, never check-mark credit", () => {
+    const textInputs = "ضع علامة أمام الشبكات الخاصة:\n| العنوان | خاص؟ |\n| --- | --- |\n| 192.168.1.10 | |\n| 8.8.8.8 | |";
+    const exam = { questions: [{ examQuestionId: "q1", marks: 2, text: textInputs, answer: { text: "192.168.1.10" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: [true, false] } });
+    expect(result.questions[0].score).toBe(0);
+    expect(result.questions[0].manualReview).toBe(true);
   });
 });
 

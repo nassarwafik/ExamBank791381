@@ -5,6 +5,7 @@ exports.LEGACY_TYPE_ALIASES = exports.GRADING_MODE_LABELS = exports.CATEGORY_ORD
 exports.resolveQuestionTypeKeyOrAlias = resolveQuestionTypeKeyOrAlias;
 exports.legacyAnswerKindAllowed = legacyAnswerKindAllowed;
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
+const legacyTableSemantics_1 = require("./legacyTableSemantics");
 exports.CATEGORY_LABELS = Object.freeze({ choice: "اختيار", response: "إجابات", structured: "منظّم", interactive: "تفاعلي", composite: "مركّب" });
 exports.CATEGORY_ORDER = Object.freeze(["choice", "response", "structured", "interactive", "composite"]);
 exports.GRADING_MODE_LABELS = Object.freeze({ auto: "تصحيح تلقائي", manual: "تصحيح يدوي", hybrid: "تصحيح هجين", composed: "تصحيح مركّب" });
@@ -31,12 +32,7 @@ function resolveQuestionTypeKeyOrAlias(raw) {
     return alias && (0, questionTypeCatalog_1.isKnownQuestionType)(alias) ? alias : undefined;
 }
 function textHasTable(text) {
-    if (typeof text !== "string")
-        return false;
-    const lines = text.split(/\r?\n/).map(x => x.trim()).filter(x => x.startsWith("|") && x.endsWith("|"));
-    if (lines.length < 2)
-        return false;
-    return lines.slice(1).some(l => !l.slice(1, -1).split("|").every(c => /^:?-{3,}:?$/.test(c.trim().replace(/\s/g, ""))));
+    return typeof text === "string" && (0, legacyTableSemantics_1.parseTable)(text) !== null;
 }
 function legacyAnswerKindAllowed(question, kind, placement = "question") {
     if (typeof kind !== "string")

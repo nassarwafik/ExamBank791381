@@ -126,9 +126,12 @@ describe("API — every item advertises and awards Strength (max 40)", () => {
     const f06 = await get(studentDeps(ctx), "F06"); expect(f06.jsonBody.training).toMatchObject({ strengthEligible: true, maxPoints: 40 });
     expect(JSON.stringify(list.jsonBody)).not.toMatch(/"maxPoints":(0|25)\b/);
   });
-  it("F01 / F06 full answers: the real grader's percentage (94 / 85 — NOT manufactured to 100) becomes round(pct × 40 / 100) points; best + attempts persisted; a retry never lowers", async () => {
+  // Phase 20G.3 — F06 was 85% (131 / 154): this helper fills LIB-F06-Q41's two select rows with its key's values "1" / "3", which its selects
+  // never offer (a real student could only ever score 0 there). The legacy table authority now routes that unearnable key to teacher review,
+  // so the real grader's F06 percentage is 82% (127 / 154): Q41's 4 marks are pending review, never auto-awarded.
+  it("F01 / F06 full answers: the real grader's percentage (94 / 82 — NOT manufactured to 100) becomes round(pct × 40 / 100) points; best + attempts persisted; a retry never lowers", async () => {
     const ctx = seed();
-    for (const [id, expectedPct] of [["F01", 94], ["F06", 85]]) {
+    for (const [id, expectedPct] of [["F01", 94], ["F06", 82]]) {
       const answers = fullAnswers(id);
       const expected = gradeExam(ITEM(id).examSnapshot, answers);
       expect(Math.round(expected.percentage)).toBe(expectedPct);                   // the open questions stay in the total
@@ -142,12 +145,12 @@ describe("API — every item advertises and awards Strength (max 40)", () => {
     }
     const stored = ctx.getJson(practiceDocName("u1"));
     expect(stored.trainings.F01).toMatchObject({ bestPercentage: 94, bestPoints: 38, attempts: 2 });
-    expect(stored.trainings.F06).toMatchObject({ bestPercentage: 85, bestPoints: 34, attempts: 2 });
-    expect(practicePointsFromTrainings(stored.trainings)).toBe(72);
-    expect(buildStrengthSummary({ finalizedPercentages: [], trainings: stored.trainings, projects: [] })).toMatchObject({ practicePoints: 72, rawTotalPoints: 72, stageNumber: 1 });
+    expect(stored.trainings.F06).toMatchObject({ bestPercentage: 82, bestPoints: 33, attempts: 2 });
+    expect(practicePointsFromTrainings(stored.trainings)).toBe(71);
+    expect(buildStrengthSummary({ finalizedPercentages: [], trainings: stored.trainings, projects: [] })).toMatchObject({ practicePoints: 71, rawTotalPoints: 71, stageNumber: 1 });
     const list = await get(studentDeps(ctx));
     expect(list.jsonBody.trainings.find(t => t.trainingId === "F01").best).toMatchObject({ bestPercentage: 94, bestPoints: 38, maxPoints: 40, attempts: 2 });
-    expect((await dash(ctx)).jsonBody.strength).toMatchObject({ practicePoints: 72, rawTotalPoints: 72, stagePoints: 72, stageNumber: 1, withinStagePoints: 72 });
+    expect((await dash(ctx)).jsonBody.strength).toMatchObject({ practicePoints: 71, rawTotalPoints: 71, stagePoints: 71, stageNumber: 1, withinStagePoints: 71 });
   });
   it("T08: 50% → 20 / 40 (+20); retry 80% → 32 / 40 (+12 only); retry 70% → +0; the dashboard reflects the ONE best", async () => {
     const ctx = seed();
