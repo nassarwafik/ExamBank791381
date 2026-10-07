@@ -1429,7 +1429,7 @@ changed.
 | MINOR-1 a cancelling perfect square under a ∜, ∛ or ^0.4 root at \|a\| ≳ 30 ((x − 1)·\|x² − 41x + 420.25\|^0.25 on [−1, 22.5]) is still missed: 17 / 430 in the reviewer's battery (`02d207c`: 65, `20966d8`: 135), √ and ^0.5 forms 0 / 430; three of five exp-based cancellations too. The power magnifies the rounding noise (≈ √a·10⁻⁴·\|b − a\|) above the negligible level, and the vanishing rule fails on the noise | pre-existing, contrived, fail-open only for this family; recorded in §12 as a limitation. A rule that accepted that noise would accept real floors of the same size |
 | NOTE-1 §12 said every feature within EDGE_TOL past an edge counts as on the edge; a **sign-change** root there refuses the key instead ((x − 1)(x − 3) on [−5, 3 − 5·10⁻⁶], key {1, 3} → "widen the window"; `02d207c`: outside the window). Touching roots, cusp roots, extrema and domain edges in the same band are accepted with the on-edge key | fail closed and asymmetric: the sentence is corrected in §12; the behaviour stays |
 | NOTE-2 a pole or a hole within EDGE_TOL past the edge passes the key's window check but the scan beyond the window refuses "widen the window" ((x + 1)/(x − 2) on [−5, 2 − 10⁻⁶]) | fail closed; §12 names it with NOTE-1 |
-| NOTE-3 with the window the domain truncated (x·√(2 − x²) on [−1.414, 1.414]) the correct monotonic key is refused as inconsistent, on every head since RF7: the domain edge is neither a recorded stretch end nor a refusal; §12's "accepted silently" was wrong for monotonic keys | fail closed (the wrong key dec(1, +∞) is refused too); the §12 sentence is corrected |
+| NOTE-3 with the window the domain truncated (x·√(2 − x²) on [−1.414, 1.414]) the correct monotonic key is refused as inconsistent, on every head since RF7: the domain edge is neither a recorded stretch end nor a refusal; §12's "accepted silently" was wrong for monotonic keys | the §12 sentence was corrected to "fail closed" — wrongly: the wrong key dec(1, +∞) is refused here only because its midpoint sample lies outside the domain. Round 14 found the fail-open case; Review Fix 14 (§11.19) closes it in code |
 
 **Verified by the reviewer on `966f0cf`:** the RF12 fail-first (11 failed / 7 passed on `02d207c`, titles matching §11.17); the suites
 (24 files / 279 tests — §11.17's 23 / 277 counted the files differently, 0 failures either way); lint, tsc and build (124.1 KB); the
@@ -1439,6 +1439,32 @@ AH01 killed) and 8 mutants re-run hash-verified, 8 / 8 KILLED; every battery (de
 0 / 89 856, wrong keys 0 / 4 356, curriculum 0 / 1 312 and the two known cur2 refusals) and three new ones (edge21, falseroot21 0 / 173
 false roots, canc21 6 / 676 — the MINOR-1 forms); the regression sweep (the diff since `02d207c` touches only `composerSim.ts`, its CJS,
 the RF12 test file and this record).
+
+### 11.19 Fresh re-review and Review Fix 14: a domain edge just past the window ends a monotonic stretch
+
+A fresh re-review of `91051fb` (the design-record-only answer to round 13) found 0 BLOCKER, 0 MAJOR, 1 MINOR and 3 NOTE.
+
+| Finding | Fix |
+|---|---|
+| MINOR-1 §12's corrected sentence called "fail closed" a case that fails **open**: a domain edge where f tends to a non-zero value, between EDGE_TOL and 10⁻³ past a window edge (√(x + √2) + 1 on [−1.414, 4]; √(x + 3) + 2 on [−3 + d, 4], 5·10⁻⁵ ≤ d ≤ 9·10⁻⁴; √(3 − x) + 2 mirrored), was neither a recorded stretch end nor a refusal. The wrong monotonic key that ignores the edge (inc(−∞, +∞)) was accepted whenever its midpoint sample fell inside the domain, while the correct key was refused. Pre-existing on `02d207c` and `20966d8` | code: the scan beyond the window refuses a monotonic key for a domain edge in its first cell beyond EDGE_TOL ("widen the window"), as it already did from 10⁻³ outward. Exclusion and roots keys are unchanged. §12 is corrected again, and the §11.18 NOTE-3 row says what was wrong |
+| NOTE-1 the §11.18 NOTE-3 row's "the wrong key is refused too" came from the midpoint sample, not an edge rule | the row is corrected |
+| NOTE-2 §12 said "\|a\| ≳ 30" while its own example (a = 20.5) is missed | "\|a\| ≳ 20" |
+| NOTE-3 the 17 / 430 figure did not name its battery | both batteries named (`canc21b`, `canc21`) |
+
+**Fail-first.** `composerReviewFix14.20f.test.ts` (5 tests) was run on `91051fb`: **3 fail** — the wrong keys for √(x + √2) + 1 on
+[−1.414, 4], √(x + 3) + 2 on [−2.99995, 4] and [−2.9991, 4] and √(3 − x) + 2 on [−4, 2.9998] accepted (`expected [] to deeply equal
+[ 'AI_FUNCTION_WINDOW_TOO_NARROW' ]`), and the correct key ending at the edge refused with `AI_FUNCTION_KEY_INCONSISTENT`. The 2 others
+are pins: within EDGE_TOL the edge is the window's own (the correct key accepted, the wrong one refused), a window that contains the
+edge is unchanged, and the exclusion and roots keys are not refused for the edge.
+
+**RF14 mutation campaign.** 4 mutants, **4 KILLED, 0 SURVIVED, 0 TIMEOUT** on the first run, each by the RF14 tests: the refusal removed
+(AI01), extended to every task (AI02), applied within EDGE_TOL too (AI03), keyed to extrema instead of monotonic tasks (AI04). Files
+restored byte-for-byte; clean `git status`.
+
+**Batteries on the head** (`1374458`, the RF12 set, see §11.17): identical to the RF12 head — domain edges 0 / 390, cancelling
+squares 0 / 613 and 0 / 441, edge batteries 0 wrong keys of 88 704 and 89 856 (correct keys refused 1 824 and 672, unchanged), wrong keys
+0 / 4 356, curriculum 0 / 1 312 and the two known `cur2` windows, fractional-power guards 0 / 2 700, touching roots beyond the window 0 / 90,
+fuzz9 0 exceptions and 2 304 / 2 345 self-keyed functions accepted, worst probe + build 269 ms.
 
 ## 12. Known limitations
 
@@ -1458,14 +1484,16 @@ the RF12 test file and this record).
     window") — fail closed, and asymmetric (Review 13, NOTE-1 and NOTE-2). A very flat extremum on an edge whose centre the probe cannot
     place within 10⁻⁵ refuses the key ("widen the window");
   - a cancelling expression under a fractional power other than ½ (∜, ∛ or ^0.4 of an expanded perfect square, |x² − 41x + 420.25|^0.25)
-    at |a| ≳ 30 is missed: the power magnifies the rounding noise above the negligible level (17 / 430 in the round-13 battery; the √ and
-    ^0.5 forms 0 / 430); so is an exp-based cancellation (√(e²ˣ − 14.78·eˣ + 54.6)). Contrived (Review 13, MINOR-1);
+    at |a| ≳ 20 is missed: the power magnifies the rounding noise above the negligible level (the round-13 reviewer's batteries: `canc21b`,
+    a ≥ 33.7, 17 / 430 with the √ and ^0.5 forms 0 / 430; `canc21`, a from 1 to 41 and other forms, 6 / 676, a = 20.5 among them); so is an
+    exp-based cancellation (√(e²ˣ − 14.78·eˣ + 54.6)). Contrived (Review 13, MINOR-1; Review 14, NOTE-2 / NOTE-3);
   - a positive minimum below a thousandth of f's values 10⁻⁴ away passes as a root (a √ cusp with a floor of 10⁻⁵, a V with a floor of
     10⁻⁷, a parabola with a floor of 10⁻¹¹); the negligible rule exists for expressions that cancel around a zero, whose noise is of that
     order;
-  - a domain edge where f tends to a non-zero value, less than 10⁻³ past the window edge, does not refuse an exclusion key (it is not an
-    isolated exclusion); a monotonic key whose interval ends at that edge is refused as inconsistent, because the edge is neither a
-    recorded stretch end nor a refusal — fail closed (Review 13, NOTE-3: x·√(2 − x²) on [−1.414, 1.414] with the correct intervals);
+  - a domain edge where f tends to a non-zero value, between 10⁻⁵ and 10⁻³ past the window edge, does not refuse an exclusion key (it is
+    not an isolated exclusion) or a roots key; a monotonic key is refused ("widen the window"), whichever way it treats the edge — the
+    window must contain the end of the stretch (Review Fix 14; before it, a key that ignored the edge, inc(−∞, +∞) for √(x + √2) + 1 on
+    [−1.414, 4], was accepted whenever its midpoint sample fell inside the domain);
   - in a window narrower than about 1.1·10⁻³, the grid past each edge (at most 2 000 samples) stops short of where the scan beyond the
     window starts;
   - functions the probe cannot decide (very steep poles, exp(1/x), growth too slow to confirm, undecidable behaviour at ±∞, overflow
