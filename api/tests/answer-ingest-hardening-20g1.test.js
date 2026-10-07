@@ -87,7 +87,8 @@ describe("20G.1 D3 — malformed and oversize legacy answers fail closed; bounda
     const bad = [5, "TCP", true, null, [1], ["TCP"], { kind: "zzz" }, { value: "TCP" }, { kind: "text", value: 5 }, { kind: "text" },
       { kind: "choice", index: "1" }, { kind: "choice", index: -1 }, { kind: "choice", index: 1.5 }, { kind: "sequence", values: "a" }, { kind: "sequence", values: [{ x: 1 }] },
       { kind: "table", values: [[1]] }, { kind: "fields", values: [] }, { kind: "fields", values: { b1: { deep: 1 } } }, { kind: "fields", values: { b1: [{ deep: 1 }] } },
-      { kind: "multiChoice", optionIds: [1] }, { kind: "multiChoice", optionIds: "o1" }, { kind: "numeric", value: 9.8 }, { kind: "numeric", value: "9.8", unit: 5 }];
+      { kind: "multiChoice", optionIds: [1] }, { kind: "multiChoice", optionIds: "o1" }, { kind: "numeric", value: 9.8 }, { kind: "numeric", value: "9.8", unit: 5 },
+      { kind: "table", values: ["A", 1] }, { kind: "fields", values: { b1: ["IP", true] } }, { kind: "numeric", value: "9.8", unit: null }];
     for (const a of bad) {
       const r = normalizeDraftAnswers({ q1: a }, EX());
       expect(r.answers, JSON.stringify(a)).toEqual({});
@@ -111,6 +112,21 @@ describe("20G.1 D3 — malformed and oversize legacy answers fail closed; bounda
     expect(part.answers).toEqual({ q3: { kind: "compound", parts: { p2: A.choice(0) } } });
     expect(part.rejected).toEqual([{ id: "q3.p1", code: "ANSWER_TOO_LARGE" }]);
   });
+  it("D3-E' extra keys on a compound PART never reach storage (a 1 MB junk key on a part is dropped, the part rebuilt to its contract keys)", () => {
+    const r = normalizeDraftAnswers({ q3: { kind: "compound", parts: { p1: { kind: "text", value: "UDP", score: 1, junk: "x".repeat(1e6) }, p2: { kind: "choice", index: 0, correct: true } } } }, EX());
+    expect(r).toEqual({ answers: { q3: { kind: "compound", parts: { p1: A.text("UDP"), p2: A.choice(0) } } }, rejected: [] });
+    expect(bytes(r.answers)).toBeLessThan(200);
+  });
+  it("D3-E'' the bound is UTF-8 BYTES, not characters: multi-byte answers at exactly the bound are kept, one byte more is refused", () => {
+    const overhead = bytes({ kind: "text", value: "" });
+    for (const [unit, size] of [["ب", 2], ["€", 3], ["😀", 4]]) {
+      const n = Math.floor((LIMIT - overhead) / size), pad = "x".repeat(LIMIT - overhead - n * size);
+      const exact = { kind: "text", value: unit.repeat(n) + pad }, over = { kind: "text", value: unit.repeat(n) + pad + "x" };
+      expect([bytes(exact), bytes(over)], unit).toEqual([LIMIT, LIMIT + 1]);
+      expect(normalizeDraftAnswers({ q1: exact }, EX()), unit).toEqual({ answers: { q1: exact }, rejected: [] });
+      expect(normalizeDraftAnswers({ q1: over }, EX()), unit).toEqual({ answers: {}, rejected: [{ id: "q1", code: "ANSWER_TOO_LARGE" }] });
+    }
+  });
   it("D3-F boundary-valid legacy text (exactly the bound, ASCII and multi-byte Arabic) is kept byte-for-byte (pin)", () => {
     const exact = { kind: "text", value: textOfBytes(LIMIT) };
     expect(bytes(exact)).toBe(LIMIT);
@@ -125,7 +141,7 @@ describe("20G.1 D3 — malformed and oversize legacy answers fail closed; bounda
 });
 
 describe("20G.1 D3 — valid answers and specialized contracts are unchanged", () => {
-  it("D3-G every valid legacy answer keeps its exact normalized form (no refusal)", () => {
+  it("D3-G every valid legacy answer keeps its exact normalized form (no refusal) (pin)", () => {
     expect(normalizeDraftAnswers(VALID(), EX())).toEqual({ answers: VALID(), rejected: [] });
   });
   it("D3-G' the 20G stress fixture (every family, kitchen-sink composite + compound) normalizes exactly as on the baseline (pin)", () => {
@@ -206,6 +222,10 @@ describe("20G.1 D3 — valid answers and specialized contracts are unchanged", (
     expect(r.answers).toEqual(comp({}));
     expect(r.rejected).toEqual(["a1", "b1", "b2", "b3"].map(pid => ({ id: "e7-2." + pid, code: "COMPOSITE_CHILD_ANSWER_INVALID" })));
   });
+  it("D3-R' an oversize legacy composite child is refused with ANSWER_TOO_LARGE (the binder's own code, not the composite's shape code)", () => {
+    const r = normalizeDraftAnswers(comp({ b3: { kind: "text", value: textOfBytes(LIMIT + 1) } }), examE());
+    expect(r).toEqual({ answers: comp({}), rejected: [{ id: "e7-2.b3", code: "ANSWER_TOO_LARGE" }] });
+  });
   it("D3-R a valid legacy composite child is rebuilt to its contract keys too (an extra key / client score is never stored)", () => {
     expect(normalizeDraftAnswers(comp({ b3: { kind: "text", value: "x", score: 9 } }), examE())).toEqual({ answers: comp({ b3: A.text("x") }), rejected: [] });
   });
@@ -267,7 +287,7 @@ describe("20G.1 D3 — end to end through the real handlers (draft, restore, sub
     expect(att.score).toBe(gradeExam(EX(), VALID()).score);
     expect(bytes(s.doc(aid))).toBeLessThan(40000);
   });
-  it("D3-M unknown ids and their content never appear in the teacher review payload", async () => {
+  it("D3-M unknown ids and their content never appear in the teacher review payload (pin — review iterates the exam)", async () => {
     const r = await p.teacher.reviewGet(aid, "ih-2");
     expect(r.status).toBe(200);
     expect(JSON.stringify(r.jsonBody)).not.toContain(CANARY);

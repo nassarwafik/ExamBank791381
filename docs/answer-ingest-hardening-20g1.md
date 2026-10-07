@@ -99,7 +99,9 @@ There is **one** new constant: `LEGACY_ANSWER_LIMITS.answerBytes = 65 536`, expo
 **Behaviour:**
 - Oversize input is **refused** (`ANSWER_TOO_LARGE`), never truncated.
 - The specialized limits stay authoritative: legacy validation runs only where no specialized binder applies, and it never loosens a stricter limit.
-- Boundaries are tested at exactly N (accepted, byte-for-byte) and N + 1 (refused).
+- Boundaries are tested at exactly N (accepted, byte-for-byte) and N + 1 (refused). That holds for ASCII (D3-E, D3-F) and, since Review Fix 1, for 2-, 3- and 4-byte UTF-8 characters at the exact boundary (D3-E″). The bound is UTF-8 **bytes**, not characters.
+
+  **Correction (Review Fix 1, F2):** the first version of this record and the PR claimed an Arabic boundary test. D3-F's Arabic case is 20 000 characters (40 000 bytes), which is far from the boundary, and no multi-byte N + 1 case existed. A mutant measuring UTF-16 code units instead of bytes therefore survived.
 
 **Resulting bound on stored state:** at most (answer units of the exam) × (their per-kind maximum). This is proportional to the published exam, which only the teacher controls. Unknown ids add nothing.
 
@@ -149,9 +151,9 @@ Refusals are recorded in `rejected[]` with deterministic codes. As before, the e
 
 ## 8. Fail-first evidence
 
-The suite is `api/tests/answer-ingest-hardening-20g1.test.js`. The final file (31 tests), run on a clean detached worktree of `b952f5c`, gave **21 failed / 10 passed**. On the head it gives **31 / 31**.
+The suite is `api/tests/answer-ingest-hardening-20g1.test.js`. The final file (34 tests, after Review Fix 1), run on a clean detached worktree of `b952f5c`, gave **24 failed / 10 passed**. On the head it gives **34 / 34**. Before Review Fix 1 the file had 31 tests: 21 failed / 10 passed.
 
-The 21 baseline failures are A, A′, A″, B, C, C′, D, D′, D″, E, H′, I, K, L, N, N′, N″, N‴, P, R and S.
+The 24 baseline failures are A, A′, A″, B, C, C′, D, D′, D″, E, E′, E″, H′, I, K, L, N, N′, N″, N‴, P, R, R′ and S.
 
 The 10 baseline passes are the pins, which are **labelled as pins**:
 - D3-F, D3-F′ (boundary-valid and sparse legacy answers);
@@ -288,7 +290,22 @@ Full campaign on `25bb4d9`; the 2 survivors were re-run on `0042a6c` after stren
 | N37 | `lib/draft-answers.js` | composite child legacy refusal reported with the generic code | **KILLED** | `answer-ingest-hardening-20g1.test.js` D3-H'' |
 | N38 | `lib/draft-answers.js` | nested compound in a composite child reported with the compound code | **KILLED** | `answer-ingest-hardening-20g1.test.js` D3-H'' |
 
-### 13.2 Survivors (first run) and how they were closed
+### 13.2 Independent-review mutants (Review Fix 1)
+
+The independent review of `b3f1722` designed 9 mutants of its own. Three were killed, and **six survived** against the suite at that head. Each survivor was a finding: the code was correct, but the tests did not pin it. The tests were strengthened (D3-D additions, D3-E′, D3-E″, D3-R′), and the six were re-run as N39–N44 against the files the server executes:
+
+| Id | Planted defect (reviewer id) | Result | Killed by |
+|---|---|---|---|
+| N39 | store the raw compound part, so extra keys / junk survive (R1) | **KILLED** | D3-E′ |
+| N40 | bound measured in UTF-16 code units instead of UTF-8 bytes (R2) | **KILLED** | D3-E″ |
+| N41 | oversize composite child reported with the composite shape code (R3) | **KILLED** | D3-R′ |
+| N42 | numeric table / field cells accepted (R4) | **KILLED** | D3-D |
+| N43 | booleans inside field string arrays accepted (R8) | **KILLED** | D3-D |
+| N44 | numeric `unit: null` accepted (R9) | **KILLED** | D3-D |
+
+**Totals: 44 mutants, 44 KILLED** (38 from our campaign and 6 from the review).
+
+### 13.3 Survivors (first run) and how they were closed
 
 - **N18 (forbidden field keys accepted)** was a weak test, not an equivalent mutant. D3-N's `__proto__` field carried an **object** value, which the value-type check already refuses, so the key check was never what refused it. D3-N‴ now sends `__proto__` / `constructor` / `prototype` with a well-typed **string** value. KILLED.
 - **N08 (arrays allowed at the legacy entry)** is unreachable over JSON, because a JSON array cannot carry a `kind` string. The legacy kind check therefore refuses it anyway, and the rebuilt output would be a plain contract object regardless. Rather than claim equivalence, D3-N‴ constructs an array carrying `kind` in-process. KILLED.
@@ -296,26 +313,34 @@ Full campaign on `25bb4d9`; the 2 survivors were re-run on `0042a6c` after stren
 
 ## 14. Bundle
 
-This phase is server-only: no `src/` production module changed (the only `src/` change is the F-7 pin in a test). `npm run build` on `0042a6c` gave **initial JS graph 18 files, 124.2 KB gzip (budget 125 KB)**, identical to the 20G head. The bundle guard passed, and the budget is **not** changed.
+This phase is server-only: no `src/` production module changed (the only `src/` change is the F-7 pin in a test). `npm run build` (on `0042a6c` and again on the Review Fix 1 tree) gave **initial JS graph 18 files, 124.2 KB gzip (budget 125 KB)**, identical to the 20G head. The bundle guard passed, and the budget is **not** changed.
 
 ## 15. Local validation
 
-Run sequentially on `0042a6c` with **no `dist/` present** during the tests. The commit after it adds only this design record.
+The Review Fix 1 tree was validated before it was committed. Its content is exactly the Review Fix 1 commit; the earlier run on `0042a6c` gave the same results with 10261 / 242 tests. All tests ran sequentially with **no `dist/` present**.
 
 | Check | Result |
 |---|---|
-| `npx vitest run` (root: app + API + scripts, including the shared-finalization drift test) | **779 files, 10261 / 10261 passed** |
-| Focused: 20G.1 + 20D compound freeze + every 20G certification suite + the a11y and D4 suites + drift | **20 files, 242 / 242** |
+| `npx vitest run` (root: app + API + scripts, including the shared-finalization drift test) | **779 files, 10264 / 10264 passed** |
+| Focused: 20G.1 + 20D compound freeze + every 20G certification suite + the a11y and D4 suites + drift | **20 files, 245 / 245** |
 | `npm run lint` | exit 0 |
 | `npx tsc -b --force` | exit 0 |
-| `npm run build` + bundle guard | exit 0; 124.2 KB / 125 KB |
+| `npm run build` + bundle guard | exit 0; initial JS **124.2 KB / 125 KB** |
 | `git diff --check` | clean |
 | `npm --prefix runner test` (isolated, last) | **407 / 407** (`runner/` untouched) |
 
 ## 16. Exact-head CI, independent review, limitations, verdict
 
-Exact-head CI, the independent review history, the final verdict and the head-specific counts are in the PR body and the final report. **Known limitations:**
-- per-answer refusal reporting to the client (future work);
-- no request-body size limit at the HTTP layer beyond the platform default (the stored state is bounded);
-- the falsy-id flat-exam edge case (§11);
-- no migration of pre-20G.1 stored data.
+Exact-head CI, the independent review history, the final verdict and the head-specific counts are in the PR body and the final report.
+
+**Known limitations:**
+- **No per-answer refusal reporting to the client** (future work).
+- **No client cap on legacy free text (F5, an owner decision).** The legacy shortAnswer and compound text inputs have no `maxLength`. A legacy text answer over 64 KiB (about 65 000 ASCII characters, 32 000 Arabic) is refused by the server, but the endpoint still answers 200. On submit it therefore grades as "no answer", while the client showed it as saved. The size is extreme for a short answer, which is why this server-only phase does not change the client. Adding a matching client `maxLength`, or surfacing the refusal, is a product UX decision for the owner. It is the remaining half of the 20G §28 note ("a product limit plus a client cap").
+- **Duplicate question ids (F8) are legacy data only.** `questionIndex` is last-wins, like `flattenQuestions` consumers. If an exam carries the same id twice, an answer is bound against the **last** question with that id. Example: a compound `x` in s1 and a shortAnswer `x` in s2; the compound answer is now refused with `COMPOUND_QUESTION_MISMATCH`, whereas the baseline stored it. Finalization refuses duplicate ids (`examQuality` `DUPLICATE_ID`), and the grader already reads one shared answer for both, so the data was already ambiguous. Code answers have always behaved this way.
+- **No request-body size limit** at the HTTP layer beyond the platform default. The stored state is bounded.
+- **The falsy-id flat-exam edge case** (§11).
+- **No migration** of data stored before 20G.1.
+
+**Pre-existing grading finding O1, outside this phase (an owner decision, not changed here).** This came from the independent review and was reproduced on both `b952f5c` and the head. The legacy grader dispatches on the response kind first. A hostile `{ kind: "choice", index: n }` sent to a legacy **fillBlank** (expected `"4"`, `index: 3`) or **ordering** (expected `["1","2","3"]`, `index: 0`) question is matched by `gradeChoice` against the textual key, and scored **7 / 7** (full marks). The probe is `normalizeDraftAnswers` followed by `gradeExam` on a two-question exam.
+
+20G.1 bounds and shape-validates legacy answers but does **not** bind a legacy answer kind to the question type. The historical legacy grader is deliberately response-kind-first (a `fields` response routes correctly regardless of type spelling), so changing that is a grading-semantics change. It needs its own phase, with fail-first evidence and freeze pins: either bind the kind to the type at ingest, or restrict `gradeChoice` to choice types.
