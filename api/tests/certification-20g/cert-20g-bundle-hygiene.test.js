@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { INITIAL_JS_GZIP_BUDGET_KB } from "../../../scripts/check-bundle-budget.mjs";
 
 // Phase 20G — BUNDLE hygiene (§17). The certification harness, fixtures and scripted-model helpers are TEST code: no production module may
 // import them (so they can never reach any bundle), the heavy surfaces stay behind lazy edges (the bundle guard proves it on every build:
@@ -12,7 +11,8 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
 
 describe("20G bundle hygiene", () => {
-  it("the initial JS gzip budget is unchanged (125 KB)", () => { expect(INITIAL_JS_GZIP_BUDGET_KB).toBe(125); });
+  // the guard runs main() on import (and needs a built dist/), so its source is read as text, like every other guard pin
+  it("the initial JS gzip budget is unchanged (125 KB)", () => { expect(fs.readFileSync(path.join(repo, "scripts/check-bundle-budget.mjs"), "utf8")).toMatch(/^export const INITIAL_JS_GZIP_BUDGET_KB = 125;$/m); });
   it("no production module (src/** non-test, api/src/**) imports the certification harness, fixtures or the scripted-model test helpers", () => {
     const prod = [...walk(path.join(repo, "src")), ...walk(path.join(repo, "api/src"))].filter(f => /\.(t|j)sx?$/.test(f) && !/\.test\.|[\\/]testing[\\/]/.test(f));
     const imports = f => fs.readFileSync(f, "utf8").split("\n").filter(l => /^\s*(import\b|export\b[^;]*\bfrom\b|.*\brequire\(|.*\bimport\()/.test(l));
