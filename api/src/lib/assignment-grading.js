@@ -8,13 +8,14 @@ const {
   questionParts,
   isCompound,
   distributePartMarks,
-  isResponseAnswered,
+  admittedResponse,
+  isAdmittedAnswered,
   selectGradedUnits,
   defaultTrueFalseOptions
 } = require("./exam-structure");
 // Phase 16A — code-owned grading registry (see question-type-graders.js): registered types, the legacy adapter, fail-closed
 // unknown types / unsupported versions. This file never grows a per-type branch again.
-const { resolveGrader, unknownTypeResult, LEGACY } = require("./question-type-graders");
+const { resolveGrader, unknownTypeResult, legacyResponseAdmitted, LEGACY } = require("./question-type-graders");
 // Phase 20D — composite@1: the ONE strict structure authority (shared build) + the trusted SmartSim "prepare once / evaluate many" seam.
 const { compositeStructure, compositeChildNode, compositeChildKey, compositeQuestionVersion, isCompositeQuestionNode, compositeQuestionMaxMarks, selectCompositeCountedParts } = require("./shared-finalization/compositeQuestion");
 const { prepareSmartSimEvaluation, evaluatePreparedSmartSimChecks } = require("./shared-finalization/trustedSimPlugins");
@@ -149,7 +150,7 @@ function gradeCompound(question,response){
   const partResults=parts.map((p,i)=>{
     const pid=partId(p,i);
     const sub={...p,marks:pmarks[i],presentationType:p.type||p.presentationType,answer:p.answer};
-    const r=gradeQuestion(sub,presp[pid]);
+    const r=gradeQuestion(sub,presp[pid],undefined,"part");
     score+=r.score;maxM+=r.maxMarks;
     const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
     manualMarks+=mr;
@@ -181,7 +182,9 @@ function gradeComposite(question,response,context){
   const partAnswers=resp&&resp.parts&&typeof resp.parts==="object"&&!Array.isArray(resp.parts)?resp.parts:{};
   const ctxAnswers=resp&&resp.contexts&&typeof resp.contexts==="object"&&!Array.isArray(resp.contexts)?resp.contexts:{};
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined;
-  const selection=selectCompositeCountedParts(question,resp);
+  // Phase 20G.2 (O1) — first-N selection sees only the child answers the child authorities admit (a mismatched child answer takes no slot);
+  // the counted children are still graded from the stored answers below, so a counted mismatch fails closed in its own grader.
+  const selection=selectCompositeCountedParts(question,admittedResponse(question,resp));
   const qkey=context&&typeof context.questionKey==="string"?context.questionKey:null;
   const generation=context&&context.generation&&typeof context.generation==="object"?context.generation:null;
   const prepared=new Map();
@@ -199,7 +202,7 @@ function gradeComposite(question,response,context){
         const e=evaluatePreparedSmartSimChecks(preparedFor(p.contextId),{answerKey:p.raw.answer,maxMarks:p.marks});
         r={score:e.score,maxMarks:p.marks,correct:e.correct===true&&e.manualReview!==true,manualReview:e.manualReview===true,parts:e.parts};
       }else{
-        r=gradeQuestion({...compositeChildNode(p.raw),marks:p.marks},own(partAnswers,p.id),generation&&qkey?{generation,questionKey:compositeChildKey(qkey,p.id)}:undefined);
+        r=gradeQuestion({...compositeChildNode(p.raw),marks:p.marks},own(partAnswers,p.id),generation&&qkey?{generation,questionKey:compositeChildKey(qkey,p.id)}:undefined,"part");
       }
       const s=Math.min(Math.max(0,Number(r.score)||0),p.marks);
       const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?p.marks:0);
@@ -221,7 +224,9 @@ function gradeComposite(question,response,context){
 // Phase 19B — `context` (optional) carries the SERVER-owned generation identity of the attempt being graded ({ generation:
 // { assignmentId, studentId, attemptNumber }, questionKey }); a registered handler receives it as its 4th argument. Only a
 // parametric handler reads it; every other grader ignores it, so all existing grades are byte-for-byte unchanged.
-function gradeQuestion(question,response,context){
+// Phase 20G.2 RF1 — `placement` ("part" for a compound part / composite child, else the top-level question) reaches only the legacy
+// answer-kind binding: a part is answered through CompoundPartControl, which never draws a table.
+function gradeQuestion(question,response,context,placement){
   // Phase 20D — the composite family is decided by its TYPE (checked first: a composite carrying a legacy `parts` array is a broken
   // authority and fails closed, never graded as a compound); compound@1 keeps its structural detection below, unchanged.
   if(isCompositeQuestionNode(question)){
@@ -241,11 +246,16 @@ function gradeQuestion(question,response,context){
     const manualReview=r.manualReview===true;
     return {score,maxMarks:max,correct:r.correct===true&&!manualReview,manualReview,...(r.parts?{parts:r.parts}:{})};
   }
-  return gradeLegacyQuestion(question,response,max);
+  return gradeLegacyQuestion(question,response,max,placement);
 }
 // LEGACY ADAPTER — the original dispatch, unchanged: response-kind first (so a fields response always routes correctly
 // regardless of type spelling), then the legacy type / answer.mode decisions for choice / sequence / table / text.
-function gradeLegacyQuestion(question,response,max){
+// Phase 20G.2 (O1) — the response kind no longer CHOOSES the grader on its own: before the dispatch, the question authority must admit
+// the kind (legacyAnswerKindAllowed, the same shared rule the ingest applies). A present response whose kind the question does not admit
+// (a forged choice on a fillBlank / ordering / typeless question …) fails CLOSED to teacher review — never a score, never a silent zero.
+// An absent response (null / undefined) keeps its historical path byte-for-byte (an unanswered question is not a mismatch).
+function gradeLegacyQuestion(question,response,max,placement){
+  if(response!=null&&!legacyResponseAdmitted(question,response,placement))return {score:0,maxMarks:max,correct:false,manualReview:true};
   const answer=question?.answer||{},type=String(question?.presentationType||question?.type||"").toLowerCase();
   if(response?.kind==="fields"){
     const r=gradeFields(question,response,max);
@@ -292,20 +302,20 @@ function gradeQuestionForSection(q,i,section,answers,countedKeys,generation){
     const partOut=parts.map((p,pi)=>{
       const pid=partId(p,pi),key=id+"::"+pid;
       const sub={...p,marks:pmarks[pi],presentationType:p.type||p.presentationType,answer:p.answer};
-      const r=gradeQuestion(sub,presp[pid]);
+      const r=gradeQuestion(sub,presp[pid],undefined,"part");
       fullMax+=r.maxMarks;
       const counted=countedKeys.has(key);
       const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
       if(counted){countedScore+=r.score;countedMax+=r.maxMarks;countedManual+=mr}
-      return {partId:pid,label:partLabel(p,pi),score:round(r.score),maxMarks:round(r.maxMarks),correct:r.correct,manualReview:r.manualReview,counted,ignored:!counted&&isResponseAnswered(presp[pid])};
+      return {partId:pid,label:partLabel(p,pi),score:round(r.score),maxMarks:round(r.maxMarks),correct:r.correct,manualReview:r.manualReview,counted,ignored:!counted&&isAdmittedAnswered(sub,presp[pid],"part")};
     });
-    return {id,score:countedScore,maxMarks:fullMax,countedMaxMarks:countedMax,manualReviewMarks:countedManual,correct:countedMax>0&&countedScore>=countedMax-1e-9,manualReview:countedManual>0,ignored:countedMax===0&&isResponseAnswered(resp),parts:partOut};
+    return {id,score:countedScore,maxMarks:fullMax,countedMaxMarks:countedMax,manualReviewMarks:countedManual,correct:countedMax>0&&countedScore>=countedMax-1e-9,manualReview:countedManual>0,ignored:countedMax===0&&isAdmittedAnswered(q,resp),parts:partOut};
   }
   const r=gradeQuestion(q,resp,generation?{generation,questionKey:id}:isCompositeQuestionNode(q)?{questionKey:id}:undefined),counted=countedKeys.has(id);
   const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
   // Phase 20D — an excess (first-N) or otherwise uncounted composite is ignored WHOLE: its parts carry no counted marks either.
   const parts=r.composite&&!counted&&Array.isArray(r.parts)?r.parts.map(p=>({...p,score:0,countedMaxMarks:0,manualReview:false,correct:false,counted:false,ignored:true})):(r.parts||null);
-  return {id,score:counted?r.score:0,maxMarks:r.maxMarks,countedMaxMarks:counted?r.maxMarks:0,manualReviewMarks:counted?mr:0,correct:r.correct,manualReview:counted?r.manualReview:false,ignored:!counted&&isResponseAnswered(resp),parts,...(r.composite?{composite:r.composite}:{})};
+  return {id,score:counted?r.score:0,maxMarks:r.maxMarks,countedMaxMarks:counted?r.maxMarks:0,manualReviewMarks:counted?mr:0,correct:r.correct,manualReview:counted?r.manualReview:false,ignored:!counted&&isAdmittedAnswered(q,resp),parts,...(r.composite?{composite:r.composite}:{})};
 }
 
 // Section-aware, backward-compatible exam grader.

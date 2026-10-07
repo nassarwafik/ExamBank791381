@@ -60,8 +60,11 @@ describe("20D-RF1-F1 forged / malformed nested answers never crash grading and n
   const FORGED = [{ kind: "text" }, { kind: "fields" }, { kind: "sequence" }, { kind: "table", values: "x" }, { kind: "text", value: 5 }, { kind: "choice", index: "0" }, { kind: "compound", parts: null }, { kind: "compound", parts: {} }, { kind: "composite", parts: {} }, { kind: "nope" }, null, 7];
   it("binding drops every malformed / wrong-family child answer (reported), keeps the well-formed ones; grading never throws", () => {
     for (const bad of FORGED) {
-      const b = normalizeDraftAnswers({ q4: comp({ pA1: bad, pA3: { kind: "choice", index: 0 } }) }, compositeArabicExam());
-      expect(b.answers.q4.parts, JSON.stringify(bad)).toEqual({ pA3: { kind: "choice", index: 0 } });
+      // 20G.2 (O1) — the kept control is an answer the matching child ADMITS (fields); a choice on that matching child was never an answer
+      // its renderer produced and is now refused (ANSWER_KIND_MISMATCH — see legacy-answer-type-binding-20g2.test.js O1-X).
+      const ok = { kind: "fields", values: { m1: "نقلّل", m2: "عذب" } };
+      const b = normalizeDraftAnswers({ q4: comp({ pA1: bad, pA3: ok }) }, compositeArabicExam());
+      expect(b.answers.q4.parts, JSON.stringify(bad)).toEqual({ pA3: ok });
       expect(b.rejected.map(r => r.id), JSON.stringify(bad)).toContain("q4.pA1");
       expect(() => gradeExam(compositeArabicExam(), b.answers)).not.toThrow();
     }

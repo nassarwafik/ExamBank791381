@@ -8,7 +8,7 @@
 // as V1 is supported — registering V2 is ADDITIVE and can never replace or shadow V1; an absent stored version is V1
 // (shared effectiveQuestionTypeVersion authority), an unsupported one fails closed. Nothing in exam JSON can name a grader.
 const shared = require("./shared-finalization/questionTypeCatalog");
-const { resolveQuestionTypeKeyOrAlias } = require("./shared-finalization/questionTypeAliases");
+const { resolveQuestionTypeKeyOrAlias, legacyAnswerKindAllowed } = require("./shared-finalization/questionTypeAliases");
 const scoring = require("./shared-finalization/questionTypeScoring");
 // Phase 18C — networkCli@1: the shared engine re-derives the canonical device state from the command history and compares it
 // to the private target (per-check partial credit). The client-claimed state is never read for grading.
@@ -91,6 +91,18 @@ function resolveGrader(rawType, version, options = {}) {
   if (def && def.legacy) return LEGACY;
   return graders.get(identity(key, v));
 }
+/**
+ * Phase 20G.2 — is `response` admitted for this question by the SERVER-OWNED question authority? Applies the shared legacy answer-kind
+ * binding (legacyAnswerKindAllowed) to exactly the questions this registry grades with the LEGACY adapter (legacy type / alias / missing
+ * type / legacy-flat unknown type); every other question (registered families, unsupported / unknown structured types) is governed by its
+ * own binder and grader, so the answer here is true (no opinion). Consumed by the legacy grader, the first-N answered selection and ingest.
+ */
+function legacyResponseAdmitted(question, response, placement) {
+  const q = question && typeof question === "object" ? question : {};
+  const structured = typeof q.presentationType === "string" && q.presentationType.trim() !== "";
+  if (resolveGrader(q.presentationType || q.type, q.questionTypeVersion, { legacyFlat: !structured }) !== LEGACY) return true;
+  return legacyAnswerKindAllowed(q, response && typeof response === "object" ? response.kind : undefined, placement === "part" ? "part" : "question");
+}
 function unknownTypeResult(max) {
   const m = Number.isFinite(Number(max)) ? Math.max(0, Number(max)) : 0;
   return { score: 0, maxMarks: m, correct: false, manualReview: true, unsupportedType: true };
@@ -164,4 +176,4 @@ registerBuiltIn("categorization", (question, response, max) => {
   return { score: r.score, correct: r.correct, manualReview: false, parts: { correct: r.correctItems, total: r.totalItems } };
 });
 
-module.exports = { registerGrader, resolveGrader, isLegacyType, unknownTypeResult, LEGACY };
+module.exports = { registerGrader, resolveGrader, isLegacyType, unknownTypeResult, legacyResponseAdmitted, LEGACY };

@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LEGACY_TYPE_ALIASES = exports.GRADING_MODE_LABELS = exports.CATEGORY_ORDER = exports.CATEGORY_LABELS = void 0;
 exports.resolveQuestionTypeKeyOrAlias = resolveQuestionTypeKeyOrAlias;
+exports.legacyAnswerKindAllowed = legacyAnswerKindAllowed;
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 exports.CATEGORY_LABELS = Object.freeze({ choice: "اختيار", response: "إجابات", structured: "منظّم", interactive: "تفاعلي", composite: "مركّب" });
 exports.CATEGORY_ORDER = Object.freeze(["choice", "response", "structured", "interactive", "composite"]);
@@ -28,4 +29,40 @@ function resolveQuestionTypeKeyOrAlias(raw) {
         return undefined;
     const alias = exports.LEGACY_TYPE_ALIASES[raw.trim().toLowerCase()];
     return alias && (0, questionTypeCatalog_1.isKnownQuestionType)(alias) ? alias : undefined;
+}
+function textHasTable(text) {
+    if (typeof text !== "string")
+        return false;
+    const lines = text.split(/\r?\n/).map(x => x.trim()).filter(x => x.startsWith("|") && x.endsWith("|"));
+    if (lines.length < 2)
+        return false;
+    return lines.slice(1).some(l => !l.slice(1, -1).split("|").every(c => /^:?-{3,}:?$/.test(c.trim().replace(/\s/g, ""))));
+}
+function legacyAnswerKindAllowed(question, kind, placement = "question") {
+    if (typeof kind !== "string")
+        return false;
+    const q = (question && typeof question === "object" ? question : {});
+    const shown = String(q.presentationType || q.type || "");
+    const literal = shown.toLowerCase();
+    const key = resolveQuestionTypeKeyOrAlias(shown);
+    const def = key ? (0, questionTypeCatalog_1.questionTypeDefinition)(key) : undefined;
+    if (def && !def.legacy)
+        return true;
+    const kinds = def ? def.responseKinds : [];
+    if (kind === "table") {
+        const fieldType = literal === "multitruefalse" || literal === "clifill" || (literal === "tablefill" && !!(q.tableHeaders || q.tableRows));
+        const drawable = textHasTable(q.text);
+        return drawable ? placement === "question" && !fieldType : kinds.includes("table");
+    }
+    if (kinds.includes(kind))
+        return true;
+    if ((kind === "sequence" || kind === "fields") && Array.isArray(q.fields) && q.fields.length > 0)
+        return true;
+    if (kind === "sequence") {
+        const mode = q.answer && typeof q.answer === "object" ? q.answer.mode : undefined;
+        return (mode === "exactSequence" || mode === "sequence") && !kinds.includes("choice");
+    }
+    if (kind === "text")
+        return literal !== "multiplechoice" && literal !== "truefalse";
+    return false;
 }

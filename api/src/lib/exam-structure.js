@@ -15,6 +15,10 @@ const GRADING_POLICIES = ["all", "capScore", "firstNAnswered"];
 // Phase 20D — composite@1 (the advanced composite family) keeps its children under the type-owned root `composite`, never `parts`, so every
 // legacy compound path below is untouched; its answer-independent official maximum and answered-ness come from the ONE shared authority.
 const { isCompositeQuestionNode, compositeQuestionMaxMarks, isCompositeAnswerAnswered } = require("./shared-finalization/compositeModel");
+// Phase 20G.2 (O1) — the question authority decides which answer kinds a legacy question admits (the SAME shared rule the grader and the
+// ingest apply); a kind it does not admit is never "answered" here, so it can never take a first-N slot.
+const { legacyResponseAdmitted } = require("./question-type-graders");
+const { compositeStructure, compositeChildNode } = require("./shared-finalization/compositeQuestion");
 
 // Stable identity helpers. These MUST match src/StudentQuestionCard.tsx's qid() and the front-end
 // mirror so a draft saved by the browser is keyed exactly the way the grader looks it up. Display
@@ -283,6 +287,46 @@ function unitKey(u) {
   return u.partId ? u.questionId + "::" + u.partId : u.questionId;
 }
 
+// Phase 20G.2 (O1) — the response as the QUESTION authority admits it, mirroring gradeQuestion's dispatch order (composite, compound, then
+// the type registry): a legacy answer whose kind the question does not admit is dropped (undefined), a compound / composite answer keeps only
+// the child answers its own child nodes admit (a compound part node is { ...part, presentationType: part.type || part.presentationType },
+// exactly as gradeCompound builds it; a composite child node is compositeChildNode(raw), exactly as gradeComposite builds it). A compound /
+// composite question answered with another kind admits nothing. Modern (registered) types are unaffected; an absent response stays absent.
+// Used ONLY to decide answered-ness / first-N selection — grading itself still receives the stored answer and fails a mismatch closed.
+const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+function admittedResponse(q, resp, placement) {
+  if (resp == null) return resp;
+  const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
+  if (isCompositeQuestionNode(q)) {
+    if (!isObj(resp) || resp.kind !== "composite") return undefined;
+    const st = compositeStructure(q);
+    if (!st.ok || !isObj(resp.parts)) return resp;
+    const parts = {};
+    for (const g of st.model.groups) for (const p of g.parts) {
+      if (!own(resp.parts, p.id)) continue;
+      const a = admittedResponse(compositeChildNode(p.raw), resp.parts[p.id], "part");
+      if (a !== undefined) parts[p.id] = a;
+    }
+    return { ...resp, parts };
+  }
+  if (isCompound(q)) {
+    if (!isObj(resp) || resp.kind !== "compound") return undefined;
+    const src = isObj(resp.parts) ? resp.parts : {};
+    const parts = {};
+    questionParts(q).forEach((p, i) => {
+      const pid = partId(p, i);
+      if (!own(src, pid)) return;
+      const a = admittedResponse({ ...p, presentationType: p.type || p.presentationType }, src[pid], "part");
+      if (a !== undefined) parts[pid] = a;
+    });
+    return { ...resp, parts };
+  }
+  return legacyResponseAdmitted(q, resp, placement) ? resp : undefined;
+}
+function isAdmittedAnswered(q, resp, placement) {
+  return isResponseAnswered(admittedResponse(q, resp, placement));
+}
+
 // The gradable "units" of a section in DISPLAY order. For answerUnit==="question" every question is
 // one unit. For answerUnit==="part" a compound question contributes one unit per part (flattened in
 // order); a non-compound question in a part-unit section counts as a single unit.
@@ -292,13 +336,14 @@ function getAnswerUnits(section, answers) {
     const qid = sectionQuestionId(section, q, qi);
     const resp = answers ? answers[qid] : undefined;
     if (section.answerUnit === "part" && isCompound(q)) {
+      const admitted = admittedResponse(q, resp);
       questionParts(q).forEach((p, pi) => {
         const pid = partId(p, pi);
         const pans = resp && resp.kind === "compound" && resp.parts ? resp.parts[pid] : undefined;
-        units.push({ questionId: qid, partId: pid, answer: pans, answered: isResponseAnswered(pans) });
+        units.push({ questionId: qid, partId: pid, answer: pans, answered: isResponseAnswered(admitted && admitted.parts ? admitted.parts[pid] : undefined) });
       });
     } else {
-      units.push({ questionId: qid, partId: null, answer: resp, answered: isResponseAnswered(resp) });
+      units.push({ questionId: qid, partId: null, answer: resp, answered: isAdmittedAnswered(q, resp) });
     }
   });
   return units;
@@ -377,6 +422,8 @@ module.exports = {
   isCompound,
   distributePartMarks,
   isResponseAnswered,
+  admittedResponse,
+  isAdmittedAnswered,
   normalizeExamStructure,
   flattenQuestions,
   getAnswerUnits,
