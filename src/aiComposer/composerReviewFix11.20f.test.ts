@@ -165,3 +165,25 @@ describe("20F-RF11 the left edge too (regression found by the batteries on d180e
     expect(codes(buildSimFromSpec(fn("(x+1)*(x-7)", ["xIntercepts"], { yMin: -50, yMax: 50, xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
   });
 });
+
+describe("20F-RF11 each rule holds on its own (final mutation re-run on 59747bc)", () => {
+  const Zu = "abs(abs(abs(abs(abs(abs(log(abs(x)+1)-8)-2.5)-1.25)-0.625)-0.3125)-0.15625)-0.078125";
+  it("a window narrower than the edge strip: a root between the strip's end and the scan beyond the window (the edge value starts the scan)", () => {
+    expect(codes(buildSimFromSpec(fn("(x-0.00025)*(x-0.0012)", ["xIntercepts"], { xMin: 0, xMax: 0.0005, xIntercepts: [0.00025] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a guard zero of a power below the vanishing floor is found where the guard is exactly 0 at the 12-digit point (1/|x − 2.1|^0.005)", () => {
+    expect(codes(buildSimFromSpec(fn("1/abs(x-2.1)^(0.005)+1/(x+4.2)", ["domainExclusions"], { domainExclusions: [-4.2] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+  });
+  it("a hidden cusp root below the vanishing floor: (x − 41.34)·|x − 41.47|^0.005 on [−50, 50]", () => {
+    expect(codes(buildSimFromSpec(fn("(x-41.34)*abs(x-41.47)^(0.005)", ["xIntercepts"], { xMin: -50, xMax: 50, xIntercepts: [41.34] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+  });
+  it("a touching root beyond the window that is neither a cusp nor a sign change: (x + 1)(x − 7)(x − 7)", () => {
+    expect(codes(buildSimFromSpec(fn("(x+1)*(x-7)*(x-7)", ["xIntercepts"], { yMin: -100, yMax: 100, xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a large V-shaped touching root that is not a cusp vanishes like a power: 10⁹·|x² − 2|·(x + 3)", () => {
+    expect(codes(buildSimFromSpec(fn("1000000000*abs(x^2-2)*(x+3)", ["xIntercepts"], { xIntercepts: [-3] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+  });
+  it("a steep root beyond the window when the guards beyond it are too many to report (64 zeros of a denominator)", () => {
+    expect(codes(buildSimFromSpec(fn("(x+1)*sqrt(abs(x^2-82))+0/(" + Zu + ")", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+});
