@@ -191,7 +191,12 @@ const PIN = {
   firstN: "1d67cd2cf40e962bf24c76cd219ed710195cb8eb07e4dad84a107649b62b2492",
   sanitizedExam: "6b4cbac4255a8d77f58ed73e11a647236a98d11a2a6c59e4d89984835df1b5dc",
   sanitizedPart: "668b53cff6f9ba7ea035d09ee4f4cc374c0c132b947cb691b90e876fae25940e",
-  draftBound: "d48d3f3a85be41666dcebfd92bbbad8d8f1b5817e4b23527b3273bf2057c5500",
+  // Phase 20G.1 — the ONE intentional, owner-authorized recapture (D3 answer ingest hardening; docs/answer-ingest-hardening-20g1.md §F-7).
+  // Was "d48d3f3a85be41666dcebfd92bbbad8d8f1b5817e4b23527b3273bf2057c5500". Bound to the published exam, the answer to `unknownQ` (not a
+  // question of the exam) is no longer stored (ANSWER_QUESTION_UNKNOWN) and the `cq1` compound container is rebuilt to exactly { kind, parts }
+  // (its `extra` key dropped); all nine cq1 parts are byte-identical and the three modern-kind part refusals are unchanged. Every other pin,
+  // draftUnbound included, is unchanged.
+  draftBound: "59ede24887af8ebbaedc6e8be752660254d9d4c2f172273f672a9351df9863d6",
   draftUnbound: "2edae12f6c918573ec079b386b215b053b6490f03206811ff2aabf54677b04af",
   validation: "74a9a4283dde31aee7f38c1cbeaa48fe5721d34d2f7b88cddf1479ede3af5010",
   imported: "b8aaba7693c5417784e8563927fbf4171be11f81c0954aed3395a42d68d15ff8",

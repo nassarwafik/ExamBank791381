@@ -97,7 +97,7 @@ describe("19B — ingest binding", () => {
     const ex = exam([pq(), { examQuestionId: "n1", presentationType: "numericResponse", text: "x", marks: 1, numeric: { unitRequired: false }, answer: { mode: "tolerance", expected: 1, tolerance: 0 } }]);
     const r = normalizeDraftAnswers({ pq1: num("26", { seed: "s", values: { a: 1 }, expected: 26, generatorVersion: 7 }), n1: num("1", { note: "kept as before" }) }, ex);
     expect(r.answers.pq1).toEqual({ kind: "numeric", value: "26" });
-    expect(r.answers.n1).toEqual(num("1", { note: "kept as before" }));
+    expect(r.answers.n1).toEqual(num("1"));                                        // 20G.1 — a legacy numeric answer is rebuilt to exactly { kind, value, unit? } (the extra key is never stored)
     const bad = normalizeDraftAnswers({ pq1: { kind: "text", value: "26" } }, ex);
     expect(bad.answers.pq1).toBeUndefined(); expect(bad.rejected).toEqual([{ id: "pq1", code: "PARAM_ANSWER_INVALID" }]);
   });

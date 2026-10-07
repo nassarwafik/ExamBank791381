@@ -6,8 +6,11 @@ import { describe, it, expect, vi } from "vitest";
 const { handler } = await import("../src/functions/student-submission.js");
 
 const AP = "platform/assignments/", SP = "platform/submissions/";
-function modernAssignment() { return { assignmentId: "as1", classId: "c1", status: "published", durationMinutes: 0, maxAttempts: 3, attemptModelVersion: 2, title: "T", examSnapshot: { questions: [] } }; }
-function legacyAssignment() { return { assignmentId: "as1", classId: "c1", status: "published", durationMinutes: 0, maxAttempts: 3, title: "T", examSnapshot: { questions: [] } }; } // attemptModelVersion undefined → legacy
+// 20G.1 — the draft markers answer q1, a question OF the published exam, with a valid text answer (an unknown id / a bare primitive is never stored)
+const Q1_EXAM = { questions: [{ id: "q1", type: "shortAnswer", text: "?", marks: 1 }] };
+const marker = value => ({ kind: "text", value });
+function modernAssignment() { return { assignmentId: "as1", classId: "c1", status: "published", durationMinutes: 0, maxAttempts: 3, attemptModelVersion: 2, title: "T", examSnapshot: Q1_EXAM }; }
+function legacyAssignment() { return { assignmentId: "as1", classId: "c1", status: "published", durationMinutes: 0, maxAttempts: 3, title: "T", examSnapshot: Q1_EXAM }; } // attemptModelVersion undefined → legacy
 function submissionAttempt2() {
   return { schemaVersion: 1, assignmentId: "as1", studentId: "u1", classId: "c1", draftAnswers: { q1: "KEEP_ATTEMPT2_DRAFT" }, draftSavedAt: "2026-01-01T12:01:00.000Z",
     attempts: [{ attemptNumber: 1, submittedAt: "x" }], activeAttempt: { attemptNumber: 2, startedAt: "2026-01-01T12:00:00.000Z", endsAt: "", status: "started" } };
@@ -67,9 +70,9 @@ describe("R10/R11 server stale-attempt guard", () => {
 
   it("matching identity saves normally (200)", async () => {
     const a = modernAssignment(); const { store, deps } = makeDeps(a, submissionAttempt2());
-    const res = await handler(req({ action: "saveDraft", answers: { q1: "FRESH" }, expectedAttemptNumber: 2, expectedStartedAt: "2026-01-01T12:00:00.000Z" }), deps);
+    const res = await handler(req({ action: "saveDraft", answers: { q1: marker("FRESH") }, expectedAttemptNumber: 2, expectedStartedAt: "2026-01-01T12:00:00.000Z" }), deps);
     expect(res.status).toBe(200);
-    expect(store.doc.draftAnswers.q1).toBe("FRESH");
+    expect(store.doc.draftAnswers.q1).toEqual(marker("FRESH"));
   });
 
   it("E: strict identity — boolean/string/float/zero/negative attemptNumber and non-string/empty startedAt all fail closed (409); valid integer+string saves", async () => {
@@ -91,17 +94,17 @@ describe("R10/R11 server stale-attempt guard", () => {
     }
     // valid strict identity (integer attemptNumber + exact string startedAt) saves normally
     const { store, deps } = makeDeps(a, submissionAttempt2());
-    const ok = await handler(req({ action: "saveDraft", answers: { q1: "STRICT_OK" }, expectedAttemptNumber: 2, expectedStartedAt: startedAt }), deps);
+    const ok = await handler(req({ action: "saveDraft", answers: { q1: marker("STRICT_OK") }, expectedAttemptNumber: 2, expectedStartedAt: startedAt }), deps);
     expect(ok.status).toBe(200);
-    expect(store.doc.draftAnswers.q1).toBe("STRICT_OK");
+    expect(store.doc.draftAnswers.q1).toEqual(marker("STRICT_OK"));
   });
 
   it("legacy untimed without asserted identity is unaffected (200)", async () => {
     const a = legacyAssignment();
     // legacy, no active attempt yet → lazy creation; no expected identity sent
     const { store, deps } = makeDeps(a, { schemaVersion: 1, assignmentId: "as1", studentId: "u1", classId: "c1", draftAnswers: {}, attempts: [], activeAttempt: null });
-    const res = await handler(req({ action: "saveDraft", answers: { q1: "LEGACY" } }), deps);
+    const res = await handler(req({ action: "saveDraft", answers: { q1: marker("LEGACY") } }), deps);
     expect(res.status).toBe(200);
-    expect(store.doc.draftAnswers.q1).toBe("LEGACY");
+    expect(store.doc.draftAnswers.q1).toEqual(marker("LEGACY"));
   });
 });

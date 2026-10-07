@@ -6,7 +6,7 @@ const { normalizeSimulationState } = require("./shared-finalization/smartsimStat
 // the source is never trimmed / re-indented / re-encoded; client-reported score / passed / testsPassed / stdout are dropped;
 // only a REGISTERED language at its exact contract version is accepted (V1: python@1, java@1, csharp@1).
 const { normalizeCodeAnswer, bindCodeAnswerToQuestion } = require("./shared-finalization/codingQuestion");
-const { flattenQuestions } = require("./exam-structure");
+const { flattenQuestions, questionParts, partId, isCompound } = require("./exam-structure");
 // Phase 19A — an answer to an inlineCloze@1 question is the existing `fields` Answer; bound to the published question only STRING
 // values for that question's own blank ids survive (bounded). A non-fields answer to a cloze question is dropped with a code.
 // Every other `fields` answer (legacy fillBlank / wordBank / matrix / …) is passed through exactly as before.
@@ -85,6 +85,12 @@ function bindAnswer(id, a, q, bound, reject) {
   if (bound && isParametricQuestion(q)) return bindParametricNumericAnswer(a);
   if (bound && isInlineClozeQuestion(q)) return bindInlineClozeAnswerToQuestion(a, q);
   if (bound && a && typeof a === "object" && a.kind === "compound" && a.parts && typeof a.parts === "object" && !Array.isArray(a.parts)) {
+    // 20G.1 — only the published question's OWN part ids (the grader's partId authority) survive, each a well-formed bounded legacy answer;
+    // the container is rebuilt to exactly { kind, parts }. The specialized mismatch codes keep their precedence.
+    if (q === undefined) return { ok: false, code: "ANSWER_QUESTION_UNKNOWN" };
+    // the grader reads a compound answer ONLY on a compound question (isCompound — the same authority); elsewhere it was never an answer
+    if (!isCompound(q)) return { ok: false, code: "COMPOUND_QUESTION_MISMATCH" };
+    const own = new Set(questionParts(q).map((p, i) => partId(p, i)));
     const parts = {};
     for (const pid of Object.keys(a.parts)) {
       if (isCode(a.parts[pid])) { reject(id + "." + pid, "CODE_QUESTION_MISMATCH"); continue; }
@@ -92,12 +98,47 @@ function bindAnswer(id, a, q, bound, reject) {
       if (isNetworkCli(a.parts[pid])) { reject(id + "." + pid, "NETCLI_QUESTION_MISMATCH"); continue; }
       if (isSmartSim(a.parts[pid])) { reject(id + "." + pid, "SMARTSIM_QUESTION_MISMATCH"); continue; }
       if (isHotspot(a.parts[pid])) { reject(id + "." + pid, "HOTSPOT_QUESTION_MISMATCH"); continue; }
-      parts[pid] = a.parts[pid];
+      if (!own.has(pid)) { reject(id + "." + pid, "COMPOUND_PART_UNKNOWN"); continue; }
+      const r = bindLegacyAnswer(a.parts[pid]);
+      if (r.ok) setOwn(parts, pid, r.answer); else reject(id + "." + pid, r.code);
     }
-    return { ok: true, answer: { ...a, parts } };
+    return { ok: true, answer: { kind: "compound", parts } };
   }
-  return { ok: true, answer: a };
+  if (!bound) return { ok: true, answer: a };
+  if (q === undefined) return { ok: false, code: "ANSWER_QUESTION_UNKNOWN" };
+  return bindLegacyAnswer(a);
 }
+
+// Phase 20G.1 — the LEGACY answer contract (the original Answer shapes the generic binder historically passed through untouched). Bound
+// to the published exam, a legacy answer must be exactly one of these shapes with values of its historical types (a sequence / table cell
+// left empty by the client is a JSON null), is REBUILT to exactly its contract keys (a client score / correct flag / extra data is never
+// stored) and must fit LEGACY_ANSWER_LIMITS.answerBytes serialized — oversize is REFUSED, never truncated. Field ids / values are kept
+// verbatim; a forbidden (prototype) field key refuses the answer. Unbound (no exam), the historical pass-through is unchanged.
+const LEGACY_ANSWER_LIMITS = Object.freeze({ answerBytes: 65536 });
+const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const LEGACY_SHAPE_CODES = new Set(["ANSWER_INVALID", "COMPOUND_QUESTION_MISMATCH"]);
+const isStr = v => typeof v === "string";
+const strOrNull = v => typeof v === "string" || v === null;
+const cellValue = v => typeof v === "string" || typeof v === "boolean" || v === null;
+const fieldValue = v => cellValue(v) || (Array.isArray(v) && v.every(strOrNull));
+const LEGACY_SHAPES = {
+  choice: a => (Number.isInteger(a.index) && a.index >= 0 ? { kind: "choice", index: a.index } : null),
+  text: a => (isStr(a.value) ? { kind: "text", value: a.value } : null),
+  sequence: a => (Array.isArray(a.values) && a.values.every(strOrNull) ? { kind: "sequence", values: a.values } : null),
+  table: a => (Array.isArray(a.values) && a.values.every(cellValue) ? { kind: "table", values: a.values } : null),
+  fields: a => (isPlain(a.values) && Object.keys(a.values).every(k => !FORBIDDEN_KEYS.has(k) && fieldValue(a.values[k])) ? { kind: "fields", values: a.values } : null),
+  multiChoice: a => (Array.isArray(a.optionIds) && a.optionIds.every(isStr) ? { kind: "multiChoice", optionIds: a.optionIds } : null),
+  numeric: a => (isStr(a.value) && (a.unit === undefined || isStr(a.unit)) ? { kind: "numeric", value: a.value, ...(a.unit !== undefined ? { unit: a.unit } : {}) } : null)
+};
+function bindLegacyAnswer(a) {
+  if (!isPlain(a) || typeof a.kind !== "string" || !Object.prototype.hasOwnProperty.call(LEGACY_SHAPES, a.kind)) return { ok: false, code: "ANSWER_INVALID" };
+  const answer = LEGACY_SHAPES[a.kind](a);
+  if (!answer) return { ok: false, code: "ANSWER_INVALID" };
+  if (Buffer.byteLength(JSON.stringify(answer), "utf8") > LEGACY_ANSWER_LIMITS.answerBytes) return { ok: false, code: "ANSWER_TOO_LARGE" };
+  return { ok: true, answer };
+}
+// an answer / part id is stored as an OWN data property whatever its spelling (a "__proto__" key can never re-prototype the stored map)
+const setOwn = (o, k, v) => Object.defineProperty(o, k, { value: v, enumerable: true, writable: true, configurable: true });
 
 // Phase 20D — composite@1: the composite answer is only the CONTAINING authority. Bound to the published composite (the ONE strict
 // structure authority, shared build): exactly { kind: "composite", parts, contexts } survives (extra keys dropped); the serialized answer and
@@ -144,7 +185,9 @@ function bindCompositeAnswer(id, a, q, bound, reject) {
     if (!part) { reject(id + "." + pid, "COMPOSITE_PART_UNKNOWN"); continue; }
     if (part.linkedSmartSim) { reject(id + "." + pid, "COMPOSITE_PART_ANSWER_FORBIDDEN"); continue; }
     const r = bindAnswer(id + "." + pid, value, compositeChildNode(part.raw), true, reject);
-    if (r.ok && childAnswerWellFormed(r.answer)) parts[pid] = r.answer; else reject(id + "." + pid, r.ok ? "COMPOSITE_CHILD_ANSWER_INVALID" : r.code);
+    // 20G.1 — a child refused for its LEGACY shape keeps the composite's historical code (the generic binder used to pass it through and
+    // childAnswerWellFormed refused it); every specialized child code (and the new ANSWER_TOO_LARGE bound) is reported as the binder gives it
+    if (r.ok && childAnswerWellFormed(r.answer)) parts[pid] = r.answer; else reject(id + "." + pid, r.ok || LEGACY_SHAPE_CODES.has(r.code) ? "COMPOSITE_CHILD_ANSWER_INVALID" : r.code);
   }
   for (const cid of ctxIds) {
     const value = a.contexts[cid];
@@ -171,9 +214,12 @@ function normalizeDraftAnswers(answers, exam) {
     if (bound && !isComposite && a && typeof a === "object" && a.kind === "composite") { rejected.push({ id, code: "COMPOSITE_QUESTION_MISMATCH" }); continue; }
     const r = isComposite ? bindCompositeAnswer(id, a, q, bound, reject) : bindAnswer(id, a, q, bound, reject);
     if (!r.ok) { rejected.push({ id, code: r.code }); continue; }
-    out[id] = r.answer;
+    // 20G.1 — bound, ONLY an answer unit of the published exam is ever stored (the binders above keep their own, more specific codes for an
+    // unknown id; this is the backstop for every kind they accept, e.g. a simulation state). A missing / malformed snapshot binds nothing.
+    if (bound && !index.has(id)) { rejected.push({ id, code: "ANSWER_QUESTION_UNKNOWN" }); continue; }
+    setOwn(out, id, r.answer);
   }
   return { answers: out, rejected };
 }
 
-module.exports = { normalizeDraftAnswers };
+module.exports = { normalizeDraftAnswers, LEGACY_ANSWER_LIMITS };
