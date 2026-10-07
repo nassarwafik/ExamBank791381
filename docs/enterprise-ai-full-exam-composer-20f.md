@@ -110,7 +110,16 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
     or lists two values closer than 0.01 (`AI_FUNCTION_KEY_INCONSISTENT`);
   - has a monotonic interval that does not hold over its whole length, or does not end at an extremum, a pole or a domain edge, or
     crosses a pole, a domain point or a domain edge, or overlaps another interval (`AI_FUNCTION_KEY_INCONSISTENT`);
-  - names a point outside the window (`AI_FUNCTION_KEY_OUTSIDE_WINDOW`).
+  - names a point outside the window (`AI_FUNCTION_KEY_OUTSIDE_WINDOW`);
+  - has, beyond the window, a root, a pole, a domain change or an extremum that its tasks ask for (`AI_FUNCTION_WINDOW_TOO_NARROW`).
+    Since Review Fix 7 the student studies the **whole** function ("the graph is for exploration only"), so the window must contain
+    every such feature. Each side beyond the window is scanned on a geometric grid out to 10⁶ past the edge (≈ 2.6 % apart). The scan
+    tells a root (a sign change through 0, an exact zero f leaves again, or a touching root) from a pole or a domain edge.
+
+  A domain edge where f tends to 0 is a **root** when the edge belongs to the domain (x·√(4−x²) at ±2; x·log x at 0 is not, since 0 is
+  outside its domain). A domain exclusion must be an **isolated** undefined point (a hole, a jump, a pole), not a point inside a domain
+  gap. A very flat extremum (x⁵ − 5x⁴ + 50 at 0, (x−2)⁸ + 1000) is detected by comparing samples 4 and 16 steps away when its
+  neighbours tie with it, and is located at the centre of its flat stretch.
 
   The grader compares sets, so an incomplete key would fail correct students.
 
@@ -709,7 +718,8 @@ completeness plus the overlap check, so its test asserts the repair message that
 | V03b | `composerSim.ts` | wide overflow run inside the window not refused (RF6 code) | KILLED | composerReviewFix4.20f.test.ts › 20F-RF4 MINOR-C very steep poles and exp(1/x) are vertical asymptot |
 | T05d | `composerSim.ts` | horizontal-asymptote key soundness skipped (RF6 code) | KILLED | composerReviewFix5.20f.test.ts › 20F-RF5 each fail-closed layer holds on its own › a key value that  |
 
-The table also lists 4 re-targets (R04c, T03b, V03b, T05d) of earlier mutants whose lines RF6 rewrote; all 4 are KILLED.
+The table also lists 4 re-targets (R04c, T03b, V03b, T05d) of earlier mutants whose lines RF6 rewrote; all 4 are KILLED. They ran in
+the RF6 campaign, not among the 146 below; the RF7 final re-run (§11.12) includes them.
 
 **Final re-run on the Review Fix 6 code.** Every mutant list was re-run, 146 mutants in all:
 - the 105 of the RF5 final re-run;
@@ -737,6 +747,103 @@ Mutants on `composerSim.ts` ran against every function-study suite, RF5 and RF6 
 Every planted defect in the current code is killed except the 4 proven equivalents. There were 0 timeouts, and every file was restored
 byte-for-byte with a clean `git status` after every campaign.
 
+### 11.12 Fresh re-review and Review Fix 7: the window contains every feature; edge roots, flat extrema, isolated exclusions
+
+A fresh re-review of `ff25763` found 0 BLOCKER, 2 MAJOR, 1 MINOR findings and 4 notes. RF6 itself held up:
+- 4 356 perturbed wrong keys on curriculum functions: 0 accepted (1 132 on `f27d136`);
+- the decimal-pole batteries are fixed.
+
+Both MAJOR findings were older gaps.
+
+| Finding | Fix |
+|---|---|
+| MAJOR-1 a root at the edge of the domain (x·√(4−x²) at ±2 on [−3, 3]) was found only when a grid sample landed on it: the key without it was accepted (32 / 90 in the reviewer's battery), and since RF6 the correct key was refused (34 / 90) | a domain edge where \|f\| shrinks steadily to 0 and that belongs to the domain is a root. An open edge (x·log x at 0) is not: when the edge is a round number, f must be defined exactly there |
+| MAJOR-2 features outside the window could be left out (x³ − 12x on [−3, 3] keyed with the root 0 only), though the student studies the whole function | each side beyond the window is scanned on a geometric grid out to 10⁶ past the edge; a root (sign change through 0, exact zero, touching root), a pole or domain change, or a slope change asked for by the tasks refuses the key (`AI_FUNCTION_WINDOW_TOO_NARROW`). A run of exact zeros (underflow: x·e^−x far out) is not a root; a plain domain edge matters to exclusions and monotony only, a pole to asymptotes. The prompt rule now asks for a window that contains every feature |
+| MINOR-1 flat extrema at a large \|f\| (x⁵ − 5x⁴ + 50 at 0) escaped the probe; the flat-extremum fallback accepted (x−2)⁶ + 10 at 2.012 | grid detection compares 4 and 16 samples away when the neighbours tie; the rise is measured 1, 4 and 16 steps away with the same 10⁻¹² relative threshold; a flat extremum is located at the centre of its flat stretch; the fallback's slack is the evaluator's rounding (4 ε) |
+| NOTE-1 an extra domain-exclusion value was checked only as "f undefined there" | it must be a probed point or an isolated undefined point (f defined just beside it on both sides) |
+| NOTE-2 a contrived power-law sum misleads the limit extrapolation | recorded in §12 (not curriculum) |
+| NOTE-3 the §12 claim about ±1.41 | corrected |
+| NOTE-4 the RF6 re-targets were not in the 146 | stated in §11.11; included in the re-run below |
+
+**Fail-first.** `composerReviewFix7.20f.test.ts` (`77878bc`'s version, 9 tests) was executed on `ff25763`: **6 failed and 3 passed**.
+The 3 that passed are pins: a non-root edge, correct keys in a wide enough window, and holes and poles. Sample assertions:
+- `x*sqrt(4-x^2) {"xMin":-3,"xMax":3,"xIntercepts":[-2,0,2]}: expected '[{"code":"AI_FUNCTION_KEY_INCONSISTENT",…' to be 'ok'`
+- `expected [] to deeply equal [ 'AI_FUNCTION_WINDOW_TOO_NARROW' ]`
+- `expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]` (x⁵ − 5x⁴ + 50 without its maximum)
+- `1/(x-1)+sqrt(x+3) {"domainExclusions":[1,-4]}: expected true to be false`
+
+The tests added afterwards have the following status:
+- **Pins** (accepted on `ff25763` and kept accepted): the underflow tail, the open log edge and the off-grid jump, all found while fixing
+  (`cb37820`).
+- **Layer-isolating tests** (`c265a27`, `6857d6f`, `bb8ead4`): an edge close to 0, a pole beyond the window against a plain edge, a
+  touching root beyond the window, flat-extremum detection and centring, and a narrow window.
+
+**Batteries on the head:**
+- **Reviewer's edge-root battery:** incomplete keys accepted **0 / 90** (was 32). Correct keys refused **3 / 90**: all three windows
+  leave a root outside, so "widen the window" is correct.
+- **Reviewer's curriculum correct-key battery:** **0 / 1 312** refused.
+- **Perturbed wrong keys:** **0 / 4 356** accepted.
+- **Earlier batteries:** decimal poles 0 / 89 per family and 0 / 672; the monotonic battery 23 / 23 and 10 / 10.
+- **Fuzzers:** **0 exceptions**; worst build 63 ms.
+
+**RF7 mutation campaign.** 20 mutants: **20 KILLED, 0 SURVIVED, 0 TIMEOUT**. X02, X08, X11, X14 and X15 first survived because
+another layer caught the same inputs, or because the probe did not reach the mutated line. Investigating X14 showed that very flat
+extrema were not detected on the grid at all, which is now fixed (`6857d6f`). The layer-isolating tests now kill all five.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| X01 | `composerSim.ts` | domain-edge roots not recorded | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 MAJOR-1 a root at the edge of the domain is a root › correc |
+| X02 | `composerSim.ts` | edge-root growth test dropped (any edge with tiny |f| is a root) | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › an edge where f only come |
+| X03 | `composerSim.ts` | open round edge counted as a root (domain membership not checked) | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 found while fixing (PINS: accepted on ff25763, kept accepte |
+| X04 | `composerSim.ts` | edge gap branch runs only for singular tasks (roots-only skips edges) | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 MAJOR-1 a root at the edge of the domain is a root › correc |
+| X05 | `composerSim.ts` | outside-window scan not called | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 MAJOR-2 the window must contain every feature the tasks ask |
+| X06 | `composerSim.ts` | outside scan ignores sign changes | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 MAJOR-2 the window must contain every feature the tasks ask |
+| X07 | `composerSim.ts` | outside scan ignores slope changes | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 MAJOR-2 the window must contain every feature the tasks ask |
+| X08 | `composerSim.ts` | beyond the window: domain flips ignored for exclusions / monotony | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › beyond the window: a pole |
+| X09 | `composerSim.ts` | outside scan: root/pole classification inverted | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 MAJOR-2 the window must contain every feature the tasks ask |
+| X10 | `composerSim.ts` | outside scan: an underflow stretch of zeros is a root | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 found while fixing (PINS: accepted on ff25763, kept accepte |
+| X11 | `composerSim.ts` | outside scan: touching roots not checked | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › beyond the window: a touc |
+| X12 | `composerSim.ts` | outside scan starts on the window edge | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-1 poles at decimal positions keep their correct keys  |
+| X13 | `composerSim.ts` | extremum rise measured one step away only | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › a flat extremum beside a  |
+| X14 | `composerSim.ts` | flat extremum not centred | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › a flat extremum wider tha |
+| X15 | `composerSim.ts` | flat-extremum fallback slack 1e-12 relative | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › a flat extremum too flat  |
+| X16 | `composerSim.ts` | domain exclusion: isolated-point check accepts gap points | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 NOTE-1 a domain exclusion must be an isolated excluded poin |
+| X17 | `composerSim.ts` | domain exclusion: isolated-point fallback removed | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 found while fixing (PINS: accepted on ff25763, kept accepte |
+| X18 | `composerSim.ts` | beyond the window: a pole at a domain edge ignored for asymptotes | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › beyond the window: a pole |
+| X19 | `composerSim.ts` | flat extremum: grid comparison 4 / 16 samples away removed | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › a flat extremum beside a  |
+| X20 | `composerSim.ts` | extremum rise threshold 1e-10 relative | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › a flat extremum beside a  |
+| U04b | `composerSim.ts` | domain-gap edges never classified as poles (RF7 code) | KILLED | composerReviewFix1.20f.test.ts › 20F-RF1 M1 function-study keys must be COMPLETE inside the window ( |
+| W14b | `composerSim.ts` | flat-extremum fallback slack 1e-9 (RF7 code) | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › a flat extremum too flat  |
+| W19b | `composerSim.ts` | domain-gap edges not recorded (RF7 code) | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole l |
+
+The table also lists 3 re-targets (U04b, W14b, W19b) of earlier mutants whose lines RF7 rewrote; all 3 are KILLED.
+
+**Final re-run on the Review Fix 7 code.** Every mutant list was re-run, 170 mutants in all:
+- the 146 of the RF6 re-run;
+- RF6's 4 re-targets;
+- RF7's 20.
+
+Mutants on `composerSim.ts` ran against every function-study suite, RF7 included.
+- **140 KILLED.**
+- **4 EQUIVALENT:** C19, C42, U02 and T07b (§11.4, §11.9, §11.10).
+- **26 INVALID,** because their target lines were rewritten. Each is re-targeted or covered, and every re-target named here is KILLED:
+  - R04b by R04c (R04 itself is also KILLED);
+  - R08 and R12 by R08b and R12b;
+  - R09, R10 and R11 by S09, S06c and U04b;
+  - S01 by S01b;
+  - S03 and S03b by S03c;
+  - S06 and S06b by S06c;
+  - S07 and S07b by S07c;
+  - S08 by U04b;
+  - T03 by T03b;
+  - T04 by T04c, T05 and T05c by T05d, T06 by U06 and T07 by T07b;
+  - U03: the steep-pole branch was removed by RF5;
+  - U04 by U04b, U05 by U05c and V03 by V03b;
+  - W14 by W14b and W19 by W19b.
+
+Every planted defect in the current code is killed except the 4 proven equivalents. There were 0 timeouts, and every file was restored
+byte-for-byte with a clean `git status` after every campaign.
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -751,11 +858,14 @@ byte-for-byte with a clean `git status` after every campaign.
     inside the window) are refused, never keyed: the teacher authors them;
   - round / floor / ceil / min / max / % are not AI vocabulary for function study;
   - vertical asymptotes at non-terminating decimals (1/(3x−1)), which can only be keyed with the exact double; refusing them is safe;
-  - key values must be within 0.005 of the truth (half the grading tolerance), so a key rounded to two decimals for an irrational
-    value (±1.41 for √2) is refused;
+  - key values must be within 0.005 of the truth (half the grading tolerance), so a key rounded to two decimals is refused when it is
+    more than 0.005 off (±1.4 for √2 is refused, ±1.41 is accepted);
   - slowly converging limits (x^−0.15, 1/log x) are undecided and refused;
-  - monotonic intervals are checked inside the window only, and a function with a flat stretch has no extremum to end an interval on,
-    so its monotonic key is refused.
+  - a function with a flat stretch has no extremum to end a monotonic interval on, so its monotonic key is refused;
+  - the scan beyond the window runs out to 10⁶ past the edge on a grid ≈ 2.6 % apart: two features closer than that, far from the
+    window, can hide each other; a pole beyond the window refuses an intercepts-only key too (fail closed: "widen the window");
+  - a domain edge at a non-round position (√3) is taken as closed (in the domain);
+  - a contrived sum of power laws (100·(|x|+1)^−0.7 + 0.3·(|x|+1)^−0.02) can mislead the limit extrapolation; it is not curriculum.
 - No live provider call was made (no network in the development environment): the provider schemas are checked against the documented
   strict-mode limits by a test, not by a live acceptance call. The first production composer call is the live check.
 - Notes accepted from the review: a replaceQuestion may change the marks of the selected question (shown in the diff); removing a composite
