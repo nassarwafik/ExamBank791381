@@ -49,7 +49,13 @@ describe("20G.2 O1 — the exploit is closed: a forged choice can no longer sele
     ["O1-B fillBlank + choice", FB, "choice", choice(3)], ["O1-C ordering + choice", ORD, "choice", choice(0)], ["O1-D shortAnswer + choice", SA, "choice", choice(1)],
     ["O1-E tableFill + choice", TBL, "choice", choice(0)], ["O1-F matching + choice", MAT, "choice", choice(2)], ["O1-G cliFill + choice", CLI, "choice", choice(0)],
     ["O1-H multipleChoice + text", MC, "text", text("ب")], ["O1-I trueFalse + text", TF, "text", text("صحيح")],
-    ["O1-J ordering + table (no table in its text)", ORD, "table", table(["1", "2", "3"])], ["O1-K shortAnswer + sequence (no fields)", SA, "sequence", seq(["b"])]
+    ["O1-J ordering + table (no table in its text)", ORD, "table", table(["1", "2", "3"])], ["O1-K shortAnswer + sequence (no fields)", SA, "sequence", seq(["b"])],
+    // an EMPTY fields array renders no field control: it proves nothing (the sequence grader would credit answer.values ["b"])
+    // a field-set answer on a question that renders no field control (fields is never a catalog kind of these types)
+    ["O1-K'' shortAnswer + fields (no fields)", SA, "fields", { kind: "fields", values: { x: "b" } }], ["O1-H' multipleChoice + fields", MC, "fields", { kind: "fields", values: { x: "1" } }],
+    ["O1-K' shortAnswer with an EMPTY fields array + sequence", () => ({ ...SA(), fields: [] }), "sequence", seq(["b"])],
+    // a header-only table (no data row) renders no table on the client and grades nothing: it does not admit a table answer
+    ["O1-J' ordering whose text holds a HEADER-ONLY table + table", () => ({ ...ORD(), text: "رتّب\n| أ | ب |\n|---|---|" }), "table", table(["1"])]
   ]) {
     it(name + " cannot score, is refused at ingest (ANSWER_KIND_MISMATCH) and is never stored", () => {
       const q = mk();
@@ -163,6 +169,23 @@ describe("20G.2 O1 — aliases, typeless and unknown legacy types obey the same 
   it("O1-L''' the binding is decided by the QUESTION, never by the response: kind casing / whitespace / non-string kinds are not the authority", () => {
     for (const kind of ["Choice", " choice", "CHOICE", undefined, null, 0, ["choice"], { kind: "choice" }]) expect(aliases.legacyAnswerKindAllowed(FB(), kind), String(kind)).toBe(false);
     expect(grade(FB(), { kind: "Choice", index: 3 })).toEqual(FAIL_CLOSED(7));
+    // a structured question's presentationType is THE type: a stale flat `type` beside it is never the authority
+    const stale = { ...FB(), type: "multipleChoice" };
+    expect(aliases.legacyAnswerKindAllowed(stale, "choice")).toBe(false);
+    expect(grade(stale, choice(3))).toEqual(FAIL_CLOSED(7));
+    expect(ingest(stale, choice(3))).toEqual({ answers: {}, rejected: [{ id: "fb", code: "ANSWER_KIND_MISMATCH" }] });
+    expect(grade({ ...MC(), type: "fillBlank" }, choice(1))).toEqual({ score: 7, maxMarks: 7, correct: true, manualReview: false });
+    // prototype-shaped kinds are never admitted
+    for (const kind of ["__proto__", "constructor", "toString", "hasOwnProperty"]) expect(aliases.legacyAnswerKindAllowed(FB(), kind), kind).toBe(false);
+  });
+  it("O1-L6 an unsupported questionTypeVersion / an unknown STRUCTURED type is the 16A registry's fail-closed result, whatever the response kind (pin)", () => {
+    for (const q of [{ ...FB(), questionTypeVersion: 99 }, { ...FB(), presentationType: "weirdLegacy" }, { ...MC(), questionTypeVersion: 2 }])
+      for (const r of [choice(0), choice(1), seq(["4", "x"]), { kind: "text", value: "ب" }]) expect(gradeQuestion(q, r), q.presentationType + "@" + q.questionTypeVersion).toEqual({ score: 0, maxMarks: 7, correct: false, manualReview: true, unsupportedType: true });
+  });
+  it("O1-CAT2 the dual-kind legacy rows are pinned literally (a catalog edit that drops a kind fails here, not silently in the binding)", () => {
+    const kinds = Object.fromEntries(catalog.QUESTION_TYPE_CATALOG.filter(d => d.legacy).map(d => [d.key, [...d.responseKinds]]));
+    expect(kinds).toEqual({ multipleChoice: ["choice"], trueFalse: ["choice"], multiTrueFalse: ["fields"], shortAnswer: ["text"], fillBlank: ["sequence", "fields"], wordBank: ["sequence", "fields"], matching: ["fields"], ordering: ["sequence"], tableFill: ["fields", "table"], cliFill: ["fields"], compound: ["compound"] });
+    for (const [key, ks] of Object.entries(kinds)) for (const k of ks) expect(aliases.legacyAnswerKindAllowed({ presentationType: key }, k), key + " " + k).toBe(true);
   });
   it("O1-CAT catalog contract: every legacy catalog row admits exactly its responseKinds (and choice ⇔ a choice type); modern rows are not the binding's business", () => {
     const rows = catalog.QUESTION_TYPE_CATALOG;
@@ -182,7 +205,17 @@ describe("20G.2 O1 — firstNAnswered: only an answer the question authority adm
   it("O1-FN1 / FN2 / FN3 a mismatched first answer does NOT consume the slot (stored data graded directly); the next valid answer counts", () => {
     const g = gradeExam(FN(), { f1: choice(3), f2: choice(1) });
     expect(g.score).toBe(7);
-    expect(units(g).find(u => u[0] === "f2")).toEqual(["f2", 7, false, false]);
+    // the mismatch is not an answer: not counted, not an "ignored excess answer", never pending review; f2 takes the one slot
+    expect(units(g)).toEqual([["f1", 0, false, false], ["f2", 7, false, false]]);
+  });
+  it("O1-FN3' historical: a compound question stored with a NON-compound kind (or with only mismatched parts) takes no question-level slot", () => {
+    const cq = { examQuestionId: "f1", presentationType: "compound", text: "مركّب", marks: 7, parts: [{ id: "p1", type: "fillBlank", text: "?", marks: 7, fields: [{ id: "b1", label: "1", correct: "4" }], answer: { values: ["4"] } }] };
+    const ex = exam([cq, { ...MC(), examQuestionId: "f2" }], { gradingPolicy: "firstNAnswered", answerUnit: "question", requiredAnswers: 1, maxMarks: 7 });
+    for (const stored of [choice(0), { kind: "compound", parts: { p1: choice(0) } }]) {
+      const g = gradeExam(ex, { f1: stored, f2: choice(1) });
+      expect(g.score, JSON.stringify(stored)).toBe(7);
+      expect(units(g), JSON.stringify(stored)).toEqual([["f1", 0, false, false], ["f2", 7, false, false]]);
+    }
   });
   it("O1-FN4 valid answers keep the existing firstN selection order byte-for-byte (pin)", () => {
     const g = gradeExam(FN(), { f1: seq(["4", "x"]), f2: choice(1) });
@@ -195,6 +228,9 @@ describe("20G.2 O1 — firstNAnswered: only an answer the question authority adm
     const g = gradeExam(ex, { cq: { kind: "compound", parts: { p1: choice(1), p2: choice(0) } } });
     expect(g.score).toBe(2);
     expect(g.questions[0].parts.find(p => p.partId === "p2")).toMatchObject({ score: 2, counted: true });
+    // the mismatched part is not an answer: not counted, not an "ignored excess answer", and nothing counted awaits review
+    expect(g.questions[0].parts.find(p => p.partId === "p1")).toMatchObject({ score: 0, counted: false, ignored: false });
+    expect([g.questions[0].manualReview, g.manualReviewMarks]).toEqual([false, 0]);
   });
 });
 
