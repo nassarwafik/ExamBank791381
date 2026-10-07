@@ -124,9 +124,15 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   - such a point is also a pole if f grows there;
   - beyond the window, such a point refuses the key.
 
-  A touching zero counts when it is exactly 0 at its 12-digit rounded position, negligible, or small and steep around it — judged by its
-  ratio to the values beside it (1/√|x − 1.3|, √|1000x − 707.1…|); a shallow minimum (x² + 10⁻⁷) is not a zero. A zero exactly halfway
-  between two samples is found (ties count), and so is a zero at the edge of the guard's own domain (√(x + 2) at −2: Review Fix 9). The guards are bounded (at most 12 guarded sub-expressions within the node budget; more refuses the key as too complex).
+  A touching zero counts when it is exactly 0 at its 12-digit rounded position, negligible, or **vanishes** there (Review Fix 10). An
+  expression vanishes at m when |g| falls like a steady power of the distance as x closes in, at 10⁻², 10⁻⁴, 10⁻⁶ and 10⁻⁸ from m, with
+  an exponent above 0.05 and the three steps within 25 % of each other:
+  - √|x − a|, |x − a|^0.25 and (x − a)² vanish;
+  - a shallow minimum (x² + 10⁻⁷) does not, and neither does an offset cusp (|x − a| + 10⁻⁷).
+
+  The same rule decides f's own touching roots, inside the window (x·√|x − 1.3|) and beyond it (x·√|x − 7| on [−5, 5]), and a zero at
+  the edge of a guard's own domain (√(x + 2) at −2, (x² − 2)^0.25 at ±√2), on the defined side only. A zero exactly halfway between two
+  samples is found (ties count, Review Fix 9). The guards are bounded (at most 12 guarded sub-expressions within the node budget; more refuses the key as too complex).
 
   A domain edge where f tends to 0 is a **root** when the edge belongs to the domain. An edge that is a guard zero (a log argument, a
   denominator) is open; any other edge is closed. So x·√(4−x²) at ±2 and x·√(1.21−x²) at ±1.1 are roots, while x·log x at 0 is not.
@@ -994,8 +1000,8 @@ removals. `7fa0578` handled every one of these cases; the guards did not yet cov
 
 **Fail-first.** `composerReviewFix9.20f.test.ts` (`1d5252b`'s version, 5 tests) was executed on `0f8911f` in a detached worktree:
 **5 of 5 failed**. Sample assertions:
-- `log(abs(2*x-1))+1/x: expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]`
-- `1/sqrt(abs(10*x-7))+1/x: expected [] …`
+- `log(abs(2*x-1))+1/x: expected '[]' to be 'incomplete'`
+- `1/sqrt(abs(10*x-7))+1/x: expected '[]' to be 'incomplete'`
 - `(x^2-4)/sqrt(x+2) … xIntercepts [-2, 2]: expected true to be false`
 - `1/sqrt(7-x)+1/x: expected [] to deeply equal [ 'AI_FUNCTION_WINDOW_TOO_NARROW' ]`
 - `sqrt(x)/(x^2-4) {"xMin":0,"xMax":5,…}: expected '[{"code":"AI_FUNCTION_WINDOW_TOO_NARROW",…' to be 'ok'`
@@ -1054,6 +1060,74 @@ The table also lists the re-target Y14b (the touching-zero branch, rewritten by 
 Every planted defect in the current code is killed except the 4 proven equivalents. Every file was restored byte-for-byte, with a
 clean `git status` after every campaign.
 
+### 11.15 Fresh re-review and Review Fix 10: one vanishing rule
+
+A fresh re-review of `15eaedc` found 0 BLOCKER, 1 MAJOR, 2 MINOR findings and 3 notes. RF9 held up: 0 incomplete keys accepted in every
+RF9 battery.
+
+| Finding | Fix |
+|---|---|
+| MAJOR-1 a steep touching root of f itself (x·√\|x − 1.3\| at 1.3) was judged by an absolute level: missed inside the window (88 / 160 in the reviewer's battery; RF8's removal of snapping made it worse) and beyond it (x·√\|x − 7\| on [−5, 5], present since RF7) | f's touching roots, inside and beyond the window, use the **vanishing rule**: \|f\| falls like a steady power of the distance |
+| MINOR-1 a guard zero of a small fractional power (\|3x − 1\|^0.25, ^(1/3) in wide windows) escaped RF9's ratio rules (1 243 / 1 500), and (x² − 2)^0.25's open edges were taken as roots | the guards' touching zeros and edge zeros use the same vanishing rule, which replaces both RF9 ratio rules |
+| MINOR-2 a monotonic stretch beyond a window edge that is a pole (1/(x² − 4) on [−2, 2]) was never required | the slope just beyond each window edge joins the monotonic key's completeness; the scan beyond the window has already ruled out any change further out |
+| NOTE-1 two §11.14 sample assertions were paraphrased | quoted exactly |
+| NOTE-2 the RF9 steep rule made an offset cusp (\|x − a\| + 10⁻⁷) a false guard zero (a correct key refused) | the vanishing rule requires a steady power: no longer a zero (test) |
+| NOTE-3 the provider env-var name in a negative bundle test | not a model identifier; no change |
+
+**Fail-first.** `composerReviewFix10.20f.test.ts` (`2b1339a`'s first four tests) was executed on `15eaedc`: **4 of 4 failed**. Sample
+assertions:
+- `x*sqrt(abs(x-1.3)) {"xIntercepts":[0]}: expected true to be false`
+- `expected [] to deeply equal [ 'AI_FUNCTION_WINDOW_TOO_NARROW' ]` (x·√|x − 7|)
+- `1/abs(3*x-1)^0.25+1/x {…}: expected true to be false`
+- `1/(x^2-4) {"xMin":-2,"xMax":2,…}: expected true to be false`
+
+The offset-cusp test fails there too, as a correct key refused.
+
+**Batteries on the head:**
+- **Reviewer's RF10 batteries:**
+  - √ touching roots 0 / 160 incomplete keys accepted, 0 correct keys refused (was 88 / 88);
+  - fractional-power guards 0 / 2 700 (was 2 700 on `0f8911f` and 1 120 on `7fa0578`);
+  - all window-edge monotonic cases now required;
+  - touching roots beyond the window 0 / 90 (`7fa0578`: 90 / 90).
+- **Every earlier battery is unchanged:**
+  - curriculum 0 / 1 312;
+  - wrong keys 0 / 4 356;
+  - holes 0 / 342;
+  - RF9 batteries 0;
+  - decimal poles 0 / 89;
+  - flat degree-8 0 / 540;
+  - fuzzers 0 exceptions (worst probe + build 277 ms in fuzz9, which includes a separate full probe).
+
+**RF10 mutation campaign.** 9 mutants: **9 KILLED, 0 SURVIVED, 0 TIMEOUT** on the first run.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| AA01 | `composerSim.ts` | vanishing rule never holds | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 each new guard rule holds on its own › an irrational guard  |
+| AA02 | `composerSim.ts` | vanishing rule: no steady-power check | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 the vanishing rule needs a STEADY power › an offset cusp  |
+| AA03 | `composerSim.ts` | vanishing rule: steadiness (25 %) not required | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 the vanishing rule needs a STEADY power › an offset cusp  |
+| AA04 | `composerSim.ts` | f's touching roots: vanishing rule not used inside the window | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 MAJOR-1 a steep touching root of f is a root › inside the |
+| AA05 | `composerSim.ts` | f's touching roots: vanishing rule not used beyond the window | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 MAJOR-1 a steep touching root of f is a root › beyond the |
+| AA06 | `composerSim.ts` | guard edge zeros: vanishing rule not used | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 MINOR-1 a guard zero of a small fractional power is found |
+| AA07 | `composerSim.ts` | guard touching zeros: vanishing rule not used | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 MINOR-1 a guard zero of a small fractional power is found |
+| AA08 | `composerSim.ts` | slope beyond the window edges not required | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 MINOR-2 a monotonic stretch beyond a window edge is requi |
+| AA09 | `composerSim.ts` | slope beyond the window edges: direction inverted | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MAJOR-1 a monotonic-interval key must hold over its whole l |
+| R08c | `composerSim.ts` | touching roots not detected (RF10 code) | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 MAJOR-1 a steep touching root of f is a root › inside the |
+| X11b | `composerSim.ts` | outside scan: touching roots not checked (RF10 code) | KILLED | composerReviewFix10.20f.test.ts › 20F-RF10 MAJOR-1 a steep touching root of f is a root › beyond the |
+
+The table also lists the re-targets R08c and X11b (f's touching-root lines, rewritten by RF10); both are KILLED.
+
+**Final re-run on the Review Fix 10 code (`2b1339a`).** Every mutant list was re-run: 216 mutants (the 206 of the RF9 re-run, Y14b, and
+RF10's 9). Mutants on `composerSim.ts` ran against every function-study suite, RF10 included.
+- **163 KILLED.**
+- **4 EQUIVALENT:** C19, C42, U02 and T07b (§11.4, §11.9, §11.10).
+- **0 SURVIVED, 0 TIMEOUT.**
+- **49 INVALID.** These are the 43 of §11.14, mapped as there, and 6 more:
+  - R08b and X11 by R08c and X11b (KILLED, run separately);
+  - Z04, Z07, Y18b and Y19b: RF9's ratio rules, replaced by the vanishing rule, whose mutants AA02, AA03, AA06 and AA07 are KILLED.
+
+Every planted defect in the current code is killed except the 4 proven equivalents. Every file was restored byte-for-byte, with a
+clean `git status` after every campaign.
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -1068,7 +1142,8 @@ clean `git status` after every campaign.
     inside the window) are refused, never keyed: the teacher authors them;
   - round / floor / ceil / min / max / % are not AI vocabulary for function study;
   - vertical asymptotes and domain exclusions at non-terminating decimals (1/(3x−1), 1/√|1000x − 707.1…|), which can only be keyed
-    with the exact double; refusing them is safe;
+    with the exact double: a correct key rounded to fewer digits is refused (safe). An incomplete key that leaves such a point out is
+    refused too, since the guards locate it (Review Fix 10);
   - key values must be within 0.005 of the truth (half the grading tolerance), so a key rounded to two decimals is refused when it is
     more than 0.005 off (±1.4 for √2 is refused, ±1.41 is accepted);
   - slowly converging limits (x^−0.15, 1/log x) are undecided and refused;
