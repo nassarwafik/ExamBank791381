@@ -430,8 +430,33 @@ The agent cannot drive a browser against the preview with credentials. These ite
 
 ## 27. Validation and CI
 
-Local full validation (tier 1) on the head: root `npm test` 778 files / 10229 tests passed; the 20G suites 17 files / 196 tests; `npm run lint` clean; `npx tsc -b --force` clean; `npm run build` with the bundle guard passing (initial JS 124.2 KB of an unchanged 125 KB budget); `git diff --check` clean; `npm --prefix runner test` 407 / 407 in isolation. `runner/` is unchanged by this PR. A first Runner run concurrent with the root suite failed one timing assertion (TAR44, `injected === 1`); the isolated re-run passed. The exact-head CI table (workflow, run, attempt, conclusion) is in the PR body.
+**Local full validation (tier 1)** ran on `ddbe737` (Review Fix 1) with **no `dist/` present during the tests**, as in CI:
 
+| Check | Result |
+|---|---|
+| Root `npm test` | 778 files, **10230 / 10230** passed |
+| 20G suites | 17 files, **197 / 197** passed |
+| `npm run lint` | clean |
+| `npx tsc -b --force` | clean |
+| `npm run build` | bundle guard passed; initial JS 124.2 KB of an unchanged 125 KB budget |
+| `git diff --check` | clean |
+| `npm --prefix runner test` | **407 / 407** in isolation, on `4b7d875`; `runner/` is unchanged by this PR |
+
+The commit after `ddbe737` changes only this section.
+
+**History, so that no earlier number is read as evidence for a later head:**
+- **Local `dist/` hid a test failure.** The first local root run (10229 / 10229, on `7ea751b`) passed only because a stale `dist/` sat in the working tree. `cert-20g-bundle-hygiene.test.js` imported `scripts/check-bundle-budget.mjs`, which runs `main()` on import and reads `dist/index.html`.
+- **The Quality Gate failed on `7ea751b`** (run 37617610922, attempt 1). The build and Build and Deploy were skipped, so no preview was created.
+- **Fixed in `7676af3`.** The test now reads the guard source as text.
+- **CI on `7676af3`:** Azure SWA run 37619562488 attempt 1 succeeded (Quality Gate and Build and Deploy, so a PR preview was created). The Runner workflow run 37619562289 succeeded. The independent review of that head was CLEAN.
+- **Timing failures in tests this PR does not touch** were seen once each under CPU contention and passed when re-run on their own:
+  - Runner `TAR44`;
+  - `src/questionTypes/composite.20d.test.tsx` (a lazy chunk exceeded the test's ~1.2 s settle window);
+  - `api/tests/parametric-numeric-19c-rf1.test.js` (its `/29\.5/` pattern can match a `dueAt` timestamp, seen by the reviewer).
+
+  None was patched here (AGENTS §12). Each is recorded for a separate hotfix.
+
+The exact-head CI table for the final head (workflow, run, attempt, conclusion) is in the PR body.
 ## 28. Known limitations, open finding D3, future phases
 
 **D3 — proposed patch for the owner** (in `api/src/lib/draft-answers.js`, after the per-kind binders):
