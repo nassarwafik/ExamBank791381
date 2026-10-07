@@ -135,3 +135,16 @@ describe("20F-RF11 each new rule holds on its own (mutation campaign)", () => {
     accepted("(x-4.99)^8+1000", ["extrema", "yIntercept"], { yIntercept: yi, extrema: [mn(4.99, 1000)] });
   });
 });
+
+describe("20F-RF11 many cusps never switch the exclusions off (regression found in self-review of 5d3739b)", () => {
+  // a zigzag of log(|x| + 1) has 64 zeros beyond each window edge (x ≈ ±19 … ±4·10⁵): 5d3739b capped the cusps with the exclusions,
+  // so past the cap the double pole at 7 went unseen (the incomplete key accepted); 20966d8, without cusps, refused it
+  const Z = "abs(abs(abs(abs(abs(abs(log(abs(x)+1)-8)-2.5)-1.25)-0.625)-0.3125)-0.15625)-0.078125";
+  const src = "(x+1)*(sqrt(abs(" + Z + "))+1)+1/(x-7)^2+1/(x-2)", tasks = ["xIntercepts", "verticalAsymptotes"];
+  it("the double pole at 7 beyond the window still refuses the key", () => {
+    expect(codes(buildSimFromSpec(fn(src, tasks, { xIntercepts: [-0.8705, 1.8564], verticalAsymptotes: [2] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("with 7 inside the window the key is accepted: every cusp beyond it is checked, none is a root", () => {
+    accepted(src, tasks, { xMax: 8, xIntercepts: [-0.8705, 1.8564], verticalAsymptotes: [2, 7] });
+  });
+});

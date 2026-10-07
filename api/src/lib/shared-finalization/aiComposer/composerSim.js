@@ -327,15 +327,14 @@ function guardInfo(ast, xs, wantCusps = false) {
             continue;
         for (const z of zerosOf(x => val(g.node, x), xs)) {
             if (g.kind === "sqrt") {
-                if (!keep(cusps, z))
-                    return null;
+                keep(cusps, z);
                 continue;
             }
             if (g.kind === "pow") {
                 const e = g.exp ? val(g.exp, z) : null;
                 if (e !== null && e >= 0) {
-                    if (wantCusps && e > 0 && !keep(cusps, z))
-                        return null;
+                    if (wantCusps && e > 0)
+                        keep(cusps, z);
                     continue;
                 }
             }
@@ -374,10 +373,6 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
         let pp = null, p = null;
         const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));
         const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge - dir * 1e-3, edge, ...xs], wantRoots) : null;
-        if (wantRoots)
-            for (const z of gi ? gi.cusps : [])
-                if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z))
-                    return z;
         for (const z of gi ? gi.excluded : []) {
             if (dir * (z - edge) <= 0)
                 continue;
@@ -389,6 +384,10 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
             if (need.poles && poleKindAt(raw, z) !== "bounded")
                 return z;
         }
+        if (wantRoots)
+            for (const z of gi ? gi.cusps : [])
+                if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z))
+                    return z;
         const e0 = at(edge);
         if (e0 !== null && e0 !== 0)
             last = { x: edge, v: e0 };

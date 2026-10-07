@@ -285,7 +285,9 @@ function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
 }
 const GUARD_MAX = 12;
 type GuardInfo = { excluded: number[]; open: number[]; cusps: number[] };
-/** The excluded zeros (also the open domain edges) of every guard, sampled on `xs`; null when the guards are too many or too costly. */
+/** The excluded zeros (also the open domain edges) of every guard, sampled on `xs`; null when the guards are too many or too costly, or
+ *  the exclusions more than a key can hold. The cusps (`wantCusps`) are bounded by the samples only: inside the window each check counts
+ *  against the probe's budget, and many cusps never switch the exclusions off (RF11). */
 function guardInfo(ast: unknown, xs: number[], wantCusps = false): GuardInfo | null {
   const gs = collectGuards(ast);
   if (gs.length > GUARD_MAX || gs.reduce((t, g) => t + expressionCost(g.node) + (g.exp ? expressionCost(g.exp) : 0), 0) * (xs.length + 400) > PROBE_NODE_BUDGET) return null;
@@ -295,10 +297,10 @@ function guardInfo(ast: unknown, xs: number[], wantCusps = false): GuardInfo | n
   for (const g of gs) {
     if (g.kind === "sqrt" && !wantCusps) continue;                                  // √0 = 0: a closed edge, never an exclusion
     for (const z of zerosOf(x => val(g.node, x), xs)) {
-      if (g.kind === "sqrt") { if (!keep(cusps, z)) return null; continue; }
+      if (g.kind === "sqrt") { keep(cusps, z); continue; }
       if (g.kind === "pow") {                                                       // 0^e excludes only for e < 0
         const e = g.exp ? val(g.exp, z) : null;
-        if (e !== null && e >= 0) { if (wantCusps && e > 0 && !keep(cusps, z)) return null; continue; }
+        if (e !== null && e >= 0) { if (wantCusps && e > 0) keep(cusps, z); continue; }
       }
       if (!keep(excluded, z)) return null;
     }
@@ -338,7 +340,6 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
     // the expression's own exclusions beyond the window (a removable hole, a pole) — Review Fix 8
     // (one sample inside the window too: a zero in the first cell beyond the edge is then a local minimum of |g| — RF11)
     const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge - dir * 1e-3, edge, ...xs], wantRoots) : null;
-    if (wantRoots) for (const z of gi ? gi.cusps : []) if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z)) return z;   // RF11
     for (const z of gi ? gi.excluded : []) {
       if (dir * (z - edge) <= 0) continue;
       const d = 1e-7 * Math.max(1, Math.abs(z));
@@ -346,6 +347,7 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
       if (need.points || need.slope) return z;
       if (need.poles && poleKindAt(raw, z) !== "bounded") return z;
     }
+    if (wantRoots) for (const z of gi ? gi.cusps : []) if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z)) return z;   // RF11
     const e0 = at(edge); if (e0 !== null && e0 !== 0) last = { x: edge, v: e0 };     // the window's edge value: a root just past it is seen
     for (let k = 0; k < n; k++) {                                                   // (a pole ON the edge is inside the window)
       const x = xs[k], r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
