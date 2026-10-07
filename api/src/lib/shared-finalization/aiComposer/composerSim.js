@@ -6,6 +6,7 @@ exports.buildSimSpecSchema = buildSimSpecSchema;
 exports.expressionCost = expressionCost;
 exports.poleKindAt = poleKindAt;
 exports.functionLimits = functionLimits;
+exports.vanishesAt = vanishesAt;
 exports.featureOutsideWindow = featureOutsideWindow;
 exports.probeFunctionFeatures = probeFunctionFeatures;
 exports.aiUnsupportedOperators = aiUnsupportedOperators;
@@ -222,6 +223,22 @@ function collectGuards(ast, out = [], seen = new Set()) {
         collectGuards(a, out, seen);
     return out;
 }
+function vanishesAt(g, m, sides = [-1, 1]) {
+    for (const s of sides) {
+        const a = [1e-2, 1e-4, 1e-6, 1e-8].map(d => g(m + s * d * Math.max(1, Math.abs(m))));
+        if (a.some(t => t === null))
+            return false;
+        const v = a.map(t => Math.abs(t));
+        if (v.every(t => t === 0))
+            continue;
+        if (v.some(t => t === 0))
+            return false;
+        const p = [0, 1, 2].map(k => Math.log(v[k] / v[k + 1]) / Math.log(100));
+        if (!p.every(q => q > 0.05) || Math.min(...p) < 0.75 * Math.max(...p))
+            return false;
+    }
+    return true;
+}
 function zerosOf(g, xs) {
     const z = [], put = (x) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v))))
         z.push(v); };
@@ -234,8 +251,8 @@ function zerosOf(g, xs) {
             else
                 lo = m;
         }
-        const g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
-        if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far)))
+        const g0 = g(lo);
+        if (g0 !== null && (g0 === 0 || vanishesAt(g, lo, [Math.sign(def - undef)])))
             put(lo);
     };
     let pp = null, p = null, undefAt = null;
@@ -282,11 +299,10 @@ function zerosOf(g, xs) {
                 else
                     b = r;
             }
-            const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
-            const steep = (t) => { const u = g(t); return u !== null && Math.abs(u) >= 1e3 * Math.abs(gm); };
+            const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v));
             if (g(sn) === 0)
                 put(sn);
-            else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-3 * scale && steep(m - dm) && steep(m + dm))))
+            else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || vanishesAt(g, m)))
                 put(m);
         }
         pp = p;
@@ -438,7 +454,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
                         hi = b;
                 }
                 const m = at((lo + hi) / 2);
-                if (m !== null && Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)))
+                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, (lo + hi) / 2)))
                     return (lo + hi) / 2;
             }
             pp = p;
@@ -647,7 +663,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
             const noise = 1e-12 * Math.max(1, Math.abs(y));
             if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)) {
                 const x = ternary(xs[i - 1], xs[i + 1], g, false);
-                if (g(x) < 1e-9)
+                if (g(x) < 1e-9 || vanishesAt(at, x))
                     add(roots, x, "roots");
             }
         }
@@ -844,6 +860,12 @@ function buildFunction(f, path) {
         const beyond = featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
         if (beyond !== null)
             return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);
+        if (tasks.monotonicIntervals)
+            for (const [e, dir] of [[xMin, -1], [xMax, 1]]) {
+                const u = e + dir * 1e-3 * Math.max(1, Math.abs(e)), w = e + dir * 2e-3 * Math.max(1, Math.abs(e)), fu = at(u), fw = at(w);
+                if (fu !== null && fw !== null && Math.abs(fw - fu) > 1e-12 * Math.max(1, Math.abs(fu)))
+                    ft.slope.push({ x: (u + w) / 2, dir: dir * (fw - fu) > 0 ? 1 : -1 });
+            }
         const K = exports.KEY_TOL;
         const missing = (label, found, key) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= K)); if (miss.length)
             issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };

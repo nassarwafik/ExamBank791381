@@ -226,14 +226,30 @@ function collectGuards(ast: unknown, out: Guard[] = [], seen = new Set<string>()
   for (const a of args) collectGuards(a, out, seen);
   return out;
 }
+/** g VANISHES at m (Review Fix 10) when |g| falls like a power of the distance as x closes in on m, on both sides (or on `sides` only, at a
+ *  domain edge): |g| at 10⁻², 10⁻⁴, 10⁻⁶ and 10⁻⁸ from m shrinks by a steady factor each time (exponent > 0.05, the three within 25 % of
+ *  each other). √|x − a|, |x − a|^0.25 and (x − a)² vanish; a shallow minimum (x² + 10⁻⁷) or an offset cusp (|x − a| + 10⁻⁷) does not.
+ *  One rule for every "is it zero here" question: f's touching roots and the guards' zeros, inside and beyond the window. */
+export function vanishesAt(g: (x: number) => number | null, m: number, sides: readonly number[] = [-1, 1]): boolean {
+  for (const s of sides) {
+    const a = [1e-2, 1e-4, 1e-6, 1e-8].map(d => g(m + s * d * Math.max(1, Math.abs(m))));
+    if (a.some(t => t === null)) return false;
+    const v = a.map(t => Math.abs(t as number));
+    if (v.every(t => t === 0)) continue;                                          // identically 0 beside m
+    if (v.some(t => t === 0)) return false;
+    const p = [0, 1, 2].map(k => Math.log(v[k] / v[k + 1]) / Math.log(100));
+    if (!p.every(q => q > 0.05) || Math.min(...p) < 0.75 * Math.max(...p)) return false;
+  }
+  return true;
+}
 function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
   const z: number[] = [], put = (x: number) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v)))) z.push(v); };
   // a zero at the EDGE of g's own domain (√(x + 2) at −2 — Review Fix 9): g is defined on one side only and vanishes there
   const edgeZero = (def: number, undef: number) => {
     let lo = def, hi = undef;
     for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (g(m) === null) hi = m; else lo = m; }
-    const g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
-    if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far))) put(lo);
+    const g0 = g(lo);
+    if (g0 !== null && (g0 === 0 || vanishesAt(g, lo, [Math.sign(def - undef)]))) put(lo);
   };
   let pp: { x: number; v: number } | null = null, p: { x: number; v: number } | null = null, undefAt: number | null = null;
   for (const x of xs) {
@@ -249,12 +265,10 @@ function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
       // touching zero — a local minimum of |g|, ties included (a zero exactly halfway between two samples leaves them equal — RF9)
       let a = pp.x, b = x;
       for (let k = 0; k < 60; k++) { const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r); if (gl === null || gr === null) break; if (Math.abs(gl) > Math.abs(gr)) a = l; else b = r; }
-      // a zero: exactly 0 at the point rounded to 12 digits, negligible at the minimum, or small and STEEP around it (√(10|x − a|) is
-      // ≈ 10⁻⁶ there and 10⁻¹ just beside it — judged by the ratio, not an absolute level, RF9); a shallow minimum (x² + 10⁻⁷) is not one
-      const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
-      const steep = (t: number) => { const u = g(t); return u !== null && Math.abs(u) >= 1e3 * Math.abs(gm as number); };
+      // a zero: exactly 0 at the point rounded to 12 digits, negligible at the minimum, or vanishing like a power there (RF10)
+      const m = (a + b) / 2, gm = g(m), sn = Number(m.toPrecision(12)), scale = Math.max(1, Math.abs(pp.v), Math.abs(v));
       if (g(sn) === 0) put(sn);
-      else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-3 * scale && steep(m - dm) && steep(m + dm)))) put(m);
+      else if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || vanishesAt(g, m))) put(m);
     }
     pp = p; p = { x, v };
   }
@@ -338,7 +352,7 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
         let lo = pp.x, hi = x;
         for (let t = 0; t < 60; t++) { const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3, fa = at(a), fb = at(b); if (fa === null || fb === null) break; if (Math.abs(fa) > Math.abs(fb)) lo = a; else hi = b; }
         const m = at((lo + hi) / 2);
-        if (m !== null && Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v))) return (lo + hi) / 2;
+        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, (lo + hi) / 2))) return (lo + hi) / 2;
       }
       pp = p; p = { x, a: Math.abs(v) }; last = { x, v };
     }
@@ -445,7 +459,7 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       const noise = 1e-12 * Math.max(1, Math.abs(y));
       if (need.roots && Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)) {
         const x = ternary(xs[i - 1], xs[i + 1], g, false);
-        if (g(x) < 1e-9) add(roots, x, "roots");
+        if (g(x) < 1e-9 || vanishesAt(at, x)) add(roots, x, "roots");               // a steep touching root (x·√|x − 1.3|, RF10)
       }
       // an even pole between samples needs no search of its own: it is a zero of a denominator, a negative power's base or a log argument,
       // found by the guards (Review Fix 8)
@@ -571,6 +585,12 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     if (ft.overflow) return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
     const beyond = featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
     if (beyond !== null) return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);
+    // the stretch just beyond each window edge belongs to the key too (a pole ON the edge starts one: 1/(x² − 4) on [−2, 2], RF10); the scan
+    // beyond the window has ruled out any change of slope further out
+    if (tasks.monotonicIntervals) for (const [e, dir] of [[xMin, -1], [xMax, 1]] as const) {
+      const u = e + dir * 1e-3 * Math.max(1, Math.abs(e)), w = e + dir * 2e-3 * Math.max(1, Math.abs(e)), fu = at(u), fw = at(w);
+      if (fu !== null && fw !== null && Math.abs(fw - fu) > 1e-12 * Math.max(1, Math.abs(fu))) ft.slope.push({ x: (u + w) / 2, dir: dir * (fw - fu) > 0 ? 1 : -1 });
+    }
     const K = KEY_TOL;
     const missing = (label: string, found: number[], key: number[]) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= K)); if (miss.length) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };
     if (tasks.xIntercepts) missing("المقاطع السينية", ft.roots, xi);
