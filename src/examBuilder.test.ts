@@ -451,8 +451,12 @@ describe("REVIEW 9: compound matching part has selectable options and grades", (
     expect(patch.fields!.every(f => f.kind === "select" && (f.options || []).length === 2)).toBe(true);
     const part = newPart("matching", { id: "mp", marks: 4, ...patch });
     const compound = newQuestion("compound", { examQuestionId: "qm", text: "طابق", marks: 4, parts: [part] });
-    const result = gradeExam(exam([newSection({ questions: [compound] })]), { qm: { kind: "compound", parts: { mp: { kind: "table", values: ["تطبيقات", "شبكة"] } } } });
+    // Phase 20G.2 RF1 — the part is answered through its selectable options, i.e. the field-set answer CompoundPartControl emits for a
+    // matching part (no compound renderer has ever emitted a `table` answer); a forged table on a part never reaches the table grader.
+    const result = gradeExam(exam([newSection({ questions: [compound] })]), { qm: { kind: "compound", parts: { mp: { kind: "fields", values: { m0: "تطبيقات", m1: "شبكة" } } } } });
     expect(result.questions[0].score).toBe(4);
+    const forged = gradeExam(exam([newSection({ questions: [compound] })]), { qm: { kind: "compound", parts: { mp: { kind: "table", values: ["تطبيقات", "شبكة"] } } } });
+    expect([forged.questions[0].score, forged.questions[0].manualReview]).toEqual([0, true]);
   });
 });
 
