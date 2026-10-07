@@ -395,6 +395,18 @@ describe("20G.2 RF1 — a forged table can only answer a question whose renderer
       expect(ingest(q, BLANK), q.presentationType).toEqual({ answers: {}, rejected: [{ id: q.examQuestionId, code: "ANSWER_KIND_MISMATCH" }] });
     }
   });
+  it("RF1-F1e a forged table on a part takes no slot and never scores in a part-unit section (graded and first-N) or a composite first-N group; it is not an 'ignored' answer", () => {
+    const cq = { examQuestionId: "cq", presentationType: "compound", text: "مركّب", marks: 6, parts: [{ id: "a", type: "shortAnswer", text: STEM, marks: 3, answer: { text: "255.255.255.0" } }, { id: "b", type: "shortAnswer", text: "?", marks: 3, answer: { text: "b" } }] };
+    const all = gradeExam(exam([cq], { answerUnit: "part" }), { cq: { kind: "compound", parts: { a: BLANK } } });
+    expect([all.score, all.questions[0].parts.find(p => p.partId === "a").manualReview]).toEqual([0, true]);
+    const fn = gradeExam(exam([cq], { gradingPolicy: "firstNAnswered", answerUnit: "part", requiredAnswers: 1, maxMarks: 3 }), { cq: { kind: "compound", parts: { a: BLANK, b: A.text("b") } } });
+    expect(fn.score).toBe(3);
+    expect(fn.questions[0].parts.map(p => [p.partId, p.score, p.counted, p.ignored])).toEqual([["a", 0, false, false], ["b", 3, true, false]]);
+    const node = K.composite("cp", "مركّب", 3, [], [K.group("g", "g", [K.part("a", "أ", { ...SA_STEM(), marks: 3 }), K.part("b", "ب", { ...SA(), marks: 3 })], K.firstN(1, 3))]);
+    const cg = gradeExam(exam([node]), { cp: A.composite({ a: BLANK, b: A.text("b") }, {}) });
+    expect(cg.score).toBe(3);
+    expect(cg.questions[0].parts.map(p => [p.partId, p.score, p.counted])).toEqual([["a", 0, false], ["b", 3, true]]);
+  });
   it("RF1-F1d where the renderer DOES draw a table (top-level, non-field type, table in its text; tableFill without a grid) a table answer stays admitted (pin; see limitation L-F2)", () => {
     for (const q of [SA_STEM(), TBL(), { ...FB(), text: STEM }, { examQuestionId: "lf", text: STEM, marks: 4, answer: { text: "x" } }]) {
       expect(aliases.legacyAnswerKindAllowed(q, "table"), q.presentationType).toBe(true);
