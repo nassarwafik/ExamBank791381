@@ -262,8 +262,9 @@ function zerosOf(g, xs) {
                 else
                     b = r;
             }
-            const m = (a + b) / 2, gm = g(m);
-            if (gm !== null && Math.abs(gm) <= 1e-12 * Math.max(1, Math.abs(pp.v), Math.abs(v)))
+            const m = (a + b) / 2, gm = g(m), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
+            const steep = (t) => { const u = g(t); return u !== null && Math.abs(u) >= 1e3 * Math.abs(gm); };
+            if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-6 * scale && steep(m - dm) && steep(m + dm))))
                 put(m);
         }
         pp = p;
@@ -628,13 +629,6 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                 const x = ternary(xs[i - 1], xs[i + 1], g, false);
                 if (g(x) < 1e-9)
                     add(roots, x, "roots");
-            }
-            if (singular && Math.abs(y) > Math.abs(p) && Math.abs(y) >= Math.abs(n)) {
-                const x = plateauCentre(xs[i - 1], ternary(xs[i - 1], xs[i + 1], g, true), xs[i + 1]);
-                if (isPole(x)) {
-                    add(poles, x, "poles");
-                    add(points, x, "points");
-                }
             }
         }
         const nearSingular = (x, d) => poles.some(v => Math.abs(v - x) < d) || points.some(v => Math.abs(v - x) < d);

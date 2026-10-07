@@ -240,8 +240,11 @@ function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
     } else if (pp && p && Math.abs(p.v) < Math.abs(pp.v) && Math.abs(p.v) < Math.abs(v) && Math.sign(pp.v) === Math.sign(v)) {     // touching zero
       let a = pp.x, b = x;
       for (let k = 0; k < 60; k++) { const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r); if (gl === null || gr === null) break; if (Math.abs(gl) > Math.abs(gr)) a = l; else b = r; }
-      const m = (a + b) / 2, gm = g(m);
-      if (gm !== null && Math.abs(gm) <= 1e-12 * Math.max(1, Math.abs(pp.v), Math.abs(v))) put(m);
+      // a touching zero: negligible at the minimum, or small and STEEP around it (√|x − a| is ≈ 10⁻⁸ there, 10⁻² just beside it); a shallow
+      // minimum (x² + 10⁻⁷) is not a zero
+      const m = (a + b) / 2, gm = g(m), scale = Math.max(1, Math.abs(pp.v), Math.abs(v)), dm = 1e-4 * Math.max(1, Math.abs(m));
+      const steep = (t: number) => { const u = g(t); return u !== null && Math.abs(u) >= 1e3 * Math.abs(gm as number); };
+      if (gm !== null && (Math.abs(gm) <= 1e-12 * scale || (Math.abs(gm) <= 1e-6 * scale && steep(m - dm) && steep(m + dm)))) put(m);
     }
     pp = p; p = { x, v };
   }
@@ -437,10 +440,8 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
         const x = ternary(xs[i - 1], xs[i + 1], g, false);
         if (g(x) < 1e-9) add(roots, x, "roots");
       }
-      if (singular && Math.abs(y) > Math.abs(p) && Math.abs(y) >= Math.abs(n)) {
-        const x = plateauCentre(xs[i - 1], ternary(xs[i - 1], xs[i + 1], g, true), xs[i + 1]);                  // even pole between samples
-        if (isPole(x)) { add(poles, x, "poles"); add(points, x, "points"); }
-      }
+      // an even pole between samples needs no search of its own: it is a zero of a denominator, a negative power's base or a log argument,
+      // found by the guards (Review Fix 8)
     }
     const nearSingular = (x: number, d: number) => poles.some(v => Math.abs(v - x) < d) || points.some(v => Math.abs(v - x) < d);
     if (need.extrema || need.slope) for (let i = 1; i < PROBE_N - 1; i++) {

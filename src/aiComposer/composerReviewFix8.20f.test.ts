@@ -88,3 +88,16 @@ describe("20F-RF8 the flat-stretch fallback measures the stretch at the evaluato
     accepted("1000+(abs(x)+x)^8/256+16*(abs(x)-x)^8/256", ["extrema"], { xMin: -1, xMax: 1, yMin: 999, yMax: 1001, extrema: [{ kind: "min", x: 0, y: 1000 }] });
   });
 });
+
+describe("20F-RF8 a flat stretch's rounding noise does not start touching-root searches", () => {
+  it("a plateau whose value carries rounding noise keeps its correct key (pin: the RF6 noise threshold, isolated)", () => {
+    accepted("(x*0.1*10-x)+abs(x-3)+abs(x-4)-1.5", ["xIntercepts"], { xMin: 0, xMax: 6, xIntercepts: [2.75, 4.25] });
+  });
+});
+
+describe("20F-RF8 a steep touching zero of a denominator is a guard zero", () => {
+  it("1/√|x − 1.3| excludes 1.3 (found while removing the grid snapping); a shallow minimum is not a zero", () => {
+    accepted("1/sqrt(abs(x-1.3))", ["domainExclusions", "verticalAsymptotes"], { xMin: -100, xMax: 100, domainExclusions: [1.3], verticalAsymptotes: [1.3] });
+    expect(codes(buildSimFromSpec(fn("1/(x^2+0.0000001)", ["domainExclusions"], { domainExclusions: [0] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+  });
+});
