@@ -254,6 +254,15 @@ function argMin(h, a, b) {
     return (a + b) / 2;
 }
 const absOr = (g) => (x) => { const v = g(x); return v === null ? Infinity : Math.abs(v); };
+const EDGE_TOL = 1e-5;
+const onEdge = (x, edge) => Math.abs(x - edge) <= EDGE_TOL * Math.max(1, Math.abs(edge));
+function negligibleAt(at, m) {
+    const s = Math.max(1, Math.abs(m)), near = [0, 1e-10, -1e-10, 1e-9, -1e-9].map(d => at(m + d * s)).filter((v) => v !== null);
+    if (!near.length)
+        return false;
+    const h = 1e-4 * s, l = at(m - h), r = at(m + h);
+    return l !== null && r !== null && Math.min(...near.map(Math.abs)) <= 1e-3 * Math.min(Math.abs(l), Math.abs(r));
+}
 function zerosOf(g, xs) {
     const z = [], put = (x) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v))))
         z.push(v); };
@@ -322,7 +331,8 @@ function guardInfo(ast, xs, wantCusps = false) {
         return null;
     const val = (n, x) => { const r = (0, functionStudyModel_1.evaluateFunctionAt)(n, x); return r.ok ? r.value : null; };
     const excluded = [], cusps = [];
-    const keep = (list, z) => { if (!list.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z))))
+    let excludedCapped = false;
+    const keep = (list, z) => { if (list.length <= 4 * KEY_CAP && !list.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z))))
         list.push(z); return list.length <= 4 * KEY_CAP; };
     for (const g of gs) {
         if (g.kind === "sqrt" && !wantCusps)
@@ -341,14 +351,14 @@ function guardInfo(ast, xs, wantCusps = false) {
                 }
             }
             if (!keep(excluded, z))
-                return null;
+                excludedCapped = true;
         }
     }
-    return { excluded, open: excluded, cusps };
+    return { excluded, open: excluded, cusps, excludedCapped };
 }
 function rootAtCusp(at, z) {
     const v = at(z);
-    return v !== null && (v === 0 || vanishesAt(at, z));
+    return (v !== null && (v === 0 || vanishesAt(at, z))) || negligibleAt(at, z);
 }
 function edgeIsRoot(at, e, dir, open) {
     const f0 = at(e);
@@ -371,7 +381,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
     const n = Math.max(100, Math.min(OUTER_N, Math.floor(exports.PROBE_NODE_BUDGET / 4 / Math.max(1, ast === undefined ? 1 : expressionCost(ast)))));
     const raw = (x) => rawAt(x), at = (x) => { const r = rawAt(x); return r !== null && Number.isFinite(r) ? r : null; };
     for (const [edge, dir] of [[xMax, 1], [xMin, -1]]) {
-        let def = null, last = null, slope = 0, prevX = edge, zeroAt = null;
+        let def = raw(edge) !== null ? true : null, last = null, slope = 0, prevX = edge, zeroAt = null;
         let pp = null, p = null;
         const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));
         const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge - dir * 1e-3, edge, ...xs], wantRoots) : null;
@@ -386,9 +396,11 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
             if (need.poles && poleKindAt(raw, z) !== "bounded")
                 return z;
         }
+        if (gi && gi.excludedCapped && wantBreaks)
+            return gi.excluded.find(z => dir * (z - edge) > 0) ?? xs[0];
         if (wantRoots)
             for (const z of gi ? gi.cusps : [])
-                if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z))
+                if (dir * (z - edge) > 0 && !onEdge(z, edge) && rootAtCusp(at, z))
                     return z;
         const e0 = at(edge);
         if (e0 !== null && e0 !== 0)
@@ -396,7 +408,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
         for (let k = 0; k < n; k++) {
             const x = xs[k], r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
             if (def !== null && d !== def) {
-                if (need.points || need.slope)
+                if (k > 0 && (need.points || need.slope))
                     return x;
                 let lo = d ? x : prevX, hi = d ? prevX : x;
                 for (let t = 0; t < 80; t++) {
@@ -406,7 +418,8 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
                     else
                         lo = m;
                 }
-                if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined))
+                if (k === 0 && onEdge(lo, edge)) { }
+                else if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined))
                     return lo;
             }
             def = d;
@@ -464,7 +477,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
             }
             if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {
                 const z = argMin(absOr(at), pp.x, x), m = at(z);
-                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)))
+                if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)) || negligibleAt(at, z))
                     return z;
             }
             pp = p;
@@ -541,7 +554,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)))
             return;
         const x = ternary(xl, xr, g, false);
-        if (g(x) < 1e-9 || vanishesAt(at, x))
+        if (g(x) < 1e-9 || vanishesAt(at, x) || negligibleAt(at, x))
             add(roots, x, "roots");
     };
     try {
@@ -558,7 +571,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         const singular = need.points || need.poles || need.extrema || need.slope;
         if (ast !== undefined && (singular || need.roots)) {
             const gi = guardInfo(ast, [xMin - step, ...xs, xMax + step], need.roots);
-            if (gi === null)
+            if (gi === null || gi.excludedCapped)
                 throw new ProbeStop("budget");
             guardOpen = gi.open;
             if (need.roots)
@@ -577,10 +590,26 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                     }
                 }
         }
-        if (singular)
-            for (const [k, dir] of [[0, -1], [PROBE_N - 1, 1]])
-                if (ys[k] !== null && atRaw(xs[k] + dir * 1e-9 * Math.max(1, Math.abs(xs[k]))) === null && !edges.some(v => Math.abs(v - xs[k]) < 1e-3))
-                    edges.push(xs[k]);
+        if (singular || need.roots)
+            for (const [k, dir] of [[0, -1], [PROBE_N - 1, 1]]) {
+                const e = xs[k], tol = EDGE_TOL * Math.max(1, Math.abs(e));
+                if (ys[k] === null || atRaw(e + dir * tol) !== null)
+                    continue;
+                if (singular && !edges.some(v => Math.abs(v - e) < 1e-3))
+                    edges.push(e);
+                if (need.roots) {
+                    let lo = e, hi = e + dir * tol;
+                    for (let t = 0; t < 80; t++) {
+                        const m = (lo + hi) / 2;
+                        if (atRaw(m) === null)
+                            hi = m;
+                        else
+                            lo = m;
+                    }
+                    if (edgeRoot(lo, -dir))
+                        add(roots, lo, "roots");
+                }
+            }
         for (let i = 0; i < PROBE_N; i++) {
             const y = ys[i];
             if (y === null) {
@@ -912,7 +941,7 @@ function buildFunction(f, path) {
             return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
         if (ft.overflow)
             return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
-        const past = [...ft.roots, ...ft.extrema.map(e => e.x)].find(x => x < xMin - 1e-6 * Math.max(1, Math.abs(xMin)) || x > xMax + 1e-6 * Math.max(1, Math.abs(xMax)));
+        const past = [...ft.roots, ...ft.extrema.map(e => e.x)].find(x => (x < xMin || x > xMax) && !onEdge(x, xMin) && !onEdge(x, xMax));
         const beyond = past ?? featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
         if (beyond !== null)
             return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);

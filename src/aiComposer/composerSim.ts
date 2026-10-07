@@ -254,6 +254,22 @@ function argMin(h: (x: number) => number, a: number, b: number): number {
   return (a + b) / 2;
 }
 const absOr = (g: (x: number) => number | null) => (x: number) => { const v = g(x); return v === null ? Infinity : Math.abs(v); };
+/** ON THE EDGE (Review Fix 12): a feature within EDGE_TOL (relative to max(1, |edge|)) of a window edge belongs to the window — the
+ *  evaluator's rounding places a flat extremum of (x − 1)·eˣ at 1.1·10⁻⁶, and a domain edge truncated to 6 decimals lies 5·10⁻⁷ past the
+ *  window's. Further out, the feature is beyond the window and the key is refused ("widen the window"). */
+const EDGE_TOL = 1e-5;
+const onEdge = (x: number, edge: number) => Math.abs(x - edge) <= EDGE_TOL * Math.max(1, Math.abs(edge));
+/** f is NEGLIGIBLE at m (Review Fix 12): |f| at m (or within 10⁻⁹ of it, where the evaluator defines it) is at most a thousandth of |f|
+ *  10⁻⁴ away on both sides. An expression that CANCELS around its zero (x·√(x² − 6x + 9) = x·|x − 3| at 3) is exactly 0 only in a band of
+ *  a few 10⁻⁹, and rounding noise (≈ 10⁻⁷) or undefined beside it: the search's minimum lands on the noise and the vanishing rule sees
+ *  zeros and gaps — yet the noise is a thousand times below f one step away. A floor (|x − a|^0.25 + 10⁻³) or a shallow minimum
+ *  ((x − 2)² + 10⁻⁶) is not negligible: f barely moves over 10⁻⁴. */
+function negligibleAt(at: (x: number) => number | null, m: number): boolean {
+  const s = Math.max(1, Math.abs(m)), near = [0, 1e-10, -1e-10, 1e-9, -1e-9].map(d => at(m + d * s)).filter((v): v is number => v !== null);
+  if (!near.length) return false;
+  const h = 1e-4 * s, l = at(m - h), r = at(m + h);
+  return l !== null && r !== null && Math.min(...near.map(Math.abs)) <= 1e-3 * Math.min(Math.abs(l), Math.abs(r));
+}
 function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
   const z: number[] = [], put = (x: number) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v)))) z.push(v); };
   // a zero at the EDGE of g's own domain (√(x + 2) at −2 — Review Fix 9): g is defined on one side only and vanishes there
@@ -285,16 +301,18 @@ function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
   return z;
 }
 const GUARD_MAX = 12;
-type GuardInfo = { excluded: number[]; open: number[]; cusps: number[] };
-/** The excluded zeros (also the open domain edges) of every guard, sampled on `xs`; null when the guards are too many or too costly, or
- *  the exclusions more than a key can hold. The cusps (`wantCusps`) are bounded by the samples only: inside the window each check counts
- *  against the probe's budget, and many cusps never switch the exclusions off (RF11). */
+type GuardInfo = { excluded: number[]; open: number[]; cusps: number[]; excludedCapped: boolean };
+/** The excluded zeros (also the open domain edges) of every guard, sampled on `xs`; null when the guards are too many or too costly.
+ *  More exclusions than a key can hold set `excludedCapped` (the callers fail closed) and never drop the cusps (RF12). The cusps
+ *  (`wantCusps`) are bounded by the samples only: inside the window each check counts against the probe's budget, and many cusps never
+ *  switch the exclusions off (RF11). */
 function guardInfo(ast: unknown, xs: number[], wantCusps = false): GuardInfo | null {
   const gs = collectGuards(ast);
   if (gs.length > GUARD_MAX || gs.reduce((t, g) => t + expressionCost(g.node) + (g.exp ? expressionCost(g.exp) : 0), 0) * (xs.length + 400) > PROBE_NODE_BUDGET) return null;
   const val = (n: ExprNode, x: number) => { const r = evaluateFunctionAt(n, x); return r.ok ? r.value : null; };
   const excluded: number[] = [], cusps: number[] = [];
-  const keep = (list: number[], z: number) => { if (!list.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z)))) list.push(z); return list.length <= 4 * KEY_CAP; };
+  let excludedCapped = false;
+  const keep = (list: number[], z: number) => { if (list.length <= 4 * KEY_CAP && !list.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z)))) list.push(z); return list.length <= 4 * KEY_CAP; };
   for (const g of gs) {
     if (g.kind === "sqrt" && !wantCusps) continue;                                  // √0 = 0: a closed edge, never an exclusion
     for (const z of zerosOf(x => val(g.node, x), xs)) {
@@ -303,18 +321,18 @@ function guardInfo(ast: unknown, xs: number[], wantCusps = false): GuardInfo | n
         const e = g.exp ? val(g.exp, z) : null;
         if (e !== null && e >= 0) { if (wantCusps && e > 0) keep(cusps, z); continue; }
       }
-      if (!keep(excluded, z)) return null;
+      if (!keep(excluded, z)) excludedCapped = true;
     }
   }
-  return { excluded, open: excluded, cusps };
+  return { excluded, open: excluded, cusps, excludedCapped };
 }
 /** A CUSP of the expression (Review Fix 11) — a zero of a power's base (e > 0) or of a square root's argument — is where a steep root
  *  hides between two samples ((x − 41.34)·|x − 41.47|^(1/3) dips to 0 between 41.45 and 41.5 without a local minimum on the grid). It is a
- *  root when f is exactly 0 there (|x − 1.3|^0.005 at 1.3) or vanishes like a power (the zero's 12-digit rounding is off by at most half of
- *  the vanishing rule's smallest step, which keeps the four steps within 25 % of each other). */
+ *  root when f is exactly 0 there (|x − 1.3|^0.005 at 1.3), negligible there (a cancelling expression, RF12) or vanishes like a power (the
+ *  zero's 12-digit rounding is off by at most half of the vanishing rule's smallest step, which keeps the four steps within 25 %). */
 function rootAtCusp(at: (x: number) => number | null, z: number): boolean {
   const v = at(z);
-  return v !== null && (v === 0 || vanishesAt(at, z));
+  return (v !== null && (v === 0 || vanishesAt(at, z))) || negligibleAt(at, z);
 }
 /** A domain edge e (f defined on the `dir` side) is a ROOT when |f| shrinks steadily toward it (10⁻² … 10⁻⁸), is negligible at e, and
  *  the edge itself belongs to the domain: with the expression's guards (Review Fix 8) an edge is OPEN when it is a zero of a denominator
@@ -335,7 +353,9 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
   const n = Math.max(100, Math.min(OUTER_N, Math.floor(PROBE_NODE_BUDGET / 4 / Math.max(1, ast === undefined ? 1 : expressionCost(ast)))));
   const raw = (x: number) => rawAt(x), at = (x: number) => { const r = rawAt(x); return r !== null && Number.isFinite(r) ? r : null; };
   for (const [edge, dir] of [[xMax, 1], [xMin, -1]] as const) {
-    let def: boolean | null = null, last: { x: number; v: number } | null = null, slope = 0, prevX = edge, zeroAt: number | null = null;
+    // the edge's own definedness starts the scan (RF12), so a domain edge less than 10⁻³ past it is seen; an UNDEFINED edge is a pole
+    // or a hole ON the edge, inside the window, and starts nothing
+    let def: boolean | null = raw(edge) !== null ? true : null, last: { x: number; v: number } | null = null, slope = 0, prevX = edge, zeroAt: number | null = null;
     let pp: { x: number; a: number } | null = null, p: { x: number; a: number } | null = null;                     // |f| history (touching roots)
     const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));                      // strictly beyond the window
     // the expression's own exclusions beyond the window (a removable hole, a pole) — Review Fix 8
@@ -348,15 +368,21 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
       if (need.points || need.slope) return z;
       if (need.poles && poleKindAt(raw, z) !== "bounded") return z;
     }
-    if (wantRoots) for (const z of gi ? gi.cusps : []) if (dir * (z - edge) > 1e-6 * Math.max(1, Math.abs(edge)) && rootAtCusp(at, z)) return z;   // RF11
+    // more exclusions beyond the window than can be reported (RF12): what they are cannot be told — fail closed
+    if (gi && gi.excludedCapped && wantBreaks) return gi.excluded.find(z => dir * (z - edge) > 0) ?? xs[0];
+    if (wantRoots) for (const z of gi ? gi.cusps : []) if (dir * (z - edge) > 0 && !onEdge(z, edge) && rootAtCusp(at, z)) return z;   // RF11
     const e0 = at(edge); if (e0 !== null && e0 !== 0) last = { x: edge, v: e0 };     // the window's edge value: a root just past it is seen
     for (let k = 0; k < n; k++) {                                                   // (a pole ON the edge is inside the window)
       const x = xs[k], r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
       if (def !== null && d !== def) {                                              // defined ↔ undefined: a domain edge, a hole or a pole
-        if (need.points || need.slope) return x;                                    // the domain changes: exclusions and monotony depend on it
+        if (k > 0 && (need.points || need.slope)) return x;                         // the domain changes: exclusions and monotony depend on it
         let lo = d ? x : prevX, hi = d ? prevX : x;                                 // lo defined, hi undefined
         for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (raw(m) === null) hi = m; else lo = m; }
-        if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined)) return lo;
+        // in the first cell (RF12) a domain edge within EDGE_TOL is the window's own edge, which the probe handles (√(4 − x²) on
+        // [−2, 2]); further out it is a root when f tends to 0 there (x·√(2 − x²) on [−1.414, 1.414]) — exclusions and monotony do not
+        // change over a domain edge that close to the window
+        if (k === 0 && onEdge(lo, edge)) { /* the window's own edge */ }
+        else if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined)) return lo;
       }
       def = d; prevX = x;
       if (v === null) { last = null; slope = 0; pp = p = null; zeroAt = null; continue; }
@@ -376,7 +402,7 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
       }
       if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {                                             // a local minimum of |f|
         const z = argMin(absOr(at), pp.x, x), m = at(z);
-        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z))) return z;
+        if (m !== null && (Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)) || vanishesAt(at, z)) || negligibleAt(at, z)) return z;
       }
       pp = p; p = { x, a: Math.abs(v) }; last = { x, v };
     }
@@ -419,13 +445,14 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     return (b + c) / 2;
   };
   // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample — nor is the
-  // evaluator's rounding noise along it); a root when |f| is negligible there or vanishes like a power (a steep touching root,
-  // x·√|x − 1.3| — RF10; a steeper one, whose power fails the vanishing rule, is found at the expression's cusps — RF11)
+  // evaluator's rounding noise along it); a root when |f| is below 10⁻⁹ there, negligible beside f one step away (a cancelling
+  // expression, RF12) or vanishing like a power (a steep touching root, x·√|x − 1.3| — RF10; a steeper one, whose power fails the
+  // vanishing rule, is found at the expression's cusps — RF11)
   const touchingRoot = (p: number, y: number, n: number, xl: number, xr: number) => {
     const noise = 1e-12 * Math.max(1, Math.abs(y));
     if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise))) return;
     const x = ternary(xl, xr, g, false);
-    if (g(x) < 1e-9 || vanishesAt(at, x)) add(roots, x, "roots");
+    if (g(x) < 1e-9 || vanishesAt(at, x) || negligibleAt(at, x)) add(roots, x, "roots");
   };
   try {
     const step = (xMax - xMin) / (PROBE_N - 1);
@@ -434,7 +461,8 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : xMin + i * step; const v = atRaw(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); overflowAt.push(v !== null && !Number.isFinite(v)); }
     const singular = need.points || need.poles || need.extrema || need.slope;     // extrema / slopes skip the neighbourhood of poles
     if (ast !== undefined && (singular || need.roots)) {                          // the expression's own exclusions (Review Fix 8)
-      const gi = guardInfo(ast, [xMin - step, ...xs, xMax + step], need.roots); if (gi === null) throw new ProbeStop("budget");   // + the edge cells (RF11)
+      const gi = guardInfo(ast, [xMin - step, ...xs, xMax + step], need.roots);                                          // + the edge cells (RF11)
+      if (gi === null || gi.excludedCapped) throw new ProbeStop("budget");
       guardOpen = gi.open;
       if (need.roots) for (const z of gi.cusps) if (rootAtCusp(at, z)) add(roots, z, "roots");   // a steep root between two samples (RF11)
       if (singular) for (const z of gi.excluded) {
@@ -443,8 +471,18 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
         if (atRaw(z - d) !== null && atRaw(z + d) !== null) { add(points, z, "points"); if (isPole(z)) add(poles, z, "poles"); }
       }
     }
-    // a window end that is also a domain edge (√x on [0, 9]) may end a monotonic interval (Review Fix 8)
-    if (singular) for (const [k, dir] of [[0, -1], [PROBE_N - 1, 1]] as const) if (ys[k] !== null && atRaw(xs[k] + dir * 1e-9 * Math.max(1, Math.abs(xs[k]))) === null && !edges.some(v => Math.abs(v - xs[k]) < 1e-3)) edges.push(xs[k]);
+    // a window end that is also a domain edge (√x on [0, 9]) may end a monotonic interval (Review Fix 8); a domain edge within EDGE_TOL
+    // past the window end is the window's end too (x·√(2 − x²) on [−1.414213, 1.414213], RF12) — a root when f tends to 0 there
+    if (singular || need.roots) for (const [k, dir] of [[0, -1], [PROBE_N - 1, 1]] as const) {
+      const e = xs[k], tol = EDGE_TOL * Math.max(1, Math.abs(e));
+      if (ys[k] === null || atRaw(e + dir * tol) !== null) continue;
+      if (singular && !edges.some(v => Math.abs(v - e) < 1e-3)) edges.push(e);
+      if (need.roots) {
+        let lo = e, hi = e + dir * tol;
+        for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (atRaw(m) === null) hi = m; else lo = m; }
+        if (edgeRoot(lo, -dir)) add(roots, lo, "roots");
+      }
+    }
     for (let i = 0; i < PROBE_N; i++) {
       const y = ys[i];
       if (y === null) {
@@ -628,8 +666,8 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     if (ft.overflow === "uncertain") return fail("AI_FUNCTION_TOO_COMPLEX", "لا يمكن التحقق آليًا من بعض نقاط الدالة داخل النافذة (قيم تتجاوز حدود الحساب أو سلوك غير محسوم)؛ اختر دالة أبسط أو أنشئ السؤال يدويًا.", path);
     if (ft.overflow === "budget") return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
     if (ft.overflow) return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
-    // a root or an extremum the probe found PAST an edge (its edge cells, RF11) — further than the search's precision — is outside the window
-    const past = [...ft.roots, ...ft.extrema.map(e => e.x)].find(x => x < xMin - 1e-6 * Math.max(1, Math.abs(xMin)) || x > xMax + 1e-6 * Math.max(1, Math.abs(xMax)));
+    // a root or an extremum the probe found PAST an edge (its edge cells, RF11) — beyond EDGE_TOL (RF12) — is outside the window
+    const past = [...ft.roots, ...ft.extrema.map(e => e.x)].find(x => (x < xMin || x > xMax) && !onEdge(x, xMin) && !onEdge(x, xMax));
     const beyond = past ?? featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
     if (beyond !== null) return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);
     // the stretch just beyond each window edge belongs to the key too (a pole ON the edge starts one: 1/(x² − 4) on [−2, 2], RF10); the scan
