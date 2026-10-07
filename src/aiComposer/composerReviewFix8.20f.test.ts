@@ -82,3 +82,9 @@ describe("20F-RF8 found while fixing: a pole the grid misses is found through it
     accepted("(x+1)/((x-2.7)^3*(x+2.5)^2)+x", ["verticalAsymptotes"], { ...o, verticalAsymptotes: [-2.5, 2.7] });
   });
 });
+
+describe("20F-RF8 the flat-stretch fallback measures the stretch at the evaluator's rounding", () => {
+  it("an asymmetric flat minimum is centred within 0.005 of its true position (a looser tolerance would drift past it)", () => {
+    accepted("1000+(abs(x)+x)^8/256+16*(abs(x)-x)^8/256", ["extrema"], { xMin: -1, xMax: 1, yMin: 999, yMax: 1001, extrema: [{ kind: "min", x: 0, y: 1000 }] });
+  });
+});
