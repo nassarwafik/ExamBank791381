@@ -88,6 +88,12 @@ describe("20G.2 O1 — valid legacy answers grade exactly as before (pins)", () 
   it("O1-R trueFalse with IMPLICIT options (no options array, answer.correct boolean) unchanged (pin)", () => {
     same(TF(), choice(0), { score: 7, maxMarks: 7, correct: true, manualReview: false });
     same(TF(), choice(1), { score: 0, maxMarks: 7, correct: false, manualReview: false });
+    // keyed by TEXT (no index, no boolean): only the implicit صحيح / غير صحيح option texts make the right choice gradeable
+    for (const answer of [{ correctText: "غير صحيح" }, { values: ["غير صحيح"] }]) {
+      const q = { examQuestionId: "tf2", presentationType: "trueFalse", text: "صح؟", marks: 7, answer };
+      same(q, choice(1), { score: 7, maxMarks: 7, correct: true, manualReview: false });
+      same(q, choice(0), { score: 0, maxMarks: 7, correct: false, manualReview: false });
+    }
   });
   it("O1-S / O1-T / O1-U / O1-V shortAnswer text, multiTrueFalse / matching / cliFill fields unchanged (pin)", () => {
     same(SA(), text(" B "), { score: 7, maxMarks: 7, correct: true, manualReview: false });
