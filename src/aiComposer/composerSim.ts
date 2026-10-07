@@ -349,13 +349,8 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
   // a candidate that lands on an OVERFLOW PLATEAU (|f| beyond the evaluator's range around a steep pole) is moved to the plateau's centre —
   // the pole — never left on its edge (lo / hi are finite points on either side)
   const finiteAt = (x: number) => { const v = atRaw(x); return v !== null && Number.isFinite(v); };
-  // a search that converged onto the plateau's FINITE edge (Review Fix 6) is moved inside it first: a point a few rounding steps away
   const plateauCentre = (lo: number, x: number, hi: number) => {
-    if (finiteAt(x)) {
-      const seed = [1e-14, 1e-12, 1e-10].flatMap(d => [x + d * Math.max(1, Math.abs(x)), x - d * Math.max(1, Math.abs(x))]).find(s => { if (s <= lo || s >= hi) return false; const v = atRaw(s); return v !== null && !Number.isFinite(v); });
-      if (seed === undefined) return x;
-      x = seed;
-    }
+    if (finiteAt(x)) return x;
     let a = lo, b = x, c = x, d = hi;
     for (let k = 0; k < 60; k++) { const m = (a + b) / 2; if (finiteAt(m)) a = m; else b = m; }
     for (let k = 0; k < 60; k++) { const m = (c + d) / 2; if (finiteAt(m)) d = m; else c = m; }

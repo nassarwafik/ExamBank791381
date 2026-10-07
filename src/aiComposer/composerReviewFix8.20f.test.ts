@@ -99,5 +99,6 @@ describe("20F-RF8 a steep touching zero of a denominator is a guard zero", () =>
   it("1/√|x − 1.3| excludes 1.3 (found while removing the grid snapping); a shallow minimum is not a zero", () => {
     accepted("1/sqrt(abs(x-1.3))", ["domainExclusions", "verticalAsymptotes"], { xMin: -100, xMax: 100, domainExclusions: [1.3], verticalAsymptotes: [1.3] });
     expect(codes(buildSimFromSpec(fn("1/(x^2+0.0000001)", ["domainExclusions"], { domainExclusions: [0] })))).toEqual(["AI_FUNCTION_KEY_INCONSISTENT"]);
+    accepted("1/(x^2+0.0000001)+1/(x-3)", ["domainExclusions"], { domainExclusions: [3] });
   });
 });

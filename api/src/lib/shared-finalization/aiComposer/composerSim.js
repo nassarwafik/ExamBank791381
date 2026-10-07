@@ -447,13 +447,8 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         throw new ProbeStop(why); };
     const finiteAt = (x) => { const v = atRaw(x); return v !== null && Number.isFinite(v); };
     const plateauCentre = (lo, x, hi) => {
-        if (finiteAt(x)) {
-            const seed = [1e-14, 1e-12, 1e-10].flatMap(d => [x + d * Math.max(1, Math.abs(x)), x - d * Math.max(1, Math.abs(x))]).find(s => { if (s <= lo || s >= hi)
-                return false; const v = atRaw(s); return v !== null && !Number.isFinite(v); });
-            if (seed === undefined)
-                return x;
-            x = seed;
-        }
+        if (finiteAt(x))
+            return x;
         let a = lo, b = x, c = x, d = hi;
         for (let k = 0; k < 60; k++) {
             const m = (a + b) / 2;
