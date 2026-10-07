@@ -231,12 +231,11 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
     for (let k = 0; k < n; k++) {                                                   // strictly beyond the window (a pole ON its edge is inside)
       const x = edge + dir * 1e-3 * 1e9 ** (k / (n - 1)), r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
       if (def !== null && d !== def) {                                              // defined ↔ undefined: a domain edge, a hole or a pole
-        if (wantBreaks) return x;
-        if (wantRoots) {
-          let lo = d ? x : prevX, hi = d ? prevX : x;                               // lo defined, hi undefined
-          for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (raw(m) === null) hi = m; else lo = m; }
-          if (edgeIsRoot(at, lo, Math.sign(lo - hi))) return lo;
-        }
+        if (need.points || need.slope) return x;                                    // the domain changes: exclusions and monotony depend on it
+        let lo = d ? x : prevX, hi = d ? prevX : x;                                 // lo defined, hi undefined
+        for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (raw(m) === null) hi = m; else lo = m; }
+        if (need.poles && poleKindAt(raw, hi) !== "bounded") return hi;             // a pole there (or one that cannot be ruled out)
+        if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi))) return lo;
       }
       def = d; prevX = x;
       if (v === null) { last = null; slope = 0; pp = p = null; zeroAt = null; continue; }

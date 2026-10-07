@@ -227,20 +227,20 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
         for (let k = 0; k < n; k++) {
             const x = edge + dir * 1e-3 * 1e9 ** (k / (n - 1)), r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
             if (def !== null && d !== def) {
-                if (wantBreaks)
+                if (need.points || need.slope)
                     return x;
-                if (wantRoots) {
-                    let lo = d ? x : prevX, hi = d ? prevX : x;
-                    for (let t = 0; t < 80; t++) {
-                        const m = (lo + hi) / 2;
-                        if (raw(m) === null)
-                            hi = m;
-                        else
-                            lo = m;
-                    }
-                    if (edgeIsRoot(at, lo, Math.sign(lo - hi)))
-                        return lo;
+                let lo = d ? x : prevX, hi = d ? prevX : x;
+                for (let t = 0; t < 80; t++) {
+                    const m = (lo + hi) / 2;
+                    if (raw(m) === null)
+                        hi = m;
+                    else
+                        lo = m;
                 }
+                if (need.poles && poleKindAt(raw, hi) !== "bounded")
+                    return hi;
+                if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi)))
+                    return lo;
             }
             def = d;
             prevX = x;

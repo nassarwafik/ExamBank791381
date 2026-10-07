@@ -85,3 +85,21 @@ describe("20F-RF7 found while fixing (PINS: accepted on ff25763, kept accepted)"
     accepted("abs(x-3)/(x-3)+2", ["domainExclusions"], { xMin: -7.3, xMax: 9.1, domainExclusions: [3] });
   });
 });
+
+describe("20F-RF7 each new layer holds on its own", () => {
+  it("an edge where f only comes close to 0 is not a root", () => {
+    accepted("(sqrt(x)+0.0004)*(x-2)", ["xIntercepts"], { xIntercepts: [2] });
+  });
+  it("beyond the window: a pole at a domain edge matters to vertical asymptotes, a plain domain edge does not", () => {
+    expect(codes(buildSimFromSpec(fn("1/x+log(8-x)", ["verticalAsymptotes"], { verticalAsymptotes: [0] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    accepted("1/x+0*sqrt(8-x)", ["verticalAsymptotes"], { verticalAsymptotes: [0] });
+    expect(codes(buildSimFromSpec(fn("1/x+0*sqrt(8-x)", ["domainExclusions"], { domainExclusions: [0] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("beyond the window: a touching root (no sign change) is found", () => {
+    expect(codes(buildSimFromSpec(fn("(x-8)^2*(x+1)", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a flat extremum wider than the key tolerance is located at its centre (a coarse window records it)", () => {
+    accepted("(x-2)^8+1000", ["extrema"], { xMin: -50, xMax: 50, yMin: 900, yMax: 1100, extrema: [{ kind: "min", x: 2, y: 1000 }] });
+  });
+});
+
