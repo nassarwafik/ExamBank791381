@@ -73,8 +73,9 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   exp, log and log10. round / floor / ceil / min / max / % are refused (`AI_FUNCTION_UNSUPPORTED`; the teacher authors those manually)
   because their jumps and noise defeat a numerical probe. The model's key is probed numerically for **soundness** (f(0), roots, poles,
   horizontal asymptotes, local extrema, monotonic intervals: an inconsistent key is refused) and, since Review Fix 1, for **completeness**
-  inside the window. Code samples the function (2001 points; sign changes refined by bisection; touching roots, even poles and extrema by
-  ternary search, a touching root only at a strict local minimum of |f|; one-sided poles at a domain edge). Poles are recognized by
+  inside the window. Code samples the function (2001 points; sign changes refined by bisection; touching roots and extrema by ternary
+  search, a touching root only at a strict local minimum of |f| beyond rounding noise; one-sided poles at a domain edge; even poles and
+  holes through the guards, Review Fix 8). Poles are recognized by
   **growth** and classified **fail-closed** (Review Fix 5). Each side of a candidate is sampled at 10⁻² … 10⁻¹², with the evaluator's
   overflow told apart from undefined points, and classified as:
   - **pole**: |f| keeps increasing without slowing down, or rises strongly until the evaluator overflows;
@@ -82,8 +83,8 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   - **uncertain**: anything else, such as overflow already at 10⁻² (an overflow edge is not a pole) or growth too slow to decide
     (√|log|x||).
 
-  A candidate that lands on an overflow plateau, or on its finite edge, is moved to the plateau's centre. Grid points are snapped to 12
-  significant digits, so a pole at a terminating decimal (1.3) is met exactly instead of one rounding step off (Review Fix 6). A
+  A candidate that lands on an overflow plateau, or on its finite edge, is moved to the plateau's centre. Poles and holes at any position
+  are also found through the expression's guards (below; Review Fix 8 replaced RF6's grid snapping). A
   **narrow** overflow run (at most 2 samples, finite on both sides) is classified at its centre and must be a pole. An uncertain
   candidate, an uncertain key point, or any wider overflow run inside the window **refuses** the key (`AI_FUNCTION_TOO_COMPLEX`) rather
   than guessing. This covers rational poles of order 1 to about 8
@@ -116,10 +117,22 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
     every such feature. Each side beyond the window is scanned on a geometric grid out to 10⁶ past the edge (≈ 2.6 % apart). The scan
     tells a root (a sign change through 0, an exact zero f leaves again, or a touching root) from a pole or a domain edge.
 
-  A domain edge where f tends to 0 is a **root** when the edge belongs to the domain (x·√(4−x²) at ±2; x·log x at 0 is not, since 0 is
-  outside its domain). A domain exclusion must be an **isolated** undefined point (a hole, a jump, a pole), not a point inside a domain
-  gap. A very flat extremum (x⁵ − 5x⁴ + 50 at 0, (x−2)⁸ + 1000) is detected by comparing samples 4 and 16 steps away when its
-  neighbours tie with it, and is located at the centre of its flat stretch.
+  **Guards (Review Fix 8).** Where the expression excludes x is found from the expression itself, whatever the grid: the zeros of every
+  denominator, every log argument and every power base under a negative exponent. Each guarded sub-expression is sampled; its sign
+  changes are bisected, and its exact and touching zeros are refined. Results:
+  - a removable hole that no sample lands on ((x−1)/(x²−1) at 1) is a domain point;
+  - such a point is also a pole if f grows there;
+  - beyond the window, such a point refuses the key.
+
+  A touching zero counts when it is negligible, or small and steep around it (1/√|x − 1.3| at 1.3); a shallow minimum (x² + 10⁻⁷) is
+  not a zero. The guards are bounded (at most 12 guarded sub-expressions within the node budget; more refuses the key as too complex).
+
+  A domain edge where f tends to 0 is a **root** when the edge belongs to the domain. An edge that is a guard zero (a log argument, a
+  denominator) is open; any other edge is closed. So x·√(4−x²) at ±2 and x·√(1.21−x²) at ±1.1 are roots, while x·log x at 0 is not.
+  A domain exclusion must be an **isolated** undefined point (a hole, a jump, a pole), not a point inside a domain gap. A window end that
+  is a domain edge (√x on [0, 9]) may end a monotonic interval. A very flat extremum (x⁵ − 5x⁴ + 50 at 0, (x−2)⁸ + 1000) is detected by comparing samples 4 and 16 steps away when its
+  neighbours tie with it, and is located at the centre of its flat stretch. One too flat for the probe is accepted only within 0.005 of
+  the centre of the stretch where f equals the key's value within rounding, with f rising (falling) beyond it on both sides.
 
   The grader compares sets, so an incomplete key would fail correct students.
 
@@ -826,7 +839,9 @@ The table also lists 3 re-targets (U04b, W14b, W19b) of earlier mutants whose li
 Mutants on `composerSim.ts` ran against every function-study suite, RF7 included.
 - **140 KILLED.**
 - **4 EQUIVALENT:** C19, C42, U02 and T07b (§11.4, §11.9, §11.10).
-- **26 INVALID,** because their target lines were rewritten. Each is re-targeted or covered, and every re-target named here is KILLED:
+- **26 INVALID,** because their target lines were rewritten. Each is re-targeted or covered. Every re-target named here is KILLED except
+  T07b, which is one of the 4 equivalents. The 3 RF7 re-targets (U04b, W14b, W19b) ran in the RF7 campaign, not among the 170;
+  §11.13 includes them:
   - R04b by R04c (R04 itself is also KILLED);
   - R08 and R12 by R08b and R12b;
   - R09, R10 and R11 by S09, S06c and U04b;
@@ -843,6 +858,123 @@ Mutants on `composerSim.ts` ran against every function-study suite, RF7 included
 
 Every planted defect in the current code is killed except the 4 proven equivalents. There were 0 timeouts, and every file was restored
 byte-for-byte with a clean `git status` after every campaign.
+
+### 11.13 Fresh re-review and Review Fix 8: the expression's own exclusions (guards)
+
+A fresh re-review of `7fa0578` (relaunched after a container restart; the first attempt reported nothing) found 0 BLOCKER, 1 MAJOR,
+3 MINOR findings and 3 notes. RF7 held up: 0 / 4 356 wrong keys accepted, 0 / 1 312 correct curriculum keys refused. The MAJOR finding
+was an older gap that earlier rounds missed.
+
+| Finding | Fix |
+|---|---|
+| MAJOR-1 a removable hole that no grid sample lands on was invisible: `(x−1)/(x²−1)` on [−6, 6] keyed without the hole at 1 was accepted (215 / 342 integer windows; 22 / 50 symmetric ones), and the monotonic key ignored it | **guards**: the zeros of every denominator, log argument and power base under a negative exponent are located on the sub-expression itself, inside the window (a domain point, a pole if it grows) and beyond it (widen the window). Probing the survivor Y17 also showed the grid could miss a pole that its denominator reveals (`(x+1)/((x−2.7)³(x+2.5)²)+x` on [−70, 70]): found now |
+| MINOR-1 a closed domain edge with decimal coefficients (x·√(1.21−x²) at ±1.1) evaluates as undefined after rounding: the root was missed and the correct key refused | edge closedness from the guards (a log or denominator zero is open, anything else closed); a key root where f rounds to undefined is matched to the probe instead of refused |
+| MINOR-2 a very flat degree-8 minimum beside a large constant accepted a key 0.03 away | the flat fallback locates the centre of the flat stretch (within 0.005) and requires f to rise (fall) beyond it |
+| MINOR-3 a monotonic interval ending at a domain edge that is the window's end was refused | window ends that are domain edges are breakpoints |
+| NOTE-1 a root within 10⁻³ past the window's edge was missed | the scan beyond the window starts from the edge's value |
+| NOTE-2 fail-closed over-refusals beyond the window | recorded in §12 |
+| NOTE-3 §11.12 wording on T07b and the RF6 / RF7 re-targets | corrected |
+| (simplification) the guards made five earlier layers redundant: RF6's grid snapping, RF7's isolated-point fallback for exclusions, RF7's pole check at a domain change beyond the window, RF7's round-number edge test, and the grid's even-pole search (RF1–RF5); the full mutation re-runs showed them surviving (W04, X03, X17, X18, S09) | removed (`31cb87e`, `c11c024`); every test and battery is unchanged without them. Removing the even-pole search exposed a steep touching zero below the guard threshold (1/√\|x − 1.3\|), now found |
+
+**Fail-first.** `composerReviewFix8.20f.test.ts` (`41baf36`'s version, 7 tests) was executed on `7fa0578`: **7 of 7 failed**. Sample
+assertions:
+- `expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]` (the hole at 1)
+- `x*sqrt(1.21-x^2) {…"xIntercepts":[-1.1,0,1.1]}: expected '[{"code":"AI_FUNCTION_KEY_INCONSISTENT",…' to be 'ok'`
+- `(x-2)^8+1000 {…"x":2.03…}: expected true to be false`
+- `sqrt(x) {"xMin":0,"xMax":9,…}: expected '[{"code":"AI_FUNCTION_KEY_INCONSISTENT",…' to be 'ok'`
+
+The tests added afterwards were checked on `7fa0578` through its generated module:
+- **Fail-first** (accepted there, refused on the head):
+  - the touching-zero hole;
+  - the pole only its denominator reveals (`3ac8e15`).
+- **New fail-closed behaviour:** the guard cap.
+- **Pin:** the log-edge exclusion.
+
+**Batteries on the head:**
+- **Reviewer's hole batteries:** incomplete keys accepted **0 / 342** and **0 / 50**.
+- **Decimal edges:** radii 0 / 45 and linear coefficients 0 / 44, both for incomplete-accepted and for correct-refused.
+- **Flat degree-8:** 0 / 540 shifted keys accepted, 0 / 180 correct keys refused.
+- **Earlier batteries:**
+  - curriculum correct keys 0 / 1 312, and 2 / 2 388 in the extended set (the fail-closed extrema-with-pole-beyond case);
+  - wrong keys 0 / 4 356;
+  - edge roots 0 / 90 incomplete keys accepted;
+  - decimal poles 0 / 89 per family;
+  - monotonic 23 / 23 and 10 / 10.
+- **Fuzzers:** **0 exceptions**. The heaviest CPU case found builds in 21 ms, and the worst fuzz figure (which also includes a separate
+  full probe) is 157 ms.
+
+**RF8 mutation campaign.** 17 mutants: **17 KILLED, 0 SURVIVED, 0 TIMEOUT**. Y17 first survived. Investigating it found the missed pole
+above, and its test now kills it.
+
+Three more RF8 tests were added after the first runs:
+- the asymmetric flat minimum (`b9170f9`), a pin that isolates the flat-stretch tolerance (answers the re-targets X15b and W14c);
+- a plateau carrying rounding noise (`c11c024`), a pin that isolates RF6's touching-root noise threshold (W16);
+- the steep touching zero (accepted) and a shallow minimum (refused) (`c11c024`), pins of the 7fa0578 outcome kept through the simplification;
+- the two found-while-fixing tests listed above.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| Y01 | `composerSim.ts` | denominators not guarded | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MAJOR-1 the expression's own exclusions are found whatever  |
+| Y02 | `composerSim.ts` | log arguments not guarded | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 found while fixing (PINS: accepted on ff25763, kept accepte |
+| Y03 | `composerSim.ts` | every zero of a power base excluded (exponent ignored) | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MAJOR-1 the expression's own exclusions are found whatever  |
+| Y04 | `composerSim.ts` | guard exclusions not added to the probe's points | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MAJOR-1 the expression's own exclusions are found whatever  |
+| Y05 | `composerSim.ts` | guard zeros inside a domain gap added as points | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 each new layer holds on its own › a zero of a log argument  |
+| Y06 | `composerSim.ts` | edge closedness from guards ignored (round-number test) | INVALID |  |
+| Y07 | `composerSim.ts` | every guarded edge taken as closed | INVALID |  |
+| Y08 | `composerSim.ts` | guard exclusions beyond the window ignored | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MAJOR-1 the expression's own exclusions are found whatever  |
+| Y09 | `composerSim.ts` | outer scan not seeded with the window's edge value | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 NOTE-1 the scan beyond the window starts from the window's  |
+| Y10 | `composerSim.ts` | window-end domain edges not recorded | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MINOR-3 a window end that is a domain edge ends a monotonic |
+| Y11 | `composerSim.ts` | key root where f rounds to undefined refused outright | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MINOR-1 a closed domain edge is a root whatever its roundin |
+| Y12 | `composerSim.ts` | flat fallback: centre not checked | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MINOR-2 a flat extremum the probe does not record is locate |
+| Y13 | `composerSim.ts` | flat fallback: direction beyond the stretch not checked | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › a flat extremum too flat  |
+| Y14 | `composerSim.ts` | guards: touching zeros not found | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 each new layer holds on its own › a hole whose denominator  |
+| Y15 | `composerSim.ts` | guards: sign changes not refined | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MAJOR-1 the expression's own exclusions are found whatever  |
+| Y16 | `composerSim.ts` | guard cap removed | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 each new layer holds on its own › more guarded sub-expressi |
+| Y17 | `composerSim.ts` | guard zeros inside the window: pole classification dropped | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 found while fixing: a pole the grid misses is found through |
+| X12b | `composerSim.ts` | outside scan starts on the window edge (RF8 code) | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MINOR-3 a window end that is a domain edge ends a monotonic |
+| X15b | `composerSim.ts` | flat-extremum fallback tolerance 1e-12 relative (RF8 code) | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 the flat-stretch fallback measures the stretch at the evalu |
+| W14c | `composerSim.ts` | flat-extremum fallback tolerance 1e-9 (RF8 code) | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 the flat-stretch fallback measures the stretch at the evalu |
+| Y06b | `composerSim.ts` | every domain edge taken as closed (RF8 code) | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 found while fixing (PINS: accepted on ff25763, kept accepte |
+| Y18 | `composerSim.ts` | guards: steep touching zeros not accepted | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 a steep touching zero of a denominator is a guard zero › 1/ |
+| Y19 | `composerSim.ts` | guards: shallow minima accepted as zeros | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 a steep touching zero of a denominator is a guard zero › 1/ |
+
+The table also lists 6 re-targets of lines RF8 rewrote (X12b, X15b, W14c, Y06b) and the steep-zero rule (Y18, Y19). The final run below
+includes all of them.
+
+**Final re-run on the Review Fix 8 code (`b8f8a41`).** Every mutant list was re-run, 196 mutants in all:
+- the 170 of the RF7 re-run;
+- RF7's 3 re-targets;
+- RF8's 17;
+- RF8's 6 re-targets and new mutants.
+
+Mutants on `composerSim.ts` ran against every function-study suite, RF8 included.
+- **153 KILLED.**
+- **4 EQUIVALENT:** C19, C42, U02 and T07b (§11.4, §11.9, §11.10).
+- **0 SURVIVED, 0 TIMEOUT.**
+- **39 INVALID,** because their target lines were rewritten or removed. Each is re-targeted (every re-target named here is KILLED except
+  T07b, an equivalent) or its feature is gone:
+  - R04b by R04c (R04 itself is also KILLED);
+  - R08 and R12 by R08b and R12b;
+  - R10 and R11 by S06c and U04b;
+  - S01 by S01b;
+  - S03 and S03b by S03c;
+  - S06 and S06b by S06c;
+  - S07 and S07b by S07c;
+  - S08 by U04b;
+  - T03 by T03b;
+  - T04 by T04c, T05 and T05c by T05d, T06 by U06 and T07 by T07b;
+  - U04 by U04b, U05 by U05c and V03 by V03b;
+  - W14, W14b and X15 by W14c and X15b;
+  - W19 by W19b, X12 by X12b, and Y06 and Y07 by Y06b;
+  - **features removed:**
+    - U03: RF5's steep branch;
+    - R09, S09 and V11: the grid even-pole search (even poles are guard zeros: Y14, Y17);
+    - W07: its plateau-edge seed;
+    - W04, X03, X16, X17 and X18: RF6's snapping, RF7's round-number test, RF7's isolated-point fallback and RF7's beyond-window flip
+      pole check.
+
+Every planted defect in the current code is killed except the 4 proven equivalents. Every file was restored byte-for-byte, with a
+clean `git status` after every campaign.
 
 ## 12. Known limitations
 
@@ -863,8 +995,11 @@ byte-for-byte with a clean `git status` after every campaign.
   - slowly converging limits (x^−0.15, 1/log x) are undecided and refused;
   - a function with a flat stretch has no extremum to end a monotonic interval on, so its monotonic key is refused;
   - the scan beyond the window runs out to 10⁶ past the edge on a grid ≈ 2.6 % apart: two features closer than that, far from the
-    window, can hide each other; a pole beyond the window refuses an intercepts-only key too (fail closed: "widen the window");
-  - a domain edge at a non-round position (√3) is taken as closed (in the domain);
+    window, can hide each other;
+  - a domain edge that is not a guard zero (a log argument or a denominator) is taken as closed (in the domain);
+  - an extremum or slope change beyond the window where |f| and its changes stay below the evaluator's rounding scale (a Gaussian tail
+    at |f| ≈ 10⁻⁹) is not seen by the scan beyond the window (15 of 5 333 in the reviewer's battery);
+  - a pole beyond the window refuses an extrema-only key (fail closed: "widen the window");
   - a contrived sum of power laws (100·(|x|+1)^−0.7 + 0.3·(|x|+1)^−0.02) can mislead the limit extrapolation; it is not curriculum.
 - No live provider call was made (no network in the development environment): the provider schemas are checked against the documented
   strict-mode limits by a test, not by a live acceptance call. The first production composer call is the live check.
