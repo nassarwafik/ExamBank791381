@@ -52,8 +52,7 @@ describe("20F-RF9 each new guard rule holds on its own", () => {
   it("a zero too flat for the ratio rule (|2x − 1|^0.01) is caught exactly at its rounded position", () => {
     incomplete("1/abs(2*x-1)^0.01+1/x", ["domainExclusions"], { xMin: -8, xMax: 8, domainExclusions: [0] });
   });
-  it("a steep zero far above the absolute 1e-6 level (√|1000x − 707|) is caught by the ratio", () => {
-    incomplete("1/sqrt(abs(1000*x-707))+1/x", ["domainExclusions"], { xMin: -10, xMax: 10, domainExclusions: [0] });
-    accepted("1/sqrt(abs(1000*x-707))+1/x", ["domainExclusions"], { xMin: -10, xMax: 10, domainExclusions: [0, 0.707] });
+  it("a steep zero far above the absolute 1e-6 level, at a position no rounding meets (√|1000x − 1000·√2/2|), is caught by the ratio", () => {
+    incomplete("1/sqrt(abs(1000*x-707.1067811865476))+1/x", ["domainExclusions"], { xMin: -10, xMax: 10, domainExclusions: [0] });
   });
 });
