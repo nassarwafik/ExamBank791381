@@ -6,7 +6,7 @@ const { normalizeSimulationState } = require("./shared-finalization/smartsimStat
 // the source is never trimmed / re-indented / re-encoded; client-reported score / passed / testsPassed / stdout are dropped;
 // only a REGISTERED language at its exact contract version is accepted (V1: python@1, java@1, csharp@1).
 const { normalizeCodeAnswer, bindCodeAnswerToQuestion } = require("./shared-finalization/codingQuestion");
-const { flattenQuestions, questionParts, partId } = require("./exam-structure");
+const { flattenQuestions, questionParts, partId, isCompound } = require("./exam-structure");
 // Phase 19A — an answer to an inlineCloze@1 question is the existing `fields` Answer; bound to the published question only STRING
 // values for that question's own blank ids survive (bounded). A non-fields answer to a cloze question is dropped with a code.
 // Every other `fields` answer (legacy fillBlank / wordBank / matrix / …) is passed through exactly as before.
@@ -88,6 +88,8 @@ function bindAnswer(id, a, q, bound, reject) {
     // 20G.1 — only the published question's OWN part ids (the grader's partId authority) survive, each a well-formed bounded legacy answer;
     // the container is rebuilt to exactly { kind, parts }. The specialized mismatch codes keep their precedence.
     if (q === undefined) return { ok: false, code: "ANSWER_QUESTION_UNKNOWN" };
+    // the grader reads a compound answer ONLY on a compound question (isCompound — the same authority); elsewhere it was never an answer
+    if (!isCompound(q)) return { ok: false, code: "COMPOUND_QUESTION_MISMATCH" };
     const own = new Set(questionParts(q).map((p, i) => partId(p, i)));
     const parts = {};
     for (const pid of Object.keys(a.parts)) {
@@ -114,6 +116,7 @@ function bindAnswer(id, a, q, bound, reject) {
 // verbatim; a forbidden (prototype) field key refuses the answer. Unbound (no exam), the historical pass-through is unchanged.
 const LEGACY_ANSWER_LIMITS = Object.freeze({ answerBytes: 65536 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const LEGACY_SHAPE_CODES = new Set(["ANSWER_INVALID", "COMPOUND_QUESTION_MISMATCH"]);
 const isStr = v => typeof v === "string";
 const strOrNull = v => typeof v === "string" || v === null;
 const cellValue = v => typeof v === "string" || typeof v === "boolean" || v === null;
@@ -182,7 +185,9 @@ function bindCompositeAnswer(id, a, q, bound, reject) {
     if (!part) { reject(id + "." + pid, "COMPOSITE_PART_UNKNOWN"); continue; }
     if (part.linkedSmartSim) { reject(id + "." + pid, "COMPOSITE_PART_ANSWER_FORBIDDEN"); continue; }
     const r = bindAnswer(id + "." + pid, value, compositeChildNode(part.raw), true, reject);
-    if (r.ok && childAnswerWellFormed(r.answer)) parts[pid] = r.answer; else reject(id + "." + pid, r.ok ? "COMPOSITE_CHILD_ANSWER_INVALID" : r.code);
+    // 20G.1 — a child refused for its LEGACY shape keeps the composite's historical code (the generic binder used to pass it through and
+    // childAnswerWellFormed refused it); every specialized child code (and the new ANSWER_TOO_LARGE bound) is reported as the binder gives it
+    if (r.ok && childAnswerWellFormed(r.answer)) parts[pid] = r.answer; else reject(id + "." + pid, r.ok || LEGACY_SHAPE_CODES.has(r.code) ? "COMPOSITE_CHILD_ANSWER_INVALID" : r.code);
   }
   for (const cid of ctxIds) {
     const value = a.contexts[cid];

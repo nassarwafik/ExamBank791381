@@ -189,6 +189,20 @@ describe("20G.1 D3 — valid answers and specialized contracts are unchanged", (
     expect(JSON.parse(JSON.stringify(r.answers))).toEqual(JSON.parse('{"__proto__":{"kind":"text","value":"a"},"cp":{"kind":"compound","parts":{"__proto__":{"kind":"text","value":"b"}}}}'));
     expect(Object.getPrototypeOf(r.answers.cp.parts)).toBe(Object.prototype);
   });
+  const comp = parts => ({ "e7-2": { kind: "composite", parts, contexts: {} } });
+  it("D3-H'' composite children refused for their legacy shape keep the historical COMPOSITE_CHILD_ANSWER_INVALID, never the generic code (pin)", () => {
+    const r = normalizeDraftAnswers(comp({ a1: 5, b1: { kind: "numeric", value: 8 }, b2: { kind: "zzz" }, b3: { kind: "compound", parts: { x: A.text("y") } } }), examE());
+    expect(r.answers).toEqual(comp({}));
+    expect(r.rejected).toEqual(["a1", "b1", "b2", "b3"].map(pid => ({ id: "e7-2." + pid, code: "COMPOSITE_CHILD_ANSWER_INVALID" })));
+  });
+  it("D3-R a valid legacy composite child is rebuilt to its contract keys too (an extra key / client score is never stored)", () => {
+    expect(normalizeDraftAnswers(comp({ b3: { kind: "text", value: "x", score: 9 } }), examE())).toEqual({ answers: comp({ b3: A.text("x") }), rejected: [] });
+  });
+  it("D3-D'' a compound answer on a NON-compound question is refused whole (COMPOUND_QUESTION_MISMATCH) — it could never be graded, only take a first-N slot", () => {
+    const r = normalizeDraftAnswers({ q2: { kind: "compound", parts: { p1: A.choice(0) } }, f1: { kind: "compound", parts: { p1: A.text("x") } } }, EX());
+    expect(r.answers).toEqual({});
+    expect(r.rejected).toEqual([{ id: "q2", code: "COMPOUND_QUESTION_MISMATCH" }, { id: "f1", code: "COMPOUND_QUESTION_MISMATCH" }]);
+  });
   it("D3-O composite (20G E) and the networking exam (20G A) valid answers normalize exactly as on the baseline (pin)", () => {
     const a = normalizeDraftAnswers(PA.FULL.answers, examA());
     const delivery = sanitizeExamForStudent(examE(), { parametric: { assignmentId: "pin-20g1", studentId: "s", attemptNumber: 1 } });
