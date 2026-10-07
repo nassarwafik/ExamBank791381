@@ -418,6 +418,8 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
                         lo = m;
                 }
                 if (k === 0 && onEdge(lo, edge)) { }
+                else if (k === 0 && need.slope)
+                    return lo;
                 else if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined))
                     return lo;
             }

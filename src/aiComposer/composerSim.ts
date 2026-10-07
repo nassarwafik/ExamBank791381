@@ -380,9 +380,11 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
         let lo = d ? x : prevX, hi = d ? prevX : x;                                 // lo defined, hi undefined
         for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (raw(m) === null) hi = m; else lo = m; }
         // in the first cell (RF12) a domain edge within EDGE_TOL is the window's own edge, which the probe handles (√(4 − x²) on
-        // [−2, 2]); further out it is a root when f tends to 0 there (x·√(2 − x²) on [−1.414, 1.414]) — exclusions and monotony do not
-        // change over a domain edge that close to the window
+        // [−2, 2]); further out it is a root when f tends to 0 there (x·√(2 − x²) on [−1.414, 1.414]) and it ends a monotonic stretch
+        // (RF14); the exclusions do not change over a domain edge that close to the window
         if (k === 0 && onEdge(lo, edge)) { /* the window's own edge */ }
+        // past EDGE_TOL a monotonic stretch ends there, outside the window: widen it (RF14 — a key that ignores the edge was accepted)
+        else if (k === 0 && need.slope) return lo;
         else if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined)) return lo;
       }
       def = d; prevX = x;
