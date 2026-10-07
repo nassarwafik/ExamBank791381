@@ -74,3 +74,11 @@ describe("20F-RF8 each new layer holds on its own", () => {
     accepted("log(x)+1/(x-2)", ["domainExclusions"], { xMin: -1, xMax: 5, domainExclusions: [2] });
   });
 });
+
+describe("20F-RF8 found while fixing: a pole the grid misses is found through its denominator (fail-first on 7fa0578)", () => {
+  it("an even pole beside an odd one on a coarse grid is required in the key", () => {
+    const o = { xMin: -70, xMax: 70, yMin: -100, yMax: 100 };
+    expect(codes(buildSimFromSpec(fn("(x+1)/((x-2.7)^3*(x+2.5)^2)+x", ["verticalAsymptotes"], { ...o, verticalAsymptotes: [2.7] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    accepted("(x+1)/((x-2.7)^3*(x+2.5)^2)+x", ["verticalAsymptotes"], { ...o, verticalAsymptotes: [-2.5, 2.7] });
+  });
+});
