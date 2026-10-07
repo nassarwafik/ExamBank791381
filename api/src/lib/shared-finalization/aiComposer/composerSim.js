@@ -517,13 +517,31 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                 if (p === null || y === null || n === null || nearSingular(xs[i], 3 * step))
                     continue;
                 const eps = 1e-12 * Math.max(1, Math.abs(y));
-                const kind = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null;
+                let kind = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null, m = 1;
+                if (!kind && Math.abs(p - y) <= eps && Math.abs(n - y) <= eps)
+                    for (const k of [4, 16]) {
+                        const pk = i - k >= 0 ? ys[i - k] : null, nk = i + k < PROBE_N ? ys[i + k] : null;
+                        if (pk === null || nk === null || nearSingular(xs[i], (k + 2) * step))
+                            break;
+                        if (pk - y > eps && nk - y > eps) {
+                            kind = "min";
+                            m = k;
+                            break;
+                        }
+                        if (y - pk > eps && y - nk > eps) {
+                            kind = "max";
+                            m = k;
+                            break;
+                        }
+                        if (Math.abs(pk - y) > eps || Math.abs(nk - y) > eps)
+                            break;
+                    }
                 if (!kind)
                     continue;
                 const fx = (x) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
-                const x = flatCentre(ternary(xs[i - 1], xs[i + 1], fx, kind === "max"), fx, step);
+                const x = flatCentre(ternary(xs[i - m], xs[i + m], fx, kind === "max"), fx, step);
                 const v = fx(x), side = Math.max(...[1, 4, 16].map(m => Math.min(Math.abs(v - fx(x - m * step)), Math.abs(v - fx(x + m * step)))));
-                if (side > 1e-10 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) {
+                if (side > 1e-12 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) {
                     extrema.push({ kind, x });
                     if (extrema.length > KEY_CAP && need.extrema)
                         throw new ProbeStop("extrema");

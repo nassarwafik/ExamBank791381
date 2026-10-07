@@ -371,14 +371,23 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       const p = ys[i - 1], y = ys[i], n = ys[i + 1];
       if (p === null || y === null || n === null || nearSingular(xs[i], 3 * step)) continue;
       const eps = 1e-12 * Math.max(1, Math.abs(y));
-      const kind = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null;
+      let kind: "min" | "max" | null = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null, m = 1;
+      // both neighbours equal to f within rounding (a very flat extremum beside a large value, (x−2)⁸ + 1000): compare 4, then 16 samples
+      // away, where it must rise (or fall) on BOTH sides — a plateau or a slope does not (Review Fix 7)
+      if (!kind && Math.abs(p - y) <= eps && Math.abs(n - y) <= eps) for (const k of [4, 16]) {
+        const pk = i - k >= 0 ? ys[i - k] : null, nk = i + k < PROBE_N ? ys[i + k] : null;
+        if (pk === null || nk === null || nearSingular(xs[i], (k + 2) * step)) break;
+        if (pk - y > eps && nk - y > eps) { kind = "min"; m = k; break; }
+        if (y - pk > eps && y - nk > eps) { kind = "max"; m = k; break; }
+        if (Math.abs(pk - y) > eps || Math.abs(nk - y) > eps) break;
+      }
       if (!kind) continue;
       const fx = (x: number) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
       // a very flat extremum ((x−2)⁶ + 10) is equal to f(x) over a stretch of rounding: the search lands anywhere on it, so it is moved to
       // the stretch's centre; its rise is measured 1, 4 and 16 steps away (x⁵ − 5x⁴ + 50 at 0 rises 3·10⁻⁹ one step away) — Review Fix 7
-      const x = flatCentre(ternary(xs[i - 1], xs[i + 1], fx, kind === "max"), fx, step);
+      const x = flatCentre(ternary(xs[i - m], xs[i + m], fx, kind === "max"), fx, step);
       const v = fx(x), side = Math.max(...[1, 4, 16].map(m => Math.min(Math.abs(v - fx(x - m * step)), Math.abs(v - fx(x + m * step)))));
-      if (side > 1e-10 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) { extrema.push({ kind, x }); if (extrema.length > KEY_CAP && need.extrema) throw new ProbeStop("extrema"); }
+      if (side > 1e-12 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) { extrema.push({ kind, x }); if (extrema.length > KEY_CAP && need.extrema) throw new ProbeStop("extrema"); }
     }
     if (need.limits) { const fl = functionLimits(atRaw); if (fl.uncertain) throw new ProbeStop("uncertain"); limits.push(...fl.limits); }
     if (need.slope) for (let i = 0; i + 1 < PROBE_N; i++) {

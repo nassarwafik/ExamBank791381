@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildSimFromSpec } from "./composerSim";
+import { buildSimFromSpec, probeFunctionFeatures } from "./composerSim";
+import { compileFunction, evaluateFunctionAt } from "../functionStudyModel";
 import * as F from "./testing/composerFakeAi";
 
 // Phase 20F — Review Fix 7 (fresh re-review of ff25763: 0 BLOCKER, 2 MAJOR, 1 MINOR, 4 NOTE). Fail-first on ff25763.
@@ -101,5 +102,10 @@ describe("20F-RF7 each new layer holds on its own", () => {
   it("a flat extremum wider than the key tolerance is located at its centre (a coarse window records it)", () => {
     accepted("(x-2)^8+1000", ["extrema"], { xMin: -50, xMax: 50, yMin: 900, yMax: 1100, extrema: [{ kind: "min", x: 2, y: 1000 }] });
   });
+  it("a flat extremum beside a large value is detected on the grid (its neighbours tie with it; it rises 4 or 16 samples away)", () => {
+    const c = compileFunction("(x-2)^8+1000"); if (!c.ok) throw new Error("compile");
+    const r = probeFunctionFeatures(x => { const v = evaluateFunctionAt(c.ast, x); return v.ok ? v.value : null; }, -5, 5, 10, { roots: false, points: false, poles: false, extrema: true, limits: false, slope: false }, c.ast);
+    expect(r.extrema.map(e => e.kind)).toEqual(["min"]);
+    expect(Math.abs(r.extrema[0].x - 2)).toBeLessThanOrEqual(0.005);
+  });
 });
-
