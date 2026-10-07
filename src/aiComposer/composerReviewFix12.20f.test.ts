@@ -102,3 +102,11 @@ describe("20F-RF12 each new rule holds on its own (mutation campaign on a814604)
     only("(x+1)/(" + Z6 + ")", ["domainExclusions"], { domainExclusions: [4.921875] }, "AI_FUNCTION_TOO_COMPLEX");
   });
 });
+
+describe("20F-RF12 a hole where f tends to 0 is not a root (final re-run on 980986b)", () => {
+  it("(x + 1)·|x − 3|^(1/3)·(x − 3)/(x − 3): the cusp at 3 is undefined, so the vanishing rule does not apply there", () => {
+    accepted("(x+1)*abs(x-3)^(1/3)*(x-3)/(x-3)", ["xIntercepts"], { xIntercepts: [-1] });
+    refused("(x+1)*abs(x-3)^(1/3)*(x-3)/(x-3)", ["xIntercepts"], { xIntercepts: [-1, 3] });
+    accepted("(x+1)*abs(x-3)^(1/3)*(x-3)/(x-3)", ["xIntercepts", "domainExclusions"], { xIntercepts: [-1], domainExclusions: [3] });
+  });
+});
