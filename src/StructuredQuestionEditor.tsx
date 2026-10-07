@@ -96,6 +96,13 @@ export default function StructuredQuestionEditor(props: Props) {
           <QuestionTypeMeta type={q.presentationType} version={q.questionTypeVersion} />
           <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
           <CodeStimulusEditor question={q} onChange={onChange} disabled={disabled} />
+          {q.assetRequest && (
+            // Phase 20F — an AI image request is a teacher TODO that blocks finalization: attach the image above/below, then resolve it here.
+            <div className="sb-warn sb-asset-request" role="note" data-testid="ai-asset-request">
+              <strong>صورة مطلوبة (اقتراح المؤلف الذكي):</strong> {q.assetRequest.description}
+              <button type="button" className="sb-btn sb-btn-sm" onClick={() => onChange({ assetRequest: undefined })} disabled={disabled}>تم إرفاق الصورة — إزالة الطلب</button>
+            </div>
+          )}
           <QuestionMediaEditor question={q} onChange={onChange} disabled={disabled} requestQuestionImage={requestQuestionImage} onBusyChange={onMediaBusyChange} mediaPending={mediaPending} />
           <QuestionClassificationEditor question={q} blueprint={blueprint} onChange={onChange} disabled={disabled} />
           <ActivityDescriptorEditor value={q.activity} onChange={activity => onChange({ activity })} disabled={disabled} />

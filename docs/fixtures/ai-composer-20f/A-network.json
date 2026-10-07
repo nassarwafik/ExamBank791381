@@ -1,0 +1,1341 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAM-A-network",
+  "title": "امتحان الشبكات — الصف الحادي عشر",
+  "status": "draft",
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "networkLab",
+    "direction": "rtl"
+  },
+  "metadata": {
+    "aiComposer": {
+      "v": 1,
+      "catalog": "AI_COMPOSER_CATALOG_V1",
+      "coverage": [
+        {
+          "questionId": "aifx001t-1-1",
+          "topic": "IPv4",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-1-2",
+          "topic": "IPv4/CIDR",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-1-3",
+          "topic": "IPv4/CIDR",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-1-4",
+          "topic": "IPv4",
+          "difficulty": "easy"
+        },
+        {
+          "questionId": "aifx001t-1-5",
+          "topic": "IPv4",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-2-1",
+          "topic": "VLAN",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-2-2",
+          "topic": "VTP",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-2-3",
+          "topic": "Trunk",
+          "difficulty": "hard"
+        },
+        {
+          "questionId": "aifx001t-2-4",
+          "topic": "Port Security",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-2-5",
+          "topic": "VLAN",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-3-1",
+          "topic": "DHCP",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-3-2",
+          "topic": "DHCP",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001t-3-3",
+          "topic": "DHCP",
+          "difficulty": "hard"
+        },
+        {
+          "questionId": "aifx001t-4-1",
+          "topic": "Router-on-a-Stick",
+          "difficulty": "hard"
+        },
+        {
+          "questionId": "aifx001t-4-2",
+          "topic": "DHCP",
+          "difficulty": "medium"
+        }
+      ],
+      "history": []
+    }
+  },
+  "sections": [
+    {
+      "id": "aifx001t-s1",
+      "title": "أساسيات العنونة IPv4",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001t-1-1",
+          "presentationType": "multipleChoice",
+          "text": "كم عدد بتات عنوان IPv4؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "32"
+            },
+            {
+              "text": "64"
+            },
+            {
+              "text": "128"
+            },
+            {
+              "text": "16"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "displayNumber": "1"
+        },
+        {
+          "examQuestionId": "aifx001t-1-2",
+          "presentationType": "multipleChoice",
+          "text": "ما قناع الشبكة المكافئ لـ /26؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "255.255.255.192"
+            },
+            {
+              "text": "255.255.255.128"
+            },
+            {
+              "text": "255.255.255.224"
+            },
+            {
+              "text": "255.255.255.0"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "table",
+                "rows": [
+                  [
+                    "192.168.1.0",
+                    "/26"
+                  ]
+                ],
+                "caption": "جدول العنونة",
+                "columnHeaders": [
+                  "الشبكة",
+                  "البادئة"
+                ],
+                "responsive": "scroll"
+              }
+            ]
+          },
+          "displayNumber": "2"
+        },
+        {
+          "examQuestionId": "aifx001t-1-3",
+          "presentationType": "inlineCloze",
+          "text": "أكمل الفقرة",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "inlineCloze": {
+            "v": 1,
+            "segments": [
+              {
+                "type": "text",
+                "text": "الشبكة 192.168.1.0/24 تحتوي "
+              },
+              {
+                "type": "blank",
+                "id": "b1",
+                "control": "text"
+              },
+              {
+                "type": "text",
+                "text": " عنوانًا صالحًا للأجهزة، وعنوان البث هو "
+              },
+              {
+                "type": "blank",
+                "id": "b2",
+                "control": "dropdown",
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "192.168.1.255"
+                  },
+                  {
+                    "id": "o2",
+                    "label": "192.168.1.0"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "."
+              }
+            ]
+          },
+          "answer": {
+            "scoring": "proportional",
+            "blanks": {
+              "b1": {
+                "accepted": [
+                  "254"
+                ],
+                "caseSensitive": false
+              },
+              "b2": {
+                "correctOptionId": "o1"
+              }
+            }
+          },
+          "displayNumber": "3"
+        },
+        {
+          "examQuestionId": "aifx001t-1-4",
+          "presentationType": "trueFalse",
+          "text": "العنوان 10.0.0.1 عنوان خاص.",
+          "marks": 2,
+          "answer": {
+            "correct": true
+          },
+          "displayNumber": "4"
+        },
+        {
+          "examQuestionId": "aifx001t-1-5",
+          "presentationType": "shortAnswer",
+          "text": "ما الفرق بين العنوان العام والخاص؟",
+          "marks": 4,
+          "answer": {
+            "text": "الخاص لا يُوجَّه على الإنترنت"
+          },
+          "displayNumber": "5"
+        }
+      ]
+    },
+    {
+      "id": "aifx001t-s2",
+      "title": "الشبكات المحلية الافتراضية",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001t-2-1",
+          "presentationType": "multipleChoice",
+          "text": "ما فائدة VLAN؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "تقسيم الشبكة منطقيًا"
+            },
+            {
+              "text": "زيادة سرعة الكابل"
+            },
+            {
+              "text": "تشفير البيانات"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "table",
+                "rows": [
+                  [
+                    "PC1",
+                    "Fa0/1",
+                    "10"
+                  ],
+                  [
+                    "PC2",
+                    "Fa0/2",
+                    "10"
+                  ],
+                  [
+                    "PC3",
+                    "Fa0/11",
+                    "20"
+                  ]
+                ],
+                "caption": "جدول الأجهزة",
+                "columnHeaders": [
+                  "الجهاز",
+                  "المنفذ",
+                  "VLAN"
+                ],
+                "responsive": "scroll"
+              }
+            ]
+          },
+          "displayNumber": "6"
+        },
+        {
+          "examQuestionId": "aifx001t-2-2",
+          "presentationType": "inlineCloze",
+          "text": "أكمل",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "inlineCloze": {
+            "v": 1,
+            "segments": [
+              {
+                "type": "text",
+                "text": "في VTP يُنشئ السويتش في وضع "
+              },
+              {
+                "type": "blank",
+                "id": "b1",
+                "control": "dropdown",
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "server"
+                  },
+                  {
+                    "id": "o2",
+                    "label": "client"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " شبكات VLAN بينما يستقبلها "
+              },
+              {
+                "type": "blank",
+                "id": "b2",
+                "control": "dropdown",
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "client"
+                  },
+                  {
+                    "id": "o2",
+                    "label": "server"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "."
+              }
+            ]
+          },
+          "answer": {
+            "scoring": "proportional",
+            "blanks": {
+              "b1": {
+                "correctOptionId": "o1"
+              },
+              "b2": {
+                "correctOptionId": "o1"
+              }
+            }
+          },
+          "displayNumber": "7"
+        },
+        {
+          "examQuestionId": "aifx001t-2-3",
+          "presentationType": "openResponse",
+          "text": "اشرح وظيفة منفذ Trunk ودور Native VLAN.",
+          "marks": 8,
+          "questionTypeVersion": 1,
+          "openResponse": {
+            "v": 1,
+            "profile": "explain",
+            "instructions": "",
+            "response": {
+              "minChars": 0,
+              "maxChars": 1500
+            },
+            "studentRubricVisibility": "hidden"
+          },
+          "answer": {
+            "rubric": {
+              "v": 1,
+              "criteria": [
+                {
+                  "id": "c1",
+                  "title": "دقة المفهوم",
+                  "description": "دقة المفهوم",
+                  "maxPoints": 4,
+                  "allowCustomPoints": false,
+                  "guidance": "إرشاد سري للمعلم",
+                  "levels": [
+                    {
+                      "id": "l1",
+                      "label": "كامل",
+                      "points": 4,
+                      "description": ""
+                    },
+                    {
+                      "id": "l2",
+                      "label": "جزئي",
+                      "points": 2,
+                      "description": ""
+                    },
+                    {
+                      "id": "l3",
+                      "label": "صفر",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                },
+                {
+                  "id": "c2",
+                  "title": "مثال تطبيقي",
+                  "description": "مثال تطبيقي",
+                  "maxPoints": 4,
+                  "allowCustomPoints": false,
+                  "guidance": "إرشاد سري للمعلم",
+                  "levels": [
+                    {
+                      "id": "l1",
+                      "label": "كامل",
+                      "points": 4,
+                      "description": ""
+                    },
+                    {
+                      "id": "l2",
+                      "label": "جزئي",
+                      "points": 2,
+                      "description": ""
+                    },
+                    {
+                      "id": "l3",
+                      "label": "صفر",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                }
+              ]
+            },
+            "modelAnswer": "إجابة نموذجية سرية"
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "cli",
+                "source": "SW1(config)# interface g0/1\nSW1(config-if)# switchport mode trunk",
+                "title": "أوامر الإعداد"
+              }
+            ]
+          },
+          "displayNumber": "8"
+        },
+        {
+          "examQuestionId": "aifx001t-2-4",
+          "presentationType": "multipleChoice",
+          "text": "ماذا يفعل وضع المخالفة shutdown في Port Security؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "يعطّل المنفذ"
+            },
+            {
+              "text": "يرسل تحذيرًا فقط"
+            },
+            {
+              "text": "يتجاهل الإطارات"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "displayNumber": "9"
+        },
+        {
+          "examQuestionId": "aifx001t-2-5",
+          "presentationType": "networkCli",
+          "text": "اضبط السويتش: أنشئ VLAN 10 باسم STAFF واجعل المنفذ Fa0/1 access في VLAN 10.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "networkCli": {
+            "device": "switch",
+            "initialState": {
+              "v": 1,
+              "device": "switch",
+              "hostname": "Switch",
+              "vlans": {},
+              "interfaces": {}
+            }
+          },
+          "answer": {
+            "targetState": {
+              "hostname": "Switch",
+              "vlans": {
+                "10": {
+                  "name": "STAFF"
+                }
+              },
+              "interfaces": {
+                "f0/1": {
+                  "mode": "access",
+                  "accessVlan": 10
+                }
+              }
+            },
+            "scoring": "proportional"
+          },
+          "displayNumber": "10"
+        }
+      ]
+    },
+    {
+      "id": "aifx001t-s3",
+      "title": "خدمات الشبكة",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001t-3-1",
+          "presentationType": "multipleChoice",
+          "text": "أي أمر يحدد البوابة الافتراضية في مجمّع DHCP؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "default-router"
+            },
+            {
+              "text": "dns-server"
+            },
+            {
+              "text": "network"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "cli",
+                "source": "R1(config)# ip dhcp pool LAN\nR1(dhcp-config)# network 192.168.1.0 255.255.255.0"
+              }
+            ]
+          },
+          "displayNumber": "11"
+        },
+        {
+          "examQuestionId": "aifx001t-3-2",
+          "presentationType": "inlineCloze",
+          "text": "أكمل مراحل DHCP",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "inlineCloze": {
+            "v": 1,
+            "segments": [
+              {
+                "type": "text",
+                "text": "تبدأ العملية برسالة "
+              },
+              {
+                "type": "blank",
+                "id": "b1",
+                "control": "dropdown",
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Discover"
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Request"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " ثم Offer ثم "
+              },
+              {
+                "type": "blank",
+                "id": "b2",
+                "control": "dropdown",
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "Request"
+                  },
+                  {
+                    "id": "o2",
+                    "label": "Discover"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " ثم ACK."
+              }
+            ]
+          },
+          "answer": {
+            "scoring": "proportional",
+            "blanks": {
+              "b1": {
+                "correctOptionId": "o1"
+              },
+              "b2": {
+                "correctOptionId": "o1"
+              }
+            }
+          },
+          "displayNumber": "12"
+        },
+        {
+          "examQuestionId": "aifx001t-3-3",
+          "presentationType": "openResponse",
+          "text": "قارن بين العنونة الثابتة والعنونة عبر DHCP في شبكة مدرسة.",
+          "marks": 10,
+          "questionTypeVersion": 1,
+          "openResponse": {
+            "v": 1,
+            "profile": "compare",
+            "instructions": "",
+            "response": {
+              "minChars": 0,
+              "maxChars": 1500
+            },
+            "studentRubricVisibility": "hidden"
+          },
+          "answer": {
+            "rubric": {
+              "v": 1,
+              "criteria": [
+                {
+                  "id": "c1",
+                  "title": "المقارنة",
+                  "description": "المقارنة",
+                  "maxPoints": 5,
+                  "allowCustomPoints": false,
+                  "guidance": "إرشاد سري للمعلم",
+                  "levels": [
+                    {
+                      "id": "l1",
+                      "label": "كامل",
+                      "points": 5,
+                      "description": ""
+                    },
+                    {
+                      "id": "l2",
+                      "label": "جزئي",
+                      "points": 2.5,
+                      "description": ""
+                    },
+                    {
+                      "id": "l3",
+                      "label": "صفر",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                },
+                {
+                  "id": "c2",
+                  "title": "التبرير",
+                  "description": "التبرير",
+                  "maxPoints": 5,
+                  "allowCustomPoints": false,
+                  "guidance": "إرشاد سري للمعلم",
+                  "levels": [
+                    {
+                      "id": "l1",
+                      "label": "كامل",
+                      "points": 5,
+                      "description": ""
+                    },
+                    {
+                      "id": "l2",
+                      "label": "جزئي",
+                      "points": 2.5,
+                      "description": ""
+                    },
+                    {
+                      "id": "l3",
+                      "label": "صفر",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                }
+              ]
+            },
+            "modelAnswer": "إجابة نموذجية سرية"
+          },
+          "displayNumber": "13"
+        }
+      ]
+    },
+    {
+      "id": "aifx001t-s4",
+      "title": "العملي المتكامل",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001t-4-1",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "text": "استخدم محاكي الشبكة المشترك للإجابة عن البنود التالية.",
+          "marks": 20,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctx1",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "شبكة Router-on-a-Stick",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "networkTopology",
+                  "pluginVersion": 2,
+                  "config": {
+                    "v": 2,
+                    "devices": [
+                      {
+                        "id": "r1",
+                        "kind": "router",
+                        "label": "R1",
+                        "x": 0.5,
+                        "y": 0.1
+                      },
+                      {
+                        "id": "sw1",
+                        "kind": "switch",
+                        "label": "SW1",
+                        "x": 0.5,
+                        "y": 0.45
+                      },
+                      {
+                        "id": "pc1",
+                        "kind": "pc",
+                        "label": "PC1",
+                        "x": 0.12,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.10.11",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.10.1"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "pc2",
+                        "kind": "pc",
+                        "label": "PC2",
+                        "x": 0.37,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.10.12",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.10.1"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "pc3",
+                        "kind": "pc",
+                        "label": "PC3",
+                        "x": 0.63,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.20.11",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.20.1"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "id": "pc4",
+                        "kind": "pc",
+                        "label": "PC4",
+                        "x": 0.88,
+                        "y": 0.85,
+                        "initial": {
+                          "v": 2,
+                          "device": "host",
+                          "adapters": {
+                            "eth0": {
+                              "mode": "static",
+                              "address": "192.168.20.12",
+                              "mask": "255.255.255.0",
+                              "gateway": "192.168.20.1"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "links": [
+                      {
+                        "id": "u",
+                        "a": {
+                          "deviceId": "r1",
+                          "port": "g0/0"
+                        },
+                        "b": {
+                          "deviceId": "sw1",
+                          "port": "g0/1"
+                        }
+                      },
+                      {
+                        "id": "a",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/1"
+                        },
+                        "b": {
+                          "deviceId": "pc1",
+                          "port": "eth0"
+                        }
+                      },
+                      {
+                        "id": "b",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/2"
+                        },
+                        "b": {
+                          "deviceId": "pc2",
+                          "port": "eth0"
+                        }
+                      },
+                      {
+                        "id": "c",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/11"
+                        },
+                        "b": {
+                          "deviceId": "pc3",
+                          "port": "eth0"
+                        }
+                      },
+                      {
+                        "id": "d",
+                        "a": {
+                          "deviceId": "sw1",
+                          "port": "f0/12"
+                        },
+                        "b": {
+                          "deviceId": "pc4",
+                          "port": "eth0"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "g1",
+                "title": "العمل على المحاكي",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "أنشئ شبكات VLAN واربط المنافذ",
+                    "marks": 4,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "k1",
+                          "label": "SW1: VLAN 10 موجودة",
+                          "weight": 1,
+                          "kind": "switch.vlanExists",
+                          "deviceId": "sw1",
+                          "vlan": 10
+                        },
+                        {
+                          "id": "k2",
+                          "label": "SW1: VLAN 20 موجودة",
+                          "weight": 1,
+                          "kind": "switch.vlanExists",
+                          "deviceId": "sw1",
+                          "vlan": 20
+                        },
+                        {
+                          "id": "k3",
+                          "label": "SW1 Fa0/1 في وضع access",
+                          "weight": 1,
+                          "kind": "switch.portMode",
+                          "deviceId": "sw1",
+                          "interface": "f0/1",
+                          "value": "access"
+                        },
+                        {
+                          "id": "k4",
+                          "label": "SW1 Fa0/1 في VLAN 10",
+                          "weight": 1,
+                          "kind": "switch.accessVlan",
+                          "deviceId": "sw1",
+                          "interface": "f0/1",
+                          "value": 10
+                        },
+                        {
+                          "id": "k5",
+                          "label": "SW1 Fa0/11 في VLAN 20",
+                          "weight": 1,
+                          "kind": "switch.accessVlan",
+                          "deviceId": "sw1",
+                          "interface": "f0/11",
+                          "value": 20
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "اضبط Trunk والواجهات الفرعية",
+                    "marks": 6,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "k6",
+                          "label": "SW1 Gi0/1 في وضع trunk",
+                          "weight": 1,
+                          "kind": "switch.portMode",
+                          "deviceId": "sw1",
+                          "interface": "g0/1",
+                          "value": "trunk"
+                        },
+                        {
+                          "id": "k7",
+                          "label": "R1 G0/0 مفعّلة",
+                          "weight": 1,
+                          "kind": "router.interfaceEnabled",
+                          "deviceId": "r1",
+                          "interface": "g0/0",
+                          "value": true
+                        },
+                        {
+                          "id": "k8",
+                          "label": "R1 G0/0.10 بـ dot1Q 10",
+                          "weight": 1,
+                          "kind": "router.subinterfaceVlan",
+                          "deviceId": "r1",
+                          "interface": "g0/0.10",
+                          "value": 10
+                        },
+                        {
+                          "id": "k9",
+                          "label": "R1 G0/0.10 = 192.168.10.1",
+                          "weight": 1,
+                          "kind": "router.ipAddress",
+                          "deviceId": "r1",
+                          "interface": "g0/0.10",
+                          "value": "192.168.10.1"
+                        },
+                        {
+                          "id": "k10",
+                          "label": "R1 G0/0.20 بـ dot1Q 20",
+                          "weight": 1,
+                          "kind": "router.subinterfaceVlan",
+                          "deviceId": "r1",
+                          "interface": "g0/0.20",
+                          "value": 20
+                        },
+                        {
+                          "id": "k11",
+                          "label": "R1 G0/0.20 = 192.168.20.1",
+                          "weight": 1,
+                          "kind": "router.ipAddress",
+                          "deviceId": "r1",
+                          "interface": "g0/0.20",
+                          "value": "192.168.20.1"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p3",
+                    "label": "ج",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "تحقق من الاتصال بين PC1 وPC3",
+                    "marks": 4,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "k12",
+                          "label": "PC1 ⇄ PC3 (توجيه بين الشبكات)",
+                          "weight": 2,
+                          "kind": "reachability",
+                          "source": "pc1",
+                          "destination": "pc3",
+                          "value": true
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "g2",
+                "title": "التحليل",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p4",
+                    "label": "د",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "لماذا نحتاج إلى واجهات فرعية في Router-on-a-Stick؟",
+                    "marks": 3,
+                    "options": [
+                      {
+                        "text": "لتوجيه كل VLAN عبر منفذ واحد"
+                      },
+                      {
+                        "text": "لزيادة السرعة"
+                      },
+                      {
+                        "text": "لتشفير البيانات"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  },
+                  {
+                    "id": "p5",
+                    "label": "هـ",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "فسّر لماذا لا يصل PC1 إلى PC3 قبل ضبط الراوتر.",
+                    "marks": 3,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 1500
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "c1",
+                            "title": "التفسير",
+                            "description": "التفسير",
+                            "maxPoints": 3,
+                            "allowCustomPoints": false,
+                            "guidance": "إرشاد سري للمعلم",
+                            "levels": [
+                              {
+                                "id": "l1",
+                                "label": "كامل",
+                                "points": 3,
+                                "description": ""
+                              },
+                              {
+                                "id": "l2",
+                                "label": "جزئي",
+                                "points": 1.5,
+                                "description": ""
+                              },
+                              {
+                                "id": "l3",
+                                "label": "صفر",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "إجابة نموذجية سرية"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "displayNumber": "14"
+        },
+        {
+          "examQuestionId": "aifx001t-4-2",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "اضبط خدمة DHCP على الراوتر حتى يحصل PC1 وPC2 على عناوين.",
+          "marks": 15,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "networkTopology",
+            "pluginVersion": 2,
+            "config": {
+              "v": 2,
+              "devices": [
+                {
+                  "id": "r1",
+                  "kind": "router",
+                  "label": "R1",
+                  "x": 0.5,
+                  "y": 0.1,
+                  "initial": {
+                    "v": 2,
+                    "device": "router",
+                    "hostname": "Router",
+                    "interfaces": {
+                      "g0/0": {
+                        "ipAddress": "192.168.1.1",
+                        "subnetMask": "255.255.255.0",
+                        "shutdown": false
+                      }
+                    },
+                    "subinterfaces": {},
+                    "dhcp": {
+                      "excluded": [],
+                      "pools": {}
+                    },
+                    "security": {}
+                  }
+                },
+                {
+                  "id": "sw1",
+                  "kind": "switch",
+                  "label": "SW1",
+                  "x": 0.5,
+                  "y": 0.45
+                },
+                {
+                  "id": "pc1",
+                  "kind": "pc",
+                  "label": "PC1",
+                  "x": 0.3,
+                  "y": 0.85,
+                  "initial": {
+                    "v": 2,
+                    "device": "host",
+                    "adapters": {
+                      "eth0": {
+                        "mode": "dhcp"
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "pc2",
+                  "kind": "pc",
+                  "label": "PC2",
+                  "x": 0.7,
+                  "y": 0.85,
+                  "initial": {
+                    "v": 2,
+                    "device": "host",
+                    "adapters": {
+                      "eth0": {
+                        "mode": "dhcp"
+                      }
+                    }
+                  }
+                }
+              ],
+              "links": [
+                {
+                  "id": "u",
+                  "a": {
+                    "deviceId": "r1",
+                    "port": "g0/0"
+                  },
+                  "b": {
+                    "deviceId": "sw1",
+                    "port": "g0/1"
+                  }
+                },
+                {
+                  "id": "a",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/1"
+                  },
+                  "b": {
+                    "deviceId": "pc1",
+                    "port": "eth0"
+                  }
+                },
+                {
+                  "id": "b",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/2"
+                  },
+                  "b": {
+                    "deviceId": "pc2",
+                    "port": "eth0"
+                  }
+                }
+              ]
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "k1",
+                "label": "مجمّع DHCP باسم LAN",
+                "weight": 1,
+                "kind": "router.dhcpPool",
+                "deviceId": "r1",
+                "pool": "LAN",
+                "value": true
+              },
+              {
+                "id": "k2",
+                "label": "شبكة المجمّع 192.168.1.0/24",
+                "weight": 1,
+                "kind": "router.dhcpNetwork",
+                "deviceId": "r1",
+                "pool": "LAN",
+                "value": "192.168.1.0 255.255.255.0"
+              },
+              {
+                "id": "k3",
+                "label": "default-router 192.168.1.1",
+                "weight": 1,
+                "kind": "router.dhcpDefaultRouter",
+                "deviceId": "r1",
+                "pool": "LAN",
+                "value": "192.168.1.1"
+              },
+              {
+                "id": "k4",
+                "label": "dns-server 192.168.1.1",
+                "weight": 1,
+                "kind": "router.dhcpDns",
+                "deviceId": "r1",
+                "pool": "LAN",
+                "value": "192.168.1.1"
+              },
+              {
+                "id": "k5",
+                "label": "استثناء 192.168.1.1–192.168.1.10",
+                "weight": 1,
+                "kind": "router.dhcpExcluded",
+                "deviceId": "r1",
+                "value": "192.168.1.1 192.168.1.10"
+              },
+              {
+                "id": "k6",
+                "label": "PC1 حصل على عنوان من DHCP",
+                "weight": 1,
+                "kind": "host.dhcpLease",
+                "deviceId": "pc1",
+                "adapter": "eth0",
+                "value": true
+              },
+              {
+                "id": "k7",
+                "label": "PC1 = 192.168.1.11",
+                "weight": 1,
+                "kind": "host.address",
+                "deviceId": "pc1",
+                "adapter": "eth0",
+                "value": "192.168.1.11"
+              },
+              {
+                "id": "k8",
+                "label": "PC2 حصل على عنوان من DHCP",
+                "weight": 1,
+                "kind": "host.dhcpLease",
+                "deviceId": "pc2",
+                "adapter": "eth0",
+                "value": true
+              },
+              {
+                "id": "k9",
+                "label": "PC1 ⇄ R1",
+                "weight": 2,
+                "kind": "reachability",
+                "source": "pc1",
+                "destination": "r1",
+                "value": true
+              }
+            ]
+          },
+          "displayNumber": "15"
+        }
+      ]
+    }
+  ]
+}

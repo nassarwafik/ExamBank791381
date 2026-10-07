@@ -174,6 +174,8 @@ function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: Bui
   // Phase 19F — the optional read-only code stimulus (any top-level type, compound included) is strict: a malformed one blocks
   // finalization (the student projection would withhold it, so the question would silently lose its code).
   for (const i of codeStimulusIssues(q)) add("error", i.code, "سؤال " + disp + " في «" + sectionLabel + "»: " + i.message, where);
+  // Phase 20F — an AI composer image request is a teacher TODO: it blocks finalization until the teacher resolves (removes) it.
+  if (q.assetRequest !== undefined) add("error", "AI_ASSET_REQUEST_UNRESOLVED", "سؤال " + disp + " في «" + sectionLabel + "» يحتاج إلى صورة لم تُرفق بعد" + (q.assetRequest && typeof q.assetRequest.description === "string" ? ": " + q.assetRequest.description.slice(0, 300) : "") + ". أرفق الصورة ثم أزل طلب الصورة.", where);
   if (q.presentationType === "compound") {
     validateCompound(q, disp, sectionLabel, where, add);
   } else if (q.presentationType === "composite") {

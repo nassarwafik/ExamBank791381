@@ -1,0 +1,484 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAM-E-showcase",
+  "title": "امتحان العرض المتكامل",
+  "status": "draft",
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "cards",
+    "direction": "rtl"
+  },
+  "metadata": {
+    "aiComposer": {
+      "v": 1,
+      "catalog": "AI_COMPOSER_CATALOG_V1",
+      "coverage": [
+        {
+          "questionId": "aifx001x-1-1",
+          "topic": "مصدر جدولي",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001x-1-2",
+          "topic": "السقوط الحر",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001x-1-3",
+          "topic": "الشبكات",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001x-2-1",
+          "topic": "التحليل",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001x-2-2",
+          "topic": "الحساب",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001x-2-3",
+          "topic": "Python",
+          "difficulty": "medium"
+        }
+      ],
+      "history": []
+    }
+  },
+  "sections": [
+    {
+      "id": "aifx001x-s1",
+      "title": "مصادر ومحاكاة",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001x-1-1",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "text": "اقرأ الجدول ثم أجب.",
+          "marks": 20,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctx1",
+                "version": 1,
+                "kind": "source",
+                "title": "نتائج تجربة",
+                "sources": [
+                  {
+                    "id": "src1",
+                    "version": 1,
+                    "kind": "rich",
+                    "title": "نتائج تجربة",
+                    "richContent": {
+                      "schemaVersion": 1,
+                      "blocks": [
+                        {
+                          "type": "table",
+                          "rows": [
+                            [
+                              "1",
+                              "5"
+                            ],
+                            [
+                              "2",
+                              "20"
+                            ],
+                            [
+                              "3",
+                              "45"
+                            ]
+                          ],
+                          "caption": "قياسات",
+                          "columnHeaders": [
+                            "الزمن (ث)",
+                            "المسافة (م)"
+                          ],
+                          "responsive": "scroll"
+                        },
+                        {
+                          "type": "callout",
+                          "variant": "note",
+                          "title": "ملاحظة",
+                          "runs": [
+                            {
+                              "text": "لاحظ نمط تزايد المسافة."
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "groups": [
+              {
+                "id": "g1",
+                "title": "أسئلة أ",
+                "gradingPolicy": "firstNAnswered",
+                "requiredAnswers": 1,
+                "maxMarks": 5,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "كيف تتغير المسافة مع الزمن؟",
+                    "marks": 5,
+                    "options": [
+                      {
+                        "text": "تربيعيًا"
+                      },
+                      {
+                        "text": "خطيًا"
+                      },
+                      {
+                        "text": "ثابتة"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "كم المسافة عند 2 ث؟",
+                    "marks": 5,
+                    "options": [
+                      {
+                        "text": "20 م"
+                      },
+                      {
+                        "text": "10 م"
+                      },
+                      {
+                        "text": "5 م"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "g2",
+                "title": "تفسير",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p3",
+                    "label": "ج",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "اشرح العلاقة بين الزمن والمسافة.",
+                    "marks": 15,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 1500
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "c1",
+                            "title": "التفسير",
+                            "description": "التفسير",
+                            "maxPoints": 5,
+                            "allowCustomPoints": false,
+                            "guidance": "إرشاد سري للمعلم",
+                            "levels": [
+                              {
+                                "id": "l1",
+                                "label": "كامل",
+                                "points": 5,
+                                "description": ""
+                              },
+                              {
+                                "id": "l2",
+                                "label": "جزئي",
+                                "points": 2.5,
+                                "description": ""
+                              },
+                              {
+                                "id": "l3",
+                                "label": "صفر",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "إجابة نموذجية سرية"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "displayNumber": "1"
+        },
+        {
+          "examQuestionId": "aifx001x-1-2",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "قِس زمن سقوط كرة من 45 م.",
+          "marks": 15,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsFreeFall",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "model": {
+                "initialHeight": 45,
+                "initialVelocity": 0,
+                "gravity": 10
+              },
+              "view": {
+                "maxTime": 3.5,
+                "showVelocityGraph": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى الأرض",
+                    "unit": "s"
+                  }
+                ],
+                "points": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول إلى الأرض",
+                "weight": 3,
+                "kind": "physics.impactTime",
+                "measurementId": "impactTime",
+                "tolerance": 0.05
+              }
+            ]
+          },
+          "displayNumber": "2"
+        },
+        {
+          "examQuestionId": "aifx001x-1-3",
+          "presentationType": "multipleChoice",
+          "text": "أي جهاز يظهر في الصورة؟",
+          "marks": 5,
+          "options": [
+            {
+              "text": "راوتر"
+            },
+            {
+              "text": "سويتش"
+            },
+            {
+              "text": "نقطة وصول"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "assetRequest": {
+            "v": 1,
+            "description": "صورة لجهاز راوتر Cisco من الأمام تُظهر المنافذ G0/0 وG0/1."
+          },
+          "displayNumber": "3"
+        }
+      ]
+    },
+    {
+      "id": "aifx001x-s2",
+      "title": "إنتاج",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001x-2-1",
+          "presentationType": "openResponse",
+          "text": "حلل أثر زيادة الارتفاع على زمن السقوط.",
+          "marks": 15,
+          "questionTypeVersion": 1,
+          "openResponse": {
+            "v": 1,
+            "profile": "analyze",
+            "instructions": "",
+            "response": {
+              "minChars": 0,
+              "maxChars": 1500
+            },
+            "studentRubricVisibility": "hidden"
+          },
+          "answer": {
+            "rubric": {
+              "v": 1,
+              "criteria": [
+                {
+                  "id": "c1",
+                  "title": "التحليل",
+                  "description": "التحليل",
+                  "maxPoints": 6,
+                  "allowCustomPoints": false,
+                  "guidance": "إرشاد سري للمعلم",
+                  "levels": [
+                    {
+                      "id": "l1",
+                      "label": "كامل",
+                      "points": 6,
+                      "description": ""
+                    },
+                    {
+                      "id": "l2",
+                      "label": "جزئي",
+                      "points": 3,
+                      "description": ""
+                    },
+                    {
+                      "id": "l3",
+                      "label": "صفر",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                },
+                {
+                  "id": "c2",
+                  "title": "الدقة",
+                  "description": "الدقة",
+                  "maxPoints": 4,
+                  "allowCustomPoints": false,
+                  "guidance": "إرشاد سري للمعلم",
+                  "levels": [
+                    {
+                      "id": "l1",
+                      "label": "كامل",
+                      "points": 4,
+                      "description": ""
+                    },
+                    {
+                      "id": "l2",
+                      "label": "جزئي",
+                      "points": 2,
+                      "description": ""
+                    },
+                    {
+                      "id": "l3",
+                      "label": "صفر",
+                      "points": 0,
+                      "description": ""
+                    }
+                  ]
+                }
+              ]
+            },
+            "modelAnswer": "إجابة نموذجية سرية"
+          },
+          "displayNumber": "4"
+        },
+        {
+          "examQuestionId": "aifx001x-2-2",
+          "presentationType": "parametricNumeric",
+          "text": "احسب {{a}} × {{b}}.",
+          "marks": 10,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "a",
+                "kind": "integer",
+                "min": 2,
+                "max": 9,
+                "step": 1
+              },
+              {
+                "id": "b",
+                "kind": "integer",
+                "min": 2,
+                "max": 9,
+                "step": 1
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "none"
+            }
+          },
+          "answer": {
+            "expression": "a*b",
+            "mode": "tolerance",
+            "tolerance": 0.01
+          },
+          "displayNumber": "5"
+        },
+        {
+          "examQuestionId": "aifx001x-2-3",
+          "presentationType": "coding",
+          "text": "اكتب برنامجًا يطبع الأعداد من 1 إلى n.",
+          "marks": 15,
+          "questionTypeVersion": 2,
+          "coding": {
+            "allowedLanguages": [
+              "python"
+            ],
+            "defaultLanguage": "python",
+            "starterCode": {},
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 256
+            },
+            "publicTests": [
+              {
+                "id": "pub1",
+                "title": "مثال 1",
+                "input": "3",
+                "sampleOutput": "1\n2\n3"
+              }
+            ]
+          },
+          "answer": {
+            "hiddenTests": [],
+            "comparator": "trimTrailingWhitespace",
+            "referenceSolutions": {},
+            "gradingMode": "manual",
+            "compileErrorPolicy": "manualReview"
+          },
+          "displayNumber": "6"
+        }
+      ]
+    }
+  ]
+}

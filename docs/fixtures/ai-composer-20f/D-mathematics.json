@@ -1,0 +1,480 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAM-D-mathematics",
+  "title": "امتحان دراسة الدوال",
+  "status": "draft",
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic",
+    "direction": "rtl"
+  },
+  "metadata": {
+    "aiComposer": {
+      "v": 1,
+      "catalog": "AI_COMPOSER_CATALOG_V1",
+      "coverage": [
+        {
+          "questionId": "aifx001w-1-1",
+          "topic": "الاشتقاق",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001w-1-2",
+          "topic": "النهايات",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001w-2-1",
+          "topic": "دراسة دالة كسرية",
+          "difficulty": "medium"
+        },
+        {
+          "questionId": "aifx001w-2-2",
+          "topic": "دراسة دالة كسرية",
+          "difficulty": "medium"
+        }
+      ],
+      "history": []
+    }
+  },
+  "sections": [
+    {
+      "id": "aifx001w-s1",
+      "title": "الحساب",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001w-1-1",
+          "presentationType": "parametricNumeric",
+          "text": "إذا كانت f(x) = {{a}}x² فاحسب f′(2).",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "a",
+                "kind": "integer",
+                "min": 1,
+                "max": 9,
+                "step": 1
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "none"
+            }
+          },
+          "answer": {
+            "expression": "4*a",
+            "mode": "tolerance",
+            "tolerance": 0.01
+          },
+          "displayNumber": "1"
+        },
+        {
+          "examQuestionId": "aifx001w-1-2",
+          "presentationType": "multipleChoice",
+          "text": "ما نهاية 1/x عندما تقترب x من اللانهاية؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "0"
+            },
+            {
+              "text": "1"
+            },
+            {
+              "text": "∞"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "math",
+                "source": "\\lim_{x\\to\\infty} \\frac{1}{x}"
+              }
+            ]
+          },
+          "displayNumber": "2"
+        }
+      ]
+    },
+    {
+      "id": "aifx001w-s2",
+      "title": "دراسة دالة",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "aifx001w-2-1",
+          "presentationType": "smartSim",
+          "questionTypeVersion": 1,
+          "text": "ادرس الدالة f(x) = (2x − 4) / ((x − 1)(x + 2)) باستخدام أداة دراسة الدوال.",
+          "marks": 20,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "functionStudy2d",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "expression": {
+                "language": 2,
+                "variable": "x",
+                "source": "(2*x-4)/((x-1)*(x+2))"
+              },
+              "window": {
+                "xMin": -6,
+                "xMax": 8,
+                "yMin": -6,
+                "yMax": 6,
+                "sampleCount": 701
+              },
+              "tasks": {
+                "domainExclusions": true,
+                "xIntercepts": true,
+                "yIntercept": true,
+                "verticalAsymptotes": true,
+                "horizontalAsymptotes": true,
+                "extrema": true,
+                "monotonicIntervals": true
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "domain",
+                "label": "استثناءات المجال",
+                "weight": 2,
+                "kind": "domain.exclusions",
+                "expected": [
+                  -2,
+                  1
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "x-intercepts",
+                "label": "المقاطع السينية",
+                "weight": 1,
+                "kind": "intercepts.x",
+                "expected": [
+                  {
+                    "x": 2,
+                    "y": 0
+                  }
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "y-intercept",
+                "label": "المقطع الصادي",
+                "weight": 1,
+                "kind": "intercept.y",
+                "expected": 2,
+                "tolerance": 0.01
+              },
+              {
+                "id": "vertical-asymptotes",
+                "label": "خطوط التقارب الرأسية",
+                "weight": 2,
+                "kind": "asymptotes.vertical",
+                "expected": [
+                  -2,
+                  1
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "horizontal-asymptotes",
+                "label": "خطوط التقارب الأفقية",
+                "weight": 1,
+                "kind": "asymptotes.horizontal",
+                "expected": [
+                  0
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "extrema",
+                "label": "القيم القصوى المحلية",
+                "weight": 3,
+                "kind": "extrema.points",
+                "expected": [
+                  {
+                    "kind": "min",
+                    "x": 0,
+                    "y": 2
+                  },
+                  {
+                    "kind": "max",
+                    "x": 4,
+                    "y": 0.2222222222222222
+                  }
+                ],
+                "tolerance": 0.01
+              },
+              {
+                "id": "monotonic",
+                "label": "فترات التزايد والتناقص",
+                "weight": 3,
+                "kind": "monotonic.intervals",
+                "tolerance": 0.01,
+                "expected": [
+                  {
+                    "kind": "decreasing",
+                    "from": "-inf",
+                    "to": -2
+                  },
+                  {
+                    "kind": "decreasing",
+                    "from": -2,
+                    "to": 0
+                  },
+                  {
+                    "kind": "increasing",
+                    "from": 0,
+                    "to": 1
+                  },
+                  {
+                    "kind": "increasing",
+                    "from": 1,
+                    "to": 4
+                  },
+                  {
+                    "kind": "decreasing",
+                    "from": 4,
+                    "to": "+inf"
+                  }
+                ]
+              }
+            ]
+          },
+          "displayNumber": "3"
+        },
+        {
+          "examQuestionId": "aifx001w-2-2",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "text": "استخدم الدالة المشتركة للإجابة عن البنود.",
+          "marks": 20,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctx1",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "دراسة دالة",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "functionStudy2d",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "expression": {
+                      "language": 2,
+                      "variable": "x",
+                      "source": "(2*x-4)/((x-1)*(x+2))"
+                    },
+                    "window": {
+                      "xMin": -6,
+                      "xMax": 8,
+                      "yMin": -6,
+                      "yMax": 6,
+                      "sampleCount": 701
+                    },
+                    "tasks": {
+                      "domainExclusions": true,
+                      "xIntercepts": true,
+                      "yIntercept": true,
+                      "verticalAsymptotes": true,
+                      "horizontalAsymptotes": true,
+                      "extrema": false,
+                      "monotonicIntervals": false
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "g1",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "استثناءات المجال وخطوط التقارب الرأسية",
+                    "marks": 8,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "domain",
+                          "label": "استثناءات المجال",
+                          "weight": 2,
+                          "kind": "domain.exclusions",
+                          "expected": [
+                            -2,
+                            1
+                          ],
+                          "tolerance": 0.01
+                        },
+                        {
+                          "id": "vertical-asymptotes",
+                          "label": "خطوط التقارب الرأسية",
+                          "weight": 2,
+                          "kind": "asymptotes.vertical",
+                          "expected": [
+                            -2,
+                            1
+                          ],
+                          "tolerance": 0.01
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "المقاطع",
+                    "marks": 4,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "x-intercepts",
+                          "label": "المقاطع السينية",
+                          "weight": 1,
+                          "kind": "intercepts.x",
+                          "expected": [
+                            {
+                              "x": 2,
+                              "y": 0
+                            }
+                          ],
+                          "tolerance": 0.01
+                        },
+                        {
+                          "id": "y-intercept",
+                          "label": "المقطع الصادي",
+                          "weight": 1,
+                          "kind": "intercept.y",
+                          "expected": 2,
+                          "tolerance": 0.01
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "g2",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p3",
+                    "label": "ج",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "ما خط التقارب الأفقي؟",
+                    "marks": 4,
+                    "options": [
+                      {
+                        "text": "y = 0"
+                      },
+                      {
+                        "text": "y = 2"
+                      },
+                      {
+                        "text": "لا يوجد"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  },
+                  {
+                    "id": "p4",
+                    "label": "د",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctx1",
+                    "text": "فسّر سلوك الدالة قرب x = 1.",
+                    "marks": 4,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 1500
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "c1",
+                            "title": "التفسير",
+                            "description": "التفسير",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "إرشاد سري للمعلم",
+                            "levels": [
+                              {
+                                "id": "l1",
+                                "label": "كامل",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "l2",
+                                "label": "جزئي",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "l3",
+                                "label": "صفر",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "إجابة نموذجية سرية"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "displayNumber": "4"
+        }
+      ]
+    }
+  ]
+}

@@ -28,6 +28,8 @@
 //      reachable from the coding question chunks (it must stay behind the editor's own dynamic edge so a coding question paints
 //      before the engine downloads), its editor worker is not a separate lazy file, any chunk carries completion / suggestion
 //      machinery (the exam invariant: the editor must never help solve the question), or any chunk references a CDN;
+//  15. (Phase 20F) the AI Full Exam Composer (dialog, staged pipeline, capability catalog, diff view) reaches the initial graph, or any of
+//      its signatures is missing from every chunk (signatures);
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -87,6 +89,9 @@ const PRESENTATION_SIGNATURES = ["xp-studio", "rc-editor", "RICH_CONTENT_RAW_HTM
 // and the function-probe class. They live ONLY in the lazy plugin workspace chunks: ANY one in an initial file fails; EACH must exist in
 // some chunk (a missing one means the list is stale).
 const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "fnstudy-probe"];
+// Phase 20F — the AI Full Exam Composer: the dialog class name, the capability catalog version marker and the diff list class name. They
+// live ONLY in the lazy composer chunk(s): ANY one in an initial file fails; EACH must exist in some chunk (a missing one means the list is stale).
+const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V1", "ai-composer-diff"];
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
@@ -186,10 +191,15 @@ function main() {
     if (presentation.length) failures.push(`${f} (initial) contains the presentation / rich-content engine payload (${presentation.join(", ")}) — it must stay lazy`);
     const dynamic = DYNAMIC_SIGNATURES.filter(s => src.includes(s));
     if (dynamic.length) failures.push(`${f} (initial) contains the dynamic SmartSim runtime payload (${dynamic.join(", ")}) — it must stay lazy`);
+    const composer = COMPOSER_SIGNATURES.filter(s => src.includes(s));
+    if (composer.length) failures.push(`${f} (initial) contains the AI Full Exam Composer payload (${composer.join(", ")}) — it must stay lazy`);
   }
   for (const sig of DYNAMIC_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the dynamic SmartSim signature "${sig}" was not found in any chunk — the signature list is stale`);
   const dynamicChunks = all.filter(f => DYNAMIC_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Dynamic SmartSim runtime payload found in: ${dynamicChunks.join(", ") || "(none)"} — ${dynamicChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
+  for (const sig of COMPOSER_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the AI Full Exam Composer signature "${sig}" was not found in any chunk — the signature list is stale`);
+  const composerChunks = all.filter(f => COMPOSER_SIGNATURES.some(s => read(f).includes(s)));
+  console.log(`AI Full Exam Composer payload found in: ${composerChunks.join(", ") || "(none)"} — ${composerChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   for (const sig of PRESENTATION_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the presentation / rich-content signature "${sig}" was not found in any chunk — the signature list is stale`);
   const presentationChunks = all.filter(f => PRESENTATION_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Presentation / rich-content engine payload found in: ${presentationChunks.join(", ") || "(none)"} — ${presentationChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
