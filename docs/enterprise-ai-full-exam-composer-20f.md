@@ -1418,6 +1418,28 @@ the other files ran on `c7a5105`, which is the same code for those files.
 Every planted defect in the current code is killed except the 5 equivalents. Every file was restored byte-for-byte, with a clean
 `git status` after every campaign.
 
+### 11.18 Fresh re-review of Review Fix 12 (round 13) — findings justified, design record corrected
+
+A fresh re-review of `966f0cf` found 0 BLOCKER, 0 MAJOR, 1 MINOR and 3 NOTE. None is a wrong or incomplete key accepted on a plausible
+curriculum function; the reviewer would not hold the merge on any of them. This round is answered in the design record only: no code
+changed.
+
+| Finding | Answer |
+|---|---|
+| MINOR-1 a cancelling perfect square under a ∜, ∛ or ^0.4 root at \|a\| ≳ 30 ((x − 1)·\|x² − 41x + 420.25\|^0.25 on [−1, 22.5]) is still missed: 17 / 430 in the reviewer's battery (`02d207c`: 65, `20966d8`: 135), √ and ^0.5 forms 0 / 430; three of five exp-based cancellations too. The power magnifies the rounding noise (≈ √a·10⁻⁴·\|b − a\|) above the negligible level, and the vanishing rule fails on the noise | pre-existing, contrived, fail-open only for this family; recorded in §12 as a limitation. A rule that accepted that noise would accept real floors of the same size |
+| NOTE-1 §12 said every feature within EDGE_TOL past an edge counts as on the edge; a **sign-change** root there refuses the key instead ((x − 1)(x − 3) on [−5, 3 − 5·10⁻⁶], key {1, 3} → "widen the window"; `02d207c`: outside the window). Touching roots, cusp roots, extrema and domain edges in the same band are accepted with the on-edge key | fail closed and asymmetric: the sentence is corrected in §12; the behaviour stays |
+| NOTE-2 a pole or a hole within EDGE_TOL past the edge passes the key's window check but the scan beyond the window refuses "widen the window" ((x + 1)/(x − 2) on [−5, 2 − 10⁻⁶]) | fail closed; §12 names it with NOTE-1 |
+| NOTE-3 with the window the domain truncated (x·√(2 − x²) on [−1.414, 1.414]) the correct monotonic key is refused as inconsistent, on every head since RF7: the domain edge is neither a recorded stretch end nor a refusal; §12's "accepted silently" was wrong for monotonic keys | fail closed (the wrong key dec(1, +∞) is refused too); the §12 sentence is corrected |
+
+**Verified by the reviewer on `966f0cf`:** the RF12 fail-first (11 failed / 7 passed on `02d207c`, titles matching §11.17); the suites
+(24 files / 279 tests — §11.17's 23 / 277 counted the files differently, 0 failures either way); lint, tsc and build (124.1 KB); the
+RF12 code against every claim of §11.17, including the AF12 equivalence by reading and the AF10 redundancy empirically (20 / 20 cancelling
+non-cusp roots beyond the window refused, 12 / 12 found inside); the mutation artefacts (28 = 17 / 11; 311 = 219 / 9 / 83; 164 = 160 / 4;
+AH01 killed) and 8 mutants re-run hash-verified, 8 / 8 KILLED; every battery (de3 0 / 390, sq2 0 / 613, sq4 0 / 441, eb 0 / 88 704, eb2
+0 / 89 856, wrong keys 0 / 4 356, curriculum 0 / 1 312 and the two known cur2 refusals) and three new ones (edge21, falseroot21 0 / 173
+false roots, canc21 6 / 676 — the MINOR-1 forms); the regression sweep (the diff since `02d207c` touches only `composerSim.ts`, its CJS,
+the RF12 test file and this record).
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -1431,14 +1453,19 @@ Every planted defect in the current code is killed except the 5 equivalents. Eve
   - a root where |f| falls more slowly than |x − a|^0.01 is found only where f is exactly 0 (a 12-digit point such as 1.3);
   - a floor below |f|'s value 10⁻¹² from the cusp passes as a root (|x − a|^0.25 + 10⁻⁴, whose minimum is 3·10⁻⁴), as does any touching
     minimum below 10⁻⁹;
-  - an extremum, a root, a cusp or a domain edge within 10⁻⁵ (relative) past a window edge counts as on the edge, and a key point there
-    is in the window. A very flat extremum on an edge whose centre the probe cannot place within 10⁻⁵ refuses the key ("widen the
-    window");
+  - a touching root, a cusp root, an extremum or a domain edge within 10⁻⁵ (relative) past a window edge counts as on the edge, and a key
+    point there is in the window; a sign-change root, a pole or a hole that close past the edge refuses the key instead ("widen the
+    window") — fail closed, and asymmetric (Review 13, NOTE-1 and NOTE-2). A very flat extremum on an edge whose centre the probe cannot
+    place within 10⁻⁵ refuses the key ("widen the window");
+  - a cancelling expression under a fractional power other than ½ (∜, ∛ or ^0.4 of an expanded perfect square, |x² − 41x + 420.25|^0.25)
+    at |a| ≳ 30 is missed: the power magnifies the rounding noise above the negligible level (17 / 430 in the round-13 battery; the √ and
+    ^0.5 forms 0 / 430); so is an exp-based cancellation (√(e²ˣ − 14.78·eˣ + 54.6)). Contrived (Review 13, MINOR-1);
   - a positive minimum below a thousandth of f's values 10⁻⁴ away passes as a root (a √ cusp with a floor of 10⁻⁵, a V with a floor of
     10⁻⁷, a parabola with a floor of 10⁻¹¹); the negligible rule exists for expressions that cancel around a zero, whose noise is of that
     order;
-  - a domain edge where f tends to a non-zero value, less than 10⁻³ past the window edge, is accepted silently for exclusion and
-    monotonic keys (it changes neither);
+  - a domain edge where f tends to a non-zero value, less than 10⁻³ past the window edge, does not refuse an exclusion key (it is not an
+    isolated exclusion); a monotonic key whose interval ends at that edge is refused as inconsistent, because the edge is neither a
+    recorded stretch end nor a refusal — fail closed (Review 13, NOTE-3: x·√(2 − x²) on [−1.414, 1.414] with the correct intervals);
   - in a window narrower than about 1.1·10⁻³, the grid past each edge (at most 2 000 samples) stops short of where the scan beyond the
     window starts;
   - functions the probe cannot decide (very steep poles, exp(1/x), growth too slow to confirm, undecidable behaviour at ±∞, overflow
