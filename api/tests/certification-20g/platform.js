@@ -25,6 +25,13 @@ const handlers = {
 const req = (url, body, method = "POST", params = {}) => ({ method, url: "https://app.example.test" + url, params, headers: new Headers({ "content-type": "application/json" }), query: new URLSearchParams(), json: async () => (body === undefined ? {} : JSON.parse(JSON.stringify(body))), text: async () => JSON.stringify(body ?? {}) });
 const studentDoc = (userId, displayName, code) => ({ schemaVersion: 3, role: "student", userId, displayName, code, classId: CLASS_ID, active: true, archived: false, authVersion: 1, shareAchievements: false });
 
+let assignmentCounter = 0;
+async function withAssignmentId(seed, fn) {
+  const nodeCrypto = require("node:crypto"), original = nodeCrypto.randomUUID;
+  const h = nodeCrypto.createHash("sha256").update("cert20g|" + seed + "|" + (++assignmentCounter)).digest("hex");
+  nodeCrypto.randomUUID = () => [h.slice(0, 8), h.slice(8, 12), "4" + h.slice(13, 16), "8" + h.slice(17, 20), h.slice(20, 32)].join("-");
+  try { return await fn(); } finally { nodeCrypto.randomUUID = original; }
+}
 /** A fresh platform: one class, the given students (id → display name), a recording Runner double. */
 function createPlatform({ students = {}, runner } = {}) {
   const seed = { ["platform/classes/" + CLASS_ID + ".json"]: { classId: CLASS_ID, name: "صف الشهادة 20G", active: true, studentIds: Object.keys(students) } };
@@ -57,7 +64,9 @@ function createPlatform({ students = {}, runner } = {}) {
       }
       return { ok: true, steps, manifest: m };
     },
-    async assign(examId, over = {}) { return handlers.assignments()(req("/api/assignments", { action: "create", classId: CLASS_ID, title: "واجب الشهادة 20G", publish: true, maxAttempts: 2, attemptPolicy: "continuous", examSnapshot: { examId }, ...over }), tDeps, quiet); },
+    /** Creates the assignment with a DETERMINISTIC id (derived from the exam id + a counter) so per-attempt parametric instances — generated from
+     *  the server-owned identity (assignment, student, attempt) — are reproducible run after run. Only the id source is pinned; nothing else. */
+    async assign(examId, over = {}) { return withAssignmentId(examId, () => handlers.assignments()(req("/api/assignments", { action: "create", classId: CLASS_ID, title: "واجب الشهادة 20G", publish: true, maxAttempts: 2, attemptPolicy: "continuous", examSnapshot: { examId }, ...over }), tDeps, quiet)); },
     async assignSnapshot(examSnapshot, over = {}) { return handlers.assignments()(req("/api/assignments", { action: "create", classId: CLASS_ID, title: "واجب الشهادة 20G", publish: true, maxAttempts: 2, attemptPolicy: "continuous", examSnapshot, ...over }), tDeps, quiet); },
     async reviewGet(aid, sid, attemptNumber = 1) { return handlers.review()(req("/api/assignment-review?assignmentId=" + aid + "&studentId=" + sid + "&attemptNumber=" + attemptNumber, undefined, "GET"), tDeps, quiet); },
     async saveReview(aid, sid, overrides, attemptNumber = 1, teacherFeedback = "") { return handlers.review()(req("/api/assignment-review", { action: "saveReview", assignmentId: aid, studentId: sid, attemptNumber, overrides, teacherFeedback }), tDeps, quiet); },
