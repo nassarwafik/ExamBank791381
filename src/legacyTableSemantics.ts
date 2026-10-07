@@ -27,12 +27,14 @@ export type TableRowOptionsSource = { fields?: RowField[]; wordBank?: string[]; 
 // into an unrelated table). Returns null when none of these apply, meaning: fall back to the
 // legacy free-text/checkbox rendering untouched - this is what keeps old exams working exactly as
 // before, since they never populate `fields` for their table rows.
+// Phase 20G.3 Review Fix 1: malformed stored question data (a non-array `fields`, a null field, non-array `options`, a null option) is
+// not row options — it never crashes the student card or the server grader that share this code.
 export function resolveTableRowOptions(q: TableRowOptionsSource, rowIndex: number): { values: string[]; isBoolean: boolean } | null {
-  const fields = q.fields || [];
+  const fields = (Array.isArray(q.fields) ? q.fields : []).map(f => (f && typeof f === "object" ? f : {}) as RowField);
   const field = fields.find(f => f.order === rowIndex) ?? fields[rowIndex];
 
-  if (field?.options?.length) {
-    const values = field.options.map(o => o.value ?? o.text ?? o.label ?? "").filter(Boolean);
+  if (Array.isArray(field?.options) && field.options.length) {
+    const values = field.options.map(o => (o && typeof o === "object" ? o.value ?? o.text ?? o.label ?? "" : "")).filter(Boolean);
     if (values.length) return { values, isBoolean: false };
   }
 

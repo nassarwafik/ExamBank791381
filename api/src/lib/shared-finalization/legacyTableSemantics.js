@@ -14,10 +14,10 @@ function parseTable(text) {
     return rows.length ? { headers, rows } : null;
 }
 function resolveTableRowOptions(q, rowIndex) {
-    const fields = q.fields || [];
+    const fields = (Array.isArray(q.fields) ? q.fields : []).map(f => (f && typeof f === "object" ? f : {}));
     const field = fields.find(f => f.order === rowIndex) ?? fields[rowIndex];
-    if (field?.options?.length) {
-        const values = field.options.map(o => o.value ?? o.text ?? o.label ?? "").filter(Boolean);
+    if (Array.isArray(field?.options) && field.options.length) {
+        const values = field.options.map(o => (o && typeof o === "object" ? o.value ?? o.text ?? o.label ?? "" : "")).filter(Boolean);
         if (values.length)
             return { values, isBoolean: false };
     }

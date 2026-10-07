@@ -4,17 +4,13 @@ const { app } = require("@azure/functions");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { callTextJson } = require("../lib/quality-fix-ai-client");
 
-// Deliberate duplicate of the same tiny markdown-table-row parser already used in
-// assignment-grading.js's tableRows() (and src/questionContent.tsx's parseTable() on the
-// frontend) - not exported from either of those files, and this endpoint only needs the row list,
-// not the full ParsedTable shape, so a small local copy avoids adding a cross-file dependency to a
-// working grading path for one field.
+// Phase 20G.3 — the ONE legacy table authority (shared build): the rows the student card draws and the legacy table grader grades,
+// so the row=value keys this endpoint writes name exactly the graded rows (the former private copy took a leading separator line's
+// next row as the header, unlike the card).
+const { parseTable } = require("../lib/shared-finalization/legacyTableSemantics");
 function tableRows(text) {
-  const lines = String(text || "").split(/\r?\n/).map(x => x.trim()).filter(x => x.startsWith("|") && x.endsWith("|"));
-  if (lines.length < 2) return [];
-  const split = line => line.slice(1, -1).split("|").map(x => x.trim());
-  const rows = lines.map(split).filter(c => !c.every(x => /^:?-{3,}:?$/.test(x.replace(/\s/g, ""))));
-  return rows.length > 1 ? rows.slice(1) : [];
+  const table = parseTable(String(text || ""));
+  return table ? table.rows : [];
 }
 
 const VALID_PRESENTATION_TYPES = ["multipleChoice", "fillBlank", "wordBank", "open", "matching", "ordering"];

@@ -219,3 +219,60 @@ describe("20G.3 keyed check-box rows, drawn-row answered-ness and key parsing (m
     expect(grade(q, table(["ip route 0.0.0.0 0.0.0.0 = gw", "a=b", "1"]))).toEqual({ score: 6, maxMarks: 6, correct: true, manualReview: false });
   });
 });
+
+// ─── Review Fix 1 (independent review of ebf023c) ────────────────────────────────────────────────────────────────────────────────────────
+// F1: a keyed check-box table whose key expects NO tick had a correct (ticked-then-unticked) answer graded a SILENT 0 and finalized — worse
+// than the untouched table (teacher review). F2: malformed question `fields` crashed the grader (and the card). F4: a membership list split
+// on `/` mis-graded a table whose labels contain the separator. F3: pins for the reviewer's surviving mutants.
+describe("20G.3 Review Fix 1 — no silent zero for a correct all-unticked answer, no crash on malformed fields, ambiguous separators fail closed", () => {
+  const ALL_FALSE = () => ({ examQuestionId: "af", presentationType: "tableFill", marks: 2, text: "ضع علامة ✓\n| Item | Ans |\n|---|---|\n| A | |\n| B | |", answer: { text: "A=false;B=false" } });
+  it("RF1-F1 a key that expects every check-box row UNticked has nothing to tick: teacher review, never a silent 0 (ebf023c: 0, finalized; c2a49e9: 2/2)", () => {
+    for (const r of [table([false, false]), uiTable([0, false]), table([null, null]), table([true, false])]) expect(grade(ALL_FALSE(), r), JSON.stringify(r)).toEqual(REVIEW(2));
+    const g = gradeExam(exam([ALL_FALSE()]), { af: table([false, false]) });
+    expect([g.score, g.manualReviewMarks, g.finalized]).toEqual([0, 2, false]);
+    // a key with at least one row to tick keeps its keyed grade (T31)
+    expect(grade({ ...ALL_FALSE(), answer: { text: "A=true;B=false" } }, table([true, false]))).toEqual({ score: 2, maxMarks: 2, correct: true, manualReview: false });
+  });
+  it("RF1-F2 malformed question fields never crash the grader: they are not row options (ebf023c: TypeError; c2a49e9: graded)", () => {
+    const base = { examQuestionId: "mf", marks: 2, text: "| Item | Ans |\n|---|---|\n| A | |\n| B | |", answer: { text: "A=1;B=2" } };
+    for (const fields of [[null], {}, [{ options: "ab" }], [{ options: [null] }], [{ options: [null, 7, { value: "1" }] }], [{ options: [{ value: "1" }, { value: "2" }] }, 5], "x"]) {
+      expect(() => gradeQuestion({ ...base, fields }, table(["1", "2"])), JSON.stringify(fields)).not.toThrow();
+      expect(() => gradeExam(exam([{ ...base, fields }]), { mf: table(["1", "2"]) }), JSON.stringify(fields)).not.toThrow();
+    }
+    expect(grade({ ...base, fields: [null] }, table(["1", "2"]))).toEqual({ score: 2, maxMarks: 2, correct: true, manualReview: false });   // no options → text rows
+    expect(grade({ ...base, fields: [{ options: [null, { value: "1" }] }, { options: [{ value: "2" }] }] }, table(["1", "2"])).score).toBe(2);   // the non-object option is skipped
+  });
+  it("RF1-F4 a membership list cannot be split unambiguously when a row label itself contains a list separator → teacher review (ebf023c: 3/3)", () => {
+    const q = { ...CB(), marks: 3, text: "وضع علامة\n| x | y |\n|---|---|\n| A | |\n| B | |\n| A/B | |", answer: { text: "A/B" } };
+    expect(grade(q, table([true, true, false]))).toEqual(REVIEW(3));
+    expect(grade(q, table([false, false, true]))).toEqual(REVIEW(3));
+    expect(grade({ ...q, text: q.text.replace("A/B", "10.0.0.0/8"), answer: { text: "A" } }, table([true, false, false]))).toEqual(REVIEW(3));
+    // keyed (row=value) grading of such labels is unambiguous and unchanged
+    expect(grade({ ...KT(), text: "أكمل\n| a | b |\n|---|---|\n| TCP/IP | |\n| DNS, DHCP | |", marks: 4, answer: { text: "TCP/IP=4؛ DNS, DHCP=7" } }, table(["4", "7"])).score).toBe(4);
+  });
+  it("RF1-F3a (R01) a membership list separated by '/' is read as a list (pin)", () => {
+    expect(grade({ ...CB(), answer: { text: "10.0.0.1 / 192.168.1.10" } }, table([true, false, true])).score).toBe(6);
+    expect(grade({ ...CB(), answer: { text: "10.0.0.1 | 192.168.1.10" } }, table([true, false, true])).score).toBe(6);
+  });
+  it("RF1-F3b (R02) a MIXED table (check-box phrasing, one row with options) never enters membership grading → review", () => {
+    const mixed = { ...CB(), fields: [{ id: "f0", kind: "select", options: [{ text: "a" }, { text: "b" }] }], answer: { text: "10.0.0.1" } };
+    expect(grade(mixed, table(["a", false, false]))).toEqual(REVIEW(6));
+    expect(grade(mixed, table([true, false, false]))).toEqual(REVIEW(6));
+  });
+  it("RF1-F3c (R03) every select row is checked against ITS OWN options; (R08) field.order maps a field to its row, not the array index", () => {
+    const per = { ...MT(), fields: [{ id: "m0", kind: "select", options: [{ text: "x" }, { text: "y" }] }, { id: "m1", kind: "select", options: [{ text: "p" }, { text: "q" }] }, { id: "m2", kind: "select", options: [{ text: "r" }] }], answer: { text: "HTTP=x;IP=q;Ethernet=r" } };
+    expect(grade(per, table(["x", "q", "r"])).score).toBe(6);
+    expect(grade({ ...per, answer: { text: "HTTP=x;IP=r;Ethernet=r" } }, table(["x", "r", "r"]))).toEqual(REVIEW(6));   // "r" is not offered on row IP
+    const ordered = { ...per, fields: [{ id: "m2", order: 2, kind: "select", options: [{ text: "r" }] }, { id: "m0", order: 0, kind: "select", options: [{ text: "x" }] }, { id: "m1", order: 1, kind: "select", options: [{ text: "q" }] }] };
+    expect(grade(ordered, table(["x", "q", "r"])).score).toBe(6);
+  });
+  it("RF1-F3d (R15) a check-box row keyed ✓ / ✗ alone is neither true nor false → review", () => {
+    expect(grade({ ...CB(), answer: { text: "10.0.0.1=✓; 8.8.8.8=false; 192.168.1.10=true" } }, table([true, false, true]))).toEqual(REVIEW(6));
+    expect(grade({ ...CB(), answer: { text: "10.0.0.1=true; 8.8.8.8=✗; 192.168.1.10=true" } }, table([true, false, true]))).toEqual(REVIEW(6));
+  });
+  it("RF1-F3e (R07) an indented table is the same table; (R09) a word bank without fields never makes select rows; (R10) 'Private?' is check-box phrasing in any case", () => {
+    expect(grade({ ...KT(), text: KT().text.split("\n").map(l => "   " + l + "  ").join("\n") }, table(["3", "2", "1"])).score).toBe(6);
+    expect(grade({ ...KT(), wordBank: ["x", "y"] }, table(["3", "2", "1"])).score).toBe(6);                // text rows, keyed values not in the bank
+    expect(grade({ ...CB(), text: CB().text.replace("وضع علامة ✓ أمام العناوين الخاصة", "PRIVATE?") }, table([true, false, true])).score).toBe(6);
+  });
+});

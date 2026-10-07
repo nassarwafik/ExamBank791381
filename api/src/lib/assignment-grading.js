@@ -96,9 +96,14 @@ function legacyTableMode(question,answer=question?.answer){
       if(controls[i]==="checkbox"&&e!=="true"&&e!=="false")return manual;
       expected.push(e);
     }
+    // Review Fix 1: a key that leaves NOTHING to tick or type (every row a checkbox keyed false) cannot tell a correct answer from an
+    // untouched table (an all-unticked answer is unanswered): teacher review, never a silent 0.
+    if(controls.every(c=>c==="checkbox")&&expected.every(e=>e==="false"))return manual;
     return {mode:"keyed",labels,controls,expected};
   }
   if(!controls.every(c=>c==="checkbox"))return manual;
+  // Review Fix 1: a list cannot be split unambiguously when a row label itself contains a list separator (TCP/IP, "DNS, DHCP")
+  if(labels.some(l=>/[,;\n\r|/]/.test(l)))return manual;
   const tokens=keyText.split(/[,،;؛\n\r|/]+/).map(clean).filter(Boolean);
   if(!tokens.length||tokens.some(t=>!labels.includes(t)))return manual;
   const ticked=new Set(tokens);
