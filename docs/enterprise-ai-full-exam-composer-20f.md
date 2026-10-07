@@ -124,8 +124,9 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   - such a point is also a pole if f grows there;
   - beyond the window, such a point refuses the key.
 
-  A touching zero counts when it is negligible, or small and steep around it (1/√|x − 1.3| at 1.3); a shallow minimum (x² + 10⁻⁷) is
-  not a zero. The guards are bounded (at most 12 guarded sub-expressions within the node budget; more refuses the key as too complex).
+  A touching zero counts when it is exactly 0 at its 12-digit rounded position, negligible, or small and steep around it — judged by its
+  ratio to the values beside it (1/√|x − 1.3|, √|1000x − 707.1…|); a shallow minimum (x² + 10⁻⁷) is not a zero. A zero exactly halfway
+  between two samples is found (ties count), and so is a zero at the edge of the guard's own domain (√(x + 2) at −2: Review Fix 9). The guards are bounded (at most 12 guarded sub-expressions within the node budget; more refuses the key as too complex).
 
   A domain edge where f tends to 0 is a **root** when the edge belongs to the domain. An edge that is a guard zero (a log argument, a
   denominator) is open; any other edge is closed. So x·√(4−x²) at ±2 and x·√(1.21−x²) at ±1.1 are roots, while x·log x at 0 is not.
@@ -876,17 +877,17 @@ was an older gap that earlier rounds missed.
 | NOTE-3 §11.12 wording on T07b and the RF6 / RF7 re-targets | corrected |
 | (simplification) the guards made five earlier layers redundant: RF6's grid snapping, RF7's isolated-point fallback for exclusions, RF7's pole check at a domain change beyond the window, RF7's round-number edge test, and the grid's even-pole search (RF1–RF5); the full mutation re-runs showed them surviving (W04, X03, X17, X18, S09) | removed (`31cb87e`, `c11c024`); every test and battery is unchanged without them. Removing the even-pole search exposed a steep touching zero below the guard threshold (1/√\|x − 1.3\|), now found |
 
-**Fail-first.** `composerReviewFix8.20f.test.ts` (`41baf36`'s version, 7 tests) was executed on `7fa0578`: **7 of 7 failed**. Sample
-assertions:
+**Fail-first.** The first 7-test draft of `composerReviewFix8.20f.test.ts` was executed on `7fa0578`: **7 of 7 failed**. Three tests
+were added before the first commit, so `41baf36`'s version has 10 tests; the RF9 reviewer ran it on `7fa0578`: **9 failed, 1 passed**
+(the log-edge pin). Sample assertions:
 - `expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]` (the hole at 1)
 - `x*sqrt(1.21-x^2) {…"xIntercepts":[-1.1,0,1.1]}: expected '[{"code":"AI_FUNCTION_KEY_INCONSISTENT",…' to be 'ok'`
 - `(x-2)^8+1000 {…"x":2.03…}: expected true to be false`
 - `sqrt(x) {"xMin":0,"xMax":9,…}: expected '[{"code":"AI_FUNCTION_KEY_INCONSISTENT",…' to be 'ok'`
 
-The tests added afterwards were checked on `7fa0578` through its generated module:
-- **Fail-first** (accepted there, refused on the head):
-  - the touching-zero hole;
-  - the pole only its denominator reveals (`3ac8e15`).
+The other tests were checked on `7fa0578` through its generated module. Most were already in `41baf36` (the touching-zero hole, the
+guard cap, the log-edge pin); the pole only its denominator reveals was added in `3ac8e15`.
+- **Fail-first** (accepted there, refused on the head): the touching-zero hole, and the pole only its denominator reveals.
 - **New fail-closed behaviour:** the guard cap.
 - **Pin:** the log-edge exclusion.
 
@@ -903,7 +904,8 @@ The tests added afterwards were checked on `7fa0578` through its generated modul
 - **Fuzzers:** **0 exceptions**. The heaviest CPU case found builds in 21 ms, and the worst fuzz figure (which also includes a separate
   full probe) is 157 ms.
 
-**RF8 mutation campaign.** 17 mutants: **17 KILLED, 0 SURVIVED, 0 TIMEOUT**. Y17 first survived. Investigating it found the missed pole
+**RF8 mutation campaign.** 17 mutants: **17 KILLED, 0 SURVIVED, 0 TIMEOUT** in the RF8 campaign. Y06 and Y07 later became INVALID
+when `31cb87e` simplified their line; Y06b re-targets them (KILLED), which is why the table shows them INVALID. Y17 first survived. Investigating it found the missed pole
 above, and its test now kills it.
 
 Three more RF8 tests were added after the first runs:
@@ -976,6 +978,82 @@ Mutants on `composerSim.ts` ran against every function-study suite, RF8 included
 Every planted defect in the current code is killed except the 4 proven equivalents. Every file was restored byte-for-byte, with a
 clean `git status` after every campaign.
 
+### 11.14 Fresh re-review and Review Fix 9: regressions of RF8's removals
+
+A fresh re-review of `0f8911f` found 0 BLOCKER, 2 MAJOR, 1 MINOR findings and 3 notes. All three code findings were regressions of RF8's
+removals. `7fa0578` handled every one of these cases; the guards did not yet cover them.
+
+| Finding | Fix |
+|---|---|
+| MAJOR-1 a guard's touching zero exactly halfway between two samples (log\|2x − 1\| on [−8, 8], 1/(2x − 1)²) was never refined, because both neighbours were equal: incomplete exclusion / asymptote keys were accepted (227–237 per form in the reviewer's battery) and the correct key refused. A steep zero of √(10\|x − a\|) stayed above the absolute 10⁻⁶ threshold | ties count as a local minimum of \|g\|; a touching zero is exactly 0 at its 12-digit rounded position, negligible, or small and steep, judged by its ratio to the values beside it rather than by an absolute level |
+| MAJOR-2 a denominator's zero at the edge of its own domain (√(x + 2) at −2) was not a guard zero: the open edge of (x² − 4)/√(x + 2) was accepted as a root (94 / 314) and the correct key refused; a one-sided pole beyond the window (1/√(7 − x)) went unseen | a guard's zero at the edge of its own domain (g vanishing there relative to its value 10⁻⁴ inside) is a guard zero: open, and a pole beyond the window when f grows there |
+| MINOR-1 a guard zero beyond the window where f is not even defined (√x/(x² − 4) at −2 on [0, 5]) refused correct keys (96 / 112) | a guard zero beyond the window counts only where f is defined beside it |
+| NOTE-1 the RF8 fail-first count (`41baf36` has 10 tests: 9 failed, 1 pin on `7fa0578`) | corrected in §11.13 |
+| NOTE-2 "17 KILLED" against Y06 / Y07 shown INVALID | clarified in §11.13 |
+| NOTE-3 §12 on guard zeros at their own domain's edge | updated |
+
+**Fail-first.** `composerReviewFix9.20f.test.ts` (`1d5252b`'s version, 5 tests) was executed on `0f8911f` in a detached worktree:
+**5 of 5 failed**. Sample assertions:
+- `log(abs(2*x-1))+1/x: expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]`
+- `1/sqrt(abs(10*x-7))+1/x: expected [] …`
+- `(x^2-4)/sqrt(x+2) … xIntercepts [-2, 2]: expected true to be false`
+- `1/sqrt(7-x)+1/x: expected [] to deeply equal [ 'AI_FUNCTION_WINDOW_TOO_NARROW' ]`
+- `sqrt(x)/(x^2-4) {"xMin":0,"xMax":5,…}: expected '[{"code":"AI_FUNCTION_WINDOW_TOO_NARROW",…' to be 'ok'`
+
+The three guard-rule tests added afterwards (`7ca1bf2`, `46c71b7`) fail there too, checked through its generated module:
+- the irrational open edge (a correct key refused);
+- the very flat zero and the steep zero at an unrounded position (incomplete keys accepted).
+
+**Batteries on the head:**
+- **Reviewer's RF9 batteries:** incomplete keys accepted **0** per form (was 227–237); edge-as-root accepted **0 / 314** (was 94); the
+  correct exclusion keys of the over-refusal battery refused **0 / 112** (was 96). The remaining "correct keys refused" of the
+  log|Cx − D|/(x − B) form (280) are all cases where log|C·B − D| = 0: B is a hole, not a pole, so the battery's key is wrong there.
+- **Every earlier battery is unchanged:**
+  - curriculum correct keys 0 / 1 312;
+  - wrong keys 0 / 4 356;
+  - holes 0 / 342;
+  - decimal edges 0 / 45;
+  - flat degree-8 0 / 540;
+  - decimal poles 0 / 89 per family;
+  - fuzzers 0 exceptions.
+
+**RF9 mutation campaign.** 10 mutants (8 new, 2 re-targets of RF8's steep rule). Some first survived:
+- Z04 (the vanishing ratio at a guard edge), Z06 (exact zero at the rounded point), and Z07 and Y18b (the steep ratio): each now has an
+  isolating test.
+- Z03 (an exact zero at the rounded guard edge) was redundant with g(edge) = 0, which bisection reaches on any representable edge. It
+  was removed (`7ca1bf2`).
+
+Final outcome: **9 KILLED, 0 SURVIVED, 0 TIMEOUT**, and Z03 INVALID (its feature was removed).
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| Z01 | `composerSim.ts` | guard edge zero not checked when g becomes undefined | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 MAJOR-2 a denominator's zero at the edge of its own domain  |
+| Z02 | `composerSim.ts` | guard edge zero not checked when g becomes defined | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 MAJOR-2 a denominator's zero at the edge of its own domain  |
+| Z03 | `composerSim.ts` | guard edge zero: exact zero at the rounded edge ignored | INVALID |  |
+| Z04 | `composerSim.ts` | guard edge zero: vanishing ratio ignored | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 each new guard rule holds on its own › an irrational guard  |
+| Z05 | `composerSim.ts` | touching zeros: ties not allowed | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 MAJOR-1 a guard's touching zero is found wherever it falls  |
+| Z06 | `composerSim.ts` | touching zeros: exact zero at the rounded point ignored | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 each new guard rule holds on its own › a zero too flat for  |
+| Z07 | `composerSim.ts` | steep zeros: absolute 1e-6 level (RF8) | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 each new guard rule holds on its own › a steep zero far abo |
+| Z08 | `composerSim.ts` | beyond the window: guard zeros where f is undefined counted | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 MINOR-1 a guard zero beyond the window counts only where f  |
+| Y18b | `composerSim.ts` | guards: steep touching zeros not accepted (RF9 code) | KILLED | composerReviewFix9.20f.test.ts › 20F-RF9 each new guard rule holds on its own › a steep zero far abo |
+| Y19b | `composerSim.ts` | guards: shallow minima accepted as zeros (RF9 code) | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 a steep touching zero of a denominator is a guard zero › 1/ |
+| Y14b | `composerSim.ts` | guards: touching zeros not found (RF9 code) | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 each new layer holds on its own › a hole whose denominator  |
+
+The table also lists the re-target Y14b (the touching-zero branch, rewritten by RF9), which is KILLED.
+
+**Final re-run on the Review Fix 9 code (`46c71b7`).** Every mutant list was re-run: 206 mutants (the 196 of the RF8 re-run and RF9's
+10). Mutants on `composerSim.ts` ran against every function-study suite, RF9 included.
+- **159 KILLED.**
+- **4 EQUIVALENT:** C19, C42, U02 and T07b (§11.4, §11.9, §11.10).
+- **0 SURVIVED, 0 TIMEOUT.**
+- **43 INVALID.** These are the 39 of §11.13, mapped as there, and 4 more:
+  - Y14 by Y14b (KILLED, run separately);
+  - Y18 and Y19 by Y18b and Y19b (KILLED in this run);
+  - Z03, whose feature was removed.
+
+Every planted defect in the current code is killed except the 4 proven equivalents. Every file was restored byte-for-byte, with a
+clean `git status` after every campaign.
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -989,14 +1067,16 @@ clean `git status` after every campaign.
   - functions the probe cannot decide (very steep poles, exp(1/x), growth too slow to confirm, undecidable behaviour at ±∞, overflow
     inside the window) are refused, never keyed: the teacher authors them;
   - round / floor / ceil / min / max / % are not AI vocabulary for function study;
-  - vertical asymptotes at non-terminating decimals (1/(3x−1)), which can only be keyed with the exact double; refusing them is safe;
+  - vertical asymptotes and domain exclusions at non-terminating decimals (1/(3x−1), 1/√|1000x − 707.1…|), which can only be keyed
+    with the exact double; refusing them is safe;
   - key values must be within 0.005 of the truth (half the grading tolerance), so a key rounded to two decimals is refused when it is
     more than 0.005 off (±1.4 for √2 is refused, ±1.41 is accepted);
   - slowly converging limits (x^−0.15, 1/log x) are undecided and refused;
   - a function with a flat stretch has no extremum to end a monotonic interval on, so its monotonic key is refused;
   - the scan beyond the window runs out to 10⁶ past the edge on a grid ≈ 2.6 % apart: two features closer than that, far from the
     window, can hide each other;
-  - a domain edge that is not a guard zero (a log argument or a denominator) is taken as closed (in the domain);
+  - a domain edge that is not a guard zero (a zero of a log argument or a denominator, including one at the edge of that guard's own
+    domain, Review Fix 9) is taken as closed (in the domain);
   - an extremum or slope change beyond the window where |f| and its changes stay below the evaluator's rounding scale (a Gaussian tail
     at |f| ≈ 10⁻⁹) is not seen by the scan beyond the window (15 of 5 333 in the reviewer's battery);
   - a pole beyond the window refuses an extrema-only key (fail closed: "widen the window");
