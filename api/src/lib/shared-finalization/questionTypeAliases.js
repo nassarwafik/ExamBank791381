@@ -51,7 +51,8 @@ function legacyAnswerKindAllowed(question, kind, placement = "question") {
     const kinds = def ? def.responseKinds : [];
     if (kind === "table") {
         const fieldType = literal === "multitruefalse" || literal === "clifill" || (literal === "tablefill" && !!(q.tableHeaders || q.tableRows));
-        return placement === "question" && !fieldType && (kinds.includes("table") || textHasTable(q.text));
+        const drawable = textHasTable(q.text);
+        return drawable ? placement === "question" && !fieldType : kinds.includes("table");
     }
     if (kinds.includes(kind))
         return true;

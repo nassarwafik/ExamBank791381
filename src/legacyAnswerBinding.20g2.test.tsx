@@ -82,7 +82,7 @@ describe("20G.2 O1 — renderer parity: every kind a legacy renderer emits is ad
 
   // Review Fix 1 — the CONVERSE for the knowledge-free kind: a table is admitted only where the renderer draws one (or, for a catalog table
   // type, where nothing is drawable, so the table grader finds no rows and fails closed); a part / composite child never admits one.
-  it("converse: `table` is admitted only where StudentQuestionCard draws a table (or nothing table-like is drawable); never for a part", () => {
+  it("converse: `table` is admitted only where StudentQuestionCard draws a table, or where nothing table-like is drawable (a part never draws one)", () => {
     for (const spelling of SPELLINGS) for (const [name, content] of Object.entries(CONTENT)) {
       for (const placement of ["presentationType", "type"] as const) {
         const q = { examQuestionId: "q1", marks: 2, ...content, ...(spelling ? { [placement]: spelling } : {}) } as unknown as Question;
@@ -90,8 +90,9 @@ describe("20G.2 O1 — renderer parity: every kind a legacy renderer emits is ad
         const drawn = cardKinds(q).has("table");
         if (!drawn) expect(parseTable(String(q.text ?? "")), `${placement}=${JSON.stringify(spelling)} ${name}: table admitted but not drawn`).toBeNull();
       }
+      // a part never draws a table: it admits one only where nothing table-like is drawable (catalog tableFill), so no row is ever graded
       const p = { id: "p1", marks: 1, ...content, ...(spelling ? { type: spelling } : {}) } as Record<string, unknown>;
-      expect(legacyAnswerKindAllowed({ ...p, presentationType: p.type || p.presentationType }, "table", "part"), `part ${JSON.stringify(spelling)} ${name}`).toBe(false);
+      if (legacyAnswerKindAllowed({ ...p, presentationType: p.type || p.presentationType }, "table", "part")) expect(parseTable(String(p.text ?? "")), `part ${JSON.stringify(spelling)} ${name}`).toBeNull();
     }
   });
 

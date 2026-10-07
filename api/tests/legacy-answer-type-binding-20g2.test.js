@@ -375,7 +375,8 @@ describe("20G.2 RF1 — a forged table can only answer a question whose renderer
     expect(g.score).toBe(0);
     expect(g.questions[0].parts.map(p => [p.partId, p.score, p.manualReview])).toEqual([["a", 0, true], ["b", 0, true]]);
     expect(aliases.legacyAnswerKindAllowed(cq.parts[0], "table", "part")).toBe(false);
-    expect(aliases.legacyAnswerKindAllowed({ presentationType: "tableFill" }, "table", "part")).toBe(false);   // not even a catalog table type
+    expect(aliases.legacyAnswerKindAllowed({ presentationType: "tableFill", text: STEM }, "table", "part")).toBe(false);   // not even a catalog table type with a drawable table
+    expect(aliases.legacyAnswerKindAllowed({ presentationType: "tableFill" }, "table", "part")).toBe(true);    // nothing drawable: the table grader finds no rows (fails closed)
   });
   it("RF1-F1b a composite legacy CHILD with a table in its text: a forged table is refused and can never score", () => {
     const node = K.composite("cp", "مركّب", 3, [], [K.group("g", "g", [K.part("a", "أ", { ...SA_STEM(), marks: 3 })])]);
@@ -434,12 +435,17 @@ describe("20G.2 RF1 — a forged table can only answer a question whose renderer
     const g = gradeExam(ex, { f1: forged, f2: choice(1) });
     expect(g.questions.map(q => [q.questionId, q.score, q.countedMaxMarks])).toEqual([["f1", 0, 0], ["f2", 7, 7]]);
   });
-  it("RF1-SIM a simulation state on a legacy (or compound) question is not an answer of that question: refused at ingest, never stored; a simulation question keeps it", () => {
+  it("RF1-SIM a simulation state on a legacy question keeps its historical ingest path (20G.1 D3-A' pin) but can never score or take a first-N slot", () => {
     const state = { kind: "simulation", state: { count: 3 } };
-    expect(ingest(FB(), state)).toEqual({ answers: {}, rejected: [{ id: "fb", code: "ANSWER_KIND_MISMATCH" }] });
-    const cq = { examQuestionId: "cq", presentationType: "compound", text: "م", marks: 2, parts: [{ id: "a", type: "shortAnswer", text: "?", marks: 2, answer: { text: "b" } }] };
-    expect(ingest(cq, state).rejected).toEqual([{ id: "cq", code: "ANSWER_KIND_MISMATCH" }]);
-    const sim = { examQuestionId: "s1", presentationType: "simulation", questionTypeVersion: 1, text: "س", marks: 10, answer: { assertions: [] } };
-    expect(ingest(sim, state)).toEqual({ answers: { s1: state }, rejected: [] });
+    expect(ingest(FB(), state)).toEqual({ answers: { fb: state }, rejected: [] });
+    expect(grade(FB(), state)).toEqual(FAIL_CLOSED(7));
+    const g = gradeExam(exam([FB(), { ...MC(), examQuestionId: "f2" }], { gradingPolicy: "firstNAnswered", answerUnit: "question", requiredAnswers: 1, maxMarks: 7 }), { fb: state, f2: choice(1) });
+    expect(g.questions.map(q => [q.questionId, q.score, q.countedMaxMarks])).toEqual([["fb", 0, 0], ["f2", 7, 7]]);
+  });
+  it("RF1-GRID a tableFill with a grid and NO text table keeps its catalog table kind (20G.1 D3 pins): nothing is drawable, so the table grader finds no rows and a table answer can never score", () => {
+    const grid = { ...TBL(), text: "املأ", tableHeaders: ["العمود 1", "العمود 2"], tableRows: [["الصف", ""]], answer: { text: "", values: ["A"] } };
+    expect(ingest(grid, table(["A", "B"])).rejected).toEqual([]);
+    expect(grade(grid, table([false, false])).score).toBe(0);
+    expect(grade(grid, table(["A", "B"])).score).toBe(0);
   });
 });

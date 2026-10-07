@@ -73,11 +73,7 @@ const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.present
 function bindAnswer(id, a, q, bound, reject, placement) {
   if (a && typeof a === "object" && a.kind === "simulation") {
     const r = normalizeSimulationState(a.state);
-    if (!r.ok) return { ok: false, code: r.code };
-    // 20G.2 RF1 — bound to a published LEGACY question (or a compound one), a simulation state is not an answer of that question
-    // (the same authority the grader and the first-N selection apply); a simulation question and unknown ids keep their path
-    if (bound && q !== undefined && admittedResponse(q, { kind: "simulation" }, placement) === undefined) return { ok: false, code: "ANSWER_KIND_MISMATCH" };
-    return { ok: true, answer: { kind: "simulation", state: r.state } };
+    return r.ok ? { ok: true, answer: { kind: "simulation", state: r.state } } : { ok: false, code: r.code };
   }
   if (isCode(a)) return bound ? bindCodeAnswerToQuestion(a, q) : normalizeCodeAnswer(a);
   if (isCodeTemplate(a) || (bound && isCodingV3Question(q))) return bound ? bindCodingTemplateAnswerToQuestion(a, q) : normalizeCodeTemplateAnswer(a);

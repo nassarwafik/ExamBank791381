@@ -48,9 +48,10 @@ export type LegacyAnswerPlacement = "question" | "part";
  * binders / graders govern it, unchanged. For a LEGACY or typeless / unknown-type question the admitted kinds are:
  *   choice   ⇐ ONLY the catalog choice family (multipleChoice / trueFalse and their aliases): no renderer ever produced it for another
  *              type, and the choice grader matches positional codes against any answer value — a forged choice must never reach it;
- *   table    ⇐ ONLY where the renderer draws a table: a top-level question that is not a field-type question (StudentQuestionCard's
- *              isFieldType: multiTrueFalse, cliFill, tableFill with a tableHeaders / tableRows grid) whose text holds a table (or a
- *              catalog table type, whose table grader finds no rows and fails closed when nothing is drawn); NEVER for a part / child;
+ *   table    ⇐ where the renderer draws a table from the question's text: a top-level question that is not a field-type question
+ *              (StudentQuestionCard's isFieldType: multiTrueFalse, cliFill, tableFill with a tableHeaders / tableRows grid) whose text
+ *              holds a table — never for a part / composite child (CompoundPartControl never draws one); and the catalog table kind
+ *              (tableFill) wherever its text holds NO table, because the table grader then finds no rows and fails closed (no score);
  *   the other catalog `responseKinds` of the resolved type (fillBlank / wordBank: sequence + fields; ordering: sequence; …);
  *   sequence, fields ⇐ the question carries fields;
  *   sequence ⇐ the question's OWN answer key is a sequence (answer.mode "exactSequence" / "sequence": the legacy dispatch has always
@@ -73,7 +74,8 @@ export function legacyAnswerKindAllowed(question: unknown, kind: unknown, placem
   const kinds: readonly string[] = def ? def.responseKinds : [];
   if (kind === "table") {
     const fieldType = literal === "multitruefalse" || literal === "clifill" || (literal === "tablefill" && !!(q.tableHeaders || q.tableRows));
-    return placement === "question" && !fieldType && (kinds.includes("table") || textHasTable(q.text));
+    const drawable = textHasTable(q.text);
+    return drawable ? placement === "question" && !fieldType : kinds.includes("table");
   }
   if (kinds.includes(kind)) return true;
   if ((kind === "sequence" || kind === "fields") && Array.isArray(q.fields) && q.fields.length > 0) return true;
