@@ -12,6 +12,7 @@ import { validateSmartSimEnvelope, validateSmartSimAnswerKey, evaluateSmartSim }
 import "../trustedSimPlugins";
 import { impactTime, peakHeight, validateFreeFallConfig, type FreeFallConfigV1, type FreeFallModel } from "../physicsFreeFallModel";
 import { compileFunction, evaluateFunctionAt, validateFunctionStudyConfig, FUNCTION_STUDY_TASKS } from "../functionStudyModel";
+import type { ExprNode } from "../parametricEngine";
 import { net2TemplateById } from "../networkTopology2/net2Templates";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_FUNCTION_TASKS, COMPOSER_NET_SCENARIOS, COMPOSER_PHYSICS_MEASUREMENTS, COMPOSER_PHYSICS_POINTS, COMPOSER_SIM_PLUGIN_KEYS, composerSimVersion, type ComposerSimPluginKey } from "./composerCatalog";
@@ -206,10 +207,69 @@ class ProbeStop extends Error { why: Exclude<FunctionFeatures["overflow"], null>
  *  The first such x is returned (the key is refused: "widen the window"). Bounded like the probe; a probe, not a proof — two features
  *  closer than the grid's spacing far from the window can hide each other. */
 const OUTER_N = 800;
+// GUARDS (Review Fix 8): where the EXPRESSION excludes x, whatever the grid — a zero of a denominator, of a log argument, or of a power's
+// base under a negative exponent (a removable hole at 1 in (x−1)/(x²−1) is found though no sample lands on it). Each guarded
+// sub-expression is sampled and its sign changes, exact zeros and touching zeros are refined. These zeros are also the OPEN domain edges
+// (log x at 0); a zero of a sqrt argument is a CLOSED edge (√0 = 0), so x·√(1.21−x²) has roots at ±1.1.
+type Guard = { kind: "div" | "log" | "pow" | "sqrt"; node: ExprNode; exp?: ExprNode };
+const hasVar = (n: unknown): boolean => { if (!n || typeof n !== "object") return false; const o = n as Record<string, unknown>; return o.t === "var" || hasVar(o.a) || hasVar(o.b) || (Array.isArray(o.args) && o.args.some(hasVar)); };
+function collectGuards(ast: unknown, out: Guard[] = [], seen = new Set<string>()): Guard[] {
+  if (!ast || typeof ast !== "object") return out;
+  const n = ast as Record<string, unknown>, args = Array.isArray(n.args) ? (n.args as ExprNode[]) : [];
+  const push = (g: Guard) => { const k = g.kind + JSON.stringify(g.node); if (hasVar(g.node) && !seen.has(k)) { seen.add(k); out.push(g); } };
+  if (n.t === "bin" && (n.op === "/" || n.op === "%")) push({ kind: "div", node: n.b as ExprNode });
+  if (n.t === "bin" && n.op === "^") push({ kind: "pow", node: n.a as ExprNode, exp: n.b as ExprNode });
+  if (n.t === "call" && (n.fn === "log" || n.fn === "log10") && args[0]) push({ kind: "log", node: args[0] });
+  if (n.t === "call" && n.fn === "pow" && args[0]) push({ kind: "pow", node: args[0], exp: args[1] });
+  if (n.t === "call" && n.fn === "sqrt" && args[0]) push({ kind: "sqrt", node: args[0] });
+  for (const k of ["a", "b"]) collectGuards(n[k], out, seen);
+  for (const a of args) collectGuards(a, out, seen);
+  return out;
+}
+function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
+  const z: number[] = [], put = (x: number) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v)))) z.push(v); };
+  let pp: { x: number; v: number } | null = null, p: { x: number; v: number } | null = null;
+  for (const x of xs) {
+    const v = g(x);
+    if (v === null) { pp = p = null; continue; }
+    if (v === 0) put(x);
+    else if (p && p.v !== 0 && Math.sign(p.v) !== Math.sign(v)) {
+      let a = p.x, b = x, fa = p.v;
+      for (let k = 0; k < 60; k++) { const m = (a + b) / 2, fm = g(m); if (fm === null || fm === 0) { a = b = m; break; } if (Math.sign(fm) === Math.sign(fa)) { a = m; fa = fm; } else b = m; }
+      put((a + b) / 2);
+    } else if (pp && p && Math.abs(p.v) < Math.abs(pp.v) && Math.abs(p.v) < Math.abs(v) && Math.sign(pp.v) === Math.sign(v)) {     // touching zero
+      let a = pp.x, b = x;
+      for (let k = 0; k < 60; k++) { const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r); if (gl === null || gr === null) break; if (Math.abs(gl) > Math.abs(gr)) a = l; else b = r; }
+      const m = (a + b) / 2, gm = g(m);
+      if (gm !== null && Math.abs(gm) <= 1e-12 * Math.max(1, Math.abs(pp.v), Math.abs(v))) put(m);
+    }
+    pp = p; p = { x, v };
+  }
+  return z;
+}
+const GUARD_MAX = 12;
+type GuardInfo = { excluded: number[]; open: number[] };
+/** The excluded zeros (also the open domain edges) of every guard, sampled on `xs`; null when the guards are too many or too costly. */
+function guardInfo(ast: unknown, xs: number[]): GuardInfo | null {
+  const gs = collectGuards(ast);
+  if (gs.length > GUARD_MAX || gs.reduce((t, g) => t + expressionCost(g.node) + (g.exp ? expressionCost(g.exp) : 0), 0) * (xs.length + 400) > PROBE_NODE_BUDGET) return null;
+  const val = (n: ExprNode, x: number) => { const r = evaluateFunctionAt(n, x); return r.ok ? r.value : null; };
+  const excluded: number[] = [];
+  for (const g of gs) {
+    if (g.kind === "sqrt") continue;                                                // √0 = 0: a closed edge, never an exclusion
+    for (const z of zerosOf(x => val(g.node, x), xs)) {
+      if (g.kind === "pow") { const e = g.exp ? val(g.exp, z) : null; if (e !== null && e >= 0) continue; }   // 0^e excludes only for e < 0
+      if (!excluded.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z)))) excluded.push(z);
+      if (excluded.length > 4 * KEY_CAP) return null;
+    }
+  }
+  return { excluded, open: excluded };
+}
 /** A domain edge e (f defined on the `dir` side) is a ROOT when |f| shrinks steadily toward it (10⁻² … 10⁻⁸), is negligible at e, and
- *  the edge itself belongs to the domain: when e is a round number (0, 2, 0.5 …), f must be defined exactly there — x·√(4−x²) at 2 is
- *  a root, x·log x at 0 is not (0 is outside the domain). An edge that is not a round number (√3) is taken as closed. */
-function edgeIsRoot(at: (x: number) => number | null, e: number, dir: number): boolean {
+ *  the edge itself belongs to the domain. With the expression's guards (Review Fix 8) an edge is OPEN when it is a zero of a denominator
+ *  or a log argument (x·log x at 0) and CLOSED otherwise (x·√(4−x²) at 2, x·√(1.21−x²) at 1.1). Without them, a round-number edge must
+ *  evaluate as defined and any other edge is taken as closed. */
+function edgeIsRoot(at: (x: number) => number | null, e: number, dir: number, open?: number[]): boolean {
   const f0 = at(e); if (f0 === null) return false;
   if (f0 !== 0) {
     const v = [1e-2, 1e-4, 1e-6, 1e-8].map(d => at(e + dir * d));
@@ -217,6 +277,7 @@ function edgeIsRoot(at: (x: number) => number | null, e: number, dir: number): b
     const a = v.map(t => Math.abs(t as number));
     if (!(a.every((t, k) => k === 0 || t < a[k - 1]) && a[3] <= 1e-2 * a[0] && Math.abs(f0) <= 1e-3 * a[3])) return false;
   }
+  if (open) return !open.some(z => Math.abs(z - e) <= 1e-6 * Math.max(1, Math.abs(e)));
   for (let k = 0; k <= 6; k++) { const c = Math.round(e * 10 ** k) / 10 ** k; if (Math.abs(c - e) <= 1e-9 * Math.max(1, Math.abs(e))) return at(c) !== null; }
   return true;
 }
@@ -228,14 +289,23 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
   for (const [edge, dir] of [[xMax, 1], [xMin, -1]] as const) {
     let def: boolean | null = null, last: { x: number; v: number } | null = null, slope = 0, prevX = edge, zeroAt: number | null = null;
     let pp: { x: number; a: number } | null = null, p: { x: number; a: number } | null = null;                     // |f| history (touching roots)
-    for (let k = 0; k < n; k++) {                                                   // strictly beyond the window (a pole ON its edge is inside)
-      const x = edge + dir * 1e-3 * 1e9 ** (k / (n - 1)), r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
+    const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));                      // strictly beyond the window
+    // the expression's own exclusions beyond the window (a removable hole, a pole) — Review Fix 8
+    const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge, ...xs]) : null;
+    for (const z of gi ? gi.excluded : []) {
+      if (dir * (z - edge) <= 0) continue;
+      if (need.points || need.slope) return z;
+      if (need.poles && poleKindAt(raw, z) !== "bounded") return z;
+    }
+    const e0 = at(edge); if (e0 !== null && e0 !== 0) last = { x: edge, v: e0 };     // the window's edge value: a root just past it is seen
+    for (let k = 0; k < n; k++) {                                                   // (a pole ON the edge is inside the window)
+      const x = xs[k], r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
       if (def !== null && d !== def) {                                              // defined ↔ undefined: a domain edge, a hole or a pole
         if (need.points || need.slope) return x;                                    // the domain changes: exclusions and monotony depend on it
         let lo = d ? x : prevX, hi = d ? prevX : x;                                 // lo defined, hi undefined
         for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (raw(m) === null) hi = m; else lo = m; }
         if (need.poles && poleKindAt(raw, hi) !== "bounded") return hi;             // a pole there (or one that cannot be ruled out)
-        if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi))) return lo;
+        if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined)) return lo;
       }
       def = d; prevX = x;
       if (v === null) { last = null; slope = 0; pp = p = null; zeroAt = null; continue; }
@@ -294,7 +364,8 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
   };
   // a domain edge is a ROOT when f tends to 0 there (Review Fix 7): |f| shrinks steadily as the probe closes in from the defined side
   // (10⁻² … 10⁻⁸) and is negligible at the edge itself — an edge where f tends to a non-zero value or grows is not one
-  const edgeRoot = (e: number, dir: number) => edgeIsRoot(at, e, dir);
+  let guardOpen: number[] | undefined;
+  const edgeRoot = (e: number, dir: number) => edgeIsRoot(at, e, dir, guardOpen);
   // a candidate singular point: a pole is recorded, an uncertain one stops the probe (fail closed) when poles are asked for
   const isPole = (x: number) => { const k = poleKindAt(atRaw, x); if (k === "uncertain" && need.poles) throw new ProbeStop("uncertain"); return k === "pole"; };
   const flatCentre = (x: number, fx: (x: number) => number, step: number) => {
@@ -314,6 +385,17 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     // where |f| would exceed the evaluator's range (Review Fix 6)
     for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : Number((xMin + i * step).toPrecision(12)); const v = atRaw(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); overflowAt.push(v !== null && !Number.isFinite(v)); }
     const singular = need.points || need.poles || need.extrema || need.slope;     // extrema / slopes skip the neighbourhood of poles
+    if (ast !== undefined && (singular || need.roots)) {                          // the expression's own exclusions (Review Fix 8)
+      const gi = guardInfo(ast, xs); if (gi === null) throw new ProbeStop("budget");
+      guardOpen = gi.open;
+      if (singular) for (const z of gi.excluded) {
+        if (z < xMin - 1e-9 || z > xMax + 1e-9) continue;
+        const d = 1e-7 * Math.max(1, Math.abs(z));
+        if (atRaw(z - d) !== null && atRaw(z + d) !== null) { add(points, z, "points"); if (isPole(z)) add(poles, z, "poles"); }
+      }
+    }
+    // a window end that is also a domain edge (√x on [0, 9]) may end a monotonic interval (Review Fix 8)
+    if (singular) for (const [k, dir] of [[0, -1], [PROBE_N - 1, 1]] as const) if (ys[k] !== null && atRaw(xs[k] + dir * 1e-9 * Math.max(1, Math.abs(xs[k]))) === null && !edges.some(v => Math.abs(v - xs[k]) < 1e-3)) edges.push(xs[k]);
     for (let i = 0; i < PROBE_N; i++) {
       const y = ys[i];
       if (y === null) {
@@ -445,7 +527,7 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
   // the same growth test as the completeness probe: |f| must keep growing toward x on at least one side (rational or logarithmic)
   let uncertain = false;
   if (tasks.verticalAsymptotes) for (const x of va) { const k = at(x) !== null ? "bounded" : poleKindAt(atRaw, x); if (k === "uncertain") uncertain = true; else if (k !== "pole") bad("لا يوجد خط تقارب رأسي عند x = " + x + "."); }
-  if (tasks.xIntercepts) for (const x of xi) if (!near(at(x), 0, 0.01)) bad("f(" + x + ") ≠ 0.");     // its x is checked against the probe below
+  if (tasks.xIntercepts) for (const x of xi) if (at(x) !== null && !near(at(x), 0, 0.01)) bad("f(" + x + ") ≠ 0.");     // its x is checked against the probe below
   // two key values closer than the grading tolerance cannot both be matched by one correct answer
   const crowded = (label: string, v: number[]) => { if (v.some((a, i) => v.some((b, j) => j > i && Math.abs(a - b) <= 2 * KEY_TOL))) bad("قيم متقاربة جدًا أو مكررة في " + label + "."); };
   if (tasks.domainExclusions) crowded("استثناءات المجال", ex);
@@ -508,8 +590,22 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     if (tasks.domainExclusions) for (const x of ex) if (!near1(x, ft.points) && !isolated(x)) bad("x = " + x + " ليست نقطة معزولة خارج المجال (ثقب أو قفزة أو خط تقارب).");
     if (tasks.xIntercepts) for (const x of xi) if (!near1(x, ft.roots)) bad("لا يوجد مقطع سيني ضمن ±" + K + " من x = " + x + ".");
     // a very flat extremum ((x−2)⁶) may escape the probe: the key point is then accepted only if f at x ± K lies on the right side of f(x)
-    const flatExtremum = (e: { kind: "min" | "max"; x: number }) => { const y = at(e.x), l = at(e.x - K), r = at(e.x + K), slack = 4 * Number.EPSILON * Math.max(1, Math.abs(y ?? 0));
-      return y !== null && l !== null && r !== null && (e.kind === "min" ? l >= y - slack && r >= y - slack : l <= y + slack && r <= y + slack); };
+    // a very flat extremum the probe does not record ((x−2)⁸ + 1000 in a narrow window): the key point must lie within K of the CENTRE of
+    // the stretch where f equals f(x) within the evaluator's rounding, and f must rise (min) / fall (max) beyond it on both sides — RF8
+    const flatExtremum = (e: { kind: "min" | "max"; x: number }) => {
+      const y = at(e.x); if (y === null) return false;
+      const tol = 4 * Number.EPSILON * Math.max(1, Math.abs(y)), off = (x: number) => { const v = at(x); return v === null ? null : v - y; };
+      const ends: number[] = [];
+      for (const s of [-1, 1]) {
+        let w = 1e-4, d = off(e.x + s * w);
+        while (d !== null && Math.abs(d) <= tol && w < 1) { w *= 2; d = off(e.x + s * w); }
+        if (d === null || Math.abs(d) <= tol || (e.kind === "min" ? d < 0 : d > 0)) return false;
+        let lo = w === 1e-4 ? 0 : w / 2, hi = w;
+        for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2, dm = off(e.x + s * m); if (dm !== null && Math.abs(dm) <= tol) lo = m; else hi = m; }
+        ends.push(e.x + s * lo);
+      }
+      return Math.abs((ends[0] + ends[1]) / 2 - e.x) <= K;
+    };
     if (tasks.extrema) for (const e of ext) if (!ft.extrema.some(p => p.kind === e.kind && Math.abs(p.x - e.x) <= K) && !flatExtremum(e)) bad("لا توجد قيمة " + (e.kind === "min" ? "صغرى" : "عظمى") + " ضمن ±" + K + " من x = " + e.x + ".");
     if (tasks.monotonicIntervals && intervals.length === (f.intervals as unknown[]).length) {
       const lo = (e: number | "-inf" | "+inf") => (e === "-inf" ? -Infinity : e === "+inf" ? Infinity : e);

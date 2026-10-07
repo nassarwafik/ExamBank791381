@@ -196,7 +196,106 @@ class ProbeStop extends Error {
     constructor(why) { super(why); this.why = why; }
 }
 const OUTER_N = 800;
-function edgeIsRoot(at, e, dir) {
+const hasVar = (n) => { if (!n || typeof n !== "object")
+    return false; const o = n; return o.t === "var" || hasVar(o.a) || hasVar(o.b) || (Array.isArray(o.args) && o.args.some(hasVar)); };
+function collectGuards(ast, out = [], seen = new Set()) {
+    if (!ast || typeof ast !== "object")
+        return out;
+    const n = ast, args = Array.isArray(n.args) ? n.args : [];
+    const push = (g) => { const k = g.kind + JSON.stringify(g.node); if (hasVar(g.node) && !seen.has(k)) {
+        seen.add(k);
+        out.push(g);
+    } };
+    if (n.t === "bin" && (n.op === "/" || n.op === "%"))
+        push({ kind: "div", node: n.b });
+    if (n.t === "bin" && n.op === "^")
+        push({ kind: "pow", node: n.a, exp: n.b });
+    if (n.t === "call" && (n.fn === "log" || n.fn === "log10") && args[0])
+        push({ kind: "log", node: args[0] });
+    if (n.t === "call" && n.fn === "pow" && args[0])
+        push({ kind: "pow", node: args[0], exp: args[1] });
+    if (n.t === "call" && n.fn === "sqrt" && args[0])
+        push({ kind: "sqrt", node: args[0] });
+    for (const k of ["a", "b"])
+        collectGuards(n[k], out, seen);
+    for (const a of args)
+        collectGuards(a, out, seen);
+    return out;
+}
+function zerosOf(g, xs) {
+    const z = [], put = (x) => { const v = Number(x.toPrecision(12)); if (!z.some(t => Math.abs(t - v) <= 1e-9 * Math.max(1, Math.abs(v))))
+        z.push(v); };
+    let pp = null, p = null;
+    for (const x of xs) {
+        const v = g(x);
+        if (v === null) {
+            pp = p = null;
+            continue;
+        }
+        if (v === 0)
+            put(x);
+        else if (p && p.v !== 0 && Math.sign(p.v) !== Math.sign(v)) {
+            let a = p.x, b = x, fa = p.v;
+            for (let k = 0; k < 60; k++) {
+                const m = (a + b) / 2, fm = g(m);
+                if (fm === null || fm === 0) {
+                    a = b = m;
+                    break;
+                }
+                if (Math.sign(fm) === Math.sign(fa)) {
+                    a = m;
+                    fa = fm;
+                }
+                else
+                    b = m;
+            }
+            put((a + b) / 2);
+        }
+        else if (pp && p && Math.abs(p.v) < Math.abs(pp.v) && Math.abs(p.v) < Math.abs(v) && Math.sign(pp.v) === Math.sign(v)) {
+            let a = pp.x, b = x;
+            for (let k = 0; k < 60; k++) {
+                const l = a + (b - a) / 3, r = b - (b - a) / 3, gl = g(l), gr = g(r);
+                if (gl === null || gr === null)
+                    break;
+                if (Math.abs(gl) > Math.abs(gr))
+                    a = l;
+                else
+                    b = r;
+            }
+            const m = (a + b) / 2, gm = g(m);
+            if (gm !== null && Math.abs(gm) <= 1e-12 * Math.max(1, Math.abs(pp.v), Math.abs(v)))
+                put(m);
+        }
+        pp = p;
+        p = { x, v };
+    }
+    return z;
+}
+const GUARD_MAX = 12;
+function guardInfo(ast, xs) {
+    const gs = collectGuards(ast);
+    if (gs.length > GUARD_MAX || gs.reduce((t, g) => t + expressionCost(g.node) + (g.exp ? expressionCost(g.exp) : 0), 0) * (xs.length + 400) > exports.PROBE_NODE_BUDGET)
+        return null;
+    const val = (n, x) => { const r = (0, functionStudyModel_1.evaluateFunctionAt)(n, x); return r.ok ? r.value : null; };
+    const excluded = [];
+    for (const g of gs) {
+        if (g.kind === "sqrt")
+            continue;
+        for (const z of zerosOf(x => val(g.node, x), xs)) {
+            if (g.kind === "pow") {
+                const e = g.exp ? val(g.exp, z) : null;
+                if (e !== null && e >= 0)
+                    continue;
+            }
+            if (!excluded.some(t => Math.abs(t - z) <= 1e-9 * Math.max(1, Math.abs(z))))
+                excluded.push(z);
+            if (excluded.length > 4 * KEY_CAP)
+                return null;
+        }
+    }
+    return { excluded, open: excluded };
+}
+function edgeIsRoot(at, e, dir, open) {
     const f0 = at(e);
     if (f0 === null)
         return false;
@@ -208,6 +307,8 @@ function edgeIsRoot(at, e, dir) {
         if (!(a.every((t, k) => k === 0 || t < a[k - 1]) && a[3] <= 1e-2 * a[0] && Math.abs(f0) <= 1e-3 * a[3]))
             return false;
     }
+    if (open)
+        return !open.some(z => Math.abs(z - e) <= 1e-6 * Math.max(1, Math.abs(e)));
     for (let k = 0; k <= 6; k++) {
         const c = Math.round(e * 10 ** k) / 10 ** k;
         if (Math.abs(c - e) <= 1e-9 * Math.max(1, Math.abs(e)))
@@ -224,8 +325,21 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
     for (const [edge, dir] of [[xMax, 1], [xMin, -1]]) {
         let def = null, last = null, slope = 0, prevX = edge, zeroAt = null;
         let pp = null, p = null;
+        const xs = Array.from({ length: n }, (_, k) => edge + dir * 1e-3 * 1e9 ** (k / (n - 1)));
+        const gi = ast !== undefined && (wantRoots || wantBreaks) ? guardInfo(ast, [edge, ...xs]) : null;
+        for (const z of gi ? gi.excluded : []) {
+            if (dir * (z - edge) <= 0)
+                continue;
+            if (need.points || need.slope)
+                return z;
+            if (need.poles && poleKindAt(raw, z) !== "bounded")
+                return z;
+        }
+        const e0 = at(edge);
+        if (e0 !== null && e0 !== 0)
+            last = { x: edge, v: e0 };
         for (let k = 0; k < n; k++) {
-            const x = edge + dir * 1e-3 * 1e9 ** (k / (n - 1)), r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
+            const x = xs[k], r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
             if (def !== null && d !== def) {
                 if (need.points || need.slope)
                     return x;
@@ -239,7 +353,7 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
                 }
                 if (need.poles && poleKindAt(raw, hi) !== "bounded")
                     return hi;
-                if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi)))
+                if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined))
                     return lo;
             }
             def = d;
@@ -365,7 +479,8 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         }
         return (b + c) / 2;
     };
-    const edgeRoot = (e, dir) => edgeIsRoot(at, e, dir);
+    let guardOpen;
+    const edgeRoot = (e, dir) => edgeIsRoot(at, e, dir, guardOpen);
     const isPole = (x) => { const k = poleKindAt(atRaw, x); if (k === "uncertain" && need.poles)
         throw new ProbeStop("uncertain"); return k === "pole"; };
     const flatCentre = (x, fx, step) => {
@@ -404,6 +519,27 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
             overflowAt.push(v !== null && !Number.isFinite(v));
         }
         const singular = need.points || need.poles || need.extrema || need.slope;
+        if (ast !== undefined && (singular || need.roots)) {
+            const gi = guardInfo(ast, xs);
+            if (gi === null)
+                throw new ProbeStop("budget");
+            guardOpen = gi.open;
+            if (singular)
+                for (const z of gi.excluded) {
+                    if (z < xMin - 1e-9 || z > xMax + 1e-9)
+                        continue;
+                    const d = 1e-7 * Math.max(1, Math.abs(z));
+                    if (atRaw(z - d) !== null && atRaw(z + d) !== null) {
+                        add(points, z, "points");
+                        if (isPole(z))
+                            add(poles, z, "poles");
+                    }
+                }
+        }
+        if (singular)
+            for (const [k, dir] of [[0, -1], [PROBE_N - 1, 1]])
+                if (ys[k] !== null && atRaw(xs[k] + dir * 1e-9 * Math.max(1, Math.abs(xs[k]))) === null && !edges.some(v => Math.abs(v - xs[k]) < 1e-3))
+                    edges.push(xs[k]);
         for (let i = 0; i < PROBE_N; i++) {
             const y = ys[i];
             if (y === null) {
@@ -632,7 +768,7 @@ function buildFunction(f, path) {
         }
     if (tasks.xIntercepts)
         for (const x of xi)
-            if (!near(at(x), 0, 0.01))
+            if (at(x) !== null && !near(at(x), 0, 0.01))
                 bad("f(" + x + ") ≠ 0.");
     const crowded = (label, v) => { if (v.some((a, i) => v.some((b, j) => j > i && Math.abs(a - b) <= 2 * exports.KEY_TOL)))
         bad("قيم متقاربة جدًا أو مكررة في " + label + "."); };
@@ -736,8 +872,30 @@ function buildFunction(f, path) {
                 if (!near1(x, ft.roots))
                     bad("لا يوجد مقطع سيني ضمن ±" + K + " من x = " + x + ".");
         const flatExtremum = (e) => {
-            const y = at(e.x), l = at(e.x - K), r = at(e.x + K), slack = 4 * Number.EPSILON * Math.max(1, Math.abs(y ?? 0));
-            return y !== null && l !== null && r !== null && (e.kind === "min" ? l >= y - slack && r >= y - slack : l <= y + slack && r <= y + slack);
+            const y = at(e.x);
+            if (y === null)
+                return false;
+            const tol = 4 * Number.EPSILON * Math.max(1, Math.abs(y)), off = (x) => { const v = at(x); return v === null ? null : v - y; };
+            const ends = [];
+            for (const s of [-1, 1]) {
+                let w = 1e-4, d = off(e.x + s * w);
+                while (d !== null && Math.abs(d) <= tol && w < 1) {
+                    w *= 2;
+                    d = off(e.x + s * w);
+                }
+                if (d === null || Math.abs(d) <= tol || (e.kind === "min" ? d < 0 : d > 0))
+                    return false;
+                let lo = w === 1e-4 ? 0 : w / 2, hi = w;
+                for (let k = 0; k < 40; k++) {
+                    const m = (lo + hi) / 2, dm = off(e.x + s * m);
+                    if (dm !== null && Math.abs(dm) <= tol)
+                        lo = m;
+                    else
+                        hi = m;
+                }
+                ends.push(e.x + s * lo);
+            }
+            return Math.abs((ends[0] + ends[1]) / 2 - e.x) <= K;
         };
         if (tasks.extrema)
             for (const e of ext)
