@@ -313,7 +313,7 @@ function gradeQuestionForSection(q,i,section,answers,countedKeys,generation){
 //   - "capScore"   : section score = min(sum of scores, section.maxMarks); ALL answered questions
 //                    (and partial marks) contribute until the cap. e.g. 21x3=63 raw => 60.
 //   - "firstNAnswered": only the first `requiredAnswers` ANSWERED units (in display order) are graded;
-//                    excess answers stay saved but score 0; section max = section.maxMarks.
+//                    excess answers stay saved but score 0; section max = section.maxMarks, which also caps the score.
 // A legacy flat exam normalizes to a single "all" section, so its output is identical to the original
 // grader (same fields, same numbers). Extra fields (ignored/countedMaxMarks/sectionId/sections) are
 // purely additive.
@@ -335,6 +335,10 @@ function gradeExam(exam,answers,context){
       rawSum=Math.min(rawSum,secMax);
     }else if(section.gradingPolicy==="firstNAnswered"){
       secMax=section.maxMarks!=null?section.maxMarks:graded.reduce((s,g)=>s+g.countedMaxMarks,0);
+      // Phase 20G (D1) — the explicit section maximum is a CAP here too (exactly like capScore and like the canonical rebuild's
+      // sectionCappedScore): with unequal question marks the first N answered units can sum above it, and an attempt must never score
+      // above its own total nor change score when an unrelated review is saved.
+      if(section.maxMarks!=null)rawSum=Math.min(rawSum,secMax);
     }else{
       // "all" is NEVER capped: section max is the sum of question marks, regardless of any (stale)
       // section.maxMarks. This guarantees an "all" section can never produce score > total even if a
