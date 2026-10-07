@@ -11,7 +11,8 @@ import * as F from "./testing/composerFakeAi";
 //   NOTE-2  touching features in the last grid cell or just beyond the edge were missed.
 // Found while fixing them (fail-first on 20966d8 too): features in the first cells past the edge (before the scan beyond the window
 // starts, 10⁻³ out), a root of an even smaller power where f is exactly 0, and a steep root whose dip falls between two samples of a
-// wide window — found at the expression's cusps (zeros of a power's base or a square root's argument).
+// wide window — found at the expression's cusps (zeros of a power's base or a square root's argument). The last block holds the tests
+// the RF11 mutation campaign asked for (survivors): each fails on 20966d8 as well.
 const codes = (r: { ok: boolean; issues?: { code: string }[] }) => (r.ok ? [] : (r.issues ?? []).map(i => i.code));
 const fn = (source: string, tasks: string[], over: Record<string, unknown> = {}) => F.funcSim({ source, xMin: -5, xMax: 5, yMin: -10, yMax: 10, tasks, domainExclusions: [], xIntercepts: [], yIntercept: null, verticalAsymptotes: [], horizontalAsymptotes: [], extrema: [], intervals: [], ...over });
 const accepted = (src: string, tasks: string[], over: Record<string, unknown>) => { const r = buildSimFromSpec(fn(src, tasks, over)); expect(r.ok ? "ok" : JSON.stringify(r.issues), src + " " + JSON.stringify(over)).toBe("ok"); };
@@ -54,6 +55,9 @@ describe("20F-RF11 NOTE-2 touching features in the last grid cell or just beyond
     accepted("(x+1)*(x-4.998)^2", ["xIntercepts"], { xIntercepts: [-1, 4.998] });
     refused("1/(x-4.998)^2+1/(x+1)", ["verticalAsymptotes"], { verticalAsymptotes: [-1] });
     refused("1/(x-5.0005)^2+1/(x+1)", ["verticalAsymptotes"], { verticalAsymptotes: [-1] });
+    // the same touching root written as a product: no power, so no cusp — only the edge cells see it
+    refused("(x+1)*(x-4.998)*(x-4.998)", ["xIntercepts"], { xIntercepts: [-1] });
+    accepted("(x+1)*(x-4.998)*(x-4.998)", ["xIntercepts"], { xIntercepts: [-1, 4.998] });
   });
 });
 
@@ -67,10 +71,12 @@ describe("20F-RF11 the edge strip: features just past the window's edge, up to w
   });
   it("a touching root 3·10⁻⁴ past the edge", () => {
     expect(codes(buildSimFromSpec(fn("(x+1)*(x-5.0003)^2", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    expect(codes(buildSimFromSpec(fn("(x+1)*(x-5.0003)*(x-5.0003)", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
   });
   it("a touching root exactly on the first sample past the edge (a dyadic grid: 2⁻¹⁰ apart)", () => {
     const w = { xMin: -0.9765625, xMax: 0.9765625 };
     expect(codes(buildSimFromSpec(fn("(x+0.5)*(x-0.9775390625)^2", ["xIntercepts"], { ...w, xIntercepts: [-0.5] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    expect(codes(buildSimFromSpec(fn("(x+0.5)*(x-0.9775390625)*(x-0.9775390625)", ["xIntercepts"], { ...w, xIntercepts: [-0.5] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
   });
   it("a narrow window: an extremum 5·10⁻⁴ past the edge, 10 grid steps out", () => {
     const src = "(x-0.0505)^2*(x+0.03)", top = mx(-0.0031667, 0.0000773);
@@ -91,5 +97,41 @@ describe("20F-RF11 the expression's cusps: a steep root whose dip falls between 
     expect(codes(buildSimFromSpec(fn("(x+1)*abs(x-5.0004)^(1/3)", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
     expect(codes(buildSimFromSpec(fn("(x+1)*abs(x-5.7)^(1/3)", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
     accepted("(x+1)*(abs(x-5.7)^(0.25)+0.001)", ["xIntercepts"], { xIntercepts: [-1] });
+  });
+});
+
+describe("20F-RF11 each new rule holds on its own (mutation campaign)", () => {
+  it("a root of an exponent between 0.01 and 0.05 at an irrational point (±√2) is a root", () => {
+    refused("(x+2)*abs(x^2-2)^(0.04)", ["xIntercepts"], { xIntercepts: [-2] });
+  });
+  it("searches reach the last digits of x in a wide window: a pole of 1/√|x − 0.5| on [−1000, 1000]", () => {
+    const w = { xMin: -1000, xMax: 1000 };
+    expect(codes(buildSimFromSpec(fn("1/sqrt(abs(x-0.5))+1/(x+300)", ["verticalAsymptotes"], { ...w, verticalAsymptotes: [-300] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    accepted("1/sqrt(abs(x-0.5))+1/(x+300)", ["verticalAsymptotes"], { ...w, verticalAsymptotes: [-300, 0.5] });
+  });
+  it("a search never settles inside a small domain gap: the double pole at 2.0012 beside a gap at (2.0025, 2.0035)", () => {
+    const src = "1/((x-2.0012)^2+0*sqrt(abs(x-2.003)-0.0005))+1/(x+3)";
+    expect(codes(buildSimFromSpec(fn(src, ["verticalAsymptotes"], { verticalAsymptotes: [-3] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    accepted(src, ["verticalAsymptotes"], { verticalAsymptotes: [-3, 2.0012] });
+  });
+  it("a cusp root inside the window near its edge is not 'beyond the window'", () => {
+    accepted("(x+1)*abs(x-4.9995)^(1/3)", ["xIntercepts"], { xIntercepts: [-1, 4.9995] });
+  });
+  it("a cusp past the window whose dip the scan beyond the window does not see (e^(2x) outgrows it)", () => {
+    expect(codes(buildSimFromSpec(fn("(x+1)*exp(2*x)*abs(x-9)^(0.1)", ["xIntercepts"], { xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    accepted("(x+1)*exp(2*x)*abs(x-9)^(0.1)", ["xIntercepts"], { xMin: -5, xMax: 10, xIntercepts: [-1, 9] });
+  });
+  it("a square root's argument is a cusp: (x − 41.34)·√√|x − 41.47| on [−50, 50]", () => {
+    const w = { xMin: -50, xMax: 50 };
+    refused("(x-41.34)*sqrt(sqrt(abs(x-41.47)))", ["xIntercepts"], { ...w, xIntercepts: [41.34] });
+    accepted("(x-41.34)*sqrt(sqrt(abs(x-41.47)))", ["xIntercepts"], { ...w, xIntercepts: [41.34, 41.47] });
+  });
+  it("a cusp at an irrational point is a root when f vanishes like a power there (its 12-digit rounding is close enough)", () => {
+    expect(codes(buildSimFromSpec(fn("(x-1.35)*abs((x-1.41421356237309)*(x+3))^(0.1)", ["xIntercepts"], { xMin: -50, xMax: 50, xIntercepts: [-3, 1.35] })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+  });
+  it("a flat extremum near the edge rises only 16 steps out, past the edge: (x − 4.99)⁸ + 1000", () => {
+    const yi = 4.99 ** 8 + 1000;
+    expect(codes(buildSimFromSpec(fn("(x-4.99)^8+1000", ["extrema", "yIntercept"], { yIntercept: yi })))).toEqual(["AI_FUNCTION_KEY_INCOMPLETE"]);
+    accepted("(x-4.99)^8+1000", ["extrema", "yIntercept"], { yIntercept: yi, extrema: [mn(4.99, 1000)] });
   });
 });

@@ -347,12 +347,7 @@ function guardInfo(ast, xs, wantCusps = false) {
 }
 function rootAtCusp(at, z) {
     const v = at(z);
-    if (v === null)
-        return false;
-    if (Math.abs(v) < 1e-9)
-        return true;
-    const d = 1e-9 * Math.max(1, Math.abs(z));
-    return vanishesAt(at, argMin(absOr(at), z - d, z + d));
+    return v !== null && (v === 0 || vanishesAt(at, z));
 }
 function edgeIsRoot(at, e, dir, open) {
     const f0 = at(e);
@@ -545,7 +540,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise)))
             return;
         const x = ternary(xl, xr, g, false);
-        if (g(x) < 1e-9 || at(Number(x.toPrecision(12))) === 0 || vanishesAt(at, x))
+        if (g(x) < 1e-9 || vanishesAt(at, x))
             add(roots, x, "roots");
     };
     try {

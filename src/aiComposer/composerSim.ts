@@ -307,13 +307,11 @@ function guardInfo(ast: unknown, xs: number[], wantCusps = false): GuardInfo | n
 }
 /** A CUSP of the expression (Review Fix 11) — a zero of a power's base (e > 0) or of a square root's argument — is where a steep root
  *  hides between two samples ((x − 41.34)·|x − 41.47|^(1/3) dips to 0 between 41.45 and 41.5 without a local minimum on the grid). It is a
- *  root when f is (almost) 0 there or vanishes like a power at the point closest to it (its 12-digit rounding is refined first). */
+ *  root when f is exactly 0 there (|x − 1.3|^0.005 at 1.3) or vanishes like a power (the zero's 12-digit rounding is off by at most half of
+ *  the vanishing rule's smallest step, which keeps the four steps within 25 % of each other). */
 function rootAtCusp(at: (x: number) => number | null, z: number): boolean {
   const v = at(z);
-  if (v === null) return false;
-  if (Math.abs(v) < 1e-9) return true;
-  const d = 1e-9 * Math.max(1, Math.abs(z));
-  return vanishesAt(at, argMin(absOr(at), z - d, z + d));
+  return v !== null && (v === 0 || vanishesAt(at, z));
 }
 /** A domain edge e (f defined on the `dir` side) is a ROOT when |f| shrinks steadily toward it (10⁻² … 10⁻⁸), is negligible at e, and
  *  the edge itself belongs to the domain: with the expression's guards (Review Fix 8) an edge is OPEN when it is a zero of a denominator
@@ -418,13 +416,13 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     return (b + c) / 2;
   };
   // touching root: a strict local minimum of |f| (a flat stretch is not one — it would start a search at every sample — nor is the
-  // evaluator's rounding noise along it); a root when |f| is negligible there, exactly 0 at the point rounded to 12 digits (RF11), or
-  // vanishing like a power (a steep touching root, x·√|x − 1.3| — RF10)
+  // evaluator's rounding noise along it); a root when |f| is negligible there or vanishes like a power (a steep touching root,
+  // x·√|x − 1.3| — RF10; a steeper one, whose power fails the vanishing rule, is found at the expression's cusps — RF11)
   const touchingRoot = (p: number, y: number, n: number, xl: number, xr: number) => {
     const noise = 1e-12 * Math.max(1, Math.abs(y));
     if (!(Math.abs(y) <= Math.abs(p) && Math.abs(y) <= Math.abs(n) && (Math.abs(p) - Math.abs(y) > noise || Math.abs(n) - Math.abs(y) > noise))) return;
     const x = ternary(xl, xr, g, false);
-    if (g(x) < 1e-9 || at(Number(x.toPrecision(12))) === 0 || vanishesAt(at, x)) add(roots, x, "roots");
+    if (g(x) < 1e-9 || vanishesAt(at, x)) add(roots, x, "roots");
   };
   try {
     const step = (xMax - xMin) / (PROBE_N - 1);
