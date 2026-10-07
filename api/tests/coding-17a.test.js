@@ -36,7 +36,9 @@ const KEY = {
   referenceSolutions: { python: "REFERENCE-SOLUTION = 1\nprint(a + b)\n" }
 };
 const codingQuestion = (over = {}) => ({ examQuestionId: "c1", presentationType: "coding", questionTypeVersion: 1, text: "اقرأ عددين واطبع مجموعهما.", marks: 10, coding: JSON.parse(JSON.stringify(CFG)), answer: JSON.parse(JSON.stringify(KEY)), teacherNote: "ملاحظة المعلم السرية", ...over });
-const examWith = q => ({ title: "امتحان", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "القسم", gradingPolicy: "all", questions: [q] }] });
+const examWith = (...questions) => ({ title: "امتحان", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "القسم", gradingPolicy: "all", questions }] });
+// 20G.1 — the non-code control answer `other` must answer a question OF the published exam (an unknown id is never stored since 20G.1)
+const OTHER_Q = { examQuestionId: "other", presentationType: "shortAnswer", text: "حر", marks: 1 };
 const code = (source, over = {}) => ({ kind: "code", language: "python", languageVersion: 1, source, ...over });
 
 describe("C12 / C13 / C14 — the student payload carries the PUBLIC coding config and nothing private", () => {
@@ -100,7 +102,7 @@ describe("C8 / C9 — server draft / submit / pause pipeline: canonical code ans
     const ctx = createMemoryContainer({
       ["platform/users/" + S1 + ".json"]: { schemaVersion: 3, role: "student", userId: S1, displayName: "أحمد", code: "S1", classId: "c1", active: true, archived: false, authVersion: 1 },
       ["platform/classes/c1.json"]: { classId: "c1", name: "الصف", active: true, studentIds: [] },
-      ["platform/assignments/" + AID + ".json"]: { schemaVersion: 2, attemptModelVersion: 3, attemptPolicy: "pausable", assignmentId: AID, classId: "c1", title: "واجب", instructions: "", status: "published", openAt: "", dueAt: new Date(Date.now() + 864e5).toISOString(), maxAttempts: 1, durationMinutes: 30, questionCount: 1, totalMarks: 10, examSnapshot: examWith(codingQuestion()) }
+      ["platform/assignments/" + AID + ".json"]: { schemaVersion: 2, attemptModelVersion: 3, attemptPolicy: "pausable", assignmentId: AID, classId: "c1", title: "واجب", instructions: "", status: "published", openAt: "", dueAt: new Date(Date.now() + 864e5).toISOString(), maxAttempts: 1, durationMinutes: 30, questionCount: 1, totalMarks: 10, examSnapshot: examWith(codingQuestion(), OTHER_Q) }
     });
     const deps = { container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: S1, sv: 1, role: "student" } }), recordAchievementIfEligible: async () => {} };
     const post = async body => (await submissionHandler({ method: "POST", params: { assignmentId: AID }, headers: { get: () => null }, json: async () => body }, deps));
@@ -215,7 +217,8 @@ describe("RF — code answers are bound to the published coding question (langua
     { examQuestionId: "t1", presentationType: "shortAnswer", text: "اشرح", marks: 2 },
     { examQuestionId: "cq", presentationType: "compound", text: "مركّب", marks: 4, parts: [{ id: "p1", type: "shortAnswer", text: "أ", marks: 2 }, { id: "p2", type: "shortAnswer", text: "ب", marks: 2 }] },
     codingQuestion({ examQuestionId: "c2", questionTypeVersion: 4, coding: BOUND_CFG }),   // 17F-C2 RF1: coding@2 is supported · 19F: coding@3 too; coding@4 is the unsupported version
-    codingQuestion({ examQuestionId: "c3", coding: { ...BOUND_CFG, allowedLanguages: ["cobol"], defaultLanguage: "cobol" } })
+    codingQuestion({ examQuestionId: "c3", coding: { ...BOUND_CFG, allowedLanguages: ["cobol"], defaultLanguage: "cobol" } }),
+    OTHER_Q
   ] }] });
   it("bindCodeAnswerToQuestion (shared, pure): allowed language + within the question's limit → kept; otherwise a precise refusal", () => {
     const { bindCodeAnswerToQuestion } = sharedQuestion();

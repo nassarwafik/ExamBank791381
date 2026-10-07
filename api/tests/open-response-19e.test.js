@@ -73,8 +73,8 @@ describe("19E — ingest binding (draft / submit)", () => {
     for (const a of [{ kind: "text", value: 5 }, { kind: "choice", index: 0 }, { kind: "fields", values: { a: "b" } }, "text"])
       expect(normalizeDraftAnswers({ o1: a }, exam([oq()])).rejected, JSON.stringify(a)).toEqual([{ id: "o1", code: "OPEN_RESPONSE_ANSWER_INVALID" }]);
   });
-  it("legacy text answers on other questions are untouched", () => {
-    expect(normalizeDraftAnswers({ sa1: { kind: "text", value: "x", extra: 1 } }, exam([shortQ()])).answers.sa1).toEqual({ kind: "text", value: "x", extra: 1 });
+  it("legacy text answers on other questions keep their value (20G.1: rebuilt to exactly { kind, value } — an extra key is never stored)", () => {
+    expect(normalizeDraftAnswers({ sa1: { kind: "text", value: "x", extra: 1 } }, exam([shortQ()])).answers.sa1).toEqual({ kind: "text", value: "x" });
   });
 });
 

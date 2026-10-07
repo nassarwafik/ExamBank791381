@@ -45,7 +45,7 @@ function makeDeps() {
 function seed(store, extra = {}) {
   store.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
   store.set("platform/classes/c1.json", { classId: "c1", status: "active" });
-  store.set(ASG, { assignmentId: "asg1", classId: "c1", status: "published", maxAttempts: 1, title: "واجب", examSnapshot: { questions: [] }, ...extra });
+  store.set(ASG, { assignmentId: "asg1", classId: "c1", status: "published", maxAttempts: 1, title: "واجب", examSnapshot: { questions: [{ id: "q1", type: "shortAnswer", text: "?", marks: 1 }] }, ...extra });   // 20G.1 — q1 is a question of the published exam (unknown ids are never stored)
 }
 
 const req = (method, action, answers = {}) => ({ method, params: { assignmentId: "asg1" }, json: async () => ({ action, answers }) });
