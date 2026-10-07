@@ -130,10 +130,17 @@ describe("20G AI composer — modes B–E on CERTIFIED exams (private keys prese
     expect(a.ok).toBe(true);
     expect(JSON.stringify(allQs(a.exam)[6].answer)).toBe(before);
     expect(allQs(a.exam)[6].marks).toBe(15);
-    const marks = await modify(exam, "improveContent", { kind: "question", questionId: "c2-1" }, "حسّن صياغة السؤال.", F.patch([F.op("updateQuestionMarks", { questionId: "c2-1", marks: 20 })]));
-    expect(marks.r.ok).toBe(false);
-    const other = await modify(exam, "improveContent", { kind: "question", questionId: "c2-1" }, "حسّن صياغة السؤال.", F.patch([F.op("updateQuestionText", { questionId: "c2-2", text: "x" })]));
-    expect(other.r.ok).toBe(false);
+    // every repair attempt repeats the hostile patch, so the refusal is the VALIDATION verdict on that patch (never a script that ran dry)
+    const refused = async patch => {
+      const { t, calls } = transportFor({ ai_exam_patch: [patch, patch, patch, patch] });
+      const r = await runModify(t, { exam, mode: "improveContent", scope: { kind: "question", questionId: "c2-1" }, instruction: "حسّن صياغة السؤال.", report: () => {}, nonce: "cert20" });
+      expect(r.ok).toBe(false);
+      expect(r.failure.kind).toBe("validation");
+      expect(calls.length).toBe(3);
+      return r.failure.issues.map(i => i.code);
+    };
+    expect(await refused(F.patch([F.op("updateQuestionMarks", { questionId: "c2-1", marks: 14 })]))).toEqual(["PATCH_SCOPE_VIOLATION"]);   // protected field
+    expect(await refused(F.patch([F.op("updateQuestionText", { questionId: "c2-2", text: "اكتب برنامج Java." })]))).toEqual(["PATCH_SCOPE_VIOLATION"]); // another question
   });
   it("selective apply: of a two-operation patch, applying operation 0 only changes exactly that; undo restores the exam byte-for-byte (one history step)", async () => {
     const exam = examA();
