@@ -444,6 +444,14 @@ block where Review Fix 1 inserted a line); it was re-targeted and KILLED in roun
 **Totals on the final code: 77 plants, every one KILLED.** That is the 60 re-run plants and 17 Review Fix 1 plants, each after an
 unmutated pre-check. There were no timeouts and no unexplained survivors. `git status` was unchanged after every round.
 
+**Round 6 — the re-review's two survivors on `1f39b78`.** Both are pinned in Review Fix 2 and were **KILLED** after an unmutated
+pre-check:
+
+- **N04:** the nothing-to-tick rule checking only the first row's control;
+- **N06:** the separator-in-label guard without `,`.
+
+**Final totals: 79 author plants plus the reviewer's 33 on the final code, all KILLED.**
+
 ## 21. Full validation
 
 Directive §31, run sequentially (`scratchpad/20g3/fullval.sh`) with `dist` removed first:
@@ -519,7 +527,33 @@ added to the initial graph.
 - **N2:** `correct:true` with `manualReview:true` when marks are 0; a forged `"false"` string takes a first-N slot; the card draws a
   stored `"false"` string as ticked.
 
-The new head is re-reviewed. Its verdict is recorded in the pull-request body; a document commit cannot certify its own head.
+**Round 2, on `1f39b78`:** NOT READY, but only for two missing test assertions; no production defect. The reviewer re-ran its
+21 mutants plus 12 aimed at the fixes: 31 KILLED, 2 SURVIVED.
+
+- **N06:** the separator-in-label guard's comma branch was not pinned.
+- **N04:** the nothing-to-tick rule's "every row" condition was not pinned with a mixed table whose first row is a checkbox.
+  The reviewer's literal example mapped both rows to the boolean select through the `fields[index]` fallback, so the pin uses
+  `field.order` 5 / 1 to obtain `[checkbox, select]`.
+
+All of its attacks on F1, F2, F4 and F5 confirmed the fixes:
+
+- the partial / case / whitespace all-false keys, mixed tables and first-N behaviour;
+- labels with an Arabic comma, an Arabic semicolon or a fullwidth comma;
+- malformed fields rendered through the real card;
+- non-string word-bank entries;
+- 40,000 generated keyed questions, whose only differences from baseline are the all-false keys (full credit → review).
+
+**Review Fix 2** pins N04 and N06 (test-only). Both mutants are now KILLED.
+
+**Notes from round 2:**
+
+- An option `value` or word-bank entry that is an object still crashes the card. This is pre-existing, and the baseline crashes
+  the same way; the grader fails closed to review (§25).
+- One root-suite test, `src/StudentExamPage.attemptPolicy.7a.test.tsx`, failed once in the reviewer's own run while its machine was
+  under heavy parallel load. It passed in isolation three times, in every author run and in CI on the same head. It is not touched
+  by this PR, and it is recorded as an owner-tracked observation.
+
+The final head is re-reviewed; its verdict is recorded in the pull-request body.
 
 ## 24. Exact-head CI
 
@@ -547,6 +581,10 @@ The run IDs, attempts and conclusions for the exact head are recorded in the pul
    - A 0-mark table result reports `correct:true` together with `manualReview:true`.
    - A forged `"false"` string cell takes a first-N slot; this only hurts the student who forged it.
    - The card draws a stored `"false"` string as ticked.
+
+   - An option `value` or word-bank entry that is an object still crashes the card ("Objects are not valid as a React child"),
+     exactly as on c2a49e9; the grader fails closed to review. A follow-up could accept only primitive values in
+     `resolveTableRowOptions`.
 
    All are recorded as follow-ups.
 
