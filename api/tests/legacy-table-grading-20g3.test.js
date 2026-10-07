@@ -196,3 +196,26 @@ describe("20G.3 tableFill, placement (20G.2) and answer-kind authority are uncha
     expect(gradeQuestion(num, table(["4"]))).toMatchObject({ score: 0 });
   });
 });
+
+// Added after mutation round 1 (survivors M07 / M15 / M18 / M20 of the design-specific plants): each closes a gap the campaign proved.
+describe("20G.3 keyed check-box rows, drawn-row answered-ness and key parsing (mutation round 1 additions)", () => {
+  const CBK = key => ({ ...CB(), answer: { text: key } });
+  it("T31 a check-box table keyed row=true / row=false grades the TICKS the card sends: unticked (never touched → null) rows read as false", () => {
+    const q = CBK("10.0.0.1=true; 8.8.8.8=false; 192.168.1.10=true");
+    expect(grade(q, uiTable([0, true], [2, true]))).toEqual({ score: 6, maxMarks: 6, correct: true, manualReview: false });   // [true, null, true]
+    expect(grade(q, uiTable([0, true]))).toEqual({ score: 4, maxMarks: 6, correct: false, manualReview: false });
+    expect(grade(q, table([true, true, true]))).toEqual({ score: 4, maxMarks: 6, correct: false, manualReview: false });
+  });
+  it("T32 a check-box row keyed with anything but true / false (نعم / لا / ✓) cannot say ticked or unticked → teacher review", () => {
+    for (const key of ["10.0.0.1=نعم; 8.8.8.8=لا; 192.168.1.10=نعم", "10.0.0.1=✓; 8.8.8.8=; 192.168.1.10=✓", "10.0.0.1=1; 8.8.8.8=0; 192.168.1.10=1"])
+      expect(grade(CBK(key), table([true, false, true])), key).toEqual(REVIEW(6));
+  });
+  it("T33 answered-ness is decided on the DRAWN rows only: a tick sent beyond the last row neither answers the table nor earns unticked rows", () => {
+    expect(grade(CB(), table([false, false, false, true]))).toEqual({ score: 0, maxMarks: 6, correct: false, manualReview: false });
+    expect(grade(CBK("10.0.0.1=false; 8.8.8.8=false; 192.168.1.10=true"), table([null, null, null, true, "x"]))).toEqual({ score: 0, maxMarks: 6, correct: false, manualReview: false });
+  });
+  it("T34 a key value containing '=' keeps everything after the FIRST '=' (historical pairMap parsing, pin)", () => {
+    const q = { ...KT(), answer: { text: "Router=ip route 0.0.0.0 0.0.0.0 = gw؛ Switch=a=b؛ Hub=1" } };
+    expect(grade(q, table(["ip route 0.0.0.0 0.0.0.0 = gw", "a=b", "1"]))).toEqual({ score: 6, maxMarks: 6, correct: true, manualReview: false });
+  });
+});

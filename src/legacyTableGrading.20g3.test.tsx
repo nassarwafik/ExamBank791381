@@ -9,7 +9,8 @@ import { createRequire } from "node:module";
 import StudentQuestionCard, { type Question, type Answer } from "./StudentQuestionCard";
 
 const require_ = createRequire(import.meta.url);
-const { gradeQuestion } = require_("../api/src/lib/assignment-grading.js");
+const { gradeQuestion, legacyTableMode } = require_("../api/src/lib/assignment-grading.js");
+const { legacyAnswerKindAllowed } = require_("../api/src/lib/shared-finalization/questionTypeAliases.js");
 
 afterEach(() => cleanup());
 
@@ -97,5 +98,64 @@ describe("20G.3 renderer-mode parity: the card's per-row control IS the shared t
       cleanup();
     }
     expect([...seen].sort()).toEqual(["checkbox", "select", "text"]);
+  });
+});
+
+// Directive §24 — the full chain for every representative top-level shape: question shape → control the card DRAWS → Answer.kind the card
+// EMITS when that control is operated → the server's table MODE (legacyTableMode, from the question alone) → the grading AUTHORITY of the
+// emitted answer (automatic only for keyed / checkbox; 0 + teacher review otherwise; a shape that draws no legacy table never reaches the
+// table grader: the 20G.2 binding refuses a table there). Non-vacuous: every control, every mode and both authorities are reached.
+describe("20G.3 renderer → server grading-mode matrix (shape → control → Answer.kind → server mode → authority)", () => {
+  const CBQ = (key: string) => ({ ...CB, answer: { text: key } });
+  const MATRIX: [string, Record<string, unknown>, string | null, string][] = [
+    ["text cells, key names no row (L-F2)", LF2, "text", "manual"],
+    ["text cells, row=value key", { ...LF2, answer: { text: "PC1=a;PC2=b" } }, "text", "keyed"],
+    ["text cells, key lists rows (membership)", { ...LF2, answer: { text: "PC1" } }, "text", "manual"],
+    ["checkbox, membership key", CB, "checkbox", "checkbox"],
+    ["checkbox, row=true/false key", CBQ("10.0.0.1=true;8.8.8.8=false;192.168.1.10=true"), "checkbox", "keyed"],
+    ["checkbox, key names no row", CBQ("العناوين الخاصة"), "checkbox", "manual"],
+    ["select, row=value key", MT, "select", "keyed"],
+    ["select, membership key", { ...MT, answer: { text: "HTTP" } }, "select", "manual"],
+    ["select, key never offered (LIB-F06-Q41)", { ...MT, answer: { text: "HTTP=1;IP=2;Ethernet=3" } }, "select", "manual"],
+    ["boolean select, row=true/false key", { ...SHAPES_BOOLEAN(), answer: { text: "R1=true;R2=false" } }, "select", "keyed"],
+    ["field-type tableFill grid", { examQuestionId: "tg", presentationType: "tableFill", text: "| أ | ب |\n|---|---|\n| R1 | |", marks: 1, tableHeaders: ["أ", "ب"], tableRows: [["R1", ""]], fields: [{ id: "c1", row: 0, column: 1, correct: "x" }], answer: { text: "R1=x" } }, null, "bound-out"],
+    ["non-table question", { examQuestionId: "sa", presentationType: "shortAnswer", text: "اشرح", marks: 1, answer: { text: "x" } }, null, "none"],
+  ];
+  function SHAPES_BOOLEAN() { return { examQuestionId: "bs", presentationType: "tableFill", text: "صنّف\n| العبارة | الحكم |\n|---|---|\n| R1 | |\n| R2 | |", marks: 2, fields: [{ id: "f0", kind: "boolean" }, { id: "f1", kind: "boolean" }] }; }
+  it("every shape maps its drawn control to the expected server mode and grading authority; every control / mode / authority is reached", () => {
+    const seen = { control: new Set<string>(), mode: new Set<string>(), authority: new Set<string>() };
+    for (const [name, q, control, mode] of MATRIX) {
+      const m = mount(q);
+      const legacyRows = [...m.container.querySelectorAll("table tbody tr")].filter(tr => tr.firstElementChild?.matches("th[scope=row]"));
+      if (control === null) {
+        expect(legacyRows.length, name).toBe(0);                                        // no legacy table is drawn, so no table answer is emitted
+        const forged = { kind: "table", values: ["x"] };
+        if (mode === "bound-out") expect(legacyAnswerKindAllowed(q, "table"), name).toBe(false);
+        else expect(legacyTableMode(q).mode, name).toBe("none");
+        expect(gradeQuestion(q, forged), name).toMatchObject({ score: 0, manualReview: true });
+        seen.mode.add(mode); seen.authority.add("review"); cleanup(); continue;
+      }
+      // the control the card draws on EVERY row
+      const drawn = legacyRows.map(tr => tr.querySelector("select") ? "select" : tr.querySelector("input.iex-check") ? "checkbox" : "text");
+      expect(new Set(drawn), name).toEqual(new Set([control]));
+      // operate the first row's real control → the emitted Answer
+      const first = legacyRows[0];
+      if (control === "select") { const s = first.querySelector("select")!; fireEvent.change(s, { target: { value: [...s.options].filter(o => o.value)[0].value } }); }
+      else if (control === "checkbox") fireEvent.click(first.querySelector("input.iex-check")!);
+      else fireEvent.change(first.querySelector("input.iex-cell")!, { target: { value: "x" } });
+      const answer = m.answer()!;
+      expect(answer.kind, name).toBe("table");
+      expect(legacyAnswerKindAllowed(q, "table"), name).toBe(true);                      // the 20G.2 binding admits what the card emits
+      expect(legacyTableMode(q).mode, name).toBe(mode);
+      const g = gradeQuestion(q, answer);
+      const authority = g.manualReview ? "review" : "automatic";
+      expect(authority, name).toBe(mode === "manual" ? "review" : "automatic");
+      if (mode === "manual") expect(g.score, name).toBe(0);
+      seen.control.add(control); seen.mode.add(mode); seen.authority.add(authority);
+      cleanup();
+    }
+    expect([...seen.control].sort()).toEqual(["checkbox", "select", "text"]);
+    expect([...seen.mode].sort()).toEqual(["bound-out", "checkbox", "keyed", "manual", "none"]);
+    expect([...seen.authority].sort()).toEqual(["automatic", "review"]);
   });
 });
