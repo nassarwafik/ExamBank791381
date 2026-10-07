@@ -29,6 +29,14 @@ describe("20G D4 — cliFill placeholders follow their fields through duplicate 
     expect(cliPlaceholders(c.cli)).toEqual([c.fields[0].id, c.fields[0].id, c.fields[1].id]);
     expect(errors(structuredExamCopy(exam()))).toEqual([]);
   });
+  it("whitespace-padded placeholders ([[ vlan ]], the same id the validator trims) are remapped too; the original is already finalizable", () => {
+    const padded = { ...cli(), cli: "R1(config)# interface g0/0.[[ vlan ]]\nR1(config-subif)# encapsulation dot1Q [[vlan ]]\nR1(config-subif)# ip address [[ ip]] 255.255.255.0" } as unknown as BuilderQuestion;
+    expect(errors(exam(padded))).toEqual([]);
+    const sections = duplicateQuestion(exam(padded).sections, "s1", "c1");
+    const copy = sections[0].questions[1] as unknown as { cli: string; fields: { id: string }[] };
+    expect(errors({ ...exam(padded), sections })).toEqual([]);
+    expect(cliPlaceholders(copy.cli)).toEqual([copy.fields[0].id, copy.fields[0].id, copy.fields[1].id]);
+  });
   it("a cliFill PART of a legacy compound: duplicatePart and the question clone remap the part's placeholders too", () => {
     const part = { id: "p1", label: "أ", type: "cliFill", text: "أكمل", marks: 2, cli: "Switch(config)# vlan [[v]]", fields: [{ id: "v", label: "VLAN", correct: "10" }] } as unknown as BuilderPart;
     const parts = duplicatePart([part], "p1") as unknown as { cli: string; fields: { id: string }[] }[];
