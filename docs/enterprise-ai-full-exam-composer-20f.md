@@ -134,6 +134,14 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
 
   Every search for a minimum stops at the last digits of x (at most 120 steps), so the 10⁻¹² samples are taken around the zero itself.
 
+  A touching root is also a root when f is **negligible** there (Review Fix 12): |f| at the minimum (or within 10⁻⁹ of it, where the
+  evaluator defines f) is at most a thousandth of |f| 10⁻⁴ away on both sides. An expression that **cancels** around its zero
+  (x·√(x² − 6x + 9) = x·|x − 3| at 3) is exactly 0 only in a band of a few 10⁻⁹ and rounding noise (≈ 10⁻⁷) or undefined beside it, so the
+  search's minimum lands on noise and the vanishing rule sees zeros and gaps — yet the noise is a thousand times below f one step away.
+  A floor (|x − a|^0.25 + 10⁻³) or a shallow minimum ((x − 2)² + 10⁻⁶) is not negligible: f barely moves over 10⁻⁴. The rule applies to
+  f's touching roots inside the window and at the cusps; beyond the window the level is relative to the samples 2.6 % away, which
+  absorbs the same noise.
+
   The same rule decides f's own touching roots, inside the window (x·√|x − 1.3|) and beyond it (x·√|x − 7| on [−5, 5]), and a zero at
   the edge of a guard's own domain (√(x + 2) at −2, (x² − 2)^0.25 at ±√2), on the defined side only. A zero exactly halfway between two
   samples is found (ties count, Review Fix 9).
@@ -147,7 +155,16 @@ schema uses these as enums; every normalizer re-checks them; "latest" does not e
   **Edge cells (Review Fix 11).** The first and last samples have a neighbour on one side only. The grid is therefore continued past each
   edge, for 1.1·10⁻³ and at least two steps (where the scan beyond the window takes over), for extrema, touching roots, exact zeros and
   sign changes; the guards are sampled over the edge cells too. An extremum or a touching root **on** an edge (x⁴ − 2x² on [−1, 1]) must
-  be in the key. One found more than 10⁻⁶ past an edge refuses the key (`AI_FUNCTION_WINDOW_TOO_NARROW`).
+  be in the key. One found past an edge refuses the key (`AI_FUNCTION_WINDOW_TOO_NARROW`).
+
+  **On the edge (Review Fix 12).** One tolerance, EDGE_TOL = 10⁻⁵ relative to max(1, |edge|), decides what is on a window edge: a
+  feature within it belongs to the window and must be in the key, and a key point within it is inside the window; the evaluator's
+  rounding of exp places the minimum of (x − 1)·eˣ at 1.1·10⁻⁶, and a domain edge truncated to 6 decimals lies 5·10⁻⁷ past the window's.
+  **Domain edges just past the window (Review Fix 12).** The scan beyond the window starts from the edge's own definedness, so a domain
+  edge less than 10⁻³ past it is seen: where f tends to 0 there (x·√(2 − x²) on [−1.414, 1.414], the domain truncated to 3 decimals) the
+  key is refused ("widen the window"); within EDGE_TOL of the edge the probe records it as a stretch end and as a root the key must list
+  (±1.4142 on [−1.414213, 1.414213]). A domain edge that close changes neither the exclusions nor the monotonic key, so those are not
+  refused for it.
 
   The guards are bounded (at most 12 guarded sub-expressions within the node budget; more refuses the key as too complex).
 
@@ -1278,6 +1295,129 @@ Every planted defect in the current code is killed except the 5 equivalents. Eve
 `git status` after every campaign. Two runs were stopped mid-way to fix the regressions above; each time the mutated file was restored
 from `HEAD` and its blob hash compared.
 
+### 11.17 Fresh re-review and Review Fix 12: domain edges just past the window, cancelling expressions, one edge tolerance
+
+A fresh re-review of `02d207c` found 0 BLOCKER, 2 MAJOR, 0 MINOR findings and 4 notes. Both MAJORs exist on `20966d8` too: RF11 did not
+introduce them, and its edge strip and cusps did not reach them. The reviewer's edge battery (22 curriculum functions, extrema and roots
+on, inside and past each edge, 89 856 keys) accepted 0 wrong keys on `02d207c` against 1 766 on `20966d8`.
+
+| Finding | Fix |
+|---|---|
+| MAJOR-1 a domain edge where f tends to 0, less than 10⁻³ past a window edge (x·√(2 − x²) on [−1.414, 1.414], √(5 − x²)·(x − 1) on [−2.236, 2.236]), was never seen: the scan beyond the window started with no notion of the edge's own definedness, the edge strip skips undefined samples, and a cusp at a domain edge is defined on one side only. 252 / 390 incomplete keys accepted whenever the window is the domain truncated to 3–6 decimals; the real grader fails the correct student 0 / 10 | the scan beyond the window starts from the edge's own definedness: a domain edge in its first cell is a root when f tends to 0 there ("widen the window"). Within EDGE_TOL of the edge it is the window's own edge: the probe records it as a stretch end and, when f tends to 0, as a root the key must list (±1.4142 on [−1.414213, 1.414213]) |
+| MAJOR-2 a touching root of an expression that **cancels** around its zero (x·√(x² − 6x + 9) = x·\|x − 3\| at 3) was missed on most windows: f is exactly 0 only in a band of a few 10⁻⁹ and rounding noise (≈ 10⁻⁷) or undefined beside it, so the search's minimum landed on noise and the vanishing rule saw zeros and gaps; 17 / 613 and 26 / 441 in the reviewer's batteries, depending on whether a grid sample landed in the band | a touching root is also a root when \|f\| at the minimum is **negligible**: at most a thousandth of \|f\| 10⁻⁴ away on both sides. The same rule applies inside and beyond the window and at the cusps |
+| NOTE-1 past the exclusions' cap (40) the cusps beyond the window were dropped with the exclusions (contrived) | `guardInfo` reports `excludedCapped` instead of dropping everything: the probe refuses as before, the scan beyond the window fails closed for exclusion / pole tasks and still checks the cusps |
+| NOTE-2 an extremum ON the edge of (x − 1)·eˣ on [−8, 0] was placed 1.1·10⁻⁶ past it by the evaluator's rounding of exp and refused the correct key (fails closed) | one tolerance, EDGE_TOL = 10⁻⁵ (relative to max(1, \|edge\|)), decides what is on a window edge; it replaces RF11's two 10⁻⁶ tolerances |
+| NOTE-3 §11.16 dated the left-edge regression to `d180e8d`; the unordered search dates from `5d3739b`, and the tests fail on `f9ec7fe` too | corrected below |
+| NOTE-4 the AD02 equivalence argument holds | — |
+
+**Correction to §11.16 (NOTE-3).** The two left-edge regression tests fail on every commit from `5d3739b` to `d180e8d` (the search
+without an ordered bracket) and pass on `20966d8` and from `59747bc` on.
+
+**Fail-first.** `composerReviewFix12.20f.test.ts` holds 18 tests, run on `02d207c`: **11 fail**, each one an incomplete key accepted or a
+correct key refused, and 7 are labelled **pins**. Sample assertions:
+- `x*sqrt(2-x^2) {"xMin":-1.414,"xMax":1.414,"xIntercepts":[0]}: expected [] to deeply equal [ 'AI_FUNCTION_WINDOW_TOO_NARROW' ]`
+- `x*sqrt(x^2-6*x+9) {"xMin":-1,"xMax":5,"xIntercepts":[0]}: expected [] to deeply equal [ 'AI_FUNCTION_KEY_INCOMPLETE' ]`
+- `(x-1)*exp(x) {"xMin":-8,"xMax":0,"extrema":[{"kind":"min","x":0,"y":-1}]}: expected '[{"code":"AI_FUNCTION_WINDOW_TOO_NARROW"…' to be 'ok'`
+- `1/(x-2)+0/(…) {"verticalAsymptotes":[2]}: expected [] to deeply equal [ 'AI_FUNCTION_WINDOW_TOO_NARROW' ]` (fail closed past the cap)
+
+The pins: a domain edge where f tends to a non-zero value, the outward-rounded window, a shallow positive minimum, the two floors that
+the negligible rule refuses, the exclusions' cap inside the window, and a hole where f tends to 0.
+
+**Batteries on the head (`980986b`; identical on `c7a5105`).** The reviewer's RF12 batteries and every earlier one:
+- domain edges truncated to 2–6 decimals (`de3`): 0 / 390 incomplete keys accepted (`20966d8` and `02d207c`: 252);
+- cancelling perfect squares under a root or a power (`sq2`, `sq4`): 0 / 613 and 0 / 441 (`20966d8`: 15 and 15; `02d207c`: 17 and 26);
+- the reviewer's edge batteries (`eb`, `eb2`: extrema and roots on, inside and past each edge): 0 wrong keys accepted out of 88 704 and
+  89 856; correct keys refused 1 824 and 672 — all for a feature that really lies beyond the window (the battery keys only what is
+  inside) — 4 fewer than on `02d207c` (the NOTE-2 cases), 1 896 fewer than on `20966d8`;
+- edge extrema 0 / 66; steep roots beside another root 0; touching roots beyond the window 0 / 90; fractional-power guards 0 / 2 700;
+- curriculum 0 / 1 312 refused; `cur2` 2 / 2 388 refused, the same two (x² − 4)/(x² − 1) windows as every round since RF7 (a pole just
+  beyond the window, fail closed); wrong keys 0 / 4 356 accepted; holes 0 / 342; flat degree-8 0 / 540 wrong accepted and 0 / 180 correct
+  refused; decimal poles 0 / 89; domain-edge batteries 0; RF9 batteries 0;
+- fuzzers 0 exceptions, 2 304 / 2 345 self-keyed functions accepted (unchanged), worst probe + build 271–314 ms over two runs; the adversarial cusp and
+  zigzag inputs peak at 214 ms (`02d207c`: 301 ms as measured by the reviewer).
+
+**RF12 mutation campaign.** The first run on `a814604` planted 28 mutants: **17 KILLED, 11 SURVIVED, 0 TIMEOUT**. For each survivor:
+- AF05, AF06, AF08, AF09, AF16, AF17, AF18, AF20 and AF21: a new test kills each (`c7a5105`);
+- AF10 (the negligible rule in the scan beyond the window): redundant — that scan's level is relative to its samples 2.6 % away, which
+  absorbs a cancelling expression's noise, and no construction told the two apart — removed;
+- AF12 (an undefined edge seeds the scan too): equivalent — a transition that starts at an undefined edge ends on the edge, within
+  EDGE_TOL, and is skipped — the line is simplified.
+
+The re-run on `c7a5105` (311 mutants) left four more survivors — AA04f, AA05d / AA05g and AC01f — which all marked clauses RF12 had made
+redundant: the vanishing rule at f's own touching minima (inside and beyond the window) and the exact-zero clause at a cusp. A power or a
+root is what makes a root steep, and every power base and root argument is a cusp, where the vanishing rule applies; an exact zero is
+negligible. The clauses were removed (`980986b`) rather than kept as equivalents. The re-run of every `composerSim.ts` mutant on
+`980986b` then left one survivor, AH01 (the cusp's vanishing check without the definedness guard): a test for a hole where f tends to 0
+kills it (`ec810c5`, a pin).
+
+The table lists every RF12 mutant and re-target with its outcome in the final re-run.
+
+| Id | File | Planted defect | Outcome | Killed by |
+|---|---|---|---|---|
+| AF01 | `composerSim.ts` | EDGE_TOL back to 1e-6 | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 NOTE-1 / NOTE-2 › NOTE-2: an extremum ON the edge that th |
+| AF02 | `composerSim.ts` | EDGE_TOL widened to 1e-3 | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AF03 | `composerSim.ts` | negligible: ratio 1e-3 → 1e-1 | KILLED | composerReviewFix11.20f.test.ts › 20F-RF11 MINOR-1 / NOTE-1 the vanishing rule follows the power dow |
+| AF04 | `composerSim.ts` | negligible: never | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-2 a touching root of an expression that cancels aro |
+| AF05 | `composerSim.ts` | negligible: one side only | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF06 | `composerSim.ts` | negligible: step 1e-4 → 1e-2 | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF07 | `composerSim.ts` | negligible: only the exact point | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-2 a touching root of an expression that cancels aro |
+| AF08 | `composerSim.ts` | cusp: negligible not used | INVALID (clause removed or re-targeted) | — |
+| AF09 | `composerSim.ts` | touching root: negligible not used | INVALID (clause removed or re-targeted) | — |
+| AF10 | `composerSim.ts` | outer touching root: negligible not used | REMOVED (redundant clause) | — |
+| AF11 | `composerSim.ts` | outer scan: edge definedness not seeded | INVALID (clause removed or re-targeted) | — |
+| AF12 | `composerSim.ts` | outer scan: an undefined edge seeds too (a pole on the edge starts a transition) | EQUIVALENT → line simplified | — |
+| AF13 | `composerSim.ts` | outer scan: first-cell domain change refuses points/slope keys | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MINOR-3 a window end that is a domain edge ends a monotonic |
+| AF14 | `composerSim.ts` | outer scan: first-cell domain edge never a root | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AF15 | `composerSim.ts` | outer scan: the window's own edge taken as a root beyond the window | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AF16 | `composerSim.ts` | outer cusps: on-edge cusps refuse the key | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF17 | `composerSim.ts` | capped exclusions beyond the window ignored | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF18 | `composerSim.ts` | capped exclusions refuse roots-only keys too | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF19 | `composerSim.ts` | guardInfo: the cap drops the cusps again (returns null) | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 NOTE-1 / NOTE-2 › NOTE-1: past the exclusions' cap, the c |
+| AF20 | `composerSim.ts` | guardInfo: the cap never set | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF21 | `composerSim.ts` | probe: capped exclusions not refused | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF22 | `composerSim.ts` | probe: window-end domain edge within EDGE_TOL not examined | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AF23 | `composerSim.ts` | probe: window-end domain edge probed at 1e-9 only | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AF24 | `composerSim.ts` | probe: window-end domain edge root not recorded | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AF25 | `composerSim.ts` | probe: window-end domain edge root tested on the wrong side | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AF26 | `composerSim.ts` | probe: window-end domain edge not recorded as a stretch end | KILLED | composerReviewFix8.20f.test.ts › 20F-RF8 MINOR-3 a window end that is a domain edge ends a monotonic |
+| AF27 | `composerSim.ts` | past-the-edge check: no tolerance | KILLED | composerReviewFix11.20f.test.ts › 20F-RF11 MAJOR-1 an extremum on the window's edge is a feature lik |
+| AF28 | `composerSim.ts` | past-the-edge check removed | KILLED | composerReviewFix11.20f.test.ts › 20F-RF11 MAJOR-1 an extremum on the window's edge is a feature lik |
+| W08f | `composerSim.ts` | gap edge bisected on 'not finite' (overflow = undefined) (RF12 code) | KILLED | composerReviewFix6.20f.test.ts › 20F-RF6 MINOR-1 poles at decimal positions keep their correct keys  |
+| X08f | `composerSim.ts` | beyond the window: domain flips ignored for exclusions / monotony (RF12 code) | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 each new layer holds on its own › beyond the window: a pole |
+| AB25f | `composerSim.ts` | cusps past the window not checked (RF12 code) | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 NOTE-1 / NOTE-2 › NOTE-1: past the exclusions' cap, the c |
+| AB26f | `composerSim.ts` | outer cusps: inside ones too (RF12 code) | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AC01f | `composerSim.ts` | cusp: exact zero not a root (RF12 code) | INVALID (clause removed or re-targeted) | — |
+| AC02f | `composerSim.ts` | cusp: vanishing not checked (RF12 code) | INVALID (clause removed or re-targeted) | — |
+| AA05f | `composerSim.ts` | f's touching roots: vanishing rule not used beyond the window (RF12 code) | INVALID (clause removed or re-targeted) | — |
+| X11f | `composerSim.ts` | outside scan: touching roots not checked (RF12 code) | INVALID (clause removed or re-targeted) | — |
+| AA04f | `composerSim.ts` | f's touching roots: vanishing rule not used inside the window (RF12 code) | INVALID (clause removed or re-targeted) | — |
+| R08f | `composerSim.ts` | touching roots not detected (RF12 code) | INVALID (clause removed or re-targeted) | — |
+| AB30f | `composerSim.ts` | cusp: any defined cusp is a root (RF12 code) | INVALID (clause removed or re-targeted) | — |
+| AF11g | `composerSim.ts` | outer scan: edge definedness not seeded (final code) | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 MAJOR-1 a domain edge where f tends to 0, just past a win |
+| AA05g | `composerSim.ts` | f's touching roots: vanishing rule not used beyond the window (final code) | INVALID (clause removed or re-targeted) | — |
+| X11g | `composerSim.ts` | outside scan: touching roots not checked (final code) | INVALID (clause removed or re-targeted) | — |
+| AG01 | `composerSim.ts` | a key point on the edge is outside the window again | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| X11h | `composerSim.ts` | outside scan: touching roots not checked (final RF12 code) | KILLED | composerReviewFix11.20f.test.ts › 20F-RF11 each rule holds on its own (final mutation re-run on 5974 |
+| R08h | `composerSim.ts` | touching roots not detected (final RF12 code) | KILLED | composerReviewFix11.20f.test.ts › 20F-RF11 NOTE-2 touching features in the last grid cell or just be |
+| AF09h | `composerSim.ts` | touching root: negligible not used (final RF12 code) | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AF08h | `composerSim.ts` | cusp: negligible not used (final RF12 code) | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 each new rule holds on its own (mutation campaign on a814 |
+| AC02h | `composerSim.ts` | cusp: vanishing not checked (final RF12 code) | KILLED | composerReviewFix11.20f.test.ts › 20F-RF11 each new rule holds on its own (mutation campaign) › a ro |
+| AB30h | `composerSim.ts` | cusp: any defined cusp is a root (final RF12 code) | KILLED | composerReviewFix7.20f.test.ts › 20F-RF7 MAJOR-1 a root at the edge of the domain is a root › an edg |
+| AH01 | `composerSim.ts` | cusp: vanishing checked at an undefined point too | KILLED | composerReviewFix12.20f.test.ts › 20F-RF12 a hole where f tends to 0 is not a root (final re-run on  |
+
+**Final re-run on the Review Fix 12 code.** 318 mutants: the 270 of the RF11 re-run, RF12's 28, AG01, AH01 and the re-targets. The mutants
+on `composerSim.ts` ran on `980986b` (and AH01, AD02 again on `ec810c5`) against every function-study suite, RF12 included; the mutants on
+the other files ran on `c7a5105`, which is the same code for those files.
+- **219 KILLED.**
+- **5 EQUIVALENT:** C19, C42, U02 and T07b as before (§11.4, §11.9, §11.10), and AD02 (§11.16).
+- **0 SURVIVED, 0 TIMEOUT.**
+- **94 INVALID:** the 68 of §11.16, the lines RF12 rewrote and the clauses it removed, each re-targeted or documented in the table above
+  (W08 → W08f, X08 → X08f, Y10 → AF22, AB20 → AF02, AB21 → AF27, AB25 → AB25f, AB26 → AB26f, AC01 / AC02 → AC02h, AB30e → AB30h,
+  R08e → R08h, X11d → X11h; the vanishing-rule clauses at f's touching minima and the exact-zero clause at a cusp no longer exist).
+
+Every planted defect in the current code is killed except the 5 equivalents. Every file was restored byte-for-byte, with a clean
+`git status` after every campaign.
+
 ## 12. Known limitations
 
 - Visual types (hotspot / labelDiagram) are not AI-generated (19D policy: no invented geometry); images are explicit teacher requests.
@@ -1291,8 +1431,14 @@ from `HEAD` and its blob hash compared.
   - a root where |f| falls more slowly than |x − a|^0.01 is found only where f is exactly 0 (a 12-digit point such as 1.3);
   - a floor below |f|'s value 10⁻¹² from the cusp passes as a root (|x − a|^0.25 + 10⁻⁴, whose minimum is 3·10⁻⁴), as does any touching
     minimum below 10⁻⁹;
-  - an extremum or a root within 10⁻⁶ past a window edge counts as on the edge. A very flat extremum on an edge whose centre the probe
-    cannot place within 10⁻⁶ refuses the key ("widen the window");
+  - an extremum, a root, a cusp or a domain edge within 10⁻⁵ (relative) past a window edge counts as on the edge, and a key point there
+    is in the window. A very flat extremum on an edge whose centre the probe cannot place within 10⁻⁵ refuses the key ("widen the
+    window");
+  - a positive minimum below a thousandth of f's values 10⁻⁴ away passes as a root (a √ cusp with a floor of 10⁻⁵, a V with a floor of
+    10⁻⁷, a parabola with a floor of 10⁻¹¹); the negligible rule exists for expressions that cancel around a zero, whose noise is of that
+    order;
+  - a domain edge where f tends to a non-zero value, less than 10⁻³ past the window edge, is accepted silently for exclusion and
+    monotonic keys (it changes neither);
   - in a window narrower than about 1.1·10⁻³, the grid past each edge (at most 2 000 samples) stops short of where the scan beyond the
     window starts;
   - functions the probe cannot decide (very steep poles, exp(1/x), growth too slow to confirm, undecidable behaviour at ±∞, overflow
