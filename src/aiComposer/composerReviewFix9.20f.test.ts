@@ -44,3 +44,16 @@ describe("20F-RF9 MINOR-1 a guard zero beyond the window counts only where f is 
     accepted("log(x)/(x^2-1)", ["domainExclusions"], { xMin: 0, xMax: 5, domainExclusions: [1] });
   });
 });
+
+describe("20F-RF9 each new guard rule holds on its own", () => {
+  it("an irrational guard edge (√(x² − 2) at ±√2) vanishes there and is open: not a root", () => {
+    accepted("(x-3)*(x^2-2)/sqrt(x^2-2)", ["xIntercepts"], { xIntercepts: [3] });
+  });
+  it("a zero too flat for the ratio rule (|2x − 1|^0.01) is caught exactly at its rounded position", () => {
+    incomplete("1/abs(2*x-1)^0.01+1/x", ["domainExclusions"], { xMin: -8, xMax: 8, domainExclusions: [0] });
+  });
+  it("a steep zero far above the absolute 1e-6 level (√|1000x − 707|) is caught by the ratio", () => {
+    incomplete("1/sqrt(abs(1000*x-707))+1/x", ["domainExclusions"], { xMin: -10, xMax: 10, domainExclusions: [0] });
+    accepted("1/sqrt(abs(1000*x-707))+1/x", ["domainExclusions"], { xMin: -10, xMax: 10, domainExclusions: [0, 0.707] });
+  });
+});

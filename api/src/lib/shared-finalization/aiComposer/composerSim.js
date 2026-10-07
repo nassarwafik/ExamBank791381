@@ -234,10 +234,8 @@ function zerosOf(g, xs) {
             else
                 lo = m;
         }
-        const sn = Number(lo.toPrecision(12)), g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
-        if (g(sn) === 0)
-            put(sn);
-        else if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far)))
+        const g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
+        if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far)))
             put(lo);
     };
     let pp = null, p = null, undefAt = null;

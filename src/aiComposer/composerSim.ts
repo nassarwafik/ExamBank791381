@@ -232,9 +232,8 @@ function zerosOf(g: (x: number) => number | null, xs: number[]): number[] {
   const edgeZero = (def: number, undef: number) => {
     let lo = def, hi = undef;
     for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (g(m) === null) hi = m; else lo = m; }
-    const sn = Number(lo.toPrecision(12)), g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
-    if (g(sn) === 0) put(sn);
-    else if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far))) put(lo);
+    const g0 = g(lo), far = g(lo + Math.sign(def - undef) * 1e-4 * Math.max(1, Math.abs(lo)));
+    if (g0 !== null && far !== null && (g0 === 0 || Math.abs(g0) <= 1e-3 * Math.abs(far))) put(lo);
   };
   let pp: { x: number; v: number } | null = null, p: { x: number; v: number } | null = null, undefAt: number | null = null;
   for (const x of xs) {
