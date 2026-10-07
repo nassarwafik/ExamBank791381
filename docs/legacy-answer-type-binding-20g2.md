@@ -84,15 +84,20 @@ The binding derives from the shared Question Type Catalog (`src/questionTypeCata
 asserts every modern row is outside the binding. `O1-CAT2` pins the eleven legacy rows literally, so an edit that drops a
 dual kind fails a test instead of silently narrowing the binding.
 
-**The one authority:** `legacyAnswerKindAllowed(question, kind)` in `src/questionTypeAliases.ts`, compiled into
+**The one authority:** `legacyAnswerKindAllowed(question, kind, placement)` in `src/questionTypeAliases.ts`, compiled into
 `api/src/lib/shared-finalization/questionTypeAliases.js` by `scripts/build-shared-finalization.mjs`, with the drift test
 green. For a legacy, typeless or unknown legacy-flat question it admits:
 
 1. the catalog `responseKinds` of the resolved type (exact key or alias);
 2. the kinds the **official legacy renderers** (`StudentQuestionCard`, `CompoundPartControl`) derive from the question's
    own content:
-   - `table` ⇐ the question text holds a markdown table with at least one data row (the client `parseTable` / server
-     `tableRows` rule);
+   - `table` ⇐ **only where the renderer draws a table** (Review Fix 1): the question text holds a markdown table with at
+     least one data row (the client `parseTable` / server `tableRows` rule), the question is answered at the top level
+     (`placement` `"question"`), and it is not a field-type question (`StudentQuestionCard`'s `isFieldType`: multiTrueFalse,
+     cliFill, tableFill with a `tableHeaders` / `tableRows` grid). A compound part or composite child (`placement`
+     `"part"`, answered through `CompoundPartControl`) never admits a drawable table. The catalog table kind (tableFill)
+     stays admitted where the text holds **no** table, in any placement: the table grader then finds no rows and fails
+     closed, so no score is reachable;
    - `sequence`, `fields` ⇐ the question carries a non-empty `fields` array;
    - `sequence` ⇐ the question's own answer key is a sequence (`answer.mode` `exactSequence` / `sequence`), except on a
      choice type;
@@ -100,16 +105,27 @@ green. For a legacy, typeless or unknown legacy-flat question it admits:
      lower-cased) is not `multiplechoice` / `truefalse`.
 
 `choice` comes **only** from the catalog choice family, aliases included. It is the only legacy grader with a positional
-shortcut (codes matched against any key value). Every content-derived kind is graded by a grader that credits only the keyed
-values: sequence compares position by position with `answer.values`; table compares row keys with `answer.text` pairs or
-check marks; fields compares each field with its own `correct`; text needs an exact `answer.text` match.
+shortcut (codes matched against any key value). `sequence`, `fields` and `text` are graded by graders that credit only keyed
+values (sequence: position by position with `answer.values`; fields: each field's own `correct`; text: an exact `answer.text`
+match), so admitting them where a current renderer happens not to draw them can never score without the answer.
+
+**`table` is the exception, and is therefore bound renderer-exactly** (Review Fix 1, finding F1). `gradeTable`'s check-mark
+mode (when `answer.text` holds no `row=value` pairs) credits every row whose label does not appear in `answer.text`, so a
+blank or all-false table scores on a question whose key names no row. Before Review Fix 1 the binding admitted `table`
+wherever the text held a table, and a forged table scored without the answer on a compound part, on a composite child and on a
+top-level multiTrueFalse / cliFill / tableFill-with-grid. None of those renderers draws a table. Where the renderer **does** draw
+a table on a top-level non-field question whose key is not a check-mark key (for example a shortAnswer whose stem holds a data
+table), the same check-mark credit is reachable by every student through the official client. That is a pre-existing grading
+semantics defect, not a response-kind forgery; it is recorded as limitation **L-F2** (§22) for the owner's decision.
 
 Why content-derived kinds at all: the official client has always produced them. For example, a `matching` question with
 fields renders word-bank selects and emits `sequence`, and a `fillBlank` without fields renders a textarea and emits `text`.
 A strict catalog-only binding would refuse answers the official client produces (directive §5 G/I).
 `src/legacyAnswerBinding.20g2.test.tsx` covers 25 type spellings × 6 content shapes × 2 placements. It renders every
-renderer, operates every control and asserts every emitted kind is admitted. All five legacy kinds are actually produced, so
-the sweep is not vacuous.
+renderer, operates every control and asserts every emitted kind is admitted (parts with `placement` `"part"`). All five legacy
+kinds are actually produced, so the sweep is not vacuous. Since Review Fix 1 it also checks the **converse** for the
+knowledge-free kind: `table` is admitted only where the card draws one, or where nothing table-like is drawable; a part never
+admits a drawable one.
 
 ## 7. Canonical type / alias resolution
 
@@ -144,6 +160,12 @@ Documented exceptions (each pinned by a test):
   would silently drop the only answer the client lets the student give (AGENTS §10). O1-L4 pins this. Canonical
   `multipleChoice` / `trueFalse` admit no text.
 - **E-3, empty containers.** `fields: []` and a header-only table prove nothing (O1-K', O1-J').
+- **E-5, catalog table with nothing drawable.** tableFill keeps its catalog `table` kind (directive §7) wherever its text holds
+  no table, including with a grid and on a part: the table grader finds no rows and fails closed (RF1-GRID; the 20G.1 D3 pins
+  on a grid tableFill).
+- **E-6, the type string.** The type is `presentationType || type` (Review Fix 1, F3), exactly as the renderer, the legacy
+  grader and the 16A registry derive it: a blank or non-string `presentationType` never borrows a modern flat type's "admit
+  everything" (RF1-F3), and an array type that stringifies to a choice type keeps its choice, as its radios do.
 - **E-4, unknown structured type / unsupported version.** These are the 16A registry's fail-closed result, unchanged.
   Ingest keeps storing a legacy-shaped answer for them, as on the baseline. Refusing it would change the ingest of modern
   types with an unsupported version, which this phase must not touch. The answer can never score. In a first-N section it
@@ -193,7 +215,8 @@ part level.
 ## 12. Compound behaviour
 
 Each part is graded as `{...part, presentationType: part.type || part.presentationType}`, unchanged, so the gate applies to
-every legacy part automatically. Ingest binds each part against that same node. Preserved:
+every legacy part automatically. Grading (`gradeCompound`, the part-unit section grader), first-N (`admittedResponse`) and ingest
+bind each part against that same node with `placement` `"part"` (no drawable table; RF1-F1a, RF1-F4b). Preserved:
 - part ids, part marks and `answerUnit:"part"`;
 - the specialized part mismatch codes (`CODE_/NETCLI_/SMARTSIM_/HOTSPOT_QUESTION_MISMATCH`, `COMPOUND_PART_UNKNOWN`);
 - the 20G.1 compound hardening.
@@ -202,8 +225,9 @@ The 20D compound freeze pins are byte-identical before and after (16 pins compar
 
 ## 13. Composite behaviour
 
-Composite children are graded through `gradeQuestion(compositeChildNode(raw) + marks)`, so a legacy child is gated, and a
-shortAnswer or ordering child with a forged choice scores 0 and goes to review (O1-X). Group first-N selection
+Composite children are graded through `gradeQuestion(compositeChildNode(raw) + marks, …, "part")`, so a legacy child is gated
+with the part placement, and a shortAnswer or ordering child with a forged choice (O1-X) or a forged table (RF1-F1b) scores 0
+and goes to review. Group first-N selection
 (`selectCompositeCountedParts`) now receives the **admitted** composite answer, so a mismatched child takes no group slot
 (O1-X'). The counted children are still graded from the stored answers. SmartSim-linked parts, the composite structure
 authority and the client composite model (which is in the initial bundle) are untouched.
@@ -224,7 +248,7 @@ migrating stored attempts is out of scope (§22).
 ## 15. Fail-first evidence
 
 The final suites were run on the untouched baseline `6db0fc0` (detached worktree, the same test files copied in):
-`api/tests/legacy-answer-type-binding-20g2.test.js` + `src/legacyAnswerBinding.20g2.test.tsx` → **47 tests: 37 fail / 10 pass on the baseline; 47 / 47 pass on this branch.**
+`api/tests/legacy-answer-type-binding-20g2.test.js` + `src/legacyAnswerBinding.20g2.test.tsx` → **47 tests: 37 fail / 10 pass on the baseline; 47 / 47 pass on the pre-review head** (Review Fix 1's fail-first is below).
 
 | Class | Count | Tests |
 |---|---|---|
@@ -234,6 +258,19 @@ The final suites were run on the untouched baseline `6db0fc0` (detached worktree
 
 The first version of the suite (33 tests) was run on the baseline before any production change: 25 fail / 8 pins pass. Tests added
 later (end-to-end resume / stale / retry, mutation-driven strengthening) were re-run on the baseline with the final suite above.
+
+**Review Fix 1 fail-first, against the pre-fix head `14f15c3`** (detached worktree, the RF1 suites copied in):
+- **Behavioural failures (6):**
+  - RF1-F1a: a forged table on a compound part was stored and graded 3/3;
+  - RF1-F1b: the same on a composite child;
+  - RF1-F1c: on a top-level multiTrueFalse, `expected { score: 2 … } to deeply equal { score: 0 … }`;
+  - RF1-F3: `expected { score: 5 … } to deeply equal { score: 0 … }`;
+  - RF1-SIM: the first version of that test;
+  - the converse parity check: `part "multipleChoice" tableText: expected true to be false`.
+- **Pins that pass on `14f15c3` (3):** RF1-F1d, RF1-F4 and RF1-F4b.
+
+Every earlier 20G.2 test passed on `14f15c3`. RF1-F1e (forged tables in part-unit sections and composite first-N groups) was
+added after mutation round 5 and is mutation-proven (P06 / P08 / P09 / P13 are killed by it).
 
 ## 16. Compatibility matrix
 
@@ -252,6 +289,13 @@ after it. The 16 pins are **byte-identical** (`cmp` equal), so no pin was recapt
 `{kind:"choice"}` on a **matching** child as its "well-formed, kept" control. That is exactly the O1 forgery, and no renderer
 ever produced it. The control is now an admitted `fields` answer for that child. The test's intent is unchanged: keep the
 well-formed child, drop and report the malformed one, never crash grading. O1-X now proves the choice is refused.
+
+**The second existing test whose input changed (Review Fix 1c):** `src/examBuilder.test.ts` "REVIEW 9" fed a compound
+**matching part** a `{kind:"table"}` answer. No compound renderer has ever emitted one: all 8 historical versions of
+`CompoundQuestion.tsx` / `CompoundPartControl.tsx` (checked with `git log`) route matching parts to the field-set control and
+emit only choice / fields / text, and compound answers did not exist before `CompoundQuestion`. The test's intent (the part has
+selectable options and grades to 4) is kept. Its input is now the field-set answer those selects emit, with the expectation
+unchanged at 4, and it additionally asserts that the forged table fails closed.
 
 **Renderer answer-kind matrix.** Generated by rendering `StudentQuestionCard` and operating every control. Each cell reads
 `emitted ⟶ admitted`:
@@ -334,8 +378,8 @@ either killed by a strengthened test in the next round (8 plants: 7 from round 1
 
 | Id | Planted defect | Outcome | Killed by |
 |---|---|---|---|
-| D-M01 | grading: restore `// response.kind === "choice"` (a choice skips the binding) | KILLED | O1-A |
-| D-M02 | grading: restore `// response.kind === "sequence"` (a sequence skips the binding) | KILLED | O1-K |
+| D-M01 | grading: restore `\|\| response.kind === "choice"` (a choice skips the binding) | KILLED | O1-A |
+| D-M02 | grading: restore `\|\| response.kind === "sequence"` (a sequence skips the binding) | KILLED | O1-K |
 | D-M03 | helper: table grader for any kind:"table" | KILLED | O1-J |
 | D-M04 | helper: fields admitted for every legacy type | KILLED | O1-K'' |
 | D-M05 | ingest: answer-kind check skipped | KILLED | O1-B |
@@ -370,6 +414,90 @@ either killed by a strengthened test in the next round (8 plants: 7 from round 1
 | D-M25a | unknown / unsupported type falls back to the client-selected legacy grader | KILLED | O1-L6 |
 | D-M25b | binding: an unknown legacy-flat type admits whatever the response claims | KILLED | O1-L5 |
 
+### Round 4 — Review Fix 1 plants on `11b0e41` (23): **partly invalid**
+
+23 plants were run against RF1: the reviewer's surviving X-mutants, re-targeted, plus new placement / field-type / simulation
+plants. All 23 reported KILLED, but 5 of those kills (R4-X02, P06, P08, P09, P13) came from the 20G.1 ingest tests, which were
+already failing on that head without any mutant. Those 5 results prove nothing. The runner now runs every suite unmutated first
+and refuses to start if any is red (round 5 onward).
+
+### Round 5 — every RF1 plant on the final code, after an unmutated pre-check (25)
+
+| Id | Planted defect | Outcome |
+|---|---|---|
+| R5-X02 | textHasTable: lines need not end with a pipe | KILLED |
+| R5-X03 | type: a non-blank-string presentationType else type (the pre-RF1 derivation) | KILLED |
+| R5-X04 | text rule decided by the resolved key, not the literal spelling | KILLED |
+| R5-X08 | gate: a stored null answer treated as a present mismatch | KILLED |
+| R5-X09 | admittedResponse: a broken composite admits nothing (silent zero in first-N) | KILLED |
+| R5-X10 | first-N compound part node: presentationType precedence reversed | KILLED |
+| R5-X11 | ingest binds the raw compound part, not the graded node | KILLED |
+| R5-X12 | ingest: size checked before kind | KILLED |
+| R5-X15 | binding ignores questionTypeVersion | KILLED |
+| R5-P01 | helper: table placement ignored (a part may answer with a table) | KILLED |
+| R5-P02 | helper: field-type questions may answer with a table | KILLED |
+| R5-P03 | helper: tableFill with a grid is not a field type | KILLED |
+| R5-P04 | server wrapper: placement dropped | KILLED |
+| R5-P05 | gradeCompound grades parts as top-level questions | KILLED |
+| R5-P06 | part-unit section grading: parts graded as top-level questions | SURVIVED in round 5 → KILLED after RF1-F1e (round 5c) |
+| R5-P07 | composite child graded as a top-level question | KILLED |
+| R5-P08 | first-N: compound part placement dropped | SURVIVED in round 5 → KILLED after RF1-F1e (round 5c) |
+| R5-P09 | first-N / composite selection: child placement dropped | SURVIVED in round 5 → KILLED after RF1-F1e (round 5c) |
+| R5-P10 | ingest: compound part placement dropped | KILLED |
+| R5-P11 | ingest: composite child placement dropped | KILLED |
+| R5-P13 | part-section ignored flag uses top-level placement | SURVIVED in round 5 → KILLED after RF1-F1e (round 5c) |
+| R5-U05 | TS helper: table placement ignored | KILLED |
+| R5-U06 | TS helper: field-type questions may answer with a table | KILLED |
+| R5-P14 | helper: with no drawable table every legacy type admits a table (not only catalog table types) | KILLED |
+| R5-P15 | helper: a drawable table also admits the catalog table kind on a part / field type | KILLED |
+
+### Round 6 — the directive's classes M01–M25 re-run on the final code (35)
+
+13 of these plants no longer applied (INVALID: their target line moved in Review Fix 1), and D-M14b had come to edit dead code.
+Each was re-targeted to the live code and run again (round 6b).
+
+| Class plant | Planted defect | Outcome |
+|---|---|---|
+| M01 | grading: restore `\|\| response.kind === "choice"` (a choice skips the binding) | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M02 | grading: restore `\|\| response.kind === "sequence"` (a sequence skips the binding) | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M03 | helper: table grader for any kind:"table" | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M04 | helper: fields admitted for every legacy type | KILLED |
+| M05 | ingest: answer-kind check skipped | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M06 | grading: answer-kind check skipped | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M07 | helper: mismatch allowed only for aliases (an alias / case variant bypasses) | KILLED |
+| M08 | helper: raw type resolved, aliases skipped | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M09 | helper: response.kind is the fallback authority when the type is unknown | KILLED |
+| M10 | helper: a missing type is response-authoritative | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M11a | catalog: fillBlank permits only sequence | KILLED |
+| M11b | helper: fillBlank refuses fields | KILLED |
+| M12a | catalog: fillBlank permits only fields | KILLED |
+| M12b | helper: fillBlank refuses sequence | KILLED |
+| M13a | catalog: wordBank loses sequence | KILLED |
+| M13b | helper: wordBank refuses fields | KILLED |
+| M14a | catalog: tableFill loses table | KILLED |
+| M14b | helper: tableFill refuses table | re-targeted (dead code) → KILLED |
+| M15a | catalog: tableFill loses fields | KILLED |
+| M15b | helper: tableFill refuses fields | KILLED |
+| M16 | helper: shortAnswer accidentally permits choice | KILLED |
+| M17 | helper: ordering accidentally permits choice | KILLED |
+| M18a | grading: compound child bypass (part sub-questions skip the binding) | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M18b | ingest: compound child bypass (part answers bound without their node) | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M19a | grading: composite legacy child bypass | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M19b | ingest: composite legacy child bypass | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M20a | first-N: a mismatched response counts as answered (question level) | KILLED |
+| M20b | first-N: a mismatched part counts as answered (part level) | KILLED |
+| M20c | first-N: a mismatched composite child counts in its group | KILLED |
+| M21 | grading trusts canonical-shaped (ingest-looking) data: old persisted {kind,index} passes | re-targeted (INVALID: target line moved in RF1) → KILLED |
+| M22 | review rebuild re-introduces an auto-score for a fail-closed (pending) grade | KILLED |
+| M23 | trueFalse implicit options broken | KILLED |
+| M24 | multipleChoice valid choice incorrectly manual-reviews | KILLED |
+| M25a | unknown / unsupported type falls back to the client-selected legacy grader | KILLED |
+| M25b | binding: an unknown legacy-flat type admits whatever the response claims | KILLED |
+
+**Campaign totals on the final code:** all 35 directive-class plants are KILLED, and all 25 Review Fix 1 plants are KILLED,
+each after an unmutated pre-check. Rounds 1–3 (69 plants on the pre-RF1 code: 68 killed, U04 equivalent) are kept above as
+history.
+
 **U04 is equivalent for the parity suite.** The client emits `choice` only for the literal spellings `multiplechoice` /
 `truefalse`, and `resolveQuestionTypeKey` resolves those case-insensitively without the alias table. Every other emitted
 kind (`text`, `table`, `sequence`, `fields`) is decided by rules that give the same answer without the alias resolution. The
@@ -377,20 +505,19 @@ same plant in the code the server runs (M07 / D-M08) is KILLED by O1-L.
 
 ## 18. Full validation
 
-Run sequentially on the code head `39cdba2`, after `rm -rf dist`. The design-record commit that follows changes only this
-file.
+Run sequentially on the final code head `8885f91` (Review Fix 1d'), after `rm -rf dist`. The design-record commit that follows
+changes only this file. The first validation, on `39cdba2` before the review, was 781 files / 10,311 tests, all pass.
 
 | Check | Result |
 |---|---|
-| Focused 20G.2 suites (`legacy-answer-type-binding-20g2.test.js`, `legacyAnswerBinding.20g2.test.tsx`) | 47 / 47 pass |
+| Focused 20G.2 suites (`legacy-answer-type-binding-20g2.test.js`, `legacyAnswerBinding.20g2.test.tsx`) | 54 + 4 pass |
 | O1 exploit reproduction | 7/7 on the baseline (§3); 0 + teacher review on the head (O1-A) |
-| 20D compound freeze pins | 12 / 12 pass; the 16 captured pins are byte-identical before and after |
-| Full root `npm test` (app + API + scripts, includes every 20G / 20G.1 certification, composite, first-N, submission / autosave, governance suite) | **781 files, 10,311 tests, all passed**, exit 0 |
+| 20D compound freeze pins + drift test | 14 / 14 pass; the captured pins match (no recapture) |
+| Full root `npm test` (app + API + scripts: every 20G / 20G.1 certification, composite, first-N, submission / autosave, governance suite) | **781 files, 10,322 tests, all passed**, exit 0 |
 | `npm run lint` | exit 0; 0 errors; 104 warnings, **exactly the baseline's warning set** (compared by file + rule) |
 | `npx tsc -b --force` | exit 0 |
 | `npm run build` | exit 0; bundle guard passed (§19) |
 | `git diff --check` | clean |
-| Shared-finalization drift test | 2 / 2 pass |
 | Runner unit suite (`npm --prefix runner test`, run in isolation; `runner/**` is untouched) | 407 / 407 pass, 0 skipped |
 
 ## 19. Bundle measurement
@@ -403,7 +530,34 @@ Recorded on the pull request (body table, refreshed for every pushed head) and i
 
 ## 21. Independent-review rounds
 
-An independent read-only adversarial review runs on the exact PR head with its own mutants. Every Review Fix commit is re-reviewed on its new head. Rounds and verdicts are recorded on the pull request and in the final report, for the reason given in §20.
+**Round 1, head `14f15c3`: NOT READY — REVIEW FIX REQUIRED.** A read-only adversarial reviewer worked in its own worktree. It
+ran a base-versus-head grading differential over 32,000 question × answer combinations (0 deviations for admitted answers; every
+refused answer fails closed), its own 17 mutants, the whole API directory and the renderer suites. Findings:
+
+| Id | Severity | Finding | Resolution |
+|---|---|---|---|
+| F1 | MAJOR | A forged `table` scored without the answer (check-mark mode) on a compound part, a composite child and a top-level field-type question; no renderer draws a table there | Review Fix 1: placement-aware, renderer-exact `table` (§6); RF1-F1a/b/c + the converse parity check |
+| F2 | MAJOR (pre-existing) | Check-mark table credit on a non-table question whose stem holds a data table, reachable through the official client | Not O1 (the question content selects the grader); grading semantics are the owner's decision. Recorded as L-F2 (§22); §6 corrected |
+| F3 | MINOR | The binding and the 16A registry read the type differently (blank / non-string `presentationType`) | Review Fix 1: one derivation, `presentationType \|\| type` (E-6); RF1-F3 |
+| F4 | MINOR | Survivors X02, X08, X09, X12, X15 (null answer, broken composite in first-N, E-4 ingest, table pipes, kind-before-size) | Pinned in RF1-F4; X10 / X11 killed by RF1-F4b; X17 equivalent (inherited keys are functions, never admitted or answered) |
+| NOTE | — | Simulation state stored on a legacy question; part with `presentationType` only | Documented (§22); the attempted ingest refusal was reverted, see below |
+
+**Review Fix history:**
+- **RF1 (`11b0e41`)** was committed and pushed after running only the 20G.2 suites, lint and the typecheck. On that head the
+  20G.1 ingest suite failed 8 tests, and the Quality Gate CI failed (run 37655057104). There were two over-reaches. First, it
+  refused the catalog `table` kind on a tableFill with a grid (20G.1 pins it). Second, it refused a simulation state on a
+  known legacy id (20G.1 D3-A' pins the historical path).
+- **RF1b (`1100125`)** restored both: E-5, the reverted simulation refusal and RF1-SIM. The full root suite then failed one
+  pre-existing test, `src/examBuilder.test.ts` REVIEW 9, which fed a compound matching part a `table` answer. No compound
+  renderer has ever emitted one (all 8 historical versions of `CompoundQuestion` / `CompoundPartControl` checked).
+- **RF1c (`81e8490`)** answers that part with the field-set answer its select controls emit. The expectation is unchanged (4),
+  and it adds an assertion that the forged table fails closed. Full root suite green; pushed after GitHub push errors (HTTP 500)
+  had cleared.
+- Mutation round 4 (on RF1) is **partly invalid**: 5 "kills" were attributed to the then-failing 20G.1 tests. Round 5 re-ran
+  every RF1 plant on the final code after an unmutated pre-check of every suite (§17).
+
+**Round 2:** the reviewer re-reviews the new exact head. The verdict is recorded on the pull request and in the final report
+(§20).
 
 ## 22. Known limitations
 
@@ -412,6 +566,19 @@ An independent read-only adversarial review runs on the exact PR head with its o
   (directive §28).
 - **E-4: unknown structured type / unsupported version.** Ingest keeps storing a legacy-shaped answer for these. Grading
   fails it closed; it can take one of the student's own first-N slots.
+- **L-F2: check-mark table grading on a non-table question (pre-existing, owner decision).** When a top-level, non-field
+  legacy question's stem holds a data table, the official client draws table cells, and `gradeTable` grades them in check-mark
+  mode whenever `answer.text` holds no `row=value` pairs: rows whose label is absent from `answer.text` are credited for a
+  blank / false cell. A shortAnswer such as "From the table, what is the subnet mask?" (key `255.255.255.0`) therefore scores
+  full marks for blank cells, identically on the baseline. The student does not choose the grader (the question content does),
+  so it is not O1; fixing it changes grading semantics (AGENTS §1) and historical scores, and is left to the owner. Suggested
+  direction from the review: use check-mark mode only for check-box tables (`tableCheckbox`) or catalog table types and send
+  everything else to teacher review.
+- **Simulation state on a legacy question (ingest / grading asymmetry).** Ingest keeps the historical simulation path for a
+  known id (20G.1 D3-A' pin), so such a state is stored; it can never score (the grading gate fails it closed) and never takes
+  a first-N slot (RF1-SIM).
+- **A part with `presentationType` but no `type`.** `CompoundPartControl` reads `type` only (textarea); the server binds the part
+  by `type || presentationType`. Non-canonical data; the grade is the same as on the baseline.
 - **E-2: raw `mcq` / `tf` aliases.** A question stored with such an alias renders a textarea on the client (pre-existing
   rendering, no client redesign in this phase). Its text answer goes to teacher review as before.
 - **Client display only.** The live first-N progress mirror (`src/examStructure.ts`) still counts what the local state
