@@ -9,6 +9,7 @@ import StudentQuestionCard, { type Question, type QuestionPart, type Answer } fr
 import CompoundPartControl from "./CompoundPartControl";
 import { legacyAnswerKindAllowed, LEGACY_TYPE_ALIASES } from "./questionTypeAliases";
 import { LEGACY_QUESTION_TYPE_KEYS } from "./questionTypeCatalog";
+import { parseTable } from "./questionContent";
 
 afterEach(() => cleanup());
 
@@ -72,11 +73,26 @@ describe("20G.2 O1 — renderer parity: every kind a legacy renderer emits is ad
       const compoundNode = { ...raw, presentationType: raw.type || raw.presentationType }, compositeNode = { ...raw, presentationType: raw.type };
       for (const kind of partKinds(p)) {
         seen.add(kind);
-        expect(legacyAnswerKindAllowed(compoundNode, kind), `part ${JSON.stringify(spelling)} ${name} → ${kind}`).toBe(true);
-        expect(legacyAnswerKindAllowed(compositeNode, kind), `child ${JSON.stringify(spelling)} ${name} → ${kind}`).toBe(true);
+        expect(legacyAnswerKindAllowed(compoundNode, kind, "part"), `part ${JSON.stringify(spelling)} ${name} → ${kind}`).toBe(true);
+        expect(legacyAnswerKindAllowed(compositeNode, kind, "part"), `child ${JSON.stringify(spelling)} ${name} → ${kind}`).toBe(true);
       }
     }
     expect([...seen].sort()).toEqual(["choice", "fields", "text"]);
+  });
+
+  // Review Fix 1 — the CONVERSE for the knowledge-free kind: a table is admitted only where the renderer draws one (or, for a catalog table
+  // type, where nothing is drawable, so the table grader finds no rows and fails closed); a part / composite child never admits one.
+  it("converse: `table` is admitted only where StudentQuestionCard draws a table (or nothing table-like is drawable); never for a part", () => {
+    for (const spelling of SPELLINGS) for (const [name, content] of Object.entries(CONTENT)) {
+      for (const placement of ["presentationType", "type"] as const) {
+        const q = { examQuestionId: "q1", marks: 2, ...content, ...(spelling ? { [placement]: spelling } : {}) } as unknown as Question;
+        if (!legacyAnswerKindAllowed(q, "table")) continue;
+        const drawn = cardKinds(q).has("table");
+        if (!drawn) expect(parseTable(String(q.text ?? "")), `${placement}=${JSON.stringify(spelling)} ${name}: table admitted but not drawn`).toBeNull();
+      }
+      const p = { id: "p1", marks: 1, ...content, ...(spelling ? { type: spelling } : {}) } as Record<string, unknown>;
+      expect(legacyAnswerKindAllowed({ ...p, presentationType: p.type || p.presentationType }, "table", "part"), `part ${JSON.stringify(spelling)} ${name}`).toBe(false);
+    }
   });
 
   it("the choice kind is emitted ONLY by the literal choice renderers — exactly the questions the binding admits a choice on", () => {

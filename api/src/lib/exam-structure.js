@@ -294,7 +294,7 @@ function unitKey(u) {
 // composite question answered with another kind admits nothing. Modern (registered) types are unaffected; an absent response stays absent.
 // Used ONLY to decide answered-ness / first-N selection — grading itself still receives the stored answer and fails a mismatch closed.
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-function admittedResponse(q, resp) {
+function admittedResponse(q, resp, placement) {
   if (resp == null) return resp;
   const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
   if (isCompositeQuestionNode(q)) {
@@ -304,7 +304,7 @@ function admittedResponse(q, resp) {
     const parts = {};
     for (const g of st.model.groups) for (const p of g.parts) {
       if (!own(resp.parts, p.id)) continue;
-      const a = admittedResponse(compositeChildNode(p.raw), resp.parts[p.id]);
+      const a = admittedResponse(compositeChildNode(p.raw), resp.parts[p.id], "part");
       if (a !== undefined) parts[p.id] = a;
     }
     return { ...resp, parts };
@@ -316,15 +316,15 @@ function admittedResponse(q, resp) {
     questionParts(q).forEach((p, i) => {
       const pid = partId(p, i);
       if (!own(src, pid)) return;
-      const a = admittedResponse({ ...p, presentationType: p.type || p.presentationType }, src[pid]);
+      const a = admittedResponse({ ...p, presentationType: p.type || p.presentationType }, src[pid], "part");
       if (a !== undefined) parts[pid] = a;
     });
     return { ...resp, parts };
   }
-  return legacyResponseAdmitted(q, resp) ? resp : undefined;
+  return legacyResponseAdmitted(q, resp, placement) ? resp : undefined;
 }
-function isAdmittedAnswered(q, resp) {
-  return isResponseAnswered(admittedResponse(q, resp));
+function isAdmittedAnswered(q, resp, placement) {
+  return isResponseAnswered(admittedResponse(q, resp, placement));
 }
 
 // The gradable "units" of a section in DISPLAY order. For answerUnit==="question" every question is

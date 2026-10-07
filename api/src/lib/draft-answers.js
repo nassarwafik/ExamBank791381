@@ -70,10 +70,14 @@ const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.present
 // Phase 20D — the per-answer binding chain, extracted VERBATIM (same branch order, same results, same refusal codes) from the original
 // loop so a composite@1 child answer is bound by EXACTLY the binder a standalone question of its type uses. `reject(id, code)` records the
 // nested refusals the compound branch reports; `q` is the published question (undefined when unbound or unknown).
-function bindAnswer(id, a, q, bound, reject) {
+function bindAnswer(id, a, q, bound, reject, placement) {
   if (a && typeof a === "object" && a.kind === "simulation") {
     const r = normalizeSimulationState(a.state);
-    return r.ok ? { ok: true, answer: { kind: "simulation", state: r.state } } : { ok: false, code: r.code };
+    if (!r.ok) return { ok: false, code: r.code };
+    // 20G.2 RF1 — bound to a published LEGACY question (or a compound one), a simulation state is not an answer of that question
+    // (the same authority the grader and the first-N selection apply); a simulation question and unknown ids keep their path
+    if (bound && q !== undefined && admittedResponse(q, { kind: "simulation" }, placement) === undefined) return { ok: false, code: "ANSWER_KIND_MISMATCH" };
+    return { ok: true, answer: { kind: "simulation", state: r.state } };
   }
   if (isCode(a)) return bound ? bindCodeAnswerToQuestion(a, q) : normalizeCodeAnswer(a);
   if (isCodeTemplate(a) || (bound && isCodingV3Question(q))) return bound ? bindCodingTemplateAnswerToQuestion(a, q) : normalizeCodeTemplateAnswer(a);
@@ -100,14 +104,14 @@ function bindAnswer(id, a, q, bound, reject) {
       if (isSmartSim(a.parts[pid])) { reject(id + "." + pid, "SMARTSIM_QUESTION_MISMATCH"); continue; }
       if (isHotspot(a.parts[pid])) { reject(id + "." + pid, "HOTSPOT_QUESTION_MISMATCH"); continue; }
       if (!own.has(pid)) { reject(id + "." + pid, "COMPOUND_PART_UNKNOWN"); continue; }
-      const r = bindLegacyAnswer(a.parts[pid], own.get(pid));
+      const r = bindLegacyAnswer(a.parts[pid], own.get(pid), "part");
       if (r.ok) setOwn(parts, pid, r.answer); else reject(id + "." + pid, r.code);
     }
     return { ok: true, answer: { kind: "compound", parts } };
   }
   if (!bound) return { ok: true, answer: a };
   if (q === undefined) return { ok: false, code: "ANSWER_QUESTION_UNKNOWN" };
-  return bindLegacyAnswer(a, q);
+  return bindLegacyAnswer(a, q, placement);
 }
 
 // Phase 20G.1 — the LEGACY answer contract (the original Answer shapes the generic binder historically passed through untouched). Bound
@@ -134,11 +138,11 @@ const LEGACY_SHAPES = {
 // Phase 20G.2 (O1) — a well-formed legacy answer must also be a kind the published QUESTION admits (admittedResponse: the same shared
 // authority — legacyAnswerKindAllowed — the grader and the first-N selection apply); otherwise it is refused with ANSWER_KIND_MISMATCH
 // (distinct from ANSWER_INVALID: the shape is fine, the question never accepts it). It is never stored and never converted to another kind.
-function bindLegacyAnswer(a, q) {
+function bindLegacyAnswer(a, q, placement) {
   if (!isPlain(a) || typeof a.kind !== "string" || !Object.prototype.hasOwnProperty.call(LEGACY_SHAPES, a.kind)) return { ok: false, code: "ANSWER_INVALID" };
   const answer = LEGACY_SHAPES[a.kind](a);
   if (!answer) return { ok: false, code: "ANSWER_INVALID" };
-  if (admittedResponse(q, answer) === undefined) return { ok: false, code: "ANSWER_KIND_MISMATCH" };
+  if (admittedResponse(q, answer, placement) === undefined) return { ok: false, code: "ANSWER_KIND_MISMATCH" };
   if (Buffer.byteLength(JSON.stringify(answer), "utf8") > LEGACY_ANSWER_LIMITS.answerBytes) return { ok: false, code: "ANSWER_TOO_LARGE" };
   return { ok: true, answer };
 }
@@ -189,7 +193,7 @@ function bindCompositeAnswer(id, a, q, bound, reject) {
     const part = st.model.partById.get(pid);
     if (!part) { reject(id + "." + pid, "COMPOSITE_PART_UNKNOWN"); continue; }
     if (part.linkedSmartSim) { reject(id + "." + pid, "COMPOSITE_PART_ANSWER_FORBIDDEN"); continue; }
-    const r = bindAnswer(id + "." + pid, value, compositeChildNode(part.raw), true, reject);
+    const r = bindAnswer(id + "." + pid, value, compositeChildNode(part.raw), true, reject, "part");
     // 20G.1 — a child refused for its LEGACY shape keeps the composite's historical code (the generic binder used to pass it through and
     // childAnswerWellFormed refused it); every specialized child code (and the new ANSWER_TOO_LARGE bound) is reported as the binder gives it
     if (r.ok && childAnswerWellFormed(r.answer)) parts[pid] = r.answer; else reject(id + "." + pid, r.ok || LEGACY_SHAPE_CODES.has(r.code) ? "COMPOSITE_CHILD_ANSWER_INVALID" : r.code);

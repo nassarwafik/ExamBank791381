@@ -357,3 +357,89 @@ describe("20G.2 O1 — end to end through the real handlers (draft, restore, pau
     expect(JSON.stringify(s.attempt(aid, 1))).toBe(first);
   });
 });
+
+// ─── Review Fix 1 (independent review of 14f15c3) ───────────────────────────────────────────────────────────────────────────────────────
+// F1: `table` is admitted ONLY where the renderer draws a table (a top-level, non-field-type question); a part / composite child is answered
+// through CompoundPartControl, which never draws one. gradeTable's check-mark mode credits a blank / all-false table on a question whose key
+// names no row, so a forged table there scored without the answer. F3: the binding derives the type exactly like the renderer, the legacy
+// grader and the 16A registry (`presentationType || type`). F4: pins for the reviewer's surviving mutants. NOTE: a simulation forgery.
+describe("20G.2 RF1 — a forged table can only answer a question whose renderer draws a table; type derivation matches the grader", () => {
+  const STEM = "من الجدول، ما قناع الشبكة؟\n| الجهاز | IP |\n|---|---|\n| PC1 | 10.0.0.5 |\n| PC2 | 10.0.0.6 |";
+  const SA_STEM = () => ({ examQuestionId: "sat", presentationType: "shortAnswer", text: STEM, marks: 4, answer: { text: "255.255.255.0" } });
+  const BLANK = table([false, false]);
+  it("RF1-F1a a compound PART with a table in its text: a forged table is refused for that part and can never score", () => {
+    const cq = { examQuestionId: "cq", presentationType: "compound", text: "مركّب", marks: 6, parts: [{ id: "a", type: "shortAnswer", text: STEM, marks: 3, answer: { text: "255.255.255.0" } }, { id: "b", type: "fillBlank", text: "?", marks: 3, fields: [{ id: "b1", label: "1", correct: "4" }], answer: { values: ["4"] } }] };
+    const hostile = { kind: "compound", parts: { a: BLANK, b: choice(3) } };
+    expect(normalizeDraftAnswers({ cq: hostile }, exam([cq]))).toEqual({ answers: { cq: { kind: "compound", parts: {} } }, rejected: [{ id: "cq.a", code: "ANSWER_KIND_MISMATCH" }, { id: "cq.b", code: "ANSWER_KIND_MISMATCH" }] });
+    const g = gradeExam(exam([cq]), { cq: hostile });
+    expect(g.score).toBe(0);
+    expect(g.questions[0].parts.map(p => [p.partId, p.score, p.manualReview])).toEqual([["a", 0, true], ["b", 0, true]]);
+    expect(aliases.legacyAnswerKindAllowed(cq.parts[0], "table", "part")).toBe(false);
+    expect(aliases.legacyAnswerKindAllowed({ presentationType: "tableFill" }, "table", "part")).toBe(false);   // not even a catalog table type
+  });
+  it("RF1-F1b a composite legacy CHILD with a table in its text: a forged table is refused and can never score", () => {
+    const node = K.composite("cp", "مركّب", 3, [], [K.group("g", "g", [K.part("a", "أ", { ...SA_STEM(), marks: 3 })])]);
+    const hostile = A.composite({ a: BLANK }, {});
+    expect(normalizeDraftAnswers({ cp: hostile }, exam([node])).rejected).toEqual([{ id: "cp.a", code: "ANSWER_KIND_MISMATCH" }]);
+    const g = gradeExam(exam([node]), { cp: hostile });
+    expect(g.score).toBe(0);
+    expect(g.questions[0].parts.map(p => [p.partId, p.score, p.manualReview])).toEqual([["a", 0, true]]);
+  });
+  it("RF1-F1c a top-level FIELD-TYPE question (multiTrueFalse, cliFill, tableFill with a grid) renders its fields, never a table: a forged table is refused", () => {
+    const mtf = { examQuestionId: "mtf", presentationType: "multiTrueFalse", text: STEM, marks: 4, fields: [{ id: "r1", statement: "PC1", kind: "boolean", correct: true }, { id: "r2", statement: "PC2", kind: "boolean", correct: false }], answer: { text: "PC1" } };
+    const cli = { ...CLI(), text: STEM, answer: { text: "x" } };
+    const grid = { ...TBL(), text: STEM, tableHeaders: ["الجهاز", "IP"], tableRows: [["PC1", ""], ["PC2", ""]], answer: { text: "255.255.255.0" } };
+    for (const q of [mtf, cli, grid]) {
+      expect(grade(q, BLANK), q.presentationType).toEqual(FAIL_CLOSED(q.marks));
+      expect(ingest(q, BLANK), q.presentationType).toEqual({ answers: {}, rejected: [{ id: q.examQuestionId, code: "ANSWER_KIND_MISMATCH" }] });
+    }
+  });
+  it("RF1-F1d where the renderer DOES draw a table (top-level, non-field type, table in its text; tableFill without a grid) a table answer stays admitted (pin; see limitation L-F2)", () => {
+    for (const q of [SA_STEM(), TBL(), { ...FB(), text: STEM }, { examQuestionId: "lf", text: STEM, marks: 4, answer: { text: "x" } }]) {
+      expect(aliases.legacyAnswerKindAllowed(q, "table"), q.presentationType).toBe(true);
+      expect(ingest(q, BLANK).rejected, q.presentationType).toEqual([]);
+    }
+    expect(grade(TBL(), table(["A"]))).toEqual({ score: 7, maxMarks: 7, correct: true, manualReview: false });   // O1-P, unchanged
+  });
+  it("RF1-F3 the type is presentationType || type, exactly as the renderer / grader / registry derive it: a blank or non-string presentationType never borrows a modern flat type's authority", () => {
+    for (const [presentationType, type] of [[" ", "multipleSelect"], ["\t", "numericResponse"], [7, "openResponse"]]) {
+      const q = { examQuestionId: "f3", presentationType, type, text: "?", marks: 5, options: [{ text: "1" }, { text: "2" }], answer: { values: ["1"] } };
+      expect(grade(q, choice(0)), String(type)).toEqual(FAIL_CLOSED(5));
+      expect(ingest(q, choice(0)), String(type)).toEqual({ answers: {}, rejected: [{ id: "f3", code: "ANSWER_KIND_MISMATCH" }] });
+    }
+    // a flat `type` the renderer stringifies to a choice type ("multiplechoice") draws radios: its choice stays admitted and grades as before
+    const arr = { examQuestionId: "f4", type: ["multipleChoice"], text: "?", marks: 5, options: [{ text: "أ" }, { text: "ب" }], answer: { correctOptionIndex: 1 } };
+    expect(grade(arr, choice(1))).toEqual({ score: 5, maxMarks: 5, correct: true, manualReview: false });
+    expect(ingest(arr, choice(1)).rejected).toEqual([]);
+  });
+  it("RF1-F4 pins: a stored null answer keeps its historical grade; a broken composite in a first-N section takes its slot and goes to teacher review; E-4 ingest; table detection needs pipes on both sides; kind is checked before size", () => {
+    expect(grade(MC(), null)).toEqual({ score: 0, maxMarks: 7, correct: false, manualReview: false });
+    const sa = { examQuestionId: "x", presentationType: "shortAnswer", text: "?", marks: 2, answer: { text: "b" } };
+    const broken = JSON.parse(JSON.stringify(K.composite("cp", "c", 2, [], [K.group("g", "g", [K.part("a", "أ", sa)])])));
+    broken.composite.groups[0].parts.push(JSON.parse(JSON.stringify(broken.composite.groups[0].parts[0])));      // duplicate part id → broken authority
+    const ex = exam([broken, { ...sa, examQuestionId: "q2" }], { gradingPolicy: "firstNAnswered", answerUnit: "question", requiredAnswers: 1, maxMarks: 2 });
+    const g = gradeExam(ex, { cp: A.composite({ a: A.text("b") }, {}), q2: A.text("b") });
+    expect(g.questions.map(q => [q.questionId, q.score, q.countedMaxMarks, q.manualReview])).toEqual([["cp", 0, 2, true], ["q2", 0, 0, false]]);
+    expect(g.manualReviewMarks).toBe(2);
+    expect(ingest({ ...FB(), questionTypeVersion: 99 }, choice(3))).toEqual({ answers: { fb: choice(3) }, rejected: [] });   // E-4 (documented)
+    const noPipes = { ...ORD(), text: "رتّب\n| أ | ب\n|---|---\n| 1 | 2" };
+    expect(ingest(noPipes, table(["1"])).rejected).toEqual([{ id: "ord", code: "ANSWER_KIND_MISMATCH" }]);
+    expect(ingest(SA(), { kind: "sequence", values: [..."x".repeat(70000)].map(() => "x") }).rejected).toEqual([{ id: "sa", code: "ANSWER_KIND_MISMATCH" }]);
+  });
+  it("RF1-F4b a compound part's type is `type || presentationType` everywhere (grading, first-N and ingest bind the SAME part node): a stray presentationType never lends a part another type's kinds", () => {
+    const cq = { examQuestionId: "f1", presentationType: "compound", text: "م", marks: 7, parts: [{ id: "a", type: "fillBlank", presentationType: "multipleChoice", text: "?", marks: 7, fields: [{ id: "b1", label: "1", correct: "4" }], options: [{ text: "1" }, { text: "4" }], answer: { values: ["4"] } }] };
+    const forged = { kind: "compound", parts: { a: choice(3) } };
+    expect(normalizeDraftAnswers({ f1: forged }, exam([cq])).rejected).toEqual([{ id: "f1.a", code: "ANSWER_KIND_MISMATCH" }]);
+    const ex = exam([cq, { ...MC(), examQuestionId: "f2" }], { gradingPolicy: "firstNAnswered", answerUnit: "question", requiredAnswers: 1, maxMarks: 7 });
+    const g = gradeExam(ex, { f1: forged, f2: choice(1) });
+    expect(g.questions.map(q => [q.questionId, q.score, q.countedMaxMarks])).toEqual([["f1", 0, 0], ["f2", 7, 7]]);
+  });
+  it("RF1-SIM a simulation state on a legacy (or compound) question is not an answer of that question: refused at ingest, never stored; a simulation question keeps it", () => {
+    const state = { kind: "simulation", state: { count: 3 } };
+    expect(ingest(FB(), state)).toEqual({ answers: {}, rejected: [{ id: "fb", code: "ANSWER_KIND_MISMATCH" }] });
+    const cq = { examQuestionId: "cq", presentationType: "compound", text: "م", marks: 2, parts: [{ id: "a", type: "shortAnswer", text: "?", marks: 2, answer: { text: "b" } }] };
+    expect(ingest(cq, state).rejected).toEqual([{ id: "cq", code: "ANSWER_KIND_MISMATCH" }]);
+    const sim = { examQuestionId: "s1", presentationType: "simulation", questionTypeVersion: 1, text: "س", marks: 10, answer: { assertions: [] } };
+    expect(ingest(sim, state)).toEqual({ answers: { s1: state }, rejected: [] });
+  });
+});

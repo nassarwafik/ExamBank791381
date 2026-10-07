@@ -97,11 +97,11 @@ function resolveGrader(rawType, version, options = {}) {
  * type / legacy-flat unknown type); every other question (registered families, unsupported / unknown structured types) is governed by its
  * own binder and grader, so the answer here is true (no opinion). Consumed by the legacy grader, the first-N answered selection and ingest.
  */
-function legacyResponseAdmitted(question, response) {
+function legacyResponseAdmitted(question, response, placement) {
   const q = question && typeof question === "object" ? question : {};
   const structured = typeof q.presentationType === "string" && q.presentationType.trim() !== "";
   if (resolveGrader(q.presentationType || q.type, q.questionTypeVersion, { legacyFlat: !structured }) !== LEGACY) return true;
-  return legacyAnswerKindAllowed(q, response && typeof response === "object" ? response.kind : undefined);
+  return legacyAnswerKindAllowed(q, response && typeof response === "object" ? response.kind : undefined, placement === "part" ? "part" : "question");
 }
 function unknownTypeResult(max) {
   const m = Number.isFinite(Number(max)) ? Math.max(0, Number(max)) : 0;
