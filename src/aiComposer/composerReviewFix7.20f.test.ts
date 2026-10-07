@@ -72,3 +72,16 @@ describe("20F-RF7 NOTE-1 a domain exclusion must be an isolated excluded point t
     accepted("1/(x^2-4)", ["domainExclusions", "verticalAsymptotes"], { domainExclusions: [-2, 2], verticalAsymptotes: [-2, 2] });
   });
 });
+
+describe("20F-RF7 found while fixing (PINS: accepted on ff25763, kept accepted)", () => {
+  it("an underflow to exactly 0 far beyond the window is not a root", () => {
+    accepted("x*exp(-x)", ["xIntercepts"], { xIntercepts: [0] });
+    accepted("(x-1)*exp(x)", ["xIntercepts"], { xIntercepts: [1] });
+  });
+  it("an OPEN domain edge where f tends to 0 is not a root (0 is outside the domain of x·log x)", () => {
+    accepted("x*log(x)", ["xIntercepts"], { xIntercepts: [1] });
+  });
+  it("a jump at a point no grid sample meets is an isolated domain exclusion", () => {
+    accepted("abs(x-3)/(x-3)+2", ["domainExclusions"], { xMin: -7.3, xMax: 9.1, domainExclusions: [3] });
+  });
+});
