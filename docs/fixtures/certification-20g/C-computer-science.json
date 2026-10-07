@@ -1,0 +1,652 @@
+{
+  "schemaVersion": 2,
+  "examId": "CERT20G-C-CS",
+  "title": "شهادة 20G — امتحان علم الحاسوب",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "الصف الحادي عشر — علم الحاسوب",
+    "instructions": "تُصحَّح البرامج على الخادم بحالات اختبار مخفية. الأخطاء التقنية لا تُحتسب صفرًا أبدًا.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "developerWorkspace",
+    "components": {
+      "code": {
+        "variant": "dark"
+      }
+    }
+  },
+  "sections": [
+    {
+      "id": "c-s1",
+      "title": "القسم الأول: التتبّع والمفاهيم",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1-1",
+          "presentationType": "multipleChoice",
+          "text": "ما مخرجات البرنامج المعروض في المصدر المشترك عند n = 4؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "4"
+            },
+            {
+              "text": "10"
+            },
+            {
+              "text": "24"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-c1-1"
+        },
+        {
+          "examQuestionId": "c1-2",
+          "presentationType": "multipleChoice",
+          "text": "ما رتبة تعقيد البحث الثنائي في أسوأ الحالات؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "O(n)"
+            },
+            {
+              "text": "O(log n)"
+            },
+            {
+              "text": "O(n²)"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-c1-2"
+        },
+        {
+          "examQuestionId": "c1-3",
+          "presentationType": "shortAnswer",
+          "text": "ما قيمة len([1, 2, 3])؟",
+          "marks": 2,
+          "answer": {
+            "text": "3"
+          }
+        },
+        {
+          "examQuestionId": "c1-4",
+          "presentationType": "tableFill",
+          "text": "أكمل جدول تتبّع الحلقة for i in range(3): s += i (القيمة الابتدائية s = 0):",
+          "marks": 4,
+          "tableHeaders": [
+            "i",
+            "s بعد التكرار"
+          ],
+          "tableRows": [
+            [
+              "0",
+              ""
+            ],
+            [
+              "1",
+              ""
+            ],
+            [
+              "2",
+              ""
+            ]
+          ],
+          "fields": [
+            {
+              "id": "s0",
+              "row": 0,
+              "column": 1,
+              "label": "s0",
+              "correct": "0"
+            },
+            {
+              "id": "s1",
+              "row": 1,
+              "column": 1,
+              "label": "s1",
+              "correct": "1"
+            },
+            {
+              "id": "s2",
+              "row": 2,
+              "column": 1,
+              "label": "s2",
+              "correct": "3"
+            }
+          ]
+        },
+        {
+          "examQuestionId": "c1-5",
+          "presentationType": "ordering",
+          "text": "رتّب خطوات ترجمة برنامج Java وتشغيله:",
+          "marks": 4,
+          "fields": [
+            {
+              "id": "o1",
+              "label": "الخطوة 1",
+              "correct": "كتابة الملف Main.java"
+            },
+            {
+              "id": "o2",
+              "label": "الخطوة 2",
+              "correct": "javac Main.java"
+            },
+            {
+              "id": "o3",
+              "label": "الخطوة 3",
+              "correct": "java Main"
+            }
+          ],
+          "wordBank": [
+            "java Main",
+            "javac Main.java",
+            "كتابة الملف Main.java"
+          ],
+          "answer": {
+            "mode": "exactSequence",
+            "values": [
+              "كتابة الملف Main.java",
+              "javac Main.java",
+              "java Main"
+            ]
+          }
+        },
+        {
+          "examQuestionId": "c1-6",
+          "presentationType": "fillBlank",
+          "text": "أكمل: الكلمة المحجوزة لتعريف دالة في Python هي ____ ، وللخروج من الحلقة ____ .",
+          "marks": 4,
+          "fields": [
+            {
+              "id": "f1",
+              "label": "تعريف الدالة",
+              "correct": "def"
+            },
+            {
+              "id": "f2",
+              "label": "الخروج من الحلقة",
+              "correct": "break"
+            }
+          ],
+          "answer": {
+            "values": [
+              "def",
+              "break"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "c-s2",
+      "title": "القسم الثاني: البرمجة",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c2-1",
+          "presentationType": "coding",
+          "text": "اكتب برنامج Python يقرأ عددين صحيحين ويطبع SUM=<المجموع>.",
+          "marks": 15,
+          "questionTypeVersion": 2,
+          "coding": {
+            "allowedLanguages": [
+              "python"
+            ],
+            "defaultLanguage": "python",
+            "starterCode": {},
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 128
+            },
+            "publicTests": [
+              {
+                "id": "pub-1",
+                "input": "2 3\n",
+                "sampleOutput": "SUM=5\n"
+              }
+            ]
+          },
+          "answer": {
+            "gradingMode": "hiddenTests",
+            "comparator": "trimTrailingWhitespace",
+            "compileErrorPolicy": "manualReview",
+            "hiddenTests": [
+              {
+                "id": "py-small",
+                "title": "CERT20G-PRIVATE-HT-py-small",
+                "input": "1 2\n",
+                "expectedOutput": "SUM=3\n",
+                "weight": 1
+              },
+              {
+                "id": "py-neg",
+                "title": "CERT20G-PRIVATE-HT-py-neg",
+                "input": "-4 10\n",
+                "expectedOutput": "SUM=6\n",
+                "weight": 2
+              },
+              {
+                "id": "py-big",
+                "title": "CERT20G-PRIVATE-HT-py-big",
+                "input": "1000000 2000000\n",
+                "expectedOutput": "SUM=3000000\n",
+                "weight": 3
+              }
+            ],
+            "referenceSolutions": {
+              "python": "CERT20G-PRIVATE-REF-PY-SUM"
+            }
+          }
+        },
+        {
+          "examQuestionId": "c2-2",
+          "presentationType": "coding",
+          "text": "اكتب برنامج Java يقرأ كلمة ويطبعها معكوسة.",
+          "marks": 15,
+          "questionTypeVersion": 2,
+          "coding": {
+            "allowedLanguages": [
+              "java"
+            ],
+            "defaultLanguage": "java",
+            "starterCode": {
+              "java": "import java.util.Scanner;\npublic class Main {\n  public static void main(String[] args) {\n    // اكتب الحل هنا\n  }\n}\n"
+            },
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 128
+            },
+            "publicTests": []
+          },
+          "answer": {
+            "gradingMode": "hiddenTests",
+            "comparator": "trimTrailingWhitespace",
+            "compileErrorPolicy": "manualReview",
+            "hiddenTests": [
+              {
+                "id": "j-word",
+                "title": "CERT20G-PRIVATE-HT-j-word",
+                "input": "networking\n",
+                "expectedOutput": "gnikrowten\n",
+                "weight": 1
+              },
+              {
+                "id": "j-ar",
+                "title": "CERT20G-PRIVATE-HT-j-ar",
+                "input": "شبكة\n",
+                "expectedOutput": "ةكبش\n",
+                "weight": 1
+              }
+            ],
+            "referenceSolutions": {
+              "java": "CERT20G-PRIVATE-REF-JAVA-REV"
+            }
+          }
+        },
+        {
+          "examQuestionId": "c2-3",
+          "presentationType": "coding",
+          "text": "أكمل برنامج C# ليطبع السطر المُدخل بأحرف كبيرة.",
+          "marks": 15,
+          "questionTypeVersion": 3,
+          "coding": {
+            "allowedLanguages": [
+              "csharp"
+            ],
+            "defaultLanguage": "csharp",
+            "starterCode": {},
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 128
+            },
+            "publicTests": [],
+            "template": {
+              "language": "csharp",
+              "segments": [
+                {
+                  "kind": "locked",
+                  "text": "using System;\npublic class Program {\n  public static void Main() {\n    string line = Console.ReadLine();\n    Console.WriteLine("
+                },
+                {
+                  "kind": "editable",
+                  "id": "expr",
+                  "starter": "line"
+                },
+                {
+                  "kind": "locked",
+                  "text": ");\n  }\n}\n"
+                }
+              ]
+            }
+          },
+          "answer": {
+            "gradingMode": "hiddenTests",
+            "comparator": "trimTrailingWhitespace",
+            "compileErrorPolicy": "zero",
+            "hiddenTests": [
+              {
+                "id": "cs-1",
+                "title": "CERT20G-PRIVATE-HT-cs-1",
+                "input": "router\n",
+                "expectedOutput": "ROUTER\n",
+                "weight": 1
+              },
+              {
+                "id": "cs-2",
+                "title": "CERT20G-PRIVATE-HT-cs-2",
+                "input": "vlan 10\n",
+                "expectedOutput": "VLAN 10\n",
+                "weight": 1
+              }
+            ],
+            "referenceSolutions": {
+              "csharp": "CERT20G-PRIVATE-REF-CS-UPPER"
+            }
+          }
+        },
+        {
+          "examQuestionId": "c2-4",
+          "presentationType": "coding",
+          "text": "أكمل الدالة count_vowels في Python (القالب مقفل إلا جسم الدالة).",
+          "marks": 15,
+          "questionTypeVersion": 3,
+          "coding": {
+            "allowedLanguages": [
+              "python"
+            ],
+            "defaultLanguage": "python",
+            "starterCode": {},
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 128
+            },
+            "publicTests": [],
+            "template": {
+              "language": "python",
+              "segments": [
+                {
+                  "kind": "locked",
+                  "text": "def count_vowels(text):\n"
+                },
+                {
+                  "kind": "editable",
+                  "id": "body",
+                  "starter": "    return 0\n"
+                },
+                {
+                  "kind": "locked",
+                  "text": "\n\nprint(count_vowels(input()))\n"
+                }
+              ]
+            }
+          },
+          "answer": {
+            "gradingMode": "hiddenTests",
+            "comparator": "trimTrailingWhitespace",
+            "compileErrorPolicy": "manualReview",
+            "hiddenTests": [
+              {
+                "id": "v-1",
+                "title": "CERT20G-PRIVATE-HT-v-1",
+                "input": "education\n",
+                "expectedOutput": "5\n",
+                "weight": 1
+              },
+              {
+                "id": "v-2",
+                "title": "CERT20G-PRIVATE-HT-v-2",
+                "input": "rhythm\n",
+                "expectedOutput": "0\n",
+                "weight": 1
+              },
+              {
+                "id": "v-3",
+                "title": "CERT20G-PRIVATE-HT-v-3",
+                "input": "AEIOU\n",
+                "expectedOutput": "5\n",
+                "weight": 2
+              }
+            ],
+            "referenceSolutions": {
+              "python": "CERT20G-PRIVATE-REF-PY-VOWELS"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "c-s3",
+      "title": "القسم الثالث: سؤال مركّب حول الكود",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c3-1",
+          "presentationType": "composite",
+          "text": "ادرس الكود في المصدر المشترك ثم أجب.",
+          "marks": 20,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxCode",
+                "version": 1,
+                "kind": "source",
+                "title": "الكود",
+                "sources": [
+                  {
+                    "id": "code1",
+                    "version": 1,
+                    "kind": "code",
+                    "title": "sum.py",
+                    "language": "python",
+                    "source": "def f(n):\n    total = 0\n    for i in range(1, n + 1):\n        total += i\n    return total\n\nprint(f(4))\n"
+                  }
+                ]
+              }
+            ],
+            "groups": [
+              {
+                "id": "gTrace",
+                "title": "تتبّع",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "t1",
+                    "label": "أ",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "كم مرة يُنفَّذ جسم الحلقة عند n = 4؟",
+                    "marks": 4,
+                    "options": [
+                      {
+                        "text": "3"
+                      },
+                      {
+                        "text": "4"
+                      },
+                      {
+                        "text": "5"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 1
+                    },
+                    "contextId": "ctxCode"
+                  },
+                  {
+                    "id": "t2",
+                    "label": "ب",
+                    "type": "shortAnswer",
+                    "questionTypeVersion": 1,
+                    "text": "ما قيمة f(3)؟",
+                    "marks": 2,
+                    "answer": {
+                      "text": "6"
+                    },
+                    "contextId": "ctxCode"
+                  }
+                ]
+              },
+              {
+                "id": "gCode",
+                "title": "البرمجة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "k1",
+                    "label": "ج",
+                    "type": "coding",
+                    "questionTypeVersion": 2,
+                    "text": "اكتب برنامجًا يقرأ n ويطبع مجموع الأعداد من 1 إلى n.",
+                    "marks": 10,
+                    "coding": {
+                      "allowedLanguages": [
+                        "python",
+                        "java",
+                        "csharp"
+                      ],
+                      "defaultLanguage": "python",
+                      "starterCode": {},
+                      "taskMode": "program",
+                      "inputMode": "stdin",
+                      "outputMode": "stdout",
+                      "limits": {
+                        "sourceBytes": 65536,
+                        "outputBytes": 65536,
+                        "timeMs": 2000,
+                        "memoryMb": 128
+                      },
+                      "publicTests": []
+                    },
+                    "answer": {
+                      "gradingMode": "hiddenTests",
+                      "comparator": "trimTrailingWhitespace",
+                      "compileErrorPolicy": "manualReview",
+                      "hiddenTests": [
+                        {
+                          "id": "c-1",
+                          "title": "CERT20G-PRIVATE-HT-c-1",
+                          "input": "3\n",
+                          "expectedOutput": "6\n",
+                          "weight": 1
+                        },
+                        {
+                          "id": "c-2",
+                          "title": "CERT20G-PRIVATE-HT-c-2",
+                          "input": "10\n",
+                          "expectedOutput": "55\n",
+                          "weight": 3
+                        }
+                      ],
+                      "referenceSolutions": {
+                        "python": "CERT20G-PRIVATE-REF-CHILD"
+                      }
+                    }
+                  },
+                  {
+                    "id": "o1",
+                    "label": "د",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "text": "اشرح لماذا يبدأ range من 1 وينتهي عند n + 1.",
+                    "marks": 4,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 4000
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "explain",
+                            "title": "الشرح",
+                            "description": "",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "CERT20G-PRIVATE-GUIDANCE-C31-explain",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "full",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "half",
+                                "label": "half",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "none",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "CERT20G-PRIVATE-MODEL-C31"
+                    },
+                    "contextId": "ctxCode"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

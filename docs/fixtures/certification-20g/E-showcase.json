@@ -1,0 +1,1404 @@
+{
+  "schemaVersion": 2,
+  "examId": "CERT20G-E-SHOW",
+  "title": "شهادة 20G — امتحان العرض الشامل",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "اختبار شامل — تكنولوجيا المعلومات",
+    "instructions": "يتضمن هذا الامتحان أنواع أسئلة متعددة.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "cards"
+  },
+  "sections": [
+    {
+      "id": "e-s1",
+      "title": "القسم الأول: الاختيار",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e1-1",
+          "presentationType": "multipleChoice",
+          "text": "أي بروتوكول يعمل على المنفذ 443؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "HTTP"
+            },
+            {
+              "text": "HTTPS"
+            },
+            {
+              "text": "DNS"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-e1-1",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "heading",
+                "level": 3,
+                "runs": [
+                  {
+                    "text": "جدول البروتوكولات"
+                  }
+                ]
+              },
+              {
+                "type": "table",
+                "caption": "المنافذ المعروفة",
+                "columnHeaders": [
+                  "البروتوكول",
+                  "المنفذ"
+                ],
+                "rowHeaders": true,
+                "responsive": "scroll",
+                "rows": [
+                  [
+                    "HTTP",
+                    "80"
+                  ],
+                  [
+                    "HTTPS",
+                    "443"
+                  ],
+                  [
+                    "DNS",
+                    "53"
+                  ]
+                ]
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "استخدم الجدول للإجابة."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "e1-2",
+          "presentationType": "multipleSelect",
+          "text": "اختر بروتوكولات طبقة النقل:",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "options": [
+            {
+              "id": "t1",
+              "text": "TCP"
+            },
+            {
+              "id": "t2",
+              "text": "UDP"
+            },
+            {
+              "id": "t3",
+              "text": "IP"
+            },
+            {
+              "id": "t4",
+              "text": "HTTP"
+            }
+          ],
+          "answer": {
+            "correctOptionIds": [
+              "t1",
+              "t2"
+            ],
+            "scoring": "allOrNothing"
+          }
+        },
+        {
+          "examQuestionId": "e1-3",
+          "presentationType": "trueFalse",
+          "text": "بروتوكول UDP موجّه بالاتصال.",
+          "marks": 2,
+          "options": [
+            {
+              "text": "صحيح"
+            },
+            {
+              "text": "غير صحيح"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 1
+          }
+        },
+        {
+          "examQuestionId": "e1-4",
+          "presentationType": "multiTrueFalse",
+          "text": "صح أم خطأ:",
+          "marks": 3,
+          "fields": [
+            {
+              "id": "r1",
+              "statement": "DNS يحوّل الأسماء إلى عناوين.",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "r2",
+              "statement": "ARP يعمل في الطبقة السابعة.",
+              "kind": "boolean",
+              "correct": false
+            },
+            {
+              "id": "r3",
+              "statement": "ICMP يستخدمه ping.",
+              "kind": "boolean",
+              "correct": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-s2",
+      "title": "القسم الثاني: الإكمال",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e2-1",
+          "presentationType": "inlineCloze",
+          "text": "أكمل الفقرة",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "inlineCloze": {
+            "v": 1,
+            "segments": [
+              {
+                "type": "text",
+                "text": "يستخدم الأمر "
+              },
+              {
+                "type": "blank",
+                "id": "b1",
+                "control": "text"
+              },
+              {
+                "type": "text",
+                "text": " لاختبار الاتصال، ويعمل بروتوكول "
+              },
+              {
+                "type": "blank",
+                "id": "b2",
+                "control": "dropdown",
+                "options": [
+                  {
+                    "id": "o1",
+                    "label": "ICMP"
+                  },
+                  {
+                    "id": "o2",
+                    "label": "SMTP"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": " في طبقة "
+              },
+              {
+                "type": "blank",
+                "id": "b3",
+                "control": "text"
+              }
+            ]
+          },
+          "answer": {
+            "scoring": "proportional",
+            "blanks": {
+              "b1": {
+                "accepted": [
+                  "ping"
+                ],
+                "caseSensitive": false
+              },
+              "b2": {
+                "correctOptionId": "o1"
+              },
+              "b3": {
+                "accepted": [
+                  "الشبكة",
+                  "network"
+                ],
+                "caseSensitive": false
+              }
+            }
+          }
+        },
+        {
+          "examQuestionId": "e2-2",
+          "presentationType": "fillBlank",
+          "text": "أكمل: عدد طبقات نموذج OSI ____ وعدد طبقات TCP/IP ____ .",
+          "marks": 4,
+          "fields": [
+            {
+              "id": "f1",
+              "label": "OSI",
+              "correct": "7"
+            },
+            {
+              "id": "f2",
+              "label": "TCP/IP",
+              "correct": "4"
+            }
+          ],
+          "answer": {
+            "values": [
+              "7",
+              "4"
+            ]
+          }
+        },
+        {
+          "examQuestionId": "e2-3",
+          "presentationType": "wordBank",
+          "text": "اختر من البنك: البروتوكول الموثوق ____ والأسرع ____ .",
+          "marks": 4,
+          "wordBank": [
+            "TCP",
+            "UDP",
+            "IP"
+          ],
+          "fields": [
+            {
+              "id": "w1",
+              "label": "الموثوق",
+              "correct": "TCP"
+            },
+            {
+              "id": "w2",
+              "label": "الأسرع",
+              "correct": "UDP"
+            }
+          ],
+          "answer": {
+            "values": [
+              "TCP",
+              "UDP"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "e-s3",
+      "title": "القسم الثالث: الأسئلة المنظّمة (تُحتسب حتى 15 علامة)",
+      "stimuli": {},
+      "gradingPolicy": "capScore",
+      "maxMarks": 15,
+      "questions": [
+        {
+          "examQuestionId": "e3-1",
+          "presentationType": "matching",
+          "text": "صِل البروتوكول بمنفذه:",
+          "marks": 4,
+          "fields": [
+            {
+              "id": "m1",
+              "label": "HTTP",
+              "kind": "select",
+              "options": [
+                {
+                  "text": "80"
+                },
+                {
+                  "text": "53"
+                },
+                {
+                  "text": "25"
+                }
+              ],
+              "correct": "80"
+            },
+            {
+              "id": "m2",
+              "label": "DNS",
+              "kind": "select",
+              "options": [
+                {
+                  "text": "80"
+                },
+                {
+                  "text": "53"
+                },
+                {
+                  "text": "25"
+                }
+              ],
+              "correct": "53"
+            }
+          ],
+          "answer": {
+            "text": "HTTP=80;DNS=53"
+          }
+        },
+        {
+          "examQuestionId": "e3-2",
+          "presentationType": "ordering",
+          "text": "رتّب طبقات TCP/IP من الأعلى إلى الأسفل:",
+          "marks": 4,
+          "fields": [
+            {
+              "id": "o1",
+              "label": "الخطوة 1",
+              "correct": "التطبيقات"
+            },
+            {
+              "id": "o2",
+              "label": "الخطوة 2",
+              "correct": "النقل"
+            },
+            {
+              "id": "o3",
+              "label": "الخطوة 3",
+              "correct": "الإنترنت"
+            },
+            {
+              "id": "o4",
+              "label": "الخطوة 4",
+              "correct": "الوصول للشبكة"
+            }
+          ],
+          "wordBank": [
+            "الوصول للشبكة",
+            "الإنترنت",
+            "النقل",
+            "التطبيقات"
+          ],
+          "answer": {
+            "mode": "exactSequence",
+            "values": [
+              "التطبيقات",
+              "النقل",
+              "الإنترنت",
+              "الوصول للشبكة"
+            ]
+          }
+        },
+        {
+          "examQuestionId": "e3-3",
+          "presentationType": "tableFill",
+          "text": "أكمل الجدول:",
+          "marks": 4,
+          "tableHeaders": [
+            "البروتوكول",
+            "الطبقة"
+          ],
+          "tableRows": [
+            [
+              "TCP",
+              ""
+            ],
+            [
+              "IP",
+              ""
+            ]
+          ],
+          "fields": [
+            {
+              "id": "l1",
+              "row": 0,
+              "column": 1,
+              "label": "l1",
+              "correct": "النقل"
+            },
+            {
+              "id": "l2",
+              "row": 1,
+              "column": 1,
+              "label": "l2",
+              "correct": "الإنترنت"
+            }
+          ]
+        },
+        {
+          "examQuestionId": "e3-4",
+          "presentationType": "matrix",
+          "text": "حدّد نوع كل بروتوكول:",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "matrix": {
+            "rows": [
+              {
+                "id": "x1",
+                "label": "TCP"
+              },
+              {
+                "id": "x2",
+                "label": "UDP"
+              }
+            ],
+            "columns": [
+              {
+                "id": "co",
+                "label": "موجّه بالاتصال"
+              },
+              {
+                "id": "cl",
+                "label": "غير موجّه بالاتصال"
+              }
+            ]
+          },
+          "answer": {
+            "correctColumnByRow": {
+              "x1": "co",
+              "x2": "cl"
+            }
+          }
+        },
+        {
+          "examQuestionId": "e3-5",
+          "presentationType": "categorization",
+          "text": "صنّف الأجهزة:",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "categorization": {
+            "categories": [
+              {
+                "id": "l2",
+                "label": "طبقة 2"
+              },
+              {
+                "id": "l3",
+                "label": "طبقة 3"
+              }
+            ],
+            "items": [
+              {
+                "id": "d1",
+                "label": "سويتش"
+              },
+              {
+                "id": "d2",
+                "label": "راوتر"
+              }
+            ]
+          },
+          "answer": {
+            "correctCategoryByItem": {
+              "d1": "l2",
+              "d2": "l3"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "e-s4",
+      "title": "القسم الرابع: العددي",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e4-1",
+          "presentationType": "numericResponse",
+          "text": "كم عنوانًا في شبكة /30 قابلًا للاستخدام؟",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 2,
+            "tolerance": 0
+          }
+        },
+        {
+          "examQuestionId": "e4-2",
+          "presentationType": "parametricNumeric",
+          "text": "إذا كان معدل النقل {{r}} Mbps، فكم ميغابت تُنقل في {{t}} ثانية؟",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "parametric": {
+            "v": 2,
+            "generatorVersion": 2,
+            "variables": [
+              {
+                "id": "r",
+                "kind": "integer",
+                "min": 10,
+                "max": 100,
+                "step": 10
+              },
+              {
+                "id": "t",
+                "kind": "integer",
+                "min": 2,
+                "max": 9,
+                "step": 1
+              }
+            ],
+            "derivedVariables": [],
+            "constraints": [],
+            "response": {
+              "unit": "label",
+              "label": "Mb"
+            }
+          },
+          "answer": {
+            "expression": "r*t",
+            "mode": "tolerance",
+            "tolerance": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "e-s5",
+      "title": "القسم الخامس: الصور",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e5-1",
+          "presentationType": "hotspot",
+          "questionTypeVersion": 1,
+          "text": "حدّد الراوتر والسويتش على المخطط.",
+          "marks": 4,
+          "image": {
+            "exists": true,
+            "visible": true,
+            "assets": [
+              {
+                "dataUrl": "data:image/png;base64,iVBORw0KGgo=",
+                "origin": "uploaded",
+                "contentType": "image/png"
+              }
+            ]
+          },
+          "hotspot": {
+            "v": 1,
+            "mode": "multiple",
+            "selections": 2,
+            "alt": "مخطط شبكة فيه راوتر وسويتش"
+          },
+          "answer": {
+            "scoring": "proportional",
+            "regions": [
+              {
+                "id": "rgn-router",
+                "shape": {
+                  "kind": "rect",
+                  "x": 0.137,
+                  "y": 0.113,
+                  "width": 0.181,
+                  "height": 0.173
+                }
+              },
+              {
+                "id": "rgn-switch",
+                "shape": {
+                  "kind": "circle",
+                  "cx": 0.617,
+                  "cy": 0.311,
+                  "r": 0.093
+                }
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "e5-2",
+          "presentationType": "labelDiagram",
+          "questionTypeVersion": 1,
+          "text": "سمِّ طبقات النموذج على الرسم.",
+          "marks": 4,
+          "image": {
+            "exists": true,
+            "visible": true,
+            "assets": [
+              {
+                "dataUrl": "data:image/png;base64,iVBORw0KGgo=",
+                "origin": "uploaded",
+                "contentType": "image/png"
+              }
+            ]
+          },
+          "labelDiagram": {
+            "v": 1,
+            "alt": "مخطط طبقات",
+            "allowReuse": false,
+            "zones": [
+              {
+                "id": "z1",
+                "shape": {
+                  "kind": "rect",
+                  "x": 0.1,
+                  "y": 0.1,
+                  "width": 0.2,
+                  "height": 0.1
+                }
+              },
+              {
+                "id": "z2",
+                "shape": {
+                  "kind": "rect",
+                  "x": 0.1,
+                  "y": 0.3,
+                  "width": 0.2,
+                  "height": 0.1
+                }
+              }
+            ],
+            "labels": [
+              {
+                "id": "l-app",
+                "text": "Application"
+              },
+              {
+                "id": "l-net",
+                "text": "Network"
+              },
+              {
+                "id": "l-phy",
+                "text": "Physical"
+              }
+            ]
+          },
+          "answer": {
+            "scoring": "proportional",
+            "correctLabelByZone": {
+              "z1": "l-app",
+              "z2": "l-net"
+            }
+          }
+        },
+        {
+          "examQuestionId": "e5-3",
+          "presentationType": "multipleChoice",
+          "text": "أي جهاز يظهر في الصورة؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "راوتر"
+            },
+            {
+              "text": "سويتش"
+            },
+            {
+              "text": "نقطة وصول"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-e5-3",
+          "image": {
+            "exists": true,
+            "visible": true,
+            "assets": [
+              {
+                "dataUrl": "data:image/png;base64,iVBORw0KGgo=",
+                "origin": "uploaded",
+                "contentType": "image/png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "e-s6",
+      "title": "القسم السادس: التفاعلي والبرمجة",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e6-1",
+          "presentationType": "networkCli",
+          "text": "اضبط المبدّل: الاسم EDGE-1 و VLAN 30 باسم LAB.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "networkCli": {
+            "device": "switch",
+            "initialState": {
+              "v": 1,
+              "device": "switch",
+              "hostname": "Switch",
+              "vlans": {},
+              "interfaces": {}
+            }
+          },
+          "answer": {
+            "targetState": {
+              "hostname": "EDGE-1",
+              "vlans": {
+                "30": {
+                  "name": "LAB"
+                }
+              }
+            },
+            "scoring": "proportional"
+          }
+        },
+        {
+          "examQuestionId": "e6-2",
+          "presentationType": "smartSim",
+          "text": "اضبط عناوين الشبكتين وفعّل واجهات الراوتر (المختبر الأصلي — الإصدار الأول).",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "networkTopology",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "devices": [
+                {
+                  "id": "r1",
+                  "kind": "router",
+                  "label": "R1",
+                  "x": 0.5,
+                  "y": 0.14
+                },
+                {
+                  "id": "sw1",
+                  "kind": "switch",
+                  "label": "SW1",
+                  "x": 0.27,
+                  "y": 0.48
+                },
+                {
+                  "id": "sw2",
+                  "kind": "switch",
+                  "label": "SW2",
+                  "x": 0.73,
+                  "y": 0.48
+                },
+                {
+                  "id": "pc1",
+                  "kind": "pc",
+                  "label": "PC1",
+                  "x": 0.13,
+                  "y": 0.84
+                },
+                {
+                  "id": "pc2",
+                  "kind": "pc",
+                  "label": "PC2",
+                  "x": 0.39,
+                  "y": 0.84
+                },
+                {
+                  "id": "pc3",
+                  "kind": "pc",
+                  "label": "PC3",
+                  "x": 0.61,
+                  "y": 0.84
+                },
+                {
+                  "id": "pc4",
+                  "kind": "pc",
+                  "label": "PC4",
+                  "x": 0.87,
+                  "y": 0.84
+                }
+              ],
+              "links": [
+                {
+                  "id": "l1",
+                  "a": {
+                    "deviceId": "r1",
+                    "port": "g0/0"
+                  },
+                  "b": {
+                    "deviceId": "sw1",
+                    "port": "g0/1"
+                  }
+                },
+                {
+                  "id": "l2",
+                  "a": {
+                    "deviceId": "r1",
+                    "port": "g0/1"
+                  },
+                  "b": {
+                    "deviceId": "sw2",
+                    "port": "g0/1"
+                  }
+                },
+                {
+                  "id": "l3",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/1"
+                  },
+                  "b": {
+                    "deviceId": "pc1",
+                    "port": "eth0"
+                  }
+                },
+                {
+                  "id": "l4",
+                  "a": {
+                    "deviceId": "sw1",
+                    "port": "f0/2"
+                  },
+                  "b": {
+                    "deviceId": "pc2",
+                    "port": "eth0"
+                  }
+                },
+                {
+                  "id": "l5",
+                  "a": {
+                    "deviceId": "sw2",
+                    "port": "f0/1"
+                  },
+                  "b": {
+                    "deviceId": "pc3",
+                    "port": "eth0"
+                  }
+                },
+                {
+                  "id": "l6",
+                  "a": {
+                    "deviceId": "sw2",
+                    "port": "f0/2"
+                  },
+                  "b": {
+                    "deviceId": "pc4",
+                    "port": "eth0"
+                  }
+                }
+              ]
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "pc1-ip",
+                "label": "PC1 — عنوان IP",
+                "weight": 1,
+                "kind": "pc.address",
+                "deviceId": "pc1",
+                "value": "192.168.10.10"
+              },
+              {
+                "id": "pc1-mask",
+                "label": "PC1 — قناع الشبكة",
+                "weight": 1,
+                "kind": "pc.mask",
+                "deviceId": "pc1",
+                "value": "255.255.255.0"
+              },
+              {
+                "id": "pc1-gw",
+                "label": "PC1 — البوابة الافتراضية",
+                "weight": 1,
+                "kind": "pc.gateway",
+                "deviceId": "pc1",
+                "value": "192.168.10.254"
+              },
+              {
+                "id": "pc2-ip",
+                "label": "PC2 — عنوان IP",
+                "weight": 1,
+                "kind": "pc.address",
+                "deviceId": "pc2",
+                "value": "192.168.10.20"
+              },
+              {
+                "id": "pc2-gw",
+                "label": "PC2 — البوابة الافتراضية",
+                "weight": 1,
+                "kind": "pc.gateway",
+                "deviceId": "pc2",
+                "value": "192.168.10.254"
+              },
+              {
+                "id": "pc3-ip",
+                "label": "PC3 — عنوان IP",
+                "weight": 1,
+                "kind": "pc.address",
+                "deviceId": "pc3",
+                "value": "192.168.20.10"
+              },
+              {
+                "id": "pc3-gw",
+                "label": "PC3 — البوابة الافتراضية",
+                "weight": 1,
+                "kind": "pc.gateway",
+                "deviceId": "pc3",
+                "value": "192.168.20.254"
+              },
+              {
+                "id": "pc4-ip",
+                "label": "PC4 — عنوان IP",
+                "weight": 1,
+                "kind": "pc.address",
+                "deviceId": "pc4",
+                "value": "192.168.20.20"
+              },
+              {
+                "id": "pc4-gw",
+                "label": "PC4 — البوابة الافتراضية",
+                "weight": 1,
+                "kind": "pc.gateway",
+                "deviceId": "pc4",
+                "value": "192.168.20.254"
+              },
+              {
+                "id": "sw1-hostname",
+                "label": "SW1 — اسم الجهاز",
+                "weight": 1,
+                "kind": "switch.hostname",
+                "deviceId": "sw1",
+                "value": "BR1-SW1"
+              },
+              {
+                "id": "sw2-hostname",
+                "label": "SW2 — اسم الجهاز",
+                "weight": 1,
+                "kind": "switch.hostname",
+                "deviceId": "sw2",
+                "value": "BR1-SW2"
+              },
+              {
+                "id": "r1-g00-ip",
+                "label": "R1 G0/0 — عنوان IP",
+                "weight": 2,
+                "kind": "router.ipAddress",
+                "deviceId": "r1",
+                "interface": "g0/0",
+                "value": "192.168.10.254"
+              },
+              {
+                "id": "r1-g00-up",
+                "label": "R1 G0/0 — مفعّلة (no shutdown)",
+                "weight": 1,
+                "kind": "router.interfaceEnabled",
+                "deviceId": "r1",
+                "interface": "g0/0",
+                "value": true
+              },
+              {
+                "id": "r1-g01-ip",
+                "label": "R1 G0/1 — عنوان IP",
+                "weight": 2,
+                "kind": "router.ipAddress",
+                "deviceId": "r1",
+                "interface": "g0/1",
+                "value": "192.168.20.254"
+              },
+              {
+                "id": "r1-g01-up",
+                "label": "R1 G0/1 — مفعّلة (no shutdown)",
+                "weight": 1,
+                "kind": "router.interfaceEnabled",
+                "deviceId": "r1",
+                "interface": "g0/1",
+                "value": true
+              },
+              {
+                "id": "reach-pc1-pc3",
+                "label": "PC1 ⇄ PC3 (عبر الراوتر)",
+                "weight": 3,
+                "kind": "reachability",
+                "source": "pc1",
+                "destination": "pc3",
+                "value": true
+              },
+              {
+                "id": "reach-pc2-pc4",
+                "label": "PC2 ⇄ PC4 (عبر الراوتر)",
+                "weight": 3,
+                "kind": "reachability",
+                "source": "pc2",
+                "destination": "pc4",
+                "value": true
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "e6-3",
+          "presentationType": "coding",
+          "text": "اكتب برنامج Python يطبع عدد الأحرف في السطر المُدخل.",
+          "marks": 6,
+          "questionTypeVersion": 2,
+          "coding": {
+            "allowedLanguages": [
+              "python"
+            ],
+            "defaultLanguage": "python",
+            "starterCode": {},
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 128
+            },
+            "publicTests": []
+          },
+          "answer": {
+            "gradingMode": "hiddenTests",
+            "comparator": "trimTrailingWhitespace",
+            "compileErrorPolicy": "manualReview",
+            "hiddenTests": [
+              {
+                "id": "len-1",
+                "input": "abcde\n",
+                "expectedOutput": "5\n",
+                "weight": 1
+              }
+            ],
+            "referenceSolutions": {}
+          }
+        }
+      ]
+    },
+    {
+      "id": "e-s7",
+      "title": "القسم السابع: الأسئلة المركّبة",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e7-1",
+          "presentationType": "compound",
+          "text": "أجب عن البندين:",
+          "marks": 5,
+          "parts": [
+            {
+              "id": "p1",
+              "label": "أ",
+              "type": "multipleChoice",
+              "text": "أي طبقة تضيف عناوين IP؟",
+              "marks": 2,
+              "options": [
+                {
+                  "text": "الشبكة"
+                },
+                {
+                  "text": "النقل"
+                }
+              ],
+              "answer": {
+                "correctOptionIndex": 0
+              }
+            },
+            {
+              "id": "p2",
+              "label": "ب",
+              "type": "shortAnswer",
+              "text": "ما اختصار بروتوكول التحكم بالنقل؟",
+              "marks": 3,
+              "answer": {
+                "text": "TCP"
+              }
+            }
+          ]
+        },
+        {
+          "examQuestionId": "e7-2",
+          "presentationType": "composite",
+          "text": "استخدم المصدرين المشتركين للإجابة.",
+          "marks": 15,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxRich",
+                "version": 1,
+                "kind": "source",
+                "title": "ملخص",
+                "sources": [
+                  {
+                    "id": "rich1",
+                    "version": 1,
+                    "kind": "rich",
+                    "title": "جدول المنافذ",
+                    "richContent": {
+                      "schemaVersion": 1,
+                      "blocks": [
+                        {
+                          "type": "heading",
+                          "level": 3,
+                          "runs": [
+                            {
+                              "text": "جدول البروتوكولات"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "table",
+                          "caption": "المنافذ المعروفة",
+                          "columnHeaders": [
+                            "البروتوكول",
+                            "المنفذ"
+                          ],
+                          "rowHeaders": true,
+                          "responsive": "scroll",
+                          "rows": [
+                            [
+                              "HTTP",
+                              "80"
+                            ],
+                            [
+                              "HTTPS",
+                              "443"
+                            ],
+                            [
+                              "DNS",
+                              "53"
+                            ]
+                          ]
+                        },
+                        {
+                          "type": "paragraph",
+                          "runs": [
+                            {
+                              "text": "استخدم الجدول للإجابة."
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "ctxMoon",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "محاكاة السقوط على القمر",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "physicsFreeFall",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "model": {
+                      "initialHeight": 50,
+                      "initialVelocity": -5,
+                      "gravity": 1.62
+                    },
+                    "view": {
+                      "maxTime": 10,
+                      "showVelocityGraph": true
+                    },
+                    "tasks": {
+                      "measurements": [
+                        {
+                          "id": "impactTime",
+                          "label": "زمن الوصول إلى سطح القمر",
+                          "unit": "s"
+                        }
+                      ],
+                      "points": []
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gA",
+                "title": "مرتبط بالمصادر",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "a1",
+                    "label": "أ",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "ما منفذ DNS بحسب الجدول؟",
+                    "marks": 3,
+                    "options": [
+                      {
+                        "text": "53"
+                      },
+                      {
+                        "text": "80"
+                      },
+                      {
+                        "text": "443"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    },
+                    "contextId": "ctxRich"
+                  },
+                  {
+                    "id": "a2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxMoon",
+                    "text": "سجّل زمن الوصول إلى سطح القمر.",
+                    "marks": 4,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "impact-time",
+                          "label": "زمن الوصول",
+                          "weight": 1,
+                          "kind": "physics.impactTime",
+                          "measurementId": "impactTime",
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gB",
+                "title": "أجب عن بندين فقط",
+                "gradingPolicy": "firstNAnswered",
+                "requiredAnswers": 2,
+                "maxMarks": 4,
+                "parts": [
+                  {
+                    "id": "b1",
+                    "label": "ج",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "text": "كم بتًا في البايت؟",
+                    "marks": 2,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 8,
+                      "tolerance": 0
+                    }
+                  },
+                  {
+                    "id": "b2",
+                    "label": "د",
+                    "type": "trueFalse",
+                    "questionTypeVersion": 1,
+                    "text": "HTTPS يشفّر الاتصال.",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "صحيح"
+                      },
+                      {
+                        "text": "غير صحيح"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  },
+                  {
+                    "id": "b3",
+                    "label": "هـ",
+                    "type": "shortAnswer",
+                    "questionTypeVersion": 1,
+                    "text": "ما البروتوكول الذي يعطي العناوين تلقائيًا؟",
+                    "marks": 2,
+                    "answer": {
+                      "text": "DHCP"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "gC",
+                "title": "التعليل",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "c1",
+                    "label": "و",
+                    "type": "openResponse",
+                    "questionTypeVersion": 1,
+                    "text": "لماذا يُفضَّل HTTPS على HTTP؟",
+                    "marks": 4,
+                    "openResponse": {
+                      "v": 1,
+                      "profile": "explain",
+                      "instructions": "",
+                      "response": {
+                        "minChars": 0,
+                        "maxChars": 4000
+                      },
+                      "studentRubricVisibility": "hidden"
+                    },
+                    "answer": {
+                      "rubric": {
+                        "v": 1,
+                        "criteria": [
+                          {
+                            "id": "security",
+                            "title": "الأمان",
+                            "description": "",
+                            "maxPoints": 4,
+                            "allowCustomPoints": false,
+                            "guidance": "CERT20G-PRIVATE-GUIDANCE-E72-security",
+                            "levels": [
+                              {
+                                "id": "full",
+                                "label": "full",
+                                "points": 4,
+                                "description": ""
+                              },
+                              {
+                                "id": "half",
+                                "label": "half",
+                                "points": 2,
+                                "description": ""
+                              },
+                              {
+                                "id": "none",
+                                "label": "none",
+                                "points": 0,
+                                "description": ""
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "modelAnswer": "CERT20G-PRIVATE-MODEL-E72"
+                    },
+                    "contextId": "ctxRich"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
