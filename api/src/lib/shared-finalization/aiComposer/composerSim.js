@@ -242,6 +242,8 @@ function vanishesAt(g, m, sides = [-1, 1]) {
     return true;
 }
 function argMin(h, a, b) {
+    if (a > b)
+        [a, b] = [b, a];
     for (let k = 0; k < 120 && b - a > 4 * Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)); k++) {
         const l = a + (b - a) / 3, r = b - (b - a) / 3;
         if (h(l) > h(r))

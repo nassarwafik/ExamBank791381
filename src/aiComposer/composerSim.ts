@@ -249,6 +249,7 @@ export function vanishesAt(g: (x: number) => number | null, m: number, sides: re
 /** The minimum of h on [a, b] by ternary search, down to the last digits of x (at most 120 steps): the vanishing rule samples 10⁻¹²
  *  from the point it is given, so the point must be that close to the zero (RF11). */
 function argMin(h: (x: number) => number, a: number, b: number): number {
+  if (a > b) [a, b] = [b, a];                                                     // the scan beyond the left edge runs leftward
   for (let k = 0; k < 120 && b - a > 4 * Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)); k++) { const l = a + (b - a) / 3, r = b - (b - a) / 3; if (h(l) > h(r)) a = l; else b = r; }
   return (a + b) / 2;
 }

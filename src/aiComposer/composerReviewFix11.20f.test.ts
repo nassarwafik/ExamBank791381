@@ -148,3 +148,20 @@ describe("20F-RF11 many cusps never switch the exclusions off (regression found 
     accepted(src, tasks, { xMax: 8, xIntercepts: [-0.8705, 1.8564], verticalAsymptotes: [2, 7] });
   });
 });
+
+describe("20F-RF11 the left edge too (regression found by the batteries on d180e8d: a search bracket given right to left)", () => {
+  it("a steep touching root beyond the LEFT edge (x·√|x + 6| on [−5, 5]) refuses the key", () => {
+    expect(codes(buildSimFromSpec(fn("x*sqrt(abs(x+6))", ["xIntercepts"], { yMin: -100, yMax: 100, xIntercepts: [0] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    expect(codes(buildSimFromSpec(fn("(x+1)*abs(x+6)^(2/3)", ["xIntercepts"], { yMin: -100, yMax: 100, xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a guard's touching zero beyond the LEFT edge is a pole there (1/√|x + 6|)", () => {
+    expect(codes(buildSimFromSpec(fn("1/sqrt(abs(x+6))+1/x", ["verticalAsymptotes"], { verticalAsymptotes: [0] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("the edge strip mirrored: two roots and a touching root just past the LEFT edge", () => {
+    expect(codes(buildSimFromSpec(fn("(x-0.2)*(x+0.5003)*(x+0.5008)", ["xIntercepts"], { xMin: -0.5, xMax: 0.5, xIntercepts: [0.2] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+    expect(codes(buildSimFromSpec(fn("(x-1)*(x+5.0003)*(x+5.0003)", ["xIntercepts"], { xIntercepts: [1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+  it("a plain root beyond the window — no cusp, no guard — is found by the scan's sign change ((x + 1)(x − 7))", () => {
+    expect(codes(buildSimFromSpec(fn("(x+1)*(x-7)", ["xIntercepts"], { yMin: -50, yMax: 50, xIntercepts: [-1] })))).toEqual(["AI_FUNCTION_WINDOW_TOO_NARROW"]);
+  });
+});
