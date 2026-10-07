@@ -10,7 +10,7 @@ const F = require("../fixtures/coding-17c.js");
 
 const CLASS_ID = "cls-20g-cert";
 const TEACHER = "teacher-20g-cert";
-const quiet = { logInfo() {}, logWarn() {}, logError() {} };
+const quietObs = { logInfo() {}, logWarn() {}, logError() {} };
 const handlers = {
   save: () => require("../../src/functions/save-exam-artifact.js").handler,
   saved: () => require("../../src/functions/manage-saved-exams.js").handler,
@@ -33,7 +33,8 @@ async function withAssignmentId(seed, fn) {
   try { return await fn(); } finally { nodeCrypto.randomUUID = original; }
 }
 /** A fresh platform: one class, the given students (id → display name), a recording Runner double. */
-function createPlatform({ students = {}, runner } = {}) {
+function createPlatform({ students = {}, runner, obs } = {}) {
+  const quiet = obs || quietObs;
   const seed = { ["platform/classes/" + CLASS_ID + ".json"]: { classId: CLASS_ID, name: "صف الشهادة 20G", active: true, studentIds: Object.keys(students) } };
   let n = 0;
   for (const [id, name] of Object.entries(students)) seed["platform/users/" + id + ".json"] = studentDoc(id, name, "CERT20G" + String(++n).padStart(3, "0"));
