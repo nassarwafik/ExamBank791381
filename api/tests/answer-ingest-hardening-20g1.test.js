@@ -162,6 +162,33 @@ describe("20G.1 D3 — valid answers and specialized contracts are unchanged", (
     expect(r.answers).toEqual({ q3: { kind: "compound", parts: { p1: A.text("UDP") } } });
     expect(r.rejected).toEqual([{ id: "__proto__", code: "ANSWER_QUESTION_UNKNOWN" }, { id: "q7", code: "ANSWER_INVALID" }, { id: "q3.__proto__", code: "COMPOUND_PART_UNKNOWN" }]);
   });
+  it("D3-A' a simulation state (accepted by its own bounded normalizer, which knows no question) is refused on an unknown id and with no snapshot", () => {
+    const sim = { kind: "simulation", state: { x: 1 } };
+    expect(normalizeDraftAnswers({ ghostSim: sim }, EX())).toEqual({ answers: {}, rejected: [{ id: "ghostSim", code: "ANSWER_QUESTION_UNKNOWN" }] });
+    expect(normalizeDraftAnswers({ q1: sim }, null)).toEqual({ answers: {}, rejected: [{ id: "q1", code: "ANSWER_QUESTION_UNKNOWN" }] });
+    expect(normalizeDraftAnswers({ q1: sim }, EX())).toEqual({ answers: { q1: sim }, rejected: [] });   // a known id keeps the historical simulation path (pin)
+  });
+  it("D3-A'' the answer-id set is EXACTLY the grader's: a client-shaped positional id (s1::q1, 1) is refused when the exam names its questions", () => {
+    const r = normalizeDraftAnswers({ "s1::q1": A.text("TCP"), "1": A.text("TCP"), q1: A.text("TCP") }, EX());
+    expect(r.answers).toEqual({ q1: A.text("TCP") });
+    expect(r.rejected).toEqual([{ id: "1", code: "ANSWER_QUESTION_UNKNOWN" }, { id: "s1::q1", code: "ANSWER_QUESTION_UNKNOWN" }]);
+    const positional = { examId: "POS", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [{ presentationType: "shortAnswer", text: "?", marks: 1 }] }] };
+    expect(normalizeDraftAnswers({ "s1::q1": A.text("x") }, positional)).toEqual({ answers: { "s1::q1": A.text("x") }, rejected: [] });   // the grader's own fallback id (pin)
+    const flat = { examId: "FLAT", questions: [{ type: "shortAnswer", text: "?", marks: 1 }, { number: 7, type: "shortAnswer", text: "?", marks: 1 }] };
+    expect(normalizeDraftAnswers({ "1": A.text("a"), "7": A.text("b"), "2": A.text("c") }, flat)).toEqual({ answers: { "1": A.text("a"), "7": A.text("b") }, rejected: [{ id: "2", code: "ANSWER_QUESTION_UNKNOWN" }] });
+  });
+  it("D3-G'' the remaining legacy value types stay valid byte-for-byte: boolean table cells, string-array / boolean / null field values (pin)", () => {
+    const answers = { q8: { kind: "table", values: [true, "B", null, false] }, q7: { kind: "fields", values: { b1: ["IP", null], b2: false, b3: null, b4: "MAC" } } };
+    expect(normalizeDraftAnswers(answers, EX())).toEqual({ answers, rejected: [] });
+  });
+  it("D3-N'' a question / part literally named __proto__ is stored as an OWN property (the stored map is never re-prototyped)", () => {
+    const ex = { examId: "PROTO", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [{ examQuestionId: "__proto__", presentationType: "shortAnswer", text: "?", marks: 1 }, { examQuestionId: "cp", presentationType: "compound", text: "?", marks: 1, parts: [{ id: "__proto__", type: "shortAnswer", text: "?", marks: 1 }] }] }] };
+    const r = normalizeDraftAnswers(JSON.parse('{"__proto__":{"kind":"text","value":"a"},"cp":{"kind":"compound","parts":{"__proto__":{"kind":"text","value":"b"}}}}'), ex);
+    expect(Object.getPrototypeOf(r.answers)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call(r.answers, "__proto__")).toBe(true);
+    expect(JSON.parse(JSON.stringify(r.answers))).toEqual(JSON.parse('{"__proto__":{"kind":"text","value":"a"},"cp":{"kind":"compound","parts":{"__proto__":{"kind":"text","value":"b"}}}}'));
+    expect(Object.getPrototypeOf(r.answers.cp.parts)).toBe(Object.prototype);
+  });
   it("D3-O composite (20G E) and the networking exam (20G A) valid answers normalize exactly as on the baseline (pin)", () => {
     const a = normalizeDraftAnswers(PA.FULL.answers, examA());
     const delivery = sanitizeExamForStudent(examE(), { parametric: { assignmentId: "pin-20g1", studentId: "s", attemptNumber: 1 } });
@@ -177,7 +204,7 @@ describe("20G.1 D3 — end to end through the real handlers (draft, restore, sub
   const CANARY = "GHOST-20G1-CANARY";
   let p, aid;
   beforeAll(async () => {
-    p = createPlatform({ students: { "ih-1": "طالب أ", "ih-2": "طالب ب", "ih-3": "طالب ج", "ih-4": "طالب د" } });
+    p = createPlatform({ students: { "ih-1": "طالب أ", "ih-2": "طالب ب", "ih-3": "طالب ج", "ih-4": "طالب د", "ih-5": "طالب هـ" } });
     const saved = await p.teacher.saveExam(EX());
     expect(saved.status).toBe(200);
     const pub = await p.teacher.publish(EX());
@@ -231,6 +258,17 @@ describe("20G.1 D3 — end to end through the real handlers (draft, restore, sub
     expect(g("q2").score).toBe(0);                                                 // never graded from an answer the attempt does not record
     expect(g("q1")).toMatchObject({ score: 0 });
     expect(att.score).toBe(gradeExam(EX(), { q6: { kind: "numeric", value: "9.8" } }).score);
+  });
+  it("D3-P pauseAttempt binds answers through the SAME authority: junk never reaches the paused draft", async () => {
+    const as = await p.teacher.assign(EX().examId, { attemptPolicy: "pausable" });
+    expect(as.status, JSON.stringify(as.jsonBody)).toBe(200);
+    const paid = as.jsonBody.assignment.assignmentId, s = p.student("ih-5");
+    expect((await s.start(paid)).status).toBe(200);
+    const i = s.identity(paid);
+    const r = await s.raw(paid, { action: "pauseAttempt", answers: { ...VALID(), ...junk() }, expectedAttemptNumber: i.attemptNumber, expectedStartedAt: i.startedAt, expectedAttemptEpoch: i.attemptEpoch });
+    expect(r.status, JSON.stringify(r.jsonBody)).toBe(200);
+    expect(JSON.stringify(s.doc(paid))).not.toContain(CANARY);
+    expect(s.doc(paid).draftAnswers).toEqual({ ...VALID(), q1: A.text("TCP") });
   });
   it("D3-K a malformed answer cannot take a firstNAnswered slot: the first VALID answered unit is the one counted", async () => {
     const s = p.student("ih-3");
