@@ -13,7 +13,7 @@ import { parseTable } from "./questionContent";
 
 afterEach(() => cleanup());
 
-const SPELLINGS = [...new Set([...LEGACY_QUESTION_TYPE_KEYS.filter(k => k !== "compound"), ...Object.keys(LEGACY_TYPE_ALIASES).filter(k => k !== "compound"), "MCQ", "TrueFalse", "FILL", "Ordering", "", "sequence", "weirdLegacy"])];
+const SPELLINGS = [...new Set([...LEGACY_QUESTION_TYPE_KEYS.filter(k => k !== "compound"), ...Object.keys(LEGACY_TYPE_ALIASES).filter(k => k !== "compound"), "MCQ", "TrueFalse", "FILL", "Ordering", " tableFill ", " multipleChoice ", " trueFalse ", "", "sequence", "weirdLegacy"])];
 const TABLE_TEXT = "املأ\n| المصطلح | الإجابة |\n|---|---|\n| DNS | |\n| DHCP | |";
 const CONTENT: Record<string, Record<string, unknown>> = {
   bare: { text: "سؤال" },

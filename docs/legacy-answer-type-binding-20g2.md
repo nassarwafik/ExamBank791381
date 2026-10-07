@@ -88,7 +88,8 @@ dual kind fails a test instead of silently narrowing the binding.
 `api/src/lib/shared-finalization/questionTypeAliases.js` by `scripts/build-shared-finalization.mjs`, with the drift test
 green. For a legacy, typeless or unknown legacy-flat question it admits:
 
-1. the catalog `responseKinds` of the resolved type (exact key or alias);
+1. the catalog `responseKinds` of the resolved type (exact key or alias). The exception is `table`, which is always gated by
+   the renderer rule below (E-5 covers the catalog table kind where nothing is drawable);
 2. the kinds the **official legacy renderers** (`StudentQuestionCard`, `CompoundPartControl`) derive from the question's
    own content:
    - `table` ⇐ **only where the renderer draws a table** (Review Fix 1): the question text holds a markdown table with at
@@ -129,8 +130,10 @@ admits a drawable one.
 
 ## 7. Canonical type / alias resolution
 
-The type is `presentationType` when it is a non-blank string, otherwise the flat `type`. A stale flat `type` beside a
-structured `presentationType` is never the authority (`O1-L'''`). The type is resolved by
+The type is `presentationType || type` (Review Fix 1, E-6), exactly as the renderer's `typeOf`, the legacy grader and the 16A
+registry derive it. The literal spelling is lower-cased but not trimmed, like `typeOf`: a padded `" tableFill "` is not a field
+type, and a padded `" multipleChoice "` draws a textarea (RF2-PADDED). A stale flat `type` beside a structured
+`presentationType` is never the authority (`O1-L'''`). The type is resolved by
 `resolveQuestionTypeKeyOrAlias`: the exact catalog key (case-insensitive), then `LEGACY_TYPE_ALIASES`
 (trimmed / lower-cased), so `mcq`, `MCQ`, `tf`, `order`, `Fill`, `table`, `cli` and the rest admit their canonical type's
 kinds. The alias matrix (`O1-L`) covers all 22 directive aliases plus case variants, in both `presentationType` and flat

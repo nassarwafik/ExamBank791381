@@ -415,6 +415,37 @@ describe("20G.2 RF1 — a forged table can only answer a question whose renderer
     }
     expect(grade(TBL(), table(["A"]))).toEqual({ score: 7, maxMarks: 7, correct: true, manualReview: false });   // O1-P, unchanged
   });
+  // Review Fix 2 (independent review round 2, F5): pins for behaviour the head already has, each killing a surviving reviewer mutant.
+  it("RF2-GRID a tableFill grid is EITHER tableHeaders OR tableRows (the renderer's isFieldType): with either one alone it draws fields, so a forged table is refused even with a stem table", () => {
+    for (const grid of [{ tableRows: [["PC1", ""], ["PC2", ""]] }, { tableHeaders: ["الجهاز", "IP"] }]) {
+      const q = { examQuestionId: "tg", presentationType: "tableFill", text: STEM, marks: 4, ...grid, answer: { text: "z" } };
+      expect(ingest(q, BLANK), JSON.stringify(grid)).toEqual({ answers: {}, rejected: [{ id: "tg", code: "ANSWER_KIND_MISMATCH" }] });
+      expect(grade(q, BLANK), JSON.stringify(grid)).toEqual(FAIL_CLOSED(4));
+    }
+  });
+  it("RF2-TWO-LINES a two-line table (header + one row, no separator) is drawn by the client: admitted at the top level, refused on a part even for a catalog table type", () => {
+    const two = "| a | b |\n| PC1 | x |";
+    expect(aliases.legacyAnswerKindAllowed({ presentationType: "shortAnswer", text: two }, "table")).toBe(true);
+    expect(ingest({ ...SA(), text: two }, table(["x"])).rejected).toEqual([]);
+    expect(aliases.legacyAnswerKindAllowed({ presentationType: "tableFill", text: two }, "table", "part")).toBe(false);
+  });
+  it("RF2-PADDED the literal type is NOT trimmed, exactly like the renderer's typeOf: a padded ' tableFill ' with a grid draws a table; a padded ' multipleChoice ' draws a textarea", () => {
+    const padded = { examQuestionId: "pt", presentationType: " tableFill ", text: STEM, marks: 4, tableHeaders: ["الجهاز", "IP"], answer: { text: "PC1=10.0.0.5;PC2=10.0.0.6" } };
+    expect(aliases.legacyAnswerKindAllowed(padded, "table")).toBe(true);
+    expect(ingest(padded, table(["10.0.0.5", "10.0.0.6"])).rejected).toEqual([]);
+    const mc = { ...MC(), presentationType: " multipleChoice " };
+    expect(aliases.legacyAnswerKindAllowed(mc, "text")).toBe(true);
+    expect(ingest(mc, { kind: "text", value: "ب" }).rejected).toEqual([]);
+  });
+  it("RF2-FN a valid top-level table answer takes its question-level first-N slot (and an excess one is reported as ignored)", () => {
+    const t1 = { examQuestionId: "t1", presentationType: "tableFill", text: STEM, marks: 4, answer: { text: "PC1=10.0.0.5;PC2=10.0.0.6" } };
+    const s2 = { ...SA(), examQuestionId: "s2", marks: 4 };
+    const answers = { t1: table(["10.0.0.5", "10.0.0.6"]), s2: A.text("b") };
+    const first = gradeExam(exam([t1, s2], { gradingPolicy: "firstNAnswered", answerUnit: "question", requiredAnswers: 1, maxMarks: 4 }), answers);
+    expect(first.questions.map(q => [q.questionId, q.score, q.countedMaxMarks, q.ignored])).toEqual([["t1", 4, 4, false], ["s2", 0, 0, true]]);
+    const second = gradeExam(exam([s2, t1], { gradingPolicy: "firstNAnswered", answerUnit: "question", requiredAnswers: 1, maxMarks: 4 }), answers);
+    expect(second.questions.map(q => [q.questionId, q.score, q.countedMaxMarks, q.ignored])).toEqual([["s2", 4, 4, false], ["t1", 0, 0, true]]);
+  });
   it("RF1-F3 the type is presentationType || type, exactly as the renderer / grader / registry derive it: a blank or non-string presentationType never borrows a modern flat type's authority", () => {
     for (const [presentationType, type] of [[" ", "multipleSelect"], ["\t", "numericResponse"], [7, "openResponse"]]) {
       const q = { examQuestionId: "f3", presentationType, type, text: "?", marks: 5, options: [{ text: "1" }, { text: "2" }], answer: { values: ["1"] } };
