@@ -108,4 +108,8 @@ describe("20F-RF7 each new layer holds on its own", () => {
     expect(r.extrema.map(e => e.kind)).toEqual(["min"]);
     expect(Math.abs(r.extrema[0].x - 2)).toBeLessThanOrEqual(0.005);
   });
+  it("a flat extremum too flat for the grid (narrow window) is checked at x ± 0.005 against the evaluator's rounding only", () => {
+    refused("(x-2)^6+10", ["extrema"], { xMin: 1.9, xMax: 2.1, yMin: 9, yMax: 11, extrema: [{ kind: "min", x: 2.012, y: 10 }] });
+    accepted("(x-2)^6+10", ["extrema"], { xMin: 1.9, xMax: 2.1, yMin: 9, yMax: 11, extrema: [{ kind: "min", x: 2, y: 10 }] });
+  });
 });
