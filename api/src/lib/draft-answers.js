@@ -6,7 +6,7 @@ const { normalizeSimulationState } = require("./shared-finalization/smartsimStat
 // the source is never trimmed / re-indented / re-encoded; client-reported score / passed / testsPassed / stdout are dropped;
 // only a REGISTERED language at its exact contract version is accepted (V1: python@1, java@1, csharp@1).
 const { normalizeCodeAnswer, bindCodeAnswerToQuestion } = require("./shared-finalization/codingQuestion");
-const { flattenQuestions, questionParts, partId, isCompound } = require("./exam-structure");
+const { flattenQuestions, questionParts, partId, isCompound, admittedResponse } = require("./exam-structure");
 // Phase 19A — an answer to an inlineCloze@1 question is the existing `fields` Answer; bound to the published question only STRING
 // values for that question's own blank ids survive (bounded). A non-fields answer to a cloze question is dropped with a code.
 // Every other `fields` answer (legacy fillBlank / wordBank / matrix / …) is passed through exactly as before.
@@ -90,7 +90,8 @@ function bindAnswer(id, a, q, bound, reject) {
     if (q === undefined) return { ok: false, code: "ANSWER_QUESTION_UNKNOWN" };
     // the grader reads a compound answer ONLY on a compound question (isCompound — the same authority); elsewhere it was never an answer
     if (!isCompound(q)) return { ok: false, code: "COMPOUND_QUESTION_MISMATCH" };
-    const own = new Set(questionParts(q).map((p, i) => partId(p, i)));
+    // 20G.2 — each own part id maps to its part NODE (exactly as gradeCompound builds it) so the part answer is bound to its own type
+    const own = new Map(questionParts(q).map((p, i) => [partId(p, i), { ...p, presentationType: p.type || p.presentationType }]));
     const parts = {};
     for (const pid of Object.keys(a.parts)) {
       if (isCode(a.parts[pid])) { reject(id + "." + pid, "CODE_QUESTION_MISMATCH"); continue; }
@@ -99,14 +100,14 @@ function bindAnswer(id, a, q, bound, reject) {
       if (isSmartSim(a.parts[pid])) { reject(id + "." + pid, "SMARTSIM_QUESTION_MISMATCH"); continue; }
       if (isHotspot(a.parts[pid])) { reject(id + "." + pid, "HOTSPOT_QUESTION_MISMATCH"); continue; }
       if (!own.has(pid)) { reject(id + "." + pid, "COMPOUND_PART_UNKNOWN"); continue; }
-      const r = bindLegacyAnswer(a.parts[pid]);
+      const r = bindLegacyAnswer(a.parts[pid], own.get(pid));
       if (r.ok) setOwn(parts, pid, r.answer); else reject(id + "." + pid, r.code);
     }
     return { ok: true, answer: { kind: "compound", parts } };
   }
   if (!bound) return { ok: true, answer: a };
   if (q === undefined) return { ok: false, code: "ANSWER_QUESTION_UNKNOWN" };
-  return bindLegacyAnswer(a);
+  return bindLegacyAnswer(a, q);
 }
 
 // Phase 20G.1 — the LEGACY answer contract (the original Answer shapes the generic binder historically passed through untouched). Bound
@@ -130,10 +131,14 @@ const LEGACY_SHAPES = {
   multiChoice: a => (Array.isArray(a.optionIds) && a.optionIds.every(isStr) ? { kind: "multiChoice", optionIds: a.optionIds } : null),
   numeric: a => (isStr(a.value) && (a.unit === undefined || isStr(a.unit)) ? { kind: "numeric", value: a.value, ...(a.unit !== undefined ? { unit: a.unit } : {}) } : null)
 };
-function bindLegacyAnswer(a) {
+// Phase 20G.2 (O1) — a well-formed legacy answer must also be a kind the published QUESTION admits (admittedResponse: the same shared
+// authority — legacyAnswerKindAllowed — the grader and the first-N selection apply); otherwise it is refused with ANSWER_KIND_MISMATCH
+// (distinct from ANSWER_INVALID: the shape is fine, the question never accepts it). It is never stored and never converted to another kind.
+function bindLegacyAnswer(a, q) {
   if (!isPlain(a) || typeof a.kind !== "string" || !Object.prototype.hasOwnProperty.call(LEGACY_SHAPES, a.kind)) return { ok: false, code: "ANSWER_INVALID" };
   const answer = LEGACY_SHAPES[a.kind](a);
   if (!answer) return { ok: false, code: "ANSWER_INVALID" };
+  if (admittedResponse(q, answer) === undefined) return { ok: false, code: "ANSWER_KIND_MISMATCH" };
   if (Buffer.byteLength(JSON.stringify(answer), "utf8") > LEGACY_ANSWER_LIMITS.answerBytes) return { ok: false, code: "ANSWER_TOO_LARGE" };
   return { ok: true, answer };
 }
