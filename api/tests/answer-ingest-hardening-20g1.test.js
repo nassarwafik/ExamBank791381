@@ -184,6 +184,14 @@ describe("20G.1 D3 — valid answers and specialized contracts are unchanged", (
     const answers = { q8: { kind: "table", values: [true, "B", null, false] }, q7: { kind: "fields", values: { b1: ["IP", null], b2: false, b3: null, b4: "MAC" } } };
     expect(normalizeDraftAnswers(answers, EX())).toEqual({ answers, rejected: [] });
   });
+  it("D3-N''' forbidden field keys are refused even with a well-typed value; an array is never a legacy answer object (even one carrying a kind)", () => {
+    for (const k of ["__proto__", "constructor", "prototype"]) {
+      const r = normalizeDraftAnswers(JSON.parse('{"q7":{"kind":"fields","values":{"' + k + '":"x","b1":"IP"}}}'), EX());
+      expect(r, k).toEqual({ answers: {}, rejected: [{ id: "q7", code: "ANSWER_INVALID" }] });
+    }
+    const arrayWithKind = Object.assign(["TCP"], { kind: "text", value: "TCP" });
+    expect(normalizeDraftAnswers({ q1: arrayWithKind }, EX())).toEqual({ answers: {}, rejected: [{ id: "q1", code: "ANSWER_INVALID" }] });
+  });
   it("D3-N'' a question / part literally named __proto__ is stored as an OWN property (the stored map is never re-prototyped)", () => {
     const ex = { examId: "PROTO", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [{ examQuestionId: "__proto__", presentationType: "shortAnswer", text: "?", marks: 1 }, { examQuestionId: "cp", presentationType: "compound", text: "?", marks: 1, parts: [{ id: "__proto__", type: "shortAnswer", text: "?", marks: 1 }] }] }] };
     const r = normalizeDraftAnswers(JSON.parse('{"__proto__":{"kind":"text","value":"a"},"cp":{"kind":"compound","parts":{"__proto__":{"kind":"text","value":"b"}}}}'), ex);
