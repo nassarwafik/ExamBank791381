@@ -233,6 +233,11 @@ describe("20G.3 Review Fix 1 — no silent zero for a correct all-unticked answe
     // a key with at least one row to tick keeps its keyed grade (T31)
     expect(grade({ ...ALL_FALSE(), answer: { text: "A=true;B=false" } }, table([true, false]))).toEqual({ score: 2, maxMarks: 2, correct: true, manualReview: false });
   });
+  it("RF1-F1b only an all-CHECK-BOX key can leave nothing to do: a boolean-SELECT table keyed all false is answered by choosing, and stays auto-graded (pin)", () => {
+    expect(grade(BS("R1=false;R2=false"), table(["false", "false"]))).toEqual({ score: 4, maxMarks: 4, correct: true, manualReview: false });
+    expect(grade(BS("R1=false;R2=false"), table(["true", "false"]))).toEqual({ score: 2, maxMarks: 4, correct: false, manualReview: false });
+    expect(grade({ ...KT(), answer: { text: "Router=false;Switch=false;Hub=false" } }, table(["false", "false", "false"])).score).toBe(6);   // text rows typed "false"
+  });
   it("RF1-F2 malformed question fields never crash the grader: they are not row options (ebf023c: TypeError; c2a49e9: graded)", () => {
     const base = { examQuestionId: "mf", marks: 2, text: "| Item | Ans |\n|---|---|\n| A | |\n| B | |", answer: { text: "A=1;B=2" } };
     for (const fields of [[null], {}, [{ options: "ab" }], [{ options: [null] }], [{ options: [null, 7, { value: "1" }] }], [{ options: [{ value: "1" }, { value: "2" }] }, 5], "x"]) {
