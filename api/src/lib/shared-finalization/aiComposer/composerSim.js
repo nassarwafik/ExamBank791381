@@ -6,6 +6,7 @@ exports.buildSimSpecSchema = buildSimSpecSchema;
 exports.expressionCost = expressionCost;
 exports.poleKindAt = poleKindAt;
 exports.functionLimits = functionLimits;
+exports.featureOutsideWindow = featureOutsideWindow;
 exports.probeFunctionFeatures = probeFunctionFeatures;
 exports.aiUnsupportedOperators = aiUnsupportedOperators;
 exports.buildSimFromSpec = buildSimFromSpec;
@@ -194,6 +195,128 @@ class ProbeStop extends Error {
     why;
     constructor(why) { super(why); this.why = why; }
 }
+const OUTER_N = 800;
+function edgeIsRoot(at, e, dir) {
+    const f0 = at(e);
+    if (f0 === null)
+        return false;
+    if (f0 !== 0) {
+        const v = [1e-2, 1e-4, 1e-6, 1e-8].map(d => at(e + dir * d));
+        if (v.some(t => t === null))
+            return false;
+        const a = v.map(t => Math.abs(t));
+        if (!(a.every((t, k) => k === 0 || t < a[k - 1]) && a[3] <= 1e-2 * a[0] && Math.abs(f0) <= 1e-3 * a[3]))
+            return false;
+    }
+    for (let k = 0; k <= 6; k++) {
+        const c = Math.round(e * 10 ** k) / 10 ** k;
+        if (Math.abs(c - e) <= 1e-9 * Math.max(1, Math.abs(e)))
+            return at(c) !== null;
+    }
+    return true;
+}
+function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
+    const wantRoots = need.roots, wantBreaks = need.poles || need.points || need.slope, wantSlope = need.extrema || need.slope;
+    if (!wantRoots && !wantBreaks && !wantSlope)
+        return null;
+    const n = Math.max(100, Math.min(OUTER_N, Math.floor(exports.PROBE_NODE_BUDGET / 4 / Math.max(1, ast === undefined ? 1 : expressionCost(ast)))));
+    const raw = (x) => rawAt(x), at = (x) => { const r = rawAt(x); return r !== null && Number.isFinite(r) ? r : null; };
+    for (const [edge, dir] of [[xMax, 1], [xMin, -1]]) {
+        let def = null, last = null, slope = 0, prevX = edge, zeroAt = null;
+        let pp = null, p = null;
+        for (let k = 0; k < n; k++) {
+            const x = edge + dir * 1e-3 * 1e9 ** (k / (n - 1)), r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
+            if (def !== null && d !== def) {
+                if (wantBreaks)
+                    return x;
+                if (wantRoots) {
+                    let lo = d ? x : prevX, hi = d ? prevX : x;
+                    for (let t = 0; t < 80; t++) {
+                        const m = (lo + hi) / 2;
+                        if (raw(m) === null)
+                            hi = m;
+                        else
+                            lo = m;
+                    }
+                    if (edgeIsRoot(at, lo, Math.sign(lo - hi)))
+                        return lo;
+                }
+            }
+            def = d;
+            prevX = x;
+            if (v === null) {
+                last = null;
+                slope = 0;
+                pp = p = null;
+                zeroAt = null;
+                continue;
+            }
+            if (v === 0) {
+                if (zeroAt === null)
+                    zeroAt = x;
+                continue;
+            }
+            if (zeroAt !== null) {
+                if (wantRoots)
+                    return zeroAt;
+                zeroAt = null;
+            }
+            if (last && v !== 0 && last.v !== 0 && Math.sign(v) !== Math.sign(last.v)) {
+                let a = last.x, b = x, fa = last.v, pole = false;
+                for (let t = 0; t < 80; t++) {
+                    const m = (a + b) / 2, fm = at(m);
+                    if (fm === null) {
+                        pole = true;
+                        break;
+                    }
+                    if (fm === 0) {
+                        a = b = m;
+                        fa = 0;
+                        break;
+                    }
+                    if (Math.sign(fm) === Math.sign(fa)) {
+                        a = m;
+                        fa = fm;
+                    }
+                    else
+                        b = m;
+                }
+                const fb = at(b);
+                const root = !pole && fb !== null && Math.min(Math.abs(fa), Math.abs(fb)) <= 1e-6 * Math.max(1, Math.abs(last.v), Math.abs(v));
+                if (root ? wantRoots : wantBreaks)
+                    return (a + b) / 2;
+            }
+            if (last && wantSlope) {
+                const dv = v - last.v;
+                if (Math.abs(dv) > 1e-9 * Math.max(1, Math.abs(v), Math.abs(last.v))) {
+                    const sg = Math.sign(dv);
+                    if (slope !== 0 && sg !== slope)
+                        return x;
+                    slope = sg;
+                }
+            }
+            if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {
+                let lo = pp.x, hi = x;
+                for (let t = 0; t < 60; t++) {
+                    const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3, fa = at(a), fb = at(b);
+                    if (fa === null || fb === null)
+                        break;
+                    if (Math.abs(fa) > Math.abs(fb))
+                        lo = a;
+                    else
+                        hi = b;
+                }
+                const m = at((lo + hi) / 2);
+                if (m !== null && Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v)))
+                    return (lo + hi) / 2;
+            }
+            pp = p;
+            p = { x, a: Math.abs(v) };
+            last = { x, v };
+        }
+    }
+    return null;
+}
 function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) {
     void scale;
     const budget = Math.min(exports.PROBE_BUDGET, Math.floor(exports.PROBE_NODE_BUDGET / Math.max(1, ast === undefined ? 1 : expressionCost(ast))));
@@ -242,8 +365,33 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         }
         return (b + c) / 2;
     };
+    const edgeRoot = (e, dir) => edgeIsRoot(at, e, dir);
     const isPole = (x) => { const k = poleKindAt(atRaw, x); if (k === "uncertain" && need.poles)
         throw new ProbeStop("uncertain"); return k === "pole"; };
+    const flatCentre = (x, fx, step) => {
+        const v = fx(x), tol = 4 * Number.EPSILON * Math.max(1, Math.abs(v)), same = (t) => Math.abs(fx(t) - v) <= tol;
+        let w = step;
+        while (w <= 16 * step && (same(x - w) || same(x + w)))
+            w *= 2;
+        if (w > 16 * step)
+            return x;
+        let a = x - w, b = x, c = x, d = x + w;
+        for (let k = 0; k < 50; k++) {
+            const m = (a + b) / 2;
+            if (same(m))
+                b = m;
+            else
+                a = m;
+        }
+        for (let k = 0; k < 50; k++) {
+            const m = (c + d) / 2;
+            if (same(m))
+                c = m;
+            else
+                d = m;
+        }
+        return (b + c) / 2;
+    };
     try {
         const step = (xMax - xMin) / (PROBE_N - 1);
         const xs = [], ys = [];
@@ -273,12 +421,14 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                     i = j;
                     continue;
                 }
-                if (singular) {
+                if (singular || need.roots) {
                     if (j - i <= 1 && i > 0 && j < PROBE_N - 1) {
-                        const x = (xs[i] + xs[j]) / 2;
-                        add(points, x, "points");
-                        if (isPole(x))
-                            add(poles, x, "poles");
+                        if (singular) {
+                            const x = (xs[i] + xs[j]) / 2;
+                            add(points, x, "points");
+                            if (isPole(x))
+                                add(poles, x, "poles");
+                        }
                     }
                     else
                         for (const [edge, inside] of [[i, i - 1], [j, j + 1]]) {
@@ -292,10 +442,14 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                                 else
                                     lo = m;
                             }
-                            if (isPole(hi))
+                            if (singular && isPole(hi))
                                 add(poles, hi, "poles");
-                            else if (!edges.some(v => Math.abs(v - hi) < 1e-3))
-                                edges.push(hi);
+                            else {
+                                if (singular && !edges.some(v => Math.abs(v - hi) < 1e-3))
+                                    edges.push(hi);
+                                if (need.roots && edgeRoot(lo, Math.sign(xs[inside] - xs[edge])))
+                                    add(roots, lo, "roots");
+                            }
                         }
                 }
                 i = j;
@@ -367,8 +521,8 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
                 if (!kind)
                     continue;
                 const fx = (x) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
-                const x = ternary(xs[i - 1], xs[i + 1], fx, kind === "max");
-                const v = fx(x), side = Math.min(Math.abs(v - fx(x - step)), Math.abs(v - fx(x + step)));
+                const x = flatCentre(ternary(xs[i - 1], xs[i + 1], fx, kind === "max"), fx, step);
+                const v = fx(x), side = Math.max(...[1, 4, 16].map(m => Math.min(Math.abs(v - fx(x - m * step)), Math.abs(v - fx(x + m * step)))));
                 if (side > 1e-10 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) {
                     extrema.push({ kind, x });
                     if (extrema.length > KEY_CAP && need.extrema)
@@ -528,6 +682,9 @@ function buildFunction(f, path) {
             return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
         if (ft.overflow)
             return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
+        const beyond = featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
+        if (beyond !== null)
+            return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);
         const K = exports.KEY_TOL;
         const missing = (label, found, key) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= K)); if (miss.length)
             issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };
@@ -551,12 +708,17 @@ function buildFunction(f, path) {
                 issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (فترات التزايد والتناقص): الدالة " + (miss.dir > 0 ? "متزايدة" : "متناقصة") + " قرب x = " + Number(miss.x.toFixed(3)) + " ولا تغطيها أي فترة.", path });
         }
         const near1 = (x, found) => found.some(v => Math.abs(v - x) <= K);
+        const isolated = (x) => at(x) === null && [1e-6, 1e-4].every(d => atRaw(x - d) !== null && atRaw(x + d) !== null);
+        if (tasks.domainExclusions)
+            for (const x of ex)
+                if (!near1(x, ft.points) && !isolated(x))
+                    bad("x = " + x + " ليست نقطة معزولة خارج المجال (ثقب أو قفزة أو خط تقارب).");
         if (tasks.xIntercepts)
             for (const x of xi)
                 if (!near1(x, ft.roots))
                     bad("لا يوجد مقطع سيني ضمن ±" + K + " من x = " + x + ".");
         const flatExtremum = (e) => {
-            const y = at(e.x), l = at(e.x - K), r = at(e.x + K), slack = 1e-12 * Math.max(1, Math.abs(y ?? 0));
+            const y = at(e.x), l = at(e.x - K), r = at(e.x + K), slack = 4 * Number.EPSILON * Math.max(1, Math.abs(y ?? 0));
             return y !== null && l !== null && r !== null && (e.kind === "min" ? l >= y - slack && r >= y - slack : l <= y + slack && r <= y + slack);
         };
         if (tasks.extrema)

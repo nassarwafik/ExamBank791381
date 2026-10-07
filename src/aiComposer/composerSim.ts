@@ -198,6 +198,73 @@ export function functionLimits(at: Probe): { limits: number[]; uncertain: boolea
 const KEY_CAP = 10;                                                             // the longest key list a function-study spec may hold
 const ALL_NEEDS: FeatureNeeds = { roots: true, points: true, poles: true, extrema: true, limits: true, slope: true };
 class ProbeStop extends Error { why: Exclude<FunctionFeatures["overflow"], null>; constructor(why: Exclude<FunctionFeatures["overflow"], null>) { super(why); this.why = why; } }
+/** OUTSIDE THE WINDOW (Review Fix 7): the student studies the WHOLE function ("الرسم للاستكشاف فقط"), so the window must contain every
+ *  feature the tasks ask for. Each side beyond the window is scanned on a geometric grid, 10⁻³ … 10⁶ past the edge (≈ 2.6 % apart):
+ *  - a sign change (a root or a pole), an exact zero, a change between defined and undefined, or a local minimum of |f| that reaches 0
+ *    (a touching root), when roots, poles, domain points or monotonic stretches are asked for;
+ *  - a change of slope beyond the evaluator's rounding, when extrema or monotonic stretches are asked for.
+ *  The first such x is returned (the key is refused: "widen the window"). Bounded like the probe; a probe, not a proof — two features
+ *  closer than the grid's spacing far from the window can hide each other. */
+const OUTER_N = 800;
+/** A domain edge e (f defined on the `dir` side) is a ROOT when |f| shrinks steadily toward it (10⁻² … 10⁻⁸), is negligible at e, and
+ *  the edge itself belongs to the domain: when e is a round number (0, 2, 0.5 …), f must be defined exactly there — x·√(4−x²) at 2 is
+ *  a root, x·log x at 0 is not (0 is outside the domain). An edge that is not a round number (√3) is taken as closed. */
+function edgeIsRoot(at: (x: number) => number | null, e: number, dir: number): boolean {
+  const f0 = at(e); if (f0 === null) return false;
+  if (f0 !== 0) {
+    const v = [1e-2, 1e-4, 1e-6, 1e-8].map(d => at(e + dir * d));
+    if (v.some(t => t === null)) return false;
+    const a = v.map(t => Math.abs(t as number));
+    if (!(a.every((t, k) => k === 0 || t < a[k - 1]) && a[3] <= 1e-2 * a[0] && Math.abs(f0) <= 1e-3 * a[3])) return false;
+  }
+  for (let k = 0; k <= 6; k++) { const c = Math.round(e * 10 ** k) / 10 ** k; if (Math.abs(c - e) <= 1e-9 * Math.max(1, Math.abs(e))) return at(c) !== null; }
+  return true;
+}
+export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, need: FeatureNeeds, ast?: unknown): number | null {
+  const wantRoots = need.roots, wantBreaks = need.poles || need.points || need.slope, wantSlope = need.extrema || need.slope;
+  if (!wantRoots && !wantBreaks && !wantSlope) return null;
+  const n = Math.max(100, Math.min(OUTER_N, Math.floor(PROBE_NODE_BUDGET / 4 / Math.max(1, ast === undefined ? 1 : expressionCost(ast)))));
+  const raw = (x: number) => rawAt(x), at = (x: number) => { const r = rawAt(x); return r !== null && Number.isFinite(r) ? r : null; };
+  for (const [edge, dir] of [[xMax, 1], [xMin, -1]] as const) {
+    let def: boolean | null = null, last: { x: number; v: number } | null = null, slope = 0, prevX = edge, zeroAt: number | null = null;
+    let pp: { x: number; a: number } | null = null, p: { x: number; a: number } | null = null;                     // |f| history (touching roots)
+    for (let k = 0; k < n; k++) {                                                   // strictly beyond the window (a pole ON its edge is inside)
+      const x = edge + dir * 1e-3 * 1e9 ** (k / (n - 1)), r = raw(x), d = r !== null, v = d && Number.isFinite(r) ? r : null;
+      if (def !== null && d !== def) {                                              // defined ↔ undefined: a domain edge, a hole or a pole
+        if (wantBreaks) return x;
+        if (wantRoots) {
+          let lo = d ? x : prevX, hi = d ? prevX : x;                               // lo defined, hi undefined
+          for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (raw(m) === null) hi = m; else lo = m; }
+          if (edgeIsRoot(at, lo, Math.sign(lo - hi))) return lo;
+        }
+      }
+      def = d; prevX = x;
+      if (v === null) { last = null; slope = 0; pp = p = null; zeroAt = null; continue; }
+      // an exact zero is a root only if f leaves 0 again (a stretch of zeros is the evaluator's underflow: x·e^(−x) far out)
+      if (v === 0) { if (zeroAt === null) zeroAt = x; continue; }
+      if (zeroAt !== null) { if (wantRoots) return zeroAt; zeroAt = null; }
+      if (last && v !== 0 && last.v !== 0 && Math.sign(v) !== Math.sign(last.v)) {   // a sign change: a root or a pole between the samples
+        let a = last.x, b = x, fa = last.v, pole = false;
+        for (let t = 0; t < 80; t++) { const m = (a + b) / 2, fm = at(m); if (fm === null) { pole = true; break; } if (fm === 0) { a = b = m; fa = 0; break; } if (Math.sign(fm) === Math.sign(fa)) { a = m; fa = fm; } else b = m; }
+        const fb = at(b);
+        const root = !pole && fb !== null && Math.min(Math.abs(fa), Math.abs(fb)) <= 1e-6 * Math.max(1, Math.abs(last.v), Math.abs(v));
+        if (root ? wantRoots : wantBreaks) return (a + b) / 2;
+      }
+      if (last && wantSlope) {
+        const dv = v - last.v;
+        if (Math.abs(dv) > 1e-9 * Math.max(1, Math.abs(v), Math.abs(last.v))) { const sg = Math.sign(dv); if (slope !== 0 && sg !== slope) return x; slope = sg; }
+      }
+      if (wantRoots && pp && p && p.a < pp.a && p.a < Math.abs(v)) {                                             // a local minimum of |f|
+        let lo = pp.x, hi = x;
+        for (let t = 0; t < 60; t++) { const a = lo + (hi - lo) / 3, b = hi - (hi - lo) / 3, fa = at(a), fb = at(b); if (fa === null || fb === null) break; if (Math.abs(fa) > Math.abs(fb)) lo = a; else hi = b; }
+        const m = at((lo + hi) / 2);
+        if (m !== null && Math.abs(m) <= 1e-9 * Math.max(1, pp.a, Math.abs(v))) return (lo + hi) / 2;
+      }
+      pp = p; p = { x, a: Math.abs(v) }; last = { x, v };
+    }
+  }
+  return null;
+}
 export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, scale: number, need: FeatureNeeds = ALL_NEEDS, ast?: unknown): FunctionFeatures {
   void scale;
   const budget = Math.min(PROBE_BUDGET, Math.floor(PROBE_NODE_BUDGET / Math.max(1, ast === undefined ? 1 : expressionCost(ast))));
@@ -226,8 +293,20 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     for (let k = 0; k < 60; k++) { const m = (c + d) / 2; if (finiteAt(m)) d = m; else c = m; }
     return (b + c) / 2;
   };
+  // a domain edge is a ROOT when f tends to 0 there (Review Fix 7): |f| shrinks steadily as the probe closes in from the defined side
+  // (10⁻² … 10⁻⁸) and is negligible at the edge itself — an edge where f tends to a non-zero value or grows is not one
+  const edgeRoot = (e: number, dir: number) => edgeIsRoot(at, e, dir);
   // a candidate singular point: a pole is recorded, an uncertain one stops the probe (fail closed) when poles are asked for
   const isPole = (x: number) => { const k = poleKindAt(atRaw, x); if (k === "uncertain" && need.poles) throw new ProbeStop("uncertain"); return k === "pole"; };
+  const flatCentre = (x: number, fx: (x: number) => number, step: number) => {
+    const v = fx(x), tol = 4 * Number.EPSILON * Math.max(1, Math.abs(v)), same = (t: number) => Math.abs(fx(t) - v) <= tol;
+    let w = step; while (w <= 16 * step && (same(x - w) || same(x + w))) w *= 2;
+    if (w > 16 * step) return x;                                                  // a plateau, not an extremum: left to the side test
+    let a = x - w, b = x, c = x, d = x + w;
+    for (let k = 0; k < 50; k++) { const m = (a + b) / 2; if (same(m)) b = m; else a = m; }
+    for (let k = 0; k < 50; k++) { const m = (c + d) / 2; if (same(m)) c = m; else d = m; }
+    return (b + c) / 2;
+  };
   try {
     const step = (xMax - xMin) / (PROBE_N - 1);
     const xs: number[] = [], ys: (number | null)[] = [];
@@ -249,15 +328,18 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
           add(poles, x, "poles"); add(points, x, "points");
           i = j; continue;
         }
-        if (singular) {
-          if (j - i <= 1 && i > 0 && j < PROBE_N - 1) { const x = (xs[i] + xs[j]) / 2; add(points, x, "points"); if (isPole(x)) add(poles, x, "poles"); }
+        if (singular || need.roots) {
+          if (j - i <= 1 && i > 0 && j < PROBE_N - 1) { if (singular) { const x = (xs[i] + xs[j]) / 2; add(points, x, "points"); if (isPole(x)) add(poles, x, "poles"); } }
           else for (const [edge, inside] of [[i, i - 1], [j, j + 1]] as const) {                              // the edge of a domain gap
             if (inside < 0 || inside >= PROBE_N) continue;
             let lo = xs[inside], hi = xs[edge];
             // the gap starts where f is UNDEFINED — an overflow between the samples is the defined side (a pole at the window's edge)
             for (let k = 0; k < 80; k++) { const m = (lo + hi) / 2; if (atRaw(m) === null) hi = m; else lo = m; }
-            if (isPole(hi)) add(poles, hi, "poles");
-            else if (!edges.some(v => Math.abs(v - hi) < 1e-3)) edges.push(hi);                             // a monotonic stretch may end here
+            if (singular && isPole(hi)) add(poles, hi, "poles");
+            else {
+              if (singular && !edges.some(v => Math.abs(v - hi) < 1e-3)) edges.push(hi);                     // a monotonic stretch may end here
+              if (need.roots && edgeRoot(lo, Math.sign(xs[inside] - xs[edge]))) add(roots, lo, "roots");     // x·√(4−x²) at ±2 (Review Fix 7)
+            }
           }
         }
         i = j; continue;
@@ -293,8 +375,10 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
       const kind = y - p > eps && y - n >= -eps && y >= n ? "max" : p - y > eps && n - y >= -eps && y <= n ? "min" : null;
       if (!kind) continue;
       const fx = (x: number) => { const v = at(x); return v === null ? (kind === "max" ? -Infinity : Infinity) : v; };
-      const x = ternary(xs[i - 1], xs[i + 1], fx, kind === "max");
-      const v = fx(x), side = Math.min(Math.abs(v - fx(x - step)), Math.abs(v - fx(x + step)));
+      // a very flat extremum ((x−2)⁶ + 10) is equal to f(x) over a stretch of rounding: the search lands anywhere on it, so it is moved to
+      // the stretch's centre; its rise is measured 1, 4 and 16 steps away (x⁵ − 5x⁴ + 50 at 0 rises 3·10⁻⁹ one step away) — Review Fix 7
+      const x = flatCentre(ternary(xs[i - 1], xs[i + 1], fx, kind === "max"), fx, step);
+      const v = fx(x), side = Math.max(...[1, 4, 16].map(m => Math.min(Math.abs(v - fx(x - m * step)), Math.abs(v - fx(x + m * step)))));
       if (side > 1e-10 * Math.max(1, Math.abs(v)) && !extrema.some(e => Math.abs(e.x - x) < 1e-3)) { extrema.push({ kind, x }); if (extrema.length > KEY_CAP && need.extrema) throw new ProbeStop("extrema"); }
     }
     if (need.limits) { const fl = functionLimits(atRaw); if (fl.uncertain) throw new ProbeStop("uncertain"); limits.push(...fl.limits); }
@@ -393,6 +477,8 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     if (ft.overflow === "uncertain") return fail("AI_FUNCTION_TOO_COMPLEX", "لا يمكن التحقق آليًا من بعض نقاط الدالة داخل النافذة (قيم تتجاوز حدود الحساب أو سلوك غير محسوم)؛ اختر دالة أبسط أو أنشئ السؤال يدويًا.", path);
     if (ft.overflow === "budget") return fail("AI_FUNCTION_TOO_COMPLEX", "الدالة أعقد من أن تُفحص آليًا داخل النافذة (تذبذب أو نقاط كثيرة)؛ اختر دالة أبسط أو نافذة أضيق.", path);
     if (ft.overflow) return fail("AI_FUNCTION_KEY_INCOMPLETE", "للدالة داخل النافذة نقاط أكثر مما يتسع له المفتاح؛ اختر نافذة أضيق أو دالة أبسط.", path);
+    const beyond = featureOutsideWindow(atRaw, xMin, xMax, need, c.ast);
+    if (beyond !== null) return fail("AI_FUNCTION_WINDOW_TOO_NARROW", "للدالة نقاط تطلبها المهام خارج نافذة الرسم (قرب x ≈ " + Number(beyond.toPrecision(4)) + ")، والطالب يدرس الدالة كلها؛ وسّع النافذة لتشملها جميعًا.", path);
     const K = KEY_TOL;
     const missing = (label: string, found: number[], key: number[]) => { const miss = found.filter(x => !key.some(k => Math.abs(k - x) <= K)); if (miss.length) issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (" + label + "): " + miss.map(x => String(Number(x.toFixed(4)))).join("، ") + ".", path }); };
     if (tasks.xIntercepts) missing("المقاطع السينية", ft.roots, xi);
@@ -408,9 +494,13 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     // …and every key value must be a feature the probe found (Review Fix 6): a root rounded too coarsely, an extremum beside the turning
     // point, or a monotonic interval that runs past a turning point, crosses a pole, ends elsewhere or overlaps another is refused
     const near1 = (x: number, found: number[]) => found.some(v => Math.abs(v - x) <= K);
+    // a domain exclusion is an ISOLATED point (a hole, a jump, a pole): f is defined just beside it on both sides (Review Fix 7) — a point
+    // inside a domain gap, or outside the domain altogether, is not one
+    const isolated = (x: number) => at(x) === null && [1e-6, 1e-4].every(d => atRaw(x - d) !== null && atRaw(x + d) !== null);
+    if (tasks.domainExclusions) for (const x of ex) if (!near1(x, ft.points) && !isolated(x)) bad("x = " + x + " ليست نقطة معزولة خارج المجال (ثقب أو قفزة أو خط تقارب).");
     if (tasks.xIntercepts) for (const x of xi) if (!near1(x, ft.roots)) bad("لا يوجد مقطع سيني ضمن ±" + K + " من x = " + x + ".");
     // a very flat extremum ((x−2)⁶) may escape the probe: the key point is then accepted only if f at x ± K lies on the right side of f(x)
-    const flatExtremum = (e: { kind: "min" | "max"; x: number }) => { const y = at(e.x), l = at(e.x - K), r = at(e.x + K), slack = 1e-12 * Math.max(1, Math.abs(y ?? 0));
+    const flatExtremum = (e: { kind: "min" | "max"; x: number }) => { const y = at(e.x), l = at(e.x - K), r = at(e.x + K), slack = 4 * Number.EPSILON * Math.max(1, Math.abs(y ?? 0));
       return y !== null && l !== null && r !== null && (e.kind === "min" ? l >= y - slack && r >= y - slack : l <= y + slack && r <= y + slack); };
     if (tasks.extrema) for (const e of ext) if (!ft.extrema.some(p => p.kind === e.kind && Math.abs(p.x - e.x) <= K) && !flatExtremum(e)) bad("لا توجد قيمة " + (e.kind === "min" ? "صغرى" : "عظمى") + " ضمن ±" + K + " من x = " + e.x + ".");
     if (tasks.monotonicIntervals && intervals.length === (f.intervals as unknown[]).length) {
