@@ -307,14 +307,7 @@ function edgeIsRoot(at, e, dir, open) {
         if (!(a.every((t, k) => k === 0 || t < a[k - 1]) && a[3] <= 1e-2 * a[0] && Math.abs(f0) <= 1e-3 * a[3]))
             return false;
     }
-    if (open)
-        return !open.some(z => Math.abs(z - e) <= 1e-6 * Math.max(1, Math.abs(e)));
-    for (let k = 0; k <= 6; k++) {
-        const c = Math.round(e * 10 ** k) / 10 ** k;
-        if (Math.abs(c - e) <= 1e-9 * Math.max(1, Math.abs(e)))
-            return at(c) !== null;
-    }
-    return true;
+    return !(open ?? []).some(z => Math.abs(z - e) <= 1e-6 * Math.max(1, Math.abs(e)));
 }
 function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
     const wantRoots = need.roots, wantBreaks = need.poles || need.points || need.slope, wantSlope = need.extrema || need.slope;
@@ -351,8 +344,6 @@ function featureOutsideWindow(rawAt, xMin, xMax, need, ast) {
                     else
                         lo = m;
                 }
-                if (need.poles && poleKindAt(raw, hi) !== "bounded")
-                    return hi;
                 if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined))
                     return lo;
             }
@@ -512,7 +503,7 @@ function probeFunctionFeatures(rawAt, xMin, xMax, scale, need = ALL_NEEDS, ast) 
         const xs = [], ys = [];
         const overflowAt = [];
         for (let i = 0; i < PROBE_N; i++) {
-            const x = i === PROBE_N - 1 ? xMax : Number((xMin + i * step).toPrecision(12));
+            const x = i === PROBE_N - 1 ? xMax : xMin + i * step;
             const v = atRaw(x);
             xs.push(x);
             ys.push(v !== null && Number.isFinite(v) ? v : null);
@@ -862,10 +853,9 @@ function buildFunction(f, path) {
                 issues.push({ code: "AI_FUNCTION_KEY_INCOMPLETE", message: "مفتاح دراسة الدالة ناقص (فترات التزايد والتناقص): الدالة " + (miss.dir > 0 ? "متزايدة" : "متناقصة") + " قرب x = " + Number(miss.x.toFixed(3)) + " ولا تغطيها أي فترة.", path });
         }
         const near1 = (x, found) => found.some(v => Math.abs(v - x) <= K);
-        const isolated = (x) => at(x) === null && [1e-6, 1e-4].every(d => atRaw(x - d) !== null && atRaw(x + d) !== null);
         if (tasks.domainExclusions)
             for (const x of ex)
-                if (!near1(x, ft.points) && !isolated(x))
+                if (!near1(x, ft.points))
                     bad("x = " + x + " ليست نقطة معزولة خارج المجال (ثقب أو قفزة أو خط تقارب).");
         if (tasks.xIntercepts)
             for (const x of xi)

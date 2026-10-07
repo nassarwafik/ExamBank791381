@@ -266,9 +266,8 @@ function guardInfo(ast: unknown, xs: number[]): GuardInfo | null {
   return { excluded, open: excluded };
 }
 /** A domain edge e (f defined on the `dir` side) is a ROOT when |f| shrinks steadily toward it (10⁻² … 10⁻⁸), is negligible at e, and
- *  the edge itself belongs to the domain. With the expression's guards (Review Fix 8) an edge is OPEN when it is a zero of a denominator
- *  or a log argument (x·log x at 0) and CLOSED otherwise (x·√(4−x²) at 2, x·√(1.21−x²) at 1.1). Without them, a round-number edge must
- *  evaluate as defined and any other edge is taken as closed. */
+ *  the edge itself belongs to the domain: with the expression's guards (Review Fix 8) an edge is OPEN when it is a zero of a denominator
+ *  or a log argument (x·log x at 0) and CLOSED otherwise (x·√(4−x²) at 2, x·√(1.21−x²) at 1.1); without them every edge is closed. */
 function edgeIsRoot(at: (x: number) => number | null, e: number, dir: number, open?: number[]): boolean {
   const f0 = at(e); if (f0 === null) return false;
   if (f0 !== 0) {
@@ -277,9 +276,7 @@ function edgeIsRoot(at: (x: number) => number | null, e: number, dir: number, op
     const a = v.map(t => Math.abs(t as number));
     if (!(a.every((t, k) => k === 0 || t < a[k - 1]) && a[3] <= 1e-2 * a[0] && Math.abs(f0) <= 1e-3 * a[3])) return false;
   }
-  if (open) return !open.some(z => Math.abs(z - e) <= 1e-6 * Math.max(1, Math.abs(e)));
-  for (let k = 0; k <= 6; k++) { const c = Math.round(e * 10 ** k) / 10 ** k; if (Math.abs(c - e) <= 1e-9 * Math.max(1, Math.abs(e))) return at(c) !== null; }
-  return true;
+  return !(open ?? []).some(z => Math.abs(z - e) <= 1e-6 * Math.max(1, Math.abs(e)));
 }
 export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, need: FeatureNeeds, ast?: unknown): number | null {
   const wantRoots = need.roots, wantBreaks = need.poles || need.points || need.slope, wantSlope = need.extrema || need.slope;
@@ -304,7 +301,6 @@ export function featureOutsideWindow(rawAt: Probe, xMin: number, xMax: number, n
         if (need.points || need.slope) return x;                                    // the domain changes: exclusions and monotony depend on it
         let lo = d ? x : prevX, hi = d ? prevX : x;                                 // lo defined, hi undefined
         for (let t = 0; t < 80; t++) { const m = (lo + hi) / 2; if (raw(m) === null) hi = m; else lo = m; }
-        if (need.poles && poleKindAt(raw, hi) !== "bounded") return hi;             // a pole there (or one that cannot be ruled out)
         if (wantRoots && edgeIsRoot(at, lo, Math.sign(lo - hi), gi ? gi.open : undefined)) return lo;
       }
       def = d; prevX = x;
@@ -381,9 +377,7 @@ export function probeFunctionFeatures(rawAt: Probe, xMin: number, xMax: number, 
     const step = (xMax - xMin) / (PROBE_N - 1);
     const xs: number[] = [], ys: (number | null)[] = [];
     const overflowAt: boolean[] = [];
-    // grid points are snapped to 12 significant digits so a pole at a terminating decimal (1.3) is met exactly — not one rounding step off,
-    // where |f| would exceed the evaluator's range (Review Fix 6)
-    for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : Number((xMin + i * step).toPrecision(12)); const v = atRaw(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); overflowAt.push(v !== null && !Number.isFinite(v)); }
+    for (let i = 0; i < PROBE_N; i++) { const x = i === PROBE_N - 1 ? xMax : xMin + i * step; const v = atRaw(x); xs.push(x); ys.push(v !== null && Number.isFinite(v) ? v : null); overflowAt.push(v !== null && !Number.isFinite(v)); }
     const singular = need.points || need.poles || need.extrema || need.slope;     // extrema / slopes skip the neighbourhood of poles
     if (ast !== undefined && (singular || need.roots)) {                          // the expression's own exclusions (Review Fix 8)
       const gi = guardInfo(ast, xs); if (gi === null) throw new ProbeStop("budget");
@@ -584,10 +578,9 @@ function buildFunction(f: unknown, path: string): R<{ config: unknown; checks: S
     // …and every key value must be a feature the probe found (Review Fix 6): a root rounded too coarsely, an extremum beside the turning
     // point, or a monotonic interval that runs past a turning point, crosses a pole, ends elsewhere or overlaps another is refused
     const near1 = (x: number, found: number[]) => found.some(v => Math.abs(v - x) <= K);
-    // a domain exclusion is an ISOLATED point (a hole, a jump, a pole): f is defined just beside it on both sides (Review Fix 7) — a point
+    // a domain exclusion is an ISOLATED excluded point the probe finds (a hole, a jump, a pole — through the guards, Review Fix 8): a point
     // inside a domain gap, or outside the domain altogether, is not one
-    const isolated = (x: number) => at(x) === null && [1e-6, 1e-4].every(d => atRaw(x - d) !== null && atRaw(x + d) !== null);
-    if (tasks.domainExclusions) for (const x of ex) if (!near1(x, ft.points) && !isolated(x)) bad("x = " + x + " ليست نقطة معزولة خارج المجال (ثقب أو قفزة أو خط تقارب).");
+    if (tasks.domainExclusions) for (const x of ex) if (!near1(x, ft.points)) bad("x = " + x + " ليست نقطة معزولة خارج المجال (ثقب أو قفزة أو خط تقارب).");
     if (tasks.xIntercepts) for (const x of xi) if (!near1(x, ft.roots)) bad("لا يوجد مقطع سيني ضمن ±" + K + " من x = " + x + ".");
     // a very flat extremum ((x−2)⁶) may escape the probe: the key point is then accepted only if f at x ± K lies on the right side of f(x)
     // a very flat extremum the probe does not record ((x−2)⁸ + 1000 in a narrow window): the key point must lie within K of the CENTRE of
