@@ -501,6 +501,11 @@ Each was re-targeted to the live code and run again (round 6b).
 each after an unmutated pre-check. Rounds 1–3 (69 plants on the pre-RF1 code: 68 killed, U04 equivalent) are kept above as
 history.
 
+### Reviewer round-2 mutants re-run after Review Fix 2 (13, unmutated pre-check green)
+
+Y01, Y02, Y03, Y05, Y06, Y07, Y08, Y09, Y10, Y11, Y12, Y13 and Y14 are all **KILLED**. Y03, Y05, Y06, Y11, Y12 and Y13 had
+survived the round-2 review, and RF2-GRID, RF2-TWO-LINES, RF2-PADDED and RF2-FN now kill them.
+
 **U04 is equivalent for the parity suite.** The client emits `choice` only for the literal spellings `multiplechoice` /
 `truefalse`, and `resolveQuestionTypeKey` resolves those case-insensitively without the alias table. Every other emitted
 kind (`text`, `table`, `sequence`, `fields`) is decided by rules that give the same answer without the alias resolution. The
@@ -513,7 +518,7 @@ changes only this file. The first validation, on `39cdba2` before the review, wa
 
 | Check | Result |
 |---|---|
-| Focused 20G.2 suites (`legacy-answer-type-binding-20g2.test.js`, `legacyAnswerBinding.20g2.test.tsx`) | 54 + 4 pass |
+| Focused 20G.2 suites (`legacy-answer-type-binding-20g2.test.js`, `legacyAnswerBinding.20g2.test.tsx`) | 58 + 4 pass (after Review Fix 2) |
 | O1 exploit reproduction | 7/7 on the baseline (§3); 0 + teacher review on the head (O1-A) |
 | 20D compound freeze pins + drift test | 14 / 14 pass; the captured pins match (no recapture) |
 | Full root `npm test` (app + API + scripts: every 20G / 20G.1 certification, composite, first-N, submission / autosave, governance suite) | **781 files, 10,322 tests, all passed**, exit 0 |
@@ -559,7 +564,19 @@ refused answer fails closed), its own 17 mutants, the whole API directory and th
 - Mutation round 4 (on RF1) is **partly invalid**: 5 "kills" were attributed to the then-failing 20G.1 tests. Round 5 re-ran
   every RF1 plant on the final code after an unmutated pre-check of every suite (§17).
 
-**Round 2:** the reviewer re-reviews the new exact head. The verdict is recorded on the pull request and in the final report
+**Round 2, head `39c2cc1`: NOT READY — REVIEW FIX REQUIRED (tests only).**
+- **Round-1 findings:** F1, F3 and F4 are resolved. L-F2 is accepted for this phase as an owner decision. The REVIEW 9 input
+  change was judged legitimate, and stronger than before.
+- **Grading differential (baseline vs head):** 51,597 combinations including placement, padded and blank types, and
+  grid-plus-text-table content. Every admitted answer grades identically to the baseline and every refused answer fails
+  closed: 0 deviations. Ingest and grading agree at both placements, and nothing knowledge-free is reachable at the part
+  placement.
+- **F5:** 6 of the reviewer's 13 new mutants survived (Y03, Y05, Y06, Y11, Y12, Y13), all as test gaps. The code was correct.
+- **F6:** two stale design-record sentences.
+- **Review Fix 2 (`RF2-*` pins, section 7 / section 6 wording):** after it, all 13 reviewer mutants are KILLED under an
+  unmutated pre-check (`RV2-Y01 … Y14`). No production code changed.
+
+**Round 3:** the reviewer re-reviews the new exact head. The verdict is recorded on the pull request and in the final report
 (§20).
 
 ## 22. Known limitations
