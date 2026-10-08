@@ -111,22 +111,38 @@ describe("21A-R3 closed vocabulary: only fixed element names and attribute names
 });
 
 describe("21A-R4 renderer freeze — the 20D.1 MathML is byte-stable (captured on 60ddadc)", () => {
-  const PIN = { count: 1500, digest: "7edd5626dca4ff26d1df291075344a540e30d2f96b711e552005767ceaf87a66" };
-  it("1,500 accepted old-grammar expressions (no Arabic \\text) render to identical MathML", () => {
-    const next = oldGrammarCandidates(21002);
-    const h = createHash("sha256");
-    let count = 0;
-    for (let i = 0; count < 1500 && i < 20000; i++) {
-      const s = next();
-      if (!M.parseMath(s).ok || /\\(begin|mathbb|iint|iiint)/.test(s) || /\\text\{[^}]*[\u0590-\u08FF]/.test(s)) continue;
-      const c = mathOf(s);
-      h.update(c.innerHTML).update("\u0001");
-      count++;
-      cleanup();
-    }
-    const got = { count, digest: h.digest("hex") };
-    if (process.env.CAPTURE_21A_RENDER === "1") { console.log("RENDER_PIN", JSON.stringify(got)); return; }
-    expect(got).toEqual(PIN);
+  // 1,500 accepted old-grammar expressions (no Arabic \text, no v2 construct) in 6 independent slices of 250 (seeds 21002…21007).
+  const SLICES = 6, PER_SLICE = 250;
+  const PINS: string[] = [
+    "60d803ca51b9b8c7e1b0b0412fdc725d5ac82286cfffb2f3ba04e98bc4beaa25",
+    "542d7fef1f6c068330634032fff4af296775eb2a95dcbfa46076634c2a3420fd",
+    "3e9955f28959b9b7fc93e6b0f80fe29593c56cf4cb173f5a83970f6add2d0ee5",
+    "1a4c5d46940ee169913845f8726daff63aa0069f5ab0e9d0b15202467c05dd27",
+    "890d09085e653a8473a2f982ecd1ffaf8b663f40915c53fe764b408f14b2890b",
+    "60457ba81d3ce91f3ac3806c355038811475afaa1bcdefa78eaa0d8f78806037"
+  ];
+  for (let k = 0; k < SLICES; k++) {
+    it(`slice ${k + 1}/${SLICES} (250 expressions, seed ${21002 + k}) renders to identical MathML`, () => {
+      const next = oldGrammarCandidates(21002 + k);
+      const h = createHash("sha256");
+      let count = 0;
+      for (let i = 0; count < PER_SLICE && i < 5000; i++) {
+        const s = next();
+        if (!M.parseMath(s).ok || /\\(begin|mathbb|iint|iiint)/.test(s) || /\\text\{[^}]*[\u0590-\u08FF]/.test(s)) continue;
+        const c = mathOf(s);
+        h.update(c.innerHTML).update("\u0001");
+        count++;
+        cleanup();
+      }
+      expect(count).toBe(PER_SLICE);
+      const got = h.digest("hex");
+      if (process.env.CAPTURE_21A_RENDER === "1") { console.log("RENDER_PIN", k, JSON.stringify(got)); return; }
+      expect(got).toBe(PINS[k]);
+    });
+  }
+  it("the sliced renderer freeze covers 1,500 expressions", () => {
+    expect(SLICES * PER_SLICE).toBe(1500);
+    if (process.env.CAPTURE_21A_RENDER !== "1") expect(PINS).toHaveLength(SLICES);
     expect(ARABIC.test("ع")).toBe(true);
   });
 });
