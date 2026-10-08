@@ -2,7 +2,7 @@
 // table-like data grid, option checkboxes — never JSON and never a rendering-library option. Every change emits the whole ChartSpecV1; a cell
 // that does not (yet) hold a number keeps the author's text in place and marks itself invalid without changing the stored value, so nothing
 // typed is lost. The authority's (validateChartSpec) issues are shown next to the fields they concern and as a list.
-import { useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from "react";
 import {
   CHART_ANIMATIONS, CHART_KINDS, CHART_LIMITS, CHART_PALETTES, validateChartSpec,
   type CategoryChartSpec, type ChartAxis, type ChartKind, type ChartSpecV1, type ChartIssue
@@ -18,7 +18,8 @@ const ANIMATION_LABELS: Readonly<Record<string, string>> = { none: "بلا حر�
 const PALETTE_LABELS: Readonly<Record<string, string>> = { categorical: "ألوان متمايزة", sequential: "تدرّج أزرق", diverging: "متباعدة", neutral: "محايدة (رمادي)" };
 
 type Confirm = (o: { title: string; message: string; confirmLabel: string; tone?: "danger" }) => Promise<boolean>;
-export type ChartEditorProps = { chart: ChartSpecV1; onChange: (c: ChartSpecV1) => void; disabled?: boolean; name: string; confirm?: Confirm };
+/** `kinds`: the chart kinds offered (default: all) — a chartSelection question offers only the kinds a student can answer on. */
+export type ChartEditorProps = { chart: ChartSpecV1; onChange: (c: ChartSpecV1) => void; disabled?: boolean; name: string; confirm?: Confirm; kinds?: readonly ChartKind[] };
 
 /** Sets / removes one optional key (no `undefined` values are ever stored). */
 function withOpt<T extends object>(o: T, key: string, v: unknown): T {
@@ -28,7 +29,10 @@ function withOpt<T extends object>(o: T, key: string, v: unknown): T {
 }
 const freeLabel = (stem: string, taken: string[]) => { for (let n = taken.length + 1; ; n++) if (!taken.includes(stem + n)) return stem + n; };
 
-/** A numeric cell: the author's spelling stays while it means the stored value; invalid text is kept and flagged, never stored. */
+/** Cells whose text is not (yet) a number report themselves here, so the editor can list them with the authority's issues. */
+const BadCells = createContext<((cell: string, bad: boolean) => void) | null>(null);
+/** A numeric cell: the author's spelling stays while it means the stored value; invalid text is kept and flagged, never stored — with a
+ *  text error next to the cell (not colour alone) and an entry in the editor's issue list. */
 function NumCell({ label, value, onCommit, nullable, invalid, disabled }: { label: string; value: unknown; onCommit: (v: number | null) => void; nullable?: boolean; invalid?: boolean; disabled?: boolean }) {
   const shown = typeof value === "number" ? String(value) : "";
   const [draft, setDraft] = useState({ text: shown, from: shown });
@@ -38,14 +42,20 @@ function NumCell({ label, value, onCommit, nullable, invalid, disabled }: { labe
   }
   const parsed = parseChartNumber(draft.text);
   const bad = parsed === undefined || (parsed === null && !nullable);
+  const errId = "ce-num-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const report = useContext(BadCells);
+  useEffect(() => { report?.(label, bad); return () => report?.(label, false); }, [report, label, bad]);
   return (
-    <input className="sb-input sb-input-sm ce-num" inputMode="decimal" dir="ltr" value={draft.text} aria-label={label} aria-invalid={bad || invalid ? true : undefined}
-      placeholder={nullable ? "—" : "0"} disabled={disabled}
-      onChange={e => {
-        const text = e.target.value, p = parseChartNumber(text);
-        setDraft({ text, from: shown });
-        if (p !== undefined && (p !== null || nullable)) onCommit(p);
-      }} />
+    <>
+      <input className="sb-input sb-input-sm ce-num" inputMode="decimal" dir="ltr" value={draft.text} aria-label={label} aria-invalid={bad || invalid ? true : undefined}
+        aria-describedby={bad ? errId : undefined} placeholder={nullable ? "—" : "0"} disabled={disabled}
+        onChange={e => {
+          const text = e.target.value, p = parseChartNumber(text);
+          setDraft({ text, from: shown });
+          if (p !== undefined && (p !== null || nullable)) onCommit(p);
+        }} />
+      {bad && <span id={errId} className="ce-num-error">{parsed === null ? "أدخل رقمًا" : "ليس رقمًا — لم يُحفظ"}</span>}
+    </>
   );
 }
 function TextCell({ label, value, onChange, max, invalid, disabled, placeholder }: { label: string; value: string | undefined; onChange: (v: string) => void; max: number; invalid?: boolean; disabled?: boolean; placeholder?: string }) {
@@ -55,8 +65,11 @@ function IconBtn({ label, glyph, onClick, disabled, danger }: { label: string; g
   return <button type="button" className={"sb-icon-btn ce-icon" + (danger ? " sb-danger" : "")} aria-label={label} title={label} onClick={onClick} disabled={disabled}>{glyph}</button>;
 }
 
-export default function ChartEditor({ chart, onChange, disabled = false, name, confirm }: ChartEditorProps) {
+export default function ChartEditor({ chart, onChange, disabled = false, name, confirm, kinds }: ChartEditorProps) {
   const result = useMemo(() => validateChartSpec(chart, "chart"), [chart]);
+  const [badCells, setBadCells] = useState<readonly string[]>([]);
+  const reportCell = useCallback((cell: string, isBad: boolean) => setBadCells(list => (isBad === list.includes(cell) ? list : isBad ? [...list, cell] : list.filter(c => c !== cell))), []);
+  const offered = (kinds ?? CHART_KINDS).includes(chart.kind) ? (kinds ?? CHART_KINDS) : [chart.kind, ...(kinds ?? CHART_KINDS)];
   const issues: ChartIssue[] = result.ok ? [] : result.issues;
   const bad = (path: string) => issues.some(i => i.path === path || i.path.startsWith(path + ".") || i.path.startsWith(path + "["));
   const exact = (path: string) => issues.some(i => i.path === path);
@@ -70,11 +83,12 @@ export default function ChartEditor({ chart, onChange, disabled = false, name, c
   };
 
   return (
-    <div className="ce" role="group" aria-label={"محرر " + name} dir="rtl">
+    <BadCells.Provider value={reportCell}>
+    <div className="ce" role="group" aria-label={"محرر " + name} dir="rtl" data-xp-chart-editor="v1">
       <div className="ce-row">
         <label className="ce-inline"><span>نوع الرسم</span>
           <select className="sb-input sb-input-sm" value={chart.kind} aria-label={"نوع الرسم البياني — " + name} disabled={d} onChange={e => void changeKind(e.target.value as ChartKind)}>
-            {CHART_KINDS.map(k => <option key={k} value={k}>{CHART_KIND_LABELS[k]}</option>)}
+            {offered.map(k => <option key={k} value={k}>{CHART_KIND_LABELS[k]}</option>)}
           </select>
         </label>
         {chart.kind === "bar" && (
@@ -93,8 +107,14 @@ export default function ChartEditor({ chart, onChange, disabled = false, name, c
       <Axes chart={chart} set={set} name={name} disabled={d} bad={bad} exact={exact} />
       <DataGrid chart={chart} set={set} name={name} disabled={d} bad={bad} />
       {(chart.kind === "bar" || chart.kind === "line" || chart.kind === "area" || chart.kind === "combo" || chart.kind === "scatter") && <RefLines chart={chart} set={set} name={name} disabled={d} bad={bad} />}
-      {issues.length > 0 && <ul className="ce-issues" aria-label={"مشكلات بيانات " + name}>{issues.slice(0, 8).map((x, n) => <li key={n}>{x.message}</li>)}</ul>}
+      {(issues.length > 0 || badCells.length > 0) && (
+        <ul className="ce-issues" aria-label={"مشكلات بيانات " + name}>
+          {badCells.length > 0 && <li>{"خلايا لا تحمل رقمًا صالحًا (لم يُحفظ ما كُتب فيها): " + badCells.slice(0, 6).join("، ") + (badCells.length > 6 ? "، …" : "")}</li>}
+          {issues.slice(0, 8).map((x, n) => <li key={n}>{x.message}</li>)}
+        </ul>
+      )}
     </div>
+    </BadCells.Provider>
   );
 }
 
@@ -125,14 +145,16 @@ function Options({ chart, set, name, disabled }: Part) {
 }
 const VALUE_LABEL_KINDS: readonly ChartKind[] = ["bar", "line", "area", "combo", "pie", "histogram", "heatmap"];
 
-function AxisFields({ title, axis, numeric, onAxis, disabled, invalid }: { title: string; axis: ChartAxis | undefined; numeric: boolean; onAxis: (a: ChartAxis | undefined) => void; disabled: boolean; invalid: (k: string) => boolean }) {
+/** `numeric`: true = a value axis (label, unit, bounds); "unit" = a binned axis (label and unit — the bins fix its extent); false = a
+ *  category axis (label only). */
+function AxisFields({ title, axis, numeric, onAxis, disabled, invalid }: { title: string; axis: ChartAxis | undefined; numeric: boolean | "unit"; onAxis: (a: ChartAxis | undefined) => void; disabled: boolean; invalid: (k: string) => boolean }) {
   const put = (key: keyof ChartAxis, v: unknown) => { const n = withOpt(axis ?? {}, key, v); onAxis(Object.keys(n).length ? n : undefined); };
   return (
     <fieldset className="ce-axis">
       <legend>{title}</legend>
       <TextCell label={"تسمية " + title} value={axis?.label} onChange={v => put("label", v)} max={CHART_LIMITS.labelChars} disabled={disabled} invalid={invalid("label")} placeholder="التسمية" />
-      {numeric && <>
-        <TextCell label={"وحدة " + title} value={axis?.unit} onChange={v => put("unit", v)} max={CHART_LIMITS.unitChars} disabled={disabled} invalid={invalid("unit")} placeholder="الوحدة، مثال: mm" />
+      {numeric && <TextCell label={"وحدة " + title} value={axis?.unit} onChange={v => put("unit", v)} max={CHART_LIMITS.unitChars} disabled={disabled} invalid={invalid("unit")} placeholder="الوحدة، مثال: mm" />}
+      {numeric === true && <>
         <NumCell label={"أدنى قيمة على " + title} value={axis?.min} nullable onCommit={v => put("min", v === null ? undefined : v)} disabled={disabled} invalid={invalid("min")} />
         <NumCell label={"أعلى قيمة على " + title} value={axis?.max} nullable onCommit={v => put("max", v === null ? undefined : v)} disabled={disabled} invalid={invalid("max")} />
       </>}
@@ -145,7 +167,7 @@ function Axes({ chart, set, name, disabled, bad, exact }: Part) {
     ? <div className="ce-row"><TextCell label={"وحدة قيم " + name} value={chart.unit} onChange={v => set(withOpt(chart, "unit", v))} max={CHART_LIMITS.unitChars} disabled={disabled} placeholder="وحدة القيم (اختياري)، مثال: %" /></div>
     : null;
   const horizontal = chart.kind === "bar" && chart.orientation === "horizontal";
-  const xNumeric = chart.kind === "scatter" || chart.kind === "histogram" || horizontal;
+  const xNumeric = chart.kind === "histogram" ? "unit" : chart.kind === "scatter" || horizontal;
   const yNumeric = chart.kind !== "heatmap" && !horizontal;
   // a min ≥ max issue is reported on the axis itself: both bounds are marked
   return (

@@ -38,10 +38,13 @@ export function defaultChart(kind: ChartKind, id = newChartId()): ChartSpecV1 {
 const isCat = (k: ChartKind) => (CATEGORY_CHART_KINDS as readonly string[]).includes(k);
 /**
  * Converts a chart to another kind. Data is carried whenever the target can hold it: between the category kinds (bar / line / area / combo)
- * no value is lost (leaving a combo that uses its secondary axis drops that axis and is reported `lossy`); category ⇄ heat map (categories ⇄ columns, series ⇄ rows) and pie → category / radar → category / heat map → category are
- * lossless; category → pie keeps the first series (lossy when there are more series or missing / negative values); category → radar keeps
- * the series (lossy for missing / negative values or fewer than 3 categories). Every other change starts from the starter data of the target
- * kind and is `lossy` (the editor asks before discarding). Title, description, source and display options always survive.
+ * no value is lost (leaving a combo that uses its secondary axis drops that axis and is reported `lossy`); category ⇄ heat map (categories ⇄
+ * columns, series ⇄ rows) and pie → category / radar → category / heat map → category keep every value; category → pie keeps the first
+ * series (lossy when there are more series or missing / negative values); category → radar keeps the series (lossy for missing / negative
+ * values or fewer than 3 categories). Authored context travels where the target has a place for it — the category axis label, the value
+ * unit, value labels — and anything the target cannot hold (reference lines, a value-axis label or bounds, a row-axis label) makes the
+ * change `lossy` too. Every other change starts from the starter data of the target kind and is `lossy` (the editor asks before discarding).
+ * Title, description, source and display options always survive.
  */
 export function convertChartKind(spec: ChartSpecV1, to: ChartKind): { spec: ChartSpecV1; lossy: boolean } {
   if (spec.kind === to) return { spec, lossy: false };
@@ -68,25 +71,44 @@ export function convertChartKind(spec: ChartSpecV1, to: ChartKind): { spec: Char
   }
   if (isCat(spec.kind)) {
     const s = spec as CategoryChartSpec;
-    if (to === "heatmap") return { spec: { ...c, kind: "heatmap", columns: s.categories, rows: s.series.map(x => ({ id: x.id, label: x.label })), values: s.series.map(x => [...x.values]) }, lossy: false };
+    const horizontal = s.kind === "bar" && s.orientation === "horizontal";
+    const va = horizontal ? s.xAxis : s.yAxis, ca = horizontal ? s.yAxis : s.xAxis;
+    // what a heat map / pie / radar has no place for
+    const dropsRefs = !!s.referenceLines?.length, dropsBounds = va?.min !== undefined || va?.max !== undefined;
+    const dropsSecondary = s.series.some(x => x.axis === "secondary") || !!s.y2Axis;
+    const valueLabels = s.valueLabels ? { valueLabels: true as const } : {};
+    if (to === "heatmap") return {
+      spec: { ...c, kind: "heatmap", columns: s.categories, rows: s.series.map(x => ({ id: x.id, label: x.label })), values: s.series.map(x => [...x.values]),
+        ...(va?.unit ? { unit: va.unit } : {}), ...valueLabels, ...(ca?.label ? { xAxis: { label: ca.label } } : {}) },
+      lossy: dropsRefs || dropsBounds || dropsSecondary || !!va?.label
+    };
     if (to === "pie") {
       const first = s.series[0];
       const ok = s.series.length === 1 && first.values.every(v => v !== null && v >= 0);
-      return { spec: { ...c, kind: "pie", slices: s.categories.map((cat, i) => ({ id: cat.id, label: cat.label, value: Math.max(0, first.values[i] ?? 0) })) }, lossy: !ok };
+      return { spec: { ...c, kind: "pie", slices: s.categories.map((cat, i) => ({ id: cat.id, label: cat.label, value: Math.max(0, first.values[i] ?? 0) })), ...(va?.unit ? { unit: va.unit } : {}), ...valueLabels },
+        lossy: !ok || dropsRefs || dropsBounds || dropsSecondary || !!va?.label || !!ca?.label };
     }
     if (to === "radar") {
       if (s.categories.length < 3) return fresh();
       const ok = s.series.every(x => x.values.every(v => v !== null && v >= 0));
       const max = Math.max(1, ...s.series.flatMap(x => x.values.filter((v): v is number => v !== null)));
-      return { spec: { ...c, kind: "radar", axes: s.categories.map(cat => ({ id: cat.id, label: cat.label, max })), series: s.series.map(x => ({ id: x.id, label: x.label, values: x.values.map(v => Math.max(0, v ?? 0)) })) }, lossy: !ok };
+      return { spec: { ...c, kind: "radar", axes: s.categories.map(cat => ({ id: cat.id, label: cat.label, max })), series: s.series.map(x => ({ id: x.id, label: x.label, values: x.values.map(v => Math.max(0, v ?? 0)) })) },
+        lossy: !ok || dropsRefs || dropsBounds || dropsSecondary || !!va?.label || !!va?.unit || !!ca?.label };
     }
     return fresh();
   }
   if (isCat(to)) {
     const kind = to as CategoryChartSpec["kind"];
     const mark = (i: number) => (kind === "combo" ? { mark: (i === 0 ? "bar" : "line") as "bar" | "line" } : {});
-    if (spec.kind === "pie") return { spec: { ...c, kind, categories: spec.slices.map(x => ({ id: x.id, label: x.label })), series: [{ id: "s1", label: "القيمة", values: spec.slices.map(x => x.value), ...mark(0) }] } as ChartSpecV1, lossy: false };
-    if (spec.kind === "heatmap") return { spec: { ...c, kind, categories: spec.columns, series: spec.rows.map((r, i) => ({ id: r.id, label: r.label, values: [...spec.values[i]], ...mark(i) })) } as ChartSpecV1, lossy: false };
+    // the value unit goes on the value axis (y; never a horizontal bar here: conversions produce vertical charts)
+    const unitAxis = (unit?: string) => (unit ? { yAxis: { unit } } : {});
+    const valueLabels = (v?: boolean) => (v ? { valueLabels: true as const } : {});
+    if (spec.kind === "pie") return { spec: { ...c, kind, categories: spec.slices.map(x => ({ id: x.id, label: x.label })), series: [{ id: "s1", label: "القيمة", values: spec.slices.map(x => x.value), ...mark(0) }], ...unitAxis(spec.unit), ...valueLabels(spec.valueLabels) } as ChartSpecV1, lossy: false };
+    if (spec.kind === "heatmap") return {
+      spec: { ...c, kind, categories: spec.columns, series: spec.rows.map((r, i) => ({ id: r.id, label: r.label, values: [...spec.values[i]], ...mark(i) })),
+        ...(spec.xAxis?.label ? { xAxis: { label: spec.xAxis.label } } : {}), ...unitAxis(spec.unit), ...valueLabels(spec.valueLabels) } as ChartSpecV1,
+      lossy: !!spec.yAxis?.label
+    };
     if (spec.kind === "radar") return { spec: { ...c, kind, categories: spec.axes.map(a => ({ id: a.id, label: a.label })), series: spec.series.map((x, i) => ({ id: x.id, label: x.label, values: [...x.values], ...mark(i) })) } as ChartSpecV1, lossy: false };
   }
   return fresh();

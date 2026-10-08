@@ -41,25 +41,35 @@ export function chartTargets(spec: ChartSpecV1, kind: ChartTargetKind): ChartTar
     case "radar": return spec.series.map(s => ({ key: s.id, label: s.label, kind: "series" as const, seriesId: s.id }));
     case "scatter":
       if (kind === "series") return spec.series.map(s => ({ key: s.id, label: s.label, kind, seriesId: s.id }));
-      return spec.series.flatMap(s => s.points.map(p => ({ key: p.id, label: (p.label ?? "(" + p.x + "، " + p.y + ")") + (spec.series.length > 1 ? " — " + s.label : ""), kind: "point" as const, seriesId: s.id })));
+      return spec.series.flatMap(s => s.points.map(p => ({ key: p.id, label: pointName(p) + (spec.series.length > 1 ? " — " + s.label : ""), kind: "point" as const, seriesId: s.id })));
     case "heatmap": return [];
   }
 }
 export const binLabel = (start: number, end: number) => "[" + start + " – " + end + ")";
+/** A scatter point's name: its label, or its coordinates — the same text in the selection list and the data table. */
+const pointName = (p: { x: number; y: number; label?: string }) => p.label ?? "(" + p.x + "، " + p.y + ")";
+/** "label (unit)" — the unit wrapped in a first-strong isolate, so a Latin unit ("°C", "m/s²") keeps its own order inside an Arabic label. */
+export const labelWithUnit = (label: string, unit?: string) => (unit ? label + " (\u2068" + unit + "\u2069)" : label);
 
 export type ChartTableCell = number | string | null;
 /** The accessible data table — the chart's numbers as a real table (one header row, one header cell per row). */
 export type ChartDataTable = { columns: string[]; rows: { header: string; cells: ChartTableCell[] }[] };
+// Every value column names its unit (the table is the chart's accessible equivalent: a number without its unit is not the same data); the
+// first column is headed by the CATEGORY axis' label (x, or y for horizontal bars) and the heat map's corner by its row axis.
 export function chartDataTable(spec: ChartSpecV1): ChartDataTable {
   switch (spec.kind) {
-    case "bar": case "line": case "area": case "combo":
-      return { columns: [spec.xAxis?.label ?? "الفئة", ...spec.series.map(s => s.label)], rows: spec.categories.map((c, i) => ({ header: c.label, cells: spec.series.map(s => s.values[i]) })) };
-    case "pie": return { columns: ["الفئة", spec.unit ? "القيمة (" + spec.unit + ")" : "القيمة"], rows: spec.slices.map(s => ({ header: s.label, cells: [s.value] })) };
-    case "scatter": return { columns: ["النقطة", "السلسلة", spec.xAxis?.label ?? "x", spec.yAxis?.label ?? "y"], rows: spec.series.flatMap(s => s.points.map(p => ({ header: p.label ?? p.id, cells: [s.label, p.x, p.y] }))) };
-    case "histogram": return { columns: [spec.xAxis?.label ?? "الفئة", spec.yAxis?.label ?? "التكرار"], rows: spec.bins.map(b => ({ header: binLabel(b.start, b.end), cells: [b.count] })) };
+    case "bar": case "line": case "area": case "combo": {
+      const horizontal = spec.kind === "bar" && spec.orientation === "horizontal";
+      const valueAxis = horizontal ? spec.xAxis : spec.yAxis, categoryAxis = horizontal ? spec.yAxis : spec.xAxis;
+      const unit = (s: (typeof spec.series)[number]) => (spec.kind === "combo" && s.axis === "secondary" ? spec.y2Axis?.unit : valueAxis?.unit);
+      return { columns: [categoryAxis?.label ?? "الفئة", ...spec.series.map(s => labelWithUnit(s.label, unit(s)))], rows: spec.categories.map((c, i) => ({ header: c.label, cells: spec.series.map(s => s.values[i]) })) };
+    }
+    case "pie": return { columns: ["الفئة", labelWithUnit("القيمة", spec.unit)], rows: spec.slices.map(s => ({ header: s.label, cells: [s.value] })) };
+    case "scatter": return { columns: ["النقطة", "السلسلة", labelWithUnit(spec.xAxis?.label ?? "x", spec.xAxis?.unit), labelWithUnit(spec.yAxis?.label ?? "y", spec.yAxis?.unit)], rows: spec.series.flatMap(s => s.points.map(p => ({ header: pointName(p), cells: [s.label, p.x, p.y] }))) };
+    case "histogram": return { columns: [labelWithUnit(spec.xAxis?.label ?? "الفئة", spec.xAxis?.unit), labelWithUnit(spec.yAxis?.label ?? "التكرار", spec.yAxis?.unit)], rows: spec.bins.map(b => ({ header: binLabel(b.start, b.end), cells: [b.count] })) };
     case "radar": return { columns: ["المحور", ...spec.series.map(s => s.label), "الحد الأعلى"], rows: spec.axes.map((a, i) => ({ header: a.label, cells: [...spec.series.map(s => s.values[i]), a.max] })) };
-    case "boxplot": return { columns: [spec.xAxis?.label ?? "المجموعة", "الأدنى", "الربيع الأول", "الوسيط", "الربيع الثالث", "الأعلى"], rows: spec.boxes.map(b => ({ header: b.label, cells: [b.min, b.q1, b.median, b.q3, b.max] })) };
-    case "heatmap": return { columns: [spec.yAxis?.label ?? "", ...spec.columns.map(c => c.label)], rows: spec.rows.map((r, i) => ({ header: r.label, cells: spec.values[i] })) };
+    case "boxplot": return { columns: [spec.xAxis?.label ?? "المجموعة", ...["الأدنى", "الربيع الأول", "الوسيط", "الربيع الثالث", "الأعلى"].map(h => labelWithUnit(h, spec.yAxis?.unit))], rows: spec.boxes.map(b => ({ header: b.label, cells: [b.min, b.q1, b.median, b.q3, b.max] })) };
+    case "heatmap": return { columns: [spec.yAxis?.label ?? "الصف", ...spec.columns.map(c => labelWithUnit(c.label, spec.unit))], rows: spec.rows.map((r, i) => ({ header: r.label, cells: spec.values[i] })) };
   }
 }
 
@@ -80,8 +90,9 @@ export function isContiguousRun(order: readonly string[], keys: readonly string[
 }
 /**
  * The next selection after the student activates `key` (pointer or keyboard — the same rule): single → that key (activating it again clears);
- * multiple → toggle, never more than `max`; range → the contiguous run from the first selected key to `key` (activating the only selected key
- * clears). The result is always in the chart's own order and duplicate-free; a key that is not a selectable target changes nothing.
+ * multiple → toggle, never more than `max`; range → the contiguous run from the ANCHOR (the first selected key) towards `key`, at most `max`
+ * long counted from the anchor in either direction (the anchor is never dropped; activating the only selected key clears). The result is
+ * always in the chart's own order and duplicate-free; a key that is not a selectable target changes nothing.
  */
 export function nextChartSelection(mode: ChartSelectionMode, order: readonly string[], current: readonly string[], key: string, max: number): string[] {
   if (!order.includes(key)) return order.filter(k => current.includes(k));
@@ -93,7 +104,6 @@ export function nextChartSelection(mode: ChartSelectionMode, order: readonly str
   }
   if (cur.length === 1 && cur[0] === key) return [];
   if (cur.length === 0) return [key];
-  const anchor = order.indexOf(cur[0]), at = order.indexOf(key);
-  const [lo, hi] = anchor <= at ? [anchor, at] : [at, anchor];
-  return order.slice(lo, hi + 1).slice(0, Math.max(1, max));
+  const anchor = order.indexOf(cur[0]), at = order.indexOf(key), m = Math.max(1, max);
+  return anchor <= at ? order.slice(anchor, Math.min(at, anchor + m - 1) + 1) : order.slice(Math.max(at, anchor - m + 1), anchor + 1);
 }

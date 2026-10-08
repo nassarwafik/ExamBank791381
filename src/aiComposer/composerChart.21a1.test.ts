@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildAiChartSchema, mapAiChart, numbersInText, AI_CHART_SOURCE_LABELS, type AiChartPolicy } from "./composerChart";
+import { buildAiChartSchema, mapAiChart, numbersInText, pairedNumber, AI_CHART_SOURCE_LABELS, type AiChartPolicy } from "./composerChart";
+import { normalizeComposerPatch, applyComposerPatch } from "./composerPatch";
 import { mapAiRichBlocks, buildRichBlockSchema } from "./composerRich";
 import { COMPOSER_CATALOG_VERSION, COMPOSER_RICH_BLOCKS, buildComposerCatalog, catalogForPrompt } from "./composerCatalog";
 import { RICH_BLOCK_TYPES } from "../richContent/richContentModel";
@@ -67,7 +68,8 @@ describe("21A1-AI3 data integrity", () => {
     expect(mapAiChart(D(), 0, TEACHER, "b").ok).toBe(true);
     expect(codes(mapAiChart(D({ series: [{ label: "الهطول", values: [121, 95, 82], mark: "bar" }] }), 0, TEACHER, "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
     expect(codes(mapAiChart(D({ series: [{ label: "الهطول", values: [120, 95, 82, 40], mark: "bar" }], categories: ["a", "b", "c", "d"] }), 0, TEACHER, "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
-    expect([...numbersInText("١٢٠ و 95٫5 و -3 و 1,5")].sort((a, b) => a - b)).toEqual([-3, 1.5, 3, 95.5, 120]);
+    // (review fix A2: the sign is kept — "-3" is −3 only; it used to admit 3 as well)
+    expect([...numbersInText("١٢٠ و 95٫5 و -3 و 1,5")].sort((a, b) => a - b)).toEqual([-3, 1.5, 95.5, 120]);
   });
   it("illustrative data needs the teacher's permission and is always labelled by code as illustrative (never presented as real)", () => {
     expect(codes(mapAiChart(D({ dataOrigin: "illustrative" }), 0, TEACHER, "b"))).toEqual(["AI_CHART_ILLUSTRATIVE_NOT_ALLOWED"]);
@@ -95,5 +97,69 @@ describe("21A1-AI4 through the rich block mapper", () => {
   it("a non-chart block carrying a chart descriptor ignores it (the flat descriptor is per block type, like every other field)", () => {
     const r = mapAiRichBlocks([rb("paragraph", { text: "نص", chart: D() })], "stem", TEACHER);
     expect(r.ok && r.richContent!.blocks).toEqual([{ type: "paragraph", runs: [{ text: "نص" }] }]);
+  });
+});
+
+describe("21A1-AI5 teacher numbers are read strictly (review fix A2)", () => {
+  const sorted = (t: string) => [...numbersInText(t)].sort((a, b) => a - b);
+  it("thousands separators, decimal separators, signs, ranges and exponents keep their written value", () => {
+    expect(sorted("January 1,200 units")).toEqual([1200]);
+    expect(sorted("١٬٢٠٠ وحدة")).toEqual([1200]);
+    expect(sorted("2,000,000 و 12,5 و 3.14")).toEqual([3.14, 12.5, 2000000]);
+    expect(sorted("January -5, February 3")).toEqual([-5, 3]);
+    expect(sorted("range 10-20")).toEqual([10, 20]);
+    expect(sorted("−4 درجات")).toEqual([-4]);
+    expect(sorted("1.5e3")).toEqual([1500]);
+  });
+  const P = (request: string): AiChartPolicy => ({ request, illustrative: false, charts: true });
+  const bar = (categories: string[], values: number[], over: Record<string, unknown> = {}) => D({ categories, series: [{ label: "القيمة", values, mark: "bar" }], ...over });
+  it("a changed reading of a teacher number is refused (1,200 → 1.2; −5 → 5; a range bound made negative; Arabic thousands split)", () => {
+    expect(codes(mapAiChart(bar(["January", "February"], [1.2, 800]), 0, P("January 1,200 units, February 800"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    expect(mapAiChart(bar(["January", "February"], [1200, 800]), 0, P("January 1,200 units, February 800"), "b").ok).toBe(true);
+    expect(codes(mapAiChart(bar(["January", "February"], [5, 3]), 0, P("January -5, February 3"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    expect(codes(mapAiChart(bar(["a", "b"], [-20, 10]), 0, P("range 10-20"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    expect(codes(mapAiChart(bar(["a", "b"], [200, 1]), 0, P("المبيعات ١٬٢٠٠"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+  });
+  it("where the request pairs a category with a number, a single-series chart must keep the pair (a swap is refused)", () => {
+    expect(pairedNumber("Jan 120, Feb 80", "Feb")).toBe(80);
+    expect(pairedNumber("يناير ١٢٠ ملم، وفبراير 95 ملم", "فبراير")).toBe(95);
+    expect(pairedNumber("Q10 = 5, Q1 = 7", "Q1")).toBe(7);                                   // "Q1" never pairs with the 0 of "Q10"
+    expect(pairedNumber("January was wet: 120 then 80", "January")).toBeUndefined();
+    expect(pairedNumber("Jan 120 in the north, Jan 80 in the south", "Jan")).toBeUndefined();     // two different numbers: not a pairing
+    expect(pairedNumber("Jan 120; again Jan 120", "Jan")).toBe(120);
+    expect(pairedNumber("يناير 2024: 120، فبراير 2024: 95", "يناير")).toBeUndefined();          // a year qualifier, then the value: no pairing
+    expect(mapAiChart(bar(["يناير", "فبراير"], [120, 95]), 0, P("يناير 2024: 120، فبراير 2024: 95"), "b").ok).toBe(true);
+    expect(codes(mapAiChart(bar(["Jan", "Feb"], [80, 120]), 0, P("Jan 120, Feb 80"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    expect(mapAiChart(bar(["Jan", "Feb"], [120, 80]), 0, P("Jan 120, Feb 80"), "b").ok).toBe(true);
+    expect(codes(mapAiChart(D({ kind: "pie", categories: ["Jan", "Feb"], series: [{ label: "s", values: [80, 120], mark: "bar" }] }), 0, P("Jan 120, Feb 80"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+  });
+  it("a teacher-data chart's title and description state no number the teacher did not write", () => {
+    const req = P("يناير ١٢٠، فبراير 95، مارس 82 عام 2020");
+    expect(codes(mapAiChart(D({ title: "ارتفع الهطول 900% إلى 4,500 mm" }), 0, req, "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    expect(mapAiChart(D({ title: "الهطول الشهري 2020" }), 0, req, "b").ok).toBe(true);
+    // invented (illustrative) charts are labelled illustrative by code and are not held to the request
+    expect(mapAiChart(D({ dataOrigin: "illustrative", title: "الهطول 2031", series: [{ label: "x", values: [1, 2, 3], mark: "bar" }] }), 0, OPEN, "b").ok).toBe(true);
+  });
+});
+
+describe("21A1-AI6 AI charts merged into an existing stem (review fix A4)", () => {
+  it("appending / prepending a chart to a stem that already has one renumbers the incoming chart id instead of failing on a duplicate", () => {
+    const existing = mapAiChart(D(), 0, TEACHER, "$");
+    if (!existing.ok) throw new Error("fixture");
+    const exam = { schemaVersion: 2, examId: "E1", title: "E", status: "draft", metadata: {}, sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [
+      { examQuestionId: "q1", presentationType: "multipleChoice", questionTypeVersion: 1, text: "أي شهر أكثر هطولًا؟", marks: 2, options: [{ text: "يناير" }, { text: "فبراير" }], answer: { correctOptionIndex: 0 },
+        richContent: { schemaVersion: 1, blocks: [{ type: "dataChart", chart: existing.chart }] } }] }] };
+    for (const richMode of ["append", "prepend"]) {
+      const op = { op: "updateQuestionRichContent", sectionId: null, questionId: "q1", partId: null, position: null, text: null, title: null, marks: null, preset: null, tableVariant: null, variant: null,
+        richBlocks: [rb("dataChart", { chart: D({ title: "الحرارة", categories: ["يناير", "فبراير"], series: [{ label: "الحرارة", values: [30, 25], mark: "bar" }] }) })], richMode, item: null, section: null, items: null, reason: "أضف رسمًا ثانيًا" };
+      const ctx = { exam, mode: "improveContent", scope: { kind: "question", questionId: "q1" }, nonce: "abc123", request: "أضف رسم الحرارة: يناير 30، فبراير 25" };
+      const n = normalizeComposerPatch({ summary: "إضافة رسم", operations: [op] }, ctx as never);
+      expect(n.ok, JSON.stringify(n)).toBe(true);
+      if (!n.ok) continue;
+      const d = applyComposerPatch(exam as never, n.patch, { now: "2026-01-01T00:00:00Z", request: ctx.request } as never) as { ok: boolean; exam?: { sections: { questions: { richContent: { blocks: { chart: { id: string } }[] } }[] }[] } };
+      expect(d.ok, richMode + " " + JSON.stringify(d).slice(0, 300)).toBe(true);
+      const ids = d.exam!.sections[0].questions[0].richContent.blocks.map(b => b.chart.id);
+      expect(ids.sort(), richMode).toEqual(["chart1", "chart2"]);
+    }
   });
 });

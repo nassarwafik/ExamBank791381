@@ -38,12 +38,44 @@ const CHART_KEYS = ["kind", "dataOrigin", "title", "description", "categories", 
 
 type R = { ok: true; chart: ChartSpecV1 } | { ok: false; issues: ComposerIssue[] };
 const DIGITS = /[٠-٩۰-۹]/g;
-/** Every number written in a text (Arabic-Indic / Persian digits, the Arabic decimal separator and a decimal comma between digits accepted). */
+/** Arabic-Indic / Persian digits → ASCII; the Arabic decimal separator → "."; the Arabic thousands separator → ","; the minus sign → "-". */
+const normDigits = (text: string) => String(text || "").replace(DIGITS, d => String(d.charCodeAt(0) & 0xf)).replace(/٫/g, ".").replace(/٬/g, ",").replace(/−/g, "-");
+// One number as written: "," between groups of exactly three digits is a THOUSANDS separator ("1,200" = 1200, never 1.2); otherwise "." or
+// "," before digits is the decimal separator ("1,5" = 1.5); an exponent is part of the number ("1.5e3" = 1500).
+const NUMBER = /(-?)(\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:[.,](\d+))?(?:[eE]([+-]?\d{1,3}))?/g;
+function readNumber(t: string, m: RegExpMatchArray): number {
+  const n = Number(m[2].replace(/,/g, "") + (m[3] ? "." + m[3] : "") + (m[4] ? "e" + m[4] : ""));
+  // a "-" right after a digit is a range / date separator ("10-20" = 10 and 20), never a sign; otherwise it is the number's sign
+  const negative = m[1] === "-" && !((m.index ?? 0) > 0 && /\d/.test(t[(m.index ?? 0) - 1]));
+  return negative ? -n : n === 0 ? 0 : n;
+}
+/** Every number written in a text, read strictly (see NUMBER / readNumber): a changed reading (1,200 → 1.2, -5 → 5) is never produced. */
 export function numbersInText(text: string): Set<number> {
-  const t = String(text || "").replace(DIGITS, d => String(d.charCodeAt(0) & 0xf)).replace(/٫/g, ".").replace(/−/g, "-");
+  const t = normDigits(text);
   const out = new Set<number>();
-  for (const m of t.matchAll(/-?\d+(?:[.,]\d+)?/g)) { const n = Number(m[0].replace(",", ".")); if (Number.isFinite(n)) { out.add(n); out.add(Math.abs(n)); } }
+  for (const m of t.matchAll(NUMBER)) { const n = readNumber(t, m); if (Number.isFinite(n)) out.add(n === 0 ? 0 : n); }
   return out;
+}
+/** The number a request writes right after a category name ("يناير ١٢٠", "January: 1,200", "Jan = 120") — when it writes exactly one. A
+ *  number that is itself followed by another number ("يناير 2024: 120" — a qualifier such as a year, then the value) is not a pairing. */
+export function pairedNumber(request: string, label: string): number | undefined {
+  const t = normDigits(request), l = normDigits(label).trim();
+  if (!l) return undefined;
+  const found = new Set<number>();
+  for (let at = t.indexOf(l); at >= 0; at = t.indexOf(l, at + 1)) {
+    const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))![0];
+    if (!lead) continue;                                                   // "Q1" never pairs with the "0" of "Q10"
+    const from = at + l.length + lead.length;
+    const re = new RegExp(NUMBER.source, "y");
+    re.lastIndex = from;
+    const m = re.exec(t);
+    if (!m || m.index !== from) continue;
+    const after = from + m[0].length, gap = /^[\s:=(]*/.exec(t.slice(after))![0];
+    if (gap && new RegExp("^" + NUMBER.source).test(t.slice(after + gap.length))) continue;
+    const n = readNumber(t, m);
+    if (Number.isFinite(n)) found.add(n);
+  }
+  return found.size === 1 ? [...found][0] : undefined;
 }
 
 /** Maps one AI chart descriptor (block index `index` of its document) to a ChartSpecV1 — the chart authority still decides afterwards. */
@@ -124,6 +156,16 @@ export function mapAiChart(raw: unknown, index: number, policy: AiChartPolicy | 
     const given = numbersInText(policy.request);
     const missing = used.filter(v => !given.has(v));
     if (missing.length) return fail("AI_CHART_DATA_NOT_PROVIDED", "أرقام الرسم البياني يجب أن تكون أرقام المعلم كما وردت في طلبه (القيمة " + missing[0] + " غير موجودة في الطلب)؛ لا تعدّل بيانات المعلم ولا تخترعها.", path);
+    // where the request pairs a category with ONE number ("يناير ١٢٠"), a single-series chart must give that category exactly that number
+    // (a swapped or shifted value is refused even though it occurs somewhere in the request)
+    const one = (kind === "bar" || kind === "line" || kind === "area" || kind === "combo" || kind === "pie") && (kind === "pie" || series.length === 1) ? series[0]?.values ?? [] : null;
+    if (one) for (let i = 0; i < categories.length; i++) {
+      const p = pairedNumber(policy.request, categories[i]), v = one[i];
+      if (p !== undefined && v !== null && v !== undefined && v !== p) return fail("AI_CHART_DATA_NOT_PROVIDED", "القيمة لـ«" + categories[i].slice(0, 40) + "» في طلب المعلم هي " + p + " وليست " + v + "؛ لا تبدّل بيانات المعلم.", path + ".series");
+    }
+    // a teacher-data chart's title and description state no number the teacher did not write (no invented figures presented as real)
+    const stated = [...numbersInText((raw.title as string) + "\n" + (raw.description as string))].filter(n => !given.has(n));
+    if (stated.length) return fail("AI_CHART_DATA_NOT_PROVIDED", "عنوان الرسم أو وصفه يذكر رقمًا ليس في طلب المعلم (" + stated[0] + ")؛ احذفه أو استخدم أرقام المعلم فقط.", path + ".title");
   }
   return { ok: true, chart: chart as ChartSpecV1 };
 }

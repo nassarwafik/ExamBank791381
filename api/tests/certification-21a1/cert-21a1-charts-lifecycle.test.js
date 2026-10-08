@@ -77,7 +77,7 @@ const sel = (chartId, ...targets) => ({ kind: "chartSelection", chartId, targets
 const PERFECT = {
   a1: A.choice(0), a2: A.numeric(120), a3: sel("rainfall-2020", "jan", "oct"), a4: sel("rainfall-2020", "may", "jun", "jul", "aug", "sep"),
   b1: A.choice(0), b2: sel("temp-week", "tmax/tue"), b3: A.numeric(29),
-  c1: sel("height-mass", "out"), c2: sel("scores", "b2"),
+  c1: sel("height-mass", "p2"), c2: sel("scores", "b2"),
   d1: A.composite({ p1: sel("sales-combo", "q4"), p2: A.numeric(120) }), d2: A.choice(0), d3: A.numeric(60)
 };
 // a1 wrong option · a3 only October of {January, October} (partial: 3 × 1/2 = 1.5) · a4 the run stops at August (all-or-nothing: 0) · b2 the

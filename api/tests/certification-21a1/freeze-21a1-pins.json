@@ -9,7 +9,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "8c774d7638eb9b159a71ab13ca6a586d894456c14d3c0410156881c478dec9ae",
    "gradeBlank": "6a5328a65aa60f5a9d79fec11b18a72d4edb943860351ca752960fc06e30b1b6",
-   "gradeSynthetic": "6a5328a65aa60f5a9d79fec11b18a72d4edb943860351ca752960fc06e30b1b6"
+   "gradeSynthetic": "14bf4d05fdafb7d9f4764740538688ad6bcb9eb6f10a7033c2fc1f0ad1ce3342",
+   "syntheticScore": [
+    12,
+    100,
+    25
+   ]
   },
   "ai-composer-20f/B-physics.json": {
    "rich": "6eb916000c3e5a3951fb4b5cb1e8e79245d038ea61cded752da5edbe30a679c9",
@@ -20,7 +25,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "f9281c12828e47f913a03acc4076d3464020b9c140f2d56d7ad485863f08740e",
    "gradeBlank": "b4ae364a5155b09ce701b0c8ea5d6a0fc99a261bdd2df828a2b29385c28faf7f",
-   "gradeSynthetic": "b4ae364a5155b09ce701b0c8ea5d6a0fc99a261bdd2df828a2b29385c28faf7f"
+   "gradeSynthetic": "bb5d0ac394ff3c53f40fee2e2249b593b473bdd9ff94b18d1d5b070c40bb6763",
+   "syntheticScore": [
+    5,
+    100,
+    21
+   ]
   },
   "ai-composer-20f/C-computer-science.json": {
    "rich": "fff59e94ed873af4218afbd7422422d7bc46427d48fd4a472e62f08494509acc",
@@ -31,7 +41,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "42a0263f6d8290b4567a8f4d4d22f546990a729a456aaac7cb13b5cc5acbfadf",
    "gradeBlank": "838bed4f96e46d7b4925ec15bc93ce7dde925be4cbd8e94794216b43447294fe",
-   "gradeSynthetic": "838bed4f96e46d7b4925ec15bc93ce7dde925be4cbd8e94794216b43447294fe"
+   "gradeSynthetic": "493dd2000c53879eeb391186ce1a00cd2d90818dc770b992df80fbd2aec7f490",
+   "syntheticScore": [
+    10,
+    60,
+    45
+   ]
   },
   "ai-composer-20f/D-mathematics.json": {
    "rich": "3cb7985fa31517a816d988f1224106453ce7e0a2735306a8c545fd9e708ad599",
@@ -42,7 +57,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "e22c5b4ba267477fa04e4ce71bd60a859c87c9cbd57d376ba7b6e930176e9609",
    "gradeBlank": "643196d0c3fa661188bd9e879b761a220a61835aeac9533f4ebfd62337c2d69f",
-   "gradeSynthetic": "643196d0c3fa661188bd9e879b761a220a61835aeac9533f4ebfd62337c2d69f"
+   "gradeSynthetic": "643196d0c3fa661188bd9e879b761a220a61835aeac9533f4ebfd62337c2d69f",
+   "syntheticScore": [
+    0,
+    50,
+    4
+   ]
   },
   "ai-composer-20f/E-showcase.json": {
    "rich": "e304fe26a55cc0a3ffe530127f6858919f6f70dec6d3fc25ccce6355ed12f2a1",
@@ -53,7 +73,12 @@
    "finalization": "8b3c9a78961a41e943bd209cd049299bc96f36a47f648677b3e532c6a023bd64",
    "student": "f7f080bab32299a8658887e8201f7370a97b8a6df08aab4f4b7770541f64308e",
    "gradeBlank": "975aad0da44b00183d86052043851f06c013236746ff71d92d002370a42c25d0",
-   "gradeSynthetic": "975aad0da44b00183d86052043851f06c013236746ff71d92d002370a42c25d0"
+   "gradeSynthetic": "4e59b7cad21e427597d26934d749a62897581db648327679b7af98230097f29c",
+   "syntheticScore": [
+    5,
+    80,
+    45
+   ]
   },
   "certification-20g/A-network.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -64,7 +89,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "19b7b8f6714d069485a90fe319093a4d2fffa351e48a1e915cb0e135b209436a",
    "gradeBlank": "ba98e3df027577cb88ad1ef0feed7a08a487704a37fb8c870c2940cc8d6b5ea4",
-   "gradeSynthetic": "ba98e3df027577cb88ad1ef0feed7a08a487704a37fb8c870c2940cc8d6b5ea4"
+   "gradeSynthetic": "85064edbb44fac888ce42880344b9676da057a8a1e5f83d2804132b0f31b9036",
+   "syntheticScore": [
+    11.33,
+    100,
+    12
+   ]
   },
   "certification-20g/B-physics.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -75,7 +105,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "0c3e408728edd31e5e26348c58873304155e691e91f05f25e2f0252b5ca99284",
    "gradeBlank": "20b2d963856123ac436dea026c177fb4e5542afd54fe52d0e331d47e0c5e3c77",
-   "gradeSynthetic": "20b2d963856123ac436dea026c177fb4e5542afd54fe52d0e331d47e0c5e3c77"
+   "gradeSynthetic": "a16be7538217961f87bcbcac7d210021a63e465996b078f2e0ac32aa45c11cff",
+   "syntheticScore": [
+    5,
+    100,
+    20
+   ]
   },
   "certification-20g/C-computer-science.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -86,7 +121,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "2a4ccf92d9ec404c452b858feb8b091972723a56ea2283164ed2dac3d25986b1",
    "gradeBlank": "e817046b677cc0fad32bd09ce2fa4601c4bd4d08bdf888ca07b1e96f1b61ba23",
-   "gradeSynthetic": "e817046b677cc0fad32bd09ce2fa4601c4bd4d08bdf888ca07b1e96f1b61ba23"
+   "gradeSynthetic": "1127bb2d297e97c1c329a5836153368f2c5c62e4228d5342e3b3922a6313ffc6",
+   "syntheticScore": [
+    8.33,
+    100,
+    78
+   ]
   },
   "certification-20g/D-mathematics.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -97,7 +137,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "681c3db618ce9195eebdd46e1a4eceff58c22eb3b7354246b925c62c398b7040",
    "gradeBlank": "4b3504985f7e7e6d640a23e6b9d6a8951e3a1dcea73cdae8cf856ba745935ad5",
-   "gradeSynthetic": "4b3504985f7e7e6d640a23e6b9d6a8951e3a1dcea73cdae8cf856ba745935ad5"
+   "gradeSynthetic": "5848273435d123c937d1aea6c0cb537d46f9a146b54a66521f2ee570787634b2",
+   "syntheticScore": [
+    13,
+    100,
+    6
+   ]
   },
   "certification-20g/E-showcase.json": {
    "rich": "19ba00c8909ce36fc5df35299134f49676f2d8e0a8d7c5a523bc0a5eac31e067",
@@ -108,7 +153,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "036e4f1863e82055181389ac8fc2d88c2371c3560a830db41403eec9261ca5d7",
    "gradeBlank": "d17ce58474ff3c6c007531f38ca9d43890b2cb5fb28a1333ddc5e5f87467b97d",
-   "gradeSynthetic": "d17ce58474ff3c6c007531f38ca9d43890b2cb5fb28a1333ddc5e5f87467b97d"
+   "gradeSynthetic": "e5e215f4f524ee5dea459ad4390aa18c399d5c4dbdf1f1e19f6952f85a7212a9",
+   "syntheticScore": [
+    38,
+    100,
+    10
+   ]
   },
   "composite-20d/arabic.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -119,7 +169,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "275dc74d8ba8b82869ccdcf6bd6475b1411b314e7a23183ad6bc175791a323dc",
    "gradeBlank": "5a820ba9cf8685def14c9d78d7e66c0d0fc997dfaacee7b0578aa847bd0e61a8",
-   "gradeSynthetic": "5a820ba9cf8685def14c9d78d7e66c0d0fc997dfaacee7b0578aa847bd0e61a8"
+   "gradeSynthetic": "e967636e0c82fb3358379ba93b45c220467e30a1bd02c242f286934ed3d6f8b8",
+   "syntheticScore": [
+    8,
+    20,
+    6
+   ]
   },
   "composite-20d/cs.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -130,7 +185,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "8e988b9000b71257013cdc377154cbdb85d51c2a72472fd2cca11b35730d035a",
    "gradeBlank": "8c861bb2efd04cf02d498e4f6a1456d2c26fd504b02d914fe93dcbd04d1dde9c",
-   "gradeSynthetic": "8c861bb2efd04cf02d498e4f6a1456d2c26fd504b02d914fe93dcbd04d1dde9c"
+   "gradeSynthetic": "50785bc9d76072eebbb5b291314cc42a3a80a432327088590d9789d679ee5665",
+   "syntheticScore": [
+    2,
+    18,
+    16
+   ]
   },
   "composite-20d/network.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -141,7 +201,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "11128f25e5ab40d7e0ac303a3f300feab303a556b75c404ad3e728fb68a6b66f",
    "gradeBlank": "32cee46ab2bb4fbab91bdf80825dae2b841431b58ee1e977c82c4b92042f9a9b",
-   "gradeSynthetic": "32cee46ab2bb4fbab91bdf80825dae2b841431b58ee1e977c82c4b92042f9a9b"
+   "gradeSynthetic": "32cee46ab2bb4fbab91bdf80825dae2b841431b58ee1e977c82c4b92042f9a9b",
+   "syntheticScore": [
+    0,
+    14,
+    0
+   ]
   },
   "composite-20d/physics.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -152,7 +217,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "e6294bd6f170b9811c19abad9f91b4577fccb159b9a1b9f9e452042a82b80034",
    "gradeBlank": "dc18c5b03b3da7db08ce21c07122457f1ebde55bd262e3b41bad2f19c8572182",
-   "gradeSynthetic": "dc18c5b03b3da7db08ce21c07122457f1ebde55bd262e3b41bad2f19c8572182"
+   "gradeSynthetic": "dc18c5b03b3da7db08ce21c07122457f1ebde55bd262e3b41bad2f19c8572182",
+   "syntheticScore": [
+    0,
+    18,
+    4
+   ]
   },
   "presentation-20d1/A-classic-arabic.json": {
    "rich": "7a0849658b514f49082ba19832ff7f7f04559645ef18870ea39d71d3409c14f7",
@@ -163,7 +233,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "feefdf92a772b6f72fa9523da8a567a34ba189a3dbd89acf2def26b155050413",
    "gradeBlank": "777530fe59256c52c30fc6ef5ff4ee7c1a6ad666598e633d8a432358afa889ad",
-   "gradeSynthetic": "777530fe59256c52c30fc6ef5ff4ee7c1a6ad666598e633d8a432358afa889ad"
+   "gradeSynthetic": "1d468d5766316f3f440b2859895ac2560acf232e521417bd987217a013d2de59",
+   "syntheticScore": [
+    3.5,
+    7,
+    0
+   ]
   },
   "presentation-20d1/B-network-lab.json": {
    "rich": "c622e2736d5499f820e1f4519f761cb8dbcb2d198afd3a36d3a50155387dc004",
@@ -174,7 +249,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "5531e340daeaf731f8c10679aabad8a27695b61aa15b7e8b9273289114fd8e85",
    "gradeBlank": "be752677642571061e79a79cadb75032538776e252a9f9ee68c020616ba9c183",
-   "gradeSynthetic": "be752677642571061e79a79cadb75032538776e252a9f9ee68c020616ba9c183"
+   "gradeSynthetic": "5257594d7ce8355a8efd0fe0cb97b01cb8b3f0f2a1e8ec8c3b007ce4bac01298",
+   "syntheticScore": [
+    4,
+    8,
+    0
+   ]
   },
   "presentation-20d1/C-physics.json": {
    "rich": "25ab8f2a32ec2d7cd023f2659d715b072cf6cb5c15ffabe49eb43072ba8e2d20",
@@ -185,7 +265,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "11c06c045bce55dcdfddaa9b49b6951836f20279d8ae01deee17b8f0d098bfc2",
    "gradeBlank": "b3d7cf5508481522636aee93943f1af46e0b9f44977f0f14a0d7e68580dd06b2",
-   "gradeSynthetic": "b3d7cf5508481522636aee93943f1af46e0b9f44977f0f14a0d7e68580dd06b2"
+   "gradeSynthetic": "8a553dbdb33be496a8b2d94706cfcb6a64cca724be480e1033e0e8fa1709dbff",
+   "syntheticScore": [
+    3,
+    8,
+    0
+   ]
   },
   "presentation-20d1/D-cs.json": {
    "rich": "9efc1eca2b20d55eb4fa9ca27884b74dfa45599ce9979c9082dd72407ca5b047",
@@ -196,7 +281,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "26ab3f173f4e713bad2460e358f3da59a33e47f4997baa0abbe99bfc13360979",
    "gradeBlank": "2ced1556c1769a3d2f79ead626fd2107246e352f41f58a30e4bc1c3989a67afe",
-   "gradeSynthetic": "2ced1556c1769a3d2f79ead626fd2107246e352f41f58a30e4bc1c3989a67afe"
+   "gradeSynthetic": "754ff3390390ab8e6be03b1ec3208bfec40bab868e43ef9e7b274f057b570292",
+   "syntheticScore": [
+    3.5,
+    7,
+    0
+   ]
   },
   "presentation-20d1/E-showcase.json": {
    "rich": "d337bec08ed0c350f0dca9beb0a2c48bd956a7acd361f4eedf61d30a4715b8d3",
@@ -207,7 +297,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "c01155acccd0fcbd846b8796bbb0b7e6b1e6dd60a9b5a0a83799d5f10550f172",
    "gradeBlank": "10f4bf3f4638f7e9ca571c660b65f8cda61095cb4f3338416b3a5a97bfc1202a",
-   "gradeSynthetic": "10f4bf3f4638f7e9ca571c660b65f8cda61095cb4f3338416b3a5a97bfc1202a"
+   "gradeSynthetic": "0ac530a06f4036d9ec4f889d41db1831e4f6747047a36bde431cc8498ce9607e",
+   "syntheticScore": [
+    4,
+    7,
+    0
+   ]
   },
   "presentation-20d1/F-legacy.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -218,7 +313,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "6abe0787190537eddb0c121a5407e1ddce4580127341c6d8e06c6df21f4fe6b7",
    "gradeBlank": "8a3eed9ea1c0567a714c341b3df6f215f957b0d6b2b1b322560d9ffa7485e8ab",
-   "gradeSynthetic": "8a3eed9ea1c0567a714c341b3df6f215f957b0d6b2b1b322560d9ffa7485e8ab"
+   "gradeSynthetic": "ba25652838e120bc28c383fcb4b81f888cdc14011dd2727d66885ccf77566008",
+   "syntheticScore": [
+    5,
+    8,
+    0
+   ]
   },
   "scientific-math-21a/ExamBank_21A_Scientific_Math_Mini_Acceptance.json": {
    "rich": "c78dad24919e78962d4d34fb8eb86ac4c33792dce56d79a745fee4d87562f835",
@@ -229,7 +329,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "45098d7260eccdbbe4293ee3edacae0c69e11a9765865d31afb8f85f813c5bb8",
    "gradeBlank": "e3d7833637727aab28885d703bb952b254c89e3e7e51824b82ad9734bd8a9095",
-   "gradeSynthetic": "e3d7833637727aab28885d703bb952b254c89e3e7e51824b82ad9734bd8a9095"
+   "gradeSynthetic": "3c029acd376d217ed604dfad778f6715957c77b6ccacc018dfabdf63f582cabc",
+   "syntheticScore": [
+    17,
+    40,
+    2
+   ]
   },
   "smartsim-20e/A-free-fall-from-rest.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -240,7 +345,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "5939aeae1c393451c4581bac676f3bbb6ba198bbcb878ffbaf2a759b744375b0",
    "gradeBlank": "82678dec2a68299164bf1b6902a3e4db4264a42abe7f057db9982e8a3c413ba6",
-   "gradeSynthetic": "82678dec2a68299164bf1b6902a3e4db4264a42abe7f057db9982e8a3c413ba6"
+   "gradeSynthetic": "82678dec2a68299164bf1b6902a3e4db4264a42abe7f057db9982e8a3c413ba6",
+   "syntheticScore": [
+    0,
+    12,
+    0
+   ]
   },
   "smartsim-20e/B-upward-throw.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -251,7 +361,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "78379dd08b47bb5008afda71199485c4ea5e68950f5d593db6b67746f16e2dde",
    "gradeBlank": "7b905766653a5635db071ff754bc2fa2d4bc5c9182914d8f9d63b48fe63cbec8",
-   "gradeSynthetic": "7b905766653a5635db071ff754bc2fa2d4bc5c9182914d8f9d63b48fe63cbec8"
+   "gradeSynthetic": "7b905766653a5635db071ff754bc2fa2d4bc5c9182914d8f9d63b48fe63cbec8",
+   "syntheticScore": [
+    0,
+    10,
+    0
+   ]
   },
   "smartsim-20e/C-function-study.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -262,7 +377,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "4ecbd238ae248e821859210f1fa8b34073f6ab61dd9c48f0e76ac61f0d8c113f",
    "gradeBlank": "de2f32cb638f61245f3b83630c8af5badd98bdb5fe3c6a5e5a52c2a9412e8f9d",
-   "gradeSynthetic": "de2f32cb638f61245f3b83630c8af5badd98bdb5fe3c6a5e5a52c2a9412e8f9d"
+   "gradeSynthetic": "de2f32cb638f61245f3b83630c8af5badd98bdb5fe3c6a5e5a52c2a9412e8f9d",
+   "syntheticScore": [
+    0,
+    13,
+    0
+   ]
   },
   "smartsim-20e/D-network-flow.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -273,7 +393,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "fe03216665a118054ccc945f930aa121b8e88a725260d6bf02d5dae1a0e05546",
    "gradeBlank": "7c520c363e3bdce3acb5af851fe6ad7f61a45eac7a23496193e55b3e332efdbe",
-   "gradeSynthetic": "7c520c363e3bdce3acb5af851fe6ad7f61a45eac7a23496193e55b3e332efdbe"
+   "gradeSynthetic": "7c520c363e3bdce3acb5af851fe6ad7f61a45eac7a23496193e55b3e332efdbe",
+   "syntheticScore": [
+    0,
+    13,
+    0
+   ]
   },
   "smartsim-20e/E-composite-shared-physics.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -284,7 +409,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "1a7d0a9430c7f6404c12476c1b6bbc8de1e15c65a353584500151287fb61d8a7",
    "gradeBlank": "45409585829c4def7e115dac37915bbfba8a5ee74558862664481c898b8cc4a4",
-   "gradeSynthetic": "45409585829c4def7e115dac37915bbfba8a5ee74558862664481c898b8cc4a4"
+   "gradeSynthetic": "a6fc6f3940593bb1b1d2d989837901799567f3415d61f1d069c17e09a3524c33",
+   "syntheticScore": [
+    2,
+    16,
+    4
+   ]
   },
   "smartsim-20e/F-reduced-motion-lunar.json": {
    "rich": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
@@ -295,7 +425,12 @@
    "finalization": "974d62e9b26776c37ab9beadf208fc86dd3a98ad4c88a5ca174c4c189fddae60",
    "student": "b2b21e0a07916879f0b7ed4b52fcca547fce13b71e9ce2b83689e5db03bc6265",
    "gradeBlank": "412accb3d91fbbf3ac895eea70e075be31db030dda109af787c3652c3fd12fe4",
-   "gradeSynthetic": "412accb3d91fbbf3ac895eea70e075be31db030dda109af787c3652c3fd12fe4"
+   "gradeSynthetic": "412accb3d91fbbf3ac895eea70e075be31db030dda109af787c3652c3fd12fe4",
+   "syntheticScore": [
+    0,
+    4,
+    0
+   ]
   }
  },
  "prompt": [

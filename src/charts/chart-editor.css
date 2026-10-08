@@ -26,3 +26,5 @@
 .ce :is(button,input,select,textarea):focus-visible{outline:3px solid var(--primary,#2563eb);outline-offset:2px}
 @media (min-width:768px){ .ce .ce-axes{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:480px){ .ce .ce-icon{min-inline-size:44px;min-block-size:44px} }
+/* a numeric cell whose text is not a number: the reason in text, next to the cell (never colour alone) */
+.ce .ce-num-error{display:block;margin-block-start:2px;color:#b91c1c;font-size:11.5px;line-height:1.3}

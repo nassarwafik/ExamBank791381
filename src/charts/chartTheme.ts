@@ -25,6 +25,23 @@ export function contrastRatio(a: string, b: string): number {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 }
 
+/** The heat-scale colour at position t ∈ [0, 1] — the engine's continuous visual map interpolates the scale linearly in RGB the same way. */
+export function heatColorAt(t: number): string {
+  const s = CHART_HEAT_SCALE, x = Math.min(1, Math.max(0, Number.isFinite(t) ? t : 0)) * (s.length - 1);
+  const i = Math.min(s.length - 2, Math.floor(x)), f = x - i;
+  const rgb = (h: string) => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
+  const [a, b] = [rgb(s[i]), rgb(s[i + 1])];
+  return "#" + a.map((v, k) => Math.round(v + (b[k] - v) * f).toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+const LABEL_DARK = "#0F172A", LABEL_LIGHT = "#FFFFFF";
+/** A value label drawn on a coloured cell: the label colour with the better contrast against the cell, and — where neither reaches 4.5:1 (the
+ *  middle of the blue scale) — a halo in the opposite colour, so the text always sits on a background it contrasts with (≥ 4.5:1). */
+export function labelOn(background: string): { color: string; halo?: string } {
+  const dark = contrastRatio(LABEL_DARK, background), light = contrastRatio(LABEL_LIGHT, background);
+  const color = dark >= light ? LABEL_DARK : LABEL_LIGHT;
+  return Math.max(dark, light) >= 4.5 ? { color } : { color, halo: color === LABEL_DARK ? LABEL_LIGHT : LABEL_DARK };
+}
+
 /** The ExamBank animation policy → concrete timings. `none` disables animation entirely. */
 export const ANIMATION_TIMINGS: Readonly<Record<ChartAnimation, { duration: number; update: number } | null>> = Object.freeze({
   none: null, subtle: Object.freeze({ duration: 350, update: 200 }), normal: Object.freeze({ duration: 800, update: 300 })

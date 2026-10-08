@@ -101,10 +101,10 @@ const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "f
 // (Phase 21A: the catalog marker became AI_COMPOSER_CATALOG_V2 — Scientific Math v2; Phase 21A.1: AI_COMPOSER_CATALOG_V3 — data charts.)
 const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V3", "ai-composer-diff"];
 // Phase 21A.1 — the data-chart platform: ExamBank's chart surface (the selection list and data table class names of the lazy DataChart,
-// the teacher's key picker, the chartSelection authority's refusal code) and the ECharts runtime (the markers of our two engine modules and
-// ECharts' own DOM instance attribute). ANY one in an initial file — or in the Student Portal's static closure (a student whose exam has no
+// the teacher's chart editor and key picker, the chartSelection authority's refusal code) and the ECharts runtime (the markers of our two
+// engine modules and ECharts' own DOM instance attribute). ANY one in an initial file — or in the Student Portal's static closure (a student whose exam has no
 // chart never downloads chart code) — fails; EACH must exist in some chunk (a missing one means the list is stale).
-const DATA_CHART_SIGNATURES = ["xp-chart-table", "xp-chart-select", "chart-key-picker", "CHART_SELECTION_CHART_MISMATCH", "xp-chart-engine-v1", "xp-chart-advanced-v1", "_echarts_instance_"];
+const DATA_CHART_SIGNATURES = ["xp-chart-table", "xp-chart-select", "data-xp-chart-editor", "chart-key-picker", "CHART_SELECTION_CHART_MISMATCH", "xp-chart-engine-v1", "xp-chart-advanced-v1", "_echarts_instance_"];
 // The ECharts runtime chunks (any of these): never statically reachable from the DataChart chunk (the figure, its accessible list and
 // data table paint first; the engine arrives through DataChart's import() edges), and budgeted in gzip — the common kinds (ECharts core
 // shared chunk + the common engine module) and the advanced kinds module (radar / box plot / heat map). Measured in 21A.1: 182.1 KB

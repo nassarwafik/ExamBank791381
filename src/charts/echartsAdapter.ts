@@ -11,8 +11,8 @@
 import type { ChartSpecV1, ChartAxis } from "./chartSpec";
 import { isCategoryChart } from "./chartSpec";
 import type { ChartTargetKind } from "./chartData";
-import { binLabel } from "./chartData";
-import { ANIMATION_TIMINGS, CHART_HEAT_SCALE, CHART_PALETTE_COLORS, CHART_SELECTED_COLOR, type ChartTokens } from "./chartTheme";
+import { binLabel, labelWithUnit } from "./chartData";
+import { ANIMATION_TIMINGS, CHART_HEAT_SCALE, CHART_PALETTE_COLORS, CHART_SELECTED_COLOR, heatColorAt, labelOn, type ChartTokens } from "./chartTheme";
 import type { ChartAnimation } from "./chartSpec";
 
 export type EngineOption = Record<string, unknown>;
@@ -21,6 +21,8 @@ export type AdapterContext = {
   animation: ChartAnimation;
   /** Narrow container (phones): rotated / truncated category labels, tighter margins. */
   compact: boolean;
+  /** The stage width in px when known (0 / absent: not measured yet): category labels wider than their slot are rotated. */
+  width?: number;
   /** Answer-surface state: which target kind is selectable and which keys are selected (emphasis only — never grading). */
   selectionKind?: ChartTargetKind;
   selected?: ReadonlySet<string>;
@@ -34,8 +36,12 @@ const RTL = /[֐-ࣿיִ-﷿ﹰ-﻿]/;
 export const isolate = (s: string) => (RTL.test(s) ? "⁧" + s + "⁩" : s);
 /** Deterministic number text (no locale grouping; integers stay integers; at most 6 decimals, trailing zeros trimmed). */
 export const formatValue = (v: number) => (Number.isInteger(v) ? String(v) : String(Number(v.toFixed(6))));
-const withUnit = (v: number, unit?: string) => formatValue(v) + (unit ? " " + unit : "");
-const axisName = (a?: ChartAxis) => (a?.label ? isolate(a.label + (a.unit ? " (" + a.unit + ")" : "")) : a?.unit ? isolate(a.unit) : undefined);
+const LRI = "\u2066", PDI = "\u2069";
+/** A number with its unit as text inside right-to-left prose: the number (and a Latin unit such as "°C") is ONE left-to-right isolate, so a
+ *  sign, a decimal point or the unit's symbols are never reordered ("-2 °C", never "C° 2-"); a unit in an RTL script stays outside the run
+ *  and follows the number in reading order. */
+export const valueText = (v: number, unit?: string) => (!unit ? LRI + formatValue(v) + PDI : RTL.test(unit) ? LRI + formatValue(v) + PDI + " " + unit : LRI + formatValue(v) + " " + unit + PDI);
+const axisName = (a?: ChartAxis) => (a?.label ? isolate(labelWithUnit(a.label, a.unit)) : a?.unit ? isolate(a.unit) : undefined);
 
 /** Heat-map cells in engine order: present cells [column, row, value] (series 0) and missing cells [column, row] (series 1). */
 function heatCells(spec: Extract<ChartSpecV1, { kind: "heatmap" }>) {
@@ -62,18 +68,21 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
     axisLabel: { ...text, formatter: (v: number) => formatValue(v) }, splitLine: { lineStyle: { color: ctx.tokens.grid } }, axisLine: { lineStyle: { color: ctx.tokens.muted } }
   });
   // Category labels: every label is drawn while there are few (≤ 12); beyond that the engine hides the ones that would overlap (the data
-  // table, the tooltip and the selection list still name every category). A horizontal (x) category axis rotates its labels when they
-  // are many, or when the container is narrow and the labels together are long (≈ 20 characters across a phone-width plot would touch).
-  // A vertical (y) category axis carries its name above the axis, never across its labels.
+  // table, the tooltip and the selection list still name every category). A horizontal (x) category axis rotates its labels when they are
+  // many, or when the longest label is wider than the slot each category has (the plot width shared by the categories; ≈ 0.55 em per
+  // character) — at ANY container width, not only on phones. Before the stage is measured, a narrow container with long labels together
+  // (≈ 20 characters across a phone-width plot) rotates. A vertical (y) category axis carries its name above the axis, never across its labels.
   const categoryAxis = (labels: string[], a: ChartAxis | undefined, vertical: boolean, inverse: boolean) => {
-    const count = labels.length;
-    const crowded = count * Math.max(0, ...labels.map(l => l.length)) > 20;
-    const rotate = !vertical && ((ctx.compact && (count > 6 || crowded)) || count > 12);
+    const count = labels.length, longest = Math.max(0, ...labels.map(l => l.length));
+    const slot = ctx.width && ctx.width > 0 ? Math.max(0, ctx.width - (ctx.compact ? 64 : 96)) / Math.max(1, count) : 0;
+    const fits = slot > 0 ? longest * text.fontSize * 0.55 <= slot - 6 : !(ctx.compact && count * longest > 20);
+    const rotate = !vertical && (count > 12 || (ctx.compact && count > 6) || !fits);
     return {
       type: "category", data: labels.map(isolate), name: axisName(a), inverse,
-      ...(vertical ? { nameLocation: inverse ? "start" : "end", nameGap: 12 } : { nameLocation: "middle", nameGap: rotate ? 58 : 30 }),
+      ...(vertical ? { nameLocation: inverse ? "start" : "end", nameGap: 12 } : { nameLocation: "middle", nameGap: rotate ? (ctx.compact ? 58 : 90) : 30 }),
       nameTextStyle: { ...text, color: ctx.tokens.muted }, axisTick: { alignWithLabel: true }, axisLine: { lineStyle: { color: ctx.tokens.muted } },
-      axisLabel: { ...text, interval: count <= 12 ? 0 : "auto", ...(rotate ? { rotate: 45 } : {}), width: rotate || ctx.compact ? 64 : 110, overflow: "truncate" }
+      // a rotated label may be longer (it no longer shares the slot's width; phones keep it short); a flat label never exceeds its slot
+      axisLabel: { ...text, interval: count <= 12 ? 0 : "auto", ...(rotate ? { rotate: 45 } : {}), width: ctx.compact ? 64 : rotate ? 104 : slot > 0 ? Math.max(24, Math.min(110, Math.floor(slot - 4))) : 110, overflow: "truncate" }
     };
   };
   // The outer bounds equal the grid margins: axis labels and axis names are always kept INSIDE the canvas (no clipped text).
@@ -129,7 +138,7 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
         // narrow containers: no outside labels (the legend, the tooltip and the table name every slice); otherwise labels are aligned to
         // the canvas edges and truncated, so none can leave the canvas
         ...(ctx.compact ? { label: { show: false }, labelLine: { show: false } } : {}),
-        label: { ...text, show: !ctx.compact, alignTo: "edge", edgeDistance: 12, minMargin: 4, width: 140, overflow: "truncate", formatter: (p: { dataIndex: number }) => { const s = spec.slices[p.dataIndex]; return s ? isolate(s.label) + (spec.valueLabels ? ": " + withUnit(s.value, spec.unit) + " (" + formatValue(Math.round(s.value / sum * 1000) / 10) + "%)" : "") : ""; } },
+        label: { ...text, show: !ctx.compact, alignTo: "edge", edgeDistance: 12, minMargin: 4, width: 140, overflow: "truncate", formatter: (p: { dataIndex: number }) => { const s = spec.slices[p.dataIndex]; return s ? isolate(s.label) + (spec.valueLabels ? ": " + valueText(s.value, spec.unit) + " (" + valueText(Math.round(s.value / sum * 1000) / 10, "%") + ")" : "") : ""; } },
         data: spec.slices.map((s, i) => ({ value: s.value, name: isolate(s.label), itemStyle: emphasize(s.id, palette[i % palette.length]) }))
       }] };
     }
@@ -163,10 +172,12 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
       const cellBorder = { borderColor: ctx.tokens.surface, borderWidth: 1 };
       return { ...base, grid: { ...grid, bottom: ctx.compact ? 52 : 56 },
         xAxis: categoryAxis(spec.columns.map(c => c.label), spec.xAxis, false, false), yAxis: categoryAxis(spec.rows.map(r => r.label), spec.yAxis, true, true),
-        visualMap: { type: "continuous", seriesIndex: 0, min, max: min + span, calculable: false, orient: "horizontal", left: "center", bottom: 4, itemHeight: ctx.compact ? 120 : 180, inRange: { color: [...CHART_HEAT_SCALE] }, textStyle: { ...text }, formatter: (v: number) => formatValue(v) },
+        // the colour scale names its two ends (lowest and highest value, with the unit): the scale is readable, not colour alone
+        visualMap: { type: "continuous", seriesIndex: 0, min, max: min + span, calculable: false, orient: "horizontal", left: "center", bottom: 4, itemHeight: ctx.compact ? 120 : 180, inRange: { color: [...CHART_HEAT_SCALE] }, textStyle: { ...text }, text: [valueText(max, spec.unit), valueText(min, spec.unit)], textGap: 8 },
         series: [
-          // present cells: coloured by the scale; a value label (when asked for) is dark on light cells and white on dark cells
-          { type: "heatmap", itemStyle: cellBorder, data: cells.map(([x, y, v]) => ({ value: [x, y, v], label: { color: (v - min) / span > 0.55 ? "#FFFFFF" : "#0F172A" } })),
+          // present cells: coloured by the scale; a value label (when asked for) takes the colour with the better contrast against its cell,
+          // with a halo in the opposite colour where neither reaches 4.5:1 (the middle of the scale)
+          { type: "heatmap", itemStyle: cellBorder, data: cells.map(([x, y, v]) => { const l = labelOn(heatColorAt((v - min) / span)); return { value: [x, y, v], label: { color: l.color, ...(l.halo ? { textBorderColor: l.halo, textBorderWidth: 2 } : {}) } }; }),
             label: { show: spec.valueLabels === true, ...text, formatter: (p: { value: unknown }) => (Array.isArray(p.value) && typeof p.value[2] === "number" ? formatValue(p.value[2]) : "") } },
           // missing cells: never coloured as a value — a neutral cell marked "—" (a missing value is not 0)
           { type: "heatmap", itemStyle: { ...cellBorder, color: "#F1F5F9" }, data: missing.map(([x, y]) => [x, y, 0]), label: { show: true, ...text, color: ctx.tokens.muted, formatter: () => "—" } }
@@ -203,17 +214,17 @@ export function tooltipFromEvent(spec: ChartSpecV1, ev: { componentType?: string
     const s = spec.series[si], c = spec.categories[di], v = s?.values[di];
     if (!s || !c || v === null || v === undefined) return null;
     const unit = spec.kind === "combo" && s.axis === "secondary" ? spec.y2Axis?.unit : spec.yAxis?.unit ?? spec.xAxis?.unit;
-    return { title: c.label, lines: [s.label + ": " + withUnit(v, unit)] };
+    return { title: c.label, lines: [s.label + ": " + valueText(v, unit)] };
   }
   switch (spec.kind) {
-    case "pie": { const s = spec.slices[di]; return s ? { title: s.label, lines: [withUnit(s.value, spec.unit)] } : null; }
-    case "histogram": { const b = spec.bins[di]; return b ? { title: binLabel(b.start, b.end), lines: [(spec.yAxis?.label ?? "التكرار") + ": " + formatValue(b.count)] } : null; }
-    case "boxplot": { const b = spec.boxes[di]; return b ? { title: b.label, lines: ["الأدنى: " + formatValue(b.min), "الربيع الأول: " + formatValue(b.q1), "الوسيط: " + formatValue(b.median), "الربيع الثالث: " + formatValue(b.q3), "الأعلى: " + formatValue(b.max)] } : null; }
-    case "radar": { const s = spec.series[di]; return s ? { title: s.label, lines: spec.axes.map((a, i) => a.label + ": " + formatValue(s.values[i])) } : null; }
-    case "scatter": { const s = spec.series[si], p = s?.points[di]; return s && p ? { title: p.label ?? s.label, lines: [(spec.xAxis?.label ?? "x") + ": " + withUnit(p.x, spec.xAxis?.unit), (spec.yAxis?.label ?? "y") + ": " + withUnit(p.y, spec.yAxis?.unit)] } : null; }
+    case "pie": { const s = spec.slices[di]; return s ? { title: s.label, lines: [valueText(s.value, spec.unit)] } : null; }
+    case "histogram": { const b = spec.bins[di]; return b ? { title: binLabel(b.start, b.end), lines: [(spec.yAxis?.label ?? "التكرار") + ": " + valueText(b.count, spec.yAxis?.unit)] } : null; }
+    case "boxplot": { const b = spec.boxes[di], u = spec.yAxis?.unit; return b ? { title: b.label, lines: ["الأدنى: " + valueText(b.min, u), "الربيع الأول: " + valueText(b.q1, u), "الوسيط: " + valueText(b.median, u), "الربيع الثالث: " + valueText(b.q3, u), "الأعلى: " + valueText(b.max, u)] } : null; }
+    case "radar": { const s = spec.series[di]; return s ? { title: s.label, lines: spec.axes.map((a, i) => a.label + ": " + valueText(s.values[i])) } : null; }
+    case "scatter": { const s = spec.series[si], p = s?.points[di]; return s && p ? { title: p.label ?? s.label, lines: [(spec.xAxis?.label ?? "x") + ": " + valueText(p.x, spec.xAxis?.unit), (spec.yAxis?.label ?? "y") + ": " + valueText(p.y, spec.yAxis?.unit)] } : null; }
     case "heatmap": {
       const { cells, missing } = heatCells(spec);
-      if (si === 0) { const c = cells[di]; return c ? { title: spec.rows[c[1]].label + " — " + spec.columns[c[0]].label, lines: [withUnit(c[2], spec.unit)] } : null; }
+      if (si === 0) { const c = cells[di]; return c ? { title: spec.rows[c[1]].label + " — " + spec.columns[c[0]].label, lines: [valueText(c[2], spec.unit)] } : null; }
       const m = si === 1 ? missing[di] : undefined;
       return m ? { title: spec.rows[m[1]].label + " — " + spec.columns[m[0]].label, lines: ["لا قيمة"] } : null;
     }

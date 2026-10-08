@@ -157,7 +157,7 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
     blockCount++;
     if (!isPlain(b)) { add("RICH_CONTENT_INVALID", "كتلة غير صالحة في المحتوى المنسق.", at); return undefined; }
     const type = b.type;
-    if (typeof type !== "string" || !(RICH_BLOCK_TYPES as readonly string[]).includes(type)) { add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + String(type).slice(0, 40), at + ".type"); return undefined; }
+    if (typeof type !== "string" || !(RICH_BLOCK_TYPES as readonly string[]).includes(type)) { add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + ((typeof type === "object" && type !== null) || typeof type === "function" ? typeof type : String(type).slice(0, 40)), at + ".type"); return undefined; }
     const t = type as RichBlockType;
     if (!keysOk(b, BLOCK_KEYS[t], at)) return undefined;
     const before = issues.length;

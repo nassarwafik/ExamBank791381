@@ -425,6 +425,25 @@ function recomputeCompositeMarks(q) {
     const marks = groups.reduce((n, g) => n + (g.gradingPolicy === "firstNAnswered" ? Number(g.maxMarks) || 0 : g.parts.reduce((t, p) => t + (Number(p.marks) || 0), 0)), 0);
     return { ...q, marks, composite: { ...c, groups } };
 }
+function renumberCharts(incoming, existing) {
+    const isRec = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+    const idOf = (b) => (isRec(b) && b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? b.chart.id : undefined);
+    const taken = new Set(existing.map(idOf).filter((x) => x !== undefined));
+    return incoming.map(b => {
+        const id = idOf(b);
+        if (id === undefined)
+            return b;
+        if (!taken.has(id)) {
+            taken.add(id);
+            return b;
+        }
+        let n = 1;
+        while (taken.has("chart" + n))
+            n++;
+        taken.add("chart" + n);
+        return { ...b, chart: { ...b.chart, id: "chart" + n } };
+    });
+}
 function applyOne(exam, o) {
     const x = { ...exam, sections: exam.sections.map(s => ({ ...s, questions: [...s.questions] })) };
     const setQ = (qid, fn) => { const l = locate(x, qid); if (!l)
@@ -445,7 +464,8 @@ function applyOne(exam, o) {
             setQ(o.questionId, q => {
                 const prevBlocks = (q.richContent?.blocks ?? []);
                 const nb = o.richContent ? o.richContent.blocks : [];
-                const blocks = o.mode === "replace" ? nb : o.mode === "prepend" ? [...nb, ...prevBlocks] : [...prevBlocks, ...nb];
+                const add = o.mode === "replace" ? nb : renumberCharts(nb, prevBlocks);
+                const blocks = o.mode === "replace" ? nb : o.mode === "prepend" ? [...add, ...prevBlocks] : [...prevBlocks, ...add];
                 const out = { ...q };
                 if (blocks.length)
                     out.richContent = { schemaVersion: 1, blocks };

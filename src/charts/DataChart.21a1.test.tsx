@@ -55,7 +55,7 @@ describe("21A1-DC1 accessible figure", () => {
     await settle();
     const fig = screen.getByRole("figure", { name: "الهطول الشهري — 2020" });
     const described = fig.getAttribute("aria-describedby")!.split(" ").map(id => document.getElementById(id)!.textContent);
-    expect(described).toEqual(["كمية الأمطار الشهرية بالملّيمتر في عام 2020 (بيانات توضيحية).", "رسم بالأعمدة — 12 فئات، 1 سلسلة"]);
+    expect(described).toEqual(["كمية الأمطار الشهرية بالملّيمتر في عام 2020 (بيانات توضيحية).", "رسم بالأعمدة — 12 فئة، سلسلة واحدة"]);
     expect(fig.querySelector(".xp-chart-stage")!.getAttribute("aria-hidden")).toBe("true");
     expect(document.querySelector("[aria-label='chart'],[aria-label='Chart'],[aria-label='رسم بياني']")).toBeNull();
     expect(fig.textContent).toContain("المصدر: بيانات توضيحية لأغراض التعلّم");
@@ -69,7 +69,7 @@ describe("21A1-DC1 accessible figure", () => {
     fireEvent.click(toggle);
     const region = screen.getByRole("region", { name: "بيانات: Temperature over a week" });
     const table = within(region).getByRole("table");
-    expect(within(table).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["Day", "Max °C", "Min °C"]);
+    expect(within(table).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["Day", "Max °C (\u2068°C\u2069)", "Min °C (\u2068°C\u2069)"]);                 // every value column names its unit
     expect(within(table).getAllByRole("rowheader").map(h => h.textContent)).toEqual(["MON", "TUE", "WED", "THU", "FRI"]);
     const wed = within(table).getAllByRole("row")[3];
     expect(wed.textContent).toBe("WED— (لا قيمة)11");
@@ -149,7 +149,7 @@ describe("21A1-DC3 tooltip, animation, resize", () => {
     await settle();
     act(() => last().emit({ type: "over", componentType: "series", seriesIndex: 0, dataIndex: 9, offsetX: 40, offsetY: 30 }));
     const tip = document.querySelector(".xp-chart-tip")!;
-    expect(tip.textContent).toBe("أكتوبر &amp; {b}الهطول: 135 mm");
+    expect(tip.textContent).toBe("أكتوبر &amp; {b}الهطول: \u2066135 mm\u2069");                             // the value + unit is one LTR isolate
     expect(Array.from(tip.querySelectorAll("*")).every(e => e.tagName === "SPAN")).toBe(true);
     act(() => last().emit({ type: "out" }));
     expect(document.querySelector(".xp-chart-tip")).toBeNull();
@@ -238,8 +238,8 @@ describe("21A1-DC4 selection surface", () => {
     await settle();
     const edu = screen.getByRole("button", { name: /التعليم/ });
     expect(edu.hasAttribute("disabled")).toBe(true);
-    expect(edu.textContent).toBe("التعليم — صحيح");
-    expect(screen.getByRole("button", { name: /الصحة/ }).textContent).toBe("الصحة — لم يُحدَّد");
+    expect(edu.textContent).toBe("التعليم — ✓ صحيح");
+    expect(screen.getByRole("button", { name: /الصحة/ }).textContent).toBe("الصحة — ○ لم يُحدَّد");
     act(() => last().emit({ type: "click", componentType: "series", seriesIndex: 0, dataIndex: 1 }));
     expect(onChange).not.toHaveBeenCalled();
   });

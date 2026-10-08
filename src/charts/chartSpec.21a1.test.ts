@@ -124,7 +124,7 @@ describe("21A1-C2 hostile and malformed input is refused (never repaired, never 
 
 describe("21A1-C3 explicit resource limits (exact boundaries)", () => {
   const cats = (n: number) => Array.from({ length: n }, (_, i) => ({ id: "c" + i, label: "c" + i }));
-  it("categories 60 / 61; series 8 / 9; data points 480 / 481", () => {
+  it("categories 60 / 61; series 8 / 9; data points 480 (481 cannot be reached: 60 categories × 8 series)", () => {
     const bar = (nc: number, ns: number) => ({ version: 1, id: "big", kind: "bar", title: "t", description: "d", categories: cats(nc), series: Array.from({ length: ns }, (_, j) => ({ id: "s" + j, label: "s" + j, values: Array(nc).fill(1) })) });
     expect(validateChartSpec(bar(60, 8)).ok).toBe(true);                                                              // 480 points
     refused(bar(61, 1), "CHART_LIMIT");
@@ -193,13 +193,13 @@ describe("21A1-C4 semantic targets, data table and summary derive from the ONE s
   });
   it("the accessible data table carries every value (missing stays null) with the same labels", () => {
     const t = chartDataTable(ok(F.temperatureLine()));
-    expect(t.columns).toEqual(["Day", "Max °C", "Min °C"]);
+    expect(t.columns).toEqual(["Day", "Max °C (\u2068°C\u2069)", "Min °C (\u2068°C\u2069)"]);
     expect(t.rows[2]).toEqual({ header: "WED", cells: [null, 11] });
     expect(chartDataTable(ok(F.rainfallBar())).rows.map(r => r.cells[0])).toEqual(F.RAINFALL_2020);
     for (const c of F.ALL_CHARTS()) expect(chartDataTable(ok(c)).rows.length, c.id).toBeGreaterThan(0);
   });
   it("summary and plain text name the kind, sizes, title, description and source", () => {
-    expect(chartSummary(ok(F.rainfallBar()))).toBe("رسم بالأعمدة — 12 فئات، 1 سلسلة");
+    expect(chartSummary(ok(F.rainfallBar()))).toBe("رسم بالأعمدة — 12 فئة، سلسلة واحدة");
     expect(chartSummary(ok(F.donutChart()))).toBe("رسم حلقي — 3 شرائح");
     expect(chartPlainText(ok(F.rainfallBar()))).toContain("الهطول الشهري — 2020\nكمية الأمطار");
   });

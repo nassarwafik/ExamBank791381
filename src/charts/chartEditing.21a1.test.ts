@@ -55,7 +55,8 @@ describe("21A1-ED2 kind conversion", () => {
   it("category ⇄ heat map and pie ⇄ bar are lossless round trips; radar → category keeps every value", () => {
     const cat = temperatureLine() as CategoryChartSpec;
     const hm = convertChartKind(cat, "heatmap");
-    expect(hm.lossy).toBe(false);
+    expect(hm.lossy).toBe(true);                                                     // the value-axis label "Temperature" has no place in a heat map
+    expect(convertChartKind({ ...cat, yAxis: { unit: "°C" } } as ChartSpecV1, "heatmap").lossy).toBe(false);   // the unit travels
     const back = convertChartKind(ok(hm.spec), "line").spec as CategoryChartSpec;
     expect([back.categories, back.series.map(s => [s.id, s.label, s.values])]).toEqual([cat.categories, cat.series.map(s => [s.id, s.label, s.values])]);
     const pie = donutChart() as Extract<ChartSpecV1, { kind: "pie" }>;
@@ -69,7 +70,9 @@ describe("21A1-ED2 kind conversion", () => {
   });
   it("a conversion that cannot hold the data says so (lossy) — several series or missing / negative values into a pie, data into a scatter / histogram / box plot", () => {
     expect(convertChartKind(temperatureLine(), "pie").lossy).toBe(true);
-    expect(convertChartKind(rainfallBar(), "pie").lossy).toBe(false);
+    expect(convertChartKind(rainfallBar(), "pie").lossy).toBe(true);                // its reference line and axis labels have no place in a pie
+    const { referenceLines: _r, xAxis: _x, ...plainRain } = rainfallBar() as CategoryChartSpec;
+    expect(convertChartKind({ ...plainRain, yAxis: { unit: "mm" } } as ChartSpecV1, "pie").lossy).toBe(false);
     for (const k of ["scatter", "histogram", "boxplot"] as const) expect(convertChartKind(rainfallBar(), k).lossy, k).toBe(true);
     expect(convertChartKind(temperatureLine(), "radar").lossy).toBe(true);
   });

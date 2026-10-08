@@ -19,7 +19,7 @@ describe("21A1-RC1 the dataChart block", () => {
   });
   it("plain text (search / fallback / AI modify projection) carries the chart title, description, source and summary — not raw numbers", () => {
     const t = R.richContentPlainText(doc({ type: "dataChart", chart: rainfallBar() }));
-    for (const s of ["الهطول الشهري — 2020", "بيانات توضيحية لأغراض التعلّم", "رسم بالأعمدة — 12 فئات، 1 سلسلة"]) expect(t).toContain(s);
+    for (const s of ["الهطول الشهري — 2020", "بيانات توضيحية لأغراض التعلّم", "رسم بالأعمدة — 12 فئة، سلسلة واحدة"]) expect(t).toContain(s);
     expect(t).not.toContain("135");
   });
   it("an invalid chart is refused with RICH_CONTENT_CHART carrying the chart authority's code and the exact path; nothing throws", () => {

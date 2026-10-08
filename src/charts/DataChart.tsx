@@ -38,7 +38,11 @@ export type DataChartProps = {
 
 /** Width below which the chart uses its compact layout (phones). */
 export const COMPACT_WIDTH = 480;
+/** The width the engine draws at while the page is printed (≈ 170 mm: inside A4 and Letter margins); the print stylesheet scales the SVG
+ *  down further when the printed column is narrower. */
+export const PRINT_WIDTH = 640;
 const MARK_TEXT: Record<ChartTargetMark, string> = { correct: "صحيح", incorrect: "غير صحيح", missed: "لم يُحدَّد" };
+const MARK_GLYPH: Record<ChartTargetMark, string> = { correct: "✓", incorrect: "✗", missed: "○" };
 const MODE_TEXT = (mode: ChartSelectionMode, max: number) => (mode === "single" ? "اختر عنصرًا واحدًا." : mode === "range" ? "اختر نطاقًا متصلًا: العنصر الأول ثم الأخير." : "يمكنك اختيار حتى " + max + " عناصر.");
 const loadEngine = (advanced: boolean) => (advanced ? Promise.all([import("./echartsEngine"), import("./echartsAdvanced")]).then(([engine, adv]) => ({ engine, advanced: adv.CHART_ADVANCED_MARKER })) : import("./echartsEngine").then(engine => ({ engine, advanced: "" })));
 type Tip = { x: number; y: number; title: string; lines: string[] };
@@ -72,18 +76,26 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   const order = useMemo(() => targets.map(t => t.key), [targets]);
   const selectedKey = selection ? selection.value.join("\u0000") : "";
   const option = useMemo(() => buildEngineOption(spec, {
-    tokens, animation, compact,
+    tokens, animation, compact, width,
     ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
-  }), [spec, tokens, animation, compact, selKind, selectedKey]);
+  }), [spec, tokens, animation, compact, width, selKind, selectedKey]);
   const optionRef = useRef(option);
 
   // the latest semantic handler, read by the engine's listener (the engine instance is not re-created when the selection changes)
+  // the live announcement says what actually happened: selected, deselected, unchanged, or refused at the limit (never "deselected" for an
+  // item that was never selected)
   const activate = useCallback((key: string) => {
     if (!selection || selection.readOnly || !selection.onChange) return;
     const next = nextChartSelection(selection.mode, order, selection.value, key, selection.max);
     const label = targets.find(t => t.key === key)?.label ?? key;
-    setAnnounce((next.includes(key) ? "تم تحديد: " : "أُلغي تحديد: ") + label + " — المحدَّد " + next.length);
-    selection.onChange(next);
+    const was = selection.value.includes(key), is = next.includes(key);
+    const same = next.length === selection.value.length && next.every(k => selection.value.includes(k));
+    const what = was && !is ? "أُلغي تحديد: " + label
+      : !was && is ? "تم تحديد: " + label
+      : !was ? "بلغت الحد الأقصى (" + selection.max + ")؛ لم يُحدَّد: " + label
+      : same ? "لا تغيير، محدَّد بالفعل: " + label : "تم تحديد: " + label;
+    setAnnounce(what + " — المحدَّد " + next.length);
+    if (!same) selection.onChange(next);
   }, [selection, order, targets]);
   const onEngineEvent = useRef<(e: EngineEvent) => void>(() => {});
   // the engine (mounted once) always reads the latest option and handler through these refs
@@ -137,6 +149,15 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
 
   useEffect(() => { handleRef.current?.update(option); }, [option]);
   useEffect(() => { handleRef.current?.resize(); }, [height]);
+  // print: nothing re-measures the stage while the page is printed, so the engine draws at a page-safe width just before the print layout
+  // and follows its container again afterwards (the print stylesheet scales the SVG to the printed column through its viewBox)
+  useEffect(() => {
+    const before = () => handleRef.current?.resize(PRINT_WIDTH);
+    const after = () => handleRef.current?.resize();
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => { window.removeEventListener("beforeprint", before); window.removeEventListener("afterprint", after); };
+  }, []);
 
   const table = useMemo(() => chartDataTable(spec), [spec]);
   const legend = useMemo(() => chartLegend(spec), [spec]);
@@ -148,7 +169,7 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   const selected = new Set(selection?.value ?? []);
 
   return (
-    <figure ref={figureRef} className="xp-chart" data-xp-chart-kind={spec.kind} data-xp-chart-state={state} data-xp-compact={compact ? "true" : "false"} data-xp-animation={animation}
+    <figure ref={figureRef} tabIndex={-1} className="xp-chart" data-xp-chart-kind={spec.kind} data-xp-chart-state={state} data-xp-compact={compact ? "true" : "false"} data-xp-animation={animation}
       aria-labelledby={ids.title} aria-describedby={ids.desc + " " + ids.summary}>
       <figcaption className="xp-chart-caption">
         <span className="xp-chart-title" id={ids.title} dir="auto">{spec.title}</span>
@@ -170,15 +191,17 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
         )}
         {state === "loading" && <span className="xp-chart-status">جارٍ تحميل الرسم البياني…</span>}
       </div>
+      {/* one retry: a browser may keep a failed chunk load for the life of the page, so a second failure says so honestly instead of
+          offering a button that cannot work; focus moves to the figure (the button disappears while the engine loads) */}
       {state === "error" && (
         <p className="xp-chart-error" role="status">
-          تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه.{" "}
-          <button type="button" className="xp-chart-retry" onClick={() => setAttempt(a => a + 1)}>إعادة المحاولة</button>
+          {attempt === 0 ? "تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه." : "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه، ويمكن إعادة تحميل الصفحة لاحقًا لعرضه."}
+          {attempt === 0 && <>{" "}<button type="button" className="xp-chart-retry" onClick={() => { figureRef.current?.focus(); setAttempt(1); }}>إعادة المحاولة</button></>}
         </p>
       )}
       {selection && (
         <div className="xp-chart-select" role="group" aria-labelledby={ids.list} data-xp-mode={selection.mode}>
-          <p className="xp-chart-select-label" id={ids.list}>{selection.label ?? "اختر من الرسم البياني"} <span className="xp-chart-select-hint">{MODE_TEXT(selection.mode, selection.max)}</span></p>
+          <p className="xp-chart-select-label" id={ids.list}>{selection.label ?? "اختر من الرسم البياني"}{!selection.readOnly && selection.onChange && <> <span className="xp-chart-select-hint">{MODE_TEXT(selection.mode, selection.max)}</span></>}</p>
           <ul className="xp-chart-options">
             {targets.map(t => {
               const on = selected.has(t.key), mark = selection.marks?.[t.key];
@@ -187,7 +210,7 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
                   <button type="button" className="xp-chart-option" aria-pressed={on} data-xp-key={t.key} data-xp-review={mark}
                     disabled={selection.readOnly || !selection.onChange} onClick={() => activate(t.key)}>
                     <bdi>{t.label}</bdi>
-                    {mark && <span className="xp-chart-option-mark"> — {MARK_TEXT[mark]}</span>}
+                    {mark && <span className="xp-chart-option-mark"> — <span aria-hidden="true">{MARK_GLYPH[mark]} </span>{MARK_TEXT[mark]}</span>}
                   </button>
                 </li>
               );

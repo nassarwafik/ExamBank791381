@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AI_CHART_POINTS = exports.AI_CHART_SOURCE_LABELS = exports.AI_CHART_DATA_ORIGINS = void 0;
 exports.buildAiChartSchema = buildAiChartSchema;
 exports.numbersInText = numbersInText;
+exports.pairedNumber = pairedNumber;
 exports.mapAiChart = mapAiChart;
 const chartSpec_1 = require("../charts/chartSpec");
 const composerSchemaKit_1 = require("./composerSchemaKit");
@@ -28,17 +29,46 @@ function buildAiChartSchema() {
 }
 const CHART_KEYS = ["kind", "dataOrigin", "title", "description", "categories", "series", "points", "bins", "boxes", "xLabel", "yLabel", "unit", "stacked", "horizontal", "donut"];
 const DIGITS = /[٠-٩۰-۹]/g;
+const normDigits = (text) => String(text || "").replace(DIGITS, d => String(d.charCodeAt(0) & 0xf)).replace(/٫/g, ".").replace(/٬/g, ",").replace(/−/g, "-");
+const NUMBER = /(-?)(\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:[.,](\d+))?(?:[eE]([+-]?\d{1,3}))?/g;
+function readNumber(t, m) {
+    const n = Number(m[2].replace(/,/g, "") + (m[3] ? "." + m[3] : "") + (m[4] ? "e" + m[4] : ""));
+    const negative = m[1] === "-" && !((m.index ?? 0) > 0 && /\d/.test(t[(m.index ?? 0) - 1]));
+    return negative ? -n : n === 0 ? 0 : n;
+}
 function numbersInText(text) {
-    const t = String(text || "").replace(DIGITS, d => String(d.charCodeAt(0) & 0xf)).replace(/٫/g, ".").replace(/−/g, "-");
+    const t = normDigits(text);
     const out = new Set();
-    for (const m of t.matchAll(/-?\d+(?:[.,]\d+)?/g)) {
-        const n = Number(m[0].replace(",", "."));
-        if (Number.isFinite(n)) {
-            out.add(n);
-            out.add(Math.abs(n));
-        }
+    for (const m of t.matchAll(NUMBER)) {
+        const n = readNumber(t, m);
+        if (Number.isFinite(n))
+            out.add(n === 0 ? 0 : n);
     }
     return out;
+}
+function pairedNumber(request, label) {
+    const t = normDigits(request), l = normDigits(label).trim();
+    if (!l)
+        return undefined;
+    const found = new Set();
+    for (let at = t.indexOf(l); at >= 0; at = t.indexOf(l, at + 1)) {
+        const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))[0];
+        if (!lead)
+            continue;
+        const from = at + l.length + lead.length;
+        const re = new RegExp(NUMBER.source, "y");
+        re.lastIndex = from;
+        const m = re.exec(t);
+        if (!m || m.index !== from)
+            continue;
+        const after = from + m[0].length, gap = /^[\s:=(]*/.exec(t.slice(after))[0];
+        if (gap && new RegExp("^" + NUMBER.source).test(t.slice(after + gap.length)))
+            continue;
+        const n = readNumber(t, m);
+        if (Number.isFinite(n))
+            found.add(n);
+    }
+    return found.size === 1 ? [...found][0] : undefined;
 }
 function mapAiChart(raw, index, policy, path) {
     const fail = (code, message, p = path) => ({ ok: false, issues: [{ code, message, path: p }] });
@@ -134,6 +164,16 @@ function mapAiChart(raw, index, policy, path) {
         const missing = used.filter(v => !given.has(v));
         if (missing.length)
             return fail("AI_CHART_DATA_NOT_PROVIDED", "أرقام الرسم البياني يجب أن تكون أرقام المعلم كما وردت في طلبه (القيمة " + missing[0] + " غير موجودة في الطلب)؛ لا تعدّل بيانات المعلم ولا تخترعها.", path);
+        const one = (kind === "bar" || kind === "line" || kind === "area" || kind === "combo" || kind === "pie") && (kind === "pie" || series.length === 1) ? series[0]?.values ?? [] : null;
+        if (one)
+            for (let i = 0; i < categories.length; i++) {
+                const p = pairedNumber(policy.request, categories[i]), v = one[i];
+                if (p !== undefined && v !== null && v !== undefined && v !== p)
+                    return fail("AI_CHART_DATA_NOT_PROVIDED", "القيمة لـ«" + categories[i].slice(0, 40) + "» في طلب المعلم هي " + p + " وليست " + v + "؛ لا تبدّل بيانات المعلم.", path + ".series");
+            }
+        const stated = [...numbersInText(raw.title + "\n" + raw.description)].filter(n => !given.has(n));
+        if (stated.length)
+            return fail("AI_CHART_DATA_NOT_PROVIDED", "عنوان الرسم أو وصفه يذكر رقمًا ليس في طلب المعلم (" + stated[0] + ")؛ احذفه أو استخدم أرقام المعلم فقط.", path + ".title");
     }
     return { ok: true, chart: chart };
 }

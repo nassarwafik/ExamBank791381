@@ -48,7 +48,7 @@ describe("21A1-AX2 adapter", () => {
     expect(Array.isArray(o.yAxis)).toBe(true);
     expect(o.yAxis).toHaveLength(2);
     expect([o.yAxis[1].position, o.yAxis[1].splitLine.show]).toEqual(["right", false]);
-    expect(o.yAxis[1].name).toContain("الهامش (%)");
+    expect(o.yAxis[1].name).toContain("الهامش (\u2068%\u2069)");
     expect(o.series.map(s => s.yAxisIndex)).toEqual([0, 1]);
   });
   it("a single-axis combo is unchanged (one value axis, no axis index); reference lines are drawn by the first PRIMARY series", () => {
@@ -63,8 +63,8 @@ describe("21A1-AX2 adapter", () => {
   });
   it("the tooltip uses each series' own axis unit", () => {
     const v = canon(comboChart());
-    expect(tooltipFromEvent(v, { componentType: "series", seriesIndex: 1, dataIndex: 3 })).toEqual({ title: "الربع 4", lines: ["الهامش %: 18 %"] });
-    expect(tooltipFromEvent(v, { componentType: "series", seriesIndex: 0, dataIndex: 3 })).toEqual({ title: "الربع 4", lines: ["المبيعات: 150"] });
+    expect(tooltipFromEvent(v, { componentType: "series", seriesIndex: 1, dataIndex: 3 })).toEqual({ title: "الربع 4", lines: ["الهامش %: \u206618 %\u2069"] });
+    expect(tooltipFromEvent(v, { componentType: "series", seriesIndex: 0, dataIndex: 3 })).toEqual({ title: "الربع 4", lines: ["المبيعات: \u2066150\u2069"] });
   });
 });
 

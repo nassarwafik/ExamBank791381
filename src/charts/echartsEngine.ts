@@ -13,7 +13,8 @@ registerModules([BarChart, LineChart, PieChart, ScatterChart, GridComponent, Mar
 /** Marker the bundle guard looks for: this string exists only in the engine chunk. */
 export const CHART_ENGINE_MARKER = "xp-chart-engine-v1";
 export type EngineEvent = { type: "click" | "over" | "out"; componentType?: string; seriesIndex?: number; dataIndex?: number; offsetX?: number; offsetY?: number };
-export type EngineHandle = { update(option: EngineOption): void; resize(): void; dispose(): void; disposed(): boolean };
+/** `resize()` follows the container; `resize(width)` draws at that width (print: the page width), until the next `resize()`. */
+export type EngineHandle = { update(option: EngineOption): void; resize(width?: number): void; dispose(): void; disposed(): boolean };
 type RawParams = { componentType?: unknown; seriesIndex?: unknown; dataIndex?: unknown; event?: { offsetX?: unknown; offsetY?: unknown } };
 const toEvent = (type: EngineEvent["type"], p: RawParams | undefined): EngineEvent => ({
   type,
@@ -24,17 +25,26 @@ const toEvent = (type: EngineEvent["type"], p: RawParams | undefined): EngineEve
   ...(typeof p?.event?.offsetY === "number" ? { offsetY: p.event.offsetY } : {})
 });
 
+/** The drawn SVG carries a viewBox equal to its drawing size, so a stylesheet can scale the picture to a narrower box (print) instead of the
+ *  page cutting it off; the renderer sets only width / height and never touches the viewBox afterwards. */
+function fitViewBox(el: HTMLElement) {
+  const svg = el.querySelector("svg");
+  const w = Number(svg?.getAttribute("width")), h = Number(svg?.getAttribute("height"));
+  if (svg && w > 0 && h > 0) { svg.setAttribute("viewBox", "0 0 " + w + " " + h); svg.setAttribute("preserveAspectRatio", "xMidYMid meet"); }
+}
+
 /** Mounts one chart instance (SVG) into `el`. The caller owns its lifecycle: update on data / context change, resize, dispose on unmount. */
 export function mountChartEngine(el: HTMLElement, option: EngineOption, onEvent: (e: EngineEvent) => void): EngineHandle {
   const chart = init(el, null, { renderer: "svg" });
   el.setAttribute("data-xp-engine", CHART_ENGINE_MARKER);
   chart.setOption(option, { notMerge: true });
+  fitViewBox(el);
   chart.on("click", p => onEvent(toEvent("click", p as RawParams)));
   chart.on("mouseover", p => onEvent(toEvent("over", p as RawParams)));
   chart.on("mouseout", p => onEvent(toEvent("out", p as RawParams)));
   return {
-    update: option2 => { if (!chart.isDisposed()) chart.setOption(option2, { notMerge: true }); },
-    resize: () => { if (!chart.isDisposed()) chart.resize(); },
+    update: option2 => { if (!chart.isDisposed()) { chart.setOption(option2, { notMerge: true }); fitViewBox(el); } },
+    resize: width => { if (!chart.isDisposed()) { chart.resize(width && width > 0 ? { width } : { width: "auto" }); fitViewBox(el); } },
     dispose: () => { if (!chart.isDisposed()) chart.dispose(); },
     disposed: () => chart.isDisposed()
   };

@@ -77,6 +77,17 @@ const REFUSED = [
   ["engine tooltip / graphic / renderItem components", withChart(c => { c.tooltip = { formatter: "{b}" }; c.graphic = [{ type: "image", style: { image: "https://evil.example/x.png" } }]; }), "CHART_UNKNOWN_KEY", "evil.example"],
   ["hidden answer injection inside the chart", withChart(c => { c.answer = { correct: ["oct"] }; }), "CHART_UNKNOWN_KEY", null],
   ["unknown kind (graphic)", withChart(c => { c.kind = "graphic"; }), null, null],
+  // review fix A1: a JSON object with no usable toString / valueOf used to make the validator THROW (taking the whole exam down)
+  ["kind is an object with a non-callable toString", withChart(c => { c.kind = { toString: 1 }; }), "CHART_KIND", null],
+  ["kind is an object with non-callable toString and valueOf", withChart(c => { c.kind = { toString: 1, valueOf: 1 }; }), "CHART_KIND", null],
+  // review fix A3: C1 controls, line / paragraph separators and invisible format characters are not prose
+  ["C1 control (8-bit CSI U+009B) in a category label", withChart(c => { c.categories[0].label = "Jan\u009B31m"; }), "CHART_TEXT_CONTROL", "\u009B"],
+  ["NEL (U+0085) in a series label", withChart(c => { c.series[0].label = "a\u0085b"; }), "CHART_TEXT_CONTROL", "\u0085"],
+  ["line separator (U+2028) in a title", withChart(c => { c.title = "a\u2028b"; }), "CHART_TEXT_CONTROL", "\u2028"],
+  ["zero-width space (U+200B) making a look-alike label", withChart(c => { c.categories[1].label = "ين\u200Bاير"; }), "CHART_TEXT_CONTROL", "\u200B"],
+  ["BOM (U+FEFF) in a description", withChart(c => { c.description = "\uFEFFوصف"; }), "CHART_TEXT_CONTROL", "\uFEFF"],
+  ["deprecated format character (U+206E) in a source", withChart(c => { c.source = "a\u206Eb"; }), "CHART_TEXT_CONTROL", "\u206E"],
+  ["interlinear annotation (U+FFF9) in a unit", withChart(c => { c.yAxis.unit = "\uFFF9mm"; }), "CHART_TEXT_CONTROL", "\uFFF9"],
   ["future version", withChart(c => { c.version = 2; }), null, null]
 ];
 
@@ -236,4 +247,26 @@ describe("21A1-ADV5 the AI intake meets the same attacks", () => {
       expect(r.richContent, name).toBeUndefined();
     });
   }
+});
+
+describe("21A1-ADV6 exotic JSON objects never make an authority throw (review fix A1)", () => {
+  const { evaluateServerFinalization } = require_("../../src/lib/server-finalization.js");
+  for (const kind of [{ toString: 1 }, { toString: 1, valueOf: 1 }]) {
+    it("chart kind " + JSON.stringify(kind) + " in a stem chart AND a chartSelection config: every authority answers, the exam stays usable", () => {
+      const exam = hostExam(withChart(c => { c.kind = kind; }));
+      expect(() => sanitizeExamForStudent(exam, {})).not.toThrow();
+      expect(sanitizeExamForStudent(exam, {}).sections[0].questions[1].chartSelection).toBeUndefined();
+      expect(evaluateExamFinalization(exam).canFinalize).toBe(false);
+      expect(() => evaluateServerFinalization(exam)).not.toThrow();
+      // the MCQ is still graded; the broken chart question fails closed to review
+      const g = gradeExam(exam, { q1: { kind: "choice", index: 0 }, q2: { kind: "chartSelection", chartId: "rainfall-2020", targets: ["oct"] } });
+      expect(g.questions.map(q => [q.questionId, q.score, !!q.manualReview])).toEqual([["q1", 2, false], ["q2", 0, true]]);
+      expect(() => normalizeDraftAnswers({ q2: { kind: "chartSelection", chartId: "rainfall-2020", targets: ["oct"] } }, exam)).not.toThrow();
+      expect(() => parseStructuredExamJson(JSON.stringify(exam), "x.json")).not.toThrow();
+    });
+  }
+  it("a rich block whose type is such an object is refused (RICH_CONTENT_BLOCK_TYPE), not thrown", () => {
+    const r = validateRichContent({ schemaVersion: 1, blocks: [{ type: { toString: 1 } }] });
+    expect([r.ok, r.ok ? [] : r.issues.map(i => i.code)]).toEqual([false, ["RICH_CONTENT_BLOCK_TYPE"]]);
+  });
 });

@@ -224,7 +224,7 @@ function validateRichContent(raw, path = "richContent") {
         }
         const type = b.type;
         if (typeof type !== "string" || !exports.RICH_BLOCK_TYPES.includes(type)) {
-            add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + String(type).slice(0, 40), at + ".type");
+            add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + ((typeof type === "object" && type !== null) || typeof type === "function" ? typeof type : String(type).slice(0, 40)), at + ".type");
             return undefined;
         }
         const t = type;

@@ -54,7 +54,7 @@ function validateChartSelectionConfig(raw) {
     let label;
     if (own(raw, "label")) {
         const l = raw.label;
-        if (typeof l !== "string" || l.trim() === "" || l.trim().length > exports.CHART_SELECTION_LIMITS.labelChars || proseGuard_1.CONTROL.test(l) || chartSpec_1.BIDI_CONTROL.test(l) || proseGuard_1.RAW_HTML.test(l))
+        if (typeof l !== "string" || l.trim() === "" || l.trim().length > exports.CHART_SELECTION_LIMITS.labelChars || proseGuard_1.CONTROL.test(l) || chartSpec_1.BIDI_CONTROL.test(l) || chartSpec_1.INVISIBLE_CONTROL.test(l) || proseGuard_1.RAW_HTML.test(l))
             issues.push(err("CHART_SELECTION_LABEL_INVALID", "تعليمة الاختيار نص عادي غير فارغ حتى " + exports.CHART_SELECTION_LIMITS.labelChars + " حرفًا.", "chartSelection.label"));
         else
             label = l.trim();

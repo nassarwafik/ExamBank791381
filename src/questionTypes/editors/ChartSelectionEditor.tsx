@@ -4,13 +4,16 @@ import { CHART_KINDS, validateChartSpec, type ChartKind, type ChartSpecV1 } from
 import { CHART_SELECTION_MODES, RANGE_TARGET_KINDS, chartTargetKinds, chartTargets, isContiguousRun, type ChartSelectionMode, type ChartTargetKind } from "../../charts/chartData";
 import { defaultChart } from "../../charts/chartEditing";
 import ChartEditor from "../../charts/ChartEditor";
+import { useConfirm } from "../../ui/useConfirm";
 import DataChart from "../../charts/DataChart";
 import { CHART_SELECTION_LIMITS, TARGET_KIND_LABELS, validateChartSelectionQuestion, type ChartSelectionScoring } from "../../chartSelectionQuestion";
 
 // Phase 21A.1 — chartSelection@1 authoring (lazy). Workflow: create the chart (kind → the table-like chart editor, no JSON, no engine
 // options) → what the student selects (target kind, single / multiple / range, the bound, an optional instruction) → the correct target(s),
 // chosen ON THE CHART ITSELF through the same semantic selection surface the student uses → the scoring. Changing the chart prunes key
-// entries whose target no longer exists; the canonical validation is shown inline.
+// entries whose target no longer exists; a kind change that cannot keep the chart's data asks first (the same confirmation as the rich-content
+// chart editor), and only the kinds a student can answer on are offered (a heat map has no selectable target). The canonical validation is
+// shown inline.
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const KIND_LABELS: Readonly<Record<ChartKind, string>> = Object.freeze({ bar: "أعمدة / أشرطة", line: "خطي", area: "مساحي", combo: "مركّب", pie: "دائري / حلقي", scatter: "انتشاري", histogram: "مدرّج تكراري", radar: "راداري", boxplot: "صندوقي", heatmap: "خريطة حرارية" });
 const MODE_LABELS: Readonly<Record<ChartSelectionMode, string>> = Object.freeze({ single: "اختيار واحد", multiple: "اختيار متعدد", range: "نطاق متصل" });
@@ -31,6 +34,8 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
   const targets = useMemo(() => (valid?.ok && kinds.includes(target) ? chartTargets(valid.value, target) : []), [valid, kinds, target]);
   const issues = useMemo(() => validateChartSelectionQuestion(node as unknown as Record<string, unknown>), [node]);
   const [newKind, setNewKind] = useState<ChartKind>("bar");
+  const [maxDraft, setMaxDraft] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
 
   /** One emission: the public config and the key together, kept mutually consistent (unsupported target / mode adjusted, bound clamped,
    *  key entries of vanished targets dropped, a broken range cleared). */
@@ -71,7 +76,7 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
         </div>
       ) : (
         <>
-          <section aria-label="بيانات الرسم البياني"><ChartEditor chart={chart} name="الرسم" disabled={disabled} onChange={c => write({ chart: c })} /></section>
+          <section aria-label="بيانات الرسم البياني"><ChartEditor chart={chart} name="الرسم" disabled={disabled} confirm={confirm} kinds={SELECTABLE_KINDS} onChange={c => write({ chart: c })} /></section>
           <section className="vq-fields" aria-label="ما يختاره الطالب">
             <label className="vq-field"><span>يختار الطالب</span>
               <select className="sb-input sb-input-sm" aria-label="نوع العنصر الذي يختاره الطالب" value={target} disabled={disabled || kinds.length === 0} onChange={e => write({ target: e.target.value as ChartTargetKind, correct: [] })}>
@@ -85,7 +90,8 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
             </label>
             {mode !== "single" && (
               <label className="vq-field"><span>أقصى عدد للاختيارات</span>
-                <input className="sb-input sb-input-sm" type="number" min={1} max={Math.max(1, targets.length)} value={max} aria-label="أقصى عدد للاختيارات" disabled={disabled} onChange={e => write({ max: Number(e.target.value) || 1 })} />
+                <input className="sb-input sb-input-sm" type="number" min={1} max={Math.max(1, targets.length)} value={maxDraft ?? String(max)} aria-label="أقصى عدد للاختيارات" disabled={disabled}
+                  onChange={e => { const t = e.target.value, n = Number(t); setMaxDraft(t); if (t.trim() !== "" && Number.isInteger(n) && n >= 1) write({ max: n }); }} onBlur={() => setMaxDraft(null)} />
               </label>
             )}
             <label className="vq-field"><span>تعليمة الاختيار (اختيارية)</span>
@@ -107,6 +113,7 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
           </section>
         </>
       )}
+      {confirmDialog}
       {issues.length > 0 && <ul className="vq-issues" data-testid="chart-selection-issues">{issues.slice(0, 10).map((i, n) => <li key={n}>{i.message}</li>)}</ul>}
     </div>
   );

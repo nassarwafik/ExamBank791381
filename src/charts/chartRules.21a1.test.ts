@@ -56,5 +56,23 @@ describe("21A1-R3 identity and text rules", () => {
     expect(bad.ok ? [] : bad.issues.map(i => i.code)).toEqual(["CHART_SELECTION_LABEL_INVALID"]);
     expect(validateChartSelectionConfig(cfg("اختر ⁦Jan⁩")).ok).toBe(false);
     expect(validateChartSelectionConfig(cfg("اختر ‎Jan‎ من الرسم")).ok).toBe(true);
+    // review fix A3: C1 controls and invisible format characters are refused there too
+    for (const bad2 of ["اختر\u0085الشهر", "اختر\u200Bالشهر", "اختر\u2029الشهر"]) expect(validateChartSelectionConfig(cfg(bad2)).ok, JSON.stringify(bad2)).toBe(false);
+  });
+  it("ZWNJ / ZWJ (needed by Persian and Arabic text) stay allowed in chart text", () => {
+    const c = rainfallBar() as unknown as { title: string; categories: { label: string }[] };
+    c.title = "می\u200Cخواهم"; c.categories[0].label = "لا\u200Dم";
+    expect(validateChartSpec(c).ok).toBe(true);
+  });
+});
+
+describe("21A1-R4 the validator never throws (review fix A1, defense in depth)", () => {
+  it("a value whose property access throws (a getter — not producible by JSON, but by an in-process caller) is refused as CHART_INVALID", () => {
+    const hostile = { ...rainfallBar() } as Record<string, unknown>;
+    Object.defineProperty(hostile, "title", { enumerable: true, get() { throw new Error("boom"); } });
+    let r: ReturnType<typeof validateChartSpec> | undefined;
+    expect(() => { r = validateChartSpec(hostile); }).not.toThrow();
+    expect(r!.ok).toBe(false);
+    expect(r!.ok ? [] : r!.issues.map(i => i.code)).toEqual(["CHART_INVALID"]);
   });
 });

@@ -84,6 +84,10 @@ export const isChartId = (v: unknown): v is string => typeof v === "string" && I
 // explicit embedding / override / isolate controls (LRE RLE PDF LRO RLO, LRI RLI FSI PDI) spoof the visual order of a label; the plain
 // marks (LRM / RLM / ALM) stay allowed. The adapter adds its own isolates when it hands labels to a renderer.
 export const BIDI_CONTROL = /[‪-‮⁦-⁩]/;
+// C1 controls (U+0080–U+009F, e.g. the 8-bit CSI escape U+009B and NEL U+0085), line / paragraph separators, zero-width space, word joiner,
+// BOM, the deprecated format characters U+206A–U+206F and the interlinear annotation controls: invisible or layout-breaking, never prose.
+// (ZWNJ / ZWJ stay allowed: Persian and Arabic text need them.)
+export const INVISIBLE_CONTROL = /[\u0080-\u009F\u2028\u2029\u200B\u2060\uFEFF\u206A-\u206F\uFFF9-\uFFFB]/;
 const isPlain = (v: unknown): v is Record<string, unknown> => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return false;
   const p = Object.getPrototypeOf(v);
@@ -102,8 +106,14 @@ function utf8Bytes(s: string): number {
   return n;
 }
 
-/** Strict validation of a ChartSpecV1. Never throws; returns the canonical rebuilt copy only when there is no issue. */
+/** Strict validation of a ChartSpecV1. Never throws; returns the canonical rebuilt copy only when there is no issue. Untrusted values are
+ *  never coerced to strings; the outer guard turns anything unforeseen into a refusal (defense in depth: a validator that throws would take
+ *  the whole exam down with it — sanitizer, finalization, grading, ingest). */
 export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
+  try { return validateChartSpecUnguarded(raw, path); }
+  catch { return { ok: false, issues: [{ code: "CHART_INVALID", message: "الرسم البياني غير صالح البنية.", severity: "error", path }] }; }
+}
+function validateChartSpecUnguarded(raw: unknown, path: string): ChartResult {
   const issues: ChartIssue[] = [];
   const add = (code: string, message: string, at: string) => { if (issues.length < 50) issues.push({ code, message, severity: "error", path: at }); };
   const keysOk = (o: Record<string, unknown>, allowed: readonly string[], at: string): boolean => {
@@ -115,7 +125,7 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
     if (typeof v !== "string") { add("CHART_TEXT_INVALID", "نص غير صالح في الرسم البياني.", at); return undefined; }
     if (required && v.trim() === "") { add("CHART_TEXT_EMPTY", "نص مطلوب فارغ في الرسم البياني.", at); return undefined; }
     if (v.length > max) { add("CHART_LIMIT", "نص أطول من الحد المسموح في الرسم البياني (" + max + ").", at); return undefined; }
-    if (CONTROL.test(v) || BIDI_CONTROL.test(v)) { add("CHART_TEXT_CONTROL", "محارف تحكم غير مسموحة في نص الرسم البياني.", at); return undefined; }
+    if (CONTROL.test(v) || BIDI_CONTROL.test(v) || INVISIBLE_CONTROL.test(v)) { add("CHART_TEXT_CONTROL", "محارف تحكم غير مسموحة في نص الرسم البياني.", at); return undefined; }
     if (RAW_HTML.test(v)) { add("CHART_TEXT_MARKUP", "نص الرسم البياني لا يقبل وسوم HTML أو روابط script.", at); return undefined; }
     return v;
   };
@@ -154,11 +164,13 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
     if (v.length > max) { add("CHART_LIMIT", what + ": العدد أكبر من الحد المسموح (" + max + ").", at); return undefined; }
     return v;
   };
-  const axis = (o: Record<string, unknown>, k: "xAxis" | "yAxis" | "y2Axis", at: string, out: Record<string, unknown>, numeric: boolean) => {
+  // numeric (value) axis: label, unit, min, max · "unit": a binned axis (histogram x) — label and unit, no bounds (the bins fix its extent)
+  // · category axis: label only
+  const axis = (o: Record<string, unknown>, k: "xAxis" | "yAxis" | "y2Axis", at: string, out: Record<string, unknown>, numeric: boolean | "unit") => {
     if (!own(o, k)) return;
     const a = o[k], ap = at + "." + k;
     if (!isPlain(a)) { add("CHART_INVALID", "إعداد المحور غير صالح.", ap); return; }
-    const allowed = numeric ? AXIS_KEYS : (["label"] as const);
+    const allowed = numeric === "unit" ? (["label", "unit"] as const) : numeric ? AXIS_KEYS : (["label"] as const);
     if (!keysOk(a, allowed, ap)) return;
     const r: ChartAxis = {};
     if (own(a, "label")) { const t = text(a.label, ap + ".label", CHART_LIMITS.labelChars, true); if (t !== undefined) r.label = t; }
@@ -220,7 +232,7 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
   if (!isPlain(raw)) { add("CHART_INVALID", "الرسم البياني يجب أن يكون كائنًا منظمًا (لا إعدادات مكتبة ولا شيفرة).", path); return { ok: false, issues }; }
   if (raw.version !== CHART_SPEC_VERSION) { add("CHART_VERSION", "إصدار الرسم البياني غير مدعوم (المدعوم: 1).", path + ".version"); return { ok: false, issues }; }
   const kind = raw.kind;
-  if (typeof kind !== "string" || !(CHART_KINDS as readonly string[]).includes(kind)) { add("CHART_KIND", "نوع الرسم البياني غير مسموح: " + String(kind).slice(0, 40), path + ".kind"); return { ok: false, issues }; }
+  if (typeof kind !== "string" || !(CHART_KINDS as readonly string[]).includes(kind)) { add("CHART_KIND", "نوع الرسم البياني غير مسموح: " + ((typeof kind === "object" && kind !== null) || typeof kind === "function" ? typeof kind : String(kind).slice(0, 40)), path + ".kind"); return { ok: false, issues }; }
   const k = kind as ChartKind;
   if (!keysOk(raw, CHART_KEYS[k], path)) return { ok: false, issues };
   const out: Record<string, unknown> = { version: 1 };
@@ -354,7 +366,7 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
         if (bins.length === arr.length) out.bins = bins;
       }
       optBool(raw, "valueLabels", path, out);
-      axis(raw, "xAxis", path, out, true);
+      axis(raw, "xAxis", path, out, "unit");
       axis(raw, "yAxis", path, out, true);
       break;
     }
@@ -446,16 +458,24 @@ const KIND_NAMES: Readonly<Record<ChartKind, string>> = Object.freeze({
   histogram: "مدرّج تكراري", radar: "رسم راداري", boxplot: "رسم صندوقي", heatmap: "خريطة حرارية"
 });
 export const chartKindName = (spec: ChartSpecV1): string => (spec.kind === "pie" && spec.donut ? "رسم حلقي" : spec.kind === "bar" && spec.orientation === "horizontal" ? "رسم بالأشرطة الأفقية" : KIND_NAMES[spec.kind]);
+// Arabic counted nouns: 1 → "<noun> واحدة / واحد", 2 → the dual, 3–10 → the plural, 11 and more → the singular ("12 فئة").
+const NOUNS = {
+  category: ["فئة", "فئتان", "فئات", "واحدة"], series: ["سلسلة", "سلسلتان", "سلاسل", "واحدة"], slice: ["شريحة", "شريحتان", "شرائح", "واحدة"],
+  point: ["نقطة", "نقطتان", "نقاط", "واحدة"], axis: ["محور", "محوران", "محاور", "واحد"], box: ["صندوق", "صندوقان", "صناديق", "واحد"]
+} as const;
+const counted = (count: number, noun: keyof typeof NOUNS) => {
+  const [one, two, few, single] = NOUNS[noun];
+  return count === 1 ? one + " " + single : count === 2 ? two : count + " " + (count >= 3 && count <= 10 ? few : one);
+};
 /** A short structural summary for assistive technology ("رسم بالأعمدة — 12 فئة، سلسلة واحدة"). */
 export function chartSummary(spec: ChartSpecV1): string {
-  const n = (count: number, one: string, many: string) => count + " " + (count === 1 ? one : many);
   switch (spec.kind) {
-    case "bar": case "line": case "area": case "combo": return chartKindName(spec) + " — " + n(spec.categories.length, "فئة", "فئات") + "، " + n(spec.series.length, "سلسلة", "سلاسل") + (("stacked" in spec && spec.stacked) ? "، مكدّسة" : "");
-    case "pie": return chartKindName(spec) + " — " + n(spec.slices.length, "شريحة", "شرائح");
-    case "scatter": return chartKindName(spec) + " — " + n(spec.series.reduce((a, s) => a + s.points.length, 0), "نقطة", "نقاط");
-    case "histogram": return chartKindName(spec) + " — " + n(spec.bins.length, "فئة", "فئات");
-    case "radar": return chartKindName(spec) + " — " + n(spec.axes.length, "محور", "محاور") + "، " + n(spec.series.length, "سلسلة", "سلاسل");
-    case "boxplot": return chartKindName(spec) + " — " + n(spec.boxes.length, "صندوق", "صناديق");
+    case "bar": case "line": case "area": case "combo": return chartKindName(spec) + " — " + counted(spec.categories.length, "category") + "، " + counted(spec.series.length, "series") + (("stacked" in spec && spec.stacked) ? "، مكدّسة" : "");
+    case "pie": return chartKindName(spec) + " — " + counted(spec.slices.length, "slice");
+    case "scatter": return chartKindName(spec) + " — " + counted(spec.series.reduce((a, s) => a + s.points.length, 0), "point");
+    case "histogram": return chartKindName(spec) + " — " + counted(spec.bins.length, "category");
+    case "radar": return chartKindName(spec) + " — " + counted(spec.axes.length, "axis") + "، " + counted(spec.series.length, "series");
+    case "boxplot": return chartKindName(spec) + " — " + counted(spec.boxes.length, "box");
     case "heatmap": return chartKindName(spec) + " — " + spec.rows.length + " × " + spec.columns.length;
   }
 }

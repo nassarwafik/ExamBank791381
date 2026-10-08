@@ -74,7 +74,7 @@ describe("21A1-AD2 per-kind mapping", () => {
     expect(o.xAxis.type).toBe("category");
     expect(o.xAxis.data).toEqual(["MON", "TUE", "WED", "THU", "FRI"]);
     expect(o.xAxis.inverse).toBe(false);
-    expect(o.yAxis).toMatchObject({ type: "value", name: "Temperature (°C)" });
+    expect(o.yAxis).toMatchObject({ type: "value", name: "Temperature (\u2068°C\u2069)" });
     expect(o.series.map(s => s.type)).toEqual(["line", "line"]);
     expect(o.series[0].data).toEqual([21.5, 23, "-", -2, 0]);
     expect(o.series[0].connectNulls).toBe(false);
@@ -195,11 +195,11 @@ describe("21A1-AD4 selection emphasis and event mapping", () => {
     }
   });
   it("tooltips are TEXT built from the spec (label, value, unit); the heat map index skips missing cells", () => {
-    expect(tooltipFromEvent(canon(rainfallBar()), { componentType: "series", seriesIndex: 0, dataIndex: 9 })).toEqual({ title: "أكتوبر", lines: ["الهطول: 135 mm"] });
+    expect(tooltipFromEvent(canon(rainfallBar()), { componentType: "series", seriesIndex: 0, dataIndex: 9 })).toEqual({ title: "أكتوبر", lines: ["الهطول: \u2066135 mm\u2069"] });
     expect(tooltipFromEvent(canon(temperatureLine()), { componentType: "series", seriesIndex: 0, dataIndex: 2 })).toBeNull();
-    expect(tooltipFromEvent(canon(donutChart()), { componentType: "series", seriesIndex: 0, dataIndex: 0 })).toEqual({ title: "التعليم", lines: ["40 %"] });
-    expect(tooltipFromEvent(canon(scatterChart()), { componentType: "series", seriesIndex: 0, dataIndex: 3 })).toEqual({ title: "قيمة شاذّة", lines: ["الطول: 155 cm", "الكتلة: 95 kg"] });
-    expect(tooltipFromEvent(canon(heatmapChart()), { componentType: "series", seriesIndex: 0, dataIndex: 2 })).toEqual({ title: "الاثنين — صباحًا", lines: ["3 زيارة"] });
+    expect(tooltipFromEvent(canon(donutChart()), { componentType: "series", seriesIndex: 0, dataIndex: 0 })).toEqual({ title: "التعليم", lines: ["\u206640 %\u2069"] });
+    expect(tooltipFromEvent(canon(scatterChart()), { componentType: "series", seriesIndex: 0, dataIndex: 3 })).toEqual({ title: "قيمة شاذّة", lines: ["الطول: \u2066155 cm\u2069", "الكتلة: \u206695 kg\u2069"] });
+    expect(tooltipFromEvent(canon(heatmapChart()), { componentType: "series", seriesIndex: 0, dataIndex: 2 })).toEqual({ title: "الاثنين — صباحًا", lines: ["\u20663\u2069 زيارة"] });
     expect(tooltipFromEvent(canon(heatmapChart()), { componentType: "series", seriesIndex: 1, dataIndex: 0 })).toEqual({ title: "الاثنين — مساءً", lines: ["لا قيمة"] });
     expect(tooltipFromEvent(canon(heatmapChart()), { componentType: "series", seriesIndex: 2, dataIndex: 0 })).toBeNull();
     expect(tooltipFromEvent(canon(boxplotChart()), { componentType: "series", seriesIndex: 0, dataIndex: 0 })!.lines).toHaveLength(5);

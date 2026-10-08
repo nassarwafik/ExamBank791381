@@ -9,6 +9,7 @@ import { toSavedStructuredExam } from "../../../src/examBuilderState";
 import { evaluateExamFinalization } from "../../../src/examFinalization";
 import { validateRichContent, RICH_BLOCK_TYPES } from "../../../src/richContent/richContentModel";
 import { catalogForPrompt } from "../../../src/aiComposer/composerCatalog";
+import { answered } from "../../../src/answerState";
 
 // Phase 21A.1 — COMPATIBILITY FREEZE (captured on the untouched baseline ff13899 with CAPTURE_21A1=1, before any 21A.1 change). Charts are
 // ADDITIVE: for every committed exam fixture, every rich-content document, the import → export → canonical save round trip, finalization,
@@ -41,17 +42,40 @@ function richDocs(v, out = [], at = "$") {
   }
   return out;
 }
-/** A deterministic synthetic answer set: the first option for choice-like questions, a fixed text / numeric otherwise. */
+/** A deterministic synthetic answer in a VALID answer shape (src/answerState.ts), keyed on the presentation type: questions cycle (by position)
+ *  through a correct, a half-correct and a wrong answer, so the grading pins cover full, partial and zero scores — not only blank grading.
+ *  Types answered by an interaction log or a program (smartSim, networkCli, coding, codeTemplate, hotspot) stay unanswered. */
+function syntheticAnswer(q, n) {
+  const pt = q.presentationType || q.type, a = q.answer || {}, mode = n % 3;   // 0 correct · 1 half correct · 2 wrong
+  const fieldsOf = pairs => ({ kind: "fields", values: Object.fromEntries(pairs.map(([id, good], i) => [id, mode === 0 || (mode === 1 && i % 2 === 0) ? good : typeof good === "boolean" ? !good : "1"])) });
+  switch (pt) {
+    case "multipleChoice": case "trueFalse": {
+      const count = Array.isArray(q.options) && q.options.length ? q.options.length : 2;
+      const good = Number.isInteger(a.correctOptionIndex) ? a.correctOptionIndex : a.correct === false ? 1 : 0;
+      return { kind: "choice", index: mode === 0 ? good : (good + 1) % count };
+    }
+    case "multipleSelect": {
+      const ids = (q.options || []).map(o => o.id), good = a.correctOptionIds || [], bad = ids.filter(id => !good.includes(id));
+      return { kind: "multiChoice", optionIds: mode === 0 ? good : mode === 1 ? good.slice(0, 1).concat(bad.slice(0, 1)) : bad };
+    }
+    case "numericResponse": return { kind: "numeric", value: mode === 0 && a.expected !== undefined ? String(a.expected) : "-987654" };
+    case "parametricNumeric": return { kind: "numeric", value: "1" };
+    case "shortAnswer": return { kind: "text", value: mode === 0 && typeof a.text === "string" ? a.text : "1" };
+    case "openResponse": return { kind: "text", value: "synthetic response " + n };
+    case "ordering": return { kind: "sequence", values: mode === 0 ? [...(a.values || [])] : [...(a.values || [])].reverse() };
+    case "multiTrueFalse": case "matching": case "fillBlank": case "wordBank": case "cliFill": case "tableFill": return fieldsOf((q.fields || []).map(f => [f.id, f.correct]));
+    case "matrix": return fieldsOf(Object.entries(a.correctColumnByRow || {}));
+    case "categorization": return fieldsOf(Object.entries(a.correctCategoryByItem || {}));
+    case "labelDiagram": return fieldsOf(Object.entries(a.correctLabelByZone || {}));
+    case "inlineCloze": return fieldsOf(Object.entries(a.blanks || {}).map(([id, b]) => [id, b.correctOptionId ?? (b.accepted || [])[0]]));
+    case "compound": return { kind: "compound", parts: Object.fromEntries((q.parts || []).map((p, i) => [p.id, syntheticAnswer(p, n + i)]).filter(([, v]) => v)) };
+    case "composite": return { kind: "composite", parts: Object.fromEntries(((q.composite && q.composite.groups) || []).flatMap(g => g.parts || []).map((p, i) => [p.id, syntheticAnswer(p, n + i)]).filter(([, v]) => v)), contexts: {} };
+    default: return undefined;
+  }
+}
 function syntheticAnswers(exam) {
   const out = {};
-  for (const q of qs(exam)) {
-    const id = q.examQuestionId || q.id;
-    if (!id) continue;
-    if (Array.isArray(q.options) && q.options.length) out[id] = { kind: "choice", optionIndex: 0 };
-    else if (q.type === "trueFalse" || q.presentationType === "trueFalse") out[id] = { kind: "choice", optionIndex: 0 };
-    else if (q.type === "numericResponse" || q.type === "parametricNumeric") out[id] = { kind: "numeric", value: "1" };
-    else out[id] = { kind: "text", text: "1" };
-  }
+  qs(exam).forEach((q, n) => { const id = q.examQuestionId || q.id; const ans = id ? syntheticAnswer(q, n) : undefined; if (ans) out[id] = ans; });
   return out;
 }
 function snapshot(name, exam) {
@@ -60,6 +84,7 @@ function snapshot(name, exam) {
   const saved = imp.exam ? toSavedStructuredExam(imp.exam) : null;
   const fin = evaluateExamFinalization(JSON.parse(JSON.stringify(exam)));
   const ctx = { parametric: { assignmentId: "freeze-21a1", studentId: "s", attemptNumber: 1 } };
+  const synthetic = gradeExam(JSON.parse(JSON.stringify(exam)), syntheticAnswers(exam), ctx);
   return {
     rich: sha(docs),
     richCount: docs.length,
@@ -69,7 +94,8 @@ function snapshot(name, exam) {
     finalization: sha({ can: fin.canFinalize, blockers: fin.blockers.map(b => b.id), warnings: (fin.warnings || []).map(w => w.id) }),
     student: sha(sanitizeExamForStudent(JSON.parse(JSON.stringify(exam)), ctx)),
     gradeBlank: sha(gradeExam(JSON.parse(JSON.stringify(exam)), {}, ctx)),
-    gradeSynthetic: sha(gradeExam(JSON.parse(JSON.stringify(exam)), syntheticAnswers(exam), ctx))
+    gradeSynthetic: sha(synthetic),
+    syntheticScore: [synthetic.score, synthetic.totalMarks, synthetic.manualReviewMarks]
   };
 }
 const promptLines = () => catalogForPrompt().split("\n");
@@ -79,6 +105,22 @@ describe("21A.1-FREEZE compatibility pins (captured on the untouched baseline ff
   it("the corpus is every committed exam fixture (at least 27)", () => {
     expect(fixtures.length).toBeGreaterThanOrEqual(27);
     if (!CAPTURE) expect(fixtures.map(f => f[0])).toEqual(Object.keys(pins.fixtures));
+  });
+  it("the synthetic answer set is made of VALID answers and exercises grading: full, partial and zero scores across the corpus", () => {
+    const ctx = { parametric: { assignmentId: "freeze-21a1", studentId: "s", attemptNumber: 1 } };
+    let answers = 0, full = 0, partial = 0, zero = 0, differs = 0;
+    for (const [name, exam] of fixtures) {
+      const syn = syntheticAnswers(exam);
+      for (const [id, ans] of Object.entries(syn)) { answers++; expect(answered(ans), name + " " + id + " " + JSON.stringify(ans).slice(0, 80)).toBe(true); }
+      const graded = gradeExam(JSON.parse(JSON.stringify(exam)), syn, ctx);
+      if (sha(graded) !== sha(gradeExam(JSON.parse(JSON.stringify(exam)), {}, ctx))) differs++;
+      for (const g of graded.questions) { if (g.manualReview) continue; if (g.score === g.maxMarks && g.maxMarks > 0) full++; else if (g.score > 0) partial++; else zero++; }
+    }
+    expect(answers).toBeGreaterThanOrEqual(100);
+    // 19 of the 27 baseline fixtures grade differently from blank; the other 8 are answered only through simulations (left unanswered
+    // here) or through parametric values the synthetic "1" misses
+    expect(differs).toBeGreaterThanOrEqual(19);
+    expect(Math.min(full, partial, zero), JSON.stringify({ answers, full, partial, zero })).toBeGreaterThanOrEqual(5);
   });
   for (const [name, exam] of fixtures) {
     it(name + ": rich content, import / export / canonical save, finalization, student projection and grading are byte-for-byte the baseline", () => {

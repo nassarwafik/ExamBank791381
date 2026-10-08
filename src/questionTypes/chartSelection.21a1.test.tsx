@@ -93,9 +93,9 @@ describe("21A1-UI3 teacher review", () => {
   it("marks ✓ / ✗ / missed on the chart's own list and summarises; a broken authority says manual review", async () => {
     render(<ChartSelectionReview config={CFG} answerKey={{ scoring: "partial", correct: ["jan", "oct"] }} answer={{ kind: "chartSelection", chartId: "rainfall-2020", targets: ["oct", "feb"] }} />);
     await settle();
-    expect(screen.getByRole("button", { name: /أكتوبر/ }).textContent).toBe("أكتوبر — صحيح");
-    expect(screen.getByRole("button", { name: /فبراير/ }).textContent).toBe("فبراير — غير صحيح");
-    expect(screen.getByRole("button", { name: /يناير/ }).textContent).toBe("يناير — لم يُحدَّد");
+    expect(screen.getByRole("button", { name: /أكتوبر/ }).textContent).toBe("أكتوبر — ✓ صحيح");
+    expect(screen.getByRole("button", { name: /فبراير/ }).textContent).toBe("فبراير — ✗ غير صحيح");
+    expect(screen.getByRole("button", { name: /يناير/ }).textContent).toBe("يناير — ○ لم يُحدَّد");
     expect(screen.getByTestId("chart-review-summary").textContent).toContain("1 من 2 صحيحة");
     cleanup();
     render(<ChartSelectionReview config={{ ...CFG, v: 9 }} answerKey={{}} answer={undefined} />);
@@ -117,8 +117,8 @@ describe("21A1-UI3 teacher review", () => {
     await settle();
     const child = document.querySelector('[data-child-key="d1::part::p1"]') as HTMLElement;
     expect(within(child).getByTestId("chart-review-summary").textContent).toContain("0 من 1 صحيحة");
-    expect(within(child).getByRole("button", { name: /الربع 2/ }).textContent).toBe("الربع 2 — غير صحيح");
-    expect(within(child).getByRole("button", { name: /الربع 4/ }).textContent).toBe("الربع 4 — لم يُحدَّد");
+    expect(within(child).getByRole("button", { name: /الربع 2/ }).textContent).toBe("الربع 2 — ✗ غير صحيح");
+    expect(within(child).getByRole("button", { name: /الربع 4/ }).textContent).toBe("الربع 4 — ○ لم يُحدَّد");
     expect(child.textContent).not.toMatch(/"targets"|"correct"/);
   });
   it("the review is a lazy, recovery-wrapped view of the assignment review (never in a student path)", () => {

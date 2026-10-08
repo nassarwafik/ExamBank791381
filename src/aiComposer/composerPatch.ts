@@ -285,6 +285,23 @@ function recomputeCompositeMarks(q: Rec): Rec {
   return { ...q, marks, composite: { ...c, groups } };
 }
 
+/** 21A.1 — AI chart ids are positional within the generated blocks ("chart1", …); merged into an existing document (prepend / append) a
+ *  colliding id is renumbered past every chart id the document already uses (rich chart ids are unique per document). */
+function renumberCharts(incoming: readonly unknown[], existing: readonly unknown[]): unknown[] {
+  const isRec = (v: unknown): v is Rec => !!v && typeof v === "object" && !Array.isArray(v);
+  const idOf = (b: unknown) => (isRec(b) && b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? b.chart.id : undefined);
+  const taken = new Set(existing.map(idOf).filter((x): x is string => x !== undefined));
+  return incoming.map(b => {
+    const id = idOf(b);
+    if (id === undefined) return b;
+    if (!taken.has(id)) { taken.add(id); return b; }
+    let n = 1;
+    while (taken.has("chart" + n)) n++;
+    taken.add("chart" + n);
+    return { ...(b as Rec), chart: { ...((b as Rec).chart as Rec), id: "chart" + n } };
+  });
+}
+
 function applyOne(exam: StructuredExam, o: NormOp): StructuredExam {
   const x: StructuredExam = { ...exam, sections: exam.sections.map(s => ({ ...s, questions: [...s.questions] })) };
   const setQ = (qid: string, fn: (q: Rec) => Rec) => { const l = locate(x, qid); if (!l) throw new Error("PATCH_TARGET_MISSING"); x.sections[l.si].questions[l.qi] = fn({ ...(x.sections[l.si].questions[l.qi] as unknown as Rec) }) as unknown as BuilderQuestion; };
@@ -299,7 +316,8 @@ function applyOne(exam: StructuredExam, o: NormOp): StructuredExam {
     case "updateQuestionRichContent": setQ(o.questionId, q => {
       const prevBlocks = (((q.richContent as Rec | undefined)?.blocks as unknown[]) ?? []);
       const nb = o.richContent ? o.richContent.blocks : [];
-      const blocks = o.mode === "replace" ? nb : o.mode === "prepend" ? [...nb, ...prevBlocks] : [...prevBlocks, ...nb];
+      const add = o.mode === "replace" ? nb : renumberCharts(nb, prevBlocks);
+      const blocks = o.mode === "replace" ? nb : o.mode === "prepend" ? [...add, ...prevBlocks] : [...prevBlocks, ...add];
       const out = { ...q };
       if (blocks.length) out.richContent = { schemaVersion: 1, blocks }; else delete out.richContent;
       return out;

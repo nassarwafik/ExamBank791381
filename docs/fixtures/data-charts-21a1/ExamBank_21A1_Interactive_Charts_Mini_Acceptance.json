@@ -757,20 +757,19 @@
                       "y": 45
                     },
                     {
-                      "id": "p3",
-                      "x": 170,
-                      "y": 60
+                      "id": "p2",
+                      "x": 155,
+                      "y": 95
                     },
                     {
-                      "id": "p2",
+                      "id": "p3",
                       "x": 160,
                       "y": 52
                     },
                     {
-                      "id": "out",
-                      "x": 155,
-                      "y": 95,
-                      "label": "قيمة شاذّة"
+                      "id": "p4",
+                      "x": 170,
+                      "y": 60
                     }
                   ]
                 }
@@ -791,7 +790,7 @@
           "answer": {
             "scoring": "allOrNothing",
             "correct": [
-              "out"
+              "p2"
             ]
           },
           "teacherNote": "CHART21A1-PRIVATE-NOTE-c1"

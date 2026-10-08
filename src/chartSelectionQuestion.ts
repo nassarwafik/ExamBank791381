@@ -15,7 +15,7 @@
 // than allowed or (range mode) a non-contiguous run is malformed ⇒ an ordinary 0 (no manual review). Order never matters. allOrNothing =
 // marks only for exactly the key; partial = marks × |selected ∩ key| / |selected ∪ key| (so selecting everything never pays).
 import { effectiveQuestionTypeVersion } from "./questionTypeCatalog";
-import { BIDI_CONTROL, validateChartSpec, type ChartSpecV1 } from "./charts/chartSpec";
+import { BIDI_CONTROL, INVISIBLE_CONTROL, validateChartSpec, type ChartSpecV1 } from "./charts/chartSpec";
 import { CHART_SELECTION_MODES, CHART_TARGET_KINDS, RANGE_TARGET_KINDS, chartTargetKinds, chartTargets, isContiguousRun, type ChartSelectionMode, type ChartTarget, type ChartTargetKind } from "./charts/chartData";
 import { CONTROL, RAW_HTML } from "./richContent/proseGuard";
 
@@ -66,7 +66,7 @@ export function validateChartSelectionConfig(raw: unknown): ChartSelectionConfig
   let label: string | undefined;
   if (own(raw, "label")) {
     const l = raw.label;
-    if (typeof l !== "string" || l.trim() === "" || l.trim().length > CHART_SELECTION_LIMITS.labelChars || CONTROL.test(l) || BIDI_CONTROL.test(l) || RAW_HTML.test(l)) issues.push(err("CHART_SELECTION_LABEL_INVALID", "تعليمة الاختيار نص عادي غير فارغ حتى " + CHART_SELECTION_LIMITS.labelChars + " حرفًا.", "chartSelection.label"));
+    if (typeof l !== "string" || l.trim() === "" || l.trim().length > CHART_SELECTION_LIMITS.labelChars || CONTROL.test(l) || BIDI_CONTROL.test(l) || INVISIBLE_CONTROL.test(l) || RAW_HTML.test(l)) issues.push(err("CHART_SELECTION_LABEL_INVALID", "تعليمة الاختيار نص عادي غير فارغ حتى " + CHART_SELECTION_LIMITS.labelChars + " حرفًا.", "chartSelection.label"));
     else label = l.trim();
   }
   let targets: ChartTarget[] = [];
