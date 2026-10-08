@@ -35,7 +35,7 @@ how anything is graded.
   - Differential: 100,030 identical inputs, baseline parser vs head parser; re-run with carriage-return variants on 200,030 inputs (§27).
   - Generated v2 corpus: 40,000 cases.
   - Mini Acceptance Exam, run through the real platform lifecycle.
-  - Mutation campaign: 50 mutants (§31), plus 2 supplementary and 27 review-fix mutants (§31, §31.1, §31.2); 79 / 79 killed.
+  - Mutation campaign: 50 mutants (§31), plus 2 supplementary and 44 review-fix mutants (§31, §31.1–§31.3); 96 / 96 killed.
 - **Bundle.** The initial graph is unchanged; the 125 KB budget is unchanged.
 
 ## 2. Scope and non-goals
@@ -241,16 +241,24 @@ There is one new node:
   overflows it**, so keyboard users can scroll it.
   - **Display formulas** keep the 20D.1 markup, a plain `div.xp-math-block`, whenever they fit.
   - **Inline formulas that contain a grid** have a scroll-box host (§18). Chromium makes ANY scroll container a keyboard Tab stop, so a
-    small inline grid was an extra stop (found in Review Fix 2). The host is therefore `tabIndex=-1` while it fits.
+    small inline grid was an extra stop (found in Review Fix 2). The host is therefore `tabIndex=-1` once measured to fit.
+  - **Every spelling is detected (Review Fix 3).** The tokenizer skips whitespace between `\begin` and its brace, so `\begin {pmatrix}`
+    and `\begin` + newline + `{bmatrix}` are grids too. The renderer's detection mirrors the tokenizer (`\begin`, then space / tab / LF /
+    CR, then `{`). Pinned by a property test: over spaced spellings of all 7 environments, the feature examples and generated corpora, a
+    rendered inline host is the inline-grid host exactly when it holds an `mtable`.
+  - **Unmeasured means untouched (Review Fix 3).** Until the first measurement, or without `ResizeObserver`, the state is unknown: no
+    role, no label and no `tabIndex` is added or removed, so the browser's own behaviour stands (an overflowing inline grid stays
+    reachable). A blur never measures an unmeasured box.
   - **Inline formulas without a grid** keep the 20D.1 host (`span.xp-math-host`, class only).
   - **Not a landmark.** The group is `role="group"`, so there is no landmark per formula and no duplicate landmark names.
   - **Re-checking** is one shared hook with a callback ref, so it also attaches when the host mounts after the lazy formula resolves. It
     re-checks on DOM mutation inside the box and on every resize of the box or the formula, and the observers are disconnected on
     every source change and on unmount.
   - **Focus retention.** A focused group is kept when its formula starts to fit (no focus loss when the viewport widens); leaving it
-    re-checks.
+    re-checks, so a group that still overflows stays a group. Only a kept group is retained: a click-focused inline grid that fits is
+    never promoted to a group.
   - **History.** The first version (1ab3ae5) made every display formula a named region and a tab stop (RF1-3).
-  - **Evidence.** Pinned by `21A-R5` and `21A-R6`; verified in Chromium on the real component (§18.2).
+  - **Evidence.** Pinned by `21A-R5`, `21A-R6` and `21A-R7`; verified in Chromium on the real component (§18.2).
 - **Invalid sources.** An invalid source is never hidden. It renders as readable LTR source text
   (`<code class="xp-math-src" dir="ltr">`).
 - **Live verdict.** The editor's verdict is `aria-live="polite"`. The palette toggle carries `aria-expanded`, and the palette is a
@@ -276,6 +284,11 @@ There is one new node:
 - **Print.** Math blocks and inline hosts are `overflow:visible` and `max-inline-size:none`. Display blocks also get
   `break-inside:avoid`; inline hosts are atomic inline boxes and never break anyway. A formula wider than the printed page still
   overflows the page (§35).
+  - **Specificity (Review Fix 3).** The generic print rules (`.xp-rich :is(…)`, specificity 0,2,0) lost to the inline-grid screen rule
+    (0,3,1), so on 3becc64 a wide inline grid was still a clipped `overflow-x:auto` box on paper. Print now releases it with its own
+    selector.
+  - **Pinned by `21A-R7`:** the test computes selector specificity and requires, for every screen rule that makes a math box scroll, a
+    later print rule at least as specific that sets `overflow:visible` and lifts the width cap.
 
 ### 18.1 Real-browser check
 
@@ -338,6 +351,17 @@ Chromium itself also makes the overflowing inline grid host a keyboard-focusable
 
 **Tab order at 360 px:** `block#0 → inline#6 → BODY → block#0 → inline#6 → BODY`. Only the two overflowing formulas are Tab stops. Focus retention, also
 checked: the focused wide group keeps focus and its role when the viewport widens to 1200 px, and reverts on blur. Page errors: none.
+
+**Review Fix 3 re-check** (Chromium 1194, the same harness rebuilt in a scratch directory against a detached 3becc64 worktree and
+against the fix). The content adds `\begin {pmatrix}` (small and wide) and `\begin` + newline + `{bmatrix}`.
+
+| Observation | 3becc64 | Review Fix 3 |
+|---|---|---|
+| Tab order, 360 px | wide inline group → **3 unlabelled spaced / newline grids** → wide block | wide inline group → wide spaced inline **group** → wide block |
+| Tab order, 1400 px (everything fits) | **3 unlabelled inline Tab stops** | no formula Tab stop |
+| Print, 600 px: wide inline grid | `overflow-x:auto` · `max-inline-size:100%` · 953 / 568 (clipped) | `visible` · `none` · 953 / 953 (released) |
+| No `ResizeObserver`, 360 px: wide inline grid | `tabIndex=-1` (unreachable) | no `tabIndex` (browser default: reachable) |
+| Page errors | none | none |
 
 ## 19. Authoring UX
 
@@ -596,7 +620,7 @@ unchanged after every run.
   - Both were fixed by stronger tests in commit `7efc337` (an exact node-boundary test; an exact environment-list check). Re-run: both
     **KILLED**.
 - Two supplementary mutants (S01, S02) target the responsive CSS written after the campaign: both **KILLED**.
-- **Final for this campaign: 52 / 52 killed.** With the review-fix campaigns (§31.1: 15, §31.2: 12), **79 / 79 killed** in total.
+- **Final for this campaign: 52 / 52 killed.** With the review-fix campaigns (§31.1: 15, §31.2: 12, §31.3: 17), **96 / 96 killed** in total.
 
 | Id | File | Planted defect | Outcome | Killed by (first failing test) |
 |---|---|---|---|---|
@@ -703,21 +727,48 @@ unchanged after every run.
 | X09 | blur no longer re-checks (a kept focused group never reverts) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
 | X10 | display formula always a focusable group (the 1ab3ae5 behaviour) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
 
+### 31.3 Review Fix 3: the round-3 reviewer's survivors and the new print / detection / measurement code
+
+- **V01–V06, V12, V16, V19, V20** are the round-3 reviewer's mutants that matter here (V12 was killed already; it is re-planted because
+  the print rules changed), re-planted against the Review Fix 3 code with the same semantics.
+- **Y01–Y07** are new mutants on the Review Fix 3 code.
+- **Result:** 17 / 17 **KILLED** (same runner, unmutated pre-check, SHA-256 restore, `git status` unchanged).
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| V01 | focus retention keeps ANY focused box (the kept-group guard dropped): a click-focused inline grid that fits becomes a group | KILLED | scientificMathRenderer.21a.test.tsx › a focused inline grid that never overflowed is NOT promoted to a group by a resize (only a kept group is re… |
+| V02 | blur always drops the group (a still-overflowing group loses role / tab stop after the first blur) | KILLED | scientificMathRenderer.21a.test.tsx › leaving a group that STILL overflows keeps it a reachable group (V02), and the no-ResizeObserver test |
+| V03 | HAS_GRID detects pmatrix only (other environments skip the inline-grid host) | KILLED | scientificMathRenderer.21a.test.tsx › every valid spelling of every environment is an inline grid; nothing else is (property over spaced spelling… |
+| V04 | inline-grid Suspense fallback renders nothing (source hidden while the renderer chunk loads) | KILLED | scientificMathRenderer.21a.test.tsx › while the lazy renderer chunk loads, an inline grid and a display formula show their exact source as LTR te… |
+| V05 | inline grid host has no onBlur (a kept focused inline group never reverts) | KILLED | scientificMathRenderer.21a.test.tsx › an INLINE grid group keeps focus when it starts to fit and reverts to tabIndex -1 when left (V05) |
+| V06 | display block renders its formula as INLINE math (display flag dropped) | KILLED | scientificMathRenderer.21a.test.tsx › a math BLOCK renders display math (display=block) through the renderer; inline runs never do (V06) |
+| V12 | print: inline hosts removed from the generic overflow:visible rule | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 › wide formulas never clip (the print `:is(…)` rule pinned since Review Fix 1) |
+| V16 | AI math markup check reads only b.source (markup in the text fallback passes) | KILLED | scientificMathComposer.21a.test.ts › markup in the plain-text fallback of an AI math block (empty source) is refused for the MARKUP reason (V16) |
+| V19 | math source textarea minimum 1 row (was 2) | KILLED | scientificMathEditor.21a.test.tsx › the textarea grows with the source: 2 rows minimum, one row per line, 8 at most (V19) |
+| V20 | prompt line drops 'never nested' | KILLED | scientificMathComposer.21a.test.ts › the prompt carries a BOUNDED math contract (the "never nested" phrase, V20) |
+| Y01 | print: the inline-grid host's own release rule removed (the 3becc64 cascade) | KILLED | scientificMathRenderer.21a.test.tsx › PRINT releases every math scroll box: for each screen rule that makes one scroll, a later print rule at lea… |
+| Y02 | print: the inline-grid release keeps the 100% width cap (max-inline-size:none dropped) | KILLED | scientificMathRenderer.21a.test.tsx › PRINT releases every math scroll box: for each screen rule that makes one scroll, a later print rule at lea… |
+| Y03 | HAS_GRID back to the unspaced spelling only (the 3becc64 detection) | KILLED | scientificMathRenderer.21a.test.tsx › every valid spelling of every environment is an inline grid; nothing else is (property over spaced spelling… |
+| Y04 | HAS_GRID ignores CR (a CR / CRLF between \begin and its brace) | KILLED | scientificMathRenderer.21a.test.tsx › every valid spelling of every environment is an inline grid; nothing else is (property over spaced spelling… |
+| Y05 | unmeasured state starts as 'fits' (false): inline grids lose their Tab stop before / without any measurement | KILLED | scientificMathRenderer.21a.test.tsx › without ResizeObserver nothing is measured, so an inline grid keeps the browser's default (no tabIndex -1),… |
+| Y06 | blur measures an unmeasured box (no ResizeObserver: a blur takes the grid out of the Tab order) | KILLED | scientificMathRenderer.21a.test.tsx › without ResizeObserver nothing is measured, so an inline grid keeps the browser's default (no tabIndex -1),… |
+| Y07 | an unmeasured inline grid is rendered with tabIndex -1 (the 3becc64 default) | KILLED | scientificMathRenderer.21a.test.tsx › without ResizeObserver nothing is measured, so an inline grid keeps the browser's default (no tabIndex -1),… |
+
 ## 32. Bundle
 
 Measured on the production build of each commit: gzip, zlib level 9, initial files from the guard's own `initialGraph()`.
-The head column is `a2ee091` (Review Fix 2; earlier 21A heads measured 127,303–127,308 B for the initial graph).
+The head column is the Review Fix 3 code (`3241a7b`; earlier 21A heads measured 127,303–127,308 B for the initial graph).
 
 | Measure | 60ddadc | Head |
 |---|---|---|
-| Initial JS graph | 127,298 B (18 files) | 127,308 B (18 files); the guard reports 124.3 KB of 125 KB |
+| Initial JS graph | 127,298 B (18 files) | 127,309 B (18 files); the guard reports 124.3 KB of 125 KB |
 | Lazy `richContentModel` (parser + model) | 7,623 B | 8,631 B |
 | Lazy `RichMath` (renderer) | 652 B | 928 B |
-| Lazy `RichContentRenderer` (scroll-group hook, Review Fixes 1–2) | 1,941 B (+ 1,762 B CSS) | 2,343 B (+ 1,938 B CSS) |
-| Lazy `RichContentEditor` | 8,629 B | 9,112 B |
+| Lazy `RichContentRenderer` (scroll-group hook, Review Fixes 1–3) | 1,941 B (+ 1,762 B CSS) | 2,366 B (+ 1,946 B CSS) |
+| Lazy `RichContentEditor` | 8,629 B | 9,113 B |
 | Lazy `MathSnippetPalette` (new) | — | 1,110 B |
 | Lazy `mathFeatures` (new; shared by the palette and the composer) | — | 891 B |
-| Lazy `AiExamComposerDialog` | 21,576 B | 21,800 B |
+| Lazy `AiExamComposerDialog` | 21,576 B | 21,798 B |
 | Budget | 125 KB | 125 KB (unchanged) |
 
 - **Initial-graph difference.** The head's initial files are identical to the baseline's modulo lazy chunk hash names. The few bytes
@@ -752,15 +803,15 @@ The head column is `a2ee091` (Review Fix 2; earlier 21A heads measured 127,303�
 | Suite | Tests | Fail-first on 60ddadc |
 |---|---|---|
 | `scientificMath.21a` (parser) | 31 | First commit, combined with the renderer suite: 40 tests, 24 fail / 16 pass (pins) |
-| `scientificMathRenderer.21a` | 26 | (above). The Review Fix 1 display-a11y tests (`21A-R5`) fail 2/2 against the 1ab3ae5 renderer |
+| `scientificMathRenderer.21a` | 36 | (above). The Review Fix 1 display-a11y tests (`21A-R5`) fail 2/2 against the 1ab3ae5 renderer; the Review Fix 3 tests (`21A-R7`) fail 4/10 against 3becc64 (print cascade, spaced-spelling property, spaced wide group, no-`ResizeObserver`), the other 6 are pins |
 | `scientificMathFreeze.21a` | 12 | Pins captured on 60ddadc |
-| `scientificMathEditor.21a` | 18 | 14 fail / 1 pass (pin), first 15 tests |
+| `scientificMathEditor.21a` | 19 | 14 fail / 1 pass (pin), first 15 tests |
 | `scientificMathGuards.21a` | 6 | Static guards |
 | `scientificMathCorpus.21a` | 15 | New corpus |
-| `scientificMathComposer.21a` | 9 | 7 fail / 1 pass (pin), first 8 tests |
+| `scientificMathComposer.21a` | 10 | 7 fail / 1 pass (pin), first 8 tests |
 | `cert-21a-scientific-math` | 10 | 4 fail / 1 pass (pin) / 5 skipped (setup refused) |
 
-The suites hold **127 tests** in total (Review Fix 2 added the five `21A-R6` observer / inline-grid tests). The reviewer's own fail-first run of the head suites against 60ddadc production code gave
+The suites hold **139 tests** in total (Review Fix 2 added the five `21A-R6` observer / inline-grid tests; Review Fix 3 added the ten `21A-R7` tests, `21A-AI5` and the textarea-rows test). The reviewer's own fail-first run of the head suites against 60ddadc production code gave
 50 failed / 25 passed / 5 skipped. The first version of this table listed 31 parser tests when there were 29 (RF1-8).
 
 **Full validation, first head `1ab3ae5`:**
@@ -782,6 +833,12 @@ The suites hold **127 tests** in total (Review Fix 2 added the five `21A-R6` obs
   Every Phase-21A suite passed.
 - `npm run lint`: exit 0, 104 warnings (baseline count). `npx tsc -b`: exit 0. `npm run build` with the bundle guard: passed.
 - Exact-head CI on `61cbe20`: Quality Gate, Build and Deploy Job and the Runner security workflow all succeeded on attempt 1.
+
+**Full validation, Review Fix 3 code (`3241a7b`):**
+- `npm test`: 792 files, **10,515 passed, 1 failed**. The failure is the same pre-existing `composite.20d.test.tsx:48` race (§35);
+  every Phase-21A suite passed.
+- `npm run lint`: exit 0, 104 warnings (baseline count). `npx tsc -b`: exit 0. `npm run build` with the bundle guard: passed, 124.3 KB /
+  125 KB. The shared build regenerates without drift.
 
 **Other checks:**
 - `npm run lint`: exit 0, no errors. 104 warnings, the same count as the 60ddadc baseline; the extra palette warning seen on 1ab3ae5 is
@@ -812,6 +869,8 @@ The exact-head CI results are in the pull request and the final report.
   - It passed in exact-head CI on every 21A head (`1ab3ae5`, `614d427`, `31b86fc`, `61cbe20`).
 - **GovernancePanel timing.** `src/GovernancePanel.14b.test.tsx` (documented timing-sensitive file, AGENTS §12) failed once under
   full-suite load in the assignment-dialog case. It was not patched, per AGENTS §12.
+- **No `ResizeObserver`.** Without it nothing is measured, so small inline grids keep the browser's default (Chromium makes any scroll
+  container a Tab stop) instead of being taken out of the Tab order; every supported browser has `ResizeObserver`.
 - **Print of a very wide formula.** A formula wider than the printed page still overflows the page; there is no scroll on paper, and grids are not reflowed.
 - **No solver.** No equivalence grading, no WYSIWYG editor, no MathML/LaTeX export format other than the exam JSON.
 - **The 20D.1 inline Markdown converter does not accept multi-line inline `$…$`.** A math → paragraph conversion of a multi-line grid
@@ -843,7 +902,15 @@ The exact-head CI results are in the pull request and the final report.
     - NIT: "Arabic" worded too narrowly;
     - NIT: the 1 px tolerance had no boundary test.
   - **Review Fix 2** addresses each (§16, §17, §18, §18.2, §24, §31.2, §33). While verifying in Chromium it also found and fixed the
-    small-inline-grid Tab stop. The round-3 re-review of the new head follows.
+    small-inline-grid Tab stop.
+  - **Round 3** (head `3becc64`): **NOT READY**. There was no blocker and no major finding; every round-2 item was confirmed fixed, the
+    full suite passed (10,504 / 0) and the reviewer's own 200,000-input differential found 0 regressions. The round-3 findings were:
+    - MINOR: print still clipped wide inline grids (a specificity loss);
+    - MINOR: `\begin {pmatrix}` (whitespace before the brace, valid) bypassed the inline-grid Tab-stop fix;
+    - MINOR: 6 surviving mutants in the Review Fix 2 code (V01–V06);
+    - NIT: 3 more survivors (V16, V19, V20); unmeasured boxes taken out of the Tab order without `ResizeObserver`; a misplaced doc
+      comment; one PR-body bullet still said "Arabic".
+  - **Review Fix 3** addresses each (§17, §18, §18.2, §31.3, §34, §35). The round-4 re-review of the new head follows.
 - **Merge.** The owner merges manually. DO NOT MERGE.
 - **Next.** Rich review rendering; optional `\operatorname`-style named functions as a v3 family; inline-math authoring in AI prose
   behind the same validator.
