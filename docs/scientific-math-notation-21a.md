@@ -35,7 +35,7 @@ how anything is graded.
   - Differential: 100,030 identical inputs, baseline parser vs head parser; re-run with carriage-return variants on 200,030 inputs (§27).
   - Generated v2 corpus: 40,000 cases.
   - Mini Acceptance Exam, run through the real platform lifecycle.
-  - Mutation campaign: 50 mutants (§31), plus 2 supplementary and 44 review-fix mutants (§31, §31.1–§31.3); 96 / 96 killed.
+  - Mutation campaign: 50 mutants (§31), plus 2 supplementary and 46 review-fix mutants (§31, §31.1–§31.4); 98 / 98 killed.
 - **Bundle.** The initial graph is unchanged; the 125 KB budget is unchanged.
 
 ## 2. Scope and non-goals
@@ -620,7 +620,7 @@ unchanged after every run.
   - Both were fixed by stronger tests in commit `7efc337` (an exact node-boundary test; an exact environment-list check). Re-run: both
     **KILLED**.
 - Two supplementary mutants (S01, S02) target the responsive CSS written after the campaign: both **KILLED**.
-- **Final for this campaign: 52 / 52 killed.** With the review-fix campaigns (§31.1: 15, §31.2: 12, §31.3: 17), **96 / 96 killed** in total.
+- **Final for this campaign: 52 / 52 killed.** With the review-fix campaigns (§31.1: 15, §31.2: 12, §31.3: 17, §31.4: 2), **98 / 98 killed** in total.
 
 | Id | File | Planted defect | Outcome | Killed by (first failing test) |
 |---|---|---|---|---|
@@ -754,6 +754,22 @@ unchanged after every run.
 | Y06 | blur measures an unmeasured box (no ResizeObserver: a blur takes the grid out of the Tab order) | KILLED | scientificMathRenderer.21a.test.tsx › without ResizeObserver nothing is measured, so an inline grid keeps the browser's default (no tabIndex -1),… |
 | Y07 | an unmeasured inline grid is rendered with tabIndex -1 (the 3becc64 default) | KILLED | scientificMathRenderer.21a.test.tsx › without ResizeObserver nothing is measured, so an inline grid keeps the browser's default (no tabIndex -1),… |
 
+### 31.4 Review Fix 4: the round-4 reviewer's two non-equivalent survivors
+
+The round-4 review (head `bb4fae1`) was CLEAN. Its campaign (29 mutants: 25 KILLED, 2 equivalent survivors W02 / W06, 2 non-equivalent
+survivors W14 / W15) left two test gaps, closed with pins in `21A-AI1` / `21A-AI2` and re-planted with the same runner (unmutated
+pre-check, SHA-256 restore, `git status` unchanged): **2 / 2 KILLED**.
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| W14 | AI math source not trimmed (surrounding blanks / line breaks stored, counted, put into `alttext`) | KILLED | scientificMathComposer.21a.test.ts › AI math sources are trimmed: surrounding blanks and line breaks are never stored (W14) |
+| W15 | the prompt's `\mathbb` alphabet drops C (the hand-written phrase drifts from the parser) | KILLED | scientificMathComposer.21a.test.ts › the prompt carries a BOUNDED math contract (the offered alphabet must equal the parser's: every capital letter probed) |
+
+**The two equivalent round-4 survivors:**
+- **W02** ("retention treats `null` as kept"). `null` exists only between mount and the first, synchronous check in the same effect,
+  and nothing restores it.
+- **W06** (`HAS_GRID` with `\s*`). It only adds whitespace the tokenizer refuses, so it never applies to validated content.
+
 ## 32. Bundle
 
 Measured on the production build of each commit: gzip, zlib level 9, initial files from the guard's own `initialGraph()`.
@@ -808,10 +824,10 @@ The head column is the Review Fix 3 code (`3241a7b`; earlier 21A heads measured 
 | `scientificMathEditor.21a` | 19 | 14 fail / 1 pass (pin), first 15 tests |
 | `scientificMathGuards.21a` | 6 | Static guards |
 | `scientificMathCorpus.21a` | 15 | New corpus |
-| `scientificMathComposer.21a` | 10 | 7 fail / 1 pass (pin), first 8 tests |
+| `scientificMathComposer.21a` | 11 | 7 fail / 1 pass (pin), first 8 tests |
 | `cert-21a-scientific-math` | 10 | 4 fail / 1 pass (pin) / 5 skipped (setup refused) |
 
-The suites hold **139 tests** in total (Review Fix 2 added the five `21A-R6` observer / inline-grid tests; Review Fix 3 added the ten `21A-R7` tests, `21A-AI5` and the textarea-rows test). The reviewer's own fail-first run of the head suites against 60ddadc production code gave
+The suites hold **140 tests** in total (Review Fix 2 added the five `21A-R6` observer / inline-grid tests; Review Fix 3 added the ten `21A-R7` tests, `21A-AI5` and the textarea-rows test; Review Fix 4 added the AI-trim test). The reviewer's own fail-first run of the head suites against 60ddadc production code gave
 50 failed / 25 passed / 5 skipped. The first version of this table listed 31 parser tests when there were 29 (RF1-8).
 
 **Full validation, first head `1ab3ae5`:**
@@ -840,6 +856,12 @@ The suites hold **139 tests** in total (Review Fix 2 added the five `21A-R6` obs
 - `npm run lint`: exit 0, 104 warnings (baseline count). `npx tsc -b`: exit 0. `npm run build` with the bundle guard: passed, 124.3 KB /
   125 KB. The shared build regenerates without drift.
 
+**Full validation, Review Fix 4 code (`9d941b2`, tests only):**
+- `npm test`: 792 files, **10,516 passed, 1 failed** (the same pre-existing `composite.20d.test.tsx:48` race); every Phase-21A suite
+  passed.
+- Lint exit 0 with 104 warnings; `npx tsc -b` exit 0; build with the bundle guard passed, 124.3 KB / 125 KB.
+- The round-4 reviewer's own full run on `bb4fae1` (the same production code) gave 10,516 passed / 0 failed.
+
 **Other checks:**
 - `npm run lint`: exit 0, no errors. 104 warnings, the same count as the 60ddadc baseline; the extra palette warning seen on 1ab3ae5 is
   gone (RF1-9).
@@ -860,13 +882,15 @@ The exact-head CI results are in the pull request and the final report.
 - **HTML-looking formulas in stored content** stay valid, inert math data (§24).
 - **Inline grids are scrollable boxes, not reflowed.** Long inline formulas without grids behave as in 20D.1.
 - **No nested environments, no `array` column specs, no `\color` / `\operatorname` / `\boxed` / `\overset`.**
-- **Pre-existing intermittent test, not fixed here (out of scope).** `src/questionTypes/composite.20d.test.tsx:48` fails about 40% of the
-  time, on the untouched 60ddadc baseline (3 / 8 in isolation) as well as on this branch.
+- **Pre-existing intermittent test, not fixed here (out of scope).** `src/questionTypes/composite.20d.test.tsx:48` fails often, on the
+  untouched 60ddadc baseline as well as on this branch. The rate depends on machine load: on 60ddadc in isolation it failed 3 / 8 (first
+  sample), 3 / 8 and 7 / 8 (the round-3 and round-4 reviewers), and 9 / 10 in 10 interleaved runs whose head half failed 4 / 10. The test
+  file is identical and 21A changes nothing under `src/questionTypes`, `src/composite` or `StudentQuestionCard.tsx`.
   - **Root cause:** the test's `settle()` helper stops waiting as soon as no `[role="status"]` element is present. It never waits for
     the lazily registered composite renderer (`.cmp-response`) itself.
   - **Proposed one-line patch** for a separate change: replace the `settle` wait with
     `await waitFor(() => expect(container.querySelector(".cmp-response")).toBeTruthy())`.
-  - It passed in exact-head CI on every 21A head (`1ab3ae5`, `614d427`, `31b86fc`, `61cbe20`).
+  - It passed in exact-head CI on every 21A head that CI ran on (`1ab3ae5`, `614d427`, `31b86fc`, `61cbe20`, `a2ee091`, `3becc64`, `bb4fae1`).
 - **GovernancePanel timing.** `src/GovernancePanel.14b.test.tsx` (documented timing-sensitive file, AGENTS §12) failed once under
   full-suite load in the assignment-dialog case. It was not patched, per AGENTS §12.
 - **No `ResizeObserver`.** Without it nothing is measured, so small inline grids keep the browser's default (Chromium makes any scroll
@@ -910,7 +934,15 @@ The exact-head CI results are in the pull request and the final report.
     - MINOR: 6 surviving mutants in the Review Fix 2 code (V01–V06);
     - NIT: 3 more survivors (V16, V19, V20); unmeasured boxes taken out of the Tab order without `ResizeObserver`; a misplaced doc
       comment; one PR-body bullet still said "Arabic".
-  - **Review Fix 3** addresses each (§17, §18, §18.2, §31.3, §34, §35). The round-4 re-review of the new head follows.
+  - **Review Fix 3** addresses each (§17, §18, §18.2, §31.3, §34, §35).
+  - **Round 4** (head `bb4fae1`): **CLEAN — APPROVED FOR OWNER MERGE**. There was no blocker, major or minor finding. Every round-3
+    item was confirmed fixed, including in Chromium. The reviewer's evidence: full suite 10,516 / 0, a 2 × 200,000-input differential
+    with 0 regressions, and 25 of its 29 mutants killed. The three NITs were:
+    - the prompt's `\mathbb` alphabet not pinned (W15);
+    - the AI math trim not pinned (W14);
+    - the flake rate in §35 understated.
+  - **Review Fix 4** closes all three (§31.4, §34, §35): tests and documentation only, no production code. The round-5 re-review of
+    the new head follows.
 - **Merge.** The owner merges manually. DO NOT MERGE.
 - **Next.** Rich review rendering; optional `\operatorname`-style named functions as a v3 family; inline-math authoring in AI prose
   behind the same validator.
