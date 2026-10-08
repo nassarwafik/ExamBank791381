@@ -32,10 +32,10 @@ how anything is graded.
   AI formulas that look like markup are refused.
 - **Certification.**
   - Old-grammar freeze: 60,000 candidates, pinned on 60ddadc.
-  - Differential: 100,030 identical inputs, baseline parser vs head parser.
+  - Differential: 100,030 identical inputs, baseline parser vs head parser; re-run with carriage-return variants on 200,030 inputs (§27).
   - Generated v2 corpus: 40,000 cases.
   - Mini Acceptance Exam, run through the real platform lifecycle.
-  - Mutation campaign: 50 mutants (§31).
+  - Mutation campaign: 50 mutants (§31), plus 2 supplementary and 27 review-fix mutants (§31, §31.1, §31.2); 79 / 79 killed.
 - **Bundle.** The initial graph is unchanged; the 125 KB budget is unchanged.
 
 ## 2. Scope and non-goals
@@ -596,7 +596,7 @@ unchanged after every run.
   - Both were fixed by stronger tests in commit `7efc337` (an exact node-boundary test; an exact environment-list check). Re-run: both
     **KILLED**.
 - Two supplementary mutants (S01, S02) target the responsive CSS written after the campaign: both **KILLED**.
-- **Final: 52 / 52 killed.**
+- **Final for this campaign: 52 / 52 killed.** With the review-fix campaigns (§31.1: 15, §31.2: 12), **79 / 79 killed** in total.
 
 | Id | File | Planted defect | Outcome | Killed by (first failing test) |
 |---|---|---|---|---|
@@ -705,15 +705,19 @@ unchanged after every run.
 
 ## 32. Bundle
 
+Measured on the production build of each commit: gzip, zlib level 9, initial files from the guard's own `initialGraph()`.
+The head column is `a2ee091` (Review Fix 2; earlier 21A heads measured 127,303–127,308 B for the initial graph).
+
 | Measure | 60ddadc | Head |
 |---|---|---|
-| Initial JS graph (gzip, guard's own reconstruction) | 127,298 B (18 files) | 127,303 B (18 files) |
-| Lazy `richContentModel` (parser + model) | 7,560 B | 8,538 B |
-| Lazy `RichMath` (renderer) | 674 B | 948 B |
-| Lazy `RichContentEditor` | 8,565 B | 9,043 B |
-| Lazy `MathSnippetPalette` (new) | — | 1,149 B |
-| Lazy `mathFeatures` (new; shared by the palette and the composer) | — | 918 B |
-| Lazy `AiExamComposerDialog` | 21,396 B | 21,592 B |
+| Initial JS graph | 127,298 B (18 files) | 127,308 B (18 files); the guard reports 124.3 KB of 125 KB |
+| Lazy `richContentModel` (parser + model) | 7,623 B | 8,631 B |
+| Lazy `RichMath` (renderer) | 652 B | 928 B |
+| Lazy `RichContentRenderer` (scroll-group hook, Review Fixes 1–2) | 1,941 B (+ 1,762 B CSS) | 2,343 B (+ 1,938 B CSS) |
+| Lazy `RichContentEditor` | 8,629 B | 9,112 B |
+| Lazy `MathSnippetPalette` (new) | — | 1,110 B |
+| Lazy `mathFeatures` (new; shared by the palette and the composer) | — | 891 B |
+| Lazy `AiExamComposerDialog` | 21,576 B | 21,800 B |
 | Budget | 125 KB | 125 KB (unchanged) |
 
 - **Initial-graph difference.** The head's initial files are identical to the baseline's modulo lazy chunk hash names. The few bytes
@@ -733,7 +737,7 @@ unchanged after every run.
   The rendered MathML of old formulas is frozen too (the renderer freeze), with one deliberate exception: a `\text` containing RTL
   script (Arabic, Hebrew, …) now carries `dir="rtl"`, so it keeps its natural direction (the freeze excludes it).
 - **Old display formulas: what changed (corrected in Review Fix 1).**
-  - Their block is LTR, with `padding-block:0.25em`.
+  - Their block is LTR, with `padding-block:0.3em` and `overflow-y:hidden` (no vertical scroller, §18).
   - The formula is sized to its content and centred, so a wide one now scrolls instead of being clipped (§18).
   - The block markup is unchanged unless the formula overflows (§17).
   - Old inline formulas without a grid are unchanged.
