@@ -67,6 +67,7 @@ describe("21A1-RB18c a webfont that finishes loading lays the labels out again (
   });
   it("the option is BUILT again with the new widths, not only re-applied: build-time room follows the webfont (mutant RU47)", async () => {
     const big = canon({ ...rainfallBar(), valueLabels: true, series: [{ id: "rain", label: "الهطول", values: (rainfallBar() as CategoryChartSpec).series[0].values.map((_, i) => 1234567 + i) }] });
+    h.mounted.length = 0; h.updates.length = 0;                                        // this chart's options only
     render(<DataChart spec={big} />);
     await settle();
     const right = (o: unknown) => (o as { grid: { right: number } }).grid.right;
