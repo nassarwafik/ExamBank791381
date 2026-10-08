@@ -154,6 +154,10 @@ function Axes({ chart, set, name, disabled, bad, exact }: Part) {
         onAxis={a => set(withOpt(chart, "xAxis", a))} />
       <AxisFields title={horizontal ? "المحور الرأسي (الفئات)" : "المحور الرأسي"} axis={"yAxis" in chart ? chart.yAxis : undefined} numeric={yNumeric} disabled={disabled} invalid={f => !!bad?.("chart.yAxis." + f) || ((f === "min" || f === "max") && !!exact?.("chart.yAxis"))}
         onAxis={a => set(withOpt(chart, "yAxis", a))} />
+      {chart.kind === "combo" && chart.series.some(x => x.axis === "secondary") && (
+        <AxisFields title="المحور الرأسي الثانوي" axis={chart.y2Axis} numeric disabled={disabled} invalid={f => !!bad?.("chart.y2Axis." + f) || ((f === "min" || f === "max") && !!exact?.("chart.y2Axis"))}
+          onAxis={a => set(withOpt(chart, "y2Axis", a))} />
+      )}
       {chart.kind === "heatmap" && <div className="ce-row"><TextCell label={"وحدة قيم " + name} value={chart.unit} onChange={v => set(withOpt(chart, "unit", v))} max={CHART_LIMITS.unitChars} disabled={disabled} placeholder="وحدة القيم (اختياري)" /></div>}
     </div>
   );
@@ -176,7 +180,18 @@ function DataGrid(p: Part) {
 function CategoryGrid({ chart, set, name, disabled, bad }: Omit<Part, "chart"> & { chart: CategoryChartSpec }) {
   const cats = chart.categories, series = chart.series;
   const points = cats.length * series.length;
-  const put = (next: Partial<CategoryChartSpec>) => set({ ...chart, ...next } as ChartSpecV1);
+  // a combo whose last secondary-axis series is removed / moved back also loses the (now unused) secondary axis
+  const put = (next: Partial<CategoryChartSpec>) => {
+    const merged = { ...chart, ...next };
+    if (merged.y2Axis && !merged.series.some(x => x.axis === "secondary")) delete merged.y2Axis;
+    set(merged as ChartSpecV1);
+  };
+  const setAxis = (si: number, a: "primary" | "secondary") => put({ series: series.map((s, k) => {
+    if (k !== si) return s;
+    const { axis: _a, ...rest } = s;
+    void _a;
+    return a === "secondary" ? { ...rest, axis: "secondary" as const } : rest;
+  }) });
   const addCategory = () => put({ categories: [...cats, { id: freeId("c", cats.map(x => x.id)), label: freeLabel("الفئة ", cats.map(x => x.label)) }], series: series.map(s => ({ ...s, values: [...s.values, null] })) });
   const removeCategory = (i: number) => put({ categories: cats.filter((_, k) => k !== i), series: series.map(s => ({ ...s, values: s.values.filter((_, k) => k !== i) })) });
   const moveCategory = (i: number, delta: number) => put({ categories: moveItem(cats, i, delta), series: series.map(s => ({ ...s, values: moveItem(s.values, i, delta) })) });
@@ -196,6 +211,11 @@ function CategoryGrid({ chart, set, name, disabled, bad }: Omit<Part, "chart"> &
                     {chart.kind === "combo" && (
                       <select className="sb-input sb-input-sm" value={s.mark ?? "bar"} aria-label={"شكل السلسلة " + (si + 1)} disabled={disabled} onChange={e => setSeries(si, { ...s, mark: e.target.value as "bar" | "line" })}>
                         <option value="bar">أعمدة</option><option value="line">خط</option>
+                      </select>
+                    )}
+                    {chart.kind === "combo" && (
+                      <select className="sb-input sb-input-sm" value={s.axis ?? "primary"} aria-label={"محور السلسلة " + (si + 1)} disabled={disabled} onChange={e => setAxis(si, e.target.value as "primary" | "secondary")}>
+                        <option value="primary">المحور الأساسي</option><option value="secondary">المحور الثانوي</option>
                       </select>
                     )}
                     <IconBtn label={"تحريك السلسلة " + (si + 1) + " قبل"} glyph="→" onClick={() => put({ series: moveItem(series, si, -1) })} disabled={disabled || si === 0} />

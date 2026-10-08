@@ -500,7 +500,7 @@
                   "id": "temp-week",
                   "kind": "line",
                   "title": "Temperature over a week",
-                  "description": "Daily maximum temperature in °C; Wednesday is missing.",
+                  "description": "Daily maximum and minimum temperature in °C; the Wednesday maximum is missing.",
                   "categories": [
                     {
                       "id": "mon",
@@ -580,7 +580,7 @@
               "id": "temp-week",
               "kind": "line",
               "title": "Temperature over a week",
-              "description": "Daily maximum temperature in °C; Wednesday is missing.",
+              "description": "Daily maximum and minimum temperature in °C; the Wednesday maximum is missing.",
               "categories": [
                 {
                   "id": "mon",
@@ -940,9 +940,17 @@
                                   9,
                                   18
                                 ],
-                                "mark": "line"
+                                "mark": "line",
+                                "axis": "secondary"
                               }
-                            ]
+                            ],
+                            "yAxis": {
+                              "label": "المبيعات"
+                            },
+                            "y2Axis": {
+                              "label": "الهامش",
+                              "unit": "%"
+                            }
                           }
                         }
                       ]
@@ -1014,9 +1022,17 @@
                               9,
                               18
                             ],
-                            "mark": "line"
+                            "mark": "line",
+                            "axis": "secondary"
                           }
-                        ]
+                        ],
+                        "yAxis": {
+                          "label": "المبيعات"
+                        },
+                        "y2Axis": {
+                          "label": "الهامش",
+                          "unit": "%"
+                        }
                       },
                       "target": "category",
                       "mode": "single",

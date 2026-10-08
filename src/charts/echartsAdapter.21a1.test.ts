@@ -217,6 +217,9 @@ describe("21A1-AD5 layout helpers", () => {
     const { referenceLines: _r, ...plain } = rainfallBar() as CategoryChartSpec;
     const many = canon({ ...plain, categories: Array.from({ length: 30 }, (_, i) => ({ id: "c" + i, label: "C" + i })), series: [{ id: "s", label: "S", values: Array(30).fill(1) }] } as ChartSpecV1);
     expect((buildEngineOption(many, ctx()) as typeof few).xAxis.axisLabel).toMatchObject({ interval: "auto", rotate: 45 });
+    // narrow: a few LONG labels rotate too (4 × "الربع N" would touch at phone width); a few short ones stay level; wide containers never rotate them
+    const rot = (c: ChartSpecV1, compact: boolean) => (buildEngineOption(canon(c), ctx({ compact })) as typeof few).xAxis.axisLabel.rotate;
+    expect([rot(comboChart(), true), rot(comboChart(), false), rot(temperatureLine(), true), rot(stackedArea(), true)]).toEqual([45, undefined, undefined, undefined]);
     const h = buildEngineOption(canon(horizontalStackedBar()), ctx()) as { yAxis: { nameLocation: string } };
     expect(h.yAxis.nameLocation).toBe("start");                                                              // a vertical category axis names itself above its labels
   });

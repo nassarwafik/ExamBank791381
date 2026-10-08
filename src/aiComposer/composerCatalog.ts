@@ -179,7 +179,7 @@ export function catalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog
 /** The data-chart contract line (21A.1): a closed descriptor — never a rendering-library option — with the data-integrity rule. */
 function chartsForPrompt(c: ComposerCatalog["charts"]): string {
   return "Charts: a dataChart block carries ONE descriptor in chart (chart is null in every other block); kind ONLY " + c.kinds.join(", ") +
-    "; categories ≤ " + c.categories + " labels with series ≤ " + c.series + " (values aligned with categories; null = a missing value, never 0; combo marks bar or line); pie = categories + the first series; heatmap = categories as columns and series as rows;" +
+    "; categories ≤ " + c.categories + " labels with series ≤ " + c.series + " (values aligned with categories; null = a missing value, never 0; combo marks bar or line on ONE shared value axis — use combo only when its series share a unit and scale); pie = categories + the first series; heatmap = categories as columns and series as rows;" +
     " scatter points (1-based series index, x, y, optional label) ≤ " + c.points + "; histogram bins ≤ " + c.bins + " contiguous (start, end, count); boxes ≤ " + c.boxes + " (min ≤ q1 ≤ median ≤ q3 ≤ max); xLabel / yLabel / unit plain text;" +
     " dataOrigin teacherProvided = ONLY the numbers the teacher wrote, unchanged; illustrative = invented numbers, ONLY when the illustrativeData feature is on (the platform then labels the chart as illustrative). Never formulas, HTML, CSS, scripts, URLs, colours or rendering options; ids and the data-source label are assigned by the platform.";
 }

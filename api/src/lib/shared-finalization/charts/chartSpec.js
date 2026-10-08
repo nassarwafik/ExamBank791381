@@ -22,7 +22,7 @@ exports.CHART_KEYS = Object.freeze({
     bar: [...COMMON_KEYS, "categories", "series", "orientation", "stacked", "valueLabels", "xAxis", "yAxis", "referenceLines"],
     line: [...COMMON_KEYS, "categories", "series", "valueLabels", "xAxis", "yAxis", "referenceLines"],
     area: [...COMMON_KEYS, "categories", "series", "stacked", "valueLabels", "xAxis", "yAxis", "referenceLines"],
-    combo: [...COMMON_KEYS, "categories", "series", "valueLabels", "xAxis", "yAxis", "referenceLines"],
+    combo: [...COMMON_KEYS, "categories", "series", "valueLabels", "xAxis", "yAxis", "y2Axis", "referenceLines"],
     pie: [...COMMON_KEYS, "slices", "donut", "unit", "valueLabels"],
     scatter: [...COMMON_KEYS, "series", "xAxis", "yAxis", "referenceLines"],
     histogram: [...COMMON_KEYS, "bins", "valueLabels", "xAxis", "yAxis"],
@@ -328,7 +328,7 @@ function validateChartSpec(raw, path = "chart") {
                     const series = [];
                     arr.forEach((s, i) => {
                         const sp = path + ".series[" + i + "]";
-                        const r = labelled(s, sp, "series", k === "combo" ? ["values", "mark"] : ["values"]);
+                        const r = labelled(s, sp, "series", k === "combo" ? ["values", "mark", "axis"] : ["values"]);
                         if (!r)
                             return;
                         const vs = values(r.o.values, sp + ".values", cats.length, true);
@@ -339,6 +339,13 @@ function validateChartSpec(raw, path = "chart") {
                                 return;
                             }
                             one.mark = r.o.mark;
+                            if (own(r.o, "axis")) {
+                                if (r.o.axis !== "primary" && r.o.axis !== "secondary") {
+                                    add("CHART_ENUM_INVALID", "محور السلسلة في الرسم المركّب: أساسي أو ثانوي.", sp + ".axis");
+                                    return;
+                                }
+                                one.axis = r.o.axis;
+                            }
                         }
                         if (vs)
                             series.push(one);
@@ -354,6 +361,17 @@ function validateChartSpec(raw, path = "chart") {
             optBool(raw, "valueLabels", path, out);
             axis(raw, "xAxis", path, out, k === "bar" && raw.orientation === "horizontal");
             axis(raw, "yAxis", path, out, !(k === "bar" && raw.orientation === "horizontal"));
+            if (k === "combo") {
+                axis(raw, "y2Axis", path, out, true);
+                const ss = out.series;
+                if (ss) {
+                    const secondary = ss.some(x => x.axis === "secondary");
+                    if (secondary && ss.every(x => x.axis === "secondary"))
+                        add("CHART_AXIS_PRIMARY_EMPTY", "اترك سلسلة واحدة على الأقل على المحور الأساسي.", path + ".series");
+                    if (!secondary && own(raw, "y2Axis"))
+                        add("CHART_AXIS_UNUSED", "المحور الثانوي معرَّف ولا توجد سلسلة عليه.", path + ".y2Axis");
+                }
+            }
             referenceLines(raw, path, out);
             break;
         }

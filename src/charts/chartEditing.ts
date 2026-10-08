@@ -38,7 +38,7 @@ export function defaultChart(kind: ChartKind, id = newChartId()): ChartSpecV1 {
 const isCat = (k: ChartKind) => (CATEGORY_CHART_KINDS as readonly string[]).includes(k);
 /**
  * Converts a chart to another kind. Data is carried whenever the target can hold it: between the category kinds (bar / line / area / combo)
- * nothing is lost; category ⇄ heat map (categories ⇄ columns, series ⇄ rows) and pie → category / radar → category / heat map → category are
+ * no value is lost (leaving a combo that uses its secondary axis drops that axis and is reported `lossy`); category ⇄ heat map (categories ⇄ columns, series ⇄ rows) and pie → category / radar → category / heat map → category are
  * lossless; category → pie keeps the first series (lossy when there are more series or missing / negative values); category → radar keeps
  * the series (lossy for missing / negative values or fewer than 3 categories). Every other change starts from the starter data of the target
  * kind and is `lossy` (the editor asks before discarding). Title, description, source and display options always survive.
@@ -50,11 +50,13 @@ export function convertChartKind(spec: ChartSpecV1, to: ChartKind): { spec: Char
   const catAxes = (s: { xAxis?: CategoryChartSpec["xAxis"]; yAxis?: CategoryChartSpec["yAxis"] }) => ({ ...(s.xAxis ? { xAxis: s.xAxis } : {}), ...(s.yAxis ? { yAxis: s.yAxis } : {}) });
   if (isCat(spec.kind) && isCat(to)) {
     const s = spec as CategoryChartSpec;
+    // the mark and the value axis are combo-only: leaving combo drops them (and the secondary axis — lossy, the editor asks first)
     const series: ChartSeries[] = s.series.map((x, i) => {
-      const { mark: _m, ...rest } = x;
-      void _m;
+      const { mark: _m, axis: _a, ...rest } = x;
+      void _m; void _a;
       return to === "combo" ? { ...rest, mark: x.mark ?? (i === 0 ? "bar" : "line") } : rest;
     });
+    const droppedSecondary = s.series.some(x => x.axis === "secondary") || !!s.y2Axis;
     // a horizontal bar keeps its numeric axis on x; any other category kind keeps it on y
     const wasHorizontal = s.kind === "bar" && s.orientation === "horizontal";
     const axes = wasHorizontal ? { ...(s.yAxis?.label ? { xAxis: { label: s.yAxis.label } } : {}), ...(s.xAxis ? { yAxis: s.xAxis } : {}) } : catAxes(s);
@@ -62,7 +64,7 @@ export function convertChartKind(spec: ChartSpecV1, to: ChartKind): { spec: Char
       ...c, kind: to as CategoryChartSpec["kind"], categories: s.categories, series,
       ...((to === "bar" || to === "area") && s.stacked ? { stacked: true } : {}),
       ...(s.valueLabels ? { valueLabels: true } : {}), ...axes, ...(s.referenceLines ? { referenceLines: s.referenceLines } : {})
-    } as ChartSpecV1, lossy: false };
+    } as ChartSpecV1, lossy: droppedSecondary };
   }
   if (isCat(spec.kind)) {
     const s = spec as CategoryChartSpec;

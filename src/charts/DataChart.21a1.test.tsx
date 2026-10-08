@@ -30,6 +30,7 @@ vi.mock("./echartsEngine", () => ({
 }));
 vi.mock("./echartsAdvanced", () => { engine.advancedLoads++; return { CHART_ADVANCED_MARKER: "xp-chart-advanced-v1" }; });
 import DataChart, { type ChartSelectionSurface } from "./DataChart";
+import { RichText } from "../richContent/RichPrompt";
 
 const canon = (c: ChartSpecV1) => { const r = validateChartSpec(c); if (!r.ok) throw new Error("fixture"); return r.value; };
 const settle = () => act(() => new Promise<void>(r => setTimeout(r, 0)));
@@ -241,6 +242,32 @@ describe("21A1-DC4 selection surface", () => {
     expect(screen.getByRole("button", { name: /الصحة/ }).textContent).toBe("الصحة — لم يُحدَّد");
     act(() => last().emit({ type: "click", componentType: "series", seriesIndex: 0, dataIndex: 1 }));
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("21A1-DC6 hostile author text in the DOM (adversarial matrix, render side)", () => {
+  it("odd-but-valid text (<b>, template braces) is rendered as TEXT everywhere — figure, legend, selection list, data table — and never becomes an element", async () => {
+    const spec = rainfallBar() as CategoryChartSpec;
+    spec.title = "{a|rich} ${x}";
+    spec.categories[0].label = "<b>bold</b>";
+    spec.series.push({ id: "s2", label: "{b}: {c}", values: Array(12).fill(1) });
+    render(<Selectable spec={canon(spec)} kind="category" mode="single" max={1} label="اختر" />);
+    await settle();
+    fireEvent.click(screen.getByRole("button", { name: /عرض البيانات|جدول/ }));
+    const fig = document.querySelector("figure.xp-chart")!;
+    expect(fig.querySelector("b, img, svg:not([aria-hidden]), script, a")).toBeNull();
+    expect(screen.getByRole("button", { name: "<b>bold</b>" })).toBeTruthy();
+    expect(Array.from(fig.querySelectorAll("th")).some(th => th.textContent === "<b>bold</b>")).toBe(true);
+    expect(fig.textContent).toContain("{a|rich} ${x}");
+    expect(fig.textContent).toContain("{b}: {c}");
+  });
+  it("a document whose chart is hostile never reaches the renderer: the rich slot falls back to the plain text, no figure, no engine", async () => {
+    const hostile = { ...rainfallBar(), title: "<img src=x onerror=alert(1)>" };
+    render(<RichText raw={{ schemaVersion: 1, blocks: [{ type: "dataChart", chart: hostile }] }} className="x" fallback={<p data-testid="plain">نص بديل</p>} />);
+    await settle();
+    expect(screen.getByTestId("plain")).toBeTruthy();
+    expect(document.querySelector("figure.xp-chart, img")).toBeNull();
+    expect(engine.mounts).toHaveLength(0);
   });
 });
 

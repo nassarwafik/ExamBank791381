@@ -28,7 +28,9 @@ export const CHART_LIMITS = Object.freeze({
 
 export type ChartAxis = { label?: string; unit?: string; min?: number; max?: number };
 export type ChartCategory = { id: string; label: string };
-export type ChartSeries = { id: string; label: string; values: (number | null)[]; mark?: "bar" | "line" };
+/** `mark` and `axis` exist on combo series only: the mark (bars or a line) and the value axis it is measured on (the secondary axis is a
+ *  second, independently scaled value axis — e.g. sales in units with a margin in %; absent = primary). */
+export type ChartSeries = { id: string; label: string; values: (number | null)[]; mark?: "bar" | "line"; axis?: "primary" | "secondary" };
 export type ChartReferenceLine = { id: string; value: number; label: string };
 export type ChartSlice = { id: string; label: string; value: number };
 export type ChartPoint = { id: string; x: number; y: number; label?: string };
@@ -42,6 +44,8 @@ type ChartCommon = { version: 1; id: string; title: string; description: string;
 export type CategoryChartSpec = ChartCommon & {
   kind: "bar" | "line" | "area" | "combo"; categories: ChartCategory[]; series: ChartSeries[];
   orientation?: "vertical" | "horizontal"; stacked?: boolean; valueLabels?: boolean; xAxis?: ChartAxis; yAxis?: ChartAxis; referenceLines?: ChartReferenceLine[];
+  /** combo only: the secondary value axis (label / unit / bounds) — allowed only when a series is on it. Reference lines use the primary axis. */
+  y2Axis?: ChartAxis;
 };
 export type PieChartSpec = ChartCommon & { kind: "pie"; slices: ChartSlice[]; donut?: boolean; unit?: string; valueLabels?: boolean };
 export type ScatterChartSpec = ChartCommon & { kind: "scatter"; series: ChartPointSeries[]; xAxis?: ChartAxis; yAxis?: ChartAxis; referenceLines?: ChartReferenceLine[] };
@@ -60,7 +64,7 @@ export const CHART_KEYS: Readonly<Record<ChartKind, readonly string[]>> = Object
   bar: [...COMMON_KEYS, "categories", "series", "orientation", "stacked", "valueLabels", "xAxis", "yAxis", "referenceLines"],
   line: [...COMMON_KEYS, "categories", "series", "valueLabels", "xAxis", "yAxis", "referenceLines"],
   area: [...COMMON_KEYS, "categories", "series", "stacked", "valueLabels", "xAxis", "yAxis", "referenceLines"],
-  combo: [...COMMON_KEYS, "categories", "series", "valueLabels", "xAxis", "yAxis", "referenceLines"],
+  combo: [...COMMON_KEYS, "categories", "series", "valueLabels", "xAxis", "yAxis", "y2Axis", "referenceLines"],
   pie: [...COMMON_KEYS, "slices", "donut", "unit", "valueLabels"],
   scatter: [...COMMON_KEYS, "series", "xAxis", "yAxis", "referenceLines"],
   histogram: [...COMMON_KEYS, "bins", "valueLabels", "xAxis", "yAxis"],
@@ -146,7 +150,7 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
     if (v.length > max) { add("CHART_LIMIT", what + ": العدد أكبر من الحد المسموح (" + max + ").", at); return undefined; }
     return v;
   };
-  const axis = (o: Record<string, unknown>, k: "xAxis" | "yAxis", at: string, out: Record<string, unknown>, numeric: boolean) => {
+  const axis = (o: Record<string, unknown>, k: "xAxis" | "yAxis" | "y2Axis", at: string, out: Record<string, unknown>, numeric: boolean) => {
     if (!own(o, k)) return;
     const a = o[k], ap = at + "." + k;
     if (!isPlain(a)) { add("CHART_INVALID", "إعداد المحور غير صالح.", ap); return; }
@@ -239,13 +243,17 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
           const series: ChartSeries[] = [];
           arr.forEach((s, i) => {
             const sp = path + ".series[" + i + "]";
-            const r = labelled(s, sp, "series", k === "combo" ? ["values", "mark"] : ["values"]);
+            const r = labelled(s, sp, "series", k === "combo" ? ["values", "mark", "axis"] : ["values"]);
             if (!r) return;
             const vs = values(r.o.values, sp + ".values", cats.length, true);
             const one: ChartSeries = { id: r.id, label: r.label, values: vs || [] };
             if (k === "combo") {
               if (r.o.mark !== "bar" && r.o.mark !== "line") { add("CHART_ENUM_INVALID", "سلسلة الرسم المركّب تحتاج شكلًا: عمود أو خط.", sp + ".mark"); return; }
               one.mark = r.o.mark;
+              if (own(r.o, "axis")) {
+                if (r.o.axis !== "primary" && r.o.axis !== "secondary") { add("CHART_ENUM_INVALID", "محور السلسلة في الرسم المركّب: أساسي أو ثانوي.", sp + ".axis"); return; }
+                one.axis = r.o.axis;
+              }
             }
             if (vs) series.push(one);
           });
@@ -257,6 +265,15 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
       optBool(raw, "valueLabels", path, out);
       axis(raw, "xAxis", path, out, k === "bar" && raw.orientation === "horizontal");
       axis(raw, "yAxis", path, out, !(k === "bar" && raw.orientation === "horizontal"));
+      if (k === "combo") {
+        axis(raw, "y2Axis", path, out, true);
+        const ss = out.series as ChartSeries[] | undefined;
+        if (ss) {
+          const secondary = ss.some(x => x.axis === "secondary");
+          if (secondary && ss.every(x => x.axis === "secondary")) add("CHART_AXIS_PRIMARY_EMPTY", "اترك سلسلة واحدة على الأقل على المحور الأساسي.", path + ".series");
+          if (!secondary && own(raw, "y2Axis")) add("CHART_AXIS_UNUSED", "المحور الثانوي معرَّف ولا توجد سلسلة عليه.", path + ".y2Axis");
+        }
+      }
       referenceLines(raw, path, out);
       break;
     }

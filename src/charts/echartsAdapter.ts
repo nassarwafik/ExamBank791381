@@ -63,10 +63,12 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
   });
   // Category labels: every label is drawn while there are few (≤ 12); beyond that the engine hides the ones that would overlap (the data
   // table, the tooltip and the selection list still name every category). A horizontal (x) category axis rotates its labels when they
-  // are many or the container is narrow. A vertical (y) category axis carries its name above the axis, never across its labels.
+  // are many, or when the container is narrow and the labels together are long (≈ 20 characters across a phone-width plot would touch).
+  // A vertical (y) category axis carries its name above the axis, never across its labels.
   const categoryAxis = (labels: string[], a: ChartAxis | undefined, vertical: boolean, inverse: boolean) => {
     const count = labels.length;
-    const rotate = !vertical && ((ctx.compact && count > 6) || count > 12);
+    const crowded = count * Math.max(0, ...labels.map(l => l.length)) > 20;
+    const rotate = !vertical && ((ctx.compact && (count > 6 || crowded)) || count > 12);
     return {
       type: "category", data: labels.map(isolate), name: axisName(a), inverse,
       ...(vertical ? { nameLocation: inverse ? "start" : "end", nameGap: 12 } : { nameLocation: "middle", nameGap: rotate ? 58 : 30 }),
@@ -92,6 +94,12 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
     const stacked = "stacked" in spec && spec.stacked === true;
     // unstacked value labels sit beyond the bar end / point: the value axis keeps 10% headroom for them (ignored when the author fixed a bound)
     const val = { ...(horizontal ? valueAxis(spec.xAxis, false) : valueAxis(spec.yAxis, true)), ...(spec.valueLabels && !stacked ? { boundaryGap: [0, "10%"] } : {}) };
+    // combo: series on the SECONDARY value axis are measured on a second, independently scaled axis (drawn on the other side, without its
+    // own grid lines so the grid stays the primary axis's); reference lines are drawn by the first PRIMARY series (primary-axis values)
+    const onSecondary = (s: { axis?: string }) => spec.kind === "combo" && s.axis === "secondary";
+    const dual = spec.series.some(onSecondary);
+    const val2 = dual ? { ...valueAxis(spec.y2Axis, true), position: "right", splitLine: { show: false }, ...(spec.valueLabels ? { boundaryGap: [0, "10%"] } : {}) } : undefined;
+    const lineHost = spec.series.findIndex(s => !onSecondary(s));
     const series = spec.series.map((s, si) => {
       const mark = spec.kind === "combo" ? s.mark : spec.kind === "bar" ? "bar" : "line";
       const color = palette[si % palette.length];
@@ -102,16 +110,16 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
         return ctx.selectionKind && ctx.selectionKind !== "series" ? { value: v, itemStyle: emphasize(key, color) } : v;
       });
       return {
-        type: mark, name: isolate(s.label), data, ...(stacked ? { stack: "total" } : {}),
+        type: mark, name: isolate(s.label), data, ...(stacked ? { stack: "total" } : {}), ...(dual ? { yAxisIndex: onSecondary(s) ? 1 : 0 } : {}),
         ...(mark === "line" ? { symbol: "circle", symbolSize: ctx.selectionKind ? 11 : 7, connectNulls: false, lineStyle: { width: seriesSel ? 4.5 : 2.5, opacity: ctx.selectionKind === "series" && anySelected && !seriesSel ? 0.45 : 1 } } : { barMaxWidth: 48 }),
         ...(spec.kind === "area" ? { areaStyle: { opacity: 0.25 } } : {}),
         ...(ctx.selectionKind === "series" ? { itemStyle: seriesSel ? { borderColor: CHART_SELECTED_COLOR, borderWidth: 3 } : anySelected ? { opacity: 0.45 } : {} } : {}),
         // stacked segments carry their value INSIDE (white on a palette colour: every palette colour has ≥ 4.5:1 against white)
         ...(spec.valueLabels ? { label: { show: true, ...text, ...(stacked && mark === "bar" ? { position: "inside", color: "#FFFFFF", fontWeight: 600 } : { position: horizontal ? "right" : "top" }), formatter: (p: { value: unknown }) => (typeof p.value === "number" ? formatValue(p.value) : "") } } : {}),
-        ...(si === 0 ? { markLine: markLine(spec.referenceLines, horizontal) } : {})
+        ...(si === lineHost ? { markLine: markLine(spec.referenceLines, horizontal) } : {})
       };
     });
-    return { ...base, grid, xAxis: horizontal ? val : cat, yAxis: horizontal ? cat : val, series };
+    return { ...base, grid, xAxis: horizontal ? val : cat, yAxis: horizontal ? cat : val2 ? [val, val2] : val, series };
   }
   switch (spec.kind) {
     case "pie": {
@@ -194,7 +202,8 @@ export function tooltipFromEvent(spec: ChartSpecV1, ev: { componentType?: string
   if (isCategoryChart(spec)) {
     const s = spec.series[si], c = spec.categories[di], v = s?.values[di];
     if (!s || !c || v === null || v === undefined) return null;
-    return { title: c.label, lines: [s.label + ": " + withUnit(v, spec.yAxis?.unit ?? spec.xAxis?.unit)] };
+    const unit = spec.kind === "combo" && s.axis === "secondary" ? spec.y2Axis?.unit : spec.yAxis?.unit ?? spec.xAxis?.unit;
+    return { title: c.label, lines: [s.label + ": " + withUnit(v, unit)] };
   }
   switch (spec.kind) {
     case "pie": { const s = spec.slices[di]; return s ? { title: s.label, lines: [withUnit(s.value, spec.unit)] } : null; }

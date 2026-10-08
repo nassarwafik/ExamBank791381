@@ -14,7 +14,7 @@ export const rainfallBar = (): ChartSpecV1 => ({
   xAxis: { label: "الشهر" }, yAxis: { label: "الهطول", unit: "mm" }, referenceLines: [{ id: "avg", value: 50, label: "عتبة 50 mm" }]
 });
 export const temperatureLine = (): ChartSpecV1 => ({
-  version: 1, id: "temp-week", kind: "line", title: "Temperature over a week", description: "Daily maximum temperature in °C; Wednesday is missing.",
+  version: 1, id: "temp-week", kind: "line", title: "Temperature over a week", description: "Daily maximum and minimum temperature in °C; the Wednesday maximum is missing.",
   categories: ["mon", "tue", "wed", "thu", "fri"].map(id => ({ id, label: id.toUpperCase() })),
   series: [{ id: "tmax", label: "Max °C", values: [21.5, 23, null, -2, 0] }, { id: "tmin", label: "Min °C", values: [12, 13, 11, -8, -4] }],
   xAxis: { label: "Day" }, yAxis: { label: "Temperature", unit: "°C" }
@@ -28,7 +28,8 @@ export const stackedArea = (): ChartSpecV1 => ({
 export const comboChart = (): ChartSpecV1 => ({
   version: 1, id: "sales-combo", kind: "combo", title: "المبيعات والهامش", description: "المبيعات (أعمدة) ونسبة الربح (خط).",
   categories: ["q1", "q2", "q3", "q4"].map((id, i) => ({ id, label: "الربع " + (i + 1) })),
-  series: [{ id: "sales", label: "المبيعات", values: [100, 120, 90, 150], mark: "bar" }, { id: "margin", label: "الهامش %", values: [12, 15, 9, 18], mark: "line" }]
+  series: [{ id: "sales", label: "المبيعات", values: [100, 120, 90, 150], mark: "bar" }, { id: "margin", label: "الهامش %", values: [12, 15, 9, 18], mark: "line", axis: "secondary" }],
+  yAxis: { label: "المبيعات" }, y2Axis: { label: "الهامش", unit: "%" }
 });
 export const horizontalStackedBar = (): ChartSpecV1 => ({
   version: 1, id: "votes", kind: "bar", title: "Votes by region", description: "Stacked horizontal bars.", orientation: "horizontal", stacked: true, valueLabels: true,
