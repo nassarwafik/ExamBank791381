@@ -61,7 +61,8 @@ Deferred (directive §40), not done:
 | `3e59ffc` | mutation-campaign pins, composite chart-child review, label bidi rule, leaner student path |
 | `736cda3` | pin for unknown combo marks (mutant C17b) |
 | `a788539` | design record |
-| (Review Fix 1) | the findings of the three independent review lanes (§21) |
+| `2d0264c` | Review Fix 1 — the findings of the three independent review lanes (§21) |
+| `d3bca6c` | Review Fix 1 mutation pin (mutant RA10, §20.1) |
 
 Review-fix commits are described in §21.
 
@@ -468,7 +469,7 @@ would kill every shared mutant falsely). `git status` was clean after every roun
 | 2 | 12 (7 compilable re-plants, C23 / D04 re-runs with new pins, N01–N03 for the self-review fixes) | 11 | 1 (C17b) | 0 |
 | 2b | C17b re-run with its pin | 1 | 0 | 0 |
 
-**Final: 82 distinct planted defects, 81 KILLED, 1 equivalent (C11), 0 unexplained survivors.** Survivors were closed with pins:
+**Implementation campaign: 82 distinct planted defects, 81 KILLED, 1 equivalent (C11), 0 unexplained survivors** (Review Fix 1: §20.1). Survivors were closed with pins:
 C23 → `chartRules.21a1.test.ts` 21A1-R1 (the 64 KiB bound is reachable with 500 labelled scatter points); D04 → 21A1-R2 (selection rules
 of every mode); C17b → `chartSpec.21a1.test.ts` (present unknown combo marks). C11 is equivalent: the 480-point budget equals the product
 of the per-axis caps, so removing it cannot change any outcome.
@@ -565,6 +566,76 @@ of the per-axis caps, so removing it cannot change any outcome.
 | N02 | contract/type | instruction label accepts bidi controls | KILLED | chartRules.21a1.test.ts — the chartSelection instruction label refuses explicit bidi controls li |
 | N03 | contract/identity | chart id rule accepts prototype names | KILLED | chartSpec.21a1.test.ts — ids: stable ASCII ids only (no spaces, unicode look-al |
 
+### 20.1 Review Fix 1 campaign
+
+The same runner, on the committed Review Fix 1 tree (`2d0264c`, clean before and after), against the new code of every lane — 15 lane A
+mutants (RA: the never-throw rule, invisible controls, the strict number reader, the pairing rules, title numbers, AI chart ids), 34 lane B
+mutants (RB: bidi isolates, label rotation and width, range anchor, heat-map contrast and scale, histogram x axis, conversions, tables,
+summary counting, print sizing and viewBox, retry and focus, announcements, review marks, chartSelection confirmation and kinds, cell
+errors, the bound field, the guard and CSS pins) and 2 lane C mutants (RC01: the reviewer's MCQ-inversion mutant, which the corrected
+freeze now kills; RC02: builder drift).
+
+| Round | Planted | KILLED | SURVIVED | TIMEOUT / BUILD_ERROR |
+|---|---|---|---|---|
+| RF1 | 51 | 50 | 1 (RA10) | 0 / 0 |
+| RF1b | RA10 re-run with its pin (`d3bca6c`: "Q10 was high; Q1: 7" isolates the glue rule from the qualifier rule) | 1 | 0 | 0 / 0 |
+
+**Review Fix 1: 51 planted defects, 51 KILLED, 0 survivors.** Overall: 133 distinct planted defects, 132 KILLED, 1 equivalent (C11).
+
+| Id | Area | Planted defect | Result | Killed by |
+|---|---|---|---|---|
+| RA01 | contract/no-throw | the outer guard removed (validation may throw) | KILLED | chartRules.21a1.test.ts — a value whose property access throws (a getter — not producibl |
+| RA02 | contract/no-throw | kind coerced with String() again | KILLED | cert-21a1-adversarial.test.js — kind is an object with |
+| RA03 | rich/no-throw | rich block type coerced with String() again | KILLED | cert-21a1-adversarial.test.js — a rich block whose type is such |
+| RA04 | contract/text | invisible controls accepted in chart text | KILLED | cert-21a1-adversarial.test.js — C1 control (8-bit CSI  |
+| RA05 | contract/text | invisible controls accepted in the chartSelection label | KILLED | chartRules.21a1.test.ts — the chartSelection instruction label refuses explicit bidi controls like every chart text; |
+| RA06 | contract/text | ZWNJ refused (Persian / Arabic text broken) | KILLED | chartRules.21a1.test.ts — ZWNJ / ZWJ (needed by Persian and Arabic text) stay allowed in chart text |
+| RA07 | ai/numbers | thousands separators read as decimals again | KILLED | composerChart.21a1.test.ts — thousands separators, decimal separators, signs, ranges and expon |
+| RA08 | ai/numbers | a '-' after a digit read as a sign (ranges made negative) | KILLED | composerChart.21a1.test.ts — thousands separators, decimal separators, signs, ranges and expon |
+| RA09 | ai/numbers | absolute values accepted again | KILLED | composerChart.21a1.test.ts — teacher-provided numbers are preserved exactly (Arabic-Indic digits in the request count); |
+| RA10 | ai/pairing | a label pairs with a number glued to it (Q1 ← Q10) | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RA11 | ai/pairing | ambiguous pairing (two different numbers) taken as a pairing | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RA12 | ai/pairing | a qualifier (year) taken as the paired value | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RA13 | ai/pairing | swapped teacher values accepted (pairing check off) | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RA14 | ai/title | invented numbers in a teacher-data title accepted | KILLED | composerChart.21a1.test.ts — a teacher-data chart's title and description state no number the  |
+| RA15 | ai/patch | appended AI chart keeps a colliding id | KILLED | composerChart.21a1.test.ts — appending / prepending a chart to a stem that already has on |
+| RB01 | rtl/value | value text without its LTR isolate | KILLED | DataChart.21a1.test.tsx — hover shows an ExamBank TEXT tooltip (title + lines) positioned inside the stage; leaving  |
+| RB02 | rtl/unit | unit not isolated inside an Arabic label | KILLED | chartReviewFix1.21a1.test.ts — an axis name 'label (unit)' isolates the unit inside  |
+| RB03 | layout/labels | labels wider than their slot not rotated | KILLED | chartReviewFix1.21a1.test.ts — 12 long labels rotate at 600 and 800 px (each label is wider than its slo |
+| RB04 | layout/labels | flat label width not capped at its slot | KILLED | chartReviewFix1.21a1.test.ts — 12 long labels rotate at 600 and 800 px (each label is wider than its slo |
+| RB05 | selection/range | a backward range drops its anchor again | KILLED | chartReviewFix1.21a1.test.ts — trimmed to the bound FROM the anchor, forwards and backwards |
+| RB06 | contrast/heat | no halo where neither label colour reaches 4.5:1 | KILLED | chartReviewFix1.21a1.test.ts — at EVERY point of the scale the value label reaches 4.5:1 again |
+| RB07 | contrast/heat | label colour not chosen by contrast | KILLED | chartReviewFix1.21a1.test.ts — at EVERY point of the scale the value label reaches 4.5:1 again |
+| RB08 | heat/scale | the colour scale names no values | KILLED | chartReviewFix1.21a1.test.ts — the colour scale names its lowest and highest value with the un |
+| RB09 | contract/histogram | histogram x bounds accepted again | KILLED | chartReviewFix1.21a1.test.ts — min / max on the histogram x axis are refused; label and |
+| RB10 | editing/lossy | bar → pie silently drops reference lines | KILLED | chartReviewFix1.21a1.test.ts — bar → pie keeps the unit and is lossy beca |
+| RB11 | editing/units | bar → pie drops the unit | KILLED | chartReviewFix1.21a1.test.ts — bar → pie keeps the unit and is lossy beca |
+| RB12 | editing/units | pie → bar drops the unit | KILLED | chartReviewFix1.21a1.test.ts — pie → bar and heat map → bar put the unit  |
+| RB13 | table/header | horizontal bars headed by the value axis again | KILLED | chartReviewFix1.21a1.test.ts — horizontal bars head the first column with the CATEGORY axis (y), |
+| RB14 | table/units | value columns without units | KILLED | chartReviewFix1.21a1.test.ts — value columns carry their unit (bar, combo secondary axis, scatte |
+| RB15 | table/heat | heat-map corner header empty | KILLED | chartReviewFix1.21a1.test.ts — value columns carry their unit (bar, combo secondary axis, scatte |
+| RB16 | wording/summary | plural after 10 again | KILLED | chartReviewFix1.21a1.test.ts — the structural summary counts in Arabic (1 واحدة, 2 dual, 3–10 plural, 11+ singular) |
+| RB17 | print | no print-width resize before printing | KILLED | DataChartReviewFix1.21a1.test.tsx — beforeprint → resize(PRINT_WIDTH); afterprint → resize |
+| RB18 | print | the engine leaves no viewBox (the SVG cannot scale) | KILLED | echartsEngine.21a1.test.ts — viewBox = drawing size after mount, after resize(PRINT) and after resize() back to the con |
+| RB19 | print | the engine ignores the print width | KILLED | echartsEngine.21a1.test.ts — viewBox = drawing size after mount, after resize(PRINT) and after resize() back to the con |
+| RB20 | retry | the retry offered again after a second failure | KILLED | DataChartRetry.21a1.test.tsx — (1) the import fails twice: the fallback  |
+| RB21 | retry/focus | focus dropped on retry | KILLED | DataChartRetry.21a1.test.tsx — (1) the import fails twice: the fallback  |
+| RB22 | announce | a refused activation announced as 'deselected' | KILLED | DataChartReviewFix1.21a1.test.tsx — multiple at its limit: activating another item is refused at the l |
+| RB23 | announce | an unchanged selection emitted anyway | KILLED | DataChartReviewFix1.21a1.test.tsx — multiple at its limit: activating another item is refused at the l |
+| RB24 | review/marks | review marks without their glyph | KILLED | DataChartReviewFix1.21a1.test.tsx — an incorrect selection shows ✗ (not ✓), a missed key ○, a correct one ✓; the student's hin |
+| RB25 | review/hint | the student hint shown read-only | KILLED | DataChartReviewFix1.21a1.test.tsx — an incorrect selection shows ✗ (not ✓), a missed key ○, a correct one ✓; the student's hin |
+| RB26 | authoring/confirm | chartSelection kind change without confirmation | KILLED | ChartEditorReviewFix1.21a1.test.tsx — bar → box plot opens the c |
+| RB27 | authoring/kinds | heat map offered for a chartSelection chart | KILLED | ChartEditorReviewFix1.21a1.test.tsx — a heat map (no selectable  |
+| RB28 | authoring/cells | no text error for an invalid cell | KILLED | ChartEditorReviewFix1.21a1.test.tsx — the error is text next to the cell (aria-describedb |
+| RB29 | authoring/cells | invalid cells not listed | KILLED | ChartEditorReviewFix1.21a1.test.tsx — the error is text next to the cell (aria-describedb |
+| RB30 | authoring/histogram | histogram x axis offers bounds again | KILLED | ChartEditorReviewFix1.21a1.test.tsx — the binned axis offers label and unit fields only; the value axis  |
+| RB31 | authoring/bound | clearing the bound forces 1 again | KILLED | ChartEditorReviewFix1.21a1.test.tsx — the selection bound can be |
+| RB32 | bundle/guard | the editor signature dropped from the guard | KILLED | chartReviewFix1.21a1.test.ts — the bundle guard recognises the chart editor; every chart editor edge is a literal lazy im |
+| RB33 | css/print | the print SVG keeps its fixed width | KILLED | chartReviewFix1.21a1.test.ts — print: the picture flows and the SVG scales to the printed column (fluid engine box, SVG w |
+| RB34 | table/scatter | unlabelled scatter rows named by id again | KILLED | chartReviewFix1.21a1.test.ts — an unlabelled scatter point is named by its coordinates in the ta |
+| RC01 | grading/mcq | MCQ grading inverted (the reviewer's freeze mutant) | KILLED | cert-21a1-compat-freeze.test.js — ai-composer-20f/A-network.js |
+| RC02 | fixture/drift | the acceptance builder drifts from the committed exam | KILLED | cert-21a1-fixture-drift.test.js — the committed acceptance exam is byte-for-byte the builder's output fro |
+
 ## 21. Independent review
 
 Round 1 — three read-only lanes on `a788539` (each: no writes to the repository, probes in scratch copies only):
@@ -577,7 +648,7 @@ Round 1 — three read-only lanes on `a788539` (each: no writes to the repositor
 
 **Review Fix 1** (one normal commit) addresses every finding: A1–A5 and F2 in §4 / §8 / §11; B-1 … B-15 in §9 / §10 / §17; F1 in §14;
 F3 / F4 in §13; F5 in §22; N1–N5 in the cited files and §1 / §17; F6 in the PR body. Fail-first evidence is in §18, browser evidence in
-§15, the mutation proof of the new code in §20. The re-review round follows on the new exact head.
+§15, the mutation proof of the new code in §20.1 (51 / 51 killed). The re-review round follows on the new exact head.
 
 ## 22. Known limitations
 
