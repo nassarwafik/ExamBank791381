@@ -133,3 +133,30 @@ describe("21A1-RB3e the key-clearing warning is the stored outcome, also while t
     expect(warned).toBe(false);
   });
 });
+
+describe("21A1-RB3h a datum keeps its key entry while its cell is retyped (round-4 finding R4-A2)", () => {
+  it("clearing the key's cell and typing a new value keeps the entry; while the cell is empty the question reports the key", async () => {
+    const box = { node: null as QuestionBody | null };
+    render(<Host initial={q(barOf(), "datum", ["s1/c1", "s1/c3"], "multiple", 2)} onNode={n => { box.node = n; }} />);
+    await settle();
+    const cell = () => screen.getByRole("textbox", { name: "الهطول — مارس" });
+    fireEvent.change(cell(), { target: { value: "" } });
+    await settle();
+    let n = box.node as unknown as N;
+    expect(n.answer.correct).toEqual(["s1/c1", "s1/c3"]);
+    expect(validateChartSelectionQuestion(n as never).map(i => i.code)).toContain("CHART_SELECTION_KEY_UNKNOWN_TARGET"); // flagged, never dropped
+    fireEvent.change(cell(), { target: { value: "97" } });
+    await settle();
+    n = box.node as unknown as N;
+    expect(n.answer.correct).toEqual(["s1/c1", "s1/c3"]);
+    expect(validateChartSelectionQuestion(n as never)).toEqual([]);
+  });
+  it("deleting the category drops the datum entry (its slot is gone)", async () => {
+    const box = { node: null as QuestionBody | null };
+    render(<Host initial={q(barOf(), "datum", ["s1/c1", "s1/c3"], "multiple", 2)} onNode={n => { box.node = n; }} />);
+    await settle();
+    fireEvent.click(screen.getByRole("button", { name: "حذف الفئة 3" }));
+    await settle();
+    expect((box.node as unknown as N).answer.correct).toEqual(["s1/c1"]);
+  });
+});

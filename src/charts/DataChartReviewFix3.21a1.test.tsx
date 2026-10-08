@@ -8,11 +8,12 @@ import { rainfallBar } from "./testing/chartFixtures";
 // Phase 21A.1 — Review Fix 3 (round-3 lane B): while printing, nothing re-applies the screen layout (B3-1: the print media query turns the
 // animation off AFTER beforeprint, which changed the option); a repeated identical announcement is spoken again (B3-4).
 type Opt = { animation?: boolean; xAxis?: { axisLabel?: { rotate?: number } } };
-const h = vi.hoisted(() => ({ calls: [] as string[], options: [] as unknown[] }));
+const h = vi.hoisted(() => ({ calls: [] as string[], options: [] as unknown[], mounted: [] as unknown[] }));
 vi.mock("./echartsEngine", () => ({
   CHART_ENGINE_MARKER: "xp-chart-engine-v1",
-  mountChartEngine: (el: HTMLElement, _o: unknown, _e: (e: EngineEvent) => void) => {
+  mountChartEngine: (el: HTMLElement, o: unknown, _e: (e: EngineEvent) => void) => {
     el.setAttribute("data-xp-engine", "xp-chart-engine-v1");
+    h.mounted.push(o);
     return {
       update: (o: unknown) => { h.calls.push("update"); h.options.push(o); },
       resize: (w?: number, ht?: number) => { h.calls.push("resize(" + (w ?? "") + (ht ? "," + ht : "") + ")"); },
@@ -29,7 +30,7 @@ const settle = async () => { for (let i = 0; i < 5; i++) await act(() => new Pro
 // a matchMedia whose "print" query can be switched like a browser does while printing
 const media = { print: false, listeners: new Set<() => void>() };
 beforeEach(() => {
-  h.calls = []; h.options = []; media.print = false; media.listeners.clear();
+  h.calls = []; h.options = []; h.mounted = []; media.print = false; media.listeners.clear();
   vi.stubGlobal("matchMedia", (q: string) => ({
     get matches() { return q === "print" ? media.print : false; }, media: q,
     addEventListener: (_: string, f: () => void) => { if (q === "print") media.listeners.add(f); },
@@ -85,8 +86,9 @@ describe("21A1-RB1e the print option is the desktop layout with the selection sh
       const pie = canon({ version: 1, id: "p", kind: "pie", title: "الحصص", description: "حصص", slices: [{ id: "a", label: "التعليم", value: 40 }, { id: "b", label: "الصحة", value: 60 }] });
       render(<DataChart spec={pie} selection={{ kind: "category", mode: "single", max: 1, value: ["b"], onChange: () => {} }} />);
       await settle();
-      const screenOpt = h.options.at(-1) as { series: { label: { show: boolean } }[] } | undefined;
-      if (screenOpt) expect(screenOpt.series[0].label.show).toBe(false);              // the phone layout on screen
+      const screenOpt = (h.options.at(-1) ?? h.mounted.at(-1)) as { series: { label: { show: boolean } }[] } | undefined;
+      expect(screenOpt).toBeDefined();                                                 // (round-4 finding C4-F10: the precondition always runs)
+      expect(screenOpt!.series[0].label.show).toBe(false);                             // the phone layout on screen
       h.options = [];
       act(() => { window.dispatchEvent(new Event("beforeprint")); });
       const printed = h.options.at(-1) as { series: { label: { show: boolean } }[] };

@@ -18,7 +18,10 @@ vi.mock("./echartsEngine", () => ({
   }
 }));
 // 6 px per character, in whatever font the adapter asks for
-const fake = { font: "", measureText: (t: string) => ({ width: Array.from(t).length * 6 }) };
+const fake = { font: "", calls: 0, measureText(t: string) { this.calls++; return { width: Array.from(t).length * 6 }; } };
+// happy-dom has no FontFaceSet: a stand-in that can announce a finished webfont load
+const fonts = new EventTarget();
+Object.defineProperty(document, "fonts", { configurable: true, value: fonts });
 HTMLCanvasElement.prototype.getContext = function getContext() { return fake; } as unknown as HTMLCanvasElement["getContext"];
 import DataChart from "./DataChart";
 
@@ -41,5 +44,25 @@ describe("21A1-RB18b DataChart measures label text where a canvas exists (review
     expect(printLabel.overflow).toBe("none");
     expect(typeof printLabel.formatter).toBe("function");
     await act(() => { window.dispatchEvent(new Event("afterprint")); });
+  });
+});
+
+describe("21A1-RB18c a webfont that finishes loading lays the labels out again (round-4 finding B4-4)", () => {
+  it("loadingdone re-applies the option, measured afresh (the cached widths were the fallback font's)", async () => {
+    const long = canon({ ...rainfallBar(), categories: (rainfallBar() as CategoryChartSpec).categories.map((c, i) => ({ ...c, label: "منطقة الشمال رقم " + (i + 1) })) });
+    render(<DataChart spec={long} />);
+    await settle();
+    const updates = h.updates.length;
+    const label = (h.mounted.at(-1) as { xAxis: { axisLabel: Label } }).xAxis.axisLabel;
+    label.formatter!("منطقة الشمال رقم 3");
+    const before = fake.calls;
+    label.formatter!("منطقة الشمال رقم 3");
+    expect(fake.calls).toBe(before);                                                 // cached
+    await act(() => { fonts.dispatchEvent(new Event("loadingdone")); });
+    await settle();
+    expect(h.updates.length).toBeGreaterThan(updates);                               // the option is applied again
+    const fresh = (h.updates.at(-1) as { xAxis: { axisLabel: Label } }).xAxis.axisLabel;
+    fresh.formatter!("منطقة الشمال رقم 3");
+    expect(fake.calls).toBeGreaterThan(before);                                       // and measured afresh
   });
 });

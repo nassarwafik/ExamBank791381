@@ -25,6 +25,12 @@ function structuralTargets(c: ChartSpecV1, t: ChartTargetKind): { key: string; l
   if (v.ok) return chartTargetKinds(v.value).includes(t) ? chartTargets(v.value, t) : [];
   try { return (CHART_KINDS as readonly unknown[]).includes(c.kind) && chartTargetKinds(c).includes(t) ? chartTargets(c, t) : []; } catch { return null; }
 }
+/** A datum key ("seriesId/categoryId") whose series and category still exist: its value may be empty while the teacher retypes the cell
+ *  (validation reports the key meanwhile) — the entry is kept, never dropped. */
+function datumSlot(c: ChartSpecV1, key: string): boolean {
+  const [s, cat] = key.split("/"), r = c as { series?: unknown; categories?: unknown };
+  return Array.isArray(r.series) && Array.isArray(r.categories) && r.series.some(x => isObj(x) && x.id === s) && r.categories.some(x => isObj(x) && x.id === cat);
+}
 /** Every id written anywhere in a (possibly broken) chart. */
 function idsIn(raw: unknown, out = new Set<string>()): Set<string> {
   if (Array.isArray(raw)) for (const x of raw) idsIn(x, out);
@@ -67,8 +73,6 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
     let m = next.mode ?? mode;
     if (m === "range" && !RANGE_TARGET_KINDS.includes(t)) m = "multiple";
     const order = v?.ok && ks.includes(t) ? chartTargets(v.value, t).map(x => x.key) : [];
-    let mx = m === "single" ? 1 : Math.max(1, Math.round(next.max ?? max));
-    if (order.length) mx = Math.min(mx, order.length);
     let ok = retargeted ? [] : next.correct ?? correct;
     if (!retargeted && next.chart && c) {
       const now = structuralTargets(c, t);
@@ -78,10 +82,15 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
         const before = new Map((structuralTargets(chart, t) ?? []).map(x => [x.key, x.label] as const));
         const after = new Map((now ?? []).map(x => [x.key, x.label] as const));
         ok = fresh ? [] : ok.filter(k => before.has(k) && after.get(k) === before.get(k));
-      } else if (now) ok = ok.filter(k => now.some(x => x.key === k));
+      } else if (now) ok = ok.filter(k => now.some(x => x.key === k) || (t === "datum" && datumSlot(c, k)));
       else { const present = idsIn(c); ok = ok.filter(k => k.split("/").every(part => present.has(part))); }
     }
-    if (order.length) ok = order.filter(k => ok.includes(k));
+    // datum entries whose cell is being retyped (no value yet, so not a target of the valid chart) stay after the chart's own order and
+    // count toward the bound — neither the key nor the bound changes because a cell was emptied (round-4 finding R4-A2)
+    const pending = order.length && t === "datum" && c ? ok.filter(k => !order.includes(k) && datumSlot(c, k)) : [];
+    let mx = m === "single" ? 1 : Math.max(1, Math.round(next.max ?? max));
+    if (order.length) mx = Math.min(mx, order.length + pending.length);
+    if (order.length) ok = [...order.filter(k => ok.includes(k)), ...pending];
     if (m === "single") ok = ok.slice(0, 1);
     if (m === "range" && ok.length && order.length && !isContiguousRun(order, ok)) ok = [];
     const sc = m === "single" ? "allOrNothing" : (next.scoring ?? scoring);

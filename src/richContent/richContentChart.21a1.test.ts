@@ -77,6 +77,12 @@ describe("21A1-RC1 the dataChart block", () => {
     expect(scodes(scenario(lo + 1))).toEqual(["SCENARIO_PAYLOAD_TOO_LARGE"]);
     expect(withSummary(lo)).toBeGreaterThan(S.SCENARIO_LIMITS.payloadBytes);
   });
+  it("a chart's stored prose is exactly its title, description and source — computed here independently (round-4 finding C4-F5)", () => {
+    const c = { ...rainfallBar(), source: "المصدر: الأرصاد الجوية" };
+    expect(R.richContentPlainText(doc({ type: "dataChart", chart: c }), { storedOnly: true })).toBe([c.title, c.description, c.source].join("\n"));
+    const plain = { ...rainfallBar() } as Record<string, unknown>; delete plain.source;
+    expect(R.richContentPlainText(doc({ type: "dataChart", chart: plain }), { storedOnly: true })).toBe([plain.title, plain.description, ""].join("\n"));
+  });
   it("an older reader's vocabulary (the 15 baseline types) keeps its order: dataChart is appended, never inserted", () => {
     expect(R.RICH_BLOCK_TYPES.indexOf("dataChart")).toBe(R.RICH_BLOCK_TYPES.length - 1);
     expect(R.RICH_BLOCK_TYPES.indexOf("math")).toBe(14);

@@ -45,18 +45,49 @@ export const PRINT_WIDTH = 640;
 const MARK_TEXT: Record<ChartTargetMark, string> = { correct: "صحيح", incorrect: "غير صحيح", missed: "لم يُحدَّد" };
 const MARK_GLYPH: Record<ChartTargetMark, string> = { correct: "✓", incorrect: "✗", missed: "○" };
 const MODE_TEXT = (mode: ChartSelectionMode, max: number) => (mode === "single" ? "اختر عنصرًا واحدًا." : mode === "range" ? "اختر نطاقًا متصلًا: العنصر الأول ثم الأخير." : "يمكنك اختيار حتى " + max + " عناصر.");
-/** A text measurer for label truncation with real widths (a 2D canvas; created once). Undefined where there is no canvas — the engine then
- *  truncates by its own estimate. */
+/** A text measurer for label truncation with real widths (a 2D canvas; created once, results cached per font and text). Undefined where
+ *  there is no canvas — the engine then truncates by its own estimate. The cache is emptied when a webfont finishes loading (the widths
+ *  change), and charts then lay their labels out again (round-4 finding B4-4). */
 let measurer: ((text: string, font: string) => number) | null | undefined;
+const measured = new Map<string, number>();
 const textMeasure = (): ((text: string, font: string) => number) | undefined => {
   if (measurer === undefined) {
     try {
       const c = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
-      measurer = c ? (t: string, f: string) => { c.font = f; return c.measureText(t).width; } : null;
+      measurer = c ? (t: string, f: string) => {
+        const k = f + "\u0000" + t, hit = measured.get(k);
+        if (hit !== undefined) return hit;
+        if (measured.size > 4000) measured.clear();
+        c.font = f;
+        const w = c.measureText(t).width;
+        measured.set(k, w);
+        return w;
+      } : null;
     } catch { measurer = null; }
   }
   return measurer ?? undefined;
 };
+/** The measurer of one font epoch: a new function after each webfont load, so an option built with the previous one is built again. */
+let epochMeasure: { epoch: number; fn: ((text: string, font: string) => number) | undefined } | undefined;
+const measureFor = (epoch: number) => {
+  if (epochMeasure?.epoch !== epoch) { const m = textMeasure(); epochMeasure = { epoch, fn: m && ((t: string, f: string) => m(t, f)) }; }
+  return epochMeasure.fn;
+};
+/** Increments when a webfont finishes loading (one shared listener for every chart on the page). */
+let fontEpoch = 0;
+const fontListeners = new Set<(n: number) => void>();
+const onFontsLoaded = () => { fontEpoch++; measured.clear(); for (const f of fontListeners) f(fontEpoch); };
+function useFontEpoch(): number {
+  const [n, setN] = useState(fontEpoch);
+  useEffect(() => {
+    const fonts = typeof document !== "undefined" ? (document as { fonts?: EventTarget }).fonts : undefined;
+    if (!fonts || typeof fonts.addEventListener !== "function") return;
+    if (fontListeners.size === 0) fonts.addEventListener("loadingdone", onFontsLoaded);
+    fontListeners.add(setN);
+    return () => { fontListeners.delete(setN); if (fontListeners.size === 0) fonts.removeEventListener("loadingdone", onFontsLoaded); };
+  }, []);
+  return n;
+}
 const loadEngine = (advanced: boolean) => (advanced ? Promise.all([import("./echartsEngine"), import("./echartsAdvanced")]).then(([engine, adv]) => ({ engine, advanced: adv.CHART_ADVANCED_MARKER })) : import("./echartsEngine").then(engine => ({ engine, advanced: "" })));
 type Tip = { x: number; y: number; title: string; lines: string[] };
 
@@ -93,11 +124,14 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   const selectedKey = selection ? selection.value.join("\u0000") : "";
   // only charts with a horizontal category axis lay out by width (label rotation / caps), and in 32 px steps: a resize re-renders the
   // engine option only when the layout can change, not on every pixel
-  const layoutWidth = width > 0 && !(spec.kind === "pie" || spec.kind === "scatter" || spec.kind === "radar" || (spec.kind === "bar" && spec.orientation === "horizontal")) ? Math.floor(width / 32) * 32 : 0;
+  // (a radar lays its axis names out by width too)
+  const layoutWidth = width > 0 && !(spec.kind === "pie" || spec.kind === "scatter" || (spec.kind === "bar" && spec.orientation === "horizontal")) ? Math.floor(width / 32) * 32 : 0;
+  const fonts = useFontEpoch();
+  const measure = useMemo(() => measureFor(fonts), [fonts]);
   const option = useMemo(() => buildEngineOption(spec, {
-    tokens, animation, compact, width: layoutWidth, measure: textMeasure(),
+    tokens, animation, compact, width: layoutWidth, measure,
     ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
-  }), [spec, tokens, animation, compact, layoutWidth, selKind, selectedKey]);
+  }), [spec, tokens, animation, compact, layoutWidth, selKind, selectedKey, measure]);
   const optionRef = useRef(option);
   // the option for paper: the print width's layout, no animation (built when printing starts)
   const printOptionRef = useRef<() => EngineOption>(() => option);
@@ -189,13 +223,13 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   const paintPrint = (h: EngineHandle) => { h.update(printOptionRef.current()); h.resize(PRINT_WIDTH, printHeightRef.current); h.flush(); };
   const applied = useRef<{ inputs: readonly unknown[]; layout: string } | null>(null);
   useEffect(() => {
-    const inputs = [spec, tokens, animation, compact, selKind, selectedKey], layout = widthLayout(option), prev = applied.current;
+    const inputs = [spec, tokens, animation, compact, selKind, selectedKey, fonts], layout = widthLayout(option), prev = applied.current;
     applied.current = { inputs, layout };
     const h = handleRef.current;
     if (h && printingRef.current) { paintPrint(h); return; }
     if (prev && prev.layout === layout && prev.inputs.every((v, i) => Object.is(v, inputs[i]))) return;
     h?.update(option);
-  }, [option, spec, tokens, animation, compact, selKind, selectedKey]);
+  }, [option, spec, tokens, animation, compact, selKind, selectedKey, fonts]);
   useEffect(() => { const h = handleRef.current; if (h && printingRef.current) paintPrint(h); else h?.resize(); }, [height]);
   useEffect(() => {
     const before = () => { printingRef.current = true; const h = handleRef.current; if (h) paintPrint(h); };

@@ -28,7 +28,7 @@ function buildAiChartSchema() {
     });
 }
 const CHART_KEYS = ["kind", "dataOrigin", "title", "description", "categories", "series", "points", "bins", "boxes", "xLabel", "yLabel", "unit", "stacked", "horizontal", "donut"];
-const DIGITS = /[٠-٩۰-۹]/g;
+const DIGITS = /[٠-٩۰-۹０-９]/g;
 const normDigits = (text) => String(text || "").replace(DIGITS, d => String(d.charCodeAt(0) & 0xf)).replace(/٫/g, ".").replace(/٬/g, ",")
     .replace(/[\u2012\u2013](?=\d)/g, "-").replace(/−/g, "-")
     .replace(/\d+(?:,\d+){2,}/g, run => (run.split(",").slice(1).every(g => g.length === 3) ? run : run.replace(/,/g, ", ")));
@@ -53,10 +53,13 @@ const INVISIBLE_OR_TATWEEL = /[\p{Default_Ignorable_Code_Point}ـ]/gu;
 const pairText = (s) => normDigits(String(s || "").normalize("NFKC").replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase();
 const LIST_SEP = "(?:\\s*[,،؛;/&]\\s*(?:(?:and\\b|و)\\s*)?|\\s+and\\s+|\\s+و\\s*)";
 const UNIT = "(?:\\s*(?:[%٪]|(?!و(?:\\s|\\d)|and\\b)[^\\s\\d,،؛;/&.:=()\\-]{1,6}))?";
+const MONTH = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|يناير|فبراير|مارس|[أإا]بريل|مايو|يوني[وه]|يولي[وه]|[أا]غسطس|سبتمبر|[أا]كتوبر|نوفمبر|ديسمبر|كانون الثاني|شباط|[آا]ذار|نيسان|[أا]يار|حزيران|تموز|[آا]ب|[أا]يلول|تشرين الأول|تشرين الثاني|كانون الأول)$/u;
+const CONNECTOR_TO_LABEL = /^\s*(?:(?:and|then|ثم)\s+)?[وفبلك]?$/u;
 const CLAUSE_END = /[.!?؟\n؛;,،]/;
 const sticky = (source, t, at) => { const re = new RegExp(source, "uy"); re.lastIndex = at; return re.exec(t); };
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const WORD = /[\p{L}\p{M}\p{N}]/u;
+const WORD_LABEL = /^[ai]$/;
 function wholeWord(t, at, len) {
     const before = at === 0 || !WORD.test(t[at - 1]) || (/[وفبلك]/.test(t[at - 1]) && (at === 1 || !WORD.test(t[at - 2])));
     return before && (at + len >= t.length || !/[\p{L}\p{M}]/u.test(t[at + len]));
@@ -90,7 +93,7 @@ function occurrences(t, l) {
 }
 function pairedAt(t, l, others) {
     if (!l)
-        return undefined;
+        return new Set();
     const otherAt = others.filter(Boolean).flatMap(o => occurrences(t, o)).sort((a, b) => a - b);
     const found = new Set();
     for (const at of occurrences(t, l)) {
@@ -99,6 +102,8 @@ function pairedAt(t, l, others) {
             continue;
         const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))[0];
         if (!lead)
+            continue;
+        if (WORD_LABEL.test(l) && !/[:=]/.test(lead))
             continue;
         const from = at + l.length + lead.length, m = sticky(NUMBER.source, t, from);
         if (!m)
@@ -109,14 +114,20 @@ function pairedAt(t, l, others) {
         if (continuesList(t, after))
             continue;
         const rest = t.slice(after), endAt = rest.search(CLAUSE_END), nextLabel = otherAt.find(o => o >= after);
+        const atLabel = nextLabel !== undefined && (endAt < 0 || nextLabel - after <= endAt);
         const clause = rest.slice(0, Math.min(endAt < 0 ? rest.length : endAt, nextLabel === undefined ? rest.length : nextLabel - after));
         if (new RegExp(NUMBER.source, "u").test(clause))
             continue;
+        const unitLen = sticky(UNIT, clause, 0)?.[0].length ?? 0, tail = clause.slice(unitLen);
+        if (!(atLabel ? CONNECTOR_TO_LABEL : /^\s*$/u).test(tail))
+            continue;
         const n = readNumber(t, m);
+        if (MONTH.test(l) && Number.isInteger(n) && n >= 1 && n <= 31 && /\p{L}/u.test(clause.slice(0, unitLen)))
+            continue;
         if (Number.isFinite(n))
             found.add(n);
     }
-    return found.size === 1 ? [...found][0] : undefined;
+    return found;
 }
 function listPairs(t, ls) {
     const out = new Map();
@@ -160,10 +171,8 @@ function pairedNumbers(request, labels) {
     const t = pairText(request), ls = labels.map(l => pairText(l).trim());
     const listed = ls.length >= 2 && ls.every(Boolean) && new Set(ls).size === ls.length ? listPairs(t, ls) : new Map();
     return ls.map((l, i) => {
-        const fromList = listed.get(i);
-        if (fromList)
-            return new Set(fromList).size === 1 ? fromList[0] : undefined;
-        return pairedAt(t, l, ls.filter((_, j) => j !== i));
+        const values = new Set([...(listed.get(i) ?? []), ...pairedAt(t, l, ls.filter((_, j) => j !== i))]);
+        return values.size === 1 ? [...values][0] : undefined;
     });
 }
 const pairedNumber = (request, label) => pairedNumbers(request, [label])[0];
@@ -219,6 +228,8 @@ function mapAiChart(raw, index, policy, path) {
         }
         case "pie": {
             const values = series[0]?.values ?? [];
+            if (values.length !== cats.length)
+                return fail("AI_CHART_MALFORMED", "عدد قيم الرسم الدائري يجب أن يساوي عدد فئاته.", path + ".series");
             used.push(...values.filter((v) => v !== null));
             chart = { ...common, kind, slices: cats.map((c, i) => ({ id: "p" + (i + 1), label: c.label, value: values[i] })), ...(raw.donut === true ? { donut: true } : {}), ...(unit ? { unit } : {}) };
             break;
@@ -270,9 +281,9 @@ function mapAiChart(raw, index, policy, path) {
                 if (p === undefined)
                     continue;
                 if (v === null || v === undefined)
-                    return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» كتبها المعلم في طلبه لكنها مفقودة في الرسم؛ انسخ قيمة كل فئة كما وردت معها في الطلب.", path + ".series");
+                    return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» فارغة في الرسم مع أن طلب المعلم يبدو أنه يذكر لها قيمة؛ راجع الطلب: انسخ القيمة كما وردت إن كانت قيمة هذه الفئة، ولا تخترع رقمًا.", path + ".series");
                 if (v !== p && pairs.some((q, j) => j !== i && q === v))
-                    return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» في الرسم لا تطابق ما كتبه المعلم لها في طلبه؛ انسخ قيمة كل فئة كما وردت معها في الطلب، دون تبديل أو إزاحة.", path + ".series");
+                    return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» في الرسم تبدو قيمةَ فئة أخرى في طلب المعلم؛ راجع الطلب وانسخ قيمة كل فئة كما وردت معها، دون تبديل أو إزاحة.", path + ".series");
             }
         const stated = [...numbersInText(raw.title + "\n" + raw.description)].filter(n => !given.has(n));
         if (stated.length)
