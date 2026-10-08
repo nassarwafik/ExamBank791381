@@ -84,6 +84,14 @@
 .xp-rich .xp-math mtable.xp-math-aligned > mtr > mtd:first-child{ text-align:right; }
 .xp-rich .xp-math mtable.xp-math-aligned > mtr > mtd:last-child{ text-align:left; }
 .xp-rich .xp-math-block .xp-math-host{ display:block; }
+/* Phase 21A — Chromium sizes a <math> box to the AVAILABLE width and paints wider content as NON-scrollable overflow, so a wide formula
+   was clipped (the block reported nothing to scroll; the page shell is overflow-x:clip). A display formula and an inline grid are therefore
+   sized to their content, and their scroll box (the display block, or the inline grid's host) scrolls them LTR from their start; the block
+   padding absorbs fence / limit ink so no vertical scrollbar appears. Inline formulas without a grid keep their 20D.1 layout. */
+.xp-rich .xp-math-block{ direction:ltr; padding-block:0.25em; }
+.xp-rich .xp-math-block .xp-math{ inline-size:max-content; max-inline-size:none; margin-inline:auto; }
+.xp-rich .xp-math-host:has(mtable):not(.xp-math-block > *){ display:inline-block; max-inline-size:100%; overflow-x:auto; padding-block:0.25em; vertical-align:middle; direction:ltr; unicode-bidi:isolate; }
+.xp-rich .xp-math-host:not(.xp-math-block > *) > .xp-math:has(mtable){ inline-size:max-content; max-inline-size:none; }
 .xp-rich .xp-math-src{ direction:ltr; unicode-bidi:isolate; }
 
 @media (min-width:768px){
@@ -99,8 +107,8 @@
   .xp-rich [data-xp-responsive="stack"] [data-xp-label]::before{ content:none; }
 }
 @media print{
-  .xp-rich :is(.xp-table-wrap,.xp-code,.xp-cli,.xp-math-block){ overflow:visible; }
+  .xp-rich :is(.xp-table-wrap,.xp-code,.xp-cli,.xp-math-block,.xp-math-host){ overflow:visible; }
   .xp-rich :is(.xp-code,.xp-cli){ white-space:pre-wrap; }
   .xp-rich :is(tr,.xp-figure,.xp-image,.xp-callout,.xp-kv > div,.xp-math-block){ break-inside:avoid; }
-  .xp-rich .xp-math-block{ max-width:none; }
+  .xp-rich :is(.xp-math-block,.xp-math-host){ max-width:none; max-inline-size:none; }
 }

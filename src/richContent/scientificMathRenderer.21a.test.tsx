@@ -82,6 +82,17 @@ describe("21A-R2 RTL / LTR and accessibility", () => {
     expect(css).toMatch(/@media print[\s\S]*\.xp-math-block[\s\S]*overflow:\s*visible/);
     expect(css).toMatch(/mtable/);
   });
+  it("wide formulas never clip: display math and inline grids are sized to their content and scroll LTR inside their own box (Chromium sizes <math> to the available width)", () => {
+    const css = fs.readFileSync(path.join(here, "rich-content.css"), "utf8");
+    const screen = css.slice(0, css.indexOf("@media print"));
+    expect(screen).toMatch(/\.xp-math-block\{[^}]*direction:ltr[^}]*padding-block:/);
+    expect(screen).toMatch(/\.xp-math-block \.xp-math\{[^}]*inline-size:max-content[^}]*max-inline-size:none[^}]*margin-inline:auto/);
+    expect(screen).toMatch(/\.xp-math-host:has\(mtable\):not\(\.xp-math-block > \*\)\{[^}]*display:inline-block[^}]*max-inline-size:100%[^}]*overflow-x:auto[^}]*direction:ltr/);
+    expect(screen).toMatch(/\.xp-math-host:not\(\.xp-math-block > \*\) > \.xp-math:has\(mtable\)\{[^}]*inline-size:max-content/);
+    const print = css.slice(css.indexOf("@media print"));
+    expect(print).toMatch(/:is\([^)]*\.xp-math-host[^)]*\)\{ overflow:visible/);
+    expect(print).toMatch(/:is\(\.xp-math-block,\.xp-math-host\)\{[^}]*max-inline-size:none/);
+  });
   it("an HTML-looking formula (accepted by the 20D.1 grammar as relations) renders as inert MathML text — no element is ever created from it", () => {
     const s = "<script>alert(1)</script><img src=x onerror=alert(1)>";
     const c = mathOf(s);
