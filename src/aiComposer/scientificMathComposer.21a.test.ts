@@ -116,7 +116,7 @@ describe("21A-AI2b HTML-looking formulas", () => {
       if (!r.ok) expect(r.issues.map(i => i.code)).toEqual(["AI_RICH_CONTENT_INVALID"]);
     }
     // documented false positives (review fix 1, design record §24): inner-product / expectation-value spellings look like tags → refused
-    // (fails closed: one bounded repair round; the prompt steers to ( , ) or \\text)
+    // (fails closed: the section is refused with the markup message and costs one bounded repair round; the prompt does not special-case it)
     for (const s of ["<a, b>", "<p>"]) { expect(parseMath(s).ok, s).toBe(true); expect(mapAiRichBlocks([F.math(s)]).ok, s).toBe(false); }
     for (const s of ["a < b", "0 < x < 1", "a/b", "x > y \\Rightarrow f(x) > f(y)"]) {
       expect(looksLikeRawHtml(s), s).toBe(false);

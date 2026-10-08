@@ -86,11 +86,12 @@
 .xp-rich .xp-math-block .xp-math-host{ display:block; }
 /* Phase 21A — Chromium sizes a <math> box to the AVAILABLE width and paints wider content as NON-scrollable overflow, so a wide formula
    was clipped (the block reported nothing to scroll; the page shell is overflow-x:clip). A display formula and an inline grid are therefore
-   sized to their content, and their scroll box (the display block, or the inline grid's host) scrolls them LTR from their start; the block
-   padding absorbs fence / limit ink so no vertical scrollbar appears. Inline formulas without a grid keep their 20D.1 layout. */
-.xp-rich .xp-math-block{ direction:ltr; padding-block:0.25em; }
+   sized to their content, and their scroll box (the display block, or the inline grid's host) scrolls them LTR from their start; the
+   padding absorbs fence / limit ink and overflow-y:hidden guarantees no vertical scroller (fallback math fonts can still paint a pixel
+   beyond the box — review fix 2). Inline formulas without a grid keep their 20D.1 layout. */
+.xp-rich .xp-math-block{ direction:ltr; padding-block:0.3em; overflow-y:hidden; }
 .xp-rich .xp-math-block .xp-math{ inline-size:max-content; max-inline-size:none; margin-inline:auto; }
-.xp-rich .xp-math-host:has(mtable):not(.xp-math-block > *){ display:inline-block; max-inline-size:100%; overflow-x:auto; padding-block:0.25em; vertical-align:middle; direction:ltr; unicode-bidi:isolate; }
+.xp-rich .xp-math-host:has(mtable):not(.xp-math-block > *){ display:inline-block; max-inline-size:100%; overflow-x:auto; overflow-y:hidden; padding-block:0.3em; vertical-align:middle; direction:ltr; unicode-bidi:isolate; }
 .xp-rich .xp-math-host:not(.xp-math-block > *) > .xp-math:has(mtable){ inline-size:max-content; max-inline-size:none; }
 .xp-rich .xp-math-src{ direction:ltr; unicode-bidi:isolate; }
 

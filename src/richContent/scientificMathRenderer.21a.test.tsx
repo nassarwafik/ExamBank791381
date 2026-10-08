@@ -100,6 +100,10 @@ describe("21A-R2 RTL / LTR and accessibility", () => {
     expect(screen).toMatch(/mtable\.xp-math-cases > mtr > mtd\{ text-align:left; \}/);
     expect(screen).toMatch(/mtable\.xp-math-aligned > mtr > mtd:first-child\{ text-align:right; \}/);
     expect(screen).toMatch(/mtable\.xp-math-aligned > mtr > mtd:last-child\{ text-align:left; \}/);
+    // the display block IS the scroll box (reviewer mutant N14) and never shows a vertical scroller (review fix 2)
+    expect(screen).toMatch(/\.xp-rich \.xp-math-block\{[^}]*max-width:100%[^}]*overflow-x:auto/);
+    expect(screen).toMatch(/\.xp-rich \.xp-math-block\{[^}]*overflow-y:hidden/);
+    expect(screen).toMatch(/\.xp-math-host:has\(mtable\):not\(\.xp-math-block > \*\)\{[^}]*overflow-x:auto; overflow-y:hidden/);
     const print = css.slice(css.indexOf("@media print"));
     expect(print).toMatch(/:is\([^)]*\.xp-math-block[^)]*\)\{ break-inside:avoid; \}/);                    // reviewer mutant R22
     expect(print).toMatch(/:is\([^)]*\.xp-math-host[^)]*\)\{ overflow:visible/);
@@ -205,5 +209,99 @@ describe("21A-R5 display formula accessibility (review fix 1): the 20D.1 markup 
       await act(async () => { for (const cb of observers) cb(); });
       expect([block().getAttribute("role"), block().getAttribute("tabindex")]).toEqual([null, null]);
     } finally { sw.mockRestore(); cw.mockRestore(); vi.unstubAllGlobals(); }
+  });
+});
+
+describe("21A-R6 the overflow observers (review fix 2): wiring, re-check on lazy arrival, tolerance, focus retention, cleanup", () => {
+  type Obs = { cb: () => void; targets: Element[]; opts?: unknown; active: boolean };
+  const block = () => document.querySelector(".xp-math-block") as HTMLElement;
+  const settle = async () => { for (let i = 0; i < 10; i++) await act(async () => { await new Promise(r => setTimeout(r, 10)); }); };
+  const WIDE = "\\begin{pmatrix} a & b & c & d & e & f & g & h \\end{pmatrix}";
+  function harness() {
+    const ros: Obs[] = [], mos: Obs[] = [];
+    let sw = 0;
+    const spies = [
+      vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (this: HTMLElement) { return this.classList.contains("xp-math-block") && this.querySelector("math") ? sw : 0; }),
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) { return this.classList.contains("xp-math-block") ? 328 : 0; })
+    ];
+    vi.stubGlobal("ResizeObserver", class { o: Obs; constructor(cb: () => void) { this.o = { cb, targets: [], active: false }; ros.push(this.o); } observe(t: Element) { this.o.targets.push(t); this.o.active = true; this.o.cb(); } disconnect() { this.o.targets = []; this.o.active = false; } });
+    vi.stubGlobal("MutationObserver", class { o: Obs; constructor(cb: () => void) { this.o = { cb, targets: [], active: false }; mos.push(this.o); } observe(t: Element, opts: unknown) { this.o.targets = [t]; this.o.opts = opts; this.o.active = true; } disconnect() { this.o.active = false; } });
+    return { ros, mos, setWidth: (w: number) => { sw = w; }, restore: () => { for (const s of spies) s.mockRestore(); vi.unstubAllGlobals(); } };
+  }
+  const fire = async (list: Obs[]) => act(async () => { for (const o of list.filter(x => x.active)) o.cb(); });
+  const attrs = () => [block().getAttribute("role"), block().getAttribute("tabindex")];
+
+  it("a DOM mutation (the lazy formula arriving / changing) re-checks; the block AND the <math> element are observed (reviewer mutants N01, N02)", async () => {
+    const h = harness();
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "math", source: WIDE }] }} />);
+      await settle();
+      expect(attrs()).toEqual([null, null]);                                                    // fits so far
+      const mo = h.mos.find(o => o.active)!;
+      expect([mo.targets[0], mo.opts]).toEqual([block(), { childList: true, subtree: true }]);
+      h.setWidth(914);
+      await fire(h.mos);                                                                          // only the mutation path re-checks here
+      expect(attrs()).toEqual(["group", "0"]);
+      const observed = h.ros.filter(o => o.active).flatMap(o => o.targets);
+      expect(observed).toContain(block());
+      expect(observed.some(t => t.tagName.toLowerCase() === "math")).toBe(true);
+    } finally { h.restore(); }
+  });
+  it("the 1 px sub-pixel tolerance: clientWidth + 1 still fits, clientWidth + 2 overflows (reviewer mutant N04)", async () => {
+    const h = harness();
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "math", source: WIDE }] }} />);
+      await settle();
+      h.setWidth(329); await fire(h.ros);
+      expect(attrs()).toEqual([null, null]);
+      h.setWidth(330); await fire(h.ros);
+      expect(attrs()).toEqual(["group", "0"]);
+    } finally { h.restore(); }
+  });
+  it("a FOCUSED group is kept when the formula starts to fit (no focus loss); leaving it re-checks and reverts", async () => {
+    const h = harness();
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "math", source: WIDE }] }} />);
+      await settle();
+      h.setWidth(914); await fire(h.ros);
+      act(() => block().focus());
+      expect(document.activeElement).toBe(block());
+      h.setWidth(0); await fire(h.ros);                                                           // the viewport widened: it fits now
+      expect(attrs()).toEqual(["group", "0"]);
+      expect(document.activeElement).toBe(block());
+      act(() => block().blur());
+      expect(attrs()).toEqual([null, null]);
+    } finally { h.restore(); }
+  });
+  it("observers are disconnected on a source change and on unmount — none leak (reviewer mutant N03; the editor preview re-renders per keystroke)", async () => {
+    const h = harness();
+    try {
+      const doc = (source: string) => ({ schemaVersion: 1 as const, blocks: [{ type: "math" as const, source }] });
+      const view = render(<RichContentRenderer content={doc(WIDE)} />);
+      await settle();
+      for (const s of ["x^{2}", "\\frac{a}{b}", WIDE, "y"]) { view.rerender(<RichContentRenderer content={doc(s)} />); await settle(); }
+      expect(h.ros.filter(o => o.active)).toHaveLength(1);
+      expect(h.mos.filter(o => o.active)).toHaveLength(1);
+      expect(h.ros.length).toBeGreaterThanOrEqual(5);
+      view.unmount();
+      expect([h.ros.filter(o => o.active).length, h.mos.filter(o => o.active).length]).toEqual([0, 0]);
+    } finally { h.restore(); }
+  });
+  it("INLINE grids: the scroll-box host is out of the Tab order while it fits (tabIndex -1: a browser would make any scroller a Tab stop), a labelled group when it overflows; inline formulas without a grid keep the 20D.1 host", async () => {
+    const h = harness();
+    const hostSw = vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (this: HTMLElement) { return this.classList.contains("xp-math-host") && wideInline ? 500 : 0; });
+    const hostCw = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) { return this.classList.contains("xp-math-host") ? 300 : 0; });
+    let wideInline = false;
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "أ " }, { math: WIDE }, { text: " ب " }, { math: "x^{2}" }] }] }} />);
+      await settle();
+      const [grid, plain] = [...document.querySelectorAll("p .xp-math-host")] as HTMLElement[];
+      expect(grid.querySelector("mtable")).toBeTruthy();
+      expect([grid.getAttribute("role"), grid.getAttribute("tabindex")]).toEqual([null, "-1"]);
+      expect([plain.getAttribute("role"), plain.getAttribute("tabindex"), plain.getAttributeNames().sort()]).toEqual([null, null, ["class"]]);
+      wideInline = true;
+      await fire(h.ros);
+      expect([grid.getAttribute("role"), grid.getAttribute("aria-label"), grid.getAttribute("tabindex")]).toEqual(["group", "صيغة رياضية قابلة للتمرير", "0"]);
+    } finally { hostSw.mockRestore(); hostCw.mockRestore(); h.restore(); }
   });
 });

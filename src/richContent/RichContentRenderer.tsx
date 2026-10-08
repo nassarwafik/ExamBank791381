@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, lazy, memo, useEffect, useState, type ReactNode } from "react";
 import type { RichBlock, RichCell, RichContentV1, RichMark, RichRun } from "./richContentModel";
 import "./rich-content.css";
 
@@ -22,28 +22,43 @@ function MathInline({ source, display }: { source: string; display?: boolean }) 
   return <Suspense fallback={<code className="xp-math-src" dir="ltr">{source}</code>}><span className="xp-math-host"><RichMath source={source} display={display} /></span></Suspense>;
 }
 
-// Phase 21A (review fix 1): a display formula keeps the 20D.1 markup (a plain block: no extra tab stop, no landmark per formula) and becomes a
-// labelled, keyboard-scrollable group ONLY while it actually overflows its block (a wide matrix on a phone). The check re-runs when the lazy
-// formula arrives (DOM mutation) and on every size change of the block or of the formula.
-function MathBlock({ source }: { source: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+// Phase 21A (review fixes 1–2): a scroll box around a formula is a labelled, keyboard-scrollable group ONLY while the formula actually
+// overflows it (a wide matrix on a phone); otherwise it carries no role, no label and no tab stop. The check re-runs when the element
+// mounts (also after the lazy formula resolves), on DOM mutation inside it, and on every size change of the box or of the formula; while
+// the group holds keyboard focus it is kept (no focus loss when the viewport widens) and leaving it re-checks.
+const SCROLL_GROUP = { role: "group", "aria-label": "صيغة رياضية قابلة للتمرير", tabIndex: 0 } as const;
+const overflows = (el: HTMLElement) => el.scrollWidth > el.clientWidth + 1;
+function useScrollGroup(source: string) {
+  const [el, setEl] = useState<HTMLElement | null>(null);
   const [scrolls, setScrolls] = useState(false);
   useEffect(() => {
-    const el = ref.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const check = () => setScrolls(el.scrollWidth > el.clientWidth + 1);
+    const check = () => setScrolls(prev => overflows(el) || (prev && document.activeElement === el));
     const ro = new ResizeObserver(check);
     const watch = () => { ro.disconnect(); ro.observe(el); const m = el.querySelector("math"); if (m) ro.observe(m); check(); };
     const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(watch);
     mo?.observe(el, { childList: true, subtree: true });
     watch();
     return () => { ro.disconnect(); mo?.disconnect(); };
-  }, [source]);
-  return <div ref={ref} className="xp-math-block" {...(scrolls ? { role: "group", "aria-label": "صيغة رياضية قابلة للتمرير", tabIndex: 0 } : {})}><MathInline source={source} display /></div>;
+  }, [el, source]);
+  const onBlur = () => { if (el) setScrolls(overflows(el)); };
+  return [setEl, scrolls, onBlur] as const;                                  // [callback ref for the scroll box, is a scroll group, blur handler]
 }
+// A display formula keeps the 20D.1 markup (a plain block) unless it overflows.
+function MathBlock({ source }: { source: string }) {
+  const [attach, scrolls, onBlur] = useScrollGroup(source);
+  return <div ref={attach} className="xp-math-block" onBlur={onBlur} {...(scrolls ? SCROLL_GROUP : {})}><MathInline source={source} display /></div>;
+}
+// An inline formula holding a grid has a scroll-box host (CSS); a scroll box the browser would make a Tab stop on its own is taken out of
+// the Tab order (tabIndex -1) unless it overflows. Inline formulas without a grid keep the 20D.1 markup (MathInline).
+function InlineGridMath({ source }: { source: string }) {
+  const [attach, scrolls, onBlur] = useScrollGroup(source);
+  return <Suspense fallback={<code className="xp-math-src" dir="ltr">{source}</code>}><span ref={attach} className="xp-math-host" onBlur={onBlur} {...(scrolls ? SCROLL_GROUP : { tabIndex: -1 })}><RichMath source={source} /></span></Suspense>;
+}
+const HAS_GRID = /\\begin\{/;
 
 function Run({ run }: { run: RichRun }) {
-  if ("math" in run) return <MathInline source={run.math} />;
+  if ("math" in run) return HAS_GRID.test(run.math) ? <InlineGridMath source={run.math} /> : <MathInline source={run.math} />;
   let out: ReactNode = run.text;
   const marks = run.marks || [];
   for (let i = MARK_ORDER.length - 1; i >= 0; i--) {
