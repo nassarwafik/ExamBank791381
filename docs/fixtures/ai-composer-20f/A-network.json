@@ -11,7 +11,7 @@
   "metadata": {
     "aiComposer": {
       "v": 1,
-      "catalog": "AI_COMPOSER_CATALOG_V1",
+      "catalog": "AI_COMPOSER_CATALOG_V2",
       "coverage": [
         {
           "questionId": "aifx001t-1-1",

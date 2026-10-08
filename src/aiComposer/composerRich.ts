@@ -2,7 +2,7 @@
 // (strict schema; only the composer's rich vocabulary — no image, figure or columns, so no URL, data URL or layout nesting can ever be
 // authored), the code maps it field by field to the 20D.1 block, and the canonical validateRichContent decides (raw HTML / script URLs in
 // prose, bounds, exact keys…). Technical text keeps its own direction: CLI / code / math are LTR blocks, never Arabic paragraphs.
-import { validateRichContent, type RichContentV1 } from "../richContent/richContentModel";
+import { looksLikeRawHtml, validateRichContent, type RichContentV1 } from "../richContent/richContentModel";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_CALLOUT_VARIANTS, COMPOSER_RICH_BLOCKS, COMPOSER_RICH_CODE_LANGUAGES } from "./composerCatalog";
 import { cleanText, hasExactKeys, isArr, isEnum, isInt, isStr, sArr, sEnum, sInt, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
@@ -51,7 +51,14 @@ export function mapAiRichBlocks(raw: unknown, path = "richContent"): { ok: true;
       case "callout": blocks.push({ type: "callout", variant: b.variant, ...(title ? { title } : {}), runs: runs(text) }); break;
       case "divider": blocks.push({ type: "divider" }); break;
       case "keyValueGrid": blocks.push({ type: "keyValueGrid", items: (b.pairs as { label: string; value: string }[]).map(x => ({ label: cleanText(x.label), value: cleanText(x.value) })) }); break;
-      case "math": blocks.push({ type: "math", source: String(b.source || b.text).trim() }); break;
+      case "math": {
+        // 21A: multi-line grids keep LF line breaks. An AI formula that looks like markup (<script>, <math>, javascript:) is refused here even
+        // though the math language would read it as inert relations: the prompt contract says HTML is refused, and AI text is untrusted.
+        const source = String(b.source || b.text).replace(/\r\n?/g, "\n").trim();
+        if (looksLikeRawHtml(source)) return fail("الصيغة الرياضية لا تقبل وسوم HTML أو روابط script.", p);
+        blocks.push({ type: "math", source });
+        break;
+      }
     }
   }
   const v = validateRichContent({ schemaVersion: 1, blocks }, path);

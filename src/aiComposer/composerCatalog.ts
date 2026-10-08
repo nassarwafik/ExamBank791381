@@ -7,13 +7,18 @@ import { questionTypeDefinition, supportsQuestionTypeVersion, authoringQuestionT
 import { resolveSmartSimPlugin } from "../trustedSimRegistry";
 import { PRESENTATION_PRESETS } from "../presentation/presentationModel";
 import { RICH_BLOCK_TYPES, RICH_CODE_LANGUAGES, RICH_CALLOUT_VARIANTS } from "../richContent/richContentModel";
+import { MATH_LANGUAGE_VERSION, MATH_ENVIRONMENTS, MATH_COMMANDS, MATH_GRID_LIMITS, MATH_LIMITS, parseMath } from "../richContent/richMath";
+import { MATH_FEATURES } from "../richContent/mathFeatures";
 import { CODING_LANGUAGES } from "../codingLanguages";
 import { NET2_TEMPLATES } from "../networkTopology2/net2Templates";
 import { FREE_FALL_LIMITS } from "../physicsFreeFallModel";
 import { FUNCTION_STUDY_TASKS, FUNCTION_STUDY_LIMITS } from "../functionStudyModel";
 import "../trustedSimPlugins";
 
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V1";
+// V2 (Phase 21A): the catalog gained the Scientific Math v2 capability (scientificMath + its prompt contract). metadata.aiComposer.catalog
+// records the catalog of the exam's LAST composer operation (withComposerHistory re-stamps it): an exam last composed under V1 keeps "V1"
+// until its next composer operation; nothing validates or migrates it.
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V2";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
@@ -82,6 +87,16 @@ export const COMPOSER_RICH_CODE_LANGUAGES = RICH_CODE_LANGUAGES;
 export const COMPOSER_CALLOUT_VARIANTS = RICH_CALLOUT_VARIANTS;
 export const COMPOSER_TABLE_VARIANTS = Object.freeze(["bordered", "striped", "minimal"] as const);
 export const COMPOSER_CODING_LANGUAGES = Object.freeze(CODING_LANGUAGES.map(l => l.key));
+/** Phase 21A — the Scientific Math v2 capability, DERIVED from the ONE parser (richMath.ts) and its proven feature catalog (mathFeatures.ts):
+ *  the AI may write a `math` block whose source uses ONLY these commands / environments within these bounds; the canonical validator
+ *  (validateRichContent → parseMath) decides, and a refused formula makes the section invalid (bounded repair, never a raw fallback). */
+export const COMPOSER_SCIENTIFIC_MATH = Object.freeze({
+  version: MATH_LANGUAGE_VERSION,
+  environments: MATH_ENVIRONMENTS,
+  commands: MATH_COMMANDS,
+  features: MATH_FEATURES,
+  limits: Object.freeze({ chars: MATH_LIMITS.chars, nodes: MATH_LIMITS.nodes, depth: MATH_LIMITS.depth, rows: MATH_GRID_LIMITS.rows, cols: MATH_GRID_LIMITS.cols, cells: MATH_GRID_LIMITS.cells, casesCols: MATH_GRID_LIMITS.casesCols, alignedCols: MATH_GRID_LIMITS.alignedCols })
+});
 
 export type ComposerCatalog = {
   version: string;
@@ -93,6 +108,7 @@ export type ComposerCatalog = {
   presets: readonly string[];
   richBlocks: readonly string[];
   codingLanguages: readonly string[];
+  scientificMath: typeof COMPOSER_SCIENTIFIC_MATH;
   unsupported: UnsupportedCapability[];
 };
 
@@ -118,6 +134,7 @@ export function buildComposerCatalog(): ComposerCatalog {
     return { pluginKey: p.pluginKey, pluginVersion: p.pluginVersion, subject: p.subject };
   });
   for (const b of COMPOSER_RICH_BLOCKS) if (!(RICH_BLOCK_TYPES as readonly string[]).includes(b)) throw new Error("composer catalog: rich block not in 20D.1 vocabulary " + b);
+  for (const f of COMPOSER_SCIENTIFIC_MATH.features) if (!parseMath(f.example).ok) throw new Error("composer catalog: math feature example refused by the parser " + f.id);
   return {
     version: COMPOSER_CATALOG_VERSION,
     questionTypes,
@@ -128,6 +145,7 @@ export function buildComposerCatalog(): ComposerCatalog {
     presets: COMPOSER_PRESETS,
     richBlocks: COMPOSER_RICH_BLOCKS,
     codingLanguages: COMPOSER_CODING_LANGUAGES,
+    scientificMath: COMPOSER_SCIENTIFIC_MATH,
     unsupported: COMPOSER_UNSUPPORTED.map(u => ({ id: u.id, label: u.label }))
   };
 }
@@ -144,7 +162,16 @@ export function catalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog
     "Presentation presets: " + catalog.presets.join(", "),
     "Rich blocks: " + catalog.richBlocks.join(", ") + " (no images, no HTML, no CSS, no URLs).",
     "Coding languages: " + catalog.codingLanguages.join(", "),
+    scientificMathForPrompt(catalog.scientificMath),
     "NOT supported (never simulate; propose a theory question or omit and report it): " + catalog.unsupported.map(u => u.label).join(", ")
   ];
   return lines.join("\n");
+}
+/** The bounded math contract line (21A): the exact command and environment vocabulary, the bounds, and the proven examples. */
+function scientificMathForPrompt(m: ComposerCatalog["scientificMath"]): string {
+  const L = m.limits;
+  return "Math blocks (scientific notation language v" + m.version + "): type math, the formula in source WITHOUT $ delimiters; commands ONLY \\" + m.commands.join(" \\") +
+    "; environments ONLY " + m.environments.join(", ") + " as \\begin{name}…\\end{name} (cells separated by &, rows by \\\\, never nested, at most " + L.rows + " rows, " + L.cols + " columns, " + L.cells + " cells; cases and aligned at most " + L.casesCols + " columns; & and \\\\ only inside an environment)" +
+    "; \\mathbb only N Z Q R C; words in \\text{…} (Arabic allowed); units and chemical symbols in \\mathrm{…}; at most " + L.chars + " characters, " + L.nodes + " nodes, nesting depth " + L.depth +
+    ". Examples: " + m.features.map(f => f.example).join(" ; ") + ". Anything else (\\href, \\url, \\def, \\newcommand, \\color, \\begin{array}, HTML, CSS, scripts, macros) is refused and the section is regenerated.";
 }

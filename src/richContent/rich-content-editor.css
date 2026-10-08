@@ -38,6 +38,12 @@
 .rc-editor .rc-math-status{margin:0;font-size:12.5px}
 .rc-editor .rc-math-ok{color:#047857;font-weight:700}
 .rc-editor .rc-math-bad{color:#b91c1c}
+.rc-editor .rc-math-source{min-block-size:3.2em;resize:vertical;font-family:var(--eb-font-mono,ui-monospace,monospace);white-space:pre}
+.rc-editor .rc-math-preview{border:1px dashed var(--line2,#cdd5e0);border-radius:8px;padding:6px 10px;background:#fff;max-inline-size:100%;overflow-x:auto}
+.rc-editor .rc-math-palette-toggle{align-self:flex-start}
+.rc-editor .rc-math-palette{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px;background:#f8fafc}
+.rc-editor .rc-math-group-title{margin:0;font-size:12px;font-weight:800;color:var(--muted,#64748b)}
+.rc-editor .rc-math-snippets{display:flex;flex-wrap:wrap;gap:4px}
 .rc-editor .rc-issues{margin:0;padding-block:6px;padding-inline:26px 10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:12.5px;line-height:1.7}
 .rc-editor .rc-error{margin:0;color:#b91c1c;font-size:12.5px}
 .rc-editor .rc-note{margin:0;color:#92400e;font-size:12px}

@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, type ReactNode } from "react";
+import { Suspense, lazy, memo, useEffect, useState, type ReactNode } from "react";
 import type { RichBlock, RichCell, RichContentV1, RichMark, RichRun } from "./richContentModel";
 import "./rich-content.css";
 
@@ -22,8 +22,45 @@ function MathInline({ source, display }: { source: string; display?: boolean }) 
   return <Suspense fallback={<code className="xp-math-src" dir="ltr">{source}</code>}><span className="xp-math-host"><RichMath source={source} display={display} /></span></Suspense>;
 }
 
+// Phase 21A (review fixes 1–2): a scroll box around a formula is a labelled, keyboard-scrollable group ONLY while the formula actually
+// overflows it (a wide matrix on a phone); otherwise it carries no role, no label and no tab stop. The check re-runs when the element
+// mounts (also after the lazy formula resolves), on DOM mutation inside it, and on every size change of the box or of the formula; while
+// the group holds keyboard focus it is kept (no focus loss when the viewport widens) and leaving it re-checks. Until a first measurement
+// (or without ResizeObserver) the state is unknown (null) and nothing is added or removed (review fix 3).
+const SCROLL_GROUP = { role: "group", "aria-label": "صيغة رياضية قابلة للتمرير", tabIndex: 0 } as const;
+const overflows = (el: HTMLElement) => el.scrollWidth > el.clientWidth + 1;
+function useScrollGroup(source: string) {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [scrolls, setScrolls] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const check = () => setScrolls(prev => overflows(el) || (prev === true && document.activeElement === el));
+    const ro = new ResizeObserver(check);
+    const watch = () => { ro.disconnect(); ro.observe(el); const m = el.querySelector("math"); if (m) ro.observe(m); check(); };
+    const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(watch);
+    mo?.observe(el, { childList: true, subtree: true });
+    watch();
+    return () => { ro.disconnect(); mo?.disconnect(); };
+  }, [el, source]);
+  const onBlur = () => { if (el) setScrolls(prev => (prev === null ? null : overflows(el))); };
+  return [setEl, scrolls, onBlur] as const;                                  // [callback ref for the scroll box, overflows (null: unmeasured), blur handler]
+}
+// A display formula keeps the 20D.1 markup (a plain block) unless it overflows.
+function MathBlock({ source }: { source: string }) {
+  const [attach, scrolls, onBlur] = useScrollGroup(source);
+  return <div ref={attach} className="xp-math-block" onBlur={onBlur} {...(scrolls ? SCROLL_GROUP : {})}><MathInline source={source} display /></div>;
+}
+// An inline formula holding a grid has a scroll-box host (CSS); a scroll box the browser would make a Tab stop on its own is taken out of
+// the Tab order (tabIndex -1) once measured to fit. Inline formulas without a grid keep the 20D.1 markup (MathInline).
+function InlineGridMath({ source }: { source: string }) {
+  const [attach, scrolls, onBlur] = useScrollGroup(source);
+  return <Suspense fallback={<code className="xp-math-src" dir="ltr">{source}</code>}><span ref={attach} className="xp-math-host" onBlur={onBlur} {...(scrolls ? SCROLL_GROUP : scrolls === false ? { tabIndex: -1 } : {})}><RichMath source={source} /></span></Suspense>;
+}
+// Does the source spell a grid environment? Mirrors the tokenizer: `\begin`, then any whitespace it skips (space, tab, LF, CR), then `{`.
+const HAS_GRID = /\\begin[ \t\n\r]*\{/;
+
 function Run({ run }: { run: RichRun }) {
-  if ("math" in run) return <MathInline source={run.math} />;
+  if ("math" in run) return HAS_GRID.test(run.math) ? <InlineGridMath source={run.math} /> : <MathInline source={run.math} />;
   let out: ReactNode = run.text;
   const marks = run.marks || [];
   for (let i = MARK_ORDER.length - 1; i >= 0; i--) {
@@ -97,7 +134,7 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "divider": return <hr className="xp-divider" />;
     case "keyValueGrid": return <dl className="xp-kv">{b.items.map((it, i) => <div key={i}><dt>{it.label}</dt><dd dir="auto">{it.value}</dd></div>)}</dl>;
     case "columns": return <div className="xp-columns">{b.columns.map((c, i) => <div className="xp-column" key={i}><Blocks blocks={c.blocks} /></div>)}</div>;
-    case "math": return <div className="xp-math-block"><MathInline source={b.source} display /></div>;
+    case "math": return <MathBlock source={b.source} />;
   }
   return null;
 }

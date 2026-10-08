@@ -18,6 +18,8 @@ import "./rich-content-editor.css";
 // authority's (validateRichContent) issues are shown inline in Arabic, and the live preview renders the valid blocks through the trusted
 // renderer (lazy).
 const RichContentRenderer = lazy(() => import("./RichContentRenderer"));
+// Phase 21A — the Scientific Math v2 snippet palette loads only when an author opens it
+const MathSnippetPalette = lazy(() => import("./MathSnippetPalette"));
 
 type Props = {
   value: RichContentV1 | undefined;
@@ -601,16 +603,37 @@ function KeyValueBody({ block: b, name, set, disabled }: { block: Extract<RichBl
 }
 
 function MathBody({ block: b, name, set, disabled }: { block: Extract<RichBlock, { type: "math" }>; name: string; set: (b: RichBlock) => void; disabled: boolean }) {
+  // Phase 21A: a multi-line LTR source field (matrices / cases / aligned span lines), the parser's live verdict, a trusted preview through
+  // the SAME lazy renderer, and an optional snippet palette that inserts only parser-proven syntax at the caret.
+  const field = useRef<HTMLTextAreaElement>(null);
+  const caret = useRef<number | null>(null);
+  const [palette, setPalette] = useState(false);
   const parsed = useMemo(() => (b.source.trim() ? parseMath(b.source) : null), [b.source]);
+  useEffect(() => {
+    const el = field.current, at = caret.current;
+    if (el && at !== null) { caret.current = null; el.focus(); el.setSelectionRange(at, at); }
+  }, [b.source]);
+  const insert = (snippet: string) => {
+    const el = field.current, src = b.source;
+    const start = el ? el.selectionStart : src.length, end = el ? el.selectionEnd : src.length;
+    const before = src.slice(0, start), glue = before && !/\s$/.test(before) ? " " : "";
+    const next = before + glue + snippet + src.slice(end);
+    if (next.length > RICH_LIMITS.mathChars) return;
+    caret.current = before.length + glue.length + snippet.length;
+    set({ ...b, source: next });
+  };
   let status: ReactNode;
   if (!parsed) status = <span className="rc-math-bad">اكتب الصيغة.</span>;
   else if (parsed.ok) status = <span className="rc-math-ok">✓ صيغة صالحة</span>;
   else status = <span className="rc-math-bad">{parsed.message}</span>;
   return (
     <div className="rc-math-editor">
-      <input className="sb-input rc-code" dir="ltr" lang="en" spellCheck={false} value={b.source} maxLength={RICH_LIMITS.mathChars} placeholder="\frac{a}{b}" aria-label={"صيغة " + name} onChange={e => set({ ...b, source: e.target.value })} disabled={disabled} />
+      <textarea ref={field} className="sb-input rc-code rc-math-source" dir="ltr" lang="en" spellCheck={false} rows={Math.min(8, Math.max(2, b.source.split("\n").length))} value={b.source} maxLength={RICH_LIMITS.mathChars} placeholder="\frac{a}{b}" aria-label={"صيغة " + name} onChange={e => set({ ...b, source: e.target.value })} disabled={disabled} />
       <p className="rc-math-status" aria-live="polite">{status}</p>
-      <p className="rc-hint">صيغ LaTeX المسموحة فقط (مثل \frac، \sqrt، ^، _، \times، \le، الحروف اليونانية). لا أوامر خارجية.</p>
+      {parsed && parsed.ok && <div className="rc-math-preview" aria-label={"معاينة صيغة " + name}><Suspense fallback={null}><RichContentRenderer content={{ schemaVersion: 1, blocks: [b] }} /></Suspense></div>}
+      <button type="button" className="sb-mini-btn rc-math-palette-toggle" aria-expanded={palette} onClick={() => setPalette(v => !v)} disabled={disabled}>{palette ? "إخفاء النماذج" : "نماذج الصيغ العلمية"}</button>
+      {palette && <Suspense fallback={null}><MathSnippetPalette onInsert={insert} disabled={disabled} /></Suspense>}
+      <p className="rc-hint">{"لغة الصيغ العلمية الآمنة (الإصدار 2) فقط: \\frac، \\sqrt، ^ و _، الحروف اليونانية، \\int و\\iint و\\sum و\\lim، المصفوفات \\begin{pmatrix} … \\end{pmatrix} وcases وaligned (الخلايا بـ & والأسطر بـ \\\\)، \\mathbb{R}، \\mathrm للوحدات والصيغ الكيميائية. لا أوامر خارجية ولا ماكرو."}</p>
     </div>
   );
 }
