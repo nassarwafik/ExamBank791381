@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { buildComposerCatalog, catalogForPrompt, COMPOSER_CATALOG_VERSION, COMPOSER_SCIENTIFIC_MATH } from "./composerCatalog";
 import { mapAiRichBlocks } from "./composerRich";
 import { runGeneration, type ComposerTransport } from "./composerRun";
+import { withComposerHistory } from "./composerExam";
 import * as F from "./testing/composerFakeAi";
 import { MATH_COMMANDS, MATH_ENVIRONMENTS, MATH_GRID_LIMITS, MATH_LANGUAGE_VERSION, MATH_LIMITS, parseMath } from "../richContent/richMath";
 import { MATH_FEATURES } from "../richContent/mathFeatures";
@@ -72,6 +73,7 @@ describe("21A-AI1 the catalog derives Scientific Math v2 from code", () => {
     expect(envs).toEqual([...MATH_ENVIRONMENTS]);                                                    // the exact list, not a substring — mutation M50
     for (const f of MATH_FEATURES) expect(line, f.id).toContain(f.example);
     for (const n of [MATH_LIMITS.chars, MATH_LIMITS.nodes, MATH_LIMITS.depth, MATH_GRID_LIMITS.rows, MATH_GRID_LIMITS.cols, MATH_GRID_LIMITS.cells]) expect(line).toContain(String(n));
+    expect(line).toContain("cases and aligned at most " + MATH_GRID_LIMITS.casesCols + " columns");     // reviewer mutant R20
     const offered = line.slice(line.indexOf("commands ONLY ") + 14, line.indexOf("; environments ONLY")).split(" ").map(s => s.replace(/^\\/, ""));
     expect(offered).toEqual([...MATH_COMMANDS]);
     for (const bad of ["href", "url", "html", "style", "class", "def", "newcommand", "input", "include", "color", "array"]) expect(offered, bad).not.toContain(bad);
@@ -83,6 +85,8 @@ describe("21A-AI2 AI math blocks → RichContentV1 through the canonical validat
     const r = mapAiRichBlocks([MATRIX, DET, CASES, ALIGNED_CRLF, CHEM, COMPLEX, INTEGRAL].map(F.math));
     expect(r.ok).toBe(true); if (!r.ok) return;
     expect(r.richContent!.blocks.map(b => (b as { source: string }).source)).toEqual([MATRIX, DET, CASES, ALIGNED_LF, CHEM, COMPLEX, INTEGRAL]);
+    const bare = mapAiRichBlocks([F.math(ALIGNED_CRLF.replace(/\r\n/g, "\r"))]);                       // bare CR (reviewer mutant R19)
+    expect(bare.ok && bare.richContent!.blocks.map(b => (b as { source: string }).source)).toEqual([ALIGNED_LF]);
   });
   it("every ADVERSARIAL formula is refused with AI_RICH_CONTENT_INVALID (escape hatches, macros, files, unknown / malformed / nested environments, separators outside a grid, HTML / CSS / JS, bounds)", () => {
     const ADVERSARIAL = [
@@ -111,6 +115,9 @@ describe("21A-AI2b HTML-looking formulas", () => {
       expect(r.ok, s).toBe(false);
       if (!r.ok) expect(r.issues.map(i => i.code)).toEqual(["AI_RICH_CONTENT_INVALID"]);
     }
+    // documented false positives (review fix 1, design record §24): inner-product / expectation-value spellings look like tags → refused
+    // (fails closed: one bounded repair round; the prompt steers to ( , ) or \\text)
+    for (const s of ["<a, b>", "<p>"]) { expect(parseMath(s).ok, s).toBe(true); expect(mapAiRichBlocks([F.math(s)]).ok, s).toBe(false); }
     for (const s of ["a < b", "0 < x < 1", "a/b", "x > y \\Rightarrow f(x) > f(y)"]) {
       expect(looksLikeRawHtml(s), s).toBe(false);
       expect(mapAiRichBlocks([F.math(s)]).ok, s).toBe(true);
@@ -158,5 +165,18 @@ describe("21A-AI3 scripted provider through the REAL endpoint and orchestration"
     expect(r.failure.issues.map(i => i.code)).toContain("AI_RICH_CONTENT_INVALID");
     expect(calls.map(c => c.schemaName)).toEqual(["ai_exam_plan", "ai_exam_section", "ai_exam_section", "ai_exam_section"]);
     expect("result" in r).toBe(false);
+  });
+});
+
+
+describe("21A-AI4 catalog provenance (review fix 1: what metadata.aiComposer.catalog really records)", () => {
+  it("an exam last composed under V1 keeps \"V1\" until its next composer operation, which re-stamps the CURRENT catalog (history entries carry none)", () => {
+    const entry = { at: "2026-01-01T00:00:00.000Z", mode: "generate", summary: "قديم", baseRevision: "r0", status: "applied" as const, operations: 1, warnings: 0 };
+    const v1 = { examId: "E", title: "t", sections: [], metadata: { aiComposer: { v: 1, catalog: "AI_COMPOSER_CATALOG_V1", coverage: [], history: [entry] } } } as unknown as StructuredExam;
+    expect(JSON.parse(JSON.stringify(v1)).metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V1");     // stored / imported untouched
+    const next = withComposerHistory(v1, { ...entry, at: "2026-10-08T00:00:00.000Z", mode: "modify" }) as unknown as { metadata: { aiComposer: { catalog: string; history: { mode: string }[] } } };
+    expect(next.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V2");
+    expect(next.metadata.aiComposer.history.map(h => h.mode)).toEqual(["generate", "modify"]);
+    expect(Object.keys(next.metadata.aiComposer.history[0])).not.toContain("catalog");
   });
 });

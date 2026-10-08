@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, act } from "@testing-library/react";
 import RichMath from "./RichMath";
+import RichContentRenderer from "./RichContentRenderer";
 import * as M from "./richMath";
 import { MATH_FEATURES } from "./mathFeatures";
 import { oldGrammarCandidates } from "./testing/mathCorpus";
@@ -53,6 +54,10 @@ describe("21A-R1 grids render as MathML tables with fixed code-owned fences", ()
     expect(a.getAttribute("class")).toBe("xp-math-aligned");
     expect(a.querySelectorAll("mtr")[1].querySelectorAll("mtd")).toHaveLength(2);                                  // the empty continuation lhs is a real cell
   });
+  it("\\ddot renders the fixed double-dot accent ¨ over its base (reviewer mutant R08)", () => {
+    const o = mathOf("\\ddot{x}").querySelector("mover")!;
+    expect([o.getAttribute("accent"), o.lastElementChild!.textContent]).toEqual(["true", "¨"]);
+  });
   it("number sets and multiple integrals render as fixed characters", () => {
     expect(mathOf("\\mathbb{R}").querySelector("mi")!.textContent).toBe("ℝ");
     const op = mathOf("\\iint_{D} f \\, dA").querySelector("mo")!;
@@ -72,6 +77,8 @@ describe("21A-R2 RTL / LTR and accessibility", () => {
     expect([t.textContent, t.getAttribute("dir")]).toEqual(["السرعة", "rtl"]);
     expect(mathOf("\\text{if } x").querySelector("mtext")!.getAttribute("dir")).toBeNull();
     for (const mi of c.querySelectorAll("mi")) expect(mi.getAttribute("dir")).toBeNull();
+    // the whole RTL range, not only the basic Arabic block (reviewer mutant R12): Hebrew, Arabic Supplement, Arabic Presentation Forms-B
+    for (const t of ["שלום", "ݐݑ", "ﻻ"]) expect(mathOf("\\text{" + t + "}").querySelector("mtext")!.getAttribute("dir"), t).toBe("rtl");
     const cases = mathOf("\\begin{cases} x^2 & \\text{إذا كان } x \\ge 0 \\\\ -x & \\text{إذا كان } x < 0 \\end{cases}");
     expect([...cases.querySelectorAll("mtext")].map(m => m.getAttribute("dir"))).toEqual(["rtl", "rtl"]);
   });
@@ -89,7 +96,12 @@ describe("21A-R2 RTL / LTR and accessibility", () => {
     expect(screen).toMatch(/\.xp-math-block \.xp-math\{[^}]*inline-size:max-content[^}]*max-inline-size:none[^}]*margin-inline:auto/);
     expect(screen).toMatch(/\.xp-math-host:has\(mtable\):not\(\.xp-math-block > \*\)\{[^}]*display:inline-block[^}]*max-inline-size:100%[^}]*overflow-x:auto[^}]*direction:ltr/);
     expect(screen).toMatch(/\.xp-math-host:not\(\.xp-math-block > \*\) > \.xp-math:has\(mtable\)\{[^}]*inline-size:max-content/);
+    // MathML Core has no columnalign in Chromium: these text-align rules ARE the cases / aligned alignment (reviewer mutants R24 / R25)
+    expect(screen).toMatch(/mtable\.xp-math-cases > mtr > mtd\{ text-align:left; \}/);
+    expect(screen).toMatch(/mtable\.xp-math-aligned > mtr > mtd:first-child\{ text-align:right; \}/);
+    expect(screen).toMatch(/mtable\.xp-math-aligned > mtr > mtd:last-child\{ text-align:left; \}/);
     const print = css.slice(css.indexOf("@media print"));
+    expect(print).toMatch(/:is\([^)]*\.xp-math-block[^)]*\)\{ break-inside:avoid; \}/);                    // reviewer mutant R22
     expect(print).toMatch(/:is\([^)]*\.xp-math-host[^)]*\)\{ overflow:visible/);
     expect(print).toMatch(/:is\(\.xp-math-block,\.xp-math-host\)\{[^}]*max-inline-size:none/);
   });
@@ -164,5 +176,34 @@ describe("21A-R4 renderer freeze — the 20D.1 MathML is byte-stable (captured o
     expect(SLICES * PER_SLICE).toBe(1500);
     if (process.env.CAPTURE_21A_RENDER !== "1") expect(PINS).toHaveLength(SLICES);
     expect(ARABIC.test("ع")).toBe(true);
+  });
+});
+
+
+describe("21A-R5 display formula accessibility (review fix 1): the 20D.1 markup unless the formula actually scrolls", () => {
+  const block = () => document.querySelector(".xp-math-block") as HTMLElement;
+  const settle = async () => { for (let i = 0; i < 10; i++) await act(async () => { await new Promise(r => setTimeout(r, 10)); }); };
+  it("a formula that fits keeps the plain 20D.1 block: no role, no label, no tab stop (no landmark or extra Tab per formula)", async () => {
+    render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "math", source: "x^{2}" }, { type: "math", source: "\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}" }] }} />);
+    await settle();
+    for (const b of document.querySelectorAll(".xp-math-block")) {
+      expect([b.getAttribute("role"), b.getAttribute("aria-label"), b.getAttribute("tabindex")]).toEqual([null, null, null]);
+      expect(b.querySelector("math")).toBeTruthy();
+    }
+  });
+  it("a formula wider than its block becomes a labelled, keyboard-focusable group (role=group, not a landmark), and reverts when it fits again", async () => {
+    let wide = true;
+    const sw = vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (this: HTMLElement) { return this.classList.contains("xp-math-block") && wide ? 914 : 0; });
+    const cw = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) { return this.classList.contains("xp-math-block") ? 328 : 0; });
+    const observers: (() => void)[] = [];
+    vi.stubGlobal("ResizeObserver", class { cb: () => void; constructor(cb: () => void) { this.cb = cb; observers.push(cb); } observe() { this.cb(); } disconnect() {} });
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "math", source: "\\begin{pmatrix} a & b & c & d & e & f & g & h \\end{pmatrix}" }] }} />);
+      await settle();
+      expect([block().getAttribute("role"), block().getAttribute("aria-label"), block().getAttribute("tabindex")]).toEqual(["group", "صيغة رياضية قابلة للتمرير", "0"]);
+      wide = false;
+      await act(async () => { for (const cb of observers) cb(); });
+      expect([block().getAttribute("role"), block().getAttribute("tabindex")]).toEqual([null, null]);
+    } finally { sw.mockRestore(); cw.mockRestore(); vi.unstubAllGlobals(); }
   });
 });

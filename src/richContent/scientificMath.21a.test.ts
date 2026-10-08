@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as M from "./richMath";
 import type { MathNode } from "./richMath";
 import { MATH_FEATURES } from "./mathFeatures";
+import { oldGrammarCandidates } from "./testing/mathCorpus";
 
 // Phase 21A — SCIENTIFIC MATH v2: the safe, allow-listed, bounded notation language. Fail-first on 60ddadc (no grids, no environments,
 // no number sets, no multiple integrals, no language identity). The grammar stays NON-Turing-complete: a fixed environment allow-list,
@@ -196,9 +197,15 @@ describe("21A-S6 calculus, complex, number sets, units, chemistry, electricity, 
     "\\vec{F} = m\\vec{a}", "\\angle ABC = 90^{\\circ}", "AB \\perp CD", "AB \\parallel CD", "\\triangle ABC", "\\hbar \\omega", "\\ddot{x} = -\\omega^2 x", "\\sinh x", "\\arctan\\left( \\frac{y}{x} \\right)"
   ];
   it("every certified scientific expression parses", () => { for (const s of CERTIFIED) ok(s); });
+  it("\\ddot is the double-dot accent ¨ (distinct from \\dot ˙) — reviewer mutant R08", () => {
+    expect(find(ok("\\ddot{x}"), "accent")[0].v).toBe("¨");
+    expect(find(ok("\\dot{x}"), "accent")[0].v).toBe("˙");
+  });
   it("number sets: \\mathbb accepts ONLY N, Z, Q, R, C (braced or single letter) — no generic styling engine", () => {
     for (const [s, v] of [["\\mathbb{R}", "ℝ"], ["\\mathbb{C}", "ℂ"], ["\\mathbb{N}", "ℕ"], ["\\mathbb{Z}", "ℤ"], ["\\mathbb{Q}", "ℚ"], ["\\mathbb R", "ℝ"]] as const) expect(find(ok(s), "id")[0].v, s).toBe(v);
     for (const s of ["\\mathbb{X}", "\\mathbb{RR}", "\\mathbb{}", "\\mathbb", "\\mathbb{r}", "\\mathbb{\\alpha}", "\\mathbb{1}", "\\mathbb{R", "\\mathbb{__proto__}", "\\mathbb{ R }x"]) refused(s);
+    // review fix 1 (reviewer mutant R01): the braced form must close right after its ONE letter — even where an outer group would balance
+    for (const s of ["{\\mathbb{Rx}", "x^{\\mathbb{R2}", "\\frac{\\mathbb{Ra}{b}"]) refused(s);
   });
   it("new symbols map to fixed code-owned values; \\iint / \\iiint are large operators", () => {
     const v = (s: string) => JSON.stringify(ok(s));
@@ -226,5 +233,29 @@ describe("21A-S7 the parser never throws and refuses deterministically", () => {
   });
   it("non-string input and whitespace-only input are refused, never thrown", () => {
     for (const s of [undefined, null, 1, {}, [], "", "   ", "\n\r\t"]) expect(M.parseMath(s as unknown).ok).toBe(false);
+  });
+});
+
+
+describe("21A-S8 a carriage return is whitespace and nothing else (review fix 1: the v2 tokenizer widening, measured)", () => {
+  it("for 3,000 old-grammar candidates, CR / CRLF in place of unescaped spaces or appended parse EXACTLY like the source with each CR read as a space", () => {
+    const next = oldGrammarCandidates(21301);
+    let compared = 0, accepted = 0;
+    for (let i = 0; i < 3000; i++) {
+      const s = next();
+      // only UNESCAPED spaces: "\\ " is the escaped-space command, and a CR right after a backslash is refused (as on 60ddadc), never a space
+      for (const v of [s.replace(/(?<!\\) /g, "\r"), s.replace(/(?<!\\) /g, "\r\n"), s + "\r\n", "\r" + s]) {
+        if (v.length > M.MATH_LIMITS.chars) continue;
+        const a = M.parseMath(v), b = M.parseMath(v.replace(/\r/g, " "));
+        expect(a, JSON.stringify(v).slice(0, 120)).toEqual(b);
+        compared++; if (a.ok) accepted++;
+      }
+    }
+    expect(compared).toBeGreaterThan(11000);
+    expect(accepted).toBeGreaterThan(3000);
+    expect(M.parseMath("E = mc^2\r\n")).toEqual(M.parseMath("E = mc^2  "));                      // a stored block with a trailing CRLF
+    expect(M.parseMath("\\text{a\rb}")).toEqual(M.parseMath("\\text{a b}"));                       // inside \text a CR is one space
+    expect(M.parseMath("a \\ b").ok).toBe(true);
+    refused("a \\\r b");                                                                            // backslash + CR is not an escaped space
   });
 });

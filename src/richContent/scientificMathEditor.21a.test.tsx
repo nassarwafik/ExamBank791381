@@ -3,7 +3,8 @@ import { describe, it, expect, afterEach } from "vitest";
 import { useState } from "react";
 import { render, cleanup, act, fireEvent, screen, within } from "@testing-library/react";
 import RichContentEditor from "./RichContentEditor";
-import { MATH_FEATURE_LABELS } from "./MathSnippetPalette";
+import { MATH_FEATURE_LABELS } from "./mathFeatureLabels";
+import MathSnippetPalette from "./MathSnippetPalette";
 import { MATH_FEATURES } from "./mathFeatures";
 import { parseMath } from "./richMath";
 import { parseInlineMarkdown, markdownToRichContent } from "./markdownToRichContent";
@@ -144,6 +145,41 @@ describe("21A-ED2 the snippet palette", () => {
     await settle();
     expect(sourceOf(box.value)).toBe(long);
     expect(box.emits).toBe(before);
+  });
+  it("a MIDDLE insertion leaves the caret right after the snippet (reviewer mutant R16)", async () => {
+    const box = mount("x = 1");
+    const p = await openPalette();
+    field().setSelectionRange(1, 1);                                                                // after "x"
+    fireEvent.click(snippet(p, "derivatives"));
+    await settle();
+    const ex = byId("derivatives").example;
+    expect(sourceOf(box.value)).toBe("x " + ex + " = 1");
+    expect([field().selectionStart, field().selectionEnd]).toEqual([2 + ex.length, 2 + ex.length]);
+    expect(document.activeElement).toBe(field());
+  });
+  it("an insert that lands EXACTLY on 2,000 characters is accepted; one more character is refused (reviewer mutant R14)", async () => {
+    const ex = byId("matrices").example;
+    const exact = "y".repeat(RICH_LIMITS.mathChars - ex.length - 1) + " ";                          // ends in a space: no glue
+    let box = mount(exact);
+    let p = await openPalette();
+    fireEvent.click(snippet(p, "matrices"));
+    await settle();
+    expect(sourceOf(box.value).length).toBe(RICH_LIMITS.mathChars);
+    cleanup();
+    const over = "y".repeat(RICH_LIMITS.mathChars - ex.length);                                    // needs one glue space: 2,001
+    box = mount(over);
+    p = await openPalette();
+    fireEvent.click(snippet(p, "matrices"));
+    await settle();
+    expect(sourceOf(box.value)).toBe(over);
+  });
+  it("every palette button honours `disabled` and inserts nothing (reviewer mutant R17)", () => {
+    const calls: string[] = [];
+    render(<MathSnippetPalette onInsert={s => calls.push(s)} disabled />);
+    const buttons = [...document.querySelectorAll("button.rc-math-snippet")] as HTMLButtonElement[];
+    expect(buttons.length).toBe(MATH_FEATURES.length);
+    for (const b of buttons) { expect(b.disabled, b.dataset.feature).toBe(true); fireEvent.click(b); }
+    expect(calls).toEqual([]);
   });
   it("is disabled with the editor", async () => {
     mount("x", true);

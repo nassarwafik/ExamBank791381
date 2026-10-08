@@ -15,8 +15,9 @@ import { FREE_FALL_LIMITS } from "../physicsFreeFallModel";
 import { FUNCTION_STUDY_TASKS, FUNCTION_STUDY_LIMITS } from "../functionStudyModel";
 import "../trustedSimPlugins";
 
-// V2 (Phase 21A): the catalog gained the Scientific Math v2 capability (scientificMath + its prompt contract). Exams composed under V1 keep
-// their recorded provenance; nothing validates or migrates it.
+// V2 (Phase 21A): the catalog gained the Scientific Math v2 capability (scientificMath + its prompt contract). metadata.aiComposer.catalog
+// records the catalog of the exam's LAST composer operation (withComposerHistory re-stamps it): an exam last composed under V1 keeps "V1"
+// until its next composer operation; nothing validates or migrates it.
 export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V2";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */

@@ -10,7 +10,7 @@ import * as M from "./richMath";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../..");
 const read = (p: string) => fs.readFileSync(path.join(root, p), "utf8");
-const MATH_RUNTIME = ["src/richContent/richMath.ts", "src/richContent/mathFeatures.ts", "src/richContent/RichMath.tsx", "src/richContent/MathSnippetPalette.tsx"];
+const MATH_RUNTIME = ["src/richContent/richMath.ts", "src/richContent/mathFeatures.ts", "src/richContent/mathFeatureLabels.ts", "src/richContent/RichMath.tsx", "src/richContent/MathSnippetPalette.tsx"];
 const HTML_SINKS = /dangerouslySetInnerHTML|\.innerHTML\s*=|\.outerHTML\s*=|insertAdjacentHTML|document\.write|DOMParser|createContextualFragment|srcdoc|\beval\(|new Function\(/;
 
 describe("21A-G1 source security guard (extends 20D1-RR2)", () => {
@@ -20,7 +20,7 @@ describe("21A-G1 source security guard (extends 20D1-RR2)", () => {
       expect(src, f).not.toMatch(HTML_SINKS);
       expect(src, f).not.toMatch(/\bfetch\(|XMLHttpRequest|WebSocket|navigator\.sendBeacon|\bimport\(|\brequire\(|new RegExp\(/);
     }
-    for (const f of ["src/richContent/richMath.ts", "src/richContent/mathFeatures.ts"]) expect(read(f), f).not.toMatch(/from "react"|document\.|window\./);
+    for (const f of ["src/richContent/richMath.ts", "src/richContent/mathFeatures.ts", "src/richContent/mathFeatureLabels.ts"]) expect(read(f), f).not.toMatch(/from "react"|document\.|window\./);
   });
   it("the renderer creates MathML ONLY through the closed `el` vocabulary plus the fixed <math> root; no name or attribute is computed from source", () => {
     const src = read("src/richContent/RichMath.tsx");

@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, type ReactNode } from "react";
+import { Suspense, lazy, memo, useEffect, useRef, useState, type ReactNode } from "react";
 import type { RichBlock, RichCell, RichContentV1, RichMark, RichRun } from "./richContentModel";
 import "./rich-content.css";
 
@@ -20,6 +20,26 @@ const MARK_TAG: Record<RichMark, "strong" | "em" | "u" | "sup" | "sub" | "code">
 function MathInline({ source, display }: { source: string; display?: boolean }) {
   // The boundary's direct host child is an HTML element (React hides / reveals a boundary's top-level host nodes through their inline style).
   return <Suspense fallback={<code className="xp-math-src" dir="ltr">{source}</code>}><span className="xp-math-host"><RichMath source={source} display={display} /></span></Suspense>;
+}
+
+// Phase 21A (review fix 1): a display formula keeps the 20D.1 markup (a plain block: no extra tab stop, no landmark per formula) and becomes a
+// labelled, keyboard-scrollable group ONLY while it actually overflows its block (a wide matrix on a phone). The check re-runs when the lazy
+// formula arrives (DOM mutation) and on every size change of the block or of the formula.
+function MathBlock({ source }: { source: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scrolls, setScrolls] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const check = () => setScrolls(el.scrollWidth > el.clientWidth + 1);
+    const ro = new ResizeObserver(check);
+    const watch = () => { ro.disconnect(); ro.observe(el); const m = el.querySelector("math"); if (m) ro.observe(m); check(); };
+    const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(watch);
+    mo?.observe(el, { childList: true, subtree: true });
+    watch();
+    return () => { ro.disconnect(); mo?.disconnect(); };
+  }, [source]);
+  return <div ref={ref} className="xp-math-block" {...(scrolls ? { role: "group", "aria-label": "صيغة رياضية قابلة للتمرير", tabIndex: 0 } : {})}><MathInline source={source} display /></div>;
 }
 
 function Run({ run }: { run: RichRun }) {
@@ -97,7 +117,7 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "divider": return <hr className="xp-divider" />;
     case "keyValueGrid": return <dl className="xp-kv">{b.items.map((it, i) => <div key={i}><dt>{it.label}</dt><dd dir="auto">{it.value}</dd></div>)}</dl>;
     case "columns": return <div className="xp-columns">{b.columns.map((c, i) => <div className="xp-column" key={i}><Blocks blocks={c.blocks} /></div>)}</div>;
-    case "math": return <div className="xp-math-block" role="region" aria-label="صيغة رياضية" tabIndex={0}><MathInline source={b.source} display /></div>;
+    case "math": return <MathBlock source={b.source} />;
   }
   return null;
 }
