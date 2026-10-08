@@ -95,6 +95,9 @@
 .xp-rich .xp-math-host:has(mtable):not(.xp-math-block > *){ display:inline-block; max-inline-size:100%; overflow-x:auto; overflow-y:hidden; padding-block:0.3em; vertical-align:middle; direction:ltr; unicode-bidi:isolate; }
 .xp-rich .xp-math-host:not(.xp-math-block > *) > .xp-math:has(mtable){ inline-size:max-content; max-inline-size:none; }
 .xp-rich .xp-math-src{ direction:ltr; unicode-bidi:isolate; }
+/* Phase 21A.1 — the placeholder of a data chart while its lazy component loads (title + description as text, a reserved box) */
+.xp-rich .xp-chart-pending{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-block-size:12rem; padding:var(--eb-space-3); border:1px solid var(--_xp-border); border-radius:var(--_xp-radius); }
+.xp-rich .xp-chart-pending figcaption{ color:var(--_xp-text); font-weight:var(--eb-fw-bold); font-size:1em; }
 
 @media (min-width:768px){
   .xp-rich .xp-kv{ grid-template-columns:repeat(2,minmax(0,1fr)); }

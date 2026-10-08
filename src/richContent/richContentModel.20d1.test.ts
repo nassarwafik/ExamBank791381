@@ -34,7 +34,9 @@ describe("20D1-R1 schema", () => {
     expect(r.value).toEqual(FULL_DOC());
   });
   it("the block vocabulary is exactly the documented v1 set (frozen, discoverable)", () => {
-    expect(R.RICH_BLOCK_TYPES).toEqual(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math"]);
+    // Phase 21A.1 appended "dataChart" (an additive block: every 20D.1 / 21A type keeps its position; an older reader refuses the new type
+    // with RICH_CONTENT_BLOCK_TYPE — pinned by cert-21a1-compat-freeze).
+    expect(R.RICH_BLOCK_TYPES).toEqual(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"]);
     expect(Object.isFrozen(R.RICH_LIMITS)).toBe(true);
   });
   it("plain-text derivation (search / fallback / accessibility) walks every text-bearing block", () => {
