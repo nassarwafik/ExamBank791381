@@ -160,7 +160,8 @@ describe("21A1-RB1/RB11/RB12 source pins", () => {
     const print = css.slice(css.indexOf("@media print"));
     expect(print).toContain(".xp-chart-stage{ overflow:visible; block-size:auto !important; }");
     expect(print).toContain(".xp-chart-host > div{ position:relative !important; inline-size:auto !important; block-size:auto !important; overflow:visible !important; }");
-    expect(print).toContain(".xp-chart-host svg{ position:static !important; display:block; inline-size:auto !important; max-inline-size:100%; block-size:auto !important; }");
+    // review fix 2: centred in a column wider than the print drawing (A4 landscape)
+    expect(print).toContain(".xp-chart-host svg{ position:static !important; display:block; inline-size:auto !important; max-inline-size:100%; block-size:auto !important; margin-inline:auto; }");
     expect(read("src/charts/echartsEngine.ts")).toContain('svg.setAttribute("viewBox", "0 0 " + w + " " + h);');
   });
   it("review: a review mark replaces the selected tick (an incorrect selection never shows ✓)", () => {

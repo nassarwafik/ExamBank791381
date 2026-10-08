@@ -70,7 +70,7 @@
   .xp-chart-stage{ overflow:visible; block-size:auto !important; }
   .xp-chart-host{ position:static; }
   .xp-chart-host > div{ position:relative !important; inline-size:auto !important; block-size:auto !important; overflow:visible !important; }
-  .xp-chart-host svg{ position:static !important; display:block; inline-size:auto !important; max-inline-size:100%; block-size:auto !important; }
+  .xp-chart-host svg{ position:static !important; display:block; inline-size:auto !important; max-inline-size:100%; block-size:auto !important; margin-inline:auto; }
   .xp-chart-tip,.xp-chart-status,.xp-chart-retry,.xp-chart-table-toggle{ display:none !important; }
   .xp-chart-options{ max-block-size:none; overflow:visible; }
 }

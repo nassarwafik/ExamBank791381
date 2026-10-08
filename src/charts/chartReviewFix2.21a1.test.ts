@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { validateChartSpec, type CategoryChartSpec, type ChartSpecV1 } from "./chartSpec";
 import { buildEngineOption } from "./echartsAdapter";
 import { defaultChartTokens } from "./chartTheme";
-import { heatmapChart, horizontalStackedBar, rainfallBar } from "./testing/chartFixtures";
+import { comboChart, heatmapChart, horizontalStackedBar, rainfallBar } from "./testing/chartFixtures";
 
 // Phase 21A.1 — Review Fix 2 (rendering lane): the category-axis layout rules behind the round-2 findings, pinned on the pure adapter.
 const canon = (c: unknown) => { const r = validateChartSpec(c); if (!r.ok) throw new Error(JSON.stringify(r.issues)); return r.value; };
@@ -32,6 +32,14 @@ describe("21A1-RB5c rotated labels that would still touch are thinned by the eng
     const x = axes(months(), 256, true).xAxis.axisLabel;
     expect(x.rotate).toBe(45);
     expect(x.interval).toBe("auto");
+  });
+  it("the slot is what the VALUE AXES leave: a combo's two axes with wide values thin 8 rotated labels where one short axis would not", () => {
+    const cats8 = twelve(i => "محافظة الفروانية " + (i + 1)).slice(0, 8);
+    const combo = canon({ ...comboChart(), categories: cats8, series: [{ id: "a", label: "المبيعات", mark: "bar", values: cats8.map((_, i) => 150000 + i * 12345) }, { id: "b", label: "الهامش", mark: "line", axis: "secondary", values: cats8.map((_, i) => 10 + i) }], yAxis: { label: "المبيعات", unit: "KWD" }, y2Axis: { label: "الهامش", unit: "%" } });
+    expect(axes(combo, 256, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: "auto" });
+    const single = canon({ ...rainfallBar(), categories: cats8, series: [{ id: "rain", label: "الهطول", values: cats8.map((_, i) => 100 + i) }] });
+    expect(axes(single, 256, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
+    expect(axes(combo, 288, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });                 // 360 px phones: room again
   });
   it("where the rotated labels have room every label is drawn (interval 0)", () => {
     expect(axes(months(), 352, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });

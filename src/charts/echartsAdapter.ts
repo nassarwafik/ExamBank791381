@@ -73,10 +73,11 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
   // character) — at ANY container width, not only on phones. Before the stage is measured, a narrow container with long labels together
   // (≈ 20 characters across a phone-width plot) rotates. Rotated labels whose neighbours would still touch (the perpendicular gap, slot ×
   // sin 45°, under one line) are thinned by the engine. A vertical (y) category axis — horizontal bars, heat-map rows — has no horizontal
-  // slot: its labels keep their full width; it carries its name above the axis, never across its labels.
-  const categoryAxis = (labels: string[], a: ChartAxis | undefined, vertical: boolean, inverse: boolean) => {
+  // slot: its labels keep their full width; it carries its name above the axis, never across its labels. `reserve`: the width the value
+  // axes take beside the plot (default: one named axis with short labels).
+  const categoryAxis = (labels: string[], a: ChartAxis | undefined, vertical: boolean, inverse: boolean, reserve = ctx.compact ? 64 : 96) => {
     const count = labels.length, longest = Math.max(0, ...labels.map(l => l.length));
-    const slot = !vertical && ctx.width && ctx.width > 0 ? Math.max(0, ctx.width - (ctx.compact ? 64 : 96)) / Math.max(1, count) : 0;
+    const slot = !vertical && ctx.width && ctx.width > 0 ? Math.max(0, ctx.width - reserve) / Math.max(1, count) : 0;
     const fits = slot > 0 ? longest * text.fontSize * 0.55 <= slot - 6 : !(ctx.compact && count * longest > 20);
     const rotate = !vertical && (count > 12 || (ctx.compact && count > 6) || !fits);
     const dense = rotate && slot > 0 && slot * Math.SQRT1_2 < text.fontSize + 2;
@@ -101,15 +102,25 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
 
   if (isCategoryChart(spec)) {
     const horizontal = spec.kind === "bar" && spec.orientation === "horizontal";
-    // vertical: categories on x, values on y; horizontal bars: values on x (spec.xAxis is the numeric axis), categories on y (first on top)
-    const cat = categoryAxis(spec.categories.map(c => c.label), horizontal ? spec.yAxis : spec.xAxis, horizontal, horizontal);
     const stacked = "stacked" in spec && spec.stacked === true;
-    // unstacked value labels sit beyond the bar end / point: the value axis keeps 10% headroom for them (ignored when the author fixed a bound)
-    const val = { ...(horizontal ? valueAxis(spec.xAxis, false) : valueAxis(spec.yAxis, true)), ...(spec.valueLabels && !stacked ? { boundaryGap: [0, "10%"] } : {}) };
     // combo: series on the SECONDARY value axis are measured on a second, independently scaled axis (drawn on the other side, without its
     // own grid lines so the grid stays the primary axis's); reference lines are drawn by the first PRIMARY series (primary-axis values)
     const onSecondary = (s: { axis?: string }) => spec.kind === "combo" && s.axis === "secondary";
     const dual = spec.series.some(onSecondary);
+    // the width each vertical value axis takes beside the plot: its widest value label, or its name's gap when it is named (the grid
+    // margins hold both); a stacked axis reaches the category totals; a combo's secondary axis takes its own width on the other side
+    const valuesOf = (secondary: boolean) => {
+      const ss = spec.series.filter(s => onSecondary(s) === secondary);
+      const a = secondary ? (spec.kind === "combo" ? spec.y2Axis : undefined) : spec.yAxis;
+      return [...(stacked ? spec.categories.map((_, i) => ss.reduce((n, s) => n + Math.abs(s.values[i] ?? 0), 0)) : ss.flatMap(s => s.values.filter((v): v is number => v !== null))), ...(a?.min !== undefined ? [a.min] : []), ...(a?.max !== undefined ? [a.max] : [])];
+    };
+    const axisWidth = (values: number[], a: ChartAxis | undefined) =>
+      Math.max(axisName(a) ? (ctx.compact ? 34 : 44) + text.fontSize : 0, Math.ceil(Math.max(1, ...values.map(v => formatValue(v).length)) * text.fontSize * 0.6) + 8);
+    const reserve = (ctx.compact ? 20 : 40) + axisWidth(valuesOf(false), spec.yAxis) + (dual && spec.kind === "combo" ? axisWidth(valuesOf(true), spec.y2Axis) : 0);
+    // vertical: categories on x, values on y; horizontal bars: values on x (spec.xAxis is the numeric axis), categories on y (first on top)
+    const cat = categoryAxis(spec.categories.map(c => c.label), horizontal ? spec.yAxis : spec.xAxis, horizontal, horizontal, reserve);
+    // unstacked value labels sit beyond the bar end / point: the value axis keeps 10% headroom for them (ignored when the author fixed a bound)
+    const val = { ...(horizontal ? valueAxis(spec.xAxis, false) : valueAxis(spec.yAxis, true)), ...(spec.valueLabels && !stacked ? { boundaryGap: [0, "10%"] } : {}) };
     const val2 = dual ? { ...valueAxis(spec.y2Axis, true), position: "right", splitLine: { show: false }, ...(spec.valueLabels ? { boundaryGap: [0, "10%"] } : {}) } : undefined;
     const lineHost = spec.series.findIndex(s => !onSecondary(s));
     const series = spec.series.map((s, si) => {
@@ -233,6 +244,13 @@ export function tooltipFromEvent(spec: ChartSpecV1, ev: { componentType?: string
     }
   }
   return null;
+}
+
+/** What the stage width decides in an option: the category axes' label layout (rotation, thinning, label width, name gap) — nothing else in
+ *  an option depends on the width. Two options built from the same inputs with the same layout draw the same picture. */
+export function widthLayout(option: EngineOption): string {
+  type Axis = { type?: unknown; nameGap?: unknown; axisLabel?: { rotate?: unknown; interval?: unknown; width?: unknown } } | undefined;
+  return JSON.stringify(([option.xAxis, option.yAxis].flat() as Axis[]).map(a => (a && a.type === "category" ? [a.axisLabel?.rotate ?? 0, a.axisLabel?.interval, a.axisLabel?.width, a.nameGap] : 0)));
 }
 
 /** The stage height (px) for a chart: fixed per kind and width class (so a width change never feeds back into the height — no resize

@@ -82,3 +82,30 @@ describe("21A1-RB8b the live announcement describes the difference (review fix 2
     expect(live(container)).toBe("تم تحديد: فبراير؛ أُلغي تحديد: يناير — المحدَّد 1");
   });
 });
+
+describe("21A1-RB17 a width change that keeps the label layout does not redraw (review fix 2, N-6)", () => {
+  it("1000 → 1100 px (labels rotated at both): resize only; → 1300 px (labels now fit flat): the new option is applied", async () => {
+    const observers: (() => void)[] = [];
+    vi.stubGlobal("ResizeObserver", class { constructor(cb: () => void) { observers.push(cb); } observe() {} unobserve() {} disconnect() {} });
+    let w = 1000;
+    const own = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => w });
+    try {
+      const long = canon({ ...rainfallBar(), categories: (rainfallBar() as CategoryChartSpec).categories.map((c, i) => ({ ...c, label: "محافظة رقم " + (i + 1) })) });
+      render(<DataChart spec={long} />);
+      await settle();
+      h.calls = []; h.options = [];
+      w = 1100;
+      act(() => { for (const o of observers) o(); });
+      await settle();
+      expect(h.calls).toEqual(["resize()"]);
+      w = 1300;
+      act(() => { for (const o of observers) o(); });
+      await settle();
+      expect(h.calls).toContain("update");
+      expect((h.options.at(-1) as Opt).xAxis!.axisLabel!.rotate).toBeUndefined();
+    } finally {
+      if (own) Object.defineProperty(HTMLElement.prototype, "clientWidth", own);
+    }
+  });
+});

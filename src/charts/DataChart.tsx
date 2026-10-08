@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ChartSpecV1 } from "./chartSpec";
 import { chartDataTable, chartSummary, chartTargets, nextChartSelection, type ChartSelectionMode, type ChartTargetKind } from "./chartData";
-import { buildEngineOption, chartHeight, chartLegend, formatValue, needsAdvancedEngine, targetFromEvent, tooltipFromEvent } from "./echartsAdapter";
+import { buildEngineOption, chartHeight, chartLegend, formatValue, needsAdvancedEngine, targetFromEvent, tooltipFromEvent, widthLayout } from "./echartsAdapter";
 import { defaultChartTokens, effectiveAnimation, readChartTokens } from "./chartTheme";
 import type { EngineEvent, EngineHandle } from "./echartsEngine";
 import type { EngineOption } from "./echartsAdapter";
@@ -158,7 +158,15 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
     return () => { cancelled = true; handleRef.current?.dispose(); handleRef.current = null; setTip(null); };
   }, [advanced, attempt]);
 
-  useEffect(() => { handleRef.current?.update(option); }, [option]);
+  // a new option is applied (a full redraw) unless only the stage width moved and the labels are laid out the same: resizing a page of
+  // charts then costs the engine's own relayout (resize), not a redraw per chart per step
+  const applied = useRef<{ inputs: readonly unknown[]; layout: string } | null>(null);
+  useEffect(() => {
+    const inputs = [spec, tokens, animation, compact, selKind, selectedKey], layout = widthLayout(option), prev = applied.current;
+    applied.current = { inputs, layout };
+    if (prev && prev.layout === layout && prev.inputs.every((v, i) => Object.is(v, inputs[i]))) return;
+    handleRef.current?.update(option);
+  }, [option, spec, tokens, animation, compact, selKind, selectedKey]);
   useEffect(() => { handleRef.current?.resize(); }, [height]);
   // print: nothing re-measures the stage and no animation frame runs before the print layout, so just before it the engine takes the
   // print-width layout (labels rotated / thinned for 640 px, no animation), draws at that width and PAINTS NOW (flush); afterwards it takes
