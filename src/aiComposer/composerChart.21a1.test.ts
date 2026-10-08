@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildAiChartSchema, mapAiChart, numbersInText, pairedNumber, AI_CHART_SOURCE_LABELS, type AiChartPolicy } from "./composerChart";
+import { buildAiChartSchema, mapAiChart, numbersInText, pairedNumber, pairedNumbers, AI_CHART_SOURCE_LABELS, type AiChartPolicy } from "./composerChart";
 import { normalizeComposerPatch, applyComposerPatch } from "./composerPatch";
 import { mapAiRichBlocks, buildRichBlockSchema } from "./composerRich";
 import { COMPOSER_CATALOG_VERSION, COMPOSER_RICH_BLOCKS, buildComposerCatalog, catalogForPrompt } from "./composerCatalog";
@@ -8,8 +8,9 @@ import { validateChartSpec } from "../charts/chartSpec";
 import { rb } from "./testing/composerFakeAi";
 
 // Phase 21A.1 — the AI chart capability (catalog V3): the model fills a flat, closed chart DESCRIPTOR inside a `dataChart` block; code maps it
-// (deterministic ids, code-owned provenance label) and the ONE chart authority decides. Teacher data is preserved exactly (every number must
-// come from the teacher's request); illustrative data only when the teacher allowed it, and always labelled as illustrative.
+// (deterministic ids, code-owned provenance label) and the ONE chart authority decides. Teacher data is CHECKED against the request: every
+// number must occur in it, and a category the teacher wrote with one number keeps that number (what this does not catch: design record
+// §11); illustrative data only when the teacher allowed it, and always labelled as illustrative.
 const D = (over: Record<string, unknown> = {}) => ({
   kind: "bar", dataOrigin: "teacherProvided", title: "الهطول الشهري", description: "كمية الأمطار لكل شهر بالملّيمتر.",
   categories: ["يناير", "فبراير", "مارس"], series: [{ label: "الهطول", values: [120, 95, 82], mark: "bar" }], points: [], bins: [], boxes: [],
@@ -64,7 +65,7 @@ describe("21A1-AI2 descriptor → ChartSpecV1", () => {
 });
 
 describe("21A1-AI3 data integrity", () => {
-  it("teacher-provided numbers are preserved exactly (Arabic-Indic digits in the request count); a changed or invented number is refused", () => {
+  it("a number that does not occur in the teacher's request is refused (Arabic-Indic digits in the request count); a category written with one number keeps it", () => {
     expect(mapAiChart(D(), 0, TEACHER, "b").ok).toBe(true);
     expect(codes(mapAiChart(D({ series: [{ label: "الهطول", values: [121, 95, 82], mark: "bar" }] }), 0, TEACHER, "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
     expect(codes(mapAiChart(D({ series: [{ label: "الهطول", values: [120, 95, 82, 40], mark: "bar" }], categories: ["a", "b", "c", "d"] }), 0, TEACHER, "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
@@ -110,6 +111,8 @@ describe("21A1-AI5 teacher numbers are read strictly (review fix A2)", () => {
     expect(sorted("range 10-20")).toEqual([10, 20]);
     expect(sorted("−4 درجات")).toEqual([-4]);
     expect(sorted("1.5e3")).toEqual([1500]);
+    expect(sorted("1,2345")).toEqual([1.2345]);                                     // a group of four digits is not a thousands group (C2-1 MX5)
+    expect(sorted("القيم 120,95,80")).toEqual([80, 95, 120]);                         // a comma list without spaces is a list (C2-3)
   });
   const P = (request: string): AiChartPolicy => ({ request, illustrative: false, charts: true });
   const bar = (categories: string[], values: number[], over: Record<string, unknown> = {}) => D({ categories, series: [{ label: "القيمة", values, mark: "bar" }], ...over });
@@ -128,16 +131,22 @@ describe("21A1-AI5 teacher numbers are read strictly (review fix A2)", () => {
     expect(pairedNumber("January was wet: 120 then 80", "January")).toBeUndefined();
     expect(pairedNumber("Jan 120 in the north, Jan 80 in the south", "Jan")).toBeUndefined();     // two different numbers: not a pairing
     expect(pairedNumber("Jan 120; again Jan 120", "Jan")).toBe(120);
-    expect(pairedNumber("يناير 2024: 120، فبراير 2024: 95", "يناير")).toBeUndefined();          // a year qualifier, then the value: no pairing
+    expect(pairedNumber("يناير 2024: 120، فبراير 2024: 95", "يناير")).toBe(120);                // a year qualifier: the value of its clause
     expect(mapAiChart(bar(["يناير", "فبراير"], [120, 95]), 0, P("يناير 2024: 120، فبراير 2024: 95"), "b").ok).toBe(true);
     expect(codes(mapAiChart(bar(["Jan", "Feb"], [80, 120]), 0, P("Jan 120, Feb 80"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
     expect(mapAiChart(bar(["Jan", "Feb"], [120, 80]), 0, P("Jan 120, Feb 80"), "b").ok).toBe(true);
     expect(codes(mapAiChart(D({ kind: "pie", categories: ["Jan", "Feb"], series: [{ label: "s", values: [80, 120], mark: "bar" }] }), 0, P("Jan 120, Feb 80"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    // a pie draws its FIRST series only, so the pairing is checked on it whatever else the descriptor carries (review round 2, C2-1 MX6)
+    const pie2 = (first: number[]) => D({ kind: "pie", categories: ["Jan", "Feb"], series: [{ label: "s", values: first, mark: "bar" }, { label: "t", values: [120, 80], mark: "bar" }] });
+    expect(codes(mapAiChart(pie2([80, 120]), 0, P("Jan 120, Feb 80"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    expect(mapAiChart(pie2([120, 80]), 0, P("Jan 120, Feb 80"), "b").ok).toBe(true);
   });
   it("a teacher-data chart's title and description state no number the teacher did not write", () => {
     const req = P("يناير ١٢٠، فبراير 95، مارس 82 عام 2020");
     expect(codes(mapAiChart(D({ title: "ارتفع الهطول 900% إلى 4,500 mm" }), 0, req, "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
+    expect(codes(mapAiChart(D({ description: "ارتفع بنسبة 900% إلى 4500" }), 0, req, "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);   // C2-1 MX4
     expect(mapAiChart(D({ title: "الهطول الشهري 2020" }), 0, req, "b").ok).toBe(true);
+    expect(mapAiChart(D({ description: "كمية الأمطار عام 2020 لكل شهر." }), 0, req, "b").ok).toBe(true);
     // invented (illustrative) charts are labelled illustrative by code and are not held to the request
     expect(mapAiChart(D({ dataOrigin: "illustrative", title: "الهطول 2031", series: [{ label: "x", values: [1, 2, 3], mark: "bar" }] }), 0, OPEN, "b").ok).toBe(true);
   });
@@ -162,5 +171,90 @@ describe("21A1-AI6 AI charts merged into an existing stem (review fix A4)", () =
       const ids = d.exam!.sections[0].questions[0].richContent.blocks.map(b => b.chart.id);
       expect(ids.sort(), richMode).toEqual(["chart1", "chart2"]);
     }
+  });
+});
+
+describe("21A1-AI7 pairings are what the teacher WROTE — never invented (review fix 2, N1 / N2 / N5)", () => {
+  const P = (request: string): AiChartPolicy => ({ request, illustrative: false, charts: true });
+  const bar = (categories: string[], values: number[]) => D({ categories, series: [{ label: "القيمة", values, mark: "bar" }] });
+  const pie = (categories: string[], values: number[]) => D({ kind: "pie", categories, series: [{ label: "s", values, mark: "bar" }] });
+  const verdict = (raw: unknown, request: string) => { const r = mapAiChart(raw, 0, P(request), "b"); return r.ok ? "ok" : r.issues.map(i => i.code).join(); };
+  // [request, labels, correct values, values a misled model could write (a shift / a year)]
+  const CASES: [string, string[], number[], number[]][] = [
+    ["Rainfall for Jan, Feb, Mar: 120, 80, 95", ["Jan", "Feb", "Mar"], [120, 80, 95], [120, 80, 120]],
+    ["أنشئ رسمًا لهطول في يناير وفبراير ومارس: 120 و80 و95 ملم", ["يناير", "فبراير", "مارس"], [120, 80, 95], [120, 80, 120]],
+    ["Jan / Feb / Mar = 120 / 80 / 95", ["Jan", "Feb", "Mar"], [120, 80, 95], [80, 120, 95]],
+    ["January 2024 sales were 120, February 2024 sales were 80", ["January", "February"], [120, 80], [2024, 2024]],
+    ["في يناير 2024 بلغت المبيعات 120، وفي فبراير 2024 بلغت 80", ["يناير", "فبراير"], [120, 80], [2024, 2024]],
+    ["Jan (2023) 120, Feb (2023) 80", ["Jan", "Feb"], [120, 80], [2023, 2023]],
+    ["Rainfall Jan,Feb,Mar: 120,80,95", ["Jan", "Feb", "Mar"], [120, 80, 95], [95, 80, 120]]
+  ];
+  it("a correct teacher-data chart is accepted for every phrasing (lists, Arabic lists, slashes, year qualifiers, a comma list without spaces)", () => {
+    for (const [req, cats, good] of CASES) expect(verdict(bar(cats, good), req), req).toBe("ok");
+    expect(verdict(pie(["A", "B", "C"], [50, 30, 20]), "Shares of A, B, C: 50%, 30%, 20%")).toBe("ok");
+  });
+  it("the values a misled model could write instead are refused (positional list pairing, the value after a year qualifier)", () => {
+    for (const [req, cats, , bad] of CASES) expect(verdict(bar(cats, bad), req), req).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(pie(["A", "B", "C"], [50, 30, 50]), "Shares of A, B, C: 50%, 30%, 20%")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+  });
+  it("the refusal never states a value (the pairing is a check, never a value to copy)", () => {
+    const r = mapAiChart(bar(["Jan", "Feb", "Mar"], [120, 95, 80]), 0, P("Jan 120, Feb 80, Mar 95"), "b");
+    expect(r.ok).toBe(false);
+    if (!r.ok) for (const i of r.issues) expect(i.message).not.toMatch(/\d/);
+  });
+  it("pairedNumbers: the list, the qualifier and the one-number rules; nothing is paired where the writing is unclear", () => {
+    expect(pairedNumbers("Rainfall for Jan, Feb, Mar: 120, 80, 95", ["Jan", "Feb", "Mar"])).toEqual([120, 80, 95]);
+    expect(pairedNumbers("Jan, Feb, Mar: 120, 80", ["Jan", "Feb", "Mar"])).toEqual([undefined, undefined, undefined]);   // lengths differ
+    expect(pairedNumbers("Jan 120-130, Feb 80", ["Jan", "Feb"])).toEqual([undefined, 80]);                                // a range
+    expect(pairedNumbers("Mar: 120, 80, 95", ["Mar"])).toEqual([undefined]);                                              // a value list
+    expect(pairedNumbers("Jan 120 mm, Feb 80 mm", ["Jan", "Feb"])).toEqual([120, 80]);                                    // units between
+  });
+  it("labels match case-insensitively, without invisible characters or tatweel; an en dash before a digit is a minus", () => {
+    expect(verdict(bar(["Jan", "Feb"], [80, 120]), "rainfall jan 120, feb 80")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["ينا\u200Cير", "فبـراير"], [80, 120]), "يناير 120، فبراير 80")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["ينا\u200Cير", "فبـراير"], [120, 80]), "يناير 120، فبراير 80")).toBe("ok");
+    expect(verdict(bar(["January", "February"], [5, 3]), "January \u20135, February 3")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect([...numbersInText("January \u20135, range 10\u201320")].sort((a, b) => a - b)).toEqual([-5, 10, 20]);
+  });
+  it("pins (mutants X3 / X4 / X8): numbers in the description, the sign in a pairing, every category is checked", () => {
+    expect(verdict(D({ description: "Rain reached 4,500 mm" }), TEACHER.request)).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Jan", "Feb"], [5, -5]), "Jan -5, Feb 5")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Jan", "Feb", "Mar"], [120, 95, 80]), "Jan 120, Feb 80, Mar 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+  });
+});
+
+describe("21A1-AI8 merged AI chart ids at any depth, several at once (review fix 2, N3 / N5)", () => {
+  const exam = (blocks: unknown[]) => ({ schemaVersion: 2, examId: "E1", title: "E", status: "draft", metadata: {}, sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [
+    { examQuestionId: "q1", presentationType: "multipleChoice", questionTypeVersion: 1, text: "أي شهر أكثر هطولًا؟", marks: 2, options: [{ text: "يناير" }, { text: "فبراير" }], answer: { correctOptionIndex: 0 },
+      richContent: { schemaVersion: 1, blocks } }] }] });
+  const chart = (id: string) => { const r = mapAiChart(D(), 0, TEACHER, "$"); if (!r.ok) throw new Error("fixture"); return { type: "dataChart", chart: { ...r.chart, id } }; };
+  const merge = (blocks: unknown[], incoming: number, richMode: "append" | "prepend") => {
+    const charts = Array.from({ length: incoming }, (_, i) => rb("dataChart", { chart: D({ title: "الحرارة " + "أبجد"[i], categories: ["يناير", "فبراير"], series: [{ label: "الحرارة", values: [30, 25], mark: "bar" }] }) }));
+    const op = { op: "updateQuestionRichContent", sectionId: null, questionId: "q1", partId: null, position: null, text: null, title: null, marks: null, preset: null, tableVariant: null, variant: null,
+      richBlocks: charts, richMode, item: null, section: null, items: null, reason: "أضف رسومًا" };
+    const e = exam(blocks);
+    const ctx = { exam: e, mode: "improveContent", scope: { kind: "question", questionId: "q1" }, nonce: "abc123", request: "أضف رسم الحرارة: يناير 30، فبراير 25" };
+    const n = normalizeComposerPatch({ summary: "إضافة رسم", operations: [op] }, ctx as never);
+    if (!n.ok) return { ok: false as const, why: JSON.stringify(n).slice(0, 300) };
+    const d = applyComposerPatch(e as never, n.patch, { now: "2026-01-01T00:00:00Z", request: ctx.request } as never) as { ok: boolean; exam?: { sections: { questions: { richContent: { blocks: Record<string, unknown>[] } }[] }[] } };
+    return d.ok ? { ok: true as const, blocks: d.exam!.sections[0].questions[0].richContent.blocks } : { ok: false as const, why: JSON.stringify(d).slice(0, 300) };
+  };
+  const ids = (blocks: Record<string, unknown>[]): string[] => blocks.flatMap(b => b.type === "dataChart" ? [(b.chart as { id: string }).id]
+    : b.type === "columns" ? (b.columns as { blocks: Record<string, unknown>[] }[]).flatMap(c => ids(c.blocks)) : []);
+  it("a chart inside a columns block counts as taken (append and prepend)", () => {
+    const nested = [{ type: "columns", columns: [{ blocks: [chart("chart1")] }, { blocks: [{ type: "paragraph", runs: [{ text: "نص" }] }] }] }];
+    for (const mode of ["append", "prepend"] as const) {
+      const r = merge(nested, 1, mode);
+      expect(r.ok, r.ok ? "" : r.why).toBe(true);
+      if (r.ok) expect(ids(r.blocks).sort()).toEqual(["chart1", "chart2"]);
+    }
+  });
+  it("several incoming charts: every kept or renumbered id is reserved (into [chart1, chart2] and into [chart2])", () => {
+    const a = merge([chart("chart1"), chart("chart2")], 2, "append");
+    expect(a.ok, a.ok ? "" : a.why).toBe(true);
+    if (a.ok) expect(ids(a.blocks).sort()).toEqual(["chart1", "chart2", "chart3", "chart4"]);
+    const b = merge([chart("chart2")], 2, "append");
+    expect(b.ok, b.ok ? "" : b.why).toBe(true);
+    if (b.ok) expect(ids(b.blocks).sort()).toEqual(["chart1", "chart2", "chart3"]);
   });
 });

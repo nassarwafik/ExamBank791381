@@ -13,7 +13,7 @@
 // Grading (server-authoritative, deterministic, pixel-free): config and key are re-validated through ONE strict authority before comparison;
 // invalid ⇒ 0 + manual review (never a silent academic zero). A response naming another chart, an unknown target, a duplicate, more targets
 // than allowed or (range mode) a non-contiguous run is malformed ⇒ an ordinary 0 (no manual review). Order never matters. allOrNothing =
-// marks only for exactly the key; partial = marks × |selected ∩ key| / |selected ∪ key| (so selecting everything never pays).
+// marks only for exactly the key; partial = marks × |selected ∩ key| / |selected ∪ key| (selecting every target T earns marks × |key| / |T|: full marks only when the key is every target).
 import { effectiveQuestionTypeVersion } from "./questionTypeCatalog";
 import { BIDI_CONTROL, INVISIBLE_CONTROL, validateChartSpec, type ChartSpecV1 } from "./charts/chartSpec";
 import { CHART_SELECTION_MODES, CHART_TARGET_KINDS, RANGE_TARGET_KINDS, chartTargetKinds, chartTargets, isContiguousRun, type ChartSelectionMode, type ChartTarget, type ChartTargetKind } from "./charts/chartData";

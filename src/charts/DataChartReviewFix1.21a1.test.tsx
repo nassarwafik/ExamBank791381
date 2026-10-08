@@ -14,7 +14,7 @@ vi.mock("./echartsEngine", () => {
     mountChartEngine: (el: HTMLElement, _o: unknown, _e: (e: EngineEvent) => void) => {
       h.mounts++;
       el.setAttribute("data-xp-engine", "xp-chart-engine-v1");
-      return { update() {}, resize: (w?: number) => { h.resizes.push(w); }, dispose() {}, disposed: () => false };
+      return { update() {}, resize: (w?: number) => { h.resizes.push(w); }, flush() {}, dispose() {}, disposed: () => false };
     }
   };
 });
@@ -60,7 +60,8 @@ describe("21A1-RB8 live announcements say what actually happened", () => {
     const { container, rerender } = render(<DataChart spec={canon(rainfallBar())} selection={surface(["jun"], onChange, "range", 3)} />);
     fireEvent.click(container.querySelector('[data-xp-key="feb"]')!);
     expect(onChange).toHaveBeenLastCalledWith(["apr", "may", "jun"]);
-    expect(live(container)).toBe("بلغت الحد الأقصى (3)؛ لم يُحدَّد: فبراير — المحدَّد 3");
+    // round 2 (N-5): the run that WAS extended is announced too, not only the refused item
+    expect(live(container)).toBe("تم تحديد: أبريل، مايو؛ بلغت الحد الأقصى (3)؛ لم يُحدَّد: فبراير — المحدَّد 3");
     rerender(<DataChart spec={canon(rainfallBar())} selection={surface(["apr", "may", "jun"], onChange, "range", 3)} />);
     onChange.mockClear();
     fireEvent.click(container.querySelector('[data-xp-key="jun"]')!);

@@ -3,8 +3,9 @@ import DataChart, { type ChartTargetMark } from "./DataChart";
 import { evaluateChartSelection, projectChartSelectionConfigForStudent, TARGET_KIND_LABELS } from "../chartSelectionQuestion";
 
 // Phase 21A.1 — the TEACHER review of a chartSelection@1 answer (lazy, inside the assignment review): the chart exactly as the student saw
-// it with every selectable target marked ✓ (selected and correct) / ✗ (selected, not correct) / missed (correct, not selected), the same
-// marks in the keyboard list, and a text summary. It carries the key, so it is never part of a student bundle path.
+// it, with the student's selection highlighted on the picture; every selectable target is marked in the chart's list — ✓ (selected and
+// correct) / ✗ (selected, not correct) / ○ missed (correct, not selected) — and a text summary follows. It carries the key, so it is never
+// part of a student bundle path.
 type Props = { answer: unknown; answerKey: unknown; config: unknown };
 export default function ChartSelectionReview({ answer, answerKey, config }: Props) {
   const cfg = useMemo(() => projectChartSelectionConfigForStudent(config), [config]);

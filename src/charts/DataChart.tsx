@@ -11,6 +11,7 @@ import { chartDataTable, chartSummary, chartTargets, nextChartSelection, type Ch
 import { buildEngineOption, chartHeight, chartLegend, formatValue, needsAdvancedEngine, targetFromEvent, tooltipFromEvent } from "./echartsAdapter";
 import { defaultChartTokens, effectiveAnimation, readChartTokens } from "./chartTheme";
 import type { EngineEvent, EngineHandle } from "./echartsEngine";
+import type { EngineOption } from "./echartsAdapter";
 import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
 import { useMediaQuery } from "../ui/useMediaQuery";
 import "./charts.css";
@@ -75,32 +76,42 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   const targets = useMemo(() => (selKind ? chartTargets(spec, selKind) : []), [spec, selKind]);
   const order = useMemo(() => targets.map(t => t.key), [targets]);
   const selectedKey = selection ? selection.value.join("\u0000") : "";
+  // only charts with a horizontal category axis lay out by width (label rotation / caps), and in 32 px steps: a resize re-renders the
+  // engine option only when the layout can change, not on every pixel
+  const layoutWidth = width > 0 && !(spec.kind === "pie" || spec.kind === "scatter" || spec.kind === "radar" || (spec.kind === "bar" && spec.orientation === "horizontal")) ? Math.floor(width / 32) * 32 : 0;
   const option = useMemo(() => buildEngineOption(spec, {
-    tokens, animation, compact, width,
+    tokens, animation, compact, width: layoutWidth,
     ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
-  }), [spec, tokens, animation, compact, width, selKind, selectedKey]);
+  }), [spec, tokens, animation, compact, layoutWidth, selKind, selectedKey]);
   const optionRef = useRef(option);
+  // the option for paper: the print width's layout, no animation (built when printing starts)
+  const printOptionRef = useRef<() => EngineOption>(() => option);
 
   // the latest semantic handler, read by the engine's listener (the engine instance is not re-created when the selection changes)
-  // the live announcement says what actually happened: selected, deselected, unchanged, or refused at the limit (never "deselected" for an
-  // item that was never selected)
+  // the live announcement says what actually happened, from the difference between the selections before and after: the items selected,
+  // the items deselected (a range that shrinks or moves), the limit when the activated item could not be added, or "unchanged" — never
+  // "deselected" for an item that was never selected; nothing is emitted when nothing changed
   const activate = useCallback((key: string) => {
     if (!selection || selection.readOnly || !selection.onChange) return;
-    const next = nextChartSelection(selection.mode, order, selection.value, key, selection.max);
-    const label = targets.find(t => t.key === key)?.label ?? key;
-    const was = selection.value.includes(key), is = next.includes(key);
-    const same = next.length === selection.value.length && next.every(k => selection.value.includes(k));
-    const what = was && !is ? "أُلغي تحديد: " + label
-      : !was && is ? "تم تحديد: " + label
-      : !was ? "بلغت الحد الأقصى (" + selection.max + ")؛ لم يُحدَّد: " + label
-      : same ? "لا تغيير، محدَّد بالفعل: " + label : "تم تحديد: " + label;
-    setAnnounce(what + " — المحدَّد " + next.length);
-    if (!same) selection.onChange(next);
+    const before = selection.value, next = nextChartSelection(selection.mode, order, before, key, selection.max);
+    const name = (k: string) => targets.find(t => t.key === k)?.label ?? k;
+    const added = next.filter(k => !before.includes(k)), removed = before.filter(k => !next.includes(k));
+    const parts = [
+      ...(added.length ? ["تم تحديد: " + added.map(name).join("، ")] : []),
+      ...(removed.length ? ["أُلغي تحديد: " + removed.map(name).join("، ")] : []),
+      ...(!next.includes(key) && !before.includes(key) ? ["بلغت الحد الأقصى (" + selection.max + ")؛ لم يُحدَّد: " + name(key)] : [])
+    ];
+    setAnnounce((parts.length ? parts.join("؛ ") : "لا تغيير، محدَّد بالفعل: " + name(key)) + " — المحدَّد " + next.length);
+    if (added.length || removed.length) selection.onChange(next);
   }, [selection, order, targets]);
   const onEngineEvent = useRef<(e: EngineEvent) => void>(() => {});
   // the engine (mounted once) always reads the latest option and handler through these refs
   useLayoutEffect(() => {
     optionRef.current = option;
+    printOptionRef.current = () => buildEngineOption(spec, {
+      tokens, animation: "none", compact: false, width: PRINT_WIDTH,
+      ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
+    });
     onEngineEvent.current = (e: EngineEvent) => {
       if (e.type === "out") { setTip(null); return; }
       const t = tooltipFromEvent(spec, e);
@@ -149,11 +160,12 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
 
   useEffect(() => { handleRef.current?.update(option); }, [option]);
   useEffect(() => { handleRef.current?.resize(); }, [height]);
-  // print: nothing re-measures the stage while the page is printed, so the engine draws at a page-safe width just before the print layout
-  // and follows its container again afterwards (the print stylesheet scales the SVG to the printed column through its viewBox)
+  // print: nothing re-measures the stage and no animation frame runs before the print layout, so just before it the engine takes the
+  // print-width layout (labels rotated / thinned for 640 px, no animation), draws at that width and PAINTS NOW (flush); afterwards it takes
+  // the screen option and its container's width again. The print stylesheet scales the SVG to the printed column through its viewBox.
   useEffect(() => {
-    const before = () => handleRef.current?.resize(PRINT_WIDTH);
-    const after = () => handleRef.current?.resize();
+    const before = () => { const h = handleRef.current; if (!h) return; h.update(printOptionRef.current()); h.resize(PRINT_WIDTH); h.flush(); };
+    const after = () => { const h = handleRef.current; if (!h) return; h.update(optionRef.current); h.resize(); h.flush(); };
     window.addEventListener("beforeprint", before);
     window.addEventListener("afterprint", after);
     return () => { window.removeEventListener("beforeprint", before); window.removeEventListener("afterprint", after); };

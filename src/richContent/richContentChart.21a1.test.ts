@@ -50,6 +50,15 @@ describe("21A1-RC1 the dataChart block", () => {
     const over = R.validateRichContent(doc(...charts(n + 1)));
     expect(over.issues.map(i => [i.code, i.path])).toEqual([["RICH_CONTENT_LIMIT", "richContent.blocks[" + n + "]"]]);
   });
+  it("the document size counts the chart's STORED prose (title, description, source), never the generated summary (review fix 2, N6)", () => {
+    const chart = rainfallBar() as { title: string; description: string; source?: string };
+    const stored = chart.title.length + chart.description.length + (chart.source?.length ?? 0);
+    const fill = (n: number) => { const out: unknown[] = []; for (let left = n; left > 0; left -= R.RICH_LIMITS.blockChars) out.push(para("x".repeat(Math.min(left, R.RICH_LIMITS.blockChars)))); return out; };
+    const exact = doc(...fill(R.RICH_LIMITS.totalChars - stored), { type: "dataChart", chart: rainfallBar() });
+    expect(R.validateRichContent(exact).issues).toEqual([]);
+    const over = doc(...fill(R.RICH_LIMITS.totalChars - stored + 1), { type: "dataChart", chart: rainfallBar() });
+    expect(R.validateRichContent(over).issues.map(i => i.code)).toEqual(["RICH_CONTENT_LIMIT"]);
+  });
   it("an older reader's vocabulary (the 15 baseline types) keeps its order: dataChart is appended, never inserted", () => {
     expect(R.RICH_BLOCK_TYPES.indexOf("dataChart")).toBe(R.RICH_BLOCK_TYPES.length - 1);
     expect(R.RICH_BLOCK_TYPES.indexOf("math")).toBe(14);

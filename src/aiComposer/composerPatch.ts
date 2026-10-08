@@ -286,20 +286,26 @@ function recomputeCompositeMarks(q: Rec): Rec {
 }
 
 /** 21A.1 — AI chart ids are positional within the generated blocks ("chart1", …); merged into an existing document (prepend / append) a
- *  colliding id is renumbered past every chart id the document already uses (rich chart ids are unique per document). */
+ *  colliding id is renumbered past every chart id the document already uses — at any depth (a chart inside a `columns` block counts too;
+ *  rich chart ids are unique per document). */
 function renumberCharts(incoming: readonly unknown[], existing: readonly unknown[]): unknown[] {
   const isRec = (v: unknown): v is Rec => !!v && typeof v === "object" && !Array.isArray(v);
-  const idOf = (b: unknown) => (isRec(b) && b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? b.chart.id : undefined);
-  const taken = new Set(existing.map(idOf).filter((x): x is string => x !== undefined));
-  return incoming.map(b => {
-    const id = idOf(b);
-    if (id === undefined) return b;
-    if (!taken.has(id)) { taken.add(id); return b; }
+  const nested = (b: Rec) => (b.type === "columns" && Array.isArray(b.columns) ? b.columns : []);
+  const ids = (blocks: readonly unknown[]): string[] => blocks.flatMap(b => !isRec(b) ? []
+    : b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? [b.chart.id]
+    : nested(b).flatMap(c => (isRec(c) && Array.isArray(c.blocks) ? ids(c.blocks) : [])));
+  const taken = new Set(ids(existing));
+  const renumber = (b: unknown): unknown => {
+    if (!isRec(b)) return b;
+    if (b.type === "columns" && Array.isArray(b.columns)) return { ...b, columns: b.columns.map(c => (isRec(c) && Array.isArray(c.blocks) ? { ...c, blocks: c.blocks.map(renumber) } : c)) };
+    if (b.type !== "dataChart" || !isRec(b.chart) || typeof b.chart.id !== "string") return b;
+    if (!taken.has(b.chart.id)) { taken.add(b.chart.id); return b; }
     let n = 1;
     while (taken.has("chart" + n)) n++;
     taken.add("chart" + n);
-    return { ...(b as Rec), chart: { ...((b as Rec).chart as Rec), id: "chart" + n } };
-  });
+    return { ...b, chart: { ...b.chart, id: "chart" + n } };
+  };
+  return incoming.map(renumber);
 }
 
 function applyOne(exam: StructuredExam, o: NormOp): StructuredExam {

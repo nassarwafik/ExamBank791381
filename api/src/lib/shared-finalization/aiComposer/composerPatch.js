@@ -427,14 +427,20 @@ function recomputeCompositeMarks(q) {
 }
 function renumberCharts(incoming, existing) {
     const isRec = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-    const idOf = (b) => (isRec(b) && b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? b.chart.id : undefined);
-    const taken = new Set(existing.map(idOf).filter((x) => x !== undefined));
-    return incoming.map(b => {
-        const id = idOf(b);
-        if (id === undefined)
+    const nested = (b) => (b.type === "columns" && Array.isArray(b.columns) ? b.columns : []);
+    const ids = (blocks) => blocks.flatMap(b => !isRec(b) ? []
+        : b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? [b.chart.id]
+            : nested(b).flatMap(c => (isRec(c) && Array.isArray(c.blocks) ? ids(c.blocks) : [])));
+    const taken = new Set(ids(existing));
+    const renumber = (b) => {
+        if (!isRec(b))
             return b;
-        if (!taken.has(id)) {
-            taken.add(id);
+        if (b.type === "columns" && Array.isArray(b.columns))
+            return { ...b, columns: b.columns.map(c => (isRec(c) && Array.isArray(c.blocks) ? { ...c, blocks: c.blocks.map(renumber) } : c)) };
+        if (b.type !== "dataChart" || !isRec(b.chart) || typeof b.chart.id !== "string")
+            return b;
+        if (!taken.has(b.chart.id)) {
+            taken.add(b.chart.id);
             return b;
         }
         let n = 1;
@@ -442,7 +448,8 @@ function renumberCharts(incoming, existing) {
             n++;
         taken.add("chart" + n);
         return { ...b, chart: { ...b.chart, id: "chart" + n } };
-    });
+    };
+    return incoming.map(renumber);
 }
 function applyOne(exam, o) {
     const x = { ...exam, sections: exam.sections.map(s => ({ ...s, questions: [...s.questions] })) };

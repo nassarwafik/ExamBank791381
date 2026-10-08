@@ -310,7 +310,8 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
         if (!c.ok) { for (const i of c.issues) add("RICH_CONTENT_CHART", i.message + " [" + i.code + "]", i.path); break; }
         if (chartIds.has(c.value.id)) { add("RICH_CONTENT_CHART", "معرّف الرسم البياني «" + c.value.id + "» مكرّر في المحتوى نفسه.", at + ".chart.id"); break; }
         chartIds.add(c.value.id);
-        totalChars += chartPlainText(c.value).length;
+        // the chart's STORED prose counts (never the generated summary: a wording change must not change a stored document's validity)
+        totalChars += c.value.title.length + c.value.description.length + (c.value.source?.length ?? 0);
         out = { type: "dataChart", chart: c.value };
         break;
       }

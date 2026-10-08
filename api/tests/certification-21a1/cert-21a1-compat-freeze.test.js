@@ -117,8 +117,8 @@ describe("21A.1-FREEZE compatibility pins (captured on the untouched baseline ff
       for (const g of graded.questions) { if (g.manualReview) continue; if (g.score === g.maxMarks && g.maxMarks > 0) full++; else if (g.score > 0) partial++; else zero++; }
     }
     expect(answers).toBeGreaterThanOrEqual(100);
-    // 19 of the 27 baseline fixtures grade differently from blank; the other 8 are answered only through simulations (left unanswered
-    // here) or through parametric values the synthetic "1" misses
+    // 19 of the 27 baseline fixtures grade differently from blank; the other 8 are answered only by simulations (left unanswered here),
+    // parametric values the synthetic "1" misses, wrong answers or open responses — each graded like blank
     expect(differs).toBeGreaterThanOrEqual(19);
     expect(Math.min(full, partial, zero), JSON.stringify({ answers, full, partial, zero })).toBeGreaterThanOrEqual(5);
   });

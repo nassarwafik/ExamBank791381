@@ -120,7 +120,7 @@ describe("21A1-CS4 grading (semantic, deterministic, fail closed)", () => {
     expect(score(cfg(), key(), ans([]))).toMatchObject({ score: 0, manualReview: false });
     expect(score(cfg(), key(), undefined)).toMatchObject({ score: 0, manualReview: false });
   });
-  it("exact multiple (allOrNothing) ignores order and pays only the exact set; partial = |S ∩ K| / |S ∪ K| (selecting everything never pays)", () => {
+  it("exact multiple (allOrNothing) ignores order and pays only the exact set; partial = |S ∩ K| / |S ∪ K| (selecting every target earns |K| / |T|)", () => {
     const m = cfg({ mode: "multiple", maxSelections: 12 }), k = key({ correct: ["jan", "oct"] }), kp = key({ scoring: "partial", correct: ["jan", "oct"] });
     expect(score(m, k, ans(["oct", "jan"])).score).toBe(4);
     expect(score(m, k, ans(["jan"])).score).toBe(0);

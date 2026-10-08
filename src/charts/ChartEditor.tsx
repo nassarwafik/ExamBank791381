@@ -18,8 +18,13 @@ const ANIMATION_LABELS: Readonly<Record<string, string>> = { none: "بلا حر�
 const PALETTE_LABELS: Readonly<Record<string, string>> = { categorical: "ألوان متمايزة", sequential: "تدرّج أزرق", diverging: "متباعدة", neutral: "محايدة (رمادي)" };
 
 type Confirm = (o: { title: string; message: string; confirmLabel: string; tone?: "danger" }) => Promise<boolean>;
-/** `kinds`: the chart kinds offered (default: all) — a chartSelection question offers only the kinds a student can answer on. */
-export type ChartEditorProps = { chart: ChartSpecV1; onChange: (c: ChartSpecV1) => void; disabled?: boolean; name: string; confirm?: Confirm; kinds?: readonly ChartKind[] };
+/** `kinds`: the chart kinds offered (default: all) — a chartSelection question offers only the kinds a student can answer on.
+ *  `kindChangeWarning`: what else a kind change would discard (a chartSelection answer key): the change is then confirmed even when it keeps
+ *  every value, in ONE dialog with the data-loss message. */
+export type ChartEditorProps = {
+  chart: ChartSpecV1; onChange: (c: ChartSpecV1) => void; disabled?: boolean; name: string; confirm?: Confirm; kinds?: readonly ChartKind[];
+  kindChangeWarning?: (next: ChartSpecV1) => string | undefined;
+};
 
 /** Sets / removes one optional key (no `undefined` values are ever stored). */
 function withOpt<T extends object>(o: T, key: string, v: unknown): T {
@@ -65,7 +70,7 @@ function IconBtn({ label, glyph, onClick, disabled, danger }: { label: string; g
   return <button type="button" className={"sb-icon-btn ce-icon" + (danger ? " sb-danger" : "")} aria-label={label} title={label} onClick={onClick} disabled={disabled}>{glyph}</button>;
 }
 
-export default function ChartEditor({ chart, onChange, disabled = false, name, confirm, kinds }: ChartEditorProps) {
+export default function ChartEditor({ chart, onChange, disabled = false, name, confirm, kinds, kindChangeWarning }: ChartEditorProps) {
   const result = useMemo(() => validateChartSpec(chart, "chart"), [chart]);
   const [badCells, setBadCells] = useState<readonly string[]>([]);
   const reportCell = useCallback((cell: string, isBad: boolean) => setBadCells(list => (isBad === list.includes(cell) ? list : isBad ? [...list, cell] : list.filter(c => c !== cell))), []);
@@ -78,7 +83,9 @@ export default function ChartEditor({ chart, onChange, disabled = false, name, c
 
   const changeKind = async (to: ChartKind) => {
     const { spec, lossy } = convertChartKind(chart, to);
-    if (lossy && confirm && !(await confirm({ title: "تغيير نوع الرسم البياني", message: "لا يتّسع النوع «" + CHART_KIND_LABELS[to] + "» لكل بيانات " + name + "؛ سيُحذف بعضها أو يُستبدل ببيانات بدء.", confirmLabel: "تغيير النوع", tone: "danger" }))) return;
+    const extra = kindChangeWarning?.(spec);
+    const message = [lossy ? "لا يتّسع النوع «" + CHART_KIND_LABELS[to] + "» لكل بيانات " + name + "؛ سيُحذف بعضها أو يُستبدل ببيانات بدء." : "", extra ?? ""].filter(Boolean).join(" ");
+    if (message && confirm && !(await confirm({ title: "تغيير نوع الرسم البياني", message, confirmLabel: "تغيير النوع", tone: "danger" }))) return;
     set(spec);
   };
 

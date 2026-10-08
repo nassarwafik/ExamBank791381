@@ -71,18 +71,21 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
   // table, the tooltip and the selection list still name every category). A horizontal (x) category axis rotates its labels when they are
   // many, or when the longest label is wider than the slot each category has (the plot width shared by the categories; ≈ 0.55 em per
   // character) — at ANY container width, not only on phones. Before the stage is measured, a narrow container with long labels together
-  // (≈ 20 characters across a phone-width plot) rotates. A vertical (y) category axis carries its name above the axis, never across its labels.
+  // (≈ 20 characters across a phone-width plot) rotates. Rotated labels whose neighbours would still touch (the perpendicular gap, slot ×
+  // sin 45°, under one line) are thinned by the engine. A vertical (y) category axis — horizontal bars, heat-map rows — has no horizontal
+  // slot: its labels keep their full width; it carries its name above the axis, never across its labels.
   const categoryAxis = (labels: string[], a: ChartAxis | undefined, vertical: boolean, inverse: boolean) => {
     const count = labels.length, longest = Math.max(0, ...labels.map(l => l.length));
-    const slot = ctx.width && ctx.width > 0 ? Math.max(0, ctx.width - (ctx.compact ? 64 : 96)) / Math.max(1, count) : 0;
+    const slot = !vertical && ctx.width && ctx.width > 0 ? Math.max(0, ctx.width - (ctx.compact ? 64 : 96)) / Math.max(1, count) : 0;
     const fits = slot > 0 ? longest * text.fontSize * 0.55 <= slot - 6 : !(ctx.compact && count * longest > 20);
     const rotate = !vertical && (count > 12 || (ctx.compact && count > 6) || !fits);
+    const dense = rotate && slot > 0 && slot * Math.SQRT1_2 < text.fontSize + 2;
     return {
       type: "category", data: labels.map(isolate), name: axisName(a), inverse,
       ...(vertical ? { nameLocation: inverse ? "start" : "end", nameGap: 12 } : { nameLocation: "middle", nameGap: rotate ? (ctx.compact ? 58 : 90) : 30 }),
       nameTextStyle: { ...text, color: ctx.tokens.muted }, axisTick: { alignWithLabel: true }, axisLine: { lineStyle: { color: ctx.tokens.muted } },
       // a rotated label may be longer (it no longer shares the slot's width; phones keep it short); a flat label never exceeds its slot
-      axisLabel: { ...text, interval: count <= 12 ? 0 : "auto", ...(rotate ? { rotate: 45 } : {}), width: ctx.compact ? 64 : rotate ? 104 : slot > 0 ? Math.max(24, Math.min(110, Math.floor(slot - 4))) : 110, overflow: "truncate" }
+      axisLabel: { ...text, interval: count <= 12 && !dense ? 0 : "auto", ...(rotate ? { rotate: 45 } : {}), width: ctx.compact ? 64 : rotate ? 104 : slot > 0 ? Math.max(24, Math.min(110, Math.floor(slot - 4))) : 110, overflow: "truncate" }
     };
   };
   // The outer bounds equal the grid margins: axis labels and axis names are always kept INSIDE the canvas (no clipped text).

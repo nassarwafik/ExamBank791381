@@ -510,7 +510,7 @@ function validateRichContent(raw, path = "richContent") {
                     break;
                 }
                 chartIds.add(c.value.id);
-                totalChars += (0, chartSpec_1.chartPlainText)(c.value).length;
+                totalChars += c.value.title.length + c.value.description.length + (c.value.source?.length ?? 0);
                 out = { type: "dataChart", chart: c.value };
                 break;
             }

@@ -13,8 +13,9 @@ registerModules([BarChart, LineChart, PieChart, ScatterChart, GridComponent, Mar
 /** Marker the bundle guard looks for: this string exists only in the engine chunk. */
 export const CHART_ENGINE_MARKER = "xp-chart-engine-v1";
 export type EngineEvent = { type: "click" | "over" | "out"; componentType?: string; seriesIndex?: number; dataIndex?: number; offsetX?: number; offsetY?: number };
-/** `resize()` follows the container; `resize(width)` draws at that width (print: the page width), until the next `resize()`. */
-export type EngineHandle = { update(option: EngineOption): void; resize(width?: number): void; dispose(): void; disposed(): boolean };
+/** `resize()` follows the container; `resize(width)` draws at that width (print: the page width), until the next `resize()`. The engine
+ *  paints on its next animation frame; `flush()` paints NOW — printing lays the page out before any further frame runs. */
+export type EngineHandle = { update(option: EngineOption): void; resize(width?: number): void; flush(): void; dispose(): void; disposed(): boolean };
 type RawParams = { componentType?: unknown; seriesIndex?: unknown; dataIndex?: unknown; event?: { offsetX?: unknown; offsetY?: unknown } };
 const toEvent = (type: EngineEvent["type"], p: RawParams | undefined): EngineEvent => ({
   type,
@@ -45,6 +46,7 @@ export function mountChartEngine(el: HTMLElement, option: EngineOption, onEvent:
   return {
     update: option2 => { if (!chart.isDisposed()) { chart.setOption(option2, { notMerge: true }); fitViewBox(el); } },
     resize: width => { if (!chart.isDisposed()) { chart.resize(width && width > 0 ? { width } : { width: "auto" }); fitViewBox(el); } },
+    flush: () => { if (!chart.isDisposed()) { chart.getZr().refreshImmediately(); fitViewBox(el); } },
     dispose: () => { if (!chart.isDisposed()) chart.dispose(); },
     disposed: () => chart.isDisposed()
   };

@@ -84,10 +84,11 @@ export const isChartId = (v: unknown): v is string => typeof v === "string" && I
 // explicit embedding / override / isolate controls (LRE RLE PDF LRO RLO, LRI RLI FSI PDI) spoof the visual order of a label; the plain
 // marks (LRM / RLM / ALM) stay allowed. The adapter adds its own isolates when it hands labels to a renderer.
 export const BIDI_CONTROL = /[‪-‮⁦-⁩]/;
-// C1 controls (U+0080–U+009F, e.g. the 8-bit CSI escape U+009B and NEL U+0085), line / paragraph separators, zero-width space, word joiner,
-// BOM, the deprecated format characters U+206A–U+206F and the interlinear annotation controls: invisible or layout-breaking, never prose.
-// (ZWNJ / ZWJ stay allowed: Persian and Arabic text need them.)
-export const INVISIBLE_CONTROL = /[\u0080-\u009F\u2028\u2029\u200B\u2060\uFEFF\u206A-\u206F\uFFF9-\uFFFB]/;
+// Invisible or layout-breaking characters, never prose: C1 controls (U+0080–U+009F, e.g. the 8-bit CSI escape U+009B and NEL U+0085), line /
+// paragraph separators, the interlinear annotation controls, and every Unicode DEFAULT-IGNORABLE code point (zero-width space, word joiner,
+// BOM, soft hyphen, invisible operators, Hangul fillers, the deprecated format characters, variation selectors, tag characters, …) — except
+// ZWNJ / ZWJ (Persian and Arabic text need them), the LRM / RLM / ALM marks and the text / emoji presentation selectors.
+export const INVISIBLE_CONTROL = /[\u0080-\u009F\u2028\u2029\uFFF9-\uFFFB]|(?![\u200C-\u200F\u061C]|\uFE0E|\uFE0F)\p{Default_Ignorable_Code_Point}/u;
 const isPlain = (v: unknown): v is Record<string, unknown> => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return false;
   const p = Object.getPrototypeOf(v);
@@ -95,7 +96,8 @@ const isPlain = (v: unknown): v is Record<string, unknown> => {
 };
 const own = (o: Record<string, unknown>, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 /** Label identity for duplicate detection: Unicode NFC, whitespace collapsed, case-insensitive. */
-export const normLabel = (s: string) => s.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+// labels compare without the invisible characters text may keep (joiners, marks, presentation selectors): look-alikes are duplicates
+export const normLabel = (s: string) => s.normalize("NFC").replace(/\p{Default_Ignorable_Code_Point}/gu, "").replace(/\s+/g, " ").trim().toLowerCase();
 function utf8Bytes(s: string): number {
   let n = 0;
   for (let i = 0; i < s.length; i++) {

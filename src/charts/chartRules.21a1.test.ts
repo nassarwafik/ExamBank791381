@@ -76,3 +76,23 @@ describe("21A1-R4 the validator never throws (review fix A1, defense in depth)",
     expect(r!.ok ? [] : r!.issues.map(i => i.code)).toEqual(["CHART_INVALID"]);
   });
 });
+
+describe("21A1-R5 invisible characters: every default-ignorable is refused, look-alike labels are duplicates (review fix 2, N4)", () => {
+  const withLabel = (label: string, at = 0) => { const c = rainfallBar() as Record<string, unknown> & { categories: { id: string; label: string }[] }; c.categories = c.categories.map((x, i) => (i === at ? { ...x, label } : x)); return c; };
+  const codes = (c: unknown) => { const r = validateChartSpec(c); return r.ok ? [] : r.issues.map(i => i.code); };
+  const hex = (ch: string) => "U+" + ch.codePointAt(0)!.toString(16).toUpperCase();
+  it("invisible operators, soft hyphen, Mongolian vowel separator, Hangul fillers, variation selectors and tag characters are refused", () => {
+    // also the word joiner, the deprecated format characters U+206A–206F and the interlinear annotation marks U+FFF9–FFFB (round 2, C2-1)
+    for (const ch of ["\u2060", "\u206A", "\u206D", "\u206F", "\uFFF9", "\uFFFA", "\uFFFB", "\u2061", "\u2063", "\u00AD", "\u180E", "\u115F", "\u3164", "\uFFA0", "\uFE00", "\u{E0020}", "\u{E0100}"]) {
+      expect(codes(withLabel("يناير" + ch)), hex(ch)).toContain("CHART_TEXT_CONTROL");
+      expect(validateChartSelectionConfig({ v: 1, chart: rainfallBar(), target: "category", mode: "single", maxSelections: 1, label: "اختر" + ch }).ok, hex(ch)).toBe(false);
+    }
+  });
+  it("ZWNJ / ZWJ, the LRM / RLM / ALM marks and the text / emoji presentation selectors stay allowed", () => {
+    for (const ch of ["\u200C", "\u200D", "\u200E", "\u200F", "\u061C", "\uFE0E", "\uFE0F"]) expect(codes(withLabel("يناير" + ch)), hex(ch)).toEqual([]);
+  });
+  it("labels that differ only by an allowed invisible character are duplicates", () => {
+    expect(codes(withLabel("يناير\u200C", 1))).toContain("CHART_LABEL_DUPLICATE");
+    expect(codes(withLabel("ين\u200Dاير", 1))).toContain("CHART_LABEL_DUPLICATE");
+  });
+});

@@ -39,7 +39,7 @@ const ID_RE = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
 const isChartId = (v) => typeof v === "string" && ID_RE.test(v) && !FORBIDDEN_KEYS.has(v);
 exports.isChartId = isChartId;
 exports.BIDI_CONTROL = /[‪-‮⁦-⁩]/;
-exports.INVISIBLE_CONTROL = /[\u0080-\u009F\u2028\u2029\u200B\u2060\uFEFF\u206A-\u206F\uFFF9-\uFFFB]/;
+exports.INVISIBLE_CONTROL = /[\u0080-\u009F\u2028\u2029\uFFF9-\uFFFB]|(?![\u200C-\u200F\u061C]|\uFE0E|\uFE0F)\p{Default_Ignorable_Code_Point}/u;
 const isPlain = (v) => {
     if (!v || typeof v !== "object" || Array.isArray(v))
         return false;
@@ -47,7 +47,7 @@ const isPlain = (v) => {
     return p === Object.prototype || p === null;
 };
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-const normLabel = (s) => s.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+const normLabel = (s) => s.normalize("NFC").replace(/\p{Default_Ignorable_Code_Point}/gu, "").replace(/\s+/g, " ").trim().toLowerCase();
 exports.normLabel = normLabel;
 function utf8Bytes(s) {
     let n = 0;

@@ -36,6 +36,15 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
   const [newKind, setNewKind] = useState<ChartKind>("bar");
   const [maxDraft, setMaxDraft] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
+  /** A kind change that keeps every value may still clear the answer key (its targets do not exist in the new kind, or the target kind
+   *  changes): the chart editor then confirms the change with this warning. */
+  const keyClearedBy = (next: ChartSpecV1): string | undefined => {
+    if (!correct.length) return undefined;
+    const v = validateChartSpec(next), ks = v.ok ? chartTargetKinds(v.value) : [];
+    const t = ks.includes(target) ? target : ks[0];
+    const order = v.ok && t ? chartTargets(v.value, t).map(x => x.key) : [];
+    return t !== target || correct.some(k => !order.includes(k)) ? "ستُمسح الإجابة الصحيحة المحدَّدة لأن عناصرها لا توجد في النوع الجديد، وعليك تحديدها من جديد." : undefined;
+  };
 
   /** One emission: the public config and the key together, kept mutually consistent (unsupported target / mode adjusted, bound clamped,
    *  key entries of vanished targets dropped, a broken range cleared). */
@@ -76,7 +85,7 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
         </div>
       ) : (
         <>
-          <section aria-label="بيانات الرسم البياني"><ChartEditor chart={chart} name="الرسم" disabled={disabled} confirm={confirm} kinds={SELECTABLE_KINDS} onChange={c => write({ chart: c })} /></section>
+          <section aria-label="بيانات الرسم البياني"><ChartEditor chart={chart} name="الرسم" disabled={disabled} confirm={confirm} kinds={SELECTABLE_KINDS} kindChangeWarning={keyClearedBy} onChange={c => write({ chart: c })} /></section>
           <section className="vq-fields" aria-label="ما يختاره الطالب">
             <label className="vq-field"><span>يختار الطالب</span>
               <select className="sb-input sb-input-sm" aria-label="نوع العنصر الذي يختاره الطالب" value={target} disabled={disabled || kinds.length === 0} onChange={e => write({ target: e.target.value as ChartTargetKind, correct: [] })}>
@@ -91,7 +100,13 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
             {mode !== "single" && (
               <label className="vq-field"><span>أقصى عدد للاختيارات</span>
                 <input className="sb-input sb-input-sm" type="number" min={1} max={Math.max(1, targets.length)} value={maxDraft ?? String(max)} aria-label="أقصى عدد للاختيارات" disabled={disabled}
-                  onChange={e => { const t = e.target.value, n = Number(t); setMaxDraft(t); if (t.trim() !== "" && Number.isInteger(n) && n >= 1) write({ max: n }); }} onBlur={() => setMaxDraft(null)} />
+                  onChange={e => {
+                    const t = e.target.value, n = Number(t);
+                    setMaxDraft(t);
+                    if (t.trim() === "" || !Number.isInteger(n) || n < 1) return;
+                    write({ max: n });
+                    if (targets.length && n > targets.length) setMaxDraft(String(targets.length));            // show the bound actually stored
+                  }} onBlur={() => setMaxDraft(null)} />
               </label>
             )}
             <label className="vq-field"><span>تعليمة الاختيار (اختيارية)</span>

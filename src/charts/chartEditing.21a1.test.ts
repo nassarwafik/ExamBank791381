@@ -52,7 +52,7 @@ describe("21A1-ED2 kind conversion", () => {
     expect(ok(h as ChartSpecV1)).toBeTruthy();
     expect([h.xAxis, h.yAxis]).toEqual([undefined, { label: "Votes", min: 0 }]);
   });
-  it("category ⇄ heat map and pie ⇄ bar are lossless round trips; radar → category keeps every value", () => {
+  it("category ⇄ heat map and pie ⇄ bar: the data survives the round trip (a value-axis label is reported lossy); radar → category keeps every value", () => {
     const cat = temperatureLine() as CategoryChartSpec;
     const hm = convertChartKind(cat, "heatmap");
     expect(hm.lossy).toBe(true);                                                     // the value-axis label "Temperature" has no place in a heat map
