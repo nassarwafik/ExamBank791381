@@ -75,6 +75,11 @@ describe("21A-AI1 the catalog derives Scientific Math v2 from code", () => {
     for (const n of [MATH_LIMITS.chars, MATH_LIMITS.nodes, MATH_LIMITS.depth, MATH_GRID_LIMITS.rows, MATH_GRID_LIMITS.cols, MATH_GRID_LIMITS.cells]) expect(line).toContain(String(n));
     expect(line).toContain("cases and aligned at most " + MATH_GRID_LIMITS.casesCols + " columns");     // reviewer mutant R20
     expect(line).toContain("rows by \\\\, never nested, at most");                                   // reviewer mutant V20 (review fix 3)
+    // the \mathbb alphabet the prompt offers IS the parser's: probe every capital letter (reviewer mutant W15, review fix 4)
+    const alphabet = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].filter(c => parseMath("\\mathbb{" + c + "}").ok);
+    const offeredSets = line.slice(line.indexOf("\\mathbb only ") + 13, line.indexOf("; words in")).split(" ");
+    expect([...offeredSets].sort()).toEqual([...alphabet].sort());
+    expect(alphabet.length).toBe(5);
     const offered = line.slice(line.indexOf("commands ONLY ") + 14, line.indexOf("; environments ONLY")).split(" ").map(s => s.replace(/^\\/, ""));
     expect(offered).toEqual([...MATH_COMMANDS]);
     for (const bad of ["href", "url", "html", "style", "class", "def", "newcommand", "input", "include", "color", "array"]) expect(offered, bad).not.toContain(bad);
@@ -88,6 +93,10 @@ describe("21A-AI2 AI math blocks → RichContentV1 through the canonical validat
     expect(r.richContent!.blocks.map(b => (b as { source: string }).source)).toEqual([MATRIX, DET, CASES, ALIGNED_LF, CHEM, COMPLEX, INTEGRAL]);
     const bare = mapAiRichBlocks([F.math(ALIGNED_CRLF.replace(/\r\n/g, "\r"))]);                       // bare CR (reviewer mutant R19)
     expect(bare.ok && bare.richContent!.blocks.map(b => (b as { source: string }).source)).toEqual([ALIGNED_LF]);
+  });
+  it("AI math sources are trimmed: surrounding blanks and line breaks are never stored (reviewer mutant W14, review fix 4)", () => {
+    const r = mapAiRichBlocks([F.math("\n  x^{2}  \r\n"), F.math(" \t" + MATRIX + "\r\n\r\n")]);
+    expect(r.ok && r.richContent!.blocks.map(b => (b as { source: string }).source)).toEqual(["x^{2}", MATRIX]);
   });
   it("every ADVERSARIAL formula is refused with AI_RICH_CONTENT_INVALID (escape hatches, macros, files, unknown / malformed / nested environments, separators outside a grid, HTML / CSS / JS, bounds)", () => {
     const ADVERSARIAL = [
