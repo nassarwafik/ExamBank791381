@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as M from "./richMath";
 import type { MathNode } from "./richMath";
+import { MATH_FEATURES } from "./mathFeatures";
 
 // Phase 21A — SCIENTIFIC MATH v2: the safe, allow-listed, bounded notation language. Fail-first on 60ddadc (no grids, no environments,
 // no number sets, no multiple integrals, no language identity). The grammar stays NON-Turing-complete: a fixed environment allow-list,
@@ -35,11 +36,11 @@ describe("21A-S1 language identity — code-owned, discoverable, frozen", () => 
     expect([...M.MATH_COMMANDS]).toEqual([...M.MATH_COMMANDS].sort());
   });
   it("MATH_FEATURES: every advertised feature carries an example that the parser accepts (no feature without proof)", () => {
-    const ids = M.MATH_FEATURES.map(f => f.id);
+    const ids = MATH_FEATURES.map(f => f.id);
     for (const f of ["matrices", "determinants", "cases", "aligned", "derivatives", "partialDerivatives", "multipleIntegrals", "complex", "numberSets", "units", "chemistry", "electricity", "vectors", "fractions", "roots", "scripts", "largeOperators", "limits"]) expect(ids, f).toContain(f);
     expect(new Set(ids).size).toBe(ids.length);
-    for (const f of M.MATH_FEATURES) { expect(M.parseMath(f.example).ok, f.id + ": " + f.example).toBe(true); expect(typeof f.group).toBe("string"); }
-    expect(Object.isFrozen(M.MATH_FEATURES)).toBe(true);
+    for (const f of MATH_FEATURES) { expect(M.parseMath(f.example).ok, f.id + ": " + f.example).toBe(true); expect(typeof f.group).toBe("string"); }
+    expect(Object.isFrozen(MATH_FEATURES)).toBe(true);
   });
 });
 
@@ -135,7 +136,9 @@ describe("21A-S4 cell and row separators are legal ONLY at a grid's own cell lev
   it("the escapes around \\\\ keep their meaning: \\\\, is a row break then ',', \\, alone is a space, an odd backslash is refused", () => {
     expect(grid("\\begin{matrix} a \\\\, b \\end{matrix}").rows).toHaveLength(2);
     expect(M.parseMath("a\\,b").ok).toBe(true);
-    refused("\\begin{matrix} a \\\\\\ b \\end{matrix}");
+    expect(grid("\\begin{matrix} a \\\\\\ b \\end{matrix}").rows).toHaveLength(2);                // \\\\ then the escaped space \\␠ (both legal)
+    refused("\\begin{matrix} a \\\\\\& b \\end{matrix}");                                         // \\\\ then the illegal escape \\&
+    refused("\\begin{matrix} a \\end{matrix} \\\\\\");
     expect(grid("\\begin{matrix} a \\\\ \\{b\\} \\end{matrix}").rows).toHaveLength(2);
   });
 });
@@ -165,11 +168,13 @@ describe("21A-S5 grid bounds are explicit, conservative and enforced before mate
     }
     expect(Date.now() - t0).toBeLessThan(2000);
   });
-  it("depth: a grid counts toward MATH_LIMITS.depth like any group", () => {
-    const deep = "\\sqrt{".repeat(M.MATH_LIMITS.depth - 2) + "\\begin{matrix} a \\end{matrix}" + "}".repeat(M.MATH_LIMITS.depth - 2);
-    const deeper = "\\sqrt{".repeat(M.MATH_LIMITS.depth + 1) + "\\begin{matrix} a \\end{matrix}" + "}".repeat(M.MATH_LIMITS.depth + 1);
-    expect(M.parseMath(deep).ok).toBe(true);
-    expect(M.parseMath(deeper).ok).toBe(false);
+  it("depth: a grid counts toward MATH_LIMITS.depth like any group (one level deeper than a plain atom)", () => {
+    const nest = (n: number, inner: string) => "\\sqrt{".repeat(n) + inner + "}".repeat(n);
+    let k = 0;
+    while (M.parseMath(nest(k + 1, "x")).ok) k++;                                                                    // the deepest plain nesting the bound allows
+    expect(k).toBeGreaterThan(5);
+    expect(M.parseMath(nest(k - 1, "\\begin{matrix} a \\end{matrix}")).ok).toBe(true);
+    expect(M.parseMath(nest(k, "\\begin{matrix} a \\end{matrix}")).ok).toBe(false);
   });
 });
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { render, cleanup } from "@testing-library/react";
 import RichMath from "./RichMath";
 import * as M from "./richMath";
+import { MATH_FEATURES } from "./mathFeatures";
 import { oldGrammarCandidates } from "./testing/mathCorpus";
 
 // Phase 21A — the MathML renderer for Scientific Math v2. React builds every element from the CLOSED AST: grids are real MathML tables
@@ -93,7 +94,7 @@ describe("21A-R2 RTL / LTR and accessibility", () => {
 
 describe("21A-R3 closed vocabulary: only fixed element names and attribute names ever appear", () => {
   it("rendering every advertised feature example and grid environment creates only allow-listed MathML elements and attributes", () => {
-    const sources = [...M.MATH_FEATURES.map(f => f.example), ...M.MATH_ENVIRONMENTS.map(e => `\\begin{${e}} a & b \\\\ c & d \\end{${e}}`.replace(/(cases|aligned)\} a & b \\\\ c & d/, "$1} a & b \\\\ c & d"))];
+    const sources = [...MATH_FEATURES.map(f => f.example), ...M.MATH_ENVIRONMENTS.map(e => `\\begin{${e}} a & b \\\\ c & d \\end{${e}}`.replace(/(cases|aligned)\} a & b \\\\ c & d/, "$1} a & b \\\\ c & d"))];
     const seenEl = new Set<string>();
     for (const s of sources) {
       const m = mathOf(s).querySelector("math")!;

@@ -97,7 +97,7 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "divider": return <hr className="xp-divider" />;
     case "keyValueGrid": return <dl className="xp-kv">{b.items.map((it, i) => <div key={i}><dt>{it.label}</dt><dd dir="auto">{it.value}</dd></div>)}</dl>;
     case "columns": return <div className="xp-columns">{b.columns.map((c, i) => <div className="xp-column" key={i}><Blocks blocks={c.blocks} /></div>)}</div>;
-    case "math": return <div className="xp-math-block"><MathInline source={b.source} display /></div>;
+    case "math": return <div className="xp-math-block" role="region" aria-label="صيغة رياضية" tabIndex={0}><MathInline source={b.source} display /></div>;
   }
   return null;
 }
