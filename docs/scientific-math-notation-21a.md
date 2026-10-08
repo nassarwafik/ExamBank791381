@@ -708,11 +708,26 @@ unchanged after every run.
 The suites hold **122 tests** in total. The reviewer's own fail-first run of the head suites against 60ddadc production code gave
 50 failed / 25 passed / 5 skipped. The first version of this table listed 31 parser tests when there were 29 (RF1-8).
 
-**Full validation**, run on the content of the final head:
-- `npm test`: **792 files, 10,490 tests passed**.
-- `npm run lint`: exit 0, no errors (pre-existing warnings only).
+**Full validation, first head `1ab3ae5`:**
+- `npm test` ran twice, the second time on the exact checked-out head. Both runs: **792 files, 10,490 tests passed**.
+
+**Full validation, Review Fix 1 content (`614d427`):**
+- `npm test` ran twice:
+  - Run 1: 10,498 passed, 1 failed.
+  - Run 2: 10,497 passed, 2 failed.
+- Both failures are **pre-existing tests in code 21A does not touch** (§35):
+  - `src/questionTypes/composite.20d.test.tsx:48`, a race in the test's wait helper. It reproduces on the untouched 60ddadc baseline
+    worktree 3 / 8 times in isolation, with the identical assertion.
+  - `src/GovernancePanel.14b.test.tsx`, the assignment-dialog case. It is the repository's documented timing-sensitive file (AGENTS
+    §12): it failed once under full-suite load and passes 5 / 5 in isolation on the head.
+- Both pass in exact-head CI. Every Phase-21A suite passed in every run.
+
+**Other checks:**
+- `npm run lint`: exit 0, no errors. 104 warnings, the same count as the 60ddadc baseline; the extra palette warning seen on 1ab3ae5 is
+  gone (RF1-9).
 - `npx tsc -b`: exit 0.
-- `npm run build`, including the bundle guard: passed, 124.3 KB / 125 KB.
+- `npm run build`, including the bundle guard: passed, 124.3 KB / 125 KB. The 18 initial files are identical to 60ddadc modulo chunk
+  hashes on both heads.
 - `git diff --check` and `git diff origin/main --check`: clean.
 
 **Not run locally:** the Runner suites (unit, Docker security, official). `runner/**` is untouched; they run in CI.
@@ -727,6 +742,15 @@ The exact-head CI results are in the pull request and the final report.
 - **HTML-looking formulas in stored content** stay valid, inert math data (§24).
 - **Inline grids are scrollable boxes, not reflowed.** Long inline formulas without grids behave as in 20D.1.
 - **No nested environments, no `array` column specs, no `\color` / `\operatorname` / `\boxed` / `\overset`.**
+- **Pre-existing intermittent test, not fixed here (out of scope).** `src/questionTypes/composite.20d.test.tsx:48` fails about 40% of the
+  time, on the untouched 60ddadc baseline (3 / 8 in isolation) as well as on this branch.
+  - **Root cause:** the test's `settle()` helper stops waiting as soon as no `[role="status"]` element is present. It never waits for
+    the lazily registered composite renderer (`.cmp-response`) itself.
+  - **Proposed one-line patch** for a separate change: replace the `settle` wait with
+    `await waitFor(() => expect(container.querySelector(".cmp-response")).toBeTruthy())`.
+  - It passes in CI on both 21A heads.
+- **GovernancePanel timing.** `src/GovernancePanel.14b.test.tsx` (documented timing-sensitive file, AGENTS §12) failed once under
+  full-suite load in the assignment-dialog case. It was not patched, per AGENTS §12.
 - **Print of a very wide formula.** A formula wider than the printed page still overflows the page; there is no scroll on paper, and grids are not reflowed.
 - **No solver.** No equivalence grading, no WYSIWYG editor, no MathML/LaTeX export format other than the exam JSON.
 - **The 20D.1 inline Markdown converter does not accept multi-line inline `$…$`.** A math → paragraph conversion of a multi-line grid
