@@ -151,6 +151,19 @@ describe("21A1-RB3h a datum keeps its key entry while its cell is retyped (round
     expect(n.answer.correct).toEqual(["s1/c1", "s1/c3"]);
     expect(validateChartSelectionQuestion(n as never)).toEqual([]);
   });
+  it("the bound counts the entry being retyped: a bound equal to the number of targets stays (mutant RU21)", async () => {
+    const box = { node: null as QuestionBody | null };
+    render(<Host initial={q(barOf(), "datum", ["s1/c1", "s1/c3"], "multiple", 3)} onNode={n => { box.node = n; }} />);
+    await settle();
+    const cell = () => screen.getByRole("textbox", { name: "الهطول — مارس" });
+    const max = () => (box.node as unknown as { chartSelection: { maxSelections: number } }).chartSelection.maxSelections;
+    fireEvent.change(cell(), { target: { value: "" } });
+    await settle();
+    expect(max()).toBe(3);
+    fireEvent.change(cell(), { target: { value: "97" } });
+    await settle();
+    expect(max()).toBe(3);
+  });
   it("deleting the category drops the datum entry (its slot is gone)", async () => {
     const box = { node: null as QuestionBody | null };
     render(<Host initial={q(barOf(), "datum", ["s1/c1", "s1/c3"], "multiple", 2)} onNode={n => { box.node = n; }} />);

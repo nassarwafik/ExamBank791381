@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateChartSpec, type CategoryChartSpec, type ChartSpecV1 } from "./chartSpec";
-import { buildEngineOption, widthLayout } from "./echartsAdapter";
+import { buildEngineOption, chartHeight, fitText, widthLayout } from "./echartsAdapter";
 import { defaultChartTokens } from "./chartTheme";
 import { comboChart, histogramChart, radarChart, rainfallBar } from "./testing/chartFixtures";
 
@@ -136,5 +136,39 @@ describe("21A1-RB24 measured cuts keep the bidi isolate and measure in the chart
     const heat = (n: number) => canon({ version: 1, id: "h", kind: "heatmap", title: "ح", description: "نشاط", columns: [1, 2, 3, 4].map(i => ({ id: "k" + i, label: "الأسبوع " + i })),
       rows: [1, 2].map(i => ({ id: "r" + i, label: ("ص".repeat(n - 2)) + " " + i })), values: [[1, 2, 3, 4], [4, 3, 2, 1]] });
     expect(widthLayout(build(heat(20), { width: 800 }) as never)).toBe(widthLayout(build(heat(60), { width: 800 }) as never));
+  });
+});
+
+describe("21A1-RB25 Review Fix 4 mutation pins (§20.4)", () => {
+  it("RU23: a measured cut never returns the uncut text — empty where not even \"…\" fits", () => {
+    const f = "12px x";
+    expect(fitText("abcdef", 0, f, measure)).toBe("");
+    expect(fitText("abcdef", 5, f, measure)).toBe("");                                 // "…" alone is 6 px here
+    expect(fitText("abc", 18, f, measure)).toBe("abc");                                // fits: unchanged
+    const cut = fitText("abcdefgh", 30, f, measure);
+    expect(cut).toBe("abcd…");
+    expect(measure(cut)).toBeLessThanOrEqual(30);
+  });
+  it("RU26 / RU32: pie labels and value labels carry the webfont's line box (1.75 em / 1.7 em)", () => {
+    const pie = canon({ version: 1, id: "p", kind: "pie", title: "ت", description: "توزيع", valueLabels: true, slices: [{ id: "a", label: "أ", value: 3 }, { id: "b", label: "ب", value: 1 }] });
+    expect(build(pie).series[0].label.lineHeight).toBe(Math.ceil(12 * 1.75));
+    expect(build(pie, { width: 360, compact: true }).series[0].label.lineHeight).toBe(Math.ceil(11 * 1.75));
+    const bar = canon({ ...(rainfallBar() as CategoryChartSpec), valueLabels: true });
+    expect(build(bar).series[0].label.lineHeight).toBe(Math.ceil(12 * 1.7));
+    expect(build(bar, { width: 360, compact: true }).series[0].label.lineHeight).toBe(Math.ceil(11 * 1.7));
+    expect(build(canon({ ...histogramChart(), valueLabels: true })).series[0].label.lineHeight).toBe(Math.ceil(12 * 1.7));
+  });
+  it("RU27 / RU28 / RU29: the radar radius shrinks so the names keep their cap — never below half its default", () => {
+    const names = ["التفكير الناقد", "حل المشكلات", "التواصل الكتابي", "العمل الجماعي", "الثقافة الرقمية", "الإبداع والابتكار"].map(s => "مهارة " + s + " المتقدمة");
+    const spec = canon({ ...radarChart(), axes: names.map((label, i) => ({ id: "a" + i, label, max: 10 })), series: [{ id: "s", label: "علي", values: names.map(() => 5) }] });
+    const full = (w: number) => 0.58 * Math.min(w, chartHeight(spec, true)) / 2;
+    const r320 = build(spec, { width: 320, compact: true }).radar;
+    expect(r320.axisName.width).toBeGreaterThanOrEqual(72);                            // the names keep their phone cap …
+    expect(r320.radius).toBeLessThan(Math.round(full(320)));                           // … because the radius gave way
+    expect(build(spec, { width: 200, compact: true }).radar.radius).toBe(Math.round(full(200) / 2));   // never below half
+  });
+  it("RU35: a histogram keeps room on its right for its widest count", () => {
+    const h = canon({ ...histogramChart(), valueLabels: true, bins: (histogramChart() as { bins: { start: number; end: number; count: number }[] }).bins.map((b, i) => ({ ...b, count: 12345678 - i })) });
+    expect(build(h, { width: 600 }).grid.right).toBeGreaterThanOrEqual(Math.ceil(measure("12345678") / 2) + 4);
   });
 });

@@ -69,3 +69,23 @@ describe("21A1-RB1c flush() paints the print width now", () => {
     el.remove();
   });
 });
+
+// Review Fix 4 (B4-3): value labels that would overlap are hidden by the engine's label layout, which the engine module must register
+// (an unregistered feature ignores `labelLayout` silently — mutant RU31).
+describe("21A1-RB23b the engine hides value labels that would overlap", () => {
+  it("30 seven-digit value labels on a 300 px stage: fewer drawn than there are values, and at least one drawn", () => {
+    const r = validateChartSpec({ version: 1, id: "dense", kind: "bar", title: "ت", description: "كثيف", valueLabels: true,
+      categories: Array.from({ length: 30 }, (_, i) => ({ id: "c" + i, label: "ي" + (i + 1) })), series: [{ id: "s", label: "س", values: Array.from({ length: 30 }, (_, i) => 1234567 + i) }] });
+    if (!r.ok) throw new Error("fixture");
+    const el = document.createElement("div");
+    el.style.width = "300px";
+    el.style.height = "320px";
+    document.body.appendChild(el);
+    const h = mountChartEngine(el, buildEngineOption(r.value, { tokens: defaultChartTokens(), animation: "none", compact: true, width: 300 }), () => {});
+    const drawn = [...el.querySelectorAll("text")].filter(t => /^\d{7}$/.test((t.textContent ?? "").replace(/[\u2066-\u2069]/g, ""))).length;
+    expect(drawn).toBeGreaterThan(0);
+    expect(drawn).toBeLessThan(30);
+    h.dispose();
+    el.remove();
+  });
+});

@@ -50,7 +50,7 @@ const graphemes = (s: string): string[] => {
   return Seg ? Array.from(new Seg(undefined, { granularity: "grapheme" }).segment(s), x => x.segment) : Array.from(s);
 };
 /** `s` cut to fit `max` px in `font` (with "…"), by measurement; unchanged when it fits; empty when not even "…" fits (never the uncut text). */
-function fitText(s: string, max: number, font: string, measure: (t: string, f: string) => number): string {
+export function fitText(s: string, max: number, font: string, measure: (t: string, f: string) => number): string {
   if (measure(s, font) <= max) return s;
   if (!(max > 0) || measure("…", font) > max) return "";
   const cs = graphemes(s);
@@ -347,13 +347,14 @@ export function tooltipFromEvent(spec: ChartSpecV1, ev: { componentType?: string
 }
 
 /** What the stage width decides in an option: the category axes' label layout (rotation, thinning, label width, name gap), the value axis's
- *  label gap, the radar's radius and name width, and the grid's right margin — nothing else in an option depends on the width. Two options
- *  built from the same inputs with the same layout draw the same picture. */
+ *  label gap, and the radar's radius and name width — nothing else in an option depends on the width (the right margin for value and
+ *  reference labels follows the values, the labels and the compact class, itself an input). Two options built from the same inputs with
+ *  the same layout draw the same picture. */
 export function widthLayout(option: EngineOption): string {
   type Axis = { type?: unknown; nameGap?: unknown; axisLabel?: { rotate?: unknown; interval?: unknown; width?: unknown; margin?: unknown } } | undefined;
   const radar = option.radar as { radius?: unknown; axisName?: { width?: unknown } } | undefined;
   return JSON.stringify([([option.xAxis, option.yAxis].flat() as Axis[]).map(a => (a && a.type === "category" ? [a.axisLabel?.rotate ?? 0, a.axisLabel?.interval, a.axisLabel?.width, a.nameGap] : a?.axisLabel?.margin ?? 0)),
-    radar ? [radar.radius, radar.axisName?.width] : 0, option.grid ? (option.grid as { right?: unknown }).right : 0]);
+    radar ? [radar.radius, radar.axisName?.width] : 0]);
 }
 
 /** The stage height (px) for a chart: fixed per kind and width class (so a width change never feeds back into the height — no resize

@@ -430,4 +430,18 @@ describe("21A1-AI11 round-4 lane C: a number that does not end its clause pairs 
     expect(pairedNumbers("يناير 120؟ فبراير 80", ["يناير", "فبراير"])).toEqual([120, 80]);
     expect([...numbersInText("Jan ‒120")]).toEqual([-120]);
   });
+  it("mutation pins (RU02 / RU03 / RU08 / RU14): \"a 50.\" is the article, a counted noun before the next label, a fractional value is no day", () => {
+    // the article ends its clause here ("a 50."): only ":" / "=" make «A» the label, so A keeps 72 and a swap of A and B is refused
+    const grades = "A: 72, B: 65, C: 80. The passing grade is a 50.";
+    expect(pairedNumbers(grades, ["A", "B", "C"])).toEqual([72, 65, 80]);
+    expect(verdict(bar(["A", "B", "C"], [65, 72, 80]), grades)).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    // a number followed by more words before the next label is a count, not the label's value (only "and" / "then" / «ثم» / a proclitic)
+    expect(pairedNumbers("Sales: North 120, South 80, East 95. North 3 shops closed so South took over.", ["North", "South", "East"])).toEqual([120, 80, 95]);
+    expect(pairedNumbers("المبيعات: الشمال 120، الجنوب 80، الشرق 95. في الشمال 3 فروع أغلقت فتولى الجنوب العمل.", ["الشمال", "الجنوب", "الشرق"])).toEqual([120, 80, 95]);
+    // a day of the month is a whole number: fractional values after month names pair with their unit
+    expect(pairedNumbers("Rainfall: Jan 2.5 mm, Feb 3.5 mm, Mar 1.5 mm.", ["Jan", "Feb", "Mar"])).toEqual([2.5, 3.5, 1.5]);
+    expect(pairedNumbers("الأمطار: يناير 2.5 ملم، فبراير 3.5 ملم، مارس 1.5 ملم.", ["يناير", "فبراير", "مارس"])).toEqual([2.5, 3.5, 1.5]);
+    // documented limitation (record §11): a whole number 1–31 with a word unit after a month reads as a day and pairs nothing
+    expect(pairedNumbers("Rainfall: Jan 12 mm, Feb 8 mm, Aug 40 mm.", ["Jan", "Feb", "Aug"])).toEqual([undefined, undefined, 40]);
+  });
 });

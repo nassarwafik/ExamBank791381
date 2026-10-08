@@ -17,8 +17,8 @@ vi.mock("./echartsEngine", () => ({
     return { update: (x: unknown) => { h.updates.push(x); }, resize() {}, flush() {}, dispose() {}, disposed: () => false };
   }
 }));
-// 6 px per character, in whatever font the adapter asks for
-const fake = { font: "", calls: 0, measureText(t: string) { this.calls++; return { width: Array.from(t).length * 6 }; } };
+// 6 px per character (× `scale`: a webfont of another width), in whatever font the adapter asks for
+const fake = { font: "", calls: 0, scale: 1, measureText(t: string) { this.calls++; return { width: Array.from(t).length * 6 * this.scale }; } };
 // happy-dom has no FontFaceSet: a stand-in that can announce a finished webfont load
 const fonts = new EventTarget();
 Object.defineProperty(document, "fonts", { configurable: true, value: fonts });
@@ -64,5 +64,18 @@ describe("21A1-RB18c a webfont that finishes loading lays the labels out again (
     const fresh = (h.updates.at(-1) as { xAxis: { axisLabel: Label } }).xAxis.axisLabel;
     fresh.formatter!("منطقة الشمال رقم 3");
     expect(fake.calls).toBeGreaterThan(before);                                       // and measured afresh
+  });
+  it("the option is BUILT again with the new widths, not only re-applied: build-time room follows the webfont (mutant RU47)", async () => {
+    const big = canon({ ...rainfallBar(), valueLabels: true, series: [{ id: "rain", label: "الهطول", values: (rainfallBar() as CategoryChartSpec).series[0].values.map((_, i) => 1234567 + i) }] });
+    render(<DataChart spec={big} />);
+    await settle();
+    const right = (o: unknown) => (o as { grid: { right: number } }).grid.right;
+    const before = right(h.updates.at(-1) ?? h.mounted.at(-1));
+    fake.scale = 2;                                                                    // the webfont is twice as wide here
+    try {
+      await act(() => { fonts.dispatchEvent(new Event("loadingdone")); });
+      await settle();
+      expect(right(h.updates.at(-1))).toBeGreaterThan(before);                         // the value labels' room was measured again
+    } finally { fake.scale = 1; }
   });
 });

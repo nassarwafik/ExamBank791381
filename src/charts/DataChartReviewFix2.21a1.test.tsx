@@ -3,7 +3,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, fireEvent, act } from "@testing-library/react";
 import { validateChartSpec, type CategoryChartSpec, type ChartSpecV1 } from "./chartSpec";
 import type { EngineEvent } from "./echartsEngine";
-import { rainfallBar } from "./testing/chartFixtures";
+import { radarChart, rainfallBar } from "./testing/chartFixtures";
 
 // Phase 21A.1 — Review Fix 2 (rendering / UX lane), the DataChart component with a recording fake engine: printing takes the print-width
 // layout and paints before the print layout (N-1 / N-4), and the live announcement describes the difference a selection made (N-5).
@@ -21,6 +21,7 @@ vi.mock("./echartsEngine", () => ({
     };
   }
 }));
+vi.mock("./echartsAdvanced", () => ({ CHART_ADVANCED_MARKER: "xp-chart-advanced-v1" }));
 import DataChart, { PRINT_WIDTH } from "./DataChart";
 
 const canon = (c: unknown) => { const r = validateChartSpec(c); if (!r.ok) throw new Error("fixture"); return r.value as ChartSpecV1; };
@@ -112,6 +113,27 @@ describe("21A1-RB17 a width change that keeps the label layout does not redraw (
       expect(h.calls).toContain("update");
       const capOf = (o: unknown) => (o as { xAxis: { axisLabel: { width: number } } }).xAxis.axisLabel.width;
       expect(capOf(h.options.at(-1))).toBeGreaterThan(0);
+    } finally {
+      if (own) Object.defineProperty(HTMLElement.prototype, "clientWidth", own);
+    }
+  });
+});
+
+describe("21A1-RB22b a radar lays out by the stage width (round-4 finding B4-2; mutant RU50)", () => {
+  it("after a width change the applied radar option carries a radius fitted to the stage (a number, not the default percentage)", async () => {
+    const observers: (() => void)[] = [];
+    vi.stubGlobal("ResizeObserver", class { constructor(cb: () => void) { observers.push(cb); } observe() {} unobserve() {} disconnect() {} });
+    let w = 1000;
+    const own = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => w });
+    try {
+      render(<DataChart spec={canon(radarChart())} />);
+      await settle();
+      w = 360;
+      act(() => { for (const o of observers) o(); });
+      await settle();
+      const radar = (h.options.at(-1) as { radar: { radius: unknown } }).radar;
+      expect(typeof radar.radius).toBe("number");
     } finally {
       if (own) Object.defineProperty(HTMLElement.prototype, "clientWidth", own);
     }
