@@ -75,6 +75,9 @@ function utf8Bytes(s: string): number {
 }
 
 /** Strict validation of a RichContentV1 document. Never throws; returns the canonical rebuilt copy only when there is no issue. */
+/** Phase 21A — the raw-HTML / script-URL pattern prose refuses, as a predicate for intake paths that must be stricter than the stored-content
+ *  validator (AI-authored formulas). The math language itself stays unchanged: `<` `>` `/` are relations, so such a source is inert math data. */
+export const looksLikeRawHtml = (s: string): boolean => RAW_HTML.test(s);
 export function validateRichContent(raw: unknown, path = "richContent"): RichResult {
   const issues: RichIssue[] = [];
   const add = (code: string, message: string, at: string) => { if (issues.length < 50) issues.push({ code, message, severity: "error", path: at }); };

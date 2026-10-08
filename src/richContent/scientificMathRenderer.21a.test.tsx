@@ -82,6 +82,15 @@ describe("21A-R2 RTL / LTR and accessibility", () => {
     expect(css).toMatch(/@media print[\s\S]*\.xp-math-block[\s\S]*overflow:\s*visible/);
     expect(css).toMatch(/mtable/);
   });
+  it("an HTML-looking formula (accepted by the 20D.1 grammar as relations) renders as inert MathML text — no element is ever created from it", () => {
+    const s = "<script>alert(1)</script><img src=x onerror=alert(1)>";
+    const c = mathOf(s);
+    const m = c.querySelector("math")!;
+    expect(m.getAttribute("alttext")).toBe(s);
+    expect(c.querySelector("script, img, style, iframe, svg")).toBeNull();
+    for (const e of m.querySelectorAll("*")) expect(ELEMENTS.has(e.tagName.toLowerCase()), e.tagName).toBe(true);
+    expect([...m.querySelectorAll("mo")].map(o => o.textContent)).toContain("<");
+  });
   it("invalid v2 source never disappears: it renders as readable LTR source text", () => {
     for (const s of ["\\begin{array} a & b \\end{array}", "a & b", "\\begin{matrix} a && b \\end{matrix}", "\\begin{matrix} a"]) {
       const c = mathOf(s);

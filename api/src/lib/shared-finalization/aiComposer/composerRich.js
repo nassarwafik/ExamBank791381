@@ -78,9 +78,13 @@ function mapAiRichBlocks(raw, path = "richContent") {
             case "keyValueGrid":
                 blocks.push({ type: "keyValueGrid", items: b.pairs.map(x => ({ label: (0, composerSchemaKit_1.cleanText)(x.label), value: (0, composerSchemaKit_1.cleanText)(x.value) })) });
                 break;
-            case "math":
-                blocks.push({ type: "math", source: String(b.source || b.text).trim() });
+            case "math": {
+                const source = String(b.source || b.text).replace(/\r\n?/g, "\n").trim();
+                if ((0, richContentModel_1.looksLikeRawHtml)(source))
+                    return fail("الصيغة الرياضية لا تقبل وسوم HTML أو روابط script.", p);
+                blocks.push({ type: "math", source });
                 break;
+            }
         }
     }
     const v = (0, richContentModel_1.validateRichContent)({ schemaVersion: 1, blocks }, path);

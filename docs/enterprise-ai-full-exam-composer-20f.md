@@ -273,7 +273,8 @@ functional update finds a changed exam is reported STALE, never «تم التط�
 Initial JS budget 125 KB gzip unchanged. Initial graph 127 080 B on the head vs 127 031 B on the baseline (124.1 KB both): the single
 `composeExam` line on the App-owned AI service (+49 B). The dialog, the domain core and every prompt / schema helper live in the lazy
 `AiExamComposerDialog` chunk; `COMPOSER_SIGNATURES` (`ai-composer-dialog`, `AI_COMPOSER_CATALOG_V1`, `ai-composer-diff`) are refused in
-initial files and must exist in a lazy chunk.
+initial files and must exist in a lazy chunk. (Phase 21A bumped the catalog to `AI_COMPOSER_CATALOG_V2` — the Scientific Math v2
+capability — and the guard marker with it; see `docs/scientific-math-notation-21a.md`.)
 
 ## 11. Evidence
 
