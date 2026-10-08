@@ -81,6 +81,8 @@ registerTypeDefaults("parametricNumeric", 1, ensure => {
 // Phase 19D — visual types: empty targets / zones block finalization until the teacher places them on the question image. Literal on
 // purpose (initial graph); parity-tested against the model defaults.
 registerTypeDefaults("hotspot", 1, ensure => { ensure("hotspot", { v: 1, mode: "single", selections: 1, alt: "" }); ensure("answer", { scoring: "allOrNothing", regions: [] }); });
+// Phase 21A.1 — no chart yet (the teacher creates one in the lazy editor; finalization blocks until it exists); the key is empty.
+registerTypeDefaults("chartSelection", 1, ensure => { ensure("chartSelection", { v: 1, target: "category", mode: "single", maxSelections: 1 }); ensure("answer", { scoring: "allOrNothing", correct: [] }); });
 registerTypeDefaults("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
 // Phase 19E — openResponse@1: the general profile and an EMPTY rubric that blocks finalization until the teacher builds one (the lazy
 // editor offers the useful 10-point default rubric in one click). Literal on purpose (initial graph); parity-tested against the model.

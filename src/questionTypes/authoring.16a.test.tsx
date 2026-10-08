@@ -38,7 +38,7 @@ describe("16A A18 — Question Type Palette", () => {
     await mount();
     const d = await openPalette();
     expect(d.getAttribute("dir") === "rtl" || d.closest("[dir=rtl]") !== null || document.documentElement.dir === "rtl").toBe(true);
-    const all = cards(d); expect(all.length).toBe(25);   /* 20D adds composite */                                            // 16B-A adds simulation · 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
+    const all = cards(d); expect(all.length).toBe(26);   /* 20D adds composite · 21A.1 adds chartSelection */                                            // 16B-A adds simulation · 17A adds coding · 18C adds networkCli · 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
     const ms = all.find(c => c.getAttribute("data-type-key") === "multipleSelect")!;
     expect(ms.textContent).toContain("اختيار متعدد الإجابات"); expect(ms.textContent).toContain("تصحيح تلقائي"); expect(ms.textContent).toContain("علامة جزئية"); expect(ms.textContent).toContain("يدعم السؤال المركب");
     const mcq = all.find(c => c.getAttribute("data-type-key") === "multipleChoice")!; expect(mcq.textContent).toContain("اختيار من متعدد");

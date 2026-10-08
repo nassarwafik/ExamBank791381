@@ -6,6 +6,7 @@ import type { SmartSimEnvelopeV1 } from "./trustedSimQuestion";
 import type { InlineClozeConfigV1 } from "./inlineClozeQuestion";
 import type { HotspotConfigV1 } from "./hotspotQuestion";
 import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
+import type { ChartSelectionConfigV1 } from "./chartSelectionQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
 import type { RichContentV1 } from "./richContent/richContentModel";
@@ -159,6 +160,8 @@ export type BuilderQuestion = {
   // Phase 19D — the PUBLIC visual configs (hotspot@1 / labelDiagram@1) on the canonical `image`; target regions / the correct mapping live under `answer`.
   hotspot?: HotspotConfigV1;
   labelDiagram?: LabelDiagramConfigV1;
+  // Phase 21A.1 — the PUBLIC chart-selection config (declarative chart + target kind + mode); the correct targets live under `answer`.
+  chartSelection?: ChartSelectionConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;
@@ -213,6 +216,8 @@ export type QuestionBody = {
   // Phase 19D — the PUBLIC visual configs (hotspot@1 / labelDiagram@1) on the canonical `image`; target regions / the correct mapping live under `answer`.
   hotspot?: HotspotConfigV1;
   labelDiagram?: LabelDiagramConfigV1;
+  // Phase 21A.1 — the PUBLIC chart-selection config (declarative chart + target kind + mode); the correct targets live under `answer`.
+  chartSelection?: ChartSelectionConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;

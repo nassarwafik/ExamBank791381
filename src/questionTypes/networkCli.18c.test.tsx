@@ -76,7 +76,7 @@ describe("identity — networkCli@1 is a real production type", () => {
     expect(d).toMatchObject({ key: "networkCli", version: 1, label: "محاكي أوامر الشبكة (CLI)", category: "interactive", gradingMode: "auto", legacy: false });
     expect(d.capabilities).toMatchObject({ autoGrading: true, partialCredit: true, interactive: true, offline: true, compoundPart: false, manualGrading: false, requiresImage: false });
     expect(d.responseKinds).toEqual(["networkCli"]);
-    expect(QUESTION_TYPE_CATALOG.length).toBe(25);   /* 20D adds composite (after compound) */ expect(QUESTION_TYPE_CATALOG.at(-7)!.key).toBe("networkCli"); expect(QUESTION_TYPE_CATALOG.at(-6)!.key).toBe("inlineCloze"); expect(QUESTION_TYPE_CATALOG.at(-5)!.key).toBe("parametricNumeric");   // 19A appends inlineCloze · 19B appends parametricNumeric · 19D appends hotspot / labelDiagram · 19E appends openResponse
+    expect(QUESTION_TYPE_CATALOG.length).toBe(26);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) */ expect(QUESTION_TYPE_CATALOG.at(-7)!.key).toBe("networkCli"); expect(QUESTION_TYPE_CATALOG.at(-6)!.key).toBe("inlineCloze"); expect(QUESTION_TYPE_CATALOG.at(-5)!.key).toBe("parametricNumeric");   // 19A appends inlineCloze · 19B appends parametricNumeric · 19D appends hotspot / labelDiagram · 19E appends openResponse
     expect(supportsQuestionTypeVersion("networkCli", 1)).toBe(true); expect(supportsQuestionTypeVersion("networkCli", 2)).toBe(false);
     expect(typeDescription(d)).toMatch(/VLAN/); expect(typeIcon(d)).toBe(">#"); expect(chipsFor(d)).toEqual(["تصحيح تلقائي", "علامة جزئية", "تفاعلي"]);
     expect(resolveAuthoringEditor("networkCli", 1)).toBeTruthy(); expect(resolveStudentRenderer("networkCli", 1)?.key).toBe("networkCli");
@@ -234,7 +234,7 @@ describe("authoring — inside the real Builder", () => {
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q1", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(25);   /* 20D adds composite */                                    // 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
+    expect(within(d).getAllByTestId("qt-card").length).toBe(26);   /* 20D adds composite · 21A.1 adds chartSelection */                                    // 19A adds inlineCloze · 19B adds parametricNumeric · 19D adds hotspot / labelDiagram · 19E adds openResponse
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     const card = within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "networkCli")!;
     expect(card.textContent).toContain("محاكي أوامر الشبكة"); expect(card.textContent).toContain("تصحيح تلقائي"); expect(card.textContent).toContain("علامة جزئية");

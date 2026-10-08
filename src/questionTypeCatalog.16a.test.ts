@@ -24,7 +24,7 @@ const UNIVERSAL = ["simulation", "coding", "networkCli", "inlineCloze", "paramet
 
 describe("16A A1 — one canonical, React-free, code-owned Question Type Catalog", () => {
   it("lists the 11 legacy types first (stable order) followed by the four Wave 1 types; frozen; every entry carries identity, version, label, category, grading mode and the capability contract", () => {
-    expect(QUESTION_TYPE_CATALOG.map(d => d.key)).toEqual([...LEGACY, "composite", ...WAVE1, ...UNIVERSAL]);   // 20D inserts composite@1 right after compound (legacy order and every append position unchanged)
+    expect(QUESTION_TYPE_CATALOG.map(d => d.key)).toEqual([...LEGACY, "composite", "chartSelection", ...WAVE1, ...UNIVERSAL]);   // 20D inserts composite@1 right after compound; 21A.1 inserts chartSelection@1 right after composite (legacy order and every append position unchanged)
     expect(Object.isFrozen(QUESTION_TYPE_CATALOG)).toBe(true);
     for (const d of QUESTION_TYPE_CATALOG) {
       expect(Object.isFrozen(d)).toBe(true);

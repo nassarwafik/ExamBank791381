@@ -37,7 +37,7 @@ const fields = values => ({ kind: "fields", values });
 describe("19D — catalog identity", () => {
   it("22 production types; hotspot@1 / labelDiagram@1 are auto-graded, partial-credit, image-requiring, interactive, never compound parts", () => {
     const catalog = require_("../src/lib/shared-finalization/questionTypeCatalog.js");
-    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(25);   /* 20D adds composite (after compound) */
+    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(26);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) */
     expect(catalog.QUESTION_TYPE_CATALOG.slice(-4, -2).map(d => [d.key, d.version, d.label, d.legacy])).toEqual([["hotspot", 1, "تحديد منطقة على صورة", false], ["labelDiagram", 1, "تسمية أجزاء الرسم", false]]);
     for (const key of ["hotspot", "labelDiagram"]) {
       const c = catalog.questionTypeDefinition(key).capabilities;

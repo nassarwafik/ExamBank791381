@@ -72,7 +72,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("identity — smartSim@1 is the 24th production type, distinct from simulation@1", () => {
   it("catalog row: interactive, auto-graded, partial credit, offline, NOT a compound part; responseKinds ['smartSim']; simulation@1 unchanged (manual, opaque)", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(25);   /* 20D adds composite (after compound) */ expect(QUESTION_TYPE_CATALOG.at(-1)!.key).toBe("smartSim");
+    expect(QUESTION_TYPE_CATALOG.length).toBe(26);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) */ expect(QUESTION_TYPE_CATALOG.at(-1)!.key).toBe("smartSim");
     const d = questionTypeDefinition("smartSim")!;
     expect(d).toMatchObject({ version: 1, category: "interactive", gradingMode: "auto", legacy: false, responseKinds: ["smartSim"] });
     expect(d.capabilities).toMatchObject({ autoGrading: true, partialCredit: true, interactive: true, offline: true, compoundPart: false, manualGrading: false, requiresImage: false });
@@ -187,7 +187,7 @@ describe("teacher authoring — lazy editor, one-click template, checks, inline 
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q1", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(25);   /* 20D adds composite */
+    expect(within(d).getAllByTestId("qt-card").length).toBe(26);   /* 20D adds composite · 21A.1 adds chartSelection */
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     const card = within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "smartSim")!;
     fireEvent.click(card); await tick(50);

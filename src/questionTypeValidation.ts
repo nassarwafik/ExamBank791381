@@ -10,6 +10,7 @@ import { validateNetworkCliQuestion } from "./networkCliQuestion";
 import { validateInlineClozeQuestion } from "./inlineClozeQuestion";
 import { validateHotspotQuestion } from "./hotspotQuestion";
 import { validateLabelDiagramQuestion } from "./labelDiagramQuestion";
+import { validateChartSelectionQuestion } from "./chartSelectionQuestion";
 import { validateParametricNumericQuestion } from "./parametricNumericQuestion";
 import { validateOpenResponseQuestion } from "./openResponseQuestion";
 import { validateSmartSimQuestion } from "./trustedSimPlugins";
@@ -132,6 +133,8 @@ registerTypeValidator("parametricNumeric", 1, node => validateParametricNumericQ
 // Phase 19D — hotspot@1 / labelDiagram@1: public config, private key AND the canonical question image (every problem blocks).
 registerTypeValidator("hotspot", 1, node => validateHotspotQuestion(node));
 registerTypeValidator("labelDiagram", 1, node => validateLabelDiagramQuestion(node));
+// Phase 21A.1 — chartSelection@1: the public config (the chart through the ONE ChartSpecV1 authority) and the private key (every problem blocks).
+registerTypeValidator("chartSelection", 1, node => validateChartSelectionQuestion(node));
 // Phase 19E — openResponse@1: public config, the private rubric (strict, never repaired), the model answer bound and positive marks.
 registerTypeValidator("openResponse", 1, node => validateOpenResponseQuestion(node));
 // Phase 20A — smartSim@1: the strict public envelope (exact plugin identity, plugin-validated config) and the private weighted checks

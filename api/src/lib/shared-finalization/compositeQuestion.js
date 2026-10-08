@@ -29,7 +29,8 @@ __exportStar(require("./compositeModel"), exports);
 exports.COMPOSITE_CHILD_IDENTITIES = Object.freeze([
     "multipleChoice@1", "trueFalse@1", "multiTrueFalse@1", "shortAnswer@1", "fillBlank@1", "wordBank@1", "matching@1", "ordering@1", "tableFill@1", "cliFill@1",
     "multipleSelect@1", "numericResponse@1", "matrix@1", "categorization@1", "simulation@1", "coding@1", "coding@2", "coding@3", "networkCli@1", "inlineCloze@1",
-    "parametricNumeric@1", "hotspot@1", "labelDiagram@1", "openResponse@1", "smartSim@1"
+    "parametricNumeric@1", "hotspot@1", "labelDiagram@1", "openResponse@1", "smartSim@1",
+    "chartSelection@1"
 ]);
 const CHILD_IDENTITY_SET = new Set(exports.COMPOSITE_CHILD_IDENTITIES);
 exports.REFUSED_COMPOSITE_CHILD_TYPES = Object.freeze(["compound", "composite"]);
@@ -51,7 +52,7 @@ const PART_TYPE_KEYS = Object.freeze({
     matching: ["fields", "tableHeaders"], ordering: ["fields", "wordBank"], tableFill: ["fields", "tableHeaders", "tableRows"], cliFill: ["fields", "cli"],
     multipleSelect: ["options"], numericResponse: ["numeric"], matrix: ["matrix"], categorization: ["categorization"], simulation: ["simulation"], coding: ["coding"],
     networkCli: ["networkCli"], inlineCloze: ["inlineCloze"], parametricNumeric: ["parametric"], hotspot: ["hotspot"], labelDiagram: ["labelDiagram"],
-    openResponse: ["openResponse"], smartSim: ["smartSim"]
+    openResponse: ["openResponse"], smartSim: ["smartSim"], chartSelection: ["chartSelection"]
 });
 const ALL_CONFIG_KEYS = new Set(Object.values(PART_TYPE_KEYS).flat());
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);

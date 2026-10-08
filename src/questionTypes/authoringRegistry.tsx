@@ -34,6 +34,7 @@ registerAuthoringEditor("parametricNumeric", 1, lazy(() => import("./editors/Par
 // Phase 19D — visual authoring (lazy: the region editor, label bank and mapping never enter the initial graph).
 registerAuthoringEditor("hotspot", 1, lazy(() => import("./editors/HotspotEditor")));
 registerAuthoringEditor("labelDiagram", 1, lazy(() => import("./editors/LabelDiagramEditor")));
+registerAuthoringEditor("chartSelection", 1, lazy(() => import("./editors/ChartSelectionEditor")));
 registerAuthoringEditor("openResponse", 1, lazy(() => import("./editors/OpenResponseEditor")));
 // Phase 20A — trusted SmartSim authoring (lazy: the plugin editor — topology, devices, links, private checks — never enters the initial graph).
 registerAuthoringEditor("smartSim", 1, lazy(() => import("./editors/SmartSimEditor")));

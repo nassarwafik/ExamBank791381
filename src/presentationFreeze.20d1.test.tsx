@@ -124,6 +124,7 @@ describe("20D.1 FREEZE — student delivery and grading (PINS captured on 0b2208
     const scrub = (g: { score: number; totalMarks: number; manualReviewMarks?: number; questions: unknown[]; sections?: unknown }) => digest({ score: g.score, totalMarks: g.totalMarks, manualReviewMarks: g.manualReviewMarks, questions: g.questions, sections: g.sections });
     pin("grade", { mixed: scrub(mixed as never), arabic: scrub(arabic as never) });
   });
+  // Phase 21A.1 inserts chartSelection@1 right after composite@1 (an additive type; every 20D.1 identity keeps its position)
   it("L-9 the production catalog stays at 25 types (this phase adds NO question type)", () => {
     pin("catalog", QUESTION_TYPE_CATALOG.map(d => d.key + "@" + d.version));
   });
@@ -315,6 +316,7 @@ const PIN = {
   "cliFill@1",
   "compound@1",
   "composite@1",
+  "chartSelection@1",
   "multipleSelect@1",
   "numericResponse@1",
   "matrix@1",
