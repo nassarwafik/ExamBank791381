@@ -188,7 +188,11 @@ describe("F-series safety — the final exams for training reuse the SAME saniti
       expect(r.jsonBody.result.percentage, t.trainingId).toBe(Math.round(expected.percentage));   // the SAME grader as assignments — no practice-specific rule
       expect(r.jsonBody.result.percentage, t.trainingId).toBeGreaterThanOrEqual(80);
       expect(r.jsonBody.result.percentage, t.trainingId).toBeLessThanOrEqual(100);
-      expect(r.jsonBody.result.review.filter(x => x.manualReview).length, t.trainingId).toBe(readLibraryCatalog().find(c => c.libraryItemId === t.trainingId).manualReviewCount);
+      // Phase 20G.3 — the catalog's manualReviewCount is the CONVERSION count (questions without a key). Exactly one keyed question is now
+      // routed to teacher review by the legacy table authority: LIB-F06-Q41, whose key ("1=1؛ 2=3") names values its select rows never offer.
+      const tableReview = t.trainingId === "F06" ? ["LIB-F06-Q41"] : [];
+      expect(r.jsonBody.result.review.filter(x => x.manualReview).length, t.trainingId).toBe(readLibraryCatalog().find(c => c.libraryItemId === t.trainingId).manualReviewCount + tableReview.length);
+      for (const qid of tableReview) expect(expected.questions.find(q => q.questionId === qid), qid).toMatchObject({ score: 0, manualReview: true });
       if (t.trainingId.startsWith("T")) expect(r.jsonBody.result.percentage, t.trainingId).toBe(100);
     }
     expect(ctx.names("platform/")).toEqual([]);
