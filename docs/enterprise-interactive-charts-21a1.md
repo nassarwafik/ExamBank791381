@@ -28,7 +28,7 @@ every function the engine receives (formatters) is code-owned. ECharts can be re
   the teacher's explicit consent and are always labelled illustrative.
 - **Certification**: compatibility freeze, acceptance exam through the real platform lifecycle (4 personas), adversarial matrix (77 cases),
   real-Chromium certification (student path, editor, 360 px, touch, keyboard, print, reduced motion), performance, mutation campaign.
-- **Bundle**: initial budget unchanged (125 KB); initial graph 127,617 B gzip (baseline 127,309, +308 B of registration metadata
+- **Bundle**: initial budget unchanged (125 KB); initial graph 127,614 B gzip (baseline 127,309, +305 B of registration metadata
   and lazy-chunk names). No chart renderer, engine, editor or selection code reaches the initial graph or the Student Portal's static closure.
 
 ## 2. Scope, non-goals and the 21A.2 boundary
@@ -67,6 +67,9 @@ Deferred (directive §40), not done:
 | `94cbfc1` | Review Fix 2 — the round-2 findings of the three lanes (§21) |
 | `7447b17` | Review Fix 2 follow-ups found by the real-browser verification (value-axis slot, print centring, no redraw on width-only changes) |
 | `aceeb57` | Review Fix 2 mutation follow-ups (a target-kind change never carries the key over; pins, §20.2) |
+| `1780f2c` | design record — Review Fix 2 browser evidence and mutation proof |
+| `5c12b52` | Review Fix 3 — the round-3 findings of the three lanes (§21) |
+| `34bf0fc` | Review Fix 3 mutation follow-ups (starter-data conversions keep no key entry; pins, §20.3) |
 
 Review-fix commits are described in §21.
 
@@ -126,6 +129,7 @@ Rules (all enforced by `validateChartSpec`, all pinned by tests):
 | serialized chart | 64 KiB |
 | charts per rich document | 8 |
 | rich document text (existing 20D.1 limit, 100,000 chars) | a chart counts its stored title, description and source — never the generated summary, so a wording change cannot change a stored document's validity (Review Fix 2, N6) |
+| scenario source payload (existing 19G bound) | the same: a `rich` source's chart counts its stored prose, never the generated summary (Review Fix 3, round-3 finding R3-A6) |
 | `chartSelection` label / response targets | 160 / 500 |
 
 The data-point budget equals the product of the per-axis caps (60 × 8); it is kept as defense in depth if a cap changes (mutation C11 is
@@ -213,6 +217,17 @@ radar's only target is its series) — in ONE dialog naming both (Review Fix 2, 
 heat map); the selection bound can be cleared while typing, and once a typed bound is clamped to the number of targets the field shows the
 stored value (N-8).
 
+Review Fix 3 (round-3 findings R3-A4, B3-3, lane C N8): every write goes through ONE resolution of the config and the key, and the
+key-clearing warning is computed from that same resolution, so what the dialog says is what is stored — for a valid chart and for an
+invalid one alike:
+- key entries are pruned against the targets the chart's STRUCTURE holds, even while the chart is invalid (an emptied label, a histogram
+  gap): a target deleted then is dropped from the key, so its id, reused by the next new target, never inherits the key;
+- a kind change keeps a key entry only when the same target (same id, same label, same target kind) exists before and after, and keeps
+  none when the conversion starts from starter data (bar → scatter, scatter → bar: the starter's ids and default labels, such as "s1" /
+  "السلسلة 1", can recur with other data); the ONE dialog names both the data and the key ("ستُمسح الإجابة الصحيحة المحدَّدة …"; the wording for a
+  partial removal, "ستُحذف من الإجابة الصحيحة العناصر …", is kept although no current conversion removes only part of a key — §20.3);
+- a broken range is cleared only when the chart's order is known.
+
 ## 10. Accessibility, RTL, animation, mobile and print
 
 - **Figure**: `<figure>` named by the chart title (`aria-labelledby`) and described by its description plus a structural summary with
@@ -220,13 +235,14 @@ stored value (N-8).
 - **Text legend** (series colours as swatches + `<bdi>` labels), **text tooltip** (spans), **data table** behind a toggle (one header row,
   one row header per row, the category axis' label on the first column — y for horizontal bars —, every value column with its unit, the
   heat map's corner headed, unlabelled scatter points named by their coordinates as in the list, missing values marked "— (لا قيمة)"),
-  opened automatically when the engine cannot load. One retry calls the engine import again; browsers may answer it from their record of
-  the failed load (Chromium does, for the life of the page — the retry then fails without a second request), so a second failure says so
-  ("… ويمكن إعادة تحميل الصفحة لاحقًا") instead of offering a button that cannot work, and focus moves to the figure (never to `<body>`).
-  The page is never reloaded automatically.
+  opened automatically when the engine cannot load. When the engine MODULE cannot be imported, no retry is offered: Chromium keeps a failed
+  module import for the life of the page, so a retry could never succeed (Review Fix 3, B3-5); the message says where the data is and what
+  brings the chart back ("تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه، ويُعرض الرسم بعد إعادة تحميل الصفحة."). A loaded engine
+  that fails to draw keeps one retry. Focus moves to the figure (never to `<body>`); the page is never reloaded automatically.
 - **Selection list**: one `aria-pressed` button per selectable target (same order as the chart), a polite live announcement that describes
   the difference the activation made — the items selected, the items deselected (a range that shrinks or moves, a single choice replaced),
-  the limit when the activated item could not be added, or "unchanged" (Review Fix 2, N-5); nothing is emitted when nothing changed —, read-only review marks
+  the limit when the activated item could not be added, or "unchanged" (Review Fix 2, N-5); nothing is emitted when nothing changed; an
+  announcement identical to the previous one is re-mounted, so it is spoken again (Review Fix 3, B3-4) —, read-only review marks
   (✓ correct / ✗ incorrect / ○ missed; the "selected" tick never shows on a reviewed option), and the student's hint only on the student's
   own surface. A range keeps its anchor in both directions when trimmed to its bound.
 - **RTL**: Arabic labels reach the engine wrapped in RLI…PDI isolates; a unit inside a label is wrapped in a first-strong isolate ("الحرارة
@@ -240,16 +256,30 @@ stored value (N-8).
 - **Mobile and mid widths**: width-only resize observer (one measurement per animation frame); under 480 px a compact layout (smaller text,
   no outside pie labels, legend wrapping). At ANY width, category labels wider than the slot each category has are rotated 45°, and a flat
   label never exceeds its slot. The slot is the plot width the value axes leave (each axis takes its widest value label or its name's gap;
-  a combo's secondary axis takes its own) shared by the categories. Rotated labels whose neighbours would still touch (perpendicular gap
-  under one line) and more than 12 categories let the engine thin the labels (the table, tooltip and list still name every one). A
-  vertical category axis — horizontal bars, heat-map rows — has no horizontal slot: its labels keep their full width (Review Fix 2, N-2).
+  a combo's secondary axis takes its own) shared by the categories. Rotated labels whose neighbours would come closer than one LINE BOX
+  (1.7 em, the webfont's ascent + descent; the perpendicular gap is the slot × sin 45°) are thinned by a step computed here — every n-th
+  label, n = ⌈1.15 × line box / gap⌉ (a 15 % margin for the estimated slot) — not by the engine's own width estimate (Review Fix 3,
+  B3-6); otherwise more than 12 categories let the engine thin the labels (the table, tooltip and list still name every one). The axis
+  name sits below the rotated labels' reach (the longest label at its cap × sin 45°, plus two lines). Heat-map columns share the width
+  the row labels leave beside the plot, and the heat-map height reserves room for rotated column labels (rows × 30 + 230 px, within
+  300–950). A vertical category axis — horizontal bars, heat-map rows — has no horizontal slot: its labels keep their full width
+  (Review Fix 2, N-2).
+- **Truncation**: a label longer than its cap (rotated 104 px; flat up to 110 px, never wider than its slot; phones 64 px; pie labels
+  140 px) is cut by MEASUREMENT — a canvas in the page's font, at grapheme boundaries (a letter keeps its harakat), ending in "…"; the
+  engine's own truncation, which estimates every non-Latin character as a wide CJK glyph and cut Arabic labels to about half their cap,
+  is used only where no canvas exists. A pie label cuts the name, never the value (Review Fix 3, B3-2). The full names are in the
+  table, the tooltip and the selection list.
   Stage heights depend only on kind, data size and width class (no resize feedback loop). A width change re-applies the engine option only
   when the label layout changes; otherwise the engine only relayouts (Review Fix 2, N-6, §16).
 - **Print**: no animation; the figure never splits across pages. Nothing re-measures the stage and no animation frame runs before the print
-  layout, so on `beforeprint` the engine takes the print-width layout (labels laid out for 640 px, no animation), draws at 640 px (inside A4
-  and Letter margins) and **paints immediately** (`EngineHandle.flush`: the engine otherwise repaints on its next animation frame, which
-  never comes before the page is laid out — Review Fix 2, N-1 / N-4); on `afterprint` it takes the screen option and its container's
-  width again. The SVG carries a `viewBox` and the print stylesheet makes the engine box fluid and centres it, so the picture scales to (or
+  layout, so on `beforeprint` the engine takes the print-width layout (labels laid out for 640 px with the desktop rules, also when
+  printing from a phone; no animation; the selection highlight kept), draws at 640 px wide and at the chart's own desktop height (the
+  print layout's fluid box is never measured — Review Fix 3) and **paints immediately** (`EngineHandle.flush`: the engine otherwise
+  repaints on its next animation frame, which never comes before the page is laid out — Review Fix 2, N-1 / N-4). While printing nothing
+  replaces the print layout: the print media query turns the animation off, which changes the option, and that update is applied as the
+  PRINT option again; the resize observer does not resize the engine (Review Fix 3, B3-1 — with the default `subtle` animation the screen
+  layout came back at 640 px). On `afterprint` it takes the screen option and its container's width AND height again (a print height
+  never outlives the print). The SVG carries a `viewBox` and the print stylesheet makes the engine box fluid and centres it, so the picture scales to (or
   sits centred in) the printed column. The tooltip, loading status, retry button and table toggle are not printed; the selection list
   prints in full (a printed copy shows every choice).
 
@@ -267,23 +297,36 @@ stored value (N-8).
   - every number in the chart occurs in the teacher's request **with its written value and sign**: numbers are read strictly (Western,
     Arabic-Indic and Persian digits; "1,200" and "١٬٢٠٠" are 1200, never 1.2; "1,5" is 1.5; a "-" right after a digit is a range separator,
     so "10-20" gives 10 and 20, never -20; no absolute values);
-  - where the request WRITES a category's value, a single-series chart or a pie (its first series) must give that category that value — a
-    swap or shift of teacher values is refused. Review Fix 2 (round-2 findings N1 / N2) made the reading conservative — an unclear
-    phrasing pairs nothing, it never invents a pairing:
-    - a list of the chart's labels followed by a value list of the same length pairs positionally ("Jan, Feb, Mar: 120, 80, 95",
-      "في يناير وفبراير ومارس: 120 و80 و95", "Jan / Feb / Mar = 120 / 80 / 95", "A, B, C: 50%, 30%, 20%");
-    - otherwise a label pairs with the ONE number written right after it ("يناير ١٢٠", "Jan: 1,200"), or, after a year qualifier, with the
-      one number of its clause ("January 2024 sales were 120", "في يناير 2024 بلغت المبيعات 120", "Jan (2023) 120");
-    - never a pairing: a label glued to digits (Q1 / Q10), a number followed by another number, a range, an item of a value list, a label
-      written with two different numbers;
-    - labels match case-insensitively after NFKC, without invisible characters or tatweel; an en / figure dash before a digit is a minus;
-      a comma list without spaces whose groups are not all three digits long ("120,80,95") is a list, never decimals;
+  - where the request WRITES a category's value, a single-series chart or a pie (its first series) may not swap or shift teacher values:
+    a category that carries ANOTHER category's written value is refused, and so is a written value left missing (`null`). A pairing is
+    used only to detect that — it never requires equality, so a misread pairing cannot refuse a correct chart (Review Fix 3, round-3
+    finding R3-A1; Review Fix 2 had required equality). Pairings are read only where the writing is clear; an unclear phrasing pairs
+    nothing:
+    - a list of the chart's labels, in ANY order, followed by a value list of the same length pairs positionally ("Jan, Feb, Mar: 120,
+      80, 95", "في يناير وفبراير ومارس: 120 و80 و95", "Jan / Feb / Mar = 120 / 80 / 95", "A, B, C: 50%, 30%, 20%", "Jan, Feb and Mar: 120,
+      80 and 95"); "and" / «و» separate items, never a unit; nothing in parentheses comes between the two lists (R3-A3, R3-A5);
+    - otherwise a label — a whole word (one Arabic proclitic و ف ب ل ك allowed: "وفبراير", "بيناير") — pairs with the ONE number right
+      after it ("يناير ١٢٠", "Jan: 1,200", "Jan 120 mm") when its clause (up to . ! ? ؟ ; ؛ , ، a line break or another label) holds no
+      other number;
+    - never a pairing: a label glued to digits (Q1 / Q10), a label inside a word («ب» in «الطلاب»), an ordinal ("Jan 15th: 120"), a number
+      followed by another number or a range ("120-130", "120 to 130", «120 إلى 130»), a second number in the clause — a year included
+      ("January 2024 sales were 120", "Jan 2000 (up 5%)" pair nothing: the year heuristic of Review Fix 2 is gone, so four-digit values
+      such as "Jan 2000, Feb 1950" pair like any other), an item of a value list, a label written with two different numbers;
+    - labels match case-insensitively after NFKC (fullwidth and Arabic presentation forms), without invisible characters or tatweel; an
+      en / figure dash before a digit is a minus; a decimal written without a leading digit keeps its point (".5", «٫5», "-.5" —
+      R3-A2); a comma list without spaces whose groups are not all three digits long ("120,80,95", "1,200,30") is a list, never
+      decimals or one thousands number;
     - the refusal never states a value (the pairing is a check of what the teacher wrote, not a value for the model to copy).
   - a teacher-data chart's title and description state no number that is not in the request.
-  - **Not verified**: the association of values with categories in multi-series charts; pairings the request does not write in the forms
-    above — a number written before its label ("120 for January"), an abbreviation of the label ("Jan" for a category "January"), a value
-    list separated by spaces only ("120 80 95"), a two-group comma list ("120,80" reads as 120.8 under the decimal-comma rule); numbers
-    inside category, series or axis labels and units. The AI result is always a draft the teacher reviews before applying it.
+  - **Not verified**: the association of values with categories in multi-series charts; a value that is another number of the request but
+    no other category's ("Jan 120, Feb 80, total 95" drawn as Jan = 95 — not a swap), including a qualifier written for every category
+    and drawn as every category's value ("January 2024 sales were 120, February 2024 sales were 80" drawn as 2024 and 2024 — refused by
+    Review Fix 2's year rule, which also refused correct charts, §18); pairings the request does not write in the forms
+    above — year-qualified or otherwise unclear phrasings (unpaired by design), a number written before its label ("120 for January"), an
+    abbreviation of the label ("Jan" for a category "January"), Arabic spelling variants (hamza forms, harakat), numeric labels ("2022:
+    120"), a value list separated by spaces only ("120 80 95"), space-grouped thousands ("1 200"), a two-group comma list ("120,80" reads
+    as 120.8 under the decimal-comma rule); numbers inside category, series or axis labels and units. The AI result is always a draft the
+    teacher reviews before applying it.
 - AI charts appended or prepended to a stem that already holds a chart receive the next free chart id (an id collision would block the
   draft — review finding A4); charts inside a `columns` block count as taken and incoming charts inside columns are renumbered too, and
   every kept or renumbered incoming id is reserved for the next incoming chart (Review Fix 2, N3 / N5).
@@ -385,6 +428,22 @@ Review Fix 2 tree; ten review charts: 12 long / mixed / upper-case / very wide l
 | label geometry at 1280 / 1024 / 800 / 600 / 360 / 320 px (perpendicular gap of rotated neighbours) | 320 px: 11 + 11 + 11 + 11 + 7 collisions; horizontal-bar and heat-map row labels truncated to "مح…" at ≥ 600 px | 0 collisions at every width; vertical-axis labels in full; remaining truncation is the designed cap (rotated 104 px / phone 64 px, full names in the table and tooltip) |
 | one live page resized 1280 → 1024 → 800 → 600 → 360 → 320 → 360 → 600 → 1280 | — | every step identical to a fresh load at that width (0 differences, 0 collisions) |
 
+Review Fix 3 (the same harness extended to the round-3 cases, built against `1780f2c` and against the Review Fix 3 tree; the page's
+webfont (IBM Plex Sans Arabic) loaded and awaited; charts at the formal-exam default animation `subtle`; 24 review charts on the screen
+page — 12 long / mixed / upper-case / very wide labels, 5 and 6 very long labels, horizontal bars × 6 / 12 / 20, combos with two wide value
+axes (8, 10 and 12 categories), heat maps with long row labels, box plots, a histogram, a scatter, a pie, negative values — and 11 of them
+on the print page). Geometry is measured in the SVG's own user space: two labels "touch" when their text boxes (`getBBox`: the webfont's
+ascent + descent) intersect by more than 0.5 px; a name hit is an axis name crossing a label; clipping is text outside the SVG.
+
+| Check | `1780f2c` | Review Fix 3 (`5c12b52`) |
+|---|---|---|
+| **real `page.pdf()`** A4 / Letter / A5 / A4 landscape with `subtle` animation, printed from 1280 px (11 charts) | the screen layout came back at 640 px once the print media query switched the animation off: combo 7 and histogram 11 touching labels on every format | the print layout stays: 0 touching labels, 0 name hits, 0 clipped texts on every format; SVG 640 px |
+| the same printed from a 360 px phone | the phone layout was printed (phone heights 320 / 280 px, 64 px label caps, a pie without labels) | the desktop print layout (desktop heights 340 / 432 / 530 / 320 px …, 104 px caps; the pie's labels and the selection highlight are pinned by `DataChartReviewFix3` RB1e); 0 touching, 0 name hits, 0 clipped |
+| after printing (width × height against a fresh load at the same width) | — | identical for 11 / 11 charts at 1280 and at 360 px (a first Review Fix 3 build kept the print height — 340 instead of 320 px on the phone — caught here and fixed fail-first: `echartsEngine.21a1` RB1c) |
+| label geometry with the webfont at 1280 / 1024 / 800 / 600 / 360 / 320 px | 360 px: 11 touching pairs in each of 7 twelve-label charts, 7 in the 8-label combo, a heat-map axis name on its labels; 320 px: 7 + 2 touching and the name hit; 600 / 800 px: 4 touching rows of rotated heat-map columns | 0 touching, 0 name hits, 0 clipped, no page overflow at every width; on phones every 2nd or 3rd rotated label is drawn (the table, tooltip and list name every one) |
+| truncated labels (rendered width of the cut text) | Arabic labels cut to about half their cap: 45–63 px of 104 / 110 at 1280 px, 28–36 px of 64 on a phone ("محاف..."); Latin labels 95–106 px (the engine's estimate fits Latin) | Arabic and Latin labels cut by measurement to their cap: 95–100 px of 104 (rotated), 103–110 px of 110 (flat), 56–64 px of 64 (phones), ending in "…" |
+| console errors | one resource 404 of the harness page at 1280 px | the same single 404, nothing else |
+
 ## 16. Performance
 
 Worst cases within the limits, real Chromium, production build of the probe (SVG renderer, `subtle` animation):
@@ -415,23 +474,31 @@ DevTools `ScriptDuration`, three runs each):
 | `94cbfc1` (layout width in 32 px steps) | 2.84 / 2.89 / 3.06 | 4.37 / 4.43 / 4.62 |
 | `7447b17` (an option is re-applied only when the label layout or another input changed) | 1.67 / 1.73 / 1.84 | 3.17 / 3.25 / 3.30 |
 
+Review Fix 3 cuts labels by canvas measurement (a few `measureText` calls per cut label per drawing). The same probe, both trees measured in
+one session with the formal-exam default animation `subtle` (the rows above used another session; compare within a table only):
+
+| Tree | Script time (s) | Task time (s) |
+|---|---|---|
+| `1780f2c` | 1.96 / 2.02 / 2.01 | 3.42 / 3.48 / 3.47 |
+| Review Fix 3 | 1.89 / 2.03 / 1.96 | 3.30 / 3.47 / 3.40 |
+
 ## 17. Bundle (directive §38)
 
 Measured on a production build (`npm run build`, gzip level 9, `scripts/check-bundle-budget.mjs`); baseline = `ff13899`; head = the Review
-Fix 2 tree (`aceeb57`; the review fixes added ~0.5 KB to the shared contract and the lazy chart chunks below include them).
+Fix 3 tree (`5c12b52`; the review fixes added ~0.5 KB to the shared contract and ~0.6 KB to the lazy chart chunks below, included).
 
 | Item | Baseline | Head |
 |---|---|---|
-| Initial graph (index.html entry + static imports) | 18 files, 127,309 B gzip | 18 files, 127,617 B gzip (budget 125 KB = 128,000 B, unchanged) |
+| Initial graph (index.html entry + static imports) | 18 files, 127,309 B gzip | 18 files, 127,614 B gzip (budget 125 KB = 128,000 B, unchanged) |
 | Chart code in the initial graph | — | **none** (guard: any chart / engine signature in an initial file fails the build) |
-| Chart code in a no-chart student's first-load graph | — | **No** renderer, engine, editor or selection code in the initial graph or the Student Portal's static closure (guarded). The Portal closure (22 → 23 files, 86,684 → 93,108 B gzip) gains the pure ChartSpec validator (`chartSpec`, 6,151 B gzip) and the renderer's `dataChart` case (~0.2 KB) through the rich-content modules it has loaded since 20D.1 (§22). |
+| Chart code in a no-chart student's first-load graph | — | **No** renderer, engine, editor or selection code in the initial graph or the Student Portal's static closure (guarded). The Portal closure (22 → 23 files, 86,684 → 93,140 B gzip) gains the pure ChartSpec validator (`chartSpec`, 6,151 B gzip) and the renderer's `dataChart` case (~0.2 KB) through the rich-content modules it has loaded since 20D.1 (§22). |
 | Common chart runtime (ECharts core shared chunk + engine module) | — | 182.2 KB gzip (131.7 + 50.5), budget 195 KB, lazy behind DataChart's `import()` |
 | Advanced kinds (radar, box plot, heat map) | — | +17.8 KB gzip, budget 22 KB, lazy |
-| DataChart first paint (figure, list, table, adapter) | — | 5 files beyond the initial graph, 16,978 B ≈ 16.6 KB gzip (DataChart 8,515 B) |
+| DataChart first paint (figure, list, table, adapter) | — | 5 files beyond the initial graph, 17,575 B ≈ 17.2 KB gzip (DataChart 9,112 B) |
 | Chart editor | — | ChartEditor 6,339 B gzip (14,570 B with its closure) |
-| chartSelection editor | — | 2,596 B gzip (32,984 B with its closure: DataChart, ChartEditor and the confirmation dialog) |
+| chartSelection editor | — | 2,896 B gzip (33,882 B with its closure: DataChart, ChartEditor and the confirmation dialog) |
 | Student renderer / teacher review | — | 0.6 / 0.8 KB gzip (624 / 803 B; + DataChart on demand) |
-| AI Composer delta | 33 files, 182,742 B gzip | 36 files, 193,884 B gzip (+11,142 B ≈ 10.9 KB: ChartSpec 6,151 B, the chartSelection model through the shared finalization, the chart helpers, the composer dialog with catalog V3 and the chart descriptor) |
+| AI Composer delta | 33 files, 182,742 B gzip | 36 files, 193,931 B gzip (+11,189 B ≈ 10.9 KB: ChartSpec 6,151 B, the chartSelection model through the shared finalization, the chart helpers, the composer dialog with catalog V3 and the chart descriptor) |
 
 Guards added to `scripts/check-bundle-budget.mjs` (each shown to fail on a planted defect in a copy of `dist`: an engine signature in an
 initial file, a static engine import from DataChart, chart code in the Student Portal, an oversized advanced chunk): signatures never
@@ -470,12 +537,13 @@ browser follow-ups on `94cbfc1`:
 
 | Findings | Suites | Result on the earlier head |
 |---|---|---|
-| N1 / N2 / N5 pairing, N3 nested ids, N6 size, N4 invisible characters | `composerChart` AI3 / AI5 / AI7 / AI8, `richContentChart` RC1, `chartRules` R5 | on `b04cc37`: AI7 5 fail (`pairedNumbers` missing, list / qualifier / comma-list readings), AI8 nested 1 fail (duplicate `chart1`), AI5 year 1 fail, RC1 size 1 fail (the exact-limit document refused), R5 2 fail (U+2061 … tag characters accepted; look-alike labels distinct) |
+| N1 / N2 / N5 pairing, N3 nested ids, N6 size, N4 invisible characters | `composerChart` AI3 / AI5 / AI7 / AI8, `richContentChart` RC1, `chartRules` R5 | on `b04cc37`: AI7 5 fail (`pairedNumbers` missing, list / qualifier / comma-list readings), AI8 nested 1 fail (duplicate `chart1`), AI5 2 fail (the year qualifier; the comma-list reading), RC1 size 1 fail (the exact-limit document refused), R5 2 fail (U+2061 … tag characters accepted; look-alike labels distinct) |
 | N-1 / N-4 print, N-2 vertical axes, N-5 announcements, N-3 key-clearing confirmation, N-7 thinning, N-8 bound | `DataChartReviewFix2`, `echartsEngine` RB1c, `chartReviewFix2`, `ChartEditorReviewFix2`, `DataChartReviewFix1` RB8 | on `b04cc37`: 13 fail (`[resize(640)]` instead of update → resize → flush; `h.flush is not a function`; announcements "تم تحديد: مايو" for a shrink; width 24 / 46 instead of 110; interval 0 instead of "auto"; no dialog; "20" shown) |
 | value-axis slot, print centring, redraw on width-only changes (found in Chromium) | `chartReviewFix2` RB5c, `chartReviewFix1` print pin, `DataChartReviewFix2` RB17 | on `94cbfc1`: 3 fail (interval 0; the CSS rule; `['resize()', 'update']`) |
 | a target-kind change carried the key over (found by mutant RS41, §20.2) | `ChartEditorReviewFix2` RB3c | on `7447b17`: 1 fail (the key stayed `['jan']`) |
 
-In all, 27 tests failed on the earlier heads; 5 new tests passed there and are pins of unchanged behaviour (allowed invisible characters,
+In all, 28 tests failed on the earlier heads (24 of the `94cbfc1` tests on `b04cc37` — the round-3 count; the implementer's first run, before
+the AI5 pins were added, recorded 23); 5 new tests passed there and are pins of unchanged behaviour (allowed invisible characters,
 kind changes that keep the key, room for every rotated label, the description-number and sign pins X3 / X4 / X8, several incoming charts),
 and lane C's C2-1 assertions are pins too (U+2060 / U+206A–U+206F / U+FFF9–U+FFFB refused, numbers in a description, the first series of a
 multi-series pie descriptor, a four-digit group): the behaviour held on `b04cc37`; they kill lane C's six surviving mutants (§20.2).
@@ -484,7 +552,46 @@ range that WAS extended by two months — the incomplete announcement that round
 "تم تحديد: أبريل، مايو؛ بلغت الحد الأقصى (3)؛ لم يُحدَّد: فبراير".
 
 One earlier expectation changed with A2 and is not a weakening: `composerChart` AI3 pinned `numbersInText` returning `3` for the
-teacher's `-3` (an absolute value) — the defect itself; it now expects the strict reading.
+teacher's `-3` (an absolute value) — the defect itself; it now expects the strict reading. A second one changed with Review Fix 2 (N1):
+AI5's year qualifier expectation went from "no pairing" to `120` (the qualifier rule of Review Fix 2; Review Fix 3 removed that rule again,
+below).
+
+Review Fix 3 — the new and changed tests (9 files, 81 tests) were run on `1780f2c` (the round-3 head) in a detached worktree: **32 fail,
+49 pass.**
+
+| Findings | Suites | On `1780f2c` |
+|---|---|---|
+| R3-A1 / A2 / A3 / A5, lane C N1 / N3 (pairing, leading-dot decimals, any-order lists, "and", missing values, four-digit values) | `composerChart` AI9 | 5 fail (the correct chart refused for "School A 2000 students in 40 classes, …"; ".2 / .3 / .5" read as `[2, 3, 5]`; a list in another order and an "and"-joined list unpaired; "Jan 2000, Feb 1950, Mar 2050" unpaired) |
+| the pairing redesign (changed expectations, below) | `composerChart` AI5 / AI7 / AI9 | 3 fail (the year qualifier paired `120`; the year-qualified phrasings paired; "Jan 120, Feb 80, total 95" drawn as Jan = 95 refused) |
+| R3-A6 scenario payload | `richContentChart` RC1 | 1 fail (the generated summary counted toward the bound) |
+| R3-A4 / B3-3 / lane C N8 key resolution | `ChartEditorReviewFix3` RB3d / RB3e | 5 fail (the deleted bin's / category's key kept and inherited by the reused id; the starter series inheriting a series key; dialog and stored key disagreeing for invalid charts — e.g. bar [-5, -3, -1, 0] → pie warned while keeping `c1`) |
+| B3-1 print with `subtle`, B3-4 repeated announcement | `DataChartReviewFix3` RB1d / RB8c | 2 fail (`["update", "resize(640)", "flush", "update"]` — the screen option after the media change; the live text not re-mounted) |
+| B3-5 import failure | `DataChartRetry` | 1 fail (the retry button offered; "تعذّر عرض الرسم البياني" instead of the reload message) |
+| B3-2 measured truncation, B3-6 thinning / axis name / heat map | `chartReviewFix3` RB18 / RB20, `echartsEngine` RB1c | 9 fail (no measured cut; interval "auto"; fixed name gaps 58 / 90; heat-map columns at the default reserve; heights 240–870; `resize(width, height)` missing) |
+| the thinning representation (see below) | `chartReviewFix2` RB5c, `chartReviewFix3` RB19 C3-28 / C3-29 | 6 fail ("auto" where a computed step is now expected) |
+| pins of unchanged behaviour | `chartRules` N4 duplicates and E10 (every C1 control), AI9 R3-A7, `DataChartReviewFix3` RB1e (print from a phone uses the desktop rules and keeps the selection highlight), RB19 C3-31 (vertical axes never rotate) | pass |
+
+The mutation follow-ups (`34bf0fc`, §20.3): `ChartEditorReviewFix3` RB3g (a conversion from starter data keeps no key entry) failed on
+`5c12b52` — the dialog announced a partial removal and kept `s1`; the nine mutation pins (`composerChart` AI9, `DataChartReviewFix3`
+RB1f, `DataChartMeasure`, `ChartEditorReviewFix3` RB3f) pass there: they are pins of the committed behaviour.
+
+Changed expectations (each a design change requested by a round-3 finding, none to match a defect):
+- **The pairing only detects swaps** (R3-A1, lane A's recommended fix): a misread pairing no longer refuses a correct chart, and the year
+  heuristic is gone. Three expectations follow: AI5 "يناير 2024: 120، فبراير 2024: 95" now pairs nothing (was `120`); AI7's year-qualified
+  phrasings pair nothing (`[undefined, undefined]`; their correct charts are still accepted); and AI7's refusal of the year written as
+  every category's value (`[2024, 2024]` for "January 2024 sales were 120, February 2024 sales were 80"; also the Arabic and "(2023)"
+  forms) was **removed** — under swap-only semantics that chart is not detected (no category carries another category's written value).
+  This is a deliberate loss of detection, listed in §11 "Not verified"; the round-2 rule that caught it also refused correct charts
+  ("School A 2000 students in 40 classes …" accepted `[40, 1500]` and refused the correct one). AI9 adds the companion case
+  "Jan 120, Feb 80, total 95" drawn as Jan = 95: accepted (not a swap), Jan = 80 refused (Feb's value).
+- **Thinning is a computed step, against a stricter metric**: RB5c / C3-28 / C3-29 expected the engine's `interval: "auto"` for dense
+  rotated labels; they now expect an integer step ≥ 1. RB5c's widths moved with the metric (touching is now one line box, 1.7 em, instead
+  of one em + 2 px, so thinning starts on wider stages): the combo and the wide-value bar are checked at 288 px instead of 256 / 224, and
+  the twelve months at 352 px are now thinned (were drawn in full). Every stage that thinned before still thins (1.7 em > 1 em + 2 px at
+  both font sizes).
+- **The import failure has no retry** (B3-5): the Review Fix 1 test "(2) the import fails once: retry re-imports and draws" is removed —
+  in Chromium a failed module import is kept for the life of the page, so that retry could never succeed; the test was passing only
+  because the test runner's module mock behaves unlike a browser. A throwing mount keeps its retry (`DataChart.21a1` DC2).
 
 Pins (current behaviour that must not change) are labelled as pins: the compatibility freeze (§14), the bundle guard pins (§17).
 
@@ -666,7 +773,7 @@ freeze now kills; RC02: builder drift).
 | RA06 | contract/text | ZWNJ refused (Persian / Arabic text broken) | KILLED | chartRules.21a1.test.ts — ZWNJ / ZWJ (needed by Persian and Arabic text) stay allowed in chart text |
 | RA07 | ai/numbers | thousands separators read as decimals again | KILLED | composerChart.21a1.test.ts — thousands separators, decimal separators, signs, ranges and expon |
 | RA08 | ai/numbers | a '-' after a digit read as a sign (ranges made negative) | KILLED | composerChart.21a1.test.ts — thousands separators, decimal separators, signs, ranges and expon |
-| RA09 | ai/numbers | absolute values accepted again | KILLED | composerChart.21a1.test.ts — teacher-provided numbers are preserved exactly (Arabic-Indic digits in the request count); |
+| RA09 | ai/numbers | absolute values accepted again | KILLED | composerChart.21a1.test.ts — a number that does not occur in the teacher's request is refused (Arabic-Indic digits in the request count) (the test's title at the time read "preserved exactly"; renamed in Review Fix 2) |
 | RA10 | ai/pairing | a label pairs with a number glued to it (Q1 ← Q10) | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
 | RA11 | ai/pairing | ambiguous pairing (two different numbers) taken as a pairing | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
 | RA12 | ai/pairing | a qualifier (year) taken as the paired value | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
@@ -782,13 +889,98 @@ and restore, centring, vertical axes, thinning, value-axis widths, the redraw ru
 | RS42 | authoring/kind | a key that survives the change is still warned about | KILLED | ChartEditorReviewFix2.21a1.test.tsx — a change that keeps the key  |
 | RS43 | authoring/bound | the clamped bound is not shown | KILLED | ChartEditorReviewFix2.21a1.test.tsx — typing 20 for a chart with 12 se |
 
+### 20.3 Review Fix 3 campaign
+
+The same runner on the committed Review Fix 3 tree (`5c12b52`, clean before and after; every file restored byte-for-byte, SHA-256
+verified, including the regenerated shared build): 50 planted defects in the Review Fix 3 code — 20 lane A (RT01–RT20: the swap-only and
+missing-value checks, the clause / ordinal / whole-word / proclitic rules, any-order and repeated label lists, the parenthesis gap, run
+lengths, leading-dot decimals, "and", lists that disagree, the stored-prose bounds, the C1 range) and 30 lane B / editor (RT21–RT50: the
+print guard, the print height and its restore, the observer while printing, explicit and automatic engine heights, the announcement
+remount, the import-failure message, measured truncation, the thinning step and margin, the line-box metric, the axis-name gap, the
+heat-map reserve and height, the editor's key resolution and warning). The follow-up round ran on `34bf0fc`.
+
+| Round | Planted | KILLED | SURVIVED | TIMEOUT / BUILD_ERROR |
+|---|---|---|---|---|
+| RF3 (`5c12b52`) | 50 | 39 | 11 (RT06, RT07, RT10, RT17, RT23, RT24, RT27, RT33, RT46, RT49, RT50) | 0 / 0 |
+| RF3b (`34bf0fc`) | 17: the 11 survivors after their pins, RT45 / RT48 and RT47b (RT47 re-planted against the changed line) on the changed resolution, RT51–RT53 for the starter-data rule | 12, and RT33 in a re-run once its new suite file was listed | 5 (RT46, RT47b, RT49, RT53 equivalent; RT33 before its suite file was listed) | 0 / 0 |
+
+- **The campaign led to one more fix**: lane A's R3-A4 asked that a conversion from starter data keep no key entry; the first Review Fix 3
+  commit kept an entry whose id AND default label recurred in the starter data (a scatter series "s1" / "السلسلة 1" → bar). `34bf0fc`
+  clears the key on every starter-data conversion (`convertChartKind` reports `fresh`); `ChartEditorReviewFix3` RB3g failed on `5c12b52`
+  (the dialog announced a partial removal and kept `s1`) and passes now; RT51 / RT52 kill its removal.
+- Nine survivors were pinned (`composerChart` AI9 mutation pins, `DataChartReviewFix3` RB1f, `DataChartMeasure`, `ChartEditorReviewFix3` RB3f).
+- **Four equivalents, all defense in depth in the editor's single resolution** (kept on purpose): RT47b and RT49 — a check that a kept
+  target keeps its label, and the partial-removal wording — cannot fire because no data-keeping conversion drops or relabels a target
+  (checked over 312 kind × fixture × target-kind combinations: 164 starter-data conversions, 34 target-kind changes, 114 that keep every
+  target with its label); RT46 and RT53 guard a structurally unreadable chart, which the chart editor never emits and import refuses.
+
+**Review Fix 3: 53 distinct planted defects, 50 KILLED, 3 equivalent (RT46, RT49, RT53; and RT47b, a re-plant of the killed RT47), 0
+timeouts.** Overall: 229 distinct planted defects, 224 KILLED, 5 equivalent (C11, RS14, RT46, RT49, RT53).
+
+| Id | Area | Planted defect | Result | Killed by |
+|---|---|---|---|---|
+| RT01 | ai/pairing | a pairing demands equality again (not only a swap) | KILLED | composerChart.21a1.test.ts — a m |
+| RT02 | ai/pairing | a written value may go missing (null accepted) | KILLED | composerChart.21a1.test.ts — R3- |
+| RT03 | ai/pairing | another number in the clause no longer makes the pairing unclear | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RT04 | ai/pairing | the clause does not end at another label | KILLED | composerChart.21a1.test.ts — R3- |
+| RT05 | ai/pairing | the clause does not end at punctuation | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RT06 | ai/pairing | an ordinal is read as a value | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mut |
+| RT07 | ai/pairing | a label matches inside a word | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mut |
+| RT08 | ai/pairing | no Arabic proclitic before a label | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RT09 | ai/pairing | a label list recognised in chart order only | KILLED | composerChart.21a1.test.ts — R3- |
+| RT10 | ai/pairing | a label may repeat inside a label list | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mut |
+| RT11 | ai/pairing | a parenthesis may come between the label list and the values | KILLED | composerChart.21a1.test.ts — R3- |
+| RT12 | ai/pairing | a longer value run pairs positionally | KILLED | composerChart.21a1.test.ts — R3- |
+| RT13 | ai/numbers | a decimal without a leading digit is not read | KILLED | composerChart.21a1.test.ts — R3- |
+| RT14 | ai/numbers | a leading-dot decimal loses its point | KILLED | composerChart.21a1.test.ts — R3- |
+| RT15 | ai/pairing | a unit swallows "and" again | KILLED | composerChart.21a1.test.ts — R3- |
+| RT16 | ai/pairing | "and" is not a list separator | KILLED | composerChart.21a1.test.ts — R3- |
+| RT17 | ai/pairing | a label listed with two different values still pairs | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mut |
+| RT18 | contract/size | the scenario payload counts the generated chart summary again | KILLED | richContentChart.21a1.test.ts — a scenario's payload bound counts a chart's STORED prose, never the generated summary (rev |
+| RT19 | contract/size | the stored-only plain text ignores the option | KILLED | richContentChart.21a1.test.ts — a scenario's payload bound counts a chart's STORED prose, never the generated summary (rev |
+| RT20 | contract/text | the C1 rule narrowed to NEL / CSI | KILLED | chartRules.21a1.test.ts — every C1 control U+0080–U+009F is refused in chart text, not only NEL and CSI (review fix  |
+| RT21 | render/print | while printing an option change re-applies the screen option | KILLED | DataChartReviewFix3.21a1.test.tsx — subtle animation (the formal-exam default) |
+| RT22 | render/print | the print height is not passed (the print box is measured) | KILLED | DataChartReviewFix3.21a1.test.tsx — subtle animation (the formal-exam default) |
+| RT23 | render/print | the resize observer resizes while printing | KILLED (after its pin; SURVIVED first) | DataChartReviewFix3.21a1.test.tsx — printing  |
+| RT24 | render/print | a height change while printing resizes to the screen | KILLED (after its pin; SURVIVED first) | DataChartReviewFix3.21a1.test.tsx — printing  |
+| RT25 | render/print | the printing flag is never set | KILLED | DataChartReviewFix3.21a1.test.tsx — subtle animation (the formal-exam default) |
+| RT26 | render/print | the printing flag is never cleared | KILLED | DataChartReviewFix3.21a1.test.tsx — subtle animation (the formal-exam default) |
+| RT27 | render/print | the print height is the phone height | KILLED (after its pin; SURVIVED first) | DataChartReviewFix3.21a1.test.tsx — printing  |
+| RT28 | render/engine | after printing the print height stays (no auto height) | KILLED | echartsEngine.21a1.test.ts — after resize(640) the drawing still reaches past 640 until flush(); after flush() e |
+| RT29 | render/engine | an explicit height is ignored | KILLED | echartsEngine.21a1.test.ts — after resize(640) the drawing still reaches past 640 until flush(); after flush() e |
+| RT30 | ux/announce | an identical announcement is not re-mounted | KILLED | DataChartReviewFix3.21a1.test.tsx — activating the same refused item twice r |
+| RT31 | ux/retry | an import failure is treated like a mount failure | KILLED | DataChartRetry.21a1.test.tsx — the import fails: the fallbac |
+| RT32 | ux/retry | the retry button is offered for an import failure | KILLED | DataChartRetry.21a1.test.tsx — the import fails: the fallbac |
+| RT33 | render/truncation | the screen option gets no measurer | KILLED (after its pin; SURVIVED first) | DataChartMeasure.21a1.test.tsx — the screen option and the p |
+| RT34 | render/truncation | a label is never cut by measurement | KILLED | chartReviewFix3.21a1.test.ts — a rotated Arabic label is cut to its 104 px cap by measurement (not t |
+| RT35 | render/truncation | a cut may split a letter from its marks | KILLED | chartReviewFix3.21a1.test.ts — a grapheme is never split (a letter keeps its harakat); a vertical ca |
+| RT36 | render/truncation | the engine still truncates a measured label | KILLED | chartReviewFix3.21a1.test.ts — a rotated Arabic label is cut to its 104 px cap by measurement (not t |
+| RT37 | render/truncation | a pie label's cut ignores its value | KILLED | chartReviewFix3.21a1.test.ts — a pie label cuts the NAME, never the value; without a measurer the en |
+| RT38 | render/axes | dense rotated labels left to the engine again | KILLED | chartReviewFix3.21a1.test.ts — a s |
+| RT39 | render/axes | the thinning step has no margin | KILLED | chartReviewFix3.21a1.test.ts —  |
+| RT40 | render/axes | touching measured against one em + 2 px again | KILLED | chartReviewFix3.21a1.test.ts — a s |
+| RT41 | render/axes | the axis name gap is fixed again | KILLED | chartReviewFix3.21a1.test.ts —  |
+| RT42 | render/axes | the rotated reach is not capped | KILLED | chartReviewFix3.21a1.test.ts —  |
+| RT43 | render/heatmap | heat-map columns ignore the row labels' width | KILLED | chartReviewFix3.21a1.test.ts —  |
+| RT44 | render/heatmap | the heat-map height has no room for rotated labels | KILLED | chartReviewFix3.21a1.test.ts —  |
+| RT45 | authoring/key | an invalid chart's key is not pruned (only a valid one) | KILLED | ChartEditorReviewFix3.21a1.test.tsx — histogram: deleting the key |
+| RT46 | authoring/key | an unreadable structure keeps the whole key | EQUIVALENT (SURVIVED) | the fallback for a structurally unreadable chart: every chart the editor emits carries its kind's arrays and import refuses invalid charts, so the structural reading never fails |
+| RT47 | authoring/key | a kind change keeps an id whose label changed | KILLED (first round); re-planted as RT47b | ChartEditorReviewFix3.21a1.test.tsx — bar (target series, key s1  |
+| RT48 | authoring/warn | the warning is not the stored outcome (never warns) | KILLED | ChartEditorReviewFix2.21a1.test.tsx — bar → radar keeps every valu |
+| RT49 | authoring/warn | a partial removal is announced as clearing everything | EQUIVALENT (SURVIVED) | no kind change removes only part of a key: data-keeping conversions keep every target, the others clear the key (same 312-combination check) |
+| RT50 | authoring/key | a range is judged against an unknown order | KILLED (after its pin; SURVIVED first) | ChartEditorReviewFix3.21a1.test.tsx — an edit that makes the chart invalid keeps a contiguous  |
+| RT47b | authoring/key | a kind change keeps an id whose label changed (re-planted against the new line) | EQUIVALENT (SURVIVED) | no conversion that keeps data relabels a target (312 kind × fixture × target-kind combinations checked); starter-data conversions clear the key first |
+| RT51 | authoring/key | a starter-data conversion keeps same-id-same-label entries | KILLED | ChartEditorReviewFix3.21a1.test.tsx — scatter (series «السلسلة 1» and «فرع  |
+| RT52 | authoring/key | a conversion never reports starter data | KILLED | ChartEditorReviewFix3.21a1.test.tsx — scatter (series «السلسلة 1» and «فرع  |
+| RT53 | authoring/key | an unreadable conversion keeps the key | EQUIVALENT (SURVIVED) | the conversion cannot throw here: the chart editor ran the same conversion before emitting the change |
+
 ## 21. Independent review
 
 Round 1 — three read-only lanes on `a788539` (each: no writes to the repository, probes in scratch copies only):
 
 | Lane | Verdict | Findings |
 |---|---|---|
-| A — security, privacy, grading authority, ingest, AI intake | FINDINGS | A1 MAJOR a JSON object posing as a chart kind / block type made the validators throw (sanitizer, finalization, grading, ingest all down); A2 MAJOR the AI number check accepted changed readings (1,200 → 1.2, −5 → 5) and swapped values; A3 MINOR invisible / C1 / separator format characters accepted in chart text; A4 MINOR appending an AI chart to a stem with a chart failed on a duplicate id; A5 NIT the "selecting everything never pays" wording |
+| A — security, privacy, grading authority, ingest, AI intake | FINDINGS | A1 MAJOR a JSON object posing as a chart kind / block type made the validators throw (sanitizer, finalization, grading, ingest all down); A2 MAJOR the AI number check accepted changed readings (1,200 → 1.2, −5 → 5) and swapped values; A3 MINOR invisible / C1 / separator format characters accepted in chart text; A4 MINOR appending an AI chart to a stem with a chart failed on a duplicate id; A5 MINOR the "selecting everything never pays" wording |
 | B — rendering, UX, accessibility, bundle | FINDINGS | B-1 … B-5 MAJOR: print cut charts off; the retry could not retry a failed import; chartSelection kind changes lost data silently; mixed RTL units / negative values reordered; labels overlapped at mid widths. B-6 … B-14 MINOR: table headers / units, announcements and range anchor, histogram x bounds ignored, lossy conversions unreported, review ✓ on incorrect selections, the editor invisible to the bundle guard, heat-map scale without values and mid-scale contrast, invalid cells without a text error. B-15 NITs |
 | C — lifecycle, compatibility, test quality, mutation adequacy, docs, process | FINDINGS | F1 MAJOR the freeze's synthetic answers were malformed (grading pinned blank only); F2 MAJOR the record overstated the AI number check; F3 MINOR the acceptance scatter labelled its answer point "outlier"; F4 MINOR no drift test for the generated fixture; F5 MINOR `composite.20d` labelled "known flaky" without a root cause; F6 MINOR PR body placeholders; N1–N5 NITs |
 
@@ -807,7 +999,21 @@ Round 2 — the same three lanes on `b04cc37`:
 **Review Fix 2** (`94cbfc1`, `7447b17`) addresses every round-2 finding: N1–N3, N5, N8 in §11; N4 and N6 in §4 / §4.1; N7 in the code
 comment and test title; N-1 … N-9 and the retry wording in §9 / §10; C2-1 with pins (§18, §20.2); C2-2 in §14; C2-3 in the composer code
 comments, the test header and titles; C2-4 in the test title; C2-5 in the PR body. Verifying in real Chromium found three more defects,
-fixed fail-first in `7447b17` (§15, §18). Fail-first evidence is in §18, the mutation proof in §20.2. Round 3 follows on the new exact head.
+fixed fail-first in `7447b17` (§15, §18). Fail-first evidence is in §18, the mutation proof in §20.2.
+
+Round 3 — the same three lanes on `1780f2c`:
+
+| Lane | Verdict | Earlier findings | New findings |
+|---|---|---|---|
+| A″ | FINDINGS | N2–N5, N7, N8, A1, A3–A5 resolved; N1, N6, A2 partially | R3-A1 MAJOR the pairing still invented pairings (years, ordinals, labels inside words, a parenthesised list): correct charts refused, wrong ones accepted; R3-A2 MAJOR ".5" read as 5; R3-A3 MAJOR label lists only in chart order; R3-A4 MAJOR the chartSelection key could silently point at another target (deletions while invalid, reused ids, starter data); R3-A5 MINOR "and" swallowed as a unit, a written value could go missing; R3-A6 MINOR the scenario payload counted the generated summary; R3-A7 MINOR unpinned rules; R3-A8 NIT §11 / §18 / §21 wording and counts |
+| B″ | FINDINGS | N-1, N-2, N-5 … N-9 and the B-2 residual resolved; N-3 resolved for valid charts; N-4 not resolved | B3-1 MAJOR with the default animation the print layout was replaced during real printing; B3-2 MINOR Arabic labels truncated to about half their cap; B3-3 MINOR key warning and stored key disagree for an invalid chart; B3-4 MINOR an identical announcement is silent; B3-5 NIT a retry that cannot succeed; B3-6 NIT geometry evidence without the webfont |
+| C″ | FINDINGS | C2-1, C2-2, C2-4, C2-5 resolved; C2-3 partially (the RA09 row) | N1 MINOR pairing rules untested; N2 MINOR "and"; N3 MINOR four-digit values never paired; N4 MINOR label-normalisation rules untested; N5 MINOR untested layout / print / dialog rules; N6 … N9 NIT (RA09 wording, fail-first counts, the invalid-conversion dialog, §22 wording) |
+
+**Review Fix 3** (`5c12b52`, `34bf0fc` and the record) addresses every round-3 finding: R3-A1 … R3-A3, R3-A5 and lane C N1 … N3 in §11 (the
+pairing redesign); R3-A4, B3-3 and lane C N8 in §9; R3-A6 in §4.1; R3-A7 and lane C N4 / N5 with pins (§18, §20.3); B3-1 … B3-6 in §10 and
+§15; R3-A8 and lane C N6 / N7 / N9 in §11, §18, §20.1, §21 and §22. Verifying in real Chromium found one more defect in the fix itself (the
+print height outliving the print), fixed fail-first before the commit (§15). Fail-first evidence is in §18, the mutation proof in §20.3.
+Round 4 follows on the new exact head.
 
 ## 22. Known limitations
 
@@ -825,13 +1031,16 @@ fixed fail-first in `7447b17` (§15, §18). Fail-first evidence is in §18, the 
   about 10 % more on this branch, whose rich-content modules validate charts. Run alone, the file failed 3 of 8 runs on this branch (the
   reviewer measured 4 of 9 here and 1 of 9 on the baseline). The fix warms the two lazy modules once in a `beforeAll`, so the settle loop
   waits for React rather than for the transformer; no assertion and no budget changed. After the fix: 0 failures in 12 runs.
-- `api/tests/visual-questions-19d.test.js:204` (phase 19D, untouched here) failed once in CI on `94cbfc1`. Root cause: its hotspot-secret
+- `api/tests/visual-questions-19d.test.js:204` (phase 19D; this branch changed only its catalog-size pin at line 40, declared) failed once
+  in CI on `94cbfc1`. Root cause: its hotspot-secret
   pattern `/…|0\.617|…/` also matches the milliseconds of a timestamp in the submit response (`"startedAt":"…T17:49:50.617Z"` — a second
   ending in 0 and milliseconds 617; likewise 137, 181, 093, 413, 719 and 557), so the test fails whenever the clock lands there. No secret
   leaked. Proposed fix (outside this phase's scope, not applied): anchor the coordinate canaries with `(?<!\d)`, which still matches
-  `"cx":0.617` and no longer matches `50.617Z`.
+  `"cx":0.617` and no longer matches `50.617Z`. The same class: `api/tests/parametric-numeric-19c-rf1.test.js` (phase 19C, untouched) failed
+  once in round-3 lane A's run — its hidden-value canary `/29\.5/` can match a timestamp's milliseconds the same way; not patched here.
 - Local full runs on the 4-core review container hit one timing failure each in two unrelated, untouched tests on the final tree:
   `src/AppEvaluationFinish.9g.test.tsx` (G3/G5, "Test timed out in 5000ms" — the same test timed out on the untouched baseline `ff13899`
   in this phase's first baseline run, with G6 and G7) and `src/phase8b.test.tsx` (the activity log's focus after «عرض المزيد»: `BODY`
-  instead of `TR`; 5 isolated and 24 parallel stressed runs passed; the focus effect consumes its pending row on the first commit after
-  the click, so any interleaved commit drops the focus — Phase 8B code, not changed here). Neither is patched in this phase.
+  instead of `TR`; not reproduced in 5 isolated and 24 parallel stressed runs, so not root-caused; a likely mechanism, unconfirmed: the
+  focus effect consumes its pending row on the first commit after the click, so an interleaved commit would drop the focus — Phase 8B
+  code, not changed here). Neither is patched in this phase.
