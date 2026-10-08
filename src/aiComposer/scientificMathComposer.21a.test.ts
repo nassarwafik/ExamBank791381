@@ -68,7 +68,8 @@ describe("21A-AI1 the catalog derives Scientific Math v2 from code", () => {
     expect(line.length).toBeLessThanOrEqual(3500);
     expect(p.length).toBeLessThanOrEqual(9000);
     expect(p.startsWith("CAPABILITY CATALOG AI_COMPOSER_CATALOG_V2")).toBe(true);
-    for (const e of MATH_ENVIRONMENTS) expect(line, e).toContain(e);
+    const envs = line.slice(line.indexOf("environments ONLY ") + 18, line.indexOf(" as \\begin{name}")).split(", ");
+    expect(envs).toEqual([...MATH_ENVIRONMENTS]);                                                    // the exact list, not a substring — mutation M50
     for (const f of MATH_FEATURES) expect(line, f.id).toContain(f.example);
     for (const n of [MATH_LIMITS.chars, MATH_LIMITS.nodes, MATH_LIMITS.depth, MATH_GRID_LIMITS.rows, MATH_GRID_LIMITS.cols, MATH_GRID_LIMITS.cells]) expect(line).toContain(String(n));
     const offered = line.slice(line.indexOf("commands ONLY ") + 14, line.indexOf("; environments ONLY")).split(" ").map(s => s.replace(/^\\/, ""));

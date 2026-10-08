@@ -145,6 +145,12 @@ describe("21A-S4 cell and row separators are legal ONLY at a grid's own cell lev
 
 describe("21A-S5 grid bounds are explicit, conservative and enforced before materializing", () => {
   const mat = (r: number, c: number, env = "matrix") => `\\begin{${env}} ` + Array.from({ length: r }, () => Array.from({ length: c }, () => "x").join(" & ")).join(" \\\\ ") + ` \\end{${env}}`;
+  it("a grid is ONE node of the 600-node bound (exact boundary: grid + cell row + cell + top row + 596 identifiers = 600) — mutation M28", () => {
+    const withIds = (n: number) => "\\begin{matrix} a \\end{matrix}" + " x".repeat(n);
+    expect(M.parseMath(withIds(596)).ok).toBe(true);
+    refused(withIds(597));
+    expect(withIds(597).length).toBeLessThan(M.MATH_LIMITS.chars);                                // refused by the NODE bound, not by length
+  });
   it("rows: 12 accepted, 13 refused; cols: 8 accepted, 9 refused; cells: 64 (8×8) accepted, 72 (9×8) refused", () => {
     expect(grid(mat(12, 1)).rows).toHaveLength(12);
     refused(mat(13, 1));
