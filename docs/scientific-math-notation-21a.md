@@ -25,7 +25,7 @@ how anything is graded.
   - Accent: `\ddot`.
   - Number sets: `\mathbb{N Z Q R C}`.
 - **Renderer.** Grids render as MathML `mtable` / `mtr` / `mtd`. Fences and alignment come from a fixed table in code, keyed by environment.
-- **Bidi and accessibility.** Arabic `\text` keeps its RTL direction. Every formula is an LTR bidi isolate with `alttext`.
+- **Bidi and accessibility.** RTL-script `\text` (Arabic, Hebrew, …) keeps its RTL direction. Every formula is an LTR bidi isolate with `alttext`.
 - **Authoring.** Multi-line LTR source field, live verdict from the parser, trusted per-block preview, and a lazy snippet palette that
   only inserts proven examples.
 - **AI Composer.** Catalog **V2**, with a `scientificMath` capability derived from the code and a bounded prompt contract.
@@ -227,20 +227,30 @@ There is one new node:
 
 - **Formulas.** Every formula is `<math dir="ltr">`. CSS makes `.xp-math` `direction:ltr; unicode-bidi:isolate`, so an inline
   formula inside an Arabic sentence never reorders its neighbours.
-- **Arabic text inside formulas.** `\text{…}` containing Arabic (U+0590–U+08FF and the presentation forms) renders
-  `<mtext dir="rtl">`, keeping its natural direction inside the LTR formula. Latin text and identifiers never get `dir`.
+- **RTL text inside formulas.** `\text{…}` containing an RTL-script character renders `<mtext dir="rtl">`, keeping its natural
+  direction inside the LTR formula. That means any character in U+0590–U+08FF (Hebrew, Arabic, Syriac, Thaana, N'Ko, Samaritan,
+  Mandaic, Arabic Supplement / Extended) or in the presentation forms (U+FB1D–U+FDFF, U+FE70–U+FEFF). Latin text and identifiers never
+  get `dir`.
 - **Source field.** The math source field in the Builder is `dir="ltr" lang="en"` inside the RTL page.
 
 ## 17. Accessibility
 
 - **Alt text.** `alttext` is the exact source, multi-line sources included.
-- **Display math (Review Fix 1).** A display formula keeps the 20D.1 markup, a plain `div.xp-math-block` with no role, no label and no
-  tab stop. It becomes a labelled, keyboard-focusable `role="group"` (`aria-label="صيغة رياضية قابلة للتمرير"`, `tabIndex=0`) **only
-  while it actually overflows its block**, so keyboard users can scroll it.
-  - It is a group, not a landmark, so there is no landmark per formula and no duplicate landmark names.
-  - The check re-runs on DOM mutation (when the lazy formula arrives) and on every resize of the block or the formula.
-  - The first version (1ab3ae5) made every display formula a named region and a tab stop; the independent review flagged it (RF1-3).
-  - Verified in Chromium on the real component (§18.2). Pinned by `21A-R5`.
+- **Scroll groups (Review Fixes 1–2).** A formula's scroll box carries no role, no label and no tab stop. It becomes a labelled,
+  keyboard-focusable `role="group"` (`aria-label="صيغة رياضية قابلة للتمرير"`, `tabIndex=0`) **only while the formula actually
+  overflows it**, so keyboard users can scroll it.
+  - **Display formulas** keep the 20D.1 markup, a plain `div.xp-math-block`, whenever they fit.
+  - **Inline formulas that contain a grid** have a scroll-box host (§18). Chromium makes ANY scroll container a keyboard Tab stop, so a
+    small inline grid was an extra stop (found in Review Fix 2). The host is therefore `tabIndex=-1` while it fits.
+  - **Inline formulas without a grid** keep the 20D.1 host (`span.xp-math-host`, class only).
+  - **Not a landmark.** The group is `role="group"`, so there is no landmark per formula and no duplicate landmark names.
+  - **Re-checking** is one shared hook with a callback ref, so it also attaches when the host mounts after the lazy formula resolves. It
+    re-checks on DOM mutation inside the box and on every resize of the box or the formula, and the observers are disconnected on
+    every source change and on unmount.
+  - **Focus retention.** A focused group is kept when its formula starts to fit (no focus loss when the viewport widens); leaving it
+    re-checks.
+  - **History.** The first version (1ab3ae5) made every display formula a named region and a tab stop (RF1-3).
+  - **Evidence.** Pinned by `21A-R5` and `21A-R6`; verified in Chromium on the real component (§18.2).
 - **Invalid sources.** An invalid source is never hidden. It renders as readable LTR source text
   (`<code class="xp-math-src" dir="ltr">`).
 - **Live verdict.** The editor's verdict is `aria-live="polite"`. The palette toggle carries `aria-expanded`, and the palette is a
@@ -251,12 +261,16 @@ There is one new node:
 - **Chromium sizing.** Chromium sizes a `<math>` box to the AVAILABLE width and paints wider content as NON-scrollable overflow. Before
   this phase, a wide formula was therefore clipped even inside the 20D.1 `overflow-x:auto` block (§18.1).
 - **Display math on screen.** The formula is sized to its content (`inline-size:max-content`, centred with `margin-inline:auto` when
-  narrower). `.xp-math-block` (`max-width:100%; overflow-x:auto`) is LTR, so it scrolls from the formula's start, and carries
-  `padding-block:0.25em` so fence and limit ink causes no vertical scrollbar. This applies to old (20D.1) display formulas too; for
+  narrower). `.xp-math-block` (`max-width:100%; overflow-x:auto`) is LTR, so it scrolls from the formula's start.
+  It carries `padding-block:0.3em; overflow-y:hidden`. The padding absorbs fence and limit ink, and `overflow-y:hidden` guarantees no
+  vertical scroller: without a platform OpenType MATH font, Chromium's fallback font still paints a pixel below the box
+  (`x^{2} + 1`: scrollHeight 26 / clientHeight 25). Before Review Fix 2 that drew a vertical scrollbar and made the block a
+  keyboard-focusable scroller. This applies to old (20D.1) display formulas too; for
   them it changes only the overflow case, which was clipped before.
 - **Inline grids on screen.** The presentation shell is `overflow-x:clip`. An inline host containing a grid
   (`.xp-math-host:has(mtable)` outside a display block) becomes an LTR `inline-block` scroll box of at most 100% width, and its formula
-  is sized to its content. Old inline formulas never contain an `mtable`, so their layout is unchanged.
+  is sized to its content (`overflow-y:hidden`, `padding-block:0.3em`). It is out of the Tab order unless it overflows (§17). Old
+  inline formulas never contain an `mtable`, so their layout is unchanged.
 - **Alignment.** MathML Core in Chromium has no `columnalign`. The `text-align` rules on `mtd` (`cases` left; `aligned` right | left)
   are what align these environments. They are pinned by `21A-R2`.
 - **Print.** Math blocks and inline hosts are `overflow:visible` and `max-inline-size:none`. Display blocks also get
@@ -309,6 +323,21 @@ There is one new node:
 | Page errors | none | none |
 
 Chromium itself also makes the overflowing inline grid host a keyboard-focusable scroller.
+
+**Review Fix 2 re-check.** This used the same harness, extended with a small inline grid, plain inline math and a wide inline grid.
+
+| Formula | 360 px | 1400 px |
+|---|---|---|
+| wide display grid | `role=group` · tabindex 0 · w 356/328 · h 55/55 | no role · tabindex — · w 1368/1368 · h 55/55 |
+| display `x^{2} + 1` | no role · tabindex — · w 328/328 · h 26/25 | no role · tabindex — · w 1368/1368 · h 26/25 |
+| small display grid (2×2) | no role · tabindex — · w 328/328 · h 42/42 | no role · tabindex — · w 1368/1368 · h 42/42 |
+| display sum | no role · tabindex — · w 328/328 · h 42/42 | no role · tabindex — · w 1368/1368 · h 42/42 |
+| small inline grid (2×2) | no role · tabindex -1 · w 58/58 · h 42/42 | no role · tabindex -1 · w 58/58 · h 42/42 |
+| inline `x^{2}` (no grid) | no role · tabindex — · w 0/0 · h 0/0 | no role · tabindex — · w 0/0 · h 0/0 |
+| wide inline grid | `role=group` · tabindex 0 · w 356/328 · h 55/55 | no role · tabindex -1 · w 356/356 · h 55/55 |
+
+**Tab order at 360 px:** `block#0 → inline#6 → BODY → block#0 → inline#6 → BODY`. Only the two overflowing formulas are Tab stops. Focus retention, also
+checked: the focused wide group keeps focus and its role when the viewport widens to 1200 px, and reverts on blur. Page errors: none.
 
 ## 19. Authoring UX
 
@@ -404,8 +433,9 @@ trims (§24).
   untrusted.
 - **CRLF.** AI math sources normalise CRLF and bare CR to LF, as code and CLI blocks already did.
 - **False positives (documented, fail closed).** The raw-HTML pattern also matches tag-like plain-text notation such as `<a, b>`
-  (inner product) and `<p>` (expectation value). Such an AI formula is refused, which costs one bounded repair round. The prompt steers
-  the model to `( , )` or `\text`. Pinned by `21A-AI2b`.
+  (inner product) and `<p>` (expectation value). Such an AI formula is refused with the markup message, which costs one bounded repair
+  round. The prompt does not special-case this notation (an earlier version of this record wrongly said it does; Review Fix 2,
+  MINOR-3). Pinned by `21A-AI2b`.
 
 ## 25. Security invariants
 
@@ -652,6 +682,27 @@ unchanged after every run.
 | X02 | overflowing block becomes a region LANDMARK instead of a group | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
 | X03 | re-check on resize removed (state never reverts / updates) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
 
+### 31.2 Review Fix 2: the observer logic, the scroll box, focus retention, inline grids
+
+- **N01–N04 and N14** are the round-2 reviewer's survivors, re-planted against the shared hook with the same semantics.
+- **X04–X10** are new mutants on the Review Fix 2 code.
+- **Result:** all 12 **KILLED** (same runner, unmutated pre-check, SHA-256 restore, `git status` unchanged).
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| N01 | MutationObserver removed (no re-check when the lazy formula arrives / changes) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| N02 | the <math> element is not observed (only the box) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| N03 | effect cleanup removed (observers leak on every source change / unmount) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| N04 | sub-pixel tolerance dropped | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| N14 | display block no longer a scroll box (overflow-x hidden) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 RTL / LTR and accessibility › wide formulas n |
+| X04 | focus retention removed (a focused group is dropped when the formula starts to fit) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| X05 | inline grid host keeps the browser's scroller Tab stop (tabIndex -1 removed) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| X06 | display block may show a vertical scroller (overflow-y:hidden removed) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 RTL / LTR and accessibility › wide formulas n |
+| X07 | observers keyed on source only (never attach when the host mounts after the lazy formula) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
+| X08 | inline grids not detected (scroll-group logic never used for inline grids) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| X09 | blur no longer re-checks (a kept focused group never reverts) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R6 the overflow observers (review fix 2): wiring |
+| X10 | display formula always a focusable group (the 1ab3ae5 behaviour) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
+
 ## 32. Bundle
 
 | Measure | 60ddadc | Head |
@@ -679,8 +730,8 @@ unchanged after every run.
 ## 33. Backward compatibility and grading
 
 - **Old grammar.** Old-grammar ASTs are frozen (§26–§27): CR is now whitespace, which is a measured, meaning-preserving widening.
-  The rendered MathML of old formulas is frozen too (the renderer freeze), with one deliberate exception: an Arabic `\text` now carries
-  `dir="rtl"`, so it keeps its natural direction (the freeze excludes it).
+  The rendered MathML of old formulas is frozen too (the renderer freeze), with one deliberate exception: a `\text` containing RTL
+  script (Arabic, Hebrew, …) now carries `dir="rtl"`, so it keeps its natural direction (the freeze excludes it).
 - **Old display formulas: what changed (corrected in Review Fix 1).**
   - Their block is LTR, with `padding-block:0.25em`.
   - The formula is sized to its content and centred, so a wide one now scrolls instead of being clipped (§18).
@@ -697,7 +748,7 @@ unchanged after every run.
 | Suite | Tests | Fail-first on 60ddadc |
 |---|---|---|
 | `scientificMath.21a` (parser) | 31 | First commit, combined with the renderer suite: 40 tests, 24 fail / 16 pass (pins) |
-| `scientificMathRenderer.21a` | 21 | (above). The Review Fix 1 display-a11y tests (`21A-R5`) fail 2/2 against the 1ab3ae5 renderer |
+| `scientificMathRenderer.21a` | 26 | (above). The Review Fix 1 display-a11y tests (`21A-R5`) fail 2/2 against the 1ab3ae5 renderer |
 | `scientificMathFreeze.21a` | 12 | Pins captured on 60ddadc |
 | `scientificMathEditor.21a` | 18 | 14 fail / 1 pass (pin), first 15 tests |
 | `scientificMathGuards.21a` | 6 | Static guards |
@@ -705,7 +756,7 @@ unchanged after every run.
 | `scientificMathComposer.21a` | 9 | 7 fail / 1 pass (pin), first 8 tests |
 | `cert-21a-scientific-math` | 10 | 4 fail / 1 pass (pin) / 5 skipped (setup refused) |
 
-The suites hold **122 tests** in total. The reviewer's own fail-first run of the head suites against 60ddadc production code gave
+The suites hold **127 tests** in total (Review Fix 2 added the five `21A-R6` observer / inline-grid tests). The reviewer's own fail-first run of the head suites against 60ddadc production code gave
 50 failed / 25 passed / 5 skipped. The first version of this table listed 31 parser tests when there were 29 (RF1-8).
 
 **Full validation, first head `1ab3ae5`:**
@@ -771,7 +822,18 @@ The exact-head CI results are in the pull request and the final report.
     - 11 non-equivalent surviving reviewer mutants;
     - 1 new lint warning.
   - **Review Fix 1** addresses each finding (§17, §18, §23, §24, §27, §31, §33, §34). All of the reviewer's survivors are now killed.
-  - A re-review of the new head follows.
+  - **Round 2** (head `31b86fc`): **NOT READY**. There was no blocker and no major finding, and all Review Fix 1 items were confirmed.
+    The round-2 findings were:
+    - MINOR: the observer logic was not pinned (N03 leak mutant, N01, N02);
+    - MINOR: the display block's `overflow-x:auto` was not pinned (N14);
+    - MINOR: a false prompt-steering claim;
+    - MINOR: a stale PR body;
+    - MINOR: a vertical scroller under fallback fonts;
+    - NIT: focus loss when the group stops overflowing;
+    - NIT: "Arabic" worded too narrowly;
+    - NIT: the 1 px tolerance had no boundary test.
+  - **Review Fix 2** addresses each (§16, §17, §18, §18.2, §24, §31.2, §33). While verifying in Chromium it also found and fixed the
+    small-inline-grid Tab stop. The round-3 re-review of the new head follows.
 - **Merge.** The owner merges manually. DO NOT MERGE.
 - **Next.** Rich review rendering; optional `\operatorname`-style named functions as a v3 family; inline-math authoring in AI prose
   behind the same validator.
