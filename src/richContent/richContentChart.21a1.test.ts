@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import * as R from "./richContentModel";
+import * as S from "../scenarioSource";
 import { donutChart, rainfallBar, scatterChart, temperatureLine } from "../charts/testing/chartFixtures";
 
 // Phase 21A.1 — the `dataChart` rich block: a ChartSpecV1 inside RichContentV1 (question stems, scenario sources, composite contexts, section
@@ -58,6 +59,23 @@ describe("21A1-RC1 the dataChart block", () => {
     expect(R.validateRichContent(exact).issues).toEqual([]);
     const over = doc(...fill(R.RICH_LIMITS.totalChars - stored + 1), { type: "dataChart", chart: rainfallBar() });
     expect(R.validateRichContent(over).issues.map(i => i.code)).toEqual(["RICH_CONTENT_LIMIT"]);
+  });
+  it("a scenario's payload bound counts a chart's STORED prose, never the generated summary (review fix 3, round-3 finding R3-A6)", () => {
+    const utf8 = (t: string) => new TextEncoder().encode(t).length;
+    const blocks = (n: number) => { const out: unknown[] = []; for (let left = n; left > 0; left -= R.RICH_LIMITS.blockChars) out.push(para("x".repeat(Math.min(left, R.RICH_LIMITS.blockChars)))); return out; };
+    const rich = (id: string, x: number) => ({ id, version: 1, kind: "rich", richContent: doc(...blocks(x), { type: "dataChart", chart: { ...rainfallBar(), id: "c-" + id } }) });
+    const scenario = (x: number) => ({ id: "sc", version: 1, sources: [rich("a", 60000), rich("b", x)], questionIds: ["q1"] });
+    // the payload of the two sources as the bound counts it (stored prose only), and the extra the generated summaries would add
+    const payload = (x: number) => scenario(x).sources.reduce((n, s) => n + utf8(R.richContentPlainText(s.richContent, { storedOnly: true })), 0);
+    const withSummary = (x: number) => scenario(x).sources.reduce((n, s) => n + utf8(R.richContentPlainText(s.richContent)), 0);
+    // the largest second source whose STORED payload fits the bound: valid; one character more: refused — and the generated summaries
+    // would have counted on top of it
+    let lo = 0, hi = R.RICH_LIMITS.totalChars - 1000;                                   // every candidate is a valid rich document
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (payload(mid) <= S.SCENARIO_LIMITS.payloadBytes) lo = mid; else hi = mid - 1; }
+    const scodes = (x: unknown) => { const v = S.validateScenario(x); return v.ok ? [] : v.issues.map(i => i.code); };
+    expect(scodes(scenario(lo))).toEqual([]);
+    expect(scodes(scenario(lo + 1))).toEqual(["SCENARIO_PAYLOAD_TOO_LARGE"]);
+    expect(withSummary(lo)).toBeGreaterThan(S.SCENARIO_LIMITS.payloadBytes);
   });
   it("an older reader's vocabulary (the 15 baseline types) keeps its order: dataChart is appended, never inserted", () => {
     expect(R.RICH_BLOCK_TYPES.indexOf("dataChart")).toBe(R.RICH_BLOCK_TYPES.length - 1);

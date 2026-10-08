@@ -556,7 +556,7 @@ function projectRichContentForStudent(raw) {
     return r.ok ? r.value : undefined;
 }
 const runsText = (runs) => runs.map(r => ("text" in r ? r.text : r.math)).join("");
-function richContentPlainText(raw) {
+function richContentPlainText(raw, opts = {}) {
     const r = validateRichContent(raw);
     if (!r.ok || !r.value)
         return "";
@@ -615,7 +615,7 @@ function richContentPlainText(raw) {
                     out.push(b.source);
                     break;
                 case "dataChart":
-                    out.push((0, chartSpec_1.chartPlainText)(b.chart));
+                    out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : (0, chartSpec_1.chartPlainText)(b.chart));
                     break;
                 case "divider": break;
             }

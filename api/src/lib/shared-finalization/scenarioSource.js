@@ -155,7 +155,7 @@ function sourcePayloadBytes(s) {
     else if (s.kind === "code")
         n += utf8Bytes(s.source);
     else if (s.kind === "rich")
-        n += utf8Bytes((0, richContentModel_1.richContentPlainText)(s.richContent));
+        n += utf8Bytes((0, richContentModel_1.richContentPlainText)(s.richContent, { storedOnly: true }));
     else {
         for (const h of s.columnHeaders)
             n += utf8Bytes(h);

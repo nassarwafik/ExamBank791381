@@ -344,7 +344,9 @@ export function projectRichContentForStudent(raw: unknown): RichContentV1 | unde
 
 const runsText = (runs: readonly RichRun[]) => runs.map(r => ("text" in r ? r.text : r.math)).join("");
 /** Plain text of a document (search, the plain fallback suggestion, accessibility summaries). Total; tolerates malformed input. */
-export function richContentPlainText(raw: unknown): string {
+/** `storedOnly`: a chart contributes only its STORED prose (title, description, source) — never the generated summary — for limits that
+ *  decide a stored document's validity (a wording change of the summary must not change it). */
+export function richContentPlainText(raw: unknown, opts: { storedOnly?: boolean } = {}): string {
   const r = validateRichContent(raw);
   if (!r.ok || !r.value) return "";
   const out: string[] = [];
@@ -361,7 +363,7 @@ export function richContentPlainText(raw: unknown): string {
         case "keyValueGrid": for (const it of b.items) out.push(it.label + ": " + it.value); break;
         case "columns": for (const c of b.columns) walk(c.blocks); break;
         case "math": out.push(b.source); break;
-        case "dataChart": out.push(chartPlainText(b.chart)); break;
+        case "dataChart": out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : chartPlainText(b.chart)); break;
         case "divider": break;
       }
     }

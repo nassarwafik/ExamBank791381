@@ -45,6 +45,18 @@ export const PRINT_WIDTH = 640;
 const MARK_TEXT: Record<ChartTargetMark, string> = { correct: "صحيح", incorrect: "غير صحيح", missed: "لم يُحدَّد" };
 const MARK_GLYPH: Record<ChartTargetMark, string> = { correct: "✓", incorrect: "✗", missed: "○" };
 const MODE_TEXT = (mode: ChartSelectionMode, max: number) => (mode === "single" ? "اختر عنصرًا واحدًا." : mode === "range" ? "اختر نطاقًا متصلًا: العنصر الأول ثم الأخير." : "يمكنك اختيار حتى " + max + " عناصر.");
+/** A text measurer for label truncation with real widths (a 2D canvas; created once). Undefined where there is no canvas — the engine then
+ *  truncates by its own estimate. */
+let measurer: ((text: string, font: string) => number) | null | undefined;
+const textMeasure = (): ((text: string, font: string) => number) | undefined => {
+  if (measurer === undefined) {
+    try {
+      const c = typeof document !== "undefined" ? document.createElement("canvas").getContext("2d") : null;
+      measurer = c ? (t: string, f: string) => { c.font = f; return c.measureText(t).width; } : null;
+    } catch { measurer = null; }
+  }
+  return measurer ?? undefined;
+};
 const loadEngine = (advanced: boolean) => (advanced ? Promise.all([import("./echartsEngine"), import("./echartsAdvanced")]).then(([engine, adv]) => ({ engine, advanced: adv.CHART_ADVANCED_MARKER })) : import("./echartsEngine").then(engine => ({ engine, advanced: "" })));
 type Tip = { x: number; y: number; title: string; lines: string[] };
 
@@ -58,10 +70,13 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   const [width, setWidth] = useState(0);
   const [tokens, setTokens] = useState(defaultChartTokens);
   const [attempt, setAttempt] = useState(0);
-  const [loaded, setLoaded] = useState<{ key: string; ok: boolean } | null>(null);
+  // `unloadable`: the engine module itself could not be imported — browsers keep a failed module import for the life of the page, so only
+  // a reload can show the chart (a throwing mount, by contrast, can be retried once)
+  const [loaded, setLoaded] = useState<{ key: string; ok: boolean; unloadable?: boolean } | null>(null);
   const [tableOpen, setTableOpen] = useState(false);
   const [tip, setTip] = useState<Tip | null>(null);
-  const [announce, setAnnounce] = useState("");
+  // `n` re-mounts the announcement on every activation, so an identical repeat is announced again (a live region only speaks changes)
+  const [announce, setAnnounce] = useState({ text: "", n: 0 });
   const reducedMotion = usePrefersReducedMotion();
   const print = useMediaQuery("print");
 
@@ -80,7 +95,7 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   // engine option only when the layout can change, not on every pixel
   const layoutWidth = width > 0 && !(spec.kind === "pie" || spec.kind === "scatter" || spec.kind === "radar" || (spec.kind === "bar" && spec.orientation === "horizontal")) ? Math.floor(width / 32) * 32 : 0;
   const option = useMemo(() => buildEngineOption(spec, {
-    tokens, animation, compact, width: layoutWidth,
+    tokens, animation, compact, width: layoutWidth, measure: textMeasure(),
     ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
   }), [spec, tokens, animation, compact, layoutWidth, selKind, selectedKey]);
   const optionRef = useRef(option);
@@ -101,15 +116,17 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
       ...(removed.length ? ["أُلغي تحديد: " + removed.map(name).join("، ")] : []),
       ...(!next.includes(key) && !before.includes(key) ? ["بلغت الحد الأقصى (" + selection.max + ")؛ لم يُحدَّد: " + name(key)] : [])
     ];
-    setAnnounce((parts.length ? parts.join("؛ ") : "لا تغيير، محدَّد بالفعل: " + name(key)) + " — المحدَّد " + next.length);
+    const text = (parts.length ? parts.join("؛ ") : "لا تغيير، محدَّد بالفعل: " + name(key)) + " — المحدَّد " + next.length;
+    setAnnounce(a => ({ text, n: a.n + 1 }));
     if (added.length || removed.length) selection.onChange(next);
   }, [selection, order, targets]);
   const onEngineEvent = useRef<(e: EngineEvent) => void>(() => {});
   // the engine (mounted once) always reads the latest option and handler through these refs
   useLayoutEffect(() => {
     optionRef.current = option;
+    printHeightRef.current = chartHeight(spec, false);
     printOptionRef.current = () => buildEngineOption(spec, {
-      tokens, animation: "none", compact: false, width: PRINT_WIDTH,
+      tokens, animation: "none", compact: false, width: PRINT_WIDTH, measure: textMeasure(),
       ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
     });
     onEngineEvent.current = (e: EngineEvent) => {
@@ -138,7 +155,7 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
         if (w === last) return;
         last = w;
         setWidth(w);
-        handleRef.current?.resize();
+        if (!printingRef.current) handleRef.current?.resize();               // while printing the engine keeps the print width
       });
     });
     ro.observe(el);
@@ -154,26 +171,35 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
       if (marker) hostRef.current.setAttribute("data-xp-engine-advanced", marker);
       handleRef.current = engine.mountChartEngine(hostRef.current, optionRef.current, e => onEngineEvent.current(e));
       setLoaded({ key, ok: true });
-    }).catch(() => { if (!cancelled) { setLoaded({ key, ok: false }); setTableOpen(true); } });
+    }, () => { if (!cancelled) { setLoaded({ key, ok: false, unloadable: true }); setTableOpen(true); } })
+      .catch(() => { if (!cancelled) { setLoaded({ key, ok: false }); setTableOpen(true); } });
     return () => { cancelled = true; handleRef.current?.dispose(); handleRef.current = null; setTip(null); };
   }, [advanced, attempt]);
 
   // a new option is applied (a full redraw) unless only the stage width moved and the labels are laid out the same: resizing a page of
   // charts then costs the engine's own relayout (resize), not a redraw per chart per step
+  // print: nothing re-measures the stage and no animation frame runs before the print layout, so just before it the engine takes the
+  // print-width layout (labels rotated / thinned for 640 px, no animation), draws at that width and the chart's own desktop height (the
+  // print layout's fluid box is never measured) and PAINTS NOW (flush); afterwards it takes the screen option and its container's width and
+  // height again. The print stylesheet scales the SVG to the printed column through its viewBox.
+  // WHILE printing, anything that would re-apply the screen option (the print media query switching the animation off, a width or height
+  // change of the print layout) re-applies the print option instead — the screen layout never reaches paper.
+  const printingRef = useRef(false);
+  const printHeightRef = useRef(chartHeight(spec, false));
+  const paintPrint = (h: EngineHandle) => { h.update(printOptionRef.current()); h.resize(PRINT_WIDTH, printHeightRef.current); h.flush(); };
   const applied = useRef<{ inputs: readonly unknown[]; layout: string } | null>(null);
   useEffect(() => {
     const inputs = [spec, tokens, animation, compact, selKind, selectedKey], layout = widthLayout(option), prev = applied.current;
     applied.current = { inputs, layout };
+    const h = handleRef.current;
+    if (h && printingRef.current) { paintPrint(h); return; }
     if (prev && prev.layout === layout && prev.inputs.every((v, i) => Object.is(v, inputs[i]))) return;
-    handleRef.current?.update(option);
+    h?.update(option);
   }, [option, spec, tokens, animation, compact, selKind, selectedKey]);
-  useEffect(() => { handleRef.current?.resize(); }, [height]);
-  // print: nothing re-measures the stage and no animation frame runs before the print layout, so just before it the engine takes the
-  // print-width layout (labels rotated / thinned for 640 px, no animation), draws at that width and PAINTS NOW (flush); afterwards it takes
-  // the screen option and its container's width again. The print stylesheet scales the SVG to the printed column through its viewBox.
+  useEffect(() => { const h = handleRef.current; if (h && printingRef.current) paintPrint(h); else h?.resize(); }, [height]);
   useEffect(() => {
-    const before = () => { const h = handleRef.current; if (!h) return; h.update(printOptionRef.current()); h.resize(PRINT_WIDTH); h.flush(); };
-    const after = () => { const h = handleRef.current; if (!h) return; h.update(optionRef.current); h.resize(); h.flush(); };
+    const before = () => { printingRef.current = true; const h = handleRef.current; if (h) paintPrint(h); };
+    const after = () => { printingRef.current = false; const h = handleRef.current; if (!h) return; h.update(optionRef.current); h.resize(); h.flush(); };
     window.addEventListener("beforeprint", before);
     window.addEventListener("afterprint", after);
     return () => { window.removeEventListener("beforeprint", before); window.removeEventListener("afterprint", after); };
@@ -211,12 +237,14 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
         )}
         {state === "loading" && <span className="xp-chart-status">جارٍ تحميل الرسم البياني…</span>}
       </div>
-      {/* one retry: a browser may keep a failed chunk load for the life of the page, so a second failure says so honestly instead of
-          offering a button that cannot work; focus moves to the figure (the button disappears while the engine loads) */}
+      {/* a module that could not be imported stays failed for the life of the page (browsers keep the failed import): no button that cannot
+          work, the reload is named instead. A throwing mount gets one retry; a second failure says so honestly. Focus moves to the figure
+          (the button disappears while the engine loads) */}
       {state === "error" && (
         <p className="xp-chart-error" role="status">
-          {attempt === 0 ? "تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه." : "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه، ويمكن إعادة تحميل الصفحة لاحقًا لعرضه."}
-          {attempt === 0 && <>{" "}<button type="button" className="xp-chart-retry" onClick={() => { figureRef.current?.focus(); setAttempt(1); }}>إعادة المحاولة</button></>}
+          {loaded?.unloadable ? "تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه، ويُعرض الرسم بعد إعادة تحميل الصفحة."
+            : attempt === 0 ? "تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه." : "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه، ويمكن إعادة تحميل الصفحة لاحقًا لعرضه."}
+          {attempt === 0 && !loaded?.unloadable && <>{" "}<button type="button" className="xp-chart-retry" onClick={() => { figureRef.current?.focus(); setAttempt(1); }}>إعادة المحاولة</button></>}
         </p>
       )}
       {selection && (
@@ -236,7 +264,7 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
               );
             })}
           </ul>
-          <p className="xp-chart-sr" aria-live="polite">{announce}</p>
+          <p className="xp-chart-sr" aria-live="polite"><span key={announce.n}>{announce.text}</span></p>
         </div>
       )}
       <div className="xp-chart-foot">

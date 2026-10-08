@@ -47,10 +47,12 @@ const normDigits = (text: string) => String(text || "").replace(DIGITS, d => Str
   .replace(/[\u2012\u2013](?=\d)/g, "-").replace(/−/g, "-")
   .replace(/\d+(?:,\d+){2,}/g, run => (run.split(",").slice(1).every(g => g.length === 3) ? run : run.replace(/,/g, ", ")));
 // One number as written: "," between groups of exactly three digits is a THOUSANDS separator ("1,200" = 1200, never 1.2); otherwise "." or
-// "," before digits is the decimal separator ("1,5" = 1.5); an exponent is part of the number ("1.5e3" = 1500).
-const NUMBER = /(-?)(\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:[.,](\d+))?(?:[eE]([+-]?\d{1,3}))?/g;
+// "," before digits is the decimal separator ("1,5" = 1.5); a "." (or the Arabic "٫") with no digit before it starts a fraction (".5" = 0.5,
+// "-.5" = -0.5); an exponent is part of the number ("1.5e3" = 1500).
+const NUMBER = /(-?)(?:(\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:[.,](\d+))?|(?<![\d.])\.(\d+))(?:[eE]([+-]?\d{1,3}))?/g;
 function readNumber(t: string, m: RegExpMatchArray): number {
-  const n = Number(m[2].replace(/,/g, "") + (m[3] ? "." + m[3] : "") + (m[4] ? "e" + m[4] : ""));
+  const frac = m[3] ?? m[4];
+  const n = Number((m[2] ?? "0").replace(/,/g, "") + (frac ? "." + frac : "") + (m[5] ? "e" + m[5] : ""));
   // a "-" right after a digit is a range / date separator ("10-20" = 10 and 20), never a sign; otherwise it is the number's sign
   const negative = m[1] === "-" && !((m.index ?? 0) > 0 && /\d/.test(t[(m.index ?? 0) - 1]));
   return negative ? -n : n === 0 ? 0 : n;
@@ -64,17 +66,25 @@ export function numbersInText(text: string): Set<number> {
   return out;
 }
 
-// ── category ↔ value pairings the teacher WROTE (conservative: an unclear phrasing pairs nothing, it never invents a pairing) ─────────────
-const INVISIBLE_OR_TATWEEL = /[\p{Default_Ignorable_Code_Point}\u0640]/gu;
+// ── category ↔ value pairings the teacher WROTE (conservative: an unclear phrasing pairs nothing) ──────────────────────────────────────
+const INVISIBLE_OR_TATWEEL = /[\p{Default_Ignorable_Code_Point}ـ]/gu;
 /** Text as compared for pairing: compatibility forms folded (NFKC), invisible characters and tatweel removed, digits normalized, lower case. */
 const pairText = (s: string) => normDigits(String(s || "").normalize("NFKC").replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase();
 /** A list separator: , ، ؛ ; / & (optionally followed by "and" / "و"), or "and" / "و" alone ("120 و80", "يناير وفبراير"). */
 const LIST_SEP = "(?:\\s*[,،؛;/&]\\s*(?:(?:and\\b|و)\\s*)?|\\s+and\\s+|\\s+و\\s*)";
-/** A short unit after a number ("%", "mm", "ملم", "وحدة") — never the "و" of a following list item. */
-const UNIT = "(?:\\s*(?:[%٪]|(?!و(?:\\s|\\d))[^\\s\\d,،؛;/&.:=()\\-]{1,6}))?";
-const sticky = (source: string, t: string, at: number) => { const re = new RegExp(source, "y"); re.lastIndex = at; return re.exec(t); };
+/** A short unit after a number ("%", "mm", "ملم", "وحدة") — never the "و" or "and" of a following list item. */
+const UNIT = "(?:\\s*(?:[%٪]|(?!و(?:\\s|\\d)|and\\b)[^\\s\\d,،؛;/&.:=()\\-]{1,6}))?";
+/** Where a clause ends: a sentence or list punctuation mark, or a line break. */
+const CLAUSE_END = /[.!?؟\n؛;,،]/;
+const sticky = (source: string, t: string, at: number) => { const re = new RegExp(source, "uy"); re.lastIndex = at; return re.exec(t); };
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const isYearLike = (s: string) => /^\d{4}$/.test(s) && Number(s) >= 1900 && Number(s) <= 2100;
+const WORD = /[\p{L}\p{M}\p{N}]/u;
+/** A label occurrence is a whole word: no letter / digit before it (one Arabic proclitic و ف ب ل ك is allowed: "وفبراير", "بيناير") and no
+ *  letter right after it ("Jan" never matches inside "January", "ب" never inside "الطلاب"). */
+function wholeWord(t: string, at: number, len: number): boolean {
+  const before = at === 0 || !WORD.test(t[at - 1]) || (/[وفبلك]/.test(t[at - 1]) && (at === 1 || !WORD.test(t[at - 2])));
+  return before && (at + len >= t.length || !/[\p{L}\p{M}]/u.test(t[at + len]));
+}
 /** The numbers of a written value list starting at `from` ("120, 80, 95", "120 و80 و95 ملم", "50%, 30%, 20%"). */
 function numberRun(t: string, from: number): number[] {
   const out: number[] = [];
@@ -95,60 +105,83 @@ const continuesList = (t: string, after: number) => {
   const p = after + (sticky(UNIT, t, after)?.[0].length ?? 0), sep = sticky(LIST_SEP, t, p);
   return !!sep && !!sticky(NUMBER.source, t, p + sep[0].length);
 };
-/** The ONE number of the clause that follows a year qualifier ("january 2024 sales were 120", "jan (2023) 120"); undefined when none or
- *  several, or when the clause reaches another label first. */
-function clauseValue(t: string, from: number, others: readonly string[]): number | undefined {
-  const values: number[] = [];
-  let prev = from;
-  for (const m of t.slice(from).matchAll(NUMBER)) {
-    const at = from + (m.index ?? 0), gap = t.slice(prev, at);
-    if (/[.!?؟\n؛;,،]/.test(gap) || others.some(o => o && gap.includes(o))) break;
-    values.push(readNumber(t, Object.assign(m, { index: at })));
-    prev = at + m[0].length;
-  }
-  return values.length === 1 ? values[0] : undefined;
+/** Every whole-word occurrence of a label. */
+function occurrences(t: string, l: string): number[] {
+  const out: number[] = [];
+  for (let at = t.indexOf(l); at >= 0; at = t.indexOf(l, at + 1)) if (wholeWord(t, at, l.length)) out.push(at);
+  return out;
 }
-/** The number paired with ONE label (`others`: the chart's other labels, so a label list is recognised as such). */
+/** The number paired with ONE label (`others`: the chart's other labels). A pairing is the ONE number written right after the label
+ *  ("يناير ١٢٠", "Jan: 1,200", "Jan 120 mm"), alone in its clause; never: a label glued to digits (Q1 / Q10), an ordinal ("15th"), a range,
+ *  a number followed by another number before the clause ends ("January 2024 sales were 120", "School A 2000 students in 40 classes"), an
+ *  item of a value list, an item of a list of the chart's labels, or a label written with different numbers. */
 function pairedAt(t: string, l: string, others: readonly string[]): number | undefined {
   if (!l) return undefined;
+  const otherAt = others.filter(Boolean).flatMap(o => occurrences(t, o)).sort((a, b) => a - b);
   const found = new Set<number>();
-  for (let at = t.indexOf(l); at >= 0; at = t.indexOf(l, at + 1)) {
+  for (const at of occurrences(t, l)) {
     // an item of a list of this chart's labels ("jan, feb, mar: …", "يناير وفبراير ومارس: …"): its values are a list too
-    const before = t.slice(0, at), sep = new RegExp("(?:" + LIST_SEP + ")$").exec(before);
+    const before = t.slice(0, at), sep = new RegExp("(?:" + LIST_SEP + ")$", "u").exec(before);
     if (sep && others.some(o => o && before.slice(0, sep.index).trimEnd().endsWith(o))) continue;
     const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))![0];
     if (!lead) continue;                                                   // "Q1" never pairs with the "0" of "Q10"; "jan," is a list item
     const from = at + l.length + lead.length, m = sticky(NUMBER.source, t, from);
     if (!m) continue;
-    const after = from + m[0].length, rest = t.slice(after);
-    if (isYearLike(m[0])) { const v = clauseValue(t, after, others); if (v !== undefined) found.add(v); continue; }   // a year qualifier
-    if (/^[\s:=(]+/.test(rest) && sticky(NUMBER.source, rest.replace(/^[\s:=(]+/, ""), 0)) continue;                // a number, then another
-    if (/^\s*(?:-|to\b|إلى|حتى)\s*-?\d/.test(rest)) continue;                                                          // a range
-    if (continuesList(t, after)) continue;                                                                             // a value list
+    const after = from + m[0].length;
+    if (/^(?:st|nd|rd|th)\b/.test(t.slice(after))) continue;                // an ordinal ("15th"), not a value
+    if (continuesList(t, after)) continue;                                 // a value list
+    // the clause after the number: ends at punctuation, a line break or another label; another number in it makes the pairing unclear
+    const rest = t.slice(after), endAt = rest.search(CLAUSE_END), nextLabel = otherAt.find(o => o >= after);
+    const clause = rest.slice(0, Math.min(endAt < 0 ? rest.length : endAt, nextLabel === undefined ? rest.length : nextLabel - after));
+    if (new RegExp(NUMBER.source, "u").test(clause)) continue;
     const n = readNumber(t, m);
     if (Number.isFinite(n)) found.add(n);
   }
   return found.size === 1 ? [...found][0] : undefined;
 }
+/** Lists of the chart's labels joined by list separators, in ANY order ("Jan, Feb, Mar", "مارس وفبراير ويناير"), each label at most once,
+ *  followed (after ":" / "=" / spaces — never a parenthesis) by a value list of the same length: label index → value. */
+function listPairs(t: string, ls: readonly string[]): Map<number, number[]> {
+  const out = new Map<number, number[]>();
+  const alt = "(?:" + [...ls].sort((a, b) => b.length - a.length).map(escapeRe).join("|") + ")";
+  for (const m of t.matchAll(new RegExp(alt + "(?:" + LIST_SEP + alt + ")+", "gu"))) {
+    const items: number[] = [];
+    let p = m.index ?? 0, ok = true;
+    for (;;) {
+      const lab = sticky(alt, t, p);
+      if (!lab || !wholeWord(t, p, lab[0].length)) { ok = false; break; }
+      const li = ls.indexOf(lab[0]);
+      if (li < 0 || items.includes(li)) { ok = false; break; }
+      items.push(li);
+      p += lab[0].length;
+      if (p >= (m.index ?? 0) + m[0].length) break;
+      const sep = sticky(LIST_SEP, t, p);
+      if (!sep) { ok = false; break; }
+      p += sep[0].length;
+    }
+    if (!ok || items.length < 2) continue;
+    const gap = sticky("[\\s:=]*", t, p);
+    const run = numberRun(t, p + (gap?.[0].length ?? 0));
+    if (run.length !== items.length) continue;
+    items.forEach((li, k) => out.set(li, [...(out.get(li) ?? []), run[k]]));
+  }
+  return out;
+}
 /**
  * The values a request WRITES for the given category labels, in order (undefined where it writes none clearly): a list of these labels
- * followed by a value list of the same length pairs positionally ("Jan, Feb, Mar: 120, 80, 95", "في يناير وفبراير ومارس: 120 و80 و95");
- * otherwise each label pairs with the ONE number written right after it ("يناير ١٢٠", "Jan: 1,200"), or with the one number of the clause
- * after a year qualifier ("January 2024 sales were 120"). Never a pairing: a label glued to digits (Q1 / Q10), a number followed by another
- * number, a range, an item of a value list, a label written with different numbers. Labels match case-insensitively after NFKC, without
- * invisible characters or tatweel.
+ * (any order) followed by a value list of the same length pairs positionally ("Jan, Feb, Mar: 120, 80, 95", "في يناير وفبراير ومارس: 120 و80
+ * و95"); otherwise each label pairs with the ONE number written right after it, alone in its clause (see pairedAt). Labels match as whole
+ * words, case-insensitively after NFKC, without invisible characters or tatweel. A label paired with two different values pairs nothing.
  */
 export function pairedNumbers(request: string, labels: readonly string[]): (number | undefined)[] {
   const t = pairText(request), ls = labels.map(l => pairText(l).trim());
-  if (ls.length >= 2 && ls.every(Boolean)) {
-    for (const m of t.matchAll(new RegExp(ls.map(escapeRe).join(LIST_SEP) + "[\\s:=(]*", "g"))) {
-      const run = numberRun(t, (m.index ?? 0) + m[0].length);
-      if (run.length === ls.length) return run;
-    }
-  }
-  return ls.map((l, i) => pairedAt(t, l, ls.filter((_, j) => j !== i)));
+  const listed = ls.length >= 2 && ls.every(Boolean) && new Set(ls).size === ls.length ? listPairs(t, ls) : new Map<number, number[]>();
+  return ls.map((l, i) => {
+    const fromList = listed.get(i);
+    if (fromList) return new Set(fromList).size === 1 ? fromList[0] : undefined;
+    return pairedAt(t, l, ls.filter((_, j) => j !== i));
+  });
 }
-/** The value a request writes for one label (see pairedNumbers). */
 export const pairedNumber = (request: string, label: string): number | undefined => pairedNumbers(request, [label])[0];
 
 /** Maps one AI chart descriptor (block index `index` of its document) to a ChartSpecV1 — the chart authority still decides afterwards. */
@@ -229,14 +262,17 @@ export function mapAiChart(raw: unknown, index: number, policy: AiChartPolicy | 
     const given = numbersInText(policy.request);
     const missing = used.filter(v => !given.has(v));
     if (missing.length) return fail("AI_CHART_DATA_NOT_PROVIDED", "أرقام الرسم البياني يجب أن تكون أرقام المعلم كما وردت في طلبه (القيمة " + missing[0] + " غير موجودة في الطلب)؛ لا تعدّل بيانات المعلم ولا تخترعها.", path);
-    // where the request pairs a category with ONE number ("يناير ١٢٠"), a single-series chart must give that category exactly that number
-    // (a swapped or shifted value is refused even though it occurs somewhere in the request)
-    // (the refusal never states a value: the pairing is a check of what the teacher wrote, not a value to copy)
+    // where the request WRITES a category's value ("يناير ١٢٠", "Jan, Feb: 120, 80"), a single-series chart or a pie (its first series) must
+    // not swap or shift it: a category may not carry the value the request writes for ANOTHER category, and a written value may not go
+    // missing. A pairing is a reading of free text, so it only ever detects a swap — it never demands that a value equal it (a misread
+    // pairing must not refuse a correct chart). The refusal never states a value (the pairing is a check, not a value to copy).
     const one = (kind === "bar" || kind === "line" || kind === "area" || kind === "combo" || kind === "pie") && (kind === "pie" || series.length === 1) ? series[0]?.values ?? [] : null;
     const pairs = one ? pairedNumbers(policy.request, categories) : [];
     if (one) for (let i = 0; i < categories.length; i++) {
       const p = pairs[i], v = one[i];
-      if (p !== undefined && v !== null && v !== undefined && v !== p) return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» في الرسم لا تطابق ما كتبه المعلم لها في طلبه؛ انسخ قيمة كل فئة كما وردت معها في الطلب، دون تبديل أو إزاحة.", path + ".series");
+      if (p === undefined) continue;
+      if (v === null || v === undefined) return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» كتبها المعلم في طلبه لكنها مفقودة في الرسم؛ انسخ قيمة كل فئة كما وردت معها في الطلب.", path + ".series");
+      if (v !== p && pairs.some((q, j) => j !== i && q === v)) return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» في الرسم لا تطابق ما كتبه المعلم لها في طلبه؛ انسخ قيمة كل فئة كما وردت معها في الطلب، دون تبديل أو إزاحة.", path + ".series");
     }
     // a teacher-data chart's title and description state no number the teacher did not write (no invented figures presented as real)
     const stated = [...numbersInText((raw.title as string) + "\n" + (raw.description as string))].filter(n => !given.has(n));

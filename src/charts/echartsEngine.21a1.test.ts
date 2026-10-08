@@ -60,6 +60,10 @@ describe("21A1-RB1c flush() paints the print width now", () => {
     h.resize();
     h.flush();
     expect(right()).toBeGreaterThan(640);
+    h.resize(640, 300);                                                              // review fix 3: an explicit height, never the print box
+    expect([el.querySelector("svg")!.getAttribute("width"), el.querySelector("svg")!.getAttribute("height")]).toEqual(["640", "300"]);
+    h.resize();                                                                      // after printing: the container's width AND height again
+    expect([el.querySelector("svg")!.getAttribute("width"), el.querySelector("svg")!.getAttribute("height")]).toEqual(["900", "340"]);
     h.dispose();
     h.flush();                                                                       // a disposed engine ignores it
     el.remove();

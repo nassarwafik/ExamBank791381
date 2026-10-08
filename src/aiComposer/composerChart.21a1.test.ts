@@ -131,7 +131,7 @@ describe("21A1-AI5 teacher numbers are read strictly (review fix A2)", () => {
     expect(pairedNumber("January was wet: 120 then 80", "January")).toBeUndefined();
     expect(pairedNumber("Jan 120 in the north, Jan 80 in the south", "Jan")).toBeUndefined();     // two different numbers: not a pairing
     expect(pairedNumber("Jan 120; again Jan 120", "Jan")).toBe(120);
-    expect(pairedNumber("يناير 2024: 120، فبراير 2024: 95", "يناير")).toBe(120);                // a year qualifier: the value of its clause
+    expect(pairedNumber("يناير 2024: 120، فبراير 2024: 95", "يناير")).toBeUndefined();          // a year, then the value: unclear — nothing paired (round 3, R3-A1)
     expect(mapAiChart(bar(["يناير", "فبراير"], [120, 95]), 0, P("يناير 2024: 120، فبراير 2024: 95"), "b").ok).toBe(true);
     expect(codes(mapAiChart(bar(["Jan", "Feb"], [80, 120]), 0, P("Jan 120, Feb 80"), "b"))).toEqual(["AI_CHART_DATA_NOT_PROVIDED"]);
     expect(mapAiChart(bar(["Jan", "Feb"], [120, 80]), 0, P("Jan 120, Feb 80"), "b").ok).toBe(true);
@@ -179,21 +179,26 @@ describe("21A1-AI7 pairings are what the teacher WROTE — never invented (revie
   const bar = (categories: string[], values: number[]) => D({ categories, series: [{ label: "القيمة", values, mark: "bar" }] });
   const pie = (categories: string[], values: number[]) => D({ kind: "pie", categories, series: [{ label: "s", values, mark: "bar" }] });
   const verdict = (raw: unknown, request: string) => { const r = mapAiChart(raw, 0, P(request), "b"); return r.ok ? "ok" : r.issues.map(i => i.code).join(); };
-  // [request, labels, correct values, values a misled model could write (a shift / a year)]
+  // [request, labels, correct values, values a misled model could write (a swap / a shift / a duplicate)]
   const CASES: [string, string[], number[], number[]][] = [
     ["Rainfall for Jan, Feb, Mar: 120, 80, 95", ["Jan", "Feb", "Mar"], [120, 80, 95], [120, 80, 120]],
     ["أنشئ رسمًا لهطول في يناير وفبراير ومارس: 120 و80 و95 ملم", ["يناير", "فبراير", "مارس"], [120, 80, 95], [120, 80, 120]],
     ["Jan / Feb / Mar = 120 / 80 / 95", ["Jan", "Feb", "Mar"], [120, 80, 95], [80, 120, 95]],
-    ["January 2024 sales were 120, February 2024 sales were 80", ["January", "February"], [120, 80], [2024, 2024]],
-    ["في يناير 2024 بلغت المبيعات 120، وفي فبراير 2024 بلغت 80", ["يناير", "فبراير"], [120, 80], [2024, 2024]],
-    ["Jan (2023) 120, Feb (2023) 80", ["Jan", "Feb"], [120, 80], [2023, 2023]],
     ["Rainfall Jan,Feb,Mar: 120,80,95", ["Jan", "Feb", "Mar"], [120, 80, 95], [95, 80, 120]]
   ];
+  // round 3 (R3-A1): a year (or any second number) in the label's clause makes the writing unclear — nothing is paired, the correct chart
+  // is accepted (a swap is then not detected: record §11 "Not verified")
+  const UNCLEAR: [string, string[], number[]][] = [
+    ["January 2024 sales were 120, February 2024 sales were 80", ["January", "February"], [120, 80]],
+    ["في يناير 2024 بلغت المبيعات 120، وفي فبراير 2024 بلغت 80", ["يناير", "فبراير"], [120, 80]],
+    ["Jan (2023) 120, Feb (2023) 80", ["Jan", "Feb"], [120, 80]]
+  ];
   it("a correct teacher-data chart is accepted for every phrasing (lists, Arabic lists, slashes, year qualifiers, a comma list without spaces)", () => {
-    for (const [req, cats, good] of CASES) expect(verdict(bar(cats, good), req), req).toBe("ok");
+    for (const [req, cats, good] of [...CASES, ...UNCLEAR]) expect(verdict(bar(cats, good), req), req).toBe("ok");
     expect(verdict(pie(["A", "B", "C"], [50, 30, 20]), "Shares of A, B, C: 50%, 30%, 20%")).toBe("ok");
+    for (const [req, cats] of UNCLEAR) expect(pairedNumbers(req, cats), req).toEqual(cats.map(() => undefined));
   });
-  it("the values a misled model could write instead are refused (positional list pairing, the value after a year qualifier)", () => {
+  it("the values a misled model could write instead are refused (a swap, a shift, a duplicate of another category's value)", () => {
     for (const [req, cats, , bad] of CASES) expect(verdict(bar(cats, bad), req), req).toBe("AI_CHART_DATA_NOT_PROVIDED");
     expect(verdict(pie(["A", "B", "C"], [50, 30, 50]), "Shares of A, B, C: 50%, 30%, 20%")).toBe("AI_CHART_DATA_NOT_PROVIDED");
   });
@@ -219,7 +224,80 @@ describe("21A1-AI7 pairings are what the teacher WROTE — never invented (revie
   it("pins (mutants X3 / X4 / X8): numbers in the description, the sign in a pairing, every category is checked", () => {
     expect(verdict(D({ description: "Rain reached 4,500 mm" }), TEACHER.request)).toBe("AI_CHART_DATA_NOT_PROVIDED");
     expect(verdict(bar(["Jan", "Feb"], [5, -5]), "Jan -5, Feb 5")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Jan", "Feb"], [5, 5]), "Jan -5, Feb 5")).toBe("AI_CHART_DATA_NOT_PROVIDED");                 // round 3 (X4′): the sign is part of the pair
     expect(verdict(bar(["Jan", "Feb", "Mar"], [120, 95, 80]), "Jan 120, Feb 80, Mar 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+  });
+});
+
+describe("21A1-AI9 a pairing only detects a swap — it never invents one (review fix 3, round-3 findings R3-A1 / A2 / A3 / A5 / A7)", () => {
+  const P = (request: string): AiChartPolicy => ({ request, illustrative: false, charts: true });
+  const bar = (categories: string[], values: (number | null)[]) => D({ categories, series: [{ label: "القيمة", values, mark: "bar" }] });
+  const pie = (categories: string[], values: number[]) => D({ kind: "pie", categories, series: [{ label: "s", values, mark: "bar" }] });
+  const verdict = (raw: unknown, request: string) => { const r = mapAiChart(raw, 0, P(request), "b"); return r.ok ? "ok" : r.issues.map(i => i.code).join(); };
+  it("R3-A1: years and other numbers in the clause, ordinals, labels inside words and a parenthesised list pair nothing — the correct chart passes", () => {
+    const cases: [string, string[], number[]][] = [
+      ["School A 2000 students in 40 classes, School B 1500 students in 30 classes", ["School A", "School B"], [2000, 1500]],
+      ["Jan 2000 (up 5%), Feb 1800", ["Jan", "Feb"], [2000, 1800]],
+      ["المدرسة أ 2000 طالب في 40 فصلًا، المدرسة ب 1500 طالب في 30 فصلًا", ["المدرسة أ", "المدرسة ب"], [2000, 1500]],
+      ["Jan 15th: 120, Feb 15th: 80", ["Jan", "Feb"], [120, 80]],
+      ["Classes A, B, C (30, 28, 25 students) had average scores of 72, 65, 80", ["A", "B", "C"], [72, 65, 80]]
+    ];
+    for (const [req, cats, good] of cases) expect(verdict(bar(cats, good), req), req).toBe("ok");
+    expect(pairedNumbers("Jan 2000 (up 5%), Feb 1800", ["Jan", "Feb"])).toEqual([undefined, 1800]);
+    expect(pairedNumbers("Jan 15th: 120, Feb 15th: 80", ["Jan", "Feb"])).toEqual([undefined, undefined]);
+    expect(pairedNumbers("Classes A, B, C (30, 28, 25 students) had average scores of 72, 65, 80", ["A", "B", "C"])).toEqual([undefined, undefined, undefined]);
+    const req = "عدد الطلاب 120: اختار 40 منهم أ، و30 ب، و20 ج، و30 د";
+    expect(pairedNumbers(req, ["أ", "ب", "ج", "د"])).toEqual([undefined, undefined, undefined, undefined]);      // "ب" is not the end of "الطلاب"
+    expect(verdict(pie(["أ", "ب", "ج", "د"], [40, 30, 20, 30]), req)).toBe("ok");
+    // a label is a whole word: "Jan" never inside "January"; one Arabic proclitic is allowed ("وفبراير", "بيناير")
+    expect(pairedNumbers("January 120, Jan 80", ["Jan"])).toEqual([80]);
+    expect(pairedNumbers("الهطول بيناير 120 وفبراير 80", ["يناير", "فبراير"])).toEqual([120, 80]);
+  });
+  it("a misread pairing never refuses a correct chart: only a value that belongs to ANOTHER category (or a missing written value) is refused", () => {
+    // "Jan 120 then" is clear, but a model writing Jan = 95 (an unpaired number of the request) is not a swap: not detected by design
+    expect(verdict(bar(["Jan", "Feb"], [95, 80]), "Jan 120, Feb 80, total 95")).toBe("ok");
+    expect(verdict(bar(["Jan", "Feb"], [80, 80]), "Jan 120, Feb 80, total 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");   // Feb's value
+    expect(verdict(bar(["Jan", "Feb"], [120, 120]), "Jan 120, Feb 120")).toBe("ok");                                 // equal values are no swap
+  });
+  it("R3-A2: a decimal written without a leading digit keeps its point (\".5\", \"٫5\", \"-.5\")", () => {
+    expect([...numbersInText("A .5, B .3, C .2")].sort((a, b) => a - b)).toEqual([0.2, 0.3, 0.5]);
+    expect([...numbersInText("Jan -.5, Feb .25")].sort((a, b) => a - b)).toEqual([-0.5, 0.25]);
+    expect([...numbersInText("يناير ٫5، فبراير ٫8")].sort((a, b) => a - b)).toEqual([0.5, 0.8]);
+    expect([...numbersInText("version 1.2.3")].sort((a, b) => a - b)).toEqual([1.2, 3]);
+    expect(verdict(pie(["A", "B", "C"], [0.5, 0.3, 0.2]), "A .5, B .3, C .2")).toBe("ok");
+    expect(verdict(pie(["A", "B", "C"], [5, 3, 2]), "A .5, B .3, C .2")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+  });
+  it("R3-A3: a label list is recognised in ANY order, so reordered categories with unmoved values are refused", () => {
+    expect(pairedNumbers("Jan, Feb, Mar: 120, 80, 95", ["Mar", "Feb", "Jan"])).toEqual([95, 80, 120]);
+    expect(verdict(bar(["Mar", "Feb", "Jan"], [120, 80, 95]), "Jan, Feb, Mar: 120, 80, 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Jan", "Mar", "Feb"], [120, 80, 95]), "Jan, Feb, Mar: 120, 80, 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Mar", "Feb", "Jan"], [95, 80, 120]), "Jan, Feb, Mar: 120, 80, 95")).toBe("ok");
+    expect(verdict(bar(["مارس", "فبراير", "يناير"], [120, 95, 82]), "يناير وفبراير ومارس: 120 و95 و82")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["مارس", "فبراير", "يناير"], [82, 95, 120]), "يناير وفبراير ومارس: 120 و95 و82")).toBe("ok");
+  });
+  it("R3-A5: \"and\" separates list items (never a unit); a value the teacher wrote may not go missing", () => {
+    expect(pairedNumbers("Jan, Feb and Mar: 120, 80 and 95", ["Jan", "Feb", "Mar"])).toEqual([120, 80, 95]);
+    expect(verdict(bar(["Jan", "Feb", "Mar"], [80, 120, 95]), "Jan, Feb and Mar: 120, 80 and 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Jan", "Feb"], [80, 120]), "Jan and Feb: 120 and 80")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Jan", "Feb", "Mar"], [120, null, 95]), "Jan 120, Feb 80, Mar 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");
+    expect(verdict(bar(["Jan", "Feb", "Mar"], [120, null, 95]), "Jan 120, Mar 95")).toBe("ok");                       // Feb not written
+  });
+  it("R3-A7 pins: a longer value run pairs nothing; a list item never pairs alone; a clause ends at another label", () => {
+    expect(pairedNumbers("Jan, Feb: 120, 80, 95", ["Jan", "Feb"])).toEqual([undefined, undefined]);
+    expect(pairedNumbers("Jan and Feb: 120", ["Jan", "Feb"])).toEqual([undefined, undefined]);
+    expect(pairedNumbers("Jan 120 Feb 80", ["Jan", "Feb"])).toEqual([120, 80]);
+    expect(pairedNumbers("Jan 120 (2020), Feb 80", ["Jan", "Feb"])).toEqual([undefined, 80]);
+  });
+  it("round-3 lane C pins (N1 / N3): ranges, a number then another, compatibility forms, tatweel, the comma-list rule, 4-digit values", () => {
+    expect(pairedNumbers("يناير 120 إلى 130، فبراير 80", ["يناير", "فبراير"])).toEqual([undefined, 80]);            // a range («إلى»)
+    expect(pairedNumbers("Jan 120 to 130, Feb 80", ["Jan", "Feb"])).toEqual([undefined, 80]);                         // a range ("to")
+    expect(pairedNumbers("Jan 120 80, Feb 95", ["Jan", "Feb"])).toEqual([undefined, 95]);                             // a number, then another
+    expect(verdict(bar(["Jan", "Feb"], [80, 80]), "\uFF2A\uFF41\uFF4E 120, Feb 80")).toBe("AI_CHART_DATA_NOT_PROVIDED"); // fullwidth "Ｊａｎ" (NFKC)
+    expect(verdict(bar(["يناير", "فبراير"], [80, 80]), "\uFEF3\uFEE8\uFE8E\uFEF3\uFEAE 120، فبراير 80")).toBe("AI_CHART_DATA_NOT_PROVIDED"); // presentation forms
+    expect(verdict(bar(["يناير", "فبـراير"], [120, 120]), "يناير 120، فبراير 80")).toBe("AI_CHART_DATA_NOT_PROVIDED");  // a label with tatweel
+    expect([...numbersInText("A,B,C 1,200,30")].sort((a, b) => a - b)).toEqual([1, 30, 200]);                        // not all groups 3 digits: a list
+    expect(pairedNumbers("Units sold: Jan 2000, Feb 1950, Mar 2050", ["Jan", "Feb", "Mar"])).toEqual([2000, 1950, 2050]);  // 4-digit values pair
+    expect(verdict(bar(["Jan", "Feb", "Mar"], [1950, 2050, 2000]), "Units sold: Jan 2000, Feb 1950, Mar 2050")).toBe("AI_CHART_DATA_NOT_PROVIDED");
   });
 });
 

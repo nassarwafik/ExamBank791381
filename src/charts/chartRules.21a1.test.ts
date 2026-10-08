@@ -59,6 +59,13 @@ describe("21A1-R3 identity and text rules", () => {
     // review fix A3: C1 controls and invisible format characters are refused there too
     for (const bad2 of ["اختر\u0085الشهر", "اختر\u200Bالشهر", "اختر\u2029الشهر"]) expect(validateChartSelectionConfig(cfg(bad2)).ok, JSON.stringify(bad2)).toBe(false);
   });
+  it("every C1 control U+0080–U+009F is refused in chart text, not only NEL and CSI (review fix 3, round-3 pin E10)", () => {
+    for (let cp = 0x80; cp <= 0x9f; cp++) {
+      const c = rainfallBar() as unknown as { title: string };
+      c.title = "هطول" + String.fromCharCode(cp) + "شهري";
+      expect(validateChartSpec(c).ok, "U+" + cp.toString(16).toUpperCase().padStart(4, "0")).toBe(false);
+    }
+  });
   it("ZWNJ / ZWJ (needed by Persian and Arabic text) stay allowed in chart text", () => {
     const c = rainfallBar() as unknown as { title: string; categories: { label: string }[] };
     c.title = "می\u200Cخواهم"; c.categories[0].label = "لا\u200Dم";
@@ -90,6 +97,14 @@ describe("21A1-R5 invisible characters: every default-ignorable is refused, look
   });
   it("ZWNJ / ZWJ, the LRM / RLM / ALM marks and the text / emoji presentation selectors stay allowed", () => {
     for (const ch of ["\u200C", "\u200D", "\u200E", "\u200F", "\u061C", "\uFE0E", "\uFE0F"]) expect(codes(withLabel("يناير" + ch)), hex(ch)).toEqual([]);
+  });
+  it("labels that differ only by case, Unicode composition or inner spacing are duplicates (round 3, lane C N4)", () => {
+    expect(codes(withLabel("فبراير", 0))).toContain("CHART_LABEL_DUPLICATE");                                // control: an exact duplicate
+    const latin = () => { const c = rainfallBar() as Record<string, unknown> & { categories: { id: string; label: string }[] }; c.categories = c.categories.map((x, i) => ({ ...x, label: i === 0 ? "Jan" : i === 1 ? "jan" : x.label })); return c; };
+    expect(codes(latin())).toContain("CHART_LABEL_DUPLICATE");
+    const nfc = (a: string, b: string) => { const c = rainfallBar() as Record<string, unknown> & { categories: { id: string; label: string }[] }; c.categories = c.categories.map((x, i) => ({ ...x, label: i === 0 ? a : i === 1 ? b : x.label })); return c; };
+    expect(codes(nfc("Caf\u00E9", "Cafe\u0301"))).toContain("CHART_LABEL_DUPLICATE");
+    expect(codes(nfc("a  b", "a b"))).toContain("CHART_LABEL_DUPLICATE");
   });
   it("labels that differ only by an allowed invisible character are duplicates", () => {
     expect(codes(withLabel("يناير\u200C", 1))).toContain("CHART_LABEL_DUPLICATE");

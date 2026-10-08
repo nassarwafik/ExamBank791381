@@ -18,6 +18,19 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 const KIND_LABELS: Readonly<Record<ChartKind, string>> = Object.freeze({ bar: "أعمدة / أشرطة", line: "خطي", area: "مساحي", combo: "مركّب", pie: "دائري / حلقي", scatter: "انتشاري", histogram: "مدرّج تكراري", radar: "راداري", boxplot: "صندوقي", heatmap: "خريطة حرارية" });
 const MODE_LABELS: Readonly<Record<ChartSelectionMode, string>> = Object.freeze({ single: "اختيار واحد", multiple: "اختيار متعدد", range: "نطاق متصل" });
 const SELECTABLE_KINDS = CHART_KINDS.filter(k => k !== "heatmap");
+/** The targets of a chart as its structure stands — also while it is invalid (an empty title, a cell being typed); null when even the
+ *  structure cannot be read. */
+function structuralTargets(c: ChartSpecV1, t: ChartTargetKind): { key: string; label: string }[] | null {
+  const v = validateChartSpec(c);
+  if (v.ok) return chartTargetKinds(v.value).includes(t) ? chartTargets(v.value, t) : [];
+  try { return (CHART_KINDS as readonly unknown[]).includes(c.kind) && chartTargetKinds(c).includes(t) ? chartTargets(c, t) : []; } catch { return null; }
+}
+/** Every id written anywhere in a (possibly broken) chart. */
+function idsIn(raw: unknown, out = new Set<string>()): Set<string> {
+  if (Array.isArray(raw)) for (const x of raw) idsIn(x, out);
+  else if (isObj(raw)) for (const [k, x] of Object.entries(raw)) { if (k === "id" && typeof x === "string") out.add(x); else idsIn(x, out); }
+  return out;
+}
 
 export default function ChartSelectionEditor({ node, onChange, disabled }: AuthoringEditorProps) {
   const raw = isObj((node as { chartSelection?: unknown }).chartSelection) ? ((node as { chartSelection: Record<string, unknown> }).chartSelection) : {};
@@ -36,25 +49,19 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
   const [newKind, setNewKind] = useState<ChartKind>("bar");
   const [maxDraft, setMaxDraft] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
-  /** A kind change that keeps every value may still clear the answer key (its targets do not exist in the new kind, or the target kind
-   *  changes): the chart editor then confirms the change with this warning. */
-  const keyClearedBy = (next: ChartSpecV1): string | undefined => {
-    if (!correct.length) return undefined;
-    const v = validateChartSpec(next), ks = v.ok ? chartTargetKinds(v.value) : [];
-    const t = ks.includes(target) ? target : ks[0];
-    const order = v.ok && t ? chartTargets(v.value, t).map(x => x.key) : [];
-    return t !== target || correct.some(k => !order.includes(k)) ? "ستُمسح الإجابة الصحيحة المحدَّدة لأن عناصرها لا توجد في النوع الجديد، وعليك تحديدها من جديد." : undefined;
-  };
-
-  /** One emission: the public config and the key together, kept mutually consistent (unsupported target / mode adjusted, bound clamped,
-   *  key entries of vanished targets dropped, a broken range cleared). */
-  const write = (next: { chart?: ChartSpecV1; target?: ChartTargetKind; mode?: ChartSelectionMode; max?: number; label?: string; scoring?: ChartSelectionScoring; correct?: string[] }) => {
+  /** One emission's content: the public config and the key together, kept mutually consistent — unsupported target / mode adjusted, bound
+   *  clamped, a broken range cleared, and the key NEVER pointing at a target it did not mean (round-3 findings R3-A4 / B3-3):
+   *  - a target kind the chart no longer offers is replaced by its first one and the key is cleared (the same id may name a different
+   *    target in the new kind: a category "jan" and a series "jan" can coexist);
+   *  - a KIND change keeps a key entry only where the new kind has the same target with the same label (a conversion that starts from
+   *    starter data reuses ids such as "s1" for a different series);
+   *  - any other change drops key entries whose target is gone — read from the chart's structure even while it is invalid (a cell being
+   *    typed, a gap between bins), so a deleted target's id, later reused for a new one, never inherits the key. */
+  const resolve = (next: { chart?: ChartSpecV1; target?: ChartTargetKind; mode?: ChartSelectionMode; max?: number; label?: string; scoring?: ChartSelectionScoring; correct?: string[] }) => {
     const c = next.chart ?? chart;
     const v = c ? validateChartSpec(c) : null;
-    const ks = v?.ok ? chartTargetKinds(v.value) : [];
+    const ks = c && (CHART_KINDS as readonly unknown[]).includes((c as { kind?: unknown }).kind) ? chartTargetKinds(c) : [];
     let t = next.target ?? target;
-    // a target kind the chart no longer offers is replaced by its first one, and the key is cleared: the same id may name a different
-    // target in the new kind (a category "jan" and a series "jan" can coexist), so it never carries over
     const retargeted = ks.length > 0 && !ks.includes(t);
     if (retargeted) t = ks[0];
     let m = next.mode ?? mode;
@@ -62,16 +69,31 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
     const order = v?.ok && ks.includes(t) ? chartTargets(v.value, t).map(x => x.key) : [];
     let mx = m === "single" ? 1 : Math.max(1, Math.round(next.max ?? max));
     if (order.length) mx = Math.min(mx, order.length);
-    let ok = retargeted ? [] : (next.correct ?? correct).filter(k => !order.length || order.includes(k));
+    let ok = retargeted ? [] : next.correct ?? correct;
+    if (!retargeted && next.chart && c) {
+      const now = structuralTargets(c, t);
+      if (chart && next.chart.kind !== chart.kind) {
+        const before = new Map((structuralTargets(chart, t) ?? []).map(x => [x.key, x.label] as const));
+        const after = new Map((now ?? []).map(x => [x.key, x.label] as const));
+        ok = ok.filter(k => before.has(k) && after.get(k) === before.get(k));
+      } else if (now) ok = ok.filter(k => now.some(x => x.key === k));
+      else { const present = idsIn(c); ok = ok.filter(k => k.split("/").every(part => present.has(part))); }
+    }
     if (order.length) ok = order.filter(k => ok.includes(k));
     if (m === "single") ok = ok.slice(0, 1);
-    if (m === "range" && ok.length && !isContiguousRun(order, ok)) ok = [];
+    if (m === "range" && ok.length && order.length && !isContiguousRun(order, ok)) ok = [];
     const sc = m === "single" ? "allOrNothing" : (next.scoring ?? scoring);
     const l = (next.label ?? label);
-    onChange({
-      chartSelection: { v: 1, ...(c ? { chart: c } : {}), target: t, mode: m, maxSelections: mx, ...(l.trim() ? { label: l } : {}) } as never,
-      answer: { scoring: sc, correct: ok } as never
-    });
+    return { chartSelection: { v: 1, ...(c ? { chart: c } : {}), target: t, mode: m, maxSelections: mx, ...(l.trim() ? { label: l } : {}) }, answer: { scoring: sc, correct: ok } };
+  };
+  const write = (next: Parameters<typeof resolve>[0]) => onChange(resolve(next) as never);
+  /** What a kind change does to the key — the SAME computation as the emission (the warning can never disagree with what is stored). */
+  const keyClearedBy = (next: ChartSpecV1): string | undefined => {
+    if (!correct.length) return undefined;
+    const kept = resolve({ chart: next }).answer.correct;
+    if (kept.length === correct.length && kept.every(k => correct.includes(k))) return undefined;
+    return kept.length === 0 ? "ستُمسح الإجابة الصحيحة المحدَّدة لأن عناصرها لا توجد في النوع الجديد، وعليك تحديدها من جديد."
+      : "ستُحذف من الإجابة الصحيحة العناصر التي لا توجد في النوع الجديد، فراجع الإجابة الصحيحة بعد التغيير.";
   };
 
   return (

@@ -28,28 +28,32 @@ describe("21A1-RB5b a VERTICAL category axis is not capped by a horizontal slot 
 });
 
 describe("21A1-RB5c rotated labels that would still touch are thinned by the engine (review fix 2, N-7)", () => {
+  // (review fix 3, B3-6: the thinning is a fixed step computed by the adapter — every (interval + 1)-th label — not the engine's own estimate)
+  const THINNED = { asymmetricMatch: (v: unknown) => typeof v === "number" && Number.isInteger(v) && v >= 1, toString: () => "a thinning step (integer ≥ 1)" };
   const months = () => canon(rainfallBar());
-  it("12 rotated labels on a very narrow phone stage: interval 'auto' (perpendicular gap under one line)", () => {
+  it("12 rotated labels on a very narrow phone stage: thinned (perpendicular gap under one line box)", () => {
     const x = axes(months(), 256, true).xAxis.axisLabel;
     expect(x.rotate).toBe(45);
-    expect(x.interval).toBe("auto");
+    expect(x.interval).toEqual(THINNED);
   });
   it("the slot is what the VALUE AXES leave: a combo's two axes with wide values thin 8 rotated labels where one short axis would not", () => {
     const cats8 = twelve(i => "محافظة الفروانية " + (i + 1)).slice(0, 8);
     const combo = canon({ ...comboChart(), categories: cats8, series: [{ id: "a", label: "المبيعات", mark: "bar", values: cats8.map((_, i) => 150000 + i * 12345) }, { id: "b", label: "الهامش", mark: "line", axis: "secondary", values: cats8.map((_, i) => 10 + i) }], yAxis: { label: "المبيعات", unit: "KWD" }, y2Axis: { label: "الهامش", unit: "%" } });
-    expect(axes(combo, 256, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: "auto" });
+    // (review fix 3, B3-6: "touching" is measured against one LINE BOX, 1.7 em — the webfont's line boxes, not just its glyphs, stay apart)
+    expect(axes(combo, 288, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: THINNED });
     const single = canon({ ...rainfallBar(), categories: cats8, series: [{ id: "rain", label: "الهطول", values: cats8.map((_, i) => 100 + i) }] });
-    expect(axes(single, 256, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
-    expect(axes(combo, 288, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });                 // 360 px phones: room again
+    expect(axes(single, 288, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
+    expect(axes(combo, 352, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });                 // a wider phone: room again
   });
   it("an unnamed value axis takes the width of its widest value label (mutant RS33)", () => {
     const cats8 = twelve(i => "محافظة " + (i + 1)).slice(0, 8);
     const bar = (values: number[]) => canon({ ...without(rainfallBar(), "yAxis", "referenceLines"), categories: cats8, series: [{ id: "s", label: "القيمة", values }] });
-    expect(axes(bar(cats8.map((_, i) => 1000000000 + i)), 224, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: "auto" });   // "1000000007"
-    expect(axes(bar(cats8.map((_, i) => i + 1)), 224, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });               // "8"
+    expect(axes(bar(cats8.map((_, i) => 1000000000 + i)), 288, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: THINNED });   // "1000000007"
+    expect(axes(bar(cats8.map((_, i) => i + 1)), 288, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });               // "8"
   });
   it("where the rotated labels have room every label is drawn (interval 0)", () => {
-    expect(axes(months(), 352, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
+    expect(axes(months(), 416, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
+    expect(axes(months(), 352, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: THINNED });          // line boxes would touch (B3-6)
     const long = canon({ ...rainfallBar(), categories: twelve(i => "محافظة رقم " + (i + 1)) });
     expect(axes(long, 800).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
   });

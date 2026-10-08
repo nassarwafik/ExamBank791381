@@ -26,6 +26,10 @@ export type AdapterContext = {
   /** Answer-surface state: which target kind is selectable and which keys are selected (emphasis only — never grading). */
   selectionKind?: ChartTargetKind;
   selected?: ReadonlySet<string>;
+  /** The rendered width of a text in a CSS font (a canvas measurement) when the host can measure; labels are then truncated to their cap
+   *  here, with real widths — the engine's own truncation estimates every non-Latin character as a wide (CJK) glyph and cut Arabic
+   *  labels to about half their cap. Absent: the engine truncates. */
+  measure?: (text: string, font: string) => number;
 };
 /** Kinds rendered by the ADVANCED engine chunk (radar, boxplot, heatmap need extra engine modules). */
 export const ADVANCED_CHART_KINDS = Object.freeze(["radar", "boxplot", "heatmap"] as const);
@@ -37,6 +41,20 @@ export const isolate = (s: string) => (RTL.test(s) ? "⁧" + s + "⁩" : s);
 /** Deterministic number text (no locale grouping; integers stay integers; at most 6 decimals, trailing zeros trimmed). */
 export const formatValue = (v: number) => (Number.isInteger(v) ? String(v) : String(Number(v.toFixed(6))));
 const LRI = "\u2066", PDI = "\u2069";
+const ISOLATES = /[\u2066-\u2069]/g;
+/** Grapheme clusters (a base letter with its marks stays whole), so a truncation never splits a letter from its harakat. */
+const graphemes = (s: string): string[] => {
+  const Seg = (Intl as { Segmenter?: new (l?: string, o?: { granularity: string }) => { segment(t: string): Iterable<{ segment: string }> } }).Segmenter;
+  return Seg ? Array.from(new Seg(undefined, { granularity: "grapheme" }).segment(s), x => x.segment) : Array.from(s);
+};
+/** `s` cut to fit `max` px in `font` (with "…"), by measurement; unchanged when it fits. */
+function fitText(s: string, max: number, font: string, measure: (t: string, f: string) => number): string {
+  if (!(max > 0) || measure(s, font) <= max) return s;
+  const cs = graphemes(s);
+  let lo = 0, hi = cs.length;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (measure(cs.slice(0, mid).join("").trimEnd() + "…", font) <= max) lo = mid; else hi = mid - 1; }
+  return cs.slice(0, lo).join("").trimEnd() + "…";
+}
 /** A number with its unit as text inside right-to-left prose: the number (and a Latin unit such as "°C") is ONE left-to-right isolate, so a
  *  sign, a decimal point or the unit's symbols are never reordered ("-2 °C", never "C° 2-"); a unit in an RTL script stays outside the run
  *  and follows the number in reading order. */
@@ -72,21 +90,36 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
   // many, or when the longest label is wider than the slot each category has (the plot width shared by the categories; ≈ 0.55 em per
   // character) — at ANY container width, not only on phones. Before the stage is measured, a narrow container with long labels together
   // (≈ 20 characters across a phone-width plot) rotates. Rotated labels whose neighbours would still touch (the perpendicular gap, slot ×
-  // sin 45°, under one line) are thinned by the engine. A vertical (y) category axis — horizontal bars, heat-map rows — has no horizontal
-  // slot: its labels keep their full width; it carries its name above the axis, never across its labels. `reserve`: the width the value
-  // axes take beside the plot (default: one named axis with short labels).
+  // sin 45°, under one line box) are thinned: every `step`-th label is drawn. A vertical (y) category axis — horizontal bars, heat-map
+  // rows — has no horizontal slot: its labels keep their full width; it carries its name above the axis, never across its labels.
+  // `reserve`: the width the value axes take beside the plot (default: one named axis with short labels).
+  // a label never wider than `cap` px. The label box keeps the cap as its width either way (the engine lays the axis out from it); the
+  // text is cut by measurement here when the host can measure (the engine's own cut is then off: "none"), otherwise by the engine
+  const font = text.fontSize + "px " + ctx.tokens.font;
+  const measure = ctx.measure;
+  const capped = (cap: number) => (measure
+    ? { width: cap, overflow: "none", formatter: (v: string) => { const inner = String(v).replace(ISOLATES, ""), cut = fitText(inner, cap, font, measure); return cut === inner ? v : isolate(cut); } }
+    : { width: cap, overflow: "truncate" });
   const categoryAxis = (labels: string[], a: ChartAxis | undefined, vertical: boolean, inverse: boolean, reserve = ctx.compact ? 64 : 96) => {
     const count = labels.length, longest = Math.max(0, ...labels.map(l => l.length));
     const slot = !vertical && ctx.width && ctx.width > 0 ? Math.max(0, ctx.width - reserve) / Math.max(1, count) : 0;
     const fits = slot > 0 ? longest * text.fontSize * 0.55 <= slot - 6 : !(ctx.compact && count * longest > 20);
     const rotate = !vertical && (count > 12 || (ctx.compact && count > 6) || !fits);
-    const dense = rotate && slot > 0 && slot * Math.SQRT1_2 < text.fontSize + 2;
+    // "touching" is measured against one LINE BOX (1.7 em: the webfont's ascent + descent), not just the glyphs; a dense axis shows every
+    // `step`-th label — computed here, not left to the engine's own width estimate — so shown neighbours keep one line box apart (15 %
+    // margin for the estimated slot)
+    const perpendicular = slot * Math.SQRT1_2, line = text.fontSize * 1.7;
+    const dense = rotate && slot > 0 && perpendicular < line;
+    const step = dense ? Math.ceil((line * 1.15) / perpendicular) : 1;
+    // a rotated label may be longer (it no longer shares the slot's width; phones keep it short); a flat label never exceeds its slot
+    const cap = ctx.compact ? 64 : rotate ? 104 : slot > 0 ? Math.max(24, Math.min(110, Math.floor(slot - 4))) : 110;
+    // the axis name sits below the rotated labels: their vertical reach (the longest label, at most its cap, at 45°) plus one line
+    const reach = Math.min(cap, longest * text.fontSize * 0.6) * Math.SQRT1_2;
     return {
       type: "category", data: labels.map(isolate), name: axisName(a), inverse,
-      ...(vertical ? { nameLocation: inverse ? "start" : "end", nameGap: 12 } : { nameLocation: "middle", nameGap: rotate ? (ctx.compact ? 58 : 90) : 30 }),
+      ...(vertical ? { nameLocation: inverse ? "start" : "end", nameGap: 12 } : { nameLocation: "middle", nameGap: rotate ? Math.ceil(reach + text.fontSize * 2) + 8 : 30 }),
       nameTextStyle: { ...text, color: ctx.tokens.muted }, axisTick: { alignWithLabel: true }, axisLine: { lineStyle: { color: ctx.tokens.muted } },
-      // a rotated label may be longer (it no longer shares the slot's width; phones keep it short); a flat label never exceeds its slot
-      axisLabel: { ...text, interval: count <= 12 && !dense ? 0 : "auto", ...(rotate ? { rotate: 45 } : {}), width: ctx.compact ? 64 : rotate ? 104 : slot > 0 ? Math.max(24, Math.min(110, Math.floor(slot - 4))) : 110, overflow: "truncate" }
+      axisLabel: { ...text, interval: dense ? step - 1 : count <= 12 ? 0 : "auto", ...(rotate ? { rotate: 45 } : {}), ...capped(cap) }
     };
   };
   // The outer bounds equal the grid margins: axis labels and axis names are always kept INSIDE the canvas (no clipped text).
@@ -152,7 +185,13 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
         // narrow containers: no outside labels (the legend, the tooltip and the table name every slice); otherwise labels are aligned to
         // the canvas edges and truncated, so none can leave the canvas
         ...(ctx.compact ? { label: { show: false }, labelLine: { show: false } } : {}),
-        label: { ...text, show: !ctx.compact, alignTo: "edge", edgeDistance: 12, minMargin: 4, width: 140, overflow: "truncate", formatter: (p: { dataIndex: number }) => { const s = spec.slices[p.dataIndex]; return s ? isolate(s.label) + (spec.valueLabels ? ": " + valueText(s.value, spec.unit) + " (" + valueText(Math.round(s.value / sum * 1000) / 10, "%") + ")" : "") : ""; } },
+        label: { ...text, show: !ctx.compact, alignTo: "edge", edgeDistance: 12, minMargin: 4, width: 140, overflow: measure ? "none" : "truncate", formatter: (p: { dataIndex: number }) => {
+          const s = spec.slices[p.dataIndex];
+          if (!s) return "";
+          const value = spec.valueLabels ? ": " + valueText(s.value, spec.unit) + " (" + valueText(Math.round(s.value / sum * 1000) / 10, "%") + ")" : "";
+          // measured: the label is cut, never the value
+          return isolate(measure ? fitText(s.label, 140 - measure(value.replace(ISOLATES, ""), font), font, measure) : s.label) + value;
+        } },
         data: spec.slices.map((s, i) => ({ value: s.value, name: isolate(s.label), itemStyle: emphasize(s.id, palette[i % palette.length]) }))
       }] };
     }
@@ -185,7 +224,10 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
       const { cells, missing } = heatCells(spec);
       const cellBorder = { borderColor: ctx.tokens.surface, borderWidth: 1 };
       return { ...base, grid: { ...grid, bottom: ctx.compact ? 52 : 56 },
-        xAxis: categoryAxis(spec.columns.map(c => c.label), spec.xAxis, false, false), yAxis: categoryAxis(spec.rows.map(r => r.label), spec.yAxis, true, true),
+        // the columns share the plot width the ROW labels leave beside it (each at most its cap)
+        xAxis: categoryAxis(spec.columns.map(c => c.label), spec.xAxis, false, false,
+          (ctx.compact ? 20 : 40) + Math.min(ctx.compact ? 64 : 110, Math.ceil(Math.max(0, ...spec.rows.map(r => r.label.length)) * text.fontSize * 0.6)) + 8),
+        yAxis: categoryAxis(spec.rows.map(r => r.label), spec.yAxis, true, true),
         // the colour scale names its two ends (lowest and highest value, with the unit): the scale is readable, not colour alone
         visualMap: { type: "continuous", seriesIndex: 0, min, max: min + span, calculable: false, orient: "horizontal", left: "center", bottom: 4, itemHeight: ctx.compact ? 120 : 180, inRange: { color: [...CHART_HEAT_SCALE] }, textStyle: { ...text }, text: [valueText(max, spec.unit), valueText(min, spec.unit)], textGap: 8 },
         series: [
@@ -265,7 +307,8 @@ export function chartHeight(spec: ChartSpecV1, compact: boolean): number {
       return compact ? ("categories" in spec && spec.categories.length > 6 || "bins" in spec && spec.bins.length > 6 || "boxes" in spec && spec.boxes.length > 6 ? 320 : 280) : 340;
     case "pie": return compact ? 280 : 320;
     case "radar": return compact ? 300 : 360;
-    case "heatmap": return clamp(spec.rows.length * 30 + 150, 240, 870);
+    // rows keep at least one line box apart when the column labels below are rotated (their reach is part of the height)
+    case "heatmap": return clamp(spec.rows.length * 30 + 230, 300, 950);
   }
 }
 
