@@ -25,7 +25,10 @@ const registry = require_("../../src/lib/shared-finalization/trustedSimRegistry.
 require_("../../src/lib/shared-finalization/trustedSimPlugins.js");
 const { resolveGrader } = require_("../../src/lib/question-type-graders.js");
 const FIX = path.join(repo, "docs/fixtures/certification-20g");
-const EXAMS = { A: examA(), B: examB(), C: examC(), D: examD(), E: examE(), S: stressExam({ sections: 1, perSection: 30 }).exam };
+// 21A.1 — the Interactive Charts mini acceptance exam (driven end to end by api/tests/certification-21a1/cert-21a1-charts-lifecycle.test.js)
+// is scanned too: it is the certification exam of chartSelection@1 (standalone and as a composite child).
+const ACCEPTANCE_21A1 = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures/data-charts-21a1/ExamBank_21A1_Interactive_Charts_Mini_Acceptance.json"), "utf8"));
+const EXAMS = { A: examA(), B: examB(), C: examC(), D: examD(), E: examE(), S: stressExam({ sections: 1, perSection: 30 }).exam, "21A1": ACCEPTANCE_21A1 };
 
 /** identity → set of certification exams that contain it (top level, composite child or compound part). */
 function exercised() {

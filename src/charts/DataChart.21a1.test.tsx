@@ -256,6 +256,22 @@ describe("21A1-DC5 source guards", () => {
     expect(dc).toMatch(/import\("\.\/echartsAdvanced"\)/);
     expect(read("echartsEngine.ts")).toMatch(/renderer: "svg"/);
   });
+  it("every chart surface is a literal lazy import; the bundle guard knows the chart / engine signatures and budgets; the initial budget is unchanged", () => {
+    const root = (f: string) => fs.readFileSync(path.join(__dirname, "..", "..", f), "utf8");
+    expect(root("src/richContent/RichContentRenderer.tsx")).toContain('const DataChart = lazy(() => import("../charts/DataChart"));');
+    expect(root("src/questionTypes/studentRegistry.tsx")).toContain('registerStudentRenderer("chartSelection", 1, lazy(() => import("./student/ChartSelectionResponse")));');
+    expect(root("src/questionTypes/authoringRegistry.tsx")).toContain('registerAuthoringEditor("chartSelection", 1, lazy(() => import("./editors/ChartSelectionEditor")));');
+    const guard = root("scripts/check-bundle-budget.mjs");
+    for (const s of ["xp-chart-table", "xp-chart-select", "chart-key-picker", "CHART_SELECTION_CHART_MISMATCH", "xp-chart-engine-v1", "xp-chart-advanced-v1", "_echarts_instance_"]) expect(guard).toContain('"' + s + '"');
+    expect(guard).toMatch(/const DATA_CHART_SIGNATURES = \[/);
+    expect(guard).toMatch(/staticClosure\(dist, portalChunks\)/);                                       // the Student Portal's static closure carries no chart code
+    expect(guard).toMatch(/staticClosure\(dist, dataChartRoots\)/);                                     // the engine stays behind DataChart's import() edges
+    expect(guard).toMatch(/CHART_ENGINE_GZIP_BUDGET_KB = 195;/);
+    expect(guard).toMatch(/CHART_ADVANCED_GZIP_BUDGET_KB = 22;/);
+    expect(guard).toMatch(/INITIAL_JS_GZIP_BUDGET_KB = 125;/);
+    expect(read("echartsEngine.ts")).toContain('"xp-chart-engine-v1"');
+    expect(read("echartsAdvanced.ts")).toContain('"xp-chart-advanced-v1"');
+  });
   it("no rendering-library option can come from author data: the chart contract has no option / formatter / html key", () => {
     const spec = read("chartSpec.ts");
     for (const k of ["formatter", "option", "html", "graphic", "tooltip", "rich"]) expect(spec).not.toMatch(new RegExp('"' + k + '"'));

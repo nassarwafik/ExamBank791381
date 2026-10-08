@@ -23,7 +23,7 @@ const { sanitizeExamForStudent } = require_("../../src/lib/student-exam-sanitize
 const { examOfficialStats } = require_("../../src/lib/exam-structure.js");
 const { gradeExam } = require_("../../src/lib/assignment-grading.js");
 const { createPlatform } = require_("./platform.js");
-const FIXTURE_DIRS = ["composite-20d", "presentation-20d1", "smartsim-20e", "ai-composer-20f", "certification-20g", "scientific-math-21a"];   // 21A: the Scientific Math mini acceptance exam
+const FIXTURE_DIRS = ["composite-20d", "presentation-20d1", "smartsim-20e", "ai-composer-20f", "certification-20g", "scientific-math-21a", "data-charts-21a1"];   // 21A: the Scientific Math mini acceptance exam · 21A.1: the Interactive Charts one
 const fixtures = FIXTURE_DIRS.flatMap(d => fs.readdirSync(path.join(repo, "docs/fixtures", d)).filter(f => f.endsWith(".json")).map(f => [d + "/" + f, JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures", d, f), "utf8"))]));
 const qs = e => e.sections.flatMap(s => s.questions);
 // private markers the older fixtures plant in their teacher-only fields (in addition to the 20G canary)

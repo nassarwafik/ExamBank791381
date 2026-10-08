@@ -1,0 +1,1206 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21A1-CHARTS-MINI",
+  "title": "ExamBank 21A.1 — اختبار القبول المصغّر للرسوم البيانية التفاعلية",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "قراءة البيانات وتحليلها — الصف العاشر",
+    "instructions": "أجب عن جميع الأسئلة. يمكنك الاختيار من الرسم بالنقر أو من قائمة العناصر تحت الرسم، وعرض البيانات كجدول في أي وقت.",
+    "instructionsRichContent": {
+      "schemaVersion": 1,
+      "blocks": [
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "أجب عن جميع الأسئلة."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "يمكنك الاختيار من الرسم بالنقر أو من قائمة العناصر تحت الرسم، وعرض البيانات كجدول في أي وقت."
+            }
+          ]
+        }
+      ]
+    },
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — الهطول الشهري (رسم واحد لعدة أسئلة)",
+      "gradingPolicy": "all",
+      "instructions": "ادرس رسم الهطول الشهري ثم أجب عن الأسئلة الأربعة.",
+      "scenarios": [
+        {
+          "id": "sc-rain",
+          "version": 1,
+          "title": "الهطول الشهري في مدينة ساحلية — 2020",
+          "sources": [
+            {
+              "id": "src-rain",
+              "version": 1,
+              "kind": "rich",
+              "title": "رسم الهطول",
+              "richContent": {
+                "schemaVersion": 1,
+                "blocks": [
+                  {
+                    "type": "paragraph",
+                    "runs": [
+                      {
+                        "text": "يبيّن الرسم كمية الهطول الشهرية بالملّيمتر (mm)؛ الخط المتقطع عتبة 50 mm."
+                      }
+                    ]
+                  },
+                  {
+                    "type": "dataChart",
+                    "chart": {
+                      "version": 1,
+                      "id": "rainfall-2020",
+                      "kind": "bar",
+                      "title": "الهطول الشهري — 2020",
+                      "description": "كمية الأمطار الشهرية بالملّيمتر في عام 2020 (بيانات توضيحية).",
+                      "source": "بيانات توضيحية لأغراض التعلّم",
+                      "animation": "subtle",
+                      "palette": "categorical",
+                      "categories": [
+                        {
+                          "id": "jan",
+                          "label": "يناير"
+                        },
+                        {
+                          "id": "feb",
+                          "label": "فبراير"
+                        },
+                        {
+                          "id": "mar",
+                          "label": "مارس"
+                        },
+                        {
+                          "id": "apr",
+                          "label": "أبريل"
+                        },
+                        {
+                          "id": "may",
+                          "label": "مايو"
+                        },
+                        {
+                          "id": "jun",
+                          "label": "يونيو"
+                        },
+                        {
+                          "id": "jul",
+                          "label": "يوليو"
+                        },
+                        {
+                          "id": "aug",
+                          "label": "أغسطس"
+                        },
+                        {
+                          "id": "sep",
+                          "label": "سبتمبر"
+                        },
+                        {
+                          "id": "oct",
+                          "label": "أكتوبر"
+                        },
+                        {
+                          "id": "nov",
+                          "label": "نوفمبر"
+                        },
+                        {
+                          "id": "dec",
+                          "label": "ديسمبر"
+                        }
+                      ],
+                      "series": [
+                        {
+                          "id": "rain",
+                          "label": "الهطول",
+                          "values": [
+                            120,
+                            95,
+                            82,
+                            40,
+                            12.5,
+                            0,
+                            0,
+                            3,
+                            18,
+                            135,
+                            88,
+                            60
+                          ]
+                        }
+                      ],
+                      "xAxis": {
+                        "label": "الشهر"
+                      },
+                      "yAxis": {
+                        "label": "الهطول",
+                        "unit": "mm"
+                      },
+                      "referenceLines": [
+                        {
+                          "id": "avg",
+                          "value": 50,
+                          "label": "عتبة 50 mm"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "questionIds": [
+            "a1",
+            "a2",
+            "a3",
+            "a4"
+          ]
+        }
+      ],
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "multipleChoice",
+          "text": "أيّ شهر سجّل أعلى هطول في عام 2020؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "أكتوبر"
+            },
+            {
+              "text": "يناير"
+            },
+            {
+              "text": "فبراير"
+            },
+            {
+              "text": "نوفمبر"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-a1"
+        },
+        {
+          "examQuestionId": "a2",
+          "presentationType": "numericResponse",
+          "questionTypeVersion": 1,
+          "text": "كم ملّيمترًا بلغ هطول شهر يناير؟ (أدخل العدد فقط)",
+          "marks": 3,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 120,
+            "tolerance": 0
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-a2"
+        },
+        {
+          "examQuestionId": "a3",
+          "presentationType": "chartSelection",
+          "questionTypeVersion": 1,
+          "text": "حدّد على الرسم كل الأشهر التي تجاوز هطولها 100 mm.",
+          "marks": 3,
+          "chartSelection": {
+            "v": 1,
+            "chart": {
+              "version": 1,
+              "id": "rainfall-2020",
+              "kind": "bar",
+              "title": "الهطول الشهري — 2020",
+              "description": "كمية الأمطار الشهرية بالملّيمتر في عام 2020 (بيانات توضيحية).",
+              "source": "بيانات توضيحية لأغراض التعلّم",
+              "animation": "subtle",
+              "palette": "categorical",
+              "categories": [
+                {
+                  "id": "jan",
+                  "label": "يناير"
+                },
+                {
+                  "id": "feb",
+                  "label": "فبراير"
+                },
+                {
+                  "id": "mar",
+                  "label": "مارس"
+                },
+                {
+                  "id": "apr",
+                  "label": "أبريل"
+                },
+                {
+                  "id": "may",
+                  "label": "مايو"
+                },
+                {
+                  "id": "jun",
+                  "label": "يونيو"
+                },
+                {
+                  "id": "jul",
+                  "label": "يوليو"
+                },
+                {
+                  "id": "aug",
+                  "label": "أغسطس"
+                },
+                {
+                  "id": "sep",
+                  "label": "سبتمبر"
+                },
+                {
+                  "id": "oct",
+                  "label": "أكتوبر"
+                },
+                {
+                  "id": "nov",
+                  "label": "نوفمبر"
+                },
+                {
+                  "id": "dec",
+                  "label": "ديسمبر"
+                }
+              ],
+              "series": [
+                {
+                  "id": "rain",
+                  "label": "الهطول",
+                  "values": [
+                    120,
+                    95,
+                    82,
+                    40,
+                    12.5,
+                    0,
+                    0,
+                    3,
+                    18,
+                    135,
+                    88,
+                    60
+                  ]
+                }
+              ],
+              "xAxis": {
+                "label": "الشهر"
+              },
+              "yAxis": {
+                "label": "الهطول",
+                "unit": "mm"
+              },
+              "referenceLines": [
+                {
+                  "id": "avg",
+                  "value": 50,
+                  "label": "عتبة 50 mm"
+                }
+              ]
+            },
+            "target": "category",
+            "mode": "multiple",
+            "maxSelections": 3
+          },
+          "answer": {
+            "scoring": "partial",
+            "correct": [
+              "jan",
+              "oct"
+            ]
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-a3"
+        },
+        {
+          "examQuestionId": "a4",
+          "presentationType": "chartSelection",
+          "questionTypeVersion": 1,
+          "text": "حدّد على الرسم الفترة الجافة المتصلة التي قلّ فيها الهطول عن 20 mm في كل شهر.",
+          "marks": 3,
+          "chartSelection": {
+            "v": 1,
+            "chart": {
+              "version": 1,
+              "id": "rainfall-2020",
+              "kind": "bar",
+              "title": "الهطول الشهري — 2020",
+              "description": "كمية الأمطار الشهرية بالملّيمتر في عام 2020 (بيانات توضيحية).",
+              "source": "بيانات توضيحية لأغراض التعلّم",
+              "animation": "subtle",
+              "palette": "categorical",
+              "categories": [
+                {
+                  "id": "jan",
+                  "label": "يناير"
+                },
+                {
+                  "id": "feb",
+                  "label": "فبراير"
+                },
+                {
+                  "id": "mar",
+                  "label": "مارس"
+                },
+                {
+                  "id": "apr",
+                  "label": "أبريل"
+                },
+                {
+                  "id": "may",
+                  "label": "مايو"
+                },
+                {
+                  "id": "jun",
+                  "label": "يونيو"
+                },
+                {
+                  "id": "jul",
+                  "label": "يوليو"
+                },
+                {
+                  "id": "aug",
+                  "label": "أغسطس"
+                },
+                {
+                  "id": "sep",
+                  "label": "سبتمبر"
+                },
+                {
+                  "id": "oct",
+                  "label": "أكتوبر"
+                },
+                {
+                  "id": "nov",
+                  "label": "نوفمبر"
+                },
+                {
+                  "id": "dec",
+                  "label": "ديسمبر"
+                }
+              ],
+              "series": [
+                {
+                  "id": "rain",
+                  "label": "الهطول",
+                  "values": [
+                    120,
+                    95,
+                    82,
+                    40,
+                    12.5,
+                    0,
+                    0,
+                    3,
+                    18,
+                    135,
+                    88,
+                    60
+                  ]
+                }
+              ],
+              "xAxis": {
+                "label": "الشهر"
+              },
+              "yAxis": {
+                "label": "الهطول",
+                "unit": "mm"
+              },
+              "referenceLines": [
+                {
+                  "id": "avg",
+                  "value": 50,
+                  "label": "عتبة 50 mm"
+                }
+              ]
+            },
+            "target": "category",
+            "mode": "range",
+            "maxSelections": 12
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "may",
+              "jun",
+              "jul",
+              "aug",
+              "sep"
+            ]
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-a4"
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — سلاسل زمنية (خطي ومساحي)",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "multipleChoice",
+          "text": "في أي يوم كانت درجة الحرارة الصغرى أدنى؟",
+          "marks": 3,
+          "options": [
+            {
+              "text": "THU"
+            },
+            {
+              "text": "MON"
+            },
+            {
+              "text": "FRI"
+            },
+            {
+              "text": "TUE"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-b1",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "يبيّن الرسم درجتي الحرارة العظمى والصغرى (°C) خلال أسبوع؛ قيمة الأربعاء مفقودة."
+                  }
+                ]
+              },
+              {
+                "type": "dataChart",
+                "chart": {
+                  "version": 1,
+                  "id": "temp-week",
+                  "kind": "line",
+                  "title": "Temperature over a week",
+                  "description": "Daily maximum temperature in °C; Wednesday is missing.",
+                  "categories": [
+                    {
+                      "id": "mon",
+                      "label": "MON"
+                    },
+                    {
+                      "id": "tue",
+                      "label": "TUE"
+                    },
+                    {
+                      "id": "wed",
+                      "label": "WED"
+                    },
+                    {
+                      "id": "thu",
+                      "label": "THU"
+                    },
+                    {
+                      "id": "fri",
+                      "label": "FRI"
+                    }
+                  ],
+                  "series": [
+                    {
+                      "id": "tmax",
+                      "label": "Max °C",
+                      "values": [
+                        21.5,
+                        23,
+                        null,
+                        -2,
+                        0
+                      ]
+                    },
+                    {
+                      "id": "tmin",
+                      "label": "Min °C",
+                      "values": [
+                        12,
+                        13,
+                        11,
+                        -8,
+                        -4
+                      ]
+                    }
+                  ],
+                  "xAxis": {
+                    "label": "Day"
+                  },
+                  "yAxis": {
+                    "label": "Temperature",
+                    "unit": "°C"
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "في أي يوم كانت درجة الحرارة الصغرى أدنى؟"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "b2",
+          "presentationType": "chartSelection",
+          "questionTypeVersion": 1,
+          "text": "حدّد على الرسم أعلى قيمة لدرجة الحرارة العظمى (°C).",
+          "marks": 4,
+          "chartSelection": {
+            "v": 1,
+            "chart": {
+              "version": 1,
+              "id": "temp-week",
+              "kind": "line",
+              "title": "Temperature over a week",
+              "description": "Daily maximum temperature in °C; Wednesday is missing.",
+              "categories": [
+                {
+                  "id": "mon",
+                  "label": "MON"
+                },
+                {
+                  "id": "tue",
+                  "label": "TUE"
+                },
+                {
+                  "id": "wed",
+                  "label": "WED"
+                },
+                {
+                  "id": "thu",
+                  "label": "THU"
+                },
+                {
+                  "id": "fri",
+                  "label": "FRI"
+                }
+              ],
+              "series": [
+                {
+                  "id": "tmax",
+                  "label": "Max °C",
+                  "values": [
+                    21.5,
+                    23,
+                    null,
+                    -2,
+                    0
+                  ]
+                },
+                {
+                  "id": "tmin",
+                  "label": "Min °C",
+                  "values": [
+                    12,
+                    13,
+                    11,
+                    -8,
+                    -4
+                  ]
+                }
+              ],
+              "xAxis": {
+                "label": "Day"
+              },
+              "yAxis": {
+                "label": "Temperature",
+                "unit": "°C"
+              }
+            },
+            "target": "datum",
+            "mode": "single",
+            "maxSelections": 1
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "tmax/tue"
+            ]
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-b2"
+        },
+        {
+          "examQuestionId": "b3",
+          "presentationType": "numericResponse",
+          "questionTypeVersion": 1,
+          "text": "ما إجمالي إنتاج الكهرباء من المصدرين في عام 2021 بوحدة GWh؟",
+          "marks": 3,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 29,
+            "tolerance": 0
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-b3",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "dataChart",
+                "chart": {
+                  "version": 1,
+                  "id": "energy-mix",
+                  "kind": "area",
+                  "title": "مزيج الطاقة",
+                  "description": "إنتاج الكهرباء (GWh) حسب المصدر.",
+                  "stacked": true,
+                  "categories": [
+                    {
+                      "id": "y2019",
+                      "label": "2019"
+                    },
+                    {
+                      "id": "y2020",
+                      "label": "2020"
+                    },
+                    {
+                      "id": "y2021",
+                      "label": "2021"
+                    }
+                  ],
+                  "series": [
+                    {
+                      "id": "solar",
+                      "label": "شمسية",
+                      "values": [
+                        10,
+                        14,
+                        20
+                      ]
+                    },
+                    {
+                      "id": "wind",
+                      "label": "رياح",
+                      "values": [
+                        5,
+                        7,
+                        9
+                      ]
+                    }
+                  ],
+                  "yAxis": {
+                    "label": "الإنتاج",
+                    "unit": "GWh"
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ما إجمالي إنتاج الكهرباء من المصدرين في عام 2021 بوحدة GWh؟"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — الانتشار والتوزيع",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "chartSelection",
+          "questionTypeVersion": 1,
+          "text": "حدّد على الرسم الانتشاري النقطة الشاذّة.",
+          "marks": 4,
+          "chartSelection": {
+            "v": 1,
+            "chart": {
+              "version": 1,
+              "id": "height-mass",
+              "kind": "scatter",
+              "title": "الطول والكتلة",
+              "description": "طول الطلاب (cm) مقابل كتلتهم (kg)؛ نقطة واحدة شاذّة.",
+              "series": [
+                {
+                  "id": "students",
+                  "label": "الطلاب",
+                  "points": [
+                    {
+                      "id": "p1",
+                      "x": 150,
+                      "y": 45
+                    },
+                    {
+                      "id": "p3",
+                      "x": 170,
+                      "y": 60
+                    },
+                    {
+                      "id": "p2",
+                      "x": 160,
+                      "y": 52
+                    },
+                    {
+                      "id": "out",
+                      "x": 155,
+                      "y": 95,
+                      "label": "قيمة شاذّة"
+                    }
+                  ]
+                }
+              ],
+              "xAxis": {
+                "label": "الطول",
+                "unit": "cm"
+              },
+              "yAxis": {
+                "label": "الكتلة",
+                "unit": "kg"
+              }
+            },
+            "target": "point",
+            "mode": "single",
+            "maxSelections": 1
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "out"
+            ]
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-c1"
+        },
+        {
+          "examQuestionId": "c2",
+          "presentationType": "chartSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر الفئة التكرارية الأكثر تكرارًا.",
+          "marks": 4,
+          "chartSelection": {
+            "v": 1,
+            "chart": {
+              "version": 1,
+              "id": "scores",
+              "kind": "histogram",
+              "title": "توزيع الدرجات",
+              "description": "عدد الطلاب في كل فئة درجات.",
+              "bins": [
+                {
+                  "id": "b0",
+                  "start": 0,
+                  "end": 10,
+                  "count": 2
+                },
+                {
+                  "id": "b1",
+                  "start": 10,
+                  "end": 20,
+                  "count": 5
+                },
+                {
+                  "id": "b2",
+                  "start": 20,
+                  "end": 30,
+                  "count": 9
+                },
+                {
+                  "id": "b3",
+                  "start": 30,
+                  "end": 40,
+                  "count": 4
+                }
+              ],
+              "xAxis": {
+                "label": "الدرجة"
+              },
+              "yAxis": {
+                "label": "عدد الطلاب"
+              }
+            },
+            "target": "bin",
+            "mode": "single",
+            "maxSelections": 1
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "b2"
+            ]
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-c2"
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — رسوم مكدّسة ومركّبة",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "composite",
+          "questionTypeVersion": 1,
+          "text": "ادرس رسم المبيعات ونسبة الربح ثم أجب عن البندين.",
+          "marks": 6,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxSales",
+                "version": 1,
+                "kind": "source",
+                "title": "المبيعات والهامش",
+                "sources": [
+                  {
+                    "id": "srcSales",
+                    "version": 1,
+                    "kind": "rich",
+                    "title": "رسم مركّب",
+                    "richContent": {
+                      "schemaVersion": 1,
+                      "blocks": [
+                        {
+                          "type": "paragraph",
+                          "runs": [
+                            {
+                              "text": "المبيعات (أعمدة) ونسبة الربح % (خط) لأربعة أرباع."
+                            }
+                          ]
+                        },
+                        {
+                          "type": "dataChart",
+                          "chart": {
+                            "version": 1,
+                            "id": "sales-combo",
+                            "kind": "combo",
+                            "title": "المبيعات والهامش",
+                            "description": "المبيعات (أعمدة) ونسبة الربح (خط).",
+                            "categories": [
+                              {
+                                "id": "q1",
+                                "label": "الربع 1"
+                              },
+                              {
+                                "id": "q2",
+                                "label": "الربع 2"
+                              },
+                              {
+                                "id": "q3",
+                                "label": "الربع 3"
+                              },
+                              {
+                                "id": "q4",
+                                "label": "الربع 4"
+                              }
+                            ],
+                            "series": [
+                              {
+                                "id": "sales",
+                                "label": "المبيعات",
+                                "values": [
+                                  100,
+                                  120,
+                                  90,
+                                  150
+                                ],
+                                "mark": "bar"
+                              },
+                              {
+                                "id": "margin",
+                                "label": "الهامش %",
+                                "values": [
+                                  12,
+                                  15,
+                                  9,
+                                  18
+                                ],
+                                "mark": "line"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "groups": [
+              {
+                "id": "gSales",
+                "title": "تحليل المبيعات",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "chartSelection",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSales",
+                    "text": "حدّد على الرسم الربع الذي كانت فيه المبيعات أعلى.",
+                    "marks": 3,
+                    "chartSelection": {
+                      "v": 1,
+                      "chart": {
+                        "version": 1,
+                        "id": "sales-combo",
+                        "kind": "combo",
+                        "title": "المبيعات والهامش",
+                        "description": "المبيعات (أعمدة) ونسبة الربح (خط).",
+                        "categories": [
+                          {
+                            "id": "q1",
+                            "label": "الربع 1"
+                          },
+                          {
+                            "id": "q2",
+                            "label": "الربع 2"
+                          },
+                          {
+                            "id": "q3",
+                            "label": "الربع 3"
+                          },
+                          {
+                            "id": "q4",
+                            "label": "الربع 4"
+                          }
+                        ],
+                        "series": [
+                          {
+                            "id": "sales",
+                            "label": "المبيعات",
+                            "values": [
+                              100,
+                              120,
+                              90,
+                              150
+                            ],
+                            "mark": "bar"
+                          },
+                          {
+                            "id": "margin",
+                            "label": "الهامش %",
+                            "values": [
+                              12,
+                              15,
+                              9,
+                              18
+                            ],
+                            "mark": "line"
+                          }
+                        ]
+                      },
+                      "target": "category",
+                      "mode": "single",
+                      "maxSelections": 1
+                    },
+                    "answer": {
+                      "scoring": "allOrNothing",
+                      "correct": [
+                        "q4"
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "numericResponse",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxSales",
+                    "text": "كم بلغت مبيعات الربع الثاني؟",
+                    "marks": 3,
+                    "numeric": {
+                      "unitRequired": false
+                    },
+                    "answer": {
+                      "mode": "tolerance",
+                      "expected": 120,
+                      "tolerance": 0
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "answer": {}
+        },
+        {
+          "examQuestionId": "d2",
+          "presentationType": "multipleChoice",
+          "text": "في أي منطقة كان عدد المصوّتين بـ«نعم» أكبر؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "South"
+            },
+            {
+              "text": "North"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-d2",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "dataChart",
+                "chart": {
+                  "version": 1,
+                  "id": "votes",
+                  "kind": "bar",
+                  "title": "Votes by region",
+                  "description": "Stacked horizontal bars.",
+                  "orientation": "horizontal",
+                  "stacked": true,
+                  "valueLabels": true,
+                  "categories": [
+                    {
+                      "id": "north",
+                      "label": "North"
+                    },
+                    {
+                      "id": "south",
+                      "label": "South"
+                    }
+                  ],
+                  "series": [
+                    {
+                      "id": "yes",
+                      "label": "Yes",
+                      "values": [
+                        30,
+                        45
+                      ]
+                    },
+                    {
+                      "id": "no",
+                      "label": "No",
+                      "values": [
+                        20,
+                        15
+                      ]
+                    }
+                  ],
+                  "xAxis": {
+                    "label": "Votes",
+                    "min": 0
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "في أي منطقة كان عدد المصوّتين بـ«نعم» (Yes) أكبر؟"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "d3",
+          "presentationType": "numericResponse",
+          "questionTypeVersion": 1,
+          "text": "ما وسيط درجات الشعبة ب؟ (أدخل العدد فقط)",
+          "marks": 2,
+          "numeric": {
+            "unitRequired": false
+          },
+          "answer": {
+            "mode": "tolerance",
+            "expected": 60,
+            "tolerance": 0
+          },
+          "teacherNote": "CHART21A1-PRIVATE-NOTE-d3",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "يلخّص الرسم الصندوقي درجات شعبتين (من 100)."
+                  }
+                ]
+              },
+              {
+                "type": "dataChart",
+                "chart": {
+                  "version": 1,
+                  "id": "class-scores",
+                  "kind": "boxplot",
+                  "title": "درجات الشعب",
+                  "description": "ملخص الأرقام الخمسة لكل شعبة.",
+                  "boxes": [
+                    {
+                      "id": "a",
+                      "label": "الشعبة أ",
+                      "min": 40,
+                      "q1": 55,
+                      "median": 65,
+                      "q3": 75,
+                      "max": 95
+                    },
+                    {
+                      "id": "b",
+                      "label": "الشعبة ب",
+                      "min": 30,
+                      "q1": 50,
+                      "median": 60,
+                      "q3": 70,
+                      "max": 88
+                    }
+                  ],
+                  "yAxis": {
+                    "label": "الدرجة",
+                    "min": 0,
+                    "max": 100
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ما وسيط درجات الشعبة ب؟"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
