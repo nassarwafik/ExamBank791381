@@ -8,20 +8,22 @@ const richContentModel_1 = require("../richContent/richContentModel");
 const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
 const composerSchemaKit_1 = require("./composerSchemaKit");
+const composerChart_1 = require("./composerChart");
 const L = composerLimits_1.COMPOSER_LIMITS;
 const DIRS = ["auto", "rtl", "ltr"];
 function buildRichBlockSchema() {
     return (0, composerSchemaKit_1.sObj)({
         type: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_RICH_BLOCKS), text: (0, composerSchemaKit_1.sStr)(), level: (0, composerSchemaKit_1.sInt)(2, 4), dir: (0, composerSchemaKit_1.sEnum)(DIRS), items: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), L.richItems),
         headers: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), L.richTableColumns), rows: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), L.richTableColumns), L.richTableRows), language: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_RICH_CODE_LANGUAGES),
-        source: (0, composerSchemaKit_1.sStr)(), variant: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_CALLOUT_VARIANTS), title: (0, composerSchemaKit_1.sStr)(), pairs: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ label: (0, composerSchemaKit_1.sStr)(), value: (0, composerSchemaKit_1.sStr)() }), L.richItems)
+        source: (0, composerSchemaKit_1.sStr)(), variant: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_CALLOUT_VARIANTS), title: (0, composerSchemaKit_1.sStr)(), pairs: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ label: (0, composerSchemaKit_1.sStr)(), value: (0, composerSchemaKit_1.sStr)() }), L.richItems),
+        chart: (0, composerSchemaKit_1.sNull)((0, composerChart_1.buildAiChartSchema)())
     });
 }
 const buildRichBlocksSchema = () => (0, composerSchemaKit_1.sArr)(buildRichBlockSchema(), L.richBlocks);
 exports.buildRichBlocksSchema = buildRichBlocksSchema;
-const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs"];
+const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs", "chart"];
 const runs = (text) => [{ text }];
-function mapAiRichBlocks(raw, path = "richContent") {
+function mapAiRichBlocks(raw, path = "richContent", chartPolicy) {
     const fail = (message, p = path) => ({ ok: false, issues: [{ code: "AI_RICH_CONTENT_INVALID", message, path: p }] });
     if (!(0, composerSchemaKit_1.isArr)(raw, L.richBlocks))
         return fail("كتل المحتوى المنسق غير صالحة.");
@@ -42,6 +44,8 @@ function mapAiRichBlocks(raw, path = "richContent") {
             return fail("أزواج القيم غير صالحة.", p);
         if (!(0, composerSchemaKit_1.isEnum)(b.language, composerCatalog_1.COMPOSER_RICH_CODE_LANGUAGES) || !(0, composerSchemaKit_1.isEnum)(b.variant, composerCatalog_1.COMPOSER_CALLOUT_VARIANTS))
             return fail("لغة الكود أو نوع الملاحظة غير معروف.", p);
+        if (b.chart !== null && !(0, composerSchemaKit_1.isPlainRecord)(b.chart))
+            return fail("وصف الرسم البياني غير صالح.", p + ".chart");
         const text = (0, composerSchemaKit_1.cleanText)(b.text), title = (0, composerSchemaKit_1.cleanText)(b.title);
         switch (b.type) {
             case "heading":
@@ -78,6 +82,15 @@ function mapAiRichBlocks(raw, path = "richContent") {
             case "keyValueGrid":
                 blocks.push({ type: "keyValueGrid", items: b.pairs.map(x => ({ label: (0, composerSchemaKit_1.cleanText)(x.label), value: (0, composerSchemaKit_1.cleanText)(x.value) })) });
                 break;
+            case "dataChart": {
+                if (b.chart === null)
+                    return fail("كتلة الرسم البياني تحتاج وصفًا للرسم (chart).", p + ".chart");
+                const c = (0, composerChart_1.mapAiChart)(b.chart, i, chartPolicy, p + ".chart");
+                if (!c.ok)
+                    return { ok: false, issues: c.issues };
+                blocks.push({ type: "dataChart", chart: c.chart });
+                break;
+            }
             case "math": {
                 const source = String(b.source || b.text).replace(/\r\n?/g, "\n").trim();
                 if ((0, richContentModel_1.looksLikeRawHtml)(source))

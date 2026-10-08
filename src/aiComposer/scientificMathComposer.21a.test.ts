@@ -49,9 +49,9 @@ const sectionWith = (m1: string, m2: string, m3: string) => ({ items: [
 
 describe("21A-AI1 the catalog derives Scientific Math v2 from code", () => {
   it("catalog V2 with a scientificMath entry that IS the parser's vocabulary (same frozen references), bounds and proven examples", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V2");
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V3");   // 21A.1 bumps the catalog again (data charts); the math capability is unchanged
     const c = buildComposerCatalog();
-    expect(c.version).toBe("AI_COMPOSER_CATALOG_V2");
+    expect(c.version).toBe("AI_COMPOSER_CATALOG_V3");
     expect(c.scientificMath).toBe(COMPOSER_SCIENTIFIC_MATH);
     expect(c.scientificMath.version).toBe(MATH_LANGUAGE_VERSION);
     expect(c.scientificMath.environments).toBe(MATH_ENVIRONMENTS);
@@ -68,7 +68,7 @@ describe("21A-AI1 the catalog derives Scientific Math v2 from code", () => {
     expect(line).toBeTruthy();
     expect(line.length).toBeLessThanOrEqual(3500);
     expect(p.length).toBeLessThanOrEqual(9000);
-    expect(p.startsWith("CAPABILITY CATALOG AI_COMPOSER_CATALOG_V2")).toBe(true);
+    expect(p.startsWith("CAPABILITY CATALOG AI_COMPOSER_CATALOG_V3")).toBe(true);
     const envs = line.slice(line.indexOf("environments ONLY ") + 18, line.indexOf(" as \\begin{name}")).split(", ");
     expect(envs).toEqual([...MATH_ENVIRONMENTS]);                                                    // the exact list, not a substring — mutation M50
     for (const f of MATH_FEATURES) expect(line, f.id).toContain(f.example);
@@ -144,9 +144,9 @@ describe("21A-AI3 scripted provider through the REAL endpoint and orchestration"
     expect(r.result.verdict.blocking).toEqual([]);
     expect(r.result.verdict.summary.totalMarks).toBe(10);
     expect(qs(exam).map(mathOf)).toEqual([[MATRIX, DET], [CASES, ALIGNED_LF], [CHEM, COMPLEX, INTEGRAL]]);
-    expect((exam.metadata as { aiComposer: { catalog: string } }).aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V2");
+    expect((exam.metadata as { aiComposer: { catalog: string } }).aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V3");
     expect(calls.map(c => c.schemaName)).toEqual(["ai_exam_plan", "ai_exam_section"]);
-    for (const c of calls) { expect(c.prompt).toContain("AI_COMPOSER_CATALOG_V2"); expect(c.prompt).toContain("Math blocks (scientific notation language v2)"); }
+    for (const c of calls) { expect(c.prompt).toContain("AI_COMPOSER_CATALOG_V3"); expect(c.prompt).toContain("Math blocks (scientific notation language v2)"); }
     const imp = parseStructuredExamJson(JSON.stringify(exam), "ai-21a.json");
     expect([imp.canOpen, imp.parseErrors, imp.validationErrors]).toEqual([true, [], []]);
     expect(qs(imp.exam as StructuredExam).map(mathOf)).toEqual(qs(exam).map(mathOf));
@@ -185,7 +185,7 @@ describe("21A-AI4 catalog provenance (review fix 1: what metadata.aiComposer.cat
     const v1 = { examId: "E", title: "t", sections: [], metadata: { aiComposer: { v: 1, catalog: "AI_COMPOSER_CATALOG_V1", coverage: [], history: [entry] } } } as unknown as StructuredExam;
     expect(JSON.parse(JSON.stringify(v1)).metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V1");     // stored / imported untouched
     const next = withComposerHistory(v1, { ...entry, at: "2026-10-08T00:00:00.000Z", mode: "modify" }) as unknown as { metadata: { aiComposer: { catalog: string; history: { mode: string }[] } } };
-    expect(next.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V2");
+    expect(next.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V3");
     expect(next.metadata.aiComposer.history.map(h => h.mode)).toEqual(["generate", "modify"]);
     expect(Object.keys(next.metadata.aiComposer.history[0])).not.toContain("catalog");
   });

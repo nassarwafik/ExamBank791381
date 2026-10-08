@@ -5,7 +5,7 @@ const { withObservability } = require("../lib/observability");
 const { getContainer } = require("../lib/platform-storage");
 const { reserveComposerCall } = require("../lib/ai-composer-rate-limit");
 const { COMPOSER_LIMITS } = require("../lib/shared-finalization/aiComposer/composerLimits");
-const { normalizeComposerIntent } = require("../lib/shared-finalization/aiComposer/composerIntent");
+const { normalizeComposerIntent, composerChartPolicy } = require("../lib/shared-finalization/aiComposer/composerIntent");
 const { buildPlanSchema, normalizePlanShape, validatePlan, planCoverage } = require("../lib/shared-finalization/aiComposer/composerPlan");
 const { buildSectionDraftSchema, normalizeSectionDraft, isComposerNonce } = require("../lib/shared-finalization/aiComposer/composerDraft");
 const { buildPatchSchema, normalizeComposerPatch, applyComposerPatch, buildPatchDiff, COMPOSER_MODES, modeScopeOk } = require("../lib/shared-finalization/aiComposer/composerPatch");
@@ -99,7 +99,7 @@ async function handler(request, deps = {}) {
         const si = body.sectionIndex;
         if (!Number.isInteger(si) || si < 0 || si >= plan.sections.length) return bad("REQUEST_INVALID", "رقم القسم غير صالح.");
         if (!isComposerNonce(body.nonce)) return bad("REQUEST_INVALID", "معرّف التوليد غير صالح.");
-        const judge = raw => normalizeSectionDraft(raw, plan.sections[si], si, { nonce: body.nonce });
+        const judge = raw => normalizeSectionDraft(raw, plan.sections[si], si, { nonce: body.nonce, chartPolicy: composerChartPolicy(intent) });   // 21A.1: the request's chart data policy
         prompt = buildSectionPrompt(intent, plan, si); schema = buildSectionDraftSchema(); schemaName = "ai_exam_section";
         finish = (raw, r = judge(raw)) => { return r.ok ? reply(200, { ok: true, section: r.section, meta: r.meta, warnings: r.warnings }) : reply(200, { ok: false, code: "SECTION_INVALID", issues: issueList(r.issues), draft: draftOf(raw) }); };
         judgePrevious = () => judge(body.previous);

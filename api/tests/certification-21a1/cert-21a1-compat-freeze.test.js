@@ -24,7 +24,11 @@ const PINS = path.join(path.dirname(fileURLToPath(import.meta.url)), "freeze-21a
 const CAPTURE = process.env.CAPTURE_21A1 === "1";
 const sha = v => createHash("sha256").update(JSON.stringify(v)).digest("hex");
 const dirs = fs.readdirSync(path.join(repo, "docs/fixtures")).filter(d => d !== "data-charts-21a1").sort();
-const fixtures = dirs.flatMap(d => fs.readdirSync(path.join(repo, "docs/fixtures", d)).filter(f => f.endsWith(".json")).sort().map(f => [d + "/" + f, JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures", d, f), "utf8"))]));
+// The ONE declared fixture delta of 21A.1: the AI composer fixtures record the catalog of their last composer operation, regenerated from
+// AI_COMPOSER_CATALOG_V2 to _V3 (WRITE_20F_FIXTURES=1; nothing else in them changed). The token is mapped back to its baseline value so every
+// other byte of every fixture is still judged against the pins captured on ff13899.
+const BASELINE_TOKEN = text => text.replace(/"AI_COMPOSER_CATALOG_V3"/g, '"AI_COMPOSER_CATALOG_V2"');
+const fixtures = dirs.flatMap(d => fs.readdirSync(path.join(repo, "docs/fixtures", d)).filter(f => f.endsWith(".json")).sort().map(f => [d + "/" + f, JSON.parse(BASELINE_TOKEN(fs.readFileSync(path.join(repo, "docs/fixtures", d, f), "utf8")))]));
 const qs = e => (e.sections || []).flatMap(s => s.questions || []);
 const BASELINE_BLOCK_TYPES = ["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math"];
 

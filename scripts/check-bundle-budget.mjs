@@ -94,8 +94,8 @@ const PRESENTATION_SIGNATURES = ["xp-studio", "rc-editor", "RICH_CONTENT_RAW_HTM
 const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "fnstudy-probe"];
 // Phase 20F — the AI Full Exam Composer: the dialog class name, the capability catalog version marker and the diff list class name. They
 // live ONLY in the lazy composer chunk(s): ANY one in an initial file fails; EACH must exist in some chunk (a missing one means the list is stale).
-// (Phase 21A: the catalog marker is AI_COMPOSER_CATALOG_V2 — the catalog gained the Scientific Math v2 capability.)
-const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V2", "ai-composer-diff"];
+// (Phase 21A: the catalog marker became AI_COMPOSER_CATALOG_V2 — Scientific Math v2; Phase 21A.1: AI_COMPOSER_CATALOG_V3 — data charts.)
+const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V3", "ai-composer-diff"];
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.

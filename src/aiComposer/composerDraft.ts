@@ -17,6 +17,7 @@ import { COMPOSER_DRAFT_TYPES, COMPOSER_ITEM_KINDS, composerItemIdentity, type C
 import type { AiExamPlanItem, AiExamPlanSection, PlanDifficulty } from "./composerPlan";
 import { PLAN_DIFFICULTIES } from "./composerPlan";
 import { buildRichBlocksSchema, mapAiRichBlocks } from "./composerRich";
+import type { AiChartPolicy } from "./composerChart";
 import { buildSimFromSpec, buildSimSpecSchema, simFreeCreditIssues, type BuiltSim } from "./composerSim";
 import { cleanText, hasExactKeys, isArr, isEnum, isInt, isStr, sArr, sBool, sEnum, sInt, sNull, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 
@@ -49,7 +50,8 @@ const GROUP_KEYS = ["title", "policy", "requiredAnswers", "parts"] as const;
 const CTX_KEYS = ["kind", "sim", "sourceTitle", "sourceBlocks"] as const;
 
 export type ComposerItemMeta = { questionId: string; kind: ComposerItemKind; topic: string; difficulty: PlanDifficulty; rationale: string };
-export type ComposerIds = { nonce: string };
+/** `chartPolicy` (21A.1): the teacher request's chart data policy; absent ⇒ no AI chart is accepted (fail closed). */
+export type ComposerIds = { nonce: string; chartPolicy?: AiChartPolicy };
 export const isComposerNonce = (v: unknown): v is string => typeof v === "string" && /^[a-z0-9]{6,16}$/.test(v);
 export const composerQuestionId = (ids: ComposerIds, sectionIndex: number, itemIndex: number) => "ai" + ids.nonce + "-" + (sectionIndex + 1) + "-" + (itemIndex + 1);
 export const composerSectionId = (ids: ComposerIds, sectionIndex: number) => "ai" + ids.nonce + "-s" + (sectionIndex + 1);
@@ -68,7 +70,7 @@ function mapDraftQuestion(raw: unknown, kind: string, qid: string, marks: number
 
 function labelOf(raw: string, i: number): string { const t = cleanText(raw); return t && t.length <= 40 ? t : LETTERS[i] ?? String(i + 1); }
 
-function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPlanItem, request: string, path: string): R<BuilderQuestion> {
+function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPlanItem, request: string, path: string, chartPolicy?: AiChartPolicy): R<BuilderQuestion> {
   const issues: ComposerIssue[] = [];
   if (!hasExactKeys(raw, ["text", "context", "groups"]) || !isStr(raw.text, L.richTextChars, 1) || !isArr(raw.groups, L.compositeGroups) || !raw.groups.length) return { ok: false, issues: [issue("AI_COMPOSITE_MALFORMED", "السؤال المركّب غير صالح البنية.", path, qid)] };
   let sim: BuiltSim | null = null;
@@ -84,7 +86,7 @@ function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPl
       contexts.push({ id: "ctx1", version: 1, kind: "smartSim", ...(sim.title ? { title: sim.title } : {}), ...(sim.instructions ? { instructions: sim.instructions } : {}), smartSim: sim.envelope });
     } else {
       if (c.sim !== null) return { ok: false, issues: [issue("AI_COMPOSITE_MALFORMED", "سياق المصدر لا يحمل محاكاة.", path + ".context", qid)] };
-      const rc = mapAiRichBlocks(c.sourceBlocks, path + ".context.sourceBlocks");
+      const rc = mapAiRichBlocks(c.sourceBlocks, path + ".context.sourceBlocks", chartPolicy);
       if (!rc.ok) return { ok: false, issues: rc.issues.map(i => ({ ...i, questionId: qid })) };
       if (!rc.richContent) return { ok: false, issues: [issue("AI_COMPOSITE_MALFORMED", "سياق المصدر فارغ.", path + ".context", qid)] };
       const title = cleanText(c.sourceTitle);
@@ -157,7 +159,7 @@ function nestedComposite(raw: Record<string, unknown>, qid: string, path: string
 }
 
 /** One AI item → one canonical question (or issues). */
-function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: string, path: string): R<{ question: BuilderQuestion; meta: Omit<ComposerItemMeta, "questionId">; warnings: ComposerIssue[] }> {
+function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: string, path: string, chartPolicy?: AiChartPolicy): R<{ question: BuilderQuestion; meta: Omit<ComposerItemMeta, "questionId">; warnings: ComposerIssue[] }> {
   const warnings: ComposerIssue[] = [];
   if (!hasExactKeys(raw, ITEM_KEYS) || !isEnum(raw.kind, COMPOSER_ITEM_KINDS) || !isStr(raw.topic, L.topicChars) || !isEnum(raw.difficulty, PLAN_DIFFICULTIES) || !isStr(raw.rationale, L.rationaleChars)) return { ok: false, issues: [issue("AI_ITEM_MALFORMED", "بند السؤال غير صالح البنية.", path, qid)] };
   if (raw.kind !== plan.kind) return { ok: false, issues: [issue("AI_ITEM_KIND_MISMATCH", "نوع البند (" + raw.kind + ") لا يطابق الخطة (" + plan.kind + ").", path, qid)] };
@@ -178,8 +180,8 @@ function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: strin
     if (free.length) return { ok: false, issues: free.map(i => ({ ...i, questionId: qid })) };
     const id = composerItemIdentity("smartSim");
     q = { examQuestionId: qid, presentationType: "smartSim", questionTypeVersion: id.version, text: cleanText(s.text), marks: plan.marks, smartSim: b.value.envelope, answer: { scoring: "proportional", checks: b.value.checks } } as unknown as BuilderQuestion;
-  } else { const c = buildComposite(comp.value, qid, plan.marks, plan, request, path + ".composite"); if (!c.ok) return c; q = c.value; }
-  const stem = mapAiRichBlocks(raw.stem, path + ".stem");
+  } else { const c = buildComposite(comp.value, qid, plan.marks, plan, request, path + ".composite", chartPolicy); if (!c.ok) return c; q = c.value; }
+  const stem = mapAiRichBlocks(raw.stem, path + ".stem", chartPolicy);
   if (!stem.ok) return { ok: false, issues: stem.issues.map(i => ({ ...i, questionId: qid })) };
   if (stem.richContent) {
     if (kind === "parametricNumeric") warnings.push(issue("AI_RICH_STEM_DROPPED", "أُهمل التنسيق الغني لسؤال المعطيات المتغيرة (غير مدعوم لهذا النوع)؛ النص العادي باقٍ.", path, qid));
@@ -195,11 +197,11 @@ function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: strin
 }
 
 /** ONE composer item outside a plan (patch operations): marks come from the operation, the simulator is whatever catalog spec the item names. */
-export function normalizeComposerItem(raw: unknown, ctx: { marks: number; qid: string; request: string; path: string }): R<{ question: BuilderQuestion; meta: Omit<ComposerItemMeta, "questionId">; warnings: ComposerIssue[] }> {
+export function normalizeComposerItem(raw: unknown, ctx: { marks: number; qid: string; request: string; path: string; chartPolicy?: AiChartPolicy }): R<{ question: BuilderQuestion; meta: Omit<ComposerItemMeta, "questionId">; warnings: ComposerIssue[] }> {
   const kind = hasExactKeys(raw, ITEM_KEYS) && isEnum(raw.kind, COMPOSER_ITEM_KINDS) ? (raw.kind as ComposerItemKind) : null;
   if (!kind) return { ok: false, issues: [issue("AI_ITEM_MALFORMED", "بند السؤال غير صالح البنية.", ctx.path, ctx.qid)] };
   const plan: AiExamPlanItem = { key: "patch", kind, topic: "", difficulty: "medium", marks: ctx.marks, simulator: null, scenario: null, note: "" };
-  return mapItem(raw, plan, ctx.qid, ctx.request, ctx.path);
+  return mapItem(raw, plan, ctx.qid, ctx.request, ctx.path, ctx.chartPolicy);
 }
 
 /** How many function-study simulators a list of raw items asks the code to build (each one runs a bounded completeness probe). */
@@ -224,7 +226,7 @@ export function normalizeSectionDraft(raw: unknown, planSection: AiExamPlanSecti
   const issues: ComposerIssue[] = [], warnings: ComposerIssue[] = [], questions: BuilderQuestion[] = [], meta: ComposerItemMeta[] = [];
   raw.items.forEach((it, i) => {
     const qid = composerQuestionId(ids, sectionIndex, i);
-    const m = mapItem(it, planSection.items[i], qid, planSection.items[i].topic + " " + planSection.items[i].note, "$.items[" + i + "]");
+    const m = mapItem(it, planSection.items[i], qid, planSection.items[i].topic + " " + planSection.items[i].note, "$.items[" + i + "]", ids.chartPolicy);
     if (!m.ok) { issues.push(...m.issues); return; }
     questions.push(m.value.question); meta.push({ questionId: qid, ...m.value.meta }); warnings.push(...m.value.warnings);
   });

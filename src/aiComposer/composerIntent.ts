@@ -5,10 +5,13 @@
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_ITEM_KINDS, COMPOSER_PRESETS, detectUnsupportedCapabilities, type ComposerItemKind, type UnsupportedCapability } from "./composerCatalog";
 import { cleanText, hasOnlyKeys, isArr, isEnum, isInt, isStr } from "./composerSchemaKit";
+import type { AiChartPolicy } from "./composerChart";
 
 export const COMPOSER_LANGUAGES = Object.freeze(["ar", "en", "he"] as const);
 export const COMPOSER_DIFFICULTIES = Object.freeze(["easy", "medium", "hard", "mixed"] as const);
-export const COMPOSER_CAPABILITY_FLAGS = Object.freeze(["composite", "smartSim", "coding", "parametric", "openResponse", "richContent", "tables", "visual", "rubrics"] as const);
+export const COMPOSER_CAPABILITY_FLAGS = Object.freeze(["composite", "smartSim", "coding", "parametric", "openResponse", "richContent", "tables", "visual", "rubrics", "charts", "illustrativeData"] as const);
+/** Flags that are OFF unless the teacher turns them on (21A.1: illustrativeData — invented chart numbers need explicit consent). */
+export const COMPOSER_CAPABILITY_DEFAULT_OFF: readonly string[] = Object.freeze(["visual", "illustrativeData"]);
 export type ComposerCapabilityFlag = (typeof COMPOSER_CAPABILITY_FLAGS)[number];
 export type DifficultyProfile = { easy: number; medium: number; hard: number };
 export type AiExamIntentV1 = {
@@ -91,7 +94,7 @@ export function normalizeComposerIntent(raw: unknown): { ok: true; intent: AiExa
   else for (const f of COMPOSER_CAPABILITY_FLAGS) {
     const v = (rc as Record<string, unknown>)[f];
     if (v !== undefined && typeof v !== "boolean") bad("capabilities." + f, "قيمة غير صالحة.");
-    caps[f] = v === undefined ? f !== "visual" : v === true;
+    caps[f] = v === undefined ? !COMPOSER_CAPABILITY_DEFAULT_OFF.includes(f) : v === true;
   }
   const preset = r.presentationPreset ?? null;
   if (preset !== null && preset !== "auto" && !isEnum(preset, COMPOSER_PRESETS as readonly string[])) bad("presentationPreset", "قالب العرض غير معروف.");
@@ -125,3 +128,11 @@ export function intentForPrompt(intent: AiExamIntentV1): string {
     intent.unsupportedRequested.length ? "requested but NOT supported by the platform (never simulate; report in unsupportedRequests with a safe alternative): " + intent.unsupportedRequested.map(u => u.label).join(", ") : ""
   ].filter(Boolean).join("\n");
 }
+
+/** Phase 21A.1 — the chart data policy of a generation request: the teacher's own words (every teacher-provided chart number must appear in
+ *  them), whether invented illustrative data is allowed, and whether charts are enabled at all. */
+export const composerChartPolicy = (intent: AiExamIntentV1): AiChartPolicy => ({
+  request: [intent.teacherInstruction, ...intent.requiredTopics].join("\n"),
+  illustrative: intent.capabilities.illustrativeData === true,
+  charts: intent.capabilities.charts === true && intent.capabilities.richContent === true
+});

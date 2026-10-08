@@ -18,6 +18,7 @@ import { buildItemSchema, countFunctionSims, functionSimLimitIssue, normalizeCom
 import { composerVerdict, withComposerHistory, allQuestions, verifyAiQuestion } from "./composerExam";
 import { examRevision, isRevision } from "./composerRevision";
 import { buildRichBlocksSchema, mapAiRichBlocks } from "./composerRich";
+import type { AiChartPolicy } from "./composerChart";
 import type { ComposerScope } from "./composerProjection";
 import { cleanText, hasExactKeys, isArr, isEnum, isInt, isStr, sArr, sEnum, sInt, sNull, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 
@@ -101,6 +102,9 @@ function opInScope(op: NormOp, scope: ComposerScope, exam: StructuredExam): bool
 
 export type NormalizeContext = { exam: StructuredExam; mode: ComposerMode; scope: ComposerScope; nonce: string; request: string };
 /** Normalizes the model's patch against the exam it was given. Out-of-scope / unknown / malformed ⇒ the whole patch is refused. */
+// 21A.1 — a MODIFY request carries no feature toggles: AI charts take only the numbers the teacher wrote in the instruction (never
+// illustrative data); charts are otherwise available.
+const modifyChartPolicy = (request: string): AiChartPolicy => ({ request, illustrative: false, charts: true });
 export function normalizeComposerPatch(raw: unknown, ctx: NormalizeContext): { ok: true; patch: AiExamPatchV1 } | { ok: false; issues: ComposerIssue[] } {
   const fail = (code: string, message: string, path = "$"): { ok: false; issues: ComposerIssue[] } => ({ ok: false, issues: [{ code, message, path }] });
   if (!modeScopeOk(ctx.mode, ctx.scope)) return fail("PATCH_SCOPE_INVALID", "نطاق الطلب لا يناسب نوع التعديل.");
@@ -121,7 +125,7 @@ export function normalizeComposerPatch(raw: unknown, ctx: NormalizeContext): { o
     if (!allowed.includes(o.op)) { issues.push({ code: "PATCH_SCOPE_VIOLATION", message: "العملية «" + o.op + "» خارج نطاق هذا الطلب.", path: p }); return; }
     const reason = cleanText(o.reason);
     const mapItem = (item: unknown, marks: number, qid: string): { question: BuilderQuestion; meta: Omit<ComposerItemMeta, "questionId"> } | null => {
-      const r = normalizeComposerItem(item, { marks, qid, request: ctx.request, path: p + ".item" });
+      const r = normalizeComposerItem(item, { marks, qid, request: ctx.request, path: p + ".item", chartPolicy: modifyChartPolicy(ctx.request) });
       if (!r.ok) { issues.push(...r.issues); return null; }
       return { question: r.value.question, meta: r.value.meta };
     };
@@ -138,7 +142,7 @@ export function normalizeComposerPatch(raw: unknown, ctx: NormalizeContext): { o
         if (o.op === "updateQuestionText") { if (!isStr(o.text, L.richTextChars, 1)) { issues.push({ code: "PATCH_OP_MALFORMED", message: "نص السؤال الجديد غير صالح.", path: p }); return; } ops.push({ op: o.op, questionId: qid, text: cleanText(o.text), reason }); return; }
         if (o.op === "updateQuestionRichContent") {
           if (cur.presentationType === "parametricNumeric") { issues.push({ code: "PARAMETRIC_RICH_CONTENT_FORBIDDEN", message: "سؤال المعطيات المتغيرة لا يدعم المحتوى المنسق.", path: p }); return; }
-          const rc = mapAiRichBlocks(o.richBlocks ?? [], p + ".richBlocks");
+          const rc = mapAiRichBlocks(o.richBlocks ?? [], p + ".richBlocks", modifyChartPolicy(ctx.request));
           if (!rc.ok) { issues.push(...rc.issues); return; }
           ops.push({ op: o.op, questionId: qid, richContent: rc.richContent, mode: isEnum(o.richMode, RICH_MODES) ? o.richMode : "replace", reason }); return;
         }

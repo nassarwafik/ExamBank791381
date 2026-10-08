@@ -13,12 +13,15 @@ import { CODING_LANGUAGES } from "../codingLanguages";
 import { NET2_TEMPLATES } from "../networkTopology2/net2Templates";
 import { FREE_FALL_LIMITS } from "../physicsFreeFallModel";
 import { FUNCTION_STUDY_TASKS, FUNCTION_STUDY_LIMITS } from "../functionStudyModel";
+import { CHART_KINDS, CHART_LIMITS } from "../charts/chartSpec";
+import { AI_CHART_DATA_ORIGINS, AI_CHART_POINTS } from "./composerChart";
 import "../trustedSimPlugins";
 
+// V3 (Phase 21A.1): the catalog gained the data-chart capability (the dataChart rich block + its declarative chart descriptor contract).
 // V2 (Phase 21A): the catalog gained the Scientific Math v2 capability (scientificMath + its prompt contract). metadata.aiComposer.catalog
 // records the catalog of the exam's LAST composer operation (withComposerHistory re-stamps it): an exam last composed under V1 keeps "V1"
 // until its next composer operation; nothing validates or migrates it.
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V2";
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V3";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
@@ -81,7 +84,9 @@ export const isUnsupportedCapabilityId = (id: unknown): boolean => typeof id ===
 // ── presentation, rich content, coding: the 20D.1 / 19F vocabularies, exactly ─────────────────────────────────────────────────────────
 export const COMPOSER_PRESETS = Object.freeze(Object.keys(PRESENTATION_PRESETS)) as readonly (keyof typeof PRESENTATION_PRESETS)[];
 /** The rich blocks the AI may emit (images / figures / columns are never AI-authored: no URL, no data URL, no layout nesting). */
-export const COMPOSER_RICH_BLOCKS = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "math"] as const);
+export const COMPOSER_RICH_BLOCKS = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "math", "dataChart"] as const);
+/** Phase 21A.1 — the data-chart capability: the chart kinds the AI may describe (the ChartSpecV1 vocabulary) and the descriptor bounds. */
+export const COMPOSER_CHARTS = Object.freeze({ kinds: CHART_KINDS, origins: AI_CHART_DATA_ORIGINS, categories: CHART_LIMITS.categories, series: CHART_LIMITS.series, points: AI_CHART_POINTS, bins: CHART_LIMITS.bins, boxes: CHART_LIMITS.boxes });
 export type ComposerRichBlockType = (typeof COMPOSER_RICH_BLOCKS)[number];
 export const COMPOSER_RICH_CODE_LANGUAGES = RICH_CODE_LANGUAGES;
 export const COMPOSER_CALLOUT_VARIANTS = RICH_CALLOUT_VARIANTS;
@@ -109,6 +114,7 @@ export type ComposerCatalog = {
   richBlocks: readonly string[];
   codingLanguages: readonly string[];
   scientificMath: typeof COMPOSER_SCIENTIFIC_MATH;
+  charts: typeof COMPOSER_CHARTS;
   unsupported: UnsupportedCapability[];
 };
 
@@ -146,6 +152,7 @@ export function buildComposerCatalog(): ComposerCatalog {
     richBlocks: COMPOSER_RICH_BLOCKS,
     codingLanguages: COMPOSER_CODING_LANGUAGES,
     scientificMath: COMPOSER_SCIENTIFIC_MATH,
+    charts: COMPOSER_CHARTS,
     unsupported: COMPOSER_UNSUPPORTED.map(u => ({ id: u.id, label: u.label }))
   };
 }
@@ -160,12 +167,21 @@ export function catalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog
     "physicsFreeFall@1: model initialHeight 0.." + catalog.physics.bounds.heightMax + " m, initialVelocity ±" + catalog.physics.bounds.velocityAbsMax + " m/s (up positive), gravity " + catalog.physics.bounds.gravityMin + ".." + catalog.physics.bounds.gravityMax + " m/s²; measurements: " + catalog.physics.measurements.join(", ") + "; points: " + catalog.physics.points.join(", ") + ". Expected values are computed by code, never by you.",
     "functionStudy2d@1: expression language 2 in the single variable x (numbers, + - * / % ^, parentheses, abs, round, floor, ceil, min, max, sqrt, pow, log (natural), log10, exp; nothing else); tasks: " + catalog.functionStudy.tasks.join(", ") + "; |x| <= " + catalog.functionStudy.bounds.xAbsMax + ". Your expected answers are checked numerically against the expression.",
     "Presentation presets: " + catalog.presets.join(", "),
-    "Rich blocks: " + catalog.richBlocks.join(", ") + " (no images, no HTML, no CSS, no URLs).",
+    // 21A.1: the pre-21A.1 block list keeps its exact wording; dataChart is announced after it and specified on the Charts line
+    "Rich blocks: " + catalog.richBlocks.filter(b => b !== "dataChart").join(", ") + " (no images, no HTML, no CSS, no URLs)" + (catalog.richBlocks.includes("dataChart") ? "; dataChart (a declarative data chart — see Charts)." : "."),
     "Coding languages: " + catalog.codingLanguages.join(", "),
     scientificMathForPrompt(catalog.scientificMath),
+    chartsForPrompt(catalog.charts),
     "NOT supported (never simulate; propose a theory question or omit and report it): " + catalog.unsupported.map(u => u.label).join(", ")
   ];
   return lines.join("\n");
+}
+/** The data-chart contract line (21A.1): a closed descriptor — never a rendering-library option — with the data-integrity rule. */
+function chartsForPrompt(c: ComposerCatalog["charts"]): string {
+  return "Charts: a dataChart block carries ONE descriptor in chart (chart is null in every other block); kind ONLY " + c.kinds.join(", ") +
+    "; categories ≤ " + c.categories + " labels with series ≤ " + c.series + " (values aligned with categories; null = a missing value, never 0; combo marks bar or line); pie = categories + the first series; heatmap = categories as columns and series as rows;" +
+    " scatter points (1-based series index, x, y, optional label) ≤ " + c.points + "; histogram bins ≤ " + c.bins + " contiguous (start, end, count); boxes ≤ " + c.boxes + " (min ≤ q1 ≤ median ≤ q3 ≤ max); xLabel / yLabel / unit plain text;" +
+    " dataOrigin teacherProvided = ONLY the numbers the teacher wrote, unchanged; illustrative = invented numbers, ONLY when the illustrativeData feature is on (the platform then labels the chart as illustrative). Never formulas, HTML, CSS, scripts, URLs, colours or rendering options; ids and the data-source label are assigned by the platform.";
 }
 /** The bounded math contract line (21A): the exact command and environment vocabulary, the bounds, and the proven examples. */
 function scientificMathForPrompt(m: ComposerCatalog["scientificMath"]): string {

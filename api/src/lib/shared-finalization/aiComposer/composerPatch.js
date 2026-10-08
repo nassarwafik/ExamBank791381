@@ -80,6 +80,7 @@ function opInScope(op, scope, exam) {
         default: return "questionId" in op && qSection(op.questionId) === scope.sectionId;
     }
 }
+const modifyChartPolicy = (request) => ({ request, illustrative: false, charts: true });
 function normalizeComposerPatch(raw, ctx) {
     const fail = (code, message, path = "$") => ({ ok: false, issues: [{ code, message, path }] });
     if (!modeScopeOk(ctx.mode, ctx.scope))
@@ -110,7 +111,7 @@ function normalizeComposerPatch(raw, ctx) {
         }
         const reason = (0, composerSchemaKit_1.cleanText)(o.reason);
         const mapItem = (item, marks, qid) => {
-            const r = (0, composerDraft_1.normalizeComposerItem)(item, { marks, qid, request: ctx.request, path: p + ".item" });
+            const r = (0, composerDraft_1.normalizeComposerItem)(item, { marks, qid, request: ctx.request, path: p + ".item", chartPolicy: modifyChartPolicy(ctx.request) });
             if (!r.ok) {
                 issues.push(...r.issues);
                 return null;
@@ -152,7 +153,7 @@ function normalizeComposerPatch(raw, ctx) {
                         issues.push({ code: "PARAMETRIC_RICH_CONTENT_FORBIDDEN", message: "سؤال المعطيات المتغيرة لا يدعم المحتوى المنسق.", path: p });
                         return;
                     }
-                    const rc = (0, composerRich_1.mapAiRichBlocks)(o.richBlocks ?? [], p + ".richBlocks");
+                    const rc = (0, composerRich_1.mapAiRichBlocks)(o.richBlocks ?? [], p + ".richBlocks", modifyChartPolicy(ctx.request));
                     if (!rc.ok) {
                         issues.push(...rc.issues);
                         return;
