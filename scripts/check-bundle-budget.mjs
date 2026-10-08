@@ -84,7 +84,10 @@ const COMPOSITE_SIGNATURES = ["cmp-response", "cmp-editor", "cmp-review", "COMPO
 // rich-content authority's raw-HTML refusal code, the Markdown converter's HTML-refusal code, the MathML renderer's element name and the
 // presentation contrast code. The initial graph may carry ONLY the tiny presentation context (StudentQuestionCard reads it); ANY one of
 // these in an initial file fails; EACH must exist in some chunk (a missing one means the list is stale).
-const PRESENTATION_SIGNATURES = ["xp-studio", "rc-editor", "RICH_CONTENT_RAW_HTML", "MARKDOWN_HTML_REFUSED", "mfrac", "PRESENTATION_CONTRAST"];
+// Phase 21A — Scientific Math v2 adds the grid renderer's aligned-table class, the builder snippet palette class and a v2-only parser
+// symbol name: the same rule (never initial, each present in some chunk).
+const PRESENTATION_SIGNATURES = ["xp-studio", "rc-editor", "RICH_CONTENT_RAW_HTML", "MARKDOWN_HTML_REFUSED", "mfrac", "PRESENTATION_CONTRAST",
+  "xp-math-aligned", "rc-math-palette", "rightleftharpoons"];
 // Phase 20E — the dynamic SmartSim runtime: the presentation clock's version marker, the trusted plot class, the network flow overlay class
 // and the function-probe class. They live ONLY in the lazy plugin workspace chunks: ANY one in an initial file fails; EACH must exist in
 // some chunk (a missing one means the list is stale).

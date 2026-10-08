@@ -33,6 +33,7 @@ export const MATH_FEATURES: readonly MathFeature[] = Object.freeze([
   { id: "chemistry", group: "science", example: "\\mathrm{SO}_4^{2-}" },
   { id: "chemicalEquations", group: "science", example: "2\\mathrm{H}_2 + \\mathrm{O}_2 \\rightarrow 2\\mathrm{H}_2\\mathrm{O}" },
   { id: "equilibrium", group: "science", example: "\\mathrm{N}_2 + 3\\mathrm{H}_2 \\rightleftharpoons 2\\mathrm{NH}_3" },
+  { id: "ohmsLaw", group: "science", example: "V = IR, \\quad R = \\frac{V}{I}" },
   { id: "electricity", group: "science", example: "X_C = \\frac{1}{2\\pi f C}" },
   { id: "vectors", group: "geometry", example: "\\vec{F} = m\\vec{a}" },
   { id: "geometry", group: "geometry", example: "\\angle ABC = 90^{\\circ}, \\quad AB \\perp CD" }
