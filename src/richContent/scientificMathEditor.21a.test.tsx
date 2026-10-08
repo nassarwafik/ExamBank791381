@@ -55,6 +55,19 @@ describe("21A-ED1 the math source field", () => {
     expect(preview()!.querySelector("math")!.getAttribute("dir")).toBe("ltr");
     expect(errorsOf(box.value)).toEqual([]);
   });
+  it("the textarea grows with the source: 2 rows minimum, one row per line, 8 at most (reviewer mutant V19, review fix 3)", async () => {
+    mount("x^{2}");
+    await settle();
+    expect(field().getAttribute("rows")).toBe("2");
+    cleanup();
+    mount("\\begin{aligned}\nV &= IR \\\\\nP &= VI\n\\end{aligned}");
+    await settle();
+    expect(field().getAttribute("rows")).toBe("4");
+    cleanup();
+    mount(Array.from({ length: 12 }, (_, i) => "x_{" + i + "}").join("\n"));
+    await settle();
+    expect(field().getAttribute("rows")).toBe("8");
+  });
   it("pasting a multi-line matrix keeps its exact source (line breaks included), validates live and previews a real MathML table", async () => {
     const box = mount("x");
     fireEvent.change(field(), { target: { value: MATRIX } });

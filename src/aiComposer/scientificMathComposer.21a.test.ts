@@ -74,6 +74,7 @@ describe("21A-AI1 the catalog derives Scientific Math v2 from code", () => {
     for (const f of MATH_FEATURES) expect(line, f.id).toContain(f.example);
     for (const n of [MATH_LIMITS.chars, MATH_LIMITS.nodes, MATH_LIMITS.depth, MATH_GRID_LIMITS.rows, MATH_GRID_LIMITS.cols, MATH_GRID_LIMITS.cells]) expect(line).toContain(String(n));
     expect(line).toContain("cases and aligned at most " + MATH_GRID_LIMITS.casesCols + " columns");     // reviewer mutant R20
+    expect(line).toContain("rows by \\\\, never nested, at most");                                   // reviewer mutant V20 (review fix 3)
     const offered = line.slice(line.indexOf("commands ONLY ") + 14, line.indexOf("; environments ONLY")).split(" ").map(s => s.replace(/^\\/, ""));
     expect(offered).toEqual([...MATH_COMMANDS]);
     for (const bad of ["href", "url", "html", "style", "class", "def", "newcommand", "input", "include", "color", "array"]) expect(offered, bad).not.toContain(bad);
@@ -178,5 +179,16 @@ describe("21A-AI4 catalog provenance (review fix 1: what metadata.aiComposer.cat
     expect(next.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V2");
     expect(next.metadata.aiComposer.history.map(h => h.mode)).toEqual(["generate", "modify"]);
     expect(Object.keys(next.metadata.aiComposer.history[0])).not.toContain("catalog");
+  });
+});
+
+describe("21A-AI5 review fix 3: the markup refusal reads the formula the block actually yields", () => {
+  it("markup in the plain-text fallback of an AI math block (empty source) is refused for the MARKUP reason (reviewer mutant V16)", () => {
+    const tag = "<script>alert(1)</script>";
+    const r = mapAiRichBlocks([{ ...F.math(""), text: tag }]);                                       // a complete block: only the formula differs
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.issues.map(i => [i.code, i.message])).toEqual([["AI_RICH_CONTENT_INVALID", "الصيغة الرياضية لا تقبل وسوم HTML أو روابط script."]]);
+    const plain = mapAiRichBlocks([{ ...F.math(""), text: "x^{2}" }]);                                // a clean fallback still maps, exactly
+    expect(plain.ok && plain.richContent).toEqual({ schemaVersion: 1, blocks: [{ type: "math", source: "x^{2}" }] });
   });
 });

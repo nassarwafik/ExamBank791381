@@ -4,12 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { render, cleanup, act } from "@testing-library/react";
+import { render, cleanup, act, fireEvent } from "@testing-library/react";
 import RichMath from "./RichMath";
 import RichContentRenderer from "./RichContentRenderer";
 import * as M from "./richMath";
 import { MATH_FEATURES } from "./mathFeatures";
-import { oldGrammarCandidates } from "./testing/mathCorpus";
+import { oldGrammarCandidates, scientificV2Candidates } from "./testing/mathCorpus";
 
 // Phase 21A — the MathML renderer for Scientific Math v2. React builds every element from the CLOSED AST: grids are real MathML tables
 // (mtable / mtr / mtd), fences are fixed code-owned characters per environment, no source text ever names an element or an attribute.
@@ -303,5 +303,187 @@ describe("21A-R6 the overflow observers (review fix 2): wiring, re-check on lazy
       await fire(h.ros);
       expect([grid.getAttribute("role"), grid.getAttribute("aria-label"), grid.getAttribute("tabindex")]).toEqual(["group", "صيغة رياضية قابلة للتمرير", "0"]);
     } finally { hostSw.mockRestore(); hostCw.mockRestore(); h.restore(); }
+  });
+});
+
+describe("21A-R7 review fix 3: print releases every scroll box, every grid spelling is an inline grid, the blur / focus / fallback paths", () => {
+  type Obs = { cb: () => void; targets: Element[]; active: boolean };
+  const settle = async () => { for (let i = 0; i < 10; i++) await act(async () => { await new Promise(r => setTimeout(r, 10)); }); };
+  const WIDE = "\\begin{pmatrix} a & b & c & d & e & f & g & h \\end{pmatrix}";
+  const SMALL = "\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}";
+  /** Box sizes per element ([scrollWidth, clientWidth]) and recording ResizeObserver / MutationObserver stubs. */
+  function harness(size: (el: HTMLElement) => [number, number]) {
+    const ros: Obs[] = [];
+    const spies = [
+      vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(function (this: HTMLElement) { return size(this)[0]; }),
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) { return size(this)[1]; })
+    ];
+    vi.stubGlobal("ResizeObserver", class { o: Obs; constructor(cb: () => void) { this.o = { cb, targets: [], active: false }; ros.push(this.o); } observe(t: Element) { this.o.targets.push(t); this.o.active = true; this.o.cb(); } disconnect() { this.o.targets = []; this.o.active = false; } });
+    vi.stubGlobal("MutationObserver", class { observe() {} disconnect() {} });
+    return { fire: async () => act(async () => { for (const o of ros.filter(x => x.active)) o.cb(); }), restore: () => { for (const s of spies) s.mockRestore(); vi.unstubAllGlobals(); } };
+  }
+  const state = (el: Element) => [el.getAttribute("role"), el.getAttribute("tabindex")];
+
+  // ---- MINOR-1: print. A print override only wins if its selector is at least as specific as the screen rule it releases (it comes later).
+  type Spec = [number, number, number];
+  const splitTop = (list: string) => { const out: string[] = []; let depth = 0, cur = ""; for (const ch of list) { if (ch === "(") depth++; if (ch === ")") depth--; if (ch === "," && depth === 0) { out.push(cur.trim()); cur = ""; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; };
+  const add = (a: Spec, b: Spec): Spec => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+  const cmp = (a: Spec, b: Spec) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+  /** Selectors Level 4 specificity for the selector shapes this stylesheet uses (classes, type selectors, *, :is / :not / :has / :where). */
+  function specificity(sel: string): Spec {
+    let s: Spec = [0, 0, 0];
+    for (let i = 0; i < sel.length;) {
+      const ch = sel[i];
+      if (ch === ".") { s = add(s, [0, 1, 0]); i++; while (i < sel.length && /[\w-]/.test(sel[i])) i++; }
+      else if (ch === "#") { s = add(s, [1, 0, 0]); i++; while (i < sel.length && /[\w-]/.test(sel[i])) i++; }
+      else if (ch === "[") { s = add(s, [0, 1, 0]); i = sel.indexOf("]", i) + 1; }
+      else if (ch === ":") {
+        const elementPseudo = sel[i + 1] === ":"; i += elementPseudo ? 2 : 1;
+        let name = ""; while (i < sel.length && /[\w-]/.test(sel[i])) name += sel[i++];
+        if (sel[i] === "(") {
+          let depth = 0, j = i; for (; j < sel.length; j++) { if (sel[j] === "(") depth++; if (sel[j] === ")" && --depth === 0) break; }
+          const args = splitTop(sel.slice(i + 1, j)); i = j + 1;
+          if (name === "where") continue;
+          if (["is", "not", "has"].includes(name)) s = add(s, args.map(specificity).sort(cmp).pop()!);
+          else s = add(s, [0, 1, 0]);
+        } else s = add(s, elementPseudo ? [0, 0, 1] : [0, 1, 0]);
+      }
+      else if (/[a-zA-Z]/.test(ch)) { s = add(s, [0, 0, 1]); while (i < sel.length && /[\w-]/.test(sel[i])) i++; }
+      else i++;                                                                                     // combinators, whitespace, *
+    }
+    return s;
+  }
+  const rulesOf = (css: string) => [...css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({ selectors: splitTop(m[1].trim()), body: m[2] }));
+  it("the specificity helper agrees with the spec on this stylesheet's shapes", () => {
+    expect(specificity(".xp-rich .xp-math-host:has(mtable):not(.xp-math-block > *)")).toEqual([0, 3, 1]);
+    expect(specificity(".xp-rich :is(.xp-table-wrap,.xp-code,.xp-cli,.xp-math-block,.xp-math-host)")).toEqual([0, 2, 0]);
+    expect(specificity(".xp-rich .xp-math-block")).toEqual([0, 2, 0]);
+    expect(specificity(".xp-rich :where(.a,.b) td::before")).toEqual([0, 1, 2]);
+  });
+  it("PRINT releases every math scroll box: for each screen rule that makes one scroll, a later print rule at least as specific sets overflow visible and lifts the width cap (reviewer MINOR-1, mutant V12)", () => {
+    const css = fs.readFileSync(path.join(here, "rich-content.css"), "utf8");
+    const at = css.indexOf("@media print");
+    const screenRules = rulesOf(css.slice(0, at).replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, ""));
+    const printRules = rulesOf(css.slice(at + css.slice(at).indexOf("{") + 1));
+    const scrollBoxes = screenRules.filter(r => /overflow-x:\s*auto/.test(r.body)).flatMap(r => r.selectors.filter(s => /xp-math/.test(s)).map(sel => ({ sel, body: r.body })));
+    expect(scrollBoxes.map(b => b.sel).sort()).toEqual([".xp-rich .xp-math-block", ".xp-rich .xp-math-host:has(mtable):not(.xp-math-block > *)"]);
+    const key = (sel: string) => (sel.match(/\.xp-math-(block|host)/) || [""])[0];
+    const releases = (sel: string, decl: RegExp) => printRules.some(r => decl.test(r.body) && r.selectors.some(p => (p === sel || (/:is\(/.test(p) && p.includes(key(sel)))) && cmp(specificity(p), specificity(sel)) >= 0));
+    for (const { sel, body } of scrollBoxes) {
+      expect(releases(sel, /(^|[\s;])overflow:\s*visible/), sel + " overflow").toBe(true);
+      if (/max-inline-size:\s*100%/.test(body)) expect(releases(sel, /max-inline-size:\s*none/), sel + " max-inline-size").toBe(true);
+      if (/max-width:\s*100%/.test(body)) expect(releases(sel, /max-width:\s*none/), sel + " max-width").toBe(true);
+    }
+  });
+
+  // ---- MINOR-2 / V03: the parser skips whitespace between \begin and its brace, so `\begin {pmatrix}` IS a grid; every spelling of every
+  // environment must get the inline-grid host. Property: a rendered inline host is out of the Tab order (fits) exactly when it holds a grid.
+  it("every valid spelling of every environment is an inline grid; nothing else is (property over spaced spellings, feature examples and generated corpora)", async () => {
+    const spaced: string[] = [];
+    for (const env of M.MATH_ENVIRONMENTS) for (const gap of [" ", "\t", "\n", "\r\n", "\r", "  \n\t"]) spaced.push(`\\begin${gap}{${env}} a & b \\\\ c & d \\end${gap}{${env}}`);
+    const v2 = scientificV2Candidates(31337), old = oldGrammarCandidates(31338);
+    const generated = [...Array.from({ length: 120 }, () => v2().source), ...Array.from({ length: 300 }, () => old())];
+    const sources = [...spaced, ...MATH_FEATURES.map(f => f.example), ...generated].filter(s => M.parseMath(s).ok);
+    expect(sources.length).toBeGreaterThan(spaced.length + MATH_FEATURES.length + 100);
+    const h = harness(() => [0, 0]);
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "paragraph", runs: sources.flatMap(s => [{ text: " و " }, { math: s }]) }] }} />);
+      await settle();
+      const hosts = [...document.querySelectorAll("p .xp-math-host")];
+      expect(hosts).toHaveLength(sources.length);
+      hosts.forEach((host, i) => {
+        const grid = !!host.querySelector("mtable");
+        expect(grid, sources[i]).toBe(JSON.stringify(M.parseMath(sources[i])).includes('"k":"grid"'));
+        expect(state(host), sources[i]).toEqual(grid ? [null, "-1"] : [null, null]);
+      });
+      for (const s of spaced) expect(hosts[sources.indexOf(s)].querySelector("mtable"), JSON.stringify(s)).toBeTruthy();
+    } finally { h.restore(); }
+  });
+  it("a wide `\\begin {pmatrix}` inline grid is the labelled scroll group like its `\\begin{pmatrix}` twin (reviewer MINOR-2)", async () => {
+    const spacedWide = WIDE.replace("\\begin{", "\\begin {").replace("\\end{", "\\end {");
+    const h = harness(el => (el.classList.contains("xp-math-host") ? [500, 300] : [0, 0]));
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ math: WIDE }, { text: " و " }, { math: spacedWide }] }] }} />);
+      await settle();
+      const [a, b] = [...document.querySelectorAll("p .xp-math-host")];
+      expect([state(a), a.getAttribute("aria-label")]).toEqual([["group", "0"], "صيغة رياضية قابلة للتمرير"]);
+      expect([state(b), b.getAttribute("aria-label")]).toEqual([["group", "0"], "صيغة رياضية قابلة للتمرير"]);
+    } finally { h.restore(); }
+  });
+
+  // ---- NIT-2: nothing measured → nothing removed from the browser's own Tab order (an overflowing grid must stay reachable).
+  it("without ResizeObserver nothing is measured, so an inline grid keeps the browser's default (no tabIndex -1), also after a blur (reviewer NIT-2)", async () => {
+    vi.stubGlobal("ResizeObserver", undefined);
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "أ " }, { math: WIDE }] }, { type: "math", source: WIDE }] }} />);
+      await settle();
+      const host = document.querySelector("p .xp-math-host")!;
+      expect(host.querySelector("mtable")).toBeTruthy();
+      expect(state(host)).toEqual([null, null]);
+      fireEvent.focusOut(host);
+      expect(state(host)).toEqual([null, null]);
+      expect(state(document.querySelector(".xp-math-block")!)).toEqual([null, null]);
+    } finally { vi.unstubAllGlobals(); }
+  });
+
+  // ---- MINOR-3: the blur / focus paths (reviewer mutants V01, V02, V05)
+  it("leaving a group that STILL overflows keeps it a reachable group (blur re-checks, it does not just drop it) — display and inline (V02)", async () => {
+    const h = harness(el => (el.classList.contains("xp-math-block") || (el.classList.contains("xp-math-host") && !el.closest(".xp-math-block")) ? [914, 328] : [0, 0]));
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "math", source: WIDE }, { type: "paragraph", runs: [{ math: WIDE }] }] }} />);
+      await settle();
+      for (const sel of [".xp-math-block", "p .xp-math-host"]) {
+        const box = document.querySelector(sel) as HTMLElement;
+        expect(state(box), sel).toEqual(["group", "0"]);
+        act(() => box.focus()); act(() => box.blur());
+        expect(state(box), sel).toEqual(["group", "0"]);
+      }
+    } finally { h.restore(); }
+  });
+  it("an INLINE grid group keeps focus when it starts to fit and reverts to tabIndex -1 when left (V05)", async () => {
+    let wide = true;
+    const h = harness(el => (el.classList.contains("xp-math-host") ? [wide ? 500 : 0, 300] : [0, 0]));
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ math: WIDE }] }] }} />);
+      await settle();
+      const host = document.querySelector("p .xp-math-host") as HTMLElement;
+      expect(state(host)).toEqual(["group", "0"]);
+      act(() => host.focus());
+      wide = false; await h.fire();
+      expect([state(host), document.activeElement === host]).toEqual([["group", "0"], true]);
+      act(() => host.blur());
+      expect(state(host)).toEqual([null, "-1"]);
+    } finally { h.restore(); }
+  });
+  it("a focused inline grid that never overflowed is NOT promoted to a group by a resize (only a kept group is retained) (V01)", async () => {
+    const h = harness(() => [0, 0]);
+    try {
+      render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ math: SMALL }] }] }} />);
+      await settle();
+      const host = document.querySelector("p .xp-math-host") as HTMLElement;
+      act(() => host.focus());                                                                      // a click / script focus (tabIndex -1)
+      expect(document.activeElement).toBe(host);
+      await h.fire(); await h.fire();
+      expect(state(host)).toEqual([null, "-1"]);
+    } finally { h.restore(); }
+  });
+
+  // ---- V06 / V04: display math is display=block through the renderer; the inline grid shows its exact source while the chunk loads
+  it("a math BLOCK renders display math (display=block) through the renderer; inline runs never do (V06)", async () => {
+    render(<RichContentRenderer content={{ schemaVersion: 1, blocks: [{ type: "math", source: "\\sum_{i=1}^{n} i" }, { type: "paragraph", runs: [{ math: "x^{2}" }, { text: " و " }, { math: SMALL }] }] }} />);
+    await settle();
+    expect(document.querySelector(".xp-math-block math")!.getAttribute("display")).toBe("block");
+    const inline = [...document.querySelectorAll("p math")];
+    expect(inline).toHaveLength(2);
+    for (const m of inline) expect(m.getAttribute("display")).not.toBe("block");
+  });
+  it("while the lazy renderer chunk loads, an inline grid and a display formula show their exact source as LTR text (V04)", async () => {
+    vi.resetModules();
+    const { default: Fresh } = await import("./RichContentRenderer");                             // a fresh lazy() that has never resolved
+    const { container } = render(<Fresh content={{ schemaVersion: 1, blocks: [{ type: "paragraph", runs: [{ text: "أ " }, { math: SMALL }] }, { type: "math", source: "x^{2}" }] }} />);
+    expect([...container.querySelectorAll("code.xp-math-src")].map(c => [c.textContent, c.getAttribute("dir")])).toEqual([[SMALL, "ltr"], ["x^{2}", "ltr"]]);
+    await settle();
+    expect(container.querySelectorAll("math")).toHaveLength(2);
+    expect(container.querySelector("code.xp-math-src")).toBeNull();
   });
 });

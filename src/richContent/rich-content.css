@@ -77,7 +77,8 @@
 .xp-rich .xp-math-block{ max-width:100%; overflow-x:auto; text-align:center; }
 .xp-rich .xp-math{ font-size:1.05em; direction:ltr; unicode-bidi:isolate; }
 /* Phase 21A — Scientific Math v2 grids (matrices, determinants, cases, aligned): restrained spacing, fixed per-environment alignment.
-   Inline math is an LTR isolate inside Arabic prose; display math scrolls on narrow screens and never clips in print. */
+   Inline math is an LTR isolate inside Arabic prose; display math and inline grids scroll on narrow screens; print releases every scroll
+   box (a formula wider than the paper still runs past the page edge). */
 .xp-rich .xp-math mtd{ padding:0.15em 0.45em; }
 .xp-rich .xp-math mtable.xp-math-cases > mtr > mtd{ text-align:left; }
 .xp-rich .xp-math mtable.xp-math-aligned > mtr > mtd{ padding-inline:0; }
@@ -112,4 +113,6 @@
   .xp-rich :is(.xp-code,.xp-cli){ white-space:pre-wrap; }
   .xp-rich :is(tr,.xp-figure,.xp-image,.xp-callout,.xp-kv > div,.xp-math-block){ break-inside:avoid; }
   .xp-rich :is(.xp-math-block,.xp-math-host){ max-width:none; max-inline-size:none; }
+  /* the inline-grid scroll box is more specific than the rules above: it is released with its own selector (review fix 3) */
+  .xp-rich .xp-math-host:has(mtable):not(.xp-math-block > *){ overflow:visible; max-inline-size:none; }
 }
