@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { validateChartSpec, type CategoryChartSpec, type ChartSpecV1 } from "./chartSpec";
 import { buildEngineOption, chartHeight, fitText, widthLayout } from "./echartsAdapter";
 import { defaultChartTokens } from "./chartTheme";
@@ -166,6 +168,14 @@ describe("21A1-RB25 Review Fix 4 mutation pins (§20.4)", () => {
     expect(r320.axisName.width).toBeGreaterThanOrEqual(72);                            // the names keep their phone cap …
     expect(r320.radius).toBeLessThan(Math.round(full(320)));                           // … because the radius gave way
     expect(build(spec, { width: 200, compact: true }).radar.radius).toBe(Math.round(full(200) / 2));   // never below half
+  });
+  it("RU31: the engine module registers the label layout itself, and the bundle guard requires it in the engine's chunks", () => {
+    // the rendering library's core installs the label layout only as an import side effect, which the production build drops: without
+    // this registration overlapping value labels are drawn over one another in the browser (the unit tests' unbundled core still has it)
+    const read = (f: string) => fs.readFileSync(path.resolve(__dirname, "../..", f), "utf8");
+    expect(read("src/charts/echartsEngine.ts")).toMatch(/registerModules\(\[[^\]]*\bLabelLayout\b[^\]]*\]\)/);
+    expect(read("scripts/check-bundle-budget.mjs")).toMatch(/const CHART_LABEL_LAYOUT_SIGNATURE = "addLabelsOfSeries";/);
+    expect(read("scripts/check-bundle-budget.mjs")).toMatch(/if \(!commonGraph\.some\(f => read\(f\)\.includes\(CHART_LABEL_LAYOUT_SIGNATURE\)\)\) failures\.push/);
   });
   it("RU35: a histogram keeps room on its right for its widest count", () => {
     const h = canon({ ...histogramChart(), valueLabels: true, bins: (histogramChart() as { bins: { start: number; end: number; count: number }[] }).bins.map((b, i) => ({ ...b, count: 12345678 - i })) });

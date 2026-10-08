@@ -1,14 +1,17 @@
 // Phase 21A.1 — the LAZY chart ENGINE chunk: the only module that imports the rendering library core (modular, tree-shaken: bar / line /
-// pie / scatter, the grid, reference lines and the SVG renderer). Loaded with a dynamic import() from the lazy DataChart component only when a
+// pie / scatter, the grid, reference lines, label layout — overlapping value labels hidden — and the SVG renderer). Loaded with a dynamic import() from the lazy DataChart component only when a
 // chart is actually on screen, so no first-load graph ever contains it. Engine events leave this module only as primitive ExamBank events
 // (component / series / data index and pointer offset) — never as library objects.
 import { init, use as registerModules } from "echarts/core";
 import { BarChart, LineChart, PieChart, ScatterChart } from "echarts/charts";
 import { GridComponent, MarkLineComponent } from "echarts/components";
 import { SVGRenderer } from "echarts/renderers";
+// the label layout hides overlapping value labels: the library's core installs it only as an import side effect, which the production
+// build drops — so it is registered here (the bundle guard checks the engine carries it)
+import { LabelLayout } from "echarts/features";
 import type { EngineOption } from "./echartsAdapter";
 
-registerModules([BarChart, LineChart, PieChart, ScatterChart, GridComponent, MarkLineComponent, SVGRenderer]);
+registerModules([BarChart, LineChart, PieChart, ScatterChart, GridComponent, MarkLineComponent, LabelLayout, SVGRenderer]);
 
 /** Marker the bundle guard looks for: this string exists only in the engine chunk. */
 export const CHART_ENGINE_MARKER = "xp-chart-engine-v1";

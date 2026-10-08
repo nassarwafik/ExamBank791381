@@ -32,8 +32,9 @@
 //      its signatures is missing from every chunk (signatures);
 //  16. (Phase 21A.1) the data-chart platform (chart figure / selection list / data table, chart editor, key picker, chartSelection
 //      authority) or the ECharts runtime reaches the initial graph or the Student Portal's static closure, the ECharts runtime is
-//      statically reachable from the DataChart chunk (it must load through DataChart's own import() edges), or the lazy runtime exceeds
-//      its gzip budgets (signatures + measured chunk sizes);
+//      statically reachable from the DataChart chunk (it must load through DataChart's own import() edges), the lazy runtime exceeds
+//      its gzip budgets (signatures + measured chunk sizes), or the common engine lacks the label layout that hides overlapping value
+//      labels (Review Fix 4: ECharts' core installs it only as an import side effect, which the production build drops);
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -112,6 +113,8 @@ const DATA_CHART_SIGNATURES = ["xp-chart-table", "xp-chart-select", "data-xp-cha
 const ECHARTS_SIGNATURES = ["_echarts_instance_", "xp-chart-engine-v1", "xp-chart-advanced-v1"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
+// the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
+const CHART_LABEL_LAYOUT_SIGNATURE = "addLabelsOfSeries";
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
@@ -234,6 +237,7 @@ function main() {
   const commonGraph = staticClosure(dist, commonEngine).filter(f => !initial.includes(f) && !dataChartClosure.includes(f));
   const advancedOnly = staticClosure(dist, advancedEngine).filter(f => !initial.includes(f) && !dataChartClosure.includes(f) && !commonGraph.includes(f));
   if (gzSum(commonGraph) > CHART_ENGINE_GZIP_BUDGET_KB) failures.push(`the chart engine (common kinds) is ${gzSum(commonGraph).toFixed(1)} KB gzip — over its ${CHART_ENGINE_GZIP_BUDGET_KB} KB budget`);
+  if (!commonGraph.some(f => read(f).includes(CHART_LABEL_LAYOUT_SIGNATURE))) failures.push(`the chart engine (common kinds) carries no label layout ("${CHART_LABEL_LAYOUT_SIGNATURE}") — overlapping value labels would be drawn over one another; register LabelLayout in src/charts/echartsEngine.ts`);
   if (gzSum(advancedOnly) > CHART_ADVANCED_GZIP_BUDGET_KB) failures.push(`the advanced chart kinds module is ${gzSum(advancedOnly).toFixed(1)} KB gzip — over its ${CHART_ADVANCED_GZIP_BUDGET_KB} KB budget`);
   console.log(`Data-chart runtime: DataChart first paint ${dataChartClosure.filter(f => !initial.includes(f)).length} files ${gzSum(dataChartClosure.filter(f => !initial.includes(f))).toFixed(1)} KB gzip; engine (common kinds) ${commonGraph.length} files ${gzSum(commonGraph).toFixed(1)} KB gzip (budget ${CHART_ENGINE_GZIP_BUDGET_KB}); advanced kinds +${advancedOnly.length} file(s) ${gzSum(advancedOnly).toFixed(1)} KB gzip (budget ${CHART_ADVANCED_GZIP_BUDGET_KB}); Student Portal static closure: no chart renderer, engine, editor or selection code`);
   for (const sig of DYNAMIC_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the dynamic SmartSim signature "${sig}" was not found in any chunk — the signature list is stale`);

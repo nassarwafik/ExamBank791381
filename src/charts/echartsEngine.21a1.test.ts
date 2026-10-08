@@ -70,8 +70,9 @@ describe("21A1-RB1c flush() paints the print width now", () => {
   });
 });
 
-// Review Fix 4 (B4-3): value labels that would overlap are hidden by the rendering library's label layout (installed by its core) through
-// the adapter's `labelLayout: { hideOverlap: true }` — the real engine draws a few of 30 dense labels, all 30 without it.
+// Review Fix 4 (B4-3): value labels that would overlap are hidden by the rendering library's label layout through the adapter's
+// `labelLayout: { hideOverlap: true }` — the real engine draws a few of 30 dense labels, all 30 without it. (The engine module registers
+// the label layout itself: the core's own registration is an import side effect the production build drops; the bundle guard checks it.)
 describe("21A1-RB23b the engine hides value labels that would overlap", () => {
   it("30 seven-digit value labels on a 300 px stage: fewer drawn than there are values, and at least one drawn", () => {
     const r = validateChartSpec({ version: 1, id: "dense", kind: "bar", title: "ت", description: "كثيف", valueLabels: true,
