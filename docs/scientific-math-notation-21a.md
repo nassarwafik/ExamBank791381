@@ -234,8 +234,13 @@ There is one new node:
 ## 17. Accessibility
 
 - **Alt text.** `alttext` is the exact source, multi-line sources included.
-- **Display math.** A display math block is `role="region"` with `aria-label="صيغة رياضية"` and `tabIndex=0`, so keyboard users can
-  scroll a wide formula.
+- **Display math (Review Fix 1).** A display formula keeps the 20D.1 markup, a plain `div.xp-math-block` with no role, no label and no
+  tab stop. It becomes a labelled, keyboard-focusable `role="group"` (`aria-label="صيغة رياضية قابلة للتمرير"`, `tabIndex=0`) **only
+  while it actually overflows its block**, so keyboard users can scroll it.
+  - It is a group, not a landmark, so there is no landmark per formula and no duplicate landmark names.
+  - The check re-runs on DOM mutation (when the lazy formula arrives) and on every resize of the block or the formula.
+  - The first version (1ab3ae5) made every display formula a named region and a tab stop; the independent review flagged it (RF1-3).
+  - Verified in Chromium on the real component (§18.2). Pinned by `21A-R5`.
 - **Invalid sources.** An invalid source is never hidden. It renders as readable LTR source text
   (`<code class="xp-math-src" dir="ltr">`).
 - **Live verdict.** The editor's verdict is `aria-live="polite"`. The palette toggle carries `aria-expanded`, and the palette is a
@@ -243,11 +248,20 @@ There is one new node:
 
 ## 18. Mobile and print
 
-- **Display math on screen.** `.xp-math-block` has `max-width:100%; overflow-x:auto`, so wide grids scroll and are never clipped.
-- **Inline grids on screen.** The presentation shell is `overflow-x:clip`, so a wide inline grid would otherwise be cut off. An inline
-  host containing a grid (`.xp-math-host:has(mtable)` outside a display block) becomes `inline-block; max-width:100%; overflow-x:auto`.
-  Old inline formulas never contain an `mtable`, so their rendering is unchanged. Verified in Chromium at 360 px (§18.1).
-- **Print.** Math blocks and hosts are `overflow:visible`, `max-width:none` and `break-inside:avoid`.
+- **Chromium sizing.** Chromium sizes a `<math>` box to the AVAILABLE width and paints wider content as NON-scrollable overflow. Before
+  this phase, a wide formula was therefore clipped even inside the 20D.1 `overflow-x:auto` block (§18.1).
+- **Display math on screen.** The formula is sized to its content (`inline-size:max-content`, centred with `margin-inline:auto` when
+  narrower). `.xp-math-block` (`max-width:100%; overflow-x:auto`) is LTR, so it scrolls from the formula's start, and carries
+  `padding-block:0.25em` so fence and limit ink causes no vertical scrollbar. This applies to old (20D.1) display formulas too; for
+  them it changes only the overflow case, which was clipped before.
+- **Inline grids on screen.** The presentation shell is `overflow-x:clip`. An inline host containing a grid
+  (`.xp-math-host:has(mtable)` outside a display block) becomes an LTR `inline-block` scroll box of at most 100% width, and its formula
+  is sized to its content. Old inline formulas never contain an `mtable`, so their layout is unchanged.
+- **Alignment.** MathML Core in Chromium has no `columnalign`. The `text-align` rules on `mtd` (`cases` left; `aligned` right | left)
+  are what align these environments. They are pinned by `21A-R2`.
+- **Print.** Math blocks and inline hosts are `overflow:visible` and `max-inline-size:none`. Display blocks also get
+  `break-inside:avoid`; inline hosts are atomic inline boxes and never break anyway. A formula wider than the printed page still
+  overflows the page (§35).
 
 ### 18.1 Real-browser check
 
@@ -278,6 +292,23 @@ There is one new node:
 **How it is pinned.**
 - The CSS contract is pinned by the test `21A-R2 wide formulas never clip`, which fails on the previous CSS.
 - The browser probe itself is recorded evidence, not a committed test, because Playwright is not a project dependency.
+
+### 18.2 Real-component accessibility check (Review Fix 1)
+
+**Setup:**
+- A throwaway Vite bundle (built outside the repository; the temporary entry files were removed) of the REAL `RichContentRenderer`.
+- Content: an Arabic paragraph with a wide inline 8×2 `pmatrix`, the same matrix as a display formula, `x^{2} + 1`, and a 2×2
+  `pmatrix`.
+- Chromium, RTL page, `overflow-x:clip` shell.
+
+| Observation | 360 px | 1200 px |
+|---|---|---|
+| Wide display formula | `role="group"`, label, `tabindex="0"` (scroll 356/328) | plain block (fits) |
+| `x^{2} + 1`, 2×2 display grid | plain block | plain block |
+| Keyboard | Tab reaches the overflowing block; ArrowRight scrolls it; End reaches the end | — |
+| Page errors | none | none |
+
+Chromium itself also makes the overflowing inline grid host a keyboard-focusable scroller.
 
 ## 19. Authoring UX
 
@@ -346,8 +377,14 @@ trims (§24).
   - the bounds;
   - the proven examples;
   - what is refused.
-- **V1 provenance.** Exams composed under V1 keep `metadata.aiComposer.catalog = "AI_COMPOSER_CATALOG_V1"`. Nothing validates or
-  migrates it, and the 20F tests keep their V1 "old exam" fixtures.
+- **Catalog provenance (corrected in Review Fix 1).** `metadata.aiComposer.catalog` records the catalog of the exam's **last** composer
+  operation, because `withComposerHistory` re-stamps it.
+  - An exam last composed under V1 keeps `"AI_COMPOSER_CATALOG_V1"` while it is stored, imported or exported untouched. Its next
+    composer operation stamps V2.
+  - History entries carry no catalog.
+  - Nothing validates or migrates the field.
+  - Pinned by `21A-AI4`. The 20F tests keep their V1 "old exam" fixtures.
+  - The first version of this record wrongly said V1 provenance is always kept (RF1-2).
 - **Updated with the bump:**
   - the bundle-guard marker;
   - the 20F endpoint test;
@@ -365,7 +402,10 @@ trims (§24).
 - **AI intake is stricter.** A formula matching the existing raw-HTML pattern (`looksLikeRawHtml`) is refused with
   `AI_RICH_CONTENT_INVALID`, which triggers the bounded repair. This makes the prompt contract ("HTML … is refused") true; AI text is
   untrusted.
-- **CRLF.** AI math sources normalise CRLF → LF, as code and CLI blocks already did.
+- **CRLF.** AI math sources normalise CRLF and bare CR to LF, as code and CLI blocks already did.
+- **False positives (documented, fail closed).** The raw-HTML pattern also matches tag-like plain-text notation such as `<a, b>`
+  (inner product) and `<p>` (expectation value). Such an AI formula is refused, which costs one bounded repair round. The prompt steers
+  the model to `( , )` or `\text`. Pinned by `21A-AI2b`.
 
 ## 25. Security invariants
 
@@ -403,8 +443,8 @@ on 60ddadc. Commit `6d9f7ad` records this.
 
 ## 27. Differential: 60ddadc parser vs head parser
 
-This was run on 100,030 identical inputs: 10 × 10,000 old-grammar candidates (seeds 22001–22010) plus 30 hand-written invalid
-sources, against the two shared builds.
+**First run.** 100,030 identical inputs: 10 × 10,000 old-grammar candidates (seeds 22001–22010) plus 30 hand-written invalid sources,
+against the two shared builds.
 
 | Class | Count |
 |---|---|
@@ -416,6 +456,28 @@ sources, against the two shared builds.
 | Narrowed (accepted → refused) | **0** |
 | Widened without a v2 construct | **0** |
 | Threw | **0** |
+
+**The carriage-return widening (Review Fix 1, RF1-6).** The v2 tokenizer reads `\r` as whitespace everywhere (§6), so sources such as
+`"a\r\nb"` or a stored block ending in CRLF, refused by 60ddadc, are accepted by the head.
+- **The gap.** The first run could not see this class: neither generator emits CR, and the freeze's look-alike mark has no `\r`.
+- **Re-run.** The differential was re-run with CR variants: for every second candidate, CR in place of unescaped spaces, plus a
+  trailing CRLF. That is 200,030 inputs, and every CR-only widening is classified against the 60ddadc parse of the same source with CR
+  read as a space.
+
+| Class | Count |
+|---|---|
+| Accepted by both, identical AST | 42,599 |
+| Widened by CR only, AST identical to the 60ddadc parse with CR read as a space | 58,625 |
+| Refused by both, same message | 53,895 |
+| Refused by both, new message | 41,045 |
+| Widened by a documented v2 construct | 3,866 |
+| CR widening with a different meaning | **0** |
+| AST changed / narrowed / widened without a v2 construct / threw | **0 / 0 / 0 / 0** |
+
+**Exception.** A CR right after a backslash is refused, exactly as on 60ddadc. It is not the escaped space `\ `.
+
+**Pinned.** `21A-S8` pins this on 3,000 seeded candidates. The independent reviewer's own differential (2 seeds × 1.19 M inputs) found
+the same: 0 AST changes, 0 narrowed, and the CR-only widenings all identical to the CR-as-space parse.
 
 ## 28. Generated v2 corpus
 
@@ -562,6 +624,34 @@ unchanged after every run.
 | S02 | `richContent/rich-content.css` | display formula sized to the available width again (non-scrollable overflow) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 RTL / LTR and accessibility › wide formulas never  |
 
 
+### 31.1 Review Fix 1: the independent reviewer's survivors and the new display-accessibility logic
+
+- **The reviewer's campaign** on `1ab3ae5` planted 26 mutants of its own: R01–R26, different from M01–M50. Result: 14 KILLED, 12
+  SURVIVED.
+- **R26** targeted the display markup that Review Fix 1 replaced. It is re-planted as **R26b**, meaning "always a focusable group", the
+  1ab3ae5 behaviour.
+- **X01–X03** are new mutants on the new overflow logic.
+- **Result:** all 15 are re-run on the Review Fix 1 head with the same runner (unmutated pre-check, SHA-256 restore) and **all 15 are
+  KILLED**.
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| R01 | \mathbb braced form no longer requires the closing brace (any 3rd token is swallowed) | KILLED | scientificMath.21a.test.ts › 21A-S6 calculus, complex, number sets, units, chemistry, elec |
+| R08 | \ddot renders the single dot accent (˙) instead of ¨ | KILLED | scientificMath.21a.test.ts › 21A-S6 calculus, complex, number sets, units, chemistry, elec |
+| R12 | RTL detection narrowed to U+0600–U+06FF (Hebrew, Arabic Supplement / Extended, presentation forms lose dir=rtl) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 RTL / LTR and accessibility › Arabic \text ge |
+| R14 | snippet insert bound off by one (an insert reaching exactly 2,000 chars is refused) | KILLED | scientificMathEditor.21a.test.tsx › 21A-ED2 the snippet palette › an insert that lands EXA |
+| R16 | caret not restored after an insert (focus only, no setSelectionRange) | KILLED | scientificMathEditor.21a.test.tsx › 21A-ED2 the snippet palette › a MIDDLE insertion leave |
+| R17 | snippet buttons ignore the disabled prop | KILLED | scientificMathEditor.21a.test.tsx › 21A-ED2 the snippet palette › every palette button hon |
+| R19 | AI math: only CRLF normalised, a bare CR is kept | KILLED | scientificMathComposer.21a.test.ts › 21A-AI2 AI math blocks → RichContentV1 through the ca |
+| R20 | prompt contract drops the cases / aligned 2-column bound | KILLED | scientificMathComposer.21a.test.ts › 21A-AI1 the catalog derives Scientific Math v2 from c |
+| R22 | print: math blocks may break across pages (break-inside:avoid dropped) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 RTL / LTR and accessibility › wide formulas n |
+| R24 | aligned lhs column text-align right → left (Chromium ignores columnalign; CSS is the alignment) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 RTL / LTR and accessibility › wide formulas n |
+| R25 | cases cells lose text-align:left | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R2 RTL / LTR and accessibility › wide formulas n |
+| R26b | display block always a focusable labelled group (the 1ab3ae5 behaviour) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
+| X01 | overflow never detected (scroll group never offered) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
+| X02 | overflowing block becomes a region LANDMARK instead of a group | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
+| X03 | re-check on resize removed (state never reverts / updates) | KILLED | scientificMathRenderer.21a.test.tsx › 21A-R5 display formula accessibility (review fix 1): |
+
 ## 32. Bundle
 
 | Measure | 60ddadc | Head |
@@ -588,7 +678,14 @@ unchanged after every run.
 
 ## 33. Backward compatibility and grading
 
-- **Old grammar.** Old-grammar ASTs and rendering are frozen (§26–§27).
+- **Old grammar.** Old-grammar ASTs are frozen (§26–§27): CR is now whitespace, which is a measured, meaning-preserving widening.
+  The rendered MathML of old formulas is frozen too (the renderer freeze), with one deliberate exception: an Arabic `\text` now carries
+  `dir="rtl"`, so it keeps its natural direction (the freeze excludes it).
+- **Old display formulas: what changed (corrected in Review Fix 1).**
+  - Their block is LTR, with `padding-block:0.25em`.
+  - The formula is sized to its content and centred, so a wide one now scrolls instead of being clipped (§18).
+  - The block markup is unchanged unless the formula overflows (§17).
+  - Old inline formulas without a grid are unchanged.
 - **Schemas.** RichContentV1 and structured-exam schemas are unchanged.
 - **Old AI exams.** V1-tagged AI exams keep working.
 - **Grading.** No grader, sanitizer rule, finalization rule or marks computation changed. Grading never reads rich content, as the
@@ -599,14 +696,17 @@ unchanged after every run.
 
 | Suite | Tests | Fail-first on 60ddadc |
 |---|---|---|
-| `scientificMath.21a` (parser) | 31 | Combined with the renderer suite: 40 tests, 24 fail / 16 pass (pins) |
-| `scientificMathRenderer.21a` | 18 | (above) |
+| `scientificMath.21a` (parser) | 31 | First commit, combined with the renderer suite: 40 tests, 24 fail / 16 pass (pins) |
+| `scientificMathRenderer.21a` | 21 | (above). The Review Fix 1 display-a11y tests (`21A-R5`) fail 2/2 against the 1ab3ae5 renderer |
 | `scientificMathFreeze.21a` | 12 | Pins captured on 60ddadc |
-| `scientificMathEditor.21a` | 15 | 14 fail / 1 pass (pin) |
+| `scientificMathEditor.21a` | 18 | 14 fail / 1 pass (pin), first 15 tests |
 | `scientificMathGuards.21a` | 6 | Static guards |
 | `scientificMathCorpus.21a` | 15 | New corpus |
-| `scientificMathComposer.21a` | 8 | 7 fail / 1 pass (pin) |
+| `scientificMathComposer.21a` | 9 | 7 fail / 1 pass (pin), first 8 tests |
 | `cert-21a-scientific-math` | 10 | 4 fail / 1 pass (pin) / 5 skipped (setup refused) |
+
+The suites hold **122 tests** in total. The reviewer's own fail-first run of the head suites against 60ddadc production code gave
+50 failed / 25 passed / 5 skipped. The first version of this table listed 31 parser tests when there were 29 (RF1-8).
 
 **Full validation**, run on the content of the final head:
 - `npm test`: **792 files, 10,490 tests passed**.
@@ -627,6 +727,7 @@ The exact-head CI results are in the pull request and the final report.
 - **HTML-looking formulas in stored content** stay valid, inert math data (§24).
 - **Inline grids are scrollable boxes, not reflowed.** Long inline formulas without grids behave as in 20D.1.
 - **No nested environments, no `array` column specs, no `\color` / `\operatorname` / `\boxed` / `\overset`.**
+- **Print of a very wide formula.** A formula wider than the printed page still overflows the page; there is no scroll on paper, and grids are not reflowed.
 - **No solver.** No equivalence grading, no WYSIWYG editor, no MathML/LaTeX export format other than the exam JSON.
 - **The 20D.1 inline Markdown converter does not accept multi-line inline `$…$`.** A math → paragraph conversion of a multi-line grid
   keeps the exact run, but re-editing that paragraph's text re-parses one-line `$…$` only.
@@ -637,7 +738,16 @@ The exact-head CI results are in the pull request and the final report.
   - Opening or updating the PR triggers the Static Web Apps `Build and Deploy Job`. A **PR preview environment** exists only when that
     job succeeded on the reported head; the final report states the observed result.
   - No production deployment and no Runner deployment.
-- **Independent review.** A read-only reviewer re-runs the suites on the exact head, plants its own mutants and probes adversarially.
+- **Independent review.**
+  - **Round 1** (head `1ab3ae5`): **NOT READY — REVIEW FIX REQUIRED**. There was no blocker and no production-code defect in the
+    parser, renderer or grading. It found:
+    - 1 MAJOR test gap: the `\mathbb` closing brace;
+    - 3 wrong claims in this record: catalog provenance, "rendering frozen", and the test count;
+    - 1 accessibility issue: every display formula was a landmark and a tab stop;
+    - 11 non-equivalent surviving reviewer mutants;
+    - 1 new lint warning.
+  - **Review Fix 1** addresses each finding (§17, §18, §23, §24, §27, §31, §33, §34). All of the reviewer's survivors are now killed.
+  - A re-review of the new head follows.
 - **Merge.** The owner merges manually. DO NOT MERGE.
 - **Next.** Rich review rendering; optional `\operatorname`-style named functions as a v3 family; inline-math authoring in AI prose
   behind the same validator.
