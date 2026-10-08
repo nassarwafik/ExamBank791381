@@ -282,6 +282,12 @@ describe("21A1-AI9 a pairing only detects a swap — it never invents one (revie
     expect(verdict(bar(["Jan", "Feb", "Mar"], [120, null, 95]), "Jan 120, Feb 80, Mar 95")).toBe("AI_CHART_DATA_NOT_PROVIDED");
     expect(verdict(bar(["Jan", "Feb", "Mar"], [120, null, 95]), "Jan 120, Mar 95")).toBe("ok");                       // Feb not written
   });
+  it("mutation pins (RT06 / RT07 / RT10 / RT17): an ordinal, the end of another word, a label listed twice or with two values pair nothing", () => {
+    expect(pairedNumbers("Jan 15th, Feb 80", ["Jan", "Feb"])).toEqual([undefined, 80]);                             // "15th" is a date
+    expect(pairedNumbers("عدد الطلاب 120، أ 40، ب 30", ["أ", "ب"])).toEqual([40, 30]);                               // «ب» ending «الطلاب» is not «ب»
+    expect(pairedNumbers("Jan, Jan, Feb: 5, 5, 7", ["Jan", "Feb"])).toEqual([undefined, undefined]);                  // a label twice in a list
+    expect(pairedNumbers("Jan, Feb: 120, 80. Later Feb, Jan: 90, 100", ["Jan", "Feb"])).toEqual([undefined, undefined]); // two lists disagree
+  });
   it("R3-A7 pins: a longer value run pairs nothing; a list item never pairs alone; a clause ends at another label", () => {
     expect(pairedNumbers("Jan, Feb: 120, 80, 95", ["Jan", "Feb"])).toEqual([undefined, undefined]);
     expect(pairedNumbers("Jan and Feb: 120", ["Jan", "Feb"])).toEqual([undefined, undefined]);

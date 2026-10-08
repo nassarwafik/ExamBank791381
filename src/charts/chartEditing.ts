@@ -44,12 +44,13 @@ const isCat = (k: ChartKind) => (CATEGORY_CHART_KINDS as readonly string[]).incl
  * values or fewer than 3 categories). Authored context travels where the target has a place for it — the category axis label, the value
  * unit, value labels — and anything the target cannot hold (reference lines, a value-axis label or bounds, a row-axis label) makes the
  * change `lossy` too. Every other change starts from the starter data of the target kind and is `lossy` (the editor asks before discarding).
- * Title, description, source and display options always survive.
+ * Title, description, source and display options always survive. `fresh`: the result holds the target kind's starter data and none of the
+ * original data (ids such as "s1" may recur with other meaning — the chartSelection editor then keeps no key entry).
  */
-export function convertChartKind(spec: ChartSpecV1, to: ChartKind): { spec: ChartSpecV1; lossy: boolean } {
+export function convertChartKind(spec: ChartSpecV1, to: ChartKind): { spec: ChartSpecV1; lossy: boolean; fresh?: true } {
   if (spec.kind === to) return { spec, lossy: false };
   const c = common(spec);
-  const fresh = (): { spec: ChartSpecV1; lossy: boolean } => ({ spec: { ...defaultChart(to, spec.id), ...c } as ChartSpecV1, lossy: true });
+  const fresh = (): { spec: ChartSpecV1; lossy: boolean; fresh: true } => ({ spec: { ...defaultChart(to, spec.id), ...c } as ChartSpecV1, lossy: true, fresh: true });
   const catAxes = (s: { xAxis?: CategoryChartSpec["xAxis"]; yAxis?: CategoryChartSpec["yAxis"] }) => ({ ...(s.xAxis ? { xAxis: s.xAxis } : {}), ...(s.yAxis ? { yAxis: s.yAxis } : {}) });
   if (isCat(spec.kind) && isCat(to)) {
     const s = spec as CategoryChartSpec;

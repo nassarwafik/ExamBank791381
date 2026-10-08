@@ -97,3 +97,32 @@ describe("21A1-RB1e the print option is the desktop layout with the selection sh
     }
   });
 });
+
+describe("21A1-RB1f while printing, a width change of the print layout never resizes the engine to its box (review fix 3)", () => {
+  it("printing from a phone: the print layout widens the stage (width AND height class change) — only the print size is applied; after printing the container's again (mutants RT23 / RT24 / RT27)", async () => {
+    const observers: (() => void)[] = [];
+    vi.stubGlobal("ResizeObserver", class { constructor(cb: () => void) { observers.push(cb); } observe() {} unobserve() {} disconnect() {} });
+    let w = 360;
+    const own = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => w });
+    try {
+      const spec = canon(rainfallBar());
+      render(<DataChart spec={spec} />);
+      await settle();
+      h.calls = [];
+      act(() => { window.dispatchEvent(new Event("beforeprint")); });
+      expect(chartHeight(spec, false)).not.toBe(chartHeight(spec, true));
+      expect(h.calls).toContain("resize(640," + chartHeight(spec, false) + ")");     // the desktop height, never the phone's (mutant RT27)
+      h.calls = [];
+      w = 718;                                                                         // the printed column: no longer a phone
+      act(() => { for (const o of observers) o(); });
+      await settle();
+      expect(h.calls).not.toContain("resize()");
+      act(() => { window.dispatchEvent(new Event("afterprint")); });
+      await settle();
+      expect(h.calls).toContain("resize()");
+    } finally {
+      if (own) Object.defineProperty(HTMLElement.prototype, "clientWidth", own);
+    }
+  });
+});

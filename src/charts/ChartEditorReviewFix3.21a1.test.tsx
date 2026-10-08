@@ -72,6 +72,34 @@ describe("21A1-RB3d a deleted target's id never carries the key to a new target 
   });
 });
 
+describe("21A1-RB3g a conversion from starter data keeps no key entry (review fix 3, R3-A4)", () => {
+  it("scatter (series «السلسلة 1» and «فرع الإسكندرية», key both) → bar: the starter series s1 «السلسلة 1» is not the teacher's — the key is cleared and the dialog says so", async () => {
+    const sc = { version: 1, id: "s", kind: "scatter", title: "مبيعات", description: "مبيعات فرعين", series: [{ id: "s1", label: "السلسلة 1", points: [{ id: "p1", x: 1, y: 2 }, { id: "p2", x: 2, y: 4 }] }, { id: "s2", label: "فرع الإسكندرية", points: [{ id: "p3", x: 1, y: 3 }] }] };
+    const box = { node: null as QuestionBody | null };
+    render(<Host initial={q(sc, "series", ["s1", "s2"], "multiple", 2)} onNode={n => { box.node = n; }} />);
+    await settle();
+    fireEvent.change(kindSelect(), { target: { value: "bar" } });
+    await settle();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.textContent).toContain("ستُمسح الإجابة الصحيحة المحدَّدة");
+    fireEvent.click(within(dialog).getByRole("button", { name: "تغيير النوع" }));
+    await settle();
+    const n = box.node as unknown as N;
+    expect([n.chartSelection.chart.kind, n.chartSelection.target, n.answer.correct]).toEqual(["bar", "series", []]);
+  });
+});
+
+describe("21A1-RB3f a range key while the chart is invalid (mutant RT50)", () => {
+  it("an edit that makes the chart invalid keeps a contiguous range key (its order is unknown, not broken)", async () => {
+    const box = { node: null as QuestionBody | null };
+    render(<Host initial={q(barOf(), "category", ["c2", "c3"], "range", 3)} onNode={n => { box.node = n; }} />);
+    await settle();
+    fireEvent.change(screen.getByRole("textbox", { name: "اسم الفئة 1" }), { target: { value: "" } });
+    await settle();
+    expect((box.node as unknown as N).answer.correct).toEqual(["c2", "c3"]);
+  });
+});
+
 describe("21A1-RB3e the key-clearing warning is the stored outcome, also while the chart is invalid (review fix 3, B3-3)", () => {
   it("an empty title (invalid chart): bar → line keeps the key and asks nothing; bar → radar warns AND clears", async () => {
     const box = { node: null as QuestionBody | null };

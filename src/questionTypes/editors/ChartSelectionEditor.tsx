@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { AuthoringEditorProps } from "../registryTypes";
 import { CHART_KINDS, validateChartSpec, type ChartKind, type ChartSpecV1 } from "../../charts/chartSpec";
 import { CHART_SELECTION_MODES, RANGE_TARGET_KINDS, chartTargetKinds, chartTargets, isContiguousRun, type ChartSelectionMode, type ChartTargetKind } from "../../charts/chartData";
-import { defaultChart } from "../../charts/chartEditing";
+import { convertChartKind, defaultChart } from "../../charts/chartEditing";
 import ChartEditor from "../../charts/ChartEditor";
 import { useConfirm } from "../../ui/useConfirm";
 import DataChart from "../../charts/DataChart";
@@ -53,8 +53,8 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
    *  clamped, a broken range cleared, and the key NEVER pointing at a target it did not mean (round-3 findings R3-A4 / B3-3):
    *  - a target kind the chart no longer offers is replaced by its first one and the key is cleared (the same id may name a different
    *    target in the new kind: a category "jan" and a series "jan" can coexist);
-   *  - a KIND change keeps a key entry only where the new kind has the same target with the same label (a conversion that starts from
-   *    starter data reuses ids such as "s1" for a different series);
+   *  - a KIND change keeps a key entry only where the new kind has the same target with the same label, and never when the conversion
+   *    starts from starter data (its ids and default labels, such as "s1" / "السلسلة 1", can recur with other data);
    *  - any other change drops key entries whose target is gone — read from the chart's structure even while it is invalid (a cell being
    *    typed, a gap between bins), so a deleted target's id, later reused for a new one, never inherits the key. */
   const resolve = (next: { chart?: ChartSpecV1; target?: ChartTargetKind; mode?: ChartSelectionMode; max?: number; label?: string; scoring?: ChartSelectionScoring; correct?: string[] }) => {
@@ -73,9 +73,11 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
     if (!retargeted && next.chart && c) {
       const now = structuralTargets(c, t);
       if (chart && next.chart.kind !== chart.kind) {
+        let fresh = true;
+        try { fresh = !!convertChartKind(chart, next.chart.kind).fresh; } catch { /* an unreadable chart: nothing carries over */ }
         const before = new Map((structuralTargets(chart, t) ?? []).map(x => [x.key, x.label] as const));
         const after = new Map((now ?? []).map(x => [x.key, x.label] as const));
-        ok = ok.filter(k => before.has(k) && after.get(k) === before.get(k));
+        ok = fresh ? [] : ok.filter(k => before.has(k) && after.get(k) === before.get(k));
       } else if (now) ok = ok.filter(k => now.some(x => x.key === k));
       else { const present = idsIn(c); ok = ok.filter(k => k.split("/").every(part => present.has(part))); }
     }
