@@ -124,6 +124,7 @@ describe("21A1-AI5 teacher numbers are read strictly (review fix A2)", () => {
     expect(pairedNumber("Jan 120, Feb 80", "Feb")).toBe(80);
     expect(pairedNumber("يناير ١٢٠ ملم، وفبراير 95 ملم", "فبراير")).toBe(95);
     expect(pairedNumber("Q10 = 5, Q1 = 7", "Q1")).toBe(7);                                   // "Q1" never pairs with the 0 of "Q10"
+    expect(pairedNumber("Q10 was high; Q1: 7", "Q1")).toBe(7);                               // …even when nothing follows that 0 (mutant RA10)
     expect(pairedNumber("January was wet: 120 then 80", "January")).toBeUndefined();
     expect(pairedNumber("Jan 120 in the north, Jan 80 in the south", "Jan")).toBeUndefined();     // two different numbers: not a pairing
     expect(pairedNumber("Jan 120; again Jan 120", "Jan")).toBe(120);
