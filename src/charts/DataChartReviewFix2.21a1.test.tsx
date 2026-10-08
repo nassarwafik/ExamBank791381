@@ -104,6 +104,14 @@ describe("21A1-RB17 a width change that keeps the label layout does not redraw (
       await settle();
       expect(h.calls).toContain("update");
       expect((h.options.at(-1) as Opt).xAxis!.axisLabel!.rotate).toBeUndefined();
+      // flat labels whose width cap changes with the stage (mutant RS35): the new cap is applied
+      h.calls = []; h.options = [];
+      w = 1400;
+      act(() => { for (const o of observers) o(); });
+      await settle();
+      expect(h.calls).toContain("update");
+      const capOf = (o: unknown) => (o as { xAxis: { axisLabel: { width: number } } }).xAxis.axisLabel.width;
+      expect(capOf(h.options.at(-1))).toBeGreaterThan(0);
     } finally {
       if (own) Object.defineProperty(HTMLElement.prototype, "clientWidth", own);
     }

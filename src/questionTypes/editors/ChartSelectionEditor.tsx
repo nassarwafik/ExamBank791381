@@ -53,13 +53,16 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
     const v = c ? validateChartSpec(c) : null;
     const ks = v?.ok ? chartTargetKinds(v.value) : [];
     let t = next.target ?? target;
-    if (ks.length && !ks.includes(t)) t = ks[0];
+    // a target kind the chart no longer offers is replaced by its first one, and the key is cleared: the same id may name a different
+    // target in the new kind (a category "jan" and a series "jan" can coexist), so it never carries over
+    const retargeted = ks.length > 0 && !ks.includes(t);
+    if (retargeted) t = ks[0];
     let m = next.mode ?? mode;
     if (m === "range" && !RANGE_TARGET_KINDS.includes(t)) m = "multiple";
     const order = v?.ok && ks.includes(t) ? chartTargets(v.value, t).map(x => x.key) : [];
     let mx = m === "single" ? 1 : Math.max(1, Math.round(next.max ?? max));
     if (order.length) mx = Math.min(mx, order.length);
-    let ok = (next.correct ?? correct).filter(k => !order.length || order.includes(k));
+    let ok = retargeted ? [] : (next.correct ?? correct).filter(k => !order.length || order.includes(k));
     if (order.length) ok = order.filter(k => ok.includes(k));
     if (m === "single") ok = ok.slice(0, 1);
     if (m === "range" && ok.length && !isContiguousRun(order, ok)) ok = [];

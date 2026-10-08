@@ -5,7 +5,7 @@ import { render, cleanup, act, fireEvent, screen, within } from "@testing-librar
 import ChartSelectionEditor from "../questionTypes/editors/ChartSelectionEditor";
 import type { QuestionBody } from "../examTypes";
 import { convertChartKind } from "./chartEditing";
-import type { CategoryChartSpec, ChartSpecV1 } from "./chartSpec";
+import { validateChartSpec, type CategoryChartSpec, type ChartSpecV1 } from "./chartSpec";
 import { rainfallBar } from "./testing/chartFixtures";
 
 // Phase 21A.1 — Review Fix 2 (authoring): a kind change that keeps every value but clears the answer key asks first (N-3); the selection
@@ -76,6 +76,24 @@ describe("21A1-RB3b a lossless kind change that clears the answer key asks first
     await settle();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect((box.node as unknown as Node).chartSelection.chart.kind).toBe("radar");
+  });
+});
+
+describe("21A1-RB3c a target-kind change never carries the key over (review fix 2, mutant RS41)", () => {
+  it("a bar whose series id equals a category id: bar → radar asks first and clears the key (the category 'jan' never becomes the series 'jan')", async () => {
+    const twin = { ...fiveMonths(), series: [{ id: "jan", label: "الهطول", values: [1, 2, 3, 4, 5] }] } as ChartSpecV1;
+    expect(validateChartSpec(twin).ok).toBe(true);
+    const box = { node: null as QuestionBody | null };
+    render(<SelectionHost initial={rainQuestion(["jan"], twin)} onNode={n => { box.node = n; }} />);
+    await settle();
+    fireEvent.change(kindSelect(), { target: { value: "radar" } });
+    await settle();
+    expect(screen.getByRole("dialog").textContent).toContain(KEY_WARNING);
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "تغيير النوع" }));
+    await settle();
+    const n = box.node as unknown as Node;
+    expect([n.chartSelection.chart.kind, n.chartSelection.target]).toEqual(["radar", "series"]);
+    expect(n.answer.correct).toEqual([]);
   });
 });
 

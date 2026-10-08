@@ -9,6 +9,7 @@ const canon = (c: unknown) => { const r = validateChartSpec(c); if (!r.ok) throw
 const ctx = { tokens: defaultChartTokens(), animation: "none" as const, compact: false };
 type Axis = { axisLabel: { rotate?: number; width: number; interval: number | string } };
 const axes = (spec: ChartSpecV1, width: number, compact = false) => buildEngineOption(spec, { ...ctx, compact, width }) as unknown as { xAxis: Axis; yAxis: Axis };
+const without = (c: unknown, ...keys: string[]) => { const o = { ...(c as Record<string, unknown>) }; for (const k of keys) delete o[k]; return o; };
 const twelve = (label: (i: number) => string) => (rainfallBar() as CategoryChartSpec).categories.map((c, i) => ({ ...c, label: label(i) }));
 
 describe("21A1-RB5b a VERTICAL category axis is not capped by a horizontal slot (review fix 2, N-2)", () => {
@@ -40,6 +41,12 @@ describe("21A1-RB5c rotated labels that would still touch are thinned by the eng
     const single = canon({ ...rainfallBar(), categories: cats8, series: [{ id: "rain", label: "الهطول", values: cats8.map((_, i) => 100 + i) }] });
     expect(axes(single, 256, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
     expect(axes(combo, 288, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });                 // 360 px phones: room again
+  });
+  it("an unnamed value axis takes the width of its widest value label (mutant RS33)", () => {
+    const cats8 = twelve(i => "محافظة " + (i + 1)).slice(0, 8);
+    const bar = (values: number[]) => canon({ ...without(rainfallBar(), "yAxis", "referenceLines"), categories: cats8, series: [{ id: "s", label: "القيمة", values }] });
+    expect(axes(bar(cats8.map((_, i) => 1000000000 + i)), 224, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: "auto" });   // "1000000007"
+    expect(axes(bar(cats8.map((_, i) => i + 1)), 224, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });               // "8"
   });
   it("where the rotated labels have room every label is drawn (interval 0)", () => {
     expect(axes(months(), 352, true).xAxis.axisLabel).toMatchObject({ rotate: 45, interval: 0 });
