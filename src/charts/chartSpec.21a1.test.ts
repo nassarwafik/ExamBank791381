@@ -100,6 +100,8 @@ describe("21A1-C2 hostile and malformed input is refused (never repaired, never 
     refused(with_(F.rainfallBar(), { legend: "top" }), "CHART_ENUM_INVALID");
     refused(with_(F.rainfallBar(), { orientation: "diagonal" }), "CHART_ENUM_INVALID");
     refused(with_(F.comboChart(), { series: [{ id: "a", label: "a", values: [1, 2, 3, 4] }] }), "CHART_ENUM_INVALID");
+    // a present but unknown mark is refused too — "scatter", an engine series type, or anything else (mutant C17b)
+    for (const mark of ["scatter", "area", "Bar", "custom"]) refused(with_(F.comboChart(), { series: [{ id: "a", label: "a", values: [1, 2, 3, 4], mark }] }), "CHART_ENUM_INVALID");
     refused(with_(F.temperatureLine(), { stacked: true }), "CHART_UNKNOWN_KEY");
     refused(with_(F.temperatureLine(), { orientation: "horizontal" }), "CHART_UNKNOWN_KEY");
   });
