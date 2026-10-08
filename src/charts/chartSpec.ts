@@ -7,7 +7,6 @@
 // (only where the kind documents it) and is never confused with 0; every identity is a stable id unique in its namespace; every collection
 // is bounded. Validation never throws: it returns the canonical rebuilt copy (fixed key order, a fresh object — never a spread of input) or
 // issues. The renderer (ECharts today, replaceable tomorrow) only ever sees this validated value through the ExamBank adapter.
-import { isVisualId } from "../visualGeometry";
 import { CONTROL, RAW_HTML } from "../richContent/proseGuard";
 
 export const CHART_SPEC_VERSION = 1 as const;
@@ -77,9 +76,14 @@ export const CATEGORY_CHART_KINDS: readonly ChartKind[] = Object.freeze(["bar", 
 export const isCategoryChart = (c: ChartSpecV1): c is CategoryChartSpec => (CATEGORY_CHART_KINDS as readonly string[]).includes(c.kind);
 
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+/** The stable chart / item id rule — the SAME rule as visualGeometry.isVisualId (pinned by a test), kept local so the contract (loaded with
+ *  the rich-content validator on the student path) does not pull the geometry module: ASCII letter first, then letters / digits / _ / -,
+ *  at most 32 characters, never a prototype-sensitive name. */
+const ID_RE = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
+export const isChartId = (v: unknown): v is string => typeof v === "string" && ID_RE.test(v) && !FORBIDDEN_KEYS.has(v);
 // explicit embedding / override / isolate controls (LRE RLE PDF LRO RLO, LRI RLI FSI PDI) spoof the visual order of a label; the plain
 // marks (LRM / RLM / ALM) stay allowed. The adapter adds its own isolates when it hands labels to a renderer.
-const BIDI_CONTROL = /[‪-‮⁦-⁩]/;
+export const BIDI_CONTROL = /[‪-‮⁦-⁩]/;
 const isPlain = (v: unknown): v is Record<string, unknown> => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return false;
   const p = Object.getPrototypeOf(v);
@@ -137,7 +141,7 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
   };
   const ids = new Map<string, Set<string>>(), labels = new Map<string, Set<string>>();
   const id = (v: unknown, at: string, ns: string): string | undefined => {
-    if (!isVisualId(v)) { add("CHART_ID_INVALID", "معرّف غير صالح في الرسم البياني (حرف لاتيني أولًا ثم حروف أو أرقام أو - أو _ حتى 32).", at); return undefined; }
+    if (!isChartId(v)) { add("CHART_ID_INVALID", "معرّف غير صالح في الرسم البياني (حرف لاتيني أولًا ثم حروف أو أرقام أو - أو _ حتى 32).", at); return undefined; }
     const set = ids.get(ns) ?? new Set<string>();
     ids.set(ns, set);
     if (set.has(v)) { add("CHART_ID_DUPLICATE", "المعرّف «" + v + "» مكرّر في الرسم البياني.", at); return undefined; }
@@ -434,4 +438,32 @@ export function validateChartSpec(raw: unknown, path = "chart"): ChartResult {
     if (bytes > CHART_LIMITS.serializedBytes) add("CHART_LIMIT", "حجم الرسم البياني أكبر من الحد المسموح.", path);
   }
   return issues.length ? { ok: false, issues } : { ok: true, value: out as unknown as ChartSpecV1, issues: [] };
+}
+
+// ── text views of a chart (accessibility summary, plain text) ─────────────────────────────────────────────────────────────────────────────
+const KIND_NAMES: Readonly<Record<ChartKind, string>> = Object.freeze({
+  bar: "رسم بالأعمدة", line: "رسم خطي", area: "رسم مساحي", combo: "رسم مركّب (أعمدة وخط)", pie: "رسم دائري", scatter: "رسم انتشاري",
+  histogram: "مدرّج تكراري", radar: "رسم راداري", boxplot: "رسم صندوقي", heatmap: "خريطة حرارية"
+});
+export const chartKindName = (spec: ChartSpecV1): string => (spec.kind === "pie" && spec.donut ? "رسم حلقي" : spec.kind === "bar" && spec.orientation === "horizontal" ? "رسم بالأشرطة الأفقية" : KIND_NAMES[spec.kind]);
+/** A short structural summary for assistive technology ("رسم بالأعمدة — 12 فئة، سلسلة واحدة"). */
+export function chartSummary(spec: ChartSpecV1): string {
+  const n = (count: number, one: string, many: string) => count + " " + (count === 1 ? one : many);
+  switch (spec.kind) {
+    case "bar": case "line": case "area": case "combo": return chartKindName(spec) + " — " + n(spec.categories.length, "فئة", "فئات") + "، " + n(spec.series.length, "سلسلة", "سلاسل") + (("stacked" in spec && spec.stacked) ? "، مكدّسة" : "");
+    case "pie": return chartKindName(spec) + " — " + n(spec.slices.length, "شريحة", "شرائح");
+    case "scatter": return chartKindName(spec) + " — " + n(spec.series.reduce((a, s) => a + s.points.length, 0), "نقطة", "نقاط");
+    case "histogram": return chartKindName(spec) + " — " + n(spec.bins.length, "فئة", "فئات");
+    case "radar": return chartKindName(spec) + " — " + n(spec.axes.length, "محور", "محاور") + "، " + n(spec.series.length, "سلسلة", "سلاسل");
+    case "boxplot": return chartKindName(spec) + " — " + n(spec.boxes.length, "صندوق", "صناديق");
+    case "heatmap": return chartKindName(spec) + " — " + spec.rows.length + " × " + spec.columns.length;
+  }
+}
+/** Plain text of a chart (search, the plain fallback suggestion, the AI modify projection): title, description, source, labels — never a
+ *  substitute for the data table. */
+export function chartPlainText(spec: ChartSpecV1): string {
+  const parts = [spec.title, spec.description];
+  if (spec.source) parts.push(spec.source);
+  parts.push(chartSummary(spec));
+  return parts.join("\n");
 }

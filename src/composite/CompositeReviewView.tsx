@@ -20,6 +20,8 @@ import "./composite-review.css";
 const SmartSimReviewView = lazy(() => import("../trustedSim/SmartSimReviewView"));
 const RubricGradingPanel = lazy(() => import("../openResponse/RubricGradingPanel"));
 const ParametricAnswerView = lazy(() => import("../parametric/ParametricReviewView").then(m => ({ default: m.ParametricAnswerView })));
+// Phase 21A.1 — a chartSelection@1 child is reviewed on its chart (✓ / ✗ / missed), exactly like a standalone chart question (teacher-only, lazy).
+const ChartSelectionReview = lazy(() => import("../charts/ChartSelectionReview"));
 
 export type CompositePartOverride = { score?: number | string; comment?: string; rubricAwards?: unknown };
 type Json = Record<string, unknown>;
@@ -87,6 +89,11 @@ function AnswerBlock({ p, ctx, question, override, onOverride, locked, onRegrade
   if (p.type === "smartSim") return (
     <div className="cmp-review-cell"><span>إجابة الطالب (فحوص الخادم لهذا البند)</span>
       <Suspense fallback={<Loading text="جارٍ تحميل مراجعة المحاكاة..." />}><SmartSimReviewView review={p.smartSimReview} envelope={ctx?.kind === "smartSim" ? ctx.smartSim : p.node?.smartSim} /></Suspense>
+    </div>
+  );
+  if (p.type === "chartSelection") return (
+    <div className="cmp-review-cell"><span>إجابة الطالب على الرسم (الإجابة المعتمدة للمعلم فقط)</span>
+      <Suspense fallback={<Loading text="جارٍ تحميل مراجعة الرسم البياني..." />}><ChartSelectionReview config={p.node?.chartSelection} answerKey={p.expectedAnswer} answer={p.studentAnswer} /></Suspense>
     </div>
   );
   let student: ReactNode, expected: ReactNode;

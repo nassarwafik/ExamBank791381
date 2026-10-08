@@ -10,7 +10,6 @@ const imageAsset_1 = require("../imageAsset");
 const richMath_1 = require("./richMath");
 const proseGuard_1 = require("./proseGuard");
 const chartSpec_1 = require("../charts/chartSpec");
-const chartData_1 = require("../charts/chartData");
 exports.RICH_CONTENT_SCHEMA_VERSION = 1;
 exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"]);
 exports.RICH_MARKS = Object.freeze(["bold", "italic", "underline", "code", "sup", "sub"]);
@@ -511,7 +510,7 @@ function validateRichContent(raw, path = "richContent") {
                     break;
                 }
                 chartIds.add(c.value.id);
-                totalChars += (0, chartData_1.chartPlainText)(c.value).length;
+                totalChars += (0, chartSpec_1.chartPlainText)(c.value).length;
                 out = { type: "dataChart", chart: c.value };
                 break;
             }
@@ -616,7 +615,7 @@ function richContentPlainText(raw) {
                     out.push(b.source);
                     break;
                 case "dataChart":
-                    out.push((0, chartData_1.chartPlainText)(b.chart));
+                    out.push((0, chartSpec_1.chartPlainText)(b.chart));
                     break;
                 case "divider": break;
             }

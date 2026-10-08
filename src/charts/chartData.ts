@@ -63,32 +63,9 @@ export function chartDataTable(spec: ChartSpecV1): ChartDataTable {
   }
 }
 
-const KIND_NAMES: Readonly<Record<ChartKind, string>> = Object.freeze({
-  bar: "رسم بالأعمدة", line: "رسم خطي", area: "رسم مساحي", combo: "رسم مركّب (أعمدة وخط)", pie: "رسم دائري", scatter: "رسم انتشاري",
-  histogram: "مدرّج تكراري", radar: "رسم راداري", boxplot: "رسم صندوقي", heatmap: "خريطة حرارية"
-});
-export const chartKindName = (spec: ChartSpecV1): string => (spec.kind === "pie" && spec.donut ? "رسم حلقي" : spec.kind === "bar" && spec.orientation === "horizontal" ? "رسم بالأشرطة الأفقية" : KIND_NAMES[spec.kind]);
-/** A short structural summary for assistive technology ("رسم بالأعمدة — 12 فئة، سلسلة واحدة"). */
-export function chartSummary(spec: ChartSpecV1): string {
-  const n = (count: number, one: string, many: string) => count + " " + (count === 1 ? one : many);
-  switch (spec.kind) {
-    case "bar": case "line": case "area": case "combo": return chartKindName(spec) + " — " + n(spec.categories.length, "فئة", "فئات") + "، " + n(spec.series.length, "سلسلة", "سلاسل") + (("stacked" in spec && spec.stacked) ? "، مكدّسة" : "");
-    case "pie": return chartKindName(spec) + " — " + n(spec.slices.length, "شريحة", "شرائح");
-    case "scatter": return chartKindName(spec) + " — " + n(spec.series.reduce((a, s) => a + s.points.length, 0), "نقطة", "نقاط");
-    case "histogram": return chartKindName(spec) + " — " + n(spec.bins.length, "فئة", "فئات");
-    case "radar": return chartKindName(spec) + " — " + n(spec.axes.length, "محور", "محاور") + "، " + n(spec.series.length, "سلسلة", "سلاسل");
-    case "boxplot": return chartKindName(spec) + " — " + n(spec.boxes.length, "صندوق", "صناديق");
-    case "heatmap": return chartKindName(spec) + " — " + spec.rows.length + " × " + spec.columns.length;
-  }
-}
-/** Plain text of a chart (search, the plain fallback suggestion, the AI modify projection): title, description, source, labels — never a
- *  substitute for the data table. */
-export function chartPlainText(spec: ChartSpecV1): string {
-  const parts = [spec.title, spec.description];
-  if (spec.source) parts.push(spec.source);
-  parts.push(chartSummary(spec));
-  return parts.join("\n");
-}
+// The chart's kind name, structural summary and plain text live with the contract (chartSpec.ts) so the rich-content validator — which the
+// student path loads eagerly — needs no chart helper module; they are re-exported here for the chart surfaces.
+export { chartKindName, chartSummary, chartPlainText } from "./chartSpec";
 
 // ── interaction semantics (answer surfaces) ─────────────────────────────────────────────────────────────────────────────────────────────
 export const CHART_SELECTION_MODES = Object.freeze(["single", "multiple", "range"] as const);

@@ -7,8 +7,7 @@
 import { validateImageAsset, type ImageAssetV1 } from "../imageAsset";
 import { parseMath } from "./richMath";
 import { CONTROL, RAW_HTML } from "./proseGuard";
-import { validateChartSpec, type ChartSpecV1 } from "../charts/chartSpec";
-import { chartPlainText } from "../charts/chartData";
+import { validateChartSpec, chartPlainText, type ChartSpecV1 } from "../charts/chartSpec";
 
 export const RICH_CONTENT_SCHEMA_VERSION = 1 as const;
 export const RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"] as const);

@@ -7,6 +7,7 @@ import path from "node:path";
 import ChartSelectionResponse from "./student/ChartSelectionResponse";
 import ChartSelectionEditor from "./editors/ChartSelectionEditor";
 import ChartSelectionReview from "../charts/ChartSelectionReview";
+import CompositeReviewView from "../composite/CompositeReviewView";
 import { resolveStudentRenderer } from "./studentRegistry";
 import { resolveAuthoringEditor } from "./authoringRegistry";
 import { validateChartSelectionQuestion } from "../chartSelectionQuestion";
@@ -99,6 +100,26 @@ describe("21A1-UI3 teacher review", () => {
     cleanup();
     render(<ChartSelectionReview config={{ ...CFG, v: 9 }} answerKey={{}} answer={undefined} />);
     expect(screen.getByTestId("chart-review-unavailable")).toBeTruthy();
+  });
+  it("a composite chartSelection CHILD is reviewed on its chart too (the same lazy review, marks and summary), never as raw JSON", async () => {
+    type P = { id: string; label: string; type: string; marks: number; text: string; contextId: string; answer: unknown };
+    const exam = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "docs/fixtures/data-charts-21a1/ExamBank_21A1_Interactive_Charts_Mini_Acceptance.json"), "utf8"));
+    const d1 = exam.sections[3].questions[0], g = d1.composite.groups[0];
+    const grade = (p: P) => ({ partId: p.id, groupId: g.id, label: p.label, type: p.type, score: p.id === "p1" ? 0 : 3, maxMarks: 3, countedMaxMarks: 3, correct: p.id !== "p1", manualReview: false, ignored: false, counted: true });
+    const parts = (g.parts as P[]).map(p => ({ partId: p.id, groupId: g.id, childKey: "d1::part::" + p.id, label: p.label, type: p.type, questionTypeVersion: 1, marks: p.marks, text: p.text, contextId: p.contextId,
+      node: { ...p, presentationType: p.type }, studentAnswer: p.id === "p1" ? { kind: "chartSelection", chartId: "sales-combo", targets: ["q2"] } : { kind: "numeric", value: "120" },
+      expectedAnswer: p.answer, autoGrade: grade(p), manualScore: null, teacherComment: "" }));
+    const ctx = d1.composite.contexts[0];
+    const question = { questionId: "d1", questionNumber: 10, text: d1.text, marks: 6, type: "composite", studentAnswer: null, expectedAnswer: null, manualScore: null, teacherComment: "", composite: d1.composite,
+      autoGrade: { questionId: "d1", score: 3, maxMarks: 6, manualReview: false, parts: (g.parts as P[]).map(grade), composite: { v: 1, groups: [{ id: g.id, gradingPolicy: "all", maxMarks: 6, partIds: ["p1", "p2"] }] } },
+      compositeReview: { valid: true, contexts: [{ id: ctx.id, kind: "source", title: ctx.title, sources: ctx.sources }], parts } };
+    render(<CompositeReviewView question={question as never} overrides={{}} onOverride={() => {}} />);
+    await settle();
+    const child = document.querySelector('[data-child-key="d1::part::p1"]') as HTMLElement;
+    expect(within(child).getByTestId("chart-review-summary").textContent).toContain("0 من 1 صحيحة");
+    expect(within(child).getByRole("button", { name: /الربع 2/ }).textContent).toBe("الربع 2 — غير صحيح");
+    expect(within(child).getByRole("button", { name: /الربع 4/ }).textContent).toBe("الربع 4 — لم يُحدَّد");
+    expect(child.textContent).not.toMatch(/"targets"|"correct"/);
   });
   it("the review is a lazy, recovery-wrapped view of the assignment review (never in a student path)", () => {
     const src = fs.readFileSync(path.join(__dirname, "..", "AssignmentReview.tsx"), "utf8");
