@@ -773,6 +773,12 @@ The suites hold **127 tests** in total (Review Fix 2 added the five `21A-R6` obs
     §12): it failed once under full-suite load and passes 5 / 5 in isolation on the head.
 - Both pass in exact-head CI. Every Phase-21A suite passed in every run.
 
+**Full validation, Review Fix 2 content (`61cbe20`):**
+- `npm test`: 792 files, **10,503 passed, 1 failed**. The failure is the same pre-existing `composite.20d.test.tsx:48` race (§35).
+  Every Phase-21A suite passed.
+- `npm run lint`: exit 0, 104 warnings (baseline count). `npx tsc -b`: exit 0. `npm run build` with the bundle guard: passed.
+- Exact-head CI on `61cbe20`: Quality Gate, Build and Deploy Job and the Runner security workflow all succeeded on attempt 1.
+
 **Other checks:**
 - `npm run lint`: exit 0, no errors. 104 warnings, the same count as the 60ddadc baseline; the extra palette warning seen on 1ab3ae5 is
   gone (RF1-9).
@@ -799,7 +805,7 @@ The exact-head CI results are in the pull request and the final report.
     the lazily registered composite renderer (`.cmp-response`) itself.
   - **Proposed one-line patch** for a separate change: replace the `settle` wait with
     `await waitFor(() => expect(container.querySelector(".cmp-response")).toBeTruthy())`.
-  - It passes in CI on both 21A heads.
+  - It passed in exact-head CI on every 21A head (`1ab3ae5`, `614d427`, `31b86fc`, `61cbe20`).
 - **GovernancePanel timing.** `src/GovernancePanel.14b.test.tsx` (documented timing-sensitive file, AGENTS §12) failed once under
   full-suite load in the assignment-dialog case. It was not patched, per AGENTS §12.
 - **Print of a very wide formula.** A formula wider than the printed page still overflows the page; there is no scroll on paper, and grids are not reflowed.
