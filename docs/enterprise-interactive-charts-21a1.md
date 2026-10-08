@@ -28,7 +28,7 @@ every function the engine receives (formatters) is code-owned. ECharts can be re
   the teacher's explicit consent and are always labelled illustrative.
 - **Certification**: compatibility freeze, acceptance exam through the real platform lifecycle (4 personas), adversarial matrix (77 cases),
   real-Chromium certification (student path, editor, 360 px, touch, keyboard, print, reduced motion), performance, mutation campaign.
-- **Bundle**: initial budget unchanged (125 KB); initial graph 127,614 B gzip (baseline 127,309, +305 B of registration metadata
+- **Bundle**: initial budget unchanged (125 KB); initial graph 127,594 B gzip (baseline 127,309, +285 B of registration metadata
   and lazy-chunk names). No chart renderer, engine, editor or selection code reaches the initial graph or the Student Portal's static closure.
 
 ## 2. Scope, non-goals and the 21A.2 boundary
@@ -70,6 +70,11 @@ Deferred (directive §40), not done:
 | `1780f2c` | design record — Review Fix 2 browser evidence and mutation proof |
 | `5c12b52` | Review Fix 3 — the round-3 findings of the three lanes (§21) |
 | `34bf0fc` | Review Fix 3 mutation follow-ups (starter-data conversions keep no key entry; pins, §20.3) |
+| `e704272` | design record — Review Fix 3 browser evidence with the webfont and mutation proof |
+| `804d810` | Review Fix 4 — the round-4 findings of the three lanes (§21) |
+| `223698c` | Review Fix 4 mutation pins (§20.4) |
+| `f4db489` | RU47's pin corrected; the engine's label-layout registration removed as redundant — a mistake, see `bb46b08` |
+| `bb46b08` | the label-layout registration restored (the production build drops the core's own) and required by the bundle guard (§17, §20.4) |
 
 Review-fix commits are described in §21.
 
@@ -228,6 +233,12 @@ invalid one alike:
   partial removal, "ستُحذف من الإجابة الصحيحة العناصر …", is kept although no current conversion removes only part of a key — §20.3);
 - a broken range is cleared only when the chart's order is known.
 
+Review Fix 4 (round-4 finding R4-A2): a `datum` key entry is pruned only when its SERIES or its CATEGORY is gone. A value cell emptied to
+retype it (an empty value is not a target of the valid chart) keeps its entry — after the chart's own order, counted toward the bound —
+and while the cell is empty the canonical validation reports the key (`CHART_SELECTION_KEY_UNKNOWN_TARGET`), so the question cannot be
+finalized with it; typing the value back makes the key whole again. Before, the entry was dropped silently and a student selecting both
+intended answers scored 0.
+
 ## 10. Accessibility, RTL, animation, mobile and print
 
 - **Figure**: `<figure>` named by the chart title (`aria-labelledby`) and described by its description plus a structural summary with
@@ -271,6 +282,25 @@ invalid one alike:
   table, the tooltip and the selection list.
   Stage heights depend only on kind, data size and width class (no resize feedback loop). A width change re-applies the engine option only
   when the label layout changes; otherwise the engine only relayouts (Review Fix 2, N-6, §16).
+  Review Fix 4 (round-4 finding B4-1): a cut never returns the uncut text — where not even "…" fits, the text is empty. A pie label whose
+  value (with a long unit) leaves the name less than 40 px puts the value on a line of its own: name and value are each cut to the
+  140 px box (the value keeps its isolate), and the label's line box is 1.75 em (the webfont's), so the two lines never overlap.
+- **Radar** (Review Fix 4, B4-2): with the stage width known, the radius leaves each side room for the axis names (up to their cap,
+  72 px on phones, 110 px otherwise; the radius shrinks to at most half its default) and the names are cut to the room left, so no name
+  leaves the canvas; a radar lays out by width like the category charts. Without a width: the default radius and the engine's truncation.
+- **Value labels** (Review Fix 4, B4-3): labels that would overlap another label are hidden (`labelLayout: { hideOverlap: true }`; the
+  engine module registers the library's label layout itself — the core's own registration is an import side effect the production
+  build drops — and the bundle guard requires it); the table, the tooltip and the selection list carry every value. Their boxes use
+  the webfont's line box (1.7 em).
+  The plot keeps room on its right for the widest one (half of it beside the last column, all of it beyond the end of a horizontal bar;
+  histograms too) and, where half a slot does not cover half the first column's label, the value axis's labels step away from the plot
+  by the rest. A rotated first category label rises toward the value axis's lowest label: that label steps 6 px further away. With
+  value labels above vertical columns, a reference line's label moves beyond the plot's right edge — past the last column's label room,
+  cut to 64 px on phones and 120 px otherwise, in a reserved margin; horizontal bars and charts with a secondary value axis keep it
+  inside the plot (§22).
+- **Late webfont** (Review Fix 4, B4-4): measured widths are cached per font and text; when a webfont finishes loading
+  (`document.fonts` `loadingdone`) the cache is emptied and every chart lays its labels out again with the real widths (one shared
+  listener for the page; the cache is bounded).
 - **Print**: no animation; the figure never splits across pages. Nothing re-measures the stage and no animation frame runs before the print
   layout, so on `beforeprint` the engine takes the print-width layout (labels laid out for 640 px with the desktop rules, also when
   printing from a phone; no animation; the selection highlight kept), draws at 640 px wide and at the chart's own desktop height (the
@@ -299,15 +329,26 @@ invalid one alike:
     so "10-20" gives 10 and 20, never -20; no absolute values);
   - where the request WRITES a category's value, a single-series chart or a pie (its first series) may not swap or shift teacher values:
     a category that carries ANOTHER category's written value is refused, and so is a written value left missing (`null`). A pairing is
-    used only to detect that — it never requires equality, so a misread pairing cannot refuse a correct chart (Review Fix 3, round-3
-    finding R3-A1; Review Fix 2 had required equality). Pairings are read only where the writing is clear; an unclear phrasing pairs
-    nothing:
+    used only to detect that — it never requires equality (Review Fix 3, round-3 finding R3-A1; Review Fix 2 had required equality). A
+    MISREAD pairing can still refuse a correct chart when the misread number is another category's value or the category's own value
+    is empty (round-4 findings R4-A1 / C4-F1 showed such misreadings: the article "a" read as the label "A", a day after a month, a
+    count before more words); Review Fix 4 makes each of those known misreadings pair nothing, and the refusal says the request SEEMS to
+    give the value and asks the model to check it — never that the teacher wrote it. Pairings are read only where the writing is clear;
+    an unclear phrasing pairs nothing:
     - a list of the chart's labels, in ANY order, followed by a value list of the same length pairs positionally ("Jan, Feb, Mar: 120,
       80, 95", "في يناير وفبراير ومارس: 120 و80 و95", "Jan / Feb / Mar = 120 / 80 / 95", "A, B, C: 50%, 30%, 20%", "Jan, Feb and Mar: 120,
       80 and 95"); "and" / «و» separate items, never a unit; nothing in parentheses comes between the two lists (R3-A3, R3-A5);
-    - otherwise a label — a whole word (one Arabic proclitic و ف ب ل ك allowed: "وفبراير", "بيناير") — pairs with the ONE number right
+    - and a label — a whole word (one Arabic proclitic و ف ب ل ك allowed: "وفبراير", "بيناير") — pairs with the ONE number right
       after it ("يناير ١٢٠", "Jan: 1,200", "Jan 120 mm") when its clause (up to . ! ? ؟ ; ؛ , ، a line break or another label) holds no
-      other number;
+      other number and the value ENDS the clause: after the number and its unit only the clause's end, or — before the next label —
+      spaces, "and" / "then" / «ثم» or a proclitic glued to the label ("Jan 120 and Feb 80", «يناير 120 وفبراير 80»); "on Mar 3 the
+      site closed" and "C 2 absent students" pair nothing (Review Fix 4, C4-F1);
+    - BOTH forms are read: a label that the lists and its own number pair with two different values pairs nothing («أ، ب، ج: 30، 25، 28
+      … الناجحون: أ 25، ب 20، ج 22» — Review Fix 4, R4-A1);
+    - the one-letter labels that are also English words ("A", "I") pair only after ":" / "=" ("A: 6") or inside a label list; "for a 30
+      student class" is not the label "A" (R4-A1);
+    - a whole number 1–31 after a month name (English, Arabic, Levantine) followed by a word is a day of the month, never the month's
+      value ("Mar 3 days", «مارس 3 أيام» — C4-F1);
     - never a pairing: a label glued to digits (Q1 / Q10), a label inside a word («ب» in «الطلاب»), an ordinal ("Jan 15th: 120"), a number
       followed by another number or a range ("120-130", "120 to 130", «120 إلى 130»), a second number in the clause — a year included
       ("January 2024 sales were 120", "Jan 2000 (up 5%)" pair nothing: the year heuristic of Review Fix 2 is gone, so four-digit values
@@ -315,9 +356,12 @@ invalid one alike:
     - labels match case-insensitively after NFKC (fullwidth and Arabic presentation forms), without invisible characters or tatweel; an
       en / figure dash before a digit is a minus; a decimal written without a leading digit keeps its point (".5", «٫5», "-.5" —
       R3-A2); a comma list without spaces whose groups are not all three digits long ("120,80,95", "1,200,30") is a list, never
-      decimals or one thousands number;
+      decimals or one thousands number; fullwidth digits ("１２０") read like ASCII digits, in the number check as in the pairing
+      (Review Fix 4, R4-A6);
     - the refusal never states a value (the pairing is a check of what the teacher wrote, not a value for the model to copy).
   - a teacher-data chart's title and description state no number that is not in the request.
+  - a pie descriptor's first series holds exactly one value per category; an extra value is refused (`AI_CHART_MALFORMED`), never dropped
+    (Review Fix 4, R4-A5).
   - **Not verified**: the association of values with categories in multi-series charts; a value that is another number of the request but
     no other category's ("Jan 120, Feb 80, total 95" drawn as Jan = 95 — not a swap), including a qualifier written for every category
     and drawn as every category's value ("January 2024 sales were 120, February 2024 sales were 80" drawn as 2024 and 2024 — refused by
@@ -325,8 +369,14 @@ invalid one alike:
     above — year-qualified or otherwise unclear phrasings (unpaired by design), a number written before its label ("120 for January"), an
     abbreviation of the label ("Jan" for a category "January"), Arabic spelling variants (hamza forms, harakat), numeric labels ("2022:
     120"), a value list separated by spaces only ("120 80 95"), space-grouped thousands ("1 200"), a two-group comma list ("120,80" reads
-    as 120.8 under the decimal-comma rule); numbers inside category, series or axis labels and units. The AI result is always a draft the
-    teacher reviews before applying it.
+    as 120.8 under the decimal-comma rule); numbers inside category, series or axis labels and units; labels the model REWRITES
+    (a translation, «ال» added or removed, two proclitics «وبفبراير») — they no longer match the request, so they pair nothing; a chart
+    that leaves out a category the request lists (the remaining values can be shifted); value lists whose units are longer than six
+    characters ("30 students, 25 students": such a list pairs nothing); a day of the month or a count that ends its clause ("closed on
+    Mar 3.") — it pairs, and a correct chart that leaves that month empty is refused (the refusal asks the model to check the request);
+    a whole number 1–31 after a month name followed by ANY word, a unit included ("Aug 3 mm", «أغسطس 3 ملم»), reads as a day and pairs
+    nothing, so small monthly values are not checked.
+    The AI result is always a draft the teacher reviews before applying it (Review Fix 4, R4-A3).
 - AI charts appended or prepended to a stem that already holds a chart receive the next free chart id (an id collision would block the
   draft — review finding A4); charts inside a `columns` block count as taken and incoming charts inside columns are renumbered too, and
   every kept or renumbered incoming id is reserved for the next incoming chart (Review Fix 2, N3 / N5).
@@ -444,6 +494,29 @@ ascent + descent) intersect by more than 0.5 px; a name hit is an axis name cros
 | truncated labels (rendered width of the cut text) | Arabic labels cut to about half their cap: 45–63 px of 104 / 110 at 1280 px, 28–36 px of 64 on a phone ("محاف..."); Latin labels 95–106 px (the engine's estimate fits Latin) | Arabic and Latin labels cut by measurement to their cap: 95–100 px of 104 (rotated), 103–110 px of 110 (flat), 56–64 px of 64 (phones), ending in "…" |
 | console errors | one resource 404 of the harness page at 1280 px | the same single 404, nothing else |
 
+Review Fix 4 (round-4 lane B's harness, copied into the implementer's scratch area and extended with the round-4 cases; built against
+`e704272` and against the Review Fix 4 tree; webfont loaded and awaited unless stated; `subtle` animation; viewport widths 320 / 360 /
+600 / 1024 / 1280 px). The round-4 cases: four pies with long names and long units («طالب وطالبة», «ألف دينار كويتي سنويًا», Latin names),
+radars with six skill names and with long names, a bar chart with value labels on 1,234,567-scale values and a 45-character reference
+line label, and the 30 / 60-category and combo charts.
+
+| Check | `e704272` | Review Fix 4 (`bb46b08`) |
+|---|---|---|
+| pie labels with value labels (rendered width of each line; overlap with the pie) | 207–326 px wide (box 140 px); at 600 px drawn 18–80 px into the pie and over one another (2 pairs, 18–19 px) | every line ≤ 139.4 px; 0 px into the pie and 0 overlaps at every width |
+| radar axis names | outside the canvas at 320 / 360 / 600 px (x from −109 px to 567 px on a 542 px canvas; up to 8 names per chart) | 0 clipped at every width |
+| value labels and a long reference-line label | 12 / 12 / 2 overlapping text pairs at 320 / 360 / 600 px (value labels over one another and over the value axis's labels; the reference label over value labels and over an axis label, up to 16 px); the last value label cut by the canvas edge at 320 px | 0 overlaps, 0 clipped: overlapping value labels hidden, the reference label beyond the plot's right edge |
+| the value axis's "0" against the first rotated category label (30 / 60 / 12 categories) | 0.6–2.0 px overlap at 320 / 360 / 600 px | 0 |
+| all charts, all five widths: touching labels / name hits / clipped texts / page overflow | the rows above | 0 / 0 / 0 / 0 |
+| real `page.pdf()` A4 / Letter / A5 / A4 landscape, printed from 1280 and from 360 px | — | 0 touching, 0 name hits, 0 clipped on every format; after printing every chart is identical to a fresh load (state and geometry: 0 differences) |
+| the webfont arriving 6 s after the page (charts drawn first with the fallback font's widths), measured after it loaded | Arabic labels stay cut for the fallback font: 73.7–97.2 px of their 104 / 110 px caps (12 Arabic labels at 78.8 px of 104 px — lane B's figure) | re-measured: the same widths as with the font awaited (96.5–110 px of 104 / 110 px) |
+| console errors | the harness page's single 404 | the same single 404 |
+
+Verifying B4-3 in this harness found overlaps beyond the reviewer's report — the first column's value label over the value axis's
+labels ("1200000" / "1234567"), the reference label over an axis label, and the value axis's "0" against the first rotated category
+label (all on `e704272` too); they are fixed in `804d810` with fail-first tests (`chartReviewFix4` RB23, §18). The same harness caught a mistake of the follow-up commit
+`f4db489`, which dropped the engine's label-layout registration as redundant: adjacent value labels overlapped again (5.6 px at 320 / 360 /
+600 px); `bb46b08` restores it, and the table's Review Fix 4 column is measured on `bb46b08`.
+
 ## 16. Performance
 
 Worst cases within the limits, real Chromium, production build of the probe (SVG renderer, `subtle` animation):
@@ -482,28 +555,40 @@ one session with the formal-exam default animation `subtle` (the rows above used
 | `1780f2c` | 1.96 / 2.02 / 2.01 | 3.42 / 3.48 / 3.47 |
 | Review Fix 3 | 1.89 / 2.03 / 1.96 | 3.30 / 3.47 / 3.40 |
 
+Round-4 lane B measured +12 % script time on a page where most labels are cut (0.93–1.04 s against 0.76–0.93 s); it was not raised as a
+finding. Review Fix 4 caches measured widths per font and text (at most 4,000 entries; emptied when a webfont finishes loading) and adds
+the engine's label layout for value labels. The same resize probe, both trees in one session:
+
+| Tree | Script time (s) | Task time (s) |
+|---|---|---|
+| `e704272` | 1.90 / 1.96 / 1.85 | 3.29 / 3.36 / 3.19 |
+| Review Fix 4 (`804d810`) | 1.82 / 1.73 / 1.94 | 3.11 / 2.98 / 3.29 |
+
 ## 17. Bundle (directive §38)
 
 Measured on a production build (`npm run build`, gzip level 9, `scripts/check-bundle-budget.mjs`); baseline = `ff13899`; head = the Review
-Fix 3 tree (`5c12b52`; the review fixes added ~0.5 KB to the shared contract and ~0.6 KB to the lazy chart chunks below, included).
+Fix 4 tree (`bb46b08`; the review fixes added ~0.5 KB to the shared contract, ~1.5 KB to the lazy chart chunks below and 3.0 KB to the
+engine chunk — the label layout —, included; round-4 lane B's note that the record dated these figures to `5c12b52` is answered here).
 
 | Item | Baseline | Head |
 |---|---|---|
-| Initial graph (index.html entry + static imports) | 18 files, 127,309 B gzip | 18 files, 127,614 B gzip (budget 125 KB = 128,000 B, unchanged) |
+| Initial graph (index.html entry + static imports) | 18 files, 127,309 B gzip | 18 files, 127,594 B gzip (budget 125 KB = 128,000 B, unchanged) |
 | Chart code in the initial graph | — | **none** (guard: any chart / engine signature in an initial file fails the build) |
-| Chart code in a no-chart student's first-load graph | — | **No** renderer, engine, editor or selection code in the initial graph or the Student Portal's static closure (guarded). The Portal closure (22 → 23 files, 86,684 → 93,140 B gzip) gains the pure ChartSpec validator (`chartSpec`, 6,151 B gzip) and the renderer's `dataChart` case (~0.2 KB) through the rich-content modules it has loaded since 20D.1 (§22). |
-| Common chart runtime (ECharts core shared chunk + engine module) | — | 182.2 KB gzip (131.7 + 50.5), budget 195 KB, lazy behind DataChart's `import()` |
-| Advanced kinds (radar, box plot, heat map) | — | +17.8 KB gzip, budget 22 KB, lazy |
-| DataChart first paint (figure, list, table, adapter) | — | 5 files beyond the initial graph, 17,575 B ≈ 17.2 KB gzip (DataChart 9,112 B) |
-| Chart editor | — | ChartEditor 6,339 B gzip (14,570 B with its closure) |
-| chartSelection editor | — | 2,896 B gzip (33,882 B with its closure: DataChart, ChartEditor and the confirmation dialog) |
-| Student renderer / teacher review | — | 0.6 / 0.8 KB gzip (624 / 803 B; + DataChart on demand) |
-| AI Composer delta | 33 files, 182,742 B gzip | 36 files, 193,931 B gzip (+11,189 B ≈ 10.9 KB: ChartSpec 6,151 B, the chartSelection model through the shared finalization, the chart helpers, the composer dialog with catalog V3 and the chart descriptor) |
+| Chart code in a no-chart student's first-load graph | — | **No** renderer, engine, editor or selection code in the initial graph or the Student Portal's static closure (guarded). The Portal closure (22 → 23 files, 86,684 → 93,145 B gzip) gains the pure ChartSpec validator (`chartSpec`, 6,151 B gzip) and the renderer's `dataChart` case (~0.2 KB) through the rich-content modules it has loaded since 20D.1 (§22). |
+| Common chart runtime (ECharts core shared chunk + engine module) | — | 185.2 KB gzip (131.9 + 53.3; Review Fix 4's label layout +3.0 KB), budget 195 KB, lazy behind DataChart's `import()` |
+| Advanced kinds (radar, box plot, heat map) | — | +17.7 KB gzip, budget 22 KB, lazy |
+| DataChart first paint (figure, list, table, adapter) | — | 5 files beyond the initial graph, 18,446 B ≈ 18.0 KB gzip (DataChart 9,983 B) |
+| Chart editor | — | ChartEditor 6,338 B gzip (14,576 B with its closure) |
+| chartSelection editor | — | 3,023 B gzip (34,882 B with its closure: DataChart, ChartEditor and the confirmation dialog) |
+| Student renderer / teacher review | — | 0.6 / 0.8 KB gzip (625 / 803 B; + DataChart on demand) |
+| AI Composer delta | 33 files, 182,742 B gzip | 36 files, 193,930 B gzip (+11,188 B ≈ 10.9 KB: ChartSpec 6,151 B, the chartSelection model through the shared finalization, the chart helpers, the composer dialog with catalog V3 and the chart descriptor) |
 
 Guards added to `scripts/check-bundle-budget.mjs` (each shown to fail on a planted defect in a copy of `dist`: an engine signature in an
 initial file, a static engine import from DataChart, chart code in the Student Portal, an oversized advanced chunk): signatures never
 initial nor in the Portal's static closure, every signature present in some chunk, the engine only behind DataChart's dynamic edges, and the
-two lazy budgets. `src/charts/DataChart.21a1.test.tsx` pins the guard's rules and every lazy import literally (mutants B01–B03).
+two lazy budgets. `src/charts/DataChart.21a1.test.tsx` pins the guard's rules and every lazy import literally (mutants B01–B03). Review
+Fix 4 adds one more: the common engine graph must carry the label layout (`addLabelsOfSeries`; it failed on the `f4db489` build, §20.4),
+pinned in `chartReviewFix4` RB25.
 
 ## 18. Fail-first evidence
 
@@ -556,8 +641,9 @@ teacher's `-3` (an absolute value) — the defect itself; it now expects the str
 AI5's year qualifier expectation went from "no pairing" to `120` (the qualifier rule of Review Fix 2; Review Fix 3 removed that rule again,
 below).
 
-Review Fix 3 — the new and changed tests (9 files, 81 tests) were run on `1780f2c` (the round-3 head) in a detached worktree: **32 fail,
-49 pass.**
+Review Fix 3 — the new and changed tests were run on `1780f2c` (the round-3 head) in a detached worktree: of the 81 tests in the 9 files,
+**40 are new or changed: 32 fail there, 8 are pins** (the other 41 are unchanged tests of those files; round-4 finding C4-F8 corrected the
+earlier "32 fail, 49 pass").
 
 | Findings | Suites | On `1780f2c` |
 |---|---|---|
@@ -592,6 +678,25 @@ Changed expectations (each a design change requested by a round-3 finding, none 
 - **The import failure has no retry** (B3-5): the Review Fix 1 test "(2) the import fails once: retry re-imports and draws" is removed —
   in Chromium a failed module import is kept for the life of the page, so that retry could never succeed; the test was passing only
   because the test runner's module mock behaves unlike a browser. A throwing mount keeps its retry (`DataChart.21a1` DC2).
+
+Review Fix 4 — the new and changed tests (7 files, 80 tests on the Review Fix 4 tree) were run on `e704272` (the round-4 head) in a detached
+worktree: **36 are new or changed: 17 fail there, 19 are pins**; the other 44 are unchanged tests of those files.
+
+| Findings | Suites | On `e704272` |
+|---|---|---|
+| R4-A1 word labels and both pairing forms | `composerChart` AI10 R4-A1 (a) / (b) | 2 fail (`[30, 12, 6, 4, 2]` for "for a 30 student class. A had 6, …"; `[30, 25, 28]` for the class sizes listed and the passes written per class) |
+| R4-A5 pie value count, R4-A6 fullwidth digits | `composerChart` AI10 | 2 fail (an extra pie value accepted: `ok`; "Jan １２０, Feb ８٠" read as `[0]`) |
+| C4-F1 a value ends its clause, the day of the month, the refusal wording | `composerChart` AI11 | 2 fail (`[120, 80, 3]` for "… on Mar 3 the site closed …"; the refusal said «… ما كتبه المعلم …») |
+| R4-A2 datum retype | `ChartEditorReviewFix3` RB3h | 1 fail (the key `['s1/c1']` after retyping March — `s1/c3` dropped) |
+| B4-4 late webfont | `DataChartMeasure` RB18c | 1 fail at its first assertion: no measurement cache (the same label measured again: 8 canvas calls instead of 7), and no listener for `loadingdone` |
+| B4-1 pie labels | `chartReviewFix4` RB21 | 1 fail (the label for «طالب وطالبة» on one line instead of two, its name uncut) |
+| B4-2 radar names | `chartReviewFix4` RB22 | 3 fail (the radius a percentage string, not fitted; the radar not part of the width layout) |
+| B4-3 value labels, the reference-line label, the axis gaps | `chartReviewFix4` RB23 | 5 fail (no `labelLayout`; `grid.right` 12 instead of ≥ 25; the reference label `insideEndTop`; no value-axis label gap; no gap beside a rotated first label) |
+| pins of unchanged behaviour | `composerChart` R4-A4 / C4-F3 pins and the renamed AI3 / AI5 / AI9 tests, `ChartEditorReviewFix3` (deleting the category drops the datum entry; the invalid-conversion dialog), `DataChartMountRetry` (C4-F2: both tests), `DataChartMeasure` (the screen and print options), `DataChartReviewFix3` RB1e (C4-F10: the precondition now asserted), `richContentChart` (C4-F5: the stored prose computed independently), `chartReviewFix4` RB21 (one-line labels), RB23 (inside placements) and RB24 (C4-F4 / C4-F6: the isolate, the chart font, the heat-map reserve cap) | pass |
+
+The pins are adequate where a mutant shows it: lane C's surviving mutants are re-planted in §20.4 (RU51–RU59).
+The bundle guard's label-layout check (§17) was run fail-first too: it fails on the `f4db489` build ("the chart engine (common kinds)
+carries no label layout") and passes on `bb46b08`.
 
 Pins (current behaviour that must not change) are labelled as pins: the compatibility freeze (§14), the bundle guard pins (§17).
 
@@ -817,6 +922,11 @@ freeze now kills; RC02: builder drift).
 | RC01 | grading/mcq | MCQ grading inverted (the reviewer's freeze mutant) | KILLED | cert-21a1-compat-freeze.test.js — ai-composer-20f/A-network.js |
 | RC02 | fixture/drift | the acceptance builder drifts from the committed exam | KILLED | cert-21a1-fixture-drift.test.js — the committed acceptance exam is byte-for-byte the builder's output fro |
 
+RB20 / RB21 were killed by `DataChartRetry` tests of the IMPORT-failure retry. Review Fix 3 removed that retry (B3-5) and rewrote the file,
+and with it the only assertions on the throwing-MOUNT retry (focus kept on the figure, no second button, «مرة أخرى»): from `5c12b52` to
+Review Fix 4 these two mutants survived (round-4 finding C4-F2). Review Fix 4 restores the assertions (`DataChartMountRetry`) and
+re-plants both against the current code (RU51 / RU52, §20.4).
+
 ### 20.2 Review Fix 2 campaign
 
 The same runner on the committed Review Fix 2 tree (`7447b17`, clean before and after; every file restored byte-for-byte, SHA-256
@@ -974,6 +1084,107 @@ timeouts.** Overall: 229 distinct planted defects, 224 KILLED, 5 equivalent (C11
 | RT52 | authoring/key | a conversion never reports starter data | KILLED | ChartEditorReviewFix3.21a1.test.tsx — scatter (series «السلسلة 1» and «فرع  |
 | RT53 | authoring/key | an unreadable conversion keeps the key | EQUIVALENT (SURVIVED) | the conversion cannot throw here: the chart editor ran the same conversion before emitting the change |
 
+### 20.4 Review Fix 4 campaign
+
+The same runner on the committed Review Fix 4 tree (`804d810`, clean before and after; every file restored byte-for-byte, SHA-256
+verified, including the regenerated shared build): 59 planted defects in the Review Fix 4 code — 18 lane A / C pairing (RU01–RU18:
+fullwidth digits, the word-label guard, both pairing forms, the clause-ending rule and its connectors, the unit skip, the day-of-month
+rule, the pie value count, the refusal wording), 4 editor (RU19–RU22: the datum slot, pending entries and the bound), 28 rendering
+(RU23–RU50: the measured cut, the pie's two lines and line box, the radar radius and name cap, label layout and its registration, value
+label line boxes and room, the histogram's room, the reference label's placement, cut and margin, the axis gaps, the width layout, the
+late-webfont cache, listener and epoch, the radar's width layout) and lane C's surviving mutants re-planted against the current code
+(RU51–RU59: the mount retry, the isolate and the font of measured cuts, the heat-map reserve cap, the stored prose).
+
+| Round | Planted | KILLED | SURVIVED | TIMEOUT / BUILD_ERROR |
+|---|---|---|---|---|
+| RF4 (`804d810`) | 59 | 43 | 16 (RU02, RU03, RU08, RU14, RU21, RU23, RU26, RU27, RU28, RU29, RU31, RU32, RU35, RU45, RU47, RU50) | 0 / 0 |
+| RF4b (`223698c`, after the pins) | 15 (the survivors but RU45, whose code was removed) | 13 | 2 (RU31, RU47) | 0 / 0 |
+| RF4c (`f4db489`) | 2 (RU47 with its corrected pin; RU30 against the engine module without the registration) | 2 | 0 | 0 / 0 |
+| RF4d (`bb46b08`) | 2 (RU31 with its pin; RU30 again) | 2 | 0 | 0 / 0 |
+
+- **Pins** (`223698c`, `f4db489`, `bb46b08`): `composerChart` AI11 (the word-label guard — "The passing grade is a 50." must not make «A»
+  pair 50 —, a counted noun before the next label, fractional values after month names; it also pins the documented limitation that "Jan
+  12 mm" pairs nothing), `ChartEditorReviewFix3` RB3h (the bound counts the entry being retyped), `chartReviewFix4` RB25 (`fitText` — now
+  exported — never returns the uncut text; the pie and value-label line boxes; the radar radius gives way so the names keep their cap,
+  never below half its default; the histogram's right margin; the engine registers the label layout and the bundle guard requires it),
+  `DataChartMeasure` (a webfont load REBUILDS the option: build-time room follows the new widths), `DataChartReviewFix2` RB22b (a radar
+  lays out by the stage width), `echartsEngine` RB23b (the real engine draws a few of 30 dense value labels, all 30 when `hideOverlap` is
+  off).
+- **One equivalent, its code removed**: RU45 — the right margin never depends on the width, so `widthLayout` no longer carries it.
+- **RU31 was first misjudged as equivalent, which the browser caught**: in the unit tests the rendering library's core installs the label
+  layout itself, so `f4db489` removed the engine's explicit registration as redundant. The real-browser re-run on `f4db489` showed value
+  labels overlapping again: the core's registration is an import side effect that the production build drops (the built engine chunks of
+  `f4db489` — and of `e704272` — contain no label manager). `bb46b08` restores the registration and adds a bundle-guard check (the common
+  engine graph must carry the label manager, `addLabelsOfSeries`) that fails on the `f4db489` build and passes now; the source pin in RB25
+  kills RU31 in the unit campaign.
+- RU47's first pin read its starting margin from the previous test's chart; corrected in `f4db489` (the mutant keeps the margin at 100 px,
+  the rebuilt option has 181 px).
+
+**Review Fix 4: 59 distinct planted defects, 58 KILLED, 1 equivalent (RU45 — its code removed), 0 timeouts.** Overall: 288 distinct planted
+defects, 282 KILLED, 6 equivalent (C11, RS14, RT46, RT49, RT53, RU45).
+
+| Id | Area | Planted defect | Result | Killed by |
+|---|---|---|---|---|
+| RU01 | ai/numbers | fullwidth digits are not normalised | KILLED | composerChart.21a1.test.ts — 21A1-AI10 round-4 lane A: a misreading pairs nothing (R4-A1); pins (R4-A4); a pie keeps ev |
+| RU02 | ai/pairing | a one-letter word label pairs without ":" / "=" | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mutation pins (RU02 |
+| RU03 | ai/pairing | a one-letter word label pairs after spaces | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mutation pins (RU02 |
+| RU04 | ai/pairing | the label list wins over the label's own number (only one form read) | KILLED | composerChart.21a1.test.ts — 21A1-AI10 round-4 lane A: a misreading pairs nothing (R4-A1); pins (R4-A4); a pie keeps ev |
+| RU05 | ai/pairing | a label with two different values pairs the first | KILLED | composerChart.21a1.test.ts — mut |
+| RU06 | ai/pairing | a value need not end its clause | KILLED | composerChart.21a1.test.ts — C4-F1: a day after  |
+| RU07 | ai/pairing | the clause never ends at a label (no connector allowed) | KILLED | composerChart.21a1.test.ts — C4-F1: a day after  |
+| RU08 | ai/pairing | any words may stand between a value and the next label | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mutation pins (RU02 |
+| RU09 | ai/pairing | no connector word before the next label | KILLED | composerChart.21a1.test.ts — C4-F1: a day after  |
+| RU10 | ai/pairing | no proclitic glued to the next label | KILLED | composerChart.21a1.test.ts — C4-F1: the forms th |
+| RU11 | ai/pairing | the unit is not skipped before the clause test | KILLED | composerChart.21a1.test.ts — where the request pairs a category with a number, a single-series |
+| RU12 | ai/pairing | a day of the month pairs as the month's value | KILLED | composerChart.21a1.test.ts — C4-F1: a day after  |
+| RU13 | ai/pairing | every small whole number after a month is a day (unit or not) | KILLED | composerChart.21a1.test.ts — pins (mutants X3 / X4 / X8): numb |
+| RU14 | ai/pairing | a fractional day after a month is a day | KILLED (after its pin; SURVIVED first) | composerChart.21a1.test.ts — mutation pins (RU02 |
+| RU15 | ai/pie | a pie descriptor's value count is not checked | KILLED | composerChart.21a1.test.ts — 21A1-AI10 round-4 lane A: a misreading pairs nothing (R4-A1); pins (R4-A4); a pie keeps ev |
+| RU16 | ai/pie | extra pie values are dropped silently (only too few refused) | KILLED | composerChart.21a1.test.ts — 21A1-AI10 round-4 lane A: a misreading pairs nothing (R4-A1); pins (R4-A4); a pie keeps ev |
+| RU17 | ai/message | the empty-value refusal claims the teacher wrote the value | KILLED | composerChart.21a1.test.ts — C4-F1: a refusal ne |
+| RU18 | ai/message | the swap refusal claims the teacher wrote the value | KILLED | composerChart.21a1.test.ts — C4-F1: a refusal ne |
+| RU19 | authoring/key | a datum entry being retyped is pruned | KILLED | ChartEditorReviewFix3.21a1.test.tsx — clearing the key's cell and typ |
+| RU20 | authoring/key | pending datum entries are dropped by the chart's order | KILLED | ChartEditorReviewFix3.21a1.test.tsx — clearing the key's cell and typ |
+| RU21 | authoring/key | pending entries do not count toward the bound | KILLED (after its pin; SURVIVED first) | ChartEditorReviewFix3.21a1.test.tsx — the bound counts the entry bein |
+| RU22 | authoring/key | a datum slot ignores its category | KILLED | ChartEditorReviewFix3.21a1.test.tsx — deleting the category drops the |
+| RU23 | render/text | a cut that cannot fit returns the uncut text | KILLED (after its pin; SURVIVED first) | chartReviewFix4.21a1.test.ts — RU23: a measured cut never returns the uncut text — empty where not even "…" fits |
+| RU24 | render/pie | a long unit never moves the value to its own line | KILLED | chartReviewFix4.21a1.test.ts — a value whose unit leaves the name no room tak |
+| RU25 | render/pie | the second line's value is not cut to the box | KILLED | chartReviewFix4.21a1.test.ts — a value whose unit leaves the name no room tak |
+| RU26 | render/pie | the pie label has no line box | KILLED (after its pin; SURVIVED first) | chartReviewFix4.21a1.test.ts — RU26 / RU32: pie labels and value labels carry the webfont's line box (1.75 em /  |
+| RU27 | render/radar | the radar radius ignores the names' room | KILLED (after its pin; SURVIVED first) | chartReviewFix4.21a1.test.ts — RU27 / RU28 / RU29: the radar radius shrinks so the names keep their cap — never  |
+| RU28 | render/radar | the radar radius may shrink below half | KILLED (after its pin; SURVIVED first) | chartReviewFix4.21a1.test.ts — RU27 / RU28 / RU29: the radar radius shrinks so the names keep their cap — never  |
+| RU29 | render/radar | the radar names keep their fixed cap | KILLED (after its pin; SURVIVED first) | chartReviewFix4.21a1.test.ts — RU27 / RU28 / RU29: the radar radius shrinks so the names keep their cap — never  |
+| RU30 | render/labels | overlapping value labels are not hidden | KILLED (re-run on f4db489 and bb46b08: killed by the real-engine pin RB23b too) | echartsEngine.21a1.test.ts — 30 seven-digit value labels on a 300 px stage: fewer drawn than ther |
+| RU31 | render/labels | the label layout feature is not registered | KILLED (after its pin, RF4d; SURVIVED twice — invisible to the unbundled unit tests) | chartReviewFix4.21a1.test.ts — RU31: the engine module registers the label layout itself, and the bundle guard requires it; and the bundle guard on a production build (failed on the f4db489 build) |
+| RU32 | render/labels | value labels use the estimated text height | KILLED (after its pin; SURVIVED first) | chartReviewFix4.21a1.test.ts — RU26 / RU32: pie labels and value labels carry the webfont's line box (1.75 em /  |
+| RU33 | render/labels | no right margin for value labels | KILLED | chartReviewFix4.21a1.test.ts — the plot keeps room on its  |
+| RU34 | render/labels | a horizontal bar keeps only half a label beyond its end | KILLED | chartReviewFix4.21a1.test.ts — the plot keeps room on its  |
+| RU35 | render/labels | a histogram keeps no room for its last label | KILLED (after its pin; SURVIVED first) | chartReviewFix4.21a1.test.ts — RU35: a histogram keeps room on its right for its widest count |
+| RU36 | render/reference | the reference label stays inside with value labels on | KILLED | chartReviewFix4.21a1.test.ts — with value labels above the |
+| RU37 | render/reference | the reference label moves outside beside a secondary axis | KILLED | chartReviewFix4.21a1.test.ts — without value labels, on ho |
+| RU38 | render/reference | the reference label starts inside the last column's label room | KILLED | chartReviewFix4.21a1.test.ts — with value labels above the |
+| RU39 | render/reference | no margin reserved for the outside reference label | KILLED | chartReviewFix4.21a1.test.ts — with value labels above the |
+| RU40 | render/reference | the outside reference label is not cut | KILLED | chartReviewFix4.21a1.test.ts — with value labels above the |
+| RU41 | render/axis | no left gap for the first column's value label | KILLED | chartReviewFix4.21a1.test.ts — the first column's value la |
+| RU42 | render/axis | no gap beside a rotated first category label | KILLED | chartReviewFix4.21a1.test.ts — the first column's value la |
+| RU43 | render/width | the width layout ignores the radar | KILLED | chartReviewFix4.21a1.test.ts — the radar layout is part of the width layout (a width |
+| RU44 | render/width | the width layout ignores the value axis's gap | KILLED | chartReviewFix4.21a1.test.ts — the first column's value la |
+| RU45 | render/width | the width layout ignores the grid's right margin | EQUIVALENT (SURVIVED) — code removed | the right margin never depends on the width (it follows the values, the labels and the compact class, itself an input): widthLayout no longer carries it (223698c) |
+| RU46 | render/fonts | a webfont load leaves the measure cache | KILLED | DataChartMeasure.21a1.test.tsx — loadingdone re-applies the optio |
+| RU47 | render/fonts | the option ignores the font epoch | KILLED (after its pin, corrected in RF4c; SURVIVED twice) | DataChartMeasure.21a1.test.tsx — the option is BUILT again with t |
+| RU48 | render/fonts | the font listener is never registered | KILLED | DataChartMeasure.21a1.test.tsx — loadingdone re-applies the optio |
+| RU49 | render/fonts | the applied inputs ignore the font epoch | KILLED | DataChartMeasure.21a1.test.tsx — loadingdone re-applies the optio |
+| RU50 | render/width | a radar does not lay out by width | KILLED (after its pin; SURVIVED first) | DataChartReviewFix2.21a1.test.tsx — after a width change the applied radar |
+| RU51 | ux/retry | the retry is offered again after a second mount failure | KILLED | DataChartMountRetry.21a1.test.tsx — fails twice: |
+| RU52 | ux/retry | focus is not kept on the figure when retrying | KILLED | DataChartMountRetry.21a1.test.tsx — fails twice: |
+| RU53 | ux/retry | a second mount failure repeats the first message | KILLED | DataChartMountRetry.21a1.test.tsx — fails twice: |
+| RU54 | render/text | a cut axis label loses its isolate | KILLED | chartReviewFix4.21a1.test.ts — a cut Arabi |
+| RU55 | render/text | a one-line pie label's name loses its isolate | KILLED | chartReviewFix4.21a1.test.ts — a pie label |
+| RU56 | render/text | cuts are measured in a fixed font | KILLED | chartReviewFix4.21a1.test.ts — a cut Arabi |
+| RU57 | render/heatmap | the heat-map row reserve is not capped | KILLED | chartReviewFix4.21a1.test.ts — heat-map co |
+| RU58 | contract/size | the stored prose leaves out the description | KILLED | richContentChart.21a1.test.ts — a chart's stored prose is exactly its title, description and source — computed here indepe |
+| RU59 | contract/size | the stored prose leaves out the source | KILLED | richContentChart.21a1.test.ts — a chart's stored prose is exactly its title, description and source — computed here indepe |
+
 ## 21. Independent review
 
 Round 1 — three read-only lanes on `a788539` (each: no writes to the repository, probes in scratch copies only):
@@ -1013,10 +1224,47 @@ Round 3 — the same three lanes on `1780f2c`:
 pairing redesign); R3-A4, B3-3 and lane C N8 in §9; R3-A6 in §4.1; R3-A7 and lane C N4 / N5 with pins (§18, §20.3); B3-1 … B3-6 in §10 and
 §15; R3-A8 and lane C N6 / N7 / N9 in §11, §18, §20.1, §21 and §22. Verifying in real Chromium found one more defect in the fix itself (the
 print height outliving the print), fixed fail-first before the commit (§15). Fail-first evidence is in §18, the mutation proof in §20.3.
-Round 4 follows on the new exact head.
+
+Round 4 — the same three lanes on `e704272`:
+
+| Lane | Verdict | Earlier findings | New findings |
+|---|---|---|---|
+| A‴ | FINDINGS | R3-A2 … R3-A8 resolved (R3-A4: no key points at another target); R3-A1 partially | R4-A1 MAJOR the pairing still invented pairings (the article "a" read as the label "A"; a label in a list AND with its own number read from the list only): correct charts refused, swaps accepted; R4-A2 MAJOR a `datum` key entry dropped silently when its value cell was cleared to retype it (the student's intended answer scored 0); R4-A3 MINOR §11 "Not verified" incomplete; R4-A4 MINOR four pairing rules unpinned; R4-A5 MINOR extra pie values dropped silently; R4-A6 NIT fullwidth digits read in the pairing but not in the number check |
+| B‴ | FINDINGS | B3-1 … B3-6 resolved (B3-2 for axis labels); N-1 … N-7 resolved | B4-1 MAJOR a pie label with a long unit was not cut at all (207–326 px drawn over the pie and its neighbours; a Review Fix 3 regression: a cut to a negative width returned the uncut text); B4-2 MINOR radar axis names outside the canvas; B4-3 MINOR value labels over one another and under the reference-line label; B4-4 NIT cuts not re-measured when the webfont arrives late; §16 +12 % script time on a heavily cut page (not raised as a finding); §17 numbers dated to `5c12b52` |
+| C‴ | FINDINGS | N1 … N8 resolved; N9 partially (the PR body's 19D wording) | C4-F1 MAJOR the claim "a misread pairing cannot refuse a correct chart" was false (a day after a month, a count before more words), and the refusal said the teacher "wrote" a value the code inferred; C4-F2 MINOR the Review Fix 3 `DataChartRetry` rewrite dropped the only mount-retry assertions (RB20 / RB21 survive); C4-F3 MINOR seven pairing rules untested; C4-F4 MINOR the isolate and the font of measured cuts untested; C4-F5 MINOR the stored-prose test derived its bound from the code under test; C4-F6 NIT the heat-map row reserve cap untested; C4-F7 NIT Review Fix 2 wording left in the composer and its tests; C4-F8 NIT the Review Fix 3 fail-first counts; C4-F9 NIT the PR body's 19D wording; C4-F10 NIT a vacuous precondition in RB1e |
+
+**Review Fix 4** (`804d810`, `223698c`, `f4db489`, `bb46b08` and the record) addresses every round-4 finding:
+- R4-A1, C4-F1, R4-A5, R4-A6 in §11 (both pairing forms, word labels, a value ends its clause, the day-of-month rule, the pie value count,
+  fullwidth digits; the claim corrected and the refusal reworded); R4-A3 in §11 "Not verified"; R4-A4 and C4-F3 with pins (`composerChart`
+  AI10 / AI11);
+- R4-A2 in §9 (`ChartEditorReviewFix3` RB3h);
+- B4-1 … B4-4 in §10 (`chartReviewFix4` RB21–RB24, `DataChartMeasure` RB18c); verifying B4-3 in Chromium showed three more overlaps — the
+  first column's value label over the value axis's labels, the reference-line label over an axis label, the value axis's "0" against the
+  first rotated category label (all on `e704272` too) — fixed with fail-first tests (§15, §18);
+- C4-F2 with `DataChartMountRetry` (§20.1, §20.4); C4-F4 / C4-F6 with `chartReviewFix4` RB24; C4-F5 with an independent stored-prose pin
+  (`richContentChart`); C4-F7 in the composer comments and test titles; C4-F8 in §18; C4-F9 in the PR body; C4-F10 in `DataChartReviewFix3`
+  (the mount option is captured and the precondition asserted unconditionally); lane B's §16 / §17 notes in §16 / §17.
+
+The mutation campaign (§20.4) added ten pin tests (they kill the fifteen non-equivalent survivors) and removed a width-layout entry that
+did nothing; its follow-up `f4db489` also removed the
+engine's label-layout registration as redundant, which the real-browser re-run showed was a mistake (the production build drops the core's
+own registration) — restored in `bb46b08` and now required by the bundle guard. Fail-first evidence is in §18, browser evidence in §15, the mutation proof in §20.4. Round 5 follows on the new
+exact head.
 
 ## 22. Known limitations
 
+- **Reference-line labels on horizontal bars and beside a secondary value axis** stay inside the plot (Review Fix 4 moves them out only
+  for vertical columns without a secondary axis, where the right margin is free): with value labels on, such a label can still lie over a
+  value label — the engine's overlap hiding covers value labels among themselves, not reference-line labels. The reference value is also
+  on the value axis, and every value is in the table, the tooltip and the selection list.
+- **The AI pairing check is a heuristic over free text** (§11): Review Fix 4 removed the misreadings the round-4 review found, but a
+  phrasing outside the documented forms can still be misread, and a misread number that is another category's value refuses a correct
+  chart (the refusal asks the model to check the request; the section repair is bounded) — the teacher can always author the chart directly.
+- `src/questionTypes/coding.17e-b.test.tsx:435` (phase 17E, untouched by this branch) failed once in CI on `bb46b08`: its hidden-value canary
+  `/…|9\.17|…/` matched the request timestamp `"expectedStartedAt":"…T23:05:19.176Z"` ("19.176" contains "9.17") — the same timestamp class
+  as the 19D and 19C canaries below. No secret leaked. Proposed fix (outside this phase's scope, not applied): anchor it as `(?<!\d)9\.17`.
+- The first local full run on `bb46b08` hit the documented flaky test `src/GovernancePanel.14b.test.tsx` (AGENTS.md §12: the 409 conflict
+  alert); it passed when re-run alone and in the second full run (823 files, 10,936 tests).
 - **Student path carries the pure chart contract**: the rich-content validator, which the Student Portal has loaded statically since 20D.1,
   now validates `dataChart` blocks, so the ChartSpec validator (6,151 B ≈ 6.0 KB gzip, no rendering code) rides with it. The initial graph carries
   no chart code at all, and the Portal's static closure carries no renderer, engine, editor or selection code (both bundle-guarded).
