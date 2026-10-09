@@ -24,10 +24,11 @@ describe("21B isolated teacher laboratory", () => {
     const input = within(dialog).getByRole("textbox", { name: "معادلة السطح" });
     fireEvent.change(input, { target: { value: "x+z" } });
     expect(within(dialog).getByRole("alert").textContent).toContain("SURFACE_VARIABLE_INVALID");
-    expect(document.body.querySelector("svg")).toBeNull();
+    expect(within(dialog).queryByRole("img", { name: /سطح ثلاثي الأبعاد للدالة/ })).toBeNull();
     fireEvent.change(input, { target: { value: "x^2+y^2" } });
     fireEvent.change(within(dialog).getByRole("spinbutton", { name: "دقة الشبكة" }), { target: { value: "100" } });
     expect(within(dialog).getByRole("alert").textContent).toContain("SURFACE_NUMBER_INVALID");
+    expect(within(dialog).queryByRole("img", { name: /سطح ثلاثي الأبعاد للدالة/ })).toBeNull();
   });
   it("opens from real exam builder and never saves or changes the exam", async () => {
     const e = { schemaVersion: 2, examId: "ex-21b-lab", title: "رياضيات", status: "draft",
