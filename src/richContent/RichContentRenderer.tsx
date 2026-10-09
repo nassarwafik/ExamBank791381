@@ -15,6 +15,8 @@ const DataChart = lazy(() => import("../charts/DataChart"));
 // Phase 21A.2 — the function-graph runtime (owned SVG renderer) is its own lazy chunk: a document without a graph never downloads it.
 const FunctionGraphView = lazy(() => import("../functionGraphs/FunctionGraphView"));
 const Surface3DView = lazy(() => import("../functionSurfaces/Surface3DView"));
+// Phase 21C — general interactive 3D scene runtime stays behind a separate lazy edge.
+const Interactive3DView = lazy(() => import("../interactive3d/Interactive3DView"));
 
 const CALLOUT_LABEL: Record<string, string> = { info: "معلومة", note: "ملاحظة", warning: "تحذير", success: "إرشاد", important: "مهم" };
 const CALLOUT_ICON: Record<string, string> = { info: "i", note: "✎", warning: "!", success: "✓", important: "★" };
@@ -153,6 +155,11 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "functionSurface3D": return (
       <Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p><p dir="ltr">z = {b.surface.expression}</p></div>}>
         <Surface3DView spec={b.surface} />
+      </Suspense>
+    );
+    case "interactive3D": return (
+      <Suspense fallback={<div className="i3d-pending" aria-busy="true"><p dir="auto">{b.scene.title}</p><p dir="auto">{b.scene.description}</p></div>}>
+        <Interactive3DView spec={b.scene} />
       </Suspense>
     );
   }
