@@ -19,11 +19,12 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   labelDiagram: "يضع الطالب تسميات من بنك على مناطق ظاهرة في الرسم (سحبًا أو اختيارًا)؛ تصحيح تلقائي لكل منطقة بعلامة جزئية.",
   chartSelection: "يختار الطالب من رسم بياني تفاعلي فئة أو سلسلة أو قيمة أو نقطة أو نطاقًا (بالنقر أو بلوحة المفاتيح)؛ تصحيح تلقائي على معنى البيانات لا على البكسلات.",
   functionGraphSelection: "رسم دالة رياضية من تعبير يكتبه المعلم (y = f(x)، دوال متعددة القواعد، منحنيات وسيطية)؛ يختار الطالب منحنى أو نقطة أو مستقيمًا أو مماسًا أو منطقة، وتصحيح تلقائي على العناصر لا على البكسلات.",
+  scene3DSelection: "نموذج 3D قابل للدوران والتكبير مع اختيار دلالي وتصحيح تلقائي.",
   openResponse: "مقال أو شرح أو تعليل أو مقارنة أو تحليل: يكتب الطالب إجابة نصية، ويصحّحها المعلم بسلم تقييم (معايير ومستويات) ويحسب الخادم الدرجة.",
   smartSim: "محاكاة موثوقة من المنصة نفسها (أولها مخطط شبكة: راوتر وسويتش وحواسيب): يضبط الطالب الأجهزة داخل الامتحان، ويُعاد بناء الحالة على الخادم وتُصحَّح فحوص خاصة بأوزان مع علامة جزئية.",
   parametricNumeric: "سؤال رقمي بمعطيات متغيرة: قيم مختلفة لكل طالب ومحاولة من متغيرات وقيود، وتعبير إجابة خاص يُحسب على الخادم؛ تصحيح تلقائي بتسامح أو مدى."
 });
-const ICONS: Readonly<Record<string, string>> = Object.freeze({ chartSelection: "▥", functionGraphSelection: "∿", multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", composite: "▣▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡", openResponse: "¶", smartSim: "⧉" });
+const ICONS: Readonly<Record<string, string>> = Object.freeze({ chartSelection: "▥", functionGraphSelection: "∿", scene3DSelection: "◇3D", multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", composite: "▣▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙", coding: "</>", networkCli: ">#", inlineCloze: "▭▾", parametricNumeric: "ƒx", hotspot: "⌖", labelDiagram: "⊡", openResponse: "¶", smartSim: "⧉" });
 // Phase 17A — factual chips that replace the generic grading-mode chip where the CURRENT behaviour differs from the type's
 // designed mode: coding@1 is designed hybrid but grades manually until a trusted executor exists — never «تصحيح تلقائي».
 const GRADING_CHIP_OVERRIDES: Readonly<Record<string, readonly string[]>> = Object.freeze({ coding: Object.freeze(["تصحيح يدوي حاليًا", "إجابة برمجية"]) });

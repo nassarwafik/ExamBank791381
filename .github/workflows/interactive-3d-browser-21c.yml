@@ -1,0 +1,44 @@
+name: Phase 21C Real Chromium Certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/interactive3d/**"
+      - "src/scene3DSelectionQuestion.ts"
+      - "src/questionTypes/editors/Scene3DSelectionEditor.tsx"
+      - "src/questionTypes/student/Scene3DSelectionResponse.tsx"
+      - "browser-harness/interactive-3d.*"
+      - "scripts/check-interactive-3d-browser-21c.mjs"
+      - "docs/enterprise-interactive-3d-objects-21c.md"
+      - ".github/workflows/interactive-3d-browser-21c.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: 21C geometry anatomy chemistry RTL mobile pointer keyboard print
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production assets and browser core
+        run: |
+          npm ci
+          npm run build
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
+          command -v google-chrome
+      - name: Certify real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-21c
+        run: node scripts/check-interactive-3d-browser-21c.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: interactive-3d-21c-browser
+          path: .harness-21c/
+          retention-days: 7

@@ -84,9 +84,10 @@ describe("21A1-RC1 the dataChart block", () => {
     expect(R.richContentPlainText(doc({ type: "dataChart", chart: plain }), { storedOnly: true })).toBe([plain.title, plain.description, ""].join("\n"));
   });
   it("an older reader's vocabulary (the 15 baseline types) keeps its order as visual blocks are appended", () => {
-    expect(R.RICH_BLOCK_TYPES.indexOf("dataChart")).toBe(R.RICH_BLOCK_TYPES.length - 3);
-    expect(R.RICH_BLOCK_TYPES.indexOf("functionGraph")).toBe(R.RICH_BLOCK_TYPES.length - 2);
-    expect(R.RICH_BLOCK_TYPES.indexOf("functionSurface3D")).toBe(R.RICH_BLOCK_TYPES.length - 1);
+    expect(R.RICH_BLOCK_TYPES.indexOf("dataChart")).toBe(R.RICH_BLOCK_TYPES.length - 4);
+    expect(R.RICH_BLOCK_TYPES.indexOf("functionGraph")).toBe(R.RICH_BLOCK_TYPES.length - 3);
+    expect(R.RICH_BLOCK_TYPES.indexOf("functionSurface3D")).toBe(R.RICH_BLOCK_TYPES.length - 2);
+    expect(R.RICH_BLOCK_TYPES.indexOf("interactive3D")).toBe(R.RICH_BLOCK_TYPES.length - 1);
     expect(R.RICH_BLOCK_TYPES.indexOf("math")).toBe(14);
   });
 });

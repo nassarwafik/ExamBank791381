@@ -41,7 +41,7 @@ const SECRETS = new RegExp([GUIDE, MODEL, '"guidance"', '"modelAnswer"', '"rubri
 describe("19E — catalog identity and the registered grader", () => {
   it("23 production types; openResponse@1 is manual, partial-credit, offline, never a compound part, never auto-graded", () => {
     const catalog = require_("../src/lib/shared-finalization/questionTypeCatalog.js");
-    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(27);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
+    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
     expect(catalog.QUESTION_TYPE_CATALOG.slice(-2, -1).map(d => [d.key, d.version, d.label, d.legacy])).toEqual([["openResponse", 1, "إجابة مفتوحة مع سلم تقييم", false]]);
     const d = catalog.questionTypeDefinition("openResponse");
     expect(d).toMatchObject({ key: "openResponse", version: 1, gradingMode: "manual", responseKinds: ["text"] });

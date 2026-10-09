@@ -182,7 +182,7 @@ describe("20A.1-P — backward compatibility PINS (persisted data unchanged)", (
     expect(validateSmartSimQuestion({ presentationType: "smartSim", questionTypeVersion: 1, smartSim: env, answer: { scoring: "proportional", checks: twoLanDemoChecks() } })).toEqual([]);
   });
   it("the question-type catalog stays at 24 (smartSim is ONE generic type; future domains are plugins, not types)", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(27);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
+    expect(QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
     expect(QUESTION_TYPE_CATALOG.filter(d => /simulation|smartSim/i.test(d.key)).map(d => d.key).sort()).toEqual(["simulation", "smartSim"]);
   });
   it("networkTopology@1 does NOT accept generic rules it never opted into", () => {

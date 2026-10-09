@@ -34,6 +34,8 @@ const { bindChartSelectionAnswerToQuestion, normalizeChartSelectionAnswer } = re
 // score, coordinates or extra fields are dropped). Bound to its functionGraphSelection@1 question it must name the question's own graph,
 // known targets of the selectable kind only, no duplicates, within the selection bound — otherwise REFUSED; on any other question it is refused.
 const { bindFunctionGraphSelectionAnswerToQuestion, normalizeFunctionGraphSelectionAnswer } = require("./shared-finalization/functionGraphSelectionQuestion");
+// Phase 21C — semantic 3D answers: exact { kind, sceneId, targets }, rebound to the published scene and target kind.
+const { bindScene3DSelectionAnswerToQuestion, normalizeScene3DSelectionAnswer } = require("./shared-finalization/scene3DSelectionQuestion");
 // Phase 19E — an answer on an openResponse question is rebuilt to exactly { kind: "text", value } (a client score / rubric awards /
 // model answer / comment are dropped), the text kept verbatim and bounded by the question's maxChars (over-long ⇒ rejected, never
 // truncated); any other kind is rejected.
@@ -76,6 +78,8 @@ const isChartSelection = a => !!a && typeof a === "object" && a.kind === "chartS
 const isChartSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "chartSelection";
 const isFunctionGraphSelection = a => !!a && typeof a === "object" && a.kind === "functionGraphSelection";
 const isFunctionGraphSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "functionGraphSelection";
+const isScene3DSelection = a => !!a && typeof a === "object" && a.kind === "scene3DSelection";
+const isScene3DSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "scene3DSelection";
 const isSmartSim = a => !!a && typeof a === "object" && a.kind === "smartSim";
 const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "smartSim";
 
@@ -94,6 +98,7 @@ function bindAnswer(id, a, q, bound, reject, placement) {
   if (isHotspot(a) || (bound && isHotspotQuestion(q))) return bound ? (isHotspotQuestion(q) ? bindHotspotAnswerToQuestion(a, q) : { ok: false, code: "HOTSPOT_QUESTION_MISMATCH" }) : normalizeHotspotAnswer(a);
   if (isChartSelection(a) || (bound && isChartSelectionQuestion(q))) return bound ? (isChartSelectionQuestion(q) ? bindChartSelectionAnswerToQuestion(a, q) : { ok: false, code: "CHART_SELECTION_QUESTION_MISMATCH" }) : normalizeChartSelectionAnswer(a);
   if (isFunctionGraphSelection(a) || (bound && isFunctionGraphSelectionQuestion(q))) return bound ? (isFunctionGraphSelectionQuestion(q) ? bindFunctionGraphSelectionAnswerToQuestion(a, q) : { ok: false, code: "GRAPH_SELECTION_QUESTION_MISMATCH" }) : normalizeFunctionGraphSelectionAnswer(a);
+  if (isScene3DSelection(a) || (bound && isScene3DSelectionQuestion(q))) return bound ? (isScene3DSelectionQuestion(q) ? bindScene3DSelectionAnswerToQuestion(a, q) : { ok: false, code: "SCENE3D_SELECTION_QUESTION_MISMATCH" }) : normalizeScene3DSelectionAnswer(a);
   if (bound && isLabelDiagramQuestion(q)) return bindLabelDiagramAnswerToQuestion(a, q);
   if (bound && isOpenResponseQuestion(q)) return bindOpenResponseAnswerToQuestion(a, q);
   if (bound && isParametricQuestion(q)) return bindParametricNumericAnswer(a);
@@ -184,7 +189,7 @@ const CHILD_ANSWER_SHAPES = {
   multiChoice: a => Array.isArray(a.optionIds),
   numeric: a => typeof a.value === "string" && (a.unit === undefined || typeof a.unit === "string"),
   // rebuilt / normalized by their own binders above (the binder already refused anything malformed)
-  simulation: () => true, code: () => true, codeTemplate: () => true, smartSim: () => true, networkCli: () => true, hotspot: () => true, chartSelection: () => true, functionGraphSelection: () => true
+  simulation: () => true, code: () => true, codeTemplate: () => true, smartSim: () => true, networkCli: () => true, hotspot: () => true, chartSelection: () => true, functionGraphSelection: () => true, scene3DSelection: () => true
 };
 const childAnswerWellFormed = a => isPlain(a) && typeof a.kind === "string" && Object.prototype.hasOwnProperty.call(CHILD_ANSWER_SHAPES, a.kind) && CHILD_ANSWER_SHAPES[a.kind](a);
 function bindCompositeAnswer(id, a, q, bound, reject) {

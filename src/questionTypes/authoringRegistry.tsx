@@ -37,6 +37,8 @@ registerAuthoringEditor("labelDiagram", 1, lazy(() => import("./editors/LabelDia
 registerAuthoringEditor("chartSelection", 1, lazy(() => import("./editors/ChartSelectionEditor")));
 // Phase 21A.2 — function-graph selection authoring (lazy: the graph editor, the preview and the key picker never enter the initial graph).
 registerAuthoringEditor("functionGraphSelection", 1, lazy(() => import("./editors/FunctionGraphSelectionEditor")));
+// Phase 21C — interactive 3D scene + semantic key authoring.
+registerAuthoringEditor("scene3DSelection", 1, lazy(() => import("./editors/Scene3DSelectionEditor")));
 registerAuthoringEditor("openResponse", 1, lazy(() => import("./editors/OpenResponseEditor")));
 // Phase 20A — trusted SmartSim authoring (lazy: the plugin editor — topology, devices, links, private checks — never enters the initial graph).
 registerAuthoringEditor("smartSim", 1, lazy(() => import("./editors/SmartSimEditor")));

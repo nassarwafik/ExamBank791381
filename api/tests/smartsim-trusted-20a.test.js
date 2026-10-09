@@ -54,7 +54,7 @@ const withBalance = () => { undo.push(loadShared("trustedSimRegistry").registerS
 
 describe("20A-S1 — smartSim@1 is a registered, version-bound authoritative grader", () => {
   it("catalog: 24 types, smartSim last, auto / partial / interactive / offline, not compound; grader for v1 only; the production plugin set is networkTopology@1 + the 20A.2 pilots", () => {
-    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(27);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
+    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
     expect(catalog.QUESTION_TYPE_CATALOG.at(-1).key).toBe("smartSim");
     expect(catalog.questionTypeDefinition("smartSim")).toMatchObject({ version: 1, gradingMode: "auto", legacy: false, responseKinds: ["smartSim"] });
     expect(catalog.questionTypeDefinition("smartSim").capabilities).toMatchObject({ autoGrading: true, partialCredit: true, compoundPart: false, interactive: true, offline: true });

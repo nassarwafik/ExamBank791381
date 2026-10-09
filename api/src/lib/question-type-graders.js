@@ -41,6 +41,8 @@ const chartSelection = require("./shared-finalization/chartSelectionQuestion");
 // FunctionGraphSpecV1 authority) and the PRIVATE key before any target is compared (malformed authority ⇒ 0 + manual review). Only the
 // student's semantic target keys on the SAME graph are read — never coordinates, pixels, zoom or a client score.
 const functionGraphSelection = require("./shared-finalization/functionGraphSelectionQuestion");
+// Phase 21C — scene3DSelection@1: server-authoritative semantic target scoring on the strict 3D scene contract.
+const scene3DSelection = require("./shared-finalization/scene3DSelectionQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -169,6 +171,10 @@ registerBuiltIn("chartSelection", (question, response, max) => {
 });
 registerBuiltIn("functionGraphSelection", (question, response, max) => {
   const r = functionGraphSelection.scoreFunctionGraphSelection({ config: question.functionGraphSelection, answerKey: question.answer, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("scene3DSelection", (question, response, max) => {
+  const r = scene3DSelection.scoreScene3DSelection({ config: question.scene3DSelection, answerKey: question.answer, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
 registerBuiltIn("inlineCloze", (question, response, max) => {
