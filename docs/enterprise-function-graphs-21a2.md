@@ -333,3 +333,23 @@ Deploy), independent review, owner merge.
 4. The temporary read-only mirror-audit workflow must be deleted before final certification (it is an implementation aid, not a product workflow).
 
 No assertion of merged, deployed, or feature-complete status is made here.
+
+
+## 15. Exact-head CI evidence and remaining owner gates — 9 October 2026
+
+This section supersedes the *CI status* in §13 and §14, which describe earlier heads and must not be interpreted as live failures.
+
+- Verified PR #278 remains **DRAFT**, unmerged, targeting `main` at `6e4a5efcef8c2b6391344266405f31539d8c3e72`.
+- Verified exact branch head: `067a69f75b0e362247c84da617c06bfd47130571` (strict lazy-composer bundle marker V4).
+- Exact-head CI **SUCCESS**: Azure Static Web Apps CI/CD workflow run `37899342002` (Quality Gate / Tests & Build and Build & Deploy); Coding Runner Security & Smoke Tests run `37899341927`; Phase 21A2 Real Chromium Certification run `37899342006`.
+- The previous `a7542a13` failure of eight tests is **historical**, not a current-head claim. The exact-head lint gate reports **105 warnings, zero errors**; existing baseline warnings must not be silently counted as feature failures.
+- Additional files subsequently committed: `cert-21a2-platform-lifecycle.test.js`, `cert-21a2-adversarial.test.js`, `functionGraphUx.21a2.test.tsx`, `graphScene.21a2.test.ts`, `functionGraphPerformance.21a2.test.ts`, plus the real-Chromium certification workflow and browser harness. Their inclusion is evidenced by the branch tree and exact-head passing workflows; the exact ledger should be preserved before owner sign-off.
+
+### Still open — do not merge
+
+1. **Targeted mutation campaign (30–40)** with reproducible mutant IDs, test-kill ledger, equivalence analysis, and hash-verified clean restoration. The hostile-payload certification is not a substitute for mutation testing.
+2. **One independent read-only review** at an explicitly pinned, final head, with BLOCKER/MAJOR remediation and requalification as necessary. The PR currently has no submitted review.
+3. **Final consolidated certification report**: exact test counts, lint baseline comparison, performance timings, bundle and CJS mirror check, Chromium device/RTL/touch/keyboard/print findings, and CI links from the final head.
+4. **Explicit owner approval** prior to merging PR #278. Keep auto-merge disabled and PR in DRAFT until the review gates are satisfied.
+
+No assertion of full enterprise certification, independent approval, or merge is made by this update.
