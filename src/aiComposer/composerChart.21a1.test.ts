@@ -22,7 +22,8 @@ const codes = (r: { ok: boolean; issues?: { code: string }[] }) => (r.ok ? [] : 
 
 describe("21A1-AI1 catalog V3 and the chart capability", () => {
   it("the catalog is V3, dataChart is an AI rich block of the 20D.1 vocabulary, and the prompt states the chart contract", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V3");
+    // Phase 21A.2: V4 extends V3 with explicit-function graphs; 21A.1 chart contract stays unchanged.
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V4");
     expect(COMPOSER_RICH_BLOCKS).toContain("dataChart");
     for (const b of COMPOSER_RICH_BLOCKS) expect(RICH_BLOCK_TYPES).toContain(b);
     const p = catalogForPrompt(buildComposerCatalog());
