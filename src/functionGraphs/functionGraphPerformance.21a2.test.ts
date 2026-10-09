@@ -28,6 +28,7 @@ describe("21A2-PERF bounded heavy graph at 320 / 1280px", () => {
     const r = validateFunctionGraphSpec(g);
     const validationMs = performance.now() - t0;
     expect(r.ok, JSON.stringify(r.issues)).toBe(true);
+    if (!r.ok) throw new Error("Expected valid heavy graph: " + JSON.stringify(r.issues));
     expect(r.value).toBeDefined();
     const ms: Record<string, number> = {};
     const evaluations: Record<string, number> = {};
