@@ -29,6 +29,8 @@ function answered(a) {
         return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");
     if (a.kind === "hotspot")
         return Array.isArray(a.points) && a.points.length > 0;
+    if (a.kind === "chartSelection")
+        return Array.isArray(a.targets) && a.targets.length > 0;
     if (a.kind === "smartSim")
         return Array.isArray(a.actions) && a.actions.length > 0;
     if (a.kind === "composite")

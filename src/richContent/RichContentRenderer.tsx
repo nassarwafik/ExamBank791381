@@ -10,6 +10,8 @@ import "./rich-content.css";
 // Heading outline: the exam page owns h1 (exam title) and h2 (page / section heading), so content headings never rise above h3:
 // author level 2 → <h3>, level 3 → <h3>, level 4 → <h4>. The author's level is kept on data-xp-level for styling.
 const RichMath = lazy(() => import("./RichMath"));
+// Phase 21A.1 — data charts: the chart component (and, behind it, the rendering engine) loads only when a chart block is rendered.
+const DataChart = lazy(() => import("../charts/DataChart"));
 
 const CALLOUT_LABEL: Record<string, string> = { info: "معلومة", note: "ملاحظة", warning: "تحذير", success: "إرشاد", important: "مهم" };
 const CALLOUT_ICON: Record<string, string> = { info: "i", note: "✎", warning: "!", success: "✓", important: "★" };
@@ -135,6 +137,11 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "keyValueGrid": return <dl className="xp-kv">{b.items.map((it, i) => <div key={i}><dt>{it.label}</dt><dd dir="auto">{it.value}</dd></div>)}</dl>;
     case "columns": return <div className="xp-columns">{b.columns.map((c, i) => <div className="xp-column" key={i}><Blocks blocks={c.blocks} /></div>)}</div>;
     case "math": return <MathBlock source={b.source} />;
+    case "dataChart": return (
+      <Suspense fallback={<figure className="xp-chart-pending" aria-busy="true"><figcaption dir="auto">{b.chart.title}</figcaption><p dir="auto">{b.chart.description}</p></figure>}>
+        <DataChart spec={b.chart} />
+      </Suspense>
+    );
   }
   return null;
 }

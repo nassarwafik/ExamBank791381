@@ -213,7 +213,11 @@ function applyParametricProjection(out, source, ctx) {
 // `answer`, blanked like every key. The image is the question's canonical `image`, delivered by the existing media path.
 const { projectHotspotConfigForStudent } = require("./shared-finalization/hotspotQuestion");
 const { projectLabelDiagramConfigForStudent } = require("./shared-finalization/labelDiagramQuestion");
+// Phase 21A.1 — chartSelection: the public config (the declarative chart + target kind + mode + bound) is REBUILT through its strict
+// projection (the chart through the ONE ChartSpecV1 authority); a config smuggling any other field (a correct target) is withheld whole.
+const { projectChartSelectionConfigForStudent } = require("./shared-finalization/chartSelectionQuestion");
 function applyVisualProjection(node) {
+  if ("chartSelection" in node) { const p = projectChartSelectionConfigForStudent(node.chartSelection); if (p) node.chartSelection = p; else delete node.chartSelection; }
   if ("hotspot" in node) { const p = projectHotspotConfigForStudent(node.hotspot); if (p) node.hotspot = p; else delete node.hotspot; }
   if ("labelDiagram" in node) { const p = projectLabelDiagramConfigForStudent(node.labelDiagram); if (p) node.labelDiagram = p; else delete node.labelDiagram; }
 }

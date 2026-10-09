@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeAll, vi } from "vitest";
 import { Suspense } from "react";
 import { render, cleanup, fireEvent, act, screen } from "@testing-library/react";
 import fs from "node:fs";
@@ -21,6 +21,12 @@ const read = (p: string) => fs.readFileSync(path.join(repo, p), "utf8");
 const studentQ = (e: unknown) => (sanitizeExamForStudent(e) as { sections: { questions: unknown[] }[] }).sections[0].questions[0] as Question;
 const settle = async (container: HTMLElement) => { for (let i = 0; i < 60; i++) { await act(async () => { await new Promise(r => setTimeout(r, 20)); }); if (!container.querySelector('[role="status"]')) break; } };
 const count = (haystack: string, needle: string) => haystack.split(needle).length - 1;
+// The renderer and the editor are LAZY (pinned below by source and by the bundle guard). The test runner transforms a lazily imported module
+// graph on first use — about 1 s for the composite renderer when cold, close to the fixed settle budget above (60 × 20 ms) — so the first
+// render raced the transformer and failed intermittently on a loaded worker (on the baseline too; the chart-aware rich content made the cold
+// graph a little larger). Loading both modules once up front leaves the settle loop waiting for React, never for the transformer; every
+// assertion and the settle budget are unchanged.
+beforeAll(async () => { await Promise.all([import("./student/CompositeResponse"), import("./editors/CompositeEditor")]); });
 
 describe("20D-UI1 registries and laziness", () => {
   it("composite@1 resolves a student renderer and an authoring editor at EXACTLY version 1", () => {

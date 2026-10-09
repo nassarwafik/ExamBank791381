@@ -3,7 +3,7 @@ import Dialog from "../ui/Dialog";
 import type { StructuredExam } from "../examTypes";
 import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type GenerationResult, type ModifyResult, type StageReporter } from "./composerRun";
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
-import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
+import { COMPOSER_CAPABILITY_DEFAULT_OFF, COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
 import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS, type ComposerItemKind } from "./composerCatalog";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
 import type { ComposerScope } from "./composerProjection";
@@ -49,7 +49,7 @@ const DIFFICULTY_LABELS: Record<(typeof COMPOSER_DIFFICULTIES)[number], string> 
 const PLAN_DIFFICULTY_LABELS: Record<string, string> = { easy: "سهل", medium: "متوسط", hard: "صعب" };
 const CAPABILITY_LABELS: Record<ComposerCapabilityFlag, string> = {
   composite: "أسئلة مركّبة", smartSim: "محاكاة SmartSim", coding: "أسئلة برمجة", parametric: "معطيات متغيرة لكل طالب", openResponse: "إجابة مفتوحة",
-  richContent: "محتوى منسق", tables: "جداول", visual: "عناصر بصرية", rubrics: "سلالم تقييم"
+  richContent: "محتوى منسق", tables: "جداول", visual: "عناصر بصرية", rubrics: "سلالم تقييم", charts: "رسوم بيانية", illustrativeData: "بيانات توضيحية للرسوم (مخترعة ومُعلَّمة)"
 };
 const FAILURE_TITLES: Record<ComposerFailureKind, string> = {
   provider: "خدمة الذكاء الاصطناعي غير متاحة حاليًا.",
@@ -75,7 +75,7 @@ type GenForm = {
 const initialForm = (): GenForm => ({
   subject: "", course: "", grade: "", language: "ar", totalMarks: "", durationMinutes: "", difficulty: "mixed", sectionTarget: "", questionTarget: "", preset: "auto",
   types: Object.fromEntries(COMPOSER_ITEM_KINDS.map(k => [k, true])) as Record<ComposerItemKind, boolean>,
-  capabilities: Object.fromEntries(COMPOSER_CAPABILITY_FLAGS.map(f => [f, f !== "visual"])) as Record<ComposerCapabilityFlag, boolean>,
+  capabilities: Object.fromEntries(COMPOSER_CAPABILITY_FLAGS.map(f => [f, !COMPOSER_CAPABILITY_DEFAULT_OFF.includes(f)])) as Record<ComposerCapabilityFlag, boolean>,
   requiredTopics: "", excludedTopics: "", instruction: ""
 });
 const topicsOf = (s: string) => [...new Set(s.split(/[,،]/).map(t => t.trim()).filter(Boolean))];

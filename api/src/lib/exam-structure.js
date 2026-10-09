@@ -140,6 +140,9 @@ function isResponseAnswered(a) {
     // Phase 19D — a hotspot answer counts when it carries at least one point (mirror of answerState.ts).
     case "hotspot":
       return Array.isArray(a.points) && a.points.length > 0;
+    // Phase 21A.1 — a chart selection counts when at least one target is selected (mirror of answerState.ts).
+    case "chartSelection":
+      return Array.isArray(a.targets) && a.targets.length > 0;
     // Phase 20A — a trusted SmartSim answer counts when it carries at least one action (mirror of answerState.ts).
     case "smartSim":
       return Array.isArray(a.actions) && a.actions.length > 0;

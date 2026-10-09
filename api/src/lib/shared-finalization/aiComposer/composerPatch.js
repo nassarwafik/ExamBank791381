@@ -80,6 +80,7 @@ function opInScope(op, scope, exam) {
         default: return "questionId" in op && qSection(op.questionId) === scope.sectionId;
     }
 }
+const modifyChartPolicy = (request) => ({ request, illustrative: false, charts: true });
 function normalizeComposerPatch(raw, ctx) {
     const fail = (code, message, path = "$") => ({ ok: false, issues: [{ code, message, path }] });
     if (!modeScopeOk(ctx.mode, ctx.scope))
@@ -110,7 +111,7 @@ function normalizeComposerPatch(raw, ctx) {
         }
         const reason = (0, composerSchemaKit_1.cleanText)(o.reason);
         const mapItem = (item, marks, qid) => {
-            const r = (0, composerDraft_1.normalizeComposerItem)(item, { marks, qid, request: ctx.request, path: p + ".item" });
+            const r = (0, composerDraft_1.normalizeComposerItem)(item, { marks, qid, request: ctx.request, path: p + ".item", chartPolicy: modifyChartPolicy(ctx.request) });
             if (!r.ok) {
                 issues.push(...r.issues);
                 return null;
@@ -152,7 +153,7 @@ function normalizeComposerPatch(raw, ctx) {
                         issues.push({ code: "PARAMETRIC_RICH_CONTENT_FORBIDDEN", message: "سؤال المعطيات المتغيرة لا يدعم المحتوى المنسق.", path: p });
                         return;
                     }
-                    const rc = (0, composerRich_1.mapAiRichBlocks)(o.richBlocks ?? [], p + ".richBlocks");
+                    const rc = (0, composerRich_1.mapAiRichBlocks)(o.richBlocks ?? [], p + ".richBlocks", modifyChartPolicy(ctx.request));
                     if (!rc.ok) {
                         issues.push(...rc.issues);
                         return;
@@ -424,6 +425,32 @@ function recomputeCompositeMarks(q) {
     const marks = groups.reduce((n, g) => n + (g.gradingPolicy === "firstNAnswered" ? Number(g.maxMarks) || 0 : g.parts.reduce((t, p) => t + (Number(p.marks) || 0), 0)), 0);
     return { ...q, marks, composite: { ...c, groups } };
 }
+function renumberCharts(incoming, existing) {
+    const isRec = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+    const nested = (b) => (b.type === "columns" && Array.isArray(b.columns) ? b.columns : []);
+    const ids = (blocks) => blocks.flatMap(b => !isRec(b) ? []
+        : b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? [b.chart.id]
+            : nested(b).flatMap(c => (isRec(c) && Array.isArray(c.blocks) ? ids(c.blocks) : [])));
+    const taken = new Set(ids(existing));
+    const renumber = (b) => {
+        if (!isRec(b))
+            return b;
+        if (b.type === "columns" && Array.isArray(b.columns))
+            return { ...b, columns: b.columns.map(c => (isRec(c) && Array.isArray(c.blocks) ? { ...c, blocks: c.blocks.map(renumber) } : c)) };
+        if (b.type !== "dataChart" || !isRec(b.chart) || typeof b.chart.id !== "string")
+            return b;
+        if (!taken.has(b.chart.id)) {
+            taken.add(b.chart.id);
+            return b;
+        }
+        let n = 1;
+        while (taken.has("chart" + n))
+            n++;
+        taken.add("chart" + n);
+        return { ...b, chart: { ...b.chart, id: "chart" + n } };
+    };
+    return incoming.map(renumber);
+}
 function applyOne(exam, o) {
     const x = { ...exam, sections: exam.sections.map(s => ({ ...s, questions: [...s.questions] })) };
     const setQ = (qid, fn) => { const l = locate(x, qid); if (!l)
@@ -444,7 +471,8 @@ function applyOne(exam, o) {
             setQ(o.questionId, q => {
                 const prevBlocks = (q.richContent?.blocks ?? []);
                 const nb = o.richContent ? o.richContent.blocks : [];
-                const blocks = o.mode === "replace" ? nb : o.mode === "prepend" ? [...nb, ...prevBlocks] : [...prevBlocks, ...nb];
+                const add = o.mode === "replace" ? nb : renumberCharts(nb, prevBlocks);
+                const blocks = o.mode === "replace" ? nb : o.mode === "prepend" ? [...add, ...prevBlocks] : [...prevBlocks, ...add];
                 const out = { ...q };
                 if (blocks.length)
                     out.richContent = { schemaVersion: 1, blocks };

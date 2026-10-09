@@ -2,7 +2,7 @@
 
 | Identity | Kind | Grading | Partial | Response | Compound part | Composite child | AI composer | Authoring version | Grader | 20G | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, B, C, E, S |
+| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, A, B, C, E, S |
 | `trueFalse@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, B, E, S |
 | `multiTrueFalse@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | B, E, S |
 | `shortAnswer@1` | type | hybrid | — | text | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, S |
@@ -13,9 +13,10 @@
 | `tableFill@1` | type | auto | ✓ | fields/table | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, C, E, S |
 | `cliFill@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | A, S |
 | `compound@1` | type | composed | ✓ | compound | — | — | — | ✓ | legacy adapter | A | E, S |
-| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | A, B, C, D, E, S |
+| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, A, B, C, D, E, S |
+| `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | — | ✓ | registered | A | 21A1 |
 | `multipleSelect@1` | type | auto | ✓ | multiChoice | ✓ | ✓ | — | ✓ | registered | A | A, B, E, S |
-| `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | — | ✓ | registered | A | A, B, D, E, S |
+| `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | — | ✓ | registered | A | 21A1, A, B, D, E, S |
 | `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | registered | A | D, E, S |
 | `categorization@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | registered | A | D, E, S |
 | `simulation@1` | type | manual | — | simulation | — | ✓ | — | ✓ | registered | B | api/tests/smartsim-guards-16b-a.test.js — teacher-uploaded package (sandboxed, manual grading only); its lifecycle needs a stored package — covered by the 16B-A browser / store suites |
@@ -44,7 +45,7 @@
 | `child:tableFill@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:cliFill@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:multipleSelect@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
-| `child:numericResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | B, D, E, S |
+| `child:numericResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A1, B, D, E, S |
 | `child:matrix@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:categorization@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:simulation@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | B | src/composite/composite.20d.test.ts — a simulation child requires an uploaded package; the composite contract accepts the identity (20D suite) |
@@ -58,6 +59,7 @@
 | `child:labelDiagram@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:openResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | A, B, C, D, E, S |
 | `child:smartSim@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | A, B, D, E, S |
+| `child:chartSelection@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A1 |
 | `compoundPart:multipleChoice` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | E, S |
 | `compoundPart:trueFalse` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | S |
 | `compoundPart:multiTrueFalse` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | S |

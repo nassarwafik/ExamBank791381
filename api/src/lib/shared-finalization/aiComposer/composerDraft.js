@@ -55,7 +55,7 @@ function mapDraftQuestion(raw, kind, qid, marks, request, path) {
     return { ok: true, value: { ...r.question, examQuestionId: qid, marks } };
 }
 function labelOf(raw, i) { const t = (0, composerSchemaKit_1.cleanText)(raw); return t && t.length <= 40 ? t : LETTERS[i] ?? String(i + 1); }
-function buildComposite(raw, qid, marks, plan, request, path) {
+function buildComposite(raw, qid, marks, plan, request, path, chartPolicy) {
     const issues = [];
     if (!(0, composerSchemaKit_1.hasExactKeys)(raw, ["text", "context", "groups"]) || !(0, composerSchemaKit_1.isStr)(raw.text, L.richTextChars, 1) || !(0, composerSchemaKit_1.isArr)(raw.groups, L.compositeGroups) || !raw.groups.length)
         return { ok: false, issues: [issue("AI_COMPOSITE_MALFORMED", "السؤال المركّب غير صالح البنية.", path, qid)] };
@@ -77,7 +77,7 @@ function buildComposite(raw, qid, marks, plan, request, path) {
         else {
             if (c.sim !== null)
                 return { ok: false, issues: [issue("AI_COMPOSITE_MALFORMED", "سياق المصدر لا يحمل محاكاة.", path + ".context", qid)] };
-            const rc = (0, composerRich_1.mapAiRichBlocks)(c.sourceBlocks, path + ".context.sourceBlocks");
+            const rc = (0, composerRich_1.mapAiRichBlocks)(c.sourceBlocks, path + ".context.sourceBlocks", chartPolicy);
             if (!rc.ok)
                 return { ok: false, issues: rc.issues.map(i => ({ ...i, questionId: qid })) };
             if (!rc.richContent)
@@ -190,7 +190,7 @@ function nestedComposite(raw, qid, path) {
     const nested = groups.map((g, gi) => ({ ...g, parts: parts.filter(p => p.group === gi + 1).map(p => { const { group: _g, ...rest } = p; void _g; return rest; }) }));
     return { present: true, value: { text: raw.compositeText, context: raw.compositeContext, groups: nested } };
 }
-function mapItem(raw, plan, qid, request, path) {
+function mapItem(raw, plan, qid, request, path, chartPolicy) {
     const warnings = [];
     if (!(0, composerSchemaKit_1.hasExactKeys)(raw, ITEM_KEYS) || !(0, composerSchemaKit_1.isEnum)(raw.kind, composerCatalog_1.COMPOSER_ITEM_KINDS) || !(0, composerSchemaKit_1.isStr)(raw.topic, L.topicChars) || !(0, composerSchemaKit_1.isEnum)(raw.difficulty, composerPlan_1.PLAN_DIFFICULTIES) || !(0, composerSchemaKit_1.isStr)(raw.rationale, L.rationaleChars))
         return { ok: false, issues: [issue("AI_ITEM_MALFORMED", "بند السؤال غير صالح البنية.", path, qid)] };
@@ -225,12 +225,12 @@ function mapItem(raw, plan, qid, request, path) {
         q = { examQuestionId: qid, presentationType: "smartSim", questionTypeVersion: id.version, text: (0, composerSchemaKit_1.cleanText)(s.text), marks: plan.marks, smartSim: b.value.envelope, answer: { scoring: "proportional", checks: b.value.checks } };
     }
     else {
-        const c = buildComposite(comp.value, qid, plan.marks, plan, request, path + ".composite");
+        const c = buildComposite(comp.value, qid, plan.marks, plan, request, path + ".composite", chartPolicy);
         if (!c.ok)
             return c;
         q = c.value;
     }
-    const stem = (0, composerRich_1.mapAiRichBlocks)(raw.stem, path + ".stem");
+    const stem = (0, composerRich_1.mapAiRichBlocks)(raw.stem, path + ".stem", chartPolicy);
     if (!stem.ok)
         return { ok: false, issues: stem.issues.map(i => ({ ...i, questionId: qid })) };
     if (stem.richContent) {
@@ -253,7 +253,7 @@ function normalizeComposerItem(raw, ctx) {
     if (!kind)
         return { ok: false, issues: [issue("AI_ITEM_MALFORMED", "بند السؤال غير صالح البنية.", ctx.path, ctx.qid)] };
     const plan = { key: "patch", kind, topic: "", difficulty: "medium", marks: ctx.marks, simulator: null, scenario: null, note: "" };
-    return mapItem(raw, plan, ctx.qid, ctx.request, ctx.path);
+    return mapItem(raw, plan, ctx.qid, ctx.request, ctx.path, ctx.chartPolicy);
 }
 function countFunctionSims(items) {
     const isFn = (sim) => !!sim && typeof sim === "object" && sim.plugin === "functionStudy2d";
@@ -276,7 +276,7 @@ function normalizeSectionDraft(raw, planSection, sectionIndex, ids) {
     const issues = [], warnings = [], questions = [], meta = [];
     raw.items.forEach((it, i) => {
         const qid = (0, exports.composerQuestionId)(ids, sectionIndex, i);
-        const m = mapItem(it, planSection.items[i], qid, planSection.items[i].topic + " " + planSection.items[i].note, "$.items[" + i + "]");
+        const m = mapItem(it, planSection.items[i], qid, planSection.items[i].topic + " " + planSection.items[i].note, "$.items[" + i + "]", ids.chartPolicy);
         if (!m.ok) {
             issues.push(...m.issues);
             return;

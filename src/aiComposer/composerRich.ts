@@ -5,7 +5,8 @@
 import { looksLikeRawHtml, validateRichContent, type RichContentV1 } from "../richContent/richContentModel";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_CALLOUT_VARIANTS, COMPOSER_RICH_BLOCKS, COMPOSER_RICH_CODE_LANGUAGES } from "./composerCatalog";
-import { cleanText, hasExactKeys, isArr, isEnum, isInt, isStr, sArr, sEnum, sInt, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
+import { cleanText, hasExactKeys, isArr, isEnum, isInt, isPlainRecord, isStr, sArr, sEnum, sInt, sNull, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
+import { buildAiChartSchema, mapAiChart, type AiChartPolicy } from "./composerChart";
 
 const L = COMPOSER_LIMITS;
 const DIRS = ["auto", "rtl", "ltr"] as const;
@@ -13,15 +14,18 @@ export function buildRichBlockSchema(): JsonSchema {
   return sObj({
     type: sEnum(COMPOSER_RICH_BLOCKS), text: sStr(), level: sInt(2, 4), dir: sEnum(DIRS), items: sArr(sStr(), L.richItems),
     headers: sArr(sStr(), L.richTableColumns), rows: sArr(sArr(sStr(), L.richTableColumns), L.richTableRows), language: sEnum(COMPOSER_RICH_CODE_LANGUAGES),
-    source: sStr(), variant: sEnum(COMPOSER_CALLOUT_VARIANTS), title: sStr(), pairs: sArr(sObj({ label: sStr(), value: sStr() }), L.richItems)
+    source: sStr(), variant: sEnum(COMPOSER_CALLOUT_VARIANTS), title: sStr(), pairs: sArr(sObj({ label: sStr(), value: sStr() }), L.richItems),
+    // 21A.1: the declarative chart descriptor of a dataChart block (null in every other block)
+    chart: sNull(buildAiChartSchema())
   });
 }
 export const buildRichBlocksSchema = (): JsonSchema => sArr(buildRichBlockSchema(), L.richBlocks);
-const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs"] as const;
+const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs", "chart"] as const;
 
 const runs = (text: string) => [{ text }];
-/** Maps AI block descriptors to a validated RichContentV1, or refuses with the canonical validator's issues. Empty list ⇒ null. */
-export function mapAiRichBlocks(raw: unknown, path = "richContent"): { ok: true; richContent: RichContentV1 | null } | { ok: false; issues: ComposerIssue[] } {
+/** Maps AI block descriptors to a validated RichContentV1, or refuses with the canonical validator's issues. Empty list ⇒ null. A dataChart
+ *  block is judged under the caller's chart data policy (21A.1); without one, an AI chart is refused (fail closed). */
+export function mapAiRichBlocks(raw: unknown, path = "richContent", chartPolicy?: AiChartPolicy): { ok: true; richContent: RichContentV1 | null } | { ok: false; issues: ComposerIssue[] } {
   const fail = (message: string, p = path): { ok: false; issues: ComposerIssue[] } => ({ ok: false, issues: [{ code: "AI_RICH_CONTENT_INVALID", message, path: p }] });
   if (!isArr(raw, L.richBlocks)) return fail("كتل المحتوى المنسق غير صالحة.");
   if (!raw.length) return { ok: true, richContent: null };
@@ -34,6 +38,7 @@ export function mapAiRichBlocks(raw: unknown, path = "richContent"): { ok: true;
     if (!isArr(b.rows, L.richTableRows) || !b.rows.every(r => isArr(r, L.richTableColumns) && r.every(c => isStr(c, L.richTextChars)))) return fail("صفوف الجدول غير صالحة.", p);
     if (!isArr(b.pairs, L.richItems) || !b.pairs.every(x => hasExactKeys(x, ["label", "value"]) && isStr(x.label, L.shortText) && isStr(x.value, L.richTextChars))) return fail("أزواج القيم غير صالحة.", p);
     if (!isEnum(b.language, COMPOSER_RICH_CODE_LANGUAGES) || !isEnum(b.variant, COMPOSER_CALLOUT_VARIANTS)) return fail("لغة الكود أو نوع الملاحظة غير معروف.", p);
+    if (b.chart !== null && !isPlainRecord(b.chart)) return fail("وصف الرسم البياني غير صالح.", p + ".chart");
     const text = cleanText(b.text), title = cleanText(b.title);
     switch (b.type) {
       case "heading": blocks.push({ type: "heading", level: b.level, runs: runs(text) }); break;
@@ -51,6 +56,13 @@ export function mapAiRichBlocks(raw: unknown, path = "richContent"): { ok: true;
       case "callout": blocks.push({ type: "callout", variant: b.variant, ...(title ? { title } : {}), runs: runs(text) }); break;
       case "divider": blocks.push({ type: "divider" }); break;
       case "keyValueGrid": blocks.push({ type: "keyValueGrid", items: (b.pairs as { label: string; value: string }[]).map(x => ({ label: cleanText(x.label), value: cleanText(x.value) })) }); break;
+      case "dataChart": {
+        if (b.chart === null) return fail("كتلة الرسم البياني تحتاج وصفًا للرسم (chart).", p + ".chart");
+        const c = mapAiChart(b.chart, i, chartPolicy, p + ".chart");
+        if (!c.ok) return { ok: false, issues: c.issues };
+        blocks.push({ type: "dataChart", chart: c.chart });
+        break;
+      }
       case "math": {
         // 21A: multi-line grids keep LF line breaks. An AI formula that looks like markup (<script>, <math>, javascript:) is refused here even
         // though the math language would read it as inert relations: the prompt contract says HTML is refused, and AI text is untrusted.

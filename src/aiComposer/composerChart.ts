@@ -1,0 +1,333 @@
+// Phase 21A.1 — AI → ChartSpecV1. The model never writes a ChartSpec (and never a rendering-library option): it fills ONE bounded, flat,
+// closed chart DESCRIPTOR inside a `dataChart` rich block (strict provider schema), and code maps it field by field — every id is
+// code-owned and deterministic, the provenance label is code-owned — before the ONE chart authority (validateChartSpec, through
+// validateRichContent) decides. DATA INTEGRITY: a descriptor declares where its numbers come from. `teacherProvided` numbers are CHECKED
+// against the teacher's own request: each must occur in it, a single-series chart (bar, line, area, combo, radar, a one-row heat map) or a
+// pie may not give a category the value the request writes for ANOTHER category (nor leave a written value empty), and the title / description state no other number (otherwise the section is refused
+// with a repairable issue). It is a check, not a proof: values the request does not clearly pair can still be exchanged (design record §11);
+// `illustrative` numbers are allowed only when the teacher enabled illustrative data, and such a chart is always labelled by code as
+// illustrative (never presented as real data). Without a policy (no teacher request at hand) no AI chart is accepted (fail closed).
+import { CHART_KINDS, CHART_LIMITS, type ChartKind, type ChartSpecV1 } from "../charts/chartSpec";
+import { cleanText, hasExactKeys, isArr, isEnum, isNum, isStr, sArr, sBool, sEnum, sInt, sNull, sNum, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
+import type { ComposerIssue } from "./composerLimits";
+
+export const AI_CHART_DATA_ORIGINS = Object.freeze(["teacherProvided", "illustrative"] as const);
+export type AiChartDataOrigin = (typeof AI_CHART_DATA_ORIGINS)[number];
+/** The policy the CALLER derives from the teacher's request: the request text (teacher-provided numbers must appear in it) and whether the
+ *  teacher allowed illustrative (invented) data. */
+export type AiChartPolicy = { request: string; illustrative: boolean; charts: boolean };
+export const AI_CHART_SOURCE_LABELS: Readonly<Record<AiChartDataOrigin, string>> = Object.freeze({
+  teacherProvided: "بيانات من طلب المعلم",
+  illustrative: "بيانات توضيحية من إنشاء الذكاء الاصطناعي — ليست بيانات حقيقية"
+});
+const L = CHART_LIMITS;
+const SERIES_MARKS = ["bar", "line"] as const;
+/** Scatter points an AI descriptor may carry (the chart contract allows more; an AI-authored stimulus stays small). */
+export const AI_CHART_POINTS = 200;
+
+export function buildAiChartSchema(): JsonSchema {
+  return sObj({
+    kind: sEnum(CHART_KINDS), dataOrigin: sEnum(AI_CHART_DATA_ORIGINS), title: sStr(), description: sStr(),
+    categories: sArr(sStr(), L.categories),
+    series: sArr(sObj({ label: sStr(), values: sArr(sNull(sNum()), L.categories), mark: sEnum(SERIES_MARKS) }), L.series),
+    points: sArr(sObj({ series: sInt(1, L.scatterSeries), x: sNum(), y: sNum(), label: sStr() }), AI_CHART_POINTS),
+    bins: sArr(sObj({ start: sNum(), end: sNum(), count: sNum() }), L.bins),
+    boxes: sArr(sObj({ label: sStr(), min: sNum(), q1: sNum(), median: sNum(), q3: sNum(), max: sNum() }), L.boxes),
+    xLabel: sStr(), yLabel: sStr(), unit: sStr(), stacked: sBool(), horizontal: sBool(), donut: sBool()
+  });
+}
+const CHART_KEYS = ["kind", "dataOrigin", "title", "description", "categories", "series", "points", "bins", "boxes", "xLabel", "yLabel", "unit", "stacked", "horizontal", "donut"] as const;
+
+type R = { ok: true; chart: ChartSpecV1 } | { ok: false; issues: ComposerIssue[] };
+const DIGITS = /[٠-٩۰-۹０-９]/g;
+/** Arabic-Indic / Persian / fullwidth digits → ASCII; the Arabic decimal separator → "."; the Arabic thousands separator → ","; the minus sign, and an
+ *  en / figure dash written before a digit, → "-"; a comma list written without spaces ("120,80,95": groups not all three digits long) gets
+ *  its spaces back, so those commas read as list separators, never as decimal points. */
+const normDigits = (text: string) => String(text || "").replace(DIGITS, d => String(d.charCodeAt(0) & 0xf)).replace(/٫/g, ".").replace(/٬/g, ",")
+  .replace(/[\u2012\u2013](?=\d)/g, "-").replace(/−/g, "-")
+  .replace(/\d+(?:,\d+){2,}/g, run => (run.split(",").slice(1).every(g => g.length === 3) ? run : run.replace(/,/g, ", ")));
+/** Compatibility forms folded (NFKC: fullwidth digits, signs and points, presentation forms) — for the number check and the pairing alike
+ *  (round-5 finding R5-A10) — after superscript digits are dropped: "m²" is a unit, never the number 2 (R5-A2). */
+const fold = (text: string) => String(text || "").replace(/[\u00B2\u00B3\u00B9\u2070-\u2079]/g, "").normalize("NFKC");
+// One number as written: "," between groups of exactly three digits is a THOUSANDS separator ("1,200" = 1200, never 1.2); otherwise "." or
+// "," before digits is the decimal separator ("1,5" = 1.5); a "." (or the Arabic "٫") with no digit before it starts a fraction (".5" = 0.5,
+// "-.5" = -0.5); an exponent is part of the number ("1.5e3" = 1500).
+const NUMBER = /(-?)(?:(\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:[.,](\d+))?|(?<![\d.])\.(\d+))(?:[eE]([+-]?\d{1,3}))?/g;
+function readNumber(t: string, m: RegExpMatchArray): number {
+  const frac = m[3] ?? m[4];
+  const n = Number((m[2] ?? "0").replace(/,/g, "") + (frac ? "." + frac : "") + (m[5] ? "e" + m[5] : ""));
+  // a "-" right after a digit is a range / date separator ("10-20" = 10 and 20), never a sign; otherwise it is the number's sign
+  const negative = m[1] === "-" && !((m.index ?? 0) > 0 && /\d/.test(t[(m.index ?? 0) - 1]));
+  return negative ? -n : n === 0 ? 0 : n;
+}
+/** Every number written in a text, read by the rules above (see normDigits / NUMBER / readNumber): "1,200" is 1200, "-5" is -5, "1,5" is
+ *  1.5 and "120,95,80" is a list. Writing that the rules read differently from its author's intent is listed in the design record §11. */
+export function numbersInText(text: string): Set<number> {
+  const t = normDigits(fold(text));
+  const out = new Set<number>();
+  for (const m of t.matchAll(NUMBER)) { const n = readNumber(t, m); if (Number.isFinite(n)) out.add(n === 0 ? 0 : n); }
+  return out;
+}
+
+// ── category ↔ value pairings the teacher WROTE (conservative: an unclear phrasing pairs nothing) ──────────────────────────────────────
+const INVISIBLE_OR_TATWEEL = /[\p{Default_Ignorable_Code_Point}ـ]/gu;
+/** Text as compared for pairing: compatibility forms folded (see fold), invisible characters and tatweel removed, digits normalized, lower case. */
+/** Every line break (CR, CR LF, the Unicode line / paragraph separators, VT, FF, NEL) reads as a line feed, and whitespace runs as one
+ *  space / one line break: the rules below see one kind of line break (round-6 finding R6-A2), and no run of whitespace can make a
+ *  backward match costly (R6-A3). */
+const lines = (s: string) => s.replace(/\r\n?|[\v\f\u0085\u2028\u2029]/g, "\n").replace(/[^\S\n]+/g, " ").replace(/ ?\n[\s]*/g, "\n");
+const pairText = (s: string) => lines(normDigits(fold(s).replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase());
+/** A list separator: , ، ؛ ; / & (optionally followed by "and" / "و"), or "and" / "و" alone ("120 و80", "يناير وفبراير"). */
+const LIST_SEP = "(?:\\s*[,،؛;/&]\\s*(?:(?:and\\b|و)\\s*)?|\\s+and\\s+|\\s+و\\s*)";
+/** A short unit after a number ("%", "mm", "ملم", "وحدة") — never the "و" or "and" of a following list item. */
+const UNIT = "(?:\\s*(?:[%٪]|(?!و(?:\\s|\\d)|and\\b)[^\\s\\d,،؛;/&.:=()\\-]{1,6}))?";
+/** Month names (English, Arabic, Levantine — compared lower-case): a whole number 1–31 written after one, followed by a word, is a day of
+ *  the month («مارس 3 أيام», "Mar 3 days"), never the month's value. */
+const MONTH = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|يناير|فبراير|مارس|[أإا]بريل|مايو|يوني[وه]|يولي[وه]|[أا]غسطس|سبتمبر|[أا]كتوبر|نوفمبر|ديسمبر|كانون الثاني|شباط|[آا]ذار|نيسان|[أا]يار|حزيران|تموز|[آا]ب|[أا]يلول|تشرين الأول|تشرين الثاني|كانون الأول)$/u;
+/** The unit that may end a value's clause: ONE token of any length ("students", "km/h", "°C", «ملليمترًا») — two or more words make the
+ *  number a count or a date, not the value (round-5 finding R5-A2; C4-F1). A connector to the next label ("and", "then", «ثم», a lone
+ *  «و» — or a proclitic و ف ب ل ك glued to that label, left alone at the clause's end) is never a unit (round-5 finding C5-1). */
+const TAIL_UNIT = "\\s*(?:[%٪]|(?!(?:and|then|ثم|[وفبلك])(?![\\p{L}\\p{M}]))[^\\s\\d,،؛;&.:=()]+)";
+/** What may stand between a value and the NEXT label: spaces, "and" / "then" / «ثم» / «و», or a proclitic glued to the label («وفبراير»). */
+const CONNECTOR_TO_LABEL = /^\s*(?:(?:and|then|ثم|و)\s+)?[وفبلك]?$/u;
+/** Where a clause ends: a sentence or list punctuation mark, or a line break. */
+const CLAUSE_END = /[.!?؟\n؛;,،]/;
+/** A list separator ending the text before a label, tested on a bounded tail (the separator and its spaces are short once whitespace
+ *  runs are collapsed): the test never scans the whole text (round-6 finding R6-A3). */
+const LIST_SEP_END = new RegExp("(?:" + LIST_SEP + ")$", "u");
+const TAIL = 48;
+const sticky = (source: string, t: string, at: number) => { const re = new RegExp(source, "uy"); re.lastIndex = at; return re.exec(t); };
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const WORD = /[\p{L}\p{M}\p{N}]/u;
+/** One-letter labels that are also English words (the article "a", the pronoun "I"): written before a number they are usually the word
+ *  ("for a 30 student class"), so they pair only after ":" / "=" ("A: 6") or inside a list of the chart's labels. */
+const WORD_LABEL = /^[ai]$/;
+/** A label occurrence is a whole word: no letter / digit / degree sign before it (one Arabic proclitic و ف ب ل ك is allowed: "وفبراير",
+ *  "بيناير"; "°C" is a unit, never the label "C") and no letter right after it ("Jan" never matches inside "January", "ب" never inside "الطلاب"). */
+function wholeWord(t: string, at: number, len: number): boolean {
+  const before = at === 0 || (!WORD.test(t[at - 1]) && t[at - 1] !== "°") || (/[وفبلك]/.test(t[at - 1]) && (at === 1 || !WORD.test(t[at - 2])));
+  return before && (at + len >= t.length || !/[\p{L}\p{M}]/u.test(t[at + len]));
+}
+/** The numbers of a written value list starting at `from` ("120, 80, 95", "120 و80 و95 ملم", "50%, 30%, 20%"). */
+function numberRun(t: string, from: number): number[] {
+  const out: number[] = [];
+  for (let p = from; ;) {
+    const m = sticky(NUMBER.source, t, p);
+    if (!m) break;
+    out.push(readNumber(t, m));
+    p = m.index + m[0].length;
+    p += sticky(UNIT, t, p)?.[0].length ?? 0;
+    const sep = sticky(LIST_SEP, t, p);
+    if (!sep || !sticky(NUMBER.source, t, p + sep[0].length)) break;
+    p += sep[0].length;
+  }
+  return out;
+}
+/** True when a value list continues after the number that ends at `after` (a list item is not the value of the label before it). */
+const continuesList = (t: string, after: number) => {
+  const p = after + (sticky(UNIT, t, after)?.[0].length ?? 0), sep = sticky(LIST_SEP, t, p);
+  return !!sep && !!sticky(NUMBER.source, t, p + sep[0].length);
+};
+/** Every whole-word occurrence of a label. */
+function occurrences(t: string, l: string): number[] {
+  const out: number[] = [];
+  for (let at = t.indexOf(l); at >= 0; at = t.indexOf(l, at + 1)) if (wholeWord(t, at, l.length)) out.push(at);
+  return out;
+}
+/** The number paired with ONE label (`others`: the chart's other labels). A pairing is the ONE number written right after the label
+ *  ("يناير ١٢٠", "Jan: 1,200", "Jan 120 mm"), alone in its clause; never: a label glued to digits (Q1 / Q10), an ordinal ("15th"), a range,
+ *  a number followed by another number before the clause ends ("January 2024 sales were 120", "School A 2000 students in 40 classes"), an
+ *  item of a value list, an item of a list of the chart's labels, or a label written with different numbers. */
+function pairedAt(t: string, l: string, others: readonly string[], valueFirst = false): Set<number> {
+  if (!l) return new Set();
+  const otherAt = others.filter(Boolean).flatMap(o => occurrences(t, o)).sort((a, b) => a - b);
+  // a label written inside a longer label of the chart ("agree" in "strongly agree", «غرب» in «شمال غرب») is that label, not this one (R5-A4)
+  const inside = others.filter(o => o.length > l.length && o.includes(l)).flatMap(o => occurrences(t, o).map(a => [a, a + o.length] as const));
+  const found = new Set<number>();
+  for (const at of occurrences(t, l)) {
+    if (inside.some(([a, b]) => at >= a && at < b)) continue;
+    // an item of a list of this chart's labels ("jan, feb, mar: …", "يناير وفبراير ومارس: …"): its values are a list too — the label before
+    // the separator is a whole word, never the end of a unit («30 طالب، ب 25» is not a list of «ب» — R5-A3)
+    const from0 = Math.max(0, at - TAIL), sep = LIST_SEP_END.exec(t.slice(from0, at));
+    const head = sep ? t.slice(0, from0 + sep.index).trimEnd() : "";
+    if (sep && others.some(o => o && head.endsWith(o) && wholeWord(head, head.length - o.length, o.length))) continue;
+    const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))![0];
+    if (!lead) continue;                                                   // "Q1" never pairs with the "0" of "Q10"; "jan," is a list item
+    if (lead.includes("\n")) continue;                                     // a label ending a line never takes the next line's number (R5-A1)
+    if (WORD_LABEL.test(l) && !/[:=]/.test(lead)) continue;                // "a 30 student class" is not the label "A"
+    const from = at + l.length + lead.length, m = sticky(NUMBER.source, t, from);
+    if (!m) continue;
+    const after = from + m[0].length;
+    if (/^(?:st|nd|rd|th)\b/.test(t.slice(after))) continue;                // an ordinal ("15th"), not a value
+    if (continuesList(t, after)) continue;                                 // a value list
+    // the clause after the number: ends at punctuation, a line break or another label; another number in it makes the pairing unclear,
+    // and so do more words — a value ENDS its clause ("Jan 120 mm, …", "Jan 120 and Feb 80"); "Mar 3 the site closed", "C 2 absent
+    // students" name a day or a count, not the category's value (round-4 finding C4-F1)
+    const rest = t.slice(after), endAt = rest.search(CLAUSE_END), nextLabel = otherAt.find(o => o >= after);
+    const atLabel = nextLabel !== undefined && (endAt < 0 || nextLabel - after <= endAt);
+    // where the request writes values BEFORE their labels ("120 Jan 80 Feb", "120 في يناير"), a number followed by the next label may be
+    // that label's value: such a pairing is unclear (R5-A1)
+    if (atLabel && valueFirst) continue;
+    const clause = rest.slice(0, Math.min(endAt < 0 ? rest.length : endAt, nextLabel === undefined ? rest.length : nextLabel - after));
+    if (new RegExp(NUMBER.source, "u").test(clause)) continue;
+    // a value in parentheses closes them ("Jan (120), Feb (80)", "Jan (120 mm)")
+    const paren = lead.includes("("), body = paren ? clause.replace(/^\s*\)/u, "") : clause;
+    const unitLen = sticky(TAIL_UNIT, body, 0)?.[0].length ?? 0, tail = paren ? body.slice(unitLen).replace(/^\s*\)/u, "") : body.slice(unitLen);
+    if (!(atLabel ? CONNECTOR_TO_LABEL : /^\s*$/u).test(tail)) continue;
+    // before the next label only spaces: "Sales 120 Jan 80 Feb" may write each value BEFORE its label — the number may be the next
+    // label's, so the pairing is unclear (round-6 finding R6-A1); a connector ("and", «و», …) or a closing parenthesis makes it clear
+    if (atLabel && !paren && /^\s*$/u.test(tail)) continue;
+    const n = readNumber(t, m);
+    if (MONTH.test(l) && Number.isInteger(n) && n >= 1 && n <= 31 && /\p{L}/u.test(body.slice(0, unitLen))) continue;   // a day of the month
+    if (Number.isFinite(n)) found.add(n);
+  }
+  return found;
+}
+/** Lists of the chart's labels joined by list separators, in ANY order ("Jan, Feb, Mar", "مارس وفبراير ويناير"), each label at most once,
+ *  followed (after ":" / "=" / spaces — never a parenthesis) by a value list of the same length: label index → value. */
+function listPairs(t: string, ls: readonly string[]): Map<number, number[]> {
+  const out = new Map<number, number[]>();
+  const alt = "(?:" + [...ls].sort((a, b) => b.length - a.length).map(escapeRe).join("|") + ")";
+  for (const m of t.matchAll(new RegExp(alt + "(?:" + LIST_SEP + alt + ")+", "gu"))) {
+    const items: number[] = [];
+    let p = m.index ?? 0, ok = true;
+    for (;;) {
+      const lab = sticky(alt, t, p);
+      if (!lab || !wholeWord(t, p, lab[0].length)) { ok = false; break; }
+      const li = ls.indexOf(lab[0]);
+      if (li < 0 || items.includes(li)) { ok = false; break; }
+      items.push(li);
+      p += lab[0].length;
+      if (p >= (m.index ?? 0) + m[0].length) break;
+      const sep = sticky(LIST_SEP, t, p);
+      if (!sep) { ok = false; break; }
+      p += sep[0].length;
+    }
+    if (!ok || items.length < 2) continue;
+    const gap = sticky("[\\s:=]*", t, p);
+    const run = numberRun(t, p + (gap?.[0].length ?? 0));
+    if (run.length !== items.length) continue;
+    items.forEach((li, k) => out.set(li, [...(out.get(li) ?? []), run[k]]));
+  }
+  return out;
+}
+/**
+ * The values a request WRITES for the given category labels, in order (undefined where it writes none clearly): a list of these labels
+ * (any order) followed by a value list of the same length pairs positionally ("Jan, Feb, Mar: 120, 80, 95", "في يناير وفبراير ومارس: 120 و80
+ * و95"), and each label pairs with the ONE number written right after it, alone in its clause (see pairedAt). Both forms are read: a label
+ * that they pair with two different values — in two lists, in two places, or in a list and on its own ("أ، ب: 30، 25 … أ 25") — pairs nothing.
+ * Labels match as whole words, case-insensitively after NFKC, without invisible characters or tatweel.
+ */
+export function pairedNumbers(request: string, labels: readonly string[]): (number | undefined)[] {
+  const t = pairText(request), ls = labels.map(l => pairText(l).trim());
+  const listed = ls.length >= 2 && ls.every(Boolean) && new Set(ls).size === ls.length ? listPairs(t, ls) : new Map<number, number[]>();
+  // the request writes a value BEFORE a label somewhere: a clause (or line) that starts with a number followed by one of the labels
+  // (tested on a bounded tail before each label occurrence, the text's start marked by a line break — round-6 finding R6-A3)
+  const valueFirstAt = new RegExp("[.!?؟\\n؛;,،:][^\\S\\n]*" + NUMBER.source + "(?:" + TAIL_UNIT + ")?(?:[^\\S\\n]+[^\\s\\d,،؛;.:=()]{1,6})?[^\\S\\n]*[وفبلك]?$", "u");
+  const valueFirst = ls.some(l => l && occurrences(t, l).some(at => valueFirstAt.test((at <= 2 * TAIL ? "\n" : "") + t.slice(Math.max(0, at - 2 * TAIL), at))));
+  return ls.map((l, i) => {
+    const values = new Set([...(listed.get(i) ?? []), ...pairedAt(t, l, ls.filter((_, j) => j !== i), valueFirst)]);
+    return values.size === 1 ? [...values][0] : undefined;
+  });
+}
+export const pairedNumber = (request: string, label: string): number | undefined => pairedNumbers(request, [label])[0];
+
+/** Maps one AI chart descriptor (block index `index` of its document) to a ChartSpecV1 — the chart authority still decides afterwards. */
+export function mapAiChart(raw: unknown, index: number, policy: AiChartPolicy | undefined, path: string): R {
+  const fail = (code: string, message: string, p = path): R => ({ ok: false, issues: [{ code, message, path: p }] });
+  if (!policy) return fail("AI_CHART_POLICY_MISSING", "لا يمكن قبول رسم بياني من الذكاء الاصطناعي دون طلب المعلم.");
+  if (!policy.charts) return fail("AI_CHART_DISABLED", "ميزة الرسوم البيانية غير مفعّلة في طلب المعلم.");
+  if (!hasExactKeys(raw, CHART_KEYS) || !isEnum(raw.kind, CHART_KINDS) || !isEnum(raw.dataOrigin, AI_CHART_DATA_ORIGINS)) return fail("AI_CHART_MALFORMED", "وصف الرسم البياني غير صالح البنية.");
+  for (const k of ["title", "description", "xLabel", "yLabel", "unit"] as const) if (!isStr(raw[k], L.descriptionChars)) return fail("AI_CHART_MALFORMED", "نصوص الرسم البياني خارج الحدود.", path + "." + k);
+  for (const k of ["stacked", "horizontal", "donut"] as const) if (typeof raw[k] !== "boolean") return fail("AI_CHART_MALFORMED", "خيارات الرسم البياني غير صالحة.", path + "." + k);
+  const num = (v: unknown) => isNum(v, -L.absValue, L.absValue);
+  if (!isArr(raw.categories, L.categories) || !raw.categories.every(c => isStr(c, L.labelChars))) return fail("AI_CHART_MALFORMED", "فئات الرسم البياني غير صالحة.", path + ".categories");
+  if (!isArr(raw.series, L.series) || !raw.series.every(s => hasExactKeys(s, ["label", "values", "mark"]) && isStr(s.label, L.labelChars) && isEnum(s.mark, SERIES_MARKS) && isArr(s.values, L.categories) && s.values.every(v => v === null || num(v)))) return fail("AI_CHART_MALFORMED", "سلاسل الرسم البياني غير صالحة.", path + ".series");
+  if (!isArr(raw.points, AI_CHART_POINTS) || !raw.points.every(p => hasExactKeys(p, ["series", "x", "y", "label"]) && Number.isInteger(p.series) && (p.series as number) >= 1 && num(p.x) && num(p.y) && isStr(p.label, L.labelChars))) return fail("AI_CHART_MALFORMED", "نقاط الرسم البياني غير صالحة.", path + ".points");
+  if (!isArr(raw.bins, L.bins) || !raw.bins.every(b => hasExactKeys(b, ["start", "end", "count"]) && num(b.start) && num(b.end) && num(b.count))) return fail("AI_CHART_MALFORMED", "الفئات التكرارية غير صالحة.", path + ".bins");
+  if (!isArr(raw.boxes, L.boxes) || !raw.boxes.every(b => hasExactKeys(b, ["label", "min", "q1", "median", "q3", "max"]) && isStr(b.label, L.labelChars) && [b.min, b.q1, b.median, b.q3, b.max].every(num))) return fail("AI_CHART_MALFORMED", "الصناديق غير صالحة.", path + ".boxes");
+  const origin = raw.dataOrigin as AiChartDataOrigin;
+  if (origin === "illustrative" && !policy.illustrative) return fail("AI_CHART_ILLUSTRATIVE_NOT_ALLOWED", "لم يسمح المعلم ببيانات توضيحية مخترعة؛ استخدم أرقام المعلم فقط أو لا تضف رسمًا بيانيًا.", path + ".dataOrigin");
+  const kind = raw.kind as ChartKind;
+  const categories = (raw.categories as string[]).map(cleanText);
+  const series = raw.series as { label: string; values: (number | null)[]; mark: "bar" | "line" }[];
+  const xLabel = cleanText(raw.xLabel as string), yLabel = cleanText(raw.yLabel as string), unit = cleanText(raw.unit as string);
+  const axis = (label: string, withUnit: boolean) => (label || (withUnit && unit) ? { ...(label ? { label } : {}), ...(withUnit && unit ? { unit } : {}) } : undefined);
+  const opt = <T,>(k: string, v: T | undefined) => (v === undefined ? {} : { [k]: v });
+  const used: number[] = [];
+  const common = { version: 1 as const, id: "chart" + (index + 1), title: cleanText(raw.title as string), description: cleanText(raw.description as string), source: AI_CHART_SOURCE_LABELS[origin] };
+  const cats = categories.map((label, i) => ({ id: "c" + (i + 1), label }));
+  let chart: Record<string, unknown>;
+  switch (kind) {
+    case "bar": case "line": case "area": case "combo": {
+      const horizontal = kind === "bar" && raw.horizontal === true;
+      const ss = series.map((s, i) => { used.push(...s.values.filter((v): v is number => v !== null)); return { id: "s" + (i + 1), label: cleanText(s.label), values: [...s.values], ...(kind === "combo" ? { mark: s.mark } : {}) }; });
+      chart = { ...common, kind, categories: cats, series: ss, ...((kind === "bar" || kind === "area") && raw.stacked === true ? { stacked: true } : {}), ...(horizontal ? { orientation: "horizontal" } : {}),
+        ...opt("xAxis", horizontal ? axis(yLabel, true) : axis(xLabel, false)), ...opt("yAxis", horizontal ? axis(xLabel, false) : axis(yLabel, true)) };
+      break;
+    }
+    case "pie": {
+      const values = series[0]?.values ?? [];
+      if (values.length !== cats.length) return fail("AI_CHART_MALFORMED", "عدد قيم الرسم الدائري يجب أن يساوي عدد فئاته.", path + ".series");
+      used.push(...values.filter((v): v is number => v !== null));
+      chart = { ...common, kind, slices: cats.map((c, i) => ({ id: "p" + (i + 1), label: c.label, value: values[i] as number })), ...(raw.donut === true ? { donut: true } : {}), ...(unit ? { unit } : {}) };
+      break;
+    }
+    case "scatter": {
+      const pts = raw.points as { series: number; x: number; y: number; label: string }[];
+      const groups = series.length ? series : [{ label: "البيانات", values: [], mark: "bar" as const }];
+      let n = 0;
+      chart = { ...common, kind, series: groups.map((s, si) => ({ id: "s" + (si + 1), label: cleanText(s.label), points: pts.filter(p => p.series === si + 1).map(p => { used.push(p.x, p.y); const label = cleanText(p.label); return { id: "pt" + ++n, x: p.x, y: p.y, ...(label ? { label } : {}) }; }) })),
+        ...opt("xAxis", axis(xLabel, false)), ...opt("yAxis", axis(yLabel, true)) };
+      if (pts.some(p => p.series > groups.length)) return fail("AI_CHART_MALFORMED", "نقطة تنتمي إلى سلسلة غير موجودة.", path + ".points");
+      break;
+    }
+    case "histogram": {
+      const bins = (raw.bins as { start: number; end: number; count: number }[]).map((b, i) => { used.push(b.start, b.end, b.count); return { id: "b" + (i + 1), start: b.start, end: b.end, count: b.count }; });
+      chart = { ...common, kind, bins, ...opt("xAxis", axis(xLabel, true)), ...opt("yAxis", axis(yLabel, false)) };
+      break;
+    }
+    case "radar": {
+      // the scale maximum is not data: code takes the largest value (every value then lies within 0..max)
+      const all = series.flatMap(s => s.values.filter((v): v is number => v !== null));
+      used.push(...all);
+      const max = all.length ? Math.max(...all) : 1;
+      chart = { ...common, kind, axes: cats.map((c, i) => ({ id: "a" + (i + 1), label: c.label, max: max > 0 ? max : 1 })), series: series.map((s, i) => ({ id: "s" + (i + 1), label: cleanText(s.label), values: [...s.values] })) };
+      break;
+    }
+    case "boxplot": {
+      const boxes = (raw.boxes as { label: string; min: number; q1: number; median: number; q3: number; max: number }[]).map((b, i) => { used.push(b.min, b.q1, b.median, b.q3, b.max); return { id: "x" + (i + 1), label: cleanText(b.label), min: b.min, q1: b.q1, median: b.median, q3: b.q3, max: b.max }; });
+      chart = { ...common, kind, boxes, ...opt("xAxis", axis(xLabel, false)), ...opt("yAxis", axis(yLabel, true)) };
+      break;
+    }
+    case "heatmap": {
+      used.push(...series.flatMap(s => s.values.filter((v): v is number => v !== null)));
+      chart = { ...common, kind, columns: cats.map((c, i) => ({ id: "k" + (i + 1), label: c.label })), rows: series.map((s, i) => ({ id: "r" + (i + 1), label: cleanText(s.label) })), values: series.map(s => [...s.values]), ...(unit ? { unit } : {}),
+        ...opt("xAxis", axis(xLabel, false)), ...opt("yAxis", axis(yLabel, false)) };
+      break;
+    }
+  }
+  if (origin === "teacherProvided") {
+    const given = numbersInText(policy.request);
+    const missing = used.filter(v => !given.has(v));
+    if (missing.length) return fail("AI_CHART_DATA_NOT_PROVIDED", "أرقام الرسم البياني يجب أن تكون أرقام المعلم كما وردت في طلبه (القيمة " + missing[0] + " غير موجودة في الطلب)؛ لا تعدّل بيانات المعلم ولا تخترعها.", path);
+    // where the request WRITES a category's value ("يناير ١٢٠", "Jan, Feb: 120, 80"), a single-series chart (radar axes and heat-map columns
+    // are its categories — round-5 finding R5-A5) or a pie (its first series) must not swap, shift or drop it. A pairing is a reading of free
+    // text, so it never demands that a value equal it: a value is refused only when it is EMPTY where the request writes one, or when it is
+    // ANOTHER category's written value. A misread pairing can therefore still refuse a correct chart — a category left empty, or two
+    // categories sharing a value; the known misreadings pair nothing instead (record §11). The refusal never states a value (the pairing is a
+    // check, not a value to copy).
+    const one = (kind === "bar" || kind === "line" || kind === "area" || kind === "combo" || kind === "radar" || kind === "heatmap" || kind === "pie") && (kind === "pie" || series.length === 1) ? series[0]?.values ?? [] : null;
+    const pairs = one ? pairedNumbers(policy.request, categories) : [];
+    if (one) for (let i = 0; i < categories.length; i++) {
+      const p = pairs[i], v = one[i];
+      if (p === undefined) continue;
+      if (v === null || v === undefined) return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» فارغة في الرسم مع أن طلب المعلم يبدو أنه يذكر لها قيمة؛ راجع الطلب: انسخ القيمة كما وردت إن كانت قيمة هذه الفئة، ولا تخترع رقمًا.", path + ".series");
+      if (v !== p && pairs.some((q, j) => j !== i && q === v)) return fail("AI_CHART_DATA_NOT_PROVIDED", "قيمة «" + categories[i].slice(0, 40) + "» في الرسم تبدو قيمةَ فئة أخرى في طلب المعلم؛ راجع الطلب وانسخ قيمة كل فئة كما وردت معها، دون تبديل أو إزاحة.", path + ".series");
+    }
+    // a teacher-data chart's title and description state no number the teacher did not write (no invented figures presented as real)
+    const stated = [...numbersInText((raw.title as string) + "\n" + (raw.description as string))].filter(n => !given.has(n));
+    if (stated.length) return fail("AI_CHART_DATA_NOT_PROVIDED", "عنوان الرسم أو وصفه يذكر رقمًا ليس في طلب المعلم (" + stated[0] + ")؛ احذفه أو استخدم أرقام المعلم فقط.", path + ".title");
+  }
+  return { ok: true, chart: chart as ChartSpecV1 };
+}

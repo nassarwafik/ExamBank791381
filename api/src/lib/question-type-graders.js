@@ -33,6 +33,10 @@ const openResponse = require("./shared-finalization/openResponseQuestion");
 // REPLAYS the student's semantic actions from the canonical initial state (the response's state / score / checks are never read) and
 // computes weighted partial credit from the plugin's facts. Unknown plugin / version or a broken key ⇒ 0 + manual review.
 const smartSim = require("./shared-finalization/trustedSimPlugins");
+// Phase 21A.1 — chartSelection@1: the shared strict authority re-validates the public config (the chart through the ONE ChartSpecV1
+// authority) and the PRIVATE key before any target is compared (malformed authority ⇒ 0 + manual review). Only the student's semantic
+// target keys on the SAME chart are read — never coordinates, pixels or a client score.
+const chartSelection = require("./shared-finalization/chartSelectionQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -153,6 +157,10 @@ registerBuiltIn("hotspot", (question, response, max) => {
 registerBuiltIn("openResponse", (question, response) => openResponse.gradeOpenResponse(question, response));
 registerBuiltIn("labelDiagram", (question, response, max) => {
   const r = labelDiagram.scoreLabelDiagram({ config: question.labelDiagram, answerKey: question.answer, image: question.image, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("chartSelection", (question, response, max) => {
+  const r = chartSelection.scoreChartSelection({ config: question.chartSelection, answerKey: question.answer, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
 registerBuiltIn("inlineCloze", (question, response, max) => {

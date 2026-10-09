@@ -1,0 +1,76 @@
+/* ============================================================
+   Phase 21A.1 — interactive data charts (lazy). Every selector is scoped to the
+   chart's own .xp-chart figure. Colours come from the presentation variables
+   (--xp-*) with the platform tokens (--eb-*) as the fallback. The engine draws
+   only the picture inside .xp-chart-host; legend, tooltip, selection list and
+   data table are ExamBank text. Mobile-first, logical properties, visible focus,
+   no page overflow (the stage is 100% of its column), print-safe.
+   ============================================================ */
+.xp-chart{
+  --_c-text:var(--xp-text,var(--eb-text,#334155)); --_c-muted:var(--xp-muted,var(--eb-muted,#64748b)); --_c-border:var(--xp-border,var(--eb-line,#e2e8f0));
+  --_c-surface:var(--xp-surface,var(--eb-surface,#fff)); --_c-alt:var(--xp-surface-alt,var(--eb-surface-2,#f7f9fc)); --_c-primary:var(--xp-primary,var(--eb-primary,#2563eb));
+  --_c-radius:var(--xp-radius,var(--eb-r-sm,8px)); --_c-selected:#F59E0B;
+  margin:0; display:flex; flex-direction:column; gap:var(--eb-space-2,8px); min-width:0; max-width:100%; color:var(--_c-text);
+  padding:var(--eb-space-3,12px); border:1px solid var(--_c-border); border-radius:var(--_c-radius); background:var(--_c-surface);
+}
+.xp-chart :focus-visible{ outline:3px solid var(--_c-primary); outline-offset:2px; }
+.xp-chart-caption{ display:flex; flex-direction:column; gap:2px; }
+.xp-chart-title{ font-weight:var(--eb-fw-bold,700); font-size:1.0625em; line-height:1.35; }
+.xp-chart-desc{ color:var(--_c-muted); font-size:.9375em; white-space:pre-line; }
+.xp-chart-summary,.xp-chart-refs{ margin:0; color:var(--_c-muted); font-size:.8125em; }
+.xp-chart-legend{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:4px 14px; font-size:.875em; }
+.xp-chart-legend li{ display:inline-flex; align-items:center; gap:6px; min-width:0; }
+.xp-chart-swatch{ inline-size:14px; block-size:10px; border-radius:2px; border:2px solid; flex:none; }
+.xp-chart-swatch[data-xp-mark="line"]{ block-size:0; border-width:2px 0 0; border-radius:0; background:transparent !important; }
+.xp-chart-swatch[data-xp-mark="point"]{ inline-size:10px; border-radius:50%; }
+.xp-chart-swatch[data-xp-mark="area"]{ opacity:.75; }
+
+/* the stage: the engine's canvas box. Always the column width (never wider), a code-owned height, its own stacking context for the tip. */
+.xp-chart-stage{ position:relative; inline-size:100%; max-inline-size:100%; min-inline-size:0; overflow:hidden; direction:ltr; touch-action:pan-y pinch-zoom; }
+.xp-chart-host{ position:absolute; inset:0; }
+.xp-chart-status{ position:absolute; inset:0; display:grid; place-items:center; color:var(--_c-muted); font-size:.875em; direction:rtl; }
+.xp-chart-tip{ position:absolute; z-index:2; pointer-events:none; max-inline-size:min(260px,80%); display:flex; flex-direction:column; gap:2px;
+  padding:6px 10px; border:1px solid var(--_c-border); border-radius:6px; background:var(--_c-surface); color:var(--_c-text);
+  box-shadow:0 4px 14px rgba(15,23,42,.14); font-size:.8125em; line-height:1.4; direction:rtl; overflow-wrap:anywhere; }
+.xp-chart-tip-title{ font-weight:var(--eb-fw-semibold,600); }
+.xp-chart-error{ margin:0; padding:var(--eb-space-2,8px); border:1px dashed var(--_c-border); border-radius:var(--_c-radius); color:var(--_c-muted); font-size:.875em; }
+.xp-chart-retry,.xp-chart-table-toggle{ font:inherit; font-size:.875em; color:var(--_c-primary); background:none; border:0; padding:4px 2px; cursor:pointer; text-decoration:underline; }
+
+/* the keyboard / screen-reader selection list (answer surfaces) — the same targets the picture accepts */
+.xp-chart-select{ display:flex; flex-direction:column; gap:6px; }
+.xp-chart-select-label{ margin:0; font-weight:var(--eb-fw-semibold,600); font-size:.9375em; }
+.xp-chart-select-hint{ font-weight:400; color:var(--_c-muted); font-size:.875em; }
+.xp-chart-options{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px; max-block-size:16rem; overflow-y:auto; }
+.xp-chart-option{ font:inherit; font-size:.875em; min-block-size:36px; padding:4px 12px; border:1px solid var(--_c-border); border-radius:999px;
+  background:var(--_c-surface); color:var(--_c-text); cursor:pointer; }
+.xp-chart-option[aria-pressed="true"]{ border-color:var(--_c-selected); box-shadow:inset 0 0 0 2px var(--_c-selected); background:#FFFBEB; font-weight:var(--eb-fw-semibold,600); }
+.xp-chart-option[aria-pressed="true"]::before{ content:"✓ "; }
+/* review: the mark (✓ correct / ✗ incorrect / ○ missed) replaces the "selected" tick, so an incorrect selection never shows a ✓ */
+.xp-chart-option[data-xp-review]::before{ content:none; }
+.xp-chart-option:disabled{ cursor:default; opacity:1; }
+.xp-chart-option[data-xp-review="correct"]{ border-color:#047857; }
+.xp-chart-option[data-xp-review="incorrect"]{ border-color:#B91C1C; }
+.xp-chart-option[data-xp-review="missed"]{ border-style:dashed; border-color:#B45309; }
+.xp-chart-option-mark{ font-size:.875em; color:var(--_c-muted); }
+
+.xp-chart-foot{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; }
+.xp-chart-source{ color:var(--_c-muted); font-size:.8125em; }
+.xp-chart-table-wrap{ max-width:100%; overflow-x:auto; border:1px solid var(--_c-border); border-radius:var(--_c-radius); }
+.xp-chart-table-wrap[hidden]{ display:none; }
+.xp-chart-table{ width:100%; border-collapse:collapse; font-size:.875em; font-variant-numeric:tabular-nums; }
+.xp-chart-table :is(th,td){ padding:4px 10px; text-align:start; border-block-start:1px solid var(--_c-border); white-space:nowrap; }
+.xp-chart-table thead th{ background:var(--_c-alt); border-block-start:0; }
+.xp-chart-missing{ color:var(--_c-muted); }
+.xp-chart-sr{ position:absolute; inline-size:1px; block-size:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+@media (prefers-reduced-motion: reduce){ .xp-chart *{ transition:none !important; animation:none !important; } }
+@media print{
+  .xp-chart{ break-inside:avoid; page-break-inside:avoid; border-color:#999; }
+  /* the picture flows in print: the engine's fixed-size box becomes fluid and the SVG (it carries a viewBox) scales to the printed column */
+  .xp-chart-stage{ overflow:visible; block-size:auto !important; }
+  .xp-chart-host{ position:static; }
+  .xp-chart-host > div{ position:relative !important; inline-size:auto !important; block-size:auto !important; overflow:visible !important; }
+  .xp-chart-host svg{ position:static !important; display:block; inline-size:auto !important; max-inline-size:100%; block-size:auto !important; margin-inline:auto; }
+  .xp-chart-tip,.xp-chart-status,.xp-chart-retry,.xp-chart-table-toggle{ display:none !important; }
+  .xp-chart-options{ max-block-size:none; overflow:visible; }
+}

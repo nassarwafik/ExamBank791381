@@ -53,6 +53,8 @@ registerStudentRenderer("parametricNumeric", 1, lazy(() => import("./student/Par
 // Phase 19D — visual questions (lazy: the image canvas, overlay and pointer mapping load only when a visual question renders).
 registerStudentRenderer("hotspot", 1, lazy(() => import("./student/HotspotResponse")));
 registerStudentRenderer("labelDiagram", 1, lazy(() => import("./student/LabelDiagramResponse")));
+// Phase 21A.1 — chart selection (lazy: the chart component loads with it; the rendering engine only behind its own dynamic edge).
+registerStudentRenderer("chartSelection", 1, lazy(() => import("./student/ChartSelectionResponse")));
 registerStudentRenderer("openResponse", 1, lazy(() => import("./student/OpenResponseResponse")));
 // Phase 20A — trusted SmartSim (lazy: the plugin workspace — topology, device panels, engines — loads only when a smartSim question renders).
 registerStudentRenderer("smartSim", 1, lazy(() => import("./student/SmartSimResponse")));

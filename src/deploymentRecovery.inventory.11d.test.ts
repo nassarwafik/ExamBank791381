@@ -32,6 +32,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./AssignmentReview.tsx", "SmartSimReviewView", "./trustedSim/SmartSimReviewView", "teacher-smartsim-review"],
   // Phase 20D — the composite review tree loads on demand inside the assignment review
   ["./AssignmentReview.tsx", "CompositeReviewView", "./composite/CompositeReviewView", "teacher-composite-review"],
+  // Phase 21A.1 — the chart-selection review loads on demand inside the assignment review
+  ["./AssignmentReview.tsx", "ChartSelectionReview", "./charts/ChartSelectionReview", "teacher-chart-review"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],

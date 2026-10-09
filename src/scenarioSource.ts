@@ -140,7 +140,7 @@ function sourcePayloadBytes(s: SourceStimulusV1): number {
   if (s.kind === "text") n += utf8Bytes(s.text);
   else if (s.kind === "image") n += utf8Bytes(s.alt);
   else if (s.kind === "code") n += utf8Bytes(s.source);
-  else if (s.kind === "rich") n += utf8Bytes(richContentPlainText(s.richContent));
+  else if (s.kind === "rich") n += utf8Bytes(richContentPlainText(s.richContent, { storedOnly: true }));   // a chart's stored prose, never its generated summary
   else { for (const h of s.columnHeaders) n += utf8Bytes(h); for (const h of s.rowHeaders ?? []) n += utf8Bytes(h); for (const r of s.rows) for (const c of r) n += utf8Bytes(c); }
   return n;
 }

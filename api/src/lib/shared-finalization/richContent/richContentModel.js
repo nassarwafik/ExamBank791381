@@ -8,25 +8,26 @@ exports.richContentPlainText = richContentPlainText;
 exports.mapRichImages = mapRichImages;
 const imageAsset_1 = require("../imageAsset");
 const richMath_1 = require("./richMath");
+const proseGuard_1 = require("./proseGuard");
+const chartSpec_1 = require("../charts/chartSpec");
 exports.RICH_CONTENT_SCHEMA_VERSION = 1;
-exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math"]);
+exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"]);
 exports.RICH_MARKS = Object.freeze(["bold", "italic", "underline", "code", "sup", "sub"]);
 exports.RICH_CODE_LANGUAGES = Object.freeze(["python", "java", "csharp", "pseudocode", "javascript", "html", "css", "sql", "text"]);
 exports.RICH_CALLOUT_VARIANTS = Object.freeze(["info", "note", "warning", "success", "important"]);
 exports.RICH_TABLE_RESPONSIVE = Object.freeze(["scroll", "stack", "compact"]);
 exports.RICH_LIMITS = Object.freeze({
     blocks: 200, runs: 200, blockChars: 20000, totalChars: 100000, listItems: 100, tableRows: 100, tableColumns: 12, cellChars: 2000,
-    shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288
+    shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8
 });
 const BLOCK_KEYS = Object.freeze({
     heading: ["type", "level", "runs"], paragraph: ["type", "runs", "dir", "align"], unorderedList: ["type", "items"], orderedList: ["type", "items"],
     table: ["type", "caption", "columnHeaders", "rowHeaders", "rows", "responsive"], image: ["type", "asset", "alt"], figure: ["type", "asset", "alt", "caption"],
     code: ["type", "language", "source", "lineNumbers", "title"], cli: ["type", "source", "title"], quote: ["type", "runs", "citation"],
-    callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"]
+    callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"],
+    dataChart: ["type", "chart"]
 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-const RAW_HTML = /<\/?(script|style|iframe|object|embed|svg|math|link|meta|img|form|input|button|textarea|select|base|frame|frameset|template|noscript|html|head|body|video|audio|source|picture|canvas)\b|<\/?(a|div|span|p|table|tbody|thead|tr|td|th|br|hr|h[1-6]|ul|ol|li)\b[^<>]*>|<!--|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/i;
-const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 const isPlain = (v) => {
     if (!v || typeof v !== "object" || Array.isArray(v))
         return false;
@@ -51,13 +52,14 @@ function utf8Bytes(s) {
     }
     return n;
 }
-const looksLikeRawHtml = (s) => RAW_HTML.test(s);
+const looksLikeRawHtml = (s) => proseGuard_1.RAW_HTML.test(s);
 exports.looksLikeRawHtml = looksLikeRawHtml;
 function validateRichContent(raw, path = "richContent") {
     const issues = [];
     const add = (code, message, at) => { if (issues.length < 50)
         issues.push({ code, message, severity: "error", path: at }); };
-    let blockCount = 0, totalChars = 0;
+    let blockCount = 0, totalChars = 0, chartCount = 0;
+    const chartIds = new Set();
     const keysOk = (o, allowed, at) => {
         let ok = true;
         for (const k of Object.keys(o))
@@ -80,11 +82,11 @@ function validateRichContent(raw, path = "richContent") {
             add("RICH_CONTENT_LIMIT", "نص أطول من الحد المسموح في المحتوى المنسق.", at);
             return undefined;
         }
-        if (CONTROL.test(v)) {
+        if (proseGuard_1.CONTROL.test(v)) {
             add("RICH_CONTENT_INVALID_TEXT", "محارف تحكم غير مسموحة في المحتوى المنسق.", at);
             return undefined;
         }
-        if (RAW_HTML.test(v)) {
+        if (proseGuard_1.RAW_HTML.test(v)) {
             add("RICH_CONTENT_RAW_HTML", "المحتوى المنسق لا يقبل وسوم HTML أو روابط script.", at);
             return undefined;
         }
@@ -100,7 +102,7 @@ function validateRichContent(raw, path = "richContent") {
             add("RICH_CONTENT_LIMIT", "الكود أطول من الحد المسموح.", at);
             return undefined;
         }
-        if (CONTROL.test(v)) {
+        if (proseGuard_1.CONTROL.test(v)) {
             add("RICH_CONTENT_INVALID_TEXT", "محارف تحكم غير مسموحة في الكود.", at);
             return undefined;
         }
@@ -222,7 +224,7 @@ function validateRichContent(raw, path = "richContent") {
         }
         const type = b.type;
         if (typeof type !== "string" || !exports.RICH_BLOCK_TYPES.includes(type)) {
-            add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + String(type).slice(0, 40), at + ".type");
+            add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + ((typeof type === "object" && type !== null) || typeof type === "function" ? typeof type : String(type).slice(0, 40)), at + ".type");
             return undefined;
         }
         const t = type;
@@ -492,6 +494,26 @@ function validateRichContent(raw, path = "richContent") {
                 out = { type: "math", source: b.source };
                 break;
             }
+            case "dataChart": {
+                if (++chartCount > exports.RICH_LIMITS.charts) {
+                    add("RICH_CONTENT_LIMIT", "عدد الرسوم البيانية في المحتوى المنسق أكبر من الحد المسموح (" + exports.RICH_LIMITS.charts + ").", at);
+                    break;
+                }
+                const c = (0, chartSpec_1.validateChartSpec)(b.chart, at + ".chart");
+                if (!c.ok) {
+                    for (const i of c.issues)
+                        add("RICH_CONTENT_CHART", i.message + " [" + i.code + "]", i.path);
+                    break;
+                }
+                if (chartIds.has(c.value.id)) {
+                    add("RICH_CONTENT_CHART", "معرّف الرسم البياني «" + c.value.id + "» مكرّر في المحتوى نفسه.", at + ".chart.id");
+                    break;
+                }
+                chartIds.add(c.value.id);
+                totalChars += c.value.title.length + c.value.description.length + (c.value.source?.length ?? 0);
+                out = { type: "dataChart", chart: c.value };
+                break;
+            }
         }
         return issues.length === before ? out : undefined;
     };
@@ -534,7 +556,7 @@ function projectRichContentForStudent(raw) {
     return r.ok ? r.value : undefined;
 }
 const runsText = (runs) => runs.map(r => ("text" in r ? r.text : r.math)).join("");
-function richContentPlainText(raw) {
+function richContentPlainText(raw, opts = {}) {
     const r = validateRichContent(raw);
     if (!r.ok || !r.value)
         return "";
@@ -591,6 +613,9 @@ function richContentPlainText(raw) {
                     break;
                 case "math":
                     out.push(b.source);
+                    break;
+                case "dataChart":
+                    out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : (0, chartSpec_1.chartPlainText)(b.chart));
                     break;
                 case "divider": break;
             }

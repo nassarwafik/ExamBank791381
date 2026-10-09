@@ -30,6 +30,11 @@
 //      machinery (the exam invariant: the editor must never help solve the question), or any chunk references a CDN;
 //  15. (Phase 20F) the AI Full Exam Composer (dialog, staged pipeline, capability catalog, diff view) reaches the initial graph, or any of
 //      its signatures is missing from every chunk (signatures);
+//  16. (Phase 21A.1) the data-chart platform (chart figure / selection list / data table, chart editor, key picker, chartSelection
+//      authority) or the ECharts runtime reaches the initial graph or the Student Portal's static closure, the ECharts runtime is
+//      statically reachable from the DataChart chunk (it must load through DataChart's own import() edges), the lazy runtime exceeds
+//      its gzip budgets (signatures + measured chunk sizes), or the common engine lacks the label layout that hides overlapping value
+//      labels (Review Fix 4: ECharts' core installs it only as an import side effect, which the production build drops);
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -94,8 +99,22 @@ const PRESENTATION_SIGNATURES = ["xp-studio", "rc-editor", "RICH_CONTENT_RAW_HTM
 const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "fnstudy-probe"];
 // Phase 20F — the AI Full Exam Composer: the dialog class name, the capability catalog version marker and the diff list class name. They
 // live ONLY in the lazy composer chunk(s): ANY one in an initial file fails; EACH must exist in some chunk (a missing one means the list is stale).
-// (Phase 21A: the catalog marker is AI_COMPOSER_CATALOG_V2 — the catalog gained the Scientific Math v2 capability.)
-const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V2", "ai-composer-diff"];
+// (Phase 21A: the catalog marker became AI_COMPOSER_CATALOG_V2 — Scientific Math v2; Phase 21A.1: AI_COMPOSER_CATALOG_V3 — data charts.)
+const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V3", "ai-composer-diff"];
+// Phase 21A.1 — the data-chart platform: ExamBank's chart surface (the selection list and data table class names of the lazy DataChart,
+// the teacher's chart editor and key picker, the chartSelection authority's refusal code) and the ECharts runtime (the markers of our two
+// engine modules and ECharts' own DOM instance attribute). ANY one in an initial file — or in the Student Portal's static closure (a student whose exam has no
+// chart never downloads chart code) — fails; EACH must exist in some chunk (a missing one means the list is stale).
+const DATA_CHART_SIGNATURES = ["xp-chart-table", "xp-chart-select", "data-xp-chart-editor", "chart-key-picker", "CHART_SELECTION_CHART_MISMATCH", "xp-chart-engine-v1", "xp-chart-advanced-v1", "_echarts_instance_"];
+// The ECharts runtime chunks (any of these): never statically reachable from the DataChart chunk (the figure, its accessible list and
+// data table paint first; the engine arrives through DataChart's import() edges), and budgeted in gzip — the common kinds (ECharts core
+// shared chunk + the common engine module) and the advanced kinds module (radar / box plot / heat map). Measured in 21A.1: 182.1 KB
+// (131.7 + 50.4) and 17.8 KB.
+const ECHARTS_SIGNATURES = ["_echarts_instance_", "xp-chart-engine-v1", "xp-chart-advanced-v1"];
+export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
+export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
+// the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
+const CHART_LABEL_LAYOUT_SIGNATURE = "addLabelsOfSeries";
 const OPEN_RESPONSE_SIGNATURES = ["qt-editor-openResponse", "or-rubric-editor", "or-grade-criteria", "or-student-answer", "open-response-input", "RUBRIC_AWARD_UNKNOWN_LEVEL"];
 // Phase 17F-C1 — the Monaco engine payload (its own DOM class names / global): two of three identify a Monaco chunk. It must exist
 // (the professional editor ships), stay out of the initial graph AND out of the static closure of the coding question chunks.
@@ -197,7 +216,30 @@ function main() {
     if (dynamic.length) failures.push(`${f} (initial) contains the dynamic SmartSim runtime payload (${dynamic.join(", ")}) — it must stay lazy`);
     const composer = COMPOSER_SIGNATURES.filter(s => src.includes(s));
     if (composer.length) failures.push(`${f} (initial) contains the AI Full Exam Composer payload (${composer.join(", ")}) — it must stay lazy`);
+    const dataChart = DATA_CHART_SIGNATURES.filter(s => src.includes(s));
+    if (dataChart.length) failures.push(`${f} (initial) contains the data-chart platform / ECharts payload (${dataChart.join(", ")}) — it must stay lazy`);
   }
+  // Phase 21A.1 — the data-chart platform and the ECharts runtime: lazy, out of the student's no-chart path, behind DataChart's dynamic edges, budgeted.
+  for (const sig of DATA_CHART_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the data-chart signature "${sig}" was not found in any chunk — the signature list is stale`);
+  const portalClosure = portalChunks.length ? staticClosure(dist, portalChunks) : [];
+  for (const f of portalClosure) { const hit = DATA_CHART_SIGNATURES.filter(s => read(f).includes(s)); if (hit.length) failures.push(`${f} is statically reachable from the Student Portal and carries chart code (${hit.join(", ")}) — a student without charts must never download it`); }
+  const echartsChunks = all.filter(f => ECHARTS_SIGNATURES.some(s => read(f).includes(s)));
+  const dataChartRoots = all.filter(f => /^DataChart-[^.]+\.js$/.test(f));
+  if (!dataChartRoots.length) failures.push("no DataChart-*.js lazy chunk was emitted (is the chart renderer imported statically?)");
+  const dataChartClosure = dataChartRoots.length ? staticClosure(dist, dataChartRoots) : [];
+  for (const f of echartsChunks) if (dataChartClosure.includes(f)) failures.push(`${f} (ECharts runtime) is statically reachable from ${dataChartRoots.join(", ")} — the engine must load through import() only`);
+  const dataChartDynamic = new Set(dataChartClosure.flatMap(f => dynamicEdges(dist, f)));
+  const engineRoots = echartsChunks.filter(f => read(f).includes("xp-chart-engine-v1") || read(f).includes("xp-chart-advanced-v1"));
+  for (const f of engineRoots) if (!dataChartDynamic.has(f)) failures.push(`${f} (chart engine module) is not behind a dynamic edge of the DataChart chunk`);
+  const gzSum = list => list.reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0) / 1024;
+  const commonEngine = engineRoots.filter(f => read(f).includes("xp-chart-engine-v1"));
+  const advancedEngine = engineRoots.filter(f => read(f).includes("xp-chart-advanced-v1"));
+  const commonGraph = staticClosure(dist, commonEngine).filter(f => !initial.includes(f) && !dataChartClosure.includes(f));
+  const advancedOnly = staticClosure(dist, advancedEngine).filter(f => !initial.includes(f) && !dataChartClosure.includes(f) && !commonGraph.includes(f));
+  if (gzSum(commonGraph) > CHART_ENGINE_GZIP_BUDGET_KB) failures.push(`the chart engine (common kinds) is ${gzSum(commonGraph).toFixed(1)} KB gzip — over its ${CHART_ENGINE_GZIP_BUDGET_KB} KB budget`);
+  if (!commonGraph.some(f => read(f).includes(CHART_LABEL_LAYOUT_SIGNATURE))) failures.push(`the chart engine (common kinds) carries no label layout ("${CHART_LABEL_LAYOUT_SIGNATURE}") — overlapping value labels would be drawn over one another; register LabelLayout in src/charts/echartsEngine.ts`);
+  if (gzSum(advancedOnly) > CHART_ADVANCED_GZIP_BUDGET_KB) failures.push(`the advanced chart kinds module is ${gzSum(advancedOnly).toFixed(1)} KB gzip — over its ${CHART_ADVANCED_GZIP_BUDGET_KB} KB budget`);
+  console.log(`Data-chart runtime: DataChart first paint ${dataChartClosure.filter(f => !initial.includes(f)).length} files ${gzSum(dataChartClosure.filter(f => !initial.includes(f))).toFixed(1)} KB gzip; engine (common kinds) ${commonGraph.length} files ${gzSum(commonGraph).toFixed(1)} KB gzip (budget ${CHART_ENGINE_GZIP_BUDGET_KB}); advanced kinds +${advancedOnly.length} file(s) ${gzSum(advancedOnly).toFixed(1)} KB gzip (budget ${CHART_ADVANCED_GZIP_BUDGET_KB}); Student Portal static closure: no chart renderer, engine, editor or selection code`);
   for (const sig of DYNAMIC_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the dynamic SmartSim signature "${sig}" was not found in any chunk — the signature list is stale`);
   const dynamicChunks = all.filter(f => DYNAMIC_SIGNATURES.some(s => read(f).includes(s)));
   console.log(`Dynamic SmartSim runtime payload found in: ${dynamicChunks.join(", ") || "(none)"} — ${dynamicChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);

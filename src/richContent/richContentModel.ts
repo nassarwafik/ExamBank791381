@@ -6,9 +6,11 @@
 // the plain `text` fallback). Rendering is the trusted React renderer (RichContentRenderer.tsx) — this module never produces markup.
 import { validateImageAsset, type ImageAssetV1 } from "../imageAsset";
 import { parseMath } from "./richMath";
+import { CONTROL, RAW_HTML } from "./proseGuard";
+import { validateChartSpec, chartPlainText, type ChartSpecV1 } from "../charts/chartSpec";
 
 export const RICH_CONTENT_SCHEMA_VERSION = 1 as const;
-export const RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math"] as const);
+export const RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"] as const);
 export type RichBlockType = (typeof RICH_BLOCK_TYPES)[number];
 export const RICH_MARKS = Object.freeze(["bold", "italic", "underline", "code", "sup", "sub"] as const);
 export type RichMark = (typeof RICH_MARKS)[number];
@@ -17,7 +19,7 @@ export const RICH_CALLOUT_VARIANTS = Object.freeze(["info", "note", "warning", "
 export const RICH_TABLE_RESPONSIVE = Object.freeze(["scroll", "stack", "compact"] as const);
 export const RICH_LIMITS = Object.freeze({
   blocks: 200, runs: 200, blockChars: 20000, totalChars: 100000, listItems: 100, tableRows: 100, tableColumns: 12, cellChars: 2000,
-  shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288
+  shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8
 });
 
 export type RichRun = { text: string; marks?: RichMark[]; dir?: "ltr" | "rtl" } | { math: string };
@@ -36,7 +38,9 @@ export type RichBlock =
   | { type: "divider" }
   | { type: "keyValueGrid"; items: { label: string; value: string }[] }
   | { type: "columns"; columns: { blocks: RichBlock[] }[] }
-  | { type: "math"; source: string };
+  | { type: "math"; source: string }
+  // Phase 21A.1: a declarative data chart (ExamBank ChartSpecV1 — never a rendering-library option), validated by the ONE chart authority.
+  | { type: "dataChart"; chart: ChartSpecV1 };
 export type RichContentV1 = { schemaVersion: 1; blocks: RichBlock[] };
 export type RichIssue = { code: string; message: string; severity: "error"; path: string };
 export type RichResult = { ok: boolean; value?: RichContentV1; issues: RichIssue[] };
@@ -45,19 +49,10 @@ const BLOCK_KEYS: Readonly<Record<RichBlockType, readonly string[]>> = Object.fr
   heading: ["type", "level", "runs"], paragraph: ["type", "runs", "dir", "align"], unorderedList: ["type", "items"], orderedList: ["type", "items"],
   table: ["type", "caption", "columnHeaders", "rowHeaders", "rows", "responsive"], image: ["type", "asset", "alt"], figure: ["type", "asset", "alt", "caption"],
   code: ["type", "language", "source", "lineNumbers", "title"], cli: ["type", "source", "title"], quote: ["type", "runs", "citation"],
-  callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"]
+  callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"],
+  dataChart: ["type", "chart"]
 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-// Policy: rich PROSE never carries markup or script URLs. Rendering is text-only anyway (React text nodes); this is the authoring /
-// import refusal the contract promises ("no raw HTML is accepted"). Code / CLI sources are exempt (they are displayed verbatim as code).
-// Linear by construction (independent review fix 1): no whitespace run between "<" and the name (HTML tokenizers never treat "< a" as a
-// tag, and the old `<\s*\/?\s*` split was quadratic on "<" + spaces). Dangerous elements are refused on their opening token alone;
-// common structural names only as a complete `<…>` tag whose body cannot contain "<" (so "x<a.length" / "0 < a < 1" stay prose and
-// every scan stops at the next "<").
-const RAW_HTML = /<\/?(script|style|iframe|object|embed|svg|math|link|meta|img|form|input|button|textarea|select|base|frame|frameset|template|noscript|html|head|body|video|audio|source|picture|canvas)\b|<\/?(a|div|span|p|table|tbody|thead|tr|td|th|br|hr|h[1-6]|ul|ol|li)\b[^<>]*>|<!--|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/i;
-// eslint-disable-next-line no-control-regex
-const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
-
 const isPlain = (v: unknown): v is Record<string, unknown> => {
   if (!v || typeof v !== "object" || Array.isArray(v)) return false;
   const p = Object.getPrototypeOf(v);
@@ -81,7 +76,8 @@ export const looksLikeRawHtml = (s: string): boolean => RAW_HTML.test(s);
 export function validateRichContent(raw: unknown, path = "richContent"): RichResult {
   const issues: RichIssue[] = [];
   const add = (code: string, message: string, at: string) => { if (issues.length < 50) issues.push({ code, message, severity: "error", path: at }); };
-  let blockCount = 0, totalChars = 0;
+  let blockCount = 0, totalChars = 0, chartCount = 0;
+  const chartIds = new Set<string>();
   const keysOk = (o: Record<string, unknown>, allowed: readonly string[], at: string): boolean => {
     let ok = true;
     for (const k of Object.keys(o)) if (FORBIDDEN_KEYS.has(k) || !allowed.includes(k)) { add("RICH_CONTENT_UNKNOWN_KEY", "حقل غير معروف في المحتوى المنسق: " + k, at + "." + k); ok = false; }
@@ -161,7 +157,7 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
     blockCount++;
     if (!isPlain(b)) { add("RICH_CONTENT_INVALID", "كتلة غير صالحة في المحتوى المنسق.", at); return undefined; }
     const type = b.type;
-    if (typeof type !== "string" || !(RICH_BLOCK_TYPES as readonly string[]).includes(type)) { add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + String(type).slice(0, 40), at + ".type"); return undefined; }
+    if (typeof type !== "string" || !(RICH_BLOCK_TYPES as readonly string[]).includes(type)) { add("RICH_CONTENT_BLOCK_TYPE", "نوع كتلة غير مسموح في المحتوى المنسق: " + ((typeof type === "object" && type !== null) || typeof type === "function" ? typeof type : String(type).slice(0, 40)), at + ".type"); return undefined; }
     const t = type as RichBlockType;
     if (!keysOk(b, BLOCK_KEYS[t], at)) return undefined;
     const before = issues.length;
@@ -308,6 +304,17 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
         out = { type: "math", source: b.source };
         break;
       }
+      case "dataChart": {
+        if (++chartCount > RICH_LIMITS.charts) { add("RICH_CONTENT_LIMIT", "عدد الرسوم البيانية في المحتوى المنسق أكبر من الحد المسموح (" + RICH_LIMITS.charts + ").", at); break; }
+        const c = validateChartSpec(b.chart, at + ".chart");
+        if (!c.ok) { for (const i of c.issues) add("RICH_CONTENT_CHART", i.message + " [" + i.code + "]", i.path); break; }
+        if (chartIds.has(c.value.id)) { add("RICH_CONTENT_CHART", "معرّف الرسم البياني «" + c.value.id + "» مكرّر في المحتوى نفسه.", at + ".chart.id"); break; }
+        chartIds.add(c.value.id);
+        // the chart's STORED prose counts (never the generated summary: a wording change must not change a stored document's validity)
+        totalChars += c.value.title.length + c.value.description.length + (c.value.source?.length ?? 0);
+        out = { type: "dataChart", chart: c.value };
+        break;
+      }
     }
     return issues.length === before ? out : undefined;
   };
@@ -337,7 +344,9 @@ export function projectRichContentForStudent(raw: unknown): RichContentV1 | unde
 
 const runsText = (runs: readonly RichRun[]) => runs.map(r => ("text" in r ? r.text : r.math)).join("");
 /** Plain text of a document (search, the plain fallback suggestion, accessibility summaries). Total; tolerates malformed input. */
-export function richContentPlainText(raw: unknown): string {
+/** `storedOnly`: a chart contributes only its STORED prose (title, description, source) — never the generated summary — for limits that
+ *  decide a stored document's validity (a wording change of the summary must not change it). */
+export function richContentPlainText(raw: unknown, opts: { storedOnly?: boolean } = {}): string {
   const r = validateRichContent(raw);
   if (!r.ok || !r.value) return "";
   const out: string[] = [];
@@ -354,6 +363,7 @@ export function richContentPlainText(raw: unknown): string {
         case "keyValueGrid": for (const it of b.items) out.push(it.label + ": " + it.value); break;
         case "columns": for (const c of b.columns) walk(c.blocks); break;
         case "math": out.push(b.source); break;
+        case "dataChart": out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : chartPlainText(b.chart)); break;
         case "divider": break;
       }
     }

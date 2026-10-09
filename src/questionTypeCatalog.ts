@@ -67,6 +67,10 @@ const PRODUCTION_ROWS = [
   // SmartSim contexts, group-level firstNAnswered, per-part manual / automatic grading. Its children live under the type-owned root
   // `composite` (never `parts`, which is how legacy compound is detected); composite never nests (not a compound part, never its own child).
   ["composite", "سؤال مركّب متقدّم", "composite", "composed", "amhpio", ["composite"], false],
+  // Phase 21A.1 — chartSelection@1: the student selects SEMANTIC targets of a declarative data chart (category / series / value / point / bin,
+  // single, multiple or a contiguous range); auto-graded on target keys (never pixels), partial credit optional; not a compound part. Inserted
+  // right after composite (like 20D's composite after compound) so the legacy order and every append position stay unchanged.
+  ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", "apio", ["chartSelection"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
