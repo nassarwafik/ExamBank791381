@@ -8,23 +8,23 @@ import Surface3DLab from "./Surface3DLab";
 afterEach(cleanup);
 describe("21B isolated teacher laboratory", () => {
   it("supports the four mathematical presets and camera rotation", () => {
-    const { container } = render(<Surface3DLab onClose={() => {}} />);
+    render(<Surface3DLab onClose={() => {}} />);
     const dialog = screen.getByRole("dialog", { name: "مختبر الدوال ثلاثية الأبعاد — تجريبي" });
     expect((within(dialog).getByRole("combobox", { name: "مثال ثلاثي الأبعاد" }) as HTMLSelectElement).options).toHaveLength(4);
-    expect(container.querySelectorAll("svg polygon").length).toBeGreaterThan(0);
-    const first = container.querySelector("svg polygon")?.getAttribute("points");
+    expect(document.body.querySelectorAll("svg polygon").length).toBeGreaterThan(0);
+    const first = document.body.querySelector("svg polygon")?.getAttribute("points");
     fireEvent.click(within(dialog).getByRole("button", { name: "تدوير لليمين" }));
-    expect(container.querySelector("svg polygon")?.getAttribute("points")).not.toBe(first);
+    expect(document.body.querySelector("svg polygon")?.getAttribute("points")).not.toBe(first);
     fireEvent.change(within(dialog).getByRole("combobox", { name: "مثال ثلاثي الأبعاد" }), { target: { value: "saddle" } });
     expect((within(dialog).getByRole("textbox", { name: "معادلة السطح" }) as HTMLInputElement).value).toBe("x^2-y^2");
   });
   it("refuses unsupported variables and out-of-bounds meshes", () => {
-    const { container } = render(<Surface3DLab onClose={() => {}} />);
+    render(<Surface3DLab onClose={() => {}} />);
     const dialog = screen.getByRole("dialog");
     const input = within(dialog).getByRole("textbox", { name: "معادلة السطح" });
     fireEvent.change(input, { target: { value: "x+z" } });
     expect(within(dialog).getByRole("alert").textContent).toContain("SURFACE_VARIABLE_INVALID");
-    expect(container.querySelector("svg")).toBeNull();
+    expect(document.body.querySelector("svg")).toBeNull();
     fireEvent.change(input, { target: { value: "x^2+y^2" } });
     fireEvent.change(within(dialog).getByRole("spinbutton", { name: "دقة الشبكة" }), { target: { value: "100" } });
     expect(within(dialog).getByRole("alert").textContent).toContain("SURFACE_NUMBER_INVALID");
