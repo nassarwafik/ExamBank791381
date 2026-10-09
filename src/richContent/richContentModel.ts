@@ -10,9 +10,10 @@ import { CONTROL, RAW_HTML } from "./proseGuard";
 import { validateChartSpec, chartPlainText, type ChartSpecV1 } from "../charts/chartSpec";
 import { validateFunctionGraphSpec, projectGraphForStudent, type FunctionGraphSpecV1 } from "../functionGraphs/functionGraphSpec";
 import { graphPlainText } from "../functionGraphs/graphTargets";
+import { validateSurfaceSpec, type SurfaceSpecV1 } from "../functionSurfaces/surfaceSpec";
 
 export const RICH_CONTENT_SCHEMA_VERSION = 1 as const;
-export const RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph"] as const);
+export const RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph", "functionSurface3D"] as const);
 export type RichBlockType = (typeof RICH_BLOCK_TYPES)[number];
 export const RICH_MARKS = Object.freeze(["bold", "italic", "underline", "code", "sup", "sub"] as const);
 export type RichMark = (typeof RICH_MARKS)[number];
@@ -23,7 +24,8 @@ export const RICH_LIMITS = Object.freeze({
   blocks: 200, runs: 200, blockChars: 20000, totalChars: 100000, listItems: 100, tableRows: 100, tableColumns: 12, cellChars: 2000,
   shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8,
   // Phase 21A.2: function graphs per document (each is sampled and drawn on the student's device)
-  functionGraphs: 4
+  functionGraphs: 4,
+  functionSurfaces: 3
 });
 
 export type RichRun = { text: string; marks?: RichMark[]; dir?: "ltr" | "rtl" } | { math: string };
@@ -47,7 +49,8 @@ export type RichBlock =
   | { type: "dataChart"; chart: ChartSpecV1 }
   // Phase 21A.2: a declarative mathematical function graph (ExamBank FunctionGraphSpecV1 — never a plotting-library option), validated by
   // the ONE graph authority (expressions are data for the safe engine, never code).
-  | { type: "functionGraph"; graph: FunctionGraphSpecV1 };
+  | { type: "functionGraph"; graph: FunctionGraphSpecV1 }
+  | { type: "functionSurface3D"; surface: SurfaceSpecV1 };
 export type RichContentV1 = { schemaVersion: 1; blocks: RichBlock[] };
 export type RichIssue = { code: string; message: string; severity: "error"; path: string };
 export type RichResult = { ok: boolean; value?: RichContentV1; issues: RichIssue[] };
@@ -57,7 +60,7 @@ const BLOCK_KEYS: Readonly<Record<RichBlockType, readonly string[]>> = Object.fr
   table: ["type", "caption", "columnHeaders", "rowHeaders", "rows", "responsive"], image: ["type", "asset", "alt"], figure: ["type", "asset", "alt", "caption"],
   code: ["type", "language", "source", "lineNumbers", "title"], cli: ["type", "source", "title"], quote: ["type", "runs", "citation"],
   callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"],
-  dataChart: ["type", "chart"], functionGraph: ["type", "graph"]
+  dataChart: ["type", "chart"], functionGraph: ["type", "graph"], functionSurface3D: ["type", "surface"]
 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const isPlain = (v: unknown): v is Record<string, unknown> => {
@@ -83,8 +86,8 @@ export const looksLikeRawHtml = (s: string): boolean => RAW_HTML.test(s);
 export function validateRichContent(raw: unknown, path = "richContent"): RichResult {
   const issues: RichIssue[] = [];
   const add = (code: string, message: string, at: string) => { if (issues.length < 50) issues.push({ code, message, severity: "error", path: at }); };
-  let blockCount = 0, totalChars = 0, chartCount = 0, graphCount = 0;
-  const chartIds = new Set<string>(), graphIds = new Set<string>();
+  let blockCount = 0, totalChars = 0, chartCount = 0, graphCount = 0, surfaceCount = 0;
+  const chartIds = new Set<string>(), graphIds = new Set<string>(), surfaceIds = new Set<string>();
   const keysOk = (o: Record<string, unknown>, allowed: readonly string[], at: string): boolean => {
     let ok = true;
     for (const k of Object.keys(o)) if (FORBIDDEN_KEYS.has(k) || !allowed.includes(k)) { add("RICH_CONTENT_UNKNOWN_KEY", "حقل غير معروف في المحتوى المنسق: " + k, at + "." + k); ok = false; }
@@ -332,6 +335,16 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
         out = { type: "functionGraph", graph: g.value };
         break;
       }
+      case "functionSurface3D": {
+        if (++surfaceCount > RICH_LIMITS.functionSurfaces) { add("RICH_CONTENT_LIMIT", "عدد الأسطح ثلاثية الأبعاد في المحتوى المنسق أكبر من الحد المسموح (" + RICH_LIMITS.functionSurfaces + ").", at); break; }
+        const surface = validateSurfaceSpec(b.surface);
+        if (!surface.ok) { for (const i of surface.issues) add("RICH_CONTENT_FUNCTION_SURFACE", i.message + " [" + i.code + "]", at + ".surface"); break; }
+        if (surfaceIds.has(surface.value.id)) { add("RICH_CONTENT_FUNCTION_SURFACE", "معرّف السطح ثلاثي الأبعاد «" + surface.value.id + "» مكرّر في المحتوى نفسه.", at + ".surface.id"); break; }
+        surfaceIds.add(surface.value.id);
+        totalChars += surface.value.title.length + surface.value.description.length + surface.value.expression.length;
+        out = { type: "functionSurface3D", surface: surface.value };
+        break;
+      }
     }
     return issues.length === before ? out : undefined;
   };
@@ -386,6 +399,7 @@ export function richContentPlainText(raw: unknown, opts: { storedOnly?: boolean 
         case "math": out.push(b.source); break;
         case "dataChart": out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : chartPlainText(b.chart)); break;
         case "functionGraph": out.push(opts.storedOnly ? [b.graph.title, b.graph.description, b.graph.source ?? ""].join("\n") : graphPlainText(b.graph)); break;
+        case "functionSurface3D": out.push([b.surface.title, b.surface.description, "z = " + b.surface.expression].join("\n")); break;
         case "divider": break;
       }
     }

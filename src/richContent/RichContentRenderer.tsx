@@ -14,6 +14,7 @@ const RichMath = lazy(() => import("./RichMath"));
 const DataChart = lazy(() => import("../charts/DataChart"));
 // Phase 21A.2 — the function-graph runtime (owned SVG renderer) is its own lazy chunk: a document without a graph never downloads it.
 const FunctionGraphView = lazy(() => import("../functionGraphs/FunctionGraphView"));
+const Surface3DView = lazy(() => import("../functionSurfaces/Surface3DView"));
 
 const CALLOUT_LABEL: Record<string, string> = { info: "معلومة", note: "ملاحظة", warning: "تحذير", success: "إرشاد", important: "مهم" };
 const CALLOUT_ICON: Record<string, string> = { info: "i", note: "✎", warning: "!", success: "✓", important: "★" };
@@ -147,6 +148,11 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "functionGraph": return (
       <Suspense fallback={<div className="fg-pending" aria-busy="true"><p dir="auto">{b.graph.title}</p><p dir="auto">{b.graph.description}</p></div>}>
         <FunctionGraphView spec={b.graph} />
+      </Suspense>
+    );
+    case "functionSurface3D": return (
+      <Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p><p dir="ltr">z = {b.surface.expression}</p></div>}>
+        <Surface3DView spec={b.surface} />
       </Suspense>
     );
   }
