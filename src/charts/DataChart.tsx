@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ChartSpecV1 } from "./chartSpec";
 import { chartDataTable, chartSummary, chartTargets, nextChartSelection, type ChartSelectionMode, type ChartTargetKind } from "./chartData";
-import { buildEngineOption, chartHeight, chartLegend, formatValue, needsAdvancedEngine, targetFromEvent, tooltipFromEvent, widthLayout } from "./echartsAdapter";
+import { buildEngineOption, chartHeight, chartLegend, formatValue, needsAdvancedEngine, referenceLinesText, targetFromEvent, tooltipFromEvent, widthLayout } from "./echartsAdapter";
 import { defaultChartTokens, effectiveAnimation, readChartTokens } from "./chartTheme";
 import type { EngineEvent, EngineHandle } from "./echartsEngine";
 import type { EngineOption } from "./echartsAdapter";
@@ -57,7 +57,7 @@ const textMeasure = (): ((text: string, font: string) => number) | undefined => 
       measurer = c ? (t: string, f: string) => {
         const k = f + "\u0000" + t, hit = measured.get(k);
         if (hit !== undefined) return hit;
-        if (measured.size > 4000) measured.clear();
+        if (measured.size >= 4000) measured.clear();
         c.font = f;
         const w = c.measureText(t).width;
         measured.set(k, w);
@@ -93,7 +93,7 @@ type Tip = { x: number; y: number; title: string; lines: string[] };
 
 export default function DataChart({ spec, preview, selection }: DataChartProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  const ids = { title: "xp-chart-" + uid + "-t", desc: "xp-chart-" + uid + "-d", summary: "xp-chart-" + uid + "-s", table: "xp-chart-" + uid + "-tb", list: "xp-chart-" + uid + "-l" };
+  const ids = { title: "xp-chart-" + uid + "-t", desc: "xp-chart-" + uid + "-d", summary: "xp-chart-" + uid + "-s", table: "xp-chart-" + uid + "-tb", list: "xp-chart-" + uid + "-l", refs: "xp-chart-" + uid + "-r" };
   const figureRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -122,16 +122,19 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   const targets = useMemo(() => (selKind ? chartTargets(spec, selKind) : []), [spec, selKind]);
   const order = useMemo(() => targets.map(t => t.key), [targets]);
   const selectedKey = selection ? selection.value.join("\u0000") : "";
-  // only charts with a horizontal category axis lay out by width (label rotation / caps), and in 32 px steps: a resize re-renders the
-  // engine option only when the layout can change, not on every pixel
-  // (a radar lays its axis names out by width too)
-  const layoutWidth = width > 0 && !(spec.kind === "pie" || spec.kind === "scatter" || (spec.kind === "bar" && spec.orientation === "horizontal")) ? Math.floor(width / 32) * 32 : 0;
+  // charts lay out by width (category label rotation / caps, value-axis label gaps, a radar's names, a pie's label box, reference-line
+  // labels) in 32 px steps: a resize re-renders the engine option only when the layout can change, not on every pixel. Horizontal bars and
+  // scatter plots depend on the width only through their reference lines
+  const layoutWidth = width > 0 && !((spec.kind === "scatter" || (spec.kind === "bar" && spec.orientation === "horizontal")) && !spec.referenceLines?.length) ? Math.floor(width / 32) * 32 : 0;
   const fonts = useFontEpoch();
   const measure = useMemo(() => measureFor(fonts), [fonts]);
+  // the engine keeps its own text widths per font string: after a webfont load the string names one more (absent) family, so no width
+  // measured with the fallback font is reused for overlap hiding or axis layout (round-5 finding B5-5)
+  const engineTokens = useMemo(() => (fonts ? { ...tokens, font: tokens.font + ", xp-font-" + fonts } : tokens), [tokens, fonts]);
   const option = useMemo(() => buildEngineOption(spec, {
-    tokens, animation, compact, width: layoutWidth, measure,
+    tokens: engineTokens, animation, compact, width: layoutWidth, measure,
     ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
-  }), [spec, tokens, animation, compact, layoutWidth, selKind, selectedKey, measure]);
+  }), [spec, engineTokens, animation, compact, layoutWidth, selKind, selectedKey, measure]);
   const optionRef = useRef(option);
   // the option for paper: the print width's layout, no animation (built when printing starts)
   const printOptionRef = useRef<() => EngineOption>(() => option);
@@ -160,7 +163,7 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
     optionRef.current = option;
     printHeightRef.current = chartHeight(spec, false);
     printOptionRef.current = () => buildEngineOption(spec, {
-      tokens, animation: "none", compact: false, width: PRINT_WIDTH, measure: textMeasure(),
+      tokens: engineTokens, animation: "none", compact: false, width: PRINT_WIDTH, measure: textMeasure(),
       ...(selKind ? { selectionKind: selKind, selected: new Set(selectedKey ? selectedKey.split("\u0000") : []) } : {})
     });
     onEngineEvent.current = (e: EngineEvent) => {
@@ -241,6 +244,7 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
 
   const table = useMemo(() => chartDataTable(spec), [spec]);
   const legend = useMemo(() => chartLegend(spec), [spec]);
+  const refs = useMemo(() => referenceLinesText(spec), [spec]);
   const tipStyle = tip ? {
     top: Math.max(4, tip.y + (tip.y > height / 2 ? -12 : 12)),
     ...(tip.x > (width || 0) / 2 ? { right: Math.max(4, (width || 0) - tip.x + 12) } : { left: Math.max(4, tip.x + 12) }),
@@ -250,12 +254,14 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
 
   return (
     <figure ref={figureRef} tabIndex={-1} className="xp-chart" data-xp-chart-kind={spec.kind} data-xp-chart-state={state} data-xp-compact={compact ? "true" : "false"} data-xp-animation={animation}
-      aria-labelledby={ids.title} aria-describedby={ids.desc + " " + ids.summary}>
+      aria-labelledby={ids.title} aria-describedby={ids.desc + " " + ids.summary + (refs ? " " + ids.refs : "")}>
       <figcaption className="xp-chart-caption">
         <span className="xp-chart-title" id={ids.title} dir="auto">{spec.title}</span>
         <span className="xp-chart-desc" id={ids.desc} dir="auto">{spec.description}</span>
       </figcaption>
       <p className="xp-chart-summary" id={ids.summary}>{chartSummary(spec)}</p>
+      {/* the reference lines as text: the picture is hidden from assistive technology and may cut their labels (round-5 finding B5-1) */}
+      {refs && <p className="xp-chart-refs" id={ids.refs}>{refs}</p>}
       {legend.length > 0 && (
         <ul className="xp-chart-legend" aria-label="مفتاح الرسم">
           {legend.map(l => <li key={l.key}><span className="xp-chart-swatch" data-xp-mark={l.mark} style={{ background: l.color, borderColor: l.color }} aria-hidden="true" /><bdi>{l.label}</bdi></li>)}

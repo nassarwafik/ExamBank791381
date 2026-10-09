@@ -32,6 +32,7 @@ const DIGITS = /[٠-٩۰-۹０-９]/g;
 const normDigits = (text) => String(text || "").replace(DIGITS, d => String(d.charCodeAt(0) & 0xf)).replace(/٫/g, ".").replace(/٬/g, ",")
     .replace(/[\u2012\u2013](?=\d)/g, "-").replace(/−/g, "-")
     .replace(/\d+(?:,\d+){2,}/g, run => (run.split(",").slice(1).every(g => g.length === 3) ? run : run.replace(/,/g, ", ")));
+const fold = (text) => String(text || "").replace(/[\u00B2\u00B3\u00B9\u2070-\u2079]/g, "").normalize("NFKC");
 const NUMBER = /(-?)(?:(\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:[.,](\d+))?|(?<![\d.])\.(\d+))(?:[eE]([+-]?\d{1,3}))?/g;
 function readNumber(t, m) {
     const frac = m[3] ?? m[4];
@@ -40,7 +41,7 @@ function readNumber(t, m) {
     return negative ? -n : n === 0 ? 0 : n;
 }
 function numbersInText(text) {
-    const t = normDigits(text);
+    const t = normDigits(fold(text));
     const out = new Set();
     for (const m of t.matchAll(NUMBER)) {
         const n = readNumber(t, m);
@@ -50,18 +51,19 @@ function numbersInText(text) {
     return out;
 }
 const INVISIBLE_OR_TATWEEL = /[\p{Default_Ignorable_Code_Point}ـ]/gu;
-const pairText = (s) => normDigits(String(s || "").normalize("NFKC").replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase();
+const pairText = (s) => normDigits(fold(s).replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase();
 const LIST_SEP = "(?:\\s*[,،؛;/&]\\s*(?:(?:and\\b|و)\\s*)?|\\s+and\\s+|\\s+و\\s*)";
 const UNIT = "(?:\\s*(?:[%٪]|(?!و(?:\\s|\\d)|and\\b)[^\\s\\d,،؛;/&.:=()\\-]{1,6}))?";
 const MONTH = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|يناير|فبراير|مارس|[أإا]بريل|مايو|يوني[وه]|يولي[وه]|[أا]غسطس|سبتمبر|[أا]كتوبر|نوفمبر|ديسمبر|كانون الثاني|شباط|[آا]ذار|نيسان|[أا]يار|حزيران|تموز|[آا]ب|[أا]يلول|تشرين الأول|تشرين الثاني|كانون الأول)$/u;
-const CONNECTOR_TO_LABEL = /^\s*(?:(?:and|then|ثم)\s+)?[وفبلك]?$/u;
+const TAIL_UNIT = "\\s*(?:[%٪]|(?!(?:and|then|ثم|[وفبلك])(?![\\p{L}\\p{M}]))[^\\s\\d,،؛;&.:=()]+)";
+const CONNECTOR_TO_LABEL = /^\s*(?:(?:and|then|ثم|و)\s+)?[وفبلك]?$/u;
 const CLAUSE_END = /[.!?؟\n؛;,،]/;
 const sticky = (source, t, at) => { const re = new RegExp(source, "uy"); re.lastIndex = at; return re.exec(t); };
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const WORD = /[\p{L}\p{M}\p{N}]/u;
 const WORD_LABEL = /^[ai]$/;
 function wholeWord(t, at, len) {
-    const before = at === 0 || !WORD.test(t[at - 1]) || (/[وفبلك]/.test(t[at - 1]) && (at === 1 || !WORD.test(t[at - 2])));
+    const before = at === 0 || (!WORD.test(t[at - 1]) && t[at - 1] !== "°") || (/[وفبلك]/.test(t[at - 1]) && (at === 1 || !WORD.test(t[at - 2])));
     return before && (at + len >= t.length || !/[\p{L}\p{M}]/u.test(t[at + len]));
 }
 function numberRun(t, from) {
@@ -91,17 +93,23 @@ function occurrences(t, l) {
             out.push(at);
     return out;
 }
-function pairedAt(t, l, others) {
+function pairedAt(t, l, others, valueFirst = false) {
     if (!l)
         return new Set();
     const otherAt = others.filter(Boolean).flatMap(o => occurrences(t, o)).sort((a, b) => a - b);
+    const inside = others.filter(o => o.length > l.length && o.includes(l)).flatMap(o => occurrences(t, o).map(a => [a, a + o.length]));
     const found = new Set();
     for (const at of occurrences(t, l)) {
+        if (inside.some(([a, b]) => at >= a && at < b))
+            continue;
         const before = t.slice(0, at), sep = new RegExp("(?:" + LIST_SEP + ")$", "u").exec(before);
-        if (sep && others.some(o => o && before.slice(0, sep.index).trimEnd().endsWith(o)))
+        const head = sep ? before.slice(0, sep.index).trimEnd() : "";
+        if (sep && others.some(o => o && head.endsWith(o) && wholeWord(head, head.length - o.length, o.length)))
             continue;
         const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))[0];
         if (!lead)
+            continue;
+        if (lead.includes("\n"))
             continue;
         if (WORD_LABEL.test(l) && !/[:=]/.test(lead))
             continue;
@@ -115,14 +123,17 @@ function pairedAt(t, l, others) {
             continue;
         const rest = t.slice(after), endAt = rest.search(CLAUSE_END), nextLabel = otherAt.find(o => o >= after);
         const atLabel = nextLabel !== undefined && (endAt < 0 || nextLabel - after <= endAt);
+        if (atLabel && valueFirst)
+            continue;
         const clause = rest.slice(0, Math.min(endAt < 0 ? rest.length : endAt, nextLabel === undefined ? rest.length : nextLabel - after));
         if (new RegExp(NUMBER.source, "u").test(clause))
             continue;
-        const unitLen = sticky(UNIT, clause, 0)?.[0].length ?? 0, tail = clause.slice(unitLen);
+        const paren = lead.includes("("), body = paren ? clause.replace(/^\s*\)/u, "") : clause;
+        const unitLen = sticky(TAIL_UNIT, body, 0)?.[0].length ?? 0, tail = paren ? body.slice(unitLen).replace(/^\s*\)/u, "") : body.slice(unitLen);
         if (!(atLabel ? CONNECTOR_TO_LABEL : /^\s*$/u).test(tail))
             continue;
         const n = readNumber(t, m);
-        if (MONTH.test(l) && Number.isInteger(n) && n >= 1 && n <= 31 && /\p{L}/u.test(clause.slice(0, unitLen)))
+        if (MONTH.test(l) && Number.isInteger(n) && n >= 1 && n <= 31 && /\p{L}/u.test(body.slice(0, unitLen)))
             continue;
         if (Number.isFinite(n))
             found.add(n);
@@ -170,8 +181,10 @@ function listPairs(t, ls) {
 function pairedNumbers(request, labels) {
     const t = pairText(request), ls = labels.map(l => pairText(l).trim());
     const listed = ls.length >= 2 && ls.every(Boolean) && new Set(ls).size === ls.length ? listPairs(t, ls) : new Map();
+    const valueFirstAt = new RegExp("(?:^|[.!?؟\\n؛;,،:])[^\\S\\n]*" + NUMBER.source + "(?:" + TAIL_UNIT + ")?(?:[^\\S\\n]+[^\\s\\d,،؛;.:=()]{1,6})?[^\\S\\n]*[وفبلك]?$", "u");
+    const valueFirst = ls.some(l => l && occurrences(t, l).some(at => valueFirstAt.test(t.slice(0, at))));
     return ls.map((l, i) => {
-        const values = new Set([...(listed.get(i) ?? []), ...pairedAt(t, l, ls.filter((_, j) => j !== i))]);
+        const values = new Set([...(listed.get(i) ?? []), ...pairedAt(t, l, ls.filter((_, j) => j !== i), valueFirst)]);
         return values.size === 1 ? [...values][0] : undefined;
     });
 }
@@ -273,7 +286,7 @@ function mapAiChart(raw, index, policy, path) {
         const missing = used.filter(v => !given.has(v));
         if (missing.length)
             return fail("AI_CHART_DATA_NOT_PROVIDED", "أرقام الرسم البياني يجب أن تكون أرقام المعلم كما وردت في طلبه (القيمة " + missing[0] + " غير موجودة في الطلب)؛ لا تعدّل بيانات المعلم ولا تخترعها.", path);
-        const one = (kind === "bar" || kind === "line" || kind === "area" || kind === "combo" || kind === "pie") && (kind === "pie" || series.length === 1) ? series[0]?.values ?? [] : null;
+        const one = (kind === "bar" || kind === "line" || kind === "area" || kind === "combo" || kind === "radar" || kind === "heatmap" || kind === "pie") && (kind === "pie" || series.length === 1) ? series[0]?.values ?? [] : null;
         const pairs = one ? pairedNumbers(policy.request, categories) : [];
         if (one)
             for (let i = 0; i < categories.length; i++) {

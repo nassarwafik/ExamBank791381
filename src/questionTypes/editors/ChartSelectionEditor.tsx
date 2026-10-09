@@ -31,6 +31,15 @@ function datumSlot(c: ChartSpecV1, key: string): boolean {
   const [s, cat] = key.split("/"), r = c as { series?: unknown; categories?: unknown };
   return Array.isArray(r.series) && Array.isArray(r.categories) && r.series.some(x => isObj(x) && x.id === s) && r.categories.some(x => isObj(x) && x.id === cat);
 }
+/** The series and category labels of a datum key (undefined when its slot does not exist). */
+function datumLabels(c: ChartSpecV1, key: string): string | undefined {
+  const [s, cat] = key.split("/"), r = c as { series?: unknown; categories?: unknown };
+  if (!Array.isArray(r.series) || !Array.isArray(r.categories)) return undefined;
+  const sl = r.series.find(x => isObj(x) && x.id === s), cl = r.categories.find(x => isObj(x) && x.id === cat);
+  return isObj(sl) && isObj(cl) ? String(sl.label) + "\u0000" + String(cl.label) : undefined;
+}
+/** Every datum slot of a chart (series × categories), filled or not. */
+const datumSlotCount = (c: ChartSpecV1) => { const r = c as { series?: unknown; categories?: unknown }; return Array.isArray(r.series) && Array.isArray(r.categories) ? r.series.length * r.categories.length : 0; };
 /** Every id written anywhere in a (possibly broken) chart. */
 function idsIn(raw: unknown, out = new Set<string>()): Set<string> {
   if (Array.isArray(raw)) for (const x of raw) idsIn(x, out);
@@ -52,6 +61,8 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
   const kinds = useMemo(() => (valid?.ok ? chartTargetKinds(valid.value) : []), [valid]);
   const targets = useMemo(() => (valid?.ok && kinds.includes(target) ? chartTargets(valid.value, target) : []), [valid, kinds, target]);
   const issues = useMemo(() => validateChartSelectionQuestion(node as unknown as Record<string, unknown>), [node]);
+  // key entries of datum cells being retyped: the picker carries them through a click and leaves them their place in the bound (R5-A6)
+  const pendingKey = useMemo(() => (chart && target === "datum" && targets.length ? correct.filter(k => !targets.some(x => x.key === k) && datumSlot(chart, k)) : []), [chart, target, targets, correct]);
   const [newKind, setNewKind] = useState<ChartKind>("bar");
   const [maxDraft, setMaxDraft] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
@@ -81,15 +92,18 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
         try { fresh = !!convertChartKind(chart, next.chart.kind).fresh; } catch { /* an unreadable chart: nothing carries over */ }
         const before = new Map((structuralTargets(chart, t) ?? []).map(x => [x.key, x.label] as const));
         const after = new Map((now ?? []).map(x => [x.key, x.label] as const));
-        ok = fresh ? [] : ok.filter(k => before.has(k) && after.get(k) === before.get(k));
+        // a datum whose cell is being retyped is no target yet: it is kept where both kinds hold the same series and category (R5-A9)
+        ok = fresh ? [] : ok.filter(k => (before.has(k) && after.get(k) === before.get(k))
+          || (t === "datum" && datumLabels(chart, k) !== undefined && datumLabels(chart, k) === datumLabels(next.chart!, k)));
       } else if (now) ok = ok.filter(k => now.some(x => x.key === k) || (t === "datum" && datumSlot(c, k)));
       else { const present = idsIn(c); ok = ok.filter(k => k.split("/").every(part => present.has(part))); }
     }
-    // datum entries whose cell is being retyped (no value yet, so not a target of the valid chart) stay after the chart's own order and
-    // count toward the bound — neither the key nor the bound changes because a cell was emptied (round-4 finding R4-A2)
+    // datum entries whose cell is being retyped (no value yet, so not a target of the valid chart) stay after the chart's own order, and a
+    // datum bound is clamped by the chart's SLOTS (series × categories), filled or not — neither the key nor the bound changes because a cell
+    // was emptied, in the key or elsewhere (round-4 finding R4-A2; round-5 R5-A7); validation reports both while the cell is empty
     const pending = order.length && t === "datum" && c ? ok.filter(k => !order.includes(k) && datumSlot(c, k)) : [];
     let mx = m === "single" ? 1 : Math.max(1, Math.round(next.max ?? max));
-    if (order.length) mx = Math.min(mx, order.length + pending.length);
+    if (order.length) mx = Math.min(mx, t === "datum" && c ? Math.max(order.length, datumSlotCount(c)) : order.length);
     if (order.length) ok = [...order.filter(k => ok.includes(k)), ...pending];
     if (m === "single") ok = ok.slice(0, 1);
     if (m === "range" && ok.length && order.length && !isContiguousRun(order, ok)) ok = [];
@@ -159,7 +173,7 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
           <section aria-label="الإجابة الصحيحة" data-testid="chart-key-picker">
             <p className="vq-note">حدّد الإجابة الصحيحة على الرسم نفسه (بالنقر أو من القائمة) — بالطريقة نفسها التي يجيب بها الطالب. لا يرى الطالب هذا التحديد.</p>
             {valid?.ok
-              ? <DataChart spec={valid.value} preview selection={{ kind: target, mode, max: mode === "single" ? 1 : max, value: correct, label: "الإجابة الصحيحة", readOnly: disabled, onChange: next => write({ correct: next }) }} />
+              ? <DataChart spec={valid.value} preview selection={{ kind: target, mode, max: mode === "single" ? 1 : Math.max(1, max - pendingKey.length), value: correct, label: "الإجابة الصحيحة", readOnly: disabled, onChange: next => write({ correct: [...next, ...pendingKey] }) }} />
               : <p className="vq-note">أكمل بيانات الرسم (أو صحّح أخطاءه) لتحديد الإجابة الصحيحة.</p>}
           </section>
         </>

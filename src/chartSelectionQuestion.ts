@@ -80,7 +80,12 @@ export function validateChartSelectionConfig(raw: unknown): ChartSelectionConfig
     if (mode === "range" && !RANGE_TARGET_KINDS.includes(kind)) issues.push(err("CHART_SELECTION_RANGE_UNSUPPORTED", "اختيار النطاق متاح للفئات والفئات التكرارية فقط.", "chartSelection.mode"));
   }
   const max = raw.maxSelections;
-  if (typeof max !== "number" || !Number.isInteger(max) || max < 1 || (targets.length > 0 && max > targets.length) || (mode === "single" && max !== 1)) issues.push(err("CHART_SELECTION_MAX_INVALID", "الحد الأقصى للاختيارات عدد صحيح من 1 حتى عدد العناصر القابلة للاختيار (1 في الاختيار الواحد).", "chartSelection.maxSelections"));
+  // a value cell left empty is no target: a bound that only empty cells push past the targets says so (round-5 finding R5-A8)
+  const emptyCells = chart.ok && target === "datum" && chart.value.kind !== "pie" && "series" in chart.value && Array.isArray(chart.value.series)
+    && chart.value.series.some(x => Array.isArray((x as { values?: unknown }).values) && (x as { values: unknown[] }).values.includes(null));
+  if (typeof max !== "number" || !Number.isInteger(max) || max < 1 || (targets.length > 0 && max > targets.length) || (mode === "single" && max !== 1)) issues.push(err("CHART_SELECTION_MAX_INVALID", emptyCells && typeof max === "number" && max > targets.length
+    ? "الحد الأقصى للاختيارات أكبر من عدد القيم الموجودة في الرسم لأن بعض خلاياه فارغة: أكمل القيم الفارغة أو خفّض الحد."
+    : "الحد الأقصى للاختيارات عدد صحيح من 1 حتى عدد العناصر القابلة للاختيار (1 في الاختيار الواحد).", "chartSelection.maxSelections"));
   if (issues.length || !chart.ok) return { ok: false, issues };
   return { ok: true, config: { v: 1, chart: chart.value, target: target as ChartTargetKind, mode: mode as ChartSelectionMode, maxSelections: max as number, ...(label !== undefined ? { label } : {}) }, targets, issues: [] };
 }
@@ -126,6 +131,15 @@ export function validateChartSelectionQuestion(node: Record<string, unknown>): C
   if (!cfg.ok) out.push(...cfg.issues);
   const key = checkAnswerKey(node.answer, cfg.ok ? cfg : null);
   if (!key.ok) out.push(...key.issues);
+  // the config is invalid but its chart and target kind are readable: the key's unknown targets are still reported (R5-A8)
+  if (!cfg.ok && isPlain(node.chartSelection) && isPlain(node.answer) && Array.isArray(node.answer.correct)) {
+    const c = validateChartSpec(node.chartSelection.chart), t = node.chartSelection.target;
+    if (c.ok && typeof t === "string" && chartTargetKinds(c.value).includes(t as ChartTargetKind)) {
+      const order = chartTargets(c.value, t as ChartTargetKind).map(x => x.key);
+      const unknown = (node.answer.correct as unknown[]).filter((k): k is string => typeof k === "string" && !order.includes(k));
+      if (unknown.length) out.push(err("CHART_SELECTION_KEY_UNKNOWN_TARGET", "مفتاح التصحيح يذكر عنصرًا غير موجود في الرسم «" + unknown[0].slice(0, 40) + "».", "answer.correct"));
+    }
+  }
   return out;
 }
 

@@ -73,8 +73,12 @@ function validateChartSelectionConfig(raw) {
             issues.push(err("CHART_SELECTION_RANGE_UNSUPPORTED", "اختيار النطاق متاح للفئات والفئات التكرارية فقط.", "chartSelection.mode"));
     }
     const max = raw.maxSelections;
+    const emptyCells = chart.ok && target === "datum" && chart.value.kind !== "pie" && "series" in chart.value && Array.isArray(chart.value.series)
+        && chart.value.series.some(x => Array.isArray(x.values) && x.values.includes(null));
     if (typeof max !== "number" || !Number.isInteger(max) || max < 1 || (targets.length > 0 && max > targets.length) || (mode === "single" && max !== 1))
-        issues.push(err("CHART_SELECTION_MAX_INVALID", "الحد الأقصى للاختيارات عدد صحيح من 1 حتى عدد العناصر القابلة للاختيار (1 في الاختيار الواحد).", "chartSelection.maxSelections"));
+        issues.push(err("CHART_SELECTION_MAX_INVALID", emptyCells && typeof max === "number" && max > targets.length
+            ? "الحد الأقصى للاختيارات أكبر من عدد القيم الموجودة في الرسم لأن بعض خلاياه فارغة: أكمل القيم الفارغة أو خفّض الحد."
+            : "الحد الأقصى للاختيارات عدد صحيح من 1 حتى عدد العناصر القابلة للاختيار (1 في الاختيار الواحد).", "chartSelection.maxSelections"));
     if (issues.length || !chart.ok)
         return { ok: false, issues };
     return { ok: true, config: { v: 1, chart: chart.value, target: target, mode: mode, maxSelections: max, ...(label !== undefined ? { label } : {}) }, targets, issues: [] };
@@ -133,6 +137,15 @@ function validateChartSelectionQuestion(node) {
     const key = checkAnswerKey(node.answer, cfg.ok ? cfg : null);
     if (!key.ok)
         out.push(...key.issues);
+    if (!cfg.ok && isPlain(node.chartSelection) && isPlain(node.answer) && Array.isArray(node.answer.correct)) {
+        const c = (0, chartSpec_1.validateChartSpec)(node.chartSelection.chart), t = node.chartSelection.target;
+        if (c.ok && typeof t === "string" && (0, chartData_1.chartTargetKinds)(c.value).includes(t)) {
+            const order = (0, chartData_1.chartTargets)(c.value, t).map(x => x.key);
+            const unknown = node.answer.correct.filter((k) => typeof k === "string" && !order.includes(k));
+            if (unknown.length)
+                out.push(err("CHART_SELECTION_KEY_UNKNOWN_TARGET", "مفتاح التصحيح يذكر عنصرًا غير موجود في الرسم «" + unknown[0].slice(0, 40) + "».", "answer.correct"));
+        }
+    }
     return out;
 }
 function projectChartSelectionConfigForStudent(raw) {

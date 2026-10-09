@@ -64,6 +64,17 @@ export function fitText(s: string, max: number, font: string, measure: (t: strin
 export const valueText = (v: number, unit?: string) => (!unit ? LRI + formatValue(v) + PDI : RTL.test(unit) ? LRI + formatValue(v) + PDI + " " + unit : LRI + formatValue(v) + " " + unit + PDI);
 const axisName = (a?: ChartAxis) => (a?.label ? isolate(labelWithUnit(a.label, a.unit)) : a?.unit ? isolate(a.unit) : undefined);
 
+/** The reference lines as text (round-5 finding B5-1): the picture is hidden from assistive technology and its reference-line labels may be
+ *  cut, so the figure names every line — its full label and its value with the unit of the axis it is drawn on (the horizontal value axis
+ *  of horizontal bars, the vertical one otherwise). Empty when the chart has none. */
+export function referenceLinesText(spec: ChartSpecV1): string {
+  if (!(isCategoryChart(spec) || spec.kind === "scatter")) return "";
+  const lines = spec.referenceLines;
+  if (!lines || !lines.length) return "";
+  const unit = spec.kind === "bar" && spec.orientation === "horizontal" ? spec.xAxis?.unit : spec.yAxis?.unit;
+  return (lines.length === 1 ? "خط مرجعي: " : "خطوط مرجعية: ") + lines.map(l => isolate(l.label) + ": " + valueText(l.value, unit)).join("؛ ");
+}
+
 /** Heat-map cells in engine order: present cells [column, row, value] (series 0) and missing cells [column, row] (series 1). */
 function heatCells(spec: Extract<ChartSpecV1, { kind: "heatmap" }>) {
   const cells: [number, number, number][] = [], missing: [number, number][] = [];
@@ -86,7 +97,10 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
   const valueAxis = (a: ChartAxis | undefined, vertical: boolean) => ({
     type: "value", name: axisName(a), nameLocation: "middle", nameGap: vertical ? (ctx.compact ? 34 : 44) : 28, nameTextStyle: { ...text, color: ctx.tokens.muted },
     ...(a?.min !== undefined ? { min: a.min } : {}), ...(a?.max !== undefined ? { max: a.max } : {}),
-    axisLabel: { ...text, formatter: (v: number) => formatValue(v) }, splitLine: { lineStyle: { color: ctx.tokens.grid } }, axisLine: { lineStyle: { color: ctx.tokens.muted } }
+    // a horizontal value axis (horizontal bars, scatter) hides tick labels that would overlap on a narrow plot, and its lowest label starts
+    // at the axis instead of centring on it, clear of the vertical axis's labels in the corner (round-5 finding B5-6)
+    axisLabel: { ...text, formatter: (v: number) => formatValue(v), ...(vertical ? {} : { hideOverlap: true, alignMinLabel: "left" }) },
+    splitLine: { lineStyle: { color: ctx.tokens.grid } }, axisLine: { lineStyle: { color: ctx.tokens.muted } }
   });
   // Category labels: every label is drawn while there are few (≤ 12); beyond that the engine hides the ones that would overlap (the data
   // table, the tooltip and the selection list still name every category). A horizontal (x) category axis rotates its labels when they are
@@ -142,19 +156,94 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
   };
   // a reference line's label sits inside the plot at the line's end — or, when `outside` is given (value labels are drawn above the
   // columns and would share its place), beyond the plot's right edge: `outside.after` px past the edge (the room kept for the last
-  // column's value label), its text cut to `outside.cap` px, in the margin `referenceRoom` reserves
-  const markLine = (lines: { value: number; label: string }[] | undefined, horizontalValueAxis: boolean, outside?: { cap: number; after: number }) => (lines && lines.length ? {
-    silent: true, symbol: "none", lineStyle: { color: ctx.tokens.muted, type: "dashed", width: 1.5 },
-    label: { ...text, color: ctx.tokens.muted, backgroundColor: ctx.tokens.surface, padding: [2, 4], borderRadius: 3,
-      ...(outside
-        ? { position: "end", distance: outside.after, ...(measure ? {} : { width: outside.cap, overflow: "truncate" }),
-            formatter: (p: { dataIndex: number }) => { const l = lines[p.dataIndex]?.label ?? ""; return isolate(measure ? fitText(l, outside.cap, font, measure) : l); } }
-        : { position: "insideEndTop", formatter: (p: { dataIndex: number }) => isolate(lines[p.dataIndex]?.label ?? "") }) },
-    data: lines.map(l => (horizontalValueAxis ? { xAxis: l.value } : { yAxis: l.value }))
-  } : undefined);
+  // column's value label), its text cut to `outside.cap` px, in the margin `referenceRoom` reserves.
+  // Round-5 findings B5-3 / B5-7: an inside label is cut to `cut` px — the plot's length along its line, estimated low — so it never leaves
+  // the canvas or reaches over an axis's labels (0: the plot is not measured yet; the label keeps the outside cap). Lines whose labels
+  // could touch (`pxPerUnit`: a LOWER bound of the value axis's px per unit, so a distance under one label box is never missed) form a
+  // group whose labels take different places: on the high side of a line (above a horizontal line, right of a vertical one) or its low
+  // side, at the line's end or its start. The highest line's label goes high at the end; the lowest line's low at the end when the axis
+  // surely leaves room for it there (`floor`: the axis can reach no higher than this value), otherwise high at the start; the others take
+  // the start. A group with a label at the start cuts every label to half the plot, so the two halves never meet
+  type RefPlace = "end" | "highEnd" | "lowEnd" | "highStart" | "lowStart";
+  const refPlaces = (lines: { value: number }[], pxPerUnit: number, floor: number, outside: boolean): { place: RefPlace; half: boolean }[] => {
+    const out = lines.map(() => ({ place: "end" as RefPlace, half: false }));
+    const order = lines.map((_, i) => i).sort((a, b) => lines[b].value - lines[a].value);
+    const box = valueLineHeight + 4 + 2;
+    let group: number[] = [];
+    const flush = () => {
+      const k = group.length;
+      if (k > 1) {
+        // an outside label has the margin to itself: room below the lowest line there is always free
+        const lowRoom = outside || (lines[group[k - 1]].value - floor) * pxPerUnit >= box;
+        const places: RefPlace[] = k === 2 ? ["highEnd", lowRoom ? "lowEnd" : "highStart"]
+          : k === 3 ? (lowRoom ? ["highEnd", "highStart", "lowEnd"] : ["highEnd", "lowEnd", "highStart"])
+          : ["highEnd", "highStart", "lowStart", "lowEnd"];
+        const half = places.some(p => p === "highStart" || p === "lowStart");
+        group.forEach((li, j) => { out[li] = { place: places[j], half }; });
+      }
+      group = [];
+    };
+    order.forEach((li, k) => { if (k > 0 && (lines[order[k - 1]].value - lines[li].value) * pxPerUnit >= box) flush(); group.push(li); });
+    flush();
+    return out;
+  };
+  type RefLayout = { outside?: { cap: number; after: number }; cut: number; pxPerUnit: number; floor: number };
+  const markLine = (lines: { value: number; label: string }[] | undefined, horizontalValueAxis: boolean, layout: RefLayout) => {
+    if (!lines || !lines.length) return undefined;
+    const { outside } = layout;
+    const places = refPlaces(lines, layout.pxPerUnit, layout.floor, !!outside);
+    const full = layout.cut > 0 ? layout.cut : ctx.compact ? 64 : 120;
+    // the engine's "Top" side of a line is above a horizontal line and right of a vertical one (the vertical line runs downward)
+    const itemLabel = (place: RefPlace): Record<string, unknown> | undefined => {
+      if (place === "end") return undefined;
+      if (place === "highStart" || place === "lowStart") return { position: place === "highStart" ? "insideStartTop" : "insideStartBottom" };
+      return outside ? { verticalAlign: place === "highEnd" ? "bottom" : "top" } : { position: place === "highEnd" ? "insideEndTop" : "insideEndBottom" };
+    };
+    // the width each label is cut to: the outside cap beyond the plot, else the plot — half of it in a group with a label at the start
+    const capOf = (i: number) => {
+      const p = places[i] ?? { place: "end", half: false };
+      return outside && (p.place === "end" || p.place === "highEnd" || p.place === "lowEnd") ? outside.cap : p.half ? Math.max(24, Math.floor(full / 2) - 8) : full;
+    };
+    const cutLabel = (i: number) => { const l = lines[i]?.label ?? ""; return isolate(measure ? fitText(l, capOf(i), font, measure) : l); };
+    return {
+      silent: true, symbol: "none", lineStyle: { color: ctx.tokens.muted, type: "dashed", width: 1.5 },
+      label: { ...text, color: ctx.tokens.muted, backgroundColor: ctx.tokens.surface, padding: [2, 4], borderRadius: 3,
+        ...(outside ? { position: "end", distance: outside.after } : { position: "insideEndTop" }),
+        formatter: (p: { dataIndex: number }) => cutLabel(p.dataIndex) },
+      // without a measurer the engine truncates a label to its width when its estimated width exceeds it
+      data: lines.map((l, i) => {
+        const at = itemLabel(places[i].place), cap = capOf(i);
+        const label = { ...(at ?? {}), ...(measure || l.label.length * text.fontSize * 0.6 <= cap ? {} : { width: cap, overflow: "truncate" }) };
+        return { ...(horizontalValueAxis ? { xAxis: l.value } : { yAxis: l.value }), ...(Object.keys(label).length ? { label } : {}) };
+      })
+    };
+  };
   // the margin an outside reference label takes: its widest label (at most `cap`), its padding and the gap before it
   const referenceRoom = (lines: { label: string }[], cap: number, after: number) =>
     Math.ceil(after + 10 + Math.min(cap, Math.max(0, ...lines.map(l => (measure ? measure(l.label, font) : l.label.length * text.fontSize * 0.6)))));
+  // a value axis's scale for reference labels: a lower bound of its px per unit — the plot's least length over the widest span the
+  // engine's rounded axis can take (twice the values' span, including 0 unless the axis scales to its data; the author's bounds when both
+  // are fixed) — and `floor`, a value the axis's lowest end never lies above
+  const axisScale = (values: number[], a: ChartAxis | undefined, plot: number, withZero: boolean) => {
+    const vs = [...values, ...(withZero ? [0] : []), ...(a?.min !== undefined ? [a.min] : []), ...(a?.max !== undefined ? [a.max] : [])];
+    const span = a?.min !== undefined && a?.max !== undefined ? a.max - a.min : 2 * (Math.max(...vs) - Math.min(...vs));
+    return { pxPerUnit: vs.length && span > 0 && plot > 0 ? plot / span : 0, floor: a?.min !== undefined ? a.min : vs.length ? Math.min(...vs) : 0 };
+  };
+  // the width a vertical value axis takes beside the plot: its widest value label, or its name's gap when it is named (the grid margins
+  // hold both)
+  const axisWidth = (values: number[], a: ChartAxis | undefined) =>
+    Math.max(axisName(a) ? (ctx.compact ? 34 : 44) + text.fontSize : 0, Math.ceil(Math.max(1, ...values.map(v => formatValue(v).length)) * text.fontSize * 0.6) + 8);
+  // the first column's value label reaches half its width left of its column's centre (the last one's right of it, toward a secondary
+  // axis): when that centre is nearer the plot's edge, that side's value-axis labels step away from the plot by the rest (their default
+  // 8 px gap grows), so a value label never lies on an axis label. The outermost column's centre lies `f` slots from the edge: half a slot
+  // for one column per category, less for `bars` grouped side by side (the engine's 20 % category gap and 30 % bar gap: 0.1 + 0.4 / (1.3 ×
+  // bars − 0.3)). The gap solves gap ≥ room − 8 − f × slot with slot = (width − reserve − sides × gap) / count; an unmeasured container
+  // keeps the full room
+  const sideGap = (room: number, free: number, count: number, sides = 1, bars = 1) => {
+    const f = bars > 1 ? 0.1 + 0.4 / (1.3 * bars - 0.3) : 0.5;
+    return room ? Math.ceil(Math.max(0, room - 8 - (f * free) / count) / Math.max(0.5, 1 - (sides * f) / count)) : 0;
+  };
+  const stageWidth = ctx.width && ctx.width > 0 ? ctx.width : 0;
 
   if (isCategoryChart(spec)) {
     const horizontal = spec.kind === "bar" && spec.orientation === "horizontal";
@@ -163,17 +252,16 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
     // own grid lines so the grid stays the primary axis's); reference lines are drawn by the first PRIMARY series (primary-axis values)
     const onSecondary = (s: { axis?: string }) => spec.kind === "combo" && s.axis === "secondary";
     const dual = spec.series.some(onSecondary);
-    // the width each vertical value axis takes beside the plot: its widest value label, or its name's gap when it is named (the grid
-    // margins hold both); a stacked axis reaches the category totals; a combo's secondary axis takes its own width on the other side
+    // a stacked axis reaches the category totals; a combo's secondary axis takes its own width on the other side
     const valuesOf = (secondary: boolean) => {
       const ss = spec.series.filter(s => onSecondary(s) === secondary);
       const a = secondary ? (spec.kind === "combo" ? spec.y2Axis : undefined) : spec.yAxis;
       return [...(stacked ? spec.categories.map((_, i) => ss.reduce((n, s) => n + Math.abs(s.values[i] ?? 0), 0)) : ss.flatMap(s => s.values.filter((v): v is number => v !== null))), ...(a?.min !== undefined ? [a.min] : []), ...(a?.max !== undefined ? [a.max] : [])];
     };
-    const axisWidth = (values: number[], a: ChartAxis | undefined) =>
-      Math.max(axisName(a) ? (ctx.compact ? 34 : 44) + text.fontSize : 0, Math.ceil(Math.max(1, ...values.map(v => formatValue(v).length)) * text.fontSize * 0.6) + 8);
     const labelRoom = spec.valueLabels && !(stacked && spec.kind === "bar") ? valueLabelRoom(valuesOf(false).concat(valuesOf(true)), horizontal) : 0;
-    const labelRight = Math.max(0, labelRoom - grid.right);
+    // the value labels' room on the right: the plot's margin — or, beside a secondary axis, that axis's label gap (round-5 finding B5-3:
+    // a wider margin only moved the axis labels inward, under the last value labels)
+    const labelRight = dual ? 0 : Math.max(0, labelRoom - grid.right);
     // value labels above vertical columns and a reference line: its label moves beyond the plot's right edge (round-4 finding B4-3), past
     // the room the last column's value label may take there — a secondary axis already holds that side (its label stays inside)
     const lines = spec.referenceLines;
@@ -182,12 +270,10 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
     const refRight = refOutside && lines ? Math.max(0, referenceRoom(lines, refOutside.cap, refOutside.after) - grid.right - labelRight) : 0;
     const right = labelRight + refRight;
     const reserve0 = (ctx.compact ? 20 : 40) + right + axisWidth(valuesOf(false), spec.yAxis) + (dual && spec.kind === "combo" ? axisWidth(valuesOf(true), spec.y2Axis) : 0);
-    // the first column's value label reaches half its width left of the column's centre: when the slot is narrower, the value axis's labels
-    // step away from the plot by the rest (their default 8 px gap grows), so the value label never lies on an axis label. `left` solves
-    // left ≥ room − 8 − slot / 2 with slot = (width − reserve − left) / count; an unmeasured container keeps the full room
-    const n = Math.max(1, spec.categories.length), free = ctx.width && ctx.width > 0 ? Math.max(0, ctx.width - reserve0) : 0;
-    const left = labelRoom && !horizontal ? Math.ceil(Math.max(0, labelRoom - 8 - free / (2 * n)) / (1 - 1 / (2 * n))) : 0;
-    const reserve = reserve0 + left;
+    const n = Math.max(1, spec.categories.length), free = stageWidth ? Math.max(0, stageWidth - reserve0) : 0;
+    const bars = stacked ? 1 : spec.series.filter(s => (spec.kind === "combo" ? s.mark === "bar" : spec.kind === "bar")).length;
+    const left = horizontal ? 0 : sideGap(labelRoom, free, n, dual ? 2 : 1, bars), rightGap = dual ? left : 0;
+    const reserve = reserve0 + left + rightGap;
     // vertical: categories on x, values on y; horizontal bars: values on x (spec.xAxis is the numeric axis), categories on y (first on top)
     const cat = categoryAxis(spec.categories.map(c => c.label), horizontal ? spec.yAxis : spec.xAxis, horizontal, horizontal, reserve);
     // unstacked value labels sit beyond the bar end / point: the value axis keeps 10% headroom for them (ignored when the author fixed a bound)
@@ -195,7 +281,16 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
     const gap = Math.max(left, !horizontal && "rotate" in cat.axisLabel ? 6 : 0);
     const valueBase = horizontal ? valueAxis(spec.xAxis, false) : valueAxis(spec.yAxis, true);
     const val = { ...valueBase, ...(gap ? { axisLabel: { ...valueBase.axisLabel, margin: 8 + gap } } : {}), ...(spec.valueLabels && !stacked ? { boundaryGap: [0, "10%"] } : {}) };
-    const val2 = dual ? { ...valueAxis(spec.y2Axis, true), position: "right", splitLine: { show: false }, ...(spec.valueLabels ? { boundaryGap: [0, "10%"] } : {}) } : undefined;
+    const val2Base = dual ? valueAxis(spec.y2Axis, true) : undefined;
+    const val2 = val2Base ? { ...val2Base, position: "right", splitLine: { show: false }, ...(rightGap ? { axisLabel: { ...val2Base.axisLabel, margin: 8 + rightGap } } : {}), ...(spec.valueLabels ? { boundaryGap: [0, "10%"] } : {}) } : undefined;
+    // the reference lines' layout: vertical charts cut a label to the plot's width, horizontal bars to its height; their distance in px
+    // is bounded from below by the plot's least length across the lines (the category axis's labels and name below a vertical chart; the
+    // category labels beside horizontal bars)
+    const height = chartHeight(spec, ctx.compact), catCap = typeof cat.axisLabel.width === "number" ? cat.axisLabel.width : 110;
+    const plotHeight = height - grid.top - grid.bottom - (horizontal ? 28 + 2 * text.fontSize : (typeof cat.nameGap === "number" ? cat.nameGap : 30) + 2 * text.fontSize);
+    const plotWidth = stageWidth ? stageWidth - (horizontal ? grid.left + grid.right + right + catCap + 8 : reserve) : 0;
+    const refLayout: RefLayout = { outside: refOutside, cut: Math.max(0, Math.floor(horizontal ? plotHeight : plotWidth) - 24),
+      ...axisScale(valuesOf(false), horizontal ? spec.xAxis : spec.yAxis, horizontal ? plotWidth : plotHeight, true) };
     const lineHost = spec.series.findIndex(s => !onSecondary(s));
     const series = spec.series.map((s, si) => {
       const mark = spec.kind === "combo" ? s.mark : spec.kind === "bar" ? "bar" : "line";
@@ -213,7 +308,7 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
         ...(ctx.selectionKind === "series" ? { itemStyle: seriesSel ? { borderColor: CHART_SELECTED_COLOR, borderWidth: 3 } : anySelected ? { opacity: 0.45 } : {} } : {}),
         // stacked segments carry their value INSIDE (white on a palette colour: every palette colour has ≥ 4.5:1 against white)
         ...(spec.valueLabels ? { labelLayout: VALUE_LABEL_LAYOUT, label: { show: true, ...text, lineHeight: valueLineHeight, ...(stacked && mark === "bar" ? { position: "inside", color: "#FFFFFF", fontWeight: 600 } : { position: horizontal ? "right" : "top" }), formatter: (p: { value: unknown }) => (typeof p.value === "number" ? formatValue(p.value) : "") } } : {}),
-        ...(si === lineHost ? { markLine: markLine(spec.referenceLines, horizontal, refOutside) } : {})
+        ...(si === lineHost ? { markLine: markLine(spec.referenceLines, horizontal, refLayout) } : {})
       };
     });
     return { ...base, grid: right ? { ...grid, right: grid.right + right } : grid, xAxis: horizontal ? val : cat, yAxis: horizontal ? cat : val2 ? [val, val2] : val, series };
@@ -221,38 +316,54 @@ export function buildEngineOption(spec: ChartSpecV1, ctx: AdapterContext): Engin
   switch (spec.kind) {
     case "pie": {
       const sum = spec.slices.reduce((a, s) => a + s.value, 0);
+      // the label box: at most 140 px, and never wider than the room beside the pie — half the stage less the radius (68 % of half the
+      // shorter side), the edge distance and a gap (round-5 finding B5-2: at 480–515 px a 140 px box reached into the pie)
+      const box = stageWidth ? Math.max(PIE_NAME_MIN, Math.min(140, Math.floor(stageWidth / 2 - 0.68 * Math.min(stageWidth, chartHeight(spec, ctx.compact)) / 2 - 12 - 8))) : 140;
       return { ...base, series: [{
         type: "pie", radius: spec.donut ? ["42%", "68%"] : [0, "68%"], center: ["50%", "52%"], avoidLabelOverlap: true,
         // narrow containers: no outside labels (the legend, the tooltip and the table name every slice); otherwise labels are aligned to
         // the canvas edges and truncated, so none can leave the canvas
         ...(ctx.compact ? { label: { show: false }, labelLine: { show: false } } : {}),
-        label: { ...text, show: !ctx.compact, alignTo: "edge", edgeDistance: 12, minMargin: 4, width: 140, lineHeight: Math.ceil(text.fontSize * 1.75), overflow: measure ? "none" : "truncate", formatter: (p: { dataIndex: number }) => {
+        label: { ...text, show: !ctx.compact, alignTo: "edge", edgeDistance: 12, minMargin: 4, width: box, lineHeight: Math.ceil(text.fontSize * 1.75), overflow: measure ? "none" : "truncate", formatter: (p: { dataIndex: number }) => {
           const s = spec.slices[p.dataIndex];
           if (!s) return "";
           const amount = spec.valueLabels ? valueText(s.value, spec.unit) + " (" + valueText(Math.round(s.value / sum * 1000) / 10, "%") + ")" : "";
           const value = amount ? ": " + amount : "";
           if (!measure) return isolate(s.label) + value;
           // measured: the name is cut, never the value; a value (with a long unit) that leaves the name less than PIE_NAME_MIN px goes on
-          // a line of its own — name and value each cut to the 140 px cap (round-4 finding B4-1: no label is ever wider than its box)
-          const room = 140 - measure(value.replace(ISOLATES, ""), font);
+          // a line of its own — name and value each cut to the box (round-4 finding B4-1: no label is ever wider than its box)
+          const room = box - measure(value.replace(ISOLATES, ""), font);
           if (!amount || room >= PIE_NAME_MIN) return isolate(fitText(s.label, room, font, measure)) + value;
-          const plain = amount.replace(ISOLATES, ""), cut = fitText(plain, 140, font, measure);
-          return isolate(fitText(s.label, 140, font, measure)) + "\n" + (cut === plain ? amount : isolate(cut));
+          const plain = amount.replace(ISOLATES, ""), cut = fitText(plain, box, font, measure);
+          return isolate(fitText(s.label, box, font, measure)) + "\n" + (cut === plain ? amount : isolate(cut));
         } },
         data: spec.slices.map((s, i) => ({ value: s.value, name: isolate(s.label), itemStyle: emphasize(s.id, palette[i % palette.length]) }))
       }] };
     }
-    case "scatter":
-      return { ...base, grid: { ...grid, left: ctx.compact ? 12 : 24 }, xAxis: { ...valueAxis(spec.xAxis, false), scale: true }, yAxis: { ...valueAxis(spec.yAxis, true), scale: true },
+    case "scatter": {
+      // reference lines (horizontal) are cut to the plot's width and kept apart by the plot's least height (the x axis's labels and name)
+      const ys = spec.series.flatMap(s => s.points.map(p => p.y)), sgrid = { ...grid, left: ctx.compact ? 12 : 24 };
+      const plotWidth = stageWidth ? stageWidth - sgrid.left - sgrid.right - axisWidth(ys, spec.yAxis) : 0;
+      const plotHeight = chartHeight(spec, ctx.compact) - grid.top - grid.bottom - 28 - 2 * text.fontSize;
+      const refLayout: RefLayout = { cut: Math.max(0, Math.floor(plotWidth) - 24), ...axisScale(ys, spec.yAxis, plotHeight, false) };
+      return { ...base, grid: sgrid, xAxis: { ...valueAxis(spec.xAxis, false), scale: true }, yAxis: { ...valueAxis(spec.yAxis, true), scale: true },
         series: spec.series.map((s, si) => {
           const color = palette[si % palette.length];
           return { type: "scatter", name: isolate(s.label), symbolSize: ctx.selectionKind ? 14 : 10,
             data: s.points.map(p => ({ value: [p.x, p.y], itemStyle: emphasize(ctx.selectionKind === "series" ? s.id : p.id, color) })),
-            ...(si === 0 ? { markLine: markLine(spec.referenceLines, false) } : {}) };
+            ...(si === 0 ? { markLine: markLine(spec.referenceLines, false, refLayout) } : {}) };
         }) };
+    }
     case "histogram": {
-      const binRight = spec.valueLabels ? Math.max(0, valueLabelRoom(spec.bins.map(b => b.count), false) - grid.right) : 0;
-      return { ...base, grid: binRight ? { ...grid, right: grid.right + binRight } : grid, xAxis: categoryAxis(spec.bins.map(b => binLabel(b.start, b.end)), spec.xAxis, false, false, (ctx.compact ? 64 : 96) + binRight), yAxis: { ...valueAxis(spec.yAxis, true), ...(spec.valueLabels ? { boundaryGap: [0, "10%"] } : {}) },
+      // value labels: room on the right for the last bin's label, and the value axis's labels step away from the first one's (and from a
+      // rotated first bin label) exactly as for columns (round-5 finding B5-4)
+      const binRoom = spec.valueLabels ? valueLabelRoom(spec.bins.map(b => b.count), false) : 0;
+      const binRight = Math.max(0, binRoom - grid.right), reserve0 = (ctx.compact ? 64 : 96) + binRight;
+      const left = sideGap(binRoom, stageWidth ? Math.max(0, stageWidth - reserve0) : 0, Math.max(1, spec.bins.length));
+      const xAxis = categoryAxis(spec.bins.map(b => binLabel(b.start, b.end)), spec.xAxis, false, false, reserve0 + left);
+      const gap = Math.max(left, "rotate" in xAxis.axisLabel ? 6 : 0), yBase = valueAxis(spec.yAxis, true);
+      return { ...base, grid: binRight ? { ...grid, right: grid.right + binRight } : grid, xAxis,
+        yAxis: { ...yBase, ...(gap ? { axisLabel: { ...yBase.axisLabel, margin: 8 + gap } } : {}), ...(spec.valueLabels ? { boundaryGap: [0, "10%"] } : {}) },
         series: [{ type: "bar", barCategoryGap: "2%", data: spec.bins.map(b => ({ value: b.count, itemStyle: emphasize(b.id, palette[0]) })),
           ...(spec.valueLabels ? { labelLayout: VALUE_LABEL_LAYOUT, label: { show: true, ...text, lineHeight: valueLineHeight, position: "top", formatter: (p: { value: unknown }) => (typeof p.value === "number" ? formatValue(p.value) : "") } } : {}) }] };
     }
@@ -346,15 +457,22 @@ export function tooltipFromEvent(spec: ChartSpecV1, ev: { componentType?: string
   return null;
 }
 
-/** What the stage width decides in an option: the category axes' label layout (rotation, thinning, label width, name gap), the value axis's
- *  label gap, and the radar's radius and name width — nothing else in an option depends on the width (the right margin for value and
- *  reference labels follows the values, the labels and the compact class, itself an input). Two options built from the same inputs with
- *  the same layout draw the same picture. */
+/** What the stage width decides in an option: the category axes' label layout (rotation, thinning, label width, name gap), the value axes'
+ *  label gaps, the radar's radius and name width, the pie's label box, and the reference lines' labels (their cut text and places) —
+ *  nothing else in an option depends on the width (the right margin for value and reference labels follows the values, the labels and the
+ *  compact class, itself an input). Two options built from the same inputs with the same layout draw the same picture. */
 export function widthLayout(option: EngineOption): string {
   type Axis = { type?: unknown; nameGap?: unknown; axisLabel?: { rotate?: unknown; interval?: unknown; width?: unknown; margin?: unknown } } | undefined;
+  type Series = { type?: unknown; label?: { width?: unknown }; markLine?: { label?: { formatter?: unknown }; data?: { label?: unknown }[] } };
   const radar = option.radar as { radius?: unknown; axisName?: { width?: unknown } } | undefined;
+  const series = (Array.isArray(option.series) ? option.series : []) as Series[];
   return JSON.stringify([([option.xAxis, option.yAxis].flat() as Axis[]).map(a => (a && a.type === "category" ? [a.axisLabel?.rotate ?? 0, a.axisLabel?.interval, a.axisLabel?.width, a.nameGap] : a?.axisLabel?.margin ?? 0)),
-    radar ? [radar.radius, radar.axisName?.width] : 0]);
+    radar ? [radar.radius, radar.axisName?.width] : 0,
+    series.map(s => {
+      if (s.type === "pie") return s.label?.width ?? 0;
+      const m = s.markLine, f = m?.label?.formatter, data = m?.data ?? [];
+      return m ? [data.map((_, i) => (typeof f === "function" ? (f as (p: { dataIndex: number }) => unknown)({ dataIndex: i }) : 0)), data.map(d => d.label ?? 0)] : 0;
+    })]);
 }
 
 /** The stage height (px) for a chart: fixed per kind and width class (so a width change never feeds back into the height — no resize

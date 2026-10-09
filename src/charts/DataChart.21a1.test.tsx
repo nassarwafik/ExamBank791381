@@ -55,7 +55,8 @@ describe("21A1-DC1 accessible figure", () => {
     await settle();
     const fig = screen.getByRole("figure", { name: "الهطول الشهري — 2020" });
     const described = fig.getAttribute("aria-describedby")!.split(" ").map(id => document.getElementById(id)!.textContent);
-    expect(described).toEqual(["كمية الأمطار الشهرية بالملّيمتر في عام 2020 (بيانات توضيحية).", "رسم بالأعمدة — 12 فئة، سلسلة واحدة"]);
+    // …and by its reference lines, named in full with their values (round-5 finding B5-1: the picture is hidden and may cut their labels)
+    expect(described).toEqual(["كمية الأمطار الشهرية بالملّيمتر في عام 2020 (بيانات توضيحية).", "رسم بالأعمدة — 12 فئة، سلسلة واحدة", "خط مرجعي: \u2067عتبة 50 mm\u2069: \u206650 mm\u2069"]);
     expect(fig.querySelector(".xp-chart-stage")!.getAttribute("aria-hidden")).toBe("true");
     expect(document.querySelector("[aria-label='chart'],[aria-label='Chart'],[aria-label='رسم بياني']")).toBeNull();
     expect(fig.textContent).toContain("المصدر: بيانات توضيحية لأغراض التعلّم");
