@@ -50,20 +50,21 @@ const questionTypeIdentityKey = (key, version) => key + "@" + version;
 exports.questionTypeIdentityKey = questionTypeIdentityKey;
 const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{1,63}$/;
 const registry = new Map(exports.QUESTION_TYPE_CATALOG.map(d => [d.key, d]));
+const productionKeys = new Set(exports.QUESTION_TYPE_CATALOG.map(d => d.key));
 function registerQuestionType(definition) {
     if (!definition || typeof definition !== "object")
-        throw new Error("invalid type");
+        throw new Error("question type definition required");
     const key = definition.key;
     if (typeof key !== "string" || !KEY_PATTERN.test(key))
-        throw new Error("invalid type");
+        throw new Error("invalid question type key");
     if (registry.has(key))
-        throw new Error("duplicate type");
+        throw new Error("question type already registered: " + key);
     if (!Number.isInteger(definition.version) || definition.version < 1)
-        throw new Error("invalid type");
+        throw new Error("invalid question type version");
     if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category))
-        throw new Error("invalid type");
+        throw new Error("invalid question type category");
     if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode))
-        throw new Error("invalid type");
+        throw new Error("invalid grading mode");
     registry.set(key, Object.freeze({ ...definition, responseKinds: Object.freeze([...definition.responseKinds]), legacy: false }));
     return () => { if (!productionKeys.has(key))
         registry.delete(key); };
@@ -104,10 +105,10 @@ function createVersionedRegistry(what, options = {}) {
     return {
         register(key, version, impl) {
             if (typeof key !== "string" || !KEY_PATTERN.test(key) || !Number.isInteger(version) || version < 1 || impl == null)
-                throw new Error("invalid " + what);
+                throw new Error("invalid " + what + " registration: " + key + "@" + version);
             const id = (0, exports.questionTypeIdentityKey)(key, version);
             if (entries.has(id))
-                throw new Error("duplicate " + what);
+                throw new Error(what + " already registered: " + id);
             entries.set(id, impl);
             return () => { if (entries.get(id) === impl)
                 entries.delete(id); };
