@@ -14,7 +14,7 @@
 .ex3d-table th,.ex3d-table td{border:1px solid #c4d1df;padding:.5rem .8rem;text-align:center}
 .ex3d-table th{background:#e7f1fa;font-weight:700}
 .ex3d-table tbody tr:nth-child(even){background:#f7fafc}
-@media print{.ex3d-controls,.ex3d-table summary{display:none}.ex3d-table .ex3d-scroll{display:block!important;overflow:visible}.ex3d{break-inside:avoid}.ex3d-scene{max-width:100%}}
+@media print{.ex3d-controls,.ex3d-help,.ex3d-table summary{display:none}.ex3d-table .ex3d-scroll{display:block!important;overflow:visible}.ex3d{break-inside:avoid}.ex3d-scene{max-width:100%}}
 
 .ex3d-lab .eb-dialog-body{max-height:80vh;overflow-y:auto}
 .ex3d-notice{background:#f1f6fc;border-inline-start:4px solid #497caa;padding:.65rem .9rem;line-height:1.7}
