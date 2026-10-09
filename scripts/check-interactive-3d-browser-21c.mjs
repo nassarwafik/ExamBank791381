@@ -34,7 +34,9 @@ try{
     await page.keyboard.press("Home");check("K2 Home restores authored camera",(await face())===before);
     await page.keyboard.press("+");check("K3 keyboard zoom changes projected geometry",(await face())!==before);await page.keyboard.press("Home");
     const box=await svg.boundingBox();if(box){await page.mouse.move(box.x+box.width*.5,box.y+box.height*.5);await page.mouse.down();await page.mouse.move(box.x+box.width*.68,box.y+box.height*.58,{steps:5});await page.mouse.up();}
-    check("P1 pointer drag rotates geometry",(await face())!==before);await q.getByRole("button",{name:"إعادة العرض"}).click();
+    check("P1 pointer drag rotates geometry",(await face())!==before);
+    check("P2 camera drag does not become an answer",!(await page.locator('[data-testid="cube-answer"]').textContent()).includes("face:"));
+    await q.getByRole("button",{name:"إعادة العرض"}).click();
     await q.getByRole("button",{name:/الوجه العلوي/}).click();check("S3 semantic list selection emits face key",(await page.locator('[data-testid="cube-answer"]').textContent()).includes("face:top"));
     await page.locator('[data-testid="heart-question"] [data-i3d-target="object:leftVentricle"]').first().click();
     check("S4 SVG anatomy selection emits object key",(await page.locator('[data-testid="heart-answer"]').textContent()).includes("object:leftVentricle"));
