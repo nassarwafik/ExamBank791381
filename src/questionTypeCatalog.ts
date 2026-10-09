@@ -31,9 +31,8 @@ const caps = (flags: string): QuestionTypeCapabilities => Object.freeze({
   autoGrading: flags.includes("a"), manualGrading: flags.includes("m"), hybridGrading: flags.includes("h"), partialCredit: flags.includes("p"),
   compoundPart: flags.includes("c"), interactive: flags.includes("i"), requiresImage: flags.includes("r"), offline: flags.includes("o")
 });
-const def = (d: QuestionTypeDefinition): QuestionTypeDefinition => Object.freeze({ ...d, responseKinds: Object.freeze([...d.responseKinds]) });
 const row = (key: string, label: string, category: QuestionTypeCategory, gradingMode: GradingMode, flags: string, responseKinds: readonly string[], legacy = false, version = 1): QuestionTypeDefinition =>
-  def({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
+  Object.freeze({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds: Object.freeze([...responseKinds]), legacy });
 /** Phase 17F-C2 (Review Fix 1) — the CURRENT version of a production type whose contract was versioned. coding@2 adds the
  *  teacher-owned compile-error policy (`answer.compileErrorPolicy`, explicit "zero" | "manualReview"); coding@1 remains the
  *  historical contract (a compile error is an automatic 0) and stored coding@1 questions are never reinterpreted. A pre-C2
@@ -136,7 +135,7 @@ export function registerQuestionType(definition: QuestionTypeDefinition): () => 
   if (!Number.isInteger(definition.version) || definition.version < 1) throw new Error("invalid type version");
   if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category)) throw new Error("invalid type category");
   if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode)) throw new Error("invalid grading mode");
-  registry.set(key, def({ ...definition, legacy: false }));
+  registry.set(key, Object.freeze({ ...definition, responseKinds: Object.freeze([...definition.responseKinds]), legacy: false }));
   return () => { if (!productionKeys.has(key)) registry.delete(key); };
 }
 
