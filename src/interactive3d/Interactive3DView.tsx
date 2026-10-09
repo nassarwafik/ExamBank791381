@@ -84,8 +84,8 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
     <svg className="i3d-scene" viewBox={"0 0 "+scene.width+" "+scene.height} role="img" tabIndex={0}
       aria-describedby={uid+"-help"} aria-label={"نموذج ثلاثي الأبعاد: "+checked.value.title}
       onKeyDown={e=>{if(keyCamera(e.key))e.preventDefault();}}
-      onPointerDown={e=>{if(!checked.value.interaction.rotate)return;dragged.current=false;drag.current={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:camera.yaw,pitch:camera.pitch};e.currentTarget.setPointerCapture?.(e.pointerId);}}
-      onPointerMove={e=>{const d=drag.current;if(!d||d.id!==e.pointerId)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>4)dragged.current=true;setCamera(v=>({...v,yaw:clamp(d.yaw+(e.clientX-d.x)*.01,-Math.PI,Math.PI),pitch:clamp(d.pitch-(e.clientY-d.y)*.008,-1.35,1.35)}));}}
+      onPointerDown={e=>{if(!checked.value.interaction.rotate)return;dragged.current=false;drag.current={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:camera.yaw,pitch:camera.pitch};}}
+      onPointerMove={e=>{const d=drag.current;if(!d||d.id!==e.pointerId)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)<=4)return;if(!dragged.current){dragged.current=true;e.currentTarget.setPointerCapture?.(e.pointerId);}setCamera(v=>({...v,yaw:clamp(d.yaw+dx*.01,-Math.PI,Math.PI),pitch:clamp(d.pitch-dy*.008,-1.35,1.35)}));}}
       onPointerUp={e=>{if(drag.current?.id===e.pointerId)drag.current=null;e.currentTarget.releasePointerCapture?.(e.pointerId);}}
       onPointerCancel={e=>{if(drag.current?.id===e.pointerId)drag.current=null;}}>
       <rect width={scene.width} height={scene.height} className="i3d-bg"/>
