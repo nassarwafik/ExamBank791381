@@ -5,7 +5,7 @@ export const SURFACES_21B = Object.freeze({
     "version": 1,
     "id": "surface-paraboloid",
     "title": "سطح القطع المكافئ",
-    "description": "السطح z = x² + y²، وله أقل ارتفاع عند نقطة الأصل.",
+    "description": "تمثيل ثلاثي الأبعاد للدالة z = x² + y² ضمن مجال العرض.",
     "expression": "x^2+y^2",
     "viewport": {
       "xMin": -2,
@@ -24,7 +24,7 @@ export const SURFACES_21B = Object.freeze({
     "version": 1,
     "id": "surface-saddle",
     "title": "السطح السرجي",
-    "description": "السطح z = x² − y²؛ يرتفع في اتجاه وينخفض في الاتجاه العمودي عليه.",
+    "description": "تمثيل ثلاثي الأبعاد للدالة z = x² − y² ضمن مجال العرض.",
     "expression": "x^2-y^2",
     "viewport": {
       "xMin": -2,
@@ -43,7 +43,7 @@ export const SURFACES_21B = Object.freeze({
     "version": 1,
     "id": "surface-wave",
     "title": "سطح موجي",
-    "description": "السطح z = sin(x)·cos(y) على مجال متناظر حول الأصل.",
+    "description": "تمثيل ثلاثي الأبعاد للدالة z = sin(x)·cos(y) ضمن المجال المعروض.",
     "expression": "sin(x)*cos(y)",
     "viewport": {
       "xMin": -3.14159,
@@ -112,7 +112,7 @@ export function buildSurfacesAcceptanceExam() {
         mcq("b1", "ما الوصف الأنسب لسلوك z = x² − y² قرب نقطة الأصل؟", ["يرتفع في اتجاه وينخفض في اتجاه آخر", "له قيمة عظمى مطلقة عند الأصل", "له قيمة صغرى مطلقة عند الأصل", "لا يعتمد على y"], 0, 4, S.saddle, "قارن شكل السطح على اتجاه x مع شكله على اتجاه y.")
       ] },
       { id: "sec-c", title: "ج — السطح الموجي", gradingPolicy: "all", questions: [
-        mcq("c1", "ما أكبر قيمة ممكنة تقريبًا للدالة z = sin(x)·cos(y)؟", ["1", "2", "π", "4"], 0, 4, S.wave, "لاحظ أن sin و cos كل منهما بين −1 و1.")
+        mcq("c1", "ما أكبر قيمة ممكنة تقريبًا للدالة z = sin(x)·cos(y)؟", ["1", "2", "π", "4"], 0, 4, S.wave, "ادرس شكل السطح وقيمه ضمن المجال المعروض قبل اختيار الإجابة.")
       ] },
       { id: "sec-d", title: "د — القبة الكروية والعرض العربي", gradingPolicy: "all", questions: [
         mcq("d1", "عند x = 0 و y = 0، ما قيمة z على القبة z = √(4 − x² − y²)؟", ["2", "0", "4", "−2"], 0, 4, S.dome, "اقرأ المعادلة ثم استخدم السطح وجدول القيم للتحقق.")
