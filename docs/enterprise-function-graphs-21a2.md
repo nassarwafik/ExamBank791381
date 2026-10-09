@@ -1,8 +1,8 @@
 # Phase 21A.2 — Enterprise Mathematical Function Graph Engine (design record — DRAFT / HANDOFF)
 
-> STATUS: **IN PROGRESS — NOT READY.** This file is the handoff record written when work paused at code head `534fa65`; it is committed
+> STATUS: **IN PROGRESS — DRAFT PR #278, DO NOT MERGE.** This file is the handoff record written when work paused at code head `534fa65`; it is committed
 > on top of it (the handoff commit is the branch head). It becomes the phase's design record; every section below must be completed before the PR is opened for review.
-> No PR exists. Nothing is deployed (no PR ⇒ no preview environment; no production or Runner deployment).
+> Draft PR #278 is open for CI certification; this does NOT authorize production deployment or merge. The original handoff checkpoint below refers to the earlier pre-PR state.
 
 ## 1. Checkpoint
 
@@ -311,3 +311,25 @@ complete design record · PR · exact-head CI · independent review · merge (ow
 No PR, no CI run on any 21A.2 SHA (branch pushes trigger no workflow). Merge blockers: everything NOT STARTED / PARTIAL in §10, the
 failing capability matrix and FF4, full green root suite at the final head, exact-head CI (Quality Gate, Runner security & smoke, Build and
 Deploy), independent review, owner merge.
+
+
+## 14. Post-handoff work — 9 October 2026 (owner-authorized continuation)
+
+- PR **#278** opened as a **DRAFT** with `⛔ DO NOT MERGE — OWNER CERTIFICATION REQUIRED`; `main` was not changed.
+- 21A.2 compatibility pins updated for the additive answer type, recoverable lazy view, 27-type catalog, and functionGraph rich block. The 21A.1 frozen corpus excludes the *new 21A.2* acceptance fixture, while allowing only the declared `Function graphs:` catalog line; original baseline pins remain unchanged.
+- AI fail-closed graph descriptor integrated with `composerRich`, composer catalog V4 and domain-patch id collision handling. Backward-compatible reading of pre-V4 block descriptors (with an absent `graph` key only on pre-existing block kinds) is intentional; new provider schema requires a closed `graph` field and new functionGraph requires a valid graph object.
+- Added `src/aiComposer/composerGraph.21a2.test.ts` with provenance, strict schema and adversarial refusal cases.
+- Added nine-section 38-mark acceptance exam (`scripts/function-graphs-21a2-exam.mjs`, generator, JSON fixture), a byte-drift guard, and a focused import / grading / projection test. Sections A–I cover quadratic, rational, sine, piecewise, intersection, tangent, area, Arabic, and composite graphs.
+- Added `21A2` as a live acceptance entry in the 20G capability matrix; `functionGraphSelection@1` and its composite child disposition are documented.
+- **Shared-finalization synchronization**: a temporary read-only GitHub Actions mirror audit regenerated all CommonJS files with locked dependencies and printed generated outputs; the CJS mirror was updated using GitHub connector. On branch head `8fac2f26`, a fresh run of the mirror audit reported an **empty generated diff**, proving TypeScript/CJS parity at that specific head.
+- An earlier CI gate on a pre-fix head was RED (legacy AI descriptors, V3 pins, old 21A.1 fixture inventory, missing matrix disposition, and shared mirror drift); these have been addressed in subsequent commits. Do NOT use that old failure list as a claim about the current head. A new exact-head full gate is still required.
+- Security & Smoke Runner previously passed on a pre-latest PR head; rerun on the exact final commit before merge.
+
+### Remaining **hard blockers**
+
+1. Full **exact-head** green test, TypeScript, lint and bundle budget (the initial graph was near its ceiling at handoff).
+2. Extended 21A.2 lifecycle certification on the actual platform (governance, publish/assign, autosave and teacher review), broader malicious payload suite, UI/RTL/browser/print tests, performance bounds and 30–40 mutations.
+3. Independent read-only review and remediation of real blockers, and a final **owner certification** before merge.
+4. The temporary read-only mirror-audit workflow must be deleted before final certification (it is an implementation aid, not a product workflow).
+
+No assertion of merged, deployed, or feature-complete status is made here.
