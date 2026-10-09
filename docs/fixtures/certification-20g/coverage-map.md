@@ -2,7 +2,7 @@
 
 | Identity | Kind | Grading | Partial | Response | Compound part | Composite child | AI composer | Authoring version | Grader | 20G | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, A, B, C, E, S |
+| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, 21C, A, B, C, E, S |
 | `trueFalse@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, B, E, S |
 | `multiTrueFalse@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | B, E, S |
 | `shortAnswer@1` | type | hybrid | — | text | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, S |
