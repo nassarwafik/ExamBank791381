@@ -13,6 +13,7 @@ export type Interactive3DSelection = {
   value: string[];
   label?: string;
   readOnly?: boolean;
+  review?: Record<string, "correct" | "incorrect" | "missed">;
   onChange: (next:string[])=>void;
 };
 
@@ -88,24 +89,24 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
       onPointerCancel={e=>{if(drag.current?.id===e.pointerId)drag.current=null;}}>
       <rect width={scene.width} height={scene.height} className="i3d-bg"/>
       {scene.faces.map(f=>{
-        const t=selection?targetForFace(targets,f.objectId,f.element):undefined, key=t?scene3DTargetKey(t):"", active=!!key&&selected.has(key);
+        const t=selection?targetForFace(targets,f.objectId,f.element):undefined, key=t?scene3DTargetKey(t):"", active=!!key&&selected.has(key), mark=key?selection?.review?.[key]:undefined;
         return <polygon key={f.id} points={f.points} fill={FILLS[(f.palette-1)%FILLS.length]} fillOpacity={f.opacity}
-          className={"i3d-face"+(t?" i3d-target":"")+(active?" is-selected":"")} data-i3d-target={key||undefined}
+          className={"i3d-face"+(t?" i3d-target":"")+(active?" is-selected":"")+(mark?" review-"+mark:"")} data-i3d-target={key||undefined}
           onClick={()=>{if(t)toggle(t);}} aria-label={t?.label}/>;
       })}
       {selection?.kind==="edge"&&scene.edges.map(e=>{
-        const t=targetForEdge(targets,e.objectId,e.element); if(!t)return null; const key=scene3DTargetKey(t),active=selected.has(key);
-        return <g key={e.id}><line className={"i3d-edge-target"+(active?" is-selected":"")} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} onClick={()=>toggle(t)} data-i3d-target={key}/>
+        const t=targetForEdge(targets,e.objectId,e.element); if(!t)return null; const key=scene3DTargetKey(t),active=selected.has(key),mark=selection?.review?.[key];
+        return <g key={e.id}><line className={"i3d-edge-target"+(active?" is-selected":"")+(mark?" review-"+mark:"")} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} onClick={()=>toggle(t)} data-i3d-target={key}/>
           <line className="i3d-edge-hit" x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} onClick={()=>toggle(t)} /></g>;
       })}
       {selection?.kind==="vertex"&&scene.points.map((p,i)=>{
-        const t=targetForVertex(targets,p.objectId,p.element);if(!t)return null;const key=scene3DTargetKey(t),active=selected.has(key);
-        return <circle key={i} cx={p.x} cy={p.y} r={active?7:5} className={"i3d-vertex-target"+(active?" is-selected":"")} onClick={()=>toggle(t)} data-i3d-target={key}/>;
+        const t=targetForVertex(targets,p.objectId,p.element);if(!t)return null;const key=scene3DTargetKey(t),active=selected.has(key),mark=selection?.review?.[key];
+        return <circle key={i} cx={p.x} cy={p.y} r={active?7:5} className={"i3d-vertex-target"+(active?" is-selected":"")+(mark?" review-"+mark:"")} onClick={()=>toggle(t)} data-i3d-target={key}/>;
       })}
     </svg>
     {selection&&<div className="i3d-target-list" role="group" aria-label={targetLabel}>
-      {targets.map(t=>{const key=scene3DTargetKey(t),active=selected.has(key);return <button type="button" key={key} aria-pressed={active}
-        disabled={selection.readOnly} className={active?"is-selected":""} onClick={()=>toggle(t)}><span>{t.label}</span>{t.detail&&<small>{t.detail}</small>}</button>;})}
+      {targets.map(t=>{const key=scene3DTargetKey(t),active=selected.has(key),mark=selection.review?.[key],reviewText=mark==="correct"?"صحيح":mark==="incorrect"?"غير صحيح":mark==="missed"?"إجابة صحيحة لم تُختر":"";return <button type="button" key={key} aria-pressed={active}
+        disabled={selection.readOnly} className={(active?"is-selected ":"")+(mark?"review-"+mark:"")} onClick={()=>toggle(t)}><span>{t.label}</span>{t.detail&&<small>{t.detail}</small>}{reviewText&&<small className="i3d-review-mark">{reviewText}</small>}</button>;})}
     </div>}
     <details className="i3d-summary"><summary>وصف نصي بديل للنموذج</summary>
       <ul>{checked.value.objects.map(o=><li key={o.id}>{o.label} — {o.kind}</li>)}</ul>
