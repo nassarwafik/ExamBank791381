@@ -18,7 +18,7 @@ export const numericParam = (text: string, vars: [string, number, number][], exp
 export const coding = (text: string, language: string, examples: [string, string][] = [["1 2", "3"]]) => q19("coding", text, { coding: { mode: "writeProgram", language, starterCode: "", publicExamples: examples.map(([input, sampleOutput]) => ({ input, sampleOutput })) } });
 export const shortAns = (text: string, modelAnswer = "") => q19("shortAnswer", text, { shortAnswer: { modelAnswer } });
 
-const RB_BASE = { text: "", level: 2, dir: "auto", items: [], headers: [], rows: [], language: "text", source: "", variant: "info", title: "", pairs: [], chart: null };   // 21A.1 adds the chart descriptor (null outside dataChart)
+const RB_BASE = { text: "", level: 2, dir: "auto", items: [], headers: [], rows: [], language: "text", source: "", variant: "info", title: "", pairs: [], chart: null, graph: null };   // 21A.1 adds the chart descriptor (null outside dataChart)
 export const rb = (type: string, over: Json = {}): Json => ({ ...RB_BASE, type, ...over });
 export const table = (headers: string[], rows: string[][], title = "") => rb("table", { headers, rows, title });
 export const cli = (source: string, title = "") => rb("cli", { source, title });
