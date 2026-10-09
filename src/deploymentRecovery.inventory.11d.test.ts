@@ -36,6 +36,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./AssignmentReview.tsx", "ChartSelectionReview", "./charts/ChartSelectionReview", "teacher-chart-review"],
   // Phase 21A.2 — graph-selection review must retain the same stale-chunk recovery guarantee.
   ["./AssignmentReview.tsx", "FunctionGraphSelectionReview", "./functionGraphs/FunctionGraphSelectionReview", "teacher-graph-review"],
+  // Phase 21C — semantic 3D selection review is another protected lazy review view.
+  ["./AssignmentReview.tsx", "Scene3DSelectionReview", "./interactive3d/Scene3DSelectionReview", "teacher-scene3d-review"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],
