@@ -74,6 +74,8 @@ const PRODUCTION_ROWS = [
   // Phase 21A.2 — functionGraphSelection@1: the student selects SEMANTIC targets of a mathematical function graph (curves, points, lines,
   // tangents, shaded regions, intervals); auto-graded on target keys (never pixels), partial credit optional; not a compound part.
   ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", "apio", ["functionGraphSelection"], false],
+  // Phase 21C — scene3DSelection@1: semantic selection on an ExamBank-owned interactive 3D scene (object / face / edge / vertex).
+  ["scene3DSelection", "اختيار من نموذج ثلاثي الأبعاد", "interactive", "auto", "apio", ["scene3DSelection"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
