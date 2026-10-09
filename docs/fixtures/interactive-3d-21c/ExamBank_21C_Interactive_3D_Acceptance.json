@@ -43,7 +43,7 @@
           "examQuestionId": "a1",
           "presentationType": "scene3DSelection",
           "questionTypeVersion": 1,
-          "text": "اختر الوجه العلوي للمكعب.",
+          "text": "اختر الوجه المقابل للوجه السفلي في المكعب.",
           "marks": 5,
           "scene3DSelection": {
             "v": 1,
@@ -268,7 +268,7 @@
             "target": "face",
             "mode": "single",
             "maxSelections": 1,
-            "label": "اختر الوجه العلوي للمكعب."
+            "label": "اختر الوجه المقابل للوجه السفلي في المكعب."
           },
           "answer": {
             "scoring": "allOrNothing",
@@ -534,7 +534,7 @@
           "examQuestionId": "c1",
           "presentationType": "scene3DSelection",
           "questionTypeVersion": 1,
-          "text": "اختر رأس الهرم E.",
+          "text": "اختر الرأس الذي لا يقع على قاعدة الهرم.",
           "marks": 5,
           "scene3DSelection": {
             "v": 1,
@@ -703,7 +703,7 @@
             "target": "vertex",
             "mode": "single",
             "maxSelections": 1,
-            "label": "اختر رأس الهرم E."
+            "label": "اختر الرأس الذي لا يقع على قاعدة الهرم."
           },
           "answer": {
             "scoring": "allOrNothing",
@@ -723,7 +723,7 @@
           "examQuestionId": "d1",
           "presentationType": "scene3DSelection",
           "questionTypeVersion": 1,
-          "text": "اختر البطين الأيسر من النموذج التعليمي.",
+          "text": "اختر حجرة القلب التي تضخ الدم المؤكسج إلى الجسم عبر الشريان الأبهر.",
           "marks": 5,
           "scene3DSelection": {
             "v": 1,
@@ -902,7 +902,7 @@
             "target": "object",
             "mode": "single",
             "maxSelections": 1,
-            "label": "اختر البطين الأيسر من النموذج التعليمي."
+            "label": "اختر حجرة القلب التي تضخ الدم المؤكسج إلى الجسم عبر الشريان الأبهر."
           },
           "answer": {
             "scoring": "allOrNothing",
@@ -922,7 +922,7 @@
           "examQuestionId": "e1",
           "presentationType": "scene3DSelection",
           "questionTypeVersion": 1,
-          "text": "اختر الكبد من نموذج الجذع.",
+          "text": "اختر العضو الكبير أسفل الرئة اليمنى والمشارك في إنتاج الصفراء.",
           "marks": 5,
           "scene3DSelection": {
             "v": 1,
@@ -1084,7 +1084,7 @@
             "target": "object",
             "mode": "single",
             "maxSelections": 1,
-            "label": "اختر الكبد من نموذج الجذع."
+            "label": "اختر العضو الكبير أسفل الرئة اليمنى والمشارك في إنتاج الصفراء."
           },
           "answer": {
             "scoring": "allOrNothing",
@@ -1104,7 +1104,7 @@
           "examQuestionId": "f1",
           "presentationType": "scene3DSelection",
           "questionTypeVersion": 1,
-          "text": "اختر ذرة الأكسجين في نموذج الماء.",
+          "text": "اختر الذرة التي تظهر مرة واحدة فقط في جزيء H₂O.",
           "marks": 5,
           "scene3DSelection": {
             "v": 1,
@@ -1239,7 +1239,7 @@
             "target": "object",
             "mode": "single",
             "maxSelections": 1,
-            "label": "اختر ذرة الأكسجين في نموذج الماء."
+            "label": "اختر الذرة التي تظهر مرة واحدة فقط في جزيء H₂O."
           },
           "answer": {
             "scoring": "allOrNothing",
