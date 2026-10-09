@@ -64,3 +64,9 @@ edit safe x/y expressions and bounded ranges, rotate the surface, and inspect an
 value table. The lab neither calls the exam change callback nor the save callback, and
 is never serialized or shown to students. This pilot is **not** integrated into actual
 exam questions. Full exam RichContent and server projection require additional certified work.
+
+
+## Slice 2C — JSON-first acceptance lifecycle
+- A generated four-surface acceptance exam now exercises paraboloid, saddle, sinusoidal and spherical-dome surfaces as persisted `functionSurface3D` rich stimuli.
+- Certification proves teacher snapshot preservation, student-safe delivery, autosave/restore, official grading of existing question types, and server refusal of renderer data smuggled into a 3D block.
+- Phase 21B deliberately reuses existing question types for assessment. Semantic 3D point/region selection and a dedicated 3D grader are deferred to Phase 21C (Interactive 3D Geometry), keeping this phase focused on the shared safe 3D runtime and JSON lifecycle.
