@@ -53,18 +53,18 @@ const registry = new Map(exports.QUESTION_TYPE_CATALOG.map(d => [d.key, d]));
 const productionKeys = new Set(exports.QUESTION_TYPE_CATALOG.map(d => d.key));
 function registerQuestionType(definition) {
     if (!definition || typeof definition !== "object")
-        throw new Error("question type definition required");
+        throw new Error("type required");
     const key = definition.key;
     if (typeof key !== "string" || !KEY_PATTERN.test(key))
-        throw new Error("invalid question type key");
+        throw new Error("bad type key");
     if (registry.has(key))
-        throw new Error("question type already registered: " + key);
+        throw new Error("type exists: " + key);
     if (!Number.isInteger(definition.version) || definition.version < 1)
-        throw new Error("invalid question type version");
+        throw new Error("bad type version");
     if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category))
-        throw new Error("invalid question type category");
+        throw new Error("bad type category");
     if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode))
-        throw new Error("invalid grading mode");
+        throw new Error("bad grading");
     registry.set(key, Object.freeze({ ...definition, responseKinds: Object.freeze([...definition.responseKinds]), legacy: false }));
     return () => { if (!productionKeys.has(key))
         registry.delete(key); };
@@ -105,7 +105,7 @@ function createVersionedRegistry(what, options = {}) {
     return {
         register(key, version, impl) {
             if (typeof key !== "string" || !KEY_PATTERN.test(key) || !Number.isInteger(version) || version < 1 || impl == null)
-                throw new Error("invalid " + what + " registration: " + key + "@" + version);
+                throw new Error("invalid " + what);
             const id = (0, exports.questionTypeIdentityKey)(key, version);
             if (entries.has(id))
                 throw new Error(what + " already registered: " + id);
