@@ -180,7 +180,7 @@ export function validateInteractive3DSceneSpec(raw: unknown, path = "interactive
 
     const byId = new Map(objects.map(o => [o.id, o]));
     const targets: Scene3DTargetV1[] = [];
-    const targetIds = new Set<string>(), targetKeys = new Set<string>();
+    const targetIds = new Set<string>(), targetKeys = new Set<string>(), targetBindings = new Set<string>();
     if (!Array.isArray(top.targets) || top.targets.length > SCENE3D_LIMITS.targets) add("SCENE3D_TARGETS_INVALID", path + ".targets", "قائمة أهداف 3D غير صالحة أو أكبر من الحد المسموح.");
     else top.targets.forEach((entry, i) => {
       const at = path + ".targets[" + i + "]";
@@ -204,13 +204,19 @@ export function validateInteractive3DSceneSpec(raw: unknown, path = "interactive
       }
       if (targetId && targetIds.has(targetId)) add("SCENE3D_DUPLICATE_TARGET_ID", at + ".id", "معرّف هدف 3D مكرر: " + targetId);
       if (targetId) targetIds.add(targetId);
+      const bindingOk = !!(kind && objectId && objectRef && validElement(kind, objectRef, element));
       if (kind && objectRef && !validElement(kind, objectRef, element)) add("SCENE3D_TARGET_ELEMENT_INVALID", at + ".element", "العنصر لا يطابق نوع الهدف أو المجسم.");
       if (targetId && kind) {
         const key = kind + ":" + targetId;
         if (targetKeys.has(key)) add("SCENE3D_DUPLICATE_TARGET_KEY", at, "مفتاح هدف 3D مكرر.");
         targetKeys.add(key);
       }
-      if (targetId && label && kind && objectId && objectRef && validElement(kind, objectRef, element)) {
+      if (bindingOk) {
+        const binding = kind + ":" + objectId + ":" + (element ?? "");
+        if (targetBindings.has(binding)) add("SCENE3D_DUPLICATE_TARGET_BINDING", at, "يوجد أكثر من هدف يشير إلى العنصر ثلاثي الأبعاد نفسه.");
+        targetBindings.add(binding);
+      }
+      if (targetId && label && kind && objectId && objectRef && bindingOk) {
         targets.push({ id: targetId, kind, label, objectId, ...(detail ? { detail } : {}), ...(element ? { element } : {}) });
       }
     });
