@@ -94,7 +94,8 @@ describe("21A2-LIFE acceptance exam, authority and grading", () => {
     const projected = sanitizeExamForStudent(exam);
     expect(projected.sections[0].scenarios).toHaveLength(1);
     const graph = projected.sections[0].scenarios[0].sources[0].richContent.blocks[1].graph;
-    expect(graph.curves).toHaveLength(1);
+    // The shared circle source contains a parametric circle AND a straight line.
+    expect(graph.curves).toHaveLength(2);
     expect(graph.points[0]).not.toHaveProperty("role");
     expect(graph.points[0]).not.toHaveProperty("on");
   });
