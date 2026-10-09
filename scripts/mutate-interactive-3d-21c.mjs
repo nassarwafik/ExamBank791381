@@ -20,6 +20,7 @@ const mutants=[
  M("S08-duplicate-object",SPEC,'if (objectId && objectIds.has(objectId))','if (false && objectId && objectIds.has(objectId))'),
  M("S09-target-object",SPEC,'if (objectId && !objectRef) add("SCENE3D_TARGET_OBJECT_UNKNOWN"','if (false && objectId && !objectRef) add("SCENE3D_TARGET_OBJECT_UNKNOWN"'),
  M("S10-target-element",SPEC,'if (kind && objectRef && !validElement(kind, objectRef, element))','if (false && kind && objectRef && !validElement(kind, objectRef, element))'),
+ M("S11-duplicate-binding",SPEC,'if (targetBindings.has(binding)) add("SCENE3D_DUPLICATE_TARGET_BINDING"','if (false && targetBindings.has(binding)) add("SCENE3D_DUPLICATE_TARGET_BINDING"'),
 
  M("Q01-config-exact",SELECT,'if(!onlyKeys(raw,["v","scene","target","mode","maxSelections","label"]))','if(false && !onlyKeys(raw,["v","scene","target","mode","maxSelections","label"]))'),
  M("Q02-select-enabled",SELECT,'if(!scene.value.interaction.select)issues.push(','if(false && !scene.value.interaction.select)issues.push('),
