@@ -129,12 +129,12 @@ const productionKeys = new Set(QUESTION_TYPE_CATALOG.map(d => d.key));
 
 /** Registers a CODE-OWNED type (plugin / test). Refuses duplicates, production keys and malformed keys. Returns the unregister function. */
 export function registerQuestionType(definition: QuestionTypeDefinition): () => void {
-  if (!definition || typeof definition !== "object") throw new Error("question type definition required");
+  if (!definition || typeof definition !== "object") throw new Error("question type required");
   const key = definition.key;
-  if (typeof key !== "string" || !KEY_PATTERN.test(key)) throw new Error("invalid question type key");
-  if (registry.has(key)) throw new Error("question type already registered: " + key);
-  if (!Number.isInteger(definition.version) || definition.version < 1) throw new Error("invalid question type version");
-  if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category)) throw new Error("invalid question type category");
+  if (typeof key !== "string" || !KEY_PATTERN.test(key)) throw new Error("invalid type key");
+  if (registry.has(key)) throw new Error("duplicate type: " + key);
+  if (!Number.isInteger(definition.version) || definition.version < 1) throw new Error("invalid type version");
+  if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category)) throw new Error("invalid type category");
   if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode)) throw new Error("invalid grading mode");
   registry.set(key, def({ ...definition, legacy: false }));
   return () => { if (!productionKeys.has(key)) registry.delete(key); };
