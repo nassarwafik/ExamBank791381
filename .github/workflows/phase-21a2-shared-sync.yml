@@ -24,7 +24,11 @@ jobs:
           node <<'NODE'
           const fs = require('fs');
           const cp = require('child_process');
-          const lines = cp.execFileSync('git', ['status', '--porcelain', '--', 'api/src/lib/shared-finalization'], { encoding:'utf8' }).trim().split('\n');
+          const statusText = cp.execFileSync('git', ['status', '--porcelain', '--', 'api/src/lib/shared-finalization'], { encoding:'utf8' });
+          console.log('21A2_AUDIT_STATUS ' + JSON.stringify(statusText));
+          console.log('21A2_AUDIT_SOURCE_VERSION ' + (fs.readFileSync('src/aiComposer/composerCatalog.ts', 'utf8').match(/AI_COMPOSER_CATALOG_V[0-9]+/) || [])[0]);
+          console.log('21A2_AUDIT_MIRROR_VERSION ' + (fs.readFileSync('api/src/lib/shared-finalization/aiComposer/composerCatalog.js', 'utf8').match(/AI_COMPOSER_CATALOG_V[0-9]+/) || [])[0]);
+          const lines = statusText.trim().split('\n');
           for (const line of lines) {
             if (!line) continue;
             const path = line.slice(3);
