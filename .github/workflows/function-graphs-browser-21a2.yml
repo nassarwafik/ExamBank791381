@@ -4,6 +4,8 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "src/functionGraphs/**"
+      - "docs/enterprise-function-graphs-21a2.md"
+      - "docs/phase-21a2-live-uat.md"
       - "browser-harness/function-graphs.*"
       - "scripts/check-function-graph-browser.mjs"
       - ".github/workflows/function-graphs-browser-21a2.yml"
