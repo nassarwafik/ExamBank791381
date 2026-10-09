@@ -166,7 +166,7 @@ function validateInteractive3DSceneSpec(raw, path = "interactive3D") {
             });
         const byId = new Map(objects.map(o => [o.id, o]));
         const targets = [];
-        const targetIds = new Set(), targetKeys = new Set();
+        const targetIds = new Set(), targetKeys = new Set(), targetBindings = new Set();
         if (!Array.isArray(top.targets) || top.targets.length > exports.SCENE3D_LIMITS.targets)
             add("SCENE3D_TARGETS_INVALID", path + ".targets", "قائمة أهداف 3D غير صالحة أو أكبر من الحد المسموح.");
         else
