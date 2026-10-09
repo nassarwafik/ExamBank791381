@@ -110,6 +110,15 @@ describe("21B-3 accessible SVG pilot renderer", () => {
     expect(container.querySelector("svg polygon")?.getAttribute("points")).not.toBe(before);
     fireEvent.click(getByRole("button", { name: "إعادة العرض" }));
     expect(container.querySelector("svg polygon")?.getAttribute("points")).toBe(before);
+    const svg = container.querySelector("svg")!;
+    fireEvent.keyDown(svg, { key: "ArrowRight" });
+    expect(container.querySelector("svg polygon")?.getAttribute("points")).not.toBe(before);
+    fireEvent.keyDown(svg, { key: "Home" });
+    expect(container.querySelector("svg polygon")?.getAttribute("points")).toBe(before);
+    fireEvent.pointerDown(svg, { pointerId: 7, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(svg, { pointerId: 7, clientX: 135, clientY: 115 });
+    fireEvent.pointerUp(svg, { pointerId: 7, clientX: 135, clientY: 115 });
+    expect(container.querySelector("svg polygon")?.getAttribute("points")).not.toBe(before);
     fireEvent.click(getByText("جدول قيم بديل للرسم (يدعم قارئ الشاشة)"));
     expect(container.querySelectorAll("table tbody tr")).toHaveLength(9);
     expect(container.querySelector("svg")?.getAttribute("role")).toBe("img");
