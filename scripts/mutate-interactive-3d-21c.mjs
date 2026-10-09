@@ -29,7 +29,7 @@ const mutants=[
  M("Q06-key-unknown",SELECT,'if(unknown.length)issues.push(','if(false && unknown.length)issues.push('),
  M("Q07-scene-mismatch",SELECT,'if(response.sceneId!==cfg.config.scene.id)return{ok:false,code:"SCENE3D_SELECTION_SCENE_MISMATCH"};','if(false)return{ok:false,code:"SCENE3D_SELECTION_SCENE_MISMATCH"};'),
  M("Q08-response-unknown",SELECT,'if((given as string[]).some(k=>!order.includes(k)))return{ok:false,code:"SCENE3D_SELECTION_TARGET_UNKNOWN"};','if(false)return{ok:false,code:"SCENE3D_SELECTION_TARGET_UNKNOWN"};'),
- M("Q09-response-duplicate",SELECT,'if(new Set(given).size!==given.length)return{ok:false,code:"SCENE3D_SELECTION_DUPLICATE"};','if(false)return{ok:false,code:"SCENE3D_SELECTION_DUPLICATE"};'),
+ M("Q09-normalize-duplicate",SELECT,'if(new Set(a.targets).size!==a.targets.length)return{ok:false,code:"SCENE3D_SELECTION_DUPLICATE"};','if(false)return{ok:false,code:"SCENE3D_SELECTION_DUPLICATE"};'),
  M("Q10-partial-union",SELECT,'max*hits/Math.max(1,union)','max*hits/Math.max(1,total)'),
 
  M("M01-box-face-semantic",MESH,'["top",["D","C","G","H"]]','["top",["A","B","F","E"]]'),
