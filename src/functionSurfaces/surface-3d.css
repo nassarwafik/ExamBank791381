@@ -1,0 +1,17 @@
+/* Phase 21B pilot, scoped to the 3D SVG viewer only. Typographic scale is inherited from the exam UI. */
+.ex3d{margin:1rem 0;padding:1.1rem;border:1px solid #bfd0df;border-radius:12px;background:#fff;color:#17324c;font:inherit;max-width:100%;overflow:hidden}
+.ex3d figcaption strong{font-size:1.16em;line-height:1.5}
+.ex3d figcaption p{margin:.4rem 0;line-height:1.7}
+.ex3d-expression{display:block;direction:ltr;unicode-bidi:isolate;text-align:center;overflow-wrap:anywhere;font-size:1.08em;font-weight:650;margin:.6rem 0;padding:.55rem;border-radius:7px;background:#edf4fa}
+.ex3d-controls{display:flex;flex-wrap:wrap;gap:.45rem;margin:.8rem 0}
+.ex3d-controls button{border:1px solid #8baac5;border-radius:7px;background:#f5faff;color:#17324c;padding:.5rem .75rem;min-height:40px;font:inherit;cursor:pointer}
+.ex3d-controls button:focus-visible,.ex3d-scroll:focus-visible,.ex3d-table summary:focus-visible{outline:3px solid #236aa4;outline-offset:2px}
+.ex3d-scene{display:block;width:100%;max-width:740px;height:auto;margin:auto;border:1px solid #c5d7e7;border-radius:9px}
+.ex3d-status{font-size:.87em;line-height:1.6;color:#365675}
+.ex3d-table summary{cursor:pointer;font-weight:650;padding:.6rem 0}
+.ex3d-scroll{overflow-x:auto}
+.ex3d-table table{width:100%;border-collapse:collapse;font:inherit}
+.ex3d-table th,.ex3d-table td{border:1px solid #c4d1df;padding:.5rem .8rem;text-align:center}
+.ex3d-table th{background:#e7f1fa;font-weight:700}
+.ex3d-table tbody tr:nth-child(even){background:#f7fafc}
+@media print{.ex3d-controls,.ex3d-table summary{display:none}.ex3d-table .ex3d-scroll{display:block!important;overflow:visible}.ex3d{break-inside:avoid}.ex3d-scene{max-width:100%}}
