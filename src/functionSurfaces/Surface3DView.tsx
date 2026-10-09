@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { evaluateExpression } from "../parametricExpression";
 import { projectSurface, sampleSurface } from "./surfaceMesh";
 import { type SurfaceCamera, type SurfaceSpecV1, validateSurfaceSpec } from "./surfaceSpec";
@@ -15,6 +15,7 @@ export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
   const checked = useMemo(() => validateSurfaceSpec(spec), [spec]);
   const [camera, setCamera] = useState<SurfaceCamera>(() => start(spec));
   const [currentSpec, setCurrentSpec] = useState(spec);
+  const drag = useRef<{ id: number; x: number; y: number; azimuth: number; elevation: number } | null>(null);
   if (currentSpec !== spec) { setCurrentSpec(spec); setCamera(start(spec)); }
   const mesh = useMemo(() => checked.ok ? sampleSurface(checked.value, checked.ast) : null, [checked]);
   const scene = useMemo(() => (checked.ok && mesh) ? projectSurface(mesh, checked.value, camera) : null, [checked, mesh, camera]);
@@ -29,6 +30,16 @@ export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
     return rows;
   }, [checked]);
   if (!checked.ok || !scene || !mesh) return <p role="alert">الرسم ثلاثي الأبعاد غير صالح، ويحتاج مراجعة المعلم.</p>;
+  const resetCamera = () => setCamera(start(spec));
+  const keyCamera = (key: string) => {
+    if (key === "ArrowLeft") setCamera(v => ({ ...v, azimuth: limitAngle(v.azimuth - 0.2) }));
+    else if (key === "ArrowRight") setCamera(v => ({ ...v, azimuth: limitAngle(v.azimuth + 0.2) }));
+    else if (key === "ArrowUp") setCamera(v => ({ ...v, elevation: limitElevation(v.elevation + 0.15) }));
+    else if (key === "ArrowDown") setCamera(v => ({ ...v, elevation: limitElevation(v.elevation - 0.15) }));
+    else if (key === "Home") resetCamera();
+    else return false;
+    return true;
+  };
   return (
     <figure className="ex3d" dir="rtl" aria-labelledby={uid + "-title"} data-surface-id={checked.value.id}>
       <figcaption>
@@ -41,10 +52,23 @@ export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
         <button type="button" onClick={() => setCamera(c => ({ ...c, azimuth: limitAngle(c.azimuth + 0.2) }))}>تدوير لليمين</button>
         <button type="button" onClick={() => setCamera(c => ({ ...c, elevation: limitElevation(c.elevation + 0.15) }))}>رفع المنظور</button>
         <button type="button" onClick={() => setCamera(c => ({ ...c, elevation: limitElevation(c.elevation - 0.15) }))}>خفض المنظور</button>
-        <button type="button" onClick={() => setCamera(start(spec))}>إعادة العرض</button>
+        <button type="button" onClick={resetCamera}>إعادة العرض</button>
       </div>
-      <svg className="ex3d-scene" viewBox={"0 0 " + scene.width + " " + scene.height} role="img"
-        aria-label={"سطح ثلاثي الأبعاد للدالة z = " + checked.value.expression + "، يمكن تدويره من الأزرار أعلاه."}>
+      <p id={uid + "-help"} className="ex3d-help">يمكن تدوير السطح بالسحب، أو بمفاتيح الأسهم بعد التركيز على الرسم. مفتاح Home يعيد زاوية العرض.</p>
+      <svg className="ex3d-scene" viewBox={"0 0 " + scene.width + " " + scene.height} role="img" tabIndex={0}
+        aria-describedby={uid + "-help"} aria-label={"سطح ثلاثي الأبعاد للدالة z = " + checked.value.expression + "، يمكن تدويره بالسحب أو بمفاتيح الأسهم."}
+        onKeyDown={e => { if (keyCamera(e.key)) e.preventDefault(); }}
+        onPointerDown={e => {
+          drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, azimuth: camera.azimuth, elevation: camera.elevation };
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        }}
+        onPointerMove={e => {
+          const d = drag.current;
+          if (!d || d.id !== e.pointerId) return;
+          setCamera({ azimuth: limitAngle(d.azimuth + (e.clientX - d.x) * 0.01), elevation: limitElevation(d.elevation - (e.clientY - d.y) * 0.008) });
+        }}
+        onPointerUp={e => { if (drag.current?.id === e.pointerId) drag.current = null; e.currentTarget.releasePointerCapture?.(e.pointerId); }}
+        onPointerCancel={e => { if (drag.current?.id === e.pointerId) drag.current = null; }}>
         <rect width={scene.width} height={scene.height} fill="#f8fbff" />
         {scene.faces.map(f => <polygon key={f.id} points={f.points} fill={FILLS[f.shade]}
           stroke="#2f4f74" strokeWidth="0.35" />)}
