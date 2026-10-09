@@ -11,8 +11,7 @@ const caps = (flags) => Object.freeze({
     autoGrading: flags.includes("a"), manualGrading: flags.includes("m"), hybridGrading: flags.includes("h"), partialCredit: flags.includes("p"),
     compoundPart: flags.includes("c"), interactive: flags.includes("i"), requiresImage: flags.includes("r"), offline: flags.includes("o")
 });
-const def = (d) => Object.freeze({ ...d, responseKinds: Object.freeze([...d.responseKinds]) });
-const row = (key, label, category, gradingMode, flags, responseKinds, legacy = false, version = 1) => def({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
+const row = (key, label, category, gradingMode, flags, responseKinds, legacy = false, version = 1) => Object.freeze({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds: Object.freeze([...responseKinds]), legacy });
 const PRODUCTION_VERSIONS = Object.freeze({ coding: 3 });
 const AUTHORING_VERSIONS = Object.freeze({ coding: 2 });
 exports.LEGACY_QUESTION_TYPE_KEYS = Object.freeze(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
@@ -66,7 +65,7 @@ function registerQuestionType(definition) {
         throw new Error("invalid type category");
     if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode))
         throw new Error("invalid grading mode");
-    registry.set(key, def({ ...definition, legacy: false }));
+    registry.set(key, Object.freeze({ ...definition, responseKinds: Object.freeze([...definition.responseKinds]), legacy: false }));
     return () => { if (!productionKeys.has(key))
         registry.delete(key); };
 }
