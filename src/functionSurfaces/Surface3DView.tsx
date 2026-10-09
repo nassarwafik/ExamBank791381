@@ -4,8 +4,8 @@ import { projectSurface, sampleSurface } from "./surfaceMesh";
 import { type SurfaceCamera, type SurfaceSpecV1, validateSurfaceSpec } from "./surfaceSpec";
 import "./surface-3d.css";
 
-// Phase 21B pilot surface viewer: owned SVG, bounded mesh; no WebGL, eval, remote scripts or new dependencies.
-// Rich-content / exam authoring integration is deferred until this isolated surface contract passes certification.
+// Phase 21B surface viewer: owned SVG + bounded mesh, shared by persisted RichContent and teacher authoring.
+// No WebGL, eval, remote scripts, renderer options or new rendering dependency; camera state is presentation-only.
 const FILLS = ["#e1effb", "#c8e1f6", "#a9d0eb", "#89b9dd", "#6aa2d1", "#4987b9", "#3671a5", "#285b91"];
 const start = (s: SurfaceSpecV1): SurfaceCamera => s.camera ?? { azimuth: -0.75, elevation: 0.6 };
 const limitAngle = (n: number) => Math.max(-Math.PI, Math.min(Math.PI, n));
