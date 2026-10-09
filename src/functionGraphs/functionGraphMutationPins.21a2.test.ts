@@ -83,7 +83,7 @@ describe("21A2-MUT-QUESTION exact student authority and answer binding", () => {
   it("rejects additional config keys, and demands at least two selectable targets", () => {
     const c = config();
     expect(validateFunctionGraphSelectionConfig({ ...c, remoteScript: "ignored" }).ok).toBe(false);
-    expect(validateFunctionGraphSelectionConfig({ ...c, target: "curve" }).ok).toBe(false);
+    expect(validateFunctionGraphSelectionConfig({ ...c, target: "curve", mode: "single", maxSelections: 1 }).ok).toBe(false);
   });
   it("rejects invalid selection capacity for either interaction mode", () => {
     const c = config();
