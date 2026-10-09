@@ -1,6 +1,6 @@
 # Phase 21B — Enterprise 3D Mathematical Surface Visualizations
 
-**Current state: integration candidate on `feature/21b-3d-mathematical-surfaces`; PR #279 remains DRAFT and is NOT ready for merge until exact-head certification and focused review complete.**
+**Current state: implementation complete on `feature/21b-3d-mathematical-surfaces`; PR #279 is in closure certification. Production merge remains owner-only.**
 
 ## 1. Baseline, boundary and release decision
 
@@ -181,7 +181,22 @@ Earlier candidate `e9754e6c` exposed two **test/corpus issues**, not production-
 
 Both tests were corrected to express their actual contracts: historical freezes exclude future fixture families, and the 21B safety check inspects exact forbidden object keys.
 
-Exact-head CI for the current candidate is pending; results must not be carried over from an older SHA.
+### Closure certification evidence
+
+The final functional candidate before closure-only comments/documentation was `586d751df9a864d7c4b6d384ee75d5976e4c9306`.
+
+On that exact code head:
+
+- **Root Quality Gate:** SUCCESS — **853/853 test files, 11,271/11,271 tests**; TypeScript/build succeeded; lint completed with **0 errors** (108 existing warnings); bundle guard passed.
+- **Bundle:** initial JavaScript graph **18 files / 124.9 KB gzip**, below the unchanged **125 KB** budget. The bundle guard reported exactly one lazy `Surface3DView` root and no 3D viewer/editor/lab UI in the Student Portal no-3D static closure.
+- **Runner security & smoke:** SUCCESS, including Runner unit tests, Docker functional/security smoke, official hidden-test grading and container cleanup.
+- **Phase 21B mutation certification:** SUCCESS — **23/23 killed, 0 survived, 0 invalid, 0 timeout**, with SHA-256 source restoration verified.
+- **Real Chromium certification:** SUCCESS at widths **320, 360, 600, 800, 1024 and 1280 px** with no page horizontal overflow; keyboard rotation and Home reset passed; pointer drag and reset passed; A4 print PDF was non-empty (**231,350 bytes**); print kept the surface/value table and hid interaction chrome; no JavaScript runtime exception and no external asset/network host was observed.
+- The inherited Phase 21A.2 mutation certification also remained green.
+
+The browser and mutation workflows are committed Phase 21B gates, not one-off local claims.
+
+A final closure-only commit can change the Git SHA without changing runtime behavior. Its **exact-head** CI status is therefore recorded in the PR body after CI completes; this file is not edited again merely to write the new SHA, because doing so would create another uncertified head.
 
 ## 11. Known limitations / deliberate deferrals
 
@@ -191,7 +206,7 @@ Exact-head CI for the current candidate is pending; results must not be carried 
 - No quantitative area/volume calculation.
 - Dedicated 3D semantic selection/grading is Phase 21C.
 - AI-authored 3D generation is deferred.
-- Real Chromium/mobile/PDF certification remains to be recorded if an available project harness executes it; happy-dom/CI evidence is not described as real-browser proof.
+- Real Chromium/mobile/PDF certification is now a committed Phase 21B workflow and passed on the final functional candidate; future 3D capabilities in Phase 21C must extend, not silently replace, this evidence.
 
 ## 12. Closure checklist
 
@@ -205,8 +220,13 @@ Exact-head CI for the current candidate is pending; results must not be carried 
 - [x] Platform save/publish/autosave/restore/grading lifecycle coverage.
 - [x] Bundle lazy-loading guard.
 - [x] Pointer/touch + keyboard camera interaction.
-- [ ] Current exact-head root tests/build/lint/bundle guard green.
-- [ ] Current exact-head Runner security/smoke green.
-- [ ] Focused independent review/certification of the final candidate.
-- [ ] Owner acceptance and manual merge of PR #279.
+- [x] Root tests/build/lint/bundle guard green on the final functional candidate.
+- [x] Runner security/smoke green on the final functional candidate.
+- [x] Dedicated Phase 21B mutation campaign: 23/23 killed.
+- [x] Dedicated real Chromium/mobile/keyboard/pointer/print certification.
+- [x] Focused adversarial review resolved the discovered test-corpus, answer-revealing prose, interaction and React state-update issues.
+- [x] Phase scope frozen: dedicated semantic 3D selection/grading moves to Phase 21C; AI-authored 3D remains deferred.
+- [ ] Owner acceptance and manual merge of PR #279 (exact closure-head CI is recorded in the PR body).
+
+**Implementation verdict:** `ENTERPRISE 3D MATHEMATICAL SURFACES 21B: PASS`
 
