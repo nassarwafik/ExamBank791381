@@ -37,7 +37,7 @@ export function mapAiRichBlocks(raw: unknown, path = "richContent", chartPolicy?
     const b = raw[i], p = path + "[" + i + "]";
     // 21A.2 additive compatibility: a pre-V4 descriptor may omit graph ONLY for older block kinds.
     // New provider schemas always carry graph (null outside functionGraph); unknown fields remain refused.
-    const legacyBlock = b?.type !== "functionGraph" && hasExactKeys(b, BLOCK_KEYS.slice(0, -1));
+    const legacyBlock = isPlainRecord(b) && b.type !== "functionGraph" && hasExactKeys(b, BLOCK_KEYS.slice(0, -1));
     if (!(hasExactKeys(b, BLOCK_KEYS) || legacyBlock) || !isEnum(b.type, COMPOSER_RICH_BLOCKS)) return fail("كتلة منسقة غير صالحة البنية.", p);
     if (!isStr(b.text, L.richTextChars) || !isStr(b.source, L.richSourceChars) || !isStr(b.title, L.shortText) || !isEnum(b.dir, DIRS) || !isInt(b.level, 2, 4)) return fail("قيم الكتلة المنسقة خارج الحدود.", p);
     if (!isArr(b.items, L.richItems) || !b.items.every(x => isStr(x, L.richTextChars)) || !isArr(b.headers, L.richTableColumns) || !b.headers.every(x => isStr(x, L.shortText))) return fail("قوائم الكتلة المنسقة غير صالحة.", p);
