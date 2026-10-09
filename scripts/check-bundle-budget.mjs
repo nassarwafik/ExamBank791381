@@ -100,7 +100,8 @@ const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "f
 // Phase 20F — the AI Full Exam Composer: the dialog class name, the capability catalog version marker and the diff list class name. They
 // live ONLY in the lazy composer chunk(s): ANY one in an initial file fails; EACH must exist in some chunk (a missing one means the list is stale).
 // (Phase 21A: the catalog marker became AI_COMPOSER_CATALOG_V2 — Scientific Math v2; Phase 21A.1: AI_COMPOSER_CATALOG_V3 — data charts.)
-const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V3", "ai-composer-diff"];
+// Phase 21A.2 advances ONLY the additive function-graph catalog marker to V4; the UI stays lazy.
+const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V4", "ai-composer-diff"];
 // Phase 21A.1 — the data-chart platform: ExamBank's chart surface (the selection list and data table class names of the lazy DataChart,
 // the teacher's chart editor and key picker, the chartSelection authority's refusal code) and the ECharts runtime (the markers of our two
 // engine modules and ECharts' own DOM instance attribute). ANY one in an initial file — or in the Student Portal's static closure (a student whose exam has no
