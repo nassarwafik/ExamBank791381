@@ -50,7 +50,6 @@ const questionTypeIdentityKey = (key, version) => key + "@" + version;
 exports.questionTypeIdentityKey = questionTypeIdentityKey;
 const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{1,63}$/;
 const registry = new Map(exports.QUESTION_TYPE_CATALOG.map(d => [d.key, d]));
-const productionKeys = new Set(exports.QUESTION_TYPE_CATALOG.map(d => d.key));
 function registerQuestionType(definition) {
     if (!definition || typeof definition !== "object")
         throw new Error("invalid type");
