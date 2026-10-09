@@ -7,6 +7,7 @@ import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_CALLOUT_VARIANTS, COMPOSER_RICH_BLOCKS, COMPOSER_RICH_CODE_LANGUAGES } from "./composerCatalog";
 import { cleanText, hasExactKeys, isArr, isEnum, isInt, isPlainRecord, isStr, sArr, sEnum, sInt, sNull, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 import { buildAiChartSchema, mapAiChart, type AiChartPolicy } from "./composerChart";
+import { buildAiGraphSchema, mapAiGraph } from "./composerGraph";
 
 const L = COMPOSER_LIMITS;
 const DIRS = ["auto", "rtl", "ltr"] as const;
@@ -16,11 +17,13 @@ export function buildRichBlockSchema(): JsonSchema {
     headers: sArr(sStr(), L.richTableColumns), rows: sArr(sArr(sStr(), L.richTableColumns), L.richTableRows), language: sEnum(COMPOSER_RICH_CODE_LANGUAGES),
     source: sStr(), variant: sEnum(COMPOSER_CALLOUT_VARIANTS), title: sStr(), pairs: sArr(sObj({ label: sStr(), value: sStr() }), L.richItems),
     // 21A.1: the declarative chart descriptor of a dataChart block (null in every other block)
-    chart: sNull(buildAiChartSchema())
+    chart: sNull(buildAiChartSchema()),
+    // 21A.2: closed function-graph descriptor; null for every non-functionGraph block.
+    graph: sNull(buildAiGraphSchema())
   });
 }
 export const buildRichBlocksSchema = (): JsonSchema => sArr(buildRichBlockSchema(), L.richBlocks);
-const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs", "chart"] as const;
+const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs", "chart", "graph"] as const;
 
 const runs = (text: string) => [{ text }];
 /** Maps AI block descriptors to a validated RichContentV1, or refuses with the canonical validator's issues. Empty list ⇒ null. A dataChart
@@ -39,6 +42,7 @@ export function mapAiRichBlocks(raw: unknown, path = "richContent", chartPolicy?
     if (!isArr(b.pairs, L.richItems) || !b.pairs.every(x => hasExactKeys(x, ["label", "value"]) && isStr(x.label, L.shortText) && isStr(x.value, L.richTextChars))) return fail("أزواج القيم غير صالحة.", p);
     if (!isEnum(b.language, COMPOSER_RICH_CODE_LANGUAGES) || !isEnum(b.variant, COMPOSER_CALLOUT_VARIANTS)) return fail("لغة الكود أو نوع الملاحظة غير معروف.", p);
     if (b.chart !== null && !isPlainRecord(b.chart)) return fail("وصف الرسم البياني غير صالح.", p + ".chart");
+    if (b.graph !== null && !isPlainRecord(b.graph)) return fail("وصف رسم الدالة غير صالح.", p + ".graph");
     const text = cleanText(b.text), title = cleanText(b.title);
     switch (b.type) {
       case "heading": blocks.push({ type: "heading", level: b.level, runs: runs(text) }); break;
@@ -61,6 +65,13 @@ export function mapAiRichBlocks(raw: unknown, path = "richContent", chartPolicy?
         const c = mapAiChart(b.chart, i, chartPolicy, p + ".chart");
         if (!c.ok) return { ok: false, issues: c.issues };
         blocks.push({ type: "dataChart", chart: c.chart });
+        break;
+      }
+      case "functionGraph": {
+        if (b.graph === null) return fail("كتلة رسم الدالة تحتاج وصفًا (graph).", p + ".graph");
+        const g = mapAiGraph(b.graph, i, chartPolicy, p + ".graph");
+        if (!g.ok) return { ok: false, issues: g.issues };
+        blocks.push({ type: "functionGraph", graph: g.graph });
         break;
       }
       case "math": {
