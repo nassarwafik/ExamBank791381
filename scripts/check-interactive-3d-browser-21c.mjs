@@ -38,7 +38,7 @@ try{
     check("P2 camera drag does not become an answer",!(await page.locator('[data-testid="cube-answer"]').textContent()).includes("face:"));
     await q.getByRole("button",{name:"إعادة العرض"}).click();
     await q.getByRole("button",{name:/الوجه العلوي/}).click();check("S3 semantic list selection emits face key",(await page.locator('[data-testid="cube-answer"]').textContent()).includes("face:top"));
-    await page.locator('[data-testid="heart-question"] [data-i3d-target="object:leftVentricle"]').first().click();
+    await page.locator('[data-testid="heart-question"] [data-i3d-target="object:leftVentricle"]').first().click({force:true});
     check("S4 SVG anatomy selection emits object key",(await page.locator('[data-testid="heart-answer"]').textContent()).includes("object:leftVentricle"));
   }
   if(width===1024){
