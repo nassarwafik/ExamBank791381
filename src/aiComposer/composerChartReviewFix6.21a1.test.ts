@@ -57,8 +57,10 @@ describe("21A1-AI19 a value-first writing after a leading word pairs nothing (ro
 
 describe("21A1-AI22 Review Fix 6 mutation pins (§20.6)", () => {
   it("RW08 / RW10: a value-first clause at the text's start or after a colon makes a connector pairing unclear too", () => {
-    expect(pairedNumbers("120 Jan and 80 Feb", ["Jan", "Feb"])).toEqual([undefined, undefined]);
-    expect(pairedNumbers("Rainfall: 120 Jan and 80 Feb", ["Jan", "Feb"])).toEqual([undefined, undefined]);
+    // "Feb 80 and Mar 95" alone pairs Feb with 80; a value written before "Jan" makes 80 possibly Mar's, so Feb pairs nothing
+    expect(pairedNumbers("120 Jan. Feb 80 and Mar 95", ["Jan", "Feb", "Mar"])).toEqual([undefined, undefined, 95]);
+    expect(pairedNumbers("Rainfall: 120 Jan. Feb 80 and Mar 95", ["Jan", "Feb", "Mar"])).toEqual([undefined, undefined, 95]);
+    expect(pairedNumbers("Feb 80 and Mar 95", ["Jan", "Feb", "Mar"])).toEqual([undefined, 80, 95]);
   });
 });
 
