@@ -5,9 +5,9 @@
 .ex3d-expression{display:block;direction:ltr;unicode-bidi:isolate;text-align:center;overflow-wrap:anywhere;font-size:1.08em;font-weight:650;margin:.6rem 0;padding:.55rem;border-radius:7px;background:#edf4fa}
 .ex3d-controls{display:flex;flex-wrap:wrap;gap:.45rem;margin:.8rem 0}
 .ex3d-controls button{border:1px solid #8baac5;border-radius:7px;background:#f5faff;color:#17324c;padding:.5rem .75rem;min-height:40px;font:inherit;cursor:pointer}
-.ex3d-controls button:focus-visible,.ex3d-scroll:focus-visible,.ex3d-table summary:focus-visible{outline:3px solid #236aa4;outline-offset:2px}
-.ex3d-scene{display:block;width:100%;max-width:740px;height:auto;margin:auto;border:1px solid #c5d7e7;border-radius:9px}
-.ex3d-status{font-size:.87em;line-height:1.6;color:#365675}
+.ex3d-controls button:focus-visible,.ex3d-scroll:focus-visible,.ex3d-table summary:focus-visible,.ex3d-scene:focus-visible{outline:3px solid #236aa4;outline-offset:2px}
+.ex3d-scene{display:block;width:100%;max-width:740px;height:auto;margin:auto;border:1px solid #c5d7e7;border-radius:9px;touch-action:none;cursor:grab}
+.ex3d-help,.ex3d-status{font-size:.87em;line-height:1.6;color:#365675}.ex3d-help{margin:.45rem 0 .65rem}
 .ex3d-table summary{cursor:pointer;font-weight:650;padding:.6rem 0}
 .ex3d-scroll{overflow-x:auto}
 .ex3d-table table{width:100%;border-collapse:collapse;font:inherit}
