@@ -27,14 +27,12 @@ export type QuestionTypeDefinition = {
 // Compact production encoding (initial-graph size matters): capability FLAGS are letters — a autoGrading, m manualGrading,
 // h hybridGrading, p partialCredit, c compoundPart, i interactive, r requiresImage, o offline. Every entry is version 1 unless
 // PRODUCTION_VERSIONS names a later CURRENT version (the family then ships every version 1..N — see registerQuestionTypePlugin).
-const FLAG: Record<string, keyof QuestionTypeCapabilities> = { a: "autoGrading", m: "manualGrading", h: "hybridGrading", p: "partialCredit", c: "compoundPart", i: "interactive", r: "requiresImage", o: "offline" };
-const caps = (flags: string): QuestionTypeCapabilities => {
-  const c: QuestionTypeCapabilities = { autoGrading: false, manualGrading: false, hybridGrading: false, partialCredit: false, compoundPart: false, interactive: false, requiresImage: false, offline: false };
-  for (const ch of flags) c[FLAG[ch]] = true;
-  return Object.freeze(c);
-};
+const caps = (flags: string): QuestionTypeCapabilities => Object.freeze({
+  autoGrading: flags.includes("a"), manualGrading: flags.includes("m"), hybridGrading: flags.includes("h"), partialCredit: flags.includes("p"),
+  compoundPart: flags.includes("c"), interactive: flags.includes("i"), requiresImage: flags.includes("r"), offline: flags.includes("o")
+});
 const def = (d: QuestionTypeDefinition): QuestionTypeDefinition => Object.freeze({ ...d, responseKinds: Object.freeze([...d.responseKinds]) });
-const row = (key: string, label: string, category: QuestionTypeCategory, gradingMode: GradingMode, flags: string, responseKinds: string[], legacy = false, version = 1): QuestionTypeDefinition =>
+const row = (key: string, label: string, category: QuestionTypeCategory, gradingMode: GradingMode, flags: string, responseKinds: readonly string[], legacy = false, version = 1): QuestionTypeDefinition =>
   def({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
 /** Phase 17F-C2 (Review Fix 1) — the CURRENT version of a production type whose contract was versioned. coding@2 adds the
  *  teacher-owned compile-error policy (`answer.compileErrorPolicy`, explicit "zero" | "manualReview"); coding@1 remains the
@@ -75,7 +73,7 @@ const PRODUCTION_ROWS = [
   // tangents, shaded regions, intervals); auto-graded on target keys (never pixels), partial credit optional; not a compound part.
   ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", "apio", ["functionGraphSelection"], false],
   // Phase 21C — scene3DSelection@1: semantic selection on an ExamBank-owned interactive 3D scene (object / face / edge / vertex).
-  ["scene3DSelection", "اختيار 3D", "interactive", "auto", "apio", ["scene3DSelection"], false],
+  ["scene3DSelection", "3D", "interactive", "auto", "apio", ["scene3DSelection"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
@@ -118,7 +116,7 @@ const PRODUCTION_ROWS = [
 export type ProductionQuestionTypeKey = (typeof PRODUCTION_ROWS)[number][0];
 
 /** Production catalog: frozen definitions built from PRODUCTION_ROWS. */
-export const QUESTION_TYPE_CATALOG: readonly QuestionTypeDefinition[] = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
+export const QUESTION_TYPE_CATALOG: readonly QuestionTypeDefinition[] = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], r[5], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
 
 /** Runtime identity of ONE implementation: a type key AND a version. Persisted data carries `presentationType` / `type` +
  *  `questionTypeVersion` (absence = V1); every runtime registry resolves by BOTH. */
