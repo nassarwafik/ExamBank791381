@@ -79,11 +79,15 @@ describe("21A2-PLATFORM complete function-graph exam lifecycle", () => {
       const shared = delivered.sections[8].questions[0].composite.contexts[0].sources[0].richContent.blocks[1].graph;
       expect(shared.curves).toHaveLength(2);
       expect(JSON.stringify(run.delivery.jsonBody), name).not.toMatch(/"correct"|"scoring"|"role"|"on"|"derivativeOf"|"slope"/);
-      expect(scanProjection(run.delivery.jsonBody, { secrets: ["correctOptionIndex", "gradingKey", "hiddenTests"] }), name).toEqual([]);
+      // The 20G privacy scanner bans the legacy visual-question private "regions" answer-key field.
+      // 21A.2 defines a different, PUBLIC graph.regions drawing primitive. Exempt ONLY these
+      // exact validated graph paths, never a sibling or a generic "regions" field.
+      const publicGraphRegionPaths = [/\\.functionGraphSelection\\.graph\\.regions$/, /\\.richContent\\.blocks\\[\\d+\\]\\.graph\\.regions$/];
+      expect(scanProjection(run.delivery.jsonBody, { secrets: ["correctOptionIndex", "gradingKey", "hiddenTests"], allowKeysAt: publicGraphRegionPaths }), name).toEqual([]);
     }
   });
 
-  it("semantic graph answers autosave and restore through server state; official ledgers are 38 / 30", () => {
+  it("retains the privacy scanner\u2019s forbidden legacy regions key outside validated graph paths", () => {\n    const publicGraphRegionPaths = [/\\.functionGraphSelection\\.graph\\.regions$/, /\\.richContent\\.blocks\\[\\d+\\]\\.graph\\.regions$/];\n    expect(scanProjection({ regions: [{ answer: "leaked" }] }, { allowKeysAt: publicGraphRegionPaths }).map(f => f.key)).toContain("regions");\n  });\n\n  it("semantic graph answers autosave and restore through server state; official ledgers are 38 / 30", () => {
     for (const [name, run] of Object.entries(runs)) {
       expect(run.restores.length, name).toBeGreaterThan(1);
       for (const restore of run.restores) {
