@@ -6,7 +6,7 @@ import Interactive3DView from "./Interactive3DView";
 import { buildInteractive3DMesh, projectInteractive3DScene } from "./sceneMesh";
 import { scene3DPreset } from "./scenePresets";
 import { scene3DTargetKey, validateInteractive3DSceneSpec, type Interactive3DSceneSpecV1 } from "./sceneSpec";
-import { scoreScene3DSelection, validateScene3DSelectionConfig, validateScene3DSelectionQuestion } from "../scene3DSelectionQuestion";
+import { bindScene3DSelectionAnswerToQuestion, scoreScene3DSelection, validateScene3DSelectionAnswerKey, validateScene3DSelectionConfig, validateScene3DSelectionQuestion } from "../scene3DSelectionQuestion";
 import { validateRichContent } from "../richContent/richContentModel";
 
 afterEach(cleanup);
@@ -19,6 +19,10 @@ describe("21C scene contract and geometry engine", () => {
     }
     const cube = scene3DPreset("cube", "scene-cube") as unknown as Record<string, unknown>;
     expect(validateInteractive3DSceneSpec({ ...cube, renderer: { webgl: true } }).ok).toBe(false);
+    expect(validateInteractive3DSceneSpec({ ...cube, version: 2 }).ok).toBe(false);
+    expect(validateInteractive3DSceneSpec({ ...cube, id: "constructor" }).ok).toBe(false);
+    expect(validateInteractive3DSceneSpec({ ...cube, title: "abc\u202Edef" }).ok).toBe(false);
+    expect(validateInteractive3DSceneSpec({ ...cube, title: "abc\u200Bdef" }).ok).toBe(false);
     const proto = Object.create(scene3DPreset("cube"));
     expect(validateInteractive3DSceneSpec(proto).ok).toBe(false);
     const broken = structuredClone(scene3DPreset("cube")) as Interactive3DSceneSpecV1;
@@ -27,6 +31,13 @@ describe("21C scene contract and geometry engine", () => {
     const duplicate = structuredClone(scene3DPreset("heart")) as Interactive3DSceneSpecV1;
     duplicate.objects.push({ ...duplicate.objects[0] });
     expect(validateInteractive3DSceneSpec(duplicate).ok).toBe(false);
+    const unknownObject = structuredClone(scene3DPreset("heart")) as Interactive3DSceneSpecV1;
+    unknownObject.targets[0] = { ...unknownObject.targets[0], objectId: "missing" };
+    expect(validateInteractive3DSceneSpec(unknownObject).ok).toBe(false);
+    const tooMany = structuredClone(scene3DPreset("heart")) as Interactive3DSceneSpecV1;
+    tooMany.objects = Array.from({ length: 65 }, (_, i) => ({ ...tooMany.objects[0], id: "part" + i }));
+    tooMany.targets = [];
+    expect(validateInteractive3DSceneSpec(tooMany).ok).toBe(false);
   });
 
   it("builds a bounded deterministic cube mesh with stable semantic geometry", () => {
@@ -40,6 +51,8 @@ describe("21C scene contract and geometry engine", () => {
     expect(a.edges).toHaveLength(12);
     expect(a.faces.map(f => f.element).sort()).toEqual(["back","bottom","front","left","right","top"]);
     expect(a.vertices.map(v => v.element).sort()).toEqual(["A","B","C","D","E","F","G","H"]);
+    const top = a.faces.find(f => f.element === "top")!;
+    expect(top.indices.map(i => a.vertices[i].point.y)).toEqual([1.5,1.5,1.5,1.5]);
     const p = projectInteractive3DScene(a, valid.value, valid.value.camera, 1, 1);
     expect([p.width, p.height]).toEqual([180,180]);
     expect(p.faces).toHaveLength(6);
@@ -51,9 +64,19 @@ describe("21C scene contract and geometry engine", () => {
     const question = { presentationType: "scene3DSelection", questionTypeVersion: 1, scene3DSelection: config, answer: { scoring: "allOrNothing", correct: ["object:leftVentricle"] } };
     expect(validateScene3DSelectionConfig(config).ok).toBe(true);
     expect(validateScene3DSelectionQuestion(question)).toEqual([]);
+    expect(validateScene3DSelectionConfig({ ...config, future: true }).ok).toBe(false);
+    expect(validateScene3DSelectionConfig({ ...config, scene: { ...scene, interaction: { ...scene.interaction, select: false } } }).ok).toBe(false);
+    expect(validateScene3DSelectionConfig({ ...config, scene: scene3DPreset("cube", "cube-no-object-targets") }).ok).toBe(false);
+    const faceConfig = { v: 1 as const, scene: scene3DPreset("cube", "cube-faces"), target: "face" as const, mode: "multiple" as const, maxSelections: 2 };
+    expect(validateScene3DSelectionConfig({ ...faceConfig, maxSelections: 7 }).ok).toBe(false);
+    expect(validateScene3DSelectionAnswerKey({ scoring: "partial", correct: ["face:top","face:top"] }, faceConfig).ok).toBe(false);
+    expect(validateScene3DSelectionAnswerKey({ scoring: "partial", correct: ["face:missing"] }, faceConfig).ok).toBe(false);
     expect(scoreScene3DSelection({ config, answerKey: question.answer, response: { kind: "scene3DSelection", sceneId: "heart-scene", targets: ["object:leftVentricle"] }, maxMarks: 5 })).toMatchObject({ score: 5, correct: true, manualReview: false });
     expect(scoreScene3DSelection({ config, answerKey: question.answer, response: { kind: "scene3DSelection", sceneId: "heart-scene", targets: ["object:rightVentricle"] }, maxMarks: 5 })).toMatchObject({ score: 0, correct: false, manualReview: false });
     expect(scoreScene3DSelection({ config, answerKey: question.answer, response: { kind: "scene3DSelection", sceneId: "heart-scene", targets: ["object:missing"] }, maxMarks: 5 })).toMatchObject({ score: 0, correct: false, manualReview: false });
+    expect(bindScene3DSelectionAnswerToQuestion({ kind: "scene3DSelection", sceneId: "other-scene", targets: ["object:leftVentricle"] }, question)).toEqual({ ok: false, code: "SCENE3D_SELECTION_SCENE_MISMATCH" });
+    expect(bindScene3DSelectionAnswerToQuestion({ kind: "scene3DSelection", sceneId: "heart-scene", targets: ["object:missing"] }, question)).toEqual({ ok: false, code: "SCENE3D_SELECTION_TARGET_UNKNOWN" });
+    expect(bindScene3DSelectionAnswerToQuestion({ kind: "scene3DSelection", sceneId: "heart-scene", targets: ["object:leftVentricle","object:leftVentricle"] }, question)).toEqual({ ok: false, code: "SCENE3D_SELECTION_DUPLICATE" });
   });
 
   it("supports proportional set scoring without rewarding extra guesses", () => {
