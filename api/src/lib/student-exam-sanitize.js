@@ -220,9 +220,12 @@ const { projectChartSelectionConfigForStudent } = require("./shared-finalization
 // FunctionGraphSpecV1 authority, without teacher-only semantics: roles, on-curve claims, derivative relations, authored slopes); a config
 // smuggling any other field (a correct target) is withheld whole.
 const { projectFunctionGraphSelectionConfigForStudent } = require("./shared-finalization/functionGraphSelectionQuestion");
+// Phase 21C — strict allow-list rebuild of public 3D scene-selection configuration; private correctness remains under answer.
+const { projectScene3DSelectionConfigForStudent } = require("./shared-finalization/scene3DSelectionQuestion");
 function applyVisualProjection(node) {
   if ("chartSelection" in node) { const p = projectChartSelectionConfigForStudent(node.chartSelection); if (p) node.chartSelection = p; else delete node.chartSelection; }
   if ("functionGraphSelection" in node) { const p = projectFunctionGraphSelectionConfigForStudent(node.functionGraphSelection); if (p) node.functionGraphSelection = p; else delete node.functionGraphSelection; }
+  if ("scene3DSelection" in node) { const p = projectScene3DSelectionConfigForStudent(node.scene3DSelection); if (p) node.scene3DSelection = p; else delete node.scene3DSelection; }
   if ("hotspot" in node) { const p = projectHotspotConfigForStudent(node.hotspot); if (p) node.hotspot = p; else delete node.hotspot; }
   if ("labelDiagram" in node) { const p = projectLabelDiagramConfigForStudent(node.labelDiagram); if (p) node.labelDiagram = p; else delete node.labelDiagram; }
 }
