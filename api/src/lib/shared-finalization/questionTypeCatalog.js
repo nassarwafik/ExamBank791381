@@ -7,43 +7,43 @@ exports.supportsQuestionTypeVersion = supportsQuestionTypeVersion;
 exports.effectiveQuestionTypeVersion = effectiveQuestionTypeVersion;
 exports.createVersionedRegistry = createVersionedRegistry;
 exports.resolveQuestionTypeKey = resolveQuestionTypeKey;
-const caps = (flags) => Object.freeze({
-    autoGrading: flags.includes("a"), manualGrading: flags.includes("m"), hybridGrading: flags.includes("h"), partialCredit: flags.includes("p"),
-    compoundPart: flags.includes("c"), interactive: flags.includes("i"), requiresImage: flags.includes("r"), offline: flags.includes("o")
+const caps = (f) => Object.freeze({
+    autoGrading: !!(f & 1), manualGrading: !!(f & 2), hybridGrading: !!(f & 4), partialCredit: !!(f & 8),
+    compoundPart: !!(f & 16), interactive: !!(f & 32), requiresImage: !!(f & 64), offline: !!(f & 128)
 });
 const row = (key, label, category, gradingMode, flags, responseKinds, legacy = false, version = 1) => Object.freeze({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds: Object.freeze([...responseKinds]), legacy });
 const PRODUCTION_VERSIONS = Object.freeze({ coding: 3 });
 const AUTHORING_VERSIONS = Object.freeze({ coding: 2 });
 exports.LEGACY_QUESTION_TYPE_KEYS = Object.freeze(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
 const PRODUCTION_ROWS = [
-    ["multipleChoice", "اختيار من متعدد", "choice", "auto", "aco", ["choice"], true],
-    ["trueFalse", "صح أو خطأ", "choice", "auto", "aco", ["choice"], true],
-    ["multiTrueFalse", "صح/خطأ متعدد", "choice", "auto", "acop", ["fields"], true],
-    ["shortAnswer", "إجابة قصيرة / مفتوحة", "response", "hybrid", "amhco", ["text"], true],
-    ["fillBlank", "إكمال فراغات", "response", "auto", "acop", ["sequence", "fields"], true],
-    ["wordBank", "مخزن كلمات", "response", "auto", "acop", ["sequence", "fields"], true],
-    ["matching", "مطابقة", "structured", "auto", "acop", ["fields"], true],
-    ["ordering", "ترتيب", "structured", "auto", "acop", ["sequence"], true],
-    ["tableFill", "إكمال جدول", "structured", "auto", "acop", ["fields", "table"], true],
-    ["cliFill", "أوامر CLI", "response", "auto", "acop", ["fields"], true],
-    ["compound", "سؤال مركّب", "composite", "composed", "amhpo", ["compound"], true],
-    ["composite", "سؤال مركّب متقدّم", "composite", "composed", "amhpio", ["composite"], false],
-    ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", "apio", ["chartSelection"], false],
-    ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", "apio", ["functionGraphSelection"], false],
-    ["scene3DSelection", "3D", "interactive", "auto", "apio", ["scene3DSelection"], false],
-    ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
-    ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
-    ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
-    ["categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"], false],
-    ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false],
-    ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code", "codeTemplate"], false],
-    ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", "apio", ["networkCli"], false],
-    ["inlineCloze", "إكمال نص تفاعلي", "response", "auto", "apo", ["fields"], false],
-    ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة", "response", "auto", "ao", ["numeric"], false],
-    ["hotspot", "تحديد منطقة على صورة", "interactive", "auto", "apiro", ["hotspot"], false],
-    ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", "apiro", ["fields"], false],
-    ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", "mpo", ["text"], false],
-    ["smartSim", "محاكاة موثوقة (SmartSim)", "interactive", "auto", "apio", ["smartSim"], false]
+    ["multipleChoice", "اختيار من متعدد", "choice", "auto", 145, ["choice"], true],
+    ["trueFalse", "صح أو خطأ", "choice", "auto", 145, ["choice"], true],
+    ["multiTrueFalse", "صح/خطأ متعدد", "choice", "auto", 153, ["fields"], true],
+    ["shortAnswer", "إجابة قصيرة / مفتوحة", "response", "hybrid", 151, ["text"], true],
+    ["fillBlank", "إكمال فراغات", "response", "auto", 153, ["sequence", "fields"], true],
+    ["wordBank", "مخزن كلمات", "response", "auto", 153, ["sequence", "fields"], true],
+    ["matching", "مطابقة", "structured", "auto", 153, ["fields"], true],
+    ["ordering", "ترتيب", "structured", "auto", 153, ["sequence"], true],
+    ["tableFill", "إكمال جدول", "structured", "auto", 153, ["fields", "table"], true],
+    ["cliFill", "أوامر CLI", "response", "auto", 153, ["fields"], true],
+    ["compound", "سؤال مركّب", "composite", "composed", 143, ["compound"], true],
+    ["composite", "سؤال مركّب متقدّم", "composite", "composed", 175, ["composite"], false],
+    ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", 169, ["chartSelection"], false],
+    ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", 169, ["functionGraphSelection"], false],
+    ["scene3DSelection", "3D", "interactive", "auto", 169, ["scene3DSelection"], false],
+    ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
+    ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
+    ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],
+    ["categorization", "تصنيف العناصر", "structured", "auto", 153, ["fields"], false],
+    ["simulation", "محاكاة تفاعلية", "interactive", "manual", 162, ["simulation"], false],
+    ["coding", "برمجة / كتابة كود", "interactive", "hybrid", 174, ["code", "codeTemplate"], false],
+    ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", 169, ["networkCli"], false],
+    ["inlineCloze", "إكمال نص تفاعلي", "response", "auto", 137, ["fields"], false],
+    ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة", "response", "auto", 129, ["numeric"], false],
+    ["hotspot", "تحديد منطقة على صورة", "interactive", "auto", 233, ["hotspot"], false],
+    ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", 233, ["fields"], false],
+    ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", 138, ["text"], false],
+    ["smartSim", "محاكاة موثوقة (SmartSim)", "interactive", "auto", 169, ["smartSim"], false]
 ];
 exports.QUESTION_TYPE_CATALOG = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], r[5], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
 const questionTypeIdentityKey = (key, version) => key + "@" + version;
