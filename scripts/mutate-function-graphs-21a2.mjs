@@ -10,17 +10,17 @@ const SAMPLE = "src/functionGraphs/graphSampling.ts";
 const SCENE = "src/functionGraphs/graphScene.ts";
 const SELECT = "src/functionGraphSelectionQuestion.ts";
 const AI = "src/aiComposer/composerGraph.ts";
-const SPEC_TEST = ["src/functionGraphs/functionGraphSpec.21a2.test.ts", "api/tests/certification-21a2/cert-21a2-adversarial.test.js"];
-const SCENE_TEST = ["src/functionGraphs/graphScene.21a2.test.ts", "src/functionGraphs/functionGraphSpec.21a2.test.ts"];
-const SELECT_TEST = ["src/functionGraphs/functionGraphFailFirst.21a2.test.tsx", "api/tests/certification-21a2/cert-21a2-graphs-lifecycle.test.js"];
+const SPEC_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/functionGraphSpec.21a2.test.ts", "api/tests/certification-21a2/cert-21a2-adversarial.test.js"];
+const SCENE_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/graphScene.21a2.test.ts", "src/functionGraphs/functionGraphSpec.21a2.test.ts"];
+const SELECT_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/functionGraphFailFirst.21a2.test.tsx", "api/tests/certification-21a2/cert-21a2-graphs-lifecycle.test.js"];
 const AI_TEST = ["src/aiComposer/composerGraph.21a2.test.ts"];
 const M = (id, file, before, after, tests) => ({ id, file, before, after, tests });
 const mutants = [
  M("S01-prototype-id",SPEC,'!FORBIDDEN_KEYS.has(v);','true;',SPEC_TEST),
- M("S02-array-as-object",SPEC,'if (!v || typeof v !== "object" || Array.isArray(v)) return false;','if (!v || typeof v !== "object") return false;',SPEC_TEST),
+ M("S02-nonplain-prototype",SPEC,'return p === Object.prototype || p === null;','return true;',SPEC_TEST),
  M("S03-root-extra-fields",SPEC,'if (!keysOk(raw, TOP_KEYS, path)) return { ok: false, issues };','if (false && !keysOk(raw, TOP_KEYS, path)) return { ok: false, issues };',SPEC_TEST),
  M("S04-graph-version",SPEC,'if (raw.version !== FUNCTION_GRAPH_VERSION)','if (false && raw.version !== FUNCTION_GRAPH_VERSION)',SPEC_TEST),
- M("S05-text-length",SPEC,'if (v.length > max) { add("GRAPH_LIMIT"','if (v.length > max * 2) { add("GRAPH_LIMIT"',SPEC_TEST),
+ M("S05-text-length",SPEC,'if (v.length > max) { add("GRAPH_LIMIT", "نص أطول من الحد المسموح في رسم الدالة ("','if (v.length > max * 2) { add("GRAPH_LIMIT", "نص أطول من الحد المسموح في رسم الدالة ("',SPEC_TEST),
  M("S06-invisible-label",SPEC,'if (CONTROL.test(v) || BIDI_CONTROL.test(v) || INVISIBLE_CONTROL.test(v)) { add("GRAPH_TEXT_CONTROL", "محارف تحكم أو محارف خفية غير مسموحة في نص رسم الدالة."','if (CONTROL.test(v)) { add("GRAPH_TEXT_CONTROL", "محارف تحكم أو محارف خفية غير مسموحة في نص رسم الدالة."',SPEC_TEST),
  M("S07-HTML-guard",SPEC,'if (RAW_HTML.test(v)) { add("GRAPH_TEXT_MARKUP"','if (false && RAW_HTML.test(v)) { add("GRAPH_TEXT_MARKUP"',SPEC_TEST),
  M("S08-finite-range",SPEC,'if (Math.abs(v) > L.coordAbs)','if (Math.abs(v) > L.coordAbs * 100)',SPEC_TEST),
@@ -36,10 +36,10 @@ const mutants = [
  M("S18-derivative-reference",SPEC,'if (b.derivativeOf !== undefined && (b.derivativeOf === b.id || curveKind.get(b.derivativeOf) !== "explicit"))','if (false)',SPEC_TEST),
  M("S19-style-palette",SPEC,'s.color < 1 || s.color > L.colors','false',SPEC_TEST),
  M("P01-max-samples",SAMPLE,'Math.min(L.maxSamples, Math.floor(Number.isFinite(o.samples) ? o.samples : 400))','Math.min(L.maxSamples * 2, Math.floor(Number.isFinite(o.samples) ? o.samples : 400))',SPEC_TEST),
- M("P02-max-depth",SAMPLE,'Math.min(L.maxDepth, Math.floor(o.maxDepth ?? 12))','Math.min(L.maxDepth * 2, Math.floor(o.maxDepth ?? 12))',SPEC_TEST),
+ M("P02-adaptive-depth",SAMPLE,'Math.min(L.maxDepth, Math.floor(o.maxDepth ?? 12))','Math.min(0, Math.floor(o.maxDepth ?? 12))',SPEC_TEST),
  M("P03-inverted-domain",SAMPLE,'Number.isFinite(s1) && s1 > s0','Number.isFinite(s1)',SPEC_TEST),
  M("P04-break-detection",SAMPLE,'const jump = dist(pa, pb) > L.jump;','const jump = false;',SPEC_TEST),
- M("P05-midpoint-guard",SAMPLE,'if (!jump && dist(chord, pm) <= smooth)','if (dist(chord, pm) <= smooth)',SPEC_TEST),
+ M("P05-midpoint-guard",SAMPLE,'if (!jump && dist(chord, pm) <= smooth)','if (true)',SPEC_TEST),
  M("E01-open-endpoint",SCENE,'open: !closed || !graphInDomain(x, dm) || !Number.isFinite(f(x))','open: false',SCENE_TEST),
  M("E02-shaded-region-samples",SCENE,'const n = 160, xs =','const n = 16, xs =',SCENE_TEST),
  M("E03-interval-closed-default",SCENE,'fromClosed: v.fromClosed ?? true, toClosed: v.toClosed ?? true','fromClosed: true, toClosed: true',SCENE_TEST),
