@@ -125,7 +125,7 @@ describe("20D.1 FREEZE — student delivery and grading (PINS captured on 0b2208
     pin("grade", { mixed: scrub(mixed as never), arabic: scrub(arabic as never) });
   });
   // Phase 21A.1 inserts chartSelection@1 right after composite@1 (an additive type; every 20D.1 identity keeps its position)
-  it("L-9 the production catalog is pinned (20D.1 added NO question type; 21A.1 adds chartSelection and 21A.2 adds functionGraphSelection: 27 types)", () => {
+  it("L-9 the production catalog is pinned (20D.1 added NO question type; 21A.1 adds chartSelection, 21A.2 adds functionGraphSelection and 21C adds scene3DSelection: 28 types)", () => {
     pin("catalog", QUESTION_TYPE_CATALOG.map(d => d.key + "@" + d.version));
   });
 });
@@ -319,6 +319,8 @@ const PIN = {
   "chartSelection@1",
   // Phase 21A.2: additive function graph question; original catalog identities and order remain frozen.
   "functionGraphSelection@1",
+  // Phase 21C: additive semantic selection on interactive 3D scenes.
+  "scene3DSelection@1",
   "multipleSelect@1",
   "numericResponse@1",
   "matrix@1",
