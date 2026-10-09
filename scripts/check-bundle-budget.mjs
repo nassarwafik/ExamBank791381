@@ -119,6 +119,8 @@ const FUNCTION_GRAPH_UI_SIGNATURES = ["fg-stage", "ge-field-expr", "fg-review"];
 // Phase 21B: the 3D SVG viewer, persisted-surface editor and teacher laboratory are UI/runtime payloads.
 // The strict SurfaceSpec validator may be pulled in transitively by RichContent validation, but these UI signatures must stay lazy.
 const SURFACE_3D_UI_SIGNATURES = ["ex3d-scene", "ex3d-editor", "ex3d-lab"];
+// Phase 21C — general interactive 3D runtime/editor/semantic-selection UI must remain lazy; the small data validators may be shared.
+const INTERACTIVE_3D_UI_SIGNATURES = ["i3d-scene", "i3d-editor", "qt-editor-scene3DSelection"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
@@ -252,6 +254,19 @@ function main() {
     if (hit.length) failures.push(`${f} statically exposes 3D surface UI on a student no-3D path (${hit.join(", ")})`);
   }
   console.log(`3D surface runtime: ${surfaceViewRoots.length} lazy Surface3DView root(s); Student Portal static closure carries no 3D viewer/editor/lab UI`);
+
+  for (const sig of INTERACTIVE_3D_UI_SIGNATURES) {
+    const owners = all.filter(f => read(f).includes(sig));
+    if (!owners.length) failures.push(`interactive 3D UI signature "${sig}" was not found in any JS chunk — update the lazy guard`);
+    for (const f of owners) if (initial.includes(f)) failures.push(`${f} loads interactive 3D UI "${sig}" in the initial graph`);
+  }
+  const interactive3DViewRoots = all.filter(f => /^Interactive3DView-[^.]+\.js$/.test(f));
+  if (!interactive3DViewRoots.length) failures.push("no lazy Interactive3DView-*.js chunk was emitted");
+  for (const f of portalClosure) {
+    const hit = INTERACTIVE_3D_UI_SIGNATURES.filter(sig => read(f).includes(sig));
+    if (hit.length) failures.push(`${f} statically exposes interactive 3D UI on a student no-3D path (${hit.join(", ")})`);
+  }
+  console.log(`Interactive 3D runtime: ${interactive3DViewRoots.length} lazy Interactive3DView root(s); Student Portal static closure carries no interactive 3D viewer/editor UI`);
 
   for (const f of portalClosure) { const hit = DATA_CHART_SIGNATURES.filter(s => read(f).includes(s)); if (hit.length) failures.push(`${f} is statically reachable from the Student Portal and carries chart code (${hit.join(", ")}) — a student without charts must never download it`); }
   const echartsChunks = all.filter(f => ECHARTS_SIGNATURES.some(s => read(f).includes(s)));
