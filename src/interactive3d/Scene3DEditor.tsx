@@ -37,7 +37,7 @@ export default function Scene3DEditor({scene,onChange,name="المشهد",disabl
   const usedBinding=(targetId:string,kind:Scene3DTargetKind,objectId:string,element?:string)=>
     scene.targets.some(t=>t.id!==targetId&&binding(t.kind,t.objectId,t.element)===binding(kind,objectId,element));
   const firstFreeBinding=()=>{
-    for(const object of scene.objects){
+    for(const object of [...scene.objects].reverse()){
       if(!usedBinding("", "object", object.id))return{kind:"object" as const,objectId:object.id,element:undefined};
       for(const kind of selectableKinds(object).filter(k=>k!=="object")){
         for(const element of elementsFor(object,kind))if(!usedBinding("",kind,object.id,element))return{kind,objectId:object.id,element};
