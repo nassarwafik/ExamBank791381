@@ -427,27 +427,46 @@ function recomputeCompositeMarks(q) {
 }
 function renumberCharts(incoming, existing) {
     const isRec = (v) => !!v && typeof v === "object" && !Array.isArray(v);
-    const nested = (b) => (b.type === "columns" && Array.isArray(b.columns) ? b.columns : []);
-    const ids = (blocks) => blocks.flatMap(b => !isRec(b) ? []
-        : b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string" ? [b.chart.id]
-            : nested(b).flatMap(c => (isRec(c) && Array.isArray(c.blocks) ? ids(c.blocks) : [])));
-    const taken = new Set(ids(existing));
+    const detail = (b) => {
+        if (b.type === "dataChart" && isRec(b.chart) && typeof b.chart.id === "string")
+            return { field: "chart", id: b.chart.id, prefix: "chart" };
+        if (b.type === "functionGraph" && isRec(b.graph) && typeof b.graph.id === "string")
+            return { field: "graph", id: b.graph.id, prefix: "graph" };
+        return null;
+    };
+    const eachBlock = (blocks, cb) => {
+        for (const b of blocks) {
+            if (!isRec(b))
+                continue;
+            cb(b);
+            if (b.type === "columns" && Array.isArray(b.columns))
+                for (const c of b.columns)
+                    if (isRec(c) && Array.isArray(c.blocks))
+                        eachBlock(c.blocks, cb);
+        }
+    };
+    const taken = { chart: new Set(), graph: new Set() };
+    eachBlock(existing, b => { const d = detail(b); if (d)
+        taken[d.field].add(d.id); });
     const renumber = (b) => {
         if (!isRec(b))
             return b;
         if (b.type === "columns" && Array.isArray(b.columns))
             return { ...b, columns: b.columns.map(c => (isRec(c) && Array.isArray(c.blocks) ? { ...c, blocks: c.blocks.map(renumber) } : c)) };
-        if (b.type !== "dataChart" || !isRec(b.chart) || typeof b.chart.id !== "string")
+        const d = detail(b);
+        if (!d)
             return b;
-        if (!taken.has(b.chart.id)) {
-            taken.add(b.chart.id);
+        const used = taken[d.field];
+        if (!used.has(d.id)) {
+            used.add(d.id);
             return b;
         }
         let n = 1;
-        while (taken.has("chart" + n))
+        while (used.has(d.prefix + n))
             n++;
-        taken.add("chart" + n);
-        return { ...b, chart: { ...b.chart, id: "chart" + n } };
+        const id = d.prefix + n;
+        used.add(id);
+        return { ...b, [d.field]: { ...b[d.field], id } };
     };
     return incoming.map(renumber);
 }
