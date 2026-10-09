@@ -83,6 +83,7 @@ export default function Scene3DEditor({scene,onChange,name="المشهد",disabl
     if(usedBinding(id,kind,objectId,element))return;
     const next:Scene3DTargetV1={...old,...patch,kind,objectId,...(element?{element}: {})};
     if(!element)delete (next as {element?:string}).element;
+    if(!next.detail)delete (next as {detail?:string}).detail;
     onChange({...scene,targets:scene.targets.map(t=>t.id===id?next:t)});
   };
   const freeBinding=firstFreeBinding();
@@ -101,7 +102,7 @@ export default function Scene3DEditor({scene,onChange,name="المشهد",disabl
     </div>
 
     <div className="i3d-editor-objects">
-      <div className="i3d-editor-head"><strong>المجسمات ({scene.objects.length})</strong><button type="button" className="sb-mini-btn" disabled={disabled||scene.objects.length>=64} onClick={addObject}>إضافة مجسم</button></div>
+      <div className="i3d-editor-head"><strong>المجسمات ({scene.objects.length})</strong><button type="button" className="sb-mini-btn" disabled={disabled||scene.objects.length>=64||scene.targets.length>=128} onClick={addObject}>إضافة مجسم</button></div>
       {scene.objects.map(o=><div className="i3d-object-row" key={o.id}>
         <label><span>الاسم</span><input className="sb-input sb-input-sm" value={o.label} disabled={disabled} onChange={e=>updateObject(o.id,{label:e.target.value})}/></label>
         <label><span>النوع</span><select className="sb-input sb-input-sm" value={o.kind} disabled={disabled} onChange={e=>updateObject(o.id,{kind:e.target.value as Scene3DObjectKind})}>{SCENE3D_OBJECT_KINDS.map(k=><option key={k}>{k}</option>)}</select></label>
