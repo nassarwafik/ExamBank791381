@@ -127,15 +127,15 @@ const productionKeys = new Set(QUESTION_TYPE_CATALOG.map(d => d.key));
 
 /** Registers a CODE-OWNED type (plugin / test). Refuses duplicates, production keys and malformed keys. Returns the unregister function. */
 export function registerQuestionType(definition: QuestionTypeDefinition): () => void {
-  if (!definition || typeof definition !== "object") throw new Error("question type required");
+  if (!definition || typeof definition !== "object") throw new Error("invalid type");
   const key = definition.key;
-  if (typeof key !== "string" || !KEY_PATTERN.test(key)) throw new Error("invalid type key");
-  if (registry.has(key)) throw new Error("duplicate type: " + key);
-  if (!Number.isInteger(definition.version) || definition.version < 1) throw new Error("invalid type version");
-  if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category)) throw new Error("invalid type category");
-  if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode)) throw new Error("invalid grading mode");
+  if (typeof key !== "string" || !KEY_PATTERN.test(key)) throw new Error("invalid type");
+  if (registry.has(key)) throw new Error("duplicate type");
+  if (!Number.isInteger(definition.version) || definition.version < 1) throw new Error("invalid type");
+  if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category)) throw new Error("invalid type");
+  if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode)) throw new Error("invalid type");
   registry.set(key, Object.freeze({ ...definition, responseKinds: Object.freeze([...definition.responseKinds]), legacy: false }));
-  return () => { if (!productionKeys.has(key)) registry.delete(key); };
+  return () => { registry.delete(key); };
 }
 
 export const questionTypeDefinition = (key: unknown): QuestionTypeDefinition | undefined => (typeof key === "string" ? registry.get(key) : undefined);
@@ -177,9 +177,9 @@ export function createVersionedRegistry<T>(what: string, options: { requireKnown
   const entries = new Map<string, T>();
   return {
     register(key, version, impl) {
-      if (typeof key !== "string" || !KEY_PATTERN.test(key) || !Number.isInteger(version) || version < 1 || impl == null) throw new Error("invalid " + what + " registration: " + key + "@" + version);
+      if (typeof key !== "string" || !KEY_PATTERN.test(key) || !Number.isInteger(version) || version < 1 || impl == null) throw new Error("invalid " + what);
       const id = questionTypeIdentityKey(key, version);
-      if (entries.has(id)) throw new Error(what + " already registered: " + id);
+      if (entries.has(id)) throw new Error("duplicate " + what);
       entries.set(id, impl);
       return () => { if (entries.get(id) === impl) entries.delete(id); };
     },
