@@ -111,6 +111,10 @@ const DATA_CHART_SIGNATURES = ["xp-chart-table", "xp-chart-select", "data-xp-cha
 // shared chunk + the common engine module) and the advanced kinds module (radar / box plot / heat map). Measured in 21A.1: 182.1 KB
 // (131.7 + 50.4) and 17.8 KB.
 const ECHARTS_SIGNATURES = ["_echarts_instance_", "xp-chart-engine-v1", "xp-chart-advanced-v1"];
+// Phase 21A.2: the owned graph SVG, authoring editor and teacher review stay behind lazy edges.
+// These CSS/UI class tokens are deliberately distinct from the shared graph validation authority,
+// which can legitimately load on the student path without loading any graph UI.
+const FUNCTION_GRAPH_UI_SIGNATURES = ["fg-stage", "ge-field-expr", "fg-review"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
@@ -222,6 +226,14 @@ function main() {
   // Phase 21A.1 — the data-chart platform and the ECharts runtime: lazy, out of the student's no-chart path, behind DataChart's dynamic edges, budgeted.
   for (const sig of DATA_CHART_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the data-chart signature "${sig}" was not found in any chunk — the signature list is stale`);
   const portalClosure = portalChunks.length ? staticClosure(dist, portalChunks) : [];
+  for (const sig of FUNCTION_GRAPH_UI_SIGNATURES) {
+    const owners = all.filter(f => read(f).includes(sig));
+    if (!owners.length) failures.push(`function graph UI signature "${sig}" was not found in any JS chunk — update the lazy guard`);
+    for (const f of owners) if (initial.includes(f)) failures.push(`${f} loads function graph UI "${sig}" in the initial graph`);
+  }
+  const graphViewRoots = all.filter(f => /^FunctionGraphView-[^.]+\.js$/.test(f));
+  if (!graphViewRoots.length) failures.push("no lazy FunctionGraphView-*.js chunk was emitted");
+  for (const f of portalClosure) { const hit = FUNCTION_GRAPH_UI_SIGNATURES.filter(sig => read(f).includes(sig)); if (hit.length) failures.push(`${f} statically exposes function graph UI on student no-graph path (${hit.join(", ")})`); }
   for (const f of portalClosure) { const hit = DATA_CHART_SIGNATURES.filter(s => read(f).includes(s)); if (hit.length) failures.push(`${f} is statically reachable from the Student Portal and carries chart code (${hit.join(", ")}) — a student without charts must never download it`); }
   const echartsChunks = all.filter(f => ECHARTS_SIGNATURES.some(s => read(f).includes(s)));
   const dataChartRoots = all.filter(f => /^DataChart-[^.]+\.js$/.test(f));

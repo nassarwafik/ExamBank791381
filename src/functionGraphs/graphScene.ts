@@ -42,7 +42,9 @@ function ticks(min: number, max: number, step: number, toPx: (v: number) => numb
 }
 const formatTick = (v: number, step: number) => {
   const decimals = Math.max(0, Math.min(6, -Math.floor(Math.log10(step) + 1e-9) + (step / 10 ** Math.floor(Math.log10(step)) === 2.5 ? 1 : 0)));
-  const s = v.toFixed(decimals).replace(/\.?0+$/, "");
+  // Strip fractional trailing zeroes only: an integer tick such as 10, 100 or 0 must never lose digits.
+  const fixed = v.toFixed(decimals);
+  const s = decimals > 0 ? fixed.replace(/\.?0+$/, "") : fixed;
   return s === "-0" ? "0" : s.replace("-", "−");
 };
 const r2 = (v: number) => Math.round(v * 100) / 100;
