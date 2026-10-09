@@ -9,6 +9,8 @@ on:
       - "src/aiComposer/composerGraph.ts"
       - "src/aiComposer/composerGraph.21a2.test.ts"
       - "api/tests/certification-21a2/**"
+      - "docs/enterprise-function-graphs-21a2.md"
+      - "docs/phase-21a2-live-uat.md"
       - ".github/workflows/function-graphs-mutation-21a2.yml"
 permissions:
   contents: read
@@ -16,7 +18,7 @@ jobs:
   mutations:
     runs-on: ubuntu-latest
     timeout-minutes: 55
-    name: Graph mutation campaign — 39 isolated mutants
+    name: Graph mutation campaign — 47 isolated mutants
     steps:
       - uses: actions/checkout@v5
         with:
@@ -31,7 +33,7 @@ jobs:
             api/package-lock.json
       - run: npm ci
       - run: npm ci --prefix api
-      - name: Run sequential baseline and 39 source mutations with SHA-256 restoration
+      - name: Run sequential baseline and 47 source mutations with SHA-256 restoration
         run: node scripts/mutate-function-graphs-21a2.mjs
       - name: Upload per-mutant ledger
         uses: actions/upload-artifact@v4
