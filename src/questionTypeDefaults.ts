@@ -85,8 +85,8 @@ registerTypeDefaults("hotspot", 1, ensure => { ensure("hotspot", { v: 1, mode: "
 registerTypeDefaults("chartSelection", 1, ensure => { ensure("chartSelection", { v: 1, target: "category", mode: "single", maxSelections: 1 }); ensure("answer", { scoring: "allOrNothing", correct: [] }); });
 // Phase 21A.2 — no graph yet (the teacher creates one in the lazy editor; finalization blocks until it exists); the key is empty.
 registerTypeDefaults("functionGraphSelection", 1, ensure => { ensure("functionGraphSelection", { v: 1, target: "point", mode: "single", maxSelections: 1 }); ensure("answer", { scoring: "allOrNothing", correct: [] }); });
-// Phase 21C — no scene yet: the teacher chooses a safe preset/editor before finalization; the private key starts empty.
-registerTypeDefaults("scene3DSelection", 1, ensure => { ensure("scene3DSelection", { v: 1, target: "object", mode: "single", maxSelections: 1 }); ensure("answer", { scoring: "allOrNothing", correct: [] }); });
+// Phase 21C — identity only: the lazy editor creates the scene + private key when the teacher chooses a preset; finalization blocks until then.
+registerTypeDefaults("scene3DSelection", 1, () => {});
 registerTypeDefaults("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
 // Phase 19E — openResponse@1: the general profile and an EMPTY rubric that blocks finalization until the teacher builds one (the lazy
 // editor offers the useful 10-point default rubric in one click). Literal on purpose (initial graph); parity-tested against the model.
