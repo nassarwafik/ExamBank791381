@@ -136,6 +136,16 @@ describe("21C real student interaction surface", () => {
     fireEvent.pointerUp(svg, { pointerId: 4 });
     expect(container.querySelector("polygon.i3d-face")?.getAttribute("points")).not.toBe(before);
     expect(emitted).toEqual([]);
+    const target = container.querySelector('[data-i3d-target="face:top"]') as Element;
+    fireEvent.pointerDown(target, { pointerId: 5, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(target, { pointerId: 5, clientX: 130, clientY: 112 });
+    fireEvent.pointerUp(target, { pointerId: 5, clientX: 130, clientY: 112 });
+    fireEvent.click(target);
+    expect(emitted).toEqual([]);
+    fireEvent.pointerDown(target, { pointerId: 6, clientX: 100, clientY: 100 });
+    fireEvent.pointerUp(target, { pointerId: 6, clientX: 100, clientY: 100 });
+    fireEvent.click(target);
+    expect(emitted.at(-1)).toEqual(["face:top"]);
   });
 
   it("exposes canonical target keys from presets", () => {
