@@ -49,17 +49,16 @@ describe("21C teacher scene authoring — arbitrary semantic targets",()=>{
     expect(validateInteractive3DSceneSpec(s).ok).toBe(true);
   });
 
-  it("cannot create two target IDs for the same physical binding through the structured editor",()=>{
+  it("adds successive targets on distinct physical bindings instead of creating ambiguous duplicates",()=>{
     render(<Host/>);
     fireEvent.click(screen.getByRole("button",{name:"إضافة مجسم"}));
+    const objectId=state().objects.at(-1)!.id;
     fireEvent.click(screen.getByRole("button",{name:"إضافة هدف"}));
-    const first=state().targets.at(-1)!;
-    const targetRows=document.querySelectorAll(".i3d-target-row");
-    const row=targetRows[targetRows.length-1] as HTMLElement;
-    const element=within(row).getByLabelText("العنصر") as HTMLSelectElement;
-    expect(element.value).toBe(first.element);
-    const disabled=[...element.options].filter(o=>o.disabled).map(o=>o.value);
-    expect(disabled).not.toContain(first.element);
+    fireEvent.click(screen.getByRole("button",{name:"إضافة هدف"}));
+    const own=state().targets.filter(t=>t.objectId===objectId);
+    expect(own.map(t=>[t.kind,t.element??""])).toEqual([["object",""],["face","front"],["face","back"]]);
+    const bindings=own.map(t=>t.kind+":"+t.objectId+":"+(t.element??""));
+    expect(new Set(bindings).size).toBe(bindings.length);
     expect(validateInteractive3DSceneSpec(state()).ok).toBe(true);
   });
 });
