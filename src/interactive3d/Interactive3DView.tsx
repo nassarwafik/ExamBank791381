@@ -32,6 +32,7 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
   const checked=useMemo(()=>validateInteractive3DSceneSpec(spec),[spec]);
   const [camera,setCamera]=useState<Scene3DCamera>(()=>start(spec));
   const drag=useRef<{id:number;x:number;y:number;yaw:number;pitch:number}|null>(null);
+  const dragged=useRef(false);
   useEffect(()=>setCamera(start(spec)),[spec]);
   const mesh=useMemo(()=>checked.ok?buildInteractive3DMesh(checked.value):null,[checked]);
   const scene=useMemo(()=>checked.ok&&mesh?projectInteractive3DScene(mesh,checked.value,camera):null,[checked,mesh,camera]);
@@ -83,8 +84,8 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
     <svg className="i3d-scene" viewBox={"0 0 "+scene.width+" "+scene.height} role="img" tabIndex={0}
       aria-describedby={uid+"-help"} aria-label={"نموذج ثلاثي الأبعاد: "+checked.value.title}
       onKeyDown={e=>{if(keyCamera(e.key))e.preventDefault();}}
-      onPointerDown={e=>{if(!checked.value.interaction.rotate)return;drag.current={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:camera.yaw,pitch:camera.pitch};e.currentTarget.setPointerCapture?.(e.pointerId);}}
-      onPointerMove={e=>{const d=drag.current;if(!d||d.id!==e.pointerId)return;setCamera(v=>({...v,yaw:clamp(d.yaw+(e.clientX-d.x)*.01,-Math.PI,Math.PI),pitch:clamp(d.pitch-(e.clientY-d.y)*.008,-1.35,1.35)}));}}
+      onPointerDown={e=>{if(!checked.value.interaction.rotate)return;dragged.current=false;drag.current={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:camera.yaw,pitch:camera.pitch};e.currentTarget.setPointerCapture?.(e.pointerId);}}
+      onPointerMove={e=>{const d=drag.current;if(!d||d.id!==e.pointerId)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>4)dragged.current=true;setCamera(v=>({...v,yaw:clamp(d.yaw+(e.clientX-d.x)*.01,-Math.PI,Math.PI),pitch:clamp(d.pitch-(e.clientY-d.y)*.008,-1.35,1.35)}));}}
       onPointerUp={e=>{if(drag.current?.id===e.pointerId)drag.current=null;e.currentTarget.releasePointerCapture?.(e.pointerId);}}
       onPointerCancel={e=>{if(drag.current?.id===e.pointerId)drag.current=null;}}>
       <rect width={scene.width} height={scene.height} className="i3d-bg"/>
@@ -92,16 +93,16 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
         const t=selection?targetForFace(targets,f.objectId,f.element):undefined, key=t?scene3DTargetKey(t):"", active=!!key&&selected.has(key), mark=key?selection?.review?.[key]:undefined;
         return <polygon key={f.id} points={f.points} fill={FILLS[(f.palette-1)%FILLS.length]} fillOpacity={f.opacity}
           className={"i3d-face"+(t?" i3d-target":"")+(active?" is-selected":"")+(mark?" review-"+mark:"")} data-i3d-target={key||undefined}
-          onClick={()=>{if(t)toggle(t);}} aria-label={t?.label}/>;
+          onClick={()=>{if(t){if(dragged.current){dragged.current=false;}else toggle(t);}}} aria-label={t?.label}/>;
       })}
       {selection?.kind==="edge"&&scene.edges.map(e=>{
         const t=targetForEdge(targets,e.objectId,e.element); if(!t)return null; const key=scene3DTargetKey(t),active=selected.has(key),mark=selection?.review?.[key];
-        return <g key={e.id}><line className={"i3d-edge-target"+(active?" is-selected":"")+(mark?" review-"+mark:"")} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} onClick={()=>toggle(t)} data-i3d-target={key}/>
-          <line className="i3d-edge-hit" x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} onClick={()=>toggle(t)} /></g>;
+        return <g key={e.id}><line className={"i3d-edge-target"+(active?" is-selected":"")+(mark?" review-"+mark:"")} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} onClick={()=>{if(dragged.current)dragged.current=false;else toggle(t);}} data-i3d-target={key}/>
+          <line className="i3d-edge-hit" x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} onClick={()=>{if(dragged.current)dragged.current=false;else toggle(t);}} /></g>;
       })}
       {selection?.kind==="vertex"&&scene.points.map((p,i)=>{
         const t=targetForVertex(targets,p.objectId,p.element);if(!t)return null;const key=scene3DTargetKey(t),active=selected.has(key),mark=selection?.review?.[key];
-        return <circle key={i} cx={p.x} cy={p.y} r={active?7:5} className={"i3d-vertex-target"+(active?" is-selected":"")+(mark?" review-"+mark:"")} onClick={()=>toggle(t)} data-i3d-target={key}/>;
+        return <circle key={i} cx={p.x} cy={p.y} r={active?7:5} className={"i3d-vertex-target"+(active?" is-selected":"")+(mark?" review-"+mark:"")} onClick={()=>{if(dragged.current)dragged.current=false;else toggle(t);}} data-i3d-target={key}/>;
       })}
     </svg>
     {selection&&<div className="i3d-target-list" role="group" aria-label={targetLabel}>
