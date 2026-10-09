@@ -37,6 +37,10 @@ const smartSim = require("./shared-finalization/trustedSimPlugins");
 // authority) and the PRIVATE key before any target is compared (malformed authority ⇒ 0 + manual review). Only the student's semantic
 // target keys on the SAME chart are read — never coordinates, pixels or a client score.
 const chartSelection = require("./shared-finalization/chartSelectionQuestion");
+// Phase 21A.2 — functionGraphSelection@1: the shared strict authority re-validates the public config (the graph through the ONE
+// FunctionGraphSpecV1 authority) and the PRIVATE key before any target is compared (malformed authority ⇒ 0 + manual review). Only the
+// student's semantic target keys on the SAME graph are read — never coordinates, pixels, zoom or a client score.
+const functionGraphSelection = require("./shared-finalization/functionGraphSelectionQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -161,6 +165,10 @@ registerBuiltIn("labelDiagram", (question, response, max) => {
 });
 registerBuiltIn("chartSelection", (question, response, max) => {
   const r = chartSelection.scoreChartSelection({ config: question.chartSelection, answerKey: question.answer, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("functionGraphSelection", (question, response, max) => {
+  const r = functionGraphSelection.scoreFunctionGraphSelection({ config: question.functionGraphSelection, answerKey: question.answer, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
 registerBuiltIn("inlineCloze", (question, response, max) => {

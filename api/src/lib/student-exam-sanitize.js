@@ -216,8 +216,13 @@ const { projectLabelDiagramConfigForStudent } = require("./shared-finalization/l
 // Phase 21A.1 — chartSelection: the public config (the declarative chart + target kind + mode + bound) is REBUILT through its strict
 // projection (the chart through the ONE ChartSpecV1 authority); a config smuggling any other field (a correct target) is withheld whole.
 const { projectChartSelectionConfigForStudent } = require("./shared-finalization/chartSelectionQuestion");
+// Phase 21A.2 — functionGraphSelection: the public config is REBUILT through its strict projection (the graph through the ONE
+// FunctionGraphSpecV1 authority, without teacher-only semantics: roles, on-curve claims, derivative relations, authored slopes); a config
+// smuggling any other field (a correct target) is withheld whole.
+const { projectFunctionGraphSelectionConfigForStudent } = require("./shared-finalization/functionGraphSelectionQuestion");
 function applyVisualProjection(node) {
   if ("chartSelection" in node) { const p = projectChartSelectionConfigForStudent(node.chartSelection); if (p) node.chartSelection = p; else delete node.chartSelection; }
+  if ("functionGraphSelection" in node) { const p = projectFunctionGraphSelectionConfigForStudent(node.functionGraphSelection); if (p) node.functionGraphSelection = p; else delete node.functionGraphSelection; }
   if ("hotspot" in node) { const p = projectHotspotConfigForStudent(node.hotspot); if (p) node.hotspot = p; else delete node.hotspot; }
   if ("labelDiagram" in node) { const p = projectLabelDiagramConfigForStudent(node.labelDiagram); if (p) node.labelDiagram = p; else delete node.labelDiagram; }
 }

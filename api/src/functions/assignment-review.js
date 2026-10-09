@@ -10,7 +10,8 @@ const {flattenQuestions,effectiveMaxMarks}=require("../lib/exam-structure");
 // its public config; the private targets / mapping arrive as expectedAnswer (teacher only), exactly like every other key.
 const {hydrateBankAssetsInQuestion,hydrateBankAssets}=require("../lib/bank-asset-hydrate");
 // Phase 21A.1 — the chart-selection public config (the chart) for the teacher's review view; the key is already `expectedAnswer`.
-function chartReviewFields(q){return q.chartSelection!==undefined?{chartSelection:q.chartSelection}:{}}
+// Phase 21A.2 — likewise the function-graph selection config (the graph, with its teacher-only semantics) for the teacher's review view.
+function chartReviewFields(q){return {...(q.chartSelection!==undefined?{chartSelection:q.chartSelection}:{}),...(q.functionGraphSelection!==undefined?{functionGraphSelection:q.functionGraphSelection}:{})}}
 function visualReviewFields(q){if(q.hotspot===undefined&&q.labelDiagram===undefined)return {};let image=q.image??null;try{image=hydrateBankAssetsInQuestion(q).image??null}catch{}return {...(q.hotspot!==undefined?{hotspot:q.hotspot}:{}),...(q.labelDiagram!==undefined?{labelDiagram:q.labelDiagram}:{}),image}}
 // Phase 17C — the ONE canonical attempt-score rebuild, shared with the automatic coding grading callback.
 const {rebuildAttemptGrades}=require("../lib/attempt-grade-rebuild");

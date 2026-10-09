@@ -10,22 +10,25 @@ const imageAsset_1 = require("../imageAsset");
 const richMath_1 = require("./richMath");
 const proseGuard_1 = require("./proseGuard");
 const chartSpec_1 = require("../charts/chartSpec");
+const functionGraphSpec_1 = require("../functionGraphs/functionGraphSpec");
+const graphTargets_1 = require("../functionGraphs/graphTargets");
 exports.RICH_CONTENT_SCHEMA_VERSION = 1;
-exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"]);
+exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph"]);
 exports.RICH_MARKS = Object.freeze(["bold", "italic", "underline", "code", "sup", "sub"]);
 exports.RICH_CODE_LANGUAGES = Object.freeze(["python", "java", "csharp", "pseudocode", "javascript", "html", "css", "sql", "text"]);
 exports.RICH_CALLOUT_VARIANTS = Object.freeze(["info", "note", "warning", "success", "important"]);
 exports.RICH_TABLE_RESPONSIVE = Object.freeze(["scroll", "stack", "compact"]);
 exports.RICH_LIMITS = Object.freeze({
     blocks: 200, runs: 200, blockChars: 20000, totalChars: 100000, listItems: 100, tableRows: 100, tableColumns: 12, cellChars: 2000,
-    shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8
+    shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8,
+    functionGraphs: 4
 });
 const BLOCK_KEYS = Object.freeze({
     heading: ["type", "level", "runs"], paragraph: ["type", "runs", "dir", "align"], unorderedList: ["type", "items"], orderedList: ["type", "items"],
     table: ["type", "caption", "columnHeaders", "rowHeaders", "rows", "responsive"], image: ["type", "asset", "alt"], figure: ["type", "asset", "alt", "caption"],
     code: ["type", "language", "source", "lineNumbers", "title"], cli: ["type", "source", "title"], quote: ["type", "runs", "citation"],
     callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"],
-    dataChart: ["type", "chart"]
+    dataChart: ["type", "chart"], functionGraph: ["type", "graph"]
 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const isPlain = (v) => {
@@ -58,8 +61,8 @@ function validateRichContent(raw, path = "richContent") {
     const issues = [];
     const add = (code, message, at) => { if (issues.length < 50)
         issues.push({ code, message, severity: "error", path: at }); };
-    let blockCount = 0, totalChars = 0, chartCount = 0;
-    const chartIds = new Set();
+    let blockCount = 0, totalChars = 0, chartCount = 0, graphCount = 0;
+    const chartIds = new Set(), graphIds = new Set();
     const keysOk = (o, allowed, at) => {
         let ok = true;
         for (const k of Object.keys(o))
@@ -514,6 +517,26 @@ function validateRichContent(raw, path = "richContent") {
                 out = { type: "dataChart", chart: c.value };
                 break;
             }
+            case "functionGraph": {
+                if (++graphCount > exports.RICH_LIMITS.functionGraphs) {
+                    add("RICH_CONTENT_LIMIT", "عدد رسوم الدوال في المحتوى المنسق أكبر من الحد المسموح (" + exports.RICH_LIMITS.functionGraphs + ").", at);
+                    break;
+                }
+                const g = (0, functionGraphSpec_1.validateFunctionGraphSpec)(b.graph, at + ".graph");
+                if (!g.ok) {
+                    for (const i of g.issues)
+                        add("RICH_CONTENT_FUNCTION_GRAPH", i.message + " [" + i.code + "]", i.path);
+                    break;
+                }
+                if (graphIds.has(g.value.id)) {
+                    add("RICH_CONTENT_FUNCTION_GRAPH", "معرّف رسم الدالة «" + g.value.id + "» مكرّر في المحتوى نفسه.", at + ".graph.id");
+                    break;
+                }
+                graphIds.add(g.value.id);
+                totalChars += g.value.title.length + g.value.description.length + (g.value.source?.length ?? 0);
+                out = { type: "functionGraph", graph: g.value };
+                break;
+            }
         }
         return issues.length === before ? out : undefined;
     };
@@ -553,7 +576,10 @@ function validateRichContent(raw, path = "richContent") {
 }
 function projectRichContentForStudent(raw) {
     const r = validateRichContent(raw);
-    return r.ok ? r.value : undefined;
+    if (!r.ok || !r.value)
+        return undefined;
+    const project = (blocks) => blocks.map(b => (b.type === "functionGraph" ? { type: "functionGraph", graph: (0, functionGraphSpec_1.projectGraphForStudent)(b.graph) } : b.type === "columns" ? { ...b, columns: b.columns.map(c => ({ blocks: project(c.blocks) })) } : b));
+    return r.value.blocks.some(function has(b) { return b.type === "functionGraph" || (b.type === "columns" && b.columns.some(c => c.blocks.some(has))); }) ? { schemaVersion: 1, blocks: project(r.value.blocks) } : r.value;
 }
 const runsText = (runs) => runs.map(r => ("text" in r ? r.text : r.math)).join("");
 function richContentPlainText(raw, opts = {}) {
@@ -616,6 +642,9 @@ function richContentPlainText(raw, opts = {}) {
                     break;
                 case "dataChart":
                     out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : (0, chartSpec_1.chartPlainText)(b.chart));
+                    break;
+                case "functionGraph":
+                    out.push(opts.storedOnly ? [b.graph.title, b.graph.description, b.graph.source ?? ""].join("\n") : (0, graphTargets_1.graphPlainText)(b.graph));
                     break;
                 case "divider": break;
             }

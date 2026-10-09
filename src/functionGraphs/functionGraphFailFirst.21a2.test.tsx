@@ -33,10 +33,12 @@ describe("21A2-FF5 renderer: a functionGraph rich block is drawn", () => {
 });
 
 describe("21A2-FF6 functionGraphSelection@1 registries and student interaction", () => {
-  it("is supported by the student runtime and the authoring registry", () => {
-    expect(studentUnsupported("functionGraphSelection", 1)).toBe(false);
+  it("is supported by the student runtime and the authoring registry; an unknown future version still fails closed", () => {
+    // (studentUnsupported is the card's FALLBACK predicate — true for every non-legacy key, chartSelection included; support is the registry)
     expect(resolveStudentRenderer("functionGraphSelection", 1)?.key).toBe("functionGraphSelection");
     expect(resolveAuthoringEditor("functionGraphSelection", 1)).toBeTruthy();
+    expect(resolveStudentRenderer("functionGraphSelection", 2)).toBeUndefined();
+    expect(studentUnsupported("functionGraphSelection", 2)).toBe(true);
   });
   it("the keyboard list and the pointer emit the same semantic answer on the question's graph", async () => {
     const Renderer = resolveStudentRenderer("functionGraphSelection", 1)!.Renderer;

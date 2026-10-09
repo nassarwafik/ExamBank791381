@@ -55,6 +55,8 @@ registerStudentRenderer("hotspot", 1, lazy(() => import("./student/HotspotRespon
 registerStudentRenderer("labelDiagram", 1, lazy(() => import("./student/LabelDiagramResponse")));
 // Phase 21A.1 — chart selection (lazy: the chart component loads with it; the rendering engine only behind its own dynamic edge).
 registerStudentRenderer("chartSelection", 1, lazy(() => import("./student/ChartSelectionResponse")));
+// Phase 21A.2 — function-graph selection (lazy: the owned SVG graph runtime loads only when a graph question renders).
+registerStudentRenderer("functionGraphSelection", 1, lazy(() => import("./student/FunctionGraphSelectionResponse")));
 registerStudentRenderer("openResponse", 1, lazy(() => import("./student/OpenResponseResponse")));
 // Phase 20A — trusted SmartSim (lazy: the plugin workspace — topology, device panels, engines — loads only when a smartSim question renders).
 registerStudentRenderer("smartSim", 1, lazy(() => import("./student/SmartSimResponse")));

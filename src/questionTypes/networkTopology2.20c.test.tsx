@@ -148,7 +148,7 @@ describe("networkTopology@2 — authoring (teacher is the only topology authorit
     render(<Host initial={baseExam([newQuestion("multipleChoice", { examQuestionId: "q1", text: "س" })])} onHistory={h => { hist = h; }} />); await tick(30);
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(26);   /* 20D adds composite · 21A.1 adds chartSelection */
+    expect(within(d).getAllByTestId("qt-card").length).toBe(27);   /* 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     fireEvent.click(within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "smartSim")!); await tick(50);
     const host = await screen.findByTestId("qt-editor-smartSim", {}, { timeout: 3000 });

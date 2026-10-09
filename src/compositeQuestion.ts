@@ -20,7 +20,9 @@ export const COMPOSITE_CHILD_IDENTITIES: readonly string[] = Object.freeze([
   "multipleSelect@1", "numericResponse@1", "matrix@1", "categorization@1", "simulation@1", "coding@1", "coding@2", "coding@3", "networkCli@1", "inlineCloze@1",
   "parametricNumeric@1", "hotspot@1", "labelDiagram@1", "openResponse@1", "smartSim@1",
   // Phase 21A.1 — a chart-selection part (its chart is self-contained; a shared chart stimulus lives in a rich SOURCE context)
-  "chartSelection@1"]);
+  "chartSelection@1",
+  // Phase 21A.2 — a function-graph selection part (its graph is self-contained; a shared graph stimulus lives in a rich SOURCE context)
+  "functionGraphSelection@1"]);
 const CHILD_IDENTITY_SET: ReadonlySet<string> = new Set(COMPOSITE_CHILD_IDENTITIES);
 export const REFUSED_COMPOSITE_CHILD_TYPES: readonly string[] = Object.freeze(["compound", "composite"]);
 /** EXACT key (no case folding, no alias) + the catalog's effective version (absent ⇒ 1); anything else is unsupported. */
@@ -49,7 +51,7 @@ const PART_TYPE_KEYS: Readonly<Record<string, readonly string[]>> = Object.freez
   matching: ["fields", "tableHeaders"], ordering: ["fields", "wordBank"], tableFill: ["fields", "tableHeaders", "tableRows"], cliFill: ["fields", "cli"],
   multipleSelect: ["options"], numericResponse: ["numeric"], matrix: ["matrix"], categorization: ["categorization"], simulation: ["simulation"], coding: ["coding"],
   networkCli: ["networkCli"], inlineCloze: ["inlineCloze"], parametricNumeric: ["parametric"], hotspot: ["hotspot"], labelDiagram: ["labelDiagram"],
-  openResponse: ["openResponse"], smartSim: ["smartSim"], chartSelection: ["chartSelection"]
+  openResponse: ["openResponse"], smartSim: ["smartSim"], chartSelection: ["chartSelection"], functionGraphSelection: ["functionGraphSelection"]
 });
 const ALL_CONFIG_KEYS: ReadonlySet<string> = new Set(Object.values(PART_TYPE_KEYS).flat());
 

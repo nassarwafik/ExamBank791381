@@ -57,16 +57,19 @@ const EXAM = () => ({
 });
 const sel = (graphId, ...targets) => ({ kind: "functionGraphSelection", graphId, targets });
 const qs = e => e.sections.flatMap(s => s.questions);
+// the student projection of a graph: the drawing unchanged, the teacher-only semantics removed (roles, on-curve claims, derivative relations,
+// authored slopes — design record §6)
+const studentGraph = g => ({ ...g, ...(g.points ? { points: g.points.map(({ role: _role, on: _on, ...rest }) => rest) } : {}), ...(g.lines ? { lines: g.lines.map(({ role: _role, ...rest }) => rest) } : {}) });
 const graphsOf = e => qs(e).map(q => (q.functionGraphSelection ? q.functionGraphSelection.graph : (q.richContent.blocks.find(b => b.type === "functionGraph") || {}).graph));
 
 describe("21A2-FF1 rich content: the functionGraph block", () => {
-  it("is a rich block type; a document with a graph validates, canonicalizes to itself and is projected to students unchanged", () => {
+  it("is a rich block type; a document with a graph validates, canonicalizes to itself and reaches students without teacher-only semantics", () => {
     expect(RICH_BLOCK_TYPES).toContain("functionGraph");
     const d = doc(para("ادرس المنحنى."), graphBlock(QUAD()));
     const r = validateRichContent(d);
     expect(r.issues).toEqual([]);
     expect(r.value).toEqual(d);
-    expect(projectRichContentForStudent(d)).toEqual(d);
+    expect(projectRichContentForStudent(d)).toEqual(doc(para("ادرس المنحنى."), graphBlock(studentGraph(QUAD()))));
   });
   it("an executable-looking or unknown expression is refused by the graph authority (not as an unknown block)", () => {
     for (const expression of ["alert(1)", "constructor", "x^2; fetch(1)", "sin(x"]) {
@@ -121,10 +124,11 @@ describe("21A2-FF3 answer ingest, grading and the student projection (server aut
     const p = sanitizeExamForStudent(EXAM(), { parametric: { assignmentId: "a", studentId: "s", attemptNumber: 1 } });
     const q1 = qs(p).find(q => q.examQuestionId === "q1");
     expect(q1.functionGraphSelection.graph.curves).toEqual(QUAD().curves);
-    expect(q1.functionGraphSelection.graph.points).toEqual(QUAD().points.map(({ role, on, ...rest }) => rest));
+    expect(q1.functionGraphSelection.graph).toEqual(studentGraph(QUAD()));
     expect(q1.functionGraphSelection).toMatchObject({ v: 1, target: "point", mode: "multiple", maxSelections: 2 });
     expect(JSON.stringify(p)).not.toMatch(/"correct"|"scoring"|"root"|"minimum"|"yIntercept"/);
-    expect(qs(p).find(q => q.examQuestionId === "q2").richContent.blocks[1]).toEqual(graphBlock(RATIONAL()));
+    expect(qs(p).find(q => q.examQuestionId === "q2").richContent.blocks[1]).toEqual(graphBlock(studentGraph(RATIONAL())));
+    expect(JSON.stringify(p)).not.toMatch(/"asymptote"|"on":/);
   });
 });
 

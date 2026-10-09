@@ -8,6 +8,7 @@ import { parseInlineMarkdown, runsToInlineMarkdown, MARKDOWN_HTML_REFUSED, MARKD
 import { readImageFile, MEDIA_MSG } from "../questionMedia";
 import { useConfirm } from "../ui/useConfirm";
 import { defaultChart, newChartId } from "../charts/chartEditing";
+import { defaultFunctionGraph } from "../functionGraphs/graphEditing";
 import type { ConfirmOptions } from "../ui/ConfirmDialog";
 import "./rich-content-editor.css";
 
@@ -23,6 +24,9 @@ const RichContentRenderer = lazy(() => import("./RichContentRenderer"));
 const MathSnippetPalette = lazy(() => import("./MathSnippetPalette"));
 // Phase 21A.1 — the chart editor (table-like data entry) loads only when a chart block is edited
 const ChartEditor = lazy(() => import("../charts/ChartEditor"));
+// Phase 21A.2 — the function-graph editor (typed controls + its own preview) is its own lazy chunk.
+const GraphEditor = lazy(() => import("../functionGraphs/GraphEditor"));
+const newGraphId = () => "graph-" + Math.random().toString(36).slice(2, 8);
 
 type Props = {
   value: RichContentV1 | undefined;
@@ -48,14 +52,15 @@ const fromValue = (v: RichContentV1 | undefined): EB[] => (v && Array.isArray(v.
 const toDoc = (items: EB[]): RichContentV1 | undefined => (items.length ? { schemaVersion: 1, blocks: items.map(toBlock) } : undefined);
 const countBlocks = (items: EB[]): number => items.reduce((n, e) => n + 1 + (e.cols ? countBlocks(e.cols[0]) + countBlocks(e.cols[1]) : 0), 0);
 // a duplicated chart receives a fresh chart id (chart ids are unique within one document)
-const freshIds = (b: RichBlock): RichBlock => (b.type === "dataChart" ? { ...b, chart: { ...b.chart, id: newChartId() } } : b);
+// (a duplicated function graph likewise receives a fresh graph id; its object ids are graph-local and stay)
+const freshIds = (b: RichBlock): RichBlock => (b.type === "dataChart" ? { ...b, chart: { ...b.chart, id: newChartId() } } : b.type === "functionGraph" ? { ...b, graph: { ...b.graph, id: newGraphId() } } : b);
 const cloneEB = (e: EB): EB => ({ key: newKey(), block: freshIds(structuredCloneSafe(e.block)), ...(e.cols ? { cols: [e.cols[0].map(cloneEB), e.cols[1].map(cloneEB)] as [EB[], EB[]] } : {}) });
 function structuredCloneSafe<T>(v: T): T { return JSON.parse(JSON.stringify(v)) as T; }
 const sameJson = (a: unknown, b: unknown) => { try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; } };
 
 const RICH_BLOCK_LABELS: Readonly<Record<RichBlockType, string>> = Object.freeze({
   paragraph: "فقرة", heading: "عنوان", unorderedList: "قائمة", orderedList: "قائمة مرقمة", table: "جدول", image: "صورة", figure: "صورة بتعليق",
-  code: "كود", cli: "CLI", quote: "اقتباس", callout: "تنبيه", divider: "فاصل", keyValueGrid: "قيم", columns: "عمودان", math: "صيغة", dataChart: "رسم بياني"
+  code: "كود", cli: "CLI", quote: "اقتباس", callout: "تنبيه", divider: "فاصل", keyValueGrid: "قيم", columns: "عمودان", math: "صيغة", dataChart: "رسم بياني", functionGraph: "رسم دالة"
 });
 const CALLOUT_LABELS: Readonly<Record<string, string>> = { info: "معلومة", note: "ملاحظة", warning: "تحذير", success: "إرشاد", important: "مهم" };
 const LANGUAGE_LABELS: Readonly<Record<string, string>> = { python: "Python", java: "Java", csharp: "C#", pseudocode: "شبه كود", javascript: "JavaScript", html: "HTML", css: "CSS", sql: "SQL", text: "نص" };
@@ -64,10 +69,10 @@ const RESPONSIVE_LABELS: Readonly<Record<string, string>> = { scroll: "تمري�
 const ADDABLE: readonly (readonly [string, RichBlockType])[] = [
   ["+ فقرة", "paragraph"], ["+ عنوان", "heading"], ["+ قائمة", "unorderedList"], ["+ قائمة مرقمة", "orderedList"], ["+ جدول", "table"],
   ["+ صورة", "image"], ["+ كود", "code"], ["+ CLI", "cli"], ["+ اقتباس", "quote"], ["+ تنبيه", "callout"], ["+ فاصل", "divider"],
-  ["+ قيم", "keyValueGrid"], ["+ عمودان", "columns"], ["+ صيغة", "math"], ["+ رسم بياني", "dataChart"]
+  ["+ قيم", "keyValueGrid"], ["+ عمودان", "columns"], ["+ صيغة", "math"], ["+ رسم بياني", "dataChart"], ["+ رسم دالة", "functionGraph"]
 ];
 const TEXT_TYPES = new Set<RichBlockType>(["paragraph", "heading", "quote", "callout", "unorderedList", "orderedList"]);
-const COMPLEX_TYPES = new Set<RichBlockType>(["table", "code", "cli", "columns", "keyValueGrid", "image", "figure", "dataChart"]);
+const COMPLEX_TYPES = new Set<RichBlockType>(["table", "code", "cli", "columns", "keyValueGrid", "image", "figure", "dataChart", "functionGraph"]);
 const RASTER = /^data:image\/(png|jpe?g|webp)[;,]/i;
 const RASTER_ONLY_MSG = "صور المحتوى المنسق: PNG أو JPEG أو WEBP فقط (لا SVG ولا روابط خارجية).";
 
@@ -88,6 +93,7 @@ function defaultRichBlock(type: Exclude<RichBlockType, "image" | "figure">): Ric
     case "columns": return { type: "columns", columns: [{ blocks: [{ type: "paragraph", runs: [{ text: "العمود الأول" }] }] }, { blocks: [{ type: "paragraph", runs: [{ text: "العمود الثاني" }] }] }] };
     case "math": return { type: "math", source: "a^{2} + b^{2} = c^{2}" };
     case "dataChart": return { type: "dataChart", chart: defaultChart("bar") };
+    case "functionGraph": return { type: "functionGraph", graph: defaultFunctionGraph(newGraphId()) };
   }
 }
 
@@ -118,7 +124,7 @@ function hasContent(b: RichBlock): boolean {
     case "table": return b.rows.some(r => r.some(c => (typeof c === "string" ? c : plainOf(c.runs)).trim() !== "")) || !!b.caption?.trim();
     case "keyValueGrid": return b.items.some(i => i.label.trim() || i.value.trim());
     case "columns": return b.columns.some(c => c.blocks.length > 0);
-    case "image": case "figure": case "dataChart": return true;
+    case "image": case "figure": case "dataChart": case "functionGraph": return true;
     default: return plainOf(blockRuns(b)).trim() !== "";
   }
 }
@@ -446,6 +452,11 @@ function BlockBody({ block: b, name, set, disabled, confirm }: { block: RichBloc
     case "dataChart": return (
       <Suspense fallback={<p className="rc-hint" role="status">جارٍ تحميل محرر الرسم البياني…</p>}>
         <ChartEditor chart={b.chart} name={name} disabled={disabled} confirm={confirm} onChange={chart => set({ type: "dataChart", chart })} />
+      </Suspense>
+    );
+    case "functionGraph": return (
+      <Suspense fallback={<p className="rc-hint" role="status">جارٍ تحميل محرر رسم الدالة…</p>}>
+        <GraphEditor graph={b.graph} name={name} disabled={disabled} confirm={confirm} onChange={graph => set({ type: "functionGraph", graph })} />
       </Suspense>
     );
     case "columns": return null;

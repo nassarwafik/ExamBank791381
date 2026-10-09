@@ -33,6 +33,7 @@ const PRODUCTION_ROWS = [
     ["compound", "سؤال مركّب", "composite", "composed", "amhpo", ["compound"], true],
     ["composite", "سؤال مركّب متقدّم", "composite", "composed", "amhpio", ["composite"], false],
     ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", "apio", ["chartSelection"], false],
+    ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", "apio", ["functionGraphSelection"], false],
     ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
     ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
     ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
