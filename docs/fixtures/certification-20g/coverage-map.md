@@ -16,6 +16,7 @@
 | `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, A, B, C, D, E, S |
 | `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | — | ✓ | registered | A | 21A1 |
 | `functionGraphSelection@1` | type | auto | ✓ | functionGraphSelection | — | ✓ | — | ✓ | registered | A | 21A2 |
+| `scene3DSelection@1` | type | auto | ✓ | scene3DSelection | — | — | — | ✓ | registered | A | 21C |
 | `multipleSelect@1` | type | auto | ✓ | multiChoice | ✓ | ✓ | — | ✓ | registered | A | A, B, E, S |
 | `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | — | ✓ | registered | A | 21A1, A, B, D, E, S |
 | `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | registered | A | D, E, S |
