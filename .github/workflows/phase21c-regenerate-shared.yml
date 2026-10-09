@@ -1,4 +1,5 @@
 name: Phase 21C Regenerate Shared Artifacts (temporary)
+# trigger: restore baseline registry semantics and refresh generated shared authority
 on:
   push:
     branches:
