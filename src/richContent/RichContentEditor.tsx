@@ -10,6 +10,7 @@ import { useConfirm } from "../ui/useConfirm";
 import { defaultChart, newChartId } from "../charts/chartEditing";
 import { defaultFunctionGraph } from "../functionGraphs/graphEditing";
 import { defaultSurface, newSurfaceId } from "../functionSurfaces/surfaceEditing";
+import { freshScene3DId, scene3DPreset } from "../interactive3d/scenePresets";
 import type { ConfirmOptions } from "../ui/ConfirmDialog";
 import "./rich-content-editor.css";
 
@@ -28,6 +29,7 @@ const ChartEditor = lazy(() => import("../charts/ChartEditor"));
 // Phase 21A.2 — the function-graph editor (typed controls + its own preview) is its own lazy chunk.
 const GraphEditor = lazy(() => import("../functionGraphs/GraphEditor"));
 const Surface3DEditor = lazy(() => import("../functionSurfaces/Surface3DEditor"));
+const Scene3DEditor = lazy(() => import("../interactive3d/Scene3DEditor"));
 const newGraphId = () => "graph-" + Math.random().toString(36).slice(2, 8);
 
 type Props = {
@@ -55,14 +57,14 @@ const toDoc = (items: EB[]): RichContentV1 | undefined => (items.length ? { sche
 const countBlocks = (items: EB[]): number => items.reduce((n, e) => n + 1 + (e.cols ? countBlocks(e.cols[0]) + countBlocks(e.cols[1]) : 0), 0);
 // a duplicated chart receives a fresh chart id (chart ids are unique within one document)
 // (a duplicated function graph likewise receives a fresh graph id; its object ids are graph-local and stay)
-const freshIds = (b: RichBlock): RichBlock => (b.type === "dataChart" ? { ...b, chart: { ...b.chart, id: newChartId() } } : b.type === "functionGraph" ? { ...b, graph: { ...b.graph, id: newGraphId() } } : b.type === "functionSurface3D" ? { ...b, surface: { ...b.surface, id: newSurfaceId() } } : b);
+const freshIds = (b: RichBlock): RichBlock => (b.type === "dataChart" ? { ...b, chart: { ...b.chart, id: newChartId() } } : b.type === "functionGraph" ? { ...b, graph: { ...b.graph, id: newGraphId() } } : b.type === "functionSurface3D" ? { ...b, surface: { ...b.surface, id: newSurfaceId() } } : b.type === "interactive3D" ? { ...b, scene: { ...b.scene, id: freshScene3DId("scene") } } : b);
 const cloneEB = (e: EB): EB => ({ key: newKey(), block: freshIds(structuredCloneSafe(e.block)), ...(e.cols ? { cols: [e.cols[0].map(cloneEB), e.cols[1].map(cloneEB)] as [EB[], EB[]] } : {}) });
 function structuredCloneSafe<T>(v: T): T { return JSON.parse(JSON.stringify(v)) as T; }
 const sameJson = (a: unknown, b: unknown) => { try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; } };
 
 const RICH_BLOCK_LABELS: Readonly<Record<RichBlockType, string>> = Object.freeze({
   paragraph: "فقرة", heading: "عنوان", unorderedList: "قائمة", orderedList: "قائمة مرقمة", table: "جدول", image: "صورة", figure: "صورة بتعليق",
-  code: "كود", cli: "CLI", quote: "اقتباس", callout: "تنبيه", divider: "فاصل", keyValueGrid: "قيم", columns: "عمودان", math: "صيغة", dataChart: "رسم بياني", functionGraph: "رسم دالة", functionSurface3D: "سطح دالة 3D"
+  code: "كود", cli: "CLI", quote: "اقتباس", callout: "تنبيه", divider: "فاصل", keyValueGrid: "قيم", columns: "عمودان", math: "صيغة", dataChart: "رسم بياني", functionGraph: "رسم دالة", functionSurface3D: "سطح دالة 3D", interactive3D: "نموذج 3D تفاعلي"
 });
 const CALLOUT_LABELS: Readonly<Record<string, string>> = { info: "معلومة", note: "ملاحظة", warning: "تحذير", success: "إرشاد", important: "مهم" };
 const LANGUAGE_LABELS: Readonly<Record<string, string>> = { python: "Python", java: "Java", csharp: "C#", pseudocode: "شبه كود", javascript: "JavaScript", html: "HTML", css: "CSS", sql: "SQL", text: "نص" };
@@ -71,10 +73,10 @@ const RESPONSIVE_LABELS: Readonly<Record<string, string>> = { scroll: "تمري�
 const ADDABLE: readonly (readonly [string, RichBlockType])[] = [
   ["+ فقرة", "paragraph"], ["+ عنوان", "heading"], ["+ قائمة", "unorderedList"], ["+ قائمة مرقمة", "orderedList"], ["+ جدول", "table"],
   ["+ صورة", "image"], ["+ كود", "code"], ["+ CLI", "cli"], ["+ اقتباس", "quote"], ["+ تنبيه", "callout"], ["+ فاصل", "divider"],
-  ["+ قيم", "keyValueGrid"], ["+ عمودان", "columns"], ["+ صيغة", "math"], ["+ رسم بياني", "dataChart"], ["+ رسم دالة", "functionGraph"], ["+ سطح دالة 3D", "functionSurface3D"]
+  ["+ قيم", "keyValueGrid"], ["+ عمودان", "columns"], ["+ صيغة", "math"], ["+ رسم بياني", "dataChart"], ["+ رسم دالة", "functionGraph"], ["+ سطح دالة 3D", "functionSurface3D"], ["+ نموذج 3D", "interactive3D"]
 ];
 const TEXT_TYPES = new Set<RichBlockType>(["paragraph", "heading", "quote", "callout", "unorderedList", "orderedList"]);
-const COMPLEX_TYPES = new Set<RichBlockType>(["table", "code", "cli", "columns", "keyValueGrid", "image", "figure", "dataChart", "functionGraph", "functionSurface3D"]);
+const COMPLEX_TYPES = new Set<RichBlockType>(["table", "code", "cli", "columns", "keyValueGrid", "image", "figure", "dataChart", "functionGraph", "functionSurface3D", "interactive3D"]);
 const RASTER = /^data:image\/(png|jpe?g|webp)[;,]/i;
 const RASTER_ONLY_MSG = "صور المحتوى المنسق: PNG أو JPEG أو WEBP فقط (لا SVG ولا روابط خارجية).";
 
@@ -97,6 +99,7 @@ function defaultRichBlock(type: Exclude<RichBlockType, "image" | "figure">): Ric
     case "dataChart": return { type: "dataChart", chart: defaultChart("bar") };
     case "functionGraph": return { type: "functionGraph", graph: defaultFunctionGraph(newGraphId()) };
     case "functionSurface3D": return { type: "functionSurface3D", surface: defaultSurface() };
+    case "interactive3D": return { type: "interactive3D", scene: scene3DPreset("cube", freshScene3DId("scene")) };
   }
 }
 
@@ -127,7 +130,7 @@ function hasContent(b: RichBlock): boolean {
     case "table": return b.rows.some(r => r.some(c => (typeof c === "string" ? c : plainOf(c.runs)).trim() !== "")) || !!b.caption?.trim();
     case "keyValueGrid": return b.items.some(i => i.label.trim() || i.value.trim());
     case "columns": return b.columns.some(c => c.blocks.length > 0);
-    case "image": case "figure": case "dataChart": case "functionGraph": case "functionSurface3D": return true;
+    case "image": case "figure": case "dataChart": case "functionGraph": case "functionSurface3D": case "interactive3D": return true;
     default: return plainOf(blockRuns(b)).trim() !== "";
   }
 }
@@ -465,6 +468,11 @@ function BlockBody({ block: b, name, set, disabled, confirm }: { block: RichBloc
     case "functionSurface3D": return (
       <Suspense fallback={<p className="rc-hint" role="status">جارٍ تحميل محرر السطح ثلاثي الأبعاد…</p>}>
         <Surface3DEditor surface={b.surface} name={name} disabled={disabled} onChange={surface => set({ type: "functionSurface3D", surface })} />
+      </Suspense>
+    );
+    case "interactive3D": return (
+      <Suspense fallback={<p className="rc-hint" role="status">جارٍ تحميل محرر النموذج ثلاثي الأبعاد…</p>}>
+        <Scene3DEditor scene={b.scene} name={name} disabled={disabled} onChange={scene => set({ type: "interactive3D", scene })} />
       </Suspense>
     );
     case "columns": return null;
