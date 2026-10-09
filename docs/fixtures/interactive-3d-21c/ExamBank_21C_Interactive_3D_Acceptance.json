@@ -1,0 +1,1428 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21C-INTERACTIVE-3D",
+  "title": "ExamBank 21C — اختبار القبول للمجسمات ثلاثية الأبعاد التفاعلية",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "هندسة وأحياء وكيمياء بنموذج 3D دلالي",
+    "instructions": "دوّر وكبّر النموذج عند الحاجة ثم اختر العنصر المطلوب من النموذج أو من القائمة الدلالية.",
+    "instructionsRichContent": {
+      "schemaVersion": 1,
+      "blocks": [
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "حركة الكاميرا لا تُعد إجابة؛ التصحيح يعتمد على معرّف العنصر الدلالي فقط."
+            }
+          ]
+        }
+      ]
+    },
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — أوجه المكعب",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "scene3DSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر الوجه العلوي للمكعب.",
+          "marks": 5,
+          "scene3DSelection": {
+            "v": 1,
+            "scene": {
+              "version": 1,
+              "id": "scene-cube",
+              "title": "مكعب تفاعلي",
+              "description": "مكعب هندسي لاختيار أوجه وحواف ورؤوس دلاليًا.",
+              "camera": {
+                "yaw": -0.65,
+                "pitch": 0.45,
+                "zoom": 1
+              },
+              "interaction": {
+                "rotate": true,
+                "zoom": true,
+                "select": true
+              },
+              "objects": [
+                {
+                  "id": "cube",
+                  "label": "المكعب",
+                  "kind": "box",
+                  "center": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 3,
+                    "y": 3,
+                    "z": 3
+                  },
+                  "palette": 2
+                }
+              ],
+              "targets": [
+                {
+                  "id": "front",
+                  "kind": "face",
+                  "label": "الوجه الأمامي",
+                  "objectId": "cube",
+                  "element": "front"
+                },
+                {
+                  "id": "back",
+                  "kind": "face",
+                  "label": "الوجه الخلفي",
+                  "objectId": "cube",
+                  "element": "back"
+                },
+                {
+                  "id": "left",
+                  "kind": "face",
+                  "label": "الوجه الأيسر",
+                  "objectId": "cube",
+                  "element": "left"
+                },
+                {
+                  "id": "right",
+                  "kind": "face",
+                  "label": "الوجه الأيمن",
+                  "objectId": "cube",
+                  "element": "right"
+                },
+                {
+                  "id": "top",
+                  "kind": "face",
+                  "label": "الوجه العلوي",
+                  "objectId": "cube",
+                  "element": "top"
+                },
+                {
+                  "id": "bottom",
+                  "kind": "face",
+                  "label": "الوجه السفلي",
+                  "objectId": "cube",
+                  "element": "bottom"
+                },
+                {
+                  "id": "vA",
+                  "kind": "vertex",
+                  "label": "الرأس A",
+                  "objectId": "cube",
+                  "element": "A"
+                },
+                {
+                  "id": "vB",
+                  "kind": "vertex",
+                  "label": "الرأس B",
+                  "objectId": "cube",
+                  "element": "B"
+                },
+                {
+                  "id": "vC",
+                  "kind": "vertex",
+                  "label": "الرأس C",
+                  "objectId": "cube",
+                  "element": "C"
+                },
+                {
+                  "id": "vD",
+                  "kind": "vertex",
+                  "label": "الرأس D",
+                  "objectId": "cube",
+                  "element": "D"
+                },
+                {
+                  "id": "vE",
+                  "kind": "vertex",
+                  "label": "الرأس E",
+                  "objectId": "cube",
+                  "element": "E"
+                },
+                {
+                  "id": "vF",
+                  "kind": "vertex",
+                  "label": "الرأس F",
+                  "objectId": "cube",
+                  "element": "F"
+                },
+                {
+                  "id": "vG",
+                  "kind": "vertex",
+                  "label": "الرأس G",
+                  "objectId": "cube",
+                  "element": "G"
+                },
+                {
+                  "id": "vH",
+                  "kind": "vertex",
+                  "label": "الرأس H",
+                  "objectId": "cube",
+                  "element": "H"
+                },
+                {
+                  "id": "eAB",
+                  "kind": "edge",
+                  "label": "الحافة AB",
+                  "objectId": "cube",
+                  "element": "AB"
+                },
+                {
+                  "id": "eBC",
+                  "kind": "edge",
+                  "label": "الحافة BC",
+                  "objectId": "cube",
+                  "element": "BC"
+                },
+                {
+                  "id": "eCD",
+                  "kind": "edge",
+                  "label": "الحافة CD",
+                  "objectId": "cube",
+                  "element": "CD"
+                },
+                {
+                  "id": "eDA",
+                  "kind": "edge",
+                  "label": "الحافة DA",
+                  "objectId": "cube",
+                  "element": "DA"
+                },
+                {
+                  "id": "eEF",
+                  "kind": "edge",
+                  "label": "الحافة EF",
+                  "objectId": "cube",
+                  "element": "EF"
+                },
+                {
+                  "id": "eFG",
+                  "kind": "edge",
+                  "label": "الحافة FG",
+                  "objectId": "cube",
+                  "element": "FG"
+                },
+                {
+                  "id": "eGH",
+                  "kind": "edge",
+                  "label": "الحافة GH",
+                  "objectId": "cube",
+                  "element": "GH"
+                },
+                {
+                  "id": "eHE",
+                  "kind": "edge",
+                  "label": "الحافة HE",
+                  "objectId": "cube",
+                  "element": "HE"
+                },
+                {
+                  "id": "eAE",
+                  "kind": "edge",
+                  "label": "الحافة AE",
+                  "objectId": "cube",
+                  "element": "AE"
+                },
+                {
+                  "id": "eBF",
+                  "kind": "edge",
+                  "label": "الحافة BF",
+                  "objectId": "cube",
+                  "element": "BF"
+                },
+                {
+                  "id": "eCG",
+                  "kind": "edge",
+                  "label": "الحافة CG",
+                  "objectId": "cube",
+                  "element": "CG"
+                },
+                {
+                  "id": "eDH",
+                  "kind": "edge",
+                  "label": "الحافة DH",
+                  "objectId": "cube",
+                  "element": "DH"
+                }
+              ]
+            },
+            "target": "face",
+            "mode": "single",
+            "maxSelections": 1,
+            "label": "اختر الوجه العلوي للمكعب."
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "face:top"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — رؤوس المكعب",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "scene3DSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر الرأسين A و E.",
+          "marks": 5,
+          "scene3DSelection": {
+            "v": 1,
+            "scene": {
+              "version": 1,
+              "id": "scene-cube",
+              "title": "مكعب تفاعلي",
+              "description": "مكعب هندسي لاختيار أوجه وحواف ورؤوس دلاليًا.",
+              "camera": {
+                "yaw": -0.65,
+                "pitch": 0.45,
+                "zoom": 1
+              },
+              "interaction": {
+                "rotate": true,
+                "zoom": true,
+                "select": true
+              },
+              "objects": [
+                {
+                  "id": "cube",
+                  "label": "المكعب",
+                  "kind": "box",
+                  "center": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 3,
+                    "y": 3,
+                    "z": 3
+                  },
+                  "palette": 2
+                }
+              ],
+              "targets": [
+                {
+                  "id": "front",
+                  "kind": "face",
+                  "label": "الوجه الأمامي",
+                  "objectId": "cube",
+                  "element": "front"
+                },
+                {
+                  "id": "back",
+                  "kind": "face",
+                  "label": "الوجه الخلفي",
+                  "objectId": "cube",
+                  "element": "back"
+                },
+                {
+                  "id": "left",
+                  "kind": "face",
+                  "label": "الوجه الأيسر",
+                  "objectId": "cube",
+                  "element": "left"
+                },
+                {
+                  "id": "right",
+                  "kind": "face",
+                  "label": "الوجه الأيمن",
+                  "objectId": "cube",
+                  "element": "right"
+                },
+                {
+                  "id": "top",
+                  "kind": "face",
+                  "label": "الوجه العلوي",
+                  "objectId": "cube",
+                  "element": "top"
+                },
+                {
+                  "id": "bottom",
+                  "kind": "face",
+                  "label": "الوجه السفلي",
+                  "objectId": "cube",
+                  "element": "bottom"
+                },
+                {
+                  "id": "vA",
+                  "kind": "vertex",
+                  "label": "الرأس A",
+                  "objectId": "cube",
+                  "element": "A"
+                },
+                {
+                  "id": "vB",
+                  "kind": "vertex",
+                  "label": "الرأس B",
+                  "objectId": "cube",
+                  "element": "B"
+                },
+                {
+                  "id": "vC",
+                  "kind": "vertex",
+                  "label": "الرأس C",
+                  "objectId": "cube",
+                  "element": "C"
+                },
+                {
+                  "id": "vD",
+                  "kind": "vertex",
+                  "label": "الرأس D",
+                  "objectId": "cube",
+                  "element": "D"
+                },
+                {
+                  "id": "vE",
+                  "kind": "vertex",
+                  "label": "الرأس E",
+                  "objectId": "cube",
+                  "element": "E"
+                },
+                {
+                  "id": "vF",
+                  "kind": "vertex",
+                  "label": "الرأس F",
+                  "objectId": "cube",
+                  "element": "F"
+                },
+                {
+                  "id": "vG",
+                  "kind": "vertex",
+                  "label": "الرأس G",
+                  "objectId": "cube",
+                  "element": "G"
+                },
+                {
+                  "id": "vH",
+                  "kind": "vertex",
+                  "label": "الرأس H",
+                  "objectId": "cube",
+                  "element": "H"
+                },
+                {
+                  "id": "eAB",
+                  "kind": "edge",
+                  "label": "الحافة AB",
+                  "objectId": "cube",
+                  "element": "AB"
+                },
+                {
+                  "id": "eBC",
+                  "kind": "edge",
+                  "label": "الحافة BC",
+                  "objectId": "cube",
+                  "element": "BC"
+                },
+                {
+                  "id": "eCD",
+                  "kind": "edge",
+                  "label": "الحافة CD",
+                  "objectId": "cube",
+                  "element": "CD"
+                },
+                {
+                  "id": "eDA",
+                  "kind": "edge",
+                  "label": "الحافة DA",
+                  "objectId": "cube",
+                  "element": "DA"
+                },
+                {
+                  "id": "eEF",
+                  "kind": "edge",
+                  "label": "الحافة EF",
+                  "objectId": "cube",
+                  "element": "EF"
+                },
+                {
+                  "id": "eFG",
+                  "kind": "edge",
+                  "label": "الحافة FG",
+                  "objectId": "cube",
+                  "element": "FG"
+                },
+                {
+                  "id": "eGH",
+                  "kind": "edge",
+                  "label": "الحافة GH",
+                  "objectId": "cube",
+                  "element": "GH"
+                },
+                {
+                  "id": "eHE",
+                  "kind": "edge",
+                  "label": "الحافة HE",
+                  "objectId": "cube",
+                  "element": "HE"
+                },
+                {
+                  "id": "eAE",
+                  "kind": "edge",
+                  "label": "الحافة AE",
+                  "objectId": "cube",
+                  "element": "AE"
+                },
+                {
+                  "id": "eBF",
+                  "kind": "edge",
+                  "label": "الحافة BF",
+                  "objectId": "cube",
+                  "element": "BF"
+                },
+                {
+                  "id": "eCG",
+                  "kind": "edge",
+                  "label": "الحافة CG",
+                  "objectId": "cube",
+                  "element": "CG"
+                },
+                {
+                  "id": "eDH",
+                  "kind": "edge",
+                  "label": "الحافة DH",
+                  "objectId": "cube",
+                  "element": "DH"
+                }
+              ]
+            },
+            "target": "vertex",
+            "mode": "multiple",
+            "maxSelections": 2,
+            "label": "اختر الرأسين A و E."
+          },
+          "answer": {
+            "scoring": "partial",
+            "correct": [
+              "vertex:vA",
+              "vertex:vE"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — الهرم",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "scene3DSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر رأس الهرم E.",
+          "marks": 5,
+          "scene3DSelection": {
+            "v": 1,
+            "scene": {
+              "version": 1,
+              "id": "scene-pyramid",
+              "title": "هرم رباعي تفاعلي",
+              "description": "هرم رباعي لتحديد الأوجه والحواف والرؤوس.",
+              "camera": {
+                "yaw": -0.65,
+                "pitch": 0.45,
+                "zoom": 1
+              },
+              "interaction": {
+                "rotate": true,
+                "zoom": true,
+                "select": true
+              },
+              "objects": [
+                {
+                  "id": "pyramid",
+                  "label": "الهرم",
+                  "kind": "pyramid",
+                  "center": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 3.4,
+                    "y": 3.2,
+                    "z": 3.4
+                  },
+                  "palette": 4
+                }
+              ],
+              "targets": [
+                {
+                  "id": "base",
+                  "kind": "face",
+                  "label": "القاعدة",
+                  "objectId": "pyramid",
+                  "element": "base"
+                },
+                {
+                  "id": "sideAB",
+                  "kind": "face",
+                  "label": "وجه جانبي AB",
+                  "objectId": "pyramid",
+                  "element": "sideAB"
+                },
+                {
+                  "id": "sideBC",
+                  "kind": "face",
+                  "label": "وجه جانبي BC",
+                  "objectId": "pyramid",
+                  "element": "sideBC"
+                },
+                {
+                  "id": "sideCD",
+                  "kind": "face",
+                  "label": "وجه جانبي CD",
+                  "objectId": "pyramid",
+                  "element": "sideCD"
+                },
+                {
+                  "id": "sideDA",
+                  "kind": "face",
+                  "label": "وجه جانبي DA",
+                  "objectId": "pyramid",
+                  "element": "sideDA"
+                },
+                {
+                  "id": "vA",
+                  "kind": "vertex",
+                  "label": "الرأس A",
+                  "objectId": "pyramid",
+                  "element": "A"
+                },
+                {
+                  "id": "vB",
+                  "kind": "vertex",
+                  "label": "الرأس B",
+                  "objectId": "pyramid",
+                  "element": "B"
+                },
+                {
+                  "id": "vC",
+                  "kind": "vertex",
+                  "label": "الرأس C",
+                  "objectId": "pyramid",
+                  "element": "C"
+                },
+                {
+                  "id": "vD",
+                  "kind": "vertex",
+                  "label": "الرأس D",
+                  "objectId": "pyramid",
+                  "element": "D"
+                },
+                {
+                  "id": "vE",
+                  "kind": "vertex",
+                  "label": "الرأس E",
+                  "objectId": "pyramid",
+                  "element": "E"
+                },
+                {
+                  "id": "eAB",
+                  "kind": "edge",
+                  "label": "الحافة AB",
+                  "objectId": "pyramid",
+                  "element": "AB"
+                },
+                {
+                  "id": "eBC",
+                  "kind": "edge",
+                  "label": "الحافة BC",
+                  "objectId": "pyramid",
+                  "element": "BC"
+                },
+                {
+                  "id": "eCD",
+                  "kind": "edge",
+                  "label": "الحافة CD",
+                  "objectId": "pyramid",
+                  "element": "CD"
+                },
+                {
+                  "id": "eDA",
+                  "kind": "edge",
+                  "label": "الحافة DA",
+                  "objectId": "pyramid",
+                  "element": "DA"
+                },
+                {
+                  "id": "eAE",
+                  "kind": "edge",
+                  "label": "الحافة AE",
+                  "objectId": "pyramid",
+                  "element": "AE"
+                },
+                {
+                  "id": "eBE",
+                  "kind": "edge",
+                  "label": "الحافة BE",
+                  "objectId": "pyramid",
+                  "element": "BE"
+                },
+                {
+                  "id": "eCE",
+                  "kind": "edge",
+                  "label": "الحافة CE",
+                  "objectId": "pyramid",
+                  "element": "CE"
+                },
+                {
+                  "id": "eDE",
+                  "kind": "edge",
+                  "label": "الحافة DE",
+                  "objectId": "pyramid",
+                  "element": "DE"
+                }
+              ]
+            },
+            "target": "vertex",
+            "mode": "single",
+            "maxSelections": 1,
+            "label": "اختر رأس الهرم E."
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "vertex:vE"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — القلب",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "scene3DSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر البطين الأيسر من النموذج التعليمي.",
+          "marks": 5,
+          "scene3DSelection": {
+            "v": 1,
+            "scene": {
+              "version": 1,
+              "id": "scene-heart",
+              "title": "القلب — نموذج تعليمي مبسّط",
+              "description": "نموذج تركيبي مبسّط للحجرات الأربع وبعض الأوعية الكبرى؛ ليس نموذجًا سريريًا.",
+              "camera": {
+                "yaw": -0.65,
+                "pitch": 0.45,
+                "zoom": 1
+              },
+              "interaction": {
+                "rotate": true,
+                "zoom": true,
+                "select": true
+              },
+              "objects": [
+                {
+                  "id": "leftVentricle",
+                  "label": "البطين الأيسر",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": -0.45,
+                    "y": -0.55,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 1.5,
+                    "y": 2.2,
+                    "z": 1.25
+                  },
+                  "palette": 6,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.18
+                  }
+                },
+                {
+                  "id": "rightVentricle",
+                  "label": "البطين الأيمن",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": 0.55,
+                    "y": -0.45,
+                    "z": 0.12
+                  },
+                  "size": {
+                    "x": 1.35,
+                    "y": 1.95,
+                    "z": 1.1
+                  },
+                  "palette": 5,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.16
+                  }
+                },
+                {
+                  "id": "leftAtrium",
+                  "label": "الأذين الأيسر",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": -0.55,
+                    "y": 0.75,
+                    "z": -0.08
+                  },
+                  "size": {
+                    "x": 1.1,
+                    "y": 1.05,
+                    "z": 1
+                  },
+                  "palette": 6
+                },
+                {
+                  "id": "rightAtrium",
+                  "label": "الأذين الأيمن",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": 0.62,
+                    "y": 0.78,
+                    "z": 0.08
+                  },
+                  "size": {
+                    "x": 1.1,
+                    "y": 1.05,
+                    "z": 1
+                  },
+                  "palette": 5
+                },
+                {
+                  "id": "aorta",
+                  "label": "الشريان الأبهر",
+                  "kind": "cylinder",
+                  "center": {
+                    "x": -0.1,
+                    "y": 1.55,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 0.48,
+                    "y": 1.45,
+                    "z": 0.48
+                  },
+                  "palette": 3,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.08
+                  }
+                },
+                {
+                  "id": "pulmonary",
+                  "label": "الشريان الرئوي",
+                  "kind": "cylinder",
+                  "center": {
+                    "x": 0.55,
+                    "y": 1.35,
+                    "z": 0.25
+                  },
+                  "size": {
+                    "x": 0.38,
+                    "y": 1.25,
+                    "z": 0.38
+                  },
+                  "palette": 2,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.25
+                  }
+                }
+              ],
+              "targets": [
+                {
+                  "id": "leftVentricle",
+                  "kind": "object",
+                  "label": "البطين الأيسر",
+                  "objectId": "leftVentricle"
+                },
+                {
+                  "id": "rightVentricle",
+                  "kind": "object",
+                  "label": "البطين الأيمن",
+                  "objectId": "rightVentricle"
+                },
+                {
+                  "id": "leftAtrium",
+                  "kind": "object",
+                  "label": "الأذين الأيسر",
+                  "objectId": "leftAtrium"
+                },
+                {
+                  "id": "rightAtrium",
+                  "kind": "object",
+                  "label": "الأذين الأيمن",
+                  "objectId": "rightAtrium"
+                },
+                {
+                  "id": "aorta",
+                  "kind": "object",
+                  "label": "الشريان الأبهر",
+                  "objectId": "aorta"
+                },
+                {
+                  "id": "pulmonary",
+                  "kind": "object",
+                  "label": "الشريان الرئوي",
+                  "objectId": "pulmonary"
+                }
+              ]
+            },
+            "target": "object",
+            "mode": "single",
+            "maxSelections": 1,
+            "label": "اختر البطين الأيسر من النموذج التعليمي."
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "object:leftVentricle"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-e",
+      "title": "هـ — جسم الإنسان",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e1",
+          "presentationType": "scene3DSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر الكبد من نموذج الجذع.",
+          "marks": 5,
+          "scene3DSelection": {
+            "v": 1,
+            "scene": {
+              "version": 1,
+              "id": "scene-torso",
+              "title": "أعضاء رئيسية في جذع جسم الإنسان",
+              "description": "نموذج تعليمي مبسّط لتحديد أعضاء رئيسية في الجذع.",
+              "camera": {
+                "yaw": -0.65,
+                "pitch": 0.45,
+                "zoom": 1
+              },
+              "interaction": {
+                "rotate": true,
+                "zoom": true,
+                "select": true
+              },
+              "objects": [
+                {
+                  "id": "leftLung",
+                  "label": "الرئة اليسرى",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": -0.75,
+                    "y": 0.55,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 1.05,
+                    "y": 2.15,
+                    "z": 0.8
+                  },
+                  "palette": 2,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.08
+                  }
+                },
+                {
+                  "id": "rightLung",
+                  "label": "الرئة اليمنى",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": 0.75,
+                    "y": 0.55,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 1.05,
+                    "y": 2.15,
+                    "z": 0.8
+                  },
+                  "palette": 2,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.08
+                  }
+                },
+                {
+                  "id": "heart",
+                  "label": "القلب",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": -0.08,
+                    "y": 0.15,
+                    "z": 0.52
+                  },
+                  "size": {
+                    "x": 0.95,
+                    "y": 1.15,
+                    "z": 0.7
+                  },
+                  "palette": 6,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.2
+                  }
+                },
+                {
+                  "id": "liver",
+                  "label": "الكبد",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": 0.58,
+                    "y": -1.05,
+                    "z": 0.1
+                  },
+                  "size": {
+                    "x": 1.8,
+                    "y": 0.8,
+                    "z": 0.75
+                  },
+                  "palette": 4,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.12
+                  }
+                },
+                {
+                  "id": "stomach",
+                  "label": "المعدة",
+                  "kind": "ellipsoid",
+                  "center": {
+                    "x": -0.62,
+                    "y": -1,
+                    "z": 0.18
+                  },
+                  "size": {
+                    "x": 0.95,
+                    "y": 1,
+                    "z": 0.7
+                  },
+                  "palette": 3,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.22
+                  }
+                }
+              ],
+              "targets": [
+                {
+                  "id": "leftLung",
+                  "kind": "object",
+                  "label": "الرئة اليسرى",
+                  "objectId": "leftLung"
+                },
+                {
+                  "id": "rightLung",
+                  "kind": "object",
+                  "label": "الرئة اليمنى",
+                  "objectId": "rightLung"
+                },
+                {
+                  "id": "heart",
+                  "kind": "object",
+                  "label": "القلب",
+                  "objectId": "heart"
+                },
+                {
+                  "id": "liver",
+                  "kind": "object",
+                  "label": "الكبد",
+                  "objectId": "liver"
+                },
+                {
+                  "id": "stomach",
+                  "kind": "object",
+                  "label": "المعدة",
+                  "objectId": "stomach"
+                }
+              ]
+            },
+            "target": "object",
+            "mode": "single",
+            "maxSelections": 1,
+            "label": "اختر الكبد من نموذج الجذع."
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "object:liver"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-f",
+      "title": "و — الكيمياء",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "f1",
+          "presentationType": "scene3DSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر ذرة الأكسجين في نموذج الماء.",
+          "marks": 5,
+          "scene3DSelection": {
+            "v": 1,
+            "scene": {
+              "version": 1,
+              "id": "scene-water",
+              "title": "جزيء ماء H₂O",
+              "description": "تمثيل تعليمي مبسّط لذرة أكسجين وذرتي هيدروجين.",
+              "camera": {
+                "yaw": -0.65,
+                "pitch": 0.45,
+                "zoom": 1
+              },
+              "interaction": {
+                "rotate": true,
+                "zoom": true,
+                "select": true
+              },
+              "objects": [
+                {
+                  "id": "oxygen",
+                  "label": "ذرة الأكسجين",
+                  "kind": "sphere",
+                  "center": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 1.25,
+                    "y": 1.25,
+                    "z": 1.25
+                  },
+                  "palette": 6
+                },
+                {
+                  "id": "hydrogenLeft",
+                  "label": "ذرة هيدروجين",
+                  "kind": "sphere",
+                  "center": {
+                    "x": -1.25,
+                    "y": -0.75,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 0.72,
+                    "y": 0.72,
+                    "z": 0.72
+                  },
+                  "palette": 1
+                },
+                {
+                  "id": "hydrogenRight",
+                  "label": "ذرة هيدروجين",
+                  "kind": "sphere",
+                  "center": {
+                    "x": 1.25,
+                    "y": -0.75,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 0.72,
+                    "y": 0.72,
+                    "z": 0.72
+                  },
+                  "palette": 1
+                },
+                {
+                  "id": "bondLeft",
+                  "label": "رابطة",
+                  "kind": "cylinder",
+                  "center": {
+                    "x": -0.62,
+                    "y": -0.38,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 0.18,
+                    "y": 1.5,
+                    "z": 0.18
+                  },
+                  "palette": 7,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": -0.72
+                  }
+                },
+                {
+                  "id": "bondRight",
+                  "label": "رابطة",
+                  "kind": "cylinder",
+                  "center": {
+                    "x": 0.62,
+                    "y": -0.38,
+                    "z": 0
+                  },
+                  "size": {
+                    "x": 0.18,
+                    "y": 1.5,
+                    "z": 0.18
+                  },
+                  "palette": 7,
+                  "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0.72
+                  }
+                }
+              ],
+              "targets": [
+                {
+                  "id": "oxygen",
+                  "kind": "object",
+                  "label": "ذرة الأكسجين",
+                  "objectId": "oxygen"
+                },
+                {
+                  "id": "hydrogenLeft",
+                  "kind": "object",
+                  "label": "ذرة الهيدروجين اليسرى",
+                  "objectId": "hydrogenLeft"
+                },
+                {
+                  "id": "hydrogenRight",
+                  "kind": "object",
+                  "label": "ذرة الهيدروجين اليمنى",
+                  "objectId": "hydrogenRight"
+                }
+              ]
+            },
+            "target": "object",
+            "mode": "single",
+            "maxSelections": 1,
+            "label": "اختر ذرة الأكسجين في نموذج الماء."
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "object:oxygen"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-g",
+      "title": "ز — 3D كمحتوى غني",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "g1",
+          "presentationType": "multipleChoice",
+          "text": "أي وصف يعبّر عن النموذج المعروض؟",
+          "marks": 5,
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "دوّر النموذج ثم لاحظ الأجزاء المعروضة."
+                  }
+                ]
+              },
+              {
+                "type": "interactive3D",
+                "scene": {
+                  "version": 1,
+                  "id": "scene-water",
+                  "title": "جزيء ماء H₂O",
+                  "description": "تمثيل تعليمي مبسّط لذرة أكسجين وذرتي هيدروجين.",
+                  "camera": {
+                    "yaw": -0.65,
+                    "pitch": 0.45,
+                    "zoom": 1
+                  },
+                  "interaction": {
+                    "rotate": true,
+                    "zoom": true,
+                    "select": true
+                  },
+                  "objects": [
+                    {
+                      "id": "oxygen",
+                      "label": "ذرة الأكسجين",
+                      "kind": "sphere",
+                      "center": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0
+                      },
+                      "size": {
+                        "x": 1.25,
+                        "y": 1.25,
+                        "z": 1.25
+                      },
+                      "palette": 6
+                    },
+                    {
+                      "id": "hydrogenLeft",
+                      "label": "ذرة هيدروجين",
+                      "kind": "sphere",
+                      "center": {
+                        "x": -1.25,
+                        "y": -0.75,
+                        "z": 0
+                      },
+                      "size": {
+                        "x": 0.72,
+                        "y": 0.72,
+                        "z": 0.72
+                      },
+                      "palette": 1
+                    },
+                    {
+                      "id": "hydrogenRight",
+                      "label": "ذرة هيدروجين",
+                      "kind": "sphere",
+                      "center": {
+                        "x": 1.25,
+                        "y": -0.75,
+                        "z": 0
+                      },
+                      "size": {
+                        "x": 0.72,
+                        "y": 0.72,
+                        "z": 0.72
+                      },
+                      "palette": 1
+                    },
+                    {
+                      "id": "bondLeft",
+                      "label": "رابطة",
+                      "kind": "cylinder",
+                      "center": {
+                        "x": -0.62,
+                        "y": -0.38,
+                        "z": 0
+                      },
+                      "size": {
+                        "x": 0.18,
+                        "y": 1.5,
+                        "z": 0.18
+                      },
+                      "palette": 7,
+                      "rotation": {
+                        "x": 0,
+                        "y": 0,
+                        "z": -0.72
+                      }
+                    },
+                    {
+                      "id": "bondRight",
+                      "label": "رابطة",
+                      "kind": "cylinder",
+                      "center": {
+                        "x": 0.62,
+                        "y": -0.38,
+                        "z": 0
+                      },
+                      "size": {
+                        "x": 0.18,
+                        "y": 1.5,
+                        "z": 0.18
+                      },
+                      "palette": 7,
+                      "rotation": {
+                        "x": 0,
+                        "y": 0,
+                        "z": 0.72
+                      }
+                    }
+                  ],
+                  "targets": [
+                    {
+                      "id": "oxygen",
+                      "kind": "object",
+                      "label": "ذرة الأكسجين",
+                      "objectId": "oxygen"
+                    },
+                    {
+                      "id": "hydrogenLeft",
+                      "kind": "object",
+                      "label": "ذرة الهيدروجين اليسرى",
+                      "objectId": "hydrogenLeft"
+                    },
+                    {
+                      "id": "hydrogenRight",
+                      "kind": "object",
+                      "label": "ذرة الهيدروجين اليمنى",
+                      "objectId": "hydrogenRight"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "options": [
+            {
+              "text": "جزيء ماء مبسّط"
+            },
+            {
+              "text": "مكعب"
+            },
+            {
+              "text": "قلب"
+            },
+            {
+              "text": "هرم"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -13,8 +13,9 @@ const chartSpec_1 = require("../charts/chartSpec");
 const functionGraphSpec_1 = require("../functionGraphs/functionGraphSpec");
 const graphTargets_1 = require("../functionGraphs/graphTargets");
 const surfaceSpec_1 = require("../functionSurfaces/surfaceSpec");
+const sceneSpec_1 = require("../interactive3d/sceneSpec");
 exports.RICH_CONTENT_SCHEMA_VERSION = 1;
-exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph", "functionSurface3D"]);
+exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph", "functionSurface3D", "interactive3D"]);
 exports.RICH_MARKS = Object.freeze(["bold", "italic", "underline", "code", "sup", "sub"]);
 exports.RICH_CODE_LANGUAGES = Object.freeze(["python", "java", "csharp", "pseudocode", "javascript", "html", "css", "sql", "text"]);
 exports.RICH_CALLOUT_VARIANTS = Object.freeze(["info", "note", "warning", "success", "important"]);
@@ -23,14 +24,15 @@ exports.RICH_LIMITS = Object.freeze({
     blocks: 200, runs: 200, blockChars: 20000, totalChars: 100000, listItems: 100, tableRows: 100, tableColumns: 12, cellChars: 2000,
     shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8,
     functionGraphs: 4,
-    functionSurfaces: 3
+    functionSurfaces: 3,
+    interactive3DScenes: 3
 });
 const BLOCK_KEYS = Object.freeze({
     heading: ["type", "level", "runs"], paragraph: ["type", "runs", "dir", "align"], unorderedList: ["type", "items"], orderedList: ["type", "items"],
     table: ["type", "caption", "columnHeaders", "rowHeaders", "rows", "responsive"], image: ["type", "asset", "alt"], figure: ["type", "asset", "alt", "caption"],
     code: ["type", "language", "source", "lineNumbers", "title"], cli: ["type", "source", "title"], quote: ["type", "runs", "citation"],
     callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"],
-    dataChart: ["type", "chart"], functionGraph: ["type", "graph"], functionSurface3D: ["type", "surface"]
+    dataChart: ["type", "chart"], functionGraph: ["type", "graph"], functionSurface3D: ["type", "surface"], interactive3D: ["type", "scene"]
 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const isPlain = (v) => {
@@ -63,8 +65,8 @@ function validateRichContent(raw, path = "richContent") {
     const issues = [];
     const add = (code, message, at) => { if (issues.length < 50)
         issues.push({ code, message, severity: "error", path: at }); };
-    let blockCount = 0, totalChars = 0, chartCount = 0, graphCount = 0, surfaceCount = 0;
-    const chartIds = new Set(), graphIds = new Set(), surfaceIds = new Set();
+    let blockCount = 0, totalChars = 0, chartCount = 0, graphCount = 0, surfaceCount = 0, interactive3DCount = 0;
+    const chartIds = new Set(), graphIds = new Set(), surfaceIds = new Set(), interactive3DIds = new Set();
     const keysOk = (o, allowed, at) => {
         let ok = true;
         for (const k of Object.keys(o))
@@ -559,6 +561,26 @@ function validateRichContent(raw, path = "richContent") {
                 out = { type: "functionSurface3D", surface: surface.value };
                 break;
             }
+            case "interactive3D": {
+                if (++interactive3DCount > exports.RICH_LIMITS.interactive3DScenes) {
+                    add("RICH_CONTENT_LIMIT", "عدد النماذج التفاعلية ثلاثية الأبعاد أكبر من الحد المسموح (" + exports.RICH_LIMITS.interactive3DScenes + ").", at);
+                    break;
+                }
+                const scene = (0, sceneSpec_1.validateInteractive3DSceneSpec)(b.scene, at + ".scene");
+                if (!scene.ok) {
+                    for (const i of scene.issues)
+                        add("RICH_CONTENT_INTERACTIVE_3D", i.message + " [" + i.code + "]", i.path);
+                    break;
+                }
+                if (interactive3DIds.has(scene.value.id)) {
+                    add("RICH_CONTENT_INTERACTIVE_3D", "معرّف نموذج 3D «" + scene.value.id + "» مكرّر في المحتوى نفسه.", at + ".scene.id");
+                    break;
+                }
+                interactive3DIds.add(scene.value.id);
+                totalChars += scene.value.title.length + scene.value.description.length + scene.value.objects.reduce((n, o) => n + o.label.length, 0) + scene.value.targets.reduce((n, t) => n + t.label.length + (t.detail?.length ?? 0), 0);
+                out = { type: "interactive3D", scene: scene.value };
+                break;
+            }
         }
         return issues.length === before ? out : undefined;
     };
@@ -670,6 +692,9 @@ function richContentPlainText(raw, opts = {}) {
                     break;
                 case "functionSurface3D":
                     out.push([b.surface.title, b.surface.description, "z = " + b.surface.expression].join("\n"));
+                    break;
+                case "interactive3D":
+                    out.push([b.scene.title, b.scene.description, ...b.scene.objects.map(o => o.label)].join("\n"));
                     break;
                 case "divider": break;
             }
