@@ -73,7 +73,7 @@ export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
         {scene.faces.map(f => <polygon key={f.id} points={f.points} fill={FILLS[f.shade]}
           stroke="#2f4f74" strokeWidth="0.35" />)}
       </svg>
-      <p className="ex3d-status">شبكة: {checked.value.grid.xSteps} × {checked.value.grid.ySteps} · مثلثات: {scene.faces.length} · خلايا مستبعدة: {mesh.skippedCells}</p>
+      <p className="ex3d-status" dir="ltr">x ∈ [{checked.value.viewport.xMin}, {checked.value.viewport.xMax}] · y ∈ [{checked.value.viewport.yMin}, {checked.value.viewport.yMax}] · z display ∈ [{checked.value.viewport.zMin}, {checked.value.viewport.zMax}]</p>
       <details className="ex3d-table">
         <summary>جدول قيم بديل للرسم (يدعم قارئ الشاشة)</summary>
         <div className="ex3d-scroll" tabIndex={0} role="region" aria-label="جدول قيم السطح">
