@@ -61,7 +61,8 @@ describe("20F-API staged pipeline: plan → sections, bounded repair, the client
     expect(r.jsonBody.coverage.length).toBeGreaterThan(3);
     expect(ai.calls[0].schemaName).toBe("ai_exam_plan");
     expect(JSON.stringify(ai.calls[0].schema)).toContain('"additionalProperties":false');
-    expect(ai.calls[0].prompt).toContain("AI_COMPOSER_CATALOG_V3");                  // Phase 21A catalog bump (Scientific Math v2) · 21A.1 bump (data charts)
+    // 21A.2: a new catalog capability adds V4; the previously pinned plan contract still applies.
+    expect(ai.calls[0].prompt).toContain("AI_COMPOSER_CATALOG_V4");                  // Phase 21A catalog bump (Scientific Math v2) · 21A.1 bump (data charts)
     expect(ai.calls[0].prompt).toContain("UNTRUSTED DATA");
     expect(reserved).toEqual(["teacher-1"]);
   });

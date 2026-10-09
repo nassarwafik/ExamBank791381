@@ -254,7 +254,7 @@ const { projectSectionScenariosForStudent } = require("./shared-finalization/sce
 function applyScenariosForStudent(out, section) {
   if (!("scenarios" in out)) return;
   const projected = projectSectionScenariosForStudent(section);
-  if (projected === undefined) delete out.scenarios; else out.scenarios = projected;
+  if (projected === undefined) delete out.scenarios; else out.scenarios = projected.map(s => ({ ...s, sources: projectStudentSources(s.sources) }));
 }
 // Phase 19G — the LEGACY shared stimulus (section.stimuli[groupId] and the per-question / per-part `stimulus` fallback the renderer reads)
 // is rebuilt through its allow-list — exactly what StructuredExamSection.StimulusBlock renders: title / text (strings only), image →
@@ -301,6 +301,12 @@ const { compositeStructure, compositeChildNode, compositeChildKey, projectCompos
 // section / exam presentation is the strict canonical copy (malformed → omitted → the default design). A parametric stem never carries
 // rich content (the generated instance replaces `text`; a rich twin would leak the {{id}} template). Academically inert.
 const { projectRichContentForStudent } = require("./shared-finalization/richContent/richContentModel");
+// 21A.2 SECURITY: rich SOURCE stimuli are strictly validated by the source authority, but their
+// function-graph annotations remain teacher-only. Apply the SAME public rich-block projection
+// as question stems before returning shared sources (both scenario and composite pathways).
+function projectStudentSources(sources) {
+  return sources.map(s => s.kind === "rich" ? { ...s, richContent: projectRichContentForStudent(s.richContent) } : s);
+}
 const { projectPresentationForStudent, projectSectionPresentationForStudent, projectQuestionPresentationForStudent } = require("./shared-finalization/presentation/presentationModel");
 function takePresentationFields(out) {
   const taken = { richContent: out.richContent, presentation: out.presentation };
@@ -336,7 +342,10 @@ function applyCompositeProjection(out, source, ctx) {
   };
   out.composite = {
     v: 1,
-    contexts: st.model.contexts.map(projectCompositeContextForStudent),
+    contexts: st.model.contexts.map(c => {
+      const projected = projectCompositeContextForStudent(c);
+      return c.kind === "source" ? { ...projected, sources: projectStudentSources(c.sources) } : projected;
+    }),
     groups: st.model.groups.map(g => ({ id: g.id, ...(g.title !== undefined ? { title: g.title } : {}), ...(g.instructions !== undefined ? { instructions: g.instructions } : {}), gradingPolicy: g.gradingPolicy, requiredAnswers: g.requiredAnswers, maxMarks: g.maxMarks, parts: g.parts.map(child) }))
   };
 }

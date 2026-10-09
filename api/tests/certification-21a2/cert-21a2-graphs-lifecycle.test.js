@@ -81,5 +81,21 @@ describe("21A2-LIFE acceptance exam, authority and grading", () => {
     expect(json).toContain("x^2 - 4*x + 3");
     expect(json).not.toMatch(/"correct"|"scoring"|"role"|"on"|"derivativeOf"|"slope"/);
     expect(questions(publicExam)[0].functionGraphSelection.graph.points).toHaveLength(4);
+    // The rich SOURCE inside the composite must obey the same public graph projection as standalone stems.
+    const shared = publicExam.sections[8].questions[0].composite.contexts[0].sources[0].richContent.blocks[1].graph;
+    expect(shared.points[0]).not.toHaveProperty("role");
+    expect(shared.points[0]).not.toHaveProperty("on");
+  });
+  it("scenario rich sources also remove teacher-only graph annotations without losing the curve", () => {
+    const exam = load();
+    const composite = exam.sections[8].questions[0].composite;
+    const richSource = composite.contexts[0].sources[0];
+    exam.sections[0].scenarios = [{ id: "scenario-graph", version: 1, sources: [richSource], questionIds: ["a1"] }];
+    const projected = sanitizeExamForStudent(exam);
+    expect(projected.sections[0].scenarios).toHaveLength(1);
+    const graph = projected.sections[0].scenarios[0].sources[0].richContent.blocks[1].graph;
+    expect(graph.curves).toHaveLength(1);
+    expect(graph.points[0]).not.toHaveProperty("role");
+    expect(graph.points[0]).not.toHaveProperty("on");
   });
 });
