@@ -7,13 +7,10 @@ exports.supportsQuestionTypeVersion = supportsQuestionTypeVersion;
 exports.effectiveQuestionTypeVersion = effectiveQuestionTypeVersion;
 exports.createVersionedRegistry = createVersionedRegistry;
 exports.resolveQuestionTypeKey = resolveQuestionTypeKey;
-const FLAG = { a: "autoGrading", m: "manualGrading", h: "hybridGrading", p: "partialCredit", c: "compoundPart", i: "interactive", r: "requiresImage", o: "offline" };
-const caps = (flags) => {
-    const c = { autoGrading: false, manualGrading: false, hybridGrading: false, partialCredit: false, compoundPart: false, interactive: false, requiresImage: false, offline: false };
-    for (const ch of flags)
-        c[FLAG[ch]] = true;
-    return Object.freeze(c);
-};
+const caps = (flags) => Object.freeze({
+    autoGrading: flags.includes("a"), manualGrading: flags.includes("m"), hybridGrading: flags.includes("h"), partialCredit: flags.includes("p"),
+    compoundPart: flags.includes("c"), interactive: flags.includes("i"), requiresImage: flags.includes("r"), offline: flags.includes("o")
+});
 const def = (d) => Object.freeze({ ...d, responseKinds: Object.freeze([...d.responseKinds]) });
 const row = (key, label, category, gradingMode, flags, responseKinds, legacy = false, version = 1) => def({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds, legacy });
 const PRODUCTION_VERSIONS = Object.freeze({ coding: 3 });
@@ -34,7 +31,7 @@ const PRODUCTION_ROWS = [
     ["composite", "سؤال مركّب متقدّم", "composite", "composed", "amhpio", ["composite"], false],
     ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", "apio", ["chartSelection"], false],
     ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", "apio", ["functionGraphSelection"], false],
-    ["scene3DSelection", "اختيار 3D", "interactive", "auto", "apio", ["scene3DSelection"], false],
+    ["scene3DSelection", "3D", "interactive", "auto", "apio", ["scene3DSelection"], false],
     ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
     ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
     ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
@@ -49,7 +46,7 @@ const PRODUCTION_ROWS = [
     ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", "mpo", ["text"], false],
     ["smartSim", "محاكاة موثوقة (SmartSim)", "interactive", "auto", "apio", ["smartSim"], false]
 ];
-exports.QUESTION_TYPE_CATALOG = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
+exports.QUESTION_TYPE_CATALOG = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], r[5], r[6], PRODUCTION_VERSIONS[r[0]] ?? 1)));
 const questionTypeIdentityKey = (key, version) => key + "@" + version;
 exports.questionTypeIdentityKey = questionTypeIdentityKey;
 const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{1,63}$/;
