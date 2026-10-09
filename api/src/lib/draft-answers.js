@@ -30,6 +30,10 @@ const { bindLabelDiagramAnswerToQuestion } = require("./shared-finalization/labe
 // coordinates or extra fields are dropped). Bound to its chartSelection@1 question it must name the question's own chart, known targets
 // only, no duplicates, within the selection bound (contiguous in range mode) — otherwise REFUSED; on any other question it is refused.
 const { bindChartSelectionAnswerToQuestion, normalizeChartSelectionAnswer } = require("./shared-finalization/chartSelectionQuestion");
+// Phase 21A.2 — a `functionGraphSelection` answer is rebuilt to exactly { kind, graphId, targets } (semantic target keys only; a client
+// score, coordinates or extra fields are dropped). Bound to its functionGraphSelection@1 question it must name the question's own graph,
+// known targets of the selectable kind only, no duplicates, within the selection bound — otherwise REFUSED; on any other question it is refused.
+const { bindFunctionGraphSelectionAnswerToQuestion, normalizeFunctionGraphSelectionAnswer } = require("./shared-finalization/functionGraphSelectionQuestion");
 // Phase 19E — an answer on an openResponse question is rebuilt to exactly { kind: "text", value } (a client score / rubric awards /
 // model answer / comment are dropped), the text kept verbatim and bounded by the question's maxChars (over-long ⇒ rejected, never
 // truncated); any other kind is rejected.
@@ -70,6 +74,8 @@ const isCodingV3Question = q => !!q && typeof q === "object" && String(q.present
 const isLabelDiagramQuestion = q => !!q && typeof q === "object" && q.presentationType === "labelDiagram";
 const isChartSelection = a => !!a && typeof a === "object" && a.kind === "chartSelection";
 const isChartSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "chartSelection";
+const isFunctionGraphSelection = a => !!a && typeof a === "object" && a.kind === "functionGraphSelection";
+const isFunctionGraphSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "functionGraphSelection";
 const isSmartSim = a => !!a && typeof a === "object" && a.kind === "smartSim";
 const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "smartSim";
 
@@ -87,6 +93,7 @@ function bindAnswer(id, a, q, bound, reject, placement) {
   if (isNetworkCli(a)) return bound ? bindNetworkCliAnswerToQuestion(a, q) : normalizeNetworkCliAnswer(a);
   if (isHotspot(a) || (bound && isHotspotQuestion(q))) return bound ? (isHotspotQuestion(q) ? bindHotspotAnswerToQuestion(a, q) : { ok: false, code: "HOTSPOT_QUESTION_MISMATCH" }) : normalizeHotspotAnswer(a);
   if (isChartSelection(a) || (bound && isChartSelectionQuestion(q))) return bound ? (isChartSelectionQuestion(q) ? bindChartSelectionAnswerToQuestion(a, q) : { ok: false, code: "CHART_SELECTION_QUESTION_MISMATCH" }) : normalizeChartSelectionAnswer(a);
+  if (isFunctionGraphSelection(a) || (bound && isFunctionGraphSelectionQuestion(q))) return bound ? (isFunctionGraphSelectionQuestion(q) ? bindFunctionGraphSelectionAnswerToQuestion(a, q) : { ok: false, code: "GRAPH_SELECTION_QUESTION_MISMATCH" }) : normalizeFunctionGraphSelectionAnswer(a);
   if (bound && isLabelDiagramQuestion(q)) return bindLabelDiagramAnswerToQuestion(a, q);
   if (bound && isOpenResponseQuestion(q)) return bindOpenResponseAnswerToQuestion(a, q);
   if (bound && isParametricQuestion(q)) return bindParametricNumericAnswer(a);
@@ -107,6 +114,7 @@ function bindAnswer(id, a, q, bound, reject, placement) {
       if (isSmartSim(a.parts[pid])) { reject(id + "." + pid, "SMARTSIM_QUESTION_MISMATCH"); continue; }
       if (isHotspot(a.parts[pid])) { reject(id + "." + pid, "HOTSPOT_QUESTION_MISMATCH"); continue; }
       if (isChartSelection(a.parts[pid])) { reject(id + "." + pid, "CHART_SELECTION_QUESTION_MISMATCH"); continue; }
+      if (isFunctionGraphSelection(a.parts[pid])) { reject(id + "." + pid, "GRAPH_SELECTION_QUESTION_MISMATCH"); continue; }
       if (!own.has(pid)) { reject(id + "." + pid, "COMPOUND_PART_UNKNOWN"); continue; }
       const r = bindLegacyAnswer(a.parts[pid], own.get(pid), "part");
       if (r.ok) setOwn(parts, pid, r.answer); else reject(id + "." + pid, r.code);
@@ -176,7 +184,7 @@ const CHILD_ANSWER_SHAPES = {
   multiChoice: a => Array.isArray(a.optionIds),
   numeric: a => typeof a.value === "string" && (a.unit === undefined || typeof a.unit === "string"),
   // rebuilt / normalized by their own binders above (the binder already refused anything malformed)
-  simulation: () => true, code: () => true, codeTemplate: () => true, smartSim: () => true, networkCli: () => true, hotspot: () => true, chartSelection: () => true
+  simulation: () => true, code: () => true, codeTemplate: () => true, smartSim: () => true, networkCli: () => true, hotspot: () => true, chartSelection: () => true, functionGraphSelection: () => true
 };
 const childAnswerWellFormed = a => isPlain(a) && typeof a.kind === "string" && Object.prototype.hasOwnProperty.call(CHILD_ANSWER_SHAPES, a.kind) && CHILD_ANSWER_SHAPES[a.kind](a);
 function bindCompositeAnswer(id, a, q, bound, reject) {

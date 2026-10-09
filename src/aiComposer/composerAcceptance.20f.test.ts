@@ -62,7 +62,14 @@ describe("20F-ACC acceptance fixtures A–E: natural language → canonical stru
       // pinned export (docs/fixtures/ai-composer-20f/<name>.json)
       const file = path.join(FIX_DIR, f.name + ".json");
       if (process.env.WRITE_20F_FIXTURES) { fs.mkdirSync(FIX_DIR, { recursive: true }); fs.writeFileSync(file, JSON.stringify(exam, null, 2) + "\n"); }
-      expect(JSON.parse(fs.readFileSync(file, "utf8"))).toEqual(JSON.parse(json));
+      // 21A.2: preserve the five 20F golden exams byte-for-byte. The ONLY allowed delta
+      // is the code-owned catalog token stamped on this NEW composer operation (V3 → V4).
+      const golden = JSON.parse(fs.readFileSync(file, "utf8"));
+      const actual = JSON.parse(json);
+      expect(golden.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V3");
+      expect(actual.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V4");
+      actual.metadata.aiComposer.catalog = golden.metadata.aiComposer.catalog;
+      expect(actual).toEqual(golden);
     });
   }
 

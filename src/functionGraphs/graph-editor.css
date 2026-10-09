@@ -1,0 +1,29 @@
+/* Phase 21A.2 — the function-graph editor (lazy builder chunk only). sb-* house style, logical properties (RTL and LTR), visible focus,
+   wraps on phones (never a horizontal page scroll). Every selector is scoped under .ge. */
+.ge{display:flex;flex-direction:column;gap:8px;min-inline-size:0}
+.ge .ge-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 10px;min-inline-size:0}
+.ge .ge-field{display:flex;flex-direction:column;gap:2px;font-size:12.5px;font-weight:700;color:var(--muted,#64748b);min-inline-size:0}
+.ge .ge-field > span{font-weight:700}
+.ge .ge-field-long,.ge .ge-field-expr{flex:1 1 220px}
+.ge .ge-text{min-inline-size:0;inline-size:100%;box-sizing:border-box;font-weight:400;color:var(--text,#0f172a)}
+.ge .ge-expr{inline-size:100%;min-inline-size:12em;box-sizing:border-box;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:400;color:var(--text,#0f172a)}
+.ge .ge-num{inline-size:7.5em;font-variant-numeric:tabular-nums;font-weight:400;color:var(--text,#0f172a)}
+.ge .ge-check{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;min-block-size:32px}
+.ge .ge-section{display:flex;flex-direction:column;gap:6px;margin:0;padding:8px;border:1px solid var(--line,#e5e9f0);border-radius:10px;min-inline-size:0}
+.ge .ge-section > legend{font-size:13px;font-weight:800;padding-inline:4px}
+.ge .ge-item{margin:0;padding:6px 8px;border:1px dashed var(--line2,#cdd5e0);border-radius:8px;min-inline-size:0}
+.ge .ge-item > legend{font-size:12px;font-weight:800;color:var(--muted,#64748b);padding-inline:4px;max-inline-size:100%;overflow-wrap:anywhere}
+.ge .ge-domain,.ge .ge-on{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px;margin:0;padding:4px 6px;border:1px dotted var(--line2,#cdd5e0);border-radius:6px}
+.ge .ge-domain > legend,.ge .ge-on > legend{font-size:11.5px;color:var(--muted,#64748b)}
+.ge .ge-piece{padding-inline-start:8px;border-inline-start:3px solid var(--line2,#cdd5e0)}
+.ge .ge-icon{min-inline-size:32px}
+.ge [aria-invalid="true"]{border-color:#b91c1c;box-shadow:inset 0 0 0 1px #b91c1c;background:#fef2f2}
+.ge .ge-error{display:block;color:#b91c1c;font-size:11.5px;font-weight:400;line-height:1.35;max-inline-size:28em}
+.ge .ge-hint{margin:0;font-size:12px;color:var(--muted,#64748b)}
+.ge .ge-issues,.ge .ge-issues-inline{margin:0;padding-block:6px;padding-inline:26px 10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:12.5px;line-height:1.7}
+.ge .ge-issues-inline{padding-block:2px;font-size:12px;flex-basis:100%}
+.ge .ge-features{padding:6px 8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px;font-size:12.5px}
+.ge .ge-features ul{margin:4px 0 0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px}
+.ge .ge-preview{min-inline-size:0}
+.ge :is(button,input,select,textarea):focus-visible{outline:3px solid var(--primary,#2563eb);outline-offset:2px}
+@media (max-width:480px){ .ge .ge-icon{min-inline-size:44px;min-block-size:44px} .ge .ge-num{inline-size:6.5em} }

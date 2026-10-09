@@ -15,13 +15,15 @@ import { FREE_FALL_LIMITS } from "../physicsFreeFallModel";
 import { FUNCTION_STUDY_TASKS, FUNCTION_STUDY_LIMITS } from "../functionStudyModel";
 import { CHART_KINDS, CHART_LIMITS } from "../charts/chartSpec";
 import { AI_CHART_DATA_ORIGINS, AI_CHART_POINTS } from "./composerChart";
+import { AI_GRAPH_CURVES } from "./composerGraph";
 import "../trustedSimPlugins";
 
 // V3 (Phase 21A.1): the catalog gained the data-chart capability (the dataChart rich block + its declarative chart descriptor contract).
 // V2 (Phase 21A): the catalog gained the Scientific Math v2 capability (scientificMath + its prompt contract). metadata.aiComposer.catalog
 // records the catalog of the exam's LAST composer operation (withComposerHistory re-stamps it): an exam last composed under V1 keeps "V1"
 // until its next composer operation; nothing validates or migrates it.
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V3";
+// Phase 21A.2: explicit-author-formula-only function graphs, not invented mathematics.
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V4";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
@@ -84,9 +86,10 @@ export const isUnsupportedCapabilityId = (id: unknown): boolean => typeof id ===
 // ── presentation, rich content, coding: the 20D.1 / 19F vocabularies, exactly ─────────────────────────────────────────────────────────
 export const COMPOSER_PRESETS = Object.freeze(Object.keys(PRESENTATION_PRESETS)) as readonly (keyof typeof PRESENTATION_PRESETS)[];
 /** The rich blocks the AI may emit (images / figures / columns are never AI-authored: no URL, no data URL, no layout nesting). */
-export const COMPOSER_RICH_BLOCKS = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "math", "dataChart"] as const);
+export const COMPOSER_RICH_BLOCKS = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "math", "dataChart", "functionGraph"] as const);
 /** Phase 21A.1 — the data-chart capability: the chart kinds the AI may describe (the ChartSpecV1 vocabulary) and the descriptor bounds. */
 export const COMPOSER_CHARTS = Object.freeze({ kinds: CHART_KINDS, origins: AI_CHART_DATA_ORIGINS, categories: CHART_LIMITS.categories, series: CHART_LIMITS.series, points: AI_CHART_POINTS, bins: CHART_LIMITS.bins, boxes: CHART_LIMITS.boxes });
+export const COMPOSER_FUNCTION_GRAPHS = Object.freeze({ language: 3, curves: AI_GRAPH_CURVES, kinds: ["explicit"] as const });
 export type ComposerRichBlockType = (typeof COMPOSER_RICH_BLOCKS)[number];
 export const COMPOSER_RICH_CODE_LANGUAGES = RICH_CODE_LANGUAGES;
 export const COMPOSER_CALLOUT_VARIANTS = RICH_CALLOUT_VARIANTS;
@@ -115,6 +118,7 @@ export type ComposerCatalog = {
   codingLanguages: readonly string[];
   scientificMath: typeof COMPOSER_SCIENTIFIC_MATH;
   charts: typeof COMPOSER_CHARTS;
+  functionGraphs: typeof COMPOSER_FUNCTION_GRAPHS;
   unsupported: UnsupportedCapability[];
 };
 
@@ -153,6 +157,7 @@ export function buildComposerCatalog(): ComposerCatalog {
     codingLanguages: COMPOSER_CODING_LANGUAGES,
     scientificMath: COMPOSER_SCIENTIFIC_MATH,
     charts: COMPOSER_CHARTS,
+    functionGraphs: COMPOSER_FUNCTION_GRAPHS,
     unsupported: COMPOSER_UNSUPPORTED.map(u => ({ id: u.id, label: u.label }))
   };
 }
@@ -168,10 +173,11 @@ export function catalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog
     "functionStudy2d@1: expression language 2 in the single variable x (numbers, + - * / % ^, parentheses, abs, round, floor, ceil, min, max, sqrt, pow, log (natural), log10, exp; nothing else); tasks: " + catalog.functionStudy.tasks.join(", ") + "; |x| <= " + catalog.functionStudy.bounds.xAbsMax + ". Your expected answers are checked numerically against the expression.",
     "Presentation presets: " + catalog.presets.join(", "),
     // 21A.1: the pre-21A.1 block list keeps its exact wording; dataChart is announced after it and specified on the Charts line
-    "Rich blocks: " + catalog.richBlocks.filter(b => b !== "dataChart").join(", ") + " (no images, no HTML, no CSS, no URLs)" + (catalog.richBlocks.includes("dataChart") ? "; dataChart (a declarative data chart — see Charts)." : "."),
+    "Rich blocks: " + catalog.richBlocks.filter(b => b !== "dataChart" && b !== "functionGraph").join(", ") + " (no images, no HTML, no CSS, no URLs)" + (catalog.richBlocks.includes("dataChart") ? "; dataChart (a declarative data chart — see Charts)" : "") + (catalog.richBlocks.includes("functionGraph") ? "; functionGraph (a declarative mathematical function graph — see Function graphs)." : "."),
     "Coding languages: " + catalog.codingLanguages.join(", "),
     scientificMathForPrompt(catalog.scientificMath),
     chartsForPrompt(catalog.charts),
+    "Function graphs: a functionGraph block contains 1–" + catalog.functionGraphs.curves + " explicit y=f(x) curves in expression language " + catalog.functionGraphs.language + " (sin, cos, tan, ln, pi, e). Only copy exact mathematical formulas the teacher EXPLICITLY wrote, never infer a formula from a description. Use null for all four viewport bounds to choose defaults, or copy teacher-written bounds. Copy domain bounds only if written. Never create points, roots, extrema, derivatives, tangents, regions, answer keys, roles, custom JS, HTML, CSS or engine options." ,
     "NOT supported (never simulate; propose a theory question or omit and report it): " + catalog.unsupported.map(u => u.label).join(", ")
   ];
   return lines.join("\n");

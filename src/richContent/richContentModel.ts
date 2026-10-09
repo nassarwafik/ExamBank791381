@@ -8,9 +8,11 @@ import { validateImageAsset, type ImageAssetV1 } from "../imageAsset";
 import { parseMath } from "./richMath";
 import { CONTROL, RAW_HTML } from "./proseGuard";
 import { validateChartSpec, chartPlainText, type ChartSpecV1 } from "../charts/chartSpec";
+import { validateFunctionGraphSpec, projectGraphForStudent, type FunctionGraphSpecV1 } from "../functionGraphs/functionGraphSpec";
+import { graphPlainText } from "../functionGraphs/graphTargets";
 
 export const RICH_CONTENT_SCHEMA_VERSION = 1 as const;
-export const RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"] as const);
+export const RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph"] as const);
 export type RichBlockType = (typeof RICH_BLOCK_TYPES)[number];
 export const RICH_MARKS = Object.freeze(["bold", "italic", "underline", "code", "sup", "sub"] as const);
 export type RichMark = (typeof RICH_MARKS)[number];
@@ -19,7 +21,9 @@ export const RICH_CALLOUT_VARIANTS = Object.freeze(["info", "note", "warning", "
 export const RICH_TABLE_RESPONSIVE = Object.freeze(["scroll", "stack", "compact"] as const);
 export const RICH_LIMITS = Object.freeze({
   blocks: 200, runs: 200, blockChars: 20000, totalChars: 100000, listItems: 100, tableRows: 100, tableColumns: 12, cellChars: 2000,
-  shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8
+  shortText: 500, codeBytes: 65536, mathChars: 2000, keyValueItems: 50, columnDepth: 1, serializedBytes: 524288, charts: 8,
+  // Phase 21A.2: function graphs per document (each is sampled and drawn on the student's device)
+  functionGraphs: 4
 });
 
 export type RichRun = { text: string; marks?: RichMark[]; dir?: "ltr" | "rtl" } | { math: string };
@@ -40,7 +44,10 @@ export type RichBlock =
   | { type: "columns"; columns: { blocks: RichBlock[] }[] }
   | { type: "math"; source: string }
   // Phase 21A.1: a declarative data chart (ExamBank ChartSpecV1 — never a rendering-library option), validated by the ONE chart authority.
-  | { type: "dataChart"; chart: ChartSpecV1 };
+  | { type: "dataChart"; chart: ChartSpecV1 }
+  // Phase 21A.2: a declarative mathematical function graph (ExamBank FunctionGraphSpecV1 — never a plotting-library option), validated by
+  // the ONE graph authority (expressions are data for the safe engine, never code).
+  | { type: "functionGraph"; graph: FunctionGraphSpecV1 };
 export type RichContentV1 = { schemaVersion: 1; blocks: RichBlock[] };
 export type RichIssue = { code: string; message: string; severity: "error"; path: string };
 export type RichResult = { ok: boolean; value?: RichContentV1; issues: RichIssue[] };
@@ -50,7 +57,7 @@ const BLOCK_KEYS: Readonly<Record<RichBlockType, readonly string[]>> = Object.fr
   table: ["type", "caption", "columnHeaders", "rowHeaders", "rows", "responsive"], image: ["type", "asset", "alt"], figure: ["type", "asset", "alt", "caption"],
   code: ["type", "language", "source", "lineNumbers", "title"], cli: ["type", "source", "title"], quote: ["type", "runs", "citation"],
   callout: ["type", "variant", "title", "runs"], divider: ["type"], keyValueGrid: ["type", "items"], columns: ["type", "columns"], math: ["type", "source"],
-  dataChart: ["type", "chart"]
+  dataChart: ["type", "chart"], functionGraph: ["type", "graph"]
 });
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const isPlain = (v: unknown): v is Record<string, unknown> => {
@@ -76,8 +83,8 @@ export const looksLikeRawHtml = (s: string): boolean => RAW_HTML.test(s);
 export function validateRichContent(raw: unknown, path = "richContent"): RichResult {
   const issues: RichIssue[] = [];
   const add = (code: string, message: string, at: string) => { if (issues.length < 50) issues.push({ code, message, severity: "error", path: at }); };
-  let blockCount = 0, totalChars = 0, chartCount = 0;
-  const chartIds = new Set<string>();
+  let blockCount = 0, totalChars = 0, chartCount = 0, graphCount = 0;
+  const chartIds = new Set<string>(), graphIds = new Set<string>();
   const keysOk = (o: Record<string, unknown>, allowed: readonly string[], at: string): boolean => {
     let ok = true;
     for (const k of Object.keys(o)) if (FORBIDDEN_KEYS.has(k) || !allowed.includes(k)) { add("RICH_CONTENT_UNKNOWN_KEY", "حقل غير معروف في المحتوى المنسق: " + k, at + "." + k); ok = false; }
@@ -315,6 +322,16 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
         out = { type: "dataChart", chart: c.value };
         break;
       }
+      case "functionGraph": {
+        if (++graphCount > RICH_LIMITS.functionGraphs) { add("RICH_CONTENT_LIMIT", "عدد رسوم الدوال في المحتوى المنسق أكبر من الحد المسموح (" + RICH_LIMITS.functionGraphs + ").", at); break; }
+        const g = validateFunctionGraphSpec(b.graph, at + ".graph");
+        if (!g.ok) { for (const i of g.issues) add("RICH_CONTENT_FUNCTION_GRAPH", i.message + " [" + i.code + "]", i.path); break; }
+        if (graphIds.has(g.value.id)) { add("RICH_CONTENT_FUNCTION_GRAPH", "معرّف رسم الدالة «" + g.value.id + "» مكرّر في المحتوى نفسه.", at + ".graph.id"); break; }
+        graphIds.add(g.value.id);
+        totalChars += g.value.title.length + g.value.description.length + (g.value.source?.length ?? 0);
+        out = { type: "functionGraph", graph: g.value };
+        break;
+      }
     }
     return issues.length === before ? out : undefined;
   };
@@ -339,7 +356,11 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
 /** The student projection: the strict canonical rebuild, or undefined (→ the plain `text` fallback). Never a spread of stored data. */
 export function projectRichContentForStudent(raw: unknown): RichContentV1 | undefined {
   const r = validateRichContent(raw);
-  return r.ok ? r.value : undefined;
+  if (!r.ok || !r.value) return undefined;
+  // Phase 21A.2: a function graph reaches a student without its teacher-only semantics (roles, on-curve claims, derivative relations,
+  // authored slopes — none changes the drawing); every other block is the validated canonical value, as before.
+  const project = (blocks: RichBlock[]): RichBlock[] => blocks.map(b => (b.type === "functionGraph" ? { type: "functionGraph", graph: projectGraphForStudent(b.graph) } : b.type === "columns" ? { ...b, columns: b.columns.map(c => ({ blocks: project(c.blocks) })) } : b));
+  return r.value.blocks.some(function has(b): boolean { return b.type === "functionGraph" || (b.type === "columns" && b.columns.some(c => c.blocks.some(has))); }) ? { schemaVersion: 1, blocks: project(r.value.blocks) } : r.value;
 }
 
 const runsText = (runs: readonly RichRun[]) => runs.map(r => ("text" in r ? r.text : r.math)).join("");
@@ -364,6 +385,7 @@ export function richContentPlainText(raw: unknown, opts: { storedOnly?: boolean 
         case "columns": for (const c of b.columns) walk(c.blocks); break;
         case "math": out.push(b.source); break;
         case "dataChart": out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : chartPlainText(b.chart)); break;
+        case "functionGraph": out.push(opts.storedOnly ? [b.graph.title, b.graph.description, b.graph.source ?? ""].join("\n") : graphPlainText(b.graph)); break;
         case "divider": break;
       }
     }

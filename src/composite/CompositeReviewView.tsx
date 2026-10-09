@@ -22,6 +22,8 @@ const RubricGradingPanel = lazy(() => import("../openResponse/RubricGradingPanel
 const ParametricAnswerView = lazy(() => import("../parametric/ParametricReviewView").then(m => ({ default: m.ParametricAnswerView })));
 // Phase 21A.1 — a chartSelection@1 child is reviewed on its chart (✓ / ✗ / missed), exactly like a standalone chart question (teacher-only, lazy).
 const ChartSelectionReview = lazy(() => import("../charts/ChartSelectionReview"));
+// Phase 21A.2 — a functionGraphSelection@1 child is reviewed on its graph (✓ / ✗ / missed), like a standalone graph question (teacher-only, lazy).
+const FunctionGraphSelectionReview = lazy(() => import("../functionGraphs/FunctionGraphSelectionReview"));
 
 export type CompositePartOverride = { score?: number | string; comment?: string; rubricAwards?: unknown };
 type Json = Record<string, unknown>;
@@ -94,6 +96,11 @@ function AnswerBlock({ p, ctx, question, override, onOverride, locked, onRegrade
   if (p.type === "chartSelection") return (
     <div className="cmp-review-cell"><span>إجابة الطالب على الرسم (الإجابة المعتمدة للمعلم فقط)</span>
       <Suspense fallback={<Loading text="جارٍ تحميل مراجعة الرسم البياني..." />}><ChartSelectionReview config={p.node?.chartSelection} answerKey={p.expectedAnswer} answer={p.studentAnswer} /></Suspense>
+    </div>
+  );
+  if (p.type === "functionGraphSelection") return (
+    <div className="cmp-review-cell"><span>إجابة الطالب على رسم الدالة (الإجابة المعتمدة للمعلم فقط)</span>
+      <Suspense fallback={<Loading text="جارٍ تحميل مراجعة رسم الدالة..." />}><FunctionGraphSelectionReview config={p.node?.functionGraphSelection} answerKey={p.expectedAnswer} answer={p.studentAnswer} /></Suspense>
     </div>
   );
   let student: ReactNode, expected: ReactNode;

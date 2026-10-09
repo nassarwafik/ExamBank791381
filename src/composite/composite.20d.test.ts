@@ -23,7 +23,7 @@ const FIXTURES = { A: compositeArabicExam, B: compositePhysicsExam, C: composite
 
 describe("20D-1 catalog identity", () => {
   it("25 production types; composite@1 sits right after compound; compound@1 is unchanged and never nests composite", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(26);   /* 21A.1 inserts chartSelection@1 right after composite */
+    expect(QUESTION_TYPE_CATALOG.length).toBe(27);   /* 21A.1 inserts chartSelection@1 right after composite · 21A.2 inserts functionGraphSelection@1 right after chartSelection */
     const keys = QUESTION_TYPE_CATALOG.map(d => d.key);
     expect(keys.indexOf("composite")).toBe(keys.indexOf("compound") + 1);
     expect(questionTypeDefinition("composite")).toEqual({ key: "composite", version: 1, label: "سؤال مركّب متقدّم", category: "composite", gradingMode: "composed", capabilities: { autoGrading: true, manualGrading: true, hybridGrading: true, partialCredit: true, compoundPart: false, interactive: true, requiresImage: false, offline: true }, responseKinds: ["composite"], legacy: false });
@@ -35,7 +35,8 @@ describe("20D-1 catalog identity", () => {
       "multipleChoice@1", "trueFalse@1", "multiTrueFalse@1", "shortAnswer@1", "fillBlank@1", "wordBank@1", "matching@1", "ordering@1", "tableFill@1", "cliFill@1",
       "multipleSelect@1", "numericResponse@1", "matrix@1", "categorization@1", "simulation@1", "coding@1", "coding@2", "coding@3", "networkCli@1", "inlineCloze@1",
       "parametricNumeric@1", "hotspot@1", "labelDiagram@1", "openResponse@1", "smartSim@1",
-      "chartSelection@1"]);   // 21A.1 appends the chart-selection part
+      "chartSelection@1",   // 21A.1 appends the chart-selection part
+      "functionGraphSelection@1"]);   // 21A.2 appends the function-graph selection part
     expect(model.isSupportedCompositeChild("compound", 1)).toBe(false);
     expect(model.isSupportedCompositeChild("composite", 1)).toBe(false);
     expect(model.isSupportedCompositeChild("coding", 4)).toBe(false);

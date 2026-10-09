@@ -7,6 +7,7 @@ import type { InlineClozeConfigV1 } from "./inlineClozeQuestion";
 import type { HotspotConfigV1 } from "./hotspotQuestion";
 import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
 import type { ChartSelectionConfigV1 } from "./chartSelectionQuestion";
+import type { FunctionGraphSelectionConfigV1 } from "./functionGraphSelectionQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
 import type { RichContentV1 } from "./richContent/richContentModel";
@@ -162,6 +163,7 @@ export type BuilderQuestion = {
   labelDiagram?: LabelDiagramConfigV1;
   // Phase 21A.1 — the PUBLIC chart-selection config (declarative chart + target kind + mode); the correct targets live under `answer`.
   chartSelection?: ChartSelectionConfigV1;
+  functionGraphSelection?: FunctionGraphSelectionConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;
@@ -218,6 +220,7 @@ export type QuestionBody = {
   labelDiagram?: LabelDiagramConfigV1;
   // Phase 21A.1 — the PUBLIC chart-selection config (declarative chart + target kind + mode); the correct targets live under `answer`.
   chartSelection?: ChartSelectionConfigV1;
+  functionGraphSelection?: FunctionGraphSelectionConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;

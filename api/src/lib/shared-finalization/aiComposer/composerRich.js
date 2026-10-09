@@ -9,6 +9,7 @@ const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
 const composerSchemaKit_1 = require("./composerSchemaKit");
 const composerChart_1 = require("./composerChart");
+const composerGraph_1 = require("./composerGraph");
 const L = composerLimits_1.COMPOSER_LIMITS;
 const DIRS = ["auto", "rtl", "ltr"];
 function buildRichBlockSchema() {
@@ -16,12 +17,13 @@ function buildRichBlockSchema() {
         type: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_RICH_BLOCKS), text: (0, composerSchemaKit_1.sStr)(), level: (0, composerSchemaKit_1.sInt)(2, 4), dir: (0, composerSchemaKit_1.sEnum)(DIRS), items: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), L.richItems),
         headers: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), L.richTableColumns), rows: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), L.richTableColumns), L.richTableRows), language: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_RICH_CODE_LANGUAGES),
         source: (0, composerSchemaKit_1.sStr)(), variant: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_CALLOUT_VARIANTS), title: (0, composerSchemaKit_1.sStr)(), pairs: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ label: (0, composerSchemaKit_1.sStr)(), value: (0, composerSchemaKit_1.sStr)() }), L.richItems),
-        chart: (0, composerSchemaKit_1.sNull)((0, composerChart_1.buildAiChartSchema)())
+        chart: (0, composerSchemaKit_1.sNull)((0, composerChart_1.buildAiChartSchema)()),
+        graph: (0, composerSchemaKit_1.sNull)((0, composerGraph_1.buildAiGraphSchema)())
     });
 }
 const buildRichBlocksSchema = () => (0, composerSchemaKit_1.sArr)(buildRichBlockSchema(), L.richBlocks);
 exports.buildRichBlocksSchema = buildRichBlocksSchema;
-const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs", "chart"];
+const BLOCK_KEYS = ["type", "text", "level", "dir", "items", "headers", "rows", "language", "source", "variant", "title", "pairs", "chart", "graph"];
 const runs = (text) => [{ text }];
 function mapAiRichBlocks(raw, path = "richContent", chartPolicy) {
     const fail = (message, p = path) => ({ ok: false, issues: [{ code: "AI_RICH_CONTENT_INVALID", message, path: p }] });
@@ -32,7 +34,8 @@ function mapAiRichBlocks(raw, path = "richContent", chartPolicy) {
     const blocks = [];
     for (let i = 0; i < raw.length; i++) {
         const b = raw[i], p = path + "[" + i + "]";
-        if (!(0, composerSchemaKit_1.hasExactKeys)(b, BLOCK_KEYS) || !(0, composerSchemaKit_1.isEnum)(b.type, composerCatalog_1.COMPOSER_RICH_BLOCKS))
+        const legacyBlock = (0, composerSchemaKit_1.isPlainRecord)(b) && b.type !== "functionGraph" && (0, composerSchemaKit_1.hasExactKeys)(b, BLOCK_KEYS.slice(0, -1));
+        if (!((0, composerSchemaKit_1.hasExactKeys)(b, BLOCK_KEYS) || legacyBlock) || !(0, composerSchemaKit_1.isEnum)(b.type, composerCatalog_1.COMPOSER_RICH_BLOCKS))
             return fail("كتلة منسقة غير صالحة البنية.", p);
         if (!(0, composerSchemaKit_1.isStr)(b.text, L.richTextChars) || !(0, composerSchemaKit_1.isStr)(b.source, L.richSourceChars) || !(0, composerSchemaKit_1.isStr)(b.title, L.shortText) || !(0, composerSchemaKit_1.isEnum)(b.dir, DIRS) || !(0, composerSchemaKit_1.isInt)(b.level, 2, 4))
             return fail("قيم الكتلة المنسقة خارج الحدود.", p);
@@ -46,6 +49,8 @@ function mapAiRichBlocks(raw, path = "richContent", chartPolicy) {
             return fail("لغة الكود أو نوع الملاحظة غير معروف.", p);
         if (b.chart !== null && !(0, composerSchemaKit_1.isPlainRecord)(b.chart))
             return fail("وصف الرسم البياني غير صالح.", p + ".chart");
+        if (b.graph !== undefined && b.graph !== null && !(0, composerSchemaKit_1.isPlainRecord)(b.graph))
+            return fail("وصف رسم الدالة غير صالح.", p + ".graph");
         const text = (0, composerSchemaKit_1.cleanText)(b.text), title = (0, composerSchemaKit_1.cleanText)(b.title);
         switch (b.type) {
             case "heading":
@@ -89,6 +94,15 @@ function mapAiRichBlocks(raw, path = "richContent", chartPolicy) {
                 if (!c.ok)
                     return { ok: false, issues: c.issues };
                 blocks.push({ type: "dataChart", chart: c.chart });
+                break;
+            }
+            case "functionGraph": {
+                if (b.graph === null)
+                    return fail("كتلة رسم الدالة تحتاج وصفًا (graph).", p + ".graph");
+                const g = (0, composerGraph_1.mapAiGraph)(b.graph, i, chartPolicy, p + ".graph");
+                if (!g.ok)
+                    return { ok: false, issues: g.issues };
+                blocks.push({ type: "functionGraph", graph: g.graph });
                 break;
             }
             case "math": {

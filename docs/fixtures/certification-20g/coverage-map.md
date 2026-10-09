@@ -13,8 +13,9 @@
 | `tableFill@1` | type | auto | ✓ | fields/table | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, C, E, S |
 | `cliFill@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | A, S |
 | `compound@1` | type | composed | ✓ | compound | — | — | — | ✓ | legacy adapter | A | E, S |
-| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, A, B, C, D, E, S |
+| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, A, B, C, D, E, S |
 | `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | — | ✓ | registered | A | 21A1 |
+| `functionGraphSelection@1` | type | auto | ✓ | functionGraphSelection | — | ✓ | — | ✓ | registered | A | 21A2 |
 | `multipleSelect@1` | type | auto | ✓ | multiChoice | ✓ | ✓ | — | ✓ | registered | A | A, B, E, S |
 | `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | — | ✓ | registered | A | 21A1, A, B, D, E, S |
 | `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | registered | A | D, E, S |
@@ -45,7 +46,7 @@
 | `child:tableFill@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:cliFill@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:multipleSelect@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
-| `child:numericResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A1, B, D, E, S |
+| `child:numericResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A1, 21A2, B, D, E, S |
 | `child:matrix@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:categorization@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:simulation@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | B | src/composite/composite.20d.test.ts — a simulation child requires an uploaded package; the composite contract accepts the identity (20D suite) |
@@ -60,6 +61,7 @@
 | `child:openResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | A, B, C, D, E, S |
 | `child:smartSim@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | A, B, D, E, S |
 | `child:chartSelection@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A1 |
+| `child:functionGraphSelection@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A2 |
 | `compoundPart:multipleChoice` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | E, S |
 | `compoundPart:trueFalse` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | S |
 | `compoundPart:multiTrueFalse` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | S |

@@ -71,6 +71,9 @@ const PRODUCTION_ROWS = [
   // single, multiple or a contiguous range); auto-graded on target keys (never pixels), partial credit optional; not a compound part. Inserted
   // right after composite (like 20D's composite after compound) so the legacy order and every append position stay unchanged.
   ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", "apio", ["chartSelection"], false],
+  // Phase 21A.2 — functionGraphSelection@1: the student selects SEMANTIC targets of a mathematical function graph (curves, points, lines,
+  // tangents, shaded regions, intervals); auto-graded on target keys (never pixels), partial credit optional; not a compound part.
+  ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", "apio", ["functionGraphSelection"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],

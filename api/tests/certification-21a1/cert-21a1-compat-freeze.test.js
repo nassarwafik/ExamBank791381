@@ -24,7 +24,7 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const PINS = path.join(path.dirname(fileURLToPath(import.meta.url)), "freeze-21a1-pins.json");
 const CAPTURE = process.env.CAPTURE_21A1 === "1";
 const sha = v => createHash("sha256").update(JSON.stringify(v)).digest("hex");
-const dirs = fs.readdirSync(path.join(repo, "docs/fixtures")).filter(d => d !== "data-charts-21a1").sort();
+const dirs = fs.readdirSync(path.join(repo, "docs/fixtures")).filter(d => d !== "data-charts-21a1" && d !== "function-graphs-21a2").sort();
 // The ONE declared fixture delta of 21A.1: the AI composer fixtures record the catalog of their last composer operation, regenerated from
 // AI_COMPOSER_CATALOG_V2 to _V3 (WRITE_20F_FIXTURES=1; nothing else in them changed). The token is mapped back to its baseline value so every
 // other byte of every fixture is still judged against the pins captured on ff13899.
@@ -143,7 +143,8 @@ describe("21A.1-FREEZE compatibility pins (captured on the untouched baseline ff
       expect(now.map(norm), line.slice(0, 60)).toContain(norm(line));
     }
     const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:"));
-    for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Charts|Chart selection)\b/);
+    // Phase 21A.2 may append ONLY the declared Function graphs contract; baseline lines stay immutable.
+    for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Charts|Chart selection|Function graphs)\b/);
   });
   it("capture writes the pins (CAPTURE_21A1=1 only)", () => {
     if (CAPTURE) fs.writeFileSync(PINS, JSON.stringify(pins, null, 1) + "\n");

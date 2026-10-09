@@ -40,3 +40,8 @@ scripts/output/
 
 # Phase 17F-B10 — load / certification harness results are evidence files produced per run, never committed
 runner/tests/load/results/
+
+# Phase 21A.2 — real-browser graph certification output (scripts/check-function-graph-browser.mjs) and the mutation ledger
+# (scripts/mutate-function-graphs-21a2.mjs) are evidence files produced per run, never committed
+.harness-21a2/
+artifacts/phase-21a2/

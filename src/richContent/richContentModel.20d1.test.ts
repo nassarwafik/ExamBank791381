@@ -37,7 +37,8 @@ describe("20D1-R1 schema", () => {
     // Phase 21A.1 appended "dataChart" (an additive block: every 20D.1 / 21A type keeps its position — the order is pinned by
     // cert-21a1-compat-freeze; an older reader refuses the new type with RICH_CONTENT_BLOCK_TYPE, as the fail-first run on the baseline
     // showed — docs/enterprise-interactive-charts-21a1.md §18).
-    expect(R.RICH_BLOCK_TYPES).toEqual(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart"]);
+    // Phase 21A.2 appends functionGraph without changing the older block positions.
+    expect(R.RICH_BLOCK_TYPES).toEqual(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph"]);
     expect(Object.isFrozen(R.RICH_LIMITS)).toBe(true);
   });
   it("plain-text derivation (search / fallback / accessibility) walks every text-bearing block", () => {

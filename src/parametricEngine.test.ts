@@ -190,8 +190,14 @@ describe("19B engine — versioned deterministic generation (generatorVersion 1)
     expect(generateInstance({ generatorVersion: 0, variables: AB, constraints: [] }, "x")).toEqual({ ok: false, code: "GEN_UNSUPPORTED_VERSION" });
   });
   it("the engine is pure: no Math.random, Date, crypto, eval, Function, import(), DOM or I/O anywhere in the module", () => {
-    const src = fs.readFileSync(path.join(repo, "src/parametricEngine.ts"), "utf8").replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(src).not.toMatch(/Math\.random|Date\.|new Date|crypto|\beval\s*\(|new Function|Function\(|import\(|require\(|document\.|window\.|fetch\(|process\./);
-    expect(src).not.toMatch(/^import /m);                                                              // dependency-free
+    // 21A.2 — the expression core moved verbatim to parametricExpression.ts (re-exported by the engine): BOTH modules are scanned, the core
+    // imports nothing, and the engine's ONLY import is its own core (still dependency-free as a pair).
+    for (const file of ["src/parametricEngine.ts", "src/parametricExpression.ts"]) {
+      const src = fs.readFileSync(path.join(repo, file), "utf8").replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(src, file).not.toMatch(/Math\.random|Date\.|new Date|crypto|\beval\s*\(|new Function|Function\(|import\(|require\(|document\.|window\.|fetch\(|process\./);
+      const imports = src.match(/^import .*$/gm) ?? [];
+      expect(imports.filter(l => !/ from "\.\/parametricExpression";$/.test(l)), file).toEqual([]);   // dependency-free
+      if (file === "src/parametricExpression.ts") expect(imports, file).toEqual([]);
+    }
   });
 });

@@ -182,7 +182,7 @@ describe("19F-U3 — palette presets: six modes, each saying what it creates; th
     await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q1", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card")).toHaveLength(26);   /* 20D adds composite · 21A.1 adds chartSelection */
+    expect(within(d).getAllByTestId("qt-card")).toHaveLength(27);   /* 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */
     const group = within(d).getByTestId("qt-coding-presets");
     const cards = within(group).getAllByTestId("qt-preset-card");
     expect(cards.map(c => c.getAttribute("data-preset-key"))).toEqual(["writeProgram", "fixBug", "completeCode", "lockedTemplate", "predictOutput", "traceExecution"]);
