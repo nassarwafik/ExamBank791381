@@ -75,6 +75,10 @@ Deferred (directive §40), not done:
 | `223698c` | Review Fix 4 mutation pins (§20.4) |
 | `f4db489` | RU47's pin corrected; the engine's label-layout registration removed as redundant — a mistake, see `bb46b08` |
 | `bb46b08` | the label-layout registration restored (the production build drops the core's own) and required by the bundle guard (§17, §20.4) |
+| `2dd95ca` | design record — Review Fix 4 browser evidence and mutation proof |
+| `291aaef` | Review Fix 5 — the round-5 findings of the three lanes (§21) |
+| `e5f47eb` | design record — Review Fix 5 findings, browser evidence, fail-first |
+| `4ff479e` | Review Fix 5 mutation pins (§20.5) |
 
 Review-fix commits are described in §21.
 
@@ -640,6 +644,15 @@ the engine's label layout for value labels. The same resize probe, both trees in
 |---|---|---|
 | `e704272` | 1.90 / 1.96 / 1.85 | 3.29 / 3.36 / 3.19 |
 | Review Fix 4 (`804d810`) | 1.82 / 1.73 / 1.94 | 3.11 / 2.98 / 3.29 |
+
+Review Fix 5 lays pies and reference-line charts out by width too (their label box and their reference labels' cuts follow the stage, in
+the same 32 px steps; an option is re-applied only when that layout changes) and changes the engine's font string once per webfont load.
+The same resize probe, both trees in one session:
+
+| Tree | Script time (s) | Task time (s) |
+|---|---|---|
+| Review Fix 4 (`804d810`) | 1.87 / 1.78 / 1.80 | 3.30 / 3.10 / 3.12 |
+| Review Fix 5 (`4ff479e`) | 1.76 / 1.74 / 1.88 | 3.04 / 3.06 / 3.23 |
 
 ## 17. Bundle (directive §38)
 
@@ -1294,6 +1307,128 @@ defects, 282 KILLED, 6 equivalent (C11, RS14, RT46, RT49, RT53, RU45).
 | RU58 | contract/size | the stored prose leaves out the description | KILLED | richContentChart.21a1.test.ts — a chart's stored prose is exactly its title, description and source — computed here indepe |
 | RU59 | contract/size | the stored prose leaves out the source | KILLED | richContentChart.21a1.test.ts — a chart's stored prose is exactly its title, description and source — computed here indepe |
 
+### 20.5 Review Fix 5 campaign
+
+The same runner on the committed Review Fix 5 tree (`e5f47eb`, clean before and after; every file restored byte-for-byte, SHA-256
+verified, including the regenerated shared build): 82 planted defects — 17 pairing (RV01–RV17: superscripts, compatibility folding in the
+number check and the pairing, connectors and proclitics never a unit, a standalone «و», the line rule, value-first detection, the
+longer-label skip, the whole-word list test, the degree sign, parentheses, radar and heat-map checks, the day rule's unit, the unit's
+length), lane C's surviving round-5 and round-4 mutants re-planted against the current code (RV18–RV29: «ثم», the proclitics, the Levantine
+months, the day range 1–31, 0, "I", "=", ordinals, the line break and «؟» as clause ends, the six-character list unit, the pie value count),
+8 editor / validator (RV30–RV37: the picker's pending entries and limit, the slot bound, the kind-change rule and its labels, the empty-cell
+message, unknown targets while the config is invalid, the datum slot's series check), 38 rendering (RV40–RV83: the reference-line text, its
+units, isolates, scatter case and description; the pie box and its width layout; the secondary-axis margin and gap, grouped columns,
+histogram gaps; tick hiding and the lowest tick; inside cuts; groups, room below, halving, sides, the span bound, 0, the author's span; the
+engine's truncation without a canvas; the width layout's reference labels and pie box; the engine's epoch font and the print option; the
+cache bound, its font key and the listener release; lane C's V14–V20) and RV84 (round 3's RT49 re-planted).
+
+| Round | Planted | KILLED | SURVIVED | TIMEOUT / BUILD_ERROR |
+|---|---|---|---|---|
+| RF5 (`e5f47eb`) | 82 | 67 | 15 (RV07, RV08, RV09, RV13, RV29, RV34, RV52, RV54, RV63, RV67, RV68, RV71, RV76, RV80, RV84) | 0 / 0 |
+| RF5b (`4ff479e`, after the pins) | 13 (the survivors but RV34 / RV84) | 13 | 0 | 0 / 0 |
+
+- **Pins** (`4ff479e`): `composerChartReviewFix5` AI18 (a label alone on its line; values before their labels on one line — the line
+  rule and the value-first rule had masked each other in the first tests; "Jan (120) students"; too few pie values refused as malformed),
+  `chartReviewFix5` RB39 (the dual-axis gap solved for both sides, the histogram's value-label gap beyond the rotated-label gap, a
+  group's end labels halved, twice the span, 0 on a category value axis, the reference labels in the width layout) and RB31 rewritten (its
+  first form compared capped label widths), `DataChartReviewFix5` RB37 (a phone chart measures at 11 px after a 12 px build of the same
+  text — the first form measured at 12 px first, so the font key was never exercised).
+- **Two equivalent, checked by a probe**: the editor's kind-change rule mirrored with the real helpers over every conversion the
+  chartSelection editor offers — 28 source charts (each kind's starter, every fixture, and every category chart with a cell emptied for
+  retyping) × every other kind × every target kind × the whole key and each single entry: 2,464 cases, 204 fresh conversions and 1,270
+  target-kind changes (the key is cleared), 990 keeping the whole key, **0 removing only part of it** and **0 keeping a datum entry whose
+  category label changed**. So RV84 (the partial-removal wording replaced by the clearing one; round 3's RT49) and RV34 (the kind-change
+  rule comparing the series label only) cannot fire. On `2dd95ca` RT49 was not equivalent: bar → line with a key cell being retyped
+  removed part of the key (round-5 finding R5-A9, fixed in §9).
+
+**Review Fix 5: 82 planted defects, 80 KILLED, 2 equivalent (RV34; RV84 = RT49 re-planted), 0 timeouts.** Overall: 369 distinct planted
+defects, 362 KILLED, 7 equivalent (C11, RS14, RT46, RT49, RT53, RU45, RV34).
+
+| Id | Area | Planted defect | Result | Killed by |
+|---|---|---|---|---|
+| RV01 | ai/numbers | superscript digits are not stripped (m² reads 2) | KILLED | composerChartReviewFix5.21a1.test.ts — 21A1-AI13 a value's unit is one token of any length; parentheses and superscripts (round-5 |
+| RV02 | ai/numbers | the number check does not fold compatibility forms | KILLED | composerChartReviewFix5.21a1.test.ts — 21A1-AI13 a value's unit is one token of any length; parentheses and superscripts (round-5 |
+| RV03 | ai/pairing | the pairing text does not fold compatibility forms | KILLED | composerChart.21a1.test.ts — rou |
+| RV04 | ai/pairing | a connector to the next label is read as a unit (C5-1) | KILLED | composerChartReviewFix5.21a1.test.ts — small monthly  |
+| RV05 | ai/pairing | only «و» alone is never a unit (other proclitics are) | KILLED | composerChartReviewFix5.21a1.test.ts — small monthly  |
+| RV06 | ai/pairing | a standalone «و» is not a connector to the next label | KILLED | composerChartReviewFix5.21a1.test.ts — small monthly  |
+| RV07 | ai/pairing | a label takes a number across a line break (R5-A1) | KILLED (after its pin; SURVIVED first) | composerChartReviewFix5.21a1.test.ts — RV07: a label alone on its line does not take the number on the next  |
+| RV08 | ai/pairing | value-first writing does not make a label-before-label pairing unclear (R5-A1) | KILLED (after its pin; SURVIVED first) | composerChartReviewFix5.21a1.test.ts — RV08 / RV09: values written before their labels on ONE line pair noth |
+| RV09 | ai/pairing | value-first detection never fires | KILLED (after its pin; SURVIVED first) | composerChartReviewFix5.21a1.test.ts — RV08 / RV09: values written before their labels on ONE line pair noth |
+| RV10 | ai/pairing | an occurrence inside a longer label is this label (R5-A4) | KILLED | composerChartReviewFix5.21a1.test.ts — a label written inside a lon |
+| RV11 | ai/pairing | the list-item test is not whole-word (R5-A3) | KILLED | composerChartReviewFix5.21a1.test.ts — a label after a unit and a s |
+| RV12 | ai/pairing | a degree sign before a label is not a word character (°C → C) | KILLED | composerChartReviewFix5.21a1.test.ts — a label after a unit and a s |
+| RV13 | ai/pairing | a closing parenthesis does not end a parenthesised value | KILLED (after its pin; SURVIVED first) | composerChartReviewFix5.21a1.test.ts — RV13: a parenthesised value followed by its unit pairs ("Jan (120) st |
+| RV14 | ai/pairing | radar axes are not checked (R5-A5) | KILLED | composerChartReviewFix5.21a1.test.ts — a swapped |
+| RV15 | ai/pairing | one-row heat maps are not checked (R5-A5) | KILLED | composerChartReviewFix5.21a1.test.ts — a swapped |
+| RV16 | ai/pairing | the day rule reads the whole clause, not the unit | KILLED | composerChartReviewFix5.21a1.test.ts — small monthly  |
+| RV17 | ai/pairing | the tail unit is at most six characters again (R5-A2) | KILLED | composerChartReviewFix5.21a1.test.ts — 21A1-AI13 a value's unit is one token of any length; parentheses and superscripts (round-5 |
+| RV18 | ai/pairing | V01: «ثم» is not a connector before the next label | KILLED | composerChartReviewFix5.21a1.test.ts — small monthly  |
+| RV19 | ai/pairing | V02: only «و» is a proclitic before the next label | KILLED | composerChartReviewFix5.21a1.test.ts — small monthly  |
+| RV20 | ai/pairing | V03: Levantine month names are not months | KILLED | composerChartReviewFix5.21a1.test.ts — the  |
+| RV21 | ai/pairing | V04: a day of the month is at most 28 | KILLED | composerChartReviewFix5.21a1.test.ts — the  |
+| RV22 | ai/pairing | V05: 0 after a month is a day | KILLED | composerChartReviewFix5.21a1.test.ts — the  |
+| RV23 | ai/pairing | V06: the pronoun «I» is not a word label | KILLED | composerChartReviewFix5.21a1.test.ts — the  |
+| RV24 | ai/pairing | V07: a word label pairs after ":" only (not "=") | KILLED | composerChartReviewFix5.21a1.test.ts — the  |
+| RV25 | ai/pairing | C4-45: only 'th' is an ordinal suffix | KILLED | composerChartReviewFix5.21a1.test.ts — an o |
+| RV26 | ai/pairing | C4-46: a line break does not end a clause | KILLED | composerChartReviewFix5.21a1.test.ts — a li |
+| RV27 | ai/pairing | C4-47: the Arabic question mark does not end a clause | KILLED | composerChartReviewFix5.21a1.test.ts — a li |
+| RV28 | ai/pairing | R5-A11: a value-list unit is at most five characters | KILLED | composerChartReviewFix5.21a1.test.ts — 21A1-AI13 a value's unit is one token of any length; parentheses and superscripts (round-5 |
+| RV29 | ai/pie | V08: too few pie values pass the count check | KILLED (after its pin; SURVIVED first) | composerChartReviewFix5.21a1.test.ts — RV29: a pie descriptor with fewer values than categories is refused a |
+| RV30 | authoring/key | the picker drops the retyped entry (R5-A6) | KILLED | ChartEditorReviewFix5.21a1.test.tsx — a click on another val |
+| RV31 | authoring/key | the picker's limit ignores the retyped entry (R5-A6) | KILLED | ChartEditorReviewFix5.21a1.test.tsx — the picker's limit lea |
+| RV32 | authoring/bound | the datum bound is clamped by the filled values (R5-A7) | KILLED | ChartEditorReviewFix5.21a1.test.tsx — a click on another val |
+| RV33 | authoring/kind | a kind change drops a retyped datum entry (R5-A9) | KILLED | ChartEditorReviewFix5.21a1.test.tsx — 21A1-RB5d a kind change keeps a retyped datum entry where both kinds hold its series and c |
+| RV34 | authoring/kind | a kind change keeps a retyped entry whose category label changed | EQUIVALENT (SURVIVED) | no data-keeping conversion renames a category: 0 of 2,464 conversion × key cases keep a datum entry whose category label changed (probe, §20.5) |
+| RV35 | validation | the bound's message never names empty cells (R5-A8) | KILLED | ChartEditorReviewFix5.21a1.test.tsx — a bound abov |
+| RV36 | validation | an invalid config hides the key's unknown targets (R5-A8) | KILLED | ChartEditorReviewFix5.21a1.test.tsx — a bound abov |
+| RV37 | authoring/key | V11: a datum slot ignores its series (C5-3) | KILLED | ChartEditorReviewFix5.21a1.test.tsx —  |
+| RV40 | a11y/refs | the reference text always uses the vertical axis's unit (B5-1) | KILLED | chartReviewFix5.21a1.test.ts — horizontal bars take the unit of their horizontal value axis, sca |
+| RV41 | a11y/refs | the reference text is always plural | KILLED | chartReviewFix5.21a1.test.ts — one line: «خط مرجعي:», its full label isolated and its value with |
+| RV42 | a11y/refs | the reference labels are not isolated in the text | KILLED | chartReviewFix5.21a1.test.ts — one line: «خط مرجعي:», its full label isolated and its value with |
+| RV43 | a11y/refs | scatter plots have no reference text | KILLED | chartReviewFix5.21a1.test.ts — horizontal bars take the unit of their horizontal value axis, sca |
+| RV44 | a11y/refs | the reference text is not part of the description | KILLED | DataChart.21a1.test.tsx — a figure named by the chart title and described by its description and structural summary; |
+| RV45 | a11y/refs | the reference text is not rendered | KILLED | DataChartReviewFix5.21a1.test.tsx — a visible paragraph with each line's label  |
+| RV46 | layout/pie | the pie box is always 140 px (B5-2) | KILLED | DataChartReviewFix5.21a1.test.tsx — a pie on a 500 px stag |
+| RV47 | layout/pie | the pie box ignores the radius | KILLED | chartReviewFix5.21a1.test.ts — at 480 px the box is the room beside the pie (half the  |
+| RV48 | layout/pie | pies do not lay out by width (DataChart) | KILLED | DataChartReviewFix5.21a1.test.tsx — a pie on a 500 px stag |
+| RV49 | layout/refs | scatter / horizontal bars with reference lines do not lay out by width | KILLED | DataChartReviewFix5.21a1.test.tsx — a scatter plot's refer |
+| RV50 | layout/dual | a dual chart widens its right margin for value labels (B5-3) | KILLED | chartReviewFix5.21a1.test.ts — the right margin is not widened beyond th |
+| RV51 | layout/dual | the secondary axis's labels never step away (B5-3) | KILLED | chartReviewFix5.21a1.test.ts — the right margin is not widened beyond th |
+| RV52 | layout/dual | the side gap solves for one side only on dual charts | KILLED (after its pin; SURVIVED first) | chartReviewFix5.21a1.test.ts — RV52: beside a secondary axis both value axes step away, and the gap solves for b |
+| RV53 | layout/grouped | grouped columns are treated as one column | KILLED | chartReviewFix5.21a1.test.ts — three |
+| RV54 | layout/hist | histograms take no value-label gap (B5-4) | KILLED (after its pin; SURVIVED first) | chartReviewFix5.21a1.test.ts — RV54: a histogram's value axis steps away from the first bin's value label (here  |
+| RV55 | layout/hist | histograms take no rotated-label gap (B5-4) | KILLED | chartReviewFix5.21a1.test.ts — a narrow stage: the value axis's label |
+| RV56 | layout/ticks | horizontal value axes keep overlapping ticks (B5-6) | KILLED | chartReviewFix5.21a1.test.ts — horizonta |
+| RV57 | layout/ticks | the lowest horizontal tick centres on the axis (B5-6) | KILLED | chartReviewFix5.21a1.test.ts — horizonta |
+| RV58 | layout/refs | inside reference labels are not cut (category charts) | KILLED | chartReviewFix5.21a1.test.ts — vertical charts: cut to the plot's wid |
+| RV59 | layout/refs | scatter reference labels are not cut | KILLED | DataChartReviewFix5.21a1.test.tsx — a scatter plot's refer |
+| RV60 | layout/refs | horizontal bars cut to the plot's width, not its height | KILLED | chartReviewFix5.21a1.test.ts — horizontal bars: a vertical line's lab |
+| RV61 | layout/refs | near reference lines never form a group (B5-7) | KILLED | chartReviewFix5.21a1.test.ts — two near lines inside the plot: the high |
+| RV62 | layout/refs | room below the lowest line is always assumed | KILLED | chartReviewFix5.21a1.test.ts — near lines at the foot of the axis: no r |
+| RV63 | layout/refs | a group with a start place does not halve its labels | KILLED (after its pin; SURVIVED first) | chartReviewFix5.21a1.test.ts — RV63: in a group with a label at the start, a long end label is cut to half the p |
+| RV64 | layout/refs | outside labels go to the wrong sides | KILLED | chartReviewFix5.21a1.test.ts — outside labels (value labels on): two ne |
+| RV65 | layout/refs | inside end labels go to the wrong sides | KILLED | chartReviewFix5.21a1.test.ts — two near lines inside the plot: the high |
+| RV66 | layout/refs | start labels go to the wrong sides | KILLED | chartReviewFix5.21a1.test.ts — near lines at the foot of the axis: no r |
+| RV67 | layout/refs | the span bound is the values' span (not twice) | KILLED (after its pin; SURVIVED first) | chartReviewFix5.21a1.test.ts — RV67: the distance bound uses twice the values' span: 40 and 52 on 0–80 may touch |
+| RV68 | layout/refs | a category value axis's span omits 0 | KILLED (after its pin; SURVIVED first) | chartReviewFix5.21a1.test.ts — RV68: a category chart's value axis starts at 0, so lines at 22 and 24 above data |
+| RV69 | layout/refs | an author's fixed span is ignored | KILLED | chartReviewFix5.21a1.test.ts — an author's fixed axis decides the dista |
+| RV70 | layout/refs | unmeasured outside labels are not truncated by the engine | KILLED | chartReviewFix5.21a1.test.ts — C5-7: without a canvas, an outside reference label takes 0.6 em pe |
+| RV71 | layout/width | the width layout ignores reference labels | KILLED (after its pin; SURVIVED first) | chartReviewFix5.21a1.test.ts — RV71: the reference labels (their cut text and places) are part of the width layo |
+| RV72 | layout/width | the width layout ignores the pie's box | KILLED | chartReviewFix5.21a1.test.ts — wide stages (and an unmeasured one) keep the 140 px box |
+| RV73 | font/engine | the engine's font string never changes after a webfont load (B5-5) | KILLED | DataChartReviewFix5.21a1.test.tsx — the screen and print options name  |
+| RV74 | font/engine | the print option keeps the stale engine font | KILLED | DataChartReviewFix5.21a1.test.tsx — the screen and print options name  |
+| RV75 | font/cache | V21: the measure cache is unbounded | KILLED | DataChartReviewFix5.21a1.test.tsx — the  |
+| RV76 | font/cache | V22: the measure cache ignores the font | KILLED (after its pin; SURVIVED first) | DataChartReviewFix5.21a1.test.tsx — a ph |
+| RV77 | font/listener | V25: an unmounted chart stays registered for font loads | KILLED | DataChartReviewFix5.21a1.test.tsx — the  |
+| RV78 | layout/pie | V14: the pie name keeps one line down to 20 px | KILLED | chartReviewFix5.21a1.test.ts — C5-6: a name left 26 px (under the 40 px minimum, over 20) takes t |
+| RV79 | layout/values | V15: unmeasured value-label room ignores the text width | KILLED | chartReviewFix5.21a1.test.ts — C5-7: without a canvas, the value labels' room is estimated at 0.6 |
+| RV80 | layout/hist | V17: the histogram's slot ignores its right margin | KILLED (after its pin; SURVIVED first) | chartReviewFix5.21a1.test.ts — the bins share the plot width left aft |
+| RV81 | layout/radar | V18: radar names have no minimum width | KILLED | chartReviewFix5.21a1.test.ts — C5-7: a radar on a very narrow stage keeps its names at least 24 p |
+| RV82 | layout/pie | V19: a value that fits keeps no isolates of its own (RLI-wrapped) | KILLED | chartReviewFix5.21a1.test.ts — C5-6: a value that fits the box whole keeps its own left-to-right  |
+| RV83 | layout/refs | V20: unmeasured reference room ignores the label width | KILLED | chartReviewFix5.21a1.test.ts — C5-7: without a canvas, an outside reference label takes 0.6 em pe |
+| RV84 | authoring/warn | RT49 re-planted: a partial removal is announced as clearing everything | EQUIVALENT (SURVIVED) | RT49 re-planted: no data-keeping conversion removes only part of a key — 0 partial removals in 2,464 conversion × key cases, retyped cells included (on `2dd95ca` R5-A9 was one) |
+
 ## 21. Independent review
 
 Round 1 — three read-only lanes on `a788539` (each: no writes to the repository, probes in scratch copies only):
@@ -1368,7 +1503,7 @@ Round 5 — the same three lanes on `2dd95ca`:
 | B⁗ | FINDINGS | B4-2, §16, §17 resolved; B4-1, B4-3, B4-4 partially | B5-1 MAJOR reference lines had no text alternative (the picture is hidden from assistive technology and Review Fix 4 cut their only rendering; the §22 mitigation was false); B5-2 MINOR pie labels drawn into the pie at 480–515 px stages; B5-3 MINOR beside a secondary axis the value-label room went beyond that axis's labels, and the inside reference label ran off the canvas; B5-4 MINOR histograms without the axis gaps; B5-5 MINOR the engine's own width cache kept the fallback font's widths after a late webfont; B5-6 MINOR horizontal value-axis ticks overlapping on phones; B5-7 MINOR nearby reference lines' labels over one another, the horizontal bars' inside label off the canvas; B5-8 NIT a 12-axis radar's names touching on phones; pie labels hidden by the engine's overlap layout not mentioned in §10 |
 | C⁗ | FINDINGS | C4-F1, C4-F2, C4-F4 … C4-F10 resolved; C4-F3 partially (three pins could not fail) | C5-1 MAJOR a connector or a proclitic before the next label was read as a unit, so small Arabic monthly values written with the joined «و» never paired and their swap was accepted (a regression against `e704272`); C5-2 MINOR the C4-45 / 46 / 47 pins could not fail; C5-3 MINOR the series check of a datum slot untested; C5-4 MINOR seven documented pairing rules without a test; C5-5 MINOR the measurer's font key, bound and listener release untested ("at most 4,000" was 4,001); C5-6 MINOR the pie's whole-value line untested; C5-7 NIT fallback widths and thresholds untested; C5-8 NIT the Review Fix 4 fail-first counts; C5-9 NIT three wordings |
 
-**Review Fix 5** (one code commit and the record) addresses every round-5 finding:
+**Review Fix 5** (`291aaef`, its mutation pins `4ff479e` and the record) addresses every round-5 finding:
 - R5-A1 … R5-A5, R5-A10, R5-A11 and C5-1 in §11 (lines never crossed; value-first writing makes a label-before-label pairing unclear;
   a one-token unit of any length that is never a connector; parentheses; superscripts; NFKC in the number check; the whole-word list
   test; labels inside longer labels; radar and heat-map checks), with `composerChartReviewFix5` AI12–AI17 (C5-2 and C5-4 included);
