@@ -1,0 +1,41 @@
+name: Phase 21B Mutation Certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "scripts/mutate-function-surfaces-21b.mjs"
+      - "src/functionSurfaces/**"
+      - "src/richContent/richContentModel.ts"
+      - "api/tests/certification-21b/**"
+      - "docs/enterprise-3d-mathematical-surfaces-21b.md"
+      - ".github/workflows/function-surfaces-mutation-21b.yml"
+permissions:
+  contents: read
+jobs:
+  mutations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    name: Surface mutation campaign — 23 isolated mutants
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+          lfs: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix api
+      - name: Run sequential baseline and 23 source mutations with SHA-256 restoration
+        run: node scripts/mutate-function-surfaces-21b.mjs
+      - name: Upload per-mutant ledger
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase-21b-mutations
+          path: artifacts/phase-21b/mutation-ledger.json
+          retention-days: 14
