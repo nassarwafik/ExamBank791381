@@ -37,9 +37,7 @@ export function answered(a: Answer | undefined): boolean {
   if (a.kind === "code") return typeof a.source === "string" && a.source.trim() !== "";   // 17A — source TEXT, never trimmed when stored
   if (a.kind === "networkCli") return Array.isArray(a.commands) && a.commands.some(c => typeof c === "string" && c.trim() !== "");   // 18C — mirror of networkCliQuestion.isNetworkCliAnswerAnswered
   if (a.kind === "hotspot") return Array.isArray(a.points) && a.points.length > 0;   // 19D — mirror of hotspotQuestion.isHotspotAnswerAnswered
-  if (a.kind === "chartSelection") return Array.isArray(a.targets) && a.targets.length > 0;   // 21A.1 — mirror of chartSelectionQuestion.isChartSelectionAnswerAnswered
-  if (a.kind === "functionGraphSelection") return Array.isArray(a.targets) && a.targets.length > 0;   // 21A.2 — mirror of isFunctionGraphSelectionAnswerAnswered
-  if (a.kind === "scene3DSelection") return Array.isArray(a.targets) && a.targets.length > 0;   // 21C — semantic 3D target selection
+  if (a.kind === "chartSelection" || a.kind === "functionGraphSelection" || a.kind === "scene3DSelection") return Array.isArray(a.targets) && a.targets.length > 0;   // 21A.1/21A.2/21C semantic target selections
   if (a.kind === "smartSim") return Array.isArray(a.actions) && a.actions.length > 0;   // 20A — mirror of trustedSimQuestion.isSmartSimAnswerAnswered
   if (a.kind === "composite") return (!!a.parts && typeof a.parts === "object" && Object.values(a.parts).some(answered)) || (!!a.contexts && typeof a.contexts === "object" && Object.values(a.contexts).some(answered));   // 20D — mirror of compositeModel.isCompositeAnswerAnswered
   if (a.kind === "codeTemplate") return !!a.values && typeof a.values === "object" && Object.values(a.values).some(v => typeof v === "string" && v.trim() !== "");   // 19F — mirror of codingTemplate.isCodeTemplateAnswered
