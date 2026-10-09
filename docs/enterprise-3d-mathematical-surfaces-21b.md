@@ -55,3 +55,12 @@ not mathematically ruled out. No quantitative area or volume is inferred from th
 - No unbounded surface resolutions, arbitrary expressions or renderer options.
 - No new package dependency, server route, API or production setting in Slice 1.
 - Only the owner can merge; this initial implementation is NOT a release claim.
+
+
+## 5. Slice 2A: isolated teacher preview laboratory (awaiting CI)
+
+The exam builder now has a lazy-opened 3D laboratory. Teachers can explore four presets,
+edit safe x/y expressions and bounded ranges, rotate the surface, and inspect an accessible
+value table. The lab neither calls the exam change callback nor the save callback, and
+is never serialized or shown to students. This pilot is **not** integrated into actual
+exam questions. Full exam RichContent and server projection require additional certified work.
