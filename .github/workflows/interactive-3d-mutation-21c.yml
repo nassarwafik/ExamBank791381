@@ -1,0 +1,37 @@
+name: Phase 21C Mutation Certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "scripts/mutate-interactive-3d-21c.mjs"
+      - "src/interactive3d/**"
+      - "src/scene3DSelectionQuestion.ts"
+      - "api/tests/certification-21c/**"
+      - "docs/enterprise-interactive-3d-objects-21c.md"
+      - ".github/workflows/interactive-3d-mutation-21c.yml"
+permissions:
+  contents: read
+jobs:
+  mutations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    name: Interactive 3D mutation campaign — 22 isolated mutants
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix api
+      - name: Run baseline and 22 source mutations with source restoration
+        run: node scripts/mutate-interactive-3d-21c.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase-21c-mutations
+          path: artifacts/phase-21c/mutation-ledger.json
+          retention-days: 14
