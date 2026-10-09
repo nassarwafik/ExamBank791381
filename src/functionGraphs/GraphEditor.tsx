@@ -14,7 +14,9 @@ import FunctionGraphView from "./FunctionGraphView";
 import "./graph-editor.css";
 
 type Confirm = (o: { title: string; message: string; confirmLabel: string; tone?: "danger" }) => Promise<boolean>;
-export type GraphEditorProps = { graph: FunctionGraphSpecV1; onChange: (g: FunctionGraphSpecV1) => void; name: string; disabled?: boolean; confirm?: Confirm; preview?: boolean };
+/** `onReplace`: a template REPLACED the whole graph (it keeps the graph id and reuses object ids such as c1) — a host holding an answer key
+ *  over the graph's objects must not let a reused id carry the key over to a different object; without it, `onChange` receives it. */
+export type GraphEditorProps = { graph: FunctionGraphSpecV1; onChange: (g: FunctionGraphSpecV1) => void; onReplace?: (g: FunctionGraphSpecV1) => void; name: string; disabled?: boolean; confirm?: Confirm; preview?: boolean };
 
 const CURVE_KIND_LABELS: Readonly<Record<GraphCurveV1["kind"], string>> = Object.freeze({ explicit: "y = f(x)", piecewise: "متعددة القواعد", parametric: "وسيطي (x(t), y(t))" });
 const ROLE_LABELS: Readonly<Record<string, string>> = Object.freeze({ point: "نقطة", root: "جذر", yIntercept: "مقطع y", intersection: "تقاطع", minimum: "قيمة صغرى", maximum: "قيمة عظمى", inflection: "نقطة انعطاف", hole: "فجوة (مفرغة)", tangency: "نقطة تماس", endpoint: "طرف مجال" });
@@ -59,19 +61,19 @@ function ExprField({ label, value, variable, params, onChange, disabled }: { lab
 const without = <T extends object>(o: T, k: string): T => { const c = { ...o } as Record<string, unknown>; delete c[k]; return c as T; };
 const setOpt = <T extends object>(o: T, k: string, v: unknown): T => (v === undefined || v === "" ? without(o, k) : ({ ...o, [k]: v } as T));
 
-export default function GraphEditor({ graph: g, onChange, name, disabled, confirm, preview = true }: GraphEditorProps) {
+export default function GraphEditor({ graph: g, onChange, onReplace, name, disabled, confirm, preview = true }: GraphEditorProps) {
   const v = useMemo(() => validateFunctionGraphSpec(g), [g]);
   const params = useMemo(() => new Set((g.parameters ?? []).map(p => p.id)), [g.parameters]);
   const [features, setFeatures] = useState<GraphFeature[] | null>(null);
   const [usedIds] = useState(() => new Set<string>());
-  const emit = (next: FunctionGraphSpecV1) => { for (const k of ["curves", "points", "lines", "tangents", "regions", "intervals"] as const) for (const o of (next[k] ?? []) as { id: string }[]) usedIds.add(o.id); onChange(next); };
+  const emit = (next: FunctionGraphSpecV1, replaced = false) => { for (const k of ["curves", "points", "lines", "tangents", "regions", "intervals"] as const) for (const o of (next[k] ?? []) as { id: string }[]) usedIds.add(o.id); (replaced && onReplace ? onReplace : onChange)(next); };
   const list = <K extends "curves" | "points" | "lines" | "tangents" | "regions" | "intervals">(k: K, items: NonNullable<FunctionGraphSpecV1[K]>) => emit(items.length || k === "curves" ? { ...g, [k]: items } : without(g, k));
   const issuesAt = (prefix: string): GraphIssue[] => (v.ok ? [] : v.issues.filter(i => i.path === prefix || i.path.startsWith(prefix + ".") || i.path.startsWith(prefix + "[")));
   const issueList = (at: string) => { const xs = issuesAt(at); return xs.length ? <ul className="ge-issues-inline">{xs.map((i, n) => <li key={n}>{i.message}</li>)}</ul> : null; };
   const curves = g.curves, ex = curves.filter(c => c.kind !== "parametric");
   const applyTemplate = async (key: GraphTemplateKey) => {
     if (confirm && !(await confirm({ title: "استبدال الرسم", message: "سيُستبدل الرسم الحالي (المنحنيات والنقاط والعناصر) بالقالب «" + GRAPH_TEMPLATE_LABELS[key] + "». هل تريد المتابعة؟", confirmLabel: "استبدال", tone: "danger" }))) return;
-    emit(graphTemplate(key, g.id));
+    emit(graphTemplate(key, g.id), true);
     setFeatures(null);
   };
   const curveSelect = (value: string | undefined, onPick: (id: string | undefined) => void, label: string, optional = false, kinds: readonly string[] = ["explicit", "piecewise"]) => (

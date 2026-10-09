@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeAll } from "vitest";
 import { Suspense, useState } from "react";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import RichContentRenderer from "../richContent/RichContentRenderer";
@@ -14,6 +14,10 @@ import type { Question } from "../studentQuestionTypes";
 // baseline the type is unsupported and fails closed), its renderer turns pointer and keyboard selection into the SAME semantic answer, and
 // the authoring registry has an editor for it.
 afterEach(cleanup);
+// The lazy graph view is loaded once before the suite (Review Fix 1, finding C-5 / B-3): under a loaded machine the first dynamic import of the
+// chunk could outlast findBy*'s wait, turning the suite — and the mutation campaign's baseline — red without any behavioural cause. (Added
+// after the fail-first record on 6e4a5ef, where this module did not exist; the suite still fails there.)
+beforeAll(async () => { await import("./FunctionGraphView"); });
 const QUAD = () => ({
   version: 1, id: "g-quad", title: "منحنى الدالة التربيعية", description: "منحنى الدالة f(x) = x² − 4x + 3 مع أربع نقاط مميزة.",
   viewport: { xMin: -2, xMax: 6, yMin: -3, yMax: 8 },

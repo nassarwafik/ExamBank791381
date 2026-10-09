@@ -58,11 +58,24 @@ try{
     }
     if(width===1024){
       const q=page.locator('[data-testid="graph-question"]');
+      // Review Fix 1 (C-3): an Arabic target detail keeps right-to-left reading order around its LTR mathematics
+      const order=await page.evaluate(()=>{const d=document.querySelector('[data-testid="graph-area-question"] .fg-option-detail');const node=d?.firstChild;const t=node?.textContent??"";
+        const left=w=>{const i=t.indexOf(w);if(i<0)return null;const r=document.createRange();r.setStart(node,i);r.setEnd(node,i+w.length);return r.getBoundingClientRect().left;};return{text:t,from:left("من"),to:left("إلى")};});
+      check("R1 Arabic target detail reads right to left (\u0645\u0646 right of \u0625\u0644\u0649)",order.from!==null&&order.to!==null&&order.from>order.to,JSON.stringify(order));
+      const ticks=sel=>q.evaluate((el,s)=>[...(el.querySelector(s)?.querySelectorAll("text")??[])].map(t=>t.textContent),sel);
+      const authored=await ticks(".fg-stage .fg-svg");
       await q.locator('button[aria-label="تكبير"]').click();
       check("P1 original-viewport duplicate exists after zoom",await q.locator(".fg-print svg").count()===1);
       const pdf=await page.pdf({format:"A4",printBackground:true});
       check("P2 browser print PDF nonempty and completed",pdf.length>10000,"bytes="+pdf.length);
       fs.writeFileSync(path.join(out,"graph-print.pdf"),pdf);
+      // Review Fix 1 (C-6): under print media the zoomed view and the controls are hidden and the visible drawing is the AUTHORED viewport
+      await page.emulateMedia({media:"print"});
+      const shown=await q.evaluate(el=>{const vis=n=>!!n&&getComputedStyle(n).display!=="none"&&n.getBoundingClientRect().width>0;
+        return{zoomedHidden:!vis(el.querySelector(".fg-stage[data-fg-zoomed] .fg-svg")),printShown:vis(el.querySelector(".fg-print svg")),toolbarHidden:!vis(el.querySelector(".fg-toolbar"))};});
+      const printed=await ticks(".fg-print svg"),zoomed=await ticks(".fg-stage .fg-svg");
+      check("P4 print media shows only the authored viewport",shown.zoomedHidden&&shown.printShown&&shown.toolbarHidden&&printed.length>0&&JSON.stringify(printed)===JSON.stringify(authored)&&JSON.stringify(zoomed)!==JSON.stringify(authored),JSON.stringify({shown,authored,printed,zoomed}));
+      await page.emulateMedia({media:"screen"});
       await q.locator('button[aria-label="إعادة الضبط إلى نافذة العرض الأصلية"]').click();
       check("P3 reset removes print duplicate",await q.locator(".fg-print").count()===0);
     }

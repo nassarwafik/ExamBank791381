@@ -66,7 +66,7 @@ function samplePath(point, s0, s1, o) {
             return;
         }
         const sa = side(pa), sm = side(pm), sb = side(pb);
-        if (sa !== 0 && (sa & sm & sb) !== 0) {
+        if (!o.refineOffscreen && sa !== 0 && (sa & sm & sb) !== 0) {
             emit(pb);
             return;
         }

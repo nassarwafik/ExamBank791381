@@ -227,7 +227,7 @@ function SelectionList({ selection, targets, chosen, onToggle }: { selection: Gr
               <button type="button" className="fg-option" aria-pressed={chosen.has(t.key)} data-fg-option={t.key} data-fg-review={mark}
                 disabled={selection.readOnly || !selection.onChange} onClick={() => onToggle(t.key)}>
                 {mark && <span className="fg-option-mark" aria-hidden="true">{REVIEW_GLYPH[mark]} </span>}
-                <span dir="auto">{t.label}</span> <bdi dir="ltr" className="fg-option-detail">{t.detail}</bdi>
+                <span dir="auto">{t.label}</span> <bdi dir="auto" className="fg-option-detail">{t.detail}</bdi>
                 {mark && <span className="fg-sr-only"> — {REVIEW_TEXT[mark]}</span>}
               </button>
             </li>

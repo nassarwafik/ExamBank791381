@@ -20,9 +20,11 @@ function Harness() {
       <section data-testid="graph-rational"><FunctionGraphView spec={rationalGraph()} /></section>
       <section data-testid="graph-tangent"><FunctionGraphView spec={tangentGraph()} /></section>
       <section data-testid="graph-area"><FunctionGraphView spec={areaGraph()} /></section>
+      <section data-testid="graph-area-question" aria-label="سؤال المنطقة"><FunctionGraphView spec={areaGraph()} selection={{ kind: "region", mode: "single", max: 1, label: "اختر المنطقة المظللة", value: [], onChange: () => {} }} /></section>
       <section data-testid="graph-parametric"><FunctionGraphView spec={circleGraph()} /></section>
       <section data-testid="graph-editor"><h2>واجهة التأليف</h2><GraphEditor graph={teacher} onChange={setTeacher} name="دالة المدرسة" preview={false} /></section>
     </main>
   );
 }
+export default Harness;
 createRoot(document.getElementById("root")!).render(<Harness />);

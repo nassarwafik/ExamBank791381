@@ -28,9 +28,10 @@ function normalizeMathNotation(s) {
     let t = String(s || "").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => "^" + [...m].map(c => SUPERSCRIPT[c]).join(""));
     t = t.replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x6f0)).normalize("NFKC");
     t = t.replace(/[−‒–—]/g, "-").replace(/[×·∙⋅]/g, "*").replace(/÷/g, "/").replace(/π/g, "pi").replace(/√\s*\(/g, "sqrt(").replace(/√\s*([A-Za-z0-9.]+)/g, "sqrt($1)");
-    t = t.replace(new RegExp("\\b(" + FUNCTIONS.join("|") + ")\\s+([A-Za-z]|\\d+(?:\\.\\d+)?)(?![A-Za-z0-9.(])", "g"), "$1($2)");
+    t = t.replace(new RegExp("\\b(" + FUNCTIONS.join("|") + ")\\s+([A-Za-z]|\\d+(?:\\.\\d+)?)(?=\\s*(?:[+\\-),;=]|$))", "g"), "$1($2)");
     t = t.replace(/\s+/g, "");
-    return t.replace(/(\d)\*(?=[A-Za-z(])/g, "$1").replace(/\)\*\(/g, ")(");
+    t = t.replace(/(^|[^\d.^/])(\d+(?:\.\d+)?)\*(?=[A-Za-z(])/g, "$1$2");
+    return t.replace(/\)\*\(/g, (m, at) => (t.slice(0, at).includes("/") ? m : ")("));
 }
 const MATH_RUN = /[A-Za-z0-9٠-٩۰-۹.+\-−–*/^()=,;×·÷πθ√⁰¹²³⁴⁵⁶⁷⁸⁹\s]+/g;
 const FUNCTION_HEAD = /^(?:[a-zA-Z]\(x\)|y)$/;

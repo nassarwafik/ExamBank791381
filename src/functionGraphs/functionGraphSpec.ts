@@ -492,38 +492,50 @@ function validateUnguarded(raw: unknown, path: string): GraphResult {
       if (!onCurve(c, p.x, p.y, p.open === true)) add("GRAPH_POINT_NOT_ON_CURVE", "النقطة «" + (p.label ?? p.id) + "» لا تقع على المنحنى «" + cid + "» (القيمة المحسوبة تختلف عن y المكتوبة).", path + ".points[" + i + "]");
     }
   });
-  const derivativeOf = (cid: string) => g.curves.find(c => c.kind === "explicit" && c.derivativeOf === cid) as GraphExplicitCurveV1 | undefined;
   const checkPoints = (lo: number, hi: number, n: number) => Array.from({ length: n }, (_, k) => lo + (hi - lo) * (k + 0.5) / n);
   for (const [i, c] of g.curves.entries()) {
     if (c.kind !== "explicit" || c.derivativeOf === undefined || !vp) continue;
     const base = compiled.get(c.derivativeOf)!, der = compiled.get(c.id)!;
-    let mismatch = false;
-    for (const x of checkPoints(vp.xMin, vp.xMax, 16)) {
+    // the check points lie where the derivative curve is drawn (its own domain inside the viewport), and a relation with no checkable
+    // point is not certified: a derivative curve can never escape the check through a narrow domain or by being undefined
+    const dm = der.kind === "explicit" ? der.domain : { min: -Infinity, max: Infinity };
+    const lo = Math.max(vp.xMin, dm.min), hi = Math.min(vp.xMax, dm.max);
+    let mismatch = !(hi > lo), checked = 0;
+    for (const x of mismatch ? [] : checkPoints(lo, hi, 16)) {
       const v = curveValue(der, x), d = numericDerivative(s => curveValue(base, s), x);
       if (!Number.isFinite(v) || !d.smooth) continue;
+      checked++;
       if (Math.abs(v - d.value) > 1e-3 * (1 + Math.abs(d.value))) { mismatch = true; break; }
     }
-    if (mismatch) add("GRAPH_DERIVATIVE_MISMATCH", "المنحنى «" + c.id + "» لا يطابق مشتقة «" + c.derivativeOf + "» عدديًا.", path + ".curves[" + i + "].derivativeOf");
+    if (mismatch || checked === 0) add("GRAPH_DERIVATIVE_MISMATCH", "المنحنى «" + c.id + "» لا يطابق مشتقة «" + c.derivativeOf + "» عدديًا.", path + ".curves[" + i + "].derivativeOf");
   }
   (g.tangents ?? []).forEach((t, i) => {
     const c = compiled.get(t.curve)!;
     const y0 = curveValue(c, t.x);
     if (!Number.isFinite(y0)) { add("GRAPH_TANGENT_UNDEFINED", "المنحنى غير معرّف عند نقطة التماس.", path + ".tangents[" + i + "].x"); return; }
+    // the tangent is judged on the curve itself, never on an authored derivative curve: that relation is teacher-only (the student
+    // projection removes it), so a tangent it alone justified would not render for the student, and a wrong derivative curve whose
+    // domain escapes the derivative check would certify a wrong slope
     const d = numericDerivative(s => curveValue(c, s), t.x);
-    const authored = derivativeOf(t.curve);
-    const exact = authored ? curveValue(compiled.get(authored.id)!, t.x) : NaN;
-    if (!Number.isFinite(exact) && !d.smooth) { add("GRAPH_TANGENT_UNDEFINED", "لا يوجد مماس وحيد عند هذه النقطة (المنحنى غير قابل للاشتقاق هنا).", path + ".tangents[" + i + "].x"); return; }
-    if (t.slope !== undefined) {
-      const ref = Number.isFinite(exact) ? exact : d.value;
-      if (Math.abs(t.slope - ref) > 1e-3 * (1 + Math.abs(ref))) add("GRAPH_TANGENT_SLOPE_MISMATCH", "الميل المكتوب لا يطابق ميل المنحنى عند x = " + t.x + ".", path + ".tangents[" + i + "].slope");
-    }
+    if (!d.smooth) { add("GRAPH_TANGENT_UNDEFINED", "لا يوجد مماس وحيد عند هذه النقطة (المنحنى غير قابل للاشتقاق هنا).", path + ".tangents[" + i + "].x"); return; }
+    if (t.slope !== undefined && Math.abs(t.slope - d.value) > 1e-3 * (1 + Math.abs(d.value))) add("GRAPH_TANGENT_SLOPE_MISMATCH", "الميل المكتوب لا يطابق ميل المنحنى عند x = " + t.x + ".", path + ".tangents[" + i + "].slope");
   });
   (g.regions ?? []).forEach((r, i) => {
     const o = { xMin: r.from, xMax: r.to, yMin: vp!.yMin, yMax: vp!.yMax, samples: 200, maxDepth: 8, budget: 4000 };
     for (const cid of [r.curve, ...(r.lower !== undefined ? [r.lower] : [])]) {
       const c = compiled.get(cid)!;
-      const s = sampleExplicit(x => curveValue(c, x), r.from, r.to, o);
-      const covers = s.segments.length === 1 && s.breaks.length === 0 && s.segments[0][0][0] === r.from && s.segments[0][s.segments[0].length - 1][0] === r.to;
+      const f = (x: number) => curveValue(c, x);
+      const s = sampleExplicit(f, r.from, r.to, o);
+      let covers = s.segments.length === 1 && s.breaks.length === 0 && s.segments[0][0][0] === r.from && s.segments[0][s.segments[0].length - 1][0] === r.to;
+      if (covers) {
+        // an even pole (1/x², ln|x|) lies wholly beyond one viewport edge, where the drawing pass does not refine: sample again in a window
+        // holding every value seen, refining off-screen too, so growth without bound between two grid points still ends as a break
+        let yLo = vp!.yMin, yHi = vp!.yMax;
+        for (const p of s.segments[0]) { if (p[1] < yLo) yLo = p[1]; if (p[1] > yHi) yHi = p[1]; }
+        const pad = (yHi - yLo) / 10;
+        const t = sampleExplicit(f, r.from, r.to, { ...o, yMin: yLo - pad, yMax: yHi + pad, refineOffscreen: true });
+        covers = t.segments.length === 1 && t.breaks.length === 0;
+      }
       if (!covers) { add("GRAPH_REGION_DISCONTINUOUS", "المنطقة المظللة تحتاج منحنى «" + cid + "» معرّفًا ومتصلًا على كامل الفترة.", path + ".regions[" + i + "]"); break; }
     }
   });

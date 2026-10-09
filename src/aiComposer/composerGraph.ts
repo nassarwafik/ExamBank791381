@@ -33,10 +33,14 @@ export function normalizeMathNotation(s: string): string {
   let t = String(s || "").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => "^" + [...m].map(c => SUPERSCRIPT[c]).join(""));
   t = t.replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x6f0)).normalize("NFKC");
   t = t.replace(/[−‒–—]/g, "-").replace(/[×·∙⋅]/g, "*").replace(/÷/g, "/").replace(/π/g, "pi").replace(/√\s*\(/g, "sqrt(").replace(/√\s*([A-Za-z0-9.]+)/g, "sqrt($1)");
-  // a one-token argument written without parentheses ("sin x", "ln 2") is the same call as "sin(x)"
-  t = t.replace(new RegExp("\\b(" + FUNCTIONS.join("|") + ")\\s+([A-Za-z]|\\d+(?:\\.\\d+)?)(?![A-Za-z0-9.(])", "g"), "$1($2)");
+  // a one-token argument written without parentheses ("sin x", "ln 2") is the same call as "sin(x)" — only when nothing binds to it
+  // afterwards: "sin x^2", "sin x/2" and "sin x cos x" are ambiguous, stay unconverted and so certify no AI expression
+  t = t.replace(new RegExp("\\b(" + FUNCTIONS.join("|") + ")\\s+([A-Za-z]|\\d+(?:\\.\\d+)?)(?=\\s*(?:[+\\-),;=]|$))", "g"), "$1($2)");
   t = t.replace(/\s+/g, "");
-  return t.replace(/(\d)\*(?=[A-Za-z(])/g, "$1").replace(/\)\*\(/g, ")(");
+  // the implicit product of a number and a letter / bracket ("4x", "2(x+1)") is "4*x" — never for a number that is an exponent or a
+  // denominator ("e^2x", "1/2x": the two readings differ), and ")(" is ")*(" only with no division before it ("1/(x+1)(x-1)")
+  t = t.replace(/(^|[^\d.^/])(\d+(?:\.\d+)?)\*(?=[A-Za-z(])/g, "$1$2");
+  return t.replace(/\)\*\(/g, (m, at: number) => (t.slice(0, at).includes("/") ? m : ")("));
 }
 const MATH_RUN = /[A-Za-z0-9٠-٩۰-۹.+\-−–*/^()=,;×·÷πθ√⁰¹²³⁴⁵⁶⁷⁸⁹\s]+/g;
 const FUNCTION_HEAD = /^(?:[a-zA-Z]\(x\)|y)$/;

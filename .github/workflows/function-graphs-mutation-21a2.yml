@@ -7,6 +7,8 @@ on:
       - "src/functionGraphs/**"
       - "src/functionGraphSelectionQuestion.ts"
       - "src/aiComposer/composerGraph.ts"
+      - "src/aiComposer/composerGraph.21a2.test.ts"
+      - "api/tests/certification-21a2/**"
       - ".github/workflows/function-graphs-mutation-21a2.yml"
 permissions:
   contents: read

@@ -4,16 +4,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import os from "node:os";
 import { spawnSync } from "node:child_process";
 const SPEC = "src/functionGraphs/functionGraphSpec.ts";
 const SAMPLE = "src/functionGraphs/graphSampling.ts";
 const SCENE = "src/functionGraphs/graphScene.ts";
 const SELECT = "src/functionGraphSelectionQuestion.ts";
 const AI = "src/aiComposer/composerGraph.ts";
-const SPEC_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/functionGraphSpec.21a2.test.ts", "api/tests/certification-21a2/cert-21a2-adversarial.test.js"];
+const RF1_TEST = "src/functionGraphs/functionGraphReviewFix1.21a2.test.ts";
+const SPEC_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/functionGraphSpec.21a2.test.ts", "api/tests/certification-21a2/cert-21a2-adversarial.test.js", RF1_TEST];
 const SCENE_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/graphScene.21a2.test.ts", "src/functionGraphs/functionGraphSpec.21a2.test.ts"];
-const SELECT_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/functionGraphFailFirst.21a2.test.tsx", "api/tests/certification-21a2/cert-21a2-graphs-lifecycle.test.js"];
-const AI_TEST = ["src/aiComposer/composerGraph.21a2.test.ts"];
+const SELECT_TEST = ["src/functionGraphs/functionGraphMutationPins.21a2.test.ts", "src/functionGraphs/functionGraphFailFirst.21a2.test.tsx", "api/tests/certification-21a2/cert-21a2-graphs-lifecycle.test.js", RF1_TEST];
+const AI_TEST = ["src/aiComposer/composerGraph.21a2.test.ts", RF1_TEST];
 const M = (id, file, before, after, tests) => ({ id, file, before, after, tests });
 const mutants = [
  M("S01-prototype-id",SPEC,'!FORBIDDEN_KEYS.has(v);','true;',SPEC_TEST),
@@ -54,11 +56,34 @@ const mutants = [
  M("A01-graph-policy-disabled",AI,'if (!policy.charts) return fail(','if (false && !policy.charts) return fail(',AI_TEST),
  M("A02-invented-formula",AI,'if (!stated.has(normalizeMathNotation(c.expression)))','if (false)',AI_TEST),
  M("A03-invented-domain",AI,'if (c[k] !== null && !written(c[k] as number, nums))','if (false)',AI_TEST),
- M("A04-invented-viewport",AI,'if (bad) return fail("AI_GRAPH_NUMBER_NOT_STATED"','if (false && bad) return fail("AI_GRAPH_NUMBER_NOT_STATED"',AI_TEST)
+ M("A04-invented-viewport",AI,'if (bad) return fail("AI_GRAPH_NUMBER_NOT_STATED"','if (false && bad) return fail("AI_GRAPH_NUMBER_NOT_STATED"',AI_TEST),
+ // Review Fix 1 — scoring invariants that survived the first campaign (review finding C-2) and the guards added by the fix
+ M("Q09-partial-union-divisor",SELECT,'max * hits / union','max * hits / total',SELECT_TEST),
+ M("Q10-exact-ignores-extra",SELECT,'const exact = hits === total && r.targets.length === total;','const exact = hits === total;',SELECT_TEST),
+ M("Q11-too-many-selections",SELECT,'if (given.length > Math.min(cfg.config.maxSelections, FUNCTION_GRAPH_SELECTION_LIMITS.responseTargets))','if (false)',SELECT_TEST),
+ M("S20-tangent-needs-own-derivative",SPEC,'if (!d.smooth) { add("GRAPH_TANGENT_UNDEFINED"','if (false) { add("GRAPH_TANGENT_UNDEFINED"',SPEC_TEST),
+ M("S21-derivative-own-domain",SPEC,'if (mismatch || checked === 0) add(','if (mismatch) add(',SPEC_TEST),
+ M("S22-region-even-pole",SPEC,'covers = t.segments.length === 1 && t.breaks.length === 0;','covers = true;',SPEC_TEST),
+ M("A05-exponent-implicit-product",AI,'(^|[^\\d.^/])(\\d+(?:\\.\\d+)?)\\*(?=[A-Za-z(])','(^|[^\\d.])(\\d+(?:\\.\\d+)?)\\*(?=[A-Za-z(])',AI_TEST),
+ M("A06-function-argument-binding",AI,'(?=\\\\s*(?:[+\\\\-),;=]|$))','(?![A-Za-z0-9.(])',AI_TEST)
 ];
 const sha = s => crypto.createHash("sha256").update(s).digest("hex");
 const files = [...new Set(mutants.map(m => m.file))];
+// A run killed outright (SIGKILL, a lost shell) cannot run `finally`: the originals are written to a BACKUP first, and the next invocation
+// restores a stale backup before anything else (`--restore` stops there). SIGINT / SIGTERM / SIGHUP restore and exit 130; an interrupted
+// test process (the signal reaches the whole process group) also stops the campaign at once. The reference is the Runner harness
+// runner/tests/mutation/load-mutations.js.
+const BACKUP = path.join(os.tmpdir(), "exambank-21a2-mutation-backup.json");
+if (fs.existsSync(BACKUP)) {
+  const stale = JSON.parse(fs.readFileSync(BACKUP, "utf8"));
+  for (const [file, contents] of Object.entries(stale)) fs.writeFileSync(file, contents, "utf8");
+  fs.rmSync(BACKUP, { force: true });
+  console.log("21A2_MUTATION_RESTORED_STALE_BACKUP", JSON.stringify(Object.keys(stale)));
+}
+if (process.argv.includes("--restore")) process.exit(0);
 const original = new Map(files.map(file => [file, fs.readFileSync(file,"utf8")]));
+const restoreAll = () => { for (const [file, contents] of original) fs.writeFileSync(file, contents, "utf8"); fs.rmSync(BACKUP, { force: true }); };
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(sig, () => { restoreAll(); console.error("21A2_MUTATION_INTERRUPTED " + sig + " — sources restored"); process.exit(130); });
 const hashes = Object.fromEntries([...original].map(([file,value])=>[file,sha(value)]));
 const status = spawnSync("git", ["status","--porcelain","--",...files],{encoding:"utf8"});
 if(status.status !== 0 || status.stdout.trim()) { console.error("Mutated source tree must start clean.",status.stdout); process.exit(3); }
@@ -68,6 +93,7 @@ const baseline = vitest(allTests);
 if(baseline.status !== 0){console.error("BASELINE RED",baseline.stdout.slice(-3500),baseline.stderr.slice(-2000));process.exit(4);}
 console.log("21A2_MUTATION_BASELINE_GREEN",JSON.stringify({tests:allTests,mutants:mutants.length,files:hashes}));
 const ledger = [];
+fs.writeFileSync(BACKUP, JSON.stringify(Object.fromEntries(original)), "utf8");
 try {
 for (const m of mutants) {
   let outcome="invalid",diagnostic="";
@@ -79,6 +105,7 @@ for (const m of mutants) {
     try {
       fs.writeFileSync(m.file, source.replace(m.before,m.after),"utf8");
       const result = vitest(m.tests);
+      if (["SIGINT","SIGTERM","SIGHUP"].includes(result.signal) || result.status === 130) { restoreAll(); console.error("21A2_MUTATION_INTERRUPTED during " + m.id + " — sources restored"); process.exit(130); }
       const output = (result.stdout||"")+"\n"+(result.stderr||"");
       if(result.error?.code==="ETIMEDOUT" || result.signal){outcome="timeout";diagnostic=String(result.error||result.signal);}
       else if(result.status===0){outcome="survived";diagnostic="Selected tests passed";}
@@ -92,7 +119,7 @@ for (const m of mutants) {
   console.log("21A2_MUTATION_RESULT",JSON.stringify(record));
 }
 }finally{
-  for(const [file,contents] of original) fs.writeFileSync(file,contents,"utf8");
+  restoreAll();
 }
 const verified=files.every(f=>sha(fs.readFileSync(f,"utf8"))===hashes[f]);
 const git=spawnSync("git",["diff","--exit-code","--",...files],{encoding:"utf8"});

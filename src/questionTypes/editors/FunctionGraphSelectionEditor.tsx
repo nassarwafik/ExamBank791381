@@ -78,7 +78,7 @@ export default function FunctionGraphSelectionEditor({ node, onChange, disabled 
         </div>
       ) : (
         <>
-          <section aria-label="رسم الدالة"><GraphEditor graph={graph} name="الرسم" disabled={disabled} confirm={confirm} preview={false} onChange={g => write({ graph: g })} /></section>
+          <section aria-label="رسم الدالة"><GraphEditor graph={graph} name="الرسم" disabled={disabled} confirm={confirm} preview={false} onChange={g => write({ graph: g })} onReplace={g => write({ graph: g, correct: [] })} /></section>
           <section className="vq-fields" aria-label="ما يختاره الطالب">
             <label className="vq-field"><span>يختار الطالب</span>
               <select className="sb-input sb-input-sm" aria-label="نوع العنصر الذي يختاره الطالب" value={target} disabled={disabled} onChange={e => void changeTarget(e.target.value as GraphTargetKind)}>

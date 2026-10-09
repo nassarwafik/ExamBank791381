@@ -20,6 +20,8 @@ export type SampleOptions = {
   maxDepth?: number;
   /** refinement evaluations beyond the base grid (clamped to 0 … 64000; default 16000) */
   budget?: number;
+  /** refine also where all three points lie beyond one viewport edge (continuity checks: an even pole such as 1/x² never shows on screen) */
+  refineOffscreen?: boolean;
 };
 export type SampleResult = { segments: SamplePoint[][]; breaks: number[]; evaluations: number; truncated: boolean };
 
@@ -74,7 +76,7 @@ export function samplePath(point: (s: number) => SamplePoint | null, s0: number,
       return;
     }
     const sa = side(pa), sm = side(pm), sb = side(pb);
-    if (sa !== 0 && (sa & sm & sb) !== 0) { emit(pb); return; }                   // all beyond one viewport edge: invisible either way
+    if (!o.refineOffscreen && sa !== 0 && (sa & sm & sb) !== 0) { emit(pb); return; } // all beyond one viewport edge: invisible either way
     const chord: SamplePoint = [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2];
     const jump = dist(pa, pb) > L.jump;
     if (!jump && dist(chord, pm) <= smooth) { emit(pb); return; }
