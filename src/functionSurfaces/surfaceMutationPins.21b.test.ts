@@ -24,7 +24,7 @@ describe("21B mutation pins — surface authority", () => {
   it("pins expression variables, view ordering, integer/bounded grids and camera elevation", () => {
     expect(codes({ ...base(), expression: "x+z" })).toContain("SURFACE_VARIABLE_INVALID");
     expect(codes({ ...base(), viewport: { ...base().viewport, xMin: 2 } })).toContain("SURFACE_VIEW_INVALID");
-    expect(codes({ ...base(), grid: { xSteps: SURFACE_LIMITS.maxSteps + 1, ySteps: 8 } })).toContain("SURFACE_NUMBER_INVALID");
+    expect(codes({ ...base(), grid: { xSteps: 41, ySteps: 8 } })).toContain("SURFACE_NUMBER_INVALID");
     expect(codes({ ...base(), grid: { xSteps: 8.5, ySteps: 8 } })).toContain("SURFACE_GRID_INVALID");
     expect(codes({ ...base(), camera: { azimuth: 0, elevation: 1.8 } })).toContain("SURFACE_NUMBER_INVALID");
   });
@@ -40,6 +40,19 @@ describe("21B mutation pins — surface authority", () => {
     const clipped = validateSurfaceSpec({ ...base(), expression: "100+x+y" });
     if (!clipped.ok) throw Error("clipped fixture");
     expect(sampleSurface(clipped.value, clipped.ast).vertices.every(v => v === null)).toBe(true);
+
+    const corner = validateSurfaceSpec({ ...base(), expression: "x+y", viewport: { ...base().viewport, zMin: -3, zMax: 1.9 } });
+    if (!corner.ok) throw Error("corner fixture");
+    expect(() => sampleSurface(corner.value, corner.ast)).not.toThrow();
+    expect(sampleSurface(corner.value, corner.ast).skippedCells).toBeGreaterThan(0);
+
+    const curved = validateSurfaceSpec({ ...base(), expression: "1/(1+100*((x-0.125)^2+(y-0.125)^2))", viewport: { ...base().viewport, zMin: 0, zMax: 2 } });
+    if (!curved.ok) throw Error("curvature fixture");
+    expect(sampleSurface(curved.value, curved.ast).skippedCells).toBeGreaterThan(0);
+
+    const jump = validateSurfaceSpec({ ...base(), expression: "1/(x+y-0.13)", viewport: { ...base().viewport, zMin: -210, zMax: 20 } });
+    if (!jump.ok) throw Error("jump fixture");
+    expect(sampleSurface(jump.value, jump.ast).skippedCells).toBeGreaterThan(0);
 
     const pole = validateSurfaceSpec({ ...base(), expression: "1/(x-y)", viewport: { ...base().viewport, zMin: -5, zMax: 5 } });
     if (!pole.ok) throw Error("pole fixture");
