@@ -1,6 +1,6 @@
 # Phase 21C — Enterprise Interactive 3D Objects & Geometry Runtime
 
-**Status:** implementation/certification in progress on `feature/21c-interactive-3d-objects-geometry` (PR #280). Owner merge only after exact-head certification.
+**Status:** implementation complete; exact-head closure certification in progress on `feature/21c-interactive-3d-objects-geometry` (PR #280). Owner merge only after all closure gates are green.
 
 ## 1. Baseline and goal
 
@@ -125,6 +125,9 @@ The teacher can:
 - add/remove bounded primitive objects;
 - edit object type, position, size and palette;
 - preview the validated scene;
+- create, edit and remove semantic targets for arbitrary authored primitives;
+- configure object / face / edge / vertex bindings where the primitive supports them;
+- automatically remove geometry targets that become invalid after changing a primitive kind;
 - configure target family and answer key in the question editor.
 
 Malformed scenes stay blocked by the canonical validator.
@@ -171,7 +174,7 @@ The generated acceptance exam is:
 
 It contains semantic 3D selection tasks across geometry, anatomy and science plus a control question, proving that the same owned contract/runtime supports multiple subjects.
 
-The fixture is generated from source and drift-tested.
+The fixture is generated from source and drift-tested. Its geometry/anatomy/chemistry prompts are concept-driven rather than simple label-copy tasks (for example, choosing the cube face opposite the bottom face, the pyramid apex, the chamber that sends oxygenated blood through the aorta, the bile-producing organ, and the atom that appears once in H₂O).
 
 ## 10. Security invariants
 
@@ -183,6 +186,7 @@ Phase 21C fails closed on:
 - unsafe bidi/invisible/control text;
 - malformed or duplicate IDs;
 - unknown target object references;
+- duplicate semantic bindings where two target IDs point at the same physical object/face/edge/vertex;
 - invalid face/edge/vertex element names;
 - oversized object/target arrays;
 - non-finite or out-of-range coordinates/sizes/camera values;
