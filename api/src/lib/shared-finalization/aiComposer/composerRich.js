@@ -34,7 +34,8 @@ function mapAiRichBlocks(raw, path = "richContent", chartPolicy) {
     const blocks = [];
     for (let i = 0; i < raw.length; i++) {
         const b = raw[i], p = path + "[" + i + "]";
-        if (!(0, composerSchemaKit_1.hasExactKeys)(b, BLOCK_KEYS) || !(0, composerSchemaKit_1.isEnum)(b.type, composerCatalog_1.COMPOSER_RICH_BLOCKS))
+        const legacyBlock = (0, composerSchemaKit_1.isPlainRecord)(b) && b.type !== "functionGraph" && (0, composerSchemaKit_1.hasExactKeys)(b, BLOCK_KEYS.slice(0, -1));
+        if (!((0, composerSchemaKit_1.hasExactKeys)(b, BLOCK_KEYS) || legacyBlock) || !(0, composerSchemaKit_1.isEnum)(b.type, composerCatalog_1.COMPOSER_RICH_BLOCKS))
             return fail("كتلة منسقة غير صالحة البنية.", p);
         if (!(0, composerSchemaKit_1.isStr)(b.text, L.richTextChars) || !(0, composerSchemaKit_1.isStr)(b.source, L.richSourceChars) || !(0, composerSchemaKit_1.isStr)(b.title, L.shortText) || !(0, composerSchemaKit_1.isEnum)(b.dir, DIRS) || !(0, composerSchemaKit_1.isInt)(b.level, 2, 4))
             return fail("قيم الكتلة المنسقة خارج الحدود.", p);
@@ -48,7 +49,7 @@ function mapAiRichBlocks(raw, path = "richContent", chartPolicy) {
             return fail("لغة الكود أو نوع الملاحظة غير معروف.", p);
         if (b.chart !== null && !(0, composerSchemaKit_1.isPlainRecord)(b.chart))
             return fail("وصف الرسم البياني غير صالح.", p + ".chart");
-        if (b.graph !== null && !(0, composerSchemaKit_1.isPlainRecord)(b.graph))
+        if (b.graph !== undefined && b.graph !== null && !(0, composerSchemaKit_1.isPlainRecord)(b.graph))
             return fail("وصف رسم الدالة غير صالح.", p + ".graph");
         const text = (0, composerSchemaKit_1.cleanText)(b.text), title = (0, composerSchemaKit_1.cleanText)(b.title);
         switch (b.type) {
