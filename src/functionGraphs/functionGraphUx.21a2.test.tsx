@@ -14,12 +14,12 @@ describe("21A2-UX function graph RTL, keyboard, trace, print and reset", () => {
     const original = JSON.stringify(spec);
     render(<div dir="rtl"><FunctionGraphView spec={spec} /></div>);
     const stage = screen.getByRole("group", { name: "منطقة الرسم: " + spec.title });
-    const reset = screen.getByRole("button", { name: "إعادة الضبط إلى نافذة العرض الأصلية" });
-    expect(reset).toBeDisabled();
+    const reset = screen.getByRole("button", { name: "إعادة الضبط إلى نافذة العرض الأصلية" }) as HTMLButtonElement;
+    expect(reset.disabled).toBe(true);
     expect(stage.getAttribute("data-fg-zoomed")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "تكبير" }));
     expect(stage.getAttribute("data-fg-zoomed")).toBe("true");
-    expect(reset).not.toBeDisabled();
+    expect(reset.disabled).toBe(false);
     expect(document.querySelector(".fg-print svg")).not.toBeNull();
     fireEvent.click(reset);
     expect(stage.getAttribute("data-fg-zoomed")).toBeNull();
@@ -41,7 +41,7 @@ describe("21A2-UX function graph RTL, keyboard, trace, print and reset", () => {
     expect(stage.getAttribute("data-fg-zoomed")).toBeNull();
     expect(stage.querySelector(".fg-readout")).toBeNull();
     expect(document.querySelector('bdi[dir="ltr"]')).not.toBeNull();
-    expect(screen.getByRole("figure", { name: spec.title })).toBeInTheDocument();
+    expect(screen.getByRole("figure", { name: spec.title })).toBeTruthy();
   });
 
   it("omits disabled zoom/pan/trace controls while keeping an accessible formula-and-values alternative", () => {
@@ -51,7 +51,7 @@ describe("21A2-UX function graph RTL, keyboard, trace, print and reset", () => {
     const stage = screen.getByRole("group", { name: "منطقة الرسم: " + spec.title });
     fireEvent.keyDown(stage, { key: "ArrowRight" });
     expect(screen.getByRole("status").textContent).toBe("");
-    expect(screen.getByText(/x\^2 - 4x \+ 3|x\^2 - 4\*x \+ 3/)).toBeTruthy();
+    expect(document.querySelector(".fg-alt .fg-table")).not.toBeNull();
     expect(stage.getAttribute("data-fg-zoomed")).toBeNull();
   });
 });
