@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateRichContent, RICH_LIMITS } from "../richContent/richContentModel";
 import { defaultSurface } from "./surfaceEditing";
 import { projectSurface, sampleSurface } from "./surfaceMesh";
-import { SURFACE_LIMITS, validateSurfaceSpec, type SurfaceSpecV1 } from "./surfaceSpec";
+import { validateSurfaceSpec, type SurfaceSpecV1 } from "./surfaceSpec";
 
 const base = (): SurfaceSpecV1 => ({
   version: 1, id: "surface-a", title: "سطح آمن", description: "وصف تعليمي آمن.",
