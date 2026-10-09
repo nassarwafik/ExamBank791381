@@ -1,0 +1,30 @@
+name: Phase 21A2 Independent Copilot Review Request
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".github/workflows/function-graphs-copilot-review-21a2.yml"
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  request-independent-review:
+    if: github.event.pull_request.number == 278
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request separate GitHub Copilot read-only PR review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          node_id="$(gh api graphql -f query='{repository(owner:"nassarwafik",name:"ExamBank791381"){pullRequest(number:278){id}}}' --jq '.data.repository.pullRequest.id')"
+          if [ -z "$node_id" ] || [ "$node_id" = null ]; then
+            echo "COPILOT_REQUEST_NOT_AVAILABLE: could not resolve PR node ID"
+            exit 0
+          fi
+          if gh api graphql -f query='mutation($p:ID!){requestReviewsByLogin(input:{pullRequestId:$p,botLogins:["copilot-pull-request-reviewer"]}){pullRequest{number}}}' -f p="$node_id"; then
+            echo "COPILOT_REQUEST_SUBMITTED: inspect PR review/events before asserting independent approval"
+          else
+            echo "COPILOT_REQUEST_NOT_AVAILABLE: no verified bot review was requested"
+          fi
