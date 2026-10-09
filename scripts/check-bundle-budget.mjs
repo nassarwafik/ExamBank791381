@@ -116,6 +116,9 @@ const ECHARTS_SIGNATURES = ["_echarts_instance_", "xp-chart-engine-v1", "xp-char
 // These CSS/UI class tokens are deliberately distinct from the shared graph validation authority,
 // which can legitimately load on the student path without loading any graph UI.
 const FUNCTION_GRAPH_UI_SIGNATURES = ["fg-stage", "ge-field-expr", "fg-review"];
+// Phase 21B: the 3D SVG viewer, persisted-surface editor and teacher laboratory are UI/runtime payloads.
+// The strict SurfaceSpec validator may be pulled in transitively by RichContent validation, but these UI signatures must stay lazy.
+const SURFACE_3D_UI_SIGNATURES = ["ex3d-scene", "ex3d-editor", "ex3d-lab"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
@@ -235,6 +238,21 @@ function main() {
   const graphViewRoots = all.filter(f => /^FunctionGraphView-[^.]+\.js$/.test(f));
   if (!graphViewRoots.length) failures.push("no lazy FunctionGraphView-*.js chunk was emitted");
   for (const f of portalClosure) { const hit = FUNCTION_GRAPH_UI_SIGNATURES.filter(sig => read(f).includes(sig)); if (hit.length) failures.push(`${f} statically exposes function graph UI on student no-graph path (${hit.join(", ")})`); }
+
+  // Phase 21B — the owned SVG 3D runtime must remain behind RichContent/Builder lazy edges.
+  for (const sig of SURFACE_3D_UI_SIGNATURES) {
+    const owners = all.filter(f => read(f).includes(sig));
+    if (!owners.length) failures.push(`3D surface UI signature "${sig}" was not found in any JS chunk — update the lazy guard`);
+    for (const f of owners) if (initial.includes(f)) failures.push(`${f} loads 3D surface UI "${sig}" in the initial graph`);
+  }
+  const surfaceViewRoots = all.filter(f => /^Surface3DView-[^.]+\.js$/.test(f));
+  if (!surfaceViewRoots.length) failures.push("no lazy Surface3DView-*.js chunk was emitted");
+  for (const f of portalClosure) {
+    const hit = SURFACE_3D_UI_SIGNATURES.filter(sig => read(f).includes(sig));
+    if (hit.length) failures.push(`${f} statically exposes 3D surface UI on a student no-3D path (${hit.join(", ")})`);
+  }
+  console.log(`3D surface runtime: ${surfaceViewRoots.length} lazy Surface3DView root(s); Student Portal static closure carries no 3D viewer/editor/lab UI`);
+
   for (const f of portalClosure) { const hit = DATA_CHART_SIGNATURES.filter(s => read(f).includes(s)); if (hit.length) failures.push(`${f} is statically reachable from the Student Portal and carries chart code (${hit.join(", ")}) — a student without charts must never download it`); }
   const echartsChunks = all.filter(f => ECHARTS_SIGNATURES.some(s => read(f).includes(s)));
   const dataChartRoots = all.filter(f => /^DataChart-[^.]+\.js$/.test(f));

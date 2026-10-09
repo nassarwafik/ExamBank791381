@@ -78,6 +78,7 @@ const AiScenarioAuthorDialog = lazy(() => import("./aiAuthoring/AiScenarioAuthor
 const PresentationStudio = lazy(() => import("./presentation/PresentationStudio"));
 // Phase 20F — «المؤلف الذكي للامتحان» (AI Full Exam Composer): its own lazy chunk (dialog + composer pipeline + catalog), opened on demand.
 const AiExamComposerDialog = lazy(() => import("./aiComposer/AiExamComposerDialog"));
+const Surface3DLab = lazy(() => import("./functionSurfaces/Surface3DLab"));
 import type { ScenarioV1 } from "./scenarioSource";
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
@@ -145,6 +146,7 @@ const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Nu
 
 export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, aiAuthor }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
+  const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
   const { confirm, confirmDialog } = useConfirm();
   const unsaved = saveState === "dirty" || saveState === "recovered";
@@ -534,6 +536,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {presets && <button type="button" className={"sb-btn" + (presetsOpen ? " is-active" : "")} onClick={() => setPresetsOpen(true)} aria-haspopup="dialog" title="القوالب الأكاديمية">📋 <span className="sb-btn-label">القوالب الأكاديمية</span></button>}
           <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
           <button type="button" className={"sb-btn" + (studioOpen ? " is-active" : "")} onClick={() => setStudioOpen(true)} disabled={saving} aria-haspopup="dialog" title="العرض والتصميم">🎨 <span className="sb-btn-label">العرض والتصميم</span></button>
+          <button type="button" className="sb-btn" onClick={() => setSurfaceLabOpen(true)} aria-haspopup="dialog">🧮 مختبر الدوال 3D (تجريبي)</button>
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
@@ -687,6 +690,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         </Suspense>
       )}
 
+      {surfaceLabOpen && (
+        <Suspense fallback={<p role="status" className="sb-hint">جارٍ تحميل مختبر 3D…</p>}>
+          <Surface3DLab onClose={() => setSurfaceLabOpen(false)} />
+        </Suspense>
+      )}
       {preview && createPortal(<ExamPreview exam={preview} onClose={() => setPreview(null)} />, document.body)}
       {confirmDialog}
       <Dialog

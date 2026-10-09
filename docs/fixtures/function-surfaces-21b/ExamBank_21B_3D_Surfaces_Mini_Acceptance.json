@@ -1,0 +1,330 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21B-3D-SURFACES-MINI",
+  "title": "ExamBank 21B — اختبار القبول للأسطح الرياضية ثلاثية الأبعاد",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "قراءة وفهم الأسطح z = f(x,y)",
+    "instructions": "دوّر السطح من أزرار العرض عند الحاجة، ثم أجب عن الأسئلة اعتمادًا على الشكل والمعادلة.",
+    "instructionsRichContent": {
+      "schemaVersion": 1,
+      "blocks": [
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "يمكن تدوير كل سطح من أزرار العرض، كما يتوفر جدول قيم بديل يدعم قارئ الشاشة."
+            }
+          ]
+        }
+      ]
+    },
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — القطع المكافئ",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "multipleChoice",
+          "text": "أي وصف يطابق السطح z = x² + y²؟",
+          "marks": 4,
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ادرس اتجاه ارتفاع السطح بعيدًا عن نقطة الأصل."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 1,
+                  "id": "surface-paraboloid",
+                  "title": "سطح القطع المكافئ",
+                  "description": "تمثيل ثلاثي الأبعاد للدالة z = x² + y² ضمن مجال العرض.",
+                  "expression": "x^2+y^2",
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": -1,
+                    "zMax": 9
+                  },
+                  "grid": {
+                    "xSteps": 20,
+                    "ySteps": 20
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "أي وصف يطابق السطح z = x² + y²؟"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": [
+            {
+              "text": "له قيمة صغرى عند نقطة الأصل"
+            },
+            {
+              "text": "له نقطة سرج عند الأصل"
+            },
+            {
+              "text": "قيمه محصورة بين −1 و1"
+            },
+            {
+              "text": "هو مستوى مستوٍ"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — السطح السرجي",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "multipleChoice",
+          "text": "ما الوصف الأنسب لسلوك z = x² − y² قرب نقطة الأصل؟",
+          "marks": 4,
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "قارن شكل السطح على اتجاه x مع شكله على اتجاه y."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 1,
+                  "id": "surface-saddle",
+                  "title": "السطح السرجي",
+                  "description": "تمثيل ثلاثي الأبعاد للدالة z = x² − y² ضمن مجال العرض.",
+                  "expression": "x^2-y^2",
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": -5,
+                    "zMax": 5
+                  },
+                  "grid": {
+                    "xSteps": 20,
+                    "ySteps": 20
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ما الوصف الأنسب لسلوك z = x² − y² قرب نقطة الأصل؟"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": [
+            {
+              "text": "يرتفع في اتجاه وينخفض في اتجاه آخر"
+            },
+            {
+              "text": "له قيمة عظمى مطلقة عند الأصل"
+            },
+            {
+              "text": "له قيمة صغرى مطلقة عند الأصل"
+            },
+            {
+              "text": "لا يعتمد على y"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — السطح الموجي",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "multipleChoice",
+          "text": "ما أكبر قيمة ممكنة تقريبًا للدالة z = sin(x)·cos(y)؟",
+          "marks": 4,
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ادرس شكل السطح وقيمه ضمن المجال المعروض قبل اختيار الإجابة."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 1,
+                  "id": "surface-wave",
+                  "title": "سطح موجي",
+                  "description": "تمثيل ثلاثي الأبعاد للدالة z = sin(x)·cos(y) ضمن المجال المعروض.",
+                  "expression": "sin(x)*cos(y)",
+                  "viewport": {
+                    "xMin": -3.14159,
+                    "xMax": 3.14159,
+                    "yMin": -3.14159,
+                    "yMax": 3.14159,
+                    "zMin": -1.5,
+                    "zMax": 1.5
+                  },
+                  "grid": {
+                    "xSteps": 20,
+                    "ySteps": 20
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ما أكبر قيمة ممكنة تقريبًا للدالة z = sin(x)·cos(y)؟"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": [
+            {
+              "text": "1"
+            },
+            {
+              "text": "2"
+            },
+            {
+              "text": "π"
+            },
+            {
+              "text": "4"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — القبة الكروية والعرض العربي",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "multipleChoice",
+          "text": "عند x = 0 و y = 0، ما قيمة z على القبة z = √(4 − x² − y²)؟",
+          "marks": 4,
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "اقرأ المعادلة ثم استخدم السطح وجدول القيم للتحقق."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 1,
+                  "id": "surface-dome",
+                  "title": "قبة كروية",
+                  "description": "النصف العلوي من الكرة ذات نصف القطر 2: z = √(4 − x² − y²).",
+                  "expression": "sqrt(4-x^2-y^2)",
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": -0.2,
+                    "zMax": 2.5
+                  },
+                  "grid": {
+                    "xSteps": 20,
+                    "ySteps": 20
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "عند x = 0 و y = 0، ما قيمة z على القبة z = √(4 − x² − y²)؟"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": [
+            {
+              "text": "2"
+            },
+            {
+              "text": "0"
+            },
+            {
+              "text": "4"
+            },
+            {
+              "text": "−2"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    }
+  ]
+}
