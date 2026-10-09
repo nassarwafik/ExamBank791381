@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateFunctionGraphSpec } from "./functionGraphSpec";
 import { samplePath, SAMPLING_LIMITS } from "./graphSampling";
 import { buildGraphScene } from "./graphScene";
-import { quadraticGraph, rationalGraph, areaGraph, piecewiseGraph, circleGraph } from "./testing/graphFixtures";
+import { quadraticGraph, areaGraph, piecewiseGraph, circleGraph } from "./testing/graphFixtures";
 import {
   validateFunctionGraphSelectionConfig,
   validateFunctionGraphSelectionAnswerKey,
