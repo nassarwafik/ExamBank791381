@@ -1,5 +1,5 @@
 name: Phase 21C Regenerate Shared Artifacts (temporary)
-# trigger: refresh after registry guard compile fix
+# trigger: regenerate after duplicate production-key fix
 on:
   push:
     branches:
