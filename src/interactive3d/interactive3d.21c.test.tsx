@@ -34,6 +34,11 @@ describe("21C scene contract and geometry engine", () => {
     const unknownObject = structuredClone(scene3DPreset("heart")) as Interactive3DSceneSpecV1;
     unknownObject.targets[0] = { ...unknownObject.targets[0], objectId: "missing" };
     expect(validateInteractive3DSceneSpec(unknownObject).ok).toBe(false);
+    const duplicateBinding = structuredClone(scene3DPreset("heart")) as Interactive3DSceneSpecV1;
+    duplicateBinding.targets.push({ ...duplicateBinding.targets[0], id: "samePartAgain" });
+    const duplicateBindingResult = validateInteractive3DSceneSpec(duplicateBinding);
+    expect(duplicateBindingResult.ok).toBe(false);
+    if (!duplicateBindingResult.ok) expect(duplicateBindingResult.issues.map(i => i.code)).toContain("SCENE3D_DUPLICATE_TARGET_BINDING");
     const tooMany = structuredClone(scene3DPreset("heart")) as Interactive3DSceneSpecV1;
     tooMany.objects = Array.from({ length: 65 }, (_, i) => ({ ...tooMany.objects[0], id: "part" + i }));
     tooMany.targets = [];
