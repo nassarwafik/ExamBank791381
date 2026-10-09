@@ -53,7 +53,7 @@ describe("20A.2-S1 — registration, descriptors, shared build", () => {
   });
   it("PIN — the question-type catalog stays at 24 and smartSim@1 is the only trusted simulator type; simulation@1 stays manual", () => {
     const cat = loadShared("questionTypeCatalog");
-    expect(cat.QUESTION_TYPE_CATALOG.length).toBe(27);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
+    expect(cat.QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
     expect(resolveGrader("simulation", 1)({}, { kind: "simulation", state: { score: 100 } }, 10)).toEqual({ score: 0, manualReview: true, correct: false });
   });
 });
