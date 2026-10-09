@@ -154,3 +154,21 @@ describe("21A1-AI17 every documented pairing rule has an assertion that fails wi
     expect(pairedNumbers("A = 6, B = 7", ["A", "B"])).toEqual([6, 7]);
   });
 });
+
+describe("21A1-AI18 Review Fix 5 mutation pins (§20.5)", () => {
+  it("RV07: a label alone on its line does not take the number on the next line", () => {
+    expect(pairedNumbers("Jan\n120\nFeb\n80", ["Jan", "Feb"])).toEqual([undefined, undefined]);
+  });
+  it("RV08 / RV09: values written before their labels on ONE line pair nothing (a label's next number is the next label's); the correct chart is accepted", () => {
+    expect(pairedNumbers("120 Jan 80 Feb 95 Mar", ["Jan", "Feb", "Mar"])).toEqual([undefined, undefined, undefined]);
+    expect(pairedNumbers("120 يناير 80 فبراير 95 مارس", ["يناير", "فبراير", "مارس"])).toEqual([undefined, undefined, undefined]);
+    expect(verdict(bar(["Jan", "Feb", "Mar"], [120, 80, 95]), "120 Jan 80 Feb 95 Mar")).toBe("ok");
+  });
+  it("RV13: a parenthesised value followed by its unit pairs (\"Jan (120) students\")", () => {
+    expect(pairedNumbers("Jan (120) students, Feb (80) students", ["Jan", "Feb"])).toEqual([120, 80]);
+  });
+  it("RV29: a pie descriptor with fewer values than categories is refused as malformed", () => {
+    const pie = D({ kind: "pie", categories: ["A", "B", "C"], series: [{ label: "s", values: [50, 30], mark: "bar" }] });
+    expect(verdict(pie, "A 50, B 30, C 20")).toBe("AI_CHART_MALFORMED");
+  });
+});

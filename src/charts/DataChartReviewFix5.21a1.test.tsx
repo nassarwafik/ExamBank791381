@@ -78,6 +78,12 @@ describe("21A1-RB37 the page's measurer: keyed by font and text, bounded; its we
     await settle();
     expect((h.mounted.at(-1) as Opt).grid.right).toBe(Math.ceil(7 * 6 + 6));                       // "1234567" at 12 px: 6 px per character
   });
+  it("a phone chart measures at 11 px even after the same number was measured at 12 px (its first, unmeasured-width build; mutant RV76)", async () => {
+    stageWidth(320);
+    render(<DataChart spec={hbar()} />);
+    await settle();
+    expect((h.mounted.at(-1) as Opt).grid.right).toBe(Math.ceil(7 * 5.5 + 6));                   // "1234567" at 11 px: 5.5 px per character
+  });
   it("the cache holds at most 4,000 entries: after 4,000 other texts the first is measured again", async () => {
     render(<DataChart spec={canon(rainfallBar())} />);
     await settle();

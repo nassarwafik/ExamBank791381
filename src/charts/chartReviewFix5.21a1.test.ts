@@ -150,10 +150,14 @@ describe("21A1-RB31 histograms take the value-label and rotated-label gaps (roun
     expect(o.xAxis.axisLabel.rotate).toBe(45);
     expect(o.yAxis.axisLabel.margin).toBe(14);
   });
-  it("the bins share the plot width left after the right margin and the left gap (lane C V17)", () => {
-    const n = 10, w = 1280, o = build(hist(n, true), { width: w });
-    const right = o.grid.right - 24, left = (o.yAxis.axisLabel.margin ?? 8) - 8;
-    expect(o.xAxis.axisLabel.width).toBe(Math.max(24, Math.min(110, Math.floor((w - 96 - right - left) / n - 4))));
+  it("the bins share the plot width left after the right margin and the left gap (lane C V17; mutant RV80)", () => {
+    // five flat bins at 600 px with 12-digit counts: the right margin is 40 − 24 = 16 px (half of 72 px + 4), no left gap; the slot is
+    // (600 − 96 − 16) / 5 = 97.6 px, so a flat label's cap is ⌊97.6 − 4⌋ = 93 px (96 if the margin were ignored)
+    const wide = canon({ ...histogramChart(), valueLabels: true, bins: Array.from({ length: 5 }, (_, i) => ({ id: "h" + i, start: i * 5, end: (i + 1) * 5, count: 123456789012 + i })) });
+    const o = build(wide, { width: 600 });
+    expect(o.xAxis.axisLabel.rotate).toBeUndefined();
+    expect(o.grid.right).toBe(24 + 16);
+    expect(o.xAxis.axisLabel.width).toBe(93);
   });
 });
 
@@ -206,5 +210,44 @@ describe("21A1-RB34 Review Fix 5 pins of round-5 lane C (C5-6 / C5-7)", () => {
   it("C5-7: a radar on a very narrow stage keeps its names at least 24 px wide", () => {
     const r = canon({ ...radarChart(), axes: ["أ", "ب", "ج", "د", "ه"].map((label, i) => ({ id: "a" + i, label, max: 10 })), series: [{ id: "s", label: "س", values: [5, 5, 5, 5, 5] }] });
     expect(build(r, { width: 200, compact: true }).radar.axisName.width).toBe(24);
+  });
+});
+
+describe("21A1-RB39 Review Fix 5 mutation pins (§20.5)", () => {
+  const dual10 = () => canon({ version: 1, id: "d", kind: "combo", title: "t", description: "d", valueLabels: true, categories: cats(4),
+    series: [{ id: "a", label: "A", mark: "bar", values: [0, 1, 2, 3].map(i => 1234567890 + i) }, { id: "b", label: "B", mark: "line", axis: "secondary", values: [0, 1, 2, 3].map(i => 1234567890 + i) }] });
+  it("RV52: beside a secondary axis both value axes step away, and the gap solves for both sides", () => {
+    // 10-digit values: label room ⌈60 / 2 + 4⌉ = 34 px; each axis 10 × 11 × 0.6 + 8 = 74 px; free 320 − (20 + 74 + 74) = 152 px; 4 categories:
+    // gap = ⌈(34 − 8 − 0.5 × 152 / 4) / (1 − 2 × 0.5 / 4)⌉ = ⌈7 / 0.75⌉ = 10 (one side only: ⌈7 / 0.875⌉ = 8)
+    const o = build(dual10(), { width: 320, compact: true });
+    expect(o.yAxis[0].axisLabel.margin).toBe(18);
+    expect(o.yAxis[1].axisLabel.margin).toBe(18);
+  });
+  it("RV54: a histogram's value axis steps away from the first bin's value label (here beyond the rotated-label gap)", () => {
+    // ten bins at 608 px, 12-digit counts: room 40 px, right margin 16 px, free 608 − 112 = 496 px: gap ⌈(40 − 8 − 496 / 20) / 0.95⌉ = 8 px
+    // (the rotated bin labels alone would give 6 px)
+    const h = canon({ ...histogramChart(), valueLabels: true, bins: Array.from({ length: 10 }, (_, i) => ({ id: "h" + i, start: 1000 + i * 250, end: 1000 + (i + 1) * 250, count: 123456789012 + i })) });
+    const o = build(h, { width: 608 });
+    expect(o.xAxis.axisLabel.rotate).toBe(45);
+    expect(o.yAxis.axisLabel.margin).toBe(16);
+  });
+  it("RV63: in a group with a label at the start, a long end label is cut to half the plot too", () => {
+    const long = "متوسط المبيعات السنوي المستهدف للفروع الرئيسية في جميع المناطق التعليمية ١";
+    const o = build(barSpec([20, 40, 80], [{ value: 0.5, label: long }, { value: 2, label: long.replace("١", "٢") }]), { width: 600 });
+    for (const t of refTexts(o)) { expect(t.replace(ISO, "").endsWith("…")).toBe(true); expect(measure(t) + 8).toBeLessThanOrEqual(300); }
+  });
+  it("RV67: the distance bound uses twice the values' span: 40 and 52 on 0–80 may touch on the engine's rounded axis", () => {
+    // plot height ≥ 340 − 28 − 12 − 30 − 24 = 246 px over twice the span 0–80: 12 units ≥ 18.5 px, under one label box (27 px)
+    const places = (o: Record<string, any>) => markOf(o).data.map((d: { label?: { position?: string } }) => d.label?.position ?? "default"); // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(places(build(barSpec([20, 40, 80], [{ value: 40, label: "أ" }, { value: 52, label: "ب" }]), { width: 600 }))).toEqual(["insideEndBottom", "insideEndTop"]);
+  });
+  it("RV68: a category chart's value axis starts at 0, so lines at 22 and 24 above data from 20 have room below", () => {
+    const places = (o: Record<string, any>) => markOf(o).data.map((d: { label?: { position?: string } }) => d.label?.position ?? "default"); // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(places(build(barSpec([20, 40, 80], [{ value: 22, label: "أ" }, { value: 24, label: "ب" }]), { width: 600 }))).toEqual(["insideEndBottom", "insideEndTop"]);
+  });
+  it("RV71: the reference labels (their cut text and places) are part of the width layout", () => {
+    const o = build(barSpec([10, 20, 30], [{ value: 25, label: LONG }]), { width: 600 });
+    const m = markOf(o), other = { ...o, series: o.series.map((s: { markLine?: unknown }) => (s.markLine ? { ...s, markLine: { ...m, label: { ...m.label, formatter: () => "x" } } } : s)) };
+    expect(widthLayout(other as never)).not.toBe(widthLayout(o as never));
   });
 });
