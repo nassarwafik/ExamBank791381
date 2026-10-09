@@ -24,14 +24,13 @@ export type QuestionTypeDefinition = {
   description?: string; icon?: string;
 };
 
-// Compact production encoding (initial-graph size matters): capability FLAGS are letters — a autoGrading, m manualGrading,
-// h hybridGrading, p partialCredit, c compoundPart, i interactive, r requiresImage, o offline. Every entry is version 1 unless
-// PRODUCTION_VERSIONS names a later CURRENT version (the family then ships every version 1..N — see registerQuestionTypePlugin).
-const caps = (flags: string): QuestionTypeCapabilities => Object.freeze({
-  autoGrading: flags.includes("a"), manualGrading: flags.includes("m"), hybridGrading: flags.includes("h"), partialCredit: flags.includes("p"),
-  compoundPart: flags.includes("c"), interactive: flags.includes("i"), requiresImage: flags.includes("r"), offline: flags.includes("o")
+// Compact production capability bitset (initial-graph size matters):
+// 1 auto · 2 manual · 4 hybrid · 8 partial · 16 compound · 32 interactive · 64 image · 128 offline.
+const caps = (f: number): QuestionTypeCapabilities => Object.freeze({
+  autoGrading: !!(f&1), manualGrading: !!(f&2), hybridGrading: !!(f&4), partialCredit: !!(f&8),
+  compoundPart: !!(f&16), interactive: !!(f&32), requiresImage: !!(f&64), offline: !!(f&128)
 });
-const row = (key: string, label: string, category: QuestionTypeCategory, gradingMode: GradingMode, flags: string, responseKinds: readonly string[], legacy = false, version = 1): QuestionTypeDefinition =>
+const row = (key: string, label: string, category: QuestionTypeCategory, gradingMode: GradingMode, flags: number, responseKinds: readonly string[], legacy = false, version = 1): QuestionTypeDefinition =>
   Object.freeze({ key, version, label, category, gradingMode, capabilities: caps(flags), responseKinds: Object.freeze([...responseKinds]), legacy });
 /** Phase 17F-C2 (Review Fix 1) — the CURRENT version of a production type whose contract was versioned. coding@2 adds the
  *  teacher-owned compile-error policy (`answer.compileErrorPolicy`, explicit "zero" | "manualReview"); coding@1 remains the
@@ -48,67 +47,67 @@ export const LEGACY_QUESTION_TYPE_KEYS: readonly string[] = Object.freeze(["mult
 /** Production rows — `as const` so TypeScript keeps the literal keys: the production key UNION derives from here (R2-D),
  *  never from a second hand-written list. Legacy 11 (historical order) then the Wave 1 enterprise types. */
 const PRODUCTION_ROWS = [
-  ["multipleChoice", "اختيار من متعدد", "choice", "auto", "aco", ["choice"], true],
-  ["trueFalse", "صح أو خطأ", "choice", "auto", "aco", ["choice"], true],
-  ["multiTrueFalse", "صح/خطأ متعدد", "choice", "auto", "acop", ["fields"], true],
-  ["shortAnswer", "إجابة قصيرة / مفتوحة", "response", "hybrid", "amhco", ["text"], true],
-  ["fillBlank", "إكمال فراغات", "response", "auto", "acop", ["sequence", "fields"], true],
-  ["wordBank", "مخزن كلمات", "response", "auto", "acop", ["sequence", "fields"], true],
-  ["matching", "مطابقة", "structured", "auto", "acop", ["fields"], true],
-  ["ordering", "ترتيب", "structured", "auto", "acop", ["sequence"], true],
-  ["tableFill", "إكمال جدول", "structured", "auto", "acop", ["fields", "table"], true],
-  ["cliFill", "أوامر CLI", "response", "auto", "acop", ["fields"], true],
-  ["compound", "سؤال مركّب", "composite", "composed", "amhpo", ["compound"], true],
+  ["multipleChoice", "اختيار من متعدد", "choice", "auto", 145, ["choice"], true],
+  ["trueFalse", "صح أو خطأ", "choice", "auto", 145, ["choice"], true],
+  ["multiTrueFalse", "صح/خطأ متعدد", "choice", "auto", 153, ["fields"], true],
+  ["shortAnswer", "إجابة قصيرة / مفتوحة", "response", "hybrid", 151, ["text"], true],
+  ["fillBlank", "إكمال فراغات", "response", "auto", 153, ["sequence", "fields"], true],
+  ["wordBank", "مخزن كلمات", "response", "auto", 153, ["sequence", "fields"], true],
+  ["matching", "مطابقة", "structured", "auto", 153, ["fields"], true],
+  ["ordering", "ترتيب", "structured", "auto", 153, ["sequence"], true],
+  ["tableFill", "إكمال جدول", "structured", "auto", 153, ["fields", "table"], true],
+  ["cliFill", "أوامر CLI", "response", "auto", 153, ["fields"], true],
+  ["compound", "سؤال مركّب", "composite", "composed", 143, ["compound"], true],
   // Phase 20D — the ADVANCED composite family (composite@1), a NEW type beside the frozen legacy compound: groups of heterogeneous modern
   // children (every Wave-1 / interactive family incl. coding, SmartSim, parametric, visual, open response), shared static sources and shared
   // SmartSim contexts, group-level firstNAnswered, per-part manual / automatic grading. Its children live under the type-owned root
   // `composite` (never `parts`, which is how legacy compound is detected); composite never nests (not a compound part, never its own child).
-  ["composite", "سؤال مركّب متقدّم", "composite", "composed", "amhpio", ["composite"], false],
+  ["composite", "سؤال مركّب متقدّم", "composite", "composed", 175, ["composite"], false],
   // Phase 21A.1 — chartSelection@1: the student selects SEMANTIC targets of a declarative data chart (category / series / value / point / bin,
   // single, multiple or a contiguous range); auto-graded on target keys (never pixels), partial credit optional; not a compound part. Inserted
   // right after composite (like 20D's composite after compound) so the legacy order and every append position stay unchanged.
-  ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", "apio", ["chartSelection"], false],
+  ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", 169, ["chartSelection"], false],
   // Phase 21A.2 — functionGraphSelection@1: the student selects SEMANTIC targets of a mathematical function graph (curves, points, lines,
   // tangents, shaded regions, intervals); auto-graded on target keys (never pixels), partial credit optional; not a compound part.
-  ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", "apio", ["functionGraphSelection"], false],
+  ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", 169, ["functionGraphSelection"], false],
   // Phase 21C — scene3DSelection@1: semantic selection on an ExamBank-owned interactive 3D scene (object / face / edge / vertex).
-  ["scene3DSelection", "3D", "interactive", "auto", "apio", ["scene3DSelection"], false],
-  ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
-  ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
-  ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
-  ["categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"], false],
+  ["scene3DSelection", "3D", "interactive", "auto", 169, ["scene3DSelection"], false],
+  ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
+  ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
+  ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],
+  ["categorization", "تصنيف العناصر", "structured", "auto", 153, ["fields"], false],
   // Phase 16B-A — ONE universal interactive type: a sandboxed, teacher-uploaded simulation package (simulation@1). Manual-review
   // only in 16B-A (uploaded code never grades); not a compound part (V1 decision, documented); interactive; offline-capable.
-  ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false],
+  ["simulation", "محاكاة تفاعلية", "interactive", "manual", 162, ["simulation"], false],
   // Phase 17A — ONE generic coding type (coding@1): the student writes ONE source file in a teacher-allowed language (language
   // is data, never a type). Designed hybrid; in 17A the official grade is MANUAL (no trusted executor yet, autoGrading false).
   // Phase 17F-C2 RF1 — CURRENT version 2 (PRODUCTION_VERSIONS): coding@2 = coding@1 + the explicit compile-error policy.
-  ["coding", "برمجة / كتابة كود", "interactive", "hybrid", "mhpio", ["code", "codeTemplate"], false],
+  ["coding", "برمجة / كتابة كود", "interactive", "hybrid", 174, ["code", "codeTemplate"], false],
   // Phase 18C — the first network-device CLI simulator plugin (networkCli@1): a deterministic educational managed SWITCH. Auto-graded
   // on canonical device STATE (per-check partial credit) by the shared engine; interactive; offline; not a compound part (V1 decision:
   // one terminal per question keeps the session, replay and review unambiguous).
-  ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", "apio", ["networkCli"], false],
+  ["networkCli", "محاكي أوامر الشبكة (CLI)", "interactive", "auto", 169, ["networkCli"], false],
   // Phase 19A — inline completion passage (inlineCloze@1): text + inline text blanks / dropdowns in any order; auto-graded per blank
   // (partial credit); the student answer is the existing `fields` Answer (blank id → value); not a compound part (V1 decision).
-  ["inlineCloze", "إكمال نص تفاعلي", "response", "auto", "apo", ["fields"], false],
+  ["inlineCloze", "إكمال نص تفاعلي", "response", "auto", 137, ["fields"], false],
   // Phase 19B — deterministic parametric numeric question (parametricNumeric@1): bounded integer variables generated per official
   // attempt from a server-owned identity, an {{id}} stem template and a private answer expression in a closed language; auto-graded
   // with the numericResponse comparison (no partial credit); the student answer is the existing `numeric` Answer; not a compound part.
-  ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة", "response", "auto", "ao", ["numeric"], false],
+  ["parametricNumeric", "سؤال رقمي بمعطيات متغيرة", "response", "auto", 129, ["numeric"], false],
   // Phase 19D — the visual foundation: ONE shared normalized geometry engine, two families on the question's canonical image. hotspot@1:
   // the student marks points (private target regions, one-to-one matching); labelDiagram@1: the student places bank labels on public
   // zones (the existing `fields` Answer). Auto-graded with partial credit; image-requiring; not compound parts (V1 decision).
-  ["hotspot", "تحديد منطقة على صورة", "interactive", "auto", "apiro", ["hotspot"], false],
-  ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", "apiro", ["fields"], false],
+  ["hotspot", "تحديد منطقة على صورة", "interactive", "auto", 233, ["hotspot"], false],
+  ["labelDiagram", "تسمية أجزاء الرسم", "interactive", "auto", 233, ["fields"], false],
   // Phase 19E — ONE open-response family (openResponse@1) for essay / explain / justify / compare / analyze / source-based answers
   // (profiles, never types): plain-text answer (the existing `text` Answer), MANUAL grading with a teacher rubric — the server computes
   // the official score from the published rubric; partial credit through rubric levels; not a compound part (V1 decision).
-  ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", "mpo", ["text"], false],
+  ["openResponse", "إجابة مفتوحة مع سلم تقييم", "response", "manual", 138, ["text"], false],
   // Phase 20A — ONE trusted, repository-owned simulation family (smartSim@1), distinct from the untrusted uploaded simulation@1: the stored
   // question names a code-registered plugin by EXACT identity (pluginKey@pluginVersion — networkTopology@1 first) and its public config;
   // the server replays the student's semantic actions and grades private weighted checks on the derived state (partial credit).
   // Interactive; offline; not a compound part (V1 decision: one workspace per question keeps replay and review unambiguous).
-  ["smartSim", "محاكاة موثوقة (SmartSim)", "interactive", "auto", "apio", ["smartSim"], false]
+  ["smartSim", "محاكاة موثوقة (SmartSim)", "interactive", "auto", 169, ["smartSim"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
  *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */
