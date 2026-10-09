@@ -353,3 +353,22 @@ This section supersedes the *CI status* in §13 and §14, which describe earlier
 4. **Explicit owner approval** prior to merging PR #278. Keep auto-merge disabled and PR in DRAFT until the review gates are satisfied.
 
 No assertion of full enterprise certification, independent approval, or merge is made by this update.
+
+
+## 16. Mutation certification and live UAT handoff — 9 October 2026
+
+### Executed mutation campaign (not a simulated or proposed tally)
+
+- Harness: `scripts/mutate-function-graphs-21a2.mjs`; dedicated read-only CI workflow: `.github/workflows/function-graphs-mutation-21a2.yml`.
+- Audited CI run: [37901905749](https://github.com/nassarwafik/ExamBank791381/actions/runs/37901905749), tested branch commit `cbc7bbcc4a49861063c0c093dc7d2f7edac99fca`.
+- Result: **39 / 39 killed**, **0 survived**, **0 invalid**, **0 timed out**, **SHA-256-verified clean restoration** of all five modified source files after each isolated mutant. Full per-mutant JSON ledger is an uploaded artifact named `phase-21a2-mutations`.
+- The first campaign at `9bdf55a1` was **18 killed / 20 survived / 1 invalid**. Additional tests in `src/functionGraphs/functionGraphMutationPins.21a2.test.ts` isolated meaningful safety and scoring invariants. The second campaign killed 38 of 39; the last surviving case was a false-negative caused by an *additional invalid selection capacity* in the test. The final pin isolates the minimum-two-target rule.
+- Mutant classes include strict graph validation, prohibited structures, quantitative limits, sampling/discontinuities, open/closed interval render semantics, target schema, forged graph IDs/teacher keys, duplicate/unknown responses, and AI graph provenance. The campaign is limited to those explicit 39 source mutations; it is not a claim of exhaustive mutation coverage across the entire project.
+- The generated server CJS mirror was not mutated; TypeScript source mutations were each run in isolated Vitest processes. The platform lifecycle tests using the shared CJS mirror are separate, previously passing certification.
+
+### Real-world acceptance remains an explicitly different gate
+
+- [Live teacher–student UAT plan](phase-21a2-live-uat.md) is now committed, with the nine-section JSON acceptance exam, 38/30/0 canonical score ledgers, actual teacher publishing, synthetic student delivery, mobile/RTL accessibility and privacy checks.
+- **Live UAT has not been carried out on a deployed app.** Do not report it as passed based solely on the Vitest/Chromium automation.
+- Build/test CI must be reverified after the added mutation test pin and TypeScript-unused-import correction. At the time of writing, the post-correction exact-head workflows are still running; do not claim they are green until directly checked.
+- An **independent read-only code review** on the final SHA and owner decision remain distinct obligations. This record is a development report, not an independent approval or a merge authorization.
