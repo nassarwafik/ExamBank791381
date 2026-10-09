@@ -1,8 +1,7 @@
-# Phase 21A.2 — Enterprise Mathematical Function Graph Engine (design record — DRAFT / HANDOFF)
+# Phase 21A.2 — Enterprise Mathematical Function Graph Engine (certification record; owner manual merge pending)
 
-> STATUS: **IN PROGRESS — DRAFT PR #278, DO NOT MERGE.** This file is the handoff record written when work paused at code head `534fa65`; it is committed
-> on top of it (the handoff commit is the branch head). It becomes the phase's design record; every section below must be completed before the PR is opened for review.
-> Draft PR #278 is open for CI certification; this does NOT authorize production deployment or merge. The original handoff checkpoint below refers to the earlier pre-PR state.
+> CURRENT STATUS: Review Fix 1 is committed and all four CI workflows passed on **`8694a4a084c5b7da27aaba0e6f9f16b2c5fa1f3c`**. A documentation/CI-label follow-up is being certified separately on its own final head. The owner alone may merge PR #278 manually after checking that final SHA and reviewing the findings. Azure PR preview has been deployed; live teacher/student UAT has **NOT** been executed. Older checkpoint and draft sections below are historical evidence, not the present status.
+
 
 ## 1. Checkpoint
 
@@ -372,3 +371,41 @@ No assertion of full enterprise certification, independent approval, or merge is
 - **Live UAT has not been carried out on a deployed app.** Do not report it as passed based solely on the Vitest/Chromium automation.
 - Build/test CI must be reverified after the added mutation test pin and TypeScript-unused-import correction. At the time of writing, the post-correction exact-head workflows are still running; do not claim they are green until directly checked.
 - An **independent read-only code review** on the final SHA and owner decision remain distinct obligations. This record is a development report, not an independent approval or a merge authorization.
+
+## 17. Post-review-fix independent verification handoff — 9 October 2026
+
+### Immutable source and review history
+
+- Baseline `origin/main` at review-fix handoff: `6e4a5efcef8c2b6391344266405f31539d8c3e72`; no main reconciliation was reported in the local handoff. Refresh `main` before owner merge.
+- Independent **three fresh-context read-only reviewer lanes** audited `65c21e72d326cd19601270a1241417acbbea3590`: mathematics/compatibility, grading/security/AI, and UI/harness. They reported **three blockers and four majors**. The implementation agent subsequently reproduced the findings in detached unmodified 65c21e7 (16 fail-first cases) and committed Review Fix 1 at **`8694a4a084c5b7da27aaba0e6f9f16b2c5fa1f3c`**, without rewriting branch history.
+- The fixes address: invalid student projection of derivative-backed tangents; mathematical precedence changed by AI notation normalization; mutation source restore on interruptions; even poles under shaded regions; authored derivative validation inside its own domain; grading mutant coverage; Arabic RTL semantic target descriptions. Minor UI edits clear stale answer keys on graph-template replacement, and new Chromium assertions cover actual print media and Arabic visual reading order.
+- **Post-fix check (independent read-only code inspection against `8694a4a`):** the graph validator now requires its own smooth numeric derivative for a tangent, samples derivative relations inside the authored derivative domain, and performs off-screen refinement when validating a shaded region. The student projection strips role/proof fields. AI mapper refuses ambiguous notation and uses exactly matching explicit formula provenance. Graph target option details use `dir="auto"`; template replacement clears official key; mutation script backs up sources and handles interruption/recovery. These specific fixes have committed regression tests and are covered by exact-source CI. This is a scoped technical re-verification, **not** a GitHub account's independent approval and not a substitute for any review required by branch protection. The original three Claude review lanes had been asked to re-check before the session hit its weekly limit; no completed second-lane report should be invented.
+
+### Full exact-commit verification on `8694a4a` (observed from GitHub Actions logs, attempt 1)
+
+| Gate | Run | Outcome |
+|---|---|---|
+| Root Quality Gate, TypeScript, production build/bundle and lint | [37909174704](https://github.com/nassarwafik/ExamBank791381/actions/runs/37909174704) | **SUCCESS** — 847 test files, **11,244/11,244 tests passed**, bundle guard passed, **104 lint warnings / 0 errors** (reported baseline 104) |
+| Azure preview Build and Deploy | same workflow, Build and Deploy Job | **SUCCESS** — `https://white-grass-0ce642c10-278.centralus.7.azurestaticapps.net` (PR preview only; no production or live Runner deployment) |
+| Coding Runner security and smoke | [37909174676](https://github.com/nassarwafik/ExamBank791381/actions/runs/37909174676) | **SUCCESS** |
+| Real Chromium RTL, touch, keyboard and print | [37909174690](https://github.com/nassarwafik/ExamBank791381/actions/runs/37909174690) | **SUCCESS** — checks at 320/360/600/800/1024/1280 px, Arabic reading order, original viewport print media, PDF output |
+| Mutation certification | [37909174763](https://github.com/nassarwafik/ExamBank791381/actions/runs/37909174763) | **SUCCESS** — **47/47 killed**, 0 survivors, 0 invalid, 0 timeouts; SHA-256 and git-status restoration clean; published JSON artifact |
+
+- Local handoff from the implementation agent separately reports typecheck, build and full root suite green at 8694a4a, interrupted mutation restore/recovery probes, and planted-defect Chromium probes. These **local observations are reported by the agent**, not independently rerun in this documentation-only continuation.
+- **Question inventory correction:** the acceptance fixture has **9 top-level questions**, across **9 sections**, totaling **38 marks**. There are **9 graph-selection subquestions** (8 standalone + 1 within the composite) and 1 numeric composite child, for **10 scorable question/part positions**. Do not claim 10 top-level graph questions.
+- **Live UAT remains pending**: [real teacher/student acceptance checklist](phase-21a2-live-uat.md). Automation (including a Chromium harness) is not a real login to the deployed preview with user roles, autosave and end-user submission.
+- The mutation and Chromium workflows previously showed outdated "39 mutants" labels or did not trigger on documentation-only changes; the CI wording and final-head paths were updated so the final PR head can be certified without interpreting skipped workflows as green.
+
+### Mandatory closeout checklist
+
+- [x] Independent initial read-only review on 65c21e7, findings recorded; Review Fix 1 committed with fail-first evidence.
+- [x] Read-only post-fix *source and regression test* examination with no additional BLOCKER/MAJOR found in the inspected fixes; no formal external approval claimed.
+- [x] Four green exact-head workflows with deployed preview on source head 8694a4a.
+- [x] 47/47 mutation campaign, restoration proof and real-browser QA.
+- [x] Corrected acceptance/UAT document and updated mutation workflow labeling.
+- [ ] Reconfirm **all four mandatory workflows** and Azure preview Build & Deploy are SUCCESS on the **new final documentation/CI-update head**; do not carry prior-green status onto a changed SHA.
+- [ ] Verify any required PR branch protection/external review; if a real reviewer approval is required, the owner must obtain it before merging.
+- [ ] Repository owner manually merges PR #278 (agents forbidden by `AGENTS.md`), then verify `main` post-merge CI/deployment.
+- [ ] Execute live teacher/student acceptance using synthetic test data, record real screenshots/results, and fix any defects discovered in a subsequent scoped change.
+
+**Decision:** Technically close to owner merge readiness, subject to final-head CI and owner review policy. Never claim that the agent merged, approved its own review, or executed live UAT.
