@@ -74,7 +74,7 @@ const answerOut = () => JSON.parse(screen.getByTestId("answer").textContent || "
 
 describe("catalog, palette and defaults", () => {
   it("22 types; hotspot@1 / labelDiagram@1 are appended with factual chips; renderers and editors exist for exactly version 1", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(27);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
+    expect(QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
     expect(QUESTION_TYPE_CATALOG.at(-4)!.key).toBe("hotspot"); expect(QUESTION_TYPE_CATALOG.at(-3)!.key).toBe("labelDiagram");
     for (const key of ["hotspot", "labelDiagram"]) {
       const d = questionTypeDefinition(key)!;
@@ -94,7 +94,7 @@ describe("catalog, palette and defaults", () => {
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q0", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(27);   /* 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */
+    expect(within(d).getAllByTestId("qt-card").length).toBe(28);   /* 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */
     fireEvent.click(within(d).getByRole("tab", { name: "تفاعلي" })); await tick();
     const keys = within(d).getAllByTestId("qt-card").map(c => c.getAttribute("data-type-key"));
     expect(keys).toContain("hotspot"); expect(keys).toContain("labelDiagram");
