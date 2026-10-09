@@ -86,12 +86,12 @@ export function buildInteractive3DAcceptanceExam(){
       showStudentName:true,showClassName:true,showExamDate:true,showDuration:true,showTotalMarks:true,showMarksDistribution:true},
     presentation:{schemaVersion:1,preset:"modernAcademic"},
     sections:[
-      section("sec-a","أ — أوجه المكعب",[select("a1","اختر الوجه العلوي للمكعب.",S.cube,"face","single",1,["face:top"])]),
+      section("sec-a","أ — أوجه المكعب",[select("a1","اختر الوجه المقابل للوجه السفلي في المكعب.",S.cube,"face","single",1,["face:top"])]),
       section("sec-b","ب — رؤوس المكعب",[select("b1","اختر الرأسين A و E.",S.cube,"vertex","multiple",2,["vertex:vA","vertex:vE"])]),
-      section("sec-c","ج — الهرم",[select("c1","اختر رأس الهرم E.",S.pyramid,"vertex","single",1,["vertex:vE"])]),
-      section("sec-d","د — القلب",[select("d1","اختر البطين الأيسر من النموذج التعليمي.",S.heart,"object","single",1,["object:leftVentricle"])]),
-      section("sec-e","هـ — جسم الإنسان",[select("e1","اختر الكبد من نموذج الجذع.",S.torso,"object","single",1,["object:liver"])]),
-      section("sec-f","و — الكيمياء",[select("f1","اختر ذرة الأكسجين في نموذج الماء.",S.water,"object","single",1,["object:oxygen"])]),
+      section("sec-c","ج — الهرم",[select("c1","اختر الرأس الذي لا يقع على قاعدة الهرم.",S.pyramid,"vertex","single",1,["vertex:vE"])]),
+      section("sec-d","د — القلب",[select("d1","اختر حجرة القلب التي تضخ الدم المؤكسج إلى الجسم عبر الشريان الأبهر.",S.heart,"object","single",1,["object:leftVentricle"])]),
+      section("sec-e","هـ — جسم الإنسان",[select("e1","اختر العضو الكبير أسفل الرئة اليمنى والمشارك في إنتاج الصفراء.",S.torso,"object","single",1,["object:liver"])]),
+      section("sec-f","و — الكيمياء",[select("f1","اختر الذرة التي تظهر مرة واحدة فقط في جزيء H₂O.",S.water,"object","single",1,["object:oxygen"])]),
       section("sec-g","ز — 3D كمحتوى غني",[richDemo])
     ]
   };
