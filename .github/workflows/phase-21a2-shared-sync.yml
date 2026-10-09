@@ -1,0 +1,37 @@
+name: Phase 21A2 Shared Mirror Read-Only Certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  mirror-audit:
+    if: github.head_ref == 'feature/21a2-mathematical-function-graph-engine'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+          cache: npm
+      - name: Install exact locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Regenerate canonical server mirror (read-only job)
+        run: node scripts/build-shared-finalization.mjs
+      - name: Report generated files for owner review without any write token
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const cp = require('child_process');
+          const lines = cp.execFileSync('git', ['status', '--porcelain', '--', 'api/src/lib/shared-finalization'], { encoding:'utf8' }).trim().split('\n');
+          for (const line of lines) {
+            if (!line) continue;
+            const path = line.slice(3);
+            if (!path.endsWith('.js') || !path.startsWith('api/src/lib/shared-finalization/')) continue;
+            const base64 = fs.readFileSync(path).toString('base64');
+            console.log('21A2_PAYLOAD_START ' + path + ' ' + base64.length);
+            for (let i = 0; i < base64.length; i += 4800) console.log('21A2_PAYLOAD_DATA ' + base64.slice(i, i + 4800));
+            console.log('21A2_PAYLOAD_END ' + path);
+          }
+          NODE
