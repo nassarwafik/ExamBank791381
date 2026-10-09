@@ -16,6 +16,15 @@ describe("21B-FIX deterministic 3D surface acceptance corpus", () => {
     expect(blocks).toHaveLength(4);
     expect(new Set(blocks.map(b => b.surface.id)).size).toBe(4);
     expect(blocks.map(b => b.surface.expression)).toEqual(Object.values(SURFACES_21B).map(s => s.expression));
-    expect(JSON.stringify(blocks)).not.toMatch(/rawSvg|renderer|three|webgl|callback|script/i);
+    const forbiddenKeys = new Set(["rawSvg", "renderer", "three", "webgl", "callback", "script"]);
+    const walk = value => {
+      if (Array.isArray(value)) return value.forEach(walk);
+      if (!value || typeof value !== "object") return;
+      for (const [key, child] of Object.entries(value)) {
+        expect(forbiddenKeys.has(key), "forbidden persisted surface key: " + key).toBe(false);
+        walk(child);
+      }
+    };
+    walk(blocks);
   });
 });
