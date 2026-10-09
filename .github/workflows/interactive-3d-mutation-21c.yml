@@ -15,7 +15,7 @@ jobs:
   mutations:
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    name: Interactive 3D mutation campaign — 22 isolated mutants
+    name: Interactive 3D mutation campaign — 23 isolated mutants
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -27,7 +27,7 @@ jobs:
             api/package-lock.json
       - run: npm ci
       - run: npm ci --prefix api
-      - name: Run baseline and 22 source mutations with source restoration
+      - name: Run baseline and 23 source mutations with source restoration
         run: node scripts/mutate-interactive-3d-21c.mjs
       - uses: actions/upload-artifact@v4
         if: always()
