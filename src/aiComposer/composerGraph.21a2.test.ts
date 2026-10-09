@@ -13,7 +13,8 @@ const D = (over: Record<string, unknown> = {}) => ({
   ...over
 });
 const policy = (request: string, charts = true) => ({ request, charts, illustrative: false });
-const codes = (r: { ok: boolean; issues?: { code: string; path: string }[] }) => r.ok ? [] : r.issues!.map(i => [i.code, i.path]);
+// ComposerIssue.path is optional by contract (the failing branch is still read-only here).
+const codes = (r: { ok: boolean; issues?: { code: string; path?: string }[] }) => r.ok ? [] : (r.issues ?? []).map(i => [i.code, i.path]);
 const EXPLICIT = "ارسم منحنى الدالة f(x) = x^2 - 4x + 3 على المستوى";
 
 describe("21A2-AI1 closed descriptor and strict teacher provenance", () => {
@@ -35,7 +36,9 @@ describe("21A2-AI1 closed descriptor and strict teacher provenance", () => {
     expect(g.type).toBe("functionGraph");
     if (g.type !== "functionGraph") return;
     expect(g.graph.id).toBe("graph1");
-    expect(g.graph.curves[0].expression).toBe("x^2 - 4*x + 3");
+    const authored = g.graph.curves[0];
+    expect(authored.kind).toBe("explicit");
+    if (authored.kind === "explicit") expect(authored.expression).toBe("x^2 - 4*x + 3");
     expect(g.graph.viewport).toEqual({ xMin: -10, xMax: 10, yMin: -10, yMax: 10 });
     expect(g.graph.points ?? []).toHaveLength(0);
   });
