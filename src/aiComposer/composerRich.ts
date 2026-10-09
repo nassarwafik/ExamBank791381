@@ -35,14 +35,17 @@ export function mapAiRichBlocks(raw: unknown, path = "richContent", chartPolicy?
   const blocks: Record<string, unknown>[] = [];
   for (let i = 0; i < raw.length; i++) {
     const b = raw[i], p = path + "[" + i + "]";
-    if (!hasExactKeys(b, BLOCK_KEYS) || !isEnum(b.type, COMPOSER_RICH_BLOCKS)) return fail("كتلة منسقة غير صالحة البنية.", p);
+    // 21A.2 additive compatibility: a pre-V4 descriptor may omit graph ONLY for older block kinds.
+    // New provider schemas always carry graph (null outside functionGraph); unknown fields remain refused.
+    const legacyBlock = b?.type !== "functionGraph" && hasExactKeys(b, BLOCK_KEYS.slice(0, -1));
+    if (!(hasExactKeys(b, BLOCK_KEYS) || legacyBlock) || !isEnum(b.type, COMPOSER_RICH_BLOCKS)) return fail("كتلة منسقة غير صالحة البنية.", p);
     if (!isStr(b.text, L.richTextChars) || !isStr(b.source, L.richSourceChars) || !isStr(b.title, L.shortText) || !isEnum(b.dir, DIRS) || !isInt(b.level, 2, 4)) return fail("قيم الكتلة المنسقة خارج الحدود.", p);
     if (!isArr(b.items, L.richItems) || !b.items.every(x => isStr(x, L.richTextChars)) || !isArr(b.headers, L.richTableColumns) || !b.headers.every(x => isStr(x, L.shortText))) return fail("قوائم الكتلة المنسقة غير صالحة.", p);
     if (!isArr(b.rows, L.richTableRows) || !b.rows.every(r => isArr(r, L.richTableColumns) && r.every(c => isStr(c, L.richTextChars)))) return fail("صفوف الجدول غير صالحة.", p);
     if (!isArr(b.pairs, L.richItems) || !b.pairs.every(x => hasExactKeys(x, ["label", "value"]) && isStr(x.label, L.shortText) && isStr(x.value, L.richTextChars))) return fail("أزواج القيم غير صالحة.", p);
     if (!isEnum(b.language, COMPOSER_RICH_CODE_LANGUAGES) || !isEnum(b.variant, COMPOSER_CALLOUT_VARIANTS)) return fail("لغة الكود أو نوع الملاحظة غير معروف.", p);
     if (b.chart !== null && !isPlainRecord(b.chart)) return fail("وصف الرسم البياني غير صالح.", p + ".chart");
-    if (b.graph !== null && !isPlainRecord(b.graph)) return fail("وصف رسم الدالة غير صالح.", p + ".graph");
+    if (b.graph !== undefined && b.graph !== null && !isPlainRecord(b.graph)) return fail("وصف رسم الدالة غير صالح.", p + ".graph");
     const text = cleanText(b.text), title = cleanText(b.title);
     switch (b.type) {
       case "heading": blocks.push({ type: "heading", level: b.level, runs: runs(text) }); break;
