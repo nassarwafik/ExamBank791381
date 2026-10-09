@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, act } from "@testing-library/react";
+import { render, cleanup, act, fireEvent } from "@testing-library/react";
 import { validateChartSpec, type ChartSpecV1 } from "./chartSpec";
 import { rainfallBar } from "./testing/chartFixtures";
 
@@ -59,5 +59,17 @@ describe("21A1-RB46 the page's measurer and its webfont listener (round-6 lane C
     expect(Number(host.getAttribute("data-updates") ?? 0)).toBe(before + 1);
     cleanup();
     expect(remove).toHaveBeenCalledWith("loadingdone", expect.any(Function));
+  });
+  it("a selection value naming no target of the chart: a click announces only what it changed, never that value deselected (mutant RW16)", async () => {
+    const changes: string[][] = [];
+    const { container } = render(<DataChart spec={canon(rainfallBar())} selection={{ kind: "category", mode: "multiple", max: 3, value: ["ghost"], label: "اختر", onChange: v => changes.push(v) }} />);
+    await settle();
+    fireEvent.click(container.querySelector('[data-xp-key="jan"]')!);
+    await settle();
+    expect(changes).toEqual([["jan"]]);
+    const said = container.querySelector("[aria-live]")!.textContent ?? "";
+    expect(said).toContain("تم تحديد");
+    expect(said).not.toContain("أُلغي");
+    expect(said).not.toContain("ghost");
   });
 });

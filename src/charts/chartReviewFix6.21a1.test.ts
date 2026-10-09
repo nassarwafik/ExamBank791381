@@ -88,6 +88,13 @@ describe("21A1-RB41 a value axis reaches every reference line (round-6 finding R
     expect([inside.yAxis.min, inside.yAxis.max]).toEqual([undefined, undefined]);
     expect(build(barSpec([20, 40, 65], L(300), { yAxis: { label: "القيمة", max: 100 } }), { width: 600 }).yAxis.max).toBe(100);
   });
+  it("a line between 0 and the data's least value leaves a category axis as it was: it starts at 0 (mutant RW33)", () => {
+    const o = build(barSpec([20, 40, 65], L(10)), { width: 600 });
+    expect([o.yAxis.min, o.yAxis.max]).toEqual([undefined, undefined]);
+  });
+  it("lines beyond the data are near on the axis that reaches them: 300 and 320 over bars of 20–65 share a group (mutant RW35)", () => {
+    expect(places(build(barSpec([20, 40, 65], L(300, 320)), { width: 600 }))).toEqual(["insideEndBottom", "insideEndTop"]);
+  });
   it("scatter plots: y data 10–17 and lines at 100 / 101 → the axis ends at 120 (its data scale is kept below)", () => {
     const sc = canon({ ...scatterChart(), series: [{ id: "p", label: "ن", points: [10, 12, 17].map((y, i) => ({ id: "p" + i, x: i, y })) }],
       referenceLines: [{ id: "r0", value: 100, label: "أ" }, { id: "r1", value: 101, label: "ب" }] });

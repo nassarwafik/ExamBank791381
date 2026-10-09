@@ -108,7 +108,7 @@ describe("21A1-RB45 the bound's message (round-6 finding R6-N1; lane C C6-4)", (
     expect(maxMessage(q(holed(), "datum", ["s1/c1"], "multiple", 6))).toContain("بعض خلاياه فارغة");
   });
   it("the general message where filling cannot help: a bound above every slot, single mode, a bound under 1 or not whole", () => {
-    for (const node of [q(holed(), "datum", ["s1/c1"], "multiple", 7), q(holed(), "datum", ["s1/c1"], "single", 2), q(holed(), "datum", ["s1/c1"], "multiple", 0), q(holed(), "datum", ["s1/c1"], "multiple", 5.5)]) {
+    for (const node of [q(holed(), "datum", ["s1/c1"], "multiple", 7), q(holed(), "datum", ["s1/c1"], "single", 2), q(holed(), "datum", ["s1/c1"], "single", 6), q(holed(), "datum", ["s1/c1"], "multiple", 0), q(holed(), "datum", ["s1/c1"], "multiple", 5.5)]) {
       const m = maxMessage(node);
       expect(m).toContain("عدد صحيح من 1");
       expect(m).not.toContain("فارغة");

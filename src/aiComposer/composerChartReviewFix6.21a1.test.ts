@@ -55,6 +55,13 @@ describe("21A1-AI19 a value-first writing after a leading word pairs nothing (ro
   });
 });
 
+describe("21A1-AI22 Review Fix 6 mutation pins (§20.6)", () => {
+  it("RW08 / RW10: a value-first clause at the text's start or after a colon makes a connector pairing unclear too", () => {
+    expect(pairedNumbers("120 Jan and 80 Feb", ["Jan", "Feb"])).toEqual([undefined, undefined]);
+    expect(pairedNumbers("Rainfall: 120 Jan and 80 Feb", ["Jan", "Feb"])).toEqual([undefined, undefined]);
+  });
+});
+
 describe("21A1-AI20 every line break ends a clause (round-6 finding R6-A2)", () => {
   const BREAKS = ["\r", "\r\n", "\u000B", "\u000C", "\u0085", "\u2028", "\u2029"];
   it("value-first lines separated by any line break pair nothing; the correct chart is accepted", () => {
