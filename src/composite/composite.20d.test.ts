@@ -23,7 +23,7 @@ const FIXTURES = { A: compositeArabicExam, B: compositePhysicsExam, C: composite
 
 describe("20D-1 catalog identity", () => {
   it("25 production types; composite@1 sits right after compound; compound@1 is unchanged and never nests composite", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(27);   /* 21A.1 inserts chartSelection@1 right after composite · 21A.2 inserts functionGraphSelection@1 right after chartSelection */
+    expect(QUESTION_TYPE_CATALOG.length).toBe(28);   /* 21A.1 inserts chartSelection@1 right after composite · 21A.2 inserts functionGraphSelection@1 right after chartSelection */
     const keys = QUESTION_TYPE_CATALOG.map(d => d.key);
     expect(keys.indexOf("composite")).toBe(keys.indexOf("compound") + 1);
     expect(questionTypeDefinition("composite")).toEqual({ key: "composite", version: 1, label: "سؤال مركّب متقدّم", category: "composite", gradingMode: "composed", capabilities: { autoGrading: true, manualGrading: true, hybridGrading: true, partialCredit: true, compoundPart: false, interactive: true, requiresImage: false, offline: true }, responseKinds: ["composite"], legacy: false });
