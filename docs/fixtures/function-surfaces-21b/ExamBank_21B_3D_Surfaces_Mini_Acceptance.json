@@ -61,7 +61,7 @@
                   "version": 1,
                   "id": "surface-paraboloid",
                   "title": "سطح القطع المكافئ",
-                  "description": "السطح z = x² + y²، وله أقل ارتفاع عند نقطة الأصل.",
+                  "description": "تمثيل ثلاثي الأبعاد للدالة z = x² + y² ضمن مجال العرض.",
                   "expression": "x^2+y^2",
                   "viewport": {
                     "xMin": -2,
@@ -134,7 +134,7 @@
                   "version": 1,
                   "id": "surface-saddle",
                   "title": "السطح السرجي",
-                  "description": "السطح z = x² − y²؛ يرتفع في اتجاه وينخفض في الاتجاه العمودي عليه.",
+                  "description": "تمثيل ثلاثي الأبعاد للدالة z = x² − y² ضمن مجال العرض.",
                   "expression": "x^2-y^2",
                   "viewport": {
                     "xMin": -2,
@@ -197,7 +197,7 @@
                 "type": "paragraph",
                 "runs": [
                   {
-                    "text": "لاحظ أن sin و cos كل منهما بين −1 و1."
+                    "text": "ادرس شكل السطح وقيمه ضمن المجال المعروض قبل اختيار الإجابة."
                   }
                 ]
               },
@@ -207,7 +207,7 @@
                   "version": 1,
                   "id": "surface-wave",
                   "title": "سطح موجي",
-                  "description": "السطح z = sin(x)·cos(y) على مجال متناظر حول الأصل.",
+                  "description": "تمثيل ثلاثي الأبعاد للدالة z = sin(x)·cos(y) ضمن المجال المعروض.",
                   "expression": "sin(x)*cos(y)",
                   "viewport": {
                     "xMin": -3.14159,
