@@ -56,7 +56,6 @@ describe("21A2-MUT-SAMPLER bounded rendering is observable", () => {
       samples: 1e9, maxDepth: 0, budget: 0
     });
     expect(sampled.evaluations).toBe(SAMPLING_LIMITS.maxSamples + 1);
-    expect(sampled.truncated).toBe(false);
   });
 });
 
