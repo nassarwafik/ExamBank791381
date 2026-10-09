@@ -124,6 +124,7 @@ export const questionTypeIdentityKey = (key: string, version: number): string =>
 const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{1,63}$/;
 const registry = new Map<string, QuestionTypeDefinition>(QUESTION_TYPE_CATALOG.map(d => [d.key, d]));
 const productionKeys = new Set(QUESTION_TYPE_CATALOG.map(d => d.key));
+const productionKeys = new Set(QUESTION_TYPE_CATALOG.map(d => d.key));
 
 /** Registers a CODE-OWNED type (plugin / test). Refuses duplicates, production keys and malformed keys. Returns the unregister function. */
 export function registerQuestionType(definition: QuestionTypeDefinition): () => void {
@@ -134,7 +135,7 @@ export function registerQuestionType(definition: QuestionTypeDefinition): () => 
   if (!Number.isInteger(definition.version) || definition.version < 1) throw new Error("invalid question type version");
   if (!["choice", "response", "structured", "interactive", "composite"].includes(definition.category)) throw new Error("invalid question type category");
   if (!["auto", "manual", "hybrid", "composed"].includes(definition.gradingMode)) throw new Error("invalid grading mode");
-  registry.set(key, def({ ...definition, legacy: false }));
+  registry.set(key, Object.freeze({ ...definition, responseKinds: Object.freeze([...definition.responseKinds]), legacy: false }));
   return () => { if (!productionKeys.has(key)) registry.delete(key); };
 }
 
