@@ -142,12 +142,12 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
   // the latest semantic handler, read by the engine's listener (the engine instance is not re-created when the selection changes)
   // the live announcement says what actually happened, from the difference between the selections before and after: the items selected,
   // the items deselected (a range that shrinks or moves), the limit when the activated item could not be added, or "unchanged" — never
-  // "deselected" for an item that was never selected; nothing is emitted when nothing changed
+  // "deselected" for an item that was never selected or is not on the chart; nothing is emitted when nothing changed
   const activate = useCallback((key: string) => {
     if (!selection || selection.readOnly || !selection.onChange) return;
     const before = selection.value, next = nextChartSelection(selection.mode, order, before, key, selection.max);
     const name = (k: string) => targets.find(t => t.key === k)?.label ?? k;
-    const added = next.filter(k => !before.includes(k)), removed = before.filter(k => !next.includes(k));
+    const added = next.filter(k => !before.includes(k)), removed = before.filter(k => order.includes(k) && !next.includes(k));
     const parts = [
       ...(added.length ? ["تم تحديد: " + added.map(name).join("، ")] : []),
       ...(removed.length ? ["أُلغي تحديد: " + removed.map(name).join("، ")] : []),

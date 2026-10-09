@@ -291,7 +291,9 @@ describe("21A1-AI9 a pairing only detects a swap — it never invents one (revie
   it("R3-A7 pins: a longer value run pairs nothing; a list item never pairs alone; a clause ends at another label", () => {
     expect(pairedNumbers("Jan, Feb: 120, 80, 95", ["Jan", "Feb"])).toEqual([undefined, undefined]);
     expect(pairedNumbers("Jan and Feb: 120", ["Jan", "Feb"])).toEqual([undefined, undefined]);
-    expect(pairedNumbers("Jan 120 Feb 80", ["Jan", "Feb"])).toEqual([120, 80]);
+    // only spaces between "120" and the next label: the number may be Feb's ("120 Feb 80 …" written value-first) — unclear since Review
+    // Fix 6 (round-6 finding R6-A1); the last label still pairs
+    expect(pairedNumbers("Jan 120 Feb 80", ["Jan", "Feb"])).toEqual([undefined, 80]);
     expect(pairedNumbers("Jan 120 (2020), Feb 80", ["Jan", "Feb"])).toEqual([undefined, 80]);
   });
   it("round-3 lane C pins (N1 / N3): ranges, a number then another, compatibility forms, tatweel, the comma-list rule, 4-digit values", () => {

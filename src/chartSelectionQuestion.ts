@@ -80,10 +80,13 @@ export function validateChartSelectionConfig(raw: unknown): ChartSelectionConfig
     if (mode === "range" && !RANGE_TARGET_KINDS.includes(kind)) issues.push(err("CHART_SELECTION_RANGE_UNSUPPORTED", "اختيار النطاق متاح للفئات والفئات التكرارية فقط.", "chartSelection.mode"));
   }
   const max = raw.maxSelections;
-  // a value cell left empty is no target: a bound that only empty cells push past the targets says so (round-5 finding R5-A8)
+  // a value cell left empty is no target: a bound that only empty cells push past the targets — filling them would make it valid — says
+  // so (round-5 finding R5-A8; round-6 R6-N1: not when the bound exceeds every slot, nor in single mode)
+  const cv = chart.ok ? (chart.value as { series?: unknown; categories?: unknown }) : null;
+  const slots = cv && Array.isArray(cv.series) && Array.isArray(cv.categories) ? cv.series.length * cv.categories.length : 0;
   const emptyCells = chart.ok && target === "datum" && chart.value.kind !== "pie" && "series" in chart.value && Array.isArray(chart.value.series)
     && chart.value.series.some(x => Array.isArray((x as { values?: unknown }).values) && (x as { values: unknown[] }).values.includes(null));
-  if (typeof max !== "number" || !Number.isInteger(max) || max < 1 || (targets.length > 0 && max > targets.length) || (mode === "single" && max !== 1)) issues.push(err("CHART_SELECTION_MAX_INVALID", emptyCells && typeof max === "number" && max > targets.length
+  if (typeof max !== "number" || !Number.isInteger(max) || max < 1 || (targets.length > 0 && max > targets.length) || (mode === "single" && max !== 1)) issues.push(err("CHART_SELECTION_MAX_INVALID", emptyCells && mode !== "single" && Number.isInteger(max) && (max as number) > targets.length && (max as number) <= slots
     ? "الحد الأقصى للاختيارات أكبر من عدد القيم الموجودة في الرسم لأن بعض خلاياه فارغة: أكمل القيم الفارغة أو خفّض الحد."
     : "الحد الأقصى للاختيارات عدد صحيح من 1 حتى عدد العناصر القابلة للاختيار (1 في الاختيار الواحد).", "chartSelection.maxSelections"));
   if (issues.length || !chart.ok) return { ok: false, issues };

@@ -62,6 +62,9 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
   const targets = useMemo(() => (valid?.ok && kinds.includes(target) ? chartTargets(valid.value, target) : []), [valid, kinds, target]);
   const issues = useMemo(() => validateChartSelectionQuestion(node as unknown as Record<string, unknown>), [node]);
   // key entries of datum cells being retyped: the picker carries them through a click and leaves them their place in the bound (R5-A6)
+  // the bound the emission stores: a datum bound is clamped by the chart's slots (filled or not), any other by the targets — the bound
+  // field shows exactly that (round-6 finding R6-A5)
+  const boundCap = chart && target === "datum" && targets.length ? Math.max(targets.length, datumSlotCount(chart)) : targets.length;
   const pendingKey = useMemo(() => (chart && target === "datum" && targets.length ? correct.filter(k => !targets.some(x => x.key === k) && datumSlot(chart, k)) : []), [chart, target, targets, correct]);
   const [newKind, setNewKind] = useState<ChartKind>("bar");
   const [maxDraft, setMaxDraft] = useState<string | null>(null);
@@ -149,13 +152,13 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
             </label>
             {mode !== "single" && (
               <label className="vq-field"><span>أقصى عدد للاختيارات</span>
-                <input className="sb-input sb-input-sm" type="number" min={1} max={Math.max(1, targets.length)} value={maxDraft ?? String(max)} aria-label="أقصى عدد للاختيارات" disabled={disabled}
+                <input className="sb-input sb-input-sm" type="number" min={1} max={Math.max(1, boundCap)} value={maxDraft ?? String(max)} aria-label="أقصى عدد للاختيارات" disabled={disabled}
                   onChange={e => {
                     const t = e.target.value, n = Number(t);
                     setMaxDraft(t);
                     if (t.trim() === "" || !Number.isInteger(n) || n < 1) return;
                     write({ max: n });
-                    if (targets.length && n > targets.length) setMaxDraft(String(targets.length));            // show the bound actually stored
+                    if (boundCap && n > boundCap) setMaxDraft(String(boundCap));                            // show the bound actually stored
                   }} onBlur={() => setMaxDraft(null)} />
               </label>
             )}
@@ -173,7 +176,7 @@ export default function ChartSelectionEditor({ node, onChange, disabled }: Autho
           <section aria-label="الإجابة الصحيحة" data-testid="chart-key-picker">
             <p className="vq-note">حدّد الإجابة الصحيحة على الرسم نفسه (بالنقر أو من القائمة) — بالطريقة نفسها التي يجيب بها الطالب. لا يرى الطالب هذا التحديد.</p>
             {valid?.ok
-              ? <DataChart spec={valid.value} preview selection={{ kind: target, mode, max: mode === "single" ? 1 : Math.max(1, max - pendingKey.length), value: correct, label: "الإجابة الصحيحة", readOnly: disabled, onChange: next => write({ correct: [...next, ...pendingKey] }) }} />
+              ? <DataChart spec={valid.value} preview selection={{ kind: target, mode, max: mode === "single" ? 1 : Math.max(0, max - pendingKey.length), value: pendingKey.length ? correct.filter(k => !pendingKey.includes(k)) : correct, label: "الإجابة الصحيحة", readOnly: disabled, onChange: next => write({ correct: [...next, ...pendingKey] }) }} />
               : <p className="vq-note">أكمل بيانات الرسم (أو صحّح أخطاءه) لتحديد الإجابة الصحيحة.</p>}
           </section>
         </>

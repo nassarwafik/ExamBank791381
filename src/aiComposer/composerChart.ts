@@ -72,7 +72,11 @@ export function numbersInText(text: string): Set<number> {
 // ── category ↔ value pairings the teacher WROTE (conservative: an unclear phrasing pairs nothing) ──────────────────────────────────────
 const INVISIBLE_OR_TATWEEL = /[\p{Default_Ignorable_Code_Point}ـ]/gu;
 /** Text as compared for pairing: compatibility forms folded (see fold), invisible characters and tatweel removed, digits normalized, lower case. */
-const pairText = (s: string) => normDigits(fold(s).replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase();
+/** Every line break (CR, CR LF, the Unicode line / paragraph separators, VT, FF, NEL) reads as a line feed, and whitespace runs as one
+ *  space / one line break: the rules below see one kind of line break (round-6 finding R6-A2), and no run of whitespace can make a
+ *  backward match costly (R6-A3). */
+const lines = (s: string) => s.replace(/\r\n?|[\v\f\u0085\u2028\u2029]/g, "\n").replace(/[^\S\n]+/g, " ").replace(/ ?\n[\s]*/g, "\n");
+const pairText = (s: string) => lines(normDigits(fold(s).replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase());
 /** A list separator: , ، ؛ ; / & (optionally followed by "and" / "و"), or "and" / "و" alone ("120 و80", "يناير وفبراير"). */
 const LIST_SEP = "(?:\\s*[,،؛;/&]\\s*(?:(?:and\\b|و)\\s*)?|\\s+and\\s+|\\s+و\\s*)";
 /** A short unit after a number ("%", "mm", "ملم", "وحدة") — never the "و" or "and" of a following list item. */
@@ -88,6 +92,10 @@ const TAIL_UNIT = "\\s*(?:[%٪]|(?!(?:and|then|ثم|[وفبلك])(?![\\p{L}\\p{M
 const CONNECTOR_TO_LABEL = /^\s*(?:(?:and|then|ثم|و)\s+)?[وفبلك]?$/u;
 /** Where a clause ends: a sentence or list punctuation mark, or a line break. */
 const CLAUSE_END = /[.!?؟\n؛;,،]/;
+/** A list separator ending the text before a label, tested on a bounded tail (the separator and its spaces are short once whitespace
+ *  runs are collapsed): the test never scans the whole text (round-6 finding R6-A3). */
+const LIST_SEP_END = new RegExp("(?:" + LIST_SEP + ")$", "u");
+const TAIL = 48;
 const sticky = (source: string, t: string, at: number) => { const re = new RegExp(source, "uy"); re.lastIndex = at; return re.exec(t); };
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const WORD = /[\p{L}\p{M}\p{N}]/u;
@@ -140,8 +148,8 @@ function pairedAt(t: string, l: string, others: readonly string[], valueFirst = 
     if (inside.some(([a, b]) => at >= a && at < b)) continue;
     // an item of a list of this chart's labels ("jan, feb, mar: …", "يناير وفبراير ومارس: …"): its values are a list too — the label before
     // the separator is a whole word, never the end of a unit («30 طالب، ب 25» is not a list of «ب» — R5-A3)
-    const before = t.slice(0, at), sep = new RegExp("(?:" + LIST_SEP + ")$", "u").exec(before);
-    const head = sep ? before.slice(0, sep.index).trimEnd() : "";
+    const from0 = Math.max(0, at - TAIL), sep = LIST_SEP_END.exec(t.slice(from0, at));
+    const head = sep ? t.slice(0, from0 + sep.index).trimEnd() : "";
     if (sep && others.some(o => o && head.endsWith(o) && wholeWord(head, head.length - o.length, o.length))) continue;
     const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))![0];
     if (!lead) continue;                                                   // "Q1" never pairs with the "0" of "Q10"; "jan," is a list item
@@ -166,6 +174,9 @@ function pairedAt(t: string, l: string, others: readonly string[], valueFirst = 
     const paren = lead.includes("("), body = paren ? clause.replace(/^\s*\)/u, "") : clause;
     const unitLen = sticky(TAIL_UNIT, body, 0)?.[0].length ?? 0, tail = paren ? body.slice(unitLen).replace(/^\s*\)/u, "") : body.slice(unitLen);
     if (!(atLabel ? CONNECTOR_TO_LABEL : /^\s*$/u).test(tail)) continue;
+    // before the next label only spaces: "Sales 120 Jan 80 Feb" may write each value BEFORE its label — the number may be the next
+    // label's, so the pairing is unclear (round-6 finding R6-A1); a connector ("and", «و», …) or a closing parenthesis makes it clear
+    if (atLabel && !paren && /^\s*$/u.test(tail)) continue;
     const n = readNumber(t, m);
     if (MONTH.test(l) && Number.isInteger(n) && n >= 1 && n <= 31 && /\p{L}/u.test(body.slice(0, unitLen))) continue;   // a day of the month
     if (Number.isFinite(n)) found.add(n);
@@ -211,8 +222,9 @@ export function pairedNumbers(request: string, labels: readonly string[]): (numb
   const t = pairText(request), ls = labels.map(l => pairText(l).trim());
   const listed = ls.length >= 2 && ls.every(Boolean) && new Set(ls).size === ls.length ? listPairs(t, ls) : new Map<number, number[]>();
   // the request writes a value BEFORE a label somewhere: a clause (or line) that starts with a number followed by one of the labels
-  const valueFirstAt = new RegExp("(?:^|[.!?؟\\n؛;,،:])[^\\S\\n]*" + NUMBER.source + "(?:" + TAIL_UNIT + ")?(?:[^\\S\\n]+[^\\s\\d,،؛;.:=()]{1,6})?[^\\S\\n]*[وفبلك]?$", "u");
-  const valueFirst = ls.some(l => l && occurrences(t, l).some(at => valueFirstAt.test(t.slice(0, at))));
+  // (tested on a bounded tail before each label occurrence, the text's start marked by a line break — round-6 finding R6-A3)
+  const valueFirstAt = new RegExp("[.!?؟\\n؛;,،:][^\\S\\n]*" + NUMBER.source + "(?:" + TAIL_UNIT + ")?(?:[^\\S\\n]+[^\\s\\d,،؛;.:=()]{1,6})?[^\\S\\n]*[وفبلك]?$", "u");
+  const valueFirst = ls.some(l => l && occurrences(t, l).some(at => valueFirstAt.test((at <= 2 * TAIL ? "\n" : "") + t.slice(Math.max(0, at - 2 * TAIL), at))));
   return ls.map((l, i) => {
     const values = new Set([...(listed.get(i) ?? []), ...pairedAt(t, l, ls.filter((_, j) => j !== i), valueFirst)]);
     return values.size === 1 ? [...values][0] : undefined;

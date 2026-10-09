@@ -51,13 +51,16 @@ function numbersInText(text) {
     return out;
 }
 const INVISIBLE_OR_TATWEEL = /[\p{Default_Ignorable_Code_Point}ـ]/gu;
-const pairText = (s) => normDigits(fold(s).replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase();
+const lines = (s) => s.replace(/\r\n?|[\v\f\u0085\u2028\u2029]/g, "\n").replace(/[^\S\n]+/g, " ").replace(/ ?\n[\s]*/g, "\n");
+const pairText = (s) => lines(normDigits(fold(s).replace(INVISIBLE_OR_TATWEEL, "")).toLowerCase());
 const LIST_SEP = "(?:\\s*[,،؛;/&]\\s*(?:(?:and\\b|و)\\s*)?|\\s+and\\s+|\\s+و\\s*)";
 const UNIT = "(?:\\s*(?:[%٪]|(?!و(?:\\s|\\d)|and\\b)[^\\s\\d,،؛;/&.:=()\\-]{1,6}))?";
 const MONTH = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|يناير|فبراير|مارس|[أإا]بريل|مايو|يوني[وه]|يولي[وه]|[أا]غسطس|سبتمبر|[أا]كتوبر|نوفمبر|ديسمبر|كانون الثاني|شباط|[آا]ذار|نيسان|[أا]يار|حزيران|تموز|[آا]ب|[أا]يلول|تشرين الأول|تشرين الثاني|كانون الأول)$/u;
 const TAIL_UNIT = "\\s*(?:[%٪]|(?!(?:and|then|ثم|[وفبلك])(?![\\p{L}\\p{M}]))[^\\s\\d,،؛;&.:=()]+)";
 const CONNECTOR_TO_LABEL = /^\s*(?:(?:and|then|ثم|و)\s+)?[وفبلك]?$/u;
 const CLAUSE_END = /[.!?؟\n؛;,،]/;
+const LIST_SEP_END = new RegExp("(?:" + LIST_SEP + ")$", "u");
+const TAIL = 48;
 const sticky = (source, t, at) => { const re = new RegExp(source, "uy"); re.lastIndex = at; return re.exec(t); };
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const WORD = /[\p{L}\p{M}\p{N}]/u;
@@ -102,8 +105,8 @@ function pairedAt(t, l, others, valueFirst = false) {
     for (const at of occurrences(t, l)) {
         if (inside.some(([a, b]) => at >= a && at < b))
             continue;
-        const before = t.slice(0, at), sep = new RegExp("(?:" + LIST_SEP + ")$", "u").exec(before);
-        const head = sep ? before.slice(0, sep.index).trimEnd() : "";
+        const from0 = Math.max(0, at - TAIL), sep = LIST_SEP_END.exec(t.slice(from0, at));
+        const head = sep ? t.slice(0, from0 + sep.index).trimEnd() : "";
         if (sep && others.some(o => o && head.endsWith(o) && wholeWord(head, head.length - o.length, o.length)))
             continue;
         const lead = /^[\s:=(]*/.exec(t.slice(at + l.length))[0];
@@ -131,6 +134,8 @@ function pairedAt(t, l, others, valueFirst = false) {
         const paren = lead.includes("("), body = paren ? clause.replace(/^\s*\)/u, "") : clause;
         const unitLen = sticky(TAIL_UNIT, body, 0)?.[0].length ?? 0, tail = paren ? body.slice(unitLen).replace(/^\s*\)/u, "") : body.slice(unitLen);
         if (!(atLabel ? CONNECTOR_TO_LABEL : /^\s*$/u).test(tail))
+            continue;
+        if (atLabel && !paren && /^\s*$/u.test(tail))
             continue;
         const n = readNumber(t, m);
         if (MONTH.test(l) && Number.isInteger(n) && n >= 1 && n <= 31 && /\p{L}/u.test(body.slice(0, unitLen)))
@@ -181,8 +186,8 @@ function listPairs(t, ls) {
 function pairedNumbers(request, labels) {
     const t = pairText(request), ls = labels.map(l => pairText(l).trim());
     const listed = ls.length >= 2 && ls.every(Boolean) && new Set(ls).size === ls.length ? listPairs(t, ls) : new Map();
-    const valueFirstAt = new RegExp("(?:^|[.!?؟\\n؛;,،:])[^\\S\\n]*" + NUMBER.source + "(?:" + TAIL_UNIT + ")?(?:[^\\S\\n]+[^\\s\\d,،؛;.:=()]{1,6})?[^\\S\\n]*[وفبلك]?$", "u");
-    const valueFirst = ls.some(l => l && occurrences(t, l).some(at => valueFirstAt.test(t.slice(0, at))));
+    const valueFirstAt = new RegExp("[.!?؟\\n؛;,،:][^\\S\\n]*" + NUMBER.source + "(?:" + TAIL_UNIT + ")?(?:[^\\S\\n]+[^\\s\\d,،؛;.:=()]{1,6})?[^\\S\\n]*[وفبلك]?$", "u");
+    const valueFirst = ls.some(l => l && occurrences(t, l).some(at => valueFirstAt.test((at <= 2 * TAIL ? "\n" : "") + t.slice(Math.max(0, at - 2 * TAIL), at))));
     return ls.map((l, i) => {
         const values = new Set([...(listed.get(i) ?? []), ...pairedAt(t, l, ls.filter((_, j) => j !== i), valueFirst)]);
         return values.size === 1 ? [...values][0] : undefined;
