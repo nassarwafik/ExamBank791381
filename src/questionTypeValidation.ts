@@ -12,6 +12,7 @@ import { validateHotspotQuestion } from "./hotspotQuestion";
 import { validateLabelDiagramQuestion } from "./labelDiagramQuestion";
 import { validateChartSelectionQuestion } from "./chartSelectionQuestion";
 import { validateFunctionGraphSelectionQuestion } from "./functionGraphSelectionQuestion";
+import { validateScene3DSelectionQuestion } from "./scene3DSelectionQuestion";
 import { validateParametricNumericQuestion } from "./parametricNumericQuestion";
 import { validateOpenResponseQuestion } from "./openResponseQuestion";
 import { validateSmartSimQuestion } from "./trustedSimPlugins";
@@ -138,6 +139,8 @@ registerTypeValidator("labelDiagram", 1, node => validateLabelDiagramQuestion(no
 registerTypeValidator("chartSelection", 1, node => validateChartSelectionQuestion(node));
 // Phase 21A.2 — functionGraphSelection@1: the public config (the graph through the ONE FunctionGraphSpecV1 authority) and the private key.
 registerTypeValidator("functionGraphSelection", 1, node => validateFunctionGraphSelectionQuestion(node));
+// Phase 21C — semantic 3D selection with the strict scene/key authority.
+registerTypeValidator("scene3DSelection", 1, node => validateScene3DSelectionQuestion(node));
 // Phase 19E — openResponse@1: public config, the private rubric (strict, never repaired), the model answer bound and positive marks.
 registerTypeValidator("openResponse", 1, node => validateOpenResponseQuestion(node));
 // Phase 20A — smartSim@1: the strict public envelope (exact plugin identity, plugin-validated config) and the private weighted checks
