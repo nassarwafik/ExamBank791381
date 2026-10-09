@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { evaluateExpression } from "../parametricExpression";
 import { projectSurface, sampleSurface } from "./surfaceMesh";
 import { type SurfaceCamera, type SurfaceSpecV1, validateSurfaceSpec } from "./surfaceSpec";
@@ -14,9 +14,8 @@ export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
   const uid = useId().replace(/[^A-Za-z0-9_-]/g, "");
   const checked = useMemo(() => validateSurfaceSpec(spec), [spec]);
   const [camera, setCamera] = useState<SurfaceCamera>(() => start(spec));
-  const [currentSpec, setCurrentSpec] = useState(spec);
   const drag = useRef<{ id: number; x: number; y: number; azimuth: number; elevation: number } | null>(null);
-  if (currentSpec !== spec) { setCurrentSpec(spec); setCamera(start(spec)); }
+  useEffect(() => { setCamera(start(spec)); }, [spec]);
   const mesh = useMemo(() => checked.ok ? sampleSurface(checked.value, checked.ast) : null, [checked]);
   const scene = useMemo(() => (checked.ok && mesh) ? projectSurface(mesh, checked.value, camera) : null, [checked, mesh, camera]);
   const table = useMemo(() => {
