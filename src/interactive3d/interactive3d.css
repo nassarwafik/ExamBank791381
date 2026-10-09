@@ -1,3 +1,6 @@
+.i3d,.i3d-editor{max-width:100%;min-width:0;box-sizing:border-box}
+.i3d *,.i3d-editor *{box-sizing:border-box;min-width:0}
+.i3d button,.i3d input,.i3d select,.i3d-editor button,.i3d-editor input,.i3d-editor select{max-width:100%}
 .i3d{margin:1rem 0;padding:.8rem;border:1px solid #cfd8e3;border-radius:10px;background:#fff;color:#172033;break-inside:avoid}
 .i3d figcaption{line-height:1.65}.i3d figcaption>p{margin:.3rem 0}.i3d-controls{display:flex;flex-wrap:wrap;gap:.4rem;margin:.65rem 0}
 .i3d-controls button,.i3d-target-list button{min-height:42px;border:1px solid #9db0c2;border-radius:8px;background:#fff;color:#172033;padding:.45rem .7rem;cursor:pointer}
