@@ -33,7 +33,7 @@ function fakeRenderer(pickResult: { id: string | null }) {
     const r = {
       states: [] as MeshRenderState[], disposed: false,
       resize: vi.fn(), render(s: MeshRenderState) { r.states.push(s); },
-      pick: vi.fn(() => pickResult.id), probe: vi.fn(() => null),
+      pick: vi.fn(() => pickResult.id), pickMany: vi.fn(() => []), probe: vi.fn(() => null),
       stats: () => ({ drawCalls: 5, triangles: 1188, gpuBytes: 50000, textures: 1, frames: r.states.length, samples: 4, dpr: 1, width: 640, height: 400, contextLost: false }),
       texturesReady: Promise.resolve(), dispose() { r.disposed = true; }
     };

@@ -24,9 +24,15 @@ function icosphere(subdivisions: number): SimplifyInput {
   return { positions: new Float32Array(P.flat()), normals: new Float32Array(P.flat()), indices: new Uint32Array(F.flat()) };
 }
 
-function grid(n: number): SimplifyInput {
+/** A unit sheet: optionally jittered (non-convex vertex rings) and gently rippled (so collapse costs differ). Deterministic. */
+function grid(n: number, jitter = 0, ripple = 0): SimplifyInput {
   const P: number[] = [], N: number[] = [], I: number[] = [];
-  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) { P.push(i / n, j / n, 0); N.push(0, 0, 1); }
+  let seed = 11;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648 - 0.5; };
+  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
+    const inner = i > 0 && j > 0 && i < n && j < n, x = i / n + (inner ? rnd() * jitter / n : 0), y = j / n + (inner ? rnd() * jitter / n : 0);
+    P.push(x, y, ripple ? ripple * Math.sin(x * 9) * Math.cos(y * 7) : 0); N.push(0, 0, 1);
+  }
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const a = j * (n + 1) + i, b = a + n + 1; I.push(a, a + 1, b, a + 1, b + 1, b); }
   return { positions: new Float32Array(P), normals: new Float32Array(N), indices: new Uint32Array(I) };
 }
@@ -72,6 +78,18 @@ describe("21D-B.2 meshSimplify — offline, original vertices only, closed and o
     let area = 0;
     for (let f = 0; f < out.triangles; f++) area += faceNormal(out.positions, out.indices[f * 3], out.indices[f * 3 + 1], out.indices[f * 3 + 2])[2] / 2;
     expect(area).toBeCloseTo(1, 6);                                                        // no overlap, no fold, no hole
+  });
+
+  it("refuses collapses that would fold the surface: an irregular rippled sheet (non-convex vertex rings) keeps every face facing up", () => {
+    const out = simplifyMesh(grid(24, 0.95, 0.05), 0.08);                                // without the flip guard: 44 folded faces
+    expect(out.triangles).toBeLessThan(1152 * 0.1);
+    let area = 0;
+    for (let f = 0; f < out.triangles; f++) {
+      const z = faceNormal(out.positions, out.indices[f * 3], out.indices[f * 3 + 1], out.indices[f * 3 + 2])[2];
+      expect(z).toBeGreaterThan(0);
+      area += z / 2;
+    }
+    expect(area).toBeCloseTo(1, 5);                                                       // projected area: no overlap, no hole
   });
 
   it("is deterministic, leaves a mesh untouched at ratio 1 and accepts an empty mesh", () => {

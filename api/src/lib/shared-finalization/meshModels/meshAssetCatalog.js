@@ -44,7 +44,7 @@ exports.MESH_LIBRARY = Object.freeze([
         id: "human-brain-bp3d", version: 1,
         sha256: "6de4ff20027acf242675d73e99da45b5e285abb7e7e6b79dc40e4ad6a30ccf5c", byteLength: 2531732,
         title: "دماغ الإنسان — الفصوص وجذع الدماغ", subject: "الأحياء — الجهاز العصبي",
-        camera: Object.freeze({ azimuth: -1.57, elevation: 0.15, zoom: 1.15 }),
+        camera: Object.freeze({ azimuth: -1.57, elevation: 0.15, zoom: 1.3 }),
         parts: Object.freeze([
             { id: "frontalLobe", label: "الفص الجبهي", description: "مقدمة نصفي المخ؛ يضم التلفيف أمام المركزي (القشرة الحركية) ويرتبط بالتخطيط واتخاذ القرار والحركة الإرادية." },
             { id: "parietalLobe", label: "الفص الجداري", description: "خلف الفص الجبهي؛ يضم التلفيف خلف المركزي (القشرة الحسية الجسدية) ويعالج الإحساس باللمس والوضع والمكان." },

@@ -227,11 +227,31 @@ recorded in the performance report.
 
 ## 12. Commit, CI and measurement record (B.1)
 
-To be completed on the final head of the B.1 pull request.
+**Baseline and branch:**
+- Baseline: `8ff966f1c06bc90de16a203435f396af6e398508` (merge of #285; main Quality Gate run 38041285543 = success).
+- Branch: `feature/phase-21d-b1-mesh-webgl-foundation`, pull request #286.
+
+**Commits:**
+
+| Commit | Content |
+|---|---|
+| `e914a28` | implementation |
+| `d34cb69` | design record + mutation proof |
+| `fe1c1b3` | route-inventory classification |
+| `f04fbf5` | harness CI fix: data: favicon, 4xx responses logged by URL, hidden artifact directory uploaded |
+
+**Exact-head CI on `f04fbf5`** (all attempt 1):
+
+| Workflow | Run | Conclusion |
+|---|---|---|
+| Quality Gate | 38044568027 | success |
+| Build and Deploy | 38044568027 | success; PR preview environment created; no production or Runner deployment |
+| Real Chromium WebGL | 38044568015 | success, 37 / 37 |
+| Runner security & smoke | 38044568062 | success |
 
 ## 13. Plan for B.2 and B.3
 
-* **B.2:**
+* **B.2** (delivered; see §14 — the lungs were replaced by the brain because BodyParts3D has no lung-lobe surfaces):
   * a reproducible conversion pipeline (BodyParts3D OBJ → merged, welded, Y-up, normal-smoothed GLB with one node per labelled part);
   * the human heart (chambers, great vessels and more) and the lungs (lobes, trachea, bronchi) as reviewed library assets, each with provenance and licence records;
   * material quality (per-structure colours, roughness);
@@ -241,3 +261,183 @@ To be completed on the final head of the B.1 pull request.
   * `meshPartSelection@1` across every registry: validation and finalization, sanitizer, server grading, draft-answer binding / autosave, teacher review, JSON import / export, and a publish-time availability check for uploads;
   * the importable Arabic acceptance exam (heart plus a second model);
   * a performance report (load time, frame time, GPU memory, several questions in one exam, context loss, low memory) and real-Chromium lifecycle certification.
+
+## 14. Phase 21D-B.2 — anatomical library models, material quality and authoring
+
+**Branch:** `feature/phase-21d-b2-anatomical-mesh-assets`.
+- It is stacked on the B.1 branch at `f04fbf5`.
+- Its pull request targets `main`. Until #286 merges, the pull request also lists the B.1 commits. The B.2 change itself is
+  `f04fbf5..head`.
+
+### 14.1 Assets
+
+The provenance record is `docs/mesh-assets/PROVENANCE.md`. The served licence notice is `public/mesh-assets/NOTICE.txt`.
+
+| Catalog id | File (SHA-256 prefix) | Bytes | Triangles | Parts | Source elements |
+|---|---|---|---|---|---|
+| `human-heart-bp3d` v1 | `61e01bcf…` | 2,001,400 | 99,207 (not simplified) | 14 | 81 BodyParts3D elements |
+| `human-brain-bp3d` v1 | `6de4ff20…` | 2,531,732 | 118,856 (from 237,720) | 10 | 36 elements |
+
+**Heart parts:**
+- the four chambers;
+- the aorta and pulmonary trunk;
+- both venae cavae;
+- the coronary arteries and the cardiac veins;
+- the four valves.
+
+**Brain parts:**
+- the frontal, parietal, temporal and occipital lobes and the insula;
+- the cerebellum;
+- the midbrain, pons and medulla;
+- the cerebral white matter.
+
+The source is BodyParts3D 4.0 (DBCLS). The licensor's page states CC BY 4.0, while the OBJ headers carry an older CC BY-SA 2.1 JP
+notice. The derived GLB files are therefore published under **CC BY-SA 4.0** with the verbatim attribution. The licence is recorded
+in each GLB's `asset.copyright`, in the catalog, in the NOTICE and in the provenance panel of the viewer.
+
+**Educational limitations** are written into the catalog entries and shown to every viewer:
+- a single adult specimen; not a diagnostic or measurement tool;
+- the heart has no ventricular myocardium surface: the ventricles are cavity surfaces, and some posterior coronary branches float
+  slightly off them;
+- not shown: the pulmonary veins and the papillary muscles;
+- the inferior vena cava is clipped;
+- the brain is simplified to about 50 %, and its superior temporal gyrus, orbital gyri and medial surface are not included;
+- colours are teaching conventions.
+
+**Pipeline** (`scripts/convert-bodyparts3d-21db.mts`):
+- It verifies the source archive's SHA-256 before using it.
+- It writes the same bytes on every run.
+- It validates each output with the same GLB authority the server and browser use.
+- The manifest `docs/mesh-assets/bodyparts3d-21db-manifest.json` lists every source element (FJ id, FMA concept, name) with
+  triangle counts.
+
+**Simplifier** (`src/meshModels/meshSimplify.ts`): an offline quadric edge-collapse simplifier.
+- Placement is endpoint-only, so every output vertex is an original source vertex with its source normal; no geometry is invented.
+- Open boundaries are locked.
+- Folds are refused: a collapse whose face-normal dot product falls below 0.3 is rejected.
+- It is deterministic.
+
+**Rendering:**
+- The light rig was retuned for tissue: key 2.35, fill 0.55, rim 1.0, darker ambient.
+- Each library entry carries a reviewed default view: the heart anterior at zoom 1.2, the brain right-lateral at zoom 1.3.
+
+### 14.2 Authoring
+
+`MeshModelEditor` is lazy. It ships unwired in B.2; the question type that embeds it arrives in B.3. It provides:
+- **Asset sources:**
+  - the reviewed library, with source and licence shown on each card;
+  - "my uploaded models", through an App-owned `MeshAssetService` provided by React context, the same token-free pattern as SmartSim.
+    The service has `meshAssetClient.ts` (XHR upload with progress, the auth header only, an encoded file name, and malformed rows
+    dropped).
+- **Drafts built from the asset** (`meshModelDraft.ts`): a teacher can only label parts the file contains. A re-included part gets its
+  default label back.
+- **Labels and descriptions, part inclusion and the student controls.**
+- **Starting view:** the starting view is captured from the live preview, then wrapped, clamped and rounded into the contract's
+  ranges.
+- **Live validation:** the canonical validator runs on every change and shows its Arabic reasons.
+- **Replacing a labelled model asks for confirmation.**
+- **Preview:** the preview is the student viewer itself. It keeps showing the last valid model while the draft is invalid.
+
+**Defect found and fixed (fail-first on `1961514`).** The B.1 viewer keyed the asset load, the camera reset and the GL renderer on the
+whole model JSON. In a live preview, every label keystroke therefore:
+- reloaded the asset;
+- disposed and recreated the WebGL context;
+- reset the view.
+
+The fix splits the keys:
+- the asset and GL context depend on the asset reference only;
+- the view resets when the asset or the authored camera changes;
+- hidden parts reset when the labelled part set changes.
+
+Labelled parts are now checked against the parsed document in the viewer. A part missing from the file still fails closed, and it
+recovers without a reload once the label is removed.
+
+`src/meshModels/meshViewerStability.21db.test.tsx` failed 3 / 3 on `1961514` (worktree run):
+- the loader was called 2 times instead of once (two tests);
+- the state was `ready` instead of `error`.
+
+All 3 pass on the head.
+
+The renderer gained `pickMany` for orientation certification: one pick pass, many read-backs. The product `pick` now routes through
+it, with identical behaviour; the B.1 Chromium checks pass 37 / 37.
+
+### 14.3 Tests and certification (B.2)
+
+**Unit tests:**
+
+| Suite | Tests |
+|---|---|
+| `meshAssetCatalog.21db` (files, hashes, GLB authority, exact part lists, contract validation of the defaults, provenance, NOTICE / PROVENANCE / manifest consistency) | 6 |
+| `meshSimplify.21db` (original vertices, closed and oriented, boundary + area, fold refusal, determinism) | 5 |
+| `meshViewerStability.21db` (fail-first) | 3 |
+| `meshModelEditor.21db` | 9 |
+| `meshAssetClient.21db` | 3 |
+
+B.1 suites updated for the new fields: 38.
+
+**Real Chromium** (`scripts/check-mesh-anatomy-browser-21db.mjs`, a second step of the WebGL workflow): **32 / 32**. It covers:
+- **The shipped files at full resolution.**
+- **Anatomical orientation, from GPU picks on a 64 × 48 grid:**
+  - in the anterior view of the heart, the superior vena cava and right atrium lie on the viewer's left of the aorta and pulmonary
+    trunk; the great vessels sit above the ventricles; the inferior vena cava is below the superior one;
+  - the left atrium is prominent only from behind;
+  - in the right lateral view of the brain, the frontal lobe is anterior of the parietal lobe, which is anterior of the occipital
+    lobe; the temporal lobe is below the parietal lobe; the cerebellum is posterior and inferior; the brainstem is lowest.
+- **Rendering:** tissue colour, selection highlight, hide / show, context loss and restore.
+- **Several models and caching:** three models at once; one download per file.
+- **The editor flows:**
+  - library pick;
+  - label edits that keep the same canvas;
+  - view capture;
+  - the replace confirmation;
+  - an upload through the service;
+  - an invalid label.
+- **Phone:** touch rotation; no overflow at 390 px for the viewer and the editor.
+- **Hygiene:** no page error, no foreign host.
+
+**Measured performance** (headless Chromium, SwiftShader CPU rendering, no GPU; a real GPU is far faster):
+
+| Model | Ready (from navigation: 2.0–2.5 MB streamed, SHA-256, validated, uploaded) | Frame (render + synchronous read-back) | GPU memory |
+|---|---|---|---|
+| Heart | 0.30–0.38 s | 190–280 ms | 1.9 MB |
+| Brain | 0.26–0.32 s | 390–430 ms | 2.4 MB |
+| Heart + brain + heart | — | — | 6.2 MB in total |
+
+**Mutation proof (B.2):** 16 mutants were planted, each file restored byte-for-byte with SHA-256 verification; `git status` was
+unchanged afterwards.
+
+| Id | Mutant | Verdict |
+|---|---|---|
+| B2-01 | viewer: missing-parts gate removed | KILLED (after strengthening, see below) |
+| B2-02 | viewer: missing-parts error dropped | KILLED |
+| B2-03 | viewer: asset keyed on the whole model | KILLED |
+| B2-04 | viewer: camera reset on text edits | KILLED |
+| B2-05 | catalog: heart pin wrong | KILLED |
+| B2-06 | catalog: unknown part labelled | KILLED |
+| B2-07 | catalog: attribution weakened | KILLED |
+| B2-08 | draft: foreign part accepted | KILLED |
+| B2-09 | draft: zoom not clamped | KILLED |
+| B2-10 | editor: emits while disabled | KILLED |
+| B2-11 | editor: replace without confirmation | KILLED |
+| B2-12 | editor: non-.glb sent to the server | KILLED |
+| B2-13 | client: malformed hash accepted | KILLED |
+| B2-14 | simplifier: boundary not locked | KILLED |
+| B2-15 | simplifier: fold check disabled | KILLED (after strengthening, see below) |
+| B2-16 | simplifier: non-original vertex | KILLED |
+
+Two mutants survived the first run and were treated as findings:
+- **B2-01:** a GL context was still created behind the error overlay. The test now asserts that no renderer exists for a model that
+  cannot be shown.
+- **B2-15:** on a perfectly flat sheet, fold-free collapses always exist. The test now uses a jittered, rippled sheet; without the
+  guard it produces 44 folded faces.
+
+**Bundle:**
+- The editor is lazy. Its class names joined the guard's mesh signatures, so they must stay out of the initial graph and out of the
+  student portal's static closure.
+- The initial graph is unchanged.
+
+**Static Web Apps configuration:** not changed, for two reasons:
+- two existing tests pin it as unchanged;
+- the loader does not depend on the served MIME type, because it verifies bytes by SHA-256.
+
+Serving `.glb` from `/mesh-assets/` is to be verified on the PR preview.

@@ -35,6 +35,8 @@ export type MeshRenderer = {
   pick(cssX: number, cssY: number, state: MeshRenderState): string | null;
   /** Renders (the given state, else the last rendered one) and reads one CSS pixel of the final image (sRGB bytes) — certification only. */
   probe(cssX: number, cssY: number, state?: MeshRenderState): [number, number, number, number] | null;
+  /** The pick of many CSS-pixel positions from ONE pick pass (orientation / coverage certification only). */
+  pickMany(points: readonly (readonly [number, number])[], state: MeshRenderState): (string | null)[];
   stats(): MeshRendererStats;
   /** Resolves when every texture is decoded and uploaded (the first frames draw untextured base colours). */
   texturesReady: Promise<void>;
@@ -491,10 +493,11 @@ export function createMeshRenderer(canvas: HTMLCanvasElement, doc: MeshDocument,
     const x = Math.floor((cssX / Math.max(1, cssW)) * canvas.width), y = canvas.height - 1 - Math.floor((cssY / Math.max(1, cssH)) * canvas.height);
     return x >= 0 && y >= 0 && x < canvas.width && y < canvas.height ? { x, y } : null;
   };
-  const pick = (cssX: number, cssY: number, state: MeshRenderState): string | null => {
-    if (disposed || lost || !gpu) return null;
-    const px = toPixel(cssX, cssY), target = ensurePickTarget();
-    if (!px || !target) return null;
+  const pickMany = (points: readonly (readonly [number, number])[], state: MeshRenderState): (string | null)[] => {
+    const none = points.map(() => null);
+    if (disposed || lost || !gpu) return none;
+    const pixels = points.map(([x, y]) => toPixel(x, y)), target = ensurePickTarget();
+    if (!target || pixels.every(p => !p)) return none;
     const v = viewOf(state), prog = gpu.pick, u = (n: string) => prog.uniforms.get(n) ?? null;
     ctx.bindFramebuffer(ctx.FRAMEBUFFER, target.fbo);
     ctx.viewport(0, 0, target.w, target.h);
@@ -513,14 +516,17 @@ export function createMeshRenderer(canvas: HTMLCanvasElement, doc: MeshDocument,
       }
     }
     ctx.bindVertexArray(null);
-    const out = new Uint8Array(4);
-    ctx.readPixels(px.x, px.y, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, out);
+    const out = new Uint8Array(4), found = pixels.map(px => {
+      if (!px || !gpu) return null;
+      ctx.readPixels(px.x, px.y, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, out);
+      const id = decodePickId(out[0], out[1], out[2]), part = id > 0 ? gpu.parts[id - 1] : undefined;
+      return part ? part.id : null;
+    });
     ctx.bindFramebuffer(ctx.FRAMEBUFFER, null);
-    const id = decodePickId(out[0], out[1], out[2]);
-    const part = id > 0 ? gpu.parts[id - 1] : undefined;
     if (lastState) render(lastState);
-    return part ? part.id : null;
+    return found;
   };
+  const pick = (cssX: number, cssY: number, state: MeshRenderState): string | null => pickMany([[cssX, cssY]], state)[0];
   const probe = (cssX: number, cssY: number, state?: MeshRenderState): [number, number, number, number] | null => {
     const use = state ?? lastState;
     if (disposed || lost || !gpu || !use) return null;
@@ -558,7 +564,7 @@ export function createMeshRenderer(canvas: HTMLCanvasElement, doc: MeshDocument,
     texturesDone();
     live--;
   };
-  return { resize, render, pick, probe, stats, texturesReady, dispose };
+  return { resize, render, pick, pickMany, probe, stats, texturesReady, dispose };
 }
 
 const DEFAULT_MATERIAL: MeshMaterial = {
