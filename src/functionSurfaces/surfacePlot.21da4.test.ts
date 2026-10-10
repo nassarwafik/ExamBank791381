@@ -77,7 +77,12 @@ describe("SurfacePlotSpecV2 contract (versioned, strict, data only)", () => {
     expect(codes(plot({ surfaces: [s[0], { ...s[1], label: "<script>x</script>" }] }))).toContain("SURFACE_PLOT_TEXT_INVALID");
     expect(codes(plot({ surfaces: [s[0], { ...s[1], label: "a‮b" }] }))).toContain("SURFACE_PLOT_TEXT_INVALID");
     expect(codes(plot({ surfaces: [s[0], { ...s[1], id: "__proto__" }] }))).toContain("SURFACE_PLOT_ID_INVALID");
+    for (const id of ["constructor", "prototype"]) {                                                     // pass the id pattern: refused by name
+      expect(codes(plot({ surfaces: [s[0], { ...s[1], id }] })), id).toContain("SURFACE_PLOT_ID_INVALID");
+      expect(codes(plot({ id })), id).toContain("SURFACE_PLOT_ID_INVALID");
+    }
     expect(codes(plot({ viewport: V(2, -2, -2, 2, -1, 5) }))).toContain("SURFACE_PLOT_VIEW_INVALID");
+    for (const empty of [V(1, 1, -2, 2, -1, 5), V(-2, 2, 0, 0, -1, 5), V(-2, 2, -2, 2, 3, 3)]) expect(codes(plot({ viewport: empty }))).toContain("SURFACE_PLOT_VIEW_INVALID");
     expect(codes(plot({ viewport: V(-2, 2, -2, 2, -1, Number.NaN) }))).toContain("SURFACE_PLOT_NUMBER_INVALID");
     expect(codes(plot({ quality: "ultra" as never }))).toContain("SURFACE_PLOT_QUALITY_INVALID");
     expect(codes(plot({ display: { style: "neon" as never, grid: true } }))).toContain("SURFACE_PLOT_STYLE_INVALID");
@@ -215,6 +220,16 @@ describe("discontinuities, poles and undefined regions", () => {
     const m = mesh("ln(x)", V(-2, 2, -2, 2, -3, 1));
     for (const p of m.polygons) for (let t = 0; t < p.pts.length; t += 3) expect(p.pts[t]).toBeGreaterThan(-1e-9);   // only x ≥ 0 (X ≥ 0)
   });
+  it("a hole narrower than the sampling lattice is never bridged by a polygon edge", () => {
+    // undefined for |x − c| < h (h = 0.02), about ±1 on either side; the hole sits between lattice points, so only the edge bisection finds it
+    const c = 0.0517, h = 0.02, v = V(-10, 10, -1, 1, -3, 3), m = mesh("(x-0.0517)/sqrt((x-0.0517)^2-0.0004)", v);
+    const lo = (2 * (c - h - v.xMin)) / (v.xMax - v.xMin) - 1, hi = (2 * (c + h - v.xMin)) / (v.xMax - v.xMin) - 1;
+    expect(m.polygons.length).toBeGreaterThan(0);
+    for (const p of m.polygons) {
+      const xs = p.pts.filter((_, i) => i % 3 === 0);
+      expect(Math.min(...xs) < lo && Math.max(...xs) > hi).toBe(false);
+    }
+  });
 });
 
 describe("budgets, level of detail and projection", () => {
@@ -268,5 +283,12 @@ describe("budgets, level of detail and projection", () => {
     expect(m.polygons.every(unit)).toBe(true);
     const tilt = m.polygons.map(p => p.s[2]);
     expect(Math.max(...tilt) - Math.min(...tilt)).toBeLessThan(0.35);                                    // a cone: every facet tilted alike
+    // a ridge of two planes (127° apart in normalised space): no smoothing across it, so every shading normal is the facet normal
+    const ridge = mesh("abs(x)", V(-2, 2, -2, 2, -0.5, 2.5));
+    expect(ridge.polygons.length).toBeGreaterThan(0);
+    for (const p of ridge.polygons) expect(Math.hypot(p.s[0] - p.n[0], p.s[1] - p.n[1], p.s[2] - p.n[2])).toBeLessThan(1e-9);
+    // a smooth surface is smoothed: shading normals differ from facet normals
+    const bowl = mesh("x^2+y^2", V(-2, 2, -2, 2, -1, 9));
+    expect(bowl.polygons.some(p => Math.hypot(p.s[0] - p.n[0], p.s[1] - p.n[1], p.s[2] - p.n[2]) > 1e-3)).toBe(true);
   });
 });
