@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { parseNumberInput } from "../trustedSim/smartSimNumberInput";
 import { DYNAMIC_LIMITS } from "../smartsim/dynamic/simulationClock";
+import { UNIT_TEXT } from "./units";
 import "../physicsMotion/motion.css";
 
 // Phase 21D-A.2 — the student-side widgets SHARED by the physics workspaces (physicsMotion@1 and physicsLab@1; lazy chunks only). Extracted
@@ -8,10 +9,6 @@ import "../physicsMotion/motion.css";
 // clearing a task is the ONLY thing that produces an action (through the caller); exploration is presentation only and always refers back
 // to the authored experiment. `ns` namespaces the test ids so each plugin keeps its own ("motion-…", "lab-…"); styling is the shared
 // motion.css design.
-export const UNIT_TEXT: Readonly<Record<string, string>> = Object.freeze({
-  s: "ث", m: "م", "m/s": "م/ث", "m/s²": "م/ث²", N: "نيوتن", kg: "كغ", deg: "درجة", "1": "بلا وحدة",
-  J: "جول", W: "واط", V: "فولت", A: "أمبير", "Ω": "أوم", "rad/s": "راد/ث", "1/s": "1/ث", "N/m": "نيوتن/م", "kg/s": "كغ/ث"
-});
 type Fmt = (n: number | null | undefined) => string;
 export type TaskAxes = { x: string; y: string; xUnit: string; yUnit: string; xIsTime: boolean };
 export type ParamInfo = { label: string; unit: string; options?: readonly { value: number; label: string }[] };

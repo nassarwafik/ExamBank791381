@@ -5,7 +5,7 @@ import { LAB_EXPERIMENT_LABEL, LAB_GRAPHS, LAB_LIMITS, LAB_PRIMARY_AXES, LAB_TAS
 import { LAB_KINDS, LAB_PARAM_SPEC, LAB_QUANTITY_SPEC, fmtLab, isLabKind, labQuantities, validateLabParams, type LabKind } from "../physics/labCore";
 import LabWorkspace from "./LabWorkspace";
 import { LAB_PRESETS } from "./labTemplates";
-import { UNIT_TEXT } from "../physicsShared/labWidgets";
+import { UNIT_TEXT } from "../physicsShared/units";
 import { labGraphs } from "./labView";
 import "./lab.css";
 

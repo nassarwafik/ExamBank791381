@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { fmtLab, type CircuitSolution, type LabFrame, type LabModel } from "../physics/labCore";
 import { niceTicks } from "../smartsim/dynamic/progressivePath";
 
@@ -63,26 +63,27 @@ type Props = { model: LabModel; frame: LabFrame; scales: LabSceneScales; showVec
 function LabScene({ model, frame, scales, showVectors, conserved, drag, selected, onSelect }: Props) {
   const svg = useRef<SVGSVGElement>(null);
   // dragging the pendulum: after a pointer-down on the bob, the WINDOW follows the pointer until it is released (no reliance on pointer
-  // capture, which a re-render may drop); the latest drag spec / pivot are read through a ref so the listeners never go stale.
-  const dragRef = useRef<{ spec?: DragSpec; toAngle?: (x: number, y: number) => number | undefined; stop?: () => void }>({});
+  // capture, which a re-render may drop); the latest drag spec / pivot are published to a ref after each commit and read by the
+  // listeners at event time, so they never go stale.
+  const dragRef = useRef<{ spec?: DragSpec; pivot?: { x: number; y: number }; stop?: () => void }>({});
   useEffect(() => () => dragRef.current.stop?.(), []);
   const p = model.params;
-  let body: ReactNode = null, vectors: ReactNode = null, top: ReactNode = null, bars = true;
+  let body: ReactNode = null, vectors: ReactNode = null, top: ReactNode = null, bars = true, pivot: { x: number; y: number } | undefined;
   if (model.kind === "pendulum") {
     // fit the whole swing (amplitude ≤ θ₀; above 90° the bob rises over the pivot) inside the drawing area left of the energy bars
     const thMax = Math.min(180, Math.abs(scales.qMax)) * Math.PI / 180, c = Math.max(0, -Math.cos(thMax));
     const Lpx = Math.min(150, 186 / (1 + c), 104 / Math.max(Math.sin(Math.min(thMax, Math.PI / 2)), 1e-3)), px = 112, py = 14 + Lpx * c;
     const th = (frame.q * Math.PI) / 180, bx = px + Lpx * Math.sin(th), by = py + Lpx * Math.cos(th);
     const snap = (deg: number) => { const d = dragRef.current.spec ?? drag!; const v = Math.min(d.max, Math.max(d.min, Math.round((deg - d.min) / d.step) * d.step + d.min)); return Number(v.toPrecision(10)); };
-    dragRef.current.spec = drag;
-    dragRef.current.toAngle = (clientX: number, clientY: number) => {
-      const s = svg.current, m = s?.getScreenCTM?.();
-      if (!s || !m) return undefined;
+    pivot = { x: px, y: py };
+    const toAngle = (clientX: number, clientY: number) => {
+      const s = svg.current, m = s?.getScreenCTM?.(), c = dragRef.current.pivot;
+      if (!s || !m || !c) return undefined;
       const pt = s.createSVGPoint(); pt.x = clientX; pt.y = clientY;
       const q = pt.matrixTransform(m.inverse());
-      return (Math.atan2(q.x - px, q.y - py) * 180) / Math.PI;
+      return (Math.atan2(q.x - c.x, q.y - c.y) * 180) / Math.PI;
     };
-    const follow = (clientX: number, clientY: number) => { const d = dragRef.current, deg = d.toAngle?.(clientX, clientY); if (d.spec && deg !== undefined) d.spec.onAngle(snap(deg)); };
+    const follow = (clientX: number, clientY: number) => { const d = dragRef.current, deg = toAngle(clientX, clientY); if (d.spec && deg !== undefined) d.spec.onAngle(snap(deg)); };
     const startDrag = (e: PointerEvent<SVGGElement>) => {
       e.preventDefault();
       dragRef.current.stop?.();
@@ -166,6 +167,7 @@ function LabScene({ model, frame, scales, showVectors, conserved, drag, selected
     bars = false;
     body = <CircuitSchematic sol={frame.circuit!} params={p} t={frame.t} selected={selected} onSelect={onSelect} showCurrent={showVectors} />;
   }
+  useLayoutEffect(() => { dragRef.current.spec = drag; dragRef.current.pivot = pivot; });
   return (
     <svg ref={svg} viewBox={"0 0 " + SCENE_W + " " + SCENE_H} role="img" aria-label={"مشهد تجربة " + model.kind} data-testid="lab-scene" data-kind={model.kind}>
       {body}{vectors}{top}

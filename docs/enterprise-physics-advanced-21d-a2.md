@@ -364,7 +364,11 @@ The bundle guard (`scripts/check-bundle-budget.mjs`) measures gzip level 9 over 
 |---|---|
 | Baseline `main` `92db4cd` | 127,789 |
 | First A.2 head, before optimization: plugin preload names in `index` / `StudentQuestionCard` | 127,919 (+130) |
-| **A.2 head**: replay through the registry, so the plugin modules merge into the registry chunk | **127,789 (+0)** |
+| A.2 after replay through the registry (`2a646f8`), so the plugin modules merge into the registry chunk | 127,789 (+0) |
+| A.2 final head (lazy-only UI changes since then) | **127,791 (+2)**, headroom 209 bytes |
+
+The last two rows differ only in lazy files. The ±3-byte movement is gzip noise from the content-hashed chunk file names that the
+initial files list. No `physicsLab` chunk or file name appears in the initial `index` chunk; verified on the built `dist/`.
 
 All physicsLab UI is lazy: workspace, scene, editor, review, CSS and the shared widgets. No dependency was added.
 
