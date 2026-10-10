@@ -9,3 +9,7 @@
 export const RAW_HTML = /<\/?(script|style|iframe|object|embed|svg|math|link|meta|img|form|input|button|textarea|select|base|frame|frameset|template|noscript|html|head|body|video|audio|source|picture|canvas)\b|<\/?(a|div|span|p|table|tbody|thead|tr|td|th|br|hr|h[1-6]|ul|ol|li)\b[^<>]*>|<!--|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html/i;
 // eslint-disable-next-line no-control-regex
 export const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+/** Phase 21B patterns (moved here verbatim in Phase 21D-A.4 so the V1 surface contract and the V2 multi-surface plot contract share them
+ *  without importing each other): bidirectional overrides / isolates and invisible formatting characters are refused in surface prose. */
+export const UNSAFE_BIDI = /[\u202A-\u202E\u2066-\u2069]/;
+export const UNSAFE_INVISIBLE = /[\u00AD\u034F\u061C\u180E\u200B\u200E\u200F\u2060\uFEFF]/;

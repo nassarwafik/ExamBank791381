@@ -118,7 +118,8 @@ const ECHARTS_SIGNATURES = ["_echarts_instance_", "xp-chart-engine-v1", "xp-char
 const FUNCTION_GRAPH_UI_SIGNATURES = ["fg-stage", "ge-field-expr", "fg-review"];
 // Phase 21B: the 3D SVG viewer, persisted-surface editor and teacher laboratory are UI/runtime payloads.
 // The strict SurfaceSpec validator may be pulled in transitively by RichContent validation, but these UI signatures must stay lazy.
-const SURFACE_3D_UI_SIGNATURES = ["ex3d-scene", "ex3d-editor", "ex3d-lab"];
+// Phase 21D-A.4: the multi-surface plot viewer (SurfacePlotSpecV2) and its editor are covered by the same lazy rule.
+const SURFACE_3D_UI_SIGNATURES = ["ex3d-scene", "ex3d-editor", "ex3d-lab", "sp3d-scene", "sp3d-editor"];
 // Phase 21C — general interactive 3D runtime/editor/semantic-selection UI must remain lazy; the small data validators may be shared.
 const INTERACTIVE_3D_UI_SIGNATURES = ["i3d-scene", "i3d-editor", "qt-editor-scene3DSelection"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
@@ -249,11 +250,14 @@ function main() {
   }
   const surfaceViewRoots = all.filter(f => /^Surface3DView-[^.]+\.js$/.test(f));
   if (!surfaceViewRoots.length) failures.push("no lazy Surface3DView-*.js chunk was emitted");
+  const plotViewRoots = all.filter(f => /^SurfacePlot3DView-[^.]+\.js$/.test(f));
+  if (!plotViewRoots.length) failures.push("no lazy SurfacePlot3DView-*.js chunk was emitted");
+  for (const f of plotViewRoots) if (initial.includes(f)) failures.push(`${f} (multi-surface 3D plot viewer) is in the initial graph`);
   for (const f of portalClosure) {
     const hit = SURFACE_3D_UI_SIGNATURES.filter(sig => read(f).includes(sig));
     if (hit.length) failures.push(`${f} statically exposes 3D surface UI on a student no-3D path (${hit.join(", ")})`);
   }
-  console.log(`3D surface runtime: ${surfaceViewRoots.length} lazy Surface3DView root(s); Student Portal static closure carries no 3D viewer/editor/lab UI`);
+  console.log(`3D surface runtime: ${surfaceViewRoots.length} lazy Surface3DView root(s), ${plotViewRoots.length} lazy SurfacePlot3DView root(s); Student Portal static closure carries no 3D viewer/editor/lab UI`);
 
   for (const sig of INTERACTIVE_3D_UI_SIGNATURES) {
     const owners = all.filter(f => read(f).includes(sig));

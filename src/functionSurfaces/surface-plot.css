@@ -1,0 +1,54 @@
+/* Phase 21D-A.4 — multi-surface 3D plot viewer and editor (lazy chunks only). Same visual language as the Phase 21B / 21D 3D viewers. */
+.sp3d{margin:1rem 0;padding:1.1rem;border:1px solid #bfd0df;border-radius:12px;background:#fff;color:#17324c;font:inherit;max-width:100%;overflow:hidden;box-sizing:border-box}
+.sp3d figcaption strong{font-size:1.16em;line-height:1.5}
+.sp3d figcaption p{margin:.4rem 0;line-height:1.7}
+.sp3d-legend{list-style:none;margin:.7rem 0;padding:0;display:flex;flex-wrap:wrap;gap:.45rem .9rem}
+.sp3d-legend li{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem;padding:.35rem .6rem;border:1px solid #d3e0ec;border-radius:9px;background:#f7fbff;min-width:0;max-width:100%}
+.sp3d-legend li.is-hidden{opacity:.55}
+.sp3d-legend label,.sp3d-legend-item{display:inline-flex;align-items:center;gap:.45rem;font-weight:600;cursor:pointer;min-width:0}
+.sp3d-legend input{width:1.15rem;height:1.15rem;margin:0}
+.sp3d-swatch{display:inline-block;width:1.05rem;height:1.05rem;border-radius:4px;border:1px solid rgba(23,50,76,.45);flex:none}
+.sp3d-formula{direction:ltr;unicode-bidi:isolate;font-size:.92em;color:#365675;overflow-wrap:anywhere}
+.sp3d-controls{display:flex;flex-wrap:wrap;gap:.45rem;margin:.6rem 0}
+.sp3d-controls button{border:1px solid #8baac5;border-radius:7px;background:#f5faff;color:#17324c;padding:.5rem .75rem;min-height:40px;min-width:40px;font:inherit;cursor:pointer}
+.sp3d-controls .sp3d-icon{font-size:1.15em;line-height:1;padding:.45rem .6rem}
+.sp3d-options{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;align-items:center;margin:.3rem 0 .5rem}
+.sp3d-options label{display:inline-flex;align-items:center;gap:.4rem;font-weight:600}
+.sp3d-options select{border:1px solid #8aa7c1;border-radius:7px;padding:.35rem .5rem;font:inherit;background:#fff;color:#17324c;max-width:100%}
+.sp3d-controls button:focus-visible,.sp3d-options select:focus-visible,.sp3d-legend input:focus-visible,.sp3d-scene:focus-visible,.sp3d-scroll:focus-visible,.sp3d-table summary:focus-visible{outline:3px solid #236aa4;outline-offset:2px}
+.sp3d-help,.sp3d-status,.sp3d-note{font-size:.87em;line-height:1.6;color:#365675;margin:.35rem 0}
+.sp3d-frame{width:100%;max-width:960px;margin-inline:auto}
+.sp3d-scene{display:block;width:100%;height:auto;border:1px solid #c5d7e7;border-radius:9px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;shape-rendering:geometricPrecision}
+.sp3d-scene[data-interacting]{cursor:grabbing}
+.sp3d-bg{fill:#fbfdff}
+.sp3d-pane{fill:#eef4fa;stroke:none}
+.sp3d-grid{stroke:#c9d7e5;stroke-width:.8}
+.sp3d-edge{stroke:#7f9bb5;stroke-width:1}
+.sp3d-tick{font-size:11px;fill:#365675;font-family:inherit}
+.sp3d-axis-title{font-size:12.5px;font-weight:700;fill:#17324c;font-family:inherit}
+.sp3d-table summary{cursor:pointer;font-weight:650;padding:.6rem 0}
+.sp3d-scroll{overflow-x:auto}
+.sp3d-table table{width:100%;border-collapse:collapse;font:inherit}
+.sp3d-table th,.sp3d-table td{border:1px solid #c4d1df;padding:.45rem .7rem;text-align:center}
+.sp3d-table th{background:#e7f1fa;font-weight:700}
+.sp3d-unavailable{border:1px solid #b14f4f;color:#842424;background:#fff5f4;padding:.75rem;border-radius:9px}
+@media (max-width:520px){.sp3d{padding:.75rem}.sp3d-legend li{width:100%}}
+@media print{.sp3d-controls,.sp3d-options,.sp3d-help,.sp3d-table summary{display:none}.sp3d-table .sp3d-scroll{display:block!important;overflow:visible}.sp3d{break-inside:avoid}}
+
+/* editor */
+.sp3d-editor{display:grid;gap:.8rem}
+.sp3d-editor fieldset{border:1px solid #c6d5e2;border-radius:10px;padding:.75rem;margin:0;min-width:0}
+.sp3d-editor legend{font-weight:700;padding:0 .3rem}
+.sp3d-editor-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem}
+.sp3d-editor label{display:flex;flex-direction:column;gap:.3rem;font-weight:600;min-width:0}
+.sp3d-editor label.sp3d-inline{flex-direction:row;align-items:center;gap:.4rem}
+.sp3d-editor input,.sp3d-editor select,.sp3d-editor textarea{border:1px solid #8aa7c1;border-radius:8px;padding:.45rem;background:#fff;color:#17324c;font:inherit;min-width:0}
+.sp3d-editor input[type=checkbox]{width:1.1rem;height:1.1rem}
+.sp3d-editor button{border:1px solid #497caa;border-radius:8px;padding:.5rem .8rem;background:#eef6ff;color:#17324c;font:inherit;cursor:pointer}
+.sp3d-editor button:disabled{opacity:.5;cursor:not-allowed}
+.sp3d-editor .sp3d-surface{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,2fr) minmax(0,1fr) auto;gap:.5rem;align-items:end;padding:.5rem 0;border-bottom:1px dashed #d3e0ec}
+.sp3d-editor .sp3d-surface:last-of-type{border-bottom:0}
+.sp3d-editor-apply{display:flex;align-items:flex-end}
+.sp3d-editor-errors{border:1px solid #b14f4f;color:#842424;background:#fff5f4;padding:.6rem .8rem;border-radius:9px;margin:0}
+.sp3d-editor-errors li{margin:.2rem 0}
+@media (max-width:620px){.sp3d-editor .sp3d-surface{grid-template-columns:1fr 1fr}}
