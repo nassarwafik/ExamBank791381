@@ -67,6 +67,10 @@ function MotionScene({ model, frame, scales, showVelocity, showForces }: Props) 
     ground = <><rect className="motion-ground" x={0} y={GROUND_Y} width={SCENE_W} height={SCENE_H - GROUND_Y} /><line className="motion-ground-line" x1={0} x2={SCENE_W} y1={GROUND_Y} y2={GROUND_Y} /></>;
     if (p.launchHeight > 0) extra = <rect className="motion-platform" x={(u.X(0) - 14).toFixed(2)} y={u.Y(p.launchHeight).toFixed(2)} width={14} height={(GROUND_Y - u.Y(p.launchHeight)).toFixed(2)} />;
     axis = <ScaleBar pxPerMetre={u.k} span={Math.max(b.x1 - b.x0, b.y1 - b.y0)} />;
+    // the trajectory: the whole path (dashed reference) and the part already travelled (solid), from the run's exact samples
+    const pts = (list: readonly { x: number; y: number }[]) => list.map(q => u.X(q.x).toFixed(2) + "," + u.Y(q.y).toFixed(2)).join(" ");
+    const done = [...scales.trail.filter(q => q.t <= frame.t), { x: frame.position.x, y: frame.position.y }];
+    extra = <>{extra}<polyline className="motion-trail is-reference" points={pts(scales.trail)} /><polyline className="motion-trail" data-testid="motion-trail" points={pts(done)} /></>;
     shape = <circle className={"motion-body" + (frame.status === "landed" ? " is-done" : "")} data-testid="motion-body" cx={body.x.toFixed(2)} cy={body.y.toFixed(2)} r={BODY_R} />;
   } else if (kind === "newton2") {
     const span = Math.max(b.x1 - b.x0, 1e-9), X = (x: number) => PAD + BLOCK / 2 + ((x - b.x0) / span) * (SCENE_W - 2 * PAD - BLOCK);

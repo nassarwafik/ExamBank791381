@@ -104,7 +104,7 @@ function ExplorationPanel({ cfg, params, onParams, disabled }: { cfg: MotionConf
           const label = (spec?.label ?? k.param) + (unit ? " (" + unit + ")" : "");
           return (
             <label key={k.param} className="motion-explore-item" data-testid="motion-control" data-param={k.param}>
-              <span>{label}: <span className="motion-ltr">{fmtMotion(params[k.param])}</span> <small className="motion-ltr">[{fmtMotion(k.min)} … {fmtMotion(k.max)}]</small></span>
+              <span>{spec?.label ?? k.param}{unit && <> <span className="motion-ltr">({unit})</span></>}: <span className="motion-ltr">{fmtMotion(params[k.param])}</span> <small className="motion-ltr">[{fmtMotion(k.min)} … {fmtMotion(k.max)}]</small></span>
               <span className="motion-row">
                 <input type="range" min={k.min} max={k.max} step={k.step} value={params[k.param]} disabled={disabled} aria-label={label} onChange={e => apply(k.param, Number(e.target.value))} />
                 <input type="number" dir="ltr" min={k.min} max={k.max} step={k.step} value={params[k.param]} disabled={disabled} aria-label={label + " — إدخال رقمي"} onChange={e => apply(k.param, parseNumberInput(e.target.value))} />
@@ -255,7 +255,8 @@ export default function MotionWorkspace({ config: rawConfig, actions, onChange, 
   const emit = (next: unknown[]) => { const r = replayMotion(cfg, next); if (r.ok) onChange(next, r.state); };
   const decide = (id: string, action: Record<string, unknown>) => emit([...base.filter(a => taskOf(a) !== id), action]);
   const axes = MOTION_PRIMARY_AXES[cfg.experiment];
-  const authored = MOTION_PARAM_SPEC[cfg.experiment].map(s => s.label + " = " + fmtMotion(cfg.params[s.key]) + (s.unit === "1" ? "" : " " + s.unit) + (motionControlOf(cfg, s.key) ? " (قابل للاستكشاف)" : ""));
+  // each value + unit is an LTR island so labels ending in parentheses never reorder it in the RTL sentence
+  const authored = MOTION_PARAM_SPEC[cfg.experiment].map(s => <>{s.label}: <span className="motion-ltr">{fmtMotion(cfg.params[s.key])}{s.unit === "1" ? "" : " " + s.unit}</span>{motionControlOf(cfg, s.key) ? " (قابل للاستكشاف)" : ""}</>);
   return (
     <div className="motion" dir="rtl" data-testid="motion-workspace" data-experiment={cfg.experiment} aria-label={(label ? label + " — " : "") + "محاكاة " + MOTION_EXPERIMENT_LABEL[cfg.experiment]}>
       <p className="motion-note"><strong>{MOTION_EXPERIMENT_LABEL[cfg.experiment]}</strong> — التجربة المطلوبة: <span data-testid="motion-authored">{authored.map((a, i) => <span key={i} className="motion-param">{a}</span>)}</span>. بإهمال مقاومة الهواء، وحدات SI. شغّل المحاكاة أو حرّك الزمن لتقيس، ثم احفظ إجاباتك صراحةً — التشغيل والاستكشاف لا يُحفظان ولا يُقيَّمان.</p>

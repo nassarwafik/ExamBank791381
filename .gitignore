@@ -48,3 +48,6 @@ artifacts/phase-21a2/
 
 # Phase 21D — real-Chromium 3D engine certification output (scripts/check-interactive-3d-browser-21d.mjs), produced per run
 .harness-21d/
+
+# Phase 21D-A.1 — real-Chromium physics motion check output (scripts/check-physics-motion-browser-21da1.mjs), produced per run
+.harness-21da1/

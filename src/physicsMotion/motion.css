@@ -11,6 +11,8 @@
 .motion-ground-line { stroke: #6b5a36; stroke-width: 2; }
 .motion-incline { fill: #c9d7e8; stroke: #44617f; stroke-width: 1.5; }
 .motion-platform { fill: #b9a77f; }
+.motion-trail { fill: none; stroke: var(--xp-primary, #1d6fd6); stroke-width: 2; }
+.motion-trail.is-reference { stroke: var(--xp-muted, #8a96a8); stroke-dasharray: 4 4; stroke-width: 1.2; }
 .motion-start { stroke: var(--xp-muted, #8a96a8); stroke-dasharray: 4 4; }
 .motion-scalebar line { stroke: var(--xp-text, #22324a); stroke-width: 2; }
 .motion-scalebar text { font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--xp-muted, #415066); }

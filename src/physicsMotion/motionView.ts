@@ -93,7 +93,7 @@ export function motionReadout(m: MotionModel, f: MotionFrame): ReadoutItem[] {
 }
 
 export type SceneBounds = { x0: number; x1: number; y0: number; y1: number };
-export type SceneScales = { speedMax: number; forceMax: number; bounds: SceneBounds };
+export type SceneScales = { speedMax: number; forceMax: number; bounds: SceneBounds; trail: { t: number; x: number; y: number }[] };
 /** Per-run scene scales: the largest speed / force of the run (vector lengths) and the world box the scene must show. */
 export function sceneScales(m: MotionModel, samples: readonly MotionFrame[]): SceneScales {
   let speedMax = 0, forceMax = 0, x0 = 0, x1 = 0, y1 = 0;
@@ -102,10 +102,13 @@ export function sceneScales(m: MotionModel, samples: readonly MotionFrame[]): Sc
     for (const fo of f.forces) forceMax = Math.max(forceMax, fo.magnitude);
   }
   const p = m.params;
-  if (m.kind === "incline") { const r = (p.angle * Math.PI) / 180; return { speedMax, forceMax, bounds: { x0: 0, x1: p.length * Math.cos(r), y0: 0, y1: Math.max(p.length * Math.sin(r), 1e-6) } }; }
+  if (m.kind === "incline") { const r = (p.angle * Math.PI) / 180; return { speedMax, forceMax, trail: [], bounds: { x0: 0, x1: p.length * Math.cos(r), y0: 0, y1: Math.max(p.length * Math.sin(r), 1e-6) } }; }
   if (m.kind === "newton2" && x1 - x0 < 1e-9) { x0 -= 1; x1 += 1; }
-  if (m.kind === "projectile") { const span = Math.max(x1, y1, 1e-6); return { speedMax, forceMax, bounds: { x0: 0, x1: Math.max(x1, span * 0.1), y0: 0, y1: Math.max(y1, span * 0.1) } }; }
-  return { speedMax, forceMax, bounds: { x0, x1, y0: 0, y1: Math.max(y1, 1e-6) } };
+  if (m.kind === "projectile") {
+    const span = Math.max(x1, y1, 1e-6);
+    return { speedMax, forceMax, trail: samples.map(f => ({ t: f.t, x: f.position.x, y: f.position.y })), bounds: { x0: 0, x1: Math.max(x1, span * 0.1), y0: 0, y1: Math.max(y1, span * 0.1) } };
+  }
+  return { speedMax, forceMax, trail: [], bounds: { x0, x1, y0: 0, y1: Math.max(y1, 1e-6) } };
 }
 
 export const STATUS_TEXT: Readonly<Record<string, string>> = Object.freeze({
