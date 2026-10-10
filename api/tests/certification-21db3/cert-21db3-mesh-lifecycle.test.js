@@ -213,6 +213,17 @@ describe("21DB3 full platform lifecycle", () => {
       expect([again.score, gradeExam(snapshot, r.attempt.answers).score], name).toEqual([TOTAL[name], TOTAL[name]]);
     }
   });
+  it("FAIL CLOSED on the published snapshot: a mesh question whose model or key can no longer be classified goes to teacher review — never an automatic mark, never a silent zero", () => {
+    const snapshot = structuredClone(p.assignmentOf(aid).examSnapshot);
+    const q = id => qs(snapshot).find(x => x.examQuestionId === id);
+    q("h2").meshPartSelection.model.asset.version = 2;   // a library version this application does not know
+    q("b2").answer.scoring = "mostly";                    // a key that cannot be classified
+    const r = gradeExam(snapshot, runs.PERFECT.attempt.answers);
+    const row = id => r.questions.find(x => x.questionId === id);
+    expect([row("h2").manualReview, row("h2").score, row("b2").manualReview, row("b2").score]).toEqual([true, 0, true, 0]);
+    expect(["h1", "h3", "b1", "b3", "c1"].map(id => row(id).manualReview)).toEqual([false, false, false, false, false]);
+    expect([r.score, r.manualReviewMarks, r.finalized]).toEqual([28 - 4 - 6, 4 + 6, false]);
+  });
   it("teacher review: the question carries its REAL model (true labels even when hidden from the student), the key and the stored answer", async () => {
     const rv = await p.teacher.reviewGet(aid, "mm-partial");
     expect(rv.status).toBe(200);

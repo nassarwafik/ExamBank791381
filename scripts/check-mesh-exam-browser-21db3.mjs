@@ -6,18 +6,24 @@
 //   • the exam page: six models, hidden-label questions show neutral names only, no private key in the student DOM;
 //   • answering: a click on the model selects the front-most labelled part (GPU pick), the parts list answers too (single / multiple /
 //     limit), every change is autosaved through the shared server binding, a forged answer is refused, a RELOAD restores every answer;
+//     rotating (drag / button), zooming (button / Ctrl+wheel) and resetting a model on the exam page never changes a saved answer;
 //   • grading of the restored answers by the shared authority = full marks; the teacher review shows the real labels and the marks;
 //   • bounded GPU use: only on-screen viewers hold a GL context while the student scrolls the whole exam, each library file is downloaded
 //     once per page, context loss mid-exam restores without losing the answer, 20 mount / unmount cycles of the exam leave no renderer and
 //     no retained heap, a low-memory phone (deviceMemory 2, DPR 3) caps the drawing buffer at 2× and has no horizontal overflow;
 //   • WebGL unavailable: the whole exam is still answerable through the parts lists and grades identically;
+//   • teacher authoring with the production question editor: a library model (mode, limit, scoring, correct parts, instruction, renamed part,
+//     captured starting view, hidden labels), a key that follows the labelled parts, a teacher-uploaded model from its content-addressed API
+//     route, and the builder's import → save → export → import round trip — RTL, no overflow on desktop or phone;
 //   • performance figures (time to first model, per-question time to ready, GPU bytes, heap) are written to exam-results.json.
+import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
+import { testAssemblyModel, writeGlb } from "../src/meshModels/glbWriter.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.resolve(process.env.HARNESS_OUT || path.join(root, ".harness-21db"), "exam");
@@ -31,6 +37,9 @@ const exam = JSON.parse(fs.readFileSync(path.join(root, "docs/fixtures/mesh-mode
 const QS = exam.sections.flatMap(s => s.questions).filter(q => q.presentationType === "meshPartSelection");
 const FULL = QS.reduce((n, q) => n + q.marks, 0);
 const assets = path.join(root, "public/mesh-assets");
+// a teacher-UPLOADED model for the authoring checks: the engineering test assembly, served at its content-addressed API route
+const assembly = Buffer.from(writeGlb(testAssemblyModel()));
+const assemblyHex = crypto.createHash("sha256").update(assembly).digest("hex");
 fs.rmSync(out, { recursive: true, force: true });
 await build({ configFile: path.join(root, "vite.config.ts"), root, logLevel: "warn", publicDir: false, build: { outDir: out, emptyOutDir: true, rollupOptions: { input: path.join(root, "browser-harness/mesh-exam-21db3.html") } } });
 const MIME = { ".js": "text/javascript", ".html": "text/html; charset=utf-8", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
@@ -38,7 +47,14 @@ const requests = new Map();
 let bytesServed = 0;
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, "http://localhost");
-  const lib = u.pathname.match(/^\/mesh-assets\/([0-9a-f]{64})\.glb$/);
+  const lib = u.pathname.match(/^\/mesh-assets\/([0-9a-f]{64})\.glb$/), api = u.pathname.match(/^\/api\/mesh-assets\/runtime\/([0-9a-f]{64})$/);
+  if (api) {
+    requests.set(api[1], (requests.get(api[1]) || 0) + 1);
+    if (api[1] !== assemblyHex) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, { "content-type": "model/gltf-binary", "content-length": String(assembly.length), "x-content-type-options": "nosniff", "cache-control": "no-store" });
+    res.end(assembly);
+    return;
+  }
   if (lib) {
     const hex = lib[1], file = path.join(assets, hex + ".glb");
     requests.set(hex, (requests.get(hex) || 0) + 1);
@@ -130,6 +146,28 @@ try {
   await choose(page, QS.find(q => q.examQuestionId === "h2"), "aorta");
   await choose(page, QS.find(q => q.examQuestionId === "h2"), "pulmonaryTrunk");
 
+  // the camera on an exam question: rotate (drag + button), zoom (button + Ctrl+wheel) and reset are presentation state only — a drag that
+  // ends on the model never selects, and the saved answers are byte-identical afterwards
+  const beforeCamera = JSON.stringify(await answers(page));
+  const cam = id => page.$eval(fig(id) + " .mm3d-scene", e => ({ yaw: Number(e.dataset.yaw), pitch: Number(e.dataset.pitch), zoom: Number(e.dataset.zoom) }));
+  await page.locator(fig("b1")).scrollIntoViewIfNeeded();
+  await waitState(page, "b1", "ready");
+  const c0 = await cam("b1"), sb = await page.locator(fig("b1") + " .mm3d-scene").boundingBox();
+  await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2); await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(sb.x + sb.width / 2 + i * 15, sb.y + sb.height / 2);
+  await page.mouse.up(); await sleep(600);
+  const c1 = await cam("b1");
+  await page.click(fig("b1") + " button[aria-label='تدوير لليمين']"); await page.click(fig("b1") + " button[aria-label='تكبير']"); await sleep(400);
+  const c2 = await cam("b1");
+  await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
+  await page.keyboard.down("Control"); await page.mouse.wheel(0, -240); await page.keyboard.up("Control"); await sleep(400);
+  const c3 = await cam("b1");
+  await page.click(fig("b1") + " button:has-text('إعادة العرض')"); await sleep(600);
+  const c4 = await cam("b1");
+  check("on the exam page a model rotates (drag + button), zooms (button + Ctrl+wheel) and resets; the camera never reaches the saved answers",
+    Math.abs(c1.yaw - c0.yaw) > 0.3 && Math.abs(c2.yaw - c1.yaw) > 0.1 && c2.zoom > c1.zoom && c3.zoom !== c2.zoom && Math.abs(c4.yaw - c0.yaw) < 0.01 && Math.abs(c4.zoom - c0.zoom) < 0.01 && JSON.stringify(await answers(page)) === beforeCamera,
+    JSON.stringify({ c0, c1, c2, c3, c4 }));
+
   // scrolled through the whole exam: GL contexts are bounded by what is on screen; each file downloaded once
   let maxLive = 0;
   for (const q of QS) { await page.locator("[data-testid=q-" + q.examQuestionId + "]").scrollIntoViewIfNeeded(); await sleep(250); maxLive = Math.max(maxLive, await live(page)); }
@@ -215,6 +253,80 @@ try {
   const g2 = await n.evaluate(() => window.__exam.grade());
   check("…every question is still answered through the parts lists and grades to full marks", g2.reduce((s, g) => s + g.score, 0) === FULL, g2.map(g => g.id + ":" + g.score).join(" "));
   await nogl.context.close();
+
+  // ── teacher authoring: the PRODUCTION question editor — a reviewed library model, then a teacher-uploaded model — and the builder's real
+  //    import → save → export → import round trip of the authored question ─────────────────────────────────────────────────────────────
+  const au = await open({ query: "?author=1" });
+  const A = au.page, ed = "[data-testid=qt-editor-meshPartSelection]", pv = ed + " figure.mm3d";
+  const waitSel = async (sel, want, ms = 60000) => { const t = Date.now(); while (Date.now() - t < ms) { if ((await A.$eval(sel, e => e.dataset.state).catch(() => null)) === want) return Date.now() - t; await sleep(50); } return -1; };
+  const aNode = () => A.evaluate(() => window.__author.node());
+  const aIssues = () => A.evaluate(() => window.__author.issues().map(i => i.code));
+  const keyBox = id => ed + " [data-testid=mesh-answer-key] li[data-part=" + id + "] input";
+  await A.waitForSelector(ed + " .mm3d-lib li[data-asset=human-heart-bp3d] button");
+  await A.click(ed + " .mm3d-lib li[data-asset=human-heart-bp3d] button");
+  await A.locator(pv).scrollIntoViewIfNeeded();
+  const auReady = await waitSel(pv, "ready");
+  const issues0 = await aIssues();
+  check("authoring: choosing the reviewed heart gives a labelled model (14 parts) with a live preview; the missing key is reported, never accepted", auReady >= 0 && (await A.$$(ed + " .mm3d-part-rows li")).length === 14 && issues0.includes("MESH_SELECTION_KEY_EMPTY"), issues0.join(","));
+  await A.click(ed + " label:has-text('اختيار عدة أجزاء') input");
+  await A.fill(ed + " label:has-text('أقصى عدد للاختيارات') input", "2");
+  await A.click(ed + " label:has-text('علامة جزئية') input");
+  await A.click(keyBox("aorta")); await A.click(keyBox("pulmonaryTrunk"));
+  await A.fill(ed + " label:has-text('تعليمة للطالب') input", "اختر الشريانين الكبيرين.");
+  await A.fill(ed + " [aria-label='تسمية الجزء aorta']", "الأبهر الصاعد وقوسه");
+  await A.focus(pv + " .mm3d-scene");
+  for (let i = 0; i < 4; i++) await A.keyboard.press("ArrowRight");
+  await sleep(200);
+  await A.click(ed + " button:has-text('اعتماد العرض الحالي في المعاينة')");
+  await sleep(100);
+  const n1 = await aNode(), is1 = await aIssues(), order1 = n1.meshPartSelection.model.parts.map(p => p.id);
+  check("authoring: multiple selection (max 2), partial scoring, two correct parts, an instruction, a renamed part and a captured starting view — the question validates",
+    is1.length === 0 && n1.meshPartSelection.mode === "multiple" && n1.meshPartSelection.maxSelections === 2 && n1.answer.scoring === "partial" && JSON.stringify(n1.answer.correct) === JSON.stringify(order1.filter(id => ["aorta", "pulmonaryTrunk"].includes(id))) &&
+    n1.meshPartSelection.label === "اختر الشريانين الكبيرين." && n1.meshPartSelection.model.parts.find(p => p.id === "aorta").label === "الأبهر الصاعد وقوسه" && Math.abs(n1.meshPartSelection.model.camera.azimuth) > 0.1,
+    JSON.stringify({ issues: is1, answer: n1.answer, camera: n1.meshPartSelection.model.camera }));
+  // excluding a correct part from the labelled vocabulary drops it from the key and tells the teacher; including it again restores the question
+  await A.click(ed + " [aria-label='تضمين الجزء pulmonaryTrunk']");
+  await sleep(100);
+  const n2 = await aNode(), notice = await A.textContent(ed + " [data-testid=mesh-answer-key] [role=status]").catch(() => "");
+  await A.click(ed + " [aria-label='تضمين الجزء pulmonaryTrunk']"); await A.click(keyBox("pulmonaryTrunk"));
+  check("authoring: a correct part removed from the model is dropped from the key with a notice (no dangling key)", JSON.stringify(n2.answer.correct) === JSON.stringify(["aorta"]) && notice.includes("أُزيل من مفتاح الإجابة") && (await aIssues()).length === 0, notice);
+  await A.click(ed + " label:has-text('إخفاء أسماء الأجزاء') input");
+  const stud = await A.evaluate(() => window.__author.student()), n3 = await aNode();
+  check("authoring: hidden labels — the student projection carries neutral names only and no key", n3.meshPartSelection.hideLabels === true && stud.model.parts.every(p => p.label.startsWith("الجزء ") && !p.description) && !/"correct"|"scoring"|الأبهر/.test(JSON.stringify(stud)), stud.model.parts.slice(0, 3).map(p => p.label).join(", "));
+  const mid = n3.meshPartSelection.model.id;
+  const sc = await A.evaluate(m => ["aorta,pulmonaryTrunk", "aorta", "aorta,rightAtrium", ""].map(s => window.__author.score({ kind: "meshPartSelection", modelId: m, parts: s ? s.split(",") : [] }).score), mid);
+  check("authoring: the authored key grades with the shared authority — exact 4, half 2, one right + one wrong 4/3, blank 0", JSON.stringify(sc.map(x => Math.round(x * 1000) / 1000)) === JSON.stringify([4, 2, 1.333, 0]), JSON.stringify(sc));
+  const rt1 = await A.evaluate(() => window.__author.roundTrip());
+  check("authoring: the builder's import → save → export → import keeps the authored library question byte-for-byte", rt1.canOpen && rt1.errors.length === 0 && rt1.same, JSON.stringify(rt1));
+  const layout = await A.evaluate(s => ({ dir: getComputedStyle(document.querySelector(s)).direction, sw: document.documentElement.scrollWidth, iw: innerWidth }), ed);
+  check("authoring: the editor is laid out right-to-left with no horizontal overflow", layout.dir === "rtl" && layout.sw <= layout.iw + 1, JSON.stringify(layout));
+  await A.screenshot({ path: path.join(out, "author-library.png"), fullPage: true });
+  // a teacher-UPLOADED model replaces the library one (confirmation), loads from its content-addressed API route, and becomes the question
+  await A.click(ed + " [role=tab]:has-text('نماذجي المرفوعة')");
+  await A.setInputFiles(ed + " input[type=file]", { name: "assembly.glb", mimeType: "model/gltf-binary", buffer: assembly });
+  await A.waitForSelector(ed + " [role=alertdialog]");
+  await A.click(ed + " button:has-text('استبدال النموذج')");
+  await A.locator(pv).scrollIntoViewIfNeeded();
+  const upReady = await waitSel(pv, "ready");
+  const n4 = await aNode();
+  await A.click(keyBox("ball")); await A.click(keyBox("rod"));
+  const n5 = await aNode(), is5 = await aIssues(), rt2 = await A.evaluate(() => window.__author.roundTrip());
+  const sc5 = await A.evaluate(m => window.__author.score({ kind: "meshPartSelection", modelId: m, parts: ["ball", "rod"] }).score, n5.meshPartSelection.model.id);
+  check("authoring: an uploaded model (content-addressed API route) replaces the library model after confirmation, drops the old key, and becomes a valid question that round-trips and grades",
+    upReady >= 0 && n4.meshPartSelection.model.asset.source === "upload" && n4.meshPartSelection.model.asset.sha256 === assemblyHex && n4.answer.correct.length === 0 &&
+    is5.length === 0 && rt2.same && rt2.errors.length === 0 && sc5 === 4 && requests.get(assemblyHex) >= 1,
+    JSON.stringify({ asset: n4.meshPartSelection.model.asset, keyAfterUpload: n4.answer, issues: is5, rt2, sc5 }));
+  await au.context.close();
+  // the editor on a phone: no horizontal overflow
+  const auPhone = await open({ width: 390, height: 844, touch: true, scale: 2, query: "?author=1" });
+  await auPhone.page.waitForSelector(ed + " .mm3d-lib li[data-asset=human-brain-bp3d] button");
+  await auPhone.page.click(ed + " .mm3d-lib li[data-asset=human-brain-bp3d] button");
+  await auPhone.page.locator(pv).scrollIntoViewIfNeeded();
+  await sleep(500);
+  const ovA = await auPhone.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth }));
+  check("authoring @390 px: the question editor has no horizontal overflow", ovA.sw <= ovA.iw + 1, JSON.stringify(ovA));
+  await auPhone.page.screenshot({ path: path.join(out, "author-phone.png"), fullPage: true });
+  await auPhone.context.close();
 
   check("no page errors", errors.length === 0, errors.slice(0, 5).join(" | "));
   check("no external asset or network host", foreign.length === 0, foreign.slice(0, 3).join(" "));

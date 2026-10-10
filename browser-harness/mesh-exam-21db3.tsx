@@ -3,21 +3,31 @@
 // the STUDENT projection (the private key never reaches the components). The "server" of this page is the shared authority the API uses:
 // every answer change is bound to the published question (bindMeshPartSelectionAnswerToQuestion) and autosaved; a reload restores the
 // saved answers; grading and the teacher review use the private key the page keeps outside the student tree.
-// Query: ?review=1 renders the teacher review of the saved answers; ?mount=0 starts with the exam unmounted.
+// Query: ?review=1 renders the teacher review of the saved answers; ?mount=0 starts with the exam unmounted; ?author=1 renders the TEACHER
+// question editor (production MeshPartSelectionEditor, with a fake App mesh-asset service whose "server" accepts the engineering test
+// assembly), and exposes the authored question to the import → save → export → import round trip of the real builder functions.
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import exam from "../docs/fixtures/mesh-models-21db3/ExamBank_21DB3_Mesh_Models_Acceptance.json";
 import MeshPartSelectionResponse from "../src/questionTypes/student/MeshPartSelectionResponse";
+import MeshPartSelectionEditor from "../src/questionTypes/editors/MeshPartSelectionEditor";
 import MeshPartSelectionReview from "../src/meshModels/MeshPartSelectionReview";
-import { bindMeshPartSelectionAnswerToQuestion, projectMeshPartSelectionConfigForStudent, scoreMeshPartSelection } from "../src/meshPartSelectionQuestion";
+import { bindMeshPartSelectionAnswerToQuestion, projectMeshPartSelectionConfigForStudent, scoreMeshPartSelection, validateMeshPartSelectionQuestion } from "../src/meshPartSelectionQuestion";
 import { meshRendererLiveCount } from "../src/meshModels/meshRenderer";
+import { MeshAssetServiceContext, type MeshAssetService } from "../src/meshModels/meshAssetService";
+import type { MeshUploadedAsset } from "../src/meshModels/meshModelDraft";
+import { sha256Hex } from "../src/meshModels/meshAssetLoader";
+import { inspectGlbAsset } from "../src/meshModels/glbAsset";
+import { testAssemblyModel, writeGlb } from "../src/meshModels/glbWriter";
+import { parseStructuredExamJson } from "../src/structuredExamImport";
+import { toSavedStructuredExam } from "../src/examBuilderState";
 
 type Q = { examQuestionId: string; presentationType: string; text: string; marks: number; meshPartSelection?: unknown; answer?: unknown };
 type Ans = { kind: "meshPartSelection"; modelId: string; parts: string[] };
 const QUESTIONS = (exam as { sections: { questions: Q[] }[] }).sections.flatMap(s => s.questions).filter(q => q.presentationType === "meshPartSelection");
 const STORE = "exam-21db3-draft";
 const params = new URLSearchParams(location.search);
-declare global { interface Window { __exam: Record<string, unknown> } }
+declare global { interface Window { __exam: Record<string, unknown>; __author: Record<string, unknown> } }
 
 const readDraft = (): Record<string, Ans> => { try { return JSON.parse(sessionStorage.getItem(STORE) || "{}"); } catch { return {}; } };
 /** the page's "server": bind each answer to the PUBLISHED question (teacher copy), keep only accepted answers, persist. */
@@ -41,6 +51,54 @@ export function Exam({ answers, onAnswer }: { answers: Record<string, Ans>; onAn
       <MeshPartSelectionResponse q={studentQ as never} id={q.examQuestionId} labelPrefix="" answer={answers[q.examQuestionId] as never} onAnswer={a => onAnswer(q.examQuestionId, a as Ans)} />
     </article>;
   })}</>;
+}
+
+type Node = Record<string, unknown>;
+/** The teacher authoring a NEW question with the production editor; `__author` exposes the node and the builder's real import/save/export. */
+export function Author() {
+  const [node, setNode] = useState<Node>({ examQuestionId: "q1", presentationType: "meshPartSelection", questionTypeVersion: 1, text: "حدّد الأجزاء المطلوبة على النموذج.", marks: 4 });
+  const latest = useRef(node);
+  useEffect(() => { latest.current = node; }, [node]);
+  const [service, setService] = useState<MeshAssetService | undefined>(undefined);
+  useEffect(() => {
+    void (async () => {
+      const bytes = writeGlb(testAssemblyModel()), sha = await sha256Hex(bytes), report = inspectGlbAsset(bytes);
+      if (!report.ok) throw new Error("fixture");
+      const asset: MeshUploadedAsset = { sha256: sha, byteLength: bytes.length, triangles: report.summary.triangles, vertices: report.summary.vertices, materials: report.summary.materials, textures: report.summary.textures, parts: report.summary.parts.map(p => ({ id: p.id, triangles: p.triangles })), name: "assembly.glb", uploadedAt: "2026-10-10T10:00:00Z" };
+      const uploads: MeshUploadedAsset[] = [];
+      setService({
+        list: async () => uploads.slice(),
+        upload: async (file, onProgress) => {
+          onProgress?.(0.5);
+          if ((await sha256Hex(new Uint8Array(await file.arrayBuffer()))) !== sha) return { status: "rejected", issues: [{ code: "MESH_ASSET_HEADER", path: "", message: "ليس ملف GLB صالحًا." }] };
+          onProgress?.(1); uploads.unshift(asset);
+          return { status: "created", asset };
+        }
+      });
+    })();
+  }, []);
+  const onChange = useCallback((patch: Node) => setNode(n => { const next = { ...n, ...patch }; latest.current = next; return next; }), []);
+  useEffect(() => {
+    const examOf = (q: Node) => ({ ...(exam as Node), examId: "authored-21db3", sections: [{ id: "sec-a", title: "سؤال مؤلَّف", gradingPolicy: "all", questions: [q] }] });
+    const questionOf = (e: unknown) => (e as { sections: { questions: Node[] }[] }).sections[0].questions[0];
+    window.__author = {
+      node: () => latest.current,
+      issues: () => validateMeshPartSelectionQuestion(latest.current),
+      student: () => projectMeshPartSelectionConfigForStudent(latest.current.meshPartSelection),
+      score: (response: unknown) => scoreMeshPartSelection({ config: latest.current.meshPartSelection, answerKey: latest.current.answer, response, maxMarks: Number(latest.current.marks) }),
+      // the builder's real round trip: import the exported JSON → canonical save → export → import again
+      roundTrip: () => {
+        const first = parseStructuredExamJson(JSON.stringify(examOf(latest.current)), "authored.json");
+        const saved = toSavedStructuredExam(first.exam as never);
+        const again = parseStructuredExamJson(JSON.stringify(saved), "re-export.json");
+        const q = questionOf(again.exam);
+        return { canOpen: first.canOpen && again.canOpen, errors: [...first.validationErrors, ...again.validationErrors].filter(i => i.severity === "error").map(i => i.code), same: JSON.stringify([q.meshPartSelection, q.answer]) === JSON.stringify([latest.current.meshPartSelection, latest.current.answer]) };
+      }
+    };
+  }, []);
+  return <main style={{ maxWidth: 1000, margin: "0 auto", padding: 12 }} dir="rtl"><h1 style={{ fontSize: 20 }}>تأليف سؤال نموذج ثلاثي الأبعاد واقعي</h1>
+    <MeshAssetServiceContext.Provider value={service}>{service ? <MeshPartSelectionEditor node={node as never} onChange={onChange as never} /> : <p>…</p>}</MeshAssetServiceContext.Provider>
+  </main>;
 }
 
 export function Harness() {
@@ -78,4 +136,4 @@ export function Harness() {
     </main>
   );
 }
-createRoot(document.getElementById("root")!).render(<StrictMode><Harness /></StrictMode>);
+createRoot(document.getElementById("root")!).render(<StrictMode>{params.get("author") === "1" ? <Author /> : <Harness />}</StrictMode>);
