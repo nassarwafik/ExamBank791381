@@ -80,7 +80,7 @@ export function useOrbitCamera({ initial, resetKey, limits, rotate, zoom }: Orbi
   const pending = useRef<OrbitCamera | null>(null);
   const lastCommit = useRef(0);
   /** animation-frame bookkeeping (one mutable object: the unmount cleanup releases whatever is pending) */
-  const anim = useRef<{ id: number | null; flush: number | null; settle: number | null; last: number; vyaw: number; vpitch: number; auto: boolean }>({ id: null, flush: null, settle: null, last: 0, vyaw: 0, vpitch: 0, auto: false });
+  const anim = useRef<{ id: number | null; flush: number | null; settle: number | null; unsuppress: number | null; last: number; vyaw: number; vpitch: number; auto: boolean }>({ id: null, flush: null, settle: null, unsuppress: null, last: 0, vyaw: 0, vpitch: 0, auto: false });
   const [target, setTarget] = useState<Element | null>(null);
   const mounted = useRef(true);
 
@@ -132,8 +132,9 @@ export function useOrbitCamera({ initial, resetKey, limits, rotate, zoom }: Orbi
     const a = anim.current;
     if (a.id !== null) caf(a.id);
     if (a.settle !== null) caf(a.settle);
-    a.id = null; a.settle = null; a.vyaw = 0; a.vpitch = 0; a.auto = false;
-    drag.current = null; pinch.current = null; pointers.current.clear(); pending.current = null;
+    if (a.unsuppress !== null) caf(a.unsuppress);
+    a.id = null; a.settle = null; a.unsuppress = null; a.vyaw = 0; a.vpitch = 0; a.auto = false;
+    drag.current = null; pinch.current = null; pointers.current.clear(); pending.current = null; suppress.current = false;
   }, [resetKey]);
   useEffect(() => {
     const q = reducedMotionQuery();
@@ -150,7 +151,8 @@ export function useOrbitCamera({ initial, resetKey, limits, rotate, zoom }: Orbi
       if (a.id !== null) caf(a.id);
       if (a.flush !== null) caf(a.flush);
       if (a.settle !== null) caf(a.settle);
-      a.id = null; a.flush = null; a.settle = null;
+      if (a.unsuppress !== null) caf(a.unsuppress);
+      a.id = null; a.flush = null; a.settle = null; a.unsuppress = null;
     };
   }, []);
 
@@ -173,7 +175,14 @@ export function useOrbitCamera({ initial, resetKey, limits, rotate, zoom }: Orbi
   }, [animate, reducedMotion, stopAnimation]);
 
   const onPointerDown = useCallback((e: ReactPointerEvent<Element>) => {
-    const o = opts.current;
+    const o = opts.current, a = anim.current;
+    // a new press decides its own click: a suppression still pending from an earlier gesture is dropped
+    if (a.unsuppress !== null) { caf(a.unsuppress); a.unsuppress = null; }
+    if (e.isPrimary) {
+      // a primary pointer starts a new gesture: anything still recorded is left over from a release that never reached the viewer (it
+      // would turn every later tap into a "pinch" and swallow its click), so the gesture state starts clean
+      pointers.current.clear(); pinch.current = null; drag.current = null;
+    }
     if (!o.rotate && !o.zoom) return;
     // a touch stops inertia / auto-rotation; the moving state is kept until the gesture is known (a drag keeps it, a click ends it)
     haltAnimation();
@@ -185,8 +194,10 @@ export function useOrbitCamera({ initial, resetKey, limits, rotate, zoom }: Orbi
       e.currentTarget.setPointerCapture?.(e.pointerId);
       return;
     }
-    if (pointers.current.size > 1 || !o.rotate) return;
+    if (pointers.current.size > 1) return;
+    // a single press always starts unsuppressed, whether or not the scene can be rotated (a zoom-only scene still selects)
     suppress.current = false;
+    if (!o.rotate) return;
     const width = (e.currentTarget as Element).getBoundingClientRect?.().width || 720;
     drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, start: cam.current, width, moved: false, samples: [] };
   }, [haltAnimation]);
@@ -213,6 +224,13 @@ export function useOrbitCamera({ initial, resetKey, limits, rotate, zoom }: Orbi
   }, [schedule]);
   const end = useCallback((e: ReactPointerEvent<Element>) => {
     pointers.current.delete(e.pointerId);
+    if (suppress.current && pointers.current.size === 0) {
+      // the click a browser sends for the drag / pinch that just ended arrives in this same task and is swallowed; from the next frame
+      // on the flag is cleared, so it can never swallow a later, unrelated activation of a part
+      const a = anim.current;
+      if (a.unsuppress !== null) caf(a.unsuppress);
+      a.unsuppress = raf(() => { a.unsuppress = null; suppress.current = false; });
+    }
     // the last coalesced camera of the gesture is applied now, never dropped
     if (pending.current) { const p = pending.current; pending.current = null; commit(p); }
     if (pinch.current) { if (pointers.current.size < 2) { pinch.current = null; setInteracting(false); } return; }

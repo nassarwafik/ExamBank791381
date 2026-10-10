@@ -67,7 +67,9 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
   const [qualityChoice,setQualityChoice]=useState<QualityChoice>("auto");
   const {camera,interacting,autoRotating,reducedMotion,reset,rotateBy,zoomBy,fit,setAutoRotate,consumeSuppressedClick,attachTo,onKeyDown,pointerHandlers}=useOrbitCamera({
     initial:value?value.camera:{yaw:0,pitch:0,zoom:1},
-    resetKey:value?value.id+"|"+value.camera.yaw+"|"+value.camera.pitch+"|"+value.camera.zoom:"",
+    // the view starts again from the authored camera whenever the validated scene CONTENT changes (geometry, targets, labels, id or
+    // authored camera); an identical scene passed again (exam timer tick, re-derived question, answer change) keeps the student's view
+    resetKey:contentKey,
     limits:LIMITS, rotate:!!value?.interaction.rotate, zoom:!!value?.interaction.zoom
   });
   const restQuality:Scene3DQuality=!value?"draft":qualityChoice==="auto"?scene3DQualityFor(value,SCENE3D_REST_BUDGET):qualityChoice;
