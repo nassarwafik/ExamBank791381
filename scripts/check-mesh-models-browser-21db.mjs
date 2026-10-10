@@ -57,7 +57,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function open({ width = 1280, height = 900, query = "", touch = false, scale = 1 } = {}) {
   const page = await browser.newPage({ viewport: { width, height }, hasTouch: touch, isMobile: touch, deviceScaleFactor: scale });
   page.on("pageerror", e => errors.push(String(e)));
-  page.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
+  page.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text() + (m.location()?.url ? " @ " + m.location().url : "")); });
+  page.on("response", r => { if (r.status() >= 400) errors.push("HTTP " + r.status() + " " + r.url()); });
   page.on("request", r => { const u = new URL(r.url()); if (u.origin !== origin && u.protocol !== "data:" && u.protocol !== "blob:") foreign.push(r.url()); });
   const t0 = Date.now();
   await page.goto(origin + "/browser-harness/mesh-models-21db.html" + query, { waitUntil: "load" });

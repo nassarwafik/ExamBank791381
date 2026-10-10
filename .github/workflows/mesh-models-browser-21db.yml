@@ -39,4 +39,5 @@ jobs:
         with:
           name: mesh-models-21db-browser
           path: .harness-21db/
+          include-hidden-files: true
           retention-days: 7
