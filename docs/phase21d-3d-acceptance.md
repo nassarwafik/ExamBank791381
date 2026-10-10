@@ -10,8 +10,9 @@ listed under "not verified". Companion records: `docs/phase21d-3d-audit.md` (bas
 |---|---|---|
 | `src/interactive3d/engine.failfirst.21d.test.tsx` | 11 behavioural fail-first cases, baseline APIs only | all 11 **fail on `294500e`** (assertion failures, untouched worktree), all pass on the head |
 | `src/interactive3d/engine.21d.test.tsx` | geometry precision, projection, camera maths, viewer behaviour, exam integration | 31 / 31 pass |
+| `src/interactive3d/engine.reviewfix.21d.test.tsx` | independent-review fix: camera reset semantics, click suppression, lost pointer releases | 11 / 11 pass; 6 FAIL-FIRST fail on `bff40b7` |
 | `src/interactive3d/interactive3d.21c.test.tsx`, `scene3dAuthoring.21c.test.tsx`, `src/functionSurfaces/*.test.tsx` | preserved 21C / 21B contracts | pass, unchanged |
-| `scripts/check-interactive-3d-browser-21d.mjs` | real-Chromium certification of the production component (demonstration page + exam fixture) | **40 / 40 checks** |
+| `scripts/check-interactive-3d-browser-21d.mjs` | real-Chromium certification of the production component (demonstration page + exam fixture) | **42 / 42 checks** |
 | `scripts/check-interactive-3d-browser-21c.mjs`, `scripts/check-function-surface-browser-21b.mjs` | earlier phases' Chromium harnesses | 18 / 18 and 14 / 14 |
 
 Chromium 141.0.7390.37 headless in this container; "mobile" is a 390 px viewport with touch emulation (and 4× CPU throttling for the
@@ -61,6 +62,7 @@ performance profile), not a device.
 |---|---|
 | Student rotates, the answer never changes | Chromium: a click on the drawn left ventricle selects it; a drag, keyboard camera keys and zoom leave the answer identical; unit 3D-EXAM-01 (rotation, zoom and timer re-renders never change the answer) |
 | The view survives the exam timer and a parent that re-derives the question | Chromium: after the motion settles, the camera is unchanged through further 1 s timer ticks (each re-derives the question object); unit `21D-FF2` (fails on baseline) |
+| A drag that starts outside the model and ends outside the viewer never costs the next selection (mouse and touch) | Chromium `3D-EXAM-02` (mouse: drag from the background released below the viewer, then a click on the right ventricle selects it; touch: same with a one-finger drag and a tap on the left ventricle); unit `21D-RF2` |
 | Navigate away and back keeps the answer | Chromium: next → type a note → previous; the answer and the pressed target-list button are intact |
 | Timer keeps running | Chromium: tick counter ≥ 3 during the interaction (30 at the end of the run) |
 | Submission / grading unchanged | no change to answer shape, sanitizer, server grading or the shared-finalization mirror (no file under `api/` changed) |
@@ -95,7 +97,38 @@ re-derives the question, a remount control, and (`?views=1`) the canonical-views
 | A5 | Shared orbit chunk | initial bundle over budget by 13 bytes | surface viewer keeps its own camera; budget unchanged |
 | A6 | Probe quality | two Chromium probes were wrong (measured during inertia; serialized an `SVGRect`) | probes fixed, never the expectations |
 
-## 5. Not verified / limitations
+## 5. Independent review fix (reviewed head `bff40b7`)
+
+The reviewer asked for an audit of `resetKey` (Interactive3DView) and of the click-suppression flag (`suppress.current`, orbitCamera).
+
+### Findings
+
+| # | Finding | Root cause | Fix |
+|---|---|---|---|
+| R1 | A real geometry change keeps the previous camera when the scene id and authored camera are unchanged (also across two questions whose scenes share an id) | `resetKey` was `id + authored camera`, not the content the docs and test title claimed | `resetKey` = the validated scene's content key (`JSON.stringify` of the validated value, already used by the mesh cache); identical content passed again (timer ticks, re-derived question, answer changes) keeps the view |
+| R2 | On a zoom-only scene (`rotate: false`), the first tap on a part after a pinch is swallowed | the press handler returned for non-rotatable scenes **before** clearing the suppression flag set by the pinch | a single press always clears the flag first, whatever the scene allows |
+| R3 | A touch whose release never reaches the viewer turns every later tap into a "pinch": every selection tap is swallowed and a later mouse drag cannot turn the model | the pointer map kept the stale entry forever | a primary press starts a new gesture: recorded pointers, pinch and drag state are cleared |
+| R4 | A drag's suppression outlives the drag: a later activation of a part with no press on the drawing (assistive technology, voice control) is swallowed | the flag was only cleared by the next press on the viewer | the flag is cleared on the frame after the drag / pinch ends (the browser delivers the drag's own click in the same task as the release); a new press cancels a pending clearing so it cannot unsuppress the next drag's click |
+
+Behaviour kept (PIN tests): a drag that starts on the background outside the model and a later click on a part selects it; the click
+that ends a drag over a part never selects it; a real two-finger pinch never selects; timer re-renders, re-derived scenes and answer
+changes keep the student's view. Decision recorded for R1: **new content starts from its authored camera** (the 21C behaviour for real
+edits, and the surface viewer's existing rule); a teacher editing a scene in the editor therefore sees the authored view after each
+edit, as before 21D.
+
+### Evidence
+
+- Fail-first: `engine.reviewfix.21d.test.tsx` run against the unchanged `bff40b7` sources — 6 FAIL-FIRST cases fail with assertion
+  errors (R1 ×2: yaw not reset; R2, R3, R4: `expected [] to deeply equal [["face:top"]]`; R3 mouse drag: yaw unchanged), 5 PIN /
+  REGRESSION cases pass; all 11 pass after the fix.
+- Mutation proof (sha256-verified restore after each): RM1 reset keyed on id + camera, RM2 no stale-pointer clearing, RM3 suppression
+  cleared only for rotatable scenes, RM4 suppression never cleared after the gesture, RM5 cleared at release (before the click),
+  RM6 pending clearing not cancelled by a new press, RM7 stale pinch / drag kept on a primary press — **7 / 7 KILLED**, each by the
+  intended test. Two earlier survivors (a duplicated reset; an untested pinch / drag reset) led to removing the duplicate and adding
+  the lost-pinch test rather than to weakening anything.
+- Chromium: `3D-EXAM-02` (mouse and touch) added to the certification — 42 / 42.
+
+## 6. Not verified / limitations
 
 - Real devices (phones, tablets, low-end laptops) and non-Chromium engines (Firefox, Safari) were not available.
 - Interpenetrating primitives (the heart's chambers) show a facet-resolution saw-tooth along the intersection (painter's algorithm).

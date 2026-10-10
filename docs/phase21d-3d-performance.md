@@ -79,14 +79,21 @@ Reading the table honestly:
 
 ## 6. Bundle
 
-- The initial JavaScript graph is **127,997 bytes gzip** against the unchanged **128,000-byte (125 KB) budget**; the baseline was
-  127,992. The +5 bytes are chunk-hash strings in lazy-import tables, not 3D code: every 3D module stays behind lazy edges.
+- The initial JavaScript graph is **127,736 bytes gzip** against the unchanged **128,000-byte (125 KB) budget** (baseline 127,992).
+  Every 3D module stays behind lazy edges; 21D adds no code to the initial graph.
 - A first version shared the orbit controller between the 3D-objects viewer and the 21B surface viewer; the bundler then emitted it as
-  its own chunk, the 3D question's lazy entry listed one more file, and the initial graph reached 128,013 bytes (over budget). The
-  surface viewer therefore keeps its own small camera with only its two defect fixes (azimuth wrap, content-keyed reset), and the
-  budget was not raised.
-- **Headroom is 3 bytes.** It was 8 bytes on the baseline; the next change that adds a lazy chunk to an initial lazy-import table will
-  need a deliberate bundle-relief step. Recorded here so it is not discovered by surprise.
+  its own chunk, the 3D question's lazy entry listed one more file, and the initial graph reached 128,013 bytes. The surface viewer
+  therefore keeps its own small camera with only its two defect fixes (azimuth wrap, content-keyed reset).
+- **Hash noise (independent-review fix round).** The initial chunks carry lazy-import tables with ~250 content-hashed file names
+  (131 in `index` alone). Any change to a lazy 3D chunk re-hashes ~30 of them, and base-64 hashes are near-random bytes that gzip
+  cannot shrink: the measured initial graph moved by ±15 bytes per change (127,997 bytes on `bff40b7`, 128,006 after the review fix,
+  with no code added to the initial graph). Against a baseline that met the budget by 8 bytes, the guard had become a coin toss.
+  `vite.config.ts` now emits **base-36** hashes (`output.hashCharacters: 'base36'`, still 8 characters ≈ 41 bits; collision odds
+  across the 484 emitted files ≈ 4 × 10⁻⁸). File names only; no code, chunking or budget change. Measured on the same tree: base-64
+  128,006 → base-36 **127,736** (hex would give 127,698 at 32 bits, collision odds ≈ 3 × 10⁻⁵, rejected). Nothing in the repository
+  depends on the hash alphabet (bundle guard matches stems; the student-visual guard's `[A-Za-z0-9_-]{8}` still matches; the service
+  worker and static-web-app routes do not match hashed names). **Owner decision recorded:** this is a repository-wide build setting
+  and can be reverted independently of the 3D work; reverting it returns the guard to its noise floor.
 
 ## 7. Gates
 
