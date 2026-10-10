@@ -142,7 +142,7 @@ function MotionDynamicView({ model: m, maxTime, graphs, showVectors, savedPoints
       const series = g.series.map(s => ({ id: s.id, className: s.className, pick: s.pick, points: samples.map(f => ({ t: f.t, ...s.pick(f) })) }));
       const ys = series.flatMap(s => s.points.map(p => p.y)), xs = series.flatMap(s => s.points.map(p => p.x));
       const xDomain: [number, number] = g.xIsTime ? [0, end || 1] : valueDomain(xs);
-      const evs = events.map<PlotEvent>(e => { const f = motionFrame(m, e.t, end), q = g.series[0].pick(f); return { x: q.x, y: q.y, label: e.label + " (t = " + fmtMotion(e.t) + " s)", kind: e.kind }; });
+      const evs = events.map<PlotEvent>(e => { const f = motionFrame(m, e.t, end), q = g.series[0].pick(f); return { x: q.x, y: q.y, label: e.label, kind: e.kind }; });   // named only: a future event's exact time / value is a graded quantity
       return { spec: g, series, xDomain, yDomain: valueDomain(ys), events: evs };
     });
     return { plots, events, scales: sceneScales(m, samples) };

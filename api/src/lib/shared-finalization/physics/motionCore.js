@@ -160,12 +160,12 @@ function prepare(m) {
                 const s = frictionAt(phases, Math.min(t, bottom)), atBottom = t >= bottom, pos = Math.min(s.x, p.length);
                 const fr = frictionForce(drive, s, p.muKinetic * N);
                 return {
-                    position: { x: pos * cos, y: (p.length - pos) * sin }, velocity: along(s.v), acceleration: along(atBottom ? 0 : s.a), along: { s: pos, v: s.v, a: atBottom ? 0 : s.a },
+                    position: { x: pos * cos, y: (p.length - pos) * sin }, velocity: along(s.v), acceleration: along(s.a), along: { s: pos, v: s.v, a: s.a },
                     status: atBottom ? "bottom" : s.phase.rest ? "rest" : "moving",
                     forces: [
                         force("weight", { x: 0, y: -W }, "الوزن mg"), force("normal", { x: N * n.x, y: N * n.y }, "القوة العمودية N"),
                         force("gravityParallel", along(drive), "مركّبة الوزن الموازية mg·sinθ"), force("gravityPerpendicular", { x: -N * n.x, y: -N * n.y }, "مركّبة الوزن العمودية mg·cosθ"),
-                        force("friction", along(fr), s.phase.rest ? "الاحتكاك السكوني" : "الاحتكاك الحركي"), force("net", along(p.mass * (atBottom ? 0 : s.a)), "محصلة القوى")
+                        force("friction", along(fr), s.phase.rest ? "الاحتكاك السكوني" : "الاحتكاك الحركي"), force("net", along(p.mass * s.a), "محصلة القوى")
                     ]
                 };
             } };

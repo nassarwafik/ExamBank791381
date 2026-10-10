@@ -53,6 +53,10 @@ the UI registry and starters, the exam import / save / finalization / grading au
 * **Angles** — `sin`/`cos` are exact at 0° and ±90° (no `6e-17` residue in displayed values).
 * **Assumptions** — rigid point-like bodies, flat ground, no air resistance, no rolling, no bouncing (motion ends at impact / bottom),
   μk ≤ μs enforced, the incline block starts at the top with `v₀ ≥ 0` down the slope, the Newton block moves on a horizontal surface.
+* **Arrival semantics** — the frame at the end of a run is the *instant* of impact / landing / reaching the bottom (left limit): the
+  body is on the ground (or at the bottom) and its velocity, acceleration and forces are the pre-arrival values (free fall: `v(t⁻) ≠ 0`,
+  `a = −g`, exactly as `physicsFreeFall@1`), so ΣF = m·a holds in every frame; nothing after arrival is modelled and later times clamp
+  to that frame.
 
 **Analytical certification** (hand-computed, asserted in `src/physicsMotion.21da1.test.ts`):
 
@@ -115,7 +119,8 @@ Optional graphs: free fall / Newton / incline — velocity, acceleration; projec
 * **Sanitizer** — the student projection keeps the public config (params, permitted controls, view, tasks) and strips checks,
   tolerances, quantities and scoring; a tampered config (unknown key, unknown experiment, authored value outside a control) blocks
   finalization and is withheld from students. The scene shows a neutral scale bar rather than the run's exact extent, so a measured
-  quantity (range, displacement) is not printed before the experiment is run.
+  quantity (range, displacement) is not printed before the experiment is run; graph event markers (apex, impact, bottom, stop) are
+  labelled by name only — never with the event's exact time, which is a graded quantity (`impactTime`, `flightTime`, `timeToBottom`).
 
 ## 6. Student experience
 
@@ -174,7 +179,23 @@ payload that includes `dueAt = new Date(Date.now() + 864e5).toISOString()`. When
 fixture hotfix. Proposed fix (separate hotfix): give the fixture a fixed `dueAt` (or a fake clock), or use a weight canary with four
 decimals (e.g. `9.1734`), which can never occur in an ISO timestamp's three-digit milliseconds.
 
-## 11. Checkpoint
+## 11. Independent-review follow-up (RF1)
+
+Three questions were verified with deterministic tests (`src/physicsMotion/physicsMotionReview.21da1.test.tsx`, 12 tests), each run
+first against the reviewed head `dc62a0b`:
+
+| # | Question | Verdict on `dc62a0b` | Fix |
+|---|---|---|---|
+| R1 | Impact / landing velocity versus the post-impact state | **Defect (incline only).** Free fall and projectile keep the pre-impact velocity and `a = −g` at the end frame (identical to `physicsFreeFall@1`). The incline's arrival frame kept the arrival velocity and kinetic friction but forced `a = 0` and `net = 0`, so ΣF ≠ m·a there and the a(t) graph dropped to 0 at the last sample. Failing: `incline … ΣF = m·a at the bottom` (`expected +0 to be close to 3.20259`) and the 2 × 300-run ΣF = m·a sweep (`incline #0 … ΣFx = net: 0.385 > 1e-9`). | The arrival frame keeps the pre-arrival acceleration and net force. No reference quantity, check or grade changes (`timeToBottom`, `speedAtBottom` and `initialAcceleration` are computed independently). |
+| R2 | Do student-visible reference graphs reveal graded answers? | **Defect (event labels).** At t = 0, before the experiment is run, the graph event markers' titles printed the exact future event time: `impactTime 3.03046` (and the `impact-point` x), `flightTime 2.88615`, `timeToBottom 2.49899`. The full reference curves themselves follow the 20E / `physicsFreeFall@1` design and give nothing the experiment withholds (running it shows the same values in the live readout). | Event markers are named only (as `physicsFreeFall@1`). The test now asserts that no graded value other than the live instrument reading at t = 0 appears in the graphs or the scene. |
+| R3 | Static → kinetic friction thresholds, velocity reversals | **No defect.** Static friction holds exactly up to `|drive| = μs·N` (both directions; incline at `tanθ = μs(1 ± 10⁻⁹)`); just above, `a = (F ∓ μk·N)/m`; a block thrown against the force stops at `t = 5/7 s` and reverses with friction flipping sign; over 2 × 200 random runs kinetic friction has magnitude `μk·N` and opposes the motion, static friction stays within `μs·N`, `v` and `x` are continuous (no jump reversal) and Newton runs are mirror-symmetric. | none |
+
+Observation for the owner (not a defect, not changed): the live readout is a required instrument and shows instantaneous values such as
+acceleration, friction and normal force; a task that asks only for such a value (e.g. the incline preset's acceleration and normal force)
+is answered by reading the instrument. Teachers who want a measurement skill should prefer quantities that need the run (times, ranges,
+speeds at an event).
+
+## 12. Checkpoint
 
 * Branch `feature/phase-21d-a1-physics-core-motion` from `main` `38bbf8c` (unchanged at the time of writing).
 * Completed: core + plugin + shared build; acceptance exam + lifecycle; UI (workspace, editor, review, registry, starter); Chromium
