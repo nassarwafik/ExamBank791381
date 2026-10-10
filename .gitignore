@@ -45,3 +45,6 @@ runner/tests/load/results/
 # (scripts/mutate-function-graphs-21a2.mjs) are evidence files produced per run, never committed
 .harness-21a2/
 artifacts/phase-21a2/
+
+# Phase 21D — real-Chromium 3D engine certification output (scripts/check-interactive-3d-browser-21d.mjs), produced per run
+.harness-21d/
