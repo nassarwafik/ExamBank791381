@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { SmartSimWorkspaceProps } from "../trustedSim/smartSimUiRegistry";
 import { CHEM_ACTIVITY_LABEL, CHEM_LIMITS, CHEM_PROPERTY_OPTIONS, validateChemConfig, type ChemConfigV1, type ChemSpecies, type ChemValueTask } from "../chemistryStructureModel";
 import { CHEM_OPTION_LABEL, fmtChem, type ChemStateV1 } from "../chemistryStructurePlugin";
@@ -104,6 +104,8 @@ export default function ChemWorkspace({ config: rawConfig, actions, onChange, di
   const [build, setBuild] = useState(() => state.particles ?? { protons: 0, neutrons: 0, electrons: 0 });
   const [shellDraft, setShellDraft] = useState<number[]>(() => [0, 1, 2, 3].map(i => state.shells?.[i] ?? 0));
   const [confirm, setConfirm] = useState(false);
+  // radio groups are named per workspace INSTANCE: two questions on one exam page may use the same task id ("shape")
+  const uid = useId();
   if (!cfg) return <p className="ncli-unavailable" role="note" data-testid="chem-unavailable">إعداد محاكاة الكيمياء لهذا السؤال غير متوفر في هذا الإصدار.</p>;
   const base = replay && replay.ok ? [...actions] : [];
   const emit = (next: unknown[]) => { const r = replayState(cfg, next); if (r.ok) onChange(next, r.state); };
@@ -207,7 +209,7 @@ export default function ChemWorkspace({ config: rawConfig, actions, onChange, di
             <legend>{t.label}</legend>
             <div className="chem-options" role="radiogroup" aria-label={t.label}>
               {CHEM_PROPERTY_OPTIONS[t.property].map(o => (
-                <label key={o} className="chem-option"><input type="radio" name={"chem-" + t.id} value={o} checked={state.classifications[t.id] === o} disabled={disabled}
+                <label key={o} className="chem-option"><input type="radio" name={uid + "-" + t.id} value={o} checked={state.classifications[t.id] === o} disabled={disabled}
                   onChange={() => decide("classification:" + t.id, { type: "classification.set", taskId: t.id, option: o })} />{CHEM_OPTION_LABEL[o] ?? o}</label>
               ))}
             </div>

@@ -22,7 +22,8 @@
 .chem-cloud-label { font: 700 13px/1 ui-sans-serif, system-ui, sans-serif; fill: #0d3f80; text-anchor: middle; }
 .chem-nucleus { fill: #f2b134; stroke: #8a5a00; stroke-width: 2; }
 .chem-nucleus-text { font: 700 11px/1 ui-sans-serif, system-ui, sans-serif; fill: #3b2600; text-anchor: middle; }
-.chem-task { border: 1px solid var(--xp-border, #d7dde5); border-radius: 10px; padding: 8px 12px; margin: 0; min-width: 0; display: grid; gap: 6px; }
+.chem-task { border: 1px solid var(--xp-border, #d7dde5); border-radius: 10px; padding: 8px 12px; margin: 0; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.chem-task > button { justify-self: start; }
 .chem-task legend { font-weight: 700; padding: 0 4px; }
 .chem-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chem-row input[type=text] { min-width: 0; flex: 1 1 120px; max-width: 240px; }
@@ -46,7 +47,9 @@
 .chem-bond line { stroke: #56657a; stroke-width: 3.2; stroke-linecap: round; }
 .chem-bond.is-selected line { stroke: #d97706; stroke-width: 4.5; }
 .chem-bond line.chem-bond-hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
-.chem-atom { cursor: pointer; }
+.chem-atom { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.chem-mol-scene, .chem-bond { -webkit-tap-highlight-color: transparent; }
+.chem-atom:focus, .chem-bond:focus { outline: none; }
 .chem-atom circle { stroke: #1f2a3a; stroke-width: 1.2; }
 .chem-atom.is-selected circle { stroke: #d97706; stroke-width: 4; }
 .chem-atom.is-probed circle { stroke: #7c3aed; stroke-width: 3.5; stroke-dasharray: 4 2; }

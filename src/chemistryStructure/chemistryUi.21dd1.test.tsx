@@ -13,6 +13,7 @@ import { chemMolecule } from "../chemistry/molecules";
 import { lonePairDirections, projectMolecule } from "./chemView";
 import ChemEditor from "./ChemEditor";
 import ChemReview from "./ChemReview";
+import ChemWorkspace from "./ChemWorkspace";
 
 // Phase 21D-D.1 — chemistryStructure@1 UI through the REAL student host (StudentQuestionCard → SmartSimResponse → lazy registry → workspace)
 // on the server-sanitized question: building an atom / ion, distributing electrons, the periodic table (keyboard + selection), the 3D
@@ -136,6 +137,24 @@ describe("21D-D.1 UI — 3D molecule", () => {
     expect(lonePairDirections(chemMolecule("ammonia")!, "N1")).toHaveLength(1);
     expect(lonePairDirections(chemMolecule("hydrogenChloride")!, "Cl1")).toHaveLength(3);
     expect(lonePairDirections(chemMolecule("methane")!, "C1")).toEqual([]);
+  });
+});
+
+describe("21D-D.1 UI — several simulations on ONE exam page", () => {
+  // found by the real-Chromium exam certification: two questions with the same classification task id ("shape" on water and on CO₂) shared
+  // one radio group name, so choosing in one question silently unchecked the other question's choice.
+  it("classification radios of two workspaces are independent groups (choosing in one never unchecks the other)", () => {
+    const water = waterPreset().config, co2 = { ...water, subject: { molecule: "carbonDioxide" } };
+    function Two() {
+      const [a, setA] = useState<unknown[]>([]), [b, setB] = useState<unknown[]>([]);
+      return <><div data-testid="w1"><ChemWorkspace config={water} actions={a} onChange={n => setA(n)} label="1" /></div><div data-testid="w2"><ChemWorkspace config={co2} actions={b} onChange={n => setB(n)} label="2" /></div></>;
+    }
+    render(<Two />);
+    const radio = (w: string, label: string) => within(within(screen.getByTestId(w)).getAllByTestId("chem-classification")[0]).getByLabelText(label) as HTMLInputElement;
+    fireEvent.click(radio("w1", "منحنٍ (زاوي)"));
+    fireEvent.click(radio("w2", "خطي"));
+    expect([radio("w1", "منحنٍ (زاوي)").checked, radio("w2", "خطي").checked]).toEqual([true, true]);
+    expect(radio("w1", "منحنٍ (زاوي)").name).not.toBe(radio("w2", "خطي").name);
   });
 });
 

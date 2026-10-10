@@ -75,10 +75,17 @@ export function projectMolecule(m: Molecule, camera: OrbitCamera, width: number,
   const screen = (p: Vec3) => { const c = toCamera(sub(p, center), camera); return { x: width / 2 + c.x * scale, y: height / 2 - c.y * scale, depth: c.z }; };
   const at = new Map(m.atoms.map(a => [a.id, { ...screen(a.position), atom: a }]));
   const atoms: ProjectedAtom[] = m.atoms.map(a => { const s = at.get(a.id)!; return { id: a.id, element: a.element, x: s.x, y: s.y, depth: s.depth, r: atomRadius(a.element) * scale }; });
-  const bonds: ProjectedBond[] = m.bonds.map(b => {
-    const p = at.get(b.a)!, q = at.get(b.b)!, dx = q.x - p.x, dy = q.y - p.y, l = Math.hypot(dx, dy) || 1;
-    return { id: b.id, a: b.a, b: b.b, order: b.order, x1: p.x, y1: p.y, x2: q.x, y2: q.y, depth: (p.depth + q.depth) / 2, nx: -dy / l, ny: dx / l };
-  });
+  // a bond runs between the atom SURFACES (trimmed to 0.9 r so it visibly meets the sphere), never across an atom disk: the painter's
+  // order alone cannot keep a nearer bond off a farther atom; a bond whose projected centres are closer than the two radii points at the
+  // viewer and is hidden behind its atoms — it is not drawn.
+  const bonds: ProjectedBond[] = [];
+  for (const b of m.bonds) {
+    const p = at.get(b.a)!, q = at.get(b.b)!, dx = q.x - p.x, dy = q.y - p.y, l = Math.hypot(dx, dy);
+    const ra = atomRadius(p.atom.element) * scale * 0.9, rb = atomRadius(q.atom.element) * scale * 0.9;
+    if (l <= ra + rb) continue;
+    const ux = dx / l, uy = dy / l;
+    bonds.push({ id: b.id, a: b.a, b: b.b, order: b.order, x1: p.x + ux * ra, y1: p.y + uy * ra, x2: q.x - ux * rb, y2: q.y - uy * rb, depth: (p.depth + q.depth) / 2, nx: -uy, ny: ux });
+  }
   const pairs: ProjectedPair[] = [];
   if (withPairs) for (const a of m.atoms) for (const d of lonePairDirections(m, a.id)) {
     const s = screen(add(a.position, mul(d, atomRadius(a.element) + 0.2))), c = toCamera(d, camera), l = Math.hypot(c.x, c.y) || 1;

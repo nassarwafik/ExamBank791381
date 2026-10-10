@@ -134,7 +134,7 @@ try {
   check("d1: the formula is stored in canonical text", JSON.stringify((await actionsOf(page, "d1"))[0]) === JSON.stringify({ type: "formula.set", formulaId: "empirical", text: "CH2O" }));
   await saveValue(page, "d2", "molarMass", 249.677); await saveValue(page, "d2", "copperPercent", 25.45); await saveValue(page, "d2", "oxygenAtoms", 9);
   // shared ammonia context: the probe measures ∠H–N–H, the student records it
-  await page.click(q("ctxAmmonia") + "[data-testid=chem-mol-measure]");
+  check("ammonia: measure-only model (no selection task) needs no mode switch: a click measures", (await page.$$(q("ctxAmmonia") + "[data-testid=chem-mol-measure]")).length === 0);
   for (const id of ["H1", "N1", "H2"]) await page.click(q("ctxAmmonia") + "[data-chem-atom=" + id + "] circle");
   const nh3 = await page.textContent(q("ctxAmmonia") + "[data-testid=chem-probe]");
   check("ammonia: the probe measures ∠H–N–H = 106.7°", nh3 === "الزاوية H1–N1–H2 = 106.7°", nh3);
@@ -153,9 +153,9 @@ try {
   await page.locator(q("a1")).screenshot({ path: path.join(out, "desktop-sodium-ion.png") });
   const forged = await page.evaluate(() => window.__exam.forge("c2", { kind: "smartSim", pluginKey: "chemistryStructure", pluginVersion: 1, actions: [{ type: "score.set", value: 4 }], state: { score: 4 } }));
   check("a forged answer is refused by the server binding", forged.rejected.includes("c2"), JSON.stringify(forged.rejected));
-  await page.close();
-
-  const review = await openPage(desktop, "?review=1");
+  // the review reads the same tab's saved answers (sessionStorage is per tab): navigate this tab, as the teacher's review follows the attempt
+  const review = page;
+  await review.goto(PAGE + "?review=1", { waitUntil: "networkidle" });
   await review.waitForSelector("[data-testid=chem-review]");
   const scores = await review.$$eval("[data-testid=r-score]", els => els.map(e => Number(e.textContent)));
   check("teacher review renders the server-derived state and the marks", scores.join() === "8,8,7,0,6,5,3" && (await review.textContent("[data-testid=r-a1]")).includes("p = 11, n = 12, e = 10"), scores.join());

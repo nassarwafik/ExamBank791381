@@ -36,9 +36,11 @@ export default function MoleculeView3D({ molecule: m, selection, measure, lonePa
   const clickAtom = (id: string) => { if (consumeSuppressedClick()) return; if (measure && mode === "measure") pick(id); else if (selection?.target === "atoms") toggle(id); };
   const clickBond = (id: string) => { if (consumeSuppressedClick()) return; if (selection?.target === "bonds" && (!measure || mode === "select")) toggle(id); };
   const at = (id: string) => m.atoms.find(a => a.id === id)!.position;
-  const probe = picked.length === 2 ? "المسافة بين " + picked[0] + " و" + picked[1] + " = " + r1(distance(at(picked[0]), at(picked[1])) * 100) + " pm"
-    : picked.length === 3 ? "الزاوية " + picked[0] + "–" + picked[1] + "–" + picked[2] + " = " + r1(angleAt(at(picked[0]), at(picked[1]), at(picked[2]))) + "°"
-      : picked.length === 1 ? "اختر ذرة ثانية لقياس المسافة، ثم ثالثة لقياس الزاوية عند الذرة الوسطى." : "";
+  // atom ids and values are LTR islands inside the Arabic sentence (bidi isolation keeps "H1–O1–H2 = 104.5°" in reading order)
+  const ltr = (t: string) => <bdi dir="ltr">{t}</bdi>;
+  const probe = picked.length === 2 ? <>المسافة بين {ltr(picked[0])} و{ltr(picked[1])} = {ltr(r1(distance(at(picked[0]), at(picked[1])) * 100) + " pm")}</>
+    : picked.length === 3 ? <>الزاوية {ltr(picked[0] + "–" + picked[1] + "–" + picked[2] + " = " + r1(angleAt(at(picked[0]), at(picked[1]), at(picked[2]))) + "°")}</>
+      : picked.length === 1 ? "اختر ذرة ثانية لقياس المسافة، ثم ثالثة لقياس الزاوية عند الذرة الوسطى." : null;
   type Item = { kind: "atom" | "bond" | "pair"; depth: number; key: string; node: ReactElement };
   const items: Item[] = [];
   for (const b of proj.bonds) {
