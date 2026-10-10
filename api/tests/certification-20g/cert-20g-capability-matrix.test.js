@@ -30,8 +30,11 @@ const FIX = path.join(repo, "docs/fixtures/certification-20g");
 const ACCEPTANCE_21A1 = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures/data-charts-21a1/ExamBank_21A1_Interactive_Charts_Mini_Acceptance.json"), "utf8"));
 const ACCEPTANCE_21A2 = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures/function-graphs-21a2/ExamBank_21A2_Function_Graphs_Mini_Acceptance.json"), "utf8"));
 const ACCEPTANCE_21C = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures/interactive-3d-21c/ExamBank_21C_Interactive_3D_Acceptance.json"), "utf8"));
+// Phase 21D-A.1: physicsMotion@1 acceptance exam (four simulations + a shared composite context), driven end to end by
+// api/tests/certification-21da1/cert-21da1-physics-motion-lifecycle.test.js.
+const ACCEPTANCE_21DA1 = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures/physics-motion-21da1/ExamBank_21DA1_Physics_Motion_Acceptance.json"), "utf8"));
 // Phase 21A.2: standalone/composite functionGraphSelection proof. Phase 21C: standalone semantic interactive-3D selection proof.
-const EXAMS = { A: examA(), B: examB(), C: examC(), D: examD(), E: examE(), S: stressExam({ sections: 1, perSection: 30 }).exam, "21A1": ACCEPTANCE_21A1, "21A2": ACCEPTANCE_21A2, "21C": ACCEPTANCE_21C };
+const EXAMS = { A: examA(), B: examB(), C: examC(), D: examD(), E: examE(), S: stressExam({ sections: 1, perSection: 30 }).exam, "21A1": ACCEPTANCE_21A1, "21A2": ACCEPTANCE_21A2, "21C": ACCEPTANCE_21C, "21DA1": ACCEPTANCE_21DA1 };
 
 /** identity → set of certification exams that contain it (top level, composite child or compound part). */
 function exercised() {

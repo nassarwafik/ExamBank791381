@@ -137,7 +137,7 @@ describe("20A.1-D — the plugin DESCRIPTOR: exact, strict, immutable, data only
   it("the listing is DATA ONLY (plain JSON, no functions), deterministic, and a copy (mutating it never changes the registry)", () => {
     undo.push(registerSmartSimPlugin(createUniversalTestPlugin(universal, SELECTION_SPEC)));
     const list = listSmartSimPluginDescriptors();
-    expect(list.map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1", "testSelection@1"]);   // Phase 20A.2 pilots + 20C networkTopology@2 included
+    expect(list.map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1", "physicsMotion@1", "testSelection@1"]);   // Phase 20A.2 pilots + 20C networkTopology@2 + 21D-A.1 physicsMotion@1 included
     expect(JSON.parse(JSON.stringify(list))).toEqual(list);
     walk(list, v => expect(typeof v).not.toBe("function"));
     (list.find(d => d.key === "networkTopology")!.capabilities as string[]).push?.("scene.3d");
@@ -149,7 +149,7 @@ describe("20A.1-C — the AUTHORING / AI-composer catalog: safe metadata only", 
   it("lists exactly the production plugins with their declared metadata; plain data; no function / module / grader / secret / answer", () => {
     const c = smartSimAuthoringCatalog();
     expect(c).toMatchObject({ catalogVersion: 1, vocabularyVersion: 1, descriptorVersion: 1 });
-    expect(c.plugins.map(p => p.key + "@" + p.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1"]);   // Phase 20A.2 pilots + 20C networkTopology@2 included
+    expect(c.plugins.map(p => p.key + "@" + p.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1", "physicsMotion@1"]);   // Phase 20A.2 pilots + 20C networkTopology@2 + 21D-A.1 physicsMotion@1 included
     expect(c.plugins.find(p => p.key === "networkTopology")).toMatchObject({ domain: "networking", capabilities: expect.arrayContaining(["scene.2d", "network.cli"]), actionKinds: expect.arrayContaining(["router.command"]), checkKinds: expect.arrayContaining(["reachability", "router.ipAddress"]) });
     expect(c.genericRules.map(r => r.id)).toEqual(["numericNear@1", "objectNotSelected@1", "objectSelected@1", "orderEquals@1", "pointNear@1", "relationExists@1", "setEquals@1"]);
     expect([...c.capabilities]).toEqual([...SMART_SIM_CAPABILITIES]);

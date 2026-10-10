@@ -1,0 +1,676 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21DA1-PHYSICS-MOTION",
+  "title": "ExamBank 21D-A.1 — اختبار القبول لمحاكيات الحركة",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "محاكيات الحركة: السقوط الحر، المقذوفات، قانون نيوتن الثاني، المستوى المائل",
+    "instructions": "شغّل كل محاكاة، استخدم الإيقاف المؤقت والخطوة المفردة عند الحاجة، ثم سجّل القياسات بوحدات SI.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — السقوط الحر",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "smartSim",
+          "text": "يسقط جسم من السكون من ارتفاع 45 m (g = 9.8 m/s²). شغّل المحاكاة وراقب المنحنيات ثم سجّل قياساتك.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsMotion",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "freeFall",
+              "params": {
+                "initialHeight": 45,
+                "initialVelocity": 0,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "initialHeight",
+                  "min": 5,
+                  "max": 100,
+                  "step": 5
+                },
+                {
+                  "param": "gravity",
+                  "min": 1.6,
+                  "max": 24.8,
+                  "step": 0.1
+                }
+              ],
+              "view": {
+                "maxTime": 5,
+                "graphs": [
+                  "velocity",
+                  "acceleration"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "impactTime",
+                    "label": "زمن الوصول إلى الأرض",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "impactSpeed",
+                    "label": "سرعة الارتطام بالأرض (مقدار)",
+                    "unit": "m/s"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "impactPoint",
+                    "label": "نقطة الارتطام على منحنى الارتفاع–الزمن"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "impact-time",
+                "label": "زمن الوصول إلى الأرض",
+                "weight": 2,
+                "kind": "motion.referenceValue",
+                "measurementId": "impactTime",
+                "quantity": "impactTime",
+                "tolerance": 0.05
+              },
+              {
+                "id": "impact-speed",
+                "label": "سرعة الارتطام",
+                "weight": 2,
+                "kind": "motion.referenceValue",
+                "measurementId": "impactSpeed",
+                "quantity": "impactSpeed",
+                "tolerance": 0.1
+              },
+              {
+                "id": "impact-point",
+                "label": "نقطة الارتطام على المنحنى",
+                "weight": 1,
+                "kind": "pointNear@1",
+                "pointId": "impactPoint",
+                "expected": {
+                  "x": 3.0305,
+                  "y": 0
+                },
+                "tolerance": 0.05
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — حركة المقذوفات",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "smartSim",
+          "text": "يُقذف جسم بسرعة 20 m/s بزاوية 45° من سطح الأرض. سجّل المدى وأقصى ارتفاع وزمن الطيران وحدّد نقطة السقوط.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsMotion",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "projectile",
+              "params": {
+                "initialSpeed": 20,
+                "launchAngle": 45,
+                "launchHeight": 0,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "initialSpeed",
+                  "min": 5,
+                  "max": 40,
+                  "step": 1
+                },
+                {
+                  "param": "launchAngle",
+                  "min": 5,
+                  "max": 85,
+                  "step": 1
+                },
+                {
+                  "param": "launchHeight",
+                  "min": 0,
+                  "max": 20,
+                  "step": 1
+                }
+              ],
+              "view": {
+                "maxTime": 10,
+                "graphs": [
+                  "height",
+                  "velocity"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "range",
+                    "label": "المدى الأفقي",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "maxHeight",
+                    "label": "أقصى ارتفاع",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "flightTime",
+                    "label": "زمن الطيران",
+                    "unit": "s"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "landingPoint",
+                    "label": "نقطة سقوط المقذوف على المسار"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "range",
+                "label": "المدى الأفقي",
+                "weight": 2,
+                "kind": "motion.referenceValue",
+                "measurementId": "range",
+                "quantity": "range",
+                "tolerance": 0.2
+              },
+              {
+                "id": "max-height",
+                "label": "أقصى ارتفاع",
+                "weight": 2,
+                "kind": "motion.referenceValue",
+                "measurementId": "maxHeight",
+                "quantity": "maxHeight",
+                "tolerance": 0.1
+              },
+              {
+                "id": "flight-time",
+                "label": "زمن الطيران",
+                "weight": 1,
+                "kind": "motion.referenceValue",
+                "measurementId": "flightTime",
+                "quantity": "flightTime",
+                "tolerance": 0.05
+              },
+              {
+                "id": "landing-point",
+                "label": "نقطة السقوط",
+                "weight": 1,
+                "kind": "pointNear@1",
+                "pointId": "landingPoint",
+                "expected": {
+                  "x": 40.8163,
+                  "y": 0
+                },
+                "tolerance": 0.3
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — قانون نيوتن الثاني",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "smartSim",
+          "text": "تؤثر قوة أفقية 10 N في صندوق كتلته 2 kg على سطح خشن (μs = 0.3، μk = 0.2). سجّل التسارع وقوة الاحتكاك والسرعة بعد 4 ث.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsMotion",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "newton2",
+              "params": {
+                "mass": 2,
+                "appliedForce": 10,
+                "initialVelocity": 0,
+                "muStatic": 0.3,
+                "muKinetic": 0.2,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "mass",
+                  "min": 0.5,
+                  "max": 10,
+                  "step": 0.5
+                },
+                {
+                  "param": "appliedForce",
+                  "min": 0,
+                  "max": 50,
+                  "step": 1
+                },
+                {
+                  "param": "muStatic",
+                  "min": 0,
+                  "max": 1,
+                  "step": 0.05
+                },
+                {
+                  "param": "muKinetic",
+                  "min": 0,
+                  "max": 1,
+                  "step": 0.05
+                }
+              ],
+              "view": {
+                "maxTime": 4,
+                "graphs": [
+                  "velocity",
+                  "acceleration"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "acceleration",
+                    "label": "تسارع الجسم",
+                    "unit": "m/s²"
+                  },
+                  {
+                    "id": "kineticFriction",
+                    "label": "قوة الاحتكاك الحركي",
+                    "unit": "N"
+                  },
+                  {
+                    "id": "finalVelocity",
+                    "label": "السرعة بعد 4 ث",
+                    "unit": "m/s"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "pointAt2s",
+                    "label": "نقطة على منحنى الإزاحة–الزمن عند 2 ث"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "acceleration",
+                "label": "التسارع",
+                "weight": 2,
+                "kind": "motion.referenceValue",
+                "measurementId": "acceleration",
+                "quantity": "initialAcceleration",
+                "tolerance": 0.05
+              },
+              {
+                "id": "kinetic-friction",
+                "label": "الاحتكاك الحركي",
+                "weight": 1,
+                "kind": "motion.referenceValue",
+                "measurementId": "kineticFriction",
+                "quantity": "kineticFriction",
+                "tolerance": 0.05
+              },
+              {
+                "id": "final-velocity",
+                "label": "السرعة بعد 4 ث",
+                "weight": 1,
+                "kind": "motion.referenceValue",
+                "measurementId": "finalVelocity",
+                "quantity": "finalVelocity",
+                "tolerance": 0.1
+              },
+              {
+                "id": "point-2s",
+                "label": "نقطة عند 2 ث",
+                "weight": 1,
+                "kind": "pointNear@1",
+                "pointId": "pointAt2s",
+                "expected": {
+                  "x": 2,
+                  "y": 6.08
+                },
+                "tolerance": 0.1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — المستوى المائل",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "smartSim",
+          "text": "ينزلق صندوق كتلته 5 kg من قمة مستوى مائل طوله 10 m وزاويته 30° (μs = 0.3، μk = 0.2). سجّل القياسات المطلوبة.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsMotion",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "incline",
+              "params": {
+                "angle": 30,
+                "mass": 5,
+                "length": 10,
+                "initialVelocity": 0,
+                "muStatic": 0.3,
+                "muKinetic": 0.2,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "angle",
+                  "min": 0,
+                  "max": 60,
+                  "step": 1
+                },
+                {
+                  "param": "mass",
+                  "min": 1,
+                  "max": 20,
+                  "step": 1
+                },
+                {
+                  "param": "muStatic",
+                  "min": 0,
+                  "max": 1,
+                  "step": 0.05
+                },
+                {
+                  "param": "muKinetic",
+                  "min": 0,
+                  "max": 1,
+                  "step": 0.05
+                }
+              ],
+              "view": {
+                "maxTime": 5,
+                "graphs": [
+                  "velocity",
+                  "acceleration"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "acceleration",
+                    "label": "تسارع الجسم على المستوى",
+                    "unit": "m/s²"
+                  },
+                  {
+                    "id": "normalForce",
+                    "label": "القوة العمودية",
+                    "unit": "N"
+                  },
+                  {
+                    "id": "timeToBottom",
+                    "label": "زمن الوصول إلى أسفل المستوى",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "speedAtBottom",
+                    "label": "السرعة عند أسفل المستوى",
+                    "unit": "m/s"
+                  }
+                ],
+                "points": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "acceleration",
+                "label": "التسارع",
+                "weight": 2,
+                "kind": "motion.referenceValue",
+                "measurementId": "acceleration",
+                "quantity": "initialAcceleration",
+                "tolerance": 0.05
+              },
+              {
+                "id": "normal",
+                "label": "القوة العمودية",
+                "weight": 1,
+                "kind": "motion.referenceValue",
+                "measurementId": "normalForce",
+                "quantity": "normalForce",
+                "tolerance": 0.1
+              },
+              {
+                "id": "time-bottom",
+                "label": "زمن الوصول إلى الأسفل",
+                "weight": 1,
+                "kind": "motion.referenceValue",
+                "measurementId": "timeToBottom",
+                "quantity": "timeToBottom",
+                "tolerance": 0.05
+              },
+              {
+                "id": "speed-bottom",
+                "label": "السرعة عند الأسفل",
+                "weight": 1,
+                "kind": "motion.referenceValue",
+                "measurementId": "speedAtBottom",
+                "quantity": "speedAtBottom",
+                "tolerance": 0.1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-e",
+      "title": "هـ — سياق مشترك",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e1",
+          "presentationType": "composite",
+          "text": "استخدم محاكاة المستوى المائل الأملس المشتركة للإجابة.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxIncline",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "مستوى مائل أملس",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "physicsMotion",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "experiment": "incline",
+                    "params": {
+                      "angle": 30,
+                      "mass": 5,
+                      "length": 10,
+                      "initialVelocity": 0,
+                      "muStatic": 0,
+                      "muKinetic": 0,
+                      "gravity": 9.8
+                    },
+                    "controls": [
+                      {
+                        "param": "angle",
+                        "min": 0,
+                        "max": 60,
+                        "step": 1
+                      },
+                      {
+                        "param": "mass",
+                        "min": 1,
+                        "max": 20,
+                        "step": 1
+                      },
+                      {
+                        "param": "muStatic",
+                        "min": 0,
+                        "max": 1,
+                        "step": 0.05
+                      },
+                      {
+                        "param": "muKinetic",
+                        "min": 0,
+                        "max": 1,
+                        "step": 0.05
+                      }
+                    ],
+                    "view": {
+                      "maxTime": 5,
+                      "graphs": [
+                        "velocity",
+                        "acceleration"
+                      ],
+                      "showVectors": true
+                    },
+                    "tasks": {
+                      "measurements": [
+                        {
+                          "id": "acceleration",
+                          "label": "تسارع الجسم دون احتكاك",
+                          "unit": "m/s²"
+                        },
+                        {
+                          "id": "timeToBottom",
+                          "label": "زمن الوصول إلى الأسفل",
+                          "unit": "s"
+                        }
+                      ],
+                      "points": []
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gA",
+                "title": "مرتبط بالمحاكاة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxIncline",
+                    "text": "سجّل تسارع الجسم على المستوى الأملس.",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "acc",
+                          "label": "التسارع",
+                          "weight": 1,
+                          "kind": "motion.referenceValue",
+                          "measurementId": "acceleration",
+                          "quantity": "initialAcceleration",
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "إذا ضاعفنا كتلة الجسم على المستوى الأملس فإن تسارعه:",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "يبقى كما هو"
+                      },
+                      {
+                        "text": "يتضاعف"
+                      },
+                      {
+                        "text": "ينقص إلى النصف"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
