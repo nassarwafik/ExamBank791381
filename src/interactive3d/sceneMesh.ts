@@ -208,7 +208,13 @@ export const SCENE3D_FRAME = 0.9;
 
 /** Orthographic projection framed by the scene's bounding sphere: rotation never changes the scale. Faces are back-to-front (painter),
  *  every face is returned with its facing and lit colour (renderers draw the front faces of opaque objects), lines are classified. */
-export function projectInteractive3DScene(mesh: Scene3DMesh, scene: Interactive3DSceneSpecV1, camera: Scene3DCamera, width=720, height=500): ProjectedScene3D {
+/** Optional draw filter: a renderer passes what it will actually draw, so the per-frame work (point strings, shading, line objects,
+ *  depth sorting) is spent only on those items. Without it every face and line is returned (the 21C projection contract). */
+export type Scene3DProjectionFilter = {
+  face?: (f: { front: boolean; rim: boolean; objectId: string }) => boolean;
+  line?: (l: { kind: ProjectedScene3DLine["kind"]; front: boolean }) => boolean;
+};
+export function projectInteractive3DScene(mesh: Scene3DMesh, scene: Interactive3DSceneSpecV1, camera: Scene3DCamera, width=720, height=500, filter: Scene3DProjectionFilter={}): ProjectedScene3D {
   const w=Math.max(180,Math.min(1600,width)), h=Math.max(180,Math.min(1200,height));
   if(!mesh.bounds) finish(mesh,scene.objects);
   const {center,radius}=mesh.bounds!;
@@ -216,36 +222,42 @@ export function projectInteractive3DScene(mesh: Scene3DMesh, scene: Interactive3
   const points:ProjectedScene3DPoint[]=mesh.vertices.map(v=>{const p=rotate(sub(v.point,center));return {x:w/2+p.x*scale,y:h/2-p.y*scale,depth:p.z,objectId:v.objectId,...(v.element?{element:v.element}:{}),visible:false};});
   const objectMap=new Map(scene.objects.map(o=>[o.id,o]));
   const normals=mesh.faces.map(f=>rotate(f.normal??{x:0,y:0,z:1})), front=normals.map(n=>n.z>1e-9);
+  // a point is visible when a face that uses it faces the viewer (independent of what the renderer draws)
+  mesh.faces.forEach((f,i)=>{ if(front[i]) for(const ix of f.indices) points[ix].visible=true; });
   // back to front (painter); equal depths keep the mesh order, so the drawing is deterministic
-  const byDepth=<T,>(items:T[],depth:(t:T)=>number)=>{const d=items.map(depth);return items.map((_,i)=>i).sort((a,b)=>d[a]-d[b]||a-b);};
+  const byDepth=(keep:number[],size:number,depth:(i:number)=>number)=>{const d=new Float64Array(size);for(const i of keep)d[i]=depth(i);return keep.sort((a,b)=>d[a]-d[b]||a-b);};
   const faceDepth=(f:Scene3DMeshFace)=>{let n=0;for(const ix of f.indices)n+=points[ix].depth;return n/Math.max(1,f.indices.length);};
-  const faces:ProjectedScene3DFace[]=byDepth(mesh.faces,faceDepth).map(i=>{
+  const rimOf=(i:number)=>!!mesh.faces[i].curved&&!front[i]&&normals[i].z>-0.25;
+  const keptFaces:number[]=[];
+  mesh.faces.forEach((f,i)=>{ if(!filter.face||filter.face({front:front[i],rim:rimOf(i),objectId:f.objectId})) keptFaces.push(i); });
+  const faces:ProjectedScene3DFace[]=byDepth(keptFaces,mesh.faces.length,i=>faceDepth(mesh.faces[i])).map(i=>{
     const f=mesh.faces[i], q=f.indices.map(ix=>points[ix]), n=normals[i];
-    if(front[i]) for(const p of q) p.visible=true;
-    const object=objectMap.get(f.objectId), palette=object?.palette??1, curved=!!f.curved, rim=curved&&!front[i]&&n.z>-0.25;
+    const object=objectMap.get(f.objectId), palette=object?.palette??1, curved=!!f.curved, rim=rimOf(i);
     return {id:"face-"+i,points:q.map(p=>p.x.toFixed(2)+","+p.y.toFixed(2)).join(" "),depth:faceDepth(f),objectId:f.objectId,...(f.element?{element:f.element}:{}),palette,opacity:object?.opacity??1,
       front:front[i],curved,rim,fill:front[i]||rim?shadeScene3DFace(palette,n,curved,true):shadeScene3DFace(palette,{x:-n.x,y:-n.y,z:-n.z},curved,false)};
   });
   const lift=radius*0.02;
   // a semantic edge is visible when one of the two faces it separates faces the viewer
   const lineFront=new Map((mesh.lines??[]).map(l=>[l.a<l.b?l.a+"-"+l.b:l.b+"-"+l.a,front[l.f1]||front[l.f2]]));
-  const edges:ProjectedScene3DEdge[]=byDepth(mesh.edges,e=>(points[e.a].depth+points[e.b].depth)/2).map(i=>{
+  const edges:ProjectedScene3DEdge[]=byDepth(mesh.edges.map((_,i)=>i),mesh.edges.length,i=>(points[mesh.edges[i].a].depth+points[mesh.edges[i].b].depth)/2).map(i=>{
     const e=mesh.edges[i], a=points[e.a],b=points[e.b];
     return {id:"edge-"+i,x1:a.x,y1:a.y,x2:b.x,y2:b.y,depth:(a.depth+b.depth)/2,objectId:e.objectId,...(e.element?{element:e.element}:{}),visible:lineFront.get(e.a<e.b?e.a+"-"+e.b:e.b+"-"+e.a)??true};
   });
-  const meshLines=mesh.lines??[];
-  const lines:ProjectedScene3DLine[]=byDepth(meshLines,l=>(points[l.a].depth+points[l.b].depth)/2).map(i=>{
-    const l=meshLines[i], f1=front[l.f1], f2=front[l.f2], kind=l.crease?"crease":f1!==f2?"silhouette":"facet", a=points[l.a], b=points[l.b];
-    return {id:"line-"+i,x1:a.x,y1:a.y,x2:b.x,y2:b.y,depth:(a.depth+b.depth)/2+lift,objectId:l.objectId,kind,front:f1||f2};
+  const meshLines=mesh.lines??[], kindOf=(l:Scene3DMeshLine):ProjectedScene3DLine["kind"]=>l.crease?"crease":front[l.f1]!==front[l.f2]?"silhouette":"facet";
+  const keptLines:number[]=[];
+  meshLines.forEach((l,i)=>{ if(!filter.line||filter.line({kind:kindOf(l),front:front[l.f1]||front[l.f2]})) keptLines.push(i); });
+  const lines:ProjectedScene3DLine[]=byDepth(keptLines,meshLines.length,i=>(points[meshLines[i].a].depth+points[meshLines[i].b].depth)/2).map(i=>{
+    const l=meshLines[i], a=points[l.a], b=points[l.b];
+    return {id:"line-"+i,x1:a.x,y1:a.y,x2:b.x,y2:b.y,depth:(a.depth+b.depth)/2+lift,objectId:l.objectId,kind:kindOf(l),front:front[l.f1]||front[l.f2]};
   });
   return {width:w,height:h,scale,points,faces,edges,lines};
 }
 
 /** Faces allowed at rest and while the camera moves (auto quality): detail at rest, fluid motion while turning. Calibrated in real
- *  Chromium with a 4x CPU slowdown (docs/phase21d-3d-performance.md): about 1000 faces (≈ 600 drawn polygons) keep a dragged model
- *  at 60 frames per second there; the rest budget bounds the single redraw when the motion settles. */
+ *  Chromium with a 4x CPU slowdown (docs/phase21d-3d-performance.md): up to about 700 faces (≈ 400 drawn polygons) keep a dragged
+ *  model at 60 frames per second there; the rest budget bounds the single redraw when the motion settles. */
 export const SCENE3D_REST_BUDGET = 4500;
-export const SCENE3D_INTERACTION_BUDGET = 1000;
+export const SCENE3D_INTERACTION_BUDGET = 700;
 /** The highest quality at or below `ceiling` whose face count fits the budget (draft if none does). */
 export function scene3DQualityFor(scene: Interactive3DSceneSpecV1, budget: number, ceiling: Scene3DQuality = "high"): Scene3DQuality {
   for (let q = SCENE3D_QUALITIES.indexOf(ceiling); q > 0; q--) if (scene3DFaceCount(scene, SCENE3D_QUALITIES[q]) <= budget) return SCENE3D_QUALITIES[q];

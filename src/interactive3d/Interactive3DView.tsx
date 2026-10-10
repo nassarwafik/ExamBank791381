@@ -49,6 +49,14 @@ function targetForVertex(targets: Scene3DTargetV1[], objectId:string, element?:s
   return targets.find(t=>t.kind==="vertex"&&t.objectId===objectId&&t.element===element);
 }
 type Item = { face: ProjectedScene3DFace; line?: undefined } | { line: ProjectedScene3DLine; face?: undefined };
+/** Lines drawn per display mode. While the model moves in the solid modes only true edges (creases) are drawn: silhouettes are the
+ *  most numerous lines and the lit facets already show the outline; they return as soon as the motion settles. */
+function lineShown(mode: Scene3DDisplayMode, moving: boolean, l: { kind: ProjectedScene3DLine["kind"]; front: boolean }): boolean {
+  if (mode === "wireframe") return true;
+  if (mode === "transparent") return l.kind !== "facet";
+  if (mode === "solid") return !moving && l.kind === "silhouette";
+  return l.front && (l.kind === "crease" || (!moving && l.kind === "silhouette"));
+}
 
 export default function Interactive3DView({ spec, selection }:{spec:Interactive3DSceneSpecV1;selection?:Interactive3DSelection}) {
   const uid=useId().replace(/[^A-Za-z0-9_-]/g,"");
@@ -66,7 +74,15 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
   const motionQuality:Scene3DQuality=!value?"draft":qualityChoice==="auto"?scene3DQualityFor(value,SCENE3D_INTERACTION_BUDGET,restQuality):qualityChoice;
   const quality=interacting?motionQuality:restQuality;
   const mesh=useMemo(()=>value?meshFor(value,contentKey,quality):null,[value,contentKey,quality]);
-  const scene=useMemo(()=>value&&mesh?projectInteractive3DScene(mesh,value,camera):null,[value,mesh,camera]);
+  const scene=useMemo(()=>{
+    if(!value||!mesh)return null;
+    // only what this display mode draws is projected in full (see showFace / showLine below)
+    const opaque=new Set(value.objects.filter(o=>(o.opacity??1)>=1).map(o=>o.id)), seeThrough=mode==="transparent"||mode==="wireframe";
+    return projectInteractive3DScene(mesh,value,camera,undefined,undefined,{
+      face:f=>mode!=="wireframe"&&(f.front||f.rim||seeThrough||!opaque.has(f.objectId)),
+      line:l=>lineShown(mode,interacting,l)
+    });
+  },[value,mesh,camera,mode,interacting]);
   if(!value||!mesh||!scene||!mesh.faces.length) return <p className="i3d-unavailable" role="alert">تعذّر عرض المشهد ثلاثي الأبعاد؛ يحتاج مراجعة المعلم.</p>;
   const targets=selection?scene3DTargets(value,selection.kind):[];
   const selected=new Set(selection?.value??[]);
@@ -83,7 +99,7 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
   const objects=new Map(value.objects.map(o=>[o.id,o]));
   const seeThrough=mode==="transparent"||mode==="wireframe";
   const showFace=(f:ProjectedScene3DFace)=>mode!=="wireframe"&&(f.front||f.rim||seeThrough||(objects.get(f.objectId)?.opacity??1)<1);
-  const showLine=(l:ProjectedScene3DLine)=>mode==="wireframe"?true:mode==="transparent"?l.kind!=="facet":mode==="solid"?l.kind==="silhouette":l.front&&l.kind!=="facet";
+  const showLine=(l:ProjectedScene3DLine)=>lineShown(mode,interacting,l);
   const faces=scene.faces.filter(showFace), lines=scene.lines.filter(showLine), items:Item[]=[];
   for(let i=0,j=0;i<faces.length||j<lines.length;){
     if(j>=lines.length||(i<faces.length&&faces[i].depth<=lines[j].depth)) items.push({face:faces[i++]}); else items.push({line:lines[j++]});

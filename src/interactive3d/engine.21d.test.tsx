@@ -100,8 +100,8 @@ describe("21D-GEO geometry precision", () => {
     const heart = scene3DPreset("heart", "h"), sphere = scene("sphere");
     expect(scene3DQualityFor(sphere, SCENE3D_REST_BUDGET)).toBe("high");
     expect(scene3DQualityFor(heart, SCENE3D_REST_BUDGET)).toBe("medium");
-    // the moving level is what keeps a dragged model fluid on a slow device: a lone sphere drops to medium, the 6-part heart to draft
-    expect(scene3DQualityFor(sphere, SCENE3D_INTERACTION_BUDGET)).toBe("medium");
+    // the moving level is what keeps a dragged model fluid on a slow device: a lone sphere drops to low, the 6-part heart to draft
+    expect(scene3DQualityFor(sphere, SCENE3D_INTERACTION_BUDGET)).toBe("low");
     expect(scene3DQualityFor(heart, SCENE3D_INTERACTION_BUDGET)).toBe("draft");
     for (const key of ["cube", "pyramid", "heart", "torso", "water"] as const) {
       const preset = scene3DPreset(key, key);
@@ -140,6 +140,17 @@ describe("21D-PRJ projection, culling and lighting", () => {
     const sil = p.lines.filter(l => l.kind === "silhouette"), R = m.bounds!.radius * p.scale;
     expect(sil.length).toBeGreaterThan(40);
     for (const l of sil) expect(Math.hypot(l.x1 - p.width / 2, l.y1 - p.height / 2) / R).toBeGreaterThan(.995);
+  });
+  it("a draw filter only removes items: what it keeps is identical (same order, same values) to the unfiltered projection", () => {
+    const heart = scene3DPreset("heart", "filter"), m = buildInteractive3DMesh(heart, "low"), cam = { yaw: 1.1, pitch: -.4, zoom: 1.3 };
+    const all = projectInteractive3DScene(m, heart, cam);
+    const face = (f: { front: boolean; rim: boolean }) => f.front || f.rim, line = (l: { kind: string; front: boolean }) => l.front && l.kind !== "facet";
+    const some = projectInteractive3DScene(m, heart, cam, undefined, undefined, { face, line });
+    expect(some.faces).toEqual(all.faces.filter(face));
+    expect(some.lines).toEqual(all.lines.filter(line));
+    expect(some.points).toEqual(all.points);
+    expect(some.edges).toEqual(all.edges);
+    expect(some.faces.length).toBeLessThan(all.faces.length);
   });
 });
 
@@ -320,6 +331,23 @@ describe("21D-VIEW viewer behaviour", () => {
     expect(svg.getAttribute("data-quality")).toBe("medium");
     fireEvent.change(screen.getByRole("combobox", { name: /جودة العرض/ }), { target: { value: "low" } });
     expect(svg.getAttribute("data-quality")).toBe("low");
+  });
+  it("motion detail: while a curved model moves only true edges are drawn; its silhouette returns when it settles", () => {
+    const { container } = render(<Interactive3DView spec={scene("cylinder", { x: 3, y: 3, z: 3 })} />);
+    const svg = svgOf(container), count = (k: string) => container.querySelectorAll("line.i3d-line-" + k).length;
+    expect(count("silhouette")).toBeGreaterThan(0);
+    const creases = count("crease");
+    expect(creases).toBeGreaterThan(0);
+    fireEvent.pointerDown(svg, { pointerId: 41, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(svg, { pointerId: 41, clientX: 150, clientY: 110 });
+    expect(svg.getAttribute("data-interacting")).toBe("true");
+    expect(count("silhouette")).toBe(0);
+    expect(count("crease")).toBeGreaterThan(0);
+    fireEvent.pointerMove(svg, { pointerId: 41, clientX: 150, clientY: 110 });
+    act(() => { vi.spyOn(performance, "now").mockReturnValue(1e9); });
+    fireEvent.pointerUp(svg, { pointerId: 41, clientX: 150, clientY: 110 });
+    expect(svg.getAttribute("data-interacting")).toBeNull();
+    expect(count("silhouette")).toBeGreaterThan(0);
   });
   it("selection: only visible edges are drawn as targets in the model, every edge stays in the list", () => {
     const sel = { kind: "edge" as const, mode: "single" as const, max: 1, value: [], onChange: () => {} };
