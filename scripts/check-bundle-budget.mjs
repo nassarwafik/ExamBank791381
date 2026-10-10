@@ -35,6 +35,8 @@
 //      statically reachable from the DataChart chunk (it must load through DataChart's own import() edges), the lazy runtime exceeds
 //      its gzip budgets (signatures + measured chunk sizes), or the common engine lacks the label layout that hides overlapping value
 //      labels (Review Fix 4: ECharts' core installs it only as an import side effect, which the production build drops);
+//  17. (Phase 21D-D.1) the chemistry simulation UI (workspace / 3D molecule / periodic table / editor / review) reaches the initial graph or the
+//      Student Portal's static closure, or the trusted chemistry core reaches the initial graph (signatures, each required to exist);
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -127,6 +129,12 @@ const INTERACTIVE_3D_UI_SIGNATURES = ["i3d-scene", "i3d-editor", "qt-editor-scen
 // renderer, teacher review and question editor), so — like the interactive 3D guard — every signature must now be FOUND in a lazy chunk:
 // a renamed class name or test id fails the build instead of silently emptying this guard.
 const MESH_3D_UI_SIGNATURES = ["mm3d-scene", "mm3d-parts", "uOcclusionStrength", "mm3d-part-rows", "mesh-model-editor", "qt-editor-meshPartSelection", "mesh-selection-response", "mesh-review"];
+// Phase 21D-D.1 — chemistryStructure@1: the student workspace (atom builder, 3D molecule scene, periodic table), the teacher editor and the
+// review (class names / test ids used nowhere else) never reach the initial graph or the Student Portal's static closure; the trusted
+// chemistry core (its config and formula refusal codes) never reaches the initial graph. EVERY signature must be found in some chunk (a
+// renamed class or code fails the build instead of silently emptying the guard).
+const CHEMISTRY_UI_SIGNATURES = ["chem-workspace", "chem-mol-scene", "chem-ptable-grid", "chem-editor", "chem-review"];
+const CHEMISTRY_CORE_SIGNATURES = ["CHEM_CONFIG_INVALID", "FORMULA_ELEMENT_UNKNOWN"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
@@ -285,6 +293,18 @@ function main() {
     if (hit.length) failures.push(`${f} statically exposes the WebGL mesh viewer on a student no-3D path (${hit.join(", ")})`);
   }
   console.log(`WebGL mesh runtime: ${meshOwners.length} lazy chunk(s); never in the initial graph or the Student Portal static closure`);
+
+  for (const sig of [...CHEMISTRY_UI_SIGNATURES, ...CHEMISTRY_CORE_SIGNATURES]) {
+    const owners = all.filter(f => read(f).includes(sig));
+    if (!owners.length) failures.push(`chemistry signature "${sig}" was not found in any JS chunk — update the lazy guard`);
+    for (const f of owners) if (initial.includes(f)) failures.push(`${f} loads chemistry code "${sig}" in the initial graph`);
+  }
+  for (const f of portalClosure) {
+    const hit = CHEMISTRY_UI_SIGNATURES.filter(sig => read(f).includes(sig));
+    if (hit.length) failures.push(`${f} statically exposes the chemistry simulation UI on a student path without chemistry (${hit.join(", ")})`);
+  }
+  const chemistryChunks = all.filter(f => [...CHEMISTRY_UI_SIGNATURES, ...CHEMISTRY_CORE_SIGNATURES].some(sig => read(f).includes(sig)));
+  console.log(`Chemistry simulation payload found in: ${chemistryChunks.join(", ") || "(none)"} — ${chemistryChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}; UI never in the Student Portal static closure`);
 
   for (const f of portalClosure) { const hit = DATA_CHART_SIGNATURES.filter(s => read(f).includes(s)); if (hit.length) failures.push(`${f} is statically reachable from the Student Portal and carries chart code (${hit.join(", ")}) — a student without charts must never download it`); }
   const echartsChunks = all.filter(f => ECHARTS_SIGNATURES.some(s => read(f).includes(s)));

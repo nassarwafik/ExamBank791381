@@ -59,3 +59,6 @@ artifacts/phase-21a2/
 
 # Phase 21D-D.1 — real-Chromium chemistry exam certification output (scripts/check-chemistry-browser-21dd1.mjs), produced per run
 .harness-21dd1/
+
+# Phase 21D-D.1 — chemistry mutation ledger (scripts/mutate-chemistry-21dd1.mjs), produced per run
+artifacts/phase-21dd1/

@@ -112,10 +112,12 @@ describe("21D-D.1 formula engine — exact molar masses (hand-computed from CIAA
   it("composition, Hill and empirical formulas; composition comparison is order-independent", () => {
     expect(M("CuSO4·5H2O").composition).toEqual({ Cu: 1, H: 10, O: 9, S: 1 });
     expect(M("CH3COOH").composition).toEqual({ C: 2, H: 4, O: 2 });
-    expect(["C6H12O6", "C2H5OH", "H2SO4", "NaCl", "CH3COOH", "NH3"].map(f => hillFormula(M(f).composition))).toEqual(["C6H12O6", "C2H6O", "H2O4S", "ClNa", "C2H4O2", "H3N"]);
+    expect(["C6H12O6", "C2H5OH", "H2SO4", "NaCl", "CH3COOH", "NH3", "CHCl3", "CBr4"].map(f => hillFormula(M(f).composition))).toEqual(["C6H12O6", "C2H6O", "H2O4S", "ClNa", "C2H4O2", "H3N", "CHCl3", "CBr4"]);
     expect(["C6H12O6", "C2H4O2", "H2O2", "Na2O", "C2H6"].map(f => hillFormula(empiricalComposition(M(f).composition)))).toEqual(["CH2O", "CH2O", "HO", "Na2O", "CH3"]);
     expect(sameComposition(M("HOH").composition, M("H2O").composition)).toBe(true);
     expect(sameComposition(M("H2O2").composition, M("H2O").composition)).toBe(false);
+    expect(sameComposition(M("H2O").composition, M("H2OS").composition)).toBe(false);                     // a subset is not the same composition
+    expect(sameComposition(M("H2OS").composition, M("H2O").composition)).toBe(false);
     expect(M("H₂O").text).toBe("H2O"); expect(M("CuSO4.5H2O").text).toBe("CuSO4·5H2O"); expect(M("CuSO4*5H2O").text).toBe("CuSO4·5H2O");
     expect(displayFormula("CuSO4·5H2O")).toBe("CuSO₄·5H₂O"); expect(displayFormula("Al2(SO4)3")).toBe("Al₂(SO₄)₃");
   });

@@ -94,6 +94,9 @@ describe("21D-D.1 semantic actions and replay", () => {
     expect(replay([{ type: "object.select", objectId: "H1" }, { type: "object.deselect", objectId: "H1" }, { type: "object.select", objectId: "O1" }], w.config).ok).toBe(true);
     expect(replay([{ type: "object.select", objectId: "H1" }, { type: "object.select", objectId: "O1" }], w.config).ok).toBe(false);   // max 1
     expect(replay([{ type: "object.select", objectId: "C1" }], w.config).ok).toBe(false);
+    // a molecule question has no build / shells task: those actions are refused there
+    expect(replay([{ type: "particles.set", protons: 8, neutrons: 8, electrons: 8 }], w.config).ok).toBe(false);
+    expect(replay([{ type: "shells.set", shells: [2, 6] }], w.config).ok).toBe(false);
     const pc = validateChemConfig({ ...periodicChlorinePreset().config, tasks: { ...periodicChlorinePreset().config.tasks, selection: { label: "x", target: "elements", max: 3 } } }) as { ok: true; config: ChemConfigV1 };
     const r = replay([{ type: "object.select", objectId: "S" }, { type: "object.select", objectId: "Cl" }, { type: "object.select", objectId: "H" }], pc.config);
     expect(r.ok && (r.state as ChemStateV1).selected).toEqual(["H", "S", "Cl"]);                           // catalog (Z) order
@@ -112,6 +115,7 @@ describe("21D-D.1 derived private checks — server evaluation", () => {
     expect(r.checks.map(c => [c.id, c.passed])).toEqual([["protons", true], ["neutrons", true], ["electrons", false], ["shells", false], ["outer", false], ["ion-kind", false], ["block", true]]);
     expect(r.score).toBeCloseTo(10 * 3 / 8, 6);
     expect(r.checks.find(c => c.id === "shells")).toMatchObject({ expected: "2، 8", actual: "2، 8، 1" });
+    expect(grade(p, [{ type: "shells.set", shells: [2] }]).checks.find(c => c.id === "shells")!.passed).toBe(false);   // a prefix of the right distribution is wrong
     expect(grade(p, [])).toMatchObject({ score: 0, manualReview: false });
   });
   it("PRIVATE species: the target (³⁵Cl) never appears in the public config, yet every expected value is derived from it", () => {
