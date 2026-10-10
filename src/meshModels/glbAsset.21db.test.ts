@@ -136,6 +136,8 @@ describe("21D-B.1 GLB authority — refusals (each with a reason)", () => {
     expect(code(valid(), { maxImageSide: 32 })).toBe("MESH_ASSET_LIMIT");
     expect(code(valid(), { maxTexturePixels: 1000 })).toBe("MESH_ASSET_LIMIT");
     expect(sniffImage(checkerPng(16), "image/png")).toEqual({ width: 16, height: 16 });
+    // the second, independent guard: the signature sniffer accepts nothing but PNG / JPEG whatever the bytes are
+    for (const type of ["image/svg+xml", "image/gif", "image/webp", "text/html", ""]) expect(sniffImage(checkerPng(16), type)).toBeNull();
     const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xc0, 0, 11, 8, 0, 48, 0, 64, 3, 1, 0x22, 0, 0xff, 0xd9]);
     expect(sniffImage(jpeg, "image/jpeg")).toEqual({ width: 64, height: 48 });
     expect(sniffImage(jpeg.slice(0, 10), "image/jpeg")).toBeNull();
