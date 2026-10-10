@@ -1,0 +1,89 @@
+/* Phase 21D-A.1 — physicsMotion@1 workspace / editor / review. RTL page; numbers, units, the scene and the graphs are LTR islands.
+   Colours come from the validated presentation variables (--xp-*) with code-owned fallbacks; desktop = scene | graphs, mobile = one
+   column with no horizontal overflow; print = a static snapshot (controls and timeline hidden). */
+.motion { display: grid; gap: 12px; min-width: 0; }
+.motion-stage { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; min-width: 0; }
+@media (max-width: 760px) { .motion-stage { grid-template-columns: minmax(0, 1fr); } }
+.motion-scene { border: 1px solid var(--xp-border, var(--line, #d7dde5)); border-radius: 12px; background: var(--xp-surface-alt, var(--surface-2, #f7f9fc)); overflow: hidden; direction: ltr; min-width: 0; }
+.motion-graphs { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); direction: ltr; min-width: 0; }
+.motion-scene svg, .motion-graphs svg { display: block; width: 100%; height: auto; max-width: 100%; }
+.motion-ground { fill: #d9c8a0; }
+.motion-ground-line { stroke: #6b5a36; stroke-width: 2; }
+.motion-incline { fill: #c9d7e8; stroke: #44617f; stroke-width: 1.5; }
+.motion-platform { fill: #b9a77f; }
+.motion-trail { fill: none; stroke: var(--xp-primary, #1d6fd6); stroke-width: 2; }
+.motion-trail.is-reference { stroke: var(--xp-muted, #8a96a8); stroke-dasharray: 4 4; stroke-width: 1.2; }
+.motion-start { stroke: var(--xp-muted, #8a96a8); stroke-dasharray: 4 4; }
+.motion-scalebar line { stroke: var(--xp-text, #22324a); stroke-width: 2; }
+.motion-scalebar text { font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--xp-muted, #415066); }
+.motion-axis-text { font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--xp-muted, #415066); }
+.motion-body, .motion-block { fill: var(--xp-primary, #1d6fd6); stroke: var(--xp-text, #0d3f80); stroke-width: 2; }
+.motion-body.is-done, .motion-block.is-done { fill: var(--xp-accent, #b4561d); }
+.motion-block.is-rest { fill: #5b6b80; }
+.motion-vector line { stroke-width: 2.5; stroke-linecap: round; stroke: #22324a; }
+.motion-vector polygon, .motion-vector circle, .motion-vector text { fill: #22324a; }
+.motion-vector text { font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.motion-vector.is-velocity line { stroke: var(--xp-success, #15803d); stroke-width: 3; }
+.motion-vector.is-velocity polygon, .motion-vector.is-velocity text { fill: var(--xp-success, #15803d); }
+.motion-vector.is-component line { stroke: #4d8f5e; stroke-dasharray: 4 3; stroke-width: 1.8; }
+.motion-vector.is-component polygon, .motion-vector.is-component text { fill: #4d8f5e; }
+.motion-vector.is-acceleration line, .motion-vector.is-net line { stroke: var(--xp-danger, #b42318); }
+.motion-vector.is-acceleration polygon, .motion-vector.is-acceleration text, .motion-vector.is-net polygon, .motion-vector.is-net text { fill: var(--xp-danger, #b42318); }
+.motion-vector.is-applied line { stroke: #1d6fd6; }
+.motion-vector.is-applied polygon, .motion-vector.is-applied text { fill: #1d6fd6; }
+.motion-vector.is-friction line { stroke: #b4561d; }
+.motion-vector.is-friction polygon, .motion-vector.is-friction text { fill: #b4561d; }
+.motion-vector.is-weight line, .motion-vector.is-normal line { stroke: #6b3fa0; }
+.motion-vector.is-weight polygon, .motion-vector.is-weight text, .motion-vector.is-normal polygon, .motion-vector.is-normal text { fill: #6b3fa0; }
+.motion-vector.is-gravityParallel line, .motion-vector.is-gravityPerpendicular line { stroke: #8a6fb8; stroke-dasharray: 5 3; stroke-width: 1.8; }
+.motion-vector.is-gravityParallel polygon, .motion-vector.is-gravityParallel text, .motion-vector.is-gravityPerpendicular polygon, .motion-vector.is-gravityPerpendicular text { fill: #8a6fb8; }
+.motion-dyn .xp-dyn-event[data-kind="student-point"] rect { fill: var(--xp-surface, #fff); stroke: var(--xp-danger, #c0392b); transform: none; }
+.motion-dyn .is-vx { stroke-dasharray: 6 4; }
+.motion-points-legend { margin: 0; padding-inline-start: 1.2em; display: grid; gap: 2px; font-size: 0.92rem; }
+.motion-controls, .motion-row, .motion-toggles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.motion-row { align-items: end; }
+.motion button, .motion-editor button { min-height: 40px; padding: 6px 14px; border-radius: 8px; border: 1px solid #1d6fd6; background: #1d6fd6; color: #fff; font: inherit; cursor: pointer; }
+.motion button.is-secondary, .motion-editor button.is-secondary { background: transparent; color: #1d6fd6; }
+.motion button.is-danger { background: #b42318; border-color: #b42318; }
+.motion button:disabled, .motion-editor button:disabled { opacity: 0.55; cursor: not-allowed; }
+.motion-controls button[aria-pressed="true"].is-secondary { background: var(--xp-primary, #1d6fd6); border-color: var(--xp-primary, #1d6fd6); color: #fff; }
+.motion button:focus-visible, .motion input:focus-visible, .motion select:focus-visible, .motion-editor :focus-visible { outline: 3px solid #1d6fd6; outline-offset: 2px; }
+.motion-timeline { display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.motion-timeline input[type="range"], .motion-explore input[type="range"] { width: 100%; min-height: 32px; flex: 1 1 140px; }
+.motion input[type="number"], .motion input[type="text"], .motion-editor input:not([type="checkbox"]), .motion-editor select { min-height: 40px; padding: 6px 8px; border: 1px solid var(--line, #c9d1dc); border-radius: 8px; font: inherit; max-width: 100%; box-sizing: border-box; }
+.motion-explore input[type="number"] { width: 7em; }
+.motion-explore, .motion-task, .motion-editor fieldset { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; min-width: 0; }
+.motion-explore legend, .motion-task legend { font-weight: 700; padding: 0 4px; }
+.motion-explore-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.motion-explore-item { display: grid; gap: 4px; min-width: 0; }
+.motion-banner { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 8px; background: #fff4e5; border: 1px solid #e0a650; color: #5c3b00; }
+.motion-banner p { margin: 0; flex: 1 1 260px; }
+.motion-readout, .motion-reference { display: grid; gap: 6px 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--xp-surface-alt, #eef4fb); font-variant-numeric: tabular-nums; }
+.motion-readout div, .motion-reference div { min-width: 0; }
+.motion-readout dt, .motion-reference dt { font-size: 0.85rem; color: var(--xp-muted, #4a5b70); }
+.motion-readout dd, .motion-reference dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.motion-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.motion-param { display: inline-block; margin-inline-end: 0.6em; direction: rtl; }
+.motion-tasks { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.motion-task label, .motion-editor label { display: grid; gap: 4px; }
+.motion-editor label.motion-row { display: flex; }
+.motion-saved { margin: 0; color: #22603a; }
+.motion-error { margin: 0; color: #b42318; }
+.motion-note { margin: 0; color: #4a5b70; font-size: 0.92rem; }
+.motion-fallback { margin: 0; padding: 8px 12px; border: 1px dashed var(--xp-border, #c9d7e8); border-radius: 8px; }
+.motion-editor { display: grid; gap: 14px; }
+.motion-fields { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.motion-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.motion-list li { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; padding: 8px; border: 1px dashed var(--line, #d7dde5); border-radius: 8px; }
+.motion-review table { border-collapse: collapse; width: 100%; }
+.motion-review th, .motion-review td { border: 1px solid var(--line, #d7dde5); padding: 4px 8px; text-align: start; }
+@media print {
+  .motion-timeline, .motion-controls, .motion-explore { display: none !important; }
+  .motion-stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (prefers-color-scheme: dark) {
+  .motion-readout, .motion-reference { background: #1b2a3d; }
+  .motion-saved { color: #7fd1a0; }
+  .motion-banner { background: #3a2a10; color: #ffd9a0; border-color: #8a6420; }
+  .motion-note { color: #a9b6c8; }
+}

@@ -26,7 +26,7 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const PINS = path.join(path.dirname(fileURLToPath(import.meta.url)), "freeze-21a2-pins.json");
 const CAPTURE = process.env.CAPTURE_21A2 === "1";
 const sha = v => createHash("sha256").update(JSON.stringify(v)).digest("hex");
-const dirs = fs.readdirSync(path.join(repo, "docs/fixtures")).filter(d => d !== "function-graphs-21a2" && d !== "function-surfaces-21b" && d !== "interactive-3d-21c").sort();
+const dirs = fs.readdirSync(path.join(repo, "docs/fixtures")).filter(d => d !== "function-graphs-21a2" && d !== "function-surfaces-21b" && d !== "interactive-3d-21c" && d !== "physics-motion-21da1").sort();   // later phases' fixtures have no capture on this baseline
 // The ONE declared fixture delta of 21A.2: the AI composer fixtures record the catalog of their last composer operation; a regenerated token
 // is mapped back to its baseline value so every other byte of every fixture is still judged against the pins captured on 6e4a5ef.
 const BASELINE_TOKEN = text => text.replace(/"AI_COMPOSER_CATALOG_V\d+"/g, '"AI_COMPOSER_CATALOG_V3"');

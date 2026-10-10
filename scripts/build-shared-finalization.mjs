@@ -56,6 +56,8 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   // (rational / elementary function study on the safe parametric engine): the server validates, replays, grades and reviews them with
   // byte-identical logic to the student workspaces and the teacher editors.
   "src/physicsFreeFallModel.ts", "src/physicsFreeFallPlugin.ts", "src/functionStudyModel.ts", "src/functionStudyPlugin.ts",
+  // Phase 21D-A.1 — the shared physics core and the physicsMotion@1 plugin (free fall, projectile, Newton's second law, inclined plane).
+  "src/physics/motionCore.ts", "src/physicsMotionModel.ts", "src/physicsMotionPlugin.ts",
   // Phase 20C — networkTopology@2 (the curriculum network simulator): shared primitives, configuration authority, switch / router CLI v2,
   // the operational network engine, the host Command Prompt and the plugin. networkTopology@1's modules above stay frozen.
   "src/net2Common.ts", "src/net2Model.ts", "src/net2SwitchCli.ts", "src/net2RouterCli.ts", "src/net2Network.ts", "src/net2Host.ts", "src/net2Plugin.ts",

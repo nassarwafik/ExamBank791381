@@ -46,6 +46,13 @@ const entries = new Map<string, SmartSimUi>([
     Workspace: lazy(() => import("../networkTopology2/Net2Workspace")),
     Editor: lazy(() => import("../networkTopology2/Net2Editor")),
     ReviewDetails: lazy(() => import("../networkTopology2/Net2Review"))
+  }],
+  // Phase 21D-A.1 — the motion simulators (free fall, projectile, Newton's second law, inclined plane): a NEW exact identity with its own
+  // lazy chunks (physicsFreeFall@1 above is unchanged).
+  ["physicsMotion@1", {
+    Workspace: lazy(() => import("../physicsMotion/MotionWorkspace")),
+    Editor: lazy(() => import("../physicsMotion/MotionEditor")),
+    ReviewDetails: lazy(() => import("../physicsMotion/MotionReview"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */
