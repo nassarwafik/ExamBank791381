@@ -13,6 +13,7 @@ const chartSpec_1 = require("../charts/chartSpec");
 const functionGraphSpec_1 = require("../functionGraphs/functionGraphSpec");
 const graphTargets_1 = require("../functionGraphs/graphTargets");
 const surfaceSpec_1 = require("../functionSurfaces/surfaceSpec");
+const surfacePlotSpec_1 = require("../functionSurfaces/surfacePlotSpec");
 const sceneSpec_1 = require("../interactive3d/sceneSpec");
 exports.RICH_CONTENT_SCHEMA_VERSION = 1;
 exports.RICH_BLOCK_TYPES = Object.freeze(["heading", "paragraph", "unorderedList", "orderedList", "table", "image", "figure", "code", "cli", "quote", "callout", "divider", "keyValueGrid", "columns", "math", "dataChart", "functionGraph", "functionSurface3D", "interactive3D"]);
@@ -546,7 +547,7 @@ function validateRichContent(raw, path = "richContent") {
                     add("RICH_CONTENT_LIMIT", "عدد الأسطح ثلاثية الأبعاد في المحتوى المنسق أكبر من الحد المسموح (" + exports.RICH_LIMITS.functionSurfaces + ").", at);
                     break;
                 }
-                const surface = (0, surfaceSpec_1.validateSurfaceSpec)(b.surface);
+                const surface = (0, surfacePlotSpec_1.isSurfacePlotPayload)(b.surface) ? (0, surfacePlotSpec_1.validateSurfacePlotSpec)(b.surface) : (0, surfaceSpec_1.validateSurfaceSpec)(b.surface);
                 if (!surface.ok) {
                     for (const i of surface.issues)
                         add("RICH_CONTENT_FUNCTION_SURFACE", i.message + " [" + i.code + "]", at + ".surface");
@@ -557,7 +558,7 @@ function validateRichContent(raw, path = "richContent") {
                     break;
                 }
                 surfaceIds.add(surface.value.id);
-                totalChars += surface.value.title.length + surface.value.description.length + surface.value.expression.length;
+                totalChars += surface.value.version === 2 ? (0, surfacePlotSpec_1.surfacePlotStoredChars)(surface.value) : surface.value.title.length + surface.value.description.length + surface.value.expression.length;
                 out = { type: "functionSurface3D", surface: surface.value };
                 break;
             }
@@ -691,7 +692,7 @@ function richContentPlainText(raw, opts = {}) {
                     out.push(opts.storedOnly ? [b.graph.title, b.graph.description, b.graph.source ?? ""].join("\n") : (0, graphTargets_1.graphPlainText)(b.graph));
                     break;
                 case "functionSurface3D":
-                    out.push([b.surface.title, b.surface.description, "z = " + b.surface.expression].join("\n"));
+                    out.push(b.surface.version === 2 ? (0, surfacePlotSpec_1.surfacePlotPlainText)(b.surface) : [b.surface.title, b.surface.description, "z = " + b.surface.expression].join("\n"));
                     break;
                 case "interactive3D":
                     out.push([b.scene.title, b.scene.description, ...b.scene.objects.map(o => o.label)].join("\n"));

@@ -1,6 +1,6 @@
 // Phase 21B: owned, closed 3D surface contract. It contains data, never executable code or renderer options.
 import { parseExpression, type ExprNode } from "../parametricExpression";
-import { CONTROL, RAW_HTML } from "../richContent/proseGuard";
+import { CONTROL, RAW_HTML, UNSAFE_BIDI, UNSAFE_INVISIBLE } from "../richContent/proseGuard";
 
 export const SURFACE_LIMITS = Object.freeze({
   textChars: 160, descriptionChars: 600, expressionChars: 500,
@@ -25,8 +25,6 @@ const isPlain = (v: unknown): v is Record<string, unknown> => {
   return p === Object.prototype || p === null;
 };
 const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-const UNSAFE_BIDI = /[\u202A-\u202E\u2066-\u2069]/;
-const UNSAFE_INVISIBLE = /[\u00AD\u034F\u061C\u180E\u200B\u200E\u200F\u2060\uFEFF]/;
 
 function validate(raw: unknown): SurfaceResult {
   const issues: SurfaceIssue[] = [];

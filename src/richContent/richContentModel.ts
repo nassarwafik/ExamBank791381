@@ -11,6 +11,8 @@ import { validateChartSpec, chartPlainText, type ChartSpecV1 } from "../charts/c
 import { validateFunctionGraphSpec, projectGraphForStudent, type FunctionGraphSpecV1 } from "../functionGraphs/functionGraphSpec";
 import { graphPlainText } from "../functionGraphs/graphTargets";
 import { validateSurfaceSpec, type SurfaceSpecV1 } from "../functionSurfaces/surfaceSpec";
+// Phase 21D-A.4 — the same block also carries the versioned multi-surface plot (surface.version 2); V1 keeps its own frozen authority.
+import { isSurfacePlotPayload, surfacePlotPlainText, surfacePlotStoredChars, validateSurfacePlotSpec, type SurfacePlotSpecV2 } from "../functionSurfaces/surfacePlotSpec";
 import { validateInteractive3DSceneSpec, type Interactive3DSceneSpecV1 } from "../interactive3d/sceneSpec";
 
 export const RICH_CONTENT_SCHEMA_VERSION = 1 as const;
@@ -52,7 +54,7 @@ export type RichBlock =
   // Phase 21A.2: a declarative mathematical function graph (ExamBank FunctionGraphSpecV1 — never a plotting-library option), validated by
   // the ONE graph authority (expressions are data for the safe engine, never code).
   | { type: "functionGraph"; graph: FunctionGraphSpecV1 }
-  | { type: "functionSurface3D"; surface: SurfaceSpecV1 }
+  | { type: "functionSurface3D"; surface: SurfaceSpecV1 | SurfacePlotSpecV2 }
   // Phase 21C: renderer-neutral interactive 3D scene; selection keys (if any) are part of the public scene, never the private answer key.
   | { type: "interactive3D"; scene: Interactive3DSceneSpecV1 };
 export type RichContentV1 = { schemaVersion: 1; blocks: RichBlock[] };
@@ -341,11 +343,11 @@ export function validateRichContent(raw: unknown, path = "richContent"): RichRes
       }
       case "functionSurface3D": {
         if (++surfaceCount > RICH_LIMITS.functionSurfaces) { add("RICH_CONTENT_LIMIT", "عدد الأسطح ثلاثية الأبعاد في المحتوى المنسق أكبر من الحد المسموح (" + RICH_LIMITS.functionSurfaces + ").", at); break; }
-        const surface = validateSurfaceSpec(b.surface);
+        const surface = isSurfacePlotPayload(b.surface) ? validateSurfacePlotSpec(b.surface) : validateSurfaceSpec(b.surface);
         if (!surface.ok) { for (const i of surface.issues) add("RICH_CONTENT_FUNCTION_SURFACE", i.message + " [" + i.code + "]", at + ".surface"); break; }
         if (surfaceIds.has(surface.value.id)) { add("RICH_CONTENT_FUNCTION_SURFACE", "معرّف السطح ثلاثي الأبعاد «" + surface.value.id + "» مكرّر في المحتوى نفسه.", at + ".surface.id"); break; }
         surfaceIds.add(surface.value.id);
-        totalChars += surface.value.title.length + surface.value.description.length + surface.value.expression.length;
+        totalChars += surface.value.version === 2 ? surfacePlotStoredChars(surface.value) : surface.value.title.length + surface.value.description.length + surface.value.expression.length;
         out = { type: "functionSurface3D", surface: surface.value };
         break;
       }
@@ -413,7 +415,7 @@ export function richContentPlainText(raw: unknown, opts: { storedOnly?: boolean 
         case "math": out.push(b.source); break;
         case "dataChart": out.push(opts.storedOnly ? [b.chart.title, b.chart.description, b.chart.source ?? ""].join("\n") : chartPlainText(b.chart)); break;
         case "functionGraph": out.push(opts.storedOnly ? [b.graph.title, b.graph.description, b.graph.source ?? ""].join("\n") : graphPlainText(b.graph)); break;
-        case "functionSurface3D": out.push([b.surface.title, b.surface.description, "z = " + b.surface.expression].join("\n")); break;
+        case "functionSurface3D": out.push(b.surface.version === 2 ? surfacePlotPlainText(b.surface) : [b.surface.title, b.surface.description, "z = " + b.surface.expression].join("\n")); break;
         case "interactive3D": out.push([b.scene.title, b.scene.description, ...b.scene.objects.map(o => o.label)].join("\n")); break;
         case "divider": break;
       }

@@ -18,8 +18,6 @@ const isPlain = (v) => {
     return p === Object.prototype || p === null;
 };
 const ID = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
-const UNSAFE_BIDI = /[\u202A-\u202E\u2066-\u2069]/;
-const UNSAFE_INVISIBLE = /[\u00AD\u034F\u061C\u180E\u200B\u200E\u200F\u2060\uFEFF]/;
 function validate(raw) {
     const issues = [];
     const fail = (code, path, message) => { issues.push({ code, path, message }); };
@@ -41,7 +39,7 @@ function validate(raw) {
         return v === 0 ? 0 : v;
     };
     const text = (v, path, max) => {
-        if (typeof v !== "string" || !v.trim() || v.length > max || proseGuard_1.CONTROL.test(v) || proseGuard_1.RAW_HTML.test(v) || UNSAFE_BIDI.test(v) || UNSAFE_INVISIBLE.test(v)) {
+        if (typeof v !== "string" || !v.trim() || v.length > max || proseGuard_1.CONTROL.test(v) || proseGuard_1.RAW_HTML.test(v) || proseGuard_1.UNSAFE_BIDI.test(v) || proseGuard_1.UNSAFE_INVISIBLE.test(v)) {
             fail("SURFACE_TEXT_INVALID", path, "النص غير صالح أو يتضمن علامات تحكم غير مسموحة.");
             return null;
         }
