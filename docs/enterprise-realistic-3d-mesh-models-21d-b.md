@@ -170,7 +170,7 @@ retrieval date. The viewer shows the provenance under "مصدر النموذج �
 | `src/meshModels/glbAsset.21db.test.ts`: accepted documents and every refusal class (container, uri, extensions, unsupported features, bounds, numbers, graph, parts, images, budgets, strict shape), 400-case corruption fuzz that never throws, strict UTF-8 | 16 / 16 |
 | `src/meshModels/meshModel.21db.test.ts`: contract (library pin, upload ref, derived URL, refusals, hostile input), camera framing invariance over yaw / pitch / aspect, normal matrix, pick-id round trip, loader (derived URL, no redirects, progress, SHA-256 before parsing, length pin, byte caps, HTTP / network / invalid / missing parts, shared download, cache, abort) | 15 / 15 |
 | `src/meshModels/meshViewer.21db.test.tsx`: load states and progress, fallback, errors and retry, invalid model, pick and list selection with maximum, hide / show, review marks, authored controls, orbit buttons and keys, fresh canvas and disposal under StrictMode | 7 / 7 |
-| `api/tests/mesh-assets-21db.test.js`: auth / name / size, unsafe and malformed uploads store nothing, content-addressed idempotent storage, per-teacher index, own list, sanitised names, runtime headers, malformed / traversal hashes, integrity at rest | 9 / 9 |
+| `api/tests/mesh-assets-21db.test.js`: auth / name / size, unsafe and malformed uploads store nothing, content-addressed idempotent storage, per-teacher index, own list, sanitised names, runtime headers, malformed / traversal hashes, integrity at rest | 8 / 8 |
 | Real Chromium (`scripts/check-mesh-models-browser-21db.mjs`, WebGL 2 through SwiftShader) | **37 / 37** (below) |
 
 The real-Chromium checks are:
