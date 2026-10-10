@@ -118,6 +118,15 @@ export default function MeshModel3DView({ model, library = MESH_LIBRARY, selecti
   const state = useMemo<MeshRenderState>(() => ({ camera, hidden, selected, hover, selectable, marks: markMap }), [camera, hidden, selected, hover, selectable, markMap]);
   const stateRef = useRef(state);
   useEffect(() => { stateRef.current = state; });
+  // every frame is drawn at the CURRENT drawing-buffer size: the state frames below and the asynchronous "textures ready" frame (it can
+  // come before the first state frame, or after the page moved to another display) both size the buffer first — a frame is never drawn,
+  // nor its stats published, at a stale size
+  const sizeRef = useRef({ width, height });
+  useEffect(() => { sizeRef.current = { width, height }; });
+  const fit = (r: MeshRenderer) => {
+    const el = canvas.current;
+    r.resize(el?.clientWidth || sizeRef.current.width, el?.clientHeight || sizeRef.current.height, typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1);
+  };
   useEffect(() => {
     const host = surface.current;
     if (!host || !document_ || !visible) return;
@@ -130,7 +139,7 @@ export default function MeshModel3DView({ model, library = MESH_LIBRARY, selecti
     const r = createRenderer(el, document_, {
       onContextLost: () => setGl({ phase: "lost", generation: ++generation }),
       onContextRestored: () => { setGl({ phase: "ready", generation: ++generation }); },
-      onTexturesReady: () => { const cur = renderer.current; if (cur) { cur.render(stateRef.current); setStats(cur.stats()); } }
+      onTexturesReady: () => { const cur = renderer.current; if (cur) { fit(cur); cur.render(stateRef.current); setStats(cur.stats()); } }
     });
     renderer.current = r;
     onRendererRef.current?.(r);
