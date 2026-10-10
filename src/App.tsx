@@ -33,6 +33,7 @@ import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { GovernanceService } from "./examGovernance";
 import type { SimulationService } from "./smartsim/simulationService";
+import type { MeshAssetService } from "./meshModels/meshAssetService";
 import type { AiAuthorResponse, AiAuthorService, AiScenarioResponse } from "./aiAuthoring/aiAuthorService";
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
@@ -61,7 +62,8 @@ import { QuestionTextBlock, parseTable } from "./questionContent";
 import { normalizeExamTheme, EXAM_THEMES, THEME_LABELS } from "./examTheme";
 import type { ExamTheme } from "./examTheme";
 import { createPortal } from "react-dom";
-import ExamPreview from "./ExamPreview";
+// Phase 21D-B.3 bundle relief — the flat-exam theme preview is a user-opened dialog, so it loads on demand (one-shot deployment recovery).
+const ExamPreview = lazy(lazyWithRetry(() => import("./ExamPreview"), "teacher-theme-preview"));
 import { GENERAL_INSTRUCTION_TEMPLATES, findGeneralInstructionTemplate } from "./instructionTemplates";
 import ThemeMiniPreview from "./ThemeMiniPreview";
 import "./App.css";
@@ -2865,18 +2867,22 @@ function App() {
   // token; nothing about the token reaches exam state, localStorage or the sandboxed frame.
   const tokenRef = useRef(token);
   useEffect(() => { tokenRef.current = token; });
+  const builderAuthHeaders = useMemo(() => (): Record<string, string> => (tokenRef.current ? { "x-builder-token": tokenRef.current, Authorization: "Bearer " + tokenRef.current } : {}), []);
   const structuredSimulations = useMemo<SimulationService>(() => {
     let clientPromise: Promise<SimulationService> | null = null;
-    const client = () => (clientPromise ??= import("./smartsim/simulationClient").then(m => m.createSimulationService({
-      requestJson: url => apiRequestRef.current(url),
-      authHeaders: (): Record<string, string> => (tokenRef.current ? { "x-builder-token": tokenRef.current, Authorization: "Bearer " + tokenRef.current } : {})
-    })));
+    const client = () => (clientPromise ??= import("./smartsim/simulationClient").then(m => m.createSimulationService({ requestJson: url => apiRequestRef.current(url), authHeaders: builderAuthHeaders })));
     return {
       list: () => client().then(c => c.list()),
       versions: packageId => client().then(c => c.versions(packageId)),
       upload: (file, onProgress) => client().then(c => c.upload(file, onProgress))
     };
-  }, []);
+  }, [builderAuthHeaders]);
+  // Phase 21D-B.3 — the App-owned mesh asset service (realistic 3D models): same lazy client, auth headers and token isolation.
+  const structuredMeshAssets = useMemo<MeshAssetService>(() => {
+    let clientPromise: Promise<MeshAssetService> | null = null;
+    const client = () => (clientPromise ??= import("./meshModels/meshAssetClient").then(m => m.createMeshAssetService({ requestJson: url => apiRequestRef.current(url), authHeaders: builderAuthHeaders })));
+    return { list: () => client().then(c => c.list()), upload: (file, onProgress) => client().then(c => c.upload(file, onProgress)) };
+  }, [builderAuthHeaders]);
   // Phase 19A — the App-owned AI authoring service: ONE POST to /api/ai-question-author through the same authenticated request
   // helper; the builder never sees the token. The server returns a canonical draft or a refusal; the builder re-verifies it.
   const structuredAiAuthor = useMemo<AiAuthorService>(() => ({ author: body => apiRequestRef.current<AiAuthorResponse>("/api/ai-question-author", { method: "POST", body: JSON.stringify(body) }), authorScenario: body => apiRequestRef.current<AiScenarioResponse>("/api/ai-scenario-author", { method: "POST", body: JSON.stringify(body) }),
@@ -7756,7 +7762,7 @@ function App() {
 
             {themePreviewOpen && previewMode === "edit" && exam &&
               createPortal(
-                <ExamPreview exam={exam} onClose={() => setThemePreviewOpen(false)} />,
+                <Suspense fallback={null}><ExamPreview exam={exam} onClose={() => setThemePreviewOpen(false)} /></Suspense>,
                 document.body
               )}
 
@@ -7889,6 +7895,7 @@ function App() {
               presets={structuredPresets}
               onOpenExamFromPreset={openExamFromPreset}
               simulations={structuredSimulations}
+              meshAssets={structuredMeshAssets}
               aiAuthor={structuredAiAuthor}
             />
           </Suspense>

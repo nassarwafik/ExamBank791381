@@ -78,3 +78,12 @@
 .mm3d-row{display:flex;flex-wrap:wrap;gap:.45rem}
 .mm3d-preview{border-top:1px dashed #c5d7e7;padding-top:.6rem;min-width:0}
 @media (max-width:720px){.mm3d-part-rows li{grid-template-columns:1fr}}
+/* Phase 21D-B.3 — question, key and review */
+.mm3d-instruction{font-weight:700;margin:.2rem 0 .4rem;color:#17324c}
+.mm3d-key-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.4rem}
+.mm3d-key-list li{padding:.4rem .6rem;border:1px solid #d3e0ec;border-radius:8px;background:#fbfdff}
+.mm3d-review-list{list-style:none;margin:.4rem 0;padding:0;display:grid;gap:.3rem}
+.mm3d-review-list li{padding:.35rem .6rem;border-radius:8px;border:1px solid #d3e0ec}
+.mm3d-review-list li.is-correct{border-color:#1f8a45;background:#eefaf2}
+.mm3d-review-list li.is-incorrect{border-color:#b42318;background:#fff1f0}
+.mm3d-review-list li.is-missed{border-color:#c58a06;background:#fffaeb}

@@ -55,6 +55,7 @@ export type { GovernanceService } from "./examGovernance";
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 export type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import { SimulationServiceContext, type SimulationService } from "./smartsim/simulationService";
+import { MeshAssetServiceContext, type MeshAssetService } from "./meshModels/meshAssetService";
 export type { SimulationService } from "./smartsim/simulationService";
 
 // Phase 13B — the Question Bank picker is loaded only when a teacher opens it (its own chunk inside the builder chunk).
@@ -130,6 +131,8 @@ type Props = {
   // Phase 16B-A — the App-owned Simulation service (upload / library). Same pattern: the builder never receives a token; the
   // lazy simulation editor reaches the service through context; without a service the upload / library actions are not offered.
   simulations?: SimulationService;
+  /** Phase 21D-B.3 — the App-owned mesh asset service (upload / "my models" in the 3D model editor); absent → library only. */
+  meshAssets?: MeshAssetService;
   // Phase 19A — the App-owned AI authoring service (one POST to /api/ai-question-author). The builder never receives a token; without
   // a service the «سؤال بالذكاء الاصطناعي» action is simply not offered.
   aiAuthor?: AiAuthorService;
@@ -144,7 +147,7 @@ const FLASH_MS = 1200;
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, aiAuthor }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -506,7 +509,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const totalMarks = computeTotalMarks(exam);
 
   return (
-    <SimulationServiceContext.Provider value={simulations}>
+    <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
     <div className="sb-builder" dir="rtl">
       <header className="sb-toolbar">
         <div className="sb-toolbar-main">
@@ -717,7 +720,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         </p>
       </Dialog>
     </div>
-    </SimulationServiceContext.Provider>
+    </MeshAssetServiceContext.Provider></SimulationServiceContext.Provider>
   );
 }
 

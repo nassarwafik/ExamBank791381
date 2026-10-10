@@ -87,6 +87,8 @@ registerTypeDefaults("chartSelection", 1, ensure => { ensure("chartSelection", {
 registerTypeDefaults("functionGraphSelection", 1, ensure => { ensure("functionGraphSelection", { v: 1, target: "point", mode: "single", maxSelections: 1 }); ensure("answer", { scoring: "allOrNothing", correct: [] }); });
 // Phase 21C — identity only: the lazy editor creates the scene + private key when the teacher chooses a preset; finalization blocks until then.
 registerTypeDefaults("scene3DSelection", 1, () => {});
+// Phase 21D-B.3 — identity only: the lazy editor creates the model + private key when the teacher picks an asset; finalization blocks until then.
+registerTypeDefaults("meshPartSelection", 1, () => {});
 registerTypeDefaults("labelDiagram", 1, ensure => { ensure("labelDiagram", { v: 1, alt: "", allowReuse: false, zones: [], labels: [] }); ensure("answer", { scoring: "proportional", correctLabelByZone: {} }); });
 // Phase 19E — openResponse@1: the general profile and an EMPTY rubric that blocks finalization until the teacher builds one (the lazy
 // editor offers the useful 10-point default rubric in one click). Literal on purpose (initial graph); parity-tested against the model.

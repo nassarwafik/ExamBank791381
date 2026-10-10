@@ -445,6 +445,10 @@ async function transition(container, { examId, to, actor: rawActor, requestId, e
     const simulationAvailability = typeof deps.simulationAvailability === "function" ? deps.simulationAvailability : require("./smartsim/package-store").examSimulationAvailabilityIssues;
     const unavailable = await simulationAvailability(container, stored.exam);
     if (unavailable.length) throw new GovernanceError(422, "SIMULATION_PACKAGE_UNAVAILABLE", "حزمة محاكاة مثبّتة في الامتحان غير متاحة في المخزن؛ لا يمكن إرسال الإصدار للمراجعة.", { issues: unavailable });
+    // Phase 21D-B.3 — every UPLOADED mesh model must exist in the mesh-asset store with the pinned length and every labelled part.
+    const meshAvailability = typeof deps.meshAssetAvailability === "function" ? deps.meshAssetAvailability : require("./mesh-assets/store").examMeshAssetAvailabilityIssues;
+    const missingModels = await meshAvailability(container, stored.exam);
+    if (missingModels.length) throw new GovernanceError(422, "MESH_ASSET_UNAVAILABLE", "ملف نموذج ثلاثي الأبعاد مثبّت في الامتحان غير متاح في المخزن؛ لا يمكن إرسال الإصدار للمراجعة.", { issues: missingModels });
     next.reviewRevisionId = revisionId;
     next.reviewRevisionNumber = manifest.latestRevisionNumber;
     boundRevisionId = revisionId;

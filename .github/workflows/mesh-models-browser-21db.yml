@@ -9,6 +9,11 @@ on:
       - "browser-harness/mesh-anatomy-21db.*"
       - "scripts/check-mesh-models-browser-21db.mjs"
       - "scripts/check-mesh-anatomy-browser-21db.mjs"
+      - "scripts/check-mesh-exam-browser-21db3.mjs"
+      - "browser-harness/mesh-exam-21db3.*"
+      - "src/meshPartSelectionQuestion.ts"
+      - "src/questionTypes/student/MeshPartSelectionResponse.tsx"
+      - "docs/fixtures/mesh-models-21db3/**"
       - "public/mesh-assets/**"
       - "docs/enterprise-realistic-3d-mesh-models-21d-b.md"
       - ".github/workflows/mesh-models-browser-21db.yml"
@@ -42,6 +47,12 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21db
         run: node --experimental-strip-types scripts/check-mesh-anatomy-browser-21db.mjs
+      - name: Certify the Arabic acceptance exam (six model questions, autosave / reload, grading, review, low memory, no WebGL) in real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-21db
+        run: node --experimental-strip-types scripts/check-mesh-exam-browser-21db3.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -31,6 +31,8 @@ function answered(a) {
         return Array.isArray(a.points) && a.points.length > 0;
     if ("targets" in a)
         return Array.isArray(a.targets) && a.targets.length > 0;
+    if (a.kind === "meshPartSelection")
+        return Array.isArray(a.parts) && a.parts.length > 0;
     if (a.kind === "smartSim")
         return Array.isArray(a.actions) && a.actions.length > 0;
     if (a.kind === "composite")

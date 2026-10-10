@@ -146,6 +146,9 @@ function isResponseAnswered(a) {
     // Phase 21A.2 — a function-graph selection counts when at least one target is selected (mirror of answerState.ts).
     case "functionGraphSelection":
       return Array.isArray(a.targets) && a.targets.length > 0;
+    // Phase 21D-B.3 — a mesh part selection counts when at least one named part is selected (mirror of answerState.ts).
+    case "meshPartSelection":
+      return Array.isArray(a.parts) && a.parts.length > 0;
     // Phase 20A — a trusted SmartSim answer counts when it carries at least one action (mirror of answerState.ts).
     case "smartSim":
       return Array.isArray(a.actions) && a.actions.length > 0;

@@ -222,10 +222,14 @@ const { projectChartSelectionConfigForStudent } = require("./shared-finalization
 const { projectFunctionGraphSelectionConfigForStudent } = require("./shared-finalization/functionGraphSelectionQuestion");
 // Phase 21C — strict allow-list rebuild of public 3D scene-selection configuration; private correctness remains under answer.
 const { projectScene3DSelectionConfigForStudent } = require("./shared-finalization/scene3DSelectionQuestion");
+// Phase 21D-B.3 — the public mesh-model configuration is rebuilt through the strict MeshModelSpecV1 authority (canonical copy, no foreign
+// field); the correct parts stay under `answer`, which is never sent.
+const { projectMeshPartSelectionConfigForStudent } = require("./shared-finalization/meshPartSelectionQuestion");
 function applyVisualProjection(node) {
   if ("chartSelection" in node) { const p = projectChartSelectionConfigForStudent(node.chartSelection); if (p) node.chartSelection = p; else delete node.chartSelection; }
   if ("functionGraphSelection" in node) { const p = projectFunctionGraphSelectionConfigForStudent(node.functionGraphSelection); if (p) node.functionGraphSelection = p; else delete node.functionGraphSelection; }
   if ("scene3DSelection" in node) { const p = projectScene3DSelectionConfigForStudent(node.scene3DSelection); if (p) node.scene3DSelection = p; else delete node.scene3DSelection; }
+  if ("meshPartSelection" in node) { const p = projectMeshPartSelectionConfigForStudent(node.meshPartSelection); if (p) node.meshPartSelection = p; else delete node.meshPartSelection; }
   if ("hotspot" in node) { const p = projectHotspotConfigForStudent(node.hotspot); if (p) node.hotspot = p; else delete node.hotspot; }
   if ("labelDiagram" in node) { const p = projectLabelDiagramConfigForStudent(node.labelDiagram); if (p) node.labelDiagram = p; else delete node.labelDiagram; }
 }
