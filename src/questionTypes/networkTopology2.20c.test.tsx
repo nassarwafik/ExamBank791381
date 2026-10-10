@@ -153,7 +153,7 @@ describe("networkTopology@2 — authoring (teacher is the only topology authorit
     fireEvent.click(within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "smartSim")!); await tick(50);
     const host = await screen.findByTestId("qt-editor-smartSim", {}, { timeout: 3000 });
     const select = within(host).getByTestId("smartsim-plugin-select") as HTMLSelectElement;
-    expect([...select.options].map(o => o.value)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1"]);
+    expect([...select.options].map(o => o.value)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1", "physicsLab@1"]);
     fireEvent.change(select, { target: { value: "networkTopology@2" } }); await tick(50);
     const ed = await within(host).findByTestId("net2-editor", {}, { timeout: 4000 });
     const q = () => hist.present!.sections[0].questions[1] as unknown as { smartSim: { pluginKey: string; pluginVersion: number; config: { devices: { id: string; kind: string; initial?: Record<string, unknown> }[]; links: unknown[] } }; answer: { checks: unknown[] } };

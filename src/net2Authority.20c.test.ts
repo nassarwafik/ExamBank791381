@@ -93,7 +93,7 @@ describe("20C-C — exact identity, descriptor ↔ normalizer contract, topology
     expect(resolveSmartSimPlugin("networkTopology", 2)).toBe(networkTopologyPluginV2);
     expect(resolveSmartSimPlugin("networkTopology", 1)).toBe(networkTopologyPluginV1);
     for (const [k, v] of [["networkTopology", 3], ["networkTopology", "2"], ["NetworkTopology", 2], ["networktopology", 2], ["networkTopology", 2.5]] as const) expect(resolveSmartSimPlugin(k, v), String(k) + "@" + String(v)).toBeUndefined();
-    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1"]);   // Phase 21D-A.1 appended physicsMotion@1
+    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1", "physicsLab@1"]);   // Phase 21D-A.1 appended physicsMotion@1
     expect(resolveSmartSimDescriptor("networkTopology", 2)).toEqual(NETWORK_TOPOLOGY_DESCRIPTOR_V2);
     expect(NETWORK_TOPOLOGY_DESCRIPTOR_V2).toMatchObject({ key: "networkTopology", version: 2, domain: "networking", genericRules: [] });
     expect(validateSmartSimQuestion({ ...question(tpl("roas").config(), tpl("roas").checks()), smartSim: env(routerTwoV1()) }).map(i => i.code)).toContain("NET2_CONFIG_VERSION_UNSUPPORTED");   // a v1 config is never silently migrated

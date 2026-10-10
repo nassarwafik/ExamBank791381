@@ -57,7 +57,10 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   // byte-identical logic to the student workspaces and the teacher editors.
   "src/physicsFreeFallModel.ts", "src/physicsFreeFallPlugin.ts", "src/functionStudyModel.ts", "src/functionStudyPlugin.ts",
   // Phase 21D-A.1 — the shared physics core and the physicsMotion@1 plugin (free fall, projectile, Newton's second law, inclined plane).
-  "src/physics/motionCore.ts", "src/physicsMotionModel.ts", "src/physicsMotionPlugin.ts",
+  // Phase 21D-A.2 — src/physics/measurementTasks.ts: the measurement-task mechanics shared by physicsMotion@1 and physicsLab@1.
+  "src/physics/motionCore.ts", "src/physics/measurementTasks.ts", "src/physicsMotionModel.ts", "src/physicsMotionPlugin.ts",
+  // Phase 21D-A.2 — the advanced physics core and the physicsLab@1 plugin (pendulum, spring, mechanical energy, DC circuits).
+  "src/physics/labCore.ts", "src/physicsLabModel.ts", "src/physicsLabPlugin.ts",
   // Phase 20C — networkTopology@2 (the curriculum network simulator): shared primitives, configuration authority, switch / router CLI v2,
   // the operational network engine, the host Command Prompt and the plugin. networkTopology@1's modules above stay frozen.
   "src/net2Common.ts", "src/net2Model.ts", "src/net2SwitchCli.ts", "src/net2RouterCli.ts", "src/net2Network.ts", "src/net2Host.ts", "src/net2Plugin.ts",
