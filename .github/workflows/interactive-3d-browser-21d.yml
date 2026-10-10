@@ -1,0 +1,47 @@
+name: Phase 21D Real Chromium 3D Engine Certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/interactive3d/**"
+      - "src/functionSurfaces/Surface3DView.tsx"
+      - "src/questionTypes/student/S3DResponse.tsx"
+      - "src/StudentQuestionCard.tsx"
+      - "browser-harness/interactive-3d-21d.*"
+      - "scripts/check-interactive-3d-browser-21d.mjs"
+      - "docs/phase21d-3d-*.md"
+      - ".github/workflows/interactive-3d-browser-21d.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    name: 21D rotation zoom touch reset lifecycle exam views motion print
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production assets and browser core
+        run: |
+          npm ci
+          npm run build
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
+          command -v google-chrome
+      - name: Certify real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-21d
+          # frame timing depends on the runner's CPU, which a shared runner does not control: the numbers are recorded in the artifact
+          # and gated on the certification machine (docs/phase21d-3d-performance.md); every behavioural and visual check is gated here
+          PERF_GATE: "0"
+        run: node scripts/check-interactive-3d-browser-21d.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: interactive-3d-21d-browser
+          path: .harness-21d/
+          retention-days: 7

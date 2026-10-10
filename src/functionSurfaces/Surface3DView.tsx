@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { evaluateExpression } from "../parametricExpression";
 import { projectSurface, sampleSurface } from "./surfaceMesh";
 import { type SurfaceCamera, type SurfaceSpecV1, validateSurfaceSpec } from "./surfaceSpec";
@@ -8,14 +8,19 @@ import "./surface-3d.css";
 // No WebGL, eval, remote scripts, renderer options or new rendering dependency; camera state is presentation-only.
 const FILLS = ["#e1effb", "#c8e1f6", "#a9d0eb", "#89b9dd", "#6aa2d1", "#4987b9", "#3671a5", "#285b91"];
 const start = (s: SurfaceSpecV1): SurfaceCamera => s.camera ?? { azimuth: -0.75, elevation: 0.6 };
-const limitAngle = (n: number) => Math.max(-Math.PI, Math.min(Math.PI, n));
+// Phase 21D: the azimuth wraps (a surface can be turned round and round; clamping it at ±π stopped the rotation dead)
+const limitAngle = (n: number) => n - 2 * Math.PI * Math.round(n / (2 * Math.PI));
 const limitElevation = (n: number) => Math.max(0.15, Math.min(1.35, n));
 export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
   const uid = useId().replace(/[^A-Za-z0-9_-]/g, "");
   const checked = useMemo(() => validateSurfaceSpec(spec), [spec]);
   const [camera, setCamera] = useState<SurfaceCamera>(() => start(spec));
   const drag = useRef<{ id: number; x: number; y: number; azimuth: number; elevation: number } | null>(null);
-  useEffect(() => { setCamera(start(spec)); }, [spec]);
+  // Phase 21D: the camera resets when the surface CONTENT changes, never because a parent passed an identical spec object again
+  // (state adjusted while rendering, React's pattern for a prop change)
+  const contentKey = useMemo(() => JSON.stringify(spec), [spec]);
+  const [shownKey, setShownKey] = useState(contentKey);
+  if (shownKey !== contentKey) { setShownKey(contentKey); setCamera(start(spec)); }
   const mesh = useMemo(() => checked.ok ? sampleSurface(checked.value, checked.ast) : null, [checked]);
   const scene = useMemo(() => (checked.ok && mesh) ? projectSurface(mesh, checked.value, camera) : null, [checked, mesh, camera]);
   const table = useMemo(() => {
