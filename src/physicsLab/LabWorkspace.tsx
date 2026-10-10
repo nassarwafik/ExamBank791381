@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { SmartSimWorkspaceProps } from "../trustedSim/smartSimUiRegistry";
 import { LAB_EXPERIMENT_LABEL, LAB_PRIMARY_AXES, labControlOf, labExplorationProblem, validateLabConfig, type LabConfigV1 } from "../physicsLabModel";
-import { replayLab, type LabStateV1 } from "../physicsLabPlugin";
+import type { LabStateV1 } from "../physicsLabPlugin";
+import { resolveSmartSimPlugin } from "../trustedSimPlugins";
+import { replaySmartSimActions } from "../trustedSimQuestion";
 import { LAB_PARAM_SPEC, fmtLab, labEndTime, labFrame, labSamples, type LabFrame, type LabModel, type LabParams } from "../physics/labCore";
 import { DYNAMIC_LIMITS } from "../smartsim/dynamic/simulationClock";
 import { useSimulationClock } from "../smartsim/dynamic/useSimulationClock";
@@ -21,6 +23,12 @@ import "./lab.css";
 //     the core evaluated at the clock time (deterministic). For the circuit the clock only animates the current markers (DC steady state).
 //   * Exploration (teacher-permitted parameters, dragging the pendulum at t = 0, choosing the component a meter reads) is PRESENTATION:
 //     never saved, never graded; a banner says so whenever the explored experiment differs, with a one-click return.
+/** Answers are replayed through the REGISTERED plugin with the SmartSim core's own bounded replay (the one path every surface uses); the
+ *  plugin modules therefore load with the registry instead of as extra chunks of the initial preload lists (Phase 21D-A.2 bundle budget). */
+const replayState = (cfg: LabConfigV1, actions: readonly unknown[]): { ok: true; state: LabStateV1 } | { ok: false } => {
+  const plugin = resolveSmartSimPlugin("physicsLab", 1), r = plugin ? replaySmartSimActions(plugin, cfg, actions) : null;
+  return r && r.ok ? { ok: true, state: r.state as LabStateV1 } : { ok: false };
+};
 type Act = { measurementId?: string; pointId?: string };
 const taskOf = (a: unknown) => { const x = a as Act; return x && typeof x === "object" ? x.measurementId ?? x.pointId : undefined; };
 type SavedPoint = { id: string; label: string; x: number; y: number };
@@ -148,7 +156,7 @@ function pl2Legend(plots: { spec: { id: string }; series: { id: string; label: s
 
 export default function LabWorkspace({ config: rawConfig, actions, onChange, disabled, label }: SmartSimWorkspaceProps) {
   const cfg = useMemo<LabConfigV1 | null>(() => { const r = validateLabConfig(rawConfig); return r.ok ? r.config : null; }, [rawConfig]);
-  const replay = useMemo(() => (cfg ? replayLab(cfg, actions) : null), [cfg, actions]);
+  const replay = useMemo(() => (cfg ? replayState(cfg, actions) : null), [cfg, actions]);
   const [confirm, setConfirm] = useState(false);
   const [explore, setExplore] = useState<{ base: LabConfigV1 | null; params: LabParams | null }>({ base: cfg, params: cfg ? { ...cfg.params } : null });
   if (explore.base !== cfg) setExplore({ base: cfg, params: cfg ? { ...cfg.params } : null });      // a new config restarts from the authored values
@@ -163,7 +171,7 @@ export default function LabWorkspace({ config: rawConfig, actions, onChange, dis
   if (!cfg || !model) return <p className="ncli-unavailable" role="note" data-testid="lab-unavailable">إعداد تجربة المختبر لهذا السؤال غير متوفر في هذا الإصدار.</p>;
   const state: LabStateV1 = replay && replay.ok ? replay.state : { v: 1, measurements: {}, points: {} };
   const base = replay && replay.ok ? [...actions] : [];
-  const emit = (next: unknown[]) => { const r = replayLab(cfg, next); if (r.ok) onChange(next, r.state); };
+  const emit = (next: unknown[]) => { const r = replayState(cfg, next); if (r.ok) onChange(next, r.state); };
   const decide = (id: string, action: Record<string, unknown>) => emit([...base.filter(a => taskOf(a) !== id), action]);
   const axes = LAB_PRIMARY_AXES[cfg.experiment];
   const spec = LAB_PARAM_SPEC[cfg.experiment];

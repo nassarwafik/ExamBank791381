@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { SmartSimWorkspaceProps } from "../trustedSim/smartSimUiRegistry";
 import { MOTION_EXPERIMENT_LABEL, MOTION_PRIMARY_AXES, motionControlOf, motionExplorationProblem, validateMotionConfig, type MotionConfigV1 } from "../physicsMotionModel";
-import { replayMotion, type MotionStateV1 } from "../physicsMotionPlugin";
+import type { MotionStateV1 } from "../physicsMotionPlugin";
+import { resolveSmartSimPlugin } from "../trustedSimPlugins";
+import { replaySmartSimActions } from "../trustedSimQuestion";
 import { MOTION_PARAM_SPEC, fmtMotion, motionEndTime, motionFrame, motionSamples, type MotionModel, type MotionParams } from "../physics/motionCore";
 import { ClockBar, ExplorationPanel, MeasurementTask, PointTask } from "../physicsShared/labWidgets";
 import { DYNAMIC_LIMITS } from "../smartsim/dynamic/simulationClock";
@@ -24,6 +26,12 @@ import "./motion.css";
 //     it is never saved and the tasks are always graded on the experiment the teacher authored; a banner says so whenever the explored
 //     values differ, with a one-click return to the authored experiment.
 // prefers-reduced-motion: no play control and no animation; stepping, the slider and time entry keep every value reachable.
+/** Answers are replayed through the REGISTERED plugin with the SmartSim core's own bounded replay (the one path every surface uses); the
+ *  plugin modules therefore load with the registry instead of as extra chunks of the initial preload lists (Phase 21D-A.2 bundle budget). */
+const replayState = (cfg: MotionConfigV1, actions: readonly unknown[]): { ok: true; state: MotionStateV1 } | { ok: false } => {
+  const plugin = resolveSmartSimPlugin("physicsMotion", 1), r = plugin ? replaySmartSimActions(plugin, cfg, actions) : null;
+  return r && r.ok ? { ok: true, state: r.state as MotionStateV1 } : { ok: false };
+};
 type Act = { measurementId?: string; pointId?: string };
 const taskOf = (a: unknown) => { const x = a as Act; return x && typeof x === "object" ? x.measurementId ?? x.pointId : undefined; };
 type SavedPoint = { id: string; label: string; x: number; y: number };
@@ -126,7 +134,7 @@ function MotionDynamicView({ model: m, maxTime, graphs, showVectors, savedPoints
 
 export default function MotionWorkspace({ config: rawConfig, actions, onChange, disabled, label }: SmartSimWorkspaceProps) {
   const cfg = useMemo<MotionConfigV1 | null>(() => { const r = validateMotionConfig(rawConfig); return r.ok ? r.config : null; }, [rawConfig]);
-  const replay = useMemo(() => (cfg ? replayMotion(cfg, actions) : null), [cfg, actions]);
+  const replay = useMemo(() => (cfg ? replayState(cfg, actions) : null), [cfg, actions]);
   const [confirm, setConfirm] = useState(false);
   const [explore, setExplore] = useState<{ base: MotionConfigV1 | null; params: MotionParams | null }>({ base: cfg, params: cfg ? { ...cfg.params } : null });
   if (explore.base !== cfg) setExplore({ base: cfg, params: cfg ? { ...cfg.params } : null });      // a new config restarts from the authored values
@@ -141,7 +149,7 @@ export default function MotionWorkspace({ config: rawConfig, actions, onChange, 
   if (!cfg || !model) return <p className="ncli-unavailable" role="note" data-testid="motion-unavailable">إعداد محاكاة الحركة لهذا السؤال غير متوفر في هذا الإصدار.</p>;
   const state: MotionStateV1 = replay && replay.ok ? replay.state : { v: 1, measurements: {}, points: {} };
   const base = replay && replay.ok ? [...actions] : [];
-  const emit = (next: unknown[]) => { const r = replayMotion(cfg, next); if (r.ok) onChange(next, r.state); };
+  const emit = (next: unknown[]) => { const r = replayState(cfg, next); if (r.ok) onChange(next, r.state); };
   const decide = (id: string, action: Record<string, unknown>) => emit([...base.filter(a => taskOf(a) !== id), action]);
   const axes = MOTION_PRIMARY_AXES[cfg.experiment];
   // each value + unit is an LTR island so labels ending in parentheses never reorder it in the RTL sentence
