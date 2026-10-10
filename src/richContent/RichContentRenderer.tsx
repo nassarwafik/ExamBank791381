@@ -15,6 +15,8 @@ const DataChart = lazy(() => import("../charts/DataChart"));
 // Phase 21A.2 — the function-graph runtime (owned SVG renderer) is its own lazy chunk: a document without a graph never downloads it.
 const FunctionGraphView = lazy(() => import("../functionGraphs/FunctionGraphView"));
 const Surface3DView = lazy(() => import("../functionSurfaces/Surface3DView"));
+// Phase 21D-A.4 — the versioned multi-surface plot (surface.version 2) has its own lazy viewer; V1 surfaces keep the frozen 21B viewer.
+const SurfacePlot3DView = lazy(() => import("../functionSurfaces/SurfacePlot3DView"));
 // Phase 21C — general interactive 3D scene runtime stays behind a separate lazy edge.
 const Interactive3DView = lazy(() => import("../interactive3d/Interactive3DView"));
 
@@ -152,7 +154,11 @@ function Block({ b }: { b: RichBlock }): ReactNode {
         <FunctionGraphView spec={b.graph} />
       </Suspense>
     );
-    case "functionSurface3D": return (
+    case "functionSurface3D": return b.surface.version === 2 ? (
+      <Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p>{b.surface.surfaces.map(s => <p key={s.id} dir="ltr">z = {s.expression}</p>)}</div>}>
+        <SurfacePlot3DView spec={b.surface} />
+      </Suspense>
+    ) : (
       <Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p><p dir="ltr">z = {b.surface.expression}</p></div>}>
         <Surface3DView spec={b.surface} />
       </Suspense>

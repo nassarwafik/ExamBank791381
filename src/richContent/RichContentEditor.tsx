@@ -9,7 +9,9 @@ import { readImageFile, MEDIA_MSG } from "../questionMedia";
 import { useConfirm } from "../ui/useConfirm";
 import { defaultChart, newChartId } from "../charts/chartEditing";
 import { defaultFunctionGraph } from "../functionGraphs/graphEditing";
-import { defaultSurface, newSurfaceId } from "../functionSurfaces/surfaceEditing";
+import { newSurfaceId } from "../functionSurfaces/surfaceEditing";
+// Phase 21D-A.4 — new 3D surface blocks are versioned multi-surface plots (V2); a stored V1 surface stays V1 until the teacher upgrades it.
+import { defaultSurfacePlot, surfacePlotFromV1 } from "../functionSurfaces/surfacePlotPresets";
 import { freshScene3DId, scene3DPreset } from "../interactive3d/scenePresets";
 import type { ConfirmOptions } from "../ui/ConfirmDialog";
 import "./rich-content-editor.css";
@@ -29,6 +31,7 @@ const ChartEditor = lazy(() => import("../charts/ChartEditor"));
 // Phase 21A.2 — the function-graph editor (typed controls + its own preview) is its own lazy chunk.
 const GraphEditor = lazy(() => import("../functionGraphs/GraphEditor"));
 const Surface3DEditor = lazy(() => import("../functionSurfaces/Surface3DEditor"));
+const SurfacePlot3DEditor = lazy(() => import("../functionSurfaces/SurfacePlot3DEditor"));
 const Scene3DEditor = lazy(() => import("../interactive3d/Scene3DEditor"));
 const newGraphId = () => "graph-" + Math.random().toString(36).slice(2, 8);
 
@@ -98,7 +101,7 @@ function defaultRichBlock(type: Exclude<RichBlockType, "image" | "figure">): Ric
     case "math": return { type: "math", source: "a^{2} + b^{2} = c^{2}" };
     case "dataChart": return { type: "dataChart", chart: defaultChart("bar") };
     case "functionGraph": return { type: "functionGraph", graph: defaultFunctionGraph(newGraphId()) };
-    case "functionSurface3D": return { type: "functionSurface3D", surface: defaultSurface() };
+    case "functionSurface3D": return { type: "functionSurface3D", surface: defaultSurfacePlot(newSurfaceId()) };
     case "interactive3D": return { type: "interactive3D", scene: scene3DPreset("cube", freshScene3DId("scene")) };
   }
 }
@@ -465,8 +468,13 @@ function BlockBody({ block: b, name, set, disabled, confirm }: { block: RichBloc
         <GraphEditor graph={b.graph} name={name} disabled={disabled} confirm={confirm} onChange={graph => set({ type: "functionGraph", graph })} />
       </Suspense>
     );
-    case "functionSurface3D": return (
+    case "functionSurface3D": return b.surface.version === 2 ? (
+      <Suspense fallback={<p className="rc-hint" role="status">جارٍ تحميل محرر الرسم ثلاثي الأبعاد…</p>}>
+        <SurfacePlot3DEditor surface={b.surface} name={name} disabled={disabled} onChange={surface => set({ type: "functionSurface3D", surface })} />
+      </Suspense>
+    ) : (
       <Suspense fallback={<p className="rc-hint" role="status">جارٍ تحميل محرر السطح ثلاثي الأبعاد…</p>}>
+        <p className="rc-hint" data-testid="surface-v1-upgrade">سطح بصيغة الإصدار الأول (سطح واحد). يمكنك ترقيته إلى رسم متعدد الأسطح عالي الدقة؛ لا تتغير الأسطح المحفوظة إلا بهذا الاختيار. <button type="button" disabled={disabled} onClick={() => { const v1 = b.surface; if (v1.version !== 2) set({ type: "functionSurface3D", surface: surfacePlotFromV1(v1) }); }}>ترقية إلى رسم متعدد الأسطح</button></p>
         <Surface3DEditor surface={b.surface} name={name} disabled={disabled} onChange={surface => set({ type: "functionSurface3D", surface })} />
       </Suspense>
     );

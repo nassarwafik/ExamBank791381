@@ -38,6 +38,6 @@ export function surfacePlotPreset(key: SurfacePlotPresetKey, id = newSurfacePlot
 export const defaultSurfacePlot = (id = newSurfacePlotId()): SurfacePlotSpecV2 => surfacePlotPreset("single", id);
 /** A V1 surface as a single-surface V2 plot (same id, texts, formula and window; the V2 default view and controls). */
 export function surfacePlotFromV1(v1: SurfaceSpecV1): SurfacePlotSpecV2 {
-  const label = ("z = " + v1.expression).length <= 60 ? "z = " + v1.expression : v1.title.slice(0, 60);
+  const label = v1.title.trim().slice(0, 60).trim() || "z = f(x, y)";                              // the legend shows the formula next to it
   return { ...base(v1.id, v1.title, v1.description, { ...v1.viewport }, [{ id: "surface1", label, expression: v1.expression, color: "blue" }]), controls: { rotate: true, zoom: true, toggleSurfaces: false } };
 }
