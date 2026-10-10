@@ -1,6 +1,6 @@
 # Phase 21D-D — Enterprise Chemistry SmartSim (design record)
 
-Status: **D.1 implemented on `feature/phase-21d-d1-chemistry-atomic-molecular`** (baseline `origin/main` = `c59242266acd8376dcad711efa6bfb78918ff1b4`).
+Status: **D.1 implemented on `feature/phase-21d-d1-chemistry-atomic-molecular`** (baseline `origin/main` = `c59242266acd8376dcad711efa6bfb78918ff1b4`); awaiting independent review.
 D.2–D.4 are planned in §9 and will ship as separate pull requests. Nothing is merged by an agent: the owner performs every merge.
 
 This record is the phase record required by `AGENTS.md` §1. Sections §1–§3 are the audit and the architecture decision, §4–§8 describe
@@ -97,9 +97,55 @@ parsed by the trusted parser, the selection bound enforced; at most 500 actions.
 A check whose reference is undefined for the authored subject (e.g. "valence electrons" of a d-block element, "bond angle" of a diatomic
 molecule) is **refused at authoring time** — it can never silently award or withhold marks.
 
-## 5–8. UI, server, bundle and security (D.1 as built)
+## 5. UI (lazy; `src/chemistryStructure/*`)
 
-Filled with the implementation evidence in §10.
+| Surface | What it does | Accessibility / RTL |
+|---|---|---|
+| **Atom builder** (`ChemWorkspace`, `AtomModel`) | Counters for p⁺ / n / e⁻ and for electrons per shell K–N are DRAFTS; *حفظ البناء* / *حفظ التوزيع* emit one semantic action each. The SVG shell diagram follows the draft and always carries the note *«تمثيل تعليمي: الدوائر تجمع الإلكترونات حسب رقم الغلاف (n)، وليست مدارات أو مسارات حقيقية …»*. The live identity of the built species (ᴬ_Z X^q, name, “uncatalogued mass number”, “unusual charge”) appears only when the teacher allows it. | number inputs + labelled −/+ buttons; `aria-live` identity; nuclide notation as an LTR island. |
+| **Periodic table** (`PeriodicTable`) | 36 cells at their IUPAC (group, period) positions, coloured by category; focus / hover shows the information line (basic or detailed); when the task asks for elements, pressing a cell chooses it (single choice replaces, multiple bounded by `max`). | ONE tab stop (roving `tabindex`), arrows / Home / End move, Enter / Space choose; `aria-pressed`; LTR grid inside its own horizontal scroller (the page never overflows at 390 px). |
+| **3D molecule** (`MoleculeView3D`) | Ball-and-stick on the shared `useOrbitCamera` (drag with inertia, Ctrl/after-click wheel, pinch, arrows, +/−, Home, auto-fit by bounding sphere); depth-sorted shaded circles, bonds trimmed to the atom surfaces, double / triple bonds as parallel lines; optional atom labels and (if details are allowed) VSEPR lone-pair directions; a measuring probe (2 atoms → distance in pm, 3 atoms → angle). Selection of atoms / bonds when the task asks for it. | the structure list under the model is the keyboard path (toggle buttons with `aria-pressed`); bidi-isolated probe text; `role="img"` scene with help text; no tap-highlight artefacts on phones. |
+| **Formula / values / classifications** | Formula input with LIVE parsing (the trusted parser's Arabic message; save disabled while invalid; canonical text stored); numeric values with explicit save; classification radio groups named per workspace instance. Composition table (CIAAW weights, contributions, molar mass) only when details are allowed. | labelled inputs, `role="alert"` errors, `radiogroup`s. |
+| **Teacher editor** (`ChemEditor`) | Activity + classroom presets (²³Na⁺, period 3 / group 17 with a private ³⁵Cl target, water, any catalog molecule, glucose, CuSO₄·5H₂O); the given subject; what the student may see (with “reveals the answer” hints); tasks; PRIVATE checks with the **expected value derived by the trusted core** shown next to every chem check; optional private species per check; scoring; a preview running the real workspace. | RTL, structured (never raw JSON), no overflow at 390 px. |
+| **Review** (`ChemReview`) | The given subject and the student's SERVER-derived answers as text. | table with captions. |
+
+## 6. Server, grading and exam lifecycle
+
+* No API module changed. The six pure modules are added to `SHARED_ENTRIES` and compiled into `api/src/lib/shared-finalization/`
+  (drift-tested); `src/trustedSimPlugins.ts` registers `chemistryStructure@1` (appended — every existing identity is unchanged).
+* The server replays the semantic actions; the client `state`, score and checks are never read; a broken answer is an ordinary zero;
+  a broken envelope / key or a check whose reference is undefined fails **closed** (0 + manual review, `finalized: false`) — proven by the
+  lifecycle test (`manualReviewMarks: 7`).
+* Composite contexts work unchanged (prepare once / evaluate many): the acceptance exam shares an ammonia model between a linked SmartSim
+  part and an MCQ.
+* The student sanitizer removes `answer` (checks, tolerances, private species, expected selections); the public config carries only the
+  given subject — the private ³⁵Cl target of the periodic-table question never leaves the server (lifecycle test).
+* Import → save → re-import, finalization, `normalizeDraftAnswers`, `gradeExam` — all through the production authorities.
+
+## 7. Bundle and lazy loading
+
+| Measure (local build of the branch) | Value |
+|---|---|
+| Initial JS graph | **112,508 B gzip** (9 files; `main` c592422: 112,509 B) — guard line unchanged at 125 KB = 128,000 B |
+| `ChemWorkspace-*.js` (workspace + molecule viewer + periodic table + atom model) | 9,437 B gzip (+ `ChemWorkspace-*.css` 2,083 B) |
+| `ChemEditor-*.js` / `ChemReview-*.js` | 6,272 B / 1,000 B gzip |
+| `trustedSimPlugins-*.js` (lazy; now also the chemistry core) | 23,712 B gzip |
+
+`scripts/check-bundle-budget.mjs` gains a chemistry rule (strengthening only): the UI signatures (`chem-workspace`, `chem-mol-scene`,
+`chem-ptable-grid`, `chem-editor`, `chem-review`) never in the initial graph nor in the Student Portal's static closure, the core
+signatures (`CHEM_CONFIG_INVALID`, `FORMULA_ELEMENT_UNKNOWN`) never in the initial graph, and every signature must exist in some chunk.
+**WebGL is not used**: the Chromium certification counts WebGL context requests (0) and renders the molecule with WebGL disabled; context-loss
+and low-GPU-memory certifications therefore do not apply to chemistry (the B.1 engine keeps its own).
+
+## 8. Security and resource bounds
+
+| Concern | Bound / rule |
+|---|---|
+| Public config | strict exact keys, catalog references only (element symbol, catalogued mass number, common ion, catalog molecule, canonical formula); refuse, never repair. Nothing secret may live in it. |
+| Private targets | `species` / `formula` inside private checks only; validated like the subject; stripped from student delivery. |
+| Actions | ≤ 500; exact keys; declared ids; particles p ≤ 36, n ≤ 60, e ≤ 40; ≤ 4 shells × ≤ 32 electrons (sum ≤ 40); values finite, \|v\| ≤ 10⁶; formulas parsed (≤ 128 chars input, canonical ≤ 64); options from the code-owned vocabulary; the selection never exceeds `max` at any point of the replay; presentation prefixes refused by the core. |
+| Formula parser | ≤ 64 chars, depth ≤ 3, ≤ 2 hydrate dots, counts 1–999, multipliers 2–99, ≤ 10 000 atoms; no charges, brackets, spaces or names. |
+| Computation / rendering | catalog of 36 elements and 12 molecules (≤ 6 atoms, ≤ 5 bonds); projection is O(atoms + bonds) per frame; SVG only; no assets, no URLs, no dynamic code. |
+| Grading authority | derived references only (or the teacher's generic-rule facts); undefined references refused at authoring time; invalid authority → fail closed to manual review. |
 
 ## 9. Plan for D.2–D.4 (separate PRs; dependency: each builds on the merged D.1 core)
 
@@ -111,8 +157,50 @@ Filled with the implementation evidence in §10.
 
 ## 10. Verification evidence (D.1)
 
-Filled at the end of the phase with the exact commands, counts and the exact-head CI.
+### 10.1 Science reference tests (`src/chemistry/chemistryCore.21dd1.test.ts`, 19 tests)
+
+Independently transcribed from the primary sources (never produced by the implementation): all 36 CIAAW 2024 abridged atomic weights and
+all 36 CIAAW isotope lists; the NIST ASD ground configurations Z = 19–36 (Cr, Cu exceptions); hand-computed molar masses in exact units
+(H₂O 18.0150, CO₂ 44.009, NaCl 58.440, C₆H₁₂O₆ 180.156, Ca(OH)₂ 74.092, Al₂(SO₄)₃ 342.132, CuSO₄·5H₂O 249.677, (NH₄)₃PO₄ 149.087,
+Mg₃(PO₄)₂ 262.855, Fe₂(SO₄)₃ 399.858 g/mol) and mass percentages (O in H₂O 88.8093 %, C in CO₂ 27.2921 %, Cu in CuSO₄·5H₂O 25.4513 %);
+shells of 13 atoms and 21 ions (Fe²⁺ 2,8,14 · Fe³⁺ 2,8,13 · Cu²⁺ 2,8,17 · Cr³⁺ 2,8,11 …); group / period re-derived from the configuration
+for all 36 elements; 24 formula refusals with their exact codes; every CCCBDB length (± 0.01 pm) and angle (± 0.001°) reproduced by the
+rebuilt coordinates; Lewis electron counts, octets (BF₃ the only declared exception), VSEPR shapes re-derived; deep-frozen catalogs.
+
+### 10.2 Authority, UI, lifecycle and Chromium
+
+| Suite | Result |
+|---|---|
+| `src/chemistryStructure.21dd1.test.ts` — registration, strict config, actions / replay, derived checks, private species, forgery, fail closed | 15 / 15 |
+| `src/chemistryStructure/chemistryUi.21dd1.test.tsx` — real student host on the sanitized question, periodic table keyboard, 3D molecule, formulas, two workspaces on one page, editor, review | 13 / 13 |
+| `src/chemistryStructure/chemView.21dd1.test.ts` — projection invariants (fail-first, below) | 2 / 2 |
+| `api/tests/certification-21dd1/*` — import → save → re-import, finalization, perfect 43 / partial / blank, attacker, student projection, tampered configs, fail-closed key | 7 / 7 |
+| `scripts/check-chemistry-browser-21dd1.mjs` — real Chromium (desktop, phone 390 × 844 DPR 3 touch, WebGL disabled) | 36 / 36 |
+| Mutation campaign `scripts/mutate-chemistry-21dd1.mjs` | 43 / 43 KILLED, 0 survived, 0 timeout, restored (sha256 + `git diff`) |
+| Root suite `npm test` (on `a37dd47`, code-identical to the head) | 897 / 897 files, 11,698 / 11,698 tests |
+
+Chromium performance: frame interval while dragging the molecule — median 16.7 ms, p95 16.7 ms (59–62 frames); no WebGL context requested.
+
+### 10.3 Defects found by the certification (fail-first)
+
+| Defect | Fail-first test (run on `b04157d`) | Failing assertion | Fix |
+|---|---|---|---|
+| Bonds painted across the disks of the atoms they join (the O–H bond covered O1; a click aimed at O1 hit the bond) | `chemView.21dd1.test.ts` (2 cases) | `hydrogen b1: expected 0 to be greater than or equal to 27.77`; end-on ethyne drew 3 bonds | bonds trimmed to 0.9 r at both ends; a bond pointing at the viewer is hidden (`ff6bf63`) |
+| Two questions with the same classification task id shared ONE radio group (choosing in CO₂ unchecked water) | `chemistryUi.21dd1.test.tsx` › *classification radios of two workspaces are independent groups* | `expected 'chem-shape' not to be 'chem-shape'` | radio names per workspace instance (`useId`) (`ff6bf63`) |
+
+The exact-head CI results are reported in the pull request (not in this file, which would change the head).
 
 ## 11. Known limitations (D.1)
 
-Filled at the end of the phase.
+* Elements Z = 1–36 only; simple ions = the curated common-ion list (charges −3…+3); mass numbers = natural isotopes + ³H, ¹⁴C (no
+  isotopic masses or abundances are used — only A).
+* The shell diagram shows electrons per principal shell (≤ 4 shells); no orbital-box or subshell-filling activity in D.1 (the
+  configuration is shown as text when the teacher allows details).
+* Twelve small catalog molecules; no rings, isomers, conformers, ions or user-built molecules; geometry is a static equilibrium picture;
+  atom sizes are not to scale; lone pairs are idealised VSEPR directions; the Lewis model's O₂ limitation is stated in the UI.
+* Formula answers are compared by composition (HOH = H₂O); structural formulas, charges and names are not parsed.
+* A bond pointing straight at the viewer is hidden behind its atoms (correct for ball-and-stick) and is then selectable only from the
+  structure list.
+* The AI exam composer catalog does not yet offer chemistry (D.4).
+* The browser harness renders the shared ammonia context as a standalone workspace; the production composite renderer is covered by the
+  unit and lifecycle suites (D.4 adds the full composite browser path).
