@@ -1,0 +1,43 @@
+/* Phase 21D-B — realistic mesh model viewer (lazy chunk only). Same visual language as the Phase 21B / 21D 3D viewers. */
+.mm3d{margin:1rem 0;padding:1.1rem;border:1px solid #bfd0df;border-radius:12px;background:#fff;color:#17324c;font:inherit;max-width:100%;overflow:hidden;box-sizing:border-box}
+.mm3d figcaption strong{font-size:1.16em;line-height:1.5}
+.mm3d figcaption p{margin:.4rem 0;line-height:1.7}
+.mm3d-controls{display:flex;flex-wrap:wrap;gap:.45rem;margin:.6rem 0}
+.mm3d-controls button,.mm3d-overlay button{border:1px solid #8baac5;border-radius:7px;background:#f5faff;color:#17324c;padding:.5rem .75rem;min-height:40px;min-width:40px;font:inherit;cursor:pointer}
+.mm3d-controls .mm3d-icon{font-size:1.15em;line-height:1;padding:.45rem .6rem}
+.mm3d-frame{position:relative;width:100%;max-width:1100px;margin-inline:auto}
+.mm3d-scene{position:relative;display:block;width:100%;border:1px solid #c5d7e7;border-radius:9px;background:#f4f7fb;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden;box-sizing:border-box}
+.mm3d-canvas{display:block;width:100%;height:100%;pointer-events:none}
+.mm3d-scene[data-interacting]{cursor:grabbing}
+.mm3d-scene[data-hover]:not([data-hover=""]){cursor:pointer}
+.mm3d-controls button:focus-visible,.mm3d-scene:focus-visible,.mm3d-parts input:focus-visible,.mm3d-parts button:focus-visible,.mm3d-provenance summary:focus-visible,.mm3d-overlay button:focus-visible{outline:3px solid #236aa4;outline-offset:2px}
+.mm3d-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.7rem;padding:1rem;text-align:center;background:rgba(244,247,251,.92);border-radius:9px;color:#17324c;font-weight:600;direction:rtl}
+.mm3d-error{color:#842424;background:rgba(255,245,244,.96);border:1px solid #b14f4f}
+.mm3d-fallback{background:rgba(255,251,235,.96);border:1px solid #c7a24a}
+.mm3d-progress{display:block;width:min(320px,80%);height:8px;border-radius:5px;background:#d6e2ee;overflow:hidden}
+.mm3d-progress span{display:block;height:100%;background:#236aa4;transition:width .15s linear}
+.mm3d-tip{position:absolute;top:.6rem;inset-inline-start:.6rem;padding:.3rem .6rem;border-radius:7px;background:rgba(23,50,76,.88);color:#fff;font-size:.9em;pointer-events:none;direction:rtl}
+.mm3d-help,.mm3d-status{font-size:.87em;line-height:1.6;color:#365675;margin:.45rem 0}
+.mm3d-status{font-weight:600;color:#17324c}
+.mm3d-parts{list-style:none;margin:.6rem 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.45rem}
+.mm3d-parts li{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .6rem;padding:.45rem .65rem;border:1px solid #d3e0ec;border-radius:9px;background:#f7fbff;min-width:0}
+.mm3d-parts li.is-selected{border-color:#d97706;background:#fff7ea;box-shadow:inset 0 0 0 1px #d97706}
+.mm3d-parts li.is-hidden{opacity:.6}
+.mm3d-parts li.is-correct{border-color:#1f8a45;background:#eefaf2}
+.mm3d-parts li.is-incorrect{border-color:#b42318;background:#fff1f0}
+.mm3d-parts li.is-missed{border-color:#c58a06;background:#fffaeb}
+.mm3d-parts label{display:inline-flex;align-items:center;gap:.45rem;font-weight:600;cursor:pointer;min-width:0}
+.mm3d-parts input{width:1.15rem;height:1.15rem;margin:0}
+.mm3d-part-label{font-weight:600}
+.mm3d-parts small{flex-basis:100%;color:#365675;line-height:1.5}
+.mm3d-mark{font-style:normal;font-size:.85em;font-weight:700}
+.mm3d-hide{margin-inline-start:auto;border:1px solid #8baac5;border-radius:7px;background:#fff;color:#17324c;padding:.3rem .6rem;font:inherit;font-size:.88em;cursor:pointer}
+.mm3d-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mm3d-provenance{margin-top:.6rem;font-size:.9em;color:#365675}
+.mm3d-provenance summary{cursor:pointer;font-weight:650;padding:.4rem 0}
+.mm3d-provenance dl{display:grid;grid-template-columns:max-content 1fr;gap:.3rem .8rem;margin:.3rem 0}
+.mm3d-provenance dt{font-weight:700;color:#17324c}
+.mm3d-provenance dd{margin:0;line-height:1.6;overflow-wrap:anywhere}
+.mm3d-unavailable{border:1px solid #b14f4f;color:#842424;background:#fff5f4;padding:.75rem;border-radius:9px}
+@media (max-width:520px){.mm3d{padding:.75rem}.mm3d-provenance dl{grid-template-columns:1fr}}
+@media print{.mm3d-controls,.mm3d-help,.mm3d-hide,.mm3d-overlay,.mm3d-tip{display:none}.mm3d{break-inside:avoid}.mm3d-provenance{display:block}}

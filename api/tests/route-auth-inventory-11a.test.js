@@ -33,7 +33,12 @@ const PUBLIC_BY_DESIGN = {
   // Phase 16B-A — content-addressed simulator asset serving: the URL carries an unguessable SHA-256 capability pinned by the
   // published exam; identity is validated before any storage access (unknown / malformed → 404); no listing, no metadata, no
   // archive, no owner data; a sandboxed student frame has no auth token to send. Upload / list / versions require builder auth.
-  simulatorRuntime: "sandboxed simulator asset by exact (packageId, version, sha256) capability; validated before storage; 404 otherwise; no enumeration"
+  simulatorRuntime: "sandboxed simulator asset by exact (packageId, version, sha256) capability; validated before storage; 404 otherwise; no enumeration",
+  // Phase 21D-B.1 — content-addressed mesh asset serving: the URL carries the unguessable SHA-256 of bytes the server validated at upload
+  // (shared GLB authority) and that a published exam pins; the hash is validated before any storage access (malformed / unknown → 404);
+  // the bytes are re-verified against the hash before they are served; model/gltf-binary + nosniff + CSP sandbox + attachment, so the
+  // response can never become a document; no listing, no owner data. Upload and list require builder auth.
+  meshAssetRuntime: "validated GLB mesh asset by exact sha256 capability; hash checked before storage; bytes re-verified; 404 otherwise; no enumeration"
 };
 /** name → the non-bearer mechanism that protects it. Still asserted to reject anonymous callers. */
 const SIGNED = {
