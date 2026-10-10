@@ -644,7 +644,7 @@ defects.
 
 ### 16.2 End-to-end audit of `meshPartSelection@1`
 
-Each requested aspect was traced in the code and tied to executed evidence. **No product defect was found.**
+Each requested aspect was traced in the code and tied to executed evidence. The static audit found no defect in `meshPartSelection@1`. The exact-head CI then found one in the shared viewer (§16.5), and it was fixed.
 
 **Teacher**
 - The question editor (production `MeshPartSelectionEditor`) works in real Chromium. It was certified for:
@@ -718,13 +718,13 @@ This tightens the guard and loosens nothing; the 128,000-byte budget is unchange
 
 | Check | Result |
 |---|---|
-| Root suite `npx vitest run` | **890 / 890 files, 11,641 / 11,641 tests** |
+| Root suite `npx vitest run` | **891 / 891 files, 11,642 / 11,642 tests** (on `2ffc955`, with the §16.5 fix) |
 | Lifecycle certification (21DB3) | 17 + fixture drift 2 = **19 / 19** (PERFECT 28 · PARTIAL 10 · BLANK 0 · ATTACKER 0) |
 | `#288` hotfix suites + B.3 focused suites | 87 / 87 after the merge |
 | `npx tsc -b` · `npm run lint` · `git diff --check` | exit 0 · exit 0 (116 warnings, as on `main`) · clean |
-| `npm run build` + bundle guard | passed; initial JS graph **112,511 B** gzip (9 files; `main` 127,805 B; budget 128,000) |
+| `npm run build` + bundle guard | passed; initial JS graph **112,509 B** gzip (9 files; `main` 127,805 B; budget 128,000) |
 | Real Chromium — B.1 viewer / anatomy + editor / **exam** | **37 / 37 · 32 / 32 · 37 / 37** |
-| Mutation campaign (B3-01 … B3-26), restore SHA-verified, `git status` unchanged | **26 / 26 KILLED**, plus the new platform fail-closed test killing B3-03 on its own |
+| Mutation campaign (B3-01 … B3-27), restore SHA-verified, `git status` unchanged | **27 / 27 KILLED**, plus the new platform fail-closed test killing B3-03 on its own |
 | Assets | GLB files, NOTICE, PROVENANCE, manifest, catalog and converter byte-identical to `main`; both files content-addressed |
 
 **New mutants:**
@@ -734,6 +734,7 @@ This tightens the guard and loosens nothing; the 128,000-byte budget is unchange
 | B3-24 | #288's `scene3DSelection` firstN case lost in the resolution | KILLED | `scene3d-first-n-answered-hotfix` |
 | B3-25 | #288's teacher-review 3D payload lost in the resolution | KILLED | `scene3d-review-config-hotfix` |
 | B3-26 | B.3's `meshPartSelection` firstN case lost in the resolution | KILLED | 21DB3 lifecycle (firstN) |
+| B3-27 | the textures-ready frame drawn without sizing the buffer (§16.5 fix removed) | KILLED | `meshViewerSizing.21db3` |
 
 **Exam Chromium** (37 checks):
 - the 27 of §15.6;
@@ -750,5 +751,43 @@ This tightens the guard and loosens nothing; the 128,000-byte budget is unchange
 | GPU per live viewer | 2.5 MB |
 | Live contexts | ≤ 3 desktop, ≤ 2 phone |
 | Heap growth after 20 exam mount cycles | 1.8 MiB |
+
+### 16.5 Defect found by the exact-head CI, and fixed
+
+**The failure.**
+- On `f2d88ff` the CI exam certification passed 36 of 37 (run 38065433413, attempt 1).
+- The failing check was the low-memory phone. The scene published `dpr 1` while the canvas drawing buffer was already 2× (676 px for
+  338 CSS px).
+
+**Root cause** (shared viewer `MeshModel3DView`).
+- The renderer signals "textures ready" asynchronously: a microtask after creation when the model has no images, later when it has.
+- The view's hook for that signal **drew a frame and published its stats without sizing the drawing buffer**. The first frame was drawn
+  at the canvas default size with `dpr 1`.
+- The sized frame came only one animation frame later. On a busy runner (delayed `requestAnimationFrame`) the viewer reported `ready`
+  with stale stats.
+- The following resize cleared the buffer, so the canvas stayed blank until the next frame.
+
+**Fail-first evidence.**
+- *Real Chromium:* the exam harness built from `f2d88ff` on a phone (DPR 3, deviceMemory 2) with `requestAnimationFrame` delayed by
+  400 ms reported `dpr 1` with a 2× buffer at `ready` in **3 / 3** runs.
+- *Unit:* the new test `src/meshModels/meshViewerSizing.21db3.test.tsx` fires textures-ready after the display DPR changed. On
+  `f2d88ff` the frame is drawn without a resize (`["render"]`).
+
+**Fix.**
+- The textures-ready path sizes the buffer from the canvas (falling back to the laid-out size) before drawing, exactly like the state
+  frames.
+- After the fix: `dpr 2` at `ready` in 3 / 3 delayed-frame runs, the unit test passes, and mutant B3-27 (fix removed) is killed.
+
+**Re-certification on `2ffc955`.**
+
+| Check | Result |
+|---|---|
+| Chromium | B.1 37 / 37 · anatomy 32 / 32 · exam 37 / 37 |
+| Root suite | 891 / 891 files, 11,642 / 11,642 tests |
+| `tsc` · lint | ok · 116 warnings |
+| Bundle guard | passed |
+
+The defect is in B.1 code, but it is reachable only through the B.3 exam integration: B.1 and B.2 shipped the viewer unwired. It is
+fixed here because B.3 is what puts the viewer in front of students.
 
 Exact-head CI and the PR-preview results are recorded in the PR body: they run on the commit that carries this record.
