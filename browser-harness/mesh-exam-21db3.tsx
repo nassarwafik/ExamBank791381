@@ -57,7 +57,8 @@ export function Harness() {
   }, []);
   useEffect(() => {
     window.__exam = {
-      answers: () => answers, grade: () => grade(answers), live: () => meshRendererLiveCount(), setMounted, lastSave: () => lastSave,
+      // read through the ref the autosave path updates synchronously: never a stale render closure
+      answers: () => latest.current, grade: () => grade(latest.current), live: () => meshRendererLiveCount(), setMounted, lastSave: () => lastSave,
       // a forged client answer goes through the same server binding (never trusted)
       forge: (id: string, a: unknown) => { const r = autosave({ ...latest.current, [id]: a as Ans }); latest.current = r.saved; setAnswers(r.saved); return r; },
       questions: QUESTIONS.map(q => q.examQuestionId)

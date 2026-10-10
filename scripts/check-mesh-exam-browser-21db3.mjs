@@ -124,9 +124,9 @@ try {
   check("every answer is autosaved in canonical model order through the shared server binding", QS.every(q => JSON.stringify(a1[q.examQuestionId]?.parts) === JSON.stringify(PERFECT[q.examQuestionId])), JSON.stringify(Object.fromEntries(Object.entries(a1).map(([k, v]) => [k, v.parts]))));
   const limit = await page.$eval("[data-testid=q-h2] .mm3d-parts", ul => [...ul.querySelectorAll("input")].filter(i => !i.checked).every(i => i.disabled));
   check("the selection limit is enforced in the list (h2: max 2)", limit);
-  const forged = await page.evaluate(() => window.__exam.forge("h2", { kind: "meshPartSelection", modelId: "heartVessels", parts: ["aorta", "thalamus"] }));
-  const afterForge = await answers(page);
-  check("a forged answer (unlabelled part) is refused by the binding and not stored", forged.rejected.includes("h2") && !afterForge.h2, JSON.stringify(forged.rejected));
+  // read in the SAME evaluate as the forge: the harness must report the server-bound state synchronously (no render race)
+  const forged = await page.evaluate(() => { const r = window.__exam.forge("h2", { kind: "meshPartSelection", modelId: "heartVessels", parts: ["aorta", "thalamus"] }); return { rejected: r.rejected, now: window.__exam.answers(), stored: JSON.parse(sessionStorage.getItem("exam-21db3-draft") || "{}") }; });
+  check("a forged answer (unlabelled part) is refused by the binding and not stored", forged.rejected.includes("h2") && !forged.now.h2 && !forged.stored.h2, JSON.stringify(forged));
   await choose(page, QS.find(q => q.examQuestionId === "h2"), "aorta");
   await choose(page, QS.find(q => q.examQuestionId === "h2"), "pulmonaryTrunk");
 
