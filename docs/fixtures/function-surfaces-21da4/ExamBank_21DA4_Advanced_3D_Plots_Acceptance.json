@@ -1,0 +1,542 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21DA4-ADVANCED-3D-PLOTS",
+  "title": "ExamBank 21D-A.4 — اختبار القبول للرسوم الرياضية ثلاثية الأبعاد متعددة الأسطح",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "رسوم z = f(x, y) متعددة الأسطح",
+    "instructions": "يمكنك تدوير كل رسم وتكبيره وإعادة عرضه، وإخفاء الأسطح عندما يسمح السؤال بذلك.",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — قطعان مكافئان متقابلان",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "multipleChoice",
+          "text": "على أي ارتفاع يتقاطع السطحان z = x² + y² و z = 4 − x² − y²؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "z = 2"
+            },
+            {
+              "text": "z = 0"
+            },
+            {
+              "text": "z = 4"
+            },
+            {
+              "text": "لا يتقاطعان"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-a1",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "دوّر الرسم وكبّره لترى منحنى التقاطع، ويمكنك إخفاء أحد السطحين من المفتاح."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 2,
+                  "id": "plot-paraboloids",
+                  "title": "قطعان مكافئان متقابلان",
+                  "description": "السطحان z = x² + y² و z = 4 − x² − y² يتقاطعان على الدائرة x² + y² = 2 عند z = 2.",
+                  "surfaces": [
+                    {
+                      "id": "upward",
+                      "label": "القطع المكافئ z = x² + y²",
+                      "expression": "x^2+y^2",
+                      "color": "blue"
+                    },
+                    {
+                      "id": "downward",
+                      "label": "القطع المكافئ المقلوب z = 4 − x² − y²",
+                      "expression": "4-x^2-y^2",
+                      "color": "amber"
+                    }
+                  ],
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": -1,
+                    "zMax": 5
+                  },
+                  "axes": {
+                    "x": {
+                      "label": "x"
+                    },
+                    "y": {
+                      "label": "y"
+                    },
+                    "z": {
+                      "label": "z"
+                    }
+                  },
+                  "quality": "standard",
+                  "display": {
+                    "style": "mesh",
+                    "grid": true
+                  },
+                  "controls": {
+                    "rotate": true,
+                    "zoom": true,
+                    "toggleSurfaces": true
+                  },
+                  "camera": {
+                    "azimuth": -0.6,
+                    "elevation": 0.45,
+                    "zoom": 1
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "أجب اعتمادًا على الرسم والمعادلتين."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — سطح سرجي ومستوى",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "multipleChoice",
+          "text": "ما شكل منحنى تقاطع السطح z = x² − y² مع المستوى z = 1؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "قطع زائد"
+            },
+            {
+              "text": "دائرة"
+            },
+            {
+              "text": "نقطة واحدة"
+            },
+            {
+              "text": "مستقيم"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-b1",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "لاحظ أين يعلو السطح السرجي فوق المستوى وأين ينخفض تحته."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 2,
+                  "id": "plot-saddle-plane",
+                  "title": "سطح سرجي يقطعه مستوى",
+                  "description": "السطح z = x² − y² والمستوى الأفقي z = 1 في نظام إحداثيات واحد.",
+                  "surfaces": [
+                    {
+                      "id": "saddle",
+                      "label": "السطح السرجي z = x² − y²",
+                      "expression": "x^2-y^2",
+                      "color": "green"
+                    },
+                    {
+                      "id": "plane",
+                      "label": "المستوى z = 1",
+                      "expression": "1",
+                      "color": "amber"
+                    }
+                  ],
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": -4,
+                    "zMax": 4
+                  },
+                  "axes": {
+                    "x": {
+                      "label": "x"
+                    },
+                    "y": {
+                      "label": "y"
+                    },
+                    "z": {
+                      "label": "z"
+                    }
+                  },
+                  "quality": "standard",
+                  "display": {
+                    "style": "mesh",
+                    "grid": true
+                  },
+                  "controls": {
+                    "rotate": true,
+                    "zoom": true,
+                    "toggleSurfaces": true
+                  },
+                  "camera": {
+                    "azimuth": -0.6,
+                    "elevation": 0.45,
+                    "zoom": 1
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "اختر الشكل الصحيح."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — مخروط ومستوى مائل",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "multipleChoice",
+          "text": "ما شكل منحنى تقاطع المخروط z = √(x² + y²) مع المستوى z = 0.5x + 1؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "قطع ناقص"
+            },
+            {
+              "text": "قطع زائد"
+            },
+            {
+              "text": "قطع مكافئ"
+            },
+            {
+              "text": "مستقيمان"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-c1",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "ميل المستوى أقل من ميل جوانب المخروط."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 2,
+                  "id": "plot-cone-plane",
+                  "title": "مخروط يقطعه مستوى مائل",
+                  "description": "السطح المخروطي z = √(x² + y²) والمستوى المائل z = 0.5x + 1.",
+                  "surfaces": [
+                    {
+                      "id": "cone",
+                      "label": "المخروط z = √(x² + y²)",
+                      "expression": "sqrt(x^2+y^2)",
+                      "color": "rose"
+                    },
+                    {
+                      "id": "plane",
+                      "label": "المستوى z = 0.5x + 1",
+                      "expression": "0.5*x+1",
+                      "color": "blue"
+                    }
+                  ],
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": 0,
+                    "zMax": 3
+                  },
+                  "axes": {
+                    "x": {
+                      "label": "x"
+                    },
+                    "y": {
+                      "label": "y"
+                    },
+                    "z": {
+                      "label": "z"
+                    }
+                  },
+                  "quality": "standard",
+                  "display": {
+                    "style": "mesh",
+                    "grid": true
+                  },
+                  "controls": {
+                    "rotate": true,
+                    "zoom": true,
+                    "toggleSurfaces": true
+                  },
+                  "camera": {
+                    "azimuth": -0.6,
+                    "elevation": 0.45,
+                    "zoom": 1
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "اختر الشكل الصحيح."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — ثلاثة أسطح وعرض يحدده المعلم",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "trueFalse",
+          "text": "المستوى z = 1 − x − y يمر بالنقطة (0, 0, 1).",
+          "marks": 4,
+          "options": [
+            {
+              "text": "صحيح"
+            },
+            {
+              "text": "غير صحيح"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "التكبير والإخفاء غير متاحين في هذا السؤال؛ التدوير متاح."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 2,
+                  "id": "plot-three",
+                  "title": "ثلاثة أسطح في نظام إحداثيات واحد",
+                  "description": "مستوى وسطح سرجي وسطح موجي ضمن المجال نفسه.",
+                  "surfaces": [
+                    {
+                      "id": "plane",
+                      "label": "المستوى z = 1 − x − y",
+                      "expression": "1-x-y",
+                      "color": "green"
+                    },
+                    {
+                      "id": "saddle",
+                      "label": "السطح السرجي z = xy",
+                      "expression": "x*y",
+                      "color": "rose"
+                    },
+                    {
+                      "id": "wave",
+                      "label": "السطح الموجي z = sin(x)·cos(y)",
+                      "expression": "sin(x)*cos(y)",
+                      "color": "lavender"
+                    }
+                  ],
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": -3,
+                    "zMax": 3
+                  },
+                  "axes": {
+                    "x": {
+                      "label": "x",
+                      "unit": "m"
+                    },
+                    "y": {
+                      "label": "y",
+                      "unit": "m"
+                    },
+                    "z": {
+                      "label": "z",
+                      "unit": "m"
+                    }
+                  },
+                  "quality": "high",
+                  "display": {
+                    "style": "transparent",
+                    "grid": true
+                  },
+                  "controls": {
+                    "rotate": true,
+                    "zoom": false,
+                    "toggleSurfaces": false
+                  },
+                  "camera": {
+                    "azimuth": -0.9,
+                    "elevation": 0.5,
+                    "zoom": 1.1
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "حدّد صحة العبارة."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-e",
+      "title": "هـ — سطح بالإصدار الأول (توافق)",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e1",
+          "presentationType": "multipleChoice",
+          "text": "عند x = 0 و y = 0، ما قيمة z على القبة z = √(4 − x² − y²)؟",
+          "marks": 4,
+          "options": [
+            {
+              "text": "2"
+            },
+            {
+              "text": "0"
+            },
+            {
+              "text": "4"
+            },
+            {
+              "text": "−2"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          },
+          "teacherNote": "CERT20G-PRIVATE-NOTE-e1",
+          "richContent": {
+            "schemaVersion": 1,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "هذا السطح محفوظ بصيغة الإصدار الأول ويُعرض كما كان."
+                  }
+                ]
+              },
+              {
+                "type": "functionSurface3D",
+                "surface": {
+                  "version": 1,
+                  "id": "surface-dome-v1",
+                  "title": "قبة كروية",
+                  "description": "النصف العلوي من كرة نصف قطرها 2 ضمن مجال العرض.",
+                  "expression": "sqrt(4-x^2-y^2)",
+                  "viewport": {
+                    "xMin": -2,
+                    "xMax": 2,
+                    "yMin": -2,
+                    "yMax": 2,
+                    "zMin": -0.2,
+                    "zMax": 2.5
+                  },
+                  "grid": {
+                    "xSteps": 20,
+                    "ySteps": 20
+                  }
+                }
+              },
+              {
+                "type": "paragraph",
+                "runs": [
+                  {
+                    "text": "اختر القيمة الصحيحة."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
