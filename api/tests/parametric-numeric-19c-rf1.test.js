@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { createRequire } from "node:module";
 import { gradeExam } from "../src/lib/assignment-grading.js";
 import { sanitizeExamForStudent } from "../src/lib/student-exam-sanitize.js";
@@ -44,10 +44,16 @@ describe("19C RF1 — server delivery carries only the displayed precision", () 
     expect(JSON.stringify(s)).not.toMatch(/0\.2916|29\.16|correct \/ total|"correct"/);
     expect(shared.parametricReviewInstance(n, { assignmentId: F.AID, studentId: F.S1, attemptNumber: 1, questionKey: "pq2" })).toMatchObject({ values: { total: 24, correct: 7 }, derived: { ratio: 0.2916666666666667 }, expected: 7 });
   });
+  afterEach(() => { vi.useRealTimers(); });
   it("the real student GET handler delivers the same display-only projection", async () => {
+    // The payload also carries the assignment's due date. The fixture derives it from the CLOCK (now + 1 day), so a run at hh:mm:29.5xx
+    // put "…:29.5…" in the body and the hidden-value check matched a timestamp, not a leak (CI run 38047783065). The clock is pinned to
+    // exactly such an instant and the due date is fixed: the check now proves what it claims, at any time of day.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-10T11:21:29.535Z"));
     const studentAssignment = require_("../src/functions/student-assignment.js");
     const snapshot = { title: "exam", metadata: {}, presentationTheme: "classic", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions: [pq()] }] };
-    const ctx = F.seed({ a: F.assignment({ examSnapshot: snapshot, totalMarks: 3, questionCount: 1 }) });
+    const ctx = F.seed({ a: F.assignment({ examSnapshot: snapshot, totalMarks: 3, questionCount: 1, dueAt: "2026-10-12T08:00:00.000Z" }) });
     const deps = { container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: F.S1, sv: 1, role: "student" } }), getContainer: () => ctx.container, env: F.ENV, fetch: F.runnerFetch() };
     const r = await studentAssignment.handler(F.studentRequest(undefined, "GET"), deps);
     expect(r.status).toBe(200);
