@@ -47,7 +47,7 @@ const grade = (answers: Record<string, Ans>) => QUESTIONS.map(q => {
   return { id: q.examQuestionId, score: r.score, maxMarks: q.marks, manualReview: r.manualReview };
 });
 
-function Exam({ answers, onAnswer }: { answers: Record<string, Ans>; onAnswer: (id: string, a: Ans) => void }) {
+export function Exam({ answers, onAnswer }: { answers: Record<string, Ans>; onAnswer: (id: string, a: Ans) => void }) {
   return <>{QUESTIONS.map((q, i) => {
     const env = projectSmartSimForStudent(q.smartSim) as { config: unknown; pluginKey: string; pluginVersion: number } | undefined;
     return (
@@ -60,7 +60,7 @@ function Exam({ answers, onAnswer }: { answers: Record<string, Ans>; onAnswer: (
   })}</>;
 }
 type Node = Record<string, unknown>;
-function Author() {
+export function Author() {
   const p = waterPreset();
   const [node, setNode] = useState<Node>({ examQuestionId: "q1", presentationType: "smartSim", questionTypeVersion: 1, text: "تأمل جزيء الماء وأجب.", marks: 7, smartSim: { schemaVersion: 1, pluginKey: "chemistryStructure", pluginVersion: 1, config: p.config }, answer: { scoring: "proportional", checks: p.checks } });
   const latest = useRef(node);
@@ -87,7 +87,7 @@ function Author() {
   return <main style={{ maxWidth: 1000, margin: "0 auto", padding: 12 }} dir="rtl"><h1 style={{ fontSize: 20 }}>تأليف سؤال كيمياء</h1>
     <ChemEditor config={sim.config} checks={key.checks as unknown[]} scoring={key.scoring} onChange={onChange} /></main>;
 }
-function Harness() {
+export function Harness() {
   const [answers, setAnswers] = useState<Record<string, Ans>>(() => readDraft());
   const [lastSave, setLastSave] = useState<{ rejected: string[] }>({ rejected: [] });
   const latest = useRef(answers);
