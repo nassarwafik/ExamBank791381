@@ -267,6 +267,23 @@ try {
       const tick = Number((await page.locator('[data-testid="exam-tick"]').textContent()).replace(/\D+/g, ""));
       check("3D-EXAM-01 the exam timer kept running through the 3D interaction", tick >= 3, "tick " + tick);
     });
+    await section("3D-EXAM-02", async () => {
+      // independent-review scenario: a drag that starts on the background outside the model and is released outside the viewer, then a
+      // click on another part — real browser click targeting and pointer capture decide which element receives that click
+      const answer = () => page.locator('[data-testid="exam-answer"]').textContent();
+      await page.locator(exam).scrollIntoViewIfNeeded();
+      const box = await page.locator(exam + " .i3d-scene").boundingBox(), before = await answer();
+      await page.mouse.move(box.x + 8, box.y + 8); await page.mouse.down();
+      await page.mouse.move(box.x + box.width * .6, box.y + box.height + 60, { steps: 15 }); await page.mouse.up();
+      await settled(page, exam);
+      const unchanged = (await answer()) === before;
+      const pt = await topmostTargetPoint(page, exam, "object:rightVentricle");
+      if (!pt) throw new Error("right ventricle not reachable on screen");
+      await page.mouse.click(pt.x, pt.y); await sleep(150);
+      const after = await answer();
+      check("3D-EXAM-02 a drag from outside the model released outside the viewer selects nothing, and the next click on a part selects it",
+        unchanged && after.includes("object:rightVentricle") && !after.includes("object:leftVentricle"), after);
+    });
     await section("3D-RTL", async () => {
       const dir = await page.evaluate(() => ({ doc: document.documentElement.dir, fig: getComputedStyle(document.querySelector(".i3d")).direction, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
       check("3D-RTL viewers render right-to-left with no horizontal page overflow", dir.doc === "rtl" && dir.fig === "rtl" && dir.overflow <= 0, JSON.stringify(dir));
@@ -295,6 +312,25 @@ try {
     report.probes.pinchZoom = Math.round(b1.w / b0.w * 1000) / 1000;
     check("3D-TOUCH-01 a two-finger spread zooms in", z1 > z0 && report.probes.pinchZoom > 1.2, "zoom " + z0 + "→" + z1 + " size×" + report.probes.pinchZoom);
     await page.screenshot({ path: path.join(out, "demo-mobile.png") });
+    await page.close();
+  });
+  await section("3D-EXAM-02 touch", async () => {
+    // the same on a touch screen: a one-finger drag from the background released outside the viewer, then a tap on a part
+    const page = await open(390, 844, { touch: true, only: "exam" });
+    const cdp = await page.context().newCDPSession(page), exam = '[data-testid="exam"]', answer = () => page.locator('[data-testid="exam-answer"]').textContent();
+    await page.locator(exam + " .i3d-scene").scrollIntoViewIfNeeded();
+    const box = await page.locator(exam + " .i3d-scene").boundingBox(), before = await answer();
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: box.x + 6, y: box.y + 6 }] });
+    for (let i = 1; i <= 12; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: box.x + 6 + i * 22, y: box.y + 6 + i * (box.height / 10) }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await settled(page, exam);
+    const unchanged = (await answer()) === before;
+    const pt = await topmostTargetPoint(page, exam, "object:leftVentricle");
+    if (!pt) throw new Error("left ventricle not reachable on screen");
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: pt.x, y: pt.y }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await sleep(400);
+    const after = await answer();
+    check("3D-EXAM-02 touch: a drag released outside the viewer selects nothing, and the next tap on a part selects it", unchanged && after.includes("object:leftVentricle"), after);
     await page.close();
   });
   // ── lifecycle: repeated mount / unmount, animation loops released, memory bounded ───────────────────────────────────────────
