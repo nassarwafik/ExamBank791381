@@ -61,6 +61,9 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   "src/physics/motionCore.ts", "src/physics/measurementTasks.ts", "src/physicsMotionModel.ts", "src/physicsMotionPlugin.ts",
   // Phase 21D-A.2 — the advanced physics core and the physicsLab@1 plugin (pendulum, spring, mechanical energy, DC circuits).
   "src/physics/labCore.ts", "src/physicsLabModel.ts", "src/physicsLabPlugin.ts",
+  // Phase 21D-D.1 — the trusted chemistry core (element catalog, electron configurations, formula engine, molecule catalog) and the
+  // chemistryStructure@1 plugin (atomic & molecular structure).
+  "src/chemistry/elements.ts", "src/chemistry/electrons.ts", "src/chemistry/formula.ts", "src/chemistry/molecules.ts", "src/chemistryStructureModel.ts", "src/chemistryStructurePlugin.ts",
   // Phase 20C — networkTopology@2 (the curriculum network simulator): shared primitives, configuration authority, switch / router CLI v2,
   // the operational network engine, the host Command Prompt and the plugin. networkTopology@1's modules above stay frozen.
   "src/net2Common.ts", "src/net2Model.ts", "src/net2SwitchCli.ts", "src/net2RouterCli.ts", "src/net2Network.ts", "src/net2Host.ts", "src/net2Plugin.ts",

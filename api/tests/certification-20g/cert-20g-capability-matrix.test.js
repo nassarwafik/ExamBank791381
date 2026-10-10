@@ -39,8 +39,11 @@ const ACCEPTANCE_21DA2 = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtur
 // Phase 21D-B.3: meshPartSelection@1 acceptance exam (heart + brain library models), driven end to end by
 // api/tests/certification-21db3/cert-21db3-mesh-lifecycle.test.js.
 const ACCEPTANCE_21DB3 = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures/mesh-models-21db3/ExamBank_21DB3_Mesh_Models_Acceptance.json"), "utf8"));
+// Phase 21D-D.1: chemistryStructure@1 acceptance exam (atoms / ions, periodic table, 3D molecules, formulas + a shared composite context),
+// driven end to end by api/tests/certification-21dd1/cert-21dd1-chemistry-lifecycle.test.js.
+const ACCEPTANCE_21DD1 = JSON.parse(fs.readFileSync(path.join(repo, "docs/fixtures/chemistry-structure-21dd1/ExamBank_21DD1_Chemistry_Structure_Acceptance.json"), "utf8"));
 // Phase 21A.2: standalone/composite functionGraphSelection proof. Phase 21C: standalone semantic interactive-3D selection proof.
-const EXAMS = { A: examA(), B: examB(), C: examC(), D: examD(), E: examE(), S: stressExam({ sections: 1, perSection: 30 }).exam, "21A1": ACCEPTANCE_21A1, "21A2": ACCEPTANCE_21A2, "21C": ACCEPTANCE_21C, "21DA1": ACCEPTANCE_21DA1, "21DA2": ACCEPTANCE_21DA2, "21DB3": ACCEPTANCE_21DB3 };
+const EXAMS = { A: examA(), B: examB(), C: examC(), D: examD(), E: examE(), S: stressExam({ sections: 1, perSection: 30 }).exam, "21A1": ACCEPTANCE_21A1, "21A2": ACCEPTANCE_21A2, "21C": ACCEPTANCE_21C, "21DA1": ACCEPTANCE_21DA1, "21DA2": ACCEPTANCE_21DA2, "21DB3": ACCEPTANCE_21DB3, "21DD1": ACCEPTANCE_21DD1 };
 
 /** identity → set of certification exams that contain it (top level, composite child or compound part). */
 function exercised() {
