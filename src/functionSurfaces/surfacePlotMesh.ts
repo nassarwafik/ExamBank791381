@@ -51,24 +51,51 @@ export function surfaceBudget(level: SurfacePlotLevel, count: number) {
   return { polygons, evaluations, base, maxDepth: b.maxDepth, tolerance: b.tolerance };
 }
 
-/** The adaptive mesh of one surface (deterministic: identical inputs give an identical mesh). */
-export function buildSurfacePlotMesh(ast: ExprNode, v: SurfaceViewport, level: SurfacePlotLevel, surfaceCount: number, withLines = level !== "motion"): SurfacePlotMesh {
+/** The adaptive mesh of one surface (deterministic: identical inputs give an identical mesh). `others` are the plot's other surfaces:
+ *  cells where one of them crosses this surface inside the window are refined to the finest level, so the painter's facet-sized
+ *  saw-tooth along an intersection curve shrinks fourfold (the polygons are not split along the curve itself). */
+export function buildSurfacePlotMesh(ast: ExprNode, v: SurfaceViewport, level: SurfacePlotLevel, surfaceCount: number, opts: { lines?: boolean; others?: readonly ExprNode[] } = {}): SurfacePlotMesh {
+  const withLines = opts.lines ?? level !== "motion", others = level === "motion" ? [] : opts.others ?? [];
   const B = surfaceBudget(level, surfaceCount), N = B.base, D = B.maxDepth, s0 = 1 << D, M = N * s0, W = M + 1;
   const state = new Uint8Array(W * W), value = new Float64Array(W * W);
   const zSpan = v.zMax - v.zMin, vars = new Map<string, number>([["x", 0], ["y", 0]]);
   let evaluations = 0;
-  const evalAt = (x: number, y: number): number => {
+  const evalWith = (e: ExprNode, x: number, y: number): number => {
     evaluations++;
     vars.set("x", x); vars.set("y", y);
-    const r = evaluateExpression(ast, vars);
+    const r = evaluateExpression(e, vars);
     return r.ok && Number.isFinite(r.value) ? (2 * (r.value - v.zMin)) / zSpan - 1 : NaN;
   };
+  const evalAt = (x: number, y: number) => evalWith(ast, x, y);
   const xAt = (i: number) => v.xMin + ((v.xMax - v.xMin) * i) / M, yAt = (j: number) => v.yMin + ((v.yMax - v.yMin) * j) / M;
   /** normalised z at grid point (i, j) (NaN = undefined), evaluated once */
   const Z = (i: number, j: number): number => {
     const k = j * W + i;
     if (state[k] === 0) { const z = evalAt(xAt(i), yAt(j)); value[k] = z; state[k] = Number.isNaN(z) ? 2 : 1; }
     return value[k];
+  };
+  const otherValues = others.map(() => new Map<number, number>());
+  /** normalised z of another surface at grid point (i, j), evaluated once */
+  const G = (o: number, i: number, j: number): number => {
+    const k = j * W + i, cache = otherValues[o], hit = cache.get(k);
+    if (hit !== undefined) return hit;
+    const z = evalWith(others[o], xAt(i), yAt(j));
+    cache.set(k, z);
+    return z;
+  };
+  /** does another surface cross this one inside the window, within the cell (its 3 × 3 lattice)? */
+  const intersects = (pts: [number, number][], z: number[]): boolean => {
+    for (let o = 0; o < others.length; o++) {
+      let above = false, below = false;
+      for (let t = 0; t < pts.length; t++) {
+        if (Math.abs(z[t]) > 1) continue;
+        const g = G(o, pts[t][0], pts[t][1]);
+        if (Number.isNaN(g)) continue;
+        if (z[t] > g) above = true; else if (z[t] < g) below = true;
+      }
+      if (above && below) return true;
+    }
+    return false;
   };
   const leaves: Leaf[] = [];
   const owner = new Int32Array(M * M);
@@ -86,8 +113,9 @@ export function buildSurfacePlotMesh(ast: ExprNode, v: SurfaceViewport, level: S
     const crossing = c.some(q => q >= -1 && q <= 1) && c.some(q => q < -1 || q > 1);
     const t = z.map(q => Math.max(-3, Math.min(3, q)));
     const jump = [[0, 4], [4, 1], [1, 5], [5, 2], [2, 6], [6, 3], [3, 7], [7, 0]].some(([a, b]) => Math.abs(t[a] - t[b]) > SURFACE_PLOT_JUMP);
-    if (err <= B.tolerance && !crossing && !jump) return -1;
-    return err + (crossing ? B.tolerance : 0) + (jump ? 50 : 0);
+    const meets = others.length > 0 && intersects(pts, z);
+    if (err <= B.tolerance && !crossing && !jump && !meets) return -1;
+    return err + (crossing ? B.tolerance : 0) + (jump ? 50 : 0) + (meets ? 20 : 0);
   };
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { leaves.push({ i: i * s0, j: j * s0, s: s0, d: 0, alive: true, pr: 0 }); assign(leaves.length - 1); }
   let alive = leaves.length, refined = 0;
@@ -102,6 +130,7 @@ export function buildSurfacePlotMesh(ast: ExprNode, v: SurfaceViewport, level: S
     }
     return [...out].sort((a, b) => a - b);
   };
+  let onChild: (ix: number) => void = () => {};
   const split = (ix: number): boolean => {
     const L = leaves[ix];
     if (!L.alive || L.d >= D) return false;
@@ -114,14 +143,27 @@ export function buildSurfacePlotMesh(ast: ExprNode, v: SurfaceViewport, level: S
       const child: Leaf = { i: L.i + a, j: L.j + b, s: h, d: L.d + 1, alive: true, pr: 0 };
       leaves.push(child); assign(leaves.length - 1);
       child.pr = priority(child);
+      onChild(leaves.length - 1);
     }
     return true;
   };
-  for (let d = 0; d < D; d++) {
-    const order = leaves.map((_, ix) => ix).filter(ix => leaves[ix].alive && leaves[ix].d === d && leaves[ix].pr > 0)
-      .sort((a, b) => leaves[b].pr - leaves[a].pr || leaves[a].j - leaves[b].j || leaves[a].i - leaves[b].i);
-    for (const ix of order) if (leaves[ix].alive) split(ix);
-  }
+  // best-first refinement across levels: the highest-priority leaf is always refined next (an intersection or a jump at the finest
+  // level before a mild curvature at the base level), ties broken by level and position — deterministic
+  const before = (a: number, b: number) => { const A = leaves[a], Bl = leaves[b]; return A.pr !== Bl.pr ? A.pr > Bl.pr : A.d !== Bl.d ? A.d < Bl.d : A.j !== Bl.j ? A.j < Bl.j : A.i < Bl.i; };
+  const heap: number[] = [];
+  const push = (ix: number) => { heap.push(ix); for (let c = heap.length - 1; c > 0;) { const p = (c - 1) >> 1; if (!before(heap[c], heap[p])) break; [heap[c], heap[p]] = [heap[p], heap[c]]; c = p; } };
+  const pop = (): number => {
+    const top = heap[0], last = heap.pop()!;
+    if (heap.length) {
+      heap[0] = last;
+      for (let p = 0; ;) { const l = 2 * p + 1, r = l + 1; let m = p; if (l < heap.length && before(heap[l], heap[m])) m = l; if (r < heap.length && before(heap[r], heap[m])) m = r; if (m === p) break; [heap[m], heap[p]] = [heap[p], heap[m]]; p = m; }
+    }
+    return top;
+  };
+  onChild = ix => { if (leaves[ix].pr > 0) push(ix); };
+  leaves.forEach((L, ix) => { if (L.pr > 0) push(ix); });
+  let exhausted = false;
+  while (heap.length && !exhausted) { const ix = pop(); if (leaves[ix].alive && !split(ix) && leaves[ix].alive && (alive + 3 > B.polygons || evaluations + 16 > B.evaluations * REFINE_SHARE)) exhausted = true; }
   // discontinuity test of a polygon edge (cached): does the value change survive repeated bisection?
   const jumps = new Map<number, boolean>();
   const isJump = (ia: number, ja: number, ib: number, jb: number): boolean => {
@@ -344,9 +386,11 @@ export function plotAxes(camera: SurfacePlotCameraState, width: number, height: 
   const centre = P(0, 0, sz), anchorOf = (dx: number): "start" | "middle" | "end" => (dx > 0.35 ? "start" : dx < -0.35 ? "end" : "middle");
   const outward = (mid: [number, number, number], from: [number, number, number]) => { const dx = mid[0] - from[0], dy = mid[1] - from[1], l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l]; };
   const out: PlotAxes = { panes, grid, edges, ticks: [], titles: [] };
+  // a tick label that would overlap one already placed (two axes meeting at a corner) is left out
+  const free = (x: number, y: number) => out.ticks.every(t => Math.abs(t.x - x) > 18 || Math.abs(t.y - y) > 12);
   const place = (axis: "x" | "y" | "z", list: PlotTick[], at: (t: number) => [number, number, number], dir: number[], title: string) => {
     const a = anchorOf(dir[0]);
-    for (const tk of list) { const p = P(...at(tk.t)); out.ticks.push({ axis, x: p[0] + dir[0] * 10, y: p[1] + dir[1] * 10 + 4, text: tk.text, anchor: a }); }
+    for (const tk of list) { const p = P(...at(tk.t)), x = p[0] + dir[0] * 10, y = p[1] + dir[1] * 10 + 4; if (free(x, y)) out.ticks.push({ axis, x, y, text: tk.text, anchor: a }); }
     const m = P(...at(0));
     out.titles.push({ axis, x: m[0] + dir[0] * 34, y: m[1] + dir[1] * 30 + 4, text: title, anchor: a });
   };

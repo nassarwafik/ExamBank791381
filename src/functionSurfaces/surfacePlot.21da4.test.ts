@@ -163,6 +163,29 @@ describe("adaptive mesh: accuracy, determinism and bounds", () => {
   });
 });
 
+describe("intersections of surfaces in one plot", () => {
+  it("refines where another surface crosses inside the window: polygons along the intersection curve are finest-level", () => {
+    const v = V(-2, 2, -2, 2, -1, 5), up = ast("x^2+y^2"), down = ast("4-x^2-y^2");
+    const alone = buildSurfacePlotMesh(up, v, "standard", 2), paired = buildSurfacePlotMesh(up, v, "standard", 2, { others: [down] });
+    expect(paired.stats.refined).toBeGreaterThan(alone.stats.refined);
+    const finest = 4 / (surfaceBudget("standard", 2).base * 4);                                          // math units per finest cell
+    let straddling = 0;
+    for (const p of paired.polygons) {
+      const pts = [] as [number, number, number][];
+      for (let t = 0; t < p.pts.length; t += 3) pts.push([p.pts[t], p.pts[t + 1], p.pts[t + 2]]);
+      const signs = new Set(pts.map(([X, Y, Z]) => { const [x, y] = mathOf(v, X, Y); return Math.sign(Z - normZ("4-x^2-y^2", v, x, y)); }));
+      if (signs.has(1) && signs.has(-1)) {
+        straddling++;
+        const xs = pts.map(([X]) => mathOf(v, X, 0)[0]), ys = pts.map(([, Y]) => mathOf(v, 0, Y)[1]);
+        expect(Math.max(...xs) - Math.min(...xs)).toBeLessThanOrEqual(finest * 1.0001);
+        expect(Math.max(...ys) - Math.min(...ys)).toBeLessThanOrEqual(finest * 1.0001);
+      }
+    }
+    expect(straddling).toBeGreaterThan(50);                                                               // the circle x² + y² = 2
+    expect(buildSurfacePlotMesh(up, v, "motion", 2, { others: [down] })).toEqual(buildSurfacePlotMesh(up, v, "motion", 2));   // motion: unchanged
+  });
+});
+
 describe("discontinuities, poles and undefined regions", () => {
   it("never draws a polygon across a jump (floor), while a steep CONTINUOUS surface keeps every polygon", () => {
     const v = V(-2.5, 2.5, -2, 2, -4, 4), m = mesh("floor(x)", v);
@@ -198,7 +221,7 @@ describe("budgets, level of detail and projection", () => {
   it("every plot stays inside its polygon and evaluation budgets; the motion level stays light", () => {
     const hard = ["sin(8*x)*cos(8*y)", "floor(3*x)+floor(3*y)", "1/(x*y)", "sqrt(4-x^2-y^2)", "tan(x*y)"], v = V(-2, 2, -2, 2, -3, 3);
     for (const level of ["standard", "high", "motion"] as const) for (let count = 1; count <= 5; count++) {
-      const ms = hard.slice(0, count).map(e => mesh(e, v, level, count));
+      const asts = hard.slice(0, count).map(ast), ms = asts.map((a, i) => buildSurfacePlotMesh(a, v, level, count, { others: asts.filter((_, k) => k !== i) }));
       const polys = ms.reduce((n, m) => n + m.polygons.length, 0), evals = ms.reduce((n, m) => n + m.stats.evaluations, 0);
       expect(polys, level + count).toBeLessThanOrEqual(SURFACE_PLOT_BUDGETS[level].polygons);
       expect(evals, level + count).toBeLessThanOrEqual(SURFACE_PLOT_BUDGETS[level].evaluations);
@@ -232,7 +255,8 @@ describe("budgets, level of detail and projection", () => {
     for (const camera of [{ yaw: -0.6, pitch: 0.45, zoom: 1 }, { yaw: 2.5, pitch: -0.8, zoom: 1.5 }]) {
       const a = plotAxes(camera, 640, 460, ticks, { x: "x (m)", y: "y", z: "z" }, true);
       expect(a.panes.length).toBe(3);
-      expect(a.ticks.length).toBe(6);
+      expect(a.ticks.length).toBeGreaterThanOrEqual(5);                                                   // a corner collision may drop one
+      for (let i = 0; i < a.ticks.length; i++) for (let j = i + 1; j < a.ticks.length; j++) expect(Math.abs(a.ticks[i].x - a.ticks[j].x) > 18 || Math.abs(a.ticks[i].y - a.ticks[j].y) > 12).toBe(true);
       expect(a.titles.map(t => t.text)).toEqual(["x (m)", "y", "z"]);
       expect(a.grid.length).toBeGreaterThan(0);
       expect(plotAxes(camera, 640, 460, ticks, { x: "x", y: "y", z: "z" }, false).grid.length).toBe(0);

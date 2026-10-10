@@ -23,10 +23,11 @@ const fmt = (n: number) => String(Number(n.toPrecision(4)));
 
 // meshes are shared between viewers and re-renders (bounded): a parent that re-derives an identical plot never rebuilds geometry
 const MESHES = new Map<string, SurfacePlotMesh>();
-function meshFor(ast: ExprNode, expression: string, plot: SurfacePlotSpecV2, level: SurfacePlotLevel): SurfacePlotMesh {
-  const key = level + "|" + plot.surfaces.length + "|" + JSON.stringify(plot.viewport) + "|" + expression, hit = MESHES.get(key);
+function meshFor(asts: readonly ExprNode[], index: number, plot: SurfacePlotSpecV2, level: SurfacePlotLevel): SurfacePlotMesh {
+  // the other surfaces take part in refinement (intersections), so they are part of the key
+  const key = level + "|" + JSON.stringify(plot.viewport) + "|" + index + "|" + plot.surfaces.map(s => s.expression).join("\u0001"), hit = MESHES.get(key);
   if (hit) return hit;
-  const mesh = buildSurfacePlotMesh(ast, plot.viewport, level, plot.surfaces.length);
+  const mesh = buildSurfacePlotMesh(asts[index], plot.viewport, level, plot.surfaces.length, { others: asts.filter((_, i) => i !== index) });
   MESHES.set(key, mesh);
   if (MESHES.size > 40) MESHES.delete(MESHES.keys().next().value as string);
   return mesh;
@@ -60,14 +61,14 @@ export default function SurfacePlot3DView({ spec }: { spec: SurfacePlotSpecV2 })
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const height = Math.round(Math.max(250, Math.min(560, width * 0.72)));
+  const height = Math.round(Math.max(250, Math.min(560, width * (width < 560 ? 0.95 : 0.72))));       // taller on phones: a larger plot
   // first paint and motion: the light mesh; the authored-quality mesh is built after the first paint (never blocks the page)
-  const motion = useMemo(() => (value && asts ? value.surfaces.map((s, i) => meshFor(asts[i], s.expression, value, "motion")) : []), [value, asts]);
+  const motion = useMemo(() => (value && asts ? value.surfaces.map((_, i) => meshFor(asts, i, value, "motion")) : []), [value, asts]);
   const [rest, setRest] = useState<{ key: string; meshes: SurfacePlotMesh[] } | null>(null);
   useEffect(() => {
     if (!value || !asts) return;
     let live = true;
-    const id = setTimeout(() => { const meshes = value.surfaces.map((s, i) => meshFor(asts[i], s.expression, value, value.quality)); if (live) setRest({ key: contentKey, meshes }); }, 0);
+    const id = setTimeout(() => { const meshes = value.surfaces.map((_, i) => meshFor(asts, i, value, value.quality)); if (live) setRest({ key: contentKey, meshes }); }, 0);
     return () => { live = false; clearTimeout(id); };
   }, [value, asts, contentKey]);
   const restReady = !!rest && rest.key === contentKey;
