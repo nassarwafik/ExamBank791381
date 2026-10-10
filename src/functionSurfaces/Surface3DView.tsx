@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo } from "react";
+import { useOrbitCamera, type OrbitLimits } from "../interactive3d/orbitCamera";
 import { evaluateExpression } from "../parametricExpression";
 import { projectSurface, sampleSurface } from "./surfaceMesh";
 import { type SurfaceCamera, type SurfaceSpecV1, validateSurfaceSpec } from "./surfaceSpec";
@@ -7,15 +8,19 @@ import "./surface-3d.css";
 // Phase 21B surface viewer: owned SVG + bounded mesh, shared by persisted RichContent and teacher authoring.
 // No WebGL, eval, remote scripts, renderer options or new rendering dependency; camera state is presentation-only.
 const FILLS = ["#e1effb", "#c8e1f6", "#a9d0eb", "#89b9dd", "#6aa2d1", "#4987b9", "#3671a5", "#285b91"];
+// Phase 21D: the camera is the shared orbit controller — azimuth turns without a stop (21B clamped it to ±π), elevation stays in
+// [0.15, 1.35] (the surface is always seen from above its plane), and the view resets only when the surface's content changes.
 const start = (s: SurfaceSpecV1): SurfaceCamera => s.camera ?? { azimuth: -0.75, elevation: 0.6 };
-const limitAngle = (n: number) => Math.max(-Math.PI, Math.min(Math.PI, n));
-const limitElevation = (n: number) => Math.max(0.15, Math.min(1.35, n));
+const SURFACE_LIMITS: OrbitLimits = { pitchMin: 0.15, pitchMax: 1.35, zoomMin: 1, zoomMax: 1 };
 export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
   const uid = useId().replace(/[^A-Za-z0-9_-]/g, "");
   const checked = useMemo(() => validateSurfaceSpec(spec), [spec]);
-  const [camera, setCamera] = useState<SurfaceCamera>(() => start(spec));
-  const drag = useRef<{ id: number; x: number; y: number; azimuth: number; elevation: number } | null>(null);
-  useEffect(() => { setCamera(start(spec)); }, [spec]);
+  const authored = start(spec);
+  const { camera: orbit, rotateBy, reset: resetCamera, onKeyDown, attachTo, pointerHandlers } = useOrbitCamera({
+    initial: { yaw: authored.azimuth, pitch: authored.elevation, zoom: 1 },
+    resetKey: spec.id + "|" + authored.azimuth + "|" + authored.elevation, limits: SURFACE_LIMITS, rotate: true, zoom: false
+  });
+  const camera: SurfaceCamera = useMemo(() => ({ azimuth: orbit.yaw, elevation: orbit.pitch }), [orbit]);
   const mesh = useMemo(() => checked.ok ? sampleSurface(checked.value, checked.ast) : null, [checked]);
   const scene = useMemo(() => (checked.ok && mesh) ? projectSurface(mesh, checked.value, camera) : null, [checked, mesh, camera]);
   const table = useMemo(() => {
@@ -29,16 +34,6 @@ export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
     return rows;
   }, [checked]);
   if (!checked.ok || !scene || !mesh) return <p role="alert">الرسم ثلاثي الأبعاد غير صالح، ويحتاج مراجعة المعلم.</p>;
-  const resetCamera = () => setCamera(start(spec));
-  const keyCamera = (key: string) => {
-    if (key === "ArrowLeft") setCamera(v => ({ ...v, azimuth: limitAngle(v.azimuth - 0.2) }));
-    else if (key === "ArrowRight") setCamera(v => ({ ...v, azimuth: limitAngle(v.azimuth + 0.2) }));
-    else if (key === "ArrowUp") setCamera(v => ({ ...v, elevation: limitElevation(v.elevation + 0.15) }));
-    else if (key === "ArrowDown") setCamera(v => ({ ...v, elevation: limitElevation(v.elevation - 0.15) }));
-    else if (key === "Home") resetCamera();
-    else return false;
-    return true;
-  };
   return (
     <figure className="ex3d" dir="rtl" aria-labelledby={uid + "-title"} data-surface-id={checked.value.id}>
       <figcaption>
@@ -47,27 +42,17 @@ export default function Surface3DView({ spec }: { spec: SurfaceSpecV1 }) {
         <span className="ex3d-expression" dir="ltr">z = {checked.value.expression}</span>
       </figcaption>
       <div className="ex3d-controls" role="group" aria-label="أدوات تدوير الرسم ثلاثي الأبعاد">
-        <button type="button" onClick={() => setCamera(c => ({ ...c, azimuth: limitAngle(c.azimuth - 0.2) }))}>تدوير لليسار</button>
-        <button type="button" onClick={() => setCamera(c => ({ ...c, azimuth: limitAngle(c.azimuth + 0.2) }))}>تدوير لليمين</button>
-        <button type="button" onClick={() => setCamera(c => ({ ...c, elevation: limitElevation(c.elevation + 0.15) }))}>رفع المنظور</button>
-        <button type="button" onClick={() => setCamera(c => ({ ...c, elevation: limitElevation(c.elevation - 0.15) }))}>خفض المنظور</button>
+        <button type="button" onClick={() => rotateBy(-0.2, 0)}>تدوير لليسار</button>
+        <button type="button" onClick={() => rotateBy(0.2, 0)}>تدوير لليمين</button>
+        <button type="button" onClick={() => rotateBy(0, 0.15)}>رفع المنظور</button>
+        <button type="button" onClick={() => rotateBy(0, -0.15)}>خفض المنظور</button>
         <button type="button" onClick={resetCamera}>إعادة العرض</button>
       </div>
       <p id={uid + "-help"} className="ex3d-help">يمكن تدوير السطح بالسحب، أو بمفاتيح الأسهم بعد التركيز على الرسم. مفتاح Home يعيد زاوية العرض.</p>
-      <svg className="ex3d-scene" viewBox={"0 0 " + scene.width + " " + scene.height} role="img" tabIndex={0}
+      <svg ref={attachTo} className="ex3d-scene" viewBox={"0 0 " + scene.width + " " + scene.height} role="img" tabIndex={0}
         aria-describedby={uid + "-help"} aria-label={"سطح ثلاثي الأبعاد للدالة z = " + checked.value.expression + "، يمكن تدويره بالسحب أو بمفاتيح الأسهم."}
-        onKeyDown={e => { if (keyCamera(e.key)) e.preventDefault(); }}
-        onPointerDown={e => {
-          drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, azimuth: camera.azimuth, elevation: camera.elevation };
-          e.currentTarget.setPointerCapture?.(e.pointerId);
-        }}
-        onPointerMove={e => {
-          const d = drag.current;
-          if (!d || d.id !== e.pointerId) return;
-          setCamera({ azimuth: limitAngle(d.azimuth + (e.clientX - d.x) * 0.01), elevation: limitElevation(d.elevation - (e.clientY - d.y) * 0.008) });
-        }}
-        onPointerUp={e => { if (drag.current?.id === e.pointerId) drag.current = null; e.currentTarget.releasePointerCapture?.(e.pointerId); }}
-        onPointerCancel={e => { if (drag.current?.id === e.pointerId) drag.current = null; }}>
+        data-azimuth={Math.round(camera.azimuth * 1000) / 1000} data-elevation={Math.round(camera.elevation * 1000) / 1000}
+        onKeyDown={e => { if (onKeyDown(e)) e.preventDefault(); }} {...pointerHandlers}>
         <rect width={scene.width} height={scene.height} fill="#f8fbff" />
         {scene.faces.map(f => <polygon key={f.id} points={f.points} fill={FILLS[f.shade]}
           stroke="#2f4f74" strokeWidth="0.35" />)}
