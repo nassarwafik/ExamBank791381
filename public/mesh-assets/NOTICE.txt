@@ -1,0 +1,21 @@
+ExamBank anatomical mesh assets (Phase 21D-B)
+
+The .glb files in this directory are derived from BodyParts3D.
+
+  BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International
+  Source:  https://dbarchive.biosciencedbc.jp/en/bodyparts3d/
+  Licence: https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html (CC BY 4.0)
+           The source OBJ files also carry a Creative Commons Attribution-Share Alike 2.1 Japan notice.
+
+The derived files are published under Creative Commons Attribution-ShareAlike 4.0 International:
+https://creativecommons.org/licenses/by-sa/4.0/
+
+ExamBank converted the source OBJ files to glTF 2.0 binary. The conversion changed units and axes, merged elements into named
+parts, clipped one vessel, simplified the brain to about 50 % of its triangles and added educational materials. These are
+educational models, not diagnostic tools.
+
+Files, sources, modifications and educational limitations:
+docs/mesh-assets/PROVENANCE.md in the ExamBank repository.
+
+  61e01bcfb305f44ce5a81d7a403f193a3b7e66c022a4f694fb5304b7c1c219d7.glb  human-heart-bp3d v1
+  6de4ff20027acf242675d73e99da45b5e285abb7e7e6b79dc40e4ad6a30ccf5c.glb  human-brain-bp3d v1

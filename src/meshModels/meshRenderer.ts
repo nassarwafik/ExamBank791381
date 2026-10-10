@@ -181,11 +181,12 @@ void main() { fragColor = uId; }`;
 
 // camera-relative light rig (view space: +x right, +y up, +z towards the viewer) — linear radiance
 const LIGHTS: { dir: [number, number, number]; color: [number, number, number] }[] = [
-  { dir: [-0.45, 0.62, 0.64], color: [2.9, 2.8, 2.65] },     // key: upper left, in front
-  { dir: [0.7, 0.12, 0.55], color: [0.85, 0.92, 1.1] },      // fill: right, cool
-  { dir: [0.1, 0.55, -0.83], color: [1.35, 1.35, 1.4] }      // rim: behind, from above
+  { dir: [-0.45, 0.62, 0.64], color: [2.35, 2.27, 2.15] },   // key: upper left, in front
+  { dir: [0.7, 0.12, 0.55], color: [0.55, 0.6, 0.72] },      // fill: right, cool
+  { dir: [0.1, 0.55, -0.83], color: [1.0, 1.0, 1.05] }       // rim: behind, from above
 ];
-const SKY = [0.36, 0.4, 0.46], GROUND = [0.15, 0.13, 0.12];
+// a darker ambient than a product viewer: saturated tissue colours, contrast between neighbouring structures
+const SKY = [0.24, 0.27, 0.31], GROUND = [0.09, 0.08, 0.075];
 const BG_SRGB = [0.957, 0.969, 0.984];
 // highlight / review tints (linear rgb + amount): strong enough to read unambiguously on any base colour (the list carries the same
 // state as text, so colour is never the only signal)

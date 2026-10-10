@@ -41,7 +41,7 @@ export function Harness() {
     void (async () => {
       const bytes = writeGlb(testAssemblyModel()), sha = await sha256Hex(bytes);
       const alt = await sha256Hex(writeGlb({ ...testAssemblyModel(), generator: "ExamBank test assembly (substituted)" }));
-      const entry = (id: string, h: string): MeshLibraryAsset => ({ id, version: 1, sha256: h, byteLength: bytes.length, title: "test", subject: "engineering", parts: PARTS.map(p => ({ id: p.id, label: p.label })), provenance: { source: "ExamBank (generated)", sourceUrl: "https://example.invalid/", license: "test only", licenseUrl: "https://example.invalid/license", attribution: "ExamBank", modifications: "none", educationalLimitations: "engineering fixture, not educational content", retrieved: "2026-10-10" } });
+      const entry = (id: string, h: string): MeshLibraryAsset => ({ id, version: 1, sha256: h, byteLength: bytes.length, title: "test", subject: "engineering", camera: { azimuth: 0, elevation: 0.2, zoom: 1 }, parts: PARTS.map(p => ({ id: p.id, label: p.label })), provenance: { source: "ExamBank (generated)", sourceUrl: "https://example.invalid/", sourceLicense: "test only", sourceLicenseUrl: "https://example.invalid/license", license: "test only", licenseUrl: "https://example.invalid/license", attribution: "ExamBank", modifications: "none", educationalLimitations: "engineering fixture, not educational content", retrieved: "2026-10-10" } });
       setReady({ library: [entry("test-assembly", sha), entry("test-substituted", alt)], sha, alt, bytes: bytes.length });
     })();
   }, []);

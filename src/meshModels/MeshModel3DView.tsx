@@ -37,7 +37,7 @@ export default function MeshModel3DView({ model, library = MESH_LIBRARY, selecti
   const checked = useMemo(() => validateMeshModelSpec(model, { library }), [model, library]);
   const value = checked.ok ? checked.value : null, entry = checked.ok ? checked.library : null;
   const contentKey = useMemo(() => (value ? JSON.stringify(value) : ""), [value]);
-  const authored = value?.camera ?? DEFAULT_MESH_CAMERA;
+  const authored = value?.camera ?? entry?.camera ?? DEFAULT_MESH_CAMERA;               // a library asset brings its reviewed default view
   const { camera, interacting, reset, rotateBy, zoomBy, attachTo, onKeyDown, pointerHandlers, consumeSuppressedClick } = useOrbitCamera({
     initial: { yaw: authored.azimuth, pitch: authored.elevation, zoom: authored.zoom },
     resetKey: contentKey, limits: LIMITS, rotate: !!value?.controls.rotate, zoom: !!value?.controls.zoom
@@ -244,9 +244,9 @@ export default function MeshModel3DView({ model, library = MESH_LIBRARY, selecti
       <details className="mm3d-provenance">
         <summary>مصدر النموذج وترخيصه</summary>
         {entry ? <dl>
-          <dt>المصدر</dt><dd>{entry.provenance.source}</dd>
-          <dt>نسبة العمل</dt><dd>{entry.provenance.attribution}</dd>
-          <dt>الترخيص</dt><dd><a href={entry.provenance.licenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.license}</a></dd>
+          <dt>المصدر</dt><dd><a href={entry.provenance.sourceUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.source}</a></dd>
+          <dt>نسبة العمل</dt><dd>{entry.provenance.attribution} (<a href={entry.provenance.sourceLicenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.sourceLicense}</a>)</dd>
+          <dt>ترخيص هذا الملف</dt><dd><a href={entry.provenance.licenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.license}</a></dd>
           <dt>تعديلات ExamBank</dt><dd>{entry.provenance.modifications}</dd>
           <dt>حدود الاستخدام التعليمي</dt><dd>{entry.provenance.educationalLimitations}</dd>
         </dl> : <p>نموذج رفعه المعلم؛ تحقّق الخادم من بنيته وبصمته (SHA-256) قبل حفظه، ولا يُعرض إلا إذا طابقت بصمته النسخة المعتمدة في السؤال.</p>}
