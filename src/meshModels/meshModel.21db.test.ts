@@ -11,9 +11,9 @@ import { computeNormals, textureScale } from "./meshRenderer";
 const SHA = "a".repeat(64);
 const PARTS = [{ id: "frontBlock", label: "الكتلة الأمامية" }, { id: "ball", label: "الكرة", description: "كرة خضراء" }];
 const entry = (sha = SHA): MeshLibraryAsset => ({
-  id: "test-assembly", version: 1, sha256: sha, byteLength: 100, title: "t", subject: "engineering",
+  id: "test-assembly", version: 1, sha256: sha, byteLength: 100, title: "t", subject: "engineering", camera: { azimuth: 0, elevation: 0.2, zoom: 1 },
   parts: [{ id: "frontBlock", label: "x" }, { id: "ball", label: "y" }, { id: "rod", label: "z" }],
-  provenance: { source: "s", sourceUrl: "https://example.invalid", license: "l", licenseUrl: "https://example.invalid/l", attribution: "a", modifications: "m", educationalLimitations: "e", retrieved: "2026-10-10" }
+  provenance: { source: "s", sourceUrl: "https://example.invalid", sourceLicense: "sl", sourceLicenseUrl: "https://example.invalid/sl", license: "l", licenseUrl: "https://example.invalid/l", attribution: "a", modifications: "m", educationalLimitations: "e", retrieved: "2026-10-10" }
 });
 const model = (patch: Partial<MeshModelSpecV1> = {}): MeshModelSpecV1 => ({
   version: 1, id: "heartModel", title: "نموذج", description: "وصف", asset: { source: "library", id: "test-assembly", version: 1, sha256: SHA }, parts: PARTS,
@@ -27,7 +27,7 @@ describe("21D-B.1 MeshModelSpecV1 — versioned, strict, data only", () => {
     expect(r.ok).toBe(true);
     if (r.ok) { expect(Object.keys(r.value)).toEqual(["version", "id", "title", "description", "asset", "parts", "controls", "camera"]); expect(r.library?.id).toBe("test-assembly"); }
     expect(codes(model({ asset: { source: "upload", sha256: SHA, byteLength: 5000 } }))).toEqual([]);
-    expect(MESH_LIBRARY).toEqual([]);                                                          // B.1 ships the contract; assets arrive in B.2
+    expect(Object.isFrozen(MESH_LIBRARY)).toBe(true);                         // code-owned and immutable (entries: meshAssetCatalog.21db.test.ts)
   });
   it("the runtime URL is derived by code from the hash only — same origin, no exam-supplied URL, no path traversal", () => {
     expect(meshAssetUrl({ source: "library", id: "x", version: 1, sha256: SHA })).toBe("/mesh-assets/" + SHA + ".glb");

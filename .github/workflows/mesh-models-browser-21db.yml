@@ -6,7 +6,9 @@ on:
       - "src/meshModels/**"
       - "src/interactive3d/orbitCamera.ts"
       - "browser-harness/mesh-models-21db.*"
+      - "browser-harness/mesh-anatomy-21db.*"
       - "scripts/check-mesh-models-browser-21db.mjs"
+      - "scripts/check-mesh-anatomy-browser-21db.mjs"
       - "public/mesh-assets/**"
       - "docs/enterprise-realistic-3d-mesh-models-21d-b.md"
       - ".github/workflows/mesh-models-browser-21db.yml"
@@ -34,6 +36,12 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21db
         run: node --experimental-strip-types scripts/check-mesh-models-browser-21db.mjs
+      - name: Certify the anatomical library models and the authoring editor in real Chromium (orientation, picking, performance)
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-21db
+        run: node --experimental-strip-types scripts/check-mesh-anatomy-browser-21db.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

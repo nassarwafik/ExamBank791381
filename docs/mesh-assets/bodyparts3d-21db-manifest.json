@@ -1,0 +1,973 @@
+{
+  "source": {
+    "name": "partof_BP3D_4.0_obj_99.zip",
+    "sha256": "9fbc713fffeee924a5a657d9813d84d7eb957bded63adb854931dd5e3eb61c97",
+    "url": "https://dbarchive.biosciencedbc.jp/data/bodyparts3d/LATEST/partof_BP3D_4.0_obj_99.zip"
+  },
+  "converter": "scripts/convert-bodyparts3d-21db.mts",
+  "models": [
+    {
+      "id": "human-heart-bp3d",
+      "version": 1,
+      "sha256": "61e01bcfb305f44ce5a81d7a403f193a3b7e66c022a4f694fb5304b7c1c219d7",
+      "byteLength": 2001400,
+      "triangles": 99207,
+      "vertices": 58143,
+      "parts": [
+        {
+          "id": "rightAtrium",
+          "sources": [
+            {
+              "file": "FJ2439",
+              "concept": "FMA9457",
+              "name": "Wall of right atrium",
+              "triangles": 17784
+            }
+          ],
+          "triangles": {
+            "source": 17784,
+            "output": 17784
+          },
+          "vertices": 9887
+        },
+        {
+          "id": "leftAtrium",
+          "sources": [
+            {
+              "file": "FJ2438",
+              "concept": "FMA9531",
+              "name": "Wall of left atrium",
+              "triangles": 7544
+            }
+          ],
+          "triangles": {
+            "source": 7544,
+            "output": 7544
+          },
+          "vertices": 4284
+        },
+        {
+          "id": "rightVentricle",
+          "sources": [
+            {
+              "file": "FJ2423",
+              "concept": "FMA9291",
+              "name": "Cavity of right ventricle",
+              "triangles": 1918
+            }
+          ],
+          "triangles": {
+            "source": 1918,
+            "output": 1918
+          },
+          "vertices": 973
+        },
+        {
+          "id": "leftVentricle",
+          "sources": [
+            {
+              "file": "FJ2422",
+              "concept": "FMA9466",
+              "name": "Cavity of left ventricle",
+              "triangles": 1722
+            }
+          ],
+          "triangles": {
+            "source": 1722,
+            "output": 1722
+          },
+          "vertices": 879
+        },
+        {
+          "id": "aorta",
+          "sources": [
+            {
+              "file": "FJ3413",
+              "concept": "FMA3736",
+              "name": "Ascending aorta",
+              "triangles": 396
+            },
+            {
+              "file": "FJ3411",
+              "concept": "FMA3768",
+              "name": "Arch of aorta",
+              "triangles": 670
+            }
+          ],
+          "triangles": {
+            "source": 1066,
+            "output": 1066
+          },
+          "vertices": 610
+        },
+        {
+          "id": "pulmonaryTrunk",
+          "sources": [
+            {
+              "file": "FJ2966",
+              "concept": "FMA8612",
+              "name": "Pulmonary trunk",
+              "triangles": 1302
+            }
+          ],
+          "triangles": {
+            "source": 1302,
+            "output": 1302
+          },
+          "vertices": 871
+        },
+        {
+          "id": "superiorVenaCava",
+          "sources": [
+            {
+              "file": "FJ3645",
+              "concept": "FMA4720",
+              "name": "Superior vena cava",
+              "triangles": 598
+            }
+          ],
+          "triangles": {
+            "source": 598,
+            "output": 598
+          },
+          "vertices": 318
+        },
+        {
+          "id": "inferiorVenaCava",
+          "sources": [
+            {
+              "file": "FJ3441",
+              "concept": "FMA10951",
+              "name": "Inferior vena cava",
+              "triangles": 761
+            }
+          ],
+          "triangles": {
+            "source": 761,
+            "output": 761
+          },
+          "vertices": 793,
+          "clippedBelowMm": 1165
+        },
+        {
+          "id": "coronaryArteries",
+          "sources": [
+            {
+              "file": "FJ2723",
+              "concept": "FMA3802",
+              "name": "Trunk of right coronary artery",
+              "triangles": 4502
+            },
+            {
+              "file": "FJ2737",
+              "concept": "FMA3855",
+              "name": "Trunk of left coronary artery",
+              "triangles": 204
+            },
+            {
+              "file": "FJ2631",
+              "concept": "FMA74912",
+              "name": "Trunk of anterior interventricular branch of left coronary artery",
+              "triangles": 3032
+            },
+            {
+              "file": "FJ2633",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 492
+            },
+            {
+              "file": "FJ2634",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 196
+            },
+            {
+              "file": "FJ2635",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 766
+            },
+            {
+              "file": "FJ2636",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 420
+            },
+            {
+              "file": "FJ2637",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 160
+            },
+            {
+              "file": "FJ2638",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 290
+            },
+            {
+              "file": "FJ2639",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 150
+            },
+            {
+              "file": "FJ2640",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 260
+            },
+            {
+              "file": "FJ2642",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 964
+            },
+            {
+              "file": "FJ2648",
+              "concept": "FMA3860",
+              "name": "Diagonal branch of anterior descending branch of left coronary artery",
+              "triangles": 286
+            },
+            {
+              "file": "FJ2649",
+              "concept": "FMA3895",
+              "name": "Circumflex branch of left coronary artery",
+              "triangles": 1380
+            },
+            {
+              "file": "FJ2650",
+              "concept": "FMA3895",
+              "name": "Circumflex branch of left coronary artery",
+              "triangles": 396
+            },
+            {
+              "file": "FJ2651",
+              "concept": "FMA3895",
+              "name": "Circumflex branch of left coronary artery",
+              "triangles": 510
+            },
+            {
+              "file": "FJ2652",
+              "concept": "FMA3895",
+              "name": "Circumflex branch of left coronary artery",
+              "triangles": 308
+            },
+            {
+              "file": "FJ2653",
+              "concept": "FMA3895",
+              "name": "Circumflex branch of left coronary artery",
+              "triangles": 252
+            },
+            {
+              "file": "FJ2654",
+              "concept": "FMA3895",
+              "name": "Circumflex branch of left coronary artery",
+              "triangles": 172
+            },
+            {
+              "file": "FJ2643",
+              "concept": "FMA3868",
+              "name": "Conus branch of anterior interventricular branch of left coronary artery",
+              "triangles": 478
+            },
+            {
+              "file": "FJ2644",
+              "concept": "FMA3868",
+              "name": "Conus branch of anterior interventricular branch of left coronary artery",
+              "triangles": 306
+            },
+            {
+              "file": "FJ2671",
+              "concept": "FMA3815",
+              "name": "First anterior ventricular branch of right coronary artery",
+              "triangles": 478
+            },
+            {
+              "file": "FJ2673",
+              "concept": "FMA3815",
+              "name": "First anterior ventricular branch of right coronary artery",
+              "triangles": 338
+            },
+            {
+              "file": "FJ2677",
+              "concept": "FMA3815",
+              "name": "First anterior ventricular branch of right coronary artery",
+              "triangles": 252
+            },
+            {
+              "file": "FJ2714",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 794
+            },
+            {
+              "file": "FJ2715",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 218
+            },
+            {
+              "file": "FJ2716",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 232
+            },
+            {
+              "file": "FJ2717",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 340
+            },
+            {
+              "file": "FJ2718",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 186
+            },
+            {
+              "file": "FJ2719",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 380
+            },
+            {
+              "file": "FJ2720",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 320
+            },
+            {
+              "file": "FJ2721",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 256
+            },
+            {
+              "file": "FJ2722",
+              "concept": "FMA3837",
+              "name": "First posterior ventricular branch of right coronary artery",
+              "triangles": 320
+            },
+            {
+              "file": "FJ2632",
+              "concept": "FMA3872",
+              "name": "First right anterior branch of anterior interventricular branch of left coronary artery",
+              "triangles": 108
+            },
+            {
+              "file": "FJ2645",
+              "concept": "FMA3872",
+              "name": "First right anterior branch of anterior interventricular branch of left coronary artery",
+              "triangles": 318
+            },
+            {
+              "file": "FJ2646",
+              "concept": "FMA3874",
+              "name": "Second right anterior branch of anterior interventricular branch of left coronary artery",
+              "triangles": 470
+            },
+            {
+              "file": "FJ2641",
+              "concept": "FMA3876",
+              "name": "Third right anterior branch of anterior interventricular branch of left coronary artery",
+              "triangles": 442
+            },
+            {
+              "file": "FJ2647",
+              "concept": "FMA3876",
+              "name": "Third right anterior branch of anterior interventricular branch of left coronary artery",
+              "triangles": 306
+            },
+            {
+              "file": "FJ2667",
+              "concept": "FMA3818",
+              "name": "Marginal branch of right coronary artery",
+              "triangles": 360
+            },
+            {
+              "file": "FJ2668",
+              "concept": "FMA3818",
+              "name": "Marginal branch of right coronary artery",
+              "triangles": 216
+            },
+            {
+              "file": "FJ2672",
+              "concept": "FMA3818",
+              "name": "Marginal branch of right coronary artery",
+              "triangles": 742
+            },
+            {
+              "file": "FJ2674",
+              "concept": "FMA3818",
+              "name": "Marginal branch of right coronary artery",
+              "triangles": 284
+            },
+            {
+              "file": "FJ2675",
+              "concept": "FMA3818",
+              "name": "Marginal branch of right coronary artery",
+              "triangles": 200
+            },
+            {
+              "file": "FJ2692",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 930
+            },
+            {
+              "file": "FJ2693",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 766
+            },
+            {
+              "file": "FJ2694",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 424
+            },
+            {
+              "file": "FJ2695",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 236
+            },
+            {
+              "file": "FJ2696",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 336
+            },
+            {
+              "file": "FJ2697",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 220
+            },
+            {
+              "file": "FJ2698",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 200
+            },
+            {
+              "file": "FJ2699",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 126
+            },
+            {
+              "file": "FJ2700",
+              "concept": "FMA3840",
+              "name": "Posterior interventricular branch of right coronary artery",
+              "triangles": 280
+            },
+            {
+              "file": "FJ2670",
+              "concept": "FMA3807",
+              "name": "Right conus artery",
+              "triangles": 442
+            },
+            {
+              "file": "FJ2676",
+              "concept": "FMA3807",
+              "name": "Right conus artery",
+              "triangles": 304
+            }
+          ],
+          "triangles": {
+            "source": 27348,
+            "output": 27348
+          },
+          "vertices": 17529
+        },
+        {
+          "id": "cardiacVeins",
+          "sources": [
+            {
+              "file": "FJ2655",
+              "concept": "FMA4706",
+              "name": "Coronary sinus",
+              "triangles": 624
+            },
+            {
+              "file": "FJ2656",
+              "concept": "FMA4707",
+              "name": "Great cardiac vein",
+              "triangles": 826
+            },
+            {
+              "file": "FJ2724",
+              "concept": "FMA4714",
+              "name": "Small cardiac vein",
+              "triangles": 570
+            },
+            {
+              "file": "FJ2731",
+              "concept": "FMA4714",
+              "name": "Small cardiac vein",
+              "triangles": 892
+            },
+            {
+              "file": "FJ2727",
+              "concept": "FMA4716",
+              "name": "Right marginal vein",
+              "triangles": 970
+            },
+            {
+              "file": "FJ2728",
+              "concept": "FMA4716",
+              "name": "Right marginal vein",
+              "triangles": 282
+            },
+            {
+              "file": "FJ2729",
+              "concept": "FMA4716",
+              "name": "Right marginal vein",
+              "triangles": 222
+            }
+          ],
+          "triangles": {
+            "source": 4386,
+            "output": 4386
+          },
+          "vertices": 2486
+        },
+        {
+          "id": "tricuspidValve",
+          "sources": [
+            {
+              "file": "FJ2421",
+              "concept": "FMA7238",
+              "name": "Anterior leaflet of tricuspid valve",
+              "triangles": 8160
+            },
+            {
+              "file": "FJ2433",
+              "concept": "FMA7239",
+              "name": "Posterior leaflet of tricuspid valve",
+              "triangles": 4926
+            },
+            {
+              "file": "FJ2436",
+              "concept": "FMA7240",
+              "name": "Septal leaflet of tricuspid valve",
+              "triangles": 4526
+            }
+          ],
+          "triangles": {
+            "source": 17612,
+            "output": 17612
+          },
+          "vertices": 9602
+        },
+        {
+          "id": "mitralValve",
+          "sources": [
+            {
+              "file": "FJ2420",
+              "concept": "FMA7242",
+              "name": "Anterior leaflet of mitral valve",
+              "triangles": 7558
+            },
+            {
+              "file": "FJ2432",
+              "concept": "FMA7243",
+              "name": "Posterior leaflet of mitral valve",
+              "triangles": 3820
+            }
+          ],
+          "triangles": {
+            "source": 11378,
+            "output": 11378
+          },
+          "vertices": 6612
+        },
+        {
+          "id": "aorticValve",
+          "sources": [
+            {
+              "file": "FJ2435",
+              "concept": "FMA7253",
+              "name": "Anterior cusp of aortic valve",
+              "triangles": 920
+            },
+            {
+              "file": "FJ2426",
+              "concept": "FMA7254",
+              "name": "Left posterior cusp of aortic valve",
+              "triangles": 914
+            },
+            {
+              "file": "FJ2431",
+              "concept": "FMA7252",
+              "name": "Right posterior cusp of aortic valve",
+              "triangles": 316
+            }
+          ],
+          "triangles": {
+            "source": 2150,
+            "output": 2150
+          },
+          "vertices": 1249
+        },
+        {
+          "id": "pulmonaryValve",
+          "sources": [
+            {
+              "file": "FJ2417",
+              "concept": "FMA7247",
+              "name": "Left anterior cusp of pulmonary valve",
+              "triangles": 1272
+            },
+            {
+              "file": "FJ2434",
+              "concept": "FMA7249",
+              "name": "Right anterior cusp of pulmonary valve",
+              "triangles": 1370
+            },
+            {
+              "file": "FJ2427",
+              "concept": "FMA7250",
+              "name": "Posterior cusp of pulmonary valve",
+              "triangles": 996
+            }
+          ],
+          "triangles": {
+            "source": 3638,
+            "output": 3638
+          },
+          "vertices": 2050
+        }
+      ]
+    },
+    {
+      "id": "human-brain-bp3d",
+      "version": 1,
+      "sha256": "6de4ff20027acf242675d73e99da45b5e285abb7e7e6b79dc40e4ad6a30ccf5c",
+      "byteLength": 2531732,
+      "triangles": 118856,
+      "vertices": 75413,
+      "parts": [
+        {
+          "id": "frontalLobe",
+          "sources": [
+            {
+              "file": "FJ1833",
+              "concept": "FMA72654",
+              "name": "Left superior frontal gyrus",
+              "triangles": 6452
+            },
+            {
+              "file": "FJ1834",
+              "concept": "FMA72653",
+              "name": "Right superior frontal gyrus",
+              "triangles": 6450
+            },
+            {
+              "file": "FJ1787",
+              "concept": "FMA72656",
+              "name": "Left middle frontal gyrus",
+              "triangles": 3416
+            },
+            {
+              "file": "FJ1788",
+              "concept": "FMA72655",
+              "name": "Right middle frontal gyrus",
+              "triangles": 3326
+            },
+            {
+              "file": "FJ1744",
+              "concept": "FMA72658",
+              "name": "Left inferior frontal gyrus",
+              "triangles": 3290
+            },
+            {
+              "file": "FJ1745",
+              "concept": "FMA72657",
+              "name": "Right inferior frontal gyrus",
+              "triangles": 3292
+            },
+            {
+              "file": "FJ1800",
+              "concept": "FMA72662",
+              "name": "Left precentral gyrus",
+              "triangles": 4042
+            },
+            {
+              "file": "FJ1801",
+              "concept": "FMA72661",
+              "name": "Right precentral gyrus",
+              "triangles": 4042
+            }
+          ],
+          "triangles": {
+            "source": 34310,
+            "output": 17154
+          },
+          "vertices": 11224
+        },
+        {
+          "id": "parietalLobe",
+          "sources": [
+            {
+              "file": "FJ1797",
+              "concept": "FMA72666",
+              "name": "Left postcentral gyrus",
+              "triangles": 3604
+            },
+            {
+              "file": "FJ1798",
+              "concept": "FMA72665",
+              "name": "Right postcentral gyrus",
+              "triangles": 3604
+            },
+            {
+              "file": "FJ1835",
+              "concept": "FMA72672",
+              "name": "Left superior parietal lobule",
+              "triangles": 5364
+            },
+            {
+              "file": "FJ1836",
+              "concept": "FMA72671",
+              "name": "Right superior parietal lobule",
+              "triangles": 5640
+            },
+            {
+              "file": "FJ1841",
+              "concept": "FMA72668",
+              "name": "Left supramarginal gyrus",
+              "triangles": 2344
+            },
+            {
+              "file": "FJ1842",
+              "concept": "FMA72667",
+              "name": "Right supramarginal gyrus",
+              "triangles": 2314
+            },
+            {
+              "file": "FJ1732",
+              "concept": "FMA72670",
+              "name": "Left angular gyrus",
+              "triangles": 3588
+            },
+            {
+              "file": "FJ1733",
+              "concept": "FMA72669",
+              "name": "Right angular gyrus",
+              "triangles": 3554
+            }
+          ],
+          "triangles": {
+            "source": 30012,
+            "output": 15006
+          },
+          "vertices": 9820
+        },
+        {
+          "id": "temporalLobe",
+          "sources": [
+            {
+              "file": "FJ1789",
+              "concept": "FMA72686",
+              "name": "Left middle temporal gyrus",
+              "triangles": 2710
+            },
+            {
+              "file": "FJ1790",
+              "concept": "FMA72685",
+              "name": "Right middle temporal gyrus",
+              "triangles": 2754
+            },
+            {
+              "file": "FJ1746",
+              "concept": "FMA72688",
+              "name": "Left inferior temporal gyrus",
+              "triangles": 2732
+            },
+            {
+              "file": "FJ1747",
+              "concept": "FMA72687",
+              "name": "Right inferior temporal gyrus",
+              "triangles": 2768
+            },
+            {
+              "file": "FJ1783",
+              "concept": "FMA72690",
+              "name": "Left fusiform gyrus",
+              "triangles": 1550
+            },
+            {
+              "file": "FJ1784",
+              "concept": "FMA72689",
+              "name": "Right fusiform gyrus",
+              "triangles": 1626
+            }
+          ],
+          "triangles": {
+            "source": 14140,
+            "output": 7070
+          },
+          "vertices": 4517
+        },
+        {
+          "id": "occipitalLobe",
+          "sources": [
+            {
+              "file": "FJ1791",
+              "concept": "FMA72976",
+              "name": "Left occipital lobe",
+              "triangles": 4390
+            },
+            {
+              "file": "FJ1792",
+              "concept": "FMA72975",
+              "name": "Right occipital lobe",
+              "triangles": 4564
+            }
+          ],
+          "triangles": {
+            "source": 8954,
+            "output": 4476
+          },
+          "vertices": 2924
+        },
+        {
+          "id": "insula",
+          "sources": [
+            {
+              "file": "FJ1748",
+              "concept": "FMA72978",
+              "name": "Left insula",
+              "triangles": 2448
+            },
+            {
+              "file": "FJ1749",
+              "concept": "FMA72977",
+              "name": "Right insula",
+              "triangles": 2448
+            }
+          ],
+          "triangles": {
+            "source": 4896,
+            "output": 2448
+          },
+          "vertices": 1287
+        },
+        {
+          "id": "cerebellum",
+          "sources": [
+            {
+              "file": "FJ1781",
+              "concept": "FMA67944",
+              "name": "Cerebellum",
+              "triangles": 23818
+            },
+            {
+              "file": "FJ1830",
+              "concept": "FMA67944",
+              "name": "Cerebellum",
+              "triangles": 23882
+            }
+          ],
+          "triangles": {
+            "source": 47700,
+            "output": 23850
+          },
+          "vertices": 12399
+        },
+        {
+          "id": "midbrain",
+          "sources": [
+            {
+              "file": "FJ1770",
+              "concept": "FMA61993",
+              "name": "Midbrain",
+              "triangles": 6468
+            },
+            {
+              "file": "FJ1817",
+              "concept": "FMA61993",
+              "name": "Midbrain",
+              "triangles": 6440
+            }
+          ],
+          "triangles": {
+            "source": 12908,
+            "output": 6454
+          },
+          "vertices": 4980
+        },
+        {
+          "id": "pons",
+          "sources": [
+            {
+              "file": "FJ1775",
+              "concept": "FMA67943",
+              "name": "Pons",
+              "triangles": 10304
+            },
+            {
+              "file": "FJ1822",
+              "concept": "FMA67943",
+              "name": "Pons",
+              "triangles": 10346
+            }
+          ],
+          "triangles": {
+            "source": 20650,
+            "output": 10324
+          },
+          "vertices": 6780
+        },
+        {
+          "id": "medullaOblongata",
+          "sources": [
+            {
+              "file": "FJ1769",
+              "concept": "FMA62004",
+              "name": "Medulla oblongata",
+              "triangles": 6036
+            },
+            {
+              "file": "FJ1831",
+              "concept": "FMA62004",
+              "name": "Medulla oblongata",
+              "triangles": 6060
+            }
+          ],
+          "triangles": {
+            "source": 12096,
+            "output": 6048
+          },
+          "vertices": 3453
+        },
+        {
+          "id": "whiteMatter",
+          "sources": [
+            {
+              "file": "FJ1758",
+              "concept": "FMA260794",
+              "name": "White matter of left cerebral hemisphere",
+              "triangles": 25542
+            },
+            {
+              "file": "FJ1806",
+              "concept": "FMA260791",
+              "name": "White matter of right cerebral hemisphere",
+              "triangles": 26512
+            }
+          ],
+          "triangles": {
+            "source": 52054,
+            "output": 26026
+          },
+          "vertices": 18029
+        }
+      ]
+    }
+  ]
+}

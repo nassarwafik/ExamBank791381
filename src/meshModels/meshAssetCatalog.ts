@@ -6,19 +6,85 @@
 // of the model. An exam references a library asset by (id, version, sha256) — never by URL — so a published exam always loads exactly the
 // reviewed bytes, and a changed file is a NEW version, never a silent replacement.
 //
-// Phase 21D-B.1 ships the contract and an empty library; the anatomical assets and their provenance records are added in Phase 21D-B.2.
+// Phase 21D-B.1 shipped the contract with an empty library; Phase 21D-B.2 adds the first reviewed anatomical assets, converted reproducibly
+// from BodyParts3D by scripts/convert-bodyparts3d-21db.mts (per-part source elements in docs/mesh-assets/bodyparts3d-21db-manifest.json,
+// licence and attribution in docs/mesh-assets/PROVENANCE.md). An entry is only ever ADDED: changing a shipped file means a new version.
 
 export type MeshLibraryPart = { id: string; label: string; description?: string };
 export type MeshAssetProvenance = {
-  source: string; sourceUrl: string; license: string; licenseUrl: string; attribution: string;
+  source: string; sourceUrl: string; sourceLicense: string; sourceLicenseUrl: string; license: string; licenseUrl: string; attribution: string;
   modifications: string; educationalLimitations: string; retrieved: string;
 };
+/** The authored starting view a teacher's model begins with (same ranges as MeshModelSpecV1.camera). */
+export type MeshLibraryCamera = { azimuth: number; elevation: number; zoom: number };
 export type MeshLibraryAsset = {
   id: string; version: number; sha256: string; byteLength: number; title: string; subject: string;
-  parts: readonly MeshLibraryPart[]; provenance: MeshAssetProvenance;
+  camera: MeshLibraryCamera; parts: readonly MeshLibraryPart[]; provenance: MeshAssetProvenance;
 };
 
-export const MESH_LIBRARY: readonly MeshLibraryAsset[] = Object.freeze([]);
+const BP3D = Object.freeze({
+  source: "BodyParts3D 4.0 — The Database Center for Life Science (DBCLS)",
+  sourceUrl: "https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html",
+  sourceLicense: "CC BY 4.0",
+  sourceLicenseUrl: "https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html",
+  license: "CC BY-SA 4.0",
+  licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
+  attribution: "BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International",
+  retrieved: "2026-10-10"
+});
+
+export const MESH_LIBRARY: readonly MeshLibraryAsset[] = Object.freeze([
+  Object.freeze({
+    id: "human-heart-bp3d", version: 1,
+    sha256: "61e01bcfb305f44ce5a81d7a403f193a3b7e66c022a4f694fb5304b7c1c219d7", byteLength: 2001400,
+    title: "قلب الإنسان — نموذج تشريحي", subject: "الأحياء — جهاز الدوران",
+    camera: Object.freeze({ azimuth: 0, elevation: 0.2, zoom: 1.2 }),
+    parts: Object.freeze([
+      { id: "rightAtrium", label: "الأذين الأيمن", description: "حجرة علوية تستقبل الدم غير المؤكسج من الوريدين الأجوفين ومن الجيب التاجي؛ تبرز منها الزائدة الأذينية اليمنى." },
+      { id: "leftAtrium", label: "الأذين الأيسر", description: "حجرة علوية تستقبل الدم المؤكسج العائد من الرئتين عبر الأوردة الرئوية (تظهر فتحاتها في النموذج دون الأوردة نفسها)." },
+      { id: "rightVentricle", label: "البطين الأيمن", description: "حجرة سفلية تضخ الدم غير المؤكسج إلى الجذع الرئوي نحو الرئتين. يمثّلها النموذج بسطح تجويفها الداخلي لا بجدارها العضلي." },
+      { id: "leftVentricle", label: "البطين الأيسر", description: "الحجرة ذات الجدار العضلي الأسمك؛ تضخ الدم المؤكسج إلى الأبهر ومنه إلى أنحاء الجسم. يمثّلها النموذج بسطح تجويفها الداخلي." },
+      { id: "aorta", label: "الأبهر (الشريان الأورطي)", description: "أكبر شرايين الجسم؛ يخرج من البطين الأيسر صاعدًا ثم ينحني في قوس الأبهر. يعرض النموذج الأبهر الصاعد والقوس فقط." },
+      { id: "pulmonaryTrunk", label: "الجذع الرئوي", description: "يخرج من البطين الأيمن ويحمل الدم غير المؤكسج نحو الرئتين عبر الشريانين الرئويين." },
+      { id: "superiorVenaCava", label: "الوريد الأجوف العلوي", description: "يعيد الدم غير المؤكسج من الرأس والذراعين والجزء العلوي من الجسم إلى الأذين الأيمن." },
+      { id: "inferiorVenaCava", label: "الوريد الأجوف السفلي", description: "يعيد الدم غير المؤكسج من الجزء السفلي من الجسم إلى الأذين الأيمن. قُطع في النموذج أسفل القلب بقليل." },
+      { id: "coronaryArteries", label: "الشرايين التاجية", description: "الشريانان التاجيان الأيمن والأيسر وفروعهما، ومنها الفرع الأمامي النازل بين البطينين والفرع المنعطف؛ تغذي عضلة القلب بالدم المؤكسج." },
+      { id: "cardiacVeins", label: "الأوردة القلبية والجيب التاجي", description: "تجمع الدم من عضلة القلب في الجيب التاجي الذي يصب في الأذين الأيمن." },
+      { id: "tricuspidValve", label: "الصمام ثلاثي الشرفات", description: "بين الأذين الأيمن والبطين الأيمن؛ ثلاث شرفات (أمامية وخلفية وحاجزية) تمنع رجوع الدم إلى الأذين." },
+      { id: "mitralValve", label: "الصمام التاجي (ثنائي الشرفات)", description: "بين الأذين الأيسر والبطين الأيسر؛ شرفتان أمامية وخلفية تمنعان رجوع الدم إلى الأذين." },
+      { id: "aorticValve", label: "الصمام الأبهري", description: "عند مخرج البطين الأيسر إلى الأبهر؛ ثلاث شرفات هلالية تمنع رجوع الدم إلى البطين." },
+      { id: "pulmonaryValve", label: "الصمام الرئوي", description: "عند مخرج البطين الأيمن إلى الجذع الرئوي؛ ثلاث شرفات هلالية تمنع رجوع الدم إلى البطين." }
+    ].map(p => Object.freeze(p))),
+    provenance: Object.freeze({
+      ...BP3D,
+      modifications: "حوِّل من OBJ إلى GLB (glTF 2.0) بالأداة scripts/convert-bodyparts3d-21db.mts: المليمترات إلى أمتار، ومحور Z للأعلى إلى Y للأعلى، وتوسيط النموذج على الحجرات الأربع. دُمجت عناصر كل جزء مسمّى (يسرد docs/mesh-assets/bodyparts3d-21db-manifest.json كل ملف مصدر ومفهوم FMA)، وقُصّ الوريد الأجوف السفلي عند ارتفاع 1165 مم، وأضيفت مواد ملوّنة. لم تُبسَّط الهندسة: 99,207 مثلثًا.",
+      educationalLimitations: "نموذج تعليمي مأخوذ من قلب بالغ واحد في قاعدة BodyParts3D، وليس أداة تشخيص أو قياس. البطينان ممثلان بسطح تجويفهما الداخلي لأن المصدر لا يتضمن جدار العضلة البطينية، لذلك تبدو بعض فروع الأوعية التاجية الخلفية منفصلة قليلًا عن السطح. الأوردة الرئوية غير معروضة (تظهر فتحاتها في الأذين الأيسر)، والوريد الأجوف السفلي مقطوع، والعضلات الحليمية والحبال الوترية محذوفة. الألوان اصطلاح تعليمي (الأحمر لأوعية الدم المؤكسج والأزرق لغير المؤكسج، ومنها الجذع الرئوي) وليست ألوان الأنسجة الحقيقية. الأحجام تقريبية، ولا يمثّل النموذج التباين بين الأفراد."
+    })
+  }),
+  Object.freeze({
+    id: "human-brain-bp3d", version: 1,
+    sha256: "6de4ff20027acf242675d73e99da45b5e285abb7e7e6b79dc40e4ad6a30ccf5c", byteLength: 2531732,
+    title: "دماغ الإنسان — الفصوص وجذع الدماغ", subject: "الأحياء — الجهاز العصبي",
+    camera: Object.freeze({ azimuth: -1.57, elevation: 0.15, zoom: 1.3 }),
+    parts: Object.freeze([
+      { id: "frontalLobe", label: "الفص الجبهي", description: "مقدمة نصفي المخ؛ يضم التلفيف أمام المركزي (القشرة الحركية) ويرتبط بالتخطيط واتخاذ القرار والحركة الإرادية." },
+      { id: "parietalLobe", label: "الفص الجداري", description: "خلف الفص الجبهي؛ يضم التلفيف خلف المركزي (القشرة الحسية الجسدية) ويعالج الإحساس باللمس والوضع والمكان." },
+      { id: "temporalLobe", label: "الفص الصدغي", description: "في الجانب السفلي من نصفي المخ؛ يرتبط بالسمع واللغة والذاكرة." },
+      { id: "occipitalLobe", label: "الفص القذالي", description: "مؤخرة نصفي المخ؛ مركز معالجة الإبصار." },
+      { id: "insula", label: "الفص الجزيري (الجزيرة)", description: "قشرة في عمق الشق الجانبي تغطيها الفصوص الجبهي والجداري والصدغي؛ ترتبط بالإحساس الداخلي والتذوق والانفعالات." },
+      { id: "cerebellum", label: "المخيخ", description: "أسفل الفصين القذاليين وخلف جذع الدماغ؛ ينسّق الحركة ويحفظ التوازن." },
+      { id: "midbrain", label: "الدماغ المتوسط", description: "الجزء العلوي من جذع الدماغ؛ تمر به مسارات حركية وحسية ويضم مراكز لانعكاسات البصر والسمع." },
+      { id: "pons", label: "الجسر (القنطرة)", description: "الجزء البارز من جذع الدماغ بين الدماغ المتوسط والنخاع المستطيل؛ يصل المخ بالمخيخ ويسهم في تنظيم التنفس." },
+      { id: "medullaOblongata", label: "النخاع المستطيل", description: "الجزء السفلي من جذع الدماغ المتصل بالحبل الشوكي؛ يضم مراكز تنظيم التنفس ونبض القلب وضغط الدم." },
+      { id: "whiteMatter", label: "المادة البيضاء للمخ", description: "ألياف عصبية مغلفة بالميالين تصل مناطق القشرة ببعضها وبجذع الدماغ؛ تظهر في النموذج حيث لا توجد تلافيف قشرية ممثّلة." }
+    ].map(p => Object.freeze(p))),
+    provenance: Object.freeze({
+      ...BP3D,
+      modifications: "حوِّل من OBJ إلى GLB (glTF 2.0) بالأداة scripts/convert-bodyparts3d-21db.mts: المليمترات إلى أمتار، ومحور Z للأعلى إلى Y للأعلى، والتوسيط. جُمعت التلافيف في فصوص (يسرد docs/mesh-assets/bodyparts3d-21db-manifest.json كل ملف مصدر ومفهوم FMA)، وبُسّطت الهندسة إلى نحو 50% بانهيار الحواف مع الإبقاء على رؤوس المصدر الأصلية فقط (118,856 مثلثًا من 237,720)، وأضيفت ألوان تمييز للفصوص.",
+      educationalLimitations: "نموذج تعليمي من دماغ بالغ واحد في قاعدة BodyParts3D، وليس أداة تشخيص. الفصوص مجمّعة من تلافيف مختارة: التلفيف الصدغي العلوي والتلافيف الحجاجية والسطح الإنسي (ومنه التلفيف الحزامي) غير مضمّنة، لذلك تظهر المادة البيضاء والجزيرة في بعض المواضع. الألوان ترميز تعليمي لتمييز الفصوص وليست ألوان النسيج الحقيقية. التبسيط يجعل تفاصيل الأخاديد تقريبية، والأعصاب القحفية والسحايا والأوعية والبطينات الدماغية غير معروضة."
+    })
+  })
+] satisfies MeshLibraryAsset[]);
 
 export const meshLibraryAsset = (library: readonly MeshLibraryAsset[], id: string, version: number): MeshLibraryAsset | undefined =>
   library.find(a => a.id === id && a.version === version);

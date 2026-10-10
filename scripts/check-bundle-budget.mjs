@@ -122,9 +122,10 @@ const FUNCTION_GRAPH_UI_SIGNATURES = ["fg-stage", "ge-field-expr", "fg-review"];
 const SURFACE_3D_UI_SIGNATURES = ["ex3d-scene", "ex3d-editor", "ex3d-lab", "sp3d-scene", "sp3d-editor"];
 // Phase 21C — general interactive 3D runtime/editor/semantic-selection UI must remain lazy; the small data validators may be shared.
 const INTERACTIVE_3D_UI_SIGNATURES = ["i3d-scene", "i3d-editor", "qt-editor-scene3DSelection"];
-// Phase 21D-B — the WebGL mesh renderer / viewer (shader sources, viewer class names) must never reach the initial graph or the Student
-// Portal's static closure. B.1 ships the foundation unwired, so the signatures may be absent from the build; once present, they must be lazy.
-const MESH_3D_UI_SIGNATURES = ["mm3d-scene", "mm3d-parts", "uOcclusionStrength"];
+// Phase 21D-B — the WebGL mesh renderer / viewer (shader sources, viewer class names) and the B.2 authoring editor must never reach the
+// initial graph or the Student Portal's static closure. B.1 / B.2 ship them unwired, so the signatures may be absent from the build; once
+// present, they must be lazy.
+const MESH_3D_UI_SIGNATURES = ["mm3d-scene", "mm3d-parts", "uOcclusionStrength", "mm3d-part-rows", "mesh-model-editor"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself

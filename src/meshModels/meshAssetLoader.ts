@@ -32,6 +32,8 @@ const MESSAGES: Record<MeshLoadCode, string> = {
   MESH_LOAD_UNSUPPORTED: "هذا المتصفح لا يدعم التحقق من سلامة ملف النموذج."
 };
 const fail = (code: MeshLoadCode, detail?: string): MeshLoadResult => ({ ok: false, error: { code, message: MESSAGES[code], ...(detail ? { detail } : {}) } });
+/** The same meaningful error the loader reports — for checks the viewer makes against an already loaded document. */
+export const meshLoadError = (code: MeshLoadCode, detail?: string): MeshLoadError => (fail(code, detail) as { ok: false; error: MeshLoadError }).error;
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const subtle = globalThis.crypto?.subtle;

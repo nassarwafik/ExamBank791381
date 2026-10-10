@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useOrbitCamera, type OrbitLimits } from "../interactive3d/orbitCamera";
 import { MESH_LIBRARY, type MeshLibraryAsset } from "./meshAssetCatalog";
-import { loadMeshModelAsset, type MeshLoadError, type MeshLoadResult, type MeshLoadOptions } from "./meshAssetLoader";
-import { DEFAULT_MESH_CAMERA, MESH_MODEL_LIMITS, validateMeshModelSpec, type MeshModelSpecV1 } from "./meshModelSpec";
+import { loadMeshModelAsset, meshLoadError, type MeshLoadError, type MeshLoadResult, type MeshLoadOptions } from "./meshAssetLoader";
+import { DEFAULT_MESH_CAMERA, MESH_MODEL_LIMITS, meshModelMissingParts, validateMeshModelSpec, type MeshModelSpecV1 } from "./meshModelSpec";
 import { createMeshRenderer, type MeshMark, type MeshRenderer, type MeshRendererStats, type MeshRenderState } from "./meshRenderer";
 import type { MeshDocument } from "./glbAsset";
 import "./mesh-model.css";
@@ -30,22 +30,32 @@ export type MeshModel3DViewProps = {
   loader?: (model: MeshModelSpecV1, options: MeshLoadOptions) => Promise<MeshLoadResult>;
   createRenderer?: typeof createMeshRenderer;
   onRenderer?: (renderer: MeshRenderer | null) => void;
+  /** authoring: the current view whenever it settles (the editor's «use this view as the starting view») */
+  onViewChange?: (view: { azimuth: number; elevation: number; zoom: number }) => void;
 };
 
-export default function MeshModel3DView({ model, library = MESH_LIBRARY, selection, marks, loader = loadMeshModelAsset, createRenderer = createMeshRenderer, onRenderer }: MeshModel3DViewProps) {
+export default function MeshModel3DView({ model, library = MESH_LIBRARY, selection, marks, loader = loadMeshModelAsset, createRenderer = createMeshRenderer, onRenderer, onViewChange }: MeshModel3DViewProps) {
   const uid = useId().replace(/[^A-Za-z0-9_-]/g, "");
   const checked = useMemo(() => validateMeshModelSpec(model, { library }), [model, library]);
   const value = checked.ok ? checked.value : null, entry = checked.ok ? checked.library : null;
-  const contentKey = useMemo(() => (value ? JSON.stringify(value) : ""), [value]);
-  const authored = value?.camera ?? DEFAULT_MESH_CAMERA;
+  // Three keys, so that editing text (a label, a description, the title) never reloads the asset, recreates the GL context or moves
+  // the view: the ASSET (bytes, parsed document, renderer) depends on the asset reference only; the VIEW resets when the asset or the
+  // authored camera changes; hidden parts reset when the asset or the labelled part set changes.
+  const assetKey = value ? JSON.stringify(value.asset) : "";
+  const authored = value?.camera ?? entry?.camera ?? DEFAULT_MESH_CAMERA;               // a library asset brings its reviewed default view
+  const viewKey = assetKey + "|" + authored.azimuth + "," + authored.elevation + "," + authored.zoom;
+  const partsKey = assetKey + "|" + (value ? value.parts.map(p => p.id).join(",") : "");
   const { camera, interacting, reset, rotateBy, zoomBy, attachTo, onKeyDown, pointerHandlers, consumeSuppressedClick } = useOrbitCamera({
     initial: { yaw: authored.azimuth, pitch: authored.elevation, zoom: authored.zoom },
-    resetKey: contentKey, limits: LIMITS, rotate: !!value?.controls.rotate, zoom: !!value?.controls.zoom
+    resetKey: viewKey, limits: LIMITS, rotate: !!value?.controls.rotate, zoom: !!value?.controls.zoom
   });
+  const onViewChangeRef = useRef(onViewChange);
+  useEffect(() => { onViewChangeRef.current = onViewChange; });
+  useEffect(() => { if (!interacting) onViewChangeRef.current?.({ azimuth: camera.yaw, elevation: camera.pitch, zoom: camera.zoom }); }, [camera, interacting]);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
   const [hover, setHover] = useState<string | null>(null);
-  const [shownKey, setShownKey] = useState(contentKey);
-  if (shownKey !== contentKey) { setShownKey(contentKey); setHidden(new Set()); setHover(null); }
+  const [shownKey, setShownKey] = useState(partsKey);
+  if (shownKey !== partsKey) { setShownKey(partsKey); setHidden(new Set()); setHover(null); }
 
   // ── asset: load (shared, verified, cached) once the viewer is near the screen ──────────────────────────────────────────────────────
   const figure = useRef<HTMLElement>(null);
@@ -62,19 +72,25 @@ export default function MeshModel3DView({ model, library = MESH_LIBRARY, selecti
   const [progress, setProgress] = useState<{ key: string; loaded: number; total: number | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
   const wanted = !!value && visible;
-  const loadKey = contentKey + "#" + attempt;
+  const loadKey = assetKey + "#" + attempt;
+  const valueRef = useRef(value);
+  useEffect(() => { valueRef.current = value; });
   useEffect(() => {
-    if (!wanted || !value) return;
+    const v = valueRef.current;
+    if (!wanted || !v) return;
     const controller = new AbortController();
-    void loader(value, { signal: controller.signal, onProgress: (loaded, total) => setProgress({ key: loadKey, loaded, total }) }).then(r => {
+    // the labelled parts are checked against the parsed document below (so a label edit never reloads); the load is the asset's alone
+    void loader({ ...v, parts: [] }, { signal: controller.signal, onProgress: (loaded, total) => setProgress({ key: loadKey, loaded, total }) }).then(r => {
       if (controller.signal.aborted) return;
       if (r.ok) setDoc({ key: loadKey, document: r.value.document });
       else setFailure({ key: loadKey, error: r.error });
     });
     return () => controller.abort();
-  }, [wanted, value, loader, loadKey]);
-  const document_ = doc && doc.key === loadKey ? doc.document : null;
-  const error = failure && failure.key === loadKey ? failure.error : null;
+  }, [wanted, loader, loadKey]);
+  const loaded = doc && doc.key === loadKey ? doc.document : null;
+  const missing = useMemo(() => (value && loaded ? meshModelMissingParts(value, loaded.parts.map(p => p.id)) : []), [value, loaded]);
+  const document_ = missing.length ? null : loaded;                                            // labelled parts missing → fail closed
+  const error = failure && failure.key === loadKey ? failure.error : missing.length ? meshLoadError("MESH_LOAD_PARTS", missing.slice(0, 5).join(", ")) : null;
 
   // ── renderer: created while visible with a document, disposed when hidden / unmounted (no leaked contexts). Each renderer gets a FRESH
   // canvas (created and removed here, never by React): dispose() releases the context itself (WEBGL_lose_context), and a lost context
@@ -244,9 +260,9 @@ export default function MeshModel3DView({ model, library = MESH_LIBRARY, selecti
       <details className="mm3d-provenance">
         <summary>مصدر النموذج وترخيصه</summary>
         {entry ? <dl>
-          <dt>المصدر</dt><dd>{entry.provenance.source}</dd>
-          <dt>نسبة العمل</dt><dd>{entry.provenance.attribution}</dd>
-          <dt>الترخيص</dt><dd><a href={entry.provenance.licenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.license}</a></dd>
+          <dt>المصدر</dt><dd><a href={entry.provenance.sourceUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.source}</a></dd>
+          <dt>نسبة العمل</dt><dd>{entry.provenance.attribution} (<a href={entry.provenance.sourceLicenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.sourceLicense}</a>)</dd>
+          <dt>ترخيص هذا الملف</dt><dd><a href={entry.provenance.licenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.license}</a></dd>
           <dt>تعديلات ExamBank</dt><dd>{entry.provenance.modifications}</dd>
           <dt>حدود الاستخدام التعليمي</dt><dd>{entry.provenance.educationalLimitations}</dd>
         </dl> : <p>نموذج رفعه المعلم؛ تحقّق الخادم من بنيته وبصمته (SHA-256) قبل حفظه، ولا يُعرض إلا إذا طابقت بصمته النسخة المعتمدة في السؤال.</p>}

@@ -18,8 +18,8 @@ const report = inspectGlbAsset(writeGlb(testAssemblyModel()));
 if (!report.ok) throw new Error("fixture");
 const DOC: MeshDocument = report.document;
 const LIB: MeshLibraryAsset[] = [{
-  id: "test-assembly", version: 1, sha256: SHA, byteLength: 1000, title: "t", subject: "engineering", parts: DOC.parts.map(p => ({ id: p.id, label: p.id })),
-  provenance: { source: "مصدر الاختبار", sourceUrl: "https://example.invalid", license: "CC BY 4.0", licenseUrl: "https://creativecommons.org/licenses/by/4.0/", attribution: "ExamBank", modifications: "تحويل", educationalLimitations: "نموذج هندسي", retrieved: "2026-10-10" }
+  id: "test-assembly", version: 1, sha256: SHA, byteLength: 1000, title: "t", subject: "engineering", camera: { azimuth: 0, elevation: 0.2, zoom: 1 }, parts: DOC.parts.map(p => ({ id: p.id, label: p.id })),
+  provenance: { source: "مصدر الاختبار", sourceUrl: "https://example.invalid", sourceLicense: "CC BY 4.0", sourceLicenseUrl: "https://creativecommons.org/licenses/by/4.0/", license: "CC BY 4.0", licenseUrl: "https://creativecommons.org/licenses/by/4.0/", attribution: "ExamBank", modifications: "تحويل", educationalLimitations: "نموذج هندسي", retrieved: "2026-10-10" }
 }];
 const MODEL: MeshModelSpecV1 = {
   version: 1, id: "m1", title: "نموذج اختبار", description: "وصف", asset: { source: "library", id: "test-assembly", version: 1, sha256: SHA },
@@ -33,7 +33,7 @@ function fakeRenderer(pickResult: { id: string | null }) {
     const r = {
       states: [] as MeshRenderState[], disposed: false,
       resize: vi.fn(), render(s: MeshRenderState) { r.states.push(s); },
-      pick: vi.fn(() => pickResult.id), probe: vi.fn(() => null),
+      pick: vi.fn(() => pickResult.id), pickMany: vi.fn(() => []), probe: vi.fn(() => null),
       stats: () => ({ drawCalls: 5, triangles: 1188, gpuBytes: 50000, textures: 1, frames: r.states.length, samples: 4, dpr: 1, width: 640, height: 400, contextLost: false }),
       texturesReady: Promise.resolve(), dispose() { r.disposed = true; }
     };
