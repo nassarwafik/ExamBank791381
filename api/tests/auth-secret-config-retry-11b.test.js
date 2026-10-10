@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createRequire } from "module";
 
 // Loaded with require (Phase 11B): health.js requires auth-config-status / observability through Node's CommonJS
@@ -16,7 +16,10 @@ const observability = require("../src/lib/observability.js");
 const { handler: healthHandler } = require("../src/functions/health.js");
 
 const KEYS = ["BANK_SETUP_KEY", "BUILDER_SESSION_SECRET", "STUDENT_SESSION_SECRET", "BUILDER_PASSWORD"];
-const V = { BANK_SETUP_KEY: "bank-setup-VALUE-11b-4d2e", BUILDER_SESSION_SECRET: "builder-VALUE-11b-8f1a", STUDENT_SESSION_SECRET: "student-VALUE-11b-3c9b", BUILDER_PASSWORD: "password-VALUE-11b-6e7d" };
+// The fixture secrets end in characters a generated identifier can never contain (request ids are lowercase-hex UUIDs, times are
+// ISO-8601), so the 5-character suffix fragment checked by `leaks` cannot match a legitimate id by chance. The former suffixes
+// (-4d2e, -8f1a, -3c9b, -6e7d) were "-" + 4 lowercase hex digits and matched a random request id about once in 2,500 UUIDs.
+const V = { BANK_SETUP_KEY: "bank-setup-VALUE-11b-KQXW", BUILDER_SESSION_SECRET: "builder-VALUE-11b-MRVY", STUDENT_SESSION_SECRET: "student-VALUE-11b-NPJU", BUILDER_PASSWORD: "password-VALUE-11b-GHSL" };
 const saved = {};
 const setEnv = vars => { for (const k of KEYS) delete process.env[k]; Object.assign(process.env, vars); };
 const FALLBACK_ONLY = { BANK_SETUP_KEY: V.BANK_SETUP_KEY };
@@ -102,5 +105,40 @@ describe("through the real health route + observability sink (11B)", () => {
     expect(ctx.logWarn("x.y", { a: 1 })).toBeNull();
     observability.setSink(r => records.push(r));
     expect(ctx.logWarn("x.y", { a: 1 })).toMatchObject({ event: "x.y", a: 1 });
+  });
+});
+
+describe("hotfix — the leak fixture cannot collide with a legitimate request id", () => {
+  const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  const LEGACY = ["bank-setup-VALUE-11b-4d2e", "builder-VALUE-11b-8f1a", "student-VALUE-11b-3c9b", "password-VALUE-11b-6e7d"];
+  const fragments = values => values.flatMap(v => [v, v.slice(0, 8), v.slice(-5)]);
+  const colliding = "00000000-0000-4d2e-8000-000000000000"; // a valid version-4, variant-1 UUID
+
+  it("the former fixture's suffix fragment occurs inside a valid random UUID (the main-branch failure, made deterministic)", () => {
+    expect(colliding).toMatch(UUID_V4);
+    expect(fragments(LEGACY).filter(f => colliding.includes(f))).toEqual(["-4d2e"]);
+  });
+  it("no fragment of the current fixture can occur in any UUID or hex id (each one holds a character outside [0-9a-f-])", () => {
+    for (const f of fragments(Object.values(V))) expect(f, f).toMatch(/[^0-9a-f-]/);
+    expect(leaks(colliding)).toEqual([]);
+  });
+  it("through the real health route with the colliding request id minted, the current fixture reports no leak while the former one would", async () => {
+    setEnv(FALLBACK_ONLY);
+    observability.setSink(r => records.push(r));
+    const uuid = vi.spyOn(require("crypto"), "randomUUID").mockReturnValue(colliding);
+    try {
+      const responses = [await callHealth(), await callHealth()];
+      const text = JSON.stringify([responses, records]);
+      expect(text).toContain(colliding);                                          // the minted id really is in the output
+      expect(fragments(LEGACY).filter(f => text.includes(f))).toEqual(["-4d2e"]);  // the former fixture: false positive
+      expect(leaks(text)).toEqual([]);                                            // the current fixture: none
+    } finally { uuid.mockRestore(); }
+  });
+  it("real leaks are still caught: the whole value, its first 8 and its last 5 characters", () => {
+    for (const v of Object.values(V)) {
+      expect(leaks("x" + v + "x")).toContain(v);
+      expect(leaks("…" + v.slice(0, 8) + "…")).toEqual([v.slice(0, 8)]);
+      expect(leaks("…" + v.slice(-5) + "…")).toEqual([v.slice(-5)]);
+    }
   });
 });
