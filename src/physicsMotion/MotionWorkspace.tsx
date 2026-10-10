@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { SmartSimWorkspaceProps } from "../trustedSim/smartSimUiRegistry";
-import { MOTION_EXPERIMENT_LABEL, MOTION_PRIMARY_AXES, motionControlOf, motionExplorationProblem, validateMotionConfig, type MotionConfigV1, type MotionMeasurementTask, type MotionPointTask } from "../physicsMotionModel";
-import { replayMotion, type MotionStateV1 } from "../physicsMotionPlugin";
+import { MOTION_EXPERIMENT_LABEL, MOTION_PRIMARY_AXES, motionControlOf, motionExplorationProblem, validateMotionConfig, type MotionConfigV1 } from "../physicsMotionModel";
+import type { MotionStateV1 } from "../physicsMotionPlugin";
+import { resolveSmartSimPlugin } from "../trustedSimPlugins";
+import { replaySmartSimActions } from "../trustedSimQuestion";
 import { MOTION_PARAM_SPEC, fmtMotion, motionEndTime, motionFrame, motionSamples, type MotionModel, type MotionParams } from "../physics/motionCore";
-import { parseNumberInput } from "../trustedSim/smartSimNumberInput";
+import { ClockBar, ExplorationPanel, MeasurementTask, PointTask } from "../physicsShared/labWidgets";
 import { DYNAMIC_LIMITS } from "../smartsim/dynamic/simulationClock";
 import { useSimulationClock } from "../smartsim/dynamic/useSimulationClock";
 import { usePrefersReducedMotion } from "../smartsim/dynamic/usePrefersReducedMotion";
@@ -11,7 +13,7 @@ import { visiblePrefix } from "../smartsim/dynamic/progressivePath";
 import DynamicPlot2D, { type PlotEvent } from "../smartsim/dynamic/DynamicPlot2D";
 import DynamicErrorBoundary from "../smartsim/dynamic/DynamicErrorBoundary";
 import MotionScene from "./MotionScene";
-import { STATUS_TEXT, UNIT_TEXT, motionEvents, motionGraphs, motionReadout, sceneScales, valueDomain } from "./motionView";
+import { STATUS_TEXT, motionEvents, motionGraphs, motionReadout, sceneScales, valueDomain } from "./motionView";
 import "./motion.css";
 
 // Phase 21D-A.1 — the physicsMotion@1 STUDENT workspace (lazy; also the teacher preview). It renders ONLY the canonical public config.
@@ -24,105 +26,18 @@ import "./motion.css";
 //     it is never saved and the tasks are always graded on the experiment the teacher authored; a banner says so whenever the explored
 //     values differ, with a one-click return to the authored experiment.
 // prefers-reduced-motion: no play control and no animation; stepping, the slider and time entry keep every value reachable.
+/** Answers are replayed through the REGISTERED plugin with the SmartSim core's own bounded replay (the one path every surface uses); the
+ *  plugin modules therefore load with the registry instead of as extra chunks of the initial preload lists (Phase 21D-A.2 bundle budget). */
+const replayState = (cfg: MotionConfigV1, actions: readonly unknown[]): { ok: true; state: MotionStateV1 } | { ok: false } => {
+  const plugin = resolveSmartSimPlugin("physicsMotion", 1), r = plugin ? replaySmartSimActions(plugin, cfg, actions) : null;
+  return r && r.ok ? { ok: true, state: r.state as MotionStateV1 } : { ok: false };
+};
 type Act = { measurementId?: string; pointId?: string };
 const taskOf = (a: unknown) => { const x = a as Act; return x && typeof x === "object" ? x.measurementId ?? x.pointId : undefined; };
 type SavedPoint = { id: string; label: string; x: number; y: number };
 
 const PLOT_W = 360, PLOT_H = 220, SAMPLE_COUNT = 240;
 const ANNOUNCE = { paused: (t: number) => "تم إيقاف المحاكاة مؤقتًا عند t = " + fmtMotion(t) + " s.", reset: "أُعيدت المحاكاة إلى البداية (t = 0 s)." };
-const sameParams = (a: MotionParams, b: MotionParams) => Object.keys(a).every(k => a[k] === b[k]);
-
-function MeasurementTask({ task, saved, disabled, onSave, onClear }: { task: MotionMeasurementTask; saved: number | undefined; disabled?: boolean; onSave: (v: number) => void; onClear: () => void }) {
-  const [draft, setDraft] = useState(saved === undefined ? "" : String(saved));
-  const [error, setError] = useState("");
-  const unit = task.unit;
-  const save = () => { const v = parseNumberInput(draft); if (v === undefined) { setError("أدخل رقمًا صالحًا (مثل 3.04 أو −9.8)."); return; } setError(""); onSave(v); };
-  return (
-    <fieldset className="motion-task" data-testid="motion-measurement" data-id={task.id}>
-      <legend>{task.label} <span className="motion-ltr">({unit})</span></legend>
-      <div className="motion-row">
-        <input type="text" inputMode="decimal" dir="ltr" autoComplete="off" spellCheck={false} aria-label={task.label + " (" + (UNIT_TEXT[unit] ?? unit) + ")"} value={draft} disabled={disabled}
-          onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (!disabled) save(); } }} />
-        {!disabled && <><button type="button" onClick={save}>حفظ القياس</button><button type="button" className="is-secondary" onClick={onClear} disabled={saved === undefined}>مسح</button></>}
-      </div>
-      {error && <p className="motion-error" role="alert">{error}</p>}
-      <p className="motion-saved">{saved === undefined ? "لم يُحفظ بعد." : <>المحفوظ: <span className="motion-ltr">{fmtMotion(saved)} {unit}</span></>}</p>
-    </fieldset>
-  );
-}
-function PointTask({ task, saved, axes, getNow, xMax, disabled, onSave, onClear }: {
-  task: MotionPointTask; saved: { x: number; y: number } | undefined; axes: (typeof MOTION_PRIMARY_AXES)[keyof typeof MOTION_PRIMARY_AXES];
-  getNow: () => number; xMax: number | null; disabled?: boolean; onSave: (x: number, y: number) => void; onClear: () => void;
-}) {
-  const [x, setX] = useState(saved ? String(saved.x) : "");
-  const [y, setY] = useState(saved ? String(saved.y) : "");
-  const [error, setError] = useState("");
-  const save = () => {
-    const xv = parseNumberInput(x), yv = parseNumberInput(y);
-    if (xv === undefined || yv === undefined) { setError("أدخل رقمين صالحين للإحداثيين."); return; }
-    if (xMax !== null && (xv < 0 || xv > xMax)) { setError("الزمن يجب أن يكون بين 0 و" + fmtMotion(xMax) + " ث."); return; }
-    setError(""); onSave(xv, yv);
-  };
-  return (
-    <fieldset className="motion-task" data-testid="motion-point" data-id={task.id}>
-      <legend>{task.label} <span className="motion-ltr">({axes.x}, {axes.y})</span></legend>
-      <div className="motion-row">
-        <label><span className="motion-ltr">{axes.x} ({axes.xUnit})</span><input type="text" inputMode="decimal" dir="ltr" autoComplete="off" value={x} disabled={disabled} onChange={e => setX(e.target.value)} /></label>
-        <label><span className="motion-ltr">{axes.y} ({axes.yUnit})</span><input type="text" inputMode="decimal" dir="ltr" autoComplete="off" value={y} disabled={disabled} onChange={e => setY(e.target.value)} /></label>
-      </div>
-      {!disabled && (
-        <div className="motion-row">
-          {axes.xIsTime && <button type="button" className="is-secondary" onClick={() => setX(String(Number(getNow().toFixed(2))))}>استخدم زمن المحاكاة الحالي</button>}
-          <button type="button" onClick={save}>حفظ النقطة</button>
-          <button type="button" className="is-secondary" onClick={onClear} disabled={!saved}>مسح النقطة</button>
-        </div>
-      )}
-      {error && <p className="motion-error" role="alert">{error}</p>}
-      <p className="motion-saved">{saved ? <>المحفوظ: <span className="motion-ltr">({axes.x} = {fmtMotion(saved.x)} {axes.xUnit}, {axes.y} = {fmtMotion(saved.y)} {axes.yUnit})</span></> : "لم تُحفظ بعد."}</p>
-    </fieldset>
-  );
-}
-
-/** The teacher-permitted parameter controls (presentation only). Invalid combinations are refused with a reason, never clamped. */
-function ExplorationPanel({ cfg, params, onParams, disabled }: { cfg: MotionConfigV1; params: MotionParams; onParams: (p: MotionParams) => void; disabled?: boolean }) {
-  const [error, setError] = useState("");
-  if (cfg.controls.length === 0) return null;
-  const apply = (key: string, v: number | undefined) => {
-    if (v === undefined) { setError("أدخل رقمًا صالحًا."); return; }
-    const next = { ...params, [key]: v }, problem = motionExplorationProblem(cfg, next);
-    if (problem) { setError(problem); return; }
-    setError(""); onParams(next);
-  };
-  const changed = !sameParams(params, cfg.params);
-  return (
-    <fieldset className="motion-explore" data-testid="motion-explore">
-      <legend>استكشف التجربة (قيم يسمح بها المعلم)</legend>
-      <div className="motion-explore-grid">
-        {cfg.controls.map(k => {
-          const spec = MOTION_PARAM_SPEC[cfg.experiment].find(s => s.key === k.param);
-          const unit = spec?.unit === "1" ? "" : spec?.unit ?? "";
-          const label = (spec?.label ?? k.param) + (unit ? " (" + unit + ")" : "");
-          return (
-            <label key={k.param} className="motion-explore-item" data-testid="motion-control" data-param={k.param}>
-              <span>{spec?.label ?? k.param}{unit && <> <span className="motion-ltr">({unit})</span></>}: <span className="motion-ltr">{fmtMotion(params[k.param])}</span> <small className="motion-ltr">[{fmtMotion(k.min)} … {fmtMotion(k.max)}]</small></span>
-              <span className="motion-row">
-                <input type="range" min={k.min} max={k.max} step={k.step} value={params[k.param]} disabled={disabled} aria-label={label} onChange={e => apply(k.param, Number(e.target.value))} />
-                <input type="number" dir="ltr" min={k.min} max={k.max} step={k.step} value={params[k.param]} disabled={disabled} aria-label={label + " — إدخال رقمي"} onChange={e => apply(k.param, parseNumberInput(e.target.value))} />
-              </span>
-            </label>
-          );
-        })}
-      </div>
-      {error && <p className="motion-error" role="alert" data-testid="motion-explore-error">{error}</p>}
-      {changed && (
-        <div className="motion-banner" role="note" data-testid="motion-explore-banner">
-          <p>أنت تستكشف قيمًا مختلفة عن التجربة المطلوبة. المهام والقياسات تُقيَّم على التجربة الأصلية التي حددها المعلم، والاستكشاف لا يُحفظ.</p>
-          <button type="button" className="is-secondary" onClick={() => { setError(""); onParams({ ...cfg.params }); }}>استعادة قيم التجربة الأصلية</button>
-        </div>
-      )}
-    </fieldset>
-  );
-}
 
 type ViewProps = { model: MotionModel; maxTime: number; graphs: readonly string[]; showVectors: boolean; savedPoints: readonly SavedPoint[]; nowRef: RefObject<number> };
 /** The clock-driven presentation (scene, graphs, controls, timeline, readout, announcements). Never receives `onChange`. */
@@ -163,8 +78,6 @@ function MotionDynamicView({ model: m, maxTime, graphs, showVectors, savedPoints
     if (crossed.length) setAnnounce(crossed.map(e => e.label + " عند t = " + fmtMotion(e.t) + " s.").join(" "));
   }, [time, playing, pre]);
 
-  const atEnd = time >= end && end > 0;
-  const playLabel = time > 0 && !atEnd ? "استئناف" : "تشغيل";
   const onPlay = () => { setAnnounce(""); clock.play(); };
   const onPause = () => { if (playing) setAnnounce(ANNOUNCE.paused(time)); clock.pause(); };
   const onReset = () => { manual.current = true; setAnnounce(ANNOUNCE.reset); clock.restart(); };
@@ -203,29 +116,13 @@ function MotionDynamicView({ model: m, maxTime, graphs, showVectors, savedPoints
           {savedPoints.map(p => <li key={p.id} data-testid="motion-graph-point" data-id={p.id}>{p.label}: <span className="motion-ltr">({fmtMotion(p.x)}, {fmtMotion(p.y)})</span></li>)}
         </ul>
       )}
-      <div className="smartsim-dyn-controls motion-controls" role="group" aria-label="التحكم في المحاكاة">
-        {reduced
-          ? <p className="motion-note" data-testid="motion-reduced-motion">الحركة المخففة مفعّلة على جهازك: لا تشغيل تلقائي؛ استخدم الخطوة المفردة أو شريط الزمن أو أدخل الزمن مباشرة.</p>
-          : <><button type="button" data-testid="motion-play" onClick={onPlay} disabled={playing || !(end > 0)}>{playLabel}</button><button type="button" className="is-secondary" data-testid="motion-pause" onClick={onPause} disabled={!playing}>إيقاف مؤقت</button></>}
-        <button type="button" className="is-secondary" data-testid="motion-reset" onClick={onReset}>إعادة الضبط</button>
-        <button type="button" className="is-secondary" data-testid="motion-step-back" onClick={() => onStep(-DYNAMIC_LIMITS.stepSeconds)}>خطوة للخلف</button>
-        <button type="button" className="is-secondary" data-testid="motion-step" onClick={() => onStep(DYNAMIC_LIMITS.stepSeconds)}>خطوة واحدة</button>
-        {!reduced && (
-          <span className="motion-toggles" role="group" aria-label="سرعة التشغيل">
-            {DYNAMIC_LIMITS.rates.map(r => <button key={r} type="button" className="is-secondary" aria-pressed={rate === r} onClick={() => clock.setRate(r)}>{r}×</button>)}
-          </span>
-        )}
-        {showVectors && (
+      <ClockBar ns="motion" reduced={reduced} playing={playing} time={frame.t} end={end} rate={rate} fmt={fmtMotion} onPlay={onPlay} onPause={onPause} onReset={onReset} onStep={onStep} onRate={r => clock.setRate(r)} onSeek={onSeek}
+        toggles={showVectors && (
           <span className="motion-toggles" role="group" aria-label="المتجهات">
             <button type="button" className="is-secondary" aria-pressed={showV} onClick={() => setShowV(s => !s)}>متجه السرعة</button>
             <button type="button" className="is-secondary" aria-pressed={showF} onClick={() => setShowF(s => !s)}>{m.kind === "freeFall" || m.kind === "projectile" ? "متجه التسارع" : "القوى"}</button>
           </span>
-        )}
-      </div>
-      <div className="motion-timeline">
-        <input type="range" min={0} max={end} step={0.01} value={frame.t} aria-label="زمن المحاكاة (ث)" aria-valuetext={fmtMotion(frame.t) + " ثانية"} onChange={e => onSeek(Number(e.target.value))} />
-        <label><span>الزمن (ث)</span><input type="number" dir="ltr" min={0} max={end} step={0.01} value={Number(frame.t.toFixed(2))} onChange={e => { const v = parseNumberInput(e.target.value); if (v !== undefined) onSeek(v); }} /></label>
-      </div>
+        )} />
       <dl className="motion-readout" data-testid="motion-readout" data-status={frame.status} aria-live={playing ? "off" : "polite"}>
         {readout.map(r => <div key={r.id} data-id={r.id}><dt>{r.label}</dt><dd className="motion-ltr">{r.value} {r.unit}</dd></div>)}
         <div data-id="status"><dt>الحالة</dt><dd>{STATUS_TEXT[frame.status] ?? frame.status}</dd></div>
@@ -237,7 +134,7 @@ function MotionDynamicView({ model: m, maxTime, graphs, showVectors, savedPoints
 
 export default function MotionWorkspace({ config: rawConfig, actions, onChange, disabled, label }: SmartSimWorkspaceProps) {
   const cfg = useMemo<MotionConfigV1 | null>(() => { const r = validateMotionConfig(rawConfig); return r.ok ? r.config : null; }, [rawConfig]);
-  const replay = useMemo(() => (cfg ? replayMotion(cfg, actions) : null), [cfg, actions]);
+  const replay = useMemo(() => (cfg ? replayState(cfg, actions) : null), [cfg, actions]);
   const [confirm, setConfirm] = useState(false);
   const [explore, setExplore] = useState<{ base: MotionConfigV1 | null; params: MotionParams | null }>({ base: cfg, params: cfg ? { ...cfg.params } : null });
   if (explore.base !== cfg) setExplore({ base: cfg, params: cfg ? { ...cfg.params } : null });      // a new config restarts from the authored values
@@ -252,7 +149,7 @@ export default function MotionWorkspace({ config: rawConfig, actions, onChange, 
   if (!cfg || !model) return <p className="ncli-unavailable" role="note" data-testid="motion-unavailable">إعداد محاكاة الحركة لهذا السؤال غير متوفر في هذا الإصدار.</p>;
   const state: MotionStateV1 = replay && replay.ok ? replay.state : { v: 1, measurements: {}, points: {} };
   const base = replay && replay.ok ? [...actions] : [];
-  const emit = (next: unknown[]) => { const r = replayMotion(cfg, next); if (r.ok) onChange(next, r.state); };
+  const emit = (next: unknown[]) => { const r = replayState(cfg, next); if (r.ok) onChange(next, r.state); };
   const decide = (id: string, action: Record<string, unknown>) => emit([...base.filter(a => taskOf(a) !== id), action]);
   const axes = MOTION_PRIMARY_AXES[cfg.experiment];
   // each value + unit is an LTR island so labels ending in parentheses never reorder it in the RTL sentence
@@ -260,15 +157,16 @@ export default function MotionWorkspace({ config: rawConfig, actions, onChange, 
   return (
     <div className="motion" dir="rtl" data-testid="motion-workspace" data-experiment={cfg.experiment} aria-label={(label ? label + " — " : "") + "محاكاة " + MOTION_EXPERIMENT_LABEL[cfg.experiment]}>
       <p className="motion-note"><strong>{MOTION_EXPERIMENT_LABEL[cfg.experiment]}</strong> — التجربة المطلوبة: <span data-testid="motion-authored">{authored.map((a, i) => <span key={i} className="motion-param">{a}</span>)}</span>. بإهمال مقاومة الهواء، وحدات SI. شغّل المحاكاة أو حرّك الزمن لتقيس، ثم احفظ إجاباتك صراحةً — التشغيل والاستكشاف لا يُحفظان ولا يُقيَّمان.</p>
-      <ExplorationPanel cfg={cfg} params={params ?? cfg.params} onParams={p => setExplore({ base: cfg, params: p })} />
+      <ExplorationPanel ns="motion" controls={cfg.controls} authored={cfg.params} params={params ?? cfg.params} fmt={fmtMotion} onParams={p => setExplore({ base: cfg, params: p })}
+        info={k => { const sp = MOTION_PARAM_SPEC[cfg.experiment].find(x => x.key === k); return sp && { label: sp.label, unit: sp.unit }; }} problem={next => motionExplorationProblem(cfg, next)} />
       <MotionDynamicView model={model} maxTime={cfg.view.maxTime} graphs={cfg.view.graphs} showVectors={cfg.view.showVectors} savedPoints={savedPoints} nowRef={nowRef} />
       <div className="motion-tasks">
         {cfg.tasks.measurements.map(t => (
-          <MeasurementTask key={t.id} task={t} saved={state.measurements[t.id]} disabled={disabled}
+          <MeasurementTask key={t.id} ns="motion" fmt={fmtMotion} task={t} saved={state.measurements[t.id]} disabled={disabled}
             onSave={v => decide(t.id, { type: "measurement.set", measurementId: t.id, value: v })} onClear={() => decide(t.id, { type: "measurement.clear", measurementId: t.id })} />
         ))}
         {cfg.tasks.points.map(p => (
-          <PointTask key={p.id} task={p} saved={state.points[p.id]} axes={axes} getNow={() => nowRef.current} xMax={axes.xIsTime ? cfg.view.maxTime : null} disabled={disabled}
+          <PointTask key={p.id} ns="motion" fmt={fmtMotion} task={p} saved={state.points[p.id]} axes={axes} getNow={() => nowRef.current} xMax={axes.xIsTime ? cfg.view.maxTime : null} disabled={disabled}
             onSave={(x, y) => decide(p.id, { type: "graphPoint.set", pointId: p.id, x, y })} onClear={() => decide(p.id, { type: "graphPoint.clear", pointId: p.id })} />
         ))}
       </div>

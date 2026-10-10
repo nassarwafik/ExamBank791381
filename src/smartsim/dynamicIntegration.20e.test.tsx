@@ -78,7 +78,8 @@ describe("20E-I2 bundle, laziness, security and presentation integration", () =>
   const walk = (d: string) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.(ts|tsx|css)$/.test(e.name) && !/\.test\./.test(e.name)) files.push(p); } };
   walk(path.join(repo, "src"));
   // Phase 21D-A.1: the physicsMotion@1 core and lazy workspace are scanned by the same repository-owned-code rule.
-  const dynamicFiles = files.filter(f => /src\/smartsim\/dynamic\/|freeFallDynamics|net2Flow|src\/physicsMotion\/|src\/physics\//.test(f));
+  // Phase 21D-A.2: the physicsLab@1 workspace and the shared physics widgets are scanned too.
+  const dynamicFiles = files.filter(f => /src\/smartsim\/dynamic\/|freeFallDynamics|net2Flow|src\/physicsMotion\/|src\/physicsLab\/|src\/physicsShared\/|src\/physics\//.test(f));
   it("the bundle guard refuses the dynamic signatures in initial files (budget line unchanged)", () => {
     const guard = read("scripts/check-bundle-budget.mjs");
     expect(guard).toMatch(/DYNAMIC_SIGNATURES/);
@@ -86,7 +87,7 @@ describe("20E-I2 bundle, laziness, security and presentation integration", () =>
     expect(guard).toMatch(/INITIAL_JS_GZIP_BUDGET_KB = 125;/);
   });
   it("no application module outside the lazy plugin workspaces imports the dynamic runtime statically", () => {
-    const allowed = /src\/(smartsim\/dynamic|physicsFreeFall|physicsMotion|functionStudy|networkTopology2)\/|src\/net2Flow\.ts$/;   // 21D-A.1: physicsMotion@1 is a lazy plugin workspace
+    const allowed = /src\/(smartsim\/dynamic|physicsFreeFall|physicsMotion|physicsLab|physicsShared|functionStudy|networkTopology2)\/|src\/net2Flow\.ts$/;   // 21D-A.1 / A.2: lazy plugin workspaces + their shared widgets
     const offenders = files.filter(f => !allowed.test(f) && /from\s+"[^"]*smartsim\/dynamic\//.test(fs.readFileSync(f, "utf8")));
     expect(offenders.map(f => path.relative(repo, f))).toEqual([]);
   });

@@ -53,6 +53,12 @@ const entries = new Map<string, SmartSimUi>([
     Workspace: lazy(() => import("../physicsMotion/MotionWorkspace")),
     Editor: lazy(() => import("../physicsMotion/MotionEditor")),
     ReviewDetails: lazy(() => import("../physicsMotion/MotionReview"))
+  }],
+  // Phase 21D-A.2 — the advanced physics lab (pendulum, spring, mechanical energy, DC circuits): a NEW exact identity with its own lazy chunks.
+  ["physicsLab@1", {
+    Workspace: lazy(() => import("../physicsLab/LabWorkspace")),
+    Editor: lazy(() => import("../physicsLab/LabEditor")),
+    ReviewDetails: lazy(() => import("../physicsLab/LabReview"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */

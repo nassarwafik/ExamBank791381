@@ -9,6 +9,7 @@ import { physicsFreeFallPluginV1 } from "./physicsFreeFallPlugin";
 import { functionStudy2dPluginV1 } from "./functionStudyPlugin";
 import { networkTopologyPluginV2 } from "./net2Plugin";
 import { physicsMotionPluginV1 } from "./physicsMotionPlugin";
+import { physicsLabPluginV1 } from "./physicsLabPlugin";
 
 registerSmartSimPlugin(networkTopologyPluginV1);
 // Phase 20A.2 — the two enterprise pilots: physics (free fall) and mathematics (rational function study).
@@ -19,6 +20,8 @@ registerSmartSimPlugin(networkTopologyPluginV2);
 // Phase 21D-A.1 — the motion experiments (free fall with student exploration, projectile, Newton's second law, inclined plane) on the
 // shared physics core: a NEW exact identity (physicsMotion@1). physicsFreeFall@1 above stays frozen.
 registerSmartSimPlugin(physicsMotionPluginV1);
+// Phase 21D-A.2 — physicsLab@1: pendulum, spring (Hooke), mechanical energy and DC circuits (a NEW exact identity; the existing plugins unchanged).
+registerSmartSimPlugin(physicsLabPluginV1);
 
 export { listSmartSimPlugins, listSmartSimPluginDescriptors, resolveSmartSimDescriptor, resolveSmartSimPlugin };
 export * from "./trustedSimQuestion";

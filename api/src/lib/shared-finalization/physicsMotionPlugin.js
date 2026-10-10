@@ -9,81 +9,30 @@ exports.evaluateMotionCheck = evaluateMotionCheck;
 exports.motionRuleView = motionRuleView;
 const physicsMotionModel_1 = require("./physicsMotionModel");
 const motionCore_1 = require("./physics/motionCore");
-const trustedSimVocabulary_1 = require("./trustedSimVocabulary");
+const measurementTasks_1 = require("./physics/measurementTasks");
 exports.MOTION_LABEL = "تجارب الحركة (فيزياء)";
-exports.MOTION_STATE_VERSION = 1;
+exports.MOTION_STATE_VERSION = measurementTasks_1.TASK_STATE_VERSION;
 exports.MOTION_MAX_ACTIONS = 500;
-exports.MOTION_ACTION_KINDS = Object.freeze(["measurement.set", "measurement.clear", "graphPoint.set", "graphPoint.clear"]);
+exports.MOTION_ACTION_KINDS = measurementTasks_1.TASK_ACTION_KINDS;
 exports.MOTION_CHECK_KINDS = Object.freeze(["motion.referenceValue"]);
-const exactKeys = (o, keys) => Object.keys(o).length === keys.length && keys.every(k => Object.prototype.hasOwnProperty.call(o, k));
 const value = (v, min, max) => typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 const VMAX = physicsMotionModel_1.MOTION_LIMITS.valueAbsMax;
 const measurementOf = (c, id) => (typeof id === "string" ? c.tasks.measurements.find(m => m.id === id) : undefined);
-const pointOf = (c, id) => (typeof id === "string" ? c.tasks.points.find(p => p.id === id) : undefined);
+const boundsOf = (c) => {
+    const xIsTime = physicsMotionModel_1.MOTION_PRIMARY_AXES[c.experiment].xIsTime;
+    return { measurementIds: c.tasks.measurements.map(m => m.id), pointIds: c.tasks.points.map(p => p.id), valueAbsMax: VMAX, pointX: { min: xIsTime ? 0 : -VMAX, max: xIsTime ? c.view.maxTime : VMAX } };
+};
+const CODES = { invalid: "MOTION_ACTION_INVALID", tooMany: "MOTION_ACTIONS_TOO_MANY" };
 function normalizeMotionAction(raw, config) {
-    const bad = { ok: false, code: "MOTION_ACTION_INVALID" };
-    if (!(0, trustedSimVocabulary_1.isPlainObject)(raw) || typeof raw.type !== "string")
-        return bad;
-    switch (raw.type) {
-        case "measurement.set":
-            if (!exactKeys(raw, ["type", "measurementId", "value"]) || !measurementOf(config, raw.measurementId) || !value(raw.value, -VMAX, VMAX))
-                return bad;
-            return { ok: true, action: { type: "measurement.set", measurementId: raw.measurementId, value: raw.value } };
-        case "measurement.clear":
-            if (!exactKeys(raw, ["type", "measurementId"]) || !measurementOf(config, raw.measurementId))
-                return bad;
-            return { ok: true, action: { type: "measurement.clear", measurementId: raw.measurementId } };
-        case "graphPoint.set": {
-            const xMin = physicsMotionModel_1.MOTION_PRIMARY_AXES[config.experiment].xIsTime ? 0 : -VMAX, xMax = physicsMotionModel_1.MOTION_PRIMARY_AXES[config.experiment].xIsTime ? config.view.maxTime : VMAX;
-            if (!exactKeys(raw, ["type", "pointId", "x", "y"]) || !pointOf(config, raw.pointId) || !value(raw.x, xMin, xMax) || !value(raw.y, -VMAX, VMAX))
-                return bad;
-            return { ok: true, action: { type: "graphPoint.set", pointId: raw.pointId, x: raw.x, y: raw.y } };
-        }
-        case "graphPoint.clear":
-            if (!exactKeys(raw, ["type", "pointId"]) || !pointOf(config, raw.pointId))
-                return bad;
-            return { ok: true, action: { type: "graphPoint.clear", pointId: raw.pointId } };
-        default:
-            return bad;
-    }
+    return (0, measurementTasks_1.normalizeTaskAction)(raw, boundsOf(config), CODES.invalid);
 }
-const createRuntime = () => ({ measurements: new Map(), points: new Map() });
-function applyAction(rt, a) {
-    const next = { measurements: new Map(rt.measurements), points: new Map(rt.points) };
-    if (a.type === "measurement.set")
-        next.measurements.set(a.measurementId, a.value);
-    else if (a.type === "measurement.clear")
-        next.measurements.delete(a.measurementId);
-    else if (a.type === "graphPoint.set")
-        next.points.set(a.pointId, { x: a.x, y: a.y });
-    else
-        next.points.delete(a.pointId);
-    return next;
-}
-const byKey = (m) => [...m.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-function canonicalState(rt) {
-    const measurements = {}, points = {};
-    for (const [id, v] of byKey(rt.measurements))
-        measurements[id] = v;
-    for (const [id, p] of byKey(rt.points))
-        points[id] = { x: p.x, y: p.y };
-    return { v: exports.MOTION_STATE_VERSION, measurements, points };
-}
-const initialMotionState = () => ({ v: exports.MOTION_STATE_VERSION, measurements: {}, points: {} });
+const createRuntime = measurementTasks_1.createTaskRuntime;
+const applyAction = measurementTasks_1.applyTaskAction;
+const canonicalState = measurementTasks_1.canonicalTaskState;
+const initialMotionState = () => (0, measurementTasks_1.initialTaskState)();
 exports.initialMotionState = initialMotionState;
 function replayMotion(config, rawActions) {
-    if (!Array.isArray(rawActions) || rawActions.length > exports.MOTION_MAX_ACTIONS)
-        return { ok: false, code: "MOTION_ACTIONS_TOO_MANY" };
-    const actions = [];
-    let rt = createRuntime();
-    for (const raw of rawActions) {
-        const n = normalizeMotionAction(raw, config);
-        if (!n.ok)
-            return n;
-        actions.push(n.action);
-        rt = applyAction(rt, n.action);
-    }
-    return { ok: true, actions, state: canonicalState(rt) };
+    return (0, measurementTasks_1.replayTaskActions)(rawActions, boundsOf(config), exports.MOTION_MAX_ACTIONS, CODES);
 }
 const TOLERANCE_MAX = 1e6;
 const expectedMotionValue = (check, config) => (0, motionCore_1.motionQuantities)({ kind: config.experiment, params: config.params }, config.view.maxTime)[check.quantity] ?? null;
@@ -92,7 +41,7 @@ function validateMotionCheck(raw, config) {
     const fail = (message) => ({ ok: false, issues: [{ code: "MOTION_CHECK_INVALID", message }] });
     if (raw.kind !== "motion.referenceValue")
         return fail("نوع فحص غير معروف.");
-    if (!exactKeys(raw, ["id", "label", "weight", "kind", "measurementId", "quantity", "tolerance"]))
+    if (!(0, measurementTasks_1.exactKeys)(raw, ["id", "label", "weight", "kind", "measurementId", "quantity", "tolerance"]))
         return fail("معاملات الفحص «" + String(raw.label) + "» غير مطابقة لنوعه.");
     if (!value(raw.tolerance, Number.MIN_VALUE, TOLERANCE_MAX))
         return fail("السماحية في الفحص «" + String(raw.label) + "» يجب أن تكون عددًا موجبًا.");
@@ -110,18 +59,11 @@ function validateMotionCheck(raw, config) {
         return fail("الكمية «" + q.label + "» غير معرّفة في هذه التجربة بقيمها الحالية (مثلًا لا يصل الجسم إلى أسفل المستوى خلال مدة التجربة).");
     return { ok: true, check };
 }
-const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 function evaluateMotionCheck(check, state, config) {
-    const expected = (0, exports.expectedMotionValue)(check, config);
-    const got = has(state.measurements, check.measurementId) ? state.measurements[check.measurementId] : undefined;
-    const passed = typeof got === "number" && Number.isFinite(got) && expected !== null && Number.isFinite(expected) && Math.abs(got - expected) <= check.tolerance;
-    return { expected: (0, motionCore_1.fmtMotion)(expected) + " ± " + (0, motionCore_1.fmtMotion)(check.tolerance), actual: typeof got === "number" ? (0, motionCore_1.fmtMotion)(got) : "—", passed };
+    return (0, measurementTasks_1.evaluateReferenceValue)((0, exports.expectedMotionValue)(check, config), state, check.measurementId, check.tolerance, motionCore_1.fmtMotion);
 }
 function motionRuleView(state, config) {
-    const points = {};
-    for (const id of Object.keys(state.points))
-        points[id] = { x: state.points[id].x, y: state.points[id].y };
-    return { ids: [...config.tasks.measurements.map(m => m.id), ...config.tasks.points.map(p => p.id)], selected: [], points, values: { ...state.measurements }, sequence: [], relations: [] };
+    return (0, measurementTasks_1.taskRuleView)(state, config.tasks.measurements.map(m => m.id), config.tasks.points.map(p => p.id));
 }
 exports.PHYSICS_MOTION_DESCRIPTOR_V1 = {
     descriptorVersion: 1, key: physicsMotionModel_1.MOTION_PLUGIN_KEY, version: physicsMotionModel_1.MOTION_PLUGIN_VERSION, label: exports.MOTION_LABEL, domain: "physics",

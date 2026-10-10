@@ -1,0 +1,38 @@
+/* Phase 21D-A.2 — physicsLab@1 additions on top of the shared motion.css design (RTL page; scenes and graphs are LTR islands). */
+.lab-scene svg { max-height: 300px; }
+.lab-ceiling { stroke: #44617f; stroke-width: 4; }
+.lab-rest-line { stroke: var(--xp-muted, #8a96a8); stroke-dasharray: 4 4; stroke-width: 1.2; }
+.lab-rod { stroke: #33465c; stroke-width: 2.5; }
+.lab-bob circle { fill: var(--xp-primary, #1d6fd6); stroke: var(--xp-text, #0d3f80); stroke-width: 2; }
+.lab-bob.is-draggable { cursor: grab; touch-action: none; }
+.lab-bob.is-draggable:focus-visible circle { stroke: #b4561d; stroke-width: 4; }
+.lab-bob:focus { outline: none; }
+.lab-spring { fill: none; stroke: #44617f; stroke-width: 2; stroke-linejoin: round; }
+.lab-mass { fill: var(--xp-primary, #1d6fd6); stroke: var(--xp-text, #0d3f80); stroke-width: 2; }
+.lab-bars text { font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--xp-muted, #415066); }
+.lab-bars-title { font-weight: 700; }
+.lab-bars-axis { stroke: #5b6b80; stroke-width: 1; }
+.lab-bar.is-ke rect, .lab-legend .is-ke .lab-swatch { fill: #1d6fd6; background: #1d6fd6; }
+.lab-bar.is-pe rect, .lab-legend .is-pe .lab-swatch { fill: #15803d; background: #15803d; }
+.lab-bar.is-total rect, .lab-legend .is-total .lab-swatch { fill: #33465c; background: #33465c; }
+.lab-bar.is-lost rect, .lab-legend .is-lost .lab-swatch { fill: #b4561d; background: #b4561d; }
+.lab-dyn .xp-dyn-series.is-ke { stroke: #1d6fd6; }
+.lab-dyn .xp-dyn-series.is-pe { stroke: #15803d; }
+.lab-dyn .xp-dyn-series.is-total { stroke: #33465c; stroke-width: 3; }
+.lab-dyn .xp-dyn-series.is-lost { stroke: #b4561d; stroke-dasharray: 5 3; }
+.lab-legend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; direction: rtl; }
+.lab-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; }
+.lab-wire, .lab-probe { stroke: #33465c; stroke-width: 2; }
+.lab-probe { stroke-dasharray: 3 3; stroke-width: 1.2; }
+.lab-cell-long { stroke: #33465c; stroke-width: 4; }
+.lab-cell-short { stroke: #33465c; stroke-width: 7; }
+.lab-resistor { cursor: pointer; }
+.lab-resistor rect { fill: #fff8ee; stroke: #b4561d; stroke-width: 2; }
+.lab-resistor.is-selected rect { fill: #ffe2bf; stroke-width: 3; }
+.lab-resistor:focus-visible rect { stroke: #1d6fd6; stroke-width: 4; }
+.lab-resistor:focus { outline: none; }
+.lab-current { fill: #b42318; }
+.lab-ammeter circle, .lab-voltmeter circle { fill: #fff; stroke: #33465c; stroke-width: 2; }
+.lab-ammeter text, .lab-voltmeter text { font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: #22324a; }
+.lab-meter { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--xp-surface-alt, #eef4fb); }
+@media (prefers-color-scheme: dark) { .lab-meter { background: #1b2a3d; } .lab-resistor rect { fill: #3a2a10; } }

@@ -184,7 +184,7 @@ describe("authoring — the code-owned plugin picker, the plugin editors and the
   it("free fall: pick the plugin, apply the 20 m classroom preset (config + weighted checks), edit a value inline; invalid physics blocks finalization", async () => {
     const { hist, host, q } = await addSmartSim();
     const select = within(host).getByTestId("smartsim-plugin-select") as HTMLSelectElement;
-    expect([...select.options].map(o => o.value)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1"]);   // Phase 20C added networkTopology@2 (a NEW exact identity; v1 unchanged)
+    expect([...select.options].map(o => o.value)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1", "physicsLab@1"]);   // Phase 20C added networkTopology@2 (a NEW exact identity; v1 unchanged)
     fireEvent.change(select, { target: { value: "physicsFreeFall@1" } }); await tick(50);
     const ed = await within(host).findByTestId("freefall-editor", {}, { timeout: 3000 });
     expect(q().smartSim.pluginKey).toBe("physicsFreeFall");

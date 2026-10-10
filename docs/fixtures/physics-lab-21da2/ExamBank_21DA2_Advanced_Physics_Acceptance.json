@@ -1,0 +1,764 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21DA2-ADVANCED-PHYSICS",
+  "title": "ExamBank 21D-A.2 — اختبار القبول لمختبر الفيزياء المتقدم",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "البندول، قانون هوك، الطاقة الميكانيكية، الدوائر الكهربائية",
+    "instructions": "شغّل كل محاكاة واستخدم الإيقاف والخطوة المفردة والقياس، ثم سجّل القيم بوحدات SI. الاستكشاف لا يُقيَّم.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — البندول البسيط",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "smartSim",
+          "text": "بندول طول خيطه 1 m يُفلت من زاوية 10°. قِس دوره من الحركة، واحسب دوره بتقريب الزاوية الصغيرة، وسجّل أقصى سرعة للثقل.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsLab",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "pendulum",
+              "params": {
+                "length": 1,
+                "initialAngle": 10,
+                "damping": 0,
+                "mass": 0.5,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "length",
+                  "min": 0.2,
+                  "max": 5,
+                  "step": 0.1
+                },
+                {
+                  "param": "initialAngle",
+                  "min": 1,
+                  "max": 90,
+                  "step": 1
+                },
+                {
+                  "param": "damping",
+                  "min": 0,
+                  "max": 1,
+                  "step": 0.05
+                },
+                {
+                  "param": "gravity",
+                  "min": 1.6,
+                  "max": 24.8,
+                  "step": 0.1
+                }
+              ],
+              "view": {
+                "maxTime": 10,
+                "graphs": [
+                  "angularVelocity",
+                  "energy"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "period",
+                    "label": "دور البندول المقيس",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "smallAnglePeriod",
+                    "label": "الدور المحسوب بتقريب الزاوية الصغيرة",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "maxSpeed",
+                    "label": "أقصى سرعة للثقل",
+                    "unit": "m/s"
+                  }
+                ],
+                "points": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "period",
+                "label": "الدور المقيس",
+                "weight": 2,
+                "kind": "lab.referenceValue",
+                "measurementId": "period",
+                "quantity": "measuredPeriod",
+                "tolerance": 0.03
+              },
+              {
+                "id": "small-angle",
+                "label": "دور الزاوية الصغيرة",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "smallAnglePeriod",
+                "quantity": "smallAnglePeriod",
+                "tolerance": 0.01
+              },
+              {
+                "id": "max-speed",
+                "label": "أقصى سرعة",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "maxSpeed",
+                "quantity": "maxSpeed",
+                "tolerance": 0.02
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — قانون هوك والنابض",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "smartSim",
+          "text": "كتلة 0.5 kg معلّقة بنابض ثابته 20 N/m أُزيحت 0.1 m أسفل موضع الاتزان ثم أُفلتت. سجّل الدور واستطالة الاتزان والقوة المُعيدة، وحدّد أول مرور بالاتزان.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsLab",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "spring",
+              "params": {
+                "springConstant": 20,
+                "mass": 0.5,
+                "initialDisplacement": 0.1,
+                "damping": 0,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "springConstant",
+                  "min": 5,
+                  "max": 100,
+                  "step": 1
+                },
+                {
+                  "param": "mass",
+                  "min": 0.1,
+                  "max": 2,
+                  "step": 0.1
+                },
+                {
+                  "param": "initialDisplacement",
+                  "min": -0.3,
+                  "max": 0.3,
+                  "step": 0.01
+                },
+                {
+                  "param": "damping",
+                  "min": 0,
+                  "max": 5,
+                  "step": 0.1
+                }
+              ],
+              "view": {
+                "maxTime": 5,
+                "graphs": [
+                  "force",
+                  "velocity",
+                  "energy"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "period",
+                    "label": "دور الاهتزاز",
+                    "unit": "s"
+                  },
+                  {
+                    "id": "equilibrium",
+                    "label": "استطالة النابض عند الاتزان",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "restoringForce",
+                    "label": "القوة المُعيدة عند الإفلات",
+                    "unit": "N"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "firstEquilibrium",
+                    "label": "أول مرور بموضع الاتزان على منحنى الإزاحة–الزمن"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "period",
+                "label": "الدور",
+                "weight": 2,
+                "kind": "lab.referenceValue",
+                "measurementId": "period",
+                "quantity": "period",
+                "tolerance": 0.02
+              },
+              {
+                "id": "equilibrium",
+                "label": "استطالة الاتزان",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "equilibrium",
+                "quantity": "equilibriumExtension",
+                "tolerance": 0.005
+              },
+              {
+                "id": "restoring",
+                "label": "القوة المُعيدة",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "restoringForce",
+                "quantity": "restoringForceAtRelease",
+                "tolerance": 0.05
+              },
+              {
+                "id": "first-equilibrium",
+                "label": "أول مرور بالاتزان",
+                "weight": 1,
+                "kind": "pointNear@1",
+                "pointId": "firstEquilibrium",
+                "expected": {
+                  "x": 0.2484,
+                  "y": 0
+                },
+                "tolerance": 0.02
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — الطاقة الميكانيكية",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "smartSim",
+          "text": "يُقذف جسم كتلته 2 kg إلى الأعلى بسرعة 10 m/s من ارتفاع 20 m دون مقاومة هواء. تتبّع الطاقة الحركية وطاقة الوضع والطاقة الكلية.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsLab",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "energy",
+              "params": {
+                "mass": 2,
+                "initialHeight": 20,
+                "initialVelocity": 10,
+                "drag": 0,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "mass",
+                  "min": 0.5,
+                  "max": 10,
+                  "step": 0.5
+                },
+                {
+                  "param": "initialHeight",
+                  "min": 0,
+                  "max": 50,
+                  "step": 1
+                },
+                {
+                  "param": "initialVelocity",
+                  "min": -20,
+                  "max": 30,
+                  "step": 1
+                },
+                {
+                  "param": "drag",
+                  "min": 0,
+                  "max": 2,
+                  "step": 0.05
+                }
+              ],
+              "view": {
+                "maxTime": 5,
+                "graphs": [
+                  "height",
+                  "velocity"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "initialEnergy",
+                    "label": "الطاقة الميكانيكية الابتدائية",
+                    "unit": "J"
+                  },
+                  {
+                    "id": "maxHeight",
+                    "label": "أقصى ارتفاع",
+                    "unit": "m"
+                  },
+                  {
+                    "id": "impactKineticEnergy",
+                    "label": "الطاقة الحركية عند الارتطام",
+                    "unit": "J"
+                  }
+                ],
+                "points": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "initial-energy",
+                "label": "الطاقة الابتدائية",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "initialEnergy",
+                "quantity": "initialEnergy",
+                "tolerance": 1
+              },
+              {
+                "id": "max-height",
+                "label": "أقصى ارتفاع",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "maxHeight",
+                "quantity": "maxHeight",
+                "tolerance": 0.1
+              },
+              {
+                "id": "impact-ke",
+                "label": "الطاقة الحركية عند الارتطام",
+                "weight": 2,
+                "kind": "lab.referenceValue",
+                "measurementId": "impactKineticEnergy",
+                "quantity": "impactKineticEnergy",
+                "tolerance": 2
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "c2",
+          "presentationType": "smartSim",
+          "text": "الجسم نفسه مع مقاومة هواء خطية b = 0.5 kg/s: الطاقة الميكانيكية لا تُحفظ. سجّل الطاقة الابتدائية والطاقة المبددة حتى الارتطام.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsLab",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "energy",
+              "params": {
+                "mass": 2,
+                "initialHeight": 20,
+                "initialVelocity": 10,
+                "drag": 0.5,
+                "gravity": 9.8
+              },
+              "controls": [
+                {
+                  "param": "mass",
+                  "min": 0.5,
+                  "max": 10,
+                  "step": 0.5
+                },
+                {
+                  "param": "initialHeight",
+                  "min": 0,
+                  "max": 50,
+                  "step": 1
+                },
+                {
+                  "param": "initialVelocity",
+                  "min": -20,
+                  "max": 30,
+                  "step": 1
+                },
+                {
+                  "param": "drag",
+                  "min": 0,
+                  "max": 2,
+                  "step": 0.05
+                }
+              ],
+              "view": {
+                "maxTime": 6,
+                "graphs": [
+                  "height",
+                  "velocity"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "initialEnergy",
+                    "label": "الطاقة الميكانيكية الابتدائية",
+                    "unit": "J"
+                  },
+                  {
+                    "id": "energyLost",
+                    "label": "الطاقة المبددة بالمقاومة حتى الارتطام",
+                    "unit": "J"
+                  }
+                ],
+                "points": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "initial-energy",
+                "label": "الطاقة الابتدائية",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "initialEnergy",
+                "quantity": "initialEnergy",
+                "tolerance": 1
+              },
+              {
+                "id": "energy-lost",
+                "label": "الطاقة المبددة",
+                "weight": 2,
+                "kind": "lab.referenceValue",
+                "measurementId": "energyLost",
+                "quantity": "energyDissipated",
+                "tolerance": 2
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — الدوائر الكهربائية",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "smartSim",
+          "text": "مصدر 12 V يغذّي R1 = 2 Ω على التوالي مع (R2 = 6 Ω ∥ R3 = 3 Ω). استخدم الأميتر والفولتميتر لتسجيل القيم المطلوبة.",
+          "marks": 7,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "physicsLab",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "experiment": "circuit",
+              "params": {
+                "voltage": 12,
+                "r1": 2,
+                "r2": 6,
+                "r3": 3,
+                "topology": 3
+              },
+              "controls": [
+                {
+                  "param": "voltage",
+                  "min": 1,
+                  "max": 24,
+                  "step": 1
+                },
+                {
+                  "param": "r1",
+                  "min": 1,
+                  "max": 20,
+                  "step": 1
+                },
+                {
+                  "param": "r2",
+                  "min": 1,
+                  "max": 20,
+                  "step": 1
+                },
+                {
+                  "param": "r3",
+                  "min": 1,
+                  "max": 20,
+                  "step": 1
+                },
+                {
+                  "param": "topology",
+                  "min": 1,
+                  "max": 4,
+                  "step": 1
+                }
+              ],
+              "view": {
+                "maxTime": 10,
+                "graphs": [
+                  "power"
+                ],
+                "showVectors": true
+              },
+              "tasks": {
+                "measurements": [
+                  {
+                    "id": "equivalentResistance",
+                    "label": "المقاومة المكافئة",
+                    "unit": "Ω"
+                  },
+                  {
+                    "id": "totalCurrent",
+                    "label": "التيار الكلي",
+                    "unit": "A"
+                  },
+                  {
+                    "id": "current2",
+                    "label": "التيار المار في R2",
+                    "unit": "A"
+                  },
+                  {
+                    "id": "voltage1",
+                    "label": "فرق الجهد على R1",
+                    "unit": "V"
+                  }
+                ],
+                "points": [
+                  {
+                    "id": "iv6",
+                    "label": "نقطة على منحنى التيار–الجهد عند 6 V"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "req",
+                "label": "المقاومة المكافئة",
+                "weight": 2,
+                "kind": "lab.referenceValue",
+                "measurementId": "equivalentResistance",
+                "quantity": "equivalentResistance",
+                "tolerance": 0.05
+              },
+              {
+                "id": "itotal",
+                "label": "التيار الكلي",
+                "weight": 2,
+                "kind": "lab.referenceValue",
+                "measurementId": "totalCurrent",
+                "quantity": "totalCurrent",
+                "tolerance": 0.05
+              },
+              {
+                "id": "i2",
+                "label": "تيار R2",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "current2",
+                "quantity": "current2",
+                "tolerance": 0.05
+              },
+              {
+                "id": "v1",
+                "label": "جهد R1",
+                "weight": 1,
+                "kind": "lab.referenceValue",
+                "measurementId": "voltage1",
+                "quantity": "voltage1",
+                "tolerance": 0.1
+              },
+              {
+                "id": "iv-point",
+                "label": "نقطة التيار–الجهد",
+                "weight": 1,
+                "kind": "pointNear@1",
+                "pointId": "iv6",
+                "expected": {
+                  "x": 6,
+                  "y": 1.5
+                },
+                "tolerance": 0.05
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-e",
+      "title": "هـ — سياق مشترك",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e1",
+          "presentationType": "composite",
+          "text": "استخدم دائرة التوازي المشتركة للإجابة.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxParallel",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "دائرة توازٍ",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "physicsLab",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "experiment": "circuit",
+                    "params": {
+                      "voltage": 12,
+                      "r1": 6,
+                      "r2": 12,
+                      "r3": 4,
+                      "topology": 2
+                    },
+                    "controls": [],
+                    "view": {
+                      "maxTime": 10,
+                      "graphs": [
+                        "power"
+                      ],
+                      "showVectors": true
+                    },
+                    "tasks": {
+                      "measurements": [
+                        {
+                          "id": "totalCurrent",
+                          "label": "التيار الكلي في الدائرة",
+                          "unit": "A"
+                        },
+                        {
+                          "id": "current3",
+                          "label": "التيار في R3",
+                          "unit": "A"
+                        }
+                      ],
+                      "points": []
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gA",
+                "title": "مرتبط بالدائرة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxParallel",
+                    "text": "سجّل التيار الكلي في الدائرة.",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "itotal",
+                          "label": "التيار الكلي",
+                          "weight": 1,
+                          "kind": "lab.referenceValue",
+                          "measurementId": "totalCurrent",
+                          "quantity": "totalCurrent",
+                          "tolerance": 0.05
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "في دائرة التوازي يكون فرق الجهد على كل مقاومة:",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "مساويًا لجهد المصدر"
+                      },
+                      {
+                        "text": "مساويًا لنصف جهد المصدر"
+                      },
+                      {
+                        "text": "متناسبًا عكسيًا مع المقاومة"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

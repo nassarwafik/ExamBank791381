@@ -10,82 +10,46 @@
 //             checks); plus the opt-in generic numericNear@1 / pointNear@1 rules. No new grading engine (experiment-based grading is A.3).
 import { MOTION_LIMITS, MOTION_PLUGIN_KEY, MOTION_PLUGIN_VERSION, MOTION_PRIMARY_AXES, validateMotionConfig, type MotionConfigV1 } from "./physicsMotionModel";
 import { MOTION_QUANTITY_SPEC, fmtMotion, motionQuantities } from "./physics/motionCore";
-import { isPlainObject } from "./trustedSimVocabulary";
+import {
+  TASK_ACTION_KINDS, TASK_STATE_VERSION, applyTaskAction, canonicalTaskState, createTaskRuntime, evaluateReferenceValue, exactKeys, initialTaskState,
+  normalizeTaskAction, replayTaskActions, taskRuleView, type TaskAction, type TaskBounds, type TaskRuntime, type TaskStateV1
+} from "./physics/measurementTasks";
 import type { SmartSimCheckBase, SmartSimCheckOutcome, SmartSimIssue, SmartSimPlugin } from "./trustedSimRegistry";
 import type { SmartSimPluginDescriptorV1 } from "./trustedSimDescriptor";
 import type { SmartSimRuleView } from "./trustedSimRules";
 
+// Phase 21D-A.2 — the action / state / replay / comparison mechanics moved, unchanged, to the shared src/physics/measurementTasks.ts
+// (also used by physicsLab@1); this module binds them to the physicsMotion@1 config and keeps its public names and error codes.
 export const MOTION_LABEL = "تجارب الحركة (فيزياء)";
-export const MOTION_STATE_VERSION = 1 as const;
+export const MOTION_STATE_VERSION = TASK_STATE_VERSION;
 export const MOTION_MAX_ACTIONS = 500;
-export const MOTION_ACTION_KINDS: readonly string[] = Object.freeze(["measurement.set", "measurement.clear", "graphPoint.set", "graphPoint.clear"]);
+export const MOTION_ACTION_KINDS: readonly string[] = TASK_ACTION_KINDS;
 export const MOTION_CHECK_KINDS: readonly string[] = Object.freeze(["motion.referenceValue"]);
-export type MotionAction =
-  | { type: "measurement.set"; measurementId: string; value: number }
-  | { type: "measurement.clear"; measurementId: string }
-  | { type: "graphPoint.set"; pointId: string; x: number; y: number }
-  | { type: "graphPoint.clear"; pointId: string };
-export type MotionStateV1 = { v: 1; measurements: Record<string, number>; points: Record<string, { x: number; y: number }> };
+export type MotionAction = TaskAction;
+export type MotionStateV1 = TaskStateV1;
 export type MotionCheck = SmartSimCheckBase & { kind: "motion.referenceValue"; measurementId: string; quantity: string; tolerance: number };
-type Runtime = { measurements: Map<string, number>; points: Map<string, { x: number; y: number }> };
+type Runtime = TaskRuntime;
 
-const exactKeys = (o: Record<string, unknown>, keys: readonly string[]) => Object.keys(o).length === keys.length && keys.every(k => Object.prototype.hasOwnProperty.call(o, k));
 const value = (v: unknown, min: number, max: number): v is number => typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 const VMAX = MOTION_LIMITS.valueAbsMax;
 const measurementOf = (c: MotionConfigV1, id: unknown) => (typeof id === "string" ? c.tasks.measurements.find(m => m.id === id) : undefined);
-const pointOf = (c: MotionConfigV1, id: unknown) => (typeof id === "string" ? c.tasks.points.find(p => p.id === id) : undefined);
+/** The task bounds of a motion config: the primary graph's x axis is [0, maxTime] when it is time, else ±valueAbsMax. */
+const boundsOf = (c: MotionConfigV1): TaskBounds => {
+  const xIsTime = MOTION_PRIMARY_AXES[c.experiment].xIsTime;
+  return { measurementIds: c.tasks.measurements.map(m => m.id), pointIds: c.tasks.points.map(p => p.id), valueAbsMax: VMAX, pointX: { min: xIsTime ? 0 : -VMAX, max: xIsTime ? c.view.maxTime : VMAX } };
+};
+const CODES = { invalid: "MOTION_ACTION_INVALID", tooMany: "MOTION_ACTIONS_TOO_MANY" };
 
 export function normalizeMotionAction(raw: unknown, config: MotionConfigV1): { ok: true; action: MotionAction } | { ok: false; code: string } {
-  const bad = { ok: false as const, code: "MOTION_ACTION_INVALID" };
-  if (!isPlainObject(raw) || typeof raw.type !== "string") return bad;
-  switch (raw.type) {
-    case "measurement.set":
-      if (!exactKeys(raw, ["type", "measurementId", "value"]) || !measurementOf(config, raw.measurementId) || !value(raw.value, -VMAX, VMAX)) return bad;
-      return { ok: true, action: { type: "measurement.set", measurementId: raw.measurementId as string, value: raw.value } };
-    case "measurement.clear":
-      if (!exactKeys(raw, ["type", "measurementId"]) || !measurementOf(config, raw.measurementId)) return bad;
-      return { ok: true, action: { type: "measurement.clear", measurementId: raw.measurementId as string } };
-    case "graphPoint.set": {
-      const xMin = MOTION_PRIMARY_AXES[config.experiment].xIsTime ? 0 : -VMAX, xMax = MOTION_PRIMARY_AXES[config.experiment].xIsTime ? config.view.maxTime : VMAX;
-      if (!exactKeys(raw, ["type", "pointId", "x", "y"]) || !pointOf(config, raw.pointId) || !value(raw.x, xMin, xMax) || !value(raw.y, -VMAX, VMAX)) return bad;
-      return { ok: true, action: { type: "graphPoint.set", pointId: raw.pointId as string, x: raw.x, y: raw.y } };
-    }
-    case "graphPoint.clear":
-      if (!exactKeys(raw, ["type", "pointId"]) || !pointOf(config, raw.pointId)) return bad;
-      return { ok: true, action: { type: "graphPoint.clear", pointId: raw.pointId as string } };
-    default:
-      return bad;
-  }
+  return normalizeTaskAction(raw, boundsOf(config), CODES.invalid);
 }
-const createRuntime = (): Runtime => ({ measurements: new Map(), points: new Map() });
-function applyAction(rt: Runtime, a: MotionAction): Runtime {
-  const next: Runtime = { measurements: new Map(rt.measurements), points: new Map(rt.points) };
-  if (a.type === "measurement.set") next.measurements.set(a.measurementId, a.value);
-  else if (a.type === "measurement.clear") next.measurements.delete(a.measurementId);
-  else if (a.type === "graphPoint.set") next.points.set(a.pointId, { x: a.x, y: a.y });
-  else next.points.delete(a.pointId);
-  return next;
-}
-const byKey = <T,>(m: Map<string, T>) => [...m.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-function canonicalState(rt: Runtime): MotionStateV1 {
-  const measurements: Record<string, number> = {}, points: Record<string, { x: number; y: number }> = {};
-  for (const [id, v] of byKey(rt.measurements)) measurements[id] = v;
-  for (const [id, p] of byKey(rt.points)) points[id] = { x: p.x, y: p.y };
-  return { v: MOTION_STATE_VERSION, measurements, points };
-}
-export const initialMotionState = (): MotionStateV1 => ({ v: MOTION_STATE_VERSION, measurements: {}, points: {} });
+const createRuntime = createTaskRuntime;
+const applyAction = applyTaskAction;
+const canonicalState = canonicalTaskState;
+export const initialMotionState = (): MotionStateV1 => initialTaskState();
 /** Replays raw actions from the empty state (the client workspace and the parity tests use it; the core uses the plugin functions). */
 export function replayMotion(config: MotionConfigV1, rawActions: readonly unknown[]): { ok: true; actions: MotionAction[]; state: MotionStateV1 } | { ok: false; code: string } {
-  if (!Array.isArray(rawActions) || rawActions.length > MOTION_MAX_ACTIONS) return { ok: false, code: "MOTION_ACTIONS_TOO_MANY" };
-  const actions: MotionAction[] = [];
-  let rt = createRuntime();
-  for (const raw of rawActions) {
-    const n = normalizeMotionAction(raw, config);
-    if (!n.ok) return n;
-    actions.push(n.action);
-    rt = applyAction(rt, n.action);
-  }
-  return { ok: true, actions, state: canonicalState(rt) };
+  return replayTaskActions(rawActions, boundsOf(config), MOTION_MAX_ACTIONS, CODES);
 }
 
 // ── checks ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -108,18 +72,12 @@ export function validateMotionCheck(raw: Record<string, unknown>, config: Motion
   if (expected === null || !Number.isFinite(expected)) return fail("الكمية «" + q.label + "» غير معرّفة في هذه التجربة بقيمها الحالية (مثلًا لا يصل الجسم إلى أسفل المستوى خلال مدة التجربة).");
   return { ok: true, check };
 }
-const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 export function evaluateMotionCheck(check: MotionCheck, state: MotionStateV1, config: MotionConfigV1): SmartSimCheckOutcome {
-  const expected = expectedMotionValue(check, config);
-  const got = has(state.measurements, check.measurementId) ? state.measurements[check.measurementId] : undefined;
-  const passed = typeof got === "number" && Number.isFinite(got) && expected !== null && Number.isFinite(expected) && Math.abs(got - expected) <= check.tolerance;
-  return { expected: fmtMotion(expected) + " ± " + fmtMotion(check.tolerance), actual: typeof got === "number" ? fmtMotion(got) : "—", passed };
+  return evaluateReferenceValue(expectedMotionValue(check, config), state, check.measurementId, check.tolerance, fmtMotion);
 }
 /** The neutral view the opt-in generic rules read: values = measurements, points = primary-graph points. */
 export function motionRuleView(state: MotionStateV1, config: MotionConfigV1): SmartSimRuleView {
-  const points: Record<string, { x: number; y: number }> = {};
-  for (const id of Object.keys(state.points)) points[id] = { x: state.points[id].x, y: state.points[id].y };
-  return { ids: [...config.tasks.measurements.map(m => m.id), ...config.tasks.points.map(p => p.id)], selected: [], points, values: { ...state.measurements }, sequence: [], relations: [] };
+  return taskRuleView(state, config.tasks.measurements.map(m => m.id), config.tasks.points.map(p => p.id));
 }
 
 export const PHYSICS_MOTION_DESCRIPTOR_V1: SmartSimPluginDescriptorV1 = {

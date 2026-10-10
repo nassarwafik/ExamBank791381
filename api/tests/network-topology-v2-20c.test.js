@@ -43,7 +43,7 @@ const ans = (actions, state = {}) => ({ kind: "smartSim", pluginKey: "networkTop
 describe("20C-S1 — registration, shared build, pins", () => {
   it("networkTopology@2 is a production plugin in the server build; every pure v2 module is shared and free of dynamic code / I/O", () => {
     const reg = loadShared("trustedSimRegistry"); loadShared("trustedSimPlugins");
-    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1", "physicsMotion@1"]);   // 21D-A.1 added physicsMotion@1
+    expect(reg.listSmartSimPluginDescriptors().map(d => d.key + "@" + d.version)).toEqual(["functionStudy2d@1", "networkTopology@1", "networkTopology@2", "physicsFreeFall@1", "physicsLab@1", "physicsMotion@1"]);   // 21D-A.1 added physicsMotion@1
     for (const m of ["net2Common", "net2Model", "net2SwitchCli", "net2RouterCli", "net2Network", "net2Host", "net2Plugin"]) {   // Review Fix 1: net2Common scanned too
       expect(SHARED_ENTRIES, m).toContain("src/" + m + ".ts");
       const code = fs.readFileSync(path.join(repo, "api/src/lib/shared-finalization", m + ".js"), "utf8");

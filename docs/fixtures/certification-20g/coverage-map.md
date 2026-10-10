@@ -13,7 +13,7 @@
 | `tableFill@1` | type | auto | ✓ | fields/table | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, C, E, S |
 | `cliFill@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | A, S |
 | `compound@1` | type | composed | ✓ | compound | — | — | — | ✓ | legacy adapter | A | E, S |
-| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, 21DA1, A, B, C, D, E, S |
+| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, 21DA1, 21DA2, A, B, C, D, E, S |
 | `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | — | ✓ | registered | A | 21A1 |
 | `functionGraphSelection@1` | type | auto | ✓ | functionGraphSelection | — | ✓ | — | ✓ | registered | A | 21A2 |
 | `scene3DSelection@1` | type | auto | ✓ | scene3DSelection | — | — | — | ✓ | registered | A | 21C |
@@ -31,13 +31,14 @@
 | `hotspot@1` | type | auto | ✓ | hotspot | — | ✓ | — | ✓ | registered | A | E, S |
 | `labelDiagram@1` | type | auto | ✓ | fields | — | ✓ | — | ✓ | registered | A | E, S |
 | `openResponse@1` | type | manual | ✓ | text | — | ✓ | ✓ | ✓ | registered | A | A, B, S |
-| `smartSim@1` | type | auto | ✓ | smartSim | — | ✓ | ✓ | ✓ | registered | A | 21DA1, A, B, D, E, S |
+| `smartSim@1` | type | auto | ✓ | smartSim | — | ✓ | ✓ | ✓ | registered | A | 21DA1, 21DA2, A, B, D, E, S |
 | `plugin:functionStudy2d@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | D, S |
 | `plugin:networkTopology@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | E, S |
 | `plugin:networkTopology@2` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | A, S |
 | `plugin:physicsFreeFall@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | B, E, S |
+| `plugin:physicsLab@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DA2 |
 | `plugin:physicsMotion@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DA1 |
-| `child:multipleChoice@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, A, B, C, D, E, S |
+| `child:multipleChoice@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, 21DA2, A, B, C, D, E, S |
 | `child:trueFalse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | E, S |
 | `child:multiTrueFalse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:shortAnswer@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | C, E, S |
@@ -61,7 +62,7 @@
 | `child:hotspot@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:labelDiagram@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:openResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | A, B, C, D, E, S |
-| `child:smartSim@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, A, B, D, E, S |
+| `child:smartSim@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, 21DA2, A, B, D, E, S |
 | `child:chartSelection@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A1 |
 | `child:functionGraphSelection@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A2 |
 | `compoundPart:multipleChoice` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | E, S |
