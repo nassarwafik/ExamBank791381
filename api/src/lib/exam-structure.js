@@ -146,6 +146,10 @@ function isResponseAnswered(a) {
     // Phase 21A.2 — a function-graph selection counts when at least one target is selected (mirror of answerState.ts).
     case "functionGraphSelection":
       return Array.isArray(a.targets) && a.targets.length > 0;
+    // Hotfix — a 3D scene selection counts when at least one target is selected (mirror of answerState.ts, which counts every semantic
+    // target selection). Without this case a firstNAnswered section never gave a 3D answer a slot, so it was never graded.
+    case "scene3DSelection":
+      return Array.isArray(a.targets) && a.targets.length > 0;
     // Phase 21D-B.3 — a mesh part selection counts when at least one named part is selected (mirror of answerState.ts).
     case "meshPartSelection":
       return Array.isArray(a.parts) && a.parts.length > 0;
