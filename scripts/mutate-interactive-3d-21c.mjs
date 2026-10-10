@@ -5,7 +5,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
-const SPEC="src/interactive3d/sceneSpec.ts",SELECT="src/scene3DSelectionQuestion.ts",MESH="src/interactive3d/sceneMesh.ts",VIEW="src/interactive3d/Interactive3DView.tsx";
+const SPEC="src/interactive3d/sceneSpec.ts",SELECT="src/scene3DSelectionQuestion.ts",MESH="src/interactive3d/sceneMesh.ts",ORBIT="src/interactive3d/orbitCamera.ts";
 const CORE=["src/interactive3d/interactive3d.21c.test.tsx","api/tests/certification-21c/cert-21c-3d-lifecycle.test.js"];
 const UI=["src/interactive3d/interactive3d.21c.test.tsx"];
 const M=(id,file,before,after,tests=CORE)=>({id,file,before,after,tests});
@@ -34,7 +34,8 @@ const mutants=[
  M("Q10-partial-union",SELECT,'max*hits/Math.max(1,union)','max*hits/Math.max(1,total)'),
 
  M("M01-box-face-semantic",MESH,'["top",["D","C","G","H"]]','["top",["A","B","F","E"]]'),
- M("V01-home-reset",VIEW,'else if(key==="Home")reset(); else return false;','else if(false&&key==="Home")reset(); else return false;',UI)
+ // Phase 21D moved the viewer's keyboard camera into the shared orbit controller: same planted defect (Home no longer resets), new home
+ M("V01-home-reset",ORBIT,'if (k === "Home") { reset(); return true; }','if (false && k === "Home") { reset(); return true; }',UI)
 ];
 const sha=s=>crypto.createHash("sha256").update(s).digest("hex"),files=[...new Set(mutants.map(m=>m.file))];
 const BACKUP=path.join(os.tmpdir(),"exambank-21c-mutation-backup.json");
