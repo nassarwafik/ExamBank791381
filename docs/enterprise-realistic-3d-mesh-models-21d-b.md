@@ -618,3 +618,137 @@ defects.
   possible here.
 - Changing the model of a published question is a new exam revision (models are pinned by hash); answers saved against a previous
   model are refused by the binding, never re-mapped.
+
+## 16. Phase 21D-B.3 — final certification on `main` after B.1 and B.2 merged
+
+### 16.1 Reconciliation
+
+- **Baseline.** `origin/main` = `ef780e2` (merge of #287, B.2). Its tree equals the reconciled B.2 head `cbc8ebc`, which itself contains
+  B.1 (#286 → `a8c860a`), the scene3DSelection hotfix (#288) and the parametric test fix (#289). Exact-main CI on `ef780e2`: Quality Gate
+  ✅, Runner ✅, Build and Deploy (production, the owner's merge) ✅.
+- **Merge.** `657370d` is a normal merge commit (`git merge origin/main`, parents `68cab11` + `ef780e2`). There was no rebase, no
+  force-push and no history rewrite.
+- **What main brought.** Since this branch's last B.2 merge (`7eaf608`), main's only new content was #288 (4 files).
+- **Conflicts.** Two, each an adjacent one-line addition for a different question type, resolved as the **union** of both sides:
+
+  | File | Kept |
+  |---|---|
+  | `api/src/lib/exam-structure.js` › `isResponseAnswered` | #288's `scene3DSelection` case **and** B.3's `meshPartSelection` case |
+  | `api/src/functions/assignment-review.js` › `chartReviewFields` | #288's `scene3DSelection` **and** B.3's `meshPartSelection` teacher-only payload |
+
+- **Proofs.**
+  - `git diff ef780e2 657370d` equals the reviewed B.3 diff `git diff 7eaf608 68cab11` byte for byte on every file except the two
+    resolved lines: 77 files, +2,549 / −59 on both sides.
+  - `git diff 68cab11 657370d` equals main's delta `git diff 7eaf608 ef780e2` on every other file.
+  - Mutants B3-24 / B3-25 / B3-26 (below) show that each side of the resolution is guarded by its own test.
+
+### 16.2 End-to-end audit of `meshPartSelection@1`
+
+Each requested aspect was traced in the code and tied to executed evidence. **No product defect was found.**
+
+**Teacher**
+- The question editor (production `MeshPartSelectionEditor`) works in real Chromium. It was certified for:
+  - library heart: single and multiple mode, limit, partial scoring, correct parts, instruction, a renamed part, a captured starting
+    view, hidden labels;
+  - the key following the labelled parts: removing a correct part drops it with a notice;
+  - a teacher-uploaded model loaded from its content-addressed API route, after confirmation;
+  - the builder's real import → save → export → import round trip, exact for both the library and the uploaded question;
+  - RTL layout with no overflow on desktop and at 390 px.
+- The App-owned upload service reaches the editor through context; the token is never seen.
+- Upload is builder-authenticated and validated server-side by the shared GLB authority.
+
+**Student**
+- The renderer projects the config through the shared authority.
+- The parts list stays usable in every load state, including fallback and error: `canSelect` depends only on `disabled`. A failing model
+  or missing WebGL never blocks an answer.
+- Answers carry part ids only. The camera is presentation state. Certified on the exam page: rotate (drag and button), zoom (button and
+  Ctrl+wheel) and reset leave the saved answers byte-identical.
+
+**Review**
+- `MeshPartSelectionReview` re-evaluates with the server's authority and shows the real labels, also for hidden-label questions.
+- The payload reaches the teacher only (`chartReviewFields`).
+
+**Grading** — all decided by the server (`question-type-graders.js` → shared `scoreMeshPartSelection`):
+
+| Requested case | Behaviour | Evidence |
+|---|---|---|
+| exact (all-or-nothing) | full marks | domain suite; PERFECT ledger 28 |
+| superset / miss (all-or-nothing) | 0 | domain suite (B3-01 killed) |
+| partial (IoU) | max·hits/\|selected ∪ correct\|; guess-all never pays | domain suite (B3-02); authoring Chromium 4 / 2 / 4⁄3 / 0 |
+| empty | 0, never a review | BLANK ledger 0 |
+| nonexistent part id | refused at ingest (`MESH_SELECTION_PART_UNKNOWN`) | ATTACKER (B3-04) |
+| duplicated id | refused (`MESH_SELECTION_DUPLICATE`) | ATTACKER |
+| other model | refused (`MESH_SELECTION_MODEL_MISMATCH`) | ATTACKER (B3-05) |
+| forged shape: score / camera / pixels / prototype key | refused (`MESH_SELECTION_ANSWER_INVALID`) | ATTACKER |
+| over the limit | refused (`MESH_SELECTION_TOO_MANY`) | ATTACKER (B3-08) |
+| a mesh answer on another type, or an unknown question | refused (`MESH_SELECTION_QUESTION_MISMATCH`) | ATTACKER |
+| unsupported asset reference (outside the reviewed library, external URL, executable field) | refused at finalization | lifecycle |
+| unavailable / corrupted / mismatched upload, missing labelled part | publication refused (422 `MESH_ASSET_UNAVAILABLE`); grading never depends on bytes | lifecycle gate (B3-13…16) |
+| `firstNAnswered` | a non-empty selection takes a slot, an empty one does not | lifecycle (B3-17, B3-26) |
+| `all` | every question counted | the acceptance exam (three `all` sections) |
+| autosave → reload → submit | exact restore in canonical order; idempotent submit; regrade repeatable | lifecycle + Chromium reload |
+| authority cannot be established | that question → teacher review (0 + manual-review marks, not finalized), never an automatic mark or a silent zero | **new** lifecycle test (18 auto + 10 manual on a forged snapshot); kills the fail-closed mutant alone |
+
+**Assets**
+- Content-addressed SHA-256 at upload, at rest (store gate) and in the browser (before parsing).
+- The shared GLB schema and binary authority, size and geometry limits.
+- Library references pinned by id, version and hash against the catalog.
+- No external URL: the URL is derived from the hash.
+- Attribution and licence shown in the viewer's provenance panel.
+- No key in the student payload: the sanitizer projection is mutant-checked (B3-10), with a DOM scan in Chromium.
+
+### 16.3 Gap found and closed: the mesh lazy-bundle guard could become vacuous
+
+**The gap.**
+- B.1 and B.2 shipped the WebGL viewer unwired, so `check-bundle-budget.mjs` tolerated absent mesh signatures (`main`: "0 lazy chunks").
+- B.3 wires the viewer into the product, so a renamed class name or test id would have silently emptied the guard.
+
+**Proof on the B.3 build.** With four of its five signatures renamed in the built chunks, the previous guard still printed "bundle guard
+passed".
+
+**The fix.**
+- Every mesh signature must now be **found** in a lazy chunk, as the interactive 3D guard already requires.
+- The meshPartSelection editor, student renderer and review test ids joined the signature list.
+- On the renamed build the new guard fails once per missing signature. The real build passes: 5 lazy mesh chunks, none in the initial
+  graph or the Student Portal static closure.
+
+This tightens the guard and loosens nothing; the 128,000-byte budget is unchanged.
+
+### 16.4 Results on the final head
+
+| Check | Result |
+|---|---|
+| Root suite `npx vitest run` | **890 / 890 files, 11,641 / 11,641 tests** |
+| Lifecycle certification (21DB3) | 17 + fixture drift 2 = **19 / 19** (PERFECT 28 · PARTIAL 10 · BLANK 0 · ATTACKER 0) |
+| `#288` hotfix suites + B.3 focused suites | 87 / 87 after the merge |
+| `npx tsc -b` · `npm run lint` · `git diff --check` | exit 0 · exit 0 (116 warnings, as on `main`) · clean |
+| `npm run build` + bundle guard | passed; initial JS graph **112,511 B** gzip (9 files; `main` 127,805 B; budget 128,000) |
+| Real Chromium — B.1 viewer / anatomy + editor / **exam** | **37 / 37 · 32 / 32 · 37 / 37** |
+| Mutation campaign (B3-01 … B3-26), restore SHA-verified, `git status` unchanged | **26 / 26 KILLED**, plus the new platform fail-closed test killing B3-03 on its own |
+| Assets | GLB files, NOTICE, PROVENANCE, manifest, catalog and converter byte-identical to `main`; both files content-addressed |
+
+**New mutants:**
+
+| Id | Mutant | Verdict | Killed by |
+|---|---|---|---|
+| B3-24 | #288's `scene3DSelection` firstN case lost in the resolution | KILLED | `scene3d-first-n-answered-hotfix` |
+| B3-25 | #288's teacher-review 3D payload lost in the resolution | KILLED | `scene3d-review-config-hotfix` |
+| B3-26 | B.3's `meshPartSelection` firstN case lost in the resolution | KILLED | 21DB3 lifecycle (firstN) |
+
+**Exam Chromium** (37 checks):
+- the 27 of §15.6;
+- 1 exam-page camera check;
+- 9 teacher-authoring checks.
+
+**Measured** (SwiftShader):
+
+| Figure | Value |
+|---|---|
+| First model ready (desktop) | 855 ms |
+| First model ready (phone) | 613 ms |
+| Downloaded per exam | 4,533,132 B, each file once |
+| GPU per live viewer | 2.5 MB |
+| Live contexts | ≤ 3 desktop, ≤ 2 phone |
+| Heap growth after 20 exam mount cycles | 1.8 MiB |
+
+Exact-head CI and the PR-preview results are recorded in the PR body: they run on the commit that carries this record.
