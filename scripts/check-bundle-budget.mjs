@@ -122,6 +122,9 @@ const FUNCTION_GRAPH_UI_SIGNATURES = ["fg-stage", "ge-field-expr", "fg-review"];
 const SURFACE_3D_UI_SIGNATURES = ["ex3d-scene", "ex3d-editor", "ex3d-lab", "sp3d-scene", "sp3d-editor"];
 // Phase 21C — general interactive 3D runtime/editor/semantic-selection UI must remain lazy; the small data validators may be shared.
 const INTERACTIVE_3D_UI_SIGNATURES = ["i3d-scene", "i3d-editor", "qt-editor-scene3DSelection"];
+// Phase 21D-B — the WebGL mesh renderer / viewer (shader sources, viewer class names) must never reach the initial graph or the Student
+// Portal's static closure. B.1 ships the foundation unwired, so the signatures may be absent from the build; once present, they must be lazy.
+const MESH_3D_UI_SIGNATURES = ["mm3d-scene", "mm3d-parts", "uOcclusionStrength"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
@@ -271,6 +274,14 @@ function main() {
     if (hit.length) failures.push(`${f} statically exposes interactive 3D UI on a student no-3D path (${hit.join(", ")})`);
   }
   console.log(`Interactive 3D runtime: ${interactive3DViewRoots.length} lazy Interactive3DView root(s); Student Portal static closure carries no interactive 3D viewer/editor UI`);
+
+  const meshOwners = all.filter(f => MESH_3D_UI_SIGNATURES.some(sig => read(f).includes(sig)));
+  for (const f of meshOwners) if (initial.includes(f)) failures.push(`${f} loads the WebGL mesh viewer in the initial graph`);
+  for (const f of portalClosure) {
+    const hit = MESH_3D_UI_SIGNATURES.filter(sig => read(f).includes(sig));
+    if (hit.length) failures.push(`${f} statically exposes the WebGL mesh viewer on a student no-3D path (${hit.join(", ")})`);
+  }
+  console.log(`WebGL mesh runtime: ${meshOwners.length} lazy chunk(s); never in the initial graph or the Student Portal static closure`);
 
   for (const f of portalClosure) { const hit = DATA_CHART_SIGNATURES.filter(s => read(f).includes(s)); if (hit.length) failures.push(`${f} is statically reachable from the Student Portal and carries chart code (${hit.join(", ")}) — a student without charts must never download it`); }
   const echartsChunks = all.filter(f => ECHARTS_SIGNATURES.some(s => read(f).includes(s)));
