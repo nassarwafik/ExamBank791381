@@ -51,3 +51,6 @@ artifacts/phase-21a2/
 
 # Phase 21D-A.1 — real-Chromium physics motion check output (scripts/check-physics-motion-browser-21da1.mjs), produced per run
 .harness-21da1/
+
+# Phase 21D-A.2 — real-Chromium physics lab check output (scripts/check-physics-lab-browser-21da2.mjs), produced per run
+.harness-21da2/

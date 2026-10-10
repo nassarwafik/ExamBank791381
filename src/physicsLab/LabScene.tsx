@@ -1,4 +1,4 @@
-import { memo, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { memo, useEffect, useRef, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { fmtLab, type CircuitSolution, type LabFrame, type LabModel } from "../physics/labCore";
 import { niceTicks } from "../smartsim/dynamic/progressivePath";
 
@@ -62,20 +62,35 @@ export type DragSpec = { min: number; max: number; step: number; onAngle: (deg: 
 type Props = { model: LabModel; frame: LabFrame; scales: LabSceneScales; showVectors: boolean; conserved: boolean; drag?: DragSpec; selected?: string; onSelect?: (id: string) => void };
 function LabScene({ model, frame, scales, showVectors, conserved, drag, selected, onSelect }: Props) {
   const svg = useRef<SVGSVGElement>(null);
+  // dragging the pendulum: after a pointer-down on the bob, the WINDOW follows the pointer until it is released (no reliance on pointer
+  // capture, which a re-render may drop); the latest drag spec / pivot are read through a ref so the listeners never go stale.
+  const dragRef = useRef<{ spec?: DragSpec; toAngle?: (x: number, y: number) => number | undefined; stop?: () => void }>({});
+  useEffect(() => () => dragRef.current.stop?.(), []);
   const p = model.params;
-  let body: ReactNode = null, vectors: ReactNode = null, bars = true;
+  let body: ReactNode = null, vectors: ReactNode = null, top: ReactNode = null, bars = true;
   if (model.kind === "pendulum") {
     // fit the whole swing (amplitude ≤ θ₀; above 90° the bob rises over the pivot) inside the drawing area left of the energy bars
     const thMax = Math.min(180, Math.abs(scales.qMax)) * Math.PI / 180, c = Math.max(0, -Math.cos(thMax));
     const Lpx = Math.min(150, 186 / (1 + c), 104 / Math.max(Math.sin(Math.min(thMax, Math.PI / 2)), 1e-3)), px = 112, py = 14 + Lpx * c;
     const th = (frame.q * Math.PI) / 180, bx = px + Lpx * Math.sin(th), by = py + Lpx * Math.cos(th);
-    const snap = (deg: number) => { const d = drag!; const v = Math.min(d.max, Math.max(d.min, Math.round((deg - d.min) / d.step) * d.step + d.min)); return Number(v.toPrecision(10)); };
-    const fromPointer = (e: PointerEvent<SVGGElement>) => {
+    const snap = (deg: number) => { const d = dragRef.current.spec ?? drag!; const v = Math.min(d.max, Math.max(d.min, Math.round((deg - d.min) / d.step) * d.step + d.min)); return Number(v.toPrecision(10)); };
+    dragRef.current.spec = drag;
+    dragRef.current.toAngle = (clientX: number, clientY: number) => {
       const s = svg.current, m = s?.getScreenCTM?.();
-      if (!s || !m || !drag) return;
-      const pt = s.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
-      const q = pt.matrixTransform(m.inverse()), deg = (Math.atan2(q.x - px, q.y - py) * 180) / Math.PI;
-      drag.onAngle(snap(deg));
+      if (!s || !m) return undefined;
+      const pt = s.createSVGPoint(); pt.x = clientX; pt.y = clientY;
+      const q = pt.matrixTransform(m.inverse());
+      return (Math.atan2(q.x - px, q.y - py) * 180) / Math.PI;
+    };
+    const follow = (clientX: number, clientY: number) => { const d = dragRef.current, deg = d.toAngle?.(clientX, clientY); if (d.spec && deg !== undefined) d.spec.onAngle(snap(deg)); };
+    const startDrag = (e: PointerEvent<SVGGElement>) => {
+      e.preventDefault();
+      dragRef.current.stop?.();
+      const move = (ev: globalThis.PointerEvent) => follow(ev.clientX, ev.clientY);
+      const stop = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", stop); window.removeEventListener("pointercancel", stop); dragRef.current.stop = undefined; };
+      window.addEventListener("pointermove", move); window.addEventListener("pointerup", stop); window.addEventListener("pointercancel", stop);
+      dragRef.current.stop = stop;
+      follow(e.clientX, e.clientY);
     };
     const onKey = (e: KeyboardEvent<SVGGElement>) => {
       if (!drag) return;
@@ -90,9 +105,14 @@ function LabScene({ model, frame, scales, showVectors, conserved, drag, selected
         <line className="lab-rod" x1={px} y1={py} x2={bx.toFixed(2)} y2={by.toFixed(2)} />
         <text className="motion-axis-text" x={px + 6} y={py + Lpx + 26}>θ = {fmtLab(frame.q)}°</text>
         <text className="motion-axis-text" x={4} y={SCENE_H - 8}>L = {fmtLab(p.length)} m</text>
+      </>
+    );
+    // the bob is painted LAST (above the force / velocity arrows that start at its centre) so it is the target of a pointer-down
+    top = (
+      <>
         <g className={"lab-bob" + (drag ? " is-draggable" : "")} data-testid="lab-body"
           {...(drag ? { role: "slider", tabIndex: 0, "aria-label": "زاوية الإزاحة الابتدائية (اسحب أو استخدم الأسهم)", "aria-valuemin": drag.min, "aria-valuemax": drag.max, "aria-valuenow": Number(frame.q.toFixed(2)), "aria-valuetext": fmtLab(frame.q) + " درجة",
-            onPointerDown: (e: PointerEvent<SVGGElement>) => { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); fromPointer(e); }, onPointerMove: (e: PointerEvent<SVGGElement>) => { if (e.buttons) fromPointer(e); }, onKeyDown: onKey } : {})}>
+            onPointerDown: startDrag, onKeyDown: onKey } : {})}>
           <circle cx={bx.toFixed(2)} cy={by.toFixed(2)} r={11} />
         </g>
       </>
@@ -148,7 +168,7 @@ function LabScene({ model, frame, scales, showVectors, conserved, drag, selected
   }
   return (
     <svg ref={svg} viewBox={"0 0 " + SCENE_W + " " + SCENE_H} role="img" aria-label={"مشهد تجربة " + model.kind} data-testid="lab-scene" data-kind={model.kind}>
-      {body}{vectors}
+      {body}{vectors}{top}
       {bars && <EnergyBars frame={frame} max={scales.energyMax} conserved={conserved} x0={236} />}
     </svg>
   );

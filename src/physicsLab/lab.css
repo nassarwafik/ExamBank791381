@@ -4,7 +4,7 @@
 .lab-rest-line { stroke: var(--xp-muted, #8a96a8); stroke-dasharray: 4 4; stroke-width: 1.2; }
 .lab-rod { stroke: #33465c; stroke-width: 2.5; }
 .lab-bob circle { fill: var(--xp-primary, #1d6fd6); stroke: var(--xp-text, #0d3f80); stroke-width: 2; }
-.lab-bob.is-draggable { cursor: grab; }
+.lab-bob.is-draggable { cursor: grab; touch-action: none; }
 .lab-bob.is-draggable:focus-visible circle { stroke: #b4561d; stroke-width: 4; }
 .lab-bob:focus { outline: none; }
 .lab-spring { fill: none; stroke: #44617f; stroke-width: 2; stroke-linejoin: round; }
@@ -20,7 +20,7 @@
 .lab-dyn .xp-dyn-series.is-pe { stroke: #15803d; }
 .lab-dyn .xp-dyn-series.is-total { stroke: #33465c; stroke-width: 3; }
 .lab-dyn .xp-dyn-series.is-lost { stroke: #b4561d; stroke-dasharray: 5 3; }
-.lab-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; direction: rtl; }
+.lab-legend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; direction: rtl; }
 .lab-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; }
 .lab-wire, .lab-probe { stroke: #33465c; stroke-width: 2; }
 .lab-probe { stroke-dasharray: 3 3; stroke-width: 1.2; }
