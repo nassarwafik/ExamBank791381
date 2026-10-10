@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import Interactive3DView from "./Interactive3DView";
 import Surface3DView from "../functionSurfaces/Surface3DView";
@@ -49,7 +49,7 @@ describe("21D-FF1 rotation never hits a wall", () => {
 describe("21D-FF2 the student's camera survives a parent that re-derives the same scene", () => {
   it("interactive scene: a re-render with a new but identical scene object keeps the rotated view", () => {
     let bump: () => void = () => {};
-    function Parent() { const [n, setN] = useState(0); bump = () => setN(v => v + 1); return <div data-n={n}><Interactive3DView spec={scene3DPreset("heart", "ff-heart")} /></div>; }
+    function Parent() { const [n, setN] = useState(0); useEffect(() => { bump = () => setN(v => v + 1); }); return <div data-n={n}><Interactive3DView spec={scene3DPreset("heart", "ff-heart")} /></div>; }
     const { container } = render(<Parent />);
     const svg = container.querySelector("svg.i3d-scene")!, start = drawing(container);
     drag(svg, 50, 120, 30);
@@ -60,7 +60,7 @@ describe("21D-FF2 the student's camera survives a parent that re-derives the sam
   });
   it("3D surface: same", () => {
     let bump: () => void = () => {};
-    function Parent() { const [n, setN] = useState(0); bump = () => setN(v => v + 1); return <div data-n={n}><Surface3DView spec={surface()} /></div>; }
+    function Parent() { const [n, setN] = useState(0); useEffect(() => { bump = () => setN(v => v + 1); }); return <div data-n={n}><Surface3DView spec={surface()} /></div>; }
     const { container } = render(<Parent />);
     const svg = container.querySelector("svg.ex3d-scene")!;
     drag(svg, 60, 120, 20);

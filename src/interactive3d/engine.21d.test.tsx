@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import Interactive3DView from "./Interactive3DView";
 import Scene3DSelectionResponse from "../questionTypes/student/S3DResponse";
@@ -338,7 +338,7 @@ describe("21D-EXAM the 3D question inside the exam flow", () => {
     const answers: (Answer | undefined)[] = [];
     function Exam() {
       const [, setN] = useState(0); const [a, setA] = useState<Answer | undefined>(undefined);
-      tick = () => setN(n => n + 1);
+      useEffect(() => { tick = () => setN(n => n + 1); });
       return <Scene3DSelectionResponse q={question()} id="q3d" answer={a} labelPrefix="" onAnswer={n => { setA(n); answers.push(n); }} />;
     }
     const { container } = render(<Exam />);
