@@ -38,6 +38,10 @@ const PROTECTED: [string, string, string, string][] = [
   ["./AssignmentReview.tsx", "FunctionGraphSelectionReview", "./functionGraphs/FunctionGraphSelectionReview", "teacher-graph-review"],
   // Phase 21C — semantic 3D selection review is another protected lazy review view.
   ["./AssignmentReview.tsx", "Scene3DSelectionReview", "./interactive3d/Scene3DSelectionReview", "teacher-scene3d-review"],
+  // Phase 21D-B.3 — the realistic 3D model (mesh part selection) review loads on demand inside the assignment review, and the flat-exam
+  // theme preview dialog left the initial graph (bundle relief) with the same stale-chunk recovery guarantee.
+  ["./AssignmentReview.tsx", "MeshPartSelectionReview", "./meshModels/MeshPartSelectionReview", "teacher-mesh-review"],
+  ["./App.tsx", "ExamPreview", "./ExamPreview", "teacher-theme-preview"],
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],

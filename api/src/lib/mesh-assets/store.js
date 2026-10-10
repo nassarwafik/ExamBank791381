@@ -85,4 +85,34 @@ async function loadAssetBytes(container, hex) {
   return { buffer: blob.buffer };
 }
 
-module.exports = { PREFIX, BLOBS_PREFIX, RECORDS_PREFIX, OWNERS_PREFIX, GLB_CONTENT_TYPE, ownerHashOf, sha256Hex, displayNameOf, persistAsset, listOwnerAssets, loadAssetRecord, loadAssetBytes };
+
+// Phase 21D-B.3 — the governance gate's availability check (mirror of the SmartSim package gate). Finalization validates the SHAPE of a
+// model's asset reference; this checks that every UPLOADED asset an exam pins really exists in the store — bytes present and re-verified
+// against their hash (integrity at rest), exactly the pinned length — and contains every part the question labels (a library asset is
+// code-owned, shipped with the app and pinned by the catalog). Nothing is ever resolved to another file.
+function collectMeshModelReferences(exam) {
+  const out = [];
+  const visit = node => { if (!node || typeof node !== "object") return; const m = node.meshPartSelection && node.meshPartSelection.model; if (m && typeof m === "object") out.push(m); if (Array.isArray(node.parts)) node.parts.forEach(visit); };
+  const sections = Array.isArray(exam && exam.sections) ? exam.sections : [];
+  for (const s of sections) for (const q of Array.isArray(s && s.questions) ? s.questions : []) visit(q);
+  if (Array.isArray(exam && exam.questions)) exam.questions.forEach(visit);
+  return out;
+}
+async function examMeshAssetAvailabilityIssues(container, exam) {
+  const issues = [], seen = new Set();
+  for (const model of collectMeshModelReferences(exam)) {
+    const asset = model && model.asset;
+    if (!asset || asset.source !== "upload") continue;
+    const parts = Array.isArray(model.parts) ? model.parts.map(p => p && p.id).filter(id => typeof id === "string") : [];
+    const key = JSON.stringify([asset.sha256, asset.byteLength, parts]);
+    if (seen.has(key)) continue; seen.add(key);
+    const record = await loadAssetRecord(container, asset.sha256);
+    const bytes = record ? await loadAssetBytes(container, asset.sha256) : null;
+    const fileParts = record && Array.isArray(record.parts) ? record.parts.map(p => p && p.id) : [];
+    const ok = !!record && !!bytes && !bytes.corrupt && record.byteLength === asset.byteLength && parts.every(id => fileParts.includes(id));
+    if (!ok) issues.push({ code: "MESH_ASSET_UNAVAILABLE", message: "ملف النموذج ثلاثي الأبعاد المرفوع في السؤال «" + String(model.title || model.id || "").slice(0, 80) + "» غير متاح في المخزن أو لا يحتوي كل الأجزاء المسمّاة.", modelId: typeof model.id === "string" ? model.id : null });
+  }
+  return issues;
+}
+
+module.exports = { PREFIX, BLOBS_PREFIX, RECORDS_PREFIX, OWNERS_PREFIX, GLB_CONTENT_TYPE, ownerHashOf, sha256Hex, displayNameOf, persistAsset, listOwnerAssets, loadAssetRecord, loadAssetBytes, collectMeshModelReferences, examMeshAssetAvailabilityIssues };

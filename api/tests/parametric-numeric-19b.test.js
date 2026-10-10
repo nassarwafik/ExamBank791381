@@ -32,7 +32,7 @@ describe("19B — the registered parametricNumeric@1 grader and the generation c
     expect(typeof resolveGrader("parametricNumeric", 1)).toBe("function");
     expect(resolveGrader("parametricNumeric", 2)).toBeUndefined();
     const catalog = require_("../src/lib/shared-finalization/questionTypeCatalog.js");
-    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */   // 19D appends hotspot / labelDiagram · 19E appends openResponse
+    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(29);   /* 21D-B.3 adds meshPartSelection (after scene3DSelection) · 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */   // 19D appends hotspot / labelDiagram · 19E appends openResponse
     expect(catalog.questionTypeDefinition("parametricNumeric")).toMatchObject({ version: 1, gradingMode: "auto", legacy: false, responseKinds: ["numeric"] });
   });
   it("gradeExam threads the identity + the section-scoped question key to the grader (pinned asg-19b / stu-1 / 1 / pq1 ⇒ 10 × 13)", () => {

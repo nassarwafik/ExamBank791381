@@ -43,6 +43,9 @@ const chartSelection = require("./shared-finalization/chartSelectionQuestion");
 const functionGraphSelection = require("./shared-finalization/functionGraphSelectionQuestion");
 // Phase 21C — scene3DSelection@1: server-authoritative semantic target scoring on the strict 3D scene contract.
 const scene3DSelection = require("./shared-finalization/scene3DSelectionQuestion");
+// Phase 21D-B.3 — meshPartSelection@1: server-authoritative scoring on named part ids of the strict MeshModelSpecV1 contract; a config or
+// key that cannot be classified is never auto-scored (0 + manual review); asset bytes, WebGL and the network play no part in the mark.
+const meshPartSelection = require("./shared-finalization/meshPartSelectionQuestion");
 
 const LEGACY = Symbol.for("exambank.legacy-grader");
 // ONE process-wide registry (a test runner may load this module through two loaders — ESM import and CJS require — and a
@@ -175,6 +178,10 @@ registerBuiltIn("functionGraphSelection", (question, response, max) => {
 });
 registerBuiltIn("scene3DSelection", (question, response, max) => {
   const r = scene3DSelection.scoreScene3DSelection({ config: question.scene3DSelection, answerKey: question.answer, response, maxMarks: max });
+  return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
+});
+registerBuiltIn("meshPartSelection", (question, response, max) => {
+  const r = meshPartSelection.scoreMeshPartSelection({ config: question.meshPartSelection, answerKey: question.answer, response, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: r.manualReview, parts: r.parts };
 });
 registerBuiltIn("inlineCloze", (question, response, max) => {

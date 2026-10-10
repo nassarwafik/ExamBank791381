@@ -68,7 +68,7 @@ describe("catalog, defaults, finalization", () => {
     expect(d).toMatchObject({ key: "parametricNumeric", version: 1, label: "سؤال رقمي بمعطيات متغيرة", category: "response", gradingMode: "auto", legacy: false });
     expect(d.capabilities).toMatchObject({ autoGrading: true, partialCredit: false, offline: true, compoundPart: false, interactive: false, manualGrading: false, requiresImage: false });
     expect(d.responseKinds).toEqual(["numeric"]);
-    expect(QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */ expect(QUESTION_TYPE_CATALOG.at(-5)!.key).toBe("parametricNumeric");   // 19D appends hotspot / labelDiagram · 19E appends openResponse
+    expect(QUESTION_TYPE_CATALOG.length).toBe(29);   /* 21D-B.3 adds meshPartSelection (after scene3DSelection) · 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */ expect(QUESTION_TYPE_CATALOG.at(-5)!.key).toBe("parametricNumeric");   // 19D appends hotspot / labelDiagram · 19E appends openResponse
     expect(supportsQuestionTypeVersion("parametricNumeric", 1)).toBe(true); expect(supportsQuestionTypeVersion("parametricNumeric", 2)).toBe(false);
     expect(typeDescription(d)).toMatch(/متغيرة/); expect(typeIcon(d)).toBe("ƒx"); expect(chipsFor(d)).toEqual(["تصحيح تلقائي"]);
     expect(resolveAuthoringEditor("parametricNumeric", 1)).toBeTruthy(); expect(resolveStudentRenderer("parametricNumeric", 1)?.key).toBe("parametricNumeric");
@@ -129,7 +129,7 @@ describe("authoring editor inside the REAL Builder", () => {
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q0", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(28);   /* 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */   // 19D appends hotspot / labelDiagram · 19E appends openResponse
+    expect(within(d).getAllByTestId("qt-card").length).toBe(29);   /* 21D-B.3 adds meshPartSelection (after scene3DSelection) · 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */   // 19D appends hotspot / labelDiagram · 19E appends openResponse
     fireEvent.click(within(d).getByRole("tab", { name: "إجابات" })); await tick();
     const card = within(d).getAllByTestId("qt-card").find(c => c.getAttribute("data-type-key") === "parametricNumeric")!;
     expect(card.textContent).toContain("سؤال رقمي بمعطيات متغيرة");

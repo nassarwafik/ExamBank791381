@@ -65,7 +65,7 @@ const answerOut = () => JSON.parse(screen.getByTestId("answer").textContent || "
 
 describe("catalog, palette and defaults", () => {
   it("23 types; openResponse@1 is appended as a manual, partial-credit response type with a renderer and an editor for exactly v1", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
+    expect(QUESTION_TYPE_CATALOG.length).toBe(29);   /* 21D-B.3 adds meshPartSelection (after scene3DSelection) · 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
     expect(QUESTION_TYPE_CATALOG.at(-2)!.key).toBe("openResponse");
     const d = questionTypeDefinition("openResponse")!;
     expect(d.label).toBe("إجابة مفتوحة مع سلم تقييم");
@@ -82,7 +82,7 @@ describe("catalog, palette and defaults", () => {
     const { hist } = await mountBuilder(baseExam([newQuestion("multipleChoice", { examQuestionId: "q0", text: "س" })]));
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     const d = await screen.findByRole("dialog", { name: "إضافة سؤال" }); await tick(30);
-    expect(within(d).getAllByTestId("qt-card").length).toBe(28);   /* 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */
+    expect(within(d).getAllByTestId("qt-card").length).toBe(29);   /* 21D-B.3 adds meshPartSelection (after scene3DSelection) · 20D adds composite · 21A.1 adds chartSelection · 21A.2 adds functionGraphSelection */
     const all = within(d).getAllByTestId("qt-card").map(c => c.getAttribute("data-type-key"));
     for (const k of ["essay", "compare", "justify", "explain", "analyze"]) expect(all).not.toContain(k);
     fireEvent.click(within(d).getByRole("tab", { name: "إجابات" })); await tick();

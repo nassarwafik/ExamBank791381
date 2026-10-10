@@ -59,6 +59,7 @@ registerStudentRenderer("chartSelection", 1, lazy(() => import("./student/ChartS
 registerStudentRenderer("functionGraphSelection", 1, lazy(() => import("./student/FunctionGraphSelectionResponse")));
 // Phase 21C — semantic interactive 3D model selection, fully lazy.
 registerStudentRenderer("scene3DSelection", 1, lazy(() => import("./student/S3DResponse")));
+registerStudentRenderer("meshPartSelection", 1, lazy(() => import("./student/MeshPartSelectionResponse")));
 registerStudentRenderer("openResponse", 1, lazy(() => import("./student/OpenResponseResponse")));
 // Phase 20A — trusted SmartSim (lazy: the plugin workspace — topology, device panels, engines — loads only when a smartSim question renders).
 registerStudentRenderer("smartSim", 1, lazy(() => import("./student/SmartSimResponse")));

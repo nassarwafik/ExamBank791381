@@ -36,6 +36,8 @@ const { bindChartSelectionAnswerToQuestion, normalizeChartSelectionAnswer } = re
 const { bindFunctionGraphSelectionAnswerToQuestion, normalizeFunctionGraphSelectionAnswer } = require("./shared-finalization/functionGraphSelectionQuestion");
 // Phase 21C — semantic 3D answers: exact { kind, sceneId, targets }, rebound to the published scene and target kind.
 const { bindScene3DSelectionAnswerToQuestion, normalizeScene3DSelectionAnswer } = require("./shared-finalization/scene3DSelectionQuestion");
+// Phase 21D-B.3 — meshPartSelection@1: named part ids of the published model only (shape, then the question's own parts / limits).
+const { bindMeshPartSelectionAnswerToQuestion, normalizeMeshPartSelectionAnswer } = require("./shared-finalization/meshPartSelectionQuestion");
 // Phase 19E — an answer on an openResponse question is rebuilt to exactly { kind: "text", value } (a client score / rubric awards /
 // model answer / comment are dropped), the text kept verbatim and bounded by the question's maxChars (over-long ⇒ rejected, never
 // truncated); any other kind is rejected.
@@ -80,6 +82,8 @@ const isFunctionGraphSelection = a => !!a && typeof a === "object" && a.kind ===
 const isFunctionGraphSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "functionGraphSelection";
 const isScene3DSelection = a => !!a && typeof a === "object" && a.kind === "scene3DSelection";
 const isScene3DSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "scene3DSelection";
+const isMeshPartSelection = a => !!a && typeof a === "object" && a.kind === "meshPartSelection";
+const isMeshPartSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "meshPartSelection";
 const isSmartSim = a => !!a && typeof a === "object" && a.kind === "smartSim";
 const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "smartSim";
 
@@ -99,6 +103,7 @@ function bindAnswer(id, a, q, bound, reject, placement) {
   if (isChartSelection(a) || (bound && isChartSelectionQuestion(q))) return bound ? (isChartSelectionQuestion(q) ? bindChartSelectionAnswerToQuestion(a, q) : { ok: false, code: "CHART_SELECTION_QUESTION_MISMATCH" }) : normalizeChartSelectionAnswer(a);
   if (isFunctionGraphSelection(a) || (bound && isFunctionGraphSelectionQuestion(q))) return bound ? (isFunctionGraphSelectionQuestion(q) ? bindFunctionGraphSelectionAnswerToQuestion(a, q) : { ok: false, code: "GRAPH_SELECTION_QUESTION_MISMATCH" }) : normalizeFunctionGraphSelectionAnswer(a);
   if (isScene3DSelection(a) || (bound && isScene3DSelectionQuestion(q))) return bound ? (isScene3DSelectionQuestion(q) ? bindScene3DSelectionAnswerToQuestion(a, q) : { ok: false, code: "SCENE3D_SELECTION_QUESTION_MISMATCH" }) : normalizeScene3DSelectionAnswer(a);
+  if (isMeshPartSelection(a) || (bound && isMeshPartSelectionQuestion(q))) return bound ? (isMeshPartSelectionQuestion(q) ? bindMeshPartSelectionAnswerToQuestion(a, q) : { ok: false, code: "MESH_SELECTION_QUESTION_MISMATCH" }) : normalizeMeshPartSelectionAnswer(a);
   if (bound && isLabelDiagramQuestion(q)) return bindLabelDiagramAnswerToQuestion(a, q);
   if (bound && isOpenResponseQuestion(q)) return bindOpenResponseAnswerToQuestion(a, q);
   if (bound && isParametricQuestion(q)) return bindParametricNumericAnswer(a);

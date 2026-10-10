@@ -31,6 +31,7 @@ const PRODUCTION_ROWS = [
     ["chartSelection", "اختيار من رسم بياني", "interactive", "auto", 169, ["chartSelection"], false],
     ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", 169, ["functionGraphSelection"], false],
     ["scene3DSelection", "3D", "interactive", "auto", 169, ["scene3DSelection"], false],
+    ["meshPartSelection", "نموذج 3D واقعي", "interactive", "auto", 41, ["meshPartSelection"], false],
     ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
     ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
     ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],

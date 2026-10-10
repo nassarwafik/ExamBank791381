@@ -84,6 +84,8 @@ export function typeSpecificContentPresent(node: Record<string, unknown>): boole
   if (node.presentationType === "functionGraphSelection" && Array.isArray(answer.correct) && answer.correct.length) return true;
   if (isObj(node.scene3DSelection) && isObj(node.scene3DSelection.scene)) return true;
   if (node.presentationType === "scene3DSelection" && Array.isArray(answer.correct) && answer.correct.length) return true;
+  if (isObj(node.meshPartSelection) && isObj(node.meshPartSelection.model)) return true;
+  if (node.presentationType === "meshPartSelection" && Array.isArray(answer.correct) && answer.correct.length) return true;
   // Phase 19E — open response: authored instructions, rubric criteria or a model answer would be lost on a type change.
   if (isObj(node.openResponse) && text(node.openResponse.instructions)) return true;
   if (node.presentationType === "openResponse" && isObj(node.answer) && ((isObj(node.answer.rubric) && Array.isArray(node.answer.rubric.criteria) && node.answer.rubric.criteria.length) || text(node.answer.modelAnswer))) return true;

@@ -72,6 +72,9 @@ const PRODUCTION_ROWS = [
   ["functionGraphSelection", "اختيار من رسم دالة", "interactive", "auto", 169, ["functionGraphSelection"], false],
   // Phase 21C — scene3DSelection@1: semantic selection on an ExamBank-owned interactive 3D scene (object / face / edge / vertex).
   ["scene3DSelection", "3D", "interactive", "auto", 169, ["scene3DSelection"], false],
+  // Phase 21D-B.3 — meshPartSelection@1: the student selects NAMED PARTS of a realistic mesh model (reviewed library asset or validated
+  // upload); auto-graded on part ids (never pixels), partial credit optional; not offline (the asset streams); not a compound part.
+  ["meshPartSelection", "نموذج 3D واقعي", "interactive", "auto", 41, ["meshPartSelection"], false],
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", 153, ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", 145, ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", 153, ["fields"], false],

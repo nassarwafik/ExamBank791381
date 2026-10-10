@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21DB3-MESH-MODELS",
+  "title": "ExamBank 21D-B — اختبار القبول للنماذج التشريحية ثلاثية الأبعاد",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "القلب والدماغ بنماذج تشريحية واقعية",
+    "instructions": "دوّر النموذج واسحبه وكبّره، واستخدم «إعادة الضبط» للعودة إلى العرض الأصلي، ثم اختر الجزء المطلوب بالنقر عليه أو من قائمة الأجزاء.",
+    "instructionsRichContent": {
+      "schemaVersion": 1,
+      "blocks": [
+        {
+          "type": "paragraph",
+          "runs": [
+            {
+              "text": "حركة الكاميرا وإخفاء الأجزاء لا تُعدّ إجابة؛ يُصحَّح السؤال على الخادم من معرّفات الأجزاء المختارة فقط."
+            }
+          ]
+        }
+      ]
+    },
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-heart",
+      "title": "أ — القلب",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "h1",
+          "presentationType": "meshPartSelection",
+          "questionTypeVersion": 1,
+          "text": "انقر الحجرة التي تضخ الدم المؤكسج إلى الجسم عبر الشريان الأبهر.",
+          "marks": 4,
+          "meshPartSelection": {
+            "v": 1,
+            "model": {
+              "version": 1,
+              "id": "heartChambers",
+              "title": "قلب الإنسان — الحجرات والأوعية الكبرى",
+              "description": "دوّر النموذج وكبّره، وتفحّص أجزاءه المسمّاة. النموذج تعليمي مشتق من BodyParts3D وليس أداة تشخيص سريري.",
+              "asset": {
+                "source": "library",
+                "id": "human-heart-bp3d",
+                "version": 1,
+                "sha256": "61e01bcfb305f44ce5a81d7a403f193a3b7e66c022a4f694fb5304b7c1c219d7"
+              },
+              "parts": [
+                {
+                  "id": "rightAtrium",
+                  "label": "الأذين الأيمن",
+                  "description": "يستقبل الدم غير المؤكسج من الجسم."
+                },
+                {
+                  "id": "leftAtrium",
+                  "label": "الأذين الأيسر",
+                  "description": "يستقبل الدم المؤكسج من الرئتين."
+                },
+                {
+                  "id": "rightVentricle",
+                  "label": "البطين الأيمن"
+                },
+                {
+                  "id": "leftVentricle",
+                  "label": "البطين الأيسر"
+                },
+                {
+                  "id": "aorta",
+                  "label": "الأبهر (الشريان الأورطي)"
+                },
+                {
+                  "id": "pulmonaryTrunk",
+                  "label": "الجذع الرئوي"
+                }
+              ],
+              "controls": {
+                "rotate": true,
+                "zoom": true,
+                "hideParts": true
+              },
+              "camera": {
+                "azimuth": 0,
+                "elevation": 0.2,
+                "zoom": 1.2
+              }
+            },
+            "mode": "single",
+            "maxSelections": 1
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "leftVentricle"
+            ]
+          }
+        },
+        {
+          "examQuestionId": "h2",
+          "presentationType": "meshPartSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر الوعاءين اللذين يخرجان من البطينين (الشريانين الكبيرين).",
+          "marks": 4,
+          "meshPartSelection": {
+            "v": 1,
+            "model": {
+              "version": 1,
+              "id": "heartVessels",
+              "title": "قلب الإنسان — الأوعية",
+              "description": "دوّر النموذج وكبّره، وتفحّص أجزاءه المسمّاة. النموذج تعليمي مشتق من BodyParts3D وليس أداة تشخيص سريري.",
+              "asset": {
+                "source": "library",
+                "id": "human-heart-bp3d",
+                "version": 1,
+                "sha256": "61e01bcfb305f44ce5a81d7a403f193a3b7e66c022a4f694fb5304b7c1c219d7"
+              },
+              "parts": [
+                {
+                  "id": "aorta",
+                  "label": "الأبهر (الشريان الأورطي)"
+                },
+                {
+                  "id": "pulmonaryTrunk",
+                  "label": "الجذع الرئوي"
+                },
+                {
+                  "id": "superiorVenaCava",
+                  "label": "الوريد الأجوف العلوي"
+                },
+                {
+                  "id": "inferiorVenaCava",
+                  "label": "الوريد الأجوف السفلي"
+                },
+                {
+                  "id": "coronaryArteries",
+                  "label": "الشرايين التاجية"
+                }
+              ],
+              "controls": {
+                "rotate": true,
+                "zoom": true,
+                "hideParts": true
+              },
+              "camera": {
+                "azimuth": 0,
+                "elevation": 0.2,
+                "zoom": 1.2
+              }
+            },
+            "mode": "multiple",
+            "maxSelections": 2,
+            "label": "اختر وعاءين اثنين."
+          },
+          "answer": {
+            "scoring": "partial",
+            "correct": [
+              "aorta",
+              "pulmonaryTrunk"
+            ]
+          }
+        },
+        {
+          "examQuestionId": "h3",
+          "presentationType": "meshPartSelection",
+          "questionTypeVersion": 1,
+          "text": "حدّد الصمام الذي يفصل الأذين الأيسر عن البطين الأيسر (أسماء الأجزاء مخفية).",
+          "marks": 4,
+          "meshPartSelection": {
+            "v": 1,
+            "model": {
+              "version": 1,
+              "id": "heartValves",
+              "title": "قلب الإنسان — الصمامات",
+              "description": "دوّر النموذج وكبّره، وتفحّص أجزاءه المسمّاة. النموذج تعليمي مشتق من BodyParts3D وليس أداة تشخيص سريري.",
+              "asset": {
+                "source": "library",
+                "id": "human-heart-bp3d",
+                "version": 1,
+                "sha256": "61e01bcfb305f44ce5a81d7a403f193a3b7e66c022a4f694fb5304b7c1c219d7"
+              },
+              "parts": [
+                {
+                  "id": "tricuspidValve",
+                  "label": "الصمام ثلاثي الشرفات"
+                },
+                {
+                  "id": "mitralValve",
+                  "label": "الصمام التاجي (ثنائي الشرفات)"
+                },
+                {
+                  "id": "aorticValve",
+                  "label": "الصمام الأبهري"
+                },
+                {
+                  "id": "pulmonaryValve",
+                  "label": "الصمام الرئوي"
+                }
+              ],
+              "controls": {
+                "rotate": true,
+                "zoom": true,
+                "hideParts": true
+              },
+              "camera": {
+                "azimuth": 0,
+                "elevation": 0.2,
+                "zoom": 1.2
+              }
+            },
+            "mode": "single",
+            "maxSelections": 1,
+            "hideLabels": true
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "mitralValve"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-brain",
+      "title": "ب — الدماغ",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "meshPartSelection",
+          "questionTypeVersion": 1,
+          "text": "انقر الجزء المسؤول أساسًا عن التوازن وتنسيق الحركة.",
+          "marks": 4,
+          "meshPartSelection": {
+            "v": 1,
+            "model": {
+              "version": 1,
+              "id": "brainBalance",
+              "title": "دماغ الإنسان — التوازن والتنسيق",
+              "description": "دوّر النموذج وكبّره، وتفحّص أجزاءه المسمّاة. النموذج تعليمي مشتق من BodyParts3D وليس أداة تشخيص سريري.",
+              "asset": {
+                "source": "library",
+                "id": "human-brain-bp3d",
+                "version": 1,
+                "sha256": "6de4ff20027acf242675d73e99da45b5e285abb7e7e6b79dc40e4ad6a30ccf5c"
+              },
+              "parts": [
+                {
+                  "id": "frontalLobe",
+                  "label": "الفص الجبهي"
+                },
+                {
+                  "id": "occipitalLobe",
+                  "label": "الفص القذالي"
+                },
+                {
+                  "id": "cerebellum",
+                  "label": "المخيخ"
+                },
+                {
+                  "id": "pons",
+                  "label": "الجسر (القنطرة)"
+                },
+                {
+                  "id": "medullaOblongata",
+                  "label": "النخاع المستطيل"
+                }
+              ],
+              "controls": {
+                "rotate": true,
+                "zoom": true,
+                "hideParts": true
+              },
+              "camera": {
+                "azimuth": -1.57,
+                "elevation": 0.15,
+                "zoom": 1.3
+              }
+            },
+            "mode": "single",
+            "maxSelections": 1
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "cerebellum"
+            ]
+          }
+        },
+        {
+          "examQuestionId": "b2",
+          "presentationType": "meshPartSelection",
+          "questionTypeVersion": 1,
+          "text": "اختر أجزاء جذع الدماغ الثلاثة.",
+          "marks": 6,
+          "meshPartSelection": {
+            "v": 1,
+            "model": {
+              "version": 1,
+              "id": "brainStem",
+              "title": "دماغ الإنسان — جذع الدماغ",
+              "description": "دوّر النموذج وكبّره، وتفحّص أجزاءه المسمّاة. النموذج تعليمي مشتق من BodyParts3D وليس أداة تشخيص سريري.",
+              "asset": {
+                "source": "library",
+                "id": "human-brain-bp3d",
+                "version": 1,
+                "sha256": "6de4ff20027acf242675d73e99da45b5e285abb7e7e6b79dc40e4ad6a30ccf5c"
+              },
+              "parts": [
+                {
+                  "id": "temporalLobe",
+                  "label": "الفص الصدغي"
+                },
+                {
+                  "id": "cerebellum",
+                  "label": "المخيخ"
+                },
+                {
+                  "id": "midbrain",
+                  "label": "الدماغ المتوسط"
+                },
+                {
+                  "id": "pons",
+                  "label": "الجسر (القنطرة)"
+                },
+                {
+                  "id": "medullaOblongata",
+                  "label": "النخاع المستطيل"
+                }
+              ],
+              "controls": {
+                "rotate": true,
+                "zoom": true,
+                "hideParts": true
+              },
+              "camera": {
+                "azimuth": -1.57,
+                "elevation": 0.15,
+                "zoom": 1.3
+              }
+            },
+            "mode": "multiple",
+            "maxSelections": 3
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "midbrain",
+              "pons",
+              "medullaOblongata"
+            ]
+          }
+        },
+        {
+          "examQuestionId": "b3",
+          "presentationType": "meshPartSelection",
+          "questionTypeVersion": 1,
+          "text": "حدّد الفص المسؤول أساسًا عن معالجة الإبصار (أسماء الأجزاء مخفية).",
+          "marks": 4,
+          "meshPartSelection": {
+            "v": 1,
+            "model": {
+              "version": 1,
+              "id": "brainLobes",
+              "title": "دماغ الإنسان — فصوص المخ",
+              "description": "دوّر النموذج وكبّره، وتفحّص أجزاءه المسمّاة. النموذج تعليمي مشتق من BodyParts3D وليس أداة تشخيص سريري.",
+              "asset": {
+                "source": "library",
+                "id": "human-brain-bp3d",
+                "version": 1,
+                "sha256": "6de4ff20027acf242675d73e99da45b5e285abb7e7e6b79dc40e4ad6a30ccf5c"
+              },
+              "parts": [
+                {
+                  "id": "frontalLobe",
+                  "label": "الفص الجبهي"
+                },
+                {
+                  "id": "parietalLobe",
+                  "label": "الفص الجداري"
+                },
+                {
+                  "id": "temporalLobe",
+                  "label": "الفص الصدغي"
+                },
+                {
+                  "id": "occipitalLobe",
+                  "label": "الفص القذالي"
+                }
+              ],
+              "controls": {
+                "rotate": true,
+                "zoom": true,
+                "hideParts": true
+              },
+              "camera": {
+                "azimuth": -1.57,
+                "elevation": 0.15,
+                "zoom": 1.3
+              }
+            },
+            "mode": "single",
+            "maxSelections": 1,
+            "hideLabels": true
+          },
+          "answer": {
+            "scoring": "allOrNothing",
+            "correct": [
+              "occipitalLobe"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-mixed",
+      "title": "ج — سؤال تقليدي في الامتحان نفسه",
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "multipleChoice",
+          "text": "أي حجرات القلب جدارها العضلي الأسمك؟",
+          "marks": 2,
+          "options": [
+            {
+              "text": "البطين الأيسر"
+            },
+            {
+              "text": "الأذين الأيمن"
+            },
+            {
+              "text": "الأذين الأيسر"
+            },
+            {
+              "text": "البطين الأيمن"
+            }
+          ],
+          "answer": {
+            "correctOptionIndex": 0
+          }
+        }
+      ]
+    }
+  ]
+}

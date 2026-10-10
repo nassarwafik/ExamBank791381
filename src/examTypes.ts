@@ -9,6 +9,7 @@ import type { LabelDiagramConfigV1 } from "./labelDiagramQuestion";
 import type { ChartSelectionConfigV1 } from "./chartSelectionQuestion";
 import type { FunctionGraphSelectionConfigV1 } from "./functionGraphSelectionQuestion";
 import type { Scene3DSelectionConfigV1 } from "./scene3DSelectionQuestion";
+import type { MeshPartSelectionConfigV1 } from "./meshPartSelectionQuestion";
 import type { OpenResponseConfigV1 } from "./openResponseQuestion";
 import type { CodeStimulus } from "./codeStimulus";
 import type { RichContentV1 } from "./richContent/richContentModel";
@@ -167,6 +168,7 @@ export type BuilderQuestion = {
   functionGraphSelection?: FunctionGraphSelectionConfigV1;
   // Phase 21C — PUBLIC interactive 3D scene-selection config; the correct semantic targets remain under answer.
   scene3DSelection?: Scene3DSelectionConfigV1;
+  meshPartSelection?: MeshPartSelectionConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;
@@ -226,6 +228,7 @@ export type QuestionBody = {
   functionGraphSelection?: FunctionGraphSelectionConfigV1;
   // Phase 21C — PUBLIC interactive 3D scene-selection config; the correct semantic targets remain under answer.
   scene3DSelection?: Scene3DSelectionConfigV1;
+  meshPartSelection?: MeshPartSelectionConfigV1;
   // Phase 19E — the PUBLIC open-response config (openResponse@1: profile, instructions, length bounds, rubric visibility); the rubric
   // (incl. private guidance) and the model answer live under `answer`.
   openResponse?: OpenResponseConfigV1;

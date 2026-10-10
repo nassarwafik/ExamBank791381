@@ -123,9 +123,10 @@ const SURFACE_3D_UI_SIGNATURES = ["ex3d-scene", "ex3d-editor", "ex3d-lab", "sp3d
 // Phase 21C — general interactive 3D runtime/editor/semantic-selection UI must remain lazy; the small data validators may be shared.
 const INTERACTIVE_3D_UI_SIGNATURES = ["i3d-scene", "i3d-editor", "qt-editor-scene3DSelection"];
 // Phase 21D-B — the WebGL mesh renderer / viewer (shader sources, viewer class names) and the B.2 authoring editor must never reach the
-// initial graph or the Student Portal's static closure. B.1 / B.2 ship them unwired, so the signatures may be absent from the build; once
-// present, they must be lazy.
-const MESH_3D_UI_SIGNATURES = ["mm3d-scene", "mm3d-parts", "uOcclusionStrength", "mm3d-part-rows", "mesh-model-editor"];
+// initial graph or the Student Portal's static closure. Phase 21D-B.3 wires them into the product (the meshPartSelection@1 student
+// renderer, teacher review and question editor), so — like the interactive 3D guard — every signature must now be FOUND in a lazy chunk:
+// a renamed class name or test id fails the build instead of silently emptying this guard.
+const MESH_3D_UI_SIGNATURES = ["mm3d-scene", "mm3d-parts", "uOcclusionStrength", "mm3d-part-rows", "mesh-model-editor", "qt-editor-meshPartSelection", "mesh-selection-response", "mesh-review"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
@@ -277,6 +278,7 @@ function main() {
   console.log(`Interactive 3D runtime: ${interactive3DViewRoots.length} lazy Interactive3DView root(s); Student Portal static closure carries no interactive 3D viewer/editor UI`);
 
   const meshOwners = all.filter(f => MESH_3D_UI_SIGNATURES.some(sig => read(f).includes(sig)));
+  for (const sig of MESH_3D_UI_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`WebGL mesh UI signature "${sig}" was not found in any JS chunk — update the lazy guard`);
   for (const f of meshOwners) if (initial.includes(f)) failures.push(`${f} loads the WebGL mesh viewer in the initial graph`);
   for (const f of portalClosure) {
     const hit = MESH_3D_UI_SIGNATURES.filter(sig => read(f).includes(sig));

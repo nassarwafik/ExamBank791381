@@ -130,7 +130,7 @@ describe("19F-T4 — coding@3 in the coding model and the version authority", ()
     expect(C.bindCodeAnswerToQuestion({ kind: "code", language: "python", languageVersion: 1, source: "print(1)" }, v3Node())).toEqual({ ok: false, code: "CODE_QUESTION_MISMATCH" });
   });
   it("T12 version authority: coding is current version 3, authored at 2; coding@4 unsupported; the catalog stays 23 types", () => {
-    expect(QUESTION_TYPE_CATALOG.length).toBe(28);   /* 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
+    expect(QUESTION_TYPE_CATALOG.length).toBe(29);   /* 21D-B.3 adds meshPartSelection (after scene3DSelection) · 20D adds composite (after compound) · 21A.1 adds chartSelection (after composite) · 21A.2 adds functionGraphSelection (after chartSelection) */
     expect(currentQuestionTypeVersion("coding")).toBe(3);
     expect((CATALOG as unknown as R).authoringQuestionTypeVersion).toBeTypeOf("function");
     expect(CATALOG.authoringQuestionTypeVersion("coding")).toBe(2);
