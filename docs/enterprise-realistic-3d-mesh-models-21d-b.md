@@ -6,8 +6,8 @@ reviewable pull requests:
 | Sub-phase | Scope | Status |
 |---|---|---|
 | **B.1** | Audit, architecture, asset security, the versioned contract, content-addressed storage, the WebGL viewer | this record, §1–§12 |
-| B.2 | Licensed high-fidelity anatomical assets (heart first), material quality, educational labelling, teacher authoring | §13 (plan) |
-| B.3 | Full exam integration (question type, grading, review, autosave, import / export), acceptance exam, performance certification | §13 (plan) |
+| B.2 | Licensed high-fidelity anatomical assets (heart first), material quality, educational labelling, teacher authoring | §14 |
+| B.3 | Full exam integration (question type, grading, review, autosave, import / export), acceptance exam, performance certification | §15 |
 
 Baseline: `main` at `8ff966f` (the merge of PR #285, Phase 21D-A.4); its Quality Gate (run 38041285543) and Runner security run passed
 before any change was made.
@@ -441,3 +441,180 @@ Two mutants survived the first run and were treated as findings:
 - the loader does not depend on the served MIME type, because it verifies bytes by SHA-256.
 
 Serving `.glb` from `/mesh-assets/` is to be verified on the PR preview.
+
+## 15. Phase 21D-B.3 — exam integration: `meshPartSelection@1`
+
+Branch `feature/phase-21d-b3-mesh-exam-integration`, stacked on B.2 (`e64df26`: B.2 + the B.1 record correction). It changes no B.1 / B.2
+contract: `MeshModelSpecV1`, the GLB authority, the library catalog, the viewer and the editor are reused as they are.
+
+### 15.1 The question type
+
+`meshPartSelection@1` is an additive production type (catalog row after `scene3DSelection@1`; category interactive; grading auto;
+partial credit; **not** a compound part nor a composite child, and **not** an AI-composer kind).
+
+| Field | Where | Contract |
+|---|---|---|
+| `meshPartSelection` | question (public) | `{ v: 1, model: MeshModelSpecV1, mode: "single" \| "multiple", maxSelections, label?, hideLabels?: true }` — `maxSelections` is 1 for single, ≤ the labelled parts otherwise; at least two labelled parts; the instruction is plain text (no HTML, control, bidi-override or invisible characters, ≤ 160) |
+| `answer` | question (private; removed by the student sanitizer) | `{ scoring: "allOrNothing" \| "partial", correct: string[] }` — non-empty, unique, labelled parts only, reachable within the limit; single choice is all-or-nothing with one part. Canonicalised to the model's part order |
+| student answer | attempt | `{ kind: "meshPartSelection", modelId, parts: string[] }` — exact keys; ids of the published model only. Camera, pixels, hidden parts and renderer state are never part of an answer |
+
+One shared authority, `src/meshPartSelectionQuestion.ts`, compiled verbatim to the API (`scripts/build-shared-finalization.mjs`, drift
+test): config / key validation, answer shape, binding to the published question, the student projection, scoring and the teacher
+evaluation.
+
+**Scoring** (server only): all-or-nothing gives full marks for exactly the correct set (a superset is not exact); partial gives
+`max × hits ÷ |selected ∪ correct|`, so selecting everything never pays. **Fail closed:** a config or key that cannot be classified is
+never auto-scored — 0 with `manualReview` (teacher review), never a silent zero. A blank answer is an ordinary unanswered question. An
+answer that does not bind (another model, an unlabelled part, too many parts, a duplicate, extra fields such as a self-reported score)
+is refused at ingest with its classified code and is never stored, exactly like the other semantic selection types.
+
+**Hidden labels** (`hideLabels: true`, identification questions): the student projection replaces every label with a neutral ordinal
+(«الجزء ١»…) and drops part descriptions **before anything leaves the server**. This is pedagogical, not secrecy: part ids remain the
+answer vocabulary in the client and the GLB itself names its nodes — as target keys do in `scene3DSelection@1`. The correct parts are
+never sent. The provenance block keeps the licence-required attribution and the general educational limitations of the asset; they name
+no part of a question.
+
+### 15.2 Server integration
+
+| Seam | Change |
+|---|---|
+| `draft-answers.js` | mesh answers are bound to the published question (`MESH_SELECTION_*` codes); a mesh answer on another type is `MESH_SELECTION_QUESTION_MISMATCH` |
+| `question-type-graders.js` | registered grader (shared scoring) |
+| `student-exam-sanitize.js` | the config is rebuilt through the strict authority (canonical copy, hidden labels neutral); an invalid config is withheld |
+| `exam-structure.js` | "first N answered": a non-empty selection takes a slot; an empty one never does |
+| `assignment-review.js` | the teacher review payload carries the real model (true labels even when hidden from the student), the key and the stored answer |
+| `exam-governance.js` + `mesh-assets/store.js` | **publish gate** `MESH_ASSET_UNAVAILABLE` (422 at submit-review): every UPLOADED model must exist in the store — bytes present and re-verified against their SHA-256 (integrity at rest), exactly the pinned length, and containing every labelled part. Library assets are code-owned and pinned by the catalog |
+
+Exam JSON never embeds model bytes: a model is a library id + version + SHA-256, or an upload SHA-256 + length. The acceptance exam is
+15.7 KB for six models.
+
+### 15.3 Authoring, delivery and review (all lazy)
+
+- **Teacher editor** (`questionTypes/editors/MeshPartSelectionEditor.tsx`): the B.2 model editor (library / uploads, labels,
+  controls, starting view, live preview) plus the question — single / multiple, limit (bounded by the labelled parts), instruction,
+  hidden labels, scoring and the private key (chosen among the labelled parts). When labelled parts change, correct parts that no
+  longer exist are pruned from the key and the teacher is told. Every change is validated live by the shared authority.
+- **Upload service:** App-owned (`meshAssetClient`, loaded lazily with the shared builder auth headers; the builder never holds the
+  token) and provided to every editor through `MeshAssetServiceContext`; without it only the library is offered.
+- **Student renderer** (`questionTypes/student/MeshPartSelectionResponse.tsx`): the B.1 viewer with selection — a click on the model
+  selects the front-most labelled part (GPU pick), and the accessible parts list selects too (and keeps working without WebGL or when
+  the asset cannot be shown). The answer for another model is never shown as selected.
+- **Teacher review** (`meshModels/MeshPartSelectionReview.tsx`, `lazyWithRetry` key `teacher-mesh-review`): re-evaluates the stored
+  answer with the shared authority; marks correct / incorrect / missed in the image and as text, with the real labels.
+
+### 15.4 Bundle relief
+
+Wiring the type added 72 B to the initial graph (128,072 B > the unchanged 128,000 B budget). The flat-exam theme preview dialog
+(«معاينة هذا التنسيق», a user-opened dialog) was the only static importer that pulled the whole student rendering closure into the
+initial graph, so App now loads it on demand (`lazyWithRetry` key `teacher-theme-preview`, inside a Suspense boundary in the same
+portal; inventoried in `deploymentRecovery.inventory.11d.test.ts`; pinned by `bundleRelief.21db3.test.ts`). Initial graph: **18 files,
+128,072 B → 9 files, 112,511 B gzip** (15,489 B headroom). The mesh UI signatures stay out of the initial graph and the student portal's
+static closure (bundle guard).
+
+### 15.5 Arabic acceptance exam
+
+`docs/fixtures/mesh-models-21db3/ExamBank_21DB3_Mesh_Models_Acceptance.json`, generated by `scripts/generate-mesh-models-21db3-fixture.mjs`
+from `scripts/mesh-models-21db3-exam.mjs` (byte-for-byte drift test). 28 marks:
+
+| Q | Model (library) | Task | Mode / scoring | Marks |
+|---|---|---|---|---|
+| h1 | heart — chambers + great vessels | the chamber that pumps oxygenated blood into the aorta | single | 4 |
+| h2 | heart — vessels | the two arteries leaving the ventricles | multiple (2), partial | 4 |
+| h3 | heart — valves | the valve between left atrium and left ventricle, **labels hidden** | single | 4 |
+| b1 | brain — balance | the part mainly responsible for balance and coordination | single | 4 |
+| b2 | brain — brainstem | the three parts of the brainstem | multiple (3), all-or-nothing | 6 |
+| b3 | brain — lobes | the lobe that mainly processes vision, **labels hidden** | single | 4 |
+| c1 | — | an ordinary multiple-choice question in the same exam | — | 2 |
+
+### 15.6 Tests and certification (B.3)
+
+| Suite | Tests |
+|---|---|
+| `src/meshPartSelectionQuestion.21db3.test.ts` — catalog identity, config / key validation (rejections), registry routing, projection, binding, scoring, fail closed, evaluation, CJS parity | 48 |
+| `src/questionTypes/meshPartSelection.21db3.test.tsx` — student renderer, editor, upload service wiring, review | 12 |
+| `api/tests/certification-21db3/cert-21db3-mesh-lifecycle.test.js` — the real platform (see below) | 16 |
+| `api/tests/certification-21db3/cert-21db3-fixture-drift.test.js` | 2 |
+| `src/aiComposer/composerMesh.21db3.test.ts` — the AI composer cannot author or reference mesh models (fail closed) | 2 |
+| `src/bundleRelief.21db3.test.ts` | 3 |
+
+Updated pins (an additive type, as for every earlier type): catalog order (`questionTypeCatalog.16a`), the frozen catalog
+(`presentationFreeze.20d1` L-9: 29 types), the answer union (`StudentExamPage.ux7b1`), the deployment-recovery inventory, and the 20G
+capability matrix (`meshPartSelection@1`: disposition A, exercised by the 21DB3 exam; `coverage-map.md` regenerated).
+
+**Platform lifecycle** (real handlers, in-memory storage): import → canonical save → export → re-import is exact; finalization
+refuses a forged library hash, an external URL, an executable field and an unlabelled part; save → load → governance (the mesh gate
+passes: library assets only) → publish → assignment; sanitized delivery (models exact, hidden labels neutral, no key); autosave and
+reload in chunks restore exactly; idempotent submit; hand-derived ledgers **PERFECT 28 · PARTIAL 10 · BLANK 0 · ATTACKER 0** (eight
+forged answers refused with their codes, nothing stored); regrading is repeatable; teacher review (real labels, key, stored answer,
+marks; save keeps 10 / final). Uploads: submit-review is refused (422 `MESH_ASSET_UNAVAILABLE`) while the upload is missing; with the
+asset stored the exam publishes, delivers the content-addressed reference and grades; missing bytes, corrupted bytes at rest, a length
+mismatch and an unlabelled part are each reported.
+
+**Real Chromium** (`scripts/check-mesh-exam-browser-21db3.mjs`, third step of the 21D-B WebGL workflow): **27 / 27** locally. It covers:
+- the six-question exam page from the student projection; hidden-label questions list neutral names; no key in the student DOM;
+- a click on the heart selects the front-most labelled part (GPU pick); single / multiple / limit through the lists; every change is
+  autosaved through the shared server binding; a forged answer is refused; a **reload restores every answer**; the restored answers
+  grade to full marks with no manual review;
+- scrolling the whole exam keeps **≤ 3 live GL contexts** (≤ 2 on a phone); each library file is downloaded **once** per page;
+- **context loss** mid-exam: status, automatic restore, the saved answer unchanged;
+- **20 mount / unmount cycles** of the exam: no live renderer left, at most **1.9 MiB** JS heap growth after GC (bound 24 MiB);
+- **low-memory phone** (deviceMemory 2, DPR 3): drawing buffer capped at 2× (676 × 642 for 338 × 321 CSS px), tap-to-answer, no
+  horizontal overflow at 390 px;
+- **WebGL unavailable:** a meaningful note, and the whole exam is answered through the parts lists and grades to full marks;
+- the teacher review shows every answer exact and the real label of the hidden-label answer; no page error, no foreign host.
+
+**Measured** (headless Chromium, SwiftShader CPU rendering, no GPU):
+
+| Figure | Value |
+|---|---|
+| First model ready (desktop, from navigation, 6-question page) | 0.78–0.91 s (three runs) |
+| First model ready (phone, DPR 2 buffer) | 0.48–0.54 s |
+| Bytes downloaded for the six questions | 4,533,132 (heart 2,001,400 + brain 2,531,732, once each) |
+| GPU memory per live viewer (desktop canvas) | 2.5 MB |
+| Live GL contexts while scrolling | max 3 (desktop), 2 (phone) |
+| JS heap growth after 20 exam mount / unmount cycles (after GC) | −0.1 to 1.9 MiB |
+
+**Mutation proof (B.3):** 23 mutants were planted, one at a time, with each file restored byte-for-byte (SHA-256 verified); `git status`
+was clean before and after.
+
+| Id | Mutant | Verdict |
+|---|---|---|
+| B3-01 | scoring: an all-or-nothing superset earns full marks | KILLED (after strengthening, see below) |
+| B3-02 | scoring: partial credit ignores wrong extras | KILLED |
+| B3-03 | fail closed: unclassifiable → silent zero | KILLED |
+| B3-04 | binding: unlabelled part accepted | KILLED |
+| B3-05 | binding: another model's answer accepted | KILLED |
+| B3-06 | projection: hidden labels sent | KILLED |
+| B3-07 | key: unlabelled correct part accepted | KILLED |
+| B3-08 | binding: more parts than allowed | KILLED |
+| B3-09 | config: raw HTML instruction accepted | KILLED |
+| B3-10 | sanitizer: mesh config not projected | KILLED |
+| B3-11 | ingest: mesh answers not bound | KILLED |
+| B3-12 | grading: no server grader | KILLED |
+| B3-13 | governance: missing upload published | KILLED |
+| B3-14 | store gate: missing / corrupted bytes pass | KILLED |
+| B3-15 | store gate: unlabelled part passes | KILLED |
+| B3-16 | store gate: length mismatch passes | KILLED |
+| B3-17 | firstN: empty selection takes a slot | KILLED |
+| B3-18 | review: payload lacks the model | KILLED |
+| B3-19 | editor: key keeps parts no longer labelled | KILLED |
+| B3-20 | editor: single choice keeps several parts | KILLED |
+| B3-21 | client: empty selection counts as answered | KILLED |
+| B3-22 | student: another model's answer shown | KILLED |
+| B3-23 | bundle: theme preview static again | KILLED |
+
+B3-01 survived the first run (no question had a limit above its key) and was treated as a finding: the domain suite now asserts that
+every correct part plus a wrong one scores 0 under all-or-nothing and is not exact in the evaluation.
+
+**Fail-first:** not applicable — B.3 adds a feature and fixes no defect. The mutation round is the evidence that the new tests detect
+defects.
+
+### 15.7 Limitations (B.3)
+
+- Hidden labels are pedagogical (see §15.1); a determined student can read part ids from the page or the GLB node names.
+- A mesh question cannot be a compound part or a composite child, and the AI composer cannot author one (by design; additive later as
+  a new version).
+- Performance figures are from CPU rendering (SwiftShader); a real GPU is faster. Real-device testing on low-end phones was not
+  possible here.
+- Changing the model of a published question is a new exam revision (models are pinned by hash); answers saved against a previous
+  model are refused by the binding, never re-mapped.

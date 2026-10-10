@@ -161,6 +161,9 @@ describe("21D-B.3 server-authoritative scoring", () => {
     expect(score(cfg(), AON, ["leftVentricle", "rightVentricle"])).toEqual({ score: 4, correct: true, manualReview: false, parts: { correct: 2, total: 2 } });
     expect(score(cfg(), AON, ["leftVentricle"])).toMatchObject({ score: 0, correct: false, manualReview: false, parts: { correct: 1, total: 2 } });
     expect(score(cfg(), AON, ["leftVentricle", "leftAtrium"])).toMatchObject({ score: 0, correct: false });
+    // a limit above the key leaves room for extras: every correct part PLUS a wrong one is not exact (all-or-nothing → 0)
+    expect(score(cfg({ maxSelections: 3 }), AON, ["rightVentricle", "leftVentricle", "leftAtrium"])).toEqual({ score: 0, correct: false, manualReview: false, parts: { correct: 2, total: 2 } });
+    expect(evaluateMeshPartSelection(cfg({ maxSelections: 3 }), AON, ans(["rightVentricle", "leftVentricle", "leftAtrium"]))).toMatchObject({ ok: true, exact: false, correct: 2, total: 2 });
   });
   it("partial: max × hits / |selected ∪ correct| — guessing everything never pays", () => {
     expect(score(cfg(), PART, ["leftVentricle"]).score).toBeCloseTo(2);
