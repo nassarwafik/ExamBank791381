@@ -100,6 +100,7 @@ const mutants = [
   M("V03-answers-accumulate", WS, "const next = [...base.filter(x => !(isAnswer(x) && (x as Act).taskId === taskId)), ...(a ? [a] : [])];", "const next = [...base, ...(a ? [a] : [])];", UI),
   M("V04-reading-before-measuring", BENCH, "{cfg.view.readouts && (measured(s.id)", "{cfg.view.readouts && (true", UI),
   M("V05-no-ltr-isolate", VIEW, 'export const ltr = (s: string): string => "\\u2066" + s + "\\u2069";', "export const ltr = (s: string): string => s;", UI),
+  M("V08-quantities-not-isolated", VIEW, "export const isolateQuantities = (s: string): string => s.replace(QUANTITY, (_, pre: string, q: string) => pre + ltr(q));", "export const isolateQuantities = (s: string): string => s;", UI),
   M("V06-mirrored-time-cursor", BENCH, '<input type="range" dir="ltr"', '<input type="range"', UI),
   M("V07-no-op-recorded", WS, 'if (same(r.state, state)) { setAnnounce("لم يتغير شيء في التجربة."); return; }', "", UI)
 ];

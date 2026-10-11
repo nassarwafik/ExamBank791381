@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { Indicator } from "../chemistry/lab/acidBase";
+import { isolateQuantities } from "./labView";
 
 // Phase 21D-D.3 — lightweight SVG instruments of the virtual chemistry laboratory (UI only). Every shape is built here from NUMBERS the
 // workspace derived from the canonical config and the replayed state; colours are ILLUSTRATIVE pictures, never measurements. The drawings
@@ -73,7 +74,7 @@ export function PhScale({ indicators, marks }: { indicators: readonly Indicator[
       <defs><linearGradient id={grad} x1="0" x2="1">{stops.map((c, i) => <stop key={c} offset={i / (stops.length - 1)} stopColor={c} />)}</linearGradient></defs>
       <rect x="12" y="8" width={W - 24} height="12" rx="3" fill={"url(#" + grad + ")"} />
       {Array.from({ length: 15 }, (_, p) => <text key={p} className="clab-svg-small" x={x(p)} y="32" textAnchor="middle">{p}</text>)}
-      {marks.map(m => <g key={m.id} transform={"translate(" + x(m.pH).toFixed(1) + " 14)"}><title>{m.label + ": pH " + m.pH.toFixed(2)}</title><path className="clab-ph-mark" d="M0 -8 L5 -14 H-5 Z" /><text className="clab-svg-small clab-ph-mark-text" y="-16" textAnchor="middle">{m.id}</text></g>)}
+      {marks.map(m => <g key={m.id} transform={"translate(" + x(m.pH).toFixed(1) + " 14)"}><title>{isolateQuantities(m.label) + ": pH " + m.pH.toFixed(2)}</title><path className="clab-ph-mark" d="M0 -8 L5 -14 H-5 Z" /><text className="clab-svg-small clab-ph-mark-text" y="-16" textAnchor="middle">{m.id}</text></g>)}
       {indicators.map((ind, i) => (
         <g key={ind.id} transform={"translate(0 " + (40 + i * 16) + ")"}>
           <title>{ind.nameAr + ": " + ind.low + "–" + ind.high}</title>

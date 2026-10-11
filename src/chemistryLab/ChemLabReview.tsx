@@ -2,7 +2,7 @@ import type { SmartSimReviewDetailsProps } from "../trustedSim/smartSimUiRegistr
 import type { ChemLabConfigV1, ChemLabStateV1 } from "../chemistryLabModel";
 import { resolveSmartSimPlugin } from "../trustedSimPlugins";
 import { indicatorById } from "../chemistry/lab/acidBase";
-import { answerUnits, experimentTitle, ltr, optionText, recordRow } from "./labView";
+import { answerUnits, experimentTitle, isolateQuantities, ltr, optionText, recordRow } from "./labView";
 import "../chemistryStructure/chem.css";
 import "./chemLab.css";
 
@@ -35,8 +35,8 @@ export default function ChemLabReview({ config, state }: SmartSimReviewDetailsPr
         <tbody>
           {cfg.tasks.filter(t => t.kind === "number" || t.kind === "choice").map(t => {
             const a = st.answers[t.id];
-            const text = !a ? "—" : a.kind === "number" ? a.value + " " + (t.kind === "number" ? answerUnits(cfg, t).find(u => u.id === a.unit)?.label ?? a.unit : a.unit) : a.options.map(o => optionText(cfg, o)).join("، ");
-            return <tr key={t.id} data-testid="clab-review-answer"><td>{t.label}</td><td className={a && a.kind === "number" ? "clab-num" : undefined}>{text}</td></tr>;
+            const text = !a ? "—" : a.kind === "number" ? ltr(a.value + " " + (t.kind === "number" ? answerUnits(cfg, t).find(u => u.id === a.unit)?.label ?? a.unit : a.unit)) : isolateQuantities(a.options.map(o => optionText(cfg, o)).join("، "));
+            return <tr key={t.id} data-testid="clab-review-answer"><td>{isolateQuantities(t.label)}</td><td className={a && a.kind === "number" ? "clab-num" : undefined}>{text}</td></tr>;
           })}
         </tbody>
       </table>

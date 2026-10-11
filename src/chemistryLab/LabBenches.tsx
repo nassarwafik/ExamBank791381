@@ -12,7 +12,7 @@ import { RATE_ORDER_LABEL, decayCurve, rateConstantDimension } from "../chemistr
 import { LAB_UNITS } from "../chemistry/lab/units";
 import DynamicPlot2D from "../smartsim/dynamic/DynamicPlot2D";
 import { Balance, Beaker, Burette, PhScale, VolumetricFlask } from "./LabInstruments";
-import { appearance, dilutionCurve, flaskPh, mix, phOf, preparedView, rateContext, sig, studentDecimal, titrationContext, trialConcentration } from "./labView";
+import { appearance, dilutionCurve, flaskPh, isolateQuantities, ltr, mix, phOf, preparedView, rateContext, sig, studentDecimal, titrationContext, trialConcentration } from "./labView";
 
 // Phase 21D-D.3 — the four benches of the chemistryLab@1 workspace (UI only). Every button is ONE semantic action the workspace replays
 // through the registered plugin; what a bench SHOWS (instrument readings, colours, curves) is derived from the replayed state by the science
@@ -52,7 +52,7 @@ export function SolutionsBench({ cfg, state, disabled, act, recordFull, uid }: B
       {solute.note && <p className="chem-help">{solute.note}</p>}
       <div className="clab-stage">
         <div className="clab-instruments">
-          {solid && <figure className="clab-figure"><Balance mass={lab.mass} /><figcaption>الميزان (دقة 0.01 g)</figcaption></figure>}
+          {solid && <figure className="clab-figure"><Balance mass={lab.mass} /><figcaption>{isolateQuantities("الميزان (دقة 0.01 g)")}</figcaption></figure>}
           <figure className="clab-figure">
             <VolumetricFlask volume={lab.flask} fill={fill} colour={tint} label={lab.flask === null ? "لم يُختر دورق" : "دورق حجمي " + lab.flask + " mL" + (lab.madeUp ? " مكمّل إلى العلامة" : "")} />
             <figcaption>{lab.flask === null ? "اختر دورقًا" : lab.madeUp ? "مكمّل إلى العلامة" : "لم يُكمل إلى العلامة"}{solute.colour && <small className="clab-illustrative"> · اللون تمثيل توضيحي</small>}</figcaption>
@@ -76,7 +76,7 @@ export function SolutionsBench({ cfg, state, disabled, act, recordFull, uid }: B
                 </span>
               </div>
               <small className="chem-help">من 0.01 إلى {maxMass} g.</small>
-              {error && <p id={uid + "-mass-err"} className="chem-error" role="alert">{error}</p>}
+              {error && <p id={uid + "-mass-err"} className="chem-error" role="alert">{isolateQuantities(error)}</p>}
             </> : <>
               <span id={uid + "-pipette"}>انقل بالماصّة حجمًا من المحلول الأم</span>
               <div className="chem-row" role="group" aria-labelledby={uid + "-pipette"}>
@@ -94,7 +94,7 @@ export function SolutionsBench({ cfg, state, disabled, act, recordFull, uid }: B
         </ol>
       </div>
       {view.state === "invalid" && <p className="chem-error" role="alert">حجم الماصّة يجب أن يكون أصغر من حجم الدورق؛ هذا التحضير غير ممكن.</p>}
-      {view.state === "outside" && <p className="chem-error" role="alert" data-testid="clab-outside">التركيز الناتج يتجاوز الحد الذي يدعمه النموذج لهذه المادة ({toNumber(solute.maxConcentration)} mol/L)؛ لا تُعرض له قيمة.</p>}
+      {view.state === "outside" && <p className="chem-error" role="alert" data-testid="clab-outside">التركيز الناتج يتجاوز الحد الذي يدعمه النموذج لهذه المادة ({ltr(toNumber(solute.maxConcentration) + " mol/L")})؛ لا تُعرض له قيمة.</p>}
       {cfg.view.readouts && view.state === "ready" && <p className="clab-readout" data-testid="clab-label-readout">ملصق الدورق (قيمة محسوبة من الكتلة أو الحجم المنقول وحجم الدورق): <span className="chem-ltr">c = {sig(view.concentration)} mol/L</span></p>}
       {cfg.view.graph && view.state === "ready" && (
         <figure className="clab-plot">
@@ -117,13 +117,13 @@ export function PhBench({ cfg, state, disabled, act, recordFull }: BenchProps) {
   const marks = e.solutions.filter(s => measured(s.id)).map(s => ({ id: s.id, label: s.label, pH: phOf(cfg, s.id) ?? 7 }));
   return (
     <section className="clab-bench" aria-label="طاولة الأحماض والقواعد" data-testid="clab-bench-ph">
-      <p className="chem-note">كل المحاليل عند 25 °C. {cfg.view.readouts ? "قِس pH بجهاز القياس، أو" : "لا يتوفر جهاز قياس pH في هذه التجربة؛"} اختبر عينة من كل محلول بقطرات من الكاشف ولاحظ اللون.</p>
+      <p className="chem-note">كل المحاليل عند {ltr("25 °C")}. {cfg.view.readouts ? "قِس pH بجهاز القياس، أو" : "لا يتوفر جهاز قياس pH في هذه التجربة؛"} اختبر عينة من كل محلول بقطرات من الكاشف ولاحظ اللون.</p>
       <div className="clab-solutions">
         {e.solutions.map(s => {
           const sp = acidBaseSpecies(s.species)!, pH = phOf(cfg, s.id);
           return (
             <article key={s.id} className="clab-card" data-testid="clab-solution" data-id={s.id} aria-label={s.label}>
-              <h4>{s.label}</h4>
+              <h4>{isolateQuantities(s.label)}</h4>
               <p className="chem-help"><span className="chem-ltr chem-formula">{sp.formula}</span> — {sp.nameAr}</p>
               <div className="clab-samples">
                 <Beaker colour={WATER} label={"عينة من " + s.label} caption="العينة" />
@@ -203,7 +203,7 @@ export function TitrationBench({ cfg, state, disabled, act, recordFull, uid }: B
           <p className="clab-readout" aria-live="polite">قراءة السحاحة (الحجم المضاف): <span className="chem-ltr" data-testid="clab-burette-reading">{lab.added} mL</span></p>
           {cfg.view.readouts && <p className="clab-meter">جهاز pH: <span className="chem-ltr" data-testid="clab-flask-ph">pH = {formatPh(pH)}</span></p>}
           <div className="chem-row" role="group" aria-label="إضافة المحلول القياسي من السحاحة">
-            {STEPS.map(v => <button key={v} type="button" disabled={disabled || !room(v)} onClick={() => add(v)}>{v === "0.05" ? "قطرة واحدة (0.05 mL)" : <>+ <span className="chem-ltr">{v} mL</span></>}</button>)}
+            {STEPS.map(v => <button key={v} type="button" disabled={disabled || !room(v)} onClick={() => add(v)}>{v === "0.05" ? isolateQuantities("قطرة واحدة (0.05 mL)") : <>+ <span className="chem-ltr">{v} mL</span></>}</button>)}
           </div>
           <div className="clab-field"><label htmlFor={uid + "-add"}>أضف حجمًا آخر (mL)</label>
             <span className="chem-row">
@@ -212,7 +212,7 @@ export function TitrationBench({ cfg, state, disabled, act, recordFull, uid }: B
               <button type="button" disabled={disabled} onClick={addTyped}>أضف</button>
             </span>
           </div>
-          {error && <p className="chem-error" role="alert">{error}</p>}
+          {error && <p className="chem-error" role="alert">{isolateQuantities(error)}</p>}
           <div className="chem-row">
             <button type="button" data-testid="clab-record" disabled={disabled || recordFull} onClick={() => act({ type: "lab.record" }, "سُجّلت قراءة السحاحة " + lab.added + " mL.")}>سجّل القراءة</button>
             {!disabled && <button type="button" className="is-secondary" onClick={() => act({ type: "lab.reset" }, "عُبّئت السحاحة ووُضع دورق جديد؛ القراءات المسجلة والإجابات محفوظة.")}>دورق جديد وتعبئة السحاحة</button>}
@@ -228,7 +228,7 @@ export function TitrationBench({ cfg, state, disabled, act, recordFull, uid }: B
       )}
       <details className="clab-explain">
         <summary>نقطة التكافؤ ونقطة النهاية</summary>
-        <p className="chem-help"><strong>نقطة التكافؤ</strong>: الحجم الذي تكون عنده كمية القاعدة المضافة مكافئة تمامًا لكمية الحمض حسب المعادلة الموزونة (pH = 7.00 عند 25 °C في معايرة حمض قوي بقاعدة قوية).</p>
+        <p className="chem-help"><strong>نقطة التكافؤ</strong>: الحجم الذي تكون عنده كمية القاعدة المضافة مكافئة تمامًا لكمية الحمض حسب المعادلة الموزونة (pH = 7.00 عند {ltr("25 °C")} في معايرة حمض قوي بقاعدة قوية).</p>
         <p className="chem-help"><strong>نقطة النهاية</strong>: الحجم الذي يتغير عنده لون الكاشف. تقترب من نقطة التكافؤ ولا تساويها بالضرورة؛ الفرق بينهما هو خطأ الكاشف.</p>
       </details>
     </section>
@@ -248,7 +248,7 @@ export function RateBench({ cfg, state, disabled, act, recordFull }: BenchProps)
   return (
     <section className="clab-bench" aria-label="طاولة سرعة التفاعل" data-testid="clab-bench-rate">
       <p className="chem-note">
-        تفاعل نموذجي <span className="chem-ltr chem-formula">A → products</span> — {RATE_ORDER_LABEL[e.order]}، ثابت السرعة عند 25 °C:{" "}
+        تفاعل نموذجي <span className="chem-ltr chem-formula">A → products</span> — {RATE_ORDER_LABEL[e.order]}، ثابت السرعة عند {ltr("25 °C")}:{" "}
         <span className="chem-ltr">k = {e.k25} {kUnit}</span>، طاقة التنشيط <span className="chem-ltr">Ea = {e.ea} kJ/mol</span>
         {e.catalystDrop !== null && <>، والحافز يخفض طاقة التنشيط بمقدار <span className="chem-ltr">{e.catalystDrop} kJ/mol</span></>}.
       </p>
@@ -261,7 +261,7 @@ export function RateBench({ cfg, state, disabled, act, recordFull }: BenchProps)
               const c = trialConcentration(cfg, tr.id, t);
               return (
                 <tr key={tr.id} data-testid="clab-trial" data-id={tr.id}>
-                  <th scope="row"><span className={"clab-swatch " + SERIES[i]} aria-hidden="true" /> {tr.label}</th>
+                  <th scope="row"><span className={"clab-swatch " + SERIES[i]} aria-hidden="true" /> {isolateQuantities(tr.label)}</th>
                   <td className="clab-num">{tr.temperature} °C</td><td className="clab-num">{tr.concentration} mol/L</td><td>{tr.catalyst ? "نعم" : "لا"}</td>
                   <td>{ran(tr.id) ? "شُغّلت" : <button type="button" disabled={disabled || recordFull} onClick={() => act({ type: "rate.run", trialId: tr.id }, "شُغّلت " + tr.label + ".")}>شغّل</button>}</td>
                   {cfg.view.readouts && <td className="clab-num" data-testid="clab-trial-readout">{ran(tr.id) && c !== null ? sig(c) + " mol/L" : "—"}</td>}
@@ -280,7 +280,7 @@ export function RateBench({ cfg, state, disabled, act, recordFull }: BenchProps)
       {runTrials.length > 0 && (
         <div className="clab-samples" aria-label="أوعية التجارب المشغّلة">
           {runTrials.map(tr => { const c = trialConcentration(cfg, tr.id, t) ?? 0, f = c / ctx.trials[tr.id].a0; return (
-            <figure key={tr.id} className="clab-sample"><Beaker colour={mix("#ffffff", "#7b3fa0", 0.1 + 0.9 * f)} label={tr.label + ": المتبقي من A عند t"} /><figcaption>{tr.label}</figcaption></figure>
+            <figure key={tr.id} className="clab-sample"><Beaker colour={mix("#ffffff", "#7b3fa0", 0.1 + 0.9 * f)} label={tr.label + ": المتبقي من A عند t"} /><figcaption>{isolateQuantities(tr.label)}</figcaption></figure>
           ); })}
           <small className="clab-illustrative">شدة اللون تمثيل توضيحي لكمية A المتبقية.</small>
         </div>

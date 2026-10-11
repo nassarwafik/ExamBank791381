@@ -161,6 +161,24 @@ try {
   for (let k = 0; k < 20; k++) await btn(page, "ctxLimewater", "قطرة واحدة").click();
   perf.dropMs = Math.round((Date.now() - t0) / 20);
   check("ctx: a burette drop (bind + autosave + replay + render) completes quickly (< 120 ms each)", perf.dropMs < 120 && (await text(page, q("ctxLimewater") + "[data-testid=clab-burette-reading]")) === "1.00 mL", perf.dropMs + " ms");
+  // bidi audit (measured on glyphs, every workspace, with a quantity in a status line): each visible number + Latin unit reads in order —
+  // the number LEFT of its unit — in status messages, teacher-authored labels and task texts, fixed strings, the record and the answers
+  const bidi = await page.evaluate(() => {
+    const bad = []; let seen = 0; const re = /(\d+(?:\.\d+)?)\s(mol\/L|mmol|mol|mL|g|s|min|°C|K)\b/g;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const el = n.parentElement;
+      if (!el || !el.closest("[data-testid=clab-workspace]") || el.closest("svg") || !el.getClientRects().length) continue;
+      for (const m of n.textContent.matchAll(re)) {
+        const r = document.createRange(), at = i => { r.setStart(n, i); r.setEnd(n, i + 1); const b = r.getBoundingClientRect(); return b.width ? b.left : null; };
+        const num = at(m.index), unit = at(m.index + m[1].length + 1);
+        if (num === null || unit === null) continue;
+        seen++; if (num > unit) bad.push(n.textContent.trim().slice(0, 50));
+      }
+    }
+    return { seen, bad: [...new Set(bad)] };
+  });
+  check("bidi: every visible number + unit reads in order (number left of its unit) across all eight workspaces, status lines included", bidi.seen >= 40 && bidi.bad.length === 0, bidi.seen + " occurrences; reordered: " + JSON.stringify(bidi.bad.slice(0, 6)));
   await saveNumber(page, "ctxLimewater", "veq", "25.00"); await saveNumber(page, "ctxLimewater", "nH", "0.500");
   await choose(page, "ctxLimewater", "suitable", "أزرق البروموثيمول"); await choose(page, "ctxLimewater", "suitable", "الفينولفثالين");
 

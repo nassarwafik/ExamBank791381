@@ -11,7 +11,7 @@ import { validateChemLabConfig } from "../chemistryLabModel";
 import {
   dilutionTemplate, indicatorTemplate, phCompareTemplate, rateTemplate, solidPrepareTemplate, titrationTemplate, unknownTitrationTemplate, type ChemLabTemplate
 } from "./labTemplates";
-import { studentDecimal } from "./labView";
+import { isolateQuantities, studentDecimal } from "./labView";
 import ChemLabEditor from "./ChemLabEditor";
 import ChemLabReview from "./ChemLabReview";
 import ChemLabWorkspace from "./ChemLabWorkspace";
@@ -151,6 +151,39 @@ describe("21D-D.3 UI — Lab C (titration)", () => {
   });
 });
 
+describe("21D-D.3 UI — quantities inside Arabic text stay LTR islands", () => {
+  // Without a bidi isolate an RTL paragraph shows "250 mL" as "mL 250" (found on the PR preview by measuring glyph positions): every
+  // number + unit the student reads — status messages, teacher-authored labels and task texts, fixed strings — is isolated at render time.
+  const iso = (s: string) => "\u2066" + s + "\u2069";
+  it("status messages, solution and trial labels, task texts and fixed strings isolate every number + unit", async () => {
+    let w = await mount(titrationTemplate());
+    click(button(w, /\+ 1\.00 mL/));
+    expect(within(w).getByTestId("clab-status").textContent).toBe("أُضيف " + iso("1.00 mL") + " من السحاحة.");
+    expect(button(w, /قطرة واحدة/).textContent).toContain(iso("0.05 mL"));
+    expect(w.querySelector(".clab-disclaimer")!.textContent).toContain(iso("25 °C"));
+    cleanup();
+    w = await mount(phCompareTemplate());
+    expect(within(w).getAllByTestId("clab-solution")[0].querySelector("h4")!.textContent).toContain(iso("0.010 mol/L"));
+    expect(w.textContent).toContain("كل المحاليل عند " + iso("25 °C"));
+    cleanup();
+    w = await mount(solidPrepareTemplate());
+    const prep = within(w).getByTestId("clab-prepare").textContent!;
+    expect(prep).toContain(iso("250 mL"));
+    expect(prep).toContain(iso("0.100 mol/L"));
+    expect(w.textContent).toContain(iso("0.01 g"));
+    cleanup();
+    w = await mount(rateTemplate());
+    expect(within(w).getAllByTestId("clab-trial")[0].textContent).toContain(iso("25 °C"));
+  });
+  it("isolateQuantities wraps each number + unit once and leaves everything else alone", () => {
+    expect(isolateQuantities("حضّر 250 mL من محلول تركيزه 0.100 mol/L.")).toBe("حضّر " + iso("250 mL") + " من محلول تركيزه " + iso("0.100 mol/L") + ".");
+    expect(isolateQuantities("وُضع " + iso("1.46 g") + " على الميزان")).toBe("وُضع " + iso("1.46 g") + " على الميزان"); // never twice
+    expect(isolateQuantities("التجربة 1: \u200f25 °C دون حافز")).toBe("التجربة 1: \u200f" + iso("25 °C") + " دون حافز");
+    expect(isolateQuantities("التجربة 3 (8.2–10)")).toBe("التجربة 3 (8.2–10)"); // numbers without a unit are not quantities
+    expect(isolateQuantities("k = 0.05 L/(mol·s)")).toBe("k = 0.05 L/(mol·s)"); // a compound unit is not split
+    expect(isolateQuantities("10 grams, 5 sec")).toBe("10 grams, 5 sec");
+  });
+});
 describe("21D-D.3 UI — Lab D (reaction rate) and answers", () => {
   it("running a trial is an action; the time cursor is presentation only; answers accept units and Arabic digits", async () => {
     const w = await mount(rateTemplate());
@@ -241,7 +274,8 @@ describe("21D-D.3 UI — registry, editor and review", () => {
     const r = screen.getByTestId("clab-review");
     expect(plain(within(r).getByTestId("clab-review-bench").textContent)).toMatch(/18\.60 mL · الكاشف: الفينولفثالين/);
     expect(plain(r.textContent)).toMatch(/18\.60 mL.*الفينولفثالين: عديم اللون/); // pH 7.00 at equivalence: below phenolphthalein's range
-    expect(within(r).getAllByTestId("clab-review-answer").map(x => x.textContent)).toEqual(["اكتب قراءة السحاحة النهائية (الحجم المضاف).—", "احسب تركيز الحمض.0.00930 mol/L", expect.stringMatching(/الفينولفثالين$/)]);
+    expect(within(r).getAllByTestId("clab-review-answer").map(x => plain(x.textContent))).toEqual(["اكتب قراءة السحاحة النهائية (الحجم المضاف).—", "احسب تركيز الحمض.0.00930 mol/L", expect.stringMatching(/الفينولفثالين$/)]);
+    expect(within(r).getAllByTestId("clab-review-answer")[1].textContent).toContain("\u20660.00930 mol/L\u2069"); // the answer is an LTR island
     cleanup();
     expect(render(<ChemLabReview config={t.config} details={{}} state={{ junk: true }} />).container.textContent).toBe("");
   });

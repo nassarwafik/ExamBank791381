@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ChemLabConfigV1, ChemLabStateV1, ChoiceTask, NumberTask, ObserveTask, PrepareTask } from "../chemistryLabModel";
 import { PRECISION_TEXT } from "../chemistry/lab/precision";
 import { indicatorById } from "../chemistry/lab/acidBase";
-import { answerUnits, ltr, optionText, preparedView, recordRow, studentDecimal, unitText } from "./labView";
+import { answerUnits, isolateQuantities, ltr, optionText, preparedView, recordRow, studentDecimal, unitText } from "./labView";
 
 // Phase 21D-D.3 — the ANSWERS of a chemistryLab@1 question and the observation RECORD (UI only). Observations (what the bench showed and the
 // student recorded), measurements (instrument readings) and answers (what the student submits for grading) are kept apart: only "save" in
@@ -27,7 +27,7 @@ function NumberAnswer({ cfg, task, saved, disabled, onSave, onClear }: { cfg: Ch
   const unitLabel = units.find(u => u.id === unit);
   return (
     <fieldset className="chem-task clab-answer" data-testid="clab-number" data-id={task.id}>
-      <legend>{task.label}</legend>
+      <legend>{isolateQuantities(task.label)}</legend>
       <p className="chem-help">اكتب الإجابة {PRECISION_TEXT(task.precision)}.</p>
       <div className="chem-row">
         <input type="text" inputMode="decimal" dir="ltr" autoComplete="off" spellCheck={false} maxLength={32} value={draft} disabled={disabled}
@@ -46,12 +46,12 @@ function NumberAnswer({ cfg, task, saved, disabled, onSave, onClear }: { cfg: Ch
 function ChoiceAnswer({ cfg, task, chosen, disabled, name, onChoose }: { cfg: ChemLabConfigV1; task: ChoiceTask; chosen: string[]; disabled?: boolean; name: string; onChoose: (o: string[]) => void }) {
   return (
     <fieldset className="chem-task clab-answer" data-testid="clab-choice" data-id={task.id}>
-      <legend>{task.label}{task.mode === "multiple" && <small> (اختر كل ما ينطبق)</small>}</legend>
+      <legend>{isolateQuantities(task.label)}{task.mode === "multiple" && <small> (اختر كل ما ينطبق)</small>}</legend>
       <div className="chem-options" role={task.mode === "single" ? "radiogroup" : "group"} aria-label={task.label}>
         {task.options.map(o => (
           <label key={o} className="chem-option">
             <input type={task.mode === "single" ? "radio" : "checkbox"} name={name} value={o} checked={chosen.includes(o)} disabled={disabled}
-              onChange={e => onChoose(task.mode === "single" ? [o] : e.target.checked ? task.options.filter(x => x === o || chosen.includes(x)) : chosen.filter(x => x !== o))} />{optionText(cfg, o)}
+              onChange={e => onChoose(task.mode === "single" ? [o] : e.target.checked ? task.options.filter(x => x === o || chosen.includes(x)) : chosen.filter(x => x !== o))} />{isolateQuantities(optionText(cfg, o))}
           </label>
         ))}
       </div>
@@ -65,7 +65,7 @@ function PrepareStatus({ cfg, state, task }: { cfg: ChemLabConfigV1; state: Chem
   const text = v.state === "pending" ? "لم يُكمل محلول إلى العلامة بعد." : v.state === "none" ? "—" : (what ?? "—") + " مكمّل إلى " + ltr(v.flask + " mL") + ".";
   return (
     <div className="chem-task clab-answer" data-testid="clab-prepare" data-id={task.id}>
-      <p className="chem-task-label"><strong>{task.label}</strong></p>
+      <p className="chem-task-label"><strong>{isolateQuantities(task.label)}</strong></p>
       <p className="chem-help">يُقيَّم المحلول الموجود في الدورق عند التسليم (يمكنك إفراغ الأدوات والتحضير من جديد).</p>
       <p className="clab-saved">المحلول الحالي: <span>{text}</span></p>
     </div>
@@ -83,7 +83,7 @@ function ObserveStatus({ cfg, state, task }: { cfg: ChemLabConfigV1; state: Chem
   }
   return (
     <div className="chem-task clab-answer" data-testid="clab-observe" data-id={task.id}>
-      <p className="chem-task-label"><strong>{task.label}</strong></p>
+      <p className="chem-task-label"><strong>{isolateQuantities(task.label)}</strong></p>
       <p className="clab-saved">{fact}</p>
     </div>
   );

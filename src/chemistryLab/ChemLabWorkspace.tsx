@@ -6,7 +6,7 @@ import { resolveSmartSimPlugin } from "../trustedSimPlugins";
 import { replaySmartSimActions } from "../trustedSimQuestion";
 import { PhBench, RateBench, SolutionsBench, TitrationBench, type BenchProps } from "./LabBenches";
 import { LabAnswers, LabRecord } from "./LabAnswers";
-import { experimentTitle } from "./labView";
+import { experimentTitle, isolateQuantities, ltr } from "./labView";
 import "../chemistryStructure/chem.css";
 import "./chemLab.css";
 
@@ -63,14 +63,14 @@ export default function ChemLabWorkspace({ config, actions, onChange, disabled, 
     <div className="chem clab" dir="rtl" data-testid="clab-workspace" data-experiment={kind} aria-label={(label ? label + " — " : "") + "المختبر الكيميائي الافتراضي"}>
       <header className="clab-head">
         <h3 className="clab-h">{experimentTitle(cfg)}</h3>
-        <p className="chem-help clab-disclaimer">محاكاة افتراضية للتعلّم مبنية على نموذج علمي مبسّط (25 °C، محاليل مثالية)، وليست دليلًا لإجراء تجارب حقيقية؛ لا تُجرِ أي تجربة دون إشراف مختص.</p>
+        <p className="chem-help clab-disclaimer">محاكاة افتراضية للتعلّم مبنية على نموذج علمي مبسّط ({ltr("25 °C")}، محاليل مثالية)، وليست دليلًا لإجراء تجارب حقيقية؛ لا تُجرِ أي تجربة دون إشراف مختص.</p>
         {actions.length > 0 && !restored && <p className="chem-error" role="alert">تعذّر استعادة العمليات السابقة لهذا السؤال؛ بدأت التجربة من جديد.</p>}
       </header>
       {kind === "solutions" && <SolutionsBench {...bench} />}
       {kind === "ph" && <PhBench {...bench} />}
       {kind === "titration" && <TitrationBench {...bench} />}
       {kind === "rate" && <RateBench {...bench} />}
-      <p className="clab-status" role="status" aria-live="polite" data-testid="clab-status">{announce}</p>
+      <p className="clab-status" role="status" aria-live="polite" data-testid="clab-status">{isolateQuantities(announce)}</p>
       <LabRecord cfg={cfg} state={state} limit={CHEM_LAB_LIMITS.observations} />
       <LabAnswers cfg={cfg} state={state} disabled={disabled} uid={uid}
         onNumber={(taskId, value, unit) => answer(taskId, { type: "answer.number", taskId, value, unit }, "حُفظت الإجابة.")}

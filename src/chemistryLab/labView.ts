@@ -91,6 +91,12 @@ export function trialConcentration(c: ChemLabConfigV1, trialId: string, t: numbe
 
 /** An LTR quantity inside Arabic text ("24.50 mL", "pH = 2.00"), isolated so the bidi algorithm never reorders it into "mL 24.50". */
 export const ltr = (s: string): string => "\u2066" + s + "\u2069";
+// a number followed by a unit the lab uses, not already isolated, not part of a longer number, word or compound unit ("L/(mol\u00b7s)");
+// no lookbehind (older Safari cannot parse it): the preceding character is captured and put back
+const QUANTITY = /(^|[^\d.\u2066])(\d+(?:\.\d+)?\s(?:mol\/L|mmol|mol|mL|L|g|min|s|\u00b0C|K))(?![\p{L}\p{N}/\u2069])/gu;
+/** Arabic text that may carry quantities \u2014 a teacher-authored label or task, a status message, a fixed hint ("\u062d\u0636\u0651\u0631 250 mL", "25 \u00b0C"):
+ *  every number + unit becomes an isolated LTR island (see ltr), once. Presentation only; the stored text is never changed. */
+export const isolateQuantities = (s: string): string => s.replace(QUANTITY, (_, pre: string, q: string) => pre + ltr(q));
 
 // ── the observation record ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export type RecordRow = { kind: string; what: string; detail: string };
@@ -102,12 +108,12 @@ export function recordRow(c: ChemLabConfigV1, o: ChemLabObservation): RecordRow 
       return { kind: "محلول محضّر", what: "دورق " + ltr(o.flask + " mL"), detail: o.mass !== null ? "كتلة " + ltr(o.mass + " g") : ltr(o.pipette + " mL") + " من المحلول الأم" };
     case "meter": {
       const label = e.kind === "ph" ? e.solutions.find(x => x.id === o.solution)?.label ?? o.solution : o.solution, pH = phOf(c, o.solution);
-      return { kind: "قياس pH", what: label, detail: pH === null ? "—" : ltr("pH = " + formatPh(pH)) };
+      return { kind: "قياس pH", what: isolateQuantities(label), detail: pH === null ? "—" : ltr("pH = " + formatPh(pH)) };
     }
     case "indicator": {
       const label = e.kind === "ph" ? e.solutions.find(x => x.id === o.solution)?.label ?? o.solution : o.solution;
       const ind = indicatorById(o.indicator), pH = phOf(c, o.solution);
-      return { kind: "اختبار بكاشف", what: label, detail: ind && pH !== null ? ind.nameAr + ": " + appearance(ind, pH).name : "—" };
+      return { kind: "اختبار بكاشف", what: isolateQuantities(label), detail: ind && pH !== null ? ind.nameAr + ": " + appearance(ind, pH).name : "—" };
     }
     case "reading": {
       const ind = o.indicator ? indicatorById(o.indicator) : undefined, pH = flaskPh(c, o.added);
@@ -116,7 +122,7 @@ export function recordRow(c: ChemLabConfigV1, o: ChemLabObservation): RecordRow 
     }
     case "run": {
       const tr = e.kind === "rate" ? e.trials.find(x => x.id === o.trial) : undefined;
-      return { kind: "تشغيل تجربة", what: tr?.label ?? o.trial, detail: "" };
+      return { kind: "تشغيل تجربة", what: isolateQuantities(tr?.label ?? o.trial), detail: "" };
     }
   }
 }
