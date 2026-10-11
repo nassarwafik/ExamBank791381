@@ -283,7 +283,7 @@ describe("UX-2 focus foundation", () => {
     expect(ratio(faint, surface)).toBeLessThan(4.5);                                                 // why faint may not colour normal text
     expect(ratio(muted, surface)).toBeGreaterThanOrEqual(4.5);                                       // the replacement on cards
     expect(ratio(muted, surface2)).toBeGreaterThanOrEqual(4.5);
-    expect(ratio(muted, bg)).toBeLessThan(4.5);                                                      // why status lines on the page background use text-secondary
+    expect(ratio(muted, bg)).toBeGreaterThanOrEqual(4.5);                                            // 21E.1 slice 2 (audit F6): --eb-muted now meets AA on the page background too (was < 4.5 — the reason status lines used text-secondary; they still may)
     expect(ratio(text, bg)).toBeGreaterThanOrEqual(4.5);                                             // --eb-text-secondary aliases --eb-text
     expect(tokens).toMatch(/--eb-text-secondary:\s*var\(--eb-text\)/);
     expect(ratio(dangerTx, surface)).toBeGreaterThanOrEqual(4.5);                                    // .eb-field-error

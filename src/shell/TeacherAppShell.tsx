@@ -51,6 +51,18 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
   const asideRef = useRef<HTMLElement>(null);
   const active = activeNavId(nav);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  // 21E.0 audit F16 (21E.1 slice 2) — when the teacher dismisses the phone menu (Escape, the backdrop or «إغلاق القائمة»), keyboard
+  // focus goes back to the «القائمة» button that opens it. The trap alone restored whatever was focused when the drawer OPENED, which is
+  // <body> whenever the tap did not focus the button (WebKit, scripted clicks) — focus was lost. Navigating to a page and the drawer
+  // closing because the window became desktop-sized keep their behaviour.
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusToMenu = useRef(false);
+  const dismissDrawer = useCallback(() => { returnFocusToMenu.current = true; setDrawerOpen(false); }, []);
+  useEffect(() => {
+    if (drawerOpen || !returnFocusToMenu.current) return;
+    returnFocusToMenu.current = false;
+    menuButtonRef.current?.focus();
+  }, [drawerOpen]);
 
   // The drawer exists only below the shell breakpoint (CSS hides its trigger above it); opening is refused on
   // desktop so the fixed rail can never become a modal dialog.
@@ -69,7 +81,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
     mq?.addEventListener("change", onChange);
     return () => { document.body.style.overflow = previousOverflow; mq?.removeEventListener("change", onChange); };
   }, [drawerOpen, closeDrawer]);
-  useFocusTrap(asideRef, drawerOpen, closeDrawer);
+  useFocusTrap(asideRef, drawerOpen, dismissDrawer);
 
   function navigate(id: TeacherNavId) { onNavigate(id); setDrawerOpen(false); }
 
@@ -110,7 +122,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
   return (
     <div className={"builder-page eb-shell" + (compact ? " is-compact" : "") + (drawerOpen ? " is-drawer-open" : "")} dir="rtl">
       <a className="eb-skip-link" href="#eb-main">تجاوز إلى المحتوى</a>
-      {drawerOpen && <div className="eb-drawer-backdrop" aria-hidden="true" onClick={closeDrawer} />}
+      {drawerOpen && <div className="eb-drawer-backdrop" aria-hidden="true" onClick={dismissDrawer} />}
       <aside
         id="eb-sidebar"
         ref={asideRef}
@@ -125,7 +137,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
             <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
           </div>
           {drawerOpen ? (
-            <IconButton inverse label="إغلاق القائمة" icon={<IconClose size={18} />} onClick={closeDrawer} className="eb-drawer-close" />
+            <IconButton inverse label="إغلاق القائمة" icon={<IconClose size={18} />} onClick={dismissDrawer} className="eb-drawer-close" />
           ) : (
             <IconButton
               inverse
@@ -161,6 +173,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
           breadcrumb={crumbs}
           leading={
             <IconButton
+              ref={menuButtonRef}
               label="القائمة"
               icon={<IconMenu size={20} />}
               aria-expanded={drawerOpen}

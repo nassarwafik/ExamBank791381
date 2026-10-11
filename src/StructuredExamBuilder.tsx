@@ -5,11 +5,9 @@ import type { StructuredExam, BuilderQuestion, BuilderSection, BuilderImageAsset
 import type { AiImageRequestQuestion } from "./questionMedia";
 import {
   addSection,
-  deleteSection,
   updateSection,
   moveSection,
   addQuestion as addQ,
-  deleteQuestion as delQ,
   updateQuestion as updQ,
   moveQuestion as movQ,
   duplicateQuestion as dupQ,
@@ -27,6 +25,8 @@ import ExamCoverEditor from "./ExamCoverEditor";
 import ExamPreview from "./ExamPreview";
 import Dialog from "./ui/Dialog";
 import { useConfirm } from "./ui/useConfirm";
+import { useToast, type ToastDismissReason } from "./ui/Toast";
+import { applyDeletion, captureQuestionDeletion, captureSectionDeletion, deletionIsBack, restoreDeletion, type Deletion, type RestoreOutcome } from "./structuredDeletionUndo";
 import type { ExamSaveState } from "./examHistory";
 import { historyShortcut, isTextEditingTarget } from "./examHistoryShortcuts";
 import { browserBackupStorage, clearExamBackup, isRecoveryCandidate, readExamBackup, writeExamBackup, type BackupStorage, type ExamBackup } from "./examAutosave";
@@ -117,6 +117,8 @@ type Props = {
   /** Storage override for tests; defaults to the browser's localStorage (or none). */
   backupStorage?: BackupStorage | null;
   autosaveDelayMs?: number;
+  /** 21E.1 slice 2 — how long the «تراجع» toast stays after deleting a question or a section (tests shorten it). */
+  undoToastMs?: number;
   // Phase 13B — App-owned, authenticated Question Bank callbacks (list rows / exact-id canonical retrieval). The builder
   // never receives a token; without a service the "إضافة من بنك الأسئلة" action is simply not offered.
   bankPicker?: BankPickerService;
@@ -142,12 +144,15 @@ const AUTOSAVE_DELAY_MS = 800;
 const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ", dirty: "● تغييرات غير محفوظة", saving: "⏳ جارٍ الحفظ", recovered: "↺ نسخة مسترجعة — غير محفوظة" };
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const FLASH_MS = 1200;
+const UNDO_TOAST_MS = 10000;
+/** «سؤال واحد / سؤالان / 3 أسئلة / 11 سؤالًا» — the count that leaves with a deleted section. */
+const questionCountPhrase = (n: number) => (n === 1 ? "سؤال واحد" : n === 2 ? "سؤالين" : n >= 3 && n <= 10 ? n + " أسئلة" : n + " سؤالًا");
 // UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
 // and pruned against the live exam so a deleted / undone question never lingers (and is never resurrected by redo).
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -340,6 +345,99 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     el.focus({ preventScroll: true });
     setFlashId(id);
   };
+  // ── Phase 21E.1 slice 2 · delete ONE question / ONE section with a safe «تراجع» toast ──
+  // The deletion is captured INSIDE the updater (from the exact `prev` it deletes from — StrictMode-safe, never a stale render copy)
+  // and settled after the builder commit (the same record-then-settle pattern as the bank insertion below). «تراجع» puts the
+  // unchanged snapshot back as ONE new history entry, re-validated against the exam as it is then (src/structuredDeletionUndo.ts);
+  // it never pops the history stack, so later edits are never undone by mistake.
+  const builderRef = useRef<HTMLDivElement | null>(null);
+  const { showToast, dismissToast, toastRegion } = useToast({ defaultDurationMs: undoToastMs, actionDisabled: !!saving });
+  const undoTarget = useRef<{ deletion: Deletion; toastId: number } | null>(null);
+  const deletionSeq = useRef(0);
+  const deletionRecords = useRef(new Map<number, Deletion>());
+  const [deletionCommit, setDeletionCommit] = useState(0);
+  const restoreSeq = useRef(0);
+  const restoreRecords = useRef(new Map<number, RestoreOutcome>());
+  const [restoreCommit, setRestoreCommit] = useState<{ seq: number; deletion: Deletion } | null>(null);
+  const sectionNode = (sectionId: string) =>
+    Array.from(builderRef.current?.querySelectorAll<HTMLElement>("[data-section-id]") ?? []).find(el => el.dataset.sectionId === sectionId) ?? null;
+  /** Where keyboard focus goes once the deleted card / section is gone: its next neighbour, else the previous one, else the add button. */
+  const focusAfterDeletion = (d: Deletion) => {
+    if (!alive.current) return;
+    if (d.kind === "question") {
+      const neighbour = [d.nextId, d.prevId].map(id => (id ? nodes.current.get(id) : undefined)).find(Boolean);
+      const target = neighbour ?? sectionNode(d.sectionId)?.querySelector<HTMLElement>("[data-add-question]") ?? sectionNode(d.sectionId);
+      target?.focus();
+      return;
+    }
+    const neighbour = [d.nextId, d.prevId].map(id => (id ? sectionNode(id) : null)).find(Boolean);
+    (neighbour ?? builderRef.current?.querySelector<HTMLElement>("[data-add-section]"))?.focus();
+  };
+  const deleteWithUndo = (capture: (prev: StructuredExam) => Deletion | null) => {
+    if (!alive.current) return;
+    const seq = ++deletionSeq.current;
+    setDeletionCommit(seq);                                             // guarantees a builder commit after the updater ran
+    update(prev => {
+      const d = capture(prev);
+      if (!d) return prev;
+      deletionRecords.current.set(seq, d);
+      return applyDeletion(prev, d);
+    });
+  };
+  const restoreFromToast = (d: Deletion) => {
+    if (!alive.current) return;
+    const seq = ++restoreSeq.current;
+    setRestoreCommit({ seq, deletion: d });
+    update(prev => {
+      const r = restoreDeletion(prev, d);
+      restoreRecords.current.set(seq, r.outcome);
+      return r.exam;
+    });
+  };
+  useLayoutEffect(() => {
+    if (!deletionCommit) return;
+    const d = deletionRecords.current.get(deletionCommit);
+    deletionRecords.current.delete(deletionCommit);
+    if (!d || !alive.current) return;
+    focusAfterDeletion(d);
+    const message = d.kind === "question"
+      ? "تم حذف السؤال " + d.label + (d.sectionTitle ? " من «" + d.sectionTitle + "»" : "") + "."
+      : "تم حذف «" + (d.section.title || "القسم " + d.label) + "»" + ((d.section.questions || []).length ? " مع " + questionCountPhrase((d.section.questions || []).length) : "") + ".";
+    const toastId = showToast({
+      message,
+      // Keyboard users hear the shortcut: right after the deletion, Ctrl+Z (focus is on a card or a button, never a text field) undoes it.
+      announcement: message + " للتراجع اضغط Ctrl+Z.",
+      action: { label: "تراجع", accessibleLabel: d.kind === "question" ? "تراجع عن حذف السؤال" : "تراجع عن حذف القسم", onAction: () => restoreFromToast(d) },
+      onDismiss: (reason: ToastDismissReason, hadFocus: boolean) => {
+        if (undoTarget.current?.deletion === d) undoTarget.current = null;
+        if (hadFocus && (reason === "close" || reason === "escape" || reason === "timeout")) focusAfterDeletion(d);
+      },
+    });
+    undoTarget.current = { deletion: d, toastId };
+  }, [deletionCommit]);                                                 // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    if (!restoreCommit) return;
+    const { seq, deletion: d } = restoreCommit;
+    const outcome = restoreRecords.current.get(seq);
+    restoreRecords.current.delete(seq);
+    if (!outcome || outcome === "stale" || !alive.current) return;
+    if (outcome === "restored" || outcome === "already-present") {
+      if (d.kind === "question") window.setTimeout(() => focusCard(d.question.examQuestionId), 0);
+      else window.setTimeout(() => { const el = sectionNode(d.section.id); if (!el || !alive.current) return; if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start", behavior: "smooth" }); el.focus({ preventScroll: true }); }, 0);
+      showToast({ tone: "success", durationMs: Math.min(undoToastMs, 4000), message: d.kind === "question" ? "تمت استعادة السؤال " + d.label + "." : "تمت استعادة «" + (d.section.title || "القسم " + d.label) + "»." });
+      return;
+    }
+    const reason = outcome === "section-missing" ? "تعذّرت استعادة السؤال: القسم «" + (d.kind === "question" ? d.sectionTitle : "") + "» لم يعد موجودًا."
+      : outcome === "bank-duplicate" ? "تعذّرت الاستعادة: سؤال البنك نفسه موجود في الامتحان الآن."
+      : "تعذّرت استعادة القسم: بعض أسئلته موجودة الآن في مكان آخر من الامتحان.";
+    showToast({ tone: "warn", message: reason });
+  }, [restoreCommit]);                                                  // eslint-disable-line react-hooks/exhaustive-deps
+  // The toast leaves by itself when the deleted item is back by another route (Ctrl+Z, the toolbar «تراجع») or another exam opened.
+  useEffect(() => {
+    const t = undoTarget.current;
+    if (!t) return;
+    if (t.deletion.examId !== exam.examId || deletionIsBack(exam, t.deletion)) { undoTarget.current = null; dismissToast(t.toastId); }
+  }, [exam, dismissToast]);
   const navigateTo = (id: string) => {
     if (isNarrow) { setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }      // let the dialog release focus first
     else focusCard(id);
@@ -510,7 +608,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
 
   return (
     <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
-    <div className="sb-builder" dir="rtl">
+    <div className="sb-builder" dir="rtl" ref={builderRef}>
       <header className="sb-toolbar">
         <div className="sb-toolbar-main">
           {onExit && <button type="button" className="sb-btn" onClick={() => { void requestExit(); }} disabled={saving}>→ رجوع</button>}
@@ -595,11 +693,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             total={(exam.sections || []).length}
             sectionOptions={sectionOptions}
             patch={p => setSections(s => updateSection(s, section.id, p))}
-            onDelete={() => setSections(s => deleteSection(s, section.id))}
+            onDelete={() => deleteWithUndo(prev => captureSectionDeletion(prev, section.id))}
             onMove={d => setSections(s => moveSection(s, section.id, d))}
             onAddQuestion={q => setSections(s => addQ(s, section.id, q))}
             onQuestionChange={(qid, p) => setSections(s => updQ(s, section.id, qid, p))}
-            onQuestionDelete={qid => setSections(s => delQ(s, section.id, qid))}
+            onQuestionDelete={qid => deleteWithUndo(prev => captureQuestionDeletion(prev, section.id, qid))}
             onQuestionMove={(qid, d) => setSections(s => movQ(s, section.id, qid, d))}
             onQuestionDuplicate={qid => setSections(s => dupQ(s, section.id, qid))}
             onQuestionMoveToSection={(qid, to) => setSections(s => movQTo(s, section.id, qid, to))}
@@ -617,7 +715,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         ))}
       </div>
 
-      <button type="button" className="sb-add-btn sb-add-section" onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
+      <button type="button" className="sb-add-btn sb-add-section" data-add-section onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
       </div>
       {navOpen && !isNarrow && navigator(true)}
       </div>
@@ -719,6 +817,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {recoveryOffer && <span className="sb-recovery-meta">آخر تعديل محلي: {formatBackupTime(recoveryOffer.savedAt)}</span>}
         </p>
       </Dialog>
+      {/* 21E.1 slice 2 — the «تراجع» toast lives INSIDE the builder's fixed overlay (its layer is above --eb-z-toast). */}
+      {toastRegion}
     </div>
     </MeshAssetServiceContext.Provider></SimulationServiceContext.Provider>
   );

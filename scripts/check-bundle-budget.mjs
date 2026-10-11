@@ -218,6 +218,8 @@ function main() {
   // 21E.1 — the shared dialog layer (Dialog / ConfirmDialog / focus trap) opens on demand. Startup modules (App.tsx) confirm through
   // useDeferredConfirm and load their own dialogs lazily, so no initial-graph file may carry the dialog primitive's markup.
   for (const f of initial) if (read(f).includes("eb-dialog-backdrop")) failures.push(`${f} (initial) contains the dialog layer (eb-dialog-backdrop) — confirm through useDeferredConfirm / a lazy Dialog in startup modules`);
+  // 21E.1 slice 2 — the toast (src/ui/Toast.tsx + toast.css) ships with its first consumer (the lazy structured builder), never at startup.
+  for (const f of initial) if (read(f).includes("eb-toast-layer")) failures.push(`${f} (initial) contains the toast layer (eb-toast-layer) — import src/ui/Toast only from lazily loaded surfaces`);
 
   for (const f of initial) {
     const src = read(f);

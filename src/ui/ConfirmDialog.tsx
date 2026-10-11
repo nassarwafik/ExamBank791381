@@ -17,6 +17,9 @@ export type ConfirmOptions = {
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: "default" | "danger";
+  /** Which button holds focus when the dialog opens. Defaults to «إلغاء» for a danger confirmation and to the confirm button
+   *  otherwise; 21E.1 slice 2 — a confirmation that REPLACES teacher-written content opts into "cancel" (the safe choice). */
+  initialFocus?: "confirm" | "cancel";
 };
 
 export function ConfirmDialog({ open, options, onResolve }: { open: boolean; options: ConfirmOptions; onResolve: (ok: boolean) => void }) {
@@ -33,7 +36,7 @@ export function ConfirmDialog({ open, options, onResolve }: { open: boolean; opt
       title={options.title || (danger ? "تأكيد إجراء لا يمكن التراجع عنه" : "تأكيد")}
       onClose={() => onResolve(false)}
       hideClose
-      initialFocusRef={danger ? cancelRef : confirmRef}
+      initialFocusRef={(options.initialFocus ?? (danger ? "cancel" : "confirm")) === "cancel" ? cancelRef : confirmRef}
       describedBy={messageId}
       className="eb-confirm"
       footer={
