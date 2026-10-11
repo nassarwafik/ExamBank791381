@@ -258,7 +258,111 @@ It passes the real import, save, re-import and finalization (no blocker). It is 
 
 ## 11. Verification evidence (D.3)
 
-Filled at certification; see the PR body for the exact-head CI record.
+All numbers below were produced on the branch. The code head for the local gates is `816406b`; later commits change documentation only.
+The exact-head CI record is in the PR body (AGENTS.md §6).
+
+### 11.1 Local gates
+
+| Gate | Result |
+|---|---|
+| `npx tsc -b` | pass |
+| `npm run lint` (oxlint) | exit 0. 0 errors; 116 warnings, the same count as `main`, none in a D.3 file. |
+| `npm run build` + bundle guard | pass. Initial JS graph 9 files, 109.9 KB gzip (budget 125 KB, unchanged). |
+| `npm test` (root: app + API + scripts) | **909 files, 11,905 tests, 0 failures** |
+| D.3 suites | 93 tests in 6 files: `labFoundation` 19, `labModels` 25, `chemistryLab` authority 23, UI 15, lifecycle 10, fixture drift 1 |
+| D.1 / D.2 regression | inside the full suite. Real Chromium: D.1 36 / 36, D.2 41 / 41. |
+| Real Chromium D.3 (`scripts/check-chemistry-browser-21dd3.mjs`) | **46 / 46** (§11.6) |
+| `git diff --check` | clean |
+
+### 11.2 Science evidence (what the tests prove)
+
+* Lab A: OpenStax Examples 3.14, 3.17, 3.19 and 3.21 are reproduced. CIAAW molar masses are exact (CuSO₄·5H₂O = 249.677 g/mol). The
+  balance range is rounded down. c ∝ 1 / V at constant n, exactly.
+* Lab B:
+  * pH 0.00 / 2.00 / 12.00 for 1.0 M HCl / 0.010 M HCl / 0.010 M NaOH, and 12.00 for 0.0050 M Ca(OH)₂ (two OH⁻).
+  * 1.0 × 10⁻⁸ M HCl gives pH 6.98, not 8.00.
+  * The weak-acid result agrees with an independent cubic solution.
+  * Monotonic on dilution; never crosses 7.
+  * Unsupported outside the ranges.
+* Lab C:
+  * OpenStax Table 14.2: 18 of 19 rows exact; the 22.0 mL row is within the source's last digit because the source rounds first.
+  * Example 14.21 is reproduced.
+  * 2 : 1 stoichiometry comes from the D.2 solver.
+  * Equivalence ≠ end point; the indicator error is computed; the ambiguity band refuses near-limit indicators.
+  * Only whole drops are accepted.
+* Lab D: OpenStax Examples 12.6, 12.8, 12.11, 12.12 and 12.13 are reproduced. Ea from Example 12.13 is 1.85 × 10⁵ J/mol exactly; the
+  source prints 1.8 × 10⁵ after rounding its slope. The tests also check Arrhenius consistency, and that zero order stops at 0.
+* Precision policy:
+  * the inclusive half-unit boundary: pH 3.377 and 3.386 pass around 3.38158; 3.376 and 3.387 fail;
+  * the instrument floors: burette 18.55–18.65 mL pass, 18.66 fails; titre 0.00925–0.00935 mol/L pass, 0.00924 fails;
+  * exact unit conversion: 0.02500 L = 25.00 mL; 2.50e-3 mol = 2.50 mmol.
+
+### 11.3 Fail-first evidence (defects found during D.3)
+
+| Defect | Proof on the defective SHA | Fix |
+|---|---|---|
+| The teacher review showed choice options as raw ids ("phenolphthalein، bromothymolBlue"). | The test "review text names indicators, solutions and trials in Arabic" failed on `c123ff8` with exactly that text. | `44a3726` (`optionText` names indicators). |
+| The rate lab's time cursor was mirrored by the RTL page: ArrowRight moved time backwards, against the graph's axis. | Real Chromium on `44a3726`: after 35 × ArrowRight the t1 reading stayed at 0.100 mol/L. | `fa0aa20` (`dir="ltr"`). Now 0.100 → 0.0497 mol/L, with no answer changed. |
+| Bidi reordering: "24.50 mL" displayed as "mL 24.50" in the record table. | A Chromium glyph-order check fails with the isolates removed ("unit-then-number") and passes with them. Screenshot evidence on `48ecf1c`'s run. | `fa0aa20` (Unicode LTR isolates). |
+
+The plugin-list and capability-matrix updates are **pins**, not fail-first tests.
+
+### 11.4 Bundle (measured with the guard's own `initialGraph()` closure)
+
+* `main` `6a61005` and the head both have 9 initial files, **362,603 B raw**. Every initial chunk is byte-identical once the
+  content-hash names are normalized. The gzip totals (112,518 vs 112,521 B) differ only through those hash characters.
+* The lab's lazy chunks (raw / gzip):
+
+  | Chunk | Raw | Gzip |
+  |---|---|---|
+  | `ChemLabWorkspace` | 36.8 KB | 10.5 KB |
+  | `ChemLabEditor` | 29.8 KB | 7.9 KB |
+  | `ChemLabReview` | 2.8 KB | 1.2 KB |
+  | Shared `chemLab` helpers | 3.5 KB | 1.8 KB |
+  | CSS | 6.0 KB | 1.9 KB |
+
+  The lab models ride `trustedSimPlugins`. The guard requires `clab-bench`, `clab-editor` and `clab-review` to stay lazy, and
+  `LAB_TITRATION_SPECIES_UNKNOWN`, `LAB_PH_UNSUPPORTED`, `LAB_RATE_INVALID` and `LAB_ACTION_INVALID` to stay in `trustedSimPlugins-*.js`.
+
+### 11.5 Mutation campaign (`scripts/mutate-chemistry-21dd3.mjs`)
+
+* **Run 1** (67 mutants, sources of `d52f361`): **58 killed, 9 survived, 0 invalid, 0 timeouts.** Files restored (sha256-verified,
+  `git diff` clean).
+* **Survivors, classified** (all addressed in `68b223f`):
+
+  | Mutant | Classification | Resolution |
+  |---|---|---|
+  | E03-length-bound | EQUIVALENT: `DECIMAL_PATTERN` matches ≤ 30 characters, so the 32-character pre-filter never decides | removed; replaced by E03-integer-digits and E04-fraction-digits, with digit-bound tests |
+  | M02-unknown-ions | test gap | unknown limewater (2 : 1) derives 0.0100 mol/L |
+  | M10-time-beyond-duration | test gap | a time beyond the window is refused; the window end is accepted |
+  | M13-bracket-window | test gap | readings > 1.00 mL away do not bracket; exactly 1.00 mL does |
+  | M14-fastest-tie | test gap | identical trials make "fastest" ambiguous (refused) |
+  | M15-prepared-any-flask | test gap | the right mass in the wrong flask is not the target |
+  | G06-empty-make-up | test gap | an empty flask is not made up |
+  | G12-record-unbounded | test gap | the record holds at most 24 observations |
+  | G14-duplicate-measurements | test gap | a repeated meter reading is recorded once |
+
+* **Run 2** (`--only`, the 10 affected mutants, on `68b223f`): **10 / 10 killed.** Files restored.
+* The campaign now has **68 mutants**. The `mutations-21dd3` CI job runs all of them on the PR head.
+
+### 11.6 Real Chromium (head code `816406b`; 46 checks)
+
+* All four labs on one exam page, rendered from the student projection; nothing private in the DOM; no WebGL.
+* RTL page with LTR formula and number islands.
+* Lab A by keyboard only (Arabic digits normalized); a visible 3 px focus ring; an announced status line.
+* Readouts and curves appear only where enabled. Meter readings 2.00 / 3.38 / 7.00 / 11.00. Categorical indicator colours.
+* Titration:
+  * a non-drop volume is refused in place;
+  * pH 3.00 / 11.00 around equivalence;
+  * colourless at 18.60 mL, transitional one drop later;
+  * the curve is built from the recorded readings.
+* Rate: the keyboard time cursor changes readings, never answers.
+* Accessible names for every control; a burette drop takes ≈ 50 ms.
+* After a reload, every answer is restored and grades identically: full marks on the page's 88 SmartSim marks. A forged answer is
+  refused.
+* The teacher review shows Arabic expected answers. The editor (templates, kind switch, tasks) round-trips import → save → export →
+  import, and its preview mounts the workspace.
+* Dark scheme. Phone at 390 × 844: no overflow, also with 150 % text; taps work. The phone editor has no overflow either.
 
 ## 12. Known limitations and outstanding risks
 
