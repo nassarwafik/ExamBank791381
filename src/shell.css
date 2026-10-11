@@ -2,7 +2,7 @@
    UX-2 — App Shell (teacher sidebar + page column, student top bar identity).
    Token-only (--eb-*). RTL-first (logical properties).
    Layers: sidebar/backdrop use --eb-z-nav / --eb-z-drawer (30/40) and stay
-   BELOW the legacy full-screen builder overlays (900 / 1000).
+   BELOW the full-screen builder shell (--eb-z-overlay) and the legacy 1000-level overlays.
    Breakpoints: ≥1280 expanded · 1024–1279 compact rail · <1024 drawer.
    ============================================================ */
 

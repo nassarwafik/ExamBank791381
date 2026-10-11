@@ -90,8 +90,11 @@
   --eb-focus-ring-inverse: 2px solid #ffffff;
   --eb-focus-offset: 2px;
 
-  /* Layers — shell layers stay below the legacy full-screen overlays (900 / 1000) */
-  --eb-z-sticky: 10; --eb-z-dropdown: 20; --eb-z-nav: 30; --eb-z-drawer: 40; --eb-z-toast: 50; --eb-z-modal: 70;
+  /* Layers — the shell (nav / drawer / toast) sits under full-screen work surfaces (--eb-z-overlay: the Structured Exam
+     Builder shell), which in turn sit UNDER the modal layer so every portal dialog opened from inside them (the unsaved-changes
+     confirmation, the toolbar tools) paints on top. The legacy 1000-level overlays (exam preview, review modal, theme preview)
+     stay above dialogs on purpose: they are opened FROM dialogs or replace the page. */
+  --eb-z-sticky: 10; --eb-z-dropdown: 20; --eb-z-nav: 30; --eb-z-drawer: 40; --eb-z-toast: 50; --eb-z-overlay: 60; --eb-z-modal: 70;
 
   /* Containers */
   --eb-container: 1280px; --eb-container-wide: 1440px; --eb-container-reading: 720px; --eb-container-student: 960px;
