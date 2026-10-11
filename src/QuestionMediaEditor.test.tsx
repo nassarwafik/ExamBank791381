@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, cleanup, fireEvent, waitFor, screen, act } from "@testing-library/react";
 import QuestionMediaEditor from "./QuestionMediaEditor";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 
@@ -11,7 +11,8 @@ const baseQ = (over: Partial<BuilderQuestion> = {}): BuilderQuestion => ({
 const withImage = (over: Partial<BuilderQuestion> = {}) => baseQ({ image: { exists: true, visible: true, assets: [{ dataUrl: "data:image/png;base64,OLD", origin: "uploaded" }] }, ...over });
 const png = () => new File([new Uint8Array([137, 80, 78, 71])], "d.png", { type: "image/png" });
 
-beforeEach(() => { window.confirm = vi.fn(() => true); });
+// 21E.1 — confirmations go through the shared ConfirmDialog: press its button (never window.confirm).
+const answerDialog = async (label: string) => { const b = await screen.findByRole("button", { name: label }); await act(async () => { fireEvent.click(b); }); };
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("QuestionMediaEditor — upload / state", () => {
@@ -53,10 +54,12 @@ describe("QuestionMediaEditor — upload / state", () => {
     expect(onChange.mock.calls[0][0].images).toEqual([]);
   });
 
-  it("remove: confirms then clears canonical image AND the legacy fallback", () => {
+  it("remove: confirms then clears canonical image AND the legacy fallback", async () => {
     const onChange = vi.fn();
     render(<QuestionMediaEditor question={withImage({ images: [{ dataUrl: "data:image/png;base64,LEG" }] })} onChange={onChange} />);
     fireEvent.click(screen.getByRole("button", { name: "🗑 إزالة الصورة" }));
+    expect(onChange).not.toHaveBeenCalled();                                   // nothing until the shared dialog is answered
+    await answerDialog("إزالة الصورة");
     expect(onChange).toHaveBeenCalledWith({ image: { exists: false, visible: false, assets: [] }, images: [] });
   });
 });
@@ -80,6 +83,7 @@ describe("QuestionMediaEditor — AI generation", () => {
     const requestQuestionImage = vi.fn(async () => { throw new Error("boom"); });
     render(<QuestionMediaEditor question={withImage()} onChange={onChange} requestQuestionImage={requestQuestionImage} />);
     fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" }));
+    await answerDialog("إنشاء واستبدال");
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -89,15 +93,20 @@ describe("QuestionMediaEditor — AI generation", () => {
     const requestQuestionImage = vi.fn(async () => ({ origin: "ai-generated", dataUrl } as BuilderImageAsset));
     render(<QuestionMediaEditor question={withImage({ images: [{ dataUrl: "data:image/png;base64,LEG" }] })} onChange={onChange} requestQuestionImage={requestQuestionImage} />);
     fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" }));
+    await answerDialog("إنشاء واستبدال");
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(onChange).not.toHaveBeenCalled(); // no replace, images[] fallback untouched
   });
 
-  it("an existing image requires explicit replace intent (confirm=false → no request)", () => {
+  it("an existing image requires explicit replace intent (the shared dialog's «إبقاء الصورة» → no request)", async () => {
     const requestQuestionImage = vi.fn(async () => ({} as BuilderImageAsset));
-    window.confirm = vi.fn(() => false);
     render(<QuestionMediaEditor question={withImage()} onChange={() => {}} requestQuestionImage={requestQuestionImage} />);
     fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" }));
+    const dialog = await screen.findByRole("dialog", { name: "استبدال صورة السؤال" });
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(document.activeElement?.textContent).toBe("إبقاء الصورة");           // danger tone: focus starts on the safe choice
+    await answerDialog("إبقاء الصورة");
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(requestQuestionImage).not.toHaveBeenCalled();
   });
 
@@ -119,7 +128,9 @@ describe("QuestionMediaEditor — AI generation", () => {
     const onChange = vi.fn();
     render(<QuestionMediaEditor question={withImage()} onChange={onChange} requestQuestionImage={requestQuestionImage} />);
     fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" }));   // AI pending
+    await answerDialog("إنشاء واستبدال");
     fireEvent.click(screen.getByRole("button", { name: "🗑 إزالة الصورة" }));       // newer explicit remove
+    await answerDialog("إزالة الصورة");
     expect(onChange).toHaveBeenCalledWith({ image: { exists: false, visible: false, assets: [] }, images: [] });
     onChange.mockClear();
     resolve({ dataUrl: "data:image/png;base64,STALE" });                          // stale AI resolves

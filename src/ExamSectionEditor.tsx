@@ -3,6 +3,7 @@ import type { BuilderSection, GradingPolicy, AnswerUnit } from "./examTypes";
 import { GRADING_POLICY_LABELS } from "./examTypes";
 import { SECTION_PRESETS, gradingRuleExplanation, newQuestion, changeSectionPolicy } from "./examBuilderState";
 import { lazy, Suspense, useState } from "react";
+import { useConfirm } from "./ui/useConfirm";
 import type { BuilderQuestionType } from "./examTypes";
 // Phase 16A — the Question Type Palette is lazy (its own chunk); it hands back a KEY and the canonical factory creates the question.
 const QuestionTypePalette = lazy(() => import("./questionTypes/QuestionTypePalette"));
@@ -54,6 +55,7 @@ type Props = {
 };
 
 export default function ExamSectionEditor(props: Props) {
+  const { confirm, confirmDialog } = useConfirm();   // 21E.1 — the shared accessible confirmation (never window.confirm)
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Phase 19G — when the palette was opened from a scenario, the picked question is created INSIDE that scenario (after its last member) and linked.
   const [paletteFor, setPaletteFor] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export default function ExamSectionEditor(props: Props) {
 
   return (
     <section className="sb-section">
+      {confirmDialog}
       <header className="sb-section-head">
         <div className="sb-row-between">
           <span className="sb-section-eyebrow">القسم {index + 1}</span>
@@ -86,13 +89,13 @@ export default function ExamSectionEditor(props: Props) {
 
         <input className="sb-input sb-title-input" value={section.title} placeholder="عنوان القسم" onChange={e => patch({ title: e.target.value })} disabled={disabled} />
         <div className="sb-template-controls">
-          <select className="sb-input sb-input-sm" value="" aria-label="قوالب تعليمات القسم" disabled={disabled} onChange={e => {
+          <select className="sb-input sb-input-sm" value="" aria-label="قوالب تعليمات القسم" disabled={disabled} onChange={async e => {
             // Roadmap #17 — section instruction template = plain TEXT only. It sets section.instructions and
             // NEVER touches gradingPolicy / requiredAnswers / maxMarks / answerUnit (grading stays structured).
             const t = findSectionInstructionTemplate(e.target.value);
             e.target.value = "";
             if (!t) return;
-            if ((section.instructions ?? "").trim() && !window.confirm("سيستبدل هذا القالب تعليمات القسم الحالية. هل تريد المتابعة؟")) return;
+            if ((section.instructions ?? "").trim() && !(await confirm({ title: "استبدال تعليمات القسم", message: "سيستبدل هذا القالب تعليمات القسم الحالية. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات" }))) return;
             patch({ instructions: t.text });
           }}>
             <option value="">قوالب تعليمات القسم…</option>

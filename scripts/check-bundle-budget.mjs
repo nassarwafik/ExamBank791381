@@ -215,6 +215,9 @@ function main() {
   const portalChunks = all.filter(f => /^StudentPortal-[^.]+\.js$/.test(f));
   if (!portalChunks.length) failures.push("no StudentPortal-*.js lazy chunk was emitted (is StudentPortal imported statically again in App.tsx?)");
   for (const f of portalChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
+  // 21E.1 — the shared dialog layer (Dialog / ConfirmDialog / focus trap) opens on demand. Startup modules (App.tsx) confirm through
+  // useDeferredConfirm and load their own dialogs lazily, so no initial-graph file may carry the dialog primitive's markup.
+  for (const f of initial) if (read(f).includes("eb-dialog-backdrop")) failures.push(`${f} (initial) contains the dialog layer (eb-dialog-backdrop) — confirm through useDeferredConfirm / a lazy Dialog in startup modules`);
 
   for (const f of initial) {
     const src = read(f);

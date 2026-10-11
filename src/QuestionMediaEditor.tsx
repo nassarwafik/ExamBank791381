@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useConfirm } from "./ui/useConfirm";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import {
   IMAGE_ACCEPT_ATTR, MEDIA_MSG, readImageFile, aiRequestQuestion,
@@ -35,6 +36,7 @@ type Props = {
 };
 
 export default function QuestionMediaEditor({ question, onChange, disabled, requestQuestionImage, onBusyChange, mediaPending }: Props) {
+  const { confirm, confirmDialog } = useConfirm();   // 21E.1 — the shared accessible confirmation (never window.confirm)
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -83,7 +85,8 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
   async function onGenerate() {
     if (locked || inFlight.current || !requestQuestionImage) return; // synchronous single-flight (incl. across remounts)
     // An existing image is NEVER silently overwritten — require explicit replacement intent.
-    if (present && !window.confirm("سيتم إنشاء صورة جديدة واستبدال الصورة الحالية لهذا السؤال. هل تريد المتابعة؟")) return;
+    if (present && !(await confirm({ title: "استبدال صورة السؤال", message: "سيتم إنشاء صورة جديدة واستبدال الصورة الحالية لهذا السؤال. هل تريد المتابعة؟", confirmLabel: "إنشاء واستبدال", cancelLabel: "إبقاء الصورة", tone: "danger" }))) return;
+    if (inFlight.current) return;                                     // a second click while the confirmation was open
     inFlight.current = true;
     onBusyChange?.(true);
     const token = nextOp();
@@ -107,9 +110,9 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
     }
   }
 
-  function onRemove() {
+  async function onRemove() {
     if (locked || !present) return;
-    if (!window.confirm("سيتم إزالة صورة هذا السؤال. هل تريد المتابعة؟")) return;
+    if (!(await confirm({ title: "إزالة صورة السؤال", message: "سيتم إزالة صورة هذا السؤال. هل تريد المتابعة؟", confirmLabel: "إزالة الصورة", cancelLabel: "إبقاء الصورة", tone: "danger" }))) return;
     nextOp(); // supersede any in-flight AI/upload so a late result cannot re-add the removed image
     onChange(removeImagePatch());
     setNotice(""); setError("");
@@ -124,6 +127,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
 
   return (
     <div className="sb-media" dir="rtl">
+      {confirmDialog}
       <div className="sb-media-head">
         <span className="sb-media-title">صورة السؤال</span>
         {busy && <span className="sb-media-busy" role="status">{notice || MEDIA_MSG.generating}</span>}

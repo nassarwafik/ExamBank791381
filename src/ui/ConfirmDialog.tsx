@@ -47,3 +47,6 @@ export function ConfirmDialog({ open, options, onResolve }: { open: boolean; opt
     </Dialog>
   );
 }
+
+// 21E.1 — default export for the lazily loaded copy in useDeferredConfirm (React.lazy needs a default export); named export unchanged.
+export default ConfirmDialog;

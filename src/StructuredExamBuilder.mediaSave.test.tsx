@@ -67,7 +67,9 @@ const saveBlocked = () => btn(DRAFT).disabled && btn(FINAL).disabled;
 const imgIn = (e: StructuredExam | null | undefined, id: string) => e?.sections[0].questions.find(x => x.examQuestionId === id)?.image?.assets?.[0]?.dataUrl;
 const clickSave = async (name: string) => { await act(async () => { fireEvent.click(btn(name)); }); };
 
-beforeEach(() => { window.confirm = vi.fn(() => true); h.saves = []; hold.on = false; hold.settle = null; });
+// 21E.1 — confirmations go through the shared ConfirmDialog: press its button (never window.confirm).
+const answerDialog = async (label: string) => { const b = await screen.findByRole("button", { name: label }); await act(async () => { fireEvent.click(b); }); };
+beforeEach(() => { h.saves = []; hold.on = false; hold.settle = null; });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("Phase 5B — saving is blocked while media is pending", () => {
@@ -186,7 +188,8 @@ describe("Phase 5B — single-flight PER QUESTION survives collapse/remount", ()
     expect(imgIn(h.latest, "qA")).toBe(IMG_A);
     const again = screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" }) as HTMLButtonElement;
     expect(again.disabled).toBe(false);                                          // controls available again
-    fireEvent.click(again);                                                      // #2 starts normally
+    fireEvent.click(again);                                                      // #2 starts normally (replacement → shared dialog)
+    await answerDialog("إنشاء واستبدال");
     expect(req).toHaveBeenCalledTimes(2);
     await act(async () => { calls[1]({ dataUrl: IMG_B }); });
     expect(imgIn(h.latest, "qA")).toBe(IMG_B);                                   // newest result is final
@@ -199,6 +202,7 @@ describe("Phase 5B — single-flight PER QUESTION survives collapse/remount", ()
     withImg.sections[0].questions[0] = { ...withImg.sections[0].questions[0], image: { exists: true, visible: true, assets: [{ dataUrl: IMG_B }] } };
     render(<Host req={req as never} initial={withImg} />);
     fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" })); // replacement pending on qA
+    await answerDialog("إنشاء واستبدال");
     fireEvent.click(screen.getAllByTitle("طيّ")[0]);
     fireEvent.click(screen.getAllByTitle("فتح")[0]);
     for (const name of ["🗑 إزالة الصورة", "🔄 استبدال صورة", "👁 إخفاء الصورة", "✨ إنشاء صورة جديدة"]) {
@@ -209,6 +213,7 @@ describe("Phase 5B — single-flight PER QUESTION survives collapse/remount", ()
     await act(async () => { calls[0]({ dataUrl: IMG_A }); });
     expect(imgIn(h.latest, "qA")).toBe(IMG_A);                                   // replacement landed
     fireEvent.click(screen.getByRole("button", { name: "🗑 إزالة الصورة" }));    // now allowed
+    await answerDialog("إزالة الصورة");
     expect(h.latest!.sections[0].questions[0].image?.exists).toBe(false);        // and nothing can undo it
   });
 });
@@ -221,9 +226,11 @@ describe("Phase 5B — the SAME editor instance keeps its approved stale-guard b
     withImg.sections[0].questions[0] = { ...withImg.sections[0].questions[0], image: { exists: true, visible: true, assets: [{ dataUrl: IMG_B }] } };
     render(<Host req={req as never} initial={withImg} />);
     fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" })); // own request pending
+    await answerDialog("إنشاء واستبدال");
     const remove = screen.getByRole("button", { name: "🗑 إزالة الصورة" }) as HTMLButtonElement;
     expect(remove.disabled).toBe(false);                                         // own op → not locked
     fireEvent.click(remove);
+    await answerDialog("إزالة الصورة");
     expect(h.latest!.sections[0].questions[0].image?.exists).toBe(false);
     await act(async () => { calls[0]({ dataUrl: IMG_A }); });                    // stale own result
     expect(h.latest!.sections[0].questions[0].image?.exists).toBe(false);        // discarded (opSeq)
