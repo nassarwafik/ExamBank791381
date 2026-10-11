@@ -19,7 +19,8 @@ const {normalizeEndReason}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {recordEventSafely}=require("../lib/notification-events");
 // Phase 17E-D — the ONE teacher-safe coding evidence projection (published snapshot + stored attempt; never internal identifiers).
-const {teacherCodingEvidence}=require("../lib/coding/official-grading");
+const {teacherCodingEvidence,legacyAutoGradingWithhold}=require("../lib/coding/official-grading");
+const crypto=require("crypto");
 // Phase 19F — a coding@3 (locked template) answer is shown to the teacher as the program the SERVER reconstructs from the PUBLISHED
 // template and the stored gap values (the same shared binding the official grading dispatches); a refusal is reported, never guessed.
 const {bindCodingTemplateAnswerToQuestion}=require("../lib/shared-finalization/codingQuestion");
@@ -77,6 +78,11 @@ function reviewFacts(attempt){
  for(const [id,v] of Object.entries(o))if(v&&String(v.comment||"").trim())comments[id]=String(v.comment).trim();
  return {finalized:!!(attempt&&attempt.finalized),score:round(attempt&&attempt.score),feedback:String(attempt&&attempt.teacherFeedback||"").trim(),comments};
 }
+// FEATURE-004 RF1 — the identity of ONE committed review transition for the notification dedupe key: the timestamp alone collided for two
+// DISTINCT commits inside one millisecond (a CI runner, two quick saves), silently dropping the second notification. The key now also
+// binds the student-facing facts before and after the commit, so every real change is its own key while a retried write of the SAME
+// committed transition still deduplicates (the facts of a no-op re-save never reach the store: reviewChange is not meaningful).
+function reviewTransitionHash(before,after){return crypto.createHash("sha256").update(JSON.stringify([before,after])).digest("hex").slice(0,16)}
 function reviewChange(before,after){
  const becameFinal=!before.finalized&&after.finalized;
  const scoreChanged=before.score!==after.score;
@@ -140,7 +146,7 @@ async function handler(request,deps={},obs=null){
   const reviewedAttempt=(Array.isArray(existingSubmission.attempts)?existingSubmission.attempts:[]).find(x=>Number(x.attemptNumber)===attemptNumber);
   const partOverrides=reviewedAttempt?compositePartOverrides(reviewAssignment.examSnapshot,reviewedAttempt,incoming):{entries:new Map()};
   if(partOverrides.error)return {status:400,jsonBody:{ok:false,error:partOverrides.error.message,code:partOverrides.error.code,questionId:partOverrides.error.questionId,...(partOverrides.error.criterionId?{criterionId:partOverrides.error.criterionId}:{})}};
-  let resultOut=null,appliedCount=0,change=null,appliedIds=[];
+  let resultOut=null,appliedCount=0,change=null,appliedIds=[],factsBeforeOut=null,factsAfterOut=null,markWithheld=false;
   try{
    await mut(c,name,current=>{
     if(!current){const err=new Error("التسليم غير موجود.");err.httpStatus=404;throw err}
@@ -153,7 +159,11 @@ async function handler(request,deps={},obs=null){
     for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;const rg=rubric.grades.get(String(questionId));attempt.manualOverrides[String(questionId)]=rg?{score:round(clamp(rg.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt,rubric:rg.rubric}:{score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId))}
     for(const [key,e] of partOverrides.entries){const cap=compositePartCap(attempt,key);if(!(cap>0))continue;const value=incoming[key];attempt.manualOverrides[key]={score:round(clamp(e.score,0,cap)),comment:String(value.comment||"").trim(),reviewedAt,...(e.rubric?{rubric:e.rubric}:{})};appliedCount++;appliedIds.push(key)}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttemptGrades(attempt);
-    change=reviewChange(factsBefore,reviewFacts(attempt));
+    factsBeforeOut=factsBefore;factsAfterOut=reviewFacts(attempt);change=reviewChange(factsBefore,factsAfterOut);
+    // FEATURE-004 RF1 — the student's RELEASE state of the mark: while official coding grading is still open, or a compile error awaits the
+    // teacher (reviewRequired), the results page withholds the headline mark (student-submission `autoGradingPending`), so the
+    // notification of this commit must not disclose it either. Decided on the attempt version this CAS attempt commits.
+    markWithheld=legacyAutoGradingWithhold(attempt);
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;
     resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:attempt.teacherFeedback};
     return current;
@@ -170,7 +180,7 @@ async function handler(request,deps={},obs=null){
   // Phase 6D — ONE coalesced personal notification per meaningful save (became final / score changed / new feedback);
   // an identical re-save changes nothing and notifies nothing. Secondary: never fails the review.
   if(change&&change.meaningful&&resultOut){
-   await recordEventSafely(c,{scope:"student",studentId,type:"assignment_reviewed",dedupeKey:"review:"+assignmentId+":"+attemptNumber+":"+reviewedAt,data:{assignmentId,assignmentTitle:reviewAssignment.title,attemptNumber,becameFinal:change.becameFinal,scoreChanged:change.scoreChanged,feedbackChanged:change.feedbackChanged,finalized:!!resultOut.finalized,percentage:resultOut.percentage}},deps,obs);
+   await recordEventSafely(c,{scope:"student",studentId,type:"assignment_reviewed",dedupeKey:"review:"+assignmentId+":"+attemptNumber+":"+reviewedAt+":"+reviewTransitionHash(factsBeforeOut,factsAfterOut),data:{assignmentId,assignmentTitle:reviewAssignment.title,attemptNumber,becameFinal:change.becameFinal,scoreChanged:change.scoreChanged,feedbackChanged:change.feedbackChanged,finalized:!!resultOut.finalized,percentage:markWithheld?null:resultOut.percentage,score:markWithheld?null:resultOut.score,totalMarks:resultOut.totalMarks}},deps,obs);
   }
   if(resultOut?.finalized){
    await ach(c,{classId:reviewAssignment.classId,studentId,studentDisplayName:reviewStudent.displayName,assignmentId,assignmentTitle:reviewAssignment.title,percentage:resultOut.percentage,shareAchievements:reviewStudent.shareAchievements});

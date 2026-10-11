@@ -301,3 +301,32 @@ describe("client parsing + presentation units", () => {
     expect(mailCount()).toBe("1");
   });
 });
+
+// FEATURE-004 — the review notification carries the UPDATED grade and reads as the owner's sentence; old events (no grade) keep the 6D wording.
+describe("FEATURE-004 grade-change wording", () => {
+  const base = { id: "i", createdAt: "2026-10-11T06:00:00.000Z", unread: true, type: "assignment_reviewed", assignmentId: "a", assignmentTitle: "الشبكات", becameFinal: true, scoreChanged: true, feedbackChanged: false, finalized: true, percentage: 89 } as const;
+  it("final grade change → «تم تحديث علامتك في امتحان «…»، وأصبحت علامتك 89/100.»", () => {
+    const p = presentNotification({ ...base, score: 89, totalMarks: 100 } as NotificationItem);
+    expect(p.title).toBe("تم تحديث علامتك");
+    expect(p.preview).toBe("تم تحديث علامتك في امتحان «الشبكات»، وأصبحت علامتك 89/100.");
+  });
+  it("a not-yet-final grade is worded as PROVISIONAL (RF1), like the results page; a new note is mentioned; the automatic variant has its own title", () => {
+    const provisional = presentNotification({ ...base, becameFinal: false, finalized: false, percentage: null, score: 10, totalMarks: 20, feedbackChanged: true } as NotificationItem);
+    expect(provisional.title).toBe("تم تحديث علامتك المؤقتة");
+    expect(provisional.preview).toBe("تم تحديث علامتك المؤقتة في امتحان «الشبكات»، وهي الآن 10/20 بانتظار اكتمال التصحيح. مع ملاحظة جديدة من المعلم.");
+    expect(provisional.preview).not.toContain("أصبحت علامتك");
+    // RF1 — a WITHHELD mark (coding grading open / compile review): the event carries no score → no number is ever worded
+    const withheld = presentNotification({ ...base, becameFinal: false, finalized: false, percentage: null, score: null, totalMarks: 12 } as NotificationItem);
+    expect(withheld.preview).not.toMatch(/[0-9]/);
+    expect(withheld.title).toBe("تم تصحيح واجبك");
+    expect(presentNotification({ ...base, score: 8.5, totalMarks: 10, automatic: true } as NotificationItem).title).toBe("اكتمل تصحيح امتحانك");
+  });
+  it("without a grade on the event (old events, feedback-only reviews) the 6D wording is unchanged; the validator admits the new numbers and drops junk", () => {
+    expect(presentNotification({ ...base } as NotificationItem).title).toBe("تم تصحيح واجبك");
+    expect(presentNotification({ ...base, score: null, totalMarks: 10, becameFinal: false, scoreChanged: false, feedbackChanged: true } as NotificationItem).title).toBe("لديك ملاحظة جديدة من المعلم");
+    const item = notificationItemOf({ id: "x", type: "assignment_reviewed", assignmentId: "a", score: 7, totalMarks: "10", studentId: "leak" }) as Record<string, unknown>;
+    expect(item.score).toBe(7);
+    expect(item.totalMarks).toBeNull();
+    expect("studentId" in item).toBe(false);
+  });
+});
