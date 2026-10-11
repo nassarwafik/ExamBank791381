@@ -1,6 +1,7 @@
 import type { SmartSimReviewDetailsProps } from "../trustedSim/smartSimUiRegistry";
-import { rxnContext, validateRxnConfig } from "../chemistryReactionsModel";
+import { rxnContext, type RxnConfigV1 } from "../chemistryReactionsModel";
 import { studentCoefficients } from "../chemistryReactionsPlugin";
+import { resolveSmartSimPlugin } from "../trustedSimPlugins";
 import { conservationTable, equationText, termText } from "../chemistry/reactions";
 import { REACTION_FAMILY_LABEL, REACTION_ROLE_LABEL, type ReactionFamily } from "../chemistry/reactionCatalog";
 import ConservationPanel from "./ConservationPanel";
@@ -8,13 +9,15 @@ import "../chemistryStructure/chem.css";
 import "./rxn.css";
 
 // Phase 21D-D.2 — chemistryReactions@1 review details (lazy, teacher only): the student's SERVER-derived equation (given coefficients
-// included), its atom-conservation table and the saved classifications and selections, as text. Views were never recorded.
+// included), its atom-conservation table and the saved classifications and selections, as text. Views were never recorded. The config is
+// read through the REGISTERED plugin (the authority the server and the workspace use), which also keeps the chemistry modules in the
+// lazy plugin chunk instead of a separately preloaded one.
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
 export default function RxnReview({ config, state }: SmartSimReviewDetailsProps) {
-  const r = validateRxnConfig(config);
-  if (!r.ok) return null;
-  const cfg = r.config, ctx = rxnContext(cfg), st = isObj(state) ? state : {};
+  const r = resolveSmartSimPlugin("chemistryReactions", 1)?.validateConfig(config);
+  if (!r?.ok) return null;
+  const cfg = r.config as RxnConfigV1, ctx = rxnContext(cfg), st = isObj(state) ? state : {};
   const coefficients = isObj(st.coefficients) ? (st.coefficients as Record<string, number>) : {};
   const classes = isObj(st.classifications) ? st.classifications : {}, sels = isObj(st.selections) ? st.selections : {};
   const coeffs = studentCoefficients({ coefficients }, cfg), table = conservationTable(ctx.reaction, coeffs);

@@ -38,7 +38,8 @@
 //  17. (Phase 21D-D.1) the chemistry simulation UI (workspace / 3D molecule / periodic table / editor / review) reaches the initial graph or the
 //      Student Portal's static closure, or the trusted chemistry core reaches the initial graph (signatures, each required to exist);
 //      (Phase 21D-D.2) the same for the reactions simulation (equation / conservation table / particle picture / editor / review) and the
-//      reaction engine;
+//      reaction engine; and the trusted chemistry core is emitted anywhere but the lazy `trustedSimPlugins` chunk (a separate chunk is
+//      listed in the entry's preload map — the initial graph grows — and fetched as an extra request with every SmartSim);
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -306,6 +307,12 @@ function main() {
   for (const f of portalClosure) {
     const hit = CHEMISTRY_UI_SIGNATURES.filter(sig => read(f).includes(sig));
     if (hit.length) failures.push(`${f} statically exposes the chemistry simulation UI on a student path without chemistry (${hit.join(", ")})`);
+  }
+  // Phase 21D-D.2 — the core rides the lazy plugin-registry chunk. A chemistry UI entry that reaches the core without reaching the registry
+  // makes the bundler split the core into its own chunk, which the entry's preload map then names (the initial graph grows).
+  for (const sig of CHEMISTRY_CORE_SIGNATURES) {
+    const stray = all.filter(f => read(f).includes(sig) && !/^trustedSimPlugins-[^.]+\.js$/.test(f));
+    if (stray.length) failures.push(`chemistry core "${sig}" is emitted outside the lazy trustedSimPlugins chunk (${stray.join(", ")}) — every chemistry UI entry must reach the core through the plugin registry`);
   }
   const chemistryChunks = all.filter(f => [...CHEMISTRY_UI_SIGNATURES, ...CHEMISTRY_CORE_SIGNATURES].some(sig => read(f).includes(sig)));
   console.log(`Chemistry simulation payload found in: ${chemistryChunks.join(", ") || "(none)"} — ${chemistryChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}; UI never in the Student Portal static closure`);
