@@ -211,6 +211,14 @@ describe("21D-D.3 server grading — derived answers, explicit precision, no cli
     // methyl orange changes about 0.6 mL early in this dilute titration: not suitable
     expect(passed(grade(t, [pick("suitable", "methylOrange", "phenolphthalein", "bromothymolBlue")]))).toEqual([]);
   });
+  it("review text names indicators, solutions and trials in Arabic — never a raw catalog id", () => {
+    const t = unknownTitrationTemplate(), e = grade(t, [pick("suitable", "methylOrange", "phenolphthalein")]);
+    const suitable = e.checks.find(c => c.id === "c-suitable")!;
+    expect(suitable).toMatchObject({ expected: "الفينولفثالين، أزرق البروموثيمول", actual: "الميثيل البرتقالي، الفينولفثالين", passed: false });
+    expect(expectedChemLabText(cfgOf(t), "suitable")).toBe("الفينولفثالين، أزرق البروموثيمول");
+    expect(grade(phCompareTemplate(), [pick("lowest", "A")]).checks.find(c => c.id === "c-lowest")).toMatchObject({ expected: "المحلول A — HCl ‏0.010 mol/L", passed: true });
+    expect(grade(rateTemplate(), [pick("fastest", "t1")]).checks.find(c => c.id === "c-fastest")).toMatchObject({ expected: "التجربة 3: ‏25 °C مع حافز", actual: "التجربة 1: ‏25 °C دون حافز" });
+  });
   it("Lab D: half-life ln 2 / k = 347 s, rate ratio e^{(Ea/R)(1/T₁ − 1/T₂)} = 2.7, the catalysed trial is fastest", () => {
     const t = rateTemplate(), runs = ["t1", "t2", "t3"].map(id => ({ type: "rate.run", trialId: id }));
     expect(grade(t, [...runs, num("half", "347", "s"), num("ratio", "2.7", "1"), pick("fastest", "t3"), pick("cat", "increase")])).toMatchObject({ score: 10, correct: true });

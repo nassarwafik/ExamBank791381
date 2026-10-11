@@ -20,6 +20,7 @@ import { labUnit, toCanonical, fromCanonical, type LabDimension } from "./chemis
 import { answerTolerance, formatAtPrecision, withinTolerance } from "./chemistry/lab/precision";
 import { isBalanceMass, requiredAliquot, requiredMass } from "./chemistry/lab/solutions";
 import { BURETTE, isBuretteStep } from "./chemistry/lab/titration";
+import { indicatorById } from "./chemistry/lab/acidBase";
 import { isPlainObject } from "./trustedSimVocabulary";
 import type { SmartSimCheckBase, SmartSimCheckOutcome, SmartSimIssue, SmartSimPlugin } from "./trustedSimRegistry";
 import type { SmartSimPluginDescriptorV1 } from "./trustedSimDescriptor";
@@ -190,10 +191,12 @@ export function correctChoice(c: ChemLabConfigV1, t: ChoiceTask): string[] | nul
   const q = choiceSpec(c.experiment.kind, t.question), r = q ? q.correct(c, t) : null;
   return r && r.ok ? r.correct : null;
 }
-const optionText = (c: ChemLabConfigV1, o: string): string => {
+/** The Arabic text of a choice option: a solution / trial label, an indicator name or a fixed option label — never a raw id. */
+export const optionText = (c: ChemLabConfigV1, o: string): string => {
   const e = c.experiment;
   if (e.kind === "ph") { const s = e.solutions.find(x => x.id === o); if (s) return s.label; }
   if (e.kind === "rate") { const t = e.trials.find(x => x.id === o); if (t) return t.label; }
+  if (e.kind === "titration" && e.indicators.includes(o)) return indicatorById(o)!.nameAr;
   return CHOICE_OPTION_LABEL[o] ?? o;
 };
 const fmtQ = (v: Q, digits = 4): string => { const n = Number(toFixed(v, 12)); return n === 0 ? "0" : String(Number(n.toPrecision(digits))); };

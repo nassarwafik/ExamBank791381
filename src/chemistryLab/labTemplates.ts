@@ -12,7 +12,7 @@ const check = (taskId: string, kind: ChemLabCheckSpec["kind"], label: string, we
 export const solidPrepareTemplate = (): ChemLabTemplate => ({
   id: "solidPrepare", title: "تحضير محلول قياسي من مادة صلبة", objective: "حساب الكتلة اللازمة m = c·V·M ووزنها وإكمال الحجم إلى العلامة، ثم حساب تركيز المحلول المحضّر.",
   config: {
-    v: 1, experiment: { kind: "solutions", solute: "NaCl", source: "solid", stock: null, flasks: [100, 250], pipettes: [] }, view: { readouts: false, graph: true },
+    v: 1, experiment: { kind: "solutions", solute: "NaCl", source: "solid", stock: null, flasks: [100, 250], pipettes: [] }, view: { readouts: false, graph: false },
     tasks: [
       { id: "prep", label: "حضّر 250 mL من محلول كلوريد الصوديوم تركيزه 0.100 mol/L.", kind: "prepare", concentration: "0.100", volume: 250 },
       { id: "conc", label: "احسب تركيز المحلول الذي حضّرته.", kind: "number", quantity: "preparedConcentration", subject: null, other: null, at: null, unit: "mol/L", precision: { significant: 3 } },

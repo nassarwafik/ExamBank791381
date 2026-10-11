@@ -6,6 +6,7 @@ exports.chemLabContext = chemLabContext;
 exports.preparedSolution = preparedSolution;
 exports.preparedMeetsTarget = preparedMeetsTarget;
 exports.validateChemLabConfig = validateChemLabConfig;
+exports.validateChemLabExperiment = validateChemLabExperiment;
 exports.emptyStateFor = emptyStateFor;
 const trustedSimVocabulary_1 = require("./trustedSimVocabulary");
 const exact_1 = require("./chemistry/lab/exact");
@@ -477,6 +478,10 @@ function validateExperiment(raw, add) {
     }
     CONTEXTS.set(e, built.context);
     return e;
+}
+function validateChemLabExperiment(raw) {
+    const issues = [], e = validateExperiment(raw, (code, message, path) => { issues.push({ code, message, path }); });
+    return e && !issues.length ? { ok: true, experiment: e } : { ok: false, issues };
 }
 function validateTasks(raw, c, add) {
     const path = P + ".tasks", L = exports.CHEM_LAB_LIMITS, kind = c.experiment.kind;

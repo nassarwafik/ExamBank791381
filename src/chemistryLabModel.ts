@@ -466,6 +466,11 @@ function validateExperiment(raw: unknown, add: Add): ChemLabExperiment | null {
   CONTEXTS.set(e, built.context);
   return e;
 }
+/** The experiment part alone, validated (authoring: option lists and derived data while the tasks are still being written). */
+export function validateChemLabExperiment(raw: unknown): { ok: true; experiment: ChemLabExperiment } | { ok: false; issues: ChemLabIssue[] } {
+  const issues: ChemLabIssue[] = [], e = validateExperiment(raw, (code, message, path) => { issues.push({ code, message, path }); });
+  return e && !issues.length ? { ok: true, experiment: e } : { ok: false, issues };
+}
 function validateTasks(raw: unknown, c: ChemLabConfigV1, add: Add): ChemLabTask[] | null {
   const path = P + ".tasks", L = CHEM_LAB_LIMITS, kind = c.experiment.kind;
   if (!Array.isArray(raw) || raw.length < 1 || raw.length > L.tasks) { add("LAB_TASKS_INVALID", "عدد المهام من 1 إلى " + L.tasks + ".", path); return null; }
