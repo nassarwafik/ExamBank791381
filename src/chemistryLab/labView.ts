@@ -89,6 +89,9 @@ export function trialConcentration(c: ChemLabConfigV1, trialId: string, t: numbe
   return ctx && tr ? concentrationAt(ctx.model.order, tr.k, tr.a0, t) : null;
 }
 
+/** An LTR quantity inside Arabic text ("24.50 mL", "pH = 2.00"), isolated so the bidi algorithm never reorders it into "mL 24.50". */
+export const ltr = (s: string): string => "\u2066" + s + "\u2069";
+
 // ── the observation record ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export type RecordRow = { kind: string; what: string; detail: string };
 /** One row per recorded observation. Measured values appear only where the teacher enabled readouts. */
@@ -96,10 +99,10 @@ export function recordRow(c: ChemLabConfigV1, o: ChemLabObservation): RecordRow 
   const e = c.experiment;
   switch (o.kind) {
     case "solution":
-      return { kind: "محلول محضّر", what: "دورق " + o.flask + " mL", detail: o.mass !== null ? "كتلة " + o.mass + " g" : o.pipette + " mL من المحلول الأم" };
+      return { kind: "محلول محضّر", what: "دورق " + ltr(o.flask + " mL"), detail: o.mass !== null ? "كتلة " + ltr(o.mass + " g") : ltr(o.pipette + " mL") + " من المحلول الأم" };
     case "meter": {
       const label = e.kind === "ph" ? e.solutions.find(x => x.id === o.solution)?.label ?? o.solution : o.solution, pH = phOf(c, o.solution);
-      return { kind: "قياس pH", what: label, detail: pH === null ? "—" : "pH = " + formatPh(pH) };
+      return { kind: "قياس pH", what: label, detail: pH === null ? "—" : ltr("pH = " + formatPh(pH)) };
     }
     case "indicator": {
       const label = e.kind === "ph" ? e.solutions.find(x => x.id === o.solution)?.label ?? o.solution : o.solution;
@@ -109,7 +112,7 @@ export function recordRow(c: ChemLabConfigV1, o: ChemLabObservation): RecordRow 
     case "reading": {
       const ind = o.indicator ? indicatorById(o.indicator) : undefined, pH = flaskPh(c, o.added);
       const colour = ind && pH !== null ? ind.nameAr + ": " + appearance(ind, pH).name : "بلا كاشف";
-      return { kind: "قراءة السحاحة", what: o.added + " mL", detail: colour + (c.view.readouts && pH !== null ? " · pH = " + formatPh(pH) : "") };
+      return { kind: "قراءة السحاحة", what: ltr(o.added + " mL"), detail: colour + (c.view.readouts && pH !== null ? " · " + ltr("pH = " + formatPh(pH)) : "") };
     }
     case "run": {
       const tr = e.kind === "rate" ? e.trials.find(x => x.id === o.trial) : undefined;

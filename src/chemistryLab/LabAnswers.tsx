@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ChemLabConfigV1, ChemLabStateV1, ChoiceTask, NumberTask, ObserveTask, PrepareTask } from "../chemistryLabModel";
 import { PRECISION_TEXT } from "../chemistry/lab/precision";
 import { indicatorById } from "../chemistry/lab/acidBase";
-import { answerUnits, optionText, preparedView, recordRow, studentDecimal, unitText } from "./labView";
+import { answerUnits, ltr, optionText, preparedView, recordRow, studentDecimal, unitText } from "./labView";
 
 // Phase 21D-D.3 — the ANSWERS of a chemistryLab@1 question and the observation RECORD (UI only). Observations (what the bench showed and the
 // student recorded), measurements (instrument readings) and answers (what the student submits for grading) are kept apart: only "save" in
@@ -61,8 +61,8 @@ function ChoiceAnswer({ cfg, task, chosen, disabled, name, onChoose }: { cfg: Ch
 }
 function PrepareStatus({ cfg, state, task }: { cfg: ChemLabConfigV1; state: ChemLabStateV1; task: PrepareTask }) {
   const v = preparedView(cfg, state), lab = state.lab;
-  const what = lab.kind === "solutions" ? (lab.mass !== null ? lab.mass + " g" : lab.pipette !== null ? lab.pipette + " mL من المحلول الأم" : null) : null;
-  const text = v.state === "pending" ? "لم يُكمل محلول إلى العلامة بعد." : v.state === "none" ? "—" : (what ?? "—") + " مكمّل إلى " + v.flask + " mL.";
+  const what = lab.kind === "solutions" ? (lab.mass !== null ? ltr(lab.mass + " g") : lab.pipette !== null ? ltr(lab.pipette + " mL") + " من المحلول الأم" : null) : null;
+  const text = v.state === "pending" ? "لم يُكمل محلول إلى العلامة بعد." : v.state === "none" ? "—" : (what ?? "—") + " مكمّل إلى " + ltr(v.flask + " mL") + ".";
   return (
     <div className="chem-task clab-answer" data-testid="clab-prepare" data-id={task.id}>
       <p className="chem-task-label"><strong>{task.label}</strong></p>

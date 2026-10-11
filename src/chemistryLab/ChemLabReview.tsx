@@ -2,7 +2,7 @@ import type { SmartSimReviewDetailsProps } from "../trustedSim/smartSimUiRegistr
 import type { ChemLabConfigV1, ChemLabStateV1 } from "../chemistryLabModel";
 import { resolveSmartSimPlugin } from "../trustedSimPlugins";
 import { indicatorById } from "../chemistry/lab/acidBase";
-import { answerUnits, experimentTitle, optionText, recordRow } from "./labView";
+import { answerUnits, experimentTitle, ltr, optionText, recordRow } from "./labView";
 import "../chemistryStructure/chem.css";
 import "./chemLab.css";
 
@@ -16,8 +16,8 @@ export default function ChemLabReview({ config, state }: SmartSimReviewDetailsPr
   if (!r?.ok || !isObj(state) || !isObj(state.lab) || !Array.isArray(state.observations) || !isObj(state.answers)) return null;
   const cfg = r.config as ChemLabConfigV1, st = state as unknown as ChemLabStateV1, lab = st.lab;
   const bench = lab.kind === "solutions"
-    ? (lab.flask === null ? "لم يُختر دورق" : "دورق " + lab.flask + " mL") + " · " + (lab.mass !== null ? lab.mass + " g" : lab.pipette !== null ? "ماصّة " + lab.pipette + " mL" : "لم تُضف المادة") + " · " + (lab.madeUp ? "مكمّل إلى العلامة" : "غير مكمّل")
-    : lab.kind === "titration" ? "قراءة السحاحة " + lab.added + " mL · الكاشف: " + (lab.indicator ? indicatorById(lab.indicator)?.nameAr ?? lab.indicator : "بلا كاشف") : null;
+    ? (lab.flask === null ? "لم يُختر دورق" : "دورق " + ltr(lab.flask + " mL")) + " · " + (lab.mass !== null ? ltr(lab.mass + " g") : lab.pipette !== null ? "ماصّة " + ltr(lab.pipette + " mL") : "لم تُضف المادة") + " · " + (lab.madeUp ? "مكمّل إلى العلامة" : "غير مكمّل")
+    : lab.kind === "titration" ? "قراءة السحاحة " + ltr(lab.added + " mL") + " · الكاشف: " + (lab.indicator ? indicatorById(lab.indicator)?.nameAr ?? lab.indicator : "بلا كاشف") : null;
   return (
     <div className="clab-review chem-review" data-testid="clab-review" dir="rtl">
       <p><strong>{experimentTitle(cfg)}</strong></p>

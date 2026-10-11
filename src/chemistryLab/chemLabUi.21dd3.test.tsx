@@ -42,6 +42,8 @@ const lastState = () => (answers[answers.length - 1] as { state?: { lab?: Record
 const click = (el: HTMLElement) => fireEvent.click(el);
 const button = (w: HTMLElement, name: RegExp) => within(w).getByRole("button", { name });
 const NO_VERDICT = /صحيح|خطأ في الإجابة|أحسنت|إجابة صحيحة|correct/i;
+/** Text without the invisible LTR isolates that keep "24.50 mL" from being reordered into "mL 24.50" inside Arabic text. */
+const plain = (s: string | null | undefined) => (s ?? "").replace(/[\u2066\u2069]/g, "");
 
 describe("21D-D.3 UI — the student host, Lab A (solutions)", () => {
   it("weigh, make up and record are semantic actions; the bench shows no computed concentration unless the teacher enables it", async () => {
@@ -62,9 +64,10 @@ describe("21D-D.3 UI — the student host, Lab A (solutions)", () => {
     click(within(w).getByTestId("clab-record"));
     expect(lastActions().slice(2)).toEqual([{ type: "solution.makeUp" }, { type: "lab.record" }]);
     expect(lastState()?.lab).toEqual({ kind: "solutions", flask: 250, mass: "1.46", pipette: null, madeUp: true });
-    expect(within(w).getAllByTestId("clab-record-row")[0].textContent).toMatch(/دورق 250 mL.*كتلة 1\.46 g/);
+    expect(plain(within(w).getAllByTestId("clab-record-row")[0].textContent)).toMatch(/دورق 250 mL.*كتلة 1\.46 g/);
+    expect(within(w).getAllByTestId("clab-record-row")[0].textContent).toContain("\u2066250 mL\u2069"); // an isolated LTR quantity
     expect(within(w).queryByTestId("clab-label-readout")).toBeNull(); // readouts off in this template
-    expect(within(w).getByTestId("clab-prepare").textContent).toMatch(/1\.46 g مكمّل إلى 250 mL/);
+    expect(plain(within(w).getByTestId("clab-prepare").textContent)).toMatch(/1\.46 g مكمّل إلى 250 mL/);
     expect(w.textContent).not.toMatch(NO_VERDICT);
   });
   it("a repeated setter replaces the previous one; readouts and the c–V graph appear only when enabled", async () => {
@@ -129,7 +132,7 @@ describe("21D-D.3 UI — Lab C (titration)", () => {
     expect(within(w).getByTestId("clab-burette-reading").textContent).toBe("25.50 mL");
     expect(within(w).getByTestId("clab-flask-colour").textContent).toBe("وردي");
     click(within(w).getByTestId("clab-record"));
-    expect(within(w).getAllByTestId("clab-record-row").map(r => r.textContent)).toEqual([expect.stringMatching(/21\.00 mL.*عديم اللون.*pH = 2\.06/), expect.stringMatching(/25\.50 mL.*وردي/)]);
+    expect(within(w).getAllByTestId("clab-record-row").map(r => plain(r.textContent))).toEqual([expect.stringMatching(/21\.00 mL.*عديم اللون.*pH = 2\.06/), expect.stringMatching(/25\.50 mL.*وردي/)]);
     expect(within(w).getByTestId("clab-plot-titration").querySelectorAll(".xp-dyn-event")).toHaveLength(2);
     click(button(w, /دورق جديد/));
     expect(within(w).getByTestId("clab-burette-reading").textContent).toBe("0.00 mL");
@@ -156,6 +159,7 @@ describe("21D-D.3 UI — Lab D (reaction rate) and answers", () => {
     expect(lastActions()).toEqual([{ type: "rate.run", trialId: "t1" }]);
     expect(within(t1).getByTestId("clab-trial-readout").textContent).toBe("0.100 mol/L");
     const n = answers.length;
+    expect(within(w).getByTestId("clab-time").getAttribute("dir")).toBe("ltr"); // runs like the graph's time axis, not mirrored by the RTL page
     fireEvent.change(within(w).getByTestId("clab-time"), { target: { value: "347" } });
     expect(answers).toHaveLength(n); // never recorded
     expect(within(t1).getByTestId("clab-trial-readout").textContent).toBe("0.0500 mol/L");
@@ -235,8 +239,8 @@ describe("21D-D.3 UI — registry, editor and review", () => {
     const t = unknownTitrationTemplate();
     render(<ChemLabReview config={t.config} details={{}} state={{ v: 1, lab: { kind: "titration", indicator: "phenolphthalein", added: "18.60" }, observations: [{ kind: "reading", added: "18.60", indicator: "phenolphthalein" }], answers: { suitable: { kind: "choice", options: ["phenolphthalein"] }, conc: { kind: "number", value: "0.00930", unit: "mol/L" } } }} />);
     const r = screen.getByTestId("clab-review");
-    expect(within(r).getByTestId("clab-review-bench").textContent).toMatch(/18\.60 mL · الكاشف: الفينولفثالين/);
-    expect(r.textContent).toMatch(/18\.60 mL.*الفينولفثالين: عديم اللون/); // pH 7.00 at equivalence: below phenolphthalein's range
+    expect(plain(within(r).getByTestId("clab-review-bench").textContent)).toMatch(/18\.60 mL · الكاشف: الفينولفثالين/);
+    expect(plain(r.textContent)).toMatch(/18\.60 mL.*الفينولفثالين: عديم اللون/); // pH 7.00 at equivalence: below phenolphthalein's range
     expect(within(r).getAllByTestId("clab-review-answer").map(x => x.textContent)).toEqual(["اكتب قراءة السحاحة النهائية (الحجم المضاف).—", "احسب تركيز الحمض.0.00930 mol/L", expect.stringMatching(/الفينولفثالين$/)]);
     cleanup();
     expect(render(<ChemLabReview config={t.config} details={{}} state={{ junk: true }} />).container.textContent).toBe("");

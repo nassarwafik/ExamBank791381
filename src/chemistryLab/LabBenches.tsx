@@ -273,7 +273,7 @@ export function RateBench({ cfg, state, disabled, act, recordFull }: BenchProps)
       </div>
       <label className="clab-field clab-time"><span>زمن المشاهدة t (ث) — للعرض فقط، لا يُحفظ</span>
         <span className="chem-row">
-          <input type="range" min={0} max={e.duration} step={stepT} value={t} onChange={ev => setT(Number(ev.target.value))} aria-valuetext={t + " s"} data-testid="clab-time" />
+          <input type="range" dir="ltr" min={0} max={e.duration} step={stepT} value={t} onChange={ev => setT(Number(ev.target.value))} aria-valuetext={t + " s"} data-testid="clab-time" />
           <span className="chem-ltr clab-num">t = {t} s</span>
         </span>
       </label>
