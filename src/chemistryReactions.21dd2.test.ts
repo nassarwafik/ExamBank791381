@@ -137,6 +137,10 @@ describe("21D-D.2 semantic actions and replay", () => {
     expect(r.ok && chemistryReactionsPluginV1.serializeState(r.state)).toBe('{"v":1,"coefficients":{"r1":1,"r2":2,"p2":2},"classifications":{"family":["combustion"]},"selections":{"fuel":["r1"]}}');
     const cleared = replay([coef("r1", 1), { type: "coefficient.clear", termId: "r1" }, coef("p1", 1), { type: "equation.reset" }, { type: "reaction.classify", taskId: "family", families: ["synthesis"] }, { type: "reaction.unclassify", taskId: "family" }, { type: "species.select", taskId: "fuel", termId: "r1" }, { type: "species.deselect", taskId: "fuel", termId: "r1" }]);
     expect(cleared.ok && cleared.state).toEqual(initialRxnState());
+    // the grade never depends on click order: terms selected backwards are stored in term order
+    const backwards = replaySmartSimActions(chemistryReactionsPluginV1, cfgOf(customAluminiumTemplate()), [{ type: "species.select", taskId: "elements", termId: "r2" }, { type: "species.select", taskId: "elements", termId: "r1" }]);
+    expect(backwards.ok && backwards.state).toMatchObject({ selections: { elements: ["r1", "r2"] } });
+    expect(grade(customAluminiumTemplate(), [{ type: "species.select", taskId: "elements", termId: "r2" }, { type: "species.select", taskId: "elements", termId: "r1" }]).checks.find(c => c.id === "elements")!.passed).toBe(true);
     const multi = replaySmartSimActions(chemistryReactionsPluginV1, cfgOf(precipitationTemplate()), [{ type: "reaction.classify", taskId: "families", families: ["doubleDisplacement", "precipitation"] }]);
     expect(multi.ok && multi.state).toMatchObject({ classifications: { families: ["doubleDisplacement", "precipitation"] } });
   });
@@ -224,6 +228,12 @@ describe("21D-D.2 server-side evaluation", () => {
     const partial = grade(waterTemplate(), [coef("r1", 2), coef("p1", 2)]);
     expect(partial.checks.map(c => c.passed)).toEqual([false, false, false]);
     expect(partial.checks[0].actual).toBe("2H₂ + ?O₂ → 2H₂O — ناقصة");
+    // an answer with no coefficients: every element and the charge read 0 = 0, yet no conservation check passes
+    const onlyFamily = grade(methaneTemplate(), [{ type: "reaction.classify", taskId: "family", families: ["combustion"] }]);
+    expect(onlyFamily.checks.map(c => [c.id, c.passed])).toEqual([["balanced", false], ["lowest", false], ["oxygen", false], ["family", true], ["fuel", false]]);
+    // one Fe²⁺ with the given Cr₂O₇²⁻: the charge reads +2 − 2 = 0 on the left and 0 on the right, but the equation is incomplete
+    const onlyRoles = grade(dichromateTemplate(), [coef("r1", 1), { type: "species.select", taskId: "oxidizer", termId: "r2" }]);
+    expect(onlyRoles.checks.map(c => [c.id, c.passed])).toEqual([["balanced", false], ["charge", false], ["lowest", false], ["oxidizer", true], ["reducer", false]]);
     const wrong = grade(waterTemplate(), [coef("r1", 1), coef("r2", 1), coef("p1", 1)]);
     expect(wrong.checks[0]).toMatchObject({ passed: false, actual: "1H₂ + 1O₂ → 1H₂O — غير موزونة", evidence: ["أكسجين O: 2 في المتفاعلات و1 في النواتج — يزيد في المتفاعلات بمقدار 1"] });
   });
