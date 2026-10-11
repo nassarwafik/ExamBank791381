@@ -52,7 +52,7 @@
 .review-question.rv-q.is-partial{ border-inline-start:4px solid #8b5cf6; }
 .review-question.rv-q.is-pending{ border-inline-start:4px solid var(--eb-warn); background:#fffdf8; }
 .review-question.rv-q.is-current{ box-shadow:0 0 0 2px var(--eb-primary), 0 8px 22px -20px rgba(15,23,42,.18); }
-.review-question.rv-q:focus{ outline:none; }
+.review-question.rv-q:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
 .rv-qmeta{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin-block-start:var(--eb-space-2); font-size:var(--eb-fs-13); color:var(--eb-muted); }
 .rv-qmeta .rv-mark{ font-variant-numeric:tabular-nums; font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
 .rv-choices{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
