@@ -23,7 +23,10 @@ const mutants = [
   // exact decimals
   M("E01-round-half-down", EX, "const r = cmp(rem, q(1n, 2n)) >= 0 ? whole + 1n : whole;", "const r = cmp(rem, q(1n, 2n)) > 0 ? whole + 1n : whole;", [...CORE, ...AUTH]),
   M("E02-exponent-bound", EX, "if (Math.abs(exp) > 30) return null;", "if (false) return null;", [...CORE, ...AUTH]),
-  M("E03-length-bound", EX, 'if (typeof raw !== "string" || raw.length > 32 || !DECIMAL_PATTERN.test(raw)) return null;', 'if (typeof raw !== "string" || !DECIMAL_PATTERN.test(raw)) return null;', [...CORE, ...AUTH]),
+  // (the 32-character pre-filter of parseDecimal is not mutated: DECIMAL_PATTERN itself matches at most 30 characters, so removing the
+  //  pre-filter is an EQUIVALENT mutant — classified so in the first campaign and replaced by the two digit-bound mutants below)
+  M("E03-integer-digits", EX, "(0|[1-9]\\d{0,11})", "(0|[1-9]\\d{0,12})", [...CORE, ...AUTH]),
+  M("E04-fraction-digits", EX, "(\\.\\d{1,12})?", "(\\.\\d{1,13})?", [...CORE, ...AUTH]),
   // the precision policy
   M("P01-full-unit-tolerance", PR, "max(mul(lastPlaceUnit(p, trusted), q(1n, 2n)), instrument)", "max(lastPlaceUnit(p, trusted), instrument)", [...CORE, ...AUTH]),
   M("P02-instrument-floor-ignored", PR, "max(mul(lastPlaceUnit(p, trusted), q(1n, 2n)), instrument)", "mul(lastPlaceUnit(p, trusted), q(1n, 2n))", [...CORE, ...AUTH]),

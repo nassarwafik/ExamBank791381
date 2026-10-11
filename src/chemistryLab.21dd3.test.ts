@@ -88,6 +88,13 @@ describe("21D-D.3 strict public configuration — refuse, never repair", () => {
     expect(codes({ ...t, experiment: { ...t.experiment, titrant: { species: "NaOH", concentration: "0.0500" } } })).toContain("LAB_TITRATION_EQUIVALENCE_RANGE");
     const u = clone(unknownTitrationTemplate().config) as Record<string, any>;
     expect(codes({ ...u, experiment: { ...u.experiment, analyte: { ...u.experiment.analyte, equivalence: "18.605" } } })).toContain("LAB_TITRATION_INVALID");
+    // an unknown analyte's concentration follows the balanced 2 : 1 ratio: 0.0200 M HCl × 25.00 mL = 0.500 mmol H⁺ = 0.250 mmol Ca(OH)₂ in
+    // 25.00 mL → 0.0100 mol/L (ignoring the ratio would give 0.0200 mol/L and a 50 mL equivalence volume beyond the burette)
+    const lime = validateChemLabConfig({ v: 1, experiment: { kind: "titration", analyte: { species: "CaOH2", volume: "25.00", concentration: null, equivalence: "25.00" },
+      titrant: { species: "HCl", concentration: "0.0200" }, indicators: ["phenolphthalein"] }, view: { readouts: false, graph: false },
+      tasks: [{ id: "c", label: "احسب تركيز ماء الجير.", kind: "number", quantity: "analyteConcentration", subject: null, other: null, at: null, unit: "mol/L", precision: { significant: 3 } }] });
+    expect(lime.ok).toBe(true);
+    expect(lime.ok && expectedChemLabText(lime.config, "c")).toMatch(/^0\.0100 mol\/L/);
   });
   it("Lab D: bounded temperatures, concentrations, k and Ea; a catalyst needs a defined effect", () => {
     const r = clone(rateTemplate().config) as Record<string, any>;
@@ -97,6 +104,14 @@ describe("21D-D.3 strict public configuration — refuse, never repair", () => {
     expect(codes({ ...r, experiment: { ...r.experiment, ea: "300" } })).toContain("LAB_RATE_INVALID");
     expect(codes({ ...r, experiment: { ...r.experiment, k25: "-2.0e-3" } })).toContain("LAB_DECIMAL_INVALID");
     expect(codes({ ...r, experiment: { ...r.experiment, order: 3 } })).toContain("LAB_RATE_INVALID");
+    // a time inside the observation window (inclusive) only — never extrapolated beyond it
+    const at = (v: string) => ({ ...r, tasks: [{ id: "a", label: "تركيز A", kind: "number", quantity: "concentrationAt", subject: "t1", other: null, at: v, unit: "mol/L", precision: { significant: 3 } }] });
+    expect(codes(at("1200"))).toEqual([]);
+    expect(codes(at("1500"))).toContain("LAB_TASK_AT_INVALID");
+    // two identical trials have the same initial rate: "the fastest" has no single answer and is refused
+    const twins = { ...r, experiment: { ...r.experiment, trials: [r.experiment.trials[0], { ...r.experiment.trials[0], id: "t9", label: "نسخة" }] },
+      tasks: [{ id: "f", label: "الأسرع", kind: "choice", question: "fastestTrial", subject: null, other: null, mode: "single", options: ["t1", "t9"] }] };
+    expect(codes(twins)).toContain("LAB_CHOICE_AMBIGUOUS");
   });
   it("tasks: declared quantities, units of the right dimension, a strict precision, valid references, ids unique, ≤ 8 tasks", () => {
     const c = base();
@@ -146,12 +161,19 @@ describe("21D-D.3 semantic actions — strict, bounded, never trusted beyond the
     expect(reset.ok && reset.state.lab).toEqual(emptyStateFor(tit).lab);
     expect(reset.ok && reset.state.observations).toHaveLength(1); // the notebook and the answers survive a bench reset
     expect(reset.ok && Object.keys(reset.state.answers)).toEqual(["reading"]);
+    // an empty flask cannot be "made up to the mark"; the record holds at most 24 observations
+    const empty = replayChemLab(solid, [{ type: "solution.flask", volume: 250 }, { type: "solution.makeUp" }]);
+    expect(empty.ok && empty.state.lab).toEqual({ kind: "solutions", flask: 250, mass: null, pipette: null, madeUp: false });
+    const many = replayChemLab(tit, Array.from({ length: 30 }, () => ({ type: "lab.record" })));
+    expect(many.ok && many.state.observations).toHaveLength(24);
   });
   it("answers are stored in task order and a cleared answer is gone; repeated observations are recorded once", () => {
     const r = replayChemLab(ph, [num("phY", "3", "pH"), pick("ppX", "base"), { type: "answer.clear", taskId: "phY" }, pick("btbY", "acid"),
       { type: "ph.indicator", solutionId: "X", indicatorId: "bromothymolBlue" }, { type: "ph.indicator", solutionId: "X", indicatorId: "bromothymolBlue" }]);
     expect(r.ok && Object.keys(r.state.answers)).toEqual(["ppX", "btbY"]);
     expect(r.ok && r.state.observations).toEqual([{ kind: "indicator", solution: "X", indicator: "bromothymolBlue" }]);
+    const meter = replayChemLab(cfgOf(phCompareTemplate()), [{ type: "ph.measure", solutionId: "A" }, { type: "ph.measure", solutionId: "A" }]);
+    expect(meter.ok && meter.state.observations).toEqual([{ kind: "meter", solution: "A" }]);
   });
 });
 
@@ -167,6 +189,8 @@ describe("21D-D.3 server grading — derived answers, explicit precision, no cli
     // a wrong preparation still earns the consistent calculation (1.50 g → 0.1027 M), not the preparation mark
     const off = grade(t, [{ type: "solution.flask", volume: 250 }, { type: "solution.mass", mass: "1.50" }, { type: "solution.makeUp" }, num("conc", "0.103", "mol/L")]);
     expect(passed(off)).toEqual(["c-conc"]);
+    // the right mass in the WRONG flask (100 mL instead of 250 mL) is not the requested solution
+    expect(passed(grade(t, [{ type: "solution.flask", volume: 100 }, { type: "solution.mass", mass: "1.46" }, { type: "solution.makeUp" }]))).toEqual([]);
     // nothing made up: no trusted value exists, nothing passes, no manual review
     expect(grade(t, [num("conc", "0.100", "mol/L")])).toMatchObject({ score: 0, manualReview: false });
     expect(grade(t, [])).toMatchObject({ score: 0, correct: false, manualReview: false });
@@ -198,6 +222,10 @@ describe("21D-D.3 server grading — derived answers, explicit precision, no cli
     expect(passed(grade(t, [num("veq", "25.08", "mL")]))).toEqual(["c-veq"]);
     expect(passed(grade(t, [num("veq", "25.15", "mL")]))).toEqual([]);
     expect(passed(grade(t, [num("veq", "0.02500", "L")]))).toEqual(["c-veq"]);
+    // readings on both sides of V_eq but more than 1.00 mL away do not bracket it; exactly 1.00 mL away does (inclusive)
+    const rec = (...vs: string[]) => vs.flatMap(v => [{ type: "titration.add", volume: v }, { type: "lab.record" }]);
+    expect(passed(grade(t, rec("20.00", "10.00")))).toEqual([]);
+    expect(passed(grade(t, rec("24.00", "2.00")))).toEqual(["c-bracket"]);
   });
   it("Lab C unknown analyte: the burette reading is the replayed volume (±0.05 mL); the concentration follows from V_eq (±0.10 mL titre)", () => {
     const t = unknownTitrationTemplate();

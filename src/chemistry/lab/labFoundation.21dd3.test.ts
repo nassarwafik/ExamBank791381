@@ -16,10 +16,13 @@ describe("21D-D.3 exact arithmetic — decisions never depend on floating point"
     expect(text(D("1.0e-5"), 6)).toBe("0.000010");
     expect(text(D("-3"), 0)).toBe("-3");
     expect(cmp(add(D("0.1"), D("0.2")), D("0.3"))).toBe(0); // exactly, unlike doubles
-    for (const bad of ["", " 1", "1 ", "+1", "1,5", "0x10", "Infinity", "NaN", "1e999", "1e31", "01", ".5", "5.", "1..2", "١٫٥", "1e", "--1", "1".repeat(40)]) {
+    for (const bad of ["", " 1", "1 ", "+1", "1,5", "0x10", "Infinity", "NaN", "1e999", "1e31", "01", ".5", "5.", "1..2", "١٫٥", "1e", "--1", "1".repeat(40), "1234567890123", "0.1234567890123"]) {
       expect(parseDecimal(bad), bad).toBeNull();
     }
     expect(parseDecimal(12 as unknown)).toBeNull();
+    // the bounds are exactly 12 integer and 12 fraction digits
+    expect(text(D("123456789012"), 0)).toBe("123456789012");
+    expect(text(D("0.123456789012"), 12)).toBe("0.123456789012");
   });
   it("rounds half AWAY from zero exactly at a boundary (2.675 → 2.68, where binary floating point gives 2.67)", () => {
     expect((2.675).toFixed(2)).toBe("2.67"); // the defect avoided
