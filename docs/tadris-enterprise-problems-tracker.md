@@ -8,7 +8,7 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 |---|---|---|---|---|---|
 | BUG-001 | 1 | Exam import → «رجوع» does nothing until a draft is saved | High (teacher blocked, work appears lost) | PR A — #293 | verified (Chromium 49/49 on the PR head; exact-head CI green) |
 | BUG-002 | 1 | Eight editor toolbar actions "do not respond" | High (features unreachable) | PR A — #293 | verified (Chromium 49/49 on the PR head; exact-head CI green) |
-| UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B — #294 (stacked on PR A) | in PR (Chromium 32/32, happy-dom 23) |
+| UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B — #294 | in PR — RF1 applied (attempt-switch guard, edit-preserving reload, review modes); Chromium + happy-dom re-certified |
 | FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C — #295 | in PR (API certification 7/7 through the real handlers, client 3/3) |
 | BRAND-005 | 4–5 | Complete Tadris+ branding | Medium | PR D — #296 | in PR (contract test + Chromium 27/27 on the production build) |
 | PWA-006 | 4–5 | Installed-app name and icon (desktop / Android / iOS) | Medium | PR D — #296 | in PR (manifest / icons certified in Chromium; device checklist pending with the owner) |

@@ -38,6 +38,41 @@ changed.**
 - Real Chromium: `scripts/check-grading-workspace-browser.mjs` + `browser-harness/grading-workspace.*` (in-page review API
   with the real projection shape): 32/32 — desktop 1280, laptop 1366×768, tablet 820×1180, phone 390×844 touch.
 
+## Review Fix 1 (independent review of head `0908235`)
+
+**Finding 1 — unsaved edits on attempt switch / reload.** The attempt tabs called `load(n)` directly, and every same-attempt
+reload (after a save, a coding regrade, the evidence block's refresh) rebuilt the inputs from the server and reset the baseline —
+both discarded typed marks silently. Fail-first (`src/review/reviewWorkspace.ux003.test.tsx` › RF1): on `0908235` the switch
+showed no confirmation (`Unable to find role="dialog" … تعديلات تصحيح غير محفوظة`). Fix:
+- `requestAttempt(n)` — the tabs go through the same guard as closing: with unsaved edits the project `ConfirmDialog` asks
+  («البقاء في هذه المحاولة» keeps the attempt *and* every edit; «الانتقال دون حفظ» loads the other attempt); without edits the
+  switch is immediate. Nothing is auto-saved.
+- `load()` of the **same** attempt merges instead of replacing: `mergeUnsavedEdits(prevBaseline, local, fresh)` (pure,
+  `src/review/reviewQuestionState.ts`) keeps every key whose local value differs from the baseline it was loaded from and takes
+  the server's value elsewhere; the baseline becomes the fresh server state, so `dirty` stays true exactly for the kept edits.
+  A different attempt starts clean.
+- A **successful save commits** the local state (baseline = saved snapshot) before the authoritative reload, so the dirty flag
+  resets accurately and a later switch does not ask. A failed save changes nothing (the inputs stay dirty).
+- The review API contract is untouched.
+
+**Finding 2 — misleading «تم التصحيح».** "Graded" meant "not pending", lumping automatically evaluated questions with saved
+teacher overrides. The state engine now reports a **review mode** on its own axis, separate from the answer outcome:
+
+| `mode` | Meaning | Label |
+|---|---|---|
+| `pending` | awaiting manual review (`autoGrade.manualReview`) | بانتظار المعلم |
+| `auto` | automatically evaluated, no override stored | تصحيح آلي |
+| `manual` | a teacher override is **stored** on the server (`manualScore` / rubric) | تصحيح يدوي محفوظ |
+| `draft` | the teacher typed a value that differs from what is stored — nothing saved yet | تعديل غير محفوظ |
+
+Every card shows a mode chip (`rv-mode`) next to the outcome badge; the filters are الكل / يحتاج إلى تصحيح يدوي / تم تصحيحه
+يدويًا / مُصحَّح آليًا / تعديلات غير محفوظة / إجابة صحيحة / إجابة خاطئة / إجابة جزئية; the summary cards and the navigator split
+the counts by mode (they partition the questions); the navigator's accessible names carry the mode. Outcome statuses
+(صحيحة / خاطئة / جزئية / لم يُجب / بانتظار) are unchanged. Tests: `reviewQuestionState.test.ts` › "review mode (RF1)" and
+"mergeUnsavedEdits"; `reviewWorkspace.ux003.test.tsx` › RF1 (attempt switch guard, cancel keeps edits, confirm switches, save
+resets the baseline; modes, counts, filters, draft transitions). Chromium: the harness now serves two attempts with per-attempt
+overrides and certifies the guard dialog on top of the review, cancel / confirm, the clean switch, and the mode chips / counts.
+
 ## Not in scope / follow-ups
 
 - Specialised review views (coding evidence, SmartSim, 3D, mesh, network, charts) keep their existing teacher renderers; they

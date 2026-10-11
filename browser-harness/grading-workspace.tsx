@@ -34,34 +34,41 @@ const AUTO: Record<string, Grade> = {
   q6: { score: 0, maxMarks: 1, manualReview: false, correct: false },
   q7: { score: 0, maxMarks: 3, manualReview: true, correct: false },
 };
-const overrides: Record<string, { score: number; comment: string }> = {};
-let teacherFeedback = "";
+// RF1 — TWO attempts per student (attempt 2 = a later, fully automatic attempt with no pending question) so the attempt-switch guard
+// and the mode counts can be certified; overrides and feedback are stored per attempt, exactly like the real submission document.
+const AUTO2: Record<string, Grade> = { ...AUTO, q3: { score: 5, maxMarks: 5, manualReview: false, correct: true }, q7: { score: 0, maxMarks: 3, manualReview: false, correct: false } };
+const overridesByAttempt: Record<number, Record<string, { score: number; comment: string }>> = { 1: {}, 2: { q2: { score: 1, comment: "نصف العلامة" } } };
+const feedbackByAttempt: Record<number, string> = { 1: "", 2: "" };
 const posts: unknown[] = [];
-function attemptView() {
+const autoOf = (n: number) => (n === 2 ? AUTO2 : AUTO);
+function attemptView(n: number) {
+  const auto = autoOf(n), overrides = overridesByAttempt[n];
   let score = 0, pending = 0;
-  for (const q of QUESTIONS) { const g = AUTO[q.questionId], o = overrides[q.questionId]; if (o) score += o.score; else { score += g.score; if (g.manualReview) pending += g.maxMarks; } }
-  const total = QUESTIONS.reduce((n, q) => n + q.marks, 0);
-  return { attemptNumber: 1, submittedAt: "2026-10-10T09:30:00.000Z", startedAt: "2026-10-10T09:00:00.000Z", endedAt: "2026-10-10T09:30:00.000Z", endReason: "submitted", timedOut: false, score, totalMarks: total, percentage: Math.round(score / total * 100), manualReviewMarks: pending, finalized: pending === 0, gradingStatus: pending === 0 ? "final" : "pendingReview" };
+  for (const q of QUESTIONS) { const g = auto[q.questionId], o = overrides[q.questionId]; if (o) score += o.score; else { score += g.score; if (g.manualReview) pending += g.maxMarks; } }
+  const total = QUESTIONS.reduce((s, q) => s + q.marks, 0);
+  const t = n === 2 ? "2026-10-11T09:00:00.000Z" : "2026-10-10T09:30:00.000Z";
+  return { attemptNumber: n, submittedAt: t, startedAt: t, endedAt: t, endReason: "submitted", timedOut: false, score, totalMarks: total, percentage: Math.round(score / total * 100), manualReviewMarks: pending, finalized: pending === 0, gradingStatus: pending === 0 ? "final" : "pendingReview" };
 }
-function reviewBody() {
-  const a = attemptView();
+function reviewBody(n: number) {
+  const a = attemptView(n), auto = autoOf(n), overrides = overridesByAttempt[n];
   return { ok: true, scenarios: [], assignment: { assignmentId: "a1", title: "امتحان الشبكات — الفصل الأول", totalMarks: a.totalMarks }, student: { studentId: "s1", studentName: "سارة أحمد", studentCode: "ST-1042" },
-    attempt: { ...a, teacherFeedback }, attempts: [a],
-    questions: QUESTIONS.map(q => { const g = AUTO[q.questionId], o = overrides[q.questionId]; const grade: Grade = o ? { ...g, score: o.score, manualScore: o.score, manualReview: false, reviewed: true, teacherComment: o.comment } : { ...g, reviewed: !g.manualReview };
+    attempt: { ...a, teacherFeedback: feedbackByAttempt[n] }, attempts: [attemptView(1), attemptView(2)],
+    questions: QUESTIONS.map(q => { const g = auto[q.questionId], o = overrides[q.questionId]; const grade: Grade = o ? { ...g, score: o.score, manualScore: o.score, manualReview: false, reviewed: true, teacherComment: o.comment } : { ...g, reviewed: !g.manualReview };
       return { ...q, options: q.options ?? [], fields: [], wordBank: [], parts: null, sectionId: "s1", autoGrade: grade, manualScore: o ? o.score : null, teacherComment: o ? o.comment : "" }; }) };
 }
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input), method = (init && init.method) || "GET";
   await new Promise(r => setTimeout(r, 40));
-  if (url.startsWith("/api/assignment-review") && method === "GET") return json(200, reviewBody());
+  if (url.startsWith("/api/assignment-review") && method === "GET") { const n = Number(new URL(url, location.origin).searchParams.get("attemptNumber") || 1); return json(200, reviewBody(n === 2 ? 2 : 1)); }
   if (url.startsWith("/api/assignment-review")) {
     const b = JSON.parse(String(init?.body || "{}")); posts.push(b);
     if (b.action !== "saveReview") return json(400, { ok: false, error: "Unsupported review action." });
-    for (const [id, v] of Object.entries(b.overrides || {})) { const g = AUTO[id]; const o = v as { score?: number; comment?: string }; if (!g || typeof o.score !== "number") continue; overrides[id] = { score: Math.min(g.maxMarks, Math.max(0, o.score)), comment: String(o.comment || "") }; }
-    teacherFeedback = String(b.teacherFeedback || "");
-    const a = attemptView();
-    return json(200, { ok: true, result: { attemptNumber: 1, score: a.score, totalMarks: a.totalMarks, percentage: a.percentage, manualReviewMarks: a.manualReviewMarks, finalized: a.finalized, gradingStatus: a.gradingStatus, teacherFeedback } });
+    const n = Number(b.attemptNumber) === 2 ? 2 : 1, auto = autoOf(n), overrides = overridesByAttempt[n];
+    for (const [id, v] of Object.entries(b.overrides || {})) { const g = auto[id]; const o = v as { score?: number; comment?: string }; if (!g || typeof o.score !== "number") continue; overrides[id] = { score: Math.min(g.maxMarks, Math.max(0, o.score)), comment: String(o.comment || "") }; }
+    feedbackByAttempt[n] = String(b.teacherFeedback || "");
+    const a = attemptView(n);
+    return json(200, { ok: true, result: { attemptNumber: n, score: a.score, totalMarks: a.totalMarks, percentage: a.percentage, manualReviewMarks: a.manualReviewMarks, finalized: a.finalized, gradingStatus: a.gradingStatus, teacherFeedback: feedbackByAttempt[n] } });
   }
   return json(404, { ok: false });
 };

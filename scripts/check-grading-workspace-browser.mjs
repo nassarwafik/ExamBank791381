@@ -7,6 +7,9 @@
 //   • the navigator jumps to a question (scrolled into view, focused, marked current); previous / next / next-pending work;
 //   • a typed mark is a provisional «غير محفوظ» state; closing then asks ON TOP of the review (the review modal sits under the
 //     modal layer); «البقاء في التصحيح» keeps the edit; the save POSTs the override body and the reload shows it as graded;
+//   • RF1: every card carries its review MODE (آلي / يدوي محفوظ / غير محفوظ / بانتظار المعلم) and the counts split by mode;
+//     switching to another attempt with unsaved edits asks ON TOP of the review — «البقاء في هذه المحاولة» keeps the attempt and
+//     the edit, «الانتقال دون حفظ» loads the other attempt; a switch without edits is immediate;
 //   • Escape on a clean review closes it; keyboard reaches the filters;
 //   • no horizontal overflow on desktop (1280), laptop (1366×768), tablet (820×1180) and phone (390×844, touch), where the
 //     navigator collapses into a disclosure and taps work.
@@ -69,12 +72,15 @@ const focusedLabel = page => page.evaluate(() => document.activeElement?.getAttr
 try {
   const desktop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   let page = await openPage(desktop);
+  let d = null;
   await shot(page, "01-workspace-desktop");
   check("desktop: no horizontal overflow of the page or the review", await noOverflow(page));
   const st = await states(page);
   check("every question has a text + icon state derived from the server projection", st.join() === "correct,incorrect,pending,partial,unanswered,incorrect,pending", st.join());
   check("a pending manual review is labelled «بانتظار التصحيح اليدوي», never «خاطئة»", (await page.$$eval(".review-question", els => els.filter(e => e.querySelector("[data-testid=rv-status]")?.getAttribute("data-state") === "pending").map(e => e.querySelector("[data-testid=rv-status]").textContent.trim()))).every(t => t.includes("بانتظار التصحيح اليدوي")));
-  check("summary shows the pending / graded counts", (await page.textContent("[data-testid=rv-count-pending]")) === "2" && (await page.textContent("[data-testid=rv-count-graded]")) === "5");
+  check("summary splits the counts by review mode: pending 2 / manual 0 / automatic 5 / unsaved 0", (await page.textContent("[data-testid=rv-count-pending]")) === "2" && (await page.textContent("[data-testid=rv-count-manual]")) === "0" && (await page.textContent("[data-testid=rv-count-auto]")) === "5" && (await page.textContent("[data-testid=rv-count-draft]")) === "0");
+  const modes = await page.$$eval(".review-question [data-testid=rv-mode]", els => els.map(e => e.getAttribute("data-mode") + ":" + e.textContent.trim()));
+  check("every card carries its review mode in text (automatic vs pending here)", modes.join() === "auto:تصحيح آلي,auto:تصحيح آلي,pending:بانتظار المعلم,auto:تصحيح آلي,auto:تصحيح آلي,auto:تصحيح آلي,pending:بانتظار المعلم", modes.join());
   const q1 = page.locator(".review-question[aria-label='السؤال 1'] [data-testid=rv-choices]");
   check("choice question 1 renders exam-style with the student's correct pick marked", (await q1.locator(".rv-choice.is-picked.is-right").count()) === 1 && (await q1.textContent()).includes("الراوتر"));
   const q2 = page.locator(".review-question[aria-label='السؤال 2'] [data-testid=rv-choices]");
@@ -107,10 +113,21 @@ try {
   const mark = page.locator(".review-question[aria-label='السؤال 3']").getByLabel(/علامة المعلم/);
   await mark.fill("4");
   check("a typed mark becomes a provisional «غير محفوظ» state", (await page.locator(".review-question[aria-label='السؤال 3'] [data-testid=rv-status]").textContent()).includes("(غير محفوظ)") && (await page.locator(".review-question[aria-label='السؤال 3'] [data-testid=rv-status]").getAttribute("data-state")) === "partial");
+  check("… and its mode chip reads «تعديل غير محفوظ»; the unsaved count is 1", (await page.locator(".review-question[aria-label='السؤال 3'] [data-testid=rv-mode]").getAttribute("data-mode")) === "draft" && (await page.textContent("[data-testid=rv-count-draft]")) === "1");
   check("the footer shows the unsaved indicator", (await page.locator(".rv-unsaved").count()) === 1);
+
+  // RF1 — attempt switching with unsaved edits
+  const tab2 = page.getByRole("button", { name: /^محاولة 2 / });
+  await tab2.click();
+  await page.waitForSelector(".eb-dialog-root [role=dialog]", { state: "attached", timeout: 5000 });
+  d = await topDialog(page);
+  await shot(page, "04a-attempt-switch-guard");
+  check("switching to attempt 2 with an unsaved mark asks first — ON TOP of the review", d && d.name === "تعديلات تصحيح غير محفوظة" && d.onTop, d ? d.name + " hit: " + d.hit : "no dialog");
+  r = await tryClick(page.getByRole("button", { name: "البقاء في هذه المحاولة", exact: true }));
+  check("«البقاء في هذه المحاولة» keeps attempt 1 and the typed mark", r.ok && (await page.getByRole("button", { name: /^محاولة 1 / }).getAttribute("class")).includes("active") && (await mark.inputValue()) === "4" && (await page.locator(".rv-unsaved").count()) === 1, r.error || "");
   await page.getByRole("button", { name: /إلغاء/ }).click();
   await page.waitForSelector("[role=dialog].eb-dialog, .eb-dialog-root [role=dialog]", { state: "attached", timeout: 5000 });
-  let d = await topDialog(page);
+  d = await topDialog(page);
   await shot(page, "04-unsaved-guard");
   check("closing with an unsaved mark asks first — and the confirmation is painted ON TOP of the review", d && d.name === "تعديلات تصحيح غير محفوظة" && d.onTop, d ? d.name + " hit: " + d.hit : "no dialog");
   r = await tryClick(page.getByRole("button", { name: "البقاء في التصحيح", exact: true }));
@@ -123,7 +140,21 @@ try {
   check("save POSTs the unchanged saveReview body with the override", post && post.action === "saveReview" && post.overrides && post.overrides.q3 && post.overrides.q3.score === 4, JSON.stringify(post && post.overrides));
   await page.waitForFunction(() => document.querySelector("[data-testid=rv-count-pending]")?.textContent === "1", null, { timeout: 8000 });
   check("after the reload the question is graded (server state), the pending count drops to 1 and the indicator is gone", (await page.locator(".review-question[aria-label='السؤال 3'] [data-testid=rv-status]").getAttribute("data-state")) === "partial" && !(await page.locator(".review-question[aria-label='السؤال 3'] [data-testid=rv-status]").textContent()).includes("غير محفوظ") && (await page.locator(".rv-unsaved").count()) === 0);
+  check("… its mode is now «تصحيح يدوي محفوظ» and the manual count is 1", (await page.locator(".review-question[aria-label='السؤال 3'] [data-testid=rv-mode]").getAttribute("data-mode")) === "manual" && (await page.textContent("[data-testid=rv-count-manual]")) === "1" && (await page.textContent("[data-testid=rv-count-draft]")) === "0");
   await shot(page, "05-after-save");
+
+  // RF1 — a clean switch is immediate; attempt 2 shows its own saved override; switching back with an edit → confirm discards
+  await tab2.click();
+  await page.waitForFunction(() => document.querySelector(".review-attempt-tabs button.active")?.textContent?.startsWith("محاولة 2"), null, { timeout: 8000 });
+  check("switching with no unsaved edits loads attempt 2 at once (no dialog)", (await page.locator(".eb-dialog-root [role=dialog]").count()) === 0 && (await page.textContent("[data-testid=rv-count-pending]")) === "0" && (await page.textContent("[data-testid=rv-count-manual]")) === "1");
+  check("attempt 2's saved override is shown as «تصحيح يدوي محفوظ» on question 2", (await page.locator(".review-question[aria-label='السؤال 2'] [data-testid=rv-mode]").getAttribute("data-mode")) === "manual");
+  await page.locator(".review-question[aria-label='السؤال 4']").getByLabel(/علامة المعلم/).fill("1");
+  await page.getByRole("button", { name: /^محاولة 1 / }).click();
+  await page.waitForSelector(".eb-dialog-root [role=dialog]", { state: "attached", timeout: 5000 });
+  r = await tryClick(page.getByRole("button", { name: "الانتقال دون حفظ", exact: true }));
+  await page.waitForFunction(() => document.querySelector(".review-attempt-tabs button.active")?.textContent?.startsWith("محاولة 1"), null, { timeout: 8000 });
+  check("«الانتقال دون حفظ» loads attempt 1 cleanly (no unsaved indicator; attempt 1's saved mark on question 3 is intact)", r.ok && (await page.locator(".rv-unsaved").count()) === 0 && (await page.locator(".review-question[aria-label='السؤال 3'] [data-testid=rv-mode]").getAttribute("data-mode")) === "manual", r.error || "");
+  await shot(page, "05b-after-attempt-switch");
 
   // keyboard + clean close
   await filterBtn(page, "all").focus();
@@ -140,7 +171,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const p = await openPage(ctx);
     await shot(p, "06-" + name);
-    check(name + " (" + w + "×" + h + "): no horizontal overflow; filters and navigator present", (await noOverflow(p)) && (await p.locator(".rv-filter").count()) === 6 && (await p.locator("[data-testid=rv-nav]").count()) === 1);
+    check(name + " (" + w + "×" + h + "): no horizontal overflow; filters and navigator present", (await noOverflow(p)) && (await p.locator(".rv-filter").count()) === 8 && (await p.locator("[data-testid=rv-nav]").count()) === 1);
     await ctx.close();
   }
 

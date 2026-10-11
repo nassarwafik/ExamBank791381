@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { type ReviewCounts, type ReviewFilter, type ReviewQuestionInfo, type ReviewState, REVIEW_FILTERS, STATE_ICON, STATE_LABEL, correctOptionIndex } from "./reviewQuestionState";
+import { type ReviewCounts, type ReviewFilter, type ReviewQuestionInfo, type ReviewState, MODE_LABEL, REVIEW_FILTERS, STATE_ICON, STATE_LABEL, correctOptionIndex } from "./reviewQuestionState";
 
 // UX-003 — presentational parts of the teacher grading workspace (AssignmentReview owns every piece of state and every API call;
 // nothing here reads a key, computes a grade or talks to the server). Every status is text + icon, never colour alone.
@@ -7,10 +7,14 @@ import { type ReviewCounts, type ReviewFilter, type ReviewQuestionInfo, type Rev
 export function ReviewStatusBadge({ info, compact }: { info: ReviewQuestionInfo; compact?: boolean }) {
   const label = STATE_LABEL[info.state] + (info.draft ? " (غير محفوظ)" : "");
   return (
-    <span className={"rv-status is-" + info.state + (info.draft ? " is-draft" : "")} data-state={info.state} data-testid="rv-status">
-      <span className="rv-status-icon" aria-hidden="true">{STATE_ICON[info.state]}</span>
-      <span className="rv-status-text">{compact ? STATE_LABEL[info.state] : label}</span>
-    </span>
+    <>
+      <span className={"rv-status is-" + info.state + (info.draft ? " is-draft" : "")} data-state={info.state} data-testid="rv-status">
+        <span className="rv-status-icon" aria-hidden="true">{STATE_ICON[info.state]}</span>
+        <span className="rv-status-text">{compact ? STATE_LABEL[info.state] : label}</span>
+      </span>
+      {/* RF1 — the review MODE (who decided the mark, saved or not) is a separate chip so «آلي» and «يدوي» are never confused */}
+      <span className={"rv-mode is-" + info.mode} data-mode={info.mode} data-testid="rv-mode">{MODE_LABEL[info.mode]}</span>
+    </>
   );
 }
 
@@ -33,13 +37,13 @@ export function ReviewNavigator({ items, currentId, onJump, counts }: { items: N
   return (
     <nav className="rv-nav" aria-labelledby={headingId} data-testid="rv-nav">
       <h3 id={headingId} className="rv-nav-title">مستكشف الأسئلة</h3>
-      <p className="rv-nav-summary">بانتظار التصحيح اليدوي: <strong dir="ltr">{counts.pending}</strong> · تم التصحيح: <strong dir="ltr">{counts.graded}</strong> · المجموع: <strong dir="ltr">{counts.all}</strong></p>
+      <p className="rv-nav-summary">بانتظار التصحيح اليدوي: <strong dir="ltr">{counts.pending}</strong> · تم تصحيحه يدويًا: <strong dir="ltr">{counts.manual}</strong> · مُصحَّح آليًا: <strong dir="ltr">{counts.auto}</strong> · غير محفوظ: <strong dir="ltr">{counts.draft}</strong> · المجموع: <strong dir="ltr">{counts.all}</strong></p>
       <ol className="rv-nav-grid">
         {items.map(it => (
           <li key={it.questionId}>
             <button type="button" className={"rv-nav-btn is-" + it.info.state + (it.questionId === currentId ? " is-current" : "") + (it.visible ? "" : " is-filtered")}
               aria-current={it.questionId === currentId ? "true" : undefined}
-              aria-label={"السؤال " + it.questionNumber + " — " + STATE_LABEL[it.info.state] + (it.info.draft ? " (غير محفوظ)" : "") + (it.visible ? "" : " — خارج التصفية الحالية")}
+              aria-label={"السؤال " + it.questionNumber + " — " + STATE_LABEL[it.info.state] + (it.info.mode === "manual" ? " — " + MODE_LABEL.manual : it.info.draft ? " (غير محفوظ)" : "") + (it.visible ? "" : " — خارج التصفية الحالية")}
               title={STATE_LABEL[it.info.state]} onClick={() => onJump(it.questionId)}>
               <span className="rv-nav-num" dir="ltr">{it.questionNumber}</span>
               <span className="rv-nav-icon" aria-hidden="true">{STATE_ICON[it.info.state]}</span>
@@ -49,6 +53,7 @@ export function ReviewNavigator({ items, currentId, onJump, counts }: { items: N
       </ol>
       <ul className="rv-legend" aria-label="دلالة الرموز">
         {(["pending", "correct", "incorrect", "partial", "unanswered"] as ReviewState[]).map(s => <li key={s} className={"is-" + s}><span aria-hidden="true">{STATE_ICON[s]}</span> {STATE_LABEL[s]}</li>)}
+        <li className="rv-legend-modes">الوضع: {MODE_LABEL.auto} · {MODE_LABEL.manual} · {MODE_LABEL.draft}</li>
       </ul>
     </nav>
   );

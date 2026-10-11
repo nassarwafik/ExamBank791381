@@ -43,7 +43,9 @@ describe("UX-003 grading workspace", () => {
     await screen.findByText("امتحان الشبكات");
     expect(articles().map(statusOf)).toEqual(["correct", "incorrect", "pending", "partial", "unanswered", "pending"]);
     expect(screen.getByTestId("rv-count-pending").textContent).toBe("2");
-    expect(screen.getByTestId("rv-count-graded").textContent).toBe("4");
+    expect(screen.getByTestId("rv-count-auto").textContent).toBe("4");
+    expect(screen.getByTestId("rv-count-manual").textContent).toBe("0");
+    expect(screen.getByTestId("rv-count-draft").textContent).toBe("0");
     // text + icon, never colour only
     expect(within(articles()[2]).getByTestId("rv-status").textContent).toContain("بانتظار التصحيح اليدوي");
     expect(within(articles()[4]).getByTestId("rv-status").textContent).toContain("لم يُجب الطالب");
@@ -72,8 +74,10 @@ describe("UX-003 grading workspace", () => {
     expect(articles().map(a => a.getAttribute("aria-label"))).toEqual(["السؤال 3", "السؤال 6"]);
     fireEvent.click(filterBtn("incorrect"));
     expect(articles().map(a => a.getAttribute("aria-label"))).toEqual(["السؤال 2"]);
-    fireEvent.click(filterBtn("graded"));
+    fireEvent.click(filterBtn("auto"));
     expect(articles().length).toBe(4);
+    fireEvent.click(filterBtn("manual"));
+    expect(articles().length).toBe(0);
     fireEvent.click(filterBtn("correct"));
     expect(articles().map(a => a.getAttribute("aria-label"))).toEqual(["السؤال 1"]);
     fireEvent.click(filterBtn("partial"));
@@ -123,6 +127,7 @@ describe("UX-003 grading workspace", () => {
     expect(within(q3).getByTestId("rv-status").textContent).toContain("(غير محفوظ)");
     expect(screen.getByText("● تعديلات غير محفوظة")).toBeTruthy();
     expect(screen.getByTestId("rv-count-pending").textContent).toBe("1");          // the draft resolves it in the counts
+    expect(screen.getByTestId("rv-count-draft").textContent).toBe("1");
     fireEvent.click(screen.getByText(/حفظ واعتماد التصحيح/));
     await waitFor(() => expect(posts.length).toBe(1));
     expect(posts[0]).toMatchObject({ action: "saveReview", assignmentId: "a1", studentId: "s1", attemptNumber: 1, overrides: { q3: { score: 3, comment: "" } } });
@@ -148,5 +153,124 @@ describe("UX-003 grading workspace", () => {
     await screen.findByRole("dialog", { name: "تعديلات تصحيح غير محفوظة" });
     fireEvent.click(screen.getByRole("button", { name: "الخروج دون حفظ" }));
     await waitFor(() => expect(second.onClose).toHaveBeenCalledTimes(1));
+  });
+});
+
+// RF1 — attempt switching and same-attempt reloads must never discard unsaved grading edits; the review mode (automatic /
+// manual-saved / unsaved draft / pending) is reported separately from the answer outcome.
+const attemptN = (n: number, over: Record<string, unknown> = {}) => ({ ...attempt, attemptNumber: n, ...over });
+const QS2 = () => [Q("q1", 1, { type: "shortAnswer", autoGrade: { score: 4, manualReview: false } }), Q("q3", 3, { autoGrade: { score: 0, manualReview: true } })];
+function mountTwoAttempts(onClose = vi.fn()) {
+  const gets: string[] = [], posts: unknown[] = [];
+  const saved: Record<number, Record<string, { score: number; comment: string }>> = { 1: {}, 2: {} };
+  const applyOverrides = (qs: ReturnType<typeof questions>, n: number) => qs.map(q => { const o = saved[n][q.questionId]; return o ? { ...q, manualScore: o.score, teacherComment: o.comment, autoGrade: { ...(q.autoGrade as object), score: o.score, manualReview: false } } : q; });
+  globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input), method = (init && init.method) || "GET";
+    if (url.includes("/api/assignment-review") && method === "GET") {
+      gets.push(url);
+      const n = Number(new URL(url, "http://x").searchParams.get("attemptNumber") || 1);
+      const a = attemptN(n);
+      return Promise.resolve({ status: 200, ok: true, json: async () => ({ ok: true, assignment: { assignmentId: "a1", title: "امتحان الشبكات", totalMarks: 24 }, student: { studentId: "s1", studentName: "سارة", studentCode: "S1" }, attempt: { ...a, teacherFeedback: "" }, attempts: [attemptN(1), attemptN(2)], questions: applyOverrides(n === 1 ? questions() : QS2(), n) }) } as Response);
+    }
+    if (url.includes("/api/assignment-review")) { const b = JSON.parse(String(init?.body)); posts.push(b); for (const [id, v] of Object.entries(b.overrides || {})) saved[Number(b.attemptNumber)][id] = v as { score: number; comment: string }; return Promise.resolve({ status: 200, ok: true, json: async () => ({ ok: true, result: { gradingStatus: "pendingReview", finalized: false, score: 14, totalMarks: 24, percentage: 58, manualReviewMarks: 4 } }) } as Response); }
+    return Promise.resolve({ status: 404, ok: false, json: async () => ({ ok: false }) } as Response);
+  }) as unknown as typeof fetch;
+  render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={onClose} onSaved={() => {}} />);
+  return { gets, posts };
+}
+const tab = (n: number) => screen.getByRole("button", { name: new RegExp("^محاولة " + n + " ") });
+
+describe("RF1 — unsaved edits survive attempt switching", () => {
+  it("switching attempts with an unsaved mark asks first; «البقاء» keeps the attempt AND the edit; «الانتقال دون حفظ» loads the other attempt and clears the dirty state", async () => {
+    const { gets } = mountTwoAttempts();
+    await screen.findByText("امتحان الشبكات");
+    expect(gets.length).toBe(1);
+    fireEvent.change(within(articles()[2]).getByLabelText(/علامة المعلم/), { target: { value: "2" } });
+    expect(screen.getByText("● تعديلات غير محفوظة")).toBeTruthy();
+    fireEvent.click(tab(2));
+    const dlg = await screen.findByRole("dialog", { name: "تعديلات تصحيح غير محفوظة" });
+    expect(dlg.textContent).toContain("محاولة");
+    fireEvent.click(screen.getByRole("button", { name: "البقاء في هذه المحاولة" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "تعديلات تصحيح غير محفوظة" })).toBeNull());
+    expect(gets.length).toBe(1);                                                   // no reload happened
+    expect(tab(1).className).toContain("active");
+    expect((within(articles()[2]).getByLabelText(/علامة المعلم/) as HTMLInputElement).value).toBe("2");
+    expect(screen.getByText("● تعديلات غير محفوظة")).toBeTruthy();
+    fireEvent.click(tab(2));
+    await screen.findByRole("dialog", { name: "تعديلات تصحيح غير محفوظة" });
+    fireEvent.click(screen.getByRole("button", { name: "الانتقال دون حفظ" }));
+    await waitFor(() => expect(gets.length).toBe(2));
+    expect(gets[1]).toContain("attemptNumber=2");
+    await waitFor(() => expect(tab(2).className).toContain("active"));
+    expect(articles().length).toBe(2);
+    expect(screen.queryByText("● تعديلات غير محفوظة")).toBeNull();
+  });
+  it("switching attempts with NO unsaved edits loads the other attempt at once; saving resets the baseline so a later switch does not ask", async () => {
+    const { gets, posts } = mountTwoAttempts();
+    await screen.findByText("امتحان الشبكات");
+    fireEvent.click(tab(2));
+    await waitFor(() => expect(gets.length).toBe(2));
+    expect(screen.queryByRole("dialog", { name: "تعديلات تصحيح غير محفوظة" })).toBeNull();
+    fireEvent.click(tab(1));
+    await waitFor(() => expect(gets.length).toBe(3));
+    await waitFor(() => expect(articles().length).toBe(6));
+    fireEvent.change(within(articles()[2]).getByLabelText(/علامة المعلم/), { target: { value: "3" } });
+    fireEvent.click(screen.getByText(/حفظ واعتماد التصحيح/));
+    await waitFor(() => expect(posts.length).toBe(1));
+    await waitFor(() => expect(screen.queryByText("● تعديلات غير محفوظة")).toBeNull());
+    fireEvent.click(tab(2));
+    await waitFor(() => expect(gets.length).toBeGreaterThanOrEqual(5));            // the post-save reload + the switch
+    expect(screen.queryByRole("dialog", { name: "تعديلات تصحيح غير محفوظة" })).toBeNull();
+  });
+});
+
+describe("RF1 — review mode: automatic vs manually reviewed vs unsaved draft vs pending", () => {
+  const QS3 = () => [
+    Q("q1", 1, { autoGrade: { score: 4, manualReview: false } }),                                  // automatic, correct
+    Q("q2", 2, { autoGrade: { score: 1, manualReview: false }, manualScore: 1 }),                 // manual (saved), partial
+    Q("q3", 3, { autoGrade: { score: 0, manualReview: true } }),                                   // pending
+    Q("q4", 4, { autoGrade: { score: 0, manualReview: false }, manualScore: 4, teacherComment: "ممتاز" }), // manual (saved), correct
+  ];
+  function mountModes() {
+    globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input), method = (init && init.method) || "GET";
+      if (url.includes("/api/assignment-review") && method === "GET") return Promise.resolve({ status: 200, ok: true, json: async () => ({ ...body(), questions: QS3() }) } as Response);
+      return Promise.resolve({ status: 404, ok: false, json: async () => ({ ok: false }) } as Response);
+    }) as unknown as typeof fetch;
+    render(<AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={() => {}} onSaved={() => {}} />);
+  }
+  const modeOf = (el: HTMLElement) => within(el).getByTestId("rv-mode").getAttribute("data-mode");
+  it("each card states its review mode in text; counts split automatic / manual / draft / pending; the outcome stays separate", async () => {
+    mountModes();
+    await screen.findByText("امتحان الشبكات");
+    expect(articles().map(modeOf)).toEqual(["auto", "manual", "pending", "manual"]);
+    expect(articles().map(statusOf)).toEqual(["correct", "partial", "pending", "correct"]);
+    expect(within(articles()[0]).getByTestId("rv-mode").textContent).toBe("تصحيح آلي");
+    expect(within(articles()[1]).getByTestId("rv-mode").textContent).toBe("تصحيح يدوي محفوظ");
+    expect(screen.getByTestId("rv-count-pending").textContent).toBe("1");
+    expect(screen.getByTestId("rv-count-manual").textContent).toBe("2");
+    expect(screen.getByTestId("rv-count-auto").textContent).toBe("1");
+    expect(screen.getByTestId("rv-count-draft").textContent).toBe("0");
+    expect(screen.queryByTestId("rv-count-graded")).toBeNull();                    // the ambiguous «تم التصحيح» count is gone
+  });
+  it("filters: «مُصحَّح آليًا», «تم تصحيحه يدويًا», «تعديلات غير محفوظة»; a typed override moves a question to draft until saved", async () => {
+    mountModes();
+    await screen.findByText("امتحان الشبكات");
+    fireEvent.click(filterBtn("auto"));
+    expect(articles().map(a => a.getAttribute("aria-label"))).toEqual(["السؤال 1"]);
+    fireEvent.click(filterBtn("manual"));
+    expect(articles().map(a => a.getAttribute("aria-label"))).toEqual(["السؤال 2", "السؤال 4"]);
+    fireEvent.click(filterBtn("all"));
+    fireEvent.change(within(articles()[0]).getByLabelText(/علامة المعلم/), { target: { value: "2" } });
+    expect(modeOf(articles()[0])).toBe("draft");
+    expect(within(articles()[0]).getByTestId("rv-mode").textContent).toBe("تعديل غير محفوظ");
+    expect(screen.getByTestId("rv-count-draft").textContent).toBe("1");
+    expect(screen.getByTestId("rv-count-auto").textContent).toBe("0");
+    fireEvent.click(filterBtn("draft"));
+    expect(articles().map(a => a.getAttribute("aria-label"))).toEqual(["السؤال 1"]);
+    const nav = screen.getByTestId("rv-nav");
+    expect(nav.textContent).toContain("تم تصحيحه يدويًا: 2");
+    expect(nav.textContent).toContain("مُصحَّح آليًا: 0");
+    expect(nav.textContent).toContain("غير محفوظ: 1");
   });
 });

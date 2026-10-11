@@ -5,7 +5,11 @@
 // mark the teacher typed but has not saved is reported as a provisional state (`draft: true`) so the navigator can show what the
 // save will produce without ever claiming it is saved.
 export type ReviewState = "pending" | "correct" | "incorrect" | "partial" | "unanswered";
-export type ReviewFilter = "all" | "pending" | "graded" | "correct" | "incorrect" | "partial";
+/** RF1 — the REVIEW MODE is reported separately from the answer outcome: who decided the mark and whether it is saved.
+ *  pending = awaiting manual review · auto = automatically evaluated, no override · manual = a teacher override is STORED on the
+ *  server · draft = the teacher typed a value that differs from what is stored (nothing saved yet). */
+export type ReviewMode = "pending" | "auto" | "manual" | "draft";
+export type ReviewFilter = "all" | "pending" | "manual" | "auto" | "draft" | "correct" | "incorrect" | "partial";
 
 export type ReviewQuestionLike = {
   marks: number;
@@ -16,7 +20,9 @@ export type ReviewQuestionLike = {
 
 export type ReviewQuestionInfo = {
   state: ReviewState;
-  /** A teacher mark (or rubric) is stored for the question on the server. */
+  /** Who decided the mark and whether it is saved (see ReviewMode). */
+  mode: ReviewMode;
+  /** A teacher mark (or rubric) is stored for the question on the server (mode === "manual", or "draft" over a stored one). */
   graded: boolean;
   /** The state reflects a typed, unsaved mark. */
   draft: boolean;
@@ -34,11 +40,19 @@ export const STATE_LABEL: Record<ReviewState, string> = {
   unanswered: "لم يُجب الطالب"
 };
 export const STATE_ICON: Record<ReviewState, string> = { pending: "⏳", correct: "✓", incorrect: "✗", partial: "◐", unanswered: "—" };
+export const MODE_LABEL: Record<ReviewMode, string> = {
+  pending: "بانتظار المعلم",
+  auto: "تصحيح آلي",
+  manual: "تصحيح يدوي محفوظ",
+  draft: "تعديل غير محفوظ"
+};
 
 export const REVIEW_FILTERS: { id: ReviewFilter; label: string }[] = [
   { id: "all", label: "الكل" },
   { id: "pending", label: "يحتاج إلى تصحيح يدوي" },
-  { id: "graded", label: "تم التصحيح" },
+  { id: "manual", label: "تم تصحيحه يدويًا" },
+  { id: "auto", label: "مُصحَّح آليًا" },
+  { id: "draft", label: "تعديلات غير محفوظة" },
   { id: "correct", label: "إجابة صحيحة" },
   { id: "incorrect", label: "إجابة خاطئة" },
   { id: "partial", label: "إجابة جزئية" }
@@ -75,26 +89,39 @@ export function reviewQuestionInfo(q: ReviewQuestionLike, draftScore?: string): 
   else if (max > 0 && effective >= max - EPS) state = "correct";
   else if (effective <= EPS) state = "incorrect";
   else state = "partial";
-  return { state, graded, draft, effective: Number(effective.toFixed(2)), max, answered };
+  const mode: ReviewMode = draft ? "draft" : state === "pending" ? "pending" : graded ? "manual" : "auto";
+  return { state, mode, graded, draft, effective: Number(effective.toFixed(2)), max, answered };
 }
 
 export function matchesReviewFilter(info: ReviewQuestionInfo, filter: ReviewFilter): boolean {
   switch (filter) {
     case "all": return true;
-    case "pending": return info.state === "pending";
-    case "graded": return info.state !== "pending";
+    case "pending": case "manual": case "auto": case "draft": return info.mode === filter;
     default: return info.state === filter;
   }
 }
 
+/** Mode counts partition the questions (pending + manual + auto + draft = all); outcome counts are exclusive of each other. */
 export type ReviewCounts = Record<ReviewFilter, number>;
 export function reviewCounts(infos: ReviewQuestionInfo[]): ReviewCounts {
-  const c: ReviewCounts = { all: infos.length, pending: 0, graded: 0, correct: 0, incorrect: 0, partial: 0 };
+  const c: ReviewCounts = { all: infos.length, pending: 0, manual: 0, auto: 0, draft: 0, correct: 0, incorrect: 0, partial: 0 };
   for (const i of infos) {
-    if (i.state === "pending") c.pending++; else c.graded++;
+    c[i.mode]++;
     if (i.state === "correct" || i.state === "incorrect" || i.state === "partial") c[i.state]++;
   }
   return c;
+}
+
+/** RF1 — a reload of the SAME attempt (after a save, a coding regrade or a manual refresh) must never discard what the teacher typed:
+ *  `fresh` is the server's new per-key state, `prevBaseline` what the inputs were loaded from before, `local` what they hold now.
+ *  Every key whose local value differs from its previous baseline is an unsaved edit and is kept over the fresh value; everything
+ *  else takes the server's value. Pure; the caller decides the new baseline (= fresh) so `dirty` stays true exactly for kept edits. */
+export function mergeUnsavedEdits<T>(prevBaseline: Record<string, T>, local: Record<string, T>, fresh: Record<string, T>): Record<string, T> {
+  const out: Record<string, T> = { ...fresh };
+  for (const [k, v] of Object.entries(local)) {
+    if (JSON.stringify(v) !== JSON.stringify(prevBaseline[k])) out[k] = v;
+  }
+  return out;
 }
 
 /** Index of the next question (after `from`, wrapping) that matches the filter; -1 when none. */
