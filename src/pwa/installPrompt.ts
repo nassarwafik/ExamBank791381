@@ -155,12 +155,12 @@ export function installGuidance(win: Window, s: InstallState): InstallGuidance {
 }
 
 /** The one sentence that always applies when the native prompt is not available. */
-export const MANUAL_INSTALL_MESSAGE = "يمكنك تثبيت ExamBank من قائمة المتصفح واستخدامه كتطبيق مستقل.";
+export const MANUAL_INSTALL_MESSAGE = "يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل.";
 /** The device-specific menu hint (wording only — behaviour never depends on it). */
 export function manualInstallHint(win: Window): string {
   return isAndroid(win)
     ? "افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»."
-    : "افتح قائمة المتصفح واختر «تثبيت ExamBank» أو «تثبيت التطبيق».";
+    : "افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق».";
 }
 
 /** Test-only: forget the captured prompt and listeners' state. */

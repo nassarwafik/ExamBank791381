@@ -66,6 +66,7 @@ import { createPortal } from "react-dom";
 const ExamPreview = lazy(lazyWithRetry(() => import("./ExamPreview"), "teacher-theme-preview"));
 import { GENERAL_INSTRUCTION_TEMPLATES, findGeneralInstructionTemplate } from "./instructionTemplates";
 import ThemeMiniPreview from "./ThemeMiniPreview";
+import { BRAND_NAME, BRAND_TAGLINE } from "./brand";
 import "./App.css";
 import "./platform.css";
 import "./page-parts.css";
@@ -3719,7 +3720,7 @@ function App() {
       const exportDocument =
         {
           format:
-            "ExamBank-AI-Export",
+            "TadrisPlus-AI-Export",
 
           version:
             1,
@@ -3729,7 +3730,7 @@ function App() {
               .toISOString(),
 
           source:
-            "ExamBank 791381",
+            "Tadris+",
 
           purpose:
             "Create a polished printable exam PDF with a separate teacher answer key.",
@@ -3860,7 +3861,7 @@ function App() {
       );
 
       setActionNotice(
-        "✓ تم تنزيل ملف ExamBank AI Export إلى الحاسوب."
+        "✓ تم تنزيل ملف Tadris+ AI Export إلى الحاسوب."
       );
     }
     catch (error) {
@@ -5585,7 +5586,7 @@ function App() {
       <main className="auth" dir="rtl">
         <div className="auth-form-wrap">
           <section className="auth-card login-card" style={{ margin: "auto", textAlign: "center" }}>
-            <h1 className="auth-welcome">ExamBank 791381</h1>
+            <h1 className="auth-welcome"><bdi dir="ltr">{BRAND_NAME}</bdi></h1>
             <p className="auth-sub subtitle">جارٍ التحقق من الجلسة…</p>
           </section>
         </div>
@@ -5638,8 +5639,8 @@ function App() {
           <div className="auth-brand-top">
             <span className="auth-logo" aria-hidden="true"><BrandMark size={52} /></span>
             <div className="auth-logo-text">
-              ExamBank
-              <small>791381</small>
+              <bdi dir="ltr">{BRAND_NAME}</bdi>
+              <small>{BRAND_TAGLINE}</small>
             </div>
           </div>
 
@@ -5666,7 +5667,7 @@ function App() {
 
         <div className="auth-form-wrap">
           <section className="auth-card login-card">
-            <h1 className="auth-welcome">ExamBank 791381</h1>
+            <h1 className="auth-welcome"><bdi dir="ltr">{BRAND_NAME}</bdi></h1>
             <p className="auth-sub subtitle">
               منصة الامتحانات والتدريب الذكي لشبكات الاتصال
             </p>
@@ -5745,7 +5746,7 @@ function App() {
       <main className="auth" dir="rtl">
         <div className="auth-form-wrap">
           <section className="auth-card login-card" style={{ margin: "auto", textAlign: "center" }}>
-            <h1 className="auth-welcome">ExamBank 791381</h1>
+            <h1 className="auth-welcome"><bdi dir="ltr">{BRAND_NAME}</bdi></h1>
             <p className="auth-sub subtitle">تعذّر التحقق من الجلسة مؤقتًا. جلستك محفوظة، حاول مرة أخرى.</p>
             <button
               type="button"

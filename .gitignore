@@ -68,5 +68,6 @@ artifacts/phase-21dd1/
 
 # Phase 21D-D.2 — reactions mutation ledger (scripts/mutate-chemistry-21dd2.mjs), produced per run
 artifacts/phase-21dd2/
+.harness-brand-pwa/
 .harness-builder-overlay/
 .harness-grading-workspace/

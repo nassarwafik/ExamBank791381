@@ -28,7 +28,7 @@ describe("BrandMark (Phase 10B — the official raster icon)", () => {
     const imgs = container.querySelectorAll("img");
     expect(imgs.length).toBe(2);
     for (const i of imgs) { expect(i.getAttribute("src")).toBe(BRAND_ICON_SRC); expect(i.getAttribute("alt")).toBe(""); expect(i.getAttribute("aria-hidden")).toBe("true"); }
-    expect(BRAND_ICON_SRC).toBe("/pwa/icon-192.png");
+    expect(BRAND_ICON_SRC).toBe("/pwa/icon-192.png?v=tadris1");                                 // BRAND-005: versioned so launchers re-fetch
     expect(imgs[0].getAttribute("width")).toBe("36"); expect(imgs[1].getAttribute("height")).toBe("52");
     expect(imgs[0].className).toBe("eb-brand-icon"); expect(imgs[1].className).toBe("eb-brand-icon is-square x");
     expect(container.querySelector("svg")).toBeNull();                                                 // no drawn fallback: one artwork everywhere
@@ -39,29 +39,30 @@ describe("BrandMark (Phase 10B — the official raster icon)", () => {
 describe("icon set + wiring (Phase 10B)", () => {
   it("index.html links the PNG favicons (32 / 16 / 192) and the Apple touch icon; the SVG favicon is gone", () => {
     const html = read("index.html");
-    expect(html).toContain('<link rel="icon" type="image/png" sizes="32x32" href="/pwa/favicon-32.png" />');
-    expect(html).toContain('<link rel="icon" type="image/png" sizes="16x16" href="/pwa/favicon-16.png" />');
-    expect(html).toContain('<link rel="icon" type="image/png" sizes="192x192" href="/pwa/icon-192.png" />');
-    expect(html).toContain('<link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png" />');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="32x32" href="/pwa/favicon-32.png?v=tadris1" />');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="16x16" href="/pwa/favicon-16.png?v=tadris1" />');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="48x48" href="/pwa/favicon-48.png?v=tadris1" />');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="192x192" href="/pwa/icon-192.png?v=tadris1" />');
+    expect(html).toContain('<link rel="apple-touch-icon" sizes="180x180" href="/pwa/apple-touch-icon.png?v=tadris1" />');
     expect(html).not.toContain("favicon.svg");
     expect(existsSync(resolve(ROOT, "public/favicon.svg"))).toBe(false);
   });
   it("public/pwa holds the full official set at the declared sizes, every file a real PNG within its budget; the manifest still lists its four icons", () => {
-    const want: Record<string, [number, number]> = { "icon-192.png": [192, 96000], "icon-512.png": [512, 360000], "icon-maskable-192.png": [192, 96000], "icon-maskable-512.png": [512, 360000], "apple-touch-icon.png": [180, 96000], "favicon-32.png": [32, 8000], "favicon-16.png": [16, 3000] };
+    const want: Record<string, [number, number]> = { "icon-192.png": [192, 96000], "icon-512.png": [512, 360000], "icon-maskable-192.png": [192, 96000], "icon-maskable-512.png": [512, 360000], "apple-touch-icon.png": [180, 96000], "favicon-32.png": [32, 8000], "favicon-16.png": [16, 3000], "favicon-48.png": [48, 12000] };
     for (const [name, [size, budget]] of Object.entries(want)) {
       const p = png("public/pwa/" + name);
       expect([p.w, p.h], name).toEqual([size, size]);
       expect(p.bytes, name).toBeLessThan(budget);
     }
     const manifest = JSON.parse(read("public/manifest.webmanifest"));
-    expect(manifest.icons.map((i: { src: string }) => i.src)).toEqual(["pwa/icon-192.png", "pwa/icon-512.png", "pwa/icon-maskable-192.png", "pwa/icon-maskable-512.png"]);
-    for (const i of manifest.icons) expect(existsSync(resolve(ROOT, "public", i.src))).toBe(true);
+    expect(manifest.icons.map((i: { src: string }) => i.src)).toEqual(["pwa/icon-192.png?v=tadris1", "pwa/icon-512.png?v=tadris1", "pwa/icon-maskable-192.png?v=tadris1", "pwa/icon-maskable-512.png?v=tadris1"]);
+    for (const i of manifest.icons) expect(existsSync(resolve(ROOT, "public", i.src.split("?")[0]))).toBe(true);
     expect(read("public/sw.js")).toContain('"pwa/icon-192.png"');                                      // push notifications keep the same file
   });
   it("the 'any' icons and favicons have transparent rounded corners; the maskable icons are full-bleed opaque", () => {
     // colour type 6 = RGBA (transparent corners around the tile), 2 = RGB (full-bleed, safe-zone padding baked in)
     const colourType = (rel: string) => readFileSync(resolve(ROOT, rel))[25];
-    for (const f of ["icon-192.png", "icon-512.png", "favicon-32.png", "favicon-16.png"]) expect(colourType("public/pwa/" + f), f).toBe(6);
+    for (const f of ["icon-192.png", "icon-512.png", "favicon-48.png", "favicon-32.png", "favicon-16.png"]) expect(colourType("public/pwa/" + f), f).toBe(6);
     for (const f of ["icon-maskable-192.png", "icon-maskable-512.png", "apple-touch-icon.png"]) expect(colourType("public/pwa/" + f), f).toBe(2);
   });
   it("the teacher sidebar, the student top bar and the login hero render BrandMark (the same file) instead of an 'EB' text tile", () => {
@@ -81,7 +82,7 @@ describe("login hero (Phase 10A)", () => {
   it("renders the redesigned hero around an UNCHANGED login form; the role chips keep their accessible text", async () => {
     globalThis.fetch = vi.fn(() => res(401, { ok: false })) as unknown as typeof fetch;
     render(<App />);
-    const form = await screen.findByRole("heading", { level: 1, name: "ExamBank 791381" });
+    const form = await screen.findByRole("heading", { level: 1, name: "Tadris+" });
     expect(form).toBeTruthy();
     expect(document.querySelector("form.auth-form")).toBeTruthy();
     expect(document.querySelector('input[autocomplete="username"]')).toBeTruthy();

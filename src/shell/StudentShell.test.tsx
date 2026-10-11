@@ -11,7 +11,7 @@ describe("UX-2 StudentShell", () => {
     render(<StudentShell studentName="أحمد محمد" className="الحادي عشر" onLogout={onLogout}><p>محتوى</p></StudentShell>);
     expect(document.querySelector("main.student-portal")?.getAttribute("dir")).toBe("rtl");
     expect(document.querySelector("header.student-topbar")).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("ExamBank 2.0");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Tadris+");
     const identity = screen.getByLabelText("الطالب الحالي");
     expect(identity.textContent).toContain("أحمد محمد");
     expect(identity.textContent).toContain("الحادي عشر");

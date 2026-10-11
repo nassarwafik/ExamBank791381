@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "../brand";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import PageHeader from "../ui/PageHeader";
 import IconButton from "../ui/IconButton";
@@ -121,7 +122,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
         <div className="eb-sidebar-top">
           <div className="eb-brand">
             <span className="eb-brand-mark" aria-hidden="true"><BrandMark size={36} /></span>
-            <span className="eb-brand-text">ExamBank<small>791381</small></span>
+            <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
           </div>
           {drawerOpen ? (
             <IconButton inverse label="إغلاق القائمة" icon={<IconClose size={18} />} onClick={closeDrawer} className="eb-drawer-close" />
