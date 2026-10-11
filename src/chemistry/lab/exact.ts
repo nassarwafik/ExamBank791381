@@ -16,7 +16,8 @@ export function q(n: bigint, d: bigint = 1n): Q {
   const g = bgcd(n, d) || 1n;
   return Object.freeze({ n: n / g, d: d / g });
 }
-export const ZERO = q(0n), ONE = q(1n);
+export const ZERO = q(0n);
+export const ONE = q(1n);
 export const qi = (k: number): Q => q(BigInt(k));
 export const add = (a: Q, b: Q): Q => q(a.n * b.d + b.n * a.d, a.d * b.d);
 export const sub = (a: Q, b: Q): Q => q(a.n * b.d - b.n * a.d, a.d * b.d);

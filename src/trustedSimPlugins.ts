@@ -12,6 +12,7 @@ import { physicsMotionPluginV1 } from "./physicsMotionPlugin";
 import { physicsLabPluginV1 } from "./physicsLabPlugin";
 import { chemistryStructurePluginV1 } from "./chemistryStructurePlugin";
 import { chemistryReactionsPluginV1 } from "./chemistryReactionsPlugin";
+import { chemistryLabPluginV1 } from "./chemistryLabPlugin";
 
 registerSmartSimPlugin(networkTopologyPluginV1);
 // Phase 20A.2 — the two enterprise pilots: physics (free fall) and mathematics (rational function study).
@@ -30,6 +31,9 @@ registerSmartSimPlugin(chemistryStructurePluginV1);
 // Phase 21D-D.2 — chemistryReactions@1: balancing equations by exact atom and charge conservation, the curated reaction catalog, reaction
 // families and substance roles (a NEW exact identity; chemistryStructure@1 and every other plugin unchanged).
 registerSmartSimPlugin(chemistryReactionsPluginV1);
+// Phase 21D-D.3 — chemistryLab@1: the virtual chemistry laboratory (solutions and dilution, pH and indicators, strong acid / strong base
+// titration, reaction rate) on exact, cited models (a NEW exact identity; every other plugin unchanged).
+registerSmartSimPlugin(chemistryLabPluginV1);
 
 export { listSmartSimPlugins, listSmartSimPluginDescriptors, resolveSmartSimDescriptor, resolveSmartSimPlugin };
 export * from "./trustedSimQuestion";
