@@ -3,6 +3,7 @@ import { motionStarterConfig } from "../physicsMotion/motionTemplates";
 import { labStarterConfig } from "../physicsLab/labTemplates";
 import { sodiumIonPreset } from "../chemistryStructure/chemTemplates";
 import { waterTemplate } from "../chemistryReactions/rxnTemplates";
+import { titrationTemplate } from "../chemistryLab/labTemplates";
 
 // Phase 20A.2 — the starting PUBLIC config the authoring host puts in place when a teacher picks a trusted plugin (UI only; lazy with the
 // authoring host). Code-owned and keyed by EXACT identity; an identity without a starter starts from an empty object (the canonical
@@ -15,6 +16,7 @@ const STARTERS: ReadonlyMap<string, () => unknown> = new Map<string, () => unkno
   ["physicsLab@1", () => labStarterConfig()],
   ["chemistryStructure@1", () => sodiumIonPreset().config],
   ["chemistryReactions@1", () => waterTemplate().config],
+  ["chemistryLab@1", () => titrationTemplate().config],
   ["functionStudy2d@1", () => ({ v: 1, expression: { language: 2, variable: "x", source: "x^2-4" }, window: { xMin: -5, xMax: 5, yMin: -6, yMax: 6, sampleCount: 401 }, tasks: { domainExclusions: false, xIntercepts: true, yIntercept: true, verticalAsymptotes: false, horizontalAsymptotes: false, extrema: true, monotonicIntervals: true } })]
 ]);
 export const smartSimStarterConfig = (key: string, version: number): unknown => { const f = STARTERS.get(key + "@" + version); return f ? f() : {}; };

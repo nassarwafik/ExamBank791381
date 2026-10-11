@@ -66,6 +66,9 @@ export const SHARED_ENTRIES = [SHARED_ENTRY, "src/assessmentPreset.ts", "src/que
   "src/chemistry/elements.ts", "src/chemistry/electrons.ts", "src/chemistry/formula.ts", "src/chemistry/molecules.ts", "src/chemistryStructureModel.ts", "src/chemistryStructurePlugin.ts",
   // Phase 21D-D.2 — the exact reaction engine, the curated reaction catalog and the chemistryReactions@1 plugin.
   "src/chemistry/reactions.ts", "src/chemistry/reactionCatalog.ts", "src/chemistryReactionsModel.ts", "src/chemistryReactionsPlugin.ts",
+  // Phase 21D-D.3 — the virtual chemistry laboratory: exact numerics, units, the precision policy, the four science models and chemistryLab@1.
+  "src/chemistry/lab/exact.ts", "src/chemistry/lab/units.ts", "src/chemistry/lab/precision.ts", "src/chemistry/lab/solutions.ts", "src/chemistry/lab/acidBase.ts",
+  "src/chemistry/lab/titration.ts", "src/chemistry/lab/kinetics.ts", "src/chemistryLabModel.ts", "src/chemistryLabPlugin.ts",
   // Phase 20C — networkTopology@2 (the curriculum network simulator): shared primitives, configuration authority, switch / router CLI v2,
   // the operational network engine, the host Command Prompt and the plugin. networkTopology@1's modules above stay frozen.
   "src/net2Common.ts", "src/net2Model.ts", "src/net2SwitchCli.ts", "src/net2RouterCli.ts", "src/net2Network.ts", "src/net2Host.ts", "src/net2Plugin.ts",

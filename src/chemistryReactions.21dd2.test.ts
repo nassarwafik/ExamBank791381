@@ -28,8 +28,8 @@ const custom = (reactants: [string, number][], products: [string, number][]) => 
 const withReaction = (reaction: unknown, tasks: unknown = { balance: { locked: [] }, classifications: [], selections: [] }) => ({ v: 1, reaction, view: { conservation: true, particles: true, states: true, names: false }, tasks });
 
 describe("21D-D.2 registration — a NEW exact identity in the chemistry domain", () => {
-  it("chemistryReactions@1 is registered last, resolves exactly, and its descriptor is valid data with no generic rules", () => {
-    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1", "physicsLab@1", "chemistryStructure@1", "chemistryReactions@1"]);
+  it("chemistryReactions@1 is registered (appended; chemistryLab@1 follows it), resolves exactly, and its descriptor is valid data with no generic rules", () => {
+    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1", "physicsLab@1", "chemistryStructure@1", "chemistryReactions@1", "chemistryLab@1"]);
     expect(resolveSmartSimPlugin("chemistryReactions", 1)).toBe(chemistryReactionsPluginV1);
     for (const [k, v] of [["chemistryReactions", 2], ["chemistryReactions", "1"], ["ChemistryReactions", 1], ["chemistryReaction", 1], ["chemistryReactions", 1.5]] as const) expect(resolveSmartSimPlugin(k, v)).toBeUndefined();
     expect(validateSmartSimDescriptor(CHEMISTRY_REACTIONS_DESCRIPTOR_V1).ok).toBe(true);
