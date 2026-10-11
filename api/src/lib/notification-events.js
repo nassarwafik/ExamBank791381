@@ -68,7 +68,8 @@ const cleanText = (value, max) => {
 };
 const cleanIso = value => { const t = Date.parse(String(value || "")); return Number.isFinite(t) ? new Date(t).toISOString() : ""; };
 const cleanInt = value => { const n = Number(value); return Number.isInteger(n) && n >= 0 ? n : 0; };
-const cleanScore = value => { const n = Number(value); return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null; };
+// RF1 — an ABSENT mark (null / undefined / "") stays null: Number(null) is 0, and a withheld or missing mark must never read as «0».
+const cleanScore = value => { if (value === null || value === undefined || value === "") return null; const n = Number(value); return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null; };
 
 function classEventPrefix(classId) {
   if (!isSafeId(classId)) throw new Error("Unsafe class id.");

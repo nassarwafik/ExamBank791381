@@ -310,8 +310,15 @@ describe("FEATURE-004 grade-change wording", () => {
     expect(p.title).toBe("تم تحديث علامتك");
     expect(p.preview).toBe("تم تحديث علامتك في امتحان «الشبكات»، وأصبحت علامتك 89/100.");
   });
-  it("a not-yet-final grade says so; a new note is mentioned; the automatic variant has its own title", () => {
-    expect(presentNotification({ ...base, becameFinal: false, finalized: false, percentage: null, score: 10, totalMarks: 20, feedbackChanged: true } as NotificationItem).preview).toBe("تم تحديث علامتك في امتحان «الشبكات»، وأصبحت علامتك 10/20. (التصحيح لم يكتمل بعد) مع ملاحظة جديدة من المعلم.");
+  it("a not-yet-final grade is worded as PROVISIONAL (RF1), like the results page; a new note is mentioned; the automatic variant has its own title", () => {
+    const provisional = presentNotification({ ...base, becameFinal: false, finalized: false, percentage: null, score: 10, totalMarks: 20, feedbackChanged: true } as NotificationItem);
+    expect(provisional.title).toBe("تم تحديث علامتك المؤقتة");
+    expect(provisional.preview).toBe("تم تحديث علامتك المؤقتة في امتحان «الشبكات»، وهي الآن 10/20 بانتظار اكتمال التصحيح. مع ملاحظة جديدة من المعلم.");
+    expect(provisional.preview).not.toContain("أصبحت علامتك");
+    // RF1 — a WITHHELD mark (coding grading open / compile review): the event carries no score → no number is ever worded
+    const withheld = presentNotification({ ...base, becameFinal: false, finalized: false, percentage: null, score: null, totalMarks: 12 } as NotificationItem);
+    expect(withheld.preview).not.toMatch(/[0-9]/);
+    expect(withheld.title).toBe("تم تصحيح واجبك");
     expect(presentNotification({ ...base, score: 8.5, totalMarks: 10, automatic: true } as NotificationItem).title).toBe("اكتمل تصحيح امتحانك");
   });
   it("without a grade on the event (old events, feedback-only reviews) the 6D wording is unchanged; the validator admits the new numbers and drops junk", () => {

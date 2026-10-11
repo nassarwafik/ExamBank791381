@@ -48,9 +48,12 @@ export function presentNotification(item: NotificationItem): NotificationPresent
       // FEATURE-004 — a grade change with the updated grade on the event reads as the owner's sentence; a still-partial grade says so.
       if (graded && typeof item.score === "number" && typeof item.totalMarks === "number" && item.totalMarks > 0) {
         const grade = fmtMark(item.score) + "/" + fmtMark(item.totalMarks);
-        const tail = item.finalized ? "" : " (التصحيح لم يكتمل بعد)";
-        const preview = "تم تحديث علامتك في امتحان " + quoted(item.assignmentTitle) + "، وأصبحت علامتك " + grade + "." + tail + (item.feedbackChanged ? " مع ملاحظة جديدة من المعلم." : "");
-        return { title: item.automatic ? "اكتمل تصحيح امتحانك" : "تم تحديث علامتك", preview, icon: "review" };
+        const note = item.feedbackChanged ? " مع ملاحظة جديدة من المعلم." : "";
+        // RF1 — a mark that is not final yet is worded exactly as the results page words it: PROVISIONAL («علامة مؤقتة»), never «أصبحت علامتك».
+        const preview = item.finalized
+          ? "تم تحديث علامتك في امتحان " + quoted(item.assignmentTitle) + "، وأصبحت علامتك " + grade + "." + note
+          : "تم تحديث علامتك المؤقتة في امتحان " + quoted(item.assignmentTitle) + "، وهي الآن " + grade + " بانتظار اكتمال التصحيح." + note;
+        return { title: item.automatic ? "اكتمل تصحيح امتحانك" : item.finalized ? "تم تحديث علامتك" : "تم تحديث علامتك المؤقتة", preview, icon: "review" };
       }
       const title = graded ? (item.automatic ? "اكتمل تصحيح واجبك" : "تم تصحيح واجبك") : "لديك ملاحظة جديدة من المعلم";
       const parts = [quoted(item.assignmentTitle)];
