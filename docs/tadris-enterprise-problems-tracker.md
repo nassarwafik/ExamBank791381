@@ -9,7 +9,7 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 | BUG-001 | 1 | Exam import → «رجوع» does nothing until a draft is saved | High (teacher blocked, work appears lost) | PR A | verified (Chromium 49/49 on the PR head) |
 | BUG-002 | 1 | Eight editor toolbar actions "do not respond" | High (features unreachable) | PR A | verified (Chromium 49/49 on the PR head) |
 | UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B | open |
-| FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C | open |
+| FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C (#295, RF1) | in review |
 | BRAND-005 | 4–5 | Complete Tadris+ branding | Medium | PR D | open |
 | PWA-006 | 4–5 | Installed-app name and icon (desktop / Android / iOS) | Medium | PR D | open |
 
@@ -57,7 +57,7 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 |---|---|
 | Source | `Problems.pdf` page 3 |
 | Current actual behaviour | `api/src/functions/assignment-review.js` already records an `assignment_reviewed` notification event (`recordEventSafely`, dedupe-keyed) when a save is "meaningful"; the student bell (`src/notifications/*`) lists it. The message does not state the updated grade in the requested form («تم تحديث علامتك في امتحان «…»، وأصبحت علامتك 89/100.»), and the trigger / idempotency / publication-policy behaviour has to be certified against the acceptance list (changed → notify; failed save → none; same grade twice → none; retry → none; unauthorized → none; pending manual grading completed → notify under the publication policy; the notification opens the permitted result). |
-| Status | open — PR C |
+| Status | in review — PR C #295; Review Fix 1: dedupe key binds the committed transition (same-millisecond saves), withheld coding marks never ride the event, `cleanScore(null)` no longer reads as 0 |
 
 ## BRAND-005 / PWA-006 — Tadris+ identity
 
