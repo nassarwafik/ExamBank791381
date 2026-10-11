@@ -1,0 +1,87 @@
+/* Phase 21D-D.3 — chemistryLab@1 (lazy). RTL page; formulas, units and numbers are LTR islands. Large readable text, visible focus, touch
+   targets of at least 44 px, and no horizontal page overflow at 360 px: instruments shrink, tables scroll inside themselves. Colours of
+   liquids are illustrative; every reading is also given as text. */
+.clab { font-size: 1.02rem; }
+.clab-h { margin: 0; font-size: 1.15rem; }
+.clab-head { display: grid; gap: 4px; }
+.clab-disclaimer { border-inline-start: 3px solid #d97706; padding-inline-start: 8px; }
+.clab button, .clab select, .clab input:not([type=checkbox]):not([type=radio]):not([type=range]) { min-height: 44px; font-size: 1rem; }
+.clab button { padding: 4px 12px; border-radius: 8px; }
+.clab button[aria-pressed=true] { background: #1d6fd6; color: #fff; border-color: #0d3f80; }
+.clab :focus-visible { outline: 3px solid #1d6fd6; outline-offset: 2px; }
+.clab input[type=text] { min-width: 0; max-width: 220px; flex: 1 1 120px; box-sizing: border-box; }
+.clab select { max-width: 100%; }
+.clab-bench { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--xp-border, #d7dde5); border-radius: 12px; background: var(--xp-surface-alt, #f7f9fc); min-width: 0; }
+.clab-stage { display: grid; gap: 12px; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: start; min-width: 0; }
+.clab-instruments { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: flex-end; min-width: 0; }
+.clab-figure { margin: 0; display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; }
+.clab-figure figcaption { font-size: 0.9rem; }
+.clab-svg { display: block; direction: ltr; height: auto; max-width: 100%; }
+.clab-flask { width: 130px; } .clab-balance { width: 170px; } .clab-burette { width: 74px; } .clab-beaker { width: 92px; } .clab-scale { width: 100%; max-width: 520px; }
+.clab-glass { fill: none; stroke: #33475f; stroke-width: 2.2; stroke-linejoin: round; }
+.clab-mark { stroke: #b42318; stroke-width: 2; }
+.clab-liquid { opacity: 0.9; }
+.clab-titrant { fill: #d9ecfb; }
+.clab-tick { stroke: #33475f; stroke-width: 1; }
+.clab-tap, .clab-body { fill: #6b7a90; } .clab-pan { fill: #9aa7b8; } .clab-powder { fill: #f4f6f9; stroke: #9aa7b8; }
+.clab-display { fill: #10261a; } .clab-display-text { font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: #7cf2a6; }
+.clab-svg-text { font: 700 13px/1 ui-sans-serif, system-ui, sans-serif; fill: #22324a; }
+.clab-svg-small { font: 600 9px/1 ui-sans-serif, system-ui, sans-serif; fill: #33475f; }
+.clab-ph-mark { fill: #111827; } .clab-ph-mark-text { font-weight: 800; }
+.clab-range { stroke: #33475f; stroke-width: 0.5; } .clab-range.is-transition { fill: #cfd6df; }
+.clab-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; min-width: 0; }
+.clab-step { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 8px; align-items: start; }
+.clab-step-n { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #22324a; color: #fff; font-weight: 700; }
+.clab-step-body { display: grid; gap: 6px; min-width: 0; }
+.clab-field { display: grid; gap: 4px; min-width: 0; }
+.clab-controls { display: grid; gap: 8px; min-width: 0; }
+.clab-readout, .clab-meter { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fff; border: 1px solid #b8c3d3; font-weight: 600; }
+.clab-meter .chem-ltr { font: 700 1.1rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.clab-illustrative { color: var(--xp-muted, #4a5870); font-weight: 400; }
+.clab-solutions { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
+.clab-card { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--xp-border, #d7dde5); border-radius: 10px; background: #fff; min-width: 0; align-content: start; }
+.clab-card h4 { margin: 0; font-size: 1rem; }
+.clab-samples { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.clab-sample { margin: 0; display: grid; justify-items: center; gap: 2px; font-size: 0.85rem; max-width: 110px; text-align: center; }
+.clab-sample .clab-beaker { width: 64px; }
+.clab-plot { margin: 0; display: grid; gap: 4px; min-width: 0; }
+.clab-plot svg { width: 100%; max-width: 520px; height: auto; }
+.clab-table-scroll { overflow-x: auto; max-width: 100%; }
+.clab-table { border-collapse: collapse; width: 100%; }
+.clab-table caption { text-align: start; font-weight: 700; padding-bottom: 4px; }
+.clab-table th, .clab-table td { border: 1px solid var(--xp-border, #d7dde5); padding: 6px 8px; text-align: start; vertical-align: middle; }
+.clab-num { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clab-empty { color: var(--xp-muted, #4a5870); font-style: italic; }
+.clab-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; }
+.clab-swatch.clab-s1, .xp-dyn-series.clab-s1 { background: #1d6fd6; stroke: #1d6fd6; }
+.clab-swatch.clab-s2, .xp-dyn-series.clab-s2 { background: #c2410c; stroke: #c2410c; }
+.clab-swatch.clab-s3, .xp-dyn-series.clab-s3 { background: #15803d; stroke: #15803d; }
+.clab-swatch.clab-s4, .xp-dyn-series.clab-s4 { background: #7c3aed; stroke: #7c3aed; }
+.clab-time input[type=range] { flex: 1 1 200px; min-width: 0; min-height: 32px; }
+.clab-status { margin: 0; min-height: 1.4em; font-weight: 600; color: #0d3f80; }
+.clab-answers { display: grid; gap: 8px; }
+.clab-answer .chem-row input[type=text] { max-width: 200px; }
+.clab-saved { margin: 0; font-size: 0.92rem; color: var(--xp-muted, #4a5870); }
+.clab-explain summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+/* the editor keeps every control inside a 360 px phone */
+.clab-editor label, .clab-editor fieldset, .clab-editor li { min-width: 0; }
+.clab-editor select, .clab-editor input:not([type=checkbox]):not([type=radio]) { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.clab-editor .chem-inline { flex-wrap: wrap; }
+.clab-editor ul { padding-inline-start: 0; list-style: none; display: grid; gap: 10px; }
+.clab-editor li { border: 1px solid var(--xp-border, #d7dde5); border-radius: 10px; padding: 8px; display: grid; gap: 6px; }
+.clab-editor .clab-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+.clab-editor .clab-derived { margin: 0; padding: 6px 10px; border-radius: 8px; background: var(--xp-surface-alt, #eef4fb); }
+.clab-review table { border-collapse: collapse; width: 100%; }
+.clab-review th, .clab-review td { border: 1px solid var(--xp-border, #d7dde5); padding: 4px 8px; text-align: start; }
+@media (max-width: 640px) {
+  .clab-stage { grid-template-columns: minmax(0, 1fr); }
+  .clab-bench { padding: 8px; }
+}
+@media (prefers-contrast: more) {
+  .clab-glass { stroke: #000; stroke-width: 2.8; } .clab-bench, .clab-card { border-color: #000; } .clab-illustrative, .clab-saved { color: inherit; }
+}
+@media (prefers-color-scheme: dark) {
+  .clab-card, .clab-readout, .clab-meter { background: #14202e; border-color: #3a4a60; }
+  .clab-glass, .clab-tick { stroke: #c5d2e3; } .clab-svg-text, .clab-svg-small { fill: #dbe5f2; } .clab-ph-mark { fill: #f3f4f6; }
+  .clab-status { color: #9cc4ff; }
+}

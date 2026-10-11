@@ -71,6 +71,12 @@ const entries = new Map<string, SmartSimUi>([
     Workspace: lazy(() => import("../chemistryReactions/RxnWorkspace")),
     Editor: lazy(() => import("../chemistryReactions/RxnEditor")),
     ReviewDetails: lazy(() => import("../chemistryReactions/RxnReview"))
+  }],
+  // Phase 21D-D.3 — the virtual chemistry laboratory (solutions, pH, titration, reaction rate): its own lazy chunks.
+  ["chemistryLab@1", {
+    Workspace: lazy(() => import("../chemistryLab/ChemLabWorkspace")),
+    Editor: lazy(() => import("../chemistryLab/ChemLabEditor")),
+    ReviewDetails: lazy(() => import("../chemistryLab/ChemLabReview"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */
