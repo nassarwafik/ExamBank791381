@@ -1,0 +1,765 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21DD2-CHEMISTRY-REACTIONS",
+  "title": "ExamBank 21D-D.2 — اختبار القبول لمحاكاة التفاعلات والمعادلات الكيميائية",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "وزن المعادلات، حفظ الذرات والشحنة، أنواع التفاعلات",
+    "instructions": "اكتب أصغر أعداد صحيحة أمام المواد ولا تغيّر الأرقام الصغيرة داخل الصيغ. الوزن يحقق حفظ الذرات والشحنة ولا يثبت وحده أن التفاعل يحدث.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — وزن المعادلات",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "smartSim",
+          "text": "زِن معادلة تكوين الماء بأصغر أعداد صحيحة، ثم صنّف التفاعل.",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryReactions",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "reaction": {
+                "catalog": "waterFormation"
+              },
+              "view": {
+                "conservation": true,
+                "particles": true,
+                "states": true,
+                "names": true
+              },
+              "tasks": {
+                "balance": {
+                  "locked": []
+                },
+                "classifications": [
+                  {
+                    "id": "family",
+                    "label": "نوع هذا التفاعل",
+                    "mode": "single",
+                    "options": [
+                      "synthesis",
+                      "decomposition",
+                      "singleDisplacement",
+                      "doubleDisplacement"
+                    ]
+                  }
+                ],
+                "selections": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "balanced",
+                "label": "المعادلة موزونة (حفظ الذرات)",
+                "weight": 2,
+                "kind": "rxn.balanced"
+              },
+              {
+                "id": "lowest",
+                "label": "أصغر معاملات صحيحة",
+                "weight": 1,
+                "kind": "rxn.lowest"
+              },
+              {
+                "id": "family",
+                "label": "تفاعل اتحاد",
+                "weight": 1,
+                "kind": "rxn.classification",
+                "taskId": "family"
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "a2",
+          "presentationType": "smartSim",
+          "text": "معامل أكسيد الحديد (III) معطى. أكمل وزن المعادلة وحدّد المادة التي تتأكسد.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryReactions",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "reaction": {
+                "catalog": "ironOxidation"
+              },
+              "view": {
+                "conservation": true,
+                "particles": true,
+                "states": true,
+                "names": true
+              },
+              "tasks": {
+                "balance": {
+                  "locked": [
+                    "p1"
+                  ]
+                },
+                "classifications": [
+                  {
+                    "id": "family",
+                    "label": "نوع هذا التفاعل",
+                    "mode": "single",
+                    "options": [
+                      "synthesis",
+                      "decomposition",
+                      "singleDisplacement",
+                      "precipitation"
+                    ]
+                  }
+                ],
+                "selections": [
+                  {
+                    "id": "reducer",
+                    "label": "اختر المادة التي تتأكسد (العامل المختزل)",
+                    "role": "reducingAgent"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "balanced",
+                "label": "المعادلة موزونة",
+                "weight": 2,
+                "kind": "rxn.balanced"
+              },
+              {
+                "id": "iron",
+                "label": "معامل الحديد",
+                "weight": 1,
+                "kind": "rxn.coefficient",
+                "termId": "r1"
+              },
+              {
+                "id": "oxygen",
+                "label": "معامل الأكسجين",
+                "weight": 1,
+                "kind": "rxn.coefficient",
+                "termId": "r2"
+              },
+              {
+                "id": "family",
+                "label": "تفاعل اتحاد",
+                "weight": 1,
+                "kind": "rxn.classification",
+                "taskId": "family"
+              },
+              {
+                "id": "reducer",
+                "label": "الحديد يتأكسد",
+                "weight": 1,
+                "kind": "rxn.selection",
+                "taskId": "reducer"
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "a3",
+          "presentationType": "smartSim",
+          "text": "زِن معادلة تفاعل الألومنيوم مع الأكسجين، وحدّد المواد التي هي عناصر.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryReactions",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "reaction": {
+                "custom": {
+                  "reactants": [
+                    {
+                      "formula": "Al",
+                      "charge": 0,
+                      "state": "s"
+                    },
+                    {
+                      "formula": "O2",
+                      "charge": 0,
+                      "state": "g"
+                    }
+                  ],
+                  "products": [
+                    {
+                      "formula": "Al2O3",
+                      "charge": 0,
+                      "state": "s"
+                    }
+                  ]
+                }
+              },
+              "view": {
+                "conservation": true,
+                "particles": true,
+                "states": true,
+                "names": false
+              },
+              "tasks": {
+                "balance": {
+                  "locked": []
+                },
+                "classifications": [],
+                "selections": [
+                  {
+                    "id": "elements",
+                    "label": "اختر المواد التي هي عناصر",
+                    "role": "element"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "balanced",
+                "label": "المعادلة موزونة",
+                "weight": 2,
+                "kind": "rxn.balanced"
+              },
+              {
+                "id": "aluminium",
+                "label": "ذرات الألومنيوم محفوظة",
+                "weight": 1,
+                "kind": "rxn.element",
+                "element": "Al"
+              },
+              {
+                "id": "oxygen",
+                "label": "ذرات الأكسجين محفوظة",
+                "weight": 1,
+                "kind": "rxn.element",
+                "element": "O"
+              },
+              {
+                "id": "lowest",
+                "label": "أصغر معاملات صحيحة",
+                "weight": 1,
+                "kind": "rxn.lowest"
+              },
+              {
+                "id": "elements",
+                "label": "Al وO₂ عنصران",
+                "weight": 1,
+                "kind": "rxn.selection",
+                "taskId": "elements"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — المعادلات الأيونية وحفظ الشحنة",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "smartSim",
+          "text": "معامل أيون الدايكرومات معطى. زِن المعادلة الأيونية بحيث تُحفظ الذرات والشحنة، وحدّد العامل المؤكسد والعامل المختزل.",
+          "marks": 7,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryReactions",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "reaction": {
+                "catalog": "dichromateIron"
+              },
+              "view": {
+                "conservation": true,
+                "particles": false,
+                "states": true,
+                "names": true
+              },
+              "tasks": {
+                "balance": {
+                  "locked": [
+                    "r2"
+                  ]
+                },
+                "classifications": [],
+                "selections": [
+                  {
+                    "id": "oxidizer",
+                    "label": "اختر العامل المؤكسد",
+                    "role": "oxidizingAgent"
+                  },
+                  {
+                    "id": "reducer",
+                    "label": "اختر العامل المختزل",
+                    "role": "reducingAgent"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "balanced",
+                "label": "المعادلة موزونة (الذرات والشحنة)",
+                "weight": 3,
+                "kind": "rxn.balanced"
+              },
+              {
+                "id": "charge",
+                "label": "الشحنة محفوظة",
+                "weight": 1,
+                "kind": "rxn.charge"
+              },
+              {
+                "id": "lowest",
+                "label": "أصغر معاملات صحيحة",
+                "weight": 1,
+                "kind": "rxn.lowest"
+              },
+              {
+                "id": "oxidizer",
+                "label": "Cr₂O₇²⁻ عامل مؤكسد",
+                "weight": 1,
+                "kind": "rxn.selection",
+                "taskId": "oxidizer"
+              },
+              {
+                "id": "reducer",
+                "label": "Fe²⁺ عامل مختزل",
+                "weight": 1,
+                "kind": "rxn.selection",
+                "taskId": "reducer"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — أنواع التفاعلات",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "smartSim",
+          "text": "زِن معادلة التفكك الحراري لكربونات الكالسيوم، واختر كل الأنواع التي ينتمي إليها التفاعل.",
+          "marks": 3,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryReactions",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "reaction": {
+                "catalog": "calciumCarbonateDecomposition"
+              },
+              "view": {
+                "conservation": false,
+                "particles": true,
+                "states": true,
+                "names": true
+              },
+              "tasks": {
+                "balance": {
+                  "locked": []
+                },
+                "classifications": [
+                  {
+                    "id": "families",
+                    "label": "اختر كل الأنواع التي ينتمي إليها التفاعل",
+                    "mode": "multiple",
+                    "options": [
+                      "decomposition",
+                      "synthesis",
+                      "redox",
+                      "combustion"
+                    ]
+                  }
+                ],
+                "selections": []
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "balanced",
+                "label": "المعادلة موزونة",
+                "weight": 1,
+                "kind": "rxn.balanced"
+              },
+              {
+                "id": "families",
+                "label": "تفكك وليس أكسدة واختزال",
+                "weight": 2,
+                "kind": "rxn.classification",
+                "taskId": "families"
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "c2",
+          "presentationType": "smartSim",
+          "text": "زِن معادلة ترسيب كربونات الكالسيوم، واختر كل الأنواع التي ينتمي إليها التفاعل، وحدّد الراسب.",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryReactions",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "reaction": {
+                "catalog": "calciumCarbonatePrecipitation"
+              },
+              "view": {
+                "conservation": true,
+                "particles": true,
+                "states": true,
+                "names": true
+              },
+              "tasks": {
+                "balance": {
+                  "locked": []
+                },
+                "classifications": [
+                  {
+                    "id": "families",
+                    "label": "اختر كل الأنواع التي ينتمي إليها التفاعل",
+                    "mode": "multiple",
+                    "options": [
+                      "precipitation",
+                      "doubleDisplacement",
+                      "redox",
+                      "combustion"
+                    ]
+                  }
+                ],
+                "selections": [
+                  {
+                    "id": "solid",
+                    "label": "اختر الراسب",
+                    "role": "precipitate"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "balanced",
+                "label": "المعادلة موزونة",
+                "weight": 2,
+                "kind": "rxn.balanced"
+              },
+              {
+                "id": "families",
+                "label": "ترسيب وإحلال مزدوج",
+                "weight": 1,
+                "kind": "rxn.classification",
+                "taskId": "families"
+              },
+              {
+                "id": "solid",
+                "label": "الراسب CaCO₃",
+                "weight": 1,
+                "kind": "rxn.selection",
+                "taskId": "solid"
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "c3",
+          "presentationType": "smartSim",
+          "text": "زِن معادلة تعادل هيدروكسيد المغنيسيوم مع حمض الهيدروكلوريك، وصنّف التفاعل، وحدّد الحمض والقاعدة.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryReactions",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "reaction": {
+                "catalog": "magnesiumHydroxideHydrochloric"
+              },
+              "view": {
+                "conservation": true,
+                "particles": true,
+                "states": true,
+                "names": true
+              },
+              "tasks": {
+                "balance": {
+                  "locked": []
+                },
+                "classifications": [
+                  {
+                    "id": "family",
+                    "label": "نوع هذا التفاعل",
+                    "mode": "single",
+                    "options": [
+                      "neutralization",
+                      "combustion",
+                      "decomposition",
+                      "synthesis"
+                    ]
+                  }
+                ],
+                "selections": [
+                  {
+                    "id": "acid",
+                    "label": "اختر الحمض",
+                    "role": "acid"
+                  },
+                  {
+                    "id": "base",
+                    "label": "اختر القاعدة",
+                    "role": "base"
+                  }
+                ]
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "balanced",
+                "label": "المعادلة موزونة",
+                "weight": 2,
+                "kind": "rxn.balanced"
+              },
+              {
+                "id": "lowest",
+                "label": "أصغر معاملات صحيحة",
+                "weight": 1,
+                "kind": "rxn.lowest"
+              },
+              {
+                "id": "family",
+                "label": "تفاعل تعادل",
+                "weight": 1,
+                "kind": "rxn.classification",
+                "taskId": "family"
+              },
+              {
+                "id": "acid",
+                "label": "الحمض HCl",
+                "weight": 1,
+                "kind": "rxn.selection",
+                "taskId": "acid"
+              },
+              {
+                "id": "base",
+                "label": "القاعدة Mg(OH)₂",
+                "weight": 1,
+                "kind": "rxn.selection",
+                "taskId": "base"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — سياق مشترك",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "composite",
+          "text": "استخدم معادلة احتراق الميثان المشتركة للإجابة.",
+          "marks": 7,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxMethane",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "احتراق الميثان",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "chemistryReactions",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "reaction": {
+                      "catalog": "methaneCombustion"
+                    },
+                    "view": {
+                      "conservation": false,
+                      "particles": true,
+                      "states": true,
+                      "names": true
+                    },
+                    "tasks": {
+                      "balance": {
+                        "locked": []
+                      },
+                      "classifications": [
+                        {
+                          "id": "family",
+                          "label": "نوع هذا التفاعل",
+                          "mode": "single",
+                          "options": [
+                            "combustion",
+                            "decomposition",
+                            "synthesis",
+                            "neutralization"
+                          ]
+                        }
+                      ],
+                      "selections": [
+                        {
+                          "id": "fuel",
+                          "label": "اختر الوقود في هذا التفاعل",
+                          "role": "fuel"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gA",
+                "title": "مرتبط بالمعادلة",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxMethane",
+                    "text": "زِن معادلة احتراق الميثان بأصغر أعداد صحيحة.",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "balanced",
+                          "label": "المعادلة موزونة",
+                          "weight": 2,
+                          "kind": "rxn.balanced"
+                        },
+                        {
+                          "id": "lowest",
+                          "label": "أصغر معاملات صحيحة",
+                          "weight": 1,
+                          "kind": "rxn.lowest"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxMethane",
+                    "text": "صنّف التفاعل وحدّد الوقود.",
+                    "marks": 2,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "family",
+                          "label": "تفاعل احتراق",
+                          "weight": 1,
+                          "kind": "rxn.classification",
+                          "taskId": "family"
+                        },
+                        {
+                          "id": "fuel",
+                          "label": "الوقود هو الميثان",
+                          "weight": 1,
+                          "kind": "rxn.selection",
+                          "taskId": "fuel"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p3",
+                    "label": "ج",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "ماذا يعني أن المعادلة الكيميائية موزونة؟",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "عدد ذرات كل عنصر (والشحنة الكلية) متساوٍ في الجهتين"
+                      },
+                      {
+                        "text": "أن التفاعل يحدث بالتأكيد عند خلط المواد"
+                      },
+                      {
+                        "text": "أن عدد الجزيئات في الجهتين متساوٍ"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
