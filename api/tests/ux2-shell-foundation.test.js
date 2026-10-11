@@ -299,7 +299,9 @@ describe("UX-2 focus foundation", () => {
     }
     expect(rule(ui, ".eb-breadcrumb-sep {")).toContain("var(--eb-faint)");                          // decorative separator keeps faint
     expect(rule(lg, ".auth-note{")).toContain("var(--lg-muted)");
-    expect(rule(lg, ".auth-input input::placeholder{")).toContain("var(--lg-muted)");
+    expect(rule(lg, ".auth-input input::placeholder{")).toContain("var(--eb-placeholder)");          // 21E.1 slice 2: its own token (F6 darkened --eb-muted) …
+    expect(ratio(token("--eb-placeholder"), surface)).toBeGreaterThanOrEqual(4.5);                        // … still AA on the white input …
+    expect(ratio(text, token("--eb-placeholder"))).toBeGreaterThanOrEqual(2);                              // … and visibly lighter than typed text
     expect(rule(pp, '.eb-muted[role="status"]{')).toContain("var(--eb-text-secondary)");
     expect(rule(strip(read("studentportal-pro.css")), ".eb-sp-status{")).toContain("var(--eb-text-secondary)");
     expect(rule(strip(read("studentexam-pro.css")), ".iex-loading{")).toContain("var(--eb-text-secondary)");

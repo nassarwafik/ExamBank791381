@@ -11,7 +11,8 @@ import { usedBankQuestionIds } from "./structuredExamProductivity";
  * where it was, and «تراجع» puts that snapshot back as ONE new history entry — re-validated against the exam as it is now:
  *   - nothing happens when the item is already back (Ctrl+Z / the toolbar undo restored it) or the exam is another exam;
  *   - a question whose section no longer exists, or whose bank question was inserted again meanwhile, is refused with a reason;
- *   - otherwise it returns after its previous neighbour, else before its next one, else at its original index (clamped);
+ *   - otherwise it returns after its previous neighbour, else before its next one, else at its original index (clamped), taking
+ *     the first of those places that splits no scenario block (the end of the section always qualifies);
  *   - a scenario member re-joins its scenario at its original place when that keeps the members contiguous, otherwise it returns
  *     unlinked (never an invalid scenario).
  * Pure and loaded only with the builder (never in the initial graph).
@@ -85,10 +86,14 @@ function insertAt<T>(list: readonly T[], item: T, at: number): T[] {
   const i = Math.max(0, Math.min(at, list.length));
   return [...list.slice(0, i), item, ...list.slice(i)];
 }
-function positionFor<T>(list: readonly T[], idOf: (x: T) => string, prevId: string | null, nextId: string | null, index: number): number {
-  if (prevId) { const p = list.findIndex(x => idOf(x) === prevId); if (p >= 0) return p + 1; }
-  if (nextId) { const n = list.findIndex(x => idOf(x) === nextId); if (n >= 0) return n; }
-  return index;
+/** Where the item may return, in order of preference: after its previous neighbour, before its next one, its original index
+ *  (clamped), and finally the end of the list. */
+function candidatePositions<T>(list: readonly T[], idOf: (x: T) => string, prevId: string | null, nextId: string | null, index: number): number[] {
+  const out: number[] = [];
+  if (prevId) { const p = list.findIndex(x => idOf(x) === prevId); if (p >= 0) out.push(p + 1); }
+  if (nextId) { const n = list.findIndex(x => idOf(x) === nextId); if (n >= 0) out.push(n); }
+  out.push(Math.max(0, Math.min(index, list.length)), list.length);
+  return out;
 }
 /** Members of a scenario must stay contiguous in the section (scenarioSource.validateSectionScenarios rule 5). */
 function contiguous(questions: readonly BuilderQuestion[], memberIds: readonly string[]): boolean {
@@ -108,7 +113,7 @@ export function restoreDeletion(exam: StructuredExam, d: Deletion): { exam: Stru
     if (ids.some(id => present.has(id))) return { exam, outcome: "id-conflict" };
     const used = usedBankQuestionIds(exam);
     if (questionsOf(d.section).some(q => { const b = bankIdOf(q); return !!b && used.has(b); })) return { exam, outcome: "bank-duplicate" };
-    const at = positionFor(sections, s => s.id, d.prevId, d.nextId, d.index);
+    const at = candidatePositions(sections, s => s.id, d.prevId, d.nextId, d.index)[0];
     return { exam: { ...exam, sections: insertAt(sections, d.section, at) }, outcome: "restored" };
   }
   const qid = d.question.examQuestionId;
@@ -118,16 +123,28 @@ export function restoreDeletion(exam: StructuredExam, d: Deletion): { exam: Stru
   const bank = bankIdOf(d.question);
   if (bank && usedBankQuestionIds(exam).has(bank)) return { exam, outcome: "bank-duplicate" };
   const list = questionsOf(section);
-  const questions = insertAt(list, d.question, positionFor(list, q => q.examQuestionId, d.prevId, d.nextId, d.index));
-  let scenarios = section.scenarios;
-  if (d.scenarioId && Array.isArray(section.scenarios)) {
-    scenarios = section.scenarios.map(sc => {
-      if (!sc || sc.id !== d.scenarioId || !Array.isArray(sc.questionIds)) return sc;
-      const memberIds = insertAt(sc.questionIds, qid, d.scenarioPos < 0 ? sc.questionIds.length : d.scenarioPos);
-      return contiguous(questions, memberIds) ? { ...sc, questionIds: memberIds } : sc;
+  const before = Array.isArray(section.scenarios) ? section.scenarios : [];
+  const attempt = (at: number) => {
+    const questions = insertAt(list, d.question, at);
+    let scenarios = section.scenarios;
+    if (d.scenarioId && Array.isArray(section.scenarios)) {
+      scenarios = section.scenarios.map(sc => {
+        if (!sc || sc.id !== d.scenarioId || !Array.isArray(sc.questionIds)) return sc;
+        const memberIds = insertAt(sc.questionIds, qid, d.scenarioPos < 0 ? sc.questionIds.length : d.scenarioPos);
+        return contiguous(questions, memberIds) ? { ...sc, questionIds: memberIds } : sc;
+      });
+    }
+    // The return must not split ANY scenario that is contiguous now (e.g. the previous neighbour was moved inside another block).
+    const keepsBlocks = (Array.isArray(scenarios) ? scenarios : []).every((sc, i) => {
+      const was = before[i];
+      if (!sc || !Array.isArray(sc.questionIds) || !was || !Array.isArray(was.questionIds) || !contiguous(list, was.questionIds)) return true;
+      return contiguous(questions, sc.questionIds);
     });
-  }
-  const restored: BuilderSection = scenarios === section.scenarios ? { ...section, questions } : { ...section, questions, scenarios };
+    return { questions, scenarios, keepsBlocks };
+  };
+  // The end of the section always keeps every block whole, so the last candidate always succeeds.
+  const r = candidatePositions(list, q => q.examQuestionId, d.prevId, d.nextId, d.index).map(attempt).find(x => x.keepsBlocks) ?? attempt(list.length);
+  const restored: BuilderSection = r.scenarios === section.scenarios ? { ...section, questions: r.questions } : { ...section, questions: r.questions, scenarios: r.scenarios };
   return { exam: { ...exam, sections: sections.map(s => (s.id === d.sectionId ? restored : s)) }, outcome: "restored" };
 }
 

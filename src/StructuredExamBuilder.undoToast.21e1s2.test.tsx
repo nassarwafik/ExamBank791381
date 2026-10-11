@@ -11,6 +11,8 @@ import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
 import type { StructuredExam } from "./examTypes";
 import type { StructuredExamUpdater } from "./examBuilderState";
+import { readFileSync } from "fs";
+import path from "path";
 
 const makeExam = (examId = "ex1"): StructuredExam => ({
   examId, title: "امتحان الوحدة", status: "draft", schemaVersion: 2, updatedAt: "2026-03-01T10:00:00.000Z",
@@ -127,6 +129,47 @@ describe("21E.1 slice 2 — delete a question → toast → «تراجع»", () 
     expect(toast()).toBeNull();
   });
 
+  it("Ctrl+Z pressed while focus is INSIDE the toast (as the announcement suggests) restores it and focuses the restored card", async () => {
+    render(<Host />);
+    await wait(5);
+    deleteQuestion("q2");
+    act(() => { undoQuestion().focus(); });
+    fireEvent.keyDown(undoQuestion(), { key: "z", ctrlKey: true, bubbles: true });
+    expect(ids()).toEqual(["q1", "q2", "q3"]);
+    expect(toast()).toBeNull();
+    expect(document.activeElement).toBe(card("q2"));
+  });
+
+  it("«تراجع» from the keyboard on a refused restore never drops focus to <body>; closing the warn / success toast from the keyboard neither", async () => {
+    render(<Host />);
+    await wait(5);
+    deleteQuestion("q2");
+    act(() => h.update(e => ({ ...e, sections: e.sections.filter(s => s.id !== "s1") })));
+    act(() => { undoQuestion().focus(); });
+    fireEvent.click(undoQuestion());                                               // the focused toast card leaves with the click
+    expect(toast()!.className).toContain("tone-warn");
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "+ إضافة قسم" }));
+    const close = within(toast()!).getByRole("button", { name: "إغلاق الإشعار" });
+    act(() => { close.focus(); });
+    fireEvent.click(close);
+    expect(toast()).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "+ إضافة قسم" }));
+  });
+
+  it("closing the success toast with focus inside it focuses the restored card", async () => {
+    render(<Host />);
+    await wait(5);
+    deleteQuestion("q2");
+    fireEvent.click(undoQuestion());
+    await wait(5);
+    const close = within(toast()!).getByRole("button", { name: "إغلاق الإشعار" });
+    act(() => { close.focus(); });
+    fireEvent.keyDown(close, { key: "Escape" });
+    expect(toast()).toBeNull();
+    expect(document.activeElement).toBe(card("q2"));
+  });
+
   it("Escape inside the toast closes it and returns focus to the neighbour card; the deletion stays", async () => {
     render(<Host />);
     await wait(5);
@@ -201,5 +244,37 @@ describe("21E.1 slice 2 — delete a section → toast → «تراجع»", () =
     expect(toast()!.textContent).toContain("تم حذف «القسم الأول» مع 3 أسئلة.");     // the newer toast replaced the older one
     fireEvent.click(undoSection());
     expect(h.latest!.sections.map(s => s.id)).toEqual(["s1"]);
+  });
+});
+
+describe("21E.1 slice 2 — where the restored / focused section lands, and motion", () => {
+  const stubMotion = (reduce: boolean) => {
+    window.matchMedia = ((q: string) => ({ matches: reduce && q.includes("prefers-reduced-motion: reduce"), media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
+  };
+  for (const reduce of [false, true]) {
+    it(`a restored section is scrolled just below the sticky toolbar (${reduce ? "reduced motion: no animation" : "smooth"})`, async () => {
+      stubMotion(reduce);
+      const calls: { el: Element; opts: unknown }[] = [];
+      const original = HTMLElement.prototype.scrollIntoView;
+      HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, opts?: unknown) { calls.push({ el: this, opts }); } as typeof original;
+      try {
+        render(<Host />);
+        await wait(5);
+        deleteSection("s1");
+        expect(document.activeElement).toBe(sectionEl("s2"));
+        expect(sectionEl("s2").style.scrollMarginBlockStart).toMatch(/^\d+px$/);   // toolbar height + 12 px (0 + 12 in this DOM)
+        calls.length = 0;
+        fireEvent.click(undoSection());
+        await wait(5);
+        expect(document.activeElement).toBe(sectionEl("s1"));
+        const last = calls.filter(c => c.el === sectionEl("s1")).pop();
+        expect(last?.opts).toEqual({ block: "start", behavior: reduce ? "auto" : "smooth" });
+        expect(sectionEl("s1").style.scrollMarginBlockStart).toBe("12px");
+      } finally { HTMLElement.prototype.scrollIntoView = original; }
+    });
+  }
+  it("while a toast is shown the builder scroller reserves room below its last control (focus is never hidden behind the toast)", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "structured-builder.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css).toMatch(/\.structured-builder-overlay:has\(\.eb-toast\)\{padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\);scroll-padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);
   });
 });

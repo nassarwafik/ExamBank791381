@@ -100,7 +100,7 @@
   border:1px solid var(--lg-line-2); border-radius:var(--lg-r);
   transition:border-color .18s var(--lg-ease), box-shadow .18s var(--lg-ease);
 }
-.auth-input input::placeholder{ color:var(--lg-muted); } /* UX-8b — placeholder text 4.76:1 */
+.auth-input input::placeholder{ color:var(--eb-placeholder); } /* UX-8b — placeholder text 4.76:1; 21E.1 slice 2 — its own token, lighter than typed text */
 .auth-input input:focus{ outline:none; border-color:var(--lg-primary); box-shadow:0 0 0 4px rgba(37,99,235,.16); }
 .auth-input input:focus + svg,
 .auth-input:focus-within svg{ stroke:var(--lg-primary); }

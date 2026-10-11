@@ -44,6 +44,7 @@ import { applyBulkClassification, type BulkClassification } from "./assessmentBu
 import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
+import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import "./structured-builder.css";
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
@@ -338,10 +339,12 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     const t = window.setTimeout(() => setFlashId(""), FLASH_MS);
     return () => window.clearTimeout(t);
   }, [flashId]);
+  const reducedMotion = usePrefersReducedMotion();
+  const scrollBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
   const focusCard = (id: string) => {
     const el = nodes.current.get(id);
     if (!el || !alive.current) return;
-    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", behavior: scrollBehavior });
     el.focus({ preventScroll: true });
     setFlashId(id);
   };
@@ -361,18 +364,38 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const [restoreCommit, setRestoreCommit] = useState<{ seq: number; deletion: Deletion } | null>(null);
   const sectionNode = (sectionId: string) =>
     Array.from(builderRef.current?.querySelectorAll<HTMLElement>("[data-section-id]") ?? []).find(el => el.dataset.sectionId === sectionId) ?? null;
-  /** Where keyboard focus goes once the deleted card / section is gone: its next neighbour, else the previous one, else the add button. */
-  const focusAfterDeletion = (d: Deletion) => {
-    if (!alive.current) return;
+  /** Focuses a section and scrolls its heading just below the sticky toolbar (whose height changes with the width). */
+  const revealSection = (el: HTMLElement) => {
+    const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
+    el.style.scrollMarginBlockStart = Math.round((bar?.getBoundingClientRect().height ?? 0) + 12) + "px";
+    el.focus({ preventScroll: true });
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start", behavior: scrollBehavior });
+  };
+  /** Where keyboard focus goes once the deleted card / section is gone: its next neighbour, else the previous one, else the add
+   *  button («+ إضافة سؤال» of its section, else «+ إضافة قسم»). Returns false when none of them exists any more. */
+  const focusAfterDeletion = (d: Deletion): boolean => {
+    if (!alive.current) return false;
+    let target: HTMLElement | null | undefined;
     if (d.kind === "question") {
       const neighbour = [d.nextId, d.prevId].map(id => (id ? nodes.current.get(id) : undefined)).find(Boolean);
-      const target = neighbour ?? sectionNode(d.sectionId)?.querySelector<HTMLElement>("[data-add-question]") ?? sectionNode(d.sectionId);
-      target?.focus();
-      return;
+      target = neighbour ?? sectionNode(d.sectionId)?.querySelector<HTMLElement>("[data-add-question]") ?? sectionNode(d.sectionId);
+    } else {
+      const neighbour = [d.nextId, d.prevId].map(id => (id ? sectionNode(id) : null)).find(Boolean);
+      if (neighbour) { revealSection(neighbour); return true; }
     }
-    const neighbour = [d.nextId, d.prevId].map(id => (id ? sectionNode(id) : null)).find(Boolean);
-    (neighbour ?? builderRef.current?.querySelector<HTMLElement>("[data-add-section]"))?.focus();
+    target ??= builderRef.current?.querySelector<HTMLElement>("[data-add-section]");
+    target?.focus();
+    return !!target;
   };
+  /** A toast about `d` left while keyboard focus was inside it: focus the item when it is back (Ctrl+Z, «تراجع»), else the
+   *  deletion's neighbour, else «+ إضافة قسم» — focus never falls to <body>. */
+  const focusItemOrNeighbour = (d: Deletion) => {
+    if (!alive.current) return;
+    if (d.kind === "question" && nodes.current.get(d.question.examQuestionId)) { focusCard(d.question.examQuestionId); return; }
+    const section = d.kind === "section" ? sectionNode(d.section.id) : null;
+    if (section) revealSection(section); else focusAfterDeletion(d);
+  };
+  const focusLost = () => { const a = document.activeElement; return !a || a === document.body || !a.isConnected; };
   const deleteWithUndo = (capture: (prev: StructuredExam) => Deletion | null) => {
     if (!alive.current) return;
     const seq = ++deletionSeq.current;
@@ -410,7 +433,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       action: { label: "تراجع", accessibleLabel: d.kind === "question" ? "تراجع عن حذف السؤال" : "تراجع عن حذف القسم", onAction: () => restoreFromToast(d) },
       onDismiss: (reason: ToastDismissReason, hadFocus: boolean) => {
         if (undoTarget.current?.deletion === d) undoTarget.current = null;
-        if (hadFocus && (reason === "close" || reason === "escape" || reason === "timeout")) focusAfterDeletion(d);
+        // "action" is settled by the restore below; "replaced" means a newer deletion already placed focus.
+        if (hadFocus && reason !== "action" && reason !== "replaced") focusItemOrNeighbour(d);
       },
     });
     undoTarget.current = { deletion: d, toastId };
@@ -423,14 +447,16 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     if (!outcome || outcome === "stale" || !alive.current) return;
     if (outcome === "restored" || outcome === "already-present") {
       if (d.kind === "question") window.setTimeout(() => focusCard(d.question.examQuestionId), 0);
-      else window.setTimeout(() => { const el = sectionNode(d.section.id); if (!el || !alive.current) return; if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start", behavior: "smooth" }); el.focus({ preventScroll: true }); }, 0);
-      showToast({ tone: "success", durationMs: Math.min(undoToastMs, 4000), message: d.kind === "question" ? "تمت استعادة السؤال " + d.label + "." : "تمت استعادة «" + (d.section.title || "القسم " + d.label) + "»." });
+      else window.setTimeout(() => { const el = sectionNode(d.section.id); if (el && alive.current) revealSection(el); }, 0);
+      showToast({ tone: "success", durationMs: Math.min(undoToastMs, 4000), message: d.kind === "question" ? "تمت استعادة السؤال " + d.label + "." : "تمت استعادة «" + (d.section.title || "القسم " + d.label) + "».",
+        onDismiss: (reason, hadFocus) => { if (hadFocus && reason !== "replaced") focusItemOrNeighbour(d); } });
       return;
     }
     const reason = outcome === "section-missing" ? "تعذّرت استعادة السؤال: القسم «" + (d.kind === "question" ? d.sectionTitle : "") + "» لم يعد موجودًا."
       : outcome === "bank-duplicate" ? "تعذّرت الاستعادة: سؤال البنك نفسه موجود في الامتحان الآن."
       : "تعذّرت استعادة القسم: بعض أسئلته موجودة الآن في مكان آخر من الامتحان.";
-    showToast({ tone: "warn", message: reason });
+    if (focusLost()) focusItemOrNeighbour(d);                            // «تراجع» was pressed from the keyboard: its card is gone
+    showToast({ tone: "warn", message: reason, onDismiss: (why, hadFocus) => { if (hadFocus && why !== "replaced") focusItemOrNeighbour(d); } });
   }, [restoreCommit]);                                                  // eslint-disable-line react-hooks/exhaustive-deps
   // The toast leaves by itself when the deleted item is back by another route (Ctrl+Z, the toolbar «تراجع») or another exam opened.
   useEffect(() => {

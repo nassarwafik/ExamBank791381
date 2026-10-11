@@ -372,3 +372,6 @@
 .sb-gov-outline ol{margin:4px 0 0;padding-inline-start:20px;display:flex;flex-direction:column;gap:4px}
 .sb-fin-confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end}
 @media (max-width:640px){.sb-gov-table th:nth-child(4),.sb-gov-table td:nth-child(4),.sb-gov-table th:nth-child(7),.sb-gov-table td:nth-child(7){display:none}}
+/* 21E.1 slice 2 — while a toast is shown at the bottom of the builder, the last controls («+ إضافة قسم») can still be scrolled clear
+   of it and keyboard focus is scrolled above it (WCAG 2.4.11). 96px ≈ the tallest toast card (two lines + a 44px action). */
+.structured-builder-overlay:has(.eb-toast){padding-block-end:calc(var(--eb-space-4) * 2 + 96px);scroll-padding-block-end:calc(var(--eb-space-4) * 2 + 96px)}

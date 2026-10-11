@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import type { BuilderQuestion, BuilderSection, StructuredExam } from "./examTypes";
 import { deleteQuestion, deleteSection, moveQuestion, moveSection, updateQuestion, addQuestion } from "./examBuilderState";
 import { validateSectionScenarios } from "./scenarioSource";
+import { createQuestionInScenario } from "./scenarioBuilderOps";
 import { applyDeletion, captureQuestionDeletion, captureSectionDeletion, deletionIsBack, restoreDeletion, type QuestionDeletion, type SectionDeletion } from "./structuredDeletionUndo";
 
 const Q = (id: string, over: Partial<BuilderQuestion> & { bankQuestionId?: string } = {}): BuilderQuestion =>
@@ -105,6 +106,31 @@ describe("21E.1 slice 2 — restore a question", () => {
     expect(r.outcome).toBe("restored");
     expect(ids(r.exam)).toEqual(["q2", "q0", "q1"]);
     expect((r.exam.sections[0].scenarios as { questionIds: string[] }[])[0].questionIds).toEqual(["q2"]);
+    expect(validateSectionScenarios(r.exam.sections[0]).issues).toEqual([]);
+  });
+  it("never splits ANOTHER scenario's block: it takes the first of after-previous / before-next / its index / the end that keeps blocks whole", () => {
+    const e = exam([S("s1", [Q("x"), Q("p"), Q("q"), Q("n")], { scenarios: [scenario("T", ["x", "p"])] } as never)]);
+    const d = captureQuestionDeletion(e, "s1", "q")!;                          // prev p, next n, not a member
+    let now = withSections(applyDeletion(e, d), s => moveQuestion(s, "s1", "p", -1)); // p x n — T still contiguous
+    let r = restoreDeletion(now, d);
+    expect(ids(r.exam)).toEqual(["p", "x", "q", "n"]);                          // after p would split T → before n
+    expect(validateSectionScenarios(r.exam.sections[0]).issues).toEqual([]);
+    now = withSections(now, s => deleteQuestion(s, "s1", "n"));                  // p x — no next neighbour; index 2 is the end
+    r = restoreDeletion(now, d);
+    expect(ids(r.exam)).toEqual(["p", "x", "q"]);
+    expect(validateSectionScenarios(r.exam.sections[0]).issues).toEqual([]);
+    const two = exam([S("s1", [Q("a"), Q("b"), Q("q"), Q("c"), Q("d")], { scenarios: [scenario("U", ["a", "b"]), scenario("V", ["c", "d"])] } as never)]);
+    const d2 = captureQuestionDeletion(two, "s1", "q")!;                       // prev b, next c
+    now = withSections(applyDeletion(two, d2), s => moveQuestion(moveQuestion(s, "s1", "b", -1), "s1", "c", 1)); // b a d c
+    r = restoreDeletion(now, d2);                                                // after b splits U, before c splits V → its index 2
+    expect(ids(r.exam)).toEqual(["b", "a", "q", "d", "c"]);
+    expect(validateSectionScenarios(r.exam.sections[0]).issues).toEqual([]);
+    // a question created INSIDE a scenario after the deletion («+ سؤال» in the scenario block) right after the previous neighbour
+    const grow = exam([S("s1", [Q("q1"), Q("q2"), Q("q3"), Q("q4")], { scenarios: [scenario("sc", ["q1"])] } as never)]);
+    const d3 = captureQuestionDeletion(grow, "s1", "q2")!;                      // prev q1 (a member), next q3
+    now = withSections(applyDeletion(grow, d3), s => s.map(x => (x.id === "s1" ? createQuestionInScenario(x, "sc", Q("qN")) : x))); // q1 qN q3 q4
+    r = restoreDeletion(now, d3);
+    expect(ids(r.exam)).toEqual(["q1", "qN", "q2", "q3", "q4"]);                 // not between q1 and qN
     expect(validateSectionScenarios(r.exam.sections[0]).issues).toEqual([]);
   });
   it("refuses with a reason: already back, another exam, section gone, the same bank question inserted again", () => {
