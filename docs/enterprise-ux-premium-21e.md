@@ -123,7 +123,7 @@ semantics, exam schemas, question version families, APIs, storage, security boun
 | **21E.0** (this PR) | Audit, baselines, roadmap, risk matrix, quality gates; **foundation fix**: focus-token misuse + guard + Chromium certification; render-baseline tool | DS-1 | 0 | L |
 | **21E.1** Design system and shell consistency | `Toast` primitive + `--eb-z-toast` wired; replace the 12 native dialogs with `useConfirm` (+ the missing single-delete confirmations); widen guards: no `window.confirm/alert/prompt`, no undefined `--eb-*` references, breakpoint allow-list (640/768/1024/1280) for *new* sheets, outline guard over `src/**/*.css` with an explicit allow-list; define `--eb-font-mono`; remove the phase-label eyebrow (DS-11); student skip link; `IconButton` for bell / install entry | DS-3, DS-8, DS-11, T-3, S-5, S-10, A-1 (guard part), A-2 | ≤ +1 KB | L–M |
 | **21E.2** Teacher workspace and exam builder | Builder toolbar grouping (primary / secondary / overflow via `ActionMenu`), icon set from `icons.tsx` instead of emoji, builder overlay becomes a true dialog surface (role, trap, Escape via the existing unsaved guard), `Field` frame adopted by the 5 most-used editors, inline per-question issues with a live region, reorder button names with context, save-label vocabulary (one table), gradebook / results CSV export reusing `reports/csv.ts`, `ChartCard` for dashboard charts | T-2, T-4, T-5, T-6, T-7, T-8, T-9 | 0 (lazy chunks) | M |
-| **21E.3** Student exam-taking experience | Per-question error boundary with retry (`lazyWithRetry` in both registries), focus moves on start / submit / result, timer threshold announcements (polite, once per threshold), save-status announcement throttled to state changes that matter, 44 px targets on phones for the listed controls, LTR islands for CLI / physics units / notification grade / install card brand, fixed-height clipping removed (max-height in `rem` or `min()` wrappers) | S-1, S-2, S-3, S-4, S-6, S-7, S-8, S-9 | ≤ +1 KB | M |
+| **21E.3** Student exam-taking experience | Per-question error boundary with retry (`lazyWithRetry` in both registries), focus moves on start / submit / result, timer threshold announcements (polite, once per threshold), save-status announcement throttled to state changes that matter, 44 px targets on phones for the listed controls, LTR islands for CLI / physics units / notification grade / install card brand, fixed-height clipping removed (max-height in `rem` or `min()` wrappers) | S-1, S-2, S-3, S-4, S-6, S-7, S-8, S-9 | ≤ +1 KB | M; **from the RF1 real-page review (§7.2):** collapse the exam details panel by default after question 1 and tighten the section header so the question is the primary focus on desktop, `scroll-padding` for the fixed bottom navigation so a newly focused control is never under it, short visual-question hint with an expandable keyboard guide |
 | **21E.4** Grading, results and analytics | `DataTable` frame for Gradebook / Dashboard / Bank / Picker (caption, scope, sort), grading workspace phone layout (summary cards collapsed into a disclosure, attempt tabs as a segmented control), teacher review `<pre>` answers isolated LTR, dashboard empty states on `EmptyState`, contrast fixes for the listed muted colours | DS-4, DS-6, S-12, A-3, S-6 (review part) | 0 | M |
 | **21E.5** SmartSim and interactive-question presentation | One loading / fallback / reduced-motion contract for every interactive family (table in §3.3 of the student audit): shared `InteractiveFrame` (loading copy, WebGL / canvas fallback message, boundary, `data-eb-motion` honoured), keyboard alternative for topology authoring drag, grids wrapped in `min(100%, …)` | S-1 (SmartSim side), S-9, A-2, A-5 | 0 | M — **touches shared renderers; sequence after #297 merges** |
 | **21E.6** Accessibility, responsive UX and final certification | Token migration of `platform.css` and `App.css` behind the widened guard (colours, spacing, physical→logical), `*-pro.css` loaded per surface, breakpoints consolidated, 200 % text-scaling certification of every shell, browser-side accessibility checks (focus visibility, landmarks, contrast) added to the harness runner, final Chromium certification sweep and the 21E close-out record | DS-2, DS-7, DS-9, DS-10, T-10, A-4, A-6 | ≤ −2 KB (CSS) | M–H (large diffs; split per sheet) |
@@ -221,11 +221,64 @@ re-pointing, and that the real root hands the ring `#000000` (high contrast) and
 `--xp-primary` only — JSON can never set the ring token. The original 21E.0 certification stays at 81/81 and the guard at
 5/5 on the RF1 head.
 
+### 7.2 Visual Quality Gate evidence for this PR (owner's Design Excellence Standard)
+
+The owner's standard requires, for every UX PR, before / after screenshots of the **actual pages**, desktop and mobile
+plus 200 % scaling, a visual review, one real workflow, documented improvements and shortcomings, and the independent
+reviewer's four passes. `scripts/capture-visual-gate-21e0.mjs` (certification only) drives the **real production build**
+in real Chromium through the real student workflow — session → student portal → open the assignment → themed exam
+(`PresentationRoot`, high-contrast and default presets) → type a cloze blank and choose the dropdown by keyboard → place
+a hotspot point by pointer and reach the marker by Tab → choose an option with Space → autosave feedback → next page —
+with a local mock of the student API (the Vitest payload shapes; no token, nothing deployed). Runs: `LABEL=before` on the
+build of `a8ef36f`, `LABEL=after` on the build of `cac0c84`; viewports 1280×900, 390×844 at 2×, and 640×450 at 2×
+(= 200 % scaling); reduced motion honoured. Evidence page (screenshots + computed-style tables + review + shortcomings):
+<https://claude.ai/artifact/U28W9Pir3ipphMZkPRk8Mo> (private to the owner; PR #298).
+
+| Real page, control reached with Tab | Before `a8ef36f` (both presets, all viewports) | After `cac0c84` high contrast · default |
+|---|---|---|
+| cloze input, cloze dropdown, hotspot marker, multiple-choice option | `solid 2px rgb(37, 99, 235)` | `solid 3px rgb(0, 0, 0)` · `solid 3px rgb(29, 78, 216)` |
+| horizontal overflow at 390 px and at 200 % | none | none (scrollWidth = clientWidth) |
+| autosave feedback after each answer | «تم الحفظ · آخر حفظ: hh:mm:ss» | same |
+
+**Visual review (C).** Interaction clarity restored: one focus language inside the exam, the ring in the exam's own
+colour (black at 21:1 in high contrast, navy at 6.7:1 in the default preset), the platform ring unchanged outside.
+Hierarchy, alignment, whitespace and readability are unchanged by this PR.
+
+**Remaining shortcomings observed on the real page (E), scheduled, not fixed here (scope control):**
+
+- **Question below the fold on desktop** — at 1280×900 the title bar, progress card, open details panel, section heading
+  and section-status card push question 1's controls to y ≈ 830 of 900 (S-ST-NEW-1 → 21E.3: collapse the details panel
+  by default after the first question; tighten the section header).
+- **Focused control at the edge of the fixed bottom navigation** — Chromium scrolls a newly focused control only
+  minimally into view, so it can sit partly under the sticky navigation (visible in the desktop cloze screenshots, before
+  and after) (S-ST-NEW-2 → 21E.3: `scroll-padding-bottom` / `scroll-margin` equal to the navigation height).
+- **Permanent instruction text on visual questions** — the hotspot keyboard hint takes three lines on phones above the
+  image (S-ST-NEW-3 → 21E.3: short hint plus an expandable «كيف أستخدم لوحة المفاتيح؟»).
+- **Chrome share at 200 %** — title bar + bottom navigation use about a quarter of the viewport height; nothing is
+  clipped (→ 21E.6 responsive certification).
+
+**Independent reviewer passes requested (F):** FUNCTIONAL, ACCESSIBILITY, VISUAL QUALITY, REGRESSION — recorded in the PR.
+
 ## 8. Acceptance criteria and measurable quality gates per stage
 
 Common to every stage (exact head): `npm test` green (documented flaky policy applies), lint 0 errors, `tsc -b`, build,
 bundle guard within the stage's bundle line of §5, `git diff --check`, PR preview created, Chromium harness of the
 stage passing with screenshots at 1280×900 and 390×844, and **no change** to any file of an open PR from another window.
+
+**Owner's Visual Quality Gate (mandatory for every UX PR, from 21E.0 RF1 on).** Before requesting merge: (A) before /
+after screenshots of the **actual affected pages** (real production build driven through the real route, not only a
+component harness); (B) desktop and mobile evidence plus 200 % scaling where relevant; (C) a written review of visual
+hierarchy, alignment, whitespace, readability, colour harmony, interaction clarity and user effort; (D) at least one real
+teacher or student workflow demonstrated end to end; (E) documented usability improvements and remaining shortcomings;
+(F) independent reviewer sign-off as FUNCTIONAL / ACCESSIBILITY / VISUAL QUALITY / REGRESSION passes. A serious visual,
+accessibility or workflow regression blocks merge even when CI is green. `scripts/capture-visual-gate-21e0.mjs` is the
+reference capture tool (real build + local mock of the student API); later stages extend it with the teacher routes.
+Design principles the gate checks against: premium but restrained visual design (exact approved logo, navy / teal /
+restrained neutrals, one typography / spacing / radius / elevation system, no gradients or shadow noise), eye comfort
+(readable Arabic type, WCAG AA, clear but calm focus and error states, 150 % / 200 % scaling without clipping),
+teacher-first productivity, student-first exam experience (the question and answer area as the primary focus, no large
+headers or permanent instruction panels pushing questions below the fold), responsiveness and accessibility (keyboard,
+screen-reader semantics, contrast, touch targets, RTL with isolated LTR, reduced motion).
 
 | Stage | Gate (measurable) |
 |---|---|
