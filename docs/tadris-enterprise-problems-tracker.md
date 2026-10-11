@@ -8,7 +8,7 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 |---|---|---|---|---|---|
 | BUG-001 | 1 | Exam import → «رجوع» does nothing until a draft is saved | High (teacher blocked, work appears lost) | PR A | verified (Chromium 49/49 on the PR head) |
 | BUG-002 | 1 | Eight editor toolbar actions "do not respond" | High (features unreachable) | PR A | verified (Chromium 49/49 on the PR head) |
-| UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B | open |
+| UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B (stacked on PR A) | in PR (Chromium 32/32, happy-dom 23) |
 | FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C | open |
 | BRAND-005 | 4–5 | Complete Tadris+ branding | Medium | PR D | open |
 | PWA-006 | 4–5 | Installed-app name and icon (desktop / Android / iOS) | Medium | PR D | open |
@@ -49,7 +49,9 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 | Current actual behaviour | `src/AssignmentReview.tsx` renders every question of the attempt in one long modal (`.review-overlay`), with the student answer and the reference answer in a two-column grid, no filter for pending manual grading, no per-question navigation, and status conveyed mostly by colour. |
 | Expected behaviour | Exam-style review of each question (same/adapted renderer as the student exam), trusted reference answer for authorized teachers, correct / incorrect / partial / pending treatments with text + icon, a prominent «يحتاج إلى تصحيح يدوي» filter plus الكل / بانتظار التصحيح / تم التصحيح / إجابة صحيحة / إجابة خاطئة / إجابة جزئية, previous / next navigation, navigator, pending / completed counts, mark + feedback entry, unsaved-change protection, final summary, responsive RTL layout. Server-authoritative grades, existing manual-review semantics, `all` / `firstNAnswered` rules, audit trail and permissions preserved. |
 | Affected | `src/AssignmentReview.tsx`, `api/src/functions/assignment-review.js` (GET projection and `saveReview`), `src/review-pro.css`, `src/platform.css`. |
-| Status | open — PR B |
+| Fix (PR B) | Presentation-only workspace on top of the unchanged review API: state engine `src/review/reviewQuestionState.ts` (server projection only; pending never incorrect; typed marks provisional), filters with counts incl. the prominent «يحتاج إلى تصحيح يدوي», navigator rail / disclosure, previous / next / next-pending, exam-style choice rendering with the teacher-only key in text, readable choice keys, unsaved-change guard on close. Design record: `docs/enterprise-grading-workspace-ux003.md`. |
+| Acceptance tests | `src/review/reviewQuestionState.test.ts` (13), `src/review/reviewWorkspace.ux003.test.tsx` (7, real component + fake API), the 21 pre-existing AssignmentReview suites unchanged; real Chromium `scripts/check-grading-workspace-browser.mjs` 32/32 (desktop / laptop / tablet / phone, hit tests, pointer, keyboard, save round-trip, confirmation on top). |
+| Status | in PR — PR B |
 
 ## FEATURE-004 — Student notification after a grade change
 

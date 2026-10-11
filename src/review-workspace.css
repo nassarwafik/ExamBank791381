@@ -1,0 +1,87 @@
+/* ============================================================
+   UX-003 — Teacher grading workspace (AssignmentReview).
+   Token-only (--eb-*), RTL-first (logical properties). Status is
+   always text + icon; colour is reinforcement. Layout: on wide
+   screens the question list and a sticky navigator rail share a
+   grid; below 1024px the navigator collapses above the list.
+   ============================================================ */
+.review-modal.rv-workspace{ width:min(1500px,100%); }
+.rv-toolbar{ position:sticky; inset-block-start:0; z-index:3; display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-3) 22px; background:var(--eb-surface); border-block-end:1px solid var(--eb-line); }
+.review-top{ z-index:4; }
+.rv-filters{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.rv-filter{ border:1px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text); border-radius:var(--eb-pill); padding:7px 13px; font:inherit; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
+.rv-filter:hover{ background:var(--eb-surface-2); }
+.rv-filter:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.rv-filter.is-active{ background:var(--eb-navy); color:#fff; border-color:var(--eb-navy); }
+.rv-filter.is-pending{ border-color:var(--eb-warn); background:var(--eb-warn-bg); color:#9a3412; font-size:var(--eb-fs-14); }
+.rv-filter.is-pending.is-active{ background:#9a3412; color:#fff; border-color:#9a3412; }
+.rv-filter-count{ font-variant-numeric:tabular-nums; opacity:.85; }
+.rv-pager{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.rv-pager button{ border:1px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text); border-radius:var(--eb-r); padding:8px 12px; font:inherit; font-weight:var(--eb-fw-bold); cursor:pointer; }
+.rv-pager button:disabled{ opacity:.45; cursor:default; }
+.rv-pager button:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.rv-pager .is-primary{ border-color:var(--eb-warn); background:var(--eb-warn-bg); color:#9a3412; }
+.rv-pager-pos{ margin-inline-start:auto; color:var(--eb-muted); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.rv-layout{ display:grid; grid-template-columns:minmax(0,1fr) 272px; gap:var(--eb-space-4); align-items:start; padding:0 22px; }
+.rv-main{ min-width:0; }
+.rv-main .review-question-list{ padding:18px 0; }
+.rv-aside{ position:sticky; inset-block-start:150px; }
+.rv-nav{ border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); padding:var(--eb-space-3); display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.rv-nav-title{ margin:0; font-size:var(--eb-fs-14); color:var(--eb-text-heading); }
+.rv-nav-summary{ margin:0; font-size:var(--eb-fs-12); color:var(--eb-muted); line-height:1.8; }
+.rv-nav-grid{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(52px,1fr)); gap:6px; }
+.rv-nav-btn{ width:100%; min-height:44px; border:1px solid var(--eb-line-2); background:var(--eb-surface); border-radius:var(--eb-r); display:flex; align-items:center; justify-content:center; gap:4px; font:inherit; font-weight:var(--eb-fw-bold); cursor:pointer; color:var(--eb-text); }
+.rv-nav-btn:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.rv-nav-btn.is-current{ box-shadow:0 0 0 2px var(--eb-primary); }
+.rv-nav-btn.is-filtered{ opacity:.4; }
+.rv-nav-btn.is-pending{ border-color:var(--eb-warn); background:var(--eb-warn-bg); }
+.rv-nav-btn.is-correct{ border-color:#86efac; background:var(--eb-success-bg); }
+.rv-nav-btn.is-incorrect{ border-color:#fca5a5; background:var(--eb-danger-bg); }
+.rv-nav-btn.is-partial{ border-color:#c4b5fd; background:#f5f3ff; }
+.rv-nav-btn.is-unanswered{ border-style:dashed; }
+.rv-legend{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.rv-status{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:var(--eb-pill); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); border:1px solid transparent; }
+.rv-status.is-pending{ background:var(--eb-warn-bg); color:#9a3412; border-color:#fdba74; }
+.rv-status.is-correct{ background:var(--eb-success-bg); color:#166534; border-color:#86efac; }
+.rv-status.is-incorrect{ background:var(--eb-danger-bg); color:#991b1b; border-color:#fca5a5; }
+.rv-status.is-partial{ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+.rv-status.is-unanswered{ background:var(--eb-surface-2); color:var(--eb-muted); border-color:var(--eb-line-2); }
+.rv-status.is-draft{ border-style:dashed; }
+.review-question.rv-q.is-correct{ border-inline-start:4px solid #22c55e; }
+.review-question.rv-q.is-incorrect{ border-inline-start:4px solid #ef4444; }
+.review-question.rv-q.is-partial{ border-inline-start:4px solid #8b5cf6; }
+.review-question.rv-q.is-pending{ border-inline-start:4px solid var(--eb-warn); background:#fffdf8; }
+.review-question.rv-q.is-current{ box-shadow:0 0 0 2px var(--eb-primary), 0 8px 22px -20px rgba(15,23,42,.18); }
+.review-question.rv-q:focus{ outline:none; }
+.rv-qmeta{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin-block-start:var(--eb-space-2); font-size:var(--eb-fs-13); color:var(--eb-muted); }
+.rv-qmeta .rv-mark{ font-variant-numeric:tabular-nums; font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+.rv-choices{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.rv-choice{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; border:1px solid var(--eb-line); border-radius:var(--eb-r); padding:8px 10px; background:var(--eb-surface); }
+.rv-choice-letter{ display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center; border-radius:50%; background:var(--eb-surface-2); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.rv-choice-text{ flex:1; min-width:120px; }
+.rv-choice-tag{ font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); padding:2px 8px; border-radius:var(--eb-pill); }
+.rv-choice.is-right{ border-color:#86efac; background:var(--eb-success-bg); }
+.rv-choice.is-right .rv-choice-tag{ color:#166534; }
+.rv-choice.is-wrong{ border-color:#fca5a5; background:var(--eb-danger-bg); }
+.rv-choice.is-wrong .rv-choice-tag{ color:#991b1b; }
+.rv-choice.is-key:not(.is-picked){ border-color:#86efac; }
+.rv-choice-tag.is-key{ color:#166534; }
+.rv-choice.is-none{ border-style:dashed; color:var(--eb-muted); }
+.rv-text-answer{ white-space:pre-wrap; overflow-wrap:anywhere; margin:0; line-height:1.9; }
+.rv-empty{ margin:0; padding:var(--eb-space-5); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r-lg); color:var(--eb-muted); text-align:center; }
+.rv-unsaved{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:var(--eb-pill); background:var(--eb-warn-bg); color:#9a3412; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.review-footer{ flex-wrap:wrap; }
+@media (max-width:1023px){
+  .rv-layout{ grid-template-columns:minmax(0,1fr); padding:0 16px; }
+  .rv-aside{ position:static; order:-1; }
+  .rv-aside details>summary{ cursor:pointer; font-weight:var(--eb-fw-bold); padding:10px 12px; border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); list-style:none; display:flex; justify-content:space-between; align-items:center; }
+  .rv-aside details[open]>summary{ border-end-start-radius:0; border-end-end-radius:0; }
+  .rv-aside details>summary::-webkit-details-marker{ display:none; }
+  .rv-aside details[open] .rv-nav{ border-start-start-radius:0; border-start-end-radius:0; border-block-start:0; }
+  .rv-toolbar{ padding-inline:16px; }
+}
+@media (max-width:640px){
+  .rv-pager-pos{ margin-inline-start:0; width:100%; }
+  .rv-nav-grid{ grid-template-columns:repeat(auto-fill,minmax(48px,1fr)); }
+}
+@media (min-width:1024px){ .rv-aside details>summary{ display:none; } }
