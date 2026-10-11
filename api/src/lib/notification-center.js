@@ -100,7 +100,7 @@ async function projectEvent(container, ctx, stream, ev, unread, deps) {
   if (!a || a.status !== "published" || !ctx.classId || String(a.classId || "") !== ctx.classId) return null;
   const assignment = { assignmentId: ev.assignmentId, assignmentTitle: String(a.title || "") };
   switch (ev.type) {
-    case "assignment_reviewed": return { ...base, ...assignment, becameFinal: ev.becameFinal, scoreChanged: ev.scoreChanged, feedbackChanged: ev.feedbackChanged, finalized: ev.finalized, percentage: ev.percentage };
+    case "assignment_reviewed": return { ...base, ...assignment, becameFinal: ev.becameFinal, scoreChanged: ev.scoreChanged, feedbackChanged: ev.feedbackChanged, finalized: ev.finalized, percentage: ev.percentage, score: typeof ev.score === "number" ? ev.score : null, totalMarks: typeof ev.totalMarks === "number" ? ev.totalMarks : null, ...(ev.automatic === true ? { automatic: true } : {}) };
     case "assignment_deadline_extended":
     case "assignment_reopened": return { ...base, ...assignment, dueAt: ev.dueAt };
     case "attempt_time_extended": return { ...base, ...assignment, attemptNumber: ev.attemptNumber };

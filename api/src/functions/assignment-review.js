@@ -170,7 +170,7 @@ async function handler(request,deps={},obs=null){
   // Phase 6D — ONE coalesced personal notification per meaningful save (became final / score changed / new feedback);
   // an identical re-save changes nothing and notifies nothing. Secondary: never fails the review.
   if(change&&change.meaningful&&resultOut){
-   await recordEventSafely(c,{scope:"student",studentId,type:"assignment_reviewed",dedupeKey:"review:"+assignmentId+":"+attemptNumber+":"+reviewedAt,data:{assignmentId,assignmentTitle:reviewAssignment.title,attemptNumber,becameFinal:change.becameFinal,scoreChanged:change.scoreChanged,feedbackChanged:change.feedbackChanged,finalized:!!resultOut.finalized,percentage:resultOut.percentage}},deps,obs);
+   await recordEventSafely(c,{scope:"student",studentId,type:"assignment_reviewed",dedupeKey:"review:"+assignmentId+":"+attemptNumber+":"+reviewedAt,data:{assignmentId,assignmentTitle:reviewAssignment.title,attemptNumber,becameFinal:change.becameFinal,scoreChanged:change.scoreChanged,feedbackChanged:change.feedbackChanged,finalized:!!resultOut.finalized,percentage:resultOut.percentage,score:resultOut.score,totalMarks:resultOut.totalMarks}},deps,obs);
   }
   if(resultOut?.finalized){
    await ach(c,{classId:reviewAssignment.classId,studentId,studentDisplayName:reviewStudent.displayName,assignmentId,assignmentTitle:reviewAssignment.title,percentage:resultOut.percentage,shareAchievements:reviewStudent.shareAchievements});

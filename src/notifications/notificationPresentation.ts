@@ -19,6 +19,7 @@ function formatDue(iso: string | undefined): string {
   catch { return d.toISOString().slice(0, 16).replace("T", " "); }
 }
 const quoted = (title: string) => (title ? "«" + title + "»" : "");
+const fmtMark = (n: number) => String(Math.round(n * 100) / 100);
 
 export type NotificationPresentation = { title: string; preview: string; icon: NotificationIconKind; sender?: string };
 
@@ -44,6 +45,13 @@ export function presentNotification(item: NotificationItem): NotificationPresent
       return { title: "مادة تعليمية جديدة", preview: item.moduleTitle + (item.courseTitle ? " — " + item.courseTitle : ""), icon: "material" };
     case "assignment_reviewed": {
       const graded = item.becameFinal || item.scoreChanged;
+      // FEATURE-004 — a grade change with the updated grade on the event reads as the owner's sentence; a still-partial grade says so.
+      if (graded && typeof item.score === "number" && typeof item.totalMarks === "number" && item.totalMarks > 0) {
+        const grade = fmtMark(item.score) + "/" + fmtMark(item.totalMarks);
+        const tail = item.finalized ? "" : " (التصحيح لم يكتمل بعد)";
+        const preview = "تم تحديث علامتك في امتحان " + quoted(item.assignmentTitle) + "، وأصبحت علامتك " + grade + "." + tail + (item.feedbackChanged ? " مع ملاحظة جديدة من المعلم." : "");
+        return { title: item.automatic ? "اكتمل تصحيح امتحانك" : "تم تحديث علامتك", preview, icon: "review" };
+      }
       const title = graded ? (item.automatic ? "اكتمل تصحيح واجبك" : "تم تصحيح واجبك") : "لديك ملاحظة جديدة من المعلم";
       const parts = [quoted(item.assignmentTitle)];
       if (graded && item.finalized && typeof item.percentage === "number") parts.push("النتيجة " + item.percentage + "%");

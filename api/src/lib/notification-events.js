@@ -68,6 +68,7 @@ const cleanText = (value, max) => {
 };
 const cleanIso = value => { const t = Date.parse(String(value || "")); return Number.isFinite(t) ? new Date(t).toISOString() : ""; };
 const cleanInt = value => { const n = Number(value); return Number.isInteger(n) && n >= 0 ? n : 0; };
+const cleanScore = value => { const n = Number(value); return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null; };
 
 function classEventPrefix(classId) {
   if (!isSafeId(classId)) throw new Error("Unsafe class id.");
@@ -109,7 +110,10 @@ function eventFields(type, src) {
       const a = assignment();
       if (!a) return null;
       const pct = Number(s.percentage);
-      return { ...a, attemptNumber: cleanInt(s.attemptNumber), becameFinal: s.becameFinal === true, scoreChanged: s.scoreChanged === true, feedbackChanged: s.feedbackChanged === true, finalized: s.finalized === true, percentage: Number.isFinite(pct) && s.finalized === true ? Math.round(pct * 100) / 100 : null, ...(s.automatic === true ? { automatic: true } : {}) };
+      return { ...a, attemptNumber: cleanInt(s.attemptNumber), becameFinal: s.becameFinal === true, scoreChanged: s.scoreChanged === true, feedbackChanged: s.feedbackChanged === true, finalized: s.finalized === true, percentage: Number.isFinite(pct) && s.finalized === true ? Math.round(pct * 100) / 100 : null, ...(s.automatic === true ? { automatic: true } : {}),
+        // FEATURE-004 — the UPDATED grade («أصبحت علامتك 89/100») rides the same idempotent event when the grade changed or became
+        // final; a feedback-only review carries no score. Sanitised numbers only; never another student's data.
+        score: (s.scoreChanged === true || s.becameFinal === true) ? cleanScore(s.score) : null, totalMarks: cleanScore(s.totalMarks) };
     }
     case "learning_module_published": {
       const courseId = String(s.courseId || ""), moduleId = String(s.moduleId || "");
