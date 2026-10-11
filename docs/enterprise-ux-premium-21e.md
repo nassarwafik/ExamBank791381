@@ -180,6 +180,47 @@ intended fallback hue. No markup, behaviour, API or bundle change (initial CSS 3
 scoped redefinition), `--eb-focus-ring` only as a complete outline value, pins on the nine fixed selectors, and real
 colour tokens on the four visual accents.
 
+### 7.1 Review Fix 1 — the ring inside a themed exam (independent UX review, P1)
+
+**Two different situations, which the first version of this section conflated.**
+
+| Where the control renders | Before 21E.0 | After the 21E.0 migration (head `a8ef36f`) | After RF1 |
+|---|---|---|---|
+| Legacy / teacher surfaces outside `.exam-presentation` (coding editor, AI composer, presentation studio, visual editors, the student page of an exam without a presentation) | **no ring** (invalid declaration → `outline-style: none`) | canonical 2 px ring in the platform primary | unchanged (2 px platform ring) |
+| Controls with their own focus rule inside a **themed** exam (`PresentationRoot` → `.exam-presentation`): inline-cloze input and dropdown, hotspot overlay and markers (certified by the RF1 harness); label-diagram zones and chips, coding run button / stdin / code view (same token, not in the harness) | **3 px ring in the preset primary already worked**: the control's own declaration was invalid, so the scoped `.exam-presentation :focus-visible { outline: 3px solid var(--xp-primary) }` rule applied | **regressed to the 2 px platform-blue ring**, in every preset including high contrast | 3 px ring in the preset primary restored |
+| Generic controls inside a themed exam (navigation, submit, text areas, selects without their own rule) | 3 px preset ring | 3 px preset ring (never changed) | unchanged |
+| Legacy multiple-choice option inside a themed exam (`.iex-option:focus-within`, a pre-21E.0 canonical-ring rule from 17F-B1) | 2 px platform-blue ring (pre-existing) | 2 px platform-blue ring | 3 px preset ring (fixed by the same scoped token) |
+
+**Root cause.** `--eb-focus-ring: 2px solid var(--eb-primary)` is declared on `:root`, where its `var(--eb-primary)` is
+substituted; the custom property then inherits into `.exam-presentation` *already resolved* to the platform blue. The
+scope's `--eb-primary: var(--xp-primary)` override therefore recolours nothing that reads `--eb-focus-ring`, and the
+migrated per-control rules (equal specificity, later in the cascade than the scoped generic rule) win with 2 px blue.
+This is why the high-contrast preset showed the platform-default blue instead of its black ring.
+
+**Fix (one declaration, scoped).** `src/presentation/presentation.css`, inside `.exam-presentation { … }`:
+`--eb-focus-ring: 3px solid var(--xp-primary);`. Every rule that reads the ring token now resolves to the exam's own
+ring inside the scope; nothing outside `.exam-presentation` changes (the teacher studio `.xp-studio` keeps the canonical
+ring), the generic scoped rule and the 17 migrated declarations are untouched, and the guard still passes (a scoped
+redefinition of the ring token is a complete outline value).
+
+**Evidence (real Chromium, `scripts/check-exam-focus-ring-browser-21e0-rf1.mjs`,
+`browser-harness/exam-focus-ring-21e0-rf1.*`).** The harness mounts the real `PresentationRoot` around the real
+`StudentQuestionCard` (inline cloze, hotspot with one placed point, legacy multiple choice) for the `highContrast`,
+`default` and `classicPaper` presets plus a reference button outside the root; after a real Tab key press it reads the
+computed outline of each control (style, width, colour, offset, contrast on the preset surface), at 1280×900 and 390×844.
+
+| Head | Result | Inside the themed exam (cloze input, dropdown, overlay, marker, option) |
+|---|---|---|
+| `14f94b1` (`main`, before 21E.0) | 117/129 | cloze / hotspot: 3 px in the preset primary (black at 21:1 in high contrast); the option: 2 px `rgb(37,99,235)` (pre-existing) |
+| `a8ef36f` (21E.0 before RF1) | **69/129** | every probed control: `solid 2px rgb(37, 99, 235)` in all three presets — the high-contrast exam shows the platform blue |
+| RF1 head | **129/129** | every control: `solid 3px`, colour = preset primary (`rgb(0,0,0)` at 21:1; `rgb(29,78,216)` at 6.7:1; `rgb(31,41,55)` at 14.4:1), offset 2 px; the reference button outside the root keeps `solid 2px rgb(37,99,235)` |
+
+Vitest regression `src/presentation/examFocusRing.21e0rf1.test.tsx` (fail-first on `a8ef36f`: the scoped token pin
+fails, 5 of 6 pass; 6/6 on the head) pins the scoped redefinition, the untouched generic rule, the `--eb-primary`
+re-pointing, and that the real root hands the ring `#000000` (high contrast) and `#1D4ED8` (default) through
+`--xp-primary` only — JSON can never set the ring token. The original 21E.0 certification stays at 81/81 and the guard at
+5/5 on the RF1 head.
+
 ## 8. Acceptance criteria and measurable quality gates per stage
 
 Common to every stage (exact head): `npm test` green (documented flaky policy applies), lint 0 errors, `tsc -b`, build,
@@ -215,4 +256,8 @@ stage passing with screenshots at 1280×900 and 390×844, and **no change** to a
   relative baseline (same tool, same container), not a field metric.
 - The audit's counts are grep-based and exclude test files; a few one-off class names may be undercounted.
 - Device coverage (Windows / Android / iOS installed app) remains the owner's manual checklist from PR #296.
-- 21E.0 fixes only DS-1; every other finding is scheduled, not fixed.
+- 21E.0 fixes only DS-1 (and, with RF1, the ring regression it caused inside themed exams); every other finding is
+  scheduled, not fixed.
+- The RF1 harness covers the inline-cloze, hotspot and multiple-choice controls inside a themed exam; the coding,
+  network-CLI and label-diagram controls inherit the same scoped token (same cascade, same rule shape) but are certified
+  only by the static 21E.0 harness outside the exam scope.

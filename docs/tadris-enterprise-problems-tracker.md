@@ -12,7 +12,7 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 | FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C — #295 | merged (`7c155ff`; RF1 `a10075f`: dedupe key binds the committed transition, withheld coding marks never ride the event, `cleanScore(null)` no longer reads as 0; API certification 7/7 + RF1 8/8, client 3/3) |
 | BRAND-005 | 4–5 | Complete Tadris+ branding | Medium | PR D — #296 | in PR (contract test + Chromium 27/27 on the production build) |
 | PWA-006 | 4–5 | Installed-app name and icon (desktop / Android / iOS) | Medium | PR D — #296 | in PR (manifest / icons certified in Chromium; device checklist pending with the owner) |
-| UX-21E | — | Enterprise UX Premium (audit → 6 stages); 21E.0 fixes the invalid focus-ring tokens (DS-1) | High (keyboard access, selection highlights) | 21E.0 | in PR — design record `docs/enterprise-ux-premium-21e.md`; guard 5/5, Chromium 81/81 (baseline 41/81) |
+| UX-21E | — | Enterprise UX Premium (audit → 6 stages); 21E.0 fixes the invalid focus-ring tokens (DS-1) | High (keyboard access, selection highlights) | 21E.0 | in PR — design record `docs/enterprise-ux-premium-21e.md`; guard 5/5, Chromium 81/81 (baseline 41/81); RF1 restores the 3 px preset ring inside themed exams — Chromium 129/129 (69/129 before the fix) |
 
 ---
 

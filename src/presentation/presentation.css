@@ -13,7 +13,11 @@
   --eb-bg:var(--xp-background); --eb-surface:var(--xp-surface); --eb-surface-2:var(--xp-surface-alt); --eb-text:var(--xp-text); --eb-text-heading:var(--xp-text);
   --eb-text-secondary:var(--xp-muted); --eb-muted:var(--xp-muted); --eb-line:var(--xp-border); --eb-line-2:var(--xp-border);
   --eb-primary:var(--xp-primary); --eb-primary-strong:var(--xp-primary); --eb-primary-050:color-mix(in srgb,var(--xp-primary) 7%,var(--xp-surface));
-  --eb-primary-100:color-mix(in srgb,var(--xp-primary) 14%,var(--xp-surface)); --eb-focus:var(--xp-primary); --eb-r-lg:var(--xp-radius); --eb-sh-xs:var(--xp-shadow);
+  --eb-primary-100:color-mix(in srgb,var(--xp-primary) 14%,var(--xp-surface)); --eb-focus:var(--xp-primary);
+  /* 21E.0 RF1 — the exam keeps ITS 3px ring in the preset primary on every control: the canonical --eb-focus-ring is substituted at :root
+     (platform blue, 2px) and inherits already resolved, so the --eb-primary override above cannot recolour it; redefining the ring
+     token here is what the per-control `outline:var(--eb-focus-ring)` rules (cloze, visual, coding, option) resolve to inside the exam. */
+  --eb-focus-ring:3px solid var(--xp-primary); --eb-r-lg:var(--xp-radius); --eb-sh-xs:var(--xp-shadow);
   --_xp-gap:calc(var(--eb-space-3) * var(--xp-space));
   background:var(--xp-background); color:var(--xp-text); font-family:var(--xp-font); line-height:var(--xp-line); overflow-x:clip;
 }
