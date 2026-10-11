@@ -341,14 +341,18 @@ describe("UX-2 focus foundation", () => {
       for (const m of css.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], f + " uses non-canonical token " + m[1]).toMatch(/^--eb-/);
     }
   });
-  it("shell layers stay below the legacy full-screen builder overlays (900 / 1000), which are left untouched", () => {
+  // BUG-001 / BUG-002: the builder shell used to sit at 900, ABOVE the modal layer (70), so every dialog opened from inside it
+  // (the unsaved-changes confirmation behind «رجوع», the toolbar tools) painted underneath it. It now uses --eb-z-overlay, which
+  // keeps it above the shell layers and below the modal layer (src/structuredBuilderOverlay.layers.test.ts pins the full contract).
+  it("shell layers stay below the full-screen builder shell (--eb-z-overlay) and the legacy 1000-level overlays, which are left untouched", () => {
     const tokens = read("design-tokens.css");
     const z = name => Number(new RegExp(name + ":\\s*(\\d+)").exec(tokens)?.[1]);
-    expect(z("--eb-z-nav")).toBeLessThan(900);
-    expect(z("--eb-z-drawer")).toBeLessThan(900);
+    expect(z("--eb-z-nav")).toBeLessThan(z("--eb-z-overlay"));
+    expect(z("--eb-z-drawer")).toBeLessThan(z("--eb-z-overlay"));
+    expect(z("--eb-z-overlay")).toBeLessThan(z("--eb-z-modal"));
     expect(read("shell.css")).toMatch(/z-index:\s*var\(--eb-z-nav\)/);
     expect(read("shell.css")).toMatch(/z-index:\s*var\(--eb-z-drawer\)/);
-    expect(read("App.css")).toMatch(/\.structured-builder-overlay\{[^}]*z-index:900/);
+    expect(read("App.css")).toMatch(/\.structured-builder-overlay\{[^}]*z-index:var\(--eb-z-overlay,60\)/);
     expect(read("structured-builder.css")).toMatch(/\.sb-preview-overlay\{[^}]*z-index:1000/);
     expect(read("studentexam-pro.css")).toMatch(/\.exam-theme-preview-overlay\{[^}]*z-index:1000/);
   });
