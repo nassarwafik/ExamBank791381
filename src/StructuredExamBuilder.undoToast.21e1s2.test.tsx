@@ -273,6 +273,30 @@ describe("21E.1 slice 2 — where the restored / focused section lands, and moti
       } finally { HTMLElement.prototype.scrollIntoView = original; }
     });
   }
+  it("a restored question card is centred when it fits below the sticky toolbar, otherwise aligned by its top just below it", async () => {
+    stubMotion(true);
+    const calls: { el: Element; opts: unknown }[] = [];
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, opts?: unknown) { calls.push({ el: this, opts }); } as typeof original;
+    try {
+      render(<Host />);
+      await wait(5);
+      deleteQuestion("q2");
+      fireEvent.click(undoQuestion());
+      await wait(5);
+      expect(calls.filter(c => c.el === card("q2")).pop()?.opts).toEqual({ block: "center", behavior: "auto" });
+      expect(card("q2").style.scrollMarginBlockStart).toBe("12px");
+      deleteQuestion("q2");
+      const tall = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+        return { height: this.id === "sb-q-q2" ? 5000 : 0, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect;
+      });
+      fireEvent.click(undoQuestion());
+      await wait(5);
+      tall.mockRestore();
+      expect(calls.filter(c => c.el === card("q2")).pop()?.opts).toEqual({ block: "start", behavior: "auto" });
+      expect(document.activeElement).toBe(card("q2"));
+    } finally { HTMLElement.prototype.scrollIntoView = original; }
+  });
   it("while a toast is shown the builder scroller reserves room below its last control (focus is never hidden behind the toast)", () => {
     const css = readFileSync(path.join(process.cwd(), "src", "structured-builder.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
     expect(css).toMatch(/\.structured-builder-overlay:has\(\.eb-toast\)\{padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\);scroll-padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);

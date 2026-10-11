@@ -341,10 +341,18 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   }, [flashId]);
   const reducedMotion = usePrefersReducedMotion();
   const scrollBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
+  const builderRef = useRef<HTMLDivElement | null>(null);
+  /** Space the sticky toolbar takes at the top of the builder (it wraps, so it is measured) plus a small gap. */
+  const toolbarClearance = () => Math.round((builderRef.current?.querySelector<HTMLElement>(".sb-toolbar")?.getBoundingClientRect().height ?? 0) + 12);
   const focusCard = (id: string) => {
     const el = nodes.current.get(id);
     if (!el || !alive.current) return;
-    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", behavior: scrollBehavior });
+    // 21E.1 slice 2 — a card that does not fit below the sticky toolbar is aligned by its top (its number and tools stay visible,
+    // e.g. at 200 % zoom); one that fits is centred as before.
+    const clearance = toolbarClearance();
+    el.style.scrollMarginBlockStart = clearance + "px";
+    const fits = el.getBoundingClientRect().height <= window.innerHeight - clearance - 24;
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: fits ? "center" : "start", behavior: scrollBehavior });
     el.focus({ preventScroll: true });
     setFlashId(id);
   };
@@ -353,7 +361,6 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // and settled after the builder commit (the same record-then-settle pattern as the bank insertion below). «تراجع» puts the
   // unchanged snapshot back as ONE new history entry, re-validated against the exam as it is then (src/structuredDeletionUndo.ts);
   // it never pops the history stack, so later edits are never undone by mistake.
-  const builderRef = useRef<HTMLDivElement | null>(null);
   const { showToast, dismissToast, toastRegion } = useToast({ defaultDurationMs: undoToastMs, actionDisabled: !!saving });
   const undoTarget = useRef<{ deletion: Deletion; toastId: number } | null>(null);
   const deletionSeq = useRef(0);
@@ -366,8 +373,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     Array.from(builderRef.current?.querySelectorAll<HTMLElement>("[data-section-id]") ?? []).find(el => el.dataset.sectionId === sectionId) ?? null;
   /** Focuses a section and scrolls its heading just below the sticky toolbar (whose height changes with the width). */
   const revealSection = (el: HTMLElement) => {
-    const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
-    el.style.scrollMarginBlockStart = Math.round((bar?.getBoundingClientRect().height ?? 0) + 12) + "px";
+    el.style.scrollMarginBlockStart = toolbarClearance() + "px";
     el.focus({ preventScroll: true });
     if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start", behavior: scrollBehavior });
   };
