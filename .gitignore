@@ -68,3 +68,9 @@ artifacts/phase-21dd1/
 
 # Phase 21D-D.2 — reactions mutation ledger (scripts/mutate-chemistry-21dd2.mjs), produced per run
 artifacts/phase-21dd2/
+
+# Phase 21D-D.3 — real-Chromium virtual-lab exam certification output (scripts/check-chemistry-browser-21dd3.mjs), produced per run
+.harness-21dd3/
+
+# Phase 21D-D.3 — virtual-lab mutation ledger (scripts/mutate-chemistry-21dd3.mjs), produced per run
+artifacts/phase-21dd3/

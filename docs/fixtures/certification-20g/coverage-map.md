@@ -2,8 +2,8 @@
 
 | Identity | Kind | Grading | Partial | Response | Compound part | Composite child | AI composer | Authoring version | Grader | 20G | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, 21C, 21DB3, A, B, C, E, S |
-| `trueFalse@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, B, E, S |
+| `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, 21C, 21DB3, 21DD3, A, B, C, E, S |
+| `trueFalse@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21DD3, A, B, E, S |
 | `multiTrueFalse@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | B, E, S |
 | `shortAnswer@1` | type | hybrid | — | text | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, S |
 | `fillBlank@1` | type | auto | ✓ | sequence/fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, E, S |
@@ -13,13 +13,13 @@
 | `tableFill@1` | type | auto | ✓ | fields/table | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, C, E, S |
 | `cliFill@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | A, S |
 | `compound@1` | type | composed | ✓ | compound | — | — | — | ✓ | legacy adapter | A | E, S |
-| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, 21DA1, 21DA2, 21DD1, 21DD2, A, B, C, D, E, S |
+| `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, C, D, E, S |
 | `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | — | ✓ | registered | A | 21A1 |
 | `functionGraphSelection@1` | type | auto | ✓ | functionGraphSelection | — | ✓ | — | ✓ | registered | A | 21A2 |
 | `scene3DSelection@1` | type | auto | ✓ | scene3DSelection | — | — | — | ✓ | registered | A | 21C |
 | `meshPartSelection@1` | type | auto | ✓ | meshPartSelection | — | — | — | ✓ | registered | A | 21DB3 |
 | `multipleSelect@1` | type | auto | ✓ | multiChoice | ✓ | ✓ | — | ✓ | registered | A | A, B, E, S |
-| `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | — | ✓ | registered | A | 21A1, A, B, D, E, S |
+| `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | — | ✓ | registered | A | 21A1, 21DD3, A, B, D, E, S |
 | `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | registered | A | D, E, S |
 | `categorization@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | registered | A | D, E, S |
 | `simulation@1` | type | manual | — | simulation | — | ✓ | — | ✓ | registered | B | api/tests/smartsim-guards-16b-a.test.js — teacher-uploaded package (sandboxed, manual grading only); its lifecycle needs a stored package — covered by the 16B-A browser / store suites |
@@ -32,7 +32,8 @@
 | `hotspot@1` | type | auto | ✓ | hotspot | — | ✓ | — | ✓ | registered | A | E, S |
 | `labelDiagram@1` | type | auto | ✓ | fields | — | ✓ | — | ✓ | registered | A | E, S |
 | `openResponse@1` | type | manual | ✓ | text | — | ✓ | ✓ | ✓ | registered | A | A, B, S |
-| `smartSim@1` | type | auto | ✓ | smartSim | — | ✓ | ✓ | ✓ | registered | A | 21DA1, 21DA2, 21DD1, 21DD2, A, B, D, E, S |
+| `smartSim@1` | type | auto | ✓ | smartSim | — | ✓ | ✓ | ✓ | registered | A | 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, D, E, S |
+| `plugin:chemistryLab@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DD3 |
 | `plugin:chemistryReactions@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DD2 |
 | `plugin:chemistryStructure@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DD1 |
 | `plugin:functionStudy2d@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | D, S |
@@ -41,7 +42,7 @@
 | `plugin:physicsFreeFall@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | B, E, S |
 | `plugin:physicsLab@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DA2 |
 | `plugin:physicsMotion@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DA1 |
-| `child:multipleChoice@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, 21DA2, 21DD1, 21DD2, A, B, C, D, E, S |
+| `child:multipleChoice@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, C, D, E, S |
 | `child:trueFalse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | E, S |
 | `child:multiTrueFalse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:shortAnswer@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | C, E, S |
@@ -65,7 +66,7 @@
 | `child:hotspot@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:labelDiagram@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
 | `child:openResponse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | A, B, C, D, E, S |
-| `child:smartSim@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, 21DA2, 21DD1, 21DD2, A, B, D, E, S |
+| `child:smartSim@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, D, E, S |
 | `child:chartSelection@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A1 |
 | `child:functionGraphSelection@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21A2 |
 | `compoundPart:multipleChoice` | legacy compound part | part grader | ✓ | — | ✓ | — | — | ✓ | legacy part | A | E, S |
