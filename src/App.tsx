@@ -5,6 +5,9 @@ import { lazyWithRetry } from "./lazyWithRetry";
 // session never download it. It is rendered — and therefore fetched — only once the session is AUTHORITATIVELY
 // validated as a student (sessionValidated && sessionRole === "student"); a stored/stale role never decides this.
 // lazyWithRetry keeps the one-shot stale-chunk deployment recovery. Guarded by scripts/check-bundle-budget.mjs.
+// 21E.1 — App.tsx is in the initial bundle: its dialogs (the marks-distribution choice and the shared confirmation through
+// useDeferredConfirm) load on first use, so the dialog layer never ships at startup (bundle guard).
+const Dialog = lazy(lazyWithRetry(() => import("./ui/Dialog"), "teacher-marks-distribution-dialog"));
 const StudentPortal = lazy(lazyWithRetry(() => import("./StudentPortal"), "student-portal"));
 // Heavy, chart-bearing modules are code-split so they load only when opened (keeps the main bundle down).
 // Phase 11D — every teacher/builder destination below uses the same one-shot stale-chunk deployment recovery as the
@@ -29,6 +32,7 @@ import { withTrackingCode } from "./lib/requestTrace";
 import { isStructuredExam } from "./examTypes";
 import type { StructuredExam, BuilderImageAsset } from "./examTypes";
 import { useAutoRefresh } from "./ui/useAutoRefresh";
+import { useDeferredConfirm } from "./ui/useDeferredConfirm";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { GovernanceService } from "./examGovernance";
@@ -552,6 +556,12 @@ function getStoredDisplayName() {
 
 function App() {
   const [token, setToken] = useState(getStoredToken);
+  // 21E.1 — every confirmation goes through the shared accessible ConfirmDialog (never window.confirm / window.prompt);
+  // the marks-distribution choice («متساوٍ» / «حسب الصعوبة») is a small Dialog instead of the former window.prompt("1" | "2").
+  const { confirm, confirmDialog } = useDeferredConfirm();
+  const [marksDistributionOpen, setMarksDistributionOpen] = useState(false);
+  const [marksDistributionUsed, setMarksDistributionUsed] = useState(false);   // once opened, the lazy Dialog stays mounted
+  const marksByDifficultyRef = useRef<HTMLButtonElement>(null);                  // focus starts on «حسب الصعوبة» (the former prompt default «2»)
   // Teacher self-profile (name / preset icon / photo metadata) — loaded once per teacher session; the sidebar and
   // the display-name authority (profile → session → "المعلم") read it. Failures leave the fallback name.
   const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
@@ -3429,7 +3439,7 @@ function App() {
       );
 
       const continueExport =
-        window.confirm(
+        await confirm({ title: "ملاحظات قبل التصدير", confirmLabel: "التصدير رغم ذلك", cancelLabel: "العودة للمراجعة", message:
           "وجد الفحص " +
           preflightIssues.length +
           " ملاحظة قبل التصدير.\n\n" +
@@ -3446,7 +3456,7 @@ function App() {
               : ""
           ) +
           "\n\nهل تريد التصدير رغم ذلك؟"
-        );
+        });
 
       if (!continueExport) {
         setActionNotice(
@@ -4144,11 +4154,11 @@ function App() {
       SavedExamListItem
   ) {
     const confirmed =
-      window.confirm(
+      await confirm({ title: "حذف امتحان محفوظ", tone: "danger", confirmLabel: "حذف الامتحان", cancelLabel: "إبقاء الامتحان", message:
         "هل تريد حذف الامتحان المحفوظ:\n" +
         item.title +
         "؟"
-      );
+      });
 
     if (
       !confirmed
@@ -4386,20 +4396,20 @@ function App() {
     });
   }
 
-  function deleteExamQuestion(
+  async function deleteExamQuestion(
     question:
       ExamQuestion,
     index:
       number
   ) {
     const confirmed =
-      window.confirm(
+      await confirm({ title: "حذف سؤال من الامتحان", tone: "danger", confirmLabel: "حذف السؤال", cancelLabel: "إبقاء السؤال", message:
         "هل تريد حذف السؤال " +
         String(
           index + 1
         ) +
         " من الامتحان؟"
-      );
+      });
 
     if (!confirmed) {
       return;
@@ -4439,24 +4449,16 @@ function App() {
   }
 
   function autoDistributeMarks() {
-    if (
-      !exam ||
-      exam.questions.length ===
-      0
-    ) {
+    if (!exam || exam.questions.length === 0) {
       return;
     }
+    setMarksDistributionUsed(true);
+    setMarksDistributionOpen(true);
+  }
 
-    const mode =
-      window.prompt(
-        "اختر طريقة التوزيع:\n1 = متساوٍ\n2 = حسب الصعوبة",
-        "2"
-      );
-
-    if (
-      mode !== "1" &&
-      mode !== "2"
-    ) {
+  function applyMarksDistribution(mode: "1" | "2") {
+    setMarksDistributionOpen(false);
+    if (!exam || exam.questions.length === 0) {
       return;
     }
 
@@ -5167,11 +5169,11 @@ function App() {
       SavedTemplateListItem
   ) {
     const confirmed =
-      window.confirm(
+      await confirm({ title: "حذف قالب", tone: "danger", confirmLabel: "حذف القالب", cancelLabel: "إبقاء القالب", message:
         "هل تريد حذف القالب:\n" +
         item.title +
         "؟"
-      );
+      });
 
     if (!confirmed) {
       return;
@@ -5301,7 +5303,7 @@ function App() {
       }
 
       const confirmed =
-        window.confirm(
+        await confirm({ title: "تطبيق التعليمات العامة على الامتحان", confirmLabel: "تطبيق التعديلات", cancelLabel: "إلغاء", message:
           (
             analysis.summary ||
             "سيتم تعديل الامتحان."
@@ -5309,7 +5311,7 @@ function App() {
           "\n\nعدد العمليات: " +
           operations.length +
           "\n\nمتابعة؟"
-        );
+        });
 
       if (!confirmed) {
         setActionNotice(
@@ -5793,6 +5795,10 @@ function App() {
       onNavigate={navigateTeacher}
       onLogout={handleLogout}
     >
+      {confirmDialog}
+      {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} initialFocusRef={marksByDifficultyRef} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button ref={marksByDifficultyRef} type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>
+        <p>اختر طريقة توزيع مجموع العلامات على أسئلة الامتحان (<bdi dir="ltr">{exam ? exam.questions.length : 0}</bdi> أسئلة): بالتساوي بين الأسئلة، أو بحسب درجة صعوبة كل سؤال.</p>
+      </Dialog></Suspense>}
 
       {teacherView ===
         "platform" && (
@@ -6806,7 +6812,7 @@ function App() {
                       className="sb-input sb-input-sm"
                       value=""
                       aria-label="قوالب التعليمات العامة"
-                      onChange={event => {
+                      onChange={async event => {
                         // Roadmap #17 — general instruction template = plain TEXT starting point. Sets only
                         // metadata.generalInstructions; never affects grading rules. Confirms before replace.
                         const t = findGeneralInstructionTemplate(event.target.value);
@@ -6814,7 +6820,7 @@ function App() {
                         if (!t) return;
                         if (
                           (exam.metadata?.generalInstructions || "").trim() &&
-                          !window.confirm("سيستبدل هذا القالب نص التعليمات العامة الحالي. هل تريد المتابعة؟")
+                          !(await confirm({ title: "استبدال التعليمات العامة", message: "سيستبدل هذا القالب نص التعليمات العامة الحالي. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات" }))
                         )
                           return;
                         updateExamMetadata("generalInstructions", t.text);

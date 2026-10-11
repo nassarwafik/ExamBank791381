@@ -78,3 +78,5 @@ artifacts/phase-21dd2/
 .harness-21dd3/
 # Phase 21D-D.3 — virtual-lab mutation ledger (scripts/mutate-chemistry-21dd3.mjs), produced per run
 artifacts/phase-21dd3/
+.harness-shared-confirm-21e1/
+.harness-visual-gate-21e1/

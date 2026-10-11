@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import { useConfirm } from "./ui/useConfirm";
 import type { ExamCoverPage, ActivityType } from "./examCover";
 import type { RichContentV1 } from "./richContent/richContentModel";
 import { defaultCoverPage, validateBannerDataUrl, MAX_BANNER_BYTES } from "./examCover";
@@ -22,6 +23,7 @@ const SAFE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 const RichContentEditor = lazy(() => import("./richContent/RichContentEditor"));
 
 export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disabled }: Props) {
+  const { confirm, confirmDialog } = useConfirm();   // 21E.1 — the shared accessible confirmation (never window.confirm)
   const [bannerError, setBannerError] = useState("");
   const [coverTplId, setCoverTplId] = useState("");
   const [insTplId, setInsTplId] = useState("");
@@ -40,19 +42,19 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
   // Roadmap #16 — apply a built-in cover template EXPLICITLY. Preserves the teacher's safe banner; when the
   // cover already has edited text, a clear confirm is required so nothing is silently overwritten. Never
   // touches exam questions/sections/marks/grading (only the cover object).
-  const applyTpl = () => {
+  const applyTpl = async () => {
     const t = findCoverTemplate(coverTplId);
     if (!t) return;
     const hasText = !!((c?.subtitle || "").trim() || (c?.instructions || "").trim() || (c?.allowedMaterials || "").trim());
-    if (hasText && !window.confirm("سيستبدل هذا القالب حقول الغلاف الحالية (مع الإبقاء على البانر). هل تريد المتابعة؟")) return;
+    if (hasText && !(await confirm({ title: "استبدال حقول الغلاف", message: "سيستبدل هذا القالب حقول الغلاف الحالية (مع الإبقاء على البانر). هل تريد المتابعة؟", confirmLabel: "استبدال حقول الغلاف", cancelLabel: "إبقاء الحقول" }))) return;
     onChange(applyCoverTemplate(c, t));
   };
   // Roadmap #17 — apply a built-in instruction template to the COVER instructions field (plain text; a
   // starting point the teacher can then edit freely). Confirms before replacing existing text.
-  const applyInsTpl = () => {
+  const applyInsTpl = async () => {
     const t = findGeneralInstructionTemplate(insTplId);
     if (!t) return;
-    if ((c?.instructions || "").trim() && !window.confirm("سيستبدل هذا القالب نص التعليمات الحالي. هل تريد المتابعة؟")) return;
+    if ((c?.instructions || "").trim() && !(await confirm({ title: "استبدال نص التعليمات", message: "سيستبدل هذا القالب نص التعليمات الحالي. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات" }))) return;
     patch({ instructions: t.text });
   };
 
@@ -90,6 +92,7 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
 
   return (
     <div className="sb-cover-panel" dir="rtl">
+      {confirmDialog}
       <div className="sb-row-between">
         <strong>🎓 الغلاف والتعليمات</strong>
         <label className="sb-check">
