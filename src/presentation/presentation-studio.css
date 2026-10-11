@@ -6,7 +6,7 @@
    ============================================================ */
 .eb-dialog.size-lg.xp-studio{ width:min(1440px,100%); height:min(94vh,1100px); max-height:94vh; }
 .xp-studio .eb-dialog-body{ padding-block:var(--eb-space-3); }
-.xp-studio :focus-visible{ outline:3px solid var(--eb-focus,#1D4ED8); outline-offset:2px; }
+.xp-studio :focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
 .xp-studio-shell{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-height:0; }
 .xp-studio .xp-studio-status{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
 .xp-studio .xp-studio-sr{ position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }

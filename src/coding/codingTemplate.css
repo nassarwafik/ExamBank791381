@@ -9,7 +9,7 @@
 .cx-tpl-locked { border: 1px dashed var(--eb-border-strong, #94a3b8); background: var(--eb-surface-2, #f1f5f9); }
 .cx-tpl-locked pre, .cx-tpl-full pre { margin: 0; padding: 8px 10px; overflow: auto; max-width: 100%; white-space: pre; tab-size: 4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; color: var(--eb-text, #0f172a); }
-.cx-tpl-locked pre:focus-visible, .cx-tpl-full pre:focus-visible { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: 2px; }
+.cx-tpl-locked pre:focus-visible, .cx-tpl-full pre:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 .cx-tpl-tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; font-family: inherit; }
 .cx-tpl-locked .cx-tpl-tag { position: absolute; top: 4px; right: 6px; background: var(--eb-surface, #fff); border: 1px solid var(--eb-border, #e2e8f0); color: var(--eb-muted, #475569); }
 .cx-tpl-gap { border: 2px solid var(--eb-primary, #2563eb); background: var(--eb-surface, #fff); padding: 4px; display: grid; gap: 4px; }
@@ -19,7 +19,7 @@
 .cx-tpl-reset { min-height: 36px; padding: 0 10px; font-size: 12px; }
 .cx-tpl-input { width: 100%; box-sizing: border-box; min-height: 3rem; resize: vertical; direction: ltr; text-align: left; white-space: pre; overflow: auto; tab-size: 4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; line-height: 1.5; padding: 6px 8px; border: 1px solid var(--eb-border, #e2e8f0); border-radius: 6px; }
-.cx-tpl-input:focus-visible { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: 1px; }
+.cx-tpl-input:focus-visible { outline: var(--eb-focus-ring); outline-offset: 1px; }
 .cx-tpl-full summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .cx-tpl-full pre { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 8px; max-height: 22rem; }
 @media (max-width: 600px) {

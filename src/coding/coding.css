@@ -8,7 +8,7 @@
 
 .cx-code-editor { direction: ltr; text-align: left; display: grid; gap: 4px; min-width: 0; }
 .cx-code-frame { display: grid; grid-template-columns: auto minmax(0, 1fr); border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; overflow: hidden; background: var(--eb-surface, #fff); }
-.cx-code-frame:focus-within { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: 2px; }
+.cx-code-frame:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 .cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter {
   margin: 0; padding: 10px 12px; font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; tab-size: 4;
 }
@@ -60,7 +60,7 @@
 .cx-code-view-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; direction: rtl; }
 .cx-code-view-body { display: grid; grid-template-columns: auto minmax(0, 1fr); max-height: 28rem; overflow: auto; border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; }
 .cx-code-view { white-space: pre; overflow: visible; }
-.cx-code-view:focus-visible { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: -3px; }
+.cx-code-view:focus-visible { outline: var(--eb-focus-ring); outline-offset: -2px; }
 .cx-key-summary { display: grid; gap: 6px; direction: rtl; font-size: 13px; }
 
 @media (max-width: 600px) {
@@ -145,7 +145,7 @@
 .cx-run-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .cx-run-controls .cx-run-button { min-height: 44px; padding: 0 18px; font-weight: 700; }
 .cx-run-button.is-secondary { font-weight: 600; }
-.cx-run-button:focus-visible, .cx-sample-pick button:focus-visible, .cx-stdin:focus-visible { outline: 3px solid var(--eb-focus, #2563eb); outline-offset: 2px; }
+.cx-run-button:focus-visible, .cx-sample-pick button:focus-visible, .cx-stdin:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
 .cx-run-button[aria-busy="true"] { cursor: progress; }
 .cx-result-meta, .cx-result-note { margin: 0; font-size: 12px; color: var(--eb-muted, #475569); }
 .cx-result-stale { margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--eb-warning-soft, #fffbeb); color: var(--eb-warning, #92400e); font-size: 12px; }
@@ -168,4 +168,4 @@
 .cx-code-rich .monaco-editor, .cx-code-rich .monaco-editor .overflow-guard { border-radius: 10px; }
 .cx-code-rich .monaco-editor .margin { border-inline-end: 1px solid var(--eb-border, #e2e8f0); }
 .cx-code-rich .monaco-editor .find-widget { direction: ltr; }
-.cx-code-editor--rich .cx-code-frame:focus-within { outline: 3px solid var(--eb-focus-ring, #2563eb); outline-offset: 2px; }
+.cx-code-editor--rich .cx-code-frame:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }

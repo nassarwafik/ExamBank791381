@@ -4,7 +4,7 @@
 .ai-composer-tab{appearance:none;border:1px solid transparent;background:transparent;color:var(--eb-text-secondary,#475569);font:inherit;font-weight:700;font-size:13px;padding:6px 12px;border-radius:var(--eb-r-sm,6px) var(--eb-r-sm,6px) 0 0;cursor:pointer}
 .ai-composer-tab:hover{background:var(--eb-surface-2,#f1f5f9)}
 .ai-composer-tab.is-active{border-color:var(--eb-border,#cbd5e1);border-bottom-color:var(--eb-surface,#fff);background:var(--eb-surface,#fff);color:var(--eb-primary,#1d4ed8);box-shadow:inset 0 -2px 0 var(--eb-primary,#1d4ed8)}
-.ai-composer-tab:focus-visible,.ai-composer :focus-visible{outline:2px solid var(--eb-focus,#2563eb);outline-offset:2px}
+.ai-composer-tab:focus-visible,.ai-composer :focus-visible{outline:var(--eb-focus-ring);outline-offset:var(--eb-focus-offset)}
 .ai-composer-panel{display:flex;flex-direction:column;gap:var(--eb-space-3,12px)}
 .ai-composer-form{display:flex;flex-direction:column;gap:10px}
 .ai-composer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}

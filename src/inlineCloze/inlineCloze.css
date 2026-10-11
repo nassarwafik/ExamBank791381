@@ -9,7 +9,7 @@
 .cloze-input { display: inline-block; min-width: 6ch; max-width: 100%; min-height: 40px; box-sizing: border-box; padding: 4px 8px; border: 0; border-bottom: 2px solid var(--eb-primary, #2563eb); border-radius: 6px 6px 0 0; background: var(--eb-surface-2, #f1f5f9); font: inherit; color: inherit; unicode-bidi: plaintext; text-align: start; }
 .cloze-select { display: inline-block; max-width: 100%; min-height: 40px; box-sizing: border-box; padding: 4px 8px; border: 1px solid var(--eb-border, #cbd5e1); border-radius: 8px; background: var(--eb-surface, #fff); font: inherit; color: inherit; unicode-bidi: plaintext; }
 .cloze-select[data-chosen="true"] { border-color: var(--eb-primary, #2563eb); background: var(--eb-surface-2, #eef2ff); font-weight: 600; }
-.cloze-input:focus-visible, .cloze-select:focus-visible { outline: 3px solid var(--eb-focus, #f59e0b); outline-offset: 2px; }
+.cloze-input:focus-visible, .cloze-select:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 .cloze-input:disabled, .cloze-select:disabled { opacity: .85; cursor: not-allowed; }
 .cloze-note, .cloze-unavailable { margin: 0; padding: 6px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); color: var(--eb-muted, #475569); font-size: 13px; }
 .cloze-unavailable { border: 1px dashed var(--eb-border, #cbd5e1); background: transparent; }
