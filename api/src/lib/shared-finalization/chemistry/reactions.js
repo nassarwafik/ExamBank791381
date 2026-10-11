@@ -120,10 +120,16 @@ function conservationTable(r, coefficients) {
     const atoms = new Map((0, exports.reactionElements)(r).map(e => [e, [0n, 0n]]));
     const charge = [0n, 0n];
     let complete = coefficients.length === terms.length;
+    const unset = new Set();
+    let chargeUnset = false;
     terms.forEach((t, i) => {
         const c = coefficients[i];
         if (!integer(c, 1, exports.REACTION_LIMITS.coefficientMax)) {
             complete = false;
+            for (const el of Object.keys(t.composition))
+                unset.add(el);
+            if (t.charge !== 0)
+                chargeUnset = true;
             return;
         }
         const side = i < n ? 0 : 1, k = BigInt(c);
@@ -131,8 +137,8 @@ function conservationTable(r, coefficients) {
         for (const [el, count] of Object.entries(t.composition))
             atoms.get(el)[side] += BigInt(count) * k;
     });
-    const rows = [...atoms.entries()].map(([element, [a, b]]) => ({ element, reactants: Number(a), products: Number(b), delta: Number(a - b), balanced: a === b }));
-    const chargeRow = (0, exports.hasChargedTerm)(r) ? { reactants: Number(charge[0]), products: Number(charge[1]), delta: Number(charge[0] - charge[1]), balanced: charge[0] === charge[1] } : null;
+    const rows = [...atoms.entries()].map(([element, [a, b]]) => ({ element, reactants: Number(a), products: Number(b), delta: Number(a - b), balanced: a === b, complete: !unset.has(element) }));
+    const chargeRow = (0, exports.hasChargedTerm)(r) ? { reactants: Number(charge[0]), products: Number(charge[1]), delta: Number(charge[0] - charge[1]), balanced: charge[0] === charge[1], complete: !chargeUnset } : null;
     return { rows, charge: chargeRow, complete, balanced: complete && rows.every(x => x.balanced) && (chargeRow?.balanced ?? true) };
 }
 function describeConservationRow(row, name = "") {

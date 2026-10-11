@@ -159,11 +159,12 @@ export function equationText(r: ReactionV1, coefficients: readonly (number | nul
 }
 
 // ── the conservation table (presentation AND grading: one exact computation) ──────────────────────────────────────────────────────
-export type ConservationRow = { element: string; reactants: number; products: number; delta: number; balanced: boolean };
+/** `complete`: every term containing the element (the charge: every charged term) has a coefficient — a 0 = 0 row of unset terms is NOT "conserved". */
+export type ConservationRow = { element: string; reactants: number; products: number; delta: number; balanced: boolean; complete: boolean };
 export type ConservationTable = {
   rows: ConservationRow[];
   /** the net-charge row, present when any term is charged */
-  charge: { reactants: number; products: number; delta: number; balanced: boolean } | null;
+  charge: { reactants: number; products: number; delta: number; balanced: boolean; complete: boolean } | null;
   /** every coefficient is set */
   complete: boolean;
   /** complete AND every element AND the charge conserved */
@@ -178,15 +179,22 @@ export function conservationTable(r: ReactionV1, coefficients: readonly (number 
   const atoms = new Map<string, [bigint, bigint]>(reactionElements(r).map(e => [e, [0n, 0n]]));
   const charge: [bigint, bigint] = [0n, 0n];
   let complete = coefficients.length === terms.length;
+  const unset = new Set<string>();
+  let chargeUnset = false;
   terms.forEach((t, i) => {
     const c = coefficients[i];
-    if (!integer(c, 1, REACTION_LIMITS.coefficientMax)) { complete = false; return; }
+    if (!integer(c, 1, REACTION_LIMITS.coefficientMax)) {
+      complete = false;
+      for (const el of Object.keys(t.composition)) unset.add(el);
+      if (t.charge !== 0) chargeUnset = true;
+      return;
+    }
     const side = i < n ? 0 : 1, k = BigInt(c);
     charge[side] += BigInt(t.charge) * k;
     for (const [el, count] of Object.entries(t.composition)) atoms.get(el)![side] += BigInt(count) * k;
   });
-  const rows: ConservationRow[] = [...atoms.entries()].map(([element, [a, b]]) => ({ element, reactants: Number(a), products: Number(b), delta: Number(a - b), balanced: a === b }));
-  const chargeRow = hasChargedTerm(r) ? { reactants: Number(charge[0]), products: Number(charge[1]), delta: Number(charge[0] - charge[1]), balanced: charge[0] === charge[1] } : null;
+  const rows: ConservationRow[] = [...atoms.entries()].map(([element, [a, b]]) => ({ element, reactants: Number(a), products: Number(b), delta: Number(a - b), balanced: a === b, complete: !unset.has(element) }));
+  const chargeRow = hasChargedTerm(r) ? { reactants: Number(charge[0]), products: Number(charge[1]), delta: Number(charge[0] - charge[1]), balanced: charge[0] === charge[1], complete: !chargeUnset } : null;
   return { rows, charge: chargeRow, complete, balanced: complete && rows.every(x => x.balanced) && (chargeRow?.balanced ?? true) };
 }
 /** One Arabic sentence explaining an element row ("الهيدروجين H: 4 في المتفاعلات و2 في النواتج — يزيد في المتفاعلات بمقدار 2"). */

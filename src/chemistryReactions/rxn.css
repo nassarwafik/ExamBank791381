@@ -27,6 +27,7 @@
 .rxn-table tr.is-off td, .rxn-table tr.is-off th { background: #fff4f2; }
 .rxn-table tr.is-ok td:last-child { background: #effaf3; }
 .rxn-ok { color: #0d5c2e; font-weight: 700; } .rxn-off { color: #b42318; font-weight: 700; }
+.rxn-pending { color: var(--xp-muted, #4a5870); font-style: italic; }
 .rxn-status { margin: 6px 0 0; padding: 6px 10px; border-radius: 8px; background: var(--xp-surface-alt, #eef4fb); font-weight: 600; }
 .rxn-status.is-ok { background: #e3f6ea; color: #0d5c2e; } .rxn-status.is-off { background: #fdecea; color: #8a1c12; }
 .rxn-particles { margin: 0; display: grid; gap: 6px; min-width: 0; }
@@ -56,6 +57,10 @@
 .rxn-chip small { font-size: 0.75rem; }
 .rxn-level { font-weight: 400; color: var(--xp-muted, #4a5870); }
 .rxn-disclaimer { border-inline-start: 3px solid #d97706; padding-inline-start: 8px; }
+/* a <select> sizes itself to its longest option (catalog reactions, templates): keep every editor control inside a 360 px phone */
+.rxn-editor label, .rxn-editor fieldset, .rxn-editor li { min-width: 0; }
+.rxn-editor select, .rxn-editor input:not([type=checkbox]):not([type=radio]) { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.rxn-editor .chem-inline { flex-wrap: wrap; }
 .rxn-editor .rxn-custom { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .rxn-editor .rxn-options { display: flex; flex-wrap: wrap; gap: 4px 12px; border: 1px dotted var(--xp-border, #d7dde5); }
 .rxn-editor .rxn-status-yes { color: #0d5c2e; } .rxn-editor .rxn-status-no { color: #6b7280; } .rxn-editor .rxn-status-contested { color: #b45309; }

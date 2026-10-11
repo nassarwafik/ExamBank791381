@@ -54,11 +54,14 @@ describe("21D-D.2 UI — balancing in the real student host", () => {
   });
   it("each coefficient is ONE semantic action per term; the conservation table follows; balanced status is announced", async () => {
     const w = await mount(methaneTemplate());
-    type(w, "r1", "1"); type(w, "r2", "1"); type(w, "p1", "1"); type(w, "p2", "1");
-    expect(lastActions()).toEqual([{ type: "coefficient.set", termId: "r1", value: 1 }, { type: "coefficient.set", termId: "r2", value: 1 }, { type: "coefficient.set", termId: "p1", value: 1 }, { type: "coefficient.set", termId: "p2", value: 1 }]);
     const panel = within(w).getByTestId("rxn-conservation");
-    const row = (el: string) => panel.querySelector('tr[data-element="' + el + '"]')!;
-    expect([...row("O").querySelectorAll("td")].map(td => td.textContent)).toEqual(["2", "3", "−1", "✗ غير محفوظ"]);
+    const cell = (el: string) => panel.querySelector('tr[data-element="' + el + '"] td:last-child')!.textContent;
+    // with only CH₄ and CO₂ set, C is decided; H and O still wait for O₂ / H₂O — never shown as "conserved" (0 = 0 of unset terms)
+    type(w, "r1", "1"); type(w, "p1", "1");
+    expect(["C", "H", "O"].map(cell)).toEqual(["✓ محفوظ", "… أكمل معاملاته", "… أكمل معاملاته"]);
+    type(w, "r2", "1"); type(w, "p2", "1");
+    expect(lastActions()).toEqual([{ type: "coefficient.set", termId: "r1", value: 1 }, { type: "coefficient.set", termId: "p1", value: 1 }, { type: "coefficient.set", termId: "r2", value: 1 }, { type: "coefficient.set", termId: "p2", value: 1 }]);
+    expect([...panel.querySelectorAll('tr[data-element="O"] td')].map(td => td.textContent)).toEqual(["2", "3", "−1", "✗ غير محفوظ"]);
     expect(within(w).getByTestId("rxn-status").textContent).toBe("المعادلة غير موزونة: H، O غير محفوظ.");
     type(w, "r2", "2"); type(w, "p2", "2");
     expect(lastActions()).toEqual([{ type: "coefficient.set", termId: "r1", value: 1 }, { type: "coefficient.set", termId: "p1", value: 1 }, { type: "coefficient.set", termId: "r2", value: 2 }, { type: "coefficient.set", termId: "p2", value: 2 }]);

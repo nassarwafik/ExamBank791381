@@ -118,7 +118,7 @@ describe("21D-D.2 exact balancing solver — scientific reference cases", () => 
   });
   it("conserves charge in ionic equations: the dichromate equation carries +24 on both sides", () => {
     const t = conservationTable(eq("Fe+2 + Cr2O7-2 + H+1 = Fe+3 + Cr+3 + H2O"), [6, 1, 14, 6, 2, 7]);
-    expect(t.charge).toEqual({ reactants: 24, products: 24, delta: 0, balanced: true });
+    expect(t.charge).toEqual({ reactants: 24, products: 24, delta: 0, balanced: true, complete: true });
     // atoms balanced but charge not: one Fe²⁺ short on both sides keeps the atoms equal and breaks the charge
     const off = conservationTable(eq("Fe+2 + Cr2O7-2 + H+1 = Fe+3 + Cr+3 + H2O"), [5, 1, 14, 5, 2, 7]);
     expect(off.rows.every(x => x.balanced)).toBe(true);
@@ -192,8 +192,8 @@ describe("21D-D.2 conservation table and presentation text", () => {
   it("counts each element on both sides and explains the difference", () => {
     const t = conservationTable(water, [1, 1, 1]);
     expect(t.rows).toEqual([
-      { element: "H", reactants: 2, products: 2, delta: 0, balanced: true },
-      { element: "O", reactants: 2, products: 1, delta: 1, balanced: false }
+      { element: "H", reactants: 2, products: 2, delta: 0, balanced: true, complete: true },
+      { element: "O", reactants: 2, products: 1, delta: 1, balanced: false, complete: true }
     ]);
     expect(t.charge).toBeNull();
     expect(t.complete).toBe(true);
@@ -208,6 +208,11 @@ describe("21D-D.2 conservation table and presentation text", () => {
     expect(t.complete).toBe(false);
     expect(t.balanced).toBe(false);
     expect(t.rows.find(x => x.element === "O")).toMatchObject({ reactants: 0, products: 2 });
+    // a row is complete only when every term holding the element has a coefficient: 0 = 0 of unset terms is NOT conservation
+    const methane = eq("CH4 + O2 = CO2 + H2O"), m = conservationTable(methane, [1, null, 1, null]);
+    expect(m.rows.map(x => [x.element, x.balanced, x.complete])).toEqual([["C", true, true], ["H", false, false], ["O", false, false]]);
+    const ionic = conservationTable(eq("Fe+2 + Cr2O7-2 + H+1 = Fe+3 + Cr+3 + H2O"), [1, 1, null, null, null, null]);
+    expect(ionic.charge).toEqual({ reactants: 0, products: 0, delta: 0, balanced: true, complete: false });
     expect(conservationTable(water, [2, 1]).complete).toBe(false);
     expect(conservationTable(water, [2, 0, 2]).complete).toBe(false);
   });
