@@ -54,13 +54,13 @@ function loadWorker(opts: { online?: boolean; existingCaches?: string[] } = {}) 
 
 describe("service worker — installation only, never stale, never private data", () => {
   it("install precaches ONLY the static offline page; activate removes only its own old caches", async () => {
-    const w = loadWorker({ existingCaches: ["examBank-pwa-offline-v0", "some-other-app-cache"] });
+    const w = loadWorker({ existingCaches: ["examBank-pwa-offline-v1", "some-other-app-cache"] });
     await w.dispatch("install");
-    expect([...w.stores.get("examBank-pwa-offline-v1")!.keys()]).toEqual(["/offline.html"]);
+    expect([...w.stores.get("examBank-pwa-offline-v2")!.keys()]).toEqual(["/offline.html"]);
     expect(w.self.skipWaiting).toHaveBeenCalled();
     await w.dispatch("activate");
     expect(w.caches.delete).toHaveBeenCalledTimes(1);
-    expect(w.caches.delete).toHaveBeenCalledWith("examBank-pwa-offline-v0");
+    expect(w.caches.delete).toHaveBeenCalledWith("examBank-pwa-offline-v1");
     expect(w.stores.has("some-other-app-cache")).toBe(true);
     expect(w.registration.navigationPreload.enable).toHaveBeenCalled();
     expect(w.self.clients.claim).toHaveBeenCalled();
@@ -113,17 +113,17 @@ describe("offline page", () => {
   it("is static Arabic RTL, says an internet connection is required, loads nothing external", () => {
     const html = read("public/offline.html");
     expect(html).toMatch(/<html lang="ar" dir="rtl">/);
-    expect(html).toMatch(/يحتاج ExamBank إلى اتصال بالإنترنت/);
+    expect(html).toMatch(/يحتاج Tadris\+ إلى اتصال بالإنترنت/);
     expect(html).not.toMatch(/<script|src=|href=|@import|url\(/);
   });
 });
 
 describe("Web App Manifest + icons + Apple metadata", () => {
   const manifest = JSON.parse(read("public/manifest.webmanifest"));
-  const pngSize = (p: string) => { const b = readFileSync(resolve(ROOT, "public", p)); expect(b.subarray(1, 4).toString()).toBe("PNG"); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
+  const pngSize = (p: string) => { const b = readFileSync(resolve(ROOT, "public", p.split("?")[0])); expect(b.subarray(1, 4).toString()).toBe("PNG"); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
 
   it("defines an installable standalone app with relative (deployment-safe) URLs", () => {
-    expect(manifest).toMatchObject({ name: "ExamBank 791381", short_name: "ExamBank", start_url: "./", scope: "./", id: "./", display: "standalone", lang: "ar", dir: "rtl" });
+    expect(manifest).toMatchObject({ name: "Tadris+", short_name: "Tadris+", start_url: "./", scope: "./", id: "./", display: "standalone", lang: "ar", dir: "rtl" });
     expect(manifest.description).toBeTruthy();
     expect(manifest.orientation).toBe("any");
     expect(manifest.theme_color).toMatch(/^#[0-9a-f]{6}$/i);
@@ -140,7 +140,7 @@ describe("Web App Manifest + icons + Apple metadata", () => {
     for (const icon of manifest.icons) {
       expect(icon.type).toBe("image/png");
       expect(pngSize(icon.src).join("x")).toBe(icon.sizes);
-      expect(readFileSync(resolve(ROOT, "public", icon.src)).length, icon.src).toBeLessThan(budget(icon.sizes));
+      expect(readFileSync(resolve(ROOT, "public", icon.src.split("?")[0])).length, icon.src).toBeLessThan(budget(icon.sizes));
     }
     expect(pngSize("pwa/apple-touch-icon.png")).toEqual([180, 180]);
   });
@@ -148,9 +148,9 @@ describe("Web App Manifest + icons + Apple metadata", () => {
   it("index.html links the manifest, theme colour, Apple title/icon and keeps the ordinary viewport", () => {
     const html = read("index.html");
     expect(html).toMatch(/<link rel="manifest" href="\/manifest\.webmanifest" \/>/);
-    expect(html).toMatch(/<link rel="apple-touch-icon" href="\/pwa\/apple-touch-icon\.png" \/>/);
-    expect(html).toMatch(/<meta name="apple-mobile-web-app-title" content="ExamBank" \/>/);
-    expect(html).toMatch(/<meta name="theme-color" content="#0f172a" \/>/);
+    expect(html).toMatch(/<link rel="apple-touch-icon" sizes="180x180" href="\/pwa\/apple-touch-icon\.png\?v=tadris1" \/>/);
+    expect(html).toMatch(/<meta name="apple-mobile-web-app-title" content="Tadris\+" \/>/);
+    expect(html).toMatch(/<meta name="theme-color" content="#031c40" \/>/);                         // BRAND-005: the Tadris+ navy
     expect(html).toMatch(/<meta name="viewport" content="width=device-width, initial-scale=1.0" \/>/);
     for (const href of ["manifest.webmanifest", "pwa/apple-touch-icon.png", "sw.js", "offline.html"]) expect(existsSync(resolve(ROOT, "public", href))).toBe(true);
   });

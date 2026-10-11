@@ -33,7 +33,7 @@ function showUnsupportedNote(win: Window): boolean {
 }
 
 function unsupportedText(win: Window): string {
-  if (!isAppleMobile(win)) return "هذا المتصفح لا يدعم إشعارات الرسائل. افتح ExamBank في المتصفح (مثل Chrome) أو من أيقونته على الشاشة الرئيسية.";
+  if (!isAppleMobile(win)) return "هذا المتصفح لا يدعم إشعارات الرسائل. افتح Tadris+ في المتصفح (مثل Chrome) أو من أيقونته على الشاشة الرئيسية.";
   return isStandalone(win)
     ? "إشعارات الرسائل غير مدعومة على هذا الجهاز. حدّث iOS إلى الإصدار 16.4 أو أحدث."
     : "إشعارات الرسائل غير مدعومة في المتصفح. على iPhone وiPad: ثبّت التطبيق على الشاشة الرئيسية أولًا، ثم افتحه من أيقونته وفعّل الإشعارات.";

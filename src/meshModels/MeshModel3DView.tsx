@@ -272,7 +272,7 @@ export default function MeshModel3DView({ model, library = MESH_LIBRARY, selecti
           <dt>المصدر</dt><dd><a href={entry.provenance.sourceUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.source}</a></dd>
           <dt>نسبة العمل</dt><dd>{entry.provenance.attribution} (<a href={entry.provenance.sourceLicenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.sourceLicense}</a>)</dd>
           <dt>ترخيص هذا الملف</dt><dd><a href={entry.provenance.licenseUrl} target="_blank" rel="noopener noreferrer">{entry.provenance.license}</a></dd>
-          <dt>تعديلات ExamBank</dt><dd>{entry.provenance.modifications}</dd>
+          <dt>تعديلات Tadris+</dt><dd>{entry.provenance.modifications}</dd>
           <dt>حدود الاستخدام التعليمي</dt><dd>{entry.provenance.educationalLimitations}</dd>
         </dl> : <p>نموذج رفعه المعلم؛ تحقّق الخادم من بنيته وبصمته (SHA-256) قبل حفظه، ولا يُعرض إلا إذا طابقت بصمته النسخة المعتمدة في السؤال.</p>}
       </details>

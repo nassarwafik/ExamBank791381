@@ -35,8 +35,8 @@ export default function InstallAppEntry({ win = window }: { win?: Window }) {
       <button type="button" className="student-topbar-link eb-student-install-entry" disabled={busy} onClick={() => void onClick()}>
         <IconDownload size={16} />تثبيت التطبيق
       </button>
-      <Dialog open={open} title="تثبيت ExamBank" onClose={() => setOpen(false)} size="sm" className="eb-install-dialog">
-        <p className="eb-install-desc">افتح ExamBank من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>
+      <Dialog open={open} title="تثبيت Tadris+" onClose={() => setOpen(false)} size="sm" className="eb-install-dialog">
+        <p className="eb-install-desc">افتح Tadris+ من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>
         {guidance.kind === "ios" ? <IosInstallSteps /> : <ManualInstallGuidance win={win} />}
       </Dialog>
     </>

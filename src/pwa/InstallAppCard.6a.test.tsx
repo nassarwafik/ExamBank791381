@@ -43,8 +43,8 @@ function firePrompt(outcome: Choice = "accepted") {
   act(() => { window.dispatchEvent(event); });
   return { event, prompt };
 }
-const card = () => screen.queryByRole("region", { name: /تثبيت التطبيق|تثبيت ExamBank/ });
-const manualCard = () => screen.queryByRole("region", { name: "تثبيت ExamBank" });
+const card = () => screen.queryByRole("region", { name: /تثبيت التطبيق|تثبيت Tadris+/ });
+const manualCard = () => screen.queryByRole("region", { name: "تثبيت Tadris+" });
 const entry = () => screen.queryByRole("button", { name: "تثبيت التطبيق" });
 const dismissedAt = (ms: number) => localStorage.setItem(DISMISSED_AT_KEY, String(ms));
 
@@ -97,7 +97,7 @@ describe("Android / Chromium — install prompt", () => {
     expect(screen.queryByRole("button", { name: "تثبيت التطبيق على الهاتف" })).toBeNull();
     const region = manualCard()!;                                                 // the consumed prompt falls back to the manual path
     expect(region).toBeTruthy();
-    expect(within(region).getByText("يمكنك تثبيت ExamBank من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
+    expect(within(region).getByText("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
     expect(within(region).getByText("افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")).toBeTruthy();
     expect(within(region).getAllByRole("button").map(b => b.textContent)).toEqual(["ليس الآن"]);   // one dismiss control, no extra «إخفاء»
     const again = firePrompt("accepted");                                         // Chromium may offer it again later
@@ -111,7 +111,7 @@ describe("Android / Chromium — install prompt", () => {
     firePrompt("dismissed");
     fireEvent.click(screen.getByRole("button", { name: "تثبيت التطبيق على هذا الجهاز" }));
     await screen.findByText(/لم يتم التثبيت/);
-    expect(screen.getByText("افتح قائمة المتصفح واختر «تثبيت ExamBank» أو «تثبيت التطبيق».")).toBeTruthy();
+    expect(screen.getByText("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق».")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "ليس الآن" }));
     expect(card()).toBeNull();
     expect(localStorage.getItem(DISMISSED_AT_KEY)).toMatch(/^\d+$/);
@@ -246,13 +246,13 @@ describe("iPhone / iPad Safari — Add to Home Screen guidance", () => {
 });
 
 describe("Phase 10C — no native prompt, not installed → manual install guidance (never null)", () => {
-  it("desktop Chromium without a prompt → the quiet «تثبيت ExamBank» card with the browser-menu path, desktop wording", () => {
+  it("desktop Chromium without a prompt → the quiet «تثبيت Tadris+» card with the browser-menu path, desktop wording", () => {
     const win = fakeWin({ ua: UA.desktopChrome });
     render(<InstallAppCard win={win} />);
     const region = manualCard()!;
     expect(region).toBeTruthy();
-    expect(within(region).getByText("يمكنك تثبيت ExamBank من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
-    expect(within(region).getByText("افتح قائمة المتصفح واختر «تثبيت ExamBank» أو «تثبيت التطبيق».")).toBeTruthy();
+    expect(within(region).getByText("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
+    expect(within(region).getByText("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق».")).toBeTruthy();
     expect(within(region).queryByRole("button", { name: /تثبيت التطبيق على/ })).toBeNull();
     expect(within(region).queryByRole("list")).toBeNull();                       // no iOS steps on desktop
     expect(within(region).getByRole("button", { name: "ليس الآن" })).toBeTruthy();
@@ -262,7 +262,7 @@ describe("Phase 10C — no native prompt, not installed → manual install guida
     render(<InstallAppCard win={fakeWin({ ua: UA.android, touch: 5, coarse: true })} />);
     expect(screen.getByText("افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")).toBeTruthy();
     expect(manualInstallHint(fakeWin({ ua: UA.samsung }))).toContain("إضافة إلى الشاشة الرئيسية");
-    expect(manualInstallHint(fakeWin({ ua: UA.desktopChrome }))).toContain("تثبيت ExamBank");
+    expect(manualInstallHint(fakeWin({ ua: UA.desktopChrome }))).toContain("تثبيت Tadris+");
   });
   it("desktop Chromium WITH a prompt → an install button worded for the device", () => {
     render(<InstallAppCard win={fakeWin({ ua: UA.desktopChrome })} />);
@@ -287,7 +287,7 @@ describe("Phase 10C — the official icon", () => {
     const img = mark.querySelector("img") as HTMLImageElement;
     expect(img.getAttribute("src")).toBe(BRAND_ICON_SRC);
     expect(img.getAttribute("alt")).toBe(""); expect(img.getAttribute("aria-hidden")).toBe("true");
-    expect(BRAND_ICON_SRC).toBe("/pwa/icon-192.png");
+    expect(BRAND_ICON_SRC).toBe("/pwa/icon-192.png?v=tadris1");
   });
 });
 
@@ -324,8 +324,8 @@ describe("Phase 10C — permanent install entry (student top bar)", () => {
     render(<InstallAppEntry win={fakeWin({ ua: UA.desktopChrome })} />);
     firePrompt("dismissed");
     fireEvent.click(entry()!);
-    const dialog = await screen.findByRole("dialog", { name: "تثبيت ExamBank" });
-    expect(within(dialog).getByText("افتح قائمة المتصفح واختر «تثبيت ExamBank» أو «تثبيت التطبيق».")).toBeTruthy();
+    const dialog = await screen.findByRole("dialog", { name: "تثبيت Tadris+" });
+    expect(within(dialog).getByText("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق».")).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(entry()).toBeTruthy();
@@ -333,15 +333,15 @@ describe("Phase 10C — permanent install entry (student top bar)", () => {
   it("iPhone → the click shows the Add-to-Home-Screen steps in a dialog", async () => {
     render(<InstallAppEntry win={fakeWin({ ua: UA.iphone, touch: 5, coarse: true, iosStandalone: false })} />);
     fireEvent.click(entry()!);
-    const dialog = await screen.findByRole("dialog", { name: "تثبيت ExamBank" });
+    const dialog = await screen.findByRole("dialog", { name: "تثبيت Tadris+" });
     expect(within(dialog).getByRole("list", { name: "خطوات الإضافة إلى الشاشة الرئيسية" })).toBeTruthy();
     expect(within(dialog).queryByText(/قائمة المتصفح/)).toBeNull();
   });
   it("Android / desktop without a prompt → the click shows the manual guidance in a dialog (device wording)", async () => {
     render(<InstallAppEntry win={fakeWin({ ua: UA.android, touch: 5, coarse: true })} />);
     fireEvent.click(entry()!);
-    const dialog = await screen.findByRole("dialog", { name: "تثبيت ExamBank" });
-    expect(within(dialog).getByText("يمكنك تثبيت ExamBank من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
+    const dialog = await screen.findByRole("dialog", { name: "تثبيت Tadris+" });
+    expect(within(dialog).getByText("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
     expect(within(dialog).getByText("افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")).toBeTruthy();
     expect(within(dialog).queryByRole("list")).toBeNull();
   });
@@ -399,7 +399,7 @@ describe("student portal placement", () => {
     render(<StudentPortal token="t" displayName="سارة" onLogout={() => {}} />);
     expect(await screen.findByText(/مرحبًا سارة/)).toBeTruthy();
     expect(screen.queryByRole("region", { name: "تثبيت التطبيق" })).toBeNull();      // happy-dom: desktop, no prompt…
-    expect(screen.getByRole("region", { name: "تثبيت ExamBank" })).toBeTruthy();     // …so the quiet manual card
+    expect(screen.getByRole("region", { name: "تثبيت Tadris+" })).toBeTruthy();     // …so the quiet manual card
     expect(within(document.querySelector("header.student-topbar") as HTMLElement).getByRole("button", { name: "تثبيت التطبيق" })).toBeTruthy();
     firePrompt();
     await waitFor(() => expect(screen.getByRole("region", { name: "تثبيت التطبيق" })).toBeTruthy());

@@ -410,7 +410,7 @@ function TeacherDashboard({token}:DashboardProps){
   const student=mode==="student";
   const scopeRow=mode==="global"?"كل الصفوف / جميع الطلاب":mode==="class"?className:"الطالب: "+studentName+" / الصف: "+className;
   const rows:string[][]=[
-   ["ExamBank - Teacher Analytics"],
+   ["Tadris+ - Teacher Analytics"],
    ["النطاق",scopeRow],
    ["تاريخ التقرير",fmtDate(d.generatedAt)],
    [],
@@ -438,7 +438,7 @@ function TeacherDashboard({token}:DashboardProps){
   const content="﻿"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n");
   const blob=new Blob([content],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download="ExamBank-Teacher-Analytics.csv";a.click();URL.revokeObjectURL(url);
+  a.href=url;a.download="TadrisPlus-Teacher-Analytics.csv";a.click();URL.revokeObjectURL(url);
  }
 
  if(!data&&loading)return <div className="analytics-loading" role="status">جارٍ بناء لوحة التحليل...</div>;

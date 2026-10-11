@@ -46,12 +46,12 @@ describe("display-name authority", () => {
 });
 
 describe("sidebar identity block", () => {
-  it("shows the name and the preset icon, keeps the brand (ExamBank / 791381), exposes the accessible profile button; no profile → default initial, no button", () => {
+  it("shows the name and the preset icon, keeps the brand (Tadris+ / التعليم المتكامل), exposes the accessible profile button; no profile → default initial, no button", () => {
     mockFetch();
     const { rerender } = render(<Shell p={profile()} />);
     const side = sidebar();
     expect(within(side).getByText("أ. سامر")).toBeTruthy();
-    expect(within(side).getByText("ExamBank")).toBeTruthy(); expect(within(side).getByText("791381")).toBeTruthy();
+    expect(within(side).getByText("Tadris+")).toBeTruthy(); expect(within(side).getByText("التعليم المتكامل")).toBeTruthy();   // BRAND-005
     const btn = within(side).getByRole("button", { name: /تعديل صورة وملف المعلم/ });
     expect(btn.textContent).toContain("🦁");
     rerender(<Shell p={null} sessionName="" />);
