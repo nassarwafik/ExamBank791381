@@ -11,6 +11,7 @@ import { networkTopologyPluginV2 } from "./net2Plugin";
 import { physicsMotionPluginV1 } from "./physicsMotionPlugin";
 import { physicsLabPluginV1 } from "./physicsLabPlugin";
 import { chemistryStructurePluginV1 } from "./chemistryStructurePlugin";
+import { chemistryReactionsPluginV1 } from "./chemistryReactionsPlugin";
 
 registerSmartSimPlugin(networkTopologyPluginV1);
 // Phase 20A.2 — the two enterprise pilots: physics (free fall) and mathematics (rational function study).
@@ -26,6 +27,9 @@ registerSmartSimPlugin(physicsLabPluginV1);
 // Phase 21D-D.1 — chemistryStructure@1: atoms and simple ions, electron shells, the periodic table, formulas / composition and catalog
 // molecules in 3D, on the trusted chemistry core (a NEW exact identity; the existing plugins unchanged).
 registerSmartSimPlugin(chemistryStructurePluginV1);
+// Phase 21D-D.2 — chemistryReactions@1: balancing equations by exact atom and charge conservation, the curated reaction catalog, reaction
+// families and substance roles (a NEW exact identity; chemistryStructure@1 and every other plugin unchanged).
+registerSmartSimPlugin(chemistryReactionsPluginV1);
 
 export { listSmartSimPlugins, listSmartSimPluginDescriptors, resolveSmartSimDescriptor, resolveSmartSimPlugin };
 export * from "./trustedSimQuestion";
