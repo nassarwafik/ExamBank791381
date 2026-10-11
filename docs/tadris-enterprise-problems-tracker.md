@@ -9,7 +9,7 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 | BUG-001 | 1 | Exam import → «رجوع» does nothing until a draft is saved | High (teacher blocked, work appears lost) | PR A — #293 | verified (Chromium 49/49 on the PR head; exact-head CI green) |
 | BUG-002 | 1 | Eight editor toolbar actions "do not respond" | High (features unreachable) | PR A — #293 | verified (Chromium 49/49 on the PR head; exact-head CI green) |
 | UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B — #294 | in PR — RF1 applied (attempt-switch guard, edit-preserving reload, review modes); Chromium + happy-dom re-certified |
-| FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C — #295 | in PR (API certification 7/7 through the real handlers, client 3/3) |
+| FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C — #295 | merged (`7c155ff`; RF1 `a10075f`: dedupe key binds the committed transition, withheld coding marks never ride the event, `cleanScore(null)` no longer reads as 0; API certification 7/7 + RF1 8/8, client 3/3) |
 | BRAND-005 | 4–5 | Complete Tadris+ branding | Medium | PR D — #296 | in PR (contract test + Chromium 27/27 on the production build) |
 | PWA-006 | 4–5 | Installed-app name and icon (desktop / Android / iOS) | Medium | PR D — #296 | in PR (manifest / icons certified in Chromium; device checklist pending with the owner) |
 
@@ -61,7 +61,7 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 | Current actual behaviour | `api/src/functions/assignment-review.js` already records an `assignment_reviewed` notification event (`recordEventSafely`, dedupe-keyed) when a save is "meaningful"; the student bell (`src/notifications/*`) lists it. The message does not state the updated grade in the requested form («تم تحديث علامتك في امتحان «…»، وأصبحت علامتك 89/100.»), and the trigger / idempotency / publication-policy behaviour has to be certified against the acceptance list (changed → notify; failed save → none; same grade twice → none; retry → none; unauthorized → none; pending manual grading completed → notify under the publication policy; the notification opens the permitted result). |
 | Fix (PR C — #295) | The existing idempotent `assignment_reviewed` event carries the updated `score` / `totalMarks` (own student only, sanitised); the teacher review and the automatic coding grader pass them; the bell reads «تم تحديث علامتك في امتحان «…»، وأصبحت علامتك 89/100.» (+ «(التصحيح لم يكتمل بعد)» / «مع ملاحظة جديدة من المعلم.»). Design record: `docs/enterprise-grade-change-notification-f004.md` (PR C). |
 | Acceptance tests | `api/tests/grade-change-notification-f004.test.js` (7 scenarios through the real handlers), `src/notifications/notificationCenter.6d.test.tsx` FEATURE-004 wording. |
-| Status | in PR — PR C (#295) |
+| Status | merged — PR C #295 (`7c155ff`), Review Fix 1 `a10075f` applied before merge |
 
 ## BRAND-005 / PWA-006 — Tadris+ identity
 
