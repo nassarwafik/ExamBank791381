@@ -1,4 +1,4 @@
-/* ExamBank — Phase 6A service worker (installation only).
+/* Tadris+ (formerly ExamBank) — Phase 6A service worker (installation only).
  *
  * What it does:
  *   - Page navigations go to the NETWORK first, always (with navigation preload). The browser receives exactly
@@ -8,7 +8,7 @@
  *     returned (offline.html, precached at install). It contains no user data and no application code.
  *
  * Phase 6B — message notifications: a `push` from the server shows a short notification (fixed, generic text by
- * default: never message content), and clicking it focuses an open ExamBank window or opens the app. The page asks
+ * default: never message content), and clicking it focuses an open Tadris+ window or opens the app. The page asks
  * for permission and subscribes only after an explicit student action; this worker never does.
  *
  * What it deliberately does NOT do: no asset/app-shell caching, no API caching, no background sync, no message
@@ -17,7 +17,8 @@
  * Kill switch: if this worker ever needs to be removed, deploy a sw.js that calls self.registration.unregister().
  */
 const CACHE_PREFIX = "examBank-pwa-";
-const OFFLINE_CACHE = CACHE_PREFIX + "offline-v1";
+// BRAND-005 — v2: the offline page changed (Tadris+); the activate step deletes v1. The prefix is an internal cache name and stays.
+const OFFLINE_CACHE = CACHE_PREFIX + "offline-v2";
 const OFFLINE_URL = "offline.html";
 
 self.addEventListener("install", event => {

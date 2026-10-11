@@ -246,7 +246,7 @@ function buildSchema(topicCodes) {
 
 function buildInstructions(topicsConfig) {
   return `
-أنت محلل طلبات ExamBank 791381.
+أنت محلل طلبات Tadris+ (منصة الامتحانات).
 
 المستخدم معلم يكتب وصفًا حرًا بالعربية أو العبرية أو الإنجليزية
 للامتحان الذي يريد بناءه من مخزن أسئلة جاهز ومصنف.

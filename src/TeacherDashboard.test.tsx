@@ -262,7 +262,7 @@ describe("UX-3 dashboard — CSV, AI, achievements (payload parity)", () => {
     const pct = (v: number | null) => v === null ? "—" : v.toFixed(1).replace(/\.0$/, "") + "%";
     const trendText = (d: number) => d >= 5 ? "يتحسن" : d <= -5 ? "يتراجع" : "مستقر";
     const rows: string[][] = [
-      ["ExamBank - Teacher Analytics"], ["النطاق", "كل الصفوف / جميع الطلاب"], ["تاريخ التقرير", new Date(GENERATED_AT).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" })], [],
+      ["Tadris+ - Teacher Analytics"], ["النطاق", "كل الصفوف / جميع الطلاب"], ["تاريخ التقرير", new Date(GENERATED_AT).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" })], [],
       ["المؤشر", "القيمة"], ["الطلاب", "38"], ["متوسط العلامات", "72.4%"], ["نسبة التسليم", "85%"], ["يحتاجون متابعة", "5"], ["واجبات منشورة", "7"], ["تسليمات ناقصة", "9"], [],
       ["الواجب", "الصف", "المتوسط", "التسليم", "لم يسلم", "مراجعة"],
       ...f.assignmentTrend.map(i => [i.title, i.className, pct(i.average as number | null), pct(i.completionRate), String(i.missing), String(i.pendingReview)]), [],

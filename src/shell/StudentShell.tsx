@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "../brand";
 import type { ReactNode } from "react";
 import BrandMark from "../ui/BrandMark";
 import { IconLogout, IconMail, IconSparkles } from "../icons";
@@ -28,7 +29,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
       <header className="student-topbar">
         <div className="student-brand">
           <span className="student-logo" aria-hidden="true"><BrandMark size={43} /></span>
-          <div><h1>ExamBank 2.0</h1><p>بوابة الطالب للتدريب والواجبات</p></div>
+          <div><h1><bdi dir="ltr">{BRAND_NAME}</bdi></h1><p>{BRAND_TAGLINE} — بوابة الطالب للتدريب والواجبات</p></div>
         </div>
         {studentName && (
           <div className="eb-student-identity" aria-label="الطالب الحالي">

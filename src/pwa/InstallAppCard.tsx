@@ -11,7 +11,7 @@ import "./pwa.css";
 // Add-to-Home-Screen steps (iOS has no install API). Already installed → nothing is rendered. No notification
 // permission is involved.
 // Phase 10C — (1) «ليس الآن» hides the card for 7 days on this device, never for good; (2) a browser that has not
-// fired `beforeinstallprompt` gets a quiet «تثبيت ExamBank» card with the browser-menu path instead of nothing;
+// fired `beforeinstallprompt` gets a quiet «تثبيت Tadris+» card with the browser-menu path instead of nothing;
 // (3) the mark is the official app icon (BrandMark), the same file as the installed icon; (4) installed / standalone
 // — including the moment a native install is ACCEPTED — renders nothing at all; a declined or consumed native prompt
 // falls back to the manual guidance (never hidden behind a notice).
@@ -41,8 +41,8 @@ export default function InstallAppCard({ win = window }: { win?: Window }) {
       <div className="eb-install-head">
         <span className="eb-install-mark" aria-hidden="true"><BrandMark size={40} /></span>
         <div>
-          <h2 id="eb-install-title" className="eb-install-title">{manual ? "تثبيت ExamBank" : "تثبيت التطبيق"}</h2>
-          {!manual && <p className="eb-install-desc">افتح ExamBank من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>}
+          <h2 id="eb-install-title" className="eb-install-title">{manual ? "تثبيت Tadris+" : "تثبيت التطبيق"}</h2>
+          {!manual && <p className="eb-install-desc">افتح Tadris+ من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>}
         </div>
       </div>
 
