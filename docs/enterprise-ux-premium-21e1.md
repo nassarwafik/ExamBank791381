@@ -92,6 +92,7 @@ student skip link, `IconButton` for the bell / install entry and the phase-label
 |---|---|---|
 | `nativeDialogs.guard.test.ts` | lists the 12 sites; 2 of 3 tests fail | 3/3 |
 | `sharedConfirm.21e1.test.tsx` (cover, section, media flows) | 4 of 4 flow tests fail (no shared dialog; `window.confirm` called) | 6/6 (incl. 2 for `useDeferredConfirm`) |
+| `App.sharedConfirm.21e1.test.tsx` (real App, teacher session: saved exam, template, question, marks, general-instructions template) | 5 of 5 fail; each flow calls the native dialog with its old text (`confirm: هل تريد حذف الامتحان المحفوظ…`, `prompt: اختر طريقة التوزيع…`) | 5/5 (same POST bodies as before on confirm; nothing sent on keep / Escape) |
 | `scripts/check-shared-confirm-browser-21e1.mjs` (Chromium) | exits on the first flow: a native `confirm` fires, the shared dialog never appears | **84/84** |
 | bundle guard on the first, eager version of this slice | FAILS: `Dialog-*.js (initial) contains the dialog layer` (112.8 KB, 14 files) | passes (110.1 KB, 8 files) |
 | dialog-root cap removed (mutant, file restored byte-for-byte, hash-verified) | **81/84**: at 260 / 195 CSS px the dialog is not fully visible; at 195 px the confirm button cannot be hit | 84/84 |
@@ -105,8 +106,33 @@ the 21E.0 focus-ring certification (unchanged files), the shared-confirm certifi
 
 ## 6. Visual Quality Gate (owner's standard) — teacher pages
 
-Filled in from `scripts/capture-visual-gate-21e1.mjs` (real production build, real teacher route, local mock of the teacher API,
-before = build of `66b8a9f`, after = build of the head): see the PR body and the evidence page linked there.
+`scripts/capture-visual-gate-21e1.mjs` drives the **real production build** through a real teacher session (stored token
+validated by `/api/platform-session`) against a local mock of the teacher API (the payload shapes App.tsx reads; no token,
+nothing deployed, service workers blocked). Before = build of `66b8a9f`, after = build of the head. Viewports: 1280×900,
+390×844 touch, 640×450 at 2× (= 200 %), and 195×422 at 4× (a phone at 200 % page zoom; bank page only).
+
+**D — the workflow:** builder landing → saved exams → delete by keyboard (Enter on «حذف», Escape keeps) → delete a template
+(keep) → new structured exam → section-instructions template over typed text → leave the builder (unsaved-changes guard) →
+open the saved exam in the legacy editor → delete a question (Enter on the focused safe choice keeps it) → distribute marks
+(«حسب الصعوبة» → «✓ تم توزيع العلامات حسب الصعوبة») → exam bank page → delete a saved exam (Escape keeps).
+
+| Measure | Before `66b8a9f` | After head |
+|---|---|---|
+| Teacher flows that open a native browser dialog (desktop, phone, 200 %) | 6 of 6 (5 `confirm`, 1 `prompt`) | 0 — all shared dialogs |
+| Destructive dialogs opening on the safe choice | — (native: browser default) | 3 of 3 («إبقاء الامتحان», «إبقاء القالب», «إبقاء السؤال») |
+| Focus returned to the opener after closing | — | every flow, every viewport |
+| Dialog buttons on a 390 px touch phone | 40 px | 44 px (every dialog) |
+| Bank-page dialog at 195 CSS px | x −117…187 in a 195 px visible area; confirm «حذف» unreachable | x 8…187; fully visible; confirm reachable |
+| Page / console errors | 0 | 0 |
+
+**C — visual review.** One dialog language across builder, editor and bank page (title, message, a primary or danger
+action, a quiet keep action); buttons name the action instead of the browser's «OK» / «Cancel»; Arabic right-aligned, the
+marks dialog isolates the question count; desktop centered dialog, phone bottom sheet. **E — remaining shortcomings observed
+on the real pages (not fixed here):** below 320 CSS px the teacher shell's menu button, the bank tabs and the row actions are
+covered (same before and after; 21E.6); the structured builder's toolbar stacks about fourteen full-width actions on phones and
+the legacy builder's AI card pushes saved exams below the fold on desktop (21E.2); single question / section deletion still
+asks nothing (slice 2, undo toast). **F —** FUNCTIONAL / ACCESSIBILITY / VISUAL QUALITY / REGRESSION passes requested from the
+independent reviewer in the PR.
 
 ## 7. Regression-risk assessment
 

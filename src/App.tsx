@@ -561,6 +561,7 @@ function App() {
   const { confirm, confirmDialog } = useDeferredConfirm();
   const [marksDistributionOpen, setMarksDistributionOpen] = useState(false);
   const [marksDistributionUsed, setMarksDistributionUsed] = useState(false);   // once opened, the lazy Dialog stays mounted
+  const marksByDifficultyRef = useRef<HTMLButtonElement>(null);                  // focus starts on «حسب الصعوبة» (the former prompt default «2»)
   // Teacher self-profile (name / preset icon / photo metadata) — loaded once per teacher session; the sidebar and
   // the display-name authority (profile → session → "المعلم") read it. Failures leave the fallback name.
   const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
@@ -5795,7 +5796,7 @@ function App() {
       onLogout={handleLogout}
     >
       {confirmDialog}
-      {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>
+      {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} initialFocusRef={marksByDifficultyRef} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button ref={marksByDifficultyRef} type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>
         <p>اختر طريقة توزيع مجموع العلامات على أسئلة الامتحان (<bdi dir="ltr">{exam ? exam.questions.length : 0}</bdi> أسئلة): بالتساوي بين الأسئلة، أو بحسب درجة صعوبة كل سؤال.</p>
       </Dialog></Suspense>}
 
