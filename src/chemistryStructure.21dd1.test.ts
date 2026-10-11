@@ -18,7 +18,7 @@ const issues = (cfg: unknown) => { const r = validateChemConfig(cfg); return r.o
 
 describe("21D-D.1 registration — a NEW exact identity in the chemistry domain", () => {
   it("chemistryStructure@1 is registered (appended), resolves exactly, and its descriptor is valid data", () => {
-    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1", "physicsLab@1", "chemistryStructure@1"]);
+    expect(listSmartSimPlugins().map(p => p.key + "@" + p.version)).toEqual(["networkTopology@1", "physicsFreeFall@1", "functionStudy2d@1", "networkTopology@2", "physicsMotion@1", "physicsLab@1", "chemistryStructure@1", "chemistryReactions@1"]);
     expect(resolveSmartSimPlugin("chemistryStructure", 1)).toBe(chemistryStructurePluginV1);
     for (const [k, v] of [["chemistryStructure", 2], ["chemistryStructure", "1"], ["ChemistryStructure", 1], ["chemistry", 1], ["chemistryStructure", 1.5]] as const) expect(resolveSmartSimPlugin(k, v)).toBeUndefined();
     expect(validateSmartSimDescriptor(CHEMISTRY_STRUCTURE_DESCRIPTOR_V1).ok).toBe(true);

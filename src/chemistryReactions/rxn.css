@@ -1,0 +1,80 @@
+/* Phase 21D-D.2 — chemistryReactions@1 (lazy). RTL page; the equation, formulas and the particle picture are LTR islands, as in printed
+   Arabic chemistry textbooks. No horizontal page overflow at 360 px: the equation wraps term by term and only the table scrolls inside itself. */
+.rxn-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.rxn-formula, .rxn-equation { font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif; }
+.rxn-equation { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 10px 8px; padding: 12px; border: 1px solid var(--xp-border, #d7dde5); border-radius: 12px; background: var(--xp-surface-alt, #f7f9fc); min-width: 0; }
+.rxn-term { display: inline-grid; justify-items: center; gap: 2px; min-width: 0; }
+.rxn-term-main { display: inline-flex; align-items: center; gap: 6px; }
+.rxn-formula { font-size: 1.35rem; font-weight: 600; white-space: nowrap; }
+.rxn-state { font-size: 0.72em; font-weight: 400; margin-inline-start: 1px; color: var(--xp-muted, #4a5870); }
+.rxn-name { font: 400 0.78rem/1.3 ui-sans-serif, system-ui, sans-serif; color: var(--xp-muted, #4a5870); max-width: 9.5em; text-align: center; }
+.rxn-plus, .rxn-arrow { font-size: 1.35rem; font-weight: 600; align-self: center; padding: 0 2px; }
+.rxn-arrow { font-size: 1.6rem; }
+.rxn-coef { display: inline-flex; align-items: center; gap: 2px; position: relative; }
+.rxn-coef input { width: 3.1em; min-height: 44px; text-align: center; font: 700 1.25rem/1 ui-sans-serif, system-ui, sans-serif; border: 2px solid #8193ab; border-radius: 8px; padding: 2px; }
+.rxn-coef input:focus-visible { outline: 3px solid #1d6fd6; outline-offset: 1px; }
+.rxn-coef.is-invalid input { border-color: #b42318; }
+.rxn-step { min-width: 32px; min-height: 44px; border-radius: 8px; font-weight: 700; padding: 0 6px; }
+.rxn-coef.is-locked { min-width: 3.1em; min-height: 44px; justify-content: center; gap: 4px; font: 700 1.25rem/1 ui-sans-serif, system-ui, sans-serif; border: 2px dashed #8193ab; border-radius: 8px; padding: 0 6px; color: #22324a; }
+.rxn-coef.is-locked span { font-size: 0.7rem; }
+.rxn-err { position: absolute; top: 100%; inset-inline-start: 0; z-index: 1; white-space: nowrap; font: 600 0.75rem/1.4 ui-sans-serif, system-ui, sans-serif; color: #b42318; background: #fff; padding: 1px 4px; border-radius: 4px; direction: rtl; }
+.rxn-table-scroll { overflow-x: auto; max-width: 100%; }
+.rxn-table { border-collapse: collapse; width: 100%; max-width: 620px; }
+.rxn-table caption { text-align: start; font-weight: 700; padding-bottom: 4px; }
+.rxn-table th, .rxn-table td { border: 1px solid var(--xp-border, #d7dde5); padding: 4px 8px; text-align: start; }
+.rxn-table th small { font-weight: 400; color: var(--xp-muted, #4a5870); }
+.rxn-num { direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; text-align: center !important; }
+.rxn-table tr.is-off td, .rxn-table tr.is-off th { background: #fff4f2; }
+.rxn-table tr.is-ok td:last-child { background: #effaf3; }
+.rxn-ok { color: #0d5c2e; font-weight: 700; } .rxn-off { color: #b42318; font-weight: 700; }
+.rxn-pending { color: var(--xp-muted, #4a5870); font-style: italic; }
+.rxn-status { margin: 6px 0 0; padding: 6px 10px; border-radius: 8px; background: var(--xp-surface-alt, #eef4fb); font-weight: 600; }
+.rxn-status.is-ok { background: #e3f6ea; color: #0d5c2e; } .rxn-status.is-off { background: #fdecea; color: #8a1c12; }
+.rxn-particles { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.rxn-particles-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.rxn-side { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-width: 0; }
+.rxn-group { display: grid; justify-items: center; gap: 4px; padding: 6px 8px; border: 1px solid var(--xp-border, #d7dde5); border-radius: 10px; min-width: 76px; max-width: 100%; }
+.rxn-group.is-unset { opacity: 0.55; border-style: dashed; }
+.rxn-group-head { font-size: 0.95rem; } .rxn-group-head b { font-size: 1.05rem; }
+.rxn-copies { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 280px; }
+.rxn-particle { display: inline-grid; place-items: center; }
+.rxn-particle-svg { width: 44px; height: 44px; display: block; }
+.rxn-bond { stroke: #56657a; stroke-width: 2.4; stroke-linecap: round; }
+.rxn-atom { stroke: #1f2a3a; stroke-width: 0.8; }
+.rxn-atom-text { font: 700 8px/1 ui-sans-serif, system-ui, sans-serif; text-anchor: middle; pointer-events: none; }
+.rxn-unit { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid #b8c3d3; border-radius: 6px; background: #fff; }
+.rxn-dots { display: inline-flex; flex-wrap: wrap; gap: 2px; max-width: 72px; justify-content: center; }
+.rxn-dot { width: 15px; height: 15px; border-radius: 50%; border: 1px solid #1f2a3a; display: inline-grid; place-items: center; font: 700 7px/1 ui-sans-serif, system-ui, sans-serif; }
+.rxn-unit-big { font: 600 0.85rem/1.2 "Cambria Math", "Times New Roman", serif; padding: 2px 4px; }
+.rxn-charge { font: 700 0.8rem/1 ui-sans-serif, system-ui, sans-serif; color: #7c3aed; align-self: flex-start; }
+.rxn-more { font-weight: 700; align-self: center; }
+.rxn-caption { font-size: 0.72rem; color: var(--xp-muted, #4a5870); }
+.rxn-help { margin: 0; font-size: 0.86rem; color: var(--xp-muted, #4a5870); line-height: 1.6; }
+.rxn-3d { display: grid; gap: 8px; }
+.rxn-3d [aria-pressed=true], .rxn-chip[aria-pressed=true] { background: #1d6fd6; color: #fff; border-color: #0d3f80; }
+.rxn-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rxn-chip { min-height: 40px; padding: 4px 10px; border-radius: 999px; font-size: 1.05rem; }
+.rxn-chip small { font-size: 0.75rem; }
+.rxn-level { font-weight: 400; color: var(--xp-muted, #4a5870); }
+.rxn-disclaimer { border-inline-start: 3px solid #d97706; padding-inline-start: 8px; }
+/* a <select> sizes itself to its longest option (catalog reactions, templates): keep every editor control inside a 360 px phone */
+.rxn-editor label, .rxn-editor fieldset, .rxn-editor li { min-width: 0; }
+.rxn-editor select, .rxn-editor input:not([type=checkbox]):not([type=radio]) { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.rxn-editor .chem-inline { flex-wrap: wrap; }
+.rxn-editor .rxn-custom { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.rxn-editor .rxn-options { display: flex; flex-wrap: wrap; gap: 4px 12px; border: 1px dotted var(--xp-border, #d7dde5); }
+.rxn-editor .rxn-status-yes { color: #0d5c2e; } .rxn-editor .rxn-status-no { color: #6b7280; } .rxn-editor .rxn-status-contested { color: #b45309; }
+.rxn-source { font-size: 0.8rem; overflow-wrap: anywhere; }
+.rxn-info { display: grid; gap: 4px; }
+@media (max-width: 480px) {
+  .rxn-equation { gap: 8px 4px; padding: 8px 4px; }
+  .rxn-formula { font-size: 1.15rem; }
+  .rxn-coef input { width: 2.6em; font-size: 1.1rem; }
+  .rxn-step { min-width: 28px; }
+}
+@media (prefers-color-scheme: dark) {
+  .rxn-table tr.is-off td, .rxn-table tr.is-off th { background: #3a1f1c; } .rxn-table tr.is-ok td:last-child { background: #16301f; }
+  .rxn-ok { color: #6fd39a; } .rxn-off { color: #ff9a8f; }
+  .rxn-status.is-ok { background: #16301f; color: #9be3b6; } .rxn-status.is-off { background: #3a1f1c; color: #ffb4aa; }
+  .rxn-unit { background: #1b2a3d; } .rxn-bond { stroke: #b9c6d8; } .rxn-coef.is-locked { color: #dbe5f2; } .rxn-err { background: #1b2a3d; }
+}

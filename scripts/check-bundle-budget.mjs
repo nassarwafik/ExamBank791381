@@ -37,6 +37,9 @@
 //      labels (Review Fix 4: ECharts' core installs it only as an import side effect, which the production build drops);
 //  17. (Phase 21D-D.1) the chemistry simulation UI (workspace / 3D molecule / periodic table / editor / review) reaches the initial graph or the
 //      Student Portal's static closure, or the trusted chemistry core reaches the initial graph (signatures, each required to exist);
+//      (Phase 21D-D.2) the same for the reactions simulation (equation / conservation table / particle picture / editor / review) and the
+//      reaction engine; and the trusted chemistry core is emitted anywhere but the lazy `trustedSimPlugins` chunk (a separate chunk is
+//      listed in the entry's preload map — the initial graph grows — and fetched as an extra request with every SmartSim);
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -133,8 +136,10 @@ const MESH_3D_UI_SIGNATURES = ["mm3d-scene", "mm3d-parts", "uOcclusionStrength",
 // review (class names / test ids used nowhere else) never reach the initial graph or the Student Portal's static closure; the trusted
 // chemistry core (its config and formula refusal codes) never reaches the initial graph. EVERY signature must be found in some chunk (a
 // renamed class or code fails the build instead of silently emptying the guard).
-const CHEMISTRY_UI_SIGNATURES = ["chem-workspace", "chem-mol-scene", "chem-ptable-grid", "chem-editor", "chem-review"];
-const CHEMISTRY_CORE_SIGNATURES = ["CHEM_CONFIG_INVALID", "FORMULA_ELEMENT_UNKNOWN"];
+// Phase 21D-D.2 — chemistryReactions@1 joins the same guard: its workspace (equation, conservation table, particle picture), editor and
+// review, and the trusted reaction engine / config authority (their refusal codes), each required to exist and to stay lazy.
+const CHEMISTRY_UI_SIGNATURES = ["chem-workspace", "chem-mol-scene", "chem-ptable-grid", "chem-editor", "chem-review", "rxn-workspace", "rxn-equation", "rxn-conservation", "rxn-particles", "rxn-editor", "rxn-review"];
+const CHEMISTRY_CORE_SIGNATURES = ["CHEM_CONFIG_INVALID", "FORMULA_ELEMENT_UNKNOWN", "RXN_CONFIG_INVALID", "REACTION_TERM_DUPLICATE"];
 export const CHART_ENGINE_GZIP_BUDGET_KB = 195;
 export const CHART_ADVANCED_GZIP_BUDGET_KB = 22;
 // the label layout's manager (a method name kept by minification): present only when the engine module registers the feature itself
@@ -302,6 +307,12 @@ function main() {
   for (const f of portalClosure) {
     const hit = CHEMISTRY_UI_SIGNATURES.filter(sig => read(f).includes(sig));
     if (hit.length) failures.push(`${f} statically exposes the chemistry simulation UI on a student path without chemistry (${hit.join(", ")})`);
+  }
+  // Phase 21D-D.2 — the core rides the lazy plugin-registry chunk. A chemistry UI entry that reaches the core without reaching the registry
+  // makes the bundler split the core into its own chunk, which the entry's preload map then names (the initial graph grows).
+  for (const sig of CHEMISTRY_CORE_SIGNATURES) {
+    const stray = all.filter(f => read(f).includes(sig) && !/^trustedSimPlugins-[^.]+\.js$/.test(f));
+    if (stray.length) failures.push(`chemistry core "${sig}" is emitted outside the lazy trustedSimPlugins chunk (${stray.join(", ")}) — every chemistry UI entry must reach the core through the plugin registry`);
   }
   const chemistryChunks = all.filter(f => [...CHEMISTRY_UI_SIGNATURES, ...CHEMISTRY_CORE_SIGNATURES].some(sig => read(f).includes(sig)));
   console.log(`Chemistry simulation payload found in: ${chemistryChunks.join(", ") || "(none)"} — ${chemistryChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}; UI never in the Student Portal static closure`);

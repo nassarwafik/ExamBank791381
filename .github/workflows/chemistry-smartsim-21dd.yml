@@ -16,6 +16,17 @@ on:
       - "scripts/mutate-chemistry-21dd1.mjs"
       - "docs/enterprise-chemistry-smartsim-21d-d.md"
       - ".github/workflows/chemistry-smartsim-21dd.yml"
+      # Phase 21D-D.2 — chemistryReactions@1 (the reaction engine and catalog live under src/chemistry/** above)
+      - "src/chemistryReactions/**"
+      - "src/chemistryReactionsModel.ts"
+      - "src/chemistryReactionsPlugin.ts"
+      - "src/chemistryReactions.21dd2.test.ts"
+      - "api/tests/certification-21dd2/**"
+      - "docs/fixtures/chemistry-reactions-21dd2/**"
+      - "browser-harness/chemistry-21dd2.*"
+      - "scripts/check-chemistry-browser-21dd2.mjs"
+      - "scripts/mutate-chemistry-21dd2.mjs"
+      - "docs/enterprise-chemistry-reactions-21d-d2.md"
 permissions:
   contents: read
 jobs:
@@ -69,4 +80,55 @@ jobs:
         with:
           name: phase-21dd1-mutations
           path: artifacts/phase-21dd1/mutation-ledger.json
+          retention-days: 14
+  chromium-21dd2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: 21D-D.2 reactions exam in real Chromium (keyboard, pointer, touch, mobile RTL, conservation, reload, review, authoring)
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare dependencies and browser core
+        run: |
+          npm ci
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
+          command -v google-chrome
+      - name: Certify the Arabic reactions acceptance exam in real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-21dd2
+        run: node --experimental-strip-types scripts/check-chemistry-browser-21dd2.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chemistry-21dd2-browser
+          path: .harness-21dd2/
+          include-hidden-files: true
+          retention-days: 7
+  mutations-21dd2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    name: Reactions mutation campaign (conservation, solver, authority, replay, grading, hidden answers, presentation)
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix api
+      - name: Run the baseline and every source mutation with byte-for-byte restoration
+        run: node scripts/mutate-chemistry-21dd2.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase-21dd2-mutations
+          path: artifacts/phase-21dd2/mutation-ledger.json
           retention-days: 14
