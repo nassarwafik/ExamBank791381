@@ -5,7 +5,7 @@
 .ncli { display: grid; gap: 10px; min-width: 0; max-width: 100%; }
 .ncli-terminal { direction: ltr; unicode-bidi: isolate; text-align: left; display: flex; flex-direction: column; min-width: 0; max-width: 100%; background: #0f172a; color: #e6edf7; border-radius: 10px; border: 1px solid #1e293b; font: 13px/1.55 ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace; overflow: hidden; }
 .ncli-terminal[data-disabled="true"] { opacity: .92; border-color: #475569; }
-.ncli-terminal:focus-within { outline: 3px solid var(--eb-focus, #f59e0b); outline-offset: 2px; }
+.ncli-terminal:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 .ncli-titlebar { display: flex; justify-content: space-between; gap: 8px; padding: 6px 12px; color: #9aa8c2; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,.12); }
 .ncli-screen { overflow: auto; min-height: 160px; max-height: 320px; padding: 8px 12px; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .ncli-entry { margin: 0 0 4px; }
