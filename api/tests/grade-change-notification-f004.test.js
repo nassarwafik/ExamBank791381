@@ -56,6 +56,9 @@ async function startAndSubmit(aid, sid, answers) {
   expect(r.status, JSON.stringify(r.jsonBody)).toBe(200);
 }
 const ANSWERS = { q1: { kind: "text", value: "إجابة الطالب" } };
+// The review's dedupe key carries the server timestamp of the save (millisecond precision); two DIFFERENT saves in the same
+// millisecond would share it (a human cannot do that; a CI runner can), so consecutive distinct saves wait a tick.
+const tick = () => new Promise(r => setTimeout(r, 5));
 
 describe("FEATURE-004 — grade change → one notification with the updated grade, for the graded student only", () => {
   it("grade changed successfully → exactly one notification carrying the updated grade; the student's own result agrees; a classmate gets nothing", async () => {
@@ -84,9 +87,11 @@ describe("FEATURE-004 — grade change → one notification with the updated gra
     expect((await review(body)).status).toBe(200);
     expect((await review(body)).status).toBe(200);                                                   // identical re-save
     expect((await review({ ...body })).status).toBe(200);                                            // client retry of the same request
+    await tick();
     const once = await reviewed(S1);
     expect(once).toHaveLength(1);
     expect(once[0]).toMatchObject({ score: 7, totalMarks: 10, becameFinal: true });
+    await tick();
     expect((await review({ ...body, overrides: { q1: { score: 9, comment: "" } } })).status).toBe(200);
     const twice = await reviewed(S1);
     expect(twice).toHaveLength(2);
@@ -99,6 +104,7 @@ describe("FEATURE-004 — grade change → one notification with the updated gra
     const aid = await createAssignment();
     await startAndSubmit(aid, S1, ANSWERS);
     expect((await review({ assignmentId: aid, studentId: S1, attemptNumber: 1, overrides: { q1: { score: 6, comment: "" } }, teacherFeedback: "" })).status).toBe(200);
+    await tick();
     expect((await review({ assignmentId: aid, studentId: S1, attemptNumber: 1, overrides: { q1: { score: 6, comment: "" } }, teacherFeedback: "راجع الطبقة الثالثة" })).status).toBe(200);
     const ev = await reviewed(S1);
     expect(ev).toHaveLength(2);
@@ -112,6 +118,7 @@ describe("FEATURE-004 — grade change → one notification with the updated gra
     const aid = await createAssignment({ examSnapshot: EXAM2 });
     await startAndSubmit(aid, S1, { q1: { kind: "text", value: "أ" }, q2: { kind: "text", value: "ب" } });
     expect((await review({ assignmentId: aid, studentId: S1, attemptNumber: 1, overrides: { q1: { score: 10, comment: "" } }, teacherFeedback: "" })).status).toBe(200);
+    await tick();
     let ev = await reviewed(S1);
     expect(ev).toHaveLength(1);
     expect(ev[0]).toMatchObject({ scoreChanged: true, becameFinal: false, finalized: false, score: 10, totalMarks: 20, percentage: null });
