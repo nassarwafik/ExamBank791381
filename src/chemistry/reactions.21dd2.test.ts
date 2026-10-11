@@ -70,6 +70,11 @@ describe("21D-D.2 strict reaction schema", () => {
     expect(validateReaction({ reactants: [{ formula: "H2", charge: 0, note: "x" }], products: [term("H2O")] })).toMatchObject({ ok: false, code: "REACTION_TERM_INVALID" });
     expect(validateReaction({ reactants: [term("Ag")], products: [term("Ag2O")] })).toMatchObject({ ok: false, code: "REACTION_FORMULA_INVALID" });
     expect(validateReaction({ reactants: [term("Xx2")], products: [term("H2O")] })).toMatchObject({ ok: false, code: "REACTION_FORMULA_INVALID" });
+    // a stored formula must already be the canonical text the parser produces (the question shown is byte-for-byte the question stored)
+    for (const raw of ["H₂O", " H2O", "H2O ", "Na2CO3.10H2O"]) {
+      expect(validateReaction({ reactants: [term(raw)], products: [term("H2"), term("O2")] })).toMatchObject({ ok: false, code: "REACTION_FORMULA_INVALID", path: "reaction.reactants[0].formula" });
+    }
+    expect(valid([term("Na2CO3·10H2O")], [term("Na2CO3"), term("H2O")]).reactants[0]).toMatchObject({ formula: "Na2CO3·10H2O", composition: { C: 1, H: 20, Na: 2, O: 13 } });
     // the same species twice — even written differently (C2H5OH and C2H6O have the same composition)
     expect(validateReaction({ reactants: [term("H2O"), term("O2")], products: [term("H2O")] })).toMatchObject({ ok: false, code: "REACTION_TERM_DUPLICATE", path: "reaction.products[0]" });
     expect(validateReaction({ reactants: [term("C2H5OH"), term("C2H6O")], products: [term("CO2")] })).toMatchObject({ ok: false, code: "REACTION_TERM_DUPLICATE" });
@@ -157,6 +162,8 @@ describe("21D-D.2 exact balancing solver — impossible, unsupported and non-uni
   it("refuses non-unique equations (several independent balancings) and returns a deterministic integer basis", () => {
     const r = eq("H2 + O2 = H2O + H2O2"), b = balanceReaction(r);
     expect(b).toMatchObject({ ok: false, code: "REACTION_NOT_UNIQUE", dimension: 2 });
+    // exactly the documented diagnostic form: one primitive vector per free column, first non-zero entry positive
+    expect((b as { basis: string[][] }).basis).toEqual([["2", "1", "2", "0"], ["1", "1", "0", "1"]]);
     const basis = (b as { basis: string[][] }).basis.map(v => v.map(BigInt));
     expect(balanceReaction(r)).toEqual(b);
     const m = conservationMatrix(r, false);
@@ -178,6 +185,9 @@ describe("21D-D.2 exact balancing solver — impossible, unsupported and non-uni
     expect(integerNullSpace([[1n, -1n]], 2).map(v => v.map(String))).toEqual([["1", "1"]]);
     expect(integerNullSpace([[2n, 0n, -1n], [0n, 2n, -1n]], 3).map(v => v.map(String))).toEqual([["1", "1", "2"]]);
     expect(integerNullSpace([[1n, 0n], [0n, 1n]], 2)).toEqual([]);
+    // x_f = lcm of the pivots can share a factor with every entry ([−2, 2, 0]) and the first entry can be negative: each basis vector is
+    // reduced to its primitive form and its sign fixed so the first non-zero entry is positive
+    expect(integerNullSpace([[2n, 2n, 1n]], 3).map(v => v.map(String))).toEqual([["1", "-1", "0"], ["1", "0", "-2"]]);
     expect(integerNullSpace([], 2).map(v => v.map(String))).toEqual([["1", "0"], ["0", "1"]]);
   });
   it("explains every refusal in Arabic", () => {

@@ -83,6 +83,11 @@ const mutants = [
   M("U04-aqueous-drawn-as-molecule", VIEW, 'return t.charge === 0 && t.state !== "aq" ? BY_FORMULA.get(t.formula) : undefined;', "return t.charge === 0 ? BY_FORMULA.get(t.formula) : undefined;", UI),
   M("U05-copies-cap", VIEW, "const drawn = Math.min(coefficient, PARTICLE_COPIES_MAX);", "const drawn = coefficient;", UI)
 ];
+// `--only=ID,ID` re-runs named mutants (a focused re-check after strengthening a test); the full campaign is the default and what CI runs
+const only = process.argv.find(a => a.startsWith("--only="))?.slice("--only=".length).split(",").filter(Boolean) ?? null;
+const unknown = (only ?? []).filter(id => !mutants.some(m => m.id === id));
+if (unknown.length) { console.error("Unknown mutant ids:", unknown.join(", ")); process.exit(2); }
+const selected = only ? mutants.filter(m => only.includes(m.id)) : mutants;
 const sha = s => crypto.createHash("sha256").update(s).digest("hex"), files = [...new Set(mutants.map(m => m.file))];
 const BACKUP = path.join(os.tmpdir(), "exambank-21dd2-mutation-backup.json");
 if (fs.existsSync(BACKUP)) { const stale = JSON.parse(fs.readFileSync(BACKUP, "utf8")); for (const [file, contents] of Object.entries(stale)) fs.writeFileSync(file, contents, "utf8"); fs.rmSync(BACKUP, { force: true }); console.log("21DD2_MUTATION_RESTORED_STALE_BACKUP"); }
@@ -97,13 +102,13 @@ if (dirty.status !== 0 || dirty.stdout.trim()) { console.error("Mutated sources 
 const SHARED = new Set([RX, CAT, MODEL, PLUGIN]);
 const regen = () => spawnSync(process.execPath, ["scripts/build-shared-finalization.mjs"], { encoding: "utf8" });
 const vitest = tests => spawnSync(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--reporter=dot", ...tests], { encoding: "utf8", timeout: 180000, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, CI: "true" } });
-const all = [...new Set(mutants.flatMap(m => m.tests))], baseline = vitest(all);
+const all = [...new Set(selected.flatMap(m => m.tests))], baseline = vitest(all);
 if (baseline.status !== 0) { console.error("BASELINE RED", baseline.stdout.slice(-5000), baseline.stderr.slice(-3000)); process.exit(4); }
-console.log("21DD2_MUTATION_BASELINE_GREEN", JSON.stringify({ tests: all, mutants: mutants.length, files: hashes }));
+console.log("21DD2_MUTATION_BASELINE_GREEN", JSON.stringify({ tests: all, mutants: selected.length, selection: only ?? "all", files: hashes }));
 const ledger = [];
 fs.writeFileSync(BACKUP, JSON.stringify(Object.fromEntries(original)), "utf8");
 try {
-  for (const m of mutants) {
+  for (const m of selected) {
     let outcome = "invalid", diagnostic = "";
     const source = original.get(m.file), occ = source.split(m.before).length - 1;
     if (occ !== 1) diagnostic = "needle count " + occ;
@@ -125,8 +130,9 @@ try {
 } finally { restore(); regen(); }
 const verified = files.every(f => sha(fs.readFileSync(f, "utf8")) === hashes[f]), git = spawnSync("git", ["diff", "--exit-code", "--", ...files, "api/src/lib/shared-finalization"], { encoding: "utf8" });
 const counts = Object.fromEntries(["killed", "survived", "invalid", "timeout"].map(s => [s, ledger.filter(r => r.outcome === s).length]));
-const report = { baseline: "green", source_sha256: hashes, restored: verified && git.status === 0, counts, mutants: ledger };
+const report = { baseline: "green", selection: only ?? "all", source_sha256: hashes, restored: verified && git.status === 0, counts, mutants: ledger };
+const out = only ? "artifacts/phase-21dd2/mutation-ledger-only.json" : "artifacts/phase-21dd2/mutation-ledger.json";
 fs.mkdirSync("artifacts/phase-21dd2", { recursive: true });
-fs.writeFileSync("artifacts/phase-21dd2/mutation-ledger.json", JSON.stringify(report, null, 2) + "\n");
-console.log("21DD2_MUTATION_SUMMARY", JSON.stringify({ restored: report.restored, counts, report: "artifacts/phase-21dd2/mutation-ledger.json" }));
+fs.writeFileSync(out, JSON.stringify(report, null, 2) + "\n");
+console.log("21DD2_MUTATION_SUMMARY", JSON.stringify({ restored: report.restored, selection: only ?? "all", counts, report: out }));
 if (!report.restored || counts.invalid || counts.timeout || counts.survived) process.exitCode = 1;
