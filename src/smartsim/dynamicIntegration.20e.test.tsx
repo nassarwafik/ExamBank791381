@@ -87,7 +87,7 @@ describe("20E-I2 bundle, laziness, security and presentation integration", () =>
     expect(guard).toMatch(/INITIAL_JS_GZIP_BUDGET_KB = 125;/);
   });
   it("no application module outside the lazy plugin workspaces imports the dynamic runtime statically", () => {
-    const allowed = /src\/(smartsim\/dynamic|physicsFreeFall|physicsMotion|physicsLab|physicsShared|functionStudy|networkTopology2)\/|src\/net2Flow\.ts$/;   // 21D-A.1 / A.2: lazy plugin workspaces + their shared widgets
+    const allowed = /src\/(smartsim\/dynamic|physicsFreeFall|physicsMotion|physicsLab|physicsShared|functionStudy|networkTopology2|chemistryLab)\/|src\/net2Flow\.ts$/;   // 21D-A.1 / A.2 / D.3: lazy plugin workspaces + their shared widgets
     const offenders = files.filter(f => !allowed.test(f) && /from\s+"[^"]*smartsim\/dynamic\//.test(fs.readFileSync(f, "utf8")));
     expect(offenders.map(f => path.relative(repo, f))).toEqual([]);
   });
