@@ -59,6 +59,12 @@ const entries = new Map<string, SmartSimUi>([
     Workspace: lazy(() => import("../physicsLab/LabWorkspace")),
     Editor: lazy(() => import("../physicsLab/LabEditor")),
     ReviewDetails: lazy(() => import("../physicsLab/LabReview"))
+  }],
+  // Phase 21D-D.1 — atomic & molecular structure (atoms / ions, shells, periodic table, formulas, 3D molecules): its own lazy chunks.
+  ["chemistryStructure@1", {
+    Workspace: lazy(() => import("../chemistryStructure/ChemWorkspace")),
+    Editor: lazy(() => import("../chemistryStructure/ChemEditor")),
+    ReviewDetails: lazy(() => import("../chemistryStructure/ChemReview"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */

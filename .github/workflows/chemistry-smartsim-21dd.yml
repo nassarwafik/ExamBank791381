@@ -1,0 +1,72 @@
+name: Phase 21D-D Chemistry SmartSim Certification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/chemistry/**"
+      - "src/chemistryStructure/**"
+      - "src/chemistryStructureModel.ts"
+      - "src/chemistryStructurePlugin.ts"
+      - "src/chemistryStructure.21dd1.test.ts"
+      - "src/interactive3d/orbitCamera.ts"
+      - "api/tests/certification-21dd1/**"
+      - "docs/fixtures/chemistry-structure-21dd1/**"
+      - "browser-harness/chemistry-21dd1.*"
+      - "scripts/check-chemistry-browser-21dd1.mjs"
+      - "scripts/mutate-chemistry-21dd1.mjs"
+      - "docs/enterprise-chemistry-smartsim-21d-d.md"
+      - ".github/workflows/chemistry-smartsim-21dd.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: 21D-D.1 chemistry exam in real Chromium (keyboard, pointer, touch, mobile RTL, reload, review, authoring, no WebGL)
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare dependencies and browser core
+        run: |
+          npm ci
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
+          command -v google-chrome
+      - name: Certify the Arabic chemistry acceptance exam in real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-21dd1
+        run: node --experimental-strip-types scripts/check-chemistry-browser-21dd1.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chemistry-21dd1-browser
+          path: .harness-21dd1/
+          include-hidden-files: true
+          retention-days: 7
+  mutations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    name: Chemistry mutation campaign — 43 isolated mutants (science, authority, grading, presentation)
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix api
+      - name: Run the baseline and 43 source mutations with byte-for-byte restoration
+        run: node scripts/mutate-chemistry-21dd1.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase-21dd1-mutations
+          path: artifacts/phase-21dd1/mutation-ledger.json
+          retention-days: 14

@@ -1,0 +1,770 @@
+{
+  "schemaVersion": 2,
+  "examId": "EXAMBANK-21DD1-CHEMISTRY-STRUCTURE",
+  "title": "ExamBank 21D-D.1 — اختبار القبول لمحاكاة البنية الذرية والجزيئية",
+  "status": "draft",
+  "metadata": {},
+  "coverPage": {
+    "enabled": true,
+    "activityType": "exam",
+    "subtitle": "بنية الذرة والأيون، الجدول الدوري، الجزيئات ثلاثية الأبعاد، الصيغ والتركيب",
+    "instructions": "احفظ كل إجابة صراحةً. التدوير والتكبير والقياس واستكشاف الجدول لا تُقيَّم. الكتل الذرية: CIAAW 2024.",
+    "allowedMaterials": "آلة حاسبة علمية غير مبرمجة",
+    "showStudentName": true,
+    "showClassName": true,
+    "showExamDate": true,
+    "showDuration": true,
+    "showTotalMarks": true,
+    "showMarksDistribution": true
+  },
+  "presentation": {
+    "schemaVersion": 1,
+    "preset": "modernAcademic"
+  },
+  "sections": [
+    {
+      "id": "sec-a",
+      "title": "أ — بنية الذرة والأيون",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "a1",
+          "presentationType": "smartSim",
+          "text": "ابنِ أيون الصوديوم ²³Na⁺ (عدد البروتونات والنيوترونات والإلكترونات)، ثم وزّع إلكتروناته على الأغلفة وصنّفه.",
+          "marks": 8,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryStructure",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "activity": "atom",
+              "subject": {
+                "element": "Na",
+                "massNumber": 23,
+                "charge": 1
+              },
+              "view": {
+                "periodicTable": "basic",
+                "identity": false,
+                "details": false,
+                "measure": false
+              },
+              "tasks": {
+                "build": true,
+                "shells": true,
+                "values": [
+                  {
+                    "id": "outer",
+                    "label": "عدد إلكترونات الغلاف الخارجي للأيون",
+                    "unit": "1"
+                  }
+                ],
+                "formulas": [],
+                "classifications": [
+                  {
+                    "id": "ionKind",
+                    "label": "نوع هذا النوع الكيميائي",
+                    "property": "ionType"
+                  },
+                  {
+                    "id": "blockKind",
+                    "label": "فئة الصوديوم في الجدول الدوري",
+                    "property": "block"
+                  }
+                ],
+                "selection": null
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "protons",
+                "label": "عدد البروتونات",
+                "weight": 1,
+                "kind": "chem.particles",
+                "particles": [
+                  "protons"
+                ]
+              },
+              {
+                "id": "neutrons",
+                "label": "عدد النيوترونات",
+                "weight": 1,
+                "kind": "chem.particles",
+                "particles": [
+                  "neutrons"
+                ]
+              },
+              {
+                "id": "electrons",
+                "label": "عدد الإلكترونات",
+                "weight": 1,
+                "kind": "chem.particles",
+                "particles": [
+                  "electrons"
+                ]
+              },
+              {
+                "id": "shells",
+                "label": "توزيع الإلكترونات على الأغلفة",
+                "weight": 2,
+                "kind": "chem.shells"
+              },
+              {
+                "id": "outer",
+                "label": "إلكترونات الغلاف الخارجي",
+                "weight": 1,
+                "kind": "chem.value",
+                "valueId": "outer",
+                "quantity": "outerShellElectrons",
+                "tolerance": 0
+              },
+              {
+                "id": "ion-kind",
+                "label": "أيون موجب",
+                "weight": 1,
+                "kind": "chem.classification",
+                "taskId": "ionKind"
+              },
+              {
+                "id": "block",
+                "label": "الفئة s",
+                "weight": 1,
+                "kind": "chem.classification",
+                "taskId": "blockKind"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-b",
+      "title": "ب — الجدول الدوري",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "b1",
+          "presentationType": "smartSim",
+          "text": "حدّد في الجدول الدوري العنصر الواقع في الدورة 3 والمجموعة 17، ثم ابنِ ذرته المتعادلة ذات العدد الكتلي 35 ووزّع إلكتروناتها.",
+          "marks": 8,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryStructure",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "activity": "atom",
+              "subject": null,
+              "view": {
+                "periodicTable": "detailed",
+                "identity": false,
+                "details": false,
+                "measure": false
+              },
+              "tasks": {
+                "build": true,
+                "shells": true,
+                "values": [
+                  {
+                    "id": "valence",
+                    "label": "عدد إلكترونات التكافؤ لذرة هذا العنصر",
+                    "unit": "1"
+                  }
+                ],
+                "formulas": [],
+                "classifications": [],
+                "selection": {
+                  "label": "حدّد في الجدول العنصر الواقع في الدورة 3 والمجموعة 17",
+                  "target": "elements",
+                  "max": 1
+                }
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "element",
+                "label": "اختيار العنصر الصحيح",
+                "weight": 2,
+                "kind": "setEquals@1",
+                "expectedIds": [
+                  "Cl"
+                ]
+              },
+              {
+                "id": "particles",
+                "label": "بناء ذرة الكلور-35 المتعادلة",
+                "weight": 3,
+                "kind": "chem.particles",
+                "particles": [
+                  "protons",
+                  "neutrons",
+                  "electrons"
+                ],
+                "species": {
+                  "element": "Cl",
+                  "massNumber": 35,
+                  "charge": 0
+                }
+              },
+              {
+                "id": "shells",
+                "label": "توزيع إلكترونات الكلور",
+                "weight": 2,
+                "kind": "chem.shells",
+                "species": {
+                  "element": "Cl",
+                  "massNumber": 35,
+                  "charge": 0
+                }
+              },
+              {
+                "id": "valence",
+                "label": "إلكترونات التكافؤ",
+                "weight": 1,
+                "kind": "chem.value",
+                "valueId": "valence",
+                "quantity": "valenceElectrons",
+                "tolerance": 0,
+                "species": {
+                  "element": "Cl",
+                  "massNumber": 35,
+                  "charge": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-c",
+      "title": "ج — الجزيئات ثلاثية الأبعاد",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "c1",
+          "presentationType": "smartSim",
+          "text": "دوّر جزيء الماء وقِس الزاوية H–O–H، وحدّد الذرة المركزية، ثم أجب عن شكله وقطبيته وكتلته المولية.",
+          "marks": 7,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryStructure",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "activity": "molecule",
+              "subject": {
+                "molecule": "water"
+              },
+              "view": {
+                "periodicTable": "hidden",
+                "identity": true,
+                "details": false,
+                "measure": true
+              },
+              "tasks": {
+                "build": false,
+                "shells": false,
+                "values": [
+                  {
+                    "id": "angle",
+                    "label": "زاوية H–O–H المقيسة",
+                    "unit": "°"
+                  },
+                  {
+                    "id": "lonePairs",
+                    "label": "عدد الأزواج غير الرابطة على ذرة الأكسجين",
+                    "unit": "1"
+                  },
+                  {
+                    "id": "molarMass",
+                    "label": "الكتلة المولية للماء",
+                    "unit": "g/mol"
+                  }
+                ],
+                "formulas": [],
+                "classifications": [
+                  {
+                    "id": "shape",
+                    "label": "الشكل الهندسي للجزيء",
+                    "property": "shape"
+                  },
+                  {
+                    "id": "polarity",
+                    "label": "قطبية الجزيء",
+                    "property": "polarity"
+                  }
+                ],
+                "selection": {
+                  "label": "حدّد الذرة المركزية في الجزيء",
+                  "target": "atoms",
+                  "max": 1
+                }
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "angle",
+                "label": "الزاوية H–O–H",
+                "weight": 2,
+                "kind": "chem.value",
+                "valueId": "angle",
+                "quantity": "bondAngle",
+                "parameter": "aHOH",
+                "tolerance": 0.5
+              },
+              {
+                "id": "lone-pairs",
+                "label": "الأزواج غير الرابطة",
+                "weight": 1,
+                "kind": "chem.value",
+                "valueId": "lonePairs",
+                "quantity": "centralLonePairs",
+                "tolerance": 0
+              },
+              {
+                "id": "molar-mass",
+                "label": "الكتلة المولية",
+                "weight": 1,
+                "kind": "chem.value",
+                "valueId": "molarMass",
+                "quantity": "molarMass",
+                "tolerance": 0.01
+              },
+              {
+                "id": "shape",
+                "label": "الشكل المنحني",
+                "weight": 1,
+                "kind": "chem.classification",
+                "taskId": "shape"
+              },
+              {
+                "id": "polarity",
+                "label": "جزيء قطبي",
+                "weight": 1,
+                "kind": "chem.classification",
+                "taskId": "polarity"
+              },
+              {
+                "id": "central",
+                "label": "الذرة المركزية O",
+                "weight": 1,
+                "kind": "setEquals@1",
+                "expectedIds": [
+                  "O1"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "c2",
+          "presentationType": "smartSim",
+          "text": "تأمل جزيء ثاني أكسيد الكربون: اكتب صيغته الجزيئية وكتلته المولية وصنّف شكله وقطبيته.",
+          "marks": 4,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryStructure",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "activity": "molecule",
+              "subject": {
+                "molecule": "carbonDioxide"
+              },
+              "view": {
+                "periodicTable": "hidden",
+                "identity": false,
+                "details": false,
+                "measure": true
+              },
+              "tasks": {
+                "build": false,
+                "shells": false,
+                "values": [
+                  {
+                    "id": "molarMass",
+                    "label": "الكتلة المولية",
+                    "unit": "g/mol"
+                  }
+                ],
+                "formulas": [
+                  {
+                    "id": "formula",
+                    "label": "الصيغة الجزيئية"
+                  }
+                ],
+                "classifications": [
+                  {
+                    "id": "shape",
+                    "label": "الشكل الهندسي",
+                    "property": "shape"
+                  },
+                  {
+                    "id": "polarity",
+                    "label": "القطبية",
+                    "property": "polarity"
+                  }
+                ],
+                "selection": null
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "formula",
+                "label": "الصيغة الجزيئية",
+                "weight": 1,
+                "kind": "chem.formula",
+                "formulaId": "formula",
+                "target": "molecular"
+              },
+              {
+                "id": "molar-mass",
+                "label": "الكتلة المولية",
+                "weight": 1,
+                "kind": "chem.value",
+                "valueId": "molarMass",
+                "quantity": "molarMass",
+                "tolerance": 0.01
+              },
+              {
+                "id": "shape",
+                "label": "الشكل الهندسي",
+                "weight": 1,
+                "kind": "chem.classification",
+                "taskId": "shape"
+              },
+              {
+                "id": "polarity",
+                "label": "القطبية",
+                "weight": 1,
+                "kind": "chem.classification",
+                "taskId": "polarity"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-d",
+      "title": "د — الصيغ الكيميائية والتركيب",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "d1",
+          "presentationType": "smartSim",
+          "text": "للغلوكوز C₆H₁₂O₆: احسب الكتلة المولية والنسبة المئوية الكتلية للكربون، واكتب الصيغة الأولية.",
+          "marks": 6,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryStructure",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "activity": "formula",
+              "subject": {
+                "formula": "C6H12O6"
+              },
+              "view": {
+                "periodicTable": "basic",
+                "identity": false,
+                "details": false,
+                "measure": false
+              },
+              "tasks": {
+                "build": false,
+                "shells": false,
+                "values": [
+                  {
+                    "id": "molarMass",
+                    "label": "الكتلة المولية للغلوكوز",
+                    "unit": "g/mol"
+                  },
+                  {
+                    "id": "carbonPercent",
+                    "label": "النسبة المئوية الكتلية للكربون",
+                    "unit": "%"
+                  }
+                ],
+                "formulas": [
+                  {
+                    "id": "empirical",
+                    "label": "الصيغة الأولية (أبسط نسبة)"
+                  }
+                ],
+                "classifications": [],
+                "selection": null
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "molar-mass",
+                "label": "الكتلة المولية",
+                "weight": 2,
+                "kind": "chem.value",
+                "valueId": "molarMass",
+                "quantity": "molarMass",
+                "tolerance": 0.05
+              },
+              {
+                "id": "carbon",
+                "label": "نسبة الكربون",
+                "weight": 2,
+                "kind": "chem.value",
+                "valueId": "carbonPercent",
+                "quantity": "massPercent",
+                "element": "C",
+                "tolerance": 0.1
+              },
+              {
+                "id": "empirical",
+                "label": "الصيغة الأولية CH₂O",
+                "weight": 2,
+                "kind": "chem.formula",
+                "formulaId": "empirical",
+                "target": "empirical"
+              }
+            ]
+          }
+        },
+        {
+          "examQuestionId": "d2",
+          "presentationType": "smartSim",
+          "text": "لكبريتات النحاس المائية CuSO₄·5H₂O: احسب الكتلة المولية ونسبة النحاس وعدد ذرات الأكسجين في وحدة الصيغة.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "smartSim": {
+            "schemaVersion": 1,
+            "pluginKey": "chemistryStructure",
+            "pluginVersion": 1,
+            "config": {
+              "v": 1,
+              "activity": "formula",
+              "subject": {
+                "formula": "CuSO4·5H2O"
+              },
+              "view": {
+                "periodicTable": "basic",
+                "identity": false,
+                "details": false,
+                "measure": false
+              },
+              "tasks": {
+                "build": false,
+                "shells": false,
+                "values": [
+                  {
+                    "id": "molarMass",
+                    "label": "الكتلة المولية لكبريتات النحاس المائية",
+                    "unit": "g/mol"
+                  },
+                  {
+                    "id": "copperPercent",
+                    "label": "النسبة المئوية الكتلية للنحاس",
+                    "unit": "%"
+                  },
+                  {
+                    "id": "oxygenAtoms",
+                    "label": "عدد ذرات الأكسجين في وحدة الصيغة",
+                    "unit": "1"
+                  }
+                ],
+                "formulas": [],
+                "classifications": [],
+                "selection": null
+              }
+            }
+          },
+          "answer": {
+            "scoring": "proportional",
+            "checks": [
+              {
+                "id": "molar-mass",
+                "label": "الكتلة المولية",
+                "weight": 2,
+                "kind": "chem.value",
+                "valueId": "molarMass",
+                "quantity": "molarMass",
+                "tolerance": 0.05
+              },
+              {
+                "id": "copper",
+                "label": "نسبة النحاس",
+                "weight": 2,
+                "kind": "chem.value",
+                "valueId": "copperPercent",
+                "quantity": "massPercent",
+                "element": "Cu",
+                "tolerance": 0.1
+              },
+              {
+                "id": "oxygen",
+                "label": "ذرات الأكسجين",
+                "weight": 1,
+                "kind": "chem.value",
+                "valueId": "oxygenAtoms",
+                "quantity": "countOf",
+                "element": "O",
+                "tolerance": 0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-e",
+      "title": "هـ — سياق مشترك",
+      "stimuli": {},
+      "gradingPolicy": "all",
+      "questions": [
+        {
+          "examQuestionId": "e1",
+          "presentationType": "composite",
+          "text": "استخدم نموذج جزيء الأمونيا المشترك للإجابة.",
+          "marks": 5,
+          "questionTypeVersion": 1,
+          "composite": {
+            "v": 1,
+            "contexts": [
+              {
+                "id": "ctxAmmonia",
+                "version": 1,
+                "kind": "smartSim",
+                "title": "جزيء الأمونيا",
+                "smartSim": {
+                  "schemaVersion": 1,
+                  "pluginKey": "chemistryStructure",
+                  "pluginVersion": 1,
+                  "config": {
+                    "v": 1,
+                    "activity": "molecule",
+                    "subject": {
+                      "molecule": "ammonia"
+                    },
+                    "view": {
+                      "periodicTable": "hidden",
+                      "identity": true,
+                      "details": false,
+                      "measure": true
+                    },
+                    "tasks": {
+                      "build": false,
+                      "shells": false,
+                      "values": [
+                        {
+                          "id": "angleHNH",
+                          "label": "زاوية H–N–H المقيسة",
+                          "unit": "°"
+                        }
+                      ],
+                      "formulas": [],
+                      "classifications": [
+                        {
+                          "id": "shape",
+                          "label": "الشكل الهندسي لجزيء الأمونيا",
+                          "property": "shape"
+                        }
+                      ],
+                      "selection": null
+                    }
+                  }
+                }
+              }
+            ],
+            "groups": [
+              {
+                "id": "gA",
+                "title": "مرتبط بالنموذج",
+                "gradingPolicy": "all",
+                "requiredAnswers": null,
+                "maxMarks": null,
+                "parts": [
+                  {
+                    "id": "p1",
+                    "label": "أ",
+                    "type": "smartSim",
+                    "questionTypeVersion": 1,
+                    "contextId": "ctxAmmonia",
+                    "text": "قِس الزاوية H–N–H وصنّف شكل الجزيء.",
+                    "marks": 3,
+                    "answer": {
+                      "scoring": "proportional",
+                      "checks": [
+                        {
+                          "id": "shape",
+                          "label": "هرم ثلاثي",
+                          "weight": 1,
+                          "kind": "chem.classification",
+                          "taskId": "shape"
+                        },
+                        {
+                          "id": "angle",
+                          "label": "الزاوية H–N–H",
+                          "weight": 1,
+                          "kind": "chem.value",
+                          "valueId": "angleHNH",
+                          "quantity": "bondAngle",
+                          "parameter": "aHNH",
+                          "tolerance": 0.5
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p2",
+                    "label": "ب",
+                    "type": "multipleChoice",
+                    "questionTypeVersion": 1,
+                    "text": "لماذا تقل الزاوية H–N–H في الأمونيا عن الزاوية الرباعية 109.5°؟",
+                    "marks": 2,
+                    "options": [
+                      {
+                        "text": "لأن زوج الإلكترونات غير الرابط يتنافر بقوة أكبر مع أزواج الروابط"
+                      },
+                      {
+                        "text": "لأن الروابط N–H ثنائية"
+                      },
+                      {
+                        "text": "لأن ذرة النيتروجين أكبر من ذرة الكربون"
+                      }
+                    ],
+                    "answer": {
+                      "correctOptionIndex": 0
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
