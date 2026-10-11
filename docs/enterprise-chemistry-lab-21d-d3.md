@@ -271,7 +271,7 @@ The exact-head CI record is in the PR body (AGENTS.md §6).
 | `npm test` (root: app + API + scripts) | **909 files, 11,905 tests, 0 failures** |
 | D.3 suites | 93 tests in 6 files: `labFoundation` 19, `labModels` 25, `chemistryLab` authority 23, UI 15, lifecycle 10, fixture drift 1 |
 | D.1 / D.2 regression | inside the full suite. Real Chromium: D.1 36 / 36, D.2 41 / 41. |
-| Real Chromium D.3 (`scripts/check-chemistry-browser-21dd3.mjs`) | **46 / 46** (§11.6) |
+| Real Chromium D.3 (`scripts/check-chemistry-browser-21dd3.mjs`) | **47 / 47** after the preview-acceptance fix (§11.6). It was 46 / 46 before the bidi audit check was added. |
 | `git diff --check` | clean |
 
 ### 11.2 Science evidence (what the tests prove)
@@ -304,6 +304,7 @@ The exact-head CI record is in the PR body (AGENTS.md §6).
 | The teacher review showed choice options as raw ids ("phenolphthalein، bromothymolBlue"). | The test "review text names indicators, solutions and trials in Arabic" failed on `c123ff8` with exactly that text. | `44a3726` (`optionText` names indicators). |
 | The rate lab's time cursor was mirrored by the RTL page: ArrowRight moved time backwards, against the graph's axis. | Real Chromium on `44a3726`: after 35 × ArrowRight the t1 reading stayed at 0.100 mol/L. | `fa0aa20` (`dir="ltr"`). Now 0.100 → 0.0497 mol/L, with no answer changed. |
 | Bidi reordering: "24.50 mL" displayed as "mL 24.50" in the record table. | A Chromium glyph-order check fails with the isolates removed ("unit-then-number") and passes with them. Screenshot evidence on `48ecf1c`'s run. | `fa0aa20` (Unicode LTR isolates). |
+| **Found by preview acceptance.** The same bidi reordering remained everywhere else a number + unit is shown. On the deployed PR preview of `bb18a26`, 52 of 69 visible occurrences (37 distinct texts) showed the unit left of the number. Affected: status messages; teacher-authored labels and task texts (the RLM in the templates did not help); choice options; record rows built from labels; fixed hints ("25 °C", "0.01 g", "(0.05 mL)"). | On the `bb18a26` sources, three tests failed: the new chemLabUi test (`'أُضيف 1.00 mL من السحاحة.'` without isolates); the new `isolateQuantities` test (not a function); and the new Chromium bidi audit (FAILED 1 / 47, 70 occurrences). | `f29805d`: `labView.isolateQuantities`, applied at every render site of config text, status and options, with `ltr()` on fixed strings. All three now pass; the audit finds 70 occurrences and 0 reordered. Presentation only: config, model and grading are untouched. |
 
 The plugin-list and capability-matrix updates are **pins**, not fail-first tests.
 
@@ -347,9 +348,9 @@ The plugin-list and capability-matrix updates are **pins**, not fail-first tests
   load. The registry refuses any plugin with more than `SMART_SIM_LIMITS.actions` (1000) at registration, so the D.3 bound itself was never
   exercised. The mutant now plants 1000, the largest value the registry accepts. Run 3 (`--only=G13-action-limit`): **KILLED** by
   assertions in both files (3 failing tests, including the lifecycle refusal of 501 actions). Files restored, sha256-verified.
-* The campaign now has **68 mutants**. The `mutations-21dd3` CI job runs all of them on the PR head.
+* The campaign now has **69 mutants**. V08-quantities-not-isolated, which turns `isolateQuantities` into the identity, was added with the preview-acceptance fix. Run on `f29805d` (`--only`, together with V05): both killed, files restored. The `mutations-21dd3` CI job runs all of them on the PR head.
 
-### 11.6 Real Chromium (head code `816406b`; 46 checks)
+### 11.6 Real Chromium (head code `816406b`: 46 checks; from `f29805d`: 47 checks, with the glyph-measured bidi audit of every number + unit in all eight workspaces)
 
 * All four labs on one exam page, rendered from the student projection; nothing private in the DOM; no WebGL.
 * RTL page with LTR formula and number islands.
