@@ -6,12 +6,12 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 
 | ID | PDF page | Title | Severity | PR | Status |
 |---|---|---|---|---|---|
-| BUG-001 | 1 | Exam import → «رجوع» does nothing until a draft is saved | High (teacher blocked, work appears lost) | PR A | verified (Chromium 49/49 on the PR head) |
-| BUG-002 | 1 | Eight editor toolbar actions "do not respond" | High (features unreachable) | PR A | verified (Chromium 49/49 on the PR head) |
-| UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B | open |
-| FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C (#295, RF1) | in review |
-| BRAND-005 | 4–5 | Complete Tadris+ branding | Medium | PR D | open |
-| PWA-006 | 4–5 | Installed-app name and icon (desktop / Android / iOS) | Medium | PR D | open |
+| BUG-001 | 1 | Exam import → «رجوع» does nothing until a draft is saved | High (teacher blocked, work appears lost) | PR A — #293 | verified (Chromium 49/49 on the PR head; exact-head CI green) |
+| BUG-002 | 1 | Eight editor toolbar actions "do not respond" | High (features unreachable) | PR A — #293 | verified (Chromium 49/49 on the PR head; exact-head CI green) |
+| UX-003 | 2–4 | Enterprise teacher grading workspace | High (usability) | PR B — #294 | in PR — RF1 applied (attempt-switch guard, edit-preserving reload, review modes); Chromium + happy-dom re-certified |
+| FEATURE-004 | 3 | Student notification after a grade change | Medium | PR C — #295 | merged (`7c155ff`; RF1 `a10075f`: dedupe key binds the committed transition, withheld coding marks never ride the event, `cleanScore(null)` no longer reads as 0; API certification 7/7 + RF1 8/8, client 3/3) |
+| BRAND-005 | 4–5 | Complete Tadris+ branding | Medium | PR D — #296 | in PR (contract test + Chromium 27/27 on the production build) |
+| PWA-006 | 4–5 | Installed-app name and icon (desktop / Android / iOS) | Medium | PR D — #296 | in PR (manifest / icons certified in Chromium; device checklist pending with the owner) |
 
 ---
 
@@ -49,7 +49,9 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 | Current actual behaviour | `src/AssignmentReview.tsx` renders every question of the attempt in one long modal (`.review-overlay`), with the student answer and the reference answer in a two-column grid, no filter for pending manual grading, no per-question navigation, and status conveyed mostly by colour. |
 | Expected behaviour | Exam-style review of each question (same/adapted renderer as the student exam), trusted reference answer for authorized teachers, correct / incorrect / partial / pending treatments with text + icon, a prominent «يحتاج إلى تصحيح يدوي» filter plus الكل / بانتظار التصحيح / تم التصحيح / إجابة صحيحة / إجابة خاطئة / إجابة جزئية, previous / next navigation, navigator, pending / completed counts, mark + feedback entry, unsaved-change protection, final summary, responsive RTL layout. Server-authoritative grades, existing manual-review semantics, `all` / `firstNAnswered` rules, audit trail and permissions preserved. |
 | Affected | `src/AssignmentReview.tsx`, `api/src/functions/assignment-review.js` (GET projection and `saveReview`), `src/review-pro.css`, `src/platform.css`. |
-| Status | open — PR B |
+| Fix (PR B) | Presentation-only workspace on top of the unchanged review API: state engine `src/review/reviewQuestionState.ts` (server projection only; pending never incorrect; typed marks provisional), filters with counts incl. the prominent «يحتاج إلى تصحيح يدوي», navigator rail / disclosure, previous / next / next-pending, exam-style choice rendering with the teacher-only key in text, readable choice keys, unsaved-change guard on close. Design record: `docs/enterprise-grading-workspace-ux003.md`. |
+| Acceptance tests | `src/review/reviewQuestionState.test.ts` (13), `src/review/reviewWorkspace.ux003.test.tsx` (7, real component + fake API), the 21 pre-existing AssignmentReview suites unchanged; real Chromium `scripts/check-grading-workspace-browser.mjs` 32/32 (desktop / laptop / tablet / phone, hit tests, pointer, keyboard, save round-trip, confirmation on top). |
+| Status | in PR — PR B |
 
 ## FEATURE-004 — Student notification after a grade change
 
@@ -57,7 +59,9 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 |---|---|
 | Source | `Problems.pdf` page 3 |
 | Current actual behaviour | `api/src/functions/assignment-review.js` already records an `assignment_reviewed` notification event (`recordEventSafely`, dedupe-keyed) when a save is "meaningful"; the student bell (`src/notifications/*`) lists it. The message does not state the updated grade in the requested form («تم تحديث علامتك في امتحان «…»، وأصبحت علامتك 89/100.»), and the trigger / idempotency / publication-policy behaviour has to be certified against the acceptance list (changed → notify; failed save → none; same grade twice → none; retry → none; unauthorized → none; pending manual grading completed → notify under the publication policy; the notification opens the permitted result). |
-| Status | in review — PR C #295; Review Fix 1: dedupe key binds the committed transition (same-millisecond saves), withheld coding marks never ride the event, `cleanScore(null)` no longer reads as 0 |
+| Fix (PR C — #295) | The existing idempotent `assignment_reviewed` event carries the updated `score` / `totalMarks` (own student only, sanitised); the teacher review and the automatic coding grader pass them; the bell reads «تم تحديث علامتك في امتحان «…»، وأصبحت علامتك 89/100.» (+ «(التصحيح لم يكتمل بعد)» / «مع ملاحظة جديدة من المعلم.»). Design record: `docs/enterprise-grade-change-notification-f004.md` (PR C). |
+| Acceptance tests | `api/tests/grade-change-notification-f004.test.js` (7 scenarios through the real handlers), `src/notifications/notificationCenter.6d.test.tsx` FEATURE-004 wording. |
+| Status | merged — PR C #295 (`7c155ff`), Review Fix 1 `a10075f` applied before merge |
 
 ## BRAND-005 / PWA-006 — Tadris+ identity
 
@@ -65,7 +69,9 @@ One row per issue; every claim links to code, tests and the PR that carries it. 
 |---|---|
 | Source | `Problems.pdf` pages 4–5; approved assets `TadrisPlus_Brand_Assets.zip` (full logo 1254², icon crop 748², icons 16/32/48/180/192/256/512, maskable 192/512). |
 | Current actual behaviour | Product name "ExamBank 791381" / "ExamBank" / "ExamBank 2.0" in `index.html`, `public/manifest.webmanifest`, `public/offline.html`, `src/App.tsx` login headings, `src/shell/TeacherAppShell.tsx`, `src/shell/StudentShell.tsx`, `src/pwa/*` install / push cards, `src/meshModels/MeshModel3DView.tsx`, API AI prompts; icons under `public/pwa/` are the old mark. Manifest `id: "./"` and `start_url` / `scope` must be preserved for a safe upgrade of existing installations. |
-| Status | open — PR D |
+| Fix (PR D — #296) | `src/brand.ts` as the one source of the visible name; approved icon set under `public/pwa` (RGBA tiles for `any` / favicons 16-32-48, opaque full-bleed maskable 192/512 re-centred at 72 % so 0 px fall outside the circular safe zone, Apple 180); manifest `name` / `short_name` Tadris+, navy theme / background, `id` / `start_url` / `scope` unchanged, icon URLs versioned (`?v=tadris1`); SW offline cache v2; shells, login, install surfaces, offline page, exports and AI prompt context renamed. Design record + migration analysis + device checklists: `docs/enterprise-tadris-branding-pwa.md` (PR D). |
+| Acceptance tests | `src/brand.tadris.test.ts` (identity, PNG kinds / sizes, decoded maskable safe-area count, manifest identity); updated pins in brand.10a / serviceWorker.6a / InstallAppCard.6a / StudentShell / StudentPortal.ux7a / TeacherDashboard / teacherIdentity / ux2-shell-foundation; real Chromium on the production build `scripts/check-brand-pwa-browser.mjs` 27/27. Windows / Android / iOS installation not observed in the session — manual checklist handed to the owner. |
+| Status | in PR — PR D (#296) |
 
 ---
 
