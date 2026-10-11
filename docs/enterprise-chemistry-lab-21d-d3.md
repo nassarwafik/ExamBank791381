@@ -343,6 +343,10 @@ The plugin-list and capability-matrix updates are **pins**, not fail-first tests
   | G14-duplicate-measurements | test gap | a repeated meter reading is recorded once |
 
 * **Run 2** (`--only`, the 10 affected mutants, on `68b223f`): **10 / 10 killed.** Files restored.
+* **Ledger audit before the PR.** G13-action-limit (500 → 5000) was recorded as killed in run 1, but no test ran: both files failed to
+  load. The registry refuses any plugin with more than `SMART_SIM_LIMITS.actions` (1000) at registration, so the D.3 bound itself was never
+  exercised. The mutant now plants 1000, the largest value the registry accepts. Run 3 (`--only=G13-action-limit`): **KILLED** by
+  assertions in both files (3 failing tests, including the lifecycle refusal of 501 actions). Files restored, sha256-verified.
 * The campaign now has **68 mutants**. The `mutations-21dd3` CI job runs all of them on the PR head.
 
 ### 11.6 Real Chromium (head code `816406b`; 46 checks)

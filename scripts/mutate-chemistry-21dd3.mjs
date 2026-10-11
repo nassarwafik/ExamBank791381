@@ -90,7 +90,9 @@ const mutants = [
   M("G10-choice-subset", PLUGIN, "const passed = correct.length > 0 && chosen.length === correct.length && chosen.every(o => correct.includes(o));", "const passed = correct.length > 0 && chosen.every(o => correct.includes(o));", AUTH),
   M("G11-no-unit-conversion", PLUGIN, "const answer = fromCanonical(toCanonical(v, unit), taskUnit);", "const answer = v;", AUTH),
   M("G12-record-unbounded", PLUGIN, "if (s.observations.length >= CHEM_LAB_LIMITS.observations) return s;", "if (false) return s;", [...AUTH, ...UI]),
-  M("G13-action-limit", PLUGIN, "export const CHEM_LAB_MAX_ACTIONS = 500;", "export const CHEM_LAB_MAX_ACTIONS = 5000;", AUTH),
+  // 1000 is the registry's own cap (SMART_SIM_LIMITS.actions): a larger value is refused at registration, so the module would not load and
+  // the D.3 bound would never be exercised; at 1000 only the lab's own 501-action refusal can kill the mutant
+  M("G13-action-limit", PLUGIN, "export const CHEM_LAB_MAX_ACTIONS = 500;", "export const CHEM_LAB_MAX_ACTIONS = 1000;", AUTH),
   M("G14-duplicate-measurements", PLUGIN, 'case "ph.measure": return withObservation(s, { kind: "meter", solution: a.solutionId }, true);', 'case "ph.measure": return withObservation(s, { kind: "meter", solution: a.solutionId }, false);', [...AUTH, ...UI]),
   // presentation invariants
   M("V01-arabic-decimal-separator", VIEW, '.replace(/[٫,]/g, ".")', '.replace(/[,]/g, ".")', UI),
