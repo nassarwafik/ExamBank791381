@@ -1,7 +1,7 @@
 // Phase 21D-D.2 — deterministic, server-shareable reaction conservation core.
 // This module checks authored educational equations. It never executes reactions,
 // suggests experimental procedures, or accepts trusted values from a student client.
-import { parseFormula, type FormulaComposition } from "./chemistry/formula";
+import { parseFormula, type FormulaComposition } from "./formula";
 
 export const REACTION_LIMITS = Object.freeze({
   termsPerSide: 8, totalTerms: 12, coefficientMax: 999, chargeAbsMax: 8
