@@ -43,9 +43,9 @@ describe("UX-2 root document", () => {
     expect(html).toMatch(/<html[^>]*\slang="ar"/);
     expect(html).toMatch(/<html[^>]*\sdir="rtl"/);
   });
-  it("carries a meaningful ExamBank title", () => {
+  it("carries the product's visible title (BRAND-005: Tadris+ — التعليم المتكامل)", () => {
     const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] || "";
-    expect(title).toMatch(/ExamBank 791381/);
+    expect(title).toBe("Tadris+ — التعليم المتكامل");
     expect(title).not.toBe("exambank791381");
   });
 });
