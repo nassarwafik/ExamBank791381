@@ -65,6 +65,12 @@ const entries = new Map<string, SmartSimUi>([
     Workspace: lazy(() => import("../chemistryStructure/ChemWorkspace")),
     Editor: lazy(() => import("../chemistryStructure/ChemEditor")),
     ReviewDetails: lazy(() => import("../chemistryStructure/ChemReview"))
+  }],
+  // Phase 21D-D.2 — reactions & equations (balancing, atom / charge conservation, families, roles): its own lazy chunks.
+  ["chemistryReactions@1", {
+    Workspace: lazy(() => import("../chemistryReactions/RxnWorkspace")),
+    Editor: lazy(() => import("../chemistryReactions/RxnEditor")),
+    ReviewDetails: lazy(() => import("../chemistryReactions/RxnReview"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */
