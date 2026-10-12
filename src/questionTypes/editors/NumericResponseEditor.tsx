@@ -1,4 +1,6 @@
 import type { AuthoringEditorProps } from "../registryTypes";
+import Field from "../../ui/Field";
+import { numericFieldIssues } from "../../teacher/questionFieldIssues";
 
 // Phase 16A — Numeric Response authoring (lazy): exact / tolerance or inclusive range, optional required unit. Every secret
 // (expected, tolerance, min, max, the correct unit) lives under `answer`; `numeric.unitRequired` is the only student-visible
@@ -8,7 +10,8 @@ const keyOf = (answer: unknown): Key => { const a = (answer && typeof answer ===
 const num = (raw: string): number | undefined => { if (raw.trim() === "") return undefined; const n = Number(raw); return Number.isFinite(n) ? n : undefined; };
 const show = (v: number | undefined) => (v === undefined ? "" : String(v));
 
-export default function NumericResponseEditor({ node, onChange, disabled }: AuthoringEditorProps) {
+export default function NumericResponseEditor({ node, onChange, disabled, framed }: AuthoringEditorProps) {
+  if (framed) return <FramedNumericResponseEditor node={node} onChange={onChange} disabled={disabled} />;
   const key = keyOf(node.answer);
   const unitRequired = node.numeric?.unitRequired === true;
   const set = (patch: Partial<Key>) => {
@@ -42,6 +45,45 @@ export default function NumericResponseEditor({ node, onChange, disabled }: Auth
         <label className="sb-inline"><span>الوحدة</span><input className="sb-input sb-input-sm" aria-label="الوحدة" value={key.unit ?? ""} placeholder="مثال: m/s²" onChange={e => set({ unit: e.target.value })} disabled={disabled} /></label>
       </div>
       <p className="sb-hint">تُقبل الأرقام العشرية بالفواصل العربية والإنجليزية والترميز العلمي؛ الحدود شاملة. لا تُقيَّم أي تعابير حسابية.</p>
+    </div>
+  );
+}
+
+// Phase 21E.2 — the same editor on the shared Field frame (top-level questions): visible labels, inline canonical errors.
+function FramedNumericResponseEditor({ node, onChange, disabled }: AuthoringEditorProps) {
+  const key = keyOf(node.answer);
+  const unitRequired = node.numeric?.unitRequired === true;
+  const issues = numericFieldIssues(node);
+  const set = (patch: Partial<Key>) => {
+    const next: Key = { ...key, ...patch };
+    const answer: Record<string, unknown> = { mode: next.mode };
+    if (next.mode === "tolerance") { answer.expected = next.expected ?? 0; answer.tolerance = next.tolerance ?? 0; } else { answer.min = next.min ?? 0; answer.max = next.max ?? 0; }
+    if (next.unit && next.unit.trim()) answer.unit = next.unit;
+    onChange({ answer, numeric: { unitRequired } });
+  };
+  return (
+    <div className="qt-editor qt-numeric" data-testid="qt-editor-numericResponse">
+      <Field label="نمط الإجابة الرقمية" layout="inline" error={issues.mode}>{a11y => (
+        <select {...a11y} className="sb-input sb-input-sm" value={key.mode} onChange={e => set({ mode: e.target.value === "range" ? "range" : "tolerance" })} disabled={disabled}>
+          <option value="tolerance">قيمة متوقعة ± تسامح</option>
+          <option value="range">مدى (من … إلى)</option>
+        </select>
+      )}</Field>
+      {key.mode === "tolerance" ? (
+        <div className="sb-field-row">
+          <Field label="القيمة المتوقعة" layout="inline" error={issues.expected}>{a11y => <input {...a11y} className="sb-input sb-input-sm" type="number" step="any" value={show(key.expected)} onChange={e => set({ expected: num(e.target.value) })} disabled={disabled} />}</Field>
+          <Field label="التسامح (±)" layout="inline" error={issues.tolerance}>{a11y => <input {...a11y} className="sb-input sb-input-sm" type="number" step="any" min="0" value={show(key.tolerance)} onChange={e => set({ tolerance: num(e.target.value) })} disabled={disabled} />}</Field>
+        </div>
+      ) : (
+        <div className="sb-field-row">
+          <Field label="الحد الأدنى" layout="inline" error={issues.min}>{a11y => <input {...a11y} className="sb-input sb-input-sm" type="number" step="any" value={show(key.min)} onChange={e => set({ min: num(e.target.value) })} disabled={disabled} />}</Field>
+          <Field label="الحد الأعلى" layout="inline" error={issues.max}>{a11y => <input {...a11y} className="sb-input sb-input-sm" type="number" step="any" value={show(key.max)} onChange={e => set({ max: num(e.target.value) })} disabled={disabled} />}</Field>
+        </div>
+      )}
+      <div className="sb-field-row">
+        <label className="sb-inline"><input type="checkbox" checked={unitRequired} aria-label="الوحدة مطلوبة" onChange={e => onChange({ numeric: { unitRequired: e.target.checked }, answer: { ...(node.answer || { mode: "tolerance", expected: 0, tolerance: 0 }) } })} disabled={disabled} /> <span>الوحدة مطلوبة</span></label>
+        <Field label="الوحدة" layout="inline" error={issues.unit} help="تُقبل الأرقام العشرية بالفواصل العربية والإنجليزية والترميز العلمي؛ الحدود شاملة. لا تُقيَّم أي تعابير حسابية.">{a11y => <input {...a11y} className="sb-input sb-input-sm" value={key.unit ?? ""} placeholder="مثال: m/s²" onChange={e => set({ unit: e.target.value })} disabled={disabled} />}</Field>
+      </div>
     </div>
   );
 }

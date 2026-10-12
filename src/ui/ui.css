@@ -158,6 +158,18 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
   .eb-dialog-root { padding: var(--eb-space-2); align-items: flex-end; }
   .eb-dialog, .eb-dialog.size-sm, .eb-dialog.size-lg { width: 100%; max-height: 94vh; }
 }
+/* 21E.2 — Field / FieldGroup frame (src/ui/Field.tsx): visible label, help, inline error; token-only. */
+.eb-field { display: flex; flex-direction: column; gap: var(--eb-space-1); min-width: 0; }
+.eb-field.is-inline { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: var(--eb-space-2); }
+.eb-field.is-inline > :is(.eb-field-help, .eb-field-error) { flex-basis: 100%; }
+.eb-field-label { color: var(--eb-text-secondary); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); line-height: var(--eb-lh-tight); }
+.eb-field-control { display: flex; flex-direction: column; min-width: 0; }
+.eb-field.is-inline .eb-field-control { flex: 0 1 auto; }
+.eb-field-help { margin: 0; color: var(--eb-muted); font-size: var(--eb-fs-12); line-height: var(--eb-lh-body); }
+.eb-field-group { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-field-group > legend { padding: 0; margin-block-end: var(--eb-space-1); }
+.eb-field.is-invalid :is(input, textarea, select)[aria-invalid="true"],
+.eb-field-group.is-invalid :is(input, textarea, select)[aria-invalid="true"] { border-color: var(--eb-danger); }
 /* UX-8b — field-specific validation message (described by the invalid control; never a page-level banner) */
 .eb-field-error { margin: var(--eb-space-1) 0 0; color: var(--eb-danger-tx); font-size: var(--eb-fs-12); line-height: var(--eb-lh-body); }
 

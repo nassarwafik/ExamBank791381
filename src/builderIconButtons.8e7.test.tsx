@@ -34,7 +34,7 @@ const noGlyphNames = () => {
 describe("Phase 8E-7 — builder glyph buttons have real accessible names", () => {
   it("StructuredQuestionEditor: preview / move up / move down / duplicate / delete + the collapse toggle exposes its state", () => {
     render(<StructuredQuestionEditor question={newQuestion("multipleChoice")} index={0} total={2} sectionOptions={[{ id: "s1", title: "القسم الأول" }]} currentSectionId="s1" groupOptions={[]} onChange={vi.fn()} onDelete={vi.fn()} onMove={vi.fn()} onDuplicate={vi.fn()} onMoveToSection={vi.fn()} onPreview={vi.fn()} />);
-    names("معاينة الطالب", "أعلى", "أسفل", "تكرار", "حذف");
+    names("معاينة الطالب", "نقل السؤال 1 للأعلى", "نقل السؤال 1 للأسفل", "تكرار", "حذف");   // 21E.2 E: reorder names say which question
     const collapse = screen.getByRole("button", { name: "طيّ" });
     expect(collapse.getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(collapse);
@@ -45,12 +45,20 @@ describe("Phase 8E-7 — builder glyph buttons have real accessible names", () =
   it("QuestionBodyEditor: MCQ option move/delete and matching-pair delete", () => {
     const mcq = newQuestion("multipleChoice", { options: [{ text: "أ" }, { text: "ب" }, { text: "ج" }] });
     render(<QuestionBodyEditor node={mcq} type="multipleChoice" onChange={vi.fn()} />);
-    names("أعلى", "أسفل", "حذف");
+    names("أعلى", "أسفل", "حذف");                                                   // compound / composite parts: frozen markup
+    noGlyphNames();
+    cleanup();
+    render(<QuestionBodyEditor node={mcq} type="multipleChoice" onChange={vi.fn()} framed />);
+    names("نقل الخيار 1 للأعلى", "نقل الخيار 3 للأسفل", "حذف الخيار 2");                 // 21E.2: a top-level question names the option
     noGlyphNames();
     cleanup();
     const matching = newQuestion("matching", buildMatchingPatch([{ left: "أ", right: "1" }, { left: "ب", right: "2" }]));
     render(<QuestionBodyEditor node={matching} type="matching" onChange={vi.fn()} />);
     names("حذف");
+    noGlyphNames();
+    cleanup();
+    render(<QuestionBodyEditor node={matching} type="matching" onChange={vi.fn()} framed />);
+    names("حذف الزوج 1", "حذف الزوج 2");
     noGlyphNames();
   });
 

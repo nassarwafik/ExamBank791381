@@ -1,5 +1,7 @@
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Field from "./ui/Field";
+import { headerFieldIssues } from "./teacher/questionFieldIssues";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import QuestionComposer from "./QuestionComposer";
 import QuestionMediaEditor from "./QuestionMediaEditor";
@@ -54,6 +56,10 @@ type Props = {
 export default function StructuredQuestionEditor(props: Props) {
   const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint } = props;
   const [open, setOpen] = useState(true);
+  // 21E.2 — the field-level view of the canonical header rules (EMPTY_TEXT / MARKS_PROBLEM) and the question's display label,
+  // used to give the reorder buttons a name that says WHICH question moves.
+  const fieldIssues = useMemo(() => headerFieldIssues(q), [q]);
+  const questionLabel = q.displayNumber?.trim() ? q.displayNumber.trim() : String(index + 1);
 
   return (
     <div className={"sb-question" + (selected ? " is-selected" : "") + (flash ? " sb-q-flash" : "")} id={"sb-q-" + q.examQuestionId} data-question-id={q.examQuestionId} data-selected={selected ? "true" : undefined} tabIndex={-1} ref={registerNode}>
@@ -65,8 +71,8 @@ export default function StructuredQuestionEditor(props: Props) {
         {scenarioLabel && <span className="sb-chip sb-scenario-chip" data-testid="scenario-chip">ضمن سيناريو: {scenarioLabel}</span>}
         <span className="sb-spacer" />
         <button type="button" className="sb-icon-btn" title="معاينة الطالب" aria-label="معاينة الطالب" onClick={onPreview} disabled={disabled}>👁</button>
-        <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
-        <button type="button" className="sb-icon-btn" title="أسفل" aria-label="أسفل" onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
+        <button type="button" className="sb-icon-btn" title={"نقل السؤال " + questionLabel + " للأعلى"} aria-label={"نقل السؤال " + questionLabel + " للأعلى"} onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
+        <button type="button" className="sb-icon-btn" title={"نقل السؤال " + questionLabel + " للأسفل"} aria-label={"نقل السؤال " + questionLabel + " للأسفل"} onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
         <button type="button" className="sb-icon-btn" title="تكرار" aria-label="تكرار" onClick={onDuplicate} disabled={disabled}>⧉</button>
         <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={onDelete} disabled={disabled}>×</button>
       </div>
@@ -74,8 +80,8 @@ export default function StructuredQuestionEditor(props: Props) {
       {open && (
         <div className="sb-q-body">
           <div className="sb-q-meta">
-            <label className="sb-inline"><span>الرقم الظاهر</span><input className="sb-input sb-input-xs" value={q.displayNumber ?? ""} placeholder={String(index + 1)} onChange={e => onChange({ displayNumber: e.target.value })} disabled={disabled} /></label>
-            <label className="sb-inline"><span>العلامة</span><input className="sb-input sb-input-xs" type="number" step="0.25" value={q.marks ?? ""} onChange={e => onChange({ marks: Number(e.target.value) })} disabled={disabled} /></label>
+            <Field label="الرقم الظاهر" layout="inline">{a11y => <input {...a11y} className="sb-input sb-input-xs" value={q.displayNumber ?? ""} placeholder={String(index + 1)} onChange={e => onChange({ displayNumber: e.target.value })} disabled={disabled} />}</Field>
+            <Field label="العلامة" layout="inline" error={fieldIssues.marks}>{a11y => <input {...a11y} className="sb-input sb-input-xs" type="number" step="0.25" value={q.marks ?? ""} onChange={e => onChange({ marks: Number(e.target.value) })} disabled={disabled} />}</Field>
             {groupOptions.length > 0 && (
               <label className="sb-inline"><span>المادة المشتركة</span>
                 <select className="sb-input sb-input-sm" value={q.groupId ?? ""} onChange={e => onChange({ groupId: e.target.value || undefined })} disabled={disabled}>
