@@ -203,7 +203,7 @@ describe("CRUD", () => {
     expect((within(dialog).getByLabelText("نص السؤال") as HTMLTextAreaElement).value).toBe("عرّف VLAN");
     expect((within(dialog).getByLabelText("نوع السؤال") as HTMLSelectElement).value).toBe("open");
     fireEvent.change(within(dialog).getByLabelText("نص السؤال"), { target: { value: "عرّف VLAN مع مثال" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التغييرات" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "تعديل السؤال" })).toBeNull());
     expect(posts()).toHaveLength(1);
     expect(posts()[0].body).toMatchObject({ action: "update", id: IMPORTED.id, question: { text: "عرّف VLAN مع مثال", presentationType: "open", answer: { values: [] } } });
@@ -267,7 +267,7 @@ describe("CRUD", () => {
     expect((within(dialog).getByLabelText("الإجابة الصحيحة للفراغ 1") as HTMLInputElement).value).toBe("255.255.255.0");
     expect(within(dialog).queryByLabelText(/بنك الكلمات/)).toBeNull();                                  // fill-blank has no word bank
     fireEvent.change(within(dialog).getByLabelText("الإجابة الصحيحة للفراغ 1"), { target: { value: "" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التغييرات" }));
     expect((await within(dialog).findByRole("alert")).textContent).toContain("الفراغ 1 بلا إجابة صحيحة.");
     expect(posts()).toHaveLength(0);
     fireEvent.change(within(dialog).getByLabelText("نوع السؤال"), { target: { value: "multipleChoice" } });
@@ -275,7 +275,7 @@ describe("CRUD", () => {
     fireEvent.change(within(dialog).getByLabelText("نص الخيار 1"), { target: { value: "255.255.255.0" } });
     fireEvent.change(within(dialog).getByLabelText("نص الخيار 2"), { target: { value: "255.255.0.0" } });
     fireEvent.click(within(dialog).getByLabelText("الخيار 1 هو الإجابة الصحيحة"));
-    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التغييرات" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "تعديل السؤال" })).toBeNull());
     expect(posts()).toHaveLength(1);
     expect(posts()[0].body).toMatchObject({ action: "update", id: MANUAL.id, question: { presentationType: "multipleChoice", fields: [], wordBank: [], answer: { correctOptionValue: "a" } } });
@@ -336,7 +336,7 @@ describe("CRUD", () => {
     fireEvent.click(within(rowOf("عرّف VLAN")).getByRole("button", { name: "تعديل" }));
     const dialog = await screen.findByRole("dialog", { name: "تعديل السؤال" });
     fireEvent.change(within(dialog).getByLabelText("نص السؤال"), { target: { value: "نص جديد" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التغييرات" }));
     await within(dialog).findByRole("alert");
     expect(within(dialog).getByRole("alert").textContent).toContain("تعذر تنفيذ العملية");
     expect(screen.getByRole("dialog", { name: "تعديل السؤال" })).toBeTruthy();

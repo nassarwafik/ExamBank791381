@@ -267,3 +267,4 @@
 }
 .analytics-view-tab:not(.active) .analytics-view-tab-badge{ background:#fef2f2; color:#b42318; }
 @media(max-width:760px){ .analytics-view-tabs{overflow-x:auto;flex-wrap:nowrap} }
+.eb-drill-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }

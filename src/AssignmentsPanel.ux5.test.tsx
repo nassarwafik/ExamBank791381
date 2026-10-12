@@ -255,9 +255,9 @@ describe("UX-5 list actions — exact bodies, explicit attempts save, confirm ga
     expect(posts("/api/assignments").filter(b => b.action === "setMaxAttempts")).toEqual([]);
     await assignmentAction("اختبار الكسور", "تعديل عدد المحاولات");
     d = await dialog("تعديل عدد المحاولات");
-    expect((within(d).getByRole("button", { name: "حفظ" }) as HTMLButtonElement).disabled).toBe(true);   // unchanged value → nothing to save
+    expect((within(d).getByRole("button", { name: "حفظ التغييرات" }) as HTMLButtonElement).disabled).toBe(true);   // unchanged value → nothing to save
     fireEvent.change(within(d).getByLabelText("عدد المحاولات المسموح بها"), { target: { value: "5" } });
-    fireEvent.click(within(d).getByRole("button", { name: "حفظ" }));
+    fireEvent.click(within(d).getByRole("button", { name: "حفظ التغييرات" }));
     await waitFor(() => expect(posts("/api/assignments").filter(b => b.action === "setMaxAttempts")).toEqual([{ assignmentId: "a1", action: "setMaxAttempts", maxAttempts: 5 }]));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(rowOf("اختبار الكسور").textContent).toContain("5 محاولة");

@@ -224,6 +224,7 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-chart-card-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
 .eb-chart-card-figure { position: relative; min-width: 0; }
 .eb-chart-card-foot { display: flex; justify-content: flex-start; }
+.eb-chart-card-empty { color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); }
 .eb-chart-card-table { overflow-x: auto; border: 1px solid var(--eb-line); border-radius: var(--eb-r); }
 .eb-chart-table { width: 100%; border-collapse: collapse; font-size: var(--eb-fs-13); }
 .eb-chart-table th, .eb-chart-table td { padding: var(--eb-space-2) var(--eb-space-3); text-align: start; border-bottom: 1px solid var(--eb-line); white-space: nowrap; }

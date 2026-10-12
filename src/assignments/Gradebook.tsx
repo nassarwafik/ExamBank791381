@@ -4,7 +4,7 @@ import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
-import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose } from "../icons";
+import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose, IconDownload } from "../icons";
 import { gradingClass, gradingLabel, type GradingStatus } from "../gradingStatus";
 import { LIFECYCLE_LABEL, type CodingEvidenceTotals, type CodingGradingStatus, type GradebookFilter, type GradebookSort, type Item, type StudentResult } from "./types";
 import { codingStatusBadge, needsCodingRetry } from "./codingRecovery";
@@ -34,6 +34,8 @@ export type GradebookProps = {
   onBulkCodingRetry?: () => void;
   /** Phase 17E-D — assignment totals of the compact evidence summary (delayed = automatic recovery exhausted). */
   codingTotals?: CodingEvidenceTotals | null;
+  /** Phase 21E.2 — export the whole gradebook of this assignment as CSV (every student, not only the filtered rows). */
+  onExportCsv?: () => void;
 };
 
 const FILTERS: Array<[GradebookFilter, string]> = [["all", "الكل"], ["pendingReview", "بانتظار التصحيح"], ["final", "نهائي"], ["notSubmitted", "لم يسلّم"], ["active", "قيد المحاولة"]];
@@ -65,6 +67,7 @@ export default function Gradebook(p: GradebookProps) {
           {FILTERS.map(([f, label]) => <button key={f} type="button" className={"gradebook-chip" + (p.filter === f ? " active" : "")} aria-pressed={p.filter === f} onClick={() => p.onFilter(f)}>{label}</button>)}
         </div>
         <button type="button" className={"eb-button is-small" + (p.sort === "pendingFirst" ? " is-quiet is-active" : "")} aria-pressed={p.sort === "pendingFirst"} onClick={() => p.onSort(p.sort === "pendingFirst" ? "name" : "pendingFirst")}>بانتظار التصحيح أولًا</button>
+        {p.onExportCsv && <button type="button" className="eb-button is-small gradebook-export" onClick={p.onExportCsv} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />تصدير سجل العلامات (CSV)</button>}
         {!archived && p.onBulkCodingRetry && needsCodingRetry(p.codingSummary) && <button type="button" className="eb-button is-small coding-bulk-retry" disabled={p.busy} onClick={p.onBulkCodingRetry}>إعادة محاولة التصحيح البرمجي</button>}
       </div>
       {codingCard && <p className="eb-coding-summary" data-testid="coding-summary-card">
