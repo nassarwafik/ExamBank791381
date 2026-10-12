@@ -5,11 +5,9 @@ import type { StructuredExam, BuilderQuestion, BuilderSection, BuilderImageAsset
 import type { AiImageRequestQuestion } from "./questionMedia";
 import {
   addSection,
-  deleteSection,
   updateSection,
   moveSection,
   addQuestion as addQ,
-  deleteQuestion as delQ,
   updateQuestion as updQ,
   moveQuestion as movQ,
   duplicateQuestion as dupQ,
@@ -27,6 +25,8 @@ import ExamCoverEditor from "./ExamCoverEditor";
 import ExamPreview from "./ExamPreview";
 import Dialog from "./ui/Dialog";
 import { useConfirm } from "./ui/useConfirm";
+import { useToast, type ToastDismissReason, type ToastDismissVia } from "./ui/Toast";
+import { applyDeletion, captureQuestionDeletion, captureSectionDeletion, deletionIsBack, restoreDeletion, type Deletion, type RestoreOutcome } from "./structuredDeletionUndo";
 import type { ExamSaveState } from "./examHistory";
 import { historyShortcut, isTextEditingTarget } from "./examHistoryShortcuts";
 import { browserBackupStorage, clearExamBackup, isRecoveryCandidate, readExamBackup, writeExamBackup, type BackupStorage, type ExamBackup } from "./examAutosave";
@@ -44,6 +44,7 @@ import { applyBulkClassification, type BulkClassification } from "./assessmentBu
 import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
+import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import "./structured-builder.css";
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
@@ -117,6 +118,8 @@ type Props = {
   /** Storage override for tests; defaults to the browser's localStorage (or none). */
   backupStorage?: BackupStorage | null;
   autosaveDelayMs?: number;
+  /** 21E.1 slice 2 — how long the «تراجع» toast stays after deleting a question or a section (tests shorten it). */
+  undoToastMs?: number;
   // Phase 13B — App-owned, authenticated Question Bank callbacks (list rows / exact-id canonical retrieval). The builder
   // never receives a token; without a service the "إضافة من بنك الأسئلة" action is simply not offered.
   bankPicker?: BankPickerService;
@@ -142,12 +145,44 @@ const AUTOSAVE_DELAY_MS = 800;
 const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ", dirty: "● تغييرات غير محفوظة", saving: "⏳ جارٍ الحفظ", recovered: "↺ نسخة مسترجعة — غير محفوظة" };
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const FLASH_MS = 1200;
+const UNDO_TOAST_MS = 10000;
+/** Height of the band a toast covers at the bottom of the builder — keep in sync with structured-builder.css
+ *  (`.structured-builder-overlay:has(.eb-toast)` reserves 16 px × 2 + 96 px). */
+const TOAST_BAND = 128;
+/** User-perceived characters: a letter with its harakat / shadda, an emoji sequence or a flag is ONE grapheme (never split). */
+const graphemesOf = (text: string): string[] =>
+  typeof Intl.Segmenter === "function" ? Array.from(new Intl.Segmenter("ar", { granularity: "grapheme" }).segment(text), x => x.segment) : Array.from(text);
+/** Trailing whitespace and invisible format characters (ZWJ, ZWNJ, bidi marks…) never sit before the «…». */
+const TRAILING_FORMAT = /[\s\u200B-\u200F\u2028-\u202E\u2060-\u2069\uFEFF]+$/u;
+/** Review Fix 1 (V1) — a title as SHOWN in a toast: at most `limit` graphemes (cut at a word — any whitespace — when one falls in
+ *  the second half) + «…», so a long title never makes the 16 px message taller than two lines at 200 %; screen readers get the
+ *  full title through the announcement. Review Fix 2: counted in graphemes, so a vocalised title keeps its marks and its length. */
+const toastTitle = (title: string, limit = 40) => {
+  const g = graphemesOf(title.trim());
+  if (g.length <= limit) return g.join("");
+  let cut = g.slice(0, limit);
+  const lastSpace = cut.map(x => /\s/u.test(x)).lastIndexOf(true);
+  if (lastSpace >= limit / 2) cut = cut.slice(0, lastSpace);
+  return cut.join("").replace(TRAILING_FORMAT, "") + "…";
+};
+/** «سؤال واحد / سؤالين / 3 أسئلة / 11 سؤالًا / 100 سؤال / 103 أسئلة» — the count that leaves with a deleted section (Arabic counts
+ *  agree with the last two digits). */
+const questionCountPhrase = (n: number) => {
+  if (n === 1) return "سؤال واحد";
+  if (n === 2) return "سؤالين";
+  const r = n % 100;
+  return n + (r >= 3 && r <= 10 ? " أسئلة" : r >= 11 ? " سؤالًا" : " سؤال");
+};
+/** Keyboard users hear the routes back: right after a deletion focus is on a card or a button (never a text field), so Ctrl+Z / ⌘Z
+ *  undoes it; the toast's own «تراجع» is the builder's second-to-last Tab stop (the toast sits at its end; only its × follows),
+ *  and the toolbar «تراجع» is near its start. */
+const UNDO_HINT = " للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع».";
 // UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
 // and pruned against the live exam so a deleted / undone question never lingers (and is never resurrected by redo).
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -333,13 +368,269 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     const t = window.setTimeout(() => setFlashId(""), FLASH_MS);
     return () => window.clearTimeout(t);
   }, [flashId]);
+  const reducedMotion = usePrefersReducedMotion();
+  const scrollBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
+  const builderRef = useRef<HTMLDivElement | null>(null);
+  /** Bottom edge of the sticky toolbar on screen (0 without one). */
+  const toolbarBottom = () => builderRef.current?.querySelector<HTMLElement>(".sb-toolbar")?.getBoundingClientRect().bottom ?? 0;
+  /** Space a revealed element keeps clear at the top of the builder's scroller: down to the sticky toolbar's bottom edge (the
+   *  scroller's padding puts the stuck toolbar below its top, so its height alone falls short) plus 12 px. At the end of the scroll
+   *  range the room reserved below the builder pushes the stuck toolbar up; a reveal scrolls it back to its resting place (the
+   *  scroller's top padding + its own height), so the clearance is never measured below that (Review Fix 2). */
+  const toolbarClearance = () => {
+    const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
+    if (!bar) return 12;
+    const scroller = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+    const scrollerTop = scroller?.getBoundingClientRect().top ?? 0;
+    const style = scroller ? getComputedStyle(scroller) : null;
+    const padding = style ? parseFloat(style.paddingBlockStart) || parseFloat(style.paddingTop) || 0 : 0;
+    const r = bar.getBoundingClientRect();
+    return Math.round(Math.max(0, r.bottom - scrollerTop, padding + r.height) + 12);
+  };
+  /** 21E.1 slice 2 — a card that does not fit below the sticky toolbar is aligned by its top (its number and tools stay visible,
+   *  e.g. at 200 % zoom); one that fits is centred. Either way it keeps the toolbar's height + 12 px clear above it. */
+  const alignCard = (el: HTMLElement, bottomReserve = 0) => {
+    const clearance = toolbarClearance();
+    el.style.scrollMarginBlockStart = clearance + "px";
+    // While a toast is shown (or about to show: `bottomReserve`) the scroller's scroll-padding reserves its band at the bottom
+    // (structured-builder.css), which shrinks the area a centred card is centred in — a card must fit that smaller area, or it
+    // is aligned by its top.
+    const band = Math.max(bottomReserve, builderRef.current?.querySelector(".eb-toast") ? TOAST_BAND : 0);
+    const fits = el.getBoundingClientRect().height <= window.innerHeight - band - clearance - 24;
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: fits ? "center" : "start", behavior: scrollBehavior });
+  };
   const focusCard = (id: string) => {
     const el = nodes.current.get(id);
     if (!el || !alive.current) return;
-    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", behavior: "smooth" });
+    alignCard(el);
     el.focus({ preventScroll: true });
     setFlashId(id);
   };
+  // ── Phase 21E.1 slice 2 · delete ONE question / ONE section with a safe «تراجع» toast ──
+  // The deletion is captured INSIDE the updater (from the exact `prev` it deletes from — StrictMode-safe, never a stale render copy)
+  // and settled after the builder commit (the same record-then-settle pattern as the bank insertion below). «تراجع» puts the
+  // unchanged snapshot back as ONE new history entry, re-validated against the exam as it is then (src/structuredDeletionUndo.ts);
+  // it never pops the history stack, so later edits are never undone by mistake.
+  const { showToast, dismissToast, toastRegion } = useToast({ defaultDurationMs: undoToastMs, actionDisabled: !!saving });
+  const undoTarget = useRef<{ deletion: Deletion; toastId: number } | null>(null);
+  /** The last deleted item that came back («تراجع», or Ctrl+Z / the toolbar while its toast was up) and whether it is in the exam
+   *  now — a Ctrl+Z / Ctrl+Y that removes or returns it must not leave keyboard focus on <body> (Review Fix 2, measured in
+   *  Chromium). `neighbour` = the element the recovery itself focused when the item left; `successToastId` = the «تمت استعادة»
+   *  toast, which leaves with the item (Review Fix 3). */
+  const restoredTarget = useRef<{ deletion: Deletion; back: boolean; neighbour: HTMLElement | null; successToastId?: number } | null>(null);
+  /** Review Fix 3 — the room below the builder for the toast exists only while a toast needs it: from the moment a deletion /
+   *  restore reveals its target (the reveal needs that scroll range before the toast has rendered) until its toasts have left.
+   *  A permanent reserve sits outside the sticky toolbar's containing block and pushed the stuck toolbar over «+ إضافة قسم» at the
+   *  end of the scroll range (150–200 %, phones). The marker is an attribute on the scroller (structured-builder.css). */
+  const reserveScroller = useRef<HTMLElement | null>(null);
+  const reserveBand = (on: boolean) => {
+    if (on) {
+      const s = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+      if (s && s !== reserveScroller.current) reserveScroller.current?.removeAttribute("data-toast-reserve");
+      reserveScroller.current = s;
+      s?.setAttribute("data-toast-reserve", "");
+    } else {
+      reserveScroller.current?.removeAttribute("data-toast-reserve");
+      reserveScroller.current = null;
+    }
+  };
+  useEffect(() => () => { reserveScroller.current?.removeAttribute("data-toast-reserve"); reserveScroller.current = null; }, []);
+  const deletionSeq = useRef(0);
+  const deletionRecords = useRef(new Map<number, Deletion>());
+  const [deletionCommit, setDeletionCommit] = useState(0);
+  const restoreSeq = useRef(0);
+  const restoreRecords = useRef(new Map<number, RestoreOutcome>());
+  const [restoreCommit, setRestoreCommit] = useState<{ seq: number; deletion: Deletion; via: ToastDismissVia } | null>(null);
+  const sectionNode = (sectionId: string) =>
+    Array.from(builderRef.current?.querySelectorAll<HTMLElement>("[data-section-id]") ?? []).find(el => el.dataset.sectionId === sectionId) ?? null;
+  const alignSection = (el: HTMLElement) => {
+    el.style.scrollMarginBlockStart = toolbarClearance() + "px";
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start", behavior: scrollBehavior });
+  };
+  /** Focuses a section and scrolls its heading just below the sticky toolbar (whose height changes with the width). */
+  const revealSection = (el: HTMLElement) => {
+    el.focus({ preventScroll: true });
+    alignSection(el);
+  };
+  /** Review Fix 1 — the heading row of `el` is on screen: at or below the sticky toolbar's bottom edge, and clear of the bottom
+   *  `bottomReserve` px (the band a toast covers while it is shown). When the toolbar and that band leave no usable strip between
+   *  them (the tall toolbar on phones / at 200 %, 21E.2), the transient band is ignored: no scroll could clear both. */
+  const headingOnScreen = (el: HTMLElement, bottomReserve: number) => {
+    const r = el.getBoundingClientRect();
+    const top = toolbarBottom();
+    const bottom = window.innerHeight - bottomReserve - top < 96 ? window.innerHeight : window.innerHeight - bottomReserve;
+    return r.top >= top - 1 && r.top + Math.min(r.height, 48) <= bottom;
+  };
+  /** "reveal": scroll the target into view when its heading is hidden (keyboard users must see where focus went);
+   *  "keep": focus only — a pointer dismissed the toast, and the page must not jump back to wherever the target is. */
+  type FocusMode = "reveal" | "keep";
+  const modeFor = (via: ToastDismissVia): FocusMode => (via === "pointer" ? "keep" : "reveal");
+  /** Moves keyboard focus WITHOUT letting the browser pick a scroll position (a plain focus() could leave the heading under the
+   *  sticky toolbar): the page stays where it is when the heading is already on screen; otherwise the element is revealed just
+   *  below the toolbar with the same alignment a restored card / section uses (add buttons align like a section). */
+  const focusInPlace = (el: HTMLElement, kind: "card" | "section" | "control", bottomReserve: number, mode: FocusMode = "reveal") => {
+    el.focus({ preventScroll: true });
+    if (mode === "keep" || headingOnScreen(el, bottomReserve)) return;
+    // A section or an add button is aligned by its top just below the toolbar ("nearest" with margins can end-align it under the
+    // toolbar when the toolbar leaves little room, e.g. at 200 %).
+    if (kind === "card") alignCard(el, bottomReserve); else alignSection(el);
+  };
+  /** Where keyboard focus goes once the deleted card / section is gone: its next neighbour, else the previous one, else the add
+   *  button («+ إضافة سؤال» of its section, else the section itself, else «+ إضافة قسم»). A candidate that cannot take focus now
+   *  (an add button disabled while saving) is skipped for the next one (Review Fix 2); the last resort is the toolbar, which is
+   *  never disabled — focus never falls to <body>. `bottomReserve` = the toast band when a toast is about to show. */
+  const focusAfterDeletion = (d: Deletion, bottomReserve = 0, mode: FocusMode = "reveal"): boolean => {
+    if (!alive.current) return false;
+    const take = (el: HTMLElement | null | undefined, kind: "card" | "section" | "control", how: FocusMode = mode) => {
+      if (!el || (el as HTMLButtonElement).disabled) return false;
+      focusInPlace(el, kind, bottomReserve, how);
+      return document.activeElement === el;
+    };
+    if (d.kind === "question") {
+      const neighbour = [d.nextId, d.prevId].map(id => (id ? nodes.current.get(id) : undefined)).find(Boolean);
+      if (take(neighbour, "card")) return true;
+      const section = sectionNode(d.sectionId);
+      if (take(section?.querySelector<HTMLElement>("[data-add-question]"), "control")) return true;
+      if (take(section, "section")) return true;
+    } else {
+      const neighbour = [d.nextId, d.prevId].map(id => (id ? sectionNode(id) : null)).find(Boolean);
+      if (take(neighbour, "section")) return true;
+    }
+    if (take(builderRef.current?.querySelector<HTMLElement>("[data-add-section]"), "control")) return true;
+    return take(builderRef.current?.querySelector<HTMLElement>(".sb-toolbar"), "control", "keep");
+  };
+  /** A toast about `d` left while keyboard focus was inside it: focus the item when it is back (Ctrl+Z, «تراجع»), else the
+   *  deletion's neighbour, else «+ إضافة قسم» — focus never falls to <body>. The page moves only for a keyboard dismissal whose
+   *  target is hidden (Review Fix 2: a pointer closing the toast never scrolls the page back; a visible item never moves). */
+  const focusItemOrNeighbour = (d: Deletion, bottomReserve = 0, mode: FocusMode = "reveal") => {
+    if (!alive.current) return;
+    const back = d.kind === "question" ? nodes.current.get(d.question.examQuestionId) : sectionNode(d.section.id);
+    if (back) focusInPlace(back, d.kind === "question" ? "card" : "section", bottomReserve, mode);
+    else focusAfterDeletion(d, bottomReserve, mode);
+  };
+  const focusLost = () => { const a = document.activeElement; return !a || a === document.body || !a.isConnected; };
+  const deleteWithUndo = (capture: (prev: StructuredExam) => Deletion | null) => {
+    if (!alive.current) return;
+    const seq = ++deletionSeq.current;
+    setDeletionCommit(seq);                                             // guarantees a builder commit after the updater ran
+    update(prev => {
+      const d = capture(prev);
+      if (!d) return prev;
+      deletionRecords.current.set(seq, d);
+      return applyDeletion(prev, d);
+    });
+  };
+  const restoreFromToast = (d: Deletion, via: ToastDismissVia = "keyboard") => {
+    if (!alive.current) return;
+    const seq = ++restoreSeq.current;
+    setRestoreCommit({ seq, deletion: d, via });
+    update(prev => {
+      const r = restoreDeletion(prev, d);
+      restoreRecords.current.set(seq, r.outcome);
+      return r.exam;
+    });
+  };
+  /** The names a toast shows / announces for `d`: the section's title (trimmed; «القسم N» when it has none) and the question's
+   *  label. The SHOWN forms are shortened (toastTitle) and rendered in <bdi> inside «…» (a Latin title keeps its own direction, so
+   *  the «…» stays at ITS end); the announced ones are complete plain text. */
+  const toastNames = (d: Deletion) => {
+    const sectionTitle = ((d.kind === "question" ? d.sectionTitle : d.section.title) || "").trim();
+    return {
+      sectionTitle, sectionName: sectionTitle || "القسم " + d.label, label: d.label, shownLabel: toastTitle(d.label, 24),
+      shown: (t: string) => <>«<bdi>{toastTitle(t)}</bdi>»</>,
+      spoken: (t: string) => "«" + t + "»",
+    };
+  };
+  useLayoutEffect(() => {
+    if (!deletionCommit) return;
+    // Two deletions settled by ONE commit (not reachable by real input): the newest record is the one to offer «تراجع» for.
+    const seqs = [...deletionRecords.current.keys()];
+    const d = seqs.length ? deletionRecords.current.get(Math.max(...seqs)) : undefined;
+    deletionRecords.current.clear();
+    if (!d || !alive.current) return;
+    reserveBand(true);                                                  // the reveal below already has the toast's room (RF3)
+    focusAfterDeletion(d, TOAST_BAND);                                  // the toast below is about to cover the bottom band
+    const n = toastNames(d);
+    const count = d.kind === "section" ? (d.section.questions || []).length : 0;
+    const tail = (count ? " مع " + questionCountPhrase(count) : "") + ".";
+    const toastId = showToast({
+      message: d.kind === "question"
+        ? <>{"تم حذف السؤال " + n.shownLabel}{n.sectionTitle ? <>{" من "}{n.shown(n.sectionTitle)}</> : null}{tail}</>
+        : <>{"تم حذف "}{n.shown(n.sectionName)}{tail}</>,
+      announcement: (d.kind === "question" ? "تم حذف السؤال " + n.label + (n.sectionTitle ? " من " + n.spoken(n.sectionTitle) : "") : "تم حذف " + n.spoken(n.sectionName)) + tail + UNDO_HINT,
+      action: { label: "تراجع", accessibleLabel: d.kind === "question" ? "تراجع عن حذف السؤال" : "تراجع عن حذف القسم", onAction: via => restoreFromToast(d, via) },
+      onDismiss: (reason: ToastDismissReason, hadFocus: boolean, via: ToastDismissVia) => {
+        if (undoTarget.current?.deletion === d) undoTarget.current = null;
+        // A replacing toast (a newer deletion) or the restore that follows «تراجع» keeps the room; anything else releases it.
+        if (reason !== "replaced" && reason !== "action") reserveBand(false);
+        // "action" is settled by the restore below; "replaced" means a newer deletion already placed focus.
+        if (hadFocus && reason !== "action" && reason !== "replaced") focusItemOrNeighbour(d, 0, modeFor(via));
+      },
+    });
+    undoTarget.current = { deletion: d, toastId };
+  }, [deletionCommit]);                                                 // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    if (!restoreCommit) return;
+    const { seq, deletion: d, via } = restoreCommit;
+    const outcome = restoreRecords.current.get(seq);
+    restoreRecords.current.delete(seq);
+    if (!outcome || outcome === "stale" || !alive.current) { reserveBand(false); return; }
+    reserveBand(true);
+    if (outcome === "restored" || outcome === "already-present") {
+      restoredTarget.current = { deletion: d, back: true, neighbour: null };
+      if (d.kind === "question") window.setTimeout(() => focusCard(d.question.examQuestionId), 0);
+      else window.setTimeout(() => { const el = sectionNode(d.section.id); if (el && alive.current) revealSection(el); }, 0);
+      const n = toastNames(d);
+      const successToastId = showToast({ tone: "success", durationMs: Math.min(undoToastMs, 4000),
+        message: d.kind === "question" ? "تمت استعادة السؤال " + n.shownLabel + "." : <>{"تمت استعادة "}{n.shown(n.sectionName)}.</>,
+        announcement: d.kind === "question" ? "تمت استعادة السؤال " + n.label + "." : "تمت استعادة " + n.spoken(n.sectionName) + ".",
+        onDismiss: (reason, hadFocus, how) => {
+          if (restoredTarget.current?.deletion === d) restoredTarget.current.successToastId = undefined;
+          if (reason !== "replaced") reserveBand(false);
+          if (hadFocus && reason !== "replaced") focusItemOrNeighbour(d, 0, modeFor(how));
+        } });
+      if (restoredTarget.current?.deletion === d) restoredTarget.current.successToastId = successToastId;
+      return;
+    }
+    const n = toastNames(d);
+    const fixed = outcome === "bank-duplicate" ? "تعذّرت الاستعادة: سؤال البنك نفسه موجود في الامتحان الآن." : "تعذّرت استعادة القسم: بعض أسئلته موجودة الآن في مكان آخر من الامتحان.";
+    const message = outcome === "section-missing"
+      ? <>{"تعذّرت استعادة السؤال: "}{n.sectionTitle ? <>{"القسم "}{n.shown(n.sectionTitle)}</> : "قسمه"}{" لم يعد موجودًا."}</>
+      : fixed;
+    const announcement = outcome === "section-missing" ? "تعذّرت استعادة السؤال: " + (n.sectionTitle ? "القسم " + n.spoken(n.sectionTitle) : "قسمه") + " لم يعد موجودًا." : fixed;
+    if (focusLost()) focusItemOrNeighbour(d, TOAST_BAND, modeFor(via));  // «تراجع» was activated and its card is gone
+    showToast({ tone: "warn", message, announcement, onDismiss: (why, hadFocus, how) => { if (why !== "replaced") reserveBand(false); if (hadFocus && why !== "replaced") focusItemOrNeighbour(d, 0, modeFor(how)); } });
+  }, [restoreCommit]);                                                  // eslint-disable-line react-hooks/exhaustive-deps
+  // The toast leaves by itself when the deleted item is back by another route (Ctrl+Z, the toolbar «تراجع») or another exam opened.
+  useEffect(() => {
+    const t = undoTarget.current;
+    if (t && (t.deletion.examId !== exam.examId || deletionIsBack(exam, t.deletion))) {
+      const isBack = t.deletion.examId === exam.examId;
+      undoTarget.current = null;
+      dismissToast(t.toastId);
+      // Back by Ctrl+Z (inside or outside the toast) or the toolbar: remembered like a «تراجع», so the redo that removes it
+      // again never leaves focus on <body> (Review Fix 3).
+      if (isBack) restoredTarget.current = { deletion: t.deletion, back: true, neighbour: null };
+    }
+    // The restored item left (Ctrl+Z undid the restore while its card held focus) or came back (Ctrl+Y): focus its neighbour /
+    // the item itself, in place — only when that presence CHANGED and focus was lost, never on an unrelated exam change.
+    const r = restoredTarget.current;
+    if (!r) return;
+    if (r.deletion.examId !== exam.examId) { restoredTarget.current = null; return; }
+    const back = deletionIsBack(exam, r.deletion);
+    if (back === r.back) return;
+    r.back = back;
+    // The «تمت استعادة …» toast never outlives its item (Review Fix 3).
+    if (!back && r.successToastId !== undefined) { const id = r.successToastId; r.successToastId = undefined; dismissToast(id); }
+    // Focus moves only when it was LOST, or when it still sits on the neighbour this recovery itself chose (a redo then follows the
+    // item back). Focus the teacher has put anywhere else — another card, a dialog, a toolbar button — is never taken, and the
+    // page never scrolls for it (Review Fix 3: a later Ctrl+Y used to pull focus back and scroll thousands of px).
+    const chosen = r.neighbour;
+    r.neighbour = null;
+    if (!focusLost() && !(chosen && document.activeElement === chosen)) return;
+    focusItemOrNeighbour(r.deletion, 0, "reveal");
+    if (!back && document.activeElement instanceof HTMLElement && document.activeElement !== document.body) r.neighbour = document.activeElement;
+  }, [exam, dismissToast]);                                              // eslint-disable-line react-hooks/exhaustive-deps
   const navigateTo = (id: string) => {
     if (isNarrow) { setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }      // let the dialog release focus first
     else focusCard(id);
@@ -510,8 +801,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
 
   return (
     <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
-    <div className="sb-builder" dir="rtl">
-      <header className="sb-toolbar">
+    <div className="sb-builder" dir="rtl" ref={builderRef}>
+      <header className="sb-toolbar" tabIndex={-1}>
         <div className="sb-toolbar-main">
           {onExit && <button type="button" className="sb-btn" onClick={() => { void requestExit(); }} disabled={saving}>→ رجوع</button>}
           {(onUndo || onRedo) && (
@@ -595,11 +886,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             total={(exam.sections || []).length}
             sectionOptions={sectionOptions}
             patch={p => setSections(s => updateSection(s, section.id, p))}
-            onDelete={() => setSections(s => deleteSection(s, section.id))}
+            onDelete={() => deleteWithUndo(prev => captureSectionDeletion(prev, section.id))}
             onMove={d => setSections(s => moveSection(s, section.id, d))}
             onAddQuestion={q => setSections(s => addQ(s, section.id, q))}
             onQuestionChange={(qid, p) => setSections(s => updQ(s, section.id, qid, p))}
-            onQuestionDelete={qid => setSections(s => delQ(s, section.id, qid))}
+            onQuestionDelete={qid => deleteWithUndo(prev => captureQuestionDeletion(prev, section.id, qid))}
             onQuestionMove={(qid, d) => setSections(s => movQ(s, section.id, qid, d))}
             onQuestionDuplicate={qid => setSections(s => dupQ(s, section.id, qid))}
             onQuestionMoveToSection={(qid, to) => setSections(s => movQTo(s, section.id, qid, to))}
@@ -617,7 +908,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         ))}
       </div>
 
-      <button type="button" className="sb-add-btn sb-add-section" onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
+      <button type="button" className="sb-add-btn sb-add-section" data-add-section onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
       </div>
       {navOpen && !isNarrow && navigator(true)}
       </div>
@@ -719,6 +1010,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {recoveryOffer && <span className="sb-recovery-meta">آخر تعديل محلي: {formatBackupTime(recoveryOffer.savedAt)}</span>}
         </p>
       </Dialog>
+      {/* 21E.1 slice 2 — the «تراجع» toast lives INSIDE the builder's fixed overlay (its layer is above --eb-z-toast). */}
+      {toastRegion}
     </div>
     </MeshAssetServiceContext.Provider></SimulationServiceContext.Provider>
   );

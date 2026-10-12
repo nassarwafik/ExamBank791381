@@ -46,7 +46,7 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
     const t = findCoverTemplate(coverTplId);
     if (!t) return;
     const hasText = !!((c?.subtitle || "").trim() || (c?.instructions || "").trim() || (c?.allowedMaterials || "").trim());
-    if (hasText && !(await confirm({ title: "استبدال حقول الغلاف", message: "سيستبدل هذا القالب حقول الغلاف الحالية (مع الإبقاء على البانر). هل تريد المتابعة؟", confirmLabel: "استبدال حقول الغلاف", cancelLabel: "إبقاء الحقول" }))) return;
+    if (hasText && !(await confirm({ title: "استبدال حقول الغلاف", message: "سيستبدل هذا القالب حقول الغلاف الحالية (مع الإبقاء على البانر). هل تريد المتابعة؟", confirmLabel: "استبدال حقول الغلاف", cancelLabel: "إبقاء الحقول", initialFocus: "cancel" }))) return;
     onChange(applyCoverTemplate(c, t));
   };
   // Roadmap #17 — apply a built-in instruction template to the COVER instructions field (plain text; a
@@ -54,7 +54,7 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
   const applyInsTpl = async () => {
     const t = findGeneralInstructionTemplate(insTplId);
     if (!t) return;
-    if ((c?.instructions || "").trim() && !(await confirm({ title: "استبدال نص التعليمات", message: "سيستبدل هذا القالب نص التعليمات الحالي. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات" }))) return;
+    if ((c?.instructions || "").trim() && !(await confirm({ title: "استبدال نص التعليمات", message: "سيستبدل هذا القالب نص التعليمات الحالي. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات", initialFocus: "cancel" }))) return;
     patch({ instructions: t.text });
   };
 
