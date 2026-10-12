@@ -458,6 +458,7 @@ describe("Final acceptance — class card hit area and ActionMenu ordering", () 
     expect(definers.map(f => f.replace(SRC, "src"))).toEqual(["src/ui/ActionMenu.tsx"]);
     expect(importers.map(f => f.replace(SRC, "src")).sort()).toEqual([
       "src/AssignmentsPanel.tsx", "src/assignments/AssignmentList.tsx", "src/assignments/Gradebook.tsx",
+      "src/builder/BuilderToolbar.tsx",                          // Phase 21E.2 — the structured builder's two overflow menus
       "src/projects/ProjectStudentDetail.tsx", "src/projects/ProjectTracker.tsx",
       "src/students/ActionMenu.tsx", "src/students/ClassesPane.tsx", "src/students/RosterPane.tsx"
     ]);
