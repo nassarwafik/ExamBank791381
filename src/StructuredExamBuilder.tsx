@@ -53,6 +53,7 @@ import { SAVE_LABELS } from "./teacher/saveLabels";
 import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave } from "./icons";
 import "./structured-builder.css";
 import "./builder/builder-issues.css";
+import "./builder/builder-premium.css";                              // 21E.2 premium redesign, slice 1 (presentation only; loaded last)
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
 // callers/tests that import { ExamPreview } from "./StructuredExamBuilder" keep working unchanged.
