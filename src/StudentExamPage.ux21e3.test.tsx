@@ -112,7 +112,10 @@ describe("21E.3 A — a failing question renderer never takes down the exam", ()
     await screen.findByTestId("question-recovery");
     const savesBefore = saves();
     ctl.mode = "ok";                                                                 // the cause went away (e.g. the network is back)
-    fireEvent.click(screen.getByRole("button", { name: "إعادة المحاولة" }));
+    const retry = screen.getByRole("button", { name: "إعادة المحاولة" });
+    retry.focus();                                                                   // a keyboard user is on the action
+    expect(document.activeElement).toBe(retry);
+    fireEvent.click(retry);
     const input = await screen.findByRole("textbox", { name: "الإجابة الرقمية" });
     expect(screen.queryByTestId("question-recovery")).toBeNull();
     expect(document.activeElement?.className).toContain("iex-page-heading");
@@ -178,6 +181,13 @@ describe("21E.3 B — focus after the major transitions", () => {
     await screen.findByText("ما هي عاصمة فلسطين؟");
     await waitFor(() => expect(document.activeElement?.className).toContain("iex-page-heading"));
     expect(document.activeElement?.textContent).toBe("السؤال 1 من 3");
+  });
+
+  it("a page that opens directly on the questions (legacy untimed) does not move focus", async () => {
+    mount();
+    await screen.findByText("ما هي عاصمة فلسطين؟");
+    await act(async () => { await new Promise(r => setTimeout(r, 50)); });
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("typing and the autosave that follows never move focus", async () => {

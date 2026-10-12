@@ -286,9 +286,11 @@ describe("createRecoveryRuntime — the measured model (v3)", () => {
   it("retryable (shared chunk without default): a retry never imports another URL", async () => {
     cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
     const E = A("CodeStimulusView");
+    f.modules.set(E, Ok("code")); f.sources.set(E, "var s=1;");       // a remap WOULD succeed — it must not be attempted
     const C = rt.lazyComponent<object>("CodeStimulusView", () => Promise.reject(chunkError(E)), { remap: false });
     await renderLazy(C); rt.rearmFailed(); cleanup(); await renderLazy(C);
-    expect(f.imported).toEqual([]);
+    expect(screen.getByText("failed")).toBeTruthy();
+    expect(f.imported).toEqual([]); expect(f.fetched).toEqual([]);
   });
 
   it("a recovered module that is not a component fails closed", async () => {
@@ -298,6 +300,7 @@ describe("createRecoveryRuntime — the measured model (v3)", () => {
     const C = rt.lazyComponent<object>("Odd", () => Promise.reject(chunkError(E)));
     await renderLazy(C); rt.rearmFailed(); cleanup(); await renderLazy(C);
     expect(screen.getByText("failed")).toBeTruthy();
+    expect(rt.rearmFailed()).toBe(1);                                  // the loader FAILED (it is re-armable), it never "loaded" undefined
   });
 
   it("concurrent retries are serialized into distinct generations", async () => {

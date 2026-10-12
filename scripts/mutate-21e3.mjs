@@ -41,7 +41,7 @@ const mutants = [
   M("B03-reload-before-retry", QEB, "{afterRetry && reloadAllowed && (", "{reloadAllowed && (", PAGE_T),
   M("B04-no-reset-on-new-question", QEB, "return props.resetKey !== state.resetKey ? { failed: false, retries: 0, resetKey: props.resetKey } : null;", "return null;", UNITS),
   M("B05-no-focus-anchor", QEB, "    this.context.focusAnchor?.();\n", "", PAGE_T),
-  M("B06-whole-card-boundary", CARD, "<QuestionErrorBoundary resetKey={id} fallback={plain}>", "<QuestionErrorBoundary resetKey={id+\"-stem\"} fallback={null}>", PAGE_T),
+  M("B06-whole-card-boundary", CARD, "<QuestionErrorBoundary resetKey={id} fallback={plain}>", "<QuestionErrorBoundary resetKey={id+\"-stem\"} fallback={null}>", ["src/StudentQuestionCard.stem21e3.test.tsx", ...PAGE_T]),
   // Reload gating and focus on the page.
   M("P01-reload-in-strict", PAGE, 'reloadAllowed:policy!=="strict"&&saveKind==="saved"', 'reloadAllowed:saveKind==="saved"', PAGE_T),
   M("P02-reload-unsaved", PAGE, 'reloadAllowed:policy!=="strict"&&saveKind==="saved"&&!submitBusy', 'reloadAllowed:policy!=="strict"&&!submitBusy', PAGE_T),
