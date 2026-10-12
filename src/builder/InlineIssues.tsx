@@ -16,7 +16,7 @@ export default function InlineIssues({ id, issues, label }: { id: string; issues
         {sorted.map(i => (
           <li key={i.id} className={i.severity === "error" ? "is-error" : "is-warning"} data-code={i.code}>
             <span className="sb-inline-issue-icon" aria-hidden="true">{i.severity === "error" ? <IconClose size={14} /> : <IconWarning size={14} />}</span>
-            <span className="sb-inline-issue-kind">{i.severity === "error" ? "خطأ:" : "تنبيه:"}</span> {i.message}
+            <span className="sb-inline-issue-kind">{i.severity === "error" ? "خطأ:" : "تنبيه:"}</span> <span className="sb-inline-issue-text">{i.message}</span>
           </li>
         ))}
       </ul>

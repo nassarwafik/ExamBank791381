@@ -6,4 +6,5 @@
 .sb-inline-issues li.is-error { color: var(--eb-danger-tx); }
 .sb-inline-issues li.is-warning { color: var(--eb-warn-tx); }
 .sb-inline-issue-icon { display: inline-flex; flex: 0 0 auto; align-self: center; }
-.sb-inline-issue-kind { font-weight: var(--eb-fw-semibold); }
+.sb-inline-issue-kind { flex: 0 0 auto; white-space: nowrap; font-weight: var(--eb-fw-semibold); }
+.sb-inline-issue-text { flex: 1 1 auto; min-width: 0; }

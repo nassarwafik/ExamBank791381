@@ -19,7 +19,9 @@ const T = {
   icons: "src/builderIconButtons.8e7.test.tsx",
   labels: "src/teacher/saveLabels.guard.21e2.test.ts",
   surface: "src/ui/useModalSurface.21e2.test.tsx",
-  toolbar: "src/builder/BuilderToolbar.21e2.test.tsx"
+  toolbar: "src/builder/BuilderToolbar.21e2.test.tsx",
+  reviewFixes: "src/builder/reviewFixes.21e2.test.tsx",
+  liveChallenge: "src/games/liveChallenge/LiveChallengeGenerator.test.tsx"
 };
 const M = (id, file, before, after, tests, what) => ({ id, file, before, after, tests, what });
 const mutants = [
@@ -58,11 +60,22 @@ const mutants = [
   M("B4-ime-escape", "src/ui/useModalSurface.ts", "if (event.isComposing) return;", "", [T.surface], "an IME composition's Escape exits the builder"),
   // A — toolbar structure
   M("A1-menu-items-visible", "src/builder/BuilderToolbar.tsx", '<ActionMenu label="المزيد من أدوات الامتحان" text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">\n              <MenuItems items={moreItems} />\n            </ActionMenu>', '<MenuItems items={moreItems} />', [T.toolbar], "overflow items rendered as visible buttons (> 8)"),
+  // Review Fix (independent adversarial review of the first implementation)
+  M("R1-full-identity-in-gradebook", "src/teacher/teacherExports.ts", "      maskedStudentCode(s.studentCode),", "      s.studentCode || \"\",", [T.exportsUnit, T.exportsPanel], "the gradebook export carries the full identity / login number"),
+  M("R2-code-back-in-drill", "src/teacher/teacherExports.ts", 'export const RESULTS_COLUMNS = ["الطالب", "الحالة",', 'export const RESULTS_COLUMNS = ["الطالب", "كود الطالب", "الحالة",', [T.exportsUnit, T.dashboard], "the drill export grows an extra column (identity) the screen never shows"),
+  M("R3-touch-key-ignored", "src/ui/Field.tsx", "const touched = touchedFor === touchKey;", "const touched = touchedFor !== null;", [T.field], "a visited state moves onto another pair after a delete"),
+  M("R4-type-change-reuses-frame", "src/QuestionBodyEditor.tsx", "<FramedLegacyEditor key={type} node={node}", "<FramedLegacyEditor node={node}", [T.field], "a type change inherits the previous type's visited state"),
+  M("R5-composer-always-framed", "src/QuestionComposer.tsx", "disabled={disabled} framed={framed} />}", "disabled={disabled} framed />}", [T.field, T.liveChallenge], "Live Challenge shows exam-finalization errors"),
+  M("R6-menu-under-overlay", "src/page-parts.css", "z-index:calc(var(--eb-z-modal) + 1);", "z-index:var(--eb-z-dropdown);", [T.reviewFixes], "toolbar menus paint under the builder overlay"),
+  M("R7-tab-leaves-menu-open", "src/ui/ActionMenu.tsx", "        if (!panel || !trigger || !panel.contains(document.activeElement)) return;\n        e.preventDefault(); e.stopPropagation();", "        if (!panel || !trigger || !panel.contains(document.activeElement)) return;\n        return;", [T.reviewFixes], "Tab from a menu item leaves the page / surface with the menu open"),
+  M("R8-tab-no-modal-wrap", "src/ui/ActionMenu.tsx", "order[at + 1] || (modal ? order[0] : trigger)", "order[at + 1] || trigger", [T.reviewFixes], "Tab from the last menu inside a modal surface does not wrap"),
+  M("R9-mcq-options-message-hidden", "src/QuestionBodyEditor.tsx", "error={[issues.options, issues.answer].filter(Boolean).join(\" \")}", "error={issues.answer || issues.options}", [T.field], "the blocking MISSING_OPTIONS message is hidden behind «choose the answer»"),
   M("A2-toggle-state-lost", "src/builder/BuilderToolbar.tsx", "aria-pressed={item.pressed === undefined ? undefined : item.pressed}", "", [T.toolbar], "a menu toggle loses its pressed state")
 ];
 
 const only = (process.argv.find(a => a.startsWith("--only=")) || "").slice(7).split(",").filter(Boolean);
 const selected = only.length ? mutants.filter(m => only.includes(m.id)) : mutants;
+const ANSI = new RegExp(String.fromCharCode(27) + "\\[[0-9;]*m", "g");
 const sha = s => crypto.createHash("sha256").update(s).digest("hex");
 const files = [...new Set(selected.map(m => m.file))];
 const BACKUP = path.join(os.tmpdir(), "exambank-21e2-mutation-backup.json");
@@ -102,7 +115,7 @@ try {
         if (result.error?.code === "ETIMEDOUT" || result.signal) { outcome = "timeout"; diagnostic = String(result.error || result.signal); }
         else if (result.status === 0) { outcome = "survived"; diagnostic = "Selected tests passed"; }
         else if (/Transform failed|Failed to parse source|SyntaxError:|Unexpected token|Error during transform|TypeError: .* is not a function/.test(output) && !/AssertionError/.test(output)) { outcome = "invalid"; diagnostic = output.slice(-700); }
-        else { outcome = "killed"; diagnostic = output.split("\n").filter(x => /FAIL |AssertionError/.test(x)).slice(0, 2).join(" ").replace(/\x1b\[[0-9;]*m/g, "").slice(0, 400); }
+        else { outcome = "killed"; diagnostic = output.split("\n").filter(x => /FAIL |AssertionError/.test(x)).slice(0, 2).join(" ").replace(ANSI, "").slice(0, 400); }
       } catch (error) { diagnostic = String(error); }
       finally { fs.writeFileSync(m.file, source, "utf8"); }
     }

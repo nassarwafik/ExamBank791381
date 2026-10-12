@@ -11,3 +11,6 @@
 .eb-field-group > legend { padding: 0; margin-block-end: var(--eb-space-1); }
 .eb-field.is-invalid :is(input, textarea, select)[aria-invalid="true"],
 .eb-field-group.is-invalid :is(input, textarea, select)[aria-invalid="true"] { border-color: var(--eb-danger); }
+/* In the builder's option / pair rows the framed control takes the row's free space (as the bare input did), never its
+   intrinsic width; it wraps below the radio / arrows on narrow rows. */
+.sb-option-row > .eb-field, .sb-field-row > .eb-field { flex: 1 1 12rem; min-width: 0; }

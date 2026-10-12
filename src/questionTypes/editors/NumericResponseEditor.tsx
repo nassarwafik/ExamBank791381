@@ -82,8 +82,9 @@ function FramedNumericResponseEditor({ node, onChange, disabled }: AuthoringEdit
       )}
       <div className="sb-field-row">
         <label className="sb-inline"><input type="checkbox" checked={unitRequired} aria-label="الوحدة مطلوبة" onChange={e => onChange({ numeric: { unitRequired: e.target.checked }, answer: { ...(node.answer || { mode: "tolerance", expected: 0, tolerance: 0 }) } })} disabled={disabled} /> <span>الوحدة مطلوبة</span></label>
-        <Field label="الوحدة" layout="inline" error={issues.unit} help="تُقبل الأرقام العشرية بالفواصل العربية والإنجليزية والترميز العلمي؛ الحدود شاملة. لا تُقيَّم أي تعابير حسابية.">{a11y => <input {...a11y} className="sb-input sb-input-sm" value={key.unit ?? ""} placeholder="مثال: m/s²" onChange={e => set({ unit: e.target.value })} disabled={disabled} />}</Field>
+        <Field label="الوحدة" layout="inline" error={issues.unit}>{a11y => <input {...a11y} className="sb-input sb-input-sm" value={key.unit ?? ""} placeholder="مثال: m/s²" onChange={e => set({ unit: e.target.value })} disabled={disabled} />}</Field>
       </div>
+      <p className="sb-hint">تُقبل الأرقام العشرية بالفواصل العربية والإنجليزية والترميز العلمي؛ الحدود شاملة. لا تُقيَّم أي تعابير حسابية.</p>
     </div>
   );
 }

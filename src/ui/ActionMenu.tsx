@@ -29,6 +29,8 @@ import { IconMore } from "../icons";
  */
 type Placement = { top: number; right: number; maxHeight: number };
 
+const TABBABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 // First frame: out of flow and invisible, at a harmless viewport corner, measurable, not interactive.
 const MEASURING: CSSProperties = { position: "fixed", top: 0, right: 0, visibility: "hidden", pointerEvents: "none" };
 
@@ -81,6 +83,21 @@ export default function ActionMenu({ label, children, icon, text, className, dis
     if (!ready) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); return; }
+      // 21E.2 — Tab leaves the menu as if the panel sat right after its trigger: the panel is portalled to the end of <body>, so
+      // the browser's own Tab order would leave the page (or a modal surface) from its last item and leave the menu open.
+      // Tab → the control after the trigger (wrapping inside a modal scope); Shift+Tab → the trigger. The menu closes either way.
+      if (e.key === "Tab") {
+        const panel = panelRef.current, trigger = triggerRef.current;
+        if (!panel || !trigger || !panel.contains(document.activeElement)) return;
+        e.preventDefault(); e.stopPropagation();
+        const modal = trigger.closest<HTMLElement>('[aria-modal="true"]');
+        const order = Array.from((modal || document.body).querySelectorAll<HTMLElement>(TABBABLE)).filter(el => !panel.contains(el) && !el.closest("[hidden], [inert], [aria-hidden='true']"));
+        const at = order.indexOf(trigger);
+        const next = e.shiftKey ? trigger : order[at + 1] || (modal ? order[0] : trigger);
+        close(false);
+        focusWithoutScroll(next || trigger);
+        return;
+      }
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
       const panel = panelRef.current; if (!panel) return;
       const items = Array.from(panel.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled])"));

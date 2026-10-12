@@ -33,7 +33,8 @@ export default function QuestionBodyEditor({ node, type, onChange, disabled, fra
   if (effectiveQuestionTypeVersion(type, node.questionTypeVersion) === undefined || !questionTypeDefinition(type)?.legacy) {
     return <UnsupportedQuestionType type={type} version={node.questionTypeVersion} />;
   }
-  if (framed && (type === "multipleChoice" || type === "shortAnswer" || type === "matching")) return <FramedLegacyEditor node={node} type={type} onChange={onChange} disabled={disabled} />;
+  // Keyed by type: a type change (same question id) mounts a fresh frame, so no "already visited" state crosses types.
+  if (framed && (type === "multipleChoice" || type === "shortAnswer" || type === "matching")) return <FramedLegacyEditor key={type} node={node} type={type} onChange={onChange} disabled={disabled} />;
   return <LegacyQuestionAuthoringAdapter node={node} type={type as BuilderQuestionType} onChange={onChange} disabled={disabled} />;
 }
 
@@ -47,7 +48,7 @@ function FramedLegacyEditor({ node, type, onChange, disabled }: { node: Question
     const setOption = (i: number, text: string) => onChange({ options: options.map((o, k) => (k === i ? { ...o, text } : o)) });
     const issues = multipleChoiceFieldIssues(node);
     return (
-      <FieldGroup legend="الخيارات والإجابة الصحيحة" className="sb-options" error={issues.answer || issues.options} showError="always">{group => (<>
+      <FieldGroup legend="الخيارات والإجابة الصحيحة" className="sb-options" error={[issues.options, issues.answer].filter(Boolean).join(" ")} showError="always">{group => (<>
         {options.map((o, i) => (
           <div className="sb-option-row" key={i}>
             <label className="sb-radio"><input type="radio" name={"mcq-" + groupId} checked={correct === i} onChange={() => onChange({ answer: { correctOptionIndex: i } })} disabled={disabled} {...group} /> الصحيح<span className="eb-visually-hidden"> — الخيار {i + 1}</span></label>
@@ -80,11 +81,13 @@ function FramedLegacyEditor({ node, type, onChange, disabled }: { node: Question
     const issues = matchingFieldIssues(node);
     return (
       <FieldGroup legend="أزواج المطابقة" className="sb-matching" help="لكل عنصر في العمود الأول، اكتب إجابته الصحيحة من العمود الثاني. تُعرض كل الإجابات كقائمة منسدلة للطالب." error={issues.list}>{() => (<>
+        {/* touchKey = the list length: adding or deleting a pair resets every pair's "already visited" state, so one pair's state
+            never moves onto another pair (rows stay mounted, so keyboard focus stays where the legacy editor kept it). */}
         {list.map((p, i) => (
           <div className="sb-field-row" key={i}>
-            <Field label={"العنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.left}>{a11y => <input {...a11y} className="sb-input" value={p.left} placeholder="العنصر" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, left: e.target.value } : x)))} disabled={disabled} />}</Field>
+            <Field label={"العنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.left} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.left} placeholder="العنصر" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, left: e.target.value } : x)))} disabled={disabled} />}</Field>
             <span className="sb-arrow" aria-hidden="true">←</span>
-            <Field label={"الإجابة الصحيحة للعنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.right}>{a11y => <input {...a11y} className="sb-input" value={p.right} placeholder="الإجابة الصحيحة" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, right: e.target.value } : x)))} disabled={disabled} />}</Field>
+            <Field label={"الإجابة الصحيحة للعنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.right} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.right} placeholder="الإجابة الصحيحة" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, right: e.target.value } : x)))} disabled={disabled} />}</Field>
             {list.length > 1 && <button type="button" className="sb-icon-btn sb-danger" title={"حذف الزوج " + (i + 1)} aria-label={"حذف الزوج " + (i + 1)} onClick={() => apply(list.filter((_, k) => k !== i))} disabled={disabled}>×</button>}
           </div>
         ))}

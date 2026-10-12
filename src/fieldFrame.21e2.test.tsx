@@ -193,3 +193,46 @@ describe("parity — field issues ⇔ canonical issue codes", () => {
     }
   });
 });
+
+// ── Review findings on the first implementation (independent adversarial review, all fixed) ──
+import QuestionComposer from "./QuestionComposer";
+describe("review fixes — Field frame", () => {
+  it("a host without a finalization step (Live Challenge) keeps the unframed composer: no frame, no finalization errors", () => {
+    const { container } = render(<QuestionComposer question={newQuestion("multipleChoice", { text: "" })} onChange={vi.fn()} />);
+    expect(container.querySelector(".eb-field, .eb-field-group")).toBeNull();
+    const text = screen.getByPlaceholderText("نص السؤال"); fireEvent.blur(text);
+    expect(text.getAttribute("aria-invalid")).toBeNull();
+    expect(screen.queryByText("اكتب نص السؤال؛ السؤال بلا نص لا يُعتمد.")).toBeNull();
+  });
+  it("changing the type mounts a fresh frame: the matching group does not inherit the multiple-choice group's visited state", () => {
+    // the same question id re-rendered as matching with no pairs (what changeQuestionType produces)
+    function Swap() { const [t, setT] = useState<"multipleChoice" | "matching">("multipleChoice"); const q = newQuestion(t, { examQuestionId: "same", text: "س", ...(t === "matching" ? { fields: [] } : { options: [{ text: "أ" }, { text: "ب" }], answer: { correctOptionIndex: 0 } }) } as Partial<BuilderQuestion>);
+      return <><button type="button" onClick={() => setT("matching")}>تبديل</button><QuestionBodyEditor node={q} type={t} onChange={vi.fn()} framed /></>; }
+    render(<Swap />);
+    const o = screen.getByLabelText("نص الخيار 1"); fireEvent.focus(o); fireEvent.blur(o);
+    expect(screen.getByRole("group", { name: "الخيارات والإجابة الصحيحة" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "تبديل" }));
+    const group = screen.getByRole("group", { name: "أزواج المطابقة" });
+    expect(screen.queryByText("أضف زوجًا واحدًا على الأقل بعنصر وإجابته.")).toBeNull();
+    expect(describedText(group)).not.toContain("أضف زوجًا");
+  });
+  it("deleting a pair never moves a visited state onto a pair the teacher has not left (and focus stays on the row)", () => {
+    render(<Host initial={newQuestion("matching", buildMatchingPatch([{ left: "HTTP", right: "80" }, { left: "DNS", right: "" }]))}>{(q, on) => <QuestionBodyEditor node={q} type="matching" onChange={on} framed />}</Host>);
+    const r1 = screen.getByLabelText("الإجابة الصحيحة للعنصر 1"); fireEvent.focus(r1); fireEvent.blur(r1);
+    const del = screen.getByRole("button", { name: "حذف الزوج 1" }); del.focus(); fireEvent.click(del);
+    const now = screen.getByLabelText("الإجابة الصحيحة للعنصر 1");                  // the DNS pair, never visited
+    expect((now as HTMLInputElement).value).toBe("");
+    expect(now.getAttribute("aria-invalid")).toBeNull();
+    fireEvent.blur(now);
+    expect(now.getAttribute("aria-invalid")).toBe("true");                         // … until the teacher leaves it
+  });
+  it("multiple choice with no options says what to do first (MISSING_OPTIONS), not only «choose the correct answer»", () => {
+    render(<QuestionBodyEditor node={newQuestion("multipleChoice", { options: [], answer: { correctOptionIndex: 0 } })} type="multipleChoice" onChange={vi.fn()} framed />);
+    expect(describedText(screen.getByRole("group", { name: "الخيارات والإجابة الصحيحة" }))).toBe("أضف خيارين على الأقل. حدّد الإجابة الصحيحة.");
+  });
+  it("numeric: the value-format note is the editor-level hint again, not the unit field's description", () => {
+    render(<NumericResponseEditor node={newQuestion("numericResponse")} onChange={vi.fn()} framed />);
+    expect(describedText(screen.getByLabelText("الوحدة"))).toBe("");
+    expect(screen.getByText(/تُقبل الأرقام العشرية/).closest(".eb-field")).toBeNull();
+  });
+});

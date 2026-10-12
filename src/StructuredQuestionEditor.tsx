@@ -100,7 +100,7 @@ export default function StructuredQuestionEditor(props: Props) {
           </div>
 
           <QuestionTypeMeta type={q.presentationType} version={q.questionTypeVersion} />
-          <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
+          <QuestionComposer question={q} onChange={onChange} disabled={disabled} framed />
           <CodeStimulusEditor question={q} onChange={onChange} disabled={disabled} />
           {q.assetRequest && (
             // Phase 20F — an AI image request is a teacher TODO that blocks finalization: attach the image above/below, then resolve it here.

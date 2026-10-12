@@ -54,7 +54,7 @@ function analyticsFixture() {
   };
 }
 const RESULTS = { ok: true, assignment: { assignmentId: "a1", title: "واجب 1", maxAttempts: 2, totalMarks: 20 }, stats: { students: 20, submitted: 16, pendingReview: 1, average: 65, highest: 95, lowest: 40 },
-  students: [{ studentId: "st1", studentName: "سارة خالد", studentCode: "S1", attemptsUsed: 1, allowedAttempts: 2, attempts: [{ attemptNumber: 1, score: 13, totalMarks: 20, percentage: 65, submittedAt: "2026-09-01T00:00:00.000Z", gradingStatus: "final", finalized: true }], latestResult: { attemptNumber: 1, score: 13, totalMarks: 20, percentage: 65, submittedAt: "2026-09-01T00:00:00.000Z", gradingStatus: "final", finalized: true } }] };
+  students: [{ studentId: "st1", studentName: "سارة خالد", studentCode: "012345678", attemptsUsed: 1, allowedAttempts: 2, attempts: [{ attemptNumber: 1, score: 13, totalMarks: 20, percentage: 65, submittedAt: "2026-09-01T00:00:00.000Z", gradingStatus: "final", finalized: true }], latestResult: { attemptNumber: 1, score: 13, totalMarks: 20, percentage: 65, submittedAt: "2026-09-01T00:00:00.000Z", gradingStatus: "final", finalized: true } }] };
 const PROFILE = { ok: true, profile: { student: { userId: "u1", displayName: "سارة خالد", identityNumber: "123456789", firstName: "سارة", familyName: "خالد", classId: "c1", active: true, archived: false, createdAt: "", lastLoginAt: "" }, classroom: { classId: "c1", name: "الحادي عشر", grade: "11", schoolYear: "2026" }, stats: { assigned: 5, completed: 2, pending: 3, average: 42, lastLoginAt: "" }, assignments: [{ assignmentId: "a1", title: "واجب 1", status: "published", dueAt: "", totalMarks: 20, attemptsUsed: 1, latestScore: 13, latestPercentage: 65, submittedAt: "", gradingStatus: "final", finalized: true }] } };
 const REVIEW = { ok: true, assignment: { assignmentId: "a1", title: "واجب 1", totalMarks: 20 }, student: { studentId: "st1", studentName: "سارة خالد", studentCode: "S1" }, attempt: { attemptNumber: 1, submittedAt: "", score: 13, totalMarks: 20, percentage: 65, manualReviewMarks: 0, gradingStatus: "final", finalized: true, teacherFeedback: "أحسنت" }, attempts: [{ attemptNumber: 1, submittedAt: "", score: 13, totalMarks: 20, percentage: 65, manualReviewMarks: 0, gradingStatus: "final", finalized: true }], questions: [{ questionId: "q1", questionNumber: 1, text: "سؤال", marks: 5, type: "mcq", autoGrade: { score: 5, maxMarks: 5, correct: true, manualReview: false }, manualScore: null, teacherComment: "" }] };
 
@@ -184,9 +184,10 @@ describe("21E.2 G — assignment-results CSV from the dashboard drill", () => {
     expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
     const lines = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes).slice(1).split("\r\n");
     expect(lines[0]).toBe('"الواجب","واجب 1"');
-    expect(lines[2]).toBe('"الطالب","كود الطالب","الحالة","المحاولات المستخدمة","المحاولات المسموحة","رقم آخر محاولة","آخر علامة","العلامة الكاملة","النسبة المئوية","تاريخ التسليم"');
-    expect(lines[3].split(",").slice(0, 9)).toEqual(['"سارة خالد"', '"S1"', '"نهائي"', '"1"', '"2"', '"1"', '"13"', '"20"', '"65"']);
+    expect(lines[2]).toBe('"الطالب","الحالة","المحاولات المستخدمة","المحاولات المسموحة","رقم آخر محاولة","آخر علامة","العلامة الكاملة","النسبة المئوية","تاريخ التسليم"');
+    expect(lines[3].split(",").slice(0, 8)).toEqual(['"سارة خالد"', '"نهائي"', '"1"', '"2"', '"1"', '"13"', '"20"', '"65"']);
     expect(lines).toHaveLength(4);
     expect(lines.join("\n")).not.toContain("123456789");
+    expect(lines.join("\n")).not.toMatch(/012345678|5678/);                      // the drill shows no code: the file carries none
   });
 });

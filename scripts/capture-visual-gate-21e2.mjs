@@ -41,9 +41,9 @@ const analytics = { ok: true, generatedAt: "2026-10-10T08:30:00.000Z", scope: { 
 const lr = (o = {}) => ({ attemptNumber: 1, score: 62, totalMarks: 100, percentage: 62, submittedAt: "2026-10-01T09:05:00.000Z", finalized: false, manualReviewMarks: 18, gradingStatus: "pendingReview", teacherFeedback: "ملاحظة خاصة بالمعلم", ...o });
 const fin = lr({ score: 90, percentage: 90, finalized: true, manualReviewMarks: 0, gradingStatus: "final" });
 const students = [
-  { studentId: "s1", studentName: "زيد علي", studentCode: "P1", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "pendingReview", activeAttempt: null, attempts: [lr()], latestResult: lr() },
-  { studentId: "s2", studentName: "خالد سمير", studentCode: "F1", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "final", activeAttempt: null, attempts: [fin], latestResult: fin },
-  { studentId: "s3", studentName: "=HYPERLINK(\"http://evil\")", studentCode: "+N1", attemptsUsed: 0, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "notStarted", gradingStatus: "notSubmitted", activeAttempt: null, attempts: [], latestResult: null }
+  { studentId: "s1", studentName: "زيد علي", studentCode: "987654321", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "pendingReview", activeAttempt: null, attempts: [lr()], latestResult: lr() },
+  { studentId: "s2", studentName: "خالد سمير", studentCode: "012345678", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "final", activeAttempt: null, attempts: [fin], latestResult: fin },
+  { studentId: "s3", studentName: "=HYPERLINK(\"http://evil\")", studentCode: "000004321", attemptsUsed: 0, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "notStarted", gradingStatus: "notSubmitted", activeAttempt: null, attempts: [], latestResult: null }
 ];
 const assignment = { assignmentId: "a1", classId: "c1", className: "الحادي عشر", title: "واجب الشبكات 1", instructions: "", status: "published", openAt: "", dueAt: "2026-10-20T10:00:00.000Z", questionCount: 5, totalMarks: 100, maxAttempts: 3, durationMinutes: 0 };
 const results = { ok: true, assignment: { assignmentId: "a1", title: "واجب الشبكات 1", dueAt: "", durationMinutes: 0, maxAttempts: 3, totalMarks: 100 }, stats: { students: 3, submitted: 2, pendingReview: 1, finalized: 1, notSubmitted: 1, active: 0, average: 76, highest: 90, lowest: 62 }, students };
@@ -140,7 +140,8 @@ async function runResults([name, viewport, touch, dsf]) {
   if (await exp.count()) {
     const d = await download(page, exp);
     rec.resultsCsv = d;
-    check(name, "G-01 assignment results CSV downloads with BOM, stable header and guarded formula cells", d.bom.join(",") === "239,187,191" && d.lines[2]?.startsWith("\"الطالب\",\"كود الطالب\",\"الحالة\"") && d.lines.some(l => l.startsWith("\"'=HYPERLINK(")) && !d.lines.join("\n").includes("ملاحظة خاصة"), d.name + " " + d.lines.length + " lines");
+    const all = d.lines.join("\n");
+    check(name, "G-01 assignment results CSV: BOM, stable header without any student code, guarded formula cells, no feedback / identity", d.bom.join(",") === "239,187,191" && d.lines[2]?.startsWith("\"الطالب\",\"الحالة\",") && d.lines.some(l => l.startsWith("\"'=HYPERLINK(")) && !all.includes("ملاحظة خاصة") && !/012345678|987654321|000004321/.test(all), d.name + " " + d.lines.length + " lines");
     await shot("03-dashboard-drill-export");
   } else { rec.resultsCsv = "absent"; check(name, "G-01 assignment results CSV", false, "absent"); }
   await page.getByRole("button", { name: "إغلاق" }).first().click().catch(() => {});
@@ -156,7 +157,8 @@ async function runResults([name, viewport, touch, dsf]) {
     const d = await download(page, gExp);
     rec.gradebookCsv = d;
     const body = d.lines.slice(4).filter(Boolean);
-    check(name, "G-02 gradebook CSV: all three students even while searched, BOM, Arabic header, guarded formula, no feedback", d.bom.join(",") === "239,187,191" && body.length === 3 && d.lines[3].startsWith("\"الطالب\",\"كود الطالب\",\"حالة التصحيح\"") && body.some(l => l.startsWith("\"'=HYPERLINK(")) && body.some(l => l.includes("\"'+N1\"")) && !d.lines.join("\n").includes("ملاحظة خاصة"), d.name + " rows=" + body.length);
+    const all = d.lines.join("\n");
+    check(name, "G-02 gradebook CSV: all three students even while searched, BOM, Arabic header, masked identity (text, leading zeros kept), guarded formula, no feedback", d.bom.join(",") === "239,187,191" && body.length === 3 && d.lines[3].startsWith("\"الطالب\",\"رقم الهوية (آخر 4 خانات)\",\"حالة التصحيح\"") && body.some(l => l.startsWith("\"'=HYPERLINK(")) && body.some(l => l.includes("\"•••••4321\"")) && !/012345678|987654321|000004321/.test(all) && !all.includes("ملاحظة خاصة"), d.name + " rows=" + body.length);
     const box = await gExp.boundingBox();
     rec.gradebookExportBox = box;
     check(name, "G-03 export button is a ≥ 44 px target on touch, ≥ 32 px otherwise", box && box.height >= (touch ? 44 : 32), JSON.stringify(box));

@@ -27,19 +27,23 @@ export type FieldProps = {
   /** Layout: "stack" (label above, default) or "inline" (label beside a short control). */
   layout?: "stack" | "inline";
   className?: string;
+  /** The "already visited" state belongs to this key: when it changes (e.g. the length of a list of rows the field sits in),
+   *  the field counts as not visited again — so a row's state never moves onto another row after an insert / delete. */
+  touchKey?: string | number;
   children: (a11y: FieldA11y) => ReactNode;
 };
 
-export default function Field({ label, help, error, showError = "touched", hideLabel, layout = "stack", className, children }: FieldProps) {
+export default function Field({ label, help, error, showError = "touched", hideLabel, layout = "stack", className, touchKey = 0, children }: FieldProps) {
   const { id, helpId, errorId } = useFieldIds();
   const reveal = useContext(FieldRevealContext);
-  const [touched, setTouched] = useState(false);
+  const [touchedFor, setTouchedFor] = useState<string | number | null>(null);
+  const touched = touchedFor === touchKey;
   const hasError = error !== undefined && error !== null && error !== false && error !== "";
   const visibleError = hasError && (showError === "always" || touched || reveal);
   const describedBy = [help ? helpId : "", visibleError ? errorId : ""].filter(Boolean).join(" ") || undefined;
   const a11y: FieldA11y = { id, ...(describedBy ? { "aria-describedby": describedBy } : {}), ...(visibleError ? { "aria-invalid": true as const } : {}) };
   return (
-    <div className={["eb-field", "is-" + layout, visibleError ? "is-invalid" : "", className || ""].filter(Boolean).join(" ")} onBlur={() => { if (!touched) setTouched(true); }}>
+    <div className={["eb-field", "is-" + layout, visibleError ? "is-invalid" : "", className || ""].filter(Boolean).join(" ")} onBlur={() => { if (!touched) setTouchedFor(touchKey); }}>
       <label htmlFor={id} className={hideLabel ? "eb-field-label eb-visually-hidden" : "eb-field-label"}>{label}</label>
       <div className="eb-field-control">{children(a11y)}</div>
       {help && <p id={helpId} className="eb-field-help">{help}</p>}

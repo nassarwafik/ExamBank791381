@@ -1,8 +1,11 @@
 // Phase 21E.2 (G) — teacher result exports: the gradebook of one assignment and the per-assignment results of the dashboard
 // drill. Pure row builders (stable column order, stable row order) encoded and downloaded by the ONE trusted CSV module
-// (reports/csv.ts: UTF-8 BOM, CRLF, quoted cells, formula-injection guard). Only fields the teacher already sees on screen are
-// exported: names, student codes, statuses, attempt counts, scores, percentages and submission times — never answers,
-// answer keys, teacher feedback, identity numbers, attempt epochs or any other internal field of the payload.
+// (reports/csv.ts: UTF-8 BOM, CRLF, quoted cells, formula-injection guard). Only what the teacher's screen shows is exported:
+// names, statuses, attempt counts, scores, percentages and submission times — never answers, answer keys, teacher feedback,
+// attempt epochs or any other internal field of the payload. The student code IS the national identity / login number
+// (manage-students: code = identityNumber), so a file never carries it in full: the gradebook export carries its last four
+// characters masked like the dashboard's maskIdentity («•••••1234», also a non-numeric cell a spreadsheet keeps as text, so a
+// leading zero is never stripped), and the dashboard drill — which shows no code at all — exports none.
 import { gradingLabel, resolveGradingStatus, type GradingStatus } from "../gradingStatus";
 import { LIFECYCLE_LABEL, type StudentResult } from "../assignments/types";
 
@@ -27,7 +30,13 @@ function byStudent(a: StudentResult, b: StudentResult): number {
     || String(a.studentId).localeCompare(String(b.studentId));
 }
 
-export const GRADEBOOK_COLUMNS = ["الطالب", "كود الطالب", "حالة التصحيح", "حالة المحاولة", "المحاولات المستخدمة", "المحاولات المسموحة", "آخر علامة", "العلامة الكاملة", "النسبة المئوية", "تاريخ آخر تسليم"] as const;
+/** «•••••» + the last four characters (the dashboard's maskIdentity); empty stays empty. */
+export function maskedStudentCode(code: string | null | undefined): string {
+  const v = String(code ?? "").trim();
+  return v ? "•••••" + v.slice(-4) : "";
+}
+
+export const GRADEBOOK_COLUMNS = ["الطالب", "رقم الهوية (آخر 4 خانات)", "حالة التصحيح", "حالة المحاولة", "المحاولات المستخدمة", "المحاولات المسموحة", "آخر علامة", "العلامة الكاملة", "النسبة المئوية", "تاريخ آخر تسليم"] as const;
 
 /**
  * The gradebook of ONE assignment: every student of the authoritative results (never the searched / filtered subset), one row
@@ -44,7 +53,7 @@ export function gradebookCsvRows(assignment: { title: string; className?: string
     const r = s.latestResult;
     out.push([
       s.studentName || "",
-      s.studentCode || "",
+      maskedStudentCode(s.studentCode),
       gradingLabel(gradingOf(s)),
       s.attemptStatus ? LIFECYCLE_LABEL[s.attemptStatus] || s.attemptStatus : "",
       num(s.attemptsUsed),
@@ -61,11 +70,11 @@ export function gradebookCsvRows(assignment: { title: string; className?: string
 /** The subset of /api/assignment-results the dashboard drill holds (structural, so both result shapes fit). */
 export type ResultsForExport = {
   assignment: { title: string; totalMarks: number };
-  students: Array<{ studentId: string; studentName: string; studentCode: string; attemptsUsed: number; allowedAttempts: number;
+  students: Array<{ studentId: string; studentName: string; studentCode?: string; attemptsUsed: number; allowedAttempts: number;
     latestResult: { attemptNumber: number; score: number; totalMarks: number; percentage: number; submittedAt: string; gradingStatus?: GradingStatus; finalized?: boolean; manualReviewMarks?: number } | null }>;
 };
 
-export const RESULTS_COLUMNS = ["الطالب", "كود الطالب", "الحالة", "المحاولات المستخدمة", "المحاولات المسموحة", "رقم آخر محاولة", "آخر علامة", "العلامة الكاملة", "النسبة المئوية", "تاريخ التسليم"] as const;
+export const RESULTS_COLUMNS = ["الطالب", "الحالة", "المحاولات المستخدمة", "المحاولات المسموحة", "رقم آخر محاولة", "آخر علامة", "العلامة الكاملة", "النسبة المئوية", "تاريخ التسليم"] as const;
 
 export function assignmentResultsCsvRows(results: ResultsForExport): CsvCellValue[][] {
   const out: CsvCellValue[][] = [["الواجب", results.assignment.title || ""], [], [...RESULTS_COLUMNS]];
@@ -74,7 +83,6 @@ export function assignmentResultsCsvRows(results: ResultsForExport): CsvCellValu
     const r = s.latestResult;
     out.push([
       s.studentName || "",
-      s.studentCode || "",
       gradingLabel(resolveGradingStatus(r)),
       num(s.attemptsUsed),
       num(s.allowedAttempts),

@@ -10,9 +10,9 @@ import Gradebook from "./assignments/Gradebook";
 const CLASSES = [{ classId: "c1", name: "الحادي عشر", grade: "11", active: true }];
 const lr = (over: Record<string, unknown>) => ({ attemptNumber: 1, score: 62, totalMarks: 100, percentage: 62, submittedAt: "2026-03-01T10:00:00.000Z", finalized: false, manualReviewMarks: 18, gradingStatus: "pendingReview", teacherFeedback: "", ...over });
 const finalLR = lr({ score: 90, percentage: 90, finalized: true, manualReviewMarks: 0, gradingStatus: "final" });
-const PEND = { studentId: "s1", studentName: "زيد", studentCode: "P1", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "pendingReview", activeAttempt: null, attempts: [lr({})], latestResult: lr({}) };
-const FIN = { studentId: "s2", studentName: "خالد", studentCode: "F1", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "final", activeAttempt: null, attempts: [finalLR], latestResult: finalLR };
-const NOSUB = { studentId: "s3", studentName: "سعد", studentCode: "N1", attemptsUsed: 0, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "notStarted", gradingStatus: "notSubmitted", activeAttempt: null, attempts: [], latestResult: null };
+const PEND = { studentId: "s1", studentName: "زيد", studentCode: "987654321", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "pendingReview", activeAttempt: null, attempts: [lr({})], latestResult: lr({}) };
+const FIN = { studentId: "s2", studentName: "خالد", studentCode: "012345678", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "submitted", gradingStatus: "final", activeAttempt: null, attempts: [finalLR], latestResult: finalLR };
+const NOSUB = { studentId: "s3", studentName: "سعد", studentCode: "000004321", attemptsUsed: 0, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "notStarted", gradingStatus: "notSubmitted", activeAttempt: null, attempts: [], latestResult: null };
 const ACT = { studentId: "s4", studentName: "عمر", studentCode: "A1", attemptsUsed: 1, allowedAttempts: 3, dueAtOverride: null, attemptStatus: "started", gradingStatus: "final", activeAttempt: { attemptNumber: 2, startedAt: "2026-03-01T10:00:00.000Z", endsAt: "", status: "started" }, attempts: [finalLR], latestResult: finalLR };
 const STATS = { students: 4, submitted: 3, pendingReview: 1, finalized: 2, notSubmitted: 1, active: 1, average: 72, highest: 90, lowest: 62 };
 const json = (body: unknown) => Promise.resolve({ ok: true, status: 200, json: async () => body } as Response);
@@ -63,11 +63,11 @@ describe("21E.2 G — gradebook CSV export", () => {
     expect(bom).toEqual([0xef, 0xbb, 0xbf]);
     const lines = body.split("\r\n");
     expect(lines[0]).toBe('"الواجب","واجب"');
-    expect(lines[3]).toBe('"الطالب","كود الطالب","حالة التصحيح","حالة المحاولة","المحاولات المستخدمة","المحاولات المسموحة","آخر علامة","العلامة الكاملة","النسبة المئوية","تاريخ آخر تسليم"');
+    expect(lines[3]).toBe('"الطالب","رقم الهوية (آخر 4 خانات)","حالة التصحيح","حالة المحاولة","المحاولات المستخدمة","المحاولات المسموحة","آخر علامة","العلامة الكاملة","النسبة المئوية","تاريخ آخر تسليم"');
     expect(lines.slice(4).map(l => l.split(",")[0])).toEqual(['"خالد"', '"زيد"', '"سعد"', '"عمر"']);
-    expect(lines.find(l => l.startsWith('"سعد"'))).toBe('"سعد","N1","لم يسلّم","لم يبدأ","0","3","","","",""');
+    expect(lines.find(l => l.startsWith('"سعد"'))).toBe('"سعد","•••••4321","لم يسلّم","لم يبدأ","0","3","","","",""');
     expect(lines.find(l => l.startsWith('"زيد"'))?.split(",").slice(2, 9)).toEqual(['"بانتظار التصحيح"', '"تم التسليم"', '"1"', '"3"', '"62"', '"100"', '"62"']);
-    for (const secret of ["s1", "s2", "teacherFeedback", "attemptEpoch"]) expect(body).not.toContain(secret);
+    for (const secret of ["s1", "s2", "teacherFeedback", "attemptEpoch", "987654321", "012345678", "000004321"]) expect(body).not.toContain(secret);   // never a full identity / login number
   });
 
   it("is labelled, keyboard reachable and never changes the gradebook state", async () => {
