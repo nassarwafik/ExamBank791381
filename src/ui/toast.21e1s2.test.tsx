@@ -138,6 +138,12 @@ describe("21E.1 slice 2 — toast.css stays inside the design system", () => {
     expect(css).not.toMatch(/(margin|padding)-(left|right)\s*:/);
     expect(css).not.toMatch(/!important/);
   });
+  it("Review Fix 1 (V1): the Arabic message is set at 16 px with the body line height (no clipped marks, readable at a glance)", () => {
+    const rule = /\.eb-toast-message\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(rule).toMatch(/font-size:\s*var\(--eb-fs-16\)/);
+    expect(rule).toMatch(/line-height:\s*var\(--eb-lh-body\)/);
+    expect(rule).not.toMatch(/overflow\s*:\s*hidden|text-overflow|-webkit-line-clamp|max-block-size|max-height/);   // never clipped
+  });
   it("uses the toast layer, 44 px actions on phones and coarse pointers, and animates only without reduced motion", () => {
     expect(css).toMatch(/\.eb-toast-layer\s*\{[^}]*z-index:\s*var\(--eb-z-toast\)/);
     expect(css).toMatch(/@media \(max-width: 767px\)\s*\{[^@]*\.eb-toast-action\s*\{\s*min-block-size:\s*44px/);

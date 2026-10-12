@@ -51,6 +51,9 @@
   flex: 1 1 auto;
   min-inline-size: 0;
   margin: 0;
+  /* Review Fix 1 (V1) — Arabic reads comfortably at 16 px; the body line height keeps diacritics and the guillemets unclipped. */
+  font-size: var(--eb-fs-16);
+  line-height: var(--eb-lh-body);
   font-weight: var(--eb-fw-medium);
   overflow-wrap: anywhere;
 }

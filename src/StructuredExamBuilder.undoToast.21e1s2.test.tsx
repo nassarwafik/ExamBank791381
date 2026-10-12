@@ -262,7 +262,7 @@ describe("21E.1 slice 2 — where the restored / focused section lands, and moti
         await wait(5);
         deleteSection("s1");
         expect(document.activeElement).toBe(sectionEl("s2"));
-        expect(sectionEl("s2").style.scrollMarginBlockStart).toMatch(/^\d+px$/);   // toolbar height + 12 px (0 + 12 in this DOM)
+        expect(calls.filter(c => c.el === sectionEl("s2"))).toEqual([]);           // RF1: its heading is on screen → the page does not move
         calls.length = 0;
         fireEvent.click(undoSection());
         await wait(5);

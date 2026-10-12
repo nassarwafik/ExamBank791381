@@ -111,7 +111,7 @@ describe("UX-7b-1 — compact top bar, timer chip, details disclosure", () => {
   });
 
   it("the details disclosure is a real button (aria-expanded/aria-controls, SVG chevron) holding the moved metadata; toggling costs no request", async () => {
-    mount();
+    mount({ ...legacyAssignment, instructions: "" });                                                  // no instructions → collapsed by default
     await screen.findByText("ما هي عاصمة فلسطين؟");
     const toggle = screen.getByRole("button", { name: /تفاصيل الامتحان والتعليمات/ });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -123,13 +123,31 @@ describe("UX-7b-1 — compact top bar, timer chip, details disclosure", () => {
     fireEvent.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(panel.hidden).toBe(false);
-    expect(within(panel).getByText("أجب عن كل الأسئلة بعناية.")).toBeTruthy();
     expect(within(panel).getByText("آخر موعد").nextElementSibling?.textContent).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);   // Western digits
     expect(within(panel).getByText("المحاولة").nextElementSibling?.textContent).toBe("المحاولة 1 / 1");
     expect(within(panel).getByText("العلامات").nextElementSibling?.textContent).toBe("12");
     fireEvent.click(toggle);
     expect(panel.hidden).toBe(true);
     expect(calls.length).toBe(before);
+  });
+
+  it("21E.1 slice 2 RF1 (F3, owner decision): assignment instructions open the disclosure by default so the student sees them; it still collapses on demand", async () => {
+    mount();                                                                                           // legacyAssignment carries instructions
+    await screen.findByText("ما هي عاصمة فلسطين؟");
+    const toggle = screen.getByRole("button", { name: /تفاصيل الامتحان والتعليمات/ });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const panel = document.getElementById(toggle.getAttribute("aria-controls") || "") as HTMLElement;
+    expect(panel.hidden).toBe(false);
+    expect(within(panel).getByText("أجب عن كل الأسئلة بعناية.")).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(panel.hidden).toBe(true);
+    for (const blank of ["", "   \n "]) {                                                         // empty / whitespace-only → collapsed
+      cleanup();
+      mount({ ...legacyAssignment, instructions: blank });
+      await screen.findByText("ما هي عاصمة فلسطين؟");
+      expect(screen.getByRole("button", { name: /تفاصيل الامتحان والتعليمات/ }).getAttribute("aria-expanded")).toBe("false");
+    }
   });
 
   it("general instructions stay in the body (inside the disclosure, open by default when present)", async () => {

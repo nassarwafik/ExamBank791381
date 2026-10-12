@@ -146,6 +146,9 @@ const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const FLASH_MS = 1200;
 const UNDO_TOAST_MS = 10000;
+/** Height of the band a toast covers at the bottom of the builder — keep in sync with structured-builder.css
+ *  (`.structured-builder-overlay:has(.eb-toast)` reserves 16 px × 2 + 96 px). */
+const TOAST_BAND = 128;
 /** «سؤال واحد / سؤالان / 3 أسئلة / 11 سؤالًا» — the count that leaves with a deleted section. */
 const questionCountPhrase = (n: number) => (n === 1 ? "سؤال واحد" : n === 2 ? "سؤالين" : n >= 3 && n <= 10 ? n + " أسئلة" : n + " سؤالًا");
 // UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
@@ -343,16 +346,26 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const scrollBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
   const builderRef = useRef<HTMLDivElement | null>(null);
   /** Space the sticky toolbar takes at the top of the builder (it wraps, so it is measured) plus a small gap. */
-  const toolbarClearance = () => Math.round((builderRef.current?.querySelector<HTMLElement>(".sb-toolbar")?.getBoundingClientRect().height ?? 0) + 12);
-  const focusCard = (id: string) => {
-    const el = nodes.current.get(id);
-    if (!el || !alive.current) return;
-    // 21E.1 slice 2 — a card that does not fit below the sticky toolbar is aligned by its top (its number and tools stay visible,
-    // e.g. at 200 % zoom); one that fits is centred as before.
+  /** Bottom edge of the sticky toolbar on screen (0 without one). */
+  const toolbarBottom = () => builderRef.current?.querySelector<HTMLElement>(".sb-toolbar")?.getBoundingClientRect().bottom ?? 0;
+  /** Space a revealed element keeps clear at the top of the builder's scroller: down to the sticky toolbar's bottom edge (the
+   *  scroller's padding puts the stuck toolbar below its top, so its height alone falls short) plus 12 px. */
+  const toolbarClearance = () => {
+    const scrollerTop = builderRef.current?.closest(".structured-builder-overlay")?.getBoundingClientRect().top ?? 0;
+    return Math.round(Math.max(0, toolbarBottom() - scrollerTop) + 12);
+  };
+  /** 21E.1 slice 2 — a card that does not fit below the sticky toolbar is aligned by its top (its number and tools stay visible,
+   *  e.g. at 200 % zoom); one that fits is centred. Either way it keeps the toolbar's height + 12 px clear above it. */
+  const alignCard = (el: HTMLElement) => {
     const clearance = toolbarClearance();
     el.style.scrollMarginBlockStart = clearance + "px";
     const fits = el.getBoundingClientRect().height <= window.innerHeight - clearance - 24;
     if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: fits ? "center" : "start", behavior: scrollBehavior });
+  };
+  const focusCard = (id: string) => {
+    const el = nodes.current.get(id);
+    if (!el || !alive.current) return;
+    alignCard(el);
     el.focus({ preventScroll: true });
     setFlashId(id);
   };
@@ -371,35 +384,65 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const [restoreCommit, setRestoreCommit] = useState<{ seq: number; deletion: Deletion } | null>(null);
   const sectionNode = (sectionId: string) =>
     Array.from(builderRef.current?.querySelectorAll<HTMLElement>("[data-section-id]") ?? []).find(el => el.dataset.sectionId === sectionId) ?? null;
-  /** Focuses a section and scrolls its heading just below the sticky toolbar (whose height changes with the width). */
-  const revealSection = (el: HTMLElement) => {
+  const alignSection = (el: HTMLElement) => {
     el.style.scrollMarginBlockStart = toolbarClearance() + "px";
-    el.focus({ preventScroll: true });
     if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start", behavior: scrollBehavior });
   };
+  /** Focuses a section and scrolls its heading just below the sticky toolbar (whose height changes with the width). */
+  const revealSection = (el: HTMLElement) => {
+    el.focus({ preventScroll: true });
+    alignSection(el);
+  };
+  /** Review Fix 1 — the heading row of `el` is on screen: at or below the sticky toolbar's bottom edge, and clear of the bottom
+   *  `bottomReserve` px (the band a toast covers while it is shown). When the toolbar and that band leave no usable strip between
+   *  them (the tall toolbar on phones / at 200 %, 21E.2), the transient band is ignored: no scroll could clear both. */
+  const headingOnScreen = (el: HTMLElement, bottomReserve: number) => {
+    const r = el.getBoundingClientRect();
+    const top = toolbarBottom();
+    const bottom = window.innerHeight - bottomReserve - top < 96 ? window.innerHeight : window.innerHeight - bottomReserve;
+    return r.top >= top - 1 && r.top + Math.min(r.height, 48) <= bottom;
+  };
+  /** Moves keyboard focus WITHOUT letting the browser pick a scroll position (a plain focus() could leave the heading under the
+   *  sticky toolbar): the page stays where it is when the heading is already on screen; otherwise the element is revealed just
+   *  below the toolbar with the same alignment a restored card / section uses. */
+  const focusInPlace = (el: HTMLElement, kind: "card" | "section" | "control", bottomReserve: number) => {
+    el.focus({ preventScroll: true });
+    if (headingOnScreen(el, bottomReserve)) return;
+    if (kind === "card") alignCard(el);
+    else if (kind === "section") alignSection(el);
+    else {
+      el.style.scrollMarginBlockStart = toolbarClearance() + "px";
+      el.style.scrollMarginBlockEnd = bottomReserve + 12 + "px";
+      if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest", behavior: scrollBehavior });
+    }
+  };
   /** Where keyboard focus goes once the deleted card / section is gone: its next neighbour, else the previous one, else the add
-   *  button («+ إضافة سؤال» of its section, else «+ إضافة قسم»). Returns false when none of them exists any more. */
-  const focusAfterDeletion = (d: Deletion): boolean => {
+   *  button («+ إضافة سؤال» of its section, else «+ إضافة قسم»). `bottomReserve` = the toast band when a toast is about to show.
+   *  Returns false when none of them exists any more. */
+  const focusAfterDeletion = (d: Deletion, bottomReserve = 0): boolean => {
     if (!alive.current) return false;
-    let target: HTMLElement | null | undefined;
     if (d.kind === "question") {
       const neighbour = [d.nextId, d.prevId].map(id => (id ? nodes.current.get(id) : undefined)).find(Boolean);
-      target = neighbour ?? sectionNode(d.sectionId)?.querySelector<HTMLElement>("[data-add-question]") ?? sectionNode(d.sectionId);
+      if (neighbour) { focusInPlace(neighbour, "card", bottomReserve); return true; }
+      const section = sectionNode(d.sectionId);
+      const add = section?.querySelector<HTMLElement>("[data-add-question]");
+      if (add) { focusInPlace(add, "control", bottomReserve); return true; }
+      if (section) { focusInPlace(section, "section", bottomReserve); return true; }
     } else {
       const neighbour = [d.nextId, d.prevId].map(id => (id ? sectionNode(id) : null)).find(Boolean);
-      if (neighbour) { revealSection(neighbour); return true; }
+      if (neighbour) { focusInPlace(neighbour, "section", bottomReserve); return true; }
     }
-    target ??= builderRef.current?.querySelector<HTMLElement>("[data-add-section]");
-    target?.focus();
-    return !!target;
+    const addSection = builderRef.current?.querySelector<HTMLElement>("[data-add-section]");
+    if (addSection) { focusInPlace(addSection, "control", bottomReserve); return true; }
+    return false;
   };
   /** A toast about `d` left while keyboard focus was inside it: focus the item when it is back (Ctrl+Z, «تراجع»), else the
    *  deletion's neighbour, else «+ إضافة قسم» — focus never falls to <body>. */
-  const focusItemOrNeighbour = (d: Deletion) => {
+  const focusItemOrNeighbour = (d: Deletion, bottomReserve = 0) => {
     if (!alive.current) return;
     if (d.kind === "question" && nodes.current.get(d.question.examQuestionId)) { focusCard(d.question.examQuestionId); return; }
     const section = d.kind === "section" ? sectionNode(d.section.id) : null;
-    if (section) revealSection(section); else focusAfterDeletion(d);
+    if (section) revealSection(section); else focusAfterDeletion(d, bottomReserve);
   };
   const focusLost = () => { const a = document.activeElement; return !a || a === document.body || !a.isConnected; };
   const deleteWithUndo = (capture: (prev: StructuredExam) => Deletion | null) => {
@@ -428,7 +471,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     const d = deletionRecords.current.get(deletionCommit);
     deletionRecords.current.delete(deletionCommit);
     if (!d || !alive.current) return;
-    focusAfterDeletion(d);
+    focusAfterDeletion(d, TOAST_BAND);                                  // the toast below is about to cover the bottom band
     const message = d.kind === "question"
       ? "تم حذف السؤال " + d.label + (d.sectionTitle ? " من «" + d.sectionTitle + "»" : "") + "."
       : "تم حذف «" + (d.section.title || "القسم " + d.label) + "»" + ((d.section.questions || []).length ? " مع " + questionCountPhrase((d.section.questions || []).length) : "") + ".";
@@ -461,7 +504,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     const reason = outcome === "section-missing" ? "تعذّرت استعادة السؤال: القسم «" + (d.kind === "question" ? d.sectionTitle : "") + "» لم يعد موجودًا."
       : outcome === "bank-duplicate" ? "تعذّرت الاستعادة: سؤال البنك نفسه موجود في الامتحان الآن."
       : "تعذّرت استعادة القسم: بعض أسئلته موجودة الآن في مكان آخر من الامتحان.";
-    if (focusLost()) focusItemOrNeighbour(d);                            // «تراجع» was pressed from the keyboard: its card is gone
+    if (focusLost()) focusItemOrNeighbour(d, TOAST_BAND);                // «تراجع» was pressed from the keyboard: its card is gone
     showToast({ tone: "warn", message: reason, onDismiss: (why, hadFocus) => { if (hadFocus && why !== "replaced") focusItemOrNeighbour(d); } });
   }, [restoreCommit]);                                                  // eslint-disable-line react-hooks/exhaustive-deps
   // The toast leaves by itself when the deleted item is back by another route (Ctrl+Z, the toolbar «تراجع») or another exam opened.
