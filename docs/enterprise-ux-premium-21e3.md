@@ -61,12 +61,39 @@ later step of the workflow is measured too.
 
 Not reproduced: horizontal page overflow (none at any viewport); the review screen already focuses its heading.
 
+### 3.1 Owner decisions (recorded after the audit review)
+
+| # | Decision |
+|---|---|
+| D1 | Exam details: keep the PR #300 rule exactly — open when meaningful instructions exist, collapsed otherwise. **No automatic collapse after question 1.** |
+| D2 | Chemistry: the periodic-table cells move to Phase 21E.5. No change to chemistry or SmartSim engine files. |
+| D3 | Physics RTL: fix the direction of equations and units in the student UI only, when possible without touching equations or simulation accuracy, with real RTL / LTR tests. |
+| D4 | Highest priority: recover a question after a JavaScript load failure **without reloading the exam**; prove `?r=n` in Chromium on a production build; restrict the URL to the application's own trusted assets (never an external file); prove no double evaluation of side-effecting modules and no loss of answer state. |
+| D5 | Student safety: **no automatic reload** of the exam page; recovery never loses answers, never ends a strict attempt, never repeats a save or submit request. |
+| D6 | Production code stays unchanged until PR #300 merges; then a normal merge of the latest `main` into this branch, then development per `AGENTS.md`. |
+| D7 | Evidence: Chromium at every viewport, fail-first tests, mutations for the critical cases, exact-head CI. |
+
+### 3.2 Recovery-mechanism probe (Vite production build, Chromium 141)
+
+Before touching the product, the `?r=n` mechanism was exercised on a minimal Vite + React production build that reproduces the
+app's chunk shapes (`__vitePreload` with JS `modulepreload` + CSS dependencies, two `lazy()` wrappers of one chunk, a chunk
+shared by two entries). Module-scope counters record how many times each module is evaluated. The probe lives in the
+scratch area only (it is not shipped); the real-app proof is the 21E.3 harness on the production build of the head.
+
+| Scenario | Observation | Consequence for the design |
+|---|---|---|
+| Entry chunk returns 503 once | error `TypeError: Failed to fetch dynamically imported module: <origin>/assets/A-….js`; a re-arm that imports `A-….js?r=1` renders the component; **A evaluated once**; a second `lazy()` of the same chunk (named export) resolves to the **same** `?r=1` record (still one evaluation); the typed answer outside the boundary is intact | in-place recovery works; the retry number must be **per chunk URL, shared by every wrapper**, so wrappers never create two instances |
+| A shared dependency chunk returns 503 once | the error names the **entry** URL (not the dependency); the failed dependency stays in the module map for the page's lifetime, so `A?r=1`, `A?r=2` and an unrelated entry `B` that also imports it all fail; the dependency is requested only once | not recoverable in place — after one failed retry the card must say so and offer only safe options (§5 A); retries must be bounded |
+| A CSS dependency fails | Vite throws `Error("Unable to preload CSS for <url>")` (not a chunk error); re-running the factory renders the component **without** its stylesheet; re-adding `<link rel=stylesheet href="<path>?r=1">` (validated same-origin `/assets/*.css`) restores it | handle the CSS case explicitly |
+| URL taken from the browser error | only `Failed to fetch dynamically imported module:` / `error loading dynamically imported module:` messages carry a URL; Safari's message carries none | accept the URL only when it parses, is same-origin, matches `^<BASE>assets/[A-Za-z0-9._-]+\.js$` (no sub-path, no query kept); otherwise re-run the original factory — never import anything derived from data |
+
 ## 4. Risk analysis
 
 | Risk | Where | Mitigation in this phase |
 |---|---|---|
 | A recovery path that reloads the page ends a strict attempt or drops an edit | per-question recovery | never auto-reload inside the exam; a manual reload is offered only when every answer is server-confirmed **and** the policy is not strict |
-| A retry that re-imports a module creates a second React instance | cache-busted import | only the failed **entry** chunk is re-requested; its static imports resolve to the already-loaded shared chunks (same module records) |
+| A retry that re-imports a module creates a second instance of it | cache-busted import | only a chunk whose load **failed** (never evaluated) is re-requested; one retry URL per chunk shared by all wrappers; its static imports resolve to the already-loaded shared chunks (same module records) — measured in §3.2 |
+| A failed shared dependency can never load again in this page | browser module map | bounded retries; the card then offers only safe options (continue with other questions; a manual reload only when every answer is server-confirmed and the attempt is not strict) |
 | An error card leaks internals or the answer key | fallback UI and logs | fixed Arabic copy only; the production log carries the fixed code + an allow-listed error name (the `ErrorBoundary` rule) |
 | Recovery schedules a save / submit, or loses an answer | page state | answers live in the page, outside the boundary; a failure or a retry never touches them (request counts are measured) |
 | Focus moves while typing / on autosave / on a timer tick | focus contract | focus is requested only by explicit transitions (a counter, like the existing navigation contract) |
