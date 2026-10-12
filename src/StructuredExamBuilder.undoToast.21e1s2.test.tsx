@@ -333,10 +333,10 @@ describe("21E.1 slice 2 — where the restored / focused section lands, and moti
   });
   it("while a toast is shown the builder scroller reserves room below its last control (focus is never hidden behind the toast)", () => {
     const css = readFileSync(path.join(process.cwd(), "src", "structured-builder.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    // Review Fix 2: the room is reserved at all times (no content jump when the toast leaves; a reveal right after a deletion has
-    // its scroll range); the scroll padding that keeps the band clear of anything scrolled into view applies while a toast shows.
-    expect(css).toMatch(/\.structured-builder-overlay:has\(\.sb-builder\)\{padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);
-    expect(css).toMatch(/\.structured-builder-overlay:has\(\.eb-toast\)\{scroll-padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);
-    expect(css).not.toMatch(/:has\(\.eb-toast\)\{[^}]*(?<!scroll-)padding-block-end/);
+    // Review Fix 3: the room and its scroll padding exist while a toast is shown, or from the moment a deletion / restore reveals
+    // its target ([data-toast-reserve], set by the builder) — never permanently (that pushed the sticky toolbar over the last
+    // controls at the end of the scroll range; the reserve's lifetime is pinned in StructuredExamBuilder.reviewFix3.21e1s2rf3).
+    expect(css).toMatch(/\.structured-builder-overlay:has\(\.eb-toast\),\.structured-builder-overlay\[data-toast-reserve\]\{padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\);scroll-padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);
+    expect(css).not.toMatch(/:has\(\.sb-builder\)\{[^}]*padding-block-end/);
   });
 });
