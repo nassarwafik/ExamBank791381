@@ -34,8 +34,9 @@
 .eb-page-header h1 {
   margin: 0;
   font-size: var(--eb-fs-24);
-  font-weight: var(--eb-fw-semibold);
+  font-weight: var(--eb-fw-bold);
   line-height: var(--eb-lh-tight);
+  letter-spacing: -0.01em;
 }
 /* Phase 8A — optional decorative page icon beside the title (the dashboard). */
 .eb-page-header h1:has(> .eb-page-header-icon) { display: flex; align-items: center; gap: var(--eb-space-2); }
@@ -60,26 +61,42 @@
   .eb-page-header h1 { font-size: var(--eb-fs-20); }
 }
 
-/* ---------- UX-3: StatCard ---------- */
+/* ---------- UX-3: StatCard (Phase 21E.2 premium pass) ----------
+   A straight accent bar along the top edge (clipped by the radius — it never bends round a corner like the old
+   inline-start border did), an optional tinted icon chip beside the label, tabular figures. Tone only changes
+   --eb-stat-accent (the bar + chip) and --eb-stat-ink (value + chip glyph). */
 .eb-stat-card {
+  --eb-stat-accent: var(--eb-primary);
+  --eb-stat-ink: var(--eb-primary-strong);
+  position: relative; overflow: hidden;
   display: flex; flex-direction: column; gap: var(--eb-space-1);
   min-width: 0; padding: var(--eb-space-4) var(--eb-space-4);
   background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg);
-  box-shadow: var(--eb-sh-xs);
-  border-inline-start: 3px solid var(--eb-primary);
+  box-shadow: var(--eb-sh-sm);
 }
-.eb-stat-card.tone-attention { border-inline-start-color: var(--eb-warn); }
-.eb-stat-card.tone-success { border-inline-start-color: var(--eb-success); }
-.eb-stat-card.tone-danger { border-inline-start-color: var(--eb-danger); }
-.eb-stat-card.tone-info { border-inline-start-color: var(--eb-info); }
+.eb-stat-card::before {
+  content: ""; position: absolute; inset-inline: 0; inset-block-start: 0; height: 3px;
+  background: var(--eb-stat-accent);
+}
+.eb-stat-card.tone-attention { --eb-stat-accent: var(--eb-warn); --eb-stat-ink: var(--eb-warn-tx); }
+.eb-stat-card.tone-success { --eb-stat-accent: var(--eb-success); --eb-stat-ink: var(--eb-success-tx); }
+.eb-stat-card.tone-danger { --eb-stat-accent: var(--eb-danger); --eb-stat-ink: var(--eb-danger-tx); }
+.eb-stat-card.tone-info { --eb-stat-accent: var(--eb-info); --eb-stat-ink: var(--eb-info-tx); }
+.eb-stat-head { display: flex; align-items: center; gap: var(--eb-space-2); min-width: 0; }
+.eb-stat-icon {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: var(--eb-r-sm);
+  background: color-mix(in srgb, var(--eb-stat-accent) 12%, var(--eb-surface)); color: var(--eb-stat-ink);
+}
+.eb-stat-icon svg { width: 18px; height: 18px; }
 .eb-stat-label { color: var(--eb-muted); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
 .eb-stat-value {
   color: var(--eb-text-heading); font-size: var(--eb-fs-24); font-weight: var(--eb-fw-bold);
   line-height: var(--eb-lh-tight); font-variant-numeric: tabular-nums;
 }
 .eb-stat-hint { color: var(--eb-muted); /* UX-8b — real text: muted (4.76:1), not faint */ font-size: var(--eb-fs-12); line-height: var(--eb-lh-body); }
-.eb-stat-card.is-primary { padding: var(--eb-space-5) var(--eb-space-5); }
-.eb-stat-card.is-primary .eb-stat-value { font-size: var(--eb-fs-28); }
+.eb-stat-card.is-primary { gap: var(--eb-space-2); padding: var(--eb-space-5) var(--eb-space-5) var(--eb-space-4); }
+.eb-stat-card.is-primary .eb-stat-value { font-size: var(--eb-fs-28); letter-spacing: -0.01em; }
 .eb-stat-card.tone-attention .eb-stat-value { color: var(--eb-warn-tx); }
 .eb-stat-card.tone-success .eb-stat-value { color: var(--eb-success-tx); }
 .eb-stat-card.tone-danger .eb-stat-value { color: var(--eb-danger-tx); }
@@ -92,7 +109,7 @@
 .eb-section-header-text { min-width: 0; flex: 1 1 auto; }
 .eb-section-title {
   display: flex; align-items: center; gap: var(--eb-space-2); margin: 0;
-  color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); line-height: var(--eb-lh-tight);
+  color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight);
 }
 h2.eb-section-title { font-size: var(--eb-fs-20); }
 h3.eb-section-title { font-size: var(--eb-fs-16); }

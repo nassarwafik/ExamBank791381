@@ -9,9 +9,9 @@
 
 /* ---------- Toolbar (filters · scope · actions) ---------- */
 .eb-dash-toolbar{
-  display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:var(--eb-space-3); align-items:end;
-  padding:var(--eb-space-3) var(--eb-space-4);
-  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
+  display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:var(--eb-space-3) var(--eb-space-4); align-items:end;
+  padding:var(--eb-space-4) var(--eb-space-5);
+  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-sm);
 }
 .eb-dash-filters{ display:flex; flex-wrap:wrap; gap:var(--eb-space-3); align-items:end; min-width:0; }
 .eb-dash-field{ display:flex; flex-direction:column; gap:var(--eb-space-1); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); color:var(--eb-muted); min-width:0; }
@@ -52,22 +52,33 @@
 @media (min-width:1536px){ .eb-dash-layout.has-drill{ grid-template-columns:minmax(0,1fr) 460px; } }
 
 /* ---------- KPI tiles ---------- */
-.eb-dash-kpis{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
-.eb-stat-grid{ display:grid; gap:var(--eb-space-3); }
+.eb-dash-kpis{ display:flex; flex-direction:column; gap:var(--eb-space-4); }
+.eb-stat-grid{ display:grid; gap:var(--eb-space-4); }
+/* Phase 21E.2 — the three secondary tiles are compact rows (label + hint, value at the end): one glance, less height. */
+.eb-stat-grid.is-secondary .eb-stat-card{
+  display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"label value" "hint value"; align-items:center;
+  column-gap:var(--eb-space-3); row-gap:2px; padding:var(--eb-space-3) var(--eb-space-4);
+}
+.eb-stat-grid.is-secondary .eb-stat-label{ grid-area:label; }
+.eb-stat-grid.is-secondary .eb-stat-value{ grid-area:value; font-size:var(--eb-fs-20); }
+.eb-stat-grid.is-secondary .eb-stat-hint{ grid-area:hint; }
 .eb-stat-grid.is-primary{ grid-template-columns:repeat(4,minmax(0,1fr)); }
 .eb-stat-grid.is-secondary{ grid-template-columns:repeat(3,minmax(0,1fr)); }
 
 /* ---------- Needs attention ---------- */
-.eb-attention-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--eb-space-3); align-items:start; }
+.eb-attention-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--eb-space-4); align-items:start; }
 .eb-attention-card{
-  display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0;
-  padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
-  border-block-start:3px solid var(--eb-primary);
+  --eb-attention-accent:var(--eb-primary);
+  position:relative; overflow:hidden;
+  display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0;
+  padding:var(--eb-space-5) var(--eb-space-4) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-sm);
 }
-.eb-attention-card.tone-danger{ border-block-start-color:var(--eb-danger); }
-.eb-attention-card.tone-attention{ border-block-start-color:var(--eb-warn); }
-.eb-attention-card.tone-info{ border-block-start-color:var(--eb-info); }
-.eb-attention-title{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
+/* Phase 21E.2 — a straight accent bar clipped by the card's radius (the old 3px top border bent round both corners). */
+.eb-attention-card::before{ content:""; position:absolute; inset-inline:0; inset-block-start:0; height:3px; background:var(--eb-attention-accent); }
+.eb-attention-card.tone-danger{ --eb-attention-accent:var(--eb-danger); }
+.eb-attention-card.tone-attention{ --eb-attention-accent:var(--eb-warn); }
+.eb-attention-card.tone-info{ --eb-attention-accent:var(--eb-info); }
+.eb-attention-title{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); }
 .eb-attention-count{
   display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:28px; padding:0 var(--eb-space-2);
   border-radius:var(--eb-pill); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums;
@@ -76,7 +87,7 @@
 .tone-danger .eb-attention-count{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
 .tone-attention .eb-attention-count{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
 .tone-info .eb-attention-count{ background:var(--eb-info-bg); color:var(--eb-info-tx); }
-.eb-attention-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-attention-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .eb-attention-item{
   width:100%; display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:start;
   padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm);
@@ -90,13 +101,13 @@
 .eb-attention-partial{ margin:0; padding:var(--eb-space-3); color:var(--eb-text-secondary); background:var(--eb-surface-2); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 
 /* ---------- Cards / charts ---------- */
-.eb-chart-grid,.eb-followup-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-3); align-items:start; }
+.eb-chart-grid,.eb-followup-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-4); align-items:start; }
 .eb-followup-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
 .eb-span-2{ grid-column:span 2; }
 .analytics-card{
   display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0;
-  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); padding:var(--eb-space-4);
-  box-shadow:var(--eb-sh-xs); animation:none;
+  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); padding:var(--eb-space-5);
+  box-shadow:var(--eb-sh-sm); animation:none;
 }
 .analytics-card .eb-section-header{ margin-bottom:0; }
 .analytics-chip{
@@ -230,7 +241,16 @@
 @media (max-width:767px){
   /* UX-8a — phone touch targets (≥ 44 px); desktop density unchanged */
   .eb-toolbar-button,.analytics-segmented button{ min-height:44px; }
-  .eb-stat-grid.is-primary,.eb-stat-grid.is-secondary,.eb-attention-grid,.eb-chart-grid{ grid-template-columns:minmax(0,1fr); }
+  .eb-stat-grid.is-secondary,.eb-attention-grid,.eb-chart-grid{ grid-template-columns:minmax(0,1fr); }
+  /* Phase 21E.2 — assignments-pro.css sets every .eb-stat-grid.is-secondary to two columns on narrow screens (an unscoped
+     selector); the dashboard's compact secondary rows stay one per line. */
+  .eb-dash-kpis .eb-stat-grid.is-secondary{ grid-template-columns:minmax(0,1fr); }
+  /* Phase 21E.2 — the four headline values are short: two columns halve the scroll on a phone. */
+  .eb-stat-grid.is-primary{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-3); }
+  .eb-stat-grid.is-primary .eb-stat-card.is-primary{ padding:var(--eb-space-4) var(--eb-space-3) var(--eb-space-3); }
+  .eb-stat-grid.is-primary .eb-stat-card.is-primary .eb-stat-value{ font-size:var(--eb-fs-24); }
+  .eb-dash-toolbar{ padding:var(--eb-space-3) var(--eb-space-4); }
+  .analytics-card{ padding:var(--eb-space-4); }
   .eb-span-2{ grid-column:auto; }
   .eb-dash-field select{ max-width:none; width:100%; }
   .analytics-segmented{ width:100%; }

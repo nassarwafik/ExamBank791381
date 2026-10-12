@@ -205,12 +205,12 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
         </div>
       )}
       <div className="eb-today-actions" role="group" aria-label="إجراءات سريعة">
-        <button type="button" className="eb-button is-small" onClick={() => go("messages")}><IconMail size={16} aria-hidden="true" />فتح الرسائل</button>
-        <button type="button" className="eb-button is-small" onClick={() => go("assignments")}><IconAssignments size={16} aria-hidden="true" />الواجبات</button>
-        <button type="button" className="eb-button is-small" onClick={() => go("students")}><IconStudents size={16} aria-hidden="true" />الصفوف والطلاب</button>
-        <button type="button" className="eb-button is-small" onClick={() => go("reports")}><IconReports size={16} aria-hidden="true" />التقارير</button>
-        <button type="button" className="eb-button is-small" onClick={() => go("projects")}><IconProjects size={16} aria-hidden="true" />المشاريع</button>
-        <button type="button" className="eb-button is-small" onClick={scrollToFeed}><IconMedal size={16} aria-hidden="true" />تقدير طالب</button>
+        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("messages")}><span className="eb-today-action-icon" aria-hidden="true"><IconMail size={18} /></span>فتح الرسائل</button>
+        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("assignments")}><span className="eb-today-action-icon" aria-hidden="true"><IconAssignments size={18} /></span>الواجبات</button>
+        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("students")}><span className="eb-today-action-icon" aria-hidden="true"><IconStudents size={18} /></span>الصفوف والطلاب</button>
+        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("reports")}><span className="eb-today-action-icon" aria-hidden="true"><IconReports size={18} /></span>التقارير</button>
+        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("projects")}><span className="eb-today-action-icon" aria-hidden="true"><IconProjects size={18} /></span>المشاريع</button>
+        <button type="button" className="eb-button is-small eb-today-action" onClick={scrollToFeed}><span className="eb-today-action-icon" aria-hidden="true"><IconMedal size={18} /></span>تقدير طالب</button>
       </div>
       {data && data.recent.length > 0 && (
         <section className="eb-today-recent" aria-labelledby="eb-today-recent-title">

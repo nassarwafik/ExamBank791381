@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useRef,useState,type ReactNode} from "react";
 import {Chart as ChartJS,CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler,type ChartOptions} from "chart.js";
 import {Line,Doughnut,Bar} from "react-chartjs-2";
-import {IconMedal,IconRefresh,IconDownload,IconPrint,IconSparkles,IconCheck,IconWarning,IconInfo} from "./icons";
+import {IconMedal,IconRefresh,IconDownload,IconPrint,IconSparkles,IconCheck,IconWarning,IconInfo,IconGraduation,IconAssignments,IconUser} from "./icons";
 import {MEDAL_COLORS,MEDAL_LABELS} from "./medals";
 import {QuestionTextBlock} from "./questionContent";
 import {REACTIONS,eventTypeOf,feedEventParts,type ReactionId,type FeedMedal,type FeedRank,type FeedProject,type FeedStage} from "./achievements";
@@ -502,12 +502,12 @@ function TeacherDashboard({token}:DashboardProps){
   <section className="eb-dash-section eb-dash-kpis" aria-labelledby="eb-kpis-title">
    <h2 id="eb-kpis-title" className="eb-visually-hidden">المؤشرات الرئيسية</h2>
    <div className="eb-stat-grid is-primary">
-    <StatCard primary label={isStudent?"معدل الطالب":"متوسط العلامات"} value={fmtPct(k.average)} hint={k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}/>
-    <StatCard primary label="نسبة التسليم" value={fmtPct(k.completionRate)} hint={`${k.submissions} من ${k.expectedSubmissions} حالة متوقعة`} tone="info"/>
+    <StatCard primary label={isStudent?"معدل الطالب":"متوسط العلامات"} value={fmtPct(k.average)} hint={k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)} icon={<IconGraduation size={18}/>}/>
+    <StatCard primary label="نسبة التسليم" value={fmtPct(k.completionRate)} hint={`${k.submissions} من ${k.expectedSubmissions} حالة متوقعة`} tone="info" icon={<IconCheck size={18}/>}/>
     {isStudent
-     ?<StatCard primary label="يحتاج متابعة" value={k.followUpStudents?"نعم":"لا"} hint={k.neverLogged?"لم يسجل الدخول بعد":"سجّل الدخول"} tone="attention"/>
-     :<StatCard primary label="يحتاجون متابعة" value={k.followUpStudents} hint={`${k.neverLogged} لم يسجلوا الدخول`} tone="attention"/>}
-    <StatCard primary label="بانتظار التصحيح" value={k.pendingReview} hint={`من ${k.submissions} تسليمًا`} tone="danger"/>
+     ?<StatCard primary label="يحتاج متابعة" value={k.followUpStudents?"نعم":"لا"} hint={k.neverLogged?"لم يسجل الدخول بعد":"سجّل الدخول"} tone="attention" icon={<IconUser size={18}/>}/>
+     :<StatCard primary label="يحتاجون متابعة" value={k.followUpStudents} hint={`${k.neverLogged} لم يسجلوا الدخول`} tone="attention" icon={<IconUser size={18}/>}/>}
+    <StatCard primary label="بانتظار التصحيح" value={k.pendingReview} hint={`من ${k.submissions} تسليمًا`} tone="danger" icon={<IconAssignments size={18}/>}/>
    </div>
    <div className="eb-stat-grid is-secondary">
     <StatCard label="الطلاب الفعّالون" value={k.activeStudents} hint={mode==="global"?k.activeClasses+" صفوف فعّالة":mode==="class"?"في الصف المختار":"الطالب المختار فقط"}/>
