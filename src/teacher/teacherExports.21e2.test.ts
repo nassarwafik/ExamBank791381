@@ -35,6 +35,12 @@ describe("gradebookCsvRows", () => {
     expect(zaid.slice(2, 4)).toEqual(["بانتظار التصحيح", "تم التسليم"]);
     expect(saad).toEqual(["سعد", "N1", "لم يسلّم", "لم يبدأ", 0, 3, "", "", "", ""]);
   });
+  it("a non-finite value inside an existing result is an empty cell, never 0 or «NaN»", () => {
+    const odd = student("s9", "ياسر", "Y1", { latestResult: result({ score: Number.NaN, totalMarks: undefined, percentage: Infinity }) });
+    const [row] = gradebookCsvRows({ title: "x" }, [odd], grading).slice(4);
+    expect(row.slice(6, 9)).toEqual(["", "", ""]);
+    expect(toCsv([row])).not.toMatch(/NaN|Infinity|"0"/);
+  });
   it("never exports teacher feedback, attempt epochs or other internal fields", () => {
     const csv = toCsv(out);
     for (const secret of ["سري للمعلم", "777", "runEndsAt", "attemptEpoch", "s1", "s2"]) expect(csv).not.toContain(secret);

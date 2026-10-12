@@ -2,6 +2,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, fireEvent } from "@testing-library/react";
 import AssignmentsPanel from "./AssignmentsPanel";
+import Gradebook from "./assignments/Gradebook";
 
 // Phase 21E.2 (G) — «تصدير سجل العلامات (CSV)» in the real gradebook: one browser download through reports/csv.ts (BOM, CRLF,
 // quoted cells), EVERY student of the authoritative results even while the on-screen list is searched / filtered, stable
@@ -79,5 +80,24 @@ describe("21E.2 G — gradebook CSV export", () => {
     captureDownload();
     fireEvent.click(button);
     expect((globalThis.fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(calls);   // no request
+  });
+});
+
+describe("21E.2 G — export availability", () => {
+  const base = { assignment: { assignmentId: "a1", classId: "c1", className: "x", title: "واجب", instructions: "", status: "published" as const, openAt: "", dueAt: "", questionCount: 1, totalMarks: 100, maxAttempts: 3 }, rows: [], gradingOf: () => "notSubmitted" as const,
+    search: "", onSearch: vi.fn(), filter: "all" as const, onFilter: vi.fn(), sort: "name" as const, onSort: vi.fn(), onReview: vi.fn(), onGrant: vi.fn(), onReopen: vi.fn(), onExtend: vi.fn(), onDeadline: vi.fn(), onEndAttempt: vi.fn(), fmt: (v: string) => v };
+  it("is disabled while the gradebook is busy and when there is no student at all; offered only with a handler", () => {
+    const onExportCsv = vi.fn();
+    const r = render(<Gradebook {...base} totalRows={0} busy={false} onExportCsv={onExportCsv} />);
+    expect((r.getByRole("button", { name: "تصدير سجل العلامات (CSV)" }) as HTMLButtonElement).disabled).toBe(true);
+    r.rerender(<Gradebook {...base} totalRows={3} busy onExportCsv={onExportCsv} />);
+    expect((r.getByRole("button", { name: "تصدير سجل العلامات (CSV)" }) as HTMLButtonElement).disabled).toBe(true);
+    r.rerender(<Gradebook {...base} totalRows={3} busy={false} onExportCsv={onExportCsv} />);
+    const b = r.getByRole("button", { name: "تصدير سجل العلامات (CSV)" }) as HTMLButtonElement;
+    expect(b.disabled).toBe(false);
+    fireEvent.click(b);
+    expect(onExportCsv).toHaveBeenCalledTimes(1);
+    r.rerender(<Gradebook {...base} totalRows={3} busy={false} />);
+    expect(r.queryByRole("button", { name: "تصدير سجل العلامات (CSV)" })).toBeNull();
   });
 });
