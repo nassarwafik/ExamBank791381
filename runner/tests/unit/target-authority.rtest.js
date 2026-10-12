@@ -1078,10 +1078,12 @@ test("TAR43 startup: an EXECUTED rev 7 record below a durable rev 8 authority (p
 });
 
 test("TAR44 the delivery fence alone: when the advance's supersede commit FAILS, the obsolete EXECUTED rev 7 stays on disk but never schedules, reserves or sends; the redelivery retires it (stale)", async () => {
-  const dir = tmpJournalDir(), logger = capture();
+  // The queue's clock is the test's: rev 7's retry (backoff 15 ms) can never become due before rev 8 is admitted, however slow
+  // the machine is between the waitFor and the submit (with the real clock, a CI runner sometimes let it run first).
+  const dir = tmpJournalDir(), logger = capture(), now = clock();
   const api = H.fakeApi((n, result) => (result.jobId === R7.jobId && n === 1 ? { delivered: false, retryable: true, status: 503, errorClass: "http" } : null));
   let injected = 0;
-  const h = await bootWith(dir, { maxPending: 8, api, logger }, journal => {
+  const h = await bootWith(dir, { maxPending: 8, api, logger, now }, journal => {
     const original = journal.writeRecord.bind(journal);
     journal.writeRecord = async rec => { if (rec.jobId === R7.jobId && rec.state === "superseded" && injected === 0) { injected++; throw new Error("injected supersede failure"); } return original(rec); };
   });
@@ -1090,7 +1092,8 @@ test("TAR44 the delivery fence alone: when the advance's supersede commit FAILS,
   assert.equal((await h.q.submit(R8)).status, "accepted");
   assert.equal(injected, 1);
   assert.equal(recordOf(dir, R7.jobId).state, "executed");                                         // the supersede did not commit — the fence must hold on its own
-  await h.q.idle(); await sleep(400);                                                               // well past the rev 7 backoff (FAST: 15 ms base, 120 ms cap)
+  now.advance(1000);                                                                                // rev 7's retry is due now (FAST: 15 ms base, 120 ms cap) — only the fence can stop it
+  await h.q.idle(); await sleep(400);                                                               // the scheduler re-checks every ≤ 15 ms of real time
   assert.equal(attemptsOf(h, R7), 1, "a non-authoritative EXECUTED record was delivered");
   assert.equal(attemptsOf(h, R8), 1);
   assert.equal(recordOf(dir, R8.jobId).state, "confirmed");
