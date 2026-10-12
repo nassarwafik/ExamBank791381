@@ -1,0 +1,292 @@
+#!/usr/bin/env node
+// Phase 21E.3 — student exam certification in real Chromium (certification only; never shipped). Drives a PRODUCTION build
+// (DIST, default ./dist) through the real student workflow with a local mock of the student API (the Vitest payload shapes,
+// student-sanitized: no answer key, no token, nothing deployed):
+//   portal → open the assignment → read the instructions on the start card → start the timed attempt → answer with the
+//   keyboard → save status → next → a question whose renderer chunk FAILS to load (controlled 503) → recovery → previous /
+//   next → retry → answer CLI / cloze / label / open questions → review → submit → result.
+// For every viewport (desktop 1280×900, 150 % = 853×600 @1.5, 200 % = 640×450 @2, phone 390×844) it records the focus target
+// and scroll position after start / submit / result, the live-region announcements (timer + save), the error-boundary
+// behaviour, the bottom-navigation clearance of the focused control, horizontal overflow, phone touch-target sizes,
+// computed text direction of the LTR islands, the request counts (saveDraft / submit), and writes screenshots to
+// HARNESS_OUT/<label>/. Run it on two builds to compare (DIST=<baseline build> LABEL=before · DIST=dist LABEL=after).
+// Nothing here asserts on the "before" build: the record is the evidence; `checks` lists the 21E.3 acceptance results.
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const dist = path.resolve(process.env.DIST || path.join(root, "dist"));
+const label = process.env.LABEL || "after";
+const out = path.resolve(process.env.HARNESS_OUT || path.join(root, ".harness-student-exam-21e3"), label);
+const only = (process.env.VIEWPORTS || "").split(",").filter(Boolean);
+let chromium;
+try { ({ chromium } = createRequire(path.join(process.env.PLAYWRIGHT_CORE_DIR || root, "package.json"))("playwright-core")); }
+catch { console.error("playwright-core unavailable (set PLAYWRIGHT_CORE_DIR)"); process.exit(2); }
+if (!fs.existsSync(path.join(dist, "index.html"))) { console.error("no production build at " + dist); process.exit(2); }
+fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
+
+// ---- fixtures (student-sanitized shapes) ----
+const IMG = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="800" height="400" fill="#e8eef5"/><rect x="60" y="120" width="160" height="110" rx="10" fill="#9fb3cc"/><text x="140" y="185" font-size="28" text-anchor="middle" fill="#1f2d3d">Router</text><rect x="580" y="120" width="160" height="110" rx="10" fill="#9fb3cc"/><text x="660" y="185" font-size="28" text-anchor="middle" fill="#1f2d3d">Switch</text><line x1="220" y1="175" x2="580" y2="175" stroke="#5b708a" stroke-width="6"/></svg>');
+const image = { exists: true, visible: true, assets: [{ dataUrl: IMG, origin: "uploaded", contentType: "image/svg+xml" }] };
+const questions = [
+  { examQuestionId: "m1", presentationType: "multipleChoice", text: "في أي طبقة يعمل عنوان IP؟", marks: 1, options: [{ text: "طبقة الشبكة" }, { text: "طبقة الربط" }, { text: "طبقة النقل" }] },
+  { examQuestionId: "h1", type: "hotspot", questionTypeVersion: 1, text: "حدّد الموجّه (Router) على المخطط.", marks: 1, image, hotspot: { v: 1, mode: "single", selections: 1, alt: "مخطط شبكة فيه موجّه ومبدّل" } },
+  { examQuestionId: "k1", type: "cliFill", text: "أكمل أوامر ضبط الواجهة.", marks: 2, cli: "Router(config)# interface [[f1]]\nRouter(config-if)# ip address [[f2]] 255.255.255.0", fields: [{ id: "f1" }, { id: "f2" }] },
+  { examQuestionId: "c1", type: "inlineCloze", questionTypeVersion: 1, text: "أكمل الفقرة التالية بالمصطلح الصحيح.", marks: 2,
+    inlineCloze: { v: 1, segments: [{ type: "text", text: "يعمل بروتوكول " }, { type: "blank", id: "b1", control: "text" }, { type: "text", text: " في طبقة الشبكة، بينما يعمل عنوان MAC في طبقة " },
+      { type: "blank", id: "b2", control: "dropdown", options: [{ id: "o1", label: "Physical" }, { id: "o2", label: "Data Link" }, { id: "o3", label: "Transport" }] }, { type: "text", text: "." }] } },
+  { examQuestionId: "l1", type: "labelDiagram", questionTypeVersion: 1, text: "سمِّ الجهازين على المخطط.", marks: 2, image,
+    labelDiagram: { v: 1, alt: "مخطط شبكة", allowReuse: false, zones: [{ id: "z1", shape: { kind: "rect", x: 0.08, y: 0.3, width: 0.2, height: 0.28 } }, { id: "z2", shape: { kind: "rect", x: 0.72, y: 0.3, width: 0.2, height: 0.28 } }], labels: [{ id: "a", text: "Router" }, { id: "b", text: "Switch" }] } },
+  { examQuestionId: "o1", presentationType: "open", text: "اشرح باختصار الفرق بين الموجّه والمبدّل.", marks: 2 },
+];
+const exam = { title: "اختبار الشبكات — الوحدة الثانية", metadata: {}, sections: [{ id: "s1", title: "أساسيات الشبكات", instructions: "أجب عن جميع الأسئلة.", gradingPolicy: "all", stimuli: {}, questions }] };
+const INSTRUCTIONS = "أجب عن كل الأسئلة. تُحفظ إجاباتك تلقائيًا، ويمكنك مراجعة إجاباتك قبل التسليم.";
+const TIMER_MS = Number(process.env.TIMER_MS || 5 * 60_000 + 6_000); // crosses the 5-minute threshold a few seconds after start
+const FAIL_CHUNK = process.env.FAIL_CHUNK || "HotspotResponse-";
+const FAIL_COUNT = Number(process.env.FAIL_COUNT || 1);
+
+function mockFor() {
+  const s = { started: false, startedAt: "", endsAt: 0, saves: 0, submits: 0, starts: 0, chunkFailures: 0, chunkRequests: [], submitted: null };
+  const summary = { assignmentId: "asg-21e3", title: exam.title, instructions: INSTRUCTIONS, openAt: "", dueAt: "2026-12-01T10:30:00.000Z", effectiveDueAt: "", questionCount: questions.length, totalMarks: 10, durationMinutes: 10, availability: "open", attemptsUsed: 0, allowedAttempts: 1, canAttempt: true, attemptStatus: "notStarted", hasActiveAttempt: false, latestScore: null, latestPercentage: null, latestResult: null, createdAt: "2026-10-01T08:00:00.000Z" };
+  const result = () => ({ attemptNumber: 1, submittedAt: new Date().toISOString(), score: 7, totalMarks: 10, percentage: 70, manualReviewMarks: 2, finalized: false, gradingStatus: "pendingReview" });
+  const state = () => ({ attemptsUsed: s.submitted ? 1 : 0, allowedAttempts: 1, canAttempt: !s.submitted, canWrite: s.started && !s.submitted, dueClosed: false, availability: "open", draftAnswers: {}, draftSavedAt: "",
+    latestResult: s.submitted, attempts: s.submitted ? [s.submitted] : [], timed: true, attemptModelVersion: 2, requiresStart: true, durationMinutes: 10, serverNow: new Date().toISOString(),
+    activeAttempt: s.started && !s.submitted ? { attemptNumber: 1, startedAt: s.startedAt, endsAt: new Date(s.endsAt).toISOString(), status: "active", attemptEpoch: 1 } : null,
+    effectiveAttemptEndsAt: s.started && !s.submitted ? new Date(s.endsAt).toISOString() : "", attemptExpired: false, canStartAttempt: !s.started && !s.submitted });
+  const assignment = () => ({ assignmentId: summary.assignmentId, title: exam.title, instructions: INSTRUCTIONS, openAt: "", dueAt: summary.dueAt, effectiveDueAt: "", maxAttempts: 1, durationMinutes: 10, requiresStart: !s.started, timed: true, questionCount: questions.length, totalMarks: 10, exam: s.started ? exam : { title: exam.title, metadata: {} } });
+  const notifCounts = { messages: { totalUnread: 0, directUnread: { unread: 0 }, announcementUnread: { unread: 0 } }, events: { unread: 1 }, bell: { unread: 1 } };
+  const notifItems = [{ id: "e1", createdAt: "2026-10-10T08:00:00.000Z", unread: true, type: "assignment_reviewed", assignmentId: "asg-old", assignmentTitle: "واجب الوحدة الأولى", becameFinal: true, scoreChanged: true, feedbackChanged: false, finalized: true, percentage: 85, score: 8.5, totalMarks: 10 }];
+  return { s, handle(req, res, body) {
+    const u = new URL(req.url, "http://localhost"), p = u.pathname;
+    const send = (code, j) => { res.writeHead(code, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify(j)); };
+    if (p === "/api/platform-session") return send(200, { ok: true, role: "student", displayName: "سارة" });
+    if (p === "/api/student-dashboard") return send(200, { ok: true, student: { userId: "u1", code: "C-1", displayName: "سارة", classId: "c1", shareAchievements: false }, classroom: { classId: "c1", name: "الحادي عشر — أ", grade: "11", schoolYear: "2026" }, assignments: [summary], stats: { assigned: 1, completed: 0, average: 0 } });
+    if (p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: assignment() });
+    if (p === "/api/student-notifications") return send(200, { ok: true, items: u.searchParams.get("view") === "notifications" ? notifItems : [], ...notifCounts });
+    if (p.startsWith("/api/student-submission/")) {
+      if (req.method === "GET") return send(200, { ok: true, state: state() });
+      let j = {}; try { j = JSON.parse(body || "{}"); } catch { /* malformed body → treated as no action */ }
+      if (j.action === "startAttempt") { s.starts++; if (!s.started) { s.started = true; s.startedAt = new Date().toISOString(); s.endsAt = Date.now() + TIMER_MS; } return send(200, { ok: true, state: state() }); }
+      if (j.action === "saveDraft") { s.saves++; return send(200, { ok: true, savedAt: new Date().toISOString() }); }
+      if (j.action === "submit") { s.submits++; s.submitted = result(); return send(200, { ok: true, result: s.submitted, state: state() }); }
+      return send(200, { ok: true, state: state() });
+    }
+    return send(200, { ok: true, items: [], posts: [], materials: [], events: [], unread: 0, count: 0, messages: [], threads: [] });
+  } };
+}
+let mock = mockFor();
+const MIME = { ".js": "text/javascript", ".html": "text/html; charset=utf-8", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".png": "image/png", ".json": "application/json", ".webmanifest": "application/manifest+json", ".ico": "image/x-icon" };
+const server = http.createServer((req, res) => {
+  const u = new URL(req.url, "http://localhost");
+  if (u.pathname.startsWith("/api/")) { let b = ""; req.on("data", c => { b += c; }); req.on("end", () => mock.handle(req, res, b)); return; }
+  const base = path.basename(u.pathname);
+  if (base.startsWith(FAIL_CHUNK) && base.endsWith(".js")) {
+    mock.s.chunkRequests.push(u.pathname + u.search);
+    if (mock.s.chunkFailures < FAIL_COUNT) { mock.s.chunkFailures++; res.writeHead(503, { "cache-control": "no-store" }); res.end("unavailable"); return; }
+  }
+  let full = path.resolve(dist, "." + decodeURIComponent(u.pathname));
+  if (!full.startsWith(dist + path.sep) || !fs.existsSync(full) || !fs.statSync(full).isFile()) full = path.join(dist, "index.html");
+  res.writeHead(200, { "content-type": MIME[path.extname(full)] || "application/octet-stream", "cache-control": "no-store" }); fs.createReadStream(full).pipe(res);
+});
+await new Promise(r => server.listen(0, "127.0.0.1", r));
+const origin = "http://127.0.0.1:" + server.address().port;
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ["--no-sandbox"] });
+const errors = [], record = { label, dist, timerMs: TIMER_MS, viewports: {} };
+
+// ---- in-page probes ----
+const focusInfo = page => page.evaluate(() => {
+  const el = document.activeElement;
+  if (!el || el === document.body) return { tag: "body" };
+  const r = el.getBoundingClientRect(), nav = document.querySelector(".iex-bottom-nav"), top = document.querySelector(".iex-topbar");
+  const navTop = nav ? nav.getBoundingClientRect().top : innerHeight, topBottom = top ? top.getBoundingClientRect().bottom : 0;
+  return { tag: el.tagName.toLowerCase(), cls: String(el.className || "").slice(0, 60), text: (el.textContent || "").trim().slice(0, 60), focusVisible: el.matches(":focus-visible"),
+    outline: getComputedStyle(el).outlineStyle + " " + getComputedStyle(el).outlineWidth, rect: { top: Math.round(r.top), bottom: Math.round(r.bottom) },
+    underBottomNav: r.bottom > navTop + 1, underTopBar: r.top < topBottom - 1, scrollY: Math.round(scrollY) };
+});
+const announcements = page => page.evaluate(() => (window.__live || []).slice());
+const boxes = (page, sel) => page.evaluate(s => [...document.querySelectorAll(s)].filter(e => e.getClientRects().length).map(e => { const r = e.getBoundingClientRect(); return { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10 }; }), sel);
+const overflow = page => page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+async function tabTo(page, selector, max = 30) {
+  for (let i = 0; i < max; i++) { await page.keyboard.press("Tab"); if (await page.evaluate(s => !!document.activeElement && document.activeElement.matches(s), selector)) return true; }
+  return false;
+}
+const step = async (rec, name, fn) => { try { const v = await fn(); rec.steps.push({ step: name, ok: true, ...(v && typeof v === "object" ? v : { value: v }) }); return v; } catch (e) { rec.steps.push({ step: name, ok: false, error: String(e && e.message || e).slice(0, 300) }); return undefined; } };
+
+async function run(name, viewport, mobile, dsf) {
+  mock = mockFor();
+  const ctx = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: dsf, locale: "ar", reducedMotion: "reduce" });
+  await ctx.addInitScript(() => {
+    sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", "student"); sessionStorage.setItem("examBankSessionDisplayName", "سارة");
+    // Record every text change of an aria-live / role=status|alert region (what a screen reader would be offered).
+    window.__live = [];
+    const t0 = performance.now();
+    const seen = new WeakMap();
+    const scan = () => { document.querySelectorAll("[aria-live],[role=status],[role=alert]").forEach(el => { const txt = (el.textContent || "").trim(); if (seen.get(el) !== txt) { seen.set(el, txt); if (txt) window.__live.push({ t: Math.round(performance.now() - t0), cls: String(el.className || "").slice(0, 40), live: el.getAttribute("aria-live") || el.getAttribute("role"), text: txt.slice(0, 120) }); } }); };
+    new MutationObserver(scan).observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["hidden", "class"] });
+  });
+  const page = await ctx.newPage();
+  page.on("pageerror", e => errors.push(name + ": " + e)); page.on("console", m => { if (m.type() === "error" && !/503|Failed to (load resource|fetch dynamically)/.test(m.text())) errors.push(name + " console: " + m.text()); });
+  const shot = (n, full = false) => page.screenshot({ path: path.join(out, name + "-" + n + ".png"), fullPage: full });
+  const rec = record.viewports[name] = { steps: [] };
+
+  await page.goto(origin + "/", { waitUntil: "networkidle" });
+  await page.waitForSelector(".eb-sp-task-action", { timeout: 20000 });
+  await shot("01-portal");
+  // Notification panel (touch targets + grade string direction) — opened from the portal bell.
+  await step(rec, "notifications", async () => {
+    await page.click(".eb-notif-bell"); await page.waitForSelector(".eb-notif-preview", { timeout: 8000 });
+    const r = { headAction: await boxes(page, ".eb-notif-head-action"), items: await boxes(page, ".eb-notif-item, .eb-notif-list button"),
+      gradeText: await page.evaluate(() => document.querySelector(".eb-notif-preview")?.textContent || ""),
+      gradeIsolated: await page.evaluate(() => !!document.querySelector(".eb-notif-preview bdi, .eb-notif-preview [dir=ltr]")) };
+    await shot("02-notifications"); await page.keyboard.press("Escape"); return r;
+  });
+  await step(rec, "install-card-brand", () => page.evaluate(() => {
+    const t = document.querySelector(".eb-install-title"); if (!t) return { present: false };
+    const iso = t.querySelector("bdi, [dir=ltr]");
+    // Visual order probe: is the "+" drawn to the RIGHT of "Tadris" (correct LTR) or to its left (RTL reordering)?
+    const tn = [...t.childNodes, ...(iso ? iso.childNodes : [])].find(n => n.nodeType === 3 && n.textContent.includes("Tadris+"));
+    if (!tn) return { present: true, text: t.textContent, isolated: !!iso };
+    const i = tn.textContent.indexOf("Tadris+"), rg = document.createRange();
+    rg.setStart(tn, i); rg.setEnd(tn, i + 1); const T = rg.getBoundingClientRect();
+    rg.setStart(tn, i + 6); rg.setEnd(tn, i + 7); const P = rg.getBoundingClientRect();
+    return { present: true, text: t.textContent, isolated: !!iso, plusRightOfT: P.left > T.left };
+  }));
+
+  await page.click(".eb-sp-task-action");
+  await page.waitForSelector(".iex-start-card, .structured-cover", { timeout: 20000 });
+  await step(rec, "start-card", () => page.evaluate(() => ({ instructionsVisible: !!document.querySelector(".iex-start-card p")?.textContent?.includes("أجب عن كل الأسئلة") })));
+  await shot("03-start-card");
+  // START with the keyboard (Tab to the start button, Enter) so focus-visible heuristics match a keyboard user.
+  await step(rec, "start", async () => {
+    const reached = await tabTo(page, ".iex-start-actions .is-primary", 20);
+    await page.keyboard.press("Enter");
+    await page.waitForSelector(".iex-page-heading", { timeout: 20000 }); await page.waitForTimeout(400);
+    return { reachedByKeyboard: reached, focus: await focusInfo(page) };
+  });
+  await step(rec, "details-disclosure", () => page.evaluate(() => { const b = document.querySelector(".iex-details-toggle"), p = document.querySelector(".iex-details-panel"); return { expanded: b?.getAttribute("aria-expanded"), panelHeight: p ? Math.round(p.getBoundingClientRect().height) : null, firstQuestionTop: Math.round(document.querySelector(".iex-page-heading")?.getBoundingClientRect().top ?? -1) }; }));
+  await shot("04-started-q1");
+  await step(rec, "answer-q1-keyboard", async () => {
+    const reached = await tabTo(page, ".iex-option input[type=radio]");
+    await page.keyboard.press("Space"); await page.waitForTimeout(1600);
+    return { reached, focus: await focusInfo(page), save: await page.evaluate(() => document.querySelector(".iex-save-state")?.textContent || "") };
+  });
+  await shot("05-q1-answered");
+  const savesBeforeFailure = mock.s.saves;
+  await step(rec, "next-to-failing-q2", async () => {
+    await page.click(".iex-nav-next"); await page.waitForTimeout(2500);
+    const r = await page.evaluate(() => ({
+      examStillMounted: !!document.querySelector(".iex-topbar") && !!document.querySelector(".iex-bottom-nav"),
+      rootBoundary: /تم تحديث الموقع|حدث خطأ غير متوقع/.test(document.body.textContent || ""),
+      recoveryCard: !!document.querySelector(".iex-q-recovery"),
+      recoveryText: (document.querySelector(".iex-q-recovery")?.textContent || "").slice(0, 200),
+      leaksInternals: /TypeError|Failed to fetch|assets\/|\.js\b|correct|expected/i.test(document.querySelector(".iex-q-recovery")?.textContent || ""),
+    }));
+    return { ...r, chunkRequests: mock.s.chunkRequests.slice() };
+  });
+  await shot("06-q2-renderer-failed");
+  await step(rec, "previous-keeps-q1-answer", async () => {
+    if (!(await page.$(".iex-nav-prev"))) return { skipped: "exam not mounted" };
+    await page.click(".iex-nav-prev"); await page.waitForTimeout(400);
+    const checked = await page.evaluate(() => [...document.querySelectorAll(".iex-option input[type=radio]")].findIndex(i => i.checked));
+    await page.click(".iex-nav-next"); await page.waitForTimeout(800);
+    return { q1CheckedIndex: checked, recoveryCardAgain: !!(await page.$(".iex-q-recovery")) };
+  });
+  await step(rec, "retry", async () => {
+    const btn = await page.$(".iex-q-recovery button");
+    if (!btn) return { skipped: "no retry action" };
+    await btn.focus(); await page.keyboard.press("Enter");
+    await page.waitForSelector(".vq-overlay", { timeout: 10000 });
+    return { rendered: true, chunkRequests: mock.s.chunkRequests.slice(), focus: await focusInfo(page) };
+  });
+  await shot("07-q2-recovered");
+  await step(rec, "no-extra-requests-from-failure", () => ({ savesBefore: savesBeforeFailure, savesAfter: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts }));
+  await step(rec, "answer-q2-hotspot", async () => {
+    if (!(await page.$(".vq-overlay"))) return { skipped: true };
+    await page.locator(".vq-image").evaluate(i => i.complete && i.naturalWidth > 0 ? null : new Promise(r => { i.onload = r; i.onerror = r; }));
+    await page.locator(".vq-overlay").scrollIntoViewIfNeeded(); const b = await page.locator(".vq-overlay").boundingBox();
+    await page.mouse.click(b.x + b.width * 0.17, b.y + b.height * 0.45); await page.waitForSelector(".vq-marker", { timeout: 5000 });
+    return { hint: await page.evaluate(() => (document.querySelector(".hotspot-response .vq-note")?.textContent || "").length), keyboardGuide: !!(await page.$(".vq-keyboard-guide")) };
+  });
+  await shot("08-q2-hotspot");
+  await step(rec, "q3-cli", async () => {
+    await page.click(".iex-nav-next"); await page.waitForSelector(".iex-cli-input", { timeout: 10000 });
+    await tabTo(page, ".iex-cli-input"); await page.keyboard.type("g0/0"); await page.keyboard.press("Tab"); await page.keyboard.type("192.168.1.1");
+    return { focus: await focusInfo(page), dir: await page.evaluate(() => { const pre = document.querySelector(".iex-cli"), i = document.querySelector(".iex-cli-input"); return { preDir: pre?.getAttribute("dir"), preDirection: pre && getComputedStyle(pre).direction, preBidi: pre && getComputedStyle(pre).unicodeBidi, inputDir: i?.getAttribute("dir"), inputDirection: i && getComputedStyle(i).direction }; }),
+      sizes: await boxes(page, ".iex-cli-input") };
+  });
+  await shot("09-q3-cli");
+  await step(rec, "q4-cloze", async () => {
+    await page.click(".iex-nav-next"); await page.waitForSelector(".cloze-input", { timeout: 10000 });
+    await tabTo(page, ".cloze-input"); await page.keyboard.type("IP");
+    return { focus: await focusInfo(page), input: await boxes(page, ".cloze-input"), select: await boxes(page, ".cloze-select") };
+  });
+  await shot("10-q4-cloze");
+  await step(rec, "q5-label", async () => {
+    await page.click(".iex-nav-next"); await page.waitForSelector(".vq-chip, .label-diagram-response", { timeout: 10000 }); await page.waitForTimeout(300);
+    return { chips: await boxes(page, ".vq-chip"), selects: await boxes(page, ".vq-list select"), zoneButtons: await boxes(page, ".vq-zone-btn"), keyboardGuide: !!(await page.$(".vq-keyboard-guide")) };
+  });
+  await shot("11-q5-label");
+  await step(rec, "q6-open-textarea-clearance", async () => {
+    await page.click(".iex-nav-next"); await page.waitForSelector("textarea.iex-open", { timeout: 10000 });
+    await page.evaluate(() => scrollTo(0, 0));
+    const reached = await tabTo(page, "textarea.iex-open"); await page.keyboard.type("الموجّه يربط شبكات مختلفة.");
+    return { reached, focus: await focusInfo(page), textarea: await boxes(page, "textarea.iex-open") };
+  });
+  await shot("12-q6-open-focused");
+  await step(rec, "timer-announcements", async () => { await page.waitForTimeout(Math.max(0, 7000)); return { live: (await announcements(page)).filter(a => /دقائق|دقيقة/.test(a.text)) }; });
+  await step(rec, "overflow-in-exam", () => overflow(page));
+  await shot("13-exam-full", true);
+  await step(rec, "review-submit-result", async () => {
+    await page.click(".iex-nav-review"); await page.waitForSelector(".iex-review-title", { timeout: 5000 });
+    const reviewFocus = await focusInfo(page);
+    await shot("14-review");
+    await page.click(".iex-submit"); await page.waitForSelector("[role=dialog] button, .eb-dialog button", { timeout: 5000 });
+    await page.click("[role=dialog] button:has-text('تسليم الآن')");
+    await page.waitForSelector(".iex-result-card", { timeout: 10000 }); await page.waitForTimeout(500);
+    return { reviewFocus, resultFocus: await focusInfo(page), submits: mock.s.submits };
+  });
+  await shot("15-result");
+  rec.live = await announcements(page);
+  rec.requests = { saves: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts, chunkRequests: mock.s.chunkRequests };
+  await ctx.close();
+}
+const VIEWPORTS = [["desktop", { width: 1280, height: 900 }, false, 1], ["desktop-150pct", { width: 853, height: 600 }, false, 1.5], ["desktop-200pct", { width: 640, height: 450 }, false, 2], ["phone", { width: 390, height: 844 }, true, 2]];
+for (const v of VIEWPORTS) if (!only.length || only.includes(v[0])) await run(...v);
+await browser.close(); server.close();
+record.errors = errors;
+
+// ---- 21E.3 acceptance checks (reported, never thrown) ----
+const checks = [];
+const ck = (vp, id, pass, detail) => checks.push({ vp, id, pass: !!pass, detail });
+for (const [vp, r] of Object.entries(record.viewports)) {
+  const s = Object.fromEntries(r.steps.map(x => [x.step, x]));
+  ck(vp, "A1 failing renderer keeps the exam mounted", s["next-to-failing-q2"]?.examStillMounted && !s["next-to-failing-q2"]?.rootBoundary, s["next-to-failing-q2"]);
+  ck(vp, "A2 recovery card shown, no internals", s["next-to-failing-q2"]?.recoveryCard && !s["next-to-failing-q2"]?.leaksInternals, s["next-to-failing-q2"]?.recoveryText);
+  ck(vp, "A3 other question keeps its answer", s["previous-keeps-q1-answer"]?.q1CheckedIndex === 0, s["previous-keeps-q1-answer"]);
+  ck(vp, "A4 retry renders the question", s.retry?.rendered === true, s.retry?.chunkRequests);
+  ck(vp, "A5 no save / submit / start caused by the failure", s["no-extra-requests-from-failure"]?.savesAfter === s["no-extra-requests-from-failure"]?.savesBefore && s["no-extra-requests-from-failure"]?.submits === 0 && s["no-extra-requests-from-failure"]?.starts === 1, s["no-extra-requests-from-failure"]);
+  ck(vp, "B1 focus on the question heading after start", s.start?.focus?.cls?.includes("iex-page-heading"), s.start?.focus);
+  ck(vp, "B2 focus on the result heading after submit", s["review-submit-result"]?.resultFocus?.tag === "h1", s["review-submit-result"]?.resultFocus);
+  ck(vp, "B3 exactly one submit", s["review-submit-result"]?.submits === 1, s["review-submit-result"]?.submits);
+  ck(vp, "C1 5-minute announcement exactly once", (s["timer-announcements"]?.live || []).filter(a => /5 دقائق/.test(a.text)).length === 1, s["timer-announcements"]?.live);
+  ck(vp, "D1 no announcement of every pending/saving/saved cycle", !(r.live || []).some(a => /جارٍ الحفظ/.test(a.text) && /polite|status/.test(a.live)), (r.live || []).filter(a => /حفظ/.test(a.text)));
+  ck(vp, "F1 CLI block is an LTR island", s["q3-cli"]?.dir?.preDir === "ltr" && s["q3-cli"]?.dir?.inputDir === "ltr", s["q3-cli"]?.dir);
+  ck(vp, "G1 focused textarea not under the bottom navigation", s["q6-open-textarea-clearance"]?.focus && !s["q6-open-textarea-clearance"].focus.underBottomNav && !s["q6-open-textarea-clearance"].focus.underTopBar, s["q6-open-textarea-clearance"]?.focus);
+  ck(vp, "G2 no horizontal page overflow", s["overflow-in-exam"]?.scrollWidth <= s["overflow-in-exam"]?.clientWidth, s["overflow-in-exam"]);
+  if (vp === "phone") {
+    const min44 = a => Array.isArray(a) && a.length > 0 && a.every(b => b.h >= 44 && b.w >= 44);
+    ck(vp, "E1 CLI inputs ≥ 44×44", min44(s["q3-cli"]?.sizes), s["q3-cli"]?.sizes);
+    ck(vp, "E2 cloze controls ≥ 44×44", min44(s["q4-cloze"]?.input) && min44(s["q4-cloze"]?.select), s["q4-cloze"]);
+    ck(vp, "E3 label chips / selects ≥ 44×44", min44(s["q5-label"]?.chips) && min44(s["q5-label"]?.selects), s["q5-label"]);
+    ck(vp, "E4 notification action ≥ 44×44", min44(s.notifications?.headAction), s.notifications?.headAction);
+  }
+}
+record.checks = checks;
+fs.writeFileSync(path.join(out, "record.json"), JSON.stringify(record, null, 2));
+const passed = checks.filter(c => c.pass).length;
+console.log(JSON.stringify({ label, out, errors: errors.length, checks: passed + "/" + checks.length }, null, 2));
+for (const c of checks) console.log((c.pass ? "PASS " : "FAIL ") + c.vp.padEnd(15) + c.id);
+if (errors.length) console.log("ERRORS:\n" + errors.join("\n"));
