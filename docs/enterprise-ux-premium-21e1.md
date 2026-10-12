@@ -140,7 +140,7 @@ independent reviewer in the PR.
 |---|---|---|---|
 | Gating order of the 12 confirmations | L | identical `if (!ok) return` structure; async handlers return before any state change on cancel | focused tests per surface; Chromium flows |
 | `useConfirm` contract (20+ consumers) | L | same return shape and semantics; logic moved verbatim into `useConfirmState` | `src/ui/dialog.test.tsx` (unchanged) + full suite |
-| First confirmation in `App.tsx` loads a chunk | L | the `ConfirmDialog` / `Dialog` chunks are already in the static closure of the teacher landing page (`TeacherPlatform`) and of the structured builder, both loaded before any App.tsx confirmation can be reached, so the lazy import resolves from the module cache; if it ever has to fetch, nothing renders and the caller keeps awaiting; stale-chunk recovery via `lazyWithRetry` | build closure check (§5.2); `useDeferredConfirm` tests; deployment-recovery inventory |
+| First confirmation in `App.tsx` loads a chunk | L | **Corrected in slice 2:** the builder landing is rendered by `App.tsx` itself, not by `TeacherPlatform`, so the first App.tsx confirmation there (e.g. deleting a saved exam) DID fetch the `ConfirmDialog` chunk on the click (the independent review measured ~356 ms with nothing painted on a throttled profile). While it loads nothing renders and the caller keeps awaiting; stale-chunk recovery via `lazyWithRetry`. Slice 2 warms the chunk on idle once a teacher session is validated (`src/ui/confirmPrefetch.ts`, `docs/enterprise-ux-premium-21e1-slice2.md`) | `useDeferredConfirm` tests; deployment-recovery inventory; slice-2 throttled first-confirm measurement |
 | `.eb-dialog-root` width cap | L | at ≥ 320 CSS px `inset: 0` is already ≤ 100vw (no change); below it the dialog becomes reachable | Chromium 84/84 at 8 viewports; mutant 81/84 |
 | Coarse-pointer 44 px buttons | L | only taller decision buttons on touch devices | Chromium touch-tablet case |
 | Bundle script edit | L | additive check; existing checks untouched | guard passes on baseline and head, fails on the eager variant |
@@ -160,4 +160,6 @@ outline guard widened to `src/**/*.css`. Same gate: before / after on the real b
   the dialog itself is now fully visible. The page-wide minimum belongs to 21E.6 (responsive certification).
 - The service worker does not cache app chunks (it only serves the offline page). If a teacher lost the connection after
   loading the app shell but before any teacher page loaded the dialog chunk, an App.tsx confirmation could not open: the
-  action is then simply not taken (never a silent destructive default). In practice the teacher landing page loads that chunk.
+  action is then simply not taken (never a silent destructive default). *Erratum (slice 2):* this section first said the teacher
+  landing page loads that chunk; it does not (the landing is App.tsx's own view). Slice 2 prefetches it on idle after the teacher
+  session is validated, which narrows this window to "lost the connection within the first idle moment after sign-in".

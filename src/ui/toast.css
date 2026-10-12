@@ -1,0 +1,94 @@
+/* ============================================================
+   Phase 21E.1 (slice 2) — toast (src/ui/Toast.tsx). Token-only (--eb-*), RTL-first, logical properties.
+   Loaded with its first consumer (the structured builder), never in the initial CSS.
+   A calm dark-navy card (the shell's navigation surface), light text, one quiet action, a close button.
+   ============================================================ */
+
+.eb-toast-layer {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: var(--eb-z-toast);
+  display: flex;
+  justify-content: center;
+  padding-inline: var(--eb-space-4);
+  padding-block-end: max(var(--eb-space-4), env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.eb-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--eb-space-3);
+  inline-size: min(560px, 100%);
+  min-block-size: 52px;
+  padding-block: var(--eb-space-2);
+  padding-inline: var(--eb-space-4) var(--eb-space-2);
+  background: var(--eb-nav-bg);
+  color: var(--eb-nav-text);
+  border: 1px solid var(--eb-nav-border);
+  border-radius: var(--eb-r);
+  box-shadow: var(--eb-sh-lg);
+  font-family: var(--eb-font);
+  font-size: var(--eb-fs-14);
+  line-height: var(--eb-lh-tight);
+}
+
+.eb-toast-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: var(--eb-pill);
+  background: var(--eb-nav-hover);
+  color: var(--eb-nav-text);
+}
+
+.eb-toast-message {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  /* Review Fix 1 (V1) — Arabic reads comfortably at 16 px; the body line height keeps diacritics and the guillemets unclipped. */
+  font-size: var(--eb-fs-16);
+  line-height: var(--eb-lh-body);
+  font-weight: var(--eb-fw-medium);
+  overflow-wrap: anywhere;
+}
+
+.eb-toast-action {
+  flex: none;
+  min-block-size: 36px;
+  padding-block: 0;
+  padding-inline: var(--eb-space-4);
+  border: 1px solid var(--eb-nav-border);
+  border-radius: var(--eb-r-sm);
+  background: var(--eb-nav-hover);
+  color: var(--eb-surface);
+  font: inherit;
+  font-weight: var(--eb-fw-semibold);
+  cursor: pointer;
+  transition: background var(--eb-dur) var(--eb-ease);
+}
+.eb-toast-action:hover { background: var(--eb-nav-border); }
+.eb-toast-action:disabled { opacity: .55; cursor: not-allowed; }
+
+.eb-toast-close { flex: none; }
+
+@media (max-width: 767px) {
+  .eb-toast { inline-size: 100%; }
+  .eb-toast-action { min-block-size: 44px; }
+}
+@media (pointer: coarse) {
+  .eb-toast-action { min-block-size: 44px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-eb-motion="off"]) .eb-toast { animation: ebToastIn var(--eb-dur) var(--eb-ease) both; }
+}
+@keyframes ebToastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}

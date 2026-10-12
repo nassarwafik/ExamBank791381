@@ -33,6 +33,7 @@ import { isStructuredExam } from "./examTypes";
 import type { StructuredExam, BuilderImageAsset } from "./examTypes";
 import { useAutoRefresh } from "./ui/useAutoRefresh";
 import { useDeferredConfirm } from "./ui/useDeferredConfirm";
+import { prefetchConfirmDialog, whenIdle } from "./ui/confirmPrefetch";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { GovernanceService } from "./examGovernance";
@@ -842,6 +843,9 @@ function App() {
   const [messageUnread, setMessageUnread] = useState<{ total: number; capped: boolean }>({ total: 0, capped: false });
   const [messageUnreadNonce, setMessageUnreadNonce] = useState(0);
   const teacherSessionReady = sessionValidated && !!token && sessionRole === "teacher";
+  // 21E.1 slice 2 — once a teacher session is validated, warm the confirmation dialog on idle (no initial-bundle growth; a failed
+  // prefetch is silent and never reloads — see prefetchConfirmDialog).
+  useEffect(() => { if (!teacherSessionReady) return; return whenIdle(prefetchConfirmDialog); }, [teacherSessionReady]);
   async function loadMessageUnread() {
     if (!teacherSessionReady) return;
     try {
@@ -6820,7 +6824,7 @@ function App() {
                         if (!t) return;
                         if (
                           (exam.metadata?.generalInstructions || "").trim() &&
-                          !(await confirm({ title: "استبدال التعليمات العامة", message: "سيستبدل هذا القالب نص التعليمات العامة الحالي. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات" }))
+                          !(await confirm({ title: "استبدال التعليمات العامة", message: "سيستبدل هذا القالب نص التعليمات العامة الحالي. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات", initialFocus: "cancel" }))
                         )
                           return;
                         updateExamMetadata("generalInstructions", t.text);
