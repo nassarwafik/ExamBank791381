@@ -81,8 +81,9 @@ export default function ExamSectionEditor(props: Props) {
               <option value="">تطبيق نموذج جاهز…</option>
               {SECTION_PRESETS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
-            <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
-            <button type="button" className="sb-icon-btn" title="أسفل" aria-label="أسفل" onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
+            {/* Phase 21E.2 (E) — the pair names the section it moves, like the question reorder buttons («نقل السؤال N …»). */}
+            <button type="button" className="sb-icon-btn" title={"نقل القسم " + (index + 1) + " للأعلى"} aria-label={"نقل القسم " + (index + 1) + " للأعلى"} onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
+            <button type="button" className="sb-icon-btn" title={"نقل القسم " + (index + 1) + " للأسفل"} aria-label={"نقل القسم " + (index + 1) + " للأسفل"} onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
             <button type="button" className="sb-icon-btn sb-danger" title="حذف القسم" onClick={onDelete} disabled={disabled}>حذف القسم</button>
           </div>
         </div>

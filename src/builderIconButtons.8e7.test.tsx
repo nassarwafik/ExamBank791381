@@ -104,7 +104,7 @@ describe("Phase 8E-7 — builder glyph buttons have real accessible names", () =
   it("ExamSectionEditor: move up / move down", () => {
     const section = { id: "s1", title: "القسم", instructions: "", gradingPolicy: "all", maxMarks: null, requiredAnswers: null, answerUnit: "question", stimuli: {}, questions: [] } as unknown as BuilderSection;
     render(<ExamSectionEditor section={section} index={0} total={2} sectionOptions={[{ id: "s1", title: "القسم" }]} patch={vi.fn()} onDelete={vi.fn()} onMove={vi.fn()} onAddQuestion={vi.fn()} onQuestionChange={vi.fn()} onQuestionDelete={vi.fn()} onQuestionMove={vi.fn()} onQuestionDuplicate={vi.fn()} onQuestionMoveToSection={vi.fn()} onPreviewQuestion={vi.fn()} />);
-    names("أعلى", "أسفل");
+    names("نقل القسم 1 للأعلى", "نقل القسم 1 للأسفل");                              // 21E.2 (E): the pair names its section
     noGlyphNames();
   });
 
