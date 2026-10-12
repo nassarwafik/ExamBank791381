@@ -193,6 +193,14 @@ describe("21E.1 slice 2 RF2 — every focus after a deletion carries preventScro
     deleteQuestion("q2");
     expect(scrollCalls.map(c => c.margin)).toEqual([144 + 12 + "px"]);
   });
+  it("the clearance is measured inside the SCROLLER (its own top edge subtracted), never from the viewport", async () => {
+    await start();
+    geo.scroller = { top: 10, height: VIEW_H };
+    geo.toolbar = { top: 40, height: TOOLBAR_H };                           // bottom 160 → 150 inside the scroller (> resting 136)
+    hide("sb-q-q3");
+    deleteQuestion("q2");
+    expect(scrollCalls.map(c => c.margin)).toEqual([150 + 12 + "px"]);
+  });
   it("without a scroller padding the resting position is the toolbar's height alone", async () => {
     await start(<Host scrollerPadding="0px" />);
     geo.toolbar = { top: -100, height: TOOLBAR_H };
@@ -216,6 +224,18 @@ describe("21E.1 slice 2 RF2 — the restored card is centred only when it fits b
       expect(focusCalls.filter(c => c.key === "sb-q-q2").every(c => c.opts?.preventScroll)).toBe(true);
       cleanup();
     }
+  });
+  it("a restored SECTION is focused with preventScroll too, and aligned by its top below the resting toolbar", async () => {
+    await start();
+    deleteSection("s1");
+    hide("section-s1");
+    fireEvent.click(screen.getByRole("button", { name: "تراجع عن حذف القسم" }));
+    await wait(5);
+    expect(document.activeElement).toBe(sectionEl("s1"));
+    const calls = focusCalls.filter(c => c.key === "section-s1");
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every(c => c.opts?.preventScroll === true)).toBe(true);
+    expect(scrollCalls.filter(c => c.key === "section-s1").map(c => [c.opts?.block, c.margin])).toEqual([["start", CLEARANCE + "px"]]);
   });
   it("after a deletion the same rule counts the band of the toast ABOUT to show", async () => {
     for (const [height, block] of [[AREA_WITH_BAND, "center"], [AREA_WITH_BAND + 1, "start"]] as const) {

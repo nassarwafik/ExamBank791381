@@ -128,6 +128,17 @@ describe("21E.1 slice 2 — Toast", () => {
     expect(screen.queryByRole("group", { name: "إشعار" })).toBeNull();        // the next toast ran its own countdown
     expect(log.map(l => l.reason)).toEqual(["escape", "timeout"]);
   });
+  it("Review Fix 2: a hover left on the previous toast never carries into the next one — after focus leaves the new card, its countdown runs", () => {
+    render(<Host duration={3000} />);
+    show();
+    act(() => { fireEvent.mouseEnter(screen.getByRole("group", { name: "إشعار" })); });   // the pointer rests on the old card
+    show({ message: "التالي", action: { label: "تراجع", accessibleLabel: "تراجع عن حذف السؤال", onAction: () => {} } });
+    const btn = screen.getByRole("button", { name: "تراجع عن حذف السؤال" });
+    act(() => { btn.focus(); fireEvent.focus(btn); });
+    act(() => { fireEvent.blur(btn, { relatedTarget: null }); screen.getByRole("button", { name: "قبل" }).focus(); });
+    advance(3500);
+    expect(screen.queryByRole("group", { name: "إشعار" })).toBeNull();
+  });
   it("Review Fix 2: the owner learns HOW the toast was dismissed — a pointer click (detail ≥ 1) vs keyboard / Escape / timers — and the action receives it", () => {
     render(<Host />);
     const via: unknown[] = [];
