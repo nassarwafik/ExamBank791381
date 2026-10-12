@@ -255,3 +255,69 @@ Measured so far (the full exact-head evidence goes in the PR):
   warnings (baseline), 0 errors; `tsc -b` clean.
 - Chromium `PART=builder` on the scratch build: 40/40 checks against 10/40 on the #300 build. Toolbar height: desktop 300 → 106 px,
   150 % 350 → 106 px; not sticky at 200 % and on phones.
+
+## 10. Premium Visual Redesign — slice 1: the structured exam builder
+
+Owner direction (2026-10-12): visible, high-quality UI before 2026-10-14, presentation only, with a resource-efficient workflow.
+This slice is stacked on part 2 (`c932f318`), because it styles the same builder.
+
+**What changed** (one new sheet, `src/builder/builder-premium.css`, imported last by `StructuredExamBuilder.tsx`; no markup, behaviour,
+exam JSON, grading, persistence or engine change):
+
+- **Canvas:** a tinted page (`--eb-primary-050` → `--eb-bg`) with the builder in a centred column (max 1200 px), so cards read as
+  cards.
+- **Toolbar:** a floating glass bar. The exam title reads as the page heading (20 px bold) and stays identifiable as a field:
+  - at rest, a dashed underline in `--eb-placeholder`, 4.76:1 (WCAG 1.4.11; the old full border was 1.4:1);
+  - on hover and focus, the full border.
+- **Sections:** the primary card. Each has a header band, a 4 px accent edge on the start side, a filled «القسم n» badge and a
+  24 px section title (same underline rule).
+  - The grading rule is a panel: segmented choices plus an info callout for the rule's explanation.
+- **Questions:** lighter nested cards with a header strip, a 32 px gradient number badge and quiet icon buttons.
+  - Icon buttons are 36 px, and 44 px on touch screens (`pointer: coarse`).
+  - The meta row (number, marks, section) sits in a compact panel.
+- **Question-type summary (`qt-meta`)** is now a chip row. `questionTypes.css` is not loaded in the builder chunk, so on every
+  question the type, version, grading mode and capabilities rendered as a bare `<dl>` list (visible in the BEFORE capture).
+- **Secondary actions** are tonal pills, no longer dashed: dashed read as "draft / unavailable". «+ إضافة قسم» is a full-width
+  drop-zone card.
+- **Phones and 200 % zoom:** tighter padding and smaller headings. Reduced motion removes transitions; forced colours keep the
+  accent and field borders.
+
+**What it must never do** (pinned by `src/builder/builderPremium.21e2p1.test.ts`, 11 tests):
+
+- pad the overlay, since the 21E.1 slice 2 toast reserve owns `padding-block-end`;
+- position the toolbar;
+- drop the card focus outline;
+- clip card content;
+- use literal colours or physical left / right.
+
+Three planted defects confirm the guards bite: overlay padding, toolbar `position`, and the focus outline. Each was KILLED, with
+the file restored byte-for-byte.
+
+**Evidence** (local, this head):
+
+- **Chromium harness** `PART=builder`: 40/40 checks on both BEFORE (`c932f318`) and AFTER builds, at 1280×900, 853×600 @1.5,
+  640×450 @2 and 390×844 touch; 0 page errors.
+  - Dialog, menus, Escape guard, toast placement, sticky rule and overflow are unchanged.
+  - Screenshots are not committed (harness output stays out of git, AGENTS.md §5); before / after composites are attached to the
+    PR.
+- **Static checks:** `tsc -b` clean; lint 125 warnings (baseline), 0 errors; `npm run build` with the bundle guard passed;
+  `git diff --check` clean.
+- **Full root suite** (2 CPUs, container TZ `Asia/Jerusalem`): 12,302 / 12,308 passed. The six failures are environmental and
+  were all reproduced or cleared:
+  - four student save-time assertions expect UTC and pass with `TZ=UTC`, as CI runs;
+  - `phase8b` passed on re-run;
+  - `surfacePlotUi.21da4` › rotate / zoom times out at 5 s on this machine **on the baseline as well** (5.6 s, 5.3 s).
+  - Exact-head CI is the arbiter.
+
+**Also in this slice** (documentation only):
+
+- the 21E.1 slice 2 record's contrast table listed four old `--eb-muted` ratios against the wrong tokens (erratum with the
+  recomputed values);
+- the plan records the owner's ratification at the merge of #300: the `--eb-muted` value-change rule and F3 open-when-instructions.
+  F3's code is unchanged.
+
+**Next slices** (each separately reviewable):
+
+1. the question editors' inner forms (options, tables, media);
+2. the navigator and finalization panels;
+3. the teacher dashboard and lists in the same visual language.
