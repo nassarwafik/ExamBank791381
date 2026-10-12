@@ -412,6 +412,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // it never pops the history stack, so later edits are never undone by mistake.
   const { showToast, dismissToast, toastRegion } = useToast({ defaultDurationMs: undoToastMs, actionDisabled: !!saving });
   const undoTarget = useRef<{ deletion: Deletion; toastId: number } | null>(null);
+  /** The last item «تراجع» brought back and whether it is in the exam now — a Ctrl+Z / Ctrl+Y that removes or returns it must
+   *  not leave keyboard focus on <body> (Review Fix 2, measured in Chromium). */
+  const restoredTarget = useRef<{ deletion: Deletion; back: boolean; recovered: boolean } | null>(null);
   const deletionSeq = useRef(0);
   const deletionRecords = useRef(new Map<number, Deletion>());
   const [deletionCommit, setDeletionCommit] = useState(0);
@@ -550,6 +553,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     restoreRecords.current.delete(seq);
     if (!outcome || outcome === "stale" || !alive.current) return;
     if (outcome === "restored" || outcome === "already-present") {
+      restoredTarget.current = { deletion: d, back: true, recovered: false };
       if (d.kind === "question") window.setTimeout(() => focusCard(d.question.examQuestionId), 0);
       else window.setTimeout(() => { const el = sectionNode(d.section.id); if (el && alive.current) revealSection(el); }, 0);
       const n = toastNames(d);
@@ -571,9 +575,20 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // The toast leaves by itself when the deleted item is back by another route (Ctrl+Z, the toolbar «تراجع») or another exam opened.
   useEffect(() => {
     const t = undoTarget.current;
-    if (!t) return;
-    if (t.deletion.examId !== exam.examId || deletionIsBack(exam, t.deletion)) { undoTarget.current = null; dismissToast(t.toastId); }
-  }, [exam, dismissToast]);
+    if (t && (t.deletion.examId !== exam.examId || deletionIsBack(exam, t.deletion))) { undoTarget.current = null; dismissToast(t.toastId); }
+    // The restored item left (Ctrl+Z undid the restore while its card held focus) or came back (Ctrl+Y): focus its neighbour /
+    // the item itself, in place — only when that presence CHANGED and focus was lost, never on an unrelated exam change.
+    const r = restoredTarget.current;
+    if (!r) return;
+    if (r.deletion.examId !== exam.examId) { restoredTarget.current = null; return; }
+    const back = deletionIsBack(exam, r.deletion);
+    if (back === r.back) return;
+    r.back = back;
+    // Focus moves only when it was lost, or when it sits on the neighbour this recovery chose (a redo then follows the item back).
+    if (!focusLost() && !r.recovered) return;
+    r.recovered = !back;
+    focusItemOrNeighbour(r.deletion, 0, "reveal");
+  }, [exam, dismissToast]);                                              // eslint-disable-line react-hooks/exhaustive-deps
   const navigateTo = (id: string) => {
     if (isNarrow) { setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }      // let the dialog release focus first
     else focusCard(id);

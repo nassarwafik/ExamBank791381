@@ -248,6 +248,50 @@ describe("21E.1 slice 2 RF2 — the restored card is centred only when it fits b
   });
 });
 
+describe("21E.1 slice 2 RF2 — the history after «تراجع» never leaves focus on <body> (measured in Chromium)", () => {
+  const key = (k: string, extra: object = {}) => fireEvent.keyDown(document.activeElement ?? document.body, { key: k, ctrlKey: true, bubbles: true, ...extra });
+  it("Ctrl+Z right after «تراجع» re-deletes the focused card → its neighbour gets focus in place; Ctrl+Y brings it back focused", async () => {
+    await start();
+    deleteQuestion("q2");
+    fireEvent.click(undoQuestion());
+    await wait(5);
+    expect(document.activeElement).toBe(card("q2"));
+    scrollCalls = []; focusCalls = [];
+    key("z");
+    expect(h.latest!.sections[0].questions.map(q => q.examQuestionId)).toEqual(["q1", "q3"]);
+    expect(document.activeElement).toBe(card("q3"));
+    expect(focusCalls.map(c => [c.key, c.opts?.preventScroll])).toEqual([["sb-q-q3", true]]);
+    expect(scrollCalls).toEqual([]);                                         // visible → no move
+    key("y");
+    expect(h.latest!.sections[0].questions.map(q => q.examQuestionId)).toEqual(["q1", "q2", "q3"]);
+    expect(document.activeElement).toBe(card("q2"));
+    expect(scrollCalls).toEqual([]);
+  });
+  it("…the same with ⌘Z / ⌘⇧Z, and for a restored SECTION (its neighbour section, then the section itself)", async () => {
+    await start();
+    deleteSection("s1");
+    fireEvent.click(screen.getByRole("button", { name: "تراجع عن حذف القسم" }));
+    await wait(5);
+    expect(document.activeElement).toBe(sectionEl("s1"));
+    fireEvent.keyDown(document.activeElement!, { key: "z", metaKey: true, bubbles: true });
+    expect(h.latest!.sections.map(s => s.id)).toEqual(["s2"]);
+    expect(document.activeElement).toBe(sectionEl("s2"));
+    fireEvent.keyDown(document.activeElement!, { key: "z", metaKey: true, shiftKey: true, bubbles: true });
+    expect(h.latest!.sections.map(s => s.id)).toEqual(["s1", "s2"]);
+    expect(document.activeElement).toBe(sectionEl("s1"));
+  });
+  it("an unrelated exam change while focus is elsewhere never pulls focus to the restored item", async () => {
+    await start();
+    deleteQuestion("q2");
+    fireEvent.click(undoQuestion());
+    await wait(5);
+    act(() => { (document.activeElement as HTMLElement).blur(); });
+    expect(document.activeElement).toBe(document.body);
+    act(() => h.update(e => ({ ...e, title: "عنوان آخر" })));
+    expect(document.activeElement).toBe(document.body);
+  });
+});
+
 describe("21E.1 slice 2 RF2 — a focus candidate disabled while saving is skipped; the toolbar is the last resort", () => {
   it("the only question of a section, toast closed during a save: the section gets focus (its add button is disabled)", async () => {
     await start(<Host initial={makeExam([section("s1", "القسم الأول", [Q("q1")]), section("s2", "القسم الثاني", [Q("r1")])])} />);
