@@ -47,10 +47,10 @@ import { useMediaQuery } from "./ui/useMediaQuery";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import BuilderToolbar from "./builder/BuilderToolbar";
 import { indexIssues, issueTargets, type IssueTarget } from "./builder/issueIndex";
-import { useIssueAnnouncer } from "./builder/useIssueAnnouncer";
+import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer";
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS } from "./teacher/saveLabels";
-import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave } from "./icons";
+import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown } from "./icons";
 import "./structured-builder.css";
 import "./builder/builder-issues.css";
 
@@ -146,12 +146,16 @@ type Props = {
   // Phase 19A — the App-owned AI authoring service (one POST to /api/ai-question-author). The builder never receives a token; without
   // a service the «سؤال بالذكاء الاصطناعي» action is simply not offered.
   aiAuthor?: AiAuthorService;
+  /** K2 A-F3 — inside App's modal overlay: the page control that takes focus when the builder closes and the control that opened it
+   *  has left the page (a saved-exams row, «متابعة تحرير الامتحان المنظّم», the import wizard). Read once the closing update rendered. */
+  returnFocusTo?: () => HTMLElement | null;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
 /** Phase 21E.2 — the toolbar's (visually hidden) heading; App's builder overlay is aria-labelledby it. One builder at a time. */
 const BUILDER_TITLE_ID = "sb-builder-title";
-const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ", dirty: "● تغييرات غير محفوظة", saving: "⏳ جارٍ الحفظ", recovered: "↺ نسخة مسترجعة — غير محفوظة" };
+// K3 (A-F7) — the glyph is shown but never spoken (an aria-hidden span inside the polite status); the visible text is unchanged.
+const SAVE_STATE_LABEL: Record<ExamSaveState, { glyph: string; text: string }> = { saved: { glyph: "✓", text: "محفوظ" }, dirty: { glyph: "●", text: "تغييرات غير محفوظة" }, saving: { glyph: "⏳", text: "جارٍ الحفظ" }, recovered: { glyph: "↺", text: "نسخة مسترجعة — غير محفوظة" } };
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const EMPTY_REVEALS: ReadonlyMap<string, number> = new Map<string, number>();
 /** Phase 21E.2 (D) — a control whose Field frame shows an error now (aria-invalid) and that can take focus. */
@@ -194,7 +198,7 @@ const UNDO_HINT = " للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -388,10 +392,15 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   /** Space a revealed element keeps clear at the top of the builder's scroller: down to the sticky toolbar's bottom edge (the
    *  scroller's padding puts the stuck toolbar below its top, so its height alone falls short) plus 12 px. At the end of the scroll
    *  range the room reserved below the builder pushes the stuck toolbar up; a reveal scrolls it back to its resting place (the
-   *  scroller's top padding + its own height), so the clearance is never measured below that (Review Fix 2). */
+   *  scroller's top padding + its own height), so the clearance is never measured below that (Review Fix 2).
+   *  K2 C-F4 — the toolbar is sticky only where there is room for it (builder-toolbar.css: ≥ 768 × 600). Below that (phones,
+   *  200 % zoom) it is static: it scrolls away with the content and, standing before every target in the flow, can never cover
+   *  one — a reveal keeps only the 12 px. (Its resting band there would land every reveal a whole toolbar lower.) */
   const toolbarClearance = () => {
     const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
     if (!bar) return 12;
+    const position = getComputedStyle(bar).position;
+    if (position === "static" || position === "relative") return 12;
     const scroller = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
     const scrollerTop = scroller?.getBoundingClientRect().top ?? 0;
     const style = scroller ? getComputedStyle(scroller) : null;
@@ -817,7 +826,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // yields to them). Rendered on its own (no overlay) the builder is not modal: nothing happens.
   const surfaceRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => { surfaceRef.current = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null; }, []);
-  useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); });
+  useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); }, returnFocusTo);
   // ── Phase 21E.2 (D) · inline issues: the SAME structural issues the summary lists and finalization uses, regrouped by where they
   // belong (indexIssues never re-validates, filters or re-ranks) — each question's in its card, each section's in its header, and
   // the exam-level rest in the summary only. ONE polite region announces settled count changes (never on opening the exam).
@@ -829,30 +838,52 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     });
   }, [decision, exam.sections]);
   const summaryTargets = useMemo(() => issueTargets(issueIndex, exam.sections || []), [issueIndex, exam.sections]);
-  const issueAnnouncement = useIssueAnnouncer(errors.length, warnings.length);
+  const issueAnnouncement = useIssueAnnouncer(errors.length, warnings.length, ISSUE_SETTLE_MS, exam.examId);   // K3 C-F5: per exam
   // Questions the teacher opened from the summary (UI state only — never exam data, history or autosave; reset for another exam):
   // their fields keep showing their errors (FieldRevealContext) until fixed; a new count re-opens a collapsed card.
   const [issueReveal, setIssueReveal] = useState<{ examId: string; seqs: ReadonlyMap<string, number> } | null>(null);
-  const revealedQuestions = issueReveal?.examId === exam.examId ? issueReveal.seqs : EMPTY_REVEALS;
+  let revealedQuestions = issueReveal?.examId === exam.examId ? issueReveal.seqs : EMPTY_REVEALS;
+  // K3 C-F3 — "until fixed" is derived, never latched: a question leaves the reveal in the render where its last canonical issue goes
+  // (no commit ever shows the stale reveal). A problem it gets LATER (a new empty row) is then shown by the field's own touched rule
+  // (Field touchKey), like any other; another summary click reveals it again.
+  if ([...revealedQuestions.keys()].some(id => !issueIndex.byQuestion.has(id))) {
+    revealedQuestions = new Map([...revealedQuestions].filter(([id]) => issueIndex.byQuestion.has(id)));
+    setIssueReveal({ examId: exam.examId, seqs: revealedQuestions });
+  }
   const revealCount = useRef(0);
+  /** K3 A-F4 — the issue list a card / section shows itself (its direct child; a card's list is never a nested question's). */
+  const ownIssueList = (host: Element | null | undefined) => (Array.from(host?.children ?? []).find(c => c.classList.contains("sb-inline-issues")) as HTMLElement | undefined) ?? null;
   /** The question below the sticky toolbar, with the alignment every other jump uses (alignCard), and focus where the teacher fixes
-   *  it: the first field whose error is now shown, else the card itself (focusCard). Never touches the selection or the navigator. */
-  const focusQuestionIssues = (id: string) => {
+   *  it. Never touches the selection or the navigator. K3: the field that shows the clicked issue (its Field frame carries that
+   *  canonical code: data-issue-codes — A-F6), else the first field whose error is now shown, else the card's NAMED issue list
+   *  «مشكلات السؤال N» (A-F4: e.g. a multiple-choice question without options has no control to focus), else the card. */
+  const focusQuestionIssues = (id: string, code?: string) => {
     const el = nodes.current.get(id);
     if (!el || !alive.current) return;
-    const field = el.querySelector<HTMLElement>(INVALID_FIELD);
-    if (!field) { focusCard(id); return; }
-    alignCard(field.closest<HTMLElement>(".eb-field, .eb-field-group") ?? field);
-    field.focus({ preventScroll: true });
-    if (document.activeElement !== field) el.focus({ preventScroll: true });
+    const showing = code ? Array.from(el.querySelectorAll<HTMLElement>("[data-issue-codes]")).filter(f => (f.dataset.issueCodes || "").split(" ").includes(code)) : [];
+    const field = showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? el.querySelector<HTMLElement>(INVALID_FIELD);
+    if (field) {
+      alignCard(field.closest<HTMLElement>(".eb-field, .eb-field-group") ?? field);
+      field.focus({ preventScroll: true });
+    } else alignCard(el);
+    if (!field || document.activeElement !== field) (ownIssueList(el) ?? el).focus({ preventScroll: true });
     setFlashId(id);
   };
-  const openIssue = (target: IssueTarget) => {
+  const openIssue = (target: IssueTarget, code: string) => {
     if (!alive.current) return;
-    if (target.kind === "section") { const el = sectionNode(target.id); if (el) revealSection(el); return; }
+    if (target.kind === "section") {
+      const el = sectionNode(target.id);
+      if (!el) return;
+      // K3 A-F4 — the section's NAMED issue list under its heading (the section itself has no name), the heading aligned as usual.
+      const list = ownIssueList(Array.from(el.children).find(c => c.classList.contains("sb-section-head")));
+      if (!list) { revealSection(el); return; }
+      list.focus({ preventScroll: true });
+      alignSection(el);
+      return;
+    }
     const examId = exam.examId, count = ++revealCount.current;
     setIssueReveal(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
-    window.setTimeout(() => focusQuestionIssues(target.id), 0);         // after the revealed (and re-opened) card has rendered
+    window.setTimeout(() => focusQuestionIssues(target.id, code), 0);   // after the revealed (and re-opened) card has rendered
   };
   const gatesText = gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات";
 
@@ -875,7 +906,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           <span className="sb-stat">{totalMarks} علامة</span>
         </>}
         status={<>
-          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite">{SAVE_STATE_LABEL[saveState]}</span>}
+          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite"><span aria-hidden="true">{SAVE_STATE_LABEL[saveState].glyph}</span> {SAVE_STATE_LABEL[saveState].text}</span>}
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {hasPolicy && <span className={"sb-stat sb-gates-chip" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")}>{gatesText}</span>}
@@ -914,7 +945,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {(errors.length > 0 || warnings.length > 0) && (
         <div className={"sb-issues sb-issues-summary " + (errors.length ? "sb-issues-error" : "sb-issues-warn")}>
           <button type="button" className="sb-issues-head" aria-expanded={showIssues} onClick={() => setShowIssues(v => !v)}>
-            {showIssues ? "▾" : "▸"} {errors.length > 0 ? errors.length + " خطأ" : ""}{errors.length && warnings.length ? " • " : ""}{warnings.length > 0 ? warnings.length + " تنبيه" : ""}
+            {/* K3 (A-F7) — aria-expanded carries the state; the chevron (aria-hidden) points down when open, to the inline end when closed. */}
+            <IconChevronDown size={14} className={"eb-disclosure-chevron sb-issues-chevron" + (showIssues ? " is-open" : "")} aria-hidden="true" />{errors.length > 0 ? errors.length + " خطأ" : ""}{errors.length && warnings.length ? " • " : ""}{warnings.length > 0 ? warnings.length + " تنبيه" : ""}
             {hasBlockingErrors(errors) && <em className="sb-issues-block"> — يجب إصلاح الأخطاء قبل الحفظ النهائي</em>}
           </button>
           {showIssues && (
@@ -926,7 +958,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
                 const what = <><span className="sb-issue-kind">{iss.severity === "error" ? "خطأ:" : "تنبيه:"}</span> <span className="sb-issue-text">{iss.message}</span></>;
                 return (
                   <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>
-                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
+                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target, iss.code)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
                   </li>
                 );
               })}

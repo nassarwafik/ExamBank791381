@@ -53,6 +53,11 @@ const sq = (id, text) => ({ examQuestionId: id, presentationType: "shortAnswer",
 const mkq = (sid, n) => Array.from({ length: n }, (_, i) => sq(sid + "q" + (i + 1), "السؤال " + (i + 1) + " في " + sid));
 const savedExam = { schemaVersion: 2, examId: "E9", title: "اختبار الوحدة الثانية", status: "draft", createdAt: "2026-10-01T10:00:00Z", updatedAt: "2026-10-01T10:00:00Z", metadata: {},
   sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, instructions: "", questions: mkq("s1", 4) }, { id: "s2", title: "القسم الثاني", gradingPolicy: "all", stimuli: {}, instructions: "", questions: mkq("s2", 2) }] };
+// The same exam with a blueprint + quality policy (K1): «المزيد» then holds its longest list (coverage, policy, readiness too).
+const blueprintExam = { ...savedExam, examId: "E10", title: "اختبار بمخطط وسياسة جودة",
+  blueprint: { schemaVersion: 1, subject: { id: "networking", label: "شبكات الحاسوب" }, topics: [{ id: "t1", label: "IPv4", order: 0 }], objectives: [{ id: "o1", label: "يحسب شبكة فرعية", topicId: "t1", order: 0 }],
+    targets: { totalQuestions: 6, totalMarks: 12 }, constraints: [{ id: "c-top", dimension: "topic", ref: "t1", metric: "count", unit: "absolute", min: 2 }],
+    qualityPolicy: { schemaVersion: 1, enabled: true, rules: [{ id: "qr1", enabled: true, source: { kind: "constraint", constraintId: "c-top" }, relations: ["below-min"], effect: "warning" }] } } };
 const apiCalls = [];
 function api(req, res, body) {
   const u = new URL(req.url, "http://localhost"), p = u.pathname;
@@ -68,8 +73,8 @@ function api(req, res, body) {
   if (p === "/api/classrooms") return send(200, { ok: true, classes: [{ classId: "c1", name: "الحادي عشر", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 3 }] });
   if (p === "/api/assignments" && req.method === "GET") return send(200, { ok: true, assignments: [assignment] });
   if (p === "/api/assignment-results" && req.method === "GET") return send(200, results);
-  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [{ blobName: "exams/e9.json", examId: "E9", title: savedExam.title, savedAt: "2026-10-01T10:00:00Z", questionCount: 6, totalMarks: 12 }] });
-  if (p === "/api/saved-exams" && j.action === "load") return send(200, { ok: true, exam: savedExam, savedAt: "2026-10-01T10:00:00Z" });
+  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [{ blobName: "exams/e9.json", examId: "E9", title: savedExam.title, savedAt: "2026-10-01T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e10.json", examId: "E10", title: blueprintExam.title, savedAt: "2026-09-30T10:00:00Z", questionCount: 6, totalMarks: 12 }] });
+  if (p === "/api/saved-exams" && j.action === "load") return send(200, { ok: true, exam: j.blobName === "exams/e10.json" ? blueprintExam : savedExam, savedAt: "2026-10-01T10:00:00Z" });
   if (p === "/api/saved-exams" && j.action === "save") return send(200, { ok: true, savedAt: new Date().toISOString(), blobName: "exams/s.json" });
   return send(200, { ok: true, items: [], exams: [], templates: [], questions: [], classes: [], students: [], assignments: [], projects: [], posts: [] });
 }
@@ -94,8 +99,10 @@ const VIEWPORTS = [
   ["phone", { width: 390, height: 844 }, true, 2]
 ];
 
-async function newPage(name, viewport, touch, dsf) {
-  const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: dsf, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block", acceptDownloads: true });
+// `motion` (K1): "reduce" by default; "no-preference" lets a probe see the app's real CSS transitions (the reduced-motion rule
+// shortens every transition to .001 ms and can hide a transition-dependent defect).
+async function newPage(name, viewport, touch, dsf, motion = "reduce") {
+  const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: dsf, locale: "ar", reducedMotion: motion, serviceWorkers: "block", acceptDownloads: true });
   await ctx.addInitScript(() => { sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", "teacher"); sessionStorage.setItem("examBankSessionDisplayName", "أ. أحمد"); });
   const page = await ctx.newPage();
   page.on("pageerror", e => errors.push(name + ": " + e)); page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(name + " console: " + m.text()); });

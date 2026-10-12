@@ -21,7 +21,13 @@ const T = {
   surface: "src/ui/useModalSurface.21e2.test.tsx",
   toolbar: "src/builder/BuilderToolbar.21e2.test.tsx",
   reviewFixes: "src/builder/reviewFixes.21e2.test.tsx",
-  liveChallenge: "src/games/liveChallenge/LiveChallengeGenerator.test.tsx"
+  liveChallenge: "src/games/liveChallenge/LiveChallengeGenerator.test.tsx",
+  actionMenuK1: "src/ui/ActionMenu.reviewK1.21e2.test.tsx",
+  surfaceK2: "src/ui/useModalSurface.reviewK2.21e2.test.tsx",
+  builderK2: "src/StructuredExamBuilder.reviewK2.21e2.test.tsx",
+  appK2: "src/App.builderFocus.reviewK2.21e2.test.tsx",
+  inlineK3: "src/builder/inlineIssues.reviewK3.21e2b.test.tsx",
+  inlineWiring: "src/builder/inlineIssuesWiring.21e2b.test.tsx"
 };
 const M = (id, file, before, after, tests, what) => ({ id, file, before, after, tests, what });
 const mutants = [
@@ -57,7 +63,9 @@ const mutants = [
   M("B1-escape-under-dialog", "src/ui/useModalSurface.ts", "if (!surface || event.defaultPrevented || hasModalAbove(surface)) return;", "if (!surface || event.defaultPrevented) return;", [T.surface], "Escape reaches the builder while a dialog is on top"),
   M("B2-no-focus-return", "src/ui/useModalSurface.ts", 'if (opener && opener.isConnected && typeof opener.focus === "function") opener.focus();', "void opener;", [T.surface], "closing the builder drops focus"),
   M("B3-no-tab-wrap", "src/ui/useModalSurface.ts", "if (event.shiftKey && (!inside || current === first || current === surface)) { event.preventDefault(); last.focus(); }", "if (false) { last.focus(); }", [T.surface], "Shift+Tab escapes the surface"),
-  M("B4-ime-escape", "src/ui/useModalSurface.ts", "if (event.isComposing) return;", "", [T.surface], "an IME composition's Escape exits the builder"),
+  // B4: since K2 C-F1 a text field's Escape is the field's own, so the IME-in-a-text-field test alone no longer separates the
+  // composition guard; the K2 file's composition on a non-text editor host (EditContext-style) does.
+  M("B4-ime-escape", "src/ui/useModalSurface.ts", "if (event.isComposing) return;", "", [T.surface, T.surfaceK2], "an IME composition's Escape exits the builder"),
   // A — toolbar structure
   M("A1-menu-items-visible", "src/builder/BuilderToolbar.tsx", '<ActionMenu label="المزيد من أدوات الامتحان" text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">\n              <MenuItems items={moreItems} />\n            </ActionMenu>', '<MenuItems items={moreItems} />', [T.toolbar], "overflow items rendered as visible buttons (> 8)"),
   // Review Fix (independent adversarial review of the first implementation)
@@ -70,7 +78,56 @@ const mutants = [
   M("R7-tab-leaves-menu-open", "src/ui/ActionMenu.tsx", "        if (!panel || !trigger || !panel.contains(document.activeElement)) return;\n        e.preventDefault(); e.stopPropagation();", "        if (!panel || !trigger || !panel.contains(document.activeElement)) return;\n        return;", [T.reviewFixes], "Tab from a menu item leaves the page / surface with the menu open"),
   M("R8-tab-no-modal-wrap", "src/ui/ActionMenu.tsx", "order[at + 1] || (modal ? order[0] : trigger)", "order[at + 1] || trigger", [T.reviewFixes], "Tab from the last menu inside a modal surface does not wrap"),
   M("R9-mcq-options-message-hidden", "src/QuestionBodyEditor.tsx", "error={[issues.options, issues.answer].filter(Boolean).join(\" \")}", "error={issues.answer || issues.options}", [T.field], "the blocking MISSING_OPTIONS message is hidden behind «choose the answer»"),
-  M("A2-toggle-state-lost", "src/builder/BuilderToolbar.tsx", "aria-pressed={item.pressed === undefined ? undefined : item.pressed}", "", [T.toolbar], "a menu toggle loses its pressed state")
+  M("A2-toggle-state-lost", "src/builder/BuilderToolbar.tsx", "aria-pressed={item.pressed === undefined ? undefined : item.pressed}", "", [T.toolbar], "a menu toggle loses its pressed state"),
+  // Review cluster K1 — the shared ActionMenu as used by the builder toolbar (A-F1 focus, A-F2 placement / own scroll, C-F6 portal host)
+  M("K1-1-focus-before-settle", "src/ui/ActionMenu.tsx", "    settleVisibility(panel);                                             // A-F1: never focus a control that is still hidden\n", "", [T.actionMenuK1], "focus issued while the reveal's visibility transition is still at its first instant"),
+  M("K1-2-settle-every-transition", "src/ui/ActionMenu.tsx", '.transitionProperty !== "visibility") continue;', '.transitionProperty === "never") continue;', [T.actionMenuK1], "every transition in the panel is cut short"),
+  M("K1-3-no-frame-retry", "src/ui/ActionMenu.tsx", '    if (document.activeElement === first || typeof requestAnimationFrame !== "function") return;', "    return;", [T.actionMenuK1], "no retry where getAnimations is missing"),
+  M("K1-4-retry-steals-focus", "src/ui/ActionMenu.tsx", "(active === triggerRef.current || active === document.body || active === null)", "(true)", [T.actionMenuK1], "the retry pulls focus back from where the user moved it"),
+  M("K1-5-viewport-cap-always", "src/ui/ActionMenu.tsx", "const maxHeight = p.height <= room ? cap : Math.max(Math.min(MIN_PANEL, cap), room);", "const maxHeight = cap;", [T.actionMenuK1], "a panel taller than its room runs off-screen"),
+  M("K1-6-old-side-choice", "src/ui/ActionMenu.tsx", "const below = p.height <= roomBelow || (p.height > roomAbove && roomBelow >= roomAbove);", "const below = p.height <= roomBelow || p.height > roomAbove;", [T.actionMenuK1], "below even when above has more room"),
+  M("K1-7-no-bottom-clamp", "src/ui/ActionMenu.tsx", "Math.max(gap, Math.min(t.bottom + gap, vh - gap - height))", "t.bottom + gap", [T.actionMenuK1], "a minimum-height panel below a tall trigger ends off-screen"),
+  M("K1-8-own-scroll-closes", "src/ui/ActionMenu.tsx", "      if (e.type === \"scroll\" && e.target instanceof Node && panelRef.current?.contains(e.target)) return;\n", "", [T.actionMenuK1], "the panel's own scroll closes the menu"),
+  M("K1-9-every-scroll-ignored", "src/ui/ActionMenu.tsx", "if (e.type === \"scroll\" && e.target instanceof Node && panelRef.current?.contains(e.target)) return;", "if (e.type === \"scroll\") return;", [T.actionMenuK1], "a page / ancestor scroll no longer closes the menu"),
+  M("K1-10-portal-body", "src/ui/ActionMenu.tsx", "        host ?? document.body\n", "        document.body\n", [T.actionMenuK1], "the panel leaves the aria-modal surface"),
+  M("K1-11-rebase-ignored", "src/ui/ActionMenu.tsx", "    if (rebasesFixed(el)) return document.body;", "    if (false) return document.body;", [T.actionMenuK1], "a transformed / filtered surface hosts a fixed panel (wrong coordinates)"),
+  M("K1-12-overscroll-dropped", "src/page-parts.css", "\n  overscroll-behavior:contain;", "\n", [T.actionMenuK1], "the panel's scroll chains into the page under it"),
+  // Review cluster K2 — the builder overlay as a modal surface (C-F1 Escape in text fields, A-F3 focus in / back, C-F4 reveal clearance)
+  M("K2-1-escape-in-field-exits", "src/ui/useModalSurface.ts", "        if (isTextEditingTarget(event.target)) return;                // C-F1: the field's own Escape (a search box clears itself)\n", "", [T.surfaceK2, T.builderK2], "Escape typed in a text field / the explorer search exits the builder"),
+  M("K2-2-escape-in-field-prevented", "src/ui/useModalSurface.ts", "        if (isTextEditingTarget(event.target)) return;                // C-F1: the field's own Escape (a search box clears itself)\n        event.preventDefault();\n", "        event.preventDefault();\n        if (isTextEditingTarget(event.target)) return;\n", [T.surfaceK2, T.builderK2], "no exit, but the native Escape (search clear) is still cancelled"),
+  M("K2-3-no-settle", "src/ui/useModalSurface.ts", "    focusSurface(surface);\n  }, [ref, active]);", "  }, [ref, active]);", [T.surfaceK2], "a layer closing in the same update leaves focus behind the aria-modal surface"),
+  M("K2-4-settle-ignores-modal-above", "src/ui/useModalSurface.ts", "if (!surface || (a && surface.contains(a)) || hasModalAbove(surface)) return;", "if (!surface || (a && surface.contains(a))) return;", [T.surfaceK2], "the settle step steals focus from a modal layer above"),
+  M("K2-5-body-is-an-opener", "src/ui/useModalSurface.ts", "current !== document.body && ", "", [T.surfaceK2, T.appK2], "<body> recorded as the opener"),
+  M("K2-6-no-fallback-focus", "src/ui/useModalSurface.ts", "        if (target && target.isConnected) target.focus();", "        void target;", [T.surfaceK2, T.appK2], "closing with no opener drops focus on <body>"),
+  M("K2-7-fallback-before-render", "src/ui/useModalSurface.ts", "      void Promise.resolve().then(() => {", "      void [0].forEach(() => {", [T.surfaceK2, T.appK2], "the return target is read during the closing commit, before it is rendered"),
+  M("K2-8-no-reactivation-guard", "src/ui/useModalSurface.ts", "        if (ACTIVE.has(surface)) return;\n", "", [T.surfaceK2], "StrictMode's simulated unmount sends focus out of the open surface"),
+  M("K2-9-fallback-steals-placed-focus", "src/ui/useModalSurface.ts", "        if (!focusLost() && !(a && surface.contains(a))) return;\n", "", [T.surfaceK2], "the return target overrides focus the closing update placed on purpose"),
+  M("K2-10-static-toolbar-band", "src/StructuredExamBuilder.tsx", '    if (position === "static" || position === "relative") return 12;\n', "", [T.builderK2], "a static (phone / 200 %) toolbar still reserves its whole resting band"),
+  M("K2-11-app-no-return-target", "src/App.tsx", "              returnFocusTo={() => continueStructuredRef.current ?? savedExamsToggleRef.current}\n", "", [T.appK2], "App passes no return target"),
+  M("K2-12-app-wrong-return-target", "src/App.tsx", "continueStructuredRef.current ?? savedExamsToggleRef.current", "savedExamsToggleRef.current", [T.appK2], "App returns focus to the toggle although «متابعة …» is there"),
+  M("K2-13-builder-drops-target", "src/StructuredExamBuilder.tsx", "useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); }, returnFocusTo);", "useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); });", [T.appK2], "the builder never forwards App's return target"),
+  // Review cluster K3 — inline issues (C-F3 reveal derived, C-F5 announcer per exam, A-F4 named issue list, A-F6 clicked issue's field,
+  // A-F7 glyphs not spoken). The focus outline of a pointer-opened list is CSS: only the real-browser harness check R-3 sees it.
+  M("K3-1-reveal-latched", "src/StructuredExamBuilder.tsx", "  if ([...revealedQuestions.keys()].some(id => !issueIndex.byQuestion.has(id))) {", "  if (false) {", [T.inlineK3], "the reveal outlives the question's issues (a later empty row is red before it is visited)"),
+  M("K3-2-announcer-keeps-baseline", "src/builder/useIssueAnnouncer.ts", '    if (last.current.identity !== identity) { last.current = { identity, key }; setText(""); return; }   // another exam: a new baseline\n', "", [T.inlineK3], "another exam's counts are announced after it opens"),
+  M("K3-3-announcer-keeps-text", "src/builder/useIssueAnnouncer.ts", 'last.current = { identity, key }; setText(""); return; }', "last.current = { identity, key }; return; }", [T.inlineK3], "the previous exam's sentence stays (and comes back with that exam)"),
+  M("K3-4-builder-no-identity", "src/StructuredExamBuilder.tsx", "useIssueAnnouncer(errors.length, warnings.length, ISSUE_SETTLE_MS, exam.examId)", "useIssueAnnouncer(errors.length, warnings.length, ISSUE_SETTLE_MS)", [T.inlineK3], "the builder does not tell the announcer which exam it shows"),
+  M("K3-5-list-not-focusable", "src/builder/InlineIssues.tsx", " tabIndex={-1} data-severity", " data-severity", [T.inlineK3, T.inlineWiring, T.builderK2], "the issue list cannot take focus"),
+  M("K3-6-question-falls-to-card", "src/StructuredExamBuilder.tsx", "(ownIssueList(el) ?? el).focus({ preventScroll: true });", "el.focus({ preventScroll: true });", [T.inlineK3], "an issue with no control focuses the unnamed card"),
+  M("K3-7-section-unnamed", "src/StructuredExamBuilder.tsx", "      if (!list) { revealSection(el); return; }", "      { revealSection(el); return; }", [T.inlineK3, T.inlineWiring, T.builderK2], "a section entry focuses the unnamed section"),
+  M("K3-8-section-not-aligned", "src/StructuredExamBuilder.tsx", "      list.focus({ preventScroll: true });\n      alignSection(el);\n", "      list.focus({ preventScroll: true });\n", [T.inlineK3, T.inlineWiring, T.builderK2], "the section heading is not brought below the toolbar"),
+  M("K3-9-card-not-aligned", "src/StructuredExamBuilder.tsx", "    } else alignCard(el);", "    }", [T.inlineK3], "the card whose list takes focus is not brought into view"),
+  M("K3-10-first-invalid-wins", "src/StructuredExamBuilder.tsx", "const field = showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? el.querySelector<HTMLElement>(INVALID_FIELD);", "const field = el.querySelector<HTMLElement>(INVALID_FIELD);", [T.inlineK3], "the first invalid field in DOM order wins over the clicked issue's field"),
+  M("K3-11-code-not-passed", "src/StructuredExamBuilder.tsx", "onClick={() => openIssue(target, iss.code)}", 'onClick={() => openIssue(target, "")}', [T.inlineK3], "the summary entry does not say which issue was clicked"),
+  M("K3-12-frame-no-codes", "src/ui/Field.tsx", "data-issue-codes={visibleError && issueCode ? issueCode : undefined} onBlur={() =>", "onBlur={() =>", [T.inlineK3], "a field frame does not say which issue it shows"),
+  M("K3-13-codes-while-valid", "src/ui/Field.tsx", "data-issue-codes={visibleError && issueCode ? issueCode : undefined} onBlur={() =>", "data-issue-codes={issueCode || undefined} onBlur={() =>", [T.inlineK3], "a valid field claims an issue"),
+  M("K3-14-text-wrong-code", "src/QuestionComposer.tsx", "issueCode={HEADER_FIELD_CODES.text}", "issueCode={HEADER_FIELD_CODES.marks}", [T.inlineK3], "the question text claims MARKS_PROBLEM"),
+  M("K3-15-mcq-codes-dropped", "src/QuestionBodyEditor.tsx", "issueCode={fieldIssueCodes(issues, MULTIPLE_CHOICE_FIELD_CODES)}", 'issueCode=""', [T.inlineK3], "the options group does not carry MISSING_OPTIONS / MISSING_ANSWER"),
+  M("K3-16-pair-code-dropped", "src/QuestionBodyEditor.tsx", "error={issues.pairs[i]?.right} issueCode={MATCHING_FIELD_CODES.pair}", "error={issues.pairs[i]?.right}", [T.inlineK3], "an incomplete pair's answer does not carry MATCH_INCOMPLETE_PAIR"),
+  M("K3-17-numeric-codes-dropped", "src/teacher/questionFieldIssues.ts", "const code = codeOf.get(message); if (code) out[field] = code;", "void codeOf; void message;", [T.inlineK3], "numeric fields carry no codes"),
+  M("K3-18-chevron-spoken", "src/StructuredExamBuilder.tsx", '" is-open" : "")} aria-hidden="true" />{errors.length', '" is-open" : "")} />{errors.length', [T.inlineK3], "the disclosure chevron is exposed to assistive technology"),
+  M("K3-19-chevron-stuck-open", "src/StructuredExamBuilder.tsx", '(showIssues ? " is-open" : "")} aria-hidden', '" is-open"} aria-hidden', [T.inlineK3], "the chevron no longer follows aria-expanded"),
+  M("K3-20-save-glyph-spoken", "src/StructuredExamBuilder.tsx", '<span aria-hidden="true">{SAVE_STATE_LABEL[saveState].glyph}</span>', "<span>{SAVE_STATE_LABEL[saveState].glyph}</span>", [T.inlineK3], "the save state's glyph is read out")
 ];
 
 const only = (process.argv.find(a => a.startsWith("--only=")) || "").slice(7).split(",").filter(Boolean);

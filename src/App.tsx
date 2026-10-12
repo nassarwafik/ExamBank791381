@@ -879,6 +879,10 @@ function App() {
   // structured exam active (so it stays the assignment source); only opening a legacy exam clears it.
   const [structuredBuilderOpen, setStructuredBuilderOpen] = useState(false);
   const [structuredImportOpen, setStructuredImportOpen] = useState(false);
+  // K2 A-F3 — where focus goes when the builder overlay closes and the control that opened it has left the page (a saved-exams row,
+  // «متابعة تحرير الامتحان المنظّم» itself, the import wizard): the control that reopens the builder, else the saved-exams toggle.
+  const continueStructuredRef = useRef<HTMLButtonElement>(null);
+  const savedExamsToggleRef = useRef<HTMLButtonElement>(null);
   const [structuredSaving, setStructuredSaving] = useState(false);
   const [structuredNotice, setStructuredNotice] = useState("");
   const [structuredError, setStructuredError] = useState("");
@@ -6158,6 +6162,7 @@ function App() {
 
         <div className="saved-exams-access">
           <button
+            ref={savedExamsToggleRef}
             onClick={
               toggleSavedExams
             }
@@ -6196,7 +6201,7 @@ function App() {
           </button>
 
           {structuredExam && !structuredBuilderOpen && (
-            <button onClick={() => setStructuredBuilderOpen(true)}>
+            <button ref={continueStructuredRef} onClick={() => setStructuredBuilderOpen(true)}>
               🧱 متابعة تحرير الامتحان المنظّم
             </button>
           )}
@@ -7911,6 +7916,7 @@ function App() {
               simulations={structuredSimulations}
               meshAssets={structuredMeshAssets}
               aiAuthor={structuredAiAuthor}
+              returnFocusTo={() => continueStructuredRef.current ?? savedExamsToggleRef.current}
             />
           </Suspense>
         </div>

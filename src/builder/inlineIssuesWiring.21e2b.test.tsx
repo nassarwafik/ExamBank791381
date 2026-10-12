@@ -177,14 +177,15 @@ describe("D — summary entries reveal their target", () => {
     expect(document.activeElement).toBe(field);
     expect(field.getAttribute("aria-invalid")).toBe("true");
   });
-  it("a section issue is a button naming the section; it reveals the section heading below the toolbar and focuses the section", async () => {
+  // K3 A-F4: focus goes to the section's NAMED issue list «مشكلات القسم 2» (the unnamed <section> it used to focus announced nothing).
+  it("a section issue is a button naming the section; it reveals the section heading below the toolbar and focuses the section's issue list", async () => {
     await mount();
     const emptySection = canonical().find(i => i.sectionId === "s2" && !i.questionId)!;
     const btn = within(summary()).getByRole("button", { name: /القسم 2/ });
     expect(btn.textContent).toContain(emptySection.message);
     fireEvent.click(btn);
     await tick();
-    expect(document.activeElement).toBe(sectionEl("s2"));
+    expect(document.activeElement).toBe(within(sectionEl("s2")).getByRole("group", { name: "مشكلات القسم 2" }));
     expect(scrollCalls).toHaveLength(1);
     expect(scrollCalls[0].el).toBe(sectionEl("s2"));
     expect(scrollCalls[0].opts).toEqual({ block: "start", behavior: "smooth" });

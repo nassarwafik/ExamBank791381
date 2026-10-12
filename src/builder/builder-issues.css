@@ -8,6 +8,8 @@
 .sb-inline-issue-icon { display: inline-flex; flex: 0 0 auto; align-self: center; }
 .sb-inline-issue-kind { flex: 0 0 auto; white-space: nowrap; font-weight: var(--eb-fw-semibold); }
 .sb-inline-issue-text { flex: 1 1 auto; min-width: 0; }
+/* K3 (A-F4) — a list the issue summary sent focus to shows it (like a focused card), whatever moved focus there. */
+.sb-inline-issues:focus { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 
 /* The builder's issue summary (StructuredExamBuilder `.sb-issues-summary`): token colours over the legacy structured-builder.css
    rules (two-class selectors, so the bundle's sheet order does not matter), a text severity instead of an emoji, and entries that
@@ -15,6 +17,8 @@
 .sb-issues.sb-issues-summary { border: 1px solid var(--eb-warn); background: var(--eb-warn-bg); border-radius: var(--eb-r-sm); padding: var(--eb-space-2) var(--eb-space-3); }
 .sb-issues.sb-issues-summary.sb-issues-error { border-color: var(--eb-danger); background: var(--eb-danger-bg); }
 .sb-issues.sb-issues-summary .sb-issues-head { color: var(--eb-text-heading); text-align: start; border-radius: var(--eb-r-xs); }
+/* K3 (A-F7) — the disclosure chevron (aria-hidden; ui.css turns it to the inline end while closed, down while open). */
+.sb-issues.sb-issues-summary .sb-issues-chevron { vertical-align: middle; margin-inline-end: var(--eb-space-1); }
 .sb-issues.sb-issues-summary .sb-issues-block { color: var(--eb-danger-tx); }
 .sb-issues.sb-issues-summary .sb-issues-list { list-style: none; padding-inline-start: 0; gap: var(--eb-space-1); }
 .sb-issues.sb-issues-summary .sb-issue-error,

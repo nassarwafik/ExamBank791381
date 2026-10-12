@@ -1,7 +1,7 @@
 
 import { useContext, useMemo, useState } from "react";
 import Field from "./ui/Field";
-import { headerFieldIssues } from "./teacher/questionFieldIssues";
+import { headerFieldIssues, HEADER_FIELD_CODES } from "./teacher/questionFieldIssues";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import QuestionComposer from "./QuestionComposer";
 import QuestionMediaEditor from "./QuestionMediaEditor";
@@ -99,7 +99,7 @@ export default function StructuredQuestionEditor(props: Props) {
         <div className="sb-q-body">
           <div className="sb-q-meta">
             <Field label="الرقم الظاهر" layout="inline">{a11y => <input {...a11y} className="sb-input sb-input-xs" value={q.displayNumber ?? ""} placeholder={String(index + 1)} onChange={e => onChange({ displayNumber: e.target.value })} disabled={disabled} />}</Field>
-            <Field label="العلامة" layout="inline" error={fieldIssues.marks}>{a11y => <input {...a11y} className="sb-input sb-input-xs" type="number" step="0.25" value={q.marks ?? ""} onChange={e => onChange({ marks: Number(e.target.value) })} disabled={disabled} />}</Field>
+            <Field label="العلامة" layout="inline" error={fieldIssues.marks} issueCode={HEADER_FIELD_CODES.marks}>{a11y => <input {...a11y} className="sb-input sb-input-xs" type="number" step="0.25" value={q.marks ?? ""} onChange={e => onChange({ marks: Number(e.target.value) })} disabled={disabled} />}</Field>
             {groupOptions.length > 0 && (
               <label className="sb-inline"><span>المادة المشتركة</span>
                 <select className="sb-input sb-input-sm" value={q.groupId ?? ""} onChange={e => onChange({ groupId: e.target.value || undefined })} disabled={disabled}>
