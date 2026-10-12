@@ -18,13 +18,13 @@ Design Excellence Standard and Visual Quality Gate (§8 of the 21E record). Inde
 | # | Objective (owner instruction) | Change | Files |
 |---|---|---|---|
 | 1 | Reusable, accessible toast with Arabic RTL | `useToast()` — one calm dark-navy card (the shell's navigation surface), at most one action, a close button, tones with icons; an ALWAYS-mounted polite live region (`role="status"`) receives the text after the card is painted; never takes focus; the countdown pauses on hover and on focus inside; Escape inside closes; one toast at a time; the owner learns how it left and whether focus was inside. Token-only CSS on `--eb-z-toast`, 44 px action on phones / coarse pointers, motion only without reduced-motion. Ships only with its first consumer (the lazy structured builder) — bundle guard. | `src/ui/Toast.tsx`, `src/ui/toast.css`, `scripts/check-bundle-budget.mjs` |
-| 2 | Safe «تراجع» for deleting one question / one section | The deletion is captured as an IMMUTABLE snapshot (the very same object + where it was) inside the history updater; «تراجع» puts it back as ONE new history entry, re-validated against the exam as it is then — never a history pop, so later edits are never undone by mistake (§3). Focus goes to the next card (else the previous one, else «+ إضافة سؤال»; for a section: the next section, else the previous one, else «+ إضافة قسم»), back to the restored card after «تراجع», and to the neighbour again when Escape / close leaves the toast with focus inside. Screen readers hear «… للتراجع اضغط Ctrl+Z.». The action is named «تراجع عن حذف السؤال / القسم» (the visible word «تراجع» stays; the toolbar's «تراجع» keeps its unique name) and is disabled while saving. Ctrl+Z / the toolbar undo / opening another exam make the toast leave. | `src/structuredDeletionUndo.ts`, `src/StructuredExamBuilder.tsx`, `src/ExamSectionEditor.tsx` (`data-section-id`, focusable section, `data-add-question`) |
-| 3 | First confirmation opens at once, no bundle growth | After a TEACHER session is validated, the shared confirmation chunk is warmed on idle (`requestIdleCallback`, else a ≤ 1.2 s timer) with a PLAIN `import()` (never the chunk-reload recovery; a failed prefetch is silent and retried later; skipped offline). Never for a visitor or a student. | `src/ui/confirmPrefetch.ts`, `src/App.tsx` |
+| 2 | Safe «تراجع» for deleting one question / one section | The deletion is captured as an IMMUTABLE snapshot (the very same object + where it was) inside the history updater; «تراجع» puts it back as ONE new history entry, re-validated against the exam as it is then — never a history pop, so later edits are never undone by mistake (§3). Focus goes to the next card (else the previous one, else «+ إضافة سؤال»; for a section: the next section, else the previous one, else «+ إضافة قسم»), back to the restored card after «تراجع», and to the neighbour again when Escape / close leaves the toast with focus inside. Screen readers hear the routes back («… للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع».» since Review Fix 2). The action is named «تراجع عن حذف السؤال / القسم» (the visible word «تراجع» stays; the toolbar's «تراجع» keeps its unique name) and is disabled while saving. Ctrl+Z / the toolbar undo / opening another exam make the toast leave. | `src/structuredDeletionUndo.ts`, `src/StructuredExamBuilder.tsx`, `src/ExamSectionEditor.tsx` (`data-section-id`, focusable section, `data-add-question`) |
+| 3 | First confirmation opens at once, within the bundle budget | After a TEACHER session is validated, the shared confirmation chunk is warmed on idle (`requestIdleCallback`, else a ≤ 1.2 s timer) with a PLAIN `import()` (never the chunk-reload recovery; a failed prefetch is silent and is NOT retried in the session — browsers keep the failed module — so the first confirmation then takes the existing one-shot reload, exactly as a failed first-use fetch did before; skipped offline). Cost: ≈ +0.35 KB gzip in the initial graph, inside the 21E.1 stage line. Never for a visitor or a student. | `src/ui/confirmPrefetch.ts`, `src/App.tsx` |
 | 4 | Template dialogs default to keeping the teacher's content | `ConfirmDialog` gains an opt-in `initialFocus: "confirm" \| "cancel"`; the four template-replacement confirmations open on «إبقاء …». Every other confirmation keeps its focus exactly as before. | `src/ui/ConfirmDialog.tsx`, `src/ExamSectionEditor.tsx`, `src/ExamCoverEditor.tsx` (×2), `src/App.tsx` |
 | 5a | Audit F3 — the exam details panel cannot collapse | `.iex-details-panel[hidden]{display:none}` + a design-system guard for the bug class (any class on a `hidden` element with a non-`none` display rule needs a `[hidden]` override). | `src/studentexam-pro.css`, `src/designSystem/hiddenAttribute.guard.test.ts` |
 | 5b | Audit F6 — secondary text fails AA on tints | `--eb-muted` `#64748b` → `#475569` (≥ 4.5:1 on every surface and tint token, still lighter than body text). Input placeholders get their own token `--eb-placeholder: #64748b` (the only placeholder that used the muted token is the sign-in form): AA on white (4.76:1) and still clearly lighter than typed text (2.2:1 apart) — with the darker muted value an empty field would look filled (1.35:1 apart). | `src/design-tokens.css`, `src/login-pro.css`, `api/tests/ux2-shell-foundation.test.js` (the old "< 4.5 on the page background" expectation is now "≥ 4.5"; the placeholder pin names the new token and gains two contrast assertions — stricter, not looser) |
 | 5c | Audit F16 — phone menu loses focus after Escape | Escape, the backdrop and «إغلاق القائمة» return focus to «القائمة» even when the opening tap never focused it. Navigating to a page and the desktop-resize close keep their behaviour. | `src/shell/TeacherAppShell.tsx`, `src/ui/IconButton.tsx` (React 19 ref-as-prop) |
-| 2b | Review fixes (independent adversarial pass on the first commit) | Focus never falls to `<body>` when ANY toast about a deletion leaves with focus inside it (Ctrl+Z pressed inside the toast, a refused «تراجع» from the keyboard, closing the success / warn toast): the restored item, else the neighbour, else «+ إضافة قسم». A restore never splits another scenario's block (first of after-previous / before-next / original index / end that keeps every block whole). Restored cards and sections are revealed just below the sticky toolbar (its measured bottom edge since Review Fix 1, §11; a card taller than the space below it is aligned by its top instead of centred). Restore scrolls honour reduced motion (OS or the app's motion setting). While a toast is shown the builder scroller reserves room below its last control. | `src/StructuredExamBuilder.tsx`, `src/structuredDeletionUndo.ts`, `src/structured-builder.css` |
+| 2b | Review fixes (independent adversarial pass on the first commit) | Focus never falls to `<body>` when ANY toast about a deletion leaves with focus inside it (Ctrl+Z pressed inside the toast, a refused «تراجع» from the keyboard, closing the success / warn toast): the restored item, else the neighbour, else «+ إضافة قسم». A restore never splits another scenario's block (first of after-previous / before-next / original index / end that keeps every block whole). Restored cards and sections are revealed just below the sticky toolbar (its measured bottom edge since Review Fix 1, §11; a card taller than the space below it is aligned by its top instead of centred). Restore scrolls honour reduced motion (OS or the app's motion setting). The builder scroller reserves room below its last control for the toast (at all times since Review Fix 2, so the content never jumps when a toast leaves). Review Fix 2 (§12): a POINTER closing a toast returns focus without moving the page, a keyboard close reveals a hidden target only; a focus candidate disabled while saving is skipped (section, then the never-disabled toolbar as the last resort). | `src/StructuredExamBuilder.tsx`, `src/structuredDeletionUndo.ts`, `src/structured-builder.css` |
 | 3b | Same-commit first confirmation | After the prefetch, the closed lazy dialog is mounted ahead of time (renders nothing), so the first confirmation does not suspend: a lazy component first rendered on demand suspends once even with its module loaded, and React holds the reveal for its fallback throttle (~300 ms measured in Chromium). | `src/ui/confirmPrefetch.ts` (readiness subscription), `src/ui/useDeferredConfirm.tsx` |
 | — | Correction | The slice-1 record claimed the teacher landing page loads the confirmation chunk; it does not (the landing is App.tsx's own view). Corrected with an erratum. | `docs/enterprise-ux-premium-21e1.md` |
 
@@ -125,13 +125,27 @@ Each mutant: exact single-occurrence replacement, the targeted suites run, file 
 | M45 / M46 | V1: the toast message back to the default size / the tight line height | KILLED ×2 |
 | M54 / M55 | V1: long section titles not shortened in the toast / screen readers get the shortened title too | KILLED ×2 |
 | M47 / M48 / M53 | F3: assignment instructions no longer open the details / whitespace-only instructions open them / general instructions no longer open them | KILLED ×3 |
+| M56 / M57 / M58 | Review Fix 2: a pointer closing the toast reveals the target anyway / a candidate that did not take focus counts as focused / no last-resort toolbar focus | KILLED ×2; **M57 equivalent** (the `disabled` guard runs first for every button candidate, and the `tabIndex="-1"` containers always take focus — the `activeElement` check is defence in depth) |
+| M59 | RF2: the clearance ignores the toolbar's resting position | KILLED |
+| M60 / M61 / M62 | RF2: titles cut by code point / a word cut anywhere / a trailing format character left before «…» | KILLED ×3 |
+| M63 / M64 / M65 / M66 | RF2: counts for 100+ questions use the whole number / whitespace-only title not trimmed / no `<bdi>` / a long display number shown in full | KILLED ×4 |
+| M67 | RF2: two deletions in one commit settle the committed seq only | KILLED |
+| M68 / M69 / M70 / M71 / M72 / M73 | RF2 toast: action always «keyboard» / close always «keyboard» / the action runs after the toast left / a toast shown from onDismiss dropped / no `aria-describedby` / the pause not keyed by id | KILLED ×6 |
+| M74 | RF2: a restored scenario member re-linked at its stale captured position | KILLED |
+| M75 | RF2: the room below the builder reserved only while a toast shows | KILLED |
+| M76 | RF2: the hidden-attribute guard trusts a specificity tie regardless of source order (mutant in the guard) | KILLED |
+| M77 / M78 | RF2: the success toast not capped at 4 s / the 24 px margin of the "fits" rule removed | KILLED ×2 |
+| M79–M89 | RF2: the self-review's 16 mutation survivors re-planted (title limit 41, «2 أسئلة», «11 أسئلة», a plain focus() before the preventScroll one, a restored card / section focused without preventScroll, the restored card aligned before the success toast exists, a blur resuming the countdown, Escape propagating, a pause carrying over, the scroller's top ignored) | KILLED ×10; **M86 equivalent** (a blur inside the card is followed by the next control's focus before any countdown effect runs) |
+| M90 / M91 | RF2: the history recovery after «تراجع» removed / reacting to every exam change | KILLED ×2 (on `0c5536b`) |
 
 M1–M37 (slice 2): all KILLED, no timeouts; M1–M35 ran on `5b72855`, and after the last builder change every mutant in
 `StructuredExamBuilder.tsx` (M6–M10, M25–M27, M32–M34, M36, M37) was run again on the final code. Review Fix 1: the whole
-campaign, M1–M55, was run again on `9794b26` (§11). Every mutated file was
+campaign, M1–M55, was run again on `9794b26` (§11). Review Fix 2: the whole campaign, M1–M78, ran on `34b8258` — 77 of 78 KILLED, no timeouts, M57 equivalent (above); then M79–M89, the self-review's own survivors re-planted, on the same code with two tests added: 10 of 11 KILLED, M86 equivalent
+(§12; the self-review's own 34 mutants and what became of their 16 survivors are tabled there). M90 / M91 ran on `0c5536b`.
+**Total: 91 mutants, 89 KILLED, 2 equivalent (M57, M86), no timeouts.** Every mutated file was
 restored byte-for-byte and sha256-verified; `src/`, `scripts/`, `api/` were identical to the commit after each run.
 
-## 7. Real-Chromium certification (production builds, before = `b8a65f1`, after = head)
+## 7. Real-Chromium certification (production builds, before = `b8a65f1`, after = `7733703`; every after-claim re-verified on `dd795f3` in §12)
 
 `scripts/capture-visual-gate-21e1s2.mjs` drives the production build through a real teacher session against a local mock of the
 teacher API (service workers blocked, nothing deployed) at desktop 1280×900, desktop 150 % (853×600 at 1.5×), desktop 200 %
@@ -149,7 +163,7 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
 | Phone menu (≤ 1024 px) opened without focusing its button, then Escape / backdrop | focus on `<body>` | focus on «القائمة» |
 | F3 details panel collapsed (390 / 1280 / 200 %) | `display:flex`, 209 / 141 / 182 px painted while `aria-expanded="false"` — **4/16 checks** | `display:none`, height 0; open / close by click; collapsed card one 44 px row with «22 أسئلة · 100 علامة»; the first question moves up by 209 px on the phone — **16/16** | *(Collapsed case = no instructions. Since Review Fix 1 the panel opens by default when the assignment has instructions — owner decision, §11.)*
 | F6 axe-core 4.10.2 colour-contrast (builder landing + structured builder, 4 viewports) | 0 nodes on these two teacher pages | 0 nodes; every element painted in the muted colour ≥ 7.18:1 |
-| First confirmation on a throttled network (400 ms RTT, 50 KB/s), measured in the page from the click to the dialog in the DOM | **520 ms**, `ConfirmDialog` + `Dialog` chunks fetched on the click | **7 ms**, both chunks fetched on idle before the click, nothing requested on the click (prefetch alone, before the closed dialog was pre-mounted: 304 ms) |
+| First confirmation on a throttled network (400 ms RTT, 50 KB/s), measured in the page from the click to the dialog in the DOM | **520 ms**, `ConfirmDialog` + `Dialog` chunks fetched on the click | **7 ms**, both chunks fetched on idle before the click, nothing requested on the click (prefetch alone, before the closed dialog was pre-mounted: about 300 ms — observed during development, not archived) |
 | Sticky builder toolbar height (pre-existing, unchanged) | 300 / 350 / 400 / 700 px of 900 / 600 / 450 / 844 | identical. At 200 % and on the phone it covers a restored card's tools; the harness then operates «حذف» by keyboard and records it (21E.2 toolbar work) |
 | Page overflow | none | none (scrollWidth = clientWidth at every viewport) |
 | Page errors | 0 | 0 |
@@ -159,8 +173,10 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
 - **A / B — before / after screenshots** of the actual pages at desktop, 150 %, 200 % and phone: published with the PR
   evidence (the run writes `HARNESS_OUT/<before|after>/`).
 - **C — visual review.** The toast uses the shell's own navigation navy, white text, one quiet bordered action and a close
-  glyph; it sits centred above the bottom edge (full width on phones, safe-area aware), never covers the toolbar, and animates
-  only without reduced motion. Approved Tadris+ identity untouched (no logo, colour or typeface change other than the darker
+  glyph; it sits centred above the bottom edge (full width on phones, safe-area aware) and animates
+  only without reduced motion. It never covers the toolbar at 1280×900, 150 % or on a 390 px phone; at 200 % (640×450) it overlaps
+  the toolbar's last row («معاينة الامتحان», «حفظ مسودة», «اعتماد نهائي») for the 10 s it shows (paused while the pointer rests
+  on it) — the pre-existing audit F1 toolbar, 21E.2 (`docs/enterprise-ux-premium-21e.md` §3.5). Approved Tadris+ identity untouched (no logo, colour or typeface change other than the darker
   secondary text token). Secondary text stays visibly lighter than body text (`#475569` vs `#334155`).
 - **D — real teacher workflow:** open a saved structured exam → delete a question → «تراجع» → delete a section → «تراجع» →
   template over typed text with a reflexive Enter; phone menu by keyboard; first confirmation on a slow network.
@@ -181,6 +197,12 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
 
 ## 10. Known limitations
 
+- **The 21E acceptance audit's findings F1–F20** are kept, with status and target phase, in `docs/enterprise-ux-premium-21e.md`
+  §3.5 (F1 — the oversized phone / 200 % builder toolbar and its overlap with this slice's undo toast — with the measured numbers).
+- **Bulk delete (pre-existing):** after the confirmation the bulk bar unmounts with the dialog's opener, so focus lands on `<body>`
+  (identical on `main`; measured in §12). 21E.2 (bulk-action bar).
+- **A modal over the toast:** the bulk-delete confirm or the bank picker does not pause the toast's countdown, and its «تراجع» is
+  unreachable behind the modal; the toolbar «تراجع» and Ctrl+Z remain after the modal closes (measured in §12).
 - **One toast at a time.** Deleting a second item replaces the first toast; the first deletion is then undone with Ctrl+Z /
   the toolbar «تراجع» (history), as before this slice. Deliberate: a stack of undo toasts competes for attention and focus.
 - **Keyboard reach.** The toast sits at the end of the builder overlay, so Tab reaches it only after the builder's controls.
@@ -228,8 +250,8 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
 | `02564c1` (first Review Fix 1 commit) | 6 | 66 | the independent re-check's findings: «+ إضافة سؤال» end-aligned under the toolbar (desktop and 200 % geometry), a card centred under the toolbar during a second deletion while the toast is shown, a refused «تراجع» revealing «+ إضافة قسم», and the two long-title toast cases |
 | `9794b26` | 0 | 72 | — |
 
-The two Chromium-found cases (bottom-edge clearance, no usable strip) also failed on the first version of the fix before the
-second change.
+The two Chromium-found cases (bottom-edge clearance, no usable strip) were found while certifying the first version of the fix
+(observed during development; the archived fail-first run is the one against `77337030`).
 
 **Real Chromium** (`scripts/check-review-fix1-browser-21e1s2.mjs`, production builds of `77337030` and `9794b26`, reduced
 motion; question 2's heading placed 8 px below the toolbar, then deleted with the mouse and — after Ctrl+Z — from the keyboard):
@@ -274,3 +296,116 @@ finding verified by a skeptic). Confirmed and fixed in `9794b26`: «+ إضافة
 padding shrinks it; long section titles making the toast tall; the F3 general-instructions test passing for the wrong reason;
 missing boundary pins (the 96 px strip, refused «تراجع», «+ إضافة قسم»). One verifier judged the long-title height inherent to
 unbounded text rather than a defect; it is handled anyway by the title shortening above.
+
+## 12. Review Fix 2 — single-window self-review of `dd795f3` (NOT an independent approval)
+
+The owner moved to one development window, so the review of the final commits (`02564c1`, `9794b26`, `dd795f3`) that the
+independent reviewer had not completed was done **by the implementing window itself**. It is a self-review: it was run as an
+adversarial, multi-agent process with no shared state with the implementation, but it carries no independent approval, and
+the owner's merge decision should weigh it as such.
+
+**Method (exact head `dd795f3`, production build `dist-dd795f3`, read-only on the main tree):**
+
+| Stage | What ran |
+|---|---|
+| Code-diff audit, four dimensions | R1 / undo correctness (every call site of the focus and reveal functions traced; 4,000-case property test of `restoreDeletion`); toast accessibility and visual / RTL (WCAG 2.2 AA checks in real Chromium at 1280×900, 640×450 @2, 320×640 and 390×844, forced colours, 1.4.12 text spacing, reduced motion, bidi); regression / scope / governance (every non-builder change, the record's claims against the evidence files, `AGENTS.md` rules); test quality (13 files replayed fail-first, 34 extra mutants, shuffled runs, Chromium cross-checks) |
+| Adversarial tests | two isolated worktrees wrote 71 attack tests against the real builder, the toast and the student page (focus never to `<body>`, undo never duplicates, StrictMode, unmount races, graphemes, F3 variants) |
+| Real-Chromium probes | the builder at 1280×900, 853×600 @1.5, 640×450 @2, 390×844 and 320×640, reduced and normal motion, pointer and keyboard, forced colours, text spacing; the real pages before (`main` `b8a65f1`) vs after; the F3 harness; the student exam page with and without instructions |
+| Verification | every finding judged by two independent skeptics (reproduce; impact and attribution vs `main`), then a completeness critic |
+
+101 agents, 1,979 tool calls, 3 h 51 min. Result: **44 findings survived verification (0 blockers, 3 major, 21 minor, 20 nits
+or record inaccuracies), 2 refuted.** The majors, every minor the fix of which is contained, and the record inaccuracies are
+fixed in `34b8258`; the rest are deferred with a reason. The accepted F1 toolbar limitation was measured again and is
+recorded with its numbers in `docs/enterprise-ux-premium-21e.md` §3.5 together with the whole F1–F20 audit.
+
+**Findings and what was done**
+
+| # | Finding (severity after verification) | Done |
+|---|---|---|
+| 1 | Closing the toast while a save is running sent focus to `<body>`: the fallback «+ إضافة سؤال / قسم» is disabled while saving and `focus()` on it does nothing (major; breaks the record's own "never `<body>`" claim, not a regression vs `main`) | fixed: a candidate that cannot take focus is skipped; the section, then the toolbar (never disabled) are the fallbacks |
+| 2 | A POINTER closing the toast (Chromium focuses × on mousedown, so the toast reported focus inside) scrolled the page back to the deleted item's neighbour, however far the teacher had scrolled (≈ 1,500–8,900 px in the probes) (major) | fixed: the toast reports how it was dismissed; a pointer close returns focus with `preventScroll` only; a keyboard close reveals a hidden target only |
+| 3 | A restore or a reveal while the builder is scrolled to its end landed 51–100 px under the toolbar at 175 % / 200 %: the end of the range pushed the stuck toolbar up and the clearance was measured from that displaced edge (major) | fixed: the clearance is never less than the toolbar's resting stuck position (scroller padding + height + 12) |
+| 4 | Closing the success toast after «تراجع» re-scrolled a card already on screen (minor) | fixed: the "item is back" path uses the in-place rule |
+| 5 | The reveal right after a deletion ran before the toast and its scroll padding existed, so «+ إضافة قسم» could end under the toast at 125–150 % (minor; 2.4.11) | fixed: the room below the builder is reserved at all times; only the scroll padding stays conditional |
+| 6 | The content jumped 112 px when the toast left while the builder was scrolled to its end (minor, ×2) | fixed by the same permanent reserve |
+| 7 | `toastTitle` cut by code point: vocalised titles lost half their letters or a shadda, emoji / flags were split, a format character could precede «…» (minor, ×4) | fixed: grapheme segmentation, a word cut only in the second half (any whitespace), trailing format characters stripped |
+| 8 | A Latin title's «…» and punctuation were drawn at the wrong end in the RTL toast (minor) | fixed: the shown title is rendered in `<bdi>` |
+| 9 | Whitespace-only titles produced «», the refused-restore message printed «» for an empty title (minor, ×3) | fixed: trimmed titles with the «القسم N» fallback; the refused message says «قسمه» |
+| 10 | «تراجع» could store scenario members out of section order when the previous member left the scenario (minor) | fixed in `structuredDeletionUndo.ts`; unit test |
+| 11 | Arabic counts for 100+ questions («100 سؤالًا») (nit) | fixed: counts agree with the last two digits |
+| 12 | A long display number was shown in full in the toast (nit) | fixed: shortened to 24 graphemes in the visible text only |
+| 13 | Toast: the action could run after the toast had already left; a toast shown from a replaced toast's `onDismiss` was dropped; the card had no description for a late visitor (nits) | fixed |
+| 14 | Two deletions settled by one commit (not reachable by real input) left the first without a toast (nit) | fixed: the newest record is settled |
+| 15 | The announcement said only «اضغط Ctrl+Z» (no Cmd, no route for touch screen-reader users) (nit) | fixed: «Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع»» |
+| 16 | Test gaps: no test that every focus carries `preventScroll`; the restore path's alignment untested; the toast's pause-by-id untested; `toastTitle` and the count phrase branches untested; one order-dependent test; the muted-token test accepting any gap; test titles overclaiming (minor / nits) | fixed: `StructuredExamBuilder.reviewFix2.21e1s2rf2.test.tsx` and the five adopted attack files; `deferredConfirmPrefetched` imports a fresh module per test; `mutedContrast` pins ≥ 1.3:1; the mutation campaign gains M56–M78 |
+| 17 | The hidden-attribute guard accepted an override of EQUAL specificity that a later show rule beats in the browser; `:where()` counted as one (minor) | fixed: ties are decided by source order within a sheet; `:where()` counts 0 |
+| 18 | Record inaccuracies: "never covers the toolbar" (false at 200 %); "a failed prefetch is retried later" and "no bundle growth"; two claims without an archived evidence file; §7's "after" build was `7733703` (minor / nits) | corrected in §2, §7, §8, §11 |
+| 19 | The 21E plan's "additive tokens only" rule was relaxed by this PR for its own `--eb-muted` change (nit, governance) | not a code defect; raised as an **owner decision** in the merge report and marked in the plan |
+| 20 | `--eb-muted` darkening narrows the step to body text from 2.18:1 to 1.37:1; disabled / archived roster names differ less from normal ones (nit) | recorded; the hierarchy rests on size and weight; a non-colour cue for disabled roster entries is a 21E.6 item |
+| 21 | The focused `<section>` / card has no concise accessible name: a screen reader may read the whole section's control labels (≈ 2.5 k characters) when focus lands there (minor, split verdict) | **deferred to 21E.2** (builder structure; naming every section a landmark needs the toolbar / card rework) |
+| 22 | The toast reserve (96 px card, 128 px band) is smaller than the real card at 320 px (124 px) and under 1.4.12 text spacing (122–170 px); «+ إضافة قسم» can end 4 px under the toast there (nit; masked today by the F1 toolbar, which is taller than those viewports) | **deferred to 21E.2 with F1**: size the band from the rendered card |
+| 23 | Toast group named only «إشعار» (nit) | fixed by the description (13) |
+
+Refuted: the toast ignoring the explicit motion «on» override (it follows the existing dialog pattern; 21E plan item A-2),
+and the prefetch tests' fixed 300 ms wait.
+
+**Fail-first** (the final test files copied into a detached worktree of `dd795f3`): **36 of 129 fail** on `dd795f3` (the
+pointer / keyboard, resting-clearance, disabled-fallback, success-toast, grapheme, empty-«», count, scenario-order,
+guard-tie and toast-via cases) and the 71 attack tests as handed over fail 33 of 159 there; all pass on `34b8258`.
+
+**Mutation proof:** the whole campaign M1–M78 ran on `34b8258` one mutant at a time with nothing else running: **77 KILLED, 1 equivalent (M57, §6), no timeouts**; every mutated file restored byte-for-byte and sha256-verified, `git status` of `src/`, `api/` and `scripts/` identical before and after. The self-review's 16 survivors were re-planted as M79–M89 (below): 8 killed at once, M84 / M88 after two tests were added in the follow-up commit `c1f69fd` (see the table below), M86 equivalent.
+
+The self-review's own 34 mutants (its test-quality dimension) had 16 survivors; each is accounted for:
+
+| Survivor | What was planted | Now |
+|---|---|---|
+| B3 | the clearance ignores the scroller's top | killed (M89) by the new scroller-offset test |
+| B10 | a «replaced» toast relocates focus | equivalent today: the deletion effect places focus BEFORE the new toast replaces the old one, so `hadFocus` is always false for «replaced» |
+| B11 / B12 | the title cut at any space / limit 41 | killed by the Review Fix 2 title tests (M61; the exact-40 / 41 pin) |
+| B13 / B14 | «2 أسئلة», «11 أسئلة» | killed by the count test (M80 / M81) |
+| B15 | success toast not capped at 4 s | killed (M77) |
+| B16 | the 24 px "fits" margin removed | killed (M78) |
+| C1 | a plain `focus()` before the `preventScroll` one | killed by the every-focus-carries-preventScroll test (M82) |
+| C2 / C3 | a restored card / section focused without `preventScroll` | killed by the restore-path test (M83 / M84; M84 needed the restored-section assertion added in the follow-up commit) |
+| C4 | the restored card aligned before the success toast exists (band ignored) | killed by the band test (M85) |
+| T1 | blur always resumes the countdown | **equivalent** (M86): a blur inside the card is followed by the next control's focus before any countdown effect runs, so the pause flips back within the same tick; no observable timing change |
+| T4 | Escape propagates out of the card | killed by «Escape inside the card does not reach a document-level handler» (M87) |
+| T5 | a hover carries over to the next toast | killed by «a hover on the previous toast does not pause the replacement» (M88, after the carry-over test was added in the follow-up commit) |
+| T6 | the pause not keyed by toast id | killed (M73) |
+
+**Real Chromium after Review Fix 2** (production build of `c1f69fd`; the final code differs from it only by the history
+recovery of `0c5536b`, whose probe was re-run on that build — see below; six probe agents + skeptics,
+every number reproduced in two passes; 0 page / console errors in every run; `dist-dd795f3` and `main` as references):
+
+| Probe | Viewports | Result |
+|---|---|---|
+| A — a pointer closing the deletion / success toast after scrolling to the end of the builder | 1280×900, 640×450 @2 | **scrollTop delta 0**, focus on the neighbour / restored card (before Review Fix 2: the page jumped back ≈ 1,500–8,900 px) |
+| A — a keyboard close with the neighbour hidden | same | revealed at the toolbar's bottom + 12 (328.1 vs 316; 428.1 vs 416) |
+| B — «تراجع» with the builder scrolled to its end (the stuck toolbar pushed up to 303 / 314 / 254 px) | 780×439 @1.75, 640×450 @2, 844×390, reduced and normal motion | restored card at the resting bottom + 12.1 (378.1 / 428.1 / 378.1) and unchanged after the success toast left; on `dd795f3`: 315 / 326 / 266 (51–100 px under) |
+| C — deleting the only section | 1024×640 @1.25, 853×600 @1.5 | «+ إضافة قسم» focused, 62 px above the toast, hit-testable |
+| D — the toast times out with the builder at its end | 1280×900, 390×844 | scrollTop, scrollHeight, padding (128 → 128) and the elements under three fixed points unchanged (on `dd795f3`: −112 px) |
+| E — toast closed (× keyboard / × mouse / Escape) while a 4 s save is running | 1280×900, 390×844 | focus on the `<section>` after the only-question deletion, on the toolbar after the last-section deletion, never `<body>` (8/8) |
+| F — copy | 1280×900, 640×450 @2 | a 120-code-unit vocalised title (69 graphemes) shown as 36 whole graphemes + «…» at a word, every mark kept; 40 shown whole, 41 cut; the Latin title's «…» drawn right after «Motion:» inside the `<bdi>`; `aria-describedby` resolves to the message and the accessibility tree carries it as the group's description; whitespace titles → no «» |
+| G — R1 under normal (smooth) motion | 1280×900, 853×600 @1.5, 640×450 @2 | page unmoved when the heading is visible; reveals land at the toolbar + 12 after `scrollend` |
+| K — forced colours (dark and light) | 1280×900, 640×450 @2 | card, section and both add buttons focused by keyboard show a solid 2 px UA outline; axe 0 violations (one light-scheme colour-contrast hit is an axe artefact: the computed colours are black on white) |
+| N — axe on the toast layer, errors | 8 viewports down to 320×640 | 0 violations for the deletion, success, long-title and section toasts; toast heights 58 / 62 / 71–97 / 97–124 px (desktop / 200 % / phone / 320); 0 errors in 35 runs |
+| J — persistence | 1280×900 | the `save-exam-artifact` body after delete → «تراجع» → save is byte-identical (apart from `updatedAt`) for a question, a scenario member, a whole section and a sole scenario member |
+| L — F1 measured | 640×450 @2, 390×844, 320×640 | see `docs/enterprise-ux-premium-21e.md` §3.5 (44 px toolbar overlap at 200 %; the 41 px strip on the phone; an 800 px toolbar at 320) |
+| M — F3 on the real student page | 853×600 @1.5, 640×450 @2 | with instructions: open, panel 153 / 200 px, first heading at y 465 / 509 (below the 450 px fold at 200 % — audit F4, 21E.3); without: collapsed, heading at 312 / 308; on `main` the panel is painted while «collapsed» |
+| Real pages before (`main` `b8a65f1`) vs after | 4 viewports, 23 screenshot pairs | 98 identical fields, 65 intended differences (focus targets, kept template text, muted colour, F3, first confirmation 530 → 5 ms); untouched screens pixel-identical apart from the muted colour |
+
+Two further findings came out of the undo / history probes (both outside Review Fix 2's own scope, both minor after verification):
+
+| Finding | Done |
+|---|---|
+| «تراجع» then Ctrl+Z / ⌘Z re-deletes the restored card that holds focus and leaves focus on `<body>`; Ctrl+Y / ⌘⇧Z brings it back unfocused (8/8). Not a regression — on `main` a Ctrl+Z that removes the focused card behaves the same — but this PR adds the route (focus on the restored card). | **fixed in `0c5536b`:** the builder remembers the item «تراجع» brought back; when the history removes it while focus is lost, its neighbour is focused in place, and when the history brings it back, focus follows it (never on an unrelated exam change). Re-measured on the build of `0c5536b`: after Ctrl+Z / ⌘Z focus on card q3, after Ctrl+Y / ⌘⇧Z on card q2, scroll delta 0, 8/8 runs at 1280×900, 853×600 @1.5 (normal motion), 640×450 @2 and a mac UA |
+| A confirmed bulk delete returns focus to its opener, which unmounts with the bulk bar, so focus lands on `<body>` (pre-existing: identical on `main`; the single-deletion toast is not involved) | **deferred to 21E.2** (bulk-action bar rework); recorded in §10 |
+
+Also measured, by design and recorded as limitations: a modal dialog (bulk-delete confirm, bank picker) does not pause the
+toast's countdown and the toast's «تراجع» is unreachable behind it (the toolbar «تراجع» / Ctrl+Z remain); an image generated
+for a question deleted while its request was pending is discarded, and «تراجع» brings the question back without it (as §10
+already says); a «تراجع» while the request is still pending restores the card with its pending state and the image lands.
+
+**Still not run — stated as limitations:** no real assistive technology (NVDA, JAWS, VoiceOver, TalkBack: only the Chromium
+accessibility tree and the live region's DOM were checked); no Firefox or WebKit (`:has()`, `scroll-padding` with
+`scrollIntoView`, `preventScroll` are all baseline features there, but unmeasured); no real devices.
