@@ -175,7 +175,9 @@
 .iex-page-heading:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); border-radius:var(--eb-r-xs); }
 /* Fields keep clear space above the sticky bottom bar when the virtual keyboard / focus scrolls them into view. */
 .iex-page .iex-open, .iex-page .iex-cell, .iex-page .iex-cell-select, .iex-page .iex-seq select, .iex-page .iex-seq input, .iex-page .iex-cli-input, .iex-page .iex-tf-select, .iex-page .iex-option{ scroll-margin-block-end:96px; scroll-margin-block-start:72px; }
-.iex-section-context{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); background:var(--eb-surface); }
+/* Phase 21E.3 (S-ST-NEW-1) — a tighter section header so the question stays the primary focus: less padding and gap; the first
+   question of a section keeps its tint and readable instructions. */
+.iex-section-context{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); background:var(--eb-surface); }
 .iex-section-context.is-first{ background:var(--eb-primary-050); }
 .iex-section-context-row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
 .iex-section-context-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); overflow-wrap:anywhere; }
@@ -355,3 +357,34 @@
 .iex-activity{ margin-block-end:var(--eb-space-3); border:1px dashed var(--eb-line); border-radius:var(--eb-r); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface-2); }
 .iex-activity-stimulus{ margin-block-start:var(--eb-space-2); }
 .iex-activity-status,.iex-activity-fallback{ margin:0; color:var(--eb-text-muted); font-size:var(--eb-fs-sm); }
+
+/* ============================================================
+   Phase 21E.3 — student exam reliability and accessibility
+   ============================================================ */
+/* Scroll clearance (S-8 / S-ST-NEW-2): the sticky top bar and bottom navigation are treated as covered areas whenever the
+   browser scrolls a control into view (Tab, focus(), scrollIntoView), so a focused field is never left under either bar. */
+:root:has(.iex-bottom-nav){ scroll-padding-block-start:72px; scroll-padding-block-end:96px; }
+
+/* Focus after major transitions (S-4): the programmatic targets (question / review / result headings) always show where focus is.
+   Keyboard users get the platform ring; after a pointer action a calm inline-start bar marks the heading instead of a ring. */
+.iex-result-title{ scroll-margin-block-start:72px; }
+.iex-result-title:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); border-radius:var(--eb-r-xs); }
+.iex-page-heading:focus:not(:focus-visible), .iex-review-title:focus:not(:focus-visible), .iex-result-title:focus:not(:focus-visible){
+  box-shadow:inset 3px 0 0 var(--eb-primary);
+}
+[dir="rtl"] .iex-page-heading:focus:not(:focus-visible), [dir="rtl"] .iex-review-title:focus:not(:focus-visible), [dir="rtl"] .iex-result-title:focus:not(:focus-visible){ box-shadow:inset -3px 0 0 var(--eb-primary); }
+
+/* Per-question recovery card (S-1): replaces only the part that failed; calm, never red, never hides the navigation. */
+.iex-q-recovery{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-warn); border-inline-start:4px solid var(--eb-warn); border-radius:var(--eb-r); background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
+.iex-q-recovery-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.iex-q-recovery-title{ display:flex; align-items:center; gap:var(--eb-space-2); margin:0; font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-body); }
+.iex-q-recovery-body{ margin:0; font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.iex-q-recovery-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.iex-q-recovery-actions .eb-button{ min-height:44px; }
+.iex-q-recovery.is-section{ padding:var(--eb-space-2) var(--eb-space-3); }
+
+/* Touch targets (S-7): at least 44×44 CSS px for the listed student controls on coarse pointers (phones, tablets). Scoped to the
+   controls themselves; desktop layouts with a fine pointer keep their sizes. */
+@media (pointer: coarse){
+  .iex-cli-input{ min-height:44px; min-width:44px; }
+}

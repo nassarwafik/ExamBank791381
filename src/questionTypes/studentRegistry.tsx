@@ -4,7 +4,7 @@
 // stored version (absence = V1); a missing implementation resolves to nothing and the card renders a safe unsupported state —
 // never the latest renderer, never a crash. Lookup is by canonical key (student payloads may carry lower-cased legacy
 // spellings, so the catalog resolver is used) — never by anything else in exam data.
-import { lazy } from "react";
+import { recoverableLazy } from "../recoverableLazy";
 import { questionTypeDefinition, createVersionedRegistry, resolveQuestionTypeKey, effectiveQuestionTypeVersion } from "../questionTypeCatalog";
 import type { StudentRendererComponent } from "./registryTypes";
 
@@ -32,36 +32,38 @@ export function studentUnsupported(rawType: unknown, storedVersion: unknown): bo
   return !def.legacy || effectiveQuestionTypeVersion(key, storedVersion) === undefined;
 }
 
-registerStudentRenderer("multipleSelect", 1, lazy(() => import("./student/MultipleSelectResponse")));
-registerStudentRenderer("numericResponse", 1, lazy(() => import("./student/NumericResponseInput")));
-registerStudentRenderer("matrix", 1, lazy(() => import("./student/MatrixResponse")));
-registerStudentRenderer("categorization", 1, lazy(() => import("./student/CategorizationResponse")));
+registerStudentRenderer("multipleSelect", 1, recoverableLazy("MultipleSelectResponse", () => import("./student/MultipleSelectResponse")));
+registerStudentRenderer("numericResponse", 1, recoverableLazy("NumericResponseInput", () => import("./student/NumericResponseInput")));
+registerStudentRenderer("matrix", 1, recoverableLazy("MatrixResponse", () => import("./student/MatrixResponse")));
+registerStudentRenderer("categorization", 1, recoverableLazy("CategorizationResponse", () => import("./student/CategorizationResponse")));
 // Phase 16B-A — the sandboxed simulation host (lazy: loaded only when a simulation question is rendered).
-registerStudentRenderer("simulation", 1, lazy(() => import("./student/SimulationResponse")));
+registerStudentRenderer("simulation", 1, recoverableLazy("SimulationResponse", () => import("./student/SimulationResponse")));
 // Phase 17A — the coding response + CodingEditor (lazy: loaded only when a coding question is rendered; student AND preview).
-registerStudentRenderer("coding", 1, lazy(() => import("./student/CodingResponse")));
+// Phase 21E.3 — ONE recoverable component for the one CodingResponse chunk, so a recovery never evaluates it twice.
+const CodingResponse = recoverableLazy("CodingResponse", () => import("./student/CodingResponse"));
+registerStudentRenderer("coding", 1, CodingResponse);
 // Phase 17F-C2 RF1 — coding@2 renders exactly like coding@1 for the student (same lazy module; the policy is private teacher data).
-registerStudentRenderer("coding", 2, lazy(() => import("./student/CodingResponse")));
+registerStudentRenderer("coding", 2, CodingResponse);
 // Phase 19F — coding@3: the locked-template workspace (lazy; locked blocks are plain text, each gap a small code field; no Monaco).
-registerStudentRenderer("coding", 3, lazy(() => import("./student/CodingTemplateResponse")));
+registerStudentRenderer("coding", 3, recoverableLazy("CodingTemplateResponse", () => import("./student/CodingTemplateResponse")));
 // Phase 18C — the network CLI terminal (lazy: the engine + terminal load only when a networkCli question is rendered; student AND preview).
-registerStudentRenderer("networkCli", 1, lazy(() => import("./student/NetworkCliResponse")));
+registerStudentRenderer("networkCli", 1, recoverableLazy("NetworkCliResponse", () => import("./student/NetworkCliResponse")));
 // Phase 19A — inline cloze passage (lazy: the passage renderer and its stylesheet load only when an inlineCloze question renders).
-registerStudentRenderer("inlineCloze", 1, lazy(() => import("./student/InlineClozeResponse")));
+registerStudentRenderer("inlineCloze", 1, recoverableLazy("InlineClozeResponse", () => import("./student/InlineClozeResponse")));
 // Phase 19B — parametric numeric question (lazy: the per-attempt input, and the teacher-preview sample generator, load only when rendered).
-registerStudentRenderer("parametricNumeric", 1, lazy(() => import("./student/ParametricNumericResponse")));
+registerStudentRenderer("parametricNumeric", 1, recoverableLazy("ParametricNumericResponse", () => import("./student/ParametricNumericResponse")));
 // Phase 19D — visual questions (lazy: the image canvas, overlay and pointer mapping load only when a visual question renders).
-registerStudentRenderer("hotspot", 1, lazy(() => import("./student/HotspotResponse")));
-registerStudentRenderer("labelDiagram", 1, lazy(() => import("./student/LabelDiagramResponse")));
+registerStudentRenderer("hotspot", 1, recoverableLazy("HotspotResponse", () => import("./student/HotspotResponse")));
+registerStudentRenderer("labelDiagram", 1, recoverableLazy("LabelDiagramResponse", () => import("./student/LabelDiagramResponse")));
 // Phase 21A.1 — chart selection (lazy: the chart component loads with it; the rendering engine only behind its own dynamic edge).
-registerStudentRenderer("chartSelection", 1, lazy(() => import("./student/ChartSelectionResponse")));
+registerStudentRenderer("chartSelection", 1, recoverableLazy("ChartSelectionResponse", () => import("./student/ChartSelectionResponse")));
 // Phase 21A.2 — function-graph selection (lazy: the owned SVG graph runtime loads only when a graph question renders).
-registerStudentRenderer("functionGraphSelection", 1, lazy(() => import("./student/FunctionGraphSelectionResponse")));
+registerStudentRenderer("functionGraphSelection", 1, recoverableLazy("FunctionGraphSelectionResponse", () => import("./student/FunctionGraphSelectionResponse")));
 // Phase 21C — semantic interactive 3D model selection, fully lazy.
-registerStudentRenderer("scene3DSelection", 1, lazy(() => import("./student/S3DResponse")));
-registerStudentRenderer("meshPartSelection", 1, lazy(() => import("./student/MeshPartSelectionResponse")));
-registerStudentRenderer("openResponse", 1, lazy(() => import("./student/OpenResponseResponse")));
+registerStudentRenderer("scene3DSelection", 1, recoverableLazy("S3DResponse", () => import("./student/S3DResponse")));
+registerStudentRenderer("meshPartSelection", 1, recoverableLazy("MeshPartSelectionResponse", () => import("./student/MeshPartSelectionResponse")));
+registerStudentRenderer("openResponse", 1, recoverableLazy("OpenResponseResponse", () => import("./student/OpenResponseResponse")));
 // Phase 20A — trusted SmartSim (lazy: the plugin workspace — topology, device panels, engines — loads only when a smartSim question renders).
-registerStudentRenderer("smartSim", 1, lazy(() => import("./student/SmartSimResponse")));
+registerStudentRenderer("smartSim", 1, recoverableLazy("SmartSimResponse", () => import("./student/SmartSimResponse")));
 // Phase 20D — composite@1 (lazy: groups, shared source / SmartSim contexts and the per-part renderers load only when a composite renders).
-registerStudentRenderer("composite", 1, lazy(() => import("./student/CompositeResponse")));
+registerStudentRenderer("composite", 1, recoverableLazy("CompositeResponse", () => import("./student/CompositeResponse")));

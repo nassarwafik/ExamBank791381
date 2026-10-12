@@ -83,3 +83,9 @@
 @media (prefers-reduced-motion: reduce){
   .eb-notif-item{ transition:none; }
 }
+
+/* Phase 21E.3 (S-7) — coarse pointers at any width (tablets ≥ 768 px included): the panel's text actions reach 44 px. */
+@media (pointer: coarse){
+  .eb-notif-head-action,
+  .eb-notif-retry{ min-height:44px; }
+}

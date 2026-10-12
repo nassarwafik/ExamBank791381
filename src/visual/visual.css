@@ -57,3 +57,13 @@
 .vq-review table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .vq-review th, .vq-review td { padding: 4px 6px; border-bottom: 1px solid var(--eb-border, #e2e8f0); text-align: start; unicode-bidi: plaintext; }
 @media (prefers-reduced-motion: reduce) { .vq-marker, .vq-zone-btn, .vq-chip { transition: none; } }
+
+/* Phase 21E.3 (S-7) — coarse pointers (phones, tablets): the label chips, zone buttons and the list controls reach 44×44 CSS px. */
+@media (pointer: coarse) {
+  .vq-chip, .vq-zone-btn, .vq-list select, .vq-list input, .vq-list button, .vq-tools button, .vq-actions button { min-height: 44px; min-width: 44px; }
+}
+/* Phase 21E.3 (S-ST-NEW-3) — one short instruction line; the keyboard steps live in an expandable guide below it. */
+.vq-keyboard-guide { margin: 0; font-size: 13px; color: var(--eb-muted, #475569); }
+.vq-keyboard-guide > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; cursor: pointer; color: var(--eb-primary-strong, #1d4ed8); font-weight: 600; }
+.vq-keyboard-guide > summary:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); border-radius: 6px; }
+.vq-keyboard-guide > p { margin: 4px 0 0; line-height: 1.7; }

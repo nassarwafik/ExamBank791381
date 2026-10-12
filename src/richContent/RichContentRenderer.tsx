@@ -1,6 +1,7 @@
-import { Suspense, lazy, memo, useEffect, useState, type ReactNode } from "react";
+import { Suspense, memo, useEffect, useState, type ReactNode } from "react";
 import type { RichBlock, RichCell, RichContentV1, RichMark, RichRun } from "./richContentModel";
 import "./rich-content.css";
+import { recoverableLazy } from "../recoverableLazy";
 
 // Phase 20D.1 — the TRUSTED RichContent renderer. Input is an already validated canonical RichContentV1 (validateRichContent's value);
 // React constructs semantic HTML from that data: every author string becomes a React TEXT node (text that looks like markup stays text),
@@ -9,16 +10,17 @@ import "./rich-content.css";
 //
 // Heading outline: the exam page owns h1 (exam title) and h2 (page / section heading), so content headings never rise above h3:
 // author level 2 → <h3>, level 3 → <h3>, level 4 → <h4>. The author's level is kept on data-xp-level for styling.
-const RichMath = lazy(() => import("./RichMath"));
+// Phase 21E.3 — each leaf below is recoverable in place after a chunk-load failure (recoverableLazy); success path unchanged.
+const RichMath = recoverableLazy("RichMath", () => import("./RichMath"));
 // Phase 21A.1 — data charts: the chart component (and, behind it, the rendering engine) loads only when a chart block is rendered.
-const DataChart = lazy(() => import("../charts/DataChart"));
+const DataChart = recoverableLazy("DataChart", () => import("../charts/DataChart"));
 // Phase 21A.2 — the function-graph runtime (owned SVG renderer) is its own lazy chunk: a document without a graph never downloads it.
-const FunctionGraphView = lazy(() => import("../functionGraphs/FunctionGraphView"));
-const Surface3DView = lazy(() => import("../functionSurfaces/Surface3DView"));
+const FunctionGraphView = recoverableLazy("FunctionGraphView", () => import("../functionGraphs/FunctionGraphView"));
+const Surface3DView = recoverableLazy("Surface3DView", () => import("../functionSurfaces/Surface3DView"));
 // Phase 21D-A.4 — the versioned multi-surface plot (surface.version 2) has its own lazy viewer; V1 surfaces keep the frozen 21B viewer.
-const SurfacePlot3DView = lazy(() => import("../functionSurfaces/SurfacePlot3DView"));
+const SurfacePlot3DView = recoverableLazy("SurfacePlot3DView", () => import("../functionSurfaces/SurfacePlot3DView"));
 // Phase 21C — general interactive 3D scene runtime stays behind a separate lazy edge.
-const Interactive3DView = lazy(() => import("../interactive3d/Interactive3DView"));
+const Interactive3DView = recoverableLazy("Interactive3DView", () => import("../interactive3d/Interactive3DView"));
 
 const CALLOUT_LABEL: Record<string, string> = { info: "معلومة", note: "ملاحظة", warning: "تحذير", success: "إرشاد", important: "مهم" };
 const CALLOUT_ICON: Record<string, string> = { info: "i", note: "✎", warning: "!", success: "✓", important: "★" };

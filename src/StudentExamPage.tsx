@@ -1,5 +1,5 @@
 
-import {useEffect,useMemo,useRef,useState,useCallback,lazy,Suspense,type ReactNode} from "react";
+import {useEffect,useMemo,useRef,useState,useCallback,Suspense,type ReactNode} from "react";
 import {IconCheck,IconMenu} from "./icons";
 import {useConfirm} from "./ui/useConfirm";
 import {usePrefersReducedMotion} from "./ui/usePrefersReducedMotion";
@@ -16,7 +16,7 @@ import type {FieldValue} from "./StudentQuestionCard";
 import {normalizeExamStructure,calculateSectionProgress,selectGradedUnits} from "./examStructure";
 import {StructuredSectionQuestion} from "./StructuredExamSection";
 // Phase 19G — the scenario block (shared sources) of a page whose question belongs to a scenario: lazy, rendered beside the question on wide screens.
-const ScenarioView=lazy(()=>import("./scenario/ScenarioView"));
+const ScenarioView=recoverableLazy("ScenarioView",()=>import("./scenario/ScenarioView"));
 import {buildQuestionPages,clampPageIndex,countAnsweredPages} from "./student/exam/questionPager";
 import ExamBottomNavigation from "./student/exam/ExamBottomNavigation";
 import QuestionNavigatorDialog from "./student/exam/QuestionNavigatorDialog";
@@ -39,6 +39,12 @@ import {rememberStrictExit,pendingStrictExit,clearStrictExit} from "./student/ex
 import PresentationRoot,{SectionPresentationScope} from "./presentation/PresentationRoot";
 import SectionShellHeader from "./presentation/SectionShellHeader";
 import {sectionShellOf,sectionMarksLabel} from "./presentation/presentationRuntime";
+// Phase 21E.3 — per-question fault isolation, focus after major transitions, one calm polite announcer (timer thresholds + save).
+import {recoverableLazy} from "./recoverableLazy";
+import QuestionErrorBoundary from "./student/exam/QuestionErrorBoundary";
+import {QuestionRecoveryContext,type QuestionRecovery} from "./student/exam/questionRecovery";
+import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement} from "./student/exam/examAnnouncements";
+import type {SaveStateKind} from "./studentSaveState";
 
 type ExamBody={presentation?:unknown;title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;attemptPolicy?:string;marksDistribution?:MarksDistribution;exam:ExamBody};
@@ -88,7 +94,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const [pageIndex,setPageIndex]=useState(0),[view,setView]=useState<"answer"|"review">("answer"),[navOpen,setNavOpen]=useState(false);
  // Focus contract: set ONLY by an intentional navigation (Next / Previous / navigator jump / review enter-leave); the
  // effect below moves focus to the new heading once, after render. Autosave, timer ticks and resyncs never set it.
- const pendingFocusRef=useRef<"question"|"review"|null>(null),questionHeadingRef=useRef<HTMLHeadingElement|null>(null),reviewHeadingRef=useRef<HTMLHeadingElement|null>(null);
+ const pendingFocusRef=useRef<"question"|"review"|null>(null),questionHeadingRef=useRef<HTMLHeadingElement|null>(null),reviewHeadingRef=useRef<HTMLHeadingElement|null>(null),resultHeadingRef=useRef<HTMLHeadingElement|null>(null);
+ // Phase 21E.3 — the ONE polite announcer of the running exam (timer thresholds, save problems / recovery, recovery cards). The
+ // live region stays mounted and empty in React; each message REPLACES its child node, so assistive technology announces it even
+ // when the same words come twice. No React state: announcing never re-renders the page.
+ const announcerRef=useRef<HTMLParagraphElement|null>(null);
+ const announce=useCallback((text:string)=>{const el=announcerRef.current;if(!el)return;const span=document.createElement("span");span.textContent=text;el.replaceChildren(span)},[]);
  // Back to the first question in answer mode — ONLY when a genuinely different attempt/generation is adopted or a new
  // attempt starts. A same-attempt resync (timer/state refresh, clean draft adoption) never moves the student.
  const resetPager=useCallback(()=>{setPageIndex(0);setView("answer");setNavOpen(false)},[]);
@@ -596,6 +607,60 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(typeof el.scrollIntoView==="function")el.scrollIntoView({block:"start",behavior});
   else window.scrollTo({top:0,behavior});
  },[currentIndex,view,reducedMotion]);
+ // Phase 21E.3 — focus after the MAJOR transitions. The page shows one "screen" at a time; when it changes (never on the first
+ // render — opening the page keeps the browser's own focus), focus moves once: entering the questions (start, resume, cover,
+ // next attempt) → the question heading, revealed with the least scrolling so the open details stay in view; reaching the
+ // result (submit, time-out, teacher end, strict end) → the result heading. Typing, autosave, timer ticks and resyncs never
+ // change the screen, so they never move focus.
+ const screen=loading?"loading":(!started&&result)?"result":(strictEnded&&!result)?"strict":(paused&&!result&&state?.activeAttempt)?"paused":needsStart?"gate":(structured&&cover?.enabled&&!coverStarted&&!timed&&!requiresStart)?"cover":"exam";
+ const prevScreenRef=useRef(screen);
+ useEffect(()=>{
+  const prev=prevScreenRef.current;prevScreenRef.current=screen;
+  if(prev===screen||prev==="loading")return;
+  const behavior:ScrollBehavior=reducedMotion?"auto":"smooth";
+  if(screen==="exam"){
+   const el=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;
+   if(!el)return;
+   el.focus({preventScroll:true});
+   if(typeof el.scrollIntoView==="function")el.scrollIntoView({block:"nearest",behavior});
+  }else if(screen==="result"||screen==="strict"){
+   const el=resultHeadingRef.current;
+   if(!el)return;
+   el.focus({preventScroll:true});
+   window.scrollTo({top:0,behavior});
+  }
+ },[screen,view,reducedMotion]);
+ // Phase 21E.3 (S-8) — a question control that receives focus partly under the sticky top bar or bottom navigation is revealed
+ // with the least scrolling (scroll-padding keeps it clear of both bars). Chromium does not scroll a PARTLY visible element on
+ // focus, so the CSS clearance alone leaves e.g. a tall answer field under the navigation. Once per focus, never while typing.
+ useEffect(()=>{
+  if(screen!=="exam")return;
+  const onFocusIn=(e:FocusEvent)=>{
+   const el=e.target instanceof HTMLElement?e.target:null;
+   if(!el||!el.closest(".iex-page,.iex-review")||typeof el.scrollIntoView!=="function")return;
+   const r=el.getBoundingClientRect(),nav=document.querySelector(".iex-bottom-nav")?.getBoundingClientRect(),bar=document.querySelector(".iex-topbar")?.getBoundingClientRect();
+   if((nav&&r.bottom>nav.top+1)||(bar&&r.top<bar.bottom-1))el.scrollIntoView({block:"nearest",inline:"nearest",behavior:reducedMotion?"auto":"smooth"});
+  };
+  document.addEventListener("focusin",onFocusIn);
+  return()=>document.removeEventListener("focusin",onFocusIn);
+ },[screen,reducedMotion]);
+ // Phase 21E.3 — timer thresholds (5 min, 1 min): announced once per threshold per attempt identity, remembered per tab, from
+ // the page's existing server-anchored remainingMs (read only; expiry and submission are untouched).
+ const timerAttempt=timed&&hasActive&&!paused&&state?.activeAttempt?timerNoticeKey(assignment.assignmentId,Number(state.activeAttempt.attemptNumber),String(state.activeAttempt.startedAt||"")):"";
+ useEffect(()=>{
+  if(!timerAttempt||remainingMs===null||expired)return;
+  const done=readTimerNotices(timerAttempt),next=timerAnnouncement(remainingMs,done);
+  if(!next)return;
+  next.record.forEach(t=>done.add(t));writeTimerNotices(timerAttempt,done);announce(next.text);
+ },[timerAttempt,remainingMs,expired,announce]);
+ // Phase 21E.3 — calm save announcements: only offline, failed-after-retries, and saved again after one of those.
+ const liveSaveKind=deriveSaveState({localRevision:revision.current,savedRevision:savedRevision.current,saving,retrying,errorExhausted:saveError,online});
+ const prevSaveKindRef=useRef<SaveStateKind|null>(null),saveProblemRef=useRef(false);
+ useEffect(()=>{
+  const r=saveAnnouncement(prevSaveKindRef.current,liveSaveKind,saveProblemRef.current);
+  prevSaveKindRef.current=liveSaveKind;saveProblemRef.current=r.problemOpen;
+  if(r.text)announce(r.text);
+ },[liveSaveKind,announce]);
  const setChoice=(id:string,index:number)=>setAnswers(a=>({...a,[id]:{kind:"choice",index}}));
  const setSeq=(id:string,index:number,value:string)=>setAnswers(a=>{const prev=a[id]?.kind==="sequence"?(a[id] as {kind:"sequence";values:string[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"sequence",values}}});
  const setTable=(id:string,index:number,value:string|boolean)=>setAnswers(a=>{const prev=a[id]?.kind==="table"?(a[id] as {kind:"table";values:(string|boolean)[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"table",values}}});
@@ -663,7 +728,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const xpRaw=exam.presentation!==undefined?exam.presentation:assignment.exam.presentation,xpOn=xpRaw!==undefined&&xpRaw!==null;
  const shell=(children:ReactNode)=>xpOn?<PresentationRoot as="main" className="interactive-exam-page" presentation={xpRaw}>{children}</PresentationRoot>:<main className={"interactive-exam-page exam-theme-"+theme} dir="rtl">{children}</main>;
  if(loading)return <main className="interactive-exam-page" dir="rtl"><div className="iex-wrap"><p className="iex-loading" role="status">جارٍ تجهيز صفحة الامتحان...</p></div></main>;
- if(!started&&result)return shell(<div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}{(()=>{const withheld=scoreWithheld(result);return <><div className="iex-score" data-testid="result-headline" data-pending={withheld?"true":"false"}>{withheld?PENDING_SCORE_DASH:result.score}<small> / {result.totalMarks}</small></div><strong className={withheld?"iex-score-pending":undefined} data-testid="result-percent">{withheld?withheldScoreLabel(result):result.percentage+"%"}</strong></>})()}{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{codingStatus?<CodingGradingStatusPanel status={codingStatus} gradingStatus={gs} windowEnded={codingPoll.windowEnded} refreshFailed={codingPoll.refreshFailed}/>:result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div>);
+ if(!started&&result)return shell(<div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1 className="iex-result-title" tabIndex={-1} ref={resultHeadingRef}>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}{(()=>{const withheld=scoreWithheld(result);return <><div className="iex-score" data-testid="result-headline" data-pending={withheld?"true":"false"}>{withheld?PENDING_SCORE_DASH:result.score}<small> / {result.totalMarks}</small></div><strong className={withheld?"iex-score-pending":undefined} data-testid="result-percent">{withheld?withheldScoreLabel(result):result.percentage+"%"}</strong></>})()}{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{codingStatus?<CodingGradingStatusPanel status={codingStatus} gradingStatus={gs} windowEnded={codingPoll.windowEnded} refreshFailed={codingPoll.refreshFailed}/>:result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div>);
  // START GATE (B2A) — questions are NOT delivered by the server until startAttempt succeeds, for TIMED
  // and UNTIMED v2 assignments alike. Shows the structured cover (when enabled) or a compact start card;
  // pressing start calls the server, refetches the exam and reveals the questions. TIMED also anchors the
@@ -671,7 +736,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Phase 7A — a strict attempt that ended because the student left: never show its questions again.
  if(strictEnded&&!result){
   return shell(<div className="iex-wrap">
-   <section className="iex-start-card iex-strict-ended" role="status"><span className="iex-eyebrow">وضع صارم</span><h1>انتهت المحاولة</h1>
+   <section className="iex-start-card iex-strict-ended" role="status"><span className="iex-eyebrow">وضع صارم</span><h1 className="iex-result-title" tabIndex={-1} ref={resultHeadingRef}>انتهت المحاولة</h1>
     <p>تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان. ستُصحَّح الإجابات المحفوظة وتظهر النتيجة هنا.</p>
     {error&&<div className="platform-error iex-error">{error}</div>}
     <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void confirmStrictExit()}}>عرض النتيجة</button></div>
@@ -743,16 +808,23 @@ export default function StudentExamPage({token,assignment,studentName,className,
  }
  const inputsDisabled=submitBusy||expired||strictEnded||pausing;
  // Roadmap #10/#11 — ONE authoritative derived save state for rendering; server-confirmed lastSavedAt only.
- const saveKind=deriveSaveState({localRevision:revision.current,savedRevision:savedRevision.current,saving,retrying,errorExhausted:saveError,online});
+ const saveKind=liveSaveKind;
  const attemptLine="المحاولة "+((state?.attemptsUsed||0)+1)+" / "+(state?.allowedAttempts||assignment.maxAttempts);
  const classLine=className||exam.metadata?.className||"الصف";
  const hasGeneralInstructions=!!String(exam.metadata?.generalInstructions||"").trim();
  // 21E.1 slice 2 RF1 (audit F3, owner decision): the teacher's assignment instructions are visible by default; without any
  // instructions the details panel starts collapsed.
  const hasAssignmentInstructions=!!String(assignment.instructions||"").trim();
+ // Phase 21E.3 — what a question recovery card may offer: a manual reload only when it cannot cost anything (every answer
+ // server-confirmed, nothing submitting, not strict — leaving a strict attempt ends it). Focus returns to the question heading.
+ const recovery:QuestionRecovery={reloadAllowed:policy!=="strict"&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,focusAnchor:()=>questionHeadingRef.current?.focus({preventScroll:true})};
  // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
  // one progress row with the SINGLE live save-status region, then the unchanged question rendering.
- return shell(<div className="iex-wrap">
+ return shell(<QuestionRecoveryContext.Provider value={recovery}><div className="iex-wrap">
+  {/* Phase 21E.3 — the single polite announcer of the running exam (timer thresholds, save problems, recovery cards). */}
+  <p className="eb-visually-hidden iex-announcer" role="status" aria-live="polite" aria-atomic="true" data-testid="exam-announcer" ref={announcerRef}/>
+  {/* Phase 21E.3 — an error anywhere below stays inside the page: StudentExamPage (answers, autosave, timer, strict state) stays mounted. */}
+  <QuestionErrorBoundary variant="exam">
   <ExamTopBar title={assignment.title} context={classLine+" · "+attemptLine} onBack={()=>{void backWithoutSubmit()}} timer={timed&&hasActive&&remainingMs!==null?{remainingMs,tone:countdownTone(remainingMs)}:null}/>
   {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
   {policy==="strict"&&hasActive&&<div className="iex-strict-badge" role="note"><strong>وضع صارم</strong><span>مغادرة هذه الصفحة أو التبديل إلى تطبيق أو تبويب آخر تنهي المحاولة.</span></div>}
@@ -799,16 +871,19 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // 20D.1 — presentation mode: the shared section shell above the page and the section-scoped presentation around it (no-op otherwise).
    const rawSection=page.section?(exam.sections||[])[page.sectionIndex]:undefined;
    const scoped=(n:ReactNode)=>xpOn?<SectionPresentationScope section={rawSection}>{n}</SectionPresentationScope>:n;
-   return <StudentAttemptContext.Provider value={attemptApi} key={id}>{xpOn&&page.section&&<SectionShellHeader section={sectionShellOf(page.section,rawSection)} index={page.sectionIndex} marksLabel={sectionMarksLabel(page.section)}/>}{scoped(<section className={"iex-page"+(inScenario?" has-scenario":"")} aria-labelledby="iex-page-heading" data-scenario-page={inScenario||undefined}>
+   return <StudentAttemptContext.Provider value={attemptApi} key={id}>{xpOn&&page.section&&<QuestionErrorBoundary variant="section" resetKey={id}><SectionShellHeader section={sectionShellOf(page.section,rawSection)} index={page.sectionIndex} marksLabel={sectionMarksLabel(page.section)}/></QuestionErrorBoundary>}{scoped(<section className={"iex-page"+(inScenario?" has-scenario":"")} aria-labelledby="iex-page-heading" data-scenario-page={inScenario||undefined}>
    <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
+   <QuestionErrorBoundary variant="page" resetKey={id}>
    {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers} shellHeader={xpOn} richInstructions={(rawSection as {instructionsRichContent?:unknown}|undefined)?.instructionsRichContent}/>}
    {inScenario&&page.section&&<div className="iex-page-scenario"><Suspense fallback={null}><ScenarioView section={page.section} questionId={id}/></Suspense></div>}
    {page.section
     ?<div className="iex-page-question"><StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} showScenario={false} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/></div>
     :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onAnswer={next=>setAnswer(id,next)} disabled={inputsDisabled}/>}
+   </QuestionErrorBoundary>
   </section>)}</StudentAttemptContext.Provider>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
   {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}
   <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages}/>
+  </QuestionErrorBoundary>
   {confirmDialog}
- </div>)
+ </div></QuestionRecoveryContext.Provider>)
 }

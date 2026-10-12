@@ -38,14 +38,18 @@ export default function LabelDiagramView({ q, answer, onAnswer, disabled, labelP
   const onZone = (zoneId: string) => { if (disabled || !selected) return; assign(zoneId, selected); setSelected(null); };
   return (
     <div className="vq label-diagram-response" data-testid="label-diagram-response">
-      <p className="vq-note" id={hintId}>اختر تسمية من البنك ثم اضغط على المنطقة المناسبة، أو اسحبها إليها، أو استخدم القوائم تحت الصورة.</p>
-      <VisualCanvas src={src} alt={cfg.alt} describedBy={hintId}
+      {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the other ways to answer sit in an expandable guide. */}
+      <p className="vq-note" id={hintId}>اختر تسمية من البنك ثم اضغط على المنطقة المناسبة.</p>
+      <details className="vq-keyboard-guide"><summary>كيف أستخدم لوحة المفاتيح؟</summary>
+        <p id={hintId + "-keys"}>بلوحة المفاتيح: انتقل بـ Tab إلى تسمية واضغط Enter لاختيارها، ثم انتقل إلى المنطقة واضغط Enter. ويمكنك أيضًا سحب التسمية إلى المنطقة، أو اختيار تسمية كل منطقة من القوائم تحت الصورة.</p>
+      </details>
+      <VisualCanvas src={src} alt={cfg.alt} describedBy={hintId + " " + hintId + "-keys"}
         svg={cfg.zones.map(z => <ShapeSvg key={z.id} shape={z.shape} className="vq-zone" />)}>
         {cfg.zones.map((z, i) => {
           const l = values[z.id];
           return (
             <button type="button" key={z.id} className="vq-zone-btn" data-testid="label-zone" data-filled={l ? "true" : "false"} style={at(shapeAnchor(z.shape))} disabled={disabled}
-              aria-label={zoneName(i) + ": " + (l ? text.get(l) ?? "" : "فارغة")} aria-describedby={hintId}
+              aria-label={zoneName(i) + ": " + (l ? text.get(l) ?? "" : "فارغة")} aria-describedby={hintId + " " + hintId + "-keys"}
               onClick={() => onZone(z.id)} onDragOver={e => { if (!disabled) e.preventDefault(); }} onDrop={e => { e.preventDefault(); const id = dragged.current; dragged.current = null; if (id) assign(z.id, id); }}>
               <span className="vq-zone-num" aria-hidden="true">{i + 1}</span>{l ? text.get(l) : ""}
             </button>

@@ -45,18 +45,22 @@ const questions = [
 const exam = { title: "اختبار الشبكات — الوحدة الثانية", metadata: {}, sections: [{ id: "s1", title: "أساسيات الشبكات", instructions: "أجب عن جميع الأسئلة.", gradingPolicy: "all", stimuli: {}, questions }] };
 const INSTRUCTIONS = "أجب عن كل الأسئلة. تُحفظ إجاباتك تلقائيًا، ويمكنك مراجعة إجاباتك قبل التسليم.";
 const TIMER_MS = Number(process.env.TIMER_MS || 5 * 60_000 + 6_000); // crosses the 5-minute threshold a few seconds after start
-const FAIL_CHUNK = process.env.FAIL_CHUNK || "HotspotResponse-";
+// FAIL: comma-separated "<file prefix>:<js|css>" — each matching asset answers 503 to its first FAIL_COUNT requests (the plain URL;
+// a recovery URL "?r=" is served normally unless FAIL_RETRY=1). Scenarios: entry stub, shared dependency, stylesheet.
+const FAIL = (process.env.FAIL ?? (process.env.FAIL_CHUNK ? process.env.FAIL_CHUNK + ":js" : "HotspotResponse-:js")).split(",").filter(Boolean).map(x => { const [prefix, ext] = x.split(":"); return { prefix, ext: "." + (ext || "js") }; });
 const FAIL_COUNT = Number(process.env.FAIL_COUNT || 1);
+const FAIL_RETRY = process.env.FAIL_RETRY === "1";
+const STRICT = process.env.STRICT === "1";
 
 function mockFor() {
-  const s = { started: false, startedAt: "", endsAt: 0, saves: 0, submits: 0, starts: 0, chunkFailures: 0, chunkRequests: [], submitted: null };
-  const summary = { assignmentId: "asg-21e3", title: exam.title, instructions: INSTRUCTIONS, openAt: "", dueAt: "2026-12-01T10:30:00.000Z", effectiveDueAt: "", questionCount: questions.length, totalMarks: 10, durationMinutes: 10, availability: "open", attemptsUsed: 0, allowedAttempts: 1, canAttempt: true, attemptStatus: "notStarted", hasActiveAttempt: false, latestScore: null, latestPercentage: null, latestResult: null, createdAt: "2026-10-01T08:00:00.000Z" };
+  const s = { started: false, startedAt: "", endsAt: 0, saves: 0, submits: 0, starts: 0, chunkFailures: new Map(), chunkRequests: [], assetLog: [], actions: [], submitted: null };
+  const summary = { ...(STRICT ? { attemptPolicy: "strict" } : {}), assignmentId: "asg-21e3", title: exam.title, instructions: INSTRUCTIONS, openAt: "", dueAt: "2026-12-01T10:30:00.000Z", effectiveDueAt: "", questionCount: questions.length, totalMarks: 10, durationMinutes: 10, availability: "open", attemptsUsed: 0, allowedAttempts: 1, canAttempt: true, attemptStatus: "notStarted", hasActiveAttempt: false, latestScore: null, latestPercentage: null, latestResult: null, createdAt: "2026-10-01T08:00:00.000Z" };
   const result = () => ({ attemptNumber: 1, submittedAt: new Date().toISOString(), score: 7, totalMarks: 10, percentage: 70, manualReviewMarks: 2, finalized: false, gradingStatus: "pendingReview" });
-  const state = () => ({ attemptsUsed: s.submitted ? 1 : 0, allowedAttempts: 1, canAttempt: !s.submitted, canWrite: s.started && !s.submitted, dueClosed: false, availability: "open", draftAnswers: {}, draftSavedAt: "",
+  const state = () => ({ ...(STRICT ? { attemptPolicy: "strict" } : {}), attemptsUsed: s.submitted ? 1 : 0, allowedAttempts: 1, canAttempt: !s.submitted, canWrite: s.started && !s.submitted, dueClosed: false, availability: "open", draftAnswers: {}, draftSavedAt: "",
     latestResult: s.submitted, attempts: s.submitted ? [s.submitted] : [], timed: true, attemptModelVersion: 2, requiresStart: true, durationMinutes: 10, serverNow: new Date().toISOString(),
     activeAttempt: s.started && !s.submitted ? { attemptNumber: 1, startedAt: s.startedAt, endsAt: new Date(s.endsAt).toISOString(), status: "active", attemptEpoch: 1 } : null,
     effectiveAttemptEndsAt: s.started && !s.submitted ? new Date(s.endsAt).toISOString() : "", attemptExpired: false, canStartAttempt: !s.started && !s.submitted });
-  const assignment = () => ({ assignmentId: summary.assignmentId, title: exam.title, instructions: INSTRUCTIONS, openAt: "", dueAt: summary.dueAt, effectiveDueAt: "", maxAttempts: 1, durationMinutes: 10, requiresStart: !s.started, timed: true, questionCount: questions.length, totalMarks: 10, exam: s.started ? exam : { title: exam.title, metadata: {} } });
+  const assignment = () => ({ ...(STRICT ? { attemptPolicy: "strict" } : {}), assignmentId: summary.assignmentId, title: exam.title, instructions: INSTRUCTIONS, openAt: "", dueAt: summary.dueAt, effectiveDueAt: "", maxAttempts: 1, durationMinutes: 10, requiresStart: !s.started, timed: true, questionCount: questions.length, totalMarks: 10, exam: s.started ? exam : { title: exam.title, metadata: {} } });
   const notifCounts = { messages: { totalUnread: 0, directUnread: { unread: 0 }, announcementUnread: { unread: 0 } }, events: { unread: 1 }, bell: { unread: 1 } };
   const notifItems = [{ id: "e1", createdAt: "2026-10-10T08:00:00.000Z", unread: true, type: "assignment_reviewed", assignmentId: "asg-old", assignmentTitle: "واجب الوحدة الأولى", becameFinal: true, scoreChanged: true, feedbackChanged: false, finalized: true, percentage: 85, score: 8.5, totalMarks: 10 }];
   return { s, handle(req, res, body) {
@@ -69,6 +73,7 @@ function mockFor() {
     if (p.startsWith("/api/student-submission/")) {
       if (req.method === "GET") return send(200, { ok: true, state: state() });
       let j = {}; try { j = JSON.parse(body || "{}"); } catch { /* malformed body → treated as no action */ }
+      s.actions.push(j.action || "?");
       if (j.action === "startAttempt") { s.starts++; if (!s.started) { s.started = true; s.startedAt = new Date().toISOString(); s.endsAt = Date.now() + TIMER_MS; } return send(200, { ok: true, state: state() }); }
       if (j.action === "saveDraft") { s.saves++; return send(200, { ok: true, savedAt: new Date().toISOString() }); }
       if (j.action === "submit") { s.submits++; s.submitted = result(); return send(200, { ok: true, result: s.submitted, state: state() }); }
@@ -83,13 +88,20 @@ const server = http.createServer((req, res) => {
   const u = new URL(req.url, "http://localhost");
   if (u.pathname.startsWith("/api/")) { let b = ""; req.on("data", c => { b += c; }); req.on("end", () => mock.handle(req, res, b)); return; }
   const base = path.basename(u.pathname);
-  if (base.startsWith(FAIL_CHUNK) && base.endsWith(".js")) {
+  const rule = FAIL.find(f => base.startsWith(f.prefix) && base.endsWith(f.ext));
+  if (rule) {
     mock.s.chunkRequests.push(u.pathname + u.search);
-    if (mock.s.chunkFailures < FAIL_COUNT) { mock.s.chunkFailures++; res.writeHead(503, { "cache-control": "no-store" }); res.end("unavailable"); return; }
+    const n = mock.s.chunkFailures.get(rule.prefix) || 0;
+    if ((FAIL_RETRY || !u.search) && n < FAIL_COUNT) { mock.s.chunkFailures.set(rule.prefix, n + 1); mock.s.assetLog.push({ url: u.pathname + u.search, status: 503, dest: req.headers["sec-fetch-dest"] || "" }); res.writeHead(503, { "cache-control": "no-store" }); res.end("unavailable"); return; }
   }
+  if (u.pathname.startsWith("/assets/")) mock.s.assetLog.push({ url: u.pathname + u.search, status: 200, dest: req.headers["sec-fetch-dest"] || "" });
   let full = path.resolve(dist, "." + decodeURIComponent(u.pathname));
   if (!full.startsWith(dist + path.sep) || !fs.existsSync(full) || !fs.statSync(full).isFile()) full = path.join(dist, "index.html");
-  res.writeHead(200, { "content-type": MIME[path.extname(full)] || "application/octet-stream", "cache-control": "no-store" }); fs.createReadStream(full).pipe(res);
+  res.writeHead(200, { "content-type": MIME[path.extname(full)] || "application/octet-stream", "cache-control": "no-store" });
+  // Evaluation counter (certification only): every served JS module ends with one statement that counts its evaluations by
+  // chunk file, whatever URL variant (plain or ?r=) loaded it — the direct proof that no module is ever evaluated twice.
+  if (full.endsWith(".js") && u.pathname.startsWith("/assets/")) { const key = JSON.stringify(base); res.end(fs.readFileSync(full, "utf8") + "\n;(globalThis.__evals||(globalThis.__evals={}))[" + key + "]=(globalThis.__evals[" + key + "]||0)+1;\n"); return; }
+  fs.createReadStream(full).pipe(res);
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const origin = "http://127.0.0.1:" + server.address().port;
@@ -164,6 +176,7 @@ async function run(name, viewport, mobile, dsf) {
     const reached = await tabTo(page, ".iex-start-actions .is-primary", 20);
     await page.keyboard.press("Enter");
     await page.waitForSelector(".iex-page-heading", { timeout: 20000 }); await page.waitForTimeout(400);
+    await page.evaluate(() => { window.__noReload = "same-document"; });          // gone if the page ever reloads
     return { reachedByKeyboard: reached, focus: await focusInfo(page) };
   });
   await step(rec, "details-disclosure", () => page.evaluate(() => { const b = document.querySelector(".iex-details-toggle"), p = document.querySelector(".iex-details-panel"); return { expanded: b?.getAttribute("aria-expanded"), panelHeight: p ? Math.round(p.getBoundingClientRect().height) : null, firstQuestionTop: Math.round(document.querySelector(".iex-page-heading")?.getBoundingClientRect().top ?? -1) }; }));
@@ -195,11 +208,21 @@ async function run(name, viewport, mobile, dsf) {
     return { q1CheckedIndex: checked, recoveryCardAgain: !!(await page.$(".iex-q-recovery")) };
   });
   await step(rec, "retry", async () => {
-    const btn = await page.$(".iex-q-recovery button");
-    if (!btn) return { skipped: "no retry action" };
-    await btn.focus(); await page.keyboard.press("Enter");
-    await page.waitForSelector(".vq-overlay", { timeout: 10000 });
-    return { rendered: true, chunkRequests: mock.s.chunkRequests.slice(), focus: await focusInfo(page) };
+    const rounds = [];
+    for (let round = 0; round < 3; round++) {
+      const btn = await page.$(".iex-q-recovery .iex-q-recovery-retry");
+      if (!btn) break;
+      await btn.focus(); await page.keyboard.press("Enter");
+      await page.waitForFunction(() => !!document.querySelector(".vq-overlay") || !!document.querySelector(".iex-q-recovery"), null, { timeout: 10000 });
+      await page.waitForTimeout(400);
+      const still = await page.evaluate(() => { const c = document.querySelector(".iex-q-recovery"); return c ? { text: (c.textContent || "").slice(0, 300), reload: !!c.querySelector(".iex-q-recovery-reload"), focus: (document.activeElement && document.activeElement.className) || "" } : null; });
+      rounds.push(still || "rendered");
+      if (!still) break;
+    }
+    if (!(await page.$(".vq-overlay"))) return { rendered: false, rounds, chunkRequests: mock.s.chunkRequests.slice() };
+    await page.waitForTimeout(300);
+    const canvasPosition = await page.evaluate(() => { const c = document.querySelector(".vq-canvas"); return c ? getComputedStyle(c).position : null; });
+    return { rendered: true, rounds, canvasPosition, chunkRequests: mock.s.chunkRequests.slice(), focus: await focusInfo(page) };
   });
   await shot("07-q2-recovered");
   await step(rec, "no-extra-requests-from-failure", () => ({ savesBefore: savesBeforeFailure, savesAfter: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts }));
@@ -250,7 +273,9 @@ async function run(name, viewport, mobile, dsf) {
   });
   await shot("15-result");
   rec.live = await announcements(page);
-  rec.requests = { saves: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts, chunkRequests: mock.s.chunkRequests };
+  rec.noReload = await page.evaluate(() => window.__noReload === "same-document").catch(() => false);
+  rec.evals = await page.evaluate(() => globalThis.__evals || {});
+  rec.requests = { saves: mock.s.saves, submits: mock.s.submits, starts: mock.s.starts, chunkRequests: mock.s.chunkRequests, actions: mock.s.actions, assets: mock.s.assetLog };
   await ctx.close();
 }
 const VIEWPORTS = [["desktop", { width: 1280, height: 900 }, false, 1], ["desktop-150pct", { width: 853, height: 600 }, false, 1.5], ["desktop-200pct", { width: 640, height: 450 }, false, 2], ["phone", { width: 390, height: 844 }, true, 2]];
@@ -267,7 +292,17 @@ for (const [vp, r] of Object.entries(record.viewports)) {
   ck(vp, "A2 recovery card shown, no internals", s["next-to-failing-q2"]?.recoveryCard && !s["next-to-failing-q2"]?.leaksInternals, s["next-to-failing-q2"]?.recoveryText);
   ck(vp, "A3 other question keeps its answer", s["previous-keeps-q1-answer"]?.q1CheckedIndex === 0, s["previous-keeps-q1-answer"]);
   ck(vp, "A4 retry renders the question", s.retry?.rendered === true, s.retry?.chunkRequests);
+  ck(vp, "A5b the recovered question has its stylesheet (visual canvas laid out)", s.retry?.rendered !== true || s.retry?.canvasPosition === "relative", s.retry?.canvasPosition);
   ck(vp, "A5 no save / submit / start caused by the failure", s["no-extra-requests-from-failure"]?.savesAfter === s["no-extra-requests-from-failure"]?.savesBefore && s["no-extra-requests-from-failure"]?.submits === 0 && s["no-extra-requests-from-failure"]?.starts === 1, s["no-extra-requests-from-failure"]);
+  ck(vp, "A6 no page reload at any point", r.noReload === true, r.noReload);
+  const assets = r.requests?.assets || [];
+  const retryUrls = assets.map(a => a.url).filter(x => x.includes("?"));
+  ck(vp, "A7 every recovery request is a same-origin /assets/<name>-<hash>.(js|css)?r=<n>. URL", retryUrls.every(x => /^\/assets\/[A-Za-z0-9_-]+-[0-9a-z]{8}\.(js|css)\?r=\d+\.$/.test(x)), retryUrls);
+  // Evaluation counts from the served modules themselves (see the counter above): no module may run twice; the recovered chunks ran once.
+  const evals = r.evals || {}, twice = Object.entries(evals).filter(([, n]) => n > 1);
+  const recovered = [...new Set(retryUrls.filter(x => x.endsWith(".js") || /\.js\?/.test(x)).map(x => x.replace(/^\/assets\//, "").replace(/\?.*$/, "")))];
+  ck(vp, "A8 no module is evaluated twice; every recovered chunk evaluated exactly once", twice.length === 0 && recovered.every(b => evals[b] === 1) && Object.keys(evals).length > 10, { twice, recovered: Object.fromEntries(recovered.map(b => [b, evals[b] ?? 0])), modules: Object.keys(evals).length });
+  ck(vp, "A9 only start / save / submit requests (no strict exit, no extra lifecycle request)", (r.requests?.actions || []).every(a => ["startAttempt", "saveDraft", "submit"].includes(a)), r.requests?.actions);
   ck(vp, "B1 focus on the question heading after start", s.start?.focus?.cls?.includes("iex-page-heading"), s.start?.focus);
   ck(vp, "B2 focus on the result heading after submit", s["review-submit-result"]?.resultFocus?.tag === "h1", s["review-submit-result"]?.resultFocus);
   ck(vp, "B3 exactly one submit", s["review-submit-result"]?.submits === 1, s["review-submit-result"]?.submits);

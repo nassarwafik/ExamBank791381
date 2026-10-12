@@ -256,3 +256,6 @@
 @media (min-width: 768px){
   .eb-sp-recognition{ gap:var(--eb-space-3); }
 }
+
+/* Phase 21E.3 (S-7) — coarse pointers at any width keep the 44 px reaction targets (the 768 px rule above is for fine pointers). */
+@media (pointer: coarse){ .eb-sp-reaction{ min-height:44px; } }

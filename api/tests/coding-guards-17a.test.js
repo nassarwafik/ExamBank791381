@@ -46,6 +46,10 @@ const EXECUTION_PATTERNS = [
   ["non-literal require", /(?<![.\w$])require\s*\(\s*(?!["'`])[^)]/],
   ["string timer", /(?<![.\w$])set(Timeout|Interval)\s*\(\s*["'`]/]
 ];
+// Phase 21E.3 — owner-authorized exception (2026-10-12, "Narrow C32 exception"): the in-place recovery of a question renderer
+// whose chunk failed to load needs ONE computed import() of `<validated same-origin asset>?r=<n>.`. Nothing else is exempt;
+// the exception is pinned below and behaviourally by src/recoverableLazy.21e3.test.ts (only validated URLs reach the importer).
+const OWNER_EXCEPTIONS = new Set(["src/recoverableLazy.ts: non-literal dynamic import"]);
 const HTML_SINKS = /dangerouslySetInnerHTML|\binnerHTML\b|\bouterHTML\b|insertAdjacentHTML|document\.write|srcdoc|srcDoc/;
 
 describe("C32 — no production source path can execute student code", () => {
@@ -62,9 +66,25 @@ describe("C32 — no production source path can execute student code", () => {
     const hits = [];
     for (const f of PRODUCTION) {
       const src = read(f);
-      for (const [name, re] of EXECUTION_PATTERNS) if (re.test(src)) hits.push(f + ": " + name);
+      for (const [name, re] of EXECUTION_PATTERNS) if (re.test(src) && !OWNER_EXCEPTIONS.has(f + ": " + name)) hits.push(f + ": " + name);
     }
     expect(hits).toEqual([]);
+  });
+  it("Phase 21E.3 owner exception — exactly ONE computed import, in the chunk-recovery module, fed only by its validated asset URLs", () => {
+    // The exception list is exactly this one entry (no file, no other primitive may be added silently).
+    expect([...OWNER_EXCEPTIONS]).toEqual(["src/recoverableLazy.ts: non-literal dynamic import"]);
+    const src = read("src/recoverableLazy.ts");
+    // One non-literal import() in the whole module: the browser environment's importer of an already-validated URL.
+    expect(src.match(/(?<![.\w$])import\s*\(\s*(?!["'`])[^)]/g)).toHaveLength(1);
+    expect(src).toMatch(/importUrl:\s*url\s*=>\s*import\(\s*url\s*\)/);
+    // The importer is called at exactly two sites: an already-recovered URL, and `<validated entry>?r=<n>.`.
+    expect(src.match(/env\.importUrl\(/g)).toHaveLength(2);
+    expect(src).toMatch(/env\.importUrl\(hit\)/);
+    expect(src).toMatch(/env\.importUrl\(url\(entry\)\)/);
+    // Every URL is rebuilt from the origin and a same-origin <base>assets/<name>-<8 base36>.<ext> path, never from raw text.
+    expect(src).toMatch(/const HASHED = \/\^\(\[A-Za-z0-9_-\]\+\)-\[0-9a-z\]\{8\}\\\.\(js\|css\)\$\//);
+    expect(src).toMatch(/if \(u\.origin !== env\.origin \|\| u\.username \|\| u\.password \|\| u\.search \|\| u\.hash\) return null;/);
+    expect(src).toMatch(/return env\.origin \+ u\.pathname;/);
   });
   it("no Docker / container orchestration / process spawning in the application (Phase 17B: only the isolated runner/ subtree)", () => {
     for (const f of CODING_FILES) expect(read(f), f).not.toMatch(/docker|dockerode|kubectl|containerd|process\.binding|\.spawn\(/i);
@@ -118,7 +138,10 @@ describe("CM18 — the editor and coding panels never enter the initial graph", 
     for (const f of INITIAL_PATH) expect(read(f), f).not.toMatch(/from\s*["'][./]*(coding\/|codingQuestion|codingContract|questionTypes\/(student|editors)\/Coding)/);
   });
   it("the registries load the coding renderer / editor through lazy(() => import(...)) only", () => {
-    expect(read("src/questionTypes/studentRegistry.tsx")).toMatch(/registerStudentRenderer\("coding",\s*1,\s*lazy\(\(\)\s*=>\s*import\("\.\/student\/CodingResponse"\)\)\)/);
+    // Phase 21E.3 — the renderer is a recoverable lazy (same literal import, recoverable in place); coding@1 and @2 share it.
+    const studentRegistry = read("src/questionTypes/studentRegistry.tsx");
+    expect(studentRegistry).toMatch(/const CodingResponse\s*=\s*recoverableLazy\("CodingResponse",\s*\(\)\s*=>\s*import\("\.\/student\/CodingResponse"\)\)/);
+    expect(studentRegistry).toMatch(/registerStudentRenderer\("coding",\s*1,\s*CodingResponse\)/);
     expect(read("src/questionTypes/authoringRegistry.tsx")).toMatch(/registerAuthoringEditor\("coding",\s*1,\s*lazy\(\(\)\s*=>\s*import\("\.\/editors\/CodingQuestionEditor"\)\)\)/);
     for (const f of ["src/questionTypes/studentRegistry.tsx", "src/questionTypes/authoringRegistry.tsx"]) expect(read(f), f).not.toMatch(/^import[^;]*Coding/m);
   });

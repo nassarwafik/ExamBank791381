@@ -21,7 +21,8 @@ describe("no arbitrary code execution in the assessment activity modules", () =>
     const activity = code(read("src/assessmentActivity.ts"));
     expect(activity).toMatch(/ASSESSMENT_SAFE_ACTIVITIES[^=]*=\s*\[/);
     const ctx = code(read("src/AssessmentActivityContext.tsx"));
-    expect(ctx).toMatch(/lazy\(\s*\(\)\s*=>\s*import\(\s*["']\.\/AssessmentActivityHost["']\s*\)/);
+    // Phase 21E.3 — a recoverable lazy of the same literal path is the same literal lazy import (recoverable in place).
+    expect(ctx).toMatch(/(?<![\w$])(?:lazy\(|recoverableLazy\(\s*["']AssessmentActivityHost["']\s*,)\s*\(\)\s*=>\s*import\(\s*["']\.\/AssessmentActivityHost["']\s*\)/);
     expect(ctx).not.toMatch(/^import\s+\w+\s+from\s+["']\.\/AssessmentActivityHost["']/m);
   });
   it("M17 — the student section renderer never eager-imports the host or the learning activity engine", () => {

@@ -58,8 +58,13 @@ export default function HotspotView({ q, answer, onAnswer, disabled, labelPrefix
   const shown = live && drag !== null ? live : points;
   return (
     <div className="vq hotspot-response" data-testid="hotspot-response">
-      <p className="vq-note" id={hintId}>{cfg.mode === "single" ? "انقر على الموضع المطلوب في الصورة." : "انقر على " + max + " مواضع في الصورة."} لوحة المفاتيح: الأسهم لتحريك المؤشر ثم Enter لوضع نقطة؛ اسحب النقطة أو استخدم الأسهم لتحريكها، وDelete لحذفها.</p>
-      <VisualCanvas src={src} alt={cfg.alt} describedBy={hintId} focusable label={labelPrefix + " — صورة السؤال: " + cfg.alt} cursor={cursor}
+      {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the keyboard steps sit in an expandable guide (still read by screen
+          readers through aria-describedby on the image, whether the guide is open or not). */}
+      <p className="vq-note" id={hintId}>{cfg.mode === "single" ? "انقر على الموضع المطلوب في الصورة." : "انقر على " + max + " مواضع في الصورة."}</p>
+      <details className="vq-keyboard-guide"><summary>كيف أستخدم لوحة المفاتيح؟</summary>
+        <p id={hintId + "-keys"}>لوحة المفاتيح: الأسهم لتحريك المؤشر ثم Enter لوضع نقطة؛ اسحب النقطة أو استخدم الأسهم لتحريكها، وDelete لحذفها.</p>
+      </details>
+      <VisualCanvas src={src} alt={cfg.alt} describedBy={hintId + " " + hintId + "-keys"} focusable label={labelPrefix + " — صورة السؤال: " + cfg.alt} cursor={cursor}
         onPoint={disabled ? undefined : place} onKeyDown={onOverlayKey} dragging={drag !== null}
         onDragMove={p => { if (drag === null || !live) return; setLive(live.map((q2, j) => (j === drag ? p : q2))); }}
         onDragEnd={p => { const i = drag, next = live; setDrag(null); setLive(null); if (i === null || !next) return; emit(p ? next.map((q2, j) => (j === i ? p : q2)) : next); }}>

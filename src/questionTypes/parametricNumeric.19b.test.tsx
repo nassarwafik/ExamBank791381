@@ -222,7 +222,7 @@ describe("lazy loading and module hygiene", () => {
     const strip = (t: string) => t.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
     for (const f of ["src/parametric/ParametricReviewView.tsx", "src/questionTypes/student/ParametricNumericResponse.tsx", "src/questionTypes/editors/ParametricNumericEditor.tsx"])
       expect(strip(fs.readFileSync(path.join(repo, f), "utf8")), f).not.toMatch(/dangerouslySetInnerHTML|innerHTML|\beval\s*\(|new Function|fetch\(|XMLHttpRequest|localStorage|Math\.random|https?:\/\//);
-    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("parametricNumeric", 1, lazy\(\(\) => import\("\.\/student\/ParametricNumericResponse"\)\)\)/);
+    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("parametricNumeric", 1, recoverableLazy\("ParametricNumericResponse", \(\) => import\("\.\/student\/ParametricNumericResponse"\)\)\)/);
     expect(fs.readFileSync(path.join(repo, "src/questionTypes/authoringRegistry.tsx"), "utf8")).toMatch(/registerAuthoringEditor\("parametricNumeric", 1, lazy\(\(\) => import\("\.\/editors\/ParametricNumericEditor"\)\)\)/);
     expect(fs.readFileSync(path.join(repo, "scripts/check-bundle-budget.mjs"), "utf8")).toMatch(/PARAMETRIC_SIGNATURES/);
   });

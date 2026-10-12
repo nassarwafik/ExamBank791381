@@ -282,8 +282,9 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
           (the button disappears while the engine loads) */}
       {state === "error" && (
         <p className="xp-chart-error" role="status">
-          {loaded?.unloadable ? "تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه، ويُعرض الرسم بعد إعادة تحميل الصفحة."
-            : attempt === 0 ? "تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه." : "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه، ويمكن إعادة تحميل الصفحة لاحقًا لعرضه."}
+          {/* 21E.3 (D5) — never advise a page reload here: inside a strict exam attempt, leaving the page ends the attempt. */}
+          {loaded?.unloadable ? "تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه."
+            : attempt === 0 ? "تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه." : "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه."}
           {attempt === 0 && !loaded?.unloadable && <>{" "}<button type="button" className="xp-chart-retry" onClick={() => { figureRef.current?.focus(); setAttempt(1); }}>إعادة المحاولة</button></>}
         </p>
       )}

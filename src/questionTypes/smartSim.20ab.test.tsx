@@ -267,7 +267,7 @@ describe("architecture guards — lazy edges only, no dynamic module names, no u
     expect(staticImporters("student/SmartSimResponse")).toEqual([]); expect(staticImporters("editors/SmartSimEditor")).toEqual([]);
     expect(staticImporters("networkTopology/NetworkTopologyWorkspace")).toEqual([]); expect(staticImporters("networkTopology/NetworkTopologyEditor")).toEqual([]);
     expect(staticImporters("trustedSim/SmartSimReviewView")).toEqual([]);
-    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("smartSim", 1, lazy\(\(\) => import\("\.\/student\/SmartSimResponse"\)\)\)/);
+    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("smartSim", 1, recoverableLazy\("SmartSimResponse", \(\) => import\("\.\/student\/SmartSimResponse"\)\)\)/);
     expect(fs.readFileSync(path.join(repo, "src/questionTypes/authoringRegistry.tsx"), "utf8")).toMatch(/registerAuthoringEditor\("smartSim", 1, lazy\(\(\) => import\("\.\/editors\/SmartSimEditor"\)\)\)/);
     const ui = fs.readFileSync(path.join(repo, "src/trustedSim/smartSimUiRegistry.ts"), "utf8");
     expect(ui).not.toMatch(/import\(\s*[^"'\s]/);

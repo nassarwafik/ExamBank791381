@@ -6,6 +6,7 @@ import { formatNotificationTime, formatUnread } from "../messages/messagesClient
 import { isMessageNotification, type BadgeCount, type NotificationItem } from "./notificationsClient";
 import { presentNotification, type NotificationIconKind } from "./notificationPresentation";
 import "./notifications.css";
+import { isolateLtr, GRADE_LTR } from "../ui/ltrIsland";
 
 /**
  * Phase 6C/6D — the student's UNIFIED in-app notification center: a «الإشعارات» bell in the StudentShell top bar + a
@@ -178,7 +179,7 @@ export default function NotificationBell({ counts, items, loading, error, onOpen
                             {item.unread ? <span className="eb-notif-new">جديد</span> : <VisuallyHidden>، مقروء</VisuallyHidden>}
                           </span>
                           {sender && <span className="eb-notif-sender">{sender}</span>}
-                          {view.preview && <span className="eb-notif-preview">{view.preview}</span>}
+                          {view.preview && <span className="eb-notif-preview">{isolateLtr(view.preview, GRADE_LTR)}</span>}
                           {time && <time className="eb-notif-time" dateTime={item.createdAt}>{time}</time>}
                         </span>
                       </button>

@@ -286,8 +286,8 @@ describe("21A1-DC5 source guards", () => {
   });
   it("every chart surface is a literal lazy import; the bundle guard knows the chart / engine signatures and budgets; the initial budget is unchanged", () => {
     const root = (f: string) => fs.readFileSync(path.join(__dirname, "..", "..", f), "utf8");
-    expect(root("src/richContent/RichContentRenderer.tsx")).toContain('const DataChart = lazy(() => import("../charts/DataChart"));');
-    expect(root("src/questionTypes/studentRegistry.tsx")).toContain('registerStudentRenderer("chartSelection", 1, lazy(() => import("./student/ChartSelectionResponse")));');
+    expect(root("src/richContent/RichContentRenderer.tsx")).toContain('const DataChart = recoverableLazy("DataChart", () => import("../charts/DataChart"));');
+    expect(root("src/questionTypes/studentRegistry.tsx")).toContain('registerStudentRenderer("chartSelection", 1, recoverableLazy("ChartSelectionResponse", () => import("./student/ChartSelectionResponse")));');
     expect(root("src/questionTypes/authoringRegistry.tsx")).toContain('registerAuthoringEditor("chartSelection", 1, lazy(() => import("./editors/ChartSelectionEditor")));');
     const guard = root("scripts/check-bundle-budget.mjs");
     for (const s of ["xp-chart-table", "xp-chart-select", "chart-key-picker", "CHART_SELECTION_CHART_MISMATCH", "xp-chart-engine-v1", "xp-chart-advanced-v1", "_echarts_instance_"]) expect(guard).toContain('"' + s + '"');

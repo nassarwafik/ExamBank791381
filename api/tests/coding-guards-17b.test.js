@@ -54,8 +54,11 @@ describe("R1 — the runner subtree exists, is self-contained and is the ONLY pl
     for (const f of [...API_FILES, ...CLIENT_FILES]) expect(exists(f), f).toBe(true);
   });
   it("GLOBAL: src/ and api/src/ (production) still contain NO execution primitive — the 17A invariant is not relaxed", () => {
+    // Phase 21E.3 — the single owner-authorized exception of the 17A guard (see coding-guards-17a.test.js: the one computed
+    // import() of the in-place chunk recovery, fed only by validated same-origin asset URLs). Nothing else is exempt.
+    const OWNER_EXCEPTIONS = new Set(["src/recoverableLazy.ts: non-literal import"]);
     const hits = [];
-    for (const f of [...walk("src"), ...walk("api/src")].filter(f => !isTest(f))) for (const [n, re] of EXEC) if (re.test(read(f))) hits.push(f + ": " + n);
+    for (const f of [...walk("src"), ...walk("api/src")].filter(f => !isTest(f))) for (const [n, re] of EXEC) if (re.test(read(f)) && !OWNER_EXCEPTIONS.has(f + ": " + n)) hits.push(f + ": " + n);
     expect(hits).toEqual([]);
   });
   it("inside runner/, child_process appears ONLY in gateway/sandbox.js; no eval / vm / workers / exec / execFile / shell anywhere", () => {

@@ -41,8 +41,8 @@ export default function InstallAppCard({ win = window }: { win?: Window }) {
       <div className="eb-install-head">
         <span className="eb-install-mark" aria-hidden="true"><BrandMark size={40} /></span>
         <div>
-          <h2 id="eb-install-title" className="eb-install-title">{manual ? "تثبيت Tadris+" : "تثبيت التطبيق"}</h2>
-          {!manual && <p className="eb-install-desc">افتح Tadris+ من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>}
+          <h2 id="eb-install-title" className="eb-install-title">{manual ? <>تثبيت <bdi dir="ltr">Tadris+</bdi></> : "تثبيت التطبيق"}</h2>
+          {!manual && <p className="eb-install-desc">افتح <bdi dir="ltr">Tadris+</bdi> من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>}
         </div>
       </div>
 

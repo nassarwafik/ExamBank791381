@@ -196,6 +196,52 @@ export function dynamicEdges(distDir, file) {
   return [...new Set([...source.matchAll(/import\([`"']\.\/([^`"']+\.js)[`"']\)/g)].map(m => m[1]))];
 }
 
+// Phase 21E.3 — the in-place chunk recovery (src/recoverableLazy.ts) relies on three facts of the production build, checked here:
+//  1. every chunk name declared to recoverableLazy("<name>", …) is emitted exactly once as <name>-<8 base36>.js (the only file
+//     name the recovery accepts for that component) and exports `default` (the recovered module is used as the component);
+//  2. the chunk-header parser below — the same source as STATIC_IMPORT_HEADER_SOURCE in src/recoverableLazy.ts (pinned by a unit
+//     test) — finds every static import edge of every chunk, so the recovery always knows the static graph it remaps;
+//  3. (report) which NEVER_REMAP chunks exist in this build.
+export const STATIC_IMPORT_HEADER_SOURCE = String.raw`(?:\s|\/\*[\s\S]*?\*\/)*(import|export)\s*(?:([\w$*{][^;"']*?)\s*from\s*)?(["'])(\.\/[^"']+?\.js)\3\s*;?`;
+export function headerImports(src) {
+  const out = [];
+  let i = /^const __vite__mapDeps=[^\n]*\n/.exec(src)?.[0].length ?? 0;
+  const re = new RegExp(STATIC_IMPORT_HEADER_SOURCE, "y");
+  for (;;) {
+    re.lastIndex = i;
+    const m = re.exec(src);
+    if (!m || (m[1] === "export" && !m[2])) break;
+    out.push(m[4]);
+    i = re.lastIndex;
+  }
+  return out;
+}
+export function checkChunkRecovery(distDir, srcDir) {
+  const report = [], failures = [];
+  const assetsDir = path.join(distDir, "assets");
+  const js = fs.readdirSync(assetsDir).filter(f => f.endsWith(".js"));
+  const declared = new Map();
+  const walk = dir => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { const p = path.join(dir, e.name); if (e.isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(e.name) && !/\.test\./.test(e.name) && e.name !== "recoverableLazy.ts") for (const m of fs.readFileSync(p, "utf8").matchAll(/recoverableLazy\(\s*"([A-Za-z0-9_-]+)"/g)) declared.set(m[1], path.relative(srcDir, p)); } };
+  walk(srcDir);
+  for (const [name, file] of declared) {
+    const hits = js.filter(f => new RegExp("^" + name + "-[0-9a-z]{8}\\.js$").test(f));
+    if (hits.length !== 1) { failures.push(`recoverableLazy("${name}") in ${file}: ${hits.length} emitted chunks named ${name}-<hash>.js (exactly 1 required)`); continue; }
+    const text = fs.readFileSync(path.join(assetsDir, hits[0]), "utf8");
+    const exported = [...text.matchAll(/export\s*\{([^}]*)\}/g)].map(m => m[1]).join(",");
+    if (!/(^|,)\s*(?:[\w$]+\s+as\s+)?default\s*(,|$)/.test(exported) && !/export\s+default\b/.test(text)) failures.push(`recoverableLazy("${name}"): ${hits[0]} does not export default — use retryableLazy for a shared chunk`);
+  }
+  let edges = 0, mismatched = 0;
+  for (const f of js) {
+    const text = fs.readFileSync(path.join(assetsDir, f), "utf8");
+    const header = new Set(headerImports(text));
+    const all = new Set([...[...text.matchAll(/from\s*["'](\.\/[^"']+\.js)["']/g)].map(m => m[1]), ...[...text.matchAll(/(?:^|[;/\n])\s*import\s*["'](\.\/[^"']+\.js)["']/g)].map(m => m[1])]);
+    edges += header.size;
+    if (header.size !== all.size || [...all].some(x => !header.has(x))) { mismatched += 1; failures.push(`chunk-header parser missed static imports of ${f}`); }
+  }
+  report.push(`Chunk recovery: ${declared.size} recoverable chunk(s) emitted once with a default export; header parser matched ${js.length - mismatched}/${js.length} chunks (${edges} static edges)`);
+  return { report, failures };
+}
+
 function main() {
   const initial = initialGraph(dist);
   const failures = [];
@@ -437,6 +483,11 @@ function main() {
   const visuals = checkStudentVisualAssets({ root: path.join(path.dirname(fileURLToPath(import.meta.url)), ".."), dist });
   for (const line of visuals.report) console.log(line);
   failures.push(...visuals.failures);
+
+  // Phase 21E.3 — in-place chunk recovery facts.
+  const recovery = checkChunkRecovery(dist, path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src"));
+  for (const line of recovery.report) console.log(line);
+  failures.push(...recovery.failures);
 
   if (failures.length) { console.error("\nBUNDLE GUARD FAILED:\n - " + failures.join("\n - ")); process.exit(1); }
   console.log("bundle guard passed");
