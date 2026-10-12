@@ -5,15 +5,17 @@ Design record for Phase 21E.2 (Tadris+ — التعليم المتكامل). It 
 (`docs/enterprise-ux-premium-21e1.md`, `docs/enterprise-ux-premium-21e1-slice2.md` once PR #300 is merged). It follows the
 owner's Design Excellence Standard and Visual Quality Gate. Independent review required. Owner merge only.
 
-> **Status of this record:** DRAFT while PR #300 (21E.1 slice 2) is open. Every item that does not depend on #300 is
-> implemented, tested and certified below. The builder integration (A toolbar wiring, B overlay dialog, D inline issues,
-> E section reorder names, F builder save labels) waits for #300 to merge into `main`, as instructed; §9 lists it.
+> **Status of this record:** part 1 of the phase, proposed for review while PR #300 (21E.1 slice 2) is open. Every item that
+> does not depend on #300 is implemented, tested and certified below, together with the premium workspace pass (W). The builder
+> integration (A toolbar wiring, B overlay dialog, D inline issues, E section reorder names, F builder save labels) edits #300's
+> files, so it ships as a separate follow-up PR after #300 merges into `main` (§9); it is prepared and tested, not included here.
 
 ## 1. Baseline, branch and dependencies
 
 | Item | Value |
 |---|---|
 | Baseline (`origin/main`) | `b8a65f16a2877a99a4adf4f24c74cb7687f7ae41` — merge of PR #299 (21E.1 slice 1) |
+| `main` moved | to `4907255177f7625d7cb9f9e31e4594519447dd6d` (PR #301, a Runner test only); reconciled by the normal merge `11d91ea`, no conflicts |
 | Branch | `feature/phase-21e2-teacher-enterprise-ux` (normal commits only; no rebase, no force-push) |
 | Open dependency | PR #300 (21E.1 slice 2, head `dd795f3`): it edits `StructuredExamBuilder.tsx`, `ExamSectionEditor.tsx`, `structured-builder.css`, `App.tsx`, `design-tokens.css`, `ConfirmDialog.tsx`, `ExamCoverEditor.tsx`, `TeacherAppShell.tsx`, `IconButton.tsx`, `.gitignore`, `api/tests/ux2-shell-foundation.test.js` |
 | Files shared with #300 that this branch already changes | `.gitignore` (two harness-output lines; union-merge) and `api/tests/ux2-shell-foundation.test.js` (one entry added to the ActionMenu-importer pin: the new toolbar imports the shared primitive). Reconciled by a normal merge keeping both sides; no assertion is loosened |
@@ -22,7 +24,8 @@ owner's Design Excellence Standard and Visual Quality Gate. Independent review r
 ## 2. Scope
 
 Teacher-facing only: the structured builder and its overlay, the teacher authoring editors, the teacher dashboard, the
-gradebook and result exports, and teacher-specific UI components. Not changed: grading semantics, exam JSON schemas, question
+gradebook and result exports, teacher-specific UI components, and the visual pass on the teacher workspace (dashboard, today hub,
+navigation). Not changed: grading semantics, exam JSON schemas, question
 version families, API contracts, authentication, storage, SmartSim / chemistry / presentation engines, student-exam files.
 
 ## 3. Acceptance criteria (21E.0 §8 gate for 21E.2, refined by the phase instruction)
@@ -37,6 +40,7 @@ version families, API contracts, authentication, storage, SmartSim / chemistry /
 | F | One save-label table (guard on the listed strings) | `teacher/saveLabels.guard.21e2.test.ts` | **done** outside #300 files; builder + App.tsx after #300 |
 | G | Gradebook / assignment-results CSV export reusing `reports/csv.ts` | `teacher/teacherExports.21e2.test.ts`, `AssignmentsPanel.export.21e2.test.tsx`, Chromium downloads | **done** |
 | H | Dashboard charts carry an accessible data table without changing analytics | `TeacherDashboard.chartTables.21e2.test.tsx`, Chromium | **done** |
+| W | Premium teacher workspace: consistent tiles, accents, elevation and states; Arabic-first type; phone layouts; no data change | `premiumWorkspace.21e2.test.tsx` (8); Chromium workspace part | **done** |
 
 ## 4. Implementation
 
@@ -113,6 +117,23 @@ version families, API contracts, authentication, storage, SmartSim / chemistry /
   `.eb-menu-panel` paints at `calc(var(--eb-z-modal) + 1)` so a menu opened inside the builder overlay is visible.
 - `src/icons.tsx`: `IconUndo`, `IconRedo`, `IconSave`, `IconCompass`.
 
+### W — premium teacher workspace (dashboard, today hub, navigation)
+
+Token-only CSS plus two markup additions; no value, name, order or data source changes.
+
+- `ui/StatCard.tsx`: an optional decorative `icon` (an `aria-hidden` chip beside the label). Without it the markup is unchanged
+  (pinned). The tone accent is a straight 3 px `::before` bar along the top edge, clipped by the radius; the coloured
+  inline-start border used to bend round the rounded corners.
+- Dashboard (`TeacherDashboard.tsx`, `dashboard-pro.css`): the four headline KPIs carry icons. The three secondary KPIs become
+  compact rows (label and hint at the start, value at the end). Attention cards get the same straight accent bar. Elevation and
+  spacing are unified. On phones the headline tiles sit in two columns.
+- A CSS leak is fixed in scope: `assignments-pro.css` sets every `.eb-stat-grid.is-secondary` to two columns on narrow screens,
+  squeezing the dashboard's third tile. The dashboard scopes its own one-column rule; `assignments-pro.css` is untouched.
+- Today hub (`TeacherTodayHub.tsx`, `teacherToday.css`): the six quick actions are an even tile grid (2 / 3 / 6 columns) with tinted
+  icon chips, replacing a ragged wrap of outline buttons. The 44 px phone target pin is kept.
+- Navigation (`shell.css`): the active destination is a tinted pill with a 3 px inline-start indicator. The solid primary stays as
+  the fallback where `color-mix` is unsupported. The sidebar has a quiet depth gradient; page and section titles are bold.
+
 ## 5. Alternatives considered
 
 | Decision | Chosen | Rejected and why |
@@ -139,6 +160,23 @@ version families, API contracts, authentication, storage, SmartSim / chemistry /
   at 1280×900, 853×600 @1.5, 640×450 @2, 390×844 touch — chart tables by keyboard, both CSV downloads (bytes, BOM, header, masked
   identity, formula guard, no private fields), touch targets, no horizontal overflow; 0 page errors.
 
+**Workspace pass (W) and the reconciled head `6514f1a`:**
+
+- **Fail-first:** `premiumWorkspace.21e2.test.tsx` fails 7 of 8 on `11d91ea`. The eighth test pins the unchanged StatCard markup
+  without an icon.
+- **Chromium** (`scripts/capture-visual-gate-21e2-workspace.mjs`, production builds, the same four viewports): 28/28 checks on this
+  build, 8/28 on `main` (the new rules are absent), 0 page errors. Checks cover:
+  - KPI and quick-action column counts per viewport;
+  - straight accent bars;
+  - four `aria-hidden` icons;
+  - the tinted active navigation with its indicator;
+  - no horizontal overflow.
+- **Full validation** on the tree of `6514f1a` plus this record:
+  - root suite 930 files, 12,062 tests passed;
+  - lint 0 errors, 125 warnings (baseline); `tsc -b` clean; `git diff --check` clean;
+  - build and bundle guard pass: initial JS 110.2 KB gzip, initial CSS 35.4 KB gzip (+0.4 KB: the workspace rules in
+    always-loaded sheets).
+
 ## 7. Independent adversarial review of the first implementation
 
 Six reviewers (CSV, chart tables, Field frame, save vocabulary, modal surface / toolbar, CSS), two skeptics per finding.
@@ -159,8 +197,16 @@ Escape while saving — to be gated in the wiring).
 - The masked identity keeps the last four characters; two students with the same name and the same last four digits remain
   ambiguous in the file (they are unambiguous on screen).
 - The Field frame covers top-level questions of the five editors; compound / composite parts keep the frozen markup.
+- W: the tinted navigation pill needs `color-mix` (all current evergreen browsers). Older engines keep the previous solid pill.
+  The unscoped `assignments-pro.css` rule stays as it is; only the dashboard is protected from it.
+- W was reviewed by its author only (the per-slice delivery of the owner's sprint); it changes no behaviour.
 
-## 9. Pending after PR #300 merges
+## 9. Follow-up PR after PR #300 merges (prepared, not in this PR)
+
+The wiring below is implemented and tested on a local scratch merge of this branch and #300's head; it is never pushed until #300
+is in `main` (AGENTS.md §7). Measured there: Chromium `PART=builder` 40/40 checks against 10/40 on the #300 build. Toolbar height
+at desktop drops from 300 to 106 px, and at 150 % from 350 to 106 px. At 200 % and on phones the toolbar is no longer sticky.
+The builder-related suites pass, as do lint (125 warnings, baseline) and `tsc -b`.
 
 1. Normal merge of `origin/main`; keep both sides of `.gitignore` and `api/tests/ux2-shell-foundation.test.js`.
 2. Wire `BuilderToolbar` into `StructuredExamBuilder` (200 % + toast first); keep #300's delete / «تراجع» / toast / focus reveal.
