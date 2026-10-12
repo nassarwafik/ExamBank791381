@@ -139,7 +139,9 @@ describe("21E.1 — App.tsx confirmations through the shared dialog (real App, t
     const value = select.querySelectorAll("option")[1].getAttribute("value") as string;
     const text = () => (document.querySelector("textarea") && [...document.querySelectorAll("textarea")].map(t => (t as HTMLTextAreaElement).value).find(v => v.length > 0)) || "";
     await act(async () => { fireEvent.change(select, { target: { value } }); });
-    await click(within(await expectSharedDialog("استبدال التعليمات العامة")).getByRole("button", { name: "إبقاء التعليمات" }));
+    const keepFirst = await expectSharedDialog("استبدال التعليمات العامة");
+    expect(document.activeElement?.textContent).toBe("إبقاء التعليمات");          // 21E.1 slice 2: opens on the action that keeps the text
+    await click(within(keepFirst).getByRole("button", { name: "إبقاء التعليمات" }));
     expect([...document.querySelectorAll("textarea")].some(t => (t as HTMLTextAreaElement).value === "تعليمات قائمة")).toBe(true);
     await act(async () => { fireEvent.change(select, { target: { value } }); });
     await click(within(await expectSharedDialog("استبدال التعليمات العامة")).getByRole("button", { name: "استبدال التعليمات" }));

@@ -18,7 +18,12 @@
   --eb-navy-2: #12223f;
   --eb-ink: #1e293b;
   --eb-text: #334155;
-  --eb-muted: #64748b;
+  /* 21E.1 slice 2 (audit F6) — was #64748b: 4.04–4.48:1 on the tints (primary-050/-100, bg, warn/danger/info -bg), below AA 4.5:1.
+     #475569 is ≥ 6.4:1 on every surface and tint and stays lighter than --eb-text. */
+  --eb-muted: #475569;
+  /* Input placeholders keep the former muted value: AA on white (4.76:1) yet clearly lighter than typed text (--eb-text, 2.2:1
+     apart), so an empty field never looks filled. */
+  --eb-placeholder: #64748b;
   --eb-faint: #94a3b8;
 
   /* Lines / borders (soft) */

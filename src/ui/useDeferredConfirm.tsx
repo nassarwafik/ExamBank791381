@@ -1,6 +1,7 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useSyncExternalStore } from "react";
 import { lazyWithRetry } from "../lazyWithRetry";
 import { useConfirmState } from "./useConfirmState";
+import { isConfirmDialogReady, subscribeConfirmDialogReady } from "./confirmPrefetch";
 
 // Phase 21E.1 — the same awaited confirmation as useConfirm() (identical contract and return shape) for STARTUP modules:
 // the dialog layer (ConfirmDialog → Dialog → focus trap) is fetched on the first confirm instead of shipping in the initial
@@ -11,7 +12,10 @@ const LazyConfirmDialog = lazy(lazyWithRetry(() => import("./ConfirmDialog"), "s
 
 export function useDeferredConfirm() {
   const { pending, used, settle, confirm, cancelPending } = useConfirmState();
-  const confirmDialog = used
+  // 21E.1 slice 2 — once ./confirmPrefetch has the chunk, mount the dialog CLOSED (it renders nothing) so the first confirm does not
+  // suspend; before that (or without a prefetch) it mounts on first use exactly as in slice 1.
+  const prefetched = useSyncExternalStore(subscribeConfirmDialogReady, isConfirmDialogReady, () => false);
+  const confirmDialog = used || prefetched
     ? <Suspense fallback={null}><LazyConfirmDialog open={pending !== null} options={pending ?? { message: "" }} onResolve={settle} /></Suspense>
     : null;
   return { confirm, cancelPending, confirmDialog, confirmPending: pending !== null };

@@ -71,7 +71,7 @@ export default function ExamSectionEditor(props: Props) {
   const addPicked = (q: BuilderQuestion) => { setPaletteOpen(false); if (paletteFor) { applySection(createQuestionInScenario(section, paletteFor, q)); setPaletteFor(null); } else onAddQuestion(q); };
 
   return (
-    <section className="sb-section">
+    <section className="sb-section" data-section-id={section.id} tabIndex={-1}>
       {confirmDialog}
       <header className="sb-section-head">
         <div className="sb-row-between">
@@ -95,7 +95,7 @@ export default function ExamSectionEditor(props: Props) {
             const t = findSectionInstructionTemplate(e.target.value);
             e.target.value = "";
             if (!t) return;
-            if ((section.instructions ?? "").trim() && !(await confirm({ title: "استبدال تعليمات القسم", message: "سيستبدل هذا القالب تعليمات القسم الحالية. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات" }))) return;
+            if ((section.instructions ?? "").trim() && !(await confirm({ title: "استبدال تعليمات القسم", message: "سيستبدل هذا القالب تعليمات القسم الحالية. هل تريد المتابعة؟", confirmLabel: "استبدال التعليمات", cancelLabel: "إبقاء التعليمات", initialFocus: "cancel" }))) return;
             patch({ instructions: t.text });
           }}>
             <option value="">قوالب تعليمات القسم…</option>
@@ -193,7 +193,7 @@ export default function ExamSectionEditor(props: Props) {
       </div>
 
       <div className="sb-section-add-row">
-        <button type="button" className="sb-add-btn" onClick={() => { setPaletteFor(null); setPaletteOpen(true); }} disabled={disabled} aria-haspopup="dialog">+ إضافة سؤال</button>
+        <button type="button" className="sb-add-btn" data-add-question onClick={() => { setPaletteFor(null); setPaletteOpen(true); }} disabled={disabled} aria-haspopup="dialog">+ إضافة سؤال</button>
         <button type="button" className="sb-add-btn" onClick={() => applySection(addScenario(section))} disabled={disabled}>+ إضافة سيناريو</button>
       </div>
       {paletteOpen && <Suspense fallback={null}><QuestionTypePalette open onClose={() => { setPaletteOpen(false); setPaletteFor(null); }} onPick={key => addPicked(newQuestion(key as BuilderQuestionType))} onPickNode={q => addPicked(q)} /></Suspense>}

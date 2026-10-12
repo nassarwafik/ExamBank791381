@@ -747,6 +747,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const attemptLine="المحاولة "+((state?.attemptsUsed||0)+1)+" / "+(state?.allowedAttempts||assignment.maxAttempts);
  const classLine=className||exam.metadata?.className||"الصف";
  const hasGeneralInstructions=!!String(exam.metadata?.generalInstructions||"").trim();
+ // 21E.1 slice 2 RF1 (audit F3, owner decision): the teacher's assignment instructions are visible by default; without any
+ // instructions the details panel starts collapsed.
+ const hasAssignmentInstructions=!!String(assignment.instructions||"").trim();
  // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
  // one progress row with the SINGLE live save-status region, then the unchanged question rendering.
  return shell(<div className="iex-wrap">
@@ -769,7 +772,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
     <small>{timed?"يحفظ إجاباتك ويوقف المؤقت حتى تعود. مغادرة الصفحة دون حفظ مؤقت لا توقف المؤقت.":"يحفظ إجاباتك لتتابع المحاولة نفسها لاحقًا."}</small>
    </div>}
   </div>
-  <ExamDetailsDisclosure summary={questionTotal+" أسئلة · "+assignment.totalMarks+" علامة"} defaultOpen={hasGeneralInstructions}>
+  <ExamDetailsDisclosure summary={questionTotal+" أسئلة · "+assignment.totalMarks+" علامة"} defaultOpen={hasGeneralInstructions||hasAssignmentInstructions}>
    {assignment.instructions&&<p className="iex-details-instructions">{assignment.instructions}</p>}
    <dl className="iex-details-list">
     <div><dt>الطالب</dt><dd>{studentName}</dd></div>

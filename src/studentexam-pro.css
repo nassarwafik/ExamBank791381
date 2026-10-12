@@ -67,6 +67,8 @@
 .iex-details-label{ flex:0 1 auto; }
 .iex-details-summary{ flex:1 1 auto; min-width:0; color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-regular); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .iex-details-panel{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:0 var(--eb-space-4) var(--eb-space-4); border-block-start:1px solid var(--eb-line); padding-block-start:var(--eb-space-3); }
+/* 21E.0 audit F3 (21E.1 slice 2) — the class rule above would override the `hidden` attribute and paint a «collapsed» panel; hidden stays hidden. */
+.iex-details-panel[hidden]{ display:none; }
 .iex-details-instructions{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
 .iex-details-list{ margin:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-2) var(--eb-space-3); }
 .iex-details-list > div{ display:flex; flex-direction:column; gap:2px; min-width:0; }
