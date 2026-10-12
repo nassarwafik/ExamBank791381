@@ -87,13 +87,48 @@ scratch area only (it is not shipped); the real-app proof is the 21E.3 harness o
 | A CSS dependency fails | Vite throws `Error("Unable to preload CSS for <url>")` (not a chunk error); re-running the factory renders the component **without** its stylesheet; re-adding `<link rel=stylesheet href="<path>?r=1">` (validated same-origin `/assets/*.css`) restores it | handle the CSS case explicitly |
 | URL taken from the browser error | only `Failed to fetch dynamically imported module:` / `error loading dynamically imported module:` messages carry a URL; Safari's message carries none | accept the URL only when it parses, is same-origin, matches `^<BASE>assets/[A-Za-z0-9._-]+\.js$` (no sub-path, no query kept); otherwise re-run the original factory — never import anything derived from data |
 
+**Dependency recovery with a scoped import map.** A second probe (`A → mid → leaf`, plus `B → mid` and `C → leaf`, every
+module counting its evaluations) showed that Chromium 141 accepts an import map inserted after start-up when its rules are
+**scoped to referrers that have not resolved anything yet**: a `<script type="importmap">` whose scopes are the retry URLs
+(`A?r=1.`, `mid?r=1.`, …) redirects only the retry graph to fresh copies of the poisoned modules, and never touches the rest of
+the application. Three design errors were found and fixed by measurement before any product code was written:
+
+| Version | Scenario | Measured | Fix |
+|---|---|---|---|
+| v1 — remap every module first requested by the failed attempt | entry only fails; later `B` (original) imports `mid` / `leaf` | `mid` and `leaf` **evaluated twice** (the healthy originals were never poisoned, so `B` evaluated them while the retry had evaluated the `?r` copies) | remap only modules whose original record can never evaluate |
+| v2 — remap failed preloads + entry + every static-import ancestor of a failed module | `B` after `A` recovered | `mid`, `leaf` re-mapped to `?r=2.` → evaluated twice | a recovered module keeps its recovered URL for every later graph |
+| v2 | `mid` and `leaf` both fail | `leaf` never remapped (the search stopped at the failed `mid`) → endless failure | read the imports of failed modules too |
+| **v3 (adopted)** | leaf fails (503 and dropped connection), A first or B first; entry only; two failed levels twice | **every module evaluated exactly once in every scenario**; each failed view recovered in place; no page error | — |
+
+The static edges come from the chunk header (`import … from "./x.js"`, `import "./x.js"`, `export … from "./x.js"`, after
+Vite's optional `const __vite__mapDeps=…` line and `/* empty css */` comments; nothing after the first other token). On the
+production build of `b8a65f1` this header parser matches the full-text cross-check on **all 348 chunks (1,081 edges, 0
+mismatches)**.
+
+### 3.3 Lazy-module audit (multi-agent, adversarially verified)
+
+Every `lazy()` / `import()` reachable from `StudentExamPage` was mapped by four parallel analysts (registries, SmartSim,
+card / page pieces), each risk claim checked by an adversarial verifier, then a completeness critic swept the static exam
+closure (283 files). Results that change the design:
+
+| Finding | Consequence |
+|---|---|
+| Registry entries for hotspot, label diagram and open response are 67–72-byte re-export stubs; the real code is a shared chunk (`HotspotView`, `VisualCanvas`, `OpenResponseView`) | entry-only `?r=n` cannot recover them → dependency recovery (above) is required |
+| `coding@1` / `coding@2` share one chunk; `RichPrompt` has six lazy wrappers **and** a static importer (always evaluated before the exam renders); `CodeStimulusView` / `ScenarioView` have lazy and static importers | one module-level state per chunk URL; never retry a module of the static student closure (`RichPrompt`, `RichContentRenderer`, `StudentQuestionCard`, `studentAttemptContext`, `trustedSimPlugins`, `smartSimUiRegistry`, `index`, `react`, runtime) — they cannot fail inside the exam |
+| Module-scope side effects with **medium / high** duplication impact: `trustedSimPlugins` (nine registrations), `studentAttemptContext` (two contexts), `monacoEngine` (`globalThis.MonacoEnvironment`), `echartsEngine` / `echartsAdvanced` (extension installs) | all are in the static closure or behind a module's own `import()`; never a remap target (deny-list + build guard) |
+| `CompoundQuestion` renders registered part renderers outside `StudentQuestionCard`; `SectionShellHeader` (presentation mode) renders outside the planned page section; `AssessmentActivityHost` is a plain lazy | boundary at every renderer host, page boundary encloses the section shell, every exam-path lazy uses the recoverable loader |
+| Any error that reaches the root boundary unmounts `StudentExamPage`; in a strict attempt the unmount fires the strict exit (`StudentExamPage.tsx` pagehide / unmount handlers) and the attempt **ends** | an outer exam-surface boundary inside the page keeps the page (and its answers, autosave and strict state) mounted |
+| `DataChart`'s own fallback tells the student to reload the page | the copy must not suggest a reload during a strict attempt (D5) |
+| Monaco grammar loaders reject unhandled; a stalled (not failed) import never rejects | no global `unhandledrejection` / `vite:preloadError` hooks; never retry on a stall (show a calm slow-loading status at most) |
+
 ## 4. Risk analysis
 
 | Risk | Where | Mitigation in this phase |
 |---|---|---|
 | A recovery path that reloads the page ends a strict attempt or drops an edit | per-question recovery | never auto-reload inside the exam; a manual reload is offered only when every answer is server-confirmed **and** the policy is not strict |
 | A retry that re-imports a module creates a second instance of it | cache-busted import | only a chunk whose load **failed** (never evaluated) is re-requested; one retry URL per chunk shared by all wrappers; its static imports resolve to the already-loaded shared chunks (same module records) — measured in §3.2 |
-| A failed shared dependency can never load again in this page | browser module map | bounded retries; the card then offers only safe options (continue with other questions; a manual reload only when every answer is server-confirmed and the attempt is not strict) |
+| A failed shared dependency can never load again in this page | browser module map | scoped import-map remap of the failed modules and their ancestors only (§3.2 v3); when the browser cannot merge a late import map, or the network is still down, the card offers only safe options (continue with other questions; a manual reload only when every answer is server-confirmed and the attempt is not strict) |
+| A remap evaluates a module a second time | remap set | only modules whose original record can never evaluate are remapped; recovered modules are reused; attempts are serialized; deny-list of side-effecting shared modules; measured per module in Chromium (§3.2) and re-measured on the app build |
 | An error card leaks internals or the answer key | fallback UI and logs | fixed Arabic copy only; the production log carries the fixed code + an allow-listed error name (the `ErrorBoundary` rule) |
 | Recovery schedules a save / submit, or loses an answer | page state | answers live in the page, outside the boundary; a failure or a retry never touches them (request counts are measured) |
 | Focus moves while typing / on autosave / on a timer tick | focus contract | focus is requested only by explicit transitions (a counter, like the existing navigation contract) |
@@ -106,15 +141,28 @@ scratch area only (it is not shipped); the real-app proof is the 21E.3 harness o
 
 ## 5. Design (to be implemented after PR #300 lands)
 
-**A — per-question fault isolation.** `src/recoverableLazy.ts`: a lazy component whose loader can be re-armed after a
-failure; for a chunk-load failure the fresh loader re-imports the same chunk URL with a retry query (`?r=<n>`), taken from
-the browser's own error and accepted only when it is same-origin, under `/assets/` and a `.js` file; any other failure
-re-runs the original factory. Used by both registries and the card's own lazy pieces (chunk names unchanged).
-`src/student/exam/QuestionErrorBoundary.tsx` around the question body in `StudentQuestionCard` (flat, structured, compound,
-composite; student and teacher preview) and around the current page in `StudentExamPage` (scenario / section-context
-lazies). Fallback: «تعذّر عرض هذا السؤال الآن», reassurance that other answers are kept, «إعادة المحاولة»; after a failed
-retry in a running exam, continue with other questions and — only when all answers are saved and the attempt is not strict
-— «إعادة تحميل الصفحة».
+**A — per-question fault isolation (model v3 of §3.2).**
+- `src/recoverableLazy.ts` — `recoverableLazy(chunkName, factory)`:
+  - The first load is the unchanged factory, so the normal path is byte-for-byte today's behaviour.
+  - On a retry it first re-calls the original factory. This costs nothing in Chromium and recovers browsers that do not
+    cache failures without any remap.
+  - Only then, serialized page-wide, it builds the remap set, inserts one scoped import map and imports `<entry>?r=<g>.`
+    (the trailing dot keeps scope prefixes unique). The remap set is: the entry, the modulepreload links that failed, and
+    every static-import ancestor of a failed or already-recovered module.
+  - On success every remapped module is recorded as recovered and reused by every later graph.
+  - The entry URL is accepted only from a `TypeError` whose message names a same-origin `<BASE>assets/<chunkName>-<8 base36>.js`.
+  - Remap and source-read URLs are validated the same way, and the deny-list is never remapped.
+  - CSS failures re-link a validated `?r=` stylesheet.
+  - No global error hooks, no reload, no `lazyWithRetry` inside the exam.
+- `src/student/exam/QuestionErrorBoundary.tsx` around every renderer host: the `StudentQuestionCard` body, the
+  `CompoundQuestion` parts and the composite parts. The page boundary in `StudentExamPage` covers the current page,
+  including the section shell, scenario and section context. An outer exam-surface boundary keeps `StudentExamPage`
+  mounted.
+- Fallback: «تعذّر عرض هذا السؤال الآن», with reassurance that other answers are kept, and «إعادة المحاولة».
+- After a failed retry in a running exam, the fallback suggests continuing with other questions. It shows
+  «إعادة تحميل الصفحة» **only** when every answer is server-confirmed and the attempt is not strict.
+- A build guard asserts that every declared chunk name exists, exports `default`, and that the header parser matches
+  every chunk.
 
 **B — focus.** A focus-request counter joins the existing navigation focus contract: start / resume / next attempt / cover
 start → the question heading; submit / timeout / strict end → the result heading (`tabIndex=-1`). Visible focus styling on
@@ -126,11 +174,19 @@ remembered per tab) and one polite page announcer. Time computation, expiry and 
 **D — save status.** The visible label is unchanged but no longer live; the announcer says only: offline, save failed
 (retries exhausted), and recovery to saved after a problem state.
 
-**E / F / G.** Coarse-pointer 44 px minimums on the listed controls; `dir="ltr"` / `<bdi>` islands; `scroll-padding` for
-the sticky bars; rem / `min()` instead of px max-heights on the answer surfaces.
+**E / F / G.**
+- Coarse-pointer / phone 44 px minimums on the listed student controls. Chemistry periodic-table cells are deferred to
+  21E.5 (D2).
+- `dir="ltr"` / `<bdi>` islands for CLI, the notification grade and the install-card brand. Physics equations and units
+  are isolated in the student scene markup only, with no change to equations or simulation values (D3).
+- `scroll-padding` for the sticky bars.
+- rem / `min()` instead of px max-heights on the answer surfaces.
 
-**H.** Short visual-question hint + an expandable «كيف أستخدم لوحة المفاتيح؟»; tighter section context; the PR #300 details
-rule preserved (open when instructions exist, collapsed otherwise).
+**H.**
+- A short visual-question hint plus an expandable «كيف أستخدم لوحة المفاتيح؟».
+- A tighter section context.
+- The PR #300 details rule is kept exactly: open when meaningful instructions exist, collapsed otherwise, and **no
+  automatic collapse after question 1** (D1).
 
 ## 6. Acceptance tests (planned)
 
