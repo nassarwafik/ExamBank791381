@@ -81,7 +81,7 @@ const ledger = [];
 fs.writeFileSync(BACKUP, JSON.stringify(Object.fromEntries(original)), "utf8");
 try {
   for (const m of selected) {
-    let outcome = "invalid", diagnostic = "";
+    let outcome = "invalid", diagnostic = "", killedBy = [];
     const source = original.get(m.file), occ = source.split(m.before).length - 1;
     if (occ !== 1) diagnostic = "needle count " + occ;
     else if (m.before === m.after) diagnostic = "mutation identical";
@@ -92,10 +92,16 @@ try {
         if (r.error?.code === "ETIMEDOUT" || r.signal) { outcome = "timeout"; diagnostic = String(r.error || r.signal); }
         else if (r.status === 0) { outcome = "survived"; diagnostic = "Selected tests passed"; }
         else if (/Transform failed|Failed to parse source|SyntaxError:|Unexpected token|Error during transform/.test(output)) { outcome = "invalid"; diagnostic = output.slice(-800); }
-        else { outcome = "killed"; diagnostic = output.split("\n").filter(x => /FAIL |Test Files|Tests +/.test(x)).slice(0, 3).join(" ").slice(0, 600); }
+        else {
+          outcome = "killed";
+          const lines = output.replace(/\u001b\[[0-9;]*m/g, "").split("\n");
+          diagnostic = lines.filter(x => /Test Files|Tests +/.test(x)).slice(0, 2).join(" ").slice(0, 300);
+          // The failing tests that killed the mutant (AGENTS.md §13: "killed by which test").
+          killedBy = [...new Set(lines.map(x => /FAIL\s+(\S+\.test\.\w+\s+>.+?)\s*$/.exec(x)?.[1]).filter(Boolean))].slice(0, 6);
+        }
       } finally { fs.writeFileSync(m.file, source, "utf8"); }
     }
-    const record = { id: m.id, file: m.file, outcome, diagnostic };
+    const record = { id: m.id, file: m.file, outcome, diagnostic, killedBy };
     ledger.push(record);
     console.log("21E3_MUTATION_RESULT", JSON.stringify(record));
   }

@@ -48,7 +48,7 @@ const EXECUTION_PATTERNS = [
 ];
 // Phase 21E.3 — owner-authorized exception (2026-10-12, "Narrow C32 exception"): the in-place recovery of a question renderer
 // whose chunk failed to load needs ONE computed import() of `<validated same-origin asset>?r=<n>.`. Nothing else is exempt;
-// the exception is pinned below and behaviourally by src/recoverableLazy.21e3.test.ts (only validated URLs reach the importer).
+// the exception is pinned below and behaviourally by src/recoverableLazy.21e3.test.tsx (only validated URLs reach the importer).
 const OWNER_EXCEPTIONS = new Set(["src/recoverableLazy.ts: non-literal dynamic import"]);
 const HTML_SINKS = /dangerouslySetInnerHTML|\binnerHTML\b|\bouterHTML\b|insertAdjacentHTML|document\.write|srcdoc|srcDoc/;
 
