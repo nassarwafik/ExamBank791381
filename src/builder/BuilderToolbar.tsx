@@ -23,8 +23,8 @@ export type ToolbarItem = {
   pressed?: boolean;
   /** The item opens a dialog. */
   dialog?: boolean;
-  /** Short status appended to the item (e.g. «3 مشكلات»), part of its accessible name. */
-  badge?: string;
+  /** Short status appended to the item (e.g. «3 مشكلات», or the builder's own count badge), part of its accessible name. */
+  badge?: ReactNode;
   title?: string;
 };
 
@@ -58,7 +58,7 @@ function MenuItems({ items }: { items: ToolbarItem[] }) {
 
 export default function BuilderToolbar({ headingId, heading, onExit, exitDisabled, history, titleField, stats, status, addItems, preview, moreItems, save }: BuilderToolbarProps) {
   return (
-    <header className="sb-toolbar sb-toolbar-21e2" data-toolbar="structured-builder">
+    <header className="sb-toolbar sb-toolbar-21e2" data-toolbar="structured-builder" tabIndex={-1}>
       <h2 id={headingId} className="eb-visually-hidden">{heading}</h2>
       <div className="sb-tb-identity">
         {onExit && <button type="button" className="sb-tb-btn sb-tb-exit" onClick={onExit} disabled={exitDisabled}><IconChevronBack size={18} aria-hidden="true" /><span className="sb-tb-label">رجوع</span></button>}

@@ -201,16 +201,57 @@ Escape while saving — to be gated in the wiring).
   The unscoped `assignments-pro.css` rule stays as it is; only the dashboard is protected from it.
 - W was reviewed by its author only (the per-slice delivery of the owner's sprint); it changes no behaviour.
 
-## 9. Follow-up PR after PR #300 merges (prepared, not in this PR)
+## 9. Part 2 — the builder integration (follow-up PR, branch `feature/phase-21e2b-builder-integration`)
 
-The wiring below is implemented and tested on a local scratch merge of this branch and #300's head; it is never pushed until #300
-is in `main` (AGENTS.md §7). Measured there: Chromium `PART=builder` 40/40 checks against 10/40 on the #300 build. Toolbar height
-at desktop drops from 300 to 106 px, and at 150 % from 350 to 106 px. At 200 % and on phones the toolbar is no longer sticky.
-The builder-related suites pass, as do lint (125 warnings, baseline) and `tsc -b`.
+Built on part 1 after #300 merged: part 1's branch was reconciled with `main` `31f4008` by the normal merge `aa3f0ca` (one
+`.gitignore` union). Part 2 starts from `aa3f0ca`.
 
-1. Normal merge of `origin/main`; keep both sides of `.gitignore` and `api/tests/ux2-shell-foundation.test.js`.
-2. Wire `BuilderToolbar` into `StructuredExamBuilder` (200 % + toast first); keep #300's delete / «تراجع» / toast / focus reveal.
-3. Overlay dialog: `role="dialog"`, name, `useModalSurface`, Escape → the unsaved guard (gated while saving).
-4. Inline issues per question / section, live region, summary click → reveal below the toolbar with `FieldRevealContext`.
-5. Section reorder names; builder save labels on the table; remove the temporary guard allow-list.
-6. Chromium `PART=builder` before (merged `main`) / after, mutation additions, full validation, exact-head CI, PR.
+### What is wired
+
+- **A — toolbar.** `StructuredExamBuilder` renders `BuilderToolbar`:
+  - the visible actions are exactly «رجوع» · «تراجع» / «إعادة» · «إضافة أسئلة» (menu) · «معاينة الامتحان» · «المزيد» (menu) · save
+    draft · finalize;
+  - the menus hold the same handlers as before: «إضافة أسئلة» has the bank and the AI authoring entries; «المزيد» has the
+    explorer, blueprint, coverage, policy, readiness, governance, presets, studio and surface lab;
+  - the blueprint count badge, save state, final, media wait and gates stay visible as status text;
+  - #300's delete / «تراجع» / toast / focus reveal are unchanged (their suites pass, updated only to open the menu that now holds
+    a tool).
+- **B — overlay dialog.**
+  - App's `.structured-builder-overlay` is `role="dialog"` + `aria-modal`, named by the toolbar's heading (`sb-builder-title`).
+  - `useModalSurface` moves focus in, wraps Tab, and returns focus to the opener.
+  - Escape takes the existing exit path, so the unsaved-changes guard decides. **While a save is in flight Escape does nothing**,
+    like the disabled «رجوع»; the first wiring missed this, and the new test caught it.
+  - A menu, dialog or toast above the builder keeps Escape for itself.
+- **F — save labels.**
+  - The builder's draft / finalize / saving labels and App's legacy save button read `SAVE_LABELS`.
+  - The guard's three temporary "pending #300" exceptions are removed.
+- **Tests.**
+  - `src/builder/toolbarTestActions.ts` (test-only) reaches a tool the way a teacher does: open the menu, find the item. Absence
+    checks open both menus, so a closed menu cannot pass vacuously.
+  - Sixteen builder, governance, AI, preset, scenario and surface-lab test files use it. No expectation was loosened: a test that
+    clicked «📚 …» on the toolbar now clicks the same item in its menu.
+  - Three more (`media`, `mediaSave`, `reliability`) change only exact button names, which lost their emoji («👁 معاينة الامتحان» →
+    «معاينة الامتحان», «💾 حفظ مسودة» → «حفظ مسودة», «✓ اعتماد نهائي» → «اعتماد نهائي», «→ رجوع» → «رجوع»).
+  - `GovernancePanel.14b` (AGENTS.md §12's documented timing-sensitive file) changes only in how it opens the governance panel,
+    which now sits in «المزيد». Its 409 conflict-alert test is untouched.
+  - New: `src/StructuredExamBuilder.toolbarWiring.21e2b.test.tsx` (9 tests), for the eight actions, the menu placement, the named
+    dialog, Escape (nothing unsaved / unsaved / saving / inside a menu) and the save labels.
+  - One test (`coverage` › accessibility) asserted focus returning to the opener: the opener is now the «المزيد» trigger, as the
+    ActionMenu contract says.
+
+### Not in part 2 (still open)
+
+- **D — inline issues** next to their question, with a live region and summary links. The building blocks shipped in part 1, but
+  wiring them changes the finalization panel; this needs its own slice.
+- **E — section reorder names.** Question reorder names shipped in part 1.
+
+### Evidence
+
+Measured so far (the full exact-head evidence goes in the PR):
+
+- `src/StructuredExamBuilder.toolbarWiring.21e2b.test.tsx`: 9/9 on this branch; **9/9 fail on `aa3f0ca`** (no wiring). "Escape
+  while saving" also failed on the first wiring (`onExit` called once) before the gate was added.
+- Builder-related suites (builder, AI authoring / composer, scenario, presets, governance, function surfaces, App) pass; lint 125
+  warnings (baseline), 0 errors; `tsc -b` clean.
+- Chromium `PART=builder` on the scratch build: 40/40 checks against 10/40 on the #300 build. Toolbar height: desktop 300 → 106 px,
+  150 % 350 → 106 px; not sticky at 200 % and on phones.

@@ -8,6 +8,7 @@ import { examSaveState } from "../examHistory";
 import type { StructuredExam, BuilderQuestion } from "../examTypes";
 import type { AssessmentBlueprintV1 } from "../assessmentTypes";
 import type { AssessmentPresetService } from "./assessmentPresetClient";
+import { toolbarItem } from "../builder/toolbarTestActions";
 
 // Phase 15A — Independent Review Fix 2 (UI): a Blueprint whose constraints collection / targets are malformed while a Quality
 // Policy is present must fail closed in the Save Design flow — structured Blueprint issues, no runtime text, zero API writes,
@@ -57,7 +58,7 @@ async function runSave(initial: StructuredExam) {
   const { svc, calls } = fakeService();
   let hist!: Hist;
   render(<Host svc={svc} initial={initial} onHistory={h => { hist = h; }} />);
-  fireEvent.click(screen.getByRole("button", { name: /القوالب الأكاديمية/ }));
+  fireEvent.click(toolbarItem(/القوالب الأكاديمية/));
   const d = await screen.findByRole("dialog", { name: "القوالب الأكاديمية" }); await tick(30);
   fireEvent.click(within(d).getByRole("button", { name: "حفظ التصميم الحالي كقالب أكاديمي" }));
   const dlg = await screen.findByRole("dialog", { name: "حفظ التصميم الحالي كقالب أكاديمي" });

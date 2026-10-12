@@ -407,7 +407,7 @@ describe("E — exit protection", () => {
   it("no unsaved changes → back exits immediately, no dialog", async () => {
     render(<Host />);
     await tick();
-    fireEvent.click(screen.getByRole("button", { name: "→ رجوع" }));
+    fireEvent.click(screen.getByRole("button", { name: "رجوع" }));
     await tick();
     expect(h.exits).toBe(1);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -422,7 +422,7 @@ describe("E — exit protection", () => {
     expect(beforeUnload(evt())).toBe(false);
     setTitle("T1");
     expect(beforeUnload(evt())).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "→ رجوع" }));
+    fireEvent.click(screen.getByRole("button", { name: "رجوع" }));
     await tick();
     const dialog = screen.getByRole("dialog", { name: "تغييرات غير محفوظة" });
     expect(dialog.textContent).toContain("توجد تغييرات غير محفوظة");
@@ -430,7 +430,7 @@ describe("E — exit protection", () => {
     await tick();
     expect(h.exits).toBe(0);
     expect(h.latest!.title).toBe("T1");
-    fireEvent.click(screen.getByRole("button", { name: "→ رجوع" }));
+    fireEvent.click(screen.getByRole("button", { name: "رجوع" }));
     await tick();
     fireEvent.click(screen.getByRole("button", { name: "الخروج دون حفظ" }));
     await tick();

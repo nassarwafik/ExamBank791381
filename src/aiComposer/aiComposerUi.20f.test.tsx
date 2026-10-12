@@ -7,6 +7,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import StructuredExamBuilder from "../StructuredExamBuilder";
+import { toolbarItem, toolbarItemOrNull } from "../builder/toolbarTestActions";
 import { useStructuredExamHistory } from "../useStructuredExamHistory";
 import { examSaveState } from "../examHistory";
 import type { StructuredExam } from "../examTypes";
@@ -24,7 +25,7 @@ const nodeRequire = createRequire(import.meta.url);
 const { handler } = nodeRequire("../../api/src/functions/ai-exam-composer.js") as { handler: (req: unknown, deps: unknown) => Promise<{ status: number; jsonBody: Record<string, unknown> }> };
 const tick = (ms = 10) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
 const DIALOG = "المؤلف الذكي للامتحان";
-const ACTION = "🧠 المؤلف الذكي للامتحان";
+const ACTION = "المؤلف الذكي للامتحان";
 
 const mcqQ = (id: string, text: string) => newQuestion("multipleChoice", { examQuestionId: id, text, marks: 1, options: [{ text: "أ" }, { text: "ب" }], answer: { correctOptionIndex: 0 } });
 const baseExam = (): StructuredExam => ({ examId: "EXAM-20F", title: "امتحان قائم", status: "draft", schemaVersion: 2, sections: [{ id: "sec-1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, questions: [mcqQ("q1", "السؤال الأول القائم"), mcqQ("q2", "السؤال الثاني القائم")] }] });
@@ -66,7 +67,7 @@ async function mount(transport?: ComposerTransport) {
   return { hist: () => hist };
 }
 async function openDialog() {
-  fireEvent.click(screen.getByRole("button", { name: ACTION }));
+  fireEvent.click(toolbarItem(ACTION));
   return screen.findByRole("dialog", { name: DIALOG }, { timeout: 3000 });
 }
 async function waitFor(fn: () => boolean, label: string, ms = 3000) {
@@ -90,7 +91,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("20F AI Full Exam Composer dialog", () => {
   it("is not offered without the App-owned composer transport", async () => {
     await mount();
-    expect(screen.queryByRole("button", { name: ACTION })).toBeNull();
+    expect(toolbarItemOrNull(ACTION)).toBeNull();
   });
 
   it("a: generates a staged exam (PASS, exact marks); nothing changes before «فتح في المحرر»; apply replaces after confirmation as ONE undo step", async () => {

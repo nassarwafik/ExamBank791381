@@ -15,11 +15,7 @@ const OUT_OF_SCOPE = ["student" + sep, "StudentExamPage.tsx", "StudentQuestionCa
 // Reviewed exceptions, each with its reason. Keep this list short; a new entry needs a design-record line.
 const ALLOWED: Record<string, string> = {
   // The compact per-stage score button in a table row: its accessible name is «حفظ علامة المرحلة <id>» (contextual).
-  "projects/ProjectStudentDetail.tsx|حفظ": "contextual aria-label",
-  // TEMPORARY — these two files are edited by the open PR #300 (21E.1 slice 2); they move onto the table right after it merges.
-  "StructuredExamBuilder.tsx|حفظ مسودة": "pending #300",
-  "StructuredExamBuilder.tsx|اعتماد نهائي": "pending #300",
-  "App.tsx|حفظ الامتحان": "pending #300"
+  "projects/ProjectStudentDetail.tsx|حفظ": "contextual aria-label"
 };
 
 function files(dir: string): string[] {

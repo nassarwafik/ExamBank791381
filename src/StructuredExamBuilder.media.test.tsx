@@ -45,7 +45,7 @@ describe("Phase 5B — preview shows the question image", () => {
       q("qB", "سؤال باء", { image: { exists: true, visible: true, assets: [{ dataUrl: SVG_URL }] } }),
     ]);
     render(<StructuredExamBuilder exam={exam} onChange={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "👁 معاينة الامتحان" }));
+    fireEvent.click(screen.getByRole("button", { name: "معاينة الامتحان" }));
     const srcs = (Array.from(document.querySelectorAll("img.iex-image")) as HTMLImageElement[]).map(i => i.getAttribute("src"));
     expect(srcs).toContain(IMG_A);
     expect(srcs).toContain(SVG_URL);      // SVG rendered through <img>, not inline
@@ -55,7 +55,7 @@ describe("Phase 5B — preview shows the question image", () => {
 
   it("an image-less question renders exactly as before (no img element)", () => {
     render(<StructuredExamBuilder exam={examWith([q("qA", "سؤال بلا صورة")])} onChange={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "👁 معاينة الامتحان" }));
+    fireEvent.click(screen.getByRole("button", { name: "معاينة الامتحان" }));
     expect(document.querySelectorAll("img.iex-image").length).toBe(0);
     expect(document.body.textContent).toContain("سؤال بلا صورة");
   });

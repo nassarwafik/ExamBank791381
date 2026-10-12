@@ -48,6 +48,11 @@ const students = [
 const assignment = { assignmentId: "a1", classId: "c1", className: "الحادي عشر", title: "واجب الشبكات 1", instructions: "", status: "published", openAt: "", dueAt: "2026-10-20T10:00:00.000Z", questionCount: 5, totalMarks: 100, maxAttempts: 3, durationMinutes: 0 };
 const results = { ok: true, assignment: { assignmentId: "a1", title: "واجب الشبكات 1", dueAt: "", durationMinutes: 0, maxAttempts: 3, totalMarks: 100 }, stats: { students: 3, submitted: 2, pendingReview: 1, finalized: 1, notSubmitted: 1, active: 0, average: 76, highest: 90, lowest: 62 }, students };
 
+// A saved structured exam (2 sections, 6 questions) for PART=builder.
+const sq = (id, text) => ({ examQuestionId: id, presentationType: "shortAnswer", text, marks: 2, answer: { text: "-" } });
+const mkq = (sid, n) => Array.from({ length: n }, (_, i) => sq(sid + "q" + (i + 1), "السؤال " + (i + 1) + " في " + sid));
+const savedExam = { schemaVersion: 2, examId: "E9", title: "اختبار الوحدة الثانية", status: "draft", createdAt: "2026-10-01T10:00:00Z", updatedAt: "2026-10-01T10:00:00Z", metadata: {},
+  sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, instructions: "", questions: mkq("s1", 4) }, { id: "s2", title: "القسم الثاني", gradingPolicy: "all", stimuli: {}, instructions: "", questions: mkq("s2", 2) }] };
 const apiCalls = [];
 function api(req, res, body) {
   const u = new URL(req.url, "http://localhost"), p = u.pathname;
@@ -63,7 +68,8 @@ function api(req, res, body) {
   if (p === "/api/classrooms") return send(200, { ok: true, classes: [{ classId: "c1", name: "الحادي عشر", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 3 }] });
   if (p === "/api/assignments" && req.method === "GET") return send(200, { ok: true, assignments: [assignment] });
   if (p === "/api/assignment-results" && req.method === "GET") return send(200, results);
-  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [] });
+  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [{ blobName: "exams/e9.json", examId: "E9", title: savedExam.title, savedAt: "2026-10-01T10:00:00Z", questionCount: 6, totalMarks: 12 }] });
+  if (p === "/api/saved-exams" && j.action === "load") return send(200, { ok: true, exam: savedExam, savedAt: "2026-10-01T10:00:00Z" });
   if (p === "/api/saved-exams" && j.action === "save") return send(200, { ok: true, savedAt: new Date().toISOString(), blobName: "exams/s.json" });
   return send(200, { ok: true, items: [], exams: [], templates: [], questions: [], classes: [], students: [], assignments: [], projects: [], posts: [] });
 }

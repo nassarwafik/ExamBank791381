@@ -8,6 +8,7 @@ import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion, BuilderSection } from "./examTypes";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { networkingBlueprint } from "./assessmentBlueprintFixtures";
+import { toolbarItem, toolbarItemOrNull } from "./builder/toolbarTestActions";
 
 // Phase 13C-C — F5 policy editor, F6 readiness panel, F7 blocking final save (handler re-check), F10 history, through the
 // REAL StructuredExamBuilder + REAL 13A history hook. Fail-first on bd10c72.
@@ -37,10 +38,11 @@ function Host({ initial, onSave }: { initial?: StructuredExam; onSave?: (mode: "
     saveState={examSaveState(hist.history, saving)} backupStorage={null} onRecover={hist.recover} autosaveDelayMs={5} />;
 }
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const policyBtn = () => screen.getByRole("button", { name: /سياسات الجودة/ });
+const policyBtn = () => toolbarItem(/سياسات الجودة/);
 const openPolicy = async () => { fireEvent.click(policyBtn()); return await screen.findByRole("dialog", { name: "سياسات الجودة" }); };
-const gatesBtn = () => screen.queryByRole("button", { name: /بوابات الجودة/ });
-const openReadiness = async () => { fireEvent.click(gatesBtn()!); return await screen.findByRole("dialog", { name: "فحص الجاهزية للاعتماد" }); };
+// Phase 21E.2 — the gates status is a toolbar status chip (text, not colour); the readiness panel opens from «المزيد».
+const gatesBtn = () => document.querySelector<HTMLElement>(".sb-toolbar .sb-gates-chip");
+const openReadiness = async () => { fireEvent.click(toolbarItem(/فحص الجاهزية للاعتماد/)); return await screen.findByRole("dialog", { name: "فحص الجاهزية للاعتماد" }); };
 const finalBtn = () => screen.getByRole("button", { name: /اعتماد نهائي/ }) as HTMLButtonElement;
 const draftBtn = () => screen.getByRole("button", { name: /حفظ مسودة/ }) as HTMLButtonElement;
 const card = (id: string) => document.getElementById("sb-q-" + id) as HTMLElement;
@@ -178,7 +180,7 @@ describe("F7 — اعتماد نهائي consumes the canonical decision; draft 
     const onSave = vi.fn();
     const broken = makeExam(); (broken.sections[0].questions[0] as unknown as Record<string, unknown>).answer = undefined;
     render(<Host initial={broken} onSave={onSave} />); await tick();
-    expect(finalBtn().disabled).toBe(true); expect(gatesBtn()).toBeNull(); expect(screen.queryByRole("button", { name: /سياسات الجودة/ })).toBeNull();
+    expect(finalBtn().disabled).toBe(true); expect(gatesBtn()).toBeNull(); expect(toolbarItemOrNull(/سياسات الجودة/)).toBeNull();
     finalBtn().removeAttribute("disabled"); fireEvent.click(finalBtn()); await tick();
     expect(onSave).not.toHaveBeenCalledWith("final");
     cleanup();
@@ -188,11 +190,10 @@ describe("F7 — اعتماد نهائي consumes the canonical decision; draft 
   });
   it("accessibility: readiness dialog named, sections are headings, items carry effect + reason text, focus returns to the opener", async () => {
     render(<Host initial={makeExam(BP(BLOCK))} />); await tick();
-    gatesBtn()!.focus();
     const dialog = await openReadiness();
     const item = dialog.querySelector('[data-gate-rule="gate-ipv4"]') as HTMLElement;
     expect(item.textContent).toMatch(/يمنع الاعتماد النهائي/); expect(item.textContent).toMatch(/الموجود/);
     await closeDialog(dialog);
-    await waitFor(() => expect(document.activeElement).toBe(gatesBtn()));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "المزيد من أدوات الامتحان" })));   // the menu that opened it
   });
 });

@@ -45,6 +45,10 @@ import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
+import BuilderToolbar from "./builder/BuilderToolbar";
+import useModalSurface from "./ui/useModalSurface";
+import { SAVE_LABELS } from "./teacher/saveLabels";
+import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave } from "./icons";
 import "./structured-builder.css";
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
@@ -142,6 +146,8 @@ type Props = {
 };
 
 const AUTOSAVE_DELAY_MS = 800;
+/** Phase 21E.2 — the toolbar's (visually hidden) heading; App's builder overlay is aria-labelledby it. One builder at a time. */
+const BUILDER_TITLE_ID = "sb-builder-title";
 const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ", dirty: "● تغييرات غير محفوظة", saving: "⏳ جارٍ الحفظ", recovered: "↺ نسخة مسترجعة — غير محفوظة" };
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const FLASH_MS = 1200;
@@ -798,50 +804,65 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     onSave("final");
   };
   const totalMarks = computeTotalMarks(exam);
+  // Phase 21E.2 (B) — inside App's full-screen overlay (role="dialog", aria-modal, named by the toolbar heading) the builder is a
+  // modal workspace: focus moves in when it opens and back to the opener when it closes, Tab wraps inside it, and Escape takes the
+  // existing exit path, so the unsaved-changes guard still decides — except while a save is in flight, when Escape does nothing,
+  // exactly like the disabled «رجوع». Any dialog, menu or toast layered above it keeps Escape and Tab for itself (useModalSurface
+  // yields to them). Rendered on its own (no overlay) the builder is not modal: nothing happens.
+  const surfaceRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => { surfaceRef.current = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null; }, []);
+  useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); });
+  const gatesText = gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات";
 
   return (
     <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
     <div className="sb-builder" dir="rtl" ref={builderRef}>
-      <header className="sb-toolbar" tabIndex={-1}>
-        <div className="sb-toolbar-main">
-          {onExit && <button type="button" className="sb-btn" onClick={() => { void requestExit(); }} disabled={saving}>→ رجوع</button>}
-          {(onUndo || onRedo) && (
-            <span className="sb-history" role="group" aria-label="سجل التعديلات">
-              <button type="button" className="sb-btn" onClick={onUndo} disabled={!canUndo || saving} title="تراجع (Ctrl+Z)" aria-label="تراجع">↶ <span className="sb-btn-label">تراجع</span></button>
-              <button type="button" className="sb-btn" onClick={onRedo} disabled={!canRedo || saving} title="إعادة (Ctrl+Y أو Ctrl+Shift+Z)" aria-label="إعادة">↷ <span className="sb-btn-label">إعادة</span></button>
-            </span>
-          )}
-          <input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" onChange={e => { const title = e.target.value; update(prev => ({ ...prev, title })); }} disabled={saving} />
+      {/* Phase 21E.2 (21E.0 audit T-2 / F1) — at most eight visible actions: «رجوع» · تراجع / إعادة · «إضافة أسئلة» (menu) ·
+          «معاينة الامتحان» · «المزيد» (menu) · save draft · finalize. Every other tool is the same handler inside a menu; the gates
+          and blueprint counts stay visible as status. The toolbar is sticky only where there is room for it (builder-toolbar.css). */}
+      <BuilderToolbar
+        headingId={BUILDER_TITLE_ID}
+        heading={"باني الامتحان المنظّم: " + (exam.title?.trim() || "امتحان بلا عنوان")}
+        onExit={onExit ? () => { void requestExit(); } : undefined}
+        exitDisabled={saving}
+        history={onUndo || onRedo ? { onUndo, onRedo, canUndo: !!canUndo, canRedo: !!canRedo, disabled: !!saving } : undefined}
+        titleField={<input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" aria-label="عنوان الامتحان" onChange={e => { const title = e.target.value; update(prev => ({ ...prev, title })); }} disabled={saving} />}
+        stats={<>
           <span className="sb-stat">{(exam.sections || []).length} أقسام</span>
           <span className="sb-stat">{countQuestions(exam)} أسئلة</span>
           <span className="sb-stat">{totalMarks} علامة</span>
-        </div>
-        <div className="sb-toolbar-actions">
+        </>}
+        status={<>
           {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite">{SAVE_STATE_LABEL[saveState]}</span>}
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
-          <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
-          {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
-          {aiAuthor && <button type="button" className="sb-btn" onClick={() => setAiOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سؤال بالذكاء الاصطناعي</button>}
-          {aiAuthor?.authorScenario && <button type="button" className="sb-btn" onClick={() => setAiScenarioOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سيناريو بالذكاء الاصطناعي</button>}
-          {aiAuthor?.composeExam && <button type="button" className="sb-btn" onClick={() => setComposerOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">🧠 المؤلف الذكي للامتحان</button>}
-          {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
-          {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
-          {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
-          {presets && <button type="button" className={"sb-btn" + (presetsOpen ? " is-active" : "")} onClick={() => setPresetsOpen(true)} aria-haspopup="dialog" title="القوالب الأكاديمية">📋 <span className="sb-btn-label">القوالب الأكاديمية</span></button>}
-          <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
-          <button type="button" className={"sb-btn" + (studioOpen ? " is-active" : "")} onClick={() => setStudioOpen(true)} disabled={saving} aria-haspopup="dialog" title="العرض والتصميم">🎨 <span className="sb-btn-label">العرض والتصميم</span></button>
-          <button type="button" className="sb-btn" onClick={() => setSurfaceLabOpen(true)} aria-haspopup="dialog">🧮 مختبر الدوال 3D (تجريبي)</button>
-          <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
-          {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
+          {hasPolicy && <span className={"sb-stat sb-gates-chip" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")}>{gatesText}</span>}
+        </>}
+        addItems={[
+          ...(bankPicker ? [{ key: "bank", label: "إضافة من بنك الأسئلة", icon: <IconBank size={16} />, onSelect: () => { setPickerFocus(null); setPickerOpenFor(exam.examId); }, disabled: saving, dialog: true }] : []),
+          ...(aiAuthor ? [{ key: "ai-question", label: "سؤال بالذكاء الاصطناعي", icon: <IconSparkles size={16} />, onSelect: () => setAiOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
+          ...(aiAuthor?.authorScenario ? [{ key: "ai-scenario", label: "سيناريو بالذكاء الاصطناعي", icon: <IconSparkles size={16} />, onSelect: () => setAiScenarioOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
+          ...(aiAuthor?.composeExam ? [{ key: "ai-composer", label: "المؤلف الذكي للامتحان", icon: <IconSparkles size={16} />, onSelect: () => setComposerOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
+        ]}
+        preview={{ key: "preview", label: "معاينة الامتحان", onSelect: () => setPreview(exam) }}
+        moreItems={[
+          { key: "explorer", label: "مستكشف الأسئلة", icon: <IconCompass size={16} />, onSelect: () => setNavOpen(v => !v), pressed: navOpen },
+          { key: "blueprint", label: "مخطط الامتحان", icon: <IconBuilder size={16} />, onSelect: () => setBlueprintOpen(true), dialog: true, badge: blueprintIssueCount > 0 ? <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span> : undefined },
+          ...(exam.blueprint ? [{ key: "coverage", label: "تحليل المخطط", icon: <IconReports size={16} />, onSelect: () => setCoverageOpen(true), dialog: true }] : []),
+          ...(exam.blueprint ? [{ key: "policy", label: "سياسات الجودة", icon: <IconCheck size={16} />, onSelect: () => setPolicyOpen(true), dialog: true }] : []),
+          ...(hasPolicy ? [{ key: "readiness", label: "فحص الجاهزية للاعتماد", icon: <IconInfo size={16} />, onSelect: () => setReadinessOpen(true), dialog: true, badge: gateBlockers || gateWarnings ? gatesText : undefined }] : []),
+          ...(governance ? [{ key: "governance", label: "إدارة النشر والإصدارات", icon: <IconHistory size={16} />, onSelect: () => setGovernanceOpen(true), dialog: true }] : []),
+          ...(presets ? [{ key: "presets", label: "القوالب الأكاديمية", icon: <IconCopy size={16} />, onSelect: () => setPresetsOpen(true), dialog: true }] : []),
+          { key: "studio", label: "العرض والتصميم", icon: <IconImage size={16} />, onSelect: () => setStudioOpen(true), disabled: saving, dialog: true },
+          { key: "surface-lab", label: "مختبر الدوال 3D (تجريبي)", icon: <IconMaximize size={16} />, onSelect: () => setSurfaceLabOpen(true), dialog: true },
+        ]}
+        save={onSave ? <>
+          <button type="button" className="sb-tb-btn sb-tb-keep-label" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}><IconSave size={18} aria-hidden="true" /><span className="sb-tb-label">{saving ? SAVE_LABELS.saving : SAVE_LABELS.saveDraft}</span></button>
           {/* Structural errors keep the pre-13C-C HTML `disabled`. Quality-gate blockers use aria-disabled so the button stays
               reachable and its click EXPLAINS the refusal (readiness panel) — the handler re-checks the latest exam either way. */}
-          {onSave && <button type="button" className={"sb-btn sb-btn-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
-          {hasPolicy && <button type="button" className={"sb-btn sb-gates-status" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")} onClick={() => setReadinessOpen(true)} aria-haspopup="dialog" title="فحص الجاهزية للاعتماد">
-            {gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات"}
-          </button>}
-        </div>
-      </header>
+          <button type="button" className={"sb-tb-btn sb-tb-keep-label is-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}><IconCheck size={18} aria-hidden="true" /><span className="sb-tb-label">{SAVE_LABELS.finalizeExam}</span></button>
+        </> : undefined}
+      />
 
       {error && <div className="sb-banner sb-banner-error">{error}</div>}
       {notice && <div className="sb-banner sb-banner-ok">{notice}</div>}

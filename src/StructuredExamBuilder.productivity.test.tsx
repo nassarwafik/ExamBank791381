@@ -6,6 +6,7 @@ import StructuredExamBuilder from "./StructuredExamBuilder";
 import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion, BuilderImageAsset } from "./examTypes";
+import { toolbarItem, toolbarItemOrNull } from "./builder/toolbarTestActions";
 
 // Phase 13B — Enterprise authoring productivity, exercised through the REAL StructuredExamBuilder + the REAL 13A
 // history hook (the App.tsx wiring): navigator (search / filters / jump), multi-selection (UI state, pruned, reset),
@@ -80,7 +81,7 @@ function Host({ initial, bank, req }: { initial?: StructuredExam; bank?: ReturnT
 const sectionIds = (i: number) => h.latest!.sections[i].questions.map(x => x.examQuestionId);
 const allIds = () => h.latest!.sections.flatMap(s => s.questions.map(x => x.examQuestionId));
 const tick = () => act(async () => { await new Promise(r => setTimeout(r, 5)); });
-const navBtn = () => screen.getByRole("button", { name: /مستكشف الأسئلة/ });
+const navBtn = () => toolbarItem(/مستكشف الأسئلة/);
 const openNav = async () => { fireEvent.click(navBtn()); await tick(); return screen.getByRole("complementary", { name: "مستكشف الأسئلة" }); };
 const navCount = () => (document.querySelector(".sb-nav-count") as HTMLElement).textContent ?? "";
 const card = (id: string) => document.getElementById("sb-q-" + id) as HTMLElement;
@@ -90,7 +91,7 @@ const selectedCount = () => within(bulkBar()!).getByRole("status").textContent ?
 const undoBtn = () => screen.getByRole("button", { name: "تراجع" }) as HTMLButtonElement;
 const redoBtn = () => screen.getByRole("button", { name: "إعادة" }) as HTMLButtonElement;
 const chip = () => (document.querySelector(".sb-save-state") as HTMLElement | null)?.textContent ?? "";
-const pickerBtn = () => screen.getByRole("button", { name: /إضافة من بنك الأسئلة/ });
+const pickerBtn = () => toolbarItem(/إضافة من بنك الأسئلة/);
 const openPicker = async (bank: ReturnType<typeof fakeBank>) => { fireEvent.click(pickerBtn()); await waitFor(() => expect(bank.picker.list).toHaveBeenCalled()); await tick(); return screen.getByRole("dialog", { name: "إضافة من بنك الأسئلة" }); };
 const pick = (dialog: HTMLElement, text: string) => within(dialog).getByRole("checkbox", { name: "اختيار السؤال: " + text }) as HTMLInputElement;
 const insertBtn = (dialog: HTMLElement) => within(dialog).getByRole("button", { name: /^إضافة \d+ أسئلة$/ }) as HTMLButtonElement;
@@ -610,7 +611,7 @@ describe("E — Question Bank picker", () => {
   it("no picker action is offered without an App-owned bank service; a failed bank load shows an error with retry ", async () => {
     render(<Host />);
     await tick();
-    expect(screen.queryByRole("button", { name: /إضافة من بنك الأسئلة/ })).toBeNull();
+    expect(toolbarItemOrNull(/إضافة من بنك الأسئلة/)).toBeNull();
     cleanup();
     const bank = fakeBank();
     render(<Host bank={bank.picker} />);
