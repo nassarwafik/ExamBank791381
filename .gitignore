@@ -83,3 +83,4 @@ artifacts/phase-21dd3/
 # Phase 21E.1 slice 2 — real-Chromium certification / visual gate output, produced per run
 .harness-exam-details-21e1s2/
 .harness-visual-gate-21e1s2/
+.harness-review-fix1-21e1s2/

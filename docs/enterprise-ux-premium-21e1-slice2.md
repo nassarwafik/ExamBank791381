@@ -24,7 +24,7 @@ Design Excellence Standard and Visual Quality Gate (§8 of the 21E record). Inde
 | 5a | Audit F3 — the exam details panel cannot collapse | `.iex-details-panel[hidden]{display:none}` + a design-system guard for the bug class (any class on a `hidden` element with a non-`none` display rule needs a `[hidden]` override). | `src/studentexam-pro.css`, `src/designSystem/hiddenAttribute.guard.test.ts` |
 | 5b | Audit F6 — secondary text fails AA on tints | `--eb-muted` `#64748b` → `#475569` (≥ 4.5:1 on every surface and tint token, still lighter than body text). Input placeholders get their own token `--eb-placeholder: #64748b` (the only placeholder that used the muted token is the sign-in form): AA on white (4.76:1) and still clearly lighter than typed text (2.2:1 apart) — with the darker muted value an empty field would look filled (1.35:1 apart). | `src/design-tokens.css`, `src/login-pro.css`, `api/tests/ux2-shell-foundation.test.js` (the old "< 4.5 on the page background" expectation is now "≥ 4.5"; the placeholder pin names the new token and gains two contrast assertions — stricter, not looser) |
 | 5c | Audit F16 — phone menu loses focus after Escape | Escape, the backdrop and «إغلاق القائمة» return focus to «القائمة» even when the opening tap never focused it. Navigating to a page and the desktop-resize close keep their behaviour. | `src/shell/TeacherAppShell.tsx`, `src/ui/IconButton.tsx` (React 19 ref-as-prop) |
-| 2b | Review fixes (independent adversarial pass on the first commit) | Focus never falls to `<body>` when ANY toast about a deletion leaves with focus inside it (Ctrl+Z pressed inside the toast, a refused «تراجع» from the keyboard, closing the success / warn toast): the restored item, else the neighbour, else «+ إضافة قسم». A restore never splits another scenario's block (first of after-previous / before-next / original index / end that keeps every block whole). Restored cards and sections are revealed just below the sticky toolbar (measured height; a card taller than the space below it is aligned by its top instead of centred). Restore scrolls honour reduced motion (OS or the app's motion setting). While a toast is shown the builder scroller reserves room below its last control. | `src/StructuredExamBuilder.tsx`, `src/structuredDeletionUndo.ts`, `src/structured-builder.css` |
+| 2b | Review fixes (independent adversarial pass on the first commit) | Focus never falls to `<body>` when ANY toast about a deletion leaves with focus inside it (Ctrl+Z pressed inside the toast, a refused «تراجع» from the keyboard, closing the success / warn toast): the restored item, else the neighbour, else «+ إضافة قسم». A restore never splits another scenario's block (first of after-previous / before-next / original index / end that keeps every block whole). Restored cards and sections are revealed just below the sticky toolbar (its measured bottom edge since Review Fix 1, §11; a card taller than the space below it is aligned by its top instead of centred). Restore scrolls honour reduced motion (OS or the app's motion setting). While a toast is shown the builder scroller reserves room below its last control. | `src/StructuredExamBuilder.tsx`, `src/structuredDeletionUndo.ts`, `src/structured-builder.css` |
 | 3b | Same-commit first confirmation | After the prefetch, the closed lazy dialog is mounted ahead of time (renders nothing), so the first confirmation does not suspend: a lazy component first rendered on demand suspends once even with its module loaded, and React holds the reveal for its fallback throttle (~300 ms measured in Chromium). | `src/ui/confirmPrefetch.ts` (readiness subscription), `src/ui/useDeferredConfirm.tsx` |
 | — | Correction | The slice-1 record claimed the teacher landing page loads the confirmation chunk; it does not (the landing is App.tsx's own view). Corrected with an erratum. | `docs/enterprise-ux-premium-21e1.md` |
 
@@ -114,11 +114,21 @@ Each mutant: exact single-occurrence replacement, the targeted suites run, file 
 | M30 / M31 | `whenIdle` hands the IdleDeadline to the task / the prefetch loads again while loading or after done | KILLED ×2 |
 | M32 / M33 / M34 | no offset below the sticky toolbar / restore scrolls ignore reduced motion / no room reserved below the builder while a toast is shown | KILLED ×3 |
 | M35 | the F3 guard skips className expressions again (mutant in the guard itself) | KILLED |
-
 | M36 / M37 | a tall restored card is centred under the toolbar again / gets no offset below it | KILLED ×2 |
+| M38 | Review Fix 1 (R1): the deletion neighbour is focused without `preventScroll` | KILLED |
+| M39 / M40 | R1: a hidden heading is never revealed / the page always moves, even when the heading is on screen | KILLED ×2 |
+| M41 / M52 | R1: the band the toast is about to cover is ignored after a deletion / after a refused keyboard «تراجع» | KILLED ×2 |
+| M42 / M50 / M51 | R1: no-usable-strip rule removed / with no strip every heading counts as visible / threshold off by one (`<=` 96) | KILLED ×3 |
+| M43 | R1: clearance from the toolbar's height instead of its bottom edge | KILLED |
+| M44 | R1: a hidden «+ إضافة سؤال» is focused but not revealed | KILLED |
+| M49 | R1: a card is centred into the full viewport while the toast's band shrinks it | KILLED |
+| M45 / M46 | V1: the toast message back to the default size / the tight line height | KILLED ×2 |
+| M54 / M55 | V1: long section titles not shortened in the toast / screen readers get the shortened title too | KILLED ×2 |
+| M47 / M48 / M53 | F3: assignment instructions no longer open the details / whitespace-only instructions open them / general instructions no longer open them | KILLED ×3 |
 
-37 mutants, all KILLED, no timeouts. M1–M35 ran on `5b72855`; after the last builder change every mutant in
-`StructuredExamBuilder.tsx` (M6–M10, M25–M27, M32–M34, M36, M37) was run again on the final code. Every mutated file was
+M1–M37 (slice 2): all KILLED, no timeouts; M1–M35 ran on `5b72855`, and after the last builder change every mutant in
+`StructuredExamBuilder.tsx` (M6–M10, M25–M27, M32–M34, M36, M37) was run again on the final code. Review Fix 1: the whole
+campaign, M1–M55, was run again on `9794b26` (§11). Every mutated file was
 restored byte-for-byte and sha256-verified; `src/`, `scripts/`, `api/` were identical to the commit after each run.
 
 ## 7. Real-Chromium certification (production builds, before = `b8a65f1`, after = head)
@@ -137,7 +147,7 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
 | Delete a section | no message, focus on `<body>` | «تم حذف «…» مع سؤالين.», focus on the next section, «تراجع» restores it |
 | Template over typed text, then a reflexive Enter | focus on «استبدال التعليمات» → **teacher text REPLACED** | focus on «إبقاء التعليمات» → teacher text KEPT |
 | Phone menu (≤ 1024 px) opened without focusing its button, then Escape / backdrop | focus on `<body>` | focus on «القائمة» |
-| F3 details panel collapsed (390 / 1280 / 200 %) | `display:flex`, 209 / 141 / 182 px painted while `aria-expanded="false"` — **4/16 checks** | `display:none`, height 0; open / close by click; collapsed card one 44 px row with «22 أسئلة · 100 علامة»; the first question moves up by 209 px on the phone — **16/16** |
+| F3 details panel collapsed (390 / 1280 / 200 %) | `display:flex`, 209 / 141 / 182 px painted while `aria-expanded="false"` — **4/16 checks** | `display:none`, height 0; open / close by click; collapsed card one 44 px row with «22 أسئلة · 100 علامة»; the first question moves up by 209 px on the phone — **16/16** | *(Collapsed case = no instructions. Since Review Fix 1 the panel opens by default when the assignment has instructions — owner decision, §11.)*
 | F6 axe-core 4.10.2 colour-contrast (builder landing + structured builder, 4 viewports) | 0 nodes on these two teacher pages | 0 nodes; every element painted in the muted colour ≥ 7.18:1 |
 | First confirmation on a throttled network (400 ms RTT, 50 KB/s), measured in the page from the click to the dialog in the DOM | **520 ms**, `ConfirmDialog` + `Dialog` chunks fetched on the click | **7 ms**, both chunks fetched on idle before the click, nothing requested on the click (prefetch alone, before the closed dialog was pre-mounted: 304 ms) |
 | Sticky builder toolbar height (pre-existing, unchanged) | 300 / 350 / 400 / 700 px of 900 / 600 / 450 / 844 | identical. At 200 % and on the phone it covers a restored card's tools; the harness then operates «حذف» by keyboard and records it (21E.2 toolbar work) |
@@ -188,19 +198,79 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
 - **Prefetch failure.** Browsers may keep a failed module fetch in the module map for the page's lifetime; if the idle prefetch
   fails, the first confirmation takes the existing one-shot recovery (`lazyWithRetry`) — the same outcome as a failed first-use
   fetch before this slice (one fetch attempt either way). The prefetch is skipped while offline.
-- **F3 makes the approved UX-7b-1 design real — owner decision requested.** The details panel now really starts collapsed unless
-  the exam has general instructions (pinned by `StudentExamPage.ux7b1.test.tsx`). Before, the CSS bug kept it always painted,
-  so students always saw the ASSIGNMENT instructions inside it. If the owner prefers those to stay visible by default, the
-  one-line option is `defaultOpen={hasGeneralInstructions || !!String(assignment.instructions || "").trim()}` in
-  `src/StudentExamPage.tsx` (and the UX-7b-1 pin updated with the owner's sign-off). Not changed here: it is a product decision.
+- **F3 — owner decision taken in Review Fix 1 (§11).** The details panel opens by default when the assignment has instructions
+  (as students effectively saw them before the CSS fix) or the exam has general instructions; it starts collapsed otherwise.
 - **At 200 % (640×450) and on phones** the toast overlays the bottom ~100 px of the builder while it is shown (10 s, paused on
   hover / focus, closable). The builder scroller reserves that much room below its last control while a toast is up, so
   nothing becomes unreachable. The pre-existing sticky builder toolbar is the bigger problem there: 400 of 450 px at 200 % and
   700 of 844 px on a phone (measured, identical before and after), so little content is visible under it with or without a
-  toast. Restored cards and sections are aligned just below it (measured height), but at those sizes their tools can still sit
-  under it. Recommended for 21E.2 (toolbar ≤ 8 actions with an overflow menu, not sticky on short viewports).
+  toast. Restored cards and sections are aligned just below its bottom edge (§11), but at 200 % the transient toast then covers
+  the only remaining strip. Recommended for 21E.2 (toolbar ≤ 8 actions with an overflow menu, not sticky on short viewports).
 - **Pre-existing timing flake seen in the full local run (not touched here):** `api/tests/coding-17d-b1-replay-protection.test.js`
   RP5 signs with `Math.floor(Date.now() / 1000) + 301` while the verifier compares fractional seconds, so when the sub-second
   part plus the handler delay reaches 1 s the +301 case falls inside the 300 s window and is accepted (failed once under full
   load; passes in isolation; no API source or that test changed in this PR). Suggested fix for a separate PR: sign with a skew
   of ±302 s or inject `nowMs`.
+
+## 11. Review Fix 1 — independent review of `77337030` (Window 1)
+
+| Finding | Severity | What changed | Files |
+|---|---|---|---|
+| **R1** — after deleting a question, the next question's heading and controls could end up under the sticky toolbar | P2 | `focusAfterDeletion` (and every path that hands focus on after a deletion, a refused «تراجع» or a toast leaving) now uses `focus({ preventScroll: true })`. The page does **not** move when the target's heading is on screen — below the toolbar's bottom edge and clear of the band the toast is about to cover (`TOAST_BAND`, 128 px, the same room `structured-builder.css` reserves). Otherwise the target is revealed just below the toolbar with the existing alignment, extracted as `alignCard` (from `focusCard`) and `alignSection` (from `revealSection`); «+ إضافة سؤال / قسم» align like a section (top edge just below the toolbar — an independent review of the first version showed that `nearest` with large margins could end-align them under the toolbar at 200 %). A card is centred only when it fits the area left after the toast band while a toast is shown (the band's scroll padding shrinks the area it is centred in); otherwise it is aligned by its top. Found while certifying: the clearance was the toolbar's *height* + 12 px, but the scroller's 16 px padding puts the stuck toolbar lower, so revealed headings sat 4 px under it (restore paths included) — now the toolbar's bottom edge relative to the scroller + 12 px. When the tall toolbar and the toast band leave no usable strip (phones, 200 %), the transient band is ignored instead of making pointless moves. | `src/StructuredExamBuilder.tsx` |
+| **V1** — Arabic toast readability | P3 | `.eb-toast-message`: `font-size: var(--eb-fs-16)`, `line-height: var(--eb-lh-body)`; nothing clips it (no overflow / clamp). Found by the independent re-check: at 16 px a long section title could make the toast 3–5 lines tall, so the title *shown* in a toast is cut to 40 characters (at a word when possible) + «…»; the live region still announces the full title. | `src/ui/toast.css`, `src/StructuredExamBuilder.tsx` |
+| **F3** — product decision | — | The details panel opens by default when `assignment.instructions` has text (whitespace-only counts as none) or the exam has general instructions; collapsed otherwise. The UX-7b-1 pin is updated: its toggle test now uses an assignment without instructions, and a new case pins "instructions → open". Consequence handed to 21E.3 (audit F4): with instructions the open panel pushes question 1 down again (by the panel's height, 209 px on a 390 px phone for the harness content); the collapsed-by-default gain now applies to assignments without instructions. | `src/StudentExamPage.tsx`, `src/StudentExamPage.ux7b1.test.tsx` |
+
+**Fail-first** (the final versions of the four test files copied into detached worktrees; 72 tests):
+
+| Run against | Failed | Passed | What fails |
+|---|---|---|---|
+| `77337030` (reviewed head) | 23 | 49 | `focusReveal.21e1s2rf1` (plain `focus()` without `preventScroll`; a hidden heading or add button never revealed; a visible next section scrolled anyway; clearance 132 px instead of 148 px), the V1 CSS assertion, the two long-title toast cases, the F3 case, and the two slice-2 assertions R1 deliberately changes (a visible next section is no longer scrolled) |
+| `02564c1` (first Review Fix 1 commit) | 6 | 66 | the independent re-check's findings: «+ إضافة سؤال» end-aligned under the toolbar (desktop and 200 % geometry), a card centred under the toolbar during a second deletion while the toast is shown, a refused «تراجع» revealing «+ إضافة قسم», and the two long-title toast cases |
+| `9794b26` | 0 | 72 | — |
+
+The two Chromium-found cases (bottom-edge clearance, no usable strip) also failed on the first version of the fix before the
+second change.
+
+**Real Chromium** (`scripts/check-review-fix1-browser-21e1s2.mjs`, production builds of `77337030` and `9794b26`, reduced
+motion; question 2's heading placed 8 px below the toolbar, then deleted with the mouse and — after Ctrl+Z — from the keyboard):
+
+| Viewport (toolbar bottom) | Before `77337030` | After |
+|---|---|---|
+| 1280×900 (316 px) | page jumped 332 / 324 px, next heading at y = 0 under the toolbar, its «حذف» not clickable | 0 px moved (mouse and keyboard), heading at 332 / 324, «حذف» clickable |
+| 853×600 @1.5 (366 px) | jumped 382 / 374 px, heading under the toolbar, not clickable | 0 px, heading at 382 / 374, clickable |
+| 640×450 @2 (416 px) | jumped 432 / 411 px, heading under the toolbar | heading at 428, just below the toolbar (the best position left); the transient toast covers the remaining strip (21E.2 toolbar) |
+| 390×844 phone (716 px) | jumped 732 / 724 px, heading under the toolbar | 0 px, heading at 732 / 724, clickable |
+
+The section's last question deleted from the keyboard while the previous toast is still shown, its «حذف» under the toolbar
+(focus falls back to «+ إضافة سؤال»):
+
+| Viewport | Before `77337030` | After |
+|---|---|---|
+| 1280×900 | button at 639, below the toolbar, clickable | same (639, clickable) |
+| 853×600 @1.5 | button at 339, **under** the 366 px toolbar | button at 378, below it, clickable |
+| 640×450 @2 | button at 189, under the toolbar | button at 428, just below the 416 px toolbar (the best position left); the transient toast covers that strip (21E.2 toolbar) |
+| 390×844 phone | button at 672–716, under the 716 px toolbar | button at 728, just below it; the transient toast covers that strip (21E.2 toolbar) |
+
+Toast (V1), measured on `9794b26`: 16 px / 26.4 px everywhere (before: 14 px / 18.2 px); always inside the viewport; no hidden
+overflow.
+
+| Viewport | Fixture title (height, lines) | 120-character section title (height, lines) |
+|---|---|---|
+| 1280×900 | 58 px, 1 | 71 px, 2 |
+| 853×600 @1.5 | 58 px, 1 | 71 px, 2 |
+| 640×450 @2 | **62 px, 1** | **62 px, 1** (≤ 90 px target) |
+| 390×844 phone | 71 px, 2 | 97 px, 3 (before the title shortening: 150 px, 5 lines) |
+
+axe-core 4.10.2 on the toast region (WCAG 2.0 / 2.1 / 2.2 A + AA): 0 violations at every viewport, before and after.
+«تراجع» after each deletion restored `q1 q2 q3 q4` in order. No page errors.
+
+**Mutation proof:** the whole campaign (§6, M1–M55, including M38–M55 for R1 / V1 / F3) ran on `9794b26`, one mutant at a
+time with nothing else running: **55 / 55 KILLED**, no timeouts, every mutated file restored byte-for-byte and
+sha256-verified, `git status` identical before and after.
+
+**Independent re-check of `02564c1`** (adversarial review: R1 correctness, accessibility / visual, regression, tests; every
+finding verified by a skeptic). Confirmed and fixed in `9794b26`: «+ إضافة سؤال / قسم» end-aligned under the toolbar by
+`nearest` (phones, 200 %, 150 % during a second deletion); a card centred into the full viewport while the toast's scroll
+padding shrinks it; long section titles making the toast tall; the F3 general-instructions test passing for the wrong reason;
+missing boundary pins (the 96 px strip, refused «تراجع», «+ إضافة قسم»). One verifier judged the long-title height inherent to
+unbounded text rather than a defect; it is handled anyway by the title shortening above.
