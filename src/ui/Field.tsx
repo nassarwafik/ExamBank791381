@@ -1,5 +1,6 @@
 import { useContext, useState, type ReactNode } from "react";
 import { FieldRevealContext, useFieldIds } from "./fieldContext";
+import "./field.css";
 
 /**
  * Field — the one field frame for teacher editors (Phase 21E.2, generalised from RubricEditor's local Field):
