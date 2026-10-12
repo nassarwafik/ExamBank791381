@@ -133,6 +133,28 @@ describe("RF3 — the room below the builder exists only while a toast needs it"
       expect(reserved()).toBe(false);
     } finally { vi.useRealTimers(); }
   });
+  it("a refused «تراجع» (its section removed meanwhile): the reserve stays while the warn toast shows and is released when it leaves (× or timeout)", async () => {
+    // Independent review of Review Fix 3, N3 — the warn path's release was unpinned: dropping it left data-toast-reserve behind for
+    // good after a refused restore (the permanent-reserve regression back) while every other test stayed green.
+    for (const leave of ["close", "timeout"] as const) {
+      vi.useFakeTimers();
+      try {
+        render(<Host />);
+        await act(async () => { await vi.advanceTimersByTimeAsync(5); });
+        deleteQuestion("q2");
+        act(() => h.update(e => ({ ...e, sections: e.sections.filter(s => s.id !== "s1") })));
+        fireEvent.click(undoQuestion(), POINTER);
+        await act(async () => { await vi.advanceTimersByTimeAsync(5); });
+        expect(toast()?.className, leave).toContain("tone-warn");
+        expect(reserved(), leave + ": reserved while the warn toast shows").toBe(true);
+        if (leave === "close") fireEvent.click(closeBtn(), POINTER);
+        else await act(async () => { await vi.advanceTimersByTimeAsync(10500); });
+        await act(async () => { await vi.advanceTimersByTimeAsync(5); });
+        expect(toast(), leave).toBeNull();
+        expect(reserved(), leave + ": released after the warn toast left").toBe(false);
+      } finally { vi.useRealTimers(); cleanup(); }
+    }
+  });
   it("closing the toast (×) releases the reserve; unmounting the builder never leaves it on the scroller", async () => {
     await start();
     deleteQuestion("q2");

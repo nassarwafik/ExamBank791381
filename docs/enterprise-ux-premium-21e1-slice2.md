@@ -207,8 +207,9 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
   unreachable behind the modal; the toolbar «تراجع» and Ctrl+Z remain after the modal closes (measured in §12).
 - **One toast at a time.** Deleting a second item replaces the first toast; the first deletion is then undone with Ctrl+Z /
   the toolbar «تراجع» (history), as before this slice. Deliberate: a stack of undo toasts competes for attention and focus.
-- **Keyboard reach.** The toast sits at the end of the builder overlay, so its «تراجع» is the builder's LAST Tab stop (not "one
-  Tab stop away", as an RF2 code comment said — corrected in Review Fix 3). Keyboard and screen-reader users are told the routes
+- **Keyboard reach.** The toast sits at the end of the builder overlay, so its «تراجع» is the builder's second-to-last Tab stop,
+  followed only by the toast's × (not "one Tab stop away", as an RF2 code comment said — corrected in Review Fix 3, and again
+  after the independent review of Review Fix 3, which found that the × comes after it). Keyboard and screen-reader users are told the routes
   instead («… للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع».»): Ctrl+Z works right after the deletion because focus is on a card
   or a button, never a text field, and the toolbar «تراجع» is near the builder's start. Escape closes the toast only while focus is
   inside it.
@@ -241,10 +242,19 @@ teacher API (service workers blocked, nothing deployed) at desktop 1280×900, de
   The pre-existing sticky toolbar is the bigger problem there (400 of 450 px at 200 %, 700 of 844 px on a phone): 21E.2 (toolbar
   ≤ 8 actions with an overflow menu, not sticky on short viewports; acceptance in `docs/enterprise-ux-premium-21e.md` §3.5 / §8).
 - **Ctrl+Z / Ctrl+Y around a restored item (Review Fix 3).** When the history removes an item that came back («تراجع», or Ctrl+Z /
-  the toolbar while its toast was up) and focus is lost, its neighbour gets focus in place; a later Ctrl+Y follows the item back
-  only while focus still sits on that neighbour. Focus the teacher has put anywhere else (another card, a dialog, a toolbar button)
-  is never taken and the page does not move (Chromium keeps the focused card still: scroll anchoring). The «تمت استعادة …» toast
-  leaves when its item is removed again.
+  the toolbar while its toast was up) and focus is lost, its neighbour gets focus in place. A later Ctrl+Y moves focus to the item
+  again in two cases only: focus still sits on that neighbour, or focus has been lost. Focus the teacher has put on another card,
+  in a dialog or on an enabled button is never taken, and the page does not move (Chromium keeps the focused card still: scroll
+  anchoring). The «تمت استعادة …» toast leaves when its item is removed again. Measured by the independent review of Review Fix 3:
+  - **N1 (since Review Fix 2, minor).** Focus counts as lost when a toolbar button that disables itself had it: after «تراجع» → the
+    toolbar «تراجع» by pointer, a teacher who scrolls away and clicks the toolbar «إعادة» (which disables itself at the end of the
+    history) sees the page jump back to the restored card (≈ 10,000–13,000 px at 853×480, 640×450 and 390×844; the same on
+    `9aa0b83`). Focus lands on a sensible target, but the page moves. Removing the trigger — toolbar buttons that never drop focus
+    when they disable — is part of the 21E.2 toolbar rework; until then this is a known limitation.
+  - **N4 (minor).** Ctrl+Z pressed inside the success toast sends focus to the neighbour (never `<body>`), but the next Ctrl+Y does
+    not follow the item back — the success toast's own dismissal moves focus before the recovery records the neighbour.
+    Inconsistent with the other routes, not harmful.
+  - A teacher who scrolls away WITHOUT moving focus and presses Ctrl+Y is taken back to the item (focus never left it): by design.
 - **Pre-existing on `main`, not changed here:** «حفظ مسودة» and the toolbar «تراجع» / «إعادة» disable themselves while they act,
   which drops keyboard focus to `<body>` (21E.2, toolbar rework).
 - **Pre-existing timing flake seen in the full local run (not touched here):** `api/tests/coding-17d-b1-replay-protection.test.js`
@@ -472,3 +482,26 @@ hit-testable; content shift −112 px, the trade-off above).
 
 Validation on the fix: lint 0 errors / 125 warnings (= baseline); `tsc -b` and the production build clean; bundle guard passed
 (initial JS 110.5 KB of 125, CSS 35.0 KB); `git diff --check` clean. Exact-head CI: see the PR.
+
+### 13.1 Independent review of Review Fix 3 (`be5e910`)
+
+A focused, read-only independent review of the Review Fix 3 delta (one reviewer, its own worktree, real Chromium against the
+production builds of this fix, `9aa0b83` and `main`) returned **APPROVED FOR OWNER MERGE** with no blocker:
+- it re-ran the fail-first (8/8 of the new tests fail with the `9aa0b83` builder and stylesheet; all pass on the head) and found
+  the end of the builder pixel-identical to `main` (640×450: toolbar 16–416, «+ إضافة قسم» 10 px visible and hit-testable;
+  853×480 and 390×844: 50 px);
+- it found no route that leaves `data-toast-reserve` behind (Escape, a replaced toast, keyboard / pointer «تراجع», ×, the 10 s
+  and 4 s timeouts, Ctrl+Z inside the success toast, the toolbar undo, another exam, unmount, StrictMode, a stale restore) and
+  confirmed the minifier keeps `:has(.eb-toast)` and `[data-toast-reserve]` as separate rules (an engine without `:has()` never
+  drops the attribute rule); after every release the scroller is back to `padding-bottom: 16px`;
+- Review Fix 1 / 2 behaviour unchanged; no page or console errors.
+
+Its minor findings and what was done:
+
+| Id | Finding | Outcome |
+|---|---|---|
+| N1 | page jump after a self-disabling toolbar «إعادة» (since Review Fix 2) | recorded in §10; the trigger goes with the 21E.2 toolbar rework |
+| N2 | §10 overclaimed ("only while focus sits on that neighbour", "a toolbar button is never taken") | §10 corrected |
+| N3 | the warn toast's reserve release was unpinned (a mutant removing it survived 261 builder tests) | new test in `StructuredExamBuilder.reviewFix3.21e1s2rf3.test.tsx` (× and timeout); that mutant is now KILLED, file sha256-restored |
+| N4 | Ctrl+Z inside the success toast → the next Ctrl+Y does not follow the item | recorded in §10 (not harmful) |
+| N5 | «تراجع» is the second-to-last Tab stop (the toast's × follows) | the code comment and §10 corrected |

@@ -174,8 +174,8 @@ const questionCountPhrase = (n: number) => {
   return n + (r >= 3 && r <= 10 ? " أسئلة" : r >= 11 ? " سؤالًا" : " سؤال");
 };
 /** Keyboard users hear the routes back: right after a deletion focus is on a card or a button (never a text field), so Ctrl+Z / ⌘Z
- *  undoes it; the toast's own «تراجع» is the LAST Tab stop of the builder (the toast sits at its end), and the toolbar «تراجع»
- *  is near its start. */
+ *  undoes it; the toast's own «تراجع» is the builder's second-to-last Tab stop (the toast sits at its end; only its × follows),
+ *  and the toolbar «تراجع» is near its start. */
 const UNDO_HINT = " للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع».";
 // UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
 // and pruned against the live exam so a deleted / undone question never lingers (and is never resurrected by redo).
