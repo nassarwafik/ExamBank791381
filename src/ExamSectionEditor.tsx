@@ -20,6 +20,9 @@ import StimulusEditor from "./StimulusEditor";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
+import type { StructuredIssue } from "./examQuality";
+import InlineIssues from "./builder/InlineIssues";
+import { domIdPart } from "./builder/issueIndex";
 
 // One section: its settings (title / instructions / grading policy + policy-specific inputs / preset),
 // its shared stimuli, and its questions. Question-level mutations are delegated up via `mutateQuestions`
@@ -52,6 +55,12 @@ type Props = {
   flashQuestionId?: string;
   // Phase 13C-A — the exam's blueprint (passed to each question's classification controls).
   blueprint?: AssessmentBlueprintV1;
+  // Phase 21E.2 (D) — the builder's index of the canonical issues: this section's own issues, and every question's by id (a
+  // question's issue may come from another section's rule, e.g. a scenario that links it across sections).
+  sectionIssues?: readonly StructuredIssue[];
+  questionIssues?: ReadonlyMap<string, readonly StructuredIssue[]>;
+  /** Question ids the teacher opened from the issue summary → the reveal count each card receives (see StructuredQuestionEditor). */
+  revealedQuestions?: ReadonlyMap<string, number>;
 };
 
 export default function ExamSectionEditor(props: Props) {
@@ -59,7 +68,7 @@ export default function ExamSectionEditor(props: Props) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Phase 19G — when the palette was opened from a scenario, the picked question is created INSIDE that scenario (after its last member) and linked.
   const [paletteFor, setPaletteFor] = useState<string | null>(null);
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint } = props;
+  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint, sectionIssues, questionIssues, revealedQuestions } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
   const scenarios = Array.isArray(section.scenarios) ? section.scenarios : [];
   const applySection = (next: BuilderSection) => { if (next !== section) patch({ scenarios: next.scenarios, questions: next.questions }); };
@@ -87,6 +96,8 @@ export default function ExamSectionEditor(props: Props) {
             <button type="button" className="sb-icon-btn sb-danger" title="حذف القسم" onClick={onDelete} disabled={disabled}>حذف القسم</button>
           </div>
         </div>
+        {/* Phase 21E.2 (D) — section-level canonical issues (grading rule, empty section, scenario structure…), under its heading. */}
+        {sectionIssues && <InlineIssues id={"sb-issues-s-" + domIdPart(section.id)} issues={sectionIssues} label={"مشكلات القسم " + (index + 1)} />}
 
         <input className="sb-input sb-title-input" value={section.title} placeholder="عنوان القسم" onChange={e => patch({ title: e.target.value })} disabled={disabled} />
         <div className="sb-template-controls">
@@ -189,6 +200,8 @@ export default function ExamSectionEditor(props: Props) {
             registerNode={registerQuestionNode ? el => registerQuestionNode(q.examQuestionId, el) : undefined}
             flash={flashQuestionId === q.examQuestionId}
             blueprint={blueprint}
+            issues={questionIssues?.get(q.examQuestionId)}
+            revealIssues={revealedQuestions?.get(q.examQuestionId)}
           />
         ))}
       </div>

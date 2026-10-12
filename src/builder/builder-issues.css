@@ -8,3 +8,26 @@
 .sb-inline-issue-icon { display: inline-flex; flex: 0 0 auto; align-self: center; }
 .sb-inline-issue-kind { flex: 0 0 auto; white-space: nowrap; font-weight: var(--eb-fw-semibold); }
 .sb-inline-issue-text { flex: 1 1 auto; min-width: 0; }
+
+/* The builder's issue summary (StructuredExamBuilder `.sb-issues-summary`): token colours over the legacy structured-builder.css
+   rules (two-class selectors, so the bundle's sheet order does not matter), a text severity instead of an emoji, and entries that
+   open their question / section. Phones: every control is at least 44 px tall. */
+.sb-issues.sb-issues-summary { border: 1px solid var(--eb-warn); background: var(--eb-warn-bg); border-radius: var(--eb-r-sm); padding: var(--eb-space-2) var(--eb-space-3); }
+.sb-issues.sb-issues-summary.sb-issues-error { border-color: var(--eb-danger); background: var(--eb-danger-bg); }
+.sb-issues.sb-issues-summary .sb-issues-head { color: var(--eb-text-heading); text-align: start; border-radius: var(--eb-r-xs); }
+.sb-issues.sb-issues-summary .sb-issues-block { color: var(--eb-danger-tx); }
+.sb-issues.sb-issues-summary .sb-issues-list { list-style: none; padding-inline-start: 0; gap: var(--eb-space-1); }
+.sb-issues.sb-issues-summary .sb-issue-error,
+.sb-issues.sb-issues-summary .sb-issue-warn { font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); overflow-wrap: anywhere; }
+.sb-issues.sb-issues-summary .sb-issue-error { color: var(--eb-danger-tx); }
+.sb-issues.sb-issues-summary .sb-issue-warn { color: var(--eb-warn-tx); }
+.sb-issue-kind { font-weight: var(--eb-fw-semibold); white-space: nowrap; }
+.sb-issue-link { display: block; inline-size: 100%; padding: var(--eb-space-1) 0; border: 0; border-radius: var(--eb-r-xs); background: none; color: inherit; font: inherit; line-height: inherit; text-align: start; cursor: pointer; }
+.sb-issue-link .sb-issue-target { font-weight: var(--eb-fw-semibold); text-decoration: underline; text-underline-offset: 2px; }
+.sb-issue-link:hover .sb-issue-target { text-decoration-thickness: 2px; }
+.sb-issues.sb-issues-summary .sb-issues-head:focus-visible,
+.sb-issue-link:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+@media (max-width: 767px) {
+  .sb-issues.sb-issues-summary .sb-issues-head,
+  .sb-issue-link { min-height: 44px; }
+}

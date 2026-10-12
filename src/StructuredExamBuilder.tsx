@@ -46,10 +46,13 @@ import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import BuilderToolbar from "./builder/BuilderToolbar";
+import { indexIssues, issueTargets, type IssueTarget } from "./builder/issueIndex";
+import { useIssueAnnouncer } from "./builder/useIssueAnnouncer";
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS } from "./teacher/saveLabels";
 import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave } from "./icons";
 import "./structured-builder.css";
+import "./builder/builder-issues.css";
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
 // callers/tests that import { ExamPreview } from "./StructuredExamBuilder" keep working unchanged.
@@ -150,6 +153,9 @@ const AUTOSAVE_DELAY_MS = 800;
 const BUILDER_TITLE_ID = "sb-builder-title";
 const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ", dirty: "● تغييرات غير محفوظة", saving: "⏳ جارٍ الحفظ", recovered: "↺ نسخة مسترجعة — غير محفوظة" };
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
+const EMPTY_REVEALS: ReadonlyMap<string, number> = new Map<string, number>();
+/** Phase 21E.2 (D) — a control whose Field frame shows an error now (aria-invalid) and that can take focus. */
+const INVALID_FIELD = ['input', 'select', 'textarea'].map(t => t + '[aria-invalid="true"]:not([disabled])').join(", ");
 const FLASH_MS = 1200;
 const UNDO_TOAST_MS = 10000;
 /** Height of the band a toast covers at the bottom of the builder — keep in sync with structured-builder.css
@@ -812,6 +818,42 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const surfaceRef = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => { surfaceRef.current = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null; }, []);
   useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); });
+  // ── Phase 21E.2 (D) · inline issues: the SAME structural issues the summary lists and finalization uses, regrouped by where they
+  // belong (indexIssues never re-validates, filters or re-ranks) — each question's in its card, each section's in its header, and
+  // the exam-level rest in the summary only. ONE polite region announces settled count changes (never on opening the exam).
+  const issueIndex = useMemo(() => {
+    const sections = exam.sections || [];
+    return indexIssues([...decision.structuralErrors, ...decision.structuralWarnings], {
+      questionIds: new Set(sections.flatMap(s => (s.questions || []).map(q => q.examQuestionId))),
+      sectionIds: new Set(sections.map(s => s.id)),
+    });
+  }, [decision, exam.sections]);
+  const summaryTargets = useMemo(() => issueTargets(issueIndex, exam.sections || []), [issueIndex, exam.sections]);
+  const issueAnnouncement = useIssueAnnouncer(errors.length, warnings.length);
+  // Questions the teacher opened from the summary (UI state only — never exam data, history or autosave; reset for another exam):
+  // their fields keep showing their errors (FieldRevealContext) until fixed; a new count re-opens a collapsed card.
+  const [issueReveal, setIssueReveal] = useState<{ examId: string; seqs: ReadonlyMap<string, number> } | null>(null);
+  const revealedQuestions = issueReveal?.examId === exam.examId ? issueReveal.seqs : EMPTY_REVEALS;
+  const revealCount = useRef(0);
+  /** The question below the sticky toolbar, with the alignment every other jump uses (alignCard), and focus where the teacher fixes
+   *  it: the first field whose error is now shown, else the card itself (focusCard). Never touches the selection or the navigator. */
+  const focusQuestionIssues = (id: string) => {
+    const el = nodes.current.get(id);
+    if (!el || !alive.current) return;
+    const field = el.querySelector<HTMLElement>(INVALID_FIELD);
+    if (!field) { focusCard(id); return; }
+    alignCard(field.closest<HTMLElement>(".eb-field, .eb-field-group") ?? field);
+    field.focus({ preventScroll: true });
+    if (document.activeElement !== field) el.focus({ preventScroll: true });
+    setFlashId(id);
+  };
+  const openIssue = (target: IssueTarget) => {
+    if (!alive.current) return;
+    if (target.kind === "section") { const el = sectionNode(target.id); if (el) revealSection(el); return; }
+    const examId = exam.examId, count = ++revealCount.current;
+    setIssueReveal(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
+    window.setTimeout(() => focusQuestionIssues(target.id), 0);         // after the revealed (and re-opened) card has rendered
+  };
   const gatesText = gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات";
 
   return (
@@ -867,17 +909,27 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {error && <div className="sb-banner sb-banner-error">{error}</div>}
       {notice && <div className="sb-banner sb-banner-ok">{notice}</div>}
 
+      {/* Phase 21E.2 (D) — always mounted, so assistive technology registers it before its first update. */}
+      <p className="eb-visually-hidden" role="status" aria-live="polite" data-issue-live>{issueAnnouncement}</p>
       {(errors.length > 0 || warnings.length > 0) && (
-        <div className={"sb-issues " + (errors.length ? "sb-issues-error" : "sb-issues-warn")}>
-          <button type="button" className="sb-issues-head" onClick={() => setShowIssues(v => !v)}>
+        <div className={"sb-issues sb-issues-summary " + (errors.length ? "sb-issues-error" : "sb-issues-warn")}>
+          <button type="button" className="sb-issues-head" aria-expanded={showIssues} onClick={() => setShowIssues(v => !v)}>
             {showIssues ? "▾" : "▸"} {errors.length > 0 ? errors.length + " خطأ" : ""}{errors.length && warnings.length ? " • " : ""}{warnings.length > 0 ? warnings.length + " تنبيه" : ""}
             {hasBlockingErrors(errors) && <em className="sb-issues-block"> — يجب إصلاح الأخطاء قبل الحفظ النهائي</em>}
           </button>
           {showIssues && (
             <ul className="sb-issues-list">
-              {[...errors, ...warnings].map((iss: StructuredIssue) => (
-                <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>{iss.severity === "error" ? "⛔" : "⚠️"} {iss.message}</li>
-              ))}
+              {/* An issue that belongs to a question / section opens it; an exam-level issue stays plain text. The severity is text
+                  («خطأ:» / «تنبيه:», as in the inline lists), never colour or an emoji alone. */}
+              {[...errors, ...warnings].map((iss: StructuredIssue) => {
+                const target = summaryTargets.get(iss);
+                const what = <><span className="sb-issue-kind">{iss.severity === "error" ? "خطأ:" : "تنبيه:"}</span> <span className="sb-issue-text">{iss.message}</span></>;
+                return (
+                  <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>
+                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -925,6 +977,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             registerQuestionNode={registerQuestionNode}
             flashQuestionId={flashId || undefined}
             blueprint={exam.blueprint}
+            sectionIssues={issueIndex.bySection.get(section.id)}
+            questionIssues={issueIndex.byQuestion}
+            revealedQuestions={revealedQuestions}
           />
         ))}
       </div>

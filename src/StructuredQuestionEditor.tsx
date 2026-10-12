@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import Field from "./ui/Field";
 import { headerFieldIssues } from "./teacher/questionFieldIssues";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
@@ -12,6 +12,10 @@ import ActivityDescriptorEditor from "./ActivityDescriptorEditor";
 import { effectiveQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
 import CodeStimulusEditor from "./CodeStimulusEditor";
 import { GRADING_MODE_LABELS } from "./questionTypeAliases";
+import type { StructuredIssue } from "./examQuality";
+import InlineIssues from "./builder/InlineIssues";
+import { domIdPart, questionLabelOf } from "./builder/issueIndex";
+import { FieldRevealContext } from "./ui/fieldContext";
 
 // Exam-specific chrome around a question: collapse, the displayed-number badge, and the row actions (preview, move,
 // duplicate, delete), plus the exam-only metadata (display number, marks, shared stimulus/group, move-to-section).
@@ -51,15 +55,24 @@ type Props = {
   flash?: boolean;
   // Phase 13C-A — the exam's blueprint (vocabulary for the optional classification controls).
   blueprint?: AssessmentBlueprintV1;
+  /** Phase 21E.2 (D) — this question's canonical issues as the builder indexed them (shown in the card; never re-validated here). */
+  issues?: readonly StructuredIssue[];
+  /** Phase 21E.2 (D) — set once the teacher opened this question from the builder's issue summary: its fields show their errors
+   *  at once (FieldRevealContext). A NEW value (a later summary click) also opens a collapsed card. UI state only, never exam data. */
+  revealIssues?: number;
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint, issues, revealIssues } = props;
   const [open, setOpen] = useState(true);
+  // A summary click on a collapsed card opens it during the same render (no extra commit), so the builder can focus the field.
+  const [openedFor, setOpenedFor] = useState(revealIssues);
+  if (revealIssues !== openedFor) { setOpenedFor(revealIssues); if (revealIssues) setOpen(true); }
   // 21E.2 — the field-level view of the canonical header rules (EMPTY_TEXT / MARKS_PROBLEM) and the question's display label,
   // used to give the reorder buttons a name that says WHICH question moves.
   const fieldIssues = useMemo(() => headerFieldIssues(q), [q]);
-  const questionLabel = q.displayNumber?.trim() ? q.displayNumber.trim() : String(index + 1);
+  const questionLabel = questionLabelOf(q.displayNumber, index);
+  const revealed = useContext(FieldRevealContext) || !!revealIssues;
 
   return (
     <div className={"sb-question" + (selected ? " is-selected" : "") + (flash ? " sb-q-flash" : "")} id={"sb-q-" + q.examQuestionId} data-question-id={q.examQuestionId} data-selected={selected ? "true" : undefined} tabIndex={-1} ref={registerNode}>
@@ -77,6 +90,11 @@ export default function StructuredQuestionEditor(props: Props) {
         <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={onDelete} disabled={disabled}>×</button>
       </div>
 
+      {/* Phase 21E.2 (D) — the question's canonical issues, between its head and its body: visible while the card is collapsed. */}
+      {issues && <InlineIssues id={"sb-issues-q-" + domIdPart(q.examQuestionId)} issues={issues} label={"مشكلات السؤال " + questionLabel} />}
+
+      {/* The provider is always rendered (a stable tree: revealing never remounts the editors below); it only adds the reveal. */}
+      <FieldRevealContext.Provider value={revealed}>
       {open && (
         <div className="sb-q-body">
           <div className="sb-q-meta">
@@ -114,6 +132,7 @@ export default function StructuredQuestionEditor(props: Props) {
           <ActivityDescriptorEditor value={q.activity} onChange={activity => onChange({ activity })} disabled={disabled} />
         </div>
       )}
+      </FieldRevealContext.Provider>
     </div>
   );
 }
