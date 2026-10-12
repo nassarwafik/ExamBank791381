@@ -29,6 +29,7 @@ describe("21E.1 slice 2 — F6: --eb-muted meets AA on every light surface and t
   }
   it("stays lighter than --eb-text (secondary text remains secondary) and darker than --eb-faint", () => {
     expect(lum(hex("muted"))).toBeGreaterThan(lum(hex("text")));
+    expect(ratio(hex("muted"), hex("text"))).toBeGreaterThanOrEqual(1.3);     // a visible step (1.37:1 today; the hierarchy also rests on size and weight)
     expect(lum(hex("muted"))).toBeLessThan(lum(hex("faint")));
   });
 });

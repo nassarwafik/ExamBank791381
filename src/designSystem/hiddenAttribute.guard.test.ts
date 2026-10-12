@@ -81,16 +81,24 @@ const lastCompound = (selector: string) => selector.split(/\s+|>|\+|~/).filter(B
 const hasClass = (compound: string, cls: string) => new RegExp("\\." + cls.replace(/[-]/g, "\\-") + "(?![\\w-])").test(compound);
 const displayOf = (body: string) => /(?:^|[;\s{])display\s*:\s*([^;!}]+)/.exec(body)?.[1].trim() ?? null;
 const isPrint = (r: Rule) => r.media.some(m => /\bprint\b/.test(m));
-/** (ids, classes + attributes + pseudo-classes) — enough to compare `.x{…}` / `.a .x{…}` with `.x[hidden]{…}`. */
+/** (ids, classes + attributes + pseudo-classes) — enough to compare `.x{…}` / `.a .x{…}` with `.x[hidden]{…}`; `:where(…)` adds 0. */
 const specificity = (selector: string): [number, number] => {
-  const sel = selector.replace(/::[\w-]+/g, "");
+  const sel = selector.replace(/::[\w-]+/g, "").replace(/:where\([^)]*\)/g, "");
   return [(sel.match(/#[\w-]+/g) || []).length, (sel.match(/\.[\w-]+|\[[^\]]*\]|:(?!:)[\w-]+/g) || []).length];
 };
-const atLeast = (a: [number, number], b: [number, number]) => a[0] > b[0] || (a[0] === b[0] && a[1] >= b[1]);
+type Placed = { file: string; idx: number };
+/** The `[hidden]` override beats the show rule: higher specificity, or — on a tie — a LATER rule in the SAME sheet (the cascade order
+ *  of two sheets is not known statically, so a tie across sheets is not trusted). */
+const beats = (override: string, o: Placed, show: string, s: Placed) => {
+  const a = specificity(override), b = specificity(show);
+  if (a[0] !== b[0]) return a[0] > b[0];
+  if (a[1] !== b[1]) return a[1] > b[1];
+  return o.file === s.file && o.idx > s.idx;
+};
 
 describe("21E.1 slice 2 — F3: the `hidden` attribute is never overridden by a class display rule", () => {
   const tsx = files(SRC, /\.tsx$/).map(f => ({ file: rel(f), els: hiddenElements(readFileSync(f, "utf8")) })).filter(f => f.els.length);
-  const rules = files(SRC, /\.css$/).flatMap(f => cssRules(readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "")).map(r => ({ ...r, file: rel(f) })));
+  const rules = files(SRC, /\.css$/).flatMap(f => cssRules(readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "")).map((r, idx) => ({ ...r, file: rel(f), idx })));
 
   it("scans the sources (sanity: the known hidden-attribute disclosures are found)", () => {
     const classes = tsx.flatMap(f => f.els.flatMap(e => e.classes ?? []));
@@ -105,7 +113,7 @@ describe("21E.1 slice 2 — F3: the `hidden` attribute is never overridden by a 
 
   it("every class with a non-none display rule on a `hidden` element has a `.class[hidden]{display:none}` that wins (unconditional or in the same at-rule, at least as specific)", () => {
     const offenders: string[] = [];
-    const overrides = (cls: string) => rules.flatMap(r => (isPrint(r) || displayOf(r.body) !== "none") ? [] : r.selectors.filter(s => { const c = lastCompound(s); return hasClass(c, cls) && /\[hidden\]/.test(c); }).map(s => ({ s, media: r.media.join(" | ") })));
+    const overrides = (cls: string) => rules.flatMap(r => (isPrint(r) || displayOf(r.body) !== "none") ? [] : r.selectors.filter(s => { const c = lastCompound(s); return hasClass(c, cls) && /\[hidden\]/.test(c); }).map(s => ({ s, media: r.media.join(" | "), file: r.file, idx: r.idx })));
     for (const f of tsx) for (const el of f.els) for (const cls of el.classes ?? []) {
       for (const r of rules) {
         if (isPrint(r) || displayOf(r.body) === null || displayOf(r.body) === "none") continue;
@@ -113,8 +121,8 @@ describe("21E.1 slice 2 — F3: the `hidden` attribute is never overridden by a 
           const c = lastCompound(sel);
           if (!hasClass(c, cls) || /\[hidden\]/.test(c)) continue;
           const media = r.media.join(" | ");
-          const ok = overrides(cls).some(o => (o.media === "" || o.media === media) && atLeast(specificity(o.s), specificity(sel)));
-          if (!ok) offenders.push(`${f.file}: .${cls} is shown by ${r.file} «${sel}{display:${displayOf(r.body)}}»${media ? " in " + media : ""} but no unconditional / same-at-rule, at-least-as-specific .${cls}[hidden]{display:none} beats it`);
+          const ok = overrides(cls).some(o => (o.media === "" || o.media === media) && beats(o.s, o, sel, r));
+          if (!ok) offenders.push(`${f.file}: .${cls} is shown by ${r.file} «${sel}{display:${displayOf(r.body)}}»${media ? " in " + media : ""} but no unconditional / same-at-rule .${cls}[hidden]{display:none} beats it (more specific, or later in the same sheet)`);
         }
       }
     }
@@ -127,8 +135,14 @@ describe("21E.1 slice 2 — F3: the `hidden` attribute is never overridden by a 
     const css = cssRules(".a .eb-panel{display:flex} @media (max-width: 600px){ .eb-panel{display:grid} } .eb-panel[hidden]{display:none}");
     const show = css.filter(r => displayOf(r.body) !== "none");
     expect(show.map(r => r.selectors[0] + " @ " + r.media.join(""))).toEqual([".a .eb-panel @ ", ".eb-panel @ @media (max-width: 600px)"]);
-    expect(atLeast(specificity(".eb-panel[hidden]"), specificity(".a .eb-panel"))).toBe(true);
-    expect(atLeast(specificity(".eb-panel[hidden]"), specificity(".a .b .eb-panel"))).toBe(false);
+    const at = (file: string, idx: number) => ({ file, idx });
+    expect(beats(".eb-panel[hidden]", at("a.css", 9), ".eb-panel", at("b.css", 0))).toBe(true);
+    expect(beats(".eb-panel[hidden]", at("a.css", 9), ".a .b .eb-panel", at("a.css", 0))).toBe(false);
+    // Review Fix 2: a tie on specificity is decided by source order — only a LATER override in the SAME sheet wins for sure.
+    expect(beats(".eb-panel[hidden]", at("a.css", 0), ".x .eb-panel", at("a.css", 1))).toBe(false);
+    expect(beats(".eb-panel[hidden]", at("a.css", 2), ".x .eb-panel", at("a.css", 1))).toBe(true);
+    expect(beats(".eb-panel[hidden]", at("a.css", 9), ".x .eb-panel", at("b.css", 0))).toBe(false);
+    expect(beats(".eb-panel[hidden]", at("a.css", 0), ":where(.x .y) .eb-panel", at("b.css", 0))).toBe(true);
   });
 
   it("the student exam's details panel in particular (the finding itself)", () => {

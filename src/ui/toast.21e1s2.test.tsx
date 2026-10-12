@@ -116,6 +116,49 @@ describe("21E.1 slice 2 — Toast", () => {
     expect(screen.queryByRole("group", { name: "إشعار" })).toBeNull();
   });
 
+  it("Review Fix 2: the pause is keyed by toast id — a toast closed with Escape while focused (no blur fires) never leaves the NEXT toast paused", () => {
+    render(<Host duration={3000} />);
+    show({ action: { label: "تراجع", accessibleLabel: "تراجع عن حذف السؤال", onAction: () => {} } });
+    const btn = screen.getByRole("button", { name: "تراجع عن حذف السؤال" });
+    act(() => { btn.focus(); fireEvent.focus(btn); });
+    act(() => { fireEvent.keyDown(btn, { key: "Escape" }); });                // closes; the card is removed without a blur
+    act(() => { screen.getByRole("button", { name: "قبل" }).focus(); });
+    show({ message: "التالي" });
+    advance(3500);
+    expect(screen.queryByRole("group", { name: "إشعار" })).toBeNull();        // the next toast ran its own countdown
+    expect(log.map(l => l.reason)).toEqual(["escape", "timeout"]);
+  });
+  it("Review Fix 2: the owner learns HOW the toast was dismissed — a pointer click (detail ≥ 1) vs keyboard / Escape / timers — and the action receives it", () => {
+    render(<Host />);
+    const via: unknown[] = [];
+    const onAction = vi.fn();
+    const opts = () => ({ action: { label: "تراجع", accessibleLabel: "تراجع عن حذف السؤال", onAction }, onDismiss: (reason: ToastDismissReason, hadFocus: boolean, how: unknown) => { log.push({ reason, hadFocus }); via.push(how); } });
+    show(opts());
+    act(() => { fireEvent.click(screen.getByRole("button", { name: "إغلاق الإشعار" }), { detail: 1 }); });
+    show(opts());
+    act(() => { fireEvent.click(screen.getByRole("button", { name: "إغلاق الإشعار" })); });
+    show(opts());
+    act(() => { fireEvent.click(screen.getByRole("button", { name: "تراجع عن حذف السؤال" }), { detail: 1 }); });
+    show(opts());
+    act(() => { fireEvent.click(screen.getByRole("button", { name: "تراجع عن حذف السؤال" })); });
+    show(opts());
+    act(() => { fireEvent.keyDown(screen.getByRole("button", { name: "تراجع عن حذف السؤال" }), { key: "Escape" }); });
+    show(opts());
+    advance(9000);
+    expect(via).toEqual(["pointer", "keyboard", "pointer", "keyboard", "keyboard", "keyboard"]);
+    expect(onAction.mock.calls).toEqual([["pointer"], ["keyboard"]]);
+  });
+  it("Review Fix 2: the card is described by its message (a late visitor hears what «تراجع» would undo); a second activation of the action is ignored", () => {
+    render(<Host />);
+    const onAction = vi.fn();
+    show({ action: { label: "تراجع", accessibleLabel: "تراجع عن حذف السؤال", onAction } });
+    const group = screen.getByRole("group", { name: "إشعار" });
+    expect(document.getElementById(group.getAttribute("aria-describedby")!)?.textContent).toBe("تم حذف السؤال 2 من «القسم الأول».");
+    const btn = screen.getByRole("button", { name: "تراجع عن حذف السؤال" });
+    act(() => { fireEvent.click(btn); fireEvent.click(btn); });
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(log).toEqual([{ reason: "action", hadFocus: false }]);
+  });
   it("tones carry an icon (success / info / warn); neutral has none; the card is a dark surface with the inverse focus ring", () => {
     render(<Host />);
     show({ tone: "success", message: "تمت استعادة السؤال 2." });

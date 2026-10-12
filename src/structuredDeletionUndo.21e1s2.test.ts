@@ -108,6 +108,19 @@ describe("21E.1 slice 2 — restore a question", () => {
     expect((r.exam.sections[0].scenarios as { questionIds: string[] }[])[0].questionIds).toEqual(["q2"]);
     expect(validateSectionScenarios(r.exam.sections[0]).issues).toEqual([]);
   });
+  it("Review Fix 2: when the previous member LEFT the scenario meanwhile, the member order stays the section order (never a stale position)", () => {
+    const e = exam([S("s1", [Q("q1"), Q("q2"), Q("q3")], { scenarios: [scenario("sc", ["q1", "q2", "q3"])] } as never), S("s2", [Q("z")])]);
+    const d = captureQuestionDeletion(e, "s1", "q2")!;                         // prev q1, next q3, member at 1
+    // q1 moves to another section: it leaves the scenario, which now holds [q3]; q2 comes back BEFORE q3.
+    const now = withSections(applyDeletion(e, d), s => s.map(sec => sec.id === "s1"
+      ? { ...sec, questions: sec.questions.filter(q => q.examQuestionId !== "q1"), scenarios: [scenario("sc", ["q3"])] as never }
+      : { ...sec, questions: [...sec.questions, e.sections[0].questions[0]] }));
+    const r = restoreDeletion(now, d);
+    expect(r.outcome).toBe("restored");
+    expect(ids(r.exam)).toEqual(["q2", "q3"]);
+    expect((r.exam.sections[0].scenarios as { questionIds: string[] }[])[0].questionIds).toEqual(["q2", "q3"]);
+    expect(validateSectionScenarios(r.exam.sections[0]).issues).toEqual([]);
+  });
   it("never splits ANOTHER scenario's block: it takes the first of after-previous / before-next / its index / the end that keeps blocks whole", () => {
     const e = exam([S("s1", [Q("x"), Q("p"), Q("q"), Q("n")], { scenarios: [scenario("T", ["x", "p"])] } as never)]);
     const d = captureQuestionDeletion(e, "s1", "q")!;                          // prev p, next n, not a member

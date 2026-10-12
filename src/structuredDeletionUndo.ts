@@ -128,9 +128,13 @@ export function restoreDeletion(exam: StructuredExam, d: Deletion): { exam: Stru
     const questions = insertAt(list, d.question, at);
     let scenarios = section.scenarios;
     if (d.scenarioId && Array.isArray(section.scenarios)) {
+      const qIndex = questions.findIndex(q => q.examQuestionId === qid);
       scenarios = section.scenarios.map(sc => {
         if (!sc || sc.id !== d.scenarioId || !Array.isArray(sc.questionIds)) return sc;
-        const memberIds = insertAt(sc.questionIds, qid, d.scenarioPos < 0 ? sc.questionIds.length : d.scenarioPos);
+        // Re-linked where the SECTION order puts it (after the members that now precede it), so the stored member order stays
+        // canonical even when a member left the scenario meanwhile; the captured position alone could be stale.
+        const pos = sc.questionIds.filter(id => { const i = questions.findIndex(q => q.examQuestionId === id); return i >= 0 && i < qIndex; }).length;
+        const memberIds = insertAt(sc.questionIds, qid, pos);
         return contiguous(questions, memberIds) ? { ...sc, questionIds: memberIds } : sc;
       });
     }

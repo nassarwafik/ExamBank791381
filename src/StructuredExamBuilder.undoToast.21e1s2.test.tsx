@@ -72,7 +72,7 @@ describe("21E.1 slice 2 — delete a question → toast → «تراجع»", () 
     expect(toast()!.closest(".sb-builder")).toBeTruthy();                         // inside the builder overlay (above the toast layer)
     expect(document.activeElement).toBe(card("q3"));                              // focus is never lost to <body>
     await wait(80);
-    expect(live().textContent).toBe("تم حذف السؤال 2 من «القسم الأول». للتراجع اضغط Ctrl+Z.");   // announced, with the keyboard route
+    expect(live().textContent).toBe("تم حذف السؤال 2 من «القسم الأول». للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع».");   // announced, with the keyboard route
     expect(screen.getAllByRole("button", { name: "تراجع" })).toHaveLength(1);        // the toolbar's «تراجع» keeps its unique name
     const pastAfterDelete = h.past;
     fireEvent.click(undoQuestion());
@@ -231,7 +231,7 @@ describe("21E.1 slice 2 RF1 (V1) — a long section title never makes the toast 
     expect(LONG.startsWith(shown.slice(0, -1))).toBe(true);
     expect(LONG.charAt(shown.length - 1)).toBe(" ");                                // cut at a word boundary
     await wait(80);
-    expect(live().textContent).toBe("تم حذف السؤال 2 من «" + LONG + "». للتراجع اضغط Ctrl+Z.");
+    expect(live().textContent).toBe("تم حذف السؤال 2 من «" + LONG + "». للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع».");
   });
   it("the same for a deleted section, its restore toast and a refused restore", async () => {
     render(<Host initial={withLongTitle()} />);
@@ -333,6 +333,10 @@ describe("21E.1 slice 2 — where the restored / focused section lands, and moti
   });
   it("while a toast is shown the builder scroller reserves room below its last control (focus is never hidden behind the toast)", () => {
     const css = readFileSync(path.join(process.cwd(), "src", "structured-builder.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    expect(css).toMatch(/\.structured-builder-overlay:has\(\.eb-toast\)\{padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\);scroll-padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);
+    // Review Fix 2: the room is reserved at all times (no content jump when the toast leaves; a reveal right after a deletion has
+    // its scroll range); the scroll padding that keeps the band clear of anything scrolled into view applies while a toast shows.
+    expect(css).toMatch(/\.structured-builder-overlay:has\(\.sb-builder\)\{padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);
+    expect(css).toMatch(/\.structured-builder-overlay:has\(\.eb-toast\)\{scroll-padding-block-end:calc\(var\(--eb-space-4\) \* 2 \+ 96px\)\}/);
+    expect(css).not.toMatch(/:has\(\.eb-toast\)\{[^}]*(?<!scroll-)padding-block-end/);
   });
 });

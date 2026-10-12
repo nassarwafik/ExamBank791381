@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { IconCheck, IconClose, IconInfo, IconWarning } from "../icons";
 import IconButton from "./IconButton";
 import "./toast.css";
@@ -19,24 +19,29 @@ import "./toast.css";
  */
 export type ToastTone = "neutral" | "success" | "info" | "warn";
 export type ToastDismissReason = "timeout" | "close" | "escape" | "action" | "replaced" | "programmatic";
+/** How the close button / the action was activated: "pointer" (mouse, touch — the browser focused the button on press, so the owner
+ *  should return focus WITHOUT scrolling the page) or "keyboard" (Enter / Space / Escape, assistive technology, timers). */
+export type ToastDismissVia = "pointer" | "keyboard";
 export type ToastAction = {
   /** Visible text of the action button (e.g. «تراجع»). */
   label: string;
   /** Full accessible name when the visible text alone is ambiguous (must contain `label`, WCAG 2.5.3). */
   accessibleLabel?: string;
-  onAction: () => void;
+  onAction: (via: ToastDismissVia) => void;
   disabled?: boolean;
 };
 export type ToastOptions = {
-  message: string;
-  /** What screen readers hear instead of `message` (e.g. the message plus a keyboard hint). Defaults to `message`. */
+  /** Visible text; may be rich (e.g. a title in `<bdi>` so it keeps its own direction) — then give the `announcement` as text. */
+  message: ReactNode;
+  /** What screen readers hear instead of `message` (e.g. the message plus a keyboard hint). Defaults to `message` when it is text. */
   announcement?: string;
   tone?: ToastTone;
   action?: ToastAction;
   /** Visible lifetime in ms (paused while hovered / focused). Defaults to the hook's `defaultDurationMs`. */
   durationMs?: number;
-  /** Called once when this toast leaves; `hadFocus` is true when keyboard focus was inside the card at that moment. */
-  onDismiss?: (reason: ToastDismissReason, hadFocus: boolean) => void;
+  /** Called once when this toast leaves; `hadFocus` is true when keyboard focus was inside the card at that moment; `via` says
+   *  whether a pointer activated the close button / action (then focus is best returned without moving the page). */
+  onDismiss?: (reason: ToastDismissReason, hadFocus: boolean, via: ToastDismissVia) => void;
 };
 type ActiveToast = ToastOptions & { id: number };
 
@@ -53,20 +58,25 @@ export function useToast({ defaultDurationMs = 8000, actionDisabled = false }: {
   const seq = useRef(0);
   const current = useRef<ActiveToast | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const messageId = useId();
 
-  const finish = useCallback((reason: ToastDismissReason) => {
+  /** Closes the current toast; false when none was current (so an activation that raced its departure runs nothing). */
+  const finish = useCallback((reason: ToastDismissReason, via: ToastDismissVia = "keyboard"): boolean => {
     const t = current.current;
-    if (!t) return;
+    if (!t) return false;
     const hadFocus = !!cardRef.current && typeof document !== "undefined" && cardRef.current.contains(document.activeElement);
     current.current = null;
     setToast(null);
-    t.onDismiss?.(reason, hadFocus);
+    t.onDismiss?.(reason, hadFocus, via);
+    return true;
   }, []);
 
   // The countdown of the CURRENT toast (keyed by id, so a closing toast's timer can never shorten the next one's).
   const timing = useRef<{ id: number; remaining: number; startedAt: number }>({ id: 0, remaining: 0, startedAt: 0 });
   const showToast = useCallback((options: ToastOptions) => {
-    if (current.current) finish("replaced");
+    // A toast shown from inside a replaced toast's onDismiss becomes current in its turn and leaves the same way (bounded, so a
+    // chain of such handlers can never loop).
+    for (let i = 0; i < 4 && current.current; i++) finish("replaced");
     const next: ActiveToast = { ...options, id: ++seq.current };
     current.current = next;
     timing.current = { id: next.id, remaining: options.durationMs ?? defaultDurationMs, startedAt: 0 };
@@ -85,7 +95,7 @@ export function useToast({ defaultDurationMs = 8000, actionDisabled = false }: {
   // message twice in a row is read twice).
   useEffect(() => {
     if (!toast) return;
-    const t = window.setTimeout(() => setAnnounced({ id: toast.id, text: toast.announcement ?? toast.message }), 60);
+    const t = window.setTimeout(() => setAnnounced({ id: toast.id, text: toast.announcement ?? (typeof toast.message === "string" ? toast.message : "") }), 60);
     return () => window.clearTimeout(t);
   }, [toast]);
   const announcement = toast && announced?.id === toast.id ? announced.text : "";
@@ -117,6 +127,7 @@ export function useToast({ defaultDurationMs = 8000, actionDisabled = false }: {
           className={"eb-toast eb-on-dark tone-" + tone}
           role="group"
           aria-label="إشعار"
+          aria-describedby={messageId}
           data-toast-id={toast.id}
           onMouseEnter={() => setPaused(toast.id, "hover", true)}
           onMouseLeave={() => setPaused(toast.id, "hover", false)}
@@ -125,19 +136,20 @@ export function useToast({ defaultDurationMs = 8000, actionDisabled = false }: {
           onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); finish("escape"); } }}
         >
           {tone !== "neutral" && <span className="eb-toast-icon" aria-hidden="true">{TONE_ICON[tone]}</span>}
-          <p className="eb-toast-message">{toast.message}</p>
+          <p id={messageId} className="eb-toast-message">{toast.message}</p>
           {toast.action && (
             <button
               type="button"
               className="eb-toast-action"
               aria-label={toast.action.accessibleLabel}
               disabled={actionDisabled || toast.action.disabled}
-              onClick={() => { const action = toast.action; if (!action || action.disabled || actionDisabled) return; finish("action"); action.onAction(); }}
+              // A keyboard activation (Enter / Space, assistive technology) is a click with detail 0; a pointer's has detail ≥ 1.
+              onClick={e => { const action = toast.action; if (!action || action.disabled || actionDisabled) return; const via: ToastDismissVia = e.detail > 0 ? "pointer" : "keyboard"; if (finish("action", via)) action.onAction(via); }}
             >
               {toast.action.label}
             </button>
           )}
-          <IconButton className="eb-toast-close" inverse label="إغلاق الإشعار" icon={<IconClose size={16} />} onClick={() => finish("close")} />
+          <IconButton className="eb-toast-close" inverse label="إغلاق الإشعار" icon={<IconClose size={16} />} onClick={e => finish("close", e.detail > 0 ? "pointer" : "keyboard")} />
         </div>
       )}
     </div>
