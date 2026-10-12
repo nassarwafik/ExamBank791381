@@ -1,4 +1,5 @@
-import { createContext, useContext, useId, useState, type ReactNode } from "react";
+import { useContext, useState, type ReactNode } from "react";
+import { FieldRevealContext, useFieldIds } from "./fieldContext";
 
 /**
  * Field — the one field frame for teacher editors (Phase 21E.2, generalised from RubricEditor's local Field):
@@ -12,9 +13,6 @@ import { createContext, useContext, useId, useState, type ReactNode } from "reac
  * The frame validates nothing itself: the caller passes the message derived from the canonical rules.
  */
 export type FieldA11y = { id: string; "aria-invalid"?: true; "aria-describedby"?: string };
-
-/** Provided by a question card when its issues must be shown now (independent of focus history). */
-export const FieldRevealContext = createContext(false);
 
 export type FieldProps = {
   label: ReactNode;
@@ -30,11 +28,6 @@ export type FieldProps = {
   className?: string;
   children: (a11y: FieldA11y) => ReactNode;
 };
-
-export function useFieldIds(prefix = "eb-field") {
-  const base = prefix + "-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  return { id: base, helpId: base + "-help", errorId: base + "-error" };
-}
 
 export default function Field({ label, help, error, showError = "touched", hideLabel, layout = "stack", className, children }: FieldProps) {
   const { id, helpId, errorId } = useFieldIds();

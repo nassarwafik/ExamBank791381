@@ -8,7 +8,8 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
 import { useState } from "react";
-import Field, { FieldGroup, FieldRevealContext } from "./ui/Field";
+import Field, { FieldGroup } from "./ui/Field";
+import { FieldRevealContext } from "./ui/fieldContext";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 import NumericResponseEditor from "./questionTypes/editors/NumericResponseEditor";
@@ -20,7 +21,7 @@ import type { BuilderQuestion, QuestionBody, StructuredExam } from "./examTypes"
 afterEach(cleanup);
 
 const describedText = (el: Element) => (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean).map(id => document.getElementById(id)?.textContent || "").join(" | ");
-const questionProps = (q: BuilderQuestion, onChange = vi.fn()) => ({ question: q, index: 0, total: 2, sectionOptions: [{ id: "s1", title: "القسم" }], currentSectionId: "s1", groupOptions: [], onChange, onDelete: vi.fn(), onMove: vi.fn(), onDuplicate: vi.fn(), onMoveToSection: vi.fn(), onPreview: vi.fn() });
+const questionProps = (q: BuilderQuestion, onChange: (p: Partial<QuestionBody>) => void = vi.fn()) => ({ question: q, index: 0, total: 2, sectionOptions: [{ id: "s1", title: "القسم" }], currentSectionId: "s1", groupOptions: [], onChange, onDelete: vi.fn(), onMove: vi.fn(), onDuplicate: vi.fn(), onMoveToSection: vi.fn(), onPreview: vi.fn() });
 
 describe("Field frame contract", () => {
   it("binds a visible label, links help, and shows the error only after the field was left", () => {
