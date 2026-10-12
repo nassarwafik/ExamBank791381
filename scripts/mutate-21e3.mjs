@@ -73,7 +73,7 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(sig, () => { resto
 const hashes = Object.fromEntries([...original].map(([file, value]) => [file, sha(value)]));
 const dirty = spawnSync("git", ["status", "--porcelain", "--", ...files], { encoding: "utf8" });
 if (dirty.status !== 0 || dirty.stdout.trim()) { console.error("Mutated sources must start clean.", dirty.stdout); process.exit(3); }
-const vitest = tests => spawnSync(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--reporter=dot", ...tests], { encoding: "utf8", timeout: 240000, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, CI: "true" } });
+const vitest = tests => spawnSync(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--reporter=dot", ...tests], { encoding: "utf8", timeout: 240000, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, CI: "true", NO_COLOR: "1" } });
 const all = [...new Set(selected.flatMap(m => m.tests))], baseline = vitest(all);
 if (baseline.status !== 0) { console.error("BASELINE RED", baseline.stdout.slice(-5000), baseline.stderr.slice(-3000)); process.exit(4); }
 console.log("21E3_MUTATION_BASELINE_GREEN", JSON.stringify({ tests: all, mutants: selected.length, files: hashes }));
@@ -94,7 +94,7 @@ try {
         else if (/Transform failed|Failed to parse source|SyntaxError:|Unexpected token|Error during transform/.test(output)) { outcome = "invalid"; diagnostic = output.slice(-800); }
         else {
           outcome = "killed";
-          const lines = output.replace(/\u001b\[[0-9;]*m/g, "").split("\n");
+          const lines = output.split("\n");
           diagnostic = lines.filter(x => /Test Files|Tests +/.test(x)).slice(0, 2).join(" ").slice(0, 300);
           // The failing tests that killed the mutant (AGENTS.md §13: "killed by which test").
           killedBy = [...new Set(lines.map(x => /FAIL\s+(\S+\.test\.\w+\s+>.+?)\s*$/.exec(x)?.[1]).filter(Boolean))].slice(0, 6);
