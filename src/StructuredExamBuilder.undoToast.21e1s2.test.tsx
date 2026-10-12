@@ -217,6 +217,40 @@ describe("21E.1 slice 2 — delete a question → toast → «تراجع»", () 
   });
 });
 
+describe("21E.1 slice 2 RF1 (V1) — a long section title never makes the toast tall", () => {
+  const LONG = "القسم الأول: أسئلة العناوين والشبكات الفرعية وأقنعة الشبكة والتوجيه الثابت والديناميكي في الشبكات المحلية والواسعة وبروتوكولات التوجيه";
+  const withLongTitle = (): StructuredExam => { const e = makeExam(); e.sections[0] = { ...e.sections[0], title: LONG }; return e; };
+  it("the visible message shortens the title to ≤ 40 characters + «…» at a word boundary; screen readers hear the full title", async () => {
+    render(<Host initial={withLongTitle()} />);
+    await wait(5);
+    deleteQuestion("q2");
+    const text = toast()!.querySelector(".eb-toast-message")!.textContent!;
+    const shown = /«(.*)»/.exec(text)![1];
+    expect(shown.endsWith("…")).toBe(true);
+    expect(Array.from(shown).length).toBeLessThanOrEqual(41);
+    expect(LONG.startsWith(shown.slice(0, -1))).toBe(true);
+    expect(LONG.charAt(shown.length - 1)).toBe(" ");                                // cut at a word boundary
+    await wait(80);
+    expect(live().textContent).toBe("تم حذف السؤال 2 من «" + LONG + "». للتراجع اضغط Ctrl+Z.");
+  });
+  it("the same for a deleted section, its restore toast and a refused restore", async () => {
+    render(<Host initial={withLongTitle()} />);
+    await wait(5);
+    deleteSection("s1");
+    expect(toast()!.querySelector(".eb-toast-message")!.textContent).toMatch(/^تم حذف «[^»]{1,40}…» مع 3 أسئلة\.$/);
+    fireEvent.click(undoSection());
+    expect(toast()!.querySelector(".eb-toast-message")!.textContent).toMatch(/^تمت استعادة «[^»]{1,40}…»\.$/);
+    await wait(80);
+    expect(live().textContent).toBe("تمت استعادة «" + LONG + "».");
+    deleteQuestion("q2");
+    act(() => h.update(e => ({ ...e, sections: e.sections.filter(s => s.id !== "s1") })));
+    fireEvent.click(undoQuestion());
+    expect(toast()!.querySelector(".eb-toast-message")!.textContent).toMatch(/^تعذّرت استعادة السؤال: القسم «[^»]{1,40}…» لم يعد موجودًا\.$/);
+    await wait(80);
+    expect(live().textContent).toBe("تعذّرت استعادة السؤال: القسم «" + LONG + "» لم يعد موجودًا.");
+  });
+});
+
 describe("21E.1 slice 2 — delete a section → toast → «تراجع»", () => {
   it("names the section and how many questions left with it, focuses the next section, and «تراجع» restores the same section object", async () => {
     render(<Host />);

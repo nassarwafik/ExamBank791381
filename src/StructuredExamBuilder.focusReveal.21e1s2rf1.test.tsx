@@ -24,13 +24,14 @@ const makeExam = (): StructuredExam => ({
   ],
 } as unknown as StructuredExam);
 
-const h = {} as { latest: StructuredExam | null };
+const h = {} as { latest: StructuredExam | null; update: (u: (e: StructuredExam) => StructuredExam) => void };
+const removeSectionS1 = () => act(() => h.update(e => ({ ...e, sections: e.sections.filter(s => s.id !== "s1") })));
 function Host() {
   const hist = useStructuredExamHistory();
   const [saving] = useState(false);
   const booted = useRef(false);
   useEffect(() => { if (!booted.current) { booted.current = true; hist.open(makeExam(), "saved"); } }, [hist]);
-  useEffect(() => { h.latest = hist.present; }, [hist]);
+  useEffect(() => { h.latest = hist.present; h.update = hist.update; }, [hist]);
   if (!hist.present) return null;
   return <StructuredExamBuilder exam={hist.present} onChange={hist.update} onSave={() => {}} saving={saving} onUndo={hist.undo} onRedo={hist.redo}
     canUndo={hist.canUndo} canRedo={hist.canRedo} saveState={examSaveState(hist.history, saving)} backupStorage={null} />;
@@ -127,16 +128,35 @@ describe("21E.1 slice 2 RF1 (R1) — focus after deleting a QUESTION", () => {
     expect(lastFocus("add-question-s2")?.opts).toEqual({ preventScroll: true });
     expect(scrollCalls).toEqual([]);
   });
-  it("…and a «+ إضافة سؤال» hidden under the toolbar is revealed (nearest, clear of the toolbar above and the toast band below)", async () => {
+  it("…and a «+ إضافة سؤال» hidden under the toolbar is revealed by its top just below it (like a section)", async () => {
     await start();
     geo["add-question-s2"] = { top: 40, height: 44 };
     fireEvent.click(deleteBtn("r1"));
     const add = within(sectionEl("s2")).getByRole("button", { name: "+ إضافة سؤال" });
     expect(document.activeElement).toBe(add);
     expect(lastFocus("add-question-s2")?.opts).toEqual({ preventScroll: true });
-    expect(scrollsOf("add-question-s2").pop()?.opts).toEqual({ block: "nearest", behavior: "smooth" });
+    expect(scrollsOf("add-question-s2").pop()?.opts).toEqual({ block: "start", behavior: "smooth" });
     expect(add.style.scrollMarginBlockStart).toBe(CLEARANCE + "px");
-    expect(add.style.scrollMarginBlockEnd).toBe(128 + 12 + "px");
+  });
+  it("short viewport (200 %: toolbar bottom 416 of 450 px): a hidden «+ إضافة سؤال» still lands just below the toolbar, never end-aligned under it", async () => {
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 450 });
+    await start();
+    geo.toolbar = { top: 16, height: 400 };
+    geo["add-question-s2"] = { top: 200, height: 44 };
+    fireEvent.click(deleteBtn("r1"));
+    const add = within(sectionEl("s2")).getByRole("button", { name: "+ إضافة سؤال" });
+    expect(scrollsOf("add-question-s2").pop()?.opts).toEqual({ block: "start", behavior: "smooth" });
+    expect(add.style.scrollMarginBlockStart).toBe(416 + 12 + "px");
+  });
+  it("a second deletion while the first toast is still shown: a card that only fits without the toast band is aligned by its top, not centred under the toolbar", async () => {
+    await start();
+    fireEvent.click(deleteBtn("q1"));                                              // toast 1 is up (the builder reserves its band)
+    expect(screen.getByRole("group", { name: "إشعار" })).toBeTruthy();
+    geo["sb-q-q3"] = { top: VIEW_H - 100, height: 600 };                            // fits 800 − 132 − 24, not once the 128 px band is taken
+    scrollCalls = [];
+    fireEvent.click(deleteBtn("q2"));
+    expect(document.activeElement).toBe(card("q3"));
+    expect(scrollsOf("sb-q-q3").pop()?.opts).toEqual({ block: "start", behavior: "smooth" });
   });
 
   it("«تراجع» after a revealed deletion still restores the same question at its place, focused", async () => {
@@ -181,6 +201,57 @@ describe("21E.1 slice 2 RF1 (R1) — measured in Chromium: the toolbar's real bo
     fireEvent.click(deleteBtn("q2"));
     expect(document.activeElement).toBe(card("q3"));
     expect(lastFocus("sb-q-q3")?.opts).toEqual({ preventScroll: true });
+    expect(scrollCalls).toEqual([]);
+  });
+});
+
+describe("21E.1 slice 2 RF1 (R1) — the visibility rule's boundaries", () => {
+  it("no usable strip (phone) does NOT mean 'never reveal': a heading under the toolbar is still revealed just below it", async () => {
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    await start();
+    geo.toolbar = { top: 16, height: 700 };                                         // bottom 716
+    geo["sb-q-q3"] = { top: 300, height: 900 };                                     // under the toolbar
+    fireEvent.click(deleteBtn("q2"));
+    expect(scrollsOf("sb-q-q3").pop()?.opts).toEqual({ block: "start", behavior: "smooth" });
+    expect(card("q3").style.scrollMarginBlockStart).toBe(716 + 12 + "px");
+  });
+  it("the toast band counts while ≥ 96 px remain between the toolbar and it, and is ignored below that", async () => {
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    await start();
+    geo.toolbar = { top: 0, height: 620 };                                          // 844 − 128 − 620 = 96 → the band counts
+    geo["sb-q-q3"] = { top: 700, height: 300 };                                     // 700 + 48 > 716 → in the band → revealed
+    fireEvent.click(deleteBtn("q2"));
+    expect(scrollsOf("sb-q-q3").length).toBe(1);
+    cleanup(); scrollCalls = [];
+    await start();
+    geo.toolbar = { top: 0, height: 621 };                                          // 95 px strip → the band is ignored
+    geo["sb-q-q3"] = { top: 700, height: 300 };                                     // 748 ≤ 844 → stays put
+    fireEvent.click(deleteBtn("q2"));
+    expect(scrollsOf("sb-q-q3")).toEqual([]);
+    expect(lastFocus("sb-q-q3")?.opts).toEqual({ preventScroll: true });
+  });
+  it("a refused «تراجع» from the keyboard reveals «+ إضافة قسم» clear of the warn toast's band (geometry-checked)", async () => {
+    await start();
+    geo["add-section"] = { top: VIEW_H - 60, height: 44 };                          // inside the band the warn toast covers
+    fireEvent.click(deleteBtn("q2"));
+    const undo = screen.getByRole("button", { name: "تراجع عن حذف السؤال" });
+    act(() => { undo.focus(); });
+    removeSectionS1();
+    focusCalls = []; scrollCalls = [];
+    fireEvent.click(undo);
+    const addSection = screen.getByRole("button", { name: "+ إضافة قسم" });
+    expect(document.activeElement).toBe(addSection);
+    expect(lastFocus("add-section")?.opts).toEqual({ preventScroll: true });
+    expect(scrollsOf("add-section").pop()?.opts).toEqual({ block: "start", behavior: "smooth" });
+  });
+  it("«+ إضافة قسم» after deleting the last section: focused in place when on screen, revealed when under the toolbar", async () => {
+    await start();
+    for (const sid of ["s3", "s2"]) fireEvent.click(within(sectionEl(sid)).getByRole("button", { name: "حذف القسم" }));
+    geo["add-section"] = { top: 400, height: 44 };
+    focusCalls = []; scrollCalls = [];
+    fireEvent.click(within(sectionEl("s1")).getByRole("button", { name: "حذف القسم" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "+ إضافة قسم" }));
+    expect(lastFocus("add-section")?.opts).toEqual({ preventScroll: true });
     expect(scrollCalls).toEqual([]);
   });
 });

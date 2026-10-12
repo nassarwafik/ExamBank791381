@@ -149,6 +149,15 @@ const UNDO_TOAST_MS = 10000;
 /** Height of the band a toast covers at the bottom of the builder — keep in sync with structured-builder.css
  *  (`.structured-builder-overlay:has(.eb-toast)` reserves 16 px × 2 + 96 px). */
 const TOAST_BAND = 128;
+/** Review Fix 1 (V1) — a section title as SHOWN in a toast: at most 40 characters (cut at a word when possible) + «…», so a long
+ *  title never makes the 16 px message taller than two lines at 200 %; screen readers get the full title through the announcement. */
+const toastTitle = (title: string) => {
+  const chars = Array.from(title.trim());
+  if (chars.length <= 40) return title.trim();
+  const cut = chars.slice(0, 40).join("");
+  const space = cut.lastIndexOf(" ");
+  return (space >= 20 ? cut.slice(0, space) : cut).trimEnd() + "…";
+};
 /** «سؤال واحد / سؤالان / 3 أسئلة / 11 سؤالًا» — the count that leaves with a deleted section. */
 const questionCountPhrase = (n: number) => (n === 1 ? "سؤال واحد" : n === 2 ? "سؤالين" : n >= 3 && n <= 10 ? n + " أسئلة" : n + " سؤالًا");
 // UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
@@ -359,7 +368,10 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const alignCard = (el: HTMLElement) => {
     const clearance = toolbarClearance();
     el.style.scrollMarginBlockStart = clearance + "px";
-    const fits = el.getBoundingClientRect().height <= window.innerHeight - clearance - 24;
+    // While a toast is shown the scroller's scroll-padding reserves its band at the bottom (structured-builder.css), which
+    // shrinks the area a centred card is centred in — a card must fit that smaller area, or it is aligned by its top.
+    const band = builderRef.current?.querySelector(".eb-toast") ? TOAST_BAND : 0;
+    const fits = el.getBoundingClientRect().height <= window.innerHeight - band - clearance - 24;
     if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: fits ? "center" : "start", behavior: scrollBehavior });
   };
   const focusCard = (id: string) => {
@@ -404,17 +416,13 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   };
   /** Moves keyboard focus WITHOUT letting the browser pick a scroll position (a plain focus() could leave the heading under the
    *  sticky toolbar): the page stays where it is when the heading is already on screen; otherwise the element is revealed just
-   *  below the toolbar with the same alignment a restored card / section uses. */
+   *  below the toolbar with the same alignment a restored card / section uses (add buttons align like a section). */
   const focusInPlace = (el: HTMLElement, kind: "card" | "section" | "control", bottomReserve: number) => {
     el.focus({ preventScroll: true });
     if (headingOnScreen(el, bottomReserve)) return;
-    if (kind === "card") alignCard(el);
-    else if (kind === "section") alignSection(el);
-    else {
-      el.style.scrollMarginBlockStart = toolbarClearance() + "px";
-      el.style.scrollMarginBlockEnd = bottomReserve + 12 + "px";
-      if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "nearest", behavior: scrollBehavior });
-    }
+    // A section or an add button is aligned by its top just below the toolbar ("nearest" with margins can end-align it under the
+    // toolbar when the toolbar leaves little room, e.g. at 200 %).
+    if (kind === "card") alignCard(el); else alignSection(el);
   };
   /** Where keyboard focus goes once the deleted card / section is gone: its next neighbour, else the previous one, else the add
    *  button («+ إضافة سؤال» of its section, else «+ إضافة قسم»). `bottomReserve` = the toast band when a toast is about to show.
@@ -472,13 +480,13 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     deletionRecords.current.delete(deletionCommit);
     if (!d || !alive.current) return;
     focusAfterDeletion(d, TOAST_BAND);                                  // the toast below is about to cover the bottom band
-    const message = d.kind === "question"
-      ? "تم حذف السؤال " + d.label + (d.sectionTitle ? " من «" + d.sectionTitle + "»" : "") + "."
-      : "تم حذف «" + (d.section.title || "القسم " + d.label) + "»" + ((d.section.questions || []).length ? " مع " + questionCountPhrase((d.section.questions || []).length) : "") + ".";
+    const compose = (title: (t: string) => string) => d.kind === "question"
+      ? "تم حذف السؤال " + d.label + (d.sectionTitle ? " من «" + title(d.sectionTitle) + "»" : "") + "."
+      : "تم حذف «" + title(d.section.title || "القسم " + d.label) + "»" + ((d.section.questions || []).length ? " مع " + questionCountPhrase((d.section.questions || []).length) : "") + ".";
     const toastId = showToast({
-      message,
+      message: compose(toastTitle),
       // Keyboard users hear the shortcut: right after the deletion, Ctrl+Z (focus is on a card or a button, never a text field) undoes it.
-      announcement: message + " للتراجع اضغط Ctrl+Z.",
+      announcement: compose(t => t) + " للتراجع اضغط Ctrl+Z.",
       action: { label: "تراجع", accessibleLabel: d.kind === "question" ? "تراجع عن حذف السؤال" : "تراجع عن حذف القسم", onAction: () => restoreFromToast(d) },
       onDismiss: (reason: ToastDismissReason, hadFocus: boolean) => {
         if (undoTarget.current?.deletion === d) undoTarget.current = null;
@@ -497,15 +505,16 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     if (outcome === "restored" || outcome === "already-present") {
       if (d.kind === "question") window.setTimeout(() => focusCard(d.question.examQuestionId), 0);
       else window.setTimeout(() => { const el = sectionNode(d.section.id); if (el && alive.current) revealSection(el); }, 0);
-      showToast({ tone: "success", durationMs: Math.min(undoToastMs, 4000), message: d.kind === "question" ? "تمت استعادة السؤال " + d.label + "." : "تمت استعادة «" + (d.section.title || "القسم " + d.label) + "».",
+      const restored = (title: (t: string) => string) => d.kind === "question" ? "تمت استعادة السؤال " + d.label + "." : "تمت استعادة «" + title(d.section.title || "القسم " + d.label) + "».";
+      showToast({ tone: "success", durationMs: Math.min(undoToastMs, 4000), message: restored(toastTitle), announcement: restored(t => t),
         onDismiss: (reason, hadFocus) => { if (hadFocus && reason !== "replaced") focusItemOrNeighbour(d); } });
       return;
     }
-    const reason = outcome === "section-missing" ? "تعذّرت استعادة السؤال: القسم «" + (d.kind === "question" ? d.sectionTitle : "") + "» لم يعد موجودًا."
+    const reason = (title: (t: string) => string) => outcome === "section-missing" ? "تعذّرت استعادة السؤال: القسم «" + title(d.kind === "question" ? d.sectionTitle : "") + "» لم يعد موجودًا."
       : outcome === "bank-duplicate" ? "تعذّرت الاستعادة: سؤال البنك نفسه موجود في الامتحان الآن."
       : "تعذّرت استعادة القسم: بعض أسئلته موجودة الآن في مكان آخر من الامتحان.";
     if (focusLost()) focusItemOrNeighbour(d, TOAST_BAND);                // «تراجع» was pressed from the keyboard: its card is gone
-    showToast({ tone: "warn", message: reason, onDismiss: (why, hadFocus) => { if (hadFocus && why !== "replaced") focusItemOrNeighbour(d); } });
+    showToast({ tone: "warn", message: reason(toastTitle), announcement: reason(t => t), onDismiss: (why, hadFocus) => { if (hadFocus && why !== "replaced") focusItemOrNeighbour(d); } });
   }, [restoreCommit]);                                                  // eslint-disable-line react-hooks/exhaustive-deps
   // The toast leaves by itself when the deleted item is back by another route (Ctrl+Z, the toolbar «تراجع») or another exam opened.
   useEffect(() => {

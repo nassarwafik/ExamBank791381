@@ -151,7 +151,7 @@ describe("UX-7b-1 — compact top bar, timer chip, details disclosure", () => {
   });
 
   it("general instructions stay in the body (inside the disclosure, open by default when present)", async () => {
-    mount({ ...legacyAssignment, exam: { ...flatExam, metadata: { generalInstructions: "اقرأ السؤال جيدًا\nلا تستخدم القلم الأحمر" } } });
+    mount({ ...legacyAssignment, instructions: "", exam: { ...flatExam, metadata: { generalInstructions: "اقرأ السؤال جيدًا\nلا تستخدم القلم الأحمر" } } });   // general instructions alone open it
     await screen.findByText("ما هي عاصمة فلسطين؟");
     expect(screen.getByRole("button", { name: /تفاصيل الامتحان والتعليمات/ }).getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText("التعليمات العامة")).toBeTruthy();
