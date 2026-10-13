@@ -1179,6 +1179,9 @@ updated for R14, R18, B04 and K01. The script writes each run's ledger to `artif
 
 ### 14.6 Remaining findings after Review Fix 3
 
+*(Superseded by §15.6 after the second round: the in-view recovery height residual below did record a different option in the
+input reviewer's runs and is narrowed by the press guard, §15.1.)*
+
 | Id | Sev | Finding | Rationale |
 |---|---|---|---|
 | 85 | P2, **owner decision** | An unrenderable question is submitted as unanswered | Unchanged: it needs a submission / grading contract change (§10). |
@@ -1202,5 +1205,138 @@ design record) and PR #309 (`88ed87c`, the platform UX audit, documentation only
 | Merge | `83690db`: a normal merge of `origin/main` into this branch. No conflict; no file is changed on both sides; no generated file is involved. *(Its commit message names only `8a1dd87` (PR #308): `main` moved to `88ed87c` (PR #309) during that same fetch, and the merge brought in both. Commit messages are never amended; this record is the correction.)* |
 | Validation after the merge | everything in §14.3–§14.5 ran on the reconciled tree |
 | Measured outcomes | none changed by the merge: the harness counts, the bundle guard (352 / 352 chunks) and the lint set (equal to `main` `88ed87c`) |
+
+## 15. Review Fix 3, second round (review of `75eaba2`)
+
+A new read-only adversarial review of the exact head `75eaba2` ran with three independent reviewers, each in its own detached
+worktree:
+
+| Area | Verdict | Findings |
+|---|---|---|
+| Governance, test integrity, evidence accuracy | PASS | 1 × P3 (PR wording), 4 × info |
+| Recovery runtime, boundaries, focus after recovery | **FAIL** (one P2, RR3-1) | 1 × P2, 4 × P3, 2 × info |
+| Pointer / touch / keyboard input integrity and accessibility | PASS | 4 × P3 / info (one introduced, as a trade-off), 1 × info |
+
+Both pointer reviewers found the same defect independently: the press wait ended during a native drag (RR3-1 = RR3-IN-1). Every
+P2 and every P3 that touches the owner's first rule ("never record an answer different from the student's actual interaction")
+is fixed in this round, including two the reviewers rated P3 / info because the record called them residual: a click aimed just
+before an in-view recovery recorded a **different option** (RR3-IN-4), and so did a click aimed just before a late first load
+appeared (RR3-2). The rest is listed with its rationale in §15.6.
+
+| Item | Value |
+|---|---|
+| Head reviewed | `75eaba22895c949161959572d2b85b6a34b56ed8` |
+| `origin/main` | `88ed87c` at the review and at every fetch of this round: no reconciliation was needed |
+| Commits | `963a182` (RR3-1 to RR3-4) · `04f543e` (§14.1 corrected in place, RR3-5) · `ec70ba1` (the press guard, RR3-IN-4) · `bbdb8dc` (a late first load settles, RR3-2) · the following commit carries this section |
+
+### 15.1 Findings and fixes
+
+| Reviewer · id | Sev | Finding | Fix | Evidence |
+|---|---|---|---|---|
+| Recovery RR3-1 = input RR3-IN-1 | **P2** (the owner's first rule; the input reviewer rated it P3) | The recovery swap still happened **during a native drag** of a label chip. Chromium fires `pointercancel` right after `dragstart` and sends no `pointerup` / `mouseup` until the drop, and `pointerHold` counted `pointercancel` as the release. A label diagram below a retrying code stimulus: zone 3 moved 199 px down while the chip was held, and the drop recorded zone 1 in **10 / 10** runs (control: zone 3, 5 / 5). The input reviewer's `dnd`: 12 / 12 drops lost with the card in view (the zone moved 343–420 px). Identical on `593fd47`: it came with in-place recovery and the F-1 fix missed it. | A native drag is a press from `dragstart` until `drop` / `dragend` (`963a182`). A drag whose drop the page never saw ends at the next pointer move with no button down; a lifted finger (`pointerup` of a touch pointer) ends the touch; the window losing focus ends every press. | RF3-U14, RF3-U15, RF3-U18; Chromium `dragswap2`, `dragswap3`, `dnd` (§15.3); mutants H03, H04, H05 |
+| Input RR3-IN-4 | P3 / info (reviewer) — treated as a defect here: it records a different option | A click aimed while the formula notice was in view and pressed **50–180 ms after the swap** saved option 2 or 3 instead of 1 in **12 / 12** runs (200 %, 390 px at 1× and 3×; keyboard and mouse retries alike). The press started after the swap, so the release wait could not help. §14.6 had described this residual as gaps and lost clicks only. | **The press guard** (`ec70ba1`, `pointerHold.guardPresses`): for 400 ms after the layout changed in view (the replaced card intersected the viewport, or the keyboard-only reveal actually scrolled), a press that *starts* was aimed at the old layout — nobody sees a change and re-aims that fast — so its `pointerdown`, `pointerup`, `click` and drag are stopped before the page sees them. A lost press, never a different answer. A keyboard activation (click `detail` 0) is never stopped; a press that started earlier was already waited for and is not affected; a card far above the viewport (scroll anchoring keeps the content still) arms nothing. | RF3-U20, RF3-U21, RF3-U22; Chromium `kbmouse` (§15.3); mutants S01–S10 |
+| Recovery RR3-2 | P3 (introduced by Review Fix 3) — its consequence is treated as a defect here | A first load waited for the re-link of every stylesheet that failed in the page, up to the 15 s stylesheet bound, even for a part that does not use that stylesheet: a code stimulus appeared after **15,057 ms** (332 ms on `593fd47`) and the options already shown jumped 128 px. A click 60 ms after it appeared, aimed at option 5, **saved option 3**; a press spanning the appearance was lost. | `963a182`: a first load waits at most **3 s** (`firstCss`) and never fails on it; a retry keeps the full bound. `bbdb8dc`: a first load that appears late — it waited for a failed stylesheet, or it took the recovery path in a page that already recovered a module it shares — resolves only once **no press is in progress**, and the presses that start in the next 400 ms are guarded (`env.settleLate`, `pointerHold.settleLatePart`). A plain first load is unchanged. | RF3-R6, RF3-R7, RF3-U23; Chromium `firststall`, `firststall2`, `firststall3` (§15.3); mutants R29, R35–R40, H07, H08 |
+| Recovery RR3-3 | P3 (introduced by Review Fix 3) | The press listeners were installed on the first retry, so a press already in progress (the mouse held on «إعادة المحاولة» while Enter activates it) was invisible: the card swapped and the page scrolled 48 px while the button was held. | The listeners are installed when the boundary first catches an error, and no reveal follows a retry that started while a pointer was down. | RF3-U13; Chromium `keyreveal` E; mutants B27, B28 |
+| Recovery RR3-4 | P3 (test gaps) | Reviewer mutants survived: X1 (the pointer guard of the keyboard-only reveal), X2 (the heading reveal after a keyboard retry of a page card), X3 (the token check after the release wait), X4 (the 60 ms settle after a release), X7 (window blur ends a press). X5 and X6: equivalent, by the reviewer's own reading. | A test for each. X1 also exposed that a page-level card focused its heading while a pointer was down after the swap: it now waits for the release, and a press after the retry cancels the reveal. | RF3-U16 (X3), RF3-U17 (X4), RF3-U18 (X7), RF3-U19 (X1, X2); mutants B29, B30, B31, H05, H06 |
+| Recovery RR3-5 | P3 (record) | §14.1 contradicted the code three times: "the recovery context no longer has a `reveal` hook"; a card never changes the layout "while a pointer or finger is down anywhere"; a first load's re-link is "bounded" (it was 15 s, unrelated loads included). The input reviewer made the same point about "anywhere" and "a drag" (code comment and §14.1). | Corrected in place in §14.1, each with a marker (`04f543e`); the `pointerHold` comment names drags and the frame limit. | — |
+| Recovery RR3-6 | info (pre-existing, identical on `593fd47`) | A retry whose original import stalls shows «جارٍ إعادة المحاولة…» for 60 s or more; the header comment said every step was bounded. | The header comment of `recoverableLazy.ts` now says that this first step is the browser's own import and is not bounded. Not changed: the student can still move to other questions; bounding the browser's own import would need a second copy of the module (never allowed, RR-1). | — |
+| Recovery RR3-7 | info (by design) | The keyboard-only reveal moves content under a hovering, not pressed, mouse (the option under it went from 8 to 6; the swap alone moves it to 7). | Kept (the disclosed WCAG 2.4.11 exception of §14.1). A press that starts within 400 ms of a reveal that scrolled is now guarded, so the moved content cannot take a press aimed before it moved. | RF3-U22; mutant S07 |
+| Input RR3-IN-2 | P3 / info (pre-existing) | A press inside the sandboxed simulation frame is invisible to the page: a formula in the stem recovered during an in-frame drag and the frame moved 11 px (100 %) / 44 px (150 %) under the press, 4 / 4. A press on page text: 4 / 4 waited. | Not changed (§15.6). | Chromium `iframe3` (§15.3) |
+| Input RR3-IN-3 | P3 (introduced by Review Fix 3, as a trade-off) | After a keyboard retry during which the student **scrolled** (wheel), the focused landing line is left where it is: off-screen or under the top bar, in 8 / 8 runs. On `593fd47` the page jumped back to it. | Not changed; put to the owner (§15.6). | Chromium `revealgeom` (§15.3) |
+| Input RR3-IN-5 | info | Presses the tracking cannot see, by reading the code: a press before the first retry; a window blur during a hold; a `mouseup` swallowed by a native context menu (the card can show «جارٍ إعادة المحاولة…» for up to 60 s); a press longer than 60 s. | The first is RR3-3 (fixed). A context menu's lost `mouseup` now ends at the next pointer move with no button down. A blur ends a press on purpose: its release is never delivered. The 60 s cap is the documented safety net. | RF3-U13, RF3-U15, RF3-U18 |
+| Governance GOV3-2 | P3 | The PR body's Review Fix 2 section still said "13 cases" without a correction marker. | The PR body now carries the marker (19 with the final test files, §13.2). | — |
+| Governance GOV3-1, GOV3-3, GOV3-4, GOV3-5 | info | The `83690db` message (corrected in §14.7); kill lists that include a test failing only as a knock-on of module state; one unrelated local timeout under load; the conditional no-scroll rule is disclosed. | No change needed. GOV3-3: the new `pointerHold` state is asserted directly where a knock-on was possible (RF3-U20 checks that a cancelled drag leaves no press in progress); `rf3b` and `rf3c` are separate files so each starts with fresh module state. | — |
+
+What the press guard costs: a press that starts within 400 ms after an in-view recovery, or after a late part appeared, does
+nothing, even if it was aimed at the new layout. That needs a person to see the change, re-aim and press within 400 ms; the
+student sees that nothing was selected and presses again. Keyboard activation is never affected.
+
+### 15.2 Fail-first
+
+Each fix's tests were run against the commit before it, in a clean detached worktree (the test files copied in, removed after):
+
+| Against | Case | Failing assertion there |
+|---|---|---|
+| `75eaba2` (shipped sources identical to `7811d44`) | RF3-R6 a first load while a failed stylesheet's re-link stalls | `Unable to find an element with the text: stimulus` (held for the whole 400 ms test bound) |
+| | RF3-U13 held on «إعادة المحاولة», then Enter | `Unable to find [data-testid="question-recovery"]`: the card was replaced under the held button |
+| | RF3-U14 `dragstart`, then `pointercancel` | the same, during the drag |
+| | RF3-U15 a drop the page never saw | the same (the drag was never a press) |
+| | RF3-U19 a press after the swap of a page-level card | `expected 'السؤال 2 من 3' not to be 'السؤال 2 من 3'`: the heading was focused while the pointer was down |
+| `963a182` | RF3-U20 a press right after an in-view swap | `expected "vi.fn()" to not be called at all, but actually been called 1 times` (the option's `pointerdown`) |
+| | RF3-U22 a press right after a reveal that scrolled | the same |
+| `ec70ba1` | RF3-R7 a first load after a stylesheet failed | `expected "vi.fn()" to be called 1 times, but got 0 times` (`settleLate`) |
+| | RF3-R7 a first load that took the recovery path | the same |
+| | RF3-U23 the browser runtime, a press in progress | `expected <p></p> to be null`: the late part appeared under the press |
+
+**10 cases fail on the defect and pass on the head.** Pins and gap tests that pass before their fix (their value is the mutants
+they kill): RF3-U16, RF3-U17, RF3-U18, RF3-U19 (keyboard), RF3-U21. The defects of `963a182` and `ec70ba1` are the same on
+`75eaba2` (the reviewers measured them there). Logs: `failfirst-75eaba2.log`, `failfirst-963a182-guard.log`,
+`failfirst-ec70ba1-late.log` with the session evidence.
+
+### 15.3 Chromium evidence
+Production builds of this round's code commits, Chromium 141, one probe at a time. The owner's closure directive stopped the
+full re-run of the §14.3 probe set on this head; the probes below are the ones that measure this round's fixes. The rest of §14.3
+was last measured on `3e3d9e6` and is **not re-run on this head**.
+
+| Probe | Build | Runs | `75eaba2` (reviewers) | This round |
+|---|---|---|---|---|
+| Repository harness `scripts/check-student-exam-browser-21e3.mjs` | `bbdb8dc` | 2 modes | all green | pointer **52 / 52**, entry **76 / 76** (the other five modes stopped by the directive; last green on `3e3d9e6`, §14.3) |
+| Input `kbmouse` (click aimed during a formula retry, pressed 40 / 120 / 250 ms after the expected completion; 200 %, 390 px at 1× and 3×; keyboard and mouse retries) | `ec70ba1` | 18 | **12 / 18 a different option saved** (option 2 or 3 for 1) | **0 different options**: the 6 presses at +40 ms (before the swap) saved the option aimed at; the 12 at +120 / +250 ms (45–180 ms after the swap, as measured in the keyboard arm) did nothing (no answer recorded) |
+| Input `dnd` (a label chip dragged onto a zone while the card above recovers; drag and click modes; the reviewer's `tall` and `tall150` viewports; release −400 to +600 ms around the completion) | `ec70ba1` | 16 | 12 of 18 drag runs lost the drop: every run with the card in view and the swap during the drag (the zone moved 343–420 px) | **16 / 16** saved as aimed; **0 swaps during a press** (the swap waits for the drop) |
+| Recovery `firststall` (the stylesheet's re-link stalls; when does the code stimulus appear?) | `bbdb8dc` | 1 | 15,057 ms | **3,098 ms** (`firstCss`) |
+| Recovery `firststall2` "after" (click 60 ms after the late stimulus appeared, aimed at option 5) | `bbdb8dc` | 1 | **option 3 saved** | nothing recorded (the press is guarded) |
+| `firststall3` (a copy of `firststall2` whose press starts just before the 3 s appearance: 2.90 / 3.00 / 3.05 s, released 150 ms after) | `bbdb8dc` | 3 | (15 s variant: the press was lost) | **3 / 3 option 5 saved**: the stimulus waited for the release |
+
+### 15.4 Mutation (AGENTS.md §9)
+The full campaign was not re-run on this head: the owner's closure directive excludes a broad mutation campaign. The last full
+campaign is §14.4 (107 mutants on `3e3d9e6`: 106 killed, P10 equivalent, 0 survived). This round's mutants, each run alone in a
+clean detached worktree of its commit with `scripts/mutate-21e3.mjs ONLY=…` (files restored byte-for-byte, `git status` clean):
+
+| Mutants | What was planted | Commit | Result | Killed by |
+|---|---|---|---|---|
+| S01–S10 | no guard after an in-view swap; a guard for any card (out of view too); keyboard clicks stopped; click / pointerdown not stopped; a guard that never ends; a reveal that scrolled arms nothing; a drag not cancelled; a cancelled drag left in progress; a zero window | `ec70ba1` | **10 / 10 killed** | RF3-U20, RF3-U21, RF3-U22 |
+| R36–R40, H07, H08 | a late first load not settled; the late flag never set; the recovery-path first load not settled; a retry settled by the runtime too; the browser environment without `settleLate`; no wait for the release; no guard after a late part | `bbdb8dc` | **7 / 7 killed** | RF3-R7, RF3-U23 |
+| H03–H06, B27–B31, R35 | the `963a182` fixes (drag, stale press, blur, settle, early listeners, held start, heading during a press, later press, stale retry, first-load bound) | `963a182` | **defined, not run** (closure directive) | their tests fail first on `75eaba2` (§15.2) |
+
+The script now holds 134 mutants (§14.4's 107, plus the 27 above).
+
+### 15.5 Validation and bundle
+| Check | Result |
+|---|---|
+| Focused suites on `bbdb8dc` (`src/student/exam`, `StudentExamPage*`, `recoverableLazy*`, `StudentQuestionCard*`, `presentationFreeze*`, `CompoundQuestion*`, `richContent`, `StructuredExam*`, `questionTypes`) | **90 files, 1,360 / 1,360 passed** |
+| Root suite and Runner unit suite | **not re-run locally on this head** (closure directive); the root suite runs in CI's Quality Gate on the exact head (reported in the PR) |
+| Lint | `npm run lint`: 0 errors, **125 warnings**, the same count as `main` `88ed87c` (none in a changed file) |
+| Typecheck | `npx tsc -b` clean |
+| Build + bundle guard (`bbdb8dc`) | passed: 57 declarations / 55 recoverable chunks, `NEVER_REMAP` 12, header parser 352 / 352 chunks (1,103 edges) |
+| Initial JS / CSS (gzip 9) | **113,201 B** (`main` `88ed87c` 113,167 B, +34 B) / 36,591 B |
+| Whitespace | `git diff --check` clean |
+| Exact-head CI | reported in the PR for the final head |
+
+### 15.6 Remaining findings after the second round
+
+| Id | Sev | Finding | Rationale |
+|---|---|---|---|
+| 85 | P2, **owner decision** | An unrenderable question is submitted as unanswered | Unchanged: it needs a submission / grading contract change (§10). |
+| 14 | P2 | The exam-level card hides the chrome | Unchanged (§12.7). |
+| RR2-2 remainder | P2 | Two loads that start together share a stylesheet that fails: the one that did not request it renders without it (§14.6). When such a stylesheet comes back after a first load stopped waiting for it (3 s), the part restyles in place, which can move the content once more. | Unchanged (§14.6): the runtime cannot know which already-linked stylesheets a loader needs without the build's chunk → stylesheet map. |
+| In-view recovery height | P3, narrowed | A press that starts more than 400 ms after an in-view recovery, but was aimed before it, can still land on the moved content. | Within 400 ms the press is now stopped (RR3-IN-4). Later, the change has been on screen long enough to be seen; holding presses longer would lose deliberate ones. |
+| RR3-IN-3 | P3, **owner decision** | After a keyboard retry during which the student scrolled the page, the focused line is left where it is (off-screen or under the top bar, 8 / 8). | The owner's first rule outranks WCAG 2.4.11 here. A reveal after the student scrolled is the RR2-3 jump (a click after it recorded a different option, 7 / 8). The reviewer's suggestion, a reveal on the first key press, would make PageDown / End / arrows jump back to the line, which is the `keyaway` path RR2-3 fixed. The next Tab moves focus to the following control, which the page reveals; assistive technology reads the line when it gets focus. The owner may choose otherwise. |
+| RR3-IN-2 | P3 / info | A press inside the sandboxed simulation frame is invisible to the page; a recovery can move the frame under it (11 / 44 px). | The page cannot observe input in a separate, sandboxed document. A heuristic (the window losing focus to the frame) sees neither the start nor the end of the press, and it would hold every recovery while a keyboard student works in the frame. Pre-existing with in-place recovery. |
+| RR3-6 | info, pre-existing | A retry whose original import stalls keeps «جارٍ إعادة المحاولة…» | The browser's own import; the student can move on (comment corrected). |
+| RR3-IN-5 | info | A press longer than 60 s sees the swap; a window blur ends a press | The 60 s cap is the safety net for a lost release; a blur's release is never delivered. |
+| RR2-6 | P3 info | A slow but working network can need a second press | Fails safe; the bound is the RR-3 fix. |
+| Pointer RR-PTR-2, RR-PTR-4, RR-PTR-5; accessibility RR-7; 30, 31, 43 / 49, 44 | P3 / info | as §13.6 | Unchanged. |
+| Input info | info, pre-existing | A 4 px hand movement during a press in a code field turns it into a text selection (§14.6). | Not introduced; no scroll is involved. |
+
+Also not measured: Safari / WebKit, Firefox, real screen-reader speech (including whether a click synthesized by assistive
+technology has `detail` 0, which decides whether its retry counts as keyboard), a native touch drag on a real device, forced
+colours, and presses longer than 60 s.
+
+### 15.7 Closure and handoff
+
+The owner's closure directive ended development on this PR after the late-first-load fix: no further review round, agent
+campaign or broad mutation campaign ran on this head. The owner states that the assessment-integrity fix preserved at `725c676`
+(`integration/phase-21e3-assessment-integrity`) must still be integrated before this PR can merge; it is **not** part of this
+PR's head, and this branch does not copy it (AGENTS.md §7). Ownership of the PR passes to the QA review session.
 
 Independent review required. Owner merge only.
