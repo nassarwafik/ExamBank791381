@@ -3,7 +3,7 @@ import { isChunkLoadError } from "../../lazyWithRetry";
 import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../recoverableLazy";
 import { IconRefresh, IconWarning } from "../../icons";
 import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionRecovery";
-import { trackPointer, pointerReleased, lastPointerDown } from "./pointerHold";
+import { trackPointer, pointerReleased, lastPointerDown, pointerIsDown } from "./pointerHold";
 
 /**
  * QuestionErrorBoundary (Phase 21E.3) — keeps ONE failing part of a page from taking down the rest.
@@ -28,13 +28,15 @@ import { trackPointer, pointerReleased, lastPointerDown } from "./pointerHold";
  *    retry button.
  *  - Outside the exam (scope "general": teacher previews, live sessions, the reader) the wording is neutral and a page reload
  *    is offered after a failed retry; inside the exam a reload is offered only when the page says it is safe.
- * Review fix 3: nothing scrolls after a recovery — focus moves with preventScroll only and the page's keyboard reveal skips the
+ * Review fix 3: nothing scrolls after a recovery — focus moves with preventScroll and the page's keyboard reveal skips the
  *  line and the headings (a jump after the student scrolled away moved the options under a pointer about to press). Once
  *  focus leaves the line it is hidden from assistive technology (it sits inside the stem that names the answer controls) but
  *  keeps its place, so nothing moves.
  *  The card never changes the layout or moves focus while a pointer or finger is down: it waits for the release, so a press
  *  in progress ends on the layout it started on. A press outside the card since «إعادة المحاولة» means the student moved on,
- *  and focus is not taken (a mouse press on an option leaves focus on <body>).
+ *  and focus is not taken (a mouse press on an option leaves focus on <body>). The one exception to "nothing scrolls": after a
+ *  retry activated with the KEYBOARD, during which the page did not scroll and nothing was pressed, the focused line or heading
+ *  is brought clear of the sticky bars (WCAG 2.4.11) — the student is still where they pressed Enter, as after a Tab.
  * Nothing about the failure reaches the user or a production log beyond a fixed code: no message, URL, stack or answer.
  */
 export type RecoveryVariant = "question" | "part" | "page" | "section" | "exam" | "review" | "block" | "stem" | "inline";
@@ -92,6 +94,8 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
   private landedRef = createRef<HTMLElement>();
   /** Focus was on the card when the student pressed «إعادة المحاولة» (only then may focus follow the recovered part). */
   private restoreFocus = false;
+  /** The recovery may bring the focused line / heading clear of the bars: keyboard retry, no scroll and no press meanwhile. */
+  private revealAllowed = false;
   private titleAnnounced = false;
   /** The failed loaders whose errors this boundary caught: «إعادة المحاولة» retries exactly these (never another question's). */
   private handles = new Set<RecoveryHandle>();
@@ -159,13 +163,14 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     return this.exam() ? "ما زال التحميل متعذّرًا. تابع الأسئلة الأخرى وعُد إلى هذا السؤال لاحقًا." : "ما زال التحميل متعذّرًا. حاول مرة أخرى لاحقًا.";
   }
 
-  private retry = async () => {
+  private retry = async (viaKeyboard = false) => {
     if (this.state.retrying) return;                                      // a repeated Enter / click while loading does nothing
     const el = this.failedRef.current, active = typeof document !== "undefined" ? document.activeElement : null;
     this.restoreFocus = !!(el && active && el.contains(active));
     const token = ++this.token;
     trackPointer();
-    const started = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const started = typeof performance !== "undefined" ? performance.now() : Date.now(), scrolledAt = window.scrollY;
+    this.revealAllowed = false;
     this.setState({ retrying: true });
     // Only the loaders that failed below THIS boundary (a render error has none: the part simply renders again).
     const ok = await retryFailedLoads([...this.handles]);
@@ -175,6 +180,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     if (!this.mounted || token !== this.token) return;
     const press = lastPointerDown(), cardNow = this.failedRef.current;
     if (press.t >= started && !(cardNow && press.target instanceof Node && cardNow.contains(press.target))) this.restoreFocus = false;
+    this.revealAllowed = viaKeyboard && press.t < started && Math.abs(window.scrollY - scrolledAt) < 1;
     // The line is shown only when focus is still on the card (or nowhere): it will receive focus; otherwise nothing is added.
     const a = document.activeElement, card = this.failedRef.current;
     const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));
@@ -187,23 +193,35 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
   /** After a successful retry, only while focus is still nowhere (the card's button disappeared): a page-level card puts focus on
    *  the page heading once it rendered (bounded); any other card on its own «تم تحميل هذا الجزء.» line — never on an answer
    *  control. Focus that the student moved meanwhile is never taken, and nothing is scrolled (review fix 3): the student may
-   *  have scrolled away while the retry loaded, and a jump would move the content under a pointer about to press. */
+   *  have scrolled away while the retry loaded, and a jump would move the content under a pointer about to press — except
+   *  after a keyboard retry during which nothing moved (`revealFocused`). */
   private placeFocusAfterRecovery(token: number) {
     const idle = () => { const a = document.activeElement; return !a || a === document.body || a === document.documentElement; };
     if (!this.anchored()) {
       const line = this.landedRef.current;
       if (!line || !idle()) { if (this.state.landed) this.setState({ landed: false }); return; }
       line.focus({ preventScroll: true });
+      this.revealFocused(line);
       return;
     }
     const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), started = now();
     const step = () => {
       this.frame = 0;
       if (!this.mounted || token !== this.token || !idle()) return;
-      if (this.context.focusAnchor?.()) return;
+      if (this.context.focusAnchor?.()) { this.revealFocused(document.activeElement); return; }
       if (now() - started < FOLLOW_MS) this.frame = requestAnimationFrame(step);
     };
     this.frame = requestAnimationFrame(step);
+  }
+
+  /** Only after a keyboard retry during which nothing moved (see `revealAllowed`), and never while a pointer is down. */
+  private revealFocused(el: Element | null) {
+    const allowed = this.revealAllowed;
+    this.revealAllowed = false;
+    if (!allowed || !(el instanceof HTMLElement) || pointerIsDown()) return;
+    if (this.context.reveal) { this.context.reveal(el); return; }
+    const b = el.getBoundingClientRect();
+    if (b.top < 0 || b.bottom > window.innerHeight) el.scrollIntoView?.({ block: "nearest" });
   }
 
   render() {
@@ -221,7 +239,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     const v = this.variant(), afterRetry = this.state.retries > 0, guidanceId = this.id + "-guidance", noteId = this.id + "-note";
     const busy = this.state.retrying;
     const retryButton = (label: string, extra?: string) => (
-      <button type="button" ref={this.retryRef} className={"eb-button iex-q-recovery-retry" + (extra ? " " + extra : "")} onClick={() => { void this.retry(); }}
+      <button type="button" ref={this.retryRef} className={"eb-button iex-q-recovery-retry" + (extra ? " " + extra : "")} onClick={e => { void this.retry(e.detail === 0); }}
         aria-disabled={busy || undefined} aria-describedby={afterRetry ? guidanceId : v === "stem" || v === "inline" ? noteId : undefined}>
         <IconRefresh size={16} aria-hidden="true" />{busy ? "جارٍ إعادة المحاولة…" : label}
       </button>

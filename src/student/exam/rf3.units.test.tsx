@@ -12,6 +12,9 @@
 //   RF3-U7  the same for a finger (a touch scroll cancels the pointer; only the last touchend releases it)   [input F-1, F-2]  fail-first
 //   RF3-U8  a visually hidden landing line shows its keyboard focus on the recovered part that follows it      [input F-3]
 //   RF3-U9  a long press (a 45 s drag) is still waited for: the safety cap is not a press length         [input F-1 follow-up]
+//   RF3-U10 a POINTER retry never reveals, even far from the viewport                                         [review fix 3]
+//   RF3-U11 a keyboard retry with a press meanwhile (even on the card) never reveals                         [review fix 3]
+//   RF3-U12 a keyboard retry during which nothing moved reveals the line far from the viewport (no provider)  [review fix 3]
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, act, cleanup, waitFor } from "@testing-library/react";
 import fs from "node:fs";
@@ -112,10 +115,14 @@ describe("RF3-U4 — outside the exam a recovery never scrolls", () => {
     const Part = slowPart("UnitFarAbove", 0, () => <p>الجزء</p>);
     render(<QuestionErrorBoundary variant="part" resetKey="fa"><Suspense fallback={<i>…</i>}><Part /></Suspense></QuestionErrorBoundary>);
     const retry = await screen.findByRole("button", { name: "إعادة المحاولة" });
-    retry.focus(); fireEvent.click(retry);
-    const line = await screen.findByTestId("recovery-landed");
-    await waitFor(() => expect(document.activeElement).toBe(line));
-    expect(into).not.toHaveBeenCalled();                                            // the defect: scrollIntoView to the line
+    retry.focus();
+    const sy = Object.getOwnPropertyDescriptor(window, "scrollY");
+    try {
+      act(() => { fireEvent.click(retry); Object.defineProperty(window, "scrollY", { configurable: true, get: () => 900 }); });   // scrolled down meanwhile
+      const line = await screen.findByTestId("recovery-landed");
+      await waitFor(() => expect(document.activeElement).toBe(line));
+      expect(into).not.toHaveBeenCalled();                                          // the defect: scrollIntoView to the line
+    } finally { if (sy) Object.defineProperty(window, "scrollY", sy); else delete (window as unknown as { scrollY?: number }).scrollY; }
   });
 });
 
@@ -197,5 +204,50 @@ describe("RF3-U9 — a long press is still waited for", () => {
       await vi.advanceTimersByTimeAsync(100);
       expect(done).toBe(true);
     } finally { vi.useRealTimers(); }
+  });
+});
+
+describe("RF3-U10..U12 — the keyboard-only reveal after a recovery", () => {
+  const original = { rect: HTMLElement.prototype.getBoundingClientRect, into: HTMLElement.prototype.scrollIntoView };
+  afterEach(() => { HTMLElement.prototype.getBoundingClientRect = original.rect; HTMLElement.prototype.scrollIntoView = original.into; });
+  const farAbove = () => { HTMLElement.prototype.getBoundingClientRect = () => ({ top: -900, bottom: -880, left: 0, right: 100, width: 100, height: 20, x: 0, y: -900, toJSON() {} }) as DOMRect; };
+  it("RF3-U10 a pointer retry (click detail 1) never reveals", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const into = vi.fn(); HTMLElement.prototype.scrollIntoView = into; farAbove();
+    const Part = slowPart("UnitPointerRetry", 0, () => <p>الجزء</p>);
+    render(<QuestionErrorBoundary variant="part" resetKey="pr"><Suspense fallback={<i>…</i>}><Part /></Suspense></QuestionErrorBoundary>);
+    const retry = await screen.findByRole("button", { name: "إعادة المحاولة" });
+    retry.focus(); fireEvent.click(retry, { detail: 1 });
+    const line = await screen.findByTestId("recovery-landed");
+    await waitFor(() => expect(document.activeElement).toBe(line));
+    await sleep(50);
+    expect(into).not.toHaveBeenCalled();
+  });
+  it("RF3-U11 a keyboard retry with a press on the card meanwhile never reveals", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const into = vi.fn(); HTMLElement.prototype.scrollIntoView = into;
+    const Part = slowPart("UnitPressOnCard", 120, () => <p>الجزء</p>);
+    render(<QuestionErrorBoundary variant="part" resetKey="pc"><Suspense fallback={<i>…</i>}><Part /></Suspense></QuestionErrorBoundary>);
+    const retry = await screen.findByRole("button", { name: "إعادة المحاولة" });
+    retry.focus(); fireEvent.click(retry);
+    const text = screen.getByTestId("question-recovery").querySelector(".iex-q-recovery-title") as HTMLElement;
+    fireEvent.pointerDown(text); fireEvent.pointerUp(text);                         // a press inside the card: focus may follow, no reveal
+    farAbove();
+    const line = await screen.findByTestId("recovery-landed");
+    await waitFor(() => expect(document.activeElement).toBe(line));
+    await sleep(50);
+    expect(into).not.toHaveBeenCalled();
+  });
+  it("RF3-U12 a keyboard retry during which nothing moved reveals the line (no provider: nearest scroll)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const into = vi.fn(); HTMLElement.prototype.scrollIntoView = into; farAbove();
+    const Part = slowPart("UnitKeyboardReveal", 0, () => <p>الجزء</p>);
+    render(<QuestionErrorBoundary variant="part" resetKey="kr"><Suspense fallback={<i>…</i>}><Part /></Suspense></QuestionErrorBoundary>);
+    const retry = await screen.findByRole("button", { name: "إعادة المحاولة" });
+    retry.focus(); fireEvent.click(retry);
+    const line = await screen.findByTestId("recovery-landed");
+    await waitFor(() => expect(document.activeElement).toBe(line));
+    await waitFor(() => expect(into).toHaveBeenCalledTimes(1));
+    expect(into).toHaveBeenCalledWith({ block: "nearest" });
   });
 });

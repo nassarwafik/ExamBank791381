@@ -5,7 +5,9 @@
 //           under a pointer about to press and a different option was recorded)                                 [RR2-3]  fail-first
 //   RF3-P2  the reload offered after a failed retry disappears while the attempt is being paused                [RR2-5 M6]
 //   RF3-P3  …and is never offered while the attempt is being submitted                                           [RR2-5 M6]
-//   RF3-P4  a page-level (review) card recovers focus onto the review heading without scrolling                 [RR2-3]  fail-first
+//   RF3-P4  a page-level (review) card recovers focus onto the review heading without scrolling (pointer retry)   [RR2-3]  fail-first
+//   RF3-P5  the one exception: a KEYBOARD retry during which nothing moved brings the focused line clear of the bars, once and
+//           instantly (WCAG 2.4.11: keyboard focus never left under a sticky bar)                               [review fix 3]  pin
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
@@ -78,6 +80,10 @@ function mount(assignment: unknown = baseAssignment) {
 }
 const goNext = () => fireEvent.click(screen.getByRole("button", { name: "التالي" }));
 
+/** Simulates the page having scrolled (happy-dom never scrolls by itself). */
+const scrollYDescriptor = Object.getOwnPropertyDescriptor(window, "scrollY");
+const setScrollY = (y: number) => Object.defineProperty(window, "scrollY", { configurable: true, get: () => y });
+afterEach(() => { if (scrollYDescriptor) Object.defineProperty(window, "scrollY", scrollYDescriptor); else delete (window as unknown as { scrollY?: number }).scrollY; });
 const frames = (n: number) => act(async () => { for (let i = 0; i < n; i++) await new Promise(r => requestAnimationFrame(() => r(null))); });
 
 describe("RF3-P1 — a successful retry never scrolls the page", () => {
@@ -100,7 +106,7 @@ describe("RF3-P1 — a successful retry never scrolls the page", () => {
     retry.focus();
     ctl.mode = "ok";
     fireEvent.keyDown(document, { key: "ArrowDown" });                              // scrolling the page with the keyboard
-    await act(async () => { fireEvent.click(retry); });
+    await act(async () => { fireEvent.click(retry); setScrollY(480); });          // …the page moved while the retry loaded
     const line = await screen.findByTestId("recovery-landed");
     await waitFor(() => expect(document.activeElement).toBe(line));
     await frames(4);
@@ -149,7 +155,7 @@ describe("RF3-P3 — no reload action while the attempt is being submitted", () 
 describe("RF3-P4 — a review-screen card recovers onto the review heading without scrolling", () => {
   const original = { into: HTMLElement.prototype.scrollIntoView, focus: HTMLElement.prototype.focus };
   afterEach(() => { HTMLElement.prototype.scrollIntoView = original.into; HTMLElement.prototype.focus = original.focus; });
-  it("focus goes to the heading with preventScroll; nothing scrolls", async () => {
+  it("a pointer retry: focus goes to the heading with preventScroll; nothing scrolls", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const scrollBy = vi.fn(), scrollTo = vi.fn(), into = vi.fn(), focused: { el: HTMLElement; opts?: FocusOptions }[] = [];
     window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
@@ -166,12 +172,35 @@ describe("RF3-P4 — a review-screen card recovers onto the review heading witho
     const retry = screen.getByRole("button", { name: "إعادة المحاولة" });
     retry.focus();
     ctl.review = "ok";
-    await act(async () => { fireEvent.click(retry); });
+    await act(async () => { fireEvent.click(retry, { detail: 1 }); });
     await waitFor(() => expect(document.activeElement?.textContent).toBe("مراجعة الإجابات"));
     await frames(4);
     expect(scrollBy).not.toHaveBeenCalled();                                        // the defect: the heading revealed with a scroll
     expect(scrollTo).not.toHaveBeenCalled();
     expect(into).not.toHaveBeenCalled();
     expect(focused.filter(f => f.el === document.activeElement).every(f => f.opts?.preventScroll === true)).toBe(true);
+  });
+});
+
+describe("RF3-P5 — a keyboard retry during which nothing moved reveals the focused line", () => {
+  it("Enter on «إعادة المحاولة», no scroll, no press: the line is brought clear of the bars with one instant scroll", async () => {
+    ctl.mode = "throw";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+    mount();
+    await screen.findByText("ما هي عاصمة فلسطين؟"); goNext();
+    await screen.findByTestId("question-recovery");
+    await frames(3);
+    scrollBy.mockClear();
+    const retry = screen.getByRole("button", { name: "إعادة المحاولة" });
+    retry.focus();
+    ctl.mode = "ok";
+    await act(async () => { fireEvent.click(retry); });                            // detail 0: Enter / Space on the button
+    const line = await screen.findByTestId("recovery-landed");
+    await waitFor(() => expect(document.activeElement).toBe(line));
+    await frames(4);
+    expect(scrollBy).toHaveBeenCalledTimes(1);                                      // here the line sits under the top bar
+    expect(scrollBy.mock.calls[0][0]).toMatchObject({ left: 0, behavior: "auto" });
   });
 });

@@ -618,7 +618,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const screen=loading?"loading":(!started&&result)?"result":(strictEnded&&!result)?"strict":(paused&&!result&&state?.activeAttempt)?"paused":needsStart?"gate":(structured&&cover?.enabled&&!coverStarted&&!timed&&!requiresStart)?"cover":"exam";
  const prevScreenRef=useRef(screen);
  // Brings a PROGRAMMATICALLY focused heading after a screen change clear of both sticky bars with the smallest instant scroll.
- // Never used for pointer focus, nor after a recovery (review fix 3: a recovery never scrolls).
+ // Never used for pointer focus. After a recovery only when the retry was a keyboard press and nothing moved (review fix 3).
  const revealElement=useCallback((el:HTMLElement)=>{
   const r=el.getBoundingClientRect(),bar=document.querySelector(".iex-topbar")?.getBoundingClientRect(),nav=document.querySelector(".iex-bottom-nav")?.getBoundingClientRect();
   const d=revealDelta(r.top,r.bottom,bar?Math.max(0,bar.bottom):0,nav?Math.min(window.innerHeight,nav.top):window.innerHeight);
@@ -833,7 +833,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Phase 21E.3 — what a question recovery card may offer: a manual reload only when it cannot cost anything (every answer
  // server-confirmed, nothing submitting, not strict — leaving a strict attempt ends it). Focus returns to the question heading.
  // Review fix 1: and only while online (a reload while offline would leave the exam for the offline page).
- const recovery:QuestionRecovery={scope:"exam",reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,
+ const recovery:QuestionRecovery={scope:"exam",reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,reveal:revealElement,
   focusAnchor:()=>{const h=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;if(!h)return false;h.focus({preventScroll:true});return true}};
  // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
  // one progress row with the SINGLE live save-status region, then the unchanged question rendering.

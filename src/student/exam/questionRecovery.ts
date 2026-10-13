@@ -10,7 +10,9 @@ import { createContext } from "react";
  *  - strict (exam): the attempt is strict, so the card tells the student not to leave the page.
  *  - focusAnchor: focuses the page's stable heading (the question heading, or the review heading on the review screen) and says
  *    whether it could — used after a page-, exam- or review-level card recovered. Any other card lands focus on its own
- *    «تم تحميل هذا الجزء.» line (review fix 2: never on an answer control). Neither scrolls (review fix 3).
+ *    «تم تحميل هذا الجزء.» line (review fix 2: never on an answer control). Both focus with preventScroll (review fix 3).
+ *  - reveal: brings a programmatically focused element clear of the page's sticky bars (keyboard-reveal geometry). Review fix 3:
+ *    called only after a retry activated with the keyboard, during which the page did not scroll and nothing was pressed.
  *  - announce: the page's single polite announcer (a card inserted with its text already inside is not reliably announced).
  */
 export type QuestionRecovery = {
@@ -18,6 +20,7 @@ export type QuestionRecovery = {
   reloadAllowed: boolean;
   strict: boolean;
   focusAnchor?: () => boolean;
+  reveal?: (el: HTMLElement) => void;
   announce?: (text: string) => void;
 };
 
