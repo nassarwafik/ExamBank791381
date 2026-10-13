@@ -1013,4 +1013,194 @@ At the fetch before the final review, `origin/main` had moved from `31f4008` to
 
 The reconciliation changed no measured outcome of this phase.
 
+## 14. Review Fix 3
+
+A new read-only adversarial review of the exact head `593fd47` ran with three independent reviewers, each in its own detached
+worktree:
+
+| Area | Verdict | Introduced findings |
+|---|---|---|
+| Governance, test integrity, evidence accuracy | PASS | 3 × P3 (record wording and evidence) |
+| Recovery runtime, boundaries, focus after recovery | PASS | 3 × P2, 3 × P3 |
+| Pointer / touch / keyboard input integrity and accessibility | PASS (one P2 the reviewer asked to fix or put to the owner) | 1 × P2, 2 × P3 |
+
+The reviewers confirmed the Review Fix 2 evidence (exact-head CI on `593fd47`, the 80-mutant ledger, the Chromium harness, the
+P1 fix: 396 ordinary key presses after a recovery changed no answer). Review Fix 3 fixes every introduced P2 and P3 that was
+safe to fix; the rest is listed with its rationale in §14.6.
+
+| Item | Value |
+|---|---|
+| Head reviewed | `593fd47f682c458619c46138bb94f3f28adbbe09` |
+| `origin/main` | `0e7adec` at the review; it moved to **`88ed87c`** (PR #308, the premium 3D viewer, and PR #309, documentation) while fixing, and the branch was reconciled (§14.7) |
+| Commits | `2159f0f` (RR2-1 to RR2-5: code, tests, mutation script) · `83690db` (merge of `origin/main`, §14.7) · `df60dc2` (input F-1 to F-3, RF3-R5, RF2-P1) · `afeeee1` (a lint-clean RF3-U5) · `62a884b` (the release wait is capped at 60 s) · `3e3d9e6` (the keyboard-only reveal, §14.1) · `52bcc2e` (the in-place corrections) · `7811d44` (the B15 needle) · the following commit carries this record |
+
+### 14.1 Findings and fixes
+
+| Reviewer · id | Sev | Finding | Fix | Evidence |
+|---|---|---|---|---|
+| Recovery RR2-3 | P2 (the owner's first rule) | A recovery that completed after the student scrolled away jumped the page to the landing line. A click in the following moments recorded a different option: 7 / 8 timed runs, and 3 / 3 spaced runs. The same jump happened on `eb174d1`. | Nothing scrolls after a recovery. The line is focused with `preventScroll` only; so is the page or review heading of a page-level card (its `revealElement` call is removed). The recovery context no longer has a `reveal` hook. The page's keyboard reveal skips the headings and the line, so a navigation key pressed while the retry loaded (PageDown, End, arrows) no longer causes the jump either; on `593fd47` that path jumped to the line and recorded option 4 instead of 12 or 13. A retried component now renders in **one commit**: the lazy wrapper used to show its empty fallback for one commit first. That changed the page height twice; scroll anchoring compensated only the first change, and the option under a still pointer moved (found by the Review Fix 3 probes, §14.3). **One exception, for WCAG 2.4.11:** with no reveal at all, the focused line was left under the bottom navigation in 8 / 32 runs of the landing-line probe. So after a retry activated with the **keyboard** (click `detail` 0), during which the page did **not scroll** and **nothing was pressed**, the focused line or heading is brought clear of the bars by the page's instant reveal (no provider: the nearest scroll), never while a pointer is down. The student is then still where they pressed Enter, as after a Tab. A pointer retry, a scroll or any press while the retry loaded keeps the strict rule. | RF3-P1 (scrolled while loading, plus a navigation key), RF3-P4 (pointer retry, review heading), RF3-U4 (outside the exam), RF3-U5 (one commit), RF3-P5 / RF3-U12 (the keyboard exception), RF3-U10 (pointer retry: none), RF3-U11 (a press meanwhile: none); mutants B15, B16, B23–B26, K08, P19, P20, P21, R34 |
+| Recovery RR2-1 | P2 (Review Fix 2 regression) | A retried card rendered without its own stylesheet when another loader had requested that stylesheet first. Vite links a shared stylesheet only once, so the later loader never recorded it as its own, and Review Fix 2 re-linked only "own" stylesheets. | A retry re-links and awaits **every** stylesheet that failed in the page, each within the stylesheet bound, and concurrent loads share one link per stylesheet. It still fails closed only when one of the loader's own stylesheets is still down, so another card's outage never blocks it (RR-2 stays fixed). | RF3-R1, RF2-R1 (updated, below), RF3-R4; mutants R28, R30, R31, R32, R33 |
+| Recovery RR2-2 | P2 (this phase's in-place model) | A sibling question that shares a failed stylesheet rendered without it and showed no card. | A first load in a page where a stylesheet already failed re-links it first (bounded; it never fails the load, because the stylesheet is not known to be this loader's). The reviewer's reproduction A (open the hotspot, then the label diagram) now renders the label diagram styled. Loads that start together, before the failure is known, are the residual (§14.6). | RF3-R2 (two cases); mutant R29 |
+| Recovery RR2-4 | P3 | The landing line sits inside the rich stem, which names the answer controls (`aria-labelledby`), so the radio group's name included «تم تحميل هذا الجزء.» until another question was shown. | Once focus leaves the line it gets `aria-hidden="true"`. It keeps its place, so nothing moves; while it has focus it is read. | RF3-U3; Chromium accessibility tree (§14.3); mutants B17, B18 |
+| Recovery RR2-5 | P3 | Three reviewer mutants survived: M3 (a successful retry may take focus after the student moved), M5 (the same for a page-level card), M6 (no reload gate while submitting or pausing). | Tests for each: a successful retry while the student moved to another field; a page-level card while the student moved; the reload action while a pause, or a submit, is in flight. | RF3-U1, RF3-U2, RF3-P2, RF3-P3; mutants B19 (M3, both layers together), B20 (M5), P17 and P18 (M6) |
+| Recovery RR2-6 | P3 info | On a slow but working network (every source read about 9 s), the 30 s total bound fails the first press; the second press renders from cache. | Not changed: the bound is the RR-3 fix, and it fails safe (§14.6). | — |
+| Governance GOV2-1 | P3 | §13.5 said the failing `AppShell.lazyDashboard.8e` test imports nothing this phase changed. | Corrected in place: it reaches `StudentQuestionCard` through the teacher platform; the conclusion stands. | — |
+| Governance GOV2-2 | P3 | §13.2 under-reported the fail-first evidence (an earlier run, without `keyboardReveal.rf1`). | Corrected in place: 19 cases fail on `eb174d1` with the final test files; the `reducedMotion` artefact is explained. | re-run logs |
+| Governance GOV2-3 | P3 | The §12.4 figure 0.0024 had no reproducible source. | The source is cited in place and recomputed from it. | — |
+| Input F-1 | P2 (the owner's rule on press and release) | A retry that completed **during a press** scrolled the page under the finger or pointer: on touch, Chromium moves focus only at the end of a tap, and a mouse press on an option `<label>` leaves focus on `<body>`, which the card read as "still on the card"; it then focused the line and revealed it. Phone touch, notice above the viewport: 0 / 6 correct (2 wrong options, 4 taps lost); mouse on option labels: 10 / 12 clicks lost; hotspot taps at phone / 150 % / 200 %: 6 / 6 lost. Present since Review Fix 1. | That reveal is gone (RR2-3; the keyboard-only exception of §14.1 never applies when anything was pressed). In addition, a card never changes the layout or moves focus while a pointer or finger is down anywhere: it waits for the release, so a press in progress ends on the layout it started on (`student/exam/pointerHold.ts`; passive capture listeners installed on the first retry; a touch scroll keeps the finger down until the last `touchend`). The wait is capped at 60 s, a safety net for a release the page never saw (any later press and release also ends it); the cap is long because a real press can be long, such as a drag in the physics lab or around a 3D model (a 10 s cap let the reviewer's held press see the swap). A press outside the card since «إعادة المحاولة» means the student moved on: focus is not taken. | RF3-U6 (mouse), RF3-U7 (touch), RF3-U9 (a 45 s press is still waited for); the reviewer's race probes on the final build (§14.3); mutants B21, B22, H01, H02 |
+| Input F-2 | P3 (in-place recovery) | With the card or notice in view, the recovered part's height change moved the content during a press even without a scroll (phone touch: option index 3 saved instead of 1). | The same wait: the layout no longer changes between press and release. What remains is a press that *starts* after the swap but was aimed before it (§14.6). | as F-1 |
+| Input F-3 | P3 (WCAG 2.4.7) | After a formula retry, focus lands on a visually hidden line: no visible focus indicator. | `ui.css`: a focused hidden recovery line outlines the recovered part that follows it (keyboard focus only, like every focus ring). The line leaves the stem's name once focus moves (RR2-4). | RF3-U8; mutant C01 |
+| Input test gap | P3 | RF2-P1 asserted a 1000 ms gap, not the 1.5 s constant | It now asserts `ANNOUNCEMENT_GAP_MS` less 50 ms of real-timer jitter; `examAnnouncer.rf2` pins the exact gap with a clock. | — |
+
+Changed expectation, with its reason (AGENTS.md §12): RF2-R1 asserted that another card's stylesheet was "neither re-linked nor
+awaited". That detail was the Review Fix 2 design that caused RR2-1. Its rule is kept: the other card's outage never fails this
+retry, and a re-link that hangs only delays it within the stylesheet bound (a second case). The test now also asserts the
+re-link itself.
+
+### 14.2 Fail-first (executed against `593fd47`)
+
+The final test files were copied into a detached worktree of `593fd47` and run there. `rf3.units` imports the new
+`pointerHold` module, which does not exist there, so it ran as a copy without that import and without RF3-U9 (which tests only
+that module). **14 cases fail on `593fd47` and pass on the head.** Each failing assertion is the defect itself:
+
+| Case | Failing assertion on `593fd47` |
+|---|---|
+| RF3-P1 scrolled while the retry loaded, plus a navigation key | `scrollBy` called 2 times (the reveal, then the keyboard reveal) |
+| RF3-P4 a pointer retry of the review card | `scrollBy` called 1 time (the heading revealed) |
+| RF3-U4 far from the viewport, scrolled meanwhile (no provider) | `scrollIntoView` called 1 time |
+| RF3-U10 a pointer retry far from the viewport | `scrollIntoView` called 1 time |
+| RF3-U11 a keyboard retry with a press on the card meanwhile | `scrollIntoView` called 1 time |
+| RF3-U5 one commit | `expected 2 to be 1` (the empty fallback committed again) |
+| RF3-U3 landing line after Tab | `expected null to be 'true'` (`aria-hidden` never set) |
+| RF3-U6 a mouse press elsewhere during the completion | `Unable to find [data-testid="question-recovery"]`: the card was replaced while the button was down |
+| RF3-U7 a finger down (touch scroll) during the completion | the same, during the touch |
+| RF3-U8 visible focus for a hidden line | the `ui.css` rule does not exist |
+| RF3-R1 stylesheet requested by another loader | `expected [] to deeply equal [VisualCanvas…css]` (no re-link on the retry) |
+| RF3-R2 first load after a stylesheet failed | `expected [] to deeply equal [VisualCanvas…css]` (no re-link) |
+| RF3-R4 concurrent loads share one re-link | `expected [] to have a length of 1` (no re-link at all) |
+| RF2-R1 (updated) | `expected [] to deeply equal [css, css]` (no re-link) |
+
+Pins and gap tests that pass on `593fd47` (their value is the mutants they kill, §14.4): RF3-U1, RF3-U2, RF3-U12, RF3-P2,
+RF3-P3, RF3-P5 (`593fd47` always revealed), RF3-R2 (still down), RF3-R3, RF3-R5, the RF2-R1 hang case and RF2-P1. RF3-U9 cannot
+load there (new module). Logs: `failfirst-593fd47-final2.log` and `failfirst-593fd47-units2.log` with the session evidence.
+
+### 14.3 Chromium evidence (production build of the Review Fix 3 tree, Chromium 141)
+
+All on a production build of the code-final head `3e3d9e6` (the documentation commits change no shipped file), Chromium 141,
+run one after another with nothing else on the machine. The reviewers' own probes were re-run unchanged, except
+`anchored.mjs` (its patch targets re-pointed to this build's minified names) and `race-hold.mjs` (a copy of `race.mjs` that holds
+the press for 15 s instead of until the card goes away).
+
+| Probe | Runs | `593fd47` (reviewers) | Final build |
+|---|---|---|---|
+| Repository harness `scripts/check-student-exam-browser-21e3.mjs` | 7 modes | all green | pointer **52 / 52**, entry **76 / 76**, dependency **58 / 58**, css **36 / 36**, css-twice **18 / 18**, strict **58 / 58**, stilldown **36 / 36**; console errors are only the injected failures' `{code: chunk-load}` logs |
+| Input F-1 `race3` (multiple choice; formula retry completes during a touch / mouse press; phone, 150 %, 200 %; card 30 / 140 px above the bar; leads 600 / 150 / 60 ms) | 36 + 36 control | phone touch 0 / 6 correct (2 wrong options, 4 taps lost) | **36 / 36** intended option saved (control 36 / 36); 0 scrolls and 0 px content shift during the press; focus never moved during the press |
+| Input F-1 `race2` (hotspot part below a retrying label-diagram part; card 0 / 40 / 120 px above the bar) | 54 | touch 6 / 6 taps lost | **54 / 54** points saved, 0 scrolls during the press, worst error 0.0055 of the image (one pixel of the phone layout) |
+| `race-hold` (press held 15 s on text while the retry completes; touch pan on the phone) | 6 held + 8 idle | the card was replaced under the press | the card stays for the whole press and is replaced after the release; 0 scrolls during the press; focus is not taken |
+| Recovery RR2-3 `scrollaway` (wheel away, then a click at the unchanged pointer) | 4 | 4 / 4 the jump put the stimulus under the pointer, nothing saved (and 7 / 8 wrong options in the reviewer's timed variant) | **4 / 4** the option under the pointer is the one saved (scroll anchoring adjusts for the recovered height above) |
+| `scrollaway2` (3-line and 1-line stimulus, wheel 100–600 px, keyboard and mouse retry) | 20 | 3 / 3 option 4 saved instead of 7, 9 or 12 | 16 / 20 the same option saved; **4 / 4 others with the card still in view**: the recovered height moved the content once and the click landed between options, recording nothing (§14.6) |
+| `keyaway2` (Enter, then PageDown / End / arrows while the retry loads; 1-, 3- and 18-line stimulus) | 9 | PageDown / End: jump to the line, option 4 saved instead of 12 / 13 | 7 / 9 the same option saved; 2 / 9 with the card in view landed on a gap or on the stimulus (no answer recorded) |
+| Landing line `line.mjs` (part / question, keyboard / pointer, 4 zooms × 2 motion settings) | 32 | 32 / 32 pass | **32 / 32** pass; 0 saves from ordinary keys; 0 layout shifts; the focused line is **clear of both bars in 32 / 32** (8 / 32 were under the bottom navigation before the keyboard-only reveal) |
+| Accessible name (`rf3probe`, formula and chart inside the stem) | 2 | the group name included «تم تحميل هذا الجزء.» | the line is read while focused; after Tab the group's name is the stem alone, and the line keeps its place |
+| `focusall` (every boundary variant; key, click, delayed; then ordinary keys) | 36 (396 keys) | focus on the line 36 / 36, no answer changed | the same: focus on the line or the heading 36 / 36, 0 answers changed, 0 saves |
+| `anchored` (page and exam cards) | 4 | heading focused | heading focused; no line |
+| `movedaway` (typing in another field while the retry completes) | 2 | — | focus and all typed characters kept, saved exactly; no line |
+| `cssshare` (shared stylesheets) | 5 scenarios | A, C unstyled; B unstyled | A (first load of a sibling) and C (a retry that needs a stylesheet another loader requested) render styled; F (another card's stylesheet stays down) does not block, the card whose own stylesheet stays down fails closed; B (two parts loading together) is the residual (§14.6); every module evaluated once |
+
+### 14.4 Mutation campaign (107 mutants, AGENTS.md §9)
+
+`scripts/mutate-21e3.mjs` in a clean detached worktree of the code-final head `3e3d9e6`, nothing else running, in two batches
+(54 + 53, each under the session's two-hour limit). B15 was reported **invalid** ("needle count 0": its needle predated the
+keyboard-only reveal); `7811d44` re-points it and it was re-run alone there. The 18 mutated sources are byte-identical in every
+run and on the final head (sha256).
+
+| Run | Mutants | Killed | Equivalent | Survived | Timeout | Invalid | Restored |
+|---|---|---|---|---|---|---|---|
+| batch A (`3e3d9e6`) | 54 | 53 | 0 | 0 | 0 | 1 (B15) | yes, `git status` clean |
+| batch B (`3e3d9e6`) | 53 | 52 | 1 (P10, with its reason) | 0 | 0 | 0 | yes, `git status` clean |
+| B15 re-run (`7811d44`) | 1 | 1 | 0 | 0 | 0 | 0 | yes |
+| **Total** | **107 across 18 files** | **106** | **1** | **0** | **0** | **0** | |
+
+Earlier runs of this round, superseded by later fixes: on `2159f0f`, stopped after 40 mutants because the input reviewer's F-1
+changed the boundary — in it **R27 survived** (a stylesheet the load requested but the error did not name was no longer treated as
+the loader's own once every failed stylesheet is re-linked), a real gap that RF3-R5 now closes; on `df60dc2` / `afeeee1`, 102
+mutants: 101 killed, P10 equivalent.
+
+New and changed mutants of this round, with the test that killed each one:
+
+| Id | What was planted | Killed by |
+|---|---|---|
+| R27 | the stylesheets a load requested are not recorded as its own | RF3-R5 |
+| R28 | a retry re-links only its own failed stylesheets (Review Fix 2) | RF3-R1, RF2-R1 |
+| R29 | no re-link on a first load after a stylesheet failed | RF3-R2, RF2-R1 |
+| R30 | any failed stylesheet fails the retry | RF2-R1 |
+| R31 | re-links not awaited | RF3-R1, RF1-R1 |
+| R32 | concurrent loads not sharing one re-link | RF3-R4 |
+| R33 | a finished re-link never cleared (no later re-link) | RF3-R1, RF2-R1 |
+| R34 | a retried component suspends once more (empty fallback commit) | RF3-U5 |
+| B15 | an unconditional scroll to the line after a recovery | RF3-P1, RF3-U4, RF3-U10, RF3-U11 |
+| B16 | the line focused without `preventScroll` | RF3-P1 |
+| B17 | the line never `aria-hidden` | RF3-U3 |
+| B18 | the line never goes quiet on blur | RF3-U3 |
+| B19 | focus taken after the student moved (both layers: `onCard` and the idle check) | RF3-U1 |
+| B20 | a page-level card takes focus after the student moved | RF3-U2 |
+| B21 | the card swapped during a press (no wait for the release) | RF3-U6, RF3-U7 |
+| B22 | a press elsewhere since the retry ignored | RF3-U6, RF3-U7 |
+| B23 | a pointer retry treated as a keyboard retry (reveal) | RF3-U10, RF3-P4 |
+| B24 | reveal although the page scrolled while the retry loaded | RF3-P1, RF3-U4 |
+| B25 | reveal although something was pressed while the retry loaded | RF3-U11 |
+| B26 | no reveal after a keyboard retry during which nothing moved | RF3-P5, RF3-U12 |
+| H02 | the release wait capped at 10 s (a long press sees the swap) | RF3-U9 |
+| H01 | a finger not tracked (only the pointer, which a touch scroll cancels) | RF3-U7 |
+| C01 | no visible focus for a hidden line | RF3-U8 |
+| K08 | the keyboard reveal does not skip the line and the headings | RF3-P1 |
+| P17 | reload offered while pausing | RF3-P2 |
+| P18 | reload offered while submitting | RF3-P3 |
+| P19 | the page heading scrolled into view after a recovery | RF3-P4 |
+| P20 | the page heading focused without `preventScroll` | RF3-P4 |
+| P21 | the page's reveal skips the headings but not the line | RF3-P1 |
+
+Retired: R25 of Review Fix 2 ("re-link every failed stylesheet") is now the intended behaviour. Needles that the fix changed were
+updated for R14, R18, B04 and K01. The script writes each run's ledger to `artifacts/phase-21e3/mutation-ledger.json` (not committed).
+
+### 14.5 Validation and bundle
+
+| Check | Result |
+|---|---|
+| Root suite, `CI=true npx vitest run`, code-final tree `3e3d9e6` | **968 files, 12,471 passed, 1 failed** (12,472) |
+| The one failure | `src/AppShell.lazyDashboard.8e.test.tsx`, the 1 s wait for the lazy dashboard chunk (§13.5, as corrected). It **fails identically on `main` `88ed87c`** in this container (`Unable to find … جارٍ تحميل لوحة المتابعة...`) and is not patched here (AGENTS.md §12). An earlier full run of this round, on `df60dc2`, also had `GovernancePanel.14b` time out once under load (a 1 s `findByRole`); it passed 7 / 7 alone at once and in this final run; this branch changes no governance file. |
+| Lint | `npm run lint`: 0 errors, 125 warnings, **the same set as `main` `88ed87c`** (two messages list the same dependency names in another order). A counter reassigned during render in RF3-U5 had added one warning; `afeeee1` replaced it with a spy. |
+| Typecheck | `npx tsc -b` clean |
+| Build + bundle guard | passed: 57 declarations / 55 recoverable chunks, `NEVER_REMAP` 12, header parser 352 / 352 chunks (1,103 edges) |
+| Runner unit | `npm --prefix runner test`: **407 / 407** (no Runner file changed) |
+| Whitespace | `git diff --check` and `git diff origin/main --check` clean |
+| Initial JS / CSS (gzip 9, the guard's initial graph) | **113,212 B** (`main` `88ed87c` 113,167 B, **+45 B**; budget 125 KB) / **36,591 B** (`main` 36,278 B) |
+| Exact-head CI | reported in the PR for the final head (this record is its last commit) |
+
+### 14.6 Remaining findings after Review Fix 3
+
+| Id | Sev | Finding | Rationale |
+|---|---|---|---|
+| 85 | P2, **owner decision** | An unrenderable question is submitted as unanswered | Unchanged: it needs a submission / grading contract change (§10). |
+| 14 | P2 | The exam-level card hides the chrome | Unchanged (§12.7). |
+| RR2-2 remainder | P2 | Two loads that start together share a stylesheet that fails: the one that did not request it renders without it and shows no card (a compound question with a hotspot part and a label part). It is styled as soon as any card's retry, or a later first load, re-links the stylesheet. A sibling also stays unstyled while the stylesheet is still down. | Vite's preload helper does not tell a loader which already-linked stylesheets it needs, so the runtime cannot know the dependency and cannot fail that loader closed without failing unrelated loaders (the RR-2 regression). Fixing it needs the build's chunk → stylesheet map at run time. In the reviewer's runs no wrong answer was recorded: pointer clicks outside the image are rejected and the zone buttons record what was pressed. |
+| In-view recovery height | P3, inherent to in-place recovery | When the card is still in view and the recovered part has a different height, the content below it moves once, after any press in progress has been released. A press that *starts* in the moment after the swap but was aimed at the old layout can land elsewhere (Review Fix 3 probes: an 18-line code stimulus replacing a visible card put the stimulus where option 4 was; a 1-line one put a gap there). Identical on `593fd47`. | This is the student's own retry changing the part they are looking at, like any part that loads in view (the code stimulus already appears this way on a first load). Scroll anchoring keeps the content stable for changes above the viewport; a compensating scroll for changes in view would move the recovered part away from the student instead. |
+| RR2-6 | P3 info | A slow but working network can need a second press | Fails safe; the bound is the RR-3 fix. |
+| Pointer RR-PTR-2, RR-PTR-4, RR-PTR-5; accessibility RR-7; 30, 31, 43 / 49, 44 | P3 / info | as §13.6 | Unchanged. |
+| Input info | info, pre-existing | A 4 px hand movement during a press in a code field turns the press into a native text selection and loses one typed character (16 / 16 runs; `31f4008`: 12 / 12). Hotspot pages carry a second polite region (`vq-status`), unchanged from `main`. | Not introduced; no scroll is involved. |
+
+Also not measured: Safari / WebKit, Firefox, and real screen-reader speech.
+
+### 14.7 Reconciliation with `main` (AGENTS.md §7)
+
+At the fetch during Review Fix 3, `origin/main` had moved from `0e7adec` to **`88ed87c7ad17603d7052acc218a19342ba2edc0c`**:
+PR #308 (`8a1dd87`, the premium 3D viewer: `Interactive3DView`, its CSS, a SmartSim host style, a viewer test and harness, a
+design record) and PR #309 (`88ed87c`, the platform UX audit, documentation only).
+
+| Item | Value |
+|---|---|
+| Merge | `83690db`: a normal merge of `origin/main` into this branch. No conflict; no file is changed on both sides; no generated file is involved. *(Its commit message names only `8a1dd87` (PR #308): `main` moved to `88ed87c` (PR #309) during that same fetch, and the merge brought in both. Commit messages are never amended; this record is the correction.)* |
+| Validation after the merge | everything in §14.3–§14.5 ran on the reconciled tree |
+| Measured outcomes | none changed by the merge: the harness counts, the bundle guard (352 / 352 chunks) and the lint set (equal to `main` `88ed87c`) |
+
 Independent review required. Owner merge only.
