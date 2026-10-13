@@ -244,6 +244,8 @@ describe("Phase 5B — move-to-section while an image is pending", () => {
     return { ...e, sections: [e.sections[0], { id: "s2", title: "S2", gradingPolicy: "all", stimuli: {}, questions: [{ examQuestionId: "qC", presentationType: "shortAnswer", text: "C", marks: 2, answer: { text: "z" } }] }] } as StructuredExam;
   };
   const moveSelects = () => screen.getAllByRole("combobox").filter(el => Array.from((el as HTMLSelectElement).options).some(o => o.value === "s2")) as HTMLSelectElement[];
+  // RF4 (A-03, owner-directed) — the select only picks the target section; the card's explicit «نقل» button moves the question.
+  const moveButtons = () => screen.getAllByRole("button", { name: /^نقل السؤال .+ إلى القسم المختار$/ }) as HTMLButtonElement[];
 
   it("M: 'نقل إلى قسم' is disabled only for the pending question; after the image lands, moving it keeps the image", async () => {
     const ai = deferredAI();
@@ -251,13 +253,18 @@ describe("Phase 5B — move-to-section while an image is pending", () => {
     fireEvent.click(screen.getAllByRole("button", { name: AI_BTN })[0]);        // qA pending
     const [moveA, moveB] = moveSelects();                                        // qA, qB (section s1)
     expect(moveA.disabled).toBe(true);
+    expect(moveButtons()[0].disabled).toBe(true);                                // its «نقل» is locked too
     expect(moveB.disabled).toBe(false);                                          // other questions unaffected
     fireEvent.change(moveA, { target: { value: "s2" } });                        // attempted move is inert
+    fireEvent.click(moveButtons()[0]);
     expect(h.latest!.sections[0].questions.map(x => x.examQuestionId)).toEqual(["qA", "qB"]);
     await ai.resolve("qA", IMG_A);
     expect(imgIn(h.latest, "qA")).toBe(IMG_A);
     expect(moveSelects()[0].disabled).toBe(false);                               // re-enabled after settle
     fireEvent.change(moveSelects()[0], { target: { value: "s2" } });
+    expect(moveButtons()[0].disabled).toBe(false);
+    fireEvent.click(moveButtons()[0]);
+    expect(h.latest!.sections[0].questions.map(x => x.examQuestionId)).toEqual(["qB"]);
     const movedA = h.latest!.sections[1].questions.find(x => x.examQuestionId === "qA");
     expect(movedA?.image?.assets?.[0].dataUrl).toBe(IMG_A);                      // no silent image loss
   });

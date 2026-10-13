@@ -30,7 +30,12 @@ export const SAVE_LABELS = {
   /** Status: edits since the last save are not on the server yet. */
   dirty: "تغييرات غير محفوظة",
   /** Status: a recovered local copy is shown; it is not on the server yet. */
-  recovered: "نسخة مسترجعة — غير محفوظة"
+  recovered: "نسخة مسترجعة — غير محفوظة",
+  /** Status (RF4 B-06): the server holds what the teacher sees AND it is the approved, final version — an approval is never
+   *  announced exactly like a draft save. */
+  savedFinal: "محفوظ — معتمد نهائيًا",
+  /** Status (RF4 A-10 / B-01): the last save did not reach the server; the builder writes the reason after it («تعذّر الحفظ: …»). */
+  saveFailed: "تعذّر الحفظ"
 } as const;
 
 export type SaveLabelKey = keyof typeof SAVE_LABELS;

@@ -885,6 +885,9 @@ function App() {
   const savedExamsToggleRef = useRef<HTMLButtonElement>(null);
   const [structuredSaving, setStructuredSaving] = useState(false);
   const [structuredNotice, setStructuredNotice] = useState("");
+  // RF4 B-06 — what the notice reports: a save's outcome (the builder shows it only while the exam is saved) or how an exam that is not
+  // on the server yet was opened (an import, a preset — it claims no save).
+  const [structuredNoticeKind, setStructuredNoticeKind] = useState<"save" | "open">("save");
   const [structuredError, setStructuredError] = useState("");
   const [generateBusy, setGenerateBusy] = useState(false);
   const [builderError, setBuilderError] = useState("");
@@ -2879,6 +2882,7 @@ function App() {
   function openExamFromPreset(next: StructuredExam) {
     setStructuredError("");
     setStructuredNotice("✓ أُنشئ امتحان جديد من القالب الأكاديمي — راجعه ثم احفظه ليصبح مسودة على الخادم.");
+    setStructuredNoticeKind("open");
     structuredHistory.open(next, "unsaved");
     setStructuredBuilderOpen(true);
   }
@@ -3990,6 +3994,7 @@ function App() {
   function openImportedStructuredExam(imported: StructuredExam) {
     setStructuredError("");
     setStructuredNotice("✓ تم استيراد الامتحان — راجعه ثم احفظه كمسودة أو اعتمده نهائيًا.");
+    setStructuredNoticeKind("open");
     structuredHistory.open(imported, "unsaved");
     setStructuredBuilderOpen(true);
     setStructuredImportOpen(false);
@@ -4024,6 +4029,7 @@ function App() {
       });
       if (!result.ok) { setStructuredError(result.reason); return; }
       setStructuredNotice(mode === "final" ? "✓ تم اعتماد الامتحان المنظّم نهائيًا وحفظه." : "✓ تم حفظ مسودة الامتحان المنظّم.");
+      setStructuredNoticeKind("save");
       await loadSavedExams();
     }
     catch (error) {
@@ -7900,6 +7906,7 @@ function App() {
               onExit={() => { setStructuredBuilderOpen(false); }}
               saving={structuredSaving}
               notice={structuredNotice}
+              noticeKind={structuredNoticeKind}
               error={structuredError}
               requestQuestionImage={requestStructuredQuestionImage}
               onUndo={structuredHistory.undo}

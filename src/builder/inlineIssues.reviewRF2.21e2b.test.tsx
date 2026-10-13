@@ -6,7 +6,8 @@
 //          the first pair that carries the code;
 //   RF2-2  an issue a Field frame shows without an invalid control in that frame (a multiple-choice question without options)
 //          focuses the frame's first enabled control («+ إضافة خيار»), else the card's named issue list — never an unrelated
-//          invalid field (the marks, the question text). The first invalid field in DOM order stays only for issues no frame shows;
+//          invalid field (the marks, the question text). RF4 A-05 (owner-directed): an issue no frame shows never takes a field whose
+//          frame shows ANOTHER issue either — it focuses the card's named issue list (issueFallback.reviewRF4.21e2b);
 //   RF2-3  the summary's reveal lasts while the question still has an ERROR: a warning it keeps (STIMULUS_MISSING — a stale shared
 //          stimulus reference) does not keep a row added later red before the teacher visits it (the C-F3 symptom).
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
@@ -172,11 +173,20 @@ describe("RF2-2 — an issue a frame shows is focused in that frame", () => {
     expectFocus(within(card("c1")).getByRole("group", { name: "مشكلات السؤال 1" }));
     expect(scrollCalls.at(-1)!.el).toBe(card("c1"));
   });
-  it("pin: an issue no frame shows (STIMULUS_MISSING) keeps the first invalid field in DOM order", async () => {
+  // RF4 A-05 (owner-directed behaviour change): this pin used to expect the first invalid field in DOM order — «العلامة», whose frame
+  // shows MARKS_PROBLEM, an unrelated issue. Fail-first on 1fa3d21: focus was «العلامة», not «مشكلات السؤال 1».
+  it("pin: an issue no frame shows (STIMULUS_MISSING) focuses the card's named issue list «مشكلات السؤال 1», never the invalid marks (MARKS_PROBLEM)", async () => {
     await mount(() => examWith(sa("w1", "ما هو المبدّل", 0, { groupId: "g-gone" })));
     expect(issuesOf("w1").map(i => i.code)).toEqual(["MARKS_PROBLEM", "STIMULUS_MISSING"]);
     await open(issueOf("w1", "STIMULUS_MISSING"));
-    expectFocus(within(card("w1")).getByLabelText("العلامة"));
+    const marks = within(card("w1")).getByLabelText("العلامة");
+    expect(marks.getAttribute("aria-invalid")).toBe("true");                                          // revealed, invalid — and not where focus went
+    expect(marks.closest("[data-issue-codes]")?.getAttribute("data-issue-codes")).toBe("MARKS_PROBLEM");
+    expectFocus(within(card("w1")).getByRole("group", { name: "مشكلات السؤال 1" }));
+    expect(scrollCalls.at(-1)!.el).toBe(card("w1"));                                                  // the card aligned below the toolbar
+    expect(scrollCalls.at(-1)!.margin).toBe(CLEARANCE + "px");
+    await open(issueOf("w1", "MARKS_PROBLEM"));                                                       // the marks' own issue still focuses them
+    expectFocus(marks);
   });
 });
 

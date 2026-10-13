@@ -514,7 +514,7 @@ describe("Review blocker 1 — the recovery scope is a REAL authenticated teache
 });
 
 describe("Review blocker 2 — undo after a raced save lands on the PERSISTED checkpoint", () => {
-  it("saved T0 → edit A → save(A) → edit B → response → undo = persisted A (✓ محفوظ) → redo = B (dirty)", async () => {
+  it("saved T0 → edit A → save(A, final) → edit B → response → undo = persisted A (✓ محفوظ — معتمد نهائيًا) → redo = B (dirty)", async () => {
     render(<Host />);
     await tick();
     setTitle("A");
@@ -529,7 +529,8 @@ describe("Review blocker 2 — undo after a raced save lands on the PERSISTED ch
     expect(h.latest!.status).toBe("final");
     expect(h.latest!.updatedAt).toBe(payload.updatedAt);
     expect(h.dirty).toBe(false);
-    expect(chip()).toBe("✓ محفوظ");
+    // RF4 B-06 (owner-directed): the persisted A is the APPROVED version, and the status says so — «✓ محفوظ» alone was a draft's status.
+    expect(chip()).toBe("✓ محفوظ — معتمد نهائيًا");
     fireEvent.click(redoBtn());
     expect(h.latest!.title).toBe("B"); expect(h.dirty).toBe(true);
     expect(chip()).toBe("● تغييرات غير محفوظة");

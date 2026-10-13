@@ -26,7 +26,7 @@ import ExamPreview from "./ExamPreview";
 import Dialog from "./ui/Dialog";
 import { useConfirm } from "./ui/useConfirm";
 import { useToast, type ToastDismissReason, type ToastDismissVia } from "./ui/Toast";
-import { applyDeletion, captureQuestionDeletion, captureSectionDeletion, deletionIsBack, restoreDeletion, type Deletion, type RestoreOutcome } from "./structuredDeletionUndo";
+import { applyDeletion, captureQuestionDeletion, captureSectionDeletion, deletionIsBack, restoreDeletion, type Deletion, type QuestionDeletion, type RestoreOutcome, type SectionDeletion } from "./structuredDeletionUndo";
 import type { ExamSaveState } from "./examHistory";
 import { historyShortcut, isTextEditingTarget } from "./examHistoryShortcuts";
 import { browserBackupStorage, clearExamBackup, isRecoveryCandidate, readExamBackup, writeExamBackup, type BackupStorage, type ExamBackup } from "./examAutosave";
@@ -48,7 +48,7 @@ import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import BuilderToolbar, { MORE_MENU_LABEL } from "./builder/BuilderToolbar";
 import { indexIssues, issueOccurrence, issuePartFocus, issueTargets, targetCardIssues, type IssuePart, type PartFocus, type IssueTarget } from "./builder/issueIndex";
 import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer";
-import useModalSurface from "./ui/useModalSurface";
+import useModalSurface, { hasModalAbove } from "./ui/useModalSurface";
 import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
 import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown } from "./icons";
 import "./structured-builder.css";
@@ -108,6 +108,10 @@ type Props = {
   onExit?: () => void;
   saving?: boolean;
   notice?: string;
+  /** RF4 B-06 — what `notice` reports. "save" (the default): a save's outcome — shown only while saveState is "saved", so it never
+   *  contradicts the status. "open": how an exam that is NOT on the server yet was opened (an import, a preset) — it claims no save. */
+  noticeKind?: "save" | "open";
+  /** The last save's failure reason (cleared by the owner when the next save starts): shown as «تعذّر الحفظ: …» in the status band. */
   error?: string;
   // Phase 5B — authenticated per-question AI image callback (App.tsx owns auth). Optional/back-compatible.
   requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
@@ -158,6 +162,12 @@ const BUILDER_TITLE_ID = "sb-builder-title";
 // K3 (A-F7) — the glyph is shown but never spoken (an aria-hidden span inside the polite status). RF3 I-4: the words are the save-label
 // table's (SAVE_STATE_LABELS), so the status says «جارٍ الحفظ…» exactly like the draft button while a save runs.
 const SAVE_STATE_GLYPH: Record<ExamSaveState, string> = { saved: "✓", dirty: "●", saving: "⏳", recovered: "↺" };
+/** RF4 B-06 — a notice's leading glyph («✓ تم حفظ …») is decoration: shown, never read out (like the save status's glyph). */
+const NOTICE_GLYPH = /^(\p{Extended_Pictographic}|[✓✔])\uFE0F?\s*/u;
+function NoticeText({ text }: { text: string }) {
+  const m = NOTICE_GLYPH.exec(text);
+  return m ? <><span aria-hidden="true">{m[1]}</span> {text.slice(m[0].length)}</> : <>{text}</>;
+}
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const EMPTY_REVEALS: ReadonlyMap<string, number> = new Map<string, number>();
 /** Phase 21E.2 (D) — a control whose Field frame shows an error now (aria-invalid) and that can take focus. */
@@ -248,12 +258,24 @@ const questionCountPhrase = (n: number) => {
  *  undoes it; the toast's own «تراجع» is the builder's second-to-last Tab stop (the toast sits at its end; only its × follows),
  *  and the toolbar «تراجع» is near its start. */
 const UNDO_HINT = " للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم زر «تراجع».";
+/** RF4 — where a card / section was (what focusAfterDeletion needs): a deletion record carries it, and so does a card or section that
+ *  left without one (a bulk delete, an undo / redo — the focus continuity step). */
+type GonePlace = Pick<QuestionDeletion, "kind" | "sectionId" | "prevId" | "nextId"> | Pick<SectionDeletion, "kind" | "prevId" | "nextId">;
+/** RF4 — the control keyboard focus was on last inside the builder (or its question explorer), and where it was at that moment: a node
+ *  that has left the page can no longer say which card, section or region held it. */
+type FocusSpot = { el: HTMLElement; questionId?: string; sectionId?: string; region: "toast" | "bulk" | "navigator" | "builder" };
+/** RF4 — `id`'s surviving neighbours in `ids` (an order from before a change): the first later one still present, else none; the
+ *  last earlier one still present, else none. */
+const survivingNeighbours = (ids: readonly string[], id: string, present: (id: string) => boolean) => {
+  const at = ids.indexOf(id);
+  return { nextId: ids.slice(at + 1).find(present) ?? null, prevId: ids.slice(0, Math.max(at, 0)).reverse().find(present) ?? null };
+};
 // UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
 // and pruned against the live exam so a deleted / undone question never lingers (and is never resurrected by redo).
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, noticeKind = "save", error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -306,6 +328,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     const handler = (e: KeyboardEvent) => {
       const action = historyShortcut(e);
       if (!action || isTextEditingTarget(e.target)) return;
+      // RF4 A-04 — the history keys belong to the builder surface: while another modal layer is open above it (the preview, the
+      // unsaved-changes guard, a dialog opened from a menu, the explorer dialog) they neither change the exam hidden behind that layer
+      // nor take the key from it (no preventDefault) — exactly like Escape and Tab (useModalSurface).
+      const host = builderRef.current;
+      if (host && hasModalAbove(host)) return;
       const h = historyRef.current;
       e.preventDefault();
       if (h.saving) return;
@@ -315,6 +342,23 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onUndo, onRedo]);
+  // RF4 A-04 — the browser's OWN undo reaches behind a modal layer too: with focus on a control of the layer that is not a text field
+  // («← إغلاق المعاينة», «البقاء في المحرر»), Chromium's Ctrl+Z / Ctrl+Y undoes the page's last text edit — often a builder field hidden
+  // behind the layer (the exam title), which then changes the exam. While a modal layer is above the builder, that history step is
+  // refused for a field OF THE BUILDER; a field of the layer itself keeps its native undo, and the key is never taken (see above).
+  useEffect(() => {
+    const guard = (e: Event) => {
+      const kind = (e as InputEvent).inputType;
+      if (kind !== "historyUndo" && kind !== "historyRedo") return;
+      const host = builderRef.current, t = e.target;
+      if (!host || !(t instanceof Element) || !host.contains(t)) return;
+      const layer = t.closest('[aria-modal="true"]');
+      if (layer && !layer.contains(host)) return;                        // a field of a layer rendered inside the builder: its own
+      if (hasModalAbove(host)) e.preventDefault();
+    };
+    document.addEventListener("beforeinput", guard, true);
+    return () => document.removeEventListener("beforeinput", guard, true);
+  }, []);
 
   // ── Phase 13A · LOCAL autosave (debounced; keyed by teacher scope + exam id; never a server request) ──
   const storage = backupStorage === undefined ? browserBackupStorage() : backupStorage;
@@ -416,7 +460,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const selected = uiState.ids;
   const navFilters = uiState.filters;
   const setSelected = (fn: (prev: ReadonlySet<string>) => ReadonlySet<string>) => setUi(prev => ({ ...prev, ids: fn(prev.ids) }));
-  const toggleSelect = (id: string) => setSelected(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  /** RF4 (A-11) — the question whose checkbox was toggled last: where focus goes when «إلغاء التحديد» takes the bulk bar away. */
+  const lastToggled = useRef<string | null>(null);
+  const toggleSelect = (id: string) => { lastToggled.current = id; setSelected(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); };
   const selectMany = (ids: string[]) => setSelected(prev => { const next = new Set(prev); for (const id of ids) next.add(id); return next; });
   const clearSelection = () => setSelected(() => EMPTY_IDS);
   const selectedIds = () => Array.from(selected);
@@ -624,8 +670,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   /** Where keyboard focus goes once the deleted card / section is gone: its next neighbour, else the previous one, else the add
    *  button («+ إضافة سؤال» of its section, else the section itself, else «+ إضافة قسم»). A candidate that cannot take focus now
    *  (an add button disabled while saving) is skipped for the next one (Review Fix 2); the last resort is the toolbar, which is
-   *  never disabled — focus never falls to <body>. `bottomReserve` = the toast band when a toast is about to show. */
-  const focusAfterDeletion = (d: Deletion, bottomReserve = 0, mode: FocusMode = "reveal"): boolean => {
+   *  never disabled — focus never falls to <body>. `bottomReserve` = the toast band when a toast is about to show. RF4: also the
+   *  place of a card / section that left without a deletion record (a bulk delete, an undo — see the focus continuity step). */
+  const focusAfterDeletion = (d: GonePlace, bottomReserve = 0, mode: FocusMode = "reveal"): boolean => {
     if (!alive.current) return false;
     const take = (el: HTMLElement | null | undefined, kind: "card" | "section" | "control", how: FocusMode = mode) => {
       if (!el || (el as HTMLButtonElement).disabled) return false;
@@ -654,7 +701,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     if (back) focusInPlace(back, d.kind === "question" ? "card" : "section", bottomReserve, mode);
     else focusAfterDeletion(d, bottomReserve, mode);
   };
-  const focusLost = () => { const a = document.activeElement; return !a || a === document.body || !a.isConnected; };
+  /** Focus is nowhere useful: on <body>, on nothing, on a node that left the page — or (RF4) on a control that is disabled now (Chromium
+   *  blurs it to <body> at once; an engine that keeps it there must not keep the teacher there either). */
+  const focusLost = () => { const a = document.activeElement; return !a || a === document.body || !a.isConnected || a.matches(":disabled"); };
   const deleteWithUndo = (capture: (prev: StructuredExam) => Deletion | null) => {
     if (!alive.current) return;
     const seq = ++deletionSeq.current;
@@ -755,8 +804,12 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       undoTarget.current = null;
       dismissToast(t.toastId);
       // Back by Ctrl+Z (inside or outside the toast) or the toolbar: remembered like a «تراجع», so the redo that removes it
-      // again never leaves focus on <body> (Review Fix 3).
-      if (isBack) restoredTarget.current = { deletion: t.deletion, back: true, neighbour: null };
+      // again never leaves focus on <body> (Review Fix 3). RF4 (A-08): the toolbar «تراجع» used for its last step is disabled now
+      // and focus fell with it — the restored item takes focus, as after the toast's «تراجع» (Ctrl+Z leaves focus where it is).
+      if (isBack) {
+        restoredTarget.current = { deletion: t.deletion, back: true, neighbour: null };
+        if (focusLost()) focusItemOrNeighbour(t.deletion, 0, "reveal");
+      }
     }
     // The restored item left (Ctrl+Z undid the restore while its card held focus) or came back (Ctrl+Y): focus its neighbour /
     // the item itself, in place — only when that presence CHANGED and focus was lost, never on an unrelated exam change.
@@ -777,6 +830,137 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     focusItemOrNeighbour(r.deletion, 0, "reveal");
     if (!back && document.activeElement instanceof HTMLElement && document.activeElement !== document.body) r.neighbour = document.activeElement;
   }, [exam, dismissToast]);                                              // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── RF4 · focus continuity (audit A-07, A-08, A-11, A-13) ──
+  // Inside App's aria-modal overlay keyboard focus is never left on <body>: the next Tab would restart at «رجوع», and useModalSurface
+  // reads an Escape on <body> as the builder's own. A commit takes focus away when the focused control leaves the page (the bulk bar
+  // unmounts with its «إلغاء التحديد», an undo removes the focused card) or ends disabled (↓ at the last place, «تراجع» on its last
+  // step: Chromium blurs it at once). The deletion / restore / toast flows above place focus themselves; after them, this ONE step
+  // re-homes focus that the commit took — never focus the teacher put elsewhere (a dialog, another control, a plain blur) — to the
+  // place the teacher was at:
+  //   · a reorder button that ended disabled → the other reorder button of the same card / section (else the card / section);
+  //   · a history button that ended disabled → the other history button (else the toolbar, never disabled);
+  //   · the bulk bar → after a bulk delete, the first surviving neighbour of the removed block (next, else previous — as a single
+  //     deletion); after «إلغاء التحديد», the checkbox of the question toggled last (else of the first one that was selected);
+  //   · the question explorer → its «تحديد الظاهر» (else its search box);
+  //   · a card / section → itself while it is still in the exam (re-created elsewhere: moved to another section), else its nearest
+  //     surviving neighbour (a Ctrl+Z / Ctrl+Y removed it) — and the step that brings it back takes focus back to it;
+  //   · any other control that ended disabled → its card, else its section, else the toolbar.
+  // A toast's own controls are its own (its dismissal places focus).
+  const lastFocus = useRef<FocusSpot | null>(null);
+  /** How the last action was started: a click with detail 0 is Enter / Space (the toast's convention); a key press is the keyboard. */
+  const lastActivation = useRef<"keyboard" | "pointer">("keyboard");
+  const continuityBase = useRef<{ exam: StructuredExam; selected: ReadonlySet<string> } | null>(null);
+  const followBack = useRef<{ kind: "question" | "section"; id: string; neighbour: HTMLElement } | null>(null);
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      const nav = t.closest(".sb-navigator");
+      if (!nav && !builderRef.current?.contains(t)) return;
+      lastFocus.current = { el: t, questionId: t.closest<HTMLElement>(".sb-question")?.dataset.questionId, sectionId: t.closest<HTMLElement>("[data-section-id]")?.dataset.sectionId,
+        region: t.closest(".eb-toast") ? "toast" : t.closest(".sb-bulk-bar") ? "bulk" : nav ? "navigator" : "builder" };
+    };
+    const onKey = () => { lastActivation.current = "keyboard"; };
+    const onClick = (e: MouseEvent) => { lastActivation.current = e.detail === 0 ? "keyboard" : "pointer"; };
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("click", onClick, true);
+    return () => { document.removeEventListener("focusin", onFocusIn, true); document.removeEventListener("keydown", onKey, true); document.removeEventListener("click", onClick, true); };
+  }, []);
+  const questionOrder = (e: StructuredExam) => (e.sections || []).flatMap(s => (s.questions || []).map(q => ({ id: q.examQuestionId, section: s })));
+  /** Focuses `el` without a scroll, then brings `host` (its card / section) into view when its heading is hidden and `mode` allows. */
+  const focusWithin = (el: HTMLElement, host: HTMLElement | null, mode: FocusMode) => {
+    el.focus({ preventScroll: true });
+    if (mode === "keep" || !host || headingOnScreen(host, 0)) return;
+    if (host.classList.contains("sb-question")) alignCard(host); else alignSection(host);
+  };
+  const rehomeFocus = (spot: FocusSpot, before: { exam: StructuredExam; selected: ReadonlySet<string> }) => {
+    const el = spot.el;
+    const usable = (t: HTMLElement | null | undefined): t is HTMLElement => !!t && t.isConnected && !t.matches(":disabled");
+    const toolbar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar") ?? null;
+    const cardOrSection = (t: HTMLElement) => t.closest<HTMLElement>(".sb-question") ?? t.closest<HTMLElement>("[data-section-id]");
+    const live = new Set(questionOrder(exam).map(x => x.id));
+    if (el.isConnected) {                                                 // it ended disabled
+      const host = cardOrSection(el);
+      const reorder = el.dataset.reorder;
+      if (reorder) {
+        const partner = el.parentElement?.querySelector<HTMLElement>('[data-reorder="' + (reorder === "up" ? "down" : "up") + '"]');
+        if (usable(partner)) { focusWithin(partner, host, "reveal"); return; }
+      }
+      const history = el.closest(".sb-history");
+      if (history) {
+        const other = Array.from(history.querySelectorAll<HTMLElement>("button")).find(b => b !== el && usable(b));
+        (other ?? toolbar)?.focus({ preventScroll: true });
+        return;
+      }
+      if (host) focusInPlace(host, host.classList.contains("sb-question") ? "card" : "section", 0, "reveal");
+      else toolbar?.focus({ preventScroll: true });
+      return;
+    }
+    if (spot.region === "bulk") {
+      const removed = questionOrder(before.exam).find(x => before.selected.has(x.id) && !live.has(x.id));
+      if (removed) {                                                      // a bulk delete (or an undo) took selected questions away
+        const ids = (removed.section.questions || []).map(q => q.examQuestionId);
+        focusAfterDeletion({ kind: "question", sectionId: removed.section.id, ...survivingNeighbours(ids, removed.id, id => live.has(id)) }, 0, "reveal");
+        return;
+      }
+      const id = lastToggled.current && before.selected.has(lastToggled.current) ? lastToggled.current : questionOrder(before.exam).find(x => before.selected.has(x.id))?.id;
+      const card = id ? nodes.current.get(id) : undefined;
+      const box = card?.querySelector<HTMLElement>(".sb-q-select");
+      if (card && usable(box)) focusWithin(box, card, lastActivation.current === "pointer" ? "keep" : "reveal");
+      else toolbar?.focus({ preventScroll: true });
+      return;
+    }
+    if (spot.region === "navigator") {                                    // (the explorer leaving altogether: the explorer-dialog step, «المزيد»)
+      const nav = document.querySelector<HTMLElement>(".sb-navigator");
+      const target = [nav?.querySelector<HTMLElement>("[data-select-visible]"), nav?.querySelector<HTMLElement>(".sb-nav-search")].find(usable);
+      if (target) { target.focus({ preventScroll: true }); return; }
+    }
+    if (spot.questionId) {
+      const now = nodes.current.get(spot.questionId);
+      if (now) { focusInPlace(now, "card", 0, "reveal"); return; }
+      const was = questionOrder(before.exam).find(x => x.id === spot.questionId);
+      if (was) {
+        const ids = (was.section.questions || []).map(q => q.examQuestionId);
+        focusAfterDeletion({ kind: "question", sectionId: was.section.id, ...survivingNeighbours(ids, was.id, id => live.has(id)) }, 0, "reveal");
+        if (!focusLost()) followBack.current = { kind: "question", id: was.id, neighbour: document.activeElement as HTMLElement };
+        return;
+      }
+    }
+    if (spot.sectionId) {
+      const now = sectionNode(spot.sectionId);
+      if (now) { focusInPlace(now, "section", 0, "reveal"); return; }
+      const ids = (before.exam.sections || []).map(s => s.id), present = new Set((exam.sections || []).map(s => s.id));
+      if (ids.includes(spot.sectionId)) {
+        focusAfterDeletion({ kind: "section", ...survivingNeighbours(ids, spot.sectionId, id => present.has(id)) }, 0, "reveal");
+        if (!focusLost()) followBack.current = { kind: "section", id: spot.sectionId, neighbour: document.activeElement as HTMLElement };
+        return;
+      }
+    }
+    toolbar?.focus({ preventScroll: true });                              // the last resort: the toolbar is never disabled
+  };
+  /** The spot whose focus this commit took (it left the page or ended disabled, and focus is lost now); null otherwise — focus the
+   *  teacher moved (a plain blur: the control is still there and enabled) is not the builder's to move. A toast's are its own. */
+  const takenSpot = () => {
+    const spot = lastFocus.current;
+    if (!spot || spot.region === "toast" || !focusLost()) return null;
+    if (spot.el.isConnected && !spot.el.matches(":disabled")) return null;   // this commit did not take it (the teacher moved focus)
+    return spot;
+  };
+  useEffect(() => {                                                       // after every builder commit, after the flows above
+    const before = continuityBase.current;
+    continuityBase.current = { exam, selected };
+    if (!alive.current || !before) return;
+    const back = followBack.current;
+    if (back && before.exam !== exam) {
+      followBack.current = null;
+      const item = back.kind === "question" ? nodes.current.get(back.id) : sectionNode(back.id);
+      if (item && document.activeElement === back.neighbour) { focusInPlace(item, back.kind === "question" ? "card" : "section", 0, "reveal"); return; }
+    }
+    const spot = takenSpot();
+    if (spot) rehomeFocus(spot, before);
+  });                                                                     // eslint-disable-line react-hooks/exhaustive-deps
   const navJump = useRef(false);
   const navigateTo = (id: string) => {
     if (isNarrow) { navJump.current = true; setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }   // let the dialog release focus first
@@ -798,6 +982,47 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     const more = Array.from(toolbar?.querySelectorAll<HTMLButtonElement>("button") ?? []).find(b => b.getAttribute("aria-label") === MORE_MENU_LABEL && !b.disabled);
     (more ?? toolbar)?.focus();
   }, [navDialogOpen]);                                                   // eslint-disable-line react-hooks/exhaustive-deps
+  // RF4 — the selection UI (the bulk bar, the question explorer) is re-homed in the commit itself (after the explorer-dialog step above,
+  // which keeps its own target): a passive effect of the explorer's dialog (≤ 900 px) would otherwise move focus to that dialog's first
+  // control before the continuity step below runs.
+  useLayoutEffect(() => {
+    const before = continuityBase.current, spot = takenSpot();
+    if (alive.current && before && (spot?.region === "bulk" || spot?.region === "navigator")) rehomeFocus(spot, before);
+  });                                                                     // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── RF4 · follow a structural edit (audit A-03, A-06, A-12) ──
+  // The card / section that an edit has just moved or created is put where the teacher can see it, once the commit has placed it:
+  //   · moved to another section with «نقل» (A-03), or added — from the type palette (A-12, also inside a scenario) or with «+ إضافة
+  //     قسم» — it takes keyboard focus and is revealed below the sticky layers (focusCard / revealSection, as an AI insertion does).
+  //     The palette gives focus back to «+ إضافة سؤال», which the new card pushes off-screen; this runs after that, in the same commit;
+  //   · reordered with ↑ / ↓ (A-06): focus stays on the pressed button (React keeps it; at an end the continuity step above moves it
+  //     to the other button), and the card / section is revealed (alignCard / alignSection) when its heading or the focused control
+  //     is not on screen. React re-inserts the moved node and puts the scroll back, which left both off-screen. One in view stays put.
+  // A request is settled by the commit that brings its item (the exam update and this commit are one batch); a newer request replaces it.
+  type Follow = { kind: "question" | "section"; id: string; take: boolean };
+  const follow = useRef<Follow | null>(null);
+  const followEdit = (kind: Follow["kind"], id: string, take: boolean) => { follow.current = { kind, id, take }; };
+  useLayoutEffect(() => {
+    const f = follow.current;
+    if (!f || !alive.current) return;
+    const el = f.kind === "question" ? nodes.current.get(f.id) : sectionNode(f.id);
+    if (!el) return;
+    follow.current = null;
+    if (f.take) { if (f.kind === "question") focusCard(f.id); else revealSection(el); return; }
+    const a = document.activeElement;
+    const control = a instanceof HTMLElement && el.contains(a) ? a.getBoundingClientRect() : null;
+    if (headingOnScreen(el, 0) && (!control || (control.top >= toolbarBottom() - 1 && control.bottom <= window.innerHeight))) return;
+    if (f.kind === "question") alignCard(el); else alignSection(el);
+  });                                                                     // eslint-disable-line react-hooks/exhaustive-deps
+  const moveQuestionToSection = (sectionId: string, questionId: string, to: string) => {
+    setSections(s => movQTo(s, sectionId, questionId, to));
+    followEdit("question", questionId, true);
+  };
+  const addSectionAndFollow = () => {
+    const added = newSection({ title: "القسم " + ((exam.sections || []).length + 1) });
+    setSections(s => addSection(s, added));
+    followEdit("section", added.id, true);
+  };
 
   // Bulk actions: each is ONE functional updater → ONE history step (a no-op result creates no entry).
   const bulkMove = (target: string) => { const ids = selectedIds(); if (ids.some(id => pendingMediaRef.current.has(id))) return; update(prev => ({ ...prev, sections: bulkMoveQuestions(prev.sections || [], ids, target) })); };
@@ -955,12 +1180,14 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // opens the readiness panel instead of calling the owner. The owner (App) applies the same authority again on the exact
   // snapshot it persists (second-line guard).
   const requestFinalSave = () => {
-    if (!onSave) return;
+    if (!onSave || saving) return;                                       // RF4: focusable while saving (aria-disabled), never a second save
     const latest = evaluateExamFinalization(latestExamRef.current);
     if (!latest.canFinalize) { setReadinessOpen(true); return; }
     onSave("final");
   };
   const totalMarks = computeTotalMarks(exam);
+  /** RF4 B-06 — the server holds what the teacher sees, and it is the approved, final version. */
+  const savedFinal = saveState === "saved" && exam.status === "final";
   // Phase 21E.2 (B) — inside App's full-screen overlay (role="dialog", aria-modal, named by the toolbar heading) the builder is a
   // modal workspace: focus moves in when it opens and back to the opener when it closes, Tab wraps inside it, and Escape takes the
   // existing exit path, so the unsaved-changes guard still decides — except while a save is in flight, when Escape does nothing,
@@ -1011,13 +1238,18 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     a.setAttribute(ISSUE_FOCUS, "");
     a.addEventListener("blur", clearIssueFocus, { once: true });
   };
+  /** RF4 A-05 — the control sits in a frame of the card that shows an issue code (data-issue-codes): a DIFFERENT issue than one no
+   *  frame shows. A frame outside the card (none today) does not count. */
+  const showsOtherIssue = (card: HTMLElement, control: HTMLElement) => { const f = control.closest("[data-issue-codes]"); return !!f && card.contains(f); };
   /** The question below the sticky toolbar, with the alignment every other jump uses (alignCard), and focus where the teacher fixes
    *  it. Never touches the selection or the navigator. K3 A-F6: the frame(s) showing the clicked issue (data-issue-codes) — RF2-1:
    *  the clicked INSTANCE of that code (data-issue-nth: e.g. its own incomplete pair), else any frame showing the code. RF2-2: in
    *  those frames, the invalid control, else the first enabled control («+ إضافة خيار» when a multiple-choice question has no
-   *  options), else the card's NAMED issue list «مشكلات السؤال N» (A-F4) — never another field's error. Only an issue no frame
-   *  shows takes the first field whose error is now shown, else the named list, else the card. RF3 I-1: an issue of a compound /
-   *  composite PART (no frame shows it) takes that part's own control, else the named list — never another field of the card. */
+   *  options), else the card's NAMED issue list «مشكلات السؤال N» (A-F4) — never another field's error. RF4 A-05 (owner-directed):
+   *  an issue NO frame shows (and that names no part) takes the first field whose error is now shown only when that field's frame
+   *  advertises no code at all (a rubric row); a field whose frame shows a DIFFERENT issue (the marks, the question text, another
+   *  pair) is never chosen — the named list is, else the card. RF3 I-1: an issue of a compound / composite PART (no frame shows it)
+   *  takes that part's own control, else the named list — never another field of the card. */
   const focusQuestionIssues = (id: string, instance?: IssueInstance) => {
     const el = nodes.current.get(id);
     if (!el || !alive.current) return;
@@ -1038,7 +1270,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       const showing = own.length ? own : coded;
       field = showing.length
         ? showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? showing.map(f => f.querySelector<HTMLElement>(ENABLED_CONTROL)).find(Boolean)
-        : el.querySelector<HTMLElement>(INVALID_FIELD);
+        : Array.from(el.querySelectorAll<HTMLElement>(INVALID_FIELD)).find(c => !showsOtherIssue(el, c));
       shown = field?.closest<HTMLElement>(".eb-field, .eb-field-group") ?? null;
     }
     if (field) {
@@ -1095,8 +1327,13 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         status={<>
           {/* RF3 I-4 — the ONE region that announces the save state: one whole sentence per change (aria-atomic), never the glyph; the
               draft button's «جارٍ الحفظ…» is its label, not an announcement. */}
-          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite" aria-atomic="true"><span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {SAVE_STATE_LABELS[saveState]}</span>}
-          {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
+          {/* RF4 B-06 — an approved exam the server holds says so in the same sentence («محفوظ — معتمد نهائيًا»), so a final approval
+              is never announced exactly like a draft save; the separate «معتمد نهائيًا» chip is then not repeated beside it. */}
+          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite" aria-atomic="true"><span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {savedFinal ? SAVE_LABELS.savedFinal : SAVE_STATE_LABELS[saveState]}</span>}
+          {/* RF4 A-10 / B-01 — a failed save says so, with its reason, next to the save state: in the toolbar, so it is on screen wherever
+              the teacher saved from (the band sticks at 100 % / 150 %), and announced once as it appears (role=alert). */}
+          {error && <span className="sb-stat sb-save-error" role="alert">{SAVE_LABELS.saveFailed}: {error}</span>}
+          {exam.status === "final" && !savedFinal && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {hasPolicy && <span className={"sb-stat sb-gates-chip" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")}>{gatesText}</span>}
         </>}
@@ -1119,15 +1356,21 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           { key: "surface-lab", label: "مختبر الدوال 3D (تجريبي)", icon: <IconMaximize size={16} />, onSelect: () => setSurfaceLabOpen(true), dialog: true },
         ]}
         save={onSave ? <>
-          <button type="button" className="sb-tb-btn sb-tb-keep-label" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}><IconSave size={18} aria-hidden="true" /><span className="sb-tb-label">{saving ? SAVE_LABELS.saving : SAVE_LABELS.saveDraft}</span></button>
+          {/* RF4 (A-09 / B-04) — while a save runs both buttons stay FOCUSABLE: aria-disabled, and their handlers ignore activation. A
+              native `disabled` blurred the button that started the save, leaving keyboard focus on <body> (outside the aria-modal
+              builder) for the whole save and after it. A pending media operation still disables them natively, as before. */}
+          <button type="button" className={"sb-tb-btn sb-tb-keep-label" + (saving ? " is-saving" : "")} onClick={() => { if (!saving) onSave("draft"); }} disabled={mediaPending} aria-disabled={saving || undefined} title={mediaPending ? MEDIA_WAIT : undefined}><IconSave size={18} aria-hidden="true" /><span className="sb-tb-label">{saving ? SAVE_LABELS.saving : SAVE_LABELS.saveDraft}</span></button>
           {/* Structural errors keep the pre-13C-C HTML `disabled`. Quality-gate blockers use aria-disabled so the button stays
               reachable and its click EXPLAINS the refusal (readiness panel) — the handler re-checks the latest exam either way. */}
-          <button type="button" className={"sb-tb-btn sb-tb-keep-label is-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}><IconCheck size={18} aria-hidden="true" /><span className="sb-tb-label">{SAVE_LABELS.finalizeExam}</span></button>
+          <button type="button" className={"sb-tb-btn sb-tb-keep-label is-primary" + (!decision.canFinalize ? " is-gated" : "") + (saving ? " is-saving" : "")} onClick={requestFinalSave} disabled={mediaPending || hasBlockingErrors(errors)} aria-disabled={saving || !decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}><IconCheck size={18} aria-hidden="true" /><span className="sb-tb-label">{SAVE_LABELS.finalizeExam}</span></button>
         </> : undefined}
       />
 
-      {error && <div className="sb-banner sb-banner-error">{error}</div>}
-      {notice && <div className="sb-banner sb-banner-ok">{notice}</div>}
+      {/* RF4 B-06 — a save's success notice is true only while the server holds what the teacher sees: it shows while the status says
+          «محفوظ» and never beside «تغييرات غير محفوظة» (an edit, a reopened builder). A notice about how an unsaved exam was opened
+          (noticeKind "open": an import, a preset) claims no save and stays. Its glyph is decoration; the status is what speaks. The
+          failure that used to sit here (out of view, unannounced) is the status band's «تعذّر الحفظ: …» above. */}
+      {notice && (noticeKind === "open" || saveState === undefined || saveState === "saved") && <div className="sb-banner sb-banner-ok"><NoticeText text={notice} /></div>}
 
       {/* Phase 21E.2 (D) — always mounted, so assistive technology registers it before its first update. */}
       <p className="eb-visually-hidden" role="status" aria-live="polite" data-issue-live>{issueAnnouncement}</p>
@@ -1181,13 +1424,14 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             sectionOptions={sectionOptions}
             patch={p => setSections(s => updateSection(s, section.id, p))}
             onDelete={() => deleteWithUndo(prev => captureSectionDeletion(prev, section.id))}
-            onMove={d => setSections(s => moveSection(s, section.id, d))}
+            onMove={d => { setSections(s => moveSection(s, section.id, d)); followEdit("section", section.id, false); }}
             onAddQuestion={q => setSections(s => addQ(s, section.id, q))}
+            onQuestionAdded={qid => followEdit("question", qid, true)}
             onQuestionChange={(qid, p) => setSections(s => updQ(s, section.id, qid, p))}
             onQuestionDelete={qid => deleteWithUndo(prev => captureQuestionDeletion(prev, section.id, qid))}
-            onQuestionMove={(qid, d) => setSections(s => movQ(s, section.id, qid, d))}
+            onQuestionMove={(qid, d) => { setSections(s => movQ(s, section.id, qid, d)); followEdit("question", qid, false); }}
             onQuestionDuplicate={qid => setSections(s => dupQ(s, section.id, qid))}
-            onQuestionMoveToSection={(qid, to) => setSections(s => movQTo(s, section.id, qid, to))}
+            onQuestionMoveToSection={(qid, to) => moveQuestionToSection(section.id, qid, to)}
             onPreviewQuestion={q => setPreview(singleQuestionExam(exam, section, q))}
             requestQuestionImage={requestQuestionImage}
             onMediaBusyChange={onMediaBusyChange}
@@ -1206,7 +1450,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         ))}
       </div>
 
-      <button type="button" className="sb-add-btn sb-add-section" data-add-section onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
+      <button type="button" className="sb-add-btn sb-add-section" data-add-section onClick={addSectionAndFollow} disabled={saving}>+ إضافة قسم</button>
       </div>
       {navOpen && !isNarrow && navigator(true)}
       </div>

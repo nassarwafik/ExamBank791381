@@ -174,9 +174,14 @@ export default function ActionMenu({ label, children, icon, text, className, dis
     }
     // A genuine scroll/resize AFTER opening still closes. The panel's OWN scroll (it scrolls inside when capped, and keyboard
     // focus brings an item into view) is not a layout change: it never closes the menu (A-F2).
+    // RF4 (A-14 / B-05) — keyboard focus on an item goes back to the trigger, as for Escape, without a scroll (the page has just
+    // moved): the item leaves the page with the panel, and focus fell to <body> (outside an aria-modal surface). Focus already
+    // elsewhere stays there.
     function onLayout(e: Event) {
       if (e.type === "scroll" && e.target instanceof Node && panelRef.current?.contains(e.target)) return;
+      const hadFocus = !!panelRef.current?.contains(document.activeElement);
       close(false);
+      if (hadFocus && triggerRef.current) focusWithoutScroll(triggerRef.current);
     }
     document.addEventListener("keydown", onKey, true);
     document.addEventListener("mousedown", onPointer);

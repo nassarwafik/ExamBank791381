@@ -52,7 +52,7 @@ export default function ExamQuestionNavigator({ entries, sections, filters, onFi
         <div className="sb-nav-actions">
           <p className="sb-nav-count" role="status">{visible.length} من {entries.length} سؤالًا</p>
           {active && <button type="button" className="sb-btn sb-btn-sm" onClick={() => onFilters(EMPTY_NAVIGATOR_FILTERS)}>مسح الفلاتر</button>}
-          <button type="button" className="sb-btn sb-btn-sm" onClick={() => onSelectMany(visible.map(e => e.examQuestionId))} disabled={!visible.length}>تحديد الظاهر</button>
+          <button type="button" className="sb-btn sb-btn-sm" data-select-visible onClick={() => onSelectMany(visible.map(e => e.examQuestionId))} disabled={!visible.length}>تحديد الظاهر</button>
           {selected.size > 0 && <button type="button" className="sb-btn sb-btn-sm" onClick={onClearSelection}>إلغاء التحديد</button>}
         </div>
       </div>

@@ -379,3 +379,8 @@
    over «+ إضافة قسم» at the end of the scroll range (150–200 %, phones). 96px ≈ the tallest toast card at ≥ 390px (two 16px lines
    + a 44px action); narrower cards are taller and belong to the 21E.2 toolbar work (F1). */
 .structured-builder-overlay:has(.eb-toast),.structured-builder-overlay[data-toast-reserve]{padding-block-end:calc(var(--eb-space-4) * 2 + 96px);scroll-padding-block-end:calc(var(--eb-space-4) * 2 + 96px)}
+/* RF4 (A-03) — a question's «نقل إلى قسم»: the select picks the target, «نقل» moves (a choice alone never moves the question). The
+   pair wraps as one group; «نقل» is a 44 px target on touch screens and phones. */
+.sb-move-to-section{display:inline-flex;flex-wrap:wrap;align-items:center;gap:var(--eb-space-2)}
+@media (pointer:coarse),(max-width:640px){.sb-builder .sb-move-to-section .sb-btn{min-height:44px;min-inline-size:44px}}
+@media (max-width:640px){.sb-move-to-section{inline-size:100%}.sb-move-to-section .sb-inline{flex:1 1 12rem;min-inline-size:0}}

@@ -110,7 +110,10 @@ describe("F5 — تحليل المخطط الحي: live, factual, derived from t
     expect(rowOf(dialog, "c-osi").textContent).toMatch(/2 أسئلة/); expect(rowOf(dialog, "c-osi").textContent).toMatch(/النطاق 1–2/); expect(overview(dialog, "unclassified")).toContain("1");
     // move q3 → s2 : section s2 count 2 → at-target
     expect(rowOf(dialog, "c-s2").getAttribute("data-relation")).toBe("below-target");
+    // RF4 (A-03, owner-directed) — the select picks the target; «نقل» moves the question (a choice alone moves nothing).
     fireEvent.change(within(card("q3")).getByRole("combobox", { name: "نقل إلى قسم" }), { target: { value: "s2" } });
+    expect(rowOf(dialog, "c-s2").getAttribute("data-relation")).toBe("below-target");
+    fireEvent.click(within(card("q3")).getByRole("button", { name: /^نقل السؤال .+ إلى القسم المختار$/ }));
     expect(rowOf(dialog, "c-s2").getAttribute("data-relation")).toBe("at-target");
     // delete q2 : questions 3, mcq count 3 (still above max 2), unmapped 0
     fireEvent.click(within(card("q2")).getByRole("button", { name: "حذف" })); await tick();

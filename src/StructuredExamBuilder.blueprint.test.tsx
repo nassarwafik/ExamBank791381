@@ -191,9 +191,13 @@ describe("question classification (optional, additive, one history step per chan
     fireEvent.click(within(card("q1")).getByRole("button", { name: "تكرار" }));
     const copy = h.latest!.sections[0].questions[1];
     expect(copy.examQuestionId).not.toBe("q1"); expect((copy as unknown as Record<string, unknown>).assessmentMeta).toEqual({ primaryTopicId: "OSI_TCPIP" });
+    // RF4 (A-03, owner-directed) — the select picks the target; «نقل» moves the question (a choice alone moves nothing).
     fireEvent.change(within(card("q1")).getByRole("combobox", { name: "نقل إلى قسم" }), { target: { value: "s2" } });
+    expect(h.latest!.sections[1].questions.map(x => x.examQuestionId)).not.toContain("q1");
+    fireEvent.click(within(card("q1")).getByRole("button", { name: /^نقل السؤال .+ إلى القسم المختار$/ }));
     expect(q("q1").assessmentMeta).toEqual({ primaryTopicId: "OSI_TCPIP" });
     expect(h.latest!.sections[1].questions.map(x => x.examQuestionId)).toContain("q1");
+    expect(h.latest!.sections[0].questions.map(x => x.examQuestionId)).not.toContain("q1");
   });
 });
 

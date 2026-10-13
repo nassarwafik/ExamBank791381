@@ -22,6 +22,13 @@
 .sb-tb-title { flex: 1 1 220px; min-width: 0; }
 .sb-tb-title .sb-exam-title { width: 100%; min-width: 0; }
 .sb-tb-stats, .sb-tb-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-1); min-width: 0; }
+/* RF4 (A-10 / B-01) — a failed save («تعذّر الحفظ: …», role=alert) sits in the status band next to the save state, so it is on screen
+   wherever the teacher saved from (the band sticks with the toolbar at 100 % / 150 %). Danger tokens; a long reason wraps inside the
+   band instead of widening it. Scoped under .sb-builder so it outranks the premium sheet's neutral chip. */
+.sb-builder .sb-tb-status .sb-save-error {
+  background: var(--eb-danger-bg); border-color: var(--eb-danger); color: var(--eb-danger-tx); border-radius: var(--eb-r-sm);
+  white-space: normal; overflow-wrap: anywhere; min-width: 0; max-inline-size: 100%;
+}
 .sb-tb-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--eb-space-2); }
 .sb-tb-group, .sb-tb-save { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); min-width: 0; }
 .sb-toolbar-21e2 .sb-history { display: inline-flex; gap: var(--eb-space-1); }
@@ -40,6 +47,10 @@
 .sb-tb-btn.is-primary:hover:not(:disabled) { background: var(--eb-navy-2); border-color: var(--eb-navy-2); }
 .sb-tb-btn.is-primary.is-gated, .sb-tb-btn.is-primary.is-gated:hover:not(:disabled) { background: var(--eb-surface); color: var(--eb-primary-strong); border-color: var(--eb-primary-strong); border-style: dashed; }
 .sb-tb-btn.is-primary.is-gated:hover:not(:disabled) { background: var(--eb-primary-050); }
+/* RF4 (A-09 / B-04) — while a save runs the two save buttons stay focusable (aria-disabled; their handlers ignore activation) and look
+   unavailable — muted colours, not opacity, so the focus ring on the button that started the save keeps its full contrast. */
+.sb-tb-btn.is-saving, .sb-tb-btn.is-saving:hover:not(:disabled), .sb-tb-btn.is-primary.is-saving:hover:not(:disabled),
+.sb-tb-btn.is-primary.is-gated.is-saving, .sb-tb-btn.is-primary.is-gated.is-saving:hover:not(:disabled) { background: var(--eb-surface-2); border-color: var(--eb-border-strong); color: var(--eb-muted); border-style: solid; cursor: progress; }
 .sb-tb-exit svg { transform: scaleX(-1); }                      /* «رجوع» points to the start side in RTL (was «→») */
 .sb-tb-btn .sb-bp-badge { margin-inline-start: var(--eb-space-1); }
 

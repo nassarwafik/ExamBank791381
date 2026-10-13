@@ -23,6 +23,8 @@ import { FieldRevealContext } from "./ui/fieldContext";
 // QuestionComposer, so the Live Challenge composer can reuse the same content editors without inheriting this
 // exam-only chrome. This component adds no second body-selection logic of its own.
 
+const MOVE_MEDIA_WAIT = "انتظر انتهاء معالجة صورة هذا السؤال قبل نقله";
+
 type Props = {
   question: BuilderQuestion;
   index: number;
@@ -77,6 +79,10 @@ export default function StructuredQuestionEditor(props: Props) {
   const fieldIssues = useMemo(() => headerFieldIssues(q), [q]);
   const questionLabel = questionLabelOf(q.displayNumber, index);
   const revealed = useContext(FieldRevealContext) || !!revealIssues;
+  // RF4 (A-03) — the section the teacher picked for «نقل» (UI state only). A section that is gone falls back to the current one.
+  const [pickedTarget, setMoveTarget] = useState(currentSectionId);
+  const moveTarget = sectionOptions.some(s => s.id === pickedTarget) ? pickedTarget : currentSectionId;
+  const canMove = moveTarget !== currentSectionId && !disabled && !mediaPending;
 
   return (
     <div className={"sb-question" + (selected ? " is-selected" : "") + (flash ? " sb-q-flash" : "")} id={"sb-q-" + q.examQuestionId} data-question-id={q.examQuestionId} data-selected={selected ? "true" : undefined} tabIndex={-1} ref={registerNode}>
@@ -88,8 +94,8 @@ export default function StructuredQuestionEditor(props: Props) {
         {scenarioLabel && <span className="sb-chip sb-scenario-chip" data-testid="scenario-chip">ضمن سيناريو: {scenarioLabel}</span>}
         <span className="sb-spacer" />
         <button type="button" className="sb-icon-btn" title="معاينة الطالب" aria-label="معاينة الطالب" onClick={onPreview} disabled={disabled}>👁</button>
-        <button type="button" className="sb-icon-btn" title={"نقل السؤال " + questionLabel + " للأعلى"} aria-label={"نقل السؤال " + questionLabel + " للأعلى"} onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
-        <button type="button" className="sb-icon-btn" title={"نقل السؤال " + questionLabel + " للأسفل"} aria-label={"نقل السؤال " + questionLabel + " للأسفل"} onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
+        <button type="button" className="sb-icon-btn" title={"نقل السؤال " + questionLabel + " للأعلى"} aria-label={"نقل السؤال " + questionLabel + " للأعلى"} onClick={() => onMove(-1)} data-reorder="up" disabled={disabled || index === 0}>↑</button>
+        <button type="button" className="sb-icon-btn" title={"نقل السؤال " + questionLabel + " للأسفل"} aria-label={"نقل السؤال " + questionLabel + " للأسفل"} onClick={() => onMove(1)} data-reorder="down" disabled={disabled || index === total - 1}>↓</button>
         <button type="button" className="sb-icon-btn" title="تكرار" aria-label="تكرار" onClick={onDuplicate} disabled={disabled}>⧉</button>
         <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={onDelete} disabled={disabled}>×</button>
       </div>
@@ -113,11 +119,17 @@ export default function StructuredQuestionEditor(props: Props) {
               </label>
             )}
             {sectionOptions.length > 1 && (
-              <label className="sb-inline"><span>نقل إلى قسم</span>
-                <select className="sb-input sb-input-sm" value={currentSectionId} onChange={e => { if (!mediaPending) onMoveToSection(e.target.value); }} disabled={disabled || mediaPending} title={mediaPending ? "انتظر انتهاء معالجة صورة هذا السؤال قبل نقله" : undefined}>
-                  {sectionOptions.map(s => <option key={s.id} value={s.id}>{s.title || "قسم"}</option>)}
-                </select>
-              </label>
+              // RF4 (A-03) — choosing a section only picks the TARGET; «نقل» moves the question (like the bulk bar's «نقل إلى قسم»).
+              // Chromium fires `change` on every ArrowDown of a closed select, so a select that moved on change moved the question
+              // while a keyboard teacher was only browsing the options.
+              <span className="sb-move-to-section">
+                <label className="sb-inline"><span>نقل إلى قسم</span>
+                  <select className="sb-input sb-input-sm" value={moveTarget} onChange={e => setMoveTarget(e.target.value)} disabled={disabled || mediaPending} title={mediaPending ? MOVE_MEDIA_WAIT : undefined}>
+                    {sectionOptions.map(s => <option key={s.id} value={s.id}>{s.title || "قسم"}</option>)}
+                  </select>
+                </label>
+                <button type="button" className="sb-btn sb-btn-sm" data-move-to-section aria-label={"نقل السؤال " + questionLabel + " إلى القسم المختار"} onClick={() => { if (canMove) onMoveToSection(moveTarget); }} disabled={!canMove} title={mediaPending ? MOVE_MEDIA_WAIT : undefined}>نقل</button>
+              </span>
             )}
           </div>
 

@@ -87,7 +87,10 @@ describe("RF3 I-4 — the save status reads the save-label table", () => {
     let release!: () => void;
     act(() => { void h.save(new Promise<void>(r => { release = r; })); });
     const button = draftButton();
-    expect(button.disabled).toBe(true);
+    // RF4 (A-09 / B-04, owner-directed): unavailable while the save runs through aria-disabled — it stays focusable, so keyboard focus
+    // never falls to <body>; its handler ignores activation (StructuredExamBuilder.focusContinuity.reviewRF4.21e2b.test.tsx).
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(button.disabled).toBe(false);
     expect((button.textContent || "").trim()).toBe("جارٍ الحفظ…");
     expect(chip().textContent).toBe("⏳ جارٍ الحفظ…");
     said.saving = spoken(chip());

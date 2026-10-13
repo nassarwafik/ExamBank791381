@@ -4,6 +4,9 @@
 // RF3 I-4 — the save STATUS entries are scanned too (the builder's status said «⏳ جارٍ الحفظ» next to the button's «جارٍ الحفظ…»).
 // Fail-first on 8bd4cc2: SAVE_STATE_LABELS did not exist, and the builder's own status table / App's legacy status line wrote the
 // status literals («محفوظ», «تغييرات غير محفوظة», «نسخة مسترجعة — غير محفوظة»).
+// RF4 B-06 / A-10 / B-01 — the builder's status says «محفوظ — معتمد نهائيًا» after an approval (a draft save says «محفوظ») and
+// «تعذّر الحفظ: …» after a failed save: both entries live in the table and are refused anywhere else. Fail-first on 1fa3d21: neither
+// entry existed (SAVE_LABELS.savedFinal / saveFailed undefined).
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -12,7 +15,9 @@ import { SAVE_LABELS, SAVE_STATE_LABELS } from "./saveLabels";
 const ROOT = join(__dirname, "..");
 const LISTED = ["حفظ مسودة", "حفظ التعديلات", "حفظ التغييرات", "حفظ واعتماد التصحيح", "حفظ التمديد", "حفظ إعادة الفتح", "اعتماد نهائي", "حفظ الامتحان", "حفظ",
   // RF3 I-4 — the save-status sentences (a status line renders SAVE_STATE_LABELS, its glyph a separate aria-hidden decoration).
-  "محفوظ", "تغييرات غير محفوظة", "نسخة مسترجعة — غير محفوظة"];
+  "محفوظ", "تغييرات غير محفوظة", "نسخة مسترجعة — غير محفوظة",
+  // RF4 B-06 / A-10 — the approved status and the failed-save status are the table's too.
+  "محفوظ — معتمد نهائيًا", "تعذّر الحفظ"];
 // Not teacher save actions: the student exam surfaces, and the two shared SmartSim answer workspaces whose «حفظ» commits a
 // SIMULATED configuration / measurement inside the simulation (rendered for students, and as a preview in the editors). The
 // teacher editors / review views next to them (FunctionStudyEditor / Review, Net2Editor / Review …) ARE guarded.
@@ -71,6 +76,25 @@ describe("21E.2 F — one save-label table", () => {
       expect(text, state).not.toContain("اعتماد");                                    // a status is never an approval
     }
     expect(new Set(Object.values(SAVE_STATE_LABELS)).size).toBe(4);
+  });
+
+  it("RF4 B-06 / A-10 — an approval's status and a failed save's status are plain sentences of the table, distinct from every other entry", () => {
+    expect(SAVE_LABELS.savedFinal).toBe("محفوظ — معتمد نهائيًا");
+    expect(SAVE_LABELS.saveFailed).toBe("تعذّر الحفظ");
+    expect(SAVE_LABELS.savedFinal.startsWith(SAVE_LABELS.saved + " — ")).toBe(true);              // a saved state, said whole
+    expect(SAVE_LABELS.savedFinal).toContain("معتمد نهائيًا");                                       // … that names the approval
+    expect(SAVE_LABELS.savedFinal).not.toContain(SAVE_LABELS.finalizeExam);                          // a status, not the action
+    for (const text of [SAVE_LABELS.savedFinal, SAVE_LABELS.saveFailed]) {
+      expect(text).toMatch(/^\p{L}/u);
+      expect(/\p{Extended_Pictographic}|[✓●↺⏳]/u.test(text), text).toBe(false);
+      expect(Object.values(SAVE_STATE_LABELS)).not.toContain(text);
+    }
+    // the guard refuses both literals written elsewhere (glyph-prefixed too), never a sentence that merely contains them
+    const hit = (l: string, src: string) => [...src.matchAll(pattern(l))].length > 0;
+    for (const s of ['"✓ محفوظ — معتمد نهائيًا"', "<span>محفوظ — معتمد نهائيًا</span>", "'محفوظ — معتمد نهائيًا'"]) expect(hit("محفوظ — معتمد نهائيًا", s), s).toBe(true);
+    for (const s of ['"تعذّر الحفظ"', "<b>تعذّر الحفظ</b>", "`تعذّر الحفظ`"]) expect(hit("تعذّر الحفظ", s), s).toBe(true);
+    for (const s of ['"تعذّر الحفظ الآن"', "<p>لقد تعذّر الحفظ</p>", '"محفوظ — معتمد نهائيًا منذ أمس"']) expect(hit(s.includes("تعذّر") ? "تعذّر الحفظ" : "محفوظ — معتمد نهائيًا", s), s).toBe(false);
+    expect(LISTED).toEqual(expect.arrayContaining([SAVE_LABELS.savedFinal, SAVE_LABELS.saveFailed]));
   });
 
   it("no listed save / finalize literal appears in teacher UI source outside the table", () => {

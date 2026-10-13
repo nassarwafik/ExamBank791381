@@ -37,6 +37,10 @@ type Props = {
   onDelete: () => void;
   onMove: (delta: number) => void;
   onAddQuestion: (q: BuilderQuestion) => void;
+  /** RF4 (A-12) — a question was just created from the type palette (in the section, or inside one of its scenarios): the builder
+   *  focuses and reveals it once it is on the page. The palette's own focus return to «+ إضافة سؤال» would leave focus on a button
+   *  the new card pushes off-screen. */
+  onQuestionAdded?: (questionId: string) => void;
   onQuestionChange: (questionId: string, p: Partial<BuilderQuestion>) => void;
   onQuestionDelete: (questionId: string) => void;
   onQuestionMove: (questionId: string, delta: number) => void;
@@ -70,7 +74,7 @@ export default function ExamSectionEditor(props: Props) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Phase 19G — when the palette was opened from a scenario, the picked question is created INSIDE that scenario (after its last member) and linked.
   const [paletteFor, setPaletteFor] = useState<string | null>(null);
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint, sectionIssues, questionIssues, revealedQuestions, openRequests } = props;
+  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionAdded, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint, sectionIssues, questionIssues, revealedQuestions, openRequests } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
   const scenarios = Array.isArray(section.scenarios) ? section.scenarios : [];
   const applySection = (next: BuilderSection) => { if (next !== section) patch({ scenarios: next.scenarios, questions: next.questions }); };
@@ -79,7 +83,7 @@ export default function ExamSectionEditor(props: Props) {
   const [richOpen, setRichOpen] = useState(() => richInstructions !== undefined);
   const [converting, setConverting] = useState(false);
   const setRichInstructions = (next: RichContentV1 | undefined) => patch({ instructionsRichContent: next });
-  const addPicked = (q: BuilderQuestion) => { setPaletteOpen(false); if (paletteFor) { applySection(createQuestionInScenario(section, paletteFor, q)); setPaletteFor(null); } else onAddQuestion(q); };
+  const addPicked = (q: BuilderQuestion) => { setPaletteOpen(false); if (paletteFor) { applySection(createQuestionInScenario(section, paletteFor, q)); setPaletteFor(null); } else onAddQuestion(q); onQuestionAdded?.(q.examQuestionId); };
 
   return (
     <section className="sb-section" data-section-id={section.id} tabIndex={-1}>
@@ -93,8 +97,8 @@ export default function ExamSectionEditor(props: Props) {
               {SECTION_PRESETS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
             {/* Phase 21E.2 (E) — the pair names the section it moves, like the question reorder buttons («نقل السؤال N …»). */}
-            <button type="button" className="sb-icon-btn" title={"نقل القسم " + (index + 1) + " للأعلى"} aria-label={"نقل القسم " + (index + 1) + " للأعلى"} onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
-            <button type="button" className="sb-icon-btn" title={"نقل القسم " + (index + 1) + " للأسفل"} aria-label={"نقل القسم " + (index + 1) + " للأسفل"} onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
+            <button type="button" className="sb-icon-btn" title={"نقل القسم " + (index + 1) + " للأعلى"} aria-label={"نقل القسم " + (index + 1) + " للأعلى"} onClick={() => onMove(-1)} data-reorder="up" disabled={disabled || index === 0}>↑</button>
+            <button type="button" className="sb-icon-btn" title={"نقل القسم " + (index + 1) + " للأسفل"} aria-label={"نقل القسم " + (index + 1) + " للأسفل"} onClick={() => onMove(1)} data-reorder="down" disabled={disabled || index === total - 1}>↓</button>
             <button type="button" className="sb-icon-btn sb-danger" title="حذف القسم" onClick={onDelete} disabled={disabled}>حذف القسم</button>
           </div>
         </div>

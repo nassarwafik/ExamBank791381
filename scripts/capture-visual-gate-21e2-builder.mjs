@@ -27,6 +27,20 @@
 //      hit-tests to itself, by mouse and by Tab; a revealed section clears the bar (A-01); where the toolbar is static (200 %, phone)
 //      a deletion's neighbour / a Ctrl+Y target is revealed, never focused off-screen (A-02); closing the explorer's dialog after a
 //      zoom never leaves focus on <body> and «المزيد» opens again (O-1); the explorer shows a matching question by its words (O-2).
+//   RF4 focus continuity: no action leaves keyboard focus on <body> — a reorder to an end (A-07), the last undo / redo step and a
+//      deletion undone from the toolbar (A-08), a save in flight (A-09 / B-04), clearing the selection and a bulk delete (A-11), an
+//      undo / redo removing the focused card (A-13), a menu closed by a scroll or a resize (A-14 / B-05).
+//   RF4 follow a structural edit: browsing «نقل إلى قسم» with an arrow key (the phone: picking a section) moves nothing; the explicit
+//      «نقل» moves the question, its card takes focus in the new section on screen, Ctrl+Z brings it back focused (A-03); after ↓ / ↑
+//      the pressed button and its card / section are on screen, never under the toolbar or below the screen (A-06); a question picked
+//      in the palette and a section added with «+ إضافة قسم» take focus on screen (A-12).
+//   RF4 undo / redo under a modal layer: Ctrl+Z on «← إغلاق المعاينة», on «البقاء في المحرر» (the unsaved-changes guard) and on the
+//      «مخطط الامتحان» dialog's «إغلاق» changes nothing behind the layer and leaves the key alone; on the builder it undoes (A-04).
+//   RF4 save feedback: a save that fails (503) from deep in the exam shows «تعذّر الحفظ: <reason>» on screen in the toolbar's status
+//      band and announces it (role=alert) (A-10 / B-01); the draft notice leaves with the next edit and after «رجوع» → «متابعة تحرير
+//      …», its «✓» is never spoken, and an approval's status says «محفوظ — معتمد نهائيًا» (B-06).
+//   RF4 issue fallback (E20, served by a route): an issue no frame shows (trueFalse / multiTrueFalse / matching / fillBlank answers)
+//      focuses the card's named issue list «مشكلات السؤال N» — never «العلامة», «نص السؤال» or another pair's «العنصر» (A-05).
 // On a BEFORE build the 21E.2 toolbar does not exist: each probe records what it finds ("absent") instead of throwing.
 
 export async function runBuilder({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow }) {
@@ -123,6 +137,11 @@ export async function runBuilder({ vp: [name, viewport, touch, dsf], newPage, or
   await runRevealStatic({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
   await runExplorerZoom({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
   await runExplorerPreview({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runFocusContinuity({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runFollowEdits({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow });
+  await runHistoryUnderModal({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runSaveFeedback({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow });
+  await runIssueFallback({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
 }
 
 // K1 — what the open ActionMenu looks like at this instant (page context): open? focus inside? host = the aria-modal builder
@@ -511,7 +530,9 @@ async function runSaveStatus({ vp: [name, viewport, touch, dsf], newPage, origin
       const chip = document.querySelector(".sb-save-state"), button = document.querySelector(".sb-tb-save button");
       const r = chip?.getBoundingClientRect(), a = document.activeElement;
       return { chipText: chip?.textContent ?? null, chipSpoken: chip ? spoken(chip) : null, role: chip?.getAttribute("role") ?? null, live: chip?.getAttribute("aria-live") ?? null,
-        atomic: chip?.getAttribute("aria-atomic") ?? null, buttonText: (button?.textContent || "").trim(), buttonDisabled: !!button?.disabled,
+        // RF4 (A-09 / B-04, owner-directed): the draft button is unavailable while saving through aria-disabled — it stays focusable (a
+        // native `disabled` blurred it and left keyboard focus on <body>); its handler ignores activation (check «RF4 A-09 / B-04»).
+        atomic: chip?.getAttribute("aria-atomic") ?? null, buttonText: (button?.textContent || "").trim(), buttonDisabled: button?.getAttribute("aria-disabled") === "true" && !button.disabled,
         buttonInLive: !!(button?.closest(LIVE) || button?.querySelector(LIVE)), saying: [...document.querySelectorAll(LIVE)].filter(n => spoken(n).includes(spoken(chip))).length,
         chipInView: !!r && r.width > 0 && r.left >= 0 && r.right <= window.innerWidth, focus: a === document.body ? "BODY" : (a?.className || a?.tagName || "") };
     });
@@ -752,4 +773,565 @@ async function runExplorerPreview({ vp: [name, viewport, touch, dsf], newPage, o
       rec.nav.texts.length === 2 && rec.nav.texts[1] === "العمود أ، العمود ب · HTTP · DNS · HTTPS" && all.every(t => t && !/\||---/.test(t)), JSON.stringify(rec.nav));
   } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder RF3 explorer-preview run", false, rec.error); }
   await ctx.close();
+}
+
+// RF4 — focus continuity (audit A-07, A-08, A-09 / B-04, A-11, A-13, A-14 / B-05), in real Chromium on E9 (reduced motion). Chromium
+// blurs a focused control to <body> the moment it is disabled, and a focused control that leaves the page takes focus with it; inside
+// the aria-modal builder that left the next Tab at «رجوع» and the next Escape to the builder. Each step is a fresh page.
+//   A-07: Enter ×3 on «نقل السؤال 1 للأسفل» (s1q1 → the last place) → focus on s1q1's own ↑; «نقل القسم 1 للأسفل» (two sections) →
+//         section s1's ↑, then Enter on it (back to the first place) → its ↓; on the phone a TAP on s1q3's ↑ (to the first place) →
+//         s1q3's ↓.
+//   A-08: one title edit, Enter on the toolbar «تراجع» (its last step) → «إعادة»; Enter on «إعادة» (its last step) → «تراجع»; a fresh
+//         page: Enter on «حذف» of s1q2, then a MOUSE click on the toolbar «تراجع» (the toast is up) → the restored s1q2.
+//   A-09 / B-04: the save request is held; Enter on «حفظ مسودة» → during the save focus stays on it (aria-disabled, «جارٍ الحفظ…»), a
+//         second Enter sends nothing; after «✓ محفوظ» focus is still on it. The same for «اعتماد نهائي».
+//   A-11: Space on s1q3's «تحديد السؤال», Enter on the bar's «إلغاء التحديد» → s1q3's checkbox; (> 900 px) the explorer's «تحديد
+//         الظاهر» then its «إلغاء التحديد» → «تحديد الظاهر»; s1q2 + s1q3 selected, bar «حذف», Enter on the dialog's «حذف» → s1q4.
+//   A-13: «تكرار» on s1q3, focus the copy's «تكرار», Ctrl+Z → s1q4 (the copy's next surviving neighbour); Ctrl+Y → the copy.
+//   A-14 / B-05: «المزيد» / «إضافة أسئلة» opened with Enter (focus inside the panel), then a 300 px wheel over the content (the phone:
+//         the overlay scrolls 300 px — mobile emulation has no wheel) → the menu closes and focus is on its trigger; the same after
+//         the viewport loses 100 px of height (an on-screen keyboard, a rotation).
+const whereProbe = () => {
+  const a = document.activeElement, o = document.querySelector(".structured-builder-overlay");
+  return { body: !a || a === document.body, inOverlay: !!o && !!a && o.contains(a), id: a?.id || "", tag: a?.tagName || "",
+    label: (a?.getAttribute("aria-label") || a?.textContent || a?.tagName || "").replace(/\s+/g, " ").trim().slice(0, 40),
+    card: a?.closest(".sb-question")?.id || "", section: a?.closest("[data-section-id]")?.getAttribute("data-section-id") || "",
+    disabled: !!a?.matches?.(":disabled"), ariaDisabled: a?.getAttribute("aria-disabled") ?? null, inNav: !!a?.closest(".sb-navigator") };
+};
+async function runFocusContinuity({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf4-" + name;
+  const rec = record.viewports[id] = {};
+  const fresh = async step => {
+    const p = await newPage(id + "-" + step, viewport, touch, dsf);
+    await openSaved(p.page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+    return p;
+  };
+  const where = page => page.evaluate(whereProbe);
+  /** The ↑ («…للأعلى») / ↓ («…للأسفل») of a card (#id) or a section ([data-section-id]) — by its name, which also exists before RF4. */
+  const reorderIn = (page, host, dir) => page.locator(host + (host.startsWith("#") ? " > .sb-q-head" : " .sb-section-tools") + ' button[aria-label$="' + dir + '"]').first();
+
+  // A-07 — reorder to an end.
+  { const { ctx, page, shot } = await fresh("a07");
+    try {
+      await reorderIn(page, "#sb-q-s1q1", "للأسفل").focus();
+      for (let i = 0; i < 3; i++) { await page.keyboard.press("Enter"); await page.waitForTimeout(200); }
+      rec.q = { ...(await where(page)), order: await page.evaluate(() => [...document.querySelectorAll('[data-section-id="s1"] .sb-question')].map(c => c.id)) };
+      await shot("01-question-last");
+      await reorderIn(page, '[data-section-id="s1"]', "للأسفل").focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(300);
+      rec.s1 = { ...(await where(page)), order: await page.evaluate(() => [...document.querySelectorAll("[data-section-id]")].map(s => s.getAttribute("data-section-id"))) };
+      await page.keyboard.press("Enter"); await page.waitForTimeout(300);
+      rec.s2 = { ...(await where(page)), order: await page.evaluate(() => [...document.querySelectorAll("[data-section-id]")].map(s => s.getAttribute("data-section-id"))) };
+      // s1 is now s1q2, s1q3, s1q4, s1q1: a tap on s1q3's ↑ moves it to the first place.
+      if (touch) { await reorderIn(page, "#sb-q-s1q3", "للأعلى").tap(); await page.waitForTimeout(300); rec.tap = await where(page); }
+    } catch (e) { rec.a07 = String(e).slice(0, 300); }
+    await ctx.close();
+    const q = rec.q || {}, s1 = rec.s1 || {}, s2 = rec.s2 || {}, tp = rec.tap;
+    check(id, "RF4 A-07 a question / section moved to the last / first place keeps focus on its OTHER reorder button (s1q1 ↓×3 → s1q1's ↑; section 1 ↓ → its ↑; ↑ back → its ↓" + (touch ? "; a tap on s1q3's ↑ (to the first place) → its ↓" : "") + ") — never <body>",
+      q.order?.at(-1) === "sb-q-s1q1" && !q.body && q.card === "sb-q-s1q1" && q.label.endsWith("للأعلى") && !q.disabled &&
+      s1.order?.join() === "s2,s1" && !s1.body && s1.section === "s1" && !s1.card && s1.label.endsWith("للأعلى") && !s1.disabled &&
+      s2.order?.join() === "s1,s2" && !s2.body && s2.section === "s1" && !s2.card && s2.label.endsWith("للأسفل") && !s2.disabled &&
+      (!touch || (!!tp && !tp.body && tp.card === "sb-q-s1q3" && tp.label.endsWith("للأسفل"))), JSON.stringify({ q, s1, s2, tap: tp, error: rec.a07 }));
+  }
+
+  // A-08 — the last available undo / redo step.
+  { const { ctx, page, shot } = await fresh("a08");
+    try {
+      await page.locator(".sb-exam-title").fill("اختبار الوحدة الثانية — معدّل"); await page.waitForTimeout(200);
+      const undo = page.locator(".sb-history button[aria-label='تراجع']"), redo = page.locator(".sb-history button[aria-label='إعادة']");
+      await undo.focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(300);
+      rec.undo = { ...(await where(page)), title: await page.locator(".sb-exam-title").inputValue(), undoDisabled: await undo.isDisabled() };
+      await page.keyboard.press("Enter"); await page.waitForTimeout(300);           // focus is on «إعادة» now (or on <body> before the fix)
+      rec.redo = { ...(await where(page)), title: await page.locator(".sb-exam-title").inputValue(), redoDisabled: await redo.isDisabled() };
+      await shot("02-history");
+    } catch (e) { rec.a08a = String(e).slice(0, 300); }
+    await ctx.close(); }
+  { const { ctx, page, shot } = await fresh("a08b");
+    try {
+      await page.locator("#sb-q-s1q2").getByRole("button", { name: "حذف", exact: true }).focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(500);
+      rec.afterDelete = await where(page);
+      await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(200);
+      await mouseOn(page, page.locator(".sb-history button[aria-label='تراجع']")); await page.waitForTimeout(600);
+      rec.toolbarUndo = { ...(await where(page)), restored: await page.locator("#sb-q-s1q2").count(), toast: await page.locator(".eb-toast").count() };
+      await shot("03-toolbar-undo-deletion");
+    } catch (e) { rec.a08b = String(e).slice(0, 300); }
+    await ctx.close(); }
+  { const u = rec.undo || {}, r = rec.redo || {}, t = rec.toolbarUndo || {};
+    check(id, "RF4 A-08 the toolbar «تراجع» / «إعادة» used for its last step → focus on the other history button; a deletion undone from the toolbar (mouse, toast up) → the restored question — never <body>",
+      u.title === "اختبار الوحدة الثانية" && u.undoDisabled && !u.body && u.label === "إعادة" &&
+      r.title === "اختبار الوحدة الثانية — معدّل" && r.redoDisabled && !r.body && r.label === "تراجع" &&
+      rec.afterDelete?.id === "sb-q-s1q3" && t.restored === 1 && t.toast === 0 && t.id === "sb-q-s1q2", JSON.stringify({ undo: u, redo: r, afterDelete: rec.afterDelete, toolbarUndo: t, errors: [rec.a08a, rec.a08b] }));
+  }
+
+  // A-09 / B-04 — a held save.
+  for (const [step, label] of [["a09d", "حفظ مسودة"], ["a09f", "اعتماد نهائي"]]) {
+    const { ctx, page, shot } = await newPage(id + "-" + step, viewport, touch, dsf);
+    let release = () => {};
+    const out = rec[step] = {};
+    try {
+      const held = new Promise(r => { release = r; });
+      out.posts = 0;
+      await page.route(u => /\/api\/(saved-exams|save-exam-artifact)$/.test(u.pathname), async route => {
+        const req = route.request(), body = req.postData() || "";
+        if (req.method() === "POST" && (/save-exam-artifact$/.test(new URL(req.url()).pathname) || /"action"\s*:\s*"save"/.test(body))) { out.posts++; await held; }
+        await route.continue();
+      });
+      await openSaved(page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+      await page.locator(".sb-exam-title").fill("اختبار الوحدة الثانية — للحفظ"); await page.waitForTimeout(200);
+      const button = page.locator(".sb-tb-save button", { hasText: label === "حفظ مسودة" ? /حفظ مسودة/ : /اعتماد نهائي/ }).first();
+      await button.focus(); await page.keyboard.press("Enter");
+      await page.locator(".sb-save-state.is-saving").waitFor({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(200);
+      out.during = await page.evaluate(whereProbe);
+      out.chip = await page.locator(".sb-save-state").textContent();
+      await page.keyboard.press("Enter"); await page.waitForTimeout(300);            // a second activation while saving
+      out.postsDuring = out.posts;
+      await shot("04-" + step + "-saving");
+      release();
+      await page.locator(".sb-save-state.is-saved").waitFor({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
+      out.after = await page.evaluate(whereProbe);
+      out.chipAfter = await page.locator(".sb-save-state").textContent();
+    } catch (e) { release(); out.error = String(e).slice(0, 300); }
+    await ctx.close();
+  }
+  { const d = rec.a09d, f = rec.a09f;
+    // RF4 B-06 (owner-directed): after an approval the status says «✓ محفوظ — معتمد نهائيًا» (a draft save «✓ محفوظ») — an exact string each.
+    const held = (x, label, chip) => !!x?.during && !x.during.body && x.during.inOverlay && x.during.tag === "BUTTON" && x.during.label.includes(label) && !x.during.disabled && x.during.ariaDisabled === "true" &&
+      x.postsDuring === 1 && x.posts === 1 && x.chipAfter === chip && !x.after.body && x.after.tag === "BUTTON" && x.after.ariaDisabled === null;
+    check(id, "RF4 A-09 / B-04 «حفظ مسودة» and «اعتماد نهائي» keep keyboard focus through a held save (aria-disabled, not disabled; a second Enter sends nothing) and after «✓ محفوظ» / «✓ محفوظ — معتمد نهائيًا» — never <body>",
+      held(d, "جارٍ الحفظ…", "✓ محفوظ") && d.after.label === "حفظ مسودة" && held(f, "اعتماد نهائي", "✓ محفوظ — معتمد نهائيًا") && f.after.label === "اعتماد نهائي", JSON.stringify({ draft: d, final: f }));
+  }
+
+  // A-11 — clearing the selection, a bulk delete.
+  { const { ctx, page, shot } = await fresh("a11");
+    try {
+      const box = q => page.locator(q).getByRole("checkbox", { name: "تحديد السؤال" });
+      await box("#sb-q-s1q3").focus(); await page.keyboard.press("Space"); await page.waitForTimeout(250);
+      await page.locator(".sb-bulk-bar").getByRole("button", { name: "إلغاء التحديد" }).focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(300);
+      rec.barClear = { ...(await where(page)), bar: await page.locator(".sb-bulk-bar").count() };
+      if (viewport.width > 900) {
+        await page.getByRole("button", { name: "المزيد من أدوات الامتحان" }).click();
+        await page.locator(".eb-menu-panel").getByRole("button", { name: "مستكشف الأسئلة" }).click(); await page.waitForTimeout(300);
+        const nav = page.locator("aside.sb-navigator");
+        await nav.getByRole("button", { name: "تحديد الظاهر" }).click(); await page.waitForTimeout(200);
+        await nav.getByRole("button", { name: "إلغاء التحديد" }).focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(300);
+        rec.navClear = await where(page);
+        await page.getByRole("button", { name: "المزيد من أدوات الامتحان" }).click();
+        await page.locator(".eb-menu-panel").getByRole("button", { name: "مستكشف الأسئلة" }).click(); await page.waitForTimeout(300);
+      }
+      await box("#sb-q-s1q2").focus(); await page.keyboard.press("Space"); await page.waitForTimeout(150);
+      await box("#sb-q-s1q3").focus(); await page.keyboard.press("Space"); await page.waitForTimeout(250);
+      await page.locator(".sb-bulk-bar").getByRole("button", { name: "حذف", exact: true }).focus(); await page.keyboard.press("Enter");
+      const dialog = page.getByRole("dialog", { name: "حذف الأسئلة المحددة" });
+      await dialog.waitFor({ timeout: 5000 });
+      await dialog.getByRole("button", { name: "حذف", exact: true }).focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(500);
+      rec.bulkDelete = { ...(await where(page)), gone: (await page.locator("#sb-q-s1q2, #sb-q-s1q3").count()) === 0 };
+      await shot("05-bulk-delete");
+    } catch (e) { rec.a11 = String(e).slice(0, 300); }
+    await ctx.close();
+    const c = rec.barClear || {}, n = rec.navClear, b = rec.bulkDelete || {};
+    check(id, "RF4 A-11 the bar's «إلغاء التحديد» → the last toggled card's checkbox" + (viewport.width > 900 ? "; the explorer's «إلغاء التحديد» → «تحديد الظاهر»" : "") + "; a confirmed bulk delete of s1q2 + s1q3 → s1q4 — never <body>",
+      c.bar === 0 && !c.body && c.card === "sb-q-s1q3" && c.label === "تحديد السؤال" && (viewport.width <= 900 || (!!n && !n.body && n.inNav && n.label === "تحديد الظاهر")) &&
+      b.gone && !b.body && b.id === "sb-q-s1q4", JSON.stringify({ barClear: c, navClear: n, bulkDelete: b, error: rec.a11 }));
+  }
+
+  // A-13 — Ctrl+Z / Ctrl+Y removing / returning the focused duplicate.
+  { const { ctx, page, shot } = await fresh("a13");
+    try {
+      await page.locator("#sb-q-s1q3").getByRole("button", { name: "تكرار", exact: true }).click(); await page.waitForTimeout(300);
+      const copy = await page.evaluate(() => { const ids = [...document.querySelectorAll('[data-section-id="s1"] .sb-question')].map(c => c.id); return ids[ids.indexOf("sb-q-s1q3") + 1]; });
+      rec.copy = copy;
+      await page.locator("#" + copy).getByRole("button", { name: "تكرار", exact: true }).focus();
+      await page.keyboard.press("Control+z"); await page.waitForTimeout(400);
+      rec.undo13 = { ...(await where(page)), copy: await page.locator("#" + copy).count() };
+      await page.keyboard.press("Control+y"); await page.waitForTimeout(400);
+      rec.redo13 = { ...(await where(page)), copy: await page.locator("#" + copy).count() };
+      await shot("06-duplicate-undo-redo");
+    } catch (e) { rec.a13 = String(e).slice(0, 300); }
+    await ctx.close();
+    const u = rec.undo13 || {}, r = rec.redo13 || {};
+    check(id, "RF4 A-13 Ctrl+Z removing the focused duplicate → its next surviving neighbour s1q4; Ctrl+Y bringing it back → the copy — never <body>",
+      /^sb-q-q-/.test(rec.copy || "") && u.copy === 0 && !u.body && u.id === "sb-q-s1q4" && r.copy === 1 && !r.body && r.id === rec.copy, JSON.stringify({ copy: rec.copy, undo: u, redo: r, error: rec.a13 }));
+  }
+
+  // A-14 / B-05 — a menu closed by a scroll or a resize.
+  { const { ctx, page, shot } = await fresh("a14");
+    const out = rec.menus = {};
+    try {
+      for (const [key, menu] of [["more", "المزيد من أدوات الامتحان"], ["add", "إضافة أسئلة"]]) {
+        const trigger = page.getByRole("button", { name: menu });
+        await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(150);
+        await trigger.focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(250);
+        const opened = await page.evaluate(() => { const p = document.querySelector(".eb-menu-panel"); return !!p && p.contains(document.activeElement); });
+        if (touch) await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop += 300; });
+        else {
+          const spot = await page.evaluate(() => {
+            const p = document.querySelector(".eb-menu-panel").getBoundingClientRect();
+            for (const [x, y] of [[12, innerHeight - 12], [innerWidth - 12, innerHeight - 12], [12, innerHeight / 2], [innerWidth / 2, innerHeight - 12]]) if (x < p.left || x > p.right || y < p.top || y > p.bottom) return [x, y];
+            return [12, innerHeight - 12];
+          });
+          await page.mouse.move(spot[0], spot[1]); await page.mouse.wheel(0, 300);
+        }
+        await page.waitForTimeout(400);
+        const scrolled = { opened, panel: await page.locator(".eb-menu-panel").count(), ...(await where(page)) };
+        await trigger.focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(250);
+        const reopened = await page.evaluate(() => { const p = document.querySelector(".eb-menu-panel"); return !!p && p.contains(document.activeElement); });
+        await page.setViewportSize({ width: viewport.width, height: viewport.height - 100 }); await page.waitForTimeout(400);
+        const resized = { reopened, panel: await page.locator(".eb-menu-panel").count(), ...(await where(page)) };
+        await page.setViewportSize(viewport); await page.waitForTimeout(300);
+        out[key] = { scrolled, resized };
+      }
+      await shot("07-menu-scroll-resize");
+    } catch (e) { out.error = String(e).slice(0, 300); }
+    await ctx.close();
+    const ok = (x, label) => !!x && x.scrolled.opened && x.scrolled.panel === 0 && !x.scrolled.body && x.scrolled.label === label &&
+      x.resized.reopened && x.resized.panel === 0 && !x.resized.body && x.resized.label === label;
+    check(id, "RF4 A-14 / B-05 «المزيد» / «إضافة أسئلة» opened by keyboard, then a scroll (" + (touch ? "the overlay scrolls 300 px" : "a 300 px wheel over the content") + ") or a 100 px shorter viewport: the menu closes and focus is on its trigger — never <body>",
+      ok(out.more, "المزيد من أدوات الامتحان") && ok(out.add, "إضافة أسئلة"), JSON.stringify(out));
+  }
+}
+
+// RF4 — follow a structural edit (audit A-03, A-06, A-12), E9 in real Chromium (reduced motion). "On screen" is measured against the
+// sticky layers' bottom edge (the stuck toolbar; 0 where it is static) and the viewport's bottom; a hit test at the element's centre
+// (its first 20 px for a card / section) must land on it.
+//   A-03: «نقل إلى قسم» of «السؤال 2» (s1q2): ONE ArrowDown on the closed select (the phone: picking «القسم الثاني») moves nothing and
+//         keeps focus on the select; Tab + Enter on «نقل» (the phone: a tap) moves it to the end of s2 — its card has focus, on screen;
+//         Ctrl+Z puts it back in s1 with focus on its card, on screen. «نقل» is a 44 px target on touch / ≤ 640 px; no overflow.
+//   A-06: the ↓ of «السؤال 1» (s1q1) centred, Enter twice: each time focus stays on that card's ↓ and it is on screen; a pointer click
+//         (the phone: a tap) on its ↓ keeps its card's heading on screen; with a third section, section 1's ↓ (centred, Enter) keeps
+//         focus on its ↓, on screen.
+//   A-12: «+ إضافة سؤال» of s1 → the palette → the first type (keyboard; the phone: taps) → focus on the NEW card, on screen; «+ إضافة
+//         قسم» → focus on the NEW section, on screen.
+const followProbe = () => {
+  const a = document.activeElement, tb = document.querySelector(".sb-toolbar"), bulk = document.querySelector(".sb-bulk-bar");
+  let edge = tb && getComputedStyle(tb).position === "sticky" ? tb.getBoundingClientRect().bottom : 0;
+  if (bulk && getComputedStyle(bulk).position === "sticky") edge = Math.max(edge, bulk.getBoundingClientRect().bottom);
+  if (!a || a === document.body) return { body: true, edge: Math.round(edge), vh: innerHeight };
+  const r = a.getBoundingClientRect(), big = r.height > 80;
+  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + (big ? 20 : r.height / 2));
+  return { body: false, id: a.id || "", tag: a.tagName, label: (a.getAttribute("aria-label") || (big ? "" : a.textContent) || "").replace(/\s+/g, " ").trim().slice(0, 40),
+    card: a.closest(".sb-question")?.id || "", section: a.closest("[data-section-id]")?.getAttribute("data-section-id") || "",
+    top: Math.round(r.top), bottom: Math.round(r.bottom), height: Math.round(r.height), width: Math.round(r.width), edge: Math.round(edge), vh: innerHeight,
+    onScreen: r.top >= edge - 1 && r.top + Math.min(r.height, 48) <= innerHeight + 1, within: r.top >= edge - 1 && r.bottom <= innerHeight + 1,
+    hitVisible: !!hit && (hit === a || a.contains(hit)) };
+};
+const cardsOf = page => page.evaluate(() => Object.fromEntries([...document.querySelectorAll("[data-section-id]")].map(s => [s.getAttribute("data-section-id"), [...s.querySelectorAll(".sb-question")].map(c => c.id.replace(/^sb-q-/, ""))])));
+async function runFollowEdits({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow }) {
+  const id = "builder-rf4f-" + name;
+  const rec = record.viewports[id] = {};
+  const fresh = async step => {
+    const p = await newPage(id + "-" + step, viewport, touch, dsf);
+    await openSaved(p.page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+    return p;
+  };
+  const probe = page => page.evaluate(followProbe);
+  const centre = (page, selector) => page.evaluate(s => { const o = document.querySelector(".structured-builder-overlay"), c = document.querySelector(s); o.scrollTop += c.getBoundingClientRect().top - o.clientHeight / 2; }, selector);
+  const small = touch || viewport.width <= 640;
+
+  // A-03 — «نقل إلى قسم».
+  { const { ctx, page, shot } = await fresh("a03");
+    const out = rec.a03 = {};
+    try {
+      const select = page.locator("#sb-q-s1q2").getByRole("combobox", { name: "نقل إلى قسم" });
+      await select.focus(); await page.waitForTimeout(150);
+      if (touch) await select.selectOption("s2"); else await page.keyboard.press("ArrowDown");
+      await page.waitForTimeout(400);
+      out.browse = { cards: await cardsOf(page), ...(await probe(page)), value: await select.inputValue().catch(() => null) };
+      await shot("01-a03-after-browse");
+      const button = page.locator("#sb-q-s1q2 [data-move-to-section]");
+      out.button = await button.count();
+      if (out.button) {
+        out.size = await button.evaluate(b => { const r = b.getBoundingClientRect(); return { height: Math.round(r.height), width: Math.round(r.width) }; });
+        if (touch) await button.tap(); else { await page.keyboard.press("Tab"); out.tabbedTo = await probe(page); await page.keyboard.press("Enter"); }
+        await page.waitForTimeout(600);
+        out.moved = { cards: await cardsOf(page), ...(await probe(page)) };
+        out.overflow = await overflow(page);
+        await shot("02-a03-after-move");
+        await page.keyboard.press("Control+z"); await page.waitForTimeout(600);
+        out.undone = { cards: await cardsOf(page), ...(await probe(page)) };
+        await shot("03-a03-after-undo");
+      }
+    } catch (e) { out.error = String(e).slice(0, 300); }
+    await ctx.close();
+    const b = out.browse || {}, m = out.moved || {}, u = out.undone || {};
+    check(id, "RF4 A-03 " + (touch ? "picking «القسم الثاني»" : "ONE ArrowDown") + " on s1q2's «نقل إلى قسم» moves nothing (s1q2 stays in s1, focus stays on the select)",
+      b.cards?.s1?.includes("s1q2") && !b.cards?.s2?.includes("s1q2") && !b.body && b.tag === "SELECT" && b.card === "sb-q-s1q2", JSON.stringify(b));
+    check(id, "RF4 A-03 the explicit «نقل» (" + (touch ? "a tap" : "Tab + Enter") + ") moves s1q2 to the end of s2: its card has focus on screen; Ctrl+Z puts it back in s1 with focus on its card on screen" + (small ? "; «نقل» is ≥ 44 × 44 px" : "") + "; no horizontal overflow",
+      out.button === 1 && (touch || out.tabbedTo?.label?.startsWith("نقل السؤال")) && m.cards?.s2?.at(-1) === "s1q2" && !m.cards?.s1?.includes("s1q2") && !m.body && m.id === "sb-q-s1q2" && m.onScreen && m.hitVisible &&
+      u.cards?.s1?.join() === "s1q1,s1q2,s1q3,s1q4" && !u.body && u.id === "sb-q-s1q2" && u.section === "s1" && u.onScreen && u.hitVisible &&
+      (!small || (out.size?.height >= 44 && out.size?.width >= 44)) && !!out.overflow && out.overflow.scrollWidth <= out.overflow.clientWidth, JSON.stringify(out));
+  }
+
+  // A-06 — ↓ / ↑ reveal the moved card / section.
+  { const { ctx, page, shot } = await fresh("a06");
+    const out = rec.a06 = {};
+    const down = host => page.locator(host + (host.startsWith("#") ? " > .sb-q-head" : " .sb-section-tools") + ' button[aria-label$="للأسفل"]').first();
+    try {
+      await centre(page, "#sb-q-s1q1 > .sb-q-head"); await page.waitForTimeout(200);
+      await down("#sb-q-s1q1").focus(); await page.waitForTimeout(100);
+      await page.keyboard.press("Enter"); await page.waitForTimeout(500);
+      out.first = { cards: (await cardsOf(page)).s1, ...(await probe(page)) };
+      await shot("04-a06-after-down");
+      await page.keyboard.press("Enter"); await page.waitForTimeout(500);
+      out.second = { cards: (await cardsOf(page)).s1, ...(await probe(page)) };
+      await shot("05-a06-after-down-2");
+      // A pointer: s1q1 is third now — its ↓ (centred) clicked / tapped moves it to the fourth place, where its ↓ is disabled.
+      await centre(page, "#sb-q-s1q1 > .sb-q-head"); await page.waitForTimeout(200);
+      if (touch) await down("#sb-q-s1q1").tap(); else await mouseOn(page, down("#sb-q-s1q1"));
+      await page.waitForTimeout(500);
+      out.pointer = { cards: (await cardsOf(page)).s1, head: await page.evaluate(() => { const c = document.querySelector("#sb-q-s1q1"), r = c.getBoundingClientRect(), tb = document.querySelector(".sb-toolbar");
+        const edge = getComputedStyle(tb).position === "sticky" ? tb.getBoundingClientRect().bottom : 0; return { top: Math.round(r.top), edge: Math.round(edge), vh: innerHeight, onScreen: r.top >= edge - 1 && r.top + 48 <= innerHeight }; }) };
+      // Sections: a third section, then section 1's ↓ (centred) — section 1 moves to the middle and its ↓ stays enabled.
+      await page.locator("[data-add-section]").click(); await page.waitForTimeout(400);
+      await centre(page, '[data-section-id="s1"] .sb-section-tools'); await page.waitForTimeout(200);
+      await down('[data-section-id="s1"]').focus(); await page.waitForTimeout(100);
+      await page.keyboard.press("Enter"); await page.waitForTimeout(500);
+      out.section = { order: await page.evaluate(() => [...document.querySelectorAll("[data-section-id]")].map(s => s.getAttribute("data-section-id"))), ...(await probe(page)) };
+      await shot("06-a06-section-down");
+    } catch (e) { out.error = String(e).slice(0, 300); }
+    await ctx.close();
+    const f = out.first || {}, s = out.second || {}, p = out.pointer || {}, sec = out.section || {};
+    const onIt = (x, card) => !x.body && x.card === card && x.label?.endsWith("للأسفل") && x.within && x.hitVisible;
+    check(id, "RF4 A-06 ↓ on s1q1 (Enter, twice): focus stays on its ↓, inside the screen below the sticky layers; a " + (touch ? "tap" : "mouse click") + " on its ↓ keeps its card's heading on screen; section 1's ↓ keeps focus on its ↓ on screen",
+      f.cards?.join() === "s1q2,s1q1,s1q3,s1q4" && onIt(f, "sb-q-s1q1") && s.cards?.join() === "s1q2,s1q3,s1q1,s1q4" && onIt(s, "sb-q-s1q1") &&
+      p.cards?.join() === "s1q2,s1q3,s1q4,s1q1" && !!p.head?.onScreen &&
+      sec.order?.[1] === "s1" && sec.order?.length === 3 && !sec.body && sec.section === "s1" && !sec.card && sec.label?.endsWith("للأسفل") && sec.within && sec.hitVisible, JSON.stringify(out));
+  }
+
+  // A-12 — a question from the palette, a new section.
+  { const { ctx, page, shot } = await fresh("a12");
+    const out = rec.a12 = {};
+    try {
+      const add = page.locator('[data-section-id="s1"] [data-add-question]');
+      if (touch) await add.tap(); else { await add.focus(); await page.keyboard.press("Enter"); }
+      const dialog = page.getByRole("dialog", { name: "إضافة سؤال" });
+      await dialog.waitFor({ timeout: 5000 }); await page.waitForTimeout(300);
+      const type = dialog.locator("[data-testid=qt-card]").first();
+      if (touch) await type.tap(); else { await type.focus(); await page.keyboard.press("Enter"); }
+      await page.waitForTimeout(600);
+      out.question = { cards: (await cardsOf(page)).s1, ...(await probe(page)) };
+      await shot("07-a12-after-add-question");
+      const addSection = page.locator("[data-add-section]");
+      if (touch) await addSection.tap(); else { await addSection.focus(); await page.keyboard.press("Enter"); }
+      await page.waitForTimeout(600);
+      out.section = { sections: await page.evaluate(() => [...document.querySelectorAll("[data-section-id]")].map(s => s.getAttribute("data-section-id"))), ...(await probe(page)) };
+      await shot("08-a12-after-add-section");
+    } catch (e) { out.error = String(e).slice(0, 300); }
+    await ctx.close();
+    const q = out.question || {}, s = out.section || {};
+    const added = q.cards?.length === 5 ? "sb-q-" + q.cards[4] : null;
+    check(id, "RF4 A-12 a question picked in the palette (" + (touch ? "taps" : "keyboard") + ") → focus on the NEW card on screen; «+ إضافة قسم» → focus on the NEW section on screen",
+      !!added && !["s1q1", "s1q2", "s1q3", "s1q4"].includes(q.cards[4]) && !q.body && q.id === added && q.onScreen && q.hitVisible &&
+      s.sections?.length === 3 && !s.body && s.tag === "SECTION" && s.section === s.sections[2] && s.onScreen && s.hitVisible, JSON.stringify(out));
+  }
+}
+
+// RF4 A-04 — the builder's Ctrl+Z / Ctrl+Y under another modal layer (E9). The title is edited, then each layer is opened in turn and
+// Ctrl+Z is pressed on its own control; a window keydown listener (bubble phase, after the builder's document listener) records whether
+// the key was taken (defaultPrevented). Last, Ctrl+Z on a toolbar button (no layer above): the builder undoes the edit.
+async function runHistoryUnderModal({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf4h-" + name;
+  const rec = record.viewports[id] = {};
+  const { ctx, page, shot } = await newPage(id, viewport, touch, dsf);
+  const EDITED = "اختبار الوحدة الثانية — معدّل";
+  try {
+    await openSaved(page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+    await page.evaluate(() => { window.__rf4Keys = []; window.addEventListener("keydown", e => { if (e.ctrlKey || e.metaKey) window.__rf4Keys.push({ key: e.key, prevented: e.defaultPrevented }); }); });
+    const title = () => page.locator(".sb-exam-title").inputValue();
+    const lastKey = () => page.evaluate(() => window.__rf4Keys.at(-1) ?? null);
+    await page.locator(".sb-exam-title").fill(EDITED); await page.waitForTimeout(200);
+    // (1) the student preview
+    await page.locator(".sb-toolbar").getByRole("button", { name: "معاينة الامتحان" }).click();
+    const close = page.locator(".sb-preview-overlay").getByRole("button", { name: "← إغلاق المعاينة" });
+    await close.waitFor({ timeout: 5000 }); await close.focus();
+    await page.keyboard.press("Control+z"); await page.waitForTimeout(300);
+    rec.preview = { title: await title(), key: await lastKey(), open: await page.locator(".sb-preview-overlay").count() };
+    await shot("01-preview-ctrl-z");
+    await close.click(); await page.waitForTimeout(300);
+    // (2) the unsaved-changes guard (Escape on a card, as in E-1)
+    await page.locator("#sb-q-s1q1").focus(); await page.keyboard.press("Escape"); await page.waitForTimeout(400);
+    const guard = page.getByRole("dialog", { name: /تغييرات غير محفوظة/ });
+    await guard.getByRole("button", { name: "البقاء في المحرر" }).focus();
+    await page.keyboard.press("Control+z"); await page.waitForTimeout(300);
+    await page.keyboard.press("Control+y"); await page.waitForTimeout(300);
+    rec.guard = { title: await title(), key: await lastKey(), open: await guard.count() };
+    await shot("02-guard-ctrl-z");
+    await page.keyboard.press("Escape"); await page.waitForTimeout(300);
+    // (3) a dialog opened from «المزيد» — the toolbar brought into view first, as a teacher scrolls up to it where it is static (a
+    //     scroll arriving after the click would close the menu again: A-14 / B-05)
+    await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(300);
+    await page.getByRole("button", { name: "المزيد من أدوات الامتحان" }).click(); await page.waitForTimeout(200);
+    await page.locator(".eb-menu-panel").getByRole("button", { name: /مخطط الامتحان/ }).click();
+    const dialog = page.getByRole("dialog", { name: "مخطط الامتحان" });
+    await dialog.waitFor({ timeout: 8000 }); await page.waitForTimeout(300);
+    await dialog.getByRole("button", { name: "إغلاق" }).first().focus();
+    await page.keyboard.press("Control+z"); await page.waitForTimeout(300);
+    rec.blueprint = { title: await title(), key: await lastKey(), open: await dialog.count() };
+    await shot("03-blueprint-ctrl-z");
+    await page.keyboard.press("Escape"); await page.waitForTimeout(400);
+    // (4) the builder itself: Ctrl+Z on a toolbar button undoes the title edit
+    rec.layersLeft = await page.evaluate(() => [...document.querySelectorAll('[aria-modal="true"]')].filter(n => !n.classList.contains("structured-builder-overlay")).length);
+    await page.locator(".sb-toolbar").getByRole("button", { name: "معاينة الامتحان" }).focus();
+    await page.keyboard.press("Control+z"); await page.waitForTimeout(300);
+    rec.builder = { title: await title(), key: await lastKey() };
+  } catch (e) { rec.error = String(e).slice(0, 300); }
+  await ctx.close();
+  const under = x => !!x && x.title === EDITED && x.open === 1 && !!x.key && x.key.prevented === false;
+  check(id, "RF4 A-04 Ctrl+Z / Ctrl+Y on «← إغلاق المعاينة», «البقاء في المحرر» and the «مخطط الامتحان» dialog's «إغلاق» leave the edited title behind the layer and the key alone (no preventDefault); with no layer above, Ctrl+Z undoes",
+    under(rec.preview) && under(rec.guard) && under(rec.blueprint) && rec.layersLeft === 0 && rec.builder?.title === "اختبار الوحدة الثانية" && rec.builder?.key?.prevented === true, JSON.stringify(rec));
+}
+
+// RF4 A-10 / B-01 and B-06 — what a save tells the teacher (E9). Live regions are logged (MutationObserver, as in RF3 I-4).
+const liveLog = () => {
+  const spoken = el => { const c = el.cloneNode(true); c.querySelectorAll('[aria-hidden="true"]').forEach(n => n.remove()); return (c.textContent || "").replace(/\s+/g, " ").trim(); };
+  const live = () => [...document.querySelectorAll('[role="status"], [role="alert"], [role="log"], [aria-live]')].filter(n => n.getAttribute("aria-live") !== "off");
+  const last = new Map(live().map(r => [r, spoken(r)]));
+  window.__rf4Said = [];
+  new MutationObserver(() => { for (const r of live()) { const t = spoken(r); if (last.get(r) !== t) { last.set(r, t); if (t) window.__rf4Said.push({ role: r.getAttribute("role") || "live", text: t }); } } })
+    .observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+};
+const bannerProbe = () => {
+  const b = document.querySelector(".sb-banner-ok"), chip = document.querySelector(".sb-save-state");
+  const spoken = el => { const c = el.cloneNode(true); c.querySelectorAll('[aria-hidden="true"]').forEach(n => n.remove()); return (c.textContent || "").replace(/\s+/g, " ").trim(); };
+  return { banner: b ? b.textContent : null, bannerSpoken: b ? spoken(b) : null, banners: document.querySelectorAll(".sb-banner-ok").length, chip: chip?.textContent ?? null,
+    finalChip: document.querySelectorAll(".sb-toolbar .sb-stat-final").length };
+};
+async function runSaveFeedback({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow }) {
+  const id = "builder-rf4s-" + name;
+  const rec = record.viewports[id] = {};
+  const REASON = "الخدمة غير متاحة مؤقتًا — لم يُحفظ الامتحان.";
+  // A-10 / B-01 — a 503 from deep in the exam.
+  { const { ctx, page, shot } = await newPage(id + "-fail", viewport, touch, dsf);
+    const out = rec.fail = {};
+    try {
+      await page.route(u => /\/api\/save-exam-artifact$/.test(u.pathname), route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, error: REASON }) }));
+      await openSaved(page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+      await page.evaluate(liveLog);
+      await page.evaluate(() => { const o = document.querySelector(".structured-builder-overlay"), c = document.querySelector("#sb-q-s2q1"); o.scrollTop += c.getBoundingClientRect().top - o.clientHeight / 2; });
+      await page.waitForTimeout(200);
+      await page.locator("#sb-q-s2q1 textarea").first().fill("السؤال 1 في s2 — معدّل"); await page.waitForTimeout(200);
+      const button = page.locator(".sb-tb-save").getByRole("button", { name: "حفظ مسودة" });
+      out.buttonInView = await button.evaluate(b => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
+      out.scrollTopBefore = await page.evaluate(() => document.querySelector(".structured-builder-overlay").scrollTop);
+      if (!out.buttonInView) { await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(200); }   // a static toolbar: the teacher scrolls up to it
+      if (touch) await button.tap(); else await button.click();
+      await page.waitForTimeout(1200);
+      out.after = await page.evaluate(reason => {
+        const alerts = [...document.querySelectorAll('[role="alert"]')];
+        const a = alerts.find(n => (n.textContent || "").includes(reason)), r = a?.getBoundingClientRect(), hit = r ? document.elementFromPoint(r.left + Math.min(20, r.width / 2), r.top + r.height / 2) : null;
+        const holders = [...document.querySelectorAll("body *")].filter(n => n.children.length === 0 && (n.textContent || "").includes(reason));
+        return { alerts: alerts.length, text: a?.textContent ?? null, inToolbar: !!a?.closest(".sb-toolbar .sb-tb-status"), nextToState: a?.previousElementSibling?.classList.contains("sb-save-state") ?? false,
+          inView: !!r && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth, visible: !!hit && !!a && (hit === a || a.contains(hit)),
+          offScreenHolders: holders.filter(n => { const b = n.getBoundingClientRect(); return b.bottom < 0 || b.top > innerHeight; }).length,
+          chip: document.querySelector(".sb-save-state")?.textContent ?? null, scrollTop: document.querySelector(".structured-builder-overlay").scrollTop,
+          colors: a ? (({ color, backgroundColor }) => ({ color, backgroundColor }))(getComputedStyle(a)) : null };
+      }, REASON);
+      out.said = await page.evaluate(() => window.__rf4Said);
+      out.overflow = await overflow(page);
+      await shot("01-save-failed");
+    } catch (e) { out.error = String(e).slice(0, 300); }
+    await ctx.close();
+    const a = out.after || {}, roomy = viewport.width >= 768 && viewport.height >= 600;
+    check(id, "RF4 A-10 / B-01 a failed save (503) from s2q1 (" + (roomy ? "sticky toolbar, no scrolling" : "toolbar scrolled to, as a teacher must") + ") shows «تعذّر الحفظ: <reason>» on screen in the toolbar's status band next to the save state, announced (role=alert); the reason is nowhere off screen; no horizontal overflow",
+      a.alerts === 1 && a.text === "تعذّر الحفظ: " + REASON && a.inToolbar && a.nextToState && a.inView && a.visible && a.offScreenHolders === 0 && a.chip === "● تغييرات غير محفوظة" &&
+      (!roomy || out.buttonInView) && (out.said || []).some(x => x.role === "alert" && x.text === "تعذّر الحفظ: " + REASON) &&
+      !!out.overflow && out.overflow.scrollWidth <= out.overflow.clientWidth, JSON.stringify(out));
+  }
+  // B-06 — the draft notice after an edit and after «رجوع» → «متابعة تحرير …»; an approval's status.
+  { const { ctx, page, shot } = await newPage(id + "-ok", viewport, touch, dsf);
+    const out = rec.ok = {};
+    const tapOrClick = loc => touch ? loc.tap() : loc.click();
+    try {
+      await openSaved(page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+      const titleBox = page.locator(".sb-exam-title");
+      await titleBox.fill("اختبار الوحدة الثانية ج"); await page.waitForTimeout(200);
+      await tapOrClick(page.locator(".sb-tb-save").getByRole("button", { name: "حفظ مسودة" }));
+      await page.locator(".sb-save-state.is-saved").waitFor({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(400);
+      out.saved = await page.evaluate(bannerProbe);
+      await shot("02-draft-saved");
+      await titleBox.focus(); await page.keyboard.press("End"); await page.keyboard.type("د"); await page.waitForTimeout(400);
+      out.edited = await page.evaluate(bannerProbe);
+      await shot("03-edited-after-save");
+      await tapOrClick(page.locator(".sb-toolbar").getByRole("button", { name: "رجوع" })); await page.waitForTimeout(400);
+      await tapOrClick(page.getByRole("dialog", { name: /تغييرات غير محفوظة/ }).getByRole("button", { name: "الخروج دون حفظ" })); await page.waitForTimeout(500);
+      await tapOrClick(page.getByRole("button", { name: /متابعة تحرير الامتحان المنظّم/ }).first());
+      await page.locator("#sb-q-s2q2").waitFor({ timeout: 10000 }); await page.waitForTimeout(500);
+      out.continued = await page.evaluate(bannerProbe);
+      await shot("04-after-continue");
+      await page.evaluate(liveLog);
+      await tapOrClick(page.locator(".sb-tb-save").getByRole("button", { name: "اعتماد نهائي" }));
+      await page.locator(".sb-save-state.is-saved").waitFor({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(500);
+      out.final = await page.evaluate(bannerProbe);
+      out.finalSaid = await page.evaluate(() => window.__rf4Said);
+      await shot("05-finalized");
+    } catch (e) { out.error = String(e).slice(0, 300); }
+    await ctx.close();
+    const s = out.saved || {}, e = out.edited || {}, c = out.continued || {}, f = out.final || {};
+    check(id, "RF4 B-06 the draft notice shows with «✓ محفوظ» (its «✓» not spoken) and is gone after one more edit and after «رجوع» → «متابعة تحرير الامتحان المنظّم» (status «● تغييرات غير محفوظة»); an approval says «✓ محفوظ — معتمد نهائيًا» (announced), no second «معتمد نهائيًا» chip",
+      s.chip === "✓ محفوظ" && s.banners === 1 && s.banner === "✓ تم حفظ مسودة الامتحان المنظّم." && s.bannerSpoken === "تم حفظ مسودة الامتحان المنظّم." &&
+      e.chip === "● تغييرات غير محفوظة" && e.banners === 0 && c.chip === "● تغييرات غير محفوظة" && c.banners === 0 &&
+      f.chip === "✓ محفوظ — معتمد نهائيًا" && f.finalChip === 0 && f.banner === "✓ تم اعتماد الامتحان المنظّم نهائيًا وحفظه." && f.bannerSpoken === "تم اعتماد الامتحان المنظّم نهائيًا وحفظه." &&
+      (out.finalSaid || []).some(x => x.role === "status" && x.text === "محفوظ — معتمد نهائيًا") && !(out.finalSaid || []).some(x => /[✓●⏳↺]/u.test(x.text)), JSON.stringify(out));
+  }
+}
+
+// RF4 A-05 — an issue no Field frame shows (E20, served by a route: the list gains one row, loading it returns the exam). Each summary
+// entry is activated the way the viewport is used (mouse ≥ 768 px, keyboard Enter at 200 %, a tap on the phone).
+const E20_CHOICES = [{ text: "80" }, { text: "53" }, { text: "443" }];
+const E20 = { schemaVersion: 2, examId: "E20", title: "اختبار مشكلات بلا إطار", status: "draft", createdAt: "2026-10-01T10:00:00Z", updatedAt: "2026-10-01T10:00:00Z", metadata: {},
+  sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, instructions: "", questions: [
+    { examQuestionId: "tf1", presentationType: "trueFalse", text: "الشبكة المحلية أسرع من الشبكة الواسعة", marks: 0, answer: {} },
+    { examQuestionId: "mtf1", presentationType: "multiTrueFalse", text: "", marks: 2, fields: [{ id: "f1", statement: "TCP موثوق", kind: "boolean", correct: true }, { id: "f2", statement: "UDP موثوق", kind: "boolean" }] },
+    { examQuestionId: "m2", presentationType: "matching", text: "طابق كل بروتوكول بمنفذه", marks: 2, answer: { text: "DNS=99" },
+      fields: [{ id: "m0", label: "", kind: "select", options: E20_CHOICES, correct: "80" }, { id: "m1", label: "DNS", kind: "select", options: E20_CHOICES, correct: "99" }] },
+    { examQuestionId: "fb1", presentationType: "fillBlank", text: "بروتوكول ____ موثوق", marks: 0, wordBank: [], fields: [{ id: "b1", label: "", kind: "select", correct: "" }], answer: { mode: "exactSequence", values: [""] } },
+    { examQuestionId: "tf2", presentationType: "trueFalse", text: "المبدّل يعمل في الطبقة الثانية", marks: 1, answer: {} },
+  ] }] };
+const issueFocusProbe = () => {
+  const a = document.activeElement, bar = document.querySelector(".sb-toolbar");
+  const r = a?.getBoundingClientRect(), sticky = !!bar && getComputedStyle(bar).position === "sticky", top = sticky ? bar.getBoundingClientRect().bottom : 0;
+  const label = a?.id ? document.querySelector(`label[for="${a.id}"]`)?.textContent : null;
+  return { name: (label || a?.getAttribute("aria-label") || a?.tagName || "").replace(/\s+/g, " ").trim().slice(0, 40), tag: a?.tagName || "", card: a?.closest(".sb-question")?.id || "",
+    list: !!a?.classList.contains("sb-inline-issues"), control: !!a?.matches?.("input, select, textarea"), codes: a?.closest("[data-issue-codes]")?.getAttribute("data-issue-codes") || "",
+    visible: !!r && r.height > 0 && r.top >= top - 1 && r.top < window.innerHeight };
+};
+async function runIssueFallback({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf4i-" + name;
+  const rec = record.viewports[id] = {};
+  const { ctx, page, shot } = await newPage(id, viewport, touch, dsf);
+  const mode = touch ? "tap" : viewport.width <= 640 ? "keyboard" : "pointer";
+  try {
+    await page.route(u => /\/api\/saved-exams$/.test(u.pathname), async route => {
+      const req = route.request();
+      let body = {}; try { body = JSON.parse(req.postData() || "{}"); } catch { /* not JSON */ }
+      if (req.method() === "POST" && body.action === "load" && body.blobName === "exams/e20.json") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, exam: E20, savedAt: "2026-10-01T10:00:00Z" }) });
+      if (req.method() === "GET") {
+        const res = await route.fetch(), j = await res.json();
+        j.exams = [{ blobName: "exams/e20.json", examId: "E20", title: E20.title, savedAt: "2026-10-02T10:00:00Z", questionCount: 5, totalMarks: 5 }, ...(j.exams || [])];
+        return route.fulfill({ response: res, body: JSON.stringify(j) });
+      }
+      return route.continue();
+    });
+    await openSaved(page, origin, E20.title, "#sb-q-tf1");
+    const activate = async (text, n, step) => {
+      await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(150);
+      const entry = page.locator(".sb-issues-list .sb-issue-link").filter({ hasText: text }).filter({ hasText: "السؤال " + n + " " });
+      const count = await entry.count();
+      if (count !== 1) return { entry: count };
+      if (mode === "tap") await entry.tap(); else if (mode === "keyboard") { await entry.focus(); await page.keyboard.press("Enter"); } else await entry.click();
+      await page.waitForTimeout(600);
+      const f = await page.evaluate(issueFocusProbe);
+      await shot(step);
+      return f;
+    };
+    rec.tf1 = await activate("صح/خطأ بلا إجابة صحيحة", 1, "01-tf1");
+    rec.mtf1 = await activate("البند 2 في", 2, "02-mtf1");
+    rec.m2 = await activate("الإجابة الصحيحة للزوج 2", 3, "03-m2");
+    rec.fb1 = await activate("الفراغ 1 في", 4, "04-fb1");
+    rec.tf2 = await activate("صح/خطأ بلا إجابة صحيحة", 5, "05-tf2");
+    rec.marks = await activate("علامته غير صالحة", 1, "06-tf1-marks");                    // a frame's own issue still focuses its field
+  } catch (e) { rec.error = String(e).slice(0, 300); }
+  await ctx.close();
+  const listOf = (x, card, n) => !!x && x.list && !x.control && x.card === card && x.name === "مشكلات السؤال " + n && x.visible;
+  check(id, "RF4 A-05 (" + mode + ") an issue no frame shows focuses the card's named list «مشكلات السؤال N» — trueFalse / multiTrueFalse / matching (answer not among its choices) / fillBlank — never «العلامة», «نص السؤال» or pair 1's «العنصر 1»; the marks' own entry still focuses «العلامة»",
+    listOf(rec.tf1, "sb-q-tf1", 1) && listOf(rec.mtf1, "sb-q-mtf1", 2) && listOf(rec.m2, "sb-q-m2", 3) && listOf(rec.fb1, "sb-q-fb1", 4) && listOf(rec.tf2, "sb-q-tf2", 5) &&
+    rec.marks?.name === "العلامة" && rec.marks?.card === "sb-q-tf1" && rec.marks?.codes === "MARKS_PROBLEM", JSON.stringify(rec));
 }
