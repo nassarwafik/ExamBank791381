@@ -21,7 +21,8 @@ function formatDue(iso: string | undefined): string {
 const quoted = (title: string) => (title ? "«" + title + "»" : "");
 const fmtMark = (n: number) => String(Math.round(n * 100) / 100);
 
-export type NotificationPresentation = { title: string; preview: string; icon: NotificationIconKind; sender?: string };
+// `grade`: the grade the app composed into `preview` (a reviewed assignment with its score); absent when the preview holds none.
+export type NotificationPresentation = { title: string; preview: string; icon: NotificationIconKind; sender?: string; grade?: string };
 
 export function presentNotification(item: NotificationItem): NotificationPresentation {
   switch (item.type) {
@@ -53,7 +54,7 @@ export function presentNotification(item: NotificationItem): NotificationPresent
         const preview = item.finalized
           ? "تم تحديث علامتك في امتحان " + quoted(item.assignmentTitle) + "، وأصبحت علامتك " + grade + "." + note
           : "تم تحديث علامتك المؤقتة في امتحان " + quoted(item.assignmentTitle) + "، وهي الآن " + grade + " بانتظار اكتمال التصحيح." + note;
-        return { title: item.automatic ? "اكتمل تصحيح امتحانك" : item.finalized ? "تم تحديث علامتك" : "تم تحديث علامتك المؤقتة", preview, icon: "review" };
+        return { title: item.automatic ? "اكتمل تصحيح امتحانك" : item.finalized ? "تم تحديث علامتك" : "تم تحديث علامتك المؤقتة", preview, icon: "review", grade };
       }
       const title = graded ? (item.automatic ? "اكتمل تصحيح واجبك" : "تم تصحيح واجبك") : "لديك ملاحظة جديدة من المعلم";
       const parts = [quoted(item.assignmentTitle)];

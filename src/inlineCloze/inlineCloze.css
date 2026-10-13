@@ -35,3 +35,7 @@
 .cloze-review-blank[data-ok="true"] { border-color: #16a34a; }
 .cloze-review-blank[data-ok="false"] { border-color: #dc2626; }
 .cloze-review-blank .cloze-given, .cloze-review-blank .cloze-expected { unicode-bidi: plaintext; overflow-wrap: anywhere; }
+
+/* Phase 21E.3 (S-7) — coarse pointers: every blank of the student passage reaches 44 CSS px (the editor keeps its own sizes). */
+/* Review fix 1: scoped to the student exam, and the input keeps its 6ch minimum width when that is wider. */
+@media (pointer: coarse) { .interactive-exam-page .cloze .cloze-input { min-height: 44px; min-width: max(6ch, 44px); } .interactive-exam-page .cloze .cloze-select { min-height: 44px; min-width: 44px; } }

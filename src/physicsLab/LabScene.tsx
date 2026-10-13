@@ -36,7 +36,8 @@ function EnergyBars({ frame, max, conserved, x0 }: { frame: LabFrame; max: numbe
   const top = 34, bottom = SCENE_H - 34, h = bottom - top, w = 22, gap = 8;
   return (
     <g className="lab-bars" data-testid="lab-energy-bars" role="group" aria-label={"أعمدة الطاقة: حركية " + fmtLab(e.kinetic) + " J، وضع " + fmtLab(e.potential) + " J، كلية " + fmtLab(e.total) + " J" + (conserved ? " (محفوظة)" : "، مبددة " + fmtLab(e.dissipated) + " J")}>
-      <text className="lab-bars-title" x={x0} y={18}>{conserved ? "الطاقة (J) — محفوظة" : "الطاقة (J) — تتبدد"}</text>
+      {/* 21E.3 (D3) — the scene is an LTR drawing; this Arabic title with a unit reads right to left (same box: anchor at its left end). */}
+      <text className="lab-bars-title" x={x0} y={18} direction="rtl" textAnchor="end">{conserved ? "الطاقة (J) — محفوظة" : "الطاقة (J) — تتبدد"}</text>
       <line className="lab-bars-axis" x1={x0} x2={x0 + bars.length * (w + gap)} y1={bottom} y2={bottom} />
       {bars.map((b, i) => {
         const bh = max > 0 ? Math.max(0, Math.min(1, b.v / max)) * h : 0, bx = x0 + i * (w + gap);

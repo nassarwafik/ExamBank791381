@@ -5,7 +5,7 @@
 // events that the adapter turns back into semantic keys at once. The picture is hidden from assistive technology; the table and the selection
 // list are its accessible equivalent. Disposal: one engine instance per mounted chart, disposed on unmount / engine change; a load that
 // resolves after unmount never mounts.
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ChartSpecV1 } from "./chartSpec";
 import { chartDataTable, chartSummary, chartTargets, nextChartSelection, type ChartSelectionMode, type ChartTargetKind } from "./chartData";
 import { buildEngineOption, chartHeight, chartLegend, formatValue, needsAdvancedEngine, referenceLinesText, targetFromEvent, tooltipFromEvent, widthLayout } from "./echartsAdapter";
@@ -14,6 +14,7 @@ import type { EngineEvent, EngineHandle } from "./echartsEngine";
 import type { EngineOption } from "./echartsAdapter";
 import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
 import { useMediaQuery } from "../ui/useMediaQuery";
+import { QuestionRecoveryContext } from "../student/exam/questionRecovery";
 import "./charts.css";
 
 /** Review state of one selectable target (teacher review / student result view). */
@@ -92,6 +93,9 @@ const loadEngine = (advanced: boolean) => (advanced ? Promise.all([import("./ech
 type Tip = { x: number; y: number; title: string; lines: string[] };
 
 export default function DataChart({ spec, preview, selection }: DataChartProps) {
+  // 21E.3 (D5), review fix 1 — inside the running exam the copy never advises a page reload (leaving a strict attempt ends it);
+  // everywhere else (teacher previews, the reader, presentations) the reload advice stays as it was.
+  const inExam = useContext(QuestionRecoveryContext).scope === "exam";
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const ids = { title: "xp-chart-" + uid + "-t", desc: "xp-chart-" + uid + "-d", summary: "xp-chart-" + uid + "-s", table: "xp-chart-" + uid + "-tb", list: "xp-chart-" + uid + "-l", refs: "xp-chart-" + uid + "-r" };
   const figureRef = useRef<HTMLElement | null>(null);
@@ -282,8 +286,8 @@ export default function DataChart({ spec, preview, selection }: DataChartProps) 
           (the button disappears while the engine loads) */}
       {state === "error" && (
         <p className="xp-chart-error" role="status">
-          {loaded?.unloadable ? "تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه، ويُعرض الرسم بعد إعادة تحميل الصفحة."
-            : attempt === 0 ? "تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه." : "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه، ويمكن إعادة تحميل الصفحة لاحقًا لعرضه."}
+          {loaded?.unloadable ? (inExam ? "تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه." : "تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه، ويُعرض الرسم بعد إعادة تحميل الصفحة.")
+            : attempt === 0 ? "تعذّر عرض الرسم البياني؛ البيانات كاملة في الجدول أدناه." : inExam ? "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه." : "تعذّر عرض الرسم البياني مرة أخرى؛ البيانات كاملة في الجدول أدناه، ويمكن إعادة تحميل الصفحة لاحقًا لعرضه."}
           {attempt === 0 && !loaded?.unloadable && <>{" "}<button type="button" className="xp-chart-retry" onClick={() => { figureRef.current?.focus(); setAttempt(1); }}>إعادة المحاولة</button></>}
         </p>
       )}

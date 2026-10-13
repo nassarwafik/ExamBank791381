@@ -7,6 +7,8 @@ import {isCheckboxTableText,legacyTableCellControl} from "./legacyTableSemantics
 import QuestionField from "./QuestionField";
 import {resolveStudentRenderer,studentUnsupported} from "./questionTypes/studentRegistry";
 import StudentUnsupported from "./questionTypes/StudentUnsupported";
+import QuestionErrorBoundary from "./student/exam/QuestionErrorBoundary";
+import {recoverableSharedLazy} from "./recoverableLazy";
 
 // Extracted verbatim from StudentExamPage.tsx so the exact same rendering (including PR #33's
 // table-dropdown logic) can be reused both by the real student exam page and by the teacher-facing
@@ -22,7 +24,8 @@ export const optionsFor=(q:{type?:string;presentationType?:string;options?:Opt[]
 import type {Answer,FieldValue} from "./answerState";
 import {answered} from "./answerState";
 // Phase 19F — the shared read-only code stimulus (any type): LAZY, loaded only for a question that carries one (initial graph unchanged).
-const CodeStimulusView=lazy(()=>import("./questionTypes/CodeStimulusView"));
+// Phase 21E.3 — recoverable in place after a chunk failure (a shared chunk: a recovered copy is resolved through its namespace export).
+const CodeStimulusView=recoverableSharedLazy("CodeStimulusView",()=>import("./questionTypes/CodeStimulusView"));
 // Phase 20D.1 — the rich stem (validation + trusted renderer) is LAZY; without q.richContent / a presentation provider the card is byte-identical.
 const RichPrompt=lazy(()=>import("./richContent/RichPrompt"));
 export type {Answer,FieldValue} from "./answerState";
@@ -95,7 +98,13 @@ export default function StudentQuestionCard({q,index,id,answer,onChoice,onSeq,on
  const labelPrefix="السؤال "+(q.displayNumber??(index+1));
  const tableAnswerHeader=table?(table.headers[1]||"الإجابة"):"";
  const xp=useContext(ExamPresentationContext),plain=<p className="iex-qtext" id={textId}>{promptText(q.text)}</p>;
- return <article className={"iex-q "+(answered(a)?"done":"")} {...xp?.questionAttributes(q)}><div className="iex-node" aria-hidden="true">{q.displayNumber??(index+1)}</div><div className="iex-card"><div className="iex-qhead"><span>{registered?registered.label:t==="multiplechoice"?"اختيار من متعدد":t==="truefalse"?"صح أو خطأ":t==="multitruefalse"?"صح/خطأ متعدد":t==="clifill"?"أوامر CLI":t==="matching"?"طابق":t==="ordering"?"رتّب العناصر":(table||fieldType)?"أكمل الجدول":seq?"أكمل الناقص":"سؤال"}</span><strong>{q.marks} علامة</strong></div>{q.richContent&&typeof q.richContent==="object"?<Suspense fallback={plain}><RichPrompt q={q} textId={textId}/></Suspense>:plain}{q.codeStimulus!==undefined&&<Suspense fallback={null}><CodeStimulusView stimulus={q.codeStimulus}/></Suspense>}
+ return <article className={"iex-q "+(answered(a)?"done":"")} {...xp?.questionAttributes(q)}><div className="iex-node" aria-hidden="true">{q.displayNumber??(index+1)}</div><div className="iex-card"><div className="iex-qhead"><span>{registered?registered.label:t==="multiplechoice"?"اختيار من متعدد":t==="truefalse"?"صح أو خطأ":t==="multitruefalse"?"صح/خطأ متعدد":t==="clifill"?"أوامر CLI":t==="matching"?"طابق":t==="ordering"?"رتّب العناصر":(table||fieldType)?"أكمل الجدول":seq?"أكمل الناقص":"سؤال"}</span><strong>{q.marks} علامة</strong></div>
+  {/* Phase 21E.3 — failures stay inside THIS question: a failing rich stem keeps the plain question text WITH a notice and a
+      retry (never silently), a failing code stimulus or answer renderer shows a recovery card, and the header, the answers
+      (held by the page) and every other question are untouched. Keyed by the answer id so another question starts clean. */}
+  <QuestionErrorBoundary resetKey={id} variant="stem" fallback={plain}>{q.richContent&&typeof q.richContent==="object"?<Suspense fallback={plain}><RichPrompt q={q} textId={textId}/></Suspense>:plain}</QuestionErrorBoundary>
+  {q.codeStimulus!==undefined&&<QuestionErrorBoundary resetKey={id} variant="part"><Suspense fallback={null}><CodeStimulusView stimulus={q.codeStimulus}/></Suspense></QuestionErrorBoundary>}
+  <QuestionErrorBoundary resetKey={id}>
   {!registered?.ownsImage&&imageList(q).map((im,n)=>im.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
   {registered&&<Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل السؤال…</p>}><registered.Renderer q={q} id={id} answer={a} onAnswer={onAnswer||(()=>{})} disabled={disabled} labelPrefix={labelPrefix} textId={textId}/></Suspense>}
   {unsupported&&<StudentUnsupported/>}
@@ -104,5 +113,6 @@ export default function StudentQuestionCard({q,index,id,answer,onChoice,onSeq,on
   {table&&<div className="iex-table-wrap"><table><thead><tr>{table.headers.map((h,n)=><th key={n} scope="col">{h}</th>)}</tr></thead><tbody>{table.rows.map((r,n)=>{const rowOptions=resolveTableRowOptions(q,n),control=legacyTableCellControl(q,n);const cellName=(r[0]||("الصف "+(n+1)))+" — "+tableAnswerHeader;return <tr key={n}><th scope="row">{r[0]}</th><td>{control==="select"&&rowOptions?<select className="iex-cell-select" aria-label={cellName} value={a?.kind==="table"?String(a.values[n]??""):""} onChange={e=>onTable(n,e.target.value)} disabled={disabled}><option value="">— اختر —</option>{rowOptions.isBoolean?<><option value="true">صحيح</option><option value="false">غير صحيح</option></>:rowOptions.values.map((v,k)=><option key={k} value={v}>{v}</option>)}</select>:control==="checkbox"?<input className="iex-check" type="checkbox" aria-label={cellName} checked={a?.kind==="table"&&Boolean(a.values[n])} onChange={e=>onTable(n,e.target.checked)} disabled={disabled}/>:<input className="iex-cell" aria-label={cellName} value={a?.kind==="table"?String(a.values[n]??""):""} onChange={e=>onTable(n,e.target.value)} placeholder="اكتب الإجابة" disabled={disabled}/>}</td></tr>})}</tbody></table></div>}
   {!table&&seq&&(()=>{const bank=getWordBank(q);const seqVal=(n:number)=>a?.kind==="sequence"?a.values[n]||"":"";return <><div className="iex-bank" aria-label="بنك الكلمات">{bank.map((w,n)=><span key={n}>{w}</span>)}</div><div className={"iex-seq"+(t==="ordering"?" iex-order-list":"")}>{(q.fields||[]).map((f,n)=><label key={f.id||f.number||n}><span>{f.label||"الحقل "+(n+1)}</span>{bank.length?<select value={seqVal(n)} onChange={e=>onSeq(n,e.target.value)} disabled={disabled}><option value="">— اختر —</option>{bank.map((w,k)=><option key={k} value={w}>{w}</option>)}</select>:<input className="iex-cell" value={seqVal(n)} onChange={e=>onSeq(n,e.target.value)} placeholder="اكتب الإجابة" disabled={disabled}/>}</label>)}</div></>})()}
   {!registered&&!unsupported&&!table&&!seq&&!fieldType&&t!=="multiplechoice"&&t!=="truefalse"&&<textarea className="iex-open" aria-labelledby={textId} value={a?.kind==="text"?a.value:""} onChange={e=>onText(e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
+  </QuestionErrorBoundary>
  </div></article>;
 }

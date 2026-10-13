@@ -4,6 +4,7 @@ import type { Question, QuestionPart } from "../../studentQuestionTypes";
 import { answered, type Answer } from "../../answerState";
 import { compositeChildKey, compositeShape, selectCompositeCountedParts } from "../../compositeModel";
 import { resolveStudentRenderer, studentUnsupported } from "../studentRegistry";
+import QuestionErrorBoundary from "../../student/exam/QuestionErrorBoundary";
 import StudentUnsupported from "../StudentUnsupported";
 import CompoundPartControl from "../../CompoundPartControl";
 import { partLabel } from "../../examStructure";
@@ -62,10 +63,13 @@ function SimContext({ ctx, answer, onAnswer, disabled, label }: { ctx: Ctx; answ
   const { Workspace } = ui;
   return (
     <div className="iex-smartsim" data-testid="smartsim-response" data-plugin={env.pluginKey + "@" + env.pluginVersion}>
-      <Suspense fallback={<p role="status">جارٍ تحميل المحاكاة...</p>}>
-        <Workspace config={env.config} actions={stored} disabled={disabled} label={label} preview={preview}
-          onChange={(actions, state) => onAnswer({ kind: "smartSim", pluginKey: env.pluginKey, pluginVersion: env.pluginVersion, actions: actions as JsonValue[], state: state as JsonValue } as Answer)} />
-      </Suspense>
+      {/* Phase 21E.3 — a shared context whose workspace fails shows a recovery card here; the composite's parts stay usable. */}
+      <QuestionErrorBoundary variant="part">
+        <Suspense fallback={<p role="status">جارٍ تحميل المحاكاة...</p>}>
+          <Workspace config={env.config} actions={stored} disabled={disabled} label={label} preview={preview}
+            onChange={(actions, state) => onAnswer({ kind: "smartSim", pluginKey: env.pluginKey, pluginVersion: env.pluginVersion, actions: actions as JsonValue[], state: state as JsonValue } as Answer)} />
+        </Suspense>
+      </QuestionErrorBoundary>
     </div>
   );
 }
@@ -129,7 +133,7 @@ export default function CompositeResponse({ q, id, answer, onAnswer, disabled, l
                     : child.text && <p className="cmp-part-text" id={textId}>{child.text}</p>}
                   {!registered?.ownsImage && imageList(child).map((im, n) => im?.dataUrl ? <img className="iex-image" src={im.dataUrl} alt={"صورة البند " + label} key={n} /> : null)}
                   {linked && <p className="cmp-part-linked" role="note">{"تُجاب في «" + ctxTitle(model.contexts.find(c => c.id === child.contextId)) + "» أعلاه"}</p>}
-                  {registered && <Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل البند…</p>}><registered.Renderer q={{ ...child, presentationType: child.type } as unknown as Question} id={key} answer={pAns} onAnswer={a => setPart(pid, a)} disabled={disabled} labelPrefix={name} textId={textId} /></Suspense>}
+                  {registered && <QuestionErrorBoundary resetKey={key} variant="part"><Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل البند…</p>}><registered.Renderer q={{ ...child, presentationType: child.type } as unknown as Question} id={key} answer={pAns} onAnswer={a => setPart(pid, a)} disabled={disabled} labelPrefix={name} textId={textId} /></Suspense></QuestionErrorBoundary>}
                   {unsupported && <StudentUnsupported />}
                   {!linked && !registered && !unsupported && <CompoundPartControl p={child} idBase={key} answer={pAns} onAnswer={a => setPart(pid, a)} disabled={disabled} textId={textId} name={name} />}
                   {excess && <div className="iex-extra-hint cmp-excess-hint">إجابة إضافية — لن تدخل في التصحيح</div>}

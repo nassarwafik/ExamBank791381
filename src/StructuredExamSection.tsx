@@ -1,9 +1,11 @@
 
 import {lazy,Suspense,type ReactNode} from "react";
 import StudentQuestionCard,{answered} from "./StudentQuestionCard";
+import {recoverableLazy} from "./recoverableLazy";
 // Phase 19G — the scenario presentation (shared sources + instructions) is LAZY: loaded only for a section that carries scenarios, so the
 // initial graph is unchanged; the view runs the strict projection itself (a malformed scenario renders nothing).
-const ScenarioView=lazy(()=>import("./scenario/ScenarioView"));
+// Phase 21E.3 — recoverable in place after a chunk failure (the page boundary shows the recovery card).
+const ScenarioView=recoverableLazy("ScenarioView",()=>import("./scenario/ScenarioView"));
 // Phase 20D.1 (review fix 1) — rich section instructions (valid RichContentV1) through the lazy trusted renderer; else the plain line.
 const RichText=lazy(()=>import("./richContent/RichPrompt").then(m=>({default:m.RichText})));
 import type {Answer,FieldValue,Question} from "./StudentQuestionCard";

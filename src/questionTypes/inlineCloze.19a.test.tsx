@@ -286,7 +286,7 @@ describe("lazy loading and module hygiene", () => {
     for (const f of ["src/inlineClozeQuestion.ts", "src/inlineCloze/InlineClozeReviewView.tsx", "src/questionTypes/student/InlineClozeResponse.tsx", "src/questionTypes/editors/InlineClozeEditor.tsx"])
       expect(strip(fs.readFileSync(path.join(repo, f), "utf8")), f).not.toMatch(/dangerouslySetInnerHTML|innerHTML|\beval\s*\(|new Function|fetch\(|XMLHttpRequest|localStorage|https?:\/\//);
     expect(strip(fs.readFileSync(path.join(repo, "src/inlineClozeQuestion.ts"), "utf8"))).not.toMatch(/from "react|document\.|window\.|import\(/);
-    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("inlineCloze", 1, lazy\(\(\) => import\("\.\/student\/InlineClozeResponse"\)\)\)/);
+    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("inlineCloze", 1, recoverableLazy\("InlineClozeResponse", \(\) => import\("\.\/student\/InlineClozeResponse"\)\)\)/);
     expect(fs.readFileSync(path.join(repo, "src/questionTypes/authoringRegistry.tsx"), "utf8")).toMatch(/registerAuthoringEditor\("inlineCloze", 1, lazy\(\(\) => import\("\.\/editors\/InlineClozeEditor"\)\)\)/);
     expect(fs.readFileSync(path.join(repo, "scripts/check-bundle-budget.mjs"), "utf8")).toMatch(/CLOZE_SIGNATURES/);
   });

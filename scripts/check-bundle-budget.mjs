@@ -196,6 +196,97 @@ export function dynamicEdges(distDir, file) {
   return [...new Set([...source.matchAll(/import\([`"']\.\/([^`"']+\.js)[`"']\)/g)].map(m => m[1]))];
 }
 
+// Phase 21E.3 — the in-place chunk recovery (src/recoverableLazy.ts) relies on these facts of the production build, checked here
+// (review fix 1 made 1, 3 and 4 strict):
+//  1. every production declaration has the exact shape recoverableLazy|recoverableSharedLazy("<Name>", () => import("<path>")) with
+//     <Name> equal to the imported file's base name (the runtime accepts only a failure that names <Name>-<hash>.js), in either
+//     quote style; any other call shape fails, and fewer than MIN_RECOVERABLE_DECLARATIONS declarations fail (a vacuous guard);
+//  2. each declared chunk is emitted exactly once as <Name>-<8 base36>.js; a recoverableLazy chunk exports `default` (the
+//     recovered module is used as the component), a recoverableSharedLazy chunk is a shared chunk WITHOUT default;
+//  3. the chunk-header parser below — the same source as STATIC_IMPORT_HEADER_SOURCE in src/recoverableLazy.ts (pinned by a unit
+//     test) — finds every static import edge of every chunk, so the recovery always knows the static graph it remaps;
+//  4. every NEVER_REMAP name exists as a chunk of this build (the deny-list stays true to the build) and no recoverable component
+//     is declared for one of them.
+export const MIN_RECOVERABLE_DECLARATIONS = 50;
+export const STATIC_IMPORT_HEADER_SOURCE = String.raw`(?:\s|\/\*[\s\S]*?\*\/)*(import|export)\s*(?:([\w$*{][^;"']*?)\s*from\s*)?(["'])(\.\/[^"']+?\.js)\3\s*;?`;
+export function headerImports(src) {
+  const out = [];
+  let i = /^const __vite__mapDeps=[^\n]*\n/.exec(src)?.[0].length ?? 0;
+  const re = new RegExp(STATIC_IMPORT_HEADER_SOURCE, "y");
+  for (;;) {
+    re.lastIndex = i;
+    const m = re.exec(src);
+    if (!m || (m[1] === "export" && !m[2])) break;
+    out.push(m[4]);
+    i = re.lastIndex;
+  }
+  return out;
+}
+const RECOVERY_CALL = /\b(recoverableLazy|recoverableSharedLazy)\s*\(/g;
+const RECOVERY_REFERENCE = /\b(recoverableLazy|recoverableSharedLazy)\b(?!\s*\()/g;
+const RECOVERY_DECL = /^(recoverableLazy|recoverableSharedLazy)\s*\(\s*(["'])([A-Za-z0-9_-]+)\2\s*,\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\4\s*\)\s*\)/;
+/** The production declarations of src/ (tests and the runtime module itself excluded). */
+export function recoveryDeclarations(srcDir) {
+  const decls = [], failures = [];
+  const walk = dir => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) { walk(p); continue; }
+      if (!/\.(ts|tsx)$/.test(e.name) || /\.test\./.test(e.name) || e.name === "recoverableLazy.ts") continue;
+      const text = fs.readFileSync(p, "utf8"), file = path.relative(srcDir, p);
+      // Review fix 2: the loaders may only be imported or called in the literal shape; any other reference (an alias such as
+      // `const rl = recoverableLazy`) would declare chunks this guard cannot see.
+      text.split("\n").forEach((line, i) => {
+        if (/^\s*(\/\/|\*|\/\*)/.test(line) || /^\s*import\b/.test(line)) return;
+        for (const r of line.matchAll(RECOVERY_REFERENCE)) failures.push(`${file}:${i + 1}: ${r[1]} is referenced without a call — only ${r[1]}("<Name>", () => import("<path>")) is allowed`);
+      });
+      for (const m of text.matchAll(RECOVERY_CALL)) {
+        const d = RECOVERY_DECL.exec(text.slice(m.index));
+        if (!d) { failures.push(`${file}: ${m[1]}( is not the literal shape ${m[1]}("<Name>", () => import("<path>"))`); continue; }
+        const base = path.basename(d[5]).replace(/\.(tsx?|jsx?)$/, "");
+        if (base !== d[3]) failures.push(`${file}: ${m[1]}("${d[3]}") imports "${d[5]}" — the name must be the imported file's base name ("${base}")`);
+        decls.push({ name: d[3], file, shared: d[1] === "recoverableSharedLazy" });
+      }
+    }
+  };
+  walk(srcDir);
+  return { decls, failures };
+}
+export function checkChunkRecovery(distDir, srcDir) {
+  const report = [], failures = [];
+  const assetsDir = path.join(distDir, "assets");
+  const js = fs.readdirSync(assetsDir).filter(f => f.endsWith(".js"));
+  const { decls, failures: shapeFailures } = recoveryDeclarations(srcDir);
+  failures.push(...shapeFailures);
+  if (decls.length < MIN_RECOVERABLE_DECLARATIONS) failures.push(`only ${decls.length} recoverable declarations found (at least ${MIN_RECOVERABLE_DECLARATIONS} expected) — the guard would be vacuous`);
+  const runtime = fs.readFileSync(path.join(srcDir, "recoverableLazy.ts"), "utf8");
+  const neverRemap = [...(/export const NEVER_REMAP[^=]*=\s*new Set\(\[([^\]]*)\]/.exec(runtime)?.[1] || "").matchAll(/"([A-Za-z0-9_-]+)"/g)].map(m => m[1]);
+  if (!neverRemap.length) failures.push("NEVER_REMAP could not be read from src/recoverableLazy.ts");
+  for (const name of neverRemap) if (!js.some(f => new RegExp("^" + name + "-[0-9a-z]{8}\\.js$").test(f))) failures.push(`NEVER_REMAP name "${name}" is not a chunk of this build (update the deny-list)`);
+  const byName = new Map();
+  for (const d of decls) { const prev = byName.get(d.name); if (prev && prev.shared !== d.shared) failures.push(`"${d.name}" is declared both shared and not shared`); byName.set(d.name, d); }
+  for (const [name, d] of byName) {
+    if (neverRemap.includes(name)) failures.push(`${d.file}: "${name}" is on NEVER_REMAP and cannot be a recoverable component`);
+    const hits = js.filter(f => new RegExp("^" + name + "-[0-9a-z]{8}\\.js$").test(f));
+    if (hits.length !== 1) { failures.push(`${d.file}: "${name}": ${hits.length} emitted chunks named ${name}-<hash>.js (exactly 1 required)`); continue; }
+    const text = fs.readFileSync(path.join(assetsDir, hits[0]), "utf8");
+    const exported = [...text.matchAll(/export\s*\{([^}]*)\}/g)].map(m => m[1]).join(",");
+    const hasDefault = /(^|,)\s*(?:[\w$]+\s+as\s+)?default\s*(,|$)/.test(exported) || /export\s+default\b/.test(text);
+    if (!d.shared && !hasDefault) failures.push(`recoverableLazy("${name}"): ${hits[0]} does not export default — declare it with recoverableSharedLazy (a shared chunk)`);
+    if (d.shared && (hasDefault || !exported.trim())) failures.push(`recoverableSharedLazy("${name}"): ${hits[0]} is not a shared chunk exporting a namespace — declare it with recoverableLazy`);
+  }
+  let edges = 0, mismatched = 0;
+  for (const f of js) {
+    const text = fs.readFileSync(path.join(assetsDir, f), "utf8");
+    const header = new Set(headerImports(text));
+    const all = new Set([...[...text.matchAll(/from\s*["'](\.\/[^"']+\.js)["']/g)].map(m => m[1]), ...[...text.matchAll(/(?:^|[;/\n])\s*import\s*["'](\.\/[^"']+\.js)["']/g)].map(m => m[1])]);
+    edges += header.size;
+    if (header.size !== all.size || [...all].some(x => !header.has(x))) { mismatched += 1; failures.push(`chunk-header parser missed static imports of ${f}`); }
+  }
+  report.push(`Chunk recovery: ${decls.length} declarations / ${byName.size} recoverable chunk(s) emitted once (${[...byName.values()].filter(d => d.shared).length} shared); NEVER_REMAP ${neverRemap.length} names all present; header parser matched ${js.length - mismatched}/${js.length} chunks (${edges} static edges)`);
+  return { report, failures };
+}
+
 function main() {
   const initial = initialGraph(dist);
   const failures = [];
@@ -438,8 +529,16 @@ function main() {
   for (const line of visuals.report) console.log(line);
   failures.push(...visuals.failures);
 
+  // Phase 21E.3 — in-place chunk recovery facts.
+  const recovery = checkChunkRecovery(dist, path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src"));
+  for (const line of recovery.report) console.log(line);
+  failures.push(...recovery.failures);
+
   if (failures.length) { console.error("\nBUNDLE GUARD FAILED:\n - " + failures.join("\n - ")); process.exit(1); }
   console.log("bundle guard passed");
 }
 
-main();
+// Run as a script (npm run check:bundle); importing the module (tests) only exposes its checks. Review fix 2: compared by real
+// path, so running it through a symlinked directory still runs the checks (a plain path comparison silently skipped them).
+const realOf = p => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+if (process.argv[1] && realOf(path.resolve(process.argv[1])) === realOf(fileURLToPath(import.meta.url))) main();
