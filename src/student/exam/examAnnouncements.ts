@@ -12,6 +12,11 @@
 import type { SaveStateKind } from "../../studentSaveState";
 
 export const TIMER_THRESHOLDS_MS = [300_000, 60_000] as const;
+/** Review fix 1 — a live region must exist (and be tracked by assistive technology) before its text changes: the first message
+ *  waits this long after the announcer is inserted. */
+export const ANNOUNCER_SETTLE_MS = 400;
+/** A delivered message is cleared after this long, so stale text is not found later in browse mode. */
+export const ANNOUNCEMENT_CLEAR_MS = 8_000;
 /** A crossing observed within this margin of the threshold is announced as "N minutes remain"; later as "less than N". */
 const CROSSING_MARGIN_MS = 5_000;
 

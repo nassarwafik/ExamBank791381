@@ -6,10 +6,11 @@ import { createElement, Fragment, type ReactNode } from "react";
  * sentence (without isolation «Tadris+» is drawn «+Tadris»). The text content is unchanged — no bidi control character is
  * ever inserted, so copied text, accessible names and stored values stay identical. `pattern` must be a global RegExp.
  */
-export function isolateLtr(text: string, pattern: RegExp): ReactNode {
+export function isolateLtr(text: string, pattern: RegExp, options: { lastOnly?: boolean } = {}): ReactNode {
   const out: ReactNode[] = [];
   let last = 0, key = 0;
-  for (const m of text.matchAll(pattern)) {
+  const all = [...text.matchAll(pattern)];
+  for (const m of options.lastOnly ? all.slice(-1) : all) {
     const at = m.index ?? 0;
     if (!m[0]) continue;
     if (at > last) out.push(text.slice(last, at));
@@ -23,5 +24,6 @@ export function isolateLtr(text: string, pattern: RegExp): ReactNode {
 
 /** The Latin brand name. */
 export const BRAND_LTR = /Tadris\+/g;
-/** A grade or score fraction such as 8/10 or 8.5/10. */
-export const GRADE_LTR = /\d+(?:\.\d+)?\s*\/\s*\d+(?:\.\d+)?/g;
+/** A standalone grade or score fraction such as 8/10 or 8.5/10. Review fix 1: never part of a longer numeric token — a date
+ *  (12/10/2026), an address / prefix (192.168.1.0/24) or a version stays one untouched run (splitting it reorders it). */
+export const GRADE_LTR = /(?<![\d/]|\d\.)\d+(?:\.\d+)?\s*\/\s*\d+(?:\.\d+)?(?![\d/]|\.\d)/g;

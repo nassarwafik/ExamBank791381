@@ -74,7 +74,7 @@ describe("QuestionErrorBoundary over a REAL lazy chunk failure", () => {
     let calls = 0;
     const Renderer = recoverableLazy<object>("UnitRenderer", () => (++calls === 1 ? Promise.reject(chunkError("UnitRenderer")) : Promise.resolve({ default: () => <p>تم تحميل السؤال</p> })) as Promise<{ default: ComponentType<object> }>);
     const announce = vi.fn();
-    render(<QuestionRecoveryContext.Provider value={{ reloadAllowed: false, strict: false, announce }}><QuestionErrorBoundary resetKey="q1"><Suspense fallback={<i>…</i>}><Renderer /></Suspense></QuestionErrorBoundary></QuestionRecoveryContext.Provider>);
+    render(<QuestionRecoveryContext.Provider value={{ scope: "exam", reloadAllowed: false, strict: false, announce }}><QuestionErrorBoundary resetKey="q1"><Suspense fallback={<i>…</i>}><Renderer /></Suspense></QuestionErrorBoundary></QuestionRecoveryContext.Provider>);
     const card = await screen.findByTestId("question-recovery");
     expect(card.textContent).not.toMatch(/Failed|assets|\.js|TypeError|abcd1234/);
     expect(announce).toHaveBeenCalledWith("تعذّر عرض هذا السؤال الآن");
@@ -83,12 +83,14 @@ describe("QuestionErrorBoundary over a REAL lazy chunk failure", () => {
     expect(await screen.findByText("تم تحميل السؤال")).toBeTruthy();
     expect(calls).toBe(2);
   });
-  it("a new question (resetKey) starts clean; a custom fallback replaces the card", () => {
+  it("a new question (resetKey) starts clean; a stem fallback keeps the text WITH a notice and a retry (never silent)", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const Boom = () => { throw new Error("x"); };
-    const { rerender } = render(<QuestionErrorBoundary resetKey="a" fallback={<p>نص السؤال</p>}><Boom /></QuestionErrorBoundary>);
+    const { rerender } = render(<QuestionErrorBoundary resetKey="a" variant="stem" fallback={<p>نص السؤال</p>}><Boom /></QuestionErrorBoundary>);
     expect(screen.getByText("نص السؤال")).toBeTruthy();
     expect(screen.queryByTestId("question-recovery")).toBeNull();
+    expect(screen.getByTestId("question-recovery-compact").textContent).toContain("يظهر النص الأساسي");
+    expect(screen.getByRole("button", { name: "إعادة تحميل التنسيق" })).toBeTruthy();
     rerender(<QuestionErrorBoundary resetKey="b"><p>سؤال آخر</p></QuestionErrorBoundary>);
     expect(screen.getByText("سؤال آخر")).toBeTruthy();
   });
@@ -105,7 +107,8 @@ describe("LTR islands (S-6) — markup only, the text itself unchanged", () => {
   });
   it("the notification grade, the install brand and the physics energy title are isolated in their components", () => {
     const bell = fs.readFileSync(path.join(repo, "src/notifications/NotificationBell.tsx"), "utf8");
-    expect(bell).toMatch(/isolateLtr\(view\.preview, GRADE_LTR\)/);
+    // Review fix 1: only a grade notification, and only its last standalone x/y (the grade the app composes).
+    expect(bell).toMatch(/item\.type === "assignment_reviewed" \? isolateLtr\(view\.preview, GRADE_LTR, \{ lastOnly: true \}\) : view\.preview/);
     // Outside comments, every «Tadris+» the install card / entry renders sits in its own <bdi dir="ltr">.
     const code = (f: string) => fs.readFileSync(path.join(repo, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     for (const f of ["src/pwa/InstallAppCard.tsx", "src/pwa/InstallAppEntry.tsx"]) {
@@ -131,8 +134,10 @@ describe("CSS — phone / coarse-pointer targets, scroll clearance, text-scaled 
     for (const sel of selectors) expect(block, sheet + " " + sel).toContain(sel);
     expect(block).toMatch(/min-height:\s*44px/);
   });
-  it("the sticky bars are cleared for focus scrolling, and the CLI screen height scales with text and viewport", () => {
-    expect(css("src/studentexam-pro.css")).toMatch(/:root:has\(\.iex-bottom-nav\)\{ scroll-padding-block-start:72px; scroll-padding-block-end:96px; \}/);
+  it("no root scroll-padding doubles the field / heading scroll-margins (review fix 1), and the CLI screen height scales", () => {
+    const exam = css("src/studentexam-pro.css");
+    expect(exam).not.toMatch(/scroll-padding/);                                   // clearance = the element scroll-margins + keyboard reveal
+    expect(exam).toMatch(/\.iex-page-heading\{[^}]*scroll-margin-block-start:72px/);
     const ncli = css("src/networkCli/networkCli.css");
     expect(ncli).toMatch(/\.ncli-screen \{[^}]*max-height: min\(20rem, 55vh\)/);
     expect(ncli).not.toMatch(/\.ncli-screen \{[^}]*max-height:\s*\d+px/);
@@ -153,6 +158,10 @@ describe("visual questions — one short instruction, the keyboard steps in an e
     const overlay = document.querySelector(".vq-overlay") as HTMLElement;
     const ids = (overlay.getAttribute("aria-describedby") || "").split(" ");
     expect(ids).toHaveLength(2);
-    expect(document.getElementById(ids[1])?.textContent).toContain("الأسهم لتحريك المؤشر ثم Enter");
+    const keys = document.getElementById(ids[1]) as HTMLElement;
+    expect(keys.textContent).toContain("الأسهم لتحريك المؤشر ثم Enter");
+    // Review fix 1: the description never points INTO the closed guide (Chromium drops a closed <details>' content from it).
+    expect(keys.closest("details")).toBeNull();
+    expect(keys.className).toContain("eb-visually-hidden");
   });
 });

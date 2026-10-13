@@ -18,6 +18,8 @@ const arrow = (key: string, big: boolean): [number, number] | null => {
   return key === "ArrowRight" ? [s, 0] : key === "ArrowLeft" ? [-s, 0] : key === "ArrowDown" ? [0, s] : key === "ArrowUp" ? [0, -s] : null;
 };
 
+const HOTSPOT_KEYS = "لوحة المفاتيح: الأسهم لتحريك المؤشر ثم Enter لوضع نقطة؛ اسحب النقطة أو استخدم الأسهم لتحريكها، وDelete لحذفها.";
+
 export default function HotspotView({ q, answer, onAnswer, disabled, labelPrefix }: StudentRendererProps) {
   const cfg = useMemo(() => projectHotspotConfigForStudent((q as { hotspot?: unknown }).hotspot), [q]);
   const src = useMemo(() => visualImageSrc((q as { image?: unknown }).image), [q]);
@@ -58,11 +60,14 @@ export default function HotspotView({ q, answer, onAnswer, disabled, labelPrefix
   const shown = live && drag !== null ? live : points;
   return (
     <div className="vq hotspot-response" data-testid="hotspot-response">
-      {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the keyboard steps sit in an expandable guide (still read by screen
-          readers through aria-describedby on the image, whether the guide is open or not). */}
+      {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the keyboard steps sit in an expandable guide for sighted users.
+          Review fix 1: the image's accessible description points at an ALWAYS-PRESENT visually hidden copy of the steps —
+          Chromium leaves the content of a closed <details> out of a description, and this overlay (role=application) is
+          learned from its description. */}
       <p className="vq-note" id={hintId}>{cfg.mode === "single" ? "انقر على الموضع المطلوب في الصورة." : "انقر على " + max + " مواضع في الصورة."}</p>
+      <span className="eb-visually-hidden" id={hintId + "-keys"}>{HOTSPOT_KEYS}</span>
       <details className="vq-keyboard-guide"><summary>كيف أستخدم لوحة المفاتيح؟</summary>
-        <p id={hintId + "-keys"}>لوحة المفاتيح: الأسهم لتحريك المؤشر ثم Enter لوضع نقطة؛ اسحب النقطة أو استخدم الأسهم لتحريكها، وDelete لحذفها.</p>
+        <p>{HOTSPOT_KEYS}</p>
       </details>
       <VisualCanvas src={src} alt={cfg.alt} describedBy={hintId + " " + hintId + "-keys"} focusable label={labelPrefix + " — صورة السؤال: " + cfg.alt} cursor={cursor}
         onPoint={disabled ? undefined : place} onKeyDown={onOverlayKey} dragging={drag !== null}

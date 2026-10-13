@@ -2,6 +2,7 @@ import { Suspense, memo, useEffect, useState, type ReactNode } from "react";
 import type { RichBlock, RichCell, RichContentV1, RichMark, RichRun } from "./richContentModel";
 import "./rich-content.css";
 import { recoverableLazy } from "../recoverableLazy";
+import QuestionErrorBoundary from "../student/exam/QuestionErrorBoundary";
 
 // Phase 20D.1 — the TRUSTED RichContent renderer. Input is an already validated canonical RichContentV1 (validateRichContent's value);
 // React constructs semantic HTML from that data: every author string becomes a React TEXT node (text that looks like markup stays text),
@@ -11,6 +12,8 @@ import { recoverableLazy } from "../recoverableLazy";
 // Heading outline: the exam page owns h1 (exam title) and h2 (page / section heading), so content headings never rise above h3:
 // author level 2 → <h3>, level 3 → <h3>, level 4 → <h4>. The author's level is kept on data-xp-level for styling.
 // Phase 21E.3 — each leaf below is recoverable in place after a chunk-load failure (recoverableLazy); success path unchanged.
+// Review fix 1: each leaf has its OWN boundary, so one failing formula / chart / graph / 3D view never replaces the rest of the
+// document: a formula keeps its source text with a retry ("inline"), a block shows a compact card with a retry ("block").
 const RichMath = recoverableLazy("RichMath", () => import("./RichMath"));
 // Phase 21A.1 — data charts: the chart component (and, behind it, the rendering engine) loads only when a chart block is rendered.
 const DataChart = recoverableLazy("DataChart", () => import("../charts/DataChart"));
@@ -28,9 +31,10 @@ const CALLOUT_ICON: Record<string, string> = { info: "i", note: "✎", warning: 
 const MARK_ORDER: readonly RichMark[] = ["bold", "italic", "underline", "sup", "sub", "code"];
 const MARK_TAG: Record<RichMark, "strong" | "em" | "u" | "sup" | "sub" | "code"> = { bold: "strong", italic: "em", underline: "u", sup: "sup", sub: "sub", code: "code" };
 
+const mathSource = (source: string) => <code className="xp-math-src" dir="ltr">{source}</code>;
 function MathInline({ source, display }: { source: string; display?: boolean }) {
   // The boundary's direct host child is an HTML element (React hides / reveals a boundary's top-level host nodes through their inline style).
-  return <Suspense fallback={<code className="xp-math-src" dir="ltr">{source}</code>}><span className="xp-math-host"><RichMath source={source} display={display} /></span></Suspense>;
+  return <QuestionErrorBoundary variant="inline" fallback={mathSource(source)}><Suspense fallback={mathSource(source)}><span className="xp-math-host"><RichMath source={source} display={display} /></span></Suspense></QuestionErrorBoundary>;
 }
 
 // Phase 21A (review fixes 1–2): a scroll box around a formula is a labelled, keyboard-scrollable group ONLY while the formula actually
@@ -65,7 +69,7 @@ function MathBlock({ source }: { source: string }) {
 // the Tab order (tabIndex -1) once measured to fit. Inline formulas without a grid keep the 20D.1 markup (MathInline).
 function InlineGridMath({ source }: { source: string }) {
   const [attach, scrolls, onBlur] = useScrollGroup(source);
-  return <Suspense fallback={<code className="xp-math-src" dir="ltr">{source}</code>}><span ref={attach} className="xp-math-host" onBlur={onBlur} {...(scrolls ? SCROLL_GROUP : scrolls === false ? { tabIndex: -1 } : {})}><RichMath source={source} /></span></Suspense>;
+  return <QuestionErrorBoundary variant="inline" fallback={mathSource(source)}><Suspense fallback={mathSource(source)}><span ref={attach} className="xp-math-host" onBlur={onBlur} {...(scrolls ? SCROLL_GROUP : scrolls === false ? { tabIndex: -1 } : {})}><RichMath source={source} /></span></Suspense></QuestionErrorBoundary>;
 }
 // Does the source spell a grid environment? Mirrors the tokenizer: `\begin`, then any whitespace it skips (space, tab, LF, CR), then `{`.
 const HAS_GRID = /\\begin[ \t\n\r]*\{/;
@@ -147,28 +151,28 @@ function Block({ b }: { b: RichBlock }): ReactNode {
     case "columns": return <div className="xp-columns">{b.columns.map((c, i) => <div className="xp-column" key={i}><Blocks blocks={c.blocks} /></div>)}</div>;
     case "math": return <MathBlock source={b.source} />;
     case "dataChart": return (
-      <Suspense fallback={<figure className="xp-chart-pending" aria-busy="true"><figcaption dir="auto">{b.chart.title}</figcaption><p dir="auto">{b.chart.description}</p></figure>}>
+      <QuestionErrorBoundary variant="block"><Suspense fallback={<figure className="xp-chart-pending" aria-busy="true"><figcaption dir="auto">{b.chart.title}</figcaption><p dir="auto">{b.chart.description}</p></figure>}>
         <DataChart spec={b.chart} />
-      </Suspense>
+      </Suspense></QuestionErrorBoundary>
     );
     case "functionGraph": return (
-      <Suspense fallback={<div className="fg-pending" aria-busy="true"><p dir="auto">{b.graph.title}</p><p dir="auto">{b.graph.description}</p></div>}>
+      <QuestionErrorBoundary variant="block"><Suspense fallback={<div className="fg-pending" aria-busy="true"><p dir="auto">{b.graph.title}</p><p dir="auto">{b.graph.description}</p></div>}>
         <FunctionGraphView spec={b.graph} />
-      </Suspense>
+      </Suspense></QuestionErrorBoundary>
     );
     case "functionSurface3D": return b.surface.version === 2 ? (
-      <Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p>{b.surface.surfaces.map(s => <p key={s.id} dir="ltr">z = {s.expression}</p>)}</div>}>
+      <QuestionErrorBoundary variant="block"><Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p>{b.surface.surfaces.map(s => <p key={s.id} dir="ltr">z = {s.expression}</p>)}</div>}>
         <SurfacePlot3DView spec={b.surface} />
-      </Suspense>
+      </Suspense></QuestionErrorBoundary>
     ) : (
-      <Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p><p dir="ltr">z = {b.surface.expression}</p></div>}>
+      <QuestionErrorBoundary variant="block"><Suspense fallback={<div className="ex3d-pending" aria-busy="true"><p dir="auto">{b.surface.title}</p><p dir="ltr">z = {b.surface.expression}</p></div>}>
         <Surface3DView spec={b.surface} />
-      </Suspense>
+      </Suspense></QuestionErrorBoundary>
     );
     case "interactive3D": return (
-      <Suspense fallback={<div className="i3d-pending" aria-busy="true"><p dir="auto">{b.scene.title}</p><p dir="auto">{b.scene.description}</p></div>}>
+      <QuestionErrorBoundary variant="block"><Suspense fallback={<div className="i3d-pending" aria-busy="true"><p dir="auto">{b.scene.title}</p><p dir="auto">{b.scene.description}</p></div>}>
         <Interactive3DView spec={b.scene} />
-      </Suspense>
+      </Suspense></QuestionErrorBoundary>
     );
   }
   return null;

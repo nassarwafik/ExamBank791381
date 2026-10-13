@@ -29,7 +29,7 @@ describe("21A1-RB2 engine import failure: no button that cannot work; the table 
     const fig = container.querySelector("figure")!;
     expect(fig.getAttribute("data-xp-chart-state")).toBe("error");
     expect(container.querySelector(".xp-chart-table-wrap")!.hasAttribute("hidden")).toBe(false);
-    expect(container.querySelector(".xp-chart-error")!.textContent).toBe("تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه."); // 21E.3 (D5): no reload advice (a strict attempt would end)
+    expect(container.querySelector(".xp-chart-error")!.textContent).toBe("تعذّر تحميل الرسم البياني؛ البيانات كاملة في الجدول أدناه، ويُعرض الرسم بعد إعادة تحميل الصفحة.");
     expect(screen.queryByRole("button", { name: "إعادة المحاولة" })).toBeNull();
     const left = h.importFailures;
     rerender(<DataChart spec={canon({ ...rainfallBar(), title: "عنوان آخر" } as ChartSpecV1)} />);

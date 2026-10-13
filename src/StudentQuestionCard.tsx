@@ -8,7 +8,7 @@ import QuestionField from "./QuestionField";
 import {resolveStudentRenderer,studentUnsupported} from "./questionTypes/studentRegistry";
 import StudentUnsupported from "./questionTypes/StudentUnsupported";
 import QuestionErrorBoundary from "./student/exam/QuestionErrorBoundary";
-import {retryableLazy} from "./recoverableLazy";
+import {recoverableSharedLazy} from "./recoverableLazy";
 
 // Extracted verbatim from StudentExamPage.tsx so the exact same rendering (including PR #33's
 // table-dropdown logic) can be reused both by the real student exam page and by the teacher-facing
@@ -24,8 +24,8 @@ export const optionsFor=(q:{type?:string;presentationType?:string;options?:Opt[]
 import type {Answer,FieldValue} from "./answerState";
 import {answered} from "./answerState";
 // Phase 19F — the shared read-only code stimulus (any type): LAZY, loaded only for a question that carries one (initial graph unchanged).
-// Phase 21E.3 — retryable after a chunk failure (a shared chunk: the retry re-calls the original import, never another URL).
-const CodeStimulusView=retryableLazy("CodeStimulusView",()=>import("./questionTypes/CodeStimulusView"));
+// Phase 21E.3 — recoverable in place after a chunk failure (a shared chunk: a recovered copy is resolved through its namespace export).
+const CodeStimulusView=recoverableSharedLazy("CodeStimulusView",()=>import("./questionTypes/CodeStimulusView"));
 // Phase 20D.1 — the rich stem (validation + trusted renderer) is LAZY; without q.richContent / a presentation provider the card is byte-identical.
 const RichPrompt=lazy(()=>import("./richContent/RichPrompt"));
 export type {Answer,FieldValue} from "./answerState";
@@ -99,10 +99,10 @@ export default function StudentQuestionCard({q,index,id,answer,onChoice,onSeq,on
  const tableAnswerHeader=table?(table.headers[1]||"الإجابة"):"";
  const xp=useContext(ExamPresentationContext),plain=<p className="iex-qtext" id={textId}>{promptText(q.text)}</p>;
  return <article className={"iex-q "+(answered(a)?"done":"")} {...xp?.questionAttributes(q)}><div className="iex-node" aria-hidden="true">{q.displayNumber??(index+1)}</div><div className="iex-card"><div className="iex-qhead"><span>{registered?registered.label:t==="multiplechoice"?"اختيار من متعدد":t==="truefalse"?"صح أو خطأ":t==="multitruefalse"?"صح/خطأ متعدد":t==="clifill"?"أوامر CLI":t==="matching"?"طابق":t==="ordering"?"رتّب العناصر":(table||fieldType)?"أكمل الجدول":seq?"أكمل الناقص":"سؤال"}</span><strong>{q.marks} علامة</strong></div>
-  {/* Phase 21E.3 — failures stay inside THIS question: a failing rich stem falls back to the plain question text, a failing
-      code stimulus or answer renderer shows a recovery card, and the header, the answers (held by the page) and every other
-      question are untouched. Keyed by the answer id so another question starts clean. */}
-  <QuestionErrorBoundary resetKey={id} fallback={plain}>{q.richContent&&typeof q.richContent==="object"?<Suspense fallback={plain}><RichPrompt q={q} textId={textId}/></Suspense>:plain}</QuestionErrorBoundary>
+  {/* Phase 21E.3 — failures stay inside THIS question: a failing rich stem keeps the plain question text WITH a notice and a
+      retry (never silently), a failing code stimulus or answer renderer shows a recovery card, and the header, the answers
+      (held by the page) and every other question are untouched. Keyed by the answer id so another question starts clean. */}
+  <QuestionErrorBoundary resetKey={id} variant="stem" fallback={plain}>{q.richContent&&typeof q.richContent==="object"?<Suspense fallback={plain}><RichPrompt q={q} textId={textId}/></Suspense>:plain}</QuestionErrorBoundary>
   {q.codeStimulus!==undefined&&<QuestionErrorBoundary resetKey={id} variant="part"><Suspense fallback={null}><CodeStimulusView stimulus={q.codeStimulus}/></Suspense></QuestionErrorBoundary>}
   <QuestionErrorBoundary resetKey={id}>
   {!registered?.ownsImage&&imageList(q).map((im,n)=>im.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}

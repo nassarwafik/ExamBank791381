@@ -12,6 +12,8 @@ import { at } from "./visualPosition";
 //   • drag and drop (desktop).
 // Assignments can be changed or removed before submission; with reuse disabled a label placed on another zone MOVES there. The Answer is
 // the existing `fields` Answer: { kind: "fields", values: { zoneId: labelId } }.
+const LABEL_KEYS = "بلوحة المفاتيح: بنك التسميات يأتي بعد مناطق الصورة؛ انتقل إليه بـ Tab واضغط Enter على تسمية لاختيارها، ثم ارجع بـ Shift+Tab إلى المنطقة المطلوبة واضغط Enter. ويمكنك أيضًا سحب التسمية إلى المنطقة، أو اختيار تسمية كل منطقة من القوائم تحت الصورة.";
+
 export default function LabelDiagramView({ q, answer, onAnswer, disabled, labelPrefix }: StudentRendererProps) {
   const cfg = useMemo(() => projectLabelDiagramConfigForStudent((q as { labelDiagram?: unknown }).labelDiagram), [q]);
   const src = useMemo(() => visualImageSrc((q as { image?: unknown }).image), [q]);
@@ -38,10 +40,13 @@ export default function LabelDiagramView({ q, answer, onAnswer, disabled, labelP
   const onZone = (zoneId: string) => { if (disabled || !selected) return; assign(zoneId, selected); setSelected(null); };
   return (
     <div className="vq label-diagram-response" data-testid="label-diagram-response">
-      {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the other ways to answer sit in an expandable guide. */}
+      {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the other ways to answer sit in an expandable guide for sighted users.
+          Review fix 1: the zones' description points at an ALWAYS-PRESENT visually hidden copy (a closed <details> is left out
+          of a description), and the steps follow the real Tab order (the zones come before the label bank). */}
       <p className="vq-note" id={hintId}>اختر تسمية من البنك ثم اضغط على المنطقة المناسبة.</p>
+      <span className="eb-visually-hidden" id={hintId + "-keys"}>{LABEL_KEYS}</span>
       <details className="vq-keyboard-guide"><summary>كيف أستخدم لوحة المفاتيح؟</summary>
-        <p id={hintId + "-keys"}>بلوحة المفاتيح: انتقل بـ Tab إلى تسمية واضغط Enter لاختيارها، ثم انتقل إلى المنطقة واضغط Enter. ويمكنك أيضًا سحب التسمية إلى المنطقة، أو اختيار تسمية كل منطقة من القوائم تحت الصورة.</p>
+        <p>{LABEL_KEYS}</p>
       </details>
       <VisualCanvas src={src} alt={cfg.alt} describedBy={hintId + " " + hintId + "-keys"}
         svg={cfg.zones.map(z => <ShapeSvg key={z.id} shape={z.shape} className="vq-zone" />)}>

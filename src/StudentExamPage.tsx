@@ -43,7 +43,8 @@ import {sectionShellOf,sectionMarksLabel} from "./presentation/presentationRunti
 import {recoverableLazy} from "./recoverableLazy";
 import QuestionErrorBoundary from "./student/exam/QuestionErrorBoundary";
 import {QuestionRecoveryContext,type QuestionRecovery} from "./student/exam/questionRecovery";
-import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement} from "./student/exam/examAnnouncements";
+import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement,ANNOUNCER_SETTLE_MS,ANNOUNCEMENT_CLEAR_MS} from "./student/exam/examAnnouncements";
+import {installKeyboardReveal,revealDelta} from "./student/exam/keyboardReveal";
 import type {SaveStateKind} from "./studentSaveState";
 
 type ExamBody={presentation?:unknown;title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
@@ -98,8 +99,19 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Phase 21E.3 — the ONE polite announcer of the running exam (timer thresholds, save problems / recovery, recovery cards). The
  // live region stays mounted and empty in React; each message REPLACES its child node, so assistive technology announces it even
  // when the same words come twice. No React state: announcing never re-renders the page.
- const announcerRef=useRef<HTMLParagraphElement|null>(null);
- const announce=useCallback((text:string)=>{const el=announcerRef.current;if(!el)return;const span=document.createElement("span");span.textContent=text;el.replaceChildren(span)},[]);
+ // Review fix 1: a message is never written into a region that has only just been inserted (assistive technology may not
+ // track it yet) — it waits until the region has settled; each message is cleared again after a while (no stale text in
+ // browse mode). onDelivered runs only when the message was actually written.
+ const announcerRef=useRef<HTMLParagraphElement|null>(null),announcerReadyAt=useRef(0);
+ const attachAnnouncer=useCallback((el:HTMLParagraphElement|null)=>{announcerRef.current=el;announcerReadyAt.current=el?performance.now()+ANNOUNCER_SETTLE_MS:0},[]);
+ const announce=useCallback((text:string,onDelivered?:()=>void)=>{
+  if(!announcerRef.current)return false;
+  const deliver=()=>{const node=announcerRef.current;if(!node)return;const span=document.createElement("span");span.textContent=text;node.replaceChildren(span);onDelivered?.();
+   window.setTimeout(()=>{if(node.firstChild===span)node.replaceChildren()},ANNOUNCEMENT_CLEAR_MS)};
+  const wait=announcerReadyAt.current-performance.now();
+  if(wait>0)window.setTimeout(deliver,wait);else deliver();
+  return true;
+ },[]);
  // Back to the first question in answer mode — ONLY when a genuinely different attempt/generation is adopted or a new
  // attempt starts. A same-attempt resync (timer/state refresh, clean draft adoption) never moves the student.
  const resetPager=useCallback(()=>{setPageIndex(0);setView("answer");setNavOpen(false)},[]);
@@ -614,6 +626,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // change the screen, so they never move focus.
  const screen=loading?"loading":(!started&&result)?"result":(strictEnded&&!result)?"strict":(paused&&!result&&state?.activeAttempt)?"paused":needsStart?"gate":(structured&&cover?.enabled&&!coverStarted&&!timed&&!requiresStart)?"cover":"exam";
  const prevScreenRef=useRef(screen);
+ // Brings a PROGRAMMATICALLY focused element (a heading after a screen change, a recovered part) clear of both sticky bars with
+ // the smallest instant scroll. Never used for pointer focus.
+ const revealElement=useCallback((el:HTMLElement)=>{
+  const r=el.getBoundingClientRect(),bar=document.querySelector(".iex-topbar")?.getBoundingClientRect(),nav=document.querySelector(".iex-bottom-nav")?.getBoundingClientRect();
+  const d=revealDelta(r.top,r.bottom,bar?Math.max(0,bar.bottom):0,nav?Math.min(window.innerHeight,nav.top):window.innerHeight);
+  if(Math.abs(d)>=1)window.scrollBy({top:d,left:0,behavior:"auto"});
+ },[]);
  useEffect(()=>{
   const prev=prevScreenRef.current;prevScreenRef.current=screen;
   if(prev===screen||prev==="loading")return;
@@ -622,37 +641,41 @@ export default function StudentExamPage({token,assignment,studentName,className,
    const el=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;
    if(!el)return;
    el.focus({preventScroll:true});
-   if(typeof el.scrollIntoView==="function")el.scrollIntoView({block:"nearest",behavior});
+   // Review fix 1 (#80): instant, from the top. A screen change replaces the page; an instant scroll also stops a smooth
+   // scrollTop() still running from the start handler, which would otherwise carry the focused heading off-screen.
+   window.scrollTo({top:0,behavior:"auto"});
+   revealElement(el);
   }else if(screen==="result"||screen==="strict"){
    const el=resultHeadingRef.current;
    if(!el)return;
    el.focus({preventScroll:true});
    window.scrollTo({top:0,behavior});
   }
- },[screen,view,reducedMotion]);
- // Phase 21E.3 (S-8) — a question control that receives focus partly under the sticky top bar or bottom navigation is revealed
- // with the least scrolling (scroll-padding keeps it clear of both bars). Chromium does not scroll a PARTLY visible element on
- // focus, so the CSS clearance alone leaves e.g. a tall answer field under the navigation. Once per focus, never while typing.
+ },[screen,view,reducedMotion,revealElement]);
+ // Phase 21E.3 (S-8), review fix 1 — a control reached with the KEYBOARD that lands partly under the sticky top bar or bottom
+ // navigation is scrolled clear of both bars. Mouse / touch focus and programmatic focus never scroll, and nothing scrolls while
+ // a pointer is down: a scroll between press and release would record a hotspot point / 3D part the student did not press, drop
+ // a button or chart click, or turn a textarea press into a selection (student/exam/keyboardReveal.ts).
  useEffect(()=>{
   if(screen!=="exam")return;
-  const onFocusIn=(e:FocusEvent)=>{
-   const el=e.target instanceof HTMLElement?e.target:null;
-   if(!el||!el.closest(".iex-page,.iex-review")||typeof el.scrollIntoView!=="function")return;
-   const r=el.getBoundingClientRect(),nav=document.querySelector(".iex-bottom-nav")?.getBoundingClientRect(),bar=document.querySelector(".iex-topbar")?.getBoundingClientRect();
-   if((nav&&r.bottom>nav.top+1)||(bar&&r.top<bar.bottom-1))el.scrollIntoView({block:"nearest",inline:"nearest",behavior:reducedMotion?"auto":"smooth"});
-  };
-  document.addEventListener("focusin",onFocusIn);
-  return()=>document.removeEventListener("focusin",onFocusIn);
+  return installKeyboardReveal({doc:document,win:window,within:".iex-page,.iex-review",topBar:".iex-topbar",bottomBar:".iex-bottom-nav",reducedMotion:()=>reducedMotion});
  },[screen,reducedMotion]);
  // Phase 21E.3 — timer thresholds (5 min, 1 min): announced once per threshold per attempt identity, remembered per tab, from
  // the page's existing server-anchored remainingMs (read only; expiry and submission are untouched).
  const timerAttempt=timed&&hasActive&&!paused&&state?.activeAttempt?timerNoticeKey(assignment.assignmentId,Number(state.activeAttempt.attemptNumber),String(state.activeAttempt.startedAt||"")):"";
+ // Review fix 1: only while the questions (and so the announcer) are shown, and a threshold is recorded only once its message
+ // was actually written — a start gate or resume screen never consumes a notice that nobody heard.
+ const timerScheduledRef=useRef("");
  useEffect(()=>{
-  if(!timerAttempt||remainingMs===null||expired)return;
+  if(screen!=="exam"||!timerAttempt||remainingMs===null||expired)return;
   const done=readTimerNotices(timerAttempt),next=timerAnnouncement(remainingMs,done);
   if(!next)return;
-  next.record.forEach(t=>done.add(t));writeTimerNotices(timerAttempt,done);announce(next.text);
- },[timerAttempt,remainingMs,expired,announce]);
+  const key=timerAttempt+"|"+next.record.join(",");
+  if(timerScheduledRef.current===key)return;
+  timerScheduledRef.current=key;
+  const scheduled=announce(next.text,()=>{const d=readTimerNotices(timerAttempt);next.record.forEach(t=>d.add(t));writeTimerNotices(timerAttempt,d);timerScheduledRef.current=""});
+  if(!scheduled)timerScheduledRef.current="";
+ },[screen,timerAttempt,remainingMs,expired,announce]);
  // Phase 21E.3 — calm save announcements: only offline, failed-after-retries, and saved again after one of those.
  const liveSaveKind=deriveSaveState({localRevision:revision.current,savedRevision:savedRevision.current,saving,retrying,errorExhausted:saveError,online});
  const prevSaveKindRef=useRef<SaveStateKind|null>(null),saveProblemRef=useRef(false);
@@ -817,12 +840,14 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const hasAssignmentInstructions=!!String(assignment.instructions||"").trim();
  // Phase 21E.3 — what a question recovery card may offer: a manual reload only when it cannot cost anything (every answer
  // server-confirmed, nothing submitting, not strict — leaving a strict attempt ends it). Focus returns to the question heading.
- const recovery:QuestionRecovery={reloadAllowed:policy!=="strict"&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,focusAnchor:()=>questionHeadingRef.current?.focus({preventScroll:true})};
+ // Review fix 1: and only while online (a reload while offline would leave the exam for the offline page).
+ const recovery:QuestionRecovery={scope:"exam",reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,reveal:revealElement,
+  focusAnchor:()=>{const h=questionHeadingRef.current;if(!h)return;h.focus({preventScroll:true});revealElement(h)}};
  // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
  // one progress row with the SINGLE live save-status region, then the unchanged question rendering.
  return shell(<QuestionRecoveryContext.Provider value={recovery}><div className="iex-wrap">
   {/* Phase 21E.3 — the single polite announcer of the running exam (timer thresholds, save problems, recovery cards). */}
-  <p className="eb-visually-hidden iex-announcer" role="status" aria-live="polite" aria-atomic="true" data-testid="exam-announcer" ref={announcerRef}/>
+  <p className="eb-visually-hidden iex-announcer" role="status" aria-live="polite" aria-atomic="true" data-testid="exam-announcer" ref={attachAnnouncer}/>
   {/* Phase 21E.3 — an error anywhere below stays inside the page: StudentExamPage (answers, autosave, timer, strict state) stays mounted. */}
   <QuestionErrorBoundary variant="exam">
   <ExamTopBar title={assignment.title} context={classLine+" · "+attemptLine} onBack={()=>{void backWithoutSubmit()}} timer={timed&&hasActive&&remainingMs!==null?{remainingMs,tone:countdownTone(remainingMs)}:null}/>
@@ -863,7 +888,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
       class stays purely visual). Structured questions render through the section renderer's per-question code with a
       compact section context; flat questions through the same StudentQuestionCard as before. Keys are unchanged. */}
   {view==="review"?(
-   <ExamReviewScreen title={assignment.title} pages={pages} answers={answers} sections={structured?norm.sections:[]} headingRef={reviewHeadingRef} onJump={goTo} onBackToAnswering={backToAnswering} onSubmit={()=>{void submit()}} submitBusy={submitBusy} submitDisabled={submitBusy||!writable}/>
+   // Review fix 1: a failing review screen keeps the exam chrome and offers the way back to the questions.
+   <QuestionErrorBoundary variant="review" resetKey="review" secondaryAction={{label:"العودة إلى الأسئلة",onClick:backToAnswering}}><ExamReviewScreen title={assignment.title} pages={pages} answers={answers} sections={structured?norm.sections:[]} headingRef={reviewHeadingRef} onJump={goTo} onBackToAnswering={backToAnswering} onSubmit={()=>{void submit()}} submitBusy={submitBusy} submitDisabled={submitBusy||!writable}/></QuestionErrorBoundary>
   ):currentPage?(()=>{const page=currentPage,id=page.id,q=page.question;
    // 19G — a page whose question belongs to a scenario gets the two-column layout on wide screens (sources beside the question); the lazy
    // ScenarioView decides validity, this flag only chooses the layout. Raw check on purpose: this module is in the student chunk, the contract is lazy.
@@ -875,7 +901,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
    <QuestionErrorBoundary variant="page" resetKey={id}>
    {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers} shellHeader={xpOn} richInstructions={(rawSection as {instructionsRichContent?:unknown}|undefined)?.instructionsRichContent}/>}
-   {inScenario&&page.section&&<div className="iex-page-scenario"><Suspense fallback={null}><ScenarioView section={page.section} questionId={id}/></Suspense></div>}
+   {inScenario&&page.section&&<div className="iex-page-scenario"><QuestionErrorBoundary variant="part" resetKey={id+"-scenario"}><Suspense fallback={null}><ScenarioView section={page.section} questionId={id}/></Suspense></QuestionErrorBoundary></div>}
    {page.section
     ?<div className="iex-page-question"><StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} showScenario={false} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/></div>
     :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onAnswer={next=>setAnswer(id,next)} disabled={inputsDisabled}/>}

@@ -7,7 +7,7 @@ import path from "node:path";
 import { Suspense, type ComponentType } from "react";
 import { render, screen, act, cleanup } from "@testing-library/react";
 import {
-  trustedAssetUrl, failedEntryUrl, failedCssUrl, parseStaticImports, remapSet, createRecoveryRuntime, assetName, NEVER_REMAP,
+  trustedAssetUrl, failedEntryUrl, failedCssUrl, parseStaticImports, remapSet, createRecoveryRuntime, assetName, NEVER_REMAP, pickShared,
   STATIC_IMPORT_HEADER_SOURCE, type RecoveryEnv,
 } from "./recoverableLazy";
 
@@ -250,15 +250,27 @@ describe("createRecoveryRuntime — the measured model (v3)", () => {
     expect(document.querySelectorAll('script[type="importmap"]').length).toBe(0);
   });
 
-  it("a module that must never be evaluated twice refuses the remap (no import, the card stays)", async () => {
+  it("a module of the static student shell is refused (defence in depth: no import, the card stays)", async () => {
     cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
-    const E = A("SmartSimResponse"), P = A("trustedSimPlugins");
-    expect(NEVER_REMAP.has("trustedSimPlugins")).toBe(true);
-    f.modules.set(E, Ok("sim")); f.sources.set(E, 'import"./trustedSimPlugins-abcd1234.js";'); f.sources.set(P, "var p=1;");
+    const E = A("SmartSimResponse"), P = A("studentAttemptContext");
+    expect(NEVER_REMAP.has("studentAttemptContext")).toBe(true);
+    f.modules.set(E, Ok("sim")); f.sources.set(E, 'import"./studentAttemptContext-abcd1234.js";'); f.sources.set(P, "var p=1;");
     const C = rt.lazyComponent<object>("SmartSimResponse", viteFactory(E, [P], () => Promise.reject(chunkError(E))));
     await renderLazy(C); fire(P, "error"); rt.rearmFailed(); cleanup(); await renderLazy(C);
     expect(screen.getByText("failed")).toBeTruthy();
     expect(f.imported).toEqual([]);
+  });
+
+  it("review fix 1 (R1-4): a lazily loaded registry (trustedSimPlugins) whose load failed is remapped once — its original never evaluated", async () => {
+    cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
+    const E = A("SmartSimResponse"), P = A("trustedSimPlugins");
+    expect(NEVER_REMAP.has("trustedSimPlugins")).toBe(false);
+    f.modules.set(E, Ok("sim")); f.sources.set(E, 'import"./trustedSimPlugins-abcd1234.js";'); f.sources.set(P, "var p=1;");
+    const C = rt.lazyComponent<object>("SmartSimResponse", viteFactory(E, [P], () => Promise.reject(chunkError(E))));
+    await renderLazy(C); fire(P, "error"); rt.rearmFailed(); cleanup(); await renderLazy(C);
+    expect(screen.getByText("sim")).toBeTruthy();
+    expect(f.imported).toEqual([E + "?r=1."]);
+    expect(rt.snapshot().settled).toEqual({ [E]: E + "?r=1.", [P]: P + "?r=1." });
   });
 
   it("a CSS dependency failure re-links a validated ?r= stylesheet, then re-calls the original (no JS remap)", async () => {
@@ -283,14 +295,26 @@ describe("createRecoveryRuntime — the measured model (v3)", () => {
     expect(f.imported).toEqual([]);
   });
 
-  it("retryable (shared chunk without default): a retry never imports another URL", async () => {
+  it("review fix 1 (R1-5): a shared chunk (namespace export, no default) recovers through its one namespace export", async () => {
     cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
     const E = A("CodeStimulusView");
-    f.modules.set(E, Ok("code")); f.sources.set(E, "var s=1;");       // a remap WOULD succeed — it must not be attempted
-    const C = rt.lazyComponent<object>("CodeStimulusView", () => Promise.reject(chunkError(E)), { remap: false });
+    const ns = Object.defineProperty({ default: () => <p>code</p> }, Symbol.toStringTag, { value: "Module" });
+    f.modules.set(E, { n: ns, t: () => <p>raw</p> }); f.sources.set(E, "var s=1;");
+    const C = rt.lazyComponent<object>("CodeStimulusView", () => Promise.reject(chunkError(E)), { shared: true });
+    await renderLazy(C); rt.rearmFailed(); cleanup(); await renderLazy(C);
+    expect(screen.getByText("code")).toBeTruthy();
+    expect(f.imported).toEqual([E + "?r=1."]);
+  });
+
+  it("review fix 1: a shared chunk whose namespace export is ambiguous (or missing) fails closed", async () => {
+    cleanHead(); const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
+    const E = A("CodeStimulusView");
+    const ns = () => Object.defineProperty({ default: () => <p>x</p> }, Symbol.toStringTag, { value: "Module" });
+    f.modules.set(E, { n: ns(), m: ns() }); f.sources.set(E, "var s=1;");
+    const C = rt.lazyComponent<object>("CodeStimulusView", () => Promise.reject(chunkError(E)), { shared: true });
     await renderLazy(C); rt.rearmFailed(); cleanup(); await renderLazy(C);
     expect(screen.getByText("failed")).toBeTruthy();
-    expect(f.imported).toEqual([]); expect(f.fetched).toEqual([]);
+    expect(pickShared({ t: () => null })).toBeUndefined();
   });
 
   it("a recovered module that is not a component fails closed", async () => {

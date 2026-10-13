@@ -8,10 +8,10 @@ import {answered} from "./StudentQuestionCard";
 import type {Question,QuestionPart,Answer} from "./StudentQuestionCard";
 import {distributePartMarks,partId,partLabel} from "./examStructure";
 import QuestionErrorBoundary from "./student/exam/QuestionErrorBoundary";
-import {retryableLazy} from "./recoverableLazy";
+import {recoverableSharedLazy} from "./recoverableLazy";
 // Phase 19F — the shared read-only code stimulus: LAZY, loaded only when the question carries one.
-// Phase 21E.3 — retryable after a chunk failure (shared chunk: the retry re-calls the original import).
-const CodeStimulusView=retryableLazy("CodeStimulusView",()=>import("./questionTypes/CodeStimulusView"));
+// Phase 21E.3 — recoverable in place after a chunk failure (a shared chunk: a recovered copy is resolved through its namespace export).
+const CodeStimulusView=recoverableSharedLazy("CodeStimulusView",()=>import("./questionTypes/CodeStimulusView"));
 
 // Renders ONE displayed question that is composed of several independent subparts. The shared prompt
 // / stimulus is drawn once, then each part renders its own answer control — parts may use DIFFERENT

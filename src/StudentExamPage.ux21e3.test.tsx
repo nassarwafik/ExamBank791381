@@ -102,7 +102,7 @@ describe("21E.3 A — a failing question renderer never takes down the exam", ()
     expect(submits()).toBe(0);
   });
 
-  it("«إعادة المحاولة» renders the question again in place (no reload); focus returns to the question heading", async () => {
+  it("«إعادة المحاولة» renders the question again in place (no reload); focus moves into the recovered question", async () => {
     ctl.mode = "throw";
     vi.spyOn(console, "error").mockImplementation(() => {});
     const reload = vi.fn();
@@ -118,7 +118,8 @@ describe("21E.3 A — a failing question renderer never takes down the exam", ()
     fireEvent.click(retry);
     const input = await screen.findByRole("textbox", { name: "الإجابة الرقمية" });
     expect(screen.queryByTestId("question-recovery")).toBeNull();
-    expect(document.activeElement?.className).toContain("iex-page-heading");
+    // Review fix 1: focus follows the recovered part (its first control), not the page heading far above it.
+    await waitFor(() => expect(document.activeElement).toBe(input));
     fireEvent.change(input, { target: { value: "7" } });
     await waitFor(() => expect(saves()).toBe(savesBefore + 1));
     expect(reload).not.toHaveBeenCalled();
@@ -134,9 +135,12 @@ describe("21E.3 A — a failing question renderer never takes down the exam", ()
     await screen.findByText("ما هي عاصمة فلسطين؟"); goNext();
     await screen.findByTestId("question-recovery");
     expect(screen.queryByRole("button", { name: "إعادة تحميل الصفحة" })).toBeNull();      // never before a retry
-    fireEvent.click(screen.getByRole("button", { name: "إعادة المحاولة" }));
+    const retry = screen.getByRole("button", { name: "إعادة المحاولة" });
+    retry.focus();                                                                          // a click / Enter leaves focus on it
+    fireEvent.click(retry);
     await waitFor(() => expect(screen.getByTestId("question-recovery").textContent).toContain("ما زال التحميل متعذّرًا"));
-    expect(document.activeElement?.textContent).toContain("إعادة المحاولة");               // focus stays on the action
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "إعادة المحاولة" }));   // focus stays on the action
+    expect(document.activeElement?.getAttribute("aria-describedby")).toBeTruthy();            // …which the guidance describes
     fireEvent.click(screen.getByRole("button", { name: "إعادة تحميل الصفحة" }));
     expect(reload).toHaveBeenCalledTimes(1);                                                  // only by the student's own click
   });
@@ -292,25 +296,31 @@ describe("21E.3 F — the CLI block is a semantic LTR island", () => {
   });
 });
 
-describe("21E.3 G — a control focused partly under the sticky bars is revealed, once per focus", () => {
+describe("21E.3 G — a control reached with the keyboard partly under the sticky bars is revealed; pointer focus never scrolls", () => {
   const rect = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 100, width: 100, height: bottom - top, x: 0, y: top, toJSON() { return {}; } }) as DOMRect;
-  it("partly under the bottom navigation → revealed with the least scrolling; a visible control and typing never scroll", async () => {
+  const frame = () => act(async () => { await new Promise(r => requestAnimationFrame(() => r(null))); });
+  it("Tab to a field partly under the bottom navigation → the smallest scroll clear of the bar; typing and a visible field never scroll", async () => {
     mount();
     await screen.findByText("ما هي عاصمة فلسطين؟"); goNext(); goNext();
     const ta = await screen.findByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." }) as HTMLTextAreaElement;
     (document.querySelector(".iex-bottom-nav") as HTMLElement).getBoundingClientRect = () => rect(818, 900);
     (document.querySelector(".iex-topbar") as HTMLElement).getBoundingClientRect = () => rect(0, 64);
-    const reveal = vi.fn();
-    ta.scrollIntoView = reveal;
+    const scrollBy = vi.fn(); window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 900 });
     ta.getBoundingClientRect = () => rect(772, 912);                              // the 1280×900 Chromium measurement
+    fireEvent.keyDown(document.body, { key: "Tab" });
     act(() => { ta.focus(); });
-    expect(reveal).toHaveBeenCalledTimes(1);
-    expect(reveal).toHaveBeenCalledWith({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    await frame();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
+    expect(scrollBy).toHaveBeenCalledWith({ top: 912 - (818 - 8), left: 0, behavior: "smooth" });
     fireEvent.change(ta, { target: { value: "شبكة" } });                          // typing: no further scrolling
-    expect(reveal).toHaveBeenCalledTimes(1);
+    await frame();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
     act(() => { ta.blur(); });
     ta.getBoundingClientRect = () => rect(300, 440);                              // fully visible → focus never scrolls
+    fireEvent.keyDown(document.body, { key: "Tab" });
     act(() => { ta.focus(); });
-    expect(reveal).toHaveBeenCalledTimes(1);
+    await frame();
+    expect(scrollBy).toHaveBeenCalledTimes(1);
   });
 });

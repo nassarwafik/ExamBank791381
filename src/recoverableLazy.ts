@@ -10,22 +10,29 @@
 //   - the rejection names the ENTRY URL even when a dependency failed;
 //   - an import map inserted later is honoured for referrers that have not resolved anything yet.
 //
-// THE MODEL (v3 of the design record):
+// THE MODEL (v3 of the design record, review fix 1):
 //   1. The first load is the unchanged factory (the normal path is exactly today's path).
 //   2. A retry first calls the original factory again (free in Chromium; recovers browsers that do not cache failures, and
 //      never creates a second module instance).
-//   3. Only if that fails again, and only for an entry URL that the browser itself reported for THIS chunk, one serialized
-//      "remapped" attempt imports `<entry>?r=<g>.` under a scoped import map that redirects, for the retry graph only, every
-//      module whose original record can never evaluate: the entry, every modulepreload that failed, and every module on a
-//      static-import path to such a module (or to an already recovered one). Healthy side modules keep their normal URL, so
-//      every module is evaluated at most once; a recovered module keeps its recovered URL for every later graph.
-//   4. A CSS dependency that failed is re-linked with a fresh URL before the retry.
+//   3. Only if that fails again, only for an entry URL that the browser itself reported for THIS chunk, and only when the
+//      browser is one that keeps a failed module failed (Chromium's wording, measured in §3.2 — so the original can never
+//      evaluate later), one serialized "remapped" attempt imports `<entry>?r=<g>.` under a scoped import map that redirects,
+//      for the retry graph only, every module whose original record can never evaluate: the entry, every modulepreload that
+//      failed, and every module on a static-import path to such a module (or to an already recovered one). Healthy side
+//      modules keep their normal URL, so every module is evaluated at most once; a recovered module keeps its recovered URL
+//      for every later graph.
+//   4. EVERY stylesheet of the load that failed is re-linked with a fresh URL before the retry; if one still fails, the retry
+//      fails (the card stays) — a question never renders without its stylesheet.
+//   5. Each step is bounded in time. A recovery that stalls stops blocking the queue; until it settles, its modules are "in
+//      flight" and any other recovery that would need one of them is refused (never a second copy).
 //
 // SAFETY: every URL used (import, import map, source read, stylesheet) is rebuilt from a same-origin `<BASE>assets/` path
 // whose file name matches `<name>-<8 base36>.js|.css` — never a value from exam data, never a query or fragment from the
-// error text. Modules that must never get a second instance (the student shell, contexts, plugin registries, engines) are
-// never remapped. No global error hook, no automatic retry loop, no reload. Unit tests drive the logic through an injected
-// environment; the real behaviour is certified in Chromium by scripts/check-student-exam-browser-21e3.mjs.
+// error text. Modules of the static student shell, which are evaluated before any exam renders, are never remapped
+// (defence in depth). No global error hook, no reload. A retry happens only when the student presses «إعادة المحاولة», or
+// once, bounded, when a first load fails in a page that already recovered modules this graph may share. Unit tests drive the
+// logic through an injected environment; the real behaviour is certified in Chromium by
+// scripts/check-student-exam-browser-21e3.mjs.
 import { createElement, lazy, type ComponentType } from "react";
 
 export type RecoveryEnv = {
@@ -36,13 +43,19 @@ export type RecoveryEnv = {
   doc: Document | null;
   importUrl: (url: string) => Promise<unknown>;
   fetchText: (url: string) => Promise<string>;
+  /** Upper bounds (ms) of one source read, one recovery import and one stylesheet relink. */
+  timeouts?: { source?: number; import?: number; css?: number };
 };
 
-/** Chunks that must never be evaluated twice: the static student closure, React contexts, plugin registries and the engines
- *  that install globals. They are never remapped; a graph that would need them remapped stays in the safe fallback. */
+/** Chunks of the static student shell (index + StudentPortal + the exam page's own static closure) and engines that install
+ *  globals behind their own import(). They are evaluated before any exam question renders or never through a remap, so they
+ *  can never be poisoned during an exam; they are refused as defence in depth (the bundle guard checks that every name exists
+ *  in the build and that no recoverable component is declared for one of them). Lazily loaded registries such as
+ *  trustedSimPlugins / smartSimUiRegistry are NOT here: they load with their question, and when they are poisoned their
+ *  original never evaluated, so the remap keeps them single-instance (review fix 1, finding R1-4). */
 export const NEVER_REMAP: ReadonlySet<string> = new Set([
-  "index", "rolldown-runtime", "react", "StudentPortal", "StudentQuestionCard", "studentAttemptContext", "trustedSimPlugins",
-  "smartSimUiRegistry", "RichPrompt", "RichContentRenderer", "PresentationRoot", "monacoEngine", "echartsEngine", "echartsAdvanced",
+  "index", "rolldown-runtime", "react", "StudentPortal", "StudentQuestionCard", "studentAttemptContext",
+  "RichPrompt", "RichContentRenderer", "PresentationRoot", "monacoEngine", "echartsEngine", "echartsAdvanced",
 ]);
 
 const HASHED = /^([A-Za-z0-9_-]+)-[0-9a-z]{8}\.(js|css)$/;
@@ -71,6 +84,13 @@ export function failedEntryUrl(err: unknown, chunkName: string, env: Pick<Recove
   if (!e || e.name !== "TypeError" || typeof e.message !== "string") return null;
   for (const re of ENTRY_FAILURE) { const m = re.exec(e.message); if (m) return trustedAssetUrl(m[1], env, "js", chunkName); }
   return null;
+}
+/** True when the dynamic-import failure comes from a browser that keeps a failed module failed for the page's lifetime
+ *  (Chromium's wording; measured in §3.2). Only then can a remapped copy never meet a later evaluation of the original, so only
+ *  then is the remap allowed. Other wordings (Firefox) keep the original-only retry. */
+export function failureIsCached(err: unknown): boolean {
+  const e = err as { name?: unknown; message?: unknown } | null;
+  return !!e && e.name === "TypeError" && typeof e.message === "string" && ENTRY_FAILURE[0].test(e.message);
 }
 /** The stylesheet URL of Vite's `Unable to preload CSS for <url>` failure, validated like every other asset URL. */
 export function failedCssUrl(err: unknown, env: Pick<RecoveryEnv, "origin" | "base">): string | null {
@@ -121,40 +141,70 @@ export async function remapSet(entry: string, poisoned: (u: string) => boolean, 
 }
 
 type LinkState = "pending" | "ok" | "failed";
-const isComponent = (c: unknown): c is ComponentType<unknown> => typeof c === "function" || (!!c && typeof c === "object" && "$$typeof" in c);
+const COMPONENT_TYPES = new Set([Symbol.for("react.memo"), Symbol.for("react.forward_ref"), Symbol.for("react.lazy")]);
+/** A component TYPE (function / class, memo, forwardRef, lazy) — never an element or another object. */
+const isComponent = (c: unknown): c is ComponentType<unknown> =>
+  typeof c === "function" || (!!c && typeof c === "object" && COMPONENT_TYPES.has((c as { $$typeof?: symbol }).$$typeof as symbol));
+/** The component of a SHARED chunk's namespace: such a chunk exports the module's namespace object (tagged "Module") instead
+ *  of `default`, and the compiled import picks it (`import(…).then(e => e.<name>)`). Exactly one such export must exist. */
+export function pickShared(ns: unknown): unknown {
+  if (!ns || typeof ns !== "object") return undefined;
+  const hits = Object.values(ns as Record<string, unknown>).filter(v => !!v && typeof v === "object"
+    && (v as Record<symbol, unknown>)[Symbol.toStringTag] === "Module" && isComponent((v as { default?: unknown }).default));
+  return hits.length === 1 ? (hits[0] as { default: unknown }).default : undefined;
+}
+const DEFAULT_TIMEOUTS = { source: 15000, import: 20000, css: 15000 };
+const within = <T,>(p: Promise<T>, ms: number, code: string): Promise<T> => new Promise<T>((resolve, reject) => {
+  const t = setTimeout(() => reject(new Error(code)), ms);
+  p.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+});
+
+/** Attached to every error a recoverable load throws: the loader that failed, so the boundary that caught the error retries
+ *  exactly the loaders below it (never another question's). */
+export const RECOVERY_HANDLE = Symbol.for("examBank.recoveryHandle");
+export type RecoveryHandle = { rearm: () => boolean; retry: () => Promise<boolean> };
+/** The failed loader carried by an error caught by a boundary, if any. */
+export const recoveryHandleOf = (err: unknown): RecoveryHandle | null =>
+  err && typeof err === "object" ? ((err as Record<symbol, unknown>)[RECOVERY_HANDLE] as RecoveryHandle | undefined) ?? null : null;
 
 export type RecoveryRuntime = {
-  lazyComponent<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>, options?: { remap?: boolean }): ComponentType<P>;
-  /** Re-arms every lazy component whose last load failed; returns how many were re-armed. */
+  lazyComponent<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>, options?: { shared?: boolean }): ComponentType<P>;
+  /** Re-arms every lazy component whose last load failed (the next render loads again); returns how many were re-armed. */
   rearmFailed(): number;
+  /** Re-arms the given failed loaders (default: every failed one) AND starts their loads now; resolves true when every one of
+   *  them loaded (so the next render shows them), false when one failed again (its card stays). True at once for none. */
+  retryFailed(handles?: RecoveryHandle[]): Promise<boolean>;
   /** Test / certification view of the runtime state. */
-  snapshot(): { settled: Record<string, string>; preloads: Record<string, LinkState>; generation: number };
+  snapshot(): { settled: Record<string, string>; preloads: Record<string, LinkState>; css: Record<string, LinkState>; inflight: string[]; generation: number };
 };
 
 export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
-  const preloads = new Map<string, LinkState>(), settled = new Map<string, string>(), failedEntries = new Set<string>();
-  const failedCss = new Set<string>(), relinkedCss = new Set<string>(), edgeCache = new Map<string, string[]>();
-  const pendingRearm = new Set<() => boolean>();
+  const limits = { ...DEFAULT_TIMEOUTS, ...(env.timeouts || {}) };
+  const preloads = new Map<string, LinkState>(), cssLinks = new Map<string, LinkState>(), settled = new Map<string, string>();
+  const failedEntries = new Set<string>(), failedCss = new Set<string>(), inflight = new Set<string>(), edgeCache = new Map<string, string[]>();
+  const pendingRearm = new Set<RecoveryHandle>();
   let generation = 0, queue: Promise<unknown> = Promise.resolve();
 
-  const modulePreloads = () => env.doc ? [...env.doc.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]')] : [];
-  // Vite inserts the modulepreload links of a dynamic import synchronously, so the links that appear during the factory call
-  // are exactly the modules first requested by this load; their load / error events have not fired yet.
+  const newLinks = () => env.doc ? [...env.doc.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"],link[rel="stylesheet"]')] : [];
+  // Vite inserts the modulepreload AND stylesheet links of a dynamic import synchronously, so the links that appear during the
+  // factory call are exactly the modules / stylesheets first requested by this load; their load / error events have not fired yet.
   const trackNew = (before: Set<HTMLLinkElement>) => {
-    for (const link of modulePreloads()) {
+    for (const link of newLinks()) {
       if (before.has(link)) continue;
-      const url = trustedAssetUrl(link.getAttribute("href") || "", env);
-      if (!url || preloads.has(url)) continue;
-      preloads.set(url, "pending");
-      link.addEventListener("load", () => preloads.set(url, "ok"), { once: true });
-      link.addEventListener("error", () => preloads.set(url, "failed"), { once: true });
+      const css = link.rel === "stylesheet";
+      const url = trustedAssetUrl(link.getAttribute("href") || "", env, css ? "css" : "js");
+      const states = css ? cssLinks : preloads;
+      if (!url || states.has(url)) continue;
+      states.set(url, "pending");
+      link.addEventListener("load", () => states.set(url, "ok"), { once: true });
+      link.addEventListener("error", () => { states.set(url, "failed"); if (css) failedCss.add(url); }, { once: true });
     }
   };
   const known = (u: string) => preloads.has(u) || failedEntries.has(u) || settled.has(u);
   const edgesOf = async (u: string) => {
     let edges = edgeCache.get(u);
     if (!edges) {
-      edges = parseStaticImports(await env.fetchText(u)).map(s => trustedAssetUrl(new URL(s, u).href, env)).filter((x): x is string => !!x);
+      edges = parseStaticImports(await within(env.fetchText(u), limits.source, "recovery-timeout")).map(s => trustedAssetUrl(new URL(s, u).href, env)).filter((x): x is string => !!x);
       edgeCache.set(u, edges);
     }
     return edges.filter(known);
@@ -164,19 +214,26 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
     queue = run.catch(() => undefined);
     return run;
   };
+  /** Re-links every stylesheet of a failed load with a fresh URL and waits for all of them. Any that still fails (or times out)
+   *  fails the retry: its link is removed and the stylesheet stays recorded for the next retry. */
   const relinkFailedCss = async () => {
-    if (!env.doc) return;
-    const waits: Promise<void>[] = [];
-    for (const css of failedCss) {
-      if (relinkedCss.has(css)) continue;
-      relinkedCss.add(css);
-      const link = env.doc.createElement("link");
+    const doc = env.doc;
+    if (!doc || !failedCss.size) return;
+    const results = await Promise.all([...failedCss].map(css => new Promise<boolean>(resolve => {
+      const link = doc.createElement("link");
       link.rel = "stylesheet";
       link.href = css + "?r=" + (++generation) + ".";
-      waits.push(new Promise<void>(resolve => { link.addEventListener("load", () => resolve(), { once: true }); link.addEventListener("error", () => { relinkedCss.delete(css); resolve(); }, { once: true }); setTimeout(resolve, 10000); }));
-      env.doc.head.appendChild(link);
-    }
-    await Promise.all(waits);
+      const t = setTimeout(() => done(false), limits.css);
+      function done(ok: boolean) {
+        clearTimeout(t);
+        if (ok) { failedCss.delete(css); cssLinks.set(css, "ok"); } else link.remove();
+        resolve(ok);
+      }
+      link.addEventListener("load", () => done(true), { once: true });
+      link.addEventListener("error", () => done(false), { once: true });
+      doc.head.appendChild(link);
+    })));
+    if (results.includes(false)) throw new Error("recovery-css");
   };
   const remapped = (entry: string) => serialized(async () => {
     const hit = settled.get(entry);
@@ -185,6 +242,8 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
     const poisoned = (u: string) => preloads.get(u) === "failed" || failedEntries.has(u) || settled.has(u);
     const set = await remapSet(entry, poisoned, u => settled.has(u), edgesOf);
     if (set.some(u => NEVER_REMAP.has(assetName(u)))) throw new Error("recovery-refused");
+    // A stalled earlier recovery may still evaluate these modules under its own generation: never start a second copy.
+    if (set.some(u => inflight.has(u))) throw new Error("recovery-busy");
     const g = ++generation, url = (u: string) => u + "?r=" + g + ".";
     const imports: Record<string, string> = {};
     settled.forEach((v, k) => { imports[k] = v; });
@@ -198,23 +257,26 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
       script.textContent = JSON.stringify({ scopes });
       env.doc.head.appendChild(script);
     }
-    const mod = await env.importUrl(url(entry));
-    for (const u of set) { settled.set(u, url(u)); failedEntries.delete(u); }
-    return mod;
+    for (const u of set) inflight.add(u);
+    const importing = env.importUrl(url(entry)).then(mod => {
+      for (const u of set) { settled.set(u, url(u)); failedEntries.delete(u); }
+      return mod;
+    }).finally(() => { for (const u of set) inflight.delete(u); });
+    // The queue never waits longer than the bound; a late success still records its modules as recovered (above).
+    return within(importing, limits.import, "recovery-timeout");
   });
 
   return {
-    lazyComponent<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>, options: { remap?: boolean } = {}) {
-      const allowRemap = options.remap !== false;
-      let entry: string | null = null, attempts = 0, failed = false;
+    lazyComponent<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>, options: { shared?: boolean } = {}) {
+      let entry: string | null = null, cached = false, attempts = 0, failed = false;
       const original = (): Promise<unknown> => {
-        const before = new Set(modulePreloads());
+        const before = new Set(newLinks());
         let p: Promise<unknown>;
         try { p = factory(); } catch (e) { p = Promise.reject(e); }
         trackNew(before);
         return p.catch((err: unknown) => {
           const e = failedEntryUrl(err, chunkName, env);
-          if (e) { entry = e; if (!settled.has(e)) failedEntries.add(e); }
+          if (e) { entry = e; cached = failureIsCached(err); if (!settled.has(e)) failedEntries.add(e); }
           const css = failedCssUrl(err, env);
           if (css) failedCss.add(css);
           throw err;
@@ -224,32 +286,50 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
         attempts += 1;
         try {
           if (attempts > 1) await relinkFailedCss();
+          let viaRemap = false;
           const mod = await original().catch((err: unknown) => {
-            // A retry, or a first load in a page that already recovered modules this graph may share, takes the remapped path.
-            if (allowRemap && entry && (attempts > 1 || settled.size > 0)) return remapped(entry);
+            // A retry, or a first load in a page that already recovered modules this graph may share, takes the remapped
+            // path — only in a browser that keeps failed modules failed (otherwise the original retry is the safe one).
+            if (entry && cached && (attempts > 1 || settled.size > 0)) { viaRemap = true; return remapped(entry); }
             throw err;
           }) as { default?: unknown };
-          if (!isComponent(mod?.default)) throw new Error("recovery-shape");
-          return { default: mod.default as ComponentType<P> };
+          const component = viaRemap && options.shared ? pickShared(mod) : mod?.default;
+          if (!isComponent(component)) throw new Error("recovery-shape");
+          return { default: component as ComponentType<P> };
         } catch (err) {
           failed = true;
-          pendingRearm.add(rearm);
+          pendingRearm.add(handle);
+          if (err && typeof err === "object") { try { (err as Record<symbol, unknown>)[RECOVERY_HANDLE] = handle; } catch { /* a frozen error: the boundary retries every failed loader */ } }
           throw err;
         }
       };
       let current = lazy(load);
-      function rearm() { if (!failed) return false; failed = false; current = lazy(load); return true; }
+      const handle: RecoveryHandle = {
+        rearm() { if (!failed) return false; failed = false; current = lazy(load); return true; },
+        retry() {
+          if (!failed) return Promise.resolve(true);
+          failed = false;
+          const loading = load();
+          current = lazy(() => loading);
+          return loading.then(() => true, () => false);
+        },
+      };
       const Recoverable = (props: P) => createElement(current as ComponentType<P>, props);
       Recoverable.displayName = "Recoverable(" + chunkName + ")";
       return Recoverable;
     },
     rearmFailed() {
       let n = 0;
-      for (const r of [...pendingRearm]) { pendingRearm.delete(r); if (r()) n += 1; }
+      for (const h of [...pendingRearm]) { pendingRearm.delete(h); if (h.rearm()) n += 1; }
       return n;
     },
+    retryFailed(handles?: RecoveryHandle[]) {
+      const list = handles ?? [...pendingRearm];
+      for (const h of list) pendingRearm.delete(h);
+      return Promise.all(list.map(h => h.retry())).then(all => all.every(Boolean));
+    },
     snapshot() {
-      return { settled: Object.fromEntries(settled), preloads: Object.fromEntries(preloads), generation };
+      return { settled: Object.fromEntries(settled), preloads: Object.fromEntries(preloads), css: Object.fromEntries(cssLinks), inflight: [...inflight], generation };
     },
   };
 }
@@ -261,7 +341,15 @@ const browserEnv = (): RecoveryEnv => {
     base: import.meta.env.BASE_URL || "/",
     doc: hasDoc ? document : null,
     importUrl: url => import(/* @vite-ignore */ url),
-    fetchText: async url => { const r = await fetch(url, { credentials: "same-origin" }); if (!r.ok) throw new Error("source " + r.status); return r.text(); },
+    fetchText: async url => {
+      const ctl = typeof AbortController === "undefined" ? null : new AbortController();
+      const t = ctl ? setTimeout(() => ctl.abort(), DEFAULT_TIMEOUTS.source) : 0;
+      try {
+        const r = await fetch(url, { credentials: "same-origin", signal: ctl?.signal });
+        if (!r.ok) throw new Error("source " + r.status);
+        return await r.text();
+      } finally { if (t) clearTimeout(t); }
+    },
   };
 };
 const runtime = createRecoveryRuntime(browserEnv());
@@ -271,14 +359,18 @@ const runtime = createRecoveryRuntime(browserEnv());
 export function recoverableLazy<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>): ComponentType<P> {
   return runtime.lazyComponent(chunkName, factory);
 }
-/** Like recoverableLazy, for a chunk whose emitted module does not export `default` (a shared chunk): a retry only re-calls the
- *  original factory; it never imports the chunk under another URL. */
-export function retryableLazy<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>): ComponentType<P> {
-  return runtime.lazyComponent(chunkName, factory, { remap: false });
+/** Like recoverableLazy, for a component whose module the bundler placed in a SHARED chunk (the compiled import picks the
+ *  module's namespace export, `import(…).then(e => e.<name>)`): a remapped copy is resolved through that namespace export. */
+export function recoverableSharedLazy<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>): ComponentType<P> {
+  return runtime.lazyComponent(chunkName, factory, { shared: true });
 }
-/** Re-arms every failed recoverable / retryable component (the recovery card's «إعادة المحاولة»). */
+/** Re-arms every failed recoverable component without loading it yet (the next render loads it). */
 export function rearmFailedLoads(): number {
   return runtime.rearmFailed();
+}
+/** «إعادة المحاولة»: re-arms the given failed loaders (default: every failed one) and loads them now; true when all loaded. */
+export function retryFailedLoads(handles?: RecoveryHandle[]): Promise<boolean> {
+  return runtime.retryFailed(handles);
 }
 /** Certification view (read-only). */
 export const recoverySnapshot = () => runtime.snapshot();

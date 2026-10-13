@@ -11,10 +11,14 @@ import { spawnSync } from "node:child_process";
 
 const RL = "src/recoverableLazy.ts", QEB = "src/student/exam/QuestionErrorBoundary.tsx", ANN = "src/student/exam/examAnnouncements.ts";
 const PAGE = "src/StudentExamPage.tsx", SAVE = "src/student/exam/SaveStatus.tsx", FIELD = "src/QuestionField.tsx", LAB = "src/physicsLab/LabScene.tsx";
-const CARD = "src/StudentQuestionCard.tsx", LTR = "src/ui/ltrIsland.ts";
-const RT = ["src/recoverableLazy.21e3.test.tsx"];
-const UNITS = ["src/student/exam/exam21e3.units.test.tsx"];
-const PAGE_T = ["src/StudentExamPage.ux21e3.test.tsx"];
+const CARD = "src/StudentQuestionCard.tsx", LTR = "src/ui/ltrIsland.ts", REVEAL = "src/student/exam/keyboardReveal.ts", BELL = "src/notifications/NotificationBell.tsx";
+const GUARD = "scripts/check-bundle-budget.mjs";
+const RT = ["src/recoverableLazy.21e3.test.tsx", "src/recoverableLazy.rf1.test.tsx"];
+const UNITS = ["src/student/exam/exam21e3.units.test.tsx", "src/student/exam/rf1.units.test.tsx"];
+const PAGE_T = ["src/StudentExamPage.ux21e3.test.tsx", "src/StudentExamPage.rf1.test.tsx"];
+const STEM_T = ["src/StudentQuestionCard.stem21e3.test.tsx", "src/StudentQuestionCard.stem.rf1.test.tsx", "src/richContent/RichContentRenderer.rf1.test.tsx"];
+const REVEAL_T = ["src/student/exam/keyboardReveal.rf1.test.tsx", "src/StudentExamPage.rf1.test.tsx"];
+const GUARD_T = ["scripts/check-bundle-budget.rf1.test.mjs"];
 const M = (id, file, before, after, tests) => ({ id, file, before, after, tests });
 const mutants = [
   // URL trust — the only way a URL reaches the importer, the import map, a source read or a stylesheet.
@@ -30,26 +34,49 @@ const mutants = [
   M("R09-recovered-remapped", RL, "return [...bad].filter(u => !recovered(u));", "return [...bad];", RT),
   M("R10-no-settled-reuse", RL, "    if (hit) return env.importUrl(hit);\n", "", RT),
   M("R11-never-remap-ignored", RL, 'if (set.some(u => NEVER_REMAP.has(assetName(u)))) throw new Error("recovery-refused");', "", RT),
-  M("R12-no-original-first", RL, "const mod = await original().catch((err: unknown) => {", "const mod = await (attempts > 1 && entry ? remapped(entry) : original()).catch((err: unknown) => {", RT),
+  M("R12-no-original-first", RL, "const mod = await original().catch((err: unknown) => {", "const mod = await (attempts > 1 && entry ? (viaRemap = true, remapped(entry)) : original()).catch((err: unknown) => {", RT),
   M("R13-map-unscoped", RL, "for (const u of set) scopes[url(u)] = imports;", "for (const u of set) scopes[u] = imports;", RT),
   M("R14-no-css-relink", RL, "if (attempts > 1) await relinkFailedCss();", "", RT),
-  M("R15-shape-unchecked", RL, 'if (!isComponent(mod?.default)) throw new Error("recovery-shape");', "", RT),
-  M("R16-retryable-remaps", RL, "const allowRemap = options.remap !== false;", "const allowRemap = true;", RT),
+  M("R15-shape-unchecked", RL, 'if (!isComponent(component)) throw new Error("recovery-shape");', "", RT),
+  M("R16-shared-no-pick", RL, "const component = viaRemap && options.shared ? pickShared(mod) : mod?.default;", "const component = mod?.default;", RT),
+  // Review fix 1 — the runtime gaps the review found (each killed by a review-fix-1 test).
+  M("R17-no-serialization", RL, "const run = queue.then(task);", "const run = task();", RT),
+  M("R18-css-relink-fail-open", RL, 'if (results.includes(false)) throw new Error("recovery-css");', "", RT),
+  M("R19-css-first-only", RL, 'link.addEventListener("error", () => { states.set(url, "failed"); if (css) failedCss.add(url); }, { once: true });', 'link.addEventListener("error", () => { states.set(url, "failed"); }, { once: true });', RT),
+  M("R20-inflight-ignored", RL, 'if (set.some(u => inflight.has(u))) throw new Error("recovery-busy");', "", RT),
+  M("R21-no-import-bound", RL, 'return within(importing, limits.import, "recovery-timeout");', "return importing;", RT),
+  M("R22-remap-any-browser", RL, "if (entry && cached && (attempts > 1 || settled.size > 0))", "if (entry && (attempts > 1 || settled.size > 0))", RT),
+  M("R23-element-accepted", RL, "COMPONENT_TYPES.has((c as { $$typeof?: symbol }).$$typeof as symbol)", "true", RT),
+  M("R24-shared-pick-ambiguous", RL, "return hits.length === 1 ? (hits[0] as { default: unknown }).default : undefined;", "return hits.length >= 1 ? (hits[0] as { default: unknown }).default : undefined;", RT),
   // The recovery card.
-  M("B01-no-rearm", QEB, "    rearmFailedLoads();\n", "", UNITS),
-  M("B02-log-leaks", QEB, 'console.error("[QuestionErrorBoundary]", { code: isChunkLoadError(error) ? "chunk-load" : "runtime" });', 'console.error("[QuestionErrorBoundary]", { code: isChunkLoadError(error) ? "chunk-load" : "runtime", message: String((error as Error)?.message) });', [...UNITS, ...PAGE_T]),
-  M("B03-reload-before-retry", QEB, "{afterRetry && reloadAllowed && (", "{reloadAllowed && (", PAGE_T),
-  M("B04-no-reset-on-new-question", QEB, "return props.resetKey !== state.resetKey ? { failed: false, retries: 0, resetKey: props.resetKey } : null;", "return null;", UNITS),
-  M("B05-no-focus-anchor", QEB, "    this.context.focusAnchor?.();\n", "", PAGE_T),
-  M("B06-whole-card-boundary", CARD, "<QuestionErrorBoundary resetKey={id} fallback={plain}>", "<QuestionErrorBoundary resetKey={id+\"-stem\"} fallback={null}>", ["src/StudentQuestionCard.stem21e3.test.tsx", ...PAGE_T]),
-  // Reload gating and focus on the page.
-  M("P01-reload-in-strict", PAGE, 'reloadAllowed:policy!=="strict"&&saveKind==="saved"', 'reloadAllowed:saveKind==="saved"', PAGE_T),
-  M("P02-reload-unsaved", PAGE, 'reloadAllowed:policy!=="strict"&&saveKind==="saved"&&!submitBusy', 'reloadAllowed:policy!=="strict"&&!submitBusy', PAGE_T),
+  M("B01-retry-loads-nothing", QEB, "    const ok = await retryFailedLoads([...this.handles]);\n", "    const ok = true;\n", UNITS),
+  M("B02-log-leaks", QEB, 'console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime" });', 'console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime", message: String((error as Error)?.message) });', [...UNITS, ...PAGE_T]),
+  M("B03-reload-before-retry", QEB, "    if (this.state.retries === 0) return false;\n", "", PAGE_T),
+  M("B04-no-reset-on-new-question", QEB, "return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey } : null;", "return null;", UNITS),
+  M("B05-no-focus-follow", QEB, "if (this.restoreFocus) { this.restoreFocus = false; this.followRecoveredPart(this.token); }", "if (this.restoreFocus) { this.restoreFocus = false; }", [...PAGE_T, ...UNITS]),
+  M("B06-stem-card-not-text", CARD, '<QuestionErrorBoundary resetKey={id} variant="stem" fallback={plain}>', "<QuestionErrorBoundary resetKey={id}>", STEM_T),
+  M("B07-refocus-steals", QEB, "if (wasOnCard && (!active || active === document.body || active === document.documentElement)) this.retryRef.current?.focus();", "this.retryRef.current?.focus();", UNITS),
+  M("B08-retry-every-loader", QEB, "    const ok = await retryFailedLoads([...this.handles]);\n", "    const ok = await retryFailedLoads();\n", UNITS),
+  M("B09-guidance-not-describing", QEB, "aria-describedby={afterRetry ? guidanceId : v === \"stem\" || v === \"inline\" ? noteId : undefined}", "aria-describedby={undefined}", PAGE_T),
+  M("B10-stem-silent", QEB, '    if (v === "stem" || v === "inline") {\n', '    if (v === "stem" || v === "inline") return this.props.fallback;\n    if (false) {\n', STEM_T),
+  M("B11-student-wording-everywhere", QEB, 'private exam() { return this.context.scope === "exam"; }', "private exam() { return true; }", UNITS),
+  // Reload gating, focus, timer and announcer on the page.
+  M("P01-reload-in-strict", PAGE, 'reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"', 'reloadAllowed:online&&saveKind==="saved"', PAGE_T),
+  M("P02-reload-unsaved", PAGE, 'reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"&&!submitBusy', 'reloadAllowed:policy!=="strict"&&online&&!submitBusy', PAGE_T),
   M("P03-focus-on-open", PAGE, 'if(prev===screen||prev==="loading")return;', "if(prev===screen)return;", PAGE_T),
   M("P04-no-result-focus", PAGE, '  }else if(screen==="result"||screen==="strict"){', '  }else if(false){', PAGE_T),
   M("P05-no-start-focus", PAGE, '  if(screen==="exam"){\n   const el=view==="review"', '  if(false){\n   const el=view==="review"', PAGE_T),
-  M("P06-reveal-always", PAGE, "if((nav&&r.bottom>nav.top+1)||(bar&&r.top<bar.bottom-1))el.scrollIntoView(", "el.scrollIntoView(", PAGE_T),
-  M("P07-timer-no-memory", PAGE, "next.record.forEach(t=>done.add(t));writeTimerNotices(timerAttempt,done);", "", PAGE_T),
+  M("P07-timer-no-memory", PAGE, "next.record.forEach(t=>d.add(t));writeTimerNotices(timerAttempt,d);", "next.record.forEach(t=>d.add(t));", PAGE_T),
+  M("P08-reload-offline", PAGE, 'reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"', 'reloadAllowed:policy!=="strict"&&saveKind==="saved"', PAGE_T),
+  M("P09-transition-smooth", PAGE, 'window.scrollTo({top:0,behavior:"auto"});\n   revealElement(el);', "window.scrollTo({top:0,behavior});\n   revealElement(el);", PAGE_T),
+  M("P10-timer-off-screen", PAGE, 'if(screen!=="exam"||!timerAttempt||remainingMs===null||expired)return;', "if(!timerAttempt||remainingMs===null||expired)return;", PAGE_T),
+  M("P11-announcer-no-settle", PAGE, "if(wait>0)window.setTimeout(deliver,wait);else deliver();", "deliver();", PAGE_T),
+  // Keyboard-only reveal (the blockers).
+  M("K01-reveal-pointer-focus", REVEAL, "if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS) return;", "if (!el) return;", REVEAL_T),
+  M("K02-reveal-while-pointer-down", REVEAL, "if (!el || pointerDown || intent < 0", "if (!el || intent < 0", REVEAL_T),
+  M("K03-reveal-any-key", REVEAL, "const onKey = (e: KeyboardEvent) => { if (NAV_KEYS.has(e.key)) keyAt = now(); };", "const onKey = () => { keyAt = now(); };", REVEAL_T),
+  M("K04-reveal-not-consumed", REVEAL, "    keyAt = -1;                                                         // one key press explains at most one focus change\n", "", REVEAL_T),
+  M("K05-reveal-no-frame-recheck", REVEAL, "if (pointerDown || pointerAt > intent || o.doc.activeElement !== el) return;", "", REVEAL_T),
   // Announcement rules.
   M("A01-timer-repeat", ANN, "const due = TIMER_THRESHOLDS_MS.filter(t => remainingMs <= t && !announced.has(t));", "const due = TIMER_THRESHOLDS_MS.filter(t => remainingMs <= t);", [...UNITS, ...PAGE_T]),
   M("A02-timer-early", ANN, "const due = TIMER_THRESHOLDS_MS.filter(t => remainingMs <= t && !announced.has(t));", "const due = TIMER_THRESHOLDS_MS.filter(t => remainingMs <= t + 60_000 && !announced.has(t));", [...UNITS, ...PAGE_T]),
@@ -59,6 +86,12 @@ const mutants = [
   M("L01-cli-not-isolated", FIELD, '<pre className="iex-cli" dir="ltr">', '<pre className="iex-cli">', PAGE_T),
   M("L02-physics-title-ltr", LAB, ' direction="rtl" textAnchor="end">{conserved', '>{conserved', UNITS),
   M("L03-island-drops-bdi", LTR, 'out.push(createElement("bdi", { dir: "ltr", key: key++ }, m[0]));', "out.push(m[0]);", [...UNITS, "src/pwa/InstallAppCard.6a.test.tsx"]),
+  M("L04-grade-any-preview", BELL, 'item.type === "assignment_reviewed" ? isolateLtr(', "true ? isolateLtr(", UNITS),
+  M("L05-grade-unbounded", LTR, "export const GRADE_LTR = /(?<![\\d/]|\\d\\.)\\d+(?:\\.\\d+)?\\s*\\/\\s*\\d+(?:\\.\\d+)?(?![\\d/]|\\.\\d)/g;", "export const GRADE_LTR = /\\d+(?:\\.\\d+)?\\s*\\/\\s*\\d+(?:\\.\\d+)?/g;", UNITS),
+  // The build guard (review fix 1).
+  M("G01-guard-name-unchecked", GUARD, "if (base !== d[3]) failures.push(", "if (false) failures.push(", GUARD_T),
+  M("G02-guard-neverremap-unread", GUARD, "if (neverRemap.includes(name)) failures.push(", "if (false) failures.push(", GUARD_T),
+  M("G03-guard-no-minimum", GUARD, "if (decls.length < MIN_RECOVERABLE_DECLARATIONS) failures.push(", "if (false) failures.push(", GUARD_T),
 ];
 
 const sha = s => crypto.createHash("sha256").update(s).digest("hex"), files = [...new Set(mutants.map(m => m.file))];

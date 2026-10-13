@@ -361,18 +361,19 @@
 /* ============================================================
    Phase 21E.3 — student exam reliability and accessibility
    ============================================================ */
-/* Scroll clearance (S-8 / S-ST-NEW-2): the sticky top bar and bottom navigation are treated as covered areas whenever the
-   browser scrolls a control into view (Tab, focus(), scrollIntoView), so a focused field is never left under either bar. */
-:root:has(.iex-bottom-nav){ scroll-padding-block-start:72px; scroll-padding-block-end:96px; }
+/* Scroll clearance (S-8 / S-ST-NEW-2): the existing scroll-margins of the headings and answer fields (above) keep the browser's
+   own focus scrolling clear of the bars; a control reached with the KEYBOARD that still lands partly under a bar is revealed by
+   student/exam/keyboardReveal.ts. Review fix 1: no root scroll-padding (it doubled those margins and moved every heading 72px
+   lower), and nothing scrolls on mouse / touch focus. */
 
 /* Focus after major transitions (S-4): the programmatic targets (question / review / result headings) always show where focus is.
-   Keyboard users get the platform ring; after a pointer action a calm inline-start bar marks the heading instead of a ring. */
+   Keyboard users get the platform ring; after a pointer action a calm underline marks the heading (review fix 1: an inset bar
+   was drawn over the first Arabic glyph). */
 .iex-result-title{ scroll-margin-block-start:72px; }
 .iex-result-title:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); border-radius:var(--eb-r-xs); }
 .iex-page-heading:focus:not(:focus-visible), .iex-review-title:focus:not(:focus-visible), .iex-result-title:focus:not(:focus-visible){
-  box-shadow:inset 3px 0 0 var(--eb-primary);
+  outline:none; text-decoration:underline 2px var(--eb-primary); text-underline-offset:6px;
 }
-[dir="rtl"] .iex-page-heading:focus:not(:focus-visible), [dir="rtl"] .iex-review-title:focus:not(:focus-visible), [dir="rtl"] .iex-result-title:focus:not(:focus-visible){ box-shadow:inset -3px 0 0 var(--eb-primary); }
 
 /* Per-question recovery card (S-1): replaces only the part that failed; calm, never red, never hides the navigation. */
 .iex-q-recovery{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-warn); border-inline-start:4px solid var(--eb-warn); border-radius:var(--eb-r); background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
@@ -381,10 +382,15 @@
 .iex-q-recovery-body{ margin:0; font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
 .iex-q-recovery-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
 .iex-q-recovery-actions .eb-button{ min-height:44px; }
-.iex-q-recovery.is-section{ padding:var(--eb-space-2) var(--eb-space-3); }
+.iex-q-recovery.is-section, .iex-q-recovery.is-block{ padding:var(--eb-space-2) var(--eb-space-3); }
+/* Review fix 1 — the compact notice of a simplified rich stem / formula: the content stays, the notice says why, with a retry. */
+.iex-q-recovery-compact.is-stem{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.iex-q-recovery-note{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-2); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.iex-q-recovery-compact.is-stem .iex-q-recovery-note{ padding:var(--eb-space-1) var(--eb-space-2); border-inline-start:3px solid var(--eb-warn); background:var(--eb-warn-bg); border-radius:var(--eb-r-xs); }
+.iex-q-recovery-retry.is-small{ min-height:44px; }
 
 /* Touch targets (S-7): at least 44×44 CSS px for the listed student controls on coarse pointers (phones, tablets). Scoped to the
    controls themselves; desktop layouts with a fine pointer keep their sizes. */
 @media (pointer: coarse){
-  .iex-cli-input{ min-height:44px; min-width:44px; }
+  .iex-cli-input{ min-height:44px; }   /* review fix 1: the 90px minimum width stays */
 }
