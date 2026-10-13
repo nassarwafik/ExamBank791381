@@ -13,6 +13,10 @@ import "./builder-toolbar.css";
  * labels; on narrow widths labels collapse to icons but every button keeps its accessible name. Purely presentational: the
  * builder owns every handler, every gate and every disabled state.
  */
+/** The accessible name of the «المزيد» menu trigger (the builder returns focus to it when the question explorer's dialog closes and
+ *  its opener has left the page — RF3). */
+export const MORE_MENU_LABEL = "المزيد من أدوات الامتحان";
+
 export type ToolbarItem = {
   key: string;
   label: string;
@@ -81,7 +85,7 @@ export default function BuilderToolbar({ headingId, heading, onExit, exitDisable
           )}
           {preview && <button type="button" className="sb-tb-btn" onClick={preview.onSelect} disabled={preview.disabled} aria-haspopup="dialog"><IconEye size={18} aria-hidden="true" /><span className="sb-tb-label">{preview.label}</span></button>}
           {moreItems.length > 0 && (
-            <ActionMenu label="المزيد من أدوات الامتحان" text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">
+            <ActionMenu label={MORE_MENU_LABEL} text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">
               <MenuItems items={moreItems} />
             </ActionMenu>
           )}

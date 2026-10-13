@@ -97,6 +97,12 @@ version families, API contracts, authentication, storage, SmartSim / chemistry /
 - Guard `src/teacher/saveLabels.guard.21e2.test.ts`: the listed literals may not appear elsewhere in teacher UI source (JSX text
   or a whole quoted string, optionally after an icon glyph). Reviewed exceptions: the compact per-stage score button (contextual
   aria-label); the two shared SmartSim answer workspaces. **Temporary:** the builder and `App.tsx` sites until #300 merges.
+- Review Fix 3 (I-4, owner directive): the save **status** lives in the same table — `saved` «محفوظ», `dirty` «تغييرات غير محفوظة»,
+  `recovered` «نسخة مسترجعة — غير محفوظة», and `saving` «جارٍ الحفظ…» shared with the buttons (`SAVE_STATE_LABELS`). The builder's
+  `role=status` renders it (glyph aria-hidden, `aria-atomic`) and is the only region that speaks a save-state change; App's legacy
+  status line reads it too. The guard scans the three status sentences. Reviewed exceptions: the 13A unsaved-work confirmation's
+  title (its `title:` use only; `api/tests/assessment-presets-guards-15a` pins that literal) and the chemistry conservation table's
+  «✓ محفوظ» (mass is conserved; not a save state).
 
 ### E — contextual reorder names (part)
 
@@ -239,11 +245,75 @@ Built on part 1 after #300 merged: part 1's branch was reconciled with `main` `3
   - One test (`coverage` › accessibility) asserted focus returning to the opener: the opener is now the «المزيد» trigger, as the
     ActionMenu contract says.
 
-### Not in part 2 (still open)
+### D and E — landed after the first push of part 2
 
-- **D — inline issues** next to their question, with a live region and summary links. The building blocks shipped in part 1, but
-  wiring them changes the finalization panel; this needs its own slice.
-- **E — section reorder names.** Question reorder names shipped in part 1.
+- **D — inline issues.**
+  - Each question card and section shows its own canonical issues (`indexIssues`: the summary's issues regrouped, never
+    re-validated) in a named list «مشكلات السؤال N» / «مشكلات القسم N».
+  - One polite live region announces the counts once they settle (`useIssueAnnouncer`), per exam.
+  - A summary entry opens its card and puts focus where the teacher fixes the issue: the field frame showing the clicked instance
+    (`data-issue-codes` / `data-issue-nth`), else that frame's first control, else the named list. It never jumps to an unrelated
+    field.
+- **E — section reorder names.** «نقل القسم N للأعلى / للأسفل» (as visible title and accessible name), like the question reorder
+  names from part 1.
+
+### Review rounds on part 2
+
+| Round | Commit | What changed |
+|---|---|---|
+| Review Fix 1 | `4e4e274` | 12 confirmed findings: menus (settle, placement cap, portal into the modal), the modal surface (Escape in text fields, return focus), inline issues, browser scripts |
+| Review Fix 2 | `8bd4cc2` | Summary focus by issue **instance**; no jump to an unrelated field; the reveal pruned when a question's errors are gone; the open signal split from the reveal (a warning-only card re-opens) |
+| Review Fix 3 | this round | The owner-listed builder items, two audit findings, the owner's two observations, and the five re-review findings (below) |
+
+**Review Fix 3 — fixed (fail-first unit tests + real Chromium):**
+
+- **I-1 — compound / composite parts.**
+  - A part's issue goes to that part, never to the card's first invalid field.
+  - The part is read back from the canonical message (`issuePart` / `issuePartFocus`); the frozen compound@1 markup is not changed.
+  - The target inside the part:
+    - a numbered row («الزوج 3 في …», «البند 2 في …», «الفراغ 2 في …»): that row (its empty control, or its answer control for a
+      missing / unreachable answer);
+    - rich content: the part's rich-content control;
+    - an unsupported type / version: the type select;
+    - the answer body as a whole: its first control.
+  - A row the editor cannot point to (a table cell, a CLI field) and two parts with the same label lead to the named list.
+  - **Re-review RR3-3 / RR3-A11Y-1:** the first fix sent row issues to the part's first row, which was often complete. They now go
+    to the named row.
+  - **Re-review RR3-1:** every form the validator uses to name a composite part is now recognised: «… — المحتوى المنسق: …» and
+    «البند «ب»».
+- **I-2 — focus ring after pointer navigation.** The control an entry focuses carries `data-issue-focus` until it loses focus.
+  `builder-issues.css` draws the focus ring for it, because Chromium does not match `:focus-visible` for script focus after a
+  click.
+- **I-3 — duplicated question ids.** The occurrence is counted among the issues of the card the entry leads to: after the last
+  `DUPLICATE_ID`.
+- **I-4 — one save vocabulary** (see F above). The status and the draft button say the same «جارٍ الحفظ…». The `role=status`
+  region is atomic and is the only one that speaks.
+- **A-01 — layers under the toolbar.** The builder publishes the stuck toolbar's height as `--sb-toolbar-band`. The bulk-action bar
+  and the inline explorer stick below it; before, they slid under it at 1280 × 900 and 853 × 600.
+- **A-02 — focus off screen.** Where the toolbar is static (200 %, phones), a heading counts as on screen only below the scroller's
+  top. Deleting a question or pressing Ctrl+Y no longer leaves focus on a card above the screen.
+- **RR3-A11Y-2 / audit B-02 — keyboard focus under the sticky layers** (WCAG 2.4.11). After a Tab or Shift+Tab, the scroller moves
+  just enough to put the focused control 12 px below the stuck toolbar and, with a selection, the bulk-action bar. Chromium does not
+  scroll a stop that is "in view" behind a sticky bar. Programmatic reveals are not adjusted: they already land below the edge.
+- **Owner observations.**
+  - Closing the explorer dialog after a zoom (its opener gone) returns focus to «المزيد», never `<body>`. The "next «المزيد» click
+    ignored" part did not reproduce in 12 Chromium variants; a test asserts the menu opens.
+  - The explorer shows a matching question by its words, never its table syntax.
+- **RR3-2 — mutation needles.** Five K3 needles no longer matched after RF2 / RF3 (K3-1, K3-7, K3-8, K3-10, K3-11) and two after
+  RF1 (K3-12, K3-13). They are re-anchored to the same planted defects. The Review Fix 3 and RR3 mutants are in
+  `scripts/mutate-21e2.mjs`. A needle check confirms all 102 match exactly once.
+
+**Still open — confirmed by the Review Fix 3 audit, not yet fixed (next round):**
+
+| Group | Findings |
+|---|---|
+| Focus dropped to `<body>` | A-07 move to an end, A-08 last undo / redo, A-09 save buttons disable themselves, A-11 clearing a selection / bulk delete, A-13 undo removing the focused card, A-14 / B-05 a menu closed by scroll or resize, B-04 self-disabling toolbar buttons |
+| Moves and reveals | A-03 «نقل إلى قسم» acts on the first ArrowDown, A-06 a moved card scrolls out of view, A-12 a new question / section is not focused |
+| Undo behind dialogs | A-04 Ctrl+Z / Ctrl+Y change the exam behind the preview, the unsaved-changes guard and menu dialogs |
+| Save feedback | A-10 / B-01 a failed save's reason is off screen and not announced; B-06 a stale success banner; a final approval announced like a draft save |
+| Issue fallback | A-05 an issue no frame shows still takes the first invalid field (pinned by RF2; an owner decision) |
+| Names and targets | A-15 focused cards / sections have no name; A-16 the explorer toggle lost `aria-controls`; A-19 card buttons do not name their question; A-18 / B-10 small targets on phones |
+| Chrome text | B-07 the gates chip's severity has no style; B-08 emoji and English in the builder chrome and the access bar; B-09 the overlay is nameless while the builder chunk loads |
 
 ### Evidence
 

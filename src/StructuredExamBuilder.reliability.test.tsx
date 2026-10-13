@@ -166,7 +166,7 @@ describe("B — undo / redo toolbar + keyboard", () => {
     let release!: () => void;
     act(() => { void h.save(new Promise<void>(r => { release = r; })); });
     expect(undoBtn().disabled).toBe(true); expect(redoBtn().disabled).toBe(true);
-    expect(chip()).toBe("⏳ جارٍ الحفظ");
+    expect(chip()).toBe("⏳ جارٍ الحفظ…");                                          // RF3 I-4 — the save-label table's «جارٍ الحفظ…» (the draft button's)
     key(document.body, { key: "z", ctrlKey: true });
     expect(h.latest!.title).toBe("T1");
     await act(async () => { release(); await tick(); });

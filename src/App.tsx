@@ -6644,8 +6644,8 @@ function App() {
 
               <strong>
                 {hasUnsavedChanges
-                  ? "تغييرات غير محفوظة"
-                  : "محفوظ"}
+                  ? SAVE_LABELS.dirty
+                  : SAVE_LABELS.saved}
               </strong>
 
               {lastCloudSaveAt && (
