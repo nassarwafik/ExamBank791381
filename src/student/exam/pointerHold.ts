@@ -6,9 +6,12 @@
  * and release, and a different option or point would be recorded (the input reviewer measured both on touch and mouse). The card
  * therefore waits for the release, and a press outside the card since «إعادة المحاولة» means the student moved on.
  *
- * Listeners are installed once, on the first retry (no side effect at import); they are passive and capture-phase.
+ * Listeners are installed once, when a recovery card first appears (no side effect at import); they are passive and
+ * capture-phase. A native drag (a label chip dragged onto a zone) is a press too: Chromium cancels the pointer at `dragstart` and
+ * sends no release until the drop (recovery reviewer RR3-1). A release whose target was removed is not seen by the document; a
+ * pointer that later moves with no button down, or a finger lifted elsewhere, ends that stale press.
  */
-let installed = false, pointer = false, touch = false;
+let installed = false, pointer = false, touch = false, drag = false;
 let lastDown: { t: number; target: EventTarget | null } = { t: -1, target: null };
 const waiters = new Set<() => void>();
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -22,13 +25,20 @@ export function trackPointer(): void {
   const down = (e: Event) => { lastDown = { t: now(), target: e.target }; };
   for (const t of ["pointerdown", "mousedown"]) document.addEventListener(t, e => { pointer = true; down(e); }, opts);
   document.addEventListener("touchstart", e => { touch = true; down(e); }, opts);
-  for (const t of ["pointerup", "pointercancel", "mouseup", "dragend"]) document.addEventListener(t, () => { pointer = false; changed(); }, opts);
+  for (const t of ["pointerup", "pointercancel", "mouseup"]) document.addEventListener(t, e => {
+    pointer = false;
+    if (t === "pointerup" && (e as PointerEvent).pointerType === "touch") touch = false;      // a finger lifted (its touchend may be lost)
+    changed();
+  }, opts);
   // A touch scroll cancels the pointer but the finger is still on the screen: only the last touchend releases it.
   for (const t of ["touchend", "touchcancel"]) document.addEventListener(t, e => { if (!(e as TouchEvent).touches?.length) touch = false; changed(); }, opts);
-  window.addEventListener("blur", () => { pointer = false; touch = false; changed(); });
+  document.addEventListener("dragstart", () => { drag = true; }, opts);
+  for (const t of ["drop", "dragend"]) document.addEventListener(t, () => { drag = false; changed(); }, opts);
+  document.addEventListener("pointermove", e => { if ((e as PointerEvent).buttons === 0 && (pointer || drag)) { pointer = false; drag = false; changed(); } }, opts);
+  window.addEventListener("blur", () => { pointer = false; touch = false; drag = false; changed(); });
 }
 
-export const pointerIsDown = (): boolean => pointer || touch;
+export const pointerIsDown = (): boolean => pointer || touch || drag;
 
 /** The last press (time from performance.now(), target), or t = -1. */
 export const lastPointerDown = (): { t: number; target: EventTarget | null } => lastDown;

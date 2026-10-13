@@ -96,6 +96,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
   private restoreFocus = false;
   /** The recovery may bring the focused line / heading clear of the bars: keyboard retry, no scroll and no press meanwhile. */
   private revealAllowed = false;
+  private retryStarted = 0;
   private titleAnnounced = false;
   /** The failed loaders whose errors this boundary caught: «إعادة المحاولة» retries exactly these (never another question's). */
   private handles = new Set<RecoveryHandle>();
@@ -116,6 +117,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
   componentWillUnmount() { this.mounted = false; this.token += 1; if (this.frame) cancelAnimationFrame(this.frame); }
 
   componentDidCatch(error: unknown) {
+    trackPointer();                                                       // a press that starts before the first retry is seen too
     const handle = recoveryHandleOf(error);
     if (handle) this.handles.add(handle);
     const msg = String((error as { message?: unknown } | null)?.message ?? "");
@@ -169,8 +171,9 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     this.restoreFocus = !!(el && active && el.contains(active));
     const token = ++this.token;
     trackPointer();
-    const started = typeof performance !== "undefined" ? performance.now() : Date.now(), scrolledAt = window.scrollY;
+    const started = typeof performance !== "undefined" ? performance.now() : Date.now(), scrolledAt = window.scrollY, downAtStart = pointerIsDown();
     this.revealAllowed = false;
+    this.retryStarted = started;
     this.setState({ retrying: true });
     // Only the loaders that failed below THIS boundary (a render error has none: the part simply renders again).
     const ok = await retryFailedLoads([...this.handles]);
@@ -180,7 +183,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     if (!this.mounted || token !== this.token) return;
     const press = lastPointerDown(), cardNow = this.failedRef.current;
     if (press.t >= started && !(cardNow && press.target instanceof Node && cardNow.contains(press.target))) this.restoreFocus = false;
-    this.revealAllowed = viaKeyboard && press.t < started && Math.abs(window.scrollY - scrolledAt) < 1;
+    this.revealAllowed = viaKeyboard && !downAtStart && press.t < started && Math.abs(window.scrollY - scrolledAt) < 1;
     // The line is shown only when focus is still on the card (or nowhere): it will receive focus; otherwise nothing is added.
     const a = document.activeElement, card = this.failedRef.current;
     const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));
@@ -208,7 +211,8 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     const step = () => {
       this.frame = 0;
       if (!this.mounted || token !== this.token || !idle()) return;
-      if (this.context.focusAnchor?.()) { this.revealFocused(document.activeElement); return; }
+      // Never while a pointer or finger is down (the heading appears a frame or more after the swap): wait for the release.
+      if (!pointerIsDown() && this.context.focusAnchor?.()) { this.revealFocused(document.activeElement); return; }
       if (now() - started < FOLLOW_MS) this.frame = requestAnimationFrame(step);
     };
     this.frame = requestAnimationFrame(step);
@@ -218,7 +222,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
   private revealFocused(el: Element | null) {
     const allowed = this.revealAllowed;
     this.revealAllowed = false;
-    if (!allowed || !(el instanceof HTMLElement) || pointerIsDown()) return;
+    if (!allowed || !(el instanceof HTMLElement) || pointerIsDown() || lastPointerDown().t >= this.retryStarted) return;
     if (this.context.reveal) { this.context.reveal(el); return; }
     const b = el.getBoundingClientRect();
     if (b.top < 0 || b.bottom > window.innerHeight) el.scrollIntoView?.({ block: "nearest" });

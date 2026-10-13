@@ -26,9 +26,12 @@
 //      stylesheet. Another loader's stylesheet that stays down never fails this retry (review fix 2), but it is re-linked too,
 //      because Vite links a shared stylesheet only for the first load that needs it: a later loader that also needs it never
 //      sees it as its own (review fix 3). For the same reason a FIRST load in a page where a stylesheet already failed re-links
-//      the failed ones first (bounded, never failing the load), so a sibling question sharing it renders styled.
-//   5. Each step is bounded in time. A recovery that stalls stops blocking the queue; until it settles, its modules are "in
-//      flight" and any other recovery that would need one of them is refused (never a second copy).
+//      the failed ones first, so a sibling question sharing it renders styled. That wait never fails the load and is short
+//      (`firstCss`, 3 s): a stylesheet that stalls must not hold an unrelated part back for the whole stylesheet bound.
+//   5. The remap and the stylesheet re-links are bounded in time. A recovery that stalls stops blocking the queue; until it
+//      settles, its modules are "in flight" and any other recovery that would need one of them is refused (never a second copy).
+//      The retry's first step re-calls the original factory, which is the browser's own import: it is not bounded here (the
+//      card shows «جارٍ إعادة المحاولة…» and the student can move on).
 //
 // SAFETY: every URL used (import, import map, source read, stylesheet) is rebuilt from a same-origin `<BASE>assets/` path
 // whose file name matches `<name>-<8 base36>.js|.css` — never a value from exam data, never a query or fragment from the
@@ -47,8 +50,9 @@ export type RecoveryEnv = {
   doc: Document | null;
   importUrl: (url: string) => Promise<unknown>;
   fetchText: (url: string) => Promise<string>;
-  /** Upper bounds (ms) of one source read, one recovery import and one stylesheet relink. */
-  timeouts?: { source?: number; import?: number; css?: number; total?: number };
+  /** Upper bounds (ms) of one source read, one recovery import, one stylesheet relink, all source reads of one recovery, and a
+   *  first load's wait for a stylesheet that failed in the page. */
+  timeouts?: { source?: number; import?: number; css?: number; total?: number; firstCss?: number };
 };
 
 /** Chunks of the static student shell (index + StudentPortal + the exam page's own static closure) and engines that install
@@ -158,7 +162,7 @@ export function pickShared(ns: unknown): unknown {
   return hits.length === 1 ? (hits[0] as { default: unknown }).default : undefined;
 }
 // `total` bounds all source reads of one recovery together (review fix 2): a chain of slow reads never holds the queue for long.
-const DEFAULT_TIMEOUTS = { source: 15000, import: 20000, css: 15000, total: 30000 };
+const DEFAULT_TIMEOUTS = { source: 15000, import: 20000, css: 15000, total: 30000, firstCss: 3000 };
 const within = <T,>(p: Promise<T>, ms: number, code: string): Promise<T> => new Promise<T>((resolve, reject) => {
   const t = setTimeout(() => reject(new Error(code)), ms);
   p.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
@@ -307,9 +311,11 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
       const load = async (): Promise<{ default: ComponentType<P> }> => {
         attempts += 1;
         try {
-          // A retry, or a first load in a page where a stylesheet already failed (a first load has no own stylesheet yet, so it
-          // never fails here: it only gives a shared stylesheet the chance to come back before the question renders).
-          if (attempts > 1 || failedCss.size > 0) await relinkFailedCss(ownCss);
+          // A retry re-links and awaits every failed stylesheet (fails closed on its own). A first load in a page where a stylesheet
+          // already failed gives it a short chance to come back before the question renders (it has no own stylesheet yet, so
+          // it never fails here; a stall only delays it by `firstCss`).
+          if (attempts > 1) await relinkFailedCss(ownCss);
+          else if (failedCss.size > 0) await within(relinkFailedCss(ownCss), limits.firstCss, "recovery-timeout").catch(() => undefined);
           let viaRemap = false;
           const mod = await original().catch((err: unknown) => {
             // A retry, or a first load in a page that already recovered modules this graph may share, takes the remapped

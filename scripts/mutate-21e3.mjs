@@ -27,7 +27,7 @@ const RT2 = ["src/recoverableLazy.rf1.test.tsx", "src/recoverableLazy.rf2.test.t
 const BELL_T = ["src/notifications/NotificationBell.grade.rf2.test.tsx", "src/student/exam/exam21e3.units.test.tsx"];
 // Review fix 3 suites.
 const RT3 = ["src/recoverableLazy.rf1.test.tsx", "src/recoverableLazy.rf2.test.tsx", "src/recoverableLazy.rf3.test.tsx"];
-const RF3_T = ["src/student/exam/rf3.units.test.tsx", "src/StudentExamPage.rf3.test.tsx"];
+const RF3_T = ["src/student/exam/rf3.units.test.tsx", "src/student/exam/rf3b.units.test.tsx", "src/StudentExamPage.rf3.test.tsx"];
 // `equivalent` (rare): the reason a mutant cannot change behaviour (AGENTS.md §9 "show the mutant is equivalent"). It is still
 // planted and run; if it survives it is reported as `equivalent` with that reason (never silently), and if it is killed the reason
 // was wrong and it counts as killed. `before` / `after` may be arrays (one mutant made of several edits in the same file, for a
@@ -50,7 +50,7 @@ const mutants = [
   M("R11-never-remap-ignored", RL, 'if (set.some(u => NEVER_REMAP.has(assetName(u)))) throw new Error("recovery-refused");', "", RT),
   M("R12-no-original-first", RL, "const mod = await original().catch((err: unknown) => {", "const mod = await (attempts > 1 && entry ? (viaRemap = true, remapped(entry)) : original()).catch((err: unknown) => {", RT),
   M("R13-map-unscoped", RL, "for (const u of set) scopes[url(u)] = imports;", "for (const u of set) scopes[u] = imports;", RT),
-  M("R14-no-css-relink", RL, "if (attempts > 1 || failedCss.size > 0) await relinkFailedCss(ownCss);", "", RT),
+  M("R14-no-css-relink", RL, "if (attempts > 1) await relinkFailedCss(ownCss);", "if (false) await relinkFailedCss(ownCss);", RT),
   M("R15-shape-unchecked", RL, 'if (!isComponent(component)) throw new Error("recovery-shape");', "", RT),
   M("R16-shared-no-pick", RL, "const component = viaRemap && options.shared ? pickShared(mod) : mod?.default;", "const component = mod?.default;", RT),
   // Review fix 1 — the runtime gaps the review found (each killed by a review-fix-1 test).
@@ -67,7 +67,8 @@ const mutants = [
   M("R27-own-css-unrecorded", RL, "        for (const u of requested) ownCss.add(u);\n", "", RT3),
   // Review fix 3 — runtime.
   M("R28-css-relink-own-only", RL, "await Promise.all([...failedCss].map(css => relink(doc, css)));", "await Promise.all([...failedCss].filter(css => own.has(css)).map(css => relink(doc, css)));", RT3),
-  M("R29-no-first-load-relink", RL, "if (attempts > 1 || failedCss.size > 0) await relinkFailedCss(ownCss);", "if (attempts > 1) await relinkFailedCss(ownCss);", RT3),
+  M("R29-no-first-load-relink", RL, "else if (failedCss.size > 0) await within(relinkFailedCss(ownCss), limits.firstCss, \"recovery-timeout\").catch(() => undefined);", "else if (false) await within(relinkFailedCss(ownCss), limits.firstCss, \"recovery-timeout\").catch(() => undefined);", RT3),
+  M("R35-first-load-full-bound", RL, "relinkFailedCss(ownCss), limits.firstCss,", "relinkFailedCss(ownCss), limits.css,", RT3),
   M("R30-css-fail-closed-any", RL, 'if ([...own].some(css => failedCss.has(css))) throw new Error("recovery-css");', 'if (failedCss.size > 0) throw new Error("recovery-css");', RT3),
   M("R31-css-relink-not-awaited", RL, "await Promise.all([...failedCss].map(css => relink(doc, css)));", "void Promise.all([...failedCss].map(css => relink(doc, css)));", RT3),
   M("R32-relink-not-shared", RL, "if (running) return running;", "void running;", RT3),
@@ -95,6 +96,15 @@ const mutants = [
   M("B24-reveal-after-scroll", QEB, " && Math.abs(window.scrollY - scrolledAt) < 1;", ";", RF3_T),
   M("B25-reveal-after-press", QEB, "this.revealAllowed = viaKeyboard && press.t < started && ", "this.revealAllowed = viaKeyboard && ", RF3_T),
   M("B26-never-revealed", QEB, "      this.revealFocused(line);\n", "", RF3_T),
+  M("H03-drag-not-a-press", HOLD, 'document.addEventListener("dragstart", () => { drag = true; }, opts);', "void 0;", RF3_T),
+  M("H04-stale-press-forever", HOLD, 'document.addEventListener("pointermove", e => { if ((e as PointerEvent).buttons === 0 && (pointer || drag)) { pointer = false; drag = false; changed(); } }, opts);', "void 0;", RF3_T),
+  M("H05-window-blur-ignored", HOLD, 'window.addEventListener("blur", () => { pointer = false; touch = false; drag = false; changed(); });', "void 0;", RF3_T),
+  M("H06-no-settle-after-release", HOLD, "      await new Promise(r => setTimeout(r, settleMs));\n", "", RF3_T),
+  M("B27-press-before-retry-unseen", QEB, "    trackPointer();                                                       // a press that starts before the first retry is seen too\n", "", RF3_T),
+  M("B28-reveal-after-held-start", QEB, "viaKeyboard && !downAtStart && press.t < started", "viaKeyboard && press.t < started", RF3_T),
+  M("B29-anchor-during-press", QEB, "if (!pointerIsDown() && this.context.focusAnchor?.())", "if (this.context.focusAnchor?.())", RF3_T),
+  M("B30-reveal-after-later-press", QEB, " || pointerIsDown() || lastPointerDown().t >= this.retryStarted) return;", " || pointerIsDown()) return;", RF3_T),
+  M("B31-stale-retry-after-release", QEB, "    await pointerReleased();\n    if (!this.mounted || token !== this.token) return;\n", "    await pointerReleased();\n", RF3_T),
   M("H01-finger-not-tracked", HOLD, 'document.addEventListener("touchstart", e => { touch = true; down(e); }, opts);', 'document.addEventListener("touchstart", e => { down(e); }, opts);', RF3_T),
   M("H02-short-press-cap", HOLD, "export async function pointerReleased(capMs = 60_000, settleMs = 60)", "export async function pointerReleased(capMs = 10_000, settleMs = 60)", RF3_T),
   M("C01-hidden-line-focus-invisible", UICSS, ".eb-visually-hidden[data-recovery-line]:focus-visible + * {", ".eb-visually-hidden[data-recovery-line]:focus-visible + .none {", RF3_T),

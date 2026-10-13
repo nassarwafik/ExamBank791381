@@ -8,6 +8,8 @@
 //   RF3-R4  loads that start together share one re-link of a failed stylesheet (never one link per load)                  new
 //   RF3-R5  a stylesheet the load requested but the error did not name is still the loader's own: if it stays down, the
 //           retry fails closed                                                                                              pin
+//   RF3-R6  a first load waits only briefly (`firstCss`) for a failed stylesheet that stalls: an unrelated part is not held back
+//           for the whole stylesheet bound                                                                         [RR3-2]  fail-first
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { Suspense, Component, type ComponentType, type ReactNode } from "react";
 import { render, act, cleanup } from "@testing-library/react";
@@ -161,5 +163,18 @@ describe("RF3-R5 — every stylesheet the load requested is the loader's own", (
     await flush(10);
     expect(ui.queryByText("template")).toBeNull();                                  // never without its own stylesheet
     expect(ui.getByText("failed")).toBeTruthy();
+  });
+});
+
+describe("RF3-R6 — a first load waits only briefly for a stalled stylesheet", () => {
+  it("VisualCanvas.css failed and its re-link stalls: the code stimulus's first load renders after `firstCss`, not `css`", async () => {
+    const f = fakeEnv({ css: 400, firstCss: 40 }), rt = createRecoveryRuntime(f.env);
+    const css = A("VisualCanvas", "abcd1234", "css");
+    const Hot = rt.lazyComponent<object>("HotspotResponse", viteFactory(f, [css], () => Promise.reject(new Error("Unable to preload CSS for " + css))));
+    const Stim = rt.lazyComponent<object>("CodeStimulusView", () => Promise.resolve(Ok("stimulus")) as Promise<{ default: ComponentType<object> }>);
+    await renderLazy(Hot); fire(f, css, "error"); cleanup();
+    const ui = await renderLazy(Stim, 120);                                        // the re-link never answers
+    expect(relinks(f)).toHaveLength(1);
+    expect(ui.getByText("stimulus")).toBeTruthy();                                 // the defect: held for the full 400 ms bound
   });
 });
