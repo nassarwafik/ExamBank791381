@@ -9,6 +9,8 @@
 //   RF1-P6  the first message waits until the announcer has settled                                               [#21]
 //   RF1-P7  after a failed retry the guidance (strict: do not leave) is announced and describes the retry button  [#23]
 //   RF1-P8  a failing review screen keeps the exam chrome and offers the way back to the questions                [#14]
+//   RF1-P9  online, but an answer the server has not confirmed: no reload after a failed retry                     [mutant P02]
+//   RF1-P10 a message is cleared from the announcer after a while (no stale text in browse mode)                   [#27]
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
@@ -26,6 +28,7 @@ vi.mock("./student/exam/ExamReviewScreen", async importOriginal => {
   return { default: (p: object) => { if (ctl.review === "throw") throw new Error("review internal"); return orig.default(p); } };
 });
 import StudentExamPage from "./StudentExamPage";
+import { ANNOUNCEMENT_CLEAR_MS } from "./student/exam/examAnnouncements";
 
 const restoreLocation = window.location;
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); Object.defineProperty(window, "location", { configurable: true, value: restoreLocation }); });
@@ -39,7 +42,7 @@ const baseState = { attemptsUsed: 0, allowedAttempts: 1, canAttempt: true, canWr
 
 let calls: { url: string; method: string; body: { action?: string } | null }[] = [];
 let stateBody: Record<string, unknown> = baseState;
-let assignmentDelayMs = 0;
+let assignmentDelayMs = 0, saveStatus = 200;
 function installFetch() {
   calls = [];
   globalThis.fetch = vi.fn((url: string, init?: RequestInit) => {
@@ -48,7 +51,7 @@ function installFetch() {
     calls.push({ url, method, body });
     if (url.includes("/api/student-submission/")) {
       if (method === "GET") return json(200, { ok: true, state: stateBody });
-      if (body.action === "saveDraft") return json(200, { ok: true, savedAt: "2026-03-01T10:01:02.000Z" });
+      if (body.action === "saveDraft") return saveStatus === 200 ? json(200, { ok: true, savedAt: "2026-03-01T10:01:02.000Z" }) : json(saveStatus, { ok: false, error: "unavailable" });
       if (body.action === "startAttempt") { const now = new Date().toISOString(), end = new Date(Date.now() + 30 * 60_000).toISOString(); stateBody = { ...stateBody, activeAttempt: { attemptNumber: 1, startedAt: now, endsAt: end, status: "started" }, effectiveAttemptEndsAt: end, serverNow: now, canWrite: true, canStartAttempt: false }; return json(200, { ok: true, state: stateBody }); }
       if (body.action === "resumeAttempt") {
         const now = new Date().toISOString(), end = new Date(Date.now() + 180_000).toISOString();
@@ -69,7 +72,7 @@ beforeEach(() => {
   window.scrollBy = (() => {}) as unknown as typeof window.scrollBy;
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
-  stateBody = baseState; ctl.mode = "ok"; ctl.review = "ok"; assignmentDelayMs = 0;
+  stateBody = baseState; ctl.mode = "ok"; ctl.review = "ok"; assignmentDelayMs = 0; saveStatus = 200;
   installFetch();
 });
 const mount = (assignment: unknown = baseAssignment) => render(<StudentExamPage token="t" assignment={assignment as never} studentName="أحمد" className="الحادي عشر" onBack={vi.fn()} onLogout={vi.fn()} />);
@@ -183,6 +186,18 @@ describe("RF1-P5/P6 — timer notices are heard, never consumed unheard", () => 
     expect(announcer()).toBe("");                                                  // the region exists, still empty
     await waitFor(() => expect(announcer()).toContain("أقل من 5 دقائق"), { timeout: 3000 });
   });
+  it("RF1-P10: a delivered message is cleared again after ANNOUNCEMENT_CLEAR_MS (nothing stale to read in browse mode)", async () => {
+    const timers = vi.spyOn(window, "setTimeout");
+    const now = new Date().toISOString(), end = new Date(Date.now() + 200_000).toISOString();
+    stateBody = { ...baseState, timed: true, requiresStart: true, durationMinutes: 30, attemptModelVersion: 2, serverNow: now, canWrite: true, activeAttempt: { attemptNumber: 1, startedAt: now, endsAt: end, status: "started" }, effectiveAttemptEndsAt: end };
+    mount({ ...baseAssignment, durationMinutes: 30, requiresStart: true, timed: true });
+    await screen.findByText("ما هي عاصمة فلسطين؟");
+    await waitFor(() => expect(announcer()).toContain("أقل من 5 دقائق"), { timeout: 3000 });
+    const clear = timers.mock.calls.filter(c => c[1] === ANNOUNCEMENT_CLEAR_MS).at(-1);
+    expect(clear).toBeTruthy();
+    act(() => { (clear![0] as () => void)(); });
+    expect(announcer()).toBe("");
+  });
 });
 
 describe("RF1-P7 — the guidance after a failed retry is announced and describes the retry button", () => {
@@ -216,5 +231,22 @@ describe("RF1-P8 — a failing review screen never strands the student", () => {
     ctl.review = "ok";
     fireEvent.click(screen.getByRole("button", { name: "العودة إلى الأسئلة" }));
     expect(await screen.findByRole("navigation", { name: "التنقل بين الأسئلة" })).toBeTruthy();
+  });
+});
+
+describe("RF1-P9 — online, but an answer the server has not confirmed: no reload", () => {
+  it("the save of the newest edit keeps failing while online: after a failed retry there is no reload action", async () => {
+    ctl.mode = "throw"; saveStatus = 503;
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mount();
+    fireEvent.click(await screen.findByRole("radio", { name: /القدس/ }));
+    await waitFor(() => expect(calls.some(c => c.body?.action === "saveDraft")).toBe(true), { timeout: 5000 });
+    goNext();
+    await screen.findByTestId("question-recovery");
+    fireEvent.click(screen.getByRole("button", { name: "إعادة المحاولة" }));
+    await waitFor(() => expect(screen.getByTestId("question-recovery").textContent).toContain("ما زال التحميل متعذّرًا"));
+    expect(navigator.onLine).toBe(true);
+    expect(saveText()).not.toContain("تم الحفظ");
+    expect(screen.queryByRole("button", { name: "إعادة تحميل الصفحة" })).toBeNull();
   });
 });

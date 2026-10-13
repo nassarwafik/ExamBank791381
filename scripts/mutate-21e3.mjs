@@ -19,7 +19,10 @@ const PAGE_T = ["src/StudentExamPage.ux21e3.test.tsx", "src/StudentExamPage.rf1.
 const STEM_T = ["src/StudentQuestionCard.stem21e3.test.tsx", "src/StudentQuestionCard.stem.rf1.test.tsx", "src/richContent/RichContentRenderer.rf1.test.tsx"];
 const REVEAL_T = ["src/student/exam/keyboardReveal.rf1.test.tsx", "src/StudentExamPage.rf1.test.tsx"];
 const GUARD_T = ["scripts/check-bundle-budget.rf1.test.mjs"];
-const M = (id, file, before, after, tests) => ({ id, file, before, after, tests });
+// `equivalent` (rare): the reason a mutant cannot change behaviour (AGENTS.md §9 "show the mutant is equivalent"). It is still
+// planted and run; if it survives it is reported as `equivalent` with that reason (never silently), and if it is killed the reason
+// was wrong and it counts as killed.
+const M = (id, file, before, after, tests, equivalent) => ({ id, file, before, after, tests, equivalent });
 const mutants = [
   // URL trust — the only way a URL reaches the importer, the import map, a source read or a stylesheet.
   M("R01-origin", RL, "if (u.origin !== env.origin || u.username", "if (false || u.username", RT),
@@ -59,6 +62,7 @@ const mutants = [
   M("B08-retry-every-loader", QEB, "    const ok = await retryFailedLoads([...this.handles]);\n", "    const ok = await retryFailedLoads();\n", UNITS),
   M("B09-guidance-not-describing", QEB, "aria-describedby={afterRetry ? guidanceId : v === \"stem\" || v === \"inline\" ? noteId : undefined}", "aria-describedby={undefined}", PAGE_T),
   M("B10-stem-silent", QEB, '    if (v === "stem" || v === "inline") {\n', '    if (v === "stem" || v === "inline") return this.props.fallback;\n    if (false) {\n', STEM_T),
+  M("B12-css-failure-logged-runtime", QEB, " || /^Unable to preload CSS/.test(msg)", "", UNITS),
   M("B11-student-wording-everywhere", QEB, 'private exam() { return this.context.scope === "exam"; }', "private exam() { return true; }", UNITS),
   // Reload gating, focus, timer and announcer on the page.
   M("P01-reload-in-strict", PAGE, 'reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"', 'reloadAllowed:online&&saveKind==="saved"', PAGE_T),
@@ -69,7 +73,9 @@ const mutants = [
   M("P07-timer-no-memory", PAGE, "next.record.forEach(t=>d.add(t));writeTimerNotices(timerAttempt,d);", "next.record.forEach(t=>d.add(t));", PAGE_T),
   M("P08-reload-offline", PAGE, 'reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"', 'reloadAllowed:policy!=="strict"&&saveKind==="saved"', PAGE_T),
   M("P09-transition-smooth", PAGE, 'window.scrollTo({top:0,behavior:"auto"});\n   revealElement(el);', "window.scrollTo({top:0,behavior});\n   revealElement(el);", PAGE_T),
-  M("P10-timer-off-screen", PAGE, 'if(screen!=="exam"||!timerAttempt||remainingMs===null||expired)return;', "if(!timerAttempt||remainingMs===null||expired)return;", PAGE_T),
+  M("P10-timer-off-screen", PAGE, 'if(screen!=="exam"||!timerAttempt||remainingMs===null||expired)return;', "if(!timerAttempt||remainingMs===null||expired)return;", PAGE_T,
+    "defence in depth: the announcer is rendered only by the questions-screen return; every other screen returns earlier, so announce() returns false there and nothing is recorded (RF1-P5 covers the observable rule)"),
+  M("P12-announcer-never-cleared", PAGE, "window.setTimeout(()=>{if(node.firstChild===span)node.replaceChildren()},ANNOUNCEMENT_CLEAR_MS)", "void 0", PAGE_T),
   M("P11-announcer-no-settle", PAGE, "if(wait>0)window.setTimeout(deliver,wait);else deliver();", "deliver();", PAGE_T),
   // Keyboard-only reveal (the blockers).
   M("K01-reveal-pointer-focus", REVEAL, "if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS) return;", "if (!el) return;", REVEAL_T),
@@ -123,7 +129,7 @@ try {
         fs.writeFileSync(m.file, source.replace(m.before, m.after), "utf8");
         const r = vitest(m.tests), output = (r.stdout || "") + "\n" + (r.stderr || "");
         if (r.error?.code === "ETIMEDOUT" || r.signal) { outcome = "timeout"; diagnostic = String(r.error || r.signal); }
-        else if (r.status === 0) { outcome = "survived"; diagnostic = "Selected tests passed"; }
+        else if (r.status === 0) { outcome = m.equivalent ? "equivalent" : "survived"; diagnostic = m.equivalent ? "Selected tests passed; declared equivalent: " + m.equivalent : "Selected tests passed"; }
         else if (/Transform failed|Failed to parse source|SyntaxError:|Unexpected token|Error during transform/.test(output)) { outcome = "invalid"; diagnostic = output.slice(-800); }
         else {
           outcome = "killed";
@@ -140,7 +146,7 @@ try {
   }
 } finally { restore(); }
 const verified = files.every(f => sha(fs.readFileSync(f, "utf8")) === hashes[f]), git = spawnSync("git", ["diff", "--exit-code", "--", ...files], { encoding: "utf8" });
-const counts = Object.fromEntries(["killed", "survived", "invalid", "timeout"].map(s => [s, ledger.filter(r => r.outcome === s).length]));
+const counts = Object.fromEntries(["killed", "equivalent", "survived", "invalid", "timeout"].map(s => [s, ledger.filter(r => r.outcome === s).length]));
 const report = { baseline: "green", source_sha256: hashes, restored: verified && git.status === 0, counts, mutants: ledger };
 fs.mkdirSync("artifacts/phase-21e3", { recursive: true });
 fs.writeFileSync("artifacts/phase-21e3/mutation-ledger.json", JSON.stringify(report, null, 2) + "\n");

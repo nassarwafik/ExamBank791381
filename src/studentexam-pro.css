@@ -372,7 +372,7 @@
 .iex-result-title{ scroll-margin-block-start:72px; }
 .iex-result-title:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); border-radius:var(--eb-r-xs); }
 .iex-page-heading:focus:not(:focus-visible), .iex-review-title:focus:not(:focus-visible), .iex-result-title:focus:not(:focus-visible){
-  outline:none; text-decoration:underline 2px var(--eb-primary); text-underline-offset:6px;
+  text-decoration:underline 2px var(--eb-primary); text-underline-offset:6px;
 }
 
 /* Per-question recovery card (S-1): replaces only the part that failed; calm, never red, never hides the navigation. */

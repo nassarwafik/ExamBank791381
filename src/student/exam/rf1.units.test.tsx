@@ -10,6 +10,7 @@
 //   RF1-U7  keyboard-guide marker, scoped coarse-pointer rules, CLI / cloze minimum widths, heading indicator   [#25 #34 #50 #26 #54]
 //   RF1-U8  the label-diagram steps follow the real Tab order                                                  [#57]
 //   RF1-U9  a card's retry depends only on ITS loaders, never on another question still failing                [design] new
+//   RF1-U10 a stylesheet failure or a recovery refusal is logged with the code chunk-load (code only)            [#84]
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, act, cleanup, waitFor } from "@testing-library/react";
 import { Suspense, useRef, type ComponentType } from "react";
@@ -31,6 +32,7 @@ const sleep = (ms: number) => act(async () => { await new Promise(r => setTimeou
 describe("RF1-U1 — a retry that fails later never steals focus", () => {
   it("the student moves to another field and types while the retry is loading: focus and keystrokes stay there", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));   // the remap's source read: no real network in a unit test
     let calls = 0;
     const Part = recoverableLazy<object>("UnitSlowPart", () => (++calls === 1 ? Promise.reject(chunkError("UnitSlowPart")) : new Promise((_, reject) => setTimeout(() => reject(chunkError("UnitSlowPart")), 300))) as Promise<{ default: ComponentType<object> }>);
     render(<div><QuestionErrorBoundary variant="part" resetKey="p1"><Suspense fallback={<i>…</i>}><Part /></Suspense></QuestionErrorBoundary><input aria-label="البند الآخر" /></div>);
@@ -184,5 +186,21 @@ describe("RF1-U9 — a card's retry depends only on its own loaders", () => {
     retries[1].focus(); fireEvent.click(retries[1]);
     expect(await screen.findByText("بندي")).toBeTruthy();
     expect(screen.getAllByTestId("question-recovery")).toHaveLength(1);        // the other card is untouched
+  });
+});
+
+describe("RF1-U10 — load failures of every kind are logged as chunk-load, with the code only", () => {
+  it("«Unable to preload CSS» and a recovery refusal are chunk-load; any other error is runtime", () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const Boom = ({ m }: { m: string }): null => { throw new Error(m); };
+    const codes = (m: string) => {
+      log.mockClear();
+      render(<QuestionErrorBoundary variant="part" resetKey={m}><Boom m={m} /></QuestionErrorBoundary>);
+      cleanup();
+      return log.mock.calls.filter(c => c[0] === "[QuestionErrorBoundary]").map(c => c[1]);
+    };
+    expect(codes("Unable to preload CSS for " + origin + "/assets/VisualCanvas-abcd1234.css")).toEqual([{ code: "chunk-load" }]);
+    expect(codes("recovery-css")).toEqual([{ code: "chunk-load" }]);
+    expect(codes("internal detail")).toEqual([{ code: "runtime" }]);
   });
 });

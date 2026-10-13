@@ -34,4 +34,43 @@ describe("keyboardReveal", () => {
     expect(scrollBy).toHaveBeenCalledTimes(1);                                       // one key press, one reveal
     off();
   });
+  // Each guard must hold on its own (the focus-time check and the frame-time re-check are independent layers).
+  const fresh = () => {
+    const scrollBy = vi.fn(), clock = { t: 0 };
+    const win = { performance: { now: () => clock.t }, innerHeight: 900, scrollBy, requestAnimationFrame: (f: FrameRequestCallback) => setTimeout(() => f(0), 0) as unknown as number, cancelAnimationFrame: (h: number) => clearTimeout(h), addEventListener() {}, removeEventListener() {} } as unknown as Window;
+    document.body.innerHTML = '<header class="iex-topbar"></header><div class="iex-page"><textarea></textarea></div><nav class="iex-bottom-nav"></nav>';
+    const ta = document.querySelector("textarea") as HTMLTextAreaElement;
+    ta.getBoundingClientRect = () => ({ top: 772, bottom: 912 }) as DOMRect;
+    (document.querySelector(".iex-topbar") as HTMLElement).getBoundingClientRect = () => ({ top: 0, bottom: 64 }) as DOMRect;
+    (document.querySelector(".iex-bottom-nav") as HTMLElement).getBoundingClientRect = () => ({ top: 818, bottom: 900 }) as DOMRect;
+    const off = installKeyboardReveal({ doc: document, win, within: ".iex-page", topBar: ".iex-topbar", bottomBar: ".iex-bottom-nav", reducedMotion: () => true });
+    return { ta, scrollBy, clock, off, tick: () => new Promise(r => setTimeout(r, 5)) };
+  };
+  const tab = () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab" }));
+  it("focus-time guard: a programmatic focus with no key at all, or after a stale key press, never scrolls", async () => {
+    const a = fresh();
+    a.ta.focus(); await a.tick();
+    expect(a.scrollBy).not.toHaveBeenCalled();                                       // no key, no pointer (programmatic)
+    a.ta.blur(); a.clock.t = 100; tab(); a.clock.t = 1200; a.ta.focus(); await a.tick();
+    expect(a.scrollBy).not.toHaveBeenCalled();                                       // the key press is older than KEY_INTENT_MS
+    a.ta.blur(); a.clock.t = 1300; tab(); a.clock.t = 1310; a.ta.focus(); await a.tick();
+    expect(a.scrollBy).toHaveBeenCalledTimes(1);                                     // control: a fresh Tab is revealed
+    a.off();
+  });
+  it("focus-time guard: focus that happens while a pointer is down never scrolls, even if the pointer is released before the frame", async () => {
+    const a = fresh();
+    a.clock.t = 10; document.dispatchEvent(new Event("pointerdown"));
+    a.clock.t = 20; tab(); a.ta.focus();
+    a.clock.t = 30; document.dispatchEvent(new Event("pointerup"));                  // released before the reveal frame
+    await a.tick();
+    expect(a.scrollBy).not.toHaveBeenCalled();
+    a.off();
+  });
+  it("frame-time re-check: an element that lost focus before the frame is not revealed", async () => {
+    const a = fresh();
+    a.clock.t = 10; tab(); a.ta.focus(); a.ta.blur();
+    await a.tick();
+    expect(a.scrollBy).not.toHaveBeenCalled();
+    a.off();
+  });
 });

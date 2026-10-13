@@ -24,7 +24,8 @@ vi.mock("./questionTypes/studentRegistry", async importOriginal => {
 });
 import StudentExamPage from "./StudentExamPage";
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); sessionStorage.clear(); });
+const restoreLocation = window.location;
+afterEach(() => { cleanup(); vi.restoreAllMocks(); sessionStorage.clear(); Object.defineProperty(window, "location", { configurable: true, value: restoreLocation }); });
 const json = (status: number, body: unknown) => Promise.resolve({ ok: status >= 200 && status < 300, status, json: async () => body, headers: { get: () => "" } } as unknown as Response);
 
 const Q1 = { examQuestionId: "q1", presentationType: "multipleChoice", text: "ما هي عاصمة فلسطين؟", marks: 2, options: [{ text: "القدس" }, { text: "رام الله" }] };
