@@ -3,6 +3,8 @@
    يُحمَّل بعد App.css. يحوّل باني الامتحان إلى مساحة عمل احترافية
    باستخدام الأصناف الموجودة (prompt/question/toolbar...). RTL-safe.
    ============================================================ */
+/* Phase 21E.2 premium slice 4 — the exam lists (saved exams, templates, access bar); an @import must precede every rule. */
+@import "./teacher/exam-lists-premium.css";
 :root{
   --bp-navy:var(--eb-navy); --bp-primary:var(--eb-primary); --bp-primary-2:var(--eb-primary-strong); --bp-primary-050:var(--eb-primary-050);
   --bp-text:var(--eb-text); --bp-muted:var(--eb-muted); --bp-faint:var(--eb-faint);

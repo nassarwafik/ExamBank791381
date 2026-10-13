@@ -1,0 +1,116 @@
+/* Phase 21E.2 — Premium Visual Redesign, slice 4: the teacher's exam lists on the exam page — the access bar
+   («الامتحانات المحفوظة» / «القوالب» / «امتحان منظّم جديد» / «استيراد امتحان منظّم»), the saved-exams panel and the templates panel.
+   Presentation only: no markup, behaviour or data change (no component file is edited — this sheet is pulled in by an @import at the
+   top of builder-pro.css, which App.tsx loads right after App.css; that fixed order lets a rule here win an equal-specificity tie with
+   App.css). Token-only, RTL logical properties.
+   Guard rails (pinned by src/teacher/examListsPremium.21e2p4.test.ts): never hides a control; keeps focus rings; ≥ 44 px targets on
+   touch; reduced motion; forced colours; the main action of a row (open / use) is the filled one, delete is quiet but red.
+   Language: one row per exam — a document tile, the title, a counts chip, the last-save line, then the actions. */
+
+/* ---------- access bar: a toolbar of equal secondary actions with the hint as a caption ---------- */
+.saved-exams-access {
+  flex-wrap: wrap; gap: var(--eb-space-2); padding: var(--eb-space-3) var(--eb-space-4);
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-xl); background: var(--eb-surface); box-shadow: var(--eb-sh-sm);
+}
+.saved-exams-access button {
+  flex: 0 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-1); min-height: 40px;
+  padding: 0 var(--eb-space-4); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface);
+  color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold);
+  transition: background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
+}
+.saved-exams-access button:hover:not(:disabled) { border-color: var(--eb-primary); background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+.saved-exams-access button:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.saved-exams-access span { flex: 1 1 16rem; color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); }
+
+/* ---------- the two panels ---------- */
+.saved-exams-panel, .templates-panel {
+  padding: var(--eb-space-5); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-xl); background: var(--eb-surface); box-shadow: var(--eb-sh-md);
+}
+.saved-exams-heading { padding-block-end: var(--eb-space-3); border-block-end: 1px solid var(--eb-line); }
+.saved-exams-heading h3 { color: var(--eb-text-heading); font-size: var(--eb-fs-20); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); }
+.saved-exams-heading .eyebrow { color: var(--eb-muted); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); letter-spacing: .04em; }
+.saved-exams-heading > button {
+  display: inline-flex; align-items: center; gap: var(--eb-space-1); min-height: 36px; padding: 0 var(--eb-space-3);
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface); color: var(--eb-text-heading);
+  font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold);
+}
+.saved-exams-heading > button:hover:not(:disabled) { border-color: var(--eb-primary); background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+.saved-exams-heading > button:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.saved-exams-list { gap: var(--eb-space-2); margin-top: var(--eb-space-3); }
+.saved-exams-empty {
+  padding: var(--eb-space-5); border: 1px dashed var(--eb-border-strong); border-radius: var(--eb-r-lg); background: var(--eb-surface-2);
+  color: var(--eb-muted); font-size: var(--eb-fs-14); text-align: center;
+}
+
+/* ---------- one row per exam / template ---------- */
+.saved-exam-item {
+  gap: var(--eb-space-3); padding: var(--eb-space-3) var(--eb-space-4); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-lg);
+  background: var(--eb-surface); transition: border-color var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
+}
+.saved-exam-item:hover { border-color: var(--eb-primary-100); box-shadow: var(--eb-sh-sm); }
+.saved-exam-item:focus-within { border-color: var(--eb-primary); }
+/* decorative page tile (a folded corner, a heading bar and three text lines, right-aligned as Arabic text runs — never a "menu" glyph), drawn with
+   tokens only; templates get the info tone. The page is RTL-only, so the physical `right` in background-position is intended. */
+.saved-exam-item::before {
+  content: ""; flex: 0 0 38px; align-self: center; block-size: 46px; border-radius: var(--eb-r-sm); box-sizing: border-box;
+  background:
+    linear-gradient(to bottom left, var(--eb-primary-100) 50%, transparent 50%) left top / 11px 11px no-repeat,
+    linear-gradient(var(--eb-primary) 0 0) right 8px top 11px / 15px 3px no-repeat,
+    linear-gradient(var(--eb-faint) 0 0) right 8px top 19px / 20px 2px no-repeat,
+    linear-gradient(var(--eb-faint) 0 0) right 8px top 25px / 20px 2px no-repeat,
+    linear-gradient(var(--eb-faint) 0 0) right 8px top 31px / 13px 2px no-repeat,
+    var(--eb-surface);
+  border: 1px solid var(--eb-primary-100); border-start-end-radius: 0;
+}
+.templates-panel .saved-exam-item::before {
+  background:
+    linear-gradient(to bottom left, var(--eb-info-bg) 50%, transparent 50%) left top / 11px 11px no-repeat,
+    linear-gradient(var(--eb-info) 0 0) right 8px top 11px / 15px 3px no-repeat,
+    linear-gradient(var(--eb-faint) 0 0) right 8px top 19px / 20px 2px no-repeat,
+    linear-gradient(var(--eb-faint) 0 0) right 8px top 25px / 20px 2px no-repeat,
+    linear-gradient(var(--eb-faint) 0 0) right 8px top 31px / 13px 2px no-repeat,
+    var(--eb-surface);
+  border: 1px solid var(--eb-info-bg); border-start-end-radius: 0;
+}
+.saved-exam-item .saved-exam-main { flex: 1 1 0; min-width: 0; gap: var(--eb-space-1); }
+.saved-exam-main strong { color: var(--eb-text-heading); font-size: var(--eb-fs-16); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); overflow-wrap: anywhere; }
+.saved-exam-main span {
+  align-self: flex-start; display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--eb-space-3); border-radius: var(--eb-pill);
+  border: 1px solid var(--eb-line-2); background: var(--eb-surface-2); color: var(--eb-ink); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.saved-exam-main small { color: var(--eb-muted); font-size: var(--eb-fs-12); font-variant-numeric: tabular-nums; }
+
+/* actions: the row's main action filled, delete quiet but red */
+.saved-exam-actions { gap: var(--eb-space-2); }
+.saved-exam-actions button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 var(--eb-space-4);
+  border-radius: var(--eb-r-sm); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold);
+  transition: background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
+}
+.saved-exam-actions button:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.saved-exam-actions .saved-open-button { border: 1px solid var(--eb-primary-strong); background: var(--eb-primary-strong); color: var(--eb-surface); }
+.saved-exam-actions .saved-open-button:hover:not(:disabled) { border-color: var(--eb-navy-2); background: var(--eb-navy-2); }
+.saved-exam-actions .saved-delete-button { border: 1px solid var(--eb-line-2); background: var(--eb-surface); color: var(--eb-danger-tx); }
+.saved-exam-actions .saved-delete-button:hover:not(:disabled) { border-color: var(--eb-danger-tx); background: var(--eb-danger-bg); }
+
+/* ---------- narrow: the tile stays beside the title, the actions take a full row ---------- */
+@media (max-width: 760px) {
+  /* App.css turns the bar into a column here, where a flex-basis would become a height: keep a wrapping row instead */
+  .saved-exams-access { flex-direction: row; align-items: center; }
+  .saved-exams-access button, .saved-exams-access span { flex: 1 1 100%; }
+  .saved-exams-panel, .templates-panel { padding: var(--eb-space-4); }
+  .saved-exam-item { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .saved-exam-item .saved-exam-actions { flex: 1 1 100%; }
+}
+/* touch: 44 px targets */
+@media (pointer: coarse) {
+  .saved-exams-access button, .saved-exams-heading > button, .saved-exam-actions button { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saved-exams-access button, .saved-exam-item, .saved-exam-actions button { transition: none; }
+}
+@media (forced-colors: active) {
+  .saved-exam-item::before { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
+  .saved-exam-actions .saved-open-button { border: 2px solid ButtonText; }
+}
