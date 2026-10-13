@@ -99,6 +99,7 @@ export default function Gradebook(p: GradebookProps) {
                       ? <StatusBadge tone="neutral" className="review-state none">{gradingLabel(gs)}</StatusBadge>
                       : <StatusBadge tone={gs === "final" ? "success" : "warn"} className={"review-state " + gradingClass(gs)}>{gradingLabel(gs)}{pending && s.latestResult && s.latestResult.manualReviewMarks > 0 ? " (" + s.latestResult.manualReviewMarks + " ع.)" : ""}</StatusBadge>}
                     {coding && <StatusBadge tone={coding.tone} className="coding-grading-badge">{coding.label}</StatusBadge>}
+                    {(s.latestResult?.technicalHolds || 0) > 0 && <StatusBadge tone="warn" className="technical-hold-badge">تعذّر عرض {s.latestResult!.technicalHolds === 1 ? "سؤال واحد" : s.latestResult!.technicalHolds + " أسئلة"} على جهاز الطالب — بانتظار قرارك</StatusBadge>}
                     {s.activeAttempt && <small className="lifecycle-attempt">المحاولة الحالية: {s.activeAttempt.attemptNumber}</small>}
                     {s.activeAttempt?.startedAt && <small className="lifecycle-started">بدأ: {p.fmt(s.activeAttempt.startedAt)}</small>}
                     {s.timed && s.activeAttempt && s.effectiveAttemptEndsAt && s.activeAttempt.status !== "paused" && <small className="lifecycle-ends">ينتهي فعليًا: {p.fmt(s.effectiveAttemptEndsAt)}</small>}

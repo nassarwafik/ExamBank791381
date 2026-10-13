@@ -46,12 +46,14 @@ import {QuestionRecoveryContext,type QuestionRecovery} from "./student/exam/ques
 import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement} from "./student/exam/examAnnouncements";
 import {createExamAnnouncer} from "./student/exam/examAnnouncer";
 import {installKeyboardReveal,revealDelta} from "./student/exam/keyboardReveal";
+// Phase 21E.3 — assessment integrity: the record of questions whose renderer could not recover (see student/exam/renderFailures.ts).
+import {EMPTY_RENDER_FAILURES,reduceRenderFailure,failedQuestionIds,renderFailureReport,unavailablePages,renderFailureSubmitWarning,type RenderFailureState,type RenderFailureEvent,type RenderFailureReport} from "./student/exam/renderFailures";
 import type {SaveStateKind} from "./studentSaveState";
 
 type ExamBody={presentation?:unknown;title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;attemptPolicy?:string;marksDistribution?:MarksDistribution;exam:ExamBody};
 type Answers=Record<string,Answer>;
-type Result={autoGradingPending?:boolean;autoGradingStatus?:string;attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
+type Result={autoGradingPending?:boolean;autoGradingStatus?:string;technicalHolds?:number;attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
 // Grading status is server-authoritative (result.gradingStatus). For an older cached result the SHARED
 // resolver derives it from manualReviewMarks/finalized — never from score/percentage. No local copy.
 const resultGradingStatus=(r:Result):GradingStatus=>resolveGradingStatus(r);
@@ -97,6 +99,23 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Focus contract: set ONLY by an intentional navigation (Next / Previous / navigator jump / review enter-leave); the
  // effect below moves focus to the new heading once, after render. Autosave, timer ticks and resyncs never set it.
  const pendingFocusRef=useRef<"question"|"review"|null>(null),questionHeadingRef=useRef<HTMLHeadingElement|null>(null),reviewHeadingRef=useRef<HTMLHeadingElement|null>(null),resultHeadingRef=useRef<HTMLHeadingElement|null>(null);
+ // Phase 21E.3 — assessment integrity: which questions could not be displayed (their recovery card did not recover). Presentation
+ // state beside the answers, never inside them: the review screen / navigator show «تعذّر عرضه», the submit confirmation warns, and
+ // the report (question id + fixed code) travels with every save / pause / submit for the SERVER to verify and hold for the teacher.
+ const [renderFailures,setRenderFailures]=useState<RenderFailureState>(EMPTY_RENDER_FAILURES);
+ const reportRenderFailure=useCallback((e:RenderFailureEvent)=>setRenderFailures(s=>reduceRenderFailure(s,e)),[]);
+ const failureReport=useMemo(()=>renderFailureReport(renderFailures),[renderFailures]);
+ const failureReportRef=useRef<RenderFailureReport[]>(failureReport);
+ useEffect(()=>{failureReportRef.current=failureReport},[failureReport]);
+ // The field is ADDITIVE and sent only while there is something to report — or once more, empty, to clear a record the server holds —
+ // so a request of an exam without any failure is byte-for-byte the historical body.
+ const failureSentRef=useRef(false);
+ const failureField=useCallback(():{renderFailures?:RenderFailureReport[]}=>{const r=failureReportRef.current;if(!r.length&&!failureSentRef.current)return {};failureSentRef.current=r.length>0;return {renderFailures:r}},[]);
+ const failedIds=useMemo(()=>failedQuestionIds(renderFailures),[renderFailures]);
+ const failureSyncRef=useRef("");   // the report last handed to the server by the sync below ("" = none)
+ // A new exam body (a started / resumed attempt) or a next legacy attempt renders every question afresh: the record starts empty
+ // (a card that fails again reports again) and the server bookkeeping of the report restarts with it.
+ const resetRenderFailures=useCallback(()=>{setRenderFailures(EMPTY_RENDER_FAILURES);failureSyncRef.current="";failureSentRef.current=false},[]);
  // Phase 21E.3 — the ONE polite announcer of the running exam (timer thresholds, save problems / recovery, recovery cards),
  // outside React (student/exam/examAnnouncer.ts): it settles before its first message, keeps each message at least a short gap
  // before the next, clears it later, and reports a message dropped when the questions screen closes before it was written.
@@ -204,7 +223,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
     if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return}
     if(mountedRef.current){setSaving(true);setRetrying(false)} // B1: SAVING = a request is actually in flight
     try{
-     const resp=await api<{savedAt?:string}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...identity})});
+     const resp=await api<{savedAt?:string}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...failureField(),...identity})});
      // STALE-SUCCESS GUARD: if the context changed while this request was in flight (another tab started a new
      // attempt / this one closed), this 200 belongs to the OLD attempt — never advance savedRevision or claim
      // a saved time for the new context. The server-side guard already refused any real cross-attempt write.
@@ -275,6 +294,23 @@ export default function StudentExamPage({token,assignment,studentName,className,
   }else{setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
   loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
  useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(answers===hydrationRef.current)return;/* server hydration, not a user edit */revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers,ctx=attemptId(stateRef.current),epoch=saveEpoch.current;dirtyAttemptRef.current=ctx;dirtyGenerationRef.current=Number(stateRef.current?.attemptsUsed||0);if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;if(epoch!==saveEpoch.current)return;/* context replaced before debounce fired */saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx,epoch))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
+ // Phase 21E.3 — when the set of unavailable questions changes (a card failed, recovered, or the student moved on), the server's draft
+ // record follows shortly: one ordinary saveDraft of the CURRENT snapshot (the same revision — never a new edit), so a time-out, a
+ // strict exit or a teacher end grades the saved draft WITH the report. A pending edit's save carries it anyway (the body reads the ref).
+ const failureKey=useMemo(()=>failureReport.map(f=>f.questionId+":"+f.code).join("|"),[failureReport]);
+ const saveSnapshotRef=useRef(saveDraftSnapshot);
+ useEffect(()=>{saveSnapshotRef.current=saveDraftSnapshot});
+ useEffect(()=>{
+  if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;
+  if(failureSyncRef.current===failureKey)return;
+  const t=window.setTimeout(()=>{
+   if(submittingRef.current||!mountedRef.current)return;
+   failureSyncRef.current=failureKey;
+   const myRevision=revision.current,snapshot=answersRef.current,ctx=attemptId(stateRef.current),epoch=saveEpoch.current,save=saveSnapshotRef.current;
+   saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>save(snapshot,myRevision,ctx,epoch));
+  },1200);
+  return()=>window.clearTimeout(t);
+ },[failureKey,started,writable,examBodyLoaded]);
  useEffect(()=>{const handler=(e:BeforeUnloadEvent)=>{if(!shouldWarnBeforeUnload(revision.current,savedRevision.current))return;e.preventDefault();e.returnValue=""};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler)},[]);
  // Resync the server-authoritative timer on reconnect and when returning to the tab; never a per-second poll.
  // Resync from AUTHORITATIVE server state. Not gated on `result` (a stale completed result must never
@@ -392,7 +428,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // attempt generation — including a visibility resync sent WHILE the start request was in flight and answered with pre-start
    // state — is stale from here on and can never replace this attempt. Reads issued after this point are accepted as usual.
    invalidateReads();
-   setExam(body);applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
+   setExam(body);resetRenderFailures();applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
    exitSentRef.current=false;setStrictEnded(false); // Phase 7A: a NEW strict attempt starts un-exited
    resetPager(); // new attempt → first question (presentation only)
    scrollTop();
@@ -551,7 +587,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   try{
    await saveQueue.current.catch(()=>{});
    const snapshot=answersRef.current,ctx=attemptId(stateRef.current);
-   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"pauseAttempt",answers:snapshot,...identityOf(ctx)})});
+   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"pauseAttempt",answers:snapshot,...failureField(),...identityOf(ctx)})});
    applyServerAttemptState(r.state);                                // paused: bookkeeping reset → no unsaved-changes warning
    onBack();
   }catch(e){
@@ -568,7 +604,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // «متابعة المحاولة» gate, which only reloads the questions — it never restarts or re-pauses anything).
    applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;
    const body=await fetchExamBody();
-   setExam(body);setResult(null);setStarted(true);setCoverStarted(true);resetPager();scrollTop();
+   setExam(body);resetRenderFailures();setResult(null);setStarted(true);setCoverStarted(true);resetPager();scrollTop();
   }catch(e){
    if(e instanceof ApiError&&e.status===409){await reconcileTimed409()}
    setError(errText(e,"تعذر متابعة المحاولة."));
@@ -590,6 +626,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const currentIndex=clampPageIndex(pageIndex,pages.length); // derived every render — the stored index is never trusted as-is
  const currentPage=pages[currentIndex];
  const answeredPages=useMemo(()=>countAnsweredPages(pages,answers),[pages,answers]);
+ // Phase 21E.3 — the questions the student could not display AND did not answer (never counted among the plain blanks).
+ const unavailable=useMemo(()=>unavailablePages(pages,answers,failedIds),[pages,answers,failedIds]);
  // firstN "extra answer" hints for the CURRENT structured section only — the shared selectGradedUnits, never a second rule.
  const currentCountedKeys=useMemo(()=>currentPage?.section?selectGradedUnits(currentPage.section,answers).countedKeys:new Set<string>(),[currentPage,answers]);
  // Intentional navigation (local, immediate, zero requests). The save queue/debounce run independently.
@@ -685,14 +723,17 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const setAnswer=(id:string,next:Answer)=>setAnswers(a=>({...a,[id]:next}));
  // The exact former window.confirm messages, now through the shared ConfirmDialog (same gating order; cancel = no request).
  const SUBMIT_CONFIRM={title:"تسليم الامتحان",confirmLabel:"تسليم الآن",cancelLabel:"متابعة الحل",tone:"danger" as const};
+ // Phase 21E.3 — the exact former messages, each followed (when it applies) by the explicit warning that some questions could not be
+ // displayed: how many, why, that they are not counted as wrong answers but go to the teacher, and that the student may go back first.
  function confirmSubmit():Promise<boolean>{
+  const warn=(message:string)=>confirm({...SUBMIT_CONFIRM,message:unavailable.length?message+"\n\n"+renderFailureSubmitWarning(unavailable.length):message});
   if(structured){
    const short=norm.sections.filter(s=>s.gradingPolicy==="firstNAnswered"&&s.requiredAnswers!=null).map(s=>({s,p:calculateSectionProgress(s,answers)})).find(x=>x.p.required!=null&&x.p.answered<x.p.required);
-   if(short)return confirm({...SUBMIT_CONFIRM,message:"أجبت عن "+short.p.answered+" من "+short.p.required+" بنود مطلوبة"+(short.s.title?" في «"+short.s.title+"»":"")+". هل تريد التسليم؟"});
-   return confirm({...SUBMIT_CONFIRM,message:"سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟"});
+   if(short)return warn("أجبت عن "+short.p.answered+" من "+short.p.required+" بنود مطلوبة"+(short.s.title?" في «"+short.s.title+"»":"")+". هل تريد التسليم؟");
+   return warn("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
   }
-  if(done<qs.length)return confirm({...SUBMIT_CONFIRM,message:"لم تُجب عن جميع الأسئلة. هل تريد التسليم الآن؟"});
-  return confirm({...SUBMIT_CONFIRM,message:"سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟"});
+  if(done<qs.length)return warn("لم تُجب عن جميع الأسئلة. هل تريد التسليم الآن؟");
+  return warn("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
  }
  // A manual "retry save" (#12): resync authoritative state first, then save the LATEST snapshot if the server
  // still allows writing — never creating a new revision merely by retrying.
@@ -705,7 +746,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // result, the epoch changed: leave that authoritative reconciled UI intact — do NOT submit attempt 1's
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
@@ -720,7 +761,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // (empty answers marked as hydration), the epoch is refreshed and any pending debounce cleared, and the
   // legacy generation is bound to the current attemptsUsed. Only a real student edit schedules the first save.
   saveEpoch.current+=1;invalidateReads();if(timer.current){window.clearTimeout(timer.current);timer.current=null}
-  const empty:Answers={};answersRef.current=empty;hydrationRef.current=empty;setAnswers(empty);
+  const empty:Answers={};answersRef.current=empty;hydrationRef.current=empty;setAnswers(empty);resetRenderFailures();
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
   dirtyAttemptRef.current=null;dirtyGenerationRef.current=Number(state.attemptsUsed||0);
   setLastSavedAt("");setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);setError("");
@@ -742,7 +783,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const xpRaw=exam.presentation!==undefined?exam.presentation:assignment.exam.presentation,xpOn=xpRaw!==undefined&&xpRaw!==null;
  const shell=(children:ReactNode)=>xpOn?<PresentationRoot as="main" className="interactive-exam-page" presentation={xpRaw}>{children}</PresentationRoot>:<main className={"interactive-exam-page exam-theme-"+theme} dir="rtl">{children}</main>;
  if(loading)return <main className="interactive-exam-page" dir="rtl"><div className="iex-wrap"><p className="iex-loading" role="status">جارٍ تجهيز صفحة الامتحان...</p></div></main>;
- if(!started&&result)return shell(<div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1 className="iex-result-title" tabIndex={-1} ref={resultHeadingRef}>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}{(()=>{const withheld=scoreWithheld(result);return <><div className="iex-score" data-testid="result-headline" data-pending={withheld?"true":"false"}>{withheld?PENDING_SCORE_DASH:result.score}<small> / {result.totalMarks}</small></div><strong className={withheld?"iex-score-pending":undefined} data-testid="result-percent">{withheld?withheldScoreLabel(result):result.percentage+"%"}</strong></>})()}{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{codingStatus?<CodingGradingStatusPanel status={codingStatus} gradingStatus={gs} windowEnded={codingPoll.windowEnded} refreshFailed={codingPoll.refreshFailed}/>:result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div>);
+ if(!started&&result)return shell(<div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1 className="iex-result-title" tabIndex={-1} ref={resultHeadingRef}>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.endReason==="teacherEnded"?" (أنهى المعلم المحاولة)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}{(()=>{const withheld=scoreWithheld(result);return <><div className="iex-score" data-testid="result-headline" data-pending={withheld?"true":"false"}>{withheld?PENDING_SCORE_DASH:result.score}<small> / {result.totalMarks}</small></div><strong className={withheld?"iex-score-pending":undefined} data-testid="result-percent">{withheld?withheldScoreLabel(result):result.percentage+"%"}</strong></>})()}{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="teacherEnded"&&<p className="iex-timeout-note">أنهى المعلم هذه المحاولة، وصُحّحت آخر إجابات محفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}{(result.technicalHolds||0)>0&&<p className="iex-provisional" data-testid="result-technical-holds">{result.technicalHolds===1?"تعذّر عرض سؤال واحد":"تعذّر عرض "+result.technicalHolds+" أسئلة"} على جهازك أثناء المحاولة. لم يُحتسب ذلك كإجابة خاطئة؛ أُحيل إلى المعلم للمراجعة قبل اعتماد العلامة.</p>}{codingStatus?<CodingGradingStatusPanel status={codingStatus} gradingStatus={gs} windowEnded={codingPoll.windowEnded} refreshFailed={codingPoll.refreshFailed}/>:result.autoGradingPending&&<p className="iex-provisional" data-testid="coding-grading-pending">تم تسليم الامتحان بنجاح. جارٍ استكمال التصحيح الآلي لأسئلة البرمجة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div>);
  // START GATE (B2A) — questions are NOT delivered by the server until startAttempt succeeds, for TIMED
  // and UNTIMED v2 assignments alike. Shows the structured cover (when enabled) or a compact start card;
  // pressing start calls the server, refetches the exam and reveals the questions. TIMED also anchors the
@@ -880,7 +921,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
       compact section context; flat questions through the same StudentQuestionCard as before. Keys are unchanged. */}
   {view==="review"?(
    // Review fix 1: a failing review screen keeps the exam chrome and offers the way back to the questions.
-   <QuestionErrorBoundary variant="review" resetKey="review" secondaryAction={{label:"العودة إلى الأسئلة",onClick:backToAnswering}}><ExamReviewScreen title={assignment.title} pages={pages} answers={answers} sections={structured?norm.sections:[]} headingRef={reviewHeadingRef} onJump={goTo} onBackToAnswering={backToAnswering} onSubmit={()=>{void submit()}} submitBusy={submitBusy} submitDisabled={submitBusy||!writable}/></QuestionErrorBoundary>
+   <QuestionErrorBoundary variant="review" resetKey="review" secondaryAction={{label:"العودة إلى الأسئلة",onClick:backToAnswering}}><ExamReviewScreen title={assignment.title} pages={pages} answers={answers} sections={structured?norm.sections:[]} headingRef={reviewHeadingRef} onJump={goTo} onBackToAnswering={backToAnswering} onSubmit={()=>{void submit()}} submitBusy={submitBusy} submitDisabled={submitBusy||!writable} unavailable={failedIds}/></QuestionErrorBoundary>
   ):currentPage?(()=>{const page=currentPage,id=page.id,q=page.question;
    // 19G — a page whose question belongs to a scenario gets the two-column layout on wide screens (sources beside the question); the lazy
    // ScenarioView decides validity, this flag only chooses the layout. Raw check on purpose: this module is in the student chunk, the contract is lazy.
@@ -888,7 +929,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // 20D.1 — presentation mode: the shared section shell above the page and the section-scoped presentation around it (no-op otherwise).
    const rawSection=page.section?(exam.sections||[])[page.sectionIndex]:undefined;
    const scoped=(n:ReactNode)=>xpOn?<SectionPresentationScope section={rawSection}>{n}</SectionPresentationScope>:n;
-   return <StudentAttemptContext.Provider value={attemptApi} key={id}>{xpOn&&page.section&&<QuestionErrorBoundary variant="section" resetKey={id}><SectionShellHeader section={sectionShellOf(page.section,rawSection)} index={page.sectionIndex} marksLabel={sectionMarksLabel(page.section)}/></QuestionErrorBoundary>}{scoped(<section className={"iex-page"+(inScenario?" has-scenario":"")} aria-labelledby="iex-page-heading" data-scenario-page={inScenario||undefined}>
+   // 21E.3 — the cards of THIS question report into the page's record under its answer key (the exam-level provider above reports nothing).
+   const pageRecovery:QuestionRecovery={...recovery,questionId:id,report:reportRenderFailure};
+   return <StudentAttemptContext.Provider value={attemptApi} key={id}><QuestionRecoveryContext.Provider value={pageRecovery}>{xpOn&&page.section&&<QuestionErrorBoundary variant="section" resetKey={id}><SectionShellHeader section={sectionShellOf(page.section,rawSection)} index={page.sectionIndex} marksLabel={sectionMarksLabel(page.section)}/></QuestionErrorBoundary>}{scoped(<section className={"iex-page"+(inScenario?" has-scenario":"")} aria-labelledby="iex-page-heading" data-scenario-page={inScenario||undefined}>
    <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
    <QuestionErrorBoundary variant="page" resetKey={id}>
    {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers} shellHeader={xpOn} richInstructions={(rawSection as {instructionsRichContent?:unknown}|undefined)?.instructionsRichContent}/>}
@@ -897,9 +940,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
     ?<div className="iex-page-question"><StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} showScenario={false} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/></div>
     :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onAnswer={next=>setAnswer(id,next)} disabled={inputsDisabled}/>}
    </QuestionErrorBoundary>
-  </section>)}</StudentAttemptContext.Provider>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
+  </section>)}</QuestionRecoveryContext.Provider></StudentAttemptContext.Provider>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
   {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}
-  <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages}/>
+  <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages} unavailable={failedIds}/>
   </QuestionErrorBoundary>
   {confirmDialog}
  </div></QuestionRecoveryContext.Provider>)
