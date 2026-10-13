@@ -13,6 +13,9 @@ repository contract in `AGENTS.md`. Independent review required. Owner merge onl
 > - The independent review of `92f4326` failed the PR (four blockers: the focus reveal scrolled the page between a pointer
 >   press and its release). **Review Fix 1 (§12)** corrects them and the other introduced findings. Statements that the
 >   review found inaccurate are corrected where they stand and marked *(corrected in Review Fix 1, §12)*.
+> - The read-only re-review of `eb174d1` (four reviewers) returned PASS in three areas and FAIL in one (recovery: focus after
+>   a successful retry could land on an answer control, P1). **Review Fix 2 (§13)** corrects it and the other introduced P2 /
+>   P3 findings; corrections are marked *(corrected in Review Fix 2, §13)*.
 
 ---
 
@@ -161,7 +164,9 @@ closure (283 files). Results that change the design:
   - *Review Fix 1 (§12):* the remap is used only when the rejection carries Chromium's wording ("Failed to fetch
     dynamically imported module"), the engine measured to keep a failed module failed for the page's lifetime. Every
     step is bounded in time (source read 15 s, import 20 s, stylesheet 15 s). A recovery that would need a module still in
-    flight is refused (`recovery-busy`) instead of waiting, so one stalled recovery never blocks the others.
+    flight is refused (`recovery-busy`) instead of waiting, so one stalled recovery never blocks the others. *(Corrected in
+    Review Fix 2, §13: the queue is still shared, so a stalled recovery delays a later one by up to its bounds; a chain of
+    slow source reads could add up to minutes. All source reads of one recovery are now bounded together, 30 s.)*
   - On success every remapped module is recorded as recovered and reused by every later graph.
   - The entry URL is accepted only from a `TypeError` whose message names a same-origin `<BASE>assets/<chunkName>-<8 base36>.js`.
   - Remap and source-read URLs are validated the same way, and the deny-list is never remapped.
@@ -428,7 +433,7 @@ exception is:
 | `codingRunClient` capabilities | A capabilities answer of "unavailable" stays cached for the exam-page session. This is Phase 17B behaviour; a failed request is not cached. Recovering the coding renderer chunk does not refresh the cached answer. Unchanged in this phase. |
 | Chemistry periodic-table cells (44 px) | Deferred to Phase 21E.5 (D2). No chemistry or SmartSim engine file was changed. |
 | Physics equations and units | Only the student-scene title direction changed. Equations, units and simulation values are untouched (D3); a wider review of physics bidi is left to a later phase. |
-| A question that can never render, then submitted (review finding 85, **owner decision needed**) | If a renderer never recovers (for example a permanent 404 after a redeploy, Safari, or a refused remap) and the student submits, the question is sent as unanswered, the same as a skip. The server grades it as it grades any unanswered question; this behaviour pre-dates the phase (finding 86). Before this phase the same failure ended the whole exam (root boundary; in strict mode the strict exit). Distinguishing "could not render" from "skipped" needs a submission-contract and grading change (for example a `reviewRequired` marker), which this phase is not allowed to make (no API, grading or question-contract change). It is disclosed here for an owner decision; AGENTS.md §10 prefers teacher review for this case. |
+| A question that can never render, then submitted (review finding 85, **owner decision needed**) | If a renderer never recovers (for example a permanent 404 after a redeploy, Safari, or a refused remap) and the student submits, the question is sent as unanswered, the same as a skip. The server grades it as it grades any unanswered question; this behaviour pre-dates the phase (finding 86). Before this phase the same failure replaced the whole exam with the root card (corrected in Review Fix 2: in a non-strict attempt that card offered a reload that resumed the attempt; a strict attempt ended through the strict exit). Distinguishing "could not render" from "skipped" needs a submission-contract and grading change (for example a `reviewRequired` marker), which this phase is not allowed to make (no API, grading or question-contract change). It is disclosed here for an owner decision; AGENTS.md §10 prefers teacher review for this case. |
 | Exam-surface card hides the exam chrome (finding 14) | The outer `exam` boundary catches only errors that escape the page, review, section and part boundaries; its children are statically loaded chrome (top bar, progress, bottom navigation, navigator). If it ever catches, the card replaces the chrome, so a strict untimed attempt has no submit path until «إعادة المحاولة» succeeds. Before this phase the same error unmounted the page and, in strict mode, ended the attempt. Kept as a P2 risk: moving the chrome outside the boundary would send its own errors to the root boundary (strict exit). |
 | Announcer and status wording (findings 30, 31) | The strict-ended `h1` takes focus inside the existing `role=status` section (info). Outside the exam page, a card's `role=status` is inserted already filled and may not be spoken (info; the exam page uses the settled page announcer). Both left as info. |
 | Teacher and portal reach (findings 43, 49) | `RichContentRenderer` and the `StudentQuestionCard` chunk are also used by teacher previews and the portal, so the recovery runtime and the boundary reach those surfaces. Review Fix 1 makes them neutral there: general wording, no exam-only advice, the chart keeps its reload advice, and coarse-pointer sizes are scoped to `.interactive-exam-page`. |
@@ -455,6 +460,9 @@ What the independent reviewer should probe first:
 5. *(Review Fix 1)* That nothing scrolls between a pointer press and its release, at any zoom, for any answer type, and
    that a control reached with the keyboard is still revealed. Re-run the harness with `POINTER=1` and the reviewers'
    GAP-1 / GAP-2 probes (§12.4).
+6. *(Review Fix 2)* That after a successful «إعادة المحاولة» focus is never on an answer control: retry with the keyboard and
+   press ordinary keys (ArrowDown, Space, Enter) — no answer may change (§13.3). That a card's retry is never held up by another
+   question's stylesheet outage, and that a press right after a Tab never meets a moving page.
 
 ## 12. Review Fix 1
 
@@ -496,10 +504,13 @@ key and pointer events itself.
    by `pointerup`, `pointercancel`, `mouseup`, `touchend`, `touchcancel`, `dragend` or a window blur).
 3. The reveal runs after a frame and re-checks that no pointer went down since and that the element still has focus.
 4. It scrolls by the exact obscured distance plus an 8 px gap (`revealDelta`), instantly when reduced motion is requested.
+   *(Corrected in Review Fix 2, §13: always instantly — a smooth scroll kept moving the page under a press that followed the
+   Tab within ~100 ms.)*
 5. The root `scroll-padding` is removed: it doubled the element scroll margins (finding 55). Entering the questions
    focuses the heading without scrolling, jumps to the top instantly, then reveals the heading (finding 80).
 
-Programmatic focus (start, result, retry) still uses its own `preventScroll` + reveal. A pointer press never scrolls the
+Programmatic focus (start, result, retry) still uses its own `preventScroll` + reveal. *(Review Fix 2: until §13's instant
+reveal, a press within ~100 ms of a Tab could still land during that Tab's smooth scroll.)* A pointer press never scrolls the
 page; a keyboard user still gets the control revealed above the bottom navigation at every zoom.
 
 ### 12.2 Findings and fixes
@@ -519,13 +530,13 @@ Severity: P0 = blocker, P1 = major, P2 = minor, P3 = nit / info.
 | 18, 33, 52, 56 | P1 | keyboard instructions removed from the accessible description while the guide is collapsed (Chromium omits closed `<details>` content) | an always-present visually hidden copy (`id="<hint>-keys"`) outside the `<details>` is referenced by `aria-describedby`; the guide shows the same text | `exam21e3.units` (fail-first); Chromium accessibility tree (§12.4) |
 | 32, 45 | P1 | grade isolation reordered dates and CIDR addresses in teacher messages | isolation only for `assignment_reviewed` previews and only for the last grade value (`GRADE_LTR` refuses dates, versions and addresses) | RF1-U6 (fail-first, with a control); L04, L05 |
 | 10, 19, 63 | P2 | a retry that fails later steals focus and drops keystrokes | the button takes focus back only if focus was on the card and is now on `body` (React remounted the card) | RF1-U1 (fail-first); B07 |
-| 17, 24, 81, 47 | P2 | retry focus went to the page heading, to `body`, or off-screen | focus follows the recovered part: its first focusable control, else the part itself; the page / exam / review variants use the page anchor | `ux21e3` A2 (updated, fail-first), RF1-U2, RF1-U3 (fail-first); B05 |
+| 17, 24, 81, 47 | P2 | retry focus went to the page heading, to `body`, or off-screen | focus follows the recovered part: its first focusable control, else the part itself; the page / exam / review variants use the page anchor *(replaced in Review Fix 2, §13: focus on an answer control let the next ordinary key record an answer; focus now lands on the boundary's own line just before the part)* | `ux21e3` A2 (updated, fail-first), RF1-U2, RF1-U3 (fail-first); B05 |
 | 23, 65 | P2 | after a failed retry the guidance (strict: «لا تغادر صفحة الامتحان») was neither announced nor linked | announced through the page announcer and referenced by the retry button's `aria-describedby` | RF1-P7 (fail-first); B09 |
 | 12, 20 | P2 | a timer threshold marked as announced while nothing was spoken | thresholds are recorded only after the announcer delivered them, and only on the questions screen | RF1-P5 (fail-first); P07 (P10 is equivalent, §12.5) |
 | 21 | P2 | a live region filled in the frame it is inserted may not be spoken | the announcer waits 400 ms after it is attached before the first message | RF1-P6 (fail-first); P11 |
 | 27 | P2 | the last announcement stayed readable in browse mode | the announcer clears 8 s after a message | RF1-P10 (fail-first); P12 |
 | 64 | P2 | reload offered while offline | `reloadAllowed` also requires `online` | RF1-P4 (fail-first); P08 |
-| 2, 3 | P2 | only the first failed stylesheet re-linked; a failed re-link ignored (A5b failed) | every failed stylesheet of the load is re-linked; the retry fails closed if one still fails | RF1-R1/R2 (fail-first); R18, R19; harness `css-twice` 18/18 (`92f4326`: 17/18) |
+| 2, 3 | P2 | only the first failed stylesheet re-linked; a failed re-link ignored (A5b failed) | every failed stylesheet of the load is re-linked; the retry fails closed if one still fails *(Review Fix 2: only the loader's own stylesheets — another question's outage no longer blocks this retry)* | RF1-R1/R2 (fail-first); R18, R19; harness `css-twice` 18/18 (`92f4326`: 17/18) |
 | 4 | P2 | `NEVER_REMAP` premise false for `trustedSimPlugins` and `smartSimUiRegistry` | removed from the list; the build guard reads the list from the source | `recoverableLazy.21e3` (updated), guard G02 |
 | 5, 9 | P2 | the code stimulus (`retryableLazy`) could never recover in Chromium | `recoverableSharedLazy`: the same remap, then the one `Module` export whose `default` is a component | `recoverableLazy.21e3` shared pick tests; R16, R24 |
 | 6 | P2 | one stalled recovery blocked every later one | bounded steps; overlapping recoveries refused (`recovery-busy`); a late success still recorded | RF1-R3 (fail-first); R20, R21 |
@@ -608,10 +619,10 @@ The release is held for 90 ms, and PTR4 adds a 2 px drag.
 
 **The reviewers' probes, re-run unchanged on the head.**
 - **GAP-1 pointer matrix** (`pointer-probe.mjs`): 12 pointer-driven answer types — chart bar, function-graph curve and point, 3D scene and mesh part, physics bob drag and «حفظ القياس», network drag, categorization, composite hotspot click and drag, composite network. Each is run at 100 / 150 / 200 % and on a phone, with the control under the top and under the bottom bar, in both motion settings: **192 cases**.
-  - On the head, **every case recorded the intended answer, with no probe error**.
-  - Against the pre-phase base `31f4008` (the reviewers' run): 168 identical. Of the 24 differences, 4 are base timeouts (3D part at 200 %) where the head saved the intended part. The other 20 are composite hotspot points that differ in the third decimal: the head's worst error is **0.0030** of the image (base 0.0047, `92f4326` **0.7395**).
+  - *(Corrected in Review Fix 2, §13 — this bullet said "every case recorded the intended answer", which overstated it.)* On the head there was no probe error, and every recorded answer equals the base build's or is better. In 64 cases neither build records an answer: the probe does not read the bob, network and composite-network drag answers (48); 12 desktop function-graph point clicks are lost to the pre-existing hover dot (finding 75); and 4 phone taps on «حفظ القياس» land on the bottom navigation in both builds.
+  - Against the pre-phase base `31f4008` (the reviewers' run): 168 identical. Of the 24 differences, 4 are base timeouts (3D part at 200 %) where the head saved the intended part. The other 20 are composite hotspot points that differ in the third decimal: the head's worst error is **0.0030** of the image (`92f4326`: **0.7395**). *(Corrected: base's own worst error against its own targets is 0.0024, so the head is not more accurate than base; both are under 0.3 % of the image.)*
   - Against `92f4326`: 66 differ, all of them answers that `92f4326` lost or corrupted.
-  - The page scroll at `pointerdown` equals the scroll at `click` in every case except the physics bob drag pressed under the **top** bar. There the base build shows the identical change: pre-existing lab behaviour, with the intended value saved.
+  - The page scroll at `pointerdown` equals the scroll at `click` in every case except the physics bob drag pressed under the **top** bar (and, at 200 %, under the bottom bar). There the base build shows the identical change: pre-existing lab behaviour.
 - **GAP-2 coding probes**. Each coding control is placed half under the bottom navigation and pressed with the mouse.
   - `probe-tpl.mjs`, coding@3 template gap, with 2 × 1 px of hand movement while the button is held (the blocker 76 reproduction): 100 / 150 / 200 %, both motion settings, holds of 120 and 200 ms. **12 / 12 cases: 0 characters lost, page scroll 0, the key inserted on the pressed line.** `92f4326` lost 33 characters (120 ms) or 13 (200 ms), and base lost 0. Without movement (holds 0 / 120 / 400 ms): 18 / 18, 0 lost.
   - `probe-native1.mjs`, coding@1 native editor at 560×450 @2 and 390×844 @3, with the same movement: **4 / 4, 0 characters lost, scroll 0** (`92f4326` lost 33).
@@ -748,10 +759,229 @@ Answer serialization, autosave, submission and strict attempts are unchanged:
 
 Pre-existing findings that were not introduced by this PR stay out of scope and unchanged: 11, 15, 16, 29, 35, 36, 37, 42,
 58, 60, 61, 62, 75, 78, 79, 83, 86, 87. Two of them change as a side effect of the fix:
-- 28 / 59: the fixed 72 px top clearance no longer exists, and the keyboard reveal measures the real top bar.
+- 28 / 59: the fixed 72 px root clearance no longer exists, and the keyboard reveal measures the real top bar. *(Corrected in Review Fix 2: navigation still positions the heading with `scrollIntoView({block:"start"})` and its 72 px `scroll-margin`, so with a two-line exam title the heading can land 6–18 px under the top bar at 150 % / 200 % — pre-existing, unchanged.)*
 - 67: the same as 84, fixed.
 
 Not measured: Safari / WebKit and Firefox (no engine in this environment; §10), and real assistive-technology output. The
 accessible descriptions were read from Chromium's accessibility tree, not from a screen reader.
+
+## 13. Review Fix 2
+
+A new read-only adversarial review of the exact head `eb174d1` ran with four independent reviewers, each in its own detached
+worktree:
+
+| Area | Verdict | Introduced findings |
+|---|---|---|
+| Pointer / touch / keyboard input integrity | PASS | 1 × P2, 2 × P3 |
+| Accessibility, announcements, RTL, zoom, teacher wording | PASS | 2 × P2, 5 × P3 |
+| Governance, test integrity, evidence accuracy | PASS | 2 × P2 (PR body, a missing test), 3 × P3 |
+| Recovery runtime and boundaries | **FAIL** | **1 × P1**, 1 × P2, 4 × P3 |
+
+The reviewers re-ran the evidence of §12 and confirmed it, except where noted below. Confirmed:
+- every former blocker is fixed in Chromium;
+- 42 fail-first cases;
+- 63 mutants killed and 1 equivalent;
+- harness, GAP-2, bundle and exact-head CI;
+- no weakened test.
+
+Review Fix 2 corrects every introduced P1 and P2, and every P3 that was safe to fix. The design record statements found
+inaccurate are corrected in place and marked *(corrected in Review Fix 2, §13)*.
+
+| Item | Value |
+|---|---|
+| Head reviewed | `eb174d1fb6982929b5e7e81e40ea2817852d8a21` |
+| `origin/main` | `31f40086e4740984ee1f7cb7c90aee7869301d5a`, unchanged |
+| Commits | `9eca00e` fixes and tests; `54e0c05` the announcer test that closes mutant P13; the following commit carries this record |
+
+### 13.1 Findings and fixes
+
+| Reviewer · id | Sev | Finding | Fix | Evidence |
+|---|---|---|---|---|
+| Recovery RR-1 | **P1** | After a successful retry, focus went to the recovered part's first control (a radio, the hotspot overlay, the answer field, or the next part's field). The student's next ordinary key then recorded an answer they never chose: 32 / 32 runs in Chromium. | Focus now lands on a short, non-interactive line the boundary itself renders just before the recovered part («تم تحميل هذا الجزء.», `tabindex=-1`). It is visually hidden inside a formula, so the sentence is not broken. The next Tab enters the part. The line stays until another question is shown, because removing it on blur would move content between a pointer press and its release. A page-, exam- or review-level card puts focus on the page heading. | `StudentQuestionCard.focus.rf2` and `focus2.rf2` (multiple choice and open question with a code stimulus, then ordinary keys: no answer recorded; formula retry: not `<body>`); RF1-U2 and ux21e3 A2 updated (not the answer control); mutants B13 and B14 |
+| Accessibility RR-1, RR-4 | P2, P3 | After a formula retry, focus fell to `<body>`; after a code-stimulus retry, focus went to the next field | same fix | same tests |
+| Recovery RR-4 | P3 | A recovered review card lost focus: the anchor was the question heading | `focusAnchor` uses the review heading on the review screen and reports whether it could focus | RF2-P2; mutant P16 |
+| Recovery RR-2 | P2 | One stylesheet that stays down blocked every other card's retry (the relink was page-wide and fails closed) | Each loader records the stylesheets its own loads requested (Vite rejects on the first failing one; others report later). Its retry re-links and awaits only those. | RF2-R1; mutants R25 and R27 |
+| Recovery RR-3 | P3 | Total recovery time was unbounded: a chain of slow source reads held the shared queue (186 s measured) | All source reads of one recovery are bounded together (`total`, 30 s); the statement in §5 is corrected | RF2-R2; mutant R26 |
+| Pointer RR-PTR-1 | P2 | The reveal's smooth scroll kept running under a pointer press made 30–110 ms after the Tab: a shifted hotspot point, or a template-gap press turned into a selection | The reveal is always instant | keyboard-reveal test (instant); ux21e3 G updated; mutant K06 |
+| Pointer RR-PTR-3 | P3 | In coding focus mode (a fixed overlay), Tab scrolled the page underneath | Nothing is revealed inside a fixed-position layer | keyboard-reveal test (fixed layer); mutant K07 |
+| Accessibility RR-2 | P2 | Grade isolation still reordered teacher titles in reviewed-assignment notices that carry no composed grade («اختبار Unit 1/2» drawn as "1/2 Unit") | `presentNotification` returns the grade it composed, and the bell isolates only when one exists | `NotificationBell.grade.rf2` (rendered bell); mutants L04 and L06 |
+| Accessibility RR-3 | P3 | Two announcements in the same frame: the first was never heard, yet a timer threshold was recorded as delivered | `student/exam/examAnnouncer.ts`: a queue holds each message ≥ 1.5 s (`ANNOUNCEMENT_GAP_MS`) before the next. `onDelivered` runs at the message's own write; a message still queued when the region leaves runs `onDropped`, which clears the page's timer key so the notice is said later (governance GOV-4). | `examAnnouncer.rf2` (settle, gap, clear, drop); RF2-P1 (timer and offline notices a gap apart); mutants P11–P15 |
+| Accessibility RR-5 | P3 | A chart in the section instructions said «… من السؤال» | Neutral block wording («تعذّر عرض هذا الجزء من المحتوى الآن») | — |
+| Accessibility RR-6 | P3 | The hidden keyboard steps were read twice in browse mode while the guide was open | The hidden copy is `aria-hidden`. A node referenced by `aria-describedby` still feeds the description (checked in Chromium's accessibility tree, §13.3). | `exam21e3.units`, RF1-U8; mutant V01 |
+| Governance GOV-2 | P2 | The in-exam branch of the chart copy (D5) had no test | `DataChartRetry.rf2`: in an exam (strict) the chart fallback names no reload | pin; mutant D01 |
+| Governance GOV-1 | P2 | The PR body still described `92f4326` | Rewritten for the final head (exact-head CI, finding-85 decision request) | PR #303 |
+| Governance GOV-3 | P3 | §12.4 and the `eb174d1` commit message overstated GAP-1 ("192 / 192 intended answers") and the base error ordering | Corrected in §12.4. The commit message cannot be amended (history is never rewritten); this record is the correction. | — |
+| Governance GOV-5 | P3 | Shared mutation backup file; leaked temp dirs; the bundle guard skipped when run through a symlinked path | Per-checkout backup; the guard tests clean up; the guard compares real paths | guard test (symlink); mutant G05 |
+| Recovery RR-5 | P3 | The bundle guard could not see an aliased loader (`const rl = recoverableLazy`) | Any reference to the loaders other than an import or the literal call fails the guard | guard test (alias); mutant G04 |
+| Recovery RR-6 | P3 | The finding-85 disclosure overstated the base: a non-strict attempt was resumable through the root card's reload | Corrected in §10 and §12.7 | — |
+
+### 13.2 Fail-first (executed against `eb174d1`)
+
+The head's new and changed test files were copied into a detached worktree of `eb174d1` and run there. **13 cases fail on
+`eb174d1` and pass on the head.** Each failing assertion is the defect itself:
+
+| Case | Failing assertion on `eb174d1` |
+|---|---|
+| multiple choice + code stimulus, after retry | `expected true to be false` (focus on a radio) |
+| open question + code stimulus, after retry | `expected <textarea> not to be <textarea>` (focus in the answer field) |
+| formula retry | `expected <body> not to be <body>` |
+| ux21e3 A2, RF1-U2 | `expected <input> not to be <input>` (focus on the answer control) |
+| RF2-P2 review card | `expected <body> to be <h2 …review…>` |
+| RF2-P1 timer + offline notice | `expected 0.43 to be greater than or equal to 1000` (ms between the two writes) |
+| RF2-R1 another card's stylesheet | the retried part never rendered (it waited for that stylesheet) |
+| RF2-R2 slow source chain | the disjoint recovery never rendered within the window |
+| bell grade island | `expected <bdi dir="ltr"> to have a length of +0 but got 1` (a teacher title split) |
+| exam21e3 bell source check | the isolation was not gated on a composed grade |
+| guard alias | `expected [] to have a length of 1` |
+| guard through a symlink | `expected +0 not to be +0` (exit 0 without checking) |
+
+Pins, which pass on `eb174d1`:
+- `DataChartRetry.rf2`: the in-exam chart copy was already right; the test guards D5.
+- The examAnnouncer unit tests cannot load there (the module is new). Their page-level counterpart, RF2-P1, is fail-first.
+
+### 13.3 Chromium evidence (production build of `9eca00e`, Chromium 141)
+
+`54e0c05` adds only a unit test, and this record changes no code, so the build is the final head's.
+
+| Check | Result |
+|---|---|
+| Certification harness (`check-student-exam-browser-21e3.mjs`) | pointer **52 / 52**, entry **76 / 76**, dependency **58 / 58**, css **36 / 36**, css-twice **18 / 18**, strict **58 / 58**, stilldown **36 / 36**. The only console errors are the injected failures' own logs. |
+| Recovery reviewer: multiple choice + code stimulus (`focusmc.mjs`) | focus after the retry is on `p.iex-q-recovered` «تم تحميل هذا الجزء.»; ArrowDown chooses nothing; no save (`eb174d1`: the first radio, and ArrowDown saved option 2) |
+| Recovery reviewer: hotspot renderer retry, then Enter (`focushs.mjs`) | focus on the line; no marker, no save (`eb174d1`: a point at (0.5, 0.5) was saved) |
+| Recovery reviewer: focus target rate (`focusrate.mjs`, 8 runs × 4 modes: key / click, immediate / delayed) | **32 / 32** on the line (`eb174d1`: 32 / 32 on the first radio) |
+| Accessibility reviewer: code-stimulus part retry (`p9-part-focus.mjs`) | focus on the line, not in the stimulus' neighbour field |
+| Accessibility reviewer: formula retry (`p3-failures.mjs`) | focus on the formula's visually hidden line (`SPAN.eb-visually-hidden tabindex=-1`), never `<body>`; a failed retry keeps focus on «إعادة المحاولة» with the guidance as its description |
+| Accessibility reviewer: same-moment notices (`p6-collision-stem.mjs`) | the timer notice written at +1,658 ms and the recovery card at +3,158 ms (**1,500 ms apart**); the threshold is recorded once (`eb174d1`: the card replaced the timer notice 2 ms later in the same frame) |
+| Accessibility reviewer: bell bidi (`p5-bidi.mjs`) | titles with fractions are not isolated («اختبار Unit 1/2», «الإصدار v1.2/3», «Quiz 3/4» render as written); only composed grades (9/10, 18.25/20) are islands; the visual order equals the plain text |
+| Pointer reviewer: Tab, then a press 0–800 ms later on the hotspot (`tabclick.mjs`, 56 runs, 4 viewports, both motion settings) | **0** runs with scroll during the press; worst point error 0.0019 (`eb174d1`: 21 / 52 runs scrolled during the press, worst error 0.4629) |
+| Pointer reviewer: Tab into the coding@3 gap, then a press 30–250 ms later with 2 × 1 px movement (`probe-tabtpl.mjs`, 24 runs) | **0** characters lost, no scroll during the press (`eb174d1`: 10 characters lost at 30 ms) |
+| Pointer reviewer: Tab cycling in coding focus mode (`fm.mjs`) | the page under the overlay does not move (`eb174d1`: −62 px at 150 %) |
+| Accessible description (`ax-app.mjs`, guide collapsed) | the hotspot `role=application` and the label zones still carry the keyboard steps with the hidden copy `aria-hidden`, at 100 / 150 / 200 % |
+
+
+### 13.4 Mutation campaign (80 mutants, AGENTS.md §9)
+
+The campaign covers 80 mutants across 16 files. It adds announcer, focus, runtime, keyboard-reveal, bell, chart, visual and
+guard mutants for every Review Fix 2 rule, and moves the announcer mutants to `examAnnouncer.ts`.
+
+| Run | Tree | Result |
+|---|---|---|
+| 1 | `9eca00e` | 78 killed, P10 equivalent, **1 survived: P13** (gap removed from the wait computation). The existing test queued both messages at once, where the post-write reschedule also holds the gap. The realistic case, a message arriving 2 ms after the previous one was written (the re-review's E1), now has its own test (`54e0c05`). |
+| 2 (targeted) | `54e0c05` | P11–P15 KILLED |
+| **Final** | **`54e0c05`** | **79 KILLED, 1 EQUIVALENT (P10), 0 survived, 0 invalid, 0 timeout. Restored: true**; `git diff` on the mutated files is clean |
+
+| Id | Planted defect | Outcome | Killed by (first failing case; total failing) |
+|---|---|---|---|
+| R01-origin | URL validator: the same-origin check removed | KILLED | `recoverableLazy.21e3.test.tsx` › refuses another origin (7) |
+| R02-query | URL validator: a query string accepted | KILLED | `recoverableLazy.21e3.test.tsx` › refuses a query (3) |
+| R03-chunk-name | URL validator: the chunk-name match removed | KILLED | `recoverableLazy.21e3.test.tsx` › refuses a different chunk name when one is required, and css for js (3) |
+| R04-hash-shape | URL validator: hash widened to `[0-9A-Za-z]{6,}` | KILLED | `recoverableLazy.21e3.test.tsx` › refuses a short hash (2) |
+| R05-assets-prefix | URL validator: the `<base>assets/` prefix check removed | KILLED | `recoverableLazy.21e3.test.tsx` › refuses outside assets (3) |
+| R06-typeerror-only | entry URL taken from any error, not only a `TypeError` | KILLED | `recoverableLazy.21e3.test.tsx` › ignores an Error (not a TypeError) (1) |
+| R07-no-ancestors | remap set: static-import ancestors of a failed module dropped | KILLED | `recoverableLazy.21e3.test.tsx` › a failed leaf brings its ancestors on the path, never the healthy side branch (4) |
+| R08-healthy-remapped | remap set: every module remapped (healthy ones too) | KILLED | `recoverableLazy.21e3.test.tsx` › the entry alone when nothing below it failed (5) |
+| R09-recovered-remapped | remap set: recovered modules remapped again | KILLED | `recoverableLazy.21e3.test.tsx` › a recovered module is not remapped again, but a plain importer of it is (3) |
+| R10-no-settled-reuse | a recovered URL not reused by later wrappers / graphs | KILLED | `recoverableLazy.21e3.test.tsx` › two wrappers of one chunk and a later graph reuse the recovered URL: one evaluation, no second generation (1) |
+| R11-never-remap-ignored | the `NEVER_REMAP` deny-list ignored | KILLED | `recoverableLazy.21e3.test.tsx` › a module of the static student shell is refused (defence in depth: no import, the card stays) (1) |
+| R12-no-original-first | a retry skips the original factory and remaps at once | KILLED | `recoverableLazy.21e3.test.tsx` › entry failure: the retry re-calls the original, then imports &lt;entry&gt;?r=1. under a map scoped to the retry URL only (3) |
+| R13-map-unscoped | import-map scopes keyed by the original URL | KILLED | `recoverableLazy.21e3.test.tsx` › entry failure: the retry re-calls the original, then imports &lt;entry&gt;?r=1. under a map scoped to the retry URL only (3) |
+| R14-no-css-relink | a failed stylesheet not re-linked before the retry | KILLED | `recoverableLazy.21e3.test.tsx` › a CSS dependency failure re-links a validated ?r= stylesheet, then re-calls the original (no JS remap) (3) |
+| R15-shape-unchecked | a module without a component `default` accepted | KILLED | `recoverableLazy.21e3.test.tsx` › a recovered module that is not a component fails closed (2) |
+| R16-shared-no-pick | the shared loader takes `default` instead of picking the `Module` export | KILLED | `recoverableLazy.21e3.test.tsx` › review fix 1 (R1-5): a shared chunk (namespace export, no default) recovers through its one namespace export (1) |
+| R17-no-serialization | the remap queue removed (recoveries run concurrently) — the review's surviving mutant | KILLED | `recoverableLazy.rf1.test.tsx` › the second remap reuses the first's recovered copy of the shared module (1) |
+| R18-css-relink-fail-open | a stylesheet re-link that fails is ignored | KILLED | `recoverableLazy.rf1.test.tsx` › a re-link that fails again fails the retry: the part does not render without its stylesheet (1) |
+| R19-css-first-only | only the first failed stylesheet recorded | KILLED | `recoverableLazy.rf1.test.tsx` › every failed stylesheet is re-linked before the retry (not only the one the error names) (1) |
+| R20-inflight-ignored | an overlapping recovery is not refused | KILLED | `recoverableLazy.rf1.test.tsx` › a disjoint recovery completes while an earlier one stalls; an overlapping one is refused; the late success is recorded (1) |
+| R21-no-import-bound | the retry import is unbounded | KILLED | `recoverableLazy.rf1.test.tsx` › a disjoint recovery completes while an earlier one stalls; an overlapping one is refused; the late success is recorded (1) |
+| R22-remap-any-browser | the remap used for any browser wording (not only a cached failure) | KILLED | `recoverableLazy.rf1.test.tsx` › Firefox wording: the retry re-calls the original only, never imports another URL (1) |
+| R23-element-accepted | any object with `$$typeof` accepted as a component | KILLED | `recoverableLazy.rf1.test.tsx` › the load fails (re-armable) instead of handing React an element as a component type (1) |
+| R25-css-relink-page-wide | a retry re-links every failed stylesheet of the page (not its own) | KILLED | `recoverableLazy.rf2.test.tsx` › the hotspot's stylesheet stays down; the code stimulus (a JS failure) retries without re-linking or waiting for it (1) |
+| R26-no-total-bound | no bound on all source reads of one recovery | KILLED | `recoverableLazy.rf2.test.tsx` › each read is under its own bound but the recovery is cut at `total`; a disjoint recovery is not held behind it (1) |
+| R27-own-css-unrecorded | a load's requested stylesheets not recorded as its own | KILLED | `recoverableLazy.rf1.test.tsx` › every failed stylesheet is re-linked before the retry (not only the one the error names) (1) |
+| R24-shared-pick-ambiguous | an ambiguous shared namespace accepted | KILLED | `recoverableLazy.21e3.test.tsx` › review fix 1: a shared chunk whose namespace export is ambiguous (or missing) fails closed (1) |
+| B01-retry-loads-nothing | «إعادة المحاولة» retries no loader | KILLED | `student/exam/exam21e3.units.test.tsx` › chunk failure → card (no internals) → «إعادة المحاولة» → the question renders; the failed React.lazy is replaced (5) |
+| B02-log-leaks | the boundary log carries the error message | KILLED | `StudentExamPage.ux21e3.test.tsx` › shows a recovery card for THAT question; the exam, the other questions and the answers stay; no save / submit; nothing leaks (3) |
+| B03-reload-before-retry | «إعادة تحميل الصفحة» offered before any retry | KILLED | `StudentExamPage.ux21e3.test.tsx` › after a failed retry the card offers a reload ONLY when everything is saved and the attempt is not strict (1) |
+| B04-no-reset-on-new-question | the card does not reset for another question | KILLED | `student/exam/exam21e3.units.test.tsx` › a new question (resetKey) starts clean; a stem fallback keeps the text WITH a notice and a retry (never silent) (1) |
+| B05-no-focus-follow | after a successful retry focus does not follow the recovered part | KILLED | `StudentExamPage.rf1.test.tsx` › «إعادة المحاولة» on the review card: the review returns and focus is on «مراجعة الإجابات», never <body> (4) |
+| B13-focus-on-answer-control | after a recovery focus goes to the part's first control (answer control) | KILLED | `StudentExamPage.ux21e3.test.tsx` › «إعادة المحاولة» renders the question again in place (no reload); focus moves to the recovered question's line, never an answer contro (2) |
+| B14-no-landing-line | no landing line after a recovery | KILLED | `StudentExamPage.ux21e3.test.tsx` › «إعادة المحاولة» renders the question again in place (no reload); focus moves to the recovered question's line, never an answer contro (5) |
+| B06-stem-card-not-text | a failing stem shows the full card instead of its text | KILLED | `StudentQuestionCard.stem.rf1.test.tsx` › visible notice + retry, the answer area stays, and the announcer does not claim the question failed (2) |
+| B07-refocus-steals | a failed retry always takes focus | KILLED | `student/exam/rf1.units.test.tsx` › the student moves to another field and types while the retry is loading: focus and keystrokes stay there (1) |
+| B08-retry-every-loader | a card's retry retries every failed loader of the page | KILLED | `student/exam/rf1.units.test.tsx` › outside the exam (no provider): focus lands on the «تم تحميل هذا الجزء.» line just before the recovered part — not <body>, not its inp (4) |
+| B09-guidance-not-describing | the after-retry guidance is not linked to the button | KILLED | `StudentExamPage.rf1.test.tsx` › strict attempt: «لا تغادر صفحة الامتحان» is announced and linked to the focused action (2) |
+| B10-stem-silent | a stem falls back to plain text silently | KILLED | `StudentQuestionCard.stem.rf1.test.tsx` › visible notice + retry, the answer area stays, and the announcer does not claim the question failed (2) |
+| B12-css-failure-logged-runtime | a stylesheet failure logged as `runtime` | KILLED | `student/exam/rf1.units.test.tsx` › «Unable to preload CSS» and a recovery refusal are chunk-load; any other error is runtime (1) |
+| B11-student-wording-everywhere | exam wording in every context | KILLED | `student/exam/exam21e3.units.test.tsx` › a new question (resetKey) starts clean; a stem fallback keeps the text WITH a notice and a retry (never silent) (2) |
+| P01-reload-in-strict | reload offered in a strict attempt | KILLED | `StudentExamPage.rf1.test.tsx` › strict attempt: «لا تغادر صفحة الامتحان» is announced and linked to the focused action (2) |
+| P02-reload-unsaved | reload offered while an answer is not server-confirmed | KILLED | `StudentExamPage.rf1.test.tsx` › the save of the newest edit keeps failing while online: after a failed retry there is no reload action (1) |
+| P03-focus-on-open | focus moved when the page opens on the questions | KILLED | `StudentExamPage.ux21e3.test.tsx` › a page that opens directly on the questions (legacy untimed) does not move focus (1) |
+| P04-no-result-focus | no focus on the result heading | KILLED | `StudentExamPage.ux21e3.test.tsx` › submitting focuses the result heading (exactly one submit) (1) |
+| P05-no-start-focus | no focus on the question heading after start | KILLED | `StudentExamPage.rf1.test.tsx` › after «بدء المحاولة» the last page scroll is instant (2) |
+| P07-timer-no-memory | timer thresholds not remembered per attempt | KILLED | `StudentExamPage.ux21e3.test.tsx` › crossing 5 minutes is announced once; nothing every second; nothing before the threshold (2) |
+| P08-reload-offline | reload offered while offline | KILLED | `StudentExamPage.rf1.test.tsx` › after a failed retry, offline with nothing unsaved: guidance to continue, no reload action (1) |
+| P09-transition-smooth | entering the questions uses a smooth scroll | KILLED | `StudentExamPage.rf1.test.tsx` › after «بدء المحاولة» the last page scroll is instant (1) |
+| P10-timer-off-screen | timer effect runs outside the questions screen | EQUIVALENT | survives by design: the announcer exists only on the questions screen, so `announce()` returns false elsewhere (defence in depth); RF1-P5 covers the rule |
+| P12-announcer-never-cleared | a delivered message is never cleared | KILLED | `StudentExamPage.rf1.test.tsx` › RF1-P10: a delivered message is cleared again after ANNOUNCEMENT_CLEAR_MS (nothing stale to read in browse mode) (2) |
+| P11-announcer-no-settle | the first message written in the frame the announcer is inserted | KILLED | `StudentExamPage.rf1.test.tsx` › the first message is written only after the announcer has settled (not in the frame it was inserted) (4) |
+| P13-announcer-no-gap | a message may replace the previous one at once (no gap) | KILLED | `student/exam/examAnnouncer.rf2.test.ts` › a message that arrives just after another one was written waits for the rest of the gap (it never replaces it at once) (1) |
+| P14-announcer-drop-silent | a dropped message reports nothing | KILLED | `student/exam/examAnnouncer.rf2.test.ts` › leaving the page drops what is still queued: onDropped, never onDelivered; announcing without a region queues nothing (1) |
+| P15-announcer-drop-delivered | a dropped message reported as delivered | KILLED | `student/exam/examAnnouncer.rf2.test.ts` › leaving the page drops what is still queued: onDropped, never onDelivered; announcing without a region queues nothing (1) |
+| P16-review-anchor | a recovered review card anchors on the (absent) question heading | KILLED | `StudentExamPage.rf1.test.tsx` › «إعادة المحاولة» on the review card: the review returns and focus is on «مراجعة الإجابات», never <body> (1) |
+| K01-reveal-pointer-focus | focus-time guard removed (any focus revealed) | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › focus-time guard: a programmatic focus with no key at all, or after a stale key press, never scrolls (2) |
+| K02-reveal-while-pointer-down | focus while a pointer is down is revealed | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › focus-time guard: focus that happens while a pointer is down never scrolls, even if the pointer is released before the frame (1) |
+| K03-reveal-any-key | any key arms a reveal | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › reveals only keyboard-caused focus; pointer focus, a held pointer and a stale key press never scroll (1) |
+| K04-reveal-not-consumed | one key press reveals several focus changes | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › reveals only keyboard-caused focus; pointer focus, a held pointer and a stale key press never scroll (1) |
+| K06-reveal-smooth | the keyboard reveal scrolls smoothly | KILLED | `StudentExamPage.ux21e3.test.tsx` › Tab to a field partly under the bottom navigation → the smallest scroll clear of the bar; typing and a visible field never scroll (3) |
+| K07-reveal-fixed-layer | the reveal also runs inside a fixed-position layer | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › review fix 2: nothing is revealed inside a fixed-position layer (a full-screen editor covers the bars) (1) |
+| K05-reveal-no-frame-recheck | the frame-time re-check removed | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › frame-time re-check: an element that lost focus before the frame is not revealed (1) |
+| A01-timer-repeat | a threshold announced again on every tick | KILLED | `StudentExamPage.ux21e3.test.tsx` › crossing 5 minutes is announced once; nothing every second; nothing before the threshold (3) |
+| A02-timer-early | a threshold announced a minute early | KILLED | `student/exam/exam21e3.units.test.tsx` › nothing above 5 minutes, at expiry or for an invalid value (1) |
+| A03-save-noisy | «تم الحفظ» announced after every ordinary save | KILLED | `StudentExamPage.ux21e3.test.tsx` › shows a recovery card for THAT question; the exam, the other questions and the answers stay; no save / submit; nothing leaks (4) |
+| A04-label-live-again | the visible save label made a live region again | KILLED | `StudentExamPage.reliability.test.tsx` › 16: exactly ONE polite live region (the page announcer, 21E.3); the save label itself is not live (4) |
+| L01-cli-not-isolated | the CLI `<pre>` loses `dir="ltr"` | KILLED | `StudentExamPage.ux21e3.test.tsx` › the command block and its blanks carry dir=ltr; the typed value is stored as typed (no bidi control character) (1) |
+| L02-physics-title-ltr | the physics title loses its RTL direction | KILLED | `student/exam/exam21e3.units.test.tsx` › the notification grade, the install brand and the physics energy title are isolated in their components (1) |
+| L03-island-drops-bdi | the LTR island helper drops the `<bdi>` | KILLED | `pwa/InstallAppCard.6a.test.tsx` › declined → the calm note AND the manual guidance (never masked); can be hidden; a later prompt works again (7) |
+| L04-grade-any-preview | grade isolation without a composed grade | KILLED | `notifications/NotificationBell.grade.rf2.test.tsx` › titles with fractions stay as written; only the composed grade (the last x/y) is a <bdi dir=ltr> (2) |
+| L06-grade-not-exposed | the presentation does not expose the composed grade | KILLED | `notifications/NotificationBell.grade.rf2.test.tsx` › titles with fractions stay as written; only the composed grade (the last x/y) is a <bdi dir=ltr> (1) |
+| V01-keys-read-twice | the hidden keyboard steps are not aria-hidden | KILLED | `student/exam/exam21e3.units.test.tsx` › the hotspot instruction is one line; the guide is collapsed yet still describes the image for screen readers (1) |
+| D01-chart-reload-in-exam | the chart's in-exam copy advises a reload | KILLED | `charts/DataChartRetry.rf2.test.tsx` › engine import fails during an exam (strict or not): the table opens, the message names no reload, there is no retry button (1) |
+| L05-grade-unbounded | grade pattern matches dates and addresses | KILLED | `student/exam/rf1.units.test.tsx` › الاختبار القادم يوم 12/10/2026 (3) |
+| G01-guard-name-unchecked | guard: declared name not tied to its import | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › a name that is not the imported file's base name fails (the runtime would never recover it) (1) |
+| G02-guard-neverremap-unread | guard: `NEVER_REMAP` not enforced | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › a NEVER_REMAP name may not be declared recoverable, and every NEVER_REMAP name must exist in the build (1) |
+| G04-guard-alias-unchecked | guard: aliased loader references accepted | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › `const rl = recoverableLazy; rl(...)` fails the guard; imports, comments and literal calls do not (1) |
+| G05-guard-symlink-skip | guard: skipped when run through a symlinked path | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › node <symlinked repo>/scripts/check-bundle-budget.mjs runs the checks (here: no dist → it fails) instead of exiting 0 silentl (1) |
+| G03-guard-no-minimum | guard: no minimum declaration count | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › fewer than the minimum number of declarations fails (a vacuous guard) (1) |
+
+
+### 13.5 Validation and bundle
+
+| Check | Result |
+|---|---|
+| Root suite, `npx vitest run` on `54e0c05` | **954 files, 12,361 passed, 1 failed** (12,362) |
+| The one failure | `src/AppShell.lazyDashboard.8e.test.tsx` (Phase 8E teacher shell). It waits 1 s for a lazily loaded teacher chunk, which took longer in this container. It passes with a longer wait, fails identically on `main` `31f4008` here (also reported by the governance reviewer), and was green in CI on `eb174d1`. It imports nothing this phase changed and is not patched here (AGENTS.md §12: no widened timeouts); CI on the exact head is reported in the PR. |
+| Lint | 0 errors, 125 warnings. Same set as `92f4326`; two messages list the same dependency names in another order. Moving the announcer into a module first raised 7 "refs during render" warnings; wrapping its methods in `useCallback` removed them. |
+| Typecheck | `npx tsc -b` clean |
+| Build + bundle guard | passed: 57 declarations / 55 recoverable chunks, NEVER_REMAP 12, 350 / 350 chunks; the alias check finds no reference outside an import or a literal call |
+| Runner unit | 407 / 407 (no Runner file changed) |
+| Whitespace | `git diff --check`, `git diff origin/main --check` clean |
+| Initial JS / CSS (gzip 9) | **113,134 B** (`main` 113,118 B, +16 B) / **36,084 B** |
+
+
+
+### 13.6 Remaining findings after Review Fix 2
+
+| Id | Sev | Finding | Rationale |
+|---|---|---|---|
+| 85 | P2, **owner decision** | An unrenderable question is submitted as unanswered | Unchanged: it needs a submission / grading contract change (§10). |
+| 14 | P2 | The exam-level card hides the chrome | Unchanged (§12.7). |
+| Pointer RR-PTR-2 | P3, accepted | A Tab pressed while a mouse button is held is never revealed (the summary stayed 22 px under the bar) | This is the rule "nothing is revealed while a pointer is down", which protects every press. The next Tab reveals. |
+| Pointer RR-PTR-4 | P3, pre-existing | With a two-line exam title, the heading after navigation lands 6–18 px under the top bar at 150 % / 200 % | Navigation positioning is unchanged; the base behaves identically (corrected in §12.7). |
+| Pointer RR-PTR-5 | P3 info, pre-existing | React error #185 in automated burst typing under heavy CPU load (head 4 / 37 runs, base 2 / 18) | Not introduced and not root-caused here; it needs its own investigation. |
+| Accessibility RR-7 | P3 info | After one formula retry, other formulas of the same stem keep their own notices | A consequence of per-card retry (a card retries only its own loaders); each has a working retry. |
+| 30, 31, 43 / 49, 44 (second half) | info | as §12.7 | Unchanged. |
+| Page wiring of `onDropped` | P3 | The page clears its timer key when a queued notice is dropped. The unit test covers `onDropped`, but no page test reaches the screen change (questions → gate → questions within 400 ms). | The announcer contract is unit-tested; the page wiring is one line, read in review. |
+
+Also not measured: Safari / WebKit, Firefox, and real screen-reader speech (as §12.7).
 
 Independent review required. Owner merge only.
