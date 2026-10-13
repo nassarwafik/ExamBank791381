@@ -8,8 +8,9 @@
    - every motion has a prefers-reduced-motion fallback; forced-colours keeps borders.
    Direction: a calm editorial workspace — tinted canvas, centred reading column, sections as primary cards with a header band
    and an accent edge, questions as lighter nested cards with a header strip, tonal (not dashed) secondary actions. */
-/* Slice 2 (question editors) lives in its own sheet; an @import must precede every rule. */
+/* Slices 2 (question editors) and 3 (panels) live in their own sheets; an @import must precede every rule. */
 @import "./builder-premium-editors.css";
+@import "./builder-premium-panels.css";                     /* slice 3: navigator, bulk bar, readiness dialog */
 
 
 /* ---------- canvas ---------- */
