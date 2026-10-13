@@ -16,6 +16,9 @@
 //      (R-1 / R-2 / R-3); the summary
 //      toggle is named by its counts, its chevron is aria-hidden and points down (open) / to the inline end (closed, RTL: left),
 //      and the save-state status hides its glyph from assistive technology (S-1).
+//   RF2 Review Fix 2 on a saved exam whose questions show issues (E11): a summary entry focuses ITS issue instance — «الزوج 3» the
+//      third pair, «الزوج 1» the first (I-1) — and a multiple-choice question without options (marks 0) focuses «+ إضافة خيار» in
+//      the frame showing the issue, never the invalid marks; the marks' own entry still focuses the marks (I-2).
 // On a BEFORE build the 21E.2 toolbar does not exist: each probe records what it finds ("absent") instead of throwing.
 
 export async function runBuilder({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow }) {
@@ -105,6 +108,7 @@ export async function runBuilder({ vp: [name, viewport, touch, dsf], newPage, or
   await ctx.close();
   await runBlueprintMenu({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
   await runModalSurface({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runInstanceFocus({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
 }
 
 // K1 — what the open ActionMenu looks like at this instant (page context): open? focus inside? host = the aria-modal builder
@@ -334,5 +338,55 @@ async function runModalSurface({ vp: [name, viewport, touch, dsf], newPage, orig
     await shot("03-import-open");
     check(id, "B-4 «فتح في باني الامتحان» from the import wizard leaves focus inside the builder dialog (not behind it)", rec.importFocus.builderOpen && !rec.importFocus.wizardOpen && rec.importFocus.inBuilder, JSON.stringify(rec.importFocus));
   } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder modal-surface run", false, rec.error); }
+  await ctx.close();
+}
+
+// RF2 — Review Fix 2, in real Chromium on E11 (reduced motion: every scroll is instant, so positions are final when measured).
+//   I-1 (RF2-1): the matching question has two MATCH_INCOMPLETE_PAIR issues; «الزوج 3» focuses «العنصر 3» (not pair 1, the first
+//       frame carrying the code) and «الزوج 1» focuses «العنصر 1» — each inside its card and visible: below the stuck toolbar where
+//       it is sticky, inside the viewport.
+//   I-2 (RF2-2): the multiple-choice question has no options and marks 0; «… بأقل من خيارين» focuses «+ إضافة خيار» inside the frame
+//       that shows MISSING_OPTIONS (it used to fall through to the invalid marks field); «… علامته غير صالحة» still focuses the marks.
+const focusProbe = () => {
+  const a = document.activeElement, bar = document.querySelector(".sb-toolbar");
+  const label = a?.id ? document.querySelector(`label[for="${a.id}"]`)?.textContent : null;
+  const r = a?.getBoundingClientRect(), sticky = !!bar && getComputedStyle(bar).position === "sticky", top = sticky ? bar.getBoundingClientRect().bottom : 0;
+  const frame = a?.closest("[data-issue-codes]");
+  return { name: (label || a?.getAttribute("aria-label") || a?.textContent || a?.tagName || "").replace(/\s+/g, " ").trim().slice(0, 50), tag: a?.tagName || "",
+    card: a?.closest(".sb-question")?.id || "", codes: frame?.getAttribute("data-issue-codes") || "", nth: frame?.getAttribute("data-issue-nth") || "",
+    visible: !!r && r.height > 0 && r.top >= top - 1 && r.bottom <= window.innerHeight + 1, sticky };
+};
+async function runInstanceFocus({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf2-" + name;
+  const { ctx, page, shot } = await newPage(id, viewport, touch, dsf);
+  const rec = record.viewports[id] = {};
+  try {
+    await page.goto(origin + "/", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /الامتحانات المحفوظة/ }).first().click();
+    await page.locator(".saved-exam-item", { hasText: "اختبار مواضع المشكلات" }).getByRole("button", { name: /فتح وتعديل/ }).click();
+    await page.locator("#sb-q-s1c1").waitFor({ timeout: 20000 }); await page.waitForTimeout(500);
+    const open = async (text, n) => {
+      await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(150);
+      const entry = page.locator(".sb-issues-list .sb-issue-link", { hasText: text });
+      const count = await entry.count();
+      if (count !== 1) return { entry: count };
+      await entry.click(); await page.waitForTimeout(600);
+      const f = await page.evaluate(focusProbe);
+      await shot(n);
+      return f;
+    };
+    rec.pair3 = await open("الزوج 3", "01-pair3");
+    rec.pair1 = await open("الزوج 1", "02-pair1");
+    const p3 = rec.pair3, p1 = rec.pair1;
+    check(id, "I-1 (RF2-1) «الزوج 3» focuses «العنصر 3» and «الزوج 1» focuses «العنصر 1» (each its own pair, visible below the toolbar)",
+      p3.name === "العنصر 3" && p3.card === "sb-q-s1m1" && p3.codes === "MATCH_INCOMPLETE_PAIR" && p3.nth === "2" && p3.visible &&
+      p1.name === "العنصر 1" && p1.card === "sb-q-s1m1" && p1.nth === "1" && p1.visible, JSON.stringify({ pair3: p3, pair1: p1 }));
+    rec.options = await open("بأقل من خيارين", "03-missing-options");
+    rec.marks = await open("علامته غير صالحة", "04-marks");
+    const o = rec.options, m = rec.marks;
+    check(id, "I-2 (RF2-2) a multiple-choice question without options focuses «+ إضافة خيار» in the frame showing MISSING_OPTIONS (not the invalid marks); its marks entry focuses «العلامة»",
+      o.name === "+ إضافة خيار" && o.tag === "BUTTON" && o.card === "sb-q-s1c1" && o.codes.split(" ").includes("MISSING_OPTIONS") && o.visible &&
+      m.name === "العلامة" && m.tag === "INPUT" && m.card === "sb-q-s1c1" && m.visible, JSON.stringify({ options: o, marks: m }));
+  } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder RF2 instance-focus run", false, rec.error); }
   await ctx.close();
 }

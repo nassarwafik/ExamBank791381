@@ -61,6 +61,8 @@ type Props = {
   questionIssues?: ReadonlyMap<string, readonly StructuredIssue[]>;
   /** Question ids the teacher opened from the issue summary → the reveal count each card receives (see StructuredQuestionEditor). */
   revealedQuestions?: ReadonlyMap<string, number>;
+  /** Re-review RF2R-1 — question ids → the summary-click count that opens a collapsed card (never pruned; see StructuredExamBuilder). */
+  openRequests?: ReadonlyMap<string, number>;
 };
 
 export default function ExamSectionEditor(props: Props) {
@@ -68,7 +70,7 @@ export default function ExamSectionEditor(props: Props) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Phase 19G — when the palette was opened from a scenario, the picked question is created INSIDE that scenario (after its last member) and linked.
   const [paletteFor, setPaletteFor] = useState<string | null>(null);
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint, sectionIssues, questionIssues, revealedQuestions } = props;
+  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint, sectionIssues, questionIssues, revealedQuestions, openRequests } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
   const scenarios = Array.isArray(section.scenarios) ? section.scenarios : [];
   const applySection = (next: BuilderSection) => { if (next !== section) patch({ scenarios: next.scenarios, questions: next.questions }); };
@@ -202,6 +204,7 @@ export default function ExamSectionEditor(props: Props) {
             blueprint={blueprint}
             issues={questionIssues?.get(q.examQuestionId)}
             revealIssues={revealedQuestions?.get(q.examQuestionId)}
+            openRequest={openRequests?.get(q.examQuestionId)}
           />
         ))}
       </div>

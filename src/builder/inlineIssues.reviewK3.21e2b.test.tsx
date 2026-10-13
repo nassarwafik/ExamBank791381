@@ -5,8 +5,10 @@
 //         «إضافة زوج») is not shown as invalid before the teacher visits it (Field's touchKey decides again);
 //   C-F5  App reuses the builder instance when another exam opens: that exam's counts are its baseline (never announced), and the
 //         previous exam's announcement leaves with it;
-//   A-F4  an issue with no invalid control to focus (a multiple-choice question without options; a section) focuses the card's /
-//         section's NAMED issue list «مشكلات السؤال N» / «مشكلات القسم N», with the alignment the card / section already uses;
+//   A-F4  an issue with no invalid control to focus (a section; a question frame without an enabled control) focuses the card's /
+//         section's NAMED issue list «مشكلات السؤال N» / «مشكلات القسم N», with the alignment the card / section already uses —
+//         Review Fix 2 (RF2-2) narrows it: a multiple-choice question without options has an enabled control in the frame that
+//         shows the issue («+ إضافة خيار»), which takes focus (the named-list case for a question: inlineIssues.reviewRF2.21e2b);
 //   A-F6  the clicked issue's own field takes focus (the Field frame showing that code: data-issue-codes), not the first invalid
 //         field in DOM order;
 //   A-F7  the summary toggle's name is its counts (the disclosure chevron is aria-hidden; aria-expanded carries the state), and the
@@ -183,18 +185,21 @@ describe("K3 C-F5 — another exam opened in the same builder instance", () => {
   });
 });
 
-describe("K3 A-F4 — an issue without an invalid control focuses its named issue list", () => {
-  it("a multiple-choice question without options: «مشكلات السؤال 3», its card aligned below the toolbar", async () => {
+describe("K3 A-F4 — an issue without an invalid control: the frame's enabled control (RF2-2), else its named issue list", () => {
+  it("a multiple-choice question without options: «+ إضافة خيار» in the frame showing the issue (RF2-2), aligned below the toolbar", async () => {
     await mount();
     expect(within(card("q3")).queryAllByRole("radio")).toHaveLength(0);
     fireEvent.click(entryFor(issueOf("q3", "MISSING_OPTIONS")));
     await tick();
-    const group = within(card("q3")).getByRole("group", { name: "مشكلات السؤال 3" });
-    expect(document.activeElement).toBe(group);
+    const frame = within(card("q3")).getByRole("group", { name: "الخيارات والإجابة الصحيحة" });
+    const add = within(frame).getByRole("button", { name: "+ إضافة خيار" });
+    expect(document.activeElement).toBe(add);
+    expect(nameOf(add, "button")).toBe("+ إضافة خيار");
+    const group = within(card("q3")).getByRole("group", { name: "مشكلات السؤال 3" });          // the named list is still there …
     expect(nameOf(group, "group")).toBe("مشكلات السؤال 3");
-    expect(group.getAttribute("tabindex")).toBe("-1");                                       // focusable by script, never a Tab stop
+    expect(group.getAttribute("tabindex")).toBe("-1");                                       // … focusable by script, never a Tab stop
     expect(scrollCalls).toHaveLength(1);
-    expect(scrollCalls[0].el).toBe(card("q3"));
+    expect(scrollCalls[0].el).toBe(frame);
     expect(scrollCalls[0].margin).toBe(CLEARANCE + "px");
     expect(card("q3").classList.contains("sb-q-flash")).toBe(true);
   });
