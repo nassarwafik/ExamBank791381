@@ -6,8 +6,8 @@ import { formatNotificationTime, formatUnread } from "../messages/messagesClient
 import { isMessageNotification, type BadgeCount, type NotificationItem } from "./notificationsClient";
 import { presentNotification, type NotificationIconKind } from "./notificationPresentation";
 import "./notifications.css";
-// Phase 21E.3 (S-6), review fix 1 — only the grade of a grade notification is an LTR island (the last standalone x/y of its
-// sentence, which the app composes); teacher-authored previews (messages, announcements, titles) are never split.
+// Phase 21E.3 (S-6), review fixes 1–2 — only a grade the app composed is an LTR island (the last standalone x/y of that sentence,
+// after the quoted title); a preview without a composed grade (messages, announcements, a title alone) is never split.
 import { isolateLtr, GRADE_LTR } from "../ui/ltrIsland";
 
 /**
@@ -181,7 +181,7 @@ export default function NotificationBell({ counts, items, loading, error, onOpen
                             {item.unread ? <span className="eb-notif-new">جديد</span> : <VisuallyHidden>، مقروء</VisuallyHidden>}
                           </span>
                           {sender && <span className="eb-notif-sender">{sender}</span>}
-                          {view.preview && <span className="eb-notif-preview">{item.type === "assignment_reviewed" ? isolateLtr(view.preview, GRADE_LTR, { lastOnly: true }) : view.preview}</span>}
+                          {view.preview && <span className="eb-notif-preview">{view.grade ? isolateLtr(view.preview, GRADE_LTR, { lastOnly: true }) : view.preview}</span>}
                           {time && <time className="eb-notif-time" dateTime={item.createdAt}>{time}</time>}
                         </span>
                       </button>

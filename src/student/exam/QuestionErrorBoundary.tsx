@@ -1,4 +1,4 @@
-import { Component, createRef, type ContextType, type ReactNode } from "react";
+import { Component, createRef, type ContextType, type ReactNode, type RefObject } from "react";
 import { isChunkLoadError } from "../../lazyWithRetry";
 import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../recoverableLazy";
 import { IconRefresh, IconWarning } from "../../icons";
@@ -16,6 +16,11 @@ import { QuestionRecoveryContext } from "./questionRecovery";
  *    when they loaded does the part render again. A retry that fails leaves the card and focus exactly where they are — focus
  *    is never pulled from wherever the student moved meanwhile. After a recovery, focus moves to the recovered part only if it
  *    was on the card and nothing else took it.
+ * Review fix 2: after a recovery focus never lands on an answer control (a radio, a hotspot, a text field — the student's next
+ *  ordinary key would record an answer they never chose). It lands on a short, non-interactive line the boundary itself renders
+ *  just before the recovered part («تم تحميل هذا الجزء.», tabindex -1); the next Tab enters the part. The line stays until
+ *  another question is shown (removing it on blur would move the content between a pointer press and its release). A
+ *  page-level card (page / exam / review) puts focus on the page's heading instead.
  *  - Nothing is replaced silently: a failing rich stem keeps the plain question text WITH a notice and a retry ("stem"); a
  *    failing formula keeps its source text with a retry ("inline"); a failing content block shows a compact card ("block").
  *  - After a failed retry the follow-up guidance (in a strict attempt: do not leave the page) is announced and describes the
@@ -34,7 +39,7 @@ type Props = {
   /** An extra safe action on the card (e.g. the review screen's «العودة إلى الأسئلة»). */
   secondaryAction?: { label: string; onClick: () => void };
 };
-type State = { failed: boolean; retries: number; retrying: boolean; resetKey?: string };
+type State = { failed: boolean; retries: number; retrying: boolean; resetKey?: string; landed: boolean };
 
 const EXAM_TITLE: Record<RecoveryVariant, string> = {
   question: "تعذّر عرض هذا السؤال الآن",
@@ -43,7 +48,7 @@ const EXAM_TITLE: Record<RecoveryVariant, string> = {
   section: "تعذّر عرض ترويسة القسم الآن",
   exam: "تعذّر عرض الامتحان الآن",
   review: "تعذّر عرض شاشة المراجعة الآن",
-  block: "تعذّر عرض هذا الجزء من السؤال الآن",
+  block: "تعذّر عرض هذا الجزء من المحتوى الآن",
   stem: "يظهر نص السؤال بصيغة مبسّطة",
   inline: "تعذّر عرض صيغة رياضية",
 };
@@ -54,7 +59,7 @@ const EXAM_BODY: Record<RecoveryVariant, string> = {
   section: "يمكنك متابعة حل الأسئلة؛ إجاباتك كما هي.",
   exam: "إجاباتك ما زالت في هذه الصفحة، ويستمر الحفظ التلقائي.",
   review: "إجاباتك كما هي. يمكنك العودة إلى الأسئلة أو إعادة المحاولة.",
-  block: "باقي نص السؤال معروض، وإجاباتك كما هي.",
+  block: "باقي النص معروض، وإجاباتك كما هي.",
   stem: "لم يكتمل تحميل تنسيق نص السؤال (الصيغ أو الرسوم)، فيظهر نصه الأساسي.",
   inline: "يظهر نص الصيغة كما كُتب.",
 };
@@ -64,19 +69,19 @@ const GENERAL_NOTE: Partial<Record<RecoveryVariant, string>> = {
   stem: "يظهر النص الأساسي لأن تنسيقه لم يكتمل تحميله.",
   inline: "يظهر نص الصيغة كما كُتب.",
 };
-/** What a recovered part may receive focus on (in document order). */
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable="true"]';
+/** The line focus lands on after a recovery (review fix 2): never an answer control. */
+const LANDED = "تم تحميل هذا الجزء.";
+const FOLLOW_MS = 3000;
 let uid = 0;
 
 export default class QuestionErrorBoundary extends Component<Props, State> {
   static contextType = QuestionRecoveryContext;
   declare context: ContextType<typeof QuestionRecoveryContext>;
-  state: State = { failed: false, retries: 0, retrying: false, resetKey: this.props.resetKey };
+  state: State = { failed: false, retries: 0, retrying: false, resetKey: this.props.resetKey, landed: false };
   private id = "qeb-" + (++uid);
   private retryRef = createRef<HTMLButtonElement>();
   private failedRef = createRef<HTMLElement>();
-  /** Where the failed rendering sat, to find the recovered part after a successful retry. */
-  private region: { parent: Node; prev: Node | null } | null = null;
+  private landedRef = createRef<HTMLElement>();
   /** Focus was on the card when the student pressed «إعادة المحاولة» (only then may focus follow the recovered part). */
   private restoreFocus = false;
   private titleAnnounced = false;
@@ -92,7 +97,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
 
   /** Another question / page is shown (a new resetKey): start clean for it. */
   static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
-    return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey } : null;
+    return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey, landed: false } : null;
   }
 
   componentDidMount() { this.mounted = true; }
@@ -115,7 +120,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
       // Recovered: the next failure is a new episode; focus follows the part only if the student was on the card.
       this.titleAnnounced = false;
       this.handles.clear();
-      if (this.restoreFocus) { this.restoreFocus = false; this.followRecoveredPart(this.token); }
+      if (this.restoreFocus) { this.restoreFocus = false; this.placeFocusAfterRecovery(this.token); }
     } else if (this.state.failed && this.state.retries > prevState.retries) {
       // A retry failed: say what to do now (the guidance also describes the retry button). Focus is left where it is — except
       // that a render error remounts the card (React rebuilds a boundary's children after an error), so a focus that was on the
@@ -150,45 +155,51 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     if (this.state.retrying) return;                                      // a repeated Enter / click while loading does nothing
     const el = this.failedRef.current, active = typeof document !== "undefined" ? document.activeElement : null;
     this.restoreFocus = !!(el && active && el.contains(active));
-    this.region = el && el.parentNode ? { parent: el.parentNode, prev: el.previousSibling } : null;
     const token = ++this.token;
     this.setState({ retrying: true });
     // Only the loaders that failed below THIS boundary (a render error has none: the part simply renders again).
     const ok = await retryFailedLoads([...this.handles]);
     if (!this.mounted || token !== this.token) return;                    // another question meanwhile: nothing to do
-    this.setState(s => ({ failed: !ok, retrying: false, retries: s.retries + 1 }));
+    // The line is shown only when focus is still on the card (or nowhere): it will receive focus; otherwise nothing is added.
+    const a = document.activeElement, card = this.failedRef.current;
+    const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));
+    this.setState(s => ({ failed: !ok, retrying: false, retries: s.retries + 1, landed: ok && this.restoreFocus && onCard && !this.anchored() }));
   };
 
-  /** After a successful retry: put focus on the recovered part (its first control, else the part itself), once it rendered —
-   *  but only while focus is still nowhere (the card's button disappeared). Bounded; never steals focus. */
-  private followRecoveredPart(token: number) {
-    const v = this.variant(), started = typeof performance !== "undefined" ? performance.now() : 0;
+  /** A page-level card recovers onto the page's heading (it exists again once the surface rendered). */
+  private anchored() { const v = this.variant(); return (v === "page" || v === "exam" || v === "review") && !!this.context.focusAnchor; }
+
+  /** After a successful retry, only while focus is still nowhere (the card's button disappeared): a page-level card puts focus on
+   *  the page heading once it rendered (bounded); any other card on its own «تم تحميل هذا الجزء.» line — never on an answer
+   *  control. Focus that the student moved meanwhile is never taken. */
+  private placeFocusAfterRecovery(token: number) {
+    const idle = () => { const a = document.activeElement; return !a || a === document.body || a === document.documentElement; };
+    if (!this.anchored()) {
+      const line = this.landedRef.current;
+      if (!line || !idle()) { if (this.state.landed) this.setState({ landed: false }); return; }
+      line.focus({ preventScroll: true });
+      if (this.context.reveal) this.context.reveal(line);
+      else { const b = line.getBoundingClientRect(); if (b.top < 0 || b.bottom > window.innerHeight) line.scrollIntoView?.({ block: "nearest" }); }
+      return;
+    }
+    const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), started = now();
     const step = () => {
       this.frame = 0;
-      if (!this.mounted || token !== this.token) return;
-      const active = document.activeElement;
-      if (active && active !== document.body && active !== document.documentElement) return;   // the student moved on
-      let target: HTMLElement | null = null;
-      if ((v === "page" || v === "exam" || v === "review") && this.context.focusAnchor) { this.context.focusAnchor(); return; }
-      const r = this.region, node = r ? (r.prev ? r.prev.nextSibling : r.parent.firstChild) : null;
-      if (node instanceof HTMLElement && !node.classList.contains("iex-loading") && node.getAttribute("aria-busy") !== "true") {
-        target = node.matches(FOCUSABLE) ? node : node.querySelector<HTMLElement>(FOCUSABLE);
-        if (!target) { target = node; if (!target.hasAttribute("tabindex")) { target.setAttribute("tabindex", "-1"); target.addEventListener("blur", () => target?.removeAttribute("tabindex"), { once: true }); } }
-      }
-      if (target) {
-        target.focus({ preventScroll: true });
-        if (this.context.reveal) this.context.reveal(target);
-        else { const b = target.getBoundingClientRect(); if (b.top < 0 || b.bottom > window.innerHeight) target.scrollIntoView?.({ block: "nearest" }); }
-        return;
-      }
-      if (typeof performance !== "undefined" && performance.now() - started > 3000) { this.context.focusAnchor?.(); return; }
-      this.frame = requestAnimationFrame(step);
+      if (!this.mounted || token !== this.token || !idle()) return;
+      if (this.context.focusAnchor?.()) return;
+      if (now() - started < FOLLOW_MS) this.frame = requestAnimationFrame(step);
     };
     this.frame = requestAnimationFrame(step);
   }
 
   render() {
-    if (!this.state.failed) return this.props.children;
+    if (!this.state.failed) {
+      // A stable shape (line slot, then the children) so that showing or hiding the line never remounts the recovered part.
+      const line = !this.state.landed ? null : this.variant() === "inline"
+        ? <span ref={this.landedRef as RefObject<HTMLSpanElement>} tabIndex={-1} className="eb-visually-hidden" data-testid="recovery-landed">{LANDED}</span>
+        : <p ref={this.landedRef as RefObject<HTMLParagraphElement>} tabIndex={-1} className="iex-q-recovered" data-testid="recovery-landed">{LANDED}</p>;
+      return <>{line}{this.props.children}</>;
+    }
     const v = this.variant(), afterRetry = this.state.retries > 0, guidanceId = this.id + "-guidance", noteId = this.id + "-note";
     const busy = this.state.retrying;
     const retryButton = (label: string, extra?: string) => (

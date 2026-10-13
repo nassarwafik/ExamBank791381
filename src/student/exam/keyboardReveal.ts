@@ -12,6 +12,9 @@
  *  - one key press reveals at most one focus change, measured one frame later (after the browser's own focus scrolling), and
  *    only if that element still has focus and no pointer went down meanwhile.
  * The scroll is the smallest one that clears both bars (an element taller than the space between them is aligned to the top).
+ * Review fix 2: the scroll is always instant (a smooth scroll kept moving the page under a press that followed a Tab within
+ * ~100 ms), and nothing is revealed inside a fixed-position layer (a full-screen editor covers the bars; scrolling the page
+ * beneath it cannot reveal anything).
  */
 export const NAV_KEYS: ReadonlySet<string> = new Set(["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"]);
 /** A key press older than this no longer explains a focus change. */
@@ -35,7 +38,6 @@ export type KeyboardRevealOptions = {
   within: string;
   topBar: string;
   bottomBar: string;
-  reducedMotion: () => boolean;
 };
 
 /** Installs the listeners; returns the cleanup. */
@@ -52,7 +54,9 @@ export function installKeyboardReveal(o: KeyboardRevealOptions): () => void {
     const t = now(), intent = keyAt;
     keyAt = -1;                                                         // one key press explains at most one focus change
     if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS) return;
-    if (!el.closest(o.within)) return;
+    const host = el.closest(o.within);
+    if (!host) return;
+    for (let n: Element | null = el; n && n !== host; n = n.parentElement) if (o.win.getComputedStyle?.(n).position === "fixed") return;
     cancel();
     frame = o.win.requestAnimationFrame(() => {
       frame = 0;
@@ -61,7 +65,7 @@ export function installKeyboardReveal(o: KeyboardRevealOptions): () => void {
       const bar = o.doc.querySelector(o.topBar)?.getBoundingClientRect();
       const nav = o.doc.querySelector(o.bottomBar)?.getBoundingClientRect();
       const d = revealDelta(r.top, r.bottom, bar ? Math.max(0, bar.bottom) : 0, nav ? Math.min(o.win.innerHeight, nav.top) : o.win.innerHeight);
-      if (Math.abs(d) >= 1) o.win.scrollBy({ top: d, left: 0, behavior: o.reducedMotion() ? "auto" : "smooth" });
+      if (Math.abs(d) >= 1) o.win.scrollBy({ top: d, left: 0, behavior: "auto" });
     });
   };
   const opts = { capture: true } as const;

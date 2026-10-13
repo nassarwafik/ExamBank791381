@@ -223,6 +223,7 @@ export function headerImports(src) {
   return out;
 }
 const RECOVERY_CALL = /\b(recoverableLazy|recoverableSharedLazy)\s*\(/g;
+const RECOVERY_REFERENCE = /\b(recoverableLazy|recoverableSharedLazy)\b(?!\s*\()/g;
 const RECOVERY_DECL = /^(recoverableLazy|recoverableSharedLazy)\s*\(\s*(["'])([A-Za-z0-9_-]+)\2\s*,\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\4\s*\)\s*\)/;
 /** The production declarations of src/ (tests and the runtime module itself excluded). */
 export function recoveryDeclarations(srcDir) {
@@ -233,6 +234,12 @@ export function recoveryDeclarations(srcDir) {
       if (e.isDirectory()) { walk(p); continue; }
       if (!/\.(ts|tsx)$/.test(e.name) || /\.test\./.test(e.name) || e.name === "recoverableLazy.ts") continue;
       const text = fs.readFileSync(p, "utf8"), file = path.relative(srcDir, p);
+      // Review fix 2: the loaders may only be imported or called in the literal shape; any other reference (an alias such as
+      // `const rl = recoverableLazy`) would declare chunks this guard cannot see.
+      text.split("\n").forEach((line, i) => {
+        if (/^\s*(\/\/|\*|\/\*)/.test(line) || /^\s*import\b/.test(line)) return;
+        for (const r of line.matchAll(RECOVERY_REFERENCE)) failures.push(`${file}:${i + 1}: ${r[1]} is referenced without a call — only ${r[1]}("<Name>", () => import("<path>")) is allowed`);
+      });
       for (const m of text.matchAll(RECOVERY_CALL)) {
         const d = RECOVERY_DECL.exec(text.slice(m.index));
         if (!d) { failures.push(`${file}: ${m[1]}( is not the literal shape ${m[1]}("<Name>", () => import("<path>"))`); continue; }
@@ -531,5 +538,7 @@ function main() {
   console.log("bundle guard passed");
 }
 
-// Run as a script (npm run check:bundle); importing the module (tests) only exposes its checks.
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+// Run as a script (npm run check:bundle); importing the module (tests) only exposes its checks. Review fix 2: compared by real
+// path, so running it through a symlinked directory still runs the checks (a plain path comparison silently skipped them).
+const realOf = p => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+if (process.argv[1] && realOf(path.resolve(process.argv[1])) === realOf(fileURLToPath(import.meta.url))) main();

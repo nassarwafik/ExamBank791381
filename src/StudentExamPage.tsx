@@ -43,7 +43,8 @@ import {sectionShellOf,sectionMarksLabel} from "./presentation/presentationRunti
 import {recoverableLazy} from "./recoverableLazy";
 import QuestionErrorBoundary from "./student/exam/QuestionErrorBoundary";
 import {QuestionRecoveryContext,type QuestionRecovery} from "./student/exam/questionRecovery";
-import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement,ANNOUNCER_SETTLE_MS,ANNOUNCEMENT_CLEAR_MS} from "./student/exam/examAnnouncements";
+import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement} from "./student/exam/examAnnouncements";
+import {createExamAnnouncer} from "./student/exam/examAnnouncer";
 import {installKeyboardReveal,revealDelta} from "./student/exam/keyboardReveal";
 import type {SaveStateKind} from "./studentSaveState";
 
@@ -96,22 +97,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Focus contract: set ONLY by an intentional navigation (Next / Previous / navigator jump / review enter-leave); the
  // effect below moves focus to the new heading once, after render. Autosave, timer ticks and resyncs never set it.
  const pendingFocusRef=useRef<"question"|"review"|null>(null),questionHeadingRef=useRef<HTMLHeadingElement|null>(null),reviewHeadingRef=useRef<HTMLHeadingElement|null>(null),resultHeadingRef=useRef<HTMLHeadingElement|null>(null);
- // Phase 21E.3 — the ONE polite announcer of the running exam (timer thresholds, save problems / recovery, recovery cards). The
- // live region stays mounted and empty in React; each message REPLACES its child node, so assistive technology announces it even
- // when the same words come twice. No React state: announcing never re-renders the page.
- // Review fix 1: a message is never written into a region that has only just been inserted (assistive technology may not
- // track it yet) — it waits until the region has settled; each message is cleared again after a while (no stale text in
- // browse mode). onDelivered runs only when the message was actually written.
- const announcerRef=useRef<HTMLParagraphElement|null>(null),announcerReadyAt=useRef(0);
- const attachAnnouncer=useCallback((el:HTMLParagraphElement|null)=>{announcerRef.current=el;announcerReadyAt.current=el?performance.now()+ANNOUNCER_SETTLE_MS:0},[]);
- const announce=useCallback((text:string,onDelivered?:()=>void)=>{
-  if(!announcerRef.current)return false;
-  const deliver=()=>{const node=announcerRef.current;if(!node)return;const span=document.createElement("span");span.textContent=text;node.replaceChildren(span);onDelivered?.();
-   window.setTimeout(()=>{if(node.firstChild===span)node.replaceChildren()},ANNOUNCEMENT_CLEAR_MS)};
-  const wait=announcerReadyAt.current-performance.now();
-  if(wait>0)window.setTimeout(deliver,wait);else deliver();
-  return true;
- },[]);
+ // Phase 21E.3 — the ONE polite announcer of the running exam (timer thresholds, save problems / recovery, recovery cards),
+ // outside React (student/exam/examAnnouncer.ts): it settles before its first message, keeps each message at least a short gap
+ // before the next, clears it later, and reports a message dropped when the questions screen closes before it was written.
+ const [examAnnouncer]=useState(()=>createExamAnnouncer());
+ const attachAnnouncer=useCallback((el:HTMLParagraphElement|null)=>examAnnouncer.attach(el),[examAnnouncer]);
+ const announce=useCallback((text:string,onDelivered?:()=>void,onDropped?:()=>void)=>examAnnouncer.announce(text,onDelivered,onDropped),[examAnnouncer]);
  // Back to the first question in answer mode — ONLY when a genuinely different attempt/generation is adopted or a new
  // attempt starts. A same-attempt resync (timer/state refresh, clean draft adoption) never moves the student.
  const resetPager=useCallback(()=>{setPageIndex(0);setView("answer");setNavOpen(false)},[]);
@@ -658,8 +649,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // a button or chart click, or turn a textarea press into a selection (student/exam/keyboardReveal.ts).
  useEffect(()=>{
   if(screen!=="exam")return;
-  return installKeyboardReveal({doc:document,win:window,within:".iex-page,.iex-review",topBar:".iex-topbar",bottomBar:".iex-bottom-nav",reducedMotion:()=>reducedMotion});
- },[screen,reducedMotion]);
+  return installKeyboardReveal({doc:document,win:window,within:".iex-page,.iex-review",topBar:".iex-topbar",bottomBar:".iex-bottom-nav"});
+ },[screen]);
  // Phase 21E.3 — timer thresholds (5 min, 1 min): announced once per threshold per attempt identity, remembered per tab, from
  // the page's existing server-anchored remainingMs (read only; expiry and submission are untouched).
  const timerAttempt=timed&&hasActive&&!paused&&state?.activeAttempt?timerNoticeKey(assignment.assignmentId,Number(state.activeAttempt.attemptNumber),String(state.activeAttempt.startedAt||"")):"";
@@ -673,7 +664,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const key=timerAttempt+"|"+next.record.join(",");
   if(timerScheduledRef.current===key)return;
   timerScheduledRef.current=key;
-  const scheduled=announce(next.text,()=>{const d=readTimerNotices(timerAttempt);next.record.forEach(t=>d.add(t));writeTimerNotices(timerAttempt,d);timerScheduledRef.current=""});
+  const scheduled=announce(next.text,()=>{const d=readTimerNotices(timerAttempt);next.record.forEach(t=>d.add(t));writeTimerNotices(timerAttempt,d);timerScheduledRef.current=""},()=>{if(timerScheduledRef.current===key)timerScheduledRef.current=""});
   if(!scheduled)timerScheduledRef.current="";
  },[screen,timerAttempt,remainingMs,expired,announce]);
  // Phase 21E.3 — calm save announcements: only offline, failed-after-retries, and saved again after one of those.
@@ -842,7 +833,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // server-confirmed, nothing submitting, not strict — leaving a strict attempt ends it). Focus returns to the question heading.
  // Review fix 1: and only while online (a reload while offline would leave the exam for the offline page).
  const recovery:QuestionRecovery={scope:"exam",reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,reveal:revealElement,
-  focusAnchor:()=>{const h=questionHeadingRef.current;if(!h)return;h.focus({preventScroll:true});revealElement(h)}};
+  focusAnchor:()=>{const h=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;if(!h)return false;h.focus({preventScroll:true});revealElement(h);return true}};
  // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
  // one progress row with the SINGLE live save-status region, then the unchanged question rendering.
  return shell(<QuestionRecoveryContext.Provider value={recovery}><div className="iex-wrap">

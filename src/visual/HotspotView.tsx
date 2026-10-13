@@ -63,9 +63,10 @@ export default function HotspotView({ q, answer, onAnswer, disabled, labelPrefix
       {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the keyboard steps sit in an expandable guide for sighted users.
           Review fix 1: the image's accessible description points at an ALWAYS-PRESENT visually hidden copy of the steps —
           Chromium leaves the content of a closed <details> out of a description, and this overlay (role=application) is
-          learned from its description. */}
+          learned from its description. Review fix 2: the copy is aria-hidden — a node referenced by aria-describedby still
+          feeds the description, but browse mode no longer reads the steps a second time. */}
       <p className="vq-note" id={hintId}>{cfg.mode === "single" ? "انقر على الموضع المطلوب في الصورة." : "انقر على " + max + " مواضع في الصورة."}</p>
-      <span className="eb-visually-hidden" id={hintId + "-keys"}>{HOTSPOT_KEYS}</span>
+      <span className="eb-visually-hidden" id={hintId + "-keys"} aria-hidden="true">{HOTSPOT_KEYS}</span>
       <details className="vq-keyboard-guide"><summary>كيف أستخدم لوحة المفاتيح؟</summary>
         <p>{HOTSPOT_KEYS}</p>
       </details>

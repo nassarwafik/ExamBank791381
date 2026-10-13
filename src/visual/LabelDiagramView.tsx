@@ -42,9 +42,10 @@ export default function LabelDiagramView({ q, answer, onAnswer, disabled, labelP
     <div className="vq label-diagram-response" data-testid="label-diagram-response">
       {/* Phase 21E.3 (S-ST-NEW-3) — one short instruction; the other ways to answer sit in an expandable guide for sighted users.
           Review fix 1: the zones' description points at an ALWAYS-PRESENT visually hidden copy (a closed <details> is left out
-          of a description), and the steps follow the real Tab order (the zones come before the label bank). */}
+          of a description), and the steps follow the real Tab order (the zones come before the label bank). Review fix 2: the
+          copy is aria-hidden (still the zones' description; browse mode does not read it twice). */}
       <p className="vq-note" id={hintId}>اختر تسمية من البنك ثم اضغط على المنطقة المناسبة.</p>
-      <span className="eb-visually-hidden" id={hintId + "-keys"}>{LABEL_KEYS}</span>
+      <span className="eb-visually-hidden" id={hintId + "-keys"} aria-hidden="true">{LABEL_KEYS}</span>
       <details className="vq-keyboard-guide"><summary>كيف أستخدم لوحة المفاتيح؟</summary>
         <p>{LABEL_KEYS}</p>
       </details>

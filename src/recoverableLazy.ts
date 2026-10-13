@@ -44,7 +44,7 @@ export type RecoveryEnv = {
   importUrl: (url: string) => Promise<unknown>;
   fetchText: (url: string) => Promise<string>;
   /** Upper bounds (ms) of one source read, one recovery import and one stylesheet relink. */
-  timeouts?: { source?: number; import?: number; css?: number };
+  timeouts?: { source?: number; import?: number; css?: number; total?: number };
 };
 
 /** Chunks of the static student shell (index + StudentPortal + the exam page's own static closure) and engines that install
@@ -153,7 +153,8 @@ export function pickShared(ns: unknown): unknown {
     && (v as Record<symbol, unknown>)[Symbol.toStringTag] === "Module" && isComponent((v as { default?: unknown }).default));
   return hits.length === 1 ? (hits[0] as { default: unknown }).default : undefined;
 }
-const DEFAULT_TIMEOUTS = { source: 15000, import: 20000, css: 15000 };
+// `total` bounds all source reads of one recovery together (review fix 2): a chain of slow reads never holds the queue for long.
+const DEFAULT_TIMEOUTS = { source: 15000, import: 20000, css: 15000, total: 30000 };
 const within = <T,>(p: Promise<T>, ms: number, code: string): Promise<T> => new Promise<T>((resolve, reject) => {
   const t = setTimeout(() => reject(new Error(code)), ms);
   p.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
@@ -188,12 +189,13 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
   const newLinks = () => env.doc ? [...env.doc.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"],link[rel="stylesheet"]')] : [];
   // Vite inserts the modulepreload AND stylesheet links of a dynamic import synchronously, so the links that appear during the
   // factory call are exactly the modules / stylesheets first requested by this load; their load / error events have not fired yet.
-  const trackNew = (before: Set<HTMLLinkElement>) => {
+  const trackNew = (before: Set<HTMLLinkElement>, mine: Set<string>) => {
     for (const link of newLinks()) {
       if (before.has(link)) continue;
       const css = link.rel === "stylesheet";
       const url = trustedAssetUrl(link.getAttribute("href") || "", env, css ? "css" : "js");
       const states = css ? cssLinks : preloads;
+      if (url && css) mine.add(url);
       if (!url || states.has(url)) continue;
       states.set(url, "pending");
       link.addEventListener("load", () => states.set(url, "ok"), { once: true });
@@ -214,12 +216,14 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
     queue = run.catch(() => undefined);
     return run;
   };
-  /** Re-links every stylesheet of a failed load with a fresh URL and waits for all of them. Any that still fails (or times out)
-   *  fails the retry: its link is removed and the stylesheet stays recorded for the next retry. */
-  const relinkFailedCss = async () => {
+  /** Re-links every stylesheet THIS load failed on (review fix 2: never another question's — one stylesheet that stays down must
+   *  not block a different card's retry) with a fresh URL and waits for all of them. Any that still fails (or times out) fails
+   *  the retry: its link is removed and the stylesheet stays recorded for the next retry. */
+  const relinkFailedCss = async (own: Set<string>) => {
     const doc = env.doc;
-    if (!doc || !failedCss.size) return;
-    const results = await Promise.all([...failedCss].map(css => new Promise<boolean>(resolve => {
+    const mine = [...own].filter(css => failedCss.has(css));
+    if (!doc || !mine.length) return;
+    const results = await Promise.all(mine.map(css => new Promise<boolean>(resolve => {
       const link = doc.createElement("link");
       link.rel = "stylesheet";
       link.href = css + "?r=" + (++generation) + ".";
@@ -240,7 +244,7 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
     if (hit) return env.importUrl(hit);
     if (!env.doc) throw new Error("recovery-unavailable");
     const poisoned = (u: string) => preloads.get(u) === "failed" || failedEntries.has(u) || settled.has(u);
-    const set = await remapSet(entry, poisoned, u => settled.has(u), edgesOf);
+    const set = await within(remapSet(entry, poisoned, u => settled.has(u), edgesOf), limits.total, "recovery-timeout");
     if (set.some(u => NEVER_REMAP.has(assetName(u)))) throw new Error("recovery-refused");
     // A stalled earlier recovery may still evaluate these modules under its own generation: never start a second copy.
     if (set.some(u => inflight.has(u))) throw new Error("recovery-busy");
@@ -269,23 +273,27 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
   return {
     lazyComponent<P extends object>(chunkName: string, factory: () => Promise<{ default: ComponentType<P> }>, options: { shared?: boolean } = {}) {
       let entry: string | null = null, cached = false, attempts = 0, failed = false;
+      // The stylesheets this loader's own loads requested or named in their failure: its retry re-links those that failed (Vite
+      // rejects on the FIRST failing stylesheet; another one of the same load may report its error later).
+      const ownCss = new Set<string>();
       const original = (): Promise<unknown> => {
-        const before = new Set(newLinks());
+        const before = new Set(newLinks()), requested = new Set<string>();
         let p: Promise<unknown>;
         try { p = factory(); } catch (e) { p = Promise.reject(e); }
-        trackNew(before);
+        trackNew(before, requested);
+        for (const u of requested) ownCss.add(u);
         return p.catch((err: unknown) => {
           const e = failedEntryUrl(err, chunkName, env);
           if (e) { entry = e; cached = failureIsCached(err); if (!settled.has(e)) failedEntries.add(e); }
           const css = failedCssUrl(err, env);
-          if (css) failedCss.add(css);
+          if (css) { failedCss.add(css); ownCss.add(css); }
           throw err;
         });
       };
       const load = async (): Promise<{ default: ComponentType<P> }> => {
         attempts += 1;
         try {
-          if (attempts > 1) await relinkFailedCss();
+          if (attempts > 1) await relinkFailedCss(ownCss);
           let viaRemap = false;
           const mod = await original().catch((err: unknown) => {
             // A retry, or a first load in a page that already recovered modules this graph may share, takes the remapped

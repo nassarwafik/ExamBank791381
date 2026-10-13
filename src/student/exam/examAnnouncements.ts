@@ -17,6 +17,9 @@ export const TIMER_THRESHOLDS_MS = [300_000, 60_000] as const;
 export const ANNOUNCER_SETTLE_MS = 400;
 /** A delivered message is cleared after this long, so stale text is not found later in browse mode. */
 export const ANNOUNCEMENT_CLEAR_MS = 8_000;
+/** Review fix 2 — a message stays in the region at least this long before the next one replaces it (two messages written in the
+ *  same frame: the first is never heard, yet it would count as delivered). */
+export const ANNOUNCEMENT_GAP_MS = 1_500;
 /** A crossing observed within this margin of the threshold is announced as "N minutes remain"; later as "less than N". */
 const CROSSING_MARGIN_MS = 5_000;
 

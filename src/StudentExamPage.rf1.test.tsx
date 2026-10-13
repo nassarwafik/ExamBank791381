@@ -11,6 +11,8 @@
 //   RF1-P8  a failing review screen keeps the exam chrome and offers the way back to the questions                [#14]
 //   RF1-P9  online, but an answer the server has not confirmed: no reload after a failed retry                     [mutant P02]
 //   RF1-P10 a message is cleared from the announcer after a while (no stale text in browse mode)                   [#27]
+//   RF2-P1  review fix 2: a timer notice and a save notice of the same moment are both written, a gap apart       [RR-3]
+//   RF2-P2  review fix 2: a recovered review screen puts focus on its heading (never <body>)                       [RR-4]
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
@@ -248,5 +250,40 @@ describe("RF1-P9 — online, but an answer the server has not confirmed: no relo
     expect(navigator.onLine).toBe(true);
     expect(saveText()).not.toContain("تم الحفظ");
     expect(screen.queryByRole("button", { name: "إعادة تحميل الصفحة" })).toBeNull();
+  });
+});
+
+describe("RF2-P1 — two notices of the same moment are both written (re-review RR-3)", () => {
+  it("the timer threshold and the offline notice due together: each written, at least a second apart (never replaced in the same frame)", async () => {
+    const now = new Date().toISOString(), end = new Date(Date.now() + 200_000).toISOString();
+    stateBody = { ...baseState, timed: true, requiresStart: true, durationMinutes: 30, attemptModelVersion: 2, serverNow: now, canWrite: true, activeAttempt: { attemptNumber: 1, startedAt: now, endsAt: end, status: "started" }, effectiveAttemptEndsAt: end };
+    mount({ ...baseAssignment, durationMinutes: 30, requiresStart: true, timed: true });
+    await screen.findByText("ما هي عاصمة فلسطين؟");
+    const region = screen.getByTestId("exam-announcer"), writes: [number, string][] = [];
+    new MutationObserver(() => { if (region.textContent) writes.push([performance.now(), region.textContent]); }).observe(region, { childList: true, subtree: true });
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    act(() => { window.dispatchEvent(new Event("offline")); });
+    fireEvent.click(screen.getByRole("radio", { name: /القدس/ }));                // an edit that cannot reach the server
+    await waitFor(() => expect(writes.some(w => w[1].includes("انقطع الاتصال"))).toBe(true), { timeout: 5000 });
+    const timer = writes.find(w => w[1].includes("أقل من 5 دقائق")), offline = writes.find(w => w[1].includes("انقطع الاتصال"));
+    expect(timer).toBeTruthy();
+    expect(Math.abs(offline![0] - timer![0])).toBeGreaterThanOrEqual(1000);
+  });
+});
+
+describe("RF2-P2 — a recovered review screen puts focus on its heading (re-review, recovery RR-4)", () => {
+  it("«إعادة المحاولة» on the review card: the review returns and focus is on «مراجعة الإجابات», never <body>", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mount();
+    await screen.findByText("ما هي عاصمة فلسطين؟");
+    ctl.review = "throw";
+    while (screen.queryByRole("button", { name: "التالي" })) goNext();
+    fireEvent.click(screen.getByRole("button", { name: "مراجعة الإجابات" }));
+    await screen.findByTestId("question-recovery");
+    ctl.review = "ok";
+    const retry = screen.getByRole("button", { name: "إعادة المحاولة" });
+    retry.focus(); fireEvent.click(retry);
+    const heading = await screen.findByRole("heading", { name: "مراجعة الإجابات" });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 });

@@ -384,6 +384,10 @@
 .iex-q-recovery-actions .eb-button{ min-height:44px; }
 .iex-q-recovery.is-section, .iex-q-recovery.is-block{ padding:var(--eb-space-2) var(--eb-space-3); }
 /* Review fix 1 — the compact notice of a simplified rich stem / formula: the content stays, the notice says why, with a retry. */
+/* Review fix 2 — after a recovery focus lands on this quiet line (never on an answer control); it stays until another question
+   is shown, so nothing moves under the pointer when focus leaves it. */
+.iex-q-recovered{ margin:0 0 var(--eb-space-2); font-size:var(--eb-fs-13); color:var(--eb-muted); }
+.iex-q-recovered:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); border-radius:var(--eb-r-xs); }
 .iex-q-recovery-compact.is-stem{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .iex-q-recovery-note{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-2); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 .iex-q-recovery-compact.is-stem .iex-q-recovery-note{ padding:var(--eb-space-1) var(--eb-space-2); border-inline-start:3px solid var(--eb-warn); background:var(--eb-warn-bg); border-radius:var(--eb-r-xs); }

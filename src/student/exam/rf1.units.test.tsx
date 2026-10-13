@@ -50,8 +50,8 @@ describe("RF1-U1 — a retry that fails later never steals focus", () => {
   });
 });
 
-describe("RF1-U2 — after a successful retry focus follows the recovered part", () => {
-  it("outside the exam (no provider): focus lands on the recovered part's first control, not <body>", async () => {
+describe("RF1-U2 — after a successful retry focus follows the recovered part (review fix 2: onto its line, never an answer control)", () => {
+  it("outside the exam (no provider): focus lands on the «تم تحميل هذا الجزء.» line just before the recovered part — not <body>, not its input", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     let calls = 0;
     const Part = recoverableLazy<object>("UnitPartTwo", () => (++calls === 1 ? Promise.reject(chunkError("UnitPartTwo")) : Promise.resolve({ default: () => <label>البند 2 <input aria-label="إجابة البند 2" /></label> })) as Promise<{ default: ComponentType<object> }>);
@@ -60,7 +60,13 @@ describe("RF1-U2 — after a successful retry focus follows the recovered part",
     const retry = screen.getByRole("button", { name: "إعادة المحاولة" });
     retry.focus(); fireEvent.click(retry);
     const input = await screen.findByRole("textbox", { name: "إجابة البند 2" });
-    await waitFor(() => expect(document.activeElement).toBe(input));
+    await waitFor(() => expect(document.activeElement).not.toBe(document.body));
+    expect(document.activeElement).not.toBe(input);                                  // never the answer control itself
+    const line = await screen.findByTestId("recovery-landed");
+    await waitFor(() => expect(document.activeElement).toBe(line));
+    expect(line.textContent).toBe("تم تحميل هذا الجزء.");
+    expect(line.getAttribute("tabindex")).toBe("-1");
+    expect(line.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();   // the next Tab enters the part
   });
 });
 
@@ -72,7 +78,7 @@ describe("RF1-U3 — an exam-level card recovers focus onto its heading after th
     function Exam() {
       const heading = useRef<HTMLHeadingElement | null>(null);
       return (
-        <QuestionRecoveryContext.Provider value={{ scope: "exam", reloadAllowed: false, strict: false, focusAnchor: () => heading.current?.focus({ preventScroll: true }) }}>
+        <QuestionRecoveryContext.Provider value={{ scope: "exam", reloadAllowed: false, strict: false, focusAnchor: () => { const h = heading.current; if (!h) return false; h.focus({ preventScroll: true }); return true; } }}>
           <QuestionErrorBoundary variant="exam"><h2 tabIndex={-1} ref={heading}>السؤال 1 من 3</h2><Suspense fallback={null}><Surface /></Suspense></QuestionErrorBoundary>
         </QuestionRecoveryContext.Provider>
       );
@@ -167,6 +173,7 @@ describe("RF1-U8 — the label-diagram keyboard steps follow the real Tab order"
     expect(zone.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const keys = document.getElementById((zone.getAttribute("aria-describedby") || "").split(" ")[1]) as HTMLElement;
     expect(keys.textContent).toContain("Shift+Tab");
+    expect(keys.getAttribute("aria-hidden")).toBe("true");                          // review fix 2: described, not read twice in browse mode
     expect(keys.closest("details")).toBeNull();
   });
 });

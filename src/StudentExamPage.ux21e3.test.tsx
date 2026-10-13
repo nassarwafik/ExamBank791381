@@ -103,7 +103,7 @@ describe("21E.3 A — a failing question renderer never takes down the exam", ()
     expect(submits()).toBe(0);
   });
 
-  it("«إعادة المحاولة» renders the question again in place (no reload); focus moves into the recovered question", async () => {
+  it("«إعادة المحاولة» renders the question again in place (no reload); focus moves to the recovered question's line, never an answer control", async () => {
     ctl.mode = "throw";
     vi.spyOn(console, "error").mockImplementation(() => {});
     const reload = vi.fn();
@@ -119,8 +119,12 @@ describe("21E.3 A — a failing question renderer never takes down the exam", ()
     fireEvent.click(retry);
     const input = await screen.findByRole("textbox", { name: "الإجابة الرقمية" });
     expect(screen.queryByTestId("question-recovery")).toBeNull();
-    // Review fix 1: focus follows the recovered part (its first control), not the page heading far above it.
-    await waitFor(() => expect(document.activeElement).toBe(input));
+    // Review fix 1: focus follows the recovered part, not the page heading far above it. Review fix 2: onto the line the boundary
+    // renders just before it — never the answer control itself (the next ordinary key would record an answer).
+    await waitFor(() => expect(document.activeElement).not.toBe(document.body));
+    expect(document.activeElement).not.toBe(input);                                  // never the answer control itself
+    const line = await screen.findByTestId("recovery-landed");
+    await waitFor(() => expect(document.activeElement).toBe(line));
     fireEvent.change(input, { target: { value: "7" } });
     await waitFor(() => expect(saves()).toBe(savesBefore + 1));
     expect(reload).not.toHaveBeenCalled();
@@ -313,7 +317,8 @@ describe("21E.3 G — a control reached with the keyboard partly under the stick
     act(() => { ta.focus(); });
     await frame();
     expect(scrollBy).toHaveBeenCalledTimes(1);
-    expect(scrollBy).toHaveBeenCalledWith({ top: 912 - (818 - 8), left: 0, behavior: "smooth" });
+    // Review fix 2: instant even with normal motion — a smooth scroll kept moving the page under a press that followed the Tab.
+    expect(scrollBy).toHaveBeenCalledWith({ top: 912 - (818 - 8), left: 0, behavior: "auto" });
     fireEvent.change(ta, { target: { value: "شبكة" } });                          // typing: no further scrolling
     await frame();
     expect(scrollBy).toHaveBeenCalledTimes(1);

@@ -12,13 +12,19 @@ import { spawnSync } from "node:child_process";
 const RL = "src/recoverableLazy.ts", QEB = "src/student/exam/QuestionErrorBoundary.tsx", ANN = "src/student/exam/examAnnouncements.ts";
 const PAGE = "src/StudentExamPage.tsx", SAVE = "src/student/exam/SaveStatus.tsx", FIELD = "src/QuestionField.tsx", LAB = "src/physicsLab/LabScene.tsx";
 const CARD = "src/StudentQuestionCard.tsx", LTR = "src/ui/ltrIsland.ts", REVEAL = "src/student/exam/keyboardReveal.ts", BELL = "src/notifications/NotificationBell.tsx";
-const GUARD = "scripts/check-bundle-budget.mjs";
+const GUARD = "scripts/check-bundle-budget.mjs", ANNR = "src/student/exam/examAnnouncer.ts", PRES = "src/notifications/notificationPresentation.ts", CHART = "src/charts/DataChart.tsx";
+const HOT = "src/visual/HotspotView.tsx";
 const RT = ["src/recoverableLazy.21e3.test.tsx", "src/recoverableLazy.rf1.test.tsx"];
 const UNITS = ["src/student/exam/exam21e3.units.test.tsx", "src/student/exam/rf1.units.test.tsx"];
 const PAGE_T = ["src/StudentExamPage.ux21e3.test.tsx", "src/StudentExamPage.rf1.test.tsx"];
 const STEM_T = ["src/StudentQuestionCard.stem21e3.test.tsx", "src/StudentQuestionCard.stem.rf1.test.tsx", "src/richContent/RichContentRenderer.rf1.test.tsx"];
 const REVEAL_T = ["src/student/exam/keyboardReveal.rf1.test.tsx", "src/StudentExamPage.rf1.test.tsx"];
 const GUARD_T = ["scripts/check-bundle-budget.rf1.test.mjs"];
+// Review fix 2 suites.
+const ANN_T = ["src/student/exam/examAnnouncer.rf2.test.ts", "src/StudentExamPage.rf1.test.tsx"];
+const FOCUS_T = ["src/StudentQuestionCard.focus.rf2.test.tsx", "src/StudentQuestionCard.focus2.rf2.test.tsx", "src/student/exam/rf1.units.test.tsx", "src/StudentExamPage.ux21e3.test.tsx"];
+const RT2 = ["src/recoverableLazy.rf1.test.tsx", "src/recoverableLazy.rf2.test.tsx"];
+const BELL_T = ["src/notifications/NotificationBell.grade.rf2.test.tsx", "src/student/exam/exam21e3.units.test.tsx"];
 // `equivalent` (rare): the reason a mutant cannot change behaviour (AGENTS.md §9 "show the mutant is equivalent"). It is still
 // planted and run; if it survives it is reported as `equivalent` with that reason (never silently), and if it is killed the reason
 // was wrong and it counts as killed.
@@ -39,7 +45,7 @@ const mutants = [
   M("R11-never-remap-ignored", RL, 'if (set.some(u => NEVER_REMAP.has(assetName(u)))) throw new Error("recovery-refused");', "", RT),
   M("R12-no-original-first", RL, "const mod = await original().catch((err: unknown) => {", "const mod = await (attempts > 1 && entry ? (viaRemap = true, remapped(entry)) : original()).catch((err: unknown) => {", RT),
   M("R13-map-unscoped", RL, "for (const u of set) scopes[url(u)] = imports;", "for (const u of set) scopes[u] = imports;", RT),
-  M("R14-no-css-relink", RL, "if (attempts > 1) await relinkFailedCss();", "", RT),
+  M("R14-no-css-relink", RL, "if (attempts > 1) await relinkFailedCss(ownCss);", "", RT),
   M("R15-shape-unchecked", RL, 'if (!isComponent(component)) throw new Error("recovery-shape");', "", RT),
   M("R16-shared-no-pick", RL, "const component = viaRemap && options.shared ? pickShared(mod) : mod?.default;", "const component = mod?.default;", RT),
   // Review fix 1 — the runtime gaps the review found (each killed by a review-fix-1 test).
@@ -50,13 +56,20 @@ const mutants = [
   M("R21-no-import-bound", RL, 'return within(importing, limits.import, "recovery-timeout");', "return importing;", RT),
   M("R22-remap-any-browser", RL, "if (entry && cached && (attempts > 1 || settled.size > 0))", "if (entry && (attempts > 1 || settled.size > 0))", RT),
   M("R23-element-accepted", RL, "COMPONENT_TYPES.has((c as { $$typeof?: symbol }).$$typeof as symbol)", "true", RT),
+  // Review fix 2 — runtime.
+  M("R25-css-relink-page-wide", RL, "const mine = [...own].filter(css => failedCss.has(css));", "const mine = [...failedCss];", RT2),
+  M("R26-no-total-bound", RL, "const set = await within(remapSet(entry, poisoned, u => settled.has(u), edgesOf), limits.total, \"recovery-timeout\");", "const set = await remapSet(entry, poisoned, u => settled.has(u), edgesOf);", RT2),
+  M("R27-own-css-unrecorded", RL, "        for (const u of requested) ownCss.add(u);\n", "", RT2),
   M("R24-shared-pick-ambiguous", RL, "return hits.length === 1 ? (hits[0] as { default: unknown }).default : undefined;", "return hits.length >= 1 ? (hits[0] as { default: unknown }).default : undefined;", RT),
   // The recovery card.
   M("B01-retry-loads-nothing", QEB, "    const ok = await retryFailedLoads([...this.handles]);\n", "    const ok = true;\n", UNITS),
   M("B02-log-leaks", QEB, 'console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime" });', 'console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime", message: String((error as Error)?.message) });', [...UNITS, ...PAGE_T]),
   M("B03-reload-before-retry", QEB, "    if (this.state.retries === 0) return false;\n", "", PAGE_T),
-  M("B04-no-reset-on-new-question", QEB, "return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey } : null;", "return null;", UNITS),
-  M("B05-no-focus-follow", QEB, "if (this.restoreFocus) { this.restoreFocus = false; this.followRecoveredPart(this.token); }", "if (this.restoreFocus) { this.restoreFocus = false; }", [...PAGE_T, ...UNITS]),
+  M("B04-no-reset-on-new-question", QEB, "return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey, landed: false } : null;", "return null;", UNITS),
+  M("B05-no-focus-follow", QEB, "if (this.restoreFocus) { this.restoreFocus = false; this.placeFocusAfterRecovery(this.token); }", "if (this.restoreFocus) { this.restoreFocus = false; }", [...PAGE_T, ...UNITS]),
+  // Review fix 2 — focus after a recovery never lands on an answer control.
+  M("B13-focus-on-answer-control", QEB, "      line.focus({ preventScroll: true });\n", "      ((line.nextElementSibling?.querySelector('input,textarea,select,button,[tabindex]') as HTMLElement | null) ?? line).focus({ preventScroll: true });\n", FOCUS_T),
+  M("B14-no-landing-line", QEB, "landed: ok && this.restoreFocus && onCard && !this.anchored()", "landed: false", FOCUS_T),
   M("B06-stem-card-not-text", CARD, '<QuestionErrorBoundary resetKey={id} variant="stem" fallback={plain}>', "<QuestionErrorBoundary resetKey={id}>", STEM_T),
   M("B07-refocus-steals", QEB, "if (wasOnCard && (!active || active === document.body || active === document.documentElement)) this.retryRef.current?.focus();", "this.retryRef.current?.focus();", UNITS),
   M("B08-retry-every-loader", QEB, "    const ok = await retryFailedLoads([...this.handles]);\n", "    const ok = await retryFailedLoads();\n", UNITS),
@@ -75,13 +88,19 @@ const mutants = [
   M("P09-transition-smooth", PAGE, 'window.scrollTo({top:0,behavior:"auto"});\n   revealElement(el);', "window.scrollTo({top:0,behavior});\n   revealElement(el);", PAGE_T),
   M("P10-timer-off-screen", PAGE, 'if(screen!=="exam"||!timerAttempt||remainingMs===null||expired)return;', "if(!timerAttempt||remainingMs===null||expired)return;", PAGE_T,
     "defence in depth: the announcer is rendered only by the questions-screen return; every other screen returns earlier, so announce() returns false there and nothing is recorded (RF1-P5 covers the observable rule)"),
-  M("P12-announcer-never-cleared", PAGE, "window.setTimeout(()=>{if(node.firstChild===span)node.replaceChildren()},ANNOUNCEMENT_CLEAR_MS)", "void 0", PAGE_T),
-  M("P11-announcer-no-settle", PAGE, "if(wait>0)window.setTimeout(deliver,wait);else deliver();", "deliver();", PAGE_T),
+  M("P12-announcer-never-cleared", ANNR, "clock.setTimeout(() => { if (el.firstChild === span) el.replaceChildren(); }, ANNOUNCEMENT_CLEAR_MS);", "void 0;", ANN_T),
+  M("P11-announcer-no-settle", ANNR, "wait = Math.max(readyAt - t, last + ANNOUNCEMENT_GAP_MS - t);", "wait = last + ANNOUNCEMENT_GAP_MS - t;", ANN_T),
+  M("P13-announcer-no-gap", ANNR, "wait = Math.max(readyAt - t, last + ANNOUNCEMENT_GAP_MS - t);", "wait = readyAt - t;", ANN_T),
+  M("P14-announcer-drop-silent", ANNR, "dropped.forEach(m => m.onDropped?.());", "void dropped;", ANN_T),
+  M("P15-announcer-drop-delivered", ANNR, "dropped.forEach(m => m.onDropped?.());", "dropped.forEach(m => m.onDelivered?.());", ANN_T),
+  M("P16-review-anchor", PAGE, 'const h=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;if(!h)return false;', "const h=questionHeadingRef.current;if(!h)return false;", PAGE_T),
   // Keyboard-only reveal (the blockers).
   M("K01-reveal-pointer-focus", REVEAL, "if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS) return;", "if (!el) return;", REVEAL_T),
   M("K02-reveal-while-pointer-down", REVEAL, "if (!el || pointerDown || intent < 0", "if (!el || intent < 0", REVEAL_T),
   M("K03-reveal-any-key", REVEAL, "const onKey = (e: KeyboardEvent) => { if (NAV_KEYS.has(e.key)) keyAt = now(); };", "const onKey = () => { keyAt = now(); };", REVEAL_T),
   M("K04-reveal-not-consumed", REVEAL, "    keyAt = -1;                                                         // one key press explains at most one focus change\n", "", REVEAL_T),
+  M("K06-reveal-smooth", REVEAL, 'o.win.scrollBy({ top: d, left: 0, behavior: "auto" });', 'o.win.scrollBy({ top: d, left: 0, behavior: "smooth" });', [...REVEAL_T, "src/StudentExamPage.ux21e3.test.tsx"]),
+  M("K07-reveal-fixed-layer", REVEAL, 'if (o.win.getComputedStyle?.(n).position === "fixed") return;', "void n;", REVEAL_T),
   M("K05-reveal-no-frame-recheck", REVEAL, "if (pointerDown || pointerAt > intent || o.doc.activeElement !== el) return;", "", REVEAL_T),
   // Announcement rules.
   M("A01-timer-repeat", ANN, "const due = TIMER_THRESHOLDS_MS.filter(t => remainingMs <= t && !announced.has(t));", "const due = TIMER_THRESHOLDS_MS.filter(t => remainingMs <= t);", [...UNITS, ...PAGE_T]),
@@ -92,16 +111,22 @@ const mutants = [
   M("L01-cli-not-isolated", FIELD, '<pre className="iex-cli" dir="ltr">', '<pre className="iex-cli">', PAGE_T),
   M("L02-physics-title-ltr", LAB, ' direction="rtl" textAnchor="end">{conserved', '>{conserved', UNITS),
   M("L03-island-drops-bdi", LTR, 'out.push(createElement("bdi", { dir: "ltr", key: key++ }, m[0]));', "out.push(m[0]);", [...UNITS, "src/pwa/InstallAppCard.6a.test.tsx"]),
-  M("L04-grade-any-preview", BELL, 'item.type === "assignment_reviewed" ? isolateLtr(', "true ? isolateLtr(", UNITS),
+  M("L04-grade-any-preview", BELL, "view.grade ? isolateLtr(", "true ? isolateLtr(", BELL_T),
+  M("L06-grade-not-exposed", PRES, 'preview, icon: "review", grade };', 'preview, icon: "review" };', BELL_T),
+  M("V01-keys-read-twice", HOT, 'id={hintId + "-keys"} aria-hidden="true">', 'id={hintId + "-keys"}>', UNITS),
+  M("D01-chart-reload-in-exam", CHART, 'const inExam = useContext(QuestionRecoveryContext).scope === "exam";', "const inExam = (useContext(QuestionRecoveryContext), false);", ["src/charts/DataChartRetry.rf2.test.tsx", "src/charts/DataChartRetry.21a1.test.tsx"]),
   M("L05-grade-unbounded", LTR, "export const GRADE_LTR = /(?<![\\d/]|\\d\\.)\\d+(?:\\.\\d+)?\\s*\\/\\s*\\d+(?:\\.\\d+)?(?![\\d/]|\\.\\d)/g;", "export const GRADE_LTR = /\\d+(?:\\.\\d+)?\\s*\\/\\s*\\d+(?:\\.\\d+)?/g;", UNITS),
   // The build guard (review fix 1).
   M("G01-guard-name-unchecked", GUARD, "if (base !== d[3]) failures.push(", "if (false) failures.push(", GUARD_T),
   M("G02-guard-neverremap-unread", GUARD, "if (neverRemap.includes(name)) failures.push(", "if (false) failures.push(", GUARD_T),
+  M("G04-guard-alias-unchecked", GUARD, "for (const r of line.matchAll(RECOVERY_REFERENCE)) failures.push(", "for (const r of []) failures.push(", GUARD_T),
+  M("G05-guard-symlink-skip", GUARD, "realOf(path.resolve(process.argv[1])) === realOf(fileURLToPath(import.meta.url))", "path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)", GUARD_T),
   M("G03-guard-no-minimum", GUARD, "if (decls.length < MIN_RECOVERABLE_DECLARATIONS) failures.push(", "if (false) failures.push(", GUARD_T),
 ];
 
 const sha = s => crypto.createHash("sha256").update(s).digest("hex"), files = [...new Set(mutants.map(m => m.file))];
-const BACKUP = path.join(os.tmpdir(), "exambank-21e3-mutation-backup.json");
+// One backup per checkout (review fix 2): a run in one worktree never "restores" another worktree's stale backup.
+const BACKUP = path.join(os.tmpdir(), "exambank-21e3-mutation-backup-" + sha(fs.realpathSync(process.cwd())).slice(0, 12) + ".json");
 if (fs.existsSync(BACKUP)) { const stale = JSON.parse(fs.readFileSync(BACKUP, "utf8")); for (const [file, contents] of Object.entries(stale)) fs.writeFileSync(file, contents, "utf8"); fs.rmSync(BACKUP, { force: true }); console.log("21E3_MUTATION_RESTORED_STALE_BACKUP"); }
 if (process.argv.includes("--restore")) process.exit(0);
 const only = (process.env.ONLY || "").split(",").filter(Boolean);

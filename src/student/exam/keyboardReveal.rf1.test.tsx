@@ -19,7 +19,7 @@ describe("keyboardReveal", () => {
     ta.getBoundingClientRect = () => ({ top: 772, bottom: 912 }) as DOMRect;
     (document.querySelector(".iex-topbar") as HTMLElement).getBoundingClientRect = () => ({ top: 0, bottom: 64 }) as DOMRect;
     (document.querySelector(".iex-bottom-nav") as HTMLElement).getBoundingClientRect = () => ({ top: 818, bottom: 900 }) as DOMRect;
-    const off = installKeyboardReveal({ doc: document, win, within: ".iex-page", topBar: ".iex-topbar", bottomBar: ".iex-bottom-nav", reducedMotion: () => true });
+    const off = installKeyboardReveal({ doc: document, win, within: ".iex-page", topBar: ".iex-topbar", bottomBar: ".iex-bottom-nav" });
     const tick = () => new Promise(r => setTimeout(r, 5));
     document.dispatchEvent(new Event("pointerdown")); ta.focus(); await tick(); document.dispatchEvent(new Event("pointerup")); ta.blur();
     expect(scrollBy).not.toHaveBeenCalled();                                         // pointer focus
@@ -43,8 +43,8 @@ describe("keyboardReveal", () => {
     ta.getBoundingClientRect = () => ({ top: 772, bottom: 912 }) as DOMRect;
     (document.querySelector(".iex-topbar") as HTMLElement).getBoundingClientRect = () => ({ top: 0, bottom: 64 }) as DOMRect;
     (document.querySelector(".iex-bottom-nav") as HTMLElement).getBoundingClientRect = () => ({ top: 818, bottom: 900 }) as DOMRect;
-    const off = installKeyboardReveal({ doc: document, win, within: ".iex-page", topBar: ".iex-topbar", bottomBar: ".iex-bottom-nav", reducedMotion: () => true });
-    return { ta, scrollBy, clock, off, tick: () => new Promise(r => setTimeout(r, 5)) };
+    const off = installKeyboardReveal({ doc: document, win, within: ".iex-page", topBar: ".iex-topbar", bottomBar: ".iex-bottom-nav" });
+    return { ta, scrollBy, clock, off, win, tick: () => new Promise(r => setTimeout(r, 5)) };
   };
   const tab = () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab" }));
   it("focus-time guard: a programmatic focus with no key at all, or after a stale key press, never scrolls", async () => {
@@ -70,6 +70,21 @@ describe("keyboardReveal", () => {
     const a = fresh();
     a.clock.t = 10; tab(); a.ta.focus(); a.ta.blur();
     await a.tick();
+    expect(a.scrollBy).not.toHaveBeenCalled();
+    a.off();
+  });
+  it("review fix 2: the scroll is instant (a smooth scroll would move the page under a press that follows the Tab)", async () => {
+    const a = fresh();
+    a.clock.t = 10; tab(); a.ta.focus(); await a.tick();
+    expect(a.scrollBy).toHaveBeenCalledWith({ top: 102, left: 0, behavior: "auto" });
+    a.off();
+  });
+  it("review fix 2: nothing is revealed inside a fixed-position layer (a full-screen editor covers the bars)", async () => {
+    const a = fresh();
+    const layer = document.createElement("div"); layer.style.position = "fixed";
+    document.querySelector(".iex-page")!.appendChild(layer); layer.appendChild(a.ta);
+    (a.win as unknown as { getComputedStyle: typeof getComputedStyle }).getComputedStyle = (n: Element) => window.getComputedStyle(n);
+    a.clock.t = 10; tab(); a.ta.focus(); await a.tick();
     expect(a.scrollBy).not.toHaveBeenCalled();
     a.off();
   });

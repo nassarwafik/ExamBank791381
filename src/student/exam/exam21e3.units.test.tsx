@@ -108,7 +108,7 @@ describe("LTR islands (S-6) — markup only, the text itself unchanged", () => {
   it("the notification grade, the install brand and the physics energy title are isolated in their components", () => {
     const bell = fs.readFileSync(path.join(repo, "src/notifications/NotificationBell.tsx"), "utf8");
     // Review fix 1: only a grade notification, and only its last standalone x/y (the grade the app composes).
-    expect(bell).toMatch(/item\.type === "assignment_reviewed" \? isolateLtr\(view\.preview, GRADE_LTR, \{ lastOnly: true \}\) : view\.preview/);
+    expect(bell).toMatch(/view\.grade \? isolateLtr\(view\.preview, GRADE_LTR, \{ lastOnly: true \}\) : view\.preview/);   // review fix 2: only a composed grade
     // Outside comments, every «Tadris+» the install card / entry renders sits in its own <bdi dir="ltr">.
     const code = (f: string) => fs.readFileSync(path.join(repo, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     for (const f of ["src/pwa/InstallAppCard.tsx", "src/pwa/InstallAppEntry.tsx"]) {
@@ -163,5 +163,6 @@ describe("visual questions — one short instruction, the keyboard steps in an e
     // Review fix 1: the description never points INTO the closed guide (Chromium drops a closed <details>' content from it).
     expect(keys.closest("details")).toBeNull();
     expect(keys.className).toContain("eb-visually-hidden");
+    expect(keys.getAttribute("aria-hidden")).toBe("true");                          // review fix 2: still the description; not read twice in browse mode
   });
 });
