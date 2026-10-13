@@ -11,6 +11,28 @@
 .smartsim-readonly{font-size:12.5px;color:var(--muted,#64748b)}
 .smartsim-debug{border:1px dashed var(--line2,#cdd5e0);border-radius:12px;padding:8px 12px;font-size:13px}
 .smartsim-debug pre{margin:8px 0 0;max-height:220px;overflow:auto;font-size:12px;background:var(--surface2,#f4f6fa);border-radius:8px;padding:8px;text-align:left}
+/* ============================================================================================================================
+   Phase 21E — Premium SmartSim host chrome (student + preview). Presentation only: the sandboxed iframe, its src, sandbox flags, height
+   handshake, saved state and every message to / from the simulator are unchanged. Token-only, RTL, ≥ 44 px, focus, reduced motion.
+   The simulator's own interior belongs to its package (sandboxed); only the frame around it is styled here.
+   ============================================================================================================================ */
+.smartsim-host{gap:var(--eb-space-2)}
+.smartsim-frame{border:1px solid var(--eb-line-2);border-radius:var(--eb-r-xl);background:var(--eb-surface);box-shadow:var(--eb-sh-sm)}
+.smartsim-host.is-disabled .smartsim-frame{opacity:1;background:var(--eb-surface-2);box-shadow:none}
+.smartsim-loading{display:inline-flex;align-items:center;gap:var(--eb-space-2);align-self:flex-start;padding:var(--eb-space-2) var(--eb-space-4);
+  border-radius:var(--eb-pill);background:var(--eb-primary-050);color:var(--eb-primary-strong);font-size:var(--eb-fs-13);font-weight:var(--eb-fw-semibold)}
+.smartsim-loading::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--eb-primary);animation:smartsim-pulse 1.2s ease-in-out infinite}
+@keyframes smartsim-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+.smartsim-error{gap:var(--eb-space-3);padding:var(--eb-space-3) var(--eb-space-4);border:1px solid var(--eb-danger-bg);border-inline-start:4px solid var(--eb-danger);
+  border-radius:var(--eb-r-lg);background:var(--eb-danger-bg);color:var(--eb-ink)}
+.smartsim-error p{color:var(--eb-ink);font-size:var(--eb-fs-14);font-weight:var(--eb-fw-semibold);line-height:var(--eb-lh-body)}
+.smartsim-error-code{color:var(--eb-muted);font-weight:var(--eb-fw-regular)}
+.smartsim-controls{gap:var(--eb-space-2)}
+.smartsim-controls .eb-button,.smartsim-error .eb-button{min-height:44px}
+.smartsim-readonly{display:inline-flex;align-items:center;min-height:28px;padding:0 var(--eb-space-3);border-radius:var(--eb-pill);background:var(--eb-surface-2);
+  border:1px solid var(--eb-line-2);color:var(--eb-muted);font-size:var(--eb-fs-12);font-weight:var(--eb-fw-semibold)}
+@media (prefers-reduced-motion:reduce){.smartsim-loading::before{animation:none;opacity:1}}
+@media (forced-colors:active){.smartsim-error{border-inline-start-color:CanvasText}.smartsim-loading::before{forced-color-adjust:none;background:CanvasText}}
 /* editor */
 .qt-simulation{display:flex;flex-direction:column;gap:12px;min-width:0}
 .smartsim-selected{display:grid;gap:4px;border:1px solid var(--line,#e5e9f0);border-radius:12px;padding:10px 12px;background:var(--surface2,#f4f6fa)}
