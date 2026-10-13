@@ -84,7 +84,7 @@ const mutants = [
   M("B13-focus-on-answer-control", QEB, "      line.focus({ preventScroll: true });\n", "      ((line.nextElementSibling?.querySelector('input,textarea,select,button,[tabindex]') as HTMLElement | null) ?? line).focus({ preventScroll: true });\n", FOCUS_T),
   M("B14-no-landing-line", QEB, "landed: ok && this.restoreFocus && onCard && !this.anchored()", "landed: false", FOCUS_T),
   // Review fix 3 — nothing scrolls after a recovery; the line leaves the name; moved focus is never taken.
-  M("B15-line-scrolled-into-view", QEB, "      line.focus({ preventScroll: true });\n      return;", "      line.focus({ preventScroll: true });\n      line.scrollIntoView?.({ block: \"nearest\" });\n      return;", RF3_T),
+  M("B15-line-scrolled-into-view", QEB, "      this.revealFocused(line);\n      return;", "      this.revealFocused(line);\n      line.scrollIntoView?.({ block: \"nearest\" });\n      return;", RF3_T),
   M("B16-line-focus-scrolls", QEB, "      line.focus({ preventScroll: true });\n", "      line.focus();\n", RF3_T),
   M("B17-line-stays-in-name", QEB, '"aria-hidden": quiet || undefined', '"aria-hidden": undefined', RF3_T),
   M("B18-line-never-quiet", QEB, "onBlur: () => { if (!this.state.quiet) this.setState({ quiet: true }); }", "onBlur: () => {}", RF3_T),
