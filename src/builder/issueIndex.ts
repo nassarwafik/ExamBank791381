@@ -55,6 +55,16 @@ export function issueTargets(index: IssueIndex, sections: readonly SectionShape[
   return out;
 }
 
+/**
+ * RF2-1 — which occurrence of its code an issue is among its question's issues (1-based, in the canonical order the index keeps).
+ * The canonical issue names no row: a rule that fires per row emits one issue per row, in row order, so the n-th
+ * MATCH_INCOMPLETE_PAIR of a question is its n-th incomplete pair — the number the field mapping gives that pair's frames
+ * (teacher/questionFieldIssues → Field `issueNth` → data-issue-nth). A code a question has once is occurrence 1.
+ */
+export function issueOccurrence(issue: StructuredIssue, questionIssues: readonly StructuredIssue[]): number {
+  return Math.max(1, questionIssues.filter(i => i.code === issue.code).indexOf(issue) + 1);
+}
+
 /** The one polite summary sentence announced when the counts change (never per keystroke: see useIssueAnnouncer). */
 export function issueSummaryText(errors: number, warnings: number): string {
   if (!errors && !warnings) return "لا توجد مشكلات في الامتحان.";

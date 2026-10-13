@@ -82,12 +82,13 @@ function FramedLegacyEditor({ node, type, onChange, disabled }: { node: Question
     return (
       <FieldGroup legend="أزواج المطابقة" className="sb-matching" help="لكل عنصر في العمود الأول، اكتب إجابته الصحيحة من العمود الثاني. تُعرض كل الإجابات كقائمة منسدلة للطالب." error={issues.list} issueCode={MATCHING_FIELD_CODES.list}>{() => (<>
         {/* touchKey = the list length: adding or deleting a pair resets every pair's "already visited" state, so one pair's state
-            never moves onto another pair (rows stay mounted, so keyboard focus stays where the legacy editor kept it). */}
+            never moves onto another pair (rows stay mounted, so keyboard focus stays where the legacy editor kept it).
+            issueNth (RF2-1) = which MATCH_INCOMPLETE_PAIR this pair shows, from the same mapping as its messages. */}
         {list.map((p, i) => (
           <div className="sb-field-row" key={i}>
-            <Field label={"العنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.left} issueCode={MATCHING_FIELD_CODES.pair} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.left} placeholder="العنصر" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, left: e.target.value } : x)))} disabled={disabled} />}</Field>
+            <Field label={"العنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.left} issueCode={MATCHING_FIELD_CODES.pair} issueNth={issues.pairs[i]?.nth} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.left} placeholder="العنصر" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, left: e.target.value } : x)))} disabled={disabled} />}</Field>
             <span className="sb-arrow" aria-hidden="true">←</span>
-            <Field label={"الإجابة الصحيحة للعنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.right} issueCode={MATCHING_FIELD_CODES.pair} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.right} placeholder="الإجابة الصحيحة" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, right: e.target.value } : x)))} disabled={disabled} />}</Field>
+            <Field label={"الإجابة الصحيحة للعنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.right} issueCode={MATCHING_FIELD_CODES.pair} issueNth={issues.pairs[i]?.nth} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.right} placeholder="الإجابة الصحيحة" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, right: e.target.value } : x)))} disabled={disabled} />}</Field>
             {list.length > 1 && <button type="button" className="sb-icon-btn sb-danger" title={"حذف الزوج " + (i + 1)} aria-label={"حذف الزوج " + (i + 1)} onClick={() => apply(list.filter((_, k) => k !== i))} disabled={disabled}>×</button>}
           </div>
         ))}
