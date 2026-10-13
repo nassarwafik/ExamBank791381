@@ -112,7 +112,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const failureSentRef=useRef(false);
  const failureField=useCallback(():{renderFailures?:RenderFailureReport[]}=>{const r=failureReportRef.current;if(!r.length&&!failureSentRef.current)return {};failureSentRef.current=r.length>0;return {renderFailures:r}},[]);
  const failedIds=useMemo(()=>failedQuestionIds(renderFailures),[renderFailures]);
- const failureSyncRef=useRef("");   // the report last handed to the server by the sync below ("" = none)
+ const failureSyncRef=useRef("");   // the report the server CONFIRMED last (set only by a successful save — Review Fix 4, P1); "" = none
+ const reportKey=(r:RenderFailureReport[])=>r.map(f=>f.questionId+":"+f.code).join("|");
  // A new exam body (a started / resumed attempt) or a next legacy attempt renders every question afresh: the record starts empty
  // (a card that fails again reports again) and the server bookkeeping of the report restarts with it.
  const resetRenderFailures=useCallback(()=>{setRenderFailures(EMPTY_RENDER_FAILURES);failureSyncRef.current="";failureSentRef.current=false},[]);
@@ -223,12 +224,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
     if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return}
     if(mountedRef.current){setSaving(true);setRetrying(false)} // B1: SAVING = a request is actually in flight
     try{
+     const sentKey=reportKey(failureReportRef.current);
      const resp=await api<{savedAt?:string}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...failureField(),...identity})});
      // STALE-SUCCESS GUARD: if the context changed while this request was in flight (another tab started a new
      // attempt / this one closed), this 200 belongs to the OLD attempt — never advance savedRevision or claim
      // a saved time for the new context. The server-side guard already refused any real cross-attempt write.
      if(epoch!==saveEpoch.current)return;
-     savedRevision.current=Math.max(savedRevision.current,myRevision);
+     savedRevision.current=Math.max(savedRevision.current,myRevision);failureSyncRef.current=sentKey;
      // SERVER-authoritative saved time (#3): use response.savedAt, never Date.now().
      if(mountedRef.current){if(resp&&resp.savedAt)setLastSavedAt(String(resp.savedAt));setSaveFailed(false);setSaveError(false);setRetrying(false);setError("");setDirty(revision.current>savedRevision.current)}
      return;
@@ -297,7 +299,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Phase 21E.3 — when the set of unavailable questions changes (a card failed, recovered, or the student moved on), the server's draft
  // record follows shortly: one ordinary saveDraft of the CURRENT snapshot (the same revision — never a new edit), so a time-out, a
  // strict exit or a teacher end grades the saved draft WITH the report. A pending edit's save carries it anyway (the body reads the ref).
- const failureKey=useMemo(()=>failureReport.map(f=>f.questionId+":"+f.code).join("|"),[failureReport]);
+ const failureKey=useMemo(()=>reportKey(failureReport),[failureReport]);
  const saveSnapshotRef=useRef(saveDraftSnapshot);
  useEffect(()=>{saveSnapshotRef.current=saveDraftSnapshot});
  useEffect(()=>{
@@ -305,7 +307,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(failureSyncRef.current===failureKey)return;
   const t=window.setTimeout(()=>{
    if(submittingRef.current||!mountedRef.current)return;
-   failureSyncRef.current=failureKey;
+   // Review Fix 4 (P1): never marked synced here — only a CONFIRMED save sets failureSyncRef; a save skipped offline or exhausted is
+   // retried by the reconnect / manual-retry path (recoverAndSave) exactly like unsaved answers.
    const myRevision=revision.current,snapshot=answersRef.current,ctx=attemptId(stateRef.current),epoch=saveEpoch.current,save=saveSnapshotRef.current;
    saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>save(snapshot,myRevision,ctx,epoch));
   },1200);
@@ -378,7 +381,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(!mountedRef.current||submittingRef.current)return;
   const st=await resync();
   if(!st)return;                                   // resync failed → never act on stale state
-  if(revision.current<=savedRevision.current)return; // nothing unsaved
+  if(revision.current<=savedRevision.current&&failureSyncRef.current===reportKey(failureReportRef.current))return; // nothing unsaved (answers or report)
   const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;
   // MODERN: only save when the SAME live attempt is still writable (identity match). LEGACY: activeAttempt may
   // be null (server creates it lazily on the first saveDraft), so gate on canWrite + the SAME generation
@@ -478,7 +481,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   finalizingRef.current=true;setExpired(true);submittingRef.current=true;
   try{
    await saveQueue.current.catch(()=>{});
-   const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeTimedOutAttempt"})});
+   const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeTimedOutAttempt",...failureField()})});
    // Adopt the authoritative CLOSED/finalized state through the SHARED hydration path: invalidate the save
    // context (epoch bump), cancel any pending autosave debounce, reset revision/savedRevision/dirtyAttempt/
    // dirtyGeneration and save flags, and take the server's finalized draft (NEVER upload post-deadline local
@@ -534,7 +537,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   exitSentRef.current=true;rememberStrictExit(assignment.assignmentId,ctx);
   if(mountedRef.current)setStrictEnded(true);
   // The page's single authenticated submission client, with keepalive so the request outlives the page.
-  void api<{result?:Result|null;state?:State}>({method:"POST",keepalive:true,body:JSON.stringify({action:"finalizeIntegrityExit",...identityOf(ctx)})})
+  void api<{result?:Result|null;state?:State}>({method:"POST",keepalive:true,body:JSON.stringify({action:"finalizeIntegrityExit",...failureField(),...identityOf(ctx)})})
    .then(j=>{clearStrictExit(assignment.assignmentId);if(mountedRef.current&&j.state){applyServerAttemptState(j.state);setResult(j.result||j.state.latestResult);setStarted(false)}})
    .catch(e=>{if(e instanceof ApiError&&e.status===409)clearStrictExit(assignment.assignmentId)/* else: best effort — completed on return (confirmStrictExit) */});
  }
@@ -544,7 +547,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(!ctx)return;
   exitSentRef.current=true;if(mountedRef.current)setStrictEnded(true);
   try{
-   const r=await api<{result:Result|null;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeIntegrityExit",...identityOf(ctx)})});
+   const r=await api<{result:Result|null;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeIntegrityExit",...failureField(),...identityOf(ctx)})});
    clearStrictExit(assignment.assignmentId);
    if(mountedRef.current){applyServerAttemptState(r.state);setResult(r.result||r.state.latestResult);setStarted(false);setError("")}
   }catch(e){

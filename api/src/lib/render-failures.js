@@ -47,12 +47,19 @@ function draftRenderFailuresPatch(doc, failures) {
 
 // A question in a firstNAnswered section is held only while the quota is NOT met: with N counted answers already in the section the
 // unseen question could not have changed the score (excess answers are ignored by design), so there is nothing for a teacher to award.
-function quotaOpen(norm, questionId, answers) {
+// Review Fix 4 (P2): the open slots are CONSUMED by the holds themselves — at most (requiredAnswers − counted) reported questions are held,
+// in exam order — so a report can never inflate a section's maximum beyond the slots the student could have filled.
+function quotaOpen(norm, questionId, answers, slots) {
   for (const section of norm.sections) {
     const ids = section.questions.map((q, i) => sectionQuestionId(section, q, i));
     if (!ids.includes(questionId)) continue;
     if (section.gradingPolicy !== "firstNAnswered" || section.requiredAnswers == null) return true;
-    return selectGradedUnits(section, answers).countedKeys.size < section.requiredAnswers;
+    const key = String(section.id);
+    if (!slots.has(key)) slots.set(key, Math.max(0, Number(section.requiredAnswers) - selectGradedUnits(section, answers).countedKeys.size));
+    const open = slots.get(key);
+    if (!(open > 0)) return false;
+    slots.set(key, open - 1);
+    return true;
   }
   return false;
 }
@@ -81,12 +88,12 @@ function applyRenderFailureHolds(grade, failures, answers, exam, nowIso) {
   const norm = normalizeExamStructure(exam);
   const record = {};
   let heldAny = false;
-  const sectionDelta = new Map();
+  const sectionDelta = new Map(), slots = new Map();
   for (const f of failures) {
     const q = byId.get(f.questionId), g = grade.questions.find(x => isObj(x) && String(x.questionId) === f.questionId);
     if (!q || !g) continue;
     const answered = isAdmittedAnswered(q, answers ? answers[f.questionId] : undefined);
-    const held = !answered && Number(g.maxMarks) > 0 && quotaOpen(norm, f.questionId, answers || {});
+    const held = !answered && Number(g.maxMarks) > 0 && quotaOpen(norm, f.questionId, answers || {}, slots);
     setOwn(record, f.questionId, { code: f.code, held, reportedAt });
     if (!held) continue;
     const before = effectiveMaxMarks(g);

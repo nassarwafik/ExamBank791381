@@ -294,3 +294,44 @@ describe("structured exams — first-N sections", () => {
     expect(a2.renderFailures.q2.held).toBe(false);
   });
 });
+
+describe("Review Fix 4 — P1 / P2 of the independent review of 0546504", () => {
+  it("P1: a report the client could not persist earlier is accepted on the finalize actions themselves (toward the teacher only)", async () => {
+    const aid = await create({ durationMinutes: 30 });
+    const st = await start(aid);
+    expect((await sub(aid, { action: "saveDraft", answers: { q1: A1 }, ...idOf(st) })).status).toBe(200);   // offline-lost report: nothing recorded
+    expect(doc(aid).draftRenderFailures).toBeUndefined();
+    at(T0 + 31 * MIN);
+    const f = await sub(aid, { action: "finalizeTimedOutAttempt", renderFailures: FAIL_Q2 });
+    expect(f.status, JSON.stringify(f.jsonBody)).toBe(200);
+    const a1 = doc(aid).attempts[0];
+    expect(gradeOf(a1, "q2")).toMatchObject({ score: 0, manualReview: true, technicalFailure: { code: "chunk-load" } });
+    expect(a1.finalized).toBe(false);
+    // the strict exit likewise; and a report on an answered question still changes nothing
+    const aidStrict = await create({ attemptPolicy: "strict" });
+    const st2 = await start(aidStrict);
+    expect((await sub(aidStrict, { action: "saveDraft", answers: { q1: A1, q2: A2 }, ...idOf(st2) })).status).toBe(200);
+    const x = await sub(aidStrict, { action: "finalizeIntegrityExit", renderFailures: [{ questionId: "q2", code: "runtime" }, { questionId: "q3", code: "runtime" }], ...idOf(st2) });
+    expect(x.status, JSON.stringify(x.jsonBody)).toBe(200);
+    const a2 = doc(aidStrict).attempts[0];
+    expect(gradeOf(a2, "q2")).toMatchObject({ score: 2, manualReview: false });
+    expect(gradeOf(a2, "q3")).toMatchObject({ score: 0, manualReview: true, technicalFailure: { code: "runtime" } });
+    expect(a2.finalized).toBe(false);
+  });
+
+  it("P2: holds are bounded by the open first-N slots and never inflate a derived section maximum", async () => {
+    const NO_MAX = { sections: [{ id: "s1", title: "اختر 2 من 3", gradingPolicy: "firstNAnswered", requiredAnswers: 2, questions: EXAM.questions }] };
+    const aid = await create({ examSnapshot: NO_MAX });
+    const st = await start(aid);
+    const r = await sub(aid, { action: "submit", answers: { q1: A1 }, renderFailures: [{ questionId: "q2", code: "chunk-load" }, { questionId: "q3", code: "chunk-load" }], ...idOf(st) });
+    expect(r.status, JSON.stringify(r.jsonBody)).toBe(200);
+    const attempt = doc(aid).attempts[0];
+    expect(gradeOf(attempt, "q2")).toMatchObject({ manualReview: true, countedMaxMarks: 2 });   // the ONE open slot, in exam order
+    expect(gradeOf(attempt, "q3")).toMatchObject({ manualReview: false, countedMaxMarks: 0 });
+    expect(attempt.renderFailures.q3.held).toBe(false);
+    expect(attempt.manualReviewMarks).toBe(2);
+    expect(attempt.totalMarks).toBe(4);                                              // 2 answered-or-held slots × 2 marks, never 6
+    const s = await review(aid, { overrides: { q2: { score: 0, comment: "" } } });
+    expect(s.jsonBody.result).toMatchObject({ finalized: true, score: 2, totalMarks: 4 });
+  });
+});

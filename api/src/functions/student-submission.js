@@ -253,7 +253,7 @@ async function handler(request,deps={},obs=null){
      if(!ts.attemptExpired){const err=new Error("لم تنتهِ مدة المحاولة بعد.");err.httpStatus=409;throw err}
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(a.examSnapshot,serverAnswers,parametricGenerationContext(id,student.userId,active.attemptNumber)),now=new Date().toISOString();
-     const holds=applyRenderFailureHolds(g,normalizeRenderFailures(doc.draftRenderFailures,a.examSnapshot||null),serverAnswers,a.examSnapshot,now);   // 21E.3 — the record saved with the draft
+     const holds=applyRenderFailureHolds(g,normalizeRenderFailures(b.renderFailures!==undefined?b.renderFailures:doc.draftRenderFailures,a.examSnapshot||null),serverAnswers,a.examSnapshot,now);   // 21E.3 — the record saved with the draft; Review Fix 4 (P1): the finalizing client's own report wins (a report the autosave could not persist offline), verified the same way — toward the teacher only, never an answer
      // Audit (B2A #12 / B2B #17): endReason "timedOut"; endedAt = the AUTHORITATIVE effective deadline
      // (teacher-extended duration OR due-clipped — ts.effectiveAttemptEndsAt already accounts for
      // extendedEndsAt), NOT this offline finalization moment. submittedAt stays the real server
@@ -381,7 +381,7 @@ async function handler(request,deps={},obs=null){
      const nowMs=Date.now(),ts=timerState(a,doc,nowMs),now=new Date(nowMs).toISOString();
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(a.examSnapshot,serverAnswers,parametricGenerationContext(id,student.userId,active.attemptNumber)),timedOut=!!ts.attemptExpired;
-     const holds=applyRenderFailureHolds(g,normalizeRenderFailures(doc.draftRenderFailures,a.examSnapshot||null),serverAnswers,a.examSnapshot,now);   // 21E.3 — the record saved with the draft
+     const holds=applyRenderFailureHolds(g,normalizeRenderFailures(b.renderFailures!==undefined?b.renderFailures:doc.draftRenderFailures,a.examSnapshot||null),serverAnswers,a.examSnapshot,now);   // 21E.3 — the record saved with the draft; Review Fix 4 (P1): the finalizing client's own report wins (a report the autosave could not persist offline), verified the same way — toward the teacher only, never an answer
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:timedOut?(ts.effectiveAttemptEndsAt||now):now,endReason:timedOut?"timedOut":"integrityExit",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{})};
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);

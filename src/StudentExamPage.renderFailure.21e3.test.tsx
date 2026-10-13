@@ -142,3 +142,22 @@ describe("a question whose renderer cannot recover", () => {
     for (const b of posts()) expect(Object.prototype.hasOwnProperty.call(b, "renderFailures")).toBe(false);
   });
 });
+
+describe("Review Fix 4 (P1) — a report the sync could not persist is retried", () => {
+  it("offline when the card fails: nothing is marked synced; on reconnect the report is saved even though no answer changed", async () => {
+    ctl.mode = "throw";
+    render(<StudentExamPage token="t" assignment={assignment as never} studentName="أحمد" className="الحادي عشر" onBack={vi.fn()} onLogout={vi.fn()} />);
+    await screen.findByText("ما هي عاصمة فلسطين؟");
+    fireEvent.click(screen.getByLabelText("القدس"));
+    await waitFor(() => expect(posts().some(b => b.action === "saveDraft")).toBe(true), { timeout: 4000 });
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    await act(async () => { window.dispatchEvent(new Event("offline")); });
+    next();
+    await screen.findByTestId("question-recovery");
+    await act(async () => { await new Promise(r => setTimeout(r, 1600)); });               // the sync fires while offline → skipped
+    expect(posts().some(b => b.action === "saveDraft" && Array.isArray(b.renderFailures))).toBe(false);
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+    await waitFor(() => expect(posts().some(b => b.action === "saveDraft" && Array.isArray(b.renderFailures) && b.renderFailures.length === 1)).toBe(true), { timeout: 4000 });
+  });
+});

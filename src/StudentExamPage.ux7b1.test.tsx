@@ -414,7 +414,9 @@ describe("UX-7b-1 — source guards", () => {
     expect(p).not.toMatch(/formatCountdown\(/);                                                          // delegated to the chip
     expect(p.match(/Date\.now\(\)/g)?.length).toBe(1);                                                  // the pre-existing serverNow fallback only
     expect(p).toContain("const est=serverAnchorMs.current+elapsed;const rem=effEndMs.current-est;");
-    expect(p).toContain('body:JSON.stringify({action:"finalizeTimedOutAttempt"})');
+    // Review Fix 4 (21E.3 P1): the timeout finalize carries the render-failure report (never answers — the server grades its own draft)
+    expect(p).toContain('body:JSON.stringify({action:"finalizeTimedOutAttempt",...failureField()})');
+    expect(p).not.toMatch(/action:"finalizeTimedOutAttempt"[^}]*answers/);
     expect(code(RAW_TS["./examTimer.ts"])).toContain("export function countdownTone");
   });
   it("save authority: SaveStatus renders the derived kind only; the page still derives ONE state and keeps the 800 ms debounce, serial queue and retry policy", () => {

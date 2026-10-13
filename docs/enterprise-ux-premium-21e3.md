@@ -1434,3 +1434,15 @@ Review Fix 3 (`pointerIsDown`, `guardPresses`, `SHIFT_GUARD_MS`) and the failure
 automatically. Review Fix 3's recovery protections (pointer hold, press guard, quiet landing line, keyboard-only reveal) and the
 failure reporting coexist in the same lifecycle methods: `componentDidMount` / `componentWillUnmount` / the `resetKey` branch only gained
 the `reportShown` / `reportEnd` calls. `src/recoverableLazy.ts` carries only Review Fix 3's own changes; the 17A / 17B guards are untouched.
+
+### 16.7 Review Fix 4 — P1 and P2 of the independent review of `0546504`
+
+| Finding | Fix | Fail-first |
+|---|---|---|
+| **P1** the failure-sync marked the report synced before the save; offline / exhausted saves were never retried and the finalize actions carried nothing, so a time-out, strict exit or teacher end after an offline chunk failure graded a plain blank | `StudentExamPage.tsx`: `failureSyncRef` is set only by a CONFIRMED save (`saveDraftSnapshot` success, the key captured at request time); `recoverAndSave` (reconnect / manual retry) also saves when the confirmed report differs from the current one; `finalizeTimedOutAttempt` / `finalizeIntegrityExit` bodies carry `...failureField()` (never answers). `student-submission.js`: both finalize branches take the request's report when present (verified exactly like a submit's — toward the teacher only), else the draft record | `StudentExamPage.renderFailure.21e3.test.tsx` «Review Fix 4 (P1)» failed on the unfixed page (no saveDraft with the report after reconnect); `render-failure-hold-21e3.test.js` «P1» failed on `0546504` (timeout graded q2 as a plain 0) |
+| **P2** every reported unanswered question in a first-N section was held while `counted < requiredAnswers`, and a derived (no explicit max) section maximum grew by each held question | `render-failures.js` `quotaOpen` consumes the open slots: at most `requiredAnswers − counted` reported questions are held, in exam order; the derived maximum grows only by those | `render-failure-hold-21e3.test.js` «P2» failed on `0546504` (q3 held, totalMarks 6) |
+
+Also updated: the `ux7b1` source pin of the timeout body (`{action:"finalizeTimedOutAttempt",...failureField()}`, plus an assertion that the
+body never carries answers). Focused validation: affected API suites + guards 17A/17B/17C and the StudentExamPage / student-exam suites
+(390 passed after the pin update); lint 0 errors / 125 warnings; `tsc` clean; build + bundle guard passed (110.5 KB gzip); Chromium
+integrity harness (desktop) 16 / 16. The P3 findings of the review are left open by the owner's closure directive.
