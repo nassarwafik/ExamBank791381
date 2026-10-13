@@ -15,6 +15,7 @@ import {
   structureForType, newField, newRequestKey, parseWordBank
 } from "./bankQuestionModel";
 import "../bank-pro.css";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 
 /*
  * UX-6c — Exam Bank Management (بنك الامتحانات): the real destination behind the sidebar group.
@@ -397,7 +398,7 @@ function QuestionEditorDialog({ mode, initial, topics, busy, serverError, onClos
   const errorId = formId + "-errors";
   return (
     <Dialog open title={mode === "create" ? "إضافة سؤال إلى البنك" : "تعديل السؤال"} onClose={onClose} size="lg" initialFocusRef={textRef} describedBy={errors.length ? errorId : undefined}
-      footer={<><button type="button" className="eb-button" onClick={onClose} disabled={busy}>إلغاء</button><button type="submit" form={formId} className="eb-button is-primary" disabled={busy}>{busy ? "جارٍ الحفظ..." : mode === "create" ? "إضافة السؤال" : "حفظ التعديلات"}</button></>}>
+      footer={<><button type="button" className="eb-button" onClick={onClose} disabled={busy}>إلغاء</button><button type="submit" form={formId} className="eb-button is-primary" disabled={busy}>{busy ? SAVE_LABELS.saving : mode === "create" ? "إضافة السؤال" : SAVE_LABELS.saveChanges}</button></>}>
       <form id={formId} className="eb-bank-form" onSubmit={submit} noValidate>
         {(errors.length > 0 || serverError) && (
           <ul id={errorId} className="eb-bank-form-errors" role="alert">{serverError && <li>{serverError}</li>}{errors.map(e => <li key={e}>{e}</li>)}</ul>

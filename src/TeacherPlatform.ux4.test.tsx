@@ -179,7 +179,7 @@ describe("UX-4 request parity — students", () => {
     expect(Array.from((within(d).getByLabelText("الصف") as HTMLSelectElement).options).map(o => o.value)).toEqual(["c1", "c2"]); // archived class never a target
     fireEvent.change(within(d).getByLabelText("اسم العائلة"), { target: { value: "حسين" } });
     fireEvent.change(within(d).getByLabelText("الصف"), { target: { value: "c2" } });
-    fireEvent.click(within(d).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(d).getByRole("button", { name: "حفظ التغييرات" }));
     await screen.findByText("✓ تم تعديل الطالب ونقله إلى الصف المختار.");
     expect(posts("/api/students")).toEqual([{ action: "update", userId: "s1", firstName: "علي", familyName: "حسين", identityNumber: "111111111", classId: "c2", password: "" }]);
   });

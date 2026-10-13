@@ -6,7 +6,9 @@ import type { QuestionBody } from "../examTypes";
 import type { Question } from "../studentQuestionTypes";
 import type { Answer } from "../answerState";
 
-export type AuthoringEditorProps = { node: QuestionBody; onChange: (patch: Partial<QuestionBody>) => void; disabled?: boolean };
+// `framed` (Phase 21E.2, optional, additive): the node is a TOP-LEVEL question, so an editor may render the shared Field frame.
+// Absent for compound / composite parts, whose editors keep their frozen markup.
+export type AuthoringEditorProps = { node: QuestionBody; onChange: (patch: Partial<QuestionBody>) => void; disabled?: boolean; framed?: boolean };
 export type StudentRendererProps = { q: Question; id: string; answer: Answer | undefined; onAnswer: (next: Answer) => void; disabled?: boolean; labelPrefix: string; textId?: string };
 export type AuthoringEditorComponent = ComponentType<AuthoringEditorProps>;
 export type StudentRendererComponent = ComponentType<StudentRendererProps>;

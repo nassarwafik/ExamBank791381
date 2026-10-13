@@ -6,6 +6,7 @@ import EmptyState from "../ui/EmptyState";
 import Dialog from "../ui/Dialog";
 import { IconUpload, IconEyeOff, IconEdit, IconArchive, IconRestore, IconTrash, IconHistory } from "../icons";
 import { STATUS_LABEL, type Item } from "./types";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 
 // ISO → <input type="datetime-local"> value (local wall-clock). Empty/invalid → "" (no crash).
 const toLocalInput = (iso: string) => { if (!iso) return ""; const d = new Date(iso); if (Number.isNaN(d.getTime())) return ""; return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -94,7 +95,7 @@ function MaxAttemptsForm({ item, busy, onSave, onClose }: { item: Item; busy: bo
       <div className="eb-form-grid">
         <label>عدد المحاولات المسموح بها<select value={value} onChange={e => setValue(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? "محاولة" : "محاولات"}</option>)}</select></label>
       </div>
-      <div className="eb-dialog-foot eb-dialog-foot-inline"><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="button" className="eb-button is-primary" onClick={() => onSave(item, value)} disabled={busy || value === (item.maxAttempts || 1)}>حفظ</button></div>
+      <div className="eb-dialog-foot eb-dialog-foot-inline"><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="button" className="eb-button is-primary" onClick={() => onSave(item, value)} disabled={busy || value === (item.maxAttempts || 1)}>{SAVE_LABELS.saveChanges}</button></div>
     </>
   );
 }
@@ -137,7 +138,7 @@ function AssignmentTimingForm({ item, busy, onSave, onClose, fmt }: { item: Item
       <p className="eb-muted assignment-timing-active-hint">تغيير مدة المحاولة يسري على المحاولات الجديدة فقط، ولا يعيد ضبط محاولة مؤقتة بدأت بالفعل.</p>
       <div className="eb-dialog-foot eb-dialog-foot-inline">
         <button type="button" className="eb-button" onClick={onClose}>إلغاء</button>
-        <button type="button" className="eb-button is-primary assignment-timing-save" onClick={() => onSave(item, dueIso, duration)} disabled={busy || !inFuture}>حفظ</button>
+        <button type="button" className="eb-button is-primary assignment-timing-save" onClick={() => onSave(item, dueIso, duration)} disabled={busy || !inFuture}>{SAVE_LABELS.saveChanges}</button>
       </div>
     </>
   );

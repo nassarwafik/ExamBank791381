@@ -19,6 +19,8 @@ import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog} from "./assignment
 import {bulkRetryNotice} from "./assignments/codingRecovery";
 import type {CodingEvidenceTotals,CodingGradingStatus,Classroom,Item,Impact,Exam,SavedExam,StudentResult,LifecycleSnap,Stats,GradebookFilter,GradebookSort,QuestionStat,ItemAnalysis,AnalysisSort,SourceMode,WorkspaceMode} from "./assignments/types";
 import {gradebookFilterFor,drillStudentId,type AssignmentDrill} from "./assignments/drillTarget";
+import {downloadCsv} from "./reports/csv";
+import {gradebookCsvRows,exportFilename} from "./teacher/teacherExports";
 
 // Server-authoritative grading status for a student's LATEST result; fall back to the same inputs the
 // server uses (never inferred from percentage). "notSubmitted" when there is no completed attempt.
@@ -464,7 +466,8 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy} focusStudentId={drillFocus&&drillFocus.assignmentId===resultsFor.assignmentId?drillFocus.studentId:undefined}
      search={gbSearch} onSearch={setGbSearch} filter={gbFilter} onFilter={setGbFilter} sort={gbSort} onSort={setGbSort}
      onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} onEndAttempt={s=>void endAttempt(s)} fmt={fmt}
-     codingSummary={codingSummary} codingTotals={codingTotals} onBulkCodingRetry={()=>void bulkCodingRetry()}/>
+     codingSummary={codingSummary} codingTotals={codingTotals} onBulkCodingRetry={()=>void bulkCodingRetry()}
+     onExportCsv={()=>downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",resultsFor.title),gradebookCsvRows(resultsFor,results,rowGrading))}/>
    </AssignmentDetail>}
   </div>
 

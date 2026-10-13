@@ -23,17 +23,22 @@ export type ChartCardProps = {
   className?: string;
   /** Extra controls rendered in the card head (e.g. a track selector). */
   actions?: ReactNode;
+  /** 21E.2 — shown INSTEAD of the figure and the table when there is nothing to chart (plain text, never role="img"). */
+  empty?: ReactNode;
+  /** 21E.2 — content rendered after the figure, OUTSIDE role="img" (e.g. an accessible picker that must stay operable). */
+  after?: ReactNode;
   children: ReactNode | ((ctx: { reducedMotion: boolean }) => ReactNode);
 };
 
-export default function ChartCard({ title, description, ariaLabel, table, tableLabel = "عرض البيانات كجدول", defaultTableOpen = false, level = 3, className, actions, children }: ChartCardProps) {
+export default function ChartCard({ title, description, ariaLabel, table, tableLabel = "عرض البيانات كجدول", defaultTableOpen = false, level = 3, className, actions, empty, after, children }: ChartCardProps) {
   const reducedMotion = usePrefersReducedMotion();
   const [open, setOpen] = useState(defaultTableOpen);
   const reactId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const titleId = "eb-chart-" + reactId + "-title";
   const tableId = "eb-chart-" + reactId + "-table";
   const Heading = level === 2 ? "h2" : "h3";
-  const content = typeof children === "function" ? children({ reducedMotion }) : children;
+  const isEmpty = empty !== undefined && empty !== null && empty !== false;
+  const content = isEmpty ? null : typeof children === "function" ? children({ reducedMotion }) : children;
   return (
     <section className={["eb-chart-card", className || ""].filter(Boolean).join(" ")} aria-labelledby={titleId} data-reduced-motion={reducedMotion ? "true" : "false"}>
       <div className="eb-chart-card-head">
@@ -43,23 +48,26 @@ export default function ChartCard({ title, description, ariaLabel, table, tableL
         </div>
         {actions && <div className="eb-chart-card-actions">{actions}</div>}
       </div>
-      <div className="eb-chart-card-figure" role="img" aria-label={ariaLabel || title}>{content}</div>
-      <div className="eb-chart-card-foot">
-        <button type="button" className="eb-button is-quiet is-small" aria-expanded={open} aria-controls={tableId} onClick={() => setOpen(o => !o)}>{tableLabel}</button>
-      </div>
-      {/* The table is always in the DOM (hidden while collapsed) so print can show it; hidden content is not
-          exposed to assistive tech, so the disclosure semantics are unchanged. */}
-      <div id={tableId} className="eb-chart-card-table" hidden={!open}>
-          <table className="eb-chart-table">
-            <caption className="eb-visually-hidden">{table.caption || title}</caption>
-            <thead><tr>{table.columns.map((c, i) => <th key={i} scope="col">{c}</th>)}</tr></thead>
-            <tbody>
-              {table.rows.length ? table.rows.map((row, ri) => (
-                <tr key={ri}>{row.map((cell, ci) => ci === 0 ? <th key={ci} scope="row">{cell}</th> : <td key={ci}>{cell}</td>)}</tr>
-              )) : <tr><td colSpan={Math.max(1, table.columns.length)}>لا توجد بيانات.</td></tr>}
-            </tbody>
-          </table>
-      </div>
+      {isEmpty ? <div className="eb-chart-card-empty">{empty}</div> : <>
+        <div className="eb-chart-card-figure" role="img" aria-label={ariaLabel || title}>{content}</div>
+        {after}
+        <div className="eb-chart-card-foot">
+          <button type="button" className="eb-button is-quiet is-small" aria-expanded={open} aria-controls={tableId} onClick={() => setOpen(o => !o)}>{tableLabel}</button>
+        </div>
+        {/* The table is always in the DOM (hidden while collapsed) so print can show it; hidden content is not
+            exposed to assistive tech, so the disclosure semantics are unchanged. */}
+        <div id={tableId} className="eb-chart-card-table" hidden={!open}>
+            <table className="eb-chart-table">
+              <caption className="eb-visually-hidden">{table.caption || title}</caption>
+              <thead><tr>{table.columns.map((c, i) => <th key={i} scope="col">{c}</th>)}</tr></thead>
+              <tbody>
+                {table.rows.length ? table.rows.map((row, ri) => (
+                  <tr key={ri}>{row.map((cell, ci) => ci === 0 ? <th key={ci} scope="row">{cell}</th> : <td key={ci}>{cell}</td>)}</tr>
+                )) : <tr><td colSpan={Math.max(1, table.columns.length)}>لا توجد بيانات.</td></tr>}
+              </tbody>
+            </table>
+        </div>
+      </>}
     </section>
   );
 }

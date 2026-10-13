@@ -507,3 +507,41 @@ export function IconMinimize(props: IconProps) {
     </svg>
   );
 }
+
+/* ---- Phase 21E.2 additions (structured builder toolbar) ---- */
+export function IconUndo(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M7.5 5 4 8.5 7.5 12" />
+      <path d="M4 8.5h8a4 4 0 0 1 0 8H9" />
+    </svg>
+  );
+}
+
+export function IconRedo(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12.5 5 16 8.5 12.5 12" />
+      <path d="M16 8.5H8a4 4 0 0 0 0 8h3" />
+    </svg>
+  );
+}
+
+export function IconSave(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4.5 3h9l3 3v9.5a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 15.5v-11A1.5 1.5 0 0 1 4.5 3Z" />
+      <path d="M6.5 3v4h6V3" />
+      <rect x="6" y="11" width="8" height="6" rx="0.8" />
+    </svg>
+  );
+}
+
+export function IconCompass(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="m12.8 7.2-1.6 4-4 1.6 1.6-4 4-1.6Z" />
+    </svg>
+  );
+}

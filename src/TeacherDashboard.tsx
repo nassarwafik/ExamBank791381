@@ -1,19 +1,22 @@
 import {useEffect,useMemo,useRef,useState,type ReactNode} from "react";
 import {Chart as ChartJS,CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler,type ChartOptions} from "chart.js";
 import {Line,Doughnut,Bar} from "react-chartjs-2";
-import {IconMedal,IconRefresh,IconDownload,IconPrint,IconSparkles,IconCheck,IconWarning,IconInfo} from "./icons";
+import {IconMedal,IconRefresh,IconDownload,IconPrint,IconSparkles,IconCheck,IconWarning,IconInfo,IconGraduation,IconAssignments,IconUser} from "./icons";
 import {MEDAL_COLORS,MEDAL_LABELS} from "./medals";
 import {QuestionTextBlock} from "./questionContent";
 import {REACTIONS,eventTypeOf,feedEventParts,type ReactionId,type FeedMedal,type FeedRank,type FeedProject,type FeedStage} from "./achievements";
 import {RANK_VISUALS} from "./studentRankVisuals";
 // Phase 11A — the ONE trusted CSV cell encoder (quotes + formula-injection guard), shared with the Reports Center.
-import {csvCell} from "./reports/csv";
+import {csvCell,downloadCsv} from "./reports/csv";
+import {assignmentResultsCsvRows,exportFilename} from "./teacher/teacherExports";
 import {stageVisual} from "./studentStageVisuals";
 import type {RankTier} from "./studentRank";
 import {visualImgProps} from "./studentVisualSizes";
 import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import StatCard from "./ui/StatCard";
 import SectionHeader from "./ui/SectionHeader";
+import ChartCard from "./ui/ChartCard";
+import {fmtPct,trendPoints,topicPoints,trendModel,submissionModel,distributionModel,classComparisonModel,topicModel} from "./teacher/dashboardChartTables";
 ChartJS.register(CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler);
 
 type DashboardProps={token:string};
@@ -81,7 +84,6 @@ function AchievementText({post}:{post:AchievementPost}){
 type DrillKind="assignment"|"profile"|"review";
 
 const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar",{dateStyle:"medium",timeStyle:"short"}):"—";
-const fmtPct=(value:number|null)=>value===null?"—":value.toFixed(1).replace(/\.0$/,"")+"%";
 const clampPct=(value:number|null)=>Math.max(0,Math.min(100,Number(value??0)));
 const maskIdentity=(value:string)=>value?"•••••"+value.slice(-4):"—";
 const trendText=(delta:number)=>delta>=5?"يتحسن":delta<=-5?"يتراجع":"مستقر";
@@ -109,52 +111,49 @@ const chartAnimation=(reduce:boolean,duration:number)=>reduce?false as const:{du
    Every dataset below is computed from the same payload fields as before UX-3
    (labels/data arrays are unchanged); UX-3 only adds a text summary for
    assistive technology and the reduced-motion switch. */
+/* 21E.2 — each chart is now the FIGURE of a shared ChartCard: the card owns the title, the accessible name (the same text
+   summary as before, from teacher/dashboardChartTables) and the data-table equivalent; these components only draw the
+   canvas. The series handed to Chart.js are unchanged. */
 function LineChart({items,student=false}:{items:AssignmentTrend[];student?:boolean}){
  const reduce=usePrefersReducedMotion();
- const points=items.filter(x=>x.average!==null);
+ const points=trendPoints(items);
  const seriesLabel=student?"علامة الطالب":"متوسط العلامات";
  const data=useMemo(()=>({labels:points.map(x=>x.title),datasets:[{label:seriesLabel,data:points.map(x=>clampPct(x.average)),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.13)",pointBackgroundColor:"#2563eb",pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:4,pointHoverRadius:7,borderWidth:3,tension:.38,fill:true}]}),[points,seriesLabel]);
  const options:ChartOptions<"line">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:chartAnimation(reduce,1050),interaction:{mode:"index",intersect:false},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>(student?" العلامة: ":" المتوسط: ")+Number(i.raw||0).toFixed(1)+"%"}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:GRID_COLOR}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:8}}}}),[reduce,student]);
- if(points.length<2)return <div className="analytics-empty-chart">{student?"تظهر حركة العلامات بعد توفر نتيجتين على الأقل لهذا الطالب.":"تظهر حركة الأداء بعد توفر نتيجتين على الأقل."}</div>;
- const summary=`${student?"تطور علامات الطالب":"تطور متوسط الأداء"} عبر ${points.length} واجبات: من ${fmtPct(points[0].average)} في «${points[0].title}» إلى ${fmtPct(points[points.length-1].average)} في «${points[points.length-1].title}».`;
- return <div className="analytics-chart-canvas analytics-chart-line" role="img" aria-label={summary}><Line data={data} options={options}/></div>;
+ return <div className="analytics-chart-canvas analytics-chart-line"><Line data={data} options={options}/></div>;
 }
 function DonutChart({submitted,missing,pendingReview}:{submitted:number;missing:number;pendingReview:number}){
  const reduce=usePrefersReducedMotion();
  const total=Math.max(1,submitted+missing);
  const data=useMemo(()=>({labels:["تم التسليم","لم يُسلّم"],datasets:[{data:[submitted,missing],backgroundColor:["#2563eb","#e2e8f0"],borderColor:["#fff","#fff"],borderWidth:4,hoverOffset:8}]}),[submitted,missing]);
  const options:ChartOptions<"doughnut">=useMemo(()=>({responsive:true,maintainAspectRatio:false,cutout:"72%",animation:chartAnimation(reduce,1150),plugins:{legend:{display:false},tooltip:{rtl:true}}}),[reduce]);
- const summary=`حالة التسليم: ${fmtPct(submitted/total*100)} نسبة التسليم، ${submitted} تم التسليم، ${missing} لم يُسلّم، ${pendingReview} تحتاج مراجعة.`;
- return <div className="analytics-donut-layout"><div className="analytics-chart-canvas analytics-chart-donut" role="img" aria-label={summary}><Doughnut data={data} options={options}/><div className="analytics-donut-center"><strong>{fmtPct(submitted/total*100)}</strong><span>تسليم</span></div></div><div className="analytics-legend"><span><i className="legend-dot submitted"/>تم التسليم <b>{submitted}</b></span><span><i className="legend-dot missing"/>لم يُسلّم <b>{missing}</b></span><span><i className="legend-dot review"/>تحتاج مراجعة <b>{pendingReview}</b></span></div></div>;
+ return <div className="analytics-donut-layout"><div className="analytics-chart-canvas analytics-chart-donut"><Doughnut data={data} options={options}/><div className="analytics-donut-center"><strong>{fmtPct(submitted/total*100)}</strong><span>تسليم</span></div></div><div className="analytics-legend"><span><i className="legend-dot submitted"/>تم التسليم <b>{submitted}</b></span><span><i className="legend-dot missing"/>لم يُسلّم <b>{missing}</b></span><span><i className="legend-dot review"/>تحتاج مراجعة <b>{pendingReview}</b></span></div></div>;
 }
 function GradeDistributionChart({items,student=false}:{items:Array<{label:string;count:number}>;student?:boolean}){
  const reduce=usePrefersReducedMotion();
  const data=useMemo(()=>({labels:items.map(x=>x.label),datasets:[{label:student?"عدد الواجبات":"عدد الطلاب",data:items.map(x=>x.count),backgroundColor:"rgba(37,99,235,.78)",borderRadius:8,borderSkipped:false}]}),[items,student]);
  const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:chartAnimation(reduce,1000),plugins:{legend:{display:false},tooltip:{rtl:true}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:GRID_COLOR}},x:{grid:{display:false}}}}),[reduce]);
- if(!items.length)return <div className="analytics-empty-chart">لا توجد علامات بعد.</div>;
- const summary="توزيع العلامات: "+items.map(x=>`${x.label}: ${x.count}`).join("، ")+".";
- return <div className="analytics-chart-canvas analytics-chart-bar" role="img" aria-label={summary}><Bar data={data} options={options}/></div>;
+ return <div className="analytics-chart-canvas analytics-chart-bar"><Bar data={data} options={options}/></div>;
 }
-function ClassComparisonChart({items,selectedClassId,onSelect}:{items:ClassComparison[];selectedClassId:string;onSelect:(id:string)=>void}){
+function ClassComparisonChart({items,onSelect}:{items:ClassComparison[];onSelect:(id:string)=>void}){
  const reduce=usePrefersReducedMotion();
  const data=useMemo(()=>({labels:items.map(x=>x.name),datasets:[{label:"متوسط الصف",data:items.map(x=>clampPct(x.average)),backgroundColor:"rgba(14,165,233,.78)",borderRadius:8,borderSkipped:false}]}),[items]);
  const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:chartAnimation(reduce,1050),onClick:(_e,els)=>{const i=els[0]?.index;if(i!==undefined&&items[i])onSelect(items[i].classId)},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:GRID_COLOR}},y:{grid:{display:false}}}}),[items,onSelect,reduce]);
- if(!items.length)return <div className="analytics-empty-chart">لا توجد بيانات صفوف بعد.</div>;
- const summary="مقارنة الصفوف: "+items.map(x=>`${x.name}: ${fmtPct(x.average)}`).join("، ")+".";
- return <>
-  <div className="analytics-chart-canvas analytics-chart-class" role="img" aria-label={summary}><Bar data={data} options={options}/></div>
-  <ul className="eb-chart-picker" aria-label="اختيار صف لعرض تفاصيله">{items.map(item=><li key={item.classId}><button type="button" className="eb-chart-picker-item" aria-pressed={item.classId===selectedClassId} onClick={()=>onSelect(item.classId)}><span>{item.name}</span><b>{fmtPct(item.average)}</b></button></li>)}</ul>
- </>;
+ return <div className="analytics-chart-canvas analytics-chart-class"><Bar data={data} options={options}/></div>;
+}
+/** The operable class picker of the comparison chart — rendered OUTSIDE the figure (role="img" hides its children). */
+function ClassPicker({items,selectedClassId,onSelect}:{items:ClassComparison[];selectedClassId:string;onSelect:(id:string)=>void}){
+ return <ul className="eb-chart-picker" aria-label="اختيار صف لعرض تفاصيله">{items.map(item=><li key={item.classId}><button type="button" className="eb-chart-picker-item" aria-pressed={item.classId===selectedClassId} onClick={()=>onSelect(item.classId)}><span>{item.name}</span><b>{fmtPct(item.average)}</b></button></li>)}</ul>;
 }
 function TopicChart({items}:{items:TopicAnalytics[]}){
  const reduce=usePrefersReducedMotion();
- const visible=items.slice(0,10);
+ const visible=topicPoints(items);
  const data=useMemo(()=>({labels:visible.map(x=>x.topic),datasets:[{label:"متوسط الموضوع",data:visible.map(x=>clampPct(x.average)),backgroundColor:visible.map(x=>Number(x.average||0)<60?"rgba(239,68,68,.76)":Number(x.average||0)>=80?"rgba(22,163,74,.76)":"rgba(245,158,11,.76)"),borderRadius:7,borderSkipped:false}]}),[visible]);
  const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:chartAnimation(reduce,1100),plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:GRID_COLOR}},y:{grid:{display:false}}}}),[reduce]);
- if(!visible.length)return <div className="analytics-empty-chart">ستظهر تحليلات الموضوعات بعد وجود إجابات مصححة.</div>;
- const summary="الأداء حسب الموضوع: "+visible.map(x=>`${x.topic}: ${fmtPct(x.average)}`).join("، ")+".";
- return <div className="analytics-chart-canvas analytics-chart-topic" role="img" aria-label={summary}><Bar data={data} options={options}/></div>;
+ return <div className="analytics-chart-canvas analytics-chart-topic"><Bar data={data} options={options}/></div>;
 }
+const emptyChart=(text:string)=><div className="analytics-empty-chart">{text}</div>;
+const EMPTY_TABLE={columns:[],rows:[]};
 
 /* ------------------------------------------------------------ drill panel
    Dashboard-private (not the global Modal). Desktop ≥1280: docked at the
@@ -447,6 +446,12 @@ function TeacherDashboard({token}:DashboardProps){
  const fresh=loaded?.key===scopeKey;
  const k=data.kpis;
  const isStudent=mode==="student";
+ // 21E.2 — the accessible name + data table of each chart, from the same series the charts draw (null = empty state).
+ const trendChart=trendModel(data.assignmentTrend,isStudent);
+ const statusChart=submissionModel(data.submissionStatus.submitted,data.submissionStatus.missing,data.submissionStatus.pendingReview);
+ const distributionChart=distributionModel(data.gradeDistribution,isStudent);
+ const classChart=classComparisonModel(data.classComparison);
+ const topicChart=topicModel(data.topicAnalytics);
  const {className:scopeClassName,studentName:scopeStudentName,roster}=scopeNames();
  const scopeCaption=mode==="global"?"كل الصفوف · جميع الطلاب":mode==="class"?"الصف: "+scopeClassName+" · جميع طلاب الصف":"الطالب: "+scopeStudentName+" · الصف: "+scopeClassName;
  const hasDrill=fresh&&Boolean(assignmentResults||profile||review||assignmentBusy||profileBusy||reviewBusy);
@@ -497,12 +502,12 @@ function TeacherDashboard({token}:DashboardProps){
   <section className="eb-dash-section eb-dash-kpis" aria-labelledby="eb-kpis-title">
    <h2 id="eb-kpis-title" className="eb-visually-hidden">المؤشرات الرئيسية</h2>
    <div className="eb-stat-grid is-primary">
-    <StatCard primary label={isStudent?"معدل الطالب":"متوسط العلامات"} value={fmtPct(k.average)} hint={k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}/>
-    <StatCard primary label="نسبة التسليم" value={fmtPct(k.completionRate)} hint={`${k.submissions} من ${k.expectedSubmissions} حالة متوقعة`} tone="info"/>
+    <StatCard primary label={isStudent?"معدل الطالب":"متوسط العلامات"} value={fmtPct(k.average)} hint={k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)} icon={<IconGraduation size={18}/>}/>
+    <StatCard primary label="نسبة التسليم" value={fmtPct(k.completionRate)} hint={`${k.submissions} من ${k.expectedSubmissions} حالة متوقعة`} tone="info" icon={<IconCheck size={18}/>}/>
     {isStudent
-     ?<StatCard primary label="يحتاج متابعة" value={k.followUpStudents?"نعم":"لا"} hint={k.neverLogged?"لم يسجل الدخول بعد":"سجّل الدخول"} tone="attention"/>
-     :<StatCard primary label="يحتاجون متابعة" value={k.followUpStudents} hint={`${k.neverLogged} لم يسجلوا الدخول`} tone="attention"/>}
-    <StatCard primary label="بانتظار التصحيح" value={k.pendingReview} hint={`من ${k.submissions} تسليمًا`} tone="danger"/>
+     ?<StatCard primary label="يحتاج متابعة" value={k.followUpStudents?"نعم":"لا"} hint={k.neverLogged?"لم يسجل الدخول بعد":"سجّل الدخول"} tone="attention" icon={<IconUser size={18}/>}/>
+     :<StatCard primary label="يحتاجون متابعة" value={k.followUpStudents} hint={`${k.neverLogged} لم يسجلوا الدخول`} tone="attention" icon={<IconUser size={18}/>}/>}
+    <StatCard primary label="بانتظار التصحيح" value={k.pendingReview} hint={`من ${k.submissions} تسليمًا`} tone="danger" icon={<IconAssignments size={18}/>}/>
    </div>
    <div className="eb-stat-grid is-secondary">
     <StatCard label="الطلاب الفعّالون" value={k.activeStudents} hint={mode==="global"?k.activeClasses+" صفوف فعّالة":mode==="class"?"في الصف المختار":"الطالب المختار فقط"}/>
@@ -524,11 +529,11 @@ function TeacherDashboard({token}:DashboardProps){
   <section className="eb-dash-section" aria-labelledby="eb-trends-title">
    <SectionHeader level={2} id="eb-trends-title" title="الاتجاهات والتحليلات"/>
    <div className="eb-chart-grid">
-    <article className="analytics-card eb-chart-card eb-span-2"><SectionHeader level={3} title={isStudent?"حركة علامات الطالب":"تطور متوسط الأداء"} actions={<span className="analytics-chip">آخر {data.assignmentTrend.length} واجبات</span>}/><LineChart items={data.assignmentTrend} student={isStudent}/></article>
-    <article className="analytics-card eb-chart-card"><SectionHeader level={3} title={isStudent?"حالة تسليم الطالب":"حالة التسليم"}/><DonutChart submitted={data.submissionStatus.submitted} missing={data.submissionStatus.missing} pendingReview={data.submissionStatus.pendingReview}/></article>
-    <article className="analytics-card eb-chart-card"><SectionHeader level={3} title={isStudent?"توزيع علامات الطالب":"توزيع العلامات"}/><GradeDistributionChart items={data.gradeDistribution} student={isStudent}/></article>
-    {mode==="global"&&<article className="analytics-card eb-chart-card"><SectionHeader level={3} title="مقارنة الصفوف" description="اختر صفًا لعرض تفاصيله"/><ClassComparisonChart items={data.classComparison} selectedClassId={classId} onSelect={selectClass}/></article>}
-    <article className="analytics-card eb-chart-card"><SectionHeader level={3} title={isStudent?"الموضوعات لهذا الطالب":"الأداء حسب الموضوع"} actions={<span className="analytics-chip">الأضعف أولًا</span>}/><TopicChart items={data.topicAnalytics}/></article>
+    <ChartCard className="analytics-card eb-span-2" title={isStudent?"حركة علامات الطالب":"تطور متوسط الأداء"} ariaLabel={trendChart?.summary} table={trendChart?.table||EMPTY_TABLE} actions={<span className="analytics-chip">آخر {data.assignmentTrend.length} واجبات</span>} empty={trendChart?undefined:emptyChart(isStudent?"تظهر حركة العلامات بعد توفر نتيجتين على الأقل لهذا الطالب.":"تظهر حركة الأداء بعد توفر نتيجتين على الأقل.")}><LineChart items={data.assignmentTrend} student={isStudent}/></ChartCard>
+    <ChartCard className="analytics-card" title={isStudent?"حالة تسليم الطالب":"حالة التسليم"} ariaLabel={statusChart.summary} table={statusChart.table}><DonutChart submitted={data.submissionStatus.submitted} missing={data.submissionStatus.missing} pendingReview={data.submissionStatus.pendingReview}/></ChartCard>
+    <ChartCard className="analytics-card" title={isStudent?"توزيع علامات الطالب":"توزيع العلامات"} ariaLabel={distributionChart?.summary} table={distributionChart?.table||EMPTY_TABLE} empty={distributionChart?undefined:emptyChart("لا توجد علامات بعد.")}><GradeDistributionChart items={data.gradeDistribution} student={isStudent}/></ChartCard>
+    {mode==="global"&&<ChartCard className="analytics-card" title="مقارنة الصفوف" description="اختر صفًا لعرض تفاصيله" ariaLabel={classChart?.summary} table={classChart?.table||EMPTY_TABLE} empty={classChart?undefined:emptyChart("لا توجد بيانات صفوف بعد.")} after={<ClassPicker items={data.classComparison} selectedClassId={classId} onSelect={selectClass}/>}><ClassComparisonChart items={data.classComparison} onSelect={selectClass}/></ChartCard>}
+    <ChartCard className="analytics-card" title={isStudent?"الموضوعات لهذا الطالب":"الأداء حسب الموضوع"} ariaLabel={topicChart?.summary} table={topicChart?.table||EMPTY_TABLE} actions={<span className="analytics-chip">الأضعف أولًا</span>} empty={topicChart?undefined:emptyChart("ستظهر تحليلات الموضوعات بعد وجود إجابات مصححة.")}><TopicChart items={data.topicAnalytics}/></ChartCard>
    </div>
   </section>
 
@@ -566,6 +571,7 @@ function TeacherDashboard({token}:DashboardProps){
    {assignmentBusy&&<div className="analytics-loading" role="status">جارٍ تحميل تفاصيل الواجب...</div>}
    {assignmentResults&&!isStudent&&assignmentFor===""&&<DashboardDrillPanel kind="assignment" title={assignmentResults.assignment.title} subtitle="من الواجب إلى الطالب إلى المحاولة إلى السؤال" onClose={closeAssignment}>
     <div className="analytics-mini-kpis"><span>المتوسط <b>{fmtPct(assignmentResults.stats.average)}</b></span><span>سلّموا <b>{assignmentResults.stats.submitted}/{assignmentResults.stats.students}</b></span><span>مراجعة <b>{assignmentResults.stats.pendingReview}</b></span><span>أعلى <b>{fmtPct(assignmentResults.stats.highest)}</b></span></div>
+    <div className="eb-drill-actions"><button type="button" className="eb-button is-small" onClick={()=>downloadCsv(exportFilename("TadrisPlus-نتائج-الواجب",assignmentResults.assignment.title),assignmentResultsCsvRows(assignmentResults))} disabled={!assignmentResults.students.length}><IconDownload size={16} aria-hidden="true"/>تصدير نتائج الواجب (CSV)</button></div>
     <div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>المحاولات</th><th>آخر علامة</th><th>الحالة</th><th>فتح محاولة</th></tr></thead><tbody>{assignmentResults.students.map(student=><tr key={student.studentId}><td><button type="button" className="analytics-link" onClick={()=>void openProfile(student.studentId)}>{student.studentName}</button></td><td>{student.attemptsUsed}/{student.allowedAttempts}</td><td>{student.latestResult?fmtPct(student.latestResult.percentage):"—"}</td><td>{!student.latestResult?"لم يسلّم":resolveGradingStatus(student.latestResult)==="final"?"مصحح":"يحتاج مراجعة"}</td><td><div className="analytics-attempt-buttons">{student.attempts.map(attempt=><button type="button" key={attempt.attemptNumber} onClick={()=>void openAttempt(assignmentResults.assignment.assignmentId,student.studentId,attempt.attemptNumber)}>#{attempt.attemptNumber} · {fmtPct(attempt.percentage)}</button>)}</div></td></tr>)}</tbody></table></div>
    </DashboardDrillPanel>}
    {assignmentResults&&isStudent&&assignmentFor===studentId&&(()=>{

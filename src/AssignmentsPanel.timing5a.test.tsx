@@ -67,7 +67,7 @@ describe("AssignmentsPanel — Phase 5A class-wide time & deadline", () => {
     // the assignment is expired, so the prefilled (past) value is already invalid → warning + disabled save
     fireEvent.change(within(d).getByDisplayValue(/2026-03-01/) as HTMLInputElement, { target: { value: "2020-01-01T09:00" } });
     expect(within(d).getByText("يجب أن يكون موعد التسليم الجديد في المستقبل.")).toBeTruthy();
-    expect((within(d).getByRole("button", { name: "حفظ" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(d).getByRole("button", { name: "حفظ التغييرات" }) as HTMLButtonElement).disabled).toBe(true);
     expect(posts()).toHaveLength(0);
   });
 
@@ -79,7 +79,7 @@ describe("AssignmentsPanel — Phase 5A class-wide time & deadline", () => {
     fireEvent.change(dueInput, { target: { value: "2027-01-01T10:00" } });
     fireEvent.change(durInput, { target: { value: "60" } });
     const getsBefore = getAssignmentsCount();
-    fireEvent.click(within(d).getByRole("button", { name: "حفظ" }));
+    fireEvent.click(within(d).getByRole("button", { name: "حفظ التغييرات" }));
     await screen.findByText("✓ تم تحديث وقت الواجب وموعد التسليم.");
     // exactly one updateTiming POST with the correct payload (ISO dueAt derived from the local input)
     const timing = posts().filter(b => b.action === "updateTiming");

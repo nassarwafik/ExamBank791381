@@ -82,8 +82,11 @@
 .eb-menu-trigger.has-text{ padding:0 var(--eb-space-3); }
 .eb-menu-trigger:hover,.eb-menu-trigger[aria-expanded="true"]{ background:var(--eb-primary-050); border-color:var(--eb-primary); color:var(--eb-primary-strong); }
 .eb-menu-trigger:disabled{ opacity:.55; cursor:default; }
+/* 21E.2 — a menu is a transient popover of the control that opened it, so it paints above every layer that can host such a
+   control: pages, the full-screen work surfaces (--eb-z-overlay: the structured builder) and dialogs (--eb-z-modal). With
+   --eb-z-dropdown (20) a menu opened from the builder toolbar sat under the opaque overlay (60) and could not be seen. */
 .eb-menu-panel{
-  z-index:var(--eb-z-dropdown); min-width:220px; max-width:min(300px, calc(100vw - 16px)); overflow:auto;
+  z-index:calc(var(--eb-z-modal) + 1); min-width:220px; max-width:min(300px, calc(100vw - 16px)); overflow:auto;
   display:flex; flex-direction:column; gap:2px; padding:var(--eb-space-1);
   background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); box-shadow:var(--eb-sh-lg);
 }

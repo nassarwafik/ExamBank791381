@@ -7,6 +7,7 @@ import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconPlus } from "../icons";
 import type { ProjectStage, ProjectGroup, TrackMeta } from "./types";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 
 type Template = { stages: ProjectStage[]; groups: ProjectGroup[]; trackWeights: Record<string, number>; config: Record<string, number> };
 type Props = {
@@ -121,7 +122,7 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
           </select>
         </label>
         <label className="eb-field-inline eb-project-search">بحث<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث عن مرحلة..." /></label>
-        {!readOnly && <button type="button" className="eb-button is-primary" disabled={busy} onClick={() => void save()}>حفظ التغييرات</button>}
+        {!readOnly && <button type="button" className="eb-button is-primary" disabled={busy} onClick={() => void save()}>{SAVE_LABELS.saveChanges}</button>}
       </div>
 
       {!groups.length && <EmptyState compact title="لا توجد مجموعات مراحل في هذا المسار." />}

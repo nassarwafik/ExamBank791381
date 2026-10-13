@@ -8,6 +8,7 @@ import { resolveGradingStatus } from "../gradingStatus";
 import { stageVisual } from "../studentStageVisuals";
 import { visualImgProps } from "../studentVisualSizes";
 import type { ProfileSection, StudentProfile, SubmittedAssignment } from "./types";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 
 /** Concise Strength / recognition line-up (server values only; nothing recomputed). Absent on older payloads. */
 function StrengthSummary({ profile }: { profile: StudentProfile }) {
@@ -161,7 +162,7 @@ export default function StudentDialog(p: StudentDialogProps) {
               <span>الموعد الأصلي: {p.fmtDate(item.dueAt)}</span>
               {item.dueAtOverride && <span>التمديد الحالي: {p.fmtDate(item.dueAtOverride)}</span>}
               <label className="eb-field-inline">الموعد الجديد<input type="datetime-local" value={p.deadlineValue} onChange={e => p.onDeadlineValue(e.target.value)} /></label>
-              <button type="button" className="eb-button is-small is-primary" onClick={() => p.onSaveDeadline(item)} disabled={p.busy || !p.deadlineValue}>حفظ التمديد</button>
+              <button type="button" className="eb-button is-small is-primary" onClick={() => p.onSaveDeadline(item)} disabled={p.busy || !p.deadlineValue}>{SAVE_LABELS.saveExtension}</button>
               {item.dueAtOverride && <button type="button" className="eb-button is-small" onClick={() => p.onClearDeadline(item)} disabled={p.busy}>إلغاء التمديد</button>}
               <button type="button" className="eb-button is-small" onClick={p.onCloseDeadline}>إغلاق</button>
             </div></td></tr>}

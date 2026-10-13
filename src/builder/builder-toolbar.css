@@ -1,0 +1,57 @@
+/* Phase 21E.2 — structured builder toolbar (BuilderToolbar.tsx). Token-only; RTL logical properties. The toolbar is sticky
+   only where there is room for it (≥ 768 px wide AND ≥ 600 px tall): on phones, at 200 % zoom and on short windows it scrolls
+   with the page so it can never cover question headings, delete controls, focus targets or notifications (21E.1 slice 2 known
+   limitation: 416 of 450 px at 200 %, 716 of 844 px on a phone). */
+.sb-toolbar.sb-toolbar-21e2 {
+  position: static; z-index: auto; display: flex; flex-direction: column; align-items: stretch; gap: var(--eb-space-2);
+  padding: var(--eb-space-2) var(--eb-space-3); background: var(--eb-surface); border: 1px solid var(--eb-line);
+  border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-sm);
+}
+@media (min-width: 768px) and (min-height: 600px) {
+  .sb-toolbar.sb-toolbar-21e2 { position: sticky; top: 0; z-index: var(--eb-z-sticky); }
+}
+.sb-tb-identity { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); min-width: 0; }
+.sb-tb-title { flex: 1 1 220px; min-width: 0; }
+.sb-tb-title .sb-exam-title { width: 100%; min-width: 0; }
+.sb-tb-stats, .sb-tb-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-1); min-width: 0; }
+.sb-tb-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--eb-space-2); }
+.sb-tb-group, .sb-tb-save { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); min-width: 0; }
+.sb-toolbar-21e2 .sb-history { display: inline-flex; gap: var(--eb-space-1); }
+
+.sb-tb-btn, .sb-toolbar-21e2 .sb-tb-menu {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-1); min-height: 38px; padding: 0 var(--eb-space-3);
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface); color: var(--eb-text-heading);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); line-height: var(--eb-lh-tight); white-space: nowrap; cursor: pointer;
+  transition: background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease);
+}
+.sb-tb-btn.is-icon { min-width: 38px; padding: 0; }
+.sb-tb-btn:hover:not(:disabled), .sb-toolbar-21e2 .sb-tb-menu:hover, .sb-toolbar-21e2 .sb-tb-menu[aria-expanded="true"] { border-color: var(--eb-primary); background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+.sb-tb-btn:focus-visible, .sb-toolbar-21e2 .sb-tb-menu:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.sb-tb-btn:disabled { opacity: .5; cursor: not-allowed; }
+.sb-tb-btn.is-primary { background: var(--eb-primary-strong); border-color: var(--eb-primary-strong); color: var(--eb-surface); }
+.sb-tb-btn.is-primary:hover:not(:disabled) { background: var(--eb-navy-2); border-color: var(--eb-navy-2); }
+.sb-tb-btn.is-primary.is-gated, .sb-tb-btn.is-primary.is-gated:hover:not(:disabled) { background: var(--eb-surface); color: var(--eb-primary-strong); border-color: var(--eb-primary-strong); border-style: dashed; }
+.sb-tb-btn.is-primary.is-gated:hover:not(:disabled) { background: var(--eb-primary-050); }
+.sb-tb-exit svg { transform: scaleX(-1); }                      /* «رجوع» points to the start side in RTL (was «→») */
+.sb-tb-btn .sb-bp-badge { margin-inline-start: var(--eb-space-1); }
+
+.sb-menu-item .sb-menu-icon { display: inline-flex; color: var(--eb-muted); }
+.sb-menu-item .sb-menu-label { flex: 1 1 auto; }
+.sb-menu-item .sb-menu-badge {
+  border-radius: var(--eb-pill); padding: 0 var(--eb-space-2); background: var(--eb-warn-bg); color: var(--eb-warn-tx);
+  font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold);
+}
+.sb-menu-item[aria-pressed="true"] { background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+
+/* Narrow (< 768 px: phones, 200 % zoom on a 1280 px screen): labels collapse to icons — names stay on the buttons — and every
+   toolbar control is a 44 px touch target. Save / finalize keep their words: their consequence must stay readable. */
+@media (max-width: 767px) {
+  .sb-tb-btn:not(.sb-tb-keep-label) .sb-tb-label, .sb-toolbar-21e2 .sb-tb-menu > span {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .sb-tb-btn, .sb-tb-btn.is-icon, .sb-toolbar-21e2 .sb-tb-menu { min-height: 44px; min-width: 44px; padding: 0 var(--eb-space-2); }
+  .sb-tb-btn.sb-tb-keep-label { padding: 0 var(--eb-space-3); }
+  .sb-tb-actions { justify-content: flex-start; }
+  .sb-tb-title { flex-basis: 100%; order: 3; }
+}
+@media (prefers-reduced-motion: reduce) { .sb-tb-btn, .sb-toolbar-21e2 .sb-tb-menu { transition: none; } }

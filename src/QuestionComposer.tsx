@@ -8,6 +8,8 @@ import { useConfirm } from "./ui/useConfirm";
 import { PRESENTATION_VOCABULARY, validateQuestionPresentation, type QuestionPresentationV1 } from "./presentation/presentationModel";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 import CompoundQuestionEditor from "./CompoundQuestionEditor";
+import Field from "./ui/Field";
+import { headerFieldIssues } from "./teacher/questionFieldIssues";
 // Phase 20D.1 — the rich-content block editor and the Markdown conversion dialog are LAZY (builder-only chunks, loaded on demand).
 const RichContentEditor = lazy(() => import("./richContent/RichContentEditor"));
 const MarkdownConvertDialog = lazy(() => import("./richContent/MarkdownConvertDialog"));
@@ -24,9 +26,12 @@ type Props = {
   question: BuilderQuestion;
   onChange: (patch: Partial<BuilderQuestion>) => void;
   disabled?: boolean;
+  /** Phase 21E.2 — the host finalizes exams (the structured builder): show the Field frame and the field-level view of the
+   *  canonical finalization rules. Hosts without a finalization step (Live Challenge) keep the unframed markup. */
+  framed?: boolean;
 };
 
-export default function QuestionComposer({ question: q, onChange, disabled }: Props) {
+export default function QuestionComposer({ question: q, onChange, disabled, framed = false }: Props) {
   // Phase 16A §24 — changing the type is destructive to the type-specific body. When the question carries meaningful authored
   // content the change goes through the shared ConfirmDialog authority (never window.confirm); a fresh default question
   // changes silently. changeQuestionType (canonical) carries identity / prompt / marks / number / group / meta / media and
@@ -75,13 +80,26 @@ export default function QuestionComposer({ question: q, onChange, disabled }: Pr
       </div>
       {confirmDialog}
 
-      <textarea
-        className="sb-input sb-textarea"
-        value={q.text ?? ""}
-        placeholder={q.presentationType === "compound" ? "نص السؤال المركّب (اختياري)" : "نص السؤال"}
-        onChange={e => onChange({ text: e.target.value })}
-        disabled={disabled}
-      />
+      {framed ? (
+        <Field label={q.presentationType === "compound" ? "نص السؤال المركّب (اختياري)" : "نص السؤال"} error={headerFieldIssues(q).text}>{a11y => (
+          <textarea
+            {...a11y}
+            className="sb-input sb-textarea"
+            value={q.text ?? ""}
+            placeholder={q.presentationType === "compound" ? "نص السؤال المركّب (اختياري)" : "نص السؤال"}
+            onChange={e => onChange({ text: e.target.value })}
+            disabled={disabled}
+          />
+        )}</Field>
+      ) : (
+        <textarea
+          className="sb-input sb-textarea"
+          value={q.text ?? ""}
+          placeholder={q.presentationType === "compound" ? "نص السؤال المركّب (اختياري)" : "نص السؤال"}
+          onChange={e => onChange({ text: e.target.value })}
+          disabled={disabled}
+        />
+      )}
       {q.presentationType === "parametricNumeric" && <p className="sb-hint rc-host-note">المحتوى المنسق غير متاح لأسئلة القوالب العددية: نص القالب هو المرجع الوحيد للسؤال.</p>}
       {richAllowed && (
         <div className="rc-host">
@@ -108,7 +126,7 @@ export default function QuestionComposer({ question: q, onChange, disabled }: Pr
 
       {q.presentationType === "compound"
         ? <CompoundQuestionEditor question={q} onChange={onChange} disabled={disabled} />
-        : <QuestionBodyEditor node={q} type={q.presentationType} onChange={onChange} disabled={disabled} />}
+        : <QuestionBodyEditor node={q} type={q.presentationType} onChange={onChange} disabled={disabled} framed={framed} />}
     </div>
   );
 }

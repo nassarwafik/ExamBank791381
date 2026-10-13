@@ -1,0 +1,10 @@
+/* Phase 21E.2 (D) — issues shown next to their question / section (InlineIssues.tsx). Token-only; RTL logical properties. */
+.sb-inline-issues { margin-block: var(--eb-space-2); padding: var(--eb-space-2) var(--eb-space-3); border-radius: var(--eb-r-sm); border: 1px solid var(--eb-warn); background: var(--eb-warn-bg); }
+.sb-inline-issues[data-severity="error"] { border-color: var(--eb-danger); background: var(--eb-danger-bg); }
+.sb-inline-issues ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--eb-space-1); }
+.sb-inline-issues li { display: flex; align-items: baseline; gap: var(--eb-space-1); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); overflow-wrap: anywhere; }
+.sb-inline-issues li.is-error { color: var(--eb-danger-tx); }
+.sb-inline-issues li.is-warning { color: var(--eb-warn-tx); }
+.sb-inline-issue-icon { display: inline-flex; flex: 0 0 auto; align-self: center; }
+.sb-inline-issue-kind { flex: 0 0 auto; white-space: nowrap; font-weight: var(--eb-fw-semibold); }
+.sb-inline-issue-text { flex: 1 1 auto; min-width: 0; }

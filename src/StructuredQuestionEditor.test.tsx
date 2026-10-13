@@ -50,7 +50,7 @@ describe("StructuredQuestionEditor — exam chrome after extraction", () => {
     const { container } = render(<StructuredQuestionEditor {...p} />);
     const head = within(container.querySelector(".sb-q-head") as HTMLElement);   // scope to the question row (not option rows)
     fireEvent.click(head.getByTitle("معاينة الطالب")); expect(p.onPreview).toHaveBeenCalledTimes(1);
-    fireEvent.click(head.getByTitle("أسفل")); expect(p.onMove).toHaveBeenCalledWith(1);
+    fireEvent.click(head.getByTitle("نقل السؤال 1 للأسفل")); expect(p.onMove).toHaveBeenCalledWith(1);
     fireEvent.click(head.getByTitle("تكرار")); expect(p.onDuplicate).toHaveBeenCalledTimes(1);
     fireEvent.click(head.getByTitle("حذف")); expect(p.onDelete).toHaveBeenCalledTimes(1);
   });
