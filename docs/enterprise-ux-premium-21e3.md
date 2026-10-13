@@ -790,7 +790,7 @@ inaccurate are corrected in place and marked *(corrected in Review Fix 2, §13)*
 | Item | Value |
 |---|---|
 | Head reviewed | `eb174d1fb6982929b5e7e81e40ea2817852d8a21` |
-| `origin/main` | `31f40086e4740984ee1f7cb7c90aee7869301d5a`, unchanged |
+| `origin/main` | `31f40086e4740984ee1f7cb7c90aee7869301d5a` while fixing; it moved to `0e7adec` (PR #302) before the final review, and the branch was reconciled (§13.7) |
 | Commits | `9eca00e` fixes and tests; `54e0c05` the announcer test that closes mutant P13; the following commit carries this record |
 
 ### 13.1 Findings and fixes
@@ -983,5 +983,21 @@ guard mutants for every Review Fix 2 rule, and moves the announcer mutants to `e
 | Page wiring of `onDropped` | P3 | The page clears its timer key when a queued notice is dropped. The unit test covers `onDropped`, but no page test reaches the screen change (questions → gate → questions within 400 ms). | The announcer contract is unit-tested; the page wiring is one line, read in review. |
 
 Also not measured: Safari / WebKit, Firefox, and real screen-reader speech (as §12.7).
+
+### 13.7 Reconciliation with `main` (AGENTS.md §7)
+
+At the fetch before the final review, `origin/main` had moved from `31f4008` to
+**`0e7adeca45890cd7889478abfef730fb2dcd3bae`**, the merge of PR #302 (Phase 21E.2, the teacher workspace).
+
+| Item | Value |
+|---|---|
+| Merge | `de0cef4`: a normal merge of `origin/main` into this branch. One conflict, `.gitignore`, resolved as the union of both additions. No other file is changed on both sides. No generated file is involved. |
+| Typecheck / lint | `npx tsc -b` clean. Lint 0 errors and 125 warnings, the **same set as the new `main`**. |
+| Build + bundle guard | Passed: 57 declarations / 55 recoverable chunks, NEVER_REMAP 12, header parser **352 / 352** chunks (1,103 edges). Initial JS **113,206 B** (new `main` 113,170 B, **+36 B**); initial CSS **36,564 B** (new `main` 36,278 B). |
+| Root suite | **964 files, 12,432 passed, 1 failed**: the same `AppShell.lazyDashboard.8e` timing test, which fails identically on `0e7adec` in this container (§13.5) |
+| Mutation | The 16 mutated sources are byte-identical to the final ledger (sha256), so the 80-mutant result (79 killed, 1 equivalent) stands for the reconciled head |
+| Chromium harness on the reconciled build | pointer **52 / 52**, entry **76 / 76**, dependency **58 / 58**, css **36 / 36**, css-twice **18 / 18**, strict **58 / 58**, stilldown **36 / 36**. The only console errors are the injected failures' own logs. |
+
+The reconciliation changed no measured outcome of this phase.
 
 Independent review required. Owner merge only.
