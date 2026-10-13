@@ -80,7 +80,7 @@ files untouched): **31 targeted tests fail, the pins pass**; on the head every o
 |---|---|
 | `src/StructuredExamBuilder.undoToast.21e1s2.test.tsx` (real builder + real history hook) | 10/10 fail — no toast; after deleting question 2 `document.activeElement` is `<body>`, not the next card |
 | `src/designSystem/hiddenAttribute.guard.test.ts` | `student/exam/ExamDetailsDisclosure.tsx: .iex-details-panel is shown by studentexam-pro.css «.iex-details-panel{display:flex}» but has no .iex-details-panel[hidden]{display:none}` |
-| `src/designSystem/mutedContrast.21e1s2.test.ts` | `--eb-muted` on bg 4.04, primary-050 4.31, primary-100 4.15, warn-bg 4.43, danger-bg 4.35, info-bg 4.48 (< 4.5) |
+| `src/designSystem/mutedContrast.21e1s2.test.ts` | the old `--eb-muted` `#64748b` on bg 4.43, primary-050 4.31, primary-100 4.04, warn-bg 4.48, danger-bg 4.35, info-bg 4.15 (< 4.5; erratum 21E.2: this row first listed four of these values against the wrong tokens — the test computes from the live tokens and was always right) |
 | `api/tests/ux2-shell-foundation.test.js` (made stricter) | `ratio(muted, bg)` 4.04 < 4.5 |
 | `src/shell/TeacherAppShell.focusReturn.21e1s2.test.tsx` | Escape / backdrop / «إغلاق القائمة»: focus on `<body>`, not «القائمة» (the unchanged navigate / resize case passes) |
 | `src/keepContentDefault.21e1s2.test.tsx`, `src/App.sharedConfirm.21e1.test.tsx` (one assertion added) | focus on «استبدال التعليمات» / «استبدال حقول الغلاف», not «إبقاء …» (the unchanged default / danger cases pass) |
