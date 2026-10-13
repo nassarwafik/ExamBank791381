@@ -44,6 +44,21 @@ describe("RF2 — exam announcer: settle, gap, clear, drop", () => {
     expect(writes.map(w => w[1])).toEqual(["الوقت", "البطاقة"]);
     expect(writes[1][0] - writes[0][0]).toBeGreaterThanOrEqual(ANNOUNCEMENT_GAP_MS);
   });
+  it("a message that arrives just after another one was written waits for the rest of the gap (it never replaces it at once)", async () => {
+    const { clock, a, el, writes } = setup();
+    a.attach(el); clock.advance(ANNOUNCER_SETTLE_MS);
+    a.announce("الوقت"); await flush();
+    expect(el.textContent).toBe("الوقت");                                           // written, the queue is empty again
+    clock.advance(2);
+    const card = vi.fn();
+    a.announce("البطاقة", card); await flush();                                     // the re-review's case: 2 ms later
+    expect(el.textContent).toBe("الوقت"); expect(card).not.toHaveBeenCalled();
+    clock.advance(ANNOUNCEMENT_GAP_MS - 3); await flush();
+    expect(el.textContent).toBe("الوقت");
+    clock.advance(1); await flush();
+    expect(el.textContent).toBe("البطاقة"); expect(card).toHaveBeenCalledTimes(1);
+    expect(writes[1][0] - writes[0][0]).toBeGreaterThanOrEqual(ANNOUNCEMENT_GAP_MS);
+  });
   it("a message is cleared after ANNOUNCEMENT_CLEAR_MS; a later message is not cleared by an earlier timer", async () => {
     const { clock, a, el } = setup();
     a.attach(el); clock.advance(ANNOUNCER_SETTLE_MS);
