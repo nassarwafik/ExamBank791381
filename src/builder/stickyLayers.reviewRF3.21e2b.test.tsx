@@ -306,6 +306,8 @@ describe("RR3-A11Y-2 / B-02 — a Tab never leaves keyboard focus under the stic
     await mount();
     trackScroll();
     const inToolbar = document.querySelector<HTMLElement>(".sb-toolbar button:not([disabled])")!;
+    inToolbar.id = "tb-probe";
+    geo["tb-probe"] = { top: 40, height: 40 };                         // inside the stuck toolbar's band (16–136): above the edge
     await tabTo(inToolbar);
     expect(document.activeElement).toBe(inToolbar);
     expect(scrollTop).toBe(1000);
