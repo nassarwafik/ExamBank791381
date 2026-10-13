@@ -92,6 +92,7 @@ const mutants = [
   M("B21-swap-mid-press", QEB, "    await pointerReleased();\n", "", RF3_T),
   M("B22-press-elsewhere-ignored", QEB, "if (press.t >= started && !(cardNow && press.target instanceof Node && cardNow.contains(press.target))) this.restoreFocus = false;", "void press;", RF3_T),
   M("H01-finger-not-tracked", HOLD, 'document.addEventListener("touchstart", e => { touch = true; down(e); }, opts);', 'document.addEventListener("touchstart", e => { down(e); }, opts);', RF3_T),
+  M("H02-short-press-cap", HOLD, "export async function pointerReleased(capMs = 60_000, settleMs = 60)", "export async function pointerReleased(capMs = 10_000, settleMs = 60)", RF3_T),
   M("C01-hidden-line-focus-invisible", UICSS, ".eb-visually-hidden[data-recovery-line]:focus-visible + * {", ".eb-visually-hidden[data-recovery-line]:focus-visible + .none {", RF3_T),
   M("B20-anchor-takes-moved-focus", QEB, "if (!this.mounted || token !== this.token || !idle()) return;", "if (!this.mounted || token !== this.token) return;", RF3_T),
   M("B06-stem-card-not-text", CARD, '<QuestionErrorBoundary resetKey={id} variant="stem" fallback={plain}>', "<QuestionErrorBoundary resetKey={id}>", STEM_T),

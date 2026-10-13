@@ -11,6 +11,7 @@
 //           changes, and does not take focus (the press moved the student on)                                [input F-1, F-2]  fail-first
 //   RF3-U7  the same for a finger (a touch scroll cancels the pointer; only the last touchend releases it)   [input F-1, F-2]  fail-first
 //   RF3-U8  a visually hidden landing line shows its keyboard focus on the recovered part that follows it      [input F-3]
+//   RF3-U9  a long press (a 45 s drag) is still waited for: the safety cap is not a press length         [input F-1 follow-up]
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, act, cleanup, waitFor } from "@testing-library/react";
 import fs from "node:fs";
@@ -19,6 +20,7 @@ import { Suspense, useRef, type ComponentType, type ReactElement } from "react";
 import QuestionErrorBoundary from "./QuestionErrorBoundary";
 import { QuestionRecoveryContext } from "./questionRecovery";
 import { recoverableLazy } from "../../recoverableLazy";
+import { trackPointer, pointerReleased } from "./pointerHold";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const origin = window.location.origin;
@@ -178,5 +180,22 @@ describe("RF3-U8 — a visually hidden landing line shows focus on the recovered
     const css = fs.readFileSync(path.join(__dirname, "..", "..", "ui", "ui.css"), "utf8");
     const rule = /\.eb-visually-hidden\[data-recovery-line\]:focus-visible \+ \* \{([^}]*)\}/.exec(css);
     expect(rule?.[1]).toMatch(/outline: var\(--eb-focus-ring\)/);
+  });
+});
+
+describe("RF3-U9 — a long press is still waited for", () => {
+  it("a press held 45 s keeps the wait open; the release ends it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+    try {
+      trackPointer();
+      fireEvent.pointerDown(document.body);
+      let done = false;
+      void pointerReleased().then(() => { done = true; });
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(done).toBe(false);                                                     // a drag in the physics lab / around a 3D model
+      fireEvent.pointerUp(document.body);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(done).toBe(true);
+    } finally { vi.useRealTimers(); }
   });
 });

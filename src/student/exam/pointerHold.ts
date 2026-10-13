@@ -34,8 +34,10 @@ export const pointerIsDown = (): boolean => pointer || touch;
 export const lastPointerDown = (): { t: number; target: EventTarget | null } => lastDown;
 
 /** Resolves once no pointer or finger is down and the release has had `settleMs` to finish (its click / activation runs on the
- *  layout it was pressed on). Never waits longer than `capMs` in total (a release the page never saw cannot hold a card forever). */
-export async function pointerReleased(capMs = 10_000, settleMs = 60): Promise<void> {
+ *  layout it was pressed on). Never waits longer than `capMs` in total: a safety net for a release the page never saw (any later
+ *  press and release also ends the wait). It is long because a real press can be long — a drag in the physics lab or around a 3D
+ *  model — and the layout must not change under it. */
+export async function pointerReleased(capMs = 60_000, settleMs = 60): Promise<void> {
   const end = now() + capMs;
   for (;;) {
     if (!pointerIsDown()) {
