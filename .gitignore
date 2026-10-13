@@ -88,3 +88,6 @@ artifacts/phase-21dd3/
 .harness-student-exam-21e3/
 # Phase 21E.3 — mutation ledger written per run (never committed)
 artifacts/phase-21e3/
+.harness-visual-gate-21e2/
+.harness-visual-gate-21e2-workspace/
+artifacts/phase-21e2/

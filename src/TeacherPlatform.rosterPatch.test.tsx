@@ -231,7 +231,7 @@ describe("R32 — edit", () => {
     const modal = await openEdit("علي");
     fireEvent.change(within(modal).getByLabelText("الاسم"), { target: { value: "عليّ" } });
     fireEvent.change(within(modal).getByLabelText("رقم الهوية"), { target: { value: "555555555" } });
-    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التغييرات" }));
     await screen.findByText("✓ تم حفظ تعديلات الطالب.");
     const row = rowOf("عليّ");
     expect(within(row).getByText("555555555")).toBeTruthy();
@@ -247,7 +247,7 @@ describe("R32 — edit", () => {
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
     const modal = await openEdit("علي");
     fireEvent.change(within(modal).getByLabelText("الصف"), { target: { value: "c2" } });
-    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التغييرات" }));
     await screen.findByText("✓ تم تعديل الطالب ونقله إلى الصف المختار.");
     expect(screen.queryByText("علي")).toBeNull();
     expect(screen.queryByText(/طالب محدد/)).toBeNull();
@@ -260,7 +260,7 @@ describe("R32 — edit", () => {
     postHandler = () => ({ ok: true, passwordChanged: false, rosterSynced: true });
     await mount();
     const modal = await openEdit("علي");
-    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التغييرات" }));
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
     expect(firstIndex(isStudentsGet)).toBeLessThan(firstIndex(isClassesGet));
@@ -270,7 +270,7 @@ describe("R32 — edit", () => {
     postHandler = () => ({ ok: true, student: { ...S1, firstName: "غريب", classId: "c2" }, passwordChanged: false, rosterSynced: true });
     await mount();
     const modal = await openEdit("علي");                       // class select stays c1
-    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التغييرات" }));
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
     expect(screen.queryByText("غريب")).toBeNull();
@@ -390,7 +390,7 @@ describe("R32 review fix — MOVE is a TWO-class operation (source index + targe
   async function startMove() {
     const modal = await openEdit("علي");
     fireEvent.change(within(modal).getByLabelText("الصف"), { target: { value: "c2" } });
-    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التغييرات" }));
   }
   const idx = (classId: string) => firstIndex(c => isStudentsGet(c) && c.url.includes("classId=" + classId));
 

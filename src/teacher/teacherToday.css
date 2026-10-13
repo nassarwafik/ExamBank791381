@@ -1,15 +1,29 @@
 /* Phase 9A — Teacher Today Hub / Command Center. Reuses the dashboard's attention-card tokens (dashboard-pro.css);
    this file only adds the hub's own layout. Imported by TeacherTodayHub (the TeacherPlatform chunk, never initial). */
 .eb-today-teacher{ display:flex; flex-direction:column; gap:var(--eb-space-3); margin-block-end:var(--eb-space-5); }
-.eb-today-grid{ grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
+.eb-today-grid{ grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
 .eb-today-row{ display:flex; flex-direction:column; gap:2px; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); }
 .eb-today-card-action{ align-self:flex-start; margin-block-start:auto; }
 .eb-today-note{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
 .eb-today-quiet{ margin:0; }
 .eb-today-error{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
-.eb-today-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+/* Phase 21E.2 — quick actions are an even tile grid (2 / 3 / 6 columns) instead of a ragged wrap of outline buttons; each
+   icon sits in a tinted chip. Same six buttons, same order, same names. */
+.eb-today-actions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-2); }
 .eb-today-actions .eb-button{ min-height:44px; }
-.eb-today-recent{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); }
+.eb-today-actions .eb-today-action{
+  justify-content:flex-start; gap:var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3);
+  border-color:var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); box-shadow:var(--eb-sh-xs);
+  color:var(--eb-text-heading); text-align:start;
+}
+.eb-today-actions .eb-today-action:hover{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.eb-today-action-icon{
+  flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+  border-radius:var(--eb-r-sm); background:var(--eb-primary-050); color:var(--eb-primary-strong);
+}
+@media (min-width: 768px){ .eb-today-actions{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (min-width: 1280px){ .eb-today-actions{ grid-template-columns:repeat(6,minmax(0,1fr)); } }
+.eb-today-recent{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-4) var(--eb-space-5); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-sm); }
 .eb-today-recent-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
 .eb-today-recent-item{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--eb-space-1) var(--eb-space-3); padding-block:var(--eb-space-1); border-block-end:1px solid var(--eb-line); font-size:var(--eb-fs-13); }
 .eb-today-recent-item:last-child{ border-block-end:0; }

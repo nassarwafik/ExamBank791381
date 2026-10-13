@@ -1,5 +1,6 @@
 import Dialog from "../ui/Dialog";
 import type { Item, StudentResult } from "./types";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 
 /* Small labelled Dialogs replacing the old inline <tr colSpan> editors. Values, validation and requests are
    owned by AssignmentsPanel; these components only lay the fields out. */
@@ -10,7 +11,7 @@ export function DeadlineDialog(p: EditorBase & { onSave: (s: StudentResult) => v
   const s = p.student;
   return (
     <Dialog open={!!s && !!p.assignment} title="تمديد الموعد" onClose={p.onClose} size="sm" className="deadline-edit-dialog"
-      footer={<><button type="button" className="eb-button" onClick={p.onClose}>إغلاق</button>{s?.dueAtOverride && <button type="button" className="eb-button" onClick={() => s && p.onClear(s)} disabled={p.busy}>إلغاء التمديد</button>}<button type="button" className="eb-button is-primary" onClick={() => s && p.onSave(s)} disabled={p.busy || !p.value}>حفظ التمديد</button></>}>
+      footer={<><button type="button" className="eb-button" onClick={p.onClose}>إغلاق</button>{s?.dueAtOverride && <button type="button" className="eb-button" onClick={() => s && p.onClear(s)} disabled={p.busy}>إلغاء التمديد</button>}<button type="button" className="eb-button is-primary" onClick={() => s && p.onSave(s)} disabled={p.busy || !p.value}>{SAVE_LABELS.saveExtension}</button></>}>
       {s && p.assignment && <>
         <p className="eb-dialog-lead">الطالب: <strong>{s.studentName}</strong></p>
         <dl className="eb-dl">
@@ -27,7 +28,7 @@ export function ReopenDialog(p: EditorBase & { onSave: (s: StudentResult) => voi
   const s = p.student;
   return (
     <Dialog open={!!s && !!p.assignment} title="إعادة فتح للطالب" onClose={p.onClose} size="sm" className="reopen-edit-dialog"
-      footer={<><button type="button" className="eb-button" onClick={p.onClose}>إغلاق</button><button type="button" className="eb-button is-primary" onClick={() => s && p.onSave(s)} disabled={p.busy}>حفظ إعادة الفتح</button></>}>
+      footer={<><button type="button" className="eb-button" onClick={p.onClose}>إغلاق</button><button type="button" className="eb-button is-primary" onClick={() => s && p.onSave(s)} disabled={p.busy}>{SAVE_LABELS.saveReopen}</button></>}>
       {s && <>
         <p className="eb-dialog-lead">الطالب: <strong>{s.studentName}</strong></p>
         <div className="eb-form-grid"><label>إعادة الفتح حتى (اختياري)<input type="datetime-local" value={p.value} onChange={e => p.onValue(e.target.value)} /></label></div>
@@ -41,7 +42,7 @@ export function ExtendDialog(p: EditorBase & { willClip: boolean; onSave: (s: St
   const s = p.student;
   return (
     <Dialog open={!!s && !!p.assignment} title="تمديد وقت المحاولة" onClose={p.onClose} size="sm" className="extend-edit-dialog"
-      footer={<><button type="button" className="eb-button" onClick={p.onClose}>إغلاق</button><button type="button" className="eb-button is-primary" onClick={() => s && p.onSave(s)} disabled={p.busy || !p.value}>حفظ التمديد</button></>}>
+      footer={<><button type="button" className="eb-button" onClick={p.onClose}>إغلاق</button><button type="button" className="eb-button is-primary" onClick={() => s && p.onSave(s)} disabled={p.busy || !p.value}>{SAVE_LABELS.saveExtension}</button></>}>
       {s && <>
         <p className="eb-dialog-lead">الطالب: <strong>{s.studentName}</strong></p>
         <dl className="eb-dl">

@@ -5,6 +5,7 @@ import StatusBadge from "../ui/StatusBadge";
 import { IconPlus, IconUpload } from "../icons";
 import type { Classroom, ImportPreviewRow, Student, ProfilePhotoMeta } from "./types";
 import { IDENTITY_ERROR, validIdentity } from "./identity";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 
 /* Form dialogs for the Classes & Students workspace. Field VALUES and handlers live in TeacherPlatform
    (it owns validation, the request bodies and the credential semantics); these components only lay the
@@ -112,7 +113,7 @@ export function EditStudentDialog({ open, onClose, classes, firstName, familyNam
   const identity = identityFieldProps(identityNumber, formId + "-identity-error");
   return (
     <Dialog open={open} title="تعديل تفاصيل الطالب" onClose={onClose} size="sm"
-      footer={<><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="submit" form={formId} className="eb-button is-primary" disabled={busy || !canSubmit}>حفظ التعديلات</button></>}>
+      footer={<><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="submit" form={formId} className="eb-button is-primary" disabled={busy || !canSubmit}>{SAVE_LABELS.saveChanges}</button></>}>
       {photo && <StudentPhotoField token={photo.token} studentId={photo.student.userId} studentName={photo.student.displayName} avatarId={photo.student.avatarId} profilePhoto={photo.student.profilePhoto ?? null} onChange={photo.onChange} />}
       <form id={formId} className="eb-form-grid" onSubmit={submitHandler(onSubmit)}>
         <label>الاسم<input value={firstName} onChange={e => onFirstName(e.target.value)} autoComplete="off" /></label>
