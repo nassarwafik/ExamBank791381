@@ -46,7 +46,7 @@ import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import BuilderToolbar from "./builder/BuilderToolbar";
-import { indexIssues, issueTargets, type IssueTarget } from "./builder/issueIndex";
+import { indexIssues, issueOccurrence, issueTargets, type IssueTarget } from "./builder/issueIndex";
 import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer";
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS } from "./teacher/saveLabels";
@@ -161,6 +161,8 @@ const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const EMPTY_REVEALS: ReadonlyMap<string, number> = new Map<string, number>();
 /** Phase 21E.2 (D) — a control whose Field frame shows an error now (aria-invalid) and that can take focus. */
 const INVALID_FIELD = ['input', 'select', 'textarea'].map(t => t + '[aria-invalid="true"]:not([disabled])').join(", ");
+/** RF2-2 — any control that can take focus (e.g. «+ إضافة خيار» in a multiple-choice frame without options). */
+const ENABLED_CONTROL = ['button', 'input:not([type="hidden"])', 'select', 'textarea'].map(t => t + ':not([disabled])').join(", ");
 const FLASH_MS = 1200;
 const UNDO_TOAST_MS = 10000;
 /** Height of the band a toast covers at the bottom of the builder — keep in sync with structured-builder.css
@@ -844,25 +846,37 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // their fields keep showing their errors (FieldRevealContext) until fixed; a new count re-opens a collapsed card.
   const [issueReveal, setIssueReveal] = useState<{ examId: string; seqs: ReadonlyMap<string, number> } | null>(null);
   let revealedQuestions = issueReveal?.examId === exam.examId ? issueReveal.seqs : EMPTY_REVEALS;
-  // K3 C-F3 — "until fixed" is derived, never latched: a question leaves the reveal in the render where its last canonical issue goes
+  // K3 C-F3 — "until fixed" is derived, never latched: a question leaves the reveal in the render where its last canonical ERROR goes
   // (no commit ever shows the stale reveal). A problem it gets LATER (a new empty row) is then shown by the field's own touched rule
-  // (Field touchKey), like any other; another summary click reveals it again.
-  if ([...revealedQuestions.keys()].some(id => !issueIndex.byQuestion.has(id))) {
-    revealedQuestions = new Map([...revealedQuestions].filter(([id]) => issueIndex.byQuestion.has(id)));
+  // (Field touchKey), like any other; another summary click reveals it again. RF2-3 — a warning it keeps (STIMULUS_MISSING: a stale
+  // shared-stimulus reference) never holds the reveal: no field shows a warning, so it would only turn later rows red unvisited.
+  const hasError = (id: string) => !!issueIndex.byQuestion.get(id)?.some(i => i.severity === "error");
+  if ([...revealedQuestions.keys()].some(id => !hasError(id))) {
+    revealedQuestions = new Map([...revealedQuestions].filter(([id]) => hasError(id)));
     setIssueReveal({ examId: exam.examId, seqs: revealedQuestions });
   }
+  // Re-review RF2R-1 — opening a collapsed card is a separate, NEVER-pruned signal: a summary click on a warning-only question must
+  // still open its card even though the field reveal above is pruned in the same render (opening and revealing are two jobs).
+  const [openReq, setOpenReq] = useState<{ examId: string; seqs: ReadonlyMap<string, number> } | null>(null);
+  const openRequests = openReq?.examId === exam.examId ? openReq.seqs : EMPTY_REVEALS;
   const revealCount = useRef(0);
   /** K3 A-F4 — the issue list a card / section shows itself (its direct child; a card's list is never a nested question's). */
   const ownIssueList = (host: Element | null | undefined) => (Array.from(host?.children ?? []).find(c => c.classList.contains("sb-inline-issues")) as HTMLElement | undefined) ?? null;
   /** The question below the sticky toolbar, with the alignment every other jump uses (alignCard), and focus where the teacher fixes
-   *  it. Never touches the selection or the navigator. K3: the field that shows the clicked issue (its Field frame carries that
-   *  canonical code: data-issue-codes — A-F6), else the first field whose error is now shown, else the card's NAMED issue list
-   *  «مشكلات السؤال N» (A-F4: e.g. a multiple-choice question without options has no control to focus), else the card. */
-  const focusQuestionIssues = (id: string, code?: string) => {
+   *  it. Never touches the selection or the navigator. K3 A-F6: the frame(s) showing the clicked issue (data-issue-codes) — RF2-1:
+   *  the clicked INSTANCE of that code (data-issue-nth: e.g. its own incomplete pair), else any frame showing the code. RF2-2: in
+   *  those frames, the invalid control, else the first enabled control («+ إضافة خيار» when a multiple-choice question has no
+   *  options), else the card's NAMED issue list «مشكلات السؤال N» (A-F4) — never another field's error. Only an issue no frame
+   *  shows takes the first field whose error is now shown, else the named list, else the card. */
+  const focusQuestionIssues = (id: string, instance?: { code: string; nth: number }) => {
     const el = nodes.current.get(id);
     if (!el || !alive.current) return;
-    const showing = code ? Array.from(el.querySelectorAll<HTMLElement>("[data-issue-codes]")).filter(f => (f.dataset.issueCodes || "").split(" ").includes(code)) : [];
-    const field = showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? el.querySelector<HTMLElement>(INVALID_FIELD);
+    const coded = instance ? Array.from(el.querySelectorAll<HTMLElement>("[data-issue-codes]")).filter(f => (f.dataset.issueCodes || "").split(" ").includes(instance.code)) : [];
+    const own = coded.filter(f => Number(f.dataset.issueNth || 1) === instance?.nth);
+    const showing = own.length ? own : coded;
+    const field = showing.length
+      ? showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? showing.map(f => f.querySelector<HTMLElement>(ENABLED_CONTROL)).find(Boolean)
+      : el.querySelector<HTMLElement>(INVALID_FIELD);
     if (field) {
       alignCard(field.closest<HTMLElement>(".eb-field, .eb-field-group") ?? field);
       field.focus({ preventScroll: true });
@@ -870,7 +884,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     if (!field || document.activeElement !== field) (ownIssueList(el) ?? el).focus({ preventScroll: true });
     setFlashId(id);
   };
-  const openIssue = (target: IssueTarget, code: string) => {
+  const openIssue = (target: IssueTarget, issue: StructuredIssue) => {
     if (!alive.current) return;
     if (target.kind === "section") {
       const el = sectionNode(target.id);
@@ -883,8 +897,10 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       return;
     }
     const examId = exam.examId, count = ++revealCount.current;
+    const instance = { code: issue.code, nth: issueOccurrence(issue, issueIndex.byQuestion.get(target.id) ?? []) };   // RF2-1
     setIssueReveal(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
-    window.setTimeout(() => focusQuestionIssues(target.id, code), 0);   // after the revealed (and re-opened) card has rendered
+    setOpenReq(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
+    window.setTimeout(() => focusQuestionIssues(target.id, instance), 0);   // after the revealed (and re-opened) card has rendered
   };
   const gatesText = gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات";
 
@@ -959,7 +975,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
                 const what = <><span className="sb-issue-kind">{iss.severity === "error" ? "خطأ:" : "تنبيه:"}</span> <span className="sb-issue-text">{iss.message}</span></>;
                 return (
                   <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>
-                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target, iss.code)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
+                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target, iss)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
                   </li>
                 );
               })}
@@ -1013,6 +1029,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             sectionIssues={issueIndex.bySection.get(section.id)}
             questionIssues={issueIndex.byQuestion}
             revealedQuestions={revealedQuestions}
+            openRequests={openRequests}
           />
         ))}
       </div>

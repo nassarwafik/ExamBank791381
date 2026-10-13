@@ -58,6 +58,14 @@ const blueprintExam = { ...savedExam, examId: "E10", title: "اختبار بمخ
   blueprint: { schemaVersion: 1, subject: { id: "networking", label: "شبكات الحاسوب" }, topics: [{ id: "t1", label: "IPv4", order: 0 }], objectives: [{ id: "o1", label: "يحسب شبكة فرعية", topicId: "t1", order: 0 }],
     targets: { totalQuestions: 6, totalMarks: 12 }, constraints: [{ id: "c-top", dimension: "topic", ref: "t1", metric: "count", unit: "absolute", min: 2 }],
     qualityPolicy: { schemaVersion: 1, enabled: true, rules: [{ id: "qr1", enabled: true, source: { kind: "constraint", constraintId: "c-top" }, relations: ["below-min"], effect: "warning" }] } } };
+// Review Fix 2 (PART=builder, RF2 checks): the re-review's own examples — a matching question with two incomplete pairs (pair 1 and
+// pair 3 without their item) and a multiple-choice question without options and with marks 0 (the shapes buildMatchingPatch writes).
+const pairField = (i, left, right) => ({ id: "m" + i, label: left, kind: "select", options: [{ text: "80" }, { text: "53" }, { text: "443" }], correct: right });
+const issuesExam = { ...savedExam, examId: "E11", title: "اختبار مواضع المشكلات",
+  sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, instructions: "", questions: [
+    { examQuestionId: "s1m1", presentationType: "matching", text: "طابق كل بروتوكول بمنفذه", marks: 2, fields: [pairField(0, "", "80"), pairField(1, "DNS", "53"), pairField(2, "", "443")], answer: { text: "DNS=53" } },
+    { examQuestionId: "s1c1", presentationType: "multipleChoice", text: "اختر بروتوكول طبقة النقل", marks: 0, options: [], answer: {} },
+  ] }] };
 const apiCalls = [];
 function api(req, res, body) {
   const u = new URL(req.url, "http://localhost"), p = u.pathname;
@@ -73,8 +81,8 @@ function api(req, res, body) {
   if (p === "/api/classrooms") return send(200, { ok: true, classes: [{ classId: "c1", name: "الحادي عشر", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 3 }] });
   if (p === "/api/assignments" && req.method === "GET") return send(200, { ok: true, assignments: [assignment] });
   if (p === "/api/assignment-results" && req.method === "GET") return send(200, results);
-  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [{ blobName: "exams/e9.json", examId: "E9", title: savedExam.title, savedAt: "2026-10-01T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e10.json", examId: "E10", title: blueprintExam.title, savedAt: "2026-09-30T10:00:00Z", questionCount: 6, totalMarks: 12 }] });
-  if (p === "/api/saved-exams" && j.action === "load") return send(200, { ok: true, exam: j.blobName === "exams/e10.json" ? blueprintExam : savedExam, savedAt: "2026-10-01T10:00:00Z" });
+  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [{ blobName: "exams/e9.json", examId: "E9", title: savedExam.title, savedAt: "2026-10-01T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e10.json", examId: "E10", title: blueprintExam.title, savedAt: "2026-09-30T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e11.json", examId: "E11", title: issuesExam.title, savedAt: "2026-09-29T10:00:00Z", questionCount: 2, totalMarks: 2 }] });
+  if (p === "/api/saved-exams" && j.action === "load") return send(200, { ok: true, exam: j.blobName === "exams/e10.json" ? blueprintExam : j.blobName === "exams/e11.json" ? issuesExam : savedExam, savedAt: "2026-10-01T10:00:00Z" });
   if (p === "/api/saved-exams" && j.action === "save") return send(200, { ok: true, savedAt: new Date().toISOString(), blobName: "exams/s.json" });
   return send(200, { ok: true, items: [], exams: [], templates: [], questions: [], classes: [], students: [], assignments: [], projects: [], posts: [] });
 }

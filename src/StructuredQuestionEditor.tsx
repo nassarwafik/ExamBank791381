@@ -60,14 +60,18 @@ type Props = {
   /** Phase 21E.2 (D) — set once the teacher opened this question from the builder's issue summary: its fields show their errors
    *  at once (FieldRevealContext). A NEW value (a later summary click) also opens a collapsed card. UI state only, never exam data. */
   revealIssues?: number;
+  /** Re-review RF2R-1 — a NEW value (a later summary click) opens a collapsed card, also for a question whose field reveal was pruned
+   *  (only warnings left). Without it, a new revealIssues value opens the card as before. */
+  openRequest?: number;
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint, issues, revealIssues } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint, issues, revealIssues, openRequest } = props;
   const [open, setOpen] = useState(true);
   // A summary click on a collapsed card opens it during the same render (no extra commit), so the builder can focus the field.
-  const [openedFor, setOpenedFor] = useState(revealIssues);
-  if (revealIssues !== openedFor) { setOpenedFor(revealIssues); if (revealIssues) setOpen(true); }
+  const openSignal = openRequest ?? revealIssues;
+  const [openedFor, setOpenedFor] = useState(openSignal);
+  if (openSignal !== openedFor) { setOpenedFor(openSignal); if (openSignal) setOpen(true); }
   // 21E.2 — the field-level view of the canonical header rules (EMPTY_TEXT / MARKS_PROBLEM) and the question's display label,
   // used to give the reorder buttons a name that says WHICH question moves.
   const fieldIssues = useMemo(() => headerFieldIssues(q), [q]);

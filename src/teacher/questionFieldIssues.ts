@@ -41,15 +41,18 @@ export function multipleChoiceFieldIssues(node: QuestionBody): { options?: strin
   return out;
 }
 
-/** Legacy matching — mirrors MISSING_FIELDS and MATCH_INCOMPLETE_PAIR (per pair, by its position in the editor's list). */
-export function matchingFieldIssues(node: QuestionBody): { list?: string; pairs: Record<number, { left?: string; right?: string }> } {
+/** Legacy matching — mirrors MISSING_FIELDS and MATCH_INCOMPLETE_PAIR (per pair, by its position in the editor's list).
+ *  RF2-1 — `nth` names WHICH MATCH_INCOMPLETE_PAIR a pair shows: the canonical rule emits one per incomplete pair, in pair order,
+ *  so the n-th incomplete pair of this loop is the question's n-th MATCH_INCOMPLETE_PAIR (its frames carry it: Field `issueNth`). */
+export function matchingFieldIssues(node: QuestionBody): { list?: string; pairs: Record<number, { left?: string; right?: string; nth: number }> } {
   const fields = node.fields || [];
-  const pairs: Record<number, { left?: string; right?: string }> = {};
+  const pairs: Record<number, { left?: string; right?: string; nth: number }> = {};
   if (!fields.length) return { list: "أضف زوجًا واحدًا على الأقل بعنصر وإجابته.", pairs };
   // The editor lists matchingPairs(node) — the same order as node.fields (one pair per field).
+  let nth = 0;
   matchingPairs(node).forEach((p, i) => {
     const left = String(p.left ?? "").trim(), right = String(p.right ?? "").trim();
-    if (left === "" || right === "") pairs[i] = { ...(left === "" ? { left: "اكتب العنصر." } : {}), ...(right === "" ? { right: "اكتب الإجابة الصحيحة لهذا العنصر." } : {}) };
+    if (left === "" || right === "") pairs[i] = { ...(left === "" ? { left: "اكتب العنصر." } : {}), ...(right === "" ? { right: "اكتب الإجابة الصحيحة لهذا العنصر." } : {}), nth: ++nth };
   });
   return { pairs };
 }

@@ -33,10 +33,18 @@ export type FieldProps = {
   /** K3 (A-F6) — the canonical issue code(s) behind `error` (space-separated; see teacher/questionFieldIssues). While the error is
    *  shown the frame carries them as `data-issue-codes`, so the builder's issue summary can focus the field showing a given issue. */
   issueCode?: string;
+  /** RF2-1 — WHICH issue with that code the frame shows when its question has several (one MATCH_INCOMPLETE_PAIR per incomplete
+   *  pair): its 1-based occurrence among the question's issues with that code, as the field mapping numbers it (default 1). Carried
+   *  with the codes as `data-issue-nth`, so a summary entry focuses its own row, not the first row carrying the code. */
+  issueNth?: number;
   children: (a11y: FieldA11y) => ReactNode;
 };
 
-export default function Field({ label, help, error, showError = "touched", hideLabel, layout = "stack", className, touchKey = 0, issueCode, children }: FieldProps) {
+/** The frame attributes that name the canonical issue(s) a frame shows — only while it shows them. */
+const issueAttrs = (visible: boolean, issueCode: string | undefined, issueNth: number | undefined) =>
+  visible && issueCode ? { "data-issue-codes": issueCode, "data-issue-nth": String(issueNth ?? 1) } : {};
+
+export default function Field({ label, help, error, showError = "touched", hideLabel, layout = "stack", className, touchKey = 0, issueCode, issueNth, children }: FieldProps) {
   const { id, helpId, errorId } = useFieldIds();
   const reveal = useContext(FieldRevealContext);
   const [touchedFor, setTouchedFor] = useState<string | number | null>(null);
@@ -46,7 +54,7 @@ export default function Field({ label, help, error, showError = "touched", hideL
   const describedBy = [help ? helpId : "", visibleError ? errorId : ""].filter(Boolean).join(" ") || undefined;
   const a11y: FieldA11y = { id, ...(describedBy ? { "aria-describedby": describedBy } : {}), ...(visibleError ? { "aria-invalid": true as const } : {}) };
   return (
-    <div className={["eb-field", "is-" + layout, visibleError ? "is-invalid" : "", className || ""].filter(Boolean).join(" ")} data-issue-codes={visibleError && issueCode ? issueCode : undefined} onBlur={() => { if (!touched) setTouchedFor(touchKey); }}>
+    <div className={["eb-field", "is-" + layout, visibleError ? "is-invalid" : "", className || ""].filter(Boolean).join(" ")} {...issueAttrs(visibleError, issueCode, issueNth)} onBlur={() => { if (!touched) setTouchedFor(touchKey); }}>
       <label htmlFor={id} className={hideLabel ? "eb-field-label eb-visually-hidden" : "eb-field-label"}>{label}</label>
       <div className="eb-field-control">{children(a11y)}</div>
       {help && <p id={helpId} className="eb-field-help">{help}</p>}
@@ -60,7 +68,7 @@ export default function Field({ label, help, error, showError = "touched", hideL
  * visible group label; help / error are linked to the group with aria-describedby. Controls inside that carry their own
  * invalid state get `aria-invalid` from the caller (via `groupA11y`).
  */
-export function FieldGroup({ legend, help, error, showError = "touched", className, issueCode, children }: { legend: ReactNode; help?: ReactNode; error?: ReactNode; showError?: "touched" | "always"; className?: string; issueCode?: string; children: (a11y: { "aria-invalid"?: true; "aria-describedby"?: string }) => ReactNode }) {
+export function FieldGroup({ legend, help, error, showError = "touched", className, issueCode, issueNth, children }: { legend: ReactNode; help?: ReactNode; error?: ReactNode; showError?: "touched" | "always"; className?: string; issueCode?: string; issueNth?: number; children: (a11y: { "aria-invalid"?: true; "aria-describedby"?: string }) => ReactNode }) {
   const { helpId, errorId } = useFieldIds("eb-group");
   const reveal = useContext(FieldRevealContext);
   const [touched, setTouched] = useState(false);
@@ -68,7 +76,7 @@ export function FieldGroup({ legend, help, error, showError = "touched", classNa
   const visibleError = hasError && (showError === "always" || touched || reveal);
   const describedBy = [help ? helpId : "", visibleError ? errorId : ""].filter(Boolean).join(" ") || undefined;
   return (
-    <fieldset className={["eb-field-group", visibleError ? "is-invalid" : "", className || ""].filter(Boolean).join(" ")} aria-describedby={describedBy} data-issue-codes={visibleError && issueCode ? issueCode : undefined} onBlur={e => { if (!touched && !e.currentTarget.contains(e.relatedTarget as Node | null)) setTouched(true); }}>
+    <fieldset className={["eb-field-group", visibleError ? "is-invalid" : "", className || ""].filter(Boolean).join(" ")} aria-describedby={describedBy} {...issueAttrs(visibleError, issueCode, issueNth)} onBlur={e => { if (!touched && !e.currentTarget.contains(e.relatedTarget as Node | null)) setTouched(true); }}>
       <legend className="eb-field-label">{legend}</legend>
       {help && <p id={helpId} className="eb-field-help">{help}</p>}
       {children(visibleError ? { "aria-invalid": true, "aria-describedby": errorId } : {})}
