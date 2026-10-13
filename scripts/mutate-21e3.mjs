@@ -27,7 +27,7 @@ const RT2 = ["src/recoverableLazy.rf1.test.tsx", "src/recoverableLazy.rf2.test.t
 const BELL_T = ["src/notifications/NotificationBell.grade.rf2.test.tsx", "src/student/exam/exam21e3.units.test.tsx"];
 // Review fix 3 suites.
 const RT3 = ["src/recoverableLazy.rf1.test.tsx", "src/recoverableLazy.rf2.test.tsx", "src/recoverableLazy.rf3.test.tsx"];
-const RF3_T = ["src/student/exam/rf3.units.test.tsx", "src/student/exam/rf3b.units.test.tsx", "src/StudentExamPage.rf3.test.tsx"];
+const RF3_T = ["src/student/exam/rf3.units.test.tsx", "src/student/exam/rf3b.units.test.tsx", "src/student/exam/rf3c.units.test.tsx", "src/StudentExamPage.rf3.test.tsx"];
 // `equivalent` (rare): the reason a mutant cannot change behaviour (AGENTS.md §9 "show the mutant is equivalent"). It is still
 // planted and run; if it survives it is reported as `equivalent` with that reason (never silently), and if it is killed the reason
 // was wrong and it counts as killed. `before` / `after` may be arrays (one mutant made of several edits in the same file, for a
@@ -105,6 +105,17 @@ const mutants = [
   M("B29-anchor-during-press", QEB, "if (!pointerIsDown() && this.context.focusAnchor?.())", "if (this.context.focusAnchor?.())", RF3_T),
   M("B30-reveal-after-later-press", QEB, " || pointerIsDown() || lastPointerDown().t >= this.retryStarted) return;", " || pointerIsDown()) return;", RF3_T),
   M("B31-stale-retry-after-release", QEB, "    await pointerReleased();\n    if (!this.mounted || token !== this.token) return;\n", "    await pointerReleased();\n", RF3_T),
+  // Review fix 3 — the press guard after a layout change in view (input reviewer RR3-IN-4).
+  M("S01-no-guard-after-swap", QEB, "() => { if (ok && inView) guardPresses(SHIFT_GUARD_MS); });", "() => {});", RF3_T),
+  M("S02-guard-out-of-view", QEB, "inView = !!r && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight;", "inView = true;", RF3_T),
+  M("S03-guard-keyboard-clicks", HOLD, "if (swallowing && (e as MouseEvent).detail !== 0) {", "if (swallowing) {", RF3_T),
+  M("S04-click-not-stopped", HOLD, '  document.addEventListener("click", e => { if (swallowing && (e as MouseEvent).detail !== 0) { swallowing = false; stop(e); } }, guard);\n', "", RF3_T),
+  M("S05-pointerdown-not-stopped", HOLD, "swallowing = now() < guardUntil; if (swallowing) stop(e);", "swallowing = now() < guardUntil;", RF3_T),
+  M("S06-guard-never-ends", HOLD, "swallowing = now() < guardUntil;", "swallowing = guardUntil > 0;", RF3_T),
+  M("S07-reveal-unguarded", QEB, "    if (window.scrollY !== y) guardPresses(SHIFT_GUARD_MS);", "    void y;", RF3_T),
+  M("S08-drag-not-cancelled", HOLD, "if (swallowing) { stop(e); drag = false; }", "if (swallowing) { drag = false; }", RF3_T),
+  M("S09-cancelled-drag-stuck", HOLD, "if (swallowing) { stop(e); drag = false; }", "if (swallowing) { stop(e); }", RF3_T),
+  M("S10-no-guard-window", QEB, "const SHIFT_GUARD_MS = 400;", "const SHIFT_GUARD_MS = 0;", RF3_T),
   M("H01-finger-not-tracked", HOLD, 'document.addEventListener("touchstart", e => { touch = true; down(e); }, opts);', 'document.addEventListener("touchstart", e => { down(e); }, opts);', RF3_T),
   M("H02-short-press-cap", HOLD, "export async function pointerReleased(capMs = 60_000, settleMs = 60)", "export async function pointerReleased(capMs = 10_000, settleMs = 60)", RF3_T),
   M("C01-hidden-line-focus-invisible", UICSS, ".eb-visually-hidden[data-recovery-line]:focus-visible + * {", ".eb-visually-hidden[data-recovery-line]:focus-visible + .none {", RF3_T),

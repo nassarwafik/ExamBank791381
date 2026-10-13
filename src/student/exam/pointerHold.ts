@@ -13,6 +13,7 @@
  */
 let installed = false, pointer = false, touch = false, drag = false;
 let lastDown: { t: number; target: EventTarget | null } = { t: -1, target: null };
+let guardUntil = -1, swallowing = false;
 const waiters = new Set<() => void>();
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
@@ -36,6 +37,21 @@ export function trackPointer(): void {
   for (const t of ["drop", "dragend"]) document.addEventListener(t, () => { drag = false; changed(); }, opts);
   document.addEventListener("pointermove", e => { if ((e as PointerEvent).buttons === 0 && (pointer || drag)) { pointer = false; drag = false; changed(); } }, opts);
   window.addEventListener("blur", () => { pointer = false; touch = false; drag = false; changed(); });
+  // `guardPresses`: registered after the tracking above, so the press is still tracked; stopped before the page sees it.
+  const stop = (e: Event) => { e.preventDefault(); e.stopPropagation(); }, guard = { capture: true } as const;
+  document.addEventListener("pointerdown", e => { swallowing = now() < guardUntil; if (swallowing) stop(e); }, guard);
+  for (const t of ["mousedown", "pointerup", "mouseup"]) document.addEventListener(t, e => { if (swallowing) stop(e); }, guard);
+  document.addEventListener("dragstart", e => { if (swallowing) { stop(e); drag = false; } }, guard);   // a cancelled drag never starts
+  document.addEventListener("click", e => { if (swallowing && (e as MouseEvent).detail !== 0) { swallowing = false; stop(e); } }, guard);
+}
+
+/** The layout just changed in view: a part recovered in place, or the page was brought to the focused line (input reviewer
+ *  RR3-IN-4). For `ms`, a press that STARTS was aimed at the old layout — no one sees a change and re-aims that fast — so it
+ *  does nothing: its pointerdown, pointerup, click and drag never reach the page. A lost press, never a different answer. A
+ *  keyboard activation (click `detail` 0) is never stopped, and a press that started earlier was already waited for. */
+export function guardPresses(ms: number): void {
+  trackPointer();
+  guardUntil = Math.max(guardUntil, now() + ms);
 }
 
 export const pointerIsDown = (): boolean => pointer || touch || drag;

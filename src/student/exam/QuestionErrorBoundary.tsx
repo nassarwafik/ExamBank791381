@@ -3,7 +3,7 @@ import { isChunkLoadError } from "../../lazyWithRetry";
 import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../recoverableLazy";
 import { IconRefresh, IconWarning } from "../../icons";
 import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionRecovery";
-import { trackPointer, pointerReleased, lastPointerDown, pointerIsDown } from "./pointerHold";
+import { trackPointer, pointerReleased, lastPointerDown, pointerIsDown, guardPresses } from "./pointerHold";
 
 /**
  * QuestionErrorBoundary (Phase 21E.3) — keeps ONE failing part of a page from taking down the rest.
@@ -82,6 +82,8 @@ const GENERAL_NOTE: Partial<Record<RecoveryVariant, string>> = {
 /** The line focus lands on after a recovery (review fix 2): never an answer control. */
 const LANDED = "تم تحميل هذا الجزء.";
 const FOLLOW_MS = 3000;
+/** After the layout changed in view, a press that starts within this window was aimed at the old layout (`guardPresses`). */
+const SHIFT_GUARD_MS = 400;
 let uid = 0;
 
 export default class QuestionErrorBoundary extends Component<Props, State> {
@@ -187,7 +189,10 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     // The line is shown only when focus is still on the card (or nowhere): it will receive focus; otherwise nothing is added.
     const a = document.activeElement, card = this.failedRef.current;
     const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));
-    this.setState(s => ({ failed: !ok, retrying: false, retries: s.retries + 1, landed: ok && this.restoreFocus && onCard && !this.anchored(), quiet: false }));
+    // A card in view is replaced by a part of another height: the content after it moves where the student may be about to press.
+    const r = card?.getBoundingClientRect(), inView = !!r && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight;
+    this.setState(s => ({ failed: !ok, retrying: false, retries: s.retries + 1, landed: ok && this.restoreFocus && onCard && !this.anchored(), quiet: false }),
+      () => { if (ok && inView) guardPresses(SHIFT_GUARD_MS); });
   };
 
   /** A page-level card recovers onto the page's heading (it exists again once the surface rendered). */
@@ -223,9 +228,13 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     const allowed = this.revealAllowed;
     this.revealAllowed = false;
     if (!allowed || !(el instanceof HTMLElement) || pointerIsDown() || lastPointerDown().t >= this.retryStarted) return;
-    if (this.context.reveal) { this.context.reveal(el); return; }
-    const b = el.getBoundingClientRect();
-    if (b.top < 0 || b.bottom > window.innerHeight) el.scrollIntoView?.({ block: "nearest" });
+    const y = window.scrollY;
+    if (this.context.reveal) this.context.reveal(el);
+    else {
+      const b = el.getBoundingClientRect();
+      if (b.top < 0 || b.bottom > window.innerHeight) el.scrollIntoView?.({ block: "nearest" });
+    }
+    if (window.scrollY !== y) guardPresses(SHIFT_GUARD_MS);              // the page moved under a hovering pointer (RR3-7)
   }
 
   render() {
