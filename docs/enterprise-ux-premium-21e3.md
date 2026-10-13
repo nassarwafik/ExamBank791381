@@ -10,6 +10,9 @@ repository contract in `AGENTS.md`. Independent review required. Owner merge onl
 >   `50d72be`.
 > - Mutation survivors were closed in `cb98b57` and `13d4912`. `4f014ec` changed tooling only.
 > - §7–§11 carry the implementation and its evidence.
+> - The independent review of `92f4326` failed the PR (four blockers: the focus reveal scrolled the page between a pointer
+>   press and its release). **Review Fix 1 (§12)** corrects them and the other introduced findings. Statements that the
+>   review found inaccurate are corrected where they stand and marked *(corrected in Review Fix 1, §12)*.
 
 ---
 
@@ -120,9 +123,9 @@ closure (283 files). Results that change the design:
 | Finding | Consequence |
 |---|---|
 | Registry entries for hotspot, label diagram and open response are 67–72-byte re-export stubs; the real code is a shared chunk (`HotspotView`, `VisualCanvas`, `OpenResponseView`) | entry-only `?r=n` cannot recover them → dependency recovery (above) is required |
-| `coding@1` / `coding@2` share one chunk; `RichPrompt` has six lazy wrappers **and** a static importer (always evaluated before the exam renders); `CodeStimulusView` / `ScenarioView` have lazy and static importers | one module-level state per chunk URL; never retry a module of the static student closure (`RichPrompt`, `RichContentRenderer`, `StudentQuestionCard`, `studentAttemptContext`, `trustedSimPlugins`, `smartSimUiRegistry`, `index`, `react`, runtime) — they cannot fail inside the exam |
-| Module-scope side effects with **medium / high** duplication impact: `trustedSimPlugins` (nine registrations), `studentAttemptContext` (two contexts), `monacoEngine` (`globalThis.MonacoEnvironment`), `echartsEngine` / `echartsAdvanced` (extension installs) | all are in the static closure or behind a module's own `import()`; never a remap target (deny-list + build guard) |
-| `CompoundQuestion` renders registered part renderers outside `StudentQuestionCard`; `SectionShellHeader` (presentation mode) renders outside the planned page section; `AssessmentActivityHost` is a plain lazy | boundary at every renderer host, page boundary encloses the section shell, every exam-path lazy uses the recoverable loader |
+| `coding@1` / `coding@2` share one chunk; `RichPrompt` has six lazy wrappers **and** a static importer (always evaluated before the exam renders); `CodeStimulusView` / `ScenarioView` have lazy and static importers | one module-level state per chunk URL; never retry a module of the static student closure (`RichPrompt`, `RichContentRenderer`, `StudentQuestionCard`, `studentAttemptContext`, `index`, `react`, runtime) — they cannot fail inside the exam. *(Corrected in Review Fix 1, §12: this audit also listed `trustedSimPlugins` and `smartSimUiRegistry`, but both load lazily with the SmartSim / composite question, so they can fail inside a running exam. Keeping them on the deny-list made most SmartSim dependency failures unrecoverable. They were removed from `NEVER_REMAP`; their single evaluation rests on the remap rule, measured by the harness.)* |
+| Module-scope side effects with **medium / high** duplication impact: `trustedSimPlugins` (nine registrations), `studentAttemptContext` (two contexts), `monacoEngine` (`globalThis.MonacoEnvironment`), `echartsEngine` / `echartsAdvanced` (extension installs) | `studentAttemptContext`, `monacoEngine` and the ECharts engines are in the static closure or behind a module's own `import()` and are never a remap target (deny-list + build guard). `trustedSimPlugins` is remapped only while its original record can never evaluate (a failed fetch), so it is still evaluated once *(corrected in Review Fix 1)* |
+| `CompoundQuestion` renders registered part renderers outside `StudentQuestionCard`; `SectionShellHeader` (presentation mode) renders outside the planned page section; `AssessmentActivityHost` is a plain lazy | boundary at every renderer host; the section shell gets **its own** `section` boundary beside the page boundary, not inside it *(corrected in Review Fix 1: the record said the page boundary encloses it)*; every exam-path lazy uses the recoverable loader |
 | Any error that reaches the root boundary unmounts `StudentExamPage`; in a strict attempt the unmount fires the strict exit (`StudentExamPage.tsx` pagehide / unmount handlers) and the attempt **ends** | an outer exam-surface boundary inside the page keeps the page (and its answers, autosave and strict state) mounted |
 | `DataChart`'s own fallback tells the student to reload the page | the copy must not suggest a reload during a strict attempt (D5) |
 | Monaco grammar loaders reject unhandled; a stalled (not failed) import never rejects | no global `unhandledrejection` / `vite:preloadError` hooks; never retry on a stall (show a calm slow-loading status at most) |
@@ -155,20 +158,28 @@ closure (283 files). Results that change the design:
   - Only then, serialized page-wide, it builds the remap set, inserts one scoped import map and imports `<entry>?r=<g>.`
     (the trailing dot keeps scope prefixes unique). The remap set is: the entry, the modulepreload links that failed, and
     every static-import ancestor of a failed or already-recovered module.
+  - *Review Fix 1 (§12):* the remap is used only when the rejection carries Chromium's wording ("Failed to fetch
+    dynamically imported module"), the engine measured to keep a failed module failed for the page's lifetime. Every
+    step is bounded in time (source read 15 s, import 20 s, stylesheet 15 s). A recovery that would need a module still in
+    flight is refused (`recovery-busy`) instead of waiting, so one stalled recovery never blocks the others.
   - On success every remapped module is recorded as recovered and reused by every later graph.
   - The entry URL is accepted only from a `TypeError` whose message names a same-origin `<BASE>assets/<chunkName>-<8 base36>.js`.
   - Remap and source-read URLs are validated the same way, and the deny-list is never remapped.
-  - CSS failures re-link a validated `?r=` stylesheet.
+  - CSS failures re-link a validated `?r=` stylesheet. *(Review Fix 1: **every** failed stylesheet of the load is re-linked,
+    and the retry fails closed if one of them still fails — the question never renders without its stylesheet.)*
   - No global error hooks, no reload, no `lazyWithRetry` inside the exam.
 - `src/student/exam/QuestionErrorBoundary.tsx` around every renderer host: the `StudentQuestionCard` body, the
   `CompoundQuestion` parts and the composite parts. The page boundary in `StudentExamPage` covers the current page,
-  including the section shell, scenario and section context. An outer exam-surface boundary keeps `StudentExamPage`
-  mounted.
+  scenario and section context; the presentation section shell has its own `section` boundary beside it *(corrected in
+  Review Fix 1)*. An outer exam-surface boundary keeps `StudentExamPage` mounted. Review Fix 1 adds a `review` boundary
+  around the review screen, a `part` boundary around the shared scenario, and `stem` / `inline` / `block` boundaries
+  around rich-content leaves (§12).
 - Fallback: «تعذّر عرض هذا السؤال الآن», with reassurance that other answers are kept, and «إعادة المحاولة».
 - After a failed retry in a running exam, the fallback suggests continuing with other questions. It shows
   «إعادة تحميل الصفحة» **only** when every answer is server-confirmed and the attempt is not strict.
 - A build guard asserts that every declared chunk name exists, exports `default`, and that the header parser matches
-  every chunk.
+  every chunk. *(Review Fix 1: it now also ties each declared name to its import path, reads `NEVER_REMAP` from the source
+  and rejects any declaration on it, and requires at least 50 declarations — §12.)*
 
 **B — focus.** A focus-request counter joins the existing navigation focus contract: start / resume / next attempt / cover
 start → the question heading; submit / timeout / strict end → the result heading (`tabIndex=-1`). Visible focus styling on
@@ -185,7 +196,9 @@ remembered per tab) and one polite page announcer. Time computation, expiry and 
   21E.5 (D2).
 - `dir="ltr"` / `<bdi>` islands for CLI, the notification grade and the install-card brand. Physics equations and units
   are isolated in the student scene markup only, with no change to equations or simulation values (D3).
-- `scroll-padding` for the sticky bars.
+- `scroll-padding` for the sticky bars. *(Replaced in Review Fix 1: the root scroll padding doubled the element scroll
+  margins, and the focus-in reveal scrolled the page between a pointer press and its release. A keyboard-intent reveal
+  replaces both — §12.)*
 - rem / `min()` instead of px max-heights on the answer surfaces.
 
 **H.**
@@ -217,19 +230,19 @@ helper, which the registries import (§8.5).
 
 | Area | Files | What changed |
 |---|---|---|
-| A — recovery runtime | `src/recoverableLazy.ts` (new) | Model v3 of §3.2. Exports `recoverableLazy(name, factory)`, which recovers in place with a remap, and `retryableLazy(name, factory)`, for shared chunks without a `default` export, which only re-runs its factory. Also exports `rearmFailedLoads()`, `trustedAssetUrl`, `parseStaticImports`, `remapSet` and `NEVER_REMAP`. The only computed `import()` in `src/` is the `importUrl` of the browser environment, and it is reached only with validated URLs (§9). |
-| A — boundaries | `src/student/exam/QuestionErrorBoundary.tsx`, `src/student/exam/questionRecovery.ts` (new) | Variants: question, part, page, section and exam. A stem boundary falls back to the plain question text. Retry re-arms the failed loaders and moves focus to the page heading; if the retry fails again, focus returns to «إعادة المحاولة». «إعادة تحميل الصفحة» appears only after a failed retry, when every answer is server-confirmed and the policy is not strict. The log carries only `{ code }`. |
+| A — recovery runtime | `src/recoverableLazy.ts` (new) | Model v3 of §3.2. Exports `recoverableLazy(name, factory)`, which recovers in place with a remap, and `retryableLazy(name, factory)`, for shared chunks without a `default` export, which only re-runs its factory. *(Review Fix 1: `retryableLazy` could never recover in Chromium, which caches the failed import. It is replaced by `recoverableSharedLazy(name, factory)`, which remaps like `recoverableLazy` and then picks the one export tagged `Module` whose `default` is a component — §12.)* Also exports `rearmFailedLoads()`, `trustedAssetUrl`, `parseStaticImports`, `remapSet` and `NEVER_REMAP`. The only computed `import()` in `src/` is the `importUrl` of the browser environment, and it is reached only with validated URLs (§9). |
+| A — boundaries | `src/student/exam/QuestionErrorBoundary.tsx`, `src/student/exam/questionRecovery.ts` (new) | Variants: question, part, page, section and exam. A stem boundary falls back to the plain question text. Retry re-arms the failed loaders and moves focus to the page heading; if the retry fails again, focus returns to «إعادة المحاولة». *(Review Fix 1: a stem shows the plain text **with** a compact notice and retry, never silently; a retry re-arms only that card's own loaders; focus follows the recovered part, and a late failure takes focus only if it was still on the card — §12.)* «إعادة تحميل الصفحة» appears only after a failed retry, when every answer is server-confirmed and the policy is not strict. The log carries only `{ code }`. |
 | A — hosts | `StudentExamPage.tsx`, `StudentQuestionCard.tsx`, `CompoundQuestion.tsx`, `questionTypes/student/CompositeResponse.tsx` | Boundaries cover the exam surface (keeping the page mounted), the page (section shell, scenario, section context), the question stem, the code stimulus, the answer area, compound parts and composite parts. |
 | A — loaders | `questionTypes/studentRegistry.tsx`, `trustedSim/smartSimUiRegistry.ts`, `richContent/RichContentRenderer.tsx`, `AssessmentActivityContext.tsx`, `StructuredExamSection.tsx`, `StudentQuestionCard.tsx` | `lazy(() => import("literal"))` becomes `recoverableLazy("ChunkName", () => import("literal"))`. Every import stays a literal repository path, and plugin identities and version families are unchanged. `coding@1` and `coding@2` share one `CodingResponse` loader, as they already shared one chunk. Only the SmartSim UI registry's loaders changed; no engine file did (D2). |
-| A — copy | `charts/DataChart.tsx` | The chart's fallback no longer tells the student to reload the page (D5). |
+| A — copy | `charts/DataChart.tsx` | The chart's fallback no longer tells the student to reload the page (D5). *(Review Fix 1: this applies inside the exam only; teacher and portal surfaces keep the original reload advice.)* |
 | B — focus | `StudentExamPage.tsx`, `studentexam-pro.css` | On a screen change (never from «loading»), the exam screen focuses the page heading without scrolling the page (`preventScroll`, then `scrollIntoView({block:"nearest"})`). The result and strict-end screens focus the `h1` (`tabIndex=-1`, `.iex-result-title`) and scroll to the top. Typing, autosave and timer ticks never move focus. Visible focus ring, no `outline:none`. |
 | C — timer | `student/exam/examAnnouncements.ts` (new), `StudentExamPage.tsx` | `timerAnnouncement(remainingMs, announced)` covers 5 min and 1 min; a jump past both thresholds announces only the lower one. Thresholds are remembered per attempt in `sessionStorage` (`timerNoticeKey`), so re-renders, resyncs, resumes and reloads never repeat them. One polite announcer (`role=status`, `aria-live=polite`, `aria-atomic`) is updated imperatively, with no React state. |
 | D — save | `examAnnouncements.ts` (`saveAnnouncement`), `student/exam/SaveStatus.tsx` | The visible label is no longer a live region. The announcer speaks only for offline, failure after retries, and recovery to «تم الحفظ» after a problem. |
 | E — touch | `studentexam-pro.css`, `visual/visual.css`, `inlineCloze/inlineCloze.css`, `notifications/notifications.css`, `studentportal-pro.css` | `(pointer: coarse)` and phone-width minimums of 44 × 44 px for CLI blanks, cloze controls, label chips and dropdowns, label zone buttons, and the notification header action at every width. |
 | F — LTR | `QuestionField.tsx`, `ui/ltrIsland.ts` (new), `notifications/NotificationBell.tsx`, `pwa/InstallAppCard.tsx`, `pwa/InstallAppEntry.tsx`, `pwa/InstallGuidanceViews.tsx`, `physicsLab/LabScene.tsx` | CLI `<pre dir="ltr">` and blanks `dir="ltr"`. The grade «8.5/10» and the brand «Tadris+» are wrapped in `<bdi dir="ltr">` (markup only; no control characters in any string). The Arabic physics bar-chart title uses SVG `direction="rtl"` with `textAnchor="end"`; equations, units and simulation values are untouched (D3). |
-| G — clearance | `studentexam-pro.css`, `networkCli/networkCli.css`, `StudentExamPage.tsx` | `:root:has(.iex-bottom-nav)` gets scroll padding of 72 px (top) and 96 px (bottom). A focus-in reveal scrolls a focused control that is partly under a sticky bar, because Chromium does not scroll a partly visible element on focus. The network-CLI screen uses `min(20rem, 55vh)` (`min(15rem, 50vh)` at ≤ 480 px) instead of px heights. |
+| G — clearance | `studentexam-pro.css`, `networkCli/networkCli.css`, `StudentExamPage.tsx` | `:root:has(.iex-bottom-nav)` gets scroll padding of 72 px (top) and 96 px (bottom). A focus-in reveal scrolls a focused control that is partly under a sticky bar, because Chromium does not scroll a partly visible element on focus. *(Replaced in Review Fix 1: this reveal also ran for focus caused by a mouse press or a touch and moved the control between press and release, which corrupted answers (the four blockers). The root scroll padding is removed, and `student/exam/keyboardReveal.ts` reveals only focus that a navigation key caused — §12.)* The network-CLI screen uses `min(20rem, 55vh)` (`min(15rem, 50vh)` at ≤ 480 px) instead of px heights. |
 | H — friction | `visual/HotspotView.tsx`, `visual/LabelDiagramView.tsx`, `visual/visual.css`, `studentexam-pro.css` | A one-line hint plus `<details class="vq-keyboard-guide">` «كيف أستخدم لوحة المفاتيح؟», referenced by `aria-describedby`. Tighter `.iex-section-context`. The details disclosure keeps the PR #300 rule unchanged (D1). |
-| Guards | `scripts/check-bundle-budget.mjs` | `checkChunkRecovery`: every `recoverableLazy` name must exist as a built chunk with a `default` export, and none may be on `NEVER_REMAP`. The chunk-header parser (`STATIC_IMPORT_HEADER_SOURCE`, shared with the runtime) must match a full-text scan on every chunk. |
+| Guards | `scripts/check-bundle-budget.mjs` | `checkChunkRecovery`: every `recoverableLazy` name must exist as a built chunk with a `default` export, and none may be on `NEVER_REMAP`. *(Corrected in Review Fix 1: at `92f4326` the guard did not read `NEVER_REMAP`, did not tie the name to its import path, and had no minimum count. All three are now enforced — §12.)* The chunk-header parser (`STATIC_IMPORT_HEADER_SOURCE`, shared with the runtime) must match a full-text scan on every chunk. |
 | Evidence tooling | `scripts/check-student-exam-browser-21e3.mjs`, `scripts/mutate-21e3.mjs` (new) | The Chromium certification harness (§8.3) and the focused mutation campaign (§8.4). |
 
 Nothing in grading, hidden-answer protection, submission identity, attempt policy, the save / submit requests or server
@@ -400,21 +413,25 @@ exception is:
 | Scope | One exemption: `src/recoverableLazy.ts`, pattern "non-literal dynamic import" (17A) / "non-literal import" (17B). Every other file and every other primitive stays forbidden, and the invariant over the rest of `src/` and `api/src/` is unchanged. |
 | Pin (17A) | A test asserts that the exception list is exactly one entry and that the module contains exactly one non-literal `import()`, the environment's `importUrl: url => import(url)`. It also asserts that the importer has exactly two call sites, `env.importUrl(hit)` (an already recovered URL) and `env.importUrl(url(entry))`, and that the URL validator keeps its exact rules: same origin, no credentials, query or fragment, `<base>assets/<name>-<8 base36>.(js|css)`, rebuilt as `origin + pathname`. |
 | Behavioural proof | `src/recoverableLazy.21e3.test.tsx` covers the URL matrix (other origin, credentials, query, fragment, sub-path, traversal, encoded separators, wrong extension, wrong hash shape, wrong chunk name, `javascript:`, `data:`, `blob:`) and shows that no unvalidated URL reaches the importer, the import map, a source read or a stylesheet. Mutants R01–R05 and R13 (§8.4) are killed. |
-| Equivalent literal lazy (CM18, M17 and the per-type pins) | `recoverableLazy("Name", () => import("literal"))` is accepted where `lazy(() => import("literal"))` was required. The literal path is the same, and the guards now also require the declared chunk name to match it. The build guard checks that every declared name is a real chunk with a `default` export. |
+| Equivalent literal lazy (CM18, M17 and the per-type pins) | `recoverableLazy("Name", () => import("literal"))` is accepted where `lazy(() => import("literal"))` was required. The literal path is the same, and the guards now also require the declared chunk name to match it. The build guard checks that every declared name is a real chunk with a `default` export. *(Review Fix 1: `recoverableSharedLazy("Name", () => import("literal"))` is the same shape for a shared chunk, which must have **no** `default` export. It replaces `retryableLazy`; the computed import, its two call sites and the URL validator are unchanged.)* |
 
 ## 10. Limitations, risks and deferrals
 
 | Item | Status |
 |---|---|
 | Safari / WebKit | The rejection carries no URL, so there is no remap. A retry re-runs the original factory, which recovers a browser that does not cache failures. Otherwise the card stays, with the safe options only. Not measured here: no WebKit in this environment. |
-| Firefox | The message wording is recognised (`error loading dynamically imported module: <url>`), but the harness ran in Chromium only. Late import-map merging is newer in Firefox, and an older engine falls back to the safe card. |
+| Firefox | The message wording is recognised (`error loading dynamically imported module: <url>`), but the harness ran in Chromium only. Late import-map merging is newer in Firefox, and an older engine falls back to the safe card. *(Review Fix 1, finding 7: single evaluation under a remap depends on the browser keeping a failed module failed, which is measured only for Chromium. The remap is therefore used only for Chromium's wording; in Firefox a retry re-runs the original factory and never imports a second copy.)* |
 | Older Chromium (no late import-map merge) | The remapped attempt fails closed, giving the same safe card with no reload. |
-| A stalled (never-settling) chunk load | It is never retried, because a retry would race a load that may still evaluate. The Suspense loading state remains. |
-| Modules of the static student closure (`NEVER_REMAP`) | They cannot fail inside a running exam because they load before it. If one did, the graph is refused (`recovery-refused`) and the safe card stays. |
-| Network still down | Measured by the `stilldown` scenario. While loads keep failing, the card stays and offers only the safe options. A strict attempt never gets a reload action (`strict` scenario and P01). There are no automatic retries; the student retries when ready. |
+| A stalled (never-settling) chunk load | It is never retried, because a retry would race a load that may still evaluate. The Suspense loading state remains. A stalled **recovery** step is bounded (Review Fix 1): after its limit the card returns, and the modules it touched stay "in flight", so any recovery that would need one of them is refused rather than loading a second copy. A late success is still recorded. |
+| Modules of the static student closure (`NEVER_REMAP`) | They cannot fail inside a running exam because they load before it. If one did, the graph is refused (`recovery-refused`) and the safe card stays. *(Corrected in Review Fix 1: `trustedSimPlugins` and `smartSimUiRegistry` were on this list but are not in the static closure; they were removed. The list is now `index`, `rolldown-runtime`, `react`, `StudentPortal`, `StudentQuestionCard`, `studentAttemptContext`, `RichPrompt`, `RichContentRenderer`, `PresentationRoot`, `monacoEngine`, `echartsEngine`, `echartsAdvanced`, and the build guard checks it.)* |
+| Network still down | Measured by the `stilldown` scenario. While loads keep failing, the card stays and offers only the safe options. A strict attempt never gets a reload action (`strict` scenario and P01), and no attempt gets one while offline (Review Fix 1). *(Corrected in Review Fix 1: the record said "there are no automatic retries". One exists: once the page has recovered a module, a **first** load that fails with a cached failure goes straight to the bounded, serialized remap, so a graph that shares the recovered module loads without a card. It never reloads and never repeats. Every other retry is the student's.)* |
 | `codingRunClient` capabilities | A capabilities answer of "unavailable" stays cached for the exam-page session. This is Phase 17B behaviour; a failed request is not cached. Recovering the coding renderer chunk does not refresh the cached answer. Unchanged in this phase. |
 | Chemistry periodic-table cells (44 px) | Deferred to Phase 21E.5 (D2). No chemistry or SmartSim engine file was changed. |
 | Physics equations and units | Only the student-scene title direction changed. Equations, units and simulation values are untouched (D3); a wider review of physics bidi is left to a later phase. |
+| A question that can never render, then submitted (review finding 85, **owner decision needed**) | If a renderer never recovers (for example a permanent 404 after a redeploy, Safari, or a refused remap) and the student submits, the question is sent as unanswered, the same as a skip. The server grades it as it grades any unanswered question; this behaviour pre-dates the phase (finding 86). Before this phase the same failure ended the whole exam (root boundary; in strict mode the strict exit). Distinguishing "could not render" from "skipped" needs a submission-contract and grading change (for example a `reviewRequired` marker), which this phase is not allowed to make (no API, grading or question-contract change). It is disclosed here for an owner decision; AGENTS.md §10 prefers teacher review for this case. |
+| Exam-surface card hides the exam chrome (finding 14) | The outer `exam` boundary catches only errors that escape the page, review, section and part boundaries; its children are statically loaded chrome (top bar, progress, bottom navigation, navigator). If it ever catches, the card replaces the chrome, so a strict untimed attempt has no submit path until «إعادة المحاولة» succeeds. Before this phase the same error unmounted the page and, in strict mode, ended the attempt. Kept as a P2 risk: moving the chrome outside the boundary would send its own errors to the root boundary (strict exit). |
+| Announcer and status wording (findings 30, 31) | The strict-ended `h1` takes focus inside the existing `role=status` section (info). Outside the exam page, a card's `role=status` is inserted already filled and may not be spoken (info; the exam page uses the settled page announcer). Both left as info. |
+| Teacher and portal reach (findings 43, 49) | `RichContentRenderer` and the `StudentQuestionCard` chunk are also used by teacher previews and the portal, so the recovery runtime and the boundary reach those surfaces. Review Fix 1 makes them neutral there: general wording, no exam-only advice, the chart keeps its reload advice, and coarse-pointer sizes are scoped to `.interactive-exam-page`. |
 
 ## 11. Handoff
 
@@ -435,5 +452,306 @@ What the independent reviewer should probe first:
    cover this, along with the `strict` scenario.
 4. That the announcer stays quiet: there must be no announcement for the ordinary save cycle and no repeated timer
    threshold (D1, C1, A01–A03, P07).
+5. *(Review Fix 1)* That nothing scrolls between a pointer press and its release, at any zoom, for any answer type, and
+   that a control reached with the keyboard is still revealed. Re-run the harness with `POINTER=1` and the reviewers'
+   GAP-1 / GAP-2 probes (§12.4).
+
+## 12. Review Fix 1
+
+The independent read-only review of `92f4326` reported **FAIL — do not merge**: four blockers, nine majors (two pairs
+report the same defect) and a list of minor and informational findings (the numbers below are the review's finding ids). Review Fix 1 corrects every introduced
+blocker and major and the safe minors. It also corrects the inaccurate statements of this record (marked in place) and
+closes the mutation gap on the serialization queue. Everything else is listed in §12.7 with its severity and rationale.
+
+| Item | Value |
+|---|---|
+| Head reviewed | `92f4326f944510337b59802cb7d562c29a777868` |
+| `origin/main` | `31f40086e4740984ee1f7cb7c90aee7869301d5a`, unchanged at every fetch of this phase, so no reconciliation was needed |
+| Branch | `feature/phase-21e3-student-enterprise-ux`, normal commits only (no amend, rebase or force-push) |
+| Commits | `3becc98` implementation and tests; `b293c4a` tests that close the mutation survivors of the first campaign run, and the guard-compliant heading indicator; the following commit carries this record |
+
+### 12.1 Root cause of the blockers
+
+Chromium moves focus on `mousedown` (and on the touch that becomes a click), **before** `mouseup` and `click`. The
+21E.3 focus-in reveal scrolled the page whenever the focused element was partly under a sticky bar, and it did so for
+focus caused by a pointer too. The root `scroll-padding` then added to the distance. The page therefore moved **while the
+button was still down**:
+
+- the hotspot point, the 3D part, the chart bar and the graph curve were read at the scrolled position, or the click
+  landed on another element (blockers 51, 69, 70 and majors 71, 72);
+- a button whose press started over it was released over something else, so its click was lost (major 73: SmartSim
+  «حفظ القياس»; major 77: coding «تشغيل»);
+- in a native textarea (coding@3 template gaps, coding@1 native editor), 1–2 px of hand movement during the scroll became
+  a multi-line selection that the next key replaced; autosave then stored the truncated code (blocker 76).
+
+`:focus-visible` cannot tell a pointer focus from a keyboard focus here. Measured in Chromium 141: a `textarea` or an
+`input` focused by a mouse click **or** a touch tap matches `:focus-visible` (a focusable `div` or a `button` does not).
+These are exactly the coding fields of blocker 76, so the reveal follows the input device instead: it tracks the last
+key and pointer events itself.
+
+**Fix — keyboard-intent reveal (`src/student/exam/keyboardReveal.ts`).**
+1. Only a navigation key (Tab, arrows, Home, End, PageUp, PageDown) arms a reveal. One key press explains at most one focus
+   change.
+2. Any `pointerdown`, `mousedown` or `touchstart` cancels it, and nothing is revealed while a pointer is down (released
+   by `pointerup`, `pointercancel`, `mouseup`, `touchend`, `touchcancel`, `dragend` or a window blur).
+3. The reveal runs after a frame and re-checks that no pointer went down since and that the element still has focus.
+4. It scrolls by the exact obscured distance plus an 8 px gap (`revealDelta`), instantly when reduced motion is requested.
+5. The root `scroll-padding` is removed: it doubled the element scroll margins (finding 55). Entering the questions
+   focuses the heading without scrolling, jumps to the top instantly, then reveals the heading (finding 80).
+
+Programmatic focus (start, result, retry) still uses its own `preventScroll` + reveal. A pointer press never scrolls the
+page; a keyboard user still gets the control revealed above the bottom navigation at every zoom.
+
+### 12.2 Findings and fixes
+
+Severity: P0 = blocker, P1 = major, P2 = minor, P3 = nit / info.
+
+| Review id | Sev | Finding | Fix | Evidence |
+|---|---|---|---|---|
+| 51, 70, 74 | P0 | hotspot point shifted by the reveal (also composite parts, drag) | keyboard-intent reveal (§12.1) | RF1-P1/P2 (mouse and touch, fail-first); harness PTR1 (52/52); GAP-1 matrix (`cphot`, `cpdrag`) |
+| 69 | P0 | 3D viewer saves the wrong named part | same | GAP-1 matrix (`mp`) |
+| 76 | P0 | coding textarea: press + 2 px drag becomes a selection, the next key deletes code | same | harness PTR4 (2 px drag → caret, no selection, no scroll); GAP-2 `probe-tpl`, `probe-native1` |
+| 71, 72 | P1 | chart bar and function-graph clicks lost | same | GAP-1 matrix (`ch1`, `fg1`, `fgp`) |
+| 73, 77 | P1 | partly covered buttons lose their click (SmartSim save, coding Run) | same | GAP-1 matrix (`plsave`); GAP-2 `probe-runbtn` |
+| 51 (label) | P1 | label-zone press dropped at 200 % | same | harness PTR3 at every viewport |
+| 1 | P1 | a transient failure of a rich-stem leaf (formula, chart, graph, 3D) silently drops that content | `inline` / `block` boundaries in `RichContentRenderer` around every lazy leaf: a formula falls back to its source text, a block to a compact card, each with its own retry; the rest of the stem stays rich | `RichContentRenderer.rf1.test.tsx` (fail-first); B10 |
+| 13, 22 | P2 | a stem that falls back to plain text announced «تعذّر عرض هذا السؤال الآن» | `stem` variant: the plain text plus a compact note «تعذّر عرض التنسيق» and «إعادة تحميل التنسيق», no question-level announcement | `StudentQuestionCard.stem.rf1.test.tsx` (fail-first); B06, B10 |
+| 18, 33, 52, 56 | P1 | keyboard instructions removed from the accessible description while the guide is collapsed (Chromium omits closed `<details>` content) | an always-present visually hidden copy (`id="<hint>-keys"`) outside the `<details>` is referenced by `aria-describedby`; the guide shows the same text | `exam21e3.units` (fail-first); Chromium accessibility tree (§12.4) |
+| 32, 45 | P1 | grade isolation reordered dates and CIDR addresses in teacher messages | isolation only for `assignment_reviewed` previews and only for the last grade value (`GRADE_LTR` refuses dates, versions and addresses) | RF1-U6 (fail-first, with a control); L04, L05 |
+| 10, 19, 63 | P2 | a retry that fails later steals focus and drops keystrokes | the button takes focus back only if focus was on the card and is now on `body` (React remounted the card) | RF1-U1 (fail-first); B07 |
+| 17, 24, 81, 47 | P2 | retry focus went to the page heading, to `body`, or off-screen | focus follows the recovered part: its first focusable control, else the part itself; the page / exam / review variants use the page anchor | `ux21e3` A2 (updated, fail-first), RF1-U2, RF1-U3 (fail-first); B05 |
+| 23, 65 | P2 | after a failed retry the guidance (strict: «لا تغادر صفحة الامتحان») was neither announced nor linked | announced through the page announcer and referenced by the retry button's `aria-describedby` | RF1-P7 (fail-first); B09 |
+| 12, 20 | P2 | a timer threshold marked as announced while nothing was spoken | thresholds are recorded only after the announcer delivered them, and only on the questions screen | RF1-P5 (fail-first); P07 (P10 is equivalent, §12.5) |
+| 21 | P2 | a live region filled in the frame it is inserted may not be spoken | the announcer waits 400 ms after it is attached before the first message | RF1-P6 (fail-first); P11 |
+| 27 | P2 | the last announcement stayed readable in browse mode | the announcer clears 8 s after a message | RF1-P10 (fail-first); P12 |
+| 64 | P2 | reload offered while offline | `reloadAllowed` also requires `online` | RF1-P4 (fail-first); P08 |
+| 2, 3 | P2 | only the first failed stylesheet re-linked; a failed re-link ignored (A5b failed) | every failed stylesheet of the load is re-linked; the retry fails closed if one still fails | RF1-R1/R2 (fail-first); R18, R19; harness `css-twice` 18/18 (`92f4326`: 17/18) |
+| 4 | P2 | `NEVER_REMAP` premise false for `trustedSimPlugins` and `smartSimUiRegistry` | removed from the list; the build guard reads the list from the source | `recoverableLazy.21e3` (updated), guard G02 |
+| 5, 9 | P2 | the code stimulus (`retryableLazy`) could never recover in Chromium | `recoverableSharedLazy`: the same remap, then the one `Module` export whose `default` is a component | `recoverableLazy.21e3` shared pick tests; R16, R24 |
+| 6 | P2 | one stalled recovery blocked every later one | bounded steps; overlapping recoveries refused (`recovery-busy`); a late success still recorded | RF1-R3 (fail-first); R20, R21 |
+| 7, 68 | P2 | single evaluation relies on the browser caching failed fetches (not established for Firefox) | the remap is used only for Chromium's cached-failure wording; other engines re-run the original factory only | RF1-R5 (fail-first); R22 |
+| 39 | P2 | removing the remap serialization queue survived every test | RF1-R4 drives two concurrent recoveries of one failed shared module and asserts one generation | R17 KILLED (it was the review's surviving mutant) |
+| 40, 41 | P2 | guard did not read `NEVER_REMAP`, did not tie names to imports, had no minimum | `recoveryDeclarations` parses each declaration's shape, name ↔ import base name, `NEVER_REMAP` from source, ≥ 50 declarations, shared chunks without `default` | `check-bundle-budget.rf1.test.mjs` (6); G01–G03 |
+| 46, 48 | P2 | student exam wording and no reload outside the exam; chart reload advice removed everywhere | `general` scope outside the exam: neutral copy, reload after a failed retry; the chart keeps its reload advice outside the exam | RF1-U4 (fail-first), `DataChartRetry.21a1` back to its `main` expectation (fail-first); B11 |
+| 53 | P2 | the harness could not observe pointer interaction with partly covered controls | `POINTER=1` mode: real mouse / touch presses on partly covered controls at every viewport and motion setting | harness PTR1–PTR6 |
+| 55 | P2 | scroll clearance counted twice | root `scroll-padding` removed | `exam21e3.units` CSS case (fail-first) |
+| 80 | P2 | after start at 150 % / 200 % with motion, the heading ended off-screen | instant top scroll, then reveal | RF1-P3 (fail-first); P09 |
+| — (review screen) | P2 | a failing review screen hid the exam chrome | `review` boundary with «العودة إلى الأسئلة» | RF1-P8 (fail-first) |
+| 8 | P3 | `isComponent` accepted a React element | only functions and memo / forward_ref / lazy types | RF1-R6 (fail-first); R23 |
+| 25, 34 | P3 | the guide's `<summary>` lost its disclosure marker | `display: list-item`, 44 px minimum height | RF1-U7 (fail-first) |
+| 26 | P3 | coarse rule lowered the CLI blank width | coarse rule sets only `min-height` | RF1-U7 (fail-first) |
+| 38, 50 | P3 | coarse-pointer sizes reached teacher editors | rules scoped to `.interactive-exam-page` | RF1-U7 (fail-first) |
+| 44 (first half) | P3 | test hygiene: `window.location` not restored | restored after each test in both page suites; RF1-U1 stubs `fetch` so a remap source read never reaches the network | — |
+| 54 | P3 | the pointer-focus bar was drawn over the first Arabic glyph | an underline below the heading text instead of an inset bar (no `outline:none`: the UX-2 focus guard forbids it, and Chromium draws no outline without `:focus-visible`) | RF1-U7 (fail-first); UX-2 guard |
+| 57 | P3 | label guide told students to Tab forward to the zone | the guide says the label bank comes after the zones and to return with Shift+Tab | RF1-U8 (fail-first) |
+| 66, 82 | P3 | record said "no automatic retries" and that the page boundary encloses the section shell | corrected in §10 and §3.3 / §5 | — |
+| 84 | P3 | a stylesheet failure logged as `runtime` | logged as `chunk-load` | RF1-U10 (fail-first); B12 |
+
+### 12.3 Fail-first (executed against `92f4326`)
+
+The head's test files were copied into a detached worktree of `92f4326` (dependencies symlinked) and run there.
+
+| Test file (head) | On `92f4326` | On the head | Representative failing assertion on `92f4326` |
+|---|---|---|---|
+| `src/StudentExamPage.rf1.test.tsx` (12) | **10 failed**, 2 passed | 12 passed | RF1-P1/P2: the page scrolled during a mouse / touch press (`expected "vi.fn()" to not be called at all, but actually been called 1 times`); RF1-P3: `expected 'smooth' to be 'auto'`; RF1-P4: the reload button is offered offline; RF1-P5: `expected '' to contain 'أقل من 5 دقائق'`; RF1-P8: the whole exam card replaced the review; RF1-P10: `expected undefined to be truthy` (no clear timer) |
+| `src/StudentExamPage.ux21e3.test.tsx` (3 cases updated) | **3 failed** | passed | retry focus went to the page heading instead of into the recovered question (`expected <h2 …> to be <input …>`); the keyboard reveal did not use the measured `scrollBy` (`expected "vi.fn()" to be called 1 times, but got 0 times`) |
+| `src/recoverableLazy.rf1.test.tsx` (7) | **6 failed**, 1 passed | 7 passed | RF1-R1: only one of two failed stylesheets re-linked (`expected [ Array(1) ] to deeply equal [ …(2) ]`); RF1-R2: the part rendered without its stylesheet; RF1-R3: a disjoint recovery never completed while an earlier one stalled; RF1-R6: an element accepted as a component |
+| `src/recoverableLazy.21e3.test.tsx` (3 cases updated) | **3 failed** | passed | `trustedSimPlugins` refused instead of remapped (`expected true to be false`); a shared chunk (namespace export, no `default`) did not recover; `pickShared is not a function` |
+| `src/student/exam/rf1.units.test.tsx` (16) | **13 failed**, 3 passed | 16 passed | RF1-U1: focus taken from the field being typed in (`expected <button …> to be <input aria-label="البند الآخر">`); RF1-U6: `expected [ '12/10' ] to deeply equal []` and `[ '1.0/24', '0.0/8' ]` for addresses; RF1-U8: no Shift+Tab step; RF1-U10: `[{ code: 'runtime' }]` for a stylesheet failure |
+| `src/student/exam/exam21e3.units.test.tsx` (4 cases updated) | **4 failed** | passed | the keys only inside the closed `<details>` (`expected <details …> to be null`); root `scroll-padding` present; the stem fallback is silent; the bell isolates every preview |
+| `src/StudentQuestionCard.stem.rf1.test.tsx` (1) | **1 failed** | 1 passed | no notice and no retry next to the plain stem |
+| `src/richContent/RichContentRenderer.rf1.test.tsx` (1) | **1 failed** | 1 passed | a failing formula drops the whole rich stem |
+| `src/charts/DataChartRetry.21a1.test.tsx` (back to its `main` expectation) | **1 failed** | 1 passed | the chart's reload advice was removed outside the exam |
+| `scripts/check-bundle-budget.rf1.test.mjs` (6), `src/student/exam/keyboardReveal.rf1.test.tsx` (5) | cannot load (the guard ran its build check on import and lacked the new exports; the reveal module is new) | 6 + 5 passed | not counted as fail-first |
+
+**42 cases fail on `92f4326` and pass on the head.** Cases that pass on `92f4326` are **pins**, not fail-first evidence:
+- RF1-P1/P2 «the same field reached with Tab IS revealed» (the keyboard control);
+- RF1-P9 «online but unconfirmed: no reload» (it guards the new `online` term; written to kill mutant P02);
+- RF1-R4 «two concurrent recoveries of one failed shared module: one generation» (written to kill R17, the review's surviving serialization mutant);
+- RF1-U5 «repeated activation starts one retry», RF1-U9 «a card's retry depends only on its own loaders», and the control sentence of RF1-U6.
+
+The keyboard-reveal unit tests (`keyboardReveal.rf1.test.tsx`) were written after the fix to kill mutants K01, K02 and K05, which survived the first campaign run (§12.5).
+
+
+### 12.4 Chromium evidence (production build of the head, Chromium 141)
+
+The reviewers' probes (GAP-1, GAP-2, accessible description) ran on the production build of `3becc98`. The final head's
+build differs from it in **one CSS declaration**: `outline:none` was removed from the `:focus:not(:focus-visible)` heading
+rule (`b293c4a`). After the content hashes in file names are normalised, every JavaScript module of the two builds is
+identical. The certification harness, in pointer mode and in every failure scenario, was **re-run on the final head's
+build** (§12.6).
+
+**Certification harness, new pointer mode (`POINTER=1`).** Real mouse presses (desktop, 100 / 150 / 200 %) and touch presses
+(phone 390×844, touch), with reduced and normal motion. Each control is placed half under a sticky bar before the press.
+The release is held for 90 ms, and PTR4 adds a 2 px drag.
+
+| Check | `92f4326` | Head |
+|---|---|---|
+| PTR1 hotspot press under the bottom bar / under the top bar: no scroll, point recorded where pressed | fails at every viewport (phone: 3 of 4) | pass |
+| PTR2 keyboard-guide `<summary>` half covered: the press opens it, no scroll | fails at 150 % and 200 % | pass |
+| PTR3 label zone half covered: the press assigns the selected label | fails at 200 % | pass |
+| PTR4 textarea press with a 2 px drag: a caret, no selection, no scroll | fails at 150 % and 200 % | pass |
+| PTR5 Tab to a partly covered textarea still reveals it (keyboard) | pass | pass |
+| PTR6 no save / submit / start other than the student's own answers | pass | pass |
+| **Total** | **27 / 52** | **52 / 52** |
+
+**Failure scenarios (unchanged checks A–G of §8.3, plus Review Fix 1 checks).**
+
+| Scenario | Viewports | Head |
+|---|---|---|
+| `entry` (hotspot renderer entry chunk 503 once) | desktop 100 / 150 / 200 %, phone | **76 / 76** |
+| `dependency` (shared `HotspotView` / `VisualCanvas` chunks fail) | desktop 100 / 200 %, phone | **58 / 58** |
+| `css` (the `VisualCanvas` stylesheet fails) | desktop 100 / 150 % | **36 / 36** |
+| `css-twice` (the stylesheet also fails on its first re-link) | desktop | **18 / 18** (`92f4326`: 17 / 18 — A5b, the question rendered without its stylesheet) |
+| `strict` (strict attempt with the `HotspotView` failure) | desktop 100 / 200 %, phone | **58 / 58** |
+| `stilldown` (503 for the first 3 requests, retry URLs included) | desktop 100 / 150 % | **36 / 36** |
+
+**The reviewers' probes, re-run unchanged on the head.**
+- **GAP-1 pointer matrix** (`pointer-probe.mjs`): 12 pointer-driven answer types — chart bar, function-graph curve and point, 3D scene and mesh part, physics bob drag and «حفظ القياس», network drag, categorization, composite hotspot click and drag, composite network. Each is run at 100 / 150 / 200 % and on a phone, with the control under the top and under the bottom bar, in both motion settings: **192 cases**.
+  - On the head, **every case recorded the intended answer, with no probe error**.
+  - Against the pre-phase base `31f4008` (the reviewers' run): 168 identical. Of the 24 differences, 4 are base timeouts (3D part at 200 %) where the head saved the intended part. The other 20 are composite hotspot points that differ in the third decimal: the head's worst error is **0.0030** of the image (base 0.0047, `92f4326` **0.7395**).
+  - Against `92f4326`: 66 differ, all of them answers that `92f4326` lost or corrupted.
+  - The page scroll at `pointerdown` equals the scroll at `click` in every case except the physics bob drag pressed under the **top** bar. There the base build shows the identical change: pre-existing lab behaviour, with the intended value saved.
+- **GAP-2 coding probes**. Each coding control is placed half under the bottom navigation and pressed with the mouse.
+  - `probe-tpl.mjs`, coding@3 template gap, with 2 × 1 px of hand movement while the button is held (the blocker 76 reproduction): 100 / 150 / 200 %, both motion settings, holds of 120 and 200 ms. **12 / 12 cases: 0 characters lost, page scroll 0, the key inserted on the pressed line.** `92f4326` lost 33 characters (120 ms) or 13 (200 ms), and base lost 0. Without movement (holds 0 / 120 / 400 ms): 18 / 18, 0 lost.
+  - `probe-native1.mjs`, coding@1 native editor at 560×450 @2 and 390×844 @3, with the same movement: **4 / 4, 0 characters lost, scroll 0** (`92f4326` lost 33).
+  - `probe-runbtn.mjs`, a click on «تشغيل», 60 % of the button visible: coding@1 **12 / 12** and coding@3 **12 / 12** sent exactly one run request, with scroll 0 and the release on the button. `92f4326` ran in only 3 / 12 (coding@1) and 0 / 4 (coding@3).
+- **Accessible description** (`ax-app.mjs`, Chromium accessibility tree, guide collapsed): the hotspot `role=application` and the label-zone buttons now include the keyboard steps at 100 / 150 / 200 %. On `92f4326` only the one-line instruction was exposed (findings 18 / 33 / 52 / 56).
+
+
+
+### 12.5 Mutation campaign (`scripts/mutate-21e3.mjs`, AGENTS.md §9)
+
+The campaign was rewritten for the review-fix sources: **64 mutants across 12 files**. Each runs its named suites, and every
+file is restored byte-for-byte (sha256-verified, also on interruption). It ran in isolation; no other test run used the
+same files.
+
+| Run | Tree | Result |
+|---|---|---|
+| 1 | `3becc98` (62 mutants) | 57 killed, **5 survived**: P02, P10, K01, K02, K05. Restored: true. |
+| — | survivors analysed | **P02** was a real gap. The offline term added to `reloadAllowed` masked the existing "unsaved" test, so RF1-P9 now holds an online but unconfirmed save. **K01, K02, K05**: the focus-time check and the frame-time re-check were each tested only together; one test per layer was added. **P10** is **equivalent**: the announcer is rendered only by the questions-screen return (every other screen returns earlier), so `announce()` returns false and nothing is recorded. The screen check is defence in depth. The script now lets a mutant state why it is equivalent; such a mutant is still planted and run, and reported as `equivalent` with the reason. |
+| 2 (targeted) | working tree of `b293c4a` | P02, K01, K02, K05 and the two new mutants (P12, B12) **KILLED**; P10 **EQUIVALENT**. Restored: true. |
+| **Final** | **`b293c4a`** (64 mutants) | **63 KILLED, 1 EQUIVALENT (P10), 0 survived, 0 invalid, 0 timeout. Restored: true**; `git diff` on the mutated files is clean. |
+
+The review's surviving mutant on the serialization queue (finding 39) is **R17**, now KILLED by RF1-R4.
+
+| Id | Planted defect | Outcome | Killed by (first failing case; total failing) |
+|---|---|---|---|
+| R01-origin | URL validator: the same-origin check removed | KILLED | `recoverableLazy.21e3.test.tsx` › refuses another origin (7) |
+| R02-query | URL validator: a query string accepted | KILLED | `recoverableLazy.21e3.test.tsx` › refuses a query (3) |
+| R03-chunk-name | URL validator: the chunk-name match removed | KILLED | `recoverableLazy.21e3.test.tsx` › refuses a different chunk name when one is required, and css for js (3) |
+| R04-hash-shape | URL validator: hash widened to `[0-9A-Za-z]{6,}` | KILLED | `recoverableLazy.21e3.test.tsx` › refuses a short hash (2) |
+| R05-assets-prefix | URL validator: the `<base>assets/` prefix check removed | KILLED | `recoverableLazy.21e3.test.tsx` › refuses outside assets (3) |
+| R06-typeerror-only | entry URL taken from any error, not only a `TypeError` | KILLED | `recoverableLazy.21e3.test.tsx` › ignores an Error (not a TypeError) (1) |
+| R07-no-ancestors | remap set: static-import ancestors of a failed module dropped | KILLED | `recoverableLazy.21e3.test.tsx` › a failed leaf brings its ancestors on the path, never the healthy side branch (4) |
+| R08-healthy-remapped | remap set: every module remapped (healthy ones too) | KILLED | `recoverableLazy.21e3.test.tsx` › the entry alone when nothing below it failed (5) |
+| R09-recovered-remapped | remap set: recovered modules remapped again | KILLED | `recoverableLazy.21e3.test.tsx` › a recovered module is not remapped again, but a plain importer of it is (3) |
+| R10-no-settled-reuse | a recovered URL not reused by later wrappers / graphs | KILLED | `recoverableLazy.21e3.test.tsx` › two wrappers of one chunk and a later graph reuse the recovered URL: one evaluation, no second generation (1) |
+| R11-never-remap-ignored | the `NEVER_REMAP` deny-list ignored | KILLED | `recoverableLazy.21e3.test.tsx` › a module of the static student shell is refused (defence in depth: no import, the card stays) (1) |
+| R12-no-original-first | a retry skips the original factory and remaps at once | KILLED | `recoverableLazy.21e3.test.tsx` › entry failure: the retry re-calls the original, then imports &lt;entry&gt;?r=1. under a map scoped to the retry URL only (3) |
+| R13-map-unscoped | import-map scopes keyed by the original URL | KILLED | `recoverableLazy.21e3.test.tsx` › entry failure: the retry re-calls the original, then imports &lt;entry&gt;?r=1. under a map scoped to the retry URL only (3) |
+| R14-no-css-relink | a failed stylesheet not re-linked before the retry | KILLED | `recoverableLazy.21e3.test.tsx` › a CSS dependency failure re-links a validated ?r= stylesheet, then re-calls the original (no JS remap) (3) |
+| R15-shape-unchecked | a module without a component `default` accepted | KILLED | `recoverableLazy.21e3.test.tsx` › a recovered module that is not a component fails closed (2) |
+| R16-shared-no-pick | the shared loader takes `default` instead of picking the `Module` export | KILLED | `recoverableLazy.21e3.test.tsx` › review fix 1 (R1-5): a shared chunk (namespace export, no default) recovers through its one namespace export (1) |
+| R17-no-serialization | the remap queue removed (recoveries run concurrently) — the review's surviving mutant | KILLED | `recoverableLazy.rf1.test.tsx` › the second remap reuses the first's recovered copy of the shared module (1) |
+| R18-css-relink-fail-open | a stylesheet re-link that fails is ignored | KILLED | `recoverableLazy.rf1.test.tsx` › a re-link that fails again fails the retry: the part does not render without its stylesheet (1) |
+| R19-css-first-only | only the first failed stylesheet recorded | KILLED | `recoverableLazy.rf1.test.tsx` › every failed stylesheet is re-linked before the retry (not only the one the error names) (1) |
+| R20-inflight-ignored | an overlapping recovery is not refused | KILLED | `recoverableLazy.rf1.test.tsx` › a disjoint recovery completes while an earlier one stalls; an overlapping one is refused; the late success is recorded (1) |
+| R21-no-import-bound | the retry import is unbounded | KILLED | `recoverableLazy.rf1.test.tsx` › a disjoint recovery completes while an earlier one stalls; an overlapping one is refused; the late success is recorded (1) |
+| R22-remap-any-browser | the remap used for any browser wording (not only a cached failure) | KILLED | `recoverableLazy.rf1.test.tsx` › Firefox wording: the retry re-calls the original only, never imports another URL (1) |
+| R23-element-accepted | any object with `$$typeof` accepted as a component | KILLED | `recoverableLazy.rf1.test.tsx` › the load fails (re-armable) instead of handing React an element as a component type (1) |
+| R24-shared-pick-ambiguous | an ambiguous shared namespace accepted | KILLED | `recoverableLazy.21e3.test.tsx` › review fix 1: a shared chunk whose namespace export is ambiguous (or missing) fails closed (1) |
+| B01-retry-loads-nothing | «إعادة المحاولة» retries no loader | KILLED | `student/exam/exam21e3.units.test.tsx` › chunk failure → card (no internals) → «إعادة المحاولة» → the question renders; the failed React.lazy is replaced (5) |
+| B02-log-leaks | the boundary log carries the error message | KILLED | `StudentExamPage.ux21e3.test.tsx` › shows a recovery card for THAT question; the exam, the other questions and the answers stay; no save / submit; nothing leaks (3) |
+| B03-reload-before-retry | «إعادة تحميل الصفحة» offered before any retry | KILLED | `StudentExamPage.ux21e3.test.tsx` › after a failed retry the card offers a reload ONLY when everything is saved and the attempt is not strict (1) |
+| B04-no-reset-on-new-question | the card does not reset for another question | KILLED | `student/exam/exam21e3.units.test.tsx` › a new question (resetKey) starts clean; a stem fallback keeps the text WITH a notice and a retry (never silent) (1) |
+| B05-no-focus-follow | after a successful retry focus does not follow the recovered part | KILLED | `StudentExamPage.ux21e3.test.tsx` › «إعادة المحاولة» renders the question again in place (no reload); focus moves into the recovered question (3) |
+| B06-stem-card-not-text | a failing stem shows the full card instead of its text | KILLED | `StudentQuestionCard.stem.rf1.test.tsx` › visible notice + retry, the answer area stays, and the announcer does not claim the question failed (2) |
+| B07-refocus-steals | a failed retry always takes focus | KILLED | `student/exam/rf1.units.test.tsx` › the student moves to another field and types while the retry is loading: focus and keystrokes stay there (1) |
+| B08-retry-every-loader | a card's retry retries every failed loader of the page | KILLED | `student/exam/rf1.units.test.tsx` › outside the exam (no provider): focus lands on the recovered part's first control, not <body> (4) |
+| B09-guidance-not-describing | the after-retry guidance is not linked to the button | KILLED | `StudentExamPage.rf1.test.tsx` › strict attempt: «لا تغادر صفحة الامتحان» is announced and linked to the focused action (2) |
+| B10-stem-silent | a stem falls back to plain text silently | KILLED | `StudentQuestionCard.stem.rf1.test.tsx` › visible notice + retry, the answer area stays, and the announcer does not claim the question failed (2) |
+| B12-css-failure-logged-runtime | a stylesheet failure logged as `runtime` | KILLED | `student/exam/rf1.units.test.tsx` › «Unable to preload CSS» and a recovery refusal are chunk-load; any other error is runtime (1) |
+| B11-student-wording-everywhere | exam wording in every context | KILLED | `student/exam/exam21e3.units.test.tsx` › a new question (resetKey) starts clean; a stem fallback keeps the text WITH a notice and a retry (never silent) (2) |
+| P01-reload-in-strict | reload offered in a strict attempt | KILLED | `StudentExamPage.rf1.test.tsx` › strict attempt: «لا تغادر صفحة الامتحان» is announced and linked to the focused action (2) |
+| P02-reload-unsaved | reload offered while an answer is not server-confirmed | KILLED | `StudentExamPage.rf1.test.tsx` › the save of the newest edit keeps failing while online: after a failed retry there is no reload action (1) |
+| P03-focus-on-open | focus moved when the page opens on the questions | KILLED | `StudentExamPage.ux21e3.test.tsx` › a page that opens directly on the questions (legacy untimed) does not move focus (1) |
+| P04-no-result-focus | no focus on the result heading | KILLED | `StudentExamPage.ux21e3.test.tsx` › submitting focuses the result heading (exactly one submit) (1) |
+| P05-no-start-focus | no focus on the question heading after start | KILLED | `StudentExamPage.rf1.test.tsx` › after «بدء المحاولة» the last page scroll is instant (2) |
+| P07-timer-no-memory | timer thresholds not remembered per attempt | KILLED | `StudentExamPage.ux21e3.test.tsx` › crossing 5 minutes is announced once; nothing every second; nothing before the threshold (2) |
+| P08-reload-offline | reload offered while offline | KILLED | `StudentExamPage.rf1.test.tsx` › after a failed retry, offline with nothing unsaved: guidance to continue, no reload action (1) |
+| P09-transition-smooth | entering the questions uses a smooth scroll | KILLED | `StudentExamPage.rf1.test.tsx` › after «بدء المحاولة» the last page scroll is instant (1) |
+| P10-timer-off-screen | timer effect runs outside the questions screen | EQUIVALENT | survives by design: the announcer exists only on the questions screen, so `announce()` returns false elsewhere (defence in depth); RF1-P5 covers the rule |
+| P12-announcer-never-cleared | a delivered message is never cleared | KILLED | `StudentExamPage.rf1.test.tsx` › RF1-P10: a delivered message is cleared again after ANNOUNCEMENT_CLEAR_MS (nothing stale to read in browse mode) (1) |
+| P11-announcer-no-settle | the first message written in the frame the announcer is inserted | KILLED | `StudentExamPage.rf1.test.tsx` › the first message is written only after the announcer has settled (not in the frame it was inserted) (1) |
+| K01-reveal-pointer-focus | focus-time guard removed (any focus revealed) | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › focus-time guard: a programmatic focus with no key at all, or after a stale key press, never scrolls (2) |
+| K02-reveal-while-pointer-down | focus while a pointer is down is revealed | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › focus-time guard: focus that happens while a pointer is down never scrolls, even if the pointer is released before the frame (1) |
+| K03-reveal-any-key | any key arms a reveal | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › reveals only keyboard-caused focus; pointer focus, a held pointer and a stale key press never scroll (1) |
+| K04-reveal-not-consumed | one key press reveals several focus changes | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › reveals only keyboard-caused focus; pointer focus, a held pointer and a stale key press never scroll (1) |
+| K05-reveal-no-frame-recheck | the frame-time re-check removed | KILLED | `student/exam/keyboardReveal.rf1.test.tsx` › frame-time re-check: an element that lost focus before the frame is not revealed (1) |
+| A01-timer-repeat | a threshold announced again on every tick | KILLED | `StudentExamPage.ux21e3.test.tsx` › crossing 5 minutes is announced once; nothing every second; nothing before the threshold (3) |
+| A02-timer-early | a threshold announced a minute early | KILLED | `student/exam/exam21e3.units.test.tsx` › nothing above 5 minutes, at expiry or for an invalid value (1) |
+| A03-save-noisy | «تم الحفظ» announced after every ordinary save | KILLED | `StudentExamPage.ux21e3.test.tsx` › an ordinary edit is silent; going offline is announced; saving again after it is announced (3) |
+| A04-label-live-again | the visible save label made a live region again | KILLED | `StudentExamPage.reliability.test.tsx` › 16: exactly ONE polite live region (the page announcer, 21E.3); the save label itself is not live (4) |
+| L01-cli-not-isolated | the CLI `<pre>` loses `dir="ltr"` | KILLED | `StudentExamPage.ux21e3.test.tsx` › the command block and its blanks carry dir=ltr; the typed value is stored as typed (no bidi control character) (1) |
+| L02-physics-title-ltr | the physics title loses its RTL direction | KILLED | `student/exam/exam21e3.units.test.tsx` › the notification grade, the install brand and the physics energy title are isolated in their components (1) |
+| L03-island-drops-bdi | the LTR island helper drops the `<bdi>` | KILLED | `pwa/InstallAppCard.6a.test.tsx` › declined → the calm note AND the manual guidance (never masked); can be hidden; a later prompt works again (7) |
+| L04-grade-any-preview | grade isolation on every notification preview | KILLED | `student/exam/exam21e3.units.test.tsx` › the notification grade, the install brand and the physics energy title are isolated in their components (1) |
+| L05-grade-unbounded | grade pattern matches dates and addresses | KILLED | `student/exam/rf1.units.test.tsx` › الاختبار القادم يوم 12/10/2026 (3) |
+| G01-guard-name-unchecked | guard: declared name not tied to its import | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › a name that is not the imported file's base name fails (the runtime would never recover it) (1) |
+| G02-guard-neverremap-unread | guard: `NEVER_REMAP` not enforced | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › a NEVER_REMAP name may not be declared recoverable, and every NEVER_REMAP name must exist in the build (1) |
+| G03-guard-no-minimum | guard: no minimum declaration count | KILLED | `scripts/check-bundle-budget.rf1.test.mjs` › fewer than the minimum number of declarations fails (a vacuous guard) (1) |
+
+### 12.6 Validation, Chromium re-run and bundle on the final tree
+
+| Check | Command | Result |
+|---|---|---|
+| Root suite | `npx vitest run` (= `npm test`) on `b293c4a` | **948 files, 12,344 tests passed, 0 failed** (`92f4326`: 941 / 12,294; `main` `31f4008`: 937 / 12,205) |
+| Lint | `npm run lint` | 0 errors, **125 warnings: the same warning set as `92f4326`** (line numbers aside) |
+| Typecheck | `npx tsc -b` | clean |
+| Build + bundle guard | `npm run build` | passed. «Chunk recovery: 57 declarations / 55 recoverable chunk(s) emitted once (1 shared); NEVER_REMAP 12 names all present; header parser matched 350/350 chunks (1093 static edges)» |
+| Runner unit | `npm --prefix runner test` | 407 passed, 0 failed (no Runner file changed) |
+| Whitespace | `git diff --check`, `git diff origin/main --check` | clean |
+| Chromium harness on the final build | `scripts/check-student-exam-browser-21e3.mjs` | pointer **52 / 52**, entry **76 / 76**, dependency **58 / 58**, css **36 / 36**, css-twice **18 / 18**, strict **58 / 58**, stilldown **36 / 36** |
+
+In the failure scenarios, the only console errors are the injected failures' own logs:
+`[QuestionErrorBoundary] {code: chunk-load}` (a stylesheet failure is now `chunk-load` too) and React's report of the caught
+stylesheet preload error. There is no other page or console error.
+
+The first full run, on the tree of `3becc98` plus the survivor tests, found one real failure, caused by this fix:
+`api/tests/ux2-shell-foundation.test.js` forbids `outline:none` in `studentexam-pro.css`, and the new heading rule had
+added one. The declaration was redundant and is removed in `b293c4a`; the guard is unchanged.
+
+Answer serialization, autosave, submission and strict attempts are unchanged:
+- No answer, save, submit, attempt or grading code changed.
+- No API, Runner, workflow, dependency or lockfile changed.
+- The existing reliability, UX-7b-1, strict and save suites pass, and this fix did not change their expectations.
+- The harness counts only start, save and submit requests, with exactly one submit (A5 / A9, PTR6).
+
+**Bundle** (exact gzip level 9, the guard's rules):
+
+| | `31f4008` (`main`) | `92f4326` | Final |
+|---|---|---|---|
+| Initial JS (8 files) | 113,118 B | 113,107 B | **113,146 B** (+28 B against `main`; target ≤ +1 KB) |
+| Initial CSS (1 file) | 35,797 B | 36,015 B | **36,067 B** |
+
+### 12.7 Remaining findings (not fixed in this phase)
+
+| Review id | Sev | Finding | Reproduction | Rationale |
+|---|---|---|---|---|
+| 85 (and pre-existing 86) | P2, **owner decision** | A question that can never render is submitted as unanswered and graded like a skip | permanent 404 of a renderer chunk (or Safari, or a refused remap) → submit → the API grades the question as unanswered | Telling "could not render" apart from "skipped" needs a submission-contract and grading change, for example a `reviewRequired` marker for teacher review (AGENTS.md §10 prefers it). This phase may not change the API, grading or question contracts. Before this phase the same failure ended the exam. Disclosed in §10 for the owner. |
+| 14 | P2 | When the outer `exam` card shows, the exam chrome (timer, navigation, review / submit) is hidden | an error thrown by the statically loaded chrome itself | Every lazy renderer, the page, the review and the section shell are caught by inner boundaries first. Moving the chrome outside the boundary would send its errors to the root boundary, which in strict mode ends the attempt. Disclosed in §10. |
+| 30 | P3 info | The strict-ended `h1` takes focus inside an existing `role=status` section | end a strict attempt | Pre-existing `role=status` markup. The focus move (B) is required; restructuring the section is left to a later accessibility pass. |
+| 31 | P3 info | Outside the exam page, a card's `role=status` is inserted already filled | a recovery card in a teacher preview | Outside the exam there is no page announcer. The card text is in the DOM and its retry button is focusable. |
+| 43, 49 | P3 info | The recovery runtime and the boundary reach teacher and portal surfaces through `RichContentRenderer` and `StudentQuestionCard` | open a teacher preview | Neutral there by design (§10, "Teacher and portal reach"). |
+| 44 (second half) | P3 nit | The 17A exception-list pin asserts a list that the same file defines | read `api/tests/coding-guards-17a.test.js` | API tests are outside this fix's scope; the behavioural proof is `recoverableLazy.21e3.test.tsx` (§9). |
+
+Pre-existing findings that were not introduced by this PR stay out of scope and unchanged: 11, 15, 16, 29, 35, 36, 37, 42,
+58, 60, 61, 62, 75, 78, 79, 83, 86, 87. Two of them change as a side effect of the fix:
+- 28 / 59: the fixed 72 px top clearance no longer exists, and the keyboard reveal measures the real top bar.
+- 67: the same as 84, fixed.
+
+Not measured: Safari / WebKit and Firefox (no engine in this environment; §10), and real assistive-technology output. The
+accessible descriptions were read from Chromium's accessibility tree, not from a screen reader.
 
 Independent review required. Owner merge only.
