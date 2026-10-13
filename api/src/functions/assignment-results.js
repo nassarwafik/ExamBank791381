@@ -9,6 +9,9 @@ const {gradeExam,parametricGenerationContext}=require("../lib/assignment-grading
 const {recordEventSafely}=require("../lib/notification-events");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const {deriveGradingStatus}=require("../lib/grading-status");
+// Phase 21E.3 — a verified render-failure hold (an unanswered question the student's device could not display) on the teacher-ended path, and
+// the per-attempt count of such holds for the gradebook row (information only; the review screen carries the question-level reason).
+const {normalizeRenderFailures,applyRenderFailureHolds,technicalHoldsField}=require("../lib/render-failures");
 const {isStudentClassMember}=require("../lib/class-membership");
 // Phase 17C — a teacher-ended attempt records the official coding grading intent in the same CAS and dispatches after it.
 const {planCodingGrading,dispatchPlannedGrading,autoGradingPending,codingGradingStatus,teacherCodingSummary}=require("../lib/coding/official-grading");
@@ -35,7 +38,7 @@ function lifecycle(a,s){
 // row and by endActiveAttempt, so the row a teacher action returns is byte-for-byte the row a reload would show.
 function resultFields(s,nowMs=Date.now()){
  const attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,latestGrading=deriveGradingStatus(latest);
- return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x),...(autoGradingPending(x)?{autoGradingPending:true}:{}),...codingFields(x,nowMs)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest),...(autoGradingPending(latest)?{autoGradingPending:true}:{}),...codingFields(latest,nowMs)}:null};
+ return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x),...(autoGradingPending(x)?{autoGradingPending:true}:{}),...codingFields(x,nowMs),...technicalHoldsField(x)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest),...(autoGradingPending(latest)?{autoGradingPending:true}:{}),...codingFields(latest,nowMs),...technicalHoldsField(latest)}:null};
 }
 // Phase 7B — the identity a teacher's endActiveAttempt was composed under. STRICT, fail closed (same rules as the student
 // write guard): attemptNumber a real integer >= 1, startedAt a non-empty string, and for model 3 an attemptEpoch integer
@@ -277,10 +280,11 @@ async function handler(request,deps={},obs=null){
      const previousStatus=ts.activeAttempt?ts.activeAttempt.status:"started",timedOut=!!ts.attemptExpired;
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(fa.examSnapshot,serverAnswers,parametricGenerationContext(a.assignmentId,student.userId,active.attemptNumber)),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
-     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{})};
+     const holds=applyRenderFailureHolds(g,normalizeRenderFailures(doc.draftRenderFailures,fa.examSnapshot||null),serverAnswers,fa.examSnapshot,now);   // 21E.3 — the record saved with the draft
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{}),...(holds?{renderFailures:holds}:{})};
      codingPlan=planCodingGrading(fa.examSnapshot,attempt,{assignmentId:a.assignmentId,studentId:student.userId,now});endedAttemptNumber=attempt.attemptNumber;   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;
      snap={...lifecycle(fa,doc),...resultFields(doc)};
      // Audit: identity + timing + policy only — NEVER answers, grades of questions, tokens or exam content.
      auditDetails={assignmentId:a.assignmentId,attemptNumber:attempt.attemptNumber,startedAt:String(attempt.startedAt),endedAt,endReason,attemptPolicy:attemptPolicyOf(fa),pauseCount:Math.max(0,Number(active.pauseCount)||0),previousStatus,timed:!!ts.timed};

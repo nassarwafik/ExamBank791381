@@ -1340,3 +1340,97 @@ campaign or broad mutation campaign ran on this head. The owner states that the 
 PR's head, and this branch does not copy it (AGENTS.md §7). Ownership of the PR passes to the QA review session.
 
 Independent review required. Owner merge only.
+
+## 16. Assessment-integrity fix — an unrecoverable question renderer
+
+Owner decision after the final independent review of `593fd47`: a question that fails to render because of an infrastructure or
+chunk-loading failure must never silently receive a zero as if the student chose not to answer. On `593fd47` the recovery card
+protected the answers, but a question whose card never recovered was listed on the review screen as a plain «غير مُجاب», the submit
+confirmation said nothing, the submit body carried nothing, and the server graded the blank as 0 — a final grade published without
+anyone knowing the student could not see the question.
+
+### 16.1 Root cause and chosen policy
+
+The client never told the server *why* a question had no answer, and the server had no state between "answered" and "blank". The
+fix follows AGENTS.md §10 (fail closed → retryable technical state → teacher review → explicit teacher decision) with the mechanism
+the platform already uses for a compile error and a key-less table: the question is **held** (score 0, `manualReview: true`) so the
+attempt is `pendingReview` until the teacher decides — never an automatic zero, never a client-chosen score.
+
+The report is **untrusted input that can only move a grade toward the teacher**: it never awards marks, never changes another
+question, never raises a score. A forged report at worst routes a blank to the teacher, who sees the reason beside the answer and
+decides. The server verifies every entry against the published exam and the stored answers before holding anything.
+
+### 16.2 Contract (additive, backward compatible)
+
+| Where | Field | Rule |
+|---|---|---|
+| Client → `saveDraft` / `pauseAttempt` / `submit` | `renderFailures: [{ questionId, code }]`, `code ∈ {chunk-load, runtime}` | Sent only while something is reported, or once more empty to clear a record the server holds; an exam without any failure sends the historical body byte-for-byte. |
+| Submission document | `draftRenderFailures` | The normalized report saved with the draft (cleared by an empty report, consumed by every finalization). |
+| Completed attempt | `renderFailures: { [questionId]: { code, held, reportedAt } }` | The verified record. `held` is decided by the server. |
+| Question grade | `technicalFailure: { code, reason: "renderFailure" }` + `manualReview: true`, `score: 0` | Only when held. Stays on record after the teacher's override. |
+| Student `pub()` / gradebook rows / review `attempt` | `technicalHolds: n` | Count only (omitted when 0); never a code, URL or message. |
+| Teacher review question | `renderFailure: { code, held, reportedAt }` | Beside `autoGrade`; the UI explains the reason and the resolution path. |
+
+`api/src/lib/render-failures.js` owns the rules: `normalizeRenderFailures` (questions of the published exam only, registered codes,
+one per question, bounded, prototype keys refused) and `applyRenderFailureHolds` (held = no admitted answer AND marks > 0 AND, in a
+`firstNAnswered` section, the quota is not already met; a firstN section without an explicit maximum grows by the held marks, as
+`gradeExam` itself derives it; totals through the ONE canonical `rebuildAttemptGrades`). Grading call sites: `submit` (the submit's
+own report wins; absent ⇒ the draft record), `finalizeTimedOutAttempt`, `finalizeIntegrityExit`, the teacher's `endActiveAttempt`.
+
+Client: `src/student/exam/renderFailures.ts` (the pure record: live / sticky entries per question, `shown` clears a previous visit's
+sticky entries only — ordering-safe against a child card that fails in the same commit), `QuestionErrorBoundary` reports a material
+card's failure / recovery / unmount and a page card's clean mount; `StudentExamPage` keeps the record beside the answers, syncs the
+server record with one ordinary `saveDraft` of the same revision when the set changes, shows «تعذّر عرضه» in the navigator and the
+review screen (counted apart from «غير مُجاب»), appends the explicit Arabic warning to the submit confirmation, and explains the hold
+on the result screen. `AssignmentReview` shows the reason and the resolution path; the gradebook row carries a badge.
+
+### 16.3 Fail-first (executed against `593fd47`)
+
+| Test file | On `593fd47` | On the head |
+|---|---|---|
+| `api/tests/render-failure-hold-21e3.test.js` | 10 failed (held question graded 0 / final; no record; drafts carry nothing), 1 pin passed (legacy body unchanged) | 11 passed |
+| `src/student/exam/reviewUnavailable.21e3.test.tsx` | 3 failed (`pageStatus` → `unanswered`; review counts 2 blanks; navigator label missing) | 3 passed |
+| `src/student/exam/renderFailures.21e3.test.tsx` | module missing (file failed to resolve) | 7 passed |
+| `src/StudentExamPage.renderFailure.21e3.test.tsx` | 2 failed (no report in the bodies, counted as a blank), 1 pin passed (historical body) — executed on a detached worktree of `593fd47` | 3 passed |
+| `src/AssignmentReview.technicalHold.21e3.test.tsx` | 2 failed (no notice, no counter), 1 pin passed (ordinary attempt) — same worktree | 3 passed |
+
+Security cases covered by the API test: a report on an answered question changes nothing; unknown ids / codes / shapes / prototype
+keys / non-arrays are dropped and never stored; a report never raises a score; duplicates and oversize collapse; the draft record is
+cleared by an empty report and consumed by timeout / strict exit / teacher end; a submit's own report overrides the draft record;
+first-N quota met ⇒ no hold, not met ⇒ held and awardable; a teacher override resolves the hold to a final grade.
+
+### 16.4 Validation, security and Chromium
+
+Related API suites (submission, timer, attempt policy, results, review, grading status, canonical rebuild parity, archive lifecycle,
+composite review, coding guards 17A/17B/17C, compile review): 208 passed; the whole `api/tests` directory: 277 files / 4,295 passed.
+Client suites around the change (StudentExamPage, student/exam, assignments, AssignmentReview, StudentPortal, question types, rich
+content, recoverableLazy, grading status): 107 files / 1,301 passed. `npx tsc -b` clean; lint 0 errors / 125 warnings (the same
+count as before); `npm run build` + bundle guard passed (initial JS 110.5 KB gzip, chunk recovery 57 / 55, NEVER_REMAP 12 present);
+`git diff --check` clean. `src/recoverableLazy.ts` and the 17A / 17B guards are untouched (the C32 exception stays exactly as
+ratified).
+
+Chromium 141 (production build of this head, mock API, Arabic, desktop / 200 % / phone-touch): **46 / 46**, 0 page errors —
+student: RTL, draft sync carries the report with the answers untouched, navigator «السؤال 2 — تعذّر عرضه» (6.01:1 contrast, keyboard
+focus ring), review «مُجاب 2 · غير مُجاب 1 · تعذّر عرضه 1» with the note, no overflow, the submit dialog with the warning, the submit
+body `renderFailures: [{h1, chunk-load}]`, the result screen's explanation; recovery after a retry: record `[1] → [0]`, no marker, no
+warning, no field, final; teacher: gradebook badge, review notice (reason, no auto-zero, mark here or a retry, `role="note"`,
+6.01:1), counter, pending status, and the mark saved through the existing `saveReview` override.
+
+### 16.5 Remaining risks
+
+- The report is a client claim; the server verifies what it can (exam membership, no stored answer, quota) and routes the rest to the
+  teacher. A student who deliberately leaves a question blank and forges a report gains nothing but a teacher's look at that blank.
+- A material card that fails and then the student navigates away stays «تعذّر عرضه» until the question is shown again; the draft
+  sync carries that state, so a time-out or strict exit holds it. Showing the question again clean clears it.
+- Stem / block failures count as material (the student may have lost a chart or formula); an answered question is never held, so a
+  degraded-but-answerable question still grades normally and the teacher only sees the information.
+
+### 16.6 Integration onto Review Fix 3
+
+The fix was developed on `593fd47` (+ a reconciliation merge of `main@8a1dd87`, `ae0ff18`) as `7f6f318`, integrated onto the Review
+Fix 3 head `df60dc2` as `725c676` (one import-block conflict in `QuestionErrorBoundary.tsx`, resolved as the union), and finally
+merged onto the closed Review Fix 3 head `f08912a` with the same single conflict and the same resolution: the pointer-hold imports of
+Review Fix 3 (`pointerIsDown`, `guardPresses`, `SHIFT_GUARD_MS`) and the failure-reporting imports both kept; every other hunk merged
+automatically. Review Fix 3's recovery protections (pointer hold, press guard, quiet landing line, keyboard-only reveal) and the
+failure reporting coexist in the same lifecycle methods: `componentDidMount` / `componentWillUnmount` / the `resetKey` branch only gained
+the `reportShown` / `reportEnd` calls. `src/recoverableLazy.ts` carries only Review Fix 3's own changes; the 17A / 17B guards are untouched.

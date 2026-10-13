@@ -8,9 +8,10 @@ import { type QuestionPage, PAGE_STATUS_LABELS, groupPagesBySection, pageStatus 
  * غير مُجاب), never by colour alone; "answered" is the existing answered() predicate applied to the LOCAL
  * answers map, so an answered-but-not-yet-saved question is still مُجاب here while SaveStatus reports
  * persistence separately. Structured exams are grouped by section with the shared calculateSectionProgress
- * (required / answered / extra) — no second firstN rule.
+ * (required / answered / extra) — no second firstN rule. Phase 21E.3: a question whose renderer could not recover and that
+ * has no answer says «تعذّر عرضه» (never «غير مُجاب»), so the student can tell a blank from a question they could not see.
  */
-export default function QuestionNavigatorList({ pages, answers, currentIndex, onJump, idPrefix }: { pages: QuestionPage[]; answers: Record<string, Answer>; currentIndex: number | null; onJump: (index: number) => void; idPrefix: string }) {
+export default function QuestionNavigatorList({ pages, answers, currentIndex, onJump, idPrefix, unavailable }: { pages: QuestionPage[]; answers: Record<string, Answer>; currentIndex: number | null; onJump: (index: number) => void; idPrefix: string; unavailable?: ReadonlySet<string> }) {
   const groups = groupPagesBySection(pages);
   return (
     <div className="iex-nav-list">
@@ -34,7 +35,7 @@ export default function QuestionNavigatorList({ pages, answers, currentIndex, on
             )}
             <div className="iex-nav-grid">
               {group.pages.map(page => {
-                const status = pageStatus(page, answers, currentIndex);
+                const status = pageStatus(page, answers, currentIndex, unavailable);
                 const number = page.question.displayNumber ?? page.index + 1;
                 return (
                   <button
