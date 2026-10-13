@@ -7,8 +7,14 @@
 //   RF3-U4  outside the exam (no provider) a recovery never scrolls either, even far from the viewport          [RR2-3]  fail-first
 //   RF3-U5  a recovered part renders in ONE commit: no empty fallback first (a two-step height change defeats scroll anchoring
 //           and moved the options under a still pointer in Chromium)                                    [RR2-3 follow-up]  fail-first
+//   RF3-U6  a recovery that completes while the student presses elsewhere (mouse) waits for the release before the layout
+//           changes, and does not take focus (the press moved the student on)                                [input F-1, F-2]  fail-first
+//   RF3-U7  the same for a finger (a touch scroll cancels the pointer; only the last touchend releases it)   [input F-1, F-2]  fail-first
+//   RF3-U8  a visually hidden landing line shows its keyboard focus on the recovered part that follows it      [input F-3]
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, act, cleanup, waitFor } from "@testing-library/react";
+import fs from "node:fs";
+import path from "node:path";
 import { Suspense, useRef, type ComponentType, type ReactElement } from "react";
 import QuestionErrorBoundary from "./QuestionErrorBoundary";
 import { QuestionRecoveryContext } from "./questionRecovery";
@@ -123,5 +129,54 @@ describe("RF3-U5 — a recovered part renders in one commit", () => {
     retry.focus(); fireEvent.click(retry);
     await screen.findByText("البند المستعاد");
     expect(fallbacks).toBe(before);                                                 // the defect: one more empty commit
+  });
+});
+
+describe("RF3-U6 — a recovery never changes the layout or takes focus during a press elsewhere", () => {
+  it("mouse: the student presses an option of another part while the retry completes; the swap waits for the release", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const Part = slowPart("UnitMidPress", 60, () => <p>البند المستعاد</p>);
+    render(<div><QuestionErrorBoundary variant="part" resetKey="mp"><Suspense fallback={<i>…</i>}><Part /></Suspense></QuestionErrorBoundary><label data-testid="option"><input type="radio" name="o" /> الخيار 2</label></div>);
+    const retry = await screen.findByRole("button", { name: "إعادة المحاولة" });
+    retry.focus(); fireEvent.click(retry);
+    const option = screen.getByTestId("option");
+    fireEvent.pointerDown(option); fireEvent.mouseDown(option);
+    (document.activeElement as HTMLElement).blur();                                // a press on a <label> leaves focus on <body>
+    await sleep(250);                                                               // the part loaded meanwhile
+    expect(screen.getByTestId("question-recovery")).toBeTruthy();                   // the defect: the layout changed mid-press
+    expect(screen.queryByText("البند المستعاد")).toBeNull();
+    fireEvent.pointerUp(option); fireEvent.mouseUp(option);
+    expect(await screen.findByText("البند المستعاد")).toBeTruthy();
+    await sleep(50);
+    expect(screen.queryByTestId("recovery-landed")).toBeNull();                     // the press moved the student on: no landing
+    expect(document.activeElement).toBe(document.body);
+  });
+});
+
+describe("RF3-U7 — the same for a finger", () => {
+  it("touch: a scroll gesture cancels the pointer, but the finger is still down until touchend", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const Part = slowPart("UnitMidTouch", 60, () => <p>الجزء المستعاد</p>);
+    render(<div><QuestionErrorBoundary variant="part" resetKey="mt"><Suspense fallback={<i>…</i>}><Part /></Suspense></QuestionErrorBoundary><p data-testid="elsewhere">نص آخر</p></div>);
+    const retry = await screen.findByRole("button", { name: "إعادة المحاولة" });
+    retry.focus(); fireEvent.click(retry);
+    const elsewhere = screen.getByTestId("elsewhere");
+    fireEvent.pointerDown(elsewhere); fireEvent.touchStart(elsewhere, { touches: [{ clientX: 10, clientY: 10 }] });
+    fireEvent.pointerCancel(elsewhere);                                             // the finger started scrolling
+    (document.activeElement as HTMLElement).blur();
+    await sleep(250);
+    expect(screen.getByTestId("question-recovery")).toBeTruthy();
+    fireEvent.touchEnd(elsewhere, { touches: [] });
+    expect(await screen.findByText("الجزء المستعاد")).toBeTruthy();
+    await sleep(50);
+    expect(screen.queryByTestId("recovery-landed")).toBeNull();
+  });
+});
+
+describe("RF3-U8 — a visually hidden landing line shows focus on the recovered part", () => {
+  it("ui.css outlines the element after a focused hidden recovery line (keyboard focus only)", () => {
+    const css = fs.readFileSync(path.join(__dirname, "..", "..", "ui", "ui.css"), "utf8");
+    const rule = /\.eb-visually-hidden\[data-recovery-line\]:focus-visible \+ \* \{([^}]*)\}/.exec(css);
+    expect(rule?.[1]).toMatch(/outline: var\(--eb-focus-ring\)/);
   });
 });

@@ -6,6 +6,8 @@
 //           shares it no longer renders unstyled when the stylesheet is back)                                       [RR2-2]  fail-first
 //   RF3-R3  the card's OWN stylesheet that stays down still fails its retry (the fail-closed rule is unchanged)            pin
 //   RF3-R4  loads that start together share one re-link of a failed stylesheet (never one link per load)                  new
+//   RF3-R5  a stylesheet the load requested but the error did not name is still the loader's own: if it stays down, the
+//           retry fails closed                                                                                              pin
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { Suspense, Component, type ComponentType, type ReactNode } from "react";
 import { render, act, cleanup } from "@testing-library/react";
@@ -142,5 +144,22 @@ describe("RF3-R4 — concurrent loads share one re-link", () => {
     expect(ui.getByText("label")).toBeTruthy();
     expect(ui.getByText("chart")).toBeTruthy();
     expect(relinks(f)).toHaveLength(1);
+  });
+});
+
+describe("RF3-R5 — every stylesheet the load requested is the loader's own", () => {
+  it("the error names coding.css; codingTemplate.css (also requested) stays down: the retry fails closed", async () => {
+    const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
+    const c1 = A("coding", "abcd1234", "css"), c2 = A("codingTemplate", "abcd1234", "css");
+    let calls = 0;
+    const C = rt.lazyComponent<object>("CodingTemplateResponse", viteFactory(f, [c1, c2], () => (++calls === 1 ? Promise.reject(new Error("Unable to preload CSS for " + c1)) : Promise.resolve(Ok("template")))));
+    await renderLazy(C); fire(f, c1, "error"); fire(f, c2, "error"); cleanup();
+    rt.rearmFailed();
+    const ui = render(<Suspense fallback={<i>…</i>}><Boundary><C /></Boundary></Suspense>);
+    await flush();
+    await act(async () => { for (const l of relinks(f)) l.dispatchEvent(new Event(bare(l) === c1 ? "load" : "error")); await new Promise(r => setTimeout(r, 0)); });
+    await flush(10);
+    expect(ui.queryByText("template")).toBeNull();                                  // never without its own stylesheet
+    expect(ui.getByText("failed")).toBeTruthy();
   });
 });

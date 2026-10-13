@@ -13,7 +13,7 @@ const RL = "src/recoverableLazy.ts", QEB = "src/student/exam/QuestionErrorBounda
 const PAGE = "src/StudentExamPage.tsx", SAVE = "src/student/exam/SaveStatus.tsx", FIELD = "src/QuestionField.tsx", LAB = "src/physicsLab/LabScene.tsx";
 const CARD = "src/StudentQuestionCard.tsx", LTR = "src/ui/ltrIsland.ts", REVEAL = "src/student/exam/keyboardReveal.ts", BELL = "src/notifications/NotificationBell.tsx";
 const GUARD = "scripts/check-bundle-budget.mjs", ANNR = "src/student/exam/examAnnouncer.ts", PRES = "src/notifications/notificationPresentation.ts", CHART = "src/charts/DataChart.tsx";
-const HOT = "src/visual/HotspotView.tsx";
+const HOT = "src/visual/HotspotView.tsx", HOLD = "src/student/exam/pointerHold.ts", UICSS = "src/ui/ui.css";
 const RT = ["src/recoverableLazy.21e3.test.tsx", "src/recoverableLazy.rf1.test.tsx"];
 const UNITS = ["src/student/exam/exam21e3.units.test.tsx", "src/student/exam/rf1.units.test.tsx"];
 const PAGE_T = ["src/StudentExamPage.ux21e3.test.tsx", "src/StudentExamPage.rf1.test.tsx"];
@@ -64,7 +64,7 @@ const mutants = [
   // Review fix 2 — runtime.
   // (R25 of review fix 2 — "re-link every failed stylesheet" — is now the intended behaviour; see R28-R33.)
   M("R26-no-total-bound", RL, "const set = await within(remapSet(entry, poisoned, u => settled.has(u), edgesOf), limits.total, \"recovery-timeout\");", "const set = await remapSet(entry, poisoned, u => settled.has(u), edgesOf);", RT2),
-  M("R27-own-css-unrecorded", RL, "        for (const u of requested) ownCss.add(u);\n", "", RT2),
+  M("R27-own-css-unrecorded", RL, "        for (const u of requested) ownCss.add(u);\n", "", RT3),
   // Review fix 3 — runtime.
   M("R28-css-relink-own-only", RL, "await Promise.all([...failedCss].map(css => relink(doc, css)));", "await Promise.all([...failedCss].filter(css => own.has(css)).map(css => relink(doc, css)));", RT3),
   M("R29-no-first-load-relink", RL, "if (attempts > 1 || failedCss.size > 0) await relinkFailedCss(ownCss);", "if (attempts > 1) await relinkFailedCss(ownCss);", RT3),
@@ -89,6 +89,10 @@ const mutants = [
   M("B17-line-stays-in-name", QEB, '"aria-hidden": quiet || undefined', '"aria-hidden": undefined', RF3_T),
   M("B18-line-never-quiet", QEB, "onBlur: () => { if (!this.state.quiet) this.setState({ quiet: true }); }", "onBlur: () => {}", RF3_T),
   M("B19-moved-focus-taken", QEB, ["const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));", "if (!line || !idle()) {"], ["const onCard = true;", "if (!line) {"], RF3_T),
+  M("B21-swap-mid-press", QEB, "    await pointerReleased();\n", "", RF3_T),
+  M("B22-press-elsewhere-ignored", QEB, "if (press.t >= started && !(cardNow && press.target instanceof Node && cardNow.contains(press.target))) this.restoreFocus = false;", "void press;", RF3_T),
+  M("H01-finger-not-tracked", HOLD, 'document.addEventListener("touchstart", e => { touch = true; down(e); }, opts);', 'document.addEventListener("touchstart", e => { down(e); }, opts);', RF3_T),
+  M("C01-hidden-line-focus-invisible", UICSS, ".eb-visually-hidden[data-recovery-line]:focus-visible + * {", ".eb-visually-hidden[data-recovery-line]:focus-visible + .none {", RF3_T),
   M("B20-anchor-takes-moved-focus", QEB, "if (!this.mounted || token !== this.token || !idle()) return;", "if (!this.mounted || token !== this.token) return;", RF3_T),
   M("B06-stem-card-not-text", CARD, '<QuestionErrorBoundary resetKey={id} variant="stem" fallback={plain}>', "<QuestionErrorBoundary resetKey={id}>", STEM_T),
   M("B07-refocus-steals", QEB, "if (wasOnCard && (!active || active === document.body || active === document.documentElement)) this.retryRef.current?.focus();", "this.retryRef.current?.focus();", UNITS),

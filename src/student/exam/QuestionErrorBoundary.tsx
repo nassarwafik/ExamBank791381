@@ -3,6 +3,7 @@ import { isChunkLoadError } from "../../lazyWithRetry";
 import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../recoverableLazy";
 import { IconRefresh, IconWarning } from "../../icons";
 import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionRecovery";
+import { trackPointer, pointerReleased, lastPointerDown } from "./pointerHold";
 
 /**
  * QuestionErrorBoundary (Phase 21E.3) — keeps ONE failing part of a page from taking down the rest.
@@ -21,16 +22,19 @@ import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionReco
  *  just before the recovered part («تم تحميل هذا الجزء.», tabindex -1); the next Tab enters the part. The line stays until
  *  another question is shown (removing it on blur would move the content between a pointer press and its release). A
  *  page-level card (page / exam / review) puts focus on the page's heading instead.
- * Review fix 3: nothing scrolls after a recovery — focus moves with preventScroll only and the page's keyboard reveal skips the
- *  line and the headings (a jump after the student scrolled away moved the options under a pointer about to press). Once
- *  focus leaves the line it is hidden from assistive technology (it sits inside the stem that names the answer controls) but
- *  keeps its place, so nothing moves.
  *  - Nothing is replaced silently: a failing rich stem keeps the plain question text WITH a notice and a retry ("stem"); a
  *    failing formula keeps its source text with a retry ("inline"); a failing content block shows a compact card ("block").
  *  - After a failed retry the follow-up guidance (in a strict attempt: do not leave the page) is announced and describes the
  *    retry button.
  *  - Outside the exam (scope "general": teacher previews, live sessions, the reader) the wording is neutral and a page reload
  *    is offered after a failed retry; inside the exam a reload is offered only when the page says it is safe.
+ * Review fix 3: nothing scrolls after a recovery — focus moves with preventScroll only and the page's keyboard reveal skips the
+ *  line and the headings (a jump after the student scrolled away moved the options under a pointer about to press). Once
+ *  focus leaves the line it is hidden from assistive technology (it sits inside the stem that names the answer controls) but
+ *  keeps its place, so nothing moves.
+ *  The card never changes the layout or moves focus while a pointer or finger is down: it waits for the release, so a press
+ *  in progress ends on the layout it started on. A press outside the card since «إعادة المحاولة» means the student moved on,
+ *  and focus is not taken (a mouse press on an option leaves focus on <body>).
  * Nothing about the failure reaches the user or a production log beyond a fixed code: no message, URL, stack or answer.
  */
 export type RecoveryVariant = "question" | "part" | "page" | "section" | "exam" | "review" | "block" | "stem" | "inline";
@@ -160,10 +164,17 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     const el = this.failedRef.current, active = typeof document !== "undefined" ? document.activeElement : null;
     this.restoreFocus = !!(el && active && el.contains(active));
     const token = ++this.token;
+    trackPointer();
+    const started = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.setState({ retrying: true });
     // Only the loaders that failed below THIS boundary (a render error has none: the part simply renders again).
     const ok = await retryFailedLoads([...this.handles]);
     if (!this.mounted || token !== this.token) return;                    // another question meanwhile: nothing to do
+    // Review fix 3: a press in progress ends on the layout it started on (the card, or the recovered part, changes height).
+    await pointerReleased();
+    if (!this.mounted || token !== this.token) return;
+    const press = lastPointerDown(), cardNow = this.failedRef.current;
+    if (press.t >= started && !(cardNow && press.target instanceof Node && cardNow.contains(press.target))) this.restoreFocus = false;
     // The line is shown only when focus is still on the card (or nowhere): it will receive focus; otherwise nothing is added.
     const a = document.activeElement, card = this.failedRef.current;
     const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));

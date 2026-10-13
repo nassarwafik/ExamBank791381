@@ -30,7 +30,7 @@ vi.mock("./student/exam/ExamReviewScreen", async importOriginal => {
   return { default: (p: object) => { if (ctl.review === "throw") throw new Error("review internal"); return orig.default(p); } };
 });
 import StudentExamPage from "./StudentExamPage";
-import { ANNOUNCEMENT_CLEAR_MS } from "./student/exam/examAnnouncements";
+import { ANNOUNCEMENT_CLEAR_MS, ANNOUNCEMENT_GAP_MS } from "./student/exam/examAnnouncements";
 
 const restoreLocation = window.location;
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); sessionStorage.clear(); Object.defineProperty(window, "location", { configurable: true, value: restoreLocation }); });
@@ -267,7 +267,8 @@ describe("RF2-P1 — two notices of the same moment are both written (re-review 
     await waitFor(() => expect(writes.some(w => w[1].includes("انقطع الاتصال"))).toBe(true), { timeout: 5000 });
     const timer = writes.find(w => w[1].includes("أقل من 5 دقائق")), offline = writes.find(w => w[1].includes("انقطع الاتصال"));
     expect(timer).toBeTruthy();
-    expect(Math.abs(offline![0] - timer![0])).toBeGreaterThanOrEqual(1000);
+    // Real timers here (review fix 3: the full gap, less timer jitter); examAnnouncer.rf2 pins the exact gap with a clock.
+    expect(Math.abs(offline![0] - timer![0])).toBeGreaterThanOrEqual(ANNOUNCEMENT_GAP_MS - 50);
   });
 });
 
