@@ -89,3 +89,10 @@
   .rv-nav-grid{ grid-template-columns:repeat(auto-fill,minmax(48px,1fr)); }
 }
 @media (min-width:1024px){ .rv-aside details>summary{ display:none; } }
+
+/* Phase 21E.3 — a question the student's device could not display: the reason beside the held grade, and what the teacher can do. */
+.rv-technical{ display:flex; flex-direction:column; gap:4px; margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-warn); border-inline-start:4px solid var(--eb-warn); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.rv-technical.is-held{ border-color:var(--eb-danger); background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.rv-technical strong{ font-weight:var(--eb-fw-bold); }
+.rv-technical-reason{ color:inherit; opacity:.9; }
+.review-summary .rv-summary-technical strong{ color:var(--eb-danger-tx); }

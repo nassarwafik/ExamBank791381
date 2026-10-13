@@ -4,6 +4,7 @@ import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../r
 import { IconRefresh, IconWarning } from "../../icons";
 import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionRecovery";
 import { trackPointer, pointerReleased, lastPointerDown } from "./pointerHold";
+import { MATERIAL_VARIANTS, type RenderFailureCode } from "./renderFailures";
 
 /**
  * QuestionErrorBoundary (Phase 21E.3) — keeps ONE failing part of a page from taking down the rest.
@@ -36,6 +37,10 @@ import { trackPointer, pointerReleased, lastPointerDown } from "./pointerHold";
  *  in progress ends on the layout it started on. A press outside the card since «إعادة المحاولة» means the student moved on,
  *  and focus is not taken (a mouse press on an option leaves focus on <body>).
  * Nothing about the failure reaches the user or a production log beyond a fixed code: no message, URL, stack or answer.
+ * Assessment integrity (21E.3): inside the exam page a MATERIAL card (question / part / page / block / stem) reports the same fixed
+ * code to the page's record of unavailable questions when it fails, reports its recovery, and reports that it went away while
+ * still failing; a page card reports a clean mount. The page shows such a question as «تعذّر عرضه», warns before submission and
+ * sends the report with the answers for the server to verify — the card itself never changes an answer or a grade.
  */
 export type RecoveryVariant = "question" | "part" | "page" | "section" | "exam" | "review" | "block" | "stem" | "inline";
 type Props = {
@@ -98,6 +103,8 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
   private token = 0;
   private frame = 0;
   private mounted = false;
+  /** The question this card reported a failure for (null while it is not failing, or when it does not report). */
+  private reported: string | null = null;
 
   static getDerivedStateFromError(): Partial<State> {
     return { failed: true };
@@ -108,8 +115,27 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey, landed: false, quiet: false } : null;
   }
 
-  componentDidMount() { this.mounted = true; }
-  componentWillUnmount() { this.mounted = false; this.token += 1; if (this.frame) cancelAnimationFrame(this.frame); }
+  componentDidMount() { this.mounted = true; if (!this.state.failed) this.reportShown(); }
+  componentWillUnmount() { this.mounted = false; this.token += 1; if (this.frame) cancelAnimationFrame(this.frame); this.reportEnd("unmounted"); }
+
+  private reportFailed(code: RenderFailureCode) {
+    const v = this.variant(), q = this.context.questionId, fn = this.context.report;
+    if (!MATERIAL_VARIANTS.has(v) || !q || !fn) return;
+    this.reported = q;
+    fn({ status: "failed", questionId: q, boundaryId: this.id, variant: v, code });
+  }
+  private reportEnd(status: "recovered" | "unmounted") {
+    const q = this.reported;
+    if (!q) return;
+    this.reported = null;
+    this.context.report?.({ status, questionId: q, boundaryId: this.id });
+  }
+  /** A page card mounted (or rendered again) clean: the previous visit's failures of this question are over. */
+  private reportShown() {
+    const q = this.context.questionId;
+    if (this.variant() !== "page" || !q) return;
+    this.context.report?.({ status: "shown", questionId: q });
+  }
 
   componentDidCatch(error: unknown) {
     const handle = recoveryHandleOf(error);
@@ -119,15 +145,23 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     // Sanitized: the fixed classification only (the root ErrorBoundary's rule) — never the message, stack or component tree.
     // eslint-disable-next-line no-console
     console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime" });
+    this.reportFailed(chunk ? "chunk-load" : "runtime");
     if (!this.titleAnnounced) { this.titleAnnounced = true; this.context.announce?.(this.title()); }
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    if (prevProps.resetKey !== this.props.resetKey) { this.titleAnnounced = false; this.restoreFocus = false; this.handles.clear(); this.token += 1; return; }
+    if (prevProps.resetKey !== this.props.resetKey) {
+      this.titleAnnounced = false; this.restoreFocus = false; this.handles.clear(); this.token += 1;
+      // Another key rendered clean under this card: the earlier failure is over (a new failure reports itself again).
+      if (!this.state.failed) { this.reportEnd("recovered"); this.reportShown(); }
+      return;
+    }
     if (prevState.failed && !this.state.failed) {
       // Recovered: the next failure is a new episode; focus follows the part only if the student was on the card.
       this.titleAnnounced = false;
       this.handles.clear();
+      this.reportEnd("recovered");
+      this.reportShown();
       if (this.restoreFocus) { this.restoreFocus = false; this.placeFocusAfterRecovery(this.token); }
     } else if (this.state.failed && this.state.retries > prevState.retries) {
       // A retry failed: say what to do now (the guidance also describes the retry button). Focus is left where it is — except

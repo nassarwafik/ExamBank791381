@@ -211,6 +211,9 @@
 .iex-nav-q.is-answered{ border-color:var(--eb-success); background:var(--eb-success-bg); }
 .iex-nav-q.is-answered .iex-nav-q-state{ color:var(--eb-success-tx); }
 .iex-nav-q.is-unanswered{ border-style:dashed; background:var(--eb-surface-2); }
+/* 21E.3 assessment integrity — a question the device could not display (not a blank): state in text, colour only as reinforcement */
+.iex-nav-q.is-unavailable{ border-style:dashed; border-color:var(--eb-danger); background:var(--eb-danger-bg); }
+.iex-nav-q.is-unavailable .iex-nav-q-state{ color:var(--eb-danger-tx); font-weight:var(--eb-fw-semibold); }
 .iex-nav-q.is-current{ border:2px solid var(--eb-primary); background:var(--eb-primary-050); }
 .iex-nav-q.is-current .iex-nav-q-state{ color:var(--eb-primary-strong); font-weight:var(--eb-fw-semibold); }
 .iex-nav-q:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
@@ -226,6 +229,10 @@
 .iex-review-stats dd{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
 .iex-review-stats > div.is-warn{ background:var(--eb-warn-bg); }
 .iex-review-stats > div.is-warn dd{ color:var(--eb-warn-tx); }
+.iex-review-stats > div.is-unavailable{ grid-column:1 / -1; background:var(--eb-danger-bg); }
+.iex-review-stats > div.is-unavailable dd{ color:var(--eb-danger-tx); }
+.iex-review-note.is-unavailable{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); align-items:flex-start; line-height:var(--eb-lh-body); }
+.iex-review-note.is-unavailable svg{ flex:none; margin-block-start:3px; }
 .iex-review-note, .iex-review-shortfalls li{ display:flex; align-items:center; gap:var(--eb-space-2); margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
 .iex-review-shortfalls{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .iex-review-actions{ display:flex; flex-direction:column-reverse; gap:var(--eb-space-2); padding-block-start:var(--eb-space-2); border-block-start:1px solid var(--eb-line); }

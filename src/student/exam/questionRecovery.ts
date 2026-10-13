@@ -1,4 +1,5 @@
 import { createContext } from "react";
+import type { RenderFailureEvent } from "./renderFailures";
 
 /**
  * Phase 21E.3 — what the surface around a recovery card tells it.
@@ -12,6 +13,8 @@ import { createContext } from "react";
  *    whether it could — used after a page-, exam- or review-level card recovered. Any other card lands focus on its own
  *    «تم تحميل هذا الجزء.» line (review fix 2: never on an answer control). Neither scrolls (review fix 3).
  *  - announce: the page's single polite announcer (a card inserted with its text already inside is not reliably announced).
+ *  - questionId + report (exam, assessment integrity): the question the cards below belong to, and where a material card reports
+ *    that it failed / recovered / went away still failing (see renderFailures.ts). Without a questionId nothing is reported.
  */
 export type QuestionRecovery = {
   scope: "exam" | "general";
@@ -19,6 +22,8 @@ export type QuestionRecovery = {
   strict: boolean;
   focusAnchor?: () => boolean;
   announce?: (text: string) => void;
+  questionId?: string;
+  report?: (event: RenderFailureEvent) => void;
 };
 
 /** Marks the «تم تحميل هذا الجزء.» line a recovery card leaves behind (review fix 3: the page's keyboard reveal skips it). */

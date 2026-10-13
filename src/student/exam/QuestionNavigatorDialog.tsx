@@ -11,13 +11,13 @@ import QuestionNavigatorList from "./QuestionNavigatorList";
  * the new question heading itself (see StudentExamPage) — the dialog's own opener focus-return is overridden by
  * that intentional jump focus, so focus never lands back on the "قائمة الأسئلة" trigger after a jump.
  */
-export default function QuestionNavigatorDialog({ open, onClose, pages, answers, currentIndex, onJump, answeredCount }: { open: boolean; onClose: () => void; pages: QuestionPage[]; answers: Record<string, Answer>; currentIndex: number; onJump: (index: number) => void; answeredCount: number }) {
+export default function QuestionNavigatorDialog({ open, onClose, pages, answers, currentIndex, onJump, answeredCount, unavailable }: { open: boolean; onClose: () => void; pages: QuestionPage[]; answers: Record<string, Answer>; currentIndex: number; onJump: (index: number) => void; answeredCount: number; unavailable?: ReadonlySet<string> }) {
   const reactId = useId();
   const prefix = "iex-navd-" + reactId.replace(/[^a-zA-Z0-9_-]/g, "");
   return (
     <Dialog open={open} onClose={onClose} title="قائمة الأسئلة" size="md" className="iex-navigator">
       <p className="iex-navigator-summary">{answeredCount} / {pages.length} مجاب · اختر سؤالًا للانتقال إليه</p>
-      <QuestionNavigatorList pages={pages} answers={answers} currentIndex={currentIndex} onJump={onJump} idPrefix={prefix} />
+      <QuestionNavigatorList pages={pages} answers={answers} currentIndex={currentIndex} onJump={onJump} idPrefix={prefix} unavailable={unavailable} />
     </Dialog>
   );
 }
