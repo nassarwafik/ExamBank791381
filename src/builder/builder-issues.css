@@ -10,6 +10,12 @@
 .sb-inline-issue-text { flex: 1 1 auto; min-width: 0; }
 /* K3 (A-F4) — a list the issue summary sent focus to shows it (like a focused card), whatever moved focus there. */
 .sb-inline-issues:focus { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+/* RF3 (I-2) — the control a summary entry focused (StructuredExamBuilder marks it with data-issue-focus until it loses focus) shows
+   the focus ring whatever moved focus there: Chromium does not match :focus-visible for script focus after a pointer click, and the
+   builder's inputs draw focus with a transparent outline. Four-part selectors out-rank `.sb-builder .sb-input:focus` (0-3-0), so the
+   bundle's sheet order does not matter. */
+.sb-builder .sb-workspace-main [data-issue-focus]:focus,
+.sb-builder .sb-workspace-main [data-issue-focus]:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 
 /* The builder's issue summary (StructuredExamBuilder `.sb-issues-summary`): token colours over the legacy structured-builder.css
    rules (two-class selectors, so the bundle's sheet order does not matter), a text severity instead of an emoji, and entries that

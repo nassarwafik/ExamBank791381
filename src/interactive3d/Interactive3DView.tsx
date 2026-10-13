@@ -48,6 +48,23 @@ function targetForEdge(targets: Scene3DTargetV1[], objectId:string, element?:str
 function targetForVertex(targets: Scene3DTargetV1[], objectId:string, element?:string){
   return targets.find(t=>t.kind==="vertex"&&t.objectId===objectId&&t.element===element);
 }
+/** Phase 21E — toolbar icons: decorative inline SVG (aria-hidden; every button keeps its Arabic accessible name), currentColor, no asset. */
+const I3D_ICONS: Readonly<Record<string, string>> = {
+  rotateLeft: "M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4.6h4.6",
+  rotateRight: "M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4.6h-4.6",
+  tiltUp: "M12 19V6M6.5 11.5 12 6l5.5 5.5",
+  tiltDown: "M12 5v13M6.5 12.5 12 18l5.5-5.5",
+  zoomIn: "M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.3 15.3 20 20M10.5 7.8v5.4M7.8 10.5h5.4",
+  zoomOut: "M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.3 15.3 20 20M7.8 10.5h5.4",
+  fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  reset: "M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5M12 9v3l2 1.5",
+  spin: "M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18.5 3.5v3.6h-3.6M5.5 20.5v-3.6h3.6",
+  drag: "M12 3v18M3 12h18M12 3 9.5 5.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5"
+};
+function I3DIcon({ name }: { name: keyof typeof I3D_ICONS }) {
+  return <svg className="i3d-ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d={I3D_ICONS[name]} /></svg>;
+}
+
 type Item = { face: ProjectedScene3DFace; line?: undefined } | { line: ProjectedScene3DLine; face?: undefined };
 /** Lines drawn per display mode. While the model moves in the solid modes only true edges (creases) are drawn: silhouettes are the
  *  most numerous lines and the lit facets already show the outline; they return as soon as the motion settles. */
@@ -114,27 +131,32 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
       <strong id={uid+"-title"}>{value.title}</strong>
       <p>{value.description}</p>
     </figcaption>
+    {/* Phase 21E — one toolbar of labelled groups; every button keeps its exact accessible name, and the auto-rotate toggle stays inside .i3d-controls */}
     <div className="i3d-controls" role="group" aria-label="أدوات عرض النموذج ثلاثي الأبعاد">
-      {value.interaction.rotate&&<>
-        <button type="button" className="i3d-icon" title="تدوير لليسار" aria-label="تدوير لليسار" onClick={()=>rotateBy(-.2,0)}>⟲</button>
-        <button type="button" className="i3d-icon" title="تدوير لليمين" aria-label="تدوير لليمين" onClick={()=>rotateBy(.2,0)}>⟳</button>
-        <button type="button" className="i3d-icon" title="رفع المنظور" aria-label="رفع المنظور" onClick={()=>rotateBy(0,.15)}>⤒</button>
-        <button type="button" className="i3d-icon" title="خفض المنظور" aria-label="خفض المنظور" onClick={()=>rotateBy(0,-.15)}>⤓</button>
-      </>}
-      {value.interaction.zoom&&<>
-        <button type="button" className="i3d-icon" title="تكبير" aria-label="تكبير" onClick={()=>zoomBy(1.12)}>+</button>
-        <button type="button" className="i3d-icon" title="تصغير" aria-label="تصغير" onClick={()=>zoomBy(1/1.12)}>−</button>
-        <button type="button" onClick={fit}>عرض النموذج كاملًا</button>
-      </>}
-      <button type="button" onClick={reset}>إعادة العرض</button>
-      {value.interaction.rotate&&!reducedMotion&&<button type="button" aria-pressed={autoRotating} onClick={()=>setAutoRotate(!autoRotating)}>{autoRotating?"إيقاف الدوران التلقائي":"دوران تلقائي"}</button>}
+      {value.interaction.rotate&&<div className="i3d-cluster" role="group" aria-label="التدوير">
+        <button type="button" className="i3d-icon" title="تدوير لليسار" aria-label="تدوير لليسار" onClick={()=>rotateBy(-.2,0)}><I3DIcon name="rotateLeft"/></button>
+        <button type="button" className="i3d-icon" title="تدوير لليمين" aria-label="تدوير لليمين" onClick={()=>rotateBy(.2,0)}><I3DIcon name="rotateRight"/></button>
+        <button type="button" className="i3d-icon" title="رفع المنظور" aria-label="رفع المنظور" onClick={()=>rotateBy(0,.15)}><I3DIcon name="tiltUp"/></button>
+        <button type="button" className="i3d-icon" title="خفض المنظور" aria-label="خفض المنظور" onClick={()=>rotateBy(0,-.15)}><I3DIcon name="tiltDown"/></button>
+      </div>}
+      {value.interaction.zoom&&<div className="i3d-cluster" role="group" aria-label="التكبير">
+        <button type="button" className="i3d-icon" title="تكبير" aria-label="تكبير" onClick={()=>zoomBy(1.12)}><I3DIcon name="zoomIn"/></button>
+        <button type="button" className="i3d-icon" title="تصغير" aria-label="تصغير" onClick={()=>zoomBy(1/1.12)}><I3DIcon name="zoomOut"/></button>
+        <button type="button" className="i3d-text" onClick={fit}><I3DIcon name="fit"/>عرض النموذج كاملًا</button>
+      </div>}
+      <div className="i3d-cluster" role="group" aria-label="العرض">
+        <button type="button" className="i3d-text" onClick={reset}><I3DIcon name="reset"/>إعادة العرض</button>
+        {value.interaction.rotate&&!reducedMotion&&<button type="button" className="i3d-text" aria-pressed={autoRotating} onClick={()=>setAutoRotate(!autoRotating)}><I3DIcon name="spin"/>{autoRotating?"إيقاف الدوران التلقائي":"دوران تلقائي"}</button>}
+      </div>
     </div>
     <div className="i3d-options">
       <label>طريقة العرض <select value={mode} onChange={e=>setMode(e.target.value as Scene3DDisplayMode)}>{MODES.map(m=><option key={m} value={m}>{MODE_LABELS[m]}</option>)}</select></label>
       <label>جودة العرض <select value={qualityChoice} onChange={e=>setQualityChoice(e.target.value as QualityChoice)}>{QUALITY_CHOICES.map(q=><option key={q} value={q}>{QUALITY_LABELS[q]}</option>)}</select></label>
     </div>
-    <p id={uid+"-help"} className="i3d-help">اسحب النموذج لتدويره بحرية في كل الاتجاهات. للتكبير: إصبعان على الشاشة اللمسية، أو عجلة الفأرة بعد النقر على النموذج (أو مع Ctrl). بعد التركيز على النموذج: الأسهم للتدوير، و+ و− للتكبير والتصغير، وHome لإعادة العرض.</p>
+    <div className="i3d-howto"><span className="i3d-howto-title" aria-hidden="true">طريقة التحكم</span>
+      <p id={uid+"-help"} className="i3d-help">اسحب النموذج لتدويره بحرية في كل الاتجاهات. للتكبير: إصبعان على الشاشة اللمسية، أو عجلة الفأرة بعد النقر على النموذج (أو مع Ctrl). بعد التركيز على النموذج: الأسهم للتدوير، و+ و− للتكبير والتصغير، وHome لإعادة العرض.</p></div>
     {targetLabel&&<p className="i3d-selection-label">{targetLabel}</p>}
+    <div className="i3d-stage" data-interacting={interacting||undefined}>
     <svg ref={attachTo} className="i3d-scene" viewBox={"0 0 "+scene.width+" "+scene.height} role="img" tabIndex={0}
       aria-describedby={uid+"-help"} aria-label={"نموذج ثلاثي الأبعاد: "+value.title}
       data-yaw={r2(camera.yaw)} data-pitch={r2(camera.pitch)} data-zoom={r2(camera.zoom)} data-quality={mesh.quality} data-mode={mode} data-interacting={interacting||undefined}
@@ -159,6 +181,8 @@ export default function Interactive3DView({ spec, selection }:{spec:Interactive3
         return <circle key={i} cx={p.x} cy={p.y} r={active?8:6} className={"i3d-vertex-target"+(active?" is-selected":"")+(mark?" review-"+mark:"")} onClick={()=>clickTarget(t)} data-i3d-target={key}/>;
       })}
     </svg>
+      {value.interaction.rotate&&<span className="i3d-stage-hint" aria-hidden="true"><I3DIcon name="drag"/>اسحب لتدوير النموذج</span>}
+    </div>
     {selection&&<div className="i3d-target-list" role="group" aria-label={targetLabel}>
       {targets.map(t=>{const key=scene3DTargetKey(t),active=selected.has(key),mark=selection.review?.[key],reviewText=mark==="correct"?"صحيح":mark==="incorrect"?"غير صحيح":mark==="missed"?"إجابة صحيحة لم تُختر":"";return <button type="button" key={key} aria-pressed={active}
         disabled={selection.readOnly} className={(active?"is-selected ":"")+(mark?"review-"+mark:"")} onClick={()=>toggle(t)}><span>{t.label}</span>{t.detail&&<small>{t.detail}</small>}{reviewText&&<small className="i3d-review-mark">{reviewText}</small>}</button>;})}

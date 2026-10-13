@@ -45,11 +45,11 @@ import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
-import BuilderToolbar from "./builder/BuilderToolbar";
-import { indexIssues, issueOccurrence, issueTargets, type IssueTarget } from "./builder/issueIndex";
+import BuilderToolbar, { MORE_MENU_LABEL } from "./builder/BuilderToolbar";
+import { indexIssues, issueOccurrence, issuePartFocus, issueTargets, targetCardIssues, type IssuePart, type PartFocus, type IssueTarget } from "./builder/issueIndex";
 import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer";
 import useModalSurface from "./ui/useModalSurface";
-import { SAVE_LABELS } from "./teacher/saveLabels";
+import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
 import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown } from "./icons";
 import "./structured-builder.css";
 import "./builder/builder-issues.css";
@@ -155,19 +155,71 @@ type Props = {
 const AUTOSAVE_DELAY_MS = 800;
 /** Phase 21E.2 — the toolbar's (visually hidden) heading; App's builder overlay is aria-labelledby it. One builder at a time. */
 const BUILDER_TITLE_ID = "sb-builder-title";
-// K3 (A-F7) — the glyph is shown but never spoken (an aria-hidden span inside the polite status); the visible text is unchanged.
-const SAVE_STATE_LABEL: Record<ExamSaveState, { glyph: string; text: string }> = { saved: { glyph: "✓", text: "محفوظ" }, dirty: { glyph: "●", text: "تغييرات غير محفوظة" }, saving: { glyph: "⏳", text: "جارٍ الحفظ" }, recovered: { glyph: "↺", text: "نسخة مسترجعة — غير محفوظة" } };
+// K3 (A-F7) — the glyph is shown but never spoken (an aria-hidden span inside the polite status). RF3 I-4: the words are the save-label
+// table's (SAVE_STATE_LABELS), so the status says «جارٍ الحفظ…» exactly like the draft button while a save runs.
+const SAVE_STATE_GLYPH: Record<ExamSaveState, string> = { saved: "✓", dirty: "●", saving: "⏳", recovered: "↺" };
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 const EMPTY_REVEALS: ReadonlyMap<string, number> = new Map<string, number>();
 /** Phase 21E.2 (D) — a control whose Field frame shows an error now (aria-invalid) and that can take focus. */
 const INVALID_FIELD = ['input', 'select', 'textarea'].map(t => t + '[aria-invalid="true"]:not([disabled])').join(", ");
 /** RF2-2 — any control that can take focus (e.g. «+ إضافة خيار» in a multiple-choice frame without options). */
 const ENABLED_CONTROL = ['button', 'input:not([type="hidden"])', 'select', 'textarea'].map(t => t + ':not([disabled])').join(", ");
+/** RF3 I-1 — what a summary entry focuses: the clicked issue's code, which instance of it (RF2-1; none for an issue of an earlier
+ *  card sharing the id, I-3) and the compound / composite part it belongs to, with what of that part it is about (I-1, RR3-3). */
+type IssueInstance = { code: string; nth?: number; part: PartFocus | "ambiguous" | null };
+/** RF3 I-1 — the element showing a part, located through the editors' existing markup (never a new attribute: compound@1 is frozen):
+ *  a compound part by its position among `.sb-compound-editor > .sb-part`, a composite part by its `data-part-id`. */
+const partNode = (card: HTMLElement, part: IssuePart): HTMLElement | null => {
+  if (part.family === "compound") {
+    const editor = card.querySelector<HTMLElement>(".sb-compound-editor");
+    return (Array.from(editor?.children ?? []).filter(c => c.classList.contains("sb-part"))[part.index] as HTMLElement | undefined) ?? null;
+  }
+  const hits = Array.from(card.querySelectorAll<HTMLElement>(".sb-part[data-part-id]")).filter(n => n.dataset.partId === part.id);
+  return hits.length === 1 ? hits[0] : null;
+};
+/** A part's answer body: its last child after the part text (both editors render head · text [· rich content] · body). */
+const partBody = (part: HTMLElement): HTMLElement | null => {
+  const body = part.lastElementChild as HTMLElement | null;
+  return body && !body.matches(".sb-part-head, .sb-part-text, .rc-host") ? body : null;
+};
+const ENABLED_VALUE_CONTROL = ['input:not([type="hidden"])', 'select', 'textarea'].map(t => t + ':not([disabled])').join(", ");
+/** RF3 I-1 / RR3-3 — the control in a part that a part issue is about, and the element to bring into view with it (null: none can be
+ *  told apart — the caller focuses the card's named issue list, never a row the issue does not name).
+ *  - a numbered row (the N-th `.sb-field-row` of the body: the validator's N-th pair / statement / blank): its correct-answer control
+ *    (the row's last input / select) for a missing or unreachable answer, else its first empty control, else its first control;
+ *  - the rich content: the part's rich-content control (its toggle, or the button that removes a parametric part's rich content);
+ *  - the type: the head's type select;
+ *  - the body as a whole: its first enabled control («+ إضافة خيار» with no options), else the type select. */
+const partTarget = (part: HTMLElement, focus: PartFocus): { field: HTMLElement; shown: HTMLElement } | null => {
+  const typeSelect = part.querySelector<HTMLElement>(".sb-part-head select:not([disabled])");
+  if (focus.at === "type") return typeSelect ? { field: typeSelect, shown: part } : null;
+  if (focus.at === "rich") {
+    const host = Array.from(part.children).find(c => c.matches(".rc-host, .sb-warn-text")) as HTMLElement | undefined;
+    const field = host?.querySelector<HTMLElement>(ENABLED_CONTROL);
+    return host && field ? { field, shown: host } : null;
+  }
+  const body = partBody(part);
+  if (focus.at === "row") {
+    const row = body?.querySelectorAll<HTMLElement>(".sb-field-row")[focus.row - 1];
+    const controls = Array.from(row?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(ENABLED_VALUE_CONTROL) ?? []);
+    const field = (focus.answer ? controls.at(-1) : controls.find(c => !c.value.trim()) ?? controls[0]) ?? row?.querySelector<HTMLElement>(ENABLED_CONTROL);
+    return row && field ? { field, shown: row } : null;
+  }
+  if (focus.at !== "body") return null;
+  const field = body?.querySelector<HTMLElement>(ENABLED_CONTROL);
+  return field && body ? { field, shown: body } : typeSelect ? { field: typeSelect, shown: part } : null;
+};
+/** RF3 I-2 — the control a summary entry focused shows it whatever moved focus there (builder-issues.css draws the marker with the
+ *  focus ring: Chromium does not match :focus-visible for script focus after a pointer click). Removed when it loses focus. */
+const ISSUE_FOCUS = "data-issue-focus";
+function clearIssueFocus(this: HTMLElement) { this.removeAttribute(ISSUE_FOCUS); }
 const FLASH_MS = 1200;
 const UNDO_TOAST_MS = 10000;
 /** Height of the band a toast covers at the bottom of the builder — keep in sync with structured-builder.css
  *  (`.structured-builder-overlay:has(.eb-toast)` reserves 16 px × 2 + 96 px). */
 const TOAST_BAND = 128;
+/** RF3 A-01 — the stuck toolbar's height on `.sb-builder` (builder-toolbar.css offsets the layers that stick below it by it). */
+const TOOLBAR_BAND_VAR = "--sb-toolbar-band";
 /** User-perceived characters: a letter with its harakat / shadda, an emoji sequence or a flag is ONE grapheme (never split). */
 const graphemesOf = (text: string): string[] =>
   typeof Intl.Segmenter === "function" ? Array.from(new Intl.Segmenter("ar", { granularity: "grapheme" }).segment(text), x => x.segment) : Array.from(text);
@@ -390,27 +442,96 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const reducedMotion = usePrefersReducedMotion();
   const scrollBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
   const builderRef = useRef<HTMLDivElement | null>(null);
-  /** Bottom edge of the sticky toolbar on screen (0 without one). */
-  const toolbarBottom = () => builderRef.current?.querySelector<HTMLElement>(".sb-toolbar")?.getBoundingClientRect().bottom ?? 0;
+  const scrollerOf = () => builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+  /** K2 C-F4 — builder-toolbar.css makes the toolbar sticky only where there is room for it (≥ 768 × 600); elsewhere it is static
+   *  and scrolls away with the content. ("" = no stylesheet, e.g. in unit tests: treated as sticky, as before.) */
+  const isStaticBox = (el: HTMLElement) => { const p = getComputedStyle(el).position; return p === "static" || p === "relative"; };
+  /** RF3 A-01 — the bulk-action bar while it is sticky (questions selected; it sticks right below the toolbar, builder-toolbar.css). */
+  const stickyBulkBar = () => {
+    const bar = builderRef.current?.querySelector<HTMLElement>(".sb-bulk-bar");
+    return bar && getComputedStyle(bar).position === "sticky" ? bar : null;
+  };
+  /** The edge a heading must be below to be seen (0 without a toolbar): the bottom of the sticky layers at the top of the scroller —
+   *  the stuck toolbar and, while questions are selected, the bulk-action bar below it (RF3 A-01). Where the toolbar is static
+   *  (phones, 200 %) it is the scroller's top: the static toolbar has scrolled away with the content and covers nothing — RF3 A-02:
+   *  its bottom edge, thousands of px above the screen once scrolled, made every heading above the screen count as on screen, so
+   *  focus landed on a card nobody could see (a deletion's neighbour, a Ctrl+Y). */
+  const toolbarBottom = () => {
+    const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
+    let edge = !bar ? 0 : isStaticBox(bar) ? (scrollerOf()?.getBoundingClientRect().top ?? 0) : bar.getBoundingClientRect().bottom;
+    const bulk = stickyBulkBar();
+    if (bulk) edge = Math.max(edge, bulk.getBoundingClientRect().bottom);
+    return edge;
+  };
   /** Space a revealed element keeps clear at the top of the builder's scroller: down to the sticky toolbar's bottom edge (the
    *  scroller's padding puts the stuck toolbar below its top, so its height alone falls short) plus 12 px. At the end of the scroll
    *  range the room reserved below the builder pushes the stuck toolbar up; a reveal scrolls it back to its resting place (the
    *  scroller's top padding + its own height), so the clearance is never measured below that (Review Fix 2).
    *  K2 C-F4 — the toolbar is sticky only where there is room for it (builder-toolbar.css: ≥ 768 × 600). Below that (phones,
    *  200 % zoom) it is static: it scrolls away with the content and, standing before every target in the flow, can never cover
-   *  one — a reveal keeps only the 12 px. (Its resting band there would land every reveal a whole toolbar lower.) */
+   *  one — a reveal keeps only the 12 px. (Its resting band there would land every reveal a whole toolbar lower.)
+   *  RF3 A-01 — while questions are selected the bulk-action bar sticks below the toolbar (its `top` = the toolbar's band + 8 px,
+   *  builder-toolbar.css), so a target is revealed below the bar's resting place too (scroller padding + its `top` + its height). */
   const toolbarClearance = () => {
     const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
-    if (!bar) return 12;
-    const position = getComputedStyle(bar).position;
-    if (position === "static" || position === "relative") return 12;
-    const scroller = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+    const toolbarSticky = !!bar && !isStaticBox(bar);
+    const bulk = stickyBulkBar();
+    if (!toolbarSticky && !bulk) return 12;
+    const scroller = scrollerOf();
     const scrollerTop = scroller?.getBoundingClientRect().top ?? 0;
     const style = scroller ? getComputedStyle(scroller) : null;
     const padding = style ? parseFloat(style.paddingBlockStart) || parseFloat(style.paddingTop) || 0 : 0;
-    const r = bar.getBoundingClientRect();
-    return Math.round(Math.max(0, r.bottom - scrollerTop, padding + r.height) + 12);
+    let band = 0;
+    if (bar && toolbarSticky) { const r = bar.getBoundingClientRect(); band = Math.max(0, r.bottom - scrollerTop, padding + r.height); }
+    if (bulk) { const offset = parseFloat(getComputedStyle(bulk).top); if (Number.isFinite(offset)) band = Math.max(band, padding + offset + bulk.getBoundingClientRect().height); }
+    return Math.round(band + 12);
   };
+  // RF3 A-01 — the stuck toolbar's height, published for the layers that stick below it (builder-toolbar.css: the bulk-action bar,
+  // the inline question explorer). They used fixed offsets sized for the old 64 px toolbar and slid under the 21E.2 toolbar. Kept
+  // current while the toolbar wraps (width, zoom, status chips).
+  useLayoutEffect(() => {
+    const root = builderRef.current, bar = root?.querySelector<HTMLElement>(".sb-toolbar");
+    if (!root || !bar) return;
+    const publish = () => root.style.setProperty(TOOLBAR_BAND_VAR, Math.ceil(bar.getBoundingClientRect().height) + "px");
+    publish();
+    if (typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(publish);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
+  // RR3-A11Y-2 / audit B-02 (WCAG 2.4.11) — a Tab / Shift+Tab never leaves keyboard focus under the sticky layers. Chromium does not
+  // scroll a focus stop that is "in view" behind a sticky bar (the stuck toolbar and, with a selection, the bulk-action bar below
+  // it), and scrolls one that is above the screen only to the scroller's top — under the same bars. After a Tab moves focus, the
+  // scroller moves just enough to put the control below their edge + 12 px (the reveal clearance). Only keyboard moves are adjusted:
+  // the programmatic reveals (alignCard / alignSection) already land below the edge. A control that sits in a fixed / sticky layer
+  // (the toolbar, the bulk bar, the inline explorer, a toast, a dialog) never scrolls with the content and is left alone.
+  useEffect(() => {
+    const root = builderRef.current;
+    if (!root) return;
+    let tabbing = false;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      tabbing = true;
+      window.setTimeout(() => { tabbing = false; }, 0);
+    };
+    const inFixedLayer = (el: HTMLElement) => {
+      for (let n: HTMLElement | null = el; n && n !== root; n = n.parentElement) {
+        const p = getComputedStyle(n).position;
+        if (p === "sticky" || p === "fixed") return true;
+      }
+      return false;
+    };
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target;
+      if (!tabbing || !(t instanceof HTMLElement) || inFixedLayer(t)) return;
+      tabbing = false;
+      const scroller = scrollerOf(), edge = toolbarBottom(), top = t.getBoundingClientRect().top;
+      if (scroller && top < edge) scroller.scrollTop -= Math.ceil(edge - top + 12);
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    root.addEventListener("focusin", onFocusIn);
+    return () => { document.removeEventListener("keydown", onKeyDown, true); root.removeEventListener("focusin", onFocusIn); };
+  }, []);                                                                // eslint-disable-line react-hooks/exhaustive-deps
   /** 21E.1 slice 2 — a card that does not fit below the sticky toolbar is aligned by its top (its number and tools stay visible,
    *  e.g. at 200 % zoom); one that fits is centred. Either way it keeps the toolbar's height + 12 px clear above it. */
   const alignCard = (el: HTMLElement, bottomReserve = 0) => {
@@ -476,9 +597,10 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     el.focus({ preventScroll: true });
     alignSection(el);
   };
-  /** Review Fix 1 — the heading row of `el` is on screen: at or below the sticky toolbar's bottom edge, and clear of the bottom
-   *  `bottomReserve` px (the band a toast covers while it is shown). When the toolbar and that band leave no usable strip between
-   *  them (the tall toolbar on phones / at 200 %, 21E.2), the transient band is ignored: no scroll could clear both. */
+  /** Review Fix 1 — the heading row of `el` is on screen: at or below the sticky layers' bottom edge (toolbarBottom: the scroller's
+   *  top where the toolbar is static, RF3 A-02), and clear of the bottom `bottomReserve` px (the band a toast covers while it is
+   *  shown). When the toolbar and that band leave no usable strip between them, the transient band is ignored: no scroll could
+   *  clear both. */
   const headingOnScreen = (el: HTMLElement, bottomReserve: number) => {
     const r = el.getBoundingClientRect();
     const top = toolbarBottom();
@@ -655,10 +777,27 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     focusItemOrNeighbour(r.deletion, 0, "reveal");
     if (!back && document.activeElement instanceof HTMLElement && document.activeElement !== document.body) r.neighbour = document.activeElement;
   }, [exam, dismissToast]);                                              // eslint-disable-line react-hooks/exhaustive-deps
+  const navJump = useRef(false);
   const navigateTo = (id: string) => {
-    if (isNarrow) { setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }      // let the dialog release focus first
+    if (isNarrow) { navJump.current = true; setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }   // let the dialog release focus first
     else focusCard(id);
   };
+  // RF3 (owner-listed, 200 %) — the explorer's dialog (≤ 900 px) gives focus back to the control that opened it. When the window
+  // narrows (zoom) while focus is inside the INLINE explorer, the explorer turns into the dialog and the focused control leaves the
+  // page with the inline panel: the dialog's opener is <body>, and closing it (Escape, «إغلاق», the backdrop) left focus on <body>.
+  // Focus then goes to «المزيد», the menu that holds the explorer's toggle (else the toolbar) — never <body>. A jump to a question
+  // focuses its card instead (navigateTo).
+  const navDialogOpen = navOpen && isNarrow;
+  const navDialogWasOpen = useRef(navDialogOpen);
+  useLayoutEffect(() => {
+    const was = navDialogWasOpen.current, jump = navJump.current;
+    navDialogWasOpen.current = navDialogOpen;
+    navJump.current = false;
+    if (!was || navDialogOpen || jump || !alive.current || !focusLost()) return;
+    const toolbar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
+    const more = Array.from(toolbar?.querySelectorAll<HTMLButtonElement>("button") ?? []).find(b => b.getAttribute("aria-label") === MORE_MENU_LABEL && !b.disabled);
+    (more ?? toolbar)?.focus();
+  }, [navDialogOpen]);                                                   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bulk actions: each is ONE functional updater → ONE history step (a no-op result creates no entry).
   const bulkMove = (target: string) => { const ids = selectedIds(); if (ids.some(id => pendingMediaRef.current.has(id))) return; update(prev => ({ ...prev, sections: bulkMoveQuestions(prev.sections || [], ids, target) })); };
@@ -862,26 +1001,52 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const revealCount = useRef(0);
   /** K3 A-F4 — the issue list a card / section shows itself (its direct child; a card's list is never a nested question's). */
   const ownIssueList = (host: Element | null | undefined) => (Array.from(host?.children ?? []).find(c => c.classList.contains("sb-inline-issues")) as HTMLElement | undefined) ?? null;
+  /** RF3 I-2 — marks the element that holds focus now, when it is inside `host` (the card / section the entry opened), for
+   *  builder-issues.css; it leaves with the focus. A marker whose element lost focus without a blur (disabled while a save runs) is
+   *  cleared first, so it is never on two elements. */
+  const markIssueFocus = (host: HTMLElement) => {
+    builderRef.current?.querySelectorAll<HTMLElement>("[" + ISSUE_FOCUS + "]").forEach(n => n.removeAttribute(ISSUE_FOCUS));
+    const a = document.activeElement;
+    if (!(a instanceof HTMLElement) || !host.contains(a)) return;
+    a.setAttribute(ISSUE_FOCUS, "");
+    a.addEventListener("blur", clearIssueFocus, { once: true });
+  };
   /** The question below the sticky toolbar, with the alignment every other jump uses (alignCard), and focus where the teacher fixes
    *  it. Never touches the selection or the navigator. K3 A-F6: the frame(s) showing the clicked issue (data-issue-codes) — RF2-1:
    *  the clicked INSTANCE of that code (data-issue-nth: e.g. its own incomplete pair), else any frame showing the code. RF2-2: in
    *  those frames, the invalid control, else the first enabled control («+ إضافة خيار» when a multiple-choice question has no
    *  options), else the card's NAMED issue list «مشكلات السؤال N» (A-F4) — never another field's error. Only an issue no frame
-   *  shows takes the first field whose error is now shown, else the named list, else the card. */
-  const focusQuestionIssues = (id: string, instance?: { code: string; nth: number }) => {
+   *  shows takes the first field whose error is now shown, else the named list, else the card. RF3 I-1: an issue of a compound /
+   *  composite PART (no frame shows it) takes that part's own control, else the named list — never another field of the card. */
+  const focusQuestionIssues = (id: string, instance?: IssueInstance) => {
     const el = nodes.current.get(id);
     if (!el || !alive.current) return;
-    const coded = instance ? Array.from(el.querySelectorAll<HTMLElement>("[data-issue-codes]")).filter(f => (f.dataset.issueCodes || "").split(" ").includes(instance.code)) : [];
-    const own = coded.filter(f => Number(f.dataset.issueNth || 1) === instance?.nth);
-    const showing = own.length ? own : coded;
-    const field = showing.length
-      ? showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? showing.map(f => f.querySelector<HTMLElement>(ENABLED_CONTROL)).find(Boolean)
-      : el.querySelector<HTMLElement>(INVALID_FIELD);
+    let field: HTMLElement | null | undefined = null, shown: HTMLElement | null = null;
+    if (instance?.part) {
+      // RF3 I-1 / RR3-3 — an issue of a compound / composite PART (no Field frame shows it): the control of that part the issue is
+      // about (partTarget: its named row, its rich content, its type, its answer body); never another field of the card, never a row
+      // the issue does not name. A part that cannot be told apart ("ambiguous": two parts with the same label), a row that cannot be
+      // located (a table / CLI cell) or a part with no such control leads to the card's named issue list below.
+      const focus = instance.part === "ambiguous" ? null : instance.part;
+      const part = focus ? partNode(el, focus.part) : null;
+      const target = part && focus ? partTarget(part, focus) : null;
+      field = target?.field;
+      shown = target?.shown ?? null;
+    } else {
+      const coded = instance ? Array.from(el.querySelectorAll<HTMLElement>("[data-issue-codes]")).filter(f => (f.dataset.issueCodes || "").split(" ").includes(instance.code)) : [];
+      const own = instance?.nth === undefined ? [] : coded.filter(f => Number(f.dataset.issueNth || 1) === instance.nth);
+      const showing = own.length ? own : coded;
+      field = showing.length
+        ? showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? showing.map(f => f.querySelector<HTMLElement>(ENABLED_CONTROL)).find(Boolean)
+        : el.querySelector<HTMLElement>(INVALID_FIELD);
+      shown = field?.closest<HTMLElement>(".eb-field, .eb-field-group") ?? null;
+    }
     if (field) {
-      alignCard(field.closest<HTMLElement>(".eb-field, .eb-field-group") ?? field);
+      alignCard(shown ?? field);
       field.focus({ preventScroll: true });
     } else alignCard(el);
     if (!field || document.activeElement !== field) (ownIssueList(el) ?? el).focus({ preventScroll: true });
+    markIssueFocus(el);
     setFlashId(id);
   };
   const openIssue = (target: IssueTarget, issue: StructuredIssue) => {
@@ -891,13 +1056,18 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       if (!el) return;
       // K3 A-F4 — the section's NAMED issue list under its heading (the section itself has no name), the heading aligned as usual.
       const list = ownIssueList(Array.from(el.children).find(c => c.classList.contains("sb-section-head")));
-      if (!list) { revealSection(el); return; }
+      if (!list) { revealSection(el); markIssueFocus(el); return; }
       list.focus({ preventScroll: true });
+      markIssueFocus(el);
       alignSection(el);
       return;
     }
     const examId = exam.examId, count = ++revealCount.current;
-    const instance = { code: issue.code, nth: issueOccurrence(issue, issueIndex.byQuestion.get(target.id) ?? []) };   // RF2-1
+    // RF2-1 — the clicked instance of its code, counted (RF3 I-3) among the issues of the card the entry leads to; RF3 I-1 — the part
+    // it belongs to, read against that card's question (the LAST one carrying the id, like the node map).
+    const own = targetCardIssues(issue, issueIndex.byQuestion.get(target.id) ?? []);
+    const question = (exam.sections || []).flatMap(s => s.questions || []).filter(q => q.examQuestionId === target.id).at(-1);
+    const instance: IssueInstance = { code: issue.code, nth: own ? issueOccurrence(issue, own) : undefined, part: issuePartFocus(issue, question) };
     setIssueReveal(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
     setOpenReq(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
     window.setTimeout(() => focusQuestionIssues(target.id, instance), 0);   // after the revealed (and re-opened) card has rendered
@@ -923,7 +1093,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           <span className="sb-stat">{totalMarks} علامة</span>
         </>}
         status={<>
-          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite"><span aria-hidden="true">{SAVE_STATE_LABEL[saveState].glyph}</span> {SAVE_STATE_LABEL[saveState].text}</span>}
+          {/* RF3 I-4 — the ONE region that announces the save state: one whole sentence per change (aria-atomic), never the glyph; the
+              draft button's «جارٍ الحفظ…» is its label, not an announcement. */}
+          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite" aria-atomic="true"><span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {SAVE_STATE_LABELS[saveState]}</span>}
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {hasPolicy && <span className={"sb-stat sb-gates-chip" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")}>{gatesText}</span>}
