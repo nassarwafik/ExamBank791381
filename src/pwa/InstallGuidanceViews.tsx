@@ -1,4 +1,5 @@
 import { MANUAL_INSTALL_MESSAGE, manualInstallHint } from "./installPrompt";
+import { isolateLtr, BRAND_LTR } from "../ui/ltrIsland";
 
 // Phase 10C — the two guidance blocks shared by the install card (student dashboard) and the permanent install entry
 // (student top bar dialog), so the wording is written once. Presentational only; no state, no side effects.
@@ -27,8 +28,8 @@ export function IosInstallSteps() {
 export function ManualInstallGuidance({ win }: { win: Window }) {
   return (
     <div className="eb-install-manual">
-      <p className="eb-install-manual-text">{MANUAL_INSTALL_MESSAGE}</p>
-      <p className="eb-install-manual-hint">{manualInstallHint(win)}</p>
+      <p className="eb-install-manual-text">{isolateLtr(MANUAL_INSTALL_MESSAGE, BRAND_LTR)}</p>
+      <p className="eb-install-manual-hint">{isolateLtr(manualInstallHint(win), BRAND_LTR)}</p>
     </div>
   );
 }

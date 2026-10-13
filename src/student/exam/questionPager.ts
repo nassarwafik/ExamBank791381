@@ -29,7 +29,7 @@ export type QuestionPage = {
   lastInSection: boolean;
 };
 
-export type PageStatus = "current" | "answered" | "unanswered";
+export type PageStatus = "current" | "answered" | "unanswered" | "unavailable";
 
 /** Builds the ordered pages. Flat exams keep the exact `exam.questions` order; structured exams keep section order then question order. */
 export function buildQuestionPages(norm: NormalizedExam, flatQuestions: Question[]): QuestionPage[] {
@@ -55,13 +55,15 @@ export function clampPageIndex(index: number, total: number): number {
   return Math.min(Math.max(Math.trunc(index), 0), total - 1);
 }
 
-/** Navigator / review status of one page — "current" wins, then the existing answered() predicate. */
-export function pageStatus(page: QuestionPage, answers: Record<string, Answer>, currentIndex: number | null): PageStatus {
+/** Navigator / review status of one page — "current" wins, then the existing answered() predicate; a question in `unavailable`
+ *  (its renderer could not recover — Phase 21E.3, renderFailures.ts) that has no answer is "unavailable", never a plain blank. */
+export function pageStatus(page: QuestionPage, answers: Record<string, Answer>, currentIndex: number | null, unavailable?: ReadonlySet<string>): PageStatus {
   if (currentIndex !== null && page.index === currentIndex) return "current";
-  return answered(answers[page.id]) ? "answered" : "unanswered";
+  if (!unavailable || !unavailable.has(page.id)) return answered(answers[page.id]) ? "answered" : "unanswered";
+  return answered(answers[page.id]) ? "answered" : "unavailable";
 }
 
-export const PAGE_STATUS_LABELS: Record<PageStatus, string> = { current: "الحالي", answered: "مُجاب", unanswered: "غير مُجاب" };
+export const PAGE_STATUS_LABELS: Record<PageStatus, string> = { current: "الحالي", answered: "مُجاب", unanswered: "غير مُجاب", unavailable: "تعذّر عرضه" };
 
 export type PageGroup = { section: NormalizedSection | null; sectionIndex: number; pages: QuestionPage[] };
 

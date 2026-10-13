@@ -84,6 +84,10 @@ artifacts/phase-21dd3/
 .harness-exam-details-21e1s2/
 .harness-visual-gate-21e1s2/
 .harness-review-fix1-21e1s2/
+# Phase 21E.3 — student exam Chromium certification output (never committed)
+.harness-student-exam-21e3/
+# Phase 21E.3 — mutation ledger written per run (never committed)
+artifacts/phase-21e3/
 .harness-visual-gate-21e2/
 .harness-visual-gate-21e2-workspace/
 artifacts/phase-21e2/

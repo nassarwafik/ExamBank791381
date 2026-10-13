@@ -194,11 +194,15 @@ describe("R10/R11 reliability", () => {
     expect(r.container.querySelector(".iex-progress .iex-save")?.textContent || "").toContain("أبقِ الصفحة مفتوحة حتى يعود الاتصال.");  // hint shown instead (UX-7b-1: next to the save status)
   });
 
-  it("16: exactly ONE aria-live save-status region", async () => {
+  it("16: exactly ONE polite live region (the page announcer, 21E.3); the save label itself is not live", async () => {
     const r = mount();
     await r.findByPlaceholderText("اكتب إجابتك هنا...");
-    const live = r.container.querySelectorAll('[aria-live="polite"].iex-save-state');
+    const live = r.container.querySelectorAll('[aria-live]');
     expect(live.length).toBe(1);
+    expect(live[0].getAttribute("aria-live")).toBe("polite");
+    expect(live[0].getAttribute("data-testid")).toBe("exam-announcer");
+    expect(r.container.querySelectorAll(".iex-save-state").length).toBe(1);
+    expect(r.container.querySelector(".iex-save-state")?.hasAttribute("aria-live")).toBe(false);
   });
 
   it("F: starting attempt 2 (no user edit) schedules NO autosave and inherits nothing from attempt 1", async () => {

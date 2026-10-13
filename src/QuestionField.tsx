@@ -54,10 +54,12 @@ export default function QuestionField({q,idBase,values,onField,disabled,labelPre
  // cliFill: fixed Cisco command text with only the marked [[fieldId]] blanks editable, in monospace.
  if(type==="clifill"&&q.cli){
   const parts=q.cli.split(/\[\[([^\]]+)\]\]/g); // even indexes = fixed text, odd = field id
-  return <pre className="iex-cli">{parts.map((chunk,i)=>{
+  // Phase 21E.3 (S-6) — a semantic LTR island (dir, not only CSS): commands, interface names and IP addresses read left to
+  // right inside the RTL page, and the typed value carries no bidi control character (the saved answer is the raw text).
+  return <pre className="iex-cli" dir="ltr">{parts.map((chunk,i)=>{
    if(i%2===0)return <span key={i}>{chunk}</span>;
    const fid=chunk.trim();
-   return <input className="iex-cli-input" key={i} aria-label={named("الفراغ "+fid)} value={get(fid)} onChange={e=>onField(fid,e.target.value)} placeholder="…" disabled={disabled} spellCheck={false} autoCapitalize="off" autoCorrect="off"/>;
+   return <input className="iex-cli-input" dir="ltr" key={i} aria-label={named("الفراغ "+fid)} value={get(fid)} onChange={e=>onField(fid,e.target.value)} placeholder="…" disabled={disabled} spellCheck={false} autoCapitalize="off" autoCorrect="off"/>;
   })}</pre>;
  }
 

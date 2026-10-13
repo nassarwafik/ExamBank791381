@@ -1,4 +1,5 @@
-import { createContext, lazy, Suspense, useContext, type ReactNode } from "react";
+import { createContext, Suspense, useContext, type ReactNode } from "react";
+import { recoverableLazy } from "./recoverableLazy";
 import type { LearningActivityRegistry } from "./learning/activities/engine";
 import { assessmentActivityRegistry, normalizeActivityDescriptor } from "./assessmentActivity";
 
@@ -7,7 +8,8 @@ import { assessmentActivityRegistry, normalizeActivityDescriptor } from "./asses
 // path from content), and an unknown / unsupported / malformed / unapproved descriptor degrades to a static fallback —
 // the surrounding question stays fully answerable.
 const RegistryContext = createContext<LearningActivityRegistry>(assessmentActivityRegistry);
-const AssessmentActivityHost = lazy(() => import("./AssessmentActivityHost"));
+// Phase 21E.3 — recoverable in place after a chunk-load failure (the exam page boundary shows the recovery card).
+const AssessmentActivityHost = recoverableLazy("AssessmentActivityHost", () => import("./AssessmentActivityHost"));
 
 /** Test / integration seam: inject a registry (production uses the code-owned assessment-safe registry). */
 export function AssessmentActivityRegistryProvider({ registry, children }: { registry: LearningActivityRegistry; children: ReactNode }) {

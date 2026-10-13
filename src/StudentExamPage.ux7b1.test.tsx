@@ -107,7 +107,8 @@ describe("UX-7b-1 — compact top bar, timer chip, details disclosure", () => {
     expect(chip.hasAttribute("aria-live")).toBe(false);
     expect(chip.className).toContain("warn");
     expect(chip.querySelector(".iex-countdown-clock")?.textContent).toMatch(/^0[34]:\d\d$/);
-    expect(document.querySelectorAll('[aria-live]').length).toBe(1);                                  // only the save status
+    expect(document.querySelectorAll('[aria-live]').length).toBe(1);                                  // only the page announcer (21E.3)
+    expect(document.querySelector('[aria-live]')?.getAttribute("data-testid")).toBe("exam-announcer");
   });
 
   it("the details disclosure is a real button (aria-expanded/aria-controls, SVG chevron) holding the moved metadata; toggling costs no request", async () => {
@@ -162,28 +163,32 @@ describe("UX-7b-1 — compact top bar, timer chip, details disclosure", () => {
 describe("UX-7b-1 — SaveStatus over the derived save state", () => {
   it("maps the six canonical kinds without ever saying saved early; hint and manual retry only where the model says so", () => {
     const onRetry = vi.fn();
+    // Phase 21E.3 (S-3) — the label shows every state but is NOT a live region; the page announcer speaks (examAnnouncements).
+    const label = () => document.querySelector(".iex-save-state") as HTMLElement;
     const { rerender } = render(<SaveStatus kind="pending" lastSavedAt="2026-03-01T10:01:02.000Z" onRetry={onRetry} />);
-    expect(screen.getByRole("status").textContent).toContain("تغييرات غير محفوظة");
-    expect(screen.getByRole("status").textContent).not.toContain("تم الحفظ");
+    expect(label().hasAttribute("aria-live")).toBe(false);
+    expect(label().hasAttribute("role")).toBe(false);
+    expect(label().textContent).toContain("تغييرات غير محفوظة");
+    expect(label().textContent).not.toContain("تم الحفظ");
     expect(screen.queryByRole("button")).toBeNull();
     rerender(<SaveStatus kind="saving" lastSavedAt="" onRetry={onRetry} />);
-    expect(screen.getByRole("status").textContent).toContain("جارٍ الحفظ");
+    expect(label().textContent).toContain("جارٍ الحفظ");
     rerender(<SaveStatus kind="retrying" lastSavedAt="" onRetry={onRetry} />);
-    expect(screen.getByRole("status").textContent).toContain("تعذر الحفظ — تتم إعادة المحاولة");
+    expect(label().textContent).toContain("تعذر الحفظ — تتم إعادة المحاولة");
     rerender(<SaveStatus kind="offline" lastSavedAt="" onRetry={onRetry} />);
-    expect(screen.getByRole("status").textContent).toContain("غير متصل");
+    expect(label().textContent).toContain("غير متصل");
     expect(screen.getByText("أبقِ الصفحة مفتوحة حتى يعود الاتصال.")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();                                                  // never a doomed retry while offline
     rerender(<SaveStatus kind="error" lastSavedAt="" onRetry={onRetry} />);
-    expect(screen.getByRole("status").textContent).toContain("تعذر حفظ التغييرات");
+    expect(label().textContent).toContain("تعذر حفظ التغييرات");
     fireEvent.click(screen.getByRole("button", { name: "إعادة محاولة الحفظ" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
     rerender(<SaveStatus kind="saved" lastSavedAt="2026-03-01T10:01:02.000Z" onRetry={onRetry} />);
-    expect(screen.getByRole("status").textContent).toBe("تم الحفظ · آخر حفظ: 10:01:02");
-    expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
+    expect(label().textContent).toBe("تم الحفظ · آخر حفظ: 10:01:02");
+    expect(label().hasAttribute("aria-live")).toBe(false);                                             // 21E.3 (S-3): the page announcer speaks
   });
 
-  it("on the page: an edit is pending (not saved) until the server confirms, then saved with the SERVER time; exactly one live region", async () => {
+  it("on the page: an edit is pending (not saved) until the server confirms, then saved with the SERVER time; exactly one live region, silent for the edit cycle (21E.3)", async () => {
     mount();
     await screen.findByText("ما هي عاصمة فلسطين؟"); goNext();
     const ta = await screen.findByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." });
@@ -192,8 +197,13 @@ describe("UX-7b-1 — SaveStatus over the derived save state", () => {
     expect(saveText()).toContain("تغييرات غير محفوظة");
     expect(saveText()).not.toContain("تم الحفظ");
     await waitFor(() => expect(saveText()).toContain("تم الحفظ · آخر حفظ: 10:01:02"), { timeout: 3000 });
-    expect(document.querySelectorAll('[aria-live="polite"].iex-save-state').length).toBe(1);
+    // Phase 21E.3 (S-3) — ONE polite live region (the page announcer); the visible label is not live, and the ordinary
+    // pending → saving → saved cycle of an edit announces nothing.
+    expect(document.querySelectorAll('[aria-live]').length).toBe(1);
+    expect(document.querySelectorAll('[aria-live="polite"][data-testid="exam-announcer"]').length).toBe(1);
+    expect(document.querySelector(".iex-save-state")?.hasAttribute("aria-live")).toBe(false);
     expect(document.querySelectorAll(".iex-save-state").length).toBe(1);
+    expect(screen.getByTestId("exam-announcer").textContent).toBe("");
   });
 
   it("offline with a dirty answer shows the offline state and fires no save", async () => {
@@ -404,7 +414,9 @@ describe("UX-7b-1 — source guards", () => {
     expect(p).not.toMatch(/formatCountdown\(/);                                                          // delegated to the chip
     expect(p.match(/Date\.now\(\)/g)?.length).toBe(1);                                                  // the pre-existing serverNow fallback only
     expect(p).toContain("const est=serverAnchorMs.current+elapsed;const rem=effEndMs.current-est;");
-    expect(p).toContain('body:JSON.stringify({action:"finalizeTimedOutAttempt"})');
+    // Review Fix 4 (21E.3 P1): the timeout finalize carries the render-failure report (never answers — the server grades its own draft)
+    expect(p).toContain('body:JSON.stringify({action:"finalizeTimedOutAttempt",...failureField()})');
+    expect(p).not.toMatch(/action:"finalizeTimedOutAttempt"[^}]*answers/);
     expect(code(RAW_TS["./examTimer.ts"])).toContain("export function countdownTone");
   });
   it("save authority: SaveStatus renders the derived kind only; the page still derives ONE state and keeps the 800 ms debounce, serial queue and retry policy", () => {

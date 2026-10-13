@@ -1,9 +1,11 @@
-import { lazy, type ComponentType } from "react";
+import type { ComponentType } from "react";
+import { recoverableLazy } from "../recoverableLazy";
 
 // Phase 20A — the CODE-OWNED UI registry of trusted SmartSim plugins: (pluginKey, pluginVersion) → the repository's lazy workspace (student
 // AND teacher preview), authoring editor and review-details components. Exam data only NAMES an identity; every dynamic import below is a literal
 // repository path — never a module, a path or a component name taken from data. An identity with no entry resolves to nothing and the
 // hosts render an explicit "unavailable" state (never another plugin, never the latest version).
+// Phase 21E.3 — each lazy is recoverable in place after a chunk-load failure (recoverableLazy); identities are unchanged.
 export type SmartSimWorkspaceProps = {
   /** The plugin's CANONICAL public config (already validated by the strict envelope authority). */
   config: unknown;
@@ -26,57 +28,57 @@ export type SmartSimUi = { Workspace: ComponentType<SmartSimWorkspaceProps>; Edi
 
 const entries = new Map<string, SmartSimUi>([
   ["networkTopology@1", {
-    Workspace: lazy(() => import("../networkTopology/NetworkTopologyWorkspace")),
-    Editor: lazy(() => import("../networkTopology/NetworkTopologyEditor")),
-    ReviewDetails: lazy(() => import("../networkTopology/NetworkTopologyReview"))
+    Workspace: recoverableLazy("NetworkTopologyWorkspace", () => import("../networkTopology/NetworkTopologyWorkspace")),
+    Editor: recoverableLazy("NetworkTopologyEditor", () => import("../networkTopology/NetworkTopologyEditor")),
+    ReviewDetails: recoverableLazy("NetworkTopologyReview", () => import("../networkTopology/NetworkTopologyReview"))
   }],
   // Phase 20A.2 — the enterprise pilots (each in its own lazy chunks).
   ["physicsFreeFall@1", {
-    Workspace: lazy(() => import("../physicsFreeFall/FreeFallWorkspace")),
-    Editor: lazy(() => import("../physicsFreeFall/FreeFallEditor")),
-    ReviewDetails: lazy(() => import("../physicsFreeFall/FreeFallReview"))
+    Workspace: recoverableLazy("FreeFallWorkspace", () => import("../physicsFreeFall/FreeFallWorkspace")),
+    Editor: recoverableLazy("FreeFallEditor", () => import("../physicsFreeFall/FreeFallEditor")),
+    ReviewDetails: recoverableLazy("FreeFallReview", () => import("../physicsFreeFall/FreeFallReview"))
   }],
   ["functionStudy2d@1", {
-    Workspace: lazy(() => import("../functionStudy/FunctionStudyWorkspace")),
-    Editor: lazy(() => import("../functionStudy/FunctionStudyEditor")),
-    ReviewDetails: lazy(() => import("../functionStudy/FunctionStudyReview"))
+    Workspace: recoverableLazy("FunctionStudyWorkspace", () => import("../functionStudy/FunctionStudyWorkspace")),
+    Editor: recoverableLazy("FunctionStudyEditor", () => import("../functionStudy/FunctionStudyEditor")),
+    ReviewDetails: recoverableLazy("FunctionStudyReview", () => import("../functionStudy/FunctionStudyReview"))
   }],
   // Phase 20C — the curriculum network simulator: a NEW exact identity with its own lazy chunks (networkTopology@1 above is unchanged).
   ["networkTopology@2", {
-    Workspace: lazy(() => import("../networkTopology2/Net2Workspace")),
-    Editor: lazy(() => import("../networkTopology2/Net2Editor")),
-    ReviewDetails: lazy(() => import("../networkTopology2/Net2Review"))
+    Workspace: recoverableLazy("Net2Workspace", () => import("../networkTopology2/Net2Workspace")),
+    Editor: recoverableLazy("Net2Editor", () => import("../networkTopology2/Net2Editor")),
+    ReviewDetails: recoverableLazy("Net2Review", () => import("../networkTopology2/Net2Review"))
   }],
   // Phase 21D-A.1 — the motion simulators (free fall, projectile, Newton's second law, inclined plane): a NEW exact identity with its own
   // lazy chunks (physicsFreeFall@1 above is unchanged).
   ["physicsMotion@1", {
-    Workspace: lazy(() => import("../physicsMotion/MotionWorkspace")),
-    Editor: lazy(() => import("../physicsMotion/MotionEditor")),
-    ReviewDetails: lazy(() => import("../physicsMotion/MotionReview"))
+    Workspace: recoverableLazy("MotionWorkspace", () => import("../physicsMotion/MotionWorkspace")),
+    Editor: recoverableLazy("MotionEditor", () => import("../physicsMotion/MotionEditor")),
+    ReviewDetails: recoverableLazy("MotionReview", () => import("../physicsMotion/MotionReview"))
   }],
   // Phase 21D-A.2 — the advanced physics lab (pendulum, spring, mechanical energy, DC circuits): a NEW exact identity with its own lazy chunks.
   ["physicsLab@1", {
-    Workspace: lazy(() => import("../physicsLab/LabWorkspace")),
-    Editor: lazy(() => import("../physicsLab/LabEditor")),
-    ReviewDetails: lazy(() => import("../physicsLab/LabReview"))
+    Workspace: recoverableLazy("LabWorkspace", () => import("../physicsLab/LabWorkspace")),
+    Editor: recoverableLazy("LabEditor", () => import("../physicsLab/LabEditor")),
+    ReviewDetails: recoverableLazy("LabReview", () => import("../physicsLab/LabReview"))
   }],
   // Phase 21D-D.1 — atomic & molecular structure (atoms / ions, shells, periodic table, formulas, 3D molecules): its own lazy chunks.
   ["chemistryStructure@1", {
-    Workspace: lazy(() => import("../chemistryStructure/ChemWorkspace")),
-    Editor: lazy(() => import("../chemistryStructure/ChemEditor")),
-    ReviewDetails: lazy(() => import("../chemistryStructure/ChemReview"))
+    Workspace: recoverableLazy("ChemWorkspace", () => import("../chemistryStructure/ChemWorkspace")),
+    Editor: recoverableLazy("ChemEditor", () => import("../chemistryStructure/ChemEditor")),
+    ReviewDetails: recoverableLazy("ChemReview", () => import("../chemistryStructure/ChemReview"))
   }],
   // Phase 21D-D.2 — reactions & equations (balancing, atom / charge conservation, families, roles): its own lazy chunks.
   ["chemistryReactions@1", {
-    Workspace: lazy(() => import("../chemistryReactions/RxnWorkspace")),
-    Editor: lazy(() => import("../chemistryReactions/RxnEditor")),
-    ReviewDetails: lazy(() => import("../chemistryReactions/RxnReview"))
+    Workspace: recoverableLazy("RxnWorkspace", () => import("../chemistryReactions/RxnWorkspace")),
+    Editor: recoverableLazy("RxnEditor", () => import("../chemistryReactions/RxnEditor")),
+    ReviewDetails: recoverableLazy("RxnReview", () => import("../chemistryReactions/RxnReview"))
   }],
   // Phase 21D-D.3 — the virtual chemistry laboratory (solutions, pH, titration, reaction rate): its own lazy chunks.
   ["chemistryLab@1", {
-    Workspace: lazy(() => import("../chemistryLab/ChemLabWorkspace")),
-    Editor: lazy(() => import("../chemistryLab/ChemLabEditor")),
-    ReviewDetails: lazy(() => import("../chemistryLab/ChemLabReview"))
+    Workspace: recoverableLazy("ChemLabWorkspace", () => import("../chemistryLab/ChemLabWorkspace")),
+    Editor: recoverableLazy("ChemLabEditor", () => import("../chemistryLab/ChemLabEditor")),
+    ReviewDetails: recoverableLazy("ChemLabReview", () => import("../chemistryLab/ChemLabReview"))
   }]
 ]);
 /** The UI registered for EXACTLY (key, version) — undefined for anything else. */

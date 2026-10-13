@@ -388,7 +388,7 @@ describe("fail closed and lazy", () => {
       expect(s, f).not.toMatch(/<iframe|srcdoc|dangerouslySetInnerHTML|innerHTML|\beval\s*\(|new Function|Function\(|child_process|\.spawn\(|execSync|execFile|require\(|fetch\(|XMLHttpRequest|WebSocket|localStorage|sessionStorage|window\.open|location\.href|https?:\/\//);
     }
     for (const f of ["src/networkCliEngine.ts", "src/networkCliQuestion.ts"]) expect(strip(fs.readFileSync(path.join(repo, f), "utf8")), f).not.toMatch(/from "react|document\.|window\.|import\(/);
-    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("networkCli", 1, lazy\(\(\) => import\("\.\/student\/NetworkCliResponse"\)\)\)/);
+    expect(fs.readFileSync(path.join(repo, "src/questionTypes/studentRegistry.tsx"), "utf8")).toMatch(/registerStudentRenderer\("networkCli", 1, recoverableLazy\("NetworkCliResponse", \(\) => import\("\.\/student\/NetworkCliResponse"\)\)\)/);
     expect(fs.readFileSync(path.join(repo, "src/questionTypes/authoringRegistry.tsx"), "utf8")).toMatch(/registerAuthoringEditor\("networkCli", 1, lazy\(\(\) => import\("\.\/editors\/NetworkCliEditor"\)\)\)/);
   });
 });

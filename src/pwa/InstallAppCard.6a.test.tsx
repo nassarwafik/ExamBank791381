@@ -45,6 +45,9 @@ function firePrompt(outcome: Choice = "accepted") {
 }
 const card = () => screen.queryByRole("region", { name: /تثبيت التطبيق|تثبيت Tadris+/ });
 const manualCard = () => screen.queryByRole("region", { name: "تثبيت Tadris+" });
+// Phase 21E.3 (S-6) — the brand is an LTR island (<bdi dir="ltr">Tadris+</bdi>), so a sentence is matched on the paragraph's whole
+// text (still the exact sentence) and the brand must be isolated inside it.
+const sentence = (text: string) => (_: string, el: Element | null) => !!el && el.tagName === "P" && el.textContent === text && (!text.includes("Tadris+") || el.querySelector('bdi[dir="ltr"]')?.textContent === "Tadris+");
 const entry = () => screen.queryByRole("button", { name: "تثبيت التطبيق" });
 const dismissedAt = (ms: number) => localStorage.setItem(DISMISSED_AT_KEY, String(ms));
 
@@ -97,7 +100,7 @@ describe("Android / Chromium — install prompt", () => {
     expect(screen.queryByRole("button", { name: "تثبيت التطبيق على الهاتف" })).toBeNull();
     const region = manualCard()!;                                                 // the consumed prompt falls back to the manual path
     expect(region).toBeTruthy();
-    expect(within(region).getByText("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
+    expect(within(region).getByText(sentence("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل."))).toBeTruthy();
     expect(within(region).getByText("افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")).toBeTruthy();
     expect(within(region).getAllByRole("button").map(b => b.textContent)).toEqual(["ليس الآن"]);   // one dismiss control, no extra «إخفاء»
     const again = firePrompt("accepted");                                         // Chromium may offer it again later
@@ -111,7 +114,7 @@ describe("Android / Chromium — install prompt", () => {
     firePrompt("dismissed");
     fireEvent.click(screen.getByRole("button", { name: "تثبيت التطبيق على هذا الجهاز" }));
     await screen.findByText(/لم يتم التثبيت/);
-    expect(screen.getByText("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق».")).toBeTruthy();
+    expect(screen.getByText(sentence("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق»."))).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "ليس الآن" }));
     expect(card()).toBeNull();
     expect(localStorage.getItem(DISMISSED_AT_KEY)).toMatch(/^\d+$/);
@@ -251,8 +254,8 @@ describe("Phase 10C — no native prompt, not installed → manual install guida
     render(<InstallAppCard win={win} />);
     const region = manualCard()!;
     expect(region).toBeTruthy();
-    expect(within(region).getByText("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
-    expect(within(region).getByText("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق».")).toBeTruthy();
+    expect(within(region).getByText(sentence("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل."))).toBeTruthy();
+    expect(within(region).getByText(sentence("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق»."))).toBeTruthy();
     expect(within(region).queryByRole("button", { name: /تثبيت التطبيق على/ })).toBeNull();
     expect(within(region).queryByRole("list")).toBeNull();                       // no iOS steps on desktop
     expect(within(region).getByRole("button", { name: "ليس الآن" })).toBeTruthy();
@@ -325,7 +328,7 @@ describe("Phase 10C — permanent install entry (student top bar)", () => {
     firePrompt("dismissed");
     fireEvent.click(entry()!);
     const dialog = await screen.findByRole("dialog", { name: "تثبيت Tadris+" });
-    expect(within(dialog).getByText("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق».")).toBeTruthy();
+    expect(within(dialog).getByText(sentence("افتح قائمة المتصفح واختر «تثبيت Tadris+» أو «تثبيت التطبيق»."))).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(entry()).toBeTruthy();
@@ -341,7 +344,7 @@ describe("Phase 10C — permanent install entry (student top bar)", () => {
     render(<InstallAppEntry win={fakeWin({ ua: UA.android, touch: 5, coarse: true })} />);
     fireEvent.click(entry()!);
     const dialog = await screen.findByRole("dialog", { name: "تثبيت Tadris+" });
-    expect(within(dialog).getByText("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
+    expect(within(dialog).getByText(sentence("يمكنك تثبيت Tadris+ من قائمة المتصفح واستخدامه كتطبيق مستقل."))).toBeTruthy();
     expect(within(dialog).getByText("افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")).toBeTruthy();
     expect(within(dialog).queryByRole("list")).toBeNull();
   });
