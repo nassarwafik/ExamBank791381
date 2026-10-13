@@ -9,6 +9,14 @@
 }
 @media (min-width: 768px) and (min-height: 600px) {
   .sb-toolbar.sb-toolbar-21e2 { position: sticky; top: 0; z-index: var(--eb-z-sticky); }
+  /* RF3 A-01 — the layers that stick inside the builder stick BELOW the stuck toolbar, whose height StructuredExamBuilder publishes
+     as --sb-toolbar-band: the bulk-action bar and the inline question explorer kept fixed offsets sized for the old 64 px toolbar
+     (structured-builder.css: 64 / 76 px) and slid under the two-row toolbar, which hid their controls from pointer and keyboard. */
+  .sb-builder .sb-bulk-bar { inset-block-start: calc(var(--sb-toolbar-band, 0px) + var(--eb-space-2)); }
+  .sb-builder .sb-workspace > .sb-navigator {
+    inset-block-start: calc(var(--sb-toolbar-band, 0px) + var(--eb-space-2));
+    max-block-size: calc(100vh - var(--sb-toolbar-band, 0px) - var(--eb-space-2) - 2 * var(--eb-space-4));
+  }
 }
 .sb-tb-identity { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); min-width: 0; }
 .sb-tb-title { flex: 1 1 220px; min-width: 0; }

@@ -66,6 +66,33 @@ const issuesExam = { ...savedExam, examId: "E11", title: "اختبار مواض�
     { examQuestionId: "s1m1", presentationType: "matching", text: "طابق كل بروتوكول بمنفذه", marks: 2, fields: [pairField(0, "", "80"), pairField(1, "DNS", "53"), pairField(2, "", "443")], answer: { text: "DNS=53" } },
     { examQuestionId: "s1c1", presentationType: "multipleChoice", text: "اختر بروتوكول طبقة النقل", marks: 0, options: [], answer: {} },
   ] }] };
+// Review Fix 3 (PART=builder, RF3 checks): compound parts are rendered without Field frames (the compound@1 markup is frozen) —
+// s1k1 has marks 0 and a second multiple-choice part without options; s1k2 has two parts with the same label «س» (they cannot be
+// told apart, so their entries lead to the card's named issue list). RR3-3: s1k3 has valid marks and a matching part whose pair 3 is
+// incomplete (pairs 1–2 complete): its «الزوج 3 في «البند 2 من …»» entry focuses pair 3's empty «العنصر», never pair 1.
+const compoundExam = { ...savedExam, examId: "E12", title: "اختبار بنود السؤال المركّب",
+  sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, instructions: "", questions: [
+    { examQuestionId: "s1k1", presentationType: "compound", text: "اقرأ ثم أجب", marks: 0, parts: [
+      { id: "p1", type: "multipleChoice", text: "اختر بروتوكول النقل", options: [{ text: "TCP" }, { text: "IP" }], answer: { correctOptionIndex: 0 } },
+      { id: "p2", type: "multipleChoice", text: "اختر منفذ HTTP", options: [], answer: {} }] },
+    { examQuestionId: "s1k2", presentationType: "compound", text: "بندان بالتسمية نفسها", marks: 4, parts: [
+      { id: "a1", label: "س", type: "multipleChoice", text: "الأول", options: [], answer: {} },
+      { id: "a2", label: "س", type: "multipleChoice", text: "الثاني", options: [], answer: {} }] },
+    { examQuestionId: "s1k3", presentationType: "compound", text: "طابق ثم اختر", marks: 4, parts: [
+      { id: "r1", type: "multipleChoice", text: "اختر بروتوكول النقل", options: [{ text: "TCP" }, { text: "IP" }], answer: { correctOptionIndex: 0 } },
+      { id: "r2", type: "matching", text: "طابق كل بروتوكول بمنفذه", answer: { text: "HTTP=80" }, fields: [
+        { id: "rm1", label: "HTTP", kind: "select", options: [{ text: "80" }, { text: "53" }, { text: "443" }], correct: "80" },
+        { id: "rm2", label: "DNS", kind: "select", options: [{ text: "80" }, { text: "53" }, { text: "443" }], correct: "53" },
+        { id: "rm3", label: "", kind: "select", options: [{ text: "80" }, { text: "53" }, { text: "443" }], correct: "443" }] }] },
+  ] }] };
+// Review Fix 3 (PART=builder, RF3 O-2): a matching question exactly as the builder writes it (buildMatchingPatch: the pairs live in a
+// markdown table in the question text, the graded table path) — the question explorer must read it by its words, not its syntax.
+const matchingTable = ["| العمود أ | العمود ب |", "| --- | --- |", "| HTTP |  |", "| DNS |  |", "| HTTPS |  |"].join("\n");
+const matchingExam = { ...savedExam, examId: "E13", title: "اختبار سؤال المطابقة",
+  sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, instructions: "", questions: [
+    sq("s1q1", "ما هو الراوتر"),
+    { examQuestionId: "s1m1", presentationType: "matching", text: matchingTable, marks: 3, fields: [pairField(0, "HTTP", "80"), pairField(1, "DNS", "53"), pairField(2, "HTTPS", "443")], answer: { text: "HTTP=80;DNS=53;HTTPS=443" } },
+  ] }] };
 const apiCalls = [];
 function api(req, res, body) {
   const u = new URL(req.url, "http://localhost"), p = u.pathname;
@@ -81,8 +108,8 @@ function api(req, res, body) {
   if (p === "/api/classrooms") return send(200, { ok: true, classes: [{ classId: "c1", name: "الحادي عشر", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 3 }] });
   if (p === "/api/assignments" && req.method === "GET") return send(200, { ok: true, assignments: [assignment] });
   if (p === "/api/assignment-results" && req.method === "GET") return send(200, results);
-  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [{ blobName: "exams/e9.json", examId: "E9", title: savedExam.title, savedAt: "2026-10-01T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e10.json", examId: "E10", title: blueprintExam.title, savedAt: "2026-09-30T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e11.json", examId: "E11", title: issuesExam.title, savedAt: "2026-09-29T10:00:00Z", questionCount: 2, totalMarks: 2 }] });
-  if (p === "/api/saved-exams" && j.action === "load") return send(200, { ok: true, exam: j.blobName === "exams/e10.json" ? blueprintExam : j.blobName === "exams/e11.json" ? issuesExam : savedExam, savedAt: "2026-10-01T10:00:00Z" });
+  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: [{ blobName: "exams/e9.json", examId: "E9", title: savedExam.title, savedAt: "2026-10-01T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e10.json", examId: "E10", title: blueprintExam.title, savedAt: "2026-09-30T10:00:00Z", questionCount: 6, totalMarks: 12 }, { blobName: "exams/e11.json", examId: "E11", title: issuesExam.title, savedAt: "2026-09-29T10:00:00Z", questionCount: 2, totalMarks: 2 }, { blobName: "exams/e12.json", examId: "E12", title: compoundExam.title, savedAt: "2026-09-28T10:00:00Z", questionCount: 3, totalMarks: 8 }, { blobName: "exams/e13.json", examId: "E13", title: matchingExam.title, savedAt: "2026-09-27T10:00:00Z", questionCount: 2, totalMarks: 5 }] });
+  if (p === "/api/saved-exams" && j.action === "load") return send(200, { ok: true, exam: j.blobName === "exams/e10.json" ? blueprintExam : j.blobName === "exams/e11.json" ? issuesExam : j.blobName === "exams/e12.json" ? compoundExam : j.blobName === "exams/e13.json" ? matchingExam : savedExam, savedAt: "2026-10-01T10:00:00Z" });
   if (p === "/api/saved-exams" && j.action === "save") return send(200, { ok: true, savedAt: new Date().toISOString(), blobName: "exams/s.json" });
   return send(200, { ok: true, items: [], exams: [], templates: [], questions: [], classes: [], students: [], assignments: [], projects: [], posts: [] });
 }
