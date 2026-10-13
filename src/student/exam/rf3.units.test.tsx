@@ -120,15 +120,15 @@ describe("RF3-U4 — outside the exam a recovery never scrolls", () => {
 describe("RF3-U5 — a recovered part renders in one commit", () => {
   it("after a successful retry the part's Suspense fallback is never shown again", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    let fallbacks = 0;
-    const Fallback = () => { fallbacks += 1; return <i>…</i>; };
+    const fallback = vi.fn();
+    const Fallback = () => { fallback(); return <i>…</i>; };
     const Part = slowPart("UnitOneCommit", 30, () => <p>البند المستعاد</p>);
     render(<QuestionErrorBoundary variant="part" resetKey="oc"><Suspense fallback={<Fallback />}><Part /></Suspense></QuestionErrorBoundary>);
     const retry = await screen.findByRole("button", { name: "إعادة المحاولة" });
-    const before = fallbacks;                                                         // the first (failed) load showed it
+    const before = fallback.mock.calls.length;                                        // the first (failed) load showed it
     retry.focus(); fireEvent.click(retry);
     await screen.findByText("البند المستعاد");
-    expect(fallbacks).toBe(before);                                                 // the defect: one more empty commit
+    expect(fallback.mock.calls.length).toBe(before);                                // the defect: one more empty commit
   });
 });
 
