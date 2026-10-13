@@ -45,6 +45,9 @@ export function trackPointer(): void {
   document.addEventListener("click", e => { if (swallowing && (e as MouseEvent).detail !== 0) { swallowing = false; stop(e); } }, guard);
 }
 
+/** After the layout changed in view, a press that starts within this window was aimed at the old layout (`guardPresses`). */
+export const SHIFT_GUARD_MS = 400;
+
 /** The layout just changed in view: a part recovered in place, or the page was brought to the focused line (input reviewer
  *  RR3-IN-4). For `ms`, a press that STARTS was aimed at the old layout — no one sees a change and re-aims that fast — so it
  *  does nothing: its pointerdown, pointerup, click and drag never reach the page. A lost press, never a different answer. A
@@ -78,4 +81,13 @@ export async function pointerReleased(capMs = 60_000, settleMs = 60): Promise<vo
       waiters.add(done);
     });
   }
+}
+
+/** A part that appears late — a first load that waited for a failed stylesheet, or that took the recovery path — changes the
+ *  layout where the student may already be pressing or aiming (recovery reviewer RR3-2): it appears only once no press is in
+ *  progress, and the presses that start just after it are guarded. */
+export async function settleLatePart(): Promise<void> {
+  trackPointer();
+  await pointerReleased();
+  guardPresses(SHIFT_GUARD_MS);
 }

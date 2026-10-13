@@ -68,6 +68,11 @@ const mutants = [
   // Review fix 3 — runtime.
   M("R28-css-relink-own-only", RL, "await Promise.all([...failedCss].map(css => relink(doc, css)));", "await Promise.all([...failedCss].filter(css => own.has(css)).map(css => relink(doc, css)));", RT3),
   M("R29-no-first-load-relink", RL, "else if (failedCss.size > 0) await within(relinkFailedCss(ownCss), limits.firstCss, \"recovery-timeout\").catch(() => undefined);", "else if (false) await within(relinkFailedCss(ownCss), limits.firstCss, \"recovery-timeout\").catch(() => undefined);", RT3),
+  M("R36-late-first-load-unsettled", RL, "          if (attempts === 1 && (late || viaRemap)) await env.settleLate?.();\n", "", RT3),
+  M("R37-late-flag-not-set", RL, "{ late = true; await within(", "{ await within(", RT3),
+  M("R38-remap-first-load-unsettled", RL, "if (attempts === 1 && (late || viaRemap))", "if (attempts === 1 && late)", RT3),
+  M("R39-retry-settled-here", RL, "if (attempts === 1 && (late || viaRemap))", "if (late || viaRemap)", RT3),
+  M("R40-browser-env-unsettled", RL, "    settleLate: hasDoc ? settleLatePart : undefined,", "    settleLate: undefined,", RF3_T),
   M("R35-first-load-full-bound", RL, "relinkFailedCss(ownCss), limits.firstCss,", "relinkFailedCss(ownCss), limits.css,", RT3),
   M("R30-css-fail-closed-any", RL, 'if ([...own].some(css => failedCss.has(css))) throw new Error("recovery-css");', 'if (failedCss.size > 0) throw new Error("recovery-css");', RT3),
   M("R31-css-relink-not-awaited", RL, "await Promise.all([...failedCss].map(css => relink(doc, css)));", "void Promise.all([...failedCss].map(css => relink(doc, css)));", RT3),
@@ -115,7 +120,10 @@ const mutants = [
   M("S07-reveal-unguarded", QEB, "    if (window.scrollY !== y) guardPresses(SHIFT_GUARD_MS);", "    void y;", RF3_T),
   M("S08-drag-not-cancelled", HOLD, "if (swallowing) { stop(e); drag = false; }", "if (swallowing) { drag = false; }", RF3_T),
   M("S09-cancelled-drag-stuck", HOLD, "if (swallowing) { stop(e); drag = false; }", "if (swallowing) { stop(e); }", RF3_T),
-  M("S10-no-guard-window", QEB, "const SHIFT_GUARD_MS = 400;", "const SHIFT_GUARD_MS = 0;", RF3_T),
+  M("S10-no-guard-window", HOLD, "export const SHIFT_GUARD_MS = 400;", "export const SHIFT_GUARD_MS = 0;", RF3_T),
+  // Review fix 3 — a first load that appears late settles like a recovery (recovery reviewer RR3-2).
+  M("H07-late-part-not-held", HOLD, "  trackPointer();\n  await pointerReleased();\n  guardPresses(SHIFT_GUARD_MS);\n}", "  trackPointer();\n  guardPresses(SHIFT_GUARD_MS);\n}", RF3_T),
+  M("H08-late-part-unguarded", HOLD, "  await pointerReleased();\n  guardPresses(SHIFT_GUARD_MS);\n}", "  await pointerReleased();\n}", RF3_T),
   M("H01-finger-not-tracked", HOLD, 'document.addEventListener("touchstart", e => { touch = true; down(e); }, opts);', 'document.addEventListener("touchstart", e => { down(e); }, opts);', RF3_T),
   M("H02-short-press-cap", HOLD, "export async function pointerReleased(capMs = 60_000, settleMs = 60)", "export async function pointerReleased(capMs = 10_000, settleMs = 60)", RF3_T),
   M("C01-hidden-line-focus-invisible", UICSS, ".eb-visually-hidden[data-recovery-line]:focus-visible + * {", ".eb-visually-hidden[data-recovery-line]:focus-visible + .none {", RF3_T),

@@ -3,7 +3,7 @@ import { isChunkLoadError } from "../../lazyWithRetry";
 import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../recoverableLazy";
 import { IconRefresh, IconWarning } from "../../icons";
 import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionRecovery";
-import { trackPointer, pointerReleased, lastPointerDown, pointerIsDown, guardPresses } from "./pointerHold";
+import { trackPointer, pointerReleased, lastPointerDown, pointerIsDown, guardPresses, SHIFT_GUARD_MS } from "./pointerHold";
 
 /**
  * QuestionErrorBoundary (Phase 21E.3) — keeps ONE failing part of a page from taking down the rest.
@@ -82,8 +82,6 @@ const GENERAL_NOTE: Partial<Record<RecoveryVariant, string>> = {
 /** The line focus lands on after a recovery (review fix 2): never an answer control. */
 const LANDED = "تم تحميل هذا الجزء.";
 const FOLLOW_MS = 3000;
-/** After the layout changed in view, a press that starts within this window was aimed at the old layout (`guardPresses`). */
-const SHIFT_GUARD_MS = 400;
 let uid = 0;
 
 export default class QuestionErrorBoundary extends Component<Props, State> {

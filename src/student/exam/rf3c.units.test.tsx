@@ -5,7 +5,10 @@
 //           and drag never reach the page); a keyboard activation does; a press after the window does          fail-first
 //   RF3-U21 a card far above the viewport (scroll anchoring keeps the content still): a press right after the swap works
 //   RF3-U22 a keyboard-only reveal that scrolled the page guards the presses that start just after it                fail-first
-import { describe, it, expect, vi, afterEach } from "vitest";
+//   RF3-U23 the browser runtime: a sibling's first load after a stylesheet failed in the page appears only once the press in
+//           progress ended, and the press that starts just after it does nothing                        [RR3-2]  fail-first
+//           (last: it leaves a failed stylesheet in the module's runtime)
+import { describe, it, expect, vi, afterEach, onTestFinished } from "vitest";
 import { render, screen, fireEvent, act, cleanup, createEvent } from "@testing-library/react";
 import { Suspense, type ComponentType, type ReactElement } from "react";
 import QuestionErrorBoundary from "./QuestionErrorBoundary";
@@ -81,6 +84,32 @@ describe("RF3-U22 — the keyboard-only reveal moved the page", () => {
     expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
     expect(window.scrollY).toBe(400);
     press(screen.getByTestId("opt"));
+    expect(onDown).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
+describe("RF3-U23 — a part that appears late (browser runtime)", () => {
+  it("waits for the press in progress, then guards the press that starts just after it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const settings = (window as unknown as { happyDOM: { settings: { disableCSSFileLoading: boolean } } }).happyDOM.settings;
+    const cssLoading = settings.disableCSSFileLoading;
+    settings.disableCSSFileLoading = true;                                          // the re-link fails at once, no network
+    onTestFinished(() => { settings.disableCSSFileLoading = cssLoading; });
+    const sheet = origin + "/assets/UnitSharedSheet-abcd1234.css";
+    const Owner = recoverableLazy<object>("UnitSheetOwner", () => Promise.reject(new Error("Unable to preload CSS for " + sheet)) as Promise<{ default: ComponentType<object> }>);
+    const first = render(<QuestionErrorBoundary variant="part" resetKey="owner"><Suspense fallback={null}><Owner /></Suspense></QuestionErrorBoundary>);
+    await screen.findByTestId("question-recovery");                                 // a stylesheet failed in this page
+    first.unmount();
+    const onDown = vi.fn(), onClick = vi.fn();
+    const Sibling = recoverableLazy<object>("UnitLateSibling", () => Promise.resolve({ default: () => <p>جزء متأخر</p> }) as Promise<{ default: ComponentType<object> }>);
+    fireEvent.pointerDown(document.body);                                           // the student is pressing
+    render(<div><Suspense fallback={null}><Sibling /></Suspense><label data-testid="opt" onPointerDown={onDown} onClick={onClick}>الخيار ٥</label></div>);
+    await sleep(300);                                                               // loaded; the re-link of the stylesheet failed
+    expect(screen.queryByText("جزء متأخر")).toBeNull();                              // never under the press in progress
+    fireEvent.pointerUp(document.body);
+    expect(await screen.findByText("جزء متأخر")).toBeTruthy();
+    press(screen.getByTestId("opt"));                                               // aimed before the part pushed the option down
     expect(onDown).not.toHaveBeenCalled();
     expect(onClick).not.toHaveBeenCalled();
   });

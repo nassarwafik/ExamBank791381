@@ -27,7 +27,9 @@
 //      because Vite links a shared stylesheet only for the first load that needs it: a later loader that also needs it never
 //      sees it as its own (review fix 3). For the same reason a FIRST load in a page where a stylesheet already failed re-links
 //      the failed ones first, so a sibling question sharing it renders styled. That wait never fails the load and is short
-//      (`firstCss`, 3 s): a stylesheet that stalls must not hold an unrelated part back for the whole stylesheet bound.
+//      (`firstCss`, 3 s): a stylesheet that stalls must not hold an unrelated part back for the whole stylesheet bound. Such a
+//      late first load, like one that took the recovery path, appears only once no press is in progress, and the presses that
+//      start just after it are guarded (`settleLate`): the content it pushes down may be what the student is aiming at.
 //   5. The remap and the stylesheet re-links are bounded in time. A recovery that stalls stops blocking the queue; until it
 //      settles, its modules are "in flight" and any other recovery that would need one of them is refused (never a second copy).
 //      The retry's first step re-calls the original factory, which is the browser's own import: it is not bounded here (the
@@ -41,6 +43,7 @@
 // logic through an injected environment; the real behaviour is certified in Chromium by
 // scripts/check-student-exam-browser-21e3.mjs.
 import { createElement, lazy, type ComponentType } from "react";
+import { settleLatePart } from "./student/exam/pointerHold";
 
 export type RecoveryEnv = {
   /** Page origin and base path (Vite BASE_URL, always ending with "/"). */
@@ -53,6 +56,9 @@ export type RecoveryEnv = {
   /** Upper bounds (ms) of one source read, one recovery import, one stylesheet relink, all source reads of one recovery, and a
    *  first load's wait for a stylesheet that failed in the page. */
   timeouts?: { source?: number; import?: number; css?: number; total?: number; firstCss?: number };
+  /** A first load that appears late (it waited for a failed stylesheet, or took the recovery path) resolves only after this:
+   *  in the browser, once no press is in progress, and the presses that start just after it are guarded (`pointerHold`). */
+  settleLate?: () => Promise<void>;
 };
 
 /** Chunks of the static student shell (index + StudentPortal + the exam page's own static closure) and engines that install
@@ -314,8 +320,9 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
           // A retry re-links and awaits every failed stylesheet (fails closed on its own). A first load in a page where a stylesheet
           // already failed gives it a short chance to come back before the question renders (it has no own stylesheet yet, so
           // it never fails here; a stall only delays it by `firstCss`).
+          let late = false;
           if (attempts > 1) await relinkFailedCss(ownCss);
-          else if (failedCss.size > 0) await within(relinkFailedCss(ownCss), limits.firstCss, "recovery-timeout").catch(() => undefined);
+          else if (failedCss.size > 0) { late = true; await within(relinkFailedCss(ownCss), limits.firstCss, "recovery-timeout").catch(() => undefined); }
           let viaRemap = false;
           const mod = await original().catch((err: unknown) => {
             // A retry, or a first load in a page that already recovered modules this graph may share, takes the remapped
@@ -325,6 +332,8 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
           }) as { default?: unknown };
           const component = viaRemap && options.shared ? pickShared(mod) : mod?.default;
           if (!isComponent(component)) throw new Error("recovery-shape");
+          // A retry is the boundary's to settle (it waits for the release and guards); a late FIRST load settles here.
+          if (attempts === 1 && (late || viaRemap)) await env.settleLate?.();
           return { default: component as ComponentType<P> };
         } catch (err) {
           failed = true;
@@ -374,6 +383,7 @@ const browserEnv = (): RecoveryEnv => {
     base: import.meta.env.BASE_URL || "/",
     doc: hasDoc ? document : null,
     importUrl: url => import(/* @vite-ignore */ url),
+    settleLate: hasDoc ? settleLatePart : undefined,
     fetchText: async url => {
       const ctl = typeof AbortController === "undefined" ? null : new AbortController();
       const t = ctl ? setTimeout(() => ctl.abort(), DEFAULT_TIMEOUTS.source) : 0;

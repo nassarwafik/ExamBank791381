@@ -10,6 +10,9 @@
 //           retry fails closed                                                                                              pin
 //   RF3-R6  a first load waits only briefly (`firstCss`) for a failed stylesheet that stalls: an unrelated part is not held back
 //           for the whole stylesheet bound                                                                         [RR3-2]  fail-first
+//   RF3-R7  a FIRST load that appears late (it waited for a failed stylesheet, or took the recovery path) resolves only after
+//           `settleLate` (in the browser: no press in progress, the next presses guarded); a plain first load and a retry never
+//           call it                                                                                                [RR3-2]  fail-first
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { Suspense, Component, type ComponentType, type ReactNode } from "react";
 import { render, act, cleanup } from "@testing-library/react";
@@ -176,5 +179,49 @@ describe("RF3-R6 — a first load waits only briefly for a stalled stylesheet", 
     const ui = await renderLazy(Stim, 120);                                        // the re-link never answers
     expect(relinks(f)).toHaveLength(1);
     expect(ui.getByText("stimulus")).toBeTruthy();                                 // the defect: held for the full 400 ms bound
+  });
+});
+
+describe("RF3-R7 — a first load that appears late settles first (`settleLate`)", () => {
+  it("after a stylesheet failed: rendered only once settleLate resolved; a plain first load and a retry never call it", async () => {
+    const f = fakeEnv({ css: 400, firstCss: 40 }), rt = createRecoveryRuntime(f.env);
+    let release = () => {};
+    const settleLate = vi.fn(() => new Promise<void>(r => { release = r; }));
+    f.env.settleLate = settleLate;
+    const css = A("VisualCanvas", "abcd1234", "css");
+    const Plain = rt.lazyComponent<object>("ChartView", () => Promise.resolve(Ok("chart")) as Promise<{ default: ComponentType<object> }>);
+    expect((await renderLazy(Plain)).getByText("chart")).toBeTruthy();
+    expect(settleLate).not.toHaveBeenCalled();                                     // nothing failed yet: on time, nothing to settle
+    cleanup();
+    let hotCalls = 0;
+    const Hot = rt.lazyComponent<object>("HotspotResponse", viteFactory(f, [css], () => ++hotCalls === 1 ? Promise.reject(new Error("Unable to preload CSS for " + css)) : Promise.resolve(Ok("hotspot"))));
+    await renderLazy(Hot); fire(f, css, "error"); cleanup();
+    const Stim = rt.lazyComponent<object>("CodeStimulusView", () => Promise.resolve(Ok("stimulus")) as Promise<{ default: ComponentType<object> }>);
+    const ui = await renderLazy(Stim, 120);                                        // the re-link never answers: `firstCss` elapsed
+    expect(settleLate).toHaveBeenCalledTimes(1);
+    expect(ui.queryByText("stimulus")).toBeNull();                                 // the defect: it appears under a press in progress
+    await act(async () => { release(); await new Promise(r => setTimeout(r, 0)); });
+    expect(ui.getByText("stimulus")).toBeTruthy();
+    cleanup();
+    const retried = rt.retryFailed();                                              // the hotspot's retry: the boundary settles it
+    await settleRelinks(f, "load");
+    expect(await retried).toBe(true);
+    expect(settleLate).toHaveBeenCalledTimes(1);
+  });
+  it("a first load that takes the recovery path (the page already recovered a module it shares) settles too", async () => {
+    const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
+    const settleLate = vi.fn(() => Promise.resolve());
+    f.env.settleLate = settleLate;
+    const E = A("HotspotResponse"), L = A("LabelDiagramResponse"), V = A("VisualCanvas");
+    f.modules.set(E, Ok("hotspot")); f.modules.set(L, Ok("label"));
+    f.sources.set(E, 'import"./VisualCanvas-abcd1234.js";'); f.sources.set(L, 'import"./VisualCanvas-abcd1234.js";'); f.sources.set(V, "var v=1;");
+    const H = rt.lazyComponent<object>("HotspotResponse", viteFactory(f, [V], () => Promise.reject(chunkError(E))));
+    await renderLazy(H); fire(f, V, "error"); rt.rearmFailed(); cleanup();
+    expect((await renderLazy(H, 20)).getByText("hotspot")).toBeTruthy();          // its second load: not a first load
+    expect(settleLate).not.toHaveBeenCalled();
+    cleanup();
+    const Lab = rt.lazyComponent<object>("LabelDiagramResponse", viteFactory(f, [], () => Promise.reject(chunkError(L))));
+    expect((await renderLazy(Lab, 20)).getByText("label")).toBeTruthy();
+    expect(settleLate).toHaveBeenCalledTimes(1);
   });
 });
