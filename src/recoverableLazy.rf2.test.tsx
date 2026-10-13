@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 // Phase 21E.3 review fix 2 — runtime regression tests for the re-review of eb174d1 (recovery reviewer):
 //   RF2-R1  a stylesheet of ANOTHER loader that stays down never blocks this card's retry                        [RR-2]  fail-first
+//           (review fix 3: it is re-linked, but its failure or a hang never fails the retry — see recoverableLazy.rf3)
 //   RF2-R2  all source reads of one recovery together are bounded: a chain of slow reads frees the queue          [RR-3]  fail-first
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { Suspense, Component, type ComponentType, type ReactNode } from "react";
@@ -56,19 +57,36 @@ const fire = (f: { links: HTMLLinkElement[] }, href: string, type: "load" | "err
 
 
 describe("RF2-R1 — another card's stylesheet outage never blocks this card's retry", () => {
-  it("the hotspot's stylesheet stays down; the code stimulus (a JS failure) retries without re-linking or waiting for it", async () => {
+  // Review fix 3 (RR2-1): the other card's stylesheet IS re-linked (this loader may need it without having requested it), but
+  // its failure, or a re-link that hangs, never fails this retry; the hang only delays it, within the stylesheet bound.
+  const relinks = (f: { appended: HTMLElement[] }) => f.appended.filter(n => n.tagName === "LINK") as HTMLLinkElement[];
+  const failRelinks = (f: { appended: HTMLElement[] }) => act(async () => { for (const l of relinks(f)) l.dispatchEvent(new Event("error")); await new Promise(r => setTimeout(r, 0)); });
+  it("the hotspot's stylesheet stays down; the code stimulus (a JS failure) retries and renders", async () => {
     const f = fakeEnv(), rt = createRecoveryRuntime(f.env);
     const css = A("VisualCanvas", "abcd1234", "css");
     const Hot = rt.lazyComponent<object>("HotspotResponse", viteFactory(f, [css], () => Promise.reject(new Error("Unable to preload CSS for " + css))));
     let calls = 0;
     const Stim = rt.lazyComponent<object>("CodeStimulusView", () => (++calls === 1 ? Promise.reject(new Error("transient")) : Promise.resolve(Ok("stimulus"))) as Promise<{ default: ComponentType<object> }>);
     await renderLazy(Hot); fire(f, css, "error");
-    await renderLazy(Stim); cleanup();
+    await renderLazy(Stim); await failRelinks(f); cleanup();
     rt.rearmFailed();
     const ui = render(<Suspense fallback={<i>…</i>}><Boundary><Stim /></Boundary></Suspense>);
-    await flush(20);
+    await flush(); await failRelinks(f); await flush(20);
+    expect(ui.getByText("stimulus")).toBeTruthy();                                 // not failed by the other card's stylesheet
+    expect(relinks(f).map(l => l.getAttribute("href")!.replace(/\?r=\d+\.$/, ""))).toEqual([css, css]);
+  });
+  it("a re-link of the other card's stylesheet that hangs only delays the retry, within the stylesheet bound", async () => {
+    const f = fakeEnv({ css: 40 }), rt = createRecoveryRuntime(f.env);
+    const css = A("VisualCanvas", "abcd1234", "css");
+    const Hot = rt.lazyComponent<object>("HotspotResponse", viteFactory(f, [css], () => Promise.reject(new Error("Unable to preload CSS for " + css))));
+    let calls = 0;
+    const Stim = rt.lazyComponent<object>("CodeStimulusView", () => (++calls === 1 ? Promise.reject(new Error("transient")) : Promise.resolve(Ok("stimulus"))) as Promise<{ default: ComponentType<object> }>);
+    await renderLazy(Hot); fire(f, css, "error");
+    await renderLazy(Stim, 80); cleanup();
+    rt.rearmFailed();
+    const ui = render(<Suspense fallback={<i>…</i>}><Boundary><Stim /></Boundary></Suspense>);
+    await flush(80);
     expect(ui.getByText("stimulus")).toBeTruthy();
-    expect(f.appended.filter(n => n.tagName === "LINK")).toHaveLength(0);         // the hotspot's stylesheet was neither re-linked nor awaited
   });
 });
 

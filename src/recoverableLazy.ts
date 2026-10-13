@@ -21,8 +21,12 @@
 //      failed, and every module on a static-import path to such a module (or to an already recovered one). Healthy side
 //      modules keep their normal URL, so every module is evaluated at most once; a recovered module keeps its recovered URL
 //      for every later graph.
-//   4. EVERY stylesheet of the load that failed is re-linked with a fresh URL before the retry; if one still fails, the retry
-//      fails (the card stays) — a question never renders without its stylesheet.
+//   4. Before a retry, EVERY stylesheet that failed in this page is re-linked with a fresh URL and awaited (bounded); if one of
+//      the loader's OWN stylesheets still fails, the retry fails (the card stays) — a question never renders without its
+//      stylesheet. Another loader's stylesheet that stays down never fails this retry (review fix 2), but it is re-linked too,
+//      because Vite links a shared stylesheet only for the first load that needs it: a later loader that also needs it never
+//      sees it as its own (review fix 3). For the same reason a FIRST load in a page where a stylesheet already failed re-links
+//      the failed ones first (bounded, never failing the load), so a sibling question sharing it renders styled.
 //   5. Each step is bounded in time. A recovery that stalls stops blocking the queue; until it settles, its modules are "in
 //      flight" and any other recovery that would need one of them is refused (never a second copy).
 //
@@ -216,28 +220,38 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
     queue = run.catch(() => undefined);
     return run;
   };
-  /** Re-links every stylesheet THIS load failed on (review fix 2: never another question's — one stylesheet that stays down must
-   *  not block a different card's retry) with a fresh URL and waits for all of them. Any that still fails (or times out) fails
-   *  the retry: its link is removed and the stylesheet stays recorded for the next retry. */
-  const relinkFailedCss = async (own: Set<string>) => {
-    const doc = env.doc;
-    const mine = [...own].filter(css => failedCss.has(css));
-    if (!doc || !mine.length) return;
-    const results = await Promise.all(mine.map(css => new Promise<boolean>(resolve => {
+  /** One fresh link per failed stylesheet at a time (concurrent loads share it); true when it loaded within the bound. A link
+   *  that fails or times out is removed and the stylesheet stays recorded as failed. */
+  const relinking = new Map<string, Promise<boolean>>();
+  const relink = (doc: Document, css: string): Promise<boolean> => {
+    const running = relinking.get(css);
+    if (running) return running;
+    const p = new Promise<boolean>(resolve => {
       const link = doc.createElement("link");
       link.rel = "stylesheet";
       link.href = css + "?r=" + (++generation) + ".";
       const t = setTimeout(() => done(false), limits.css);
       function done(ok: boolean) {
         clearTimeout(t);
+        relinking.delete(css);
         if (ok) { failedCss.delete(css); cssLinks.set(css, "ok"); } else link.remove();
         resolve(ok);
       }
       link.addEventListener("load", () => done(true), { once: true });
       link.addEventListener("error", () => done(false), { once: true });
       doc.head.appendChild(link);
-    })));
-    if (results.includes(false)) throw new Error("recovery-css");
+    });
+    relinking.set(css, p);
+    return p;
+  };
+  /** Re-links EVERY stylesheet that failed in this page and waits for all of them (each bounded). Only one of the loader's OWN
+   *  stylesheets that is still down fails the load (review fix 2: another question's stylesheet that stays down never blocks
+   *  this card); the others are re-linked because this loader may need them without having requested them (review fix 3). */
+  const relinkFailedCss = async (own: Set<string>) => {
+    const doc = env.doc;
+    if (!doc || !failedCss.size) return;
+    await Promise.all([...failedCss].map(css => relink(doc, css)));
+    if ([...own].some(css => failedCss.has(css))) throw new Error("recovery-css");
   };
   const remapped = (entry: string) => serialized(async () => {
     const hit = settled.get(entry);
@@ -293,7 +307,9 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
       const load = async (): Promise<{ default: ComponentType<P> }> => {
         attempts += 1;
         try {
-          if (attempts > 1) await relinkFailedCss(ownCss);
+          // A retry, or a first load in a page where a stylesheet already failed (a first load has no own stylesheet yet, so it
+          // never fails here: it only gives a shared stylesheet the chance to come back before the question renders).
+          if (attempts > 1 || failedCss.size > 0) await relinkFailedCss(ownCss);
           let viaRemap = false;
           const mod = await original().catch((err: unknown) => {
             // A retry, or a first load in a page that already recovered modules this graph may share, takes the remapped
@@ -311,7 +327,7 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
           throw err;
         }
       };
-      let current = lazy(load);
+      let current: ComponentType<P> = lazy(load);
       const handle: RecoveryHandle = {
         rearm() { if (!failed) return false; failed = false; current = lazy(load); return true; },
         retry() {
@@ -319,10 +335,13 @@ export function createRecoveryRuntime(env: RecoveryEnv): RecoveryRuntime {
           failed = false;
           const loading = load();
           current = lazy(() => loading);
-          return loading.then(() => true, () => false);
+          // Review fix 3: once loaded, the component itself is rendered (no second suspension). A lazy wrapper would render its
+          // empty fallback for one commit first, so the recovered part would change the page's height twice — scroll anchoring
+          // compensates only the first change, and the content under a still pointer moved.
+          return loading.then(m => { current = m.default; return true; }, () => false);
         },
       };
-      const Recoverable = (props: P) => createElement(current as ComponentType<P>, props);
+      const Recoverable = (props: P) => createElement(current, props);
       Recoverable.displayName = "Recoverable(" + chunkName + ")";
       return Recoverable;
     },

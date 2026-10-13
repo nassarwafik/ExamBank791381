@@ -15,6 +15,8 @@
  * Review fix 2: the scroll is always instant (a smooth scroll kept moving the page under a press that followed a Tab within
  * ~100 ms), and nothing is revealed inside a fixed-position layer (a full-screen editor covers the bars; scrolling the page
  * beneath it cannot reveal anything).
+ * Review fix 3: an element matching `skip` (a heading or a recovery line, focused only by the page's own code) is never
+ * revealed, even when a navigation key was pressed just before — e.g. arrow keys scrolling the page while a retry loaded.
  */
 export const NAV_KEYS: ReadonlySet<string> = new Set(["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"]);
 /** A key press older than this no longer explains a focus change. */
@@ -38,6 +40,8 @@ export type KeyboardRevealOptions = {
   within: string;
   topBar: string;
   bottomBar: string;
+  /** Elements that only the page's own code focuses (never by a key): never revealed. */
+  skip?: string;
 };
 
 /** Installs the listeners; returns the cleanup. */
@@ -53,7 +57,7 @@ export function installKeyboardReveal(o: KeyboardRevealOptions): () => void {
     const el = target && typeof target.closest === "function" && typeof target.getBoundingClientRect === "function" ? target : null;
     const t = now(), intent = keyAt;
     keyAt = -1;                                                         // one key press explains at most one focus change
-    if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS) return;
+    if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS || (o.skip && el.matches(o.skip))) return;
     const host = el.closest(o.within);
     if (!host) return;
     for (let n: Element | null = el; n && n !== host; n = n.parentElement) if (o.win.getComputedStyle?.(n).position === "fixed") return;

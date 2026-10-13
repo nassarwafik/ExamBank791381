@@ -25,10 +25,15 @@ const ANN_T = ["src/student/exam/examAnnouncer.rf2.test.ts", "src/StudentExamPag
 const FOCUS_T = ["src/StudentQuestionCard.focus.rf2.test.tsx", "src/StudentQuestionCard.focus2.rf2.test.tsx", "src/student/exam/rf1.units.test.tsx", "src/StudentExamPage.ux21e3.test.tsx"];
 const RT2 = ["src/recoverableLazy.rf1.test.tsx", "src/recoverableLazy.rf2.test.tsx"];
 const BELL_T = ["src/notifications/NotificationBell.grade.rf2.test.tsx", "src/student/exam/exam21e3.units.test.tsx"];
+// Review fix 3 suites.
+const RT3 = ["src/recoverableLazy.rf1.test.tsx", "src/recoverableLazy.rf2.test.tsx", "src/recoverableLazy.rf3.test.tsx"];
+const RF3_T = ["src/student/exam/rf3.units.test.tsx", "src/StudentExamPage.rf3.test.tsx"];
 // `equivalent` (rare): the reason a mutant cannot change behaviour (AGENTS.md §9 "show the mutant is equivalent"). It is still
 // planted and run; if it survives it is reported as `equivalent` with that reason (never silently), and if it is killed the reason
-// was wrong and it counts as killed.
+// was wrong and it counts as killed. `before` / `after` may be arrays (one mutant made of several edits in the same file, for a
+// rule enforced by layered guards: review fix 3).
 const M = (id, file, before, after, tests, equivalent) => ({ id, file, before, after, tests, equivalent });
+const edits = m => (Array.isArray(m.before) ? m.before.map((b, i) => [b, m.after[i]]) : [[m.before, m.after]]);
 const mutants = [
   // URL trust — the only way a URL reaches the importer, the import map, a source read or a stylesheet.
   M("R01-origin", RL, "if (u.origin !== env.origin || u.username", "if (false || u.username", RT),
@@ -45,31 +50,46 @@ const mutants = [
   M("R11-never-remap-ignored", RL, 'if (set.some(u => NEVER_REMAP.has(assetName(u)))) throw new Error("recovery-refused");', "", RT),
   M("R12-no-original-first", RL, "const mod = await original().catch((err: unknown) => {", "const mod = await (attempts > 1 && entry ? (viaRemap = true, remapped(entry)) : original()).catch((err: unknown) => {", RT),
   M("R13-map-unscoped", RL, "for (const u of set) scopes[url(u)] = imports;", "for (const u of set) scopes[u] = imports;", RT),
-  M("R14-no-css-relink", RL, "if (attempts > 1) await relinkFailedCss(ownCss);", "", RT),
+  M("R14-no-css-relink", RL, "if (attempts > 1 || failedCss.size > 0) await relinkFailedCss(ownCss);", "", RT),
   M("R15-shape-unchecked", RL, 'if (!isComponent(component)) throw new Error("recovery-shape");', "", RT),
   M("R16-shared-no-pick", RL, "const component = viaRemap && options.shared ? pickShared(mod) : mod?.default;", "const component = mod?.default;", RT),
   // Review fix 1 — the runtime gaps the review found (each killed by a review-fix-1 test).
   M("R17-no-serialization", RL, "const run = queue.then(task);", "const run = task();", RT),
-  M("R18-css-relink-fail-open", RL, 'if (results.includes(false)) throw new Error("recovery-css");', "", RT),
+  M("R18-css-relink-fail-open", RL, 'if ([...own].some(css => failedCss.has(css))) throw new Error("recovery-css");', "", RT),
   M("R19-css-first-only", RL, 'link.addEventListener("error", () => { states.set(url, "failed"); if (css) failedCss.add(url); }, { once: true });', 'link.addEventListener("error", () => { states.set(url, "failed"); }, { once: true });', RT),
   M("R20-inflight-ignored", RL, 'if (set.some(u => inflight.has(u))) throw new Error("recovery-busy");', "", RT),
   M("R21-no-import-bound", RL, 'return within(importing, limits.import, "recovery-timeout");', "return importing;", RT),
   M("R22-remap-any-browser", RL, "if (entry && cached && (attempts > 1 || settled.size > 0))", "if (entry && (attempts > 1 || settled.size > 0))", RT),
   M("R23-element-accepted", RL, "COMPONENT_TYPES.has((c as { $$typeof?: symbol }).$$typeof as symbol)", "true", RT),
   // Review fix 2 — runtime.
-  M("R25-css-relink-page-wide", RL, "const mine = [...own].filter(css => failedCss.has(css));", "const mine = [...failedCss];", RT2),
+  // (R25 of review fix 2 — "re-link every failed stylesheet" — is now the intended behaviour; see R28-R33.)
   M("R26-no-total-bound", RL, "const set = await within(remapSet(entry, poisoned, u => settled.has(u), edgesOf), limits.total, \"recovery-timeout\");", "const set = await remapSet(entry, poisoned, u => settled.has(u), edgesOf);", RT2),
   M("R27-own-css-unrecorded", RL, "        for (const u of requested) ownCss.add(u);\n", "", RT2),
+  // Review fix 3 — runtime.
+  M("R28-css-relink-own-only", RL, "await Promise.all([...failedCss].map(css => relink(doc, css)));", "await Promise.all([...failedCss].filter(css => own.has(css)).map(css => relink(doc, css)));", RT3),
+  M("R29-no-first-load-relink", RL, "if (attempts > 1 || failedCss.size > 0) await relinkFailedCss(ownCss);", "if (attempts > 1) await relinkFailedCss(ownCss);", RT3),
+  M("R30-css-fail-closed-any", RL, 'if ([...own].some(css => failedCss.has(css))) throw new Error("recovery-css");', 'if (failedCss.size > 0) throw new Error("recovery-css");', RT3),
+  M("R31-css-relink-not-awaited", RL, "await Promise.all([...failedCss].map(css => relink(doc, css)));", "void Promise.all([...failedCss].map(css => relink(doc, css)));", RT3),
+  M("R32-relink-not-shared", RL, "if (running) return running;", "void running;", RT3),
+  M("R33-relink-never-cleared", RL, "        relinking.delete(css);\n", "", RT3),
+  M("R34-recovered-suspends-again", RL, "return loading.then(m => { current = m.default; return true; }, () => false);", "return loading.then(() => true, () => false);", RF3_T),
   M("R24-shared-pick-ambiguous", RL, "return hits.length === 1 ? (hits[0] as { default: unknown }).default : undefined;", "return hits.length >= 1 ? (hits[0] as { default: unknown }).default : undefined;", RT),
   // The recovery card.
   M("B01-retry-loads-nothing", QEB, "    const ok = await retryFailedLoads([...this.handles]);\n", "    const ok = true;\n", UNITS),
   M("B02-log-leaks", QEB, 'console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime" });', 'console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime", message: String((error as Error)?.message) });', [...UNITS, ...PAGE_T]),
   M("B03-reload-before-retry", QEB, "    if (this.state.retries === 0) return false;\n", "", PAGE_T),
-  M("B04-no-reset-on-new-question", QEB, "return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey, landed: false } : null;", "return null;", UNITS),
+  M("B04-no-reset-on-new-question", QEB, "return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey, landed: false, quiet: false } : null;", "return null;", UNITS),
   M("B05-no-focus-follow", QEB, "if (this.restoreFocus) { this.restoreFocus = false; this.placeFocusAfterRecovery(this.token); }", "if (this.restoreFocus) { this.restoreFocus = false; }", [...PAGE_T, ...UNITS]),
   // Review fix 2 — focus after a recovery never lands on an answer control.
   M("B13-focus-on-answer-control", QEB, "      line.focus({ preventScroll: true });\n", "      ((line.nextElementSibling?.querySelector('input,textarea,select,button,[tabindex]') as HTMLElement | null) ?? line).focus({ preventScroll: true });\n", FOCUS_T),
   M("B14-no-landing-line", QEB, "landed: ok && this.restoreFocus && onCard && !this.anchored()", "landed: false", FOCUS_T),
+  // Review fix 3 — nothing scrolls after a recovery; the line leaves the name; moved focus is never taken.
+  M("B15-line-scrolled-into-view", QEB, "      line.focus({ preventScroll: true });\n      return;", "      line.focus({ preventScroll: true });\n      line.scrollIntoView?.({ block: \"nearest\" });\n      return;", RF3_T),
+  M("B16-line-focus-scrolls", QEB, "      line.focus({ preventScroll: true });\n", "      line.focus();\n", RF3_T),
+  M("B17-line-stays-in-name", QEB, '"aria-hidden": quiet || undefined', '"aria-hidden": undefined', RF3_T),
+  M("B18-line-never-quiet", QEB, "onBlur: () => { if (!this.state.quiet) this.setState({ quiet: true }); }", "onBlur: () => {}", RF3_T),
+  M("B19-moved-focus-taken", QEB, ["const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));", "if (!line || !idle()) {"], ["const onCard = true;", "if (!line) {"], RF3_T),
+  M("B20-anchor-takes-moved-focus", QEB, "if (!this.mounted || token !== this.token || !idle()) return;", "if (!this.mounted || token !== this.token) return;", RF3_T),
   M("B06-stem-card-not-text", CARD, '<QuestionErrorBoundary resetKey={id} variant="stem" fallback={plain}>', "<QuestionErrorBoundary resetKey={id}>", STEM_T),
   M("B07-refocus-steals", QEB, "if (wasOnCard && (!active || active === document.body || active === document.documentElement)) this.retryRef.current?.focus();", "this.retryRef.current?.focus();", UNITS),
   M("B08-retry-every-loader", QEB, "    const ok = await retryFailedLoads([...this.handles]);\n", "    const ok = await retryFailedLoads();\n", UNITS),
@@ -93,9 +113,15 @@ const mutants = [
   M("P13-announcer-no-gap", ANNR, "wait = Math.max(readyAt - t, last + ANNOUNCEMENT_GAP_MS - t);", "wait = readyAt - t;", ANN_T),
   M("P14-announcer-drop-silent", ANNR, "dropped.forEach(m => m.onDropped?.());", "void dropped;", ANN_T),
   M("P15-announcer-drop-delivered", ANNR, "dropped.forEach(m => m.onDropped?.());", "dropped.forEach(m => m.onDelivered?.());", ANN_T),
+  M("P17-reload-while-pausing", PAGE, '&&!submitBusy&&!pausing,strict:', '&&!submitBusy,strict:', RF3_T),
+  M("P18-reload-while-submitting", PAGE, '&&!submitBusy&&!pausing,strict:', '&&!pausing,strict:', RF3_T),
+  M("P19-anchor-scrolls", PAGE, 'h.focus({preventScroll:true});return true}};', 'h.focus({preventScroll:true});h.scrollIntoView?.({block:"start"});return true}};', RF3_T),
+  M("P20-anchor-focus-scrolls", PAGE, 'h.focus({preventScroll:true});return true}};', 'h.focus();return true}};', RF3_T),
   M("P16-review-anchor", PAGE, 'const h=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;if(!h)return false;', "const h=questionHeadingRef.current;if(!h)return false;", PAGE_T),
   // Keyboard-only reveal (the blockers).
-  M("K01-reveal-pointer-focus", REVEAL, "if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS) return;", "if (!el) return;", REVEAL_T),
+  M("K01-reveal-pointer-focus", REVEAL, "if (!el || pointerDown || intent < 0 || intent <= pointerAt || t - intent > KEY_INTENT_MS || (o.skip && el.matches(o.skip))) return;", "if (!el) return;", REVEAL_T),
+  M("K08-reveal-programmatic-focus", REVEAL, " || (o.skip && el.matches(o.skip))) return;", ") return;", RF3_T),
+  M("P21-line-not-skipped", PAGE, 'skip:"#iex-page-heading,.iex-review-title,["+RECOVERY_LINE_ATTRIBUTE+"]"', 'skip:"#iex-page-heading,.iex-review-title"', RF3_T),
   M("K02-reveal-while-pointer-down", REVEAL, "if (!el || pointerDown || intent < 0", "if (!el || intent < 0", REVEAL_T),
   M("K03-reveal-any-key", REVEAL, "const onKey = (e: KeyboardEvent) => { if (NAV_KEYS.has(e.key)) keyAt = now(); };", "const onKey = () => { keyAt = now(); };", REVEAL_T),
   M("K04-reveal-not-consumed", REVEAL, "    keyAt = -1;                                                         // one key press explains at most one focus change\n", "", REVEAL_T),
@@ -146,12 +172,12 @@ fs.writeFileSync(BACKUP, JSON.stringify(Object.fromEntries(original)), "utf8");
 try {
   for (const m of selected) {
     let outcome = "invalid", diagnostic = "", killedBy = [];
-    const source = original.get(m.file), occ = source.split(m.before).length - 1;
-    if (occ !== 1) diagnostic = "needle count " + occ;
-    else if (m.before === m.after) diagnostic = "mutation identical";
+    const source = original.get(m.file), pairs = edits(m), occ = pairs.map(([b]) => source.split(b).length - 1);
+    if (occ.some(n => n !== 1)) diagnostic = "needle count " + occ.join(",");
+    else if (pairs.some(([b, a]) => b === a)) diagnostic = "mutation identical";
     else {
       try {
-        fs.writeFileSync(m.file, source.replace(m.before, m.after), "utf8");
+        fs.writeFileSync(m.file, pairs.reduce((text, [b, a]) => text.replace(b, a), source), "utf8");
         const r = vitest(m.tests), output = (r.stdout || "") + "\n" + (r.stderr || "");
         if (r.error?.code === "ETIMEDOUT" || r.signal) { outcome = "timeout"; diagnostic = String(r.error || r.signal); }
         else if (r.status === 0) { outcome = m.equivalent ? "equivalent" : "survived"; diagnostic = m.equivalent ? "Selected tests passed; declared equivalent: " + m.equivalent : "Selected tests passed"; }

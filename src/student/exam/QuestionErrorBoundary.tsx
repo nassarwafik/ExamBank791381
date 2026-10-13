@@ -2,7 +2,7 @@ import { Component, createRef, type ContextType, type ReactNode, type RefObject 
 import { isChunkLoadError } from "../../lazyWithRetry";
 import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../recoverableLazy";
 import { IconRefresh, IconWarning } from "../../icons";
-import { QuestionRecoveryContext } from "./questionRecovery";
+import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionRecovery";
 
 /**
  * QuestionErrorBoundary (Phase 21E.3) — keeps ONE failing part of a page from taking down the rest.
@@ -21,6 +21,10 @@ import { QuestionRecoveryContext } from "./questionRecovery";
  *  just before the recovered part («تم تحميل هذا الجزء.», tabindex -1); the next Tab enters the part. The line stays until
  *  another question is shown (removing it on blur would move the content between a pointer press and its release). A
  *  page-level card (page / exam / review) puts focus on the page's heading instead.
+ * Review fix 3: nothing scrolls after a recovery — focus moves with preventScroll only and the page's keyboard reveal skips the
+ *  line and the headings (a jump after the student scrolled away moved the options under a pointer about to press). Once
+ *  focus leaves the line it is hidden from assistive technology (it sits inside the stem that names the answer controls) but
+ *  keeps its place, so nothing moves.
  *  - Nothing is replaced silently: a failing rich stem keeps the plain question text WITH a notice and a retry ("stem"); a
  *    failing formula keeps its source text with a retry ("inline"); a failing content block shows a compact card ("block").
  *  - After a failed retry the follow-up guidance (in a strict attempt: do not leave the page) is announced and describes the
@@ -39,7 +43,7 @@ type Props = {
   /** An extra safe action on the card (e.g. the review screen's «العودة إلى الأسئلة»). */
   secondaryAction?: { label: string; onClick: () => void };
 };
-type State = { failed: boolean; retries: number; retrying: boolean; resetKey?: string; landed: boolean };
+type State = { failed: boolean; retries: number; retrying: boolean; resetKey?: string; landed: boolean; quiet: boolean };
 
 const EXAM_TITLE: Record<RecoveryVariant, string> = {
   question: "تعذّر عرض هذا السؤال الآن",
@@ -77,7 +81,7 @@ let uid = 0;
 export default class QuestionErrorBoundary extends Component<Props, State> {
   static contextType = QuestionRecoveryContext;
   declare context: ContextType<typeof QuestionRecoveryContext>;
-  state: State = { failed: false, retries: 0, retrying: false, resetKey: this.props.resetKey, landed: false };
+  state: State = { failed: false, retries: 0, retrying: false, resetKey: this.props.resetKey, landed: false, quiet: false };
   private id = "qeb-" + (++uid);
   private retryRef = createRef<HTMLButtonElement>();
   private failedRef = createRef<HTMLElement>();
@@ -97,7 +101,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
 
   /** Another question / page is shown (a new resetKey): start clean for it. */
   static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
-    return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey, landed: false } : null;
+    return props.resetKey !== state.resetKey ? { failed: false, retries: 0, retrying: false, resetKey: props.resetKey, landed: false, quiet: false } : null;
   }
 
   componentDidMount() { this.mounted = true; }
@@ -163,7 +167,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     // The line is shown only when focus is still on the card (or nowhere): it will receive focus; otherwise nothing is added.
     const a = document.activeElement, card = this.failedRef.current;
     const onCard = !a || a === document.body || a === document.documentElement || !!(card && card.contains(a));
-    this.setState(s => ({ failed: !ok, retrying: false, retries: s.retries + 1, landed: ok && this.restoreFocus && onCard && !this.anchored() }));
+    this.setState(s => ({ failed: !ok, retrying: false, retries: s.retries + 1, landed: ok && this.restoreFocus && onCard && !this.anchored(), quiet: false }));
   };
 
   /** A page-level card recovers onto the page's heading (it exists again once the surface rendered). */
@@ -171,15 +175,14 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
 
   /** After a successful retry, only while focus is still nowhere (the card's button disappeared): a page-level card puts focus on
    *  the page heading once it rendered (bounded); any other card on its own «تم تحميل هذا الجزء.» line — never on an answer
-   *  control. Focus that the student moved meanwhile is never taken. */
+   *  control. Focus that the student moved meanwhile is never taken, and nothing is scrolled (review fix 3): the student may
+   *  have scrolled away while the retry loaded, and a jump would move the content under a pointer about to press. */
   private placeFocusAfterRecovery(token: number) {
     const idle = () => { const a = document.activeElement; return !a || a === document.body || a === document.documentElement; };
     if (!this.anchored()) {
       const line = this.landedRef.current;
       if (!line || !idle()) { if (this.state.landed) this.setState({ landed: false }); return; }
       line.focus({ preventScroll: true });
-      if (this.context.reveal) this.context.reveal(line);
-      else { const b = line.getBoundingClientRect(); if (b.top < 0 || b.bottom > window.innerHeight) line.scrollIntoView?.({ block: "nearest" }); }
       return;
     }
     const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now()), started = now();
@@ -194,10 +197,14 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.failed) {
-      // A stable shape (line slot, then the children) so that showing or hiding the line never remounts the recovered part.
+      // A stable shape (line slot, then the children) so that showing or hiding the line never remounts the recovered part. After
+      // focus left it the line is hidden from assistive technology (no longer part of the stem's name) and keeps its place.
+      const quiet = this.state.quiet;
+      const lineProps = { tabIndex: -1, "aria-hidden": quiet || undefined, "data-testid": "recovery-landed", [RECOVERY_LINE_ATTRIBUTE]: "",
+        onBlur: () => { if (!this.state.quiet) this.setState({ quiet: true }); }, onFocus: () => { if (this.state.quiet) this.setState({ quiet: false }); } };
       const line = !this.state.landed ? null : this.variant() === "inline"
-        ? <span ref={this.landedRef as RefObject<HTMLSpanElement>} tabIndex={-1} className="eb-visually-hidden" data-testid="recovery-landed">{LANDED}</span>
-        : <p ref={this.landedRef as RefObject<HTMLParagraphElement>} tabIndex={-1} className="iex-q-recovered" data-testid="recovery-landed">{LANDED}</p>;
+        ? <span ref={this.landedRef as RefObject<HTMLSpanElement>} className="eb-visually-hidden" {...lineProps}>{LANDED}</span>
+        : <p ref={this.landedRef as RefObject<HTMLParagraphElement>} className="iex-q-recovered" {...lineProps}>{LANDED}</p>;
       return <>{line}{this.props.children}</>;
     }
     const v = this.variant(), afterRetry = this.state.retries > 0, guidanceId = this.id + "-guidance", noteId = this.id + "-note";

@@ -42,7 +42,7 @@ import {sectionShellOf,sectionMarksLabel} from "./presentation/presentationRunti
 // Phase 21E.3 — per-question fault isolation, focus after major transitions, one calm polite announcer (timer thresholds + save).
 import {recoverableLazy} from "./recoverableLazy";
 import QuestionErrorBoundary from "./student/exam/QuestionErrorBoundary";
-import {QuestionRecoveryContext,type QuestionRecovery} from "./student/exam/questionRecovery";
+import {QuestionRecoveryContext,RECOVERY_LINE_ATTRIBUTE,type QuestionRecovery} from "./student/exam/questionRecovery";
 import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement} from "./student/exam/examAnnouncements";
 import {createExamAnnouncer} from "./student/exam/examAnnouncer";
 import {installKeyboardReveal,revealDelta} from "./student/exam/keyboardReveal";
@@ -617,8 +617,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // change the screen, so they never move focus.
  const screen=loading?"loading":(!started&&result)?"result":(strictEnded&&!result)?"strict":(paused&&!result&&state?.activeAttempt)?"paused":needsStart?"gate":(structured&&cover?.enabled&&!coverStarted&&!timed&&!requiresStart)?"cover":"exam";
  const prevScreenRef=useRef(screen);
- // Brings a PROGRAMMATICALLY focused element (a heading after a screen change, a recovered part) clear of both sticky bars with
- // the smallest instant scroll. Never used for pointer focus.
+ // Brings a PROGRAMMATICALLY focused heading after a screen change clear of both sticky bars with the smallest instant scroll.
+ // Never used for pointer focus, nor after a recovery (review fix 3: a recovery never scrolls).
  const revealElement=useCallback((el:HTMLElement)=>{
   const r=el.getBoundingClientRect(),bar=document.querySelector(".iex-topbar")?.getBoundingClientRect(),nav=document.querySelector(".iex-bottom-nav")?.getBoundingClientRect();
   const d=revealDelta(r.top,r.bottom,bar?Math.max(0,bar.bottom):0,nav?Math.min(window.innerHeight,nav.top):window.innerHeight);
@@ -649,7 +649,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // a button or chart click, or turn a textarea press into a selection (student/exam/keyboardReveal.ts).
  useEffect(()=>{
   if(screen!=="exam")return;
-  return installKeyboardReveal({doc:document,win:window,within:".iex-page,.iex-review",topBar:".iex-topbar",bottomBar:".iex-bottom-nav"});
+  // Review fix 3: the headings and a recovery's line are focused only by the page's own code (preventScroll) — never revealed.
+  return installKeyboardReveal({doc:document,win:window,within:".iex-page,.iex-review",topBar:".iex-topbar",bottomBar:".iex-bottom-nav",skip:"#iex-page-heading,.iex-review-title,["+RECOVERY_LINE_ATTRIBUTE+"]"});
  },[screen]);
  // Phase 21E.3 — timer thresholds (5 min, 1 min): announced once per threshold per attempt identity, remembered per tab, from
  // the page's existing server-anchored remainingMs (read only; expiry and submission are untouched).
@@ -832,8 +833,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Phase 21E.3 — what a question recovery card may offer: a manual reload only when it cannot cost anything (every answer
  // server-confirmed, nothing submitting, not strict — leaving a strict attempt ends it). Focus returns to the question heading.
  // Review fix 1: and only while online (a reload while offline would leave the exam for the offline page).
- const recovery:QuestionRecovery={scope:"exam",reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,reveal:revealElement,
-  focusAnchor:()=>{const h=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;if(!h)return false;h.focus({preventScroll:true});revealElement(h);return true}};
+ const recovery:QuestionRecovery={scope:"exam",reloadAllowed:policy!=="strict"&&online&&saveKind==="saved"&&!submitBusy&&!pausing,strict:policy==="strict",announce,
+  focusAnchor:()=>{const h=view==="review"?reviewHeadingRef.current:questionHeadingRef.current;if(!h)return false;h.focus({preventScroll:true});return true}};
  // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
  // one progress row with the SINGLE live save-status region, then the unchanged question rendering.
  return shell(<QuestionRecoveryContext.Provider value={recovery}><div className="iex-wrap">
