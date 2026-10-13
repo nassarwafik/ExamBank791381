@@ -19,6 +19,14 @@
 //   RF2 Review Fix 2 on a saved exam whose questions show issues (E11): a summary entry focuses ITS issue instance — «الزوج 3» the
 //      third pair, «الزوج 1» the first (I-1) — and a multiple-choice question without options (marks 0) focuses «+ إضافة خيار» in
 //      the frame showing the issue, never the invalid marks; the marks' own entry still focuses the marks (I-2).
+//   RF3 Review Fix 3 (owner-listed): a compound PART's entry focuses that part's own control, never the card's invalid marks; parts
+//      that cannot be told apart lead to the card's named issue list (I-1, E12); after a MOUSE click on an entry the focused element
+//      shows a visible focus outline (style ≠ none, ≥ 2 px, a non-transparent colour) — inputs, buttons, named lists (I-2); the save
+//      status speaks the save-label table: one sentence per state change, no glyph, «جارٍ الحفظ…» like the draft button (I-4).
+//   RF3 audit / owner observations: the bulk-action bar and the inline explorer stick BELOW the stuck toolbar — every control
+//      hit-tests to itself, by mouse and by Tab; a revealed section clears the bar (A-01); where the toolbar is static (200 %, phone)
+//      a deletion's neighbour / a Ctrl+Y target is revealed, never focused off-screen (A-02); closing the explorer's dialog after a
+//      zoom never leaves focus on <body> and «المزيد» opens again (O-1); the explorer shows a matching question by its words (O-2).
 // On a BEFORE build the 21E.2 toolbar does not exist: each probe records what it finds ("absent") instead of throwing.
 
 export async function runBuilder({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow }) {
@@ -109,6 +117,12 @@ export async function runBuilder({ vp: [name, viewport, touch, dsf], newPage, or
   await runBlueprintMenu({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
   await runModalSurface({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
   await runInstanceFocus({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runPartFocus({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runSaveStatus({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow });
+  await runStickyLayers({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runRevealStatic({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runExplorerZoom({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
+  await runExplorerPreview({ vp: [name, viewport, touch, dsf], newPage, origin, record, check });
 }
 
 // K1 — what the open ActionMenu looks like at this instant (page context): open? focus inside? host = the aria-modal builder
@@ -388,5 +402,354 @@ async function runInstanceFocus({ vp: [name, viewport, touch, dsf], newPage, ori
       o.name === "+ إضافة خيار" && o.tag === "BUTTON" && o.card === "sb-q-s1c1" && o.codes.split(" ").includes("MISSING_OPTIONS") && o.visible &&
       m.name === "العلامة" && m.tag === "INPUT" && m.card === "sb-q-s1c1" && m.visible, JSON.stringify({ options: o, marks: m }));
   } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder RF2 instance-focus run", false, rec.error); }
+  await ctx.close();
+}
+
+// RF3 — Review Fix 3 (owner-listed I-1 / I-2), in real Chromium (reduced motion). Every entry is opened by a MOUSE click: Chromium
+// does not match :focus-visible for the script focus that follows a pointer click, so the focused element must draw its own ring.
+//   I-1 (E12): s1k1 has marks 0 and a second multiple-choice part without options: its «… بأقل من خيارين» entry focuses «+ إضافة خيار»
+//       inside part 2 (`.sb-compound-editor > .sb-part`, the frozen compound@1 markup) — never «العلامة», never part 1's control; s1k2's
+//       two parts share the label «س» (cannot be told apart): the entry focuses the card's named issue list «مشكلات السؤال 2».
+//   I-2 (E11 + E12): after each mouse click the focused element (a pair input, «+ إضافة خيار», the marks input, a part's button, a named
+//       list) has a visible outline: computed outline-style ≠ none, outline-width ≥ 2 px, outline colour not transparent.
+const ringProbe = () => {
+  const a = document.activeElement, bar = document.querySelector(".sb-toolbar");
+  const label = a?.id ? document.querySelector(`label[for="${a.id}"]`)?.textContent : null;
+  const r = a?.getBoundingClientRect(), sticky = !!bar && getComputedStyle(bar).position === "sticky", top = sticky ? bar.getBoundingClientRect().bottom : 0;
+  const cs = a ? getComputedStyle(a) : null, alpha = c => { const m = /rgba?\(([^)]+)\)/.exec(c || ""); if (!m) return c && c !== "transparent" ? 1 : 0; const v = m[1].split(/[ ,/]+/).filter(Boolean); return v.length > 3 ? parseFloat(v[3]) : 1; };
+  const part = a?.closest(".sb-compound-editor > .sb-part");
+  return { name: (label || a?.getAttribute("aria-label") || a?.textContent || a?.tagName || "").replace(/\s+/g, " ").trim().slice(0, 50), tag: a?.tagName || "", role: a?.getAttribute("role") || "",
+    card: a?.closest(".sb-question")?.id || "", part: part ? [...part.parentElement.children].filter(c => c.classList.contains("sb-part")).indexOf(part) + 1 : 0,
+    visible: !!r && r.height > 0 && r.top >= top - 1 && r.bottom <= window.innerHeight + 1, focusVisible: !!a?.matches(":focus-visible"),
+    outlineStyle: cs?.outlineStyle || "", outlineWidth: cs ? parseFloat(cs.outlineWidth) || 0 : 0, outlineColor: cs?.outlineColor || "", outlineAlpha: cs ? alpha(cs.outlineColor) : 0 };
+};
+const ringShown = f => f.outlineStyle !== "none" && f.outlineWidth >= 2 && f.outlineAlpha > 0;
+async function runPartFocus({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf3-" + name;
+  const { ctx, page, shot } = await newPage(id, viewport, touch, dsf);
+  const rec = record.viewports[id] = {};
+  try {
+    const load = async (title, firstCard) => {
+      await page.goto(origin + "/", { waitUntil: "networkidle" });
+      await page.getByRole("button", { name: /الامتحانات المحفوظة/ }).first().click();
+      await page.locator(".saved-exam-item", { hasText: title }).getByRole("button", { name: /فتح وتعديل/ }).click();
+      await page.locator(firstCard).waitFor({ timeout: 20000 }); await page.waitForTimeout(500);
+    };
+    const open = async (text, n, nth = 0) => {
+      await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(150);
+      const entries = page.locator(".sb-issues-list .sb-issue-link", { hasText: text });
+      const count = await entries.count();
+      if (count <= nth) return { entry: count };
+      await entries.nth(nth).click(); await page.waitForTimeout(600);       // a MOUSE click (Playwright's click = pointer events)
+      const f = await page.evaluate(ringProbe);
+      await shot(n);
+      return { ...f, entries: count };
+    };
+    await load("اختبار مواضع المشكلات", "#sb-q-s1c1");
+    rec.pair3 = await open("الزوج 3", "01-pair3-mouse");
+    rec.options = await open("بأقل من خيارين", "02-options-mouse");
+    rec.marks = await open("علامته غير صالحة", "03-marks-mouse");
+    await load("اختبار بنود السؤال المركّب", "#sb-q-s1k1");
+    rec.part = await open("«البند 2 من » اختيار من متعدد بأقل من خيارين", "04-compound-part-mouse");
+    rec.partMarks = await open("علامته غير صالحة", "05-compound-marks-mouse");
+    rec.sameLabel = await open("«البند س من » اختيار من متعدد بأقل من خيارين", "06-compound-same-label-mouse", 1);
+    const p = rec.part, pm = rec.partMarks, sl = rec.sameLabel;
+    check(id, "RF3 I-1 a compound part's «… بأقل من خيارين» focuses «+ إضافة خيار» in THAT part (part 2), never «العلامة» or part 1; its marks entry focuses «العلامة»; same-label parts lead to «مشكلات السؤال 2»",
+      p.name === "+ إضافة خيار" && p.tag === "BUTTON" && p.card === "sb-q-s1k1" && p.part === 2 && p.visible &&
+      pm.name === "العلامة" && pm.tag === "INPUT" && pm.card === "sb-q-s1k1" && pm.visible &&
+      sl.entries === 2 && sl.role === "group" && sl.name === "مشكلات السؤال 2" && sl.card === "sb-q-s1k2", JSON.stringify({ part: p, marks: pm, sameLabel: sl }));
+    // RR3-3 — a row issue inside a part focuses THAT row (s1k3: valid marks, pair 3 of its matching part incomplete).
+    rec.row = await open("الزوج 3 في «البند 2 من »", "07-compound-row-mouse");
+    rec.rowWhere = await page.evaluate(() => {
+      const a = document.activeElement, row = a?.closest(".sb-field-row"), part = a?.closest(".sb-compound-editor > .sb-part");
+      return { value: a && "value" in a ? a.value : null, row: row && part ? [...part.querySelectorAll(".sb-field-row")].indexOf(row) + 1 : 0 };
+    });
+    const rw = rec.row;
+    check(id, "RR3-3 a row issue inside a part («الزوج 3 في «البند 2 من …»») focuses THAT pair's empty «العنصر» (part 2, row 3) with a visible ring — never pair 1",
+      rw.card === "sb-q-s1k3" && rw.part === 2 && rw.tag === "INPUT" && rec.rowWhere.row === 3 && rec.rowWhere.value === "" && rw.visible && ringShown(rw), JSON.stringify({ row: rw, where: rec.rowWhere }));
+    const all = { pair3: rec.pair3, options: rec.options, marks: rec.marks, part: p, partMarks: pm, sameLabel: sl, row: rw };
+    check(id, "RF3 I-2 after a MOUSE click on an entry the focused element shows a visible focus outline (style ≠ none, ≥ 2 px, not transparent): pair input, «+ إضافة خيار», «العلامة», a part's button, a named list",
+      Object.values(all).every(f => f.tag && ringShown(f)), JSON.stringify(Object.fromEntries(Object.entries(all).map(([k, f]) => [k, { name: f.name, focusVisible: f.focusVisible, style: f.outlineStyle, width: f.outlineWidth, color: f.outlineColor }]))));
+  } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder RF3 part-focus run", false, rec.error); }
+  await ctx.close();
+}
+
+// RF3 I-4 — one save vocabulary, in real Chromium on E9. The save request is held (page.route) so the in-flight state can be read.
+// A MutationObserver records what every live region (role=status / alert / log, aria-live) says, without aria-hidden content, each
+// time it changes: edit → «تغييرات غير محفوظة», a MOUSE click on «حفظ مسودة» → «جارٍ الحفظ…» (the status and the button show the same
+// string; the button is no live region and sits in none), release → «محفوظ». Exactly those three sentences, from the status only.
+async function runSaveStatus({ vp: [name, viewport, touch, dsf], newPage, origin, record, check, overflow }) {
+  const id = "builder-rf3s-" + name;
+  const { ctx, page, shot } = await newPage(id, viewport, touch, dsf);
+  const rec = record.viewports[id] = {};
+  let release = () => {};
+  try {
+    const held = new Promise(r => { release = r; });
+    await page.route(u => /\/api\/(saved-exams|save-exam-artifact)$/.test(u.pathname), async route => {
+      const req = route.request(), body = req.postData() || "";
+      if (req.method() === "POST" && (/save-exam-artifact$/.test(new URL(req.url()).pathname) || /"action"\s*:\s*"save"/.test(body))) await held;
+      await route.continue();
+    });
+    await page.goto(origin + "/", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /الامتحانات المحفوظة/ }).first().click();
+    await page.locator(".saved-exam-item", { hasText: "اختبار الوحدة الثانية" }).getByRole("button", { name: /فتح وتعديل/ }).click();
+    await page.locator("#sb-q-s2q2").waitFor({ timeout: 20000 }); await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      const spoken = el => { const c = el.cloneNode(true); c.querySelectorAll('[aria-hidden="true"]').forEach(n => n.remove()); return (c.textContent || "").replace(/\s+/g, " ").trim(); };
+      const live = () => [...document.querySelectorAll('[role="status"], [role="alert"], [role="log"], [aria-live]')].filter(n => n.getAttribute("aria-live") !== "off");
+      const last = new Map(live().map(r => [r, spoken(r)]));
+      window.__rf3Said = [];
+      new MutationObserver(() => { for (const r of live()) { const t = spoken(r); if (last.get(r) !== t) { last.set(r, t); if (t) window.__rf3Said.push({ region: r.classList.contains("sb-save-state") ? "status" : (r.className || r.tagName), text: t }); } } })
+        .observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+    });
+    await page.locator(".sb-exam-title").fill("اختبار الوحدة الثانية — معدّل"); await page.waitForTimeout(300);
+    await page.locator(".sb-tb-save").getByRole("button", { name: "حفظ مسودة" }).click();   // a MOUSE click
+    await page.locator(".sb-save-state.is-saving").waitFor({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(200);
+    rec.during = await page.evaluate(() => {
+      const spoken = el => { const c = el.cloneNode(true); c.querySelectorAll('[aria-hidden="true"]').forEach(n => n.remove()); return (c.textContent || "").replace(/\s+/g, " ").trim(); };
+      const LIVE = '[role="status"], [role="alert"], [role="log"], [aria-live]:not([aria-live="off"])';
+      const chip = document.querySelector(".sb-save-state"), button = document.querySelector(".sb-tb-save button");
+      const r = chip?.getBoundingClientRect(), a = document.activeElement;
+      return { chipText: chip?.textContent ?? null, chipSpoken: chip ? spoken(chip) : null, role: chip?.getAttribute("role") ?? null, live: chip?.getAttribute("aria-live") ?? null,
+        atomic: chip?.getAttribute("aria-atomic") ?? null, buttonText: (button?.textContent || "").trim(), buttonDisabled: !!button?.disabled,
+        buttonInLive: !!(button?.closest(LIVE) || button?.querySelector(LIVE)), saying: [...document.querySelectorAll(LIVE)].filter(n => spoken(n).includes(spoken(chip))).length,
+        chipInView: !!r && r.width > 0 && r.left >= 0 && r.right <= window.innerWidth, focus: a === document.body ? "BODY" : (a?.className || a?.tagName || "") };
+    });
+    rec.duringOverflow = await overflow(page);
+    await shot("01-saving");
+    release();
+    await page.locator(".sb-save-state.is-saved").waitFor({ timeout: 5000 }).catch(() => {}); await page.waitForTimeout(300);
+    rec.after = await page.evaluate(() => ({ chipText: document.querySelector(".sb-save-state")?.textContent ?? null, buttonText: (document.querySelector(".sb-tb-save button")?.textContent || "").trim() }));
+    rec.said = await page.evaluate(() => window.__rf3Said);
+    await shot("02-saved");
+    const d = rec.during, GLYPH = /[✓●⏳↺]|\p{Extended_Pictographic}/u;
+    check(id, "RF3 I-4 the save status speaks the save-label table — one sentence per state change, no glyph: «تغييرات غير محفوظة» → «جارٍ الحفظ…» (the draft button's own string; the button is no live region) → «محفوظ»",
+      d.chipText === "⏳ جارٍ الحفظ…" && d.chipSpoken === "جارٍ الحفظ…" && d.buttonText === d.chipSpoken && d.buttonDisabled && !d.buttonInLive && d.saying === 1 &&
+      d.role === "status" && d.live === "polite" && d.atomic === "true" && d.chipInView && rec.duringOverflow.scrollWidth <= rec.duringOverflow.clientWidth &&
+      rec.after.chipText === "✓ محفوظ" && rec.after.buttonText === "حفظ مسودة" &&
+      JSON.stringify(rec.said) === JSON.stringify([{ region: "status", text: "تغييرات غير محفوظة" }, { region: "status", text: "جارٍ الحفظ…" }, { region: "status", text: "محفوظ" }]) &&
+      rec.said.every(x => !GLYPH.test(x.text)), JSON.stringify({ during: d, overflow: rec.duringOverflow, after: rec.after, said: rec.said }));
+  } catch (e) { release(); rec.error = String(e).slice(0, 300); check(id, "builder RF3 save-status run", false, rec.error); }
+  await ctx.close();
+}
+
+// RF3 — confirmed audit findings and owner-listed observations (Review Fix 3), in real Chromium (reduced motion). Pointer actions use
+// page.mouse at the measured centre (a covered control must FAIL the check, not make Playwright wait for it to become clickable).
+const openSaved = async (page, origin, title, firstCard) => {
+  await page.goto(origin + "/", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /الامتحانات المحفوظة/ }).first().click();
+  await page.locator(".saved-exam-item", { hasText: title }).getByRole("button", { name: /فتح وتعديل/ }).click();
+  await page.locator(firstCard).waitFor({ timeout: 20000 }); await page.waitForTimeout(500);
+};
+const mouseOn = async (page, locator) => {
+  const b = await locator.boundingBox();
+  if (!b) return false;
+  await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+  return true;
+};
+// Every visible control of `selector` (page context): does a hit test at its centre land on it? Where it sits otherwise.
+const hitProbe = selector => {
+  const host = document.querySelector(selector), tb = document.querySelector(".sb-toolbar");
+  if (!host) return { present: false };
+  const r = host.getBoundingClientRect(), t = tb.getBoundingClientRect();
+  const controls = [...host.querySelectorAll("button, select, input")].filter(c => { const b = c.getBoundingClientRect(); return b.width > 0 && b.height > 0 && b.bottom > 0 && b.top < innerHeight; }).map(c => {
+    const b = c.getBoundingClientRect(), hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { name: (c.getAttribute("aria-label") || c.textContent || c.tagName).replace(/\s+/g, " ").trim().slice(0, 24), ok: !!hit && (hit === c || c.contains(hit)),
+      hit: hit?.closest(".sb-toolbar") ? "TOOLBAR" : hit === c || c.contains(hit) ? "self" : (hit?.className || hit?.tagName || "none").toString().slice(0, 24), top: Math.round(b.top) };
+  });
+  return { present: true, position: getComputedStyle(host).position, cssTop: getComputedStyle(host).top, top: Math.round(r.top), bottom: Math.round(r.bottom),
+    toolbarSticky: getComputedStyle(tb).position === "sticky", toolbarBottom: Math.round(t.bottom), vh: innerHeight, controls };
+};
+const activeHit = () => {
+  const a = document.activeElement, r = a?.getBoundingClientRect(), hit = r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+  return { name: (a?.getAttribute("aria-label") || a?.textContent || a?.tagName || "").replace(/\s+/g, " ").trim().slice(0, 30), tag: a?.tagName || "", body: a === document.body,
+    inBar: !!a?.closest(".sb-bulk-bar"), inNav: !!a?.closest("aside.sb-navigator"), top: r ? Math.round(r.top) : null, covered: !!hit?.closest(".sb-toolbar") && !a?.closest(".sb-toolbar"),
+    visible: !!hit && (hit === a || !!a?.contains(hit)) };
+};
+//   A-01: E9 — scroll to the second section, MOUSE-select «السؤال 1 في s2»: the bulk-action bar (sticky ≥ 641 px) sticks below the stuck
+//         toolbar; each of its controls hit-tests to itself; Tab from the control before it focuses its first control, not covered;
+//         a mouse click on «إلغاء التحديد» clears the selection. ≤ 640 px the bar is static: brought into view, every control hit-tests.
+//         Inline explorer (> 900 px), scrolled 2500 px: its controls hit-test to themselves and a mouse click focuses «بحث في الامتحان».
+//         With questions selected, a summary entry reveals «مشكلات القسم 2» below the toolbar AND the bar.
+/** RR3-A11Y-2 — how much of the focused control the sticky layers cover: 5 points (centre + inset corners, clipped to the screen); a
+ *  control that is itself in a sticky / fixed layer (the toolbar, the bar, a menu) is reported with its layer and not judged. */
+const coverProbe = () => {
+  const a = document.activeElement;
+  if (!a || a === document.body) return { body: true };
+  const layers = [document.querySelector(".sb-toolbar"), document.querySelector(".sb-bulk-bar")].filter(l => l && getComputedStyle(l).position === "sticky");
+  let layer = "";
+  for (let n = a; n && !n.classList?.contains("structured-builder-overlay"); n = n.parentElement) { const p = getComputedStyle(n).position; if (p === "sticky" || p === "fixed") { layer = n.className || n.tagName; break; } }
+  const r = a.getBoundingClientRect(), x0 = Math.max(r.left + 2, 1), x1 = Math.min(r.right - 2, innerWidth - 1), y0 = Math.max(r.top + 2, 1), y1 = Math.min(r.bottom - 2, innerHeight - 1);
+  const pts = [[(x0 + x1) / 2, (y0 + y1) / 2], [x0, y0], [x1, y0], [x0, y1], [x1, y1]];
+  const covered = pts.filter(([x, y]) => { const h = document.elementFromPoint(x, y); return !!h && !a.contains(h) && layers.some(l => l.contains(h)); }).length;
+  return { name: (a.getAttribute("aria-label") || a.textContent || a.tagName || "").replace(/\s+/g, " ").trim().slice(0, 30), top: Math.round(r.top), layer: String(layer).slice(0, 40),
+    sticky: layers.map(l => l.className.split(" ")[0] + ":" + Math.round(l.getBoundingClientRect().bottom)), fully: covered === 5, partly: covered > 0 && covered < 5 };
+};
+async function runStickyLayers({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf3l-" + name;
+  const { ctx, page, shot } = await newPage(id, viewport, touch, dsf);
+  const rec = record.viewports[id] = {};
+  try {
+    await openSaved(page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+    const centre = sel => page.evaluate(s => { const o = document.querySelector(".structured-builder-overlay"), c = document.querySelector(s); o.scrollTop += c.getBoundingClientRect().top - o.clientHeight / 2; }, sel);
+    await centre("#sb-q-s2q1"); await page.waitForTimeout(300);
+    await mouseOn(page, page.locator("#sb-q-s2q1").getByRole("checkbox", { name: "تحديد السؤال" })); await page.waitForTimeout(400);
+    const stuck = await page.evaluate(() => getComputedStyle(document.querySelector(".sb-bulk-bar")).position === "sticky");
+    if (!stuck) { await page.evaluate(() => document.querySelector(".sb-bulk-bar").scrollIntoView({ block: "center" })); await page.waitForTimeout(300); }
+    rec.bar = await page.evaluate(hitProbe, ".sb-bulk-bar");
+    await shot("01-bulk-bar");
+    // Tab from the control just before the bar (focused without scrolling, as a teacher's previous Tab leaves it).
+    await page.evaluate(() => {
+      const o = document.querySelector(".structured-builder-overlay"), bar = document.querySelector(".sb-bulk-bar");
+      const all = [...o.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+      const first = all.findIndex(el => bar.contains(el));
+      all[first - 1]?.focus({ preventScroll: true });
+    });
+    await page.keyboard.press("Tab"); await page.waitForTimeout(150);
+    rec.tab = await page.evaluate(activeHit);
+    // RR3-A11Y-2 / audit B-02 (WCAG 2.4.11) — with the selection up, Shift+Tab upward through the content from the last control of
+    // «السؤال 2 في s2»: no focus stop is fully or partly hidden under the sticky layers (the stuck toolbar and the bulk-action bar).
+    await page.evaluate(() => {
+      const c = document.querySelector("#sb-q-s2q2");
+      const all = [...c.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')];
+      all.at(-1)?.focus();
+    });
+    rec.walk = [];
+    for (let i = 0; i < 40; i++) { await page.keyboard.press("Shift+Tab"); await page.waitForTimeout(60); rec.walk.push(await page.evaluate(coverProbe)); }
+    const hidden = rec.walk.filter(w => w.layer === "" && (w.fully || w.partly));
+    check(id, "RR3-A11Y-2 / B-02 Shift+Tab ×40 through the content with questions selected: no focus stop is hidden (fully or partly) under the sticky toolbar / bulk-action bar, none on <body>",
+      rec.walk.length === 40 && hidden.length === 0 && rec.walk.every(w => !w.body), JSON.stringify({ hidden, stops: rec.walk.length, sticky: rec.walk[0]?.sticky }));
+    await shot("01b-shift-tab-walk");
+    // Where the bar is static (≤ 640 px) the walk scrolled it away: back into view for the pointer step below.
+    if (!stuck) { await page.evaluate(() => document.querySelector(".sb-bulk-bar").scrollIntoView({ block: "center" })); await page.waitForTimeout(300); }
+    rec.clearClicked = await mouseOn(page, page.locator(".sb-bulk-bar").getByRole("button", { name: "إلغاء التحديد" })); await page.waitForTimeout(300);
+    rec.cleared = (await page.locator(".sb-bulk-bar").count()) === 0;
+    const b = rec.bar, barOk = b.present && b.controls.length >= 5 && b.controls.every(c => c.ok) && (!b.toolbarSticky || b.position !== "sticky" || b.top >= b.toolbarBottom) && b.bottom <= b.vh;
+    check(id, "RF3 A-01 the bulk-action bar sticks below the stuck toolbar: every control hit-tests to itself; Tab reaches its first control uncovered; a mouse click on «إلغاء التحديد» clears the selection",
+      barOk && rec.tab.inBar && !rec.tab.covered && rec.tab.visible && rec.clearClicked && rec.cleared, JSON.stringify({ bar: b, tab: rec.tab, cleared: rec.cleared }));
+
+    if (viewport.width > 900) {
+      await page.getByRole("button", { name: "المزيد من أدوات الامتحان" }).click();
+      await page.locator(".eb-menu-panel").getByRole("button", { name: "مستكشف الأسئلة" }).click(); await page.waitForTimeout(300);
+      await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 2500; }); await page.waitForTimeout(300);
+      rec.nav = await page.evaluate(hitProbe, "aside.sb-navigator");
+      await mouseOn(page, page.locator("aside.sb-navigator").getByRole("searchbox", { name: "بحث في الامتحان" })); await page.waitForTimeout(150);
+      rec.navClick = await page.evaluate(activeHit);
+      await shot("02-explorer-scrolled");
+      const n = rec.nav;
+      check(id, "RF3 A-01 the inline explorer sticks below the stuck toolbar (scrolled): its controls hit-test to themselves; a mouse click focuses «بحث في الامتحان»",
+        n.present && n.controls.length >= 3 && n.controls.every(c => c.ok) && n.top >= n.toolbarBottom && rec.navClick.name === "بحث في الامتحان" && rec.navClick.inNav && !rec.navClick.covered,
+        JSON.stringify({ nav: { ...n, controls: n.controls?.slice(0, 8) }, click: rec.navClick }));
+      await page.getByRole("button", { name: "المزيد من أدوات الامتحان" }).click();
+      await page.locator(".eb-menu-panel").getByRole("button", { name: "مستكشف الأسئلة" }).click(); await page.waitForTimeout(300);
+    }
+
+    // A selection + a section-level issue in s2 (capScore without a maximum): the entry reveals the section's named list below both layers.
+    await centre("#sb-q-s1q2"); await page.waitForTimeout(200);
+    await mouseOn(page, page.locator("#sb-q-s1q2").getByRole("checkbox", { name: "تحديد السؤال" })); await page.waitForTimeout(300);
+    await page.locator('[data-section-id="s2"] .sb-policy-choices input[type="radio"]').nth(1).check(); await page.waitForTimeout(300);
+    await page.evaluate(() => { document.querySelector(".structured-builder-overlay").scrollTop = 0; }); await page.waitForTimeout(200);
+    await page.locator(".sb-issues-list .sb-issue-link", { hasText: "القسم 2" }).first().click(); await page.waitForTimeout(700);
+    rec.reveal = await page.evaluate(() => {
+      const a = document.activeElement, r = a.getBoundingClientRect(), tb = document.querySelector(".sb-toolbar"), bar = document.querySelector(".sb-bulk-bar");
+      const tSticky = getComputedStyle(tb).position === "sticky", bSticky = !!bar && getComputedStyle(bar).position === "sticky";
+      const edge = Math.max(tSticky ? tb.getBoundingClientRect().bottom : 0, bSticky ? bar.getBoundingClientRect().bottom : 0);
+      return { name: a.getAttribute("aria-label") || a.tagName, top: Math.round(r.top), edge: Math.round(edge), bar: !!bar, barSticky: bSticky, vh: innerHeight };
+    });
+    await shot("03-reveal-with-selection");
+    const rv = rec.reveal;
+    check(id, "RF3 A-01 with questions selected, a summary entry reveals «مشكلات القسم 2» below the toolbar AND the bulk-action bar (never under the bar)",
+      rv.name === "مشكلات القسم 2" && rv.bar && rv.top >= rv.edge - 1 && rv.top + 24 <= rv.vh, JSON.stringify(rv));
+  } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder RF3 sticky-layers run", false, rec.error); }
+  await ctx.close();
+}
+
+//   A-02: E9 — (A) «السؤال 4» of section 1 at the top of the visible area, a MOUSE click on its «حذف»: focus goes to «السؤال 3» and its heading
+//         is on screen (below the stuck toolbar where it is sticky, inside the viewport); (B) Enter on «حذف» of «السؤال 2», Enter on the
+//         toast's «تراجع», Ctrl+Z, Ctrl+Y: «السؤال 2» is focused with its heading on screen. 200 % / phone used to give −934 / −1319.
+const headProbe = () => {
+  const a = document.activeElement, r = a.getBoundingClientRect(), tb = document.querySelector(".sb-toolbar");
+  const edge = getComputedStyle(tb).position === "sticky" ? tb.getBoundingClientRect().bottom : 0;
+  return { focus: a === document.body ? "BODY" : a.id || a.getAttribute("aria-label") || a.tagName, top: Math.round(r.top), bottom: Math.round(r.bottom), edge: Math.round(edge), vh: innerHeight,
+    onScreen: r.top >= edge - 1 && r.top + 48 <= innerHeight };
+};
+async function runRevealStatic({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf3r-" + name;
+  const rec = record.viewports[id] = {};
+  for (const step of ["A", "B"]) {
+    const { ctx, page, shot } = await newPage(id + "-" + step, viewport, touch, dsf);
+    try {
+      await openSaved(page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+      if (step === "A") {
+        // «السؤال 4» at the top of what the teacher sees: 12 px below the stuck toolbar, or below the screen's top where it is static.
+        await page.evaluate(() => {
+          const o = document.querySelector(".structured-builder-overlay"), c = document.getElementById("sb-q-s1q4"), tb = document.querySelector(".sb-toolbar");
+          const edge = getComputedStyle(tb).position === "sticky" ? tb.getBoundingClientRect().bottom : 0;
+          o.scrollTop += c.getBoundingClientRect().top - edge - 12;
+        }); await page.waitForTimeout(300);
+        await mouseOn(page, page.locator("#sb-q-s1q4").getByRole("button", { name: "حذف", exact: true })); await page.waitForTimeout(700);
+        rec.A = await page.evaluate(headProbe);
+        await shot("01-after-delete");
+      } else {
+        await page.locator("#sb-q-s1q2").getByRole("button", { name: "حذف", exact: true }).focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(600);
+        await page.locator(".eb-toast").getByRole("button", { name: /تراجع/ }).focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(700);
+        await page.keyboard.press("Control+z"); await page.waitForTimeout(600);
+        await page.keyboard.press("Control+y"); await page.waitForTimeout(700);
+        rec.B = await page.evaluate(headProbe);
+        await shot("02-after-redo");
+      }
+    } catch (e) { rec[step] = { error: String(e).slice(0, 300) }; }
+    await ctx.close();
+  }
+  check(id, "RF3 A-02 the card focus lands on is on screen: a deletion's neighbour (mouse «حذف» on «السؤال 4») and the Ctrl+Y target («السؤال 2») — below the stuck toolbar or the screen's top where it is static",
+    rec.A?.focus === "sb-q-s1q3" && rec.A.onScreen && rec.B?.focus === "sb-q-s1q2" && rec.B.onScreen, JSON.stringify(rec));
+}
+
+//   O-1 (150 % / 200 % only — a zoom): E9 at 1280 × 900, the inline explorer open with focus in «بحث في الامتحان»; the window zooms to
+//         this viewport, the explorer becomes a dialog; Escape closes it — focus is on «المزيد» (never <body>) and a MOUSE click on
+//         «المزيد» opens its menu.
+async function runExplorerZoom({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  if (name !== "150pct" && name !== "200pct") return;
+  const id = "builder-rf3z-" + name;
+  const { ctx, page, shot } = await newPage(id, { width: 1280, height: 900 }, touch, dsf);
+  const rec = record.viewports[id] = {};
+  try {
+    await openSaved(page, origin, "اختبار الوحدة الثانية", "#sb-q-s2q2");
+    const more = page.getByRole("button", { name: "المزيد من أدوات الامتحان" });
+    await more.click(); await page.locator(".eb-menu-panel").getByRole("button", { name: "مستكشف الأسئلة" }).click(); await page.waitForTimeout(300);
+    await mouseOn(page, page.locator("aside.sb-navigator").getByRole("searchbox", { name: "بحث في الامتحان" })); await page.waitForTimeout(150);
+    rec.before = await page.evaluate(activeHit);
+    await page.setViewportSize(viewport); await page.waitForTimeout(700);
+    rec.dialog = await page.getByRole("dialog", { name: "مستكشف الأسئلة" }).count();
+    await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+    rec.after = await page.evaluate(activeHit);
+    rec.dialogAfter = await page.getByRole("dialog", { name: "مستكشف الأسئلة" }).count();
+    await shot("01-after-escape");
+    await mouseOn(page, more); await page.waitForTimeout(300);
+    rec.menu = { expanded: await more.getAttribute("aria-expanded"), panel: await page.locator(".eb-menu-panel").count() };
+    await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+    check(id, "RF3 O-1 zoomed with focus in the inline explorer: Escape on the dialog it became returns focus to «المزيد» (never <body>); the next click on «المزيد» opens it",
+      rec.before.name === "بحث في الامتحان" && rec.dialog === 1 && rec.dialogAfter === 0 && !rec.after.body && rec.after.name === "المزيد من أدوات الامتحان" && rec.menu.expanded === "true" && rec.menu.panel === 1, JSON.stringify(rec));
+  } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder RF3 explorer-zoom run", false, rec.error); }
+  await ctx.close();
+}
+
+//   O-2: E13 — a matching question written as the builder writes it (a markdown table in its text): the explorer (inline panel or
+//         dialog) shows «العمود أ، العمود ب · HTTP · DNS · HTTPS», and no entry text or selection checkbox name carries «|» or «---».
+async function runExplorerPreview({ vp: [name, viewport, touch, dsf], newPage, origin, record, check }) {
+  const id = "builder-rf3p-" + name;
+  const { ctx, page, shot } = await newPage(id, viewport, touch, dsf);
+  const rec = record.viewports[id] = {};
+  try {
+    await openSaved(page, origin, "اختبار سؤال المطابقة", "#sb-q-s1m1");
+    await page.getByRole("button", { name: "المزيد من أدوات الامتحان" }).click();
+    await page.locator(".eb-menu-panel").getByRole("button", { name: "مستكشف الأسئلة" }).click(); await page.waitForTimeout(400);
+    rec.nav = await page.evaluate(() => ({ texts: [...document.querySelectorAll(".sb-navigator .sb-nav-text")].map(n => n.textContent),
+      labels: [...document.querySelectorAll(".sb-navigator .sb-nav-check")].map(n => n.getAttribute("aria-label")), dialog: !!document.querySelector(".sb-navigator-dialog") }));
+    await shot("01-explorer-matching");
+    const all = [...rec.nav.texts, ...rec.nav.labels];
+    check(id, "RF3 O-2 the question explorer shows a matching question by its words («العمود أ، العمود ب · HTTP · DNS · HTTPS»), never its table syntax (no «|» / «---» in a text or a checkbox name)",
+      rec.nav.texts.length === 2 && rec.nav.texts[1] === "العمود أ، العمود ب · HTTP · DNS · HTTPS" && all.every(t => t && !/\||---/.test(t)), JSON.stringify(rec.nav));
+  } catch (e) { rec.error = String(e).slice(0, 300); check(id, "builder RF3 explorer-preview run", false, rec.error); }
   await ctx.close();
 }

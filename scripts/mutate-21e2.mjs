@@ -27,7 +27,14 @@ const T = {
   builderK2: "src/StructuredExamBuilder.reviewK2.21e2.test.tsx",
   appK2: "src/App.builderFocus.reviewK2.21e2.test.tsx",
   inlineK3: "src/builder/inlineIssues.reviewK3.21e2b.test.tsx",
-  inlineWiring: "src/builder/inlineIssuesWiring.21e2b.test.tsx"
+  inlineWiring: "src/builder/inlineIssuesWiring.21e2b.test.tsx",
+  inlineRF3: "src/builder/inlineIssues.reviewRF3.21e2b.test.tsx",
+  issueIndexRF3: "src/builder/issueIndex.rf3.21e2b.test.ts",
+  sticky: "src/builder/stickyLayers.reviewRF3.21e2b.test.tsx",
+  explorer: "src/builder/explorer.reviewRF3.21e2b.test.tsx",
+  saveStatus: "src/builder/saveStatus.reviewRF3.21e2b.test.tsx",
+  reliability: "src/StructuredExamBuilder.reliability.test.tsx",
+  productivity: "src/structuredExamProductivity.test.ts"
 };
 const M = (id, file, before, after, tests, what) => ({ id, file, before, after, tests, what });
 const mutants = [
@@ -67,7 +74,7 @@ const mutants = [
   // composition guard; the K2 file's composition on a non-text editor host (EditContext-style) does.
   M("B4-ime-escape", "src/ui/useModalSurface.ts", "if (event.isComposing) return;", "", [T.surface, T.surfaceK2], "an IME composition's Escape exits the builder"),
   // A — toolbar structure
-  M("A1-menu-items-visible", "src/builder/BuilderToolbar.tsx", '<ActionMenu label="المزيد من أدوات الامتحان" text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">\n              <MenuItems items={moreItems} />\n            </ActionMenu>', '<MenuItems items={moreItems} />', [T.toolbar], "overflow items rendered as visible buttons (> 8)"),
+  M("A1-menu-items-visible", "src/builder/BuilderToolbar.tsx", '<ActionMenu label={MORE_MENU_LABEL} text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">\n              <MenuItems items={moreItems} />\n            </ActionMenu>', '<MenuItems items={moreItems} />', [T.toolbar], "overflow items rendered as visible buttons (> 8)"),
   // Review Fix (independent adversarial review of the first implementation)
   M("R1-full-identity-in-gradebook", "src/teacher/teacherExports.ts", "      maskedStudentCode(s.studentCode),", "      s.studentCode || \"\",", [T.exportsUnit, T.exportsPanel], "the gradebook export carries the full identity / login number"),
   M("R2-code-back-in-drill", "src/teacher/teacherExports.ts", 'export const RESULTS_COLUMNS = ["الطالب", "الحالة",', 'export const RESULTS_COLUMNS = ["الطالب", "كود الطالب", "الحالة",', [T.exportsUnit, T.dashboard], "the drill export grows an extra column (identity) the screen never shows"),
@@ -102,32 +109,52 @@ const mutants = [
   M("K2-7-fallback-before-render", "src/ui/useModalSurface.ts", "      void Promise.resolve().then(() => {", "      void [0].forEach(() => {", [T.surfaceK2, T.appK2], "the return target is read during the closing commit, before it is rendered"),
   M("K2-8-no-reactivation-guard", "src/ui/useModalSurface.ts", "        if (ACTIVE.has(surface)) return;\n", "", [T.surfaceK2], "StrictMode's simulated unmount sends focus out of the open surface"),
   M("K2-9-fallback-steals-placed-focus", "src/ui/useModalSurface.ts", "        if (!focusLost() && !(a && surface.contains(a))) return;\n", "", [T.surfaceK2], "the return target overrides focus the closing update placed on purpose"),
-  M("K2-10-static-toolbar-band", "src/StructuredExamBuilder.tsx", '    if (position === "static" || position === "relative") return 12;\n', "", [T.builderK2], "a static (phone / 200 %) toolbar still reserves its whole resting band"),
+  M("K2-10-static-toolbar-band", "src/StructuredExamBuilder.tsx", '    const toolbarSticky = !!bar && !isStaticBox(bar);\n', '    const toolbarSticky = !!bar;\n', [T.builderK2], "a static (phone / 200 %) toolbar still reserves its whole resting band"),
   M("K2-11-app-no-return-target", "src/App.tsx", "              returnFocusTo={() => continueStructuredRef.current ?? savedExamsToggleRef.current}\n", "", [T.appK2], "App passes no return target"),
   M("K2-12-app-wrong-return-target", "src/App.tsx", "continueStructuredRef.current ?? savedExamsToggleRef.current", "savedExamsToggleRef.current", [T.appK2], "App returns focus to the toggle although «متابعة …» is there"),
   M("K2-13-builder-drops-target", "src/StructuredExamBuilder.tsx", "useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); }, returnFocusTo);", "useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); });", [T.appK2], "the builder never forwards App's return target"),
   // Review cluster K3 — inline issues (C-F3 reveal derived, C-F5 announcer per exam, A-F4 named issue list, A-F6 clicked issue's field,
   // A-F7 glyphs not spoken). The focus outline of a pointer-opened list is CSS: only the real-browser harness check R-3 sees it.
-  M("K3-1-reveal-latched", "src/StructuredExamBuilder.tsx", "  if ([...revealedQuestions.keys()].some(id => !issueIndex.byQuestion.has(id))) {", "  if (false) {", [T.inlineK3], "the reveal outlives the question's issues (a later empty row is red before it is visited)"),
+  M("K3-1-reveal-latched", "src/StructuredExamBuilder.tsx", "  if ([...revealedQuestions.keys()].some(id => !hasError(id))) {", "  if (false) {", [T.inlineK3], "the reveal outlives the question's issues (a later empty row is red before it is visited)"),
   M("K3-2-announcer-keeps-baseline", "src/builder/useIssueAnnouncer.ts", '    if (last.current.identity !== identity) { last.current = { identity, key }; setText(""); return; }   // another exam: a new baseline\n', "", [T.inlineK3], "another exam's counts are announced after it opens"),
   M("K3-3-announcer-keeps-text", "src/builder/useIssueAnnouncer.ts", 'last.current = { identity, key }; setText(""); return; }', "last.current = { identity, key }; return; }", [T.inlineK3], "the previous exam's sentence stays (and comes back with that exam)"),
   M("K3-4-builder-no-identity", "src/StructuredExamBuilder.tsx", "useIssueAnnouncer(errors.length, warnings.length, ISSUE_SETTLE_MS, exam.examId)", "useIssueAnnouncer(errors.length, warnings.length, ISSUE_SETTLE_MS)", [T.inlineK3], "the builder does not tell the announcer which exam it shows"),
   M("K3-5-list-not-focusable", "src/builder/InlineIssues.tsx", " tabIndex={-1} data-severity", " data-severity", [T.inlineK3, T.inlineWiring, T.builderK2], "the issue list cannot take focus"),
   M("K3-6-question-falls-to-card", "src/StructuredExamBuilder.tsx", "(ownIssueList(el) ?? el).focus({ preventScroll: true });", "el.focus({ preventScroll: true });", [T.inlineK3], "an issue with no control focuses the unnamed card"),
-  M("K3-7-section-unnamed", "src/StructuredExamBuilder.tsx", "      if (!list) { revealSection(el); return; }", "      { revealSection(el); return; }", [T.inlineK3, T.inlineWiring, T.builderK2], "a section entry focuses the unnamed section"),
-  M("K3-8-section-not-aligned", "src/StructuredExamBuilder.tsx", "      list.focus({ preventScroll: true });\n      alignSection(el);\n", "      list.focus({ preventScroll: true });\n", [T.inlineK3, T.inlineWiring, T.builderK2], "the section heading is not brought below the toolbar"),
+  M("K3-7-section-unnamed", "src/StructuredExamBuilder.tsx", "      if (!list) { revealSection(el); markIssueFocus(el); return; }", "      { revealSection(el); markIssueFocus(el); return; }", [T.inlineK3, T.inlineWiring, T.builderK2], "a section entry focuses the unnamed section"),
+  M("K3-8-section-not-aligned", "src/StructuredExamBuilder.tsx", "      markIssueFocus(el);\n      alignSection(el);\n", "      markIssueFocus(el);\n", [T.inlineK3, T.inlineWiring, T.builderK2], "the section heading is not brought below the toolbar"),
   M("K3-9-card-not-aligned", "src/StructuredExamBuilder.tsx", "    } else alignCard(el);", "    }", [T.inlineK3], "the card whose list takes focus is not brought into view"),
-  M("K3-10-first-invalid-wins", "src/StructuredExamBuilder.tsx", "const field = showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? el.querySelector<HTMLElement>(INVALID_FIELD);", "const field = el.querySelector<HTMLElement>(INVALID_FIELD);", [T.inlineK3], "the first invalid field in DOM order wins over the clicked issue's field"),
-  M("K3-11-code-not-passed", "src/StructuredExamBuilder.tsx", "onClick={() => openIssue(target, iss.code)}", 'onClick={() => openIssue(target, "")}', [T.inlineK3], "the summary entry does not say which issue was clicked"),
-  M("K3-12-frame-no-codes", "src/ui/Field.tsx", "data-issue-codes={visibleError && issueCode ? issueCode : undefined} onBlur={() =>", "onBlur={() =>", [T.inlineK3], "a field frame does not say which issue it shows"),
-  M("K3-13-codes-while-valid", "src/ui/Field.tsx", "data-issue-codes={visibleError && issueCode ? issueCode : undefined} onBlur={() =>", "data-issue-codes={issueCode || undefined} onBlur={() =>", [T.inlineK3], "a valid field claims an issue"),
+  M("K3-10-first-invalid-wins", "src/StructuredExamBuilder.tsx", "      field = showing.length\n        ? showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? showing.map(f => f.querySelector<HTMLElement>(ENABLED_CONTROL)).find(Boolean)\n        : el.querySelector<HTMLElement>(INVALID_FIELD);", "      field = el.querySelector<HTMLElement>(INVALID_FIELD);", [T.inlineK3], "the first invalid field in DOM order wins over the clicked issue's field"),
+  M("K3-11-code-not-passed", "src/StructuredExamBuilder.tsx", "onClick={() => openIssue(target, iss)}", 'onClick={() => openIssue(target, { ...iss, code: "", message: "" })}', [T.inlineK3], "the summary entry does not say which issue was clicked"),
+  M("K3-12-frame-no-codes", "src/ui/Field.tsx", '  visible && issueCode ? { "data-issue-codes": issueCode, "data-issue-nth": String(issueNth ?? 1) } : {};', '  visible && issueCode ? { "data-issue-nth": String(issueNth ?? 1) } : {};', [T.inlineK3], "a field frame does not say which issue it shows"),
+  M("K3-13-codes-while-valid", "src/ui/Field.tsx", '  visible && issueCode ? { "data-issue-codes": issueCode, "data-issue-nth": String(issueNth ?? 1) } : {};', '  issueCode ? { "data-issue-codes": issueCode, "data-issue-nth": String(issueNth ?? 1) } : {};', [T.inlineK3], "a valid frame still claims its codes"),
   M("K3-14-text-wrong-code", "src/QuestionComposer.tsx", "issueCode={HEADER_FIELD_CODES.text}", "issueCode={HEADER_FIELD_CODES.marks}", [T.inlineK3], "the question text claims MARKS_PROBLEM"),
   M("K3-15-mcq-codes-dropped", "src/QuestionBodyEditor.tsx", "issueCode={fieldIssueCodes(issues, MULTIPLE_CHOICE_FIELD_CODES)}", 'issueCode=""', [T.inlineK3], "the options group does not carry MISSING_OPTIONS / MISSING_ANSWER"),
   M("K3-16-pair-code-dropped", "src/QuestionBodyEditor.tsx", "error={issues.pairs[i]?.right} issueCode={MATCHING_FIELD_CODES.pair}", "error={issues.pairs[i]?.right}", [T.inlineK3], "an incomplete pair's answer does not carry MATCH_INCOMPLETE_PAIR"),
   M("K3-17-numeric-codes-dropped", "src/teacher/questionFieldIssues.ts", "const code = codeOf.get(message); if (code) out[field] = code;", "void codeOf; void message;", [T.inlineK3], "numeric fields carry no codes"),
   M("K3-18-chevron-spoken", "src/StructuredExamBuilder.tsx", '" is-open" : "")} aria-hidden="true" />{errors.length', '" is-open" : "")} />{errors.length', [T.inlineK3], "the disclosure chevron is exposed to assistive technology"),
   M("K3-19-chevron-stuck-open", "src/StructuredExamBuilder.tsx", '(showIssues ? " is-open" : "")} aria-hidden', '" is-open"} aria-hidden', [T.inlineK3], "the chevron no longer follows aria-expanded"),
-  M("K3-20-save-glyph-spoken", "src/StructuredExamBuilder.tsx", '<span aria-hidden="true">{SAVE_STATE_LABEL[saveState].glyph}</span>', "<span>{SAVE_STATE_LABEL[saveState].glyph}</span>", [T.inlineK3], "the save state's glyph is read out")
+  M("K3-20-save-glyph-spoken", "src/StructuredExamBuilder.tsx", '<span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span>', "<span>{SAVE_STATE_GLYPH[saveState]}</span>", [T.inlineK3], "the save state's glyph is read out"),
+  // Review Fix 3 (owner-listed I-1 … I-4, audit A-01 / A-02, owner observations O-1 / O-2) and its re-review (RR3-1, RR3-3, RR3-A11Y-2)
+  M("RF3-I1-part-dropped", "src/StructuredExamBuilder.tsx", "part: issuePartFocus(issue, question) };", "part: null };", [T.inlineRF3], "a part's issue falls back to the card's first invalid field"),
+  M("RF3-I2-no-marker", "src/StructuredExamBuilder.tsx", '    a.setAttribute(ISSUE_FOCUS, "");\n', "", [T.inlineRF3], "the control a summary entry focused is never marked (no ring after a pointer click)"),
+  M("RF3-I3-duplicates-counted-across-cards", "src/builder/issueIndex.ts", "  if (last < 0) return questionIssues;\n", "  return questionIssues;\n", [T.inlineRF3, T.issueIndexRF3], "a duplicated id's occurrences are counted across every card again"),
+  M("RF3-I4-own-saving-string", "src/StructuredExamBuilder.tsx", '<span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {SAVE_STATE_LABELS[saveState]}</span>}', '<span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {saveState === "saving" ? "جارٍ الحفظ" : SAVE_STATE_LABELS[saveState]}</span>}', [T.saveStatus, T.reliability], "the status writes its own saving string next to the button's"),
+  M("RF3-I4-not-atomic", "src/StructuredExamBuilder.tsx", ' role="status" aria-live="polite" aria-atomic="true"><span aria-hidden="true">{SAVE_STATE_GLYPH', ' role="status" aria-live="polite"><span aria-hidden="true">{SAVE_STATE_GLYPH', [T.saveStatus], "the save status may be read as a fragment"),
+  M("RF3-I4-glyph-in-table", "src/teacher/saveLabels.ts", '  saved: "محفوظ",', '  saved: "✓ محفوظ",', [T.labels, T.saveStatus], "a status sentence carries a glyph (read out)"),
+  M("RF3-A01-band-unpublished", "src/StructuredExamBuilder.tsx", '    const publish = () => root.style.setProperty(TOOLBAR_BAND_VAR, Math.ceil(bar.getBoundingClientRect().height) + "px");\n', "    const publish = () => {};\n", [T.sticky], "the layers below the toolbar slide under it again"),
+  M("RF3-A01-bulk-not-an-edge", "src/StructuredExamBuilder.tsx", "    if (bulk) edge = Math.max(edge, bulk.getBoundingClientRect().bottom);\n", "", [T.sticky], "a heading under the stuck bulk-action bar counts as on screen"),
+  M("RF3-A02-static-toolbar-edge", "src/StructuredExamBuilder.tsx", "    let edge = !bar ? 0 : isStaticBox(bar) ? (scrollerOf()?.getBoundingClientRect().top ?? 0) : bar.getBoundingClientRect().bottom;\n", "    let edge = !bar ? 0 : bar.getBoundingClientRect().bottom;\n", [T.sticky], "a scrolled-away static toolbar makes headings above the screen count as visible"),
+  M("RF3-O1-explorer-close-to-body", "src/StructuredExamBuilder.tsx", "    (more ?? toolbar)?.focus();\n", "", [T.explorer], "closing the explorer dialog whose opener left leaves focus on <body>"),
+  M("RF3-O2-raw-table-preview", "src/structuredExamProductivity.ts", 'const preview = (t: unknown) => navigatorPreviewText(String(t ?? "")).replace(/\\s+/g, " ").trim().slice(0, PREVIEW_MAX);', 'const preview = (t: unknown) => String(t ?? "").replace(/\\s+/g, " ").trim().slice(0, PREVIEW_MAX);', [T.explorer, T.productivity], "the explorer shows a matching question's raw table syntax"),
+  M("RR3-1-rich-content-form", "src/builder/issueIndex.ts", ' || message.startsWith(e.name + " — ")', "", [T.issueIndexRF3, T.inlineRF3], "a composite part's rich-content issue names no part"),
+  M("RR3-1-composite-label-form", "src/builder/issueIndex.ts", '\n  || (e.part.family === "composite" && message.includes("البند «" + e.label + "»"))', "", [T.issueIndexRF3, T.inlineRF3], "the composite authority's «البند «ب»» form names no part"),
+  M("RR3-3-first-row", "src/StructuredExamBuilder.tsx", '.querySelectorAll<HTMLElement>(".sb-field-row")[focus.row - 1]', '.querySelectorAll<HTMLElement>(".sb-field-row")[0]', [T.inlineRF3], "a row issue focuses the part's first row"),
+  M("RR3-3-answer-ignored", "src/StructuredExamBuilder.tsx", "focus.answer ? controls.at(-1)", "false ? controls.at(-1)", [T.inlineRF3], "a missing answer focuses the row's item, not its answer"),
+  M("RR3-3-unlocatable-row-to-body", "src/builder/issueIndex.ts", ': { part, at: "list" };', ': { part, at: "body" };', [T.issueIndexRF3, T.inlineRF3], "a table cell issue focuses the table's first control"),
+  M("RR3-A11Y-2-no-tab-clearance", "src/StructuredExamBuilder.tsx", "      if (scroller && top < edge) scroller.scrollTop", "      if (false) scroller.scrollTop", [T.sticky], "a Tab leaves focus under the sticky layers"),
+  M("RR3-A11Y-2-programmatic-adjusted", "src/StructuredExamBuilder.tsx", "      if (!tabbing || !(t instanceof HTMLElement) || inFixedLayer(t)) return;", "      if (!(t instanceof HTMLElement) || inFixedLayer(t)) return;", [T.sticky], "programmatic focus (the reveals) is moved too"),
+  M("RR3-A11Y-2-sticky-layer-scrolls", "src/StructuredExamBuilder.tsx", "      if (!tabbing || !(t instanceof HTMLElement) || inFixedLayer(t)) return;", "      if (!tabbing || !(t instanceof HTMLElement)) return;", [T.sticky], "a Tab into the toolbar scrolls the content")
 ];
 
 const only = (process.argv.find(a => a.startsWith("--only=")) || "").slice(7).split(",").filter(Boolean);
