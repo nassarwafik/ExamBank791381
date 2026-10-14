@@ -251,6 +251,7 @@ export default function LearningReader({
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isEditableTarget(e.target) || nestedDialogOpen()) return;
       if (e.key === "f" || e.key === "F" || e.code === "KeyF") { e.preventDefault(); togglePresentation(); return; }
+      if (!presentation && e.target instanceof Node && !rootRef.current?.contains(e.target)) return;
       // Normal reading also accepts page keys, but never hijacks keyboard interaction
       // within interactive lesson blocks, the toolbar, or TOC controls.
       if (!presentation && e.target instanceof Element &&
