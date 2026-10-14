@@ -6,7 +6,7 @@ import { LEARNING_COURSES, findLearningCourse, type LearningCourse } from "./cat
 import { hasCourseContent, loadCourseManifest } from "./content/registry";
 import { batchFirstPageId, flattenPageRefs } from "./content/navigation";
 import type { LearningCourseManifest } from "./content/types";
-import { arabicCount, AVAILABLE_BOOKS } from "./arabicCount";
+import { arabicCount, AVAILABLE_BOOKS, LESSONS } from "./arabicCount";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import "./learning.css";
 import "./learning-library-premium.css";
@@ -26,7 +26,9 @@ type View =
 /**
  * Learning Materials (المواد التعليمية). Local state only (no router): the library of course cards, a course
  * overview (eight high-level sections), and the interactive Reader. Opening the library/overview issues ZERO
- * network requests; the Reader performs no backend request for CONTENT (only code-split content imports). With a
+ * backend requests; the overview of a readable course loads only the course's code-split MANIFEST chunk (the same one
+ * the Reader needs) for the section lesson counts and page ranges — never a module body or the Reader chunk. The Reader
+ * performs no backend request for CONTENT (only code-split content imports). With a
  * teacher token the Reader additionally reads the trainings list once (Learning Practice) so the teacher can
  * preview and solve T01–T04 regardless of class publication; without a token it stays fully local.
  */
@@ -167,6 +169,9 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
       return [batch.id, pages.length ? { lessons, first: pages[0].index + 1, last: pages[pages.length - 1].index + 1 } : null] as const;
     }));
   }, [manifest]);
+  // The details stay visible text inside the button; aria-describedby makes a screen reader announce them after the
+  // short «فتح قسم …» name, which the aria-label would otherwise replace them with.
+  const detailsIdPrefix = "eb-lm-batch-details-" + course.id + "-";
   return (
     <section className="eb-lm eb-lm-overview" aria-labelledby="eb-lm-course-title">
       <button type="button" className="eb-button is-quiet is-small eb-lm-back" onClick={onBack}>
@@ -209,9 +214,10 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
                   className="eb-lm-batch-open"
                   onClick={() => onOpenSection(b.id)}
                   aria-label={"فتح قسم " + b.label}
+                  aria-describedby={sectionStats.get(b.id) ? detailsIdPrefix + b.id : undefined}
                 >
                   <span className="eb-lm-batch-index" aria-hidden="true">{i + 1}</span>
-                  <span className="eb-lm-batch-label">{b.label}{sectionStats.get(b.id) && <small className="eb-lm-batch-details">{sectionStats.get(b.id)!.lessons} دروس · الصفحات {sectionStats.get(b.id)!.first}–{sectionStats.get(b.id)!.last}</small>}</span>
+                  <span className="eb-lm-batch-label">{b.label}{sectionStats.get(b.id) && <small id={detailsIdPrefix + b.id} className="eb-lm-batch-details">{arabicCount(sectionStats.get(b.id)!.lessons, LESSONS)} · الصفحات {sectionStats.get(b.id)!.first}–{sectionStats.get(b.id)!.last}</small>}</span>
                   <span className="eb-lm-batch-action">
                     فتح القسم
                     <IconChevronBack size={16} aria-hidden="true" />
