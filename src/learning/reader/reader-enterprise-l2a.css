@@ -37,3 +37,15 @@
     border-color: CanvasText;
   }
 }
+
+/* The release note can be dismissed without obscuring lesson content. */
+.learning-reader:not(.is-presentation) .learning-reader-release-note {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--eb-space-2);
+}
+.learning-reader:not(.is-presentation) .learning-reader-release-note button {
+  min-block-size: 44px;
+}
+.learning-reader:not(.is-presentation) .learning-reader-release-note button:focus-visible {
+  outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset);
+}
