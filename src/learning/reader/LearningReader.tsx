@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles } from "../../icons";
 import useFocusTrap from "../../ui/useFocusTrap";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
@@ -12,6 +12,8 @@ import type { LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import "./reader.css";
 import "./reader-enterprise-l2a.css";
+import "./reader-enterprise-l2b.css";
+import { loadVisitedPages, saveVisitedPages } from "./visitedPages";
 
 export type { ReaderContentApi } from "./readerContentApi";
 
@@ -39,7 +41,7 @@ type ManifestState =
  */
 export default function LearningReader({
   courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, onPageChange,
-  initialPresentation, onPresentationChange, embedded = false,
+  initialPresentation, onPresentationChange, embedded = false, visitedScope,
 }: {
   courseId: string;
   onExit: () => void;
@@ -63,6 +65,9 @@ export default function LearningReader({
    *  renders as a <div> instead of a nested <main>. Same class, ref, tabIndex and children → identical layout and
    *  behavior (normal and presentation mode). Default (standalone, e.g. the student's full-screen Reader): <main>. */
   embedded?: boolean;
+  /** Phase 21E L2-B — opaque, host-supplied identity scope for the device-local "visited" marks in the index (the
+   *  student portal passes the authenticated student's id). Absent → no marks are read, written or shown. */
+  visitedScope?: string;
 }) {
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
@@ -70,6 +75,20 @@ export default function LearningReader({
   // Phase 21E L2-A — the release note is a one-time notice: once dismissed it stays hidden on this device for this course.
   const [releaseNoteVisible, setReleaseNoteVisible] = useState(() => !releaseNoteDismissed(courseId));
   const [manifestNonce, setManifestNonce] = useState(0);
+  // Phase 21E L2-B — pages this student opened before on this device (empty without a scope). Updated by the same
+  // events that select a page (manifest load, selectPage), never by an effect.
+  const [visited, setVisited] = useState<ReadonlySet<string>>(() => loadVisitedPages(visitedScope, courseId));
+  const markVisited = useCallback((pageId: string) => {
+    if (!visitedScope || !pageId) return;
+    setVisited(prev => {
+      if (prev.has(pageId)) return prev;
+      const next = new Set(prev).add(pageId);
+      saveVisitedPages(visitedScope, courseId, next);                                  // idempotent write
+      return next;
+    });
+  }, [visitedScope, courseId]);
+  const markVisitedRef = useRef(markVisited);
+  useEffect(() => { markVisitedRef.current = markVisited; }, [markVisited]);
   const [erroredModules, setErroredModules] = useState<Set<string>>(new Set());
   // Session cache of loaded module bodies, held in STATE so the page body is derived from it during render.
   const [modules, setModules] = useState<Record<string, ContentModule>>({});
@@ -107,7 +126,9 @@ export default function LearningReader({
       const pages = flattenPageRefs(manifest);
       setManifestState({ status: "ready", manifest });
       const wanted = initialPageRef.current;
-      setSelectedPageId(wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : "");
+      const first = wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : "";
+      setSelectedPageId(first);
+      markVisitedRef.current(first);
     }).catch(() => { if (alive) setManifestState({ status: "error" }); });
     return () => { alive = false; };
   }, [courseId, api, manifestNonce]);
@@ -164,12 +185,13 @@ export default function LearningReader({
   const selectPage = useCallback((pageId: string) => {
     // Manifest-order-validated: ignore unknown ids (controlled fallback, never a crash).
     if (manifest && !findPage(manifest, pageId)) return;
+    markVisited(pageId);
     pendingFocusRef.current = true;
     setSelectedPageId(pageId);
     setDrawerOpen(false);
     setPageDraft(null);
     setJumpError("");
-  }, [manifest]);
+  }, [manifest, markVisited]);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   // Dismissing the note removes the focused button, so focus moves to the reading surface instead of falling to <body>.
@@ -291,6 +313,7 @@ export default function LearningReader({
     pageTitle: located.page.title,
     moduleTitle: located.module.title,
     lessonTitle: located.lesson.title,
+    lesson: lessonPosition(located.module.lessons, located.lesson.id),
     position,
     source: located.page.source,
   } : null;
@@ -302,8 +325,11 @@ export default function LearningReader({
       manifest={manifest}
       selectedPageId={selectedPageId}
       activeModuleId={located?.module.id}
+      activeLessonId={located?.lesson.id}
       onSelectPage={selectPage}
       idPrefix={idPrefix}
+      visited={visitedScope ? visited : undefined}
+      showJump={!presentation}
     />
   );
 
@@ -367,22 +393,11 @@ export default function LearningReader({
         <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
 
         <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1}>
-          {/* Phase 21E L2-A — one compact reading row above the page: the page jump and, until dismissed, the release note
-              (side by side where the column is wide enough, stacked on phones). */}
-          {!presentation && (
-            <div className="learning-reader-readbar">
-              <div className="learning-reader-jump">
-                <label htmlFor="learning-reader-jump-select">انتقل إلى صفحة</label>
-                <select id="learning-reader-jump-select" value={selectedPageId} onChange={e => selectPage(e.target.value)}>
-                  {pages.map((f, i) => <option key={f.page.id} value={f.page.id}>{i + 1} — {f.page.title}</option>)}
-                </select>
-              </div>
-              {releaseNoteVisible && (
-                <div className="learning-reader-partial learning-reader-release-note" role="note">
-                  <span>يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</span>
-                  <button type="button" className="eb-button is-quiet is-small" onClick={dismissReleaseNote} aria-label="إخفاء تنبيه محتوى الكتاب">إخفاء</button>
-                </div>
-              )}
+          {/* Phase 21E L2-A — the one-time release note above the page (the page jump moved into the index in L2-B). */}
+          {!presentation && releaseNoteVisible && (
+            <div className="learning-reader-partial learning-reader-release-note" role="note">
+              <span>يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</span>
+              <button type="button" className="eb-button is-quiet is-small" onClick={dismissReleaseNote} aria-label="إخفاء تنبيه محتوى الكتاب">إخفاء</button>
             </div>
           )}
           {header ? <LearningPageRenderer header={header} body={body} training={training} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
@@ -390,6 +405,21 @@ export default function LearningReader({
       </div>
 
       <nav className="learning-reader-nav" aria-label="تنقّل بين الصفحات">
+        {/* Phase 21E L2-B — a thin book-position bar along the top edge of the page bar (normal reading). The ordinal
+            «n / total» counts the pages THIS reader can open (a student's published pages only). */}
+        {!presentation && position.total > 0 && (
+          <div
+            className="learning-reader-progress"
+            role="progressbar"
+            aria-label="موضعك في الكتاب"
+            aria-valuemin={1}
+            aria-valuemax={position.total}
+            aria-valuenow={Math.max(1, position.index)}
+            aria-valuetext={`الصفحة ${position.index} من ${position.total}`}
+          >
+            <span className="learning-reader-progress-fill" style={{ "--learning-reader-progress": Math.max(0, position.index) / position.total } as CSSProperties} />
+          </div>
+        )}
         <button type="button" className="eb-button learning-reader-navbtn" disabled={!prev} onClick={() => prev && selectPage(prev.id)}>
           <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />السابق
         </button>
@@ -446,8 +476,6 @@ export default function LearningReader({
   );
 }
 
-/** True when a keyboard event originates in a field the learner may be typing in (inputs, textareas, selects, the CLI
- *  terminal line, any content-editable element) — navigation shortcuts must never steal those keys. */
 /** Normal-mode paging source: the reading surface (content root) or the focused page title — never a control. */
 function isReadingSurface(target: EventTarget | null, content: HTMLElement | null): boolean {
   if (!(target instanceof Element) || !content) return false;
@@ -463,6 +491,15 @@ function rememberReleaseNoteDismissed(courseId: string): void {
   try { globalThis.localStorage?.setItem(RELEASE_NOTE_KEY + courseId, "1"); } catch { /* the note stays hidden for this mount only */ }
 }
 
+/** "Lesson x of y" inside its module, by the canonical lesson order (null if the lesson is unknown). */
+function lessonPosition(lessons: readonly { id: string; order: number }[], lessonId: string): { index: number; total: number } | null {
+  const ordered = [...lessons].sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const i = ordered.findIndex(l => l.id === lessonId);
+  return i < 0 ? null : { index: i + 1, total: ordered.length };
+}
+
+/** True when a keyboard event originates in a field the learner may be typing in (inputs, textareas, selects, the CLI
+ *  terminal line, any content-editable element) — navigation shortcuts must never steal those keys. */
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   const tag = target.tagName;

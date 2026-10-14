@@ -154,7 +154,11 @@ describe("9–10, 13 · index drawer", () => {
     const current = within(drawer).getByRole("button", { name: "صفحة غنية" });
     expect(current.getAttribute("aria-current")).toBe("page");
     expect(current.classList.contains("is-active")).toBe(true);
-    expect(within(drawer).getByRole("button", { name: "الوحدة الثانية" }).getAttribute("aria-expanded")).toBe("true");   // modules open by default
+    // Phase 21E L2-B: only the current module starts open; another module is expanded on demand.
+    const m2 = within(drawer).getByRole("button", { name: "الوحدة الثانية" });
+    expect(m2.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(m2);
+    expect(m2.getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(within(drawer).getByRole("button", { name: "صفحة ٥" }));
     await heading("صفحة ٥");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "فهرس الكتاب" })).toBeNull());
@@ -164,7 +168,10 @@ describe("9–10, 13 · index drawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "الفهرس" }));
     const again = await screen.findByRole("dialog", { name: "فهرس الكتاب" });
     expect(within(again).getByRole("button", { name: "صفحة ٥" }).getAttribute("aria-current")).toBe("page");
-    expect(within(again).getByRole("button", { name: "صفحة غنية" }).getAttribute("aria-current")).toBeNull();
+    // only the new current module (m2) opens: the previous page's module is collapsed, so its page is not current/shown
+    expect(within(again).getByRole("button", { name: "الوحدة الثانية" }).getAttribute("aria-expanded")).toBe("true");
+    expect(within(again).getByRole("button", { name: "الوحدة الأولى" }).getAttribute("aria-expanded")).toBe("false");
+    expect(within(again).queryByRole("button", { name: "صفحة غنية" })).toBeNull();
     fireEvent.click(within(again).getByRole("button", { name: "إغلاق" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "فهرس الكتاب" })).toBeNull());
     expect(root().classList.contains("is-presentation")).toBe(true);

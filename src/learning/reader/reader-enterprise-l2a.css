@@ -55,15 +55,9 @@
   outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset);
 }
 
-/* ── Reading row: page jump (label and select on one line) + release note; side by side when the column allows ──── */
+/* ── Compact reading chrome: tighter gaps between toolbar, release note and page ───────────────────────────────── */
 .learning-reader:not(.is-presentation) { gap: var(--eb-space-2); }
 .learning-reader:not(.is-presentation) .learning-reader-main { gap: var(--eb-space-2); }
-.learning-reader:not(.is-presentation) .learning-reader-readbar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); min-width: 0;
-}
-.learning-reader:not(.is-presentation) .learning-reader-jump { flex: 1 1 22rem; flex-wrap: nowrap; min-width: 0; }
-.learning-reader:not(.is-presentation) .learning-reader-jump label { flex: 0 0 auto; }
-.learning-reader:not(.is-presentation) .learning-reader-release-note { flex: 1 1 18rem; min-width: 0; }
 
 /* ── Unit opener in normal reading: keep the hero, drop the slide-height block above it ───────────────────────────
    (presentation mode keeps the full-height centred slide.) */
