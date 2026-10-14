@@ -5,6 +5,7 @@ import { IconBook, IconChevronBack } from "../icons";
 import { LEARNING_COURSES, findLearningCourse, type LearningCourse } from "./catalog";
 import { hasCourseContent, loadCourseManifest } from "./content/registry";
 import { batchFirstPageId } from "./content/navigation";
+import { arabicCount, AVAILABLE_BOOKS } from "./arabicCount";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import "./learning.css";
 import "./learning-library-premium.css";
@@ -93,9 +94,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
           title="المواد التعليمية"
           description="كتب ومواد تعليمية تفاعلية تساعد الطلاب على الفهم والتدريب خطوة بخطوة."
         />
-        <p className="eb-lm-library-count" aria-label={availableCourses.length + " كتب متاحة"}>
-          {availableCourses.length} {availableCourses.length === 1 ? "كتاب متاح" : "كتب متاحة"}
-        </p>
+        <p className="eb-lm-library-count">{arabicCount(availableCourses.length, AVAILABLE_BOOKS)}</p>
       </div>
       <ul className="eb-lm-grid" aria-label="الكتب والمواد التعليمية المتاحة">
         {availableCourses.map(c => (
@@ -105,14 +104,14 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
         ))}
       </ul>
       {upcomingCourses.length > 0 && (
-        <div className="eb-lm-upcoming" aria-labelledby="eb-lm-upcoming-title">
+        <section className="eb-lm-upcoming" aria-labelledby="eb-lm-upcoming-title">
           <h3 id="eb-lm-upcoming-title">قريبًا في المكتبة</h3>
           <ul className="eb-lm-grid">
             {upcomingCourses.map(c => (
               <li key={c.id}><CourseCard course={c} onOpen={() => {}} /></li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
     </section>
   );
