@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles } from "../../icons";
+import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconFilter } from "../../icons";
 import useFocusTrap from "../../ui/useFocusTrap";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import { setMotionOverride } from "../../ui/motionPreference";
@@ -14,6 +14,9 @@ import "./reader.css";
 import "./reader-enterprise-l2a.css";
 import "./reader-enterprise-l2b.css";
 import { loadVisitedPages, saveVisitedPages } from "./visitedPages";
+import "./reader-enterprise-l2c.css";
+import ReadingSettingsDialog from "./ReadingSettingsDialog";
+import { loadReadingSettings, saveReadingSettings, type ReadingSettings } from "./readingSettings";
 
 export type { ReaderContentApi } from "./readerContentApi";
 
@@ -75,6 +78,11 @@ export default function LearningReader({
   // Phase 21E L2-A — the release note is a one-time notice: once dismissed it stays hidden on this device for this course.
   const [releaseNoteVisible, setReleaseNoteVisible] = useState(() => !releaseNoteDismissed(courseId));
   const [manifestNonce, setManifestNonce] = useState(0);
+  // Phase 21E L2-C — reading comfort (text size, line spacing, reading theme), remembered on this device. Applied to the
+  // root as data attributes in NORMAL reading only, so presentation mode keeps its own established layout.
+  const [readingSettings, setReadingSettings] = useState<ReadingSettings>(loadReadingSettings);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const changeReadingSettings = useCallback((next: ReadingSettings) => { setReadingSettings(next); saveReadingSettings(next); }, []);
   // Phase 21E L2-B — pages this student opened before on this device (empty without a scope). Updated by the same
   // events that select a page (manifest load, selectPage), never by an effect.
   const [visited, setVisited] = useState<ReadonlySet<string>>(() => loadVisitedPages(visitedScope, courseId));
@@ -253,8 +261,9 @@ export default function LearningReader({
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, [presentation]);
-  // A nested dialog (index drawer, activity fullscreen) inside the presentation root owns Escape / the keyboard.
-  const nestedDialogOpen = useCallback(() => !!rootRef.current?.querySelector('[aria-modal="true"]'), []);
+  // A nested dialog owns Escape / the keyboard: one inside the reader (index drawer, activity fullscreen) or one portalled
+  // to the page (the reading-settings Dialog) — any open modal other than the presentation root itself.
+  const nestedDialogOpen = useCallback(() => [...document.querySelectorAll('[aria-modal="true"]')].some(el => el !== rootRef.current), []);
   const onPresentationEscape = useCallback(() => { if (!nestedDialogOpen()) exitPresentation(); }, [nestedDialogOpen, exitPresentation]);
   useFocusTrap(rootRef, presentation, onPresentationEscape);
 
@@ -370,6 +379,9 @@ export default function LearningReader({
       className={"learning-reader" + (presentation ? " is-presentation" : "")}
       dir="rtl"
       data-presentation={presentation || undefined}
+      data-read-size={presentation ? undefined : readingSettings.size}
+      data-read-spacing={presentation ? undefined : readingSettings.spacing}
+      data-read-theme={presentation ? undefined : readingSettings.theme}
       role={presentation ? "dialog" : undefined}
       aria-modal={presentation || undefined}
       aria-label={presentation ? "وضع العرض — كتاب " + courseId : undefined}
@@ -380,14 +392,20 @@ export default function LearningReader({
             <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" /><span className="learning-reader-btn-label">{exitLabel}</span>
           </button>
         )}
-        <span className="learning-reader-booktitle">كتاب {courseId}{presentation && located ? <span className="learning-reader-topbar-page"> · {located.page.title}</span> : null}</span>
+        <span className="learning-reader-booktitle"><span className="learning-reader-booktitle-word">كتاب </span>{courseId}{presentation && located ? <span className="learning-reader-topbar-page"> · {located.page.title}</span> : null}</span>
         <button type="button" className="eb-button is-quiet is-small learning-reader-toc-toggle" aria-expanded={drawerOpen} aria-controls="learning-reader-drawer" onClick={() => setDrawerOpen(true)}>
           <IconMenu size={18} aria-hidden="true" /><span className="learning-reader-btn-label">الفهرس</span>
         </button>
         {presentation && <span className="learning-reader-keyhint" aria-hidden="true">← → للتنقل · Esc للخروج</span>}
+        {!presentation && (
+          <button type="button" className="eb-button is-quiet is-small learning-reader-settings-toggle" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>
+            <IconFilter size={18} aria-hidden="true" /><span className="learning-reader-btn-label">إعدادات القراءة</span>
+          </button>
+        )}
         {motionToggle}
         {presentToggle}
       </div>
+      <ReadingSettingsDialog open={settingsOpen && !presentation} settings={readingSettings} onChange={changeReadingSettings} onClose={() => setSettingsOpen(false)} />
 
       <div className="learning-reader-layout">
         <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
