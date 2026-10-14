@@ -67,6 +67,7 @@ export default function LearningReader({
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [releaseNoteVisible, setReleaseNoteVisible] = useState(true);
   const [manifestNonce, setManifestNonce] = useState(0);
   const [erroredModules, setErroredModules] = useState<Set<string>>(new Set());
   // Session cache of loaded module bodies, held in STATE so the page body is derived from it during render.
@@ -356,7 +357,12 @@ export default function LearningReader({
         {presentToggle}
       </div>
 
-      {!presentation && <p className="learning-reader-partial" role="note">يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</p>}
+      {!presentation && releaseNoteVisible && (
+        <div className="learning-reader-partial learning-reader-release-note" role="note">
+          <span>يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</span>
+          <button type="button" className="eb-button is-quiet is-small" onClick={() => setReleaseNoteVisible(false)} aria-label="إخفاء تنبيه محتوى الكتاب">إخفاء</button>
+        </div>
+      )}
 
       <div className="learning-reader-layout">
         <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
