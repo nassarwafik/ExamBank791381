@@ -1,0 +1,64 @@
+/* Phase 21E L1-A — additive, catalog-driven learning library styling. */
+/* No content loads, API calls, or permission changes in this sheet. */
+.eb-lm-premium-library { gap: var(--eb-space-5); }
+.eb-lm-library-hero {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: var(--eb-space-2); padding: var(--eb-space-5);
+  background: var(--eb-surface); border: 1px solid var(--eb-line-2);
+  border-radius: var(--eb-r-xl); box-shadow: var(--eb-sh-sm); min-width: 0;
+}
+.eb-lm-library-hero .eb-section-header { margin: 0; }
+.eb-lm-library-eyebrow {
+  margin: 0; color: var(--eb-primary-strong); font-size: var(--eb-fs-12);
+  font-weight: var(--eb-fw-semibold); line-height: var(--eb-lh-body);
+}
+.eb-lm-library-count {
+  display: inline-flex; align-items: center; min-block-size: 28px;
+  margin: 0; padding-inline: var(--eb-space-3);
+  background: var(--eb-primary-050); color: var(--eb-primary-strong);
+  border: 1px solid var(--eb-primary-100); border-radius: var(--eb-pill);
+  font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold);
+}
+.eb-lm-premium-library .eb-lm-card {
+  border-color: var(--eb-line-2); border-radius: var(--eb-r-xl);
+  box-shadow: var(--eb-sh-sm);
+  transition: border-color var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
+}
+.eb-lm-premium-library .eb-lm-card:hover {
+  border-color: var(--eb-primary-100); box-shadow: var(--eb-sh-md);
+}
+.eb-lm-premium-library .eb-lm-cover {
+  inline-size: 80px; block-size: 96px;
+  background: var(--eb-primary-050); color: var(--eb-primary-strong);
+  border-radius: var(--eb-r-lg); border: 1px solid var(--eb-primary-100);
+}
+.eb-lm-premium-library .eb-lm-card-title {
+  font-size: var(--eb-fs-20); line-height: var(--eb-lh-tight);
+}
+.eb-lm-premium-library .eb-lm-cta {
+  min-block-size: 44px; min-inline-size: 110px;
+}
+.eb-lm-premium-library .eb-lm-cta:focus-visible {
+  outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset);
+}
+.eb-lm-upcoming {
+  display: flex; flex-direction: column; gap: var(--eb-space-3);
+  min-width: 0; padding-block-start: var(--eb-space-3);
+  border-block-start: 1px solid var(--eb-line);
+}
+.eb-lm-upcoming h3 {
+  margin: 0; font-size: var(--eb-fs-17);
+  color: var(--eb-text-heading); font-weight: var(--eb-fw-bold);
+}
+@media (max-width: 767px) {
+  .eb-lm-library-hero { padding: var(--eb-space-4); }
+  .eb-lm-premium-library .eb-lm-cover { inline-size: 64px; block-size: 72px; }
+  .eb-lm-premium-library .eb-lm-card-foot { align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eb-lm-premium-library .eb-lm-card { transition: none; }
+}
+@media (forced-colors: active) {
+  .eb-lm-premium-library .eb-lm-card,
+  .eb-lm-library-hero { border: 1px solid CanvasText; }
+}
