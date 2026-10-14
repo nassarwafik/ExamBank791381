@@ -159,13 +159,13 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
     return () => { active = false; };
   }, [course.id, canRead]);
   const sectionStats = useMemo(() => {
-    if (!manifest) return new Map<string, { lessons: number; first: number; last: number }>();
+    if (!manifest) return new Map<string, { lessons: number; first: number; last: number } | null>();
     const flat = flattenPageRefs(manifest);
     return new Map((manifest.batches ?? []).map(batch => {
       const ids = new Set(batch.moduleIds);
       const pages = flat.filter(entry => ids.has(entry.module.id));
       const lessons = new Set(pages.map(entry => entry.lesson.id)).size;
-      return [batch.id, { lessons, first: pages.length ? pages[0].index + 1 : 0, last: pages.length ? pages[pages.length - 1].index + 1 : 0 }] as const;
+      return [batch.id, pages.length ? { lessons, first: pages[0].index + 1, last: pages[pages.length - 1].index + 1 } : null] as const;
     }));
   }, [manifest]);
   return (
