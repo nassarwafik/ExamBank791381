@@ -11,6 +11,7 @@ import { registryContentApi, type ReaderContentApi } from "./readerContentApi";
 import type { LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import "./reader.css";
+import "./reader-enterprise-l2a.css";
 
 export type { ReaderContentApi } from "./readerContentApi";
 
@@ -66,6 +67,8 @@ export default function LearningReader({
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Phase 21E L2-A — the release note is a one-time notice: once dismissed it stays hidden on this device for this course.
+  const [releaseNoteVisible, setReleaseNoteVisible] = useState(() => !releaseNoteDismissed(courseId));
   const [manifestNonce, setManifestNonce] = useState(0);
   const [erroredModules, setErroredModules] = useState<Set<string>>(new Set());
   // Session cache of loaded module bodies, held in STATE so the page body is derived from it during render.
@@ -169,6 +172,12 @@ export default function LearningReader({
   }, [manifest]);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  // Dismissing the note removes the focused button, so focus moves to the reading surface instead of falling to <body>.
+  const dismissReleaseNote = useCallback(() => {
+    rememberReleaseNoteDismissed(courseId);
+    setReleaseNoteVisible(false);
+    contentRef.current?.focus({ preventScroll: true });
+  }, [courseId]);
   useFocusTrap(drawerRef, drawerOpen, closeDrawer);
   useEffect(() => {
     if (!drawerOpen && !presentation) return;
@@ -241,8 +250,8 @@ export default function LearningReader({
     selectPage(pages[n - 1].page.id);
   }, [pages, selectPage]);
 
-  // Keyboard: F toggles presentation (any mode); in presentation ArrowLeft / PageDown → next, ArrowRight / PageUp →
-  // previous. Never while typing (input / textarea / select / editable — the CLI line is an input), never with a
+  // Keyboard: F toggles presentation (any mode); ArrowLeft / PageDown → next, ArrowRight / PageUp → previous (RTL) —
+  // anywhere in presentation, and in normal reading only from the reading surface (see `isReadingSurface`). Never while typing (input / textarea / select / editable — the CLI line is an input), never with a
   // modifier, never while a nested dialog owns the keyboard. Escape is handled by the presentation focus trap.
   useEffect(() => {
     if (!manifest) return;
@@ -250,7 +259,10 @@ export default function LearningReader({
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isEditableTarget(e.target) || nestedDialogOpen()) return;
       if (e.key === "f" || e.key === "F" || e.code === "KeyF") { e.preventDefault(); togglePresentation(); return; }
-      if (!presentation) return;
+      // Normal reading pages only while focus rests on the reading surface itself (the content root, which a click on
+      // the text focuses, or the page title, which a page change focuses). Any focused control — a toolbar or TOC
+      // button, a lesson activity, a training card, a scrollable region — keeps its own arrow keys.
+      if (!presentation && !isReadingSurface(e.target, contentRef.current)) return;
       if (e.key === "ArrowLeft" || e.key === "PageDown") { e.preventDefault(); if (next) selectPage(next.id); }
       else if (e.key === "ArrowRight" || e.key === "PageUp") { e.preventDefault(); if (prev) selectPage(prev.id); }
     };
@@ -305,7 +317,7 @@ export default function LearningReader({
       onClick={togglePresentation}
     >
       {presentation ? <IconMinimize size={18} aria-hidden="true" /> : <IconMaximize size={18} aria-hidden="true" />}
-      {presentation ? "خروج من وضع العرض" : "وضع العرض"}
+      <span className="learning-reader-btn-label">{presentation ? "خروج من وضع العرض" : "وضع العرض"}</span>
     </button>
   );
 
@@ -322,7 +334,7 @@ export default function LearningReader({
       onClick={() => setMotionOverride(reducedMotion ? "on" : "off")}
     >
       <IconSparkles size={18} aria-hidden="true" />
-      {reducedMotion ? "تشغيل حركة الرسوم" : "إيقاف حركة الرسوم"}
+      <span className="learning-reader-btn-label">{reducedMotion ? "تشغيل حركة الرسوم" : "إيقاف حركة الرسوم"}</span>
     </button>
   );
 
@@ -339,30 +351,38 @@ export default function LearningReader({
       <div className="learning-reader-topbar">
         {!presentation && (
           <button type="button" className="eb-button is-quiet is-small learning-reader-back" onClick={onExit}>
-            <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />{exitLabel}
+            <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" /><span className="learning-reader-btn-label">{exitLabel}</span>
           </button>
         )}
         <span className="learning-reader-booktitle">كتاب {courseId}{presentation && located ? <span className="learning-reader-topbar-page"> · {located.page.title}</span> : null}</span>
         <button type="button" className="eb-button is-quiet is-small learning-reader-toc-toggle" aria-expanded={drawerOpen} aria-controls="learning-reader-drawer" onClick={() => setDrawerOpen(true)}>
-          <IconMenu size={18} aria-hidden="true" />الفهرس
+          <IconMenu size={18} aria-hidden="true" /><span className="learning-reader-btn-label">الفهرس</span>
         </button>
         {presentation && <span className="learning-reader-keyhint" aria-hidden="true">← → للتنقل · Esc للخروج</span>}
         {motionToggle}
         {presentToggle}
       </div>
 
-      {!presentation && <p className="learning-reader-partial" role="note">يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</p>}
-
       <div className="learning-reader-layout">
         <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
 
         <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1}>
+          {/* Phase 21E L2-A — one compact reading row above the page: the page jump and, until dismissed, the release note
+              (side by side where the column is wide enough, stacked on phones). */}
           {!presentation && (
-            <div className="learning-reader-jump">
-              <label htmlFor="learning-reader-jump-select">انتقل إلى صفحة</label>
-              <select id="learning-reader-jump-select" value={selectedPageId} onChange={e => selectPage(e.target.value)}>
-                {pages.map((f, i) => <option key={f.page.id} value={f.page.id}>{i + 1} — {f.page.title}</option>)}
-              </select>
+            <div className="learning-reader-readbar">
+              <div className="learning-reader-jump">
+                <label htmlFor="learning-reader-jump-select">انتقل إلى صفحة</label>
+                <select id="learning-reader-jump-select" value={selectedPageId} onChange={e => selectPage(e.target.value)}>
+                  {pages.map((f, i) => <option key={f.page.id} value={f.page.id}>{i + 1} — {f.page.title}</option>)}
+                </select>
+              </div>
+              {releaseNoteVisible && (
+                <div className="learning-reader-partial learning-reader-release-note" role="note">
+                  <span>يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</span>
+                  <button type="button" className="eb-button is-quiet is-small" onClick={dismissReleaseNote} aria-label="إخفاء تنبيه محتوى الكتاب">إخفاء</button>
+                </div>
+              )}
             </div>
           )}
           {header ? <LearningPageRenderer header={header} body={body} training={training} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
@@ -428,6 +448,21 @@ export default function LearningReader({
 
 /** True when a keyboard event originates in a field the learner may be typing in (inputs, textareas, selects, the CLI
  *  terminal line, any content-editable element) — navigation shortcuts must never steal those keys. */
+/** Normal-mode paging source: the reading surface (content root) or the focused page title — never a control. */
+function isReadingSurface(target: EventTarget | null, content: HTMLElement | null): boolean {
+  if (!(target instanceof Element) || !content) return false;
+  return target === content || (target.id === "learning-reader-page-title" && content.contains(target));
+}
+
+const RELEASE_NOTE_KEY = "eb.learning.releaseNoteDismissed.";
+/** Device-local, per course. Storage may be unavailable (private mode, blocked site data): the note then simply shows. */
+function releaseNoteDismissed(courseId: string): boolean {
+  try { return globalThis.localStorage?.getItem(RELEASE_NOTE_KEY + courseId) === "1"; } catch { return false; }
+}
+function rememberReleaseNoteDismissed(courseId: string): void {
+  try { globalThis.localStorage?.setItem(RELEASE_NOTE_KEY + courseId, "1"); } catch { /* the note stays hidden for this mount only */ }
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   const tag = target.tagName;

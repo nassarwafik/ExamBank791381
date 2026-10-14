@@ -1,0 +1,82 @@
+/* Phase 21E L2-A: compact reading chrome and sticky-pager clearance (normal reading only).
+   Presentation mode retains its own established layout and scrolling: every rule below is scoped to
+   `.learning-reader:not(.is-presentation)`, including the root scroll padding, which only applies while such a reader
+   is on the page. */
+
+/* ── Sticky pager clearance (WCAG 2.4.11) ──────────────────────────────────────────────────────────────────────────
+   In normal reading the DOCUMENT is the scroll container (the reader sits in the teacher shell / student portal), so the
+   clearance belongs on the root element: keyboard focus and in-page scrolling then stop above the sticky page bar
+   instead of under it. Presentation mode scrolls its own content area and is untouched. */
+:root:has(.learning-reader:not(.is-presentation) .learning-reader-nav) {
+  scroll-padding-block-end: calc(var(--eb-space-6) + 44px + env(safe-area-inset-bottom, 0px));
+}
+.learning-reader:not(.is-presentation) .learning-reader-page {
+  padding-block: var(--eb-space-3) var(--eb-space-6);
+}
+
+/* ── One-row toolbar: back · book title · TOC · motion · presentation ───────────────────────────────────────────── */
+.learning-reader:not(.is-presentation) .learning-reader-topbar {
+  flex-wrap: nowrap; gap: var(--eb-space-1);
+  padding: var(--eb-space-1) var(--eb-space-2);
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-lg);
+  background: var(--eb-surface); box-shadow: var(--eb-sh-xs);
+}
+.learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button {
+  flex: 0 0 auto; min-block-size: 44px; min-inline-size: 44px; justify-content: center;
+}
+.learning-reader:not(.is-presentation) .learning-reader-booktitle {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button:focus-visible {
+  outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset);
+}
+/* Phones: the back, motion and presentation controls become 44×44 icon buttons. Their text stays in the DOM (visually
+   hidden), so each keeps exactly the same accessible name; «الفهرس» keeps its visible label. */
+@media (max-width: 767px) {
+  .learning-reader:not(.is-presentation) :is(.learning-reader-back, .learning-reader-motion-toggle, .learning-reader-present-toggle) {
+    padding-inline: 0;
+  }
+  .learning-reader:not(.is-presentation) :is(.learning-reader-back, .learning-reader-motion-toggle, .learning-reader-present-toggle) .learning-reader-btn-label {
+    position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+}
+
+/* ── One-time release note: a single compact line ──────────────────────────────────────────────────────────────── */
+.learning-reader:not(.is-presentation) .learning-reader-release-note {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2);
+  padding-block: 0; padding-inline: var(--eb-space-3) var(--eb-space-1);
+}
+.learning-reader:not(.is-presentation) .learning-reader-release-note > span { min-width: 0; padding-block: var(--eb-space-1); }
+.learning-reader:not(.is-presentation) .learning-reader-release-note button {
+  flex: 0 0 auto; min-block-size: 44px; min-inline-size: 44px;
+}
+.learning-reader:not(.is-presentation) .learning-reader-release-note button:focus-visible {
+  outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset);
+}
+
+/* ── Reading row: page jump (label and select on one line) + release note; side by side when the column allows ──── */
+.learning-reader:not(.is-presentation) { gap: var(--eb-space-2); }
+.learning-reader:not(.is-presentation) .learning-reader-main { gap: var(--eb-space-2); }
+.learning-reader:not(.is-presentation) .learning-reader-readbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); min-width: 0;
+}
+.learning-reader:not(.is-presentation) .learning-reader-jump { flex: 1 1 22rem; flex-wrap: nowrap; min-width: 0; }
+.learning-reader:not(.is-presentation) .learning-reader-jump label { flex: 0 0 auto; }
+.learning-reader:not(.is-presentation) .learning-reader-release-note { flex: 1 1 18rem; min-width: 0; }
+
+/* ── Unit opener in normal reading: keep the hero, drop the slide-height block above it ───────────────────────────
+   (presentation mode keeps the full-height centred slide.) */
+.learning-reader:not(.is-presentation) .learning-reader-opener { padding-block-start: 0; }
+@media (min-width: 1024px) {
+  .learning-reader:not(.is-presentation) .learning-reader-opener {
+    min-block-size: 0; gap: var(--eb-space-5); padding-block: 0 var(--eb-space-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button { transition: none; }
+}
+@media (forced-colors: active) {
+  .learning-reader:not(.is-presentation) .learning-reader-topbar { border-color: CanvasText; }
+}
