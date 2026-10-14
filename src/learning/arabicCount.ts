@@ -20,4 +20,3 @@ export const AVAILABLE_BOOKS: ArabicCountForms = {
   many: "{n} كتابًا متاحًا",
   other: "{n} كتاب متاح",
 };
-
