@@ -44,3 +44,48 @@ export function saveVisitedPages(scope: string | undefined, courseId: string, id
   if (!s) return;
   try { s.setItem(keyFor(scope, courseId), JSON.stringify([...ids].slice(-MAX_IDS))); } catch { /* storage full / unavailable: marks stay for this view only */ }
 }
+
+// ── A tiny external store over the same storage, read by the Reader with useSyncExternalStore ─────────────────────────
+// The Reader records a visit from an effect once a page's CONTENT is ready (never on selection alone — a page whose
+// module is still loading, failed or is unavailable is not "visited"). Writing to this store instead of React state
+// keeps that effect free of setState; the snapshot is re-derived from the stored string, so it also follows a reset of
+// storage, and stays referentially stable while nothing changed.
+const EMPTY: ReadonlySet<string> = new Set();
+// `raw`: the stored string, null when absent, undefined when storage cannot be read (blocked) — then the marks recorded
+// in this session stay in memory only.
+const snapshots = new Map<string, { raw: string | null | undefined; ids: ReadonlySet<string> }>();
+const listeners = new Set<() => void>();
+
+function rawFor(scope: string, courseId: string): string | null | undefined {
+  const s = storage();
+  if (!s) return undefined;
+  try { return s.getItem(keyFor(scope, courseId)); } catch { return undefined; }
+}
+
+/** Stable snapshot of the visited ids for this scope + course (the empty set without a scope). */
+export function visitedSnapshot(scope: string | undefined, courseId: string): ReadonlySet<string> {
+  if (!usable(scope, courseId)) return EMPTY;
+  const key = keyFor(scope, courseId);
+  const raw = rawFor(scope, courseId);
+  const cached = snapshots.get(key);
+  if (cached && cached.raw === raw) return cached.ids;
+  const ids = raw === undefined ? (cached?.ids ?? EMPTY) : raw === null ? EMPTY : loadVisitedPages(scope, courseId);
+  snapshots.set(key, { raw, ids });
+  return ids;
+}
+
+export function subscribeVisited(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+/** Record one page as visited (no scope → no-op). Persists and notifies subscribers; storage failures keep the mark in memory. */
+export function recordVisited(scope: string | undefined, courseId: string, pageId: string): void {
+  if (!usable(scope, courseId) || !pageId) return;
+  const current = visitedSnapshot(scope, courseId);
+  if (current.has(pageId)) return;
+  const next = new Set(current).add(pageId);
+  saveVisitedPages(scope, courseId, next);
+  snapshots.set(keyFor(scope, courseId), { raw: rawFor(scope, courseId), ids: next });
+  listeners.forEach(l => l());
+}

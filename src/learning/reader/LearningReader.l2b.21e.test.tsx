@@ -14,7 +14,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import LearningReader from "./LearningReader";
 import LearningReaderWithTraining from "../training/LearningReaderWithTraining";
-import { makeImmediateApi } from "./readerFixtures";
+import { makeImmediateApi, makeDeferredApi, readerBodies } from "./readerFixtures";
 import { createRestrictedReaderContentApi } from "./restrictedContentApi";
 
 const KEY = (scope: string, course = "791381") => "eb.learning.visited.v1:" + scope + ":" + course;
@@ -27,6 +27,8 @@ const heading = (name: string) => screen.findByRole("heading", { level: 2, name 
 const desktopToc = () => within(screen.getByRole("complementary", { name: "فهرس الكتاب (سطح المكتب)" }));
 const nextBtn = () => screen.getByRole("button", { name: "التالي" }) as HTMLButtonElement;
 const jump = () => screen.getByLabelText("انتقل إلى صفحة") as HTMLSelectElement;
+// The page's CONTENT (not just its header) is on screen — the moment a page counts as visited.
+const contentReady = () => waitFor(() => expect(screen.queryByText("جارٍ تحميل الصفحة...")).toBeNull());
 const seenTitles = () => [...document.querySelectorAll(".learning-reader-sidebar .learning-reader-toc-page.is-visited .learning-reader-toc-pagetitle")].map(e => e.textContent);
 
 describe("21E L2-B — progress and orientation", () => {
@@ -116,29 +118,29 @@ describe("21E L2-B — visited marks (device-local, students only) — security"
     expect(seenTitles()).toEqual([]);
   });
 
-  it("marks opened pages for this student and course, persists them, and never shows them to another student or course", async () => {
+  it("marks read pages for this student and course, persists them, and never shows them to another student or course", async () => {
     const a = mount({ visitedScope: "student:u1" });
-    await heading("صفحة غنية");
-    fireEvent.click(nextBtn()); await heading("صفحة ٢");
+    await heading("صفحة غنية"); await contentReady();
+    fireEvent.click(nextBtn()); await heading("صفحة ٢"); await contentReady();
     expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]);
     expect(JSON.parse(localStorage.getItem(KEY("student:u1"))!)).toEqual(["p1", "p2"]);
     expect(desktopToc().getByRole("button", { name: /^صفحة غنية\s*،\s*تمت قراءتها$/ })).toBeTruthy();   // announced, not colour-only
     a.unmount();
 
     const again = mount({ visitedScope: "student:u1" });                                     // same student, same device
-    await heading("صفحة غنية");
+    await heading("صفحة غنية"); await contentReady();
     expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]);
     again.unmount();
 
     mount({ visitedScope: "student:u2" });                                                   // another student
-    await heading("صفحة غنية");
+    await heading("صفحة غنية"); await contentReady();
     expect(seenTitles()).toEqual(["صفحة غنية"]);                                             // only what u2 opened
     expect(JSON.parse(localStorage.getItem(KEY("student:u1"))!)).toEqual(["p1", "p2"]);     // u1 untouched
     cleanup();
 
     localStorage.setItem(KEY("student:u3", "other-course"), JSON.stringify(["p2", "p3"]));
     mount({ visitedScope: "student:u3" });
-    await heading("صفحة غنية");
+    await heading("صفحة غنية"); await contentReady();
     expect(seenTitles()).toEqual(["صفحة غنية"]);                                             // another course's marks never apply
   });
 
@@ -147,7 +149,7 @@ describe("21E L2-B — visited marks (device-local, students only) — security"
     localStorage.setItem(KEY("student:u1"), JSON.stringify(["p5", "p6", "x-unknown", "p2"]));
     const api = createRestrictedReaderContentApi("791381", ["m1"], makeImmediateApi());
     mount({ api, visitedScope: "student:u1" });
-    await heading("صفحة غنية");
+    await heading("صفحة غنية"); await contentReady();
     const toc = document.querySelector(".learning-reader-sidebar")!;
     expect(toc.textContent).not.toContain("الوحدة الثانية");
     expect(toc.textContent).not.toContain("صفحة ٥");
@@ -155,16 +157,45 @@ describe("21E L2-B — visited marks (device-local, students only) — security"
     expect([...jump().options].map(o => o.value)).toEqual(["p1", "p2", "p3", "p4"]);
   });
 
+  // Review fix (ChatGPT, #314): a page counts as visited only once its CONTENT has loaded — never on selection alone.
+  it("never marks a page whose module failed to load or is not available", async () => {
+    const api = makeImmediateApi({
+      loadModule: async (_c, m) => { if (m === "m2") throw new Error("offline"); const b = readerBodies.get(m); if (!b) throw new Error("no body"); return b; },
+    });
+    mount({ api, visitedScope: "student:u1" });
+    await heading("صفحة غنية"); await contentReady();
+    await waitFor(() => expect(localStorage.getItem(KEY("student:u1"))).toBe(JSON.stringify(["p1"])));
+    fireEvent.change(jump(), { target: { value: "p5" } });                                  // m2 → load fails
+    await screen.findByText("تعذّر تحميل هذه الصفحة");
+    fireEvent.change(jump(), { target: { value: "p7" } });                                  // m3 → no body served (unavailable)
+    await heading("صفحة ٧");
+    await waitFor(() => {});
+    expect(JSON.parse(localStorage.getItem(KEY("student:u1"))!)).toEqual(["p1"]);
+    expect(seenTitles()).toEqual(["صفحة غنية"]);
+  });
+
+  it("marks a page only when its content arrives, not while its module is still loading", async () => {
+    const d = makeDeferredApi();
+    mount({ api: d.api, visitedScope: "student:u1" });
+    await heading("صفحة غنية");                                                              // header renders while m1 loads
+    await waitFor(() => {});
+    expect(localStorage.getItem(KEY("student:u1"))).toBeNull();                              // still loading → not visited
+    expect(seenTitles()).toEqual([]);
+    d.resolveModule("m1");
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(KEY("student:u1")) ?? "[]")).toEqual(["p1"]));
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية"]));
+  });
+
   it("malformed or blocked storage never breaks reading and shows no marks", async () => {
     localStorage.setItem(KEY("student:u1"), "{not json");
     const first = mount({ visitedScope: "student:u1" });
-    await heading("صفحة غنية");
-    expect(seenTitles()).toEqual(["صفحة غنية"]);                                             // the stored junk is ignored
+    await heading("صفحة غنية"); await contentReady();
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية"]));                                             // the stored junk is ignored
     first.unmount();
     localStorage.setItem(KEY("student:u1"), JSON.stringify({ p1: true }));
     const second = mount({ visitedScope: "student:u1" });
-    await heading("صفحة غنية");
-    expect(seenTitles()).toEqual(["صفحة غنية"]);
+    await heading("صفحة غنية"); await contentReady();
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية"]));
     second.unmount();
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
