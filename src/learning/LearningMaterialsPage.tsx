@@ -91,7 +91,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
           level={2}
           id="eb-lm-title"
           title="المواد التعليمية"
-          description="استكشف الكتب والدروس التفاعلية، واختر المادة للانتقال إلى أقسامها."
+          description="كتب ومواد تعليمية تفاعلية تساعد الطلاب على الفهم والتدريب خطوة بخطوة."
         />
         <p className="eb-lm-library-count" aria-label={availableCourses.length + " كتب متاحة"}>
           {availableCourses.length} {availableCourses.length === 1 ? "كتاب متاح" : "كتب متاحة"}
