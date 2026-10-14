@@ -1,0 +1,39 @@
+/* Phase 21E L2-A: reader toolbar and sticky pager clearance.
+   Presentation mode retains its own established layout and scrolling. */
+.learning-reader:not(.is-presentation) {
+  scroll-padding-block-end: 7rem;
+}
+.learning-reader:not(.is-presentation) .learning-reader-main {
+  scroll-padding-block-start: var(--eb-space-4);
+  scroll-padding-block-end: 7rem;
+}
+.learning-reader:not(.is-presentation) .learning-reader-page {
+  padding-block-end: var(--eb-space-6);
+}
+.learning-reader:not(.is-presentation) .learning-reader-topbar {
+  padding: var(--eb-space-2) var(--eb-space-3);
+  border: 1px solid var(--eb-line-2);
+  border-radius: var(--eb-r-lg);
+  background: var(--eb-surface);
+  box-shadow: var(--eb-sh-xs);
+}
+.learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button {
+  min-block-size: 44px;
+}
+.learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button:focus-visible {
+  outline: var(--eb-focus-ring);
+  outline-offset: var(--eb-focus-offset);
+}
+.learning-reader:not(.is-presentation) .learning-reader-nav {
+  scroll-margin-block-end: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .learning-reader:not(.is-presentation) .learning-reader-topbar {
+    border-color: CanvasText;
+  }
+}
