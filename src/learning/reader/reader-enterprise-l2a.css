@@ -30,13 +30,28 @@
 .learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button:focus-visible {
   outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset);
 }
-/* Phones: the back, motion and presentation controls become 44×44 icon buttons. Their text stays in the DOM (visually
+/* Phones: the back, reading-settings (L2-C), motion and presentation controls become 44×44 icon buttons. Their text stays in the DOM (visually
    hidden), so each keeps exactly the same accessible name; «الفهرس» keeps its visible label. */
+/* Narrow phones keep the course identity whole: «الفهرس» also goes icon-only below 380px, and below 360px the word
+   «كتاب» is hidden visually (still read out), leaving the course number. Accessible names never change. */
+@media (max-width: 379px) {
+  .learning-reader:not(.is-presentation) .learning-reader-toc-toggle { padding-inline: 0; }
+  .learning-reader:not(.is-presentation) .learning-reader-toc-toggle .learning-reader-btn-label,
+  .learning-reader:not(.is-presentation) .learning-reader-booktitle-word {
+    position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+}
+@media (min-width: 360px) and (max-width: 379px) {
+  .learning-reader:not(.is-presentation) .learning-reader-booktitle-word { position: static; inline-size: auto; block-size: auto; margin: 0; overflow: visible; clip: auto; clip-path: none; }
+}
 @media (max-width: 767px) {
-  .learning-reader:not(.is-presentation) :is(.learning-reader-back, .learning-reader-motion-toggle, .learning-reader-present-toggle) {
+  /* five controls share the phone row: the book identity («كتاب 791381») steps down one size so it stays whole */
+  .learning-reader:not(.is-presentation) .learning-reader-booktitle { font-size: var(--eb-fs-14); }
+  .learning-reader:not(.is-presentation) :is(.learning-reader-back, .learning-reader-settings-toggle, .learning-reader-motion-toggle, .learning-reader-present-toggle) {
     padding-inline: 0;
   }
-  .learning-reader:not(.is-presentation) :is(.learning-reader-back, .learning-reader-motion-toggle, .learning-reader-present-toggle) .learning-reader-btn-label {
+  .learning-reader:not(.is-presentation) :is(.learning-reader-back, .learning-reader-settings-toggle, .learning-reader-motion-toggle, .learning-reader-present-toggle) .learning-reader-btn-label {
     position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden;
     clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
   }
