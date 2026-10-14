@@ -11,8 +11,10 @@ describe("21E L2-A scoped reader clearance", () => {
     expect(component.indexOf('import "./reader.css";')).toBeGreaterThan(-1);
     expect(component.indexOf('import "./reader-enterprise-l2a.css";')).toBeGreaterThan(component.indexOf('import "./reader.css";'));
   });
-  it("never scrolls or focuses from pointer event handlers", () => {
-    expect(css).toContain("scroll-padding-block-end");
+  it("puts the sticky-pager clearance on the document scroller and never scrolls or focuses from pointer handlers", () => {
+    // Normal reading scrolls the DOCUMENT, so the clearance must sit on the root element (a scroll-padding on the
+    // reader box itself has no effect — measured in Chromium: focused practice options ended under the pager).
+    expect(css).toMatch(/:root:has\(\.learning-reader:not\(\.is-presentation\) \.learning-reader-nav\)\s*\{\s*scroll-padding-block-end:/);
     expect(css).not.toMatch(/pointerdown|pointerup|mousedown|mouseup|scrollIntoView|scrollTo/);
   });
   it("does not override presentation mode styles", () => {
@@ -22,11 +24,11 @@ describe("21E L2-A scoped reader clearance", () => {
       expect(rule).toContain(":not(.is-presentation)");
     }
   });
-  it("enables RTL arrow and paging keys in normal mode without intercepting inputs", () => {
-    expect(component).toContain('e.target instanceof Node && !rootRef.current?.contains(e.target)');
+  it("enables RTL arrow and paging keys in normal mode only from the reading surface, never from inputs or controls", () => {
+    // Behaviour is covered in LearningReader.l2a.21e.test.tsx; this pins the guard order in the source.
     expect(component).toContain('isEditableTarget(e.target)');
     expect(component).toContain('nestedDialogOpen()');
-    expect(component).toContain('e.target.closest("button, a, [role=\'button\'], [role=\'slider\'], [role=\'tab\'], [role=\'menuitem\']")');
+    expect(component).toContain('if (!presentation && !isReadingSurface(e.target, contentRef.current)) return;');
     expect(component).not.toContain('if (!presentation) return;\n      if (e.key === "ArrowLeft"');
     expect(component).toContain('e.key === "ArrowLeft" || e.key === "PageDown"');
     expect(component).toContain('e.key === "ArrowRight" || e.key === "PageUp"');
