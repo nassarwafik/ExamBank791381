@@ -11,6 +11,7 @@ import { registryContentApi, type ReaderContentApi } from "./readerContentApi";
 import type { LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import "./reader.css";
+import "./reader-enterprise-l2a.css";
 
 export type { ReaderContentApi } from "./readerContentApi";
 
