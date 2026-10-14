@@ -20,3 +20,13 @@ export const AVAILABLE_BOOKS: ArabicCountForms = {
   many: "{n} كتابًا متاحًا",
   other: "{n} كتاب متاح",
 };
+
+/** «درس» agreed with its count (the course-home section details). */
+export const LESSONS: ArabicCountForms = {
+  zero: "لا دروس",
+  one: "درس واحد",
+  two: "درسان",
+  few: "{n} دروس",
+  many: "{n} درسًا",
+  other: "{n} درس",
+};
