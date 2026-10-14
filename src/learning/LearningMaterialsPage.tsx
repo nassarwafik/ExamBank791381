@@ -1,10 +1,11 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import { IconBook, IconChevronBack } from "../icons";
 import { LEARNING_COURSES, findLearningCourse, type LearningCourse } from "./catalog";
 import { hasCourseContent, loadCourseManifest } from "./content/registry";
-import { batchFirstPageId } from "./content/navigation";
+import { batchFirstPageId, flattenPageRefs } from "./content/navigation";
+import type { LearningCourseManifest } from "./content/types";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import "./learning.css";
 import "./learning-library-premium.css";
@@ -148,6 +149,25 @@ function CourseCard({ course, onOpen }: { course: LearningCourse; onOpen: () => 
 
 /** Course overview: identity + a short intro + the eight high-level content sections, and the reader entry point. */
 function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void; onOpenSection: (batchId: string) => void }) {
+  const [manifest, setManifest] = useState<LearningCourseManifest | null>(null);
+  useEffect(() => {
+    if (!canRead) return;
+    let active = true;
+    loadCourseManifest(course.id).then(result => {
+      if (active) setManifest(result);
+    }).catch(() => { if (active) setManifest(null); });
+    return () => { active = false; };
+  }, [course.id, canRead]);
+  const sectionStats = useMemo(() => {
+    if (!manifest) return new Map<string, { lessons: number; first: number; last: number }>();
+    const flat = flattenPageRefs(manifest);
+    return new Map((manifest.batches ?? []).map(batch => {
+      const ids = new Set(batch.moduleIds);
+      const pages = flat.filter(entry => ids.has(entry.module.id));
+      const lessons = new Set(pages.map(entry => entry.lesson.id)).size;
+      return [batch.id, { lessons, first: pages.length ? pages[0].index + 1 : 0, last: pages.length ? pages[pages.length - 1].index + 1 : 0 }] as const;
+    }));
+  }, [manifest]);
   return (
     <section className="eb-lm eb-lm-overview" aria-labelledby="eb-lm-course-title">
       <button type="button" className="eb-button is-quiet is-small eb-lm-back" onClick={onBack}>
@@ -192,7 +212,7 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
                   aria-label={"فتح قسم " + b.label}
                 >
                   <span className="eb-lm-batch-index" aria-hidden="true">{i + 1}</span>
-                  <span className="eb-lm-batch-label">{b.label}</span>
+                  <span className="eb-lm-batch-label">{b.label}{sectionStats.get(b.id) && <small className="eb-lm-batch-details">{sectionStats.get(b.id)!.lessons} دروس · الصفحات {sectionStats.get(b.id)!.first}–{sectionStats.get(b.id)!.last}</small>}</span>
                   <span className="eb-lm-batch-action">
                     فتح القسم
                     <IconChevronBack size={16} aria-hidden="true" />
