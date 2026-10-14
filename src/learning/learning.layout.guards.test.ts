@@ -41,7 +41,7 @@ describe("Learning Materials — desktop inset", () => {
   it("the teacher page mounts its Reader inside the .eb-lm-reader root and the library/overview keep the .eb-lm root", () => {
     const page = read("learning/LearningMaterialsPage.tsx");
     expect(page).toContain('<div className="eb-lm-reader">');
-    expect(page.match(/className="eb-lm(?: eb-lm-overview)?" aria-labelledby/g)?.length).toBe(2);
+    expect(page.match(/className="eb-lm(?: eb-lm-overview| eb-lm-premium-library)?" aria-labelledby/g)?.length).toBe(2);
   });
 });
 
