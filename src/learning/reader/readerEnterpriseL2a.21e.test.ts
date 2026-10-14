@@ -31,6 +31,12 @@ describe("21E L2-A scoped reader clearance", () => {
     expect(component).toContain('e.key === "ArrowLeft" || e.key === "PageDown"');
     expect(component).toContain('e.key === "ArrowRight" || e.key === "PageUp"');
   });
+  it("keeps the release notice dismissible and outside presentation mode", () => {
+    expect(component).toContain("releaseNoteVisible &&");
+    expect(component).toContain("setReleaseNoteVisible(false)");
+    expect(component).toContain('aria-label="إخفاء تنبيه محتوى الكتاب"');
+    expect(css).toContain(".learning-reader-release-note");
+  });
   it("uses tokens, keyboard rings and forced-colors fallback", () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(/);
     expect(css).toContain(":focus-visible");
