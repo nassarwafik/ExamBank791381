@@ -21,7 +21,6 @@ export const AVAILABLE_BOOKS: ArabicCountForms = {
   other: "{n} كتاب متاح",
 };
 
-
 /** «درس» agreed with its count (the course-home section details). */
 export const LESSONS: ArabicCountForms = {
   zero: "لا دروس",
