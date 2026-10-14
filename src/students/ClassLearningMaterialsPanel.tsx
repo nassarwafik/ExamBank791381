@@ -42,7 +42,10 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
   const editable = Boolean(classroom) && p.classActive;
   // Derived from the same class release state and catalog used by the existing controls.
   // Never infer publication from a catalog default or an unassigned module.
-  const publishedCount = materials.reduce((total, entry) => total + entry.visibleModuleIds.length, 0);
+  const publishedCount = materials.reduce((total, entry) => {
+    const course = p.catalog?.find(c => c.courseId === entry.courseId);
+    return total + (course ? course.modules.filter(m => entry.visibleModuleIds.includes(m.moduleId)).length : entry.visibleModuleIds.length);
+  }, 0);
   const assignedModuleCount = materials.reduce((total, entry) => {
     const course = p.catalog?.find(c => c.courseId === entry.courseId);
     return total + (course?.modules.length ?? 0);
@@ -68,7 +71,7 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
         <div className="eb-lm-class-overview" aria-label="ملخص المواد التعليمية للصف">
           <p><strong>{materials.length}</strong> مواد تعليمية مضافة</p>
           <p><strong>{publishedCount}</strong> وحدات منشورة للطلاب</p>
-          {p.catalog && <p><strong>{assignedModuleCount - publishedCount}</strong> وحدات غير منشورة</p>}
+          {p.catalog && <p><strong>{Math.max(0, assignedModuleCount - publishedCount)}</strong> وحدات غير منشورة</p>}
           {!p.classActive && <p>الصف مؤرشف — عرض فقط</p>}
         </div>
       )}
