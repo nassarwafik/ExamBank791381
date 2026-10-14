@@ -1,0 +1,69 @@
+/* Phase 21E L2-C: reading comfort — text size, line spacing, reading theme — and the «إعدادات القراءة» dialog.
+   The Reader sets data-read-size / data-read-spacing / data-read-theme on its root in NORMAL reading only, and every
+   rule below is keyed on them, so presentation mode keeps its established layout. The settings act only through the
+   Reader's own typography tokens (--eb-read-*) and the reading surface's colour tokens: content and interactive
+   semantics are untouched. */
+
+/* Reader-scoped sepia palette (warm paper). Contrast on the sepia surface: text ≈ 12:1, secondary ≈ 7.7:1, muted ≈ 5.9:1. */
+:root {
+  --eb-read-sepia-surface: #f6efdf; --eb-read-sepia-surface-2: #efe4cc;
+  --eb-read-sepia-line: #e2d3b3; --eb-read-sepia-line-2: #d8c59f;
+  --eb-read-sepia-text: #3a2e1f; --eb-read-sepia-heading: #2b2116; --eb-read-sepia-secondary: #5a4a35; --eb-read-sepia-muted: #6b583f;
+}
+
+/* ── Text size: body 17 / 19 / 21 px (the related text tokens step with it; headings keep their scale) ───────────── */
+.learning-reader:not(.is-presentation)[data-read-size="1"] {
+  --eb-read-fs-body: 17px; --eb-read-fs-card: 16px; --eb-read-fs-small: 14px; --eb-read-fs-label: 15px; --eb-read-fs-table: 14px; --eb-read-fs-code: 14px;
+}
+.learning-reader:not(.is-presentation)[data-read-size="2"] {
+  --eb-read-fs-body: 19px; --eb-read-fs-card: 18px; --eb-read-fs-small: 16px; --eb-read-fs-label: 17px; --eb-read-fs-table: 16px; --eb-read-fs-code: 15px;
+}
+.learning-reader:not(.is-presentation)[data-read-size="3"] {
+  --eb-read-fs-body: 21px; --eb-read-fs-card: 20px; --eb-read-fs-small: 18px; --eb-read-fs-label: 19px; --eb-read-fs-table: 18px; --eb-read-fs-code: 17px;
+}
+
+/* ── Line spacing ───────────────────────────────────────────────────────────────────────────────────────────────── */
+.learning-reader:not(.is-presentation)[data-read-spacing="1"] { --eb-read-lh: 1.85; }
+.learning-reader:not(.is-presentation)[data-read-spacing="2"] { --eb-read-lh: 2.05; }
+.learning-reader:not(.is-presentation)[data-read-spacing="3"] { --eb-read-lh: 2.25; }
+
+/* ── Sepia reading surface: the page card (and the release note) re-map the colour tokens they read ─────────────── */
+.learning-reader:not(.is-presentation)[data-read-theme="sepia"] :is(.learning-reader-page, .learning-reader-release-note) {
+  --eb-surface: var(--eb-read-sepia-surface); --eb-surface-2: var(--eb-read-sepia-surface-2);
+  --eb-line: var(--eb-read-sepia-line); --eb-line-2: var(--eb-read-sepia-line-2);
+  --eb-text: var(--eb-read-sepia-text); --eb-text-heading: var(--eb-read-sepia-heading);
+  --eb-text-secondary: var(--eb-read-sepia-secondary); --eb-muted: var(--eb-read-sepia-muted);
+  background: var(--eb-surface); color: var(--eb-text);
+}
+
+/* ── The settings dialog ────────────────────────────────────────────────────────────────────────────────────────── */
+.learning-reader-settings .eb-dialog-body { display: flex; flex-direction: column; gap: var(--eb-space-4); }
+.learning-reader-settings-note { margin: 0; color: var(--eb-text-secondary); font-size: var(--eb-fs-13); }
+.learning-reader-settings-group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.learning-reader-settings-group legend {
+  padding: 0; margin-block-end: var(--eb-space-2); color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-14);
+}
+.learning-reader-settings-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: var(--eb-space-2); }
+.learning-reader-settings-option {
+  display: flex; align-items: center; gap: var(--eb-space-2); min-block-size: 44px; padding: var(--eb-space-2) var(--eb-space-3);
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); background: var(--eb-surface); cursor: pointer;
+  color: var(--eb-text); font-size: var(--eb-fs-14); min-width: 0;
+}
+.learning-reader-settings-option:has(input:checked) { border-color: var(--eb-primary); background: var(--eb-primary-050); color: var(--eb-primary-strong); font-weight: var(--eb-fw-semibold); }
+.learning-reader-settings-option input { flex: 0 0 auto; inline-size: 18px; block-size: 18px; margin: 0; accent-color: var(--eb-primary); }
+.learning-reader-settings-option input:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.learning-reader-settings-sample { font-weight: var(--eb-fw-bold); line-height: 1; color: var(--eb-text-heading); }
+.learning-reader-settings-sample[data-size="1"] { font-size: 17px; }
+.learning-reader-settings-sample[data-size="2"] { font-size: 19px; }
+.learning-reader-settings-sample[data-size="3"] { font-size: 21px; }
+.learning-reader-settings-px { color: var(--eb-muted); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-medium); font-variant-numeric: tabular-nums; }
+.learning-reader-settings-hint { display: block; color: var(--eb-muted); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-medium); }
+.learning-reader-settings-swatch { flex: 0 0 auto; inline-size: 22px; block-size: 22px; border-radius: var(--eb-pill); border: 1px solid var(--eb-line-2); }
+.learning-reader-settings-swatch[data-theme="light"] { background: var(--eb-surface); }
+.learning-reader-settings-swatch[data-theme="sepia"] { background: var(--eb-read-sepia-surface); border-color: var(--eb-read-sepia-line-2); }
+.learning-reader-settings .eb-dialog-foot { flex-wrap: wrap; }
+
+@media (forced-colors: active) {
+  .learning-reader-settings-option { border-color: CanvasText; }
+  .learning-reader-settings-option:has(input:checked) { border-width: 2px; border-color: Highlight; }
+}
