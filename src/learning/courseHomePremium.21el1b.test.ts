@@ -19,6 +19,11 @@ describe("21E L1-B — course section counts originate from manifest", () => {
     expect(memberships.size).toBe(flat.length);
     expect([...memberships.values()].every(v => v === 1)).toBe(true);
   });
+  it("the empty intro section never displays a fabricated page range", () => {
+    const intro = manifest.batches?.find(b => b.id === "intro");
+    expect(intro?.moduleIds).toEqual([]);
+    expect(flat.filter(p => intro?.moduleIds.includes(p.module.id))).toHaveLength(0);
+  });
   it("manifest-derived reading ranges are ordered and sum to total pages", () => {
     let count = 0;
     for (const batch of manifest.batches ?? []) {
