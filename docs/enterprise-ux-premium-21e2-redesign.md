@@ -100,3 +100,70 @@ without a display label. Handed over as an observation.
 2. teacher dashboard and exam lists;
 3. the student exam experience, after PR #303's 21E.3 work, to avoid conflicts;
 4. shared SmartSim / 3D framing.
+
+## Slice 3 — the builder panels: «مستكشف الأسئلة», the bulk-selection bar, «فحص الجاهزية للاعتماد»
+
+**Base and branch:**
+- stacked on slice 2's head `12ec2bc7`;
+- branch `feature/phase-21e2-premium-s3-panels`;
+- merge order: **#302 → #304 → #305 → this slice**.
+
+**Edit set:**
+- `src/builder/builder-premium-panels.css`: new.
+- `src/builder/builder-premium.css`: one more `@import`.
+- `src/builder/builderPremiumPanels.21e2p3.test.ts`: new, 9 guards.
+- `scripts/capture-visual-gate-21e2p3.mjs`: new harness.
+- This section.
+
+No component file changes. As in slice 2, this edit set shares no file with the builder-integration branch, which was still at
+`f7539b08` when checked before commit.
+
+**What the teacher sees:**
+
+| Panel | Before | After |
+|---|---|---|
+| Question navigator (side panel above 900 px, dialog below) | plain search box, heavy dashed group rules, round 22 px number dots, a 16 px checkbox beside each row | a pill search field; section groups with a hairline rule and a count pill; rounded-square number tiles matching the question cards; the selected row tinted with a ring; filters and actions banded |
+| Bulk-selection bar | white bar, the count a small grey pill | a tinted selection band with a filled «2 أسئلة محددة» count and one button language; «حذف» in danger text |
+| Readiness dialog | a flat list; the blocker an outlined box | the decision as a status panel; section headings with rules; each blocker / warning a tinted card with a 4 px tone edge and a labelled pill on white («يمنع الاعتماد النهائي»), so the tone is never colour alone |
+
+**Fixed while restyling** (measured in real Chromium, phone, touch):
+- navigator checkboxes 16 px → 24 px (WCAG 2.5.8);
+- «تحديد القسم» 22 px → 44 px;
+- «تحديد الظاهر» 40 px → 44 px;
+- the question rows → 44 px.
+
+**Cascade finding:** `structured-builder.css` is imported again by the structured-import chunks, so after one of them loads, a
+legacy rule wins any **tie** in specificity. «تحديد الظاهر» stayed at 40 px for exactly this reason. The new guard requires every
+slice-3 rule to be more specific than any legacy rule that can match the same element and sets the same property.
+
+**Evidence** (local, on this head):
+
+- **Chromium harness** `scripts/capture-visual-gate-21e2p3.mjs`:
+  - fixture: slice 2's exam plus a blueprint with a quality policy, so the readiness dialog has a real blocker with evidence;
+  - viewports: 1280×900 (panel), 853×600 @1.5, 640×450 @2, 390×844 touch (dialog).
+
+  | Check | BEFORE (`12ec2bc7`) | AFTER |
+  |---|---|---|
+  | N-1 the navigator lists 6; N-2 the type filter narrows to 1, «مسح الفلاتر» restores 6 | ✓ | ✓ |
+  | B-1 the bulk bar counts 2; B-2 its position rule is unchanged (sticky above 640 px, static below) | ✓ | ✓ |
+  | R-1 readiness: 3 sections, a quality-gate blocker; R-2 «عرض الأسئلة» closes the dialog and focuses the question card | ✓ | ✓ |
+  | V-1 no horizontal overflow; E-1 no page / console errors | ✓ | ✓ |
+  | **T-1 touch: navigator rows / buttons ≥ 44 px, checkboxes ≥ 24 px** | **✗** | ✓ |
+  | Total | 29 / 30 | **30 / 30** |
+
+- **Guards:** slice 3 (9) + slice 2 (11) + slice 1 (11) + `src/designSystem`: 61/61.
+- **Planted defects** (file hash-restored), each KILLED:
+  - the navigator made non-sticky;
+  - the checkbox touch size removed;
+  - the readiness pill moved onto the tint.
+- **Static checks:** `tsc -b` clean; lint 125 warnings (baseline), 0 errors; `npm run build` with the bundle guard passed;
+  `git diff --check` clean.
+
+**Seen while testing, not changed here** (dialog / menu behaviour owned by the builder-integration branch):
+- **Focus loss and an ignored click at 200 %.** At 640×450, after Escape closes the navigator dialog:
+  - focus is on `<body>`;
+  - the next pointer click on «المزيد» does not open the menu; a second click does.
+  
+  The harness records this as `menuFirstClickIgnored` and retries.
+- **Raw navigator text for matching questions.** The navigator shows a matching question's stored table markdown («| البروتوكول |
+  الوظيفة | | --- …») as its text.
