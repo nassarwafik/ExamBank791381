@@ -79,7 +79,8 @@ describe("student Reader — m07 hidden (released m01 + m02)", () => {
     const three = mount([M01, M02, M07]);
     await heading("أساسيات الشبكات");
     const toc = within(screen.getByRole("complementary", { name: "فهرس الكتاب (سطح المكتب)" }));
-    const modules = toc.getAllByRole("button", { expanded: true }).map(b => b.textContent);
+    // every module toggle, expanded or not (Phase 21E L2-B: only the current module starts expanded)
+    const modules = toc.getAllByRole("button").filter(b => b.hasAttribute("aria-expanded")).map(b => b.textContent);
     expect(modules).toEqual(["أساسيات الشبكات", "الأعداد والموازين", "عناوين IP"]);   // canonical order, m07 after m02
     fireEvent.change(jump(), { target: { value: "791381-m02-l01-p09" } });
     await screen.findByText(/صفحة PDF 23(\D|$)/, {}, SLOW);

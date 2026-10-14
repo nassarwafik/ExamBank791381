@@ -14,7 +14,8 @@ const M01 = "791381-m01", M02 = "791381-m02", M07 = "791381-m07";
 const SLOW = { timeout: 8000 }, T = 30000;
 const jump = () => screen.getByLabelText("انتقل إلى صفحة") as HTMLSelectElement;
 const nextBtn = () => screen.getByRole("button", { name: "التالي" }) as HTMLButtonElement;
-const tocModules = () => within(screen.getByRole("complementary", { name: "فهرس الكتاب (سطح المكتب)" })).getAllByRole("button", { expanded: true }).map(b => b.textContent);
+// Every module toggle in the index, expanded or not (Phase 21E L2-B: only the current module starts expanded).
+const tocModules = () => within(screen.getByRole("complementary", { name: "فهرس الكتاب (سطح المكتب)" })).getAllByRole("button").filter(b => b.hasAttribute("aria-expanded")).map(b => b.textContent);
 const readerText = () => (document.querySelector(".learning-reader") as HTMLElement).textContent || "";
 
 async function openReader(released: string[]) {

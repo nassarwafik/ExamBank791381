@@ -1,0 +1,63 @@
+/* Phase 21E L2-B: reading progress, orientation and the index (TOC) — tokens and logical properties only.
+   Normal reading only, except the TOC rules, which also serve the presentation-mode index drawer unchanged in layout. */
+
+/* ── Thin book-position bar along the top edge of the page bar ─────────────────────────────────────────────────── */
+/* The page bar is sticky (a positioned box), so the bar sits on its top edge, inset clear of the rounded corners. */
+.learning-reader-progress {
+  position: absolute; inset-block-start: 0; inset-inline: var(--eb-space-4); block-size: 3px;
+  background: var(--eb-primary-050); border-radius: var(--eb-pill); overflow: hidden;
+}
+/* The fill scales from the inline START (the right edge in RTL) by the unitless --learning-reader-progress (0…1) the
+   Reader sets — no inline width, so the layout stays CSS-driven. */
+.learning-reader-progress-fill {
+  display: block; block-size: 100%; inline-size: 100%;
+  background: var(--eb-primary);
+  transform: scaleX(var(--learning-reader-progress, 0)); transform-origin: right center;
+  transition: transform var(--eb-dur) var(--eb-ease);
+}
+[dir="ltr"] .learning-reader-progress-fill { transform-origin: left center; }
+
+/* ── «الدرس 2 من 5» beside «صفحة n من total» in the page head ──────────────────────────────────────────────────── */
+.learning-reader-lessonpos {
+  color: var(--eb-primary-strong); font-size: var(--eb-read-fs-meta); font-weight: var(--eb-fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Index: page jump at the top, current lesson, visited marks ────────────────────────────────────────────────── */
+/* nowrap matters: the base sheet's `flex-wrap: wrap` would make this column multi-line, sizing it to the select's
+   longest option title instead of the index width (measured: 420px in a 282px sidebar). */
+.learning-reader-toc .learning-reader-jump {
+  display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: var(--eb-space-1);
+  padding: var(--eb-space-2); margin-block-end: var(--eb-space-2);
+  border-block-end: 1px solid var(--eb-line);
+}
+.learning-reader-toc .learning-reader-jump-row { display: flex; gap: var(--eb-space-2); min-width: 0; }
+.learning-reader-toc .learning-reader-jump select { flex: 1 1 auto; min-width: 0; max-inline-size: none; }
+.learning-reader-jump-go { flex: 0 0 auto; min-block-size: 44px; min-inline-size: 64px; }
+.learning-reader-jump select:focus-visible, .learning-reader-jump-go:focus-visible,
+.learning-reader-toc-modbtn:focus-visible, .learning-reader-toc-page:focus-visible {
+  outline: var(--eb-focus-ring); outline-offset: calc(-1 * var(--eb-focus-offset));
+}
+
+.learning-reader-toc-module.is-current > .learning-reader-toc-modbtn { color: var(--eb-primary-strong); }
+.learning-reader-toc-lesson.is-current > .learning-reader-toc-lessontitle { color: var(--eb-text-heading); }
+.learning-reader-toc-lessonnow {
+  display: inline-block; margin-inline-start: var(--eb-space-2); padding-inline: var(--eb-space-2);
+  border-radius: var(--eb-pill); background: var(--eb-primary-050); color: var(--eb-primary-strong);
+  font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold);
+}
+.learning-reader-toc-page { gap: var(--eb-space-2); justify-content: space-between; }
+.learning-reader-toc-pagetitle { min-width: 0; }
+.learning-reader-toc-seen { flex: 0 0 auto; color: var(--eb-success-tx); }
+.learning-reader-toc-page.is-visited:not(.is-active) { color: var(--eb-text-secondary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .learning-reader-progress-fill { transition: none; }
+}
+@media (forced-colors: active) {
+  .learning-reader-progress { background: Canvas; border-block-end: 1px solid CanvasText; }
+  .learning-reader-progress-fill { background: Highlight; }
+  .learning-reader-toc-lessonnow { border: 1px solid CanvasText; }
+}
+/* A collapsed module keeps its panel in the DOM (aria-controls must resolve) but never shows it. */
+.learning-reader-toc-lessons[hidden] { display: none; }

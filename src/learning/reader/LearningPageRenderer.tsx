@@ -38,6 +38,8 @@ export type ReaderPageHeader = {
   pageTitle: string;
   moduleTitle: string;
   lessonTitle: string;
+  /** Phase 21E L2-B — the lesson's place inside its module («الدرس 2 من 5»); absent/null → not shown. */
+  lesson?: { index: number; total: number } | null;
   position: { index: number; total: number };
   source?: ContentSource;
 };
@@ -90,6 +92,7 @@ export default function LearningPageRenderer({ header, body, activity, training,
         <h2 id="learning-reader-page-title" className="learning-reader-page-title" tabIndex={-1}>{header.pageTitle}</h2>
         <p className="learning-reader-context">{header.moduleTitle} · {header.lessonTitle}</p>
         <div className="learning-reader-metarow">
+          {header.lesson && <span className="learning-reader-lessonpos">الدرس {header.lesson.index} من {header.lesson.total}</span>}
           <span className="learning-reader-position">صفحة {header.position.index} من {header.position.total}</span>
           <span className="learning-reader-frombook"><IconBook size={14} aria-hidden="true" />من الكتاب</span>
         </div>
