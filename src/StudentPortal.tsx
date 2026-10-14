@@ -367,6 +367,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
           token={token}
           initialPageId={readerInitialPageId}
+          studentId={data.student.userId}
           onPageChange={pageId => saveReaderPosition(data.student.userId, { courseId: readerCourse.courseId, pageId })}
           onTrainingSubmitted={() => { strengthDirtyRef.current = true; }}
           onStudyPointsEarned={() => { strengthDirtyRef.current = true; }}
