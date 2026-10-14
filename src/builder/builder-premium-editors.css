@@ -1,0 +1,185 @@
+/* Phase 21E.2 — Premium Visual Redesign, slice 2: the question editors inside the structured builder.
+   Presentation only: no markup, behaviour, exam JSON, grading or storage change (no component file is edited — this sheet is
+   pulled in by an @import at the top of builder-premium.css). Token-only, RTL logical properties.
+   Scope: `.sb-builder .sb-q-body` — question bodies (and the compound parts inside them) only; specificity (0,3,x) is above the
+   slice 1 sheet's `.sb-builder .x`, so the editor look wins inside a question while the section / toolbar look stays slice 1's.
+   Guard rails (pinned by src/builder/builderPremiumEditors.21e2p2.test.ts): never clips a row, never hides a control, keeps every
+   focus indicator, reduced-motion and forced-colours fallbacks, ≥ 44 px answer targets on touch, success text ≥ 4.5:1.
+   Language: an answer row is a small card; the CORRECT answer is marked by form AND colour (filled pill, ring, badge);
+   every editor family shares the same row card, index badge and action cluster. */
+
+/* ---------- group headings (Field frame legends and the legacy labels above an editor) ---------- */
+.sb-builder .sb-q-body .eb-field-group > legend.eb-field-label,
+.sb-builder .sb-q-body .sb-fields > .sb-field-label {
+  color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-bold);
+}
+.sb-builder .sb-q-body .eb-field-help { color: var(--eb-muted); font-size: var(--eb-fs-13); }
+
+/* ---------- the shared answer row card ---------- */
+.sb-builder .sb-q-body .sb-options,
+.sb-builder .sb-q-body .sb-fields,
+.sb-builder .sb-q-body .sb-fields-list,
+.sb-builder .sb-q-body .sb-matching { gap: var(--eb-space-2); }
+.sb-builder .sb-q-body .sb-options { counter-reset: sb-opt; }
+.sb-builder .sb-q-body .sb-option-row,
+.sb-builder .sb-q-body .sb-fields > .sb-field-row,
+.sb-builder .sb-q-body .sb-fields-list > .sb-field-row,
+.sb-builder .sb-q-body .sb-matching > .sb-field-row {
+  gap: var(--eb-space-2); padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r);
+  background: var(--eb-surface); box-shadow: var(--eb-sh-xs);
+  transition: border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
+}
+.sb-builder .sb-q-body .sb-option-row:hover,
+.sb-builder .sb-q-body .sb-fields > .sb-field-row:hover,
+.sb-builder .sb-q-body .sb-fields-list > .sb-field-row:hover,
+.sb-builder .sb-q-body .sb-matching > .sb-field-row:hover { border-color: var(--eb-primary-100); }
+.sb-builder .sb-q-body .sb-option-row:focus-within,
+.sb-builder .sb-q-body .sb-fields > .sb-field-row:focus-within,
+.sb-builder .sb-q-body .sb-fields-list > .sb-field-row:focus-within,
+.sb-builder .sb-q-body .sb-matching > .sb-field-row:focus-within { border-color: var(--eb-primary); box-shadow: var(--eb-sh-sm); }
+/* inputs inside a row take the free space (they had a fixed intrinsic width in field rows) */
+.sb-builder .sb-q-body .sb-field-row > .sb-input:not(.sb-input-sm) { flex: 1 1 14rem; min-width: 0; width: auto; }
+.sb-builder .sb-q-body .sb-field-row > .sb-input.sb-input-sm { flex: 1 1 9rem; min-width: 0; }
+
+/* index badges: the option number (generated, decorative) and the field index (real text) share one look */
+.sb-builder .sb-q-body .sb-option-row { counter-increment: sb-opt; }
+.sb-builder .sb-q-body .sb-option-row::before {
+  content: counter(sb-opt); flex: 0 0 auto; order: -1;
+}
+.sb-builder .sb-q-body .sb-option-row::before,
+.sb-builder .sb-q-body .sb-field-index {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 28px; height: 28px; padding: 0 var(--eb-space-1);
+  border-radius: var(--eb-r-sm); background: var(--eb-primary-050); color: var(--eb-primary-strong);
+  font-size: var(--eb-fs-13); font-weight: var(--eb-fw-bold); font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the correct-answer control: a pill that fills when chosen ---------- */
+.sb-builder .sb-q-body .sb-radio {
+  min-height: 34px; padding: 0 var(--eb-space-3); gap: var(--eb-space-2); border: 1px solid var(--eb-line-2); border-radius: var(--eb-pill);
+  background: var(--eb-surface); color: var(--eb-muted); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); cursor: pointer;
+  transition: background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
+}
+.sb-builder .sb-q-body .sb-radio:hover { border-color: var(--eb-success); color: var(--eb-success-tx); }
+.sb-builder .sb-q-body .sb-radio input { accent-color: var(--eb-success); width: 16px; height: 16px; margin: 0; }
+.sb-builder .sb-q-body .sb-radio:has(input:checked) {
+  border-color: var(--eb-success); background: var(--eb-success-bg); color: var(--eb-success-tx); font-weight: var(--eb-fw-bold);
+}
+.sb-builder .sb-q-body .sb-radio:has(input:focus-visible) { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.sb-builder .sb-q-body .sb-radio:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+
+/* the row holding the correct option: ring + success badge (form, not only colour) */
+.sb-builder .sb-q-body .sb-option-row:has(.sb-radio input:checked) {
+  border-color: var(--eb-success); background: var(--eb-success-bg); box-shadow: 0 0 0 1px var(--eb-success);
+}
+.sb-builder .sb-q-body .sb-option-row:has(.sb-radio input:checked)::before { background: var(--eb-success-tx); color: var(--eb-surface); }
+.sb-builder .sb-q-body .sb-option-row:has(.sb-radio input:checked) .sb-input { border-color: var(--eb-success); }
+
+/* true / false: two large choice tiles */
+.sb-builder .sb-q-body .sb-truefalse { gap: var(--eb-space-3); flex-wrap: wrap; }
+.sb-builder .sb-q-body .sb-truefalse .sb-radio {
+  flex: 0 1 11rem; justify-content: center; min-height: 48px; border-radius: var(--eb-r);
+  font-size: var(--eb-fs-16); color: var(--eb-ink); box-shadow: var(--eb-sh-xs);
+}
+.sb-builder .sb-q-body .sb-truefalse .sb-radio:has(input:checked) { box-shadow: 0 0 0 1px var(--eb-success), var(--eb-sh-sm); }
+
+/* ---------- matching: item → answer, the arrow as a chip ---------- */
+.sb-builder .sb-q-body .sb-arrow {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; inline-size: 28px; block-size: 28px;
+  border-radius: var(--eb-pill); background: var(--eb-primary-050); color: var(--eb-primary-strong); font-size: var(--eb-fs-14);
+}
+
+/* ---------- interactive table ---------- */
+.sb-builder .sb-q-body .sb-tablefill { gap: var(--eb-space-2); }
+.sb-builder .sb-q-body .sb-tablefill-scroll {
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-lg); background: var(--eb-surface); box-shadow: var(--eb-sh-xs);
+}
+.sb-builder .sb-q-body .sb-grid { border-collapse: separate; border-spacing: 0; }
+.sb-builder .sb-q-body .sb-grid :is(th, td) {
+  border: 0; border-block-end: 1px solid var(--eb-line); border-inline-start: 1px solid var(--eb-line); padding: var(--eb-space-2);
+}
+.sb-builder .sb-q-body .sb-grid tr > :is(th, td):first-child { border-inline-start: 0; }
+.sb-builder .sb-q-body .sb-grid tbody tr:last-child > td { border-block-end: 0; }
+.sb-builder .sb-q-body .sb-grid th { background: var(--eb-surface-2); border-block-end: 2px solid var(--eb-line-2); }
+.sb-builder .sb-q-body .sb-grid th .sb-input { font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.sb-builder .sb-q-body .sb-grid .sb-grid-actions { background: var(--eb-surface-2); text-align: center; }
+/* answer cells: tint + a success top edge (form, not only colour) */
+.sb-builder .sb-q-body .sb-grid td.sb-cell-answer { background: var(--eb-success-bg); box-shadow: inset 0 3px 0 var(--eb-success); }
+.sb-builder .sb-q-body .sb-cell-editor, .sb-builder .sb-q-body .sb-cell-static { gap: var(--eb-space-2); }
+.sb-builder .sb-q-body .sb-cell-row { gap: var(--eb-space-1); }
+.sb-builder .sb-q-body .sb-cell-row > .sb-input { flex: 1 1 auto; min-width: 0; }
+.sb-builder .sb-q-body .sb-cell-static > .sb-mini-btn { align-self: flex-start; }
+
+/* ---------- media: the image on a stage, actions as a tidy cluster ---------- */
+.sb-builder .sb-q-body .sb-media {
+  display: flex; flex-direction: column; gap: var(--eb-space-3); padding: var(--eb-space-4);
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-lg); background: var(--eb-surface);
+}
+.sb-builder .sb-q-body .sb-media-title { font-size: var(--eb-fs-14); font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.sb-builder .sb-q-body .sb-media-preview {
+  justify-content: center; align-items: center; padding: var(--eb-space-3); border-radius: var(--eb-r);
+  background: var(--eb-surface-2); border: 1px dashed var(--eb-border-strong);
+}
+.sb-builder .sb-q-body .sb-media-thumb { max-height: 240px; border-radius: var(--eb-r-sm); border: 1px solid var(--eb-line-2); background: var(--eb-surface); box-shadow: var(--eb-sh-sm); }
+.sb-builder .sb-q-body .sb-media-actions { gap: var(--eb-space-2); }
+.sb-builder .sb-q-body .sb-media-hint { color: var(--eb-muted); font-size: var(--eb-fs-12); }
+.sb-builder .sb-q-body .sb-media-busy { border-radius: var(--eb-pill); padding: 2px var(--eb-space-3); background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+
+/* plain buttons inside a question (media, code, activity): the toolbar's button language */
+.sb-builder .sb-q-body .sb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-1); min-height: 36px;
+  padding: 0 var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface);
+  color: var(--eb-text-heading); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold);
+  transition: background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
+}
+.sb-builder .sb-q-body .sb-btn:hover:not(:disabled) { border-color: var(--eb-primary); background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+.sb-builder .sb-q-body .sb-btn:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.sb-builder .sb-q-body .sb-btn.sb-media-ai { border-color: var(--eb-primary-100); background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+.sb-builder .sb-q-body .sb-btn:is(.sb-danger, .sb-btn-danger) { border-color: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.sb-builder .sb-q-body .sb-btn:is(.sb-danger, .sb-btn-danger):hover:not(:disabled) { background: var(--eb-danger-bg); border-color: var(--eb-danger-tx); color: var(--eb-danger-tx); }
+
+/* ---------- attached code: an empty state that reads as an add action; the source as a code surface ---------- */
+.sb-builder .sb-q-body div.sb-code-stimulus { padding: var(--eb-space-1); border: 1px dashed var(--eb-border-strong); border-radius: var(--eb-r-lg); background: transparent; }
+.sb-builder .sb-q-body div.sb-code-stimulus > .sb-btn { inline-size: 100%; min-height: 44px; border-color: transparent; background: transparent; color: var(--eb-primary-strong); }
+.sb-builder .sb-q-body div.sb-code-stimulus > .sb-btn:hover:not(:disabled) { background: var(--eb-primary-050); border-color: transparent; }
+.sb-builder .sb-q-body fieldset.sb-code-stimulus { padding: var(--eb-space-3) var(--eb-space-4); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-lg); background: var(--eb-surface); }
+.sb-builder .sb-q-body .sb-code-stimulus legend { font-size: var(--eb-fs-14); font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.sb-builder .sb-q-body .sb-code-stimulus-source {
+  background: var(--eb-navy); color: var(--eb-nav-text); border-color: var(--eb-navy-2); caret-color: var(--eb-nav-text);
+  font-family: var(--eb-font-mono, ui-monospace, monospace); font-size: var(--eb-fs-13); line-height: 1.6;
+}
+
+/* ---------- classification and activity panels ---------- */
+.sb-builder .sb-q-body :is(.sb-class, .sb-activity) {
+  margin: 0; padding: var(--eb-space-3) var(--eb-space-4); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-lg); background: var(--eb-surface-2);
+}
+.sb-builder .sb-q-body :is(.sb-class, .sb-activity) > legend { padding-inline: var(--eb-space-1); color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-bold); }
+.sb-builder .sb-q-body .sb-class-row { gap: var(--eb-space-2) var(--eb-space-4); }
+
+/* ---------- narrow (phones, 200 % zoom): rows re-flow inside their card ---------- */
+@media (max-width: 640px) {
+  /* MCQ: number + correct pill + actions on the first line, the option text full width below */
+  .sb-builder .sb-q-body .sb-option-row > :is(.eb-field, .sb-input) { order: 2; flex: 1 1 100%; }
+  .sb-builder .sb-q-body .sb-option-row > .sb-icon-btn:first-of-type { margin-inline-start: auto; }
+  .sb-builder .sb-q-body .sb-option-row { gap: var(--eb-space-1) var(--eb-space-1); padding: var(--eb-space-2); }   /* pill + ↑ ↓ × fit one line at 390 px */
+  /* matching: item [↓] / answer [×] — the arrow turns to point at the answer below it */
+  .sb-builder .sb-q-body .sb-matching > .sb-field-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .sb-builder .sb-q-body .sb-matching > .sb-field-row > .sb-arrow { transform: rotate(-90deg); }
+  /* fields (multi true / false, word bank): index + text on one line, answer select + actions below */
+  .sb-builder .sb-q-body :is(.sb-fields, .sb-fields-list) > .sb-field-row > .sb-input:not(.sb-input-sm) { flex-basis: calc(100% - 44px); }
+  .sb-builder .sb-q-body .sb-truefalse .sb-radio { flex: 1 1 8rem; }
+  .sb-builder .sb-q-body .sb-media { padding: var(--eb-space-3); }
+}
+/* touch: every answer control is a 44 px target */
+@media (pointer: coarse) {
+  .sb-builder .sb-q-body .sb-radio { min-height: 44px; }
+  .sb-builder .sb-q-body .sb-btn { min-height: 44px; }
+  .sb-builder .sb-q-body .sb-option-row::before, .sb-builder .sb-q-body .sb-field-index { min-width: 32px; height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-builder .sb-q-body .sb-option-row, .sb-builder .sb-q-body .sb-fields > .sb-field-row, .sb-builder .sb-q-body .sb-fields-list > .sb-field-row,
+  .sb-builder .sb-q-body .sb-matching > .sb-field-row, .sb-builder .sb-q-body .sb-radio, .sb-builder .sb-q-body .sb-btn { transition: none; }
+}
+@media (forced-colors: active) {
+  .sb-builder .sb-q-body .sb-option-row:has(.sb-radio input:checked), .sb-builder .sb-q-body .sb-radio:has(input:checked) { border-color: Highlight; }
+  .sb-builder .sb-q-body .sb-grid td.sb-cell-answer { box-shadow: none; border-block-start: 3px solid Highlight; }
+}

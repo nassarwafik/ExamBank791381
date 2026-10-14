@@ -9,7 +9,8 @@ import path from "path";
 
 const root = process.cwd();
 const sheetRaw = readFileSync(path.join(root, "src", "builder", "builder-premium.css"), "utf8");
-const sheet = sheetRaw.replace(/\/\*[\s\S]*?\*\//g, "");
+// @import statements (slice 2 pulls its editors sheet in this way) are not rules: strip them before the rule parser below.
+const sheet = sheetRaw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/@import[^;]+;/g, "");
 const tokens = readFileSync(path.join(root, "src", "design-tokens.css"), "utf8");
 
 /** Top-level and nested rules as { selector, body } (at-rule wrappers are flattened; their own headers are skipped). */
