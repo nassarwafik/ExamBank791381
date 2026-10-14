@@ -251,7 +251,10 @@ export default function LearningReader({
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isEditableTarget(e.target) || nestedDialogOpen()) return;
       if (e.key === "f" || e.key === "F" || e.code === "KeyF") { e.preventDefault(); togglePresentation(); return; }
-      if (!presentation) return;
+      // Normal reading also accepts page keys, but never hijacks keyboard interaction
+      // within interactive lesson blocks, the toolbar, or TOC controls.
+      if (!presentation && e.target instanceof Element &&
+          e.target.closest("button, a, [role='button'], [role='slider'], [role='tab'], [role='menuitem']")) return;
       if (e.key === "ArrowLeft" || e.key === "PageDown") { e.preventDefault(); if (next) selectPage(next.id); }
       else if (e.key === "ArrowRight" || e.key === "PageUp") { e.preventDefault(); if (prev) selectPage(prev.id); }
     };
