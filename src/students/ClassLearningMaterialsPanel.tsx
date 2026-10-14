@@ -4,7 +4,7 @@ import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
 import Dialog from "../ui/Dialog";
 import { IconBook, IconPlus } from "../icons";
-import { classLearningMaterials } from "./classLearningMaterials";
+import { classLearningMaterials, classLearningReleaseSummary } from "./classLearningMaterials";
 import type { Classroom, ClassLearningMaterial, LearningCatalogCourse } from "./types";
 
 /**
@@ -42,15 +42,7 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
   const editable = Boolean(classroom) && p.classActive;
   // Derived from the same class release state and catalog used by the existing controls.
   // Never infer publication from a catalog default or an unassigned module.
-  const catalogReady = Boolean(p.catalog && materials.every(entry => p.catalog!.some(c => c.courseId === entry.courseId)));
-  const publishedCount = materials.reduce((total, entry) => {
-    const course = p.catalog?.find(c => c.courseId === entry.courseId);
-    return total + (course ? course.modules.filter(m => entry.visibleModuleIds.includes(m.moduleId)).length : 0);
-  }, 0);
-  const assignedModuleCount = materials.reduce((total, entry) => {
-    const course = p.catalog?.find(c => c.courseId === entry.courseId);
-    return total + (course?.modules.length ?? 0);
-  }, 0);
+  const summary = classLearningReleaseSummary(materials, p.catalog);
 
   // The add affordance exists only while there is something left to add (catalog loaded, a course not yet attached).
   const addButton = classroom && p.classActive && p.catalog && addable.length > 0 ? (
@@ -71,10 +63,10 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
       {classroom && materials.length > 0 && (
         <div className="eb-lm-class-overview" aria-label="ملخص المواد التعليمية للصف">
           <p><strong>{materials.length}</strong> مواد تعليمية مضافة</p>
-          {catalogReady ? (
+          {summary ? (
             <>
-              <p><strong>{publishedCount}</strong> وحدات منشورة للطلاب</p>
-              <p><strong>{Math.max(0, assignedModuleCount - publishedCount)}</strong> وحدات غير منشورة</p>
+              <p><strong>{summary.publishedModules}</strong> وحدات منشورة للطلاب</p>
+              <p><strong>{summary.hiddenModules}</strong> وحدات غير منشورة</p>
             </>
           ) : <p role="status">إحصاءات الوحدات متاحة بعد تحميل جميع مواد الصف.</p>}
           {!p.classActive && <p>الصف مؤرشف — عرض فقط</p>}
