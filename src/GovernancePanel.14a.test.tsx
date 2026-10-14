@@ -7,6 +7,7 @@ import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion } from "./examTypes";
 import { GOVERNANCE_CONFLICT_MESSAGE, GovernanceRequestError, type GovernanceService, type GovernanceStatus, type GovernanceManifestView, type RevisionMeta, type GovernanceEvent } from "./examGovernance";
+import { toolbarItem, toolbarItemOrNull } from "./builder/toolbarTestActions";
 
 // Phase 14A — G9: the lazy «إدارة النشر والإصدارات» surface inside the REAL StructuredExamBuilder with a fake App-owned
 // governance service (the builder never receives a token). Fail-first on 6918ce1 (surface absent).
@@ -51,7 +52,7 @@ function Host({ svc, initial }: { svc: GovernanceService; initial?: StructuredEx
     saveState={examSaveState(hist.history, saving)} backupStorage={null} onRecover={hist.recover} autosaveDelayMs={5} governance={svc} />;
 }
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const openPanel = async () => { fireEvent.click(screen.getByRole("button", { name: /إدارة النشر والإصدارات/ })); const d = await screen.findByRole("dialog", { name: "إدارة النشر والإصدارات" }); await tick(20); return d; };
+const openPanel = async () => { fireEvent.click(toolbarItem(/إدارة النشر والإصدارات/)); const d = await screen.findByRole("dialog", { name: "إدارة النشر والإصدارات" }); await tick(20); return d; };
 
 beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -61,7 +62,7 @@ describe("14A G9 — governance surface", () => {
     const hist = { open: () => {} };
     void hist;
     render(<StructuredExamBuilder exam={makeExam()} onChange={() => {}} onSave={() => {}} saving={false} backupStorage={null} autosaveDelayMs={5} />);
-    expect(screen.queryByRole("button", { name: /إدارة النشر والإصدارات/ })).toBeNull();
+    expect(toolbarItemOrNull(/إدارة النشر والإصدارات/)).toBeNull();
   });
   it("shows lifecycle state, revision number / short id, published revision, last transition, capabilities, revision history and audit timeline — from the server status, not from exam.status", async () => {
     const { svc, calls } = fakeService({ status: { governed: true, manifest: manifest({ publishedRevisionId: "rev-bbbb2222-pub", publishedRevisionNumber: 2, publishedAt: "2026-09-29T10:00:00.000Z", publishedBy: "teacher-1" }), capabilities: [...ALL], capabilitySource: "default-single-teacher" } });

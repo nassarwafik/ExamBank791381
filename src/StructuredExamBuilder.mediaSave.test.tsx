@@ -18,8 +18,8 @@ vi.mock("./questionMedia", async importOriginal => {
   return { ...real, readImageFile: (f: File) => (hold.on ? new Promise<ReadImageResult>(r => { hold.settle = r; }) : real.readImageFile(f)) };
 });
 
-const DRAFT = "💾 حفظ مسودة";
-const FINAL = "✓ اعتماد نهائي";
+const DRAFT = "حفظ مسودة";
+const FINAL = "اعتماد نهائي";
 const WAIT = "انتظر انتهاء معالجة الصور قبل الحفظ.";
 const AI_BTN = "✨ إنشاء صورة بالذكاء الاصطناعي";
 const IMG_A = "data:image/png;base64,AAAA";

@@ -97,6 +97,12 @@ version families, API contracts, authentication, storage, SmartSim / chemistry /
 - Guard `src/teacher/saveLabels.guard.21e2.test.ts`: the listed literals may not appear elsewhere in teacher UI source (JSX text
   or a whole quoted string, optionally after an icon glyph). Reviewed exceptions: the compact per-stage score button (contextual
   aria-label); the two shared SmartSim answer workspaces. **Temporary:** the builder and `App.tsx` sites until #300 merges.
+- Review Fix 3 (I-4, owner directive): the save **status** lives in the same table — `saved` «محفوظ», `dirty` «تغييرات غير محفوظة»,
+  `recovered` «نسخة مسترجعة — غير محفوظة», and `saving` «جارٍ الحفظ…» shared with the buttons (`SAVE_STATE_LABELS`). The builder's
+  `role=status` renders it (glyph aria-hidden, `aria-atomic`) and is the only region that speaks a save-state change; App's legacy
+  status line reads it too. The guard scans the three status sentences. Reviewed exceptions: the 13A unsaved-work confirmation's
+  title (its `title:` use only; `api/tests/assessment-presets-guards-15a` pins that literal) and the chemistry conservation table's
+  «✓ محفوظ» (mass is conserved; not a save state).
 
 ### E — contextual reorder names (part)
 
@@ -201,16 +207,187 @@ Escape while saving — to be gated in the wiring).
   The unscoped `assignments-pro.css` rule stays as it is; only the dashboard is protected from it.
 - W was reviewed by its author only (the per-slice delivery of the owner's sprint); it changes no behaviour.
 
-## 9. Follow-up PR after PR #300 merges (prepared, not in this PR)
+## 9. Part 2 — the builder integration (follow-up PR, branch `feature/phase-21e2b-builder-integration`)
 
-The wiring below is implemented and tested on a local scratch merge of this branch and #300's head; it is never pushed until #300
-is in `main` (AGENTS.md §7). Measured there: Chromium `PART=builder` 40/40 checks against 10/40 on the #300 build. Toolbar height
-at desktop drops from 300 to 106 px, and at 150 % from 350 to 106 px. At 200 % and on phones the toolbar is no longer sticky.
-The builder-related suites pass, as do lint (125 warnings, baseline) and `tsc -b`.
+Built on part 1 after #300 merged: part 1's branch was reconciled with `main` `31f4008` by the normal merge `aa3f0ca` (one
+`.gitignore` union). Part 2 starts from `aa3f0ca`.
 
-1. Normal merge of `origin/main`; keep both sides of `.gitignore` and `api/tests/ux2-shell-foundation.test.js`.
-2. Wire `BuilderToolbar` into `StructuredExamBuilder` (200 % + toast first); keep #300's delete / «تراجع» / toast / focus reveal.
-3. Overlay dialog: `role="dialog"`, name, `useModalSurface`, Escape → the unsaved guard (gated while saving).
-4. Inline issues per question / section, live region, summary click → reveal below the toolbar with `FieldRevealContext`.
-5. Section reorder names; builder save labels on the table; remove the temporary guard allow-list.
-6. Chromium `PART=builder` before (merged `main`) / after, mutation additions, full validation, exact-head CI, PR.
+### What is wired
+
+- **A — toolbar.** `StructuredExamBuilder` renders `BuilderToolbar`:
+  - the visible actions are exactly «رجوع» · «تراجع» / «إعادة» · «إضافة أسئلة» (menu) · «معاينة الامتحان» · «المزيد» (menu) · save
+    draft · finalize;
+  - the menus hold the same handlers as before: «إضافة أسئلة» has the bank and the AI authoring entries; «المزيد» has the
+    explorer, blueprint, coverage, policy, readiness, governance, presets, studio and surface lab;
+  - the blueprint count badge, save state, final, media wait and gates stay visible as status text;
+  - #300's delete / «تراجع» / toast / focus reveal are unchanged (their suites pass, updated only to open the menu that now holds
+    a tool).
+- **B — overlay dialog.**
+  - App's `.structured-builder-overlay` is `role="dialog"` + `aria-modal`, named by the toolbar's heading (`sb-builder-title`).
+  - `useModalSurface` moves focus in, wraps Tab, and returns focus to the opener.
+  - Escape takes the existing exit path, so the unsaved-changes guard decides. **While a save is in flight Escape does nothing**,
+    like the disabled «رجوع»; the first wiring missed this, and the new test caught it.
+  - A menu, dialog or toast above the builder keeps Escape for itself.
+- **F — save labels.**
+  - The builder's draft / finalize / saving labels and App's legacy save button read `SAVE_LABELS`.
+  - The guard's three temporary "pending #300" exceptions are removed.
+- **Tests.**
+  - `src/builder/toolbarTestActions.ts` (test-only) reaches a tool the way a teacher does: open the menu, find the item. Absence
+    checks open both menus, so a closed menu cannot pass vacuously.
+  - Sixteen builder, governance, AI, preset, scenario and surface-lab test files use it. No expectation was loosened: a test that
+    clicked «📚 …» on the toolbar now clicks the same item in its menu.
+  - Three more (`media`, `mediaSave`, `reliability`) change only exact button names, which lost their emoji («👁 معاينة الامتحان» →
+    «معاينة الامتحان», «💾 حفظ مسودة» → «حفظ مسودة», «✓ اعتماد نهائي» → «اعتماد نهائي», «→ رجوع» → «رجوع»).
+  - `GovernancePanel.14b` (AGENTS.md §12's documented timing-sensitive file) changes only in how it opens the governance panel,
+    which now sits in «المزيد». Its 409 conflict-alert test is untouched.
+  - New: `src/StructuredExamBuilder.toolbarWiring.21e2b.test.tsx` (9 tests), for the eight actions, the menu placement, the named
+    dialog, Escape (nothing unsaved / unsaved / saving / inside a menu) and the save labels.
+  - One test (`coverage` › accessibility) asserted focus returning to the opener: the opener is now the «المزيد» trigger, as the
+    ActionMenu contract says.
+
+### D and E — landed after the first push of part 2
+
+- **D — inline issues.**
+  - Each question card and section shows its own canonical issues (`indexIssues`: the summary's issues regrouped, never
+    re-validated) in a named list «مشكلات السؤال N» / «مشكلات القسم N».
+  - One polite live region announces the counts once they settle (`useIssueAnnouncer`), per exam.
+  - A summary entry opens its card and puts focus where the teacher fixes the issue: the field frame showing the clicked instance
+    (`data-issue-codes` / `data-issue-nth`), else that frame's first control, else the named list. It never jumps to an unrelated
+    field.
+- **E — section reorder names.** «نقل القسم N للأعلى / للأسفل» (as visible title and accessible name), like the question reorder
+  names from part 1.
+
+### Review rounds on part 2
+
+| Round | Commit | What changed |
+|---|---|---|
+| Review Fix 1 | `4e4e274` | 12 confirmed findings: menus (settle, placement cap, portal into the modal), the modal surface (Escape in text fields, return focus), inline issues, browser scripts |
+| Review Fix 2 | `8bd4cc2` | Summary focus by issue **instance**; no jump to an unrelated field; the reveal pruned when a question's errors are gone; the open signal split from the reveal (a warning-only card re-opens) |
+| Review Fix 3 | this round | The owner-listed builder items, two audit findings, the owner's two observations, and the five re-review findings (below) |
+
+**Review Fix 3 — fixed (fail-first unit tests + real Chromium):**
+
+- **I-1 — compound / composite parts.**
+  - A part's issue goes to that part, never to the card's first invalid field.
+  - The part is read back from the canonical message (`issuePart` / `issuePartFocus`); the frozen compound@1 markup is not changed.
+  - The target inside the part:
+    - a numbered row («الزوج 3 في …», «البند 2 في …», «الفراغ 2 في …»): that row (its empty control, or its answer control for a
+      missing / unreachable answer);
+    - rich content: the part's rich-content control;
+    - an unsupported type / version: the type select;
+    - the answer body as a whole: its first control.
+  - A row the editor cannot point to (a table cell, a CLI field) and two parts with the same label lead to the named list.
+  - **Re-review RR3-3 / RR3-A11Y-1:** the first fix sent row issues to the part's first row, which was often complete. They now go
+    to the named row.
+  - **Re-review RR3-1:** every form the validator uses to name a composite part is now recognised: «… — المحتوى المنسق: …» and
+    «البند «ب»».
+- **I-2 — focus ring after pointer navigation.** The control an entry focuses carries `data-issue-focus` until it loses focus.
+  `builder-issues.css` draws the focus ring for it, because Chromium does not match `:focus-visible` for script focus after a
+  click.
+- **I-3 — duplicated question ids.** The occurrence is counted among the issues of the card the entry leads to: after the last
+  `DUPLICATE_ID`.
+- **I-4 — one save vocabulary** (see F above). The status and the draft button say the same «جارٍ الحفظ…». The `role=status`
+  region is atomic and is the only one that speaks.
+- **A-01 — layers under the toolbar.** The builder publishes the stuck toolbar's height as `--sb-toolbar-band`. The bulk-action bar
+  and the inline explorer stick below it; before, they slid under it at 1280 × 900 and 853 × 600.
+- **A-02 — focus off screen.** Where the toolbar is static (200 %, phones), a heading counts as on screen only below the scroller's
+  top. Deleting a question or pressing Ctrl+Y no longer leaves focus on a card above the screen.
+- **RR3-A11Y-2 / audit B-02 — keyboard focus under the sticky layers** (WCAG 2.4.11). After a Tab or Shift+Tab, the scroller moves
+  just enough to put the focused control 12 px below the stuck toolbar and, with a selection, the bulk-action bar. Chromium does not
+  scroll a stop that is "in view" behind a sticky bar. Programmatic reveals are not adjusted: they already land below the edge.
+- **Owner observations.**
+  - Closing the explorer dialog after a zoom (its opener gone) returns focus to «المزيد», never `<body>`. The "next «المزيد» click
+    ignored" part did not reproduce in 12 Chromium variants; a test asserts the menu opens.
+  - The explorer shows a matching question by its words, never its table syntax.
+- **RR3-2 — mutation needles.** Five K3 needles no longer matched after RF2 / RF3 (K3-1, K3-7, K3-8, K3-10, K3-11) and two after
+  RF1 (K3-12, K3-13). They are re-anchored to the same planted defects. The Review Fix 3 and RR3 mutants are in
+  `scripts/mutate-21e2.mjs`. A needle check confirms all 102 match exactly once.
+
+**Still open — confirmed by the Review Fix 3 audit, not yet fixed (next round):**
+
+| Group | Findings |
+|---|---|
+| Focus dropped to `<body>` | A-07 move to an end, A-08 last undo / redo, A-09 save buttons disable themselves, A-11 clearing a selection / bulk delete, A-13 undo removing the focused card, A-14 / B-05 a menu closed by scroll or resize, B-04 self-disabling toolbar buttons |
+| Moves and reveals | A-03 «نقل إلى قسم» acts on the first ArrowDown, A-06 a moved card scrolls out of view, A-12 a new question / section is not focused |
+| Undo behind dialogs | A-04 Ctrl+Z / Ctrl+Y change the exam behind the preview, the unsaved-changes guard and menu dialogs |
+| Save feedback | A-10 / B-01 a failed save's reason is off screen and not announced; B-06 a stale success banner; a final approval announced like a draft save |
+| Issue fallback | A-05 an issue no frame shows still takes the first invalid field (pinned by RF2; an owner decision) |
+| Names and targets | A-15 focused cards / sections have no name; A-16 the explorer toggle lost `aria-controls`; A-19 card buttons do not name their question; A-18 / B-10 small targets on phones |
+| Chrome text | B-07 the gates chip's severity has no style; B-08 emoji and English in the builder chrome and the access bar; B-09 the overlay is nameless while the builder chunk loads |
+
+### Evidence
+
+Measured so far (the full exact-head evidence goes in the PR):
+
+- `src/StructuredExamBuilder.toolbarWiring.21e2b.test.tsx`: 9/9 on this branch; **9/9 fail on `aa3f0ca`** (no wiring). "Escape
+  while saving" also failed on the first wiring (`onExit` called once) before the gate was added.
+- Builder-related suites (builder, AI authoring / composer, scenario, presets, governance, function surfaces, App) pass; lint 125
+  warnings (baseline), 0 errors; `tsc -b` clean.
+- Chromium `PART=builder` on the scratch build: 40/40 checks against 10/40 on the #300 build. Toolbar height: desktop 300 → 106 px,
+  150 % 350 → 106 px; not sticky at 200 % and on phones.
+
+## 10. Premium Visual Redesign — slice 1: the structured exam builder
+
+Owner direction (2026-10-12): visible, high-quality UI before 2026-10-14, presentation only, with a resource-efficient workflow.
+This slice is stacked on part 2 (`c932f318`), because it styles the same builder.
+
+**What changed** (one new sheet, `src/builder/builder-premium.css`, imported last by `StructuredExamBuilder.tsx`; no markup, behaviour,
+exam JSON, grading, persistence or engine change):
+
+- **Canvas:** a tinted page (`--eb-primary-050` → `--eb-bg`) with the builder in a centred column (max 1200 px), so cards read as
+  cards.
+- **Toolbar:** a floating glass bar. The exam title reads as the page heading (20 px bold) and stays identifiable as a field:
+  - at rest, a dashed underline in `--eb-placeholder`, 4.76:1 (WCAG 1.4.11; the old full border was 1.4:1);
+  - on hover and focus, the full border.
+- **Sections:** the primary card. Each has a header band, a 4 px accent edge on the start side, a filled «القسم n» badge and a
+  24 px section title (same underline rule).
+  - The grading rule is a panel: segmented choices plus an info callout for the rule's explanation.
+- **Questions:** lighter nested cards with a header strip, a 32 px gradient number badge and quiet icon buttons.
+  - Icon buttons are 36 px, and 44 px on touch screens (`pointer: coarse`).
+  - The meta row (number, marks, section) sits in a compact panel.
+- **Question-type summary (`qt-meta`)** is now a chip row. `questionTypes.css` is not loaded in the builder chunk, so on every
+  question the type, version, grading mode and capabilities rendered as a bare `<dl>` list (visible in the BEFORE capture).
+- **Secondary actions** are tonal pills, no longer dashed: dashed read as "draft / unavailable". «+ إضافة قسم» is a full-width
+  drop-zone card.
+- **Phones and 200 % zoom:** tighter padding and smaller headings. Reduced motion removes transitions; forced colours keep the
+  accent and field borders.
+
+**What it must never do** (pinned by `src/builder/builderPremium.21e2p1.test.ts`, 11 tests):
+
+- pad the overlay, since the 21E.1 slice 2 toast reserve owns `padding-block-end`;
+- position the toolbar;
+- drop the card focus outline;
+- clip card content;
+- use literal colours or physical left / right.
+
+Three planted defects confirm the guards bite: overlay padding, toolbar `position`, and the focus outline. Each was KILLED, with
+the file restored byte-for-byte.
+
+**Evidence** (local, this head):
+
+- **Chromium harness** `PART=builder`: 40/40 checks on both BEFORE (`c932f318`) and AFTER builds, at 1280×900, 853×600 @1.5,
+  640×450 @2 and 390×844 touch; 0 page errors.
+  - Dialog, menus, Escape guard, toast placement, sticky rule and overflow are unchanged.
+  - Screenshots are not committed (harness output stays out of git, AGENTS.md §5); before / after composites are attached to the
+    PR.
+- **Static checks:** `tsc -b` clean; lint 125 warnings (baseline), 0 errors; `npm run build` with the bundle guard passed;
+  `git diff --check` clean.
+- **Full root suite** (2 CPUs, container TZ `Asia/Jerusalem`): 12,302 / 12,308 passed. The six failures are environmental and
+  were all reproduced or cleared:
+  - four student save-time assertions expect UTC and pass with `TZ=UTC`, as CI runs;
+  - `phase8b` passed on re-run;
+  - `surfacePlotUi.21da4` › rotate / zoom times out at 5 s on this machine **on the baseline as well** (5.6 s, 5.3 s).
+  - Exact-head CI is the arbiter.
+
+**Also in this slice** (documentation only):
+
+- the 21E.1 slice 2 record's contrast table listed four old `--eb-muted` ratios against the wrong tokens (erratum with the
+  recomputed values);
+- the plan records the owner's ratification at the merge of #300: the `--eb-muted` value-change rule and F3 open-when-instructions.
+  F3's code is unchanged.
+
+**Next slices** (each separately reviewable):
+
+1. the question editors' inner forms (options, tables, media);
+2. the navigator and finalization panels;
+3. the teacher dashboard and lists in the same visual language.

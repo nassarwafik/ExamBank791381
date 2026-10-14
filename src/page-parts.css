@@ -87,6 +87,7 @@
    --eb-z-dropdown (20) a menu opened from the builder toolbar sat under the opaque overlay (60) and could not be seen. */
 .eb-menu-panel{
   z-index:calc(var(--eb-z-modal) + 1); min-width:220px; max-width:min(300px, calc(100vw - 16px)); overflow:auto;
+  overscroll-behavior:contain; /* 21E.2 K1 — a capped panel scrolls inside; reaching its end never scrolls the page under it (that would close it) */
   display:flex; flex-direction:column; gap:2px; padding:var(--eb-space-1);
   background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); box-shadow:var(--eb-sh-lg);
 }

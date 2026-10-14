@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import StructuredExamBuilder from "../StructuredExamBuilder";
+import { toolbarItem, toolbarItemOrNull } from "../builder/toolbarTestActions";
 import { useStructuredExamHistory } from "../useStructuredExamHistory";
 import { examSaveState } from "../examHistory";
 import type { StructuredExam } from "../examTypes";
@@ -33,9 +34,9 @@ function Host({ service, onHistory }: { service?: AiAuthorService; onHistory: (h
   return <StructuredExamBuilder exam={hist.present} onChange={hist.update} onSave={() => {}} saving={saving} onUndo={hist.undo} onRedo={hist.redo} canUndo={hist.canUndo} canRedo={hist.canRedo} saveState={examSaveState(hist.history, saving)} backupStorage={null} aiAuthor={service} />;
 }
 async function mount(service?: AiAuthorService) { let hist!: Hist; render(<Host service={service} onHistory={h => { hist = h; }} />); await tick(30); return { hist: () => hist }; }
-const ACTION = "✨ سؤال بالذكاء الاصطناعي";
+const ACTION = "سؤال بالذكاء الاصطناعي";
 async function openAndGenerate(request: string, section = "sec-1") {
-  fireEvent.click(screen.getByRole("button", { name: ACTION }));
+  fireEvent.click(toolbarItem(ACTION));
   const d = await screen.findByRole("dialog", { name: "إنشاء سؤال بالذكاء الاصطناعي" }, { timeout: 3000 });
   fireEvent.change(within(d).getByRole("textbox", { name: "اكتب طلبك" }), { target: { value: request } });
   fireEvent.change(within(d).getByRole("combobox", { name: "القسم الهدف" }), { target: { value: section } });
@@ -50,7 +51,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("19A AI question authoring dialog", () => {
   it("is not offered without the App-owned service", async () => {
     await mount();
-    expect(screen.queryByRole("button", { name: ACTION })).toBeNull();
+    expect(toolbarItemOrNull(ACTION)).toBeNull();
   });
   it("a networkCli draft is re-validated, summarised, and inserted into the chosen section as ONE update with a fresh id (undo removes it)", async () => {
     const author = vi.fn(async () => ({ ok: true as const, intent: "networkCli", question: NET_Q, notes: [] }));
@@ -71,7 +72,7 @@ describe("19A AI question authoring dialog", () => {
   it("an inlineCloze draft shows the passage with its blanks; the preferred type is sent when chosen", async () => {
     const author = vi.fn(async () => ({ ok: true as const, intent: "inlineCloze", question: CLOZE_Q, notes: [] }));
     await mount({ author });
-    fireEvent.click(screen.getByRole("button", { name: ACTION }));
+    fireEvent.click(toolbarItem(ACTION));
     const d = await screen.findByRole("dialog", { name: "إنشاء سؤال بالذكاء الاصطناعي" }, { timeout: 3000 });
     fireEvent.change(within(d).getByRole("textbox", { name: "اكتب طلبك" }), { target: { value: "اكتب فقرة فيها فراغ" } });
     fireEvent.change(within(d).getByRole("combobox", { name: "نوع السؤال المفضّل" }), { target: { value: "inlineCloze" } });
@@ -108,7 +109,7 @@ describe("19A AI question authoring dialog", () => {
   it("a provider / network failure is an explicit error, never a fabricated question; an empty request is not sent", async () => {
     const author = vi.fn(async () => { throw new Error("تعذّر الوصول إلى خدمة الذكاء الاصطناعي."); });
     await mount({ author });
-    fireEvent.click(screen.getByRole("button", { name: ACTION }));
+    fireEvent.click(toolbarItem(ACTION));
     const d = await screen.findByRole("dialog", { name: "إنشاء سؤال بالذكاء الاصطناعي" }, { timeout: 3000 });
     expect((within(d).getByRole("button", { name: "إنشاء المسودة" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(within(d).getByRole("textbox", { name: "اكتب طلبك" }), { target: { value: "switch" } });

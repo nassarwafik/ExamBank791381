@@ -7,6 +7,7 @@ import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion } from "./examTypes";
 import { networkingBlueprint } from "./assessmentBlueprintFixtures";
+import { toolbarItem } from "./builder/toolbarTestActions";
 
 // Phase 13C-A — Independent Review Fix 1 (builder surface): R1 context identities authored with stable ids; R4 section
 // constraints validated against the REAL exam sections in the builder. Fail-first on dec6ce2.
@@ -36,7 +37,7 @@ function Host({ initial }: { initial?: StructuredExam }) {
   );
 }
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const bpBtn = () => screen.getByRole("button", { name: /مخطط الامتحان/ });
+const bpBtn = () => toolbarItem(/مخطط الامتحان/);
 const openPanel = async () => { fireEvent.click(bpBtn()); return await screen.findByRole("dialog", { name: "مخطط الامتحان" }); };
 const bp = () => h.latest!.blueprint!;
 const issueCodes = (dialog: HTMLElement) => Array.from(within(dialog).queryByRole("list", { name: "مشكلات المخطط" })?.querySelectorAll("[data-code]") ?? []).map(li => (li as HTMLElement).getAttribute("data-code"));

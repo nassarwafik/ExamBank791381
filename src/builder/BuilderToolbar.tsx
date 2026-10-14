@@ -13,6 +13,10 @@ import "./builder-toolbar.css";
  * labels; on narrow widths labels collapse to icons but every button keeps its accessible name. Purely presentational: the
  * builder owns every handler, every gate and every disabled state.
  */
+/** The accessible name of the «المزيد» menu trigger (the builder returns focus to it when the question explorer's dialog closes and
+ *  its opener has left the page — RF3). */
+export const MORE_MENU_LABEL = "المزيد من أدوات الامتحان";
+
 export type ToolbarItem = {
   key: string;
   label: string;
@@ -23,8 +27,8 @@ export type ToolbarItem = {
   pressed?: boolean;
   /** The item opens a dialog. */
   dialog?: boolean;
-  /** Short status appended to the item (e.g. «3 مشكلات»), part of its accessible name. */
-  badge?: string;
+  /** Short status appended to the item (e.g. «3 مشكلات», or the builder's own count badge), part of its accessible name. */
+  badge?: ReactNode;
   title?: string;
 };
 
@@ -58,7 +62,7 @@ function MenuItems({ items }: { items: ToolbarItem[] }) {
 
 export default function BuilderToolbar({ headingId, heading, onExit, exitDisabled, history, titleField, stats, status, addItems, preview, moreItems, save }: BuilderToolbarProps) {
   return (
-    <header className="sb-toolbar sb-toolbar-21e2" data-toolbar="structured-builder">
+    <header className="sb-toolbar sb-toolbar-21e2" data-toolbar="structured-builder" tabIndex={-1}>
       <h2 id={headingId} className="eb-visually-hidden">{heading}</h2>
       <div className="sb-tb-identity">
         {onExit && <button type="button" className="sb-tb-btn sb-tb-exit" onClick={onExit} disabled={exitDisabled}><IconChevronBack size={18} aria-hidden="true" /><span className="sb-tb-label">رجوع</span></button>}
@@ -81,7 +85,7 @@ export default function BuilderToolbar({ headingId, heading, onExit, exitDisable
           )}
           {preview && <button type="button" className="sb-tb-btn" onClick={preview.onSelect} disabled={preview.disabled} aria-haspopup="dialog"><IconEye size={18} aria-hidden="true" /><span className="sb-tb-label">{preview.label}</span></button>}
           {moreItems.length > 0 && (
-            <ActionMenu label="المزيد من أدوات الامتحان" text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">
+            <ActionMenu label={MORE_MENU_LABEL} text="المزيد" icon={<IconMore size={18} aria-hidden="true" />} className="sb-tb-menu">
               <MenuItems items={moreItems} />
             </ActionMenu>
           )}

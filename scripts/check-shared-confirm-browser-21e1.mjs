@@ -8,6 +8,9 @@
 // button applies the change, Tab stays inside the dialog, a destructive confirmation starts on the safe choice, and the dialog
 // fits the viewport at 390 / 820 / 1280 px and at 150 % / 200 % / 400 % (320 CSS px) zoom without panning; below 320 CSS px
 // (phone page zoom) the page-wide minimum forces panning, which is measured and reported. Screenshots land in HARNESS_OUT/shots.
+// Phase 21E.2: the builder's exit is «رجوع» (no arrow glyph), and App's overlay is itself a role="dialog" aria-modal surface — the
+// harness replica carries App.tsx's exact overlay tag (checked against src/App.tsx below), and "a dialog" here keeps meaning a layer
+// OVER the builder (LAYER), never the overlay, so no check became easier to pass.
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -40,6 +43,30 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 const errors = [];
 const SECTION_TEXT = "أجب عن جميع أسئلة هذا القسم.";
 const CLICK = { timeout: 2500 };
+// A dialog layered OVER the builder: every [role=dialog] except App's builder overlay surface itself (role="dialog" since 21E.2).
+const LAYER = '[role="dialog"]:not(.structured-builder-overlay)';
+/** App.tsx's builder overlay opening tag as DOM attributes (className → class, tabIndex → tabindex, {-1} → "-1"). */
+function appOverlayAttributes() {
+  const tags = [...fs.readFileSync(path.join(root, "src/App.tsx"), "utf8").matchAll(/<div className="structured-builder-overlay"[^>]*>/g)];
+  if (tags.length !== 1) throw new Error("src/App.tsx: expected one builder overlay tag, found " + tags.length);
+  const DOM = { className: "class", tabIndex: "tabindex" };
+  return Object.fromEntries([...tags[0][0].matchAll(/([A-Za-z-]+)=(?:"([^"]*)"|\{([^}]*)\})/g)].map(m => [DOM[m[1]] || m[1], m[2] ?? String(JSON.parse(m[3].trim()))]));
+}
+const APP_OVERLAY = appOverlayAttributes();
+const sortedJson = o => JSON.stringify(Object.keys(o || {}).sort().map(k => [k, o[k]]));
+/** Stylesheets a module imports, as paths under src/ (e.g. "App.css", "ui/ui.css"). */
+const cssImports = file => [...fs.readFileSync(path.join(root, file), "utf8").matchAll(/^import\s+["'](\.{1,2}\/[\w./-]+\.css)["'];?\s*$/gm)]
+  .map(m => path.relative(path.join(root, "src"), path.resolve(path.dirname(path.join(root, file)), m[1])).split(path.sep).join("/"));
+/** The harness page loads every App-level stylesheet (src/main.tsx, then src/App.tsx) that styles the builder overlay, its menus or
+ *  its dialogs, and the App stylesheets it loads come in App's order — so the harness paints what App paints (21E.2: the toolbar's
+ *  menus are styled, and layered above the overlay, only by page-parts.css). */
+function stylesheetFidelity(harnessFile) {
+  const app = [...cssImports("src/main.tsx"), ...cssImports("src/App.tsx")], harness = cssImports(harnessFile);
+  const styling = app.filter(c => /\.sb-|\.eb-menu|\.eb-dialog|\.structured-builder-overlay/.test(fs.readFileSync(path.join(root, "src", c), "utf8")));
+  const shared = harness.filter(c => app.includes(c)), missing = styling.filter(c => !harness.includes(c));
+  const inOrder = shared.every((c, i) => i === 0 || app.indexOf(shared[i - 1]) < app.indexOf(c));
+  return { ok: styling.length > 0 && missing.length === 0 && inOrder, detail: "App styles the builder in " + styling.join(", ") + "; missing " + JSON.stringify(missing) + "; harness order " + shared.join(" → ") };
+}
 
 async function openPage(ctx) {
   const page = await ctx.newPage();
@@ -48,10 +75,10 @@ async function openPage(ctx) {
   page.on("pageerror", e => errors.push(String(e)));
   page.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
   await page.goto(PAGE, { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "→ رجوع" }).waitFor({ timeout: 15000 });
+  await page.getByRole("button", { name: "رجوع", exact: true }).waitFor({ timeout: 15000 });
   return { page, native };
 }
-const dialogOf = (page, title) => page.locator('[role="dialog"]').filter({ has: page.getByRole("heading", { name: title }) });
+const dialogOf = (page, title) => page.locator(LAYER).filter({ has: page.getByRole("heading", { name: title }) });
 /** The element under the CENTER of `locator` is the locator itself (nothing covers it) AND that center is inside the visible area
  *  (the visual viewport). Measured in the page's own layout-viewport coordinates — the space elementFromPoint uses — so a zoomed
  *  phone whose visual viewport is offset inside a wider layout viewport is measured correctly. */
@@ -70,6 +97,13 @@ const fitsViewport = async (locator) => locator.evaluate(el => { const r = el.ge
 async function run(name, viewport, mobile) {
   const ctx = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1 });
   const { page, native } = await openPage(ctx);
+  // The replica is App's overlay tag, attribute for attribute, and the builder heading names it (the dialogs below open over it).
+  const overlay = await page.evaluate(() => {
+    const o = document.querySelector(".structured-builder-overlay"), named = o && document.getElementById(o.getAttribute("aria-labelledby") || "");
+    return { attrs: o ? Object.fromEntries(Array.from(o.attributes, a => [a.name, a.value])) : null, named: !!named && o.contains(named) && /^باني الامتحان المنظّم: /.test((named.textContent || "").trim()) };
+  });
+  check(name + ": the harness overlay is App.tsx's exact overlay tag (same attributes, no others), named by the builder heading", sortedJson(overlay.attrs) === sortedJson(APP_OVERLAY) && overlay.named,
+    "harness " + sortedJson(overlay.attrs) + " vs App " + sortedJson(APP_OVERLAY));
 
   // ── 1. Section instruction template over existing text ───────────────────────────────────────────────
   const select = page.getByRole("combobox", { name: "قوالب تعليمات القسم" }).first();
@@ -84,7 +118,7 @@ async function run(name, viewport, mobile) {
   await page.screenshot({ path: path.join(shots, name + "-01-section-dialog.png") });
   // keyboard: Tab stays inside the dialog
   const inside = [];
-  for (let i = 0; i < 4; i++) { await page.keyboard.press("Tab"); inside.push(await page.evaluate(() => { const a = document.activeElement; return !!a && !!a.closest('[role="dialog"]'); })); }
+  for (let i = 0; i < 4; i++) { await page.keyboard.press("Tab"); inside.push(await page.evaluate(layer => { const a = document.activeElement; return !!a && !!a.closest(layer); }, LAYER)); }
   check(name + ": Tab stays inside the dialog (focus trap)", inside.every(Boolean), inside.join(","));
   await page.keyboard.press("Escape");
   check(name + ": Escape closes it, the section instructions are unchanged", !(await d1.isVisible().catch(() => false)) && (await sectionTextarea(page).inputValue()) === SECTION_TEXT);
@@ -128,6 +162,8 @@ async function run(name, viewport, mobile) {
   check(name + ": no native browser dialog fired in any flow", native.length === 0, native.join(" | "));
   await ctx.close();
 }
+const css = stylesheetFidelity("browser-harness/shared-confirm-21e1.tsx");
+check("harness: loads every App stylesheet that styles the builder overlay, its menus or its dialogs, in App's order", css.ok, css.detail);
 await run("desktop", { width: 1280, height: 900 }, false);
 await run("tablet", { width: 820, height: 1180 }, true);
 await run("phone", { width: 390, height: 844 }, true);

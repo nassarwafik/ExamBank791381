@@ -8,6 +8,7 @@ import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion } from "./examTypes";
 import type { BackupStorage } from "./examAutosave";
 import { networkingBlueprint } from "./assessmentBlueprintFixtures";
+import { toolbarItem } from "./builder/toolbarTestActions";
 
 // Phase 13C-A — the Blueprint authoring surface (مخطط الامتحان) and question classification, exercised through the REAL
 // StructuredExamBuilder + REAL 13A history hook: every persisted edit is ONE onChange(updater) → one undo step; opening
@@ -40,7 +41,7 @@ function Host({ initial, storage, scope }: { initial?: StructuredExam; storage?:
   );
 }
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const bpBtn = () => screen.getByRole("button", { name: /مخطط الامتحان/ });
+const bpBtn = () => toolbarItem(/مخطط الامتحان/);
 const openPanel = async () => { fireEvent.click(bpBtn()); return await screen.findByRole("dialog", { name: "مخطط الامتحان" }); };
 const closePanel = async (dialog: HTMLElement) => { fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" })); await tick(); };
 const bp = () => h.latest!.blueprint!;

@@ -9,6 +9,7 @@ import type { StructuredExam, BuilderQuestion } from "../examTypes";
 import type { AssessmentBlueprintV1 } from "../assessmentTypes";
 import { presetSummary, type AssessmentPresetV1, type AssessmentPresetRecordV1 } from "../assessmentPreset";
 import { PresetRequestError, type AssessmentPresetService } from "./assessmentPresetClient";
+import { toolbarItem, toolbarItemOrNull } from "../builder/toolbarTestActions";
 
 // Phase 15A — «القوالب الأكاديمية» inside the REAL StructuredExamBuilder with a fake App-owned preset service (the builder never
 // receives a token): library (loading / empty / cards), preview, save-current-design (P9), validation failure, create a new
@@ -50,7 +51,7 @@ function Host({ svc, initial, dirty = false, onHistory }: { svc: AssessmentPrese
     saveState={examSaveState(hist.history, saving)} backupStorage={null} onRecover={hist.recover} autosaveDelayMs={5} presets={svc} onOpenExamFromPreset={next => hist.open(next, "unsaved")} />;
 }
 const tick = (ms = 10) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const openLibrary = async () => { fireEvent.click(screen.getByRole("button", { name: /القوالب الأكاديمية/ })); const d = await screen.findByRole("dialog", { name: "القوالب الأكاديمية" }); await tick(30); return d; };
+const openLibrary = async () => { fireEvent.click(toolbarItem(/القوالب الأكاديمية/)); const d = await screen.findByRole("dialog", { name: "القوالب الأكاديمية" }); await tick(30); return d; };
 
 beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -58,12 +59,12 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("15A P8 — Preset Library", () => {
   it("without a preset service the builder offers no library button (unchanged builder)", () => {
     render(<StructuredExamBuilder exam={makeExam()} onChange={() => {}} onSave={() => {}} saving={false} backupStorage={null} autosaveDelayMs={5} />);
-    expect(screen.queryByRole("button", { name: /القوالب الأكاديمية/ })).toBeNull();
+    expect(toolbarItemOrNull(/القوالب الأكاديمية/)).toBeNull();
   });
   it("opens lazily, shows a loading state, then factual cards (title, subject, course, level, counts, version, updated) — no quality score, no question counts; the empty state when nothing exists; RTL and keyboard-reachable", async () => {
     const { svc } = fakeService([record()], { listDelay: 40 });
     render(<Host svc={svc} />);
-    fireEvent.click(screen.getByRole("button", { name: /القوالب الأكاديمية/ }));
+    fireEvent.click(toolbarItem(/القوالب الأكاديمية/));
     const d = await screen.findByRole("dialog", { name: "القوالب الأكاديمية" });
     expect(within(d).getByText(/جارٍ تحميل القوالب/)).toBeTruthy();
     await tick(80);

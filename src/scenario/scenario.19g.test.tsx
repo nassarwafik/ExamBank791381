@@ -11,6 +11,7 @@ import { examSaveState } from "../examHistory";
 import { normalizeExamStructure } from "../examStructure";
 import type { StructuredExam, BuilderQuestion, BuilderSection } from "../examTypes";
 import * as sanitizer from "../../api/src/lib/student-exam-sanitize.js";
+import { toolbarItem, toolbarItemOrNull } from "../builder/toolbarTestActions";
 
 // Phase 19G — the Scenario layer in the UI: the teacher's scenario card inside a section (create, sources of every kind through typed
 // controls, link / unlink / reorder / create-in-scenario / delete with the questions surviving, inline validator messages, the membership
@@ -267,10 +268,10 @@ describe("19G-U12 — AI scenario authoring in the Builder", () => {
       return <StructuredExamBuilder exam={h.present} onChange={h.update} onSave={() => {}} saving={false} onUndo={h.undo} onRedo={h.redo} canUndo={h.canUndo} canRedo={h.canRedo} saveState={examSaveState(h.history, false)} backupStorage={null} onRecover={h.recover} autosaveDelayMs={5} aiAuthor={service as never} />;
     }
     render(<HostAi service={{ author: async () => { throw new Error("unused"); } }} />); await tick(30);
-    expect(screen.queryByRole("button", { name: "✨ سيناريو بالذكاء الاصطناعي" })).toBeNull();
+    expect(toolbarItemOrNull("سيناريو بالذكاء الاصطناعي")).toBeNull();
     cleanup();
     render(<HostAi service={{ author: async () => { throw new Error("unused"); }, authorScenario }} />); await tick(30);
-    fireEvent.click(screen.getByRole("button", { name: "✨ سيناريو بالذكاء الاصطناعي" }));
+    fireEvent.click(toolbarItem("سيناريو بالذكاء الاصطناعي"));
     const d = await screen.findByRole("dialog", { name: "إنشاء سيناريو بالذكاء الاصطناعي" }, { timeout: 3000 });
     fireEvent.change(within(d).getByRole("textbox", { name: "اكتب طلب السيناريو" }), { target: { value: "سيناريو عن DHCP" } });
     fireEvent.click(within(d).getByRole("button", { name: "إنشاء مسودة السيناريو" }));
@@ -293,7 +294,7 @@ describe("19G-U12 — AI scenario authoring in the Builder", () => {
     cleanup();
     const tampered = vi.fn(async () => ({ ...ok, scenario: { ...AI_SCN, sources: [{ ...AI_SCN.sources[0], answer: "LEAK" }] } }));
     render(<HostAi service={{ author: async () => { throw new Error("unused"); }, authorScenario: tampered }} />); await tick(30);
-    fireEvent.click(screen.getByRole("button", { name: "✨ سيناريو بالذكاء الاصطناعي" }));
+    fireEvent.click(toolbarItem("سيناريو بالذكاء الاصطناعي"));
     const d2 = await screen.findByRole("dialog", { name: "إنشاء سيناريو بالذكاء الاصطناعي" }, { timeout: 3000 });
     fireEvent.change(within(d2).getByRole("textbox", { name: "اكتب طلب السيناريو" }), { target: { value: "x" } });
     fireEvent.click(within(d2).getByRole("button", { name: "إنشاء مسودة السيناريو" }));

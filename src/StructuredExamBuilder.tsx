@@ -45,7 +45,15 @@ import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
+import BuilderToolbar, { MORE_MENU_LABEL } from "./builder/BuilderToolbar";
+import { indexIssues, issueOccurrence, issuePartFocus, issueTargets, targetCardIssues, type IssuePart, type PartFocus, type IssueTarget } from "./builder/issueIndex";
+import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer";
+import useModalSurface from "./ui/useModalSurface";
+import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
+import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown } from "./icons";
 import "./structured-builder.css";
+import "./builder/builder-issues.css";
+import "./builder/builder-premium.css";                              // 21E.2 premium redesign, slice 1 (presentation only; loaded last)
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
 // callers/tests that import { ExamPreview } from "./StructuredExamBuilder" keep working unchanged.
@@ -139,16 +147,79 @@ type Props = {
   // Phase 19A — the App-owned AI authoring service (one POST to /api/ai-question-author). The builder never receives a token; without
   // a service the «سؤال بالذكاء الاصطناعي» action is simply not offered.
   aiAuthor?: AiAuthorService;
+  /** K2 A-F3 — inside App's modal overlay: the page control that takes focus when the builder closes and the control that opened it
+   *  has left the page (a saved-exams row, «متابعة تحرير الامتحان المنظّم», the import wizard). Read once the closing update rendered. */
+  returnFocusTo?: () => HTMLElement | null;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
-const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ", dirty: "● تغييرات غير محفوظة", saving: "⏳ جارٍ الحفظ", recovered: "↺ نسخة مسترجعة — غير محفوظة" };
+/** Phase 21E.2 — the toolbar's (visually hidden) heading; App's builder overlay is aria-labelledby it. One builder at a time. */
+const BUILDER_TITLE_ID = "sb-builder-title";
+// K3 (A-F7) — the glyph is shown but never spoken (an aria-hidden span inside the polite status). RF3 I-4: the words are the save-label
+// table's (SAVE_STATE_LABELS), so the status says «جارٍ الحفظ…» exactly like the draft button while a save runs.
+const SAVE_STATE_GLYPH: Record<ExamSaveState, string> = { saved: "✓", dirty: "●", saving: "⏳", recovered: "↺" };
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
+const EMPTY_REVEALS: ReadonlyMap<string, number> = new Map<string, number>();
+/** Phase 21E.2 (D) — a control whose Field frame shows an error now (aria-invalid) and that can take focus. */
+const INVALID_FIELD = ['input', 'select', 'textarea'].map(t => t + '[aria-invalid="true"]:not([disabled])').join(", ");
+/** RF2-2 — any control that can take focus (e.g. «+ إضافة خيار» in a multiple-choice frame without options). */
+const ENABLED_CONTROL = ['button', 'input:not([type="hidden"])', 'select', 'textarea'].map(t => t + ':not([disabled])').join(", ");
+/** RF3 I-1 — what a summary entry focuses: the clicked issue's code, which instance of it (RF2-1; none for an issue of an earlier
+ *  card sharing the id, I-3) and the compound / composite part it belongs to, with what of that part it is about (I-1, RR3-3). */
+type IssueInstance = { code: string; nth?: number; part: PartFocus | "ambiguous" | null };
+/** RF3 I-1 — the element showing a part, located through the editors' existing markup (never a new attribute: compound@1 is frozen):
+ *  a compound part by its position among `.sb-compound-editor > .sb-part`, a composite part by its `data-part-id`. */
+const partNode = (card: HTMLElement, part: IssuePart): HTMLElement | null => {
+  if (part.family === "compound") {
+    const editor = card.querySelector<HTMLElement>(".sb-compound-editor");
+    return (Array.from(editor?.children ?? []).filter(c => c.classList.contains("sb-part"))[part.index] as HTMLElement | undefined) ?? null;
+  }
+  const hits = Array.from(card.querySelectorAll<HTMLElement>(".sb-part[data-part-id]")).filter(n => n.dataset.partId === part.id);
+  return hits.length === 1 ? hits[0] : null;
+};
+/** A part's answer body: its last child after the part text (both editors render head · text [· rich content] · body). */
+const partBody = (part: HTMLElement): HTMLElement | null => {
+  const body = part.lastElementChild as HTMLElement | null;
+  return body && !body.matches(".sb-part-head, .sb-part-text, .rc-host") ? body : null;
+};
+const ENABLED_VALUE_CONTROL = ['input:not([type="hidden"])', 'select', 'textarea'].map(t => t + ':not([disabled])').join(", ");
+/** RF3 I-1 / RR3-3 — the control in a part that a part issue is about, and the element to bring into view with it (null: none can be
+ *  told apart — the caller focuses the card's named issue list, never a row the issue does not name).
+ *  - a numbered row (the N-th `.sb-field-row` of the body: the validator's N-th pair / statement / blank): its correct-answer control
+ *    (the row's last input / select) for a missing or unreachable answer, else its first empty control, else its first control;
+ *  - the rich content: the part's rich-content control (its toggle, or the button that removes a parametric part's rich content);
+ *  - the type: the head's type select;
+ *  - the body as a whole: its first enabled control («+ إضافة خيار» with no options), else the type select. */
+const partTarget = (part: HTMLElement, focus: PartFocus): { field: HTMLElement; shown: HTMLElement } | null => {
+  const typeSelect = part.querySelector<HTMLElement>(".sb-part-head select:not([disabled])");
+  if (focus.at === "type") return typeSelect ? { field: typeSelect, shown: part } : null;
+  if (focus.at === "rich") {
+    const host = Array.from(part.children).find(c => c.matches(".rc-host, .sb-warn-text")) as HTMLElement | undefined;
+    const field = host?.querySelector<HTMLElement>(ENABLED_CONTROL);
+    return host && field ? { field, shown: host } : null;
+  }
+  const body = partBody(part);
+  if (focus.at === "row") {
+    const row = body?.querySelectorAll<HTMLElement>(".sb-field-row")[focus.row - 1];
+    const controls = Array.from(row?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(ENABLED_VALUE_CONTROL) ?? []);
+    const field = (focus.answer ? controls.at(-1) : controls.find(c => !c.value.trim()) ?? controls[0]) ?? row?.querySelector<HTMLElement>(ENABLED_CONTROL);
+    return row && field ? { field, shown: row } : null;
+  }
+  if (focus.at !== "body") return null;
+  const field = body?.querySelector<HTMLElement>(ENABLED_CONTROL);
+  return field && body ? { field, shown: body } : typeSelect ? { field: typeSelect, shown: part } : null;
+};
+/** RF3 I-2 — the control a summary entry focused shows it whatever moved focus there (builder-issues.css draws the marker with the
+ *  focus ring: Chromium does not match :focus-visible for script focus after a pointer click). Removed when it loses focus. */
+const ISSUE_FOCUS = "data-issue-focus";
+function clearIssueFocus(this: HTMLElement) { this.removeAttribute(ISSUE_FOCUS); }
 const FLASH_MS = 1200;
 const UNDO_TOAST_MS = 10000;
 /** Height of the band a toast covers at the bottom of the builder — keep in sync with structured-builder.css
  *  (`.structured-builder-overlay:has(.eb-toast)` reserves 16 px × 2 + 96 px). */
 const TOAST_BAND = 128;
+/** RF3 A-01 — the stuck toolbar's height on `.sb-builder` (builder-toolbar.css offsets the layers that stick below it by it). */
+const TOOLBAR_BAND_VAR = "--sb-toolbar-band";
 /** User-perceived characters: a letter with its harakat / shadda, an emoji sequence or a flag is ONE grapheme (never split). */
 const graphemesOf = (text: string): string[] =>
   typeof Intl.Segmenter === "function" ? Array.from(new Intl.Segmenter("ar", { granularity: "grapheme" }).segment(text), x => x.segment) : Array.from(text);
@@ -182,7 +253,7 @@ const UNDO_HINT = " للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -371,22 +442,96 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const reducedMotion = usePrefersReducedMotion();
   const scrollBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
   const builderRef = useRef<HTMLDivElement | null>(null);
-  /** Bottom edge of the sticky toolbar on screen (0 without one). */
-  const toolbarBottom = () => builderRef.current?.querySelector<HTMLElement>(".sb-toolbar")?.getBoundingClientRect().bottom ?? 0;
+  const scrollerOf = () => builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+  /** K2 C-F4 — builder-toolbar.css makes the toolbar sticky only where there is room for it (≥ 768 × 600); elsewhere it is static
+   *  and scrolls away with the content. ("" = no stylesheet, e.g. in unit tests: treated as sticky, as before.) */
+  const isStaticBox = (el: HTMLElement) => { const p = getComputedStyle(el).position; return p === "static" || p === "relative"; };
+  /** RF3 A-01 — the bulk-action bar while it is sticky (questions selected; it sticks right below the toolbar, builder-toolbar.css). */
+  const stickyBulkBar = () => {
+    const bar = builderRef.current?.querySelector<HTMLElement>(".sb-bulk-bar");
+    return bar && getComputedStyle(bar).position === "sticky" ? bar : null;
+  };
+  /** The edge a heading must be below to be seen (0 without a toolbar): the bottom of the sticky layers at the top of the scroller —
+   *  the stuck toolbar and, while questions are selected, the bulk-action bar below it (RF3 A-01). Where the toolbar is static
+   *  (phones, 200 %) it is the scroller's top: the static toolbar has scrolled away with the content and covers nothing — RF3 A-02:
+   *  its bottom edge, thousands of px above the screen once scrolled, made every heading above the screen count as on screen, so
+   *  focus landed on a card nobody could see (a deletion's neighbour, a Ctrl+Y). */
+  const toolbarBottom = () => {
+    const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
+    let edge = !bar ? 0 : isStaticBox(bar) ? (scrollerOf()?.getBoundingClientRect().top ?? 0) : bar.getBoundingClientRect().bottom;
+    const bulk = stickyBulkBar();
+    if (bulk) edge = Math.max(edge, bulk.getBoundingClientRect().bottom);
+    return edge;
+  };
   /** Space a revealed element keeps clear at the top of the builder's scroller: down to the sticky toolbar's bottom edge (the
    *  scroller's padding puts the stuck toolbar below its top, so its height alone falls short) plus 12 px. At the end of the scroll
    *  range the room reserved below the builder pushes the stuck toolbar up; a reveal scrolls it back to its resting place (the
-   *  scroller's top padding + its own height), so the clearance is never measured below that (Review Fix 2). */
+   *  scroller's top padding + its own height), so the clearance is never measured below that (Review Fix 2).
+   *  K2 C-F4 — the toolbar is sticky only where there is room for it (builder-toolbar.css: ≥ 768 × 600). Below that (phones,
+   *  200 % zoom) it is static: it scrolls away with the content and, standing before every target in the flow, can never cover
+   *  one — a reveal keeps only the 12 px. (Its resting band there would land every reveal a whole toolbar lower.)
+   *  RF3 A-01 — while questions are selected the bulk-action bar sticks below the toolbar (its `top` = the toolbar's band + 8 px,
+   *  builder-toolbar.css), so a target is revealed below the bar's resting place too (scroller padding + its `top` + its height). */
   const toolbarClearance = () => {
     const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
-    if (!bar) return 12;
-    const scroller = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+    const toolbarSticky = !!bar && !isStaticBox(bar);
+    const bulk = stickyBulkBar();
+    if (!toolbarSticky && !bulk) return 12;
+    const scroller = scrollerOf();
     const scrollerTop = scroller?.getBoundingClientRect().top ?? 0;
     const style = scroller ? getComputedStyle(scroller) : null;
     const padding = style ? parseFloat(style.paddingBlockStart) || parseFloat(style.paddingTop) || 0 : 0;
-    const r = bar.getBoundingClientRect();
-    return Math.round(Math.max(0, r.bottom - scrollerTop, padding + r.height) + 12);
+    let band = 0;
+    if (bar && toolbarSticky) { const r = bar.getBoundingClientRect(); band = Math.max(0, r.bottom - scrollerTop, padding + r.height); }
+    if (bulk) { const offset = parseFloat(getComputedStyle(bulk).top); if (Number.isFinite(offset)) band = Math.max(band, padding + offset + bulk.getBoundingClientRect().height); }
+    return Math.round(band + 12);
   };
+  // RF3 A-01 — the stuck toolbar's height, published for the layers that stick below it (builder-toolbar.css: the bulk-action bar,
+  // the inline question explorer). They used fixed offsets sized for the old 64 px toolbar and slid under the 21E.2 toolbar. Kept
+  // current while the toolbar wraps (width, zoom, status chips).
+  useLayoutEffect(() => {
+    const root = builderRef.current, bar = root?.querySelector<HTMLElement>(".sb-toolbar");
+    if (!root || !bar) return;
+    const publish = () => root.style.setProperty(TOOLBAR_BAND_VAR, Math.ceil(bar.getBoundingClientRect().height) + "px");
+    publish();
+    if (typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(publish);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
+  // RR3-A11Y-2 / audit B-02 (WCAG 2.4.11) — a Tab / Shift+Tab never leaves keyboard focus under the sticky layers. Chromium does not
+  // scroll a focus stop that is "in view" behind a sticky bar (the stuck toolbar and, with a selection, the bulk-action bar below
+  // it), and scrolls one that is above the screen only to the scroller's top — under the same bars. After a Tab moves focus, the
+  // scroller moves just enough to put the control below their edge + 12 px (the reveal clearance). Only keyboard moves are adjusted:
+  // the programmatic reveals (alignCard / alignSection) already land below the edge. A control that sits in a fixed / sticky layer
+  // (the toolbar, the bulk bar, the inline explorer, a toast, a dialog) never scrolls with the content and is left alone.
+  useEffect(() => {
+    const root = builderRef.current;
+    if (!root) return;
+    let tabbing = false;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      tabbing = true;
+      window.setTimeout(() => { tabbing = false; }, 0);
+    };
+    const inFixedLayer = (el: HTMLElement) => {
+      for (let n: HTMLElement | null = el; n && n !== root; n = n.parentElement) {
+        const p = getComputedStyle(n).position;
+        if (p === "sticky" || p === "fixed") return true;
+      }
+      return false;
+    };
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target;
+      if (!tabbing || !(t instanceof HTMLElement) || inFixedLayer(t)) return;
+      tabbing = false;
+      const scroller = scrollerOf(), edge = toolbarBottom(), top = t.getBoundingClientRect().top;
+      if (scroller && top < edge) scroller.scrollTop -= Math.ceil(edge - top + 12);
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    root.addEventListener("focusin", onFocusIn);
+    return () => { document.removeEventListener("keydown", onKeyDown, true); root.removeEventListener("focusin", onFocusIn); };
+  }, []);                                                                // eslint-disable-line react-hooks/exhaustive-deps
   /** 21E.1 slice 2 — a card that does not fit below the sticky toolbar is aligned by its top (its number and tools stay visible,
    *  e.g. at 200 % zoom); one that fits is centred. Either way it keeps the toolbar's height + 12 px clear above it. */
   const alignCard = (el: HTMLElement, bottomReserve = 0) => {
@@ -452,9 +597,10 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     el.focus({ preventScroll: true });
     alignSection(el);
   };
-  /** Review Fix 1 — the heading row of `el` is on screen: at or below the sticky toolbar's bottom edge, and clear of the bottom
-   *  `bottomReserve` px (the band a toast covers while it is shown). When the toolbar and that band leave no usable strip between
-   *  them (the tall toolbar on phones / at 200 %, 21E.2), the transient band is ignored: no scroll could clear both. */
+  /** Review Fix 1 — the heading row of `el` is on screen: at or below the sticky layers' bottom edge (toolbarBottom: the scroller's
+   *  top where the toolbar is static, RF3 A-02), and clear of the bottom `bottomReserve` px (the band a toast covers while it is
+   *  shown). When the toolbar and that band leave no usable strip between them, the transient band is ignored: no scroll could
+   *  clear both. */
   const headingOnScreen = (el: HTMLElement, bottomReserve: number) => {
     const r = el.getBoundingClientRect();
     const top = toolbarBottom();
@@ -631,10 +777,27 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     focusItemOrNeighbour(r.deletion, 0, "reveal");
     if (!back && document.activeElement instanceof HTMLElement && document.activeElement !== document.body) r.neighbour = document.activeElement;
   }, [exam, dismissToast]);                                              // eslint-disable-line react-hooks/exhaustive-deps
+  const navJump = useRef(false);
   const navigateTo = (id: string) => {
-    if (isNarrow) { setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }      // let the dialog release focus first
+    if (isNarrow) { navJump.current = true; setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }   // let the dialog release focus first
     else focusCard(id);
   };
+  // RF3 (owner-listed, 200 %) — the explorer's dialog (≤ 900 px) gives focus back to the control that opened it. When the window
+  // narrows (zoom) while focus is inside the INLINE explorer, the explorer turns into the dialog and the focused control leaves the
+  // page with the inline panel: the dialog's opener is <body>, and closing it (Escape, «إغلاق», the backdrop) left focus on <body>.
+  // Focus then goes to «المزيد», the menu that holds the explorer's toggle (else the toolbar) — never <body>. A jump to a question
+  // focuses its card instead (navigateTo).
+  const navDialogOpen = navOpen && isNarrow;
+  const navDialogWasOpen = useRef(navDialogOpen);
+  useLayoutEffect(() => {
+    const was = navDialogWasOpen.current, jump = navJump.current;
+    navDialogWasOpen.current = navDialogOpen;
+    navJump.current = false;
+    if (!was || navDialogOpen || jump || !alive.current || !focusLost()) return;
+    const toolbar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
+    const more = Array.from(toolbar?.querySelectorAll<HTMLButtonElement>("button") ?? []).find(b => b.getAttribute("aria-label") === MORE_MENU_LABEL && !b.disabled);
+    (more ?? toolbar)?.focus();
+  }, [navDialogOpen]);                                                   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bulk actions: each is ONE functional updater → ONE history step (a no-op result creates no entry).
   const bulkMove = (target: string) => { const ids = selectedIds(); if (ids.some(id => pendingMediaRef.current.has(id))) return; update(prev => ({ ...prev, sections: bulkMoveQuestions(prev.sections || [], ids, target) })); };
@@ -798,65 +961,196 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     onSave("final");
   };
   const totalMarks = computeTotalMarks(exam);
+  // Phase 21E.2 (B) — inside App's full-screen overlay (role="dialog", aria-modal, named by the toolbar heading) the builder is a
+  // modal workspace: focus moves in when it opens and back to the opener when it closes, Tab wraps inside it, and Escape takes the
+  // existing exit path, so the unsaved-changes guard still decides — except while a save is in flight, when Escape does nothing,
+  // exactly like the disabled «رجوع». Any dialog, menu or toast layered above it keeps Escape and Tab for itself (useModalSurface
+  // yields to them). Rendered on its own (no overlay) the builder is not modal: nothing happens.
+  const surfaceRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => { surfaceRef.current = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null; }, []);
+  useModalSurface(surfaceRef, true, () => { if (!saving) void requestExit(); }, returnFocusTo);
+  // ── Phase 21E.2 (D) · inline issues: the SAME structural issues the summary lists and finalization uses, regrouped by where they
+  // belong (indexIssues never re-validates, filters or re-ranks) — each question's in its card, each section's in its header, and
+  // the exam-level rest in the summary only. ONE polite region announces settled count changes (never on opening the exam).
+  const issueIndex = useMemo(() => {
+    const sections = exam.sections || [];
+    return indexIssues([...decision.structuralErrors, ...decision.structuralWarnings], {
+      questionIds: new Set(sections.flatMap(s => (s.questions || []).map(q => q.examQuestionId))),
+      sectionIds: new Set(sections.map(s => s.id)),
+    });
+  }, [decision, exam.sections]);
+  const summaryTargets = useMemo(() => issueTargets(issueIndex, exam.sections || []), [issueIndex, exam.sections]);
+  const issueAnnouncement = useIssueAnnouncer(errors.length, warnings.length, ISSUE_SETTLE_MS, exam.examId);   // K3 C-F5: per exam
+  // Questions the teacher opened from the summary (UI state only — never exam data, history or autosave; reset for another exam):
+  // their fields keep showing their errors (FieldRevealContext) until fixed; a new count re-opens a collapsed card.
+  const [issueReveal, setIssueReveal] = useState<{ examId: string; seqs: ReadonlyMap<string, number> } | null>(null);
+  let revealedQuestions = issueReveal?.examId === exam.examId ? issueReveal.seqs : EMPTY_REVEALS;
+  // K3 C-F3 — "until fixed" is derived, never latched: a question leaves the reveal in the render where its last canonical ERROR goes
+  // (no commit ever shows the stale reveal). A problem it gets LATER (a new empty row) is then shown by the field's own touched rule
+  // (Field touchKey), like any other; another summary click reveals it again. RF2-3 — a warning it keeps (STIMULUS_MISSING: a stale
+  // shared-stimulus reference) never holds the reveal: no field shows a warning, so it would only turn later rows red unvisited.
+  const hasError = (id: string) => !!issueIndex.byQuestion.get(id)?.some(i => i.severity === "error");
+  if ([...revealedQuestions.keys()].some(id => !hasError(id))) {
+    revealedQuestions = new Map([...revealedQuestions].filter(([id]) => hasError(id)));
+    setIssueReveal({ examId: exam.examId, seqs: revealedQuestions });
+  }
+  // Re-review RF2R-1 — opening a collapsed card is a separate, NEVER-pruned signal: a summary click on a warning-only question must
+  // still open its card even though the field reveal above is pruned in the same render (opening and revealing are two jobs).
+  const [openReq, setOpenReq] = useState<{ examId: string; seqs: ReadonlyMap<string, number> } | null>(null);
+  const openRequests = openReq?.examId === exam.examId ? openReq.seqs : EMPTY_REVEALS;
+  const revealCount = useRef(0);
+  /** K3 A-F4 — the issue list a card / section shows itself (its direct child; a card's list is never a nested question's). */
+  const ownIssueList = (host: Element | null | undefined) => (Array.from(host?.children ?? []).find(c => c.classList.contains("sb-inline-issues")) as HTMLElement | undefined) ?? null;
+  /** RF3 I-2 — marks the element that holds focus now, when it is inside `host` (the card / section the entry opened), for
+   *  builder-issues.css; it leaves with the focus. A marker whose element lost focus without a blur (disabled while a save runs) is
+   *  cleared first, so it is never on two elements. */
+  const markIssueFocus = (host: HTMLElement) => {
+    builderRef.current?.querySelectorAll<HTMLElement>("[" + ISSUE_FOCUS + "]").forEach(n => n.removeAttribute(ISSUE_FOCUS));
+    const a = document.activeElement;
+    if (!(a instanceof HTMLElement) || !host.contains(a)) return;
+    a.setAttribute(ISSUE_FOCUS, "");
+    a.addEventListener("blur", clearIssueFocus, { once: true });
+  };
+  /** The question below the sticky toolbar, with the alignment every other jump uses (alignCard), and focus where the teacher fixes
+   *  it. Never touches the selection or the navigator. K3 A-F6: the frame(s) showing the clicked issue (data-issue-codes) — RF2-1:
+   *  the clicked INSTANCE of that code (data-issue-nth: e.g. its own incomplete pair), else any frame showing the code. RF2-2: in
+   *  those frames, the invalid control, else the first enabled control («+ إضافة خيار» when a multiple-choice question has no
+   *  options), else the card's NAMED issue list «مشكلات السؤال N» (A-F4) — never another field's error. Only an issue no frame
+   *  shows takes the first field whose error is now shown, else the named list, else the card. RF3 I-1: an issue of a compound /
+   *  composite PART (no frame shows it) takes that part's own control, else the named list — never another field of the card. */
+  const focusQuestionIssues = (id: string, instance?: IssueInstance) => {
+    const el = nodes.current.get(id);
+    if (!el || !alive.current) return;
+    let field: HTMLElement | null | undefined = null, shown: HTMLElement | null = null;
+    if (instance?.part) {
+      // RF3 I-1 / RR3-3 — an issue of a compound / composite PART (no Field frame shows it): the control of that part the issue is
+      // about (partTarget: its named row, its rich content, its type, its answer body); never another field of the card, never a row
+      // the issue does not name. A part that cannot be told apart ("ambiguous": two parts with the same label), a row that cannot be
+      // located (a table / CLI cell) or a part with no such control leads to the card's named issue list below.
+      const focus = instance.part === "ambiguous" ? null : instance.part;
+      const part = focus ? partNode(el, focus.part) : null;
+      const target = part && focus ? partTarget(part, focus) : null;
+      field = target?.field;
+      shown = target?.shown ?? null;
+    } else {
+      const coded = instance ? Array.from(el.querySelectorAll<HTMLElement>("[data-issue-codes]")).filter(f => (f.dataset.issueCodes || "").split(" ").includes(instance.code)) : [];
+      const own = instance?.nth === undefined ? [] : coded.filter(f => Number(f.dataset.issueNth || 1) === instance.nth);
+      const showing = own.length ? own : coded;
+      field = showing.length
+        ? showing.map(f => f.querySelector<HTMLElement>(INVALID_FIELD)).find(Boolean) ?? showing.map(f => f.querySelector<HTMLElement>(ENABLED_CONTROL)).find(Boolean)
+        : el.querySelector<HTMLElement>(INVALID_FIELD);
+      shown = field?.closest<HTMLElement>(".eb-field, .eb-field-group") ?? null;
+    }
+    if (field) {
+      alignCard(shown ?? field);
+      field.focus({ preventScroll: true });
+    } else alignCard(el);
+    if (!field || document.activeElement !== field) (ownIssueList(el) ?? el).focus({ preventScroll: true });
+    markIssueFocus(el);
+    setFlashId(id);
+  };
+  const openIssue = (target: IssueTarget, issue: StructuredIssue) => {
+    if (!alive.current) return;
+    if (target.kind === "section") {
+      const el = sectionNode(target.id);
+      if (!el) return;
+      // K3 A-F4 — the section's NAMED issue list under its heading (the section itself has no name), the heading aligned as usual.
+      const list = ownIssueList(Array.from(el.children).find(c => c.classList.contains("sb-section-head")));
+      if (!list) { revealSection(el); markIssueFocus(el); return; }
+      list.focus({ preventScroll: true });
+      markIssueFocus(el);
+      alignSection(el);
+      return;
+    }
+    const examId = exam.examId, count = ++revealCount.current;
+    // RF2-1 — the clicked instance of its code, counted (RF3 I-3) among the issues of the card the entry leads to; RF3 I-1 — the part
+    // it belongs to, read against that card's question (the LAST one carrying the id, like the node map).
+    const own = targetCardIssues(issue, issueIndex.byQuestion.get(target.id) ?? []);
+    const question = (exam.sections || []).flatMap(s => s.questions || []).filter(q => q.examQuestionId === target.id).at(-1);
+    const instance: IssueInstance = { code: issue.code, nth: own ? issueOccurrence(issue, own) : undefined, part: issuePartFocus(issue, question) };
+    setIssueReveal(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
+    setOpenReq(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
+    window.setTimeout(() => focusQuestionIssues(target.id, instance), 0);   // after the revealed (and re-opened) card has rendered
+  };
+  const gatesText = gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات";
 
   return (
     <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
     <div className="sb-builder" dir="rtl" ref={builderRef}>
-      <header className="sb-toolbar" tabIndex={-1}>
-        <div className="sb-toolbar-main">
-          {onExit && <button type="button" className="sb-btn" onClick={() => { void requestExit(); }} disabled={saving}>→ رجوع</button>}
-          {(onUndo || onRedo) && (
-            <span className="sb-history" role="group" aria-label="سجل التعديلات">
-              <button type="button" className="sb-btn" onClick={onUndo} disabled={!canUndo || saving} title="تراجع (Ctrl+Z)" aria-label="تراجع">↶ <span className="sb-btn-label">تراجع</span></button>
-              <button type="button" className="sb-btn" onClick={onRedo} disabled={!canRedo || saving} title="إعادة (Ctrl+Y أو Ctrl+Shift+Z)" aria-label="إعادة">↷ <span className="sb-btn-label">إعادة</span></button>
-            </span>
-          )}
-          <input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" onChange={e => { const title = e.target.value; update(prev => ({ ...prev, title })); }} disabled={saving} />
+      {/* Phase 21E.2 (21E.0 audit T-2 / F1) — at most eight visible actions: «رجوع» · تراجع / إعادة · «إضافة أسئلة» (menu) ·
+          «معاينة الامتحان» · «المزيد» (menu) · save draft · finalize. Every other tool is the same handler inside a menu; the gates
+          and blueprint counts stay visible as status. The toolbar is sticky only where there is room for it (builder-toolbar.css). */}
+      <BuilderToolbar
+        headingId={BUILDER_TITLE_ID}
+        heading={"باني الامتحان المنظّم: " + (exam.title?.trim() || "امتحان بلا عنوان")}
+        onExit={onExit ? () => { void requestExit(); } : undefined}
+        exitDisabled={saving}
+        history={onUndo || onRedo ? { onUndo, onRedo, canUndo: !!canUndo, canRedo: !!canRedo, disabled: !!saving } : undefined}
+        titleField={<input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" aria-label="عنوان الامتحان" onChange={e => { const title = e.target.value; update(prev => ({ ...prev, title })); }} disabled={saving} />}
+        stats={<>
           <span className="sb-stat">{(exam.sections || []).length} أقسام</span>
           <span className="sb-stat">{countQuestions(exam)} أسئلة</span>
           <span className="sb-stat">{totalMarks} علامة</span>
-        </div>
-        <div className="sb-toolbar-actions">
-          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite">{SAVE_STATE_LABEL[saveState]}</span>}
+        </>}
+        status={<>
+          {/* RF3 I-4 — the ONE region that announces the save state: one whole sentence per change (aria-atomic), never the glyph; the
+              draft button's «جارٍ الحفظ…» is its label, not an announcement. */}
+          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite" aria-atomic="true"><span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {SAVE_STATE_LABELS[saveState]}</span>}
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
-          <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
-          {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
-          {aiAuthor && <button type="button" className="sb-btn" onClick={() => setAiOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سؤال بالذكاء الاصطناعي</button>}
-          {aiAuthor?.authorScenario && <button type="button" className="sb-btn" onClick={() => setAiScenarioOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">✨ سيناريو بالذكاء الاصطناعي</button>}
-          {aiAuthor?.composeExam && <button type="button" className="sb-btn" onClick={() => setComposerOpenFor(exam.examId)} disabled={saving} aria-haspopup="dialog">🧠 المؤلف الذكي للامتحان</button>}
-          {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
-          {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
-          {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
-          {presets && <button type="button" className={"sb-btn" + (presetsOpen ? " is-active" : "")} onClick={() => setPresetsOpen(true)} aria-haspopup="dialog" title="القوالب الأكاديمية">📋 <span className="sb-btn-label">القوالب الأكاديمية</span></button>}
-          <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
-          <button type="button" className={"sb-btn" + (studioOpen ? " is-active" : "")} onClick={() => setStudioOpen(true)} disabled={saving} aria-haspopup="dialog" title="العرض والتصميم">🎨 <span className="sb-btn-label">العرض والتصميم</span></button>
-          <button type="button" className="sb-btn" onClick={() => setSurfaceLabOpen(true)} aria-haspopup="dialog">🧮 مختبر الدوال 3D (تجريبي)</button>
-          <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
-          {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
+          {hasPolicy && <span className={"sb-stat sb-gates-chip" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")}>{gatesText}</span>}
+        </>}
+        addItems={[
+          ...(bankPicker ? [{ key: "bank", label: "إضافة من بنك الأسئلة", icon: <IconBank size={16} />, onSelect: () => { setPickerFocus(null); setPickerOpenFor(exam.examId); }, disabled: saving, dialog: true }] : []),
+          ...(aiAuthor ? [{ key: "ai-question", label: "سؤال بالذكاء الاصطناعي", icon: <IconSparkles size={16} />, onSelect: () => setAiOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
+          ...(aiAuthor?.authorScenario ? [{ key: "ai-scenario", label: "سيناريو بالذكاء الاصطناعي", icon: <IconSparkles size={16} />, onSelect: () => setAiScenarioOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
+          ...(aiAuthor?.composeExam ? [{ key: "ai-composer", label: "المؤلف الذكي للامتحان", icon: <IconSparkles size={16} />, onSelect: () => setComposerOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
+        ]}
+        preview={{ key: "preview", label: "معاينة الامتحان", onSelect: () => setPreview(exam) }}
+        moreItems={[
+          { key: "explorer", label: "مستكشف الأسئلة", icon: <IconCompass size={16} />, onSelect: () => setNavOpen(v => !v), pressed: navOpen },
+          { key: "blueprint", label: "مخطط الامتحان", icon: <IconBuilder size={16} />, onSelect: () => setBlueprintOpen(true), dialog: true, badge: blueprintIssueCount > 0 ? <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span> : undefined },
+          ...(exam.blueprint ? [{ key: "coverage", label: "تحليل المخطط", icon: <IconReports size={16} />, onSelect: () => setCoverageOpen(true), dialog: true }] : []),
+          ...(exam.blueprint ? [{ key: "policy", label: "سياسات الجودة", icon: <IconCheck size={16} />, onSelect: () => setPolicyOpen(true), dialog: true }] : []),
+          ...(hasPolicy ? [{ key: "readiness", label: "فحص الجاهزية للاعتماد", icon: <IconInfo size={16} />, onSelect: () => setReadinessOpen(true), dialog: true, badge: gateBlockers || gateWarnings ? gatesText : undefined }] : []),
+          ...(governance ? [{ key: "governance", label: "إدارة النشر والإصدارات", icon: <IconHistory size={16} />, onSelect: () => setGovernanceOpen(true), dialog: true }] : []),
+          ...(presets ? [{ key: "presets", label: "القوالب الأكاديمية", icon: <IconCopy size={16} />, onSelect: () => setPresetsOpen(true), dialog: true }] : []),
+          { key: "studio", label: "العرض والتصميم", icon: <IconImage size={16} />, onSelect: () => setStudioOpen(true), disabled: saving, dialog: true },
+          { key: "surface-lab", label: "مختبر الدوال 3D (تجريبي)", icon: <IconMaximize size={16} />, onSelect: () => setSurfaceLabOpen(true), dialog: true },
+        ]}
+        save={onSave ? <>
+          <button type="button" className="sb-tb-btn sb-tb-keep-label" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}><IconSave size={18} aria-hidden="true" /><span className="sb-tb-label">{saving ? SAVE_LABELS.saving : SAVE_LABELS.saveDraft}</span></button>
           {/* Structural errors keep the pre-13C-C HTML `disabled`. Quality-gate blockers use aria-disabled so the button stays
               reachable and its click EXPLAINS the refusal (readiness panel) — the handler re-checks the latest exam either way. */}
-          {onSave && <button type="button" className={"sb-btn sb-btn-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
-          {hasPolicy && <button type="button" className={"sb-btn sb-gates-status" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")} onClick={() => setReadinessOpen(true)} aria-haspopup="dialog" title="فحص الجاهزية للاعتماد">
-            {gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات"}
-          </button>}
-        </div>
-      </header>
+          <button type="button" className={"sb-tb-btn sb-tb-keep-label is-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}><IconCheck size={18} aria-hidden="true" /><span className="sb-tb-label">{SAVE_LABELS.finalizeExam}</span></button>
+        </> : undefined}
+      />
 
       {error && <div className="sb-banner sb-banner-error">{error}</div>}
       {notice && <div className="sb-banner sb-banner-ok">{notice}</div>}
 
+      {/* Phase 21E.2 (D) — always mounted, so assistive technology registers it before its first update. */}
+      <p className="eb-visually-hidden" role="status" aria-live="polite" data-issue-live>{issueAnnouncement}</p>
       {(errors.length > 0 || warnings.length > 0) && (
-        <div className={"sb-issues " + (errors.length ? "sb-issues-error" : "sb-issues-warn")}>
-          <button type="button" className="sb-issues-head" onClick={() => setShowIssues(v => !v)}>
-            {showIssues ? "▾" : "▸"} {errors.length > 0 ? errors.length + " خطأ" : ""}{errors.length && warnings.length ? " • " : ""}{warnings.length > 0 ? warnings.length + " تنبيه" : ""}
+        <div className={"sb-issues sb-issues-summary " + (errors.length ? "sb-issues-error" : "sb-issues-warn")}>
+          <button type="button" className="sb-issues-head" aria-expanded={showIssues} onClick={() => setShowIssues(v => !v)}>
+            {/* K3 (A-F7) — aria-expanded carries the state; the chevron (aria-hidden) points down when open, to the inline end when closed. */}
+            <IconChevronDown size={14} className={"eb-disclosure-chevron sb-issues-chevron" + (showIssues ? " is-open" : "")} aria-hidden="true" />{errors.length > 0 ? errors.length + " خطأ" : ""}{errors.length && warnings.length ? " • " : ""}{warnings.length > 0 ? warnings.length + " تنبيه" : ""}
             {hasBlockingErrors(errors) && <em className="sb-issues-block"> — يجب إصلاح الأخطاء قبل الحفظ النهائي</em>}
           </button>
           {showIssues && (
             <ul className="sb-issues-list">
-              {[...errors, ...warnings].map((iss: StructuredIssue) => (
-                <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>{iss.severity === "error" ? "⛔" : "⚠️"} {iss.message}</li>
-              ))}
+              {/* An issue that belongs to a question / section opens it; an exam-level issue stays plain text. The severity is text
+                  («خطأ:» / «تنبيه:», as in the inline lists), never colour or an emoji alone. */}
+              {[...errors, ...warnings].map((iss: StructuredIssue) => {
+                const target = summaryTargets.get(iss);
+                const what = <><span className="sb-issue-kind">{iss.severity === "error" ? "خطأ:" : "تنبيه:"}</span> <span className="sb-issue-text">{iss.message}</span></>;
+                return (
+                  <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>
+                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target, iss)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -904,6 +1198,10 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             registerQuestionNode={registerQuestionNode}
             flashQuestionId={flashId || undefined}
             blueprint={exam.blueprint}
+            sectionIssues={issueIndex.bySection.get(section.id)}
+            questionIssues={issueIndex.byQuestion}
+            revealedQuestions={revealedQuestions}
+            openRequests={openRequests}
           />
         ))}
       </div>

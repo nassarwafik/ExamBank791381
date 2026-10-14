@@ -8,6 +8,7 @@ import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion } from "./examTypes";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { networkingBlueprint, physicsBlueprint, chemistryBlueprint, mathematicsBlueprint } from "./assessmentBlueprintFixtures";
+import { toolbarItem } from "./builder/toolbarTestActions";
 
 // Phase 13C-B — Independent Review Fix 1 (builder surface): R1 guided bank discovery is scope-gated (data), the manual
 // picker is not; R2 an invalid total target is shown as unassessable, never as an authoritative target. Fail-first on ffea5b0.
@@ -37,7 +38,7 @@ function Host({ initial, bank }: { initial: StructuredExam; bank?: ReturnType<ty
     saveState={examSaveState(hist.history, saving)} backupStorage={null} onRecover={hist.recover} autosaveDelayMs={5} bankPicker={bank as never} />;
 }
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const openCov = async () => { fireEvent.click(screen.getByRole("button", { name: /تحليل المخطط/ })); return await screen.findByRole("dialog", { name: "تحليل المخطط الحي" }); };
+const openCov = async () => { fireEvent.click(toolbarItem(/تحليل المخطط/)); return await screen.findByRole("dialog", { name: "تحليل المخطط الحي" }); };
 const bankButtons = (dialog: HTMLElement) => within(dialog).queryAllByRole("button", { name: "ابحث في بنك الأسئلة" });
 const NET_SCOPE = { subjectId: "networking", courseId: "791381" };
 
@@ -48,7 +49,7 @@ describe("R1 — guided bank discovery is gated by the bank service's declared s
   it("Physics (topic), Chemistry (difficulty) and Mathematics (type) blueprints get NO 'ابحث في بنك الأسئلة' against the networking / 791381 bank; the manual toolbar button stays", async () => {
     for (const [bp, topic] of [[physicsBlueprint, "MOTION"], [chemistryBlueprint, "REDOX"], [mathematicsBlueprint, "ALGEBRA"]] as const) {
       render(<Host initial={makeExam(withRows(bp, topic), topic)} bank={bankService(NET_SCOPE)} />); await tick();
-      expect(screen.getByRole("button", { name: /إضافة من بنك الأسئلة/ })).toBeTruthy();
+      expect(toolbarItem(/إضافة من بنك الأسئلة/)).toBeTruthy();
       const dialog = await openCov();
       expect(dialog.querySelectorAll("[data-coverage-id]")).toHaveLength(4);                          // the analysis itself is subject-neutral and complete
       expect(bankButtons(dialog)).toHaveLength(0);
@@ -59,7 +60,7 @@ describe("R1 — guided bank discovery is gated by the bank service's declared s
     render(<Host initial={makeExam(withRows(networkingBlueprint, "IP_ADDRESSING"), "IP_ADDRESSING")} bank={bankService()} />); await tick();
     let dialog = await openCov();
     expect(bankButtons(dialog)).toHaveLength(0);
-    expect(screen.getByRole("button", { name: /إضافة من بنك الأسئلة/ })).toBeTruthy();
+    expect(toolbarItem(/إضافة من بنك الأسئلة/)).toBeTruthy();
     cleanup();
     render(<Host initial={makeExam(withRows(networkingBlueprint, "IP_ADDRESSING"), "IP_ADDRESSING")} bank={bankService(NET_SCOPE)} />); await tick();
     dialog = await openCov();
@@ -80,7 +81,7 @@ describe("R2 — an invalid total target is visible as unassessable, never as an
   it("targets.totalQuestions = -1: overview shows the fact without a target, the total row is unassessable with INVALID_TARGET, and the badge / panel issue counts agree", async () => {
     const bp = { ...networkingBlueprint, constraints: [], targets: { totalQuestions: -1, totalMarks: 10 } };
     render(<Host initial={makeExam(bp, "IP_ADDRESSING")} bank={undefined} />); await tick();
-    expect(screen.getByRole("button", { name: /مخطط الامتحان/ }).querySelector(".sb-bp-badge")?.textContent).toBe("1");
+    expect(toolbarItem(/مخطط الامتحان/).querySelector(".sb-bp-badge")?.textContent).toBe("1");
     const dialog = await openCov();
     expect((dialog.querySelector('[data-overview="questions"]') as HTMLElement).textContent!.replace(/\s+/g, " ").trim()).toBe("2 سؤال");
     expect((dialog.querySelector('[data-overview="marks"]') as HTMLElement).textContent!.replace(/\s+/g, " ").trim()).toBe("4 / 10 علامة");

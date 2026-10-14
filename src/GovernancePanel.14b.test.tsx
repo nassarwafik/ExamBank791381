@@ -7,6 +7,7 @@ import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion } from "./examTypes";
 import { GovernanceRequestError, type GovernanceService, type GovernanceStatus, type GovernanceManifestView, type ReviewWorkflowView, type DecisionRecord, type GovernanceActor } from "./examGovernance";
+import { toolbarItem } from "./builder/toolbarTestActions";
 
 // Phase 14B — the Builder's governance panel in ASSIGNED mode with a fake App-owned service: actor-selection dialog before
 // «إرسال للمراجعة», workflow card with display names / stage, assigned-actor decisions, required note, approver gating, the
@@ -56,7 +57,7 @@ function Host({ svc }: { svc: GovernanceService }) {
     saveState={examSaveState(hist.history, saving)} backupStorage={null} onRecover={hist.recover} autosaveDelayMs={5} governance={svc} />;
 }
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const openPanel = async () => { fireEvent.click(screen.getByRole("button", { name: /إدارة النشر والإصدارات/ })); const d = await screen.findByRole("dialog", { name: "إدارة النشر والإصدارات" }); await tick(30); return d; };
+const openPanel = async () => { fireEvent.click(toolbarItem(/إدارة النشر والإصدارات/)); const d = await screen.findByRole("dialog", { name: "إدارة النشر والإصدارات" }); await tick(30); return d; };
 const btn = (scope: HTMLElement, name: string | RegExp) => within(scope).getByRole("button", { name });
 
 beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); });

@@ -9,7 +9,7 @@ import { PRESENTATION_VOCABULARY, validateQuestionPresentation, type QuestionPre
 import QuestionBodyEditor from "./QuestionBodyEditor";
 import CompoundQuestionEditor from "./CompoundQuestionEditor";
 import Field from "./ui/Field";
-import { headerFieldIssues } from "./teacher/questionFieldIssues";
+import { headerFieldIssues, HEADER_FIELD_CODES } from "./teacher/questionFieldIssues";
 // Phase 20D.1 — the rich-content block editor and the Markdown conversion dialog are LAZY (builder-only chunks, loaded on demand).
 const RichContentEditor = lazy(() => import("./richContent/RichContentEditor"));
 const MarkdownConvertDialog = lazy(() => import("./richContent/MarkdownConvertDialog"));
@@ -81,7 +81,7 @@ export default function QuestionComposer({ question: q, onChange, disabled, fram
       {confirmDialog}
 
       {framed ? (
-        <Field label={q.presentationType === "compound" ? "نص السؤال المركّب (اختياري)" : "نص السؤال"} error={headerFieldIssues(q).text}>{a11y => (
+        <Field label={q.presentationType === "compound" ? "نص السؤال المركّب (اختياري)" : "نص السؤال"} error={headerFieldIssues(q).text} issueCode={HEADER_FIELD_CODES.text}>{a11y => (
           <textarea
             {...a11y}
             className="sb-input sb-textarea"

@@ -1,7 +1,7 @@
 
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import Field from "./ui/Field";
-import { headerFieldIssues } from "./teacher/questionFieldIssues";
+import { headerFieldIssues, HEADER_FIELD_CODES } from "./teacher/questionFieldIssues";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import QuestionComposer from "./QuestionComposer";
 import QuestionMediaEditor from "./QuestionMediaEditor";
@@ -12,6 +12,10 @@ import ActivityDescriptorEditor from "./ActivityDescriptorEditor";
 import { effectiveQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
 import CodeStimulusEditor from "./CodeStimulusEditor";
 import { GRADING_MODE_LABELS } from "./questionTypeAliases";
+import type { StructuredIssue } from "./examQuality";
+import InlineIssues from "./builder/InlineIssues";
+import { domIdPart, questionLabelOf } from "./builder/issueIndex";
+import { FieldRevealContext } from "./ui/fieldContext";
 
 // Exam-specific chrome around a question: collapse, the displayed-number badge, and the row actions (preview, move,
 // duplicate, delete), plus the exam-only metadata (display number, marks, shared stimulus/group, move-to-section).
@@ -51,15 +55,28 @@ type Props = {
   flash?: boolean;
   // Phase 13C-A — the exam's blueprint (vocabulary for the optional classification controls).
   blueprint?: AssessmentBlueprintV1;
+  /** Phase 21E.2 (D) — this question's canonical issues as the builder indexed them (shown in the card; never re-validated here). */
+  issues?: readonly StructuredIssue[];
+  /** Phase 21E.2 (D) — set once the teacher opened this question from the builder's issue summary: its fields show their errors
+   *  at once (FieldRevealContext). A NEW value (a later summary click) also opens a collapsed card. UI state only, never exam data. */
+  revealIssues?: number;
+  /** Re-review RF2R-1 — a NEW value (a later summary click) opens a collapsed card, also for a question whose field reveal was pruned
+   *  (only warnings left). Without it, a new revealIssues value opens the card as before. */
+  openRequest?: number;
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint, issues, revealIssues, openRequest } = props;
   const [open, setOpen] = useState(true);
+  // A summary click on a collapsed card opens it during the same render (no extra commit), so the builder can focus the field.
+  const openSignal = openRequest ?? revealIssues;
+  const [openedFor, setOpenedFor] = useState(openSignal);
+  if (openSignal !== openedFor) { setOpenedFor(openSignal); if (openSignal) setOpen(true); }
   // 21E.2 — the field-level view of the canonical header rules (EMPTY_TEXT / MARKS_PROBLEM) and the question's display label,
   // used to give the reorder buttons a name that says WHICH question moves.
   const fieldIssues = useMemo(() => headerFieldIssues(q), [q]);
-  const questionLabel = q.displayNumber?.trim() ? q.displayNumber.trim() : String(index + 1);
+  const questionLabel = questionLabelOf(q.displayNumber, index);
+  const revealed = useContext(FieldRevealContext) || !!revealIssues;
 
   return (
     <div className={"sb-question" + (selected ? " is-selected" : "") + (flash ? " sb-q-flash" : "")} id={"sb-q-" + q.examQuestionId} data-question-id={q.examQuestionId} data-selected={selected ? "true" : undefined} tabIndex={-1} ref={registerNode}>
@@ -77,11 +94,16 @@ export default function StructuredQuestionEditor(props: Props) {
         <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={onDelete} disabled={disabled}>×</button>
       </div>
 
+      {/* Phase 21E.2 (D) — the question's canonical issues, between its head and its body: visible while the card is collapsed. */}
+      {issues && <InlineIssues id={"sb-issues-q-" + domIdPart(q.examQuestionId)} issues={issues} label={"مشكلات السؤال " + questionLabel} />}
+
+      {/* The provider is always rendered (a stable tree: revealing never remounts the editors below); it only adds the reveal. */}
+      <FieldRevealContext.Provider value={revealed}>
       {open && (
         <div className="sb-q-body">
           <div className="sb-q-meta">
             <Field label="الرقم الظاهر" layout="inline">{a11y => <input {...a11y} className="sb-input sb-input-xs" value={q.displayNumber ?? ""} placeholder={String(index + 1)} onChange={e => onChange({ displayNumber: e.target.value })} disabled={disabled} />}</Field>
-            <Field label="العلامة" layout="inline" error={fieldIssues.marks}>{a11y => <input {...a11y} className="sb-input sb-input-xs" type="number" step="0.25" value={q.marks ?? ""} onChange={e => onChange({ marks: Number(e.target.value) })} disabled={disabled} />}</Field>
+            <Field label="العلامة" layout="inline" error={fieldIssues.marks} issueCode={HEADER_FIELD_CODES.marks}>{a11y => <input {...a11y} className="sb-input sb-input-xs" type="number" step="0.25" value={q.marks ?? ""} onChange={e => onChange({ marks: Number(e.target.value) })} disabled={disabled} />}</Field>
             {groupOptions.length > 0 && (
               <label className="sb-inline"><span>المادة المشتركة</span>
                 <select className="sb-input sb-input-sm" value={q.groupId ?? ""} onChange={e => onChange({ groupId: e.target.value || undefined })} disabled={disabled}>
@@ -114,6 +136,7 @@ export default function StructuredQuestionEditor(props: Props) {
           <ActivityDescriptorEditor value={q.activity} onChange={activity => onChange({ activity })} disabled={disabled} />
         </div>
       )}
+      </FieldRevealContext.Provider>
     </div>
   );
 }

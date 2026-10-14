@@ -8,6 +8,7 @@ import { examSaveState } from "./examHistory";
 import type { StructuredExam, BuilderQuestion } from "./examTypes";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { networkingBlueprint } from "./assessmentBlueprintFixtures";
+import { toolbarItem, toolbarItemOrNull } from "./builder/toolbarTestActions";
 
 // Phase 13C-B — F5 (live intelligence surface), F6 (bulk classification), F7 (Blueprint → Bank focus) through the REAL
 // StructuredExamBuilder + REAL 13A history hook. Fail-first on baseline e6affe0.
@@ -62,7 +63,7 @@ function Host({ initial, bank }: { initial?: StructuredExam; bank?: ReturnType<t
   );
 }
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
-const covBtn = () => screen.getByRole("button", { name: /تحليل المخطط/ });
+const covBtn = () => toolbarItem(/تحليل المخطط/);
 const openCov = async () => { fireEvent.click(covBtn()); return await screen.findByRole("dialog", { name: "تحليل المخطط الحي" }); };
 const closeDialog = async (dialog: HTMLElement) => { fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" })); await tick(); };
 const card = (id: string) => document.getElementById("sb-q-" + id) as HTMLElement;
@@ -119,7 +120,7 @@ describe("F5 — تحليل المخطط الحي: live, factual, derived from t
     expect(overview(dialog, "questions")).toBe("4 / 6 سؤال"); expect(rowOf(dialog, "c-ip").textContent).toMatch(/75%/);          // 12 of 16 official marks
     // blueprint target change through مخطط الامتحان: totalQuestions 6 → 4 → at-target
     await closeDialog(dialog);
-    fireEvent.click(screen.getByRole("button", { name: /مخطط الامتحان/ }));
+    fireEvent.click(toolbarItem(/مخطط الامتحان/));
     const bpDialog = await screen.findByRole("dialog", { name: "مخطط الامتحان" });
     fireEvent.change(within(bpDialog).getByRole("spinbutton", { name: "إجمالي الأسئلة المستهدف" }), { target: { value: "4" } });
     await closeDialog(bpDialog);
@@ -150,7 +151,7 @@ describe("F5 — تحليل المخطط الحي: live, factual, derived from t
   it("an exam without a blueprint stays normal (no analysis button); an invalid blueprint never crashes the panel", async () => {
     const { blueprint: _b, ...plain } = makeExam(); void _b;
     render(<Host initial={plain as StructuredExam} />); await tick();
-    expect(screen.queryByRole("button", { name: /تحليل المخطط/ })).toBeNull();
+    expect(toolbarItemOrNull(/تحليل المخطط/)).toBeNull();
     cleanup();
     render(<Host initial={makeExam({ blueprint: { ...BP, constraints: [{ id: "bad", dimension: "topic", ref: "NOPE", metric: "count", unit: "absolute", target: 1 }, ...BP.constraints] } })} />); await tick();
     const dialog = await openCov();
@@ -169,7 +170,7 @@ describe("F5 — تحليل المخطط الحي: live, factual, derived from t
     const btn = within(rowOf(dialog, "c-mcq")).getByRole("button", { name: "عرض الأسئلة" });
     btn.focus(); expect(document.activeElement).toBe(btn);
     await closeDialog(dialog);
-    await waitFor(() => expect(document.activeElement).toBe(covBtn()));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "المزيد من أدوات الامتحان" })));   // the menu that opened it
   });
 });
 

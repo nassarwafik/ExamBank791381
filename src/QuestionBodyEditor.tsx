@@ -8,7 +8,7 @@ import CliFillEditor from "./CliFillEditor";
 import { resolveAuthoringEditor } from "./questionTypes/authoringRegistry";
 import { isKnownQuestionType, questionTypeDefinition, effectiveQuestionTypeVersion } from "./questionTypeCatalog";
 import Field, { FieldGroup } from "./ui/Field";
-import { matchingFieldIssues, multipleChoiceFieldIssues } from "./teacher/questionFieldIssues";
+import { matchingFieldIssues, multipleChoiceFieldIssues, fieldIssueCodes, MULTIPLE_CHOICE_FIELD_CODES, MATCHING_FIELD_CODES } from "./teacher/questionFieldIssues";
 
 // Type-specific answer-body HOST shared by a question and a compound part. It never renders identity, text or marks (the
 // caller owns those) — only the answer controls for the given type. Phase 16A: the host resolves the CODE-OWNED authoring
@@ -48,7 +48,7 @@ function FramedLegacyEditor({ node, type, onChange, disabled }: { node: Question
     const setOption = (i: number, text: string) => onChange({ options: options.map((o, k) => (k === i ? { ...o, text } : o)) });
     const issues = multipleChoiceFieldIssues(node);
     return (
-      <FieldGroup legend="الخيارات والإجابة الصحيحة" className="sb-options" error={[issues.options, issues.answer].filter(Boolean).join(" ")} showError="always">{group => (<>
+      <FieldGroup legend="الخيارات والإجابة الصحيحة" className="sb-options" error={[issues.options, issues.answer].filter(Boolean).join(" ")} issueCode={fieldIssueCodes(issues, MULTIPLE_CHOICE_FIELD_CODES)} showError="always">{group => (<>
         {options.map((o, i) => (
           <div className="sb-option-row" key={i}>
             <label className="sb-radio"><input type="radio" name={"mcq-" + groupId} checked={correct === i} onChange={() => onChange({ answer: { correctOptionIndex: i } })} disabled={disabled} {...group} /> الصحيح<span className="eb-visually-hidden"> — الخيار {i + 1}</span></label>
@@ -80,14 +80,15 @@ function FramedLegacyEditor({ node, type, onChange, disabled }: { node: Question
     const apply = (next: MatchPair[]) => onChange(buildMatchingPatch(next));
     const issues = matchingFieldIssues(node);
     return (
-      <FieldGroup legend="أزواج المطابقة" className="sb-matching" help="لكل عنصر في العمود الأول، اكتب إجابته الصحيحة من العمود الثاني. تُعرض كل الإجابات كقائمة منسدلة للطالب." error={issues.list}>{() => (<>
+      <FieldGroup legend="أزواج المطابقة" className="sb-matching" help="لكل عنصر في العمود الأول، اكتب إجابته الصحيحة من العمود الثاني. تُعرض كل الإجابات كقائمة منسدلة للطالب." error={issues.list} issueCode={MATCHING_FIELD_CODES.list}>{() => (<>
         {/* touchKey = the list length: adding or deleting a pair resets every pair's "already visited" state, so one pair's state
-            never moves onto another pair (rows stay mounted, so keyboard focus stays where the legacy editor kept it). */}
+            never moves onto another pair (rows stay mounted, so keyboard focus stays where the legacy editor kept it).
+            issueNth (RF2-1) = which MATCH_INCOMPLETE_PAIR this pair shows, from the same mapping as its messages. */}
         {list.map((p, i) => (
           <div className="sb-field-row" key={i}>
-            <Field label={"العنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.left} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.left} placeholder="العنصر" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, left: e.target.value } : x)))} disabled={disabled} />}</Field>
+            <Field label={"العنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.left} issueCode={MATCHING_FIELD_CODES.pair} issueNth={issues.pairs[i]?.nth} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.left} placeholder="العنصر" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, left: e.target.value } : x)))} disabled={disabled} />}</Field>
             <span className="sb-arrow" aria-hidden="true">←</span>
-            <Field label={"الإجابة الصحيحة للعنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.right} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.right} placeholder="الإجابة الصحيحة" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, right: e.target.value } : x)))} disabled={disabled} />}</Field>
+            <Field label={"الإجابة الصحيحة للعنصر " + (i + 1)} hideLabel error={issues.pairs[i]?.right} issueCode={MATCHING_FIELD_CODES.pair} issueNth={issues.pairs[i]?.nth} touchKey={list.length}>{a11y => <input {...a11y} className="sb-input" value={p.right} placeholder="الإجابة الصحيحة" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, right: e.target.value } : x)))} disabled={disabled} />}</Field>
             {list.length > 1 && <button type="button" className="sb-icon-btn sb-danger" title={"حذف الزوج " + (i + 1)} aria-label={"حذف الزوج " + (i + 1)} onClick={() => apply(list.filter((_, k) => k !== i))} disabled={disabled}>×</button>}
           </div>
         ))}

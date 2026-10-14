@@ -8,6 +8,7 @@ import { examSaveState } from "../examHistory";
 import type { StructuredExam, BuilderQuestion } from "../examTypes";
 import type { AssessmentBlueprintV1 } from "../assessmentTypes";
 import type { AssessmentPresetService } from "./assessmentPresetClient";
+import { toolbarItem } from "../builder/toolbarTestActions";
 
 // Phase 15A — Independent Review Fix 1 (RF8): a malformed CURRENT design (imported / legacy data) opens the Save Design flow
 // safely, shows structured validation issues in «مشكلات التحقق», never surfaces a runtime message, makes zero API calls and
@@ -56,7 +57,7 @@ async function runSave(initial: StructuredExam) {
   const { svc, calls } = fakeService();
   let hist!: Hist;
   render(<Host svc={svc} initial={initial} onHistory={h => { hist = h; }} />);
-  fireEvent.click(screen.getByRole("button", { name: /القوالب الأكاديمية/ }));
+  fireEvent.click(toolbarItem(/القوالب الأكاديمية/));
   const d = await screen.findByRole("dialog", { name: "القوالب الأكاديمية" }); await tick(30);
   fireEvent.click(within(d).getByRole("button", { name: "حفظ التصميم الحالي كقالب أكاديمي" }));
   const dlg = await screen.findByRole("dialog", { name: "حفظ التصميم الحالي كقالب أكاديمي" });     // the flow opens safely

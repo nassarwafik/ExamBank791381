@@ -26,7 +26,48 @@ export type NavigatorEntry = {
   origin: "bank" | "manual"; bankQuestionId: string; sourceQuestionNumber: string; topic: string; difficulty: number | null;
 };
 const PREVIEW_MAX = 120;
-const preview = (t: unknown) => String(t ?? "").replace(/\s+/g, " ").trim().slice(0, PREVIEW_MAX);
+/** A markdown table's delimiter row (`| --- | :--: |`). */
+const TABLE_DELIMITER = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+/** The non-empty cells of a table row, without its outer pipes (`\|` is a pipe inside a cell). */
+function tableCells(row: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  const s = row.trim();
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "\\" && s[i + 1] === "|") { cell += "|"; i++; }
+    else if (s[i] === "|") { cells.push(cell); cell = ""; }
+    else cell += s[i];
+  }
+  cells.push(cell);
+  return cells.map(c => c.trim()).filter(Boolean);
+}
+/** RF3 (owner-listed) — the question explorer's preview reads a markdown table by its words, never its syntax: a matching question
+ *  keeps its pairs as a table in its text (buildMatchingPatch, the graded table path), and the explorer showed «| العمود أ |
+ *  العمود ب | | --- | --- | | HTTP | |». A table (a row with a pipe, then a delimiter row, then the rows with a pipe that follow)
+ *  becomes its cells: «، » between the cells of a row, « · » between rows and around the table; the delimiter row and empty cells
+ *  are dropped. Text without a table is returned unchanged. Display only: the question is never touched. */
+export function navigatorPreviewText(text: string): string {
+  const lines = text.split(/\r?\n/);
+  const kind = lines.map((): "text" | "row" | "delimiter" => "text");
+  for (let i = 1; i < lines.length; i++) {
+    if (kind[i] !== "text" || !TABLE_DELIMITER.test(lines[i]) || !lines[i - 1].includes("|")) continue;
+    kind[i - 1] = "row"; kind[i] = "delimiter";
+    for (let j = i + 1; j < lines.length && lines[j].includes("|") && !TABLE_DELIMITER.test(lines[j]); j++) kind[j] = "row";
+  }
+  if (!kind.includes("delimiter")) return text;
+  const segments: string[] = [];
+  let prose = false;                                                   // the last segment is running text (lines join with a space)
+  lines.forEach((line, i) => {
+    if (kind[i] === "delimiter") return;
+    if (kind[i] === "row") { const cells = tableCells(line); if (cells.length) segments.push(cells.join("، ")); prose = false; return; }
+    const words = line.trim();
+    if (!words) return;
+    if (prose) segments[segments.length - 1] += " " + words; else segments.push(words);
+    prose = true;
+  });
+  return segments.join(" · ");
+}
+const preview = (t: unknown) => navigatorPreviewText(String(t ?? "")).replace(/\s+/g, " ").trim().slice(0, PREVIEW_MAX);
 
 export function indexExamQuestions(exam: StructuredExam | null | undefined): NavigatorEntry[] {
   const out: NavigatorEntry[] = [];

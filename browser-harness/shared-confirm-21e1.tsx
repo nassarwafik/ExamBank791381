@@ -11,6 +11,9 @@ import "../src/design-tokens.css";
 import "../src/index.css";
 import "../src/App.css";
 import "../src/platform.css";
+// App loads page-parts.css between platform.css and shell.css: it holds the shared ActionMenu panel (its surface and its layer
+// above the builder overlay) and dialog parts. Since 21E.2 the builder's tools live in toolbar menus, so the harness loads it too.
+import "../src/page-parts.css";
 import "../src/shell.css";
 import "../src/ui/ui.css";
 import StructuredExamBuilder from "../src/StructuredExamBuilder";
@@ -86,7 +89,9 @@ function Host() {
     <>
       <main className="eb-shell-content" data-testid="teacher-workspace"><h1>مساحة عمل المعلم</h1><p>الامتحانات المحفوظة تظهر هنا بعد الرجوع من المحرر.</p></main>
       {open && (
-        <div className="structured-builder-overlay" dir="rtl">
+        // App.tsx's overlay markup, attribute for attribute (21E.2: the overlay is the builder's aria-modal dialog surface, named by
+        // the builder heading; the scripts check this tag against src/App.tsx, so the replica cannot drift from it again).
+        <div className="structured-builder-overlay" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="sb-builder-title" tabIndex={-1}>
           <Suspense fallback={<div className="platform-loading">⏳ جارٍ تحميل مبنى الامتحان…</div>}>
             <StructuredExamBuilder
               exam={hist.present}

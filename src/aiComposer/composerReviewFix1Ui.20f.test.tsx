@@ -13,6 +13,7 @@ import { newQuestion } from "../examBuilderState";
 import type { AiAuthorService } from "../aiAuthoring/aiAuthorService";
 import type { ComposerTransport } from "./composerRun";
 import * as F from "./testing/composerFakeAi";
+import { toolbarItem } from "../builder/toolbarTestActions";
 
 // Phase 20F — Review Fix 1, UI findings (independent review of 50fd21f). Fail-first on 470a99b.
 //   M2  an AI image request (assetRequest) blocked finalization but nothing in the Builder could resolve it;
@@ -69,7 +70,7 @@ describe("20F-RF1 UI findings", () => {
     const coverPage = { schoolName: "مدرسة النور", subject: "الشبكات" };
     const exam: StructuredExam = { examId: "E-RF1", title: "قديم", status: "draft", schemaVersion: 2, coverPage: coverPage as never, metadata: { owner: "dept-7" }, sections: [{ id: "s1", title: "قسم", gradingPolicy: "all", stimuli: {}, questions: [mcqQ("q1", "قديم")] }] };
     const hist = await mount(exam, realTransport({ ai_exam_plan: [plan], ai_exam_section: [section] }));
-    fireEvent.click(screen.getByRole("button", { name: "🧠 المؤلف الذكي للامتحان" }));
+    fireEvent.click(toolbarItem("المؤلف الذكي للامتحان"));
     const d = await screen.findByRole("dialog", { name: "المؤلف الذكي للامتحان" }, { timeout: 3000 });
     fireEvent.change(within(d).getByRole("textbox", { name: "المادة (مطلوب)" }), { target: { value: "الشبكات" } });
     fireEvent.change(within(d).getByRole("spinbutton", { name: "مجموع العلامات (مطلوب)" }), { target: { value: "2" } });
@@ -92,7 +93,7 @@ describe("20F-RF1 UI findings", () => {
     const earlier = { at: "2026-10-01T10:00:00.000Z", mode: "modifyExam", summary: "تعديل سابق", baseRevision: "rev1-0000000000000000", status: "applied", operations: 1, warnings: 0 };
     const exam: StructuredExam = { examId: "E-RF2", title: "قديم", status: "draft", schemaVersion: 2, metadata: { aiComposer: { v: 1, catalog: "AI_COMPOSER_CATALOG_V1", coverage: [], history: [earlier] } }, sections: [{ id: "s1", title: "قسم", gradingPolicy: "all", stimuli: {}, questions: [mcqQ("q1", "قديم")] }] };
     const hist = await mount(exam, realTransport({ ai_exam_plan: [plan], ai_exam_section: [section] }));
-    fireEvent.click(screen.getByRole("button", { name: "🧠 المؤلف الذكي للامتحان" }));
+    fireEvent.click(toolbarItem("المؤلف الذكي للامتحان"));
     const d = await screen.findByRole("dialog", { name: "المؤلف الذكي للامتحان" }, { timeout: 3000 });
     fireEvent.change(within(d).getByRole("textbox", { name: "المادة (مطلوب)" }), { target: { value: "الشبكات" } });
     fireEvent.change(within(d).getByRole("spinbutton", { name: "مجموع العلامات (مطلوب)" }), { target: { value: "2" } });
