@@ -22,6 +22,15 @@ describe("21E L2-A scoped reader clearance", () => {
       expect(rule).toContain(":not(.is-presentation)");
     }
   });
+  it("enables RTL arrow and paging keys in normal mode without intercepting inputs", () => {
+    expect(component).toContain('e.target instanceof Node && !rootRef.current?.contains(e.target)');
+    expect(component).toContain('isEditableTarget(e.target)');
+    expect(component).toContain('nestedDialogOpen()');
+    expect(component).toContain('e.target.closest("button, a, [role=\'button\'], [role=\'slider\'], [role=\'tab\'], [role=\'menuitem\']")');
+    expect(component).not.toContain('if (!presentation) return;\n      if (e.key === "ArrowLeft"');
+    expect(component).toContain('e.key === "ArrowLeft" || e.key === "PageDown"');
+    expect(component).toContain('e.key === "ArrowRight" || e.key === "PageUp"');
+  });
   it("uses tokens, keyboard rings and forced-colors fallback", () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(/);
     expect(css).toContain(":focus-visible");
