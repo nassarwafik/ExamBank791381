@@ -167,3 +167,63 @@ slice-3 rule to be more specific than any legacy rule that can match the same el
   The harness records this as `menuFirstClickIgnored` and retries.
 - **Raw navigator text for matching questions.** The navigator shows a matching question's stored table markdown («| البروتوكول |
   الوظيفة | | --- …») as its text.
+
+## Slice 4 — the teacher's exam lists (access bar, «الامتحانات المحفوظة», «القوالب المحفوظة»)
+
+**Base and branch:**
+- stacked on slice 3's head `45083dd0`;
+- branch `feature/phase-21e2-premium-s4-exam-lists`;
+- merge order: **#302 → #304 → #305 → #306 → this slice**.
+
+**Edit set:**
+- `src/teacher/exam-lists-premium.css`: new.
+- `src/builder-pro.css`: one `@import` line.
+- `src/teacher/examListsPremium.21e2p4.test.ts`: new, 9 guards.
+- `scripts/capture-visual-gate-21e2p4.mjs`: new harness.
+- This section.
+
+**No overlap:** checked against #302, #303 and the builder-integration branch, none of which touches `builder-pro.css` or these
+files. No component file changes; `App.tsx` is untouched.
+
+**Load order:** App.tsx loads `App.css` and then `builder-pro.css`, and nothing else loads either. A rule in this sheet therefore
+wins an equal-specificity tie with App.css, and the guard requires each rule to be at least as specific as every App.css rule
+for the same element, state and property.
+
+**What the teacher sees:**
+
+| Area | Before | After |
+|---|---|---|
+| Access bar | four equal buttons and a hint squeezed beside them | a toolbar of secondary actions with the hint as a caption line |
+| Saved exams / templates rows | title, plain «18 سؤال · 60 علامة», two equal buttons | a page tile (folded corner, heading bar, right-aligned lines; templates in the info tone), the title, the counts in a chip, the last-save line, and actions by weight: «فتح وتعديل» / «استخدام القالب» filled, «حذف» quiet in danger text |
+| Panel headings | — | a 20 px title, a muted eyebrow, a ruled header and a ghost «↻ تحديث» |
+| Phone | the tile would sit on a row of its own (App.css stacks the row) | the tile stays beside the title and the actions take a full row |
+
+**Fixed while restyling:** the touch targets (refresh, open, delete, use template) were 42 px and are now 44 px.
+
+**Evidence** (local, on this head):
+
+- **Chromium harness** `scripts/capture-visual-gate-21e2p4.mjs`: 5 saved exams and 3 templates; 1280×900, 853×600 @1.5,
+  640×450 @2, 390×844 touch.
+
+  | Check | BEFORE (`45083dd0`) | AFTER |
+  |---|---|---|
+  | L-1 5 exams with title, counts, «آخر حفظ»; L-2 3 templates | ✓ | ✓ |
+  | L-3 «فتح وتعديل» opens that exam in the builder; L-4 «حذف» asks first, cancel keeps 5 | ✓ | ✓ |
+  | V-1 no overflow; E-1 no page / console errors | ✓ | ✓ |
+  | **T-1 touch: access-bar and row actions ≥ 44 px** | **✗** (42 px) | ✓ |
+  | Total | 21 / 22 | **22 / 22** |
+
+- **Guards:** slices 1–4 + `src/designSystem`: 70/70.
+- **Planted defects** (file hash-restored), each KILLED:
+  - the open button no longer filled;
+  - the touch rule removed;
+  - the access-bar focus ring removed;
+  - the delete rule weakened below App.css.
+- **Static checks:** `tsc -b` clean; lint 125 warnings (baseline), 0 errors; build with the bundle guard passed;
+  `git diff --check` clean.
+
+**Not changed (markup, out of scope):**
+- the emoji in the access-bar labels («📚 …», «🧱 …»);
+- the English eyebrows «Azure Storage» / «Exam Templates».
+
+Both are text in `App.tsx`, which the builder-integration branch is still editing. They are left for a later markup slice.
