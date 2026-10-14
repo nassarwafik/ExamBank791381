@@ -7,6 +7,7 @@ import { hasCourseContent, loadCourseManifest } from "./content/registry";
 import { batchFirstPageId } from "./content/navigation";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import "./learning.css";
+import "./learning-library-premium.css";
 import { lazyWithRetry } from "../lazyWithRetry";
 
 // The interactive reader (hosted by the shared Reader-plus-training wrapper) is code-split so it and the content
@@ -80,21 +81,39 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
     );
   }
 
+  const availableCourses = LEARNING_COURSES.filter(c => c.status === "available");
+  const upcomingCourses = LEARNING_COURSES.filter(c => c.status === "coming-soon");
   return (
-    <section className="eb-lm" aria-labelledby="eb-lm-title">
-      <SectionHeader
-        level={2}
-        id="eb-lm-title"
-        title="المواد التعليمية"
-        description="كتب ومواد تعليمية تفاعلية تساعد الطلاب على الفهم والتدريب خطوة بخطوة."
-      />
-      <ul className="eb-lm-grid" aria-label="الكتب والمواد التعليمية">
-        {LEARNING_COURSES.map(c => (
+    <section className="eb-lm eb-lm-premium-library" aria-labelledby="eb-lm-title">
+      <div className="eb-lm-library-hero">
+        <p className="eb-lm-library-eyebrow">مكتبة التعلّم التفاعلي</p>
+        <SectionHeader
+          level={2}
+          id="eb-lm-title"
+          title="المواد التعليمية"
+          description="استكشف الكتب والدروس التفاعلية، واختر المادة للانتقال إلى أقسامها."
+        />
+        <p className="eb-lm-library-count" aria-label={availableCourses.length + " كتب متاحة"}>
+          {availableCourses.length} {availableCourses.length === 1 ? "كتاب متاح" : "كتب متاحة"}
+        </p>
+      </div>
+      <ul className="eb-lm-grid" aria-label="الكتب والمواد التعليمية المتاحة">
+        {availableCourses.map(c => (
           <li key={c.id}>
             <CourseCard course={c} onOpen={() => setView({ kind: "course", courseId: c.id })} />
           </li>
         ))}
       </ul>
+      {upcomingCourses.length > 0 && (
+        <div className="eb-lm-upcoming" aria-labelledby="eb-lm-upcoming-title">
+          <h3 id="eb-lm-upcoming-title">قريبًا في المكتبة</h3>
+          <ul className="eb-lm-grid">
+            {upcomingCourses.map(c => (
+              <li key={c.id}><CourseCard course={c} onOpen={() => {}} /></li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
