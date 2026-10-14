@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconFilter } from "../../icons";
 import useFocusTrap from "../../ui/useFocusTrap";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
@@ -13,7 +13,7 @@ import type { StudyHost } from "../study/types";
 import "./reader.css";
 import "./reader-enterprise-l2a.css";
 import "./reader-enterprise-l2b.css";
-import { loadVisitedPages, saveVisitedPages } from "./visitedPages";
+import { recordVisited, subscribeVisited, visitedSnapshot } from "./visitedPages";
 import "./reader-enterprise-l2c.css";
 import ReadingSettingsDialog from "./ReadingSettingsDialog";
 import { loadReadingSettings, saveReadingSettings, type ReadingSettings } from "./readingSettings";
@@ -83,20 +83,8 @@ export default function LearningReader({
   const [readingSettings, setReadingSettings] = useState<ReadingSettings>(loadReadingSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const changeReadingSettings = useCallback((next: ReadingSettings) => { setReadingSettings(next); saveReadingSettings(next); }, []);
-  // Phase 21E L2-B — pages this student opened before on this device (empty without a scope). Updated by the same
-  // events that select a page (manifest load, selectPage), never by an effect.
-  const [visited, setVisited] = useState<ReadonlySet<string>>(() => loadVisitedPages(visitedScope, courseId));
-  const markVisited = useCallback((pageId: string) => {
-    if (!visitedScope || !pageId) return;
-    setVisited(prev => {
-      if (prev.has(pageId)) return prev;
-      const next = new Set(prev).add(pageId);
-      saveVisitedPages(visitedScope, courseId, next);                                  // idempotent write
-      return next;
-    });
-  }, [visitedScope, courseId]);
-  const markVisitedRef = useRef(markVisited);
-  useEffect(() => { markVisitedRef.current = markVisited; }, [markVisited]);
+  // Phase 21E L2-B — pages this student has READ on this device (empty without a scope), from the device store.
+  const visited = useSyncExternalStore(subscribeVisited, () => visitedSnapshot(visitedScope, courseId), () => visitedSnapshot(undefined, courseId));
   const [erroredModules, setErroredModules] = useState<Set<string>>(new Set());
   // Session cache of loaded module bodies, held in STATE so the page body is derived from it during render.
   const [modules, setModules] = useState<Record<string, ContentModule>>({});
@@ -134,9 +122,7 @@ export default function LearningReader({
       const pages = flattenPageRefs(manifest);
       setManifestState({ status: "ready", manifest });
       const wanted = initialPageRef.current;
-      const first = wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : "";
-      setSelectedPageId(first);
-      markVisitedRef.current(first);
+      setSelectedPageId(wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : "");
     }).catch(() => { if (alive) setManifestState({ status: "error" }); });
     return () => { alive = false; };
   }, [courseId, api, manifestNonce]);
@@ -180,6 +166,11 @@ export default function LearningReader({
           ? bodyForModule(modules[located.module.id], selectedPageId)
           : { kind: "loading" };
 
+  // Phase 21E L2-B — a page counts as visited once its CONTENT is ready: never on selection alone, never while its
+  // module is loading, and never when it failed or is unavailable. The write goes to the device store (not React state).
+  const readyPageId = body.kind === "ready" ? body.page.id : "";
+  useEffect(() => { if (readyPageId) recordVisited(visitedScope, courseId, readyPageId); }, [readyPageId, visitedScope, courseId]);
+
   // After a real page navigation (not initial mount, not TOC expand): scroll to the top of the new page and move
   // focus to its title. Guarded so it never steals focus on first render.
   useEffect(() => {
@@ -193,13 +184,12 @@ export default function LearningReader({
   const selectPage = useCallback((pageId: string) => {
     // Manifest-order-validated: ignore unknown ids (controlled fallback, never a crash).
     if (manifest && !findPage(manifest, pageId)) return;
-    markVisited(pageId);
     pendingFocusRef.current = true;
     setSelectedPageId(pageId);
     setDrawerOpen(false);
     setPageDraft(null);
     setJumpError("");
-  }, [manifest, markVisited]);
+  }, [manifest]);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   // Dismissing the note removes the focused button, so focus moves to the reading surface instead of falling to <body>.
