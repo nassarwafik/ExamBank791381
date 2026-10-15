@@ -187,14 +187,14 @@
 .eb-assign-rows { gap: var(--eb-space-3); }
 .eb-assign-row {
   position: relative;
-  align-items: center;
+  align-items: flex-start;
   padding: var(--eb-space-4);
   border-color: var(--eb-line-2);
   border-radius: var(--eb-r-lg);
   box-shadow: var(--eb-sh-xs);
 }
 .eb-assign-row:hover { box-shadow: var(--eb-sh-sm); }
-.eb-assign-row.selected { border-color: var(--eb-primary); box-shadow: var(--eb-focus), var(--eb-sh-xs); }
+.eb-assign-row.selected { border-color: var(--eb-primary); background: var(--eb-primary-050); box-shadow: var(--eb-sh-xs); }
 .eb-assign-row-title strong { font-size: var(--eb-fs-16); line-height: var(--eb-lh-body); }
 .eb-assign-row-meta, .eb-assign-row-due { line-height: var(--eb-lh-body); }
 .eb-assign-row-actions .eb-button { min-height: 40px; }
@@ -206,7 +206,7 @@
   box-shadow: var(--eb-sh-sm);
   border-inline-start: 3px solid var(--eb-primary);
 }
-.eb-assign-detail-head { align-items: center; padding-block-end: var(--eb-space-3); border-block-end: 1px solid var(--eb-line); }
+.eb-assign-detail-head { align-items: flex-start; padding-block-end: var(--eb-space-3); border-block-end: 1px solid var(--eb-line); }
 .eb-assign-detail-title { font-size: var(--eb-fs-24); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); }
 .eb-assign-detail-meta { line-height: var(--eb-lh-body); }
 .eb-assign-stats .eb-stat-card { border-radius: var(--eb-r-lg); }
@@ -220,7 +220,7 @@
 .eb-gradebook-controls .eb-search-field input { min-height: 44px; min-width: 0; }
 .eb-gradebook-table-wrap { border-color: var(--eb-line-2); border-radius: var(--eb-r-lg); }
 .eb-gradebook-table { border-collapse: separate; border-spacing: 0; width: 100%; }
-.eb-gradebook-table th { position: relative; background: var(--eb-surface-2); color: var(--eb-text-heading); }
+.eb-gradebook-table th { background: var(--eb-surface-2); color: var(--eb-text-heading); }
 .eb-gradebook-table tbody tr:hover td { background: var(--eb-primary-050); }
 .eb-gradebook-table tbody tr:focus-within td { background: var(--eb-primary-050); }
 .eb-gradebook-table td { border-block-end: 1px solid var(--eb-line); line-height: var(--eb-lh-body); }
@@ -231,14 +231,26 @@
 .library-item { border-radius: var(--eb-r-lg); }
 .library-item:focus-within { border-color: var(--eb-primary); }
 .eb-composer-foot { padding-block-start: var(--eb-space-4); }
-.eb-assignments :is(.eb-button, .eb-nav-link, .gradebook-chip, .library-cat-chip, .library-item-select, .library-item-preview):focus-visible {
+.eb-assignments :is(.eb-button, .gradebook-chip, .library-cat-chip, .library-item-select, .library-item-preview):focus-visible {
   outline: var(--eb-focus-ring);
   outline-offset: -2px;
 }
 .eb-assignments :is(input, select, textarea):focus-visible { outline: var(--eb-focus-ring); outline-offset: 0; }
-@media (max-width: 1023px) {
-  .eb-assign-layout.has-detail { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1024px) {
+  .eb-assign-row { align-items: center; }
 }
+@media (max-width: 1023px) {
+  .eb-assign-row { align-items: stretch; }
+  .eb-assign-detail-head { align-items: flex-start; }
+  .eb-assign-detail-actions { align-self: flex-start; }
+}
+/* Coarse-pointer tablets need the same comfortable controls as phones. */
+@media (max-width: 1023px) and (pointer: coarse) {
+  .eb-assignments :is(.eb-button, .eb-menu-item, .gradebook-chip, .library-cat-chip, .eb-segmented button, .eb-assign-row-actions button) { min-height: 44px; }
+  .eb-assignments :is(input:not([type="checkbox"]), select, textarea) { min-height: 44px; }
+  .eb-assignments .eb-assign-row-actions button { min-width: 44px; }
+}
+
 @media (max-width: 767px) {
   .eb-assignments { gap: var(--eb-space-3); }
   .eb-assign-toolbar, .eb-assign-detail, .eb-assign-composer { padding: var(--eb-space-3); border-radius: var(--eb-r-lg); }
