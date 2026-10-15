@@ -12,6 +12,7 @@ import {normalizeClassStatus} from "./classLifecycle";
 import ActionMenu from "./ui/ActionMenu";
 import {useConfirm} from "./ui/useConfirm";
 import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog} from "./assignments/AssignmentList";
+import { matchesStatus, selectAssignments, type AssignmentSort, type AssignmentStatusFilter } from "./assignments/assignmentDiscovery";
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
@@ -36,13 +37,15 @@ const localDate=(h:number)=>{const d=new Date(Date.now()+h*3600000);return new D
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
 
-// Master-list scope (class filter · current/archived view · search). The SAME predicate drives the displayed list
-// and the UX-5 invariant "a visible AssignmentDetail belongs to the current master-list scope", so the two can
-// never disagree. Pure; `q` is already trimmed + lowercased.
-type MasterScope={classId:string;showArchived:boolean;q:string};
+// Master-list scope (class filter · current/archived view · search · status). The SAME predicate drives the displayed
+// list and the UX-5 invariant "a visible AssignmentDetail belongs to the current master-list scope", so the two can
+// never disagree. Pure; `q` is already trimmed + lowercased. The status filter applies to the current view only: the
+// archived view never hides an archived assignment because a published/draft filter is selected.
+type MasterScope={classId:string;showArchived:boolean;q:string;status:AssignmentStatusFilter};
 function matchesMasterScope(x:Item,s:MasterScope):boolean{
  if(s.classId&&x.classId!==s.classId)return false;
  if(s.showArchived?x.status!=="archived":x.status==="archived")return false;
+ if(!s.showArchived&&!matchesStatus(x,s.status))return false;
  if(s.q&&![x.title,x.className].join(" ").toLocaleLowerCase("ar").includes(s.q))return false;
  return true;
 }
@@ -64,10 +67,10 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
  const [preview,setPreview]=useState<{title:string;exam:Exam}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
  // UX-5 workspace state: list filter (separate from the composer's target class), search, mode, explicit attempts editor.
- const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null),[timingFor,setTimingFor]=useState<Item|null>(null);
+ const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[listStatus,setListStatus]=useState<AssignmentStatusFilter>("all"),[listSort,setListSort]=useState<AssignmentSort>("original"),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null),[timingFor,setTimingFor]=useState<Item|null>(null);
  const detailHeadingRef=useRef<HTMLHeadingElement>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null);
  const detailOpenerRef=useRef<HTMLElement|null>(null),composerOpenerRef=useRef<HTMLElement|null>(null),focusDetailPending=useRef(false),focusComposerOpenerPending=useRef(false),focusWorkspacePending=useRef(false);
- const toolbarRef=useRef<HTMLDivElement|null>(null),scopeRef=useRef<MasterScope>({classId:"",showArchived:false,q:""});
+ const toolbarRef=useRef<HTMLDivElement|null>(null),scopeRef=useRef<MasterScope>({classId:"",showArchived:false,q:"",status:"all"});
  // Phase 12B — drill-in bookkeeping. listReady: the assignment list has been read successfully at least once (a drill is
  // never judged against the empty pre-load list). appliedDrillSeq: the newest drill this mount has consumed (never
  // re-applied). resultsSeq: the newest results read; an older response that resolves later is discarded, so the newest
@@ -276,8 +279,8 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
    setError("");setNotice("تعذر فتح الواجب المطلوب لأنه لم يعد متاحًا (ربما أُرشف أو حُذف). تُعرض قائمة الواجبات.");
    return;
   }
-  const scope:MasterScope={classId:item.classId,showArchived:false,q:""};
-  scopeRef.current=scope;setFilterClassId(item.classId);setShowArchived(false);setSearch("");
+  const scope:MasterScope={classId:item.classId,showArchived:false,q:"",status:"all"};
+  scopeRef.current=scope;setFilterClassId(item.classId);setShowArchived(false);setSearch("");setListStatus("all");
   setError("");setNotice("");
   void loadResults(item,null,d);
  }
@@ -300,12 +303,13 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  function closeDetail(){clearDetail({restoreFocus:true})}
  // Master controls: apply the change, then enforce the invariant against the resulting scope. The composer is
  // never closed here (its target class is intentionally independent of the list filter).
- function changeScope(patch:{filterClassId?:string;showArchived?:boolean;search?:string}){
-  const next:MasterScope={classId:patch.filterClassId!==undefined?patch.filterClassId:effectiveFilter,showArchived:patch.showArchived!==undefined?patch.showArchived:showArchived,q:normalizeQuery(patch.search!==undefined?patch.search:search)};
+ function changeScope(patch:{filterClassId?:string;showArchived?:boolean;search?:string;status?:AssignmentStatusFilter}){
+  const next:MasterScope={classId:patch.filterClassId!==undefined?patch.filterClassId:effectiveFilter,showArchived:patch.showArchived!==undefined?patch.showArchived:showArchived,q:normalizeQuery(patch.search!==undefined?patch.search:search),status:patch.status!==undefined?patch.status:listStatus};
   scopeRef.current=next;
   if(patch.filterClassId!==undefined)setFilterClassId(patch.filterClassId);
   if(patch.showArchived!==undefined)setShowArchived(patch.showArchived);
   if(patch.search!==undefined)setSearch(patch.search);
+  if(patch.status!==undefined)setListStatus(patch.status);
   if(resultsFor&&!matchesMasterScope(resultsFor,next))clearDetail({restoreFocus:false});
  }
  // Authoritative assignment mutation (setStatus / setMaxAttempts / archive / restore): replace the row, and if the
@@ -386,11 +390,11 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  // Review opens above the NON-MODAL detail; row-editor dialogs and the pending confirm never stay open beneath it.
  function openReview(s:StudentResult){if(!s.latestResult)return;setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAttemptsFor(null);setPurgeFor(null);cancelPending();setReview({studentId:s.studentId,attemptNumber:s.latestResult.attemptNumber})}
 
- const masterScope:MasterScope={classId:effectiveFilter,showArchived,q:normalizeQuery(search)};
+ const masterScope:MasterScope={classId:effectiveFilter,showArchived,q:normalizeQuery(search),status:listStatus};
  useEffect(()=>{scopeRef.current=masterScope});
- const archivedCount=items.filter(x=>matchesMasterScope(x,{classId:effectiveFilter,showArchived:true,q:""})).length;
- const scoped=items.filter(x=>matchesMasterScope(x,{...masterScope,q:""}));
- const visible=items.filter(x=>matchesMasterScope(x,masterScope));
+ const archivedCount=items.filter(x=>matchesMasterScope(x,{classId:effectiveFilter,showArchived:true,q:"",status:"all"})).length;
+ const scoped=items.filter(x=>matchesMasterScope(x,{...masterScope,q:"",status:"all"}));
+ const visible=selectAssignments(items.filter(x=>matchesMasterScope(x,masterScope)),"all",listSort);
  const sourceCount=examQuestionCount(sourceExam);
  const sortedQuestions=useMemo(()=>{
   if(!analysis)return [];
@@ -440,6 +444,8 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
      <button type="button" aria-pressed={showArchived} onClick={()=>changeScope({showArchived:true})}>المؤرشفة{archivedCount?" ("+archivedCount+")":""}</button>
     </div>
     <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={search} onChange={e=>changeScope({search:e.target.value})} placeholder="بحث بعنوان الواجب أو الصف"/></label>
+    {!showArchived&&<label className="eb-field-inline">الحالة<select aria-label="تصفية الواجبات حسب الحالة" value={listStatus} onChange={e=>changeScope({status:e.target.value as AssignmentStatusFilter})}><option value="all">جميع الحالات</option><option value="published">منشور</option><option value="draft">مسودة</option></select></label>}
+    <label className="eb-field-inline">ترتيب<select aria-label="ترتيب الواجبات" value={listSort} onChange={e=>setListSort(e.target.value as AssignmentSort)}><option value="original">الترتيب الأصلي</option><option value="dueSoon">موعد التسليم الأقرب</option><option value="dueLate">موعد التسليم الأبعد</option><option value="title">العنوان أبجديًا</option></select></label>
    </div>
    <div className="eb-assign-actions">
     <button type="button" className="eb-button is-primary" onClick={openComposer} disabled={mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>
