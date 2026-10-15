@@ -39,6 +39,17 @@ export const EXAM_BANK_HEAD: TeacherNavId = "bank";
 export const EXAM_BANK_NAV: TeacherNavId[] = ["builder", "import", "reviews"];
 export const FOOTER_NAV: TeacherNavId[] = ["audit"];
 
+/** Phase 21E main navigation — the sidebar's visible sections. A pure PARTITION of PRIMARY_NAV (which stays the single order
+ *  authority): teaching work, then follow-up activities; the Exam Bank group and the footer (activity log + account) follow.
+ *  Section labels are presentation only — no destination moves, hides or changes. */
+export type TeacherNavSection = { id: string; label: string; items: TeacherNavId[] };
+export const PRIMARY_SECTIONS: TeacherNavSection[] = [
+  { id: "teaching", label: "التدريس", items: ["dashboard", "learning", "students", "assignments", "messages"] },
+  { id: "activities", label: "المتابعة والأنشطة", items: ["projects", "reports", "games"] },
+];
+export const EXAM_SECTION_LABEL = "الامتحانات";
+export const ACCOUNT_SECTION_LABEL = "الحساب";
+
 export function activeNavId(state: TeacherNavState): TeacherNavId {
   switch (state.teacherView) {
     case "platform": return state.workspaceTab;
