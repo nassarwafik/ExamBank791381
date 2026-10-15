@@ -142,3 +142,20 @@
   .auth-form-wrap{ padding:28px 18px 44px; }
 }
 @media (max-width:900px) and (max-height:520px){ .auth-lead{ display:none; } }
+
+/* Phase 21E visible-first: login controls share the shell's accessible focus language.
+   CSS-only: do not alter session validation, role selection, or routing. */
+.auth-input input:focus-visible,
+.auth-submit:focus-visible {
+  outline: 2px solid var(--eb-focus);
+  outline-offset: 2px;
+}
+.auth-submit {
+  min-height: var(--eb-control-h-touch, 44px);
+}
+.auth-input input {
+  min-height: var(--eb-control-h-touch, 44px);
+}
+@media (max-width: 900px) {
+  .auth-card { max-width: min(100%, 400px); }
+}
