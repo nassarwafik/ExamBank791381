@@ -133,6 +133,7 @@
   /* UX-8a — phone touch targets (≥ 44 px); desktop density unchanged */
   .gradebook-chip,.library-cat-chip{ min-height:44px; }
   .eb-assign-toolbar,.eb-assign-filters{ flex-direction:column; align-items:stretch; }
+  .eb-assign-search{ flex:0 0 auto; }
   .eb-assign-actions .eb-button{ flex:1 1 auto; }
   .eb-form-grid-2{ grid-template-columns:minmax(0,1fr); }
   .eb-form-grid-2 .eb-span-2{ grid-column:auto; }
