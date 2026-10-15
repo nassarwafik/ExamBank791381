@@ -29,3 +29,22 @@ describe("21E assignments enterprise workspace — structural style guards", () 
     expect(section).not.toMatch(/\b(isolation|z-index|transform|filter|contain|will-change)\s*:/);
   });
 });
+
+describe("21E assignments reviewer regression guards", () => {
+  const premium = css.slice(css.indexOf("/* Phase 21E — unified enterprise assignments workspace."));
+  it("restores RTL list alignment below 1024px after the desktop-only centering rule", () => {
+    expect(premium).toMatch(/@media \(min-width: 1024px\)\s*\{\s*\.eb-assign-row\s*\{\s*align-items:\s*center/);
+    expect(premium).toMatch(/@media \(max-width: 1023px\)\s*\{\s*\.eb-assign-row\s*\{\s*align-items:\s*stretch/);
+  });
+  it("keeps detail actions at top, restores table header positioning and distinguishes selection from focus", () => {
+    expect(premium).toContain(".eb-assign-detail-head { align-items: flex-start;");
+    expect(premium).not.toContain(".eb-gradebook-table th { position: relative;");
+    expect(premium).not.toMatch(/\.eb-assign-row\.selected[^}]*box-shadow:\s*var\(--eb-focus\)/);
+  });
+  it("provides 44px coarse-pointer tablet controls including edit fields and gradebook chips", () => {
+    expect(premium).toMatch(/@media \(max-width: 1023px\) and \(pointer: coarse\)/);
+    expect(premium).toContain(".gradebook-chip, .library-cat-chip");
+    expect(premium).toContain('input:not([type="checkbox"]), select, textarea');
+    expect(premium).toContain("min-height: 44px");
+  });
+});
