@@ -61,6 +61,16 @@ describe("L3-B search panel — states", () => {
     expect(hitButtons()).toHaveLength(0);
   });
 
+  it("permissions unavailable or still loading → submitting the form (Enter) opens nothing", () => {
+    const onOpen = vi.fn();
+    const { unmount } = render(<Host availability="unavailable" initial="الشبكة" onOpen={onOpen} />);
+    fireEvent.submit(screen.getByRole("search"));
+    unmount();
+    render(<Host sources={null} initial="الشبكة" onOpen={onOpen} />);
+    fireEvent.submit(screen.getByRole("search"));
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
   it("no match → empty state and «لا توجد نتائج مطابقة.» announced", async () => {
     render(<Host />);
     fireEvent.change(field(), { target: { value: "zzzzqqq" } });

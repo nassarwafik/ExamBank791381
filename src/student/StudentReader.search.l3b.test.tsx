@@ -87,6 +87,12 @@ describe("fetchReleasedModuleIds", () => {
     globalThis.fetch = vi.fn(() => res(200, { ok: false })) as unknown as typeof fetch;
     expect(await fetchReleasedModuleIds("t", "791381")).toBeNull();
   });
+  it("a non-2xx status is never a release list, whatever its body says (401 / 403 / 500 / 503 with an ok:true body)", async () => {
+    for (const status of [401, 403, 500, 503]) {
+      globalThis.fetch = vi.fn(() => res(status, materials([M01, M02]))) as unknown as typeof fetch;
+      expect(await fetchReleasedModuleIds("t", "791381"), String(status)).toBeNull();
+    }
+  });
   it("sends the student token, never another credential", async () => {
     const f = vi.fn((_u: RequestInfo | URL, _i?: RequestInit) => res(200, materials([M01])));
     globalThis.fetch = f as unknown as typeof fetch;
