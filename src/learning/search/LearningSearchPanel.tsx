@@ -104,7 +104,7 @@ export default function LearningSearchPanel({
     <div className="eb-search" dir="rtl">
       <form role="search" className="eb-search-form" aria-label="البحث في المحتوى التعليمي" onSubmit={e => { e.preventDefault(); if (firstHit && !opening) onOpen(firstHit); }}>
         <label htmlFor={inputId} className="eb-search-label">{label}</label>
-        <div className="eb-search-field">
+        <div className="eb-search-box">
           <IconSearch size={18} aria-hidden="true" className="eb-search-icon" />
           <input
             id={inputId}

@@ -2,13 +2,13 @@
 .eb-search { display: flex; flex-direction: column; gap: var(--eb-space-3); min-inline-size: 0; color: var(--eb-text); }
 .eb-search-form { display: flex; flex-direction: column; gap: var(--eb-space-2); }
 .eb-search-label { font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); }
-.eb-search-field {
+.eb-search-box {
   position: relative; display: flex; align-items: center; gap: var(--eb-space-2);
   min-block-size: 48px; padding-inline: var(--eb-space-3) var(--eb-space-1);
   background: var(--eb-surface); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-lg);
   box-shadow: var(--eb-sh-xs); transition: border-color var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
 }
-.eb-search-field:focus-within { border-color: var(--eb-primary); box-shadow: var(--eb-focus); }
+.eb-search-box:focus-within { border-color: var(--eb-primary); box-shadow: var(--eb-focus); }
 .eb-search-icon { flex: 0 0 auto; color: var(--eb-muted); }
 .eb-search-input {
   flex: 1 1 auto; min-inline-size: 0; min-block-size: 44px; border: 0; background: transparent; color: var(--eb-text);
@@ -57,8 +57,8 @@
 .eb-search-mark { background: var(--eb-warn-bg); color: var(--eb-warn-tx); border-radius: var(--eb-r-xs); padding-inline: 1px; }
 @media (forced-colors: active) {
   .eb-search-mark { background: Highlight; color: HighlightText; }
-  .eb-search-field:focus-within { outline: 2px solid Highlight; }
+  .eb-search-box:focus-within { outline: 2px solid Highlight; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .eb-search-field, .eb-search-hit { transition: none; }
+  .eb-search-box, .eb-search-hit { transition: none; }
 }
