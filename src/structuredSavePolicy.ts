@@ -25,7 +25,10 @@ export async function runStructuredSave(args: {
   if (!verdict.allowed) return { ok: false, reason: verdict.reason, decision: verdict.decision };
   const payload = { ...toSavedStructuredExam(args.snapshot), status: args.mode } as StructuredExam;
   const response = await args.request(payload);
-  args.commitSaved(args.snapshot, payload, savedEtagOf(response));
+  // Phase 21F.0 — the version the server returned travels with the commit (only when there is one; the 13C-C contract is otherwise
+  // the unchanged two-argument commit).
+  const etag = savedEtagOf(response);
+  if (etag) args.commitSaved(args.snapshot, payload, etag); else args.commitSaved(args.snapshot, payload);
   return { ok: true, payload };
 }
 

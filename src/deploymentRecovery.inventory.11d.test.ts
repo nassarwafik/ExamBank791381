@@ -23,6 +23,8 @@ const PROTECTED: [string, string, string, string][] = [
   ["./App.tsx", "ReviewInboxPage", "./governance/ReviewInboxPage", "teacher-review-inbox"],
   ["./App.tsx", "StructuredExamBuilder", "./StructuredExamBuilder", "structured-exam-builder"],
   ["./App.tsx", "SmartStructuredExamImportWizard", "./SmartStructuredExamImportWizard", "smart-structured-import"],
+  // Phase 21F.0 — the save-conflict dialog («تعارض في الحفظ») loads on first conflict, with the same stale-chunk recovery.
+  ["./App.tsx", "SaveConflictDialog", "./studio/SaveConflictDialog", "save-conflict-dialog"],
   // Phase 19E bundle relief — the question import destination and the teacher profile dialog load on demand
   ["./App.tsx", "ImportQuestionsPanel", "./ImportQuestionsPanel", "teacher-import-questions"],
   ["./teacher/TeacherIdentity.tsx", "TeacherProfileDialog", "./TeacherProfileDialog", "teacher-profile-dialog"],

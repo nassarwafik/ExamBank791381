@@ -273,7 +273,7 @@ function assessmentPresetFromExam(exam, options = {}) {
     const result = extractAssessmentPresetFromExam(exam, options);
     return result.ok ? result.preset : null;
 }
-const newInstantiatedExamId = () => "EXAM-" + Date.now() + "-" + (0, examBuilderState_1.genId)("").replace(/^-/, "").slice(0, 8);
+const newInstantiatedExamId = () => (0, examBuilderState_1.genId)("EXAM");
 exports.newInstantiatedExamId = newInstantiatedExamId;
 function instantiateExamFromPreset(preset, options = {}) {
     const sectionIdFor = options.sectionIdFor ?? (() => (0, examBuilderState_1.genId)("sec"));
