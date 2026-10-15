@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconFilter } from "../../icons";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconFilter, IconSearch } from "../../icons";
 import useFocusTrap from "../../ui/useFocusTrap";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import { setMotionOverride } from "../../ui/motionPreference";
@@ -17,6 +17,14 @@ import { recordVisited, subscribeVisited, visitedSnapshot } from "./visitedPages
 import "./reader-enterprise-l2c.css";
 import ReadingSettingsDialog from "./ReadingSettingsDialog";
 import { loadReadingSettings, saveReadingSettings, type ReadingSettings } from "./readingSettings";
+import "./reader-enterprise-l3b.css";
+import { lazyWithRetry } from "../../lazyWithRetry";
+import type { SearchScope } from "../content/searchProvider";
+import type { SearchHit, SearchProviderFactory, SearchSource } from "../search/searchModel";
+
+// Phase 21E L3-B — the search panel is its own lazy chunk: the Reader pays for it only when search is opened, and it
+// indexes the manifest's titles + keywords only (opening it imports no module body).
+const LearningSearchPanel = lazy(lazyWithRetry(() => import("../search/LearningSearchPanel"), "learning-search-panel"));
 
 export type { ReaderContentApi } from "./readerContentApi";
 
@@ -44,7 +52,7 @@ type ManifestState =
  */
 export default function LearningReader({
   courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, onPageChange,
-  initialPresentation, onPresentationChange, embedded = false, visitedScope,
+  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory,
 }: {
   courseId: string;
   onExit: () => void;
@@ -71,6 +79,16 @@ export default function LearningReader({
   /** Phase 21E L2-B — opaque, host-supplied identity scope for the device-local "visited" marks in the index (the
    *  student portal passes the authenticated student's id). Absent → no marks are read, written or shown. */
   visitedScope?: string;
+  /** Phase 21E L3-B — in-book search. The EXPLICIT release set searched (fail-closed, see `SearchScope`): the student
+   *  host passes the module ids of the authenticated release list; only an authorized teacher host passes "all".
+   *  Absent → no search control. Any other value → the search shows "unavailable" and no result. The index is built
+   *  from THIS reader's manifest (for a student, already restricted to the released modules). */
+  searchScope?: SearchScope["allowedModuleIds"];
+  /** Phase 21E L3-B — re-checks the entitlement when a result is opened (the student host re-reads the server release
+   *  list). Resolves false (or rejects) → the page is NOT opened and the search explains why. Absent → allowed. */
+  onSearchOpen?: (hit: SearchHit) => Promise<boolean> | boolean;
+  /** L3-7 — the search provider behind the index (default: the title/keyword provider). */
+  searchProviderFactory?: SearchProviderFactory;
 }) {
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
@@ -94,6 +112,19 @@ export default function LearningReader({
   const [presentation, setPresentation] = useState<boolean>(initialPresentation === true);
   const [pageDraft, setPageDraft] = useState<string | null>(null);
   const [jumpError, setJumpError] = useState("");
+  // Phase 21E L3-B — in-book search: the query survives closing / reopening the panel (search → open → back), and a
+  // result opened from the panel offers «العودة إلى نتائج البحث», which reopens it with the query and focus restored.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpening, setSearchOpening] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [searchReturn, setSearchReturn] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchToggleRef = useRef<HTMLButtonElement>(null);
+  const pendingSearchToggleFocusRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const onSearchOpenRef = useRef(onSearchOpen);
+  useEffect(() => { onSearchOpenRef.current = onSearchOpen; }, [onSearchOpen]);
 
   const inflightRef = useRef<Set<string>>(new Set());   // module ids currently loading — de-dupes concurrent loads
   const mountedRef = useRef(true);
@@ -199,12 +230,47 @@ export default function LearningReader({
     contentRef.current?.focus({ preventScroll: true });
   }, [courseId]);
   useFocusTrap(drawerRef, drawerOpen, closeDrawer);
+  // Closing the search (Escape, «إغلاق», the backdrop) returns focus to the «بحث» control explicitly — a clicked button is
+  // not focused in every browser, so the trap's own "restore the previous element" could fall back to <body>.
+  const closeSearch = useCallback(() => { setSearchOpen(false); setSearchError(""); pendingSearchToggleFocusRef.current = true; }, []);
+  useFocusTrap(searchRef, searchOpen, closeSearch);
   useEffect(() => {
-    if (!drawerOpen && !presentation) return;
+    if (searchOpen || !pendingSearchToggleFocusRef.current) return;
+    pendingSearchToggleFocusRef.current = false;
+    searchToggleRef.current?.focus();
+  }, [searchOpen]);
+  useEffect(() => {
+    if (!drawerOpen && !presentation && !searchOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
-  }, [drawerOpen, presentation]);
+  }, [drawerOpen, presentation, searchOpen]);
+
+  // ── Phase 21E L3-B: in-book search ──────────────────────────────────────────────────────────────────────────
+  const searchEnabled = searchScope !== undefined;
+  const searchScopeValid = searchScope === "all" || searchScope instanceof Set;
+  const searchSources = useMemo<SearchSource[] | null>(
+    () => (manifest && searchScopeValid && searchScope !== undefined ? [{ courseId, courseTitle: "كتاب " + courseId, manifest, allowedModuleIds: searchScope }] : null),
+    [manifest, searchScopeValid, searchScope, courseId],
+  );
+  const openSearch = useCallback(() => { setSearchError(""); setSearchOpen(true); }, []);
+  const openSearchHit = useCallback(async (hit: SearchHit) => {
+    // The page must exist in THIS reader's manifest (restricted for a student) and its module must be loadable here.
+    if (!manifest || hit.courseId !== courseId || !findPage(manifest, hit.pageId) || !api.hasModule(courseId, hit.moduleId)) {
+      setSearchError("لا يمكن فتح هذه الصفحة.");
+      return;
+    }
+    setSearchOpening(true);
+    setSearchError("");
+    let allowed = false;
+    try { allowed = onSearchOpenRef.current ? (await onSearchOpenRef.current(hit)) === true : true; } catch { allowed = false; }
+    if (!mountedRef.current) return;
+    setSearchOpening(false);
+    if (!allowed) { setSearchError("لم تعد هذه الصفحة متاحة لك، أو تعذّر التحقق من صلاحيتك الآن. حاول مرة أخرى."); return; }
+    setSearchOpen(false);
+    setSearchReturn(true);
+    selectPage(hit.pageId);
+  }, [manifest, courseId, api, selectPage]);
 
   // ── Presentation mode ──────────────────────────────────────────────────────────────────────────────────────
   // Native fullscreen is a best-effort enhancement: requested on entry, released on exit, never required. A refusal
@@ -387,6 +453,11 @@ export default function LearningReader({
           <IconMenu size={18} aria-hidden="true" /><span className="learning-reader-btn-label">الفهرس</span>
         </button>
         {presentation && <span className="learning-reader-keyhint" aria-hidden="true">← → للتنقل · Esc للخروج</span>}
+        {!presentation && searchEnabled && (
+          <button type="button" ref={searchToggleRef} className="eb-button is-quiet is-small learning-reader-search-toggle" aria-haspopup="dialog" aria-expanded={searchOpen} onClick={openSearch}>
+            <IconSearch size={18} aria-hidden="true" /><span className="learning-reader-btn-label">بحث</span>
+          </button>
+        )}
         {!presentation && (
           <button type="button" className="eb-button is-quiet is-small learning-reader-settings-toggle" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>
             <IconFilter size={18} aria-hidden="true" /><span className="learning-reader-btn-label">إعدادات القراءة</span>
@@ -402,6 +473,13 @@ export default function LearningReader({
 
         <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1}>
           {/* Phase 21E L2-A — the one-time release note above the page (the page jump moved into the index in L2-B). */}
+          {!presentation && searchEnabled && searchReturn && !searchOpen && (
+            <div className="learning-reader-search-return">
+              <button type="button" className="eb-button is-small learning-reader-search-back" onClick={openSearch}>
+                <IconSearch size={16} aria-hidden="true" />العودة إلى نتائج البحث{searchQuery ? <span className="learning-reader-search-back-query"> «{searchQuery}»</span> : null}
+              </button>
+            </div>
+          )}
           {!presentation && releaseNoteVisible && (
             <div className="learning-reader-partial learning-reader-release-note" role="note">
               <span>يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</span>
@@ -457,6 +535,34 @@ export default function LearningReader({
           التالي<IconChevronBack size={18} aria-hidden="true" />
         </button>
       </nav>
+
+      {searchOpen && !presentation && (
+        <div className="learning-reader-search-root">
+          <div className="learning-reader-search-backdrop" aria-hidden="true" onClick={closeSearch} />
+          <div ref={searchRef} id="learning-reader-search" className="learning-reader-search" role="dialog" aria-modal="true" aria-labelledby="learning-reader-search-title">
+            <div className="learning-reader-search-head">
+              <h2 id="learning-reader-search-title" className="learning-reader-search-title">البحث في الكتاب</h2>
+              <button type="button" className="eb-button is-quiet is-small" onClick={closeSearch}>
+                <IconClose size={18} aria-hidden="true" />إغلاق
+              </button>
+            </div>
+            <Suspense fallback={<p className="learning-reader-status" role="status">جارٍ تحميل البحث...</p>}>
+              <LearningSearchPanel
+                sources={searchSources}
+                availability={searchScopeValid ? "ready" : "unavailable"}
+                query={searchQuery}
+                onQueryChange={q => { setSearchQuery(q); setSearchError(""); }}
+                onOpen={hit => { void openSearchHit(hit); }}
+                openError={searchError}
+                opening={searchOpening}
+                inputRef={searchInputRef}
+                providerFactory={searchProviderFactory}
+                autoFocus
+              />
+            </Suspense>
+          </div>
+        </div>
+      )}
 
       {drawerOpen && (
         <div className="learning-reader-drawer-root">

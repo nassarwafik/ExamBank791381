@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import LearningReaderWithTraining from "../learning/training/LearningReaderWithTraining";
 import { createRestrictedReaderContentApi } from "../learning/reader/restrictedContentApi";
 import { createTrainingClient, studentTrainingHeaders } from "../learning/training/trainingClient";
 import { createStudyClient } from "../learning/study/studyClient";
+import type { SearchHit } from "../learning/search/searchModel";
+import { fetchReleasedModuleIds } from "./learningRelease";
 
 /**
  * The student's Reader = the SAME LearningReader (one Reader authority, no student fork) fed by a content API that
@@ -32,6 +34,15 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
   const client = useMemo(() => createTrainingClient(studentTrainingHeaders(token)), [token]);
   const study = useMemo(() => createStudyClient(studentTrainingHeaders(token)), [token]);
+  // Phase 21E L3-B — in-book search is scoped to EXACTLY the released module ids this Reader was opened with (from the
+  // authenticated release list the portal re-read on open) — never "all". Opening a result re-reads that list: a
+  // module that is no longer released, or an entitlement that cannot be established, does not open.
+  const searchScope = useMemo<ReadonlySet<string>>(() => new Set(allowedModuleIds.map(id => String(id || "").trim()).filter(Boolean)), [key]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const onSearchOpen = useCallback(async (hit: SearchHit) => {
+    if (hit.courseId !== courseId || !searchScope.has(hit.moduleId)) return false;
+    const fresh = await fetchReleasedModuleIds(token, courseId);
+    return fresh !== null && fresh.has(hit.moduleId);
+  }, [courseId, searchScope, token]);
   return (
     <LearningReaderWithTraining
       courseId={courseId}
@@ -46,6 +57,8 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       initialPageId={initialPageId}
       onPageChange={onPageChange}
       visitedScope={studentId && studentId.trim() ? "student:" + studentId.trim() : undefined}
+      searchScope={searchScope}
+      onSearchOpen={onSearchOpen}
     />
   );
 }

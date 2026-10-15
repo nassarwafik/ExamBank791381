@@ -11,6 +11,8 @@ import { createTrainingClient, teacherTrainingHeaders } from "./training/trainin
 import "./learning.css";
 import "./learning-library-premium.css";
 import { lazyWithRetry } from "../lazyWithRetry";
+import LibrarySearch from "./search/LibrarySearch";
+import "./search/learning-library-search.css";
 
 // The interactive reader (hosted by the shared Reader-plus-training wrapper) is code-split so it and the content
 // layer it pulls never weigh down the library view.
@@ -21,7 +23,7 @@ type View =
   | { kind: "course"; courseId: string }
   // `initialPageId` is the Course-Overview section shortcut (a canonical pageId). Absent → «بدء القراءة»: the
   // Reader opens from its canonical beginning. Each reader open is a fresh mount, so a shortcut is never stale.
-  | { kind: "reader"; courseId: string; initialPageId?: string };
+  | { kind: "reader"; courseId: string; initialPageId?: string; fromSearch?: boolean };
 
 /**
  * Learning Materials (المواد التعليمية). Local state only (no router): the library of course cards, a course
@@ -36,6 +38,15 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   const [view, setView] = useState<View>({ kind: "library" });
   const course = view.kind === "library" ? undefined : findLearningCourse(view.courseId);
   const client = useMemo(() => (token ? createTrainingClient(teacherTrainingHeaders(token)) : null), [token]);
+  // Phase 21E L3-B — whole-course search ("all") is a TEACHER capability: this page is mounted only inside the
+  // authenticated teacher app, and it is enabled only with the teacher session token present. The student portal never
+  // reaches this page; its Reader searches exactly its released modules.
+  const teacherSearch = Boolean(token);
+  // Library search + filters survive opening a result in the Reader and coming back («العودة إلى نتائج البحث»).
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [subject, setSubject] = useState("");
+  const [grade, setGrade] = useState("");
 
   // Open the Reader at a Course-Overview section's first canonical page. The section→pageId mapping lives in the
   // manifest (batches + reading order), which is the SAME code-split chunk the Reader is about to load — so this
@@ -62,11 +73,12 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
           <LearningReaderWithTraining
             courseId={course.id}
             initialPageId={initialPageId}
-            onExit={() => setView({ kind: "course", courseId: course.id })}
-            exitLabel="العودة إلى نظرة الكتاب"
+            onExit={() => setView(view.fromSearch ? { kind: "library" } : { kind: "course", courseId: course.id })}
+            exitLabel={view.fromSearch ? "العودة إلى نتائج البحث" : "العودة إلى نظرة الكتاب"}
             client={client}
             actor="teacher"
             embedded
+            searchScope={teacherSearch ? "all" : undefined}
           />
         </Suspense>
       </div>
@@ -85,8 +97,12 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
     );
   }
 
-  const availableCourses = LEARNING_COURSES.filter(c => c.status === "available");
-  const upcomingCourses = LEARNING_COURSES.filter(c => c.status === "coming-soon");
+  const subjects = [...new Set(LEARNING_COURSES.map(c => c.subject))];
+  const grades = [...new Set(LEARNING_COURSES.flatMap(courseGrades))];
+  const matchesFilters = (c: LearningCourse) => (!subject || c.subject === subject) && (!grade || courseGrades(c).includes(grade));
+  const availableCourses = LEARNING_COURSES.filter(c => c.status === "available").filter(matchesFilters);
+  const upcomingCourses = LEARNING_COURSES.filter(c => c.status === "coming-soon").filter(matchesFilters);
+  const searchableCourses = availableCourses.filter(c => hasCourseContent(c.id));
   return (
     <section className="eb-lm eb-lm-premium-library" aria-labelledby="eb-lm-title">
       <div className="eb-lm-library-hero">
@@ -99,6 +115,35 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
         />
         <p className="eb-lm-library-count">{arabicCount(availableCourses.length, AVAILABLE_BOOKS)}</p>
       </div>
+      <div className="eb-lm-filters" role="group" aria-label="تصفية المكتبة">
+        <label className="eb-lm-filter">
+          <span className="eb-lm-filter-label">المادة</span>
+          <select className="eb-lm-filter-select" value={subject} onChange={e => setSubject(e.target.value)}>
+            <option value="">كل المواد</option>
+            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label className="eb-lm-filter">
+          <span className="eb-lm-filter-label">الصف</span>
+          <select className="eb-lm-filter-select" value={grade} onChange={e => setGrade(e.target.value)}>
+            <option value="">كل الصفوف</option>
+            {grades.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </label>
+      </div>
+      {teacherSearch && (
+        <LibrarySearch
+          courses={searchableCourses}
+          active={searchActive}
+          onActivate={() => setSearchActive(true)}
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          onOpen={hit => setView({ kind: "reader", courseId: hit.courseId, initialPageId: hit.pageId, fromSearch: true })}
+        />
+      )}
+      {availableCourses.length === 0 && upcomingCourses.length === 0 && (
+        <p className="eb-muted eb-lm-filter-empty" role="status">لا توجد كتب تطابق التصفية المختارة.</p>
+      )}
       <ul className="eb-lm-grid" aria-label="الكتب والمواد التعليمية المتاحة">
         {availableCourses.map(c => (
           <li key={c.id}>
@@ -118,6 +163,13 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
       )}
     </section>
   );
+}
+
+/** A course's grade labels from the catalog's free-text field («الصف العاشر / الحادي عشر» → two grades). */
+function courseGrades(course: LearningCourse): string[] {
+  const parts = course.grades.split("/").map(g => g.trim()).filter(Boolean);
+  const prefix = parts.find(g => g.startsWith("الصف ")) ? "الصف " : "";
+  return parts.map(g => (prefix && !g.startsWith(prefix) ? prefix + g : g));
 }
 
 /** One product entry in the library grid. */

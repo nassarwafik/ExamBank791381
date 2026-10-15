@@ -1,0 +1,23 @@
+/* Phase 21E L3-B — teacher library filters and the library search block (loaded with the lazy Learning Materials page).
+   Tokens and logical properties only. */
+.eb-lm-filters { display: flex; flex-wrap: wrap; gap: var(--eb-space-3); margin-block: var(--eb-space-4) var(--eb-space-3); }
+.eb-lm-filter { display: flex; flex-direction: column; gap: var(--eb-space-1); min-inline-size: 0; flex: 1 1 12rem; max-inline-size: 20rem; }
+.eb-lm-filter-label { font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); color: var(--eb-text-secondary); }
+.eb-lm-filter-select {
+  min-block-size: 44px; padding-inline: var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r);
+  background-color: var(--eb-surface); color: var(--eb-text); font: inherit; font-size: var(--eb-fs-14);
+}
+.eb-lm-filter-select:hover { border-color: var(--eb-primary); }
+.eb-lm-filter-select:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); border-color: var(--eb-primary); }
+.eb-lm-filter-empty { margin-block: var(--eb-space-3); }
+
+.eb-lm-search {
+  display: flex; flex-direction: column; gap: var(--eb-space-3); margin-block-end: var(--eb-space-5);
+  padding: var(--eb-space-4); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-xl);
+  box-shadow: var(--eb-sh-sm);
+}
+.eb-lm-search-title { margin: 0; font-size: var(--eb-fs-17); color: var(--eb-text-heading); }
+.eb-lm-search-open { align-self: flex-start; min-block-size: 44px; gap: var(--eb-space-2); }
+@media (forced-colors: active) {
+  .eb-lm-search { border: 1px solid CanvasText; }
+}

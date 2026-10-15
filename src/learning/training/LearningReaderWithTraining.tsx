@@ -4,6 +4,8 @@ import { lazyWithRetry } from "../../lazyWithRetry";
 import type { ReaderContentApi } from "../reader/readerContentApi";
 import type { LibraryTrainingHost, TrainingClient, TrainingListEntry, TrainingStatus } from "./types";
 import type { StudyAttemptResponse, StudyClient, StudyHost, StudyModuleState, StudyPageState, StudyPageStatus, StudyResponse } from "../study/types";
+import type { SearchScope } from "../content/searchProvider";
+import type { SearchHit, SearchProviderFactory } from "../search/searchModel";
 
 // The runner (and the exam question primitive it pulls) is code-split: reading never pays for practising.
 const LearningTrainingRunner = lazy(lazyWithRetry(() => import("./LearningTrainingRunner"), "learning-training-runner"));
@@ -21,7 +23,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, onPageChange: onPageChangeProp, embedded = false, visitedScope }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -48,6 +50,13 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   /** Phase 21E L2-B — the authenticated student's scope for the device-local "visited" marks, forwarded to the Reader
    *  for STUDENT sessions only (a teacher preview never shows marks). Absent → no marks. */
   visitedScope?: string;
+  /** Phase 21E L3-B — the in-book search release set, forwarded to the Reader. A STUDENT session never searches "all":
+   *  that value is refused here (the Reader then shows no search), so only a teacher host can search a whole course. */
+  searchScope?: SearchScope["allowedModuleIds"];
+  /** Phase 21E L3-B — open-time entitlement re-check for a search result, forwarded to the Reader. */
+  onSearchOpen?: (hit: SearchHit) => Promise<boolean> | boolean;
+  /** L3-7 — the search provider, forwarded to the Reader. */
+  searchProviderFactory?: SearchProviderFactory;
 }) {
   const [view, setView] = useState<View>({ kind: "reader", pageId: initialPageId });
   const [list, setList] = useState<ListState>({ kind: "loading" });
@@ -178,6 +187,9 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       onPresentationChange={onPresentationChange}
       embedded={embedded}
       visitedScope={actor === "student" ? visitedScope : undefined}
+      searchScope={actor === "student" && searchScope === "all" ? undefined : searchScope}
+      onSearchOpen={onSearchOpen}
+      searchProviderFactory={searchProviderFactory}
     />
   );
 }
