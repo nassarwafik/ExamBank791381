@@ -65,7 +65,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
  const [preview,setPreview]=useState<{title:string;exam:Exam}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
  // UX-5 workspace state: list filter (separate from the composer's target class), search, mode, explicit attempts editor.
- const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[listStatus,setListStatus]=useState<AssignmentStatusFilter>("all"),[listSort,setListSort]=useState<AssignmentSort>("dueSoon"),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null),[timingFor,setTimingFor]=useState<Item|null>(null);
+ const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[listStatus,setListStatus]=useState<AssignmentStatusFilter>("all"),[listSort,setListSort]=useState<AssignmentSort>("original"),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null),[timingFor,setTimingFor]=useState<Item|null>(null);
  const detailHeadingRef=useRef<HTMLHeadingElement>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null);
  const detailOpenerRef=useRef<HTMLElement|null>(null),composerOpenerRef=useRef<HTMLElement|null>(null),focusDetailPending=useRef(false),focusComposerOpenerPending=useRef(false),focusWorkspacePending=useRef(false);
  const toolbarRef=useRef<HTMLDivElement|null>(null),scopeRef=useRef<MasterScope>({classId:"",showArchived:false,q:""});
@@ -442,7 +442,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     </div>
     <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={search} onChange={e=>changeScope({search:e.target.value})} placeholder="بحث بعنوان الواجب أو الصف"/></label>
     {!showArchived&&<label className="eb-field-inline">الحالة<select aria-label="تصفية الواجبات حسب الحالة" value={listStatus} onChange={e=>setListStatus(e.target.value as AssignmentStatusFilter)}><option value="all">جميع الحالات</option><option value="published">منشور</option><option value="draft">مسودة</option></select></label>}
-    <label className="eb-field-inline">ترتيب<select aria-label="ترتيب الواجبات" value={listSort} onChange={e=>setListSort(e.target.value as AssignmentSort)}><option value="dueSoon">موعد التسليم الأقرب</option><option value="dueLate">موعد التسليم الأبعد</option><option value="title">العنوان أبجديًا</option></select></label>
+    <label className="eb-field-inline">ترتيب<select aria-label="ترتيب الواجبات" value={listSort} onChange={e=>setListSort(e.target.value as AssignmentSort)}><option value="original">الترتيب الأصلي</option><option value="dueSoon">موعد التسليم الأقرب</option><option value="dueLate">موعد التسليم الأبعد</option><option value="title">العنوان أبجديًا</option></select></label>
    </div>
    <div className="eb-assign-actions">
     <button type="button" className="eb-button is-primary" onClick={openComposer} disabled={mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>

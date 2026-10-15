@@ -10,12 +10,17 @@ const rows = [
   make("d","جميل","published","invalid")
 ];
 describe("assignment list discoverability", () => {
+  it("preserves original server order by default and never mutates inputs", () => {
+    expect(selectAssignments(rows,"all","original").map(x=>x.assignmentId)).toEqual(["b","a","c","d"]);
+    expect(selectAssignments(rows,"published","original").map(x=>x.assignmentId)).toEqual(["a","d"]);
+    expect(rows.map(x=>x.assignmentId)).toEqual(["b","a","c","d"]);
+  });
   it("sorts by deadline and always places missing deadlines last", () => {
     expect(selectAssignments(rows,"all","dueSoon").map(x=>x.assignmentId)).toEqual(["a","b","c","d"].slice(0,2).concat(["d","c"].sort((x,y)=>rows.find(z=>z.assignmentId===x)!.title.localeCompare(rows.find(z=>z.assignmentId===y)!.title,"ar"))));
     expect(selectAssignments(rows,"all","dueLate").slice(0,2).map(x=>x.assignmentId)).toEqual(["b","a"]);
   });
   it("filters published and draft without changing the input", () => {
-    expect(selectAssignments(rows,"published","title").map(x=>x.assignmentId)).toEqual(["a","d","c"].sort((x,y)=>rows.find(z=>z.assignmentId===x)!.title.localeCompare(rows.find(z=>z.assignmentId===y)!.title,"ar")));
+    expect(selectAssignments(rows,"published","title").map(x=>x.assignmentId)).toEqual(["a","d"].sort((x,y)=>rows.find(z=>z.assignmentId===x)!.title.localeCompare(rows.find(z=>z.assignmentId===y)!.title,"ar")));
     expect(rows[0].assignmentId).toBe("b");
   });
   it("uses stable Arabic title ordering", () => {

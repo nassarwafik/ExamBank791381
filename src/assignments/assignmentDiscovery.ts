@@ -3,7 +3,7 @@ import type { Item } from "./types";
 // Pure client-side discovery over the already-authorized assignment list.
 // The server remains authoritative for assignment state, deadlines, grading and mutations.
 export type AssignmentStatusFilter = "all" | "published" | "draft";
-export type AssignmentSort = "dueSoon" | "dueLate" | "title";
+export type AssignmentSort = "original" | "dueSoon" | "dueLate" | "title";
 
 const deadline = (iso: string): number | null => {
   const time = Date.parse(iso);
@@ -11,8 +11,9 @@ const deadline = (iso: string): number | null => {
 };
 
 export function selectAssignments(items: Item[], status: AssignmentStatusFilter, sort: AssignmentSort): Item[] {
-  const selected = items.filter(item => status === "all" || item.status === "archived" || item.status === status);
+  const selected = items.filter(item => status === "all" || item.status === status);
   const byTitle = (a: Item, b: Item) => a.title.localeCompare(b.title, "ar") || a.assignmentId.localeCompare(b.assignmentId);
+  if (sort === "original") return [...selected];
   return [...selected].sort((a, b) => {
     if (sort === "title") return byTitle(a, b);
     const ad = deadline(a.dueAt), bd = deadline(b.dueAt);
