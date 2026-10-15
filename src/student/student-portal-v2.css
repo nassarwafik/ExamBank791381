@@ -1,0 +1,203 @@
+/* ============================================================================================================
+   Phase 21E V2 — Student Portal visual release (page-level redesign).
+   Layered over studentportal-pro.css / today.css / platform.css: every rule is scoped to the V2 portal root
+   (.eb-sp-v2) or the student shell (.eb-student-shell), tokens only (--eb-*), RTL-first logical properties.
+   The DOM order of the sections is unchanged (phones read top to bottom exactly as before); on wide screens a
+   12-column dashboard grid places them side by side. No logic, no content change.
+   ============================================================================================================ */
+
+/* ── Page & container ─────────────────────────────────────────────────────────────────────────────────────── */
+.eb-student-shell {
+  background:
+    radial-gradient(1200px 420px at 85% -120px, var(--eb-primary-100), transparent 70%),
+    linear-gradient(180deg, var(--eb-bg-tint) 0, var(--eb-bg) 520px);
+}
+.eb-student-shell .student-shell { padding: var(--eb-space-5) clamp(var(--eb-space-3), 3vw, var(--eb-space-6)) var(--eb-space-7); }
+.eb-sp-v2 { width: min(1320px, 100%); gap: var(--eb-space-4); }
+
+/* ── Top bar: one calm navy band; on phones a brand row + one scrollable row of actions ───────────────────── */
+.eb-student-shell .student-topbar {
+  position: sticky; inset-block-start: 0; z-index: var(--eb-z-sticky);
+  min-height: 64px; padding: var(--eb-space-2) clamp(var(--eb-space-3), 3vw, var(--eb-space-6));
+  background: linear-gradient(90deg, var(--eb-navy) 0%, var(--eb-navy-2) 100%);
+  box-shadow: var(--eb-sh-sm);
+}
+.eb-student-shell .student-brand h1 { font-size: var(--eb-fs-20); letter-spacing: .01em; }
+.eb-student-shell .student-topbar-actions { display: flex; align-items: center; gap: var(--eb-space-2); flex-wrap: wrap; }
+.eb-student-shell .student-topbar-link,
+.eb-student-shell .student-logout { border-radius: var(--eb-pill); min-height: 40px; padding-inline: var(--eb-space-3); }
+@media (max-width: 720px) {
+  .eb-student-shell .student-topbar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); position: static; }
+  .eb-student-shell .student-brand { flex: 1 1 auto; min-width: 0; }
+  .eb-student-shell .student-brand p { display: none; }
+  .eb-student-shell .eb-student-identity { display: none; }            /* the welcome hero below names the student */
+  .eb-student-shell .student-topbar-actions {
+    flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain;
+    padding-block-end: 2px; scrollbar-width: none;
+  }
+  .eb-student-shell .student-topbar-actions::-webkit-scrollbar { display: none; }
+  .eb-student-shell .student-topbar-actions > * { flex: 0 0 auto; }
+  .eb-student-shell .student-topbar-link,
+  .eb-student-shell .student-logout { min-height: 44px; min-width: 44px; white-space: nowrap; }
+}
+
+/* ── Welcome hero (the identity card) ─────────────────────────────────────────────────────────────────────── */
+.eb-sp-v2 .eb-sp-identity {
+  position: relative; overflow: hidden; isolation: isolate;
+  gap: var(--eb-space-4); padding: clamp(var(--eb-space-4), 3vw, var(--eb-space-6));
+  border: 0; border-radius: var(--eb-r-xl); box-shadow: var(--eb-sh-md);
+  color: white;
+  background:
+    radial-gradient(420px 220px at 12% 120%, color-mix(in srgb, var(--eb-primary) 55%, transparent), transparent 70%),
+    radial-gradient(360px 200px at 100% -40%, color-mix(in srgb, var(--eb-info) 45%, transparent), transparent 70%),
+    linear-gradient(135deg, var(--eb-navy) 0%, var(--eb-primary-strong) 100%);
+}
+.eb-sp-v2 .eb-sp-identity-text h2 { color: white; font-size: clamp(var(--eb-fs-20), 2.4vw, var(--eb-fs-28)); }
+.eb-sp-v2 .eb-sp-identity-text p,
+.eb-sp-v2 .eb-sp-identity-text .eb-muted { color: color-mix(in srgb, white 82%, transparent); font-size: var(--eb-fs-14); }
+.eb-sp-v2 .eb-sp-identity .eb-sp-code {
+  background: color-mix(in srgb, white 14%, transparent); color: white; border: 1px solid color-mix(in srgb, white 28%, transparent);
+}
+.eb-sp-v2 .eb-sp-identity .eb-sp-code strong { color: white; }
+.eb-sp-v2 .eb-sp-avatar-frame { background: color-mix(in srgb, white 16%, transparent); }
+
+/* ── At-a-glance strip ────────────────────────────────────────────────────────────────────────────────────── */
+.eb-sp-kpis { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--eb-space-3); min-width: 0; }
+.eb-sp-kpi {
+  inline-size: 100%; block-size: 100%; display: grid; grid-template-columns: auto 1fr; grid-template-areas: "icon value" "label label" "hint hint";
+  align-items: center; gap: var(--eb-space-1) var(--eb-space-3); padding: var(--eb-space-3) var(--eb-space-4);
+  text-align: start; font: inherit; color: var(--eb-text); cursor: pointer;
+  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-xs);
+  transition: box-shadow var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease), transform var(--eb-dur) var(--eb-ease);
+}
+.eb-sp-kpi:hover { border-color: var(--eb-primary-100); box-shadow: var(--eb-sh-md); transform: translateY(-1px); }
+.eb-sp-kpi:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-sp-kpi-icon { grid-area: icon; display: inline-flex; align-items: center; justify-content: center; inline-size: 40px; block-size: 40px; border-radius: var(--eb-r); background: var(--eb-primary-050); color: var(--eb-primary-strong); }
+.eb-sp-kpi-value { grid-area: value; justify-self: end; color: var(--eb-text-heading); font-size: var(--eb-fs-28); font-weight: var(--eb-fw-bold); line-height: 1; font-variant-numeric: tabular-nums; }
+.eb-sp-kpi-label { grid-area: label; color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
+.eb-sp-kpi-hint { grid-area: hint; color: var(--eb-muted); font-size: var(--eb-fs-12); line-height: var(--eb-lh-tight); }
+.eb-sp-kpi.is-now .eb-sp-kpi-icon { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+.eb-sp-kpi.is-review .eb-sp-kpi-icon { background: var(--eb-info-bg); color: var(--eb-info-tx); }
+.eb-sp-kpi.is-average .eb-sp-kpi-icon { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+@media (min-width: 768px) { .eb-sp-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ── Panels: one card language for every section ──────────────────────────────────────────────────────────── */
+.eb-sp-v2 .eb-sp-panel {
+  border: 1px solid var(--eb-line); border-radius: var(--eb-r-xl); box-shadow: var(--eb-sh-sm);
+  padding: clamp(var(--eb-space-4), 2.2vw, var(--eb-space-5)); gap: var(--eb-space-4); min-width: 0;
+}
+.eb-sp-v2 .eb-sp-panel > .eb-section-header .eb-section-title {
+  display: flex; align-items: center; gap: var(--eb-space-2); font-size: var(--eb-fs-20);
+}
+.eb-sp-v2 .eb-sp-panel > .eb-section-header .eb-section-title::before {
+  content: ""; flex: 0 0 auto; inline-size: 5px; block-size: 1.1em; border-radius: var(--eb-pill); background: var(--eb-primary);
+}
+.eb-sp-v2 .eb-sp-panel > .eb-section-header .eb-section-description { max-inline-size: 70ch; }
+
+/* ── «أكمل من حيث توقفت» — the one next step, as a feature card ───────────────────────────────────────────── */
+.eb-sp-v2 .eb-sp-today-hero { gap: var(--eb-space-2); padding: var(--eb-space-5); border-radius: var(--eb-r-lg); border-inline-start-width: 6px; box-shadow: var(--eb-sh-xs); }
+.eb-sp-v2 .eb-sp-today-kicker {
+  align-self: flex-start; padding: 2px var(--eb-space-3); border-radius: var(--eb-pill);
+  background: var(--eb-surface); border: 1px solid var(--eb-line); color: var(--eb-text-secondary);
+}
+.eb-sp-v2 .eb-sp-today-hero-title { font-size: clamp(var(--eb-fs-20), 2.2vw, var(--eb-fs-24)); }
+@media (min-width: 768px) {
+  .eb-sp-v2 .eb-sp-today-cta { inline-size: auto; min-inline-size: 220px; align-self: flex-start; }
+  .eb-sp-v2 .eb-sp-today-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+}
+
+/* ── «ماذا عليّ أن أفعل الآن؟» ───────────────────────────────────────────────────────────────────────────────── */
+.eb-sp-v2 .eb-sp-now-item { border-radius: var(--eb-r-lg); padding: var(--eb-space-3) var(--eb-space-4); box-shadow: var(--eb-sh-xs); }
+
+/* ── Tasks: a responsive grid of cards with a status edge ─────────────────────────────────────────────────── */
+.eb-sp-v2 .eb-sp-tasks-panel { container-type: inline-size; }
+.eb-sp-v2 .eb-sp-filters { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); padding: var(--eb-space-1); border-radius: var(--eb-pill); background: var(--eb-surface-2); align-self: flex-start; max-inline-size: 100%; }
+.eb-sp-v2 .eb-sp-filters .eb-chip-button { min-height: 40px; border-radius: var(--eb-pill); }
+.eb-sp-v2 .eb-sp-tasks { gap: var(--eb-space-3); }
+@container (min-width: 620px) {
+  .eb-sp-v2 .eb-sp-tasks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}
+.eb-sp-v2 .eb-sp-tasks > li { display: flex; min-width: 0; }
+.eb-sp-v2 .eb-sp-task {
+  flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--eb-space-2); min-width: 0;
+  padding: var(--eb-space-4); border: 1px solid var(--eb-line); border-inline-start: 5px solid var(--eb-line-2);
+  border-radius: var(--eb-r-lg); background: var(--eb-surface); box-shadow: var(--eb-sh-xs);
+  transition: box-shadow var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease);
+}
+.eb-sp-v2 .eb-sp-task:hover { box-shadow: var(--eb-sh-md); }
+.eb-sp-v2 .eb-sp-task.dash-available { border-inline-start-color: var(--eb-primary); }
+.eb-sp-v2 .eb-sp-task.dash-inProgress { border-inline-start-color: var(--eb-warn); }
+.eb-sp-v2 .eb-sp-task.dash-awaitingReview { border-inline-start-color: var(--eb-info); }
+.eb-sp-v2 .eb-sp-task.dash-completed { border-inline-start-color: var(--eb-success); }
+.eb-sp-v2 .eb-sp-task.dash-scheduled { border-inline-start-color: var(--eb-faint); background: var(--eb-surface-2); }
+.eb-sp-v2 .eb-sp-task.dash-closedUnsubmitted { border-inline-start-color: var(--eb-danger); }
+.eb-sp-v2 .eb-sp-task-head { justify-content: space-between; align-items: flex-start; flex-wrap: nowrap; }
+.eb-sp-v2 .eb-sp-task-title { font-size: var(--eb-fs-17); }
+.eb-sp-v2 .eb-sp-task-head > :last-child { flex: 0 0 auto; }
+.eb-sp-v2 .eb-sp-task-meta { gap: var(--eb-space-1); }
+.eb-sp-v2 .eb-sp-task-meta > li {
+  padding: 2px var(--eb-space-2); border-radius: var(--eb-pill); background: var(--eb-surface-2); border: 1px solid var(--eb-line);
+  color: var(--eb-text-secondary);
+}
+.eb-sp-v2 .eb-sp-task-result { padding: var(--eb-space-2) var(--eb-space-3); border-radius: var(--eb-r); background: var(--eb-surface-2); }
+.eb-sp-v2 .eb-sp-task-result.is-final { background: var(--eb-success-bg); }
+.eb-sp-v2 .eb-sp-task-result.is-pending { background: var(--eb-warn-bg); }
+.eb-sp-v2 .eb-sp-task-action { margin-block-start: auto; inline-size: 100%; min-height: 44px; align-self: stretch; }
+
+/* ── Loading skeleton & retry ─────────────────────────────────────────────────────────────────────────────── */
+.eb-sp-skeleton { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--eb-space-3); }
+.eb-sp-skel {
+  display: block; border-radius: var(--eb-r-lg); min-block-size: 84px;
+  background: linear-gradient(90deg, var(--eb-surface-2) 0%, var(--eb-surface) 50%, var(--eb-surface-2) 100%);
+  background-size: 200% 100%; animation: eb-sp-shimmer 1.4s linear infinite;
+}
+.eb-sp-skel.is-hero { grid-column: 1 / -1; min-block-size: 132px; border-radius: var(--eb-r-xl); }
+.eb-sp-skel.is-panel { grid-column: 1 / -1; min-block-size: 220px; border-radius: var(--eb-r-xl); }
+@media (min-width: 768px) { .eb-sp-skeleton { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@keyframes eb-sp-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.eb-sp-retry { display: flex; justify-content: flex-start; }
+.eb-sp-retry .eb-button { min-height: 44px; }
+
+/* ── Wide screens: the dashboard grid (DOM order unchanged; RTL places the first column on the right) ─────── */
+@media (min-width: 1100px) {
+  .eb-sp-v2 {
+    display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-flow: row dense;
+    align-items: start; gap: var(--eb-space-5);
+  }
+  .eb-sp-v2 > * { grid-column: 1 / -1; min-width: 0; }
+  .eb-sp-v2 > .eb-sp-today { grid-column: span 7; }
+  .eb-sp-v2 > .eb-sp-now { grid-column: span 5; }
+  .eb-sp-v2 > .eb-sp-learning { grid-column: span 5; }
+  .eb-sp-v2 > .eb-sp-progress { grid-column: span 7; }
+  .eb-sp-v2 > .eb-sp-tasks-panel { grid-column: span 8; grid-row: span 2; }
+  .eb-sp-v2 > .eb-sp-projects, .eb-sp-v2 > .eb-sp-feed { grid-column: span 4; }
+}
+
+/* ── Tablets: projects and achievements side by side ───────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .eb-sp-v2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; align-items: start; }
+  .eb-sp-v2 > * { grid-column: 1 / -1; min-width: 0; }
+  .eb-sp-v2 > .eb-sp-projects, .eb-sp-v2 > .eb-sp-feed { grid-column: span 1; }
+}
+
+/* ── Wide screens: the optional install / notification cards read as one compact row; «الآن» stacks its items
+   (the column is narrow) ───────────────────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 1100px) {
+  .eb-sp-v2 > .eb-install-card { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: var(--eb-space-5); }
+  .eb-sp-v2 > .eb-install-card > * { flex: 1 1 320px; min-width: 0; margin: 0; }
+  .eb-sp-v2 > .eb-install-card > .eb-install-actions { flex: 0 0 auto; }
+  .eb-sp-v2 > .eb-sp-now .eb-sp-now-item { flex-direction: column; align-items: stretch; }
+  .eb-sp-v2 > .eb-sp-now .eb-sp-now-action { inline-size: 100%; min-height: 44px; }
+}
+
+/* ── Preferences ──────────────────────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .eb-sp-kpi, .eb-sp-v2 .eb-sp-task { transition: none; }
+  .eb-sp-kpi:hover { transform: none; }
+  .eb-sp-skel { animation: none; }
+}
+@media (forced-colors: active) {
+  .eb-sp-v2 .eb-sp-identity { border: 1px solid CanvasText; background: Canvas; color: CanvasText; }
+  .eb-sp-v2 .eb-sp-identity-text h2, .eb-sp-v2 .eb-sp-identity-text p, .eb-sp-v2 .eb-sp-identity .eb-sp-code strong { color: CanvasText; }
+  .eb-sp-kpi, .eb-sp-v2 .eb-sp-task, .eb-sp-v2 .eb-sp-panel { border: 1px solid CanvasText; }
+}
