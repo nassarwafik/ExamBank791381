@@ -165,3 +165,101 @@
 @media (min-width: 1024px){ .eb-policy-options{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
 /* Phase 17E-D — assignment-level coding grading summary (counts only; detailed evidence lives in AssignmentReview). */
 .eb-coding-summary{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); margin:0 0 var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-13); }
+
+/* Phase 21E — unified enterprise assignments workspace.
+   Presentation-only: the list, composer, detail, gradebook and question analysis keep existing authority/actions. */
+.eb-assignments { gap: var(--eb-space-5); min-width: 0; }
+.eb-assign-toolbar {
+  padding: var(--eb-space-4) var(--eb-space-5);
+  border-color: var(--eb-line-2);
+  border-radius: var(--eb-r-xl);
+  box-shadow: var(--eb-sh-sm);
+}
+.eb-assign-toolbar:focus-visible { outline: var(--eb-focus-ring); outline-offset: -2px; }
+.eb-assign-toolbar .eb-field-inline { font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); }
+.eb-assign-toolbar :is(input, select) {
+  min-height: 44px;
+  border-radius: var(--eb-r-sm);
+  background: var(--eb-surface);
+}
+.eb-assign-layout { gap: var(--eb-space-5); }
+.eb-assign-list { gap: var(--eb-space-3); }
+.eb-assign-rows { gap: var(--eb-space-3); }
+.eb-assign-row {
+  position: relative;
+  align-items: flex-start;
+  padding: var(--eb-space-4);
+  border-color: var(--eb-line-2);
+  border-radius: var(--eb-r-lg);
+  box-shadow: var(--eb-sh-xs);
+}
+.eb-assign-row:hover { box-shadow: var(--eb-sh-sm); }
+.eb-assign-row.selected { border-color: var(--eb-primary); background: var(--eb-primary-050); box-shadow: var(--eb-sh-xs); }
+.eb-assign-row-title strong { font-size: var(--eb-fs-16); line-height: var(--eb-lh-body); }
+.eb-assign-row-meta, .eb-assign-row-due { line-height: var(--eb-lh-body); }
+.eb-assign-row-actions .eb-button { min-height: 40px; }
+.eb-assign-detail, .eb-assign-composer {
+  padding: var(--eb-space-5);
+  gap: var(--eb-space-5);
+  border: 1px solid var(--eb-line-2);
+  border-radius: var(--eb-r-xl);
+  box-shadow: var(--eb-sh-sm);
+  border-inline-start: 3px solid var(--eb-primary);
+}
+.eb-assign-detail-head { align-items: flex-start; padding-block-end: var(--eb-space-3); border-block-end: 1px solid var(--eb-line); }
+.eb-assign-detail-title { font-size: var(--eb-fs-24); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); }
+.eb-assign-detail-meta { line-height: var(--eb-lh-body); }
+.eb-assign-stats .eb-stat-card { border-radius: var(--eb-r-lg); }
+.eb-gradebook { gap: var(--eb-space-4); padding-block-start: var(--eb-space-4); }
+.eb-gradebook > .eb-subheading, .eb-composer-section > .eb-subheading, .eb-item-analysis > .eb-subheading {
+  color: var(--eb-text-heading);
+  font-size: var(--eb-fs-17);
+  font-weight: var(--eb-fw-bold);
+}
+.eb-gradebook-controls { padding: var(--eb-space-3); background: var(--eb-surface-2); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); }
+.eb-gradebook-controls .eb-search-field input { min-height: 44px; min-width: 0; }
+.eb-gradebook-table-wrap { border-color: var(--eb-line-2); border-radius: var(--eb-r-lg); }
+.eb-gradebook-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+.eb-gradebook-table th { background: var(--eb-surface-2); color: var(--eb-text-heading); }
+.eb-gradebook-table tbody tr:hover td { background: var(--eb-primary-050); }
+.eb-gradebook-table tbody tr:focus-within td { background: var(--eb-primary-050); }
+.eb-gradebook-table td { border-block-end: 1px solid var(--eb-line); line-height: var(--eb-lh-body); }
+.eb-item-analysis { padding-block-start: var(--eb-space-5); }
+.eb-composer-section { min-width: 0; gap: var(--eb-space-4); }
+.eb-source-card, .eb-policy-group { border-color: var(--eb-line-2); border-radius: var(--eb-r-lg); }
+.eb-source-card { background: var(--eb-bg-tint); }
+.library-item { border-radius: var(--eb-r-lg); }
+.library-item:focus-within { border-color: var(--eb-primary); }
+.eb-composer-foot { padding-block-start: var(--eb-space-4); }
+.eb-assignments :is(.eb-button, .gradebook-chip, .library-cat-chip, .library-item-select, .library-item-preview):focus-visible {
+  outline: var(--eb-focus-ring);
+  outline-offset: -2px;
+}
+.eb-assignments :is(input, select, textarea):focus-visible { outline: var(--eb-focus-ring); outline-offset: 0; }
+@media (min-width: 1024px) {
+  .eb-assign-row { align-items: center; }
+}
+@media (max-width: 1023px) {
+  .eb-assign-row { align-items: stretch; }
+  .eb-assign-detail-head { align-items: flex-start; }
+  .eb-assign-detail-actions { align-self: flex-start; }
+}
+/* Coarse-pointer tablets need the same comfortable controls as phones. */
+@media (max-width: 1023px) and (pointer: coarse) {
+  .eb-assignments :is(.eb-button, .eb-menu-item, .gradebook-chip, .library-cat-chip, .eb-segmented button, .eb-assign-row-actions button) { min-height: 44px; }
+  .eb-assignments :is(input:not([type="checkbox"]), select, textarea) { min-height: 44px; }
+  .eb-assignments .eb-assign-row-actions button { min-width: 44px; }
+}
+
+@media (max-width: 767px) {
+  .eb-assignments { gap: var(--eb-space-3); }
+  .eb-assign-toolbar, .eb-assign-detail, .eb-assign-composer { padding: var(--eb-space-3); border-radius: var(--eb-r-lg); }
+  .eb-assign-row { align-items: stretch; padding: var(--eb-space-3); }
+  .eb-assign-detail-title { font-size: var(--eb-fs-20); }
+  .eb-assign-row-actions .eb-button { min-height: 44px; }
+  .eb-gradebook-controls { padding: var(--eb-space-2); }
+  .eb-gradebook-controls .eb-button, .eb-composer-foot .eb-button { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eb-assign-row, .library-item { transition: none; }
+}
