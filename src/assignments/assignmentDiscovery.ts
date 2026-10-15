@@ -10,8 +10,10 @@ const deadline = (iso: string): number | null => {
   return Number.isFinite(time) ? time : null;
 };
 
+export const matchesStatus = (item: Item, status: AssignmentStatusFilter): boolean => status === "all" || item.status === status;
+
 export function selectAssignments(items: Item[], status: AssignmentStatusFilter, sort: AssignmentSort): Item[] {
-  const selected = items.filter(item => status === "all" || item.status === status);
+  const selected = items.filter(item => matchesStatus(item, status));
   const byTitle = (a: Item, b: Item) => a.title.localeCompare(b.title, "ar") || a.assignmentId.localeCompare(b.assignmentId);
   if (sort === "original") return [...selected];
   return [...selected].sort((a, b) => {
