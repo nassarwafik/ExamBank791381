@@ -236,13 +236,13 @@
 .eb-nav-link.is-active {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eb-primary-100) 25%, transparent);
 }
+/* Inset ring: the scrolling .eb-nav (overflow-y: auto) clips anything drawn outside the link. */
 .eb-nav-link:focus-visible {
   outline: 2px solid var(--eb-primary-100);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
-.eb-shell-content {
-  isolation: isolate;
-}
+/* No stacking context on .eb-shell-main / .eb-shell-content: the Reader's presentation mode and index drawer are fixed
+   layers rendered in place inside <main>, and must paint above the sticky sidebar (teacherShellLayers.21ev1.test.ts). */
 @media (max-width: 1023px) {
   .eb-sidebar { box-shadow: var(--eb-sh-lg); }
 }
