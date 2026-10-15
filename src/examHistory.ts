@@ -30,6 +30,11 @@ export type ExamHistory = {
   future: readonly StructuredExam[];
   savedCheckpoint: StructuredExam | null;
   recovered: boolean;
+  /** Phase 21F.0 — the version (blob ETag) of the server copy this exam was opened from or last saved as: the base a CONDITIONAL
+   *  save states, so a newer version saved elsewhere is never overwritten. `null` = the server holds no copy yet (a new, imported,
+   *  preset or copied exam: the save must CREATE it); absent = unknown (an exam converted from the legacy editor, or an API that
+   *  returned no ETag): the save is the historical last-write-wins one. */
+  serverEtag?: string | null;
 };
 
 export type ExamSaveState = "saved" | "dirty" | "saving" | "recovered";
@@ -44,8 +49,10 @@ export function emptyExamHistory(): ExamHistory { return EMPTY; }
  * Exams) IS the checkpoint; an "unsaved" one (new / imported / converted from the legacy editor) has no checkpoint yet,
  * so it is dirty until its first successful save.
  */
-export function openExamHistory(exam: StructuredExam, source: "saved" | "unsaved" = "saved"): ExamHistory {
-  return { present: exam, past: [], future: [], savedCheckpoint: source === "saved" ? exam : null, recovered: false };
+export function openExamHistory(exam: StructuredExam, source: "saved" | "unsaved" = "saved", serverEtag?: string | null): ExamHistory {
+  const h: ExamHistory = { present: exam, past: [], future: [], savedCheckpoint: source === "saved" ? exam : null, recovered: false };
+  if (serverEtag !== undefined) h.serverEtag = serverEtag;
+  return h;
 }
 
 /** Close the structured exam. A later updater can never bring it back (see updateExamHistory). */
@@ -98,14 +105,18 @@ export function redoExamHistory(h: ExamHistory): ExamHistory {
  * from that payload ONLY for the exam that is still open. Present follows reconcileSavedStructuredExam: unchanged →
  * the payload; edited meanwhile → the newer edits are kept and the exam stays dirty (status demoted to draft).
  */
-export function commitSavedExamHistory(h: ExamHistory, snapshot: StructuredExam, saved: StructuredExam): ExamHistory {
+export function commitSavedExamHistory(h: ExamHistory, snapshot: StructuredExam, saved: StructuredExam, serverEtag?: string | null): ExamHistory {
   if (!h.present || h.present.examId !== saved.examId) return h;
   const present = reconcileSavedStructuredExam(h.present, snapshot, saved);
   // The snapshot that was persisted IS the saved checkpoint, wherever it sits in history. Every occurrence of that EXACT
   // reference (never a merely equal-looking state) becomes the persisted payload, so navigating back to the saved point
   // lands on what the server really holds (stamped, not dirty). Stacks keep their length: the bound is untouched.
   const stamp = (e: StructuredExam) => (e === snapshot ? saved : e);
-  return { ...h, present, past: h.past.map(stamp), future: h.future.map(stamp), savedCheckpoint: saved, recovered: false };
+  const next: ExamHistory = { ...h, present, past: h.past.map(stamp), future: h.future.map(stamp), savedCheckpoint: saved, recovered: false };
+  // Phase 21F.0 — the version the server now holds becomes the base of the next conditional save (an ETag-less response keeps
+  // the previous knowledge; it never turns a known base into "unknown").
+  if (typeof serverEtag === "string" && serverEtag) next.serverEtag = serverEtag;
+  return next;
 }
 
 /** Restore a local autosave backup of the SAME exam: present = backup (undoable back to the server copy), still dirty. */

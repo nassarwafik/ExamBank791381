@@ -44,7 +44,9 @@ import type { AiAuthorResponse, AiAuthorService, AiScenarioResponse } from "./ai
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
-import { legacyToStructured, newSection, newQuestion, type StructuredExamUpdater } from "./examBuilderState";
+import { legacyToStructured, newSection, newQuestion, newExamId, type StructuredExamUpdater } from "./examBuilderState";
+import type { SaveConflict } from "./structuredSavePolicy";
+const SaveConflictDialog = lazy(lazyWithRetry(() => import("./studio/SaveConflictDialog"), "save-conflict-dialog"));
 // Phase 13A — the structured exam lives in a HISTORY authority (undo / redo / saved checkpoint / recovery).
 import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
@@ -354,7 +356,7 @@ export function buildExamCopy(exam: ExamDraft): ExamDraft {
   const now = new Date().toISOString();
   return {
     ...(JSON.parse(JSON.stringify(exam)) as ExamDraft),
-    examId: "EXAM-" + Date.now(),
+    examId: newExamId(),
     title: exam.title + " - نسخة",
     createdAt: now,
     updatedAt: now
@@ -2879,7 +2881,7 @@ function App() {
   function openExamFromPreset(next: StructuredExam) {
     setStructuredError("");
     setStructuredNotice("✓ أُنشئ امتحان جديد من القالب الأكاديمي — راجعه ثم احفظه ليصبح مسودة على الخادم.");
-    structuredHistory.open(next, "unsaved");
+    structuredHistory.open(next, "unsaved", null);
     setStructuredBuilderOpen(true);
   }
   // Phase 16B-A — the App-owned SimulationService («المحاكاة التفاعلية»): JSON calls through the same request helper, the raw
@@ -3979,18 +3981,18 @@ function App() {
     setStructuredError("");
     setStructuredNotice("");
     structuredHistory.open({
-      examId: "EXAM-" + Date.now(),
+      examId: newExamId(),
       title: "امتحان منظّم جديد",
       status: "draft",
       sections: [newSection({ title: "القسم الأول", questions: [newQuestion("multipleChoice")] })]
-    }, "unsaved");
+    }, "unsaved", null);
     setStructuredBuilderOpen(true);
   }
   // Imported exam (JSON/HTML) becomes the ACTIVE structured exam in memory only — never auto-saved.
   function openImportedStructuredExam(imported: StructuredExam) {
     setStructuredError("");
     setStructuredNotice("✓ تم استيراد الامتحان — راجعه ثم احفظه كمسودة أو اعتمده نهائيًا.");
-    structuredHistory.open(imported, "unsaved");
+    structuredHistory.open(imported, "unsaved", null);
     setStructuredBuilderOpen(true);
     setStructuredImportOpen(false);
   }
@@ -4005,9 +4007,14 @@ function App() {
   function updateStructuredExam(updater: StructuredExamUpdater) {
     structuredHistory.update(updater);
   }
-  async function saveStructuredExam(mode: "draft" | "final") {
-    if (!structuredExam) return;
-    const snapshot = structuredExam;
+  // Phase 21F.0 — a save states the server version it starts from (ExamHistory.serverEtag): the server refuses to overwrite a newer
+  // version (409 EXAM_CONFLICT) and the teacher resolves it in SaveConflictDialog — open the server copy, save this copy as a new
+  // exam, or replace the server copy deliberately. `override` carries the snapshot / base of those resolutions.
+  const [structuredConflict, setStructuredConflict] = useState<(SaveConflict & { mode: "draft" | "final" }) | null>(null);
+  async function saveStructuredExam(mode: "draft" | "final", override?: { snapshot: StructuredExam; serverEtag: string | null }) {
+    const snapshot = override?.snapshot ?? structuredExam;
+    if (!snapshot) return;
+    const serverEtag = override ? override.serverEtag : structuredHistory.history.serverEtag;
     setStructuredSaving(true);
     setStructuredError("");
     setStructuredNotice("");
@@ -4016,13 +4023,22 @@ function App() {
       // finalization authority (structural validity + quality gates); when refused, no request is sent and nothing is
       // committed. Draft saves are never gated. Reconciliation against the latest exam is unchanged (13A saved authority).
       // The authority is loaded on demand (it already lives in the lazy builder chunk) so the initial graph does not grow.
-      const { runStructuredSave } = await import("./structuredSavePolicy");
-      const result = await runStructuredSave({
-        snapshot, mode,
-        request: payload => apiRequest<{ ok: true }>("/api/save-exam-artifact", { method: "POST", body: JSON.stringify({ kind: "exam", exam: payload }) }),
-        commitSaved: structuredHistory.commitSaved
-      });
-      if (!result.ok) { setStructuredError(result.reason); return; }
+      const { runStructuredSave, saveConditionFields, saveConflictOf } = await import("./structuredSavePolicy");
+      try {
+        const result = await runStructuredSave({
+          snapshot, mode,
+          request: payload => apiRequest<{ ok: true; etag?: string | null }>("/api/save-exam-artifact", { method: "POST", body: JSON.stringify({ kind: "exam", exam: payload, ...saveConditionFields(serverEtag) }) }),
+          commitSaved: structuredHistory.commitSaved
+        });
+        if (!result.ok) { setStructuredError(result.reason); return; }
+      }
+      catch (error) {
+        const conflict = saveConflictOf(error);
+        if (!conflict) throw error;
+        setStructuredConflict({ ...conflict, mode });
+        return;
+      }
+      setStructuredConflict(null);
       setStructuredNotice(mode === "final" ? "✓ تم اعتماد الامتحان المنظّم نهائيًا وحفظه." : "✓ تم حفظ مسودة الامتحان المنظّم.");
       await loadSavedExams();
     }
@@ -4032,6 +4048,39 @@ function App() {
     finally {
       setStructuredSaving(false);
     }
+  }
+  // Conflict resolutions (each discarding choice was already confirmed in the dialog).
+  async function reloadStructuredFromServer() {
+    const conflict = structuredConflict;
+    if (!conflict?.blobName) return;
+    setStructuredSaving(true);
+    try {
+      const result = await apiRequest<{ ok: true; exam: StructuredExam; etag?: string | null }>("/api/saved-exams", { method: "POST", body: JSON.stringify({ action: "load", blobName: conflict.blobName }) });
+      structuredHistory.open(result.exam, "saved", typeof result.etag === "string" ? result.etag : undefined);
+      setStructuredConflict(null);
+      setStructuredError("");
+      setStructuredNotice("✓ فُتحت أحدث نسخة محفوظة على الخادم.");
+    }
+    catch (error) {
+      setStructuredError(error instanceof Error ? error.message : "تعذر فتح نسخة الخادم.");
+    }
+    finally {
+      setStructuredSaving(false);
+    }
+  }
+  function saveStructuredAsCopy() {
+    const conflict = structuredConflict;
+    if (!conflict || !structuredExam) return;
+    const copy: StructuredExam = { ...structuredExam, examId: newExamId(), title: (structuredExam.title?.trim() || "امتحان") + " (نسختي)" };
+    structuredHistory.open(copy, "unsaved", null);
+    setStructuredConflict(null);
+    void saveStructuredExam(conflict.mode === "final" ? "final" : "draft", { snapshot: copy, serverEtag: null });
+  }
+  function replaceStructuredOnServer() {
+    const conflict = structuredConflict;
+    if (!conflict || !structuredExam) return;
+    setStructuredConflict(null);
+    void saveStructuredExam(conflict.mode, { snapshot: structuredExam, serverEtag: conflict.serverEtag });
   }
 
   async function openSavedExam(
@@ -4054,6 +4103,10 @@ function App() {
 
           savedAt?:
             string;
+
+          // Phase 21F.0 — the version a conditional save starts from.
+          etag?:
+            string | null;
         }>(
           "/api/saved-exams",
           {
@@ -4077,7 +4130,7 @@ function App() {
       // A saved STRUCTURED exam (has sections[]) opens in the Structured Exam Builder; a legacy flat
       // exam continues to open in the existing editor exactly as before.
       if (isStructuredExam(loadedExam)) {
-        structuredHistory.open(loadedExam as unknown as StructuredExam, "saved");
+        structuredHistory.open(loadedExam as unknown as StructuredExam, "saved", typeof result.etag === "string" && result.etag ? result.etag : undefined);
         setStructuredBuilderOpen(true);
         setStructuredError("");
         setStructuredNotice("");
@@ -7919,6 +7972,12 @@ function App() {
               returnFocusTo={() => continueStructuredRef.current ?? savedExamsToggleRef.current}
             />
           </Suspense>
+          {structuredConflict && (
+            <Suspense fallback={null}>
+              <SaveConflictDialog conflict={structuredConflict} busy={structuredSaving} onClose={() => setStructuredConflict(null)}
+                onReloadServer={() => { void reloadStructuredFromServer(); }} onSaveAsCopy={saveStructuredAsCopy} onReplaceServer={replaceStructuredOnServer} />
+            </Suspense>
+          )}
         </div>
       )}
     </TeacherAppShell>

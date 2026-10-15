@@ -12,12 +12,12 @@ import {
 
 export function useStructuredExamHistory() {
   const [history, setHistory] = useState<ExamHistory>(emptyExamHistory);
-  const open = useCallback((exam: StructuredExam, source: "saved" | "unsaved" = "saved") => setHistory(openExamHistory(exam, source)), []);
+  const open = useCallback((exam: StructuredExam, source: "saved" | "unsaved" = "saved", serverEtag?: string | null) => setHistory(openExamHistory(exam, source, serverEtag)), []);
   const clear = useCallback(() => setHistory(emptyExamHistory()), []);
   const update = useCallback((updater: StructuredExamUpdater) => setHistory(h => updateExamHistory(h, updater)), []);
   const undo = useCallback(() => setHistory(h => undoExamHistory(h)), []);
   const redo = useCallback(() => setHistory(h => redoExamHistory(h)), []);
-  const commitSaved = useCallback((snapshot: StructuredExam, saved: StructuredExam) => setHistory(h => commitSavedExamHistory(h, snapshot, saved)), []);
+  const commitSaved = useCallback((snapshot: StructuredExam, saved: StructuredExam, serverEtag?: string | null) => setHistory(h => commitSavedExamHistory(h, snapshot, saved, serverEtag)), []);
   const recover = useCallback((backup: StructuredExam) => setHistory(h => recoverExamHistory(h, backup)), []);
   return useMemo(() => ({
     history, present: history.present, canUndo: canUndo(history), canRedo: canRedo(history), dirty: isExamDirty(history),

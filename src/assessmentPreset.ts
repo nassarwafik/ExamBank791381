@@ -277,7 +277,7 @@ export function assessmentPresetFromExam(exam: StructuredExam, options: ExtractO
 }
 
 export type InstantiateOptions = { examId?: string; title?: string; sectionIdFor?: (section: AssessmentPresetSection, index: number) => string };
-export const newInstantiatedExamId = () => "EXAM-" + Date.now() + "-" + genId("").replace(/^-/, "").slice(0, 8);
+export const newInstantiatedExamId = () => genId("EXAM");
 /** A NEW draft exam from the design: fresh identities, empty content, remapped section constraints, deep-copied Blueprint. */
 export function instantiateExamFromPreset(preset: AssessmentPresetV1, options: InstantiateOptions = {}): StructuredExam {
   const sectionIdFor = options.sectionIdFor ?? (() => genId("sec"));
