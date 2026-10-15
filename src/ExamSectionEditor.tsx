@@ -2,7 +2,8 @@
 import type { BuilderSection, GradingPolicy, AnswerUnit } from "./examTypes";
 import { GRADING_POLICY_LABELS } from "./examTypes";
 import { SECTION_PRESETS, gradingRuleExplanation, newQuestion, changeSectionPolicy } from "./examBuilderState";
-import { lazy, Suspense, useState } from "react";
+import { lazy, memo, Suspense, useMemo, useState } from "react";
+import type { BuilderActions } from "./builder/builderActions";
 import { useConfirm } from "./ui/useConfirm";
 import type { BuilderQuestionType } from "./examTypes";
 // Phase 16A — the Question Type Palette is lazy (its own chunk); it hands back a KEY and the canonical factory creates the question.
@@ -33,16 +34,20 @@ type Props = {
   index: number;
   total: number;
   sectionOptions: { id: string; title: string }[];
-  patch: (p: Partial<BuilderSection>) => void;
-  onDelete: () => void;
-  onMove: (delta: number) => void;
-  onAddQuestion: (q: BuilderQuestion) => void;
-  onQuestionChange: (questionId: string, p: Partial<BuilderQuestion>) => void;
-  onQuestionDelete: (questionId: string) => void;
-  onQuestionMove: (questionId: string, delta: number) => void;
-  onQuestionDuplicate: (questionId: string) => void;
-  onQuestionMoveToSection: (questionId: string, toSectionId: string) => void;
-  onPreviewQuestion: (question: BuilderQuestion) => void;
+  /** Phase 21F.1 — the builder's stable actions (see builder/builderActions.ts) and the exam they act on. When given, they replace
+   *  the per-section callbacks below, and the cards receive the same stable object (render isolation). */
+  actions?: BuilderActions;
+  scopeKey?: string;
+  patch?: (p: Partial<BuilderSection>) => void;
+  onDelete?: () => void;
+  onMove?: (delta: number) => void;
+  onAddQuestion?: (q: BuilderQuestion) => void;
+  onQuestionChange?: (questionId: string, p: Partial<BuilderQuestion>) => void;
+  onQuestionDelete?: (questionId: string) => void;
+  onQuestionMove?: (questionId: string, delta: number) => void;
+  onQuestionDuplicate?: (questionId: string) => void;
+  onQuestionMoveToSection?: (questionId: string, toSectionId: string) => void;
+  onPreviewQuestion?: (question: BuilderQuestion) => void;
   requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
   onMediaBusyChange?: (questionId: string, busy: boolean) => void;
   // Question ids with a pending media operation (builder authority).
@@ -65,13 +70,26 @@ type Props = {
   openRequests?: ReadonlyMap<string, number>;
 };
 
-export default function ExamSectionEditor(props: Props) {
+// Phase 21F.1 — memoized: with the builder's stable actions and stable data, a section whose data did not change is skipped, and
+// its cards (memoized too) re-render only when their own question, issues or flags change.
+export default memo(ExamSectionEditor);
+
+const NOOP = () => {};
+
+function ExamSectionEditor(props: Props) {
   const { confirm, confirmDialog } = useConfirm();   // 21E.1 — the shared accessible confirmation (never window.confirm)
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Phase 19G — when the palette was opened from a scenario, the picked question is created INSIDE that scenario (after its last member) and linked.
   const [paletteFor, setPaletteFor] = useState<string | null>(null);
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint, sectionIssues, questionIssues, revealedQuestions, openRequests } = props;
-  const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
+  const { section, index, total, sectionOptions, actions, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint, sectionIssues, questionIssues, revealedQuestions, openRequests } = props;
+  const scope = props.scopeKey ?? "";
+  // The section's own operations: through the stable actions when the builder gives them, else the per-section callbacks.
+  const patch = actions ? (p: Partial<BuilderSection>) => actions.patchSection(scope, section.id, p) : (props.patch ?? NOOP);
+  const onDelete = actions ? () => actions.deleteSection(scope, section.id) : (props.onDelete ?? NOOP);
+  const onMove = actions ? (d: number) => actions.moveSection(scope, section.id, d) : (props.onMove ?? NOOP);
+  const onAddQuestion = actions ? (q: BuilderQuestion) => actions.addQuestion(scope, section.id, q) : (props.onAddQuestion ?? NOOP);
+  const { onQuestionChange = NOOP, onQuestionDelete = NOOP, onQuestionMove = NOOP, onQuestionDuplicate = NOOP, onQuestionMoveToSection = NOOP, onPreviewQuestion = NOOP } = props;
+  const groupOptions = useMemo(() => Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id })), [section.stimuli]);
   const scenarios = Array.isArray(section.scenarios) ? section.scenarios : [];
   const applySection = (next: BuilderSection) => { if (next !== section) patch({ scenarios: next.scenarios, questions: next.questions }); };
   // Phase 20D.1 — section.instructionsRichContent (presentation only); the plain `instructions` stay the fallback and are never rewritten.
@@ -187,19 +205,21 @@ export default function ExamSectionEditor(props: Props) {
             currentSectionId={section.id}
             groupOptions={groupOptions}
             scenarioLabel={(() => { const sc = scenarioOf(section, q.examQuestionId); return sc ? (sc.title?.trim() || "سيناريو") : undefined; })()}
-            onChange={p => onQuestionChange(q.examQuestionId, p)}
-            onDelete={() => onQuestionDelete(q.examQuestionId)}
-            onMove={d => onQuestionMove(q.examQuestionId, d)}
-            onDuplicate={() => onQuestionDuplicate(q.examQuestionId)}
-            onMoveToSection={to => onQuestionMoveToSection(q.examQuestionId, to)}
-            onPreview={() => onPreviewQuestion(q)}
+            {...(actions ? { actions, scopeKey: scope } : {
+              onChange: (p: Partial<BuilderQuestion>) => onQuestionChange(q.examQuestionId, p),
+              onDelete: () => onQuestionDelete(q.examQuestionId),
+              onMove: (d: number) => onQuestionMove(q.examQuestionId, d),
+              onDuplicate: () => onQuestionDuplicate(q.examQuestionId),
+              onMoveToSection: (to: string) => onQuestionMoveToSection(q.examQuestionId, to),
+              onPreview: () => onPreviewQuestion(q),
+              onMediaBusyChange: onMediaBusyChange ? (busy: boolean) => onMediaBusyChange(q.examQuestionId, busy) : undefined,
+              onToggleSelect: onToggleSelect ? () => onToggleSelect(q.examQuestionId) : undefined,
+              registerNode: registerQuestionNode ? (el: HTMLDivElement | null) => registerQuestionNode(q.examQuestionId, el) : undefined
+            })}
             requestQuestionImage={requestQuestionImage}
-            onMediaBusyChange={onMediaBusyChange ? busy => onMediaBusyChange(q.examQuestionId, busy) : undefined}
             mediaPending={pendingMediaIds?.has(q.examQuestionId) ?? false}
             disabled={disabled}
             selected={selectedIds?.has(q.examQuestionId) ?? false}
-            onToggleSelect={onToggleSelect ? () => onToggleSelect(q.examQuestionId) : undefined}
-            registerNode={registerQuestionNode ? el => registerQuestionNode(q.examQuestionId, el) : undefined}
             flash={flashQuestionId === q.examQuestionId}
             blueprint={blueprint}
             issues={questionIssues?.get(q.examQuestionId)}

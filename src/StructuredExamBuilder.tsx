@@ -27,7 +27,7 @@ import Dialog from "./ui/Dialog";
 import { useConfirm } from "./ui/useConfirm";
 import { useToast, type ToastDismissReason, type ToastDismissVia } from "./ui/Toast";
 import { applyDeletion, captureQuestionDeletion, captureSectionDeletion, deletionIsBack, restoreDeletion, type Deletion, type RestoreOutcome } from "./structuredDeletionUndo";
-import type { ExamSaveState } from "./examHistory";
+import type { ExamSaveState, EditMeta } from "./examHistory";
 import { historyShortcut, isTextEditingTarget } from "./examHistoryShortcuts";
 import { browserBackupStorage, clearExamBackup, isRecoveryCandidate, readExamBackup, writeExamBackup, type BackupStorage, type ExamBackup } from "./examAutosave";
 import {
@@ -48,6 +48,8 @@ import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import BuilderToolbar, { MORE_MENU_LABEL } from "./builder/BuilderToolbar";
 import { indexIssues, issueOccurrence, issuePartFocus, issueTargets, targetCardIssues, type IssuePart, type PartFocus, type IssueTarget } from "./builder/issueIndex";
 import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer";
+import { stabilizeIssues, type StableIssues } from "./builder/stableIssues";
+import type { BuilderActions } from "./builder/builderActions";
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
 import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown } from "./icons";
@@ -103,7 +105,9 @@ type Props = {
   exam: StructuredExam;
   // Receives an updater, not a full exam: the state owner applies it to its latest exam, so an async result
   // (AI image / upload) that resolves after other edits merges instead of reverting them.
-  onChange: (updater: StructuredExamUpdater) => void;
+  onChange: (updater: StructuredExamUpdater, meta?: EditMeta) => void;
+  /** Phase 21F.1 — a text field lost focus: the owner ends the current typing group (the next keystroke is a new undo step). */
+  onTypingEnd?: () => void;
   onSave?: (mode: SaveMode) => void;
   onExit?: () => void;
   saving?: boolean;
@@ -251,9 +255,10 @@ const UNDO_HINT = " للتراجع اضغط Ctrl+Z (أو ⌘Z) أو استخدم
 // UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
 // and pruned against the live exam so a deleted / undone question never lingers (and is never resurrected by redo).
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
+type ActionImpl = Omit<BuilderActions, "registerNode"> & { requestImage: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset> };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -266,9 +271,13 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const sourceExamId = exam.examId;
+  // Phase 21F.1 — an edit made while the browser is delivering a keyboard text entry (native `beforeinput`, see the listener below)
+  // is marked `typing`: the history authority folds consecutive keystrokes in one field into one undo step.
+  const typingNow = useRef(false);
   const update = (fn: StructuredExamUpdater) => {
     if (!alive.current) return;
-    onChange(prev => (prev.examId === sourceExamId ? fn(prev) : prev));
+    const updater: StructuredExamUpdater = prev => (prev.examId === sourceExamId ? fn(prev) : prev);
+    if (typingNow.current) onChange(updater, { typing: true }); else onChange(updater);
   };
   const setSections = (updater: (s: BuilderSection[]) => BuilderSection[]) => update(prev => ({ ...prev, sections: updater(prev.sections || []) }));
 
@@ -296,7 +305,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // silently drop the image).
   const pendingMediaIds: ReadonlySet<string> = useMemo(() => new Set(Object.keys(pendingMedia)), [pendingMedia]);
   const MEDIA_WAIT = "انتظر انتهاء معالجة الصور قبل الحفظ.";
-  const sectionOptions = (exam.sections || []).map(s => ({ id: s.id, title: s.title }));
+  // Phase 21F.1 — the same array while no section is added, removed, moved or renamed (memoized cards receive it).
+  const sectionOptionsKey = JSON.stringify((exam.sections || []).map(s => [s.id, s.title]));
+  const sectionOptions = useMemo(() => (JSON.parse(sectionOptionsKey) as [string, string][]).map(([id, title]) => ({ id, title })), [sectionOptionsKey]);
 
   // ── Phase 13A · keyboard undo / redo (outside text fields only — see examHistoryShortcuts) ──
   const historyRef = useRef({ onUndo, onRedo, canUndo, canRedo, saving: !!saving });
@@ -432,7 +443,28 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const navId = "sb-navigator-" + exam.examId.replace(/[^a-zA-Z0-9_-]/g, "");
   // Stable DOM anchors by examQuestionId (never display numbers): registered by the real cards.
   const nodes = useRef(new Map<string, HTMLDivElement>());
-  const registerQuestionNode = (id: string, el: HTMLDivElement | null) => { if (el) nodes.current.set(id, el); else nodes.current.delete(id); };
+  // Phase 21F.1 — ONE stable actions object for every section editor and card (builder/builderActions.ts). Each call runs the
+  // implementation of the latest commit (`actionImpl`, refreshed in the layout phase — before any event can call it). An action
+  // created for another exam (a late AI image / upload of an exam that is no longer open) is dropped, as the per-render closures
+  // were before (5B / 13A). Node registration only touches the node map, so it needs no implementation swap.
+  const actionImpl = useRef<ActionImpl | null>(null);
+  const [actions] = useState<BuilderActions>(() => ({
+    patchSection: (...a) => actionImpl.current?.patchSection(...a),
+    deleteSection: (...a) => actionImpl.current?.deleteSection(...a),
+    moveSection: (...a) => actionImpl.current?.moveSection(...a),
+    addQuestion: (...a) => actionImpl.current?.addQuestion(...a),
+    changeQuestion: (...a) => actionImpl.current?.changeQuestion(...a),
+    deleteQuestion: (...a) => actionImpl.current?.deleteQuestion(...a),
+    moveQuestion: (...a) => actionImpl.current?.moveQuestion(...a),
+    duplicateQuestion: (...a) => actionImpl.current?.duplicateQuestion(...a),
+    moveQuestionToSection: (...a) => actionImpl.current?.moveQuestionToSection(...a),
+    previewQuestion: (...a) => actionImpl.current?.previewQuestion(...a),
+    toggleSelect: (...a) => actionImpl.current?.toggleSelect(...a),
+    mediaBusy: (...a) => actionImpl.current?.mediaBusy(...a),
+    registerNode: (id, el) => { if (el) nodes.current.set(id, el); else nodes.current.delete(id); }
+  }));
+  // The AI image callback the owner gives changes identity on every owner render; the cards get a stable one (present iff given).
+  const [stableRequestImage] = useState(() => (q: AiImageRequestQuestion) => actionImpl.current ? actionImpl.current.requestImage(q) : Promise.reject(new Error("builder closed")));
   const [flashId, setFlashId] = useState("");
   useEffect(() => {
     if (!flashId) return;
@@ -498,6 +530,25 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     const observer = new ResizeObserver(publish);
     observer.observe(bar);
     return () => observer.disconnect();
+  }, []);
+  // Phase 21F.1 — keyboard typing detection. `beforeinput` of a text-entry kind (never a paste, a drop or a history command) in a text
+  // field marks the edit its `input` event produces in the same task; a field losing focus ends the typing group.
+  const typingEndRef = useRef(onTypingEnd);
+  useEffect(() => { typingEndRef.current = onTypingEnd; }, [onTypingEnd]);
+  useEffect(() => {
+    const root = builderRef.current;
+    if (!root) return;
+    const TYPED = /^(insertText|insertCompositionText|insertReplacementText|deleteContentBackward|deleteContentForward|deleteWordBackward|deleteWordForward)$/;
+    const onBeforeInput = (e: Event) => {
+      const kind = (e as InputEvent).inputType || "";
+      // A paste / drop / history command right after typing is never folded into the keystrokes before it.
+      typingNow.current = TYPED.test(kind) && isTextEditingTarget(e.target);
+      if (typingNow.current) window.setTimeout(() => { typingNow.current = false; }, 0);
+    };
+    const onFocusOut = (e: FocusEvent) => { if (isTextEditingTarget(e.target)) typingEndRef.current?.(); };
+    root.addEventListener("beforeinput", onBeforeInput, true);
+    root.addEventListener("focusout", onFocusOut, true);
+    return () => { root.removeEventListener("beforeinput", onBeforeInput, true); root.removeEventListener("focusout", onFocusOut, true); };
   }, []);
   // RR3-A11Y-2 / audit B-02 (WCAG 2.4.11) — a Tab / Shift+Tab never leaves keyboard focus under the sticky layers. Chromium does not
   // scroll a focus stop that is "in view" behind a sticky bar (the stuck toolbar and, with a selection, the bulk-action bar below
@@ -980,6 +1031,12 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     });
   }, [decision, exam.sections]);
   const summaryTargets = useMemo(() => issueTargets(issueIndex, exam.sections || []), [issueIndex, exam.sections]);
+  // Phase 21F.1 — the issue arrays handed to the memoized section editors / cards keep their identity while their content is the same
+  // (derived from the previous render's arrays, adjusted during render like the selection state above).
+  const [issueArrays, setIssueArrays] = useState<{ index: typeof issueIndex; value: StableIssues } | null>(null);
+  const issuesStale = !issueArrays || issueArrays.index !== issueIndex;
+  const stableIssues: StableIssues = issuesStale ? stabilizeIssues(issueArrays?.value ?? null, issueIndex, exam.sections || []) : issueArrays.value;
+  if (issuesStale) setIssueArrays({ index: issueIndex, value: stableIssues });
   const issueAnnouncement = useIssueAnnouncer(errors.length, warnings.length, ISSUE_SETTLE_MS, exam.examId);   // K3 C-F5: per exam
   // Questions the teacher opened from the summary (UI state only — never exam data, history or autosave; reset for another exam):
   // their fields keep showing their errors (FieldRevealContext) until fixed; a new count re-opens a collapsed card.
@@ -1072,6 +1129,30 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     setOpenReq(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
     window.setTimeout(() => focusQuestionIssues(target.id, instance), 0);   // after the revealed (and re-opened) card has rendered
   };
+  // Phase 21F.1 — the implementation behind the stable `actions` (refreshed every commit, before any event can run it).
+  const scoped = (scope: string) => scope === exam.examId && alive.current;
+  useLayoutEffect(() => {
+    actionImpl.current = {
+      patchSection: (scope, sid, p) => { if (scoped(scope)) setSections(s => updateSection(s, sid, p)); },
+      deleteSection: (scope, sid) => { if (scoped(scope)) deleteWithUndo(prev => captureSectionDeletion(prev, sid)); },
+      moveSection: (scope, sid, d) => { if (scoped(scope)) setSections(s => moveSection(s, sid, d)); },
+      addQuestion: (scope, sid, q) => { if (scoped(scope)) setSections(s => addQ(s, sid, q)); },
+      changeQuestion: (scope, sid, qid, p) => { if (scoped(scope)) setSections(s => updQ(s, sid, qid, p)); },
+      deleteQuestion: (scope, sid, qid) => { if (scoped(scope)) deleteWithUndo(prev => captureQuestionDeletion(prev, sid, qid)); },
+      moveQuestion: (scope, sid, qid, d) => { if (scoped(scope)) setSections(s => movQ(s, sid, qid, d)); },
+      duplicateQuestion: (scope, sid, qid) => { if (scoped(scope)) setSections(s => dupQ(s, sid, qid)); },
+      moveQuestionToSection: (scope, sid, qid, to) => { if (scoped(scope)) setSections(s => movQTo(s, sid, qid, to)); },
+      previewQuestion: (scope, sid, qid) => {
+        if (!scoped(scope)) return;
+        const section = (exam.sections || []).find(x => x.id === sid);
+        const question = section?.questions.find(x => x.examQuestionId === qid);
+        if (section && question) setPreview(singleQuestionExam(exam, section, question));
+      },
+      toggleSelect: (scope, qid) => { if (scoped(scope)) toggleSelect(qid); },
+      mediaBusy: (qid, busy) => onMediaBusyChange(qid, busy),
+      requestImage: q => (requestQuestionImage ? requestQuestionImage(q) : Promise.reject(new Error("no image service")))
+    };
+  });
   const gatesText = gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات";
 
   return (
@@ -1175,31 +1256,20 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         {(exam.sections || []).map((section, index) => (
           <ExamSectionEditor
             key={section.id}
+            actions={actions}
+            scopeKey={exam.examId}
             section={section}
             index={index}
             total={(exam.sections || []).length}
             sectionOptions={sectionOptions}
-            patch={p => setSections(s => updateSection(s, section.id, p))}
-            onDelete={() => deleteWithUndo(prev => captureSectionDeletion(prev, section.id))}
-            onMove={d => setSections(s => moveSection(s, section.id, d))}
-            onAddQuestion={q => setSections(s => addQ(s, section.id, q))}
-            onQuestionChange={(qid, p) => setSections(s => updQ(s, section.id, qid, p))}
-            onQuestionDelete={qid => deleteWithUndo(prev => captureQuestionDeletion(prev, section.id, qid))}
-            onQuestionMove={(qid, d) => setSections(s => movQ(s, section.id, qid, d))}
-            onQuestionDuplicate={qid => setSections(s => dupQ(s, section.id, qid))}
-            onQuestionMoveToSection={(qid, to) => setSections(s => movQTo(s, section.id, qid, to))}
-            onPreviewQuestion={q => setPreview(singleQuestionExam(exam, section, q))}
-            requestQuestionImage={requestQuestionImage}
-            onMediaBusyChange={onMediaBusyChange}
+            requestQuestionImage={requestQuestionImage ? stableRequestImage : undefined}
             pendingMediaIds={pendingMediaIds}
             disabled={saving}
             selectedIds={selected}
-            onToggleSelect={toggleSelect}
-            registerQuestionNode={registerQuestionNode}
             flashQuestionId={flashId || undefined}
             blueprint={exam.blueprint}
-            sectionIssues={issueIndex.bySection.get(section.id)}
-            questionIssues={issueIndex.byQuestion}
+            sectionIssues={stableIssues.bySection.get(section.id)}
+            questionIssues={stableIssues.questionsOfSection.get(section.id)}
             revealedQuestions={revealedQuestions}
             openRequests={openRequests}
           />

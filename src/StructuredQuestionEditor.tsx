@@ -1,5 +1,6 @@
 
-import { useContext, useMemo, useState } from "react";
+import { memo, useCallback, useContext, useMemo, useState } from "react";
+import type { BuilderActions } from "./builder/builderActions";
 import Field from "./ui/Field";
 import { headerFieldIssues, HEADER_FIELD_CODES } from "./teacher/questionFieldIssues";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
@@ -32,12 +33,16 @@ type Props = {
   groupOptions: { id: string; label: string }[];
   // Phase 19G — the title of the scenario this question is linked to (membership is read from the section, never stored on the question).
   scenarioLabel?: string;
-  onChange: (patch: Partial<BuilderQuestion>) => void;
-  onDelete: () => void;
-  onMove: (delta: number) => void;
-  onDuplicate: () => void;
-  onMoveToSection: (toSectionId: string) => void;
-  onPreview: () => void;
+  /** Phase 21F.1 — the builder's stable actions and the exam they act on (render isolation). When given, they replace the per-card
+   *  callbacks below (the card names its own section and question). */
+  actions?: BuilderActions;
+  scopeKey?: string;
+  onChange?: (patch: Partial<BuilderQuestion>) => void;
+  onDelete?: () => void;
+  onMove?: (delta: number) => void;
+  onDuplicate?: () => void;
+  onMoveToSection?: (toSectionId: string) => void;
+  onPreview?: () => void;
   // Phase 5B — authenticated AI image callback (App.tsx). Optional so existing renders/tests without media
   // still work; when absent the media editor simply does not offer AI generation.
   requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
@@ -65,8 +70,27 @@ type Props = {
   openRequest?: number;
 };
 
-export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint, issues, revealIssues, openRequest } = props;
+// Phase 21F.1 — memoized: with the builder's stable actions and stable data, a card re-renders only when ITS question, issues,
+// selection or flags change (typing in one question no longer re-renders the others).
+export default memo(StructuredQuestionEditor);
+
+const NOOP = () => {};
+
+function StructuredQuestionEditor(props: Props) {
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, scenarioLabel, requestQuestionImage, mediaPending, disabled, selected, flash, blueprint, issues, revealIssues, openRequest, actions } = props;
+  // Phase 21F.1 — the card's operations: the builder's stable actions (naming this exam, section and question), else its callbacks.
+  const scope = props.scopeKey ?? "", id = q.examQuestionId;
+  const onChange = actions ? (p: Partial<BuilderQuestion>) => actions.changeQuestion(scope, currentSectionId, id, p) : (props.onChange ?? NOOP);
+  const onDelete = actions ? () => actions.deleteQuestion(scope, currentSectionId, id) : (props.onDelete ?? NOOP);
+  const onMove = actions ? (d: number) => actions.moveQuestion(scope, currentSectionId, id, d) : (props.onMove ?? NOOP);
+  const onDuplicate = actions ? () => actions.duplicateQuestion(scope, currentSectionId, id) : (props.onDuplicate ?? NOOP);
+  const onMoveToSection = actions ? (to: string) => actions.moveQuestionToSection(scope, currentSectionId, id, to) : (props.onMoveToSection ?? NOOP);
+  const onPreview = actions ? () => actions.previewQuestion(scope, currentSectionId, id) : (props.onPreview ?? NOOP);
+  const onMediaBusyChange = actions ? (busy: boolean) => actions.mediaBusy(id, busy) : props.onMediaBusyChange;
+  const onToggleSelect = actions ? () => actions.toggleSelect(scope, id) : props.onToggleSelect;
+  const ownRegister = props.registerNode;
+  // A stable ref callback (a new function on every render would detach / re-attach the node on each keystroke).
+  const registerNode = useCallback((el: HTMLDivElement | null) => { if (actions) actions.registerNode(id, el); else ownRegister?.(el); }, [actions, id, ownRegister]);
   const [open, setOpen] = useState(true);
   // A summary click on a collapsed card opens it during the same render (no extra commit), so the builder can focus the field.
   const openSignal = openRequest ?? revealIssues;

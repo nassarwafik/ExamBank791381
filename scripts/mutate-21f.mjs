@@ -16,6 +16,8 @@ const sha = buf => createHash("sha256").update(buf).digest("hex");
 
 const F0_API = ["api/tests/saved-exam-safety-21f0.test.js"];
 const F0_CLIENT = ["src/structuredSaveConditions.21f0.test.ts", "src/App.saveConflict.21f0.test.tsx"];
+const F1_ISO = ["src/StructuredExamBuilder.renderIsolation.21f1.test.tsx"];
+const F1_TYPING = ["src/examHistory.typing.21f1.test.tsx"];
 export const CAMPAIGNS = {
   f0: [
     { id: "F0-M1", what: "conditional save ignores the stated base version (If-Match dropped)", file: "api/src/lib/saved-exam-access.js",
@@ -42,6 +44,36 @@ export const CAMPAIGNS = {
       find: "  if (p.code !== \"EXAM_CONFLICT\") return null;", replace: "  return null;", tests: F0_CLIENT },
     { id: "F0-M12", what: "new exam ids come from the clock again", file: "src/examBuilderState.ts",
       find: "export function newExamId(): string { return genId(\"EXAM\"); }", replace: "export function newExamId(): string { return \"EXAM-\" + Date.now(); }", tests: F0_CLIENT }
+  ],
+  f1: [
+    { id: "F1-M1", what: "question cards are no longer memoized", file: "src/StructuredQuestionEditor.tsx",
+      find: "export default memo(StructuredQuestionEditor);", replace: "export default StructuredQuestionEditor;", tests: F1_ISO },
+    { id: "F1-M2", what: "section editors are no longer memoized", file: "src/ExamSectionEditor.tsx",
+      find: "export default memo(ExamSectionEditor);", replace: "export default ExamSectionEditor;", tests: F1_ISO },
+    { id: "F1-M3", what: "issue arrays are not stabilized (every card with an issue re-renders on every edit)", file: "src/builder/stableIssues.ts",
+      find: "out.set(key, old && sameList(old, list) ? old : list);", replace: "out.set(key, list);", tests: F1_ISO },
+    { id: "F1-M4", what: "a section's question-issue map is rebuilt on every edit (every section re-renders)", file: "src/builder/stableIssues.ts",
+      find: "questionsOfSection.set(s.id, old && sameEntries(old, own) ? old : own);", replace: "questionsOfSection.set(s.id, own);", tests: F1_ISO },
+    { id: "F1-M5", what: "the actions' implementation is captured once (stale exam in later actions)", file: "src/StructuredExamBuilder.tsx",
+      find: "      requestImage: q => (requestQuestionImage ? requestQuestionImage(q) : Promise.reject(new Error(\"no image service\")))\n    };\n  });", replace: "      requestImage: q => (requestQuestionImage ? requestQuestionImage(q) : Promise.reject(new Error(\"no image service\")))\n    };\n  }, []);", tests: F1_ISO },
+    { id: "F1-M6", what: "actions are not scoped to the exam (a late result of exam A lands in exam B)", file: "src/StructuredExamBuilder.tsx",
+      find: "  const scoped = (scope: string) => scope === exam.examId && alive.current;", replace: "  const scoped = (_scope: string) => alive.current;", tests: ["src/StructuredExamBuilder.reliability.test.tsx", "src/StructuredExamBuilder.mediaState.test.tsx"] },
+    { id: "F1-M7", what: "typed keystrokes are never coalesced", file: "src/examHistory.ts",
+      find: "  if (continues) return { ...h, present: next, future: [], typing };", replace: "", tests: F1_TYPING },
+    { id: "F1-M8", what: "a typing group folds the saved checkpoint", file: "src/examHistory.ts",
+      find: "    && h.past.length > 0 && h.present !== h.savedCheckpoint;", replace: "    && h.past.length > 0;", tests: F1_TYPING },
+    { id: "F1-M9", what: "the typing window is ignored (a pause does not start a new step)", file: "src/examHistory.ts",
+      find: "now - h.typing.at <= TYPING_COALESCE_MS", replace: "true", tests: F1_TYPING },
+    { id: "F1-M10", what: "any edit (not only keyboard typing) is coalesced", file: "src/examHistory.ts",
+      find: "  const path = meta.typing ? typingPathOf(h.present, next) : null;", replace: "  const path = typingPathOf(h.present, next);", tests: F1_TYPING },
+    { id: "F1-M11", what: "a paste right after typing joins the typing group", file: "src/StructuredExamBuilder.tsx",
+      find: "      typingNow.current = TYPED.test(kind) && isTextEditingTarget(e.target);", replace: "      typingNow.current = typingNow.current || (TYPED.test(kind) && isTextEditingTarget(e.target));", tests: F1_TYPING },
+    { id: "F1-M12", what: "leaving a field does not end the typing group", file: "src/StructuredExamBuilder.tsx",
+      find: "    const onFocusOut = (e: FocusEvent) => { if (isTextEditingTarget(e.target)) typingEndRef.current?.(); };", replace: "    const onFocusOut = (_e: FocusEvent) => {};", tests: F1_TYPING },
+    { id: "F1-M13", what: "undo does not end the typing group", file: "src/examHistory.ts",
+      find: "  return closeTypingGroup({ ...h, present: previous, past: h.past.slice(0, -1), future: [h.present as StructuredExam, ...h.future] });", replace: "  return { ...h, present: previous, past: h.past.slice(0, -1), future: [h.present as StructuredExam, ...h.future] };", tests: F1_TYPING },
+    { id: "F1-M14", what: "a non-text change (a number, an added item) counts as typing", file: "src/examHistory.ts",
+      find: "    if ((tx === \"string\" || x === undefined) && (ty === \"string\" || y === undefined)) return path;", replace: "    if (tx !== \"object\" || ty !== \"object\" || x === null || y === null) return path;", tests: F1_TYPING }
   ]
 };
 
