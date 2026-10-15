@@ -59,4 +59,3 @@ export default function LibrarySearch({ courses, active, onActivate, query, onQu
     </section>
   );
 }
-
