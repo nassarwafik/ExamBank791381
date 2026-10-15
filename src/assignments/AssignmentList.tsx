@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { attemptPolicyLabel } from "./attemptPolicy";
+import { describeAssignmentDeadline } from "./assignmentDeadline";
 import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
@@ -28,6 +29,7 @@ export type AssignmentListProps = {
   onPurge: (item: Item) => void;
   onCreate: () => void;
   fmt: (value: string) => string;
+  now?: number; // injected clock for deterministic UI checks; defaults to render-time wall clock
 };
 
 export default function AssignmentList(p: AssignmentListProps) {
@@ -45,12 +47,13 @@ export default function AssignmentList(p: AssignmentListProps) {
         {p.items.map(item => {
           const selected = item.assignmentId === p.selectedId;
           const archived = item.status === "archived";
+          const deadline = describeAssignmentDeadline(item, p.now ?? Date.now());
           return (
             <li key={item.assignmentId} className={"assignment-row eb-assign-row" + (selected ? " selected" : "") + (archived ? " archived" : "")}>
               <div className="eb-assign-row-main">
                 <div className="eb-assign-row-title"><strong>{item.title}</strong><StatusBadge tone={item.status === "published" ? "success" : item.status === "archived" ? "neutral" : "warn"} className={"assignment-status " + item.status}>{STATUS_LABEL[item.status]}</StatusBadge></div>
                 <span className="eb-assign-row-meta">{item.className}{item.className ? " · " : ""}{item.questionCount} سؤال · {item.totalMarks} علامة · {item.maxAttempts || 1} محاولة · {item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}{item.attemptPolicy && item.attemptPolicy !== "continuous" ? " · " + attemptPolicyLabel(item.attemptPolicy) : ""}</span>
-                <small className="eb-assign-row-due">التسليم: {p.fmt(item.dueAt)}{archived && item.archivedAt ? " · أُرشف: " + p.fmt(item.archivedAt) : ""}</small>
+                <small className={"eb-assign-row-due"+(deadline.tone==="overdue"?" is-overdue":deadline.tone==="soon"?" is-due-soon":"")}>التسليم: {deadline.display}{deadline.message ? " · " + deadline.message : ""}{archived && item.archivedAt ? " · أُرشف: " + p.fmt(item.archivedAt) : ""}</small>
               </div>
               <div className="eb-assign-row-actions">
                 <button type="button" className="eb-button is-small" aria-pressed={selected} onClick={e => p.onOpen(item, e.currentTarget)} disabled={p.busy}>فتح</button>

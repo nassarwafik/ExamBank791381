@@ -263,3 +263,7 @@
 @media (prefers-reduced-motion: reduce) {
   .eb-assign-row, .library-item { transition: none; }
 }
+
+/* Phase 21E: informational global due-date states, distinct from focus/selection. */
+.eb-assign-row-due.is-due-soon { color: var(--eb-warn-tx); font-weight: var(--eb-fw-semibold); }
+.eb-assign-row-due.is-overdue { color: var(--eb-danger-tx); font-weight: var(--eb-fw-semibold); }
