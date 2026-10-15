@@ -175,7 +175,6 @@
   border-radius: var(--eb-r-xl);
   box-shadow: var(--eb-sh-sm);
 }
-.eb-assign-toolbar:focus { outline: none; }
 .eb-assign-toolbar:focus-visible { outline: var(--eb-focus-ring); outline-offset: -2px; }
 .eb-assign-toolbar .eb-field-inline { font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); }
 .eb-assign-toolbar :is(input, select) {
