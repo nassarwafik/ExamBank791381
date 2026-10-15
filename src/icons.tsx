@@ -545,3 +545,110 @@ export function IconCompass(props: IconProps) {
     </svg>
   );
 }
+
+// ── Phase 21F.2 — Exam Studio icons (same outline style: 20×20, stroke = currentColor) ──
+export function IconGrip(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="7.5" cy="5" r=".9" /><circle cx="12.5" cy="5" r=".9" />
+      <circle cx="7.5" cy="10" r=".9" /><circle cx="12.5" cy="10" r=".9" />
+      <circle cx="7.5" cy="15" r=".9" /><circle cx="12.5" cy="15" r=".9" />
+    </svg>
+  );
+}
+
+export function IconSettings(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10" cy="10" r="2.6" />
+      <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" />
+    </svg>
+  );
+}
+
+export function IconChoice(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="4.5" cy="6" r="1.8" /><circle cx="4.5" cy="14" r="1.8" />
+      <path d="M8.5 6h8M8.5 14h8" />
+    </svg>
+  );
+}
+
+export function IconToggle(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2" y="6" width="16" height="8" rx="4" />
+      <circle cx="13.5" cy="10" r="2.2" />
+    </svg>
+  );
+}
+
+export function IconText(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h8" />
+    </svg>
+  );
+}
+
+export function IconLayers(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m10 3 7.5 4.2L10 11.4 2.5 7.2 10 3Z" />
+      <path d="m2.5 11 7.5 4.2 7.5-4.2" />
+    </svg>
+  );
+}
+
+export function IconSliders(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 6h8M15 6h2M3 14h3M10 14h7" />
+      <circle cx="13" cy="6" r="1.8" /><circle cx="8" cy="14" r="1.8" />
+    </svg>
+  );
+}
+
+export function IconFlag(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4.5 17.5V3M4.5 3.5h9.5l-1.8 3.5 1.8 3.5H4.5" />
+    </svg>
+  );
+}
+
+export function IconFile(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M11.5 2.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 17.5h8a1.5 1.5 0 0 0 1.5-1.5V6.5l-4-4Z" />
+      <path d="M11.5 2.5v4h4" />
+    </svg>
+  );
+}
+
+export function IconCode(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m7 6-4 4 4 4M13 6l4 4-4 4" />
+    </svg>
+  );
+}
+
+export function IconOutline(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M7.5 5h9M7.5 10h9M7.5 15h9" />
+      <path d="M3.5 5h.01M3.5 10h.01M3.5 15h.01" strokeWidth={2.4} />
+    </svg>
+  );
+}
+
+export function IconKeyboard(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2" y="5" width="16" height="10" rx="2" />
+      <path d="M5 8.5h.01M8 8.5h.01M11 8.5h.01M14 8.5h.01M6 12h8" />
+    </svg>
+  );
+}
