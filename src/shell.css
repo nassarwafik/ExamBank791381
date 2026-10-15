@@ -209,3 +209,43 @@
   .eb-teacher-identity { justify-content: center; padding-inline: 0; }
   .eb-teacher-identity-name { display: none; }
 }
+
+/* Phase 21E-V1 — teacher visual foundation.
+   Scope to the teacher shell; preserves navigation semantics, drawer geometry and z-index layering. */
+.eb-shell {
+  background:
+    radial-gradient(ellipse at 85% 0%, color-mix(in srgb, var(--eb-primary) 7%, transparent), transparent 50%),
+    var(--eb-bg);
+}
+.eb-sidebar {
+  box-shadow: -1px 0 0 color-mix(in srgb, var(--eb-nav-text) 10%, transparent);
+}
+.eb-sidebar-top {
+  padding-block-end: var(--eb-space-4);
+  margin-block-end: var(--eb-space-2);
+}
+.eb-brand-mark {
+  width: 42px;
+  height: 42px;
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--eb-primary) 22%, transparent);
+}
+.eb-nav-link {
+  min-height: 44px;
+  border-radius: var(--eb-r-md);
+}
+.eb-nav-link.is-active {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eb-primary-100) 25%, transparent);
+}
+/* Inset ring: the scrolling .eb-nav (overflow-y: auto) clips anything drawn outside the link. */
+.eb-nav-link:focus-visible {
+  outline: 2px solid var(--eb-primary-100);
+  outline-offset: -2px;
+}
+/* No stacking context on .eb-shell-main / .eb-shell-content: the Reader's presentation mode and index drawer are fixed
+   layers rendered in place inside <main>, and must paint above the sticky sidebar (teacherShellLayers.21ev1.test.ts). */
+@media (max-width: 1023px) {
+  .eb-sidebar { box-shadow: var(--eb-sh-lg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eb-brand-mark { transition: none; }
+}
