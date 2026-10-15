@@ -31,6 +31,9 @@ describe("21F.1 typingPathOf — the one text value an edit changed", () => {
     expect(typingPathOf(a, { ...a, title: "عنوان" })).toBe("/title");
     expect(typingPathOf(a, setText("qB", "ب")(setText("qA", "أ")(a)))).toBeNull();
     expect(typingPathOf(a, { ...a, sections: a.sections.map(s => ({ ...s, questions: s.questions.map(q => ({ ...q, marks: 3 })) })) })).toBeNull();
+    // ONE number changed (a marks field typed into) is not text: never coalesced.
+    expect(typingPathOf(a, { ...a, sections: a.sections.map(s => ({ ...s, questions: s.questions.map((q, i) => (i === 0 ? { ...q, marks: 5 } : q)) })) })).toBeNull();
+    expect(typingPathOf(a, { ...a, sections: [{ ...a.sections[0], instructions: undefined }] })).toBeNull();
     expect(typingPathOf(a, { ...a, sections: [{ ...a.sections[0], questions: a.sections[0].questions.slice(1) }] })).toBeNull();
   });
 });
@@ -66,6 +69,15 @@ describe("21F.1 updateExamHistory — keyboard typing in one field is one undo s
     ({ h, t } = typeInto(h, "qA", "ج", t, 100, "أب"));
     ({ h } = typeInto(h, "qA", "د", t, 100, "أبج"));
     expect(textOf(h, "qA")).toBe("أبجد");
+    expect(textOf(undoExamHistory(h), "qA")).toBe("أب");
+  });
+  it("undo alone ends the group: typing after an undo is a new step", () => {
+    let { h, t } = typeInto(openExamHistory(exam(), "saved"), "qA", "أب", 0);
+    ({ h, t } = typeInto(h, "qB", "ج", t));
+    h = undoExamHistory(h);
+    expect(h.typing).toBeUndefined();
+    ({ h } = typeInto(h, "qA", "د", t, 100, "أب"));
+    expect(h.past).toHaveLength(2);
     expect(textOf(undoExamHistory(h), "qA")).toBe("أب");
   });
   it("undo / redo / closeTypingGroup end the group", () => {

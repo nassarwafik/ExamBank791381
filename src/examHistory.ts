@@ -116,8 +116,8 @@ export type EditMeta = { typing?: boolean; now?: number };
 /** Apply a functional updater to the LATEST present. No-op results create no entry; a null present stays null.
  *  Phase 21F.1 — typing coalescing: a TYPED edit (meta.typing) that changes only the text value the previous typed edit changed,
  *  within TYPING_COALESCE_MS of it, REPLACES the present instead of pushing a new step — «تراجع» after typing a sentence restores the
- *  whole sentence, and real history is no longer lost after 100 keystrokes. Every other edit is its own step, exactly as before. The
- *  saved checkpoint is never folded into a group (the state the server holds stays reachable by undo). */
+ *  whole sentence, and real history is no longer lost after 100 keystrokes. Every other edit is its own step, exactly as before. A
+ *  successful save ends the group (commitSavedExamHistory), so the state the server holds stays reachable by undo. */
 export function updateExamHistory(h: ExamHistory, updater: StructuredExamUpdater, meta: EditMeta = {}): ExamHistory {
   if (!h.present) return h;
   const next = updater(h.present);
@@ -125,8 +125,9 @@ export function updateExamHistory(h: ExamHistory, updater: StructuredExamUpdater
   const now = meta.now ?? Date.now();
   const path = meta.typing ? typingPathOf(h.present, next) : null;
   const typing = path === null ? undefined : { path, at: now };
+  // (A save, undo, redo, recovery and open all end the group — closeTypingGroup — so the state the server holds is never folded.)
   const continues = !!typing && !!h.typing && h.typing.path === typing.path && now - h.typing.at <= TYPING_COALESCE_MS && now >= h.typing.at
-    && h.past.length > 0 && h.present !== h.savedCheckpoint;
+    && h.past.length > 0;
   if (continues) return { ...h, present: next, future: [], typing };
   const past = h.past.length >= HISTORY_LIMIT ? [...h.past.slice(h.past.length - HISTORY_LIMIT + 1), h.present] : [...h.past, h.present];
   const out: ExamHistory = { ...h, present: next, past, future: [] };
