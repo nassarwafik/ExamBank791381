@@ -9,13 +9,14 @@ import {
   IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
   IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar, IconMail, IconCheck } from "../icons";
 import {
-  NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, PRIMARY_NAV, EXAM_BANK_NAV, FOOTER_NAV,
+  NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, PRIMARY_SECTIONS, EXAM_SECTION_LABEL, ACCOUNT_SECTION_LABEL,
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
 } from "./teacherNav";
 import TeacherIdentity from "../teacher/TeacherIdentity";
 import type { TeacherProfile } from "../teacher/teacherProfile";
 import "../ui/ui.css";
 import "../shell.css";
+import "./teacher-nav-21e.css";
 
 // UX-2 — Teacher App Shell. Consumes the existing navigation state (App.tsx owns it) and renders: skip link,
 // sidebar (expanded ≥1280 / compact rail 1024–1279 / drawer <1024, plus a manual compact toggle), page header
@@ -117,6 +118,18 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
     );
   }
 
+  // Phase 21E main navigation — a labelled section: a visible label that also names the group for assistive technology (the
+  // compact rail hides the label visually, never from the accessibility tree).
+  function section(id: string, label: string, body: ReactNode, extraClass = "") {
+    const labelId = "eb-nav-section-" + id;
+    return (
+      <div key={id} className={"eb-nav-section" + extraClass} role="group" aria-labelledby={labelId}>
+        <p id={labelId} className="eb-nav-section-label">{label}</p>
+        {body}
+      </div>
+    );
+  }
+
   const crumbs = breadcrumbFor(nav).map(c => ({ label: c.label, onSelect: c.navId ? () => onNavigate(c.navId as TeacherNavId) : undefined }));
 
   return (
@@ -133,7 +146,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
       >
         <div className="eb-sidebar-top">
           <div className="eb-brand">
-            <span className="eb-brand-mark" aria-hidden="true"><BrandMark size={36} /></span>
+            <span className="eb-brand-mark" aria-hidden="true"><BrandMark size={40} /></span>
             <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
           </div>
           {drawerOpen ? (
@@ -149,21 +162,29 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
             />
           )}
         </div>
-        {identity && <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact={compact} />}
         <nav className="eb-nav" aria-label="الأقسام">
-          {PRIMARY_NAV.map(id => navButton(id))}
+          {PRIMARY_SECTIONS.map(s => section(s.id, s.label, s.items.map(id => navButton(id))))}
           {/* UX-6c — the group head is a real destination (Exam Bank management); builder + import stay as its children. */}
-          <div className="eb-nav-group" role="group" aria-label={EXAM_BANK_GROUP_LABEL}>
-            {navButton(EXAM_BANK_HEAD, "group-head")}
-            {EXAM_BANK_NAV.map(id => navButton(id, "child"))}
-          </div>
+          {section("exams", EXAM_SECTION_LABEL, (
+            <div className="eb-nav-group" role="group" aria-label={EXAM_BANK_GROUP_LABEL}>
+              {navButton(EXAM_BANK_HEAD, "group-head")}
+              {EXAM_BANK_NAV.map(id => navButton(id, "child"))}
+            </div>
+          ))}
         </nav>
         <nav className="eb-nav eb-nav-footer" aria-label="إعدادات وحساب">
           {FOOTER_NAV.map(id => navButton(id))}
-          {!identity && <div className="eb-user" title={displayName}><IconUser size={16} /><span className="eb-nav-label">{displayName}</span></div>}
-          <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
-            <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
-          </button>
+          {/* Phase 21E — the account controls together at the bottom: who is signed in, then «تسجيل الخروج». */}
+          {section("account", ACCOUNT_SECTION_LABEL, (
+            <>
+              {identity
+                ? <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact={compact} />
+                : <div className="eb-user" title={displayName}><IconUser size={16} /><span className="eb-nav-label">{displayName}</span></div>}
+              <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
+                <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
+              </button>
+            </>
+          ), " eb-nav-account")}
         </nav>
       </aside>
       <div className="app-shell-main eb-shell-main">
