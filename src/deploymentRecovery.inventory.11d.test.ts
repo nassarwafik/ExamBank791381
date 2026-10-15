@@ -5,7 +5,7 @@
 // changing its key, or reusing a key fails here by name.
 import { describe, it, expect } from "vitest";
 
-const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const ALL = import.meta.glob(["./**/*.ts", "./**/*.tsx", "!./**/*.test.ts", "!./**/*.test.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 /** [file, component, module path, stable key] — the protected lazy views. */
@@ -52,6 +52,9 @@ const PROTECTED: [string, string, string, string][] = [
   // loaded on first use by useDeferredConfirm (bundle guard: no initial-graph file carries the dialog layer).
   ["./App.tsx", "Dialog", "./ui/Dialog", "teacher-marks-distribution-dialog"],
   ["./ui/useDeferredConfirm.tsx", "LazyConfirmDialog", "./ConfirmDialog", "shared-confirm-dialog"],
+  // 21E L3-B — the search panel loads on demand in the Reader («بحث») and in the teacher library; one key per call site.
+  ["./learning/reader/LearningReader.tsx", "LearningSearchPanel", "../search/LearningSearchPanel", "reader-search-panel"],
+  ["./learning/search/LibrarySearch.tsx", "LearningSearchPanel", "./LearningSearchPanel", "library-search-panel"],
 ];
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
