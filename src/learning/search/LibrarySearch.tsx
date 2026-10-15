@@ -6,7 +6,7 @@ import type { LearningCourse } from "../catalog";
 import type { SearchHit, SearchSource } from "./searchModel";
 
 // The search panel is its own lazy chunk, loaded only when the teacher opens the library search.
-const LearningSearchPanel = lazy(lazyWithRetry(() => import("./LearningSearchPanel"), "learning-search-panel"));
+const LearningSearchPanel = lazy(lazyWithRetry(() => import("./LearningSearchPanel"), "library-search-panel"));
 
 /**
  * Phase 21E L3-B — the teacher's library-wide search (titles + keywords of every readable, filter-matching book). The

@@ -24,7 +24,7 @@ import type { SearchHit, SearchProviderFactory, SearchSource } from "../search/s
 
 // Phase 21E L3-B — the search panel is its own lazy chunk: the Reader pays for it only when search is opened, and it
 // indexes the manifest's titles + keywords only (opening it imports no module body).
-const LearningSearchPanel = lazy(lazyWithRetry(() => import("../search/LearningSearchPanel"), "learning-search-panel"));
+const LearningSearchPanel = lazy(lazyWithRetry(() => import("../search/LearningSearchPanel"), "reader-search-panel"));
 
 export type { ReaderContentApi } from "./readerContentApi";
 
