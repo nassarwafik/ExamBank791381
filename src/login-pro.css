@@ -147,8 +147,8 @@
    CSS-only: do not alter session validation, role selection, or routing. */
 .auth-input input:focus-visible,
 .auth-submit:focus-visible {
-  outline: 2px solid var(--eb-focus);
-  outline-offset: 2px;
+  outline: var(--eb-focus-ring);
+  outline-offset: var(--eb-focus-offset);
 }
 .auth-submit {
   min-height: var(--eb-control-h-touch, 44px);
