@@ -21,7 +21,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, onPageChange: onPageChangeProp, embedded = false }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, onPageChange: onPageChangeProp, embedded = false, visitedScope }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -45,6 +45,9 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   /** SEMANTICS only, forwarded verbatim to LearningReader: the host already owns the page's <main> (the teacher app
    *  shell), so the Reader's content column renders as a <div>. Default false (the student's full-screen Reader). */
   embedded?: boolean;
+  /** Phase 21E L2-B — the authenticated student's scope for the device-local "visited" marks, forwarded to the Reader
+   *  for STUDENT sessions only (a teacher preview never shows marks). Absent → no marks. */
+  visitedScope?: string;
 }) {
   const [view, setView] = useState<View>({ kind: "reader", pageId: initialPageId });
   const [list, setList] = useState<ListState>({ kind: "loading" });
@@ -174,6 +177,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       initialPresentation={view.kind === "reader" ? view.presentation : undefined}
       onPresentationChange={onPresentationChange}
       embedded={embedded}
+      visitedScope={actor === "student" ? visitedScope : undefined}
     />
   );
 }

@@ -11,7 +11,7 @@ import { createStudyClient } from "../learning/study/studyClient";
  * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
  * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, onPageChange }: {
+export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, onPageChange, studentId }: {
   courseId: string;
   allowedModuleIds: string[];
   token: string;
@@ -24,6 +24,9 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   initialPageId?: string;
   /** Phase 9A — the Reader's page-change signal (the portal remembers this student's page on this device). */
   onPageChange?: (pageId: string) => void;
+  /** Phase 21E L2-B — the authenticated student's server-issued id: scopes the device-local "visited" marks in the
+   *  index to this student and course. Absent / empty → no marks are read, written or shown. */
+  studentId?: string;
 }) {
   const key = allowedModuleIds.join("|");
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -42,6 +45,7 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       onStudyPointsEarned={onStudyPointsEarned}
       initialPageId={initialPageId}
       onPageChange={onPageChange}
+      visitedScope={studentId && studentId.trim() ? "student:" + studentId.trim() : undefined}
     />
   );
 }

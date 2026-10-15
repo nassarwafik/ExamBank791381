@@ -13,6 +13,8 @@ import { lazyWithRetry } from "./lazyWithRetry";
 import EmptyState from "./ui/EmptyState";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import StudentIdentityCard from "./student/StudentIdentityCard";
+import StudentKpiStrip from "./student/StudentKpiStrip";
+import "./student/student-portal-v2.css";
 import NowSection from "./student/NowSection";
 import StudentProgressSection from "./student/StudentProgressSection";
 import StudentLearningMaterials, { type StudentLearningCourse } from "./student/StudentLearningMaterials";
@@ -367,6 +369,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
           token={token}
           initialPageId={readerInitialPageId}
+          studentId={data.student.userId}
           onPageChange={pageId => saveReaderPosition(data.student.userId, { courseId: readerCourse.courseId, pageId })}
           onTrainingSubmitted={() => { strengthDirtyRef.current = true; }}
           onStudyPointsEarned={() => { strengthDirtyRef.current = true; }}
@@ -422,14 +425,31 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       onOpenMessages: () => openMessages("direct"),
       onRetry: () => void loadNotifications()
     }}>
-      <div className="eb-sp">
+      <div className="eb-sp eb-sp-v2">
+        {/* Phase 21E V2 — the first load shows the page's shape (decorative skeleton) under the same status line. */}
+        {loading && !data && (
+          <div className="eb-sp-skeleton" aria-hidden="true">
+            <span className="eb-sp-skel is-hero" /><span className="eb-sp-skel is-kpi" /><span className="eb-sp-skel is-kpi" /><span className="eb-sp-skel is-kpi" /><span className="eb-sp-skel is-kpi" />
+            <span className="eb-sp-skel is-panel" /><span className="eb-sp-skel is-panel" />
+          </div>
+        )}
         {loading && <p className="eb-muted eb-sp-status" role="status">جارٍ تحميل حسابك...</p>}
         {busy && <p className="eb-muted eb-sp-status" role="status">جارٍ فتح الواجب...</p>}
         {error && <div className="platform-error" role="alert">{error}</div>}
+        {/* Phase 21E V2 — the dashboard itself failed (no data to show): offer one explicit retry of the same read. */}
+        {error && !loading && !data && (
+          <div className="eb-sp-retry">
+            <button type="button" className="eb-button is-primary" onClick={() => void load()}>إعادة المحاولة</button>
+          </div>
+        )}
         {notice && <div className="platform-notice eb-sp-notice" role="status">{notice}<button type="button" className="eb-notif-retry" onClick={() => setNotice("")}>إغلاق</button></div>}
         {!loading && data && stats && (
           <>
             <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} stageGroup={stageGroup} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+            <StudentKpiStrip
+              kpis={{ actionable: now_.actionable.length, inProgress: Number(stats.inProgress || 0), pendingReview: Number(stats.pendingReview || 0), averageFinalized, stageNumber: strength ? strength.stageNumber : null, stageCount: strength ? strength.stageCount : 25 }}
+              onOpenNow={() => scrollToSection("eb-sp-now-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")} onOpenProgress={() => scrollToSection("eb-sp-progress-title")}
+            />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
             <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={() => openMessages("direct")} progress={todayProgress} onOpenProgress={() => scrollToSection("eb-sp-progress-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")}
               projectEvaluation={projectEvaluation} onOpenProjects={() => scrollToSection("eb-sp-projects-title")} />
@@ -438,7 +458,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
             <MessagePushCard token={token} />
             <StudentLearningMaterials token={token} onCoursesChange={setCourses} onOpen={course => { setReaderInitialPageId(undefined); setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
             <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
-            <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
+            <section className="eb-sp-panel eb-sp-tasks-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
               <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">
                 {FILTERS.map(f => <button key={f.key} type="button" className="eb-chip-button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</button>)}
