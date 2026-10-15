@@ -117,11 +117,13 @@ export default function LearningReader({
   // result opened from the panel offers «العودة إلى نتائج البحث», which reopens it with the query and focus restored.
   const [searchOpen, setSearchOpen] = useState(false);
   // The live query is held by the search dialog itself (typing re-renders the panel only, never the page body or the
-  // two indexes); the Reader keeps it in a ref so it survives close / reopen, and snapshots it for the back control.
+  // two indexes). The dialog mirrors it into `searchQueryRef`; the Reader copies it into `savedSearchQuery` only when the
+  // dialog opens or closes, so it survives close / reopen and labels the back control.
   const searchQueryRef = useRef("");
+  const [savedSearchQuery, setSavedSearchQuery] = useState("");
   const [searchOpening, setSearchOpening] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [searchReturn, setSearchReturn] = useState<string | null>(null);
+  const [searchReturn, setSearchReturn] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
   const pendingSearchToggleFocusRef = useRef(false);
@@ -237,7 +239,7 @@ export default function LearningReader({
   // not focused in every browser, so the trap's own "restore the previous element" could fall back to <body>.
   const closeSearch = useCallback(() => {
     setSearchOpen(false); setSearchError(""); pendingSearchToggleFocusRef.current = true;
-    setSearchReturn(r => (r === null ? null : searchQueryRef.current));
+    setSavedSearchQuery(searchQueryRef.current);
   }, []);
   useFocusTrap(searchRef, searchOpen, closeSearch);
   useEffect(() => {
@@ -259,7 +261,7 @@ export default function LearningReader({
     () => (manifest && searchScopeValid && searchScope !== undefined ? [{ courseId, courseTitle: "كتاب " + courseId, manifest, allowedModuleIds: searchScope }] : null),
     [manifest, searchScopeValid, searchScope, courseId],
   );
-  const openSearch = useCallback(() => { setSearchError(""); setSearchOpen(true); }, []);
+  const openSearch = useCallback(() => { setSearchError(""); setSavedSearchQuery(searchQueryRef.current); setSearchOpen(true); }, []);
   const clearSearchError = useCallback(() => setSearchError(""), []);
   const openSearchHit = useCallback(async (hit: SearchHit) => {
     // The page must exist in THIS reader's manifest (restricted for a student) and its module must be loadable here.
@@ -275,7 +277,8 @@ export default function LearningReader({
     setSearchOpening(false);
     if (!allowed) { setSearchError("لم تعد هذه الصفحة متاحة لك، أو تعذّر التحقق من صلاحيتك الآن. حاول مرة أخرى."); return; }
     setSearchOpen(false);
-    setSearchReturn(searchQueryRef.current);
+    setSavedSearchQuery(searchQueryRef.current);
+    setSearchReturn(true);
     selectPage(hit.pageId);
   }, [manifest, courseId, api, selectPage]);
 
@@ -480,10 +483,10 @@ export default function LearningReader({
 
         <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1}>
           {/* Phase 21E L2-A — the one-time release note above the page (the page jump moved into the index in L2-B). */}
-          {!presentation && searchEnabled && searchReturn !== null && !searchOpen && (
+          {!presentation && searchEnabled && searchReturn && !searchOpen && (
             <div className="learning-reader-search-return">
               <button type="button" className="eb-button is-small learning-reader-search-back" onClick={openSearch}>
-                <IconSearch size={16} aria-hidden="true" />العودة إلى نتائج البحث{searchReturn ? <span className="learning-reader-search-back-query"> «{searchReturn}»</span> : null}
+                <IconSearch size={16} aria-hidden="true" />العودة إلى نتائج البحث{savedSearchQuery ? <span className="learning-reader-search-back-query"> «{savedSearchQuery}»</span> : null}
               </button>
             </div>
           )}
@@ -555,6 +558,7 @@ export default function LearningReader({
             </div>
             <Suspense fallback={<p className="learning-reader-status" role="status">جارٍ تحميل البحث...</p>}>
               <ReaderSearchPanel
+                initialQuery={savedSearchQuery}
                 queryRef={searchQueryRef}
                 onEdited={clearSearchError}
                 sources={searchSources}
@@ -600,8 +604,8 @@ export default function LearningReader({
 /** Normal-mode paging source: the reading surface (content root) or the focused page title — never a control. */
 /** The search dialog's panel with its own query state: a keystroke re-renders this subtree only. The query is mirrored into
  * the Reader's ref so it survives closing and reopening the dialog. */
-function ReaderSearchPanel({ queryRef, onEdited, ...panel }: Omit<LearningSearchPanelProps, "query" | "onQueryChange"> & { queryRef: MutableRefObject<string>; onEdited: () => void }) {
-  const [query, setQuery] = useState(queryRef.current);
+function ReaderSearchPanel({ initialQuery, queryRef, onEdited, ...panel }: Omit<LearningSearchPanelProps, "query" | "onQueryChange"> & { initialQuery: string; queryRef: MutableRefObject<string>; onEdited: () => void }) {
+  const [query, setQuery] = useState(initialQuery);
   const hasError = Boolean(panel.openError);
   const onQueryChange = useCallback((q: string) => { queryRef.current = q; setQuery(q); if (hasError) onEdited(); }, [queryRef, hasError, onEdited]);
   return <LearningSearchPanel {...panel} query={query} onQueryChange={onQueryChange} />;
