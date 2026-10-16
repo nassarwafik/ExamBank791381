@@ -12,7 +12,7 @@ import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import {normalizeClassStatus} from "./classLifecycle";
 import ActionMenu from "./ui/ActionMenu";
 import {useConfirm} from "./ui/useConfirm";
-import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog} from "./assignments/AssignmentList";
+import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetailsDialog} from "./assignments/AssignmentList";
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
@@ -52,6 +52,7 @@ const normalizeQuery=(v:string)=>v.trim().toLocaleLowerCase("ar");
 export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder,drill=null,onDrillConsumed}:Props){
  const current=currentExam&&typeof currentExam==="object"?currentExam as Exam:null;
  const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[durationMinutes,setDurationMinutes]=useState(0),[attemptPolicy,setAttemptPolicy]=useState<AttemptPolicy>("continuous"),[publish,setPublish]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
+ const [detailsFor,setDetailsFor]=useState<Item|null>(null);
  const [deadlineFor,setDeadlineFor]=useState<string|null>(null),[deadlineValue,setDeadlineValue]=useState("");
  const [reopenFor,setReopenFor]=useState<string|null>(null),[reopenValue,setReopenValue]=useState("");
  const [extendFor,setExtendFor]=useState<string|null>(null),[extendValue,setExtendValue]=useState("");
@@ -190,6 +191,14 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  // Phase 5A — class-wide time & deadline update. One authoritative request; reconcile the returned summary
  // into the list (and the open gradebook if it points here) WITHOUT a page reload, then a clear success notice.
  // Availability/eligibility is re-derived server-side, so an eligible student reopens and an exhausted one does not.
+ // Phase 21G.0 — title / instructions edit: one authoritative request, the returned summary reconciles the row and the detail.
+ async function saveDetails(item:Item,title:string,instructions:string){
+  setBusy(true);setError("");setNotice("");
+  try{
+   const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"updateDetails",assignmentId:item.assignmentId,title,instructions})});
+   reconcileMutated(r.assignment);setDetailsFor(null);setNotice("✓ تم تحديث عنوان الواجب وتعليماته.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تحديث بيانات الواجب.")}finally{setBusy(false)}
+ }
  async function saveTiming(item:Item,dueAtIso:string,durationMinutes:number){
   setBusy(true);setError("");setNotice("");
   try{
@@ -455,7 +464,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   <div className={"eb-assign-layout"+(showDetailArea?" has-detail":"")}>
    <AssignmentList items={visible} showArchived={showArchived} hasAnyInScope={scoped.length>0} selectedId={mode==="list"&&resultsFor?resultsFor.assignmentId:""} busy={busy} loading={loading}
     onOpen={(item,trigger)=>void loadResults(item,trigger)} onPublish={item=>void action(item,{action:"setStatus",status:"published"})} onUnpublish={item=>void action(item,{action:"setStatus",status:"draft"})}
-    onEditAttempts={setAttemptsFor} onEditTiming={setTimingFor} onArchive={item=>void archiveItem(item)} onRestore={item=>void restoreItem(item)} onPurge={item=>void openPurge(item)} onCreate={openComposer} fmt={fmt}/>
+    onEditAttempts={setAttemptsFor} onEditTiming={setTimingFor} onEditDetails={setDetailsFor} onArchive={item=>void archiveItem(item)} onRestore={item=>void restoreItem(item)} onPurge={item=>void openPurge(item)} onCreate={openComposer} fmt={fmt}/>
    {mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={closeComposer} busy={busy} examLoading={examLoading}
     sourceMode={sourceMode} onSourceMode={m=>void switchSourceMode(m)} sourceExam={sourceExam} sourceCount={sourceCount} currentExam={current} hasCurrent={!!(current&&examHasQuestions(current))}
     savedExams={savedExams} examSource={examSource} onChooseExam={v=>void chooseExam(v)}
@@ -474,6 +483,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   </div>
 
   <MaxAttemptsDialog item={attemptsFor} busy={busy} onSave={(item,value)=>void saveMaxAttempts(item,value)} onClose={()=>setAttemptsFor(null)}/>
+  <AssignmentDetailsDialog item={detailsFor} busy={busy} onSave={(item,title,instructions)=>void saveDetails(item,title,instructions)} onClose={()=>setDetailsFor(null)}/>
   <AssignmentTimingDialog item={timingFor} busy={busy} onSave={(item,dueAtIso,durationMinutes)=>void saveTiming(item,dueAtIso,durationMinutes)} onClose={()=>setTimingFor(null)} fmt={fmt}/>
   <DeadlineDialog student={deadlineStudent} assignment={resultsFor} busy={busy} value={deadlineValue} onValue={setDeadlineValue} onClose={()=>setDeadlineFor(null)} onSave={s=>void saveDeadline(s)} onClear={s=>void clearDeadline(s)} fmt={fmt}/>
   <ReopenDialog student={reopenStudent} assignment={resultsFor} busy={busy} value={reopenValue} onValue={setReopenValue} onClose={()=>setReopenFor(null)} onSave={s=>void saveReopen(s)} fmt={fmt}/>

@@ -62,6 +62,7 @@ function routed(input: RequestInfo | URL, init?: RequestInit) {
     if (a === "restore") return json({ ok: true, assignment: { ...base, status: "published" } });
     if (a === "setStatus") return json({ ok: true, assignment: { ...base, status: body.status } });
     if (a === "setMaxAttempts") return json({ ok: true, assignment: { ...base, maxAttempts: body.maxAttempts } });
+    if (a === "updateDetails") return json({ ok: true, assignment: { ...base, title: String(body.title), instructions: String(body.instructions) } });
     if (a === "create") return json({ ok: true, assignment: { ...A1, assignmentId: "a9", title: String(body.title), classId: String(body.classId), className: "الحادي عشر", status: body.publish ? "published" : "draft" } });
     return json({ ok: true, assignment: base });
   }
@@ -630,5 +631,30 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
     expect(document.activeElement).toBe(trigger);
     expect(trigger.isConnected).toBe(true);
     expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+});
+
+describe("21G.0 edit an assignment's title and instructions", () => {
+  it("cancel sends nothing; an empty title cannot be saved; save sends one exact request and the row shows the new title", async () => {
+    await mount();
+    await assignmentAction("اختبار الكسور", "تعديل العنوان والتعليمات");
+    let d = await dialog("تعديل العنوان والتعليمات");
+    const save = () => within(d).getByRole("button", { name: "حفظ التغييرات" }) as HTMLButtonElement;
+    expect(save().disabled).toBe(true);                                                              // unchanged → nothing to save
+    fireEvent.click(within(d).getByRole("button", { name: "إلغاء" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posts("/api/assignments").filter(b => b.action === "updateDetails")).toEqual([]);
+    await assignmentAction("اختبار الكسور", "تعديل العنوان والتعليمات");
+    d = await dialog("تعديل العنوان والتعليمات");
+    fireEvent.change(within(d).getByLabelText("عنوان الواجب"), { target: { value: "   " } });
+    expect(within(d).getByRole("alert").textContent).toBe("عنوان الواجب مطلوب.");
+    expect(save().disabled).toBe(true);
+    fireEvent.change(within(d).getByLabelText("عنوان الواجب"), { target: { value: " اختبار الكسور — مراجعة " } });
+    fireEvent.change(within(d).getByLabelText("التعليمات"), { target: { value: "اقرأ كل سؤال." } });
+    fireEvent.click(save());
+    await waitFor(() => expect(posts("/api/assignments").filter(b => b.action === "updateDetails")).toEqual([{ action: "updateDetails", assignmentId: "a1", title: "اختبار الكسور — مراجعة", instructions: "اقرأ كل سؤال." }]));
+    await screen.findByText("✓ تم تحديث عنوان الواجب وتعليماته.");
+    expect(rowTitles()).toContain("اختبار الكسور — مراجعة");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

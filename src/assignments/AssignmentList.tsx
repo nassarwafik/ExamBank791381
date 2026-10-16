@@ -23,6 +23,8 @@ export type AssignmentListProps = {
   onUnpublish: (item: Item) => void;
   onEditAttempts: (item: Item) => void;
   onEditTiming: (item: Item) => void;
+  /** Phase 21G.0 — edit the title and instructions (absent → not offered). */
+  onEditDetails?: (item: Item) => void;
   onArchive: (item: Item) => void;
   onRestore: (item: Item) => void;
   onPurge: (item: Item) => void;
@@ -63,6 +65,7 @@ export default function AssignmentList(p: AssignmentListProps) {
                     {item.status !== "published"
                       ? <button type="button" className="eb-menu-item" onClick={() => p.onPublish(item)} disabled={p.busy}><IconUpload size={16} />نشر</button>
                       : <button type="button" className="eb-menu-item" onClick={() => p.onUnpublish(item)} disabled={p.busy}><IconEyeOff size={16} />إيقاف النشر</button>}
+                    {p.onEditDetails && <button type="button" className="eb-menu-item" onClick={() => p.onEditDetails?.(item)} disabled={p.busy}><IconEdit size={16} />تعديل العنوان والتعليمات</button>}
                     <button type="button" className="eb-menu-item" onClick={() => p.onEditAttempts(item)} disabled={p.busy}><IconEdit size={16} />تعديل عدد المحاولات</button>
                     <button type="button" className="eb-menu-item assignment-timing-button" onClick={() => p.onEditTiming(item)} disabled={p.busy}><IconHistory size={16} />تعديل الوقت والموعد</button>
                     <hr className="eb-menu-sep" />
@@ -139,6 +142,44 @@ function AssignmentTimingForm({ item, busy, onSave, onClose, fmt }: { item: Item
       <div className="eb-dialog-foot eb-dialog-foot-inline">
         <button type="button" className="eb-button" onClick={onClose}>إلغاء</button>
         <button type="button" className="eb-button is-primary assignment-timing-save" onClick={() => onSave(item, dueIso, duration)} disabled={busy || !inFuture}>{SAVE_LABELS.saveChanges}</button>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Phase 21G.0 — edit the title and instructions. Allowed at any time (also after students started): they are presentation only;
+ * the questions, marks, timing and attempts are not touched. cancel → no request; save → exactly one updateDetails request
+ * (owned by AssignmentsPanel). Keyed by assignment → fresh fields per item.
+ */
+export const MAX_ASSIGNMENT_TITLE = 200;
+export const MAX_ASSIGNMENT_INSTRUCTIONS = 5000;
+export function AssignmentDetailsDialog({ item, busy, onSave, onClose }: { item: Item | null; busy: boolean; onSave: (item: Item, title: string, instructions: string) => void; onClose: () => void }) {
+  return (
+    <Dialog open={item !== null} title="تعديل العنوان والتعليمات" onClose={onClose} size="sm" hideClose>
+      {item && <AssignmentDetailsForm key={item.assignmentId} item={item} busy={busy} onSave={onSave} onClose={onClose} />}
+    </Dialog>
+  );
+}
+function AssignmentDetailsForm({ item, busy, onSave, onClose }: { item: Item; busy: boolean; onSave: (item: Item, title: string, instructions: string) => void; onClose: () => void }) {
+  const [title, setTitle] = useState(item.title || "");
+  const [instructions, setInstructions] = useState(item.instructions || "");
+  const cleanTitle = title.trim(), cleanInstructions = instructions.trim();
+  const titleError = !cleanTitle ? "عنوان الواجب مطلوب." : cleanTitle.length > MAX_ASSIGNMENT_TITLE ? "عنوان الواجب أطول من " + MAX_ASSIGNMENT_TITLE + " حرفًا." : "";
+  const instructionsError = cleanInstructions.length > MAX_ASSIGNMENT_INSTRUCTIONS ? "التعليمات أطول من " + MAX_ASSIGNMENT_INSTRUCTIONS + " حرف." : "";
+  const unchanged = cleanTitle === (item.title || "").trim() && cleanInstructions === (item.instructions || "").trim();
+  return (
+    <>
+      <p className="eb-dialog-lead">يمكن تعديل العنوان والتعليمات في أي وقت؛ لا يتغير شيء في الأسئلة أو العلامات أو المحاولات.</p>
+      <div className="eb-form-grid">
+        <label>عنوان الواجب<input value={title} onChange={e => setTitle(e.target.value)} aria-invalid={titleError ? true : undefined} aria-describedby={titleError ? "eb-details-title-error" : undefined} /></label>
+        {titleError && <p id="eb-details-title-error" className="eb-field-error" role="alert">{titleError}</p>}
+        <label>التعليمات<textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={5} aria-invalid={instructionsError ? true : undefined} aria-describedby={instructionsError ? "eb-details-instructions-error" : undefined} /></label>
+        {instructionsError && <p id="eb-details-instructions-error" className="eb-field-error" role="alert">{instructionsError}</p>}
+      </div>
+      <div className="eb-dialog-foot eb-dialog-foot-inline">
+        <button type="button" className="eb-button" onClick={onClose}>إلغاء</button>
+        <button type="button" className="eb-button is-primary" onClick={() => onSave(item, cleanTitle, cleanInstructions)} disabled={busy || unchanged || !!titleError || !!instructionsError}>{SAVE_LABELS.saveChanges}</button>
       </div>
     </>
   );

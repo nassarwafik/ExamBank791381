@@ -19,6 +19,7 @@ const TEN = ["api/tests/teacher-tenancy-21g0.test.js"];
 const BANK = ["api/tests/bank-tenancy-21g0.test.js"];
 const CONTENT = ["api/tests/content-tenancy-21g0.test.js"];
 const ALL = [...TEN, ...BANK, ...CONTENT];
+const DETAILS = ["api/tests/assignment-details-21g0.test.js"];
 const LIB = "api/src/lib/teacher-tenancy.js";
 const BQ = "api/src/functions/bank-questions.js";
 export const CAMPAIGNS = {
@@ -80,7 +81,13 @@ export const CAMPAIGNS = {
     { id: "G0-M28", what: "saved exams ignore LEGACY_DATA_OWNER (D2 claim always open)", file: "api/src/lib/saved-exam-access.js",
       find: "  return canAccessDocument(document, owner, env);", replace: "  const stored = storedOwnerOf(document);\n  return !owner || !stored || stored === owner;", tests: CONTENT },
     { id: "G0-M29", what: "two templates saved in one millisecond share a blob name", file: "api/src/functions/save-exam-artifact.js",
-      find: '              crypto.randomBytes(4).toString("hex") +\n              "-" +\n', replace: "", tests: CONTENT }
+      find: '              crypto.randomBytes(4).toString("hex") +\n              "-" +\n', replace: "", tests: CONTENT },
+    { id: "G0-M30", what: "an archived assignment's title can still be edited", file: "api/src/functions/manage-assignments.js",
+      find: 'if(normalizeAssignmentStatus(current)==="archived"){const err=new Error("الواجب مؤرشف. استعده أولًا قبل تعديل بياناته.");err.httpStatus=409;throw err}', replace: "", tests: DETAILS },
+    { id: "G0-M31", what: "an empty title is accepted on edit", file: "api/src/functions/manage-assignments.js",
+      find: 'if(!title)return {status:400,jsonBody:{ok:false,error:"عنوان الواجب مطلوب."}};', replace: "", tests: DETAILS },
+    { id: "G0-M32", what: "editing the title also rewrites the instructions when none were sent", file: "api/src/functions/manage-assignments.js",
+      find: "current.title=title;if(instructions!==null)current.instructions=instructions;", replace: 'current.title=title;current.instructions=instructions||"";', tests: DETAILS }
   ]
 };
 
