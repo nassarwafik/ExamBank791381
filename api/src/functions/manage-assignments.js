@@ -28,6 +28,9 @@ const {resolveGovernedExamSource,GovernanceError}=require("../lib/exam-governanc
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const MAX_TITLE=200,MAX_INSTRUCTIONS=5000;
+// Phase 21G.2 — bump SUMMARY_VERSION whenever summary() changes shape: every cached summary is then recomputed once.
+const SUMMARY_VERSION=1;
+const {loadAssignmentSummaries}=require("../lib/assignment-summary-cache");
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
 // stored submission blobs (authoritative for purge-blocking); the rest are derived from the parsed docs.
 function computeImpact(a,submissionDocuments,subs){
@@ -64,7 +67,8 @@ async function handler(request,deps={},obs=null){
  try{
   const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   const tenant=tenantOf(auth.user);
-  if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");let list=(await ls(c,PREFIX)).map(summary);if(classId)list=list.filter(x=>x.classId===classId);
+  // Phase 21G.2 — the LIGHT list: summaries from the ETag-verified cache; only new / changed documents are downloaded.
+  if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");const loaded=await (deps.loadAssignmentSummaries||loadAssignmentSummaries)(c,{prefix:PREFIX,summarize:summary,summaryVersion:SUMMARY_VERSION},{...(deps.summaryCacheDeps||{}),onCacheError:()=>obs?.logWarn?.("assignment.summary_cache.failed",{retryable:true})});let list=loaded.summaries;if(classId)list=list.filter(x=>x.classId===classId);
    if(tenant){const allowed=accessibleClassIds(await ls(c,CLASS_PREFIX),tenant);list=list.filter(x=>classIdAllowed(allowed,x.classId))}list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
   let b={};try{b=await request.json()}catch{}
   const action=String(b.action||"create").toLowerCase();
