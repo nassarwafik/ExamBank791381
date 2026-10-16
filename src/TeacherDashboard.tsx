@@ -1,4 +1,5 @@
-import {useEffect,useMemo,useRef,useState,type ReactNode} from "react";
+import {Fragment,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from "react";
+import {TodaySlot} from "./teacher/todaySlot";
 import {Chart as ChartJS,CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler,type ChartOptions} from "chart.js";
 import {Line,Doughnut,Bar} from "react-chartjs-2";
 import {IconMedal,IconRefresh,IconDownload,IconPrint,IconSparkles,IconCheck,IconWarning,IconInfo,IconGraduation,IconAssignments,IconUser} from "./icons";
@@ -194,7 +195,11 @@ function AttentionCard({id,title,count,tone,items,empty}:{id:string;title:string
 }
 
 function TeacherDashboard({token}:DashboardProps){
+ // Phase 21H.2 — the live «ما الذي يحتاج انتباهي الآن؟» hub (provided by TeacherPlatform) renders UNDER this page's scope
+ // bar with the page's class and its single refresh: one filter and one «تحديث» for the whole page.
+ const renderToday=useContext(TodaySlot);
  const [classId,setClassId]=useState("");
+ const [refreshSignal,setRefreshSignal]=useState(0);
  const [studentId,setStudentId]=useState("");
  const [range,setRange]=useState<RangeKey>("all");
  // Phase 8A — the scope the teacher selected. Every analytics surface renders ONLY data loaded for exactly this key:
@@ -441,8 +446,11 @@ function TeacherDashboard({token}:DashboardProps){
   a.href=url;a.download="TadrisPlus-Teacher-Analytics.csv";a.click();URL.revokeObjectURL(url);
  }
 
- if(!data&&loading)return <div className="analytics-loading" role="status">جارٍ بناء لوحة التحليل...</div>;
- if(!data)return <div className="platform-error" role="alert">{error||"لا توجد بيانات لعرضها."}</div>;
+ // The live hub never waits for (or depends on) the analytics read: it renders in every state of this page.
+ // Same parent and the same key in every state, so the hub is never remounted (and never re-read) when the analytics land.
+ const today=renderToday?<Fragment key="today">{renderToday({classId,refreshSignal})}</Fragment>:null;
+ if(!data&&loading)return <div className="analytics-dashboard eb-dash" dir="rtl">{today}<div key="state" className="analytics-loading" role="status">جارٍ بناء لوحة التحليل...</div></div>;
+ if(!data)return <div className="analytics-dashboard eb-dash" dir="rtl">{today}<div key="state" className="platform-error" role="alert">{error||"لا توجد بيانات لعرضها."}</div></div>;
 
  const fresh=loaded?.key===scopeKey;
  const k=data.kpis;
@@ -482,12 +490,13 @@ function TeacherDashboard({token}:DashboardProps){
    </div>
    <div className="eb-dash-scope"><strong data-testid="dashboard-scope-caption">{scopeCaption}</strong>{fresh&&<span>آخر تحديث: {fmtDate(data.generatedAt)}</span>}</div>
    <div className="eb-dash-actions">
-    <button type="button" className="eb-toolbar-button" onClick={()=>void loadDashboard()} disabled={loading}><IconRefresh size={16}/>تحديث</button>
+    <button type="button" className="eb-toolbar-button" onClick={()=>{setRefreshSignal(n=>n+1);void loadDashboard()}} disabled={loading}><IconRefresh size={16}/>تحديث</button>
     <button type="button" className="eb-toolbar-button" onClick={exportCsv} disabled={!fresh}><IconDownload size={16}/>تصدير CSV</button>
     <button type="button" className="eb-toolbar-button" onClick={()=>window.print()}><IconPrint size={16}/>طباعة</button>
    </div>
   </section>
 
+  {today}
   {error&&<div className="platform-error" role="alert">{error}</div>}
   {!fresh&&loading&&<div className="analytics-loading" role="status">جارٍ تحميل بيانات النطاق المحدد...</div>}
 
@@ -518,7 +527,7 @@ function TeacherDashboard({token}:DashboardProps){
   </section>
 
   <section className="eb-dash-section" aria-labelledby="eb-attention-title">
-   <SectionHeader level={2} id="eb-attention-title" title="يحتاج إلى انتباهك" description="أربع فئات مرتّبة حسب الأولوية ضمن النطاق الحالي"/>
+   <SectionHeader level={2} id="eb-attention-title" title="يحتاج إلى انتباهك" description="من نتائج الصف والفترة المحددين أعلاه · أربع فئات مرتّبة حسب الأولوية"/>
    <div className="eb-attention-grid">
     <AttentionCard id="eb-attention-pending" title="بانتظار التصحيح" count={k.pendingReview} tone="danger" items={pendingItems} empty="لا توجد تسليمات بانتظار التصحيح"/>
     <AttentionCard id="eb-attention-urgent" title={isStudent?"حالة عاجلة":"طلاب في حالة عاجلة"} count={urgentItems.length} tone="danger" items={urgentItems} empty="لا توجد حالات عاجلة"/>

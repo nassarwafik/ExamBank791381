@@ -10,6 +10,7 @@ import {lazyWithRetry} from "./lazyWithRetry";
 const TeacherDashboard=lazy(lazyWithRetry(()=>import("./TeacherDashboard"),"teacher-dashboard"));
 import AuditHistoryPanel from "./AuditHistoryPanel";
 import TeacherTodayHub from "./teacher/TeacherTodayHub";
+import { TodaySlot, type TodayScope } from "./teacher/todaySlot";
 import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "./projects/drillTarget";
 import type { AssignmentDrill, AssignmentDrillTarget } from "./assignments/drillTarget";
 import type {TeacherNavId} from "./shell/teacherNav";
@@ -745,7 +746,12 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // while the chunk loads, and the fallback is a local status line inside the same inner container (never a blank page).
  // Phase 9A — the Today Hub (command center) is the FIRST thing on the teacher's home, above the analytics dashboard; it is
  // part of this chunk (one small read of its own), so the lazy Dashboard boundary below is unchanged.
- if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherTodayHub token={token} onNavigate={props.onNavigate} onOpenProject={props.onOpenProject} onOpenProjectStudent={props.onOpenProjectStudent} onStartEvaluationQueue={props.onStartEvaluationQueue} onOpenAssignmentTarget={props.onOpenAssignmentTarget}/><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
+ // Phase 21H.2 — ONE scope for the whole page: the dashboard owns the scope bar (class, period, refresh) and places the hub
+ // right under it with that class and that refresh (mounted once, in every dashboard state, so it reads its summary once).
+ if(workspaceTab==="dashboard"){
+  const hub=(scope:TodayScope)=><TeacherTodayHub token={token} onNavigate={props.onNavigate} onOpenProject={props.onOpenProject} onOpenProjectStudent={props.onOpenProjectStudent} onStartEvaluationQueue={props.onStartEvaluationQueue} onOpenAssignmentTarget={props.onOpenAssignmentTarget} classId={scope.classId} refreshSignal={scope.refreshSignal} embedded/>;
+  return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TodaySlot.Provider value={hub}><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></TodaySlot.Provider></div></section>;
+ }
  if(workspaceTab==="audit")return <AuditHistoryPanel token={token}/>;
  if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder} drill={props.assignmentDrill??null} onDrillConsumed={props.onAssignmentDrillConsumed}/></div></section>;
 

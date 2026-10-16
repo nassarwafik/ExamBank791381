@@ -20,7 +20,29 @@ const H0_API = ["api/tests/today-live-21h0.test.js", "api/tests/today-hub-9a.tes
 const H0_UI = ["src/teacher/todayFormat.21h0.test.ts", "src/teacher/TeacherTodayHub.21h0.test.tsx"];
 const EVAL = "api/src/lib/project-tracker/evaluation-attention.js", EVAL_UI = "src/teacher/teacherTodayEvaluation.ts";
 const H1_API = ["api/tests/project-review-21h1.test.js", "api/tests/teacher-project-evaluation-9c.test.js"], H1_UI = ["src/teacher/TeacherTodayHub.21h1.test.tsx", "src/teacher/TeacherTodayHub.9f.test.tsx", "src/teacher/TeacherTodayHub.9c.test.tsx"];
+const DASH = "src/TeacherDashboard.tsx";
+const H2_API = ["api/tests/today-scope-21h2.test.js"], H2_UI = ["src/TeacherDashboard.scope.21h2.test.tsx", "src/teacher/TeacherTodayHub.9a.test.tsx"];
 export const CAMPAIGNS = {
+  h2: [
+    { id: "H2-M1", what: "?classId= is ignored (the hub stays on every class)", file: TODAY,
+      find: "const scopeClassId=scopeOf(request);", replace: "const scopeClassId=\"\";", tests: H2_API },
+    { id: "H2-M2", what: "another teacher's class is served (the scope widens past tenancy)", file: TODAY,
+      find: "let classes=filterAccessible(allClasses,tenantOf(auth.user));", replace: "let classes=scopeOf(request)?allClasses:filterAccessible(allClasses,tenantOf(auth.user));", tests: H2_API },
+    { id: "H2-M3", what: "an unknown class answers with every class instead of 404", file: TODAY,
+      find: "if(!classes.some(c=>c&&String(c.classId)===scopeClassId))return {status:404,jsonBody:{ok:false,error:\"الصف غير موجود.\"}};\n   classes=", replace: "if(classes.some(c=>c&&String(c.classId)===scopeClassId))classes=", tests: H2_API },
+    { id: "H2-M4", what: "the hub does not send the page's class", file: HUB,
+      find: "fetch(\"/api/teacher-today\" + (key ? \"?classId=\" + encodeURIComponent(key) : \"\")", replace: "fetch(\"/api/teacher-today\"", tests: H2_UI },
+    { id: "H2-M5", what: "a late answer for an earlier class overwrites the newer one", file: HUB,
+      find: "if (!alive.current || mine !== gen.current) return;\n      const parsed", replace: "if (!alive.current) return;\n      const parsed", tests: H2_UI },
+    { id: "H2-M6", what: "the previous class's figures stay visible while another class loads", file: HUB,
+      find: "const data = loadedFor && loadedFor.key === classId ? loadedFor.data : null;", replace: "const data = loadedFor ? loadedFor.data : null;", tests: H2_UI },
+    { id: "H2-M7", what: "the page's «تحديث» does not re-read the hub", file: DASH,
+      find: "onClick={()=>{setRefreshSignal(n=>n+1);void loadDashboard()}}", replace: "onClick={()=>{void loadDashboard()}}", tests: H2_UI },
+    { id: "H2-M8", what: "the embedded hub keeps its own refresh button", file: HUB,
+      find: "actions={embedded ? undefined : <button", replace: "actions={false ? undefined : <button", tests: H2_UI },
+    { id: "H2-M9", what: "the hub remounts (and re-reads) when the analytics land", file: DASH,
+      find: "const today=renderToday?<Fragment key=\"today\">", replace: "const today=renderToday?<Fragment>", tests: H2_UI }
+  ],
   h1: [
     { id: "H1-M1", what: "review counts every ungraded stage again", file: EVAL,
       find: "const readyStages = e.stages.filter(st => st.status === READY).length;", replace: "const readyStages = e.ungradedStages;", tests: H1_API },
