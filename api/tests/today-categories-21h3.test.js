@@ -39,7 +39,7 @@ describe("21H.3 teacher-today — due soon, results to publish, opening soon", (
     expect(d.attention.resultsUnreleased.count).toBe(1);
   });
 
-  it("an unreadable release mode is withheld by the 21G.5 authority, so it is listed too (fail closed, never «released»)", () => {
+  it("an unreadable release mode is not «the teacher's step»: only «manual» is listed (the 21G.5 authority already withholds such results)", () => {
     const d = derive([A("X1", { dueAt: iso(NOW_MS + 99 * H), resultsRelease: "weird" })], { X1: { s01: [done] } });
     expect(d.attention.resultsUnreleased.count).toBe(0);                                   // only «manual» is the teacher's step
   });
