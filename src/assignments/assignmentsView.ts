@@ -4,6 +4,7 @@
 import { resolveGradingStatus, type GradingStatus } from "../gradingStatus";
 import { gradebookFilterFor, drillStudentId, type AssignmentDrill } from "./drillTarget";
 import type { Item, StudentResult, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, QuestionStat } from "./types";
+import { matchesTimeFilter, type TimeFilter } from "./assignmentsHome";
 
 /**
  * Server-authoritative grading status for a student's LATEST result: the row-level server gradingStatus wins; otherwise the SHARED
@@ -17,10 +18,11 @@ export const rowGrading = (s: StudentResult): GradingStatus => (s.gradingStatus 
  * invariant "a visible AssignmentDetail belongs to the current master-list scope", so the two can never disagree. `q` is already
  * trimmed + lowercased (normalizeQuery).
  */
-export type MasterScope = { classId: string; showArchived: boolean; q: string };
+export type MasterScope = { classId: string; showArchived: boolean; q: string; /** Phase 21G.2 — the home's time filter (current view only), judged at `now`. */ time?: TimeFilter; now?: number };
 export function matchesMasterScope(x: Item, s: MasterScope): boolean {
   if (s.classId && x.classId !== s.classId) return false;
   if (s.showArchived ? x.status !== "archived" : x.status === "archived") return false;
+  if (!s.showArchived && s.time && s.time !== "all" && !matchesTimeFilter(x, s.time, s.now ?? 0)) return false;
   if (s.q && ![x.title, x.className].join(" ").toLocaleLowerCase("ar").includes(s.q)) return false;
   return true;
 }

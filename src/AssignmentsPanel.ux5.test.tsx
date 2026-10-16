@@ -107,19 +107,19 @@ const gbNames = (detail: HTMLElement) => Array.from(detail.querySelectorAll("tbo
 const dialog = (name: string) => screen.findByRole("dialog", { name });
 
 describe("UX-5 workspace — toolbar, filter, search, archive switch, requests", () => {
-  it("boots with exactly GET assignments + GET saved-exams (no results for any row), shows the toolbar and no duplicate hero", async () => {
+  it("boots with exactly GET assignments + GET assignment-progress + GET saved-exams (no results for any row), shows the toolbar and no duplicate hero", async () => {
     await mount();
-    expect(calls.map(c => c.method + " " + c.url)).toEqual(["GET /api/assignments", "GET /api/saved-exams"]);
+    expect(calls.map(c => c.method + " " + c.url)).toEqual(["GET /api/assignments", "GET /api/assignment-progress", "GET /api/saved-exams"]);   // Phase 21G.2 — + the home's progress read
     expect(gets("/api/assignment-results")).toHaveLength(0);
     const toolbar = screen.getByRole("region", { name: "أدوات الواجبات" });
-    expect((within(toolbar).getByLabelText("الصف") as HTMLSelectElement).value).toBe("c1");               // scope defaults to the first active class
+    expect((within(toolbar).getByLabelText("الصف") as HTMLSelectElement).value).toBe("");                 // Phase 21G.2 — scope defaults to every class
     expect(within(toolbar).getByRole("button", { name: "الواجبات الحالية" }).getAttribute("aria-pressed")).toBe("true");
     expect(within(toolbar).getByLabelText("بحث")).toBeTruthy();
     expect(within(toolbar).getByRole("button", { name: "إنشاء واجب" })).toBeTruthy();
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(document.body.textContent).not.toMatch(/الواجبات، التصحيح وسجل العلامات|Phase 2\.0E|Assignments · /);
-    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر"]);
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default
     expect(within(rowOf("اختبار الكسور")).getByText("منشور")).toBeTruthy(); expect(within(rowOf("واجب الجبر")).getByText("مسودة")).toBeTruthy();
     expect(rowOf("اختبار الكسور").textContent).toContain("5 سؤال · 100 علامة · 3 محاولة · 90 دقيقة");
     fireEvent.click(within(toolbar).getByRole("button", { name: "المزيد من إجراءات الواجبات" }));
@@ -170,7 +170,7 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     const composer = await screen.findByRole("region", { name: "إنشاء واجب جديد" });
     expect(document.activeElement).toBe(within(composer).getByRole("heading", { level: 2, name: "إنشاء واجب جديد" }));
     expect(screen.queryByRole("dialog")).toBeNull();                                                  // NOT a dialog
-    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر"]);                                     // list still visible
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default                                     // list still visible
     expect(within(composer).getByRole("button", { name: "امتحاناتي" }).getAttribute("aria-pressed")).toBe("true");
     expect(Array.from((within(composer).getByLabelText("الصف") as HTMLSelectElement).options).map(o => o.value)).toEqual(["", "c1", "c2"]); // active classes only
     const createBtn = within(composer).getByRole("button", { name: "إنشاء الواجب" }) as HTMLButtonElement;
@@ -282,7 +282,7 @@ describe("UX-5 list actions — exact bodies, explicit attempts save, confirm ga
     expect((await confirmEl()).textContent).toContain("يوجد 3 طلاب في محاولات نشطة. أرشفة الواجب ستمنعهم من المتابعة حتى تتم استعادته. لن تُحذف إجاباتهم أو محاولاتهم.");
     await confirmDialog();
     await waitFor(() => expect(posts("/api/assignments").at(-1)).toEqual({ action: "archive", assignmentId: "a1", confirmActiveAttempts: true }));
-    await waitFor(() => expect(rowTitles()).toEqual(["واجب الجبر"]));
+    await waitFor(() => expect(rowTitles()).toEqual(["واجب الجبر", "اختبار الهندسة"]));
     fireEvent.click(screen.getByRole("button", { name: /^المؤرشفة/ }));
     await assignmentAction("اختبار الكسور", "استعادة");
     await waitFor(() => expect(posts("/api/assignments").at(-1)).toEqual({ action: "restore", assignmentId: "a1" }));
@@ -568,7 +568,7 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
     expect(document.activeElement).toBe(input);
     expect(input.value).toBe("الجبر");
     fireEvent.change(input, { target: { value: "" } });                                              // clearing never re-opens or re-fetches
-    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر"]);
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default
     detailGone();
     expect(document.activeElement).toBe(input);
     expect(gets("/api/assignment-results")).toHaveLength(1);
@@ -607,7 +607,7 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
     await waitFor(() => expect(posts("/api/assignments").filter(b => b.action === "archive")).toHaveLength(1));
     await waitFor(() => detailGone());
     noGradebook();
-    expect(rowTitles()).toEqual(["واجب الجبر"]);
+    expect(rowTitles()).toEqual(["واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default
     expect(within(toolbar()).getByRole("button", { name: /^المؤرشفة/ }).textContent).toBe("المؤرشفة (2)");
     const ae = document.activeElement as HTMLElement;
     expect(ae && ae !== document.body && ae.isConnected).toBe(true);                              // focus landed on a live workspace element

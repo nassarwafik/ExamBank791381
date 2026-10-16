@@ -11,9 +11,10 @@ import { windowBlocks, assignmentWindowIssues } from "./assignmentWindow";
 import { bulkRetryNotice } from "./codingRecovery";
 import { assignmentsApi, toLocalInput } from "./assignmentsApi";
 import { matchesMasterScope, normalizeQuery, gradebookRows, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
+import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
 import { useAssignmentComposer } from "./useAssignmentComposer";
 import type { AssignmentDrill } from "./drillTarget";
-import type { CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
+import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
 
 export type AssignmentsControllerProps = {
   token: string;
@@ -47,7 +48,11 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // Roadmap #13 — gradebook search / filter / sort (client-side over the already-loaded results; no request per keystroke).
   const [gbSearch, setGbSearch] = useState(""), [gbFilter, setGbFilter] = useState<GradebookFilter>("all"), [gbSort, setGbSort] = useState<GradebookSort>("name");
   // UX-5 workspace state: list filter (separate from the composer's target class), search, mode, explicit attempts / timing editors.
-  const [filterClassId, setFilterClassId] = useState<string | null>(null), [search, setSearch] = useState(""), [mode, setMode] = useState<WorkspaceMode>("list"), [attemptsFor, setAttemptsFor] = useState<Item | null>(null), [timingFor, setTimingFor] = useState<Item | null>(null);
+  // Phase 21G.2 — the home: every class by default (the teacher narrows it), a time filter, the server progress (null = not
+  // loaded / unavailable: the figures that need it are shown as unknown, never as zero), and a minute clock for the time chips.
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all"), [progress, setProgress] = useState<Map<string, AssignmentProgress> | null>(null), [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(t); }, []);
+  const [filterClassId, setFilterClassId] = useState(""), [search, setSearch] = useState(""), [mode, setMode] = useState<WorkspaceMode>("list"), [attemptsFor, setAttemptsFor] = useState<Item | null>(null), [timingFor, setTimingFor] = useState<Item | null>(null);
   const detailOpenerRef = useRef<HTMLElement | null>(null), composerOpenerRef = useRef<HTMLElement | null>(null), focusDetailPending = useRef(false), focusComposerOpenerPending = useRef(false), focusWorkspacePending = useRef(false);
   const scopeRef = useRef<MasterScope>({ classId: "", showArchived: false, q: "" });
   // Phase 12B — drill-in bookkeeping. listReady: the assignment list has been read successfully at least once (a drill is never judged
@@ -65,12 +70,14 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // active:false ⇒ archived), never the raw compatibility `active` flag.
   const active = useMemo(() => classes.filter(x => normalizeClassStatus(x) === "active"), [classes]);
   const composer = useAssignmentComposer({ api, current, active, onCopyLibraryExamToBuilder, setError, setNotice });
-  // The list scope defaults to the first canonical-active class (as before); "" = all classes once the teacher chooses it.
-  const effectiveFilter = filterClassId === null ? (active[0]?.classId || "") : filterClassId;
+  // Phase 21G.2 — the list scope covers every class until the teacher picks one ("" = all classes).
+  const effectiveFilter = filterClassId;
 
-  async function load() { setLoading(true); try { const r = await api<{ assignments: Item[] }>("/api/assignments"); setItems(r.assignments || []); setListReady(true); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الواجبات."); } finally { setLoading(false); } }
-  useEffect(() => { void load(); void composer.source.loadSavedExams(); }, []);
-  function refresh() { void load(); void composer.source.loadSavedExams(); }
+  async function load() { setLoading(true); try { const r = await api<{ assignments: Item[] }>("/api/assignments"); setItems(r.assignments || []); setListReady(true); setNow(Date.now()); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الواجبات."); } finally { setLoading(false); } }
+  // Phase 21G.2 — progress is secondary: a failed read leaves the list working and the progress figures «غير متاح».
+  async function loadProgress() { try { const r = await api<{ progress: AssignmentProgress[] }>("/api/assignment-progress"); setProgress(new Map((Array.isArray(r.progress) ? r.progress : []).map(p => [p.assignmentId, p]))); } catch { setProgress(null); } }
+  useEffect(() => { void load(); void loadProgress(); void composer.source.loadSavedExams(); }, []);
+  function refresh() { void load(); void loadProgress(); void composer.source.loadSavedExams(); }
 
   // ── Workspace modes: composer (non-modal, in the detail area) and detail (non-modal). Focus moves to the area's heading when it
   // appears and returns to the opening control when it closes.
@@ -99,11 +106,11 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     setBusy(true); setError(""); setNotice("");
     try {
       const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "create", classId: f.classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, publish: f.publish, examSnapshot: sourceExam }) });
-      setItems(x => [r.assignment, ...x]); setNotice(r.assignment?.source?.revisionNumber ? "✓ تم إنشاء الواجب من الإصدار المنشور رقم " + r.assignment.source.revisionNumber + " (إدارة النشر) — النسخة المنشورة مثبّتة لهذا الواجب." : "✓ تم إنشاء الواجب من الامتحان المختار.");
+      setItems(x => [r.assignment, ...x]); void loadProgress(); setNotice(r.assignment?.source?.revisionNumber ? "✓ تم إنشاء الواجب من الإصدار المنشور رقم " + r.assignment.source.revisionNumber + " (إدارة النشر) — النسخة المنشورة مثبّتة لهذا الواجب." : "✓ تم إنشاء الواجب من الامتحان المختار.");
       closeComposer();
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر إنشاء الواجب."); } finally { setBusy(false); }
   }
-  async function action(item: Item, body: Record<string, unknown>) { setBusy(true); try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ assignmentId: item.assignmentId, ...body }) }); reconcileMutated(r.assignment); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تنفيذ العملية."); } finally { setBusy(false); } }
+  async function action(item: Item, body: Record<string, unknown>) { setBusy(true); try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ assignmentId: item.assignmentId, ...body }) }); reconcileMutated(r.assignment); if (body.action === "setStatus") void loadProgress(); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تنفيذ العملية."); } finally { setBusy(false); } }
   async function saveMaxAttempts(item: Item, value: number) { await action(item, { action: "setMaxAttempts", maxAttempts: value }); setAttemptsFor(null); }
   // Phase 21G.0 — title / instructions edit: one authoritative request, the returned summary reconciles the row and the detail.
   async function saveDetails(item: Item, title: string, instructions: string) {
@@ -120,7 +127,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     setBusy(true); setError(""); setNotice("");
     try {
       const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "updateTiming", assignmentId: item.assignmentId, dueAt: dueAtIso, durationMinutes }) });
-      reconcileMutated(r.assignment); setTimingFor(null); setNotice("✓ تم تحديث وقت الواجب وموعد التسليم.");
+      reconcileMutated(r.assignment); setTimingFor(null); void loadProgress(); setNotice("✓ تم تحديث وقت الواجب وموعد التسليم.");
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحديث وقت الواجب."); } finally { setBusy(false); }
   }
   // Roadmap #7 — archive-first deletion. The normal destructive action ARCHIVES (never physically deletes) and always checks
@@ -138,12 +145,12 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
       const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "archive", assignmentId: item.assignmentId, ...(confirmActive ? { confirmActiveAttempts: true } : {}) }) });
       // If this assignment's gradebook is open: refresh its authoritative status so B2B controls hide at once, or drop the detail
       // entirely when the archived assignment leaves the current master scope.
-      reconcileMutated(r.assignment);
+      reconcileMutated(r.assignment); void loadProgress();
       if (resultsFor?.assignmentId === item.assignmentId) { setDeadlineFor(null); setReopenFor(null); setExtendFor(null); }
       setNotice("✓ تم أرشفة الواجب «" + item.title + "».");
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر أرشفة الواجب."); } finally { setBusy(false); }
   }
-  async function restoreItem(item: Item) { setBusy(true); setError(""); setNotice(""); try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "restore", assignmentId: item.assignmentId }) }); reconcileMutated(r.assignment); setNotice("✓ تم استعادة الواجب «" + item.title + "»."); } catch (e) { setError(e instanceof Error ? e.message : "تعذر استعادة الواجب."); } finally { setBusy(false); } }
+  async function restoreItem(item: Item) { setBusy(true); setError(""); setNotice(""); try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "restore", assignmentId: item.assignmentId }) }); reconcileMutated(r.assignment); void loadProgress(); setNotice("✓ تم استعادة الواجب «" + item.title + "»."); } catch (e) { setError(e instanceof Error ? e.message : "تعذر استعادة الواجب."); } finally { setBusy(false); } }
   // Permanent purge — impact-gated. History present => never even offer purge; zero history => danger dialog that requires typing the
   // exact title before POSTing action:"purge".
   async function openPurge(item: Item) { setError(""); setNotice(""); setBusy(true); try { const impact = await fetchImpact(item); if (!impact) return; if (impact.submissionDocuments > 0) { setError("لا يمكن الحذف النهائي لأن للواجب بيانات طلاب محفوظة. اترك الواجب في الأرشيف للحفاظ على السجل."); return; } setPurgeFor(item); setPurgeTitle(""); } finally { setBusy(false); } }
@@ -195,8 +202,8 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
       setError(""); setNotice("تعذر فتح الواجب المطلوب لأنه لم يعد متاحًا (ربما أُرشف أو حُذف). تُعرض قائمة الواجبات.");
       return;
     }
-    const scope: MasterScope = { classId: item.classId, showArchived: false, q: "" };
-    scopeRef.current = scope; setFilterClassId(item.classId); setShowArchived(false); setSearch("");
+    const scope: MasterScope = { classId: item.classId, showArchived: false, q: "", time: "all", now };
+    scopeRef.current = scope; setFilterClassId(item.classId); setShowArchived(false); setSearch(""); setTimeFilter("all");
     setError(""); setNotice("");
     void loadResults(item, null, d);
   }
@@ -219,9 +226,10 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   function closeDetail() { clearDetail({ restoreFocus: true }); }
   // Master controls: apply the change, then enforce the invariant against the resulting scope. The composer is never closed here (its
   // target class is intentionally independent of the list filter).
-  function changeScope(patch: { filterClassId?: string; showArchived?: boolean; search?: string }) {
-    const next: MasterScope = { classId: patch.filterClassId !== undefined ? patch.filterClassId : effectiveFilter, showArchived: patch.showArchived !== undefined ? patch.showArchived : showArchived, q: normalizeQuery(patch.search !== undefined ? patch.search : search) };
+  function changeScope(patch: { filterClassId?: string; showArchived?: boolean; search?: string; timeFilter?: TimeFilter }) {
+    const next: MasterScope = { classId: patch.filterClassId !== undefined ? patch.filterClassId : effectiveFilter, showArchived: patch.showArchived !== undefined ? patch.showArchived : showArchived, q: normalizeQuery(patch.search !== undefined ? patch.search : search), time: patch.timeFilter !== undefined ? patch.timeFilter : timeFilter, now };
     scopeRef.current = next;
+    if (patch.timeFilter !== undefined) setTimeFilter(patch.timeFilter);
     if (patch.filterClassId !== undefined) setFilterClassId(patch.filterClassId);
     if (patch.showArchived !== undefined) setShowArchived(patch.showArchived);
     if (patch.search !== undefined) setSearch(patch.search);
@@ -306,10 +314,10 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // Review opens above the NON-MODAL detail; row-editor dialogs and the pending confirm never stay open beneath it.
   function openReview(s: StudentResult) { if (!s.latestResult) return; setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAttemptsFor(null); setPurgeFor(null); cancelPending(); setReview({ studentId: s.studentId, attemptNumber: s.latestResult.attemptNumber }); }
 
-  const masterScope: MasterScope = { classId: effectiveFilter, showArchived, q: normalizeQuery(search) };
+  const masterScope: MasterScope = { classId: effectiveFilter, showArchived, q: normalizeQuery(search), time: timeFilter, now };
   useEffect(() => { scopeRef.current = masterScope; });
   const archivedCount = items.filter(x => matchesMasterScope(x, { classId: effectiveFilter, showArchived: true, q: "" })).length;
-  const scoped = items.filter(x => matchesMasterScope(x, { ...masterScope, q: "" }));
+  const scoped = items.filter(x => matchesMasterScope(x, { ...masterScope, q: "", time: "all" }));
   const visible = items.filter(x => matchesMasterScope(x, masterScope));
   const sortedQuestions = useMemo(() => sortAnalysisQuestions(analysis, analysisSort), [analysis, analysisSort]);
   const analysisSummary = useMemo(() => summarizeAnalysis(analysis), [analysis]);
@@ -322,7 +330,8 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
 
   return {
     token, busy, loading, error, notice, mode,
-    toolbar: { active, effectiveFilter, showArchived, search, archivedCount, changeScope, openComposer, refresh },
+    toolbar: { active, effectiveFilter, showArchived, search, archivedCount, changeScope, openComposer, refresh, timeFilter, timeCounts: timeFilterCounts(scoped, now) },
+    home: { kpis: homeKpis(scoped, progress, now), progress, now },
     list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item) },
     composer: { ...composer, close: closeComposer, create: () => void create(), canCreate },
     detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, toggleAnalysis, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },

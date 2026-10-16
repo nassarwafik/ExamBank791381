@@ -12,6 +12,8 @@ import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog} from "./assignment
 import {useAssignmentsController,type AssignmentsControllerProps} from "./assignments/useAssignmentsController";
 import {rowGrading} from "./assignments/assignmentsView";
 import {fmt} from "./assignments/assignmentsApi";
+import AssignmentsHomeKpis from "./assignments/AssignmentsHomeKpis";
+import {TIME_FILTERS} from "./assignments/assignmentsHome";
 import {downloadCsv} from "./reports/csv";
 import {gradebookCsvRows,exportFilename} from "./teacher/teacherExports";
 
@@ -28,6 +30,7 @@ export default function AssignmentsPanel(props:Props){
  const showDetailArea=c.mode==="composer"||d.item!==null;
 
  return <section className="assignments-panel eb-assignments">
+  {!t.showArchived&&<AssignmentsHomeKpis kpis={c.home.kpis}/>}
   <div className="eb-assign-toolbar" role="region" aria-label="أدوات الواجبات" ref={toolbarRef} tabIndex={-1}>
    <div className="eb-assign-filters">
     <label className="eb-field-inline">الصف<select value={t.effectiveFilter} onChange={e=>t.changeScope({filterClassId:e.target.value})}><option value="">كل الصفوف</option>{t.active.map(cl=><option value={cl.classId} key={cl.classId}>{cl.name}{cl.grade?" · "+cl.grade:""}</option>)}</select></label>
@@ -36,6 +39,9 @@ export default function AssignmentsPanel(props:Props){
      <button type="button" aria-pressed={t.showArchived} onClick={()=>t.changeScope({showArchived:true})}>المؤرشفة{t.archivedCount?" ("+t.archivedCount+")":""}</button>
     </div>
     <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={t.search} onChange={e=>t.changeScope({search:e.target.value})} placeholder="بحث بعنوان الواجب أو الصف"/></label>
+    {!t.showArchived&&<div className="eb-chip-group eb-assign-time-filters" role="group" aria-label="تصفية حسب الوقت">
+     {TIME_FILTERS.filter(f=>f.key==="all"||t.timeCounts[f.key]>0||t.timeFilter===f.key).map(f=><button key={f.key} type="button" className="eb-filter-chip" aria-pressed={t.timeFilter===f.key} onClick={()=>t.changeScope({timeFilter:f.key})}>{f.label} <span className="eb-filter-chip-n">{t.timeCounts[f.key]}</span></button>)}
+    </div>}
    </div>
    <div className="eb-assign-actions">
     <button type="button" className="eb-button is-primary" onClick={t.openComposer} disabled={c.mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>
@@ -49,7 +55,7 @@ export default function AssignmentsPanel(props:Props){
   <div className={"eb-assign-layout"+(showDetailArea?" has-detail":"")}>
    <AssignmentList items={l.visible} showArchived={t.showArchived} hasAnyInScope={l.hasAnyInScope} selectedId={l.selectedId} busy={c.busy} loading={c.loading}
     onOpen={l.open} onPublish={l.publish} onUnpublish={l.unpublish}
-    onEditAttempts={l.editAttempts} onEditTiming={l.editTiming} onEditDetails={l.editDetails} onArchive={l.archive} onRestore={l.restore} onPurge={l.purge} onCreate={t.openComposer} fmt={fmt}/>
+    onEditAttempts={l.editAttempts} onEditTiming={l.editTiming} onEditDetails={l.editDetails} onArchive={l.archive} onRestore={l.restore} onPurge={l.purge} onCreate={t.openComposer} fmt={fmt} progress={c.home.progress} now={c.home.now}/>
    {c.mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={k.close} busy={c.busy} examLoading={k.source.examLoading}
     sourceMode={k.source.sourceMode} onSourceMode={m=>void k.source.switchSourceMode(m)} sourceExam={k.source.sourceExam} sourceCount={k.source.sourceCount} currentExam={k.source.current} hasCurrent={k.source.hasCurrent}
     savedExams={k.source.savedExams} examSource={k.source.examSource} onChooseExam={v=>void k.source.chooseExam(v)}

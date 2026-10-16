@@ -5,7 +5,9 @@ import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import Dialog from "../ui/Dialog";
 import { IconUpload, IconEyeOff, IconEdit, IconArchive, IconRestore, IconTrash, IconHistory } from "../icons";
-import { STATUS_LABEL, type Item } from "./types";
+import ProgressBar from "../ui/ProgressBar";
+import { STATUS_LABEL, type AssignmentProgress, type Item } from "./types";
+import { timeLabel } from "./assignmentsHome";
 import { SAVE_LABELS } from "../teacher/saveLabels";
 
 // ISO → <input type="datetime-local"> value (local wall-clock). Empty/invalid → "" (no crash).
@@ -30,6 +32,9 @@ export type AssignmentListProps = {
   onPurge: (item: Item) => void;
   onCreate: () => void;
   fmt: (value: string) => string;
+  /** Phase 21G.2 — the server progress per assignment (null = unavailable) and the clock the time chips are judged at. */
+  progress?: ReadonlyMap<string, AssignmentProgress> | null;
+  now?: number;
 };
 
 export default function AssignmentList(p: AssignmentListProps) {
@@ -53,6 +58,7 @@ export default function AssignmentList(p: AssignmentListProps) {
                 <div className="eb-assign-row-title"><strong>{item.title}</strong><StatusBadge tone={item.status === "published" ? "success" : item.status === "archived" ? "neutral" : "warn"} className={"assignment-status " + item.status}>{STATUS_LABEL[item.status]}</StatusBadge></div>
                 <span className="eb-assign-row-meta">{item.className}{item.className ? " · " : ""}{item.questionCount} سؤال · {item.totalMarks} علامة · {item.maxAttempts || 1} محاولة · {item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}{item.attemptPolicy && item.attemptPolicy !== "continuous" ? " · " + attemptPolicyLabel(item.attemptPolicy) : ""}</span>
                 <small className="eb-assign-row-due">التسليم: {p.fmt(item.dueAt)}{archived && item.archivedAt ? " · أُرشف: " + p.fmt(item.archivedAt) : ""}</small>
+                {p.now !== undefined && <RowProgress item={item} progress={p.progress?.get(item.assignmentId) || null} known={p.progress !== null && p.progress !== undefined} now={p.now} />}
               </div>
               <div className="eb-assign-row-actions">
                 <button type="button" className="eb-button is-small" aria-pressed={selected} onClick={e => p.onOpen(item, e.currentTarget)} disabled={p.busy}>فتح</button>
@@ -79,6 +85,29 @@ export default function AssignmentList(p: AssignmentListProps) {
       </ul>
       {empty}
     </section>
+  );
+}
+
+/**
+ * Phase 21G.2 — a row's time status and progress: the time chip (published only; a draft / archived row's badge already says it),
+ * «بانتظار التصحيح» / «يحاولون الآن» counts when there are any, and the submission bar (submitted of the class's students). Every
+ * figure is the server's (GET /api/assignment-progress, the gradebook's own rules); when progress is unavailable nothing is guessed.
+ */
+function RowProgress({ item, progress: g, known, now }: { item: Item; progress: AssignmentProgress | null; known: boolean; now: number }) {
+  const t = timeLabel(item, now);
+  if (!t) return null;
+  return (
+    <div className="eb-assign-row-progress">
+      <div className="eb-assign-row-chips">
+        <span className={"eb-time-chip tone-" + t.tone} data-time={t.status}>{t.label}</span>
+        {g && g.pendingReview > 0 && <span className="eb-count-chip tone-attention">بانتظار التصحيح: {g.pendingReview}</span>}
+        {g && g.active > 0 && <span className="eb-count-chip tone-info">يحاولون الآن: {g.active}</span>}
+      </div>
+      {g ? (g.expected > 0
+        ? <ProgressBar value={g.submitted / g.expected * 100} label={"سلّم " + g.submitted + " من " + g.expected} size="sm" tone={g.submitted === g.expected ? "success" : "primary"} />
+        : <small className="eb-muted">لا يوجد طلاب في هذا الصف بعد.</small>)
+        : known ? null : <small className="eb-muted">تقدم التسليم غير متاح حاليًا.</small>}
+    </div>
   );
 }
 
