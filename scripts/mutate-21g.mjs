@@ -4,7 +4,8 @@
 // that guard it, and is KILLED only if a test fails because of it. A timeout is reported as TIMEOUT (never as killed). Every mutated
 // file is restored byte-for-byte and hash-verified after each mutant — also when the run throws or the process is interrupted.
 //
-//   node scripts/mutate-21g.mjs <campaign>      campaigns: g0, … (see CAMPAIGNS below)
+//   node scripts/mutate-21g.mjs <campaign> [ids]   campaigns: g0, … (see CAMPAIGNS below); ids = comma-separated mutant ids to
+//                                                  re-run in isolation (e.g. a TIMEOUT, or a survivor after its test was fixed)
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -97,8 +98,9 @@ const restoreAll = () => {
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { restoreAll(); process.exit(130); });
 process.on("exit", restoreAll);
 
+const only = process.argv[3] ? new Set(process.argv[3].split(",")) : null;
 const results = [];
-for (const m of campaign) {
+for (const m of campaign.filter(x => !only || only.has(x.id))) {
   const abs = path.join(root, m.file);
   if (!originals.has(m.file)) { const buf = readFileSync(abs); originals.set(m.file, { buf, hash: sha(buf) }); }
   const source = originals.get(m.file).buf.toString("utf8");

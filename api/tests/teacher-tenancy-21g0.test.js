@@ -176,7 +176,12 @@ describe("21G.0 assignments, results and grading belong to the class's teacher",
     const B = multi("teacher-b");
     expect((await p.resultsGet(B, id)).status).toBe(404);
     expect((await p.resultsPost(B, { action: "allowRetry", assignmentId: id, studentId: sa })).status).toBe(404);
-    expect((await p.reviewGet(B, id, sa)).status).toBe(404);
+    // A real paper exists (teacher A opens it); teacher B is answered exactly as for a paper that does not exist.
+    p.mem.setJson("platform/submissions/" + id + "/" + sa + ".json", { assignmentId: id, studentId: sa, attempts: [{ attemptNumber: 1, submittedAt: "2026-09-02T00:00:00.000Z", score: 1, totalMarks: 1, percentage: 100, manualReviewMarks: 0, finalized: true, questionGrades: [{ questionId: "q1", score: 1 }], answers: { q1: { kind: "trueFalse", value: true } } }] });
+    expect((await p.reviewGet(multi("teacher-a"), id, sa)).status).toBe(200);
+    const paper = await p.reviewGet(B, id, sa);
+    expect(paper.status).toBe(404);
+    expect(paper.jsonBody).toEqual((await p.reviewGet(B, id, "no-such-student")).jsonBody);
     expect((await p.analysisGet(B, id)).status).toBe(404);
     expect((await p.regrade(B, { action: "retry", assignmentId: id, studentId: sa, attemptNumber: 1, questionId: "q1" })).status).toBe(404);
     expect((await p.bulkRetry(B, { assignmentId: id })).status).toBe(404);
