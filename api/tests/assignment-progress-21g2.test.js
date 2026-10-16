@@ -1,4 +1,4 @@
-// Phase 21G.2 — GET /api/assignments-overview: the progress of the teacher's published assignments. Drives the REAL handlers over
+// Phase 21G.2 — GET /api/assignment-progress: the progress of the teacher's published assignments. Drives the REAL handlers over
 // the in-memory container. The figures equal the gradebook's own stats for the same assignment (parity), drafts / archived
 // classes / other teachers' classes are never included, and the read is the Today hub's scoped shape.
 import { describe, it, expect } from "vitest";
@@ -8,7 +8,7 @@ const classrooms = require("../src/functions/manage-classrooms.js");
 const students = require("../src/functions/manage-students.js");
 const assignments = require("../src/functions/manage-assignments.js");
 const results = require("../src/functions/assignment-results.js");
-const overview = require("../src/functions/assignments-overview.js");
+const overview = require("../src/functions/assignment-progress.js");
 const { createMemoryContainer } = require("./fixtures/memory-container.js");
 
 const multi = sub => ({ ok: true, user: { ver: 2, role: "teacher", sub, am: "multi-user" } });
@@ -30,11 +30,11 @@ async function setup() {
   sub(pub, s1, { attempts: [attempt(1, 50), attempt(2, 80)] });                                   // final 80
   sub(pub, s2, { attempts: [attempt(1, 40, { finalized: false, manualReviewMarks: 3 })] });       // pending review
   sub(pub, s3, { attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-10-16T08:00:00.000Z", endsAt: "2026-10-16T09:00:00.000Z" } }); // live, nothing submitted
-  const get = async auth => (await overview.handler(req("GET", null, "http://x/api/assignments-overview"), deps(auth))).jsonBody;
+  const get = async auth => (await overview.handler(req("GET", null, "http://x/api/assignment-progress"), deps(auth))).jsonBody;
   return { mem, deps, A, B, a1, pub, draft, other, s4, get };
 }
 
-describe("21G.2 assignments overview", () => {
+describe("21G.2 assignment progress", () => {
   it("reports the gradebook's own figures for each published assignment", async () => {
     const s = await setup();
     const body = await s.get(s.A);

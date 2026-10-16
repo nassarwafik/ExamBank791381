@@ -1,4 +1,4 @@
-// Phase 21G.2 — GET /api/assignments-overview: the PROGRESS of the teacher's published assignments, for the assignments home
+// Phase 21G.2 — GET /api/assignment-progress: the PROGRESS of the teacher's published assignments, for the assignments home
 // (progress bars, «بانتظار التصحيح», «يحاولون الآن», the KPI strip). Read-only and derived: the SAME scoped read shape as the
 // Today hub (the published assignments of the teacher's ACTIVE classes through the Phase 12E-B per-class index, one submission
 // folder per published assignment, the class members) and the SAME rules as the gradebook (lib/assignment-progress.js). Nothing is
@@ -46,13 +46,13 @@ async function handler(request, deps = {}, obs = null) {
     const tally = { submissionDocsLoaded: 0 };
     const folders = await (deps.mapConcurrent || mapConcurrent)(published, getReadConcurrency(), a => loadFolder(container, String(a.assignmentId), deps, tally));
     const progress = published.map((a, i) => ({ assignmentId: String(a.assignmentId), classId: String(a.classId), ...deriveAssignmentProgress(members.get(String(a.classId)) || [], folders[i]) }));
-    logReadCost(obs, "assignments.overview.read_cost", { classDocsScanned: allClasses.length, userDocsScanned: users.length, publishedActiveAssignments: published.length, submissionFolderListings: published.length, submissionDocsLoaded: tally.submissionDocsLoaded, assignmentDocsScanned: idx.stats.assignmentDocsLoaded });
+    logReadCost(obs, "assignment.progress.read_cost", { classDocsScanned: allClasses.length, userDocsScanned: users.length, publishedActiveAssignments: published.length, submissionFolderListings: published.length, submissionDocsLoaded: tally.submissionDocsLoaded, assignmentDocsScanned: idx.stats.assignmentDocsLoaded });
     return { status: 200, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: true, generatedAt: new Date(nowMs).toISOString(), progress } };
   } catch (e) {
-    obs?.logError?.("assignments.overview.error", e);
+    obs?.logError?.("assignment.progress.error", e);
     return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل تقدم الواجبات حاليًا." } };
   }
 }
 
-app.http("assignmentsOverview", { methods: ["GET"], authLevel: "anonymous", route: "assignments-overview", handler: withObservability("assignments-overview", handler) });
+app.http("assignmentProgress", { methods: ["GET"], authLevel: "anonymous", route: "assignment-progress", handler: withObservability("assignment-progress", handler) });
 module.exports = { handler };
