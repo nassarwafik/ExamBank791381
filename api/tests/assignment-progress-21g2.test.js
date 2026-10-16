@@ -30,6 +30,7 @@ async function setup() {
   sub(pub, s1, { attempts: [attempt(1, 50), attempt(2, 80)] });                                   // final 80
   sub(pub, s2, { attempts: [attempt(1, 40, { finalized: false, manualReviewMarks: 3 })] });       // pending review
   sub(pub, s3, { attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-10-16T08:00:00.000Z", endsAt: "2026-10-16T09:00:00.000Z" } }); // live, nothing submitted
+  sub(pub, s4, { attempts: [attempt(1, 60)], activeAttempt: { attemptNumber: 2, startedAt: "2026-10-16T08:30:00.000Z", endsAt: "2026-10-16T09:30:00.000Z" } }); // graded AND a live second attempt
   const get = async auth => (await overview.handler(req("GET", null, "http://x/api/assignment-progress"), deps(auth))).jsonBody;
   return { mem, deps, A, B, a1, pub, draft, other, s4, get };
 }
@@ -39,7 +40,7 @@ describe("21G.2 assignment progress", () => {
     const s = await setup();
     const body = await s.get(s.A);
     expect(body.ok).toBe(true);
-    expect(body.progress).toEqual([{ assignmentId: s.pub, classId: s.a1, expected: 4, submitted: 2, notSubmitted: 2, pendingReview: 1, graded: 1, active: 1, average: 60, lastSubmittedAt: "2026-10-12T08:00:00.000Z" }]);
+    expect(body.progress).toEqual([{ assignmentId: s.pub, classId: s.a1, expected: 4, submitted: 3, notSubmitted: 1, pendingReview: 1, graded: 2, active: 2, average: 60, lastSubmittedAt: "2026-10-12T08:00:00.000Z" }]);
     // Parity with the gradebook (assignment-results GET stats) for the same assignment.
     const stats = (await results.handler(req("GET", null, "http://x/api/assignment-results?assignmentId=" + s.pub), s.deps(s.A))).jsonBody.stats;
     const p = body.progress[0];
