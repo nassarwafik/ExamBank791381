@@ -1,6 +1,6 @@
 # Phase 21H — Enterprise teacher dashboard («لوحة المتابعة»)
 
-**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1–21H.3 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.4–21H.5 planned. Each phase: exact-head CI,
+**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1–21H.4 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.5 planned. Each phase: exact-head CI,
 independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -40,7 +40,7 @@ Each decision is recorded here so the owner can reverse it at review.
 | 21H.1 | Project attention = submitted stages awaiting review (D2) | implemented |
 | 21H.2 | One scope and one refresh for the page (D3, as revised in §6) | implemented |
 | 21H.3 | Next actions: closing within 48 h, results to publish, opening within 24 h; «تذكير» on a row; priority order; «عرض الكل» | implemented |
-| 21H.4 | Read cost of `teacher-today`: only the teacher's students, a short cache, measured before / after | planned |
+| 21H.4 | Read cost of `teacher-today`: an ETag-verified document cache, measured before / after | implemented |
 | 21H.5 | Visual and accessibility gate on the dashboard (axe, overflow, touch targets at 390 / 834 / 1180 / 1440) | planned |
 
 ## 4. Implementation record and evidence (21H.0)
@@ -155,3 +155,38 @@ UX-3's «يحتاج إلى انتباهك» stays: its four categories were lock
 | `TeacherTodayHub.21h3` | 5 / 5: wording with relative times and units, the priority order, «تذكير» (cancel sends nothing; confirm sends exactly `{action:"remindStudents", assignmentId}` and reports «✓ أُرسل التذكير إلى 3 طلاب … طالب واحد ذُكّر اليوم مسبقًا.»), «عرض الكل في الواجبات», older and malformed payloads |
 | 12B / 9A | the row labels are unchanged (only their order follows the cards); «3 رسائل» replaces the ungrammatical «3 رسالة» |
 | Mutation `node scripts/mutate-21h.mjs h3` | 12 mutants, **12 KILLED**. H3-M6 survived first (the closing-soon fixture now also pins `openingSoon` = 0); H3-M10 was a no-op rename, replaced by «the closing-soon card is dropped» |
+
+## 8. Implementation record and evidence (21H.4)
+
+### Why not «only the teacher's students»
+
+Narrowing the user read to a class's `studentIds` was rejected. That roster is a denormalized, repairable index and never authoritative (Roadmap #25). Membership is the user document's own `classId`, through `class-membership.js`. Reading only the listed ids could silently drop a member from every figure.
+
+### What shipped
+
+- **`api/src/lib/etag-doc-cache.js`:** an in-memory, per-container, LRU-bounded cache (20,000 documents / 32 MB of text), keyed by blob name AND the ETag the listing reports.
+  - **When a cached copy is used:** only if the current listing reports the same ETag. A changed, new or ETag-less document is downloaded, and a deleted one disappears.
+  - **What a hit returns:** a freshly parsed object, so one request never sees another's mutation.
+  - **Authority:** none. A cold or evicted cache only means more downloads.
+- **`teacher-today.js`:** reads classes, users and every published assignment's submission folder through it.
+  - The test seams (`deps.listJson`, `listBlobNames`, `downloadManyJson`) keep the plain path, and `deps.docCache = null` disables the cache.
+  - The count-only read-cost event adds `docCacheHits` and `docsDownloaded`.
+
+### Measured (real handler + real in-memory container)
+
+| Fixture | Warm lists / downloads, 12E-B | Warm lists / downloads, 21H.4 (nothing changed) |
+|---|---|---|
+| T1 | 3 / 10 | 3 / 4 |
+| T10 (10 × 3 submissions) | 12 / 47 | 12 / 13 |
+| T-MANY-ARCHIVED | 3 / 10 | 3 / 4 |
+| T-MANY-OTHER/INACTIVE | 3 / 14 | 3 / 4 |
+
+The cold (first) request is unchanged. The full formula is in `docs/read-cost-baseline-12e.md` (21H.4 section).
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `etag-doc-cache-21h4` | 8 / 8: unchanged second load downloads nothing; changed / new / deleted documents are seen; no ETag → always downloaded; a downloaded or cached document mutated by a caller never changes the next result; entry and byte bounds; two containers never share; `null` → plain path; **teacher-today: a submission changed between two refreshes changes the figures on the second** |
+| `read-cost-teacher-today-12e` / `read-cost-observability-12e` | updated deliberately: warm and migrating second requests download 0 unchanged class / user / submission documents; exact warm numbers above; two added count-only fields |
+| Mutation `node scripts/mutate-21h.mjs h4` | 6 mutants, **6 KILLED** (ETag ignored, ETag-less served from cache, shared object on a hit, no entry bound, one cache for two containers, cache bypassed). H4-M3 survived first; the isolation test now also mutates a cache hit |
