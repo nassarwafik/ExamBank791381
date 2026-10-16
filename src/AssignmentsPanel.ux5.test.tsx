@@ -362,7 +362,9 @@ describe("UX-5 gradebook — filters, sorts, grading labels, review action, life
     expect(gbRow(detail, "زيد").querySelector(".review-state.pending")?.textContent).toBe("بانتظار التصحيح (18 ع.)");
     expect(gbRow(detail, "خالد").querySelector(".review-state.final")?.textContent).toBe("نهائي");
     expect(gbRow(detail, "سعد").querySelector(".review-state.none")?.textContent).toBe("لم يسلّم");
-    expect(gbRow(detail, "زيد").querySelector(".lifecycle-badge")?.textContent).toBe("تم التسليم");
+    // Phase 21G.4 — one status per row: a submitted student shows the grading status only (no second «تم التسليم» badge).
+    expect(gbRow(detail, "زيد").querySelectorAll(".eb-student-status")).toHaveLength(1);
+    expect(gbRow(detail, "زيد").querySelector(".lifecycle-badge")).toBeNull();
     expect(gbRow(detail, "عمر").textContent).toContain("ينتهي فعليًا:");
     expect(within(gbRow(detail, "زيد")).getByRole("button", { name: "تصحيح الآن" }).className).toContain("is-primary");
     expect(within(gbRow(detail, "خالد")).getByRole("button", { name: "عرض التصحيح" })).toBeTruthy();
@@ -494,9 +496,9 @@ describe("UX-5 item analysis — lazy, sortable, empty", () => {
 describe("UX-5 accessibility source guards", () => {
   // Phase 21G.1 — the workspace logic moved from AssignmentsPanel.tsx into its controller hook and pure view helpers; the guards
   // follow the code to where it lives (the panel only renders).
-  const RAW = import.meta.glob(["./{AssignmentsPanel,assignments/AssignmentList,assignments/AssignmentDetail,assignments/AssignmentComposer,assignments/Gradebook,assignments/GradebookRowEditors}.tsx", "./assignments/{useAssignmentsController,useAssignmentComposer,assignmentsView}.ts"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+  const RAW = import.meta.glob(["./{AssignmentsPanel,assignments/AssignmentList,assignments/AssignmentDetail,assignments/AssignmentComposer,assignments/Gradebook,assignments/GradebookRowEditors}.tsx", "./assignments/{useAssignmentsController,useAssignmentComposer,assignmentsView,gradebookStatus}.ts"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
   it("no window.confirm, no tablist/menu roles, no <details>, no action-control emoji; grading only through the shared authority", () => {
-    expect(Object.keys(RAW)).toHaveLength(9);
+    expect(Object.keys(RAW)).toHaveLength(10);
     for (const [file, src] of Object.entries(RAW)) {
       expect(src, file).not.toMatch(/window\.confirm/);
       expect(src, file).not.toMatch(/role="(tablist|tab|menu|menuitem)"/);
@@ -509,11 +511,13 @@ describe("UX-5 accessibility source guards", () => {
     expect(panel).toMatch(/import \{rowGrading\} from "\.\/assignments\/assignmentsView";/);
     for (const src of [panel, controller]) expect(src).not.toMatch(/resolveGradingStatus|manualReviewMarks|finalized\s*===/);
     expect(controller).toMatch(/useConfirm\(\)/);
-    for (const child of ["./assignments/Gradebook.tsx", "./assignments/AssignmentDetail.tsx", "./assignments/GradebookRowEditors.tsx", "./assignments/AssignmentList.tsx"]) {
+    for (const child of ["./assignments/Gradebook.tsx", "./assignments/AssignmentDetail.tsx", "./assignments/GradebookRowEditors.tsx", "./assignments/AssignmentList.tsx", "./assignments/gradebookStatus.ts"]) {
       expect(RAW[child], child).not.toMatch(/resolveGradingStatus|manualReviewMarks\s*>\s*0\s*\?\s*"(pending|final)|finalized\s*\?(?!\?)|percentage\s*[><]=?\s*\d|score\s*[><]=?\s*\d/);
     }
-    expect(RAW["./assignments/Gradebook.tsx"]).toMatch(/gradingLabel\(gs\)/);
-    expect(RAW["./assignments/Gradebook.tsx"]).toMatch(/gradingClass\(gs\)/);
+    // Phase 21G.4 — the row's one status is built in gradebookStatus.ts, from the shared resolver's status (gs) only.
+    expect(RAW["./assignments/Gradebook.tsx"]).toMatch(/studentStatus\(s, gs\)/);
+    expect(RAW["./assignments/gradebookStatus.ts"]).toMatch(/gradingLabel\(gs\)/);
+    expect(RAW["./assignments/gradebookStatus.ts"]).toMatch(/gradingClass\(gs\)/);
     // purge keeps the typed-title guard and the exact body; archive keeps impact-first gating
     expect(controller).toMatch(/action: "purge", assignmentId: item\.assignmentId, confirmAssignmentId: item\.assignmentId, confirmTitle: purgeTitle/);
     expect(controller).toMatch(/const impact = await fetchImpact\(item\); if \(!impact\) return;\n\s*let confirmActive = false;/);

@@ -12,7 +12,7 @@ import { bulkRetryNotice } from "./codingRecovery";
 import { assignmentsApi, toLocalInput } from "./assignmentsApi";
 import { matchesMasterScope, normalizeQuery, gradebookRows, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
 import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
-import type { PageTab } from "./assignmentPage";
+import { studentsCount, type PageTab } from "./assignmentPage";
 import { useAssignmentComposer } from "./useAssignmentComposer";
 import type { AssignmentDrill } from "./drillTarget";
 import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
@@ -51,6 +51,14 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const [codingSummary, setCodingSummary] = useState<CodingGradingStatus | null>(null), [codingTotals, setCodingTotals] = useState<CodingEvidenceTotals | null>(null);
   // Roadmap #13 — gradebook search / filter / sort (client-side over the already-loaded results; no request per keystroke).
   const [gbSearch, setGbSearch] = useState(""), [gbFilter, setGbFilter] = useState<GradebookFilter>("all"), [gbSort, setGbSort] = useState<GradebookSort>("name");
+  // Phase 21G.4 — the gradebook's row selection for the bulk actions. Cleared whenever the visible rows change meaning (another
+  // assignment, a search, a filter), so a bulk action only ever reaches rows the teacher can see ticked.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set()), [bulkDeadlineOpen, setBulkDeadlineOpen] = useState(false), [bulkDeadlineValue, setBulkDeadlineValue] = useState("");
+  const clearSelection = () => setSelected(new Set());
+  // A bulk run belongs to the assignment it started on: leaving or switching the page stops it (bulkRun) and releases the busy state
+  // the run holds (bulkBusy) — never a busy state owned by another request.
+  const bulkRun = useRef(0), bulkBusy = useRef(false);
+  const stopBulk = () => { bulkRun.current += 1; if (bulkBusy.current) { bulkBusy.current = false; setBusy(false); } };
   // UX-5 workspace state: list filter (separate from the composer's target class), search, mode, explicit attempts / timing editors.
   // Phase 21G.2 — the home: every class by default (the teacher narrows it), a time filter, the server progress (null = not
   // loaded / unavailable: the figures that need it are shown as unknown, never as zero), and a minute clock for the time chips.
@@ -165,7 +173,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // selection). A drill applies its gradebook view to the SAME authoritative rows.
   async function loadResults(item = resultsFor, trigger?: HTMLElement | null, drillTarget?: AssignmentDrill) {
     if (!item) return;
-    if (trigger !== undefined) { detailOpenerRef.current = trigger; focusDetailPending.current = true; setMode("list"); setPageTab("students"); }
+    if (trigger !== undefined) { detailOpenerRef.current = trigger; focusDetailPending.current = true; setMode("list"); setPageTab("students"); stopBulk(); clearSelection(); setBulkDeadlineOpen(false); }
     if (trigger !== undefined && !drillTarget) setDrillFocus(null);                        // a manual open: the teacher leaves the drill focus
     const seq = ++resultsSeq.current;
     resultsBusy.current = true;
@@ -226,7 +234,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // teacher operates a master control or after an authoritative mutation, so the control they are using keeps focus and no detached
   // opener is ever focused.
   function clearDetail({ restoreFocus }: { restoreFocus: boolean }) {
-    setPageTab("students");
+    setPageTab("students"); stopBulk(); clearSelection(); setBulkDeadlineOpen(false);
     setResultsFor(null); setResults([]); setStats(null); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAnalysis(null); setGbSearch(""); setGbFilter("all"); setGbSort("name"); setDrillFocus(null);
     const el = detailOpenerRef.current; detailOpenerRef.current = null;
     // Phase 21G.3 — the opener sits in the list, which is hidden while the page is open: focus it once the list is shown again.
@@ -327,6 +335,42 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   function openDeadline(s: StudentResult) { setError(""); setReopenFor(null); setExtendFor(null); setDeadlineFor(s.studentId); setDeadlineValue(s.dueAtOverride ? toLocalInput(s.dueAtOverride) : ""); }
   async function saveDeadline(s: StudentResult) { if (!resultsFor || !deadlineValue) return; setBusy(true); setError(""); try { const r = await api<LifecycleSnap & { dueAtOverride: string | null }>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "setDueAtOverride", assignmentId: resultsFor.assignmentId, studentId: s.studentId, dueAtOverride: new Date(deadlineValue).toISOString() }) }); mergeSnap(s.studentId, r); setDeadlineFor(null); setNotice("✓ تم تمديد الموعد للطالب " + s.studentName); } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التمديد."); } finally { setBusy(false); } }
   async function clearDeadline(s: StudentResult) { if (!resultsFor) return; setBusy(true); setError(""); try { const r = await api<LifecycleSnap & { dueAtOverride: string | null }>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "setDueAtOverride", assignmentId: resultsFor.assignmentId, studentId: s.studentId, dueAtOverride: null }) }); mergeSnap(s.studentId, r); setDeadlineFor(null); setNotice("✓ تم إلغاء تمديد الطالب " + s.studentName); } catch (e) { setError(e instanceof Error ? e.message : "تعذر إلغاء التمديد."); } finally { setBusy(false); } }
+  // Phase 21G.4 — a bulk action is the SAME per-student request as the row action, sent once per ticked visible row, one after the
+  // other (each answer is the authoritative snapshot of that student and is merged in place). Every student is reported: the ones that
+  // failed stay ticked so the teacher can retry them. Opening another assignment (or closing this one) stops the run.
+  async function runBulk(label: string, send: (s: StudentResult, assignmentId: string) => Promise<LifecycleSnap>, done: (n: string) => string) {
+    const item = resultsFor;
+    const rows = visibleResults.filter(s => selected.has(s.studentId));
+    if (!item || !rows.length) return false;
+    const run = ++bulkRun.current, failed: { s: StudentResult; error: string }[] = [];
+    let ok = 0;
+    bulkBusy.current = true; setBusy(true); setError(""); setNotice("");
+    try {
+      for (const [i, s] of rows.entries()) {
+        if (bulkRun.current !== run) return false;
+        setNotice(label + " " + (i + 1) + " من " + rows.length + "…");
+        try { const r = await send(s, item.assignmentId); if (bulkRun.current !== run) return false; mergeSnap(s.studentId, r); ok++; }
+        catch (e) { failed.push({ s, error: e instanceof Error ? e.message : "تعذر تنفيذ الإجراء." }); }
+      }
+    } finally { if (bulkRun.current === run) { bulkBusy.current = false; setBusy(false); } }
+    setSelected(new Set(failed.map(f => f.s.studentId)));
+    setNotice(ok ? "✓ " + done(studentsCount(ok)) : "");
+    if (failed.length) setError("تعذر تنفيذ الإجراء لـ " + studentsCount(failed.length) + ": " + failed.map(f => f.s.studentName + " (" + f.error + ")").join("، "));
+    return failed.length === 0;
+  }
+  async function bulkGrant() {
+    const n = visibleResults.filter(s => selected.has(s.studentId)).length;
+    if (!resultsFor || !n) return;
+    if (!(await confirm({ message: "سيتم السماح لـ " + studentsCount(n) + " بمحاولة إضافية دون حذف المحاولات السابقة.", title: "منح محاولة إضافية للمحددين", confirmLabel: "منح المحاولة" }))) return;
+    await runBulk("جارٍ منح المحاولة", (s, assignmentId) => api<LifecycleSnap>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "allowRetry", assignmentId, studentId: s.studentId }) }), n => "تم منح محاولة إضافية لـ " + n + ".");
+  }
+  function openBulkDeadline() { setError(""); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setBulkDeadlineValue(""); setBulkDeadlineOpen(true); }
+  async function saveBulkDeadline() {
+    if (!bulkDeadlineValue) return;
+    const dueAtOverride = new Date(bulkDeadlineValue).toISOString();
+    const allDone = await runBulk("جارٍ تمديد الموعد", (s, assignmentId) => api<LifecycleSnap>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "setDueAtOverride", assignmentId, studentId: s.studentId, dueAtOverride }) }), n => "تم تمديد الموعد لـ " + n + ".");
+    if (allDone) setBulkDeadlineOpen(false);
+  }
   // Review opens above the NON-MODAL detail; row-editor dialogs and the pending confirm never stay open beneath it.
   function openReview(s: StudentResult) { if (!s.latestResult) return; setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAttemptsFor(null); setPurgeFor(null); cancelPending(); setReview({ studentId: s.studentId, attemptNumber: s.latestResult.attemptNumber }); }
 
@@ -351,7 +395,11 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item) },
     composer: { ...composer, close: closeComposer, create: () => void create(), canCreate },
     detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, tab: pageTab, selectTab: selectPageTab, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },
-    gradebook: { rows: visibleResults, results, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: setGbSearch, filter: gbFilter, setFilter: setGbFilter, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s) },
+    gradebook: { rows: visibleResults, results, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s),
+      selected, toggleSelected: (id: string) => setSelected(x => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; }),
+      toggleAllSelected: (ids: string[], on: boolean) => setSelected(x => { const n = new Set(x); for (const id of ids) { if (on) n.add(id); else n.delete(id); } return n; }),
+      clearSelection, bulkGrant: () => void bulkGrant(), openBulkDeadline,
+      bulkDeadline: { open: bulkDeadlineOpen, count: visibleResults.filter(s => selected.has(s.studentId)).length, value: bulkDeadlineValue, setValue: setBulkDeadlineValue, close: () => setBulkDeadlineOpen(false), save: () => void saveBulkDeadline() } },
     dialogs: {
       attemptsFor, closeAttempts: () => setAttemptsFor(null), saveMaxAttempts: (item: Item, value: number) => void saveMaxAttempts(item, value),
       detailsFor, closeDetails: () => setDetailsFor(null), saveDetails: (item: Item, title: string, instructions: string) => void saveDetails(item, title, instructions),

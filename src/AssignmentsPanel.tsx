@@ -8,7 +8,8 @@ import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetail
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
-import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog} from "./assignments/GradebookRowEditors";
+import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog,BulkDeadlineDialog} from "./assignments/GradebookRowEditors";
+import {studentsCount} from "./assignments/assignmentPage";
 import {useAssignmentsController,type AssignmentsControllerProps} from "./assignments/useAssignmentsController";
 import {rowGrading} from "./assignments/assignmentsView";
 import {fmt} from "./assignments/assignmentsApi";
@@ -72,6 +73,7 @@ export default function AssignmentsPanel(props:Props){
      search={g.search} onSearch={g.setSearch} filter={g.filter} onFilter={g.setFilter} sort={g.sort} onSort={g.setSort}
      onReview={g.review} onGrant={g.grant} onReopen={g.reopen} onExtend={g.extend} onDeadline={g.deadline} onEndAttempt={g.endAttempt} fmt={fmt}
      codingSummary={g.codingSummary} codingTotals={g.codingTotals} onBulkCodingRetry={g.bulkCodingRetry}
+     selection={{selected:g.selected,onToggle:g.toggleSelected,onToggleAll:g.toggleAllSelected,onClear:g.clearSelection,onBulkGrant:g.bulkGrant,onBulkDeadline:g.openBulkDeadline}}
      onExportCsv={()=>{if(d.item)downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",d.item.title),gradebookCsvRows(d.item,g.results,rowGrading))}}/>
    </AssignmentDetail>}
   </div>
@@ -79,6 +81,7 @@ export default function AssignmentsPanel(props:Props){
   <MaxAttemptsDialog item={x.attemptsFor} busy={c.busy} onSave={x.saveMaxAttempts} onClose={x.closeAttempts}/>
   <AssignmentDetailsDialog item={x.detailsFor} busy={c.busy} onSave={x.saveDetails} onClose={x.closeDetails}/>
   <AssignmentTimingDialog item={x.timingFor} busy={c.busy} onSave={x.saveTiming} onClose={x.closeTiming} fmt={fmt}/>
+  <BulkDeadlineDialog open={g.bulkDeadline.open} count={studentsCount(g.bulkDeadline.count)} assignment={d.item} busy={c.busy} value={g.bulkDeadline.value} onValue={g.bulkDeadline.setValue} onClose={g.bulkDeadline.close} onSave={g.bulkDeadline.save} fmt={fmt}/>
   <DeadlineDialog student={x.deadlineStudent} assignment={d.item} busy={c.busy} value={x.deadlineValue} onValue={x.setDeadlineValue} onClose={x.closeDeadline} onSave={x.saveDeadline} onClear={x.clearDeadline} fmt={fmt}/>
   <ReopenDialog student={x.reopenStudent} assignment={d.item} busy={c.busy} value={x.reopenValue} onValue={x.setReopenValue} onClose={x.closeReopen} onSave={x.saveReopen} fmt={fmt}/>
   <ExtendDialog student={x.extendStudent} assignment={d.item} busy={c.busy} value={x.extendValue} onValue={x.setExtendValue} onClose={x.closeExtend} onSave={x.saveExtend} willClip={x.willClip} fmt={fmt}/>

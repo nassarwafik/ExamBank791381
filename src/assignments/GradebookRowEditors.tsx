@@ -24,6 +24,21 @@ export function DeadlineDialog(p: EditorBase & { onSave: (s: StudentResult) => v
   );
 }
 
+/** Phase 21G.4 — one new deadline for every ticked student (the same setDueAtOverride request as the row, once per student). */
+export function BulkDeadlineDialog(p: { open: boolean; count: string; assignment: Item | null; busy: boolean; value: string; onValue: (v: string) => void; onClose: () => void; onSave: () => void; fmt: (value: string) => string }) {
+  return (
+    <Dialog open={p.open && !!p.assignment} title="تمديد الموعد للمحددين" onClose={p.onClose} size="sm" className="bulk-deadline-dialog"
+      footer={<><button type="button" className="eb-button" onClick={p.onClose}>إغلاق</button><button type="button" className="eb-button is-primary" onClick={p.onSave} disabled={p.busy || !p.value}>{SAVE_LABELS.saveExtension}</button></>}>
+      {p.assignment && <>
+        <p className="eb-dialog-lead">الطلاب المحددون: <strong>{p.count}</strong></p>
+        <dl className="eb-dl"><div><dt>الموعد الأصلي</dt><dd>{p.fmt(p.assignment.dueAt)}</dd></div></dl>
+        <div className="eb-form-grid"><label>الموعد الجديد<input type="datetime-local" value={p.value} onChange={e => p.onValue(e.target.value)} /></label></div>
+        <p className="eb-muted">يحل هذا الموعد محل أي تمديد سابق لكل طالب محدد.</p>
+      </>}
+    </Dialog>
+  );
+}
+
 export function ReopenDialog(p: EditorBase & { onSave: (s: StudentResult) => void }) {
   const s = p.student;
   return (
