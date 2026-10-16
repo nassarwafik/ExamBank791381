@@ -40,6 +40,8 @@ const BANK_CONTAINER =
 
 const EXAMS_PREFIX =
   "exams/";
+const MAX_LISTED = 100;
+const MAX_EXAMINED = 2000;
 
 async function streamToBuffer(
   stream
@@ -160,8 +162,11 @@ async function listSavedExams(
         EXAMS_PREFIX
     })
   ) {
+    // Phase 21G.0 — the 100-exam page counts THIS teacher's exams (another teacher's are skipped, not counted), within a hard
+    // scan bound so a crowded store can never make the list unbounded.
     if (
-      examined >= 100
+      exams.length >= MAX_LISTED ||
+      examined >= MAX_EXAMINED
     ) {
       break;
     }

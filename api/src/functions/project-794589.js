@@ -14,7 +14,8 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, StorageConflictError } = require("../lib/platform-storage");
+const { getContainer, listJson, StorageConflictError } = require("../lib/platform-storage");
+const { tenantOf, canAccessDocument, accessibleClassIds, classIdAllowed } = require("../lib/teacher-tenancy");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isStudentClassMember } = require("../lib/class-membership");
@@ -55,6 +56,9 @@ async function handler(request, deps = {}, obs = null) {
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
       const now = new Date().toISOString();
+      // 21G.0 — another teacher's class is answered exactly like a missing one, on every read and write.
+      const tenant = tenantOf(auth.user);
+      const ownClassroom = classroom => !!classroom && canAccessDocument(classroom, tenant);
 
       if (request.method === "GET") {
         const url = new URL(request.url);
@@ -64,13 +68,14 @@ async function handler(request, deps = {}, obs = null) {
         // Catalog of 794589 classes for the class selector (no classId needed). The shared catalogue applies the
         // canonical enrollment predicate (modern programCodes[] or the legacy programCode) — never raw equality.
         if (resource === "classes") {
-          const classes = await svc.listProjectClasses(container, PROGRAM_CODE);
+          const allowed = tenant ? accessibleClassIds(await listJson(container, "platform/classes/"), tenant) : null;
+          const classes = (await svc.listProjectClasses(container, PROGRAM_CODE)).filter(c => classIdAllowed(allowed, c && c.classId));
           return { status: 200, jsonBody: { ok: true, classes } };
         }
 
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const classroom = await svc.loadClassroom(container, classId);
-        if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+        if (!ownClassroom(classroom)) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         // Multi-project enrollment gate: this legacy route only serves a class enrolled in 794589
         // (via modern programCodes[] or the legacy programCode). A class whose 794589 link was
         // removed (or that never had it) has no project section here.
@@ -134,7 +139,7 @@ async function handler(request, deps = {}, obs = null) {
       const classId = String(body.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
       const classroom = await svc.loadClassroom(container, classId);
-      if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+      if (!ownClassroom(classroom)) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
 
       // Multi-project enrollment gate: every write here (project.reset included) requires the class
       // to be enrolled in 794589. Removing the 794589 link blocks these routes without touching the

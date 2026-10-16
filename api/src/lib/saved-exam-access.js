@@ -11,6 +11,7 @@
 // (If-None-Match: *); otherwise the save is refused with 409 EXAM_CONFLICT and nothing is overwritten. Clients that do not opt in
 // (the legacy flat editor) keep last-write-wins, but every write is still atomic with the ownership check it was decided on.
 const storage = require("./platform-storage");
+const { canAccessDocument } = require("./teacher-tenancy");
 
 const EXAM_CONFLICT = "EXAM_CONFLICT";
 const EXAM_FORBIDDEN = "EXAM_FORBIDDEN";
@@ -26,10 +27,13 @@ function storedOwnerOf(document) {
   return document && typeof document.ownerId === "string" && document.ownerId ? document.ownerId : null;
 }
 
-/** Whether `owner` (examOwnerOf) may see / change this stored document. */
-function canAccessSavedExam(document, owner) {
-  const stored = storedOwnerOf(document);
-  return !owner || !stored || stored === owner;
+/**
+ * Whether `owner` (examOwnerOf) may see / change this stored document. Phase 21G.0 — the platform-wide tenancy rule: an unowned
+ * (pre-ownership) exam belongs to the operator-chosen LEGACY_DATA_OWNER when that server setting is present; without it, it stays
+ * shared and is claimed by the next multi-user save (D2).
+ */
+function canAccessSavedExam(document, owner, env = process.env) {
+  return canAccessDocument(document, owner, env);
 }
 
 class SaveRefusal extends Error {

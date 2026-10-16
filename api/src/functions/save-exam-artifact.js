@@ -1,5 +1,6 @@
 
 const { app } = require("@azure/functions");
+const crypto = require("crypto");
 
 const {
   BlobServiceClient
@@ -14,6 +15,7 @@ const { canonicalizeExamContent } = require("../lib/exam-canonical");
 const { uploadJson } = require("../lib/platform-storage");
 // Phase 21F.0 — saved-exam ownership + conditional saves (never a silent overwrite of a newer version).
 const { examOwnerOf, writeSavedExam, SaveRefusal } = require("../lib/saved-exam-access");
+const { tenantOf, ownerStamp } = require("../lib/teacher-tenancy");
 
 const BANK_CONTAINER =
   "bank";
@@ -184,11 +186,14 @@ async function handler(request, deps = {}) {
             kind ===
             "template"
           ) {
-            document =
-              buildTemplateDocument(
+            // Phase 21G.0 — a template belongs to the teacher who saved it (multi-user mode).
+            document = {
+              ...buildTemplateDocument(
                 exam,
                 savedAt
-              );
+              ),
+              ...ownerStamp(tenantOf(auth.user))
+            };
 
             const day =
               savedAt.slice(
@@ -201,6 +206,9 @@ async function handler(request, deps = {}) {
               day +
               "/" +
               Date.now() +
+              "-" +
+              // 21G.0 — never two templates on one name (same millisecond, a title the slug reduces to the same text).
+              crypto.randomBytes(4).toString("hex") +
               "-" +
               safeSegment(
                 exam.title ||

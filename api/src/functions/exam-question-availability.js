@@ -5,6 +5,8 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { INDEX_BLOB, filterEligibleCandidates, presentationTypeFromIndex } = require("../lib/exam-question-selection");
 const { resolveSectionFromTopic } = require("../lib/section-resolver");
+const { tenantOf } = require("../lib/teacher-tenancy");
+const { visibleBankEntries } = require("../lib/bank-tenancy");
 
 const PREVIEW_LIMIT = 20;
 
@@ -41,7 +43,8 @@ app.http("examQuestionAvailability", {
 
       const container = getContainer();
       const index = await downloadJsonOrNull(container, INDEX_BLOB);
-      const indexQuestions = Array.isArray(index?.questions) ? index.questions : [];
+      // 21G.0 — availability, facets and the preview cover only the official bank and this teacher's own questions.
+      const indexQuestions = visibleBankEntries(Array.isArray(index?.questions) ? index.questions : [], tenantOf(auth.user));
 
       // A non-empty selectedTopics restricts candidates the same way generate-exam.js's
       // excludedTopics already does elsewhere in the app: excluding every OTHER known topic.
