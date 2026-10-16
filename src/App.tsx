@@ -47,6 +47,9 @@ import type { BankExamQuestion } from "./structuredExamProductivity";
 import { legacyToStructured, newSection, newQuestion, newExamId, type StructuredExamUpdater } from "./examBuilderState";
 import type { EditMeta } from "./examHistory";
 const SaveConflictDialog = lazy(lazyWithRetry(() => import("./studio/SaveConflictDialog"), "save-conflict-dialog"));
+// Phase 21F.7 — «امتحاناتي» (the Studio home) and its «من قالب أكاديمي» library load on demand, with the same stale-chunk recovery.
+const StudioExamsHome = lazy(lazyWithRetry(() => import("./studio/StudioExamsHome"), "studio-exams-home"));
+const HomePresetLibrary = lazy(lazyWithRetry(() => import("./presets/PresetLibraryPanel"), "studio-home-presets"));
 // Phase 13A — the structured exam lives in a HISTORY authority (undo / redo / saved checkpoint / recovery).
 import { useExamStudioController } from "./studio/useExamStudioController";
 import { readBuilderLayout, writeBuilderLayout, type BuilderLayout } from "./studio/studioPreference";
@@ -3980,15 +3983,24 @@ function App() {
     studio.openExam(legacyToStructured(exam as unknown as Record<string, unknown>), "unsaved");
     setStructuredBuilderOpen(true);
   }
-  function openNewStructuredExam() {
+  function openNewStructuredExam(): string {
+    const examId = newExamId();
     studio.openExam({
-      examId: newExamId(),
+      examId,
       title: "امتحان منظّم جديد",
       status: "draft",
       sections: [newSection({ title: "القسم الأول", questions: [newQuestion("multipleChoice")] })]
     }, "unsaved", null);
     setStructuredBuilderOpen(true);
+    return examId;
   }
+  // Phase 21F.7 — «امتحاناتي» → «المؤلف الذكي»: a new exam opens with the builder's own composer (its menu item, run once).
+  const [builderStartTool, setBuilderStartTool] = useState<{ examId: string; key: string } | null>(null);
+  function composeNewStructuredExam() {
+    const examId = openNewStructuredExam();
+    setBuilderStartTool({ examId, key: "ai-composer" });
+  }
+  const [homePresetsOpen, setHomePresetsOpen] = useState(false);
   // Imported exam (JSON/HTML) becomes the ACTIVE structured exam in memory only — never auto-saved.
   function openImportedStructuredExam(imported: StructuredExam) {
     studio.openExam(imported, "unsaved", null, "✓ تم استيراد الامتحان — راجعه ثم احفظه كمسودة أو اعتمده نهائيًا.");
@@ -6137,6 +6149,29 @@ function App() {
           </div>
         )}
 
+        {builderLayout === "studio" ? (
+          <Suspense fallback={<div className="platform-loading" role="status">جارٍ تحميل امتحاناتي…</div>}>
+            <StudioExamsHome
+              exams={savedExams}
+              loading={savedExamsBusy}
+              onRefresh={() => { void loadSavedExams(); }}
+              onOpen={item => { void openSavedExam(item); }}
+              onDelete={item => { void deleteSavedExam(item); }}
+              onCreateBlank={() => { openNewStructuredExam(); }}
+              onCreateFromPreset={() => setHomePresetsOpen(true)}
+              onImport={() => setStructuredImportOpen(true)}
+              onCompose={composeNewStructuredExam}
+              onContinue={structuredExam && !structuredBuilderOpen ? () => setStructuredBuilderOpen(true) : undefined}
+              continueTitle={structuredExam?.title}
+              onTemplates={() => { void toggleTemplates(); }}
+              onClassic={() => changeBuilderLayout("classic")}
+            />
+            {homePresetsOpen && (
+              <HomePresetLibrary open onClose={() => setHomePresetsOpen(false)} service={structuredPresets}
+                onCreateExam={next => { setHomePresetsOpen(false); openExamFromPreset(next); return true; }} />
+            )}
+          </Suspense>
+        ) : (<>
         <div className="saved-exams-access">
           <button
             ref={savedExamsToggleRef}
@@ -6284,6 +6319,8 @@ function App() {
             )}
           </section>
         )}
+
+        </>)}
 
         {templatesOpen && (
           <section className="templates-panel">
@@ -7876,6 +7913,9 @@ function App() {
               onTypingEnd={structuredHistory.endTyping}
               layout={builderLayout}
               onLayoutChange={changeBuilderLayout}
+              startTool={builderStartTool}
+              onStartToolConsumed={() => setBuilderStartTool(null)}
+              onOpenAssignments={() => { setStructuredBuilderOpen(false); goToWorkspace("assignments"); }}
               onSave={saveStructuredExam}
               onExit={() => { setStructuredBuilderOpen(false); }}
               saving={structuredSaving}

@@ -55,6 +55,8 @@ import { insertQuestionAt, placeQuestion as placeQuestionAt } from "./studio/stu
 // Phase 21F.3 — the Exam Studio layout is its own chunk inside the builder chunk (the classic layout never loads it).
 const StudioWorkspace = lazy(() => import("./studio/StudioWorkspace"));
 const StudioReview = lazy(() => import("./studio/StudioReview"));
+const StudioSetup = lazy(() => import("./studio/StudioSetup"));
+const StudioPublish = lazy(() => import("./studio/StudioPublish"));
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
 import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown, IconLayers } from "./icons";
@@ -118,6 +120,12 @@ type Props = {
   layout?: "classic" | "studio";
   /** Phase 21F.3 — switch the layout (the owner stores the teacher's choice); absent → the switch is not offered. */
   onLayoutChange?: (layout: "classic" | "studio") => void;
+  /** Phase 21F.7 — open one of the builder's tools as soon as THIS exam opens (e.g. «امتحاناتي» → «المؤلف الذكي»): the key of an
+   *  «إضافة» / «أدوات» menu item, run through that item's own handler; reported back once run (or absent) so it never replays. */
+  startTool?: { examId: string; key: string } | null;
+  onStartToolConsumed?: () => void;
+  /** Phase 21F.7 — the publish step's hand-off to the assignments workspace (after the unsaved-work guard); absent → not offered. */
+  onOpenAssignments?: () => void;
   onSave?: (mode: SaveMode) => void;
   onExit?: () => void;
   saving?: boolean;
@@ -268,7 +276,7 @@ type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: Navig
 type ActionImpl = Omit<BuilderActions, "registerNode"> & { requestImage: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset> };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, layout = "classic", onLayoutChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, layout = "classic", onLayoutChange, startTool, onStartToolConsumed, onOpenAssignments, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -1234,6 +1242,18 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
           ...(onLayoutChange ? [{ key: "layout", label: studio ? "العودة إلى الواجهة الكلاسيكية" : "تجربة استوديو الامتحان (جديد)", icon: <IconLayers size={16} />, onSelect: () => onLayoutChange(studio ? "classic" : "studio") }] : []),
         ];
 
+  // Phase 21F.7 — a tool requested for this exam opens once, through its own menu item (same handler, gate and dialog).
+  const runStartTool = useRef<() => void>(() => {});
+  useLayoutEffect(() => {
+    runStartTool.current = () => {
+      if (!startTool || startTool.examId !== exam.examId) return;
+      [...addMenuItems, ...toolMenuItems].find(item => item.key === startTool.key && !item.disabled)?.onSelect();
+      onStartToolConsumed?.();
+    };
+  });
+  useEffect(() => { if (startTool && startTool.examId === exam.examId) runStartTool.current(); }, [startTool, exam.examId]);
+  const openAssignments = async () => { if (onOpenAssignments && (await confirmLeaveUnsaved("المتابعة دون حفظ"))) onOpenAssignments(); };
+
   // The layers both layouts share: every dialog / panel the menus open, the student preview, the confirmations, the recovery offer
   // and the «تراجع» toast (21E.1 slice 2 — inside the builder's fixed overlay, above --eb-z-toast).
   const layers = (
@@ -1341,14 +1361,27 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
   );
 
   // Phase 21F.6 / 21F.7 — the Studio's setup, review and publish steps (filled by those phases; the content step is the workspace's).
-  const studioStepViews = (): Partial<Record<StudioStepKey, ReactNode>> => ({
+  const studioStepViews: Partial<Record<StudioStepKey, ReactNode>> = {
+    setup: (
+      <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل الإعداد…</p>}>
+        <StudioSetup exam={exam} onTitle={title => update(prev => ({ ...prev, title }))} tools={toolMenuItems} disabled={!!saving} onStep={step => setStudioUi(prev => ({ ...prev, step }))}
+          coverEditor={<ExamCoverEditor cover={exam.coverPage} onChange={cover => update(prev => ({ ...prev, coverPage: cover }))} onPreviewCover={() => setPreview(exam)} disabled={saving} />} />
+      </Suspense>
+    ),
+    publish: (
+      <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل النشر…</p>}>
+        <StudioPublish exam={exam} decision={decision} saveState={saveState} saving={!!saving} mediaPending={mediaPending} mediaWait={MEDIA_WAIT}
+          onSaveDraft={onSave ? () => onSave("draft") : undefined} onFinalize={onSave ? requestFinalSave : undefined} onAssign={onOpenAssignments ? () => { void openAssignments(); } : undefined}
+          tools={toolMenuItems} onStep={step => setStudioUi(prev => ({ ...prev, step }))} />
+      </Suspense>
+    ),
     review: (
       <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المراجعة…</p>}>
         <StudioReview exam={exam} decision={decision} issuesOfQuestion={stableIssues.byQuestion} targets={summaryTargets} tools={toolMenuItems}
           onOpenIssue={openIssue} onPreview={() => setPreview(exam)} onStep={step => setStudioUi(prev => ({ ...prev, step }))} />
       </Suspense>
     )
-  });
+  };
   if (studio) {
     const addSectionNow = () => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })));
     return (
@@ -1399,7 +1432,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
                 onMove={bulkMove} onDuplicate={bulkDuplicate} onSetMarks={bulkMarks} onDelete={() => { void bulkDelete(); }} onClear={clearSelection}
                 onClassify={() => setClassifyOpen(true)} />
             ) : undefined}
-            stepViews={studioStepViews()}
+            stepViews={studioStepViews}
           />
         </Suspense>
         {/* Phase 21E.2 (D) — always mounted, so assistive technology registers it before its first update. */}

@@ -19,6 +19,21 @@ const {
 // Phase 21F.0 — ownership (multi-user mode) and the ETag a conditional save starts from.
 const { examOwnerOf, canAccessSavedExam } = require("../lib/saved-exam-access");
 const { downloadJsonWithEtagOrNull, deleteBlobConditional, isConcurrencyConflict } = require("../lib/platform-storage");
+// Phase 21F.7 — «امتحاناتي» summary: the SERVER finalization authority (the same decision the builder and governance use).
+const { evaluateServerFinalization } = require("../lib/server-finalization");
+
+// Counts only (never an exam body, question text or answer key). A legacy flat exam has no finalization decision (null), and a
+// summary that cannot be computed is null too: the list never fails because of one exam.
+function readinessSummary(exam) {
+  if (!Array.isArray(exam.sections)) return null;
+  try {
+    const decision = evaluateServerFinalization(exam);
+    return { canFinalize: decision.canFinalize === true, blockers: decision.blockers.length, warnings: decision.warnings.length };
+  }
+  catch {
+    return null;
+  }
+}
 
 const BANK_CONTAINER =
   "bank";
@@ -209,7 +224,19 @@ async function listSavedExams(
         totalMarks:
           examOfficialStats(
             exam
-          ).totalMarks
+          ).totalMarks,
+
+        // Phase 21F.7 — additive fields (older clients ignore them).
+        kind:
+          Array.isArray(exam.sections) ? "structured" : "legacy",
+
+        status:
+          exam.status === "final" ? "final" : "draft",
+
+        readiness:
+          readinessSummary(
+            exam
+          )
       });
     }
     catch {
