@@ -317,3 +317,53 @@ secrecy pattern contains `9\.17` (a hidden weight canary), and the real-clock `e
 the clock in that test, or make the weight canary a string no timestamp can contain.
 
 Fail-first applies to the phone-card defect only. Deployment tier: 1 (local) only.
+
+## 12. Implementation record and evidence (21G.5)
+
+### What shipped
+
+- **Moving between students in the review** (`src/assignments/reviewNav.ts`, `AssignmentReview.tsx`).
+  - Controls: «→ الطالب السابق», «الطالب التالي ←», «الطالب التالي بانتظار التصحيح», the position («الطالب 3 من 8»), and
+    «حفظ والانتقال إلى التالي بانتظار التصحيح».
+  - Order: the gradebook's current sort, over every student with a submitted attempt, so a search or filter never strands the
+    review. «التالي بانتظار التصحيح» wraps round and never names the current student.
+  - Keys `]` `[` `N` by physical key, so any keyboard layout works (Arabic included). They never fire while typing in a field or
+    with a modifier.
+  - Every switch goes through the same unsaved-edits guard as closing; nothing is auto-saved. «حفظ والانتقال» moves only after a
+    successful save.
+- **Results release (owner decision D2)** (`api/src/lib/results-release.js`), a per-assignment `resultsRelease`:
+  - The three modes: `immediate` (the default, and every assignment stored before 21G.5), `afterDue` (from `dueAt`), and
+    `manual` (`resultsReleasedAt`, set by the teacher).
+  - **Enforced by the server.** Until release, score, percentage, manual-review marks and teacher feedback leave no student
+    surface. That covers:
+    - the submission state: the latest result, every attempt, and every write response;
+    - the dashboard: the assignment's result, `latestScore` / `latestPercentage`, the averages, Strength and medals;
+    - medal posts in the achievement feed, including reactions to them;
+    - `assignment_reviewed` notifications, which appear, with their original time, once released.
+  - The client learns only `resultsVisible:false`, the mode and, for `afterDue`, the date. Fail closed: an unknown mode or an
+    unreadable date withholds.
+  - Teacher actions: `setResultsRelease` (any time; changing the mode clears a manual publication, so switching back to
+    «يدويًا» never surprises with a release) and `releaseResults` (manual mode only; publish or withdraw, confirmed). An archived
+    assignment is read-only. Both are audited.
+  - The summary carries the setting, so `SUMMARY_VERSION` is now 2.
+  - Teacher UI: the composer's «متى يرى الطلاب نتائجهم», and in «نظرة عامة» where results stand, the mode and the manual
+    publish. The page header names the mode.
+  - Student UI: the ONE resolver `scoreWithheld` treats an unreleased result as withheld and says when it will show. The result
+    card and task card show the reason and a dash, never a zero. Medals and the Today hub skip such a result.
+  - Student-facing field names avoid «lease», which the coding leak guard rightly forbids. The two public-key allowlists gain
+    `resultsVisible`, `resultsVisibility` and `resultsVisibleAt`: a boolean, a mode word and a due date.
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `results-release-21g5` (API) | 9 / 9: the rule (incl. fail-closed), each-assignment-once gating helper, create / summary / both actions incl. archived, and every student surface withheld then released |
+| `reviewNav.21g5`, `AssignmentReview.nav.21g5` | 3 / 3, 5 / 5: order and wrap, buttons, physical keys (not while typing), the guard both ways, save-then-move only on success, no nav = unchanged |
+| `resultsRelease.21g5`, `AssignmentsPanel.grading.21g5` | 4 / 4, 2 / 2: the teacher's words, the student resolver and task card (no mark, no zero), portal medals, the review moving through the real panel, the mode change and confirmed publish |
+| Existing suites | `ux5` (create body gains `resultsRelease:"immediate"`), `assignment-summary-cache-21g2` (SUMMARY_VERSION 2), the two coding public-key allowlists (three release fields); `ux7a`'s finalized-only medal guard kept verbatim |
+| Full root suite + build on `582d25dc` | 1,060 files / 13,171 tests, all passed; initial JS 114.1 KB gzip |
+| tsc / lint | clean / 125 |
+| Mutation `node scripts/mutate-21g.mjs g5` | 23 mutants, 22 KILLED, 1 EQUIVALENT: G5-M10 (the dashboard medal loop's own release check removed) cannot change the output, because `withholdResult` already removed the percentage the medal tier is read from; the check stays as defence in depth |
+| Real Chromium at 1440 / 390 px | no horizontal overflow; the review header shows the position and the three student controls; «نظرة عامة» shows the release state, the mode and «نشر النتائج للطلاب» |
+
+Fail-first: not applicable, as no defect was fixed. Deployment tier: 1 (local) only.
