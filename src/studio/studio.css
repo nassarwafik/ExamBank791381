@@ -59,10 +59,15 @@
   background: var(--st-top);
   color: var(--st-top-tx);
 }
-.st-studio .st-topbar-start, .st-studio .st-topbar-end { display: flex; align-items: center; gap: var(--eb-space-2); min-inline-size: 0; }
+.st-studio .st-topbar-start, .st-studio .st-topbar-end, .st-studio .st-topbar-tools { display: flex; align-items: center; gap: var(--eb-space-2); min-inline-size: 0; }
 .st-studio .st-topbar-end { justify-content: flex-end; }
 .st-studio .st-title { display: grid; min-inline-size: 0; }
-.st-studio .st-crumb { font-size: var(--eb-fs-12); color: var(--st-top-mute); }
+.st-studio .st-crumb { display: flex; align-items: center; gap: var(--eb-space-2); font-size: var(--eb-fs-12); color: var(--st-top-mute); }
+.st-studio .st-crumb .st-save { padding-inline: 0; }
+.st-studio .st-crumb .st-save::before { content: "·"; margin-inline-end: 2px; }
+.st-studio .st-short { display: none; }
+.st-studio .st-topbar .eb-menu-trigger.st-menu { min-block-size: var(--st-target); min-inline-size: var(--st-target); border-radius: var(--eb-r-sm); border-color: var(--st-top-line); background: transparent; color: var(--st-top-tx); }
+.st-studio .st-topbar .eb-menu-trigger.st-menu:hover, .st-studio .st-topbar .eb-menu-trigger.st-menu[aria-expanded="true"] { background: var(--st-top-hover); border-color: var(--st-top-mute); color: var(--st-top-tx); }
 .st-studio .st-title-row { display: flex; align-items: center; gap: var(--eb-space-2); min-inline-size: 0; }
 .st-studio .st-title-input {
   font: inherit; font-size: var(--eb-fs-16); font-weight: var(--eb-fw-semibold);
@@ -122,7 +127,7 @@
 .st-studio .st-body.no-outline.no-inspector { grid-template-columns: minmax(0, 1fr); }
 
 /* ---------- outline ---------- */
-.st-outline { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-block-size: 0; background: var(--st-panel-2); border-inline-end: 1px solid var(--eb-line); }
+.st-outline { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); min-block-size: 0; min-inline-size: 0; background: var(--st-panel-2); border-inline-end: 1px solid var(--eb-line); }
 .st-drawer .st-outline { border: 0; block-size: 100%; }
 .st-outline .st-outline-head { display: grid; gap: 10px; padding: var(--eb-space-4) var(--eb-space-4) var(--eb-space-3); border-block-end: 1px solid var(--eb-line); }
 .st-outline .st-outline-title { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2); }
@@ -131,7 +136,7 @@
   display: flex; align-items: center; gap: var(--eb-space-2); min-block-size: 34px; padding-inline: 10px;
   border-radius: 9px; background: var(--eb-surface); border: 1px solid var(--eb-line); color: var(--eb-placeholder);
 }
-.st-outline .st-search input { flex: 1; min-inline-size: 0; border: 0; background: transparent; font: inherit; font-size: var(--eb-fs-13); color: var(--eb-ink); outline: none; }
+.st-outline .st-search input { flex: 1; inline-size: 100%; min-inline-size: 0; border: 0; background: transparent; font: inherit; font-size: var(--eb-fs-13); color: var(--eb-ink); outline: none; }
 .st-outline .st-search:focus-within { border-color: var(--eb-primary); box-shadow: var(--eb-focus); }
 .st-outline .st-totals { display: flex; gap: 6px; flex-wrap: wrap; }
 .st-outline .st-total { font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); color: var(--eb-text); background: var(--eb-surface); border: 1px solid var(--eb-line); padding: 2px 9px; border-radius: var(--eb-pill); font-variant-numeric: tabular-nums; }
@@ -188,6 +193,8 @@
   background-size: 18px 18px;
   scroll-padding-block: 16px;
 }
+/* 21E.1 slice 2 — the band a toast covers at the bottom of the scroller is reserved while a toast is shown (the Studio's scroller is its canvas). */
+.st-studio .st-canvas[data-toast-reserve] { padding-block-end: calc(var(--eb-space-4) * 2 + 96px); scroll-padding-block-end: calc(var(--eb-space-4) * 2 + 96px); }
 .st-studio .st-sheet { max-inline-size: 760px; margin-inline: auto; display: grid; gap: 14px; }
 .st-studio .st-banner { border-radius: var(--eb-r); padding: 10px 14px; font-size: var(--eb-fs-14); }
 .st-studio .st-banner.is-error { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
@@ -209,10 +216,12 @@
 .st-studio .st-card.is-error { border-color: var(--eb-danger); }
 .st-studio .st-card.is-selected { border-color: var(--eb-primary); box-shadow: 0 0 0 2px var(--eb-primary-100); }
 .st-studio .st-card.is-flash { box-shadow: 0 0 0 4px var(--st-teal-050), var(--st-card-sh-hover); }
-.st-studio .st-card-open {
-  display: grid; gap: 10px; inline-size: 100%; padding: 16px 20px; border: 0; border-radius: inherit; background: transparent;
-  text-align: start; font: inherit; color: inherit; cursor: pointer;
-}
+/* A collapsed card is one big «تحرير» button stretched over its content (the content stays real text, outside the button). */
+.st-studio .st-card-cover { position: absolute; inset: 0; z-index: 1; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.st-studio .st-card-cover:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.st-studio .st-card-content { display: grid; gap: 10px; padding: 16px 20px; }
+.st-studio .st-card-content .st-card-top { padding-inline-end: 30px; }
+.st-studio .st-select-box { z-index: 2; }
 .st-studio .st-card:hover:not(.is-active) { border-color: var(--eb-border-strong); box-shadow: var(--st-card-sh-hover); }
 .st-studio .st-card-top { display: flex; align-items: flex-start; gap: 12px; }
 .st-studio .st-num { flex: none; display: grid; place-items: center; inline-size: 30px; block-size: 30px; border-radius: 9px; background: var(--st-panel-2); border: 1px solid var(--eb-line); font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-13); color: var(--eb-navy); font-variant-numeric: tabular-nums; }
@@ -289,6 +298,8 @@
 .st-inspector .st-type-card .st-type-ic { display: grid; place-items: center; inline-size: 40px; block-size: 40px; border-radius: 10px; background: var(--eb-primary-050); color: var(--eb-primary-strong); }
 .st-inspector .st-type-card b { display: block; color: var(--eb-navy); font-size: var(--eb-fs-14); }
 .st-inspector .st-fields { display: grid; gap: var(--eb-space-3); }
+.st-inspector .st-type-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-block-start: 4px; }
+.st-inspector .st-section-settings .sb-title-input { font-size: var(--eb-fs-16); }
 .st-inspector .st-field { display: grid; gap: 6px; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); color: var(--eb-muted); }
 .st-inspector .st-field select, .st-inspector .st-field input, .st-inspector .st-field textarea { font: inherit; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-regular); min-block-size: 36px; border: 1px solid var(--eb-border-strong); border-radius: 9px; padding-inline: 10px; color: var(--eb-ink); background: var(--eb-surface); inline-size: 100%; }
 .st-inspector .st-insp-issues { display: grid; gap: var(--eb-space-2); }
@@ -361,13 +372,31 @@
   .st-studio .st-step-view { padding: 20px 16px 72px; }
 }
 @media (max-width: 767px) {
-  .st-studio .st-topbar { padding-inline: var(--eb-space-3); }
+  .st-studio .st-topbar {
+    padding-inline: var(--eb-space-3); gap: var(--eb-space-2);
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "start save next" "steps tools tools";
+  }
+  .st-studio .st-topbar-end { display: contents; }
+  .st-studio .st-topbar-start { grid-area: start; }
+  .st-studio .st-topbar .st-steps { grid-area: steps; grid-column: auto; grid-row: auto; justify-self: start; }
+  .st-studio .st-topbar-tools { grid-area: tools; justify-content: flex-end; }
+  .st-studio .st-topbar .st-save-btn { grid-area: save; }
+  .st-studio .st-topbar .st-next-btn { grid-area: next; }
+  .st-studio .st-topbar .st-redo-btn, .st-studio .st-topbar .st-preview-btn { display: none; }
+  .st-studio .st-crumb-name { display: none; }
+  .st-studio .st-title-input { font-size: var(--eb-fs-14); }
+  .st-studio .st-chip-dark { display: none; }
+  .st-studio .st-long { display: none; }
+  .st-studio .st-short { display: inline; }
+  .st-studio .st-topbar .eb-menu-trigger.st-menu.has-text span { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .st-studio .st-topbar .eb-menu-trigger.st-menu.has-text { padding: 0; }
   .st-studio .st-step { padding-inline: 8px; }
   .st-studio .st-step .st-step-label { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .st-studio .st-step[aria-current="step"] .st-step-label { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
   .st-studio .st-opts { grid-template-columns: minmax(0, 1fr); }
   .st-studio .st-summary, .st-studio .st-chips { padding-inline-start: 0; }
-  .st-studio .st-card-open { padding: 14px; }
+  .st-studio .st-card-content { padding: 14px; }
   .st-studio .st-section-card { padding: 14px 16px; }
   .sb-builder.st-studio { grid-template-rows: auto 1fr auto; }
   .st-studio .st-bottombar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 6px 6px max(10px, env(safe-area-inset-bottom, 0px)); background: var(--eb-surface); border-block-start: 1px solid var(--eb-line); }

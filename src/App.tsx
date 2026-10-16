@@ -49,6 +49,7 @@ import type { EditMeta } from "./examHistory";
 const SaveConflictDialog = lazy(lazyWithRetry(() => import("./studio/SaveConflictDialog"), "save-conflict-dialog"));
 // Phase 13A — the structured exam lives in a HISTORY authority (undo / redo / saved checkpoint / recovery).
 import { useExamStudioController } from "./studio/useExamStudioController";
+import { readBuilderLayout, writeBuilderLayout, type BuilderLayout } from "./studio/studioPreference";
 import { examSaveState } from "./examHistory";
 import "./project794589.css";
 // Phase 8E-4 — the teacher PLATFORM (classes / students / assignments / audit / dashboard workspace) is a LAZY chunk:
@@ -883,6 +884,9 @@ function App() {
   // structured exam active (so it stays the assignment source); only opening a legacy exam clears it.
   const [structuredBuilderOpen, setStructuredBuilderOpen] = useState(false);
   const [structuredImportOpen, setStructuredImportOpen] = useState(false);
+  // Phase 21F.3 — the builder layout (Exam Studio or classic): a per-browser preference the teacher switches from the builder.
+  const [builderLayout, setBuilderLayout] = useState<BuilderLayout>(() => readBuilderLayout());
+  const changeBuilderLayout = (next: BuilderLayout) => { setBuilderLayout(next); writeBuilderLayout(next); };
   // K2 A-F3 — where focus goes when the builder overlay closes and the control that opened it has left the page (a saved-exams row,
   // «متابعة تحرير الامتحان المنظّم» itself, the import wizard): the control that reopens the builder, else the saved-exams toggle.
   const continueStructuredRef = useRef<HTMLButtonElement>(null);
@@ -7870,6 +7874,8 @@ function App() {
               exam={structuredExam}
               onChange={updateStructuredExam}
               onTypingEnd={structuredHistory.endTyping}
+              layout={builderLayout}
+              onLayoutChange={changeBuilderLayout}
               onSave={saveStructuredExam}
               onExit={() => { setStructuredBuilderOpen(false); }}
               saving={structuredSaving}

@@ -51,7 +51,7 @@ export type StudioTab = { key: string; label: string; badge?: ReactNode };
  * ARIA tabs (tablist / tab / tabpanel) with the standard keyboard model: arrows move between tabs and select them (RTL: ArrowLeft is
  * the next tab, ArrowRight the previous), Home / End go to the first / last. Only the selected tab is a Tab stop.
  */
-export function StudioTabs({ tabs, value, onChange, label, children }: { tabs: StudioTab[]; value: string; onChange: (key: string) => void; label: string; children: ReactNode }) {
+export function StudioTabs({ tabs, value, onChange, label, children }: { tabs: readonly StudioTab[]; value: string; onChange: (key: string) => void; label: string; children: ReactNode }) {
   const base = "st-tabs-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const listRef = useRef<HTMLDivElement>(null);
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {

@@ -1,5 +1,5 @@
 
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { StructuredExam, BuilderQuestion, BuilderSection, BuilderImageAsset } from "./examTypes";
 import type { AiImageRequestQuestion } from "./questionMedia";
@@ -45,14 +45,17 @@ import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
-import BuilderToolbar, { MORE_MENU_LABEL } from "./builder/BuilderToolbar";
+import BuilderToolbar, { MORE_MENU_LABEL, type ToolbarItem } from "./builder/BuilderToolbar";
 import { indexIssues, issueOccurrence, issuePartFocus, issueTargets, targetCardIssues, type IssuePart, type PartFocus, type IssueTarget } from "./builder/issueIndex";
 import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer";
 import { stabilizeIssues, type StableIssues } from "./builder/stableIssues";
 import type { BuilderActions } from "./builder/builderActions";
+import type { StudioStepKey, InspectorTab } from "./studio/studioSteps";
+// Phase 21F.3 — the Exam Studio layout is its own chunk inside the builder chunk (the classic layout never loads it).
+const StudioWorkspace = lazy(() => import("./studio/StudioWorkspace"));
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
-import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown } from "./icons";
+import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown, IconLayers } from "./icons";
 import "./structured-builder.css";
 import "./builder/builder-issues.css";
 import "./builder/builder-premium.css";                              // 21E.2 premium redesign, slice 1 (presentation only; loaded last)
@@ -108,6 +111,11 @@ type Props = {
   onChange: (updater: StructuredExamUpdater, meta?: EditMeta) => void;
   /** Phase 21F.1 — a text field lost focus: the owner ends the current typing group (the next keystroke is a new undo step). */
   onTypingEnd?: () => void;
+  /** Phase 21F.3 — "studio": the Exam Studio layout (outline · canvas · inspector, four steps); "classic" (default): the 21E layout.
+   *  Both run the same handlers, gates and history; only the presentation differs. */
+  layout?: "classic" | "studio";
+  /** Phase 21F.3 — switch the layout (the owner stores the teacher's choice); absent → the switch is not offered. */
+  onLayoutChange?: (layout: "classic" | "studio") => void;
   onSave?: (mode: SaveMode) => void;
   onExit?: () => void;
   saving?: boolean;
@@ -258,7 +266,7 @@ type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: Navig
 type ActionImpl = Omit<BuilderActions, "registerNode"> & { requestImage: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset> };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, layout = "classic", onLayoutChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -425,6 +433,19 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
     if (pruned !== ui.ids) { uiState = { ...ui, ids: pruned }; setUi(uiState); }
   }
   const selected = uiState.ids;
+  // ── Phase 21F.3 · Studio UI state (never exam data): the step, the ONE active question, the section whose settings the inspector
+  //    shows, the inspector tab. Reset for another exam; an active question that left the exam (deleted, undone) is let go.
+  const studio = layout === "studio";
+  type StudioUi = { examId: string; step: StudioStepKey; activeId: string | null; sectionId: string | null; tab: InspectorTab };
+  const [studioUiState, setStudioUi] = useState<StudioUi>(() => ({ examId: exam.examId, step: "content", activeId: null, sectionId: null, tab: "question" }));
+  let studioUi = studioUiState;
+  if (studioUi.examId !== exam.examId) { studioUi = { examId: exam.examId, step: "content", activeId: null, sectionId: null, tab: "question" }; setStudioUi(studioUi); }
+  else if ((studioUi.activeId && !(exam.sections || []).some(sec => (sec.questions || []).some(q => q.examQuestionId === studioUi.activeId)))
+    || (studioUi.sectionId && !(exam.sections || []).some(sec => sec.id === studioUi.sectionId))) {
+    studioUi = { ...studioUi, activeId: (exam.sections || []).some(sec => (sec.questions || []).some(q => q.examQuestionId === studioUi.activeId)) ? studioUi.activeId : null,
+      sectionId: (exam.sections || []).some(sec => sec.id === studioUi.sectionId) ? studioUi.sectionId : null };
+    setStudioUi(studioUi);
+  }
   const navFilters = uiState.filters;
   const setSelected = (fn: (prev: ReadonlySet<string>) => ReadonlySet<string>) => setUi(prev => ({ ...prev, ids: fn(prev.ids) }));
   const toggleSelect = (id: string) => setSelected(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
@@ -474,7 +495,8 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
   const reducedMotion = usePrefersReducedMotion();
   const scrollBehavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
   const builderRef = useRef<HTMLDivElement | null>(null);
-  const scrollerOf = () => builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+  // Phase 21F.3 — in the Studio the canvas scrolls (the overlay does not), and no sticky toolbar sits inside it.
+  const scrollerOf = () => (studio ? builderRef.current?.querySelector<HTMLElement>("[data-studio-scroller]") ?? null : builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null);
   /** K2 C-F4 — builder-toolbar.css makes the toolbar sticky only where there is room for it (≥ 768 × 600); elsewhere it is static
    *  and scrolls away with the content. ("" = no stylesheet, e.g. in unit tests: treated as sticky, as before.) */
   const isStaticBox = (el: HTMLElement) => { const p = getComputedStyle(el).position; return p === "static" || p === "relative"; };
@@ -489,6 +511,12 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
    *  its bottom edge, thousands of px above the screen once scrolled, made every heading above the screen count as on screen, so
    *  focus landed on a card nobody could see (a deletion's neighbour, a Ctrl+Y). */
   const toolbarBottom = () => {
+    if (studio) {
+      let top = scrollerOf()?.getBoundingClientRect().top ?? 0;
+      const bulkBar = stickyBulkBar();
+      if (bulkBar) top = Math.max(top, bulkBar.getBoundingClientRect().bottom);
+      return top;
+    }
     const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
     let edge = !bar ? 0 : isStaticBox(bar) ? (scrollerOf()?.getBoundingClientRect().top ?? 0) : bar.getBoundingClientRect().bottom;
     const bulk = stickyBulkBar();
@@ -505,6 +533,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
    *  RF3 A-01 — while questions are selected the bulk-action bar sticks below the toolbar (its `top` = the toolbar's band + 8 px,
    *  builder-toolbar.css), so a target is revealed below the bar's resting place too (scroller padding + its `top` + its height). */
   const toolbarClearance = () => {
+    if (studio) { const bulkBar = stickyBulkBar(); return bulkBar ? Math.round(bulkBar.getBoundingClientRect().height + 20) : 12; }
     const bar = builderRef.current?.querySelector<HTMLElement>(".sb-toolbar");
     const toolbarSticky = !!bar && !isStaticBox(bar);
     const bulk = stickyBulkBar();
@@ -621,7 +650,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
   const reserveScroller = useRef<HTMLElement | null>(null);
   const reserveBand = (on: boolean) => {
     if (on) {
-      const s = builderRef.current?.closest<HTMLElement>(".structured-builder-overlay") ?? null;
+      const s = scrollerOf();
       if (s && s !== reserveScroller.current) reserveScroller.current?.removeAttribute("data-toast-reserve");
       reserveScroller.current = s;
       s?.setAttribute("data-toast-reserve", "");
@@ -1108,6 +1137,13 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
   };
   const openIssue = (target: IssueTarget, issue: StructuredIssue) => {
     if (!alive.current) return;
+    // Phase 21F.3 — in the Studio an issue opens in the content step: its question becomes the ACTIVE card (its fields are mounted),
+    // and a section issue shows on its section card. The rest is the same routing as the classic layout.
+    if (studio && (studioUi.step !== "content" || (target.kind === "question" && studioUi.activeId !== target.id))) {
+      setStudioUi(prev => ({ ...prev, step: "content", activeId: target.kind === "question" ? target.id : prev.activeId, sectionId: null }));
+      window.setTimeout(() => openIssueRef.current?.(target, issue), 0);
+      return;
+    }
     if (target.kind === "section") {
       const el = sectionNode(target.id);
       if (!el) return;
@@ -1129,6 +1165,24 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
     setOpenReq(prev => ({ examId, seqs: new Map(prev?.examId === examId ? prev.seqs : EMPTY_REVEALS).set(target.id, count) }));
     window.setTimeout(() => focusQuestionIssues(target.id, instance), 0);   // after the revealed (and re-opened) card has rendered
   };
+  const openIssueRef = useRef<typeof openIssue | null>(null);
+  useLayoutEffect(() => { openIssueRef.current = openIssue; });
+  // ── Phase 21F.3 · Studio: activation moves focus to the opened card (the control that opened it — a collapsed card, an outline
+  //    row — may have left the page); the card is aligned in the canvas like every other reveal.
+  const pendingActiveFocus = useRef<string | null>(null);
+  const activate = (id: string | null) => {
+    setStudioUi(prev => ({ ...prev, activeId: id, sectionId: id ? null : prev.sectionId }));
+    pendingActiveFocus.current = id;
+  };
+  useLayoutEffect(() => {
+    const id = pendingActiveFocus.current;
+    if (!studio || !id || studioUi.activeId !== id) return;
+    pendingActiveFocus.current = null;
+    const el = nodes.current.get(id);
+    if (!el || !alive.current) return;
+    alignCard(el);
+    el.focus({ preventScroll: true });
+  }, [studio, studioUi.activeId]);                                       // eslint-disable-line react-hooks/exhaustive-deps
   // Phase 21F.1 — the implementation behind the stable `actions` (refreshed every commit, before any event can run it).
   const scoped = (scope: string) => scope === exam.examId && alive.current;
   useLayoutEffect(() => {
@@ -1154,41 +1208,14 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
     };
   });
   const gatesText = gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات";
-
-  return (
-    <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
-    <div className="sb-builder" dir="rtl" ref={builderRef}>
-      {/* Phase 21E.2 (21E.0 audit T-2 / F1) — at most eight visible actions: «رجوع» · تراجع / إعادة · «إضافة أسئلة» (menu) ·
-          «معاينة الامتحان» · «المزيد» (menu) · save draft · finalize. Every other tool is the same handler inside a menu; the gates
-          and blueprint counts stay visible as status. The toolbar is sticky only where there is room for it (builder-toolbar.css). */}
-      <BuilderToolbar
-        headingId={BUILDER_TITLE_ID}
-        heading={"باني الامتحان المنظّم: " + (exam.title?.trim() || "امتحان بلا عنوان")}
-        onExit={onExit ? () => { void requestExit(); } : undefined}
-        exitDisabled={saving}
-        history={onUndo || onRedo ? { onUndo, onRedo, canUndo: !!canUndo, canRedo: !!canRedo, disabled: !!saving } : undefined}
-        titleField={<input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" aria-label="عنوان الامتحان" onChange={e => { const title = e.target.value; update(prev => ({ ...prev, title })); }} disabled={saving} />}
-        stats={<>
-          <span className="sb-stat">{(exam.sections || []).length} أقسام</span>
-          <span className="sb-stat">{countQuestions(exam)} أسئلة</span>
-          <span className="sb-stat">{totalMarks} علامة</span>
-        </>}
-        status={<>
-          {/* RF3 I-4 — the ONE region that announces the save state: one whole sentence per change (aria-atomic), never the glyph; the
-              draft button's «جارٍ الحفظ…» is its label, not an announcement. */}
-          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite" aria-atomic="true"><span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {SAVE_STATE_LABELS[saveState]}</span>}
-          {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
-          {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
-          {hasPolicy && <span className={"sb-stat sb-gates-chip" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")}>{gatesText}</span>}
-        </>}
-        addItems={[
+  // The toolbar's menus (21E.2), shared by the classic toolbar and the Studio's top bar — the same handlers either way.
+  const addMenuItems: ToolbarItem[] = [
           ...(bankPicker ? [{ key: "bank", label: "إضافة من بنك الأسئلة", icon: <IconBank size={16} />, onSelect: () => { setPickerFocus(null); setPickerOpenFor(exam.examId); }, disabled: saving, dialog: true }] : []),
           ...(aiAuthor ? [{ key: "ai-question", label: "سؤال بالذكاء الاصطناعي", icon: <IconSparkles size={16} />, onSelect: () => setAiOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
           ...(aiAuthor?.authorScenario ? [{ key: "ai-scenario", label: "سيناريو بالذكاء الاصطناعي", icon: <IconSparkles size={16} />, onSelect: () => setAiScenarioOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
           ...(aiAuthor?.composeExam ? [{ key: "ai-composer", label: "المؤلف الذكي للامتحان", icon: <IconSparkles size={16} />, onSelect: () => setComposerOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
-        ]}
-        preview={{ key: "preview", label: "معاينة الامتحان", onSelect: () => setPreview(exam) }}
-        moreItems={[
+        ];
+  const toolMenuItems: ToolbarItem[] = [
           { key: "explorer", label: "مستكشف الأسئلة", icon: <IconCompass size={16} />, onSelect: () => setNavOpen(v => !v), pressed: navOpen },
           { key: "blueprint", label: "مخطط الامتحان", icon: <IconBuilder size={16} />, onSelect: () => setBlueprintOpen(true), dialog: true, badge: blueprintIssueCount > 0 ? <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span> : undefined },
           ...(exam.blueprint ? [{ key: "coverage", label: "تحليل المخطط", icon: <IconReports size={16} />, onSelect: () => setCoverageOpen(true), dialog: true }] : []),
@@ -1198,89 +1225,13 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
           ...(presets ? [{ key: "presets", label: "القوالب الأكاديمية", icon: <IconCopy size={16} />, onSelect: () => setPresetsOpen(true), dialog: true }] : []),
           { key: "studio", label: "العرض والتصميم", icon: <IconImage size={16} />, onSelect: () => setStudioOpen(true), disabled: saving, dialog: true },
           { key: "surface-lab", label: "مختبر الدوال 3D (تجريبي)", icon: <IconMaximize size={16} />, onSelect: () => setSurfaceLabOpen(true), dialog: true },
-        ]}
-        save={onSave ? <>
-          <button type="button" className="sb-tb-btn sb-tb-keep-label" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}><IconSave size={18} aria-hidden="true" /><span className="sb-tb-label">{saving ? SAVE_LABELS.saving : SAVE_LABELS.saveDraft}</span></button>
-          {/* Structural errors keep the pre-13C-C HTML `disabled`. Quality-gate blockers use aria-disabled so the button stays
-              reachable and its click EXPLAINS the refusal (readiness panel) — the handler re-checks the latest exam either way. */}
-          <button type="button" className={"sb-tb-btn sb-tb-keep-label is-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}><IconCheck size={18} aria-hidden="true" /><span className="sb-tb-label">{SAVE_LABELS.finalizeExam}</span></button>
-        </> : undefined}
-      />
+          ...(onLayoutChange ? [{ key: "layout", label: studio ? "العودة إلى الواجهة الكلاسيكية" : "تجربة استوديو الامتحان (جديد)", icon: <IconLayers size={16} />, onSelect: () => onLayoutChange(studio ? "classic" : "studio") }] : []),
+        ];
 
-      {error && <div className="sb-banner sb-banner-error">{error}</div>}
-      {notice && <div className="sb-banner sb-banner-ok">{notice}</div>}
-
-      {/* Phase 21E.2 (D) — always mounted, so assistive technology registers it before its first update. */}
-      <p className="eb-visually-hidden" role="status" aria-live="polite" data-issue-live>{issueAnnouncement}</p>
-      {(errors.length > 0 || warnings.length > 0) && (
-        <div className={"sb-issues sb-issues-summary " + (errors.length ? "sb-issues-error" : "sb-issues-warn")}>
-          <button type="button" className="sb-issues-head" aria-expanded={showIssues} onClick={() => setShowIssues(v => !v)}>
-            {/* K3 (A-F7) — aria-expanded carries the state; the chevron (aria-hidden) points down when open, to the inline end when closed. */}
-            <IconChevronDown size={14} className={"eb-disclosure-chevron sb-issues-chevron" + (showIssues ? " is-open" : "")} aria-hidden="true" />{errors.length > 0 ? errors.length + " خطأ" : ""}{errors.length && warnings.length ? " • " : ""}{warnings.length > 0 ? warnings.length + " تنبيه" : ""}
-            {hasBlockingErrors(errors) && <em className="sb-issues-block"> — يجب إصلاح الأخطاء قبل الحفظ النهائي</em>}
-          </button>
-          {showIssues && (
-            <ul className="sb-issues-list">
-              {/* An issue that belongs to a question / section opens it; an exam-level issue stays plain text. The severity is text
-                  («خطأ:» / «تنبيه:», as in the inline lists), never colour or an emoji alone. */}
-              {[...errors, ...warnings].map((iss: StructuredIssue) => {
-                const target = summaryTargets.get(iss);
-                const what = <><span className="sb-issue-kind">{iss.severity === "error" ? "خطأ:" : "تنبيه:"}</span> <span className="sb-issue-text">{iss.message}</span></>;
-                return (
-                  <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>
-                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target, iss)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
-
-      <div className={"sb-workspace" + (navOpen && !isNarrow ? " has-navigator" : "")}>
-      <div className="sb-workspace-main">
-      <ExamCoverEditor
-        cover={exam.coverPage}
-        onChange={cover => update(prev => ({ ...prev, coverPage: cover }))}
-        onPreviewCover={() => setPreview(exam)}
-        disabled={saving}
-      />
-
-      {selected.size > 0 && (
-        <BulkActionBar count={selected.size} sections={sectionOptions} mediaPending={selectedMediaPending} disabled={saving}
-          onMove={bulkMove} onDuplicate={bulkDuplicate} onSetMarks={bulkMarks} onDelete={() => { void bulkDelete(); }} onClear={clearSelection}
-          onClassify={() => setClassifyOpen(true)} />
-      )}
-
-      <div className="sb-sections">
-        {(exam.sections || []).map((section, index) => (
-          <ExamSectionEditor
-            key={section.id}
-            actions={actions}
-            scopeKey={exam.examId}
-            section={section}
-            index={index}
-            total={(exam.sections || []).length}
-            sectionOptions={sectionOptions}
-            requestQuestionImage={requestQuestionImage ? stableRequestImage : undefined}
-            pendingMediaIds={pendingMediaIds}
-            disabled={saving}
-            selectedIds={selected}
-            flashQuestionId={flashId || undefined}
-            blueprint={exam.blueprint}
-            sectionIssues={stableIssues.bySection.get(section.id)}
-            questionIssues={stableIssues.questionsOfSection.get(section.id)}
-            revealedQuestions={revealedQuestions}
-            openRequests={openRequests}
-          />
-        ))}
-      </div>
-
-      <button type="button" className="sb-add-btn sb-add-section" data-add-section onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
-      </div>
-      {navOpen && !isNarrow && navigator(true)}
-      </div>
-
+  // The layers both layouts share: every dialog / panel the menus open, the student preview, the confirmations, the recovery offer
+  // and the «تراجع» toast (21E.1 slice 2 — inside the builder's fixed overlay, above --eb-z-toast).
+  const layers = (
+    <>
       <Dialog open={navOpen && isNarrow} size="md" title="مستكشف الأسئلة" onClose={() => setNavOpen(false)} className="sb-navigator-dialog-shell">
         {navigator(false)}
       </Dialog>
@@ -1380,6 +1331,184 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, onS
       </Dialog>
       {/* 21E.1 slice 2 — the «تراجع» toast lives INSIDE the builder's fixed overlay (its layer is above --eb-z-toast). */}
       {toastRegion}
+    </>
+  );
+
+  // Phase 21F.6 / 21F.7 — the Studio's setup, review and publish steps (filled by those phases; the content step is the workspace's).
+  const studioStepViews = (): Partial<Record<StudioStepKey, ReactNode>> => ({});
+  if (studio) {
+    const addSectionNow = () => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })));
+    return (
+      <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
+      <div className="sb-builder st-studio" dir="rtl" ref={builderRef}>
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل استوديو الامتحان…</p>}>
+          <StudioWorkspace
+            exam={exam}
+            headingId={BUILDER_TITLE_ID}
+            heading={"استوديو الامتحان: " + (exam.title?.trim() || "امتحان بلا عنوان")}
+            scope={exam.examId}
+            actions={actions}
+            saving={!!saving}
+            saveState={saveState}
+            mediaPending={mediaPending}
+            mediaWait={MEDIA_WAIT}
+            pendingMediaIds={pendingMediaIds}
+            notice={notice}
+            error={error}
+            onExit={onExit ? () => { void requestExit(); } : undefined}
+            onTitle={title => update(prev => ({ ...prev, title }))}
+            history={onUndo || onRedo ? { onUndo, onRedo, canUndo: !!canUndo, canRedo: !!canRedo } : undefined}
+            onSaveDraft={onSave ? () => onSave("draft") : undefined}
+            onFinalize={onSave ? requestFinalSave : undefined}
+            finalizeBlocked={!decision.canFinalize}
+            decision={decision}
+            addItems={addMenuItems}
+            toolItems={toolMenuItems.filter(item => item.key !== "explorer")}
+            onPreview={() => setPreview(exam)}
+            step={studioUi.step}
+            onStep={step => setStudioUi(prev => ({ ...prev, step }))}
+            activeId={studioUi.activeId}
+            onActivate={activate}
+            inspectorSectionId={studioUi.sectionId}
+            onOpenSection={sectionId => setStudioUi(prev => ({ ...prev, sectionId }))}
+            inspectorTab={studioUi.tab}
+            onInspectorTab={tab => setStudioUi(prev => ({ ...prev, tab }))}
+            selectedIds={selected}
+            flashId={flashId}
+            issuesOfSection={stableIssues.bySection}
+            issuesOfQuestion={stableIssues.byQuestion}
+            questionIssuesOfSection={stableIssues.questionsOfSection}
+            revealedQuestions={revealedQuestions}
+            requestQuestionImage={requestQuestionImage ? stableRequestImage : undefined}
+            onAddSection={addSectionNow}
+            bulkBar={selected.size > 0 ? (
+              <BulkActionBar count={selected.size} sections={sectionOptions} mediaPending={selectedMediaPending} disabled={saving}
+                onMove={bulkMove} onDuplicate={bulkDuplicate} onSetMarks={bulkMarks} onDelete={() => { void bulkDelete(); }} onClear={clearSelection}
+                onClassify={() => setClassifyOpen(true)} />
+            ) : undefined}
+            stepViews={studioStepViews()}
+          />
+        </Suspense>
+        {/* Phase 21E.2 (D) — always mounted, so assistive technology registers it before its first update. */}
+        <p className="eb-visually-hidden" role="status" aria-live="polite" data-issue-live>{issueAnnouncement}</p>
+        {layers}
+      </div>
+      </MeshAssetServiceContext.Provider></SimulationServiceContext.Provider>
+    );
+  }
+
+  return (
+    <SimulationServiceContext.Provider value={simulations}><MeshAssetServiceContext.Provider value={meshAssets}>
+    <div className="sb-builder" dir="rtl" ref={builderRef}>
+      {/* Phase 21E.2 (21E.0 audit T-2 / F1) — at most eight visible actions: «رجوع» · تراجع / إعادة · «إضافة أسئلة» (menu) ·
+          «معاينة الامتحان» · «المزيد» (menu) · save draft · finalize. Every other tool is the same handler inside a menu; the gates
+          and blueprint counts stay visible as status. The toolbar is sticky only where there is room for it (builder-toolbar.css). */}
+      <BuilderToolbar
+        headingId={BUILDER_TITLE_ID}
+        heading={"باني الامتحان المنظّم: " + (exam.title?.trim() || "امتحان بلا عنوان")}
+        onExit={onExit ? () => { void requestExit(); } : undefined}
+        exitDisabled={saving}
+        history={onUndo || onRedo ? { onUndo, onRedo, canUndo: !!canUndo, canRedo: !!canRedo, disabled: !!saving } : undefined}
+        titleField={<input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" aria-label="عنوان الامتحان" onChange={e => { const title = e.target.value; update(prev => ({ ...prev, title })); }} disabled={saving} />}
+        stats={<>
+          <span className="sb-stat">{(exam.sections || []).length} أقسام</span>
+          <span className="sb-stat">{countQuestions(exam)} أسئلة</span>
+          <span className="sb-stat">{totalMarks} علامة</span>
+        </>}
+        status={<>
+          {/* RF3 I-4 — the ONE region that announces the save state: one whole sentence per change (aria-atomic), never the glyph; the
+              draft button's «جارٍ الحفظ…» is its label, not an announcement. */}
+          {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite" aria-atomic="true"><span aria-hidden="true">{SAVE_STATE_GLYPH[saveState]}</span> {SAVE_STATE_LABELS[saveState]}</span>}
+          {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
+          {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
+          {hasPolicy && <span className={"sb-stat sb-gates-chip" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")}>{gatesText}</span>}
+        </>}
+        addItems={addMenuItems}
+        preview={{ key: "preview", label: "معاينة الامتحان", onSelect: () => setPreview(exam) }}
+        moreItems={toolMenuItems}
+        save={onSave ? <>
+          <button type="button" className="sb-tb-btn sb-tb-keep-label" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}><IconSave size={18} aria-hidden="true" /><span className="sb-tb-label">{saving ? SAVE_LABELS.saving : SAVE_LABELS.saveDraft}</span></button>
+          {/* Structural errors keep the pre-13C-C HTML `disabled`. Quality-gate blockers use aria-disabled so the button stays
+              reachable and its click EXPLAINS the refusal (readiness panel) — the handler re-checks the latest exam either way. */}
+          <button type="button" className={"sb-tb-btn sb-tb-keep-label is-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}><IconCheck size={18} aria-hidden="true" /><span className="sb-tb-label">{SAVE_LABELS.finalizeExam}</span></button>
+        </> : undefined}
+      />
+
+      {error && <div className="sb-banner sb-banner-error">{error}</div>}
+      {notice && <div className="sb-banner sb-banner-ok">{notice}</div>}
+
+      {/* Phase 21E.2 (D) — always mounted, so assistive technology registers it before its first update. */}
+      <p className="eb-visually-hidden" role="status" aria-live="polite" data-issue-live>{issueAnnouncement}</p>
+      {(errors.length > 0 || warnings.length > 0) && (
+        <div className={"sb-issues sb-issues-summary " + (errors.length ? "sb-issues-error" : "sb-issues-warn")}>
+          <button type="button" className="sb-issues-head" aria-expanded={showIssues} onClick={() => setShowIssues(v => !v)}>
+            {/* K3 (A-F7) — aria-expanded carries the state; the chevron (aria-hidden) points down when open, to the inline end when closed. */}
+            <IconChevronDown size={14} className={"eb-disclosure-chevron sb-issues-chevron" + (showIssues ? " is-open" : "")} aria-hidden="true" />{errors.length > 0 ? errors.length + " خطأ" : ""}{errors.length && warnings.length ? " • " : ""}{warnings.length > 0 ? warnings.length + " تنبيه" : ""}
+            {hasBlockingErrors(errors) && <em className="sb-issues-block"> — يجب إصلاح الأخطاء قبل الحفظ النهائي</em>}
+          </button>
+          {showIssues && (
+            <ul className="sb-issues-list">
+              {/* An issue that belongs to a question / section opens it; an exam-level issue stays plain text. The severity is text
+                  («خطأ:» / «تنبيه:», as in the inline lists), never colour or an emoji alone. */}
+              {[...errors, ...warnings].map((iss: StructuredIssue) => {
+                const target = summaryTargets.get(iss);
+                const what = <><span className="sb-issue-kind">{iss.severity === "error" ? "خطأ:" : "تنبيه:"}</span> <span className="sb-issue-text">{iss.message}</span></>;
+                return (
+                  <li key={iss.id} className={iss.severity === "error" ? "sb-issue-error" : "sb-issue-warn"}>
+                    {target ? <button type="button" className="sb-issue-link" onClick={() => openIssue(target, iss)}>{what}{" — "}<span className="sb-issue-target">{target.label}</span></button> : what}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className={"sb-workspace" + (navOpen && !isNarrow ? " has-navigator" : "")}>
+      <div className="sb-workspace-main">
+      <ExamCoverEditor
+        cover={exam.coverPage}
+        onChange={cover => update(prev => ({ ...prev, coverPage: cover }))}
+        onPreviewCover={() => setPreview(exam)}
+        disabled={saving}
+      />
+
+      {selected.size > 0 && (
+        <BulkActionBar count={selected.size} sections={sectionOptions} mediaPending={selectedMediaPending} disabled={saving}
+          onMove={bulkMove} onDuplicate={bulkDuplicate} onSetMarks={bulkMarks} onDelete={() => { void bulkDelete(); }} onClear={clearSelection}
+          onClassify={() => setClassifyOpen(true)} />
+      )}
+
+      <div className="sb-sections">
+        {(exam.sections || []).map((section, index) => (
+          <ExamSectionEditor
+            key={section.id}
+            actions={actions}
+            scopeKey={exam.examId}
+            section={section}
+            index={index}
+            total={(exam.sections || []).length}
+            sectionOptions={sectionOptions}
+            requestQuestionImage={requestQuestionImage ? stableRequestImage : undefined}
+            pendingMediaIds={pendingMediaIds}
+            disabled={saving}
+            selectedIds={selected}
+            flashQuestionId={flashId || undefined}
+            blueprint={exam.blueprint}
+            sectionIssues={stableIssues.bySection.get(section.id)}
+            questionIssues={stableIssues.questionsOfSection.get(section.id)}
+            revealedQuestions={revealedQuestions}
+            openRequests={openRequests}
+          />
+        ))}
+      </div>
+
+      <button type="button" className="sb-add-btn sb-add-section" data-add-section onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
+      </div>
+      {navOpen && !isNarrow && navigator(true)}
+      </div>
+
+      {layers}
     </div>
     </MeshAssetServiceContext.Provider></SimulationServiceContext.Provider>
   );
