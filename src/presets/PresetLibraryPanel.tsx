@@ -86,9 +86,8 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
   // fail-closed): a malformed imported / legacy design shows structured issues in «مشكلات التحقق», never a runtime message, and
   // no request is sent. A missing Blueprint stays the distinct factual case.
   const extractCurrent = (title: string, description: string): AssessmentPresetV1 | null => {
-    const design = latest();
-    if (!design) return null;
-    const result = extractAssessmentPresetFromExam(design, { title, description });
+    if (!latest()) return null;                                     // pick-only (no exam): nothing to extract
+    const result = extractAssessmentPresetFromExam(latest()!, { title, description });
     if (result.ok) return result.preset;
     if (result.reason === "no-blueprint") setError(NO_BLUEPRINT_MESSAGE);
     else { setError("لا يمكن حفظ تصميم غير صالح كقالب أكاديمي."); setIssues(result.issues); }
