@@ -39,7 +39,7 @@ const T = {
 const M = (id, file, before, after, tests, what) => ({ id, file, before, after, tests, what });
 const mutants = [
   // G — exports
-  M("G1-filtered-rows", "src/AssignmentsPanel.tsx", "gradebookCsvRows(resultsFor,results,rowGrading)", "gradebookCsvRows(resultsFor,visibleResults,rowGrading)", [T.exportsPanel], "gradebook export uses the searched / filtered subset"),
+  M("G1-filtered-rows", "src/AssignmentsPanel.tsx", "gradebookCsvRows(d.item,g.results,rowGrading)", "gradebookCsvRows(d.item,g.rows,rowGrading)", [T.exportsPanel], "gradebook export uses the searched / filtered subset"),
   M("G2-row-order", "src/teacher/teacherExports.ts", "for (const s of [...rows].sort(byStudent)) {", "for (const s of [...rows]) {", [T.exportsUnit], "rows follow the input order (unstable)"),
   M("G3-missing-is-zero", "src/teacher/teacherExports.ts", 'Number.isFinite(value) ? value : "");', 'Number.isFinite(value) ? value : 0);', [T.exportsUnit], "a missing value exported as 0"),
   M("G4-private-field", "src/teacher/teacherExports.ts", '      r ? csvDateTime(r.submittedAt) : ""\n    ]);\n  }\n  return out;\n}\n\n/** The subset', '      r ? csvDateTime(r.submittedAt) : "",\n      String((r as unknown as { teacherFeedback?: string })?.teacherFeedback ?? "")\n    ]);\n  }\n  return out;\n}\n\n/** The subset', [T.exportsUnit], "teacher feedback leaks into the gradebook export"),

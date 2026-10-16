@@ -487,9 +487,11 @@ describe("UX-5 item analysis — lazy, sortable, empty", () => {
 });
 
 describe("UX-5 accessibility source guards", () => {
-  const RAW = import.meta.glob("./{AssignmentsPanel,assignments/AssignmentList,assignments/AssignmentDetail,assignments/AssignmentComposer,assignments/Gradebook,assignments/GradebookRowEditors}.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+  // Phase 21G.1 — the workspace logic moved from AssignmentsPanel.tsx into its controller hook and pure view helpers; the guards
+  // follow the code to where it lives (the panel only renders).
+  const RAW = import.meta.glob(["./{AssignmentsPanel,assignments/AssignmentList,assignments/AssignmentDetail,assignments/AssignmentComposer,assignments/Gradebook,assignments/GradebookRowEditors}.tsx", "./assignments/{useAssignmentsController,useAssignmentComposer,assignmentsView}.ts"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
   it("no window.confirm, no tablist/menu roles, no <details>, no action-control emoji; grading only through the shared authority", () => {
-    expect(Object.keys(RAW)).toHaveLength(6);
+    expect(Object.keys(RAW)).toHaveLength(9);
     for (const [file, src] of Object.entries(RAW)) {
       expect(src, file).not.toMatch(/window\.confirm/);
       expect(src, file).not.toMatch(/role="(tablist|tab|menu|menuitem)"/);
@@ -497,18 +499,21 @@ describe("UX-5 accessibility source guards", () => {
       // 🧠 📚 👁 📝 📤 📊 ✏ ⏱ ⏰ ⏳ ↻ as control glyphs
       expect(src, file).not.toMatch(/[\u{1F9E0}\u{1F4DA}\u{1F441}\u{1F4DD}\u{1F4E4}\u{1F4CA}\u{270F}\u{23F1}\u{23F0}\u{23F3}\u{21BB}]/u);
     }
-    const panel = RAW["./AssignmentsPanel.tsx"];
-    expect(panel).toMatch(/const rowGrading=\(s:StudentResult\):GradingStatus=>s\.gradingStatus\?s\.gradingStatus:resolveGradingStatus\(s\.latestResult\);/);
-    expect(panel).toMatch(/useConfirm\(\)/);
+    const panel = RAW["./AssignmentsPanel.tsx"], controller = RAW["./assignments/useAssignmentsController.ts"], view = RAW["./assignments/assignmentsView.ts"];
+    expect(view).toMatch(/export const rowGrading = \(s: StudentResult\): GradingStatus => \(s\.gradingStatus \? s\.gradingStatus : resolveGradingStatus\(s\.latestResult\)\);/);
+    expect(panel).toMatch(/import \{rowGrading\} from "\.\/assignments\/assignmentsView";/);
+    for (const src of [panel, controller]) expect(src).not.toMatch(/resolveGradingStatus|manualReviewMarks|finalized\s*===/);
+    expect(controller).toMatch(/useConfirm\(\)/);
     for (const child of ["./assignments/Gradebook.tsx", "./assignments/AssignmentDetail.tsx", "./assignments/GradebookRowEditors.tsx", "./assignments/AssignmentList.tsx"]) {
       expect(RAW[child], child).not.toMatch(/resolveGradingStatus|manualReviewMarks\s*>\s*0\s*\?\s*"(pending|final)|finalized\s*\?(?!\?)|percentage\s*[><]=?\s*\d|score\s*[><]=?\s*\d/);
     }
     expect(RAW["./assignments/Gradebook.tsx"]).toMatch(/gradingLabel\(gs\)/);
     expect(RAW["./assignments/Gradebook.tsx"]).toMatch(/gradingClass\(gs\)/);
     // purge keeps the typed-title guard and the exact body; archive keeps impact-first gating
-    expect(panel).toMatch(/action:"purge",assignmentId:item\.assignmentId,confirmAssignmentId:item\.assignmentId,confirmTitle:purgeTitle/);
-    expect(panel).toMatch(/const impact=await fetchImpact\(item\);if\(!impact\)return;\n   let confirmActive=false;/);
-    expect(panel).toMatch(/if\(impact\.submissionDocuments>0\)\{setError\("لا يمكن الحذف النهائي/);
+    expect(controller).toMatch(/action: "purge", assignmentId: item\.assignmentId, confirmAssignmentId: item\.assignmentId, confirmTitle: purgeTitle/);
+    expect(controller).toMatch(/const impact = await fetchImpact\(item\); if \(!impact\) return;\n\s*let confirmActive = false;/);
+    expect(controller).toMatch(/if \(impact\.submissionDocuments > 0\) \{ setError\("لا يمكن الحذف النهائي/);
+    expect(panel).not.toMatch(/\/api\//);                                                           // the view sends no request itself
   });
 });
 

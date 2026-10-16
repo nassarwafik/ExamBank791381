@@ -1,6 +1,7 @@
 // Shared TYPES for the Assignments & Gradebook workspace (UX-5). Presentation components receive these shapes
-// and callbacks from AssignmentsPanel, which remains the single owner of state, API handlers, mutations,
-// authoritative snapshots, grading resolution (rowGrading) and lifecycle semantics.
+// and callbacks from AssignmentsPanel. Since Phase 21G.1 the single owner of state, API handlers, mutations,
+// authoritative snapshots and lifecycle semantics is useAssignmentsController; grading resolution (rowGrading)
+// and the other pure view rules live in assignmentsView.ts.
 import type { GradingStatus } from "../gradingStatus";
 
 export type Classroom = { classId: string; name: string; grade: string; active: boolean; status?: string };

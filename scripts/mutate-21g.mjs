@@ -4,7 +4,7 @@
 // that guard it, and is KILLED only if a test fails because of it. A timeout is reported as TIMEOUT (never as killed). Every mutated
 // file is restored byte-for-byte and hash-verified after each mutant — also when the run throws or the process is interrupted.
 //
-//   node scripts/mutate-21g.mjs <campaign> [ids]   campaigns: g0, … (see CAMPAIGNS below); ids = comma-separated mutant ids to
+//   node scripts/mutate-21g.mjs <campaign> [ids]   campaigns: g0, g1, … (see CAMPAIGNS below); ids = comma-separated mutant ids to
 //                                                  re-run in isolation (e.g. a TIMEOUT, or a survivor after its test was fixed)
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -22,7 +22,40 @@ const ALL = [...TEN, ...BANK, ...CONTENT];
 const DETAILS = ["api/tests/assignment-details-21g0.test.js"];
 const LIB = "api/src/lib/teacher-tenancy.js";
 const BQ = "api/src/functions/bank-questions.js";
+const VIEW = "src/assignments/assignmentsView.ts", CTRL = "src/assignments/useAssignmentsController.ts", COMPOSER = "src/assignments/useAssignmentComposer.ts";
+const G1_UNIT = ["src/assignments/assignmentsView.21g1.test.ts", "src/assignments/assignmentsApi.21g1.test.ts"];
+const G1_PANEL = ["src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.drill.12b.test.tsx", "src/AssignmentsPanel.lifecycle.test.tsx", "src/AssignmentsPanel.export.21e2.test.tsx", "src/AssignmentsPanel.timing5a.test.tsx"];
 export const CAMPAIGNS = {
+  g1: [
+    { id: "G1-M1", what: "the archived view and the current view are swapped", file: VIEW,
+      find: 'if (s.showArchived ? x.status !== "archived" : x.status === "archived") return false;', replace: 'if (s.showArchived ? x.status === "archived" : x.status !== "archived") return false;', tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M2", what: "the class filter no longer filters", file: VIEW,
+      find: "if (s.classId && x.classId !== s.classId) return false;", replace: "", tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M3", what: "the list search no longer filters", file: VIEW,
+      find: '  if (s.q && ![x.title, x.className].join(" ").toLocaleLowerCase("ar").includes(s.q)) return false;\n', replace: "", tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M4", what: "the server's grading status is ignored (re-derived locally)", file: VIEW,
+      find: "(s.gradingStatus ? s.gradingStatus : resolveGradingStatus(s.latestResult))", replace: "resolveGradingStatus(s.latestResult)", tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M5", what: "the «active» gradebook filter keeps every row", file: VIEW,
+      find: 'if (filter === "active") return !!s.activeAttempt;', replace: 'if (filter === "active") return true;', tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M6", what: "students without a result sort first by score", file: VIEW,
+      find: "if (av === null) return 1; if (bv === null) return -1;", replace: "if (av === null) return -1; if (bv === null) return 1;", tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M7", what: "a drilled student who no longer matches is hidden by the filter", file: VIEW,
+      find: 'filter: matches ? wanted : "all"', replace: "filter: wanted", tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M8", what: "a refused request is treated as a success", file: "src/assignments/assignmentsApi.ts",
+      find: '    if (!r.ok) throw new Error(withTrackingCode(j.error || "حدث خطأ.", r.status, r));\n', replace: "", tests: [...G1_UNIT, ...G1_PANEL] },
+    { id: "G1-M9", what: "an older results read overwrites a newer selection", file: CTRL,
+      find: "      if (seq !== resultsSeq.current) return;\n", replace: "", tests: G1_PANEL },
+    { id: "G1-M10", what: "a mutation's answer no longer replaces the list row", file: CTRL,
+      find: "    setItems(x => x.map(y => (y.assignmentId === updated.assignmentId ? updated : y)));\n", replace: "", tests: G1_PANEL },
+    { id: "G1-M11", what: "choosing a saved exam no longer pre-fills the title", file: COMPOSER,
+      find: 'setTitle(String(r.exam?.title || meta?.title || ""));', replace: "", tests: G1_PANEL },
+    { id: "G1-M12", what: "the gradebook export uses the searched / filtered subset", file: "src/AssignmentsPanel.tsx",
+      find: "gradebookCsvRows(d.item,g.results,rowGrading)", replace: "gradebookCsvRows(d.item,g.rows,rowGrading)", tests: G1_PANEL },
+    { id: "G1-M13", what: "the create request is sent while the window is invalid", file: CTRL,
+      find: " || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;", replace: ") return;", tests: G1_PANEL },
+    { id: "G1-M14", what: "the create button is enabled while the window is invalid", file: CTRL,
+      find: " && !windowBlocks(composer.windowIssues);", replace: ";", tests: G1_PANEL }
+  ],
   g0: [
     { id: "G0-M1", what: "multi-user sessions get no tenant (isolation switched off)", file: LIB,
       find: 'return user && user.am === "multi-user" && typeof user.sub === "string" && user.sub ? user.sub : null;', replace: "return null;", tests: ALL },
