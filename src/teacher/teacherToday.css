@@ -55,3 +55,11 @@
 @media (min-width: 768px){
   .eb-today-row-action, .eb-today-recent-action{ min-height:38px; }
 }
+/* Phase 21H.3 — a row with a direct action («تذكير»): the row button and the action sit side by side (never nested); the
+   hub-level notice reports the action's result. */
+.eb-today-row-item.has-action, .eb-today-row.has-action{ display:flex; align-items:stretch; gap:var(--eb-space-2); }
+.eb-today-row-item.has-action .eb-today-row-action{ flex:1 1 auto; min-width:0; }
+.eb-today-row-secondary{ flex:0 0 auto; align-self:center; min-height:44px; }
+@media (min-width: 768px){ .eb-today-row-secondary{ min-height:38px; } }
+.eb-today-notice{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-success-bg); color:var(--eb-success-tx); font-size:var(--eb-fs-13); }
+.eb-today-notice.is-error{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }

@@ -22,7 +22,34 @@ const EVAL = "api/src/lib/project-tracker/evaluation-attention.js", EVAL_UI = "s
 const H1_API = ["api/tests/project-review-21h1.test.js", "api/tests/teacher-project-evaluation-9c.test.js"], H1_UI = ["src/teacher/TeacherTodayHub.21h1.test.tsx", "src/teacher/TeacherTodayHub.9f.test.tsx", "src/teacher/TeacherTodayHub.9c.test.tsx"];
 const DASH = "src/TeacherDashboard.tsx";
 const H2_API = ["api/tests/today-scope-21h2.test.js"], H2_UI = ["src/TeacherDashboard.scope.21h2.test.tsx", "src/teacher/TeacherTodayHub.9a.test.tsx"];
+const H3_API = ["api/tests/today-categories-21h3.test.js"], H3_UI = ["src/teacher/TeacherTodayHub.21h3.test.tsx", "src/teacher/TeacherTodayHub.12b.test.tsx", "src/teacher/todayFormat.21h0.test.ts"];
 export const CAMPAIGNS = {
+  h3: [
+    { id: "H3-M1", what: "a deadline beyond 48 h is listed as closing soon", file: TODAY,
+      find: "due-nowMs<=DUE_SOON_MS", replace: "due-nowMs<=2*DUE_SOON_MS", tests: H3_API },
+    { id: "H3-M2", what: "a past deadline is listed as closing soon", file: TODAY,
+      find: "if(due&&due>nowMs&&due-nowMs", replace: "if(due&&due-nowMs", tests: H3_API },
+    { id: "H3-M3", what: "released results are still listed as waiting", file: TODAY,
+      find: "releaseMode(a)===\"manual\"&&!resultsReleased(a,nowMs)&&submitted>0", replace: "releaseMode(a)===\"manual\"&&submitted>0", tests: H3_API },
+    { id: "H3-M4", what: "a manual assignment with no submission is listed", file: TODAY,
+      find: "&&!resultsReleased(a,nowMs)&&submitted>0", replace: "&&!resultsReleased(a,nowMs)", tests: H3_API },
+    { id: "H3-M5", what: "every non-immediate mode counts as the teacher's step", file: TODAY,
+      find: "if(releaseMode(a)===\"manual\"&&", replace: "if(releaseMode(a)!==\"immediate\"&&", tests: H3_API },
+    { id: "H3-M6", what: "an already open assignment is listed as opening soon", file: TODAY,
+      find: "if(open&&open>nowMs&&open-nowMs<=OPENING_MS)", replace: "if(open&&open-nowMs<=OPENING_MS)", tests: H3_API },
+    { id: "H3-M7", what: "the not-submitted count includes students who submitted", file: TODAY,
+      find: "if(attempts.length===0&&st.availability===\"open\")notSubmitted++;", replace: "notSubmitted++;", tests: H3_API },
+    { id: "H3-M8", what: "«تذكير» sends without asking", file: HUB,
+      find: "    if (!(await confirm({ title: \"تذكير الطلاب\",", replace: "    if (false && !(await confirm({ title: \"تذكير الطلاب\",", tests: H3_UI },
+    { id: "H3-M9", what: "«تذكير» is offered on plain-text rows (outside the app)", file: HUB,
+      find: "...(openAssignment ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />", replace: "action: remindAction(i.assignmentId, i.title) }))} />", tests: H3_UI },
+    { id: "H3-M10", what: "the closing-soon card is dropped", file: HUB,
+      find: "{due && <Card id=\"eb-today-due\"", replace: "{false && due && <Card id=\"eb-today-due\"", tests: H3_UI },
+    { id: "H3-M11", what: "a malformed dueSoon block is trusted", file: HUB,
+      find: "(b && typeof b.count === \"number\" && Array.isArray(b.items) ? b : undefined)", replace: "(b ? b : undefined)", tests: H3_UI },
+    { id: "H3-M12", what: "«خلال» counts the wrong way round", file: FMT,
+      find: "const min = Math.floor((t - now) / 60e3);", replace: "const min = Math.floor((now - t) / 60e3);", tests: H3_UI }
+  ],
   h2: [
     { id: "H2-M1", what: "?classId= is ignored (the hub stays on every class)", file: TODAY,
       find: "const scopeClassId=scopeOf(request);", replace: "const scopeClassId=\"\";", tests: H2_API },
@@ -77,11 +104,11 @@ export const CAMPAIGNS = {
     { id: "H0-M7", what: "a zero keeps its alarm colour", file: HUB,
       find: '<article className={"eb-attention-card tone-" + (count > 0 ? tone : "neutral")}', replace: '<article className={"eb-attention-card tone-" + tone}', tests: H0_UI },
     { id: "H0-M8", what: "a time ahead of now reads as an age", file: FMT,
-      find: "if (min < 1) return \"الآن\";", replace: "if (min === 0) return \"الآن\";", tests: H0_UI },
+      find: "const min = Math.floor((now - t) / 60e3);\n  if (min < 1) return \"الآن\";", replace: "const min = Math.floor((now - t) / 60e3);\n  if (min === 0) return \"الآن\";", tests: H0_UI },
     { id: "H0-M9", what: "the stale card is dropped (idle attempts vanish)", file: HUB,
       find: "{stale && <Card id=\"eb-today-stale\"", replace: "{false && stale && <Card id=\"eb-today-stale\"", tests: H0_UI },
     { id: "H0-M10", what: "a malformed staleAttempts block is trusted", file: HUB,
-      find: "staleAttempts: o.attention.staleAttempts && Array.isArray(o.attention.staleAttempts.items) ? o.attention.staleAttempts : undefined", replace: "staleAttempts: o.attention.staleAttempts", tests: H0_UI }
+      find: "staleAttempts: block(o.attention.staleAttempts)", replace: "staleAttempts: o.attention.staleAttempts", tests: H0_UI }
   ]
 };
 

@@ -64,7 +64,7 @@ describe("9A TeacherTodayHub — attention, quick actions, recent activity", () 
     expect(within(screen.getByRole("article", { name: /بانتظار التصحيح/ })).getByText("3")).toBeTruthy();
     const msgs = within(screen.getByRole("article", { name: /رسائل غير مقروءة/ }));
     expect(msgs.getByText("3")).toBeTruthy();
-    expect(msgs.getByText(/3 رسالة من طلابك بانتظار الرد/)).toBeTruthy();
+    expect(msgs.getByText(/3 رسائل من طلابك بانتظار الرد/)).toBeTruthy();                // 21H.3: Arabic agreement («3 رسائل», was «3 رسالة»)
     const recent = within(screen.getByRole("region", { name: "آخر نشاط في صفوفك" }));
     expect(recent.getAllByRole("listitem").length).toBe(2);
     expect(recent.getAllByRole("listitem")[0].textContent).toContain("طالب s01");

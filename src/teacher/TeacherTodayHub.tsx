@@ -6,7 +6,8 @@ import type { TeacherNavId } from "../shell/teacherNav";
 import { parseProjectEvaluation, type ProjectEvaluationAttention, type ProjectEvaluationAttentionRow, type ProjectReviewAttention } from "./teacherTodayEvaluation";
 import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "../projects/drillTarget";
 import { recentActivityTarget, type AssignmentDrillTarget } from "../assignments/drillTarget";
-import { count, spread, sinceText, exactTime, SUBMISSIONS, STUDENTS, STUDENTS_WORKING, STAGES, FROM_STUDENTS } from "./todayFormat";
+import { count, spread, sinceText, untilText, exactTime, SUBMISSIONS, STUDENTS, STUDENTS_WORKING, STAGES, FROM_STUDENTS, MESSAGES } from "./todayFormat";
+import { useConfirm } from "../ui/useConfirm";
 import "./teacherToday.css";
 export type { ProjectEvaluationAttention, ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
 
@@ -25,6 +26,11 @@ export type TeacherToday = {
     activeAttempts: { count: number; items: AttemptItem[] };
     /** Phase 21H.0 — additive: open attempts with no recent activity, or paused (absent on older payloads → no card). */
     staleAttempts?: { count: number; items: AttemptItem[] };
+    /** Phase 21H.3 — additive (absent on older payloads → no card): deadlines within 48 h, «manual» results not yet
+     *  published (21G.5), and assignments opening within 24 h. */
+    dueSoon?: { count: number; items: { assignmentId: string; title: string; className: string; dueAt: string; notSubmitted: number; expected: number }[] };
+    resultsUnreleased?: { count: number; items: { assignmentId: string; title: string; className: string; submitted: number; dueAt: string }[] };
+    openingSoon?: { count: number; items: { assignmentId: string; title: string; className: string; openAt: string; expected: number }[] };
     notStarted: { count: number; assignments: number; items: { assignmentId: string; title: string; className: string; dueAt: string; notStarted: number; expected: number }[] };
     pendingReview: { count: number; assignments: number; items: { assignmentId: string; title: string; className: string; pendingReview: number }[] };
     unreadMessages: { total: number; capped: boolean } | null;
@@ -70,12 +76,15 @@ const activityText = (i: AttemptItem, nowIso: string) => {
 };
 const KIND: Record<string, string> = { submitted: "سلّم", started: "بدأ محاولة", timedOut: "انتهى وقته", integrityExit: "خرج من الامتحان", teacherEnded: "أنهى المعلم محاولته" };
 
+/** An optional additive block: kept only when it has the {count, items[]} shape (a malformed one renders no card). */
+const block = <T extends { count: number; items: unknown[] }>(b: T | undefined): T | undefined => (b && typeof b.count === "number" && Array.isArray(b.items) ? b : undefined);
+
 /** Validates the payload shape defensively: a malformed body is an error, never a crash or a fake zero-state. */
 function parse(j: unknown): TeacherToday | null {
   const o = j as Partial<TeacherToday> | null;
   if (!o || typeof o !== "object" || !o.attention || !o.attention.activeAttempts || !o.attention.notStarted || !o.attention.pendingReview) return null;
   const projectEvaluation = parseProjectEvaluation((o as Record<string, unknown>).projectEvaluation);
-  return { generatedAt: String(o.generatedAt || ""), scope: o.scope || { activeClasses: 0, students: 0, publishedAssignments: 0 }, attention: { ...o.attention, unreadMessages: o.attention.unreadMessages ?? null, staleAttempts: o.attention.staleAttempts && Array.isArray(o.attention.staleAttempts.items) ? o.attention.staleAttempts : undefined }, recent: Array.isArray(o.recent) ? o.recent : [], partial: Array.isArray(o.partial) ? o.partial : [], ...(projectEvaluation === undefined ? {} : { projectEvaluation }) };
+  return { generatedAt: String(o.generatedAt || ""), scope: o.scope || { activeClasses: 0, students: 0, publishedAssignments: 0 }, attention: { ...o.attention, unreadMessages: o.attention.unreadMessages ?? null, staleAttempts: block(o.attention.staleAttempts), dueSoon: block(o.attention.dueSoon), resultsUnreleased: block(o.attention.resultsUnreleased), openingSoon: block(o.attention.openingSoon) }, recent: Array.isArray(o.recent) ? o.recent : [], partial: Array.isArray(o.partial) ? o.partial : [], ...(projectEvaluation === undefined ? {} : { projectEvaluation }) };
 }
 
 /** «3/7 مراحل مقيّمة» — the row's evaluation state in the Phase 9B wording (0 IS a grade: it is counted as graded by the server). */
@@ -156,16 +165,21 @@ function ProjectReviewCard({ review, onOpen, onOpenAll }: { review: ProjectRevie
 
 /** A card row: display text, plus (Phase 12B) an optional action. With `onOpen` the row is ONE real <button> (never the
  *  whole card, never nested); without it the row is plain text exactly as before. */
-type CardItem = { key: string; label: string; meta: string; onOpen?: () => void; ariaLabel?: string };
+type CardItem = { key: string; label: string; meta: string; onOpen?: () => void; ariaLabel?: string;
+  /** Phase 21H.3 — a direct action next to the row (e.g. «تذكير»): its own button, never nested in the row's. */
+  action?: { label: string; ariaLabel: string; onClick: () => void; disabled?: boolean } };
 
 function Card({ id, title, count, tone, items, empty, actionLabel, onAction, summary }: { id: string; title: string; count: number; tone: "danger" | "attention" | "info"; items: CardItem[]; empty: string; actionLabel: string; onAction?: () => void; summary?: string }) {
   const shown = items.slice(0, PREVIEW), rest = items.length - shown.length;
   let body: ReactNode;
   if (shown.length) body = (
     <ul className="eb-attention-list">
-      {shown.map(i => i.onOpen
-        ? <li key={i.key} className="eb-today-row-item"><button type="button" className="eb-attention-item eb-today-row-action" onClick={i.onOpen} aria-label={i.ariaLabel}><span className="eb-attention-item-label">{i.label}</span><span className="eb-attention-item-meta">{i.meta}</span></button></li>
-        : <li key={i.key} className="eb-today-row"><span className="eb-attention-item-label">{i.label}</span><span className="eb-attention-item-meta">{i.meta}</span></li>)}
+      {shown.map(i => {
+        const action = i.action && <button type="button" className="eb-button is-quiet is-small eb-today-row-secondary" onClick={i.action.onClick} disabled={i.action.disabled} aria-label={i.action.ariaLabel}>{i.action.label}</button>;
+        return i.onOpen
+          ? <li key={i.key} className={"eb-today-row-item" + (action ? " has-action" : "")}><button type="button" className="eb-attention-item eb-today-row-action" onClick={i.onOpen} aria-label={i.ariaLabel}><span className="eb-attention-item-label">{i.label}</span><span className="eb-attention-item-meta">{i.meta}</span></button>{action}</li>
+          : <li key={i.key} className={"eb-today-row" + (action ? " has-action" : "")}><span className="eb-attention-item-label">{i.label}</span><span className="eb-attention-item-meta">{i.meta}</span>{action}</li>;
+      })}
     </ul>
   );
   else if (count === 0) body = <p className="eb-attention-empty">{empty}</p>;
@@ -176,7 +190,7 @@ function Card({ id, title, count, tone, items, empty, actionLabel, onAction, sum
       {summary && count > 0 && <p className="eb-today-note">{summary}</p>}
       {body}
       {rest > 0 && <p className="eb-attention-more">و{rest} أخرى</p>}
-      {onAction && <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={onAction}>{actionLabel}</button>}
+      {onAction && <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={onAction}>{rest > 0 ? "عرض الكل في " + actionLabel : actionLabel}</button>}
     </article>
   );
 }
@@ -215,8 +229,9 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
   const a = data?.attention;
   const projectEval = data?.projectEvaluation;                                 // undefined = older payload (no card)
   const stale = a?.staleAttempts;                                              // undefined = older payload (no card)
+  const due = a?.dueSoon, unreleased = a?.resultsUnreleased, opening = a?.openingSoon;
   const now = data?.generatedAt || "";
-  const total = a ? a.activeAttempts.count + (stale ? stale.count : 0) + a.notStarted.count + a.pendingReview.count + (a.unreadMessages ? a.unreadMessages.total : 0) + (projectEval ? (projectEval.review ? projectEval.review.totalReadyStages : projectEval.studentsWithUngradedStages) : 0) : 0;
+  const total = a ? a.activeAttempts.count + (stale ? stale.count : 0) + a.notStarted.count + a.pendingReview.count + (a.unreadMessages ? a.unreadMessages.total : 0) + (due ? due.count : 0) + (unreleased ? unreleased.count : 0) + (projectEval ? (projectEval.review ? projectEval.review.totalReadyStages : projectEval.studentsWithUngradedStages) : 0) : 0;
   const quiet = !!a && total === 0 && !a.unreadMessages?.total;
   // A row: the exact student (9D) when App offers it, else the project (9C), else the Projects destination.
   const openRow = (r: ProjectEvaluationAttentionRow) => {
@@ -232,6 +247,30 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
   // destination re-reads them and decides what is current.
   const openAssignment = onOpenAssignmentTarget ? (t: AssignmentDrillTarget) => () => onOpenAssignmentTarget(t) : null;
 
+  // Phase 21H.3 — «تذكير» right from the card (offered with the actionable rows, i.e. inside the app): the SAME confirmed action as the gradebook's (21G.7 remindStudents — the server
+  // decides who is eligible, at most one reminder per student per day); the hub re-reads its summary afterwards.
+  const { confirm, confirmDialog } = useConfirm();
+  const [reminding, setReminding] = useState("");
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  async function remind(assignmentId: string, title: string) {
+    if (reminding) return;
+    if (!(await confirm({ title: "تذكير الطلاب", message: "سيصل إشعار «تذكير من المعلم» إلى كل من لم يسلّم «" + title + "» بعد ممن لا يزال بإمكانهم التسليم. يُرسل تذكير واحد على الأكثر لكل طالب في اليوم.", confirmLabel: "إرسال التذكير" }))) return;
+    setReminding(assignmentId); setNotice(null);
+    try {
+      const r = await fetch("/api/assignment-results", { method: "POST", headers: { "Content-Type": "application/json", "x-builder-token": token, Authorization: "Bearer " + token }, body: JSON.stringify({ action: "remindStudents", assignmentId }) });
+      const j = await r.json().catch(() => null) as { ok?: boolean; error?: string; reminded?: number; alreadyToday?: number; failed?: number } | null;
+      if (!alive.current) return;
+      if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || "تعذر إرسال التذكير.");
+      const parts = [j.reminded ? "✓ أُرسل التذكير إلى " + count(j.reminded, STUDENTS) + " في «" + title + "»." : "لم يُرسل تذكير جديد في «" + title + "»."];
+      if (j.alreadyToday) parts.push(count(j.alreadyToday, STUDENTS) + " ذُكّر اليوم مسبقًا.");
+      if (j.failed) parts.push("تعذر الإرسال إلى " + count(j.failed, STUDENTS) + "؛ أعد المحاولة لاحقًا.");
+      setNotice({ text: parts.join(" "), error: !!j.failed });
+      void load({ silent: true });
+    } catch (e) { if (alive.current) setNotice({ text: e instanceof Error ? e.message : "تعذر إرسال التذكير.", error: true }); }
+    finally { if (alive.current) setReminding(""); }
+  }
+  const remindAction = (assignmentId: string, title: string) => ({ label: reminding === assignmentId ? "جارٍ الإرسال..." : "تذكير", ariaLabel: "تذكير من لم يسلّم «" + title + "»", onClick: () => void remind(assignmentId, title), disabled: !!reminding });
+
   return (
     <section className="eb-today-teacher" aria-labelledby="eb-today-title">
       <SectionHeader level={2} id="eb-today-title" title="ما الذي يحتاج انتباهي الآن؟" description={embedded ? "مباشر الآن · يتحدّث تلقائيًا كل دقيقة" : data ? "ملخص مباشر من صفوفك النشطة" + (data.generatedAt ? " · " + fmt(data.generatedAt) : "") : "ملخص مباشر من صفوفك النشطة"}
@@ -239,34 +278,50 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
       {loading && !data && <p className="eb-muted" role="status">جارٍ تحميل ملخص اليوم...</p>}
       {error && !data && <div className="platform-error eb-today-error" role="alert">{error} <button type="button" className="eb-notif-retry" onClick={() => void load()}>إعادة المحاولة</button></div>}
       {a && quiet && <p className="eb-attention-empty eb-today-quiet" role="status">لا توجد عناصر تحتاج تدخلك الآن.</p>}
+      {notice && <p className={"eb-today-notice" + (notice.error ? " is-error" : "")} role={notice.error ? "alert" : "status"}>{notice.text}</p>}
       {a && (
+        // Phase 21H.3 — cards in priority order: grading, deadlines, who has not started, results to publish, messages,
+        // projects, then the live / idle attempts and what opens soon.
         <div className="eb-attention-grid eb-today-grid">
+          <Card id="eb-today-pending" title="بانتظار التصحيح" count={a.pendingReview.count} tone="info" empty="لا تسليمات تنتظر تصحيحًا يدويًا." actionLabel="الواجبات" onAction={() => go("assignments")}
+            summary={spread(a.pendingReview.count, SUBMISSIONS, a.pendingReview.assignments)}
+            items={a.pendingReview.items.map(i => ({ key: i.assignmentId, label: i.title, meta: count(i.pendingReview, SUBMISSIONS) + " · " + i.className,
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "pendingReview" }), ariaLabel: "افتح واجب " + i.title + " — " + pendingText(i.pendingReview) } : {}) }))} />
+          {due && <Card id="eb-today-due" title="يُغلق خلال 48 ساعة" count={due.count} tone="attention" empty="لا واجبات يقترب موعد إغلاقها." actionLabel="الواجبات" onAction={() => go("assignments")}
+            items={due.items.map(i => ({ key: "due:" + i.assignmentId, label: i.title, meta: "يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) + " · لم يسلّم " + i.notSubmitted + " من " + i.expected + " · " + i.className,
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) } : {}),
+              ...(openAssignment && i.notSubmitted > 0 ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />}
+          <Card id="eb-today-notstarted" title="لم يبدؤوا بعد" count={a.notStarted.count} tone="danger" empty="بدأ الجميع واجباتهم المفتوحة." actionLabel="الواجبات" onAction={() => go("assignments")}
+            summary={spread(a.notStarted.count, STUDENTS, a.notStarted.assignments)}
+            items={a.notStarted.items.map(i => ({ key: i.assignmentId, label: i.title, meta: "لم يبدأ " + i.notStarted + " من " + i.expected + " · " + i.className + (i.dueAt ? " · التسليم " + fmt(i.dueAt) : ""),
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — " + notStartedText(i.notStarted) } : {}),
+              ...(openAssignment ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />
+          {unreleased && <Card id="eb-today-unreleased" title="نتائج بانتظار النشر" count={unreleased.count} tone="info" empty="لا نتائج تنتظر النشر." actionLabel="الواجبات" onAction={() => go("assignments")}
+            summary="اخترت نشر نتائج هذه الواجبات يدويًا؛ لا يرى الطلاب علاماتهم قبل أن تنشرها."
+            items={unreleased.items.map(i => ({ key: "rel:" + i.assignmentId, label: i.title, meta: count(i.submitted, SUBMISSIONS) + " · " + i.className,
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " لنشر نتائجه" } : {}) }))} />}
+          <article className={"eb-attention-card tone-" + (a.unreadMessages && a.unreadMessages.total > 0 ? "info" : "neutral")} aria-labelledby="eb-today-messages">
+            <h3 id="eb-today-messages" className="eb-attention-title"><span>رسائل غير مقروءة</span><span className="eb-attention-count">{a.unreadMessages ? (a.unreadMessages.capped ? "99+" : a.unreadMessages.total) : "—"}</span></h3>
+            {a.unreadMessages === null ? <p className="eb-attention-partial">تعذر قراءة الرسائل الآن؛ بقية الملخص محدّثة.</p>
+              : a.unreadMessages.total === 0 ? <p className="eb-attention-empty">لا رسائل جديدة من الطلاب.</p>
+              : <p className="eb-today-note">{a.unreadMessages.capped ? "أكثر من 99 رسالة" : count(a.unreadMessages.total, MESSAGES)} من طلابك بانتظار الرد.</p>}
+            <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={() => go("messages")}>فتح الرسائل</button>
+          </article>
+          {projectEval !== undefined && <ProjectEvaluationCard data={projectEval} onOpen={openRow} onOpenAll={() => go("projects")} />}
           <Card id="eb-today-active" title="محاولات نشطة الآن" count={a.activeAttempts.count} tone="attention" empty="لا يعمل أي طالب على محاولة الآن." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={count(a.activeAttempts.count, STUDENTS_WORKING)}
             items={a.activeAttempts.items.map(i => ({ key: i.assignmentId + ":" + i.studentId, label: i.studentName, meta: i.title + " · " + i.className + (activityText(i, now) ? " · " + activityText(i, now) : ""),
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — " + attemptText(i.status) } : {}) }))} />
           {stale && <Card id="eb-today-stale" title="محاولات مفتوحة بلا نشاط" count={stale.count} tone="attention" empty="لا توجد محاولات مفتوحة متروكة." actionLabel="الواجبات" onAction={() => go("assignments")}
-            summary={"لم يعمل عليها أصحابها منذ أكثر من 15 دقيقة، أو أوقفتها مؤقتًا"}
+            summary={"لم يعمل عليها أصحابها منذ أكثر من 15 دقيقة، أو أوقفتها مؤقتًا. افتح المحاولة لتمديدها أو إنهائها من سجل العلامات."}
             items={stale.items.map(i => ({ key: "stale:" + i.assignmentId + ":" + i.studentId, label: i.studentName, meta: i.title + " · " + i.className + (activityText(i, now) ? " · " + activityText(i, now) : ""),
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — محاولة مفتوحة بلا نشاط" } : {}) }))} />}
-          <Card id="eb-today-notstarted" title="لم يبدؤوا بعد" count={a.notStarted.count} tone="danger" empty="بدأ الجميع واجباتهم المفتوحة." actionLabel="الواجبات" onAction={() => go("assignments")}
-            summary={spread(a.notStarted.count, STUDENTS, a.notStarted.assignments)}
-            items={a.notStarted.items.map(i => ({ key: i.assignmentId, label: i.title, meta: "لم يبدأ " + i.notStarted + " من " + i.expected + " · " + i.className + (i.dueAt ? " · التسليم " + fmt(i.dueAt) : ""),
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — " + notStartedText(i.notStarted) } : {}) }))} />
-          <Card id="eb-today-pending" title="بانتظار التصحيح" count={a.pendingReview.count} tone="info" empty="لا تسليمات تنتظر تصحيحًا يدويًا." actionLabel="الواجبات" onAction={() => go("assignments")}
-            summary={spread(a.pendingReview.count, SUBMISSIONS, a.pendingReview.assignments)}
-            items={a.pendingReview.items.map(i => ({ key: i.assignmentId, label: i.title, meta: count(i.pendingReview, SUBMISSIONS) + " · " + i.className,
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "pendingReview" }), ariaLabel: "افتح واجب " + i.title + " — " + pendingText(i.pendingReview) } : {}) }))} />
-          <article className={"eb-attention-card tone-" + (a.unreadMessages && a.unreadMessages.total > 0 ? "info" : "neutral")} aria-labelledby="eb-today-messages">
-            <h3 id="eb-today-messages" className="eb-attention-title"><span>رسائل غير مقروءة</span><span className="eb-attention-count">{a.unreadMessages ? (a.unreadMessages.capped ? "99+" : a.unreadMessages.total) : "—"}</span></h3>
-            {a.unreadMessages === null ? <p className="eb-attention-partial">تعذر قراءة الرسائل الآن؛ بقية الملخص محدّثة.</p>
-              : a.unreadMessages.total === 0 ? <p className="eb-attention-empty">لا رسائل جديدة من الطلاب.</p>
-              : <p className="eb-today-note">{a.unreadMessages.capped ? "أكثر من 99 رسالة" : a.unreadMessages.total + " رسالة"} من طلابك بانتظار الرد.</p>}
-            <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={() => go("messages")}>فتح الرسائل</button>
-          </article>
-          {projectEval !== undefined && <ProjectEvaluationCard data={projectEval} onOpen={openRow} onOpenAll={() => go("projects")} />}
+          {opening && opening.count > 0 && <Card id="eb-today-opening" title="تفتح خلال 24 ساعة" count={opening.count} tone="info" empty="" actionLabel="الواجبات" onAction={() => go("assignments")}
+            items={opening.items.map(i => ({ key: "open:" + i.assignmentId, label: i.title, meta: "تفتح " + (untilText(i.openAt, now) || fmt(i.openAt)) + " · " + count(i.expected, STUDENTS) + " · " + i.className,
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " — يفتح " + (untilText(i.openAt, now) || fmt(i.openAt)) } : {}) }))} />}
         </div>
       )}
+      {confirmDialog}
       <div className="eb-today-actions" role="group" aria-label="إجراءات سريعة">
         <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("messages")}><span className="eb-today-action-icon" aria-hidden="true"><IconMail size={18} /></span>فتح الرسائل</button>
         <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("assignments")}><span className="eb-today-action-icon" aria-hidden="true"><IconAssignments size={18} /></span>الواجبات</button>
