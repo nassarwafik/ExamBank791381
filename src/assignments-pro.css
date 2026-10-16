@@ -372,3 +372,12 @@
 .eb-qgrid-cell.is-b90, .eb-qgrid-swatch.is-b90 { background: color-mix(in srgb, var(--eb-primary) 62%, var(--eb-surface)); }
 .eb-qgrid-cell.is-pending, .eb-qgrid-swatch.is-pending { background: repeating-linear-gradient(135deg, var(--eb-warn-bg) 0 5px, var(--eb-surface) 5px 10px); color: var(--eb-warn-tx); font-weight: var(--eb-fw-semibold); }
 .eb-qgrid-cell.is-none { color: var(--eb-muted); background: var(--eb-surface-2); }
+
+/* Phase 21G.5 — the results release in «نظرة عامة»: where they stand for students (text + tone, never colour alone), the mode, the
+   manual publish. */
+.eb-release-state { display: block; margin-block-start: 2px; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); }
+.eb-release-state.is-visible { color: var(--eb-success-tx); }
+.eb-release-state.is-hidden { color: var(--eb-warn-tx); }
+.eb-release-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--eb-space-2) var(--eb-space-3); margin-block-start: var(--eb-space-3); }
+.eb-release-mode { display: flex; flex-direction: column; gap: var(--eb-space-1); color: var(--eb-muted); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
+.eb-release-mode select { min-block-size: 40px; padding: 0 var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface); color: var(--eb-text); font: inherit; }

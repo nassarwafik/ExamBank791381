@@ -19,7 +19,9 @@ const official = () => require_("../src/lib/coding/official-grading.js");
 const studentAuth = () => ({ ok: true, user: { sub: F.S1, sv: 1, role: "student" } });
 const quiet = { logInfo() {}, logWarn() {}, logError() {} };
 const OPEN = ["queued", "processing", "retrying", "delayed"];
-const PUBLIC_RESULT_KEYS = ["attemptNumber", "submittedAt", "score", "totalMarks", "percentage", "manualReviewMarks", "finalized", "gradingStatus", "teacherFeedback", "timedOut", "startedAt", "endsAt", "extendedEndsAt", "endedAt", "endReason", "pauseCount", "autoGradingPending", "autoGradingStatus"];
+const PUBLIC_RESULT_KEYS = ["attemptNumber", "submittedAt", "score", "totalMarks", "percentage", "manualReviewMarks", "finalized", "gradingStatus", "teacherFeedback", "timedOut", "startedAt", "endsAt", "extendedEndsAt", "endedAt", "endReason", "pauseCount", "autoGradingPending", "autoGradingStatus",
+  // Phase 21G.5 — the results-release state (a boolean, a mode word, a due date): never a mark, an id or an internal.
+  "resultsVisible", "resultsVisibility", "resultsVisibleAt"];
 // Everything the internal grading engine knows that a student must never see (identifiers, internals, evidence, secrets).
 const LEAK = /cg_[A-Za-z0-9_-]{8,}|"jobId"|targetRef|"revision"|technicalCode|gradingKey|answerHash|questionFingerprint|"cases"|passedCount|testCount|passedWeight|automaticScore|"delivery"|lease|automaticAttempts|exhausted|"recovery"|callback|runner|HMAC|EXECUTION_|RUNNER_|STALE_|SWEEP|stale|hiddenTests|expectedOutput|SUM=CANARY|CANARY-REFERENCE|CANARY-HIDDEN-TITLE|"weight"|comparator|print\(|codingGrading"/;
 

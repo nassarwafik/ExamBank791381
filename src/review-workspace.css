@@ -96,3 +96,12 @@
 .rv-technical strong{ font-weight:var(--eb-fw-bold); }
 .rv-technical-reason{ color:inherit; opacity:.9; }
 .review-summary .rv-summary-technical strong{ color:var(--eb-danger-tx); }
+
+/* Phase 21G.5 — moving between students without leaving the review (the same guard as closing; keys ] [ N). */
+.rv-student-nav{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin-inline-start:auto; }
+.rv-student-nav button{ border:1px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text); border-radius:var(--eb-r); padding:8px 12px; font:inherit; font-weight:var(--eb-fw-bold); cursor:pointer; }
+.rv-student-nav button.is-primary{ background:var(--eb-primary); border-color:var(--eb-primary); color:var(--eb-surface); }
+.rv-student-nav button:disabled{ opacity:.45; cursor:default; }
+.rv-student-nav button:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.rv-student-pos{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+@media (max-width: 767px){ .rv-student-nav{ inline-size:100%; margin-inline-start:0; } }

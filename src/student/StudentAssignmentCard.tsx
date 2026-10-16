@@ -1,5 +1,5 @@
 import { dashboardStateLabel, gradingClass, resolveGradingStatus, scoreLabel } from "../gradingStatus";
-import { CODING_GRADING_CARD_OPEN, CODING_GRADING_CARD_REVIEW, PENDING_SCORE_DASH, codingGradingStatusOf, isCodingGradingOpen, isCodingReviewRequired, scoreWithheld } from "../codingGradingStatus";
+import { CODING_GRADING_CARD_OPEN, CODING_GRADING_CARD_REVIEW, PENDING_SCORE_DASH, codingGradingStatusOf, isCodingGradingOpen, isCodingReviewRequired, scoreWithheld, resultsNotReleased, resultsNotReleasedLabel } from "../codingGradingStatus";
 import StatusBadge from "../ui/StatusBadge";
 import { STATE_TONE, actionLabel, formatWhen, stateOf } from "./portalPresentation";
 import type { Summary } from "./types";
@@ -27,7 +27,7 @@ export default function StudentAssignmentCard({ item, busy, onOpen }: { item: Su
       {lr && lrGs && (
         <p className={"eb-sp-task-result is-" + gradingClass(lrGs)}>
           <strong>{scoreLabel(lrGs)}: {scoreWithheld(lr) ? PENDING_SCORE_DASH + " " : lr.score}/{lr.totalMarks}{lrGs === "final" && !scoreWithheld(lr) ? " (" + lr.percentage + "%)" : ""}</strong>
-          {lrGs === "pendingReview" && lr.manualReviewMarks > 0 && <span>بانتظار مراجعة {lr.manualReviewMarks} علامة</span>}
+          {resultsNotReleased(lr) ? <span data-testid="card-not-released">{resultsNotReleasedLabel(lr)}</span> : lrGs === "pendingReview" && lr.manualReviewMarks > 0 && <span>بانتظار مراجعة {lr.manualReviewMarks} علامة</span>}
         </p>
       )}
       {lr && isCodingGradingOpen(codingGradingStatusOf(lr)) && <p className="eb-sp-task-coding" data-testid="card-coding-grading">{CODING_GRADING_CARD_OPEN}</p>}

@@ -1,7 +1,8 @@
 import ChartCard from "../ui/ChartCard";
-import { IconEdit, IconHistory } from "../icons";
+import { IconEdit, IconHistory, IconEye, IconEyeOff } from "../icons";
 import { attemptPolicyLabel } from "./attemptPolicy";
 import { scoreDistribution, statusBreakdown, studentsCount } from "./assignmentPage";
+import { RESULTS_RELEASE_OPTIONS, normalizeResultsRelease, resultsReleaseLabel, resultsReleaseState, type ResultsRelease } from "./resultsRelease";
 import type { Item, StudentResult } from "./types";
 
 /**
@@ -9,17 +10,23 @@ import type { Item, StudentResult } from "./types";
  * apart), where the students stand, and the assignment's settings with their edit entry points. Every figure comes from the
  * gradebook rows the page already holds — no extra request. Charts are plain HTML bars inside ChartCard (a named figure + a table).
  */
-export default function AssignmentOverview({ item, results, fmt, onEditDetails, onEditTiming, onEditAttempts }: {
+export default function AssignmentOverview({ item, results, fmt, onEditDetails, onEditTiming, onEditAttempts, now, onResultsRelease, onReleaseResults, busy }: {
   item: Item;
   results: readonly StudentResult[];
   fmt: (value: string) => string;
   onEditDetails: (item: Item) => void;
   onEditTiming: (item: Item) => void;
   onEditAttempts: (item: Item) => void;
+  /** Phase 21G.5 (D2) — the results release: the minute clock (for «بعد الموعد النهائي»), the mode editor and the manual publish. */
+  now?: number;
+  onResultsRelease?: (item: Item, mode: ResultsRelease) => void;
+  onReleaseResults?: (item: Item, released: boolean) => void;
+  busy?: boolean;
 }) {
   const dist = scoreDistribution(results);
   const parts = statusBreakdown(results), total = results.length;
   const archived = item.status === "archived";
+  const releaseMode = normalizeResultsRelease(item.resultsRelease), release = resultsReleaseState(item, now ?? 0, fmt);
   const distSummary = dist.graded
     ? "توزيع العلامات النهائية (" + studentsCount(dist.graded) + "): " + dist.bands.map(b => b.label + " " + b.count).join("، ")
     : "لا توجد علامات نهائية بعد";
@@ -67,7 +74,20 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
           <div><dt>مدة المحاولة</dt><dd>{item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}</dd></div>
           <div><dt>طريقة المحاولة</dt><dd>{attemptPolicyLabel(item.attemptPolicy)}</dd></div>
           <div><dt>الأسئلة</dt><dd>{item.questionCount} سؤال · {item.totalMarks} علامة</dd></div>
+          <div><dt>إظهار النتائج</dt><dd>{resultsReleaseLabel(releaseMode)}<small className={"eb-release-state" + (release.visible ? " is-visible" : " is-hidden")}>{release.text}</small></dd></div>
         </dl>
+        {!archived && onResultsRelease && (
+          <div className="eb-release-controls">
+            <label className="eb-release-mode">متى يرى الطلاب نتائجهم
+              <select value={releaseMode} onChange={e => onResultsRelease(item, e.target.value as ResultsRelease)} disabled={busy}>
+                {RESULTS_RELEASE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </label>
+            {releaseMode === "manual" && onReleaseResults && (item.resultsReleasedAt
+              ? <button type="button" className="eb-button is-small" onClick={() => onReleaseResults(item, false)} disabled={busy}><IconEyeOff size={16} />إخفاء النتائج عن الطلاب</button>
+              : <button type="button" className="eb-button is-small is-primary" onClick={() => onReleaseResults(item, true)} disabled={busy}><IconEye size={16} />نشر النتائج للطلاب</button>)}
+          </div>
+        )}
         <div className="eb-assign-instructions">
           <h4 className="eb-assign-instructions-title">التعليمات</h4>
           <p>{item.instructions?.trim() || "لا توجد تعليمات."}</p>

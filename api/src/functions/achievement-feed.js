@@ -1,10 +1,14 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
-const { listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { withheldAssignmentIds } = require("../lib/results-release");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost, isVisibleToStudent, reactionCounts } = require("../lib/achievement-feed");
 
-const UP = "platform/users/";
+const UP = "platform/users/", AP = "platform/assignments/";
+// Phase 21G.5 (D2) — an assessment medal reveals a mark band, so its post is shown (to anyone, its owner included) only once the
+// assignment's results are released. Game medals carry no assignment and are unaffected.
+const assessmentMedalOf = post => { const raw = post && post.medal && typeof post.medal === "object" ? post.medal : null; if (raw && raw.source === "game") return ""; const m = publicPost(post).medal; return m ? String(m.assignmentId || "") : ""; };
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const MAX_POSTS = 30;
 
@@ -30,8 +34,11 @@ async function handler(request, deps = {}, obs = null) {
       if (request.method === "GET") {
         if (!classId) return { status: 200, jsonBody: { ok: true, posts: [] } };
         // Privacy: a classmate's event is listed only when shared with the class; the student's own events always.
-        const posts = (await listJson(container, FEED_PREFIX + classId + "/"))
-          .filter(post => isVisibleToStudent(post, student.userId))
+        const listed = (await listJson(container, FEED_PREFIX + classId + "/")).filter(post => isVisibleToStudent(post, student.userId));
+        const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+        const withheld = await withheldAssignmentIds(listed.map(assessmentMedalOf), id => dl(container, AP + id + ".json"));
+        const posts = listed
+          .filter(post => !withheld.has(assessmentMedalOf(post)))
           .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
           .slice(0, MAX_POSTS)
           .map(post => ({
@@ -52,12 +59,16 @@ async function handler(request, deps = {}, obs = null) {
       if (!postId || !REACTIONS.includes(reaction)) return { status: 400, jsonBody: { ok: false, error: "ردّ الفعل غير صالح." } };
 
       const studentId = String(student.userId);
+      // A medal post that is not shown (its assignment's results are not released) cannot be reacted to either.
+      const target = await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, feedBlobName(classId, postId));
+      const unreleasedMedal = !!target && (await withheldAssignmentIds([assessmentMedalOf(target)], id => (deps.downloadJsonOrNull || downloadJsonOrNull)(container, AP + id + ".json"))).size > 0;
       let updatedReactions = null;
       try {
         await mutateJsonWithRetry(container, feedBlobName(classId, postId), current => {
           if (!current) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
           // A student reacts to a VISIBLE classmate's event only — never their own, never an unshared one.
           if (String(current.studentId || "") === studentId) { const err = new Error("لا يمكنك التفاعل مع إنجازك."); err.httpStatus = 403; throw err; }
+          if (unreleasedMedal) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
           if (!isVisibleToStudent(current, studentId)) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
           const hadThisReaction = Array.isArray(current.reactions?.[reaction]) && current.reactions[reaction].includes(studentId);
           current.reactions = current.reactions && typeof current.reactions === "object" ? current.reactions : {};

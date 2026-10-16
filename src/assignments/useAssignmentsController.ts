@@ -10,10 +10,12 @@ import { useConfirm } from "../ui/useConfirm";
 import { windowBlocks, assignmentWindowIssues } from "./assignmentWindow";
 import { bulkRetryNotice } from "./codingRecovery";
 import { assignmentsApi, toLocalInput } from "./assignmentsApi";
-import { matchesMasterScope, normalizeQuery, gradebookRows, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
+import { matchesMasterScope, normalizeQuery, gradebookRows, rowGrading, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
 import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
 import { studentsCount, type PageTab } from "./assignmentPage";
 import { useAssignmentComposer } from "./useAssignmentComposer";
+import { reviewNav, type ReviewTarget } from "./reviewNav";
+import { normalizeResultsRelease, type ResultsRelease } from "./resultsRelease";
 import type { AssignmentDrill } from "./drillTarget";
 import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
 
@@ -118,12 +120,25 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     if (busy || !f.classId || !f.title.trim() || !sourceExam || !examHasQuestions(sourceExam) || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;
     setBusy(true); setError(""); setNotice("");
     try {
-      const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "create", classId: f.classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, publish: f.publish, examSnapshot: sourceExam }) });
+      const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "create", classId: f.classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, resultsRelease: f.resultsRelease, publish: f.publish, examSnapshot: sourceExam }) });
       setItems(x => [r.assignment, ...x]); void loadProgress(); setNotice(r.assignment?.source?.revisionNumber ? "✓ تم إنشاء الواجب من الإصدار المنشور رقم " + r.assignment.source.revisionNumber + " (إدارة النشر) — النسخة المنشورة مثبّتة لهذا الواجب." : "✓ تم إنشاء الواجب من الامتحان المختار.");
       closeComposer();
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر إنشاء الواجب."); } finally { setBusy(false); }
   }
-  async function action(item: Item, body: Record<string, unknown>) { setBusy(true); try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ assignmentId: item.assignmentId, ...body }) }); reconcileMutated(r.assignment); if (body.action === "setStatus") void loadProgress(); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تنفيذ العملية."); } finally { setBusy(false); } }
+  async function action(item: Item, body: Record<string, unknown>) { setBusy(true); try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ assignmentId: item.assignmentId, ...body }) }); reconcileMutated(r.assignment); if (body.action === "setStatus") void loadProgress(); return true; } catch (e) { setError(e instanceof Error ? e.message : "تعذر تنفيذ العملية."); return false; } finally { setBusy(false); } }
+  // Phase 21G.5 (D2) — the results release: the mode (any time), and in «يدويًا» mode publishing / withdrawing (confirmed: it
+  // changes what every student of the class sees). The server enforces it; the returned summary reconciles the row and the page.
+  async function setResultsRelease(item: Item, mode: ResultsRelease) {
+    if (normalizeResultsRelease(item.resultsRelease) === mode) return;
+    await action(item, { action: "setResultsRelease", resultsRelease: mode });
+  }
+  async function releaseResults(item: Item, released: boolean) {
+    if (!(await confirm(released
+      ? { title: "نشر النتائج للطلاب", message: "سيرى كل طالب في الصف علامته وملاحظاتك في هذا الواجب، بما فيها الشارات وإشعارات التصحيح.", confirmLabel: "نشر النتائج" }
+      : { title: "إخفاء النتائج عن الطلاب", message: "ستُحجب العلامات والملاحظات عن الطلاب حتى تنشرها مرة أخرى. لا تتغير العلامات نفسها.", confirmLabel: "إخفاء النتائج", tone: "danger" }))) return;
+    setError(""); setNotice("");
+    if (await action(item, { action: "releaseResults", released })) setNotice(released ? "✓ نُشرت نتائج «" + item.title + "» للطلاب." : "✓ أُخفيت نتائج «" + item.title + "» عن الطلاب.");
+  }
   async function saveMaxAttempts(item: Item, value: number) { await action(item, { action: "setMaxAttempts", maxAttempts: value }); setAttemptsFor(null); }
   // Phase 21G.0 — title / instructions edit: one authoritative request, the returned summary reconciles the row and the detail.
   async function saveDetails(item: Item, title: string, instructions: string) {
@@ -382,6 +397,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const sortedQuestions = useMemo(() => sortAnalysisQuestions(analysis, analysisSort), [analysis, analysisSort]);
   const analysisSummary = useMemo(() => summarizeAnalysis(analysis), [analysis]);
   const visibleResults = useMemo(() => gradebookRows(results, gbSearch, gbFilter, gbSort), [results, gbSearch, gbFilter, gbSort]);
+  const reviewNavigation = useMemo(() => (review ? reviewNav(gradebookRows(results, "", "all", gbSort), review.studentId, rowGrading) : null), [review, results, gbSort]);
   const deadlineStudent = results.find(x => x.studentId === deadlineFor) || null, reopenStudent = results.find(x => x.studentId === reopenFor) || null, extendStudent = results.find(x => x.studentId === extendFor) || null;
   const extendEffDue = extendStudent ? (extendStudent.dueAtOverride || resultsFor?.dueAt || "") : "";
   const willClip = !!(extendValue && extendEffDue && new Date(extendValue).getTime() > new Date(extendEffDue).getTime());
@@ -392,7 +408,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     token, busy, loading, error, notice, mode,
     toolbar: { active, effectiveFilter, showArchived, search, archivedCount, changeScope, openComposer, refresh, timeFilter, timeCounts: timeFilterCounts(scoped, now) },
     home: { kpis: homeKpis(scoped, progress, now), progress, now },
-    list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item) },
+    list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item), setResultsRelease: (item: Item, mode: ResultsRelease) => void setResultsRelease(item, mode), releaseResults: (item: Item, released: boolean) => void releaseResults(item, released) },
     composer: { ...composer, close: closeComposer, create: () => void create(), canCreate },
     detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, tab: pageTab, selectTab: selectPageTab, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },
     gradebook: { rows: visibleResults, results, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s),
@@ -410,7 +426,9 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
       purgeFor, purgeTitle, setPurgeTitle, confirmPurge: () => void confirmPurge(), closePurge: () => { if (!busy) setPurgeFor(null); },
       confirmDialog
     },
-    review: { target: review, close: () => setReview(null) }
+    // Phase 21G.5 — the review moves between students in the gradebook's current sort order, over EVERY student (a search or a
+    // filter never strands it: a student who leaves the «بانتظار التصحيح» filter once graded is still the review's position).
+    review: { target: review, close: () => setReview(null), nav: reviewNavigation, go: (t: ReviewTarget) => setReview(t) }
   };
 }
 export type AssignmentsController = ReturnType<typeof useAssignmentsController>;

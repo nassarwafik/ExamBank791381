@@ -9,6 +9,7 @@ const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion,attemptPolicyOf,attemptEpochOf,pauseRejection,resumeRejection,toMs}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
+const {releaseInfo,withholdResult}=require("../lib/results-release");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 // Phase 17C — official hidden-test coding grading: the durable intent is planned INSIDE each completed-attempt CAS; the runner
 // is reached only AFTER the commit (dispatchPlannedGrading never fails the submission; an outage is never a zero).
@@ -28,7 +29,9 @@ const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيا�
 // is open OR a compile error awaits the teacher (a pre-C2 client knows no "reviewRequired" word and must still withhold the mark).
 // Neither ever carries a job id, revision, technical code or evidence.
 function codingStatusField(x){const c=studentCodingGradingStatus(x);return c?{autoGradingStatus:c}:{}}
-function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{}),...(legacyAutoGradingWithhold(x)?{autoGradingPending:true}:{}),...codingStatusField(x),...technicalHoldsField(x)}}
+// Phase 21G.5 (D2) — the ONE student projection of a result, gated by the assignment's results release: before release every
+// mark-bearing field is withheld here, on the server (the client only learns resultsVisible:false and when, if known).
+function pub(x,a,nowMs=Date.now()){const out={attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{}),...(legacyAutoGradingWithhold(x)?{autoGradingPending:true}:{}),...codingStatusField(x),...technicalHoldsField(x)};const rel=releaseInfo(a,nowMs);return rel.resultsVisible?{...out,resultsVisible:true}:{...withholdResult(out),...rel}}
 // Unified state from the shared timer/availability helper, so this endpoint agrees with the
 // dashboard/assignment endpoints. `canAttempt` keeps its historical (untimed) meaning; `canWrite`
 // (save/submit gate) and `canStartAttempt` (timed start gate) are explicit and separate. serverNow +
@@ -37,7 +40,7 @@ function state(a,s,nowMs=Date.now()){
  const ts=timerState(a,s,nowMs),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
  return {attemptsUsed:ts.attemptsUsed,allowedAttempts:ts.allowedAttempts,canAttempt:ts.canAttempt,dueClosed:ts.isClosed,availability:ts.availability,openAt:ts.openAt,effectiveDueAt:ts.effectiveDueAt,
   durationMinutes:ts.durationMinutes,timed:ts.timed,attemptModelVersion:ts.attemptModelVersion,attemptPolicy:ts.attemptPolicy,requiresStart:ts.requiresStart,attemptStatus:ts.attemptStatus,serverNow:new Date(nowMs).toISOString(),activeAttempt:ts.activeAttempt,effectiveAttemptEndsAt:ts.effectiveAttemptEndsAt,attemptExpired:ts.attemptExpired,canStartAttempt:ts.canStartAttempt,canWrite:ts.canWrite,
-  draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",latestResult:latest?pub(latest):null,attempts:attempts.map(pub)}}
+  draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",latestResult:latest?pub(latest,a,nowMs):null,attempts:attempts.map(x=>pub(x,a,nowMs))}}
 function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,studentId:student.userId,classId:student.classId,studentCode:student.code,studentName:student.displayName,allowedAttempts:null,draftAnswers:{},attempts:[],activeAttempt:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
 // Roadmap #10/#11 stale-attempt guard. For a MODERN attempt (timed OR attemptModelVersion>=2) a write MUST
 // carry the identity (attemptNumber + startedAt) of the attempt it was composed under — this FAILS CLOSED:
@@ -233,7 +236,7 @@ async function handler(request,deps={},obs=null){
    }
    await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    obs?.logInfo("student.submission.completed",{action:"submit",assignmentId:id,finalized:!!resultAttempt.finalized});
-   return {status:200,jsonBody:{ok:true,result:pub(resultAttempt),state:finalState}};
+   return {status:200,jsonBody:{ok:true,result:pub(resultAttempt,a),state:finalState}};
   }
 
   // ── finalizeTimedOutAttempt — the ONLY safe way an expired timed attempt is closed. SECURITY: grades
@@ -279,7 +282,7 @@ async function handler(request,deps={},obs=null){
    }
    if(!already&&resultAttempt)await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    if(!already)obs?.logInfo("student.submission.completed",{action:"finalizeTimedOutAttempt",assignmentId:id,timedOut:true});
-   return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
+   return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt,a):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
   }
 
   // Shared failure mapping for the Phase 7A lifecycle actions (same contract as the actions above): safe technical event
@@ -395,7 +398,7 @@ async function handler(request,deps={},obs=null){
    }
    if(!already&&resultAttempt)await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    if(!already)obs?.logInfo("student.submission.completed",{action,assignmentId:id,endReason:resultAttempt?resultAttempt.endReason:""});
-   return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
+   return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt,a):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
   }
 
   return {status:400,jsonBody:{ok:false,error:"Unsupported submission action."}};

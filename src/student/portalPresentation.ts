@@ -76,6 +76,7 @@ export function medalsFor(items: Summary[]): MedalTier[] {
   for (const item of items) {
     const lr = item.latestResult;
     if (!lr || gradingOf(item) !== "final") continue;
+    if (lr.resultsVisible === false) continue;                    // 21G.5 — a result the teacher has not released carries no mark
     const tier = medalTier(Number(lr.percentage));
     if (tier) out.push(tier);
   }

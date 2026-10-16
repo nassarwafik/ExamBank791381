@@ -30,13 +30,25 @@ export const PENDING_SCORE_DASH = "—";
 export const PENDING_SCORE_LABEL = "بانتظار التصحيح الآلي";
 /** 17F-C2 — the percentage slot while a compile error awaits the teacher (not a technical delay, not a zero). */
 export const REVIEW_SCORE_LABEL = "بانتظار مراجعة المعلم";
-export function scoreWithheld(result: { autoGradingStatus?: unknown; autoGradingPending?: unknown } | null | undefined): boolean {
+export function scoreWithheld(result: { autoGradingStatus?: unknown; autoGradingPending?: unknown; resultsVisible?: unknown } | null | undefined): boolean {
   if (!result || typeof result !== "object") return false;
+  if (resultsNotReleased(result)) return true;
   const s = codingGradingStatusOf(result);
   return isCodingGradingOpen(s) || isCodingReviewRequired(s) || result.autoGradingPending === true;
 }
-/** The label that replaces the percentage while the score is withheld: WHY it is withheld (teacher review vs technical delay). */
-export const withheldScoreLabel = (result: { autoGradingStatus?: unknown } | null | undefined): string => (isCodingReviewRequired(codingGradingStatusOf(result)) ? REVIEW_SCORE_LABEL : PENDING_SCORE_LABEL);
+/** The label that replaces the percentage while the score is withheld: WHY it is withheld (not released yet, teacher review, or a
+ *  technical delay). */
+export const withheldScoreLabel = (result: { autoGradingStatus?: unknown; resultsVisible?: unknown; resultsVisibility?: unknown; resultsVisibleAt?: unknown } | null | undefined): string =>
+  (resultsNotReleased(result) ? resultsNotReleasedLabel(result) : isCodingReviewRequired(codingGradingStatusOf(result)) ? REVIEW_SCORE_LABEL : PENDING_SCORE_LABEL);
+
+// Phase 21G.5 (D2) — the teacher's results release: until then the SERVER sends no score, percentage or feedback (resultsVisible:
+// false, the mode, and for «بعد الموعد النهائي» the date). The student is told when, never shown a mark or a zero.
+export const resultsNotReleased = (result: { resultsVisible?: unknown } | null | undefined): boolean => !!result && typeof result === "object" && result.resultsVisible === false;
+export function resultsNotReleasedLabel(result: { resultsVisibility?: unknown; resultsVisibleAt?: unknown } | null | undefined): string {
+  const at = result && typeof result.resultsVisibleAt === "string" ? Date.parse(result.resultsVisibleAt) : NaN;
+  if (result && result.resultsVisibility === "afterDue") return Number.isFinite(at) ? "تظهر النتيجة بعد الموعد النهائي (" + new Date(at).toLocaleString("ar") + ")" : "تظهر النتيجة بعد الموعد النهائي";
+  return "تظهر النتيجة عندما ينشرها المعلم";
+}
 
 /** Whether the result screen should keep re-reading the server: only while grading still progresses AUTOMATICALLY. A "delayed"
  *  status (automatic recovery exhausted) changes only through a teacher, so it is refreshed on return / visibility, not polled. */
