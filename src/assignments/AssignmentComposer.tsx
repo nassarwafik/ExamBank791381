@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import { ATTEMPT_POLICY_OPTIONS, type AttemptPolicy } from "./attemptPolicy";
+import { RESULTS_RELEASE_OPTIONS, type ResultsRelease } from "./resultsRelease";
 import type { WindowField, WindowIssue } from "./assignmentWindow";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
@@ -34,6 +35,7 @@ export type AssignmentComposerProps = {
   maxAttempts: number; onMaxAttempts: (v: number) => void;
   durationMinutes: number; onDurationMinutes: (v: number) => void;
   attemptPolicy: AttemptPolicy; onAttemptPolicy: (v: AttemptPolicy) => void;
+  resultsRelease?: ResultsRelease; onResultsRelease?: (v: ResultsRelease) => void;
   publish: boolean; onPublish: (v: boolean) => void;
   /** Phase 21G.0 — the opening time / deadline issues, shown at their field. */
   windowIssues?: readonly WindowIssue[];
@@ -140,6 +142,19 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
             ))}
           </div>
         </fieldset>
+        {/* Phase 21G.5 (D2) — when students see their results; enforced by the server, editable later from the assignment page. */}
+        {p.onResultsRelease && <fieldset className="eb-policy-group">
+          <legend className="eb-subheading">متى يرى الطلاب نتائجهم</legend>
+          <p className="eb-policy-hint">تُحجب العلامات والملاحظات عن الطلاب حتى موعد الإظهار. يمكنك تغييرها لاحقًا من صفحة الواجب.</p>
+          <div className="eb-policy-options">
+            {RESULTS_RELEASE_OPTIONS.map(o => (
+              <label key={o.value} className={"eb-policy-option" + (p.resultsRelease === o.value ? " is-selected" : "")}>
+                <input type="radio" name="eb-results-release" value={o.value} checked={p.resultsRelease === o.value} onChange={() => p.onResultsRelease?.(o.value)} />
+                <span className="eb-policy-text"><strong>{o.label}</strong><span className="eb-policy-summary">{o.summary}</span></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>}
       </div>
 
       <div className="eb-composer-foot">

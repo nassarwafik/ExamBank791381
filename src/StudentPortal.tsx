@@ -409,7 +409,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Phase 9A — the ONE continuation for the hero (pure, deterministic; see todayPriority.ts). The Reader marker is read
   // for THIS student's server-issued userId only, so another student's page on the same device is never offered.
   const todayContinue = data ? selectTodayContinue({ assignments: data.assignments, now, readerPosition: loadReaderPosition(data.student.userId), studyLastActivity: data.study?.lastActivity ?? null, courses, projects: strength?.projects ?? [] }) : null;
-  const latestFinal = data ? data.assignments.filter(a => a.latestResult && (a.gradingStatus || a.latestResult.gradingStatus) === "final").sort((a, b) => Date.parse(b.latestResult!.submittedAt) - Date.parse(a.latestResult!.submittedAt))[0] : undefined;
+  const latestFinal = data ? data.assignments.filter(a => a.latestResult && a.latestResult.resultsVisible !== false && (a.gradingStatus || a.latestResult.gradingStatus) === "final").sort((a, b) => Date.parse(b.latestResult!.submittedAt) - Date.parse(a.latestResult!.submittedAt))[0] : undefined;
   const todayProgress = { stageNumber: strength ? strength.stageNumber : null, stageCount: strength ? strength.stageCount : 25, medals: data?.recognition ? data.recognition.medals.total : medals.length, finalized: stats ? Number(stats.finalized || 0) : 0, latest: latestFinal && latestFinal.latestResult ? { title: latestFinal.title, percentage: Number(latestFinal.latestResult.percentage) } : null };
 
   // Phase 12C — the phone quick navigation belongs to the ORDINARY main portal only: it exists once the sections it
