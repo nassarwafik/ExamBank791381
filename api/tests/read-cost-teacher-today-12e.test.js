@@ -60,7 +60,11 @@ function cost(w, snap) {
   };
 }
 const X = w => (w.C_active ? 1 : 0);
-const warm = w => ({ globalAssignmentLists: 0, scans: [1, 1], folderListings: w.P_active, otherLists: 0, classDocs: w.C_total, userDocs: w.U_total, controlReads: 2 * X(w), indexReads: w.C_active, assignmentDocs: w.P_active, submissionDocs: w.S_active, otherDownloads: 0, indexWrites: 0, otherUploads: 0 });
+// Phase 21H.4 — the class, user and submission documents come through the ETag-verified document cache: a document whose ETag is
+// unchanged since the previous request is not downloaded again. COLD (first request) numbers are unchanged; every LATER request
+// downloads 0 unchanged class / user / submission documents (it still LISTS them — that listing is what proves they are current).
+const unchanged = { classDocs: 0, userDocs: 0, submissionDocs: 0 };
+const warm = w => ({ globalAssignmentLists: 0, scans: [1, 1], folderListings: w.P_active, otherLists: 0, controlReads: 2 * X(w), indexReads: w.C_active, assignmentDocs: w.P_active, otherDownloads: 0, indexWrites: 0, otherUploads: 0, ...unchanged });
 const migrating = w => ({ globalAssignmentLists: X(w), scans: [1, 1], folderListings: w.P_active, otherLists: 0, classDocs: w.C_total, userDocs: w.U_total, controlReads: X(w), indexReads: 0, assignmentDocs: X(w) * w.A_total, submissionDocs: w.S_active, otherDownloads: 0, indexWrites: 0, otherUploads: 0 });
 const cold = w => ({ globalAssignmentLists: X(w), scans: [1, 1], folderListings: w.P_active, otherLists: 0, classDocs: w.C_total, userDocs: w.U_total, controlReads: 2 * X(w), indexReads: 2 * w.C_active, assignmentDocs: w.C_active ? w.A_total : 0, submissionDocs: w.S_active, otherDownloads: 0, indexWrites: w.C_active, otherUploads: 0 });
 const published = (n, classId, subs, prefix = classId + "-p") => Array.from({ length: n }, (_, i) => ({ a: asg(prefix + i, classId), subs }));
@@ -75,7 +79,7 @@ describe("12E-B teacher today — MIGRATING (index authority not activated): the
       for (let i = 0; i < 2; i++) {
         const { r, snap } = await run(w);
         expect(r.jsonBody.scope.publishedAssignments).toBe(w.P_active);
-        expect(cost(w, snap)).toEqual(migrating(w));
+        expect(cost(w, snap)).toEqual(i === 0 ? migrating(w) : { ...migrating(w), ...unchanged });   // 21H.4: the 2nd request reuses unchanged documents
       }
     });
   }
@@ -110,10 +114,11 @@ describe("12E-B teacher today — AUTHORITATIVE: cold (reconcile) then warm (ste
     for (const [name, spec] of scenarios) { const w = world(spec); await run(w); const { snap } = await run(w); measured[name.split(" — ")[0]] = { lists: snap.lists, downloads: snap.downloads, assignmentDocs: w.rc.downloadsOf(AP), globalScans: w.rc.listsOf(AP) }; }
     expect(measured).toEqual({
       T0: { lists: 2, downloads: 0, assignmentDocs: 0, globalScans: 0 },
-      T1: { lists: 3, downloads: 10, assignmentDocs: 1, globalScans: 0 },
-      T10: { lists: 12, downloads: 47, assignmentDocs: 10, globalScans: 0 },
-      "T-MANY-ARCHIVED": { lists: 3, downloads: 10, assignmentDocs: 1, globalScans: 0 },
-      "T-MANY-OTHER/INACTIVE": { lists: 3, downloads: 14, assignmentDocs: 1, globalScans: 0 },
+      // 21H.4 (was 10 / 47 / 10 / 14 in 12E-B): only control + index + assignment documents are downloaded when nothing changed.
+      T1: { lists: 3, downloads: 4, assignmentDocs: 1, globalScans: 0 },
+      T10: { lists: 12, downloads: 13, assignmentDocs: 10, globalScans: 0 },
+      "T-MANY-ARCHIVED": { lists: 3, downloads: 4, assignmentDocs: 1, globalScans: 0 },
+      "T-MANY-OTHER/INACTIVE": { lists: 3, downloads: 4, assignmentDocs: 1, globalScans: 0 },
     });
   });
 });
@@ -121,7 +126,7 @@ describe("12E-B teacher today — AUTHORITATIVE: cold (reconcile) then warm (ste
 describe("12E-B teacher today — steady-state guards (replace the 12E-A BASELINE: history costs NOTHING)", () => {
   // 12E-A BEFORE: assignment downloads = 1 / 11 / 101 for 0 / 10 / 100 historical assignments (fixed relevant set).
   for (const history of [0, 10, 100]) {
-    it(`WARM fixed relevant set + ${history} draft/archived assignments in the SAME class: 1 assignment document, 1 folder, 2 submissions, 0 scans`, async () => {
+    it(`WARM fixed relevant set + ${history} draft/archived assignments in the SAME class: 1 assignment document, 1 folder, 0 re-downloaded submissions, 0 scans`, async () => {
       const w = world({ classes: [cls("c1")], students: { c1: 3 }, assignments: [...published(1, "c1", 2), ...archivedHistory(history, "c1")] });
       await run(w);
       const { r, snap } = await run(w);
@@ -139,7 +144,7 @@ describe("12E-B teacher today — steady-state guards (replace the 12E-A BASELIN
     ];
     const out = [];
     for (const w of worlds) { await run(w); const { r } = await run(w); out.push({ body: strip(r.jsonBody), assignmentDocs: w.rc.downloadsOf(AP), folders: w.rc.listsUnder(SP), subs: w.rc.downloadsOf(SP), scans: w.rc.listsOf(AP) }); }
-    for (const o of out) expect([o.assignmentDocs, o.folders, o.subs, o.scans]).toEqual([1, 1, 2, 0]);
+    for (const o of out) expect([o.assignmentDocs, o.folders, o.subs, o.scans]).toEqual([1, 1, 0, 0]);   // 21H.4: unchanged submissions are not re-downloaded
     expect(out[1].body).toEqual(out[0].body);
     expect(out[2].body).toEqual(out[0].body);
   });
@@ -162,12 +167,12 @@ describe("12E-B teacher today — count-only observability + response parity", (
   it("emits ONE teacher.today.read_cost event with exactly the eleven numeric fields (cold, warm, migrating)", async () => {
     const w = world({ classes: [cls("c1"), cls("c2", "archived")], students: { c1: 3, c2: 1 }, assignments: [...published(2, "c1", 3), { a: asg("c1-d0", "c1", "draft"), subs: 1 }, ...published(1, "c2", 1)] });
     await run(w);
-    expect(logs.filter(l => l.event === "teacher.today.read_cost").map(l => l.fields)).toEqual([{ assignmentDocsScanned: 4, classDocsScanned: 2, userDocsScanned: 4, publishedActiveAssignments: 2, submissionFolderListings: 2, submissionDocsLoaded: 6, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 1, globalAssignmentScans: 1, assignmentIndexAuthoritative: 1, assignmentIndexAuthorityChanges: 0 }]);
+    expect(logs.filter(l => l.event === "teacher.today.read_cost").map(l => l.fields)).toEqual([{ assignmentDocsScanned: 4, classDocsScanned: 2, userDocsScanned: 4, publishedActiveAssignments: 2, submissionFolderListings: 2, submissionDocsLoaded: 6, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 1, globalAssignmentScans: 1, assignmentIndexAuthoritative: 1, assignmentIndexAuthorityChanges: 0, docCacheHits: 0, docsDownloaded: 12 }]);
     await run(w);
-    expect(logs.filter(l => l.event === "teacher.today.read_cost").map(l => l.fields)).toEqual([{ assignmentDocsScanned: 2, classDocsScanned: 2, userDocsScanned: 4, publishedActiveAssignments: 2, submissionFolderListings: 2, submissionDocsLoaded: 6, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 0, assignmentIndexAuthoritative: 1, assignmentIndexAuthorityChanges: 0 }]);
+    expect(logs.filter(l => l.event === "teacher.today.read_cost").map(l => l.fields)).toEqual([{ assignmentDocsScanned: 2, classDocsScanned: 2, userDocsScanned: 4, publishedActiveAssignments: 2, submissionFolderListings: 2, submissionDocsLoaded: 6, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 0, assignmentIndexAuthoritative: 1, assignmentIndexAuthorityChanges: 0, docCacheHits: 12, docsDownloaded: 0 }]);
     const m = world({ authoritative: false, classes: [cls("c1"), cls("c2", "archived")], students: { c1: 3, c2: 1 }, assignments: [...published(2, "c1", 3), { a: asg("c1-d0", "c1", "draft"), subs: 1 }, ...published(1, "c2", 1)] });
     await run(m);
-    expect(logs.filter(l => l.event === "teacher.today.read_cost").map(l => l.fields)).toEqual([{ assignmentDocsScanned: 4, classDocsScanned: 2, userDocsScanned: 4, publishedActiveAssignments: 2, submissionFolderListings: 2, submissionDocsLoaded: 6, assignmentIndexReads: 0, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 1, assignmentIndexAuthoritative: 0, assignmentIndexAuthorityChanges: 0 }]);
+    expect(logs.filter(l => l.event === "teacher.today.read_cost").map(l => l.fields)).toEqual([{ assignmentDocsScanned: 4, classDocsScanned: 2, userDocsScanned: 4, publishedActiveAssignments: 2, submissionFolderListings: 2, submissionDocsLoaded: 6, assignmentIndexReads: 0, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 1, assignmentIndexAuthoritative: 0, assignmentIndexAuthorityChanges: 0, docCacheHits: 0, docsDownloaded: 12 }]);
     const text = JSON.stringify(logs);
     for (const leak of ["c1", "c2", "teacher-1", "واجب", "طالب", "p0", "platform/"]) expect(text).not.toContain(leak);
   });

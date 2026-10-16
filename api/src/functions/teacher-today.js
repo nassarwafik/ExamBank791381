@@ -41,6 +41,11 @@ const {logReadCost}=require("../lib/read-cost-log");
 const {loadPublishedAssignmentsForClasses}=require("../lib/class-assignment-index");
 // Phase 21G.0 — teacher tenancy: the Today hub covers only the teacher's own classes (everything below derives from them).
 const {tenantOf,filterAccessible}=require("../lib/teacher-tenancy");
+// Phase 21H.4 — the class, user and submission documents come through an ETag-verified in-memory cache: an unchanged document
+// (same ETag in the listing) is not downloaded again on the next refresh. deps.docCache = null disables it (deps.listJson /
+// listBlobNames / downloadManyJson test seams keep the plain path).
+const {createDocCache,loadJsonDocs}=require("../lib/etag-doc-cache");
+const DOC_CACHE=createDocCache();
 
 const CP="platform/classes/",UP="platform/users/",SP="platform/submissions/";
 const ITEM_CAP=8,RECENT_CAP=10;
@@ -53,15 +58,31 @@ const DUE_SOON_MS=48*3600e3,OPENING_MS=24*3600e3;
 const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
 
+const cacheOf=deps=>(deps.docCache===undefined?DOC_CACHE:deps.docCache);
+/** A whole prefix of JSON documents: the test seam deps.listJson when given, else the ETag-verified cache (21H.4). */
+async function listDocs(container,prefix,deps,tally){
+ if(deps.listJson)return deps.listJson(container,prefix);
+ const r=await loadJsonDocs(container,prefix,cacheOf(deps));
+ if(tally){tally.cachedDocs+=r.stats.cached;tally.downloadedDocs+=r.stats.downloaded}
+ return r.docs;
+}
+
 /** The requested class scope ("" = all of the teacher's classes); an unreadable URL is no scope. */
 function scopeOf(request){try{return String(new URL(request.url).searchParams.get("classId")||"").trim()}catch{return ""}}
 
 /** The submission documents of ONE assignment folder, keyed by the student id THE DOCUMENT names (never the file name). */
 async function loadFolder(container,assignmentId,deps,tally){
- const list=deps.listBlobNames||listBlobNames,many=deps.downloadManyJson||downloadManyJson;
- const names=(await list(container,SP+assignmentId+"/")).filter(n=>n.endsWith(".json"));
- const docs=await many(container,names,getReadConcurrency());
- if(tally)tally.submissionDocsLoaded+=names.length;                                   // Phase 12E-A: count only
+ let docs;
+ if(deps.listBlobNames||deps.downloadManyJson){
+  const list=deps.listBlobNames||listBlobNames,many=deps.downloadManyJson||downloadManyJson;
+  const names=(await list(container,SP+assignmentId+"/")).filter(n=>n.endsWith(".json"));
+  docs=await many(container,names,getReadConcurrency());
+  if(tally){tally.submissionDocsLoaded+=names.length;tally.downloadedDocs+=names.length}   // Phase 12E-A: count only
+ }else{
+  const r=await loadJsonDocs(container,SP+assignmentId+"/",cacheOf(deps));
+  docs=r.docs;
+  if(tally){tally.submissionDocsLoaded+=r.stats.listed;tally.cachedDocs+=r.stats.cached;tally.downloadedDocs+=r.stats.downloaded}
+ }
  const byStudent=new Map();
  for(const d of docs){if(d&&typeof d==="object"&&String(d.assignmentId||"")===assignmentId&&d.studentId)byStudent.set(String(d.studentId),d)}
  return byStudent;
@@ -136,8 +157,9 @@ async function handler(request,deps={},obs=null){
   const teacherId=String(auth.user&&auth.user.sub||"builder");
   const container=deps.container||(deps.getContainer||getContainer)();
   const lj=deps.listJson||listJson,nowMs=typeof deps.nowMs==="number"?deps.nowMs:Date.now();
-  // Classes + users are still scanned (Phase 12E-B targets assignment discovery only).
-  const [allClasses,users]=await Promise.all([lj(container,CP),lj(container,UP)]);
+  const tally={submissionDocsLoaded:0,cachedDocs:0,downloadedDocs:0};
+  // Classes + users are still LISTED on every request; since 21H.4 only the documents whose ETag changed are downloaded.
+  const [allClasses,users]=await Promise.all([listDocs(container,CP,deps,tally),listDocs(container,UP,deps,tally)]);
   let classes=filterAccessible(allClasses,tenantOf(auth.user));
   // Phase 21H.2 — the dashboard's ONE scope: ?classId= narrows the hub to one of the teacher's OWN classes (after the
   // tenancy filter, so it can never widen); a class the teacher cannot see is «not found», never someone else's data.
@@ -152,7 +174,6 @@ async function handler(request,deps={},obs=null){
   const idx=await loadPublishedAssignmentsForClasses(container,[...activeIds],{...deps,listJson:lj},obs);
   const assignments=[...idx.byClass.values()].flat().sort((x,y)=>{const a=String(x.assignmentId)+".json",b=String(y.assignmentId)+".json";return a<b?-1:a>b?1:0});
   const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeIds.has(String(a.classId||"")));
-  const tally={submissionDocsLoaded:0};
   // One folder listing + its blobs per published assignment of an active class — the SAME scoped read shape as the
   // class-scoped analytics path (8E-3): drafts, archived assignments and archived classes are never read.
   // The submission folders and the project-evaluation sources are independent reads → issued together (each bounded).
@@ -170,7 +191,7 @@ async function handler(request,deps={},obs=null){
   if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
   else{partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",projectSources.error)}
   // Phase 12E-A — count-only read-cost telemetry (the scans' own sizes; never an id/name/title/mark).
-  logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:idx.stats.assignmentDocsLoaded,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded,assignmentIndexReads:idx.stats.indexReads,assignmentIndexesBootstrapped:idx.stats.bootstrapped,globalAssignmentScans:idx.stats.globalScans,assignmentIndexAuthoritative:idx.stats.authoritative,assignmentIndexAuthorityChanges:idx.stats.authorityChanges});
+  logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:idx.stats.assignmentDocsLoaded,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded,assignmentIndexReads:idx.stats.indexReads,assignmentIndexesBootstrapped:idx.stats.bootstrapped,globalAssignmentScans:idx.stats.globalScans,assignmentIndexAuthoritative:idx.stats.authoritative,assignmentIndexAuthorityChanges:idx.stats.authorityChanges,docCacheHits:tally.cachedDocs,docsDownloaded:tally.downloadedDocs});
   return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...(scopeClassId?{scopeClassId}:{}),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }

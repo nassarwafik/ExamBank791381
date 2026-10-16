@@ -23,7 +23,23 @@ const H1_API = ["api/tests/project-review-21h1.test.js", "api/tests/teacher-proj
 const DASH = "src/TeacherDashboard.tsx";
 const H2_API = ["api/tests/today-scope-21h2.test.js"], H2_UI = ["src/TeacherDashboard.scope.21h2.test.tsx", "src/teacher/TeacherTodayHub.9a.test.tsx"];
 const H3_API = ["api/tests/today-categories-21h3.test.js"], H3_UI = ["src/teacher/TeacherTodayHub.21h3.test.tsx", "src/teacher/TeacherTodayHub.12b.test.tsx", "src/teacher/todayFormat.21h0.test.ts"];
+const DOCCACHE = "api/src/lib/etag-doc-cache.js";
+const H4 = ["api/tests/etag-doc-cache-21h4.test.js", "api/tests/read-cost-teacher-today-12e.test.js"];
 export const CAMPAIGNS = {
+  h4: [
+    { id: "H4-M1", what: "a cached document is used although its ETag changed", file: DOCCACHE,
+      find: "if (hit && hit.etag === etag) {", replace: "if (hit) {", tests: H4 },
+    { id: "H4-M2", what: "a blob listed without an ETag is served from the cache", file: DOCCACHE,
+      find: "const hit = s && etag ? s.map.get(name) : null;", replace: "const hit = s ? s.map.get(name) : null;\n    if (hit && !etag) { cached++; return JSON.parse(hit.text); }", tests: H4 },
+    { id: "H4-M3", what: "a hit returns the shared cached object (mutations leak across requests)", file: DOCCACHE,
+      find: "      cached++;\n      return JSON.parse(hit.text);", replace: "      cached++;\n      return hit.obj || (hit.obj = JSON.parse(hit.text));", tests: H4 },
+    { id: "H4-M4", what: "the cache is not bounded by entries", file: DOCCACHE,
+      find: "while (s.map.size > cache.maxEntries || s.bytes > cache.maxBytes) {", replace: "while (s.bytes > cache.maxBytes) {", tests: H4 },
+    { id: "H4-M5", what: "two containers share one cache", file: DOCCACHE,
+      find: "  let s = cache.byContainer.get(container);\n  if (!s) { s = { map: new Map(), bytes: 0 }; cache.byContainer.set(container, s); }", replace: "  let s = cache.byContainer.get(cache);\n  if (!s) { s = { map: new Map(), bytes: 0 }; cache.byContainer.set(cache, s); }", tests: H4 },
+    { id: "H4-M6", what: "teacher-today ignores the cache (every refresh downloads everything)", file: TODAY,
+      find: "const cacheOf=deps=>(deps.docCache===undefined?DOC_CACHE:deps.docCache);", replace: "const cacheOf=()=>null;", tests: H4 }
+  ],
   h3: [
     { id: "H3-M1", what: "a deadline beyond 48 h is listed as closing soon", file: TODAY,
       find: "due-nowMs<=DUE_SOON_MS", replace: "due-nowMs<=2*DUE_SOON_MS", tests: H3_API },
