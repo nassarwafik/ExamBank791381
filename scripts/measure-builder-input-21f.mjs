@@ -73,17 +73,20 @@ for (const n of sizes) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block" });
   await ctx.addInitScript(isStudio => {
     sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", "teacher"); sessionStorage.setItem("examBankSessionDisplayName", "أ. أحمد");
-    if (isStudio) try { localStorage.setItem("tadris.studio.layout", "studio"); } catch { /* ignore */ }
+    try { localStorage.setItem("tadris.studio.layout", isStudio ? "studio" : "classic"); } catch { /* ignore */ }   // explicit: the Studio is the default since 21F.9
     window.__evt = [];
     new PerformanceObserver(list => { for (const e of list.getEntries()) if (e.name === "keydown" || e.name === "keypress" || e.name === "input" || e.name === "keyup") window.__evt.push({ name: e.name, duration: e.duration, processing: e.processingEnd - e.processingStart }); }).observe({ type: "event", durationThreshold: 16, buffered: true });
   }, studio);
   const page = await ctx.newPage();
   await page.goto(origin + "/", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: /الامتحانات المحفوظة/ }).first().click();
-  await page.locator(".saved-exams-panel").getByRole("button", { name: /فتح وتعديل/ }).first().click();
+  if (studio) await page.locator("[data-studio-home] .st-exam-card").first().getByRole("button", { name: "فتح" }).click();   // «امتحاناتي»
+  else {
+    await page.getByRole("button", { name: /الامتحانات المحفوظة/ }).first().click();
+    await page.locator(".saved-exams-panel").getByRole("button", { name: /فتح وتعديل/ }).first().click();
+  }
   const target = "q" + Math.floor(n / 2);
   await page.locator("#sb-q-" + target).waitFor({ timeout: 30000 });
-  if (studio) await page.locator("#sb-q-" + target).click();
+  if (studio) await page.locator("#sb-q-" + target + " .st-card-cover").click();
   await page.waitForTimeout(800);
   const field = page.locator("#sb-q-" + target + " textarea").first();
   await field.scrollIntoViewIfNeeded();

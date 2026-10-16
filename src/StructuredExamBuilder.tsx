@@ -51,6 +51,7 @@ import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer"
 import { stabilizeIssues, type StableIssues } from "./builder/stableIssues";
 import type { BuilderActions } from "./builder/builderActions";
 import type { StudioStepKey, InspectorTab } from "./studio/studioSteps";
+import { readExperimentalTools, writeExperimentalTools } from "./studio/studioPreference";
 import { insertQuestionAt, placeQuestion as placeQuestionAt } from "./studio/studioOps";
 // Phase 21F.3 — the Exam Studio layout is its own chunk inside the builder chunk (the classic layout never loads it).
 const StudioWorkspace = lazy(() => import("./studio/StudioWorkspace"));
@@ -1258,6 +1259,14 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
           ...(onLayoutChange ? [{ key: "layout", label: studio ? "العودة إلى الواجهة الكلاسيكية" : "تجربة استوديو الامتحان (جديد)", icon: <IconLayers size={16} />, onSelect: () => onLayoutChange(studio ? "classic" : "studio") }] : []),
         ];
 
+  // Phase 21F.9 — the Studio's «أدوات» menu: the question explorer is the outline there, and experimental tools (the 3D function lab)
+  // appear only once the teacher turns them on (remembered per browser).
+  const [experimentalTools, setExperimentalTools] = useState(readExperimentalTools);
+  const studioToolItems: ToolbarItem[] = [
+    ...toolMenuItems.filter(item => item.key !== "explorer" && (experimentalTools || item.key !== "surface-lab")),
+    { key: "experimental", label: experimentalTools ? "إخفاء الأدوات التجريبية" : "إظهار الأدوات التجريبية", icon: <IconSparkles size={16} />,
+      onSelect: () => { writeExperimentalTools(!experimentalTools); setExperimentalTools(!experimentalTools); } }
+  ];
   // Phase 21F.7 — a tool requested for this exam opens once, through its own menu item (same handler, gate and dialog).
   const runStartTool = useRef<() => void>(() => {});
   useLayoutEffect(() => {
@@ -1425,7 +1434,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
             finalizeBlocked={!decision.canFinalize}
             decision={decision}
             addItems={addMenuItems}
-            toolItems={toolMenuItems.filter(item => item.key !== "explorer")}
+            toolItems={studioToolItems}
             onPreview={() => setPreview(exam)}
             step={studioUi.step}
             onStep={step => setStudioUi(prev => ({ ...prev, step }))}

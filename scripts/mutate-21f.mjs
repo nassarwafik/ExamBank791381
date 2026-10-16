@@ -23,6 +23,9 @@ const F7_PUBLISH = ["src/studio/studioHome.21f7.test.ts", "src/studio/studioSetu
 const F8_SAVE = ["src/studio/autosave.21f8.test.tsx"];
 const F8_IDLE = ["src/studio/idleSave.21f8.test.tsx"];
 const CTRL = "src/studio/useExamStudioController.ts";
+const F9_ISO = ["src/studio/outlineIsolation.21f9.test.tsx"];
+const F9_CUT = ["src/studio/cutover.21f9.test.tsx"];
+const F9_APP = ["src/App.examsHome.21f7.test.tsx"];
 export const CAMPAIGNS = {
   f0: [
     { id: "F0-M1", what: "conditional save ignores the stated base version (If-Match dropped)", file: "api/src/lib/saved-exam-access.js",
@@ -111,6 +114,20 @@ export const CAMPAIGNS = {
       find: 'if (!wantsIdleSave || saveState !== "dirty" || saving || mediaPending) return;', replace: "if (!wantsIdleSave || saving || mediaPending) return;", tests: F8_IDLE },
     { id: "F8-M10", what: "an edit does not restart the idle wait", file: "src/StructuredExamBuilder.tsx",
       find: "}, [wantsIdleSave, exam, saveState, saving, mediaPending, idleSaveDelayMs]);", replace: "}, [wantsIdleSave, saveState, saving, mediaPending, idleSaveDelayMs]);", tests: F8_IDLE }
+  ],
+  f9: [
+    { id: "F9-M1", what: "outline rows are no longer memoized", file: "src/studio/StudioOutline.tsx",
+      find: "const OutlineRow = memo(function OutlineRow(", replace: "const OutlineRow = (function OutlineRow(", tests: F9_ISO },
+    { id: "F9-M2", what: "the cards get a fresh activation handler on every render", file: "src/studio/StudioWorkspace.tsx",
+      find: "onActivate={cardEvents.onActivate}", replace: "onActivate={id => cardEvents.onActivate(id)}", tests: F9_ISO },
+    { id: "F9-M3", what: "experimental tools are always shown", file: "src/StructuredExamBuilder.tsx",
+      find: '(experimentalTools || item.key !== "surface-lab")', replace: "true", tests: F9_CUT },
+    { id: "F9-M4", what: "the classic layout is the default again", file: "src/studio/studioPreference.ts",
+      find: 'export const DEFAULT_BUILDER_LAYOUT: BuilderLayout = "studio";', replace: 'export const DEFAULT_BUILDER_LAYOUT: BuilderLayout = "classic";', tests: [...F9_CUT, ...F9_APP] },
+    { id: "F9-M5", what: "a converted legacy exam keeps the legacy id (its first save could overwrite the original)", file: "src/App.tsx",
+      find: "studio.openExam({ ...converted, examId: newExamId(),", replace: "studio.openExam({ ...converted, examId: converted.examId,", tests: F9_APP },
+    { id: "F9-M6", what: "a converted legacy exam is saved unconditionally (no create-only)", file: "src/App.tsx",
+      find: '"unsaved", null,\n        "✓ حُوّل', replace: '"unsaved", undefined,\n        "✓ حُوّل', tests: F9_APP }
   ]
 };
 

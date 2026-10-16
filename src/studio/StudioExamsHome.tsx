@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { IconPlus, IconSearch, IconRefresh, IconCopy, IconUpload, IconSparkles, IconBuilder, IconTrash, IconWarning, IconCheck, IconFile } from "../icons";
+import { IconPlus, IconSearch, IconRefresh, IconCopy, IconUpload, IconSparkles, IconBuilder, IconTrash, IconWarning, IconCheck } from "../icons";
 import { HOME_FILTERS, filterHomeExams, homeCounts, type HomeExam, type HomeFilter } from "./studioHome";
 import "./studio.css";
 
 // Phase 21F.7 — «امتحاناتي»: the Exam Studio's home, in place of the builder page's access bar. The saved exams as cards (status,
 // readiness, size, last save), a search, status filters, and the four ways to start an exam (blank, academic preset, import, the AI
-// composer). Every action is the owner's existing handler: opening goes through the same load (and its unsaved-work guard), deleting
+// composer); a legacy exam is converted to a NEW structured one (21F.9, D1). Every action is the owner's existing handler: opening goes through the same load (and its unsaved-work guard), deleting
 // through the same confirmation, creating through the same entry points. The list loads once when the home appears.
 
 type Props = {
@@ -21,8 +21,8 @@ type Props = {
   /** An exam is open in memory but the editor is closed: continue it. */
   onContinue?: () => void;
   continueTitle?: string;
-  /** The flat-exam templates (the access bar's «القوالب»). */
-  onTemplates?: () => void;
+  /** Phase 21F.9 (D1) — a legacy (flat) exam becomes a NEW structured exam; the original stays as it is. Absent → not offered. */
+  onConvertLegacy?: (exam: HomeExam) => void;
   /** Back to the classic access bar (the layout preference). */
   onClassic?: () => void;
 };
@@ -55,7 +55,6 @@ export default function StudioExamsHome(p: Props) {
           <p>أنشئ امتحانًا جديدًا أو تابع العمل على امتحان محفوظ.</p>
         </div>
         <div className="st-row-actions">
-          {p.onTemplates && <button type="button" className="st-btn" onClick={p.onTemplates}><IconFile size={16} aria-hidden="true" />القوالب</button>}
           {p.onClassic && <button type="button" className="st-btn is-ghost" onClick={p.onClassic}>الواجهة الكلاسيكية</button>}
         </div>
       </header>
@@ -99,14 +98,14 @@ export default function StudioExamsHome(p: Props) {
         : visible.length === 0 ? <p className="st-home-empty">لا توجد امتحانات تطابق البحث أو التصفية.</p>
         : (
           <ul className="st-exam-grid" aria-label="الامتحانات المحفوظة">
-            {visible.map(e => <ExamCard key={e.blobName} exam={e} onOpen={() => p.onOpen(e)} onDelete={() => p.onDelete(e)} />)}
+            {visible.map(e => <ExamCard key={e.blobName} exam={e} onOpen={() => p.onOpen(e)} onDelete={() => p.onDelete(e)} onConvert={p.onConvertLegacy ? () => p.onConvertLegacy?.(e) : undefined} />)}
           </ul>
         )}
     </section>
   );
 }
 
-function ExamCard({ exam: e, onOpen, onDelete }: { exam: HomeExam; onOpen: () => void; onDelete: () => void }) {
+function ExamCard({ exam: e, onOpen, onDelete, onConvert }: { exam: HomeExam; onOpen: () => void; onDelete: () => void; onConvert?: () => void }) {
   const legacy = e.kind === "legacy", final = !legacy && e.status === "final";
   const r = legacy ? null : e.readiness;
   const titleId = "st-exam-" + e.blobName.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -122,7 +121,12 @@ function ExamCard({ exam: e, onOpen, onDelete }: { exam: HomeExam; onOpen: () =>
       <p className="st-exam-meta">{qCount(e.questionCount)} · {mCount(e.totalMarks)}</p>
       <p className="st-exam-date">آخر حفظ: {fmtDate(e.savedAt)}</p>
       <div className="st-exam-actions">
-        <button type="button" className="st-btn is-primary is-small" onClick={onOpen} aria-describedby={titleId}><IconBuilder size={14} aria-hidden="true" />فتح</button>
+        {legacy && onConvert
+          ? <>
+              <button type="button" className="st-btn is-primary is-small" onClick={onConvert} aria-describedby={titleId}><IconBuilder size={14} aria-hidden="true" />تحويل إلى منظّم</button>
+              <button type="button" className="st-btn is-small" onClick={onOpen} aria-describedby={titleId}>فتح كما هو</button>
+            </>
+          : <button type="button" className="st-btn is-primary is-small" onClick={onOpen} aria-describedby={titleId}><IconBuilder size={14} aria-hidden="true" />فتح</button>}
         <button type="button" className="st-btn is-ghost is-small is-danger" onClick={onDelete} aria-label={"حذف «" + e.title + "»"}><IconTrash size={14} aria-hidden="true" />حذف</button>
       </div>
     </li>

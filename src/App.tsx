@@ -4021,6 +4021,28 @@ function App() {
   // Phase 21F.0 / 21F.1 — saving and conflict resolution live in useExamStudioController (unchanged behaviour).
   const saveStructuredExam = (mode: "draft" | "final") => studio.save(mode);
 
+  // Phase 21F.9 (D1) — «تحويل إلى منظّم» from «امتحاناتي»: the saved legacy exam is loaded and converted into a NEW structured exam
+  // (fresh id, create-only on its first save); the legacy original stays exactly as it is on the server.
+  async function convertSavedLegacyExam(item: SavedExamListItem) {
+    setSavedExamsBusy(true);
+    setBuilderError("");
+    try {
+      const result = await apiRequest<{ ok: true; exam: ExamDraft }>("/api/saved-exams", { method: "POST", body: JSON.stringify({ action: "load", blobName: item.blobName }) });
+      const loaded = result.exam as unknown as Record<string, unknown>;
+      if (isStructuredExam(loaded)) { await openSavedExam(item); return; }
+      const converted = legacyToStructured(loaded);
+      studio.openExam({ ...converted, examId: newExamId(), title: (converted.title?.trim() || "امتحان") + " (منظّم)", status: "draft" }, "unsaved", null,
+        "✓ حُوّل الامتحان القديم إلى امتحان منظّم جديد — النسخة القديمة باقية كما هي. احفظه ليُحفظ على الخادم.");
+      setStructuredBuilderOpen(true);
+    }
+    catch (error) {
+      setBuilderError(error instanceof Error ? error.message : "تعذر تحويل الامتحان القديم.");
+    }
+    finally {
+      setSavedExamsBusy(false);
+    }
+  }
+
   async function openSavedExam(
     item:
       SavedExamListItem
@@ -6163,7 +6185,7 @@ function App() {
               onCompose={composeNewStructuredExam}
               onContinue={structuredExam && !structuredBuilderOpen ? () => setStructuredBuilderOpen(true) : undefined}
               continueTitle={structuredExam?.title}
-              onTemplates={() => { void toggleTemplates(); }}
+              onConvertLegacy={item => { void convertSavedLegacyExam(item); }}
               onClassic={() => changeBuilderLayout("classic")}
             />
             {homePresetsOpen && (

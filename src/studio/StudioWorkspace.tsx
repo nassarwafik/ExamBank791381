@@ -20,6 +20,7 @@ import { StudioStepper, StudioSaveStatus } from "./StudioPrimitives";
 import { STUDIO_STEPS, type StudioStepKey, type InspectorTab } from "./studioSteps";
 import StudioOutline from "./StudioOutline";
 import { questionReadiness } from "./studioReview";
+import { useStableHandlers } from "./useStableHandlers";
 import StudioCanvas from "./StudioCanvas";
 import StudioInspector, { type InspectorTarget } from "./StudioInspector";
 import "./studio.css";
@@ -217,11 +218,17 @@ export default function StudioWorkspace(p: StudioWorkspaceProps) {
       {p.bulkBar}
     </>
   );
+  // Stable identities for what every (memoized) question card receives: an edit re-renders the edited card only.
+  const cardEvents = useStableHandlers({
+    onActivate: (id: string) => { p.onOpenSection(null); p.onActivate(id); },
+    onDeactivate: () => p.onActivate(null),
+    onOpenMedia: () => { p.onInspectorTab("media"); p.onOpenSection(null); if (!wide) setDrawer("inspector"); }
+  });
   const canvas = (
     <StudioCanvas sections={sections} scope={p.scope} actions={p.actions} activeId={p.activeId} selectedIds={p.selectedIds} flashId={p.flashId} disabled={p.saving}
       issuesOfSection={p.issuesOfSection} questionIssuesOfSection={p.questionIssuesOfSection} revealedQuestions={p.revealedQuestions}
-      onActivate={id => { p.onOpenSection(null); p.onActivate(id); }} onDeactivate={() => p.onActivate(null)} onOpenSection={openSection}
-      onOpenMedia={() => { p.onInspectorTab("media"); p.onOpenSection(null); if (!wide) setDrawer("inspector"); }} onAddSection={p.onAddSection}
+      onActivate={cardEvents.onActivate} onDeactivate={cardEvents.onDeactivate} onOpenSection={openSection}
+      onOpenMedia={cardEvents.onOpenMedia} onAddSection={p.onAddSection}
       header={header} insertOpen={insertOpen} onInsertOpen={setInsertOpen} insertExtras={p.addItems} />
   );
   const bodyClass = "st-body" + (step !== "content" ? " is-wide" : !roomy ? " no-outline no-inspector" : !wide ? " no-inspector" : "");

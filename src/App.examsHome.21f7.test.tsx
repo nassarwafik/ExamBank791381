@@ -17,9 +17,13 @@ const SAVED = [
   { blobName: "exams/E3.json", examId: "E3", title: "النهائي", savedAt: "2026-09-30T10:00:00Z", questionCount: 20, totalMarks: 40, kind: "structured", status: "final", readiness: { canFinalize: true, blockers: 0, warnings: 0 } }
 ];
 let listCalls = 0;
+let extra: typeof SAVED = [];
+let saveCalls = 0;
+let saveBodies: { exam: { examId: string; title: string }; conditional?: boolean; baseEtag?: string | null }[] = [];
+const LEGACY = { blobName: "exams/L1.json", examId: "L1", title: "امتحان قديم", savedAt: "2025-05-01T10:00:00Z", questionCount: 1, totalMarks: 1, kind: "legacy", status: "draft", readiness: null };
 
 beforeEach(() => {
-  listCalls = 0;
+  listCalls = 0; extra = []; saveCalls = 0; saveBodies = [];
   try { sessionStorage.clear(); localStorage.clear(); } catch { /* ignore */ }
   sessionStorage.setItem("examBankBuilderToken", "teacher-token");
   sessionStorage.setItem("examBankSessionRole", "teacher");
@@ -35,9 +39,11 @@ beforeEach(() => {
     if (url.includes("/api/messages")) return res(200, { ok: true, totalUnread: 0, capped: false });
     if (url.includes("/api/assessment-presets")) return res(200, { ok: true, items: [], nextCursor: null });
     if (url.includes("/api/saved-exams")) {
-      if (method === "GET") { listCalls += 1; return res(200, { ok: true, exams: SAVED }); }
+      if (method === "GET") { listCalls += 1; return res(200, { ok: true, exams: [...SAVED, ...extra] }); }
+      if (body.action === "load" && body.blobName === "exams/L1.json") return res(200, { ok: true, exam: { examId: "L1", title: "امتحان قديم", questions: [{ id: "x1", type: "trueFalse", text: "عبارة قديمة", marks: 1, answer: true }] }, savedAt: "2025-05-01T10:00:00Z", blobName: "exams/L1.json", etag: "L-1" });
       if (body.action === "load") return res(200, { ok: true, exam: structuredExam(), savedAt: "2026-10-02T10:00:00Z", blobName: "exams/E1.json", etag: "E-1" });
     }
+    if (url.includes("/api/save-exam-artifact")) { saveCalls += 1; saveBodies.push(body); return res(200, { ok: true, kind: "exam", blobName: "exams/new.json", savedAt: "2026-10-16T10:00:00Z", etag: "N-1" }); }
     return res(200, { ok: true });
   }) as unknown as typeof fetch;
 });
@@ -99,7 +105,30 @@ describe("21F.7 «امتحاناتي»", () => {
     expect(within(dialog).queryByRole("button", { name: "حفظ التصميم الحالي كقالب أكاديمي" })).toBeNull();
   }, 30000);
 
-  it("the classic layout keeps its access bar", async () => {
+  it("21F.9 (D1) «تحويل إلى منظّم» turns a legacy exam into a NEW structured exam in the Studio; nothing is saved or replaced", async () => {
+    extra = [LEGACY as unknown as (typeof SAVED)[number]];
+    await openHome();
+    const card = document.querySelector('[data-exam-id="L1"]') as HTMLElement;
+    expect(card.textContent).toMatch(/امتحان قديم \(غير منظّم\)/);
+    await click(within(card).getByRole("button", { name: "تحويل إلى منظّم" }));
+    const overlay = await screen.findByRole("dialog", { name: /استوديو الامتحان: امتحان قديم \(منظّم\)/ }, { timeout: 15000 });
+    expect(saveCalls).toBe(0);
+    // Its first save creates a NEW exam (fresh id, create-only): the legacy original can never be overwritten by it.
+    await click(within(overlay).getByRole("button", { name: /حفظ مسودة/ }));
+    await settle(80);
+    expect(saveBodies).toHaveLength(1);
+    expect(saveBodies[0].exam.examId).not.toBe("L1");
+    expect(saveBodies[0]).toMatchObject({ conditional: true, baseEtag: null });
+  }, 30000);
+
+  it("21F.9 — the Studio is the default: with no stored choice the builder page shows «امتحاناتي»", async () => {
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "امتحاناتي" }, { timeout: 8000 })).toBeTruthy();
+    expect(document.querySelector(".saved-exams-access")).toBeNull();
+  }, 30000);
+
+  it("the classic layout (chosen by the teacher) keeps its access bar", async () => {
+    localStorage.setItem("tadris.studio.layout", "classic");
     render(<App />);
     expect(await screen.findByRole("button", { name: /الامتحانات المحفوظة/ }, { timeout: 8000 })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "امتحاناتي" })).toBeNull();

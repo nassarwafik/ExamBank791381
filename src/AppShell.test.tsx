@@ -142,11 +142,15 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     render(<App />); await login();
     await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
     await waitFor(() => expect(calls.some(u => u.includes("resource=projects-summary"))).toBe(true));
+    await waitFor(() => expect(calls.some(u => pathOf(u) === "/api/saved-exams")).toBe(true));
     const set = new Set(calls.map(pathOf));
     // /api/teacher-profile is the teacher identity (name / icon / photo metadata) — read once per session, never per page.
     // /api/messages?kind=unread-summary is App's «الرسائل» badge (Phase 5D), owned by App like projects-summary — not the shell.
-    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary", "/api/teacher-profile", "/api/messages?kind=unread-summary"]));
+    // /api/saved-exams is the landing page's content, not the shell: since Phase 21F.9 the builder page opens on «امتحاناتي» (the
+    // Exam Studio home), which lists the saved exams — once.
+    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary", "/api/teacher-profile", "/api/messages?kind=unread-summary", "/api/saved-exams"]));
     expect(calls.filter(u => pathOf(u) === "/api/teacher-profile").length).toBe(1);
+    expect(calls.filter(u => pathOf(u) === "/api/saved-exams").length).toBe(1);
   });
   it("student login renders the StudentShell-wrapped portal (welcome text unchanged), never the teacher shell, never teacher requests", async () => {
     const calls = installFetch("student");

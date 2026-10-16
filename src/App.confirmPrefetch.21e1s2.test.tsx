@@ -30,6 +30,8 @@ const signIn = (role: "teacher" | "student") => {
   sessionStorage.setItem("examBankSessionDisplayName", "مستخدم");
 };
 beforeEach(() => {
+  // Phase 21F.9 — the Studio is the default layout; this suite exercises the CLASSIC layout (the teacher's opt-out), so it chooses it.
+  try { localStorage.setItem("tadris.studio.layout", "classic"); } catch { /* ignore */ }
   spy.prefetch.mockReset(); spy.idle.mockReset();
   try { sessionStorage.clear(); } catch { /* ignore */ }
   window.matchMedia = ((query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
