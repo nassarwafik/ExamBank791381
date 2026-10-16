@@ -49,6 +49,12 @@ type Props = {
   /** Phase 12B — opens the EXACT assignment (and the useful gradebook state) of an attention / activity row through App's
    * navigation. Absent → the rows stay plain text and the card actions keep opening «الواجبات». */
   onOpenAssignmentTarget?: (target: AssignmentDrillTarget) => void;
+  /** Phase 21H.2 — the dashboard's ONE scope: "" = all classes, else that class only (the server narrows; it never widens). */
+  classId?: string;
+  /** Phase 21H.2 — the dashboard's single «تحديث»: every change re-reads the summary. */
+  refreshSignal?: number;
+  /** Phase 21H.2 — inside the dashboard: the page's scope bar owns refresh and «آخر تحديث», so the hub shows neither. */
+  embedded?: boolean;
 };
 
 export const TEACHER_TODAY_REFRESH_MS = 60000;
@@ -175,28 +181,33 @@ function Card({ id, title, count, tone, items, empty, actionLabel, onAction, sum
   );
 }
 
-export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOpenProjectStudent, onStartEvaluationQueue, onOpenAssignmentTarget }: Props) {
-  const [data, setData] = useState<TeacherToday | null>(null);
+export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOpenProjectStudent, onStartEvaluationQueue, onOpenAssignmentTarget, classId = "", refreshSignal = 0, embedded = false }: Props) {
+  // Phase 21H.2 — the summary belongs to the scope it was read for: another class's figures are never shown under this one,
+  // and a slower answer for an earlier scope never overwrites a newer one (gen).
+  const [loadedFor, setLoadedFor] = useState<{ key: string; data: TeacherToday } | null>(null);
+  const data = loadedFor && loadedFor.key === classId ? loadedFor.data : null;
+  const gen = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   async function load({ silent = false }: { silent?: boolean } = {}) {
+    const mine = ++gen.current, key = classId;
     if (!silent) { setLoading(true); setError(""); }
     try {
-      const r = await fetch("/api/teacher-today", { headers: { "x-builder-token": token, Authorization: "Bearer " + token } });
+      const r = await fetch("/api/teacher-today" + (key ? "?classId=" + encodeURIComponent(key) : ""), { headers: { "x-builder-token": token, Authorization: "Bearer " + token } });
       const j = await r.json().catch(() => null) as { ok?: boolean; error?: string } | null;
-      if (!alive.current) return;
+      if (!alive.current || mine !== gen.current) return;
       const parsed = r.ok && j && j.ok ? parse(j) : null;
       if (!parsed) throw new Error((j && j.error) || "تعذر تحميل ملخص اليوم حاليًا.");
-      setData(parsed); setError("");
-    } catch (e) { if (!alive.current) return; if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل ملخص اليوم حاليًا."); }
-    finally { if (alive.current && !silent) setLoading(false); }
+      setLoadedFor({ key, data: parsed }); setError("");
+    } catch (e) { if (!alive.current || mine !== gen.current) return; if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل ملخص اليوم حاليًا."); }
+    finally { if (alive.current && mine === gen.current && !silent) setLoading(false); }
   }
   // The initial read starts in a microtask (the mounted state is already "loading"), so no state is set synchronously
   // inside the effect; a token change (new session) restarts from a clean read the same way.
-  useEffect(() => { void Promise.resolve().then(() => load()); }, [token]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void Promise.resolve().then(() => load()); }, [token, classId, refreshSignal]);   // eslint-disable-line react-hooks/exhaustive-deps
   useAutoRefresh(() => load({ silent: true }), { intervalMs: TEACHER_TODAY_REFRESH_MS, enabled: !!data });
 
   const go = (id: TeacherNavId) => onNavigate?.(id);
@@ -223,8 +234,8 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
 
   return (
     <section className="eb-today-teacher" aria-labelledby="eb-today-title">
-      <SectionHeader level={2} id="eb-today-title" title="ما الذي يحتاج انتباهي الآن؟" description={data ? "ملخص مباشر من صفوفك النشطة" + (data.generatedAt ? " · " + fmt(data.generatedAt) : "") : "ملخص مباشر من صفوفك النشطة"}
-        actions={<button type="button" className="eb-button is-quiet is-small" onClick={() => void load()} disabled={loading}><IconRefresh size={16} aria-hidden="true" />تحديث</button>} />
+      <SectionHeader level={2} id="eb-today-title" title="ما الذي يحتاج انتباهي الآن؟" description={embedded ? "مباشر الآن · يتحدّث تلقائيًا كل دقيقة" : data ? "ملخص مباشر من صفوفك النشطة" + (data.generatedAt ? " · " + fmt(data.generatedAt) : "") : "ملخص مباشر من صفوفك النشطة"}
+        actions={embedded ? undefined : <button type="button" className="eb-button is-quiet is-small" onClick={() => void load()} disabled={loading}><IconRefresh size={16} aria-hidden="true" />تحديث</button>} />
       {loading && !data && <p className="eb-muted" role="status">جارٍ تحميل ملخص اليوم...</p>}
       {error && !data && <div className="platform-error eb-today-error" role="alert">{error} <button type="button" className="eb-notif-retry" onClick={() => void load()}>إعادة المحاولة</button></div>}
       {a && quiet && <p className="eb-attention-empty eb-today-quiet" role="status">لا توجد عناصر تحتاج تدخلك الآن.</p>}

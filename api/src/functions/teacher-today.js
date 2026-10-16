@@ -43,6 +43,9 @@ const LIVE_WINDOW_MS=15*60e3;
 const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
 
+/** The requested class scope ("" = all of the teacher's classes); an unreadable URL is no scope. */
+function scopeOf(request){try{return String(new URL(request.url).searchParams.get("classId")||"").trim()}catch{return ""}}
+
 /** The submission documents of ONE assignment folder, keyed by the student id THE DOCUMENT names (never the file name). */
 async function loadFolder(container,assignmentId,deps,tally){
  const list=deps.listBlobNames||listBlobNames,many=deps.downloadManyJson||downloadManyJson;
@@ -111,7 +114,14 @@ async function handler(request,deps={},obs=null){
   const lj=deps.listJson||listJson,nowMs=typeof deps.nowMs==="number"?deps.nowMs:Date.now();
   // Classes + users are still scanned (Phase 12E-B targets assignment discovery only).
   const [allClasses,users]=await Promise.all([lj(container,CP),lj(container,UP)]);
-  const classes=filterAccessible(allClasses,tenantOf(auth.user));
+  let classes=filterAccessible(allClasses,tenantOf(auth.user));
+  // Phase 21H.2 — the dashboard's ONE scope: ?classId= narrows the hub to one of the teacher's OWN classes (after the
+  // tenancy filter, so it can never widen); a class the teacher cannot see is «not found», never someone else's data.
+  const scopeClassId=scopeOf(request);
+  if(scopeClassId){
+   if(!classes.some(c=>c&&String(c.classId)===scopeClassId))return {status:404,jsonBody:{ok:false,error:"الصف غير موجود."}};
+   classes=classes.filter(c=>c&&String(c.classId)===scopeClassId);
+  }
   const activeIds=new Set(classes.filter(c=>c&&c.classId&&normalizeClassStatus(c)==="active").map(c=>String(c.classId)));
   // Phase 12E-B — the published assignments of the ACTIVE classes through the per-class index: no global assignment
   // listing in steady state; classes not yet bootstrapped share AT MOST ONE legacy scan for this whole request.
@@ -137,7 +147,7 @@ async function handler(request,deps={},obs=null){
   else{partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",projectSources.error)}
   // Phase 12E-A — count-only read-cost telemetry (the scans' own sizes; never an id/name/title/mark).
   logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:idx.stats.assignmentDocsLoaded,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded,assignmentIndexReads:idx.stats.indexReads,assignmentIndexesBootstrapped:idx.stats.bootstrapped,globalAssignmentScans:idx.stats.globalScans,assignmentIndexAuthoritative:idx.stats.authoritative,assignmentIndexAuthorityChanges:idx.stats.authorityChanges});
-  return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
+  return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...(scopeClassId?{scopeClassId}:{}),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }
 app.http("teacherToday",{methods:["GET"],authLevel:"anonymous",route:"teacher-today",handler:withObservability("teacher-today",handler)});

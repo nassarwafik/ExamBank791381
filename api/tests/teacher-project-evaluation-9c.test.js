@@ -211,14 +211,16 @@ describe("9C-F/K robustness, additivity, authorization", () => {
     const none = await todayHandler(req(), deps(createMemoryContainer(s)));
     expect(none.jsonBody.projectEvaluation).toEqual({ studentsWithUngradedStages: 0, totalUngradedStages: 0, projects: [], attentionTotal: 0, capped: false, attention: [], review: { studentsAwaitingReview: 0, totalReadyStages: 0, attentionTotal: 0, capped: false, attention: [] }, skipped: [] });
   });
-  it("H-auth: unauthenticated → 401 and no project read; query parameters cannot widen the scope (classId / studentId in the URL are ignored)", async () => {
+  it("H-auth: unauthenticated → 401 and no project read; query parameters cannot widen the scope (studentId / projectCode in the URL are ignored; 21H.2 classId only narrows — see today-scope-21h2)", async () => {
     const ctx = createMemoryContainer(seed());
     const st = instrument(ctx);
     const denied = await todayHandler(req(), { ...AUTH_NONE, container: ctx.container, nowMs: NOW_MS });
     expect(denied.status).toBe(401); expect(st.lists.length).toBe(0); expect(st.downloads.length).toBe(0);
     const a = await todayHandler(req(), deps(ctx));
-    const b = await todayHandler(req("https://x/api/teacher-today?classId=c3&studentId=s21&projectCode=794589"), deps(ctx));
+    const b = await todayHandler(req("https://x/api/teacher-today?studentId=s21&projectCode=794589"), deps(ctx));
     expect(b.jsonBody.projectEvaluation).toEqual(a.jsonBody.projectEvaluation);
     expect(JSON.stringify(b.jsonBody.projectEvaluation)).not.toContain("s21");
+    const c = await todayHandler(req("https://x/api/teacher-today?classId=c3&studentId=s21"), deps(ctx));   // the archived class: narrowed to nothing
+    expect(JSON.stringify(c.jsonBody.projectEvaluation)).not.toContain("s21");
   });
 });
