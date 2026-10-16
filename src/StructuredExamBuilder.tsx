@@ -126,6 +126,10 @@ type Props = {
   onStartToolConsumed?: () => void;
   /** Phase 21F.7 — the publish step's hand-off to the assignments workspace (after the unsaved-work guard); absent → not offered. */
   onOpenAssignments?: () => void;
+  /** Phase 21F.8 — the exam has had unsaved edits and no new edit for `idleSaveDelayMs` (no save, no media upload in flight): the owner
+   *  may save a draft to the server (it decides whether it is allowed). Absent → no server autosave. */
+  onIdleSave?: () => void;
+  idleSaveDelayMs?: number;
   onSave?: (mode: SaveMode) => void;
   onExit?: () => void;
   saving?: boolean;
@@ -175,6 +179,7 @@ type Props = {
 };
 
 const AUTOSAVE_DELAY_MS = 800;
+const IDLE_SAVE_DELAY_MS = 5000;
 /** Phase 21E.2 — the toolbar's (visually hidden) heading; App's builder overlay is aria-labelledby it. One builder at a time. */
 const BUILDER_TITLE_ID = "sb-builder-title";
 // K3 (A-F7) — the glyph is shown but never spoken (an aria-hidden span inside the polite status). RF3 I-4: the words are the save-label
@@ -276,7 +281,7 @@ type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: Navig
 type ActionImpl = Omit<BuilderActions, "registerNode"> & { requestImage: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset> };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, layout = "classic", onLayoutChange, startTool, onStartToolConsumed, onOpenAssignments, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, layout = "classic", onLayoutChange, startTool, onStartToolConsumed, onOpenAssignments, onIdleSave, idleSaveDelayMs = IDLE_SAVE_DELAY_MS, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, undoToastMs = UNDO_TOAST_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations, meshAssets, aiAuthor, returnFocusTo }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [surfaceLabOpen, setSurfaceLabOpen] = useState(false);
   const [showIssues, setShowIssues] = useState(true);
@@ -374,6 +379,17 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
       if (pending && pending.examId === examId && recoveryScope && storage) { pendingBackup.current = null; writeExamBackup(storage, recoveryScope, pending.exam, new Date().toISOString()); }
     };
   }, [exam.examId, recoveryScope, storage]);
+
+  // ── Phase 21F.8 · idle signal for the owner's server draft autosave: every edit restarts the wait; nothing is asked while a save or a
+  //    media upload is in flight or while the exam has nothing unsaved (a recovered copy waits for the teacher's own save).
+  const idleSave = useRef(onIdleSave);
+  useLayoutEffect(() => { idleSave.current = onIdleSave; });
+  const wantsIdleSave = !!onIdleSave;
+  useEffect(() => {
+    if (!wantsIdleSave || saveState !== "dirty" || saving || mediaPending) return;
+    const timer = window.setTimeout(() => idleSave.current?.(), idleSaveDelayMs);
+    return () => window.clearTimeout(timer);
+  }, [wantsIdleSave, exam, saveState, saving, mediaPending, idleSaveDelayMs]);
 
   // ── Phase 13A · recovery offer: once per (scope, exam id), only for a NEWER, DIFFERENT backup of the SAME exam ──
   const [recoveryOffer, setRecoveryOffer] = useState<ExamBackup | null>(null);

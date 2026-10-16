@@ -7926,7 +7926,8 @@ function App() {
               onRedo={structuredHistory.redo}
               canUndo={structuredHistory.canUndo}
               canRedo={structuredHistory.canRedo}
-              saveState={examSaveState(structuredHistory.history, structuredSaving)}
+              saveState={examSaveState(structuredHistory.history, structuredSaving || studio.autosaving)}
+              onIdleSave={builderLayout === "studio" ? studio.autosaveDraft : undefined}
               recoveryScope={teacherProfile?.teacherId || undefined}
               onRecover={structuredHistory.recover}
               bankPicker={structuredBankPicker}
