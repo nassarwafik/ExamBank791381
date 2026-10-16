@@ -1,6 +1,6 @@
 # Phase 21G — Assignments: enterprise workflow and teacher tenancy
 
-**Status:** 21G.0 implemented on branch `claude/nifty-clarke-k0wlid`; 21G.1–21G.7 planned. Awaiting exact-head CI, independent
+**Status:** 21G.0 and 21G.1 implemented on branch `claude/nifty-clarke-k0wlid`; 21G.2–21G.7 planned. Awaiting exact-head CI, independent
 review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 **Baseline:** `origin/main` `080c4df4` (merge of PR #326, the Exam Studio).
@@ -112,7 +112,8 @@ what a teacher receives; the remaining cost is server-side reads.
 
 Commits (normal commits on `claude/nifty-clarke-k0wlid`): `1a53d9da` core, `151d433d` derived data, `b56e2143` lint fix,
 `23e23548` question bank, `1033b470` content / imports / 794589 / registry, `1f85b249` + `87e255d3` mutation campaign and test
-fix, `5454c33d` draft default and window validation, `b6b51ed8` edit title and instructions, plus this record.
+fix, `5454c33d` draft default and window validation, `b6b51ed8` edit title and instructions, `bb728fb4` this record, `aeccd920` the
+row-menu test update the full suite found.
 
 ### Fail-first (tests copied into a detached worktree of `080c4df4`)
 
@@ -147,3 +148,34 @@ Recorded per head in the PR; the exact-head rule (`AGENTS.md` §6) applies to th
 ### Deployment tier
 
 Tier 1 (local tests) only. Nothing deployed; no Azure setting changed; `LEGACY_DATA_OWNER` is not set by any agent.
+
+## 8. Implementation record and evidence (21G.1)
+
+**Scope:** no behaviour change. `src/AssignmentsPanel.tsx` held the whole workspace in one 497-line component (state, requests,
+rules and layout). It is now the 81-line view; the logic moved unchanged into:
+
+| File | Holds |
+|---|---|
+| `src/assignments/useAssignmentsController.ts` | list and master scope, create, every assignment action, the sequenced results read, gradebook and row actions, item analysis, coding bulk retry, the 12B drill-in, the focus discipline of the non-modal areas |
+| `src/assignments/useAssignmentComposer.ts` | content source (open exam / saved exam / 791381 library), library browser, composer fields |
+| `src/assignments/assignmentsView.ts` | pure rules: master scope, `rowGrading` (shared resolver), gradebook rows, item-analysis order and summary, the drill view (`drillViewFor`) |
+| `src/assignments/assignmentsApi.ts` | the one request helper and date formatting |
+
+The view owns the three focus anchors (refs) and passes them in, so the controller's result holds no refs (the React Compiler lint
+otherwise flags every read of it). These are the pieces 21G.2–21G.6 build on.
+
+**Source guards follow the code.** Two guards read the panel's source text. They now read the files the code moved to, with the
+same assertions: the ux5 accessibility guard (rowGrading through the shared resolver, `useConfirm`, the purge typed-title body, the
+impact-first archive), and the single-grading-resolver guard (the view file must delegate; the panel and the controller join the
+no-local-rule surfaces). `scripts/mutate-21e2.mjs` G1-filtered-rows targets the new export line.
+
+| Evidence | Result on `23d91d20` |
+|---|---|
+| Existing AssignmentsPanel / drill / lifecycle / export / timing / review / coding suites | pass with no change to their test files (245 tests in 20 files, guards included) |
+| New: `assignmentsView.21g1`, `assignmentsApi.21g1`, `useAssignmentsController.21g1` | 11, 3 and 2 tests |
+| Full root suite + build | 1,045 files / 13,096 tests; initial JS 114.1 KB gzip (budget 125 KB) |
+| tsc / lint | clean / 125 (the panel's four effect warnings now sit in the hooks) |
+| Real Chromium, list / detail / composer at 1440 and 390 px against the 21G.0 head | identical except the clock-dependent date text, which differs the same way between two runs of one build |
+| Mutation `node scripts/mutate-21g.mjs g1` | 14 mutants, **14 KILLED** (G1-M13 first SURVIVED: the create() window guard sits behind a disabled button, so no view test reached it; the hook test now does, isolated re-run KILLED); 21E2 G1-filtered-rows re-run: KILLED |
+
+Fail-first does not apply (no defect fixed; a refactor is proven by the unchanged suites). Deployment tier: 1 (local) only.
