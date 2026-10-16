@@ -1,6 +1,6 @@
 # Phase 21G — Assignments: enterprise workflow and teacher tenancy
 
-**Status:** 21G.0–21G.7 implemented (21G.0–21G.5 merged; 21G.6 in review as nassarwafik/ExamBank791381#331; 21G.7 on branch
+**Status:** 21G.0–21G.7 implemented (21G.0–21G.6 merged, 21G.6 as nassarwafik/ExamBank791381#331; 21G.7 in review on branch
 `claude/nifty-clarke-k0wlid`). Each phase: exact-head CI, independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 **Baseline:** `origin/main` `080c4df4` (merge of PR #326, the Exam Studio).
@@ -451,7 +451,7 @@ Fail-first applies to the reopened-wizard gap only; the new test failed before `
 | `printReport.21g7` | 4 / 4: RTL A4 landscape, every cell escaped (an `<img onerror>` name stays text), no teacher feedback, the same columns and rows as the CSV, the iframe printed and removed, a clean failure without print, the reminder notification on the client |
 | `assignment-reminders-21g7` (API) | 4 / 4: only eligible members, once per day, `studentIds` limited and validated, draft / archived / not-yet-open / closed remind nobody, another teacher gets 404, the type is personal only |
 | `AssignmentsPanel.reports.21g7`, `a11yGate.21g7` | 3 / 3, 4 / 4: both reminder buttons (confirmed, exact bodies, counts), no reminder on a draft, Excel and PDF of every student while searched, the gate's markup and touch rules |
-| Full root suite + build on `51567ba2` | 1,067 files / 13,200 tests, all passed; initial JS 114.1 KB gzip |
+| Full root suite + build on `51567ba2` (tree-identical to `b86f1f35` after moving onto the merge of #331) | 1,067 files / 13,200 tests, all passed; initial JS 114.1 KB gzip |
 | tsc / lint | clean / 124 |
 | Mutation `node scripts/mutate-21g.mjs g7` | 16 mutants, **16 KILLED** on the first run: reminder eligibility, the daily dedupe, a draft reminding, unvalidated `studentIds`, another class reached, an Excel formula, unescaped Excel / PDF cells, a wrong CRC, LTR, the frame left behind, both axe fixes, and Excel / PDF exporting the filtered subset. G1-M12 was re-pointed (the panel now builds the same rows twice) and is KILLED |
 | Gate (Chromium + axe) | 32 / 32 clean after the fixes; before them, 2 axe rules and the touch targets above |
