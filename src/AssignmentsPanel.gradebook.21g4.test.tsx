@@ -32,6 +32,9 @@ function routed(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
   if (url === "/api/assignment-progress") return Promise.resolve(json({ ok: true, progress: [] }));
   if (url.startsWith("/api/assignments") && method === "GET") return Promise.resolve(json({ ok: true, assignments: ITEMS }));
   if (url.startsWith("/api/saved-exams")) return Promise.resolve(json({ ok: true, exams: [] }));
+  if (url.startsWith("/api/assignment-item-analysis")) return Promise.resolve(json({ ok: true, assignmentId: "a1", title: "واجب الكسور", studentsInClass: 4, studentsSubmitted: 2, attemptsAnalyzed: 2,
+    questions: [1, 2].map(n => ({ questionId: "q" + n, number: n, text: "سؤال " + n, type: "mcq", maxMarks: 5, studentsAnalyzed: 2, correctCount: 1, correctRate: 50, averageScore: 2.5, averagePercentage: 50, manualReviewCount: n === 2 ? 1 : 0, difficulty: "medium" })),
+    students: [{ studentId: "s1", studentName: "سارة", studentCode: "P-s1", attemptNumber: 1, cells: [{ state: "graded", score: 5 }, { state: "graded", score: 3.5 }] }, { studentId: "s2", studentName: "أحمد", studentCode: "P-s2", attemptNumber: 1, cells: [{ state: "graded", score: 1 }, { state: "pending" }] }] }));
   if (url.startsWith("/api/assignment-results") && method === "GET") return Promise.resolve(json({ ok: true, stats: { students: 4, submitted: 2, pendingReview: 1, finalized: 1, notSubmitted: 2, active: 0, average: 85, highest: 85, lowest: 85 }, students: STUDENTS }));
   if (url === "/api/assignment-results" && method === "POST") {
     const s = STUDENTS.find(x => x.studentId === body.studentId)!;
@@ -132,6 +135,16 @@ describe("21G.4 the professional gradebook", () => {
     expect(posts()).toEqual([["allowRetry", "s3"]]);
     const open = within(document.querySelector(".eb-assign-rows") as HTMLElement).getByRole("button", { name: "فتح" }) as HTMLButtonElement;
     expect(open.disabled).toBe(false);                                                         // the run's busy state was released
+  });
+
+  it("«تحليل الأسئلة» shows every student's mark per question; a pending question reads «بانتظار» and is not banded", async () => {
+    const page = await openPage();
+    fireEvent.click(within(within(page).getByRole("group", { name: "أقسام الواجب" })).getByRole("button", { name: "تحليل الأسئلة" }));
+    const grid = await within(page).findByRole("region", { name: "جدول علامات الطلاب لكل سؤال" });
+    expect(within(grid).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["الطالب", "س1", "س2"]);
+    const cells = (name: string) => Array.from(within(grid).getByRole("rowheader", { name: new RegExp(name) }).closest("tr")!.querySelectorAll("td")).map(td => td.textContent + "|" + td.className.replace("eb-qgrid-cell ", ""));
+    expect(cells("أحمد")).toEqual(["1/5|is-b0", "بانتظار|is-pending"]);
+    expect(cells("سارة")).toEqual(["5/5|is-b90", "3.5/5|is-b65"]);
   });
 
   it("an archived assignment offers no selection", async () => {

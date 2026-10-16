@@ -35,7 +35,7 @@ export const CAMPAIGNS = {
     { id: "G3-M1", what: "a pending review is drawn as a score", file: PAGE,
       find: "    if (g === \"pendingReview\") { pendingReview++; continue; }\n", replace: "", tests: [...G3_UNIT, ...G3_PANEL] },
     { id: "G3-M2", what: "band edges move (a 50% lands below 50)", file: PAGE,
-      find: "const band = bands.find(b => pct >= b.min && pct < b.max)", replace: "const band = bands.find(b => pct > b.min && pct <= b.max)", tests: [...G3_UNIT, ...G3_PANEL] },
+      find: "return BANDS.find(b => pct >= b.min && pct < b.max)", replace: "return BANDS.find(b => pct > b.min && pct <= b.max)", tests: [...G3_UNIT, ...G3_PANEL] },
     { id: "G3-M3", what: "a student in an attempt counts as not submitted", file: PAGE,
       find: "    else if (s.activeAttempt) at(\"active\").count++;\n", replace: "", tests: [...G3_UNIT, ...G3_PANEL] },
     { id: "G3-M4", what: "the list stays visible beside the page", file: "src/AssignmentsPanel.tsx",

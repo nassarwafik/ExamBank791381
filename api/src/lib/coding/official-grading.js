@@ -346,6 +346,15 @@ function autoGradingPending(attempt) {
   const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
   return !!t && Object.entries(t).some(([id, x]) => x && x.state !== "complete" && !reviewRequiredTarget(x) && overrideScoreOf(attempt, id) === null);   // 17E-D F3
 }
+/** Phase 21G.4 — the same rule for ONE question of the attempt (the question itself, or a part of a composite question): true while
+ *  automatic coding execution that can still change that question's mark is open. The teacher's per-question grid shows it as
+ *  pending, never as the provisional score. */
+function questionAutoGradingPending(attempt, questionId) {
+  const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
+  if (!t) return false;
+  const q = String(questionId);
+  return Object.entries(t).some(([id, x]) => { const c = parseCompositeChildKey(id); return (c ? c.questionId : id) === q && x && x.state !== "complete" && !reviewRequiredTarget(x) && overrideScoreOf(attempt, id) === null; });
+}
 /**
  * Phase 17F-C2 (Review Fix 1) — the PUBLIC legacy field `autoGradingPending` of the student projections (student-submission,
  * student-dashboard): historically "automatic grading still open"; for OLDER clients it is the SCORE-WITHHOLD compatibility bit.
@@ -900,6 +909,6 @@ function teacherCodingSummary(attempt) {
 }
 
 module.exports = {
-  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, TERMINAL_STATES, STALE_DISPATCHED_MS, legacyAutoGradingWithhold, reviewRequiredTarget, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, studentCodingGradingStatus, buildOfficialRunnerJob,
+  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, TERMINAL_STATES, STALE_DISPATCHED_MS, legacyAutoGradingWithhold, reviewRequiredTarget, DELIVERY_LEASE, officialJobId, officialTargetRef, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, questionAutoGradingPending, codingGradingStatus, studentCodingGradingStatus, buildOfficialRunnerJob,
   dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, teacherCodingEvidence, teacherCodingSummary, overrideScoreOf, mutateTarget, manualRecovery, resolveCodingTarget
 };

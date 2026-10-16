@@ -350,3 +350,25 @@
   .eb-gradebook-table tbody td.eb-col-actions { grid-column: 1 / -1; inline-size: auto; }
   .eb-gradebook-table tbody td.eb-col-actions .eb-row-actions { justify-content: flex-start; }
 }
+/* The per-question grid of «تحليل الأسئلة»: one hue deepening with the mark (the distribution's bands, every cell prints its mark),
+   a hatched «بانتظار» for a question still waiting for the teacher, and the student column kept in view while scrolling sideways. */
+.eb-qgrid { display: flex; flex-direction: column; gap: var(--eb-space-2); margin-block-start: var(--eb-space-4); }
+.eb-qgrid-lead { margin: 0; font-size: var(--eb-fs-13); }
+.eb-qgrid-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--eb-space-2) var(--eb-space-4); font-size: var(--eb-fs-12); color: var(--eb-muted); }
+.eb-qgrid-legend li { display: inline-flex; align-items: center; gap: var(--eb-space-1); }
+.eb-qgrid-swatch { inline-size: 14px; block-size: 14px; border-radius: 3px; border: 1px solid var(--eb-line); display: inline-block; }
+.eb-qgrid-wrap { overflow: auto; max-block-size: min(70vh, 720px); border: 1px solid var(--eb-line); border-radius: var(--eb-r); background: var(--eb-surface); }
+.eb-qgrid-wrap:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
+.eb-qgrid-table { border-collapse: separate; border-spacing: 2px; min-inline-size: 100%; font-size: var(--eb-fs-12); }
+.eb-qgrid-table thead th { position: sticky; inset-block-start: 0; background: var(--eb-surface-2); color: var(--eb-muted); font-weight: var(--eb-fw-semibold); padding: var(--eb-space-1) var(--eb-space-2); white-space: nowrap; }
+.eb-qgrid-table th[scope="row"], .eb-qgrid-table thead th:first-child { position: sticky; inset-inline-start: 0; background: var(--eb-surface); text-align: start; min-inline-size: 140px; padding: var(--eb-space-1) var(--eb-space-2); }
+.eb-qgrid-table th[scope="row"] strong { display: block; color: var(--eb-text-heading); font-size: var(--eb-fs-13); }
+.eb-qgrid-table th[scope="row"] small { color: var(--eb-muted); }
+.eb-qgrid-cell { min-inline-size: 52px; padding: var(--eb-space-1) var(--eb-space-2); border-radius: 4px; text-align: center; white-space: nowrap; color: var(--eb-text-heading); font-variant-numeric: tabular-nums; }
+.eb-qgrid-cell.is-b0, .eb-qgrid-swatch.is-b0 { background: color-mix(in srgb, var(--eb-primary) 8%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b50, .eb-qgrid-swatch.is-b50 { background: color-mix(in srgb, var(--eb-primary) 20%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b65, .eb-qgrid-swatch.is-b65 { background: color-mix(in srgb, var(--eb-primary) 34%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b80, .eb-qgrid-swatch.is-b80 { background: color-mix(in srgb, var(--eb-primary) 48%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b90, .eb-qgrid-swatch.is-b90 { background: color-mix(in srgb, var(--eb-primary) 62%, var(--eb-surface)); }
+.eb-qgrid-cell.is-pending, .eb-qgrid-swatch.is-pending { background: repeating-linear-gradient(135deg, var(--eb-warn-bg) 0 5px, var(--eb-surface) 5px 10px); color: var(--eb-warn-tx); font-weight: var(--eb-fw-semibold); }
+.eb-qgrid-cell.is-none { color: var(--eb-muted); background: var(--eb-surface-2); }
