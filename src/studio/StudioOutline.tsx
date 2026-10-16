@@ -1,4 +1,4 @@
-import { memo, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import type { BuilderSection } from "../examTypes";
 import type { StructuredIssue } from "../examQuality";
 import { questionLabelOf } from "../builder/issueIndex";
@@ -24,7 +24,12 @@ type Props = {
   onOpenQuestion: (questionId: string) => void;
   onOpenSection: (sectionId: string) => void;
   onAddSection: () => void;
+  /** Phase 21F.5 — drag-and-drop: put a question before the item at `toIndex` of a section (≥ length: last). */
+  onPlace?: (questionId: string, toSectionId: string, toIndex: number) => void;
+  /** Phase 21F.5 — Alt + ↑ / ↓ on a row: one place up / down (across section boundaries). */
+  onNudge?: (questionId: string, delta: -1 | 1) => void;
 };
+type Drop = { sectionId: string; index: number; at: string };
 
 const norm = (s: string) => s.normalize("NFKC").toLowerCase().replace(/[ً-ْ]/g, "").replace(/\s+/g, " ").trim();
 const toneOf = (issues: readonly StructuredIssue[] | undefined): IssueTone => (!issues?.length ? "ok" : issues.some(i => i.severity === "error") ? "error" : "warn");
@@ -32,7 +37,33 @@ const marksOf = (n: number) => (Number.isFinite(n) ? n : 0);
 
 export default memo(StudioOutline);
 
-function StudioOutline({ sections, activeId, activeSectionId, selectedIds, issuesOf, readiness, totalMarks, disabled, onOpenQuestion, onOpenSection, onAddSection }: Props) {
+function StudioOutline({ sections, activeId, activeSectionId, selectedIds, issuesOf, readiness, totalMarks, disabled, onOpenQuestion, onOpenSection, onAddSection, onPlace, onNudge }: Props) {
+  // Phase 21F.5 — drag-and-drop (pointer): the dragged question and where it would land (before / after a row, or a section's top).
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [drop, setDrop] = useState<Drop | null>(null);
+  // A moved row keeps keyboard focus (a move to another section re-creates its row).
+  const refocus = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const id = refocus.current;
+    if (!id) return;
+    refocus.current = null;
+    treeRef.current?.querySelector<HTMLElement>('[data-outline-question="' + CSS.escape(id) + '"]')?.focus();
+  });
+  const canDrag = !!onPlace && !disabled;
+  const dragOverRow = (e: DragEvent<HTMLElement>, sectionId: string, index: number, id: string) => {
+    if (!dragId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const r = e.currentTarget.getBoundingClientRect();
+    const after = e.clientY > r.top + r.height / 2;
+    const next = { sectionId, index: after ? index + 1 : index, at: (after ? "after:" : "before:") + id };
+    if (!drop || drop.at !== next.at) setDrop(next);
+  };
+  const finishDrop = (e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    if (dragId && drop) { refocus.current = dragId; onPlace?.(dragId, drop.sectionId, drop.index); }
+    setDragId(null); setDrop(null);
+  };
   const [query, setQuery] = useState("");
   const searchId = useId();
   const treeRef = useRef<HTMLUListElement>(null);
@@ -50,6 +81,12 @@ function StudioOutline({ sections, activeId, activeSectionId, selectedIds, issue
     const list = items();
     const i = list.indexOf(document.activeElement as HTMLElement);
     if (i < 0) return;
+    const rowId = list[i].dataset.outlineQuestion;
+    if (e.altKey && rowId && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      e.preventDefault(); e.stopPropagation();
+      if (!disabled && onNudge) { refocus.current = rowId; onNudge(rowId, e.key === "ArrowUp" ? -1 : 1); }
+      return;
+    }
     let next = -1;
     if (e.key === "ArrowDown") next = Math.min(list.length - 1, i + 1);
     else if (e.key === "ArrowUp") next = Math.max(0, i - 1);
@@ -99,7 +136,9 @@ function StudioOutline({ sections, activeId, activeSectionId, selectedIds, issue
                   tabIndex={focusKey === sKey ? 0 : -1} data-name={section.title || "القسم"} data-outline-section={section.id}
                   aria-label={"القسم " + (si + 1) + ": " + (section.title || "قسم بلا عنوان") + "، " + questions.length + " من الأسئلة"}
                   onClick={e => { if (e.target === e.currentTarget || (e.target as HTMLElement).closest(".st-tree-section-head")) onOpenSection(section.id); }}>
-                  <div className="st-tree-section-head">
+                  <div className={"st-tree-section-head" + (drop?.at === "top:" + section.id ? " is-drop-before" : "")}
+                    onDragOver={e => { if (!dragId) return; e.preventDefault(); if (drop?.at !== "top:" + section.id) setDrop({ sectionId: section.id, index: 0, at: "top:" + section.id }); }}
+                    onDrop={finishDrop}>
                     <span className="st-sec-badge">{si + 1}</span>
                     <span className="st-t">{section.title || "قسم بلا عنوان"}</span>
                     <span className="st-m">{marksOf(sectionMaxMarks(section))} ع</span>
@@ -112,7 +151,13 @@ function StudioOutline({ sections, activeId, activeSectionId, selectedIds, issue
                       const text = (question.text || "").trim();
                       return (
                         <li key={id} role="treeitem" aria-level={2} aria-selected={activeId === id} aria-current={activeId === id ? "true" : undefined}
-                          className={"st-row" + (selectedIds.has(id) ? " is-selected" : "")} tabIndex={focusKey === "q:" + id ? 0 : -1}
+                          className={"st-row" + (selectedIds.has(id) ? " is-selected" : "") + (dragId === id ? " is-dragging" : "") + (drop?.at === "before:" + id ? " is-drop-before" : drop?.at === "after:" + id ? " is-drop-after" : "")}
+                          tabIndex={focusKey === "q:" + id ? 0 : -1}
+                          draggable={canDrag} aria-roledescription={canDrag ? "عنصر قابل للسحب" : undefined}
+                          onDragStart={e => { if (!canDrag) return; setDragId(id); e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", id); } catch { /* some engines refuse */ } }}
+                          onDragOver={e => dragOverRow(e, section.id, index, id)}
+                          onDrop={finishDrop}
+                          onDragEnd={() => { setDragId(null); setDrop(null); }}
                           data-name={text || label} data-outline-question={id}
                           aria-label={"السؤال " + label + ": " + (text || "سؤال بلا نص") + "، " + question.marks + " علامة، " + (tone === "ok" ? "سليم" : tone === "warn" ? "فيه تنبيه" : "فيه خطأ")}
                           onClick={e => { e.stopPropagation(); if (!disabled) onOpenQuestion(id); }}>

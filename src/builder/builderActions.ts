@@ -16,6 +16,10 @@ export type BuilderActions = {
   duplicateQuestion: (scope: string, sectionId: string, questionId: string) => void;
   moveQuestionToSection: (scope: string, sectionId: string, questionId: string, toSectionId: string) => void;
   previewQuestion: (scope: string, sectionId: string, questionId: string) => void;
+  /** Phase 21F.5 — insert a new question at a position (the Studio's insert bar). */
+  insertQuestion: (scope: string, sectionId: string, index: number, question: BuilderQuestion) => void;
+  /** Phase 21F.5 — move a question to an exact position, in its section or another one (drag-and-drop). */
+  placeQuestion: (scope: string, fromSectionId: string, questionId: string, toSectionId: string, toIndex: number) => void;
   toggleSelect: (scope: string, questionId: string) => void;
   /** Pending media bookkeeping is per question id and must also settle after another exam opened (never scoped). */
   mediaBusy: (questionId: string, busy: boolean) => void;

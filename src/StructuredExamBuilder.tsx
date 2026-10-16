@@ -51,6 +51,7 @@ import { useIssueAnnouncer, ISSUE_SETTLE_MS } from "./builder/useIssueAnnouncer"
 import { stabilizeIssues, type StableIssues } from "./builder/stableIssues";
 import type { BuilderActions } from "./builder/builderActions";
 import type { StudioStepKey, InspectorTab } from "./studio/studioSteps";
+import { insertQuestionAt, placeQuestion as placeQuestionAt } from "./studio/studioOps";
 // Phase 21F.3 — the Exam Studio layout is its own chunk inside the builder chunk (the classic layout never loads it).
 const StudioWorkspace = lazy(() => import("./studio/StudioWorkspace"));
 import useModalSurface from "./ui/useModalSurface";
@@ -480,6 +481,8 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
     duplicateQuestion: (...a) => actionImpl.current?.duplicateQuestion(...a),
     moveQuestionToSection: (...a) => actionImpl.current?.moveQuestionToSection(...a),
     previewQuestion: (...a) => actionImpl.current?.previewQuestion(...a),
+    insertQuestion: (...a) => actionImpl.current?.insertQuestion(...a),
+    placeQuestion: (...a) => actionImpl.current?.placeQuestion(...a),
     toggleSelect: (...a) => actionImpl.current?.toggleSelect(...a),
     mediaBusy: (...a) => actionImpl.current?.mediaBusy(...a),
     registerNode: (id, el) => { if (el) nodes.current.set(id, el); else nodes.current.delete(id); }
@@ -1202,6 +1205,8 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
         const question = section?.questions.find(x => x.examQuestionId === qid);
         if (section && question) setPreview(singleQuestionExam(exam, section, question));
       },
+      insertQuestion: (scope, sid, index, q) => { if (scoped(scope)) setSections(s => insertQuestionAt(s, sid, index, q)); },
+      placeQuestion: (scope, from, qid, to, index) => { if (scoped(scope)) setSections(s => placeQuestionAt(s, from, qid, to, index)); },
       toggleSelect: (scope, qid) => { if (scoped(scope)) toggleSelect(qid); },
       mediaBusy: (qid, busy) => onMediaBusyChange(qid, busy),
       requestImage: q => (requestQuestionImage ? requestQuestionImage(q) : Promise.reject(new Error("no image service")))
