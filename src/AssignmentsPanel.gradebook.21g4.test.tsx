@@ -167,6 +167,7 @@ describe("21G.4 gradebook styles", () => {
     const phone = block.slice(block.indexOf("@media (max-width: 767px)"));
     expect(phone).toMatch(/\.eb-gradebook-table tbody tr \{ display: grid;/);
     expect(phone).toMatch(/content: attr\(data-label\)/);
+    expect(phone).toMatch(/\.eb-gradebook-table, \.eb-gradebook-table tbody \{ display: block; inline-size: 100%; min-inline-size: 0; \}/);   // beats .students-table's 620px
     expect(phone).toMatch(/\.eb-gradebook-table thead th\.is-sortable \{ display: block; \}/);   // sorting stays reachable on a phone
   });
 });

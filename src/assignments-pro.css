@@ -335,7 +335,7 @@
 .eb-gradebook-bulk-count { font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); margin-inline-end: auto; }
 @media (max-width: 767px) {
   .eb-gradebook-table-wrap { max-block-size: none; overflow: visible; border: 0; border-radius: 0; background: transparent; }
-  .eb-gradebook-table, .eb-gradebook-table tbody { display: block; inline-size: 100%; }
+  .eb-gradebook-table, .eb-gradebook-table tbody { display: block; inline-size: 100%; min-inline-size: 0; }   /* .students-table sets min-width: 620px */
   .eb-gradebook-table thead { display: block; }
   .eb-gradebook-table thead tr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); margin-block-end: var(--eb-space-2); }
   .eb-gradebook-table thead th { display: none; position: static; box-shadow: none; padding: 0; background: transparent; }
