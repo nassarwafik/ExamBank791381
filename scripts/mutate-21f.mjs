@@ -35,7 +35,7 @@ export const CAMPAIGNS = {
     { id: "F0-M3", what: "the write is not conditional on the version the decision was made on", file: "api/src/lib/saved-exam-access.js",
       find: "await io.uploadJsonConditional(container, blobName, document, currentEtag);", replace: "(await io.uploadJson(container, blobName, document), null);", tests: F0_API },
     { id: "F0-M4", what: "owner comparison removed (any teacher may access any exam)", file: "api/src/lib/saved-exam-access.js",
-      find: "return !owner || !stored || stored === owner;", replace: "return true;", tests: F0_API },
+      find: "return canAccessDocument(document, owner, env);", replace: "return true;", tests: F0_API },
     { id: "F0-M5", what: "the owner is never stamped on a saved document", file: "api/src/lib/saved-exam-access.js",
       find: "if (ownerId) document.ownerId = ownerId;", replace: "", tests: F0_API },
     { id: "F0-M6", what: "the saved-exams list shows other teachers' exams", file: "api/src/functions/manage-saved-exams.js",
