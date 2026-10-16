@@ -388,7 +388,7 @@ async function teacherDirectUnread(container, teacherId, { classId = "", canSee 
     return !!u && u.role === "student" && String(u.userId || "") === r.sid && (!classId || String(u.classId || "") === classId);
   });
   // Phase 21G.0 — teacher tenancy: only the teacher's own students count (canSee: an async per-student predicate).
-  if (canSee) rows = (await Promise.all(rows.map(async (r, i) => ((await canSee(users.find(u => u && String(u.userId || "") === r.sid))) ? r : null)))).filter(Boolean);
+  if (canSee) rows = (await Promise.all(rows.map(async r => ((await canSee(users.find(u => u && String(u.userId || "") === r.sid))) ? r : null)))).filter(Boolean);
   const byStudent = {};
   const counts = [];
   for (const r of rows) {
