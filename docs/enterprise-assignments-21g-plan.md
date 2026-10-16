@@ -1,6 +1,6 @@
 # Phase 21G — Assignments: enterprise workflow and teacher tenancy
 
-**Status:** 21G.0 and 21G.1 implemented on branch `claude/nifty-clarke-k0wlid`; 21G.2–21G.7 planned. Awaiting exact-head CI, independent
+**Status:** 21G.0, 21G.1 and 21G.2 implemented on branch `claude/nifty-clarke-k0wlid`; 21G.3–21G.7 planned. Awaiting exact-head CI, independent
 review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 **Baseline:** `origin/main` `080c4df4` (merge of PR #326, the Exam Studio).
@@ -66,7 +66,7 @@ the guard's evidence in every class-scoped and teacher-owned one. A new endpoint
 
 | Class | Endpoints | Rule |
 |---|---|---|
-| Class-scoped | classes, students, assignments, results, review, item analysis, coding regrade / bulk retry, reports, Today hub, achievement feed, messages, project tracker, legacy 794589 route, live game sessions, analytics (and AI analytics), student photos | the class decides |
+| Class-scoped | classes, students, assignments, assignment progress (21G.2), results, review, item analysis, coding regrade / bulk retry, reports, Today hub, achievement feed, messages, project tracker, legacy 794589 route, live game sessions, analytics (and AI analytics), student photos | the class decides |
 | Teacher-owned | saved exams, save artifact, templates, assessment presets, simulators, mesh assets, teacher profile, live challenges, audit history, bank questions / select / replace / summary / generate-exam / question availability, bank import, import upload / fetch-url / analyze | the owner decides |
 | Shared by design | exam library (official), exam governance and its inbox (a review workflow across teachers), learning materials catalog, learning study / training (course content) | everyone |
 | Operator | assignment-index control, build-bank-2025, classify-bank-batch, classify-question-preview, import-html-exam, inspect-html, storage-status | **need an admin role** (open item, §6) |
@@ -89,6 +89,8 @@ Student-facing endpoints (`student-*`, `platform-session`, `coding-run`) are unt
   - a template load of a missing blob answered 500; it now answers 404 «القالب غير موجود.».
 
 ## 5. Deviation from the plan
+
+*Resolved in 21G.2 (§9): the light list shipped as an ETag-verified summary cache, which needs no write path to change.*
 
 The **light assignment list** (a summary index instead of downloading every assignment document) moved from 21G.0 to 21G.2.
 Doing it safely needs a per-class summary that every write path (create, status, attempts, timing, details, archive, restore,
@@ -179,3 +181,43 @@ no-local-rule surfaces). `scripts/mutate-21e2.mjs` G1-filtered-rows targets the 
 | Mutation `node scripts/mutate-21g.mjs g1` | 14 mutants, **14 KILLED** (G1-M13 first SURVIVED: the create() window guard sits behind a disabled button, so no view test reached it; the hook test now does, isolated re-run KILLED); 21E2 G1-filtered-rows re-run: KILLED |
 
 Fail-first does not apply (no defect fixed; a refactor is proven by the unchanged suites). Deployment tier: 1 (local) only.
+
+## 9. Implementation record and evidence (21G.2)
+
+### What shipped
+
+- **Light list** (`api/src/lib/assignment-summary-cache.js`). `GET /api/assignments` reads one blob listing plus
+  `platform/assignment-index/summary-cache.json`, and downloads only the documents whose ETag changed. A cached summary is served
+  only for the exact ETag it was computed from, so a change by any writer is seen at once. No write path needed to change; the
+  cache is never an authority. `SUMMARY_VERSION` in `manage-assignments.js` invalidates it when `summary()` changes shape.
+- **Progress** (`GET /api/assignment-progress`, `api/src/lib/assignment-progress.js`). For each published assignment of the
+  teacher's active classes it returns expected / submitted / not submitted / pending review / graded / live / average / last
+  submission. It uses the Today hub's scoped read and the gradebook's own rules; a parity test checks the figures against the
+  gradebook's stats.
+- **Home** (`src/assignments/assignmentsHome.ts`, `AssignmentsHomeKpis.tsx`, rows in `AssignmentList.tsx`):
+  - every class by default;
+  - a KPI strip: open now / closing within 48 h, pending review, live attempts, and the submission rate of the open assignments;
+  - per published row: a time status (scheduled / open / closing soon / closed, with an Arabic duration), pending and live
+    counts, and a submission bar;
+  - time-filter chips with counts. They join the master scope, so a detail they hide closes.
+  An unavailable progress read shows «—» and «تعذر تحميل التقدم», never zero.
+
+The progress route was first named `/api/assignments-overview` and renamed so that no `/api/assignments` prefix matcher mistakes it
+for a list read.
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `assignment-summary-cache-21g2` | 8 / 8. A repeated list downloads 0 documents; the same case on the 21G.1 head downloads all 3 |
+| `assignment-progress-21g2` | 4 / 4, including parity with the `assignment-results` stats and a graded student with a live second attempt |
+| `assignmentsHome.21g2`, `AssignmentsPanel.home.21g2` | 7 / 7, 4 / 4 |
+| Existing suites | ux5 expectations changed only for the two intended changes: the extra boot read, and the all-classes default |
+| Full root suite + build on `ae3e0431` | 1,049 files / 13,119 tests; initial JS 114.1 KB gzip |
+| Earlier full run on `5f1e885c` | 2 failures. (1) Raw colours in `assignments-pro.css`, fixed in `ae3e0431`. (2) A 3D plot-viewer test unrelated to this phase, which failed while another test run competed for CPU and passed alone (11 / 11) |
+| tsc / lint | clean / 125 |
+| Mutation `node scripts/mutate-21g.mjs g2` | 16 mutants, **16 KILLED**. G2-M8 first SURVIVED (no fixture student had both a completed and a live attempt); after the fixture fix the isolated re-run is KILLED |
+| Real Chromium at 1440 / 390 px | no horizontal overflow. The capture found an empty band in the phone toolbar and two Arabic count phrasings, both fixed in `69f9d760` |
+
+Fail-first applies to the defects fixed on the way only: the token-only CSS guard failed on `5f1e885c` and passes on `ae3e0431`.
+Deployment tier: 1 (local) only.
