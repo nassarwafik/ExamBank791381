@@ -89,6 +89,7 @@ Configured as application settings of the Static Web App's managed API. Derived 
 | `BUILDER_SESSION_VERSION` | optional, default `1` | Bump to revoke every teacher session at once |
 | `BANK_SETUP_KEY` | fallback-compatible only | Legacy fallback for the three secrets above and for the number-conversion preview key |
 | `TEACHER_DISPLAY_NAME` | optional | Display name used until the teacher sets one in their profile |
+| `LEGACY_DATA_OWNER` | optional (multi-user mode) | The `BUILDER_USERS` key of the teacher who owns data created before teacher tenancy (Phase 21G.0). Unset: that data stays shared by every teacher. See `docs/enterprise-assignments-21g-plan.md` §3 |
 
 Fallback chains, exactly as the code resolves them:
 
