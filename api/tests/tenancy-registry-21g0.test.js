@@ -19,7 +19,7 @@ const REGISTRY = {
     "assignment-review.js": TENANT, "assignment-item-analysis.js": TENANT, "coding-grading.js": TENANT, "coding-grading-recovery.js": TENANT,
     "reports.js": TENANT, "teacher-today.js": TENANT, "teacher-achievement-feed.js": TENANT, "messages.js": TENANT, "project-tracker.js": TENANT,
     "project-794589.js": TENANT, "game-live-session.js": TENANT, "teacher-analytics.js": TENANT, "teacher-analytics-ai.js": TENANT,
-    "student-profile-photo.js": TENANT
+    "student-profile-photo.js": TENANT, "assignments-overview.js": TENANT
   },
   teacherOwned: {
     "manage-saved-exams.js": /examOwnerOf\(/, "save-exam-artifact.js": /examOwnerOf\([\s\S]*tenantOf\(|tenantOf\([\s\S]*examOwnerOf\(/,
