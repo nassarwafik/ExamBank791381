@@ -96,7 +96,7 @@ export default function AssignmentDetail({ headingRef, ...p }: AssignmentDetailP
             {ANALYSIS_SORTS.map(([s, label]) => <button key={s} type="button" className={"gradebook-chip" + (p.analysisSort === s ? " active" : "")} aria-pressed={p.analysisSort === s} onClick={() => p.onAnalysisSort(s)}>{label}</button>)}
           </div>
           {p.sortedQuestions.length ? (
-            <div className="students-table-wrap"><table className="students-table item-analysis-table">
+            <div className="students-table-wrap" role="region" aria-label="جدول تحليل الأسئلة" tabIndex={0}><table className="students-table item-analysis-table">
               <thead><tr><th scope="col">#</th><th scope="col">نص السؤال</th><th scope="col">عدد الطلاب</th><th scope="col">نسبة الصحيح</th><th scope="col">متوسط العلامة</th><th scope="col">متوسط %</th><th scope="col">الصعوبة</th><th scope="col">مراجعة يدوية</th></tr></thead>
               <tbody>{p.sortedQuestions.map(q => <tr key={q.questionId}><td>{q.number}</td><td className="item-analysis-text">{q.text && q.text.length > 60 ? q.text.slice(0, 60) + "…" : q.text || "—"}</td><td>{q.studentsAnalyzed}</td><td>{q.correctRate === null ? "—" : q.correctRate + "%"}</td><td>{q.averageScore === null ? "—" : q.averageScore + "/" + q.maxMarks}</td><td>{q.averagePercentage === null ? "—" : q.averagePercentage + "%"}</td><td>{q.difficulty ? <StatusBadge tone={q.difficulty === "easy" ? "success" : q.difficulty === "medium" ? "warn" : "danger"} className={"difficulty-badge " + q.difficulty}>{q.difficulty === "easy" ? "سهل" : q.difficulty === "medium" ? "متوسط" : "صعب"}</StatusBadge> : "—"}</td><td>{q.manualReviewCount > 0 ? q.manualReviewCount : "—"}</td></tr>)}</tbody>
             </table></div>

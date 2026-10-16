@@ -407,3 +407,15 @@
   .eb-assign-composer .eb-composer-foot { flex-wrap: wrap; }
   .eb-assign-composer .eb-composer-foot .eb-button { flex: 1 1 auto; }
 }
+
+/* Phase 21G.7 — the visual and accessibility gate (axe-core WCAG 2.1 AA + layout at 390 / 834 / 1180 / 1440 px): on a touch screen
+   every control of the assignments workspace gets a 44 px target; desktop sizing is unchanged. */
+@media (pointer: coarse) {
+  .eb-assignments .eb-filter-chip, .eb-assignments .gradebook-chip, .eb-assignments .eb-wizard-step, .eb-assignments .eb-th-sort,
+  .eb-assignments .eb-menu-trigger, .eb-assignments .eb-icon-button, .eb-assignments .eb-button.is-small { min-block-size: 44px; min-inline-size: 44px; }
+  .eb-assignments .eb-select-box, .eb-assignments .eb-class-option input { inline-size: 24px; block-size: 24px; }
+  .eb-assignments .eb-student-cell { min-block-size: 44px; align-items: center; }
+  .eb-assignments .eb-class-all { min-block-size: 44px; }
+  .eb-assignments .eb-gradebook-table thead th.is-sortable .eb-th-sort { min-block-size: 44px; }
+}
+.eb-assign-detail .students-table-wrap[tabindex]:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
