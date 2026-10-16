@@ -1,6 +1,6 @@
 # Phase 21H — Enterprise teacher dashboard («لوحة المتابعة»)
 
-**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1–21H.2 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.3–21H.5 planned. Each phase: exact-head CI,
+**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1–21H.3 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.4–21H.5 planned. Each phase: exact-head CI,
 independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -39,7 +39,7 @@ Each decision is recorded here so the owner can reverse it at review.
 | 21H.0 | True figures: active-now vs stale attempts; units with Arabic agreement; neutral zero; relative times | implemented |
 | 21H.1 | Project attention = submitted stages awaiting review (D2) | implemented |
 | 21H.2 | One scope and one refresh for the page (D3, as revised in §6) | implemented |
-| 21H.3 | Direct actions from the cards (start grading, remind, end an idle attempt); due today / results not released / opening today; «عرض الكل» | planned |
+| 21H.3 | Next actions: closing within 48 h, results to publish, opening within 24 h; «تذكير» on a row; priority order; «عرض الكل» | implemented |
 | 21H.4 | Read cost of `teacher-today`: only the teacher's students, a short cache, measured before / after | planned |
 | 21H.5 | Visual and accessibility gate on the dashboard (axe, overflow, touch targets at 390 / 834 / 1180 / 1440) | planned |
 
@@ -127,3 +127,31 @@ UX-3's «يحتاج إلى انتباهك» stays: its four categories were lock
 | `teacher-project-evaluation-9c` H-auth | studentId / projectCode are still ignored (equal bodies); classId of the archived class narrows to nothing (no `s21`) |
 | Mutation `node scripts/mutate-21h.mjs h2` | 9 mutants, **9 KILLED**: classId ignored, scope widened past tenancy, unknown class answered, hub not sending the class, late answer landing, stale figures while loading, refresh not reaching the hub, the embedded refresh button, a remount on load |
 | tsc / lint | clean / 124 |
+
+## 7. Implementation record and evidence (21H.3)
+
+### What shipped
+
+- **Server** (`teacher-today.js`): three additive blocks, derived from the documents the hub already reads (no new read).
+  - `dueSoon`: the assignment's deadline is within 48 hours, it is still open, and the block says how many members have not submitted. Nearest deadline first.
+  - `resultsUnreleased`: release mode «manual», not yet released, with at least one submission. Both checks come from the 21G.5 authority `results-release.js`; nothing is released here.
+  - `openingSoon`: the assignment opens within 24 hours.
+- **Hub**:
+  - **Priority order of the cards:** pending review → closing soon → not started → results to publish → messages → projects → active now → idle attempts → opening soon.
+  - **«تذكير»:** a closing-soon or not-started row offers it next to the row, as its own button and never nested. It runs the confirmed 21G.7 `remindStudents`. Cancel sends nothing; the server decides eligibility and sends at most one reminder per student per day. The result is announced in a status line, and the hub re-reads.
+  - **Where «تذكير» appears:** only on actionable rows, i.e. inside the app. Plain-text rows stay as 12B defined them.
+  - **«عرض الكل في الواجبات»:** shown when a card has more rows than it displays.
+  - **Arabic agreement:** messages now agree with their count («3 رسائل»).
+  - **Older payloads:** an older or malformed block renders no card.
+- **Kept on purpose:**
+  - **Ending an idle attempt** stays in the gradebook. Ending an attempt grades it, so the idle-attempt card says to open the attempt to extend or end it there.
+  - **The six quick actions** are unchanged. They are pinned by 9A / 21E.2 («same six buttons, same order, same names»).
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `today-categories-21h3` (API) | 4 / 4: the 48 h boundary (inclusive), past and later deadlines, the not-submitted count; manual / released / afterDue / immediate / without submissions; an unreadable mode is not «the teacher's step»; opening within 24 h only, with nobody «not started» before it opens |
+| `TeacherTodayHub.21h3` | 5 / 5: wording with relative times and units, the priority order, «تذكير» (cancel sends nothing; confirm sends exactly `{action:"remindStudents", assignmentId}` and reports «✓ أُرسل التذكير إلى 3 طلاب … طالب واحد ذُكّر اليوم مسبقًا.»), «عرض الكل في الواجبات», older and malformed payloads |
+| 12B / 9A | the row labels are unchanged (only their order follows the cards); «3 رسائل» replaces the ungrammatical «3 رسالة» |
+| Mutation `node scripts/mutate-21h.mjs h3` | 12 mutants, **12 KILLED**. H3-M6 survived first (the closing-soon fixture now also pins `openingSoon` = 0); H3-M10 was a no-op rename, replaced by «the closing-soon card is dropped» |
