@@ -1,7 +1,8 @@
 # Phase 21F — Exam Studio: engineering plan for the structured exam builder
 
-**Status:** plan only. No production code changes in this record. Every phase below is a separate branch and pull request that
-follows `AGENTS.md` §3 (baseline gate → fail-first → implementation → validation → exact-head CI → independent review → owner merge).
+**Status:** implemented — phases 21F.0–21F.9 on branch `claude/nifty-clarke-k0wlid`; see §9 for the implementation record and the
+evidence. Awaiting exact-head CI, independent review and the owner's manual merge (`AGENTS.md` §3, §13). The plan below is unchanged;
+§9 records where the implementation follows or deviates from it.
 
 **Baseline:** `origin/main` `613bda55` (merge of PR #323).
 
@@ -444,3 +445,42 @@ These are unchanged:
 - the storage layout, except the additive envelope fields in 21F.0 and 21F.7.
 
 No deployment beyond the automatic PR preview of tier 3 (`AGENTS.md` §11).
+
+---
+
+## 9. Implementation record (2026-10-16)
+
+**Baseline:** `origin/main` `613bda55`; re-fetched before handover: unchanged, so no reconciliation merge was needed.
+**Branch:** `claude/nifty-clarke-k0wlid` (one branch for all phases, as the session required, instead of one branch per phase; one
+normal commit per step, no amend / rebase / force-push). **Owner decisions:** D1–D6 as recommended in §7.
+
+| Phase | Commits | What shipped | Evidence |
+|---|---|---|---|
+| 21F.0 | `ab898d6d`, `e451c97d` | Conditional saves (`baseEtag`; 409 `EXAM_CONFLICT` with the server version), ownership in multi-user mode (`ownerId`; another teacher's exam reads as not found), random exam ids, «تعارض في الحفظ» (save mine as new · replace, confirmed · open the server copy, confirmed) | fail-first on `613bda55`: 7 of 9 API tests failed; full suite 1 020 files / 12 933 tests green; mutation f0 12/12 KILLED |
+| 21F.1 | `76d52ed4`, `8cb190b5` | Typing-aware undo (one step per typing burst, ≤ 1.5 s, same field), render isolation (stable `actions`, memoized editors, stable issue arrays), `useExamStudioController` | fail-first: 9 tests failed on the baseline; mutation f1 14/14 KILLED (3 survivors closed in `8cb190b5`); typing at 100 questions, input handler p50 22 → 2 ms, p95 36 → 3 ms; full suite 1 022 / 12 948 green |
+| 21F.2 | `9951c920` | Studio tokens (only literal colours: navy + turquoise), 13 icons, primitives (stepper, save status, status dot, key hint, ARIA tabs) | 9 tests |
+| 21F.3 / 21F.4 | `dcaab048`, `42f538a1` | Opt-in Studio layout: top bar, four steps, outline (ARIA tree), canvas of collapsed student-view cards with ONE active editor, inspector tabs, section settings, drawers and phone bottom bar | 11 tests; canvas height 11 756 → 2 121 px and collapsed card 1 139 → 156 px (9-question fixture); full suite: the inventory failure fixed in `42f538a1`; `rf3b.units` failed once under load, 3/3 in isolation and green in every later full run |
+| 21F.5 | `5c286de9` | Insert bar between cards, outline drag-and-drop and Alt + ↑ / ↓, shortcuts (Ctrl / ⌘ + K, Enter, D, «?»), command palette | 15 tests; full suite 1 026 / 12 983 green, initial JS 113.1 KB |
+| 21F.6 | `ccf80b6c` | Review step: readiness ring and state from the ONE finalization decision, every blocker / warning with «إصلاح» (opens the issue in its card), official marks by section / type / cognitive level / difficulty | 9 tests; full suite 1 028 / 12 992 green |
+| 21F.7 | `eb03a4ed`, `649480dd` | Setup step (title, cover and instructions, design tools), publish step (timeline, gated final save, governance, hand-off to assignments), «امتحاناتي» (cards with status and readiness, search, filters, four creation sources); additive list fields `kind`, `status`, `readiness` (counts only) | API fail-first: 3 of 4 failed before the change; 23 tests; mutation f7 4/4 KILLED; the full suite found a 15A source-guard regression, fixed in `649480dd` |
+| 21F.8 | `7a540265` | Server draft autosave (D3): 5 s idle, quiet, conditional, never creates, never finalizes or demotes a final exam, never locks the editor; saves serialized; conflict → the 21F.0 dialog; offline → notice, nothing lost, no retry loop | 9 tests against the REAL save / load handlers (two-tab conflict loses nothing); mutation f8 10/10 KILLED; full suite 1 034 / 13 026 green, initial JS 113.9 KB |
+| 21F.9 | `2a1db6b2` | Studio is the default (classic kept as the remembered opt-out); 3D function lab behind «إظهار الأدوات التجريبية»; D1 «تحويل إلى منظّم» (new id, create-only); typing in the default layout re-renders one outline row and one card | fail-first: 40 rows + 40 cards re-rendered per edit; mutation f9 6/6 KILLED; typing at 100 questions, input handler p95: Studio 15 → 6 ms (classic 8 ms); full suite 1 036 / 13 031 green, initial JS 114.1 KB of 125 KB |
+
+**Tests changed by the cutover (expectations unchanged):** four App suites that exercise the classic access bar or the classic builder
+now choose the classic layout in their setup (`App.builderFocus.reviewK2.21e2`, `App.saveConflict.21f0`, `App.sharedConfirm.21e1`,
+`App.confirmPrefetch.21e1s2`). One expectation changed on purpose: `AppShell.test.tsx` — a teacher boot now also reads
+`/api/saved-exams` exactly once, because the landing builder page is «امتحاناتي»; the shell itself still adds no request.
+
+**Deviations from the plan and open items for the owner:**
+- The classic layout and its CSS are **not removed** in 21F.9: removal needs the owner's parity sign-off, and the classic builder's
+  tests stay as they are until then. Studio-equivalent tests exist for every Studio flow listed above.
+- D1 «hide creating new legacy exams»: the home offers no legacy creation and «القوالب» (legacy templates) left it. The page's AI
+  bank generator still produces a flat exam (it is a separate product feature; its result can be converted in one click). Retiring
+  it is an owner decision.
+- Mutation proof was not applied to 21F.2–21F.6 (presentation and productivity; every action they run is an existing, already
+  mutation-tested builder handler); it was applied to every save, ownership, history, readiness and cutover invariant.
+- Visual evidence: Chromium captures at 1440 × 900 and 390 × 844 for every step and the home, with no horizontal overflow; the plan's
+  four-viewport axe harness (`capture-visual-gate-21f*.mjs`) was not built.
+
+**Deployment tier exercised:** tier 1 (local tests, builds, Chromium harness) only. Nothing deployed; no Azure, Runner or production
+change. A PR preview (tier 3) exists only if a pull request is opened and its `Build and Deploy Job` succeeds.
