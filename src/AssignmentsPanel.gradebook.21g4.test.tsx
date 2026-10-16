@@ -40,7 +40,7 @@ function routed(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
     const s = STUDENTS.find(x => x.studentId === body.studentId)!;
     if (failFor.has(String(body.studentId))) return Promise.resolve(json({ ok: false, error: "تعارض في الحفظ، حاول مرة أخرى." }, 503));
     const snap = body.action === "allowRetry" ? { allowedAttempts: s.allowedAttempts + 1, attemptsUsed: s.attemptsUsed } : { dueAtOverride: body.dueAtOverride };
-    if (holdNext) { holdNext = false; return new Promise(resolve => { hold = resolve; }).then(() => json({ ok: true, ...snap })); }
+    if (holdNext) { holdNext = false; return new Promise<Response>(resolve => { hold = resolve; }); }
     return Promise.resolve(json({ ok: true, ...snap }));
   }
   return Promise.resolve(json({ ok: true }));
@@ -130,7 +130,7 @@ describe("21G.4 the professional gradebook", () => {
     fireEvent.click(within(await confirmDialog()).getByRole("button", { name: "منح المحاولة" }));
     await waitFor(() => expect(posts()).toHaveLength(1));
     fireEvent.click(within(page).getByRole("button", { name: "العودة إلى الواجبات" }));
-    hold!(json({}));
+    hold!(json({ ok: true, allowedAttempts: 2 }));
     await new Promise(r => setTimeout(r, 20));
     expect(posts()).toEqual([["allowRetry", "s3"]]);
     const open = within(document.querySelector(".eb-assign-rows") as HTMLElement).getByRole("button", { name: "فتح" }) as HTMLButtonElement;
@@ -145,6 +145,19 @@ describe("21G.4 the professional gradebook", () => {
     const cells = (name: string) => Array.from(within(grid).getByRole("rowheader", { name: new RegExp(name) }).closest("tr")!.querySelectorAll("td")).map(td => td.textContent + "|" + td.className.replace("eb-qgrid-cell ", ""));
     expect(cells("أحمد")).toEqual(["1/5|is-b0", "بانتظار|is-pending"]);
     expect(cells("سارة")).toEqual(["5/5|is-b90", "3.5/5|is-b65"]);
+  });
+
+  it("…also when the request in flight FAILS after the teacher left", async () => {
+    const page = await openPage();
+    tick(page, "سارة"); tick(page, "باسل");
+    holdNext = true;
+    fireEvent.click(within(bulkBar(page)!).getByRole("button", { name: "منح محاولة إضافية" }));
+    fireEvent.click(within(await confirmDialog()).getByRole("button", { name: "منح المحاولة" }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    fireEvent.click(within(page).getByRole("button", { name: "العودة إلى الواجبات" }));
+    hold!(json({ ok: false, error: "تعارض في الحفظ، حاول مرة أخرى." }, 503));
+    await new Promise(r => setTimeout(r, 20));
+    expect(posts()).toEqual([["allowRetry", "s3"]]);
   });
 
   it("an archived assignment offers no selection", async () => {
