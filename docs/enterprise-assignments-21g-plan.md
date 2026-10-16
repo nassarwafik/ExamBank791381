@@ -367,3 +367,42 @@ Fail-first applies to the phone-card defect only. Deployment tier: 1 (local) onl
 | Real Chromium at 1440 / 390 px | no horizontal overflow; the review header shows the position and the three student controls; «نظرة عامة» shows the release state, the mode and «نشر النتائج للطلاب» |
 
 Fail-first: not applicable, as no defect was fixed. Deployment tier: 1 (local) only.
+
+## 13. Implementation record and evidence (21G.6)
+
+### What shipped
+
+- **The creation wizard** (`src/assignments/assignmentWizard.ts`, `AssignmentComposer.tsx`).
+  - Five steps:
+    - «المحتوى»: the exam, a search in my exams, «معاينة المحتوى», and the title and instructions;
+    - «الصفوف»;
+    - «المواعيد»: the window, attempts and duration;
+    - «القواعد»: the attempt policy, the results release and publishing;
+    - «المراجعة»: exactly what each copy will carry.
+  - Navigation:
+    - The stepper is a numbered list of current / done buttons with `aria-current="step"` and no tab roles, as the UX-5 guard
+      requires.
+    - Moving back is always free. Moving forward passes only through valid steps; the reasons are shown under the stepper.
+    - Focus moves to each step's heading.
+    - A blocking window issue stops «المواعيد»; a deadline already past only warns.
+- **One copy per class (owner decision D4).**
+  - The SAME create request is sent once per chosen class, in order. The server's create, authority and tenancy checks are
+    unchanged.
+  - Every class is reported. A class that succeeded leaves the selection, so a retry can never create a second copy there. A
+    class that failed stays chosen, and the wizard stays open on its review.
+  - The first active class is chosen once when the classes arrive, and again when the wizard opens after a full create. It is
+    never re-ticked while the teacher is choosing.
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `assignmentWizard.21g6` | 6 / 6: each step's blocking reasons (a past deadline only warns), the first blocked step, forward jumps only through valid steps, the copy count, the review rows |
+| `AssignmentsPanel.wizard.21g6` | 4 / 4: search and preview in the real panel, three copies with one failure named and kept chosen, a retry creating only it, going back keeps every value, never re-ticking (even when the classes reload), a reopened wizard choosing the first class |
+| Existing suites | `ux5` (composer walk and master-scope), `lifecycle` (class targets), `assignmentWindow.21g0`, `attemptPolicy.7a` and `useAssignmentsController.21g1` follow the steps or `classIds`. The same assertions hold: the exact create body, focus, non-modal |
+| Full root suite + build on `730b4ffc` | 1,062 files / 13,181 tests, all passed; initial JS 114.1 KB gzip |
+| tsc / lint | clean / 124 |
+| Mutation `node scripts/mutate-21g.mjs g6` | 10 mutants, **10 KILLED**. G6-M9 (the default class re-filled whenever the selection is empty) first SURVIVED: the effect depends on the class list, which no test reloaded. The new test reloads it with every class unticked, and also found that a wizard reopened after a full create had no class chosen, now restored on opening. KILLED in the isolated re-run |
+| Real Chromium at 1440 / 390 px | no horizontal overflow; five steps; the classes step with two classes ticked; the review with «إنشاء الواجب (نسختان)» |
+
+Fail-first applies to the reopened-wizard gap only; the new test failed before `730b4ffc`. Deployment tier: 1 (local) only.
