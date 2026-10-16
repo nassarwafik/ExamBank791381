@@ -199,7 +199,7 @@ describe("9C-F/K robustness, additivity, authorization", () => {
     const ctx = createMemoryContainer(seed());
     const r = await todayHandler(req(), deps(ctx));
     expect(Object.keys(r.jsonBody).sort()).toEqual(["attention", "generatedAt", "ok", "partial", "projectEvaluation", "recent", "scope"]);
-    expect(Object.keys(r.jsonBody.attention).sort()).toEqual(["activeAttempts", "notStarted", "pendingReview", "unreadMessages"]);
+    expect(Object.keys(r.jsonBody.attention).sort()).toEqual(["activeAttempts", "notStarted", "pendingReview", "staleAttempts", "unreadMessages"]);   // 21H.0 adds staleAttempts
     expect(Object.keys(r.jsonBody.projectEvaluation).sort()).toEqual(["attention", "attentionTotal", "capped", "projects", "skipped", "studentsWithUngradedStages", "totalUngradedStages"]);
     const failing = await todayHandler(req(), deps(ctx, { loadProjectEvaluationSources: async () => { throw new Error("storage down"); } }));
     expect(failing.status).toBe(200);

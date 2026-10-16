@@ -185,7 +185,8 @@ function AttentionCard({id,title,count,tone,items,empty}:{id:string;title:string
  if(shown.length)body=<ul className="eb-attention-list">{shown.map(item=><li key={item.key}><button type="button" className="eb-attention-item" onClick={item.onOpen}><span className="eb-attention-item-label">{item.label}</span><span className="eb-attention-item-meta">{item.meta}</span></button></li>)}</ul>;
  else if(count===0)body=<p className="eb-attention-empty">{empty}</p>;
  else body=<p className="eb-attention-partial">توجد {count} حالات ضمن النطاق الحالي، لكن تفاصيلها ليست ضمن قائمة المتابعة المختصرة.</p>;
- return <article className={"eb-attention-card tone-"+tone} aria-labelledby={id}>
+ // Phase 21H.0 — nothing waiting → no alarm colour.
+ return <article className={"eb-attention-card tone-"+(count>0?tone:"neutral")} aria-labelledby={id}>
   <h3 id={id} className="eb-attention-title"><span>{title}</span><span className="eb-attention-count">{count}</span></h3>
   {body}
   {rest>0&&<p className="eb-attention-more">و{rest} أخرى ضمن النطاق الحالي</p>}

@@ -288,3 +288,6 @@
 .analytics-view-tab:not(.active) .analytics-view-tab-badge{ background:#fef2f2; color:#b42318; }
 @media(max-width:760px){ .analytics-view-tabs{overflow-x:auto;flex-wrap:nowrap} }
 .eb-drill-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+/* Phase 21H.0 — an attention card with nothing waiting carries no alarm colour: a neutral accent and count. */
+.eb-attention-card.tone-neutral{ --eb-attention-accent:var(--eb-line); }
+.tone-neutral .eb-attention-count{ background:var(--eb-surface-2); color:var(--eb-muted); }

@@ -49,9 +49,10 @@ describe("9A teacher-today — scope, attention counts and recent activity", () 
     const ctx = createMemoryContainer(seed());
     const r = await todayHandler(req(), { ...AUTH_OK, ...unreadOk, container: ctx.container, nowMs: NOW_MS });
     expect(r.status).toBe(200);
-    const a = r.jsonBody.attention.activeAttempts;
-    expect(a.count).toBe(2);
-    expect(a.items.map(i => [i.studentId, i.assignmentId, i.status])).toEqual([["s02", "P2", "started"], ["s03", "P1", "paused"]]);
+    // Phase 21H.0 — the open attempts are split: s02 (started 5 minutes ago) is active NOW; s03 (paused) is stale.
+    const a = r.jsonBody.attention.activeAttempts, st = r.jsonBody.attention.staleAttempts;
+    expect(a.count + st.count).toBe(2);
+    expect([...a.items, ...st.items].map(i => [i.studentId, i.assignmentId, i.status])).toEqual([["s02", "P2", "started"], ["s03", "P1", "paused"]]);
     expect(a.items[0]).toMatchObject({ title: "واجب P2", className: "صف 1", studentName: "طالب s02", startedAt: "2026-03-10T09:55:00.000Z" });
     expect(JSON.stringify(r.jsonBody)).not.toContain("s21");                          // archived class never appears
     expect(JSON.stringify(r.jsonBody)).not.toContain("s05");                          // archived student never appears
@@ -101,7 +102,7 @@ describe("9A teacher-today — scope, attention counts and recent activity", () 
     expect(bad.status).toBe(200);
     expect(bad.jsonBody.attention.unreadMessages).toBeNull();
     expect(bad.jsonBody.partial).toEqual(["messages"]);
-    expect(bad.jsonBody.attention.activeAttempts.count).toBe(2);                       // the rest is intact
+    expect(bad.jsonBody.attention.activeAttempts.count + bad.jsonBody.attention.staleAttempts.count).toBe(2);   // the rest is intact
   });
 
   it("G: reads only the published/active-class assignment folders (never draft, archived or archived-class folders)", async () => {
@@ -117,6 +118,7 @@ describe("9A teacher-today — scope, attention counts and recent activity", () 
     const r = await todayHandler(req(), { ...AUTH_OK, ...unreadOk, container: ctx.container, nowMs: NOW_MS });
     expect(r.status).toBe(200);
     expect(r.jsonBody.attention.activeAttempts).toEqual({ count: 0, items: [] });
+    expect(r.jsonBody.attention.staleAttempts).toEqual({ count: 0, items: [] });
     expect(r.jsonBody.attention.notStarted.count).toBe(0);
     expect(r.jsonBody.attention.pendingReview.count).toBe(0);
     expect(r.jsonBody.recent).toEqual([]);
