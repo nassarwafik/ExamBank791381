@@ -1,6 +1,6 @@
 # Phase 21H — Enterprise teacher dashboard («لوحة المتابعة»)
 
-**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.2–21H.5 planned. Each phase: exact-head CI,
+**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1–21H.2 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.3–21H.5 planned. Each phase: exact-head CI,
 independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -38,7 +38,7 @@ Each decision is recorded here so the owner can reverse it at review.
 |---|---|---|
 | 21H.0 | True figures: active-now vs stale attempts; units with Arabic agreement; neutral zero; relative times | implemented |
 | 21H.1 | Project attention = submitted stages awaiting review (D2) | implemented |
-| 21H.2 | One scope, KPI row, one task inbox (D3) | planned |
+| 21H.2 | One scope and one refresh for the page (D3, as revised in §6) | implemented |
 | 21H.3 | Direct actions from the cards (start grading, remind, end an idle attempt); due today / results not released / opening today; «عرض الكل» | planned |
 | 21H.4 | Read cost of `teacher-today`: only the teacher's students, a short cache, measured before / after | planned |
 | 21H.5 | Visual and accessibility gate on the dashboard (axe, overflow, touch targets at 390 / 834 / 1180 / 1440) | planned |
@@ -92,3 +92,38 @@ Each decision is recorded here so the owner can reverse it at review.
 | `TeacherTodayHub.21h1` | 4 / 4: stages and students wording, rows, «و20 أخرى», no untouched or zero rows, the queue over review rows, the neutral empty card, older and malformed payloads |
 | `teacher-project-evaluation-9c` H14 | the additivity pin lists `review`; the zero block includes an empty `review` |
 | Mutation `node scripts/mutate-21h.mjs h1` | 8 mutants, **8 KILLED**. H1-M4 (ordering) survived first, because the fixture's names sorted the same way as the counts; the fixture now orders against the names, and the mutant is KILLED |
+
+## 6. Implementation record and evidence (21H.2)
+
+### D3 as implemented
+
+The hub and the dashboard now share **one scope** and **one refresh**:
+- the class filter and «تحديث» sit in the page's scope bar at the top;
+- the live hub sits directly under it and follows the selected class.
+
+UX-3's «يحتاج إلى انتباهك» stays: its four categories were locked by an earlier owner decision. They are not merged into the hub. Its description now says it reads «من نتائج الصف والفترة المحددين أعلاه», so it can be told apart from the live hub («مباشر الآن»).
+
+### What shipped
+
+- **Server** (`teacher-today.js`): `?classId=` narrows to one of the teacher's OWN classes.
+  - It is applied after the tenancy filter, so it can only narrow. An unknown class, or another teacher's class, gets 404 «الصف غير موجود.»
+  - The response names its `scopeClassId`.
+  - `studentId` / `projectCode` in the URL are still ignored.
+- **Page** (`TeacherPlatform.tsx`, `TeacherDashboard.tsx`, `src/teacher/todaySlot.ts`):
+  - TeacherPlatform provides how to render the hub through a context slot, so the Dashboard's lazy boundary and its 8E source guards are unchanged.
+  - The Dashboard renders the hub under its scope bar, in every state (loading, error, loaded). It uses the same parent and key, so the hub is mounted once and reads once.
+  - The page's single «تحديث» re-reads both reads.
+- **Hub** (`TeacherTodayHub.tsx`):
+  - It takes `classId`, `refreshSignal` and `embedded`.
+  - A summary belongs to the class it was read for: a later answer for an earlier class is dropped, and the previous class's figures are not shown while another class loads.
+  - Embedded, it shows no refresh button or timestamp of its own («مباشر الآن · يتحدّث تلقائيًا كل دقيقة»).
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `today-scope-21h2` (API) | 3 / 3: no class → all classes; `classId=c1` → only c1 (and `scopeClassId`); unknown → 404; multi-user: another teacher's class → 404, the owner's → 200 |
+| `TeacherDashboard.scope.21h2` | 3 / 3: the hub under the scope bar with no refresh of its own and one read; the class filter narrows the hub (`?classId=cA`) and the page's «تحديث» re-reads both; no stale figures while loading and a late answer for an older class never lands |
+| `teacher-project-evaluation-9c` H-auth | studentId / projectCode are still ignored (equal bodies); classId of the archived class narrows to nothing (no `s21`) |
+| Mutation `node scripts/mutate-21h.mjs h2` | 9 mutants, **9 KILLED**: classId ignored, scope widened past tenancy, unknown class answered, hub not sending the class, late answer landing, stale figures while loading, refresh not reaching the hub, the embedded refresh button, a remount on load |
+| tsc / lint | clean / 124 |
