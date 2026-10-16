@@ -67,6 +67,20 @@ export function gradebookCsvRows(assignment: { title: string; className?: string
   return out;
 }
 
+/**
+ * Phase 21G.7 — the SAME gradebook as the CSV, for the Excel and PDF exports: the header rows, then the column row (index 3, bold
+ * in Excel), then one row per student. The PDF adds the assignment's figures above the table — counts only, the ones the page
+ * shows; never a student's answers, the answer key or teacher feedback.
+ */
+export const GRADEBOOK_HEADER_ROW = 3;
+export type GradebookFigures = { students: number; submitted: number; pendingReview: number; finalized?: number; average: number | null };
+export function gradebookPrintReport(assignment: { title: string; className?: string; dueAt?: string }, rows: StudentResult[], gradingOf: (s: StudentResult) => GradingStatus, figures: GradebookFigures | null, now = new Date()) {
+  const table = gradebookCsvRows(assignment, rows, gradingOf);
+  const meta: Array<[string, string]> = [["الصف", assignment.className || "—"], ["آخر موعد", csvDateTime(assignment.dueAt) || "—"]];
+  if (figures) meta.push(["تم التسليم", figures.submitted + " من " + figures.students], ["بانتظار التصحيح", String(figures.pendingReview)], ["نهائي", String(figures.finalized ?? 0)], ["المعدل", figures.average === null ? "—" : figures.average + "%"]);
+  return { title: "سجل العلامات — " + (assignment.title || ""), subtitle: assignment.className ? "الصف: " + assignment.className : undefined, meta, columns: table[GRADEBOOK_HEADER_ROW].map(String), rows: table.slice(GRADEBOOK_HEADER_ROW + 1), generatedAt: csvDateTime(now.toISOString()) };
+}
+
 /** The subset of /api/assignment-results the dashboard drill holds (structural, so both result shapes fit). */
 export type ResultsForExport = {
   assignment: { title: string; totalMarks: number };

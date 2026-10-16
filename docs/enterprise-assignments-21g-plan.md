@@ -1,7 +1,7 @@
 # Phase 21G — Assignments: enterprise workflow and teacher tenancy
 
-**Status:** 21G.0, 21G.1 and 21G.2 implemented on branch `claude/nifty-clarke-k0wlid`; 21G.3–21G.7 planned. Awaiting exact-head CI, independent
-review and the owner's manual merge (`AGENTS.md` §3, §13).
+**Status:** 21G.0–21G.7 implemented (21G.0–21G.6 merged, 21G.6 as nassarwafik/ExamBank791381#331; 21G.7 in review on branch
+`claude/nifty-clarke-k0wlid`). Each phase: exact-head CI, independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 **Baseline:** `origin/main` `080c4df4` (merge of PR #326, the Exam Studio).
 
@@ -406,3 +406,55 @@ Fail-first: not applicable, as no defect was fixed. Deployment tier: 1 (local) o
 | Real Chromium at 1440 / 390 px | no horizontal overflow; five steps; the classes step with two classes ticked; the review with «إنشاء الواجب (نسختان)» |
 
 Fail-first applies to the reopened-wizard gap only; the new test failed before `730b4ffc`. Deployment tier: 1 (local) only.
+
+## 14. Implementation record and evidence (21G.7)
+
+### What shipped
+
+- **Excel export** (`src/reports/xlsx.ts`): a real `.xlsx` workbook with no new dependency.
+  - It is the Office Open XML parts in a STORED zip, with CRC-32.
+  - The sheet is right-to-left, with a bold header row.
+  - Numbers are written as numbers and text as inline strings. There is **no formula element at all**, so «=SUM(…)» stays text
+    (no formula injection).
+  - Characters XML forbids are dropped, and a non-finite number is an empty cell.
+  - openpyxl reads it as right-to-left, with the header bold, «=SUM» as text and numbers as numbers.
+- **PDF export** (`src/reports/printReport.ts`): a print-ready A4 landscape, right-to-left report printed from a hidden same-origin
+  iframe. The browser's «حفظ بصيغة PDF» shapes Arabic correctly, which a JavaScript PDF library would not.
+  - Every cell is escaped.
+  - The report fails cleanly when the browser offers no print, and the frame is removed after printing.
+  - Both new exports are built from the SAME rows as the CSV (`gradebookCsvRows`) and carry every student even while the screen is
+    searched. The PDF adds the page's counts. Neither ever carries answers, keys or teacher feedback.
+- **Reminders** («تذكير من لم يسلّم», «تذكير المحددين»): `POST /api/assignment-results {action:"remindStudents"}`.
+  - Who receives one: a personal `assignment_reminder` goes to each class member (or each ticked one) who has not submitted and can
+    still submit: published, open, and not closed for them by the same `timerState` as their page.
+  - At most one per student per assignment per day, through a dated dedupe key.
+  - `studentIds` are validated, and another class's student is never reached.
+  - The action is audited and tenancy-guarded like every assignment action.
+  - The student's bell reads «تذكير من المعلم — لم تسلّم «…» بعد · آخر موعد …».
+  - It is triggered by the teacher. An automatic reminder would need a scheduled job, which is a deployment change, so it is left
+    to the owner.
+- **Visual and accessibility gate**:
+  - Method: axe-core 4.10.2 (WCAG 2.1 A/AA) plus a layout check, run on eight screens at 390 / 834 (touch) and 1180 / 1440 px. The
+    screens are the home, the page's three sections, the review, and three wizard steps. axe was downloaded into the scratchpad as
+    a measuring tool, not a project dependency.
+  - Found: `listitem` (the blocking reasons were a list with `role=status`); `scrollable-region-focusable` (the question analysis
+    table); and touch targets under 44 px on the touch sizes.
+  - Fixed: the status is now a region around the list; the table frame is a named, focusable region; on a coarse pointer every
+    workspace and review control gets 44 px, and a selection box 24 px (the WCAG 2.2 AA minimum).
+  - **After: 32 / 32 checks, 0 violations, no horizontal overflow, no target below its minimum.**
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `xlsx.21g7` | 4 / 4: CRC-32 equal to Node's zlib, the zip read independently (central directory, local headers, every CRC), the parts, RTL / numbers / inline strings / no `<f>`, escaping and dropped characters |
+| `printReport.21g7` | 4 / 4: RTL A4 landscape, every cell escaped (an `<img onerror>` name stays text), no teacher feedback, the same columns and rows as the CSV, the iframe printed and removed, a clean failure without print, the reminder notification on the client |
+| `assignment-reminders-21g7` (API) | 4 / 4: only eligible members, once per day, `studentIds` limited and validated, draft / archived / not-yet-open / closed remind nobody, another teacher gets 404, the type is personal only |
+| `AssignmentsPanel.reports.21g7`, `a11yGate.21g7` | 3 / 3, 4 / 4: both reminder buttons (confirmed, exact bodies, counts), no reminder on a draft, Excel and PDF of every student while searched, the gate's markup and touch rules |
+| Full root suite + build on `51567ba2` (tree-identical to `b86f1f35` after moving onto the merge of #331) | 1,067 files / 13,200 tests, all passed; initial JS 114.1 KB gzip |
+| tsc / lint | clean / 124 |
+| Mutation `node scripts/mutate-21g.mjs g7` | 16 mutants, **16 KILLED** on the first run: reminder eligibility, the daily dedupe, a draft reminding, unvalidated `studentIds`, another class reached, an Excel formula, unescaped Excel / PDF cells, a wrong CRC, LTR, the frame left behind, both axe fixes, and Excel / PDF exporting the filtered subset. G1-M12 was re-pointed (the panel now builds the same rows twice) and is KILLED |
+| Gate (Chromium + axe) | 32 / 32 clean after the fixes; before them, 2 axe rules and the touch targets above |
+
+Fail-first applies to the gate's findings: axe reported them on the 21G.6 build, and they are absent on this head. Deployment tier:
+1 (local) only.

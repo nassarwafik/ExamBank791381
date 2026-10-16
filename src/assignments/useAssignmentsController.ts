@@ -393,6 +393,24 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     if (failed.length) setError("تعذر تنفيذ الإجراء لـ " + studentsCount(failed.length) + ": " + failed.map(f => f.s.studentName + " (" + f.error + ")").join("، "));
     return failed.length === 0;
   }
+  // Phase 21G.7 — «تذكير»: a personal reminder to the students who have not submitted and can still submit (the server decides who;
+  // at most one per student per day). studentIds = the ticked rows, or none for every eligible student of the class.
+  async function remindStudents(studentIds?: string[]) {
+    const item = resultsFor;
+    if (!item || busy) return;
+    const target = studentIds && studentIds.length ? studentsCount(studentIds.length) + " من المحددين" : "كل من لم يسلّم بعد";
+    if (!(await confirm({ title: "تذكير الطلاب", message: "سيصل إشعار «تذكير من المعلم» إلى " + target + " ممن لا يزال بإمكانهم التسليم. يُرسل تذكير واحد على الأكثر لكل طالب في اليوم.", confirmLabel: "إرسال التذكير" }))) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const r = await api<{ reminded: number; alreadyToday: number; notNeeded: number; failed: number }>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "remindStudents", assignmentId: item.assignmentId, ...(studentIds && studentIds.length ? { studentIds } : {}) }) });
+      const parts = [r.reminded ? "✓ أُرسل التذكير إلى " + studentsCount(r.reminded) + "." : "لم يُرسل تذكير جديد."];
+      if (r.alreadyToday) parts.push(studentsCount(r.alreadyToday) + " ذُكّر اليوم مسبقًا.");
+      if (r.notNeeded) parts.push(studentsCount(r.notNeeded) + " لا يحتاج تذكيرًا (سلّم أو أُغلق عليه الواجب).");
+      setNotice(parts.join(" "));
+      if (r.failed) setError("تعذر إرسال التذكير إلى " + studentsCount(r.failed) + "؛ أعد المحاولة لاحقًا.");
+      if (studentIds && studentIds.length) clearSelection();
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر إرسال التذكير."); } finally { setBusy(false); }
+  }
   async function bulkGrant() {
     const n = visibleResults.filter(s => selected.has(s.studentId)).length;
     if (!resultsFor || !n) return;
@@ -425,7 +443,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const canCreate = !busy && !src.examLoading && f.classIds.length > 0 && !!f.title.trim() && !!src.sourceExam && src.sourceCount > 0 && !windowBlocks(composer.windowIssues);
 
   return {
-    token, busy, loading, error, notice, mode,
+    token, busy, loading, error, notice, mode, reportError: (message: string) => { setNotice(""); setError(message); },
     toolbar: { active, effectiveFilter, showArchived, search, archivedCount, changeScope, openComposer, refresh, timeFilter, timeCounts: timeFilterCounts(scoped, now) },
     home: { kpis: homeKpis(scoped, progress, now), progress, now },
     list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item), setResultsRelease: (item: Item, mode: ResultsRelease) => void setResultsRelease(item, mode), releaseResults: (item: Item, released: boolean) => void releaseResults(item, released) },
@@ -435,6 +453,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
       selected, toggleSelected: (id: string) => setSelected(x => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; }),
       toggleAllSelected: (ids: string[], on: boolean) => setSelected(x => { const n = new Set(x); for (const id of ids) { if (on) n.add(id); else n.delete(id); } return n; }),
       clearSelection, bulkGrant: () => void bulkGrant(), openBulkDeadline,
+      remindAll: () => void remindStudents(), remindSelected: () => void remindStudents(visibleResults.filter(x => selected.has(x.studentId)).map(x => x.studentId)),
       bulkDeadline: { open: bulkDeadlineOpen, count: visibleResults.filter(s => selected.has(s.studentId)).length, value: bulkDeadlineValue, setValue: setBulkDeadlineValue, close: () => setBulkDeadlineOpen(false), save: () => void saveBulkDeadline() } },
     dialogs: {
       attemptsFor, closeAttempts: () => setAttemptsFor(null), saveMaxAttempts: (item: Item, value: number) => void saveMaxAttempts(item, value),

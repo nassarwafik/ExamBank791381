@@ -39,7 +39,8 @@ const { listStreamIds } = require("./message-read-state");
 const EVENT_PREFIX = "platform/notifications/";
 const EVENT_TYPES = Object.freeze([
   "assignment_published", "assignment_deadline_extended", "assignment_reopened", "assignment_retry_granted",
-  "attempt_time_extended", "learning_module_published", "assignment_reviewed", "teacher_reaction", "teacher_note"
+  "attempt_time_extended", "learning_module_published", "assignment_reviewed", "teacher_reaction", "teacher_note",
+  "assignment_reminder"   // Phase 21G.7 — the teacher's «تذكير» to a student who has not submitted yet (personal)
 ]);
 // Which scope each type may be stored in (a class-wide deadline extension is class scope; a per-student one is personal).
 const TYPE_SCOPES = Object.freeze({
@@ -51,7 +52,8 @@ const TYPE_SCOPES = Object.freeze({
   learning_module_published: ["class"],
   assignment_reviewed: ["student"],
   teacher_reaction: ["student"],
-  teacher_note: ["student"]
+  teacher_note: ["student"],
+  assignment_reminder: ["student"]
 });
 const REACTION_IDS = Object.freeze(["heart", "clap", "cheer", "fire"]);
 const DEDUPE_WINDOW = 20;
@@ -99,7 +101,8 @@ function eventFields(type, src) {
     case "assignment_retry_granted":
       return assignment();
     case "assignment_deadline_extended":
-    case "assignment_reopened": {
+    case "assignment_reopened":
+    case "assignment_reminder": {
       const a = assignment();
       return a && { ...a, dueAt: cleanIso(s.dueAt) };
     }

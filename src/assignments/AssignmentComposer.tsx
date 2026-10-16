@@ -227,7 +227,7 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
         </div>
       )}
 
-      {blocking.length > 0 && <ul className="eb-wizard-issues" role="status" aria-label="ما يمنع المتابعة">{blocking.map(m => <li key={m}>{m}</li>)}</ul>}
+      {blocking.length > 0 && <div role="status" aria-label="ما يمنع المتابعة"><ul className="eb-wizard-issues">{blocking.map(m => <li key={m}>{m}</li>)}</ul></div>}
       <div className="eb-composer-foot">
         <button type="button" className="eb-button" onClick={p.onClose}>إلغاء</button>
         {at > 0 && <button type="button" className="eb-button" onClick={() => goTo(WIZARD_STEPS[at - 1].key)}><IconChevronBack size={16} />السابق</button>}

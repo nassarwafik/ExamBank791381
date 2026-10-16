@@ -5,7 +5,7 @@ import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
-import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose, IconDownload } from "../icons";
+import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose, IconDownload, IconBell } from "../icons";
 import type { GradingStatus } from "../gradingStatus";
 import { studentStatus } from "./gradebookStatus";
 import type { CodingEvidenceTotals, CodingGradingStatus, GradebookFilter, GradebookSort, Item, StudentResult } from "./types";
@@ -38,6 +38,9 @@ export type GradebookProps = {
   codingTotals?: CodingEvidenceTotals | null;
   /** Phase 21E.2 — export the whole gradebook of this assignment as CSV (every student, not only the filtered rows). */
   onExportCsv?: () => void;
+  /** Phase 21G.7 — the same gradebook as an Excel workbook (.xlsx) and as a print-ready report (save as PDF). */
+  onExportXlsx?: () => void;
+  onPrint?: () => void;
   /** Phase 21G.4 — row selection for the bulk actions (absent = no selection, e.g. an archived assignment). The panel clears it
    *  whenever the visible rows change meaning (search, filter, another assignment), so a bulk action never reaches an unseen row. */
   selection?: {
@@ -47,7 +50,11 @@ export type GradebookProps = {
     onClear: () => void;
     onBulkGrant: () => void;
     onBulkDeadline: () => void;
+    /** Phase 21G.7 — a reminder to the ticked students (the server sends it only to those who can still submit). */
+    onRemind?: () => void;
   };
+  /** Phase 21G.7 — «تذكير من لم يسلّم» for a published assignment (the server decides who is eligible). */
+  onRemindAll?: () => void;
 };
 
 const FILTERS: Array<[GradebookFilter, string]> = [["all", "الكل"], ["pendingReview", "بانتظار التصحيح"], ["final", "نهائي"], ["notSubmitted", "لم يسلّم"], ["active", "قيد المحاولة"]];
@@ -88,6 +95,9 @@ export default function Gradebook(p: GradebookProps) {
         </div>
         <button type="button" className={"eb-button is-small" + (p.sort === "pendingFirst" ? " is-quiet is-active" : "")} aria-pressed={p.sort === "pendingFirst"} onClick={() => p.onSort(p.sort === "pendingFirst" ? "name" : "pendingFirst")}>بانتظار التصحيح أولًا</button>
         {p.onExportCsv && <button type="button" className="eb-button is-small gradebook-export" onClick={p.onExportCsv} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />تصدير سجل العلامات (CSV)</button>}
+        {p.onExportXlsx && <button type="button" className="eb-button is-small gradebook-export-xlsx" onClick={p.onExportXlsx} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />تصدير سجل العلامات (Excel)</button>}
+        {p.onPrint && <button type="button" className="eb-button is-small gradebook-print" onClick={p.onPrint} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />طباعة سجل العلامات (PDF)</button>}
+        {p.onRemindAll && p.assignment.status === "published" && p.rows.some(s => !s.latestResult) && <button type="button" className="eb-button is-small gradebook-remind" onClick={p.onRemindAll} disabled={p.busy}><IconBell size={16} aria-hidden="true" />تذكير من لم يسلّم</button>}
         {!archived && p.onBulkCodingRetry && needsCodingRetry(p.codingSummary) && <button type="button" className="eb-button is-small coding-bulk-retry" disabled={p.busy} onClick={p.onBulkCodingRetry}>إعادة محاولة التصحيح البرمجي</button>}
       </div>
       {codingCard && <p className="eb-coding-summary" data-testid="coding-summary-card">
@@ -98,6 +108,7 @@ export default function Gradebook(p: GradebookProps) {
           <span className="eb-gradebook-bulk-count" role="status">تم تحديد {studentsCount(selectedVisible)}</span>
           <button type="button" className="eb-button is-small" onClick={sel.onBulkGrant} disabled={p.busy}><IconPlus size={16} />منح محاولة إضافية</button>
           <button type="button" className="eb-button is-small" onClick={sel.onBulkDeadline} disabled={p.busy}><IconEdit size={16} />تمديد الموعد</button>
+          {sel.onRemind && p.assignment.status === "published" && <button type="button" className="eb-button is-small" onClick={sel.onRemind} disabled={p.busy}><IconBell size={16} />تذكير المحددين</button>}
           <button type="button" className="eb-button is-small is-ghost" onClick={sel.onClear} disabled={p.busy}>إلغاء التحديد</button>
         </div>
       )}

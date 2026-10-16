@@ -105,3 +105,8 @@
 .rv-student-nav button:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
 .rv-student-pos{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
 @media (max-width: 767px){ .rv-student-nav{ inline-size:100%; margin-inline-start:0; } }
+
+/* Phase 21G.7 — touch screens: 44 px targets for the review's student navigation, attempt tabs, filters and pager. */
+@media (pointer: coarse) {
+  .rv-student-nav button, .review-attempt-tabs button, .rv-filter, .rv-pager button, .review-top > button { min-block-size: 44px; }
+}
