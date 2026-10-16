@@ -200,7 +200,7 @@ describe("9C-F/K robustness, additivity, authorization", () => {
     const r = await todayHandler(req(), deps(ctx));
     expect(Object.keys(r.jsonBody).sort()).toEqual(["attention", "generatedAt", "ok", "partial", "projectEvaluation", "recent", "scope"]);
     expect(Object.keys(r.jsonBody.attention).sort()).toEqual(["activeAttempts", "notStarted", "pendingReview", "staleAttempts", "unreadMessages"]);   // 21H.0 adds staleAttempts
-    expect(Object.keys(r.jsonBody.projectEvaluation).sort()).toEqual(["attention", "attentionTotal", "capped", "projects", "skipped", "studentsWithUngradedStages", "totalUngradedStages"]);
+    expect(Object.keys(r.jsonBody.projectEvaluation).sort()).toEqual(["attention", "attentionTotal", "capped", "projects", "review", "skipped", "studentsWithUngradedStages", "totalUngradedStages"]);   // 21H.1 adds review
     const failing = await todayHandler(req(), deps(ctx, { loadProjectEvaluationSources: async () => { throw new Error("storage down"); } }));
     expect(failing.status).toBe(200);
     expect(failing.jsonBody.projectEvaluation).toBeNull();
@@ -209,7 +209,7 @@ describe("9C-F/K robustness, additivity, authorization", () => {
     // a platform with no project enrollment at all → an explicit zero block, never null
     const s = seed(); for (const c of ["c1", "c2", "c3"]) s["platform/classes/" + c + ".json"].programCodes = [];
     const none = await todayHandler(req(), deps(createMemoryContainer(s)));
-    expect(none.jsonBody.projectEvaluation).toEqual({ studentsWithUngradedStages: 0, totalUngradedStages: 0, projects: [], attentionTotal: 0, capped: false, attention: [], skipped: [] });
+    expect(none.jsonBody.projectEvaluation).toEqual({ studentsWithUngradedStages: 0, totalUngradedStages: 0, projects: [], attentionTotal: 0, capped: false, attention: [], review: { studentsAwaitingReview: 0, totalReadyStages: 0, attentionTotal: 0, capped: false, attention: [] }, skipped: [] });
   });
   it("H-auth: unauthenticated → 401 and no project read; query parameters cannot widen the scope (classId / studentId in the URL are ignored)", async () => {
     const ctx = createMemoryContainer(seed());

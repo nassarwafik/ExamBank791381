@@ -3,10 +3,10 @@ import { IconMail, IconAssignments, IconStudents, IconReports, IconProjects, Ico
 import SectionHeader from "../ui/SectionHeader";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import type { TeacherNavId } from "../shell/teacherNav";
-import { parseProjectEvaluation, type ProjectEvaluationAttention, type ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
+import { parseProjectEvaluation, type ProjectEvaluationAttention, type ProjectEvaluationAttentionRow, type ProjectReviewAttention } from "./teacherTodayEvaluation";
 import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "../projects/drillTarget";
 import { recentActivityTarget, type AssignmentDrillTarget } from "../assignments/drillTarget";
-import { count, spread, sinceText, exactTime, SUBMISSIONS, STUDENTS, STUDENTS_WORKING } from "./todayFormat";
+import { count, spread, sinceText, exactTime, SUBMISSIONS, STUDENTS, STUDENTS_WORKING, STAGES, FROM_STUDENTS } from "./todayFormat";
 import "./teacherToday.css";
 export type { ProjectEvaluationAttention, ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
 
@@ -87,6 +87,7 @@ const attemptText = (status: string) => (status === "paused" ? "محاولة م�
  * the positive empty state says nothing waits. Rendered only when the payload carries the block.
  */
 function ProjectEvaluationCard({ data, onOpen, onOpenAll }: { data: ProjectEvaluationAttention | null; onOpen: (row: ProjectEvaluationAttentionRow) => void; onOpenAll: () => void }) {
+  if (data && data.review) return <ProjectReviewCard review={data.review} onOpen={onOpen} onOpenAll={onOpenAll} />;
   const id = "eb-today-project-eval";
   let body: ReactNode;
   if (data === null) body = <p className="eb-attention-partial">تعذر قراءة تقييم المشاريع الآن؛ بقية الملخص محدّثة.</p>;
@@ -111,6 +112,37 @@ function ProjectEvaluationCard({ data, onOpen, onOpenAll }: { data: ProjectEvalu
     <article className={"eb-attention-card tone-" + (data && data.studentsWithUngradedStages > 0 ? "info" : "neutral") + " eb-today-project-eval"} aria-labelledby={id}>
       <h3 id={id} className="eb-attention-title"><span>تقييم المشاريع</span><span className="eb-attention-count">{data === null ? "—" : data.studentsWithUngradedStages}</span></h3>
       {body}
+      <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={onOpenAll}>المشاريع</button>
+    </article>
+  );
+}
+
+/**
+ * Phase 21H.1 (decision D2) — «مراحل بانتظار مراجعتك»: the stages students SUBMITTED for review, the same figure as the
+ * sidebar badge. A stage nobody has worked on is not listed. Rows open the same evaluation queue / drill-in as 9C–9F.
+ */
+function ProjectReviewCard({ review, onOpen, onOpenAll }: { review: ProjectReviewAttention; onOpen: (row: ProjectEvaluationAttentionRow) => void; onOpenAll: () => void }) {
+  const id = "eb-today-project-eval", shown = review.attention.slice(0, PREVIEW * 2), rest = review.attentionTotal - shown.length;
+  const n = review.totalReadyStages;
+  return (
+    <article className={"eb-attention-card tone-" + (n > 0 ? "info" : "neutral") + " eb-today-project-eval"} aria-labelledby={id}>
+      <h3 id={id} className="eb-attention-title"><span>مراحل مشاريع بانتظار مراجعتك</span><span className="eb-attention-count">{n}</span></h3>
+      {n === 0 ? <p className="eb-attention-empty">لا توجد مراحل سلّمها الطلاب بانتظار مراجعتك.</p> : (
+        <>
+          <p className="eb-today-note">{count(n, STAGES)} {count(review.studentsAwaitingReview, FROM_STUDENTS)}</p>
+          <ul className="eb-attention-list" aria-label="طلاب سلّموا مراحل مشروع للمراجعة">
+            {shown.map(r => (
+              <li key={r.studentId + ":" + r.projectCode}>
+                <button type="button" className="eb-attention-item" onClick={() => onOpen(r)} aria-label={"افتح مشروع " + r.projectTitle + " لمراجعة " + r.displayName + " — " + count(r.readyStages, STAGES) + " بانتظار المراجعة"}>
+                  <span className="eb-attention-item-label">{r.displayName} — {r.projectTitle}</span>
+                  <span className="eb-attention-item-meta" dir="auto">{count(r.readyStages, STAGES)} بانتظار المراجعة · {stagesText(r)}{r.className ? " · " + r.className : ""}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {rest > 0 && <p className="eb-attention-more">و{rest} أخرى</p>}
+        </>
+      )}
       <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={onOpenAll}>المشاريع</button>
     </article>
   );
@@ -173,11 +205,11 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
   const projectEval = data?.projectEvaluation;                                 // undefined = older payload (no card)
   const stale = a?.staleAttempts;                                              // undefined = older payload (no card)
   const now = data?.generatedAt || "";
-  const total = a ? a.activeAttempts.count + (stale ? stale.count : 0) + a.notStarted.count + a.pendingReview.count + (a.unreadMessages ? a.unreadMessages.total : 0) + (projectEval ? projectEval.studentsWithUngradedStages : 0) : 0;
+  const total = a ? a.activeAttempts.count + (stale ? stale.count : 0) + a.notStarted.count + a.pendingReview.count + (a.unreadMessages ? a.unreadMessages.total : 0) + (projectEval ? (projectEval.review ? projectEval.review.totalReadyStages : projectEval.studentsWithUngradedStages) : 0) : 0;
   const quiet = !!a && total === 0 && !a.unreadMessages?.total;
   // A row: the exact student (9D) when App offers it, else the project (9C), else the Projects destination.
   const openRow = (r: ProjectEvaluationAttentionRow) => {
-    const rows = projectEval ? projectEval.attention : [];
+    const rows = projectEval ? (projectEval.review ? projectEval.review.attention : projectEval.attention) : [];
     const index = rows.findIndex(x => x.studentId === r.studentId && x.projectCode === r.projectCode && x.classId === r.classId);
     if (onStartEvaluationQueue && index >= 0) onStartEvaluationQueue(rows.map(x => ({ projectCode: x.projectCode, classId: x.classId, studentId: x.studentId, displayName: x.displayName })), index);
     else if (onOpenProjectStudent) onOpenProjectStudent({ projectCode: r.projectCode, classId: r.classId, studentId: r.studentId });

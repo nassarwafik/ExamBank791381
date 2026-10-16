@@ -31,6 +31,10 @@ const { normalizeClassStatus } = require("../class-lifecycle");
 const { isStudentClassMember } = require("../class-membership");
 
 const ATTENTION_CAP = 20;
+// Phase 21H.1 (decision D2) — the teacher's actual work: stages a student SUBMITTED for review (status ready_for_review on an
+// active stage of a current member), the same rule as the sidebar badge (ready-count.js). Reported in the additive `review`
+// block next to the unchanged 9C counters, so a stage nobody has worked on is no longer presented as waiting for the teacher.
+const READY = "ready_for_review";
 
 const studentName = u => String(u.displayName || [u.firstName, u.familyName].filter(Boolean).join(" ") || u.code || u.userId || "");
 const isActiveClass = c => !!c && !!c.classId && normalizeClassStatus(c) === "active";
@@ -67,6 +71,12 @@ async function loadProjectEvaluationSources(container, classes, deps = {}) {
 }
 
 const collator = new Intl.Collator("ar");
+function compareReviewRows(a, b) {
+  return b.readyStages - a.readyStages
+    || collator.compare(a.displayName, b.displayName)
+    || (a.studentId < b.studentId ? -1 : a.studentId > b.studentId ? 1 : 0)
+    || (a.projectCode < b.projectCode ? -1 : a.projectCode > b.projectCode ? 1 : 0);
+}
 function compareRows(a, b) {
   return b.ungradedStages - a.ungradedStages
     || a.evaluationProgress - b.evaluationProgress
@@ -82,7 +92,8 @@ function compareRows(a, b) {
  *   cap      — display cap for `attention` (default ATTENTION_CAP).
  */
 function deriveProjectEvaluationAttention({ users, sources, cap = ATTENTION_CAP }) {
-  const rows = [], skipped = [];
+  const rows = [], reviewRows = [], skipped = [];
+  const reviewStudentIds = new Set();
   const perProject = new Map();
   const studentIds = new Set();
   for (const src of Array.isArray(sources) ? sources : []) {
@@ -96,6 +107,15 @@ function deriveProjectEvaluationAttention({ users, sources, cap = ATTENTION_CAP 
     for (const u of members) {
       const studentId = String(u.userId);
       const e = buildProjectEvaluation(workDef, byStudent.get(studentId) || null);   // the ONE evaluation authority
+      const readyStages = e.stages.filter(st => st.status === READY).length;
+      if (readyStages > 0) {
+        reviewStudentIds.add(studentId);
+        reviewRows.push({
+          studentId, displayName: studentName(u), classId: src.classId, className: src.className,
+          projectCode: src.projectCode, projectTitle: definition.title, readyStages,
+          gradedStages: e.gradedStages, totalStages: e.totalStages, ungradedStages: e.ungradedStages, evaluationProgress: e.evaluationProgress
+        });
+      }
       if (e.ungradedStages <= 0) continue;
       projectStudents += 1; projectStages += e.ungradedStages; studentIds.add(studentId);
       rows.push({
@@ -109,6 +129,7 @@ function deriveProjectEvaluationAttention({ users, sources, cap = ATTENTION_CAP 
     perProject.set(src.projectCode, agg);
   }
   rows.sort(compareRows);
+  reviewRows.sort(compareReviewRows);
   const limit = Math.max(0, Number(cap) || 0);
   return {
     studentsWithUngradedStages: studentIds.size,
@@ -117,6 +138,13 @@ function deriveProjectEvaluationAttention({ users, sources, cap = ATTENTION_CAP 
     attentionTotal: rows.length,
     capped: rows.length > limit,
     attention: rows.slice(0, limit),
+    review: {
+      studentsAwaitingReview: reviewStudentIds.size,
+      totalReadyStages: reviewRows.reduce((n, r) => n + r.readyStages, 0),
+      attentionTotal: reviewRows.length,
+      capped: reviewRows.length > limit,
+      attention: reviewRows.slice(0, limit)
+    },
     skipped
   };
 }
