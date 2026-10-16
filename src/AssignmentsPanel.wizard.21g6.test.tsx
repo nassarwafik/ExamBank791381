@@ -98,4 +98,27 @@ describe("21G.6 the creation wizard", () => {
     expect(within(w).getByText("واجب الأسبوع")).toBeTruthy();
     expect(within(within(w).getByText("المحاولات").closest("div") as HTMLElement).getByText("3")).toBeTruthy();
   });
+
+  it("never re-ticks a class the teacher unticked (even when the classes reload); a wizard reopened after a full create starts on the first class again", async () => {
+    const view = render(<AssignmentsPanel token="t" classes={CLASSES as never} currentExam={null} />);
+    fireEvent.click(await screen.findByRole("button", { name: "إنشاء واجب" }));
+    const w = await screen.findByRole("region", { name: "إنشاء واجب جديد" });
+    await waitFor(() => expect(within(w).getAllByRole("option").length).toBeGreaterThan(1));
+    await chooseContent(w);
+    next(w);
+    fireEvent.click(within(w).getByRole("checkbox", { name: /الحادي عشر/ }));
+    view.rerender(<AssignmentsPanel token="t" classes={CLASSES.map(c => ({ ...c })) as never} currentExam={null} />);   // the classes reload
+    expect((within(w).getByRole("checkbox", { name: /الحادي عشر/ }) as HTMLInputElement).checked).toBe(false);
+    expect(within(w).getByRole("status", { name: "ما يمنع المتابعة" }).textContent).toBe("اختر صفًا واحدًا على الأقل.");
+    fireEvent.click(within(w).getByRole("checkbox", { name: /العاشر/ }));
+    fireEvent.click(within(w).getByRole("button", { name: /المراجعة/ }));
+    fireEvent.click(within(w).getByRole("button", { name: "إنشاء الواجب" }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "إنشاء واجب جديد" })).toBeNull());
+    expect(creates()).toEqual(["c2"]);
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء واجب" }));
+    const again = await screen.findByRole("region", { name: "إنشاء واجب جديد" });
+    await chooseContent(again);
+    next(again);
+    expect(within(again).getAllByRole("checkbox").filter(b => b.closest(".eb-class-option")).map(b => (b as HTMLInputElement).checked)).toEqual([true, false, false]);
+  });
 });

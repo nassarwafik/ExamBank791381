@@ -101,6 +101,9 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     const el = typeof document !== "undefined" ? document.activeElement : null;
     composerOpenerRef.current = el instanceof HTMLElement ? el : null;
     setError(""); setNotice(""); setMode("composer");
+    // 21G.6 — a wizard opened after every chosen class got its copy starts on the first class again (on opening, never behind the
+    // teacher's back while the wizard is open).
+    if (!composer.fields.classIds.length && active[0]) composer.fields.setClassIds([active[0].classId]);
   }
   function closeComposer() {
     // The opener is disabled while the composer is open, so focus is returned after the mode flips (effect below).
