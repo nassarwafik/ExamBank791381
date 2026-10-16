@@ -25,7 +25,20 @@ const H2_API = ["api/tests/today-scope-21h2.test.js"], H2_UI = ["src/TeacherDash
 const H3_API = ["api/tests/today-categories-21h3.test.js"], H3_UI = ["src/teacher/TeacherTodayHub.21h3.test.tsx", "src/teacher/TeacherTodayHub.12b.test.tsx", "src/teacher/todayFormat.21h0.test.ts"];
 const DOCCACHE = "api/src/lib/etag-doc-cache.js";
 const H4 = ["api/tests/etag-doc-cache-21h4.test.js", "api/tests/read-cost-teacher-today-12e.test.js"];
+const H5 = ["src/teacher/dashboardGate.21h5.test.ts"], DCSS = "src/dashboard-pro.css", TCSS = "src/teacher/teacherToday.css";
 export const CAMPAIGNS = {
+  h5: [
+    { id: "H5-M1", what: "a chart canvas is exposed as an unnamed image again", file: DASH,
+      find: "<Bar data={data} options={options} aria-hidden=\"true\"/></div>;\n}\nfunction ClassComparisonChart", replace: "<Bar data={data} options={options}/></div>;\n}\nfunction ClassComparisonChart", tests: H5 },
+    { id: "H5-M2", what: "the dashboard toolbar loses its 44 px touch size", file: DCSS,
+      find: "  .eb-dash-toolbar :is(button, select), .eb-dash-field select,", replace: "  .eb-dash-field select,", tests: H5 },
+    { id: "H5-M3", what: "table links stay 19 px tall on touch", file: DCSS,
+      find: "  .analytics-link{ display:inline-flex; align-items:center; min-height:44px; min-width:44px; }", replace: "  .analytics-link{ display:inline-flex; align-items:center; }", tests: H5 },
+    { id: "H5-M4", what: "the hub's row actions lose their touch size", file: TCSS,
+      find: "  .eb-today-row-action, .eb-today-recent-action, .eb-today-row-secondary, .eb-today-card-action,", replace: "  .eb-today-recent-action, .eb-today-card-action,", tests: H5 },
+    { id: "H5-M5", what: "the hub grid goes back to narrow ragged cards", file: TCSS,
+      find: ".eb-today-grid{ grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); align-items:stretch; }", replace: ".eb-today-grid{ grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); align-items:start; }", tests: H5 }
+  ],
   h4: [
     { id: "H4-M1", what: "a cached document is used although its ETag changed", file: DOCCACHE,
       find: "if (hit && hit.etag === etag) {", replace: "if (hit) {", tests: H4 },

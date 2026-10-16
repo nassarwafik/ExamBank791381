@@ -63,3 +63,15 @@
 @media (min-width: 768px){ .eb-today-row-secondary{ min-height:38px; } }
 .eb-today-notice{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-success-bg); color:var(--eb-success-tx); font-size:var(--eb-fs-13); }
 .eb-today-notice.is-error{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+/* Phase 21H.5 — on a coarse pointer the hub's rows, row actions, card actions and quick actions keep 44 px at every width
+   (the 38 px desktop size above applies to fine pointers only). */
+@media (pointer: coarse){
+  .eb-today-row-action, .eb-today-recent-action, .eb-today-row-secondary, .eb-today-card-action,
+  .eb-today-project-eval .eb-attention-item, .eb-today-actions .eb-button, .eb-today-teacher .eb-button{ min-height:44px; }
+}
+/* Phase 21H.5 — the hub's grid: wider cards (fewer, readable columns) of EQUAL height per row (no ragged gaps; each card's
+   action stays at its foot), and a row's «تذكير» wraps under the row text when the card is narrow. */
+.eb-today-grid{ grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); align-items:stretch; }
+.eb-today-row-item.has-action, .eb-today-row.has-action{ flex-wrap:wrap; }
+.eb-today-row-item.has-action .eb-today-row-action{ flex:1 1 170px; }
+.eb-today-row-secondary{ margin-inline-start:auto; }
