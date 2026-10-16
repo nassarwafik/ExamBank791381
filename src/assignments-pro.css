@@ -263,3 +263,9 @@
 @media (prefers-reduced-motion: reduce) {
   .eb-assign-row, .library-item { transition: none; }
 }
+
+/* Phase 21G.0 — the composer's window checks and the draft-by-default publish choice. */
+.eb-assign-composer .eb-field-warning { margin: var(--eb-space-1) 0 0; color: var(--eb-warn-tx); font-size: var(--eb-fs-12); line-height: var(--eb-lh-body); }
+.eb-assign-composer input[aria-invalid="true"] { border-color: var(--eb-danger-tx); }
+.eb-publish-choice { display: flex; flex-direction: column; gap: var(--eb-space-1); align-self: end; }
+.eb-window-field { display: flex; flex-direction: column; min-width: 0; }

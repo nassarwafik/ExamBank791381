@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import type {AttemptPolicy} from "./assignments/attemptPolicy";
+import { assignmentWindowIssues, windowBlocks } from "./assignments/assignmentWindow";
 import {withTrackingCode} from "./lib/requestTrace";
 import AssignmentReview from "./AssignmentReview";
 import {createPortal} from "react-dom";
@@ -50,7 +51,7 @@ const normalizeQuery=(v:string)=>v.trim().toLocaleLowerCase("ar");
 
 export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder,drill=null,onDrillConsumed}:Props){
  const current=currentExam&&typeof currentExam==="object"?currentExam as Exam:null;
- const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[durationMinutes,setDurationMinutes]=useState(0),[attemptPolicy,setAttemptPolicy]=useState<AttemptPolicy>("continuous"),[publish,setPublish]=useState(true),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
+ const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[durationMinutes,setDurationMinutes]=useState(0),[attemptPolicy,setAttemptPolicy]=useState<AttemptPolicy>("continuous"),[publish,setPublish]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
  const [deadlineFor,setDeadlineFor]=useState<string|null>(null),[deadlineValue,setDeadlineValue]=useState("");
  const [reopenFor,setReopenFor]=useState<string|null>(null),[reopenValue,setReopenValue]=useState("");
  const [extendFor,setExtendFor]=useState<string|null>(null),[extendValue,setExtendValue]=useState("");
@@ -176,7 +177,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  useEffect(()=>{if(mode==="list"&&resultsFor&&focusDetailPending.current){focusDetailPending.current=false;detailHeadingRef.current?.focus()}},[mode,resultsFor]);
 
  async function create(){
-  if(busy||!classId||!title.trim()||!sourceExam||!examHasQuestions(sourceExam))return;
+  if(busy||!classId||!title.trim()||!sourceExam||!examHasQuestions(sourceExam)||windowBlocks(assignmentWindowIssues(openAt,dueAt)))return;
   setBusy(true);setError("");setNotice("");
   try{
    const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"create",classId,title:title.trim(),instructions:instructions.trim(),openAt:openAt?new Date(openAt).toISOString():"",dueAt:dueAt?new Date(dueAt).toISOString():"",maxAttempts,durationMinutes,attemptPolicy,publish,examSnapshot:sourceExam})});
@@ -428,7 +429,8 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const deadlineStudent=results.find(x=>x.studentId===deadlineFor)||null,reopenStudent=results.find(x=>x.studentId===reopenFor)||null,extendStudent=results.find(x=>x.studentId===extendFor)||null;
  const extendEffDue=extendStudent?(extendStudent.dueAtOverride||resultsFor?.dueAt||""):"";
  const willClip=!!(extendValue&&extendEffDue&&new Date(extendValue).getTime()>new Date(extendEffDue).getTime());
- const canCreate=!busy&&!examLoading&&!!classId&&!!title.trim()&&!!sourceExam&&sourceCount>0;
+ const windowIssues=assignmentWindowIssues(openAt,dueAt);
+ const canCreate=!busy&&!examLoading&&!!classId&&!!title.trim()&&!!sourceExam&&sourceCount>0&&!windowBlocks(windowIssues);
  const showDetailArea=mode==="composer"||resultsFor!==null;
 
  return <section className="assignments-panel eb-assignments">
@@ -460,7 +462,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     libraryLoading={libraryLoading} libraryItems={libraryFiltered} libraryCategories={libraryCats} librarySearch={librarySearch} onLibrarySearch={setLibrarySearch} libraryCategory={libraryCategory} onLibraryCategory={setLibraryCategory}
     librarySelectedId={librarySelectedId} onChooseLibraryItem={it=>void chooseLibraryItem(it)} onPreview={it=>void openPreview(it)} previewBusyId={previewBusyId} onCopyToBuilder={onCopyLibraryExamToBuilder?(it=>void copyLibraryItem(it)):undefined} copyBusyId={copyBusyId}
     activeClasses={active} classId={classId} onClassId={setClassId} title={title} onTitle={setTitle} instructions={instructions} onInstructions={setInstructions} openAt={openAt} onOpenAt={setOpenAt} dueAt={dueAt} onDueAt={setDueAt}
-    maxAttempts={maxAttempts} onMaxAttempts={setMaxAttempts} durationMinutes={durationMinutes} onDurationMinutes={setDurationMinutes} attemptPolicy={attemptPolicy} onAttemptPolicy={setAttemptPolicy} publish={publish} onPublish={setPublish} canCreate={canCreate} onCreate={()=>void create()}/>}
+    maxAttempts={maxAttempts} onMaxAttempts={setMaxAttempts} durationMinutes={durationMinutes} onDurationMinutes={setDurationMinutes} attemptPolicy={attemptPolicy} onAttemptPolicy={setAttemptPolicy} publish={publish} onPublish={setPublish} windowIssues={windowIssues} canCreate={canCreate} onCreate={()=>void create()}/>}
    {mode==="list"&&resultsFor&&<AssignmentDetail item={resultsFor} stats={stats} loading={busy} headingRef={detailHeadingRef} onClose={closeDetail}
     analysis={analysis} analysisBusy={analysisBusy} analysisSort={analysisSort} onAnalysisSort={setAnalysisSort} onToggleAnalysis={()=>{if(analysis)setAnalysis(null);else void loadItemAnalysis()}} sortedQuestions={sortedQuestions} analysisSummary={analysisSummary} fmt={fmt}>
     <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy} focusStudentId={drillFocus&&drillFocus.assignmentId===resultsFor.assignmentId?drillFocus.studentId:undefined}

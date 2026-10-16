@@ -179,10 +179,17 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     expect(posts("/api/saved-exams")).toEqual([{ action: "load", blobName: "exams/e1.json" }]);
     expect((within(composer).getByLabelText("عنوان الواجب") as HTMLInputElement).value).toBe("امتحان محفوظ");
     fireEvent.change(within(composer).getByLabelText("يفتح في"), { target: { value: "2026-04-01T08:00" } });
+    // Phase 21G.0 — a deadline before the opening time is caught in place and blocks the create.
+    fireEvent.change(within(composer).getByLabelText("آخر موعد"), { target: { value: "2026-03-30T10:00" } });
+    expect(within(composer).getByRole("alert").textContent).toBe("آخر موعد يجب أن يكون بعد موعد الفتح.");
+    fireEvent.change(within(composer).getByLabelText("عدد المحاولات"), { target: { value: "2" } });
+    expect(createBtn.disabled).toBe(true);
     fireEvent.change(within(composer).getByLabelText("آخر موعد"), { target: { value: "2026-04-05T10:00" } });
+    expect(within(composer).queryByRole("alert")).toBeNull();
     fireEvent.change(within(composer).getByLabelText("عدد المحاولات"), { target: { value: "2" } });
     fireEvent.change(within(composer).getByLabelText("مدة المحاولة (بالدقائق)"), { target: { value: "45" } });
-    fireEvent.click(within(composer).getByLabelText("نشر مباشرة"));
+    // Phase 21G.0 — a new assignment starts as a DRAFT (students see nothing until the teacher publishes it).
+    expect((within(composer).getByLabelText("نشر مباشرة") as HTMLInputElement).checked).toBe(false);
     expect(createBtn.disabled).toBe(false);
     fireEvent.click(createBtn);
     await screen.findByText("✓ تم إنشاء الواجب من الامتحان المختار.");

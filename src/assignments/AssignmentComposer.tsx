@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import { ATTEMPT_POLICY_OPTIONS, type AttemptPolicy } from "./attemptPolicy";
+import type { WindowField, WindowIssue } from "./assignmentWindow";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import { IconClose, IconEye, IconBuilder, IconPlus } from "../icons";
@@ -34,11 +35,22 @@ export type AssignmentComposerProps = {
   durationMinutes: number; onDurationMinutes: (v: number) => void;
   attemptPolicy: AttemptPolicy; onAttemptPolicy: (v: AttemptPolicy) => void;
   publish: boolean; onPublish: (v: boolean) => void;
+  /** Phase 21G.0 — the opening time / deadline issues, shown at their field. */
+  windowIssues?: readonly WindowIssue[];
   canCreate: boolean; onCreate: () => void;
 };
 
 /** NON-MODAL composer: lives in the detail area so the library's ExamPreview overlay keeps its own, unchanged layering. */
 export default function AssignmentComposer({ headingRef, ...p }: AssignmentComposerProps) {
+  const issueOf = (field: WindowField) => (p.windowIssues || []).find(i => i.field === field) || null;
+  const fieldIssue = (field: WindowField) => {
+    const issue = issueOf(field);
+    return issue ? <span id={"eb-composer-" + field + "-issue"} className={issue.blocking ? "eb-field-error" : "eb-field-warning"} role={issue.blocking ? "alert" : "status"}>{issue.message}</span> : null;
+  };
+  const issueProps = (field: WindowField) => {
+    const issue = issueOf(field);
+    return issue ? { "aria-invalid": issue.blocking || undefined, "aria-describedby": "eb-composer-" + field + "-issue" } : {};
+  };
   return (
     <section className="eb-assign-composer" aria-labelledby="eb-composer-title">
       <div className="eb-assign-detail-head">
@@ -101,11 +113,14 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
           <label>الصف<select value={p.classId} onChange={e => p.onClassId(e.target.value)}><option value="">اختر الصف</option>{p.activeClasses.map(c => <option value={c.classId} key={c.classId}>{c.name}{c.grade ? " · " + c.grade : ""}</option>)}</select></label>
           <label>عنوان الواجب<input value={p.title} onChange={e => p.onTitle(e.target.value)} /></label>
           <label className="assignment-wide-field eb-span-2">تعليمات<textarea value={p.instructions} onChange={e => p.onInstructions(e.target.value)} /></label>
-          <label>يفتح في<input type="datetime-local" value={p.openAt} onChange={e => p.onOpenAt(e.target.value)} /></label>
-          <label>آخر موعد<input type="datetime-local" value={p.dueAt} onChange={e => p.onDueAt(e.target.value)} /></label>
+          <div className="eb-window-field"><label>يفتح في<input type="datetime-local" value={p.openAt} onChange={e => p.onOpenAt(e.target.value)} {...issueProps("openAt")} /></label>{fieldIssue("openAt")}</div>
+          <div className="eb-window-field"><label>آخر موعد<input type="datetime-local" value={p.dueAt} onChange={e => p.onDueAt(e.target.value)} {...issueProps("dueAt")} /></label>{fieldIssue("dueAt")}</div>
           <label>عدد المحاولات<select value={p.maxAttempts} onChange={e => p.onMaxAttempts(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
           <label>مدة المحاولة (بالدقائق)<select value={p.durationMinutes} onChange={e => p.onDurationMinutes(Number(e.target.value))}><option value={0}>بدون مؤقت</option>{[15, 30, 45, 60, 90, 120, 180].map(n => <option key={n} value={n}>{n} دقيقة</option>)}</select></label>
-          <label className="assignment-publish-toggle eb-check-inline"><input type="checkbox" checked={p.publish} onChange={e => p.onPublish(e.target.checked)} /><span>نشر مباشرة</span></label>
+          <div className="eb-publish-choice">
+            <label className="assignment-publish-toggle eb-check-inline"><input type="checkbox" checked={p.publish} onChange={e => p.onPublish(e.target.checked)} aria-describedby="eb-composer-publish-hint" /><span>نشر مباشرة</span></label>
+            <small id="eb-composer-publish-hint" className="eb-muted">{p.publish ? "يظهر الواجب للطلاب فور إنشائه." : "يبقى مسودة لا يراها الطلاب حتى تنشره."}</small>
+          </div>
         </div>
         {/* Phase 7A — assignment-level attempt policy: chosen explicitly here, persisted on the assignment, never
             changed afterwards (the same exam can be homework, a controlled exam or save-&-resume work). */}
