@@ -8,6 +8,7 @@ import { render, cleanup, screen } from "@testing-library/react";
 import { resultsReleaseState, resultsReleaseLabel, normalizeResultsRelease } from "./resultsRelease";
 import { scoreWithheld, withheldScoreLabel, resultsNotReleased, resultsNotReleasedLabel } from "../codingGradingStatus";
 import StudentAssignmentCard from "../student/StudentAssignmentCard";
+import { medalsFor } from "../student/portalPresentation";
 
 afterEach(cleanup);
 const NOW = Date.parse("2026-10-16T12:00:00Z"), fmt = (v: string) => "«" + v + "»";
@@ -43,5 +44,9 @@ describe("the student's view of an unreleased result", () => {
     expect(line.textContent).not.toMatch(/\b0\b|%|undefined|NaN/);
     expect(screen.getByTestId("card-not-released").textContent).toBe("تظهر النتيجة عندما ينشرها المعلم");
     expect(document.querySelector(".eb-sp-task-feedback")).toBeNull();
+  });
+  it("an unreleased result earns no medal on the portal (the server sends no percentage for it)", () => {
+    const item = (resultsVisible: boolean | undefined) => ({ gradingStatus: "final", latestResult: { attemptNumber: 1, totalMarks: 10, percentage: 95, score: 9.5, submittedAt: "x", manualReviewMarks: 0, gradingStatus: "final", teacherFeedback: "", ...(resultsVisible === undefined ? {} : { resultsVisible }) } });
+    expect(medalsFor([item(undefined), item(true), item(false)] as never).length).toBe(2);
   });
 });
