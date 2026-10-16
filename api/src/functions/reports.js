@@ -21,6 +21,9 @@ const USER_PREFIX = "platform/users/";
 const ASSIGN_PREFIX = "platform/assignments/";
 const SUB_PREFIX = "platform/submissions/";
 
+// Phase 21G.0 — teacher tenancy: reports cover only the teacher's own classes and students.
+const { tenantOf, canAccessDocument, classAccessible, studentAccessible } = require("../lib/teacher-tenancy");
+
 async function loadClass(container, classId) { return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json"); }
 function classMeta(c) {
   return { classId: c.classId, name: c.name, grade: c.grade || "", schoolYear: c.schoolYear || "", status: normalizeClassStatus(c), programCodes: getClassProgramCodes(c), studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0 };
@@ -83,9 +86,17 @@ async function handler(request, deps = {}, obs = null) {
       try { range = parseDateRange(url.searchParams.get("from"), url.searchParams.get("to")); }
       catch (e) { return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } }; }
 
+      // Phase 21G.0 — every class / student a report names must be the teacher's own; another teacher's answers like a missing one.
+      const tenant = tenantOf(auth.user);
+      if (tenant) {
+        const load = name => downloadJsonOrNull(container, name);
+        if (classId && !(await classAccessible(load, classId, tenant))) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+        if (studentId && !(await studentAccessible(load, await load(USER_PREFIX + studentId + ".json"), tenant))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+      }
+
       // Filter options for the global filter bar (school years incl. archived, classes, projects).
       if (type === "filters") {
-        const classes = (await listJson(container, CLASS_PREFIX)).filter(Boolean).map(classMeta)
+        const classes = (await listJson(container, CLASS_PREFIX)).filter(c => c && canAccessDocument(c, tenant)).map(classMeta)
           .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || String(a.name).localeCompare(String(b.name), "ar"));
         const schoolYears = [...new Set(classes.map(c => c.schoolYear).filter(Boolean))].sort((a, b) => String(b).localeCompare(String(a)));
         const projects = getSupportedProjects().map(getProjectMeta);

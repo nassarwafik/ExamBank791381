@@ -3,6 +3,8 @@ const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
+// Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
+const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {flattenQuestions,effectiveMaxMarks}=require("../lib/exam-structure");
@@ -122,7 +124,7 @@ async function handler(request,deps={},obs=null){
    if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
    if(!safeId(assignmentId)||!safeId(studentId)||attemptNumber===null)return {status:400,jsonBody:{ok:false,error:"بيانات الطلب غير صالحة."}};
    const assignment=await dl(c,AP+assignmentId+".json"),student=await dl(c,UP+studentId+".json");
-   if(!assignment||!student)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
+   if(!assignment||!student||!(await classAccessible(n=>dl(c,n),assignment.classId,tenantOf(auth.user))))return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
    const submission=await dl(c,SP+assignmentId+"/"+studentId+".json");
    if(!submission)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
    const sameClass=String(student.classId||"")===String(assignment.classId||"");
@@ -136,7 +138,7 @@ async function handler(request,deps={},obs=null){
   let b={};try{b=await request.json()}catch{}if(String(b.action)!=="saveReview")return {status:400,jsonBody:{ok:false,error:"Unsupported review action."}};
   const assignmentId=String(b.assignmentId||""),studentId=String(b.studentId||""),attemptNumber=attemptNumberOf(b.attemptNumber);if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
   if(!safeId(assignmentId)||!safeId(studentId)||attemptNumber===null)return {status:400,jsonBody:{ok:false,error:"بيانات الطلب غير صالحة."}};
-  const reviewAssignment=await dl(c,AP+assignmentId+".json");if(!reviewAssignment)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+  const reviewAssignment=await dl(c,AP+assignmentId+".json");if(!reviewAssignment||!(await classAccessible(n=>dl(c,n),reviewAssignment.classId,tenantOf(auth.user))))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
   const reviewStudent=await dl(c,UP+studentId+".json");if(!reviewStudent)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
   const name=SP+assignmentId+"/"+studentId+".json";
   const existingSubmission=await dl(c,name);

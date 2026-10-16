@@ -14,7 +14,9 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
+// Phase 21G.0 — teacher tenancy: only the teacher of the assignment's class may re-grade its attempts.
+const { tenantOf, classAccessible } = require("../lib/teacher-tenancy");
 const { verifyCallbackRequest } = require("../lib/coding/callback-protocol");
 const { resolveCallbackKey } = require("../lib/coding/hmac-key-separation");
 const { validateCallbackBody, applyOfficialCallback, regradeTarget } = require("../lib/coding/official-grading");
@@ -69,6 +71,13 @@ async function regradeHandler(request, deps = {}, obs = null) {
       return reply(400, { ok: false, code: "REQUEST_INVALID" });
     }
     const container = (deps.getContainer || getContainer)();
+    {
+      const tenant = tenantOf(auth.user), load = deps.downloadJsonOrNull || downloadJsonOrNull;
+      if (tenant) {
+        const target = await load(container, "platform/assignments/" + b.assignmentId + ".json");
+        if (!target || !(await classAccessible(n => load(container, n), target.classId, tenant))) return reply(404, { ok: false, code: "NOT_FOUND" });
+      }
+    }
     const r = await regradeTarget(container, { assignmentId: b.assignmentId, studentId: b.studentId, attemptNumber: b.attemptNumber, questionId: b.questionId, action: b.action, actor: auth.user && auth.user.sub }, deps, obs);
     if (r.status !== 200) return reply(r.status, { ok: false, code: r.code });
     obs?.logInfo?.("coding.autoGrade.regrade.requested", { action: b.action, state: r.state, revision: r.revision });

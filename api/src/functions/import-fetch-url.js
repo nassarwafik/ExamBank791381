@@ -3,6 +3,7 @@ const { withObservability } = require("../lib/observability");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+const { tenantOf, ownerStamp } = require("../lib/teacher-tenancy");
 const { looksLikeText } = require("../lib/file-sniff");
 const { safeFetch, UnsafeUrlError } = require("../lib/url-fetch");
 
@@ -117,7 +118,8 @@ app.http("importFetchUrl", {
         sizeBytes: buffer.length,
         sha256: crypto.createHash("sha256").update(buffer).digest("hex"),
         uploadedAt: new Date().toISOString(),
-        status: "uploaded"
+        status: "uploaded",
+        ...ownerStamp(tenantOf(auth.user))                                  // 21G.0 — the import job is this teacher's
       };
 
       await uploadJson(container, blobPrefix + "manifest.json", manifest);

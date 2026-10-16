@@ -1,6 +1,8 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+// Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
+const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer } = require("../lib/platform-storage");
 const { computeTeacherAnalytics, AnalyticsScopeError } = require("../lib/teacher-analytics-core");
 
@@ -29,7 +31,8 @@ async function handler(request, deps = {}, obs = null) {
         classId: requestedClassId,
         studentId: requestedStudentId,
         fromMs,
-        toMs
+        toMs,
+        tenant: tenantOf(auth.user)
       });
 
       return {

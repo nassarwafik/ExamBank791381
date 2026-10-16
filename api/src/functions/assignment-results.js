@@ -3,6 +3,8 @@ const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
+// Phase 21G.0 — teacher tenancy: results of an assignment belong to the teacher of its class.
+const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs,attemptPolicyOf,attemptModelVersion,attemptEpochOf}=require("../lib/assignment-availability");
 const {gradeExam,parametricGenerationContext}=require("../lib/assignment-grading");
@@ -71,7 +73,7 @@ async function handler(request,deps={},obs=null){
  const gradeFn=deps.gradeExam||gradeExam,authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent;
  try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
-   const u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const a=await dl(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+   const u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const a=await dl(c,AP+id+".json");if(!a||!(await classAccessible(n=>dl(c,n),a.classId,tenantOf(auth.user))))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
    // Phase 8A: an optional STUDENT scope (the dashboard's student drill). When `studentId` is present the population is
    // exactly that one student — who must exist, be a student and be a canonical member of the assignment's class — so
    // no other student's row, marks, attempts or aggregate can appear; stats are that student's own. A malformed,
@@ -102,6 +104,7 @@ async function handler(request,deps={},obs=null){
    out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},codingSummary,codingEvidenceTotals,students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
   }
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
+  {const tenant=tenantOf(auth.user);if(tenant){const target=await dl(c,AP+String(b.assignmentId||"")+".json");if(target&&!(await classAccessible(n=>dl(c,n),target.classId,tenant)))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}}}}
 
   // ── allowRetry — ensure the student has at least one unused NEXT attempt. Never deletes/resets a
   // completed attempt, never overwrites grades, never touches an active attempt (B2B #1/#2). ──

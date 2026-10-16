@@ -18,6 +18,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+const { tenantOf, studentAccessible } = require("../lib/teacher-tenancy");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -58,6 +59,9 @@ async function handler(request, deps = {}, obs = null) {
     const actor = await resolveActor(request, deps);
     if (actor.kind === "denied") return actor.response;
     const container = actor.container || deps.container || (deps.getContainer || getContainer)();
+    // Phase 21G.0 — teacher tenancy: a teacher sees and sets photos of their own students only.
+    const tenant = actor.kind === "teacher" ? tenantOf(actor.user) : null;
+    const ownStudent = user => studentAccessible(name => dl(container, name), user, tenant);
 
     if (request.method === "GET") {
       const url = new URL(request.url);
@@ -70,7 +74,7 @@ async function handler(request, deps = {}, obs = null) {
       }
       if (!VALID_ID.test(requested)) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
       const user = await dl(container, userDocName(requested));
-      const record = user && user.role === "student" ? photoRecord(user) : null;
+      const record = user && user.role === "student" && (await ownStudent(user)) ? photoRecord(user) : null;
       return photoResponse(container, record, studentPhotoPrefix(requested), deps, obs);
     }
 
@@ -82,7 +86,7 @@ async function handler(request, deps = {}, obs = null) {
     const studentId = String(body?.studentId || "").trim();
     if (!VALID_ID.test(studentId)) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
     const user = await dl(container, userDocName(studentId));
-    if (!user || user.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+    if (!user || user.role !== "student" || !(await ownStudent(user))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
     const now = new Date().toISOString();
     const label = String(user.displayName || user.code || "");
 

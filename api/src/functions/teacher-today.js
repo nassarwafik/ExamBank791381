@@ -29,6 +29,8 @@ const {teacherDirectUnread}=require("../lib/message-read-state");
 const {loadProjectEvaluationSources,deriveProjectEvaluationAttention}=require("../lib/project-tracker/evaluation-attention");
 const {logReadCost}=require("../lib/read-cost-log");
 const {loadPublishedAssignmentsForClasses}=require("../lib/class-assignment-index");
+// Phase 21G.0 — teacher tenancy: the Today hub covers only the teacher's own classes (everything below derives from them).
+const {tenantOf,filterAccessible}=require("../lib/teacher-tenancy");
 
 const CP="platform/classes/",UP="platform/users/",SP="platform/submissions/";
 const ITEM_CAP=8,RECENT_CAP=10;
@@ -95,7 +97,8 @@ async function handler(request,deps={},obs=null){
   const container=deps.container||(deps.getContainer||getContainer)();
   const lj=deps.listJson||listJson,nowMs=typeof deps.nowMs==="number"?deps.nowMs:Date.now();
   // Classes + users are still scanned (Phase 12E-B targets assignment discovery only).
-  const [classes,users]=await Promise.all([lj(container,CP),lj(container,UP)]);
+  const [allClasses,users]=await Promise.all([lj(container,CP),lj(container,UP)]);
+  const classes=filterAccessible(allClasses,tenantOf(auth.user));
   const activeIds=new Set(classes.filter(c=>c&&c.classId&&normalizeClassStatus(c)==="active").map(c=>String(c.classId)));
   // Phase 12E-B — the published assignments of the ACTIVE classes through the per-class index: no global assignment
   // listing in steady state; classes not yet bootstrapped share AT MOST ONE legacy scan for this whole request.

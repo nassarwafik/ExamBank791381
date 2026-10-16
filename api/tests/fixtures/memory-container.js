@@ -3,7 +3,7 @@
 // Implements the subset of the @azure/storage-blob container surface the platform code actually uses:
 // getBlobClient(name).download()/deleteIfExists(), getBlockBlobClient(name).upload(body, len, opts) with
 // ETag-conditional writes (ifNoneMatch:"*" create-only, ifMatch:<etag> compare-and-set), and an async
-// listBlobsFlat({prefix}) iterator. This lets tests drive the REAL handlers + the REAL platform-storage
+// listBlobsFlat({prefix}) iterator (each item with properties.etag, as Azure lists it). This lets tests drive the REAL handlers + the REAL platform-storage
 // optimistic-concurrency helpers (downloadJsonWithEtagOrNull / uploadJsonConditional / mutateJsonWithRetry)
 // end-to-end against faithful conflict semantics — proving uniqueness/race behavior, not a stub of it.
 //
@@ -88,7 +88,8 @@ function createMemoryContainer(seed = {}, hooks = {}) {
     listBlobsFlat({ prefix } = {}) {
       const matching = () => Array.from(store.keys()).filter(n => n.startsWith(prefix || "")).sort();
       return {
-        async *[Symbol.asyncIterator]() { for (const name of Array.from(store.keys())) if (name.startsWith(prefix || "")) yield { name }; },
+        // Phase 21G.2 — like Azure, each listed blob carries its current ETag (properties.etag), the same value a download returns.
+        async *[Symbol.asyncIterator]() { for (const name of Array.from(store.keys())) if (name.startsWith(prefix || "")) { const e = store.get(name); if (e) yield { name, properties: { etag: e.etag } }; } },
         byPage({ continuationToken, maxPageSize } = {}) {
           return (async function* pages() {
             let after = null;
@@ -104,7 +105,7 @@ function createMemoryContainer(seed = {}, hooks = {}) {
               rest = rest.slice(size);
               const next = rest.length ? Buffer.from("mc1:" + page[page.length - 1], "utf8").toString("base64") : "";
               if (typeof hooks.onListPage === "function") hooks.onListPage(page.length);
-              yield { segment: { blobItems: page.map(name => ({ name })) }, continuationToken: next };
+              yield { segment: { blobItems: page.map(name => ({ name, properties: { etag: store.get(name)?.etag } })) }, continuationToken: next };
               if (!rest.length) return;
             }
           })();

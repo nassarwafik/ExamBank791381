@@ -16,6 +16,8 @@ const {recordEventSafely}=require("../lib/notification-events");
 // setstatus / archive / restore / purge transitions all run under the per-assignment lifecycle lock, so a delayed
 // removal can never erase the pointer of a concurrent re-publish of the same assignment.
 const {ensurePublishedAssignmentIndexed,removePublishedAssignmentFromIndex}=require("../lib/class-assignment-index");
+// Phase 21G.0 — teacher tenancy: an assignment belongs to the teacher of its class (shared pre-tenancy classes stay shared).
+const {tenantOf,canAccessDocument,accessibleClassIds,classIdAllowed,classAccessible}=require("../lib/teacher-tenancy");
 // Bank image assets are persisted by durable identity only; the signed URL is minted when the student is served (student-assignment).
 const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
 // Phase 14A — GOVERNED exams: an assignment binds the exact immutable PUBLISHED revision the server owns (manifest →
@@ -25,6 +27,10 @@ const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
 const {resolveGovernedExamSource,GovernanceError}=require("../lib/exam-governance");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
+const MAX_TITLE=200,MAX_INSTRUCTIONS=5000;
+// Phase 21G.2 — bump SUMMARY_VERSION whenever summary() changes shape: every cached summary is then recomputed once.
+const SUMMARY_VERSION=1;
+const {loadAssignmentSummaries}=require("../lib/assignment-summary-cache");
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
 // stored submission blobs (authoritative for purge-blocking); the rest are derived from the parsed docs.
 function computeImpact(a,submissionDocuments,subs){
@@ -60,9 +66,18 @@ async function handler(request,deps={},obs=null){
  const ensureIdx=deps.ensurePublishedAssignmentIndexed||ensurePublishedAssignmentIndexed,removeIdx=deps.removePublishedAssignmentFromIndex||removePublishedAssignmentFromIndex;
  try{
   const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
-  if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");let list=(await ls(c,PREFIX)).map(summary);if(classId)list=list.filter(x=>x.classId===classId);list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
+  const tenant=tenantOf(auth.user);
+  // Phase 21G.2 — the LIGHT list: summaries from the ETag-verified cache; only new / changed documents are downloaded.
+  if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");const loaded=await (deps.loadAssignmentSummaries||loadAssignmentSummaries)(c,{prefix:PREFIX,summarize:summary,summaryVersion:SUMMARY_VERSION},{...(deps.summaryCacheDeps||{}),onCacheError:()=>obs?.logWarn?.("assignment.summary_cache.failed",{retryable:true})});let list=loaded.summaries;if(classId)list=list.filter(x=>x.classId===classId);
+   if(tenant){const allowed=accessibleClassIds(await ls(c,CLASS_PREFIX),tenant);list=list.filter(x=>classIdAllowed(allowed,x.classId))}list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
   let b={};try{b=await request.json()}catch{}
   const action=String(b.action||"create").toLowerCase();
+  // Phase 21G.0 — an action on an existing assignment acts only on one of the teacher's own classes; another teacher's assignment
+  // is reported exactly like a missing one. (The class of an assignment never changes, so one check suffices.)
+  if(action!=="create"&&tenant&&b.assignmentId){
+   const target=await dl(c,PREFIX+String(b.assignmentId)+".json");
+   if(target&&!(await classAccessible(n=>dl(c,n),target.classId,tenant)))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+  }
   if(action==="create"){
    const classId=String(b.classId||"").trim(),title=String(b.title||"").trim(),instructions=String(b.instructions||"").trim();let exam=cleanExam(b.examSnapshot),source=null;
    if(!classId||!title)return {status:400,jsonBody:{ok:false,error:"الصف وعنوان الواجب مطلوبان."}};
@@ -91,7 +106,7 @@ async function handler(request,deps={},obs=null){
    const policyRaw=b.attemptPolicy===undefined||b.attemptPolicy===null||b.attemptPolicy===""?"continuous":b.attemptPolicy;
    if(!ATTEMPT_POLICIES.includes(policyRaw))return {status:400,jsonBody:{ok:false,error:"طريقة المحاولة غير صالحة."}};
    const attemptPolicy=policyRaw;
-   const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
+   const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||!canAccessDocument(classroom,tenant)||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
    const openAt=iso(b.openAt),dueAt=iso(b.dueAt);if(openAt&&dueAt&&new Date(dueAt)<new Date(openAt))return {status:400,jsonBody:{ok:false,error:"موعد التسليم يجب أن يكون بعد موعد الفتح."}};
    const now=new Date().toISOString(),assignmentId=crypto.randomUUID(),maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
    // attemptModelVersion:2 (B2A) marks this assignment as using the UNIFIED attempt lifecycle: even an
@@ -178,6 +193,32 @@ async function handler(request,deps={},obs=null){
   // does NOT take the per-assignment lifecycle lock — unrelated students are never serialized. Changing the
   // default duration affects only FUTURE attempts: an already-started attempt keeps its stored
   // startedAt/endsAt/extendedEndsAt (timerState never recomputes a live attempt from the new duration). ──
+  // Phase 21G.0 — edit the title and instructions at any time (also after students started): they are presentation, never
+  // grading. The questions, marks, policy, attempts and submissions are untouched; an archived assignment is read-only.
+  if(action==="updatedetails"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   const title=typeof b.title==="string"?b.title.trim():"",instructions=typeof b.instructions==="string"?b.instructions.trim():null;
+   if(!title)return {status:400,jsonBody:{ok:false,error:"عنوان الواجب مطلوب."}};
+   if(title.length>MAX_TITLE)return {status:400,jsonBody:{ok:false,error:"عنوان الواجب أطول من "+MAX_TITLE+" حرفًا."}};
+   if(instructions!==null&&instructions.length>MAX_INSTRUCTIONS)return {status:400,jsonBody:{ok:false,error:"التعليمات أطول من "+MAX_INSTRUCTIONS+" حرف."}};
+   let previous=null,updated=null;
+   try{
+    updated=await mut(c,PREFIX+id+".json",current=>{
+     if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+     if(normalizeAssignmentStatus(current)==="archived"){const err=new Error("الواجب مؤرشف. استعده أولًا قبل تعديل بياناته.");err.httpStatus=409;throw err}
+     previous={title:String(current.title||""),instructions:String(current.instructions||"")};
+     current.title=title;if(instructions!==null)current.instructions=instructions;
+     current.updatedAt=new Date().toISOString();
+     return current;   // examSnapshot / status / timing / attempts / submissions intentionally untouched
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+   await rec(c,{actor:auth.user?.sub,action:"assignment.updateDetails",targetType:"assignment",targetId:id,targetLabel:updated.title,details:{assignmentId:id,titleChanged:previous.title!==updated.title,instructionsChanged:previous.instructions!==String(updated.instructions||"")}});
+   return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
+  }
   if(action==="updatetiming"){
    const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
    // New class-wide submission deadline. Must be a valid timestamp and in the FUTURE (this is an extension).

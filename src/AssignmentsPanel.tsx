@@ -1,484 +1,87 @@
-import {useEffect,useMemo,useRef,useState} from "react";
-import type {AttemptPolicy} from "./assignments/attemptPolicy";
-import {withTrackingCode} from "./lib/requestTrace";
-import AssignmentReview from "./AssignmentReview";
+import {useRef} from "react";
 import {createPortal} from "react-dom";
+import AssignmentReview from "./AssignmentReview";
 import ExamPreview from "./ExamPreview";
 import {IconPlus,IconRefresh} from "./icons";
-import {filterLibraryCatalog,catalogCategories,type LibraryCatalogItem} from "./examLibrary";
-import {examHasQuestions,examQuestionCount} from "./examTypes";
-import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
-import {normalizeClassStatus} from "./classLifecycle";
 import ActionMenu from "./ui/ActionMenu";
-import {useConfirm} from "./ui/useConfirm";
-import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog} from "./assignments/AssignmentList";
+import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetailsDialog} from "./assignments/AssignmentList";
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
 import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog} from "./assignments/GradebookRowEditors";
-import {bulkRetryNotice} from "./assignments/codingRecovery";
-import type {CodingEvidenceTotals,CodingGradingStatus,Classroom,Item,Impact,Exam,SavedExam,StudentResult,LifecycleSnap,Stats,GradebookFilter,GradebookSort,QuestionStat,ItemAnalysis,AnalysisSort,SourceMode,WorkspaceMode} from "./assignments/types";
-import {gradebookFilterFor,drillStudentId,type AssignmentDrill} from "./assignments/drillTarget";
+import {useAssignmentsController,type AssignmentsControllerProps} from "./assignments/useAssignmentsController";
+import {rowGrading} from "./assignments/assignmentsView";
+import {fmt} from "./assignments/assignmentsApi";
+import AssignmentsHomeKpis from "./assignments/AssignmentsHomeKpis";
+import {TIME_FILTERS} from "./assignments/assignmentsHome";
 import {downloadCsv} from "./reports/csv";
 import {gradebookCsvRows,exportFilename} from "./teacher/teacherExports";
 
-// Server-authoritative grading status for a student's LATEST result; fall back to the same inputs the
-// server uses (never inferred from percentage). "notSubmitted" when there is no completed attempt.
-// Row-level server gradingStatus wins; otherwise the SHARED resolver derives it from the latest result's
-// manualReviewMarks/finalized (never from score). No local copy of the rule.
-const rowGrading=(s:StudentResult):GradingStatus=>s.gradingStatus?s.gradingStatus:resolveGradingStatus(s.latestResult);
-type Props={token:string;classes:Classroom[];currentExam:unknown|null;onCopyLibraryExamToBuilder?:(examSnapshot:Exam,title:string)=>void;
- /** Phase 12B — App's sequenced drill target from a Today Hub row (identifiers + intent). Applied ONCE against this
-  * panel's own authoritative data, then reported through onDrillConsumed; afterwards the teacher owns every control. */
- drill?:AssignmentDrill|null;onDrillConsumed?:(seq:number)=>void};
+// Phase 21G.1 — the assignments workspace VIEW. Every piece of state, every request and every rule lives in
+// useAssignmentsController (and its composer hook / pure view helpers); this component only lays the areas out.
+// Props: App's token, classes, the open exam, the copy-to-builder hand-off, and the Phase 12B drill target (applied ONCE
+// against the panel's own authoritative data, then reported through onDrillConsumed).
+type Props=AssignmentsControllerProps;
 
-const localDate=(h:number)=>{const d=new Date(Date.now()+h*3600000);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
-const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
-const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
-
-// Master-list scope (class filter · current/archived view · search). The SAME predicate drives the displayed list
-// and the UX-5 invariant "a visible AssignmentDetail belongs to the current master-list scope", so the two can
-// never disagree. Pure; `q` is already trimmed + lowercased.
-type MasterScope={classId:string;showArchived:boolean;q:string};
-function matchesMasterScope(x:Item,s:MasterScope):boolean{
- if(s.classId&&x.classId!==s.classId)return false;
- if(s.showArchived?x.status!=="archived":x.status==="archived")return false;
- if(s.q&&![x.title,x.className].join(" ").toLocaleLowerCase("ar").includes(s.q))return false;
- return true;
-}
-const normalizeQuery=(v:string)=>v.trim().toLocaleLowerCase("ar");
-
-export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder,drill=null,onDrillConsumed}:Props){
- const current=currentExam&&typeof currentExam==="object"?currentExam as Exam:null;
- const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[durationMinutes,setDurationMinutes]=useState(0),[attemptPolicy,setAttemptPolicy]=useState<AttemptPolicy>("continuous"),[publish,setPublish]=useState(true),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
- const [deadlineFor,setDeadlineFor]=useState<string|null>(null),[deadlineValue,setDeadlineValue]=useState("");
- const [reopenFor,setReopenFor]=useState<string|null>(null),[reopenValue,setReopenValue]=useState("");
- const [extendFor,setExtendFor]=useState<string|null>(null),[extendValue,setExtendValue]=useState("");
- const [showArchived,setShowArchived]=useState(false),[purgeFor,setPurgeFor]=useState<Item|null>(null),[purgeTitle,setPurgeTitle]=useState("");
- const [analysis,setAnalysis]=useState<ItemAnalysis|null>(null),[analysisBusy,setAnalysisBusy]=useState(false),[analysisSort,setAnalysisSort]=useState<AnalysisSort>("number");
- // Roadmap #13 — gradebook search/filter/sort (client-side over the already-loaded results; no request per keystroke).
- const [codingSummary,setCodingSummary]=useState<CodingGradingStatus|null>(null),[codingTotals,setCodingTotals]=useState<CodingEvidenceTotals|null>(null);
- const [gbSearch,setGbSearch]=useState(""),[gbFilter,setGbFilter]=useState<GradebookFilter>("all"),[gbSort,setGbSort]=useState<GradebookSort>("name");
- const [savedExams,setSavedExams]=useState<SavedExam[]>([]),[examSource,setExamSource]=useState(current?"current":""),[savedExam,setSavedExam]=useState<Exam|null>(null),[examLoading,setExamLoading]=useState(false);
- const [sourceMode,setSourceMode]=useState<SourceMode>("mine");
- const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
- const [preview,setPreview]=useState<{title:string;exam:Exam}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
- // UX-5 workspace state: list filter (separate from the composer's target class), search, mode, explicit attempts editor.
- const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null),[timingFor,setTimingFor]=useState<Item|null>(null);
- const detailHeadingRef=useRef<HTMLHeadingElement>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null);
- const detailOpenerRef=useRef<HTMLElement|null>(null),composerOpenerRef=useRef<HTMLElement|null>(null),focusDetailPending=useRef(false),focusComposerOpenerPending=useRef(false),focusWorkspacePending=useRef(false);
- const toolbarRef=useRef<HTMLDivElement|null>(null),scopeRef=useRef<MasterScope>({classId:"",showArchived:false,q:""});
- // Phase 12B — drill-in bookkeeping. listReady: the assignment list has been read successfully at least once (a drill is
- // never judged against the empty pre-load list). appliedDrillSeq: the newest drill this mount has consumed (never
- // re-applied). resultsSeq: the newest results read; an older response that resolves later is discarded, so the newest
- // intent always wins. drillFocus: the student row a drill asked for, shown only while its assignment is open.
- const [listReady,setListReady]=useState(false);
- const appliedDrillSeq=useRef(0),resultsSeq=useRef(0);
- // resultsBusy: the workspace's `busy` is currently held by a results read (so superseding that read may release it —
- // never a busy state owned by an unrelated mutation).
- const resultsBusy=useRef(false);
- const [drillFocus,setDrillFocus]=useState<{assignmentId:string;studentId:string}|null>(null);
- const {confirm,cancelPending,confirmDialog}=useConfirm();
- // Roadmap #34: a class is offered as an assignment target only through the canonical lifecycle helper (status
- // "archived" OR active:false ⇒ archived), never the raw compatibility `active` flag.
- const active=useMemo(()=>classes.filter(x=>normalizeClassStatus(x)==="active"),[classes]);
- const sourceExam=sourceMode==="library"?libraryExam:(examSource==="current"?current:savedExam);
- useEffect(()=>{if(!classId&&active[0])setClassId(active[0].classId)},[active,classId]);
- useEffect(()=>{if(current&&examSource===""&&examHasQuestions(current))setExamSource("current")},[current,examSource]);
- // The list scope defaults to the first canonical-active class (as before); "" = all classes once the teacher chooses it.
- const effectiveFilter=filterClassId===null?(active[0]?.classId||""):filterClassId;
-
- async function api<T>(url:string,options:RequestInit={}):Promise<T>{
-  const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-builder-token",token);h.set("Authorization","Bearer "+token);
-  const r=await fetch(url,{...options,headers:h}),j=await r.json() as T&{error?:string};if(!r.ok)throw new Error(withTrackingCode(j.error||"حدث خطأ.",r.status,r));return j;
- }
- async function load(){setLoading(true);try{const r=await api<{assignments:Item[]}>("/api/assignments");setItems(r.assignments||[]);setListReady(true)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الواجبات.")}finally{setLoading(false)}}
- async function loadSavedExams(){
-  try{const r=await api<{exams:SavedExam[]}>("/api/saved-exams");setSavedExams(r.exams||[])}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الامتحانات المحفوظة.")}
- }
- useEffect(()=>{void load();void loadSavedExams()},[]);
-
- async function chooseExam(value:string){
-  setExamSource(value);setSavedExam(null);setError("");setNotice("");
-  if(!value){return}
-  if(value==="current"){
-   if(current?.title)setTitle(current.title);
-   return;
-  }
-  const meta=savedExams.find(x=>x.blobName===value);
-  setExamLoading(true);
-  try{
-   const r=await api<{exam:Exam}>("/api/saved-exams",{method:"POST",body:JSON.stringify({action:"load",blobName:value})});
-   setSavedExam(r.exam||null);setTitle(String(r.exam?.title||meta?.title||""));setNotice("✓ تم اختيار الامتحان المحفوظ.");
-  }catch(e){setExamSource("");setError(e instanceof Error?e.message:"تعذر فتح الامتحان المحفوظ.")}finally{setExamLoading(false)}
- }
-
- async function switchSourceMode(mode:SourceMode){
-  setSourceMode(mode);setError("");setNotice("");
-  if(mode==="library"&&!libraryCatalog.length&&!libraryLoading){
-   setLibraryLoading(true);
-   try{const r=await api<{catalog:LibraryCatalogItem[]}>("/api/exam-library");setLibraryCatalog(r.catalog||[])}
-   catch(e){setError(e instanceof Error?e.message:"تعذر تحميل مكتبة 791381.")}
-   finally{setLibraryLoading(false)}
-  }
- }
- async function chooseLibraryItem(it:LibraryCatalogItem){
-  if(!it.publishable||examLoading)return;
-  setLibrarySelectedId(it.libraryItemId);setLibraryExam(null);setError("");setNotice("");
-  setExamLoading(true);
-  try{
-   const r=await api<{item:{examSnapshot:Exam}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
-   setLibraryExam(r.item?.examSnapshot||null);setTitle(String(r.item?.examSnapshot?.title||it.title||""));setNotice("✓ تم اختيار «"+it.title+"» من مكتبة 791381.");
-  }catch(e){setLibrarySelectedId("");setError(e instanceof Error?e.message:"تعذر فتح عنصر المكتبة.")}finally{setExamLoading(false)}
- }
- // Preview reuses the ONE faithful renderer (ExamPreview), whose toSafePreviewExam() deep-scrubs every
- // grading secret from the whole exam (sections/cover/parts/fields/options) — so previewing any item
- // (including needs_review ones) is safe and never reveals answers, and structured exams keep their
- // sections/cover instead of being flattened.
- async function openPreview(it:LibraryCatalogItem){
-  if(previewBusyId)return;
-  setPreviewBusyId(it.libraryItemId);setError("");
-  try{
-   const r=await api<{item:{examSnapshot:Exam}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
-   setPreview({title:it.title,exam:(r.item?.examSnapshot||{}) as Exam});
-  }catch(e){setError(e instanceof Error?e.message:"تعذر فتح المعاينة.")}finally{setPreviewBusyId("")}
- }
- async function copyLibraryItem(it:LibraryCatalogItem){
-  if(!onCopyLibraryExamToBuilder||copyBusyId)return;
-  setCopyBusyId(it.libraryItemId);setError("");setNotice("");
-  try{
-   const r=await api<{item:{examSnapshot:Exam}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
-   if(r.item?.examSnapshot)onCopyLibraryExamToBuilder(r.item.examSnapshot,it.title);
-  }catch(e){setError(e instanceof Error?e.message:"تعذر نسخ العنصر إلى الباني.")}finally{setCopyBusyId("")}
- }
- const libraryFiltered=useMemo(()=>filterLibraryCatalog(libraryCatalog,{search:librarySearch,category:libraryCategory}),[libraryCatalog,librarySearch,libraryCategory]);
- const libraryCats=useMemo(()=>catalogCategories(libraryCatalog),[libraryCatalog]);
-
- // ── Workspace modes: composer (non-modal, in the detail area) and detail (non-modal). Focus moves to the
- // area's heading when it appears and returns to the opening control when it closes.
- function openComposer(){
-  const el=typeof document!=="undefined"?document.activeElement:null;
-  composerOpenerRef.current=el instanceof HTMLElement?el:null;
-  setError("");setNotice("");setMode("composer");
- }
- function closeComposer(){
-  // The opener is disabled while the composer is open, so focus is returned after the mode flips (effect below).
-  focusComposerOpenerPending.current=true;setMode("list");
- }
- useEffect(()=>{
-  if(mode==="composer"){composerHeadingRef.current?.focus();return}
-  if(focusComposerOpenerPending.current){
-   focusComposerOpenerPending.current=false;
-   const el=composerOpenerRef.current;composerOpenerRef.current=null;
-   if(el&&el.isConnected)el.focus();
-  }
- },[mode]);
- useEffect(()=>{if(mode==="list"&&resultsFor&&focusDetailPending.current){focusDetailPending.current=false;detailHeadingRef.current?.focus()}},[mode,resultsFor]);
-
- async function create(){
-  if(busy||!classId||!title.trim()||!sourceExam||!examHasQuestions(sourceExam))return;
-  setBusy(true);setError("");setNotice("");
-  try{
-   const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"create",classId,title:title.trim(),instructions:instructions.trim(),openAt:openAt?new Date(openAt).toISOString():"",dueAt:dueAt?new Date(dueAt).toISOString():"",maxAttempts,durationMinutes,attemptPolicy,publish,examSnapshot:sourceExam})});
-   setItems(x=>[r.assignment,...x]);setNotice(r.assignment?.source?.revisionNumber?"✓ تم إنشاء الواجب من الإصدار المنشور رقم "+r.assignment.source.revisionNumber+" (إدارة النشر) — النسخة المنشورة مثبّتة لهذا الواجب.":"✓ تم إنشاء الواجب من الامتحان المختار.");
-   closeComposer();
-  }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الواجب.")}finally{setBusy(false)}
- }
- async function action(item:Item,body:any){setBusy(true);try{const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({assignmentId:item.assignmentId,...body})});reconcileMutated(r.assignment)}catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية.")}finally{setBusy(false)}}
- async function saveMaxAttempts(item:Item,value:number){await action(item,{action:"setMaxAttempts",maxAttempts:value});setAttemptsFor(null)}
- // Phase 5A — class-wide time & deadline update. One authoritative request; reconcile the returned summary
- // into the list (and the open gradebook if it points here) WITHOUT a page reload, then a clear success notice.
- // Availability/eligibility is re-derived server-side, so an eligible student reopens and an exhausted one does not.
- async function saveTiming(item:Item,dueAtIso:string,durationMinutes:number){
-  setBusy(true);setError("");setNotice("");
-  try{
-   const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"updateTiming",assignmentId:item.assignmentId,dueAt:dueAtIso,durationMinutes})});
-   reconcileMutated(r.assignment);setTimingFor(null);setNotice("✓ تم تحديث وقت الواجب وموعد التسليم.");
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تحديث وقت الواجب.")}finally{setBusy(false)}
- }
- // Roadmap #7 — archive-first deletion. The normal destructive action ARCHIVES (never physically deletes)
- // and always checks authoritative impact first so an active-attempt archive is confirmed explicitly.
- async function fetchImpact(item:Item):Promise<Impact|null>{try{const r=await api<{impact:Impact}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"deleteImpact",assignmentId:item.assignmentId})});return r.impact}catch(e){setError(e instanceof Error?e.message:"تعذر حساب أثر العملية.");return null}}
- async function archiveItem(item:Item){
-  setBusy(true);setError("");setNotice("");
-  try{
-   const impact=await fetchImpact(item);if(!impact)return;
-   let confirmActive=false;
-   if(impact.activeAttempts>0){
-    if(!(await confirm({message:"يوجد "+impact.activeAttempts+" طلاب في محاولات نشطة. أرشفة الواجب ستمنعهم من المتابعة حتى تتم استعادته. لن تُحذف إجاباتهم أو محاولاتهم.",title:"أرشفة واجب فيه محاولات نشطة",confirmLabel:"أرشفة"})))return;
-    confirmActive=true;
-   }else if(!(await confirm({message:"سيتم إخفاء الواجب عن الطلاب مع الاحتفاظ بجميع التسليمات والنتائج. يمكنك استعادته لاحقًا.",title:"أرشفة الواجب",confirmLabel:"أرشفة"})))return;
-   const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"archive",assignmentId:item.assignmentId,...(confirmActive?{confirmActiveAttempts:true}:{})})});
-   // If this assignment's gradebook is open: refresh its authoritative status so B2B controls hide at once, or
-   // drop the detail entirely when the archived assignment leaves the current master scope.
-   reconcileMutated(r.assignment);
-   if(resultsFor?.assignmentId===item.assignmentId){setDeadlineFor(null);setReopenFor(null);setExtendFor(null)}
-   setNotice("✓ تم أرشفة الواجب «"+item.title+"».");
-  }catch(e){setError(e instanceof Error?e.message:"تعذر أرشفة الواجب.")}finally{setBusy(false)}
- }
- async function restoreItem(item:Item){setBusy(true);setError("");setNotice("");try{const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"restore",assignmentId:item.assignmentId})});reconcileMutated(r.assignment);setNotice("✓ تم استعادة الواجب «"+item.title+"».")}catch(e){setError(e instanceof Error?e.message:"تعذر استعادة الواجب.")}finally{setBusy(false)}}
- // Permanent purge — impact-gated. History present => never even offer purge; zero history => danger dialog
- // that requires typing the exact title before POSTing action:"purge".
- async function openPurge(item:Item){setError("");setNotice("");setBusy(true);try{const impact=await fetchImpact(item);if(!impact)return;if(impact.submissionDocuments>0){setError("لا يمكن الحذف النهائي لأن للواجب بيانات طلاب محفوظة. اترك الواجب في الأرشيف للحفاظ على السجل.");return}setPurgeFor(item);setPurgeTitle("")}finally{setBusy(false)}}
- async function confirmPurge(){if(!purgeFor)return;const item=purgeFor;setBusy(true);setError("");try{const r=await api<{purged?:boolean}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"purge",assignmentId:item.assignmentId,confirmAssignmentId:item.assignmentId,confirmTitle:purgeTitle})});if(r.purged){setItems(x=>x.filter(y=>y.assignmentId!==item.assignmentId));if(resultsFor?.assignmentId===item.assignmentId)clearDetail({restoreFocus:false});focusWorkspacePending.current=true;setPurgeFor(null);setNotice("✓ تم حذف الواجب نهائيًا.")}}catch(e){setError(e instanceof Error?e.message:"تعذر الحذف النهائي.")}finally{setBusy(false)}}
- // Opening an assignment = exactly one authoritative results read; the composer yields to the detail area.
- // Phase 12B — sequenced: a read that resolves after a NEWER open / drill started is discarded (newest intent wins, never
- // an older response overwriting a newer selection). A drill applies its gradebook view to the SAME authoritative rows.
- async function loadResults(item=resultsFor,trigger?:HTMLElement|null,drillTarget?:AssignmentDrill){
-  if(!item)return;
-  if(trigger!==undefined){detailOpenerRef.current=trigger;focusDetailPending.current=true;setMode("list")}
-  if(trigger!==undefined&&!drillTarget)setDrillFocus(null);                        // a manual open: the teacher leaves the drill focus
-  const seq=++resultsSeq.current;
-  resultsBusy.current=true;
-  setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);
-  try{
-   const r=await api<{students:StudentResult[];stats:Stats;codingSummary?:CodingGradingStatus;codingEvidenceTotals?:CodingEvidenceTotals}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
-   if(seq!==resultsSeq.current)return;
-   if(!matchesMasterScope(item,scopeRef.current))return;
-   const students=r.students||[];
-   setResultsFor(item);setResults(students);setStats(r.stats||null);setCodingSummary(r.codingSummary||null);setCodingTotals(r.codingEvidenceTotals||null);
-   if(drillTarget)applyDrillView(drillTarget,item,students);
-  }catch(e){if(seq===resultsSeq.current)setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{if(seq===resultsSeq.current){resultsBusy.current=false;setBusy(false)}}
- }
- // Review fix — the ONE place that retires the current results intent without starting a new read: every older in-flight
- // read becomes stale (its response and its finally are ignored), and the busy state that read held is released here,
- // because that read's own finally no longer will. Used when a newer drill turns out to be unavailable.
- function supersedeResultsIntent(){
-  resultsSeq.current+=1;
-  focusDetailPending.current=false;
-  if(resultsBusy.current){resultsBusy.current=false;setBusy(false)}
- }
- // Phase 12B — the drill's gradebook view, decided from the authoritative rows just read (never from the Today summary):
- // the EXISTING filter the intent maps to; a requested student is focused only if present in these rows, and when that
- // student no longer matches the intended filter (the attempt ended since Today was read) the gradebook shows every row
- // so the student's CURRENT state stays visible — with a calm note, never an error.
- function applyDrillView(d:AssignmentDrill,item:Item,students:StudentResult[]){
-  const wanted=gradebookFilterFor(d.mode),sid=drillStudentId(d);
-  setGbSearch("");
-  if(!sid){setGbFilter(wanted);setDrillFocus(null);return}
-  const row=students.find(s=>s.studentId===sid);
-  if(!row){setGbFilter(wanted);setDrillFocus(null);setNotice("لم يعد هذا الطالب ضمن الواجب؛ تُعرض الحالة الحالية.");return}
-  const matches=wanted==="all"||(wanted==="active"?!!row.activeAttempt:rowGrading(row)===wanted);
-  setGbFilter(matches?wanted:"all");
-  setDrillFocus({assignmentId:item.assignmentId,studentId:sid});
-  if(!matches)setNotice("لم تعد محاولة "+row.studentName+" جارية؛ تُعرض حالته الحالية.");
- }
- // Phase 12B — consume a drill ONCE, and only against the authoritative list (never the empty pre-load list). The exact
- // assignment is brought into the master scope (its class, current view, no search) and opened through the SAME results
- // read as «فتح». An assignment that no longer exists (or was archived) is never replaced by another: calm note only.
- function applyDrill(d:AssignmentDrill,list:Item[]){
-  const item=list.find(x=>x.assignmentId===d.assignmentId);
-  if(!item||item.status==="archived"){
-   // A newer intent that cannot be honoured still wins over every older one: retire any in-flight read, drop the open
-   // detail (results, stats, gradebook controls, drill focus), keep the list, select nothing, request nothing.
-   supersedeResultsIntent();
-   clearDetail({restoreFocus:false});
-   setError("");setNotice("تعذر فتح الواجب المطلوب لأنه لم يعد متاحًا (ربما أُرشف أو حُذف). تُعرض قائمة الواجبات.");
-   return;
-  }
-  const scope:MasterScope={classId:item.classId,showArchived:false,q:""};
-  scopeRef.current=scope;setFilterClassId(item.classId);setShowArchived(false);setSearch("");
-  setError("");setNotice("");
-  void loadResults(item,null,d);
- }
- useEffect(()=>{
-  if(!drill||!listReady||drill.seq<=appliedDrillSeq.current)return;
-  appliedDrillSeq.current=drill.seq;                                                // marked synchronously: never applied twice
-  const d=drill;
-  onDrillConsumed?.(d.seq);
-  void Promise.resolve().then(()=>applyDrill(d,items));
- },[drill,listReady]);// eslint-disable-line react-hooks/exhaustive-deps
- // Clears every piece of detail state (results, stats, analysis, gradebook controls, row editors, opener ref).
- // restoreFocus:true = the explicit close button (focus returns to the original "فتح"); restoreFocus:false = the
- // detail left the master scope while the teacher operates a master control or after an authoritative mutation,
- // so the control they are using keeps focus and no detached opener is ever focused.
- function clearDetail({restoreFocus}:{restoreFocus:boolean}){
-  setResultsFor(null);setResults([]);setStats(null);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);setGbSearch("");setGbFilter("all");setGbSort("name");setDrillFocus(null);
-  const el=detailOpenerRef.current;detailOpenerRef.current=null;
-  if(restoreFocus&&el&&el.isConnected)el.focus();
- }
- function closeDetail(){clearDetail({restoreFocus:true})}
- // Master controls: apply the change, then enforce the invariant against the resulting scope. The composer is
- // never closed here (its target class is intentionally independent of the list filter).
- function changeScope(patch:{filterClassId?:string;showArchived?:boolean;search?:string}){
-  const next:MasterScope={classId:patch.filterClassId!==undefined?patch.filterClassId:effectiveFilter,showArchived:patch.showArchived!==undefined?patch.showArchived:showArchived,q:normalizeQuery(patch.search!==undefined?patch.search:search)};
-  scopeRef.current=next;
-  if(patch.filterClassId!==undefined)setFilterClassId(patch.filterClassId);
-  if(patch.showArchived!==undefined)setShowArchived(patch.showArchived);
-  if(patch.search!==undefined)setSearch(patch.search);
-  if(resultsFor&&!matchesMasterScope(resultsFor,next))clearDetail({restoreFocus:false});
- }
- // Authoritative assignment mutation (setStatus / setMaxAttempts / archive / restore): replace the row, and if the
- // returned assignment no longer belongs to the master scope, drop a detail that pointed at it (never focusing a
- // detached opener; a stable workspace target is focused only if focus was actually lost with the row).
- function reconcileMutated(updated:Item){
-  setItems(x=>x.map(y=>y.assignmentId===updated.assignmentId?updated:y));
-  if(matchesMasterScope(updated,scopeRef.current)){setResultsFor(prev=>prev&&prev.assignmentId===updated.assignmentId?updated:prev);return}
-  if(resultsFor?.assignmentId===updated.assignmentId)clearDetail({restoreFocus:false});
-  focusWorkspacePending.current=true;
- }
- useEffect(()=>{
-  if(!focusWorkspacePending.current)return;
-  focusWorkspacePending.current=false;
-  const el=document.activeElement;
-  if(!el||el===document.body||!el.isConnected)toolbarRef.current?.focus();
- });
- async function loadItemAnalysis(item=resultsFor){if(!item)return;setAnalysisBusy(true);setError("");try{const r=await api<ItemAnalysis>("/api/assignment-item-analysis?assignmentId="+encodeURIComponent(item.assignmentId));setAnalysis(r)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل تحليل الأسئلة.")}finally{setAnalysisBusy(false)}}
- // Merge an authoritative lifecycle snapshot (returned by every mutating action) into the student's row
- // so the UI never guesses (B2B #2/#20). Only defined fields are applied.
- // Phase 17D-A — ONE bulk retry of the assignment's open coding grading (same revision, server-selected targets), then an
- // authoritative reload of the gradebook. The request carries the assignment id only.
- async function bulkCodingRetry(){
-  if(!resultsFor)return;
-  const item=resultsFor;
-  if(!(await confirm({message:"سيُعاد إرسال الأسئلة البرمجية التي لم يكتمل تصحيحها الآلي إلى خادم التنفيذ بنفس الإصدار. لن تتغير الإجابات أو المراجعات اليدوية.",title:"إعادة محاولة التصحيح البرمجي",confirmLabel:"إعادة المحاولة"})))return;
-  setBusy(true);setError("");setNotice("");
-  let r:{scheduled:number;hasMore:boolean}|null=null;
-  try{r=await api<{scheduled:number;hasMore:boolean}>("/api/coding/bulk-retry",{method:"POST",body:JSON.stringify({assignmentId:item.assignmentId})})}
-  catch{setError("تعذر جدولة إعادة محاولة التصحيح البرمجي.")}
-  finally{setBusy(false)}
-  if(!r)return;
-  await loadResults(item);
-  setNotice(bulkRetryNotice({scheduled:Number(r.scheduled)||0,hasMore:!!r.hasMore}));
- }
- function mergeSnap(studentId:string,snap:LifecycleSnap){setResults(x=>x.map(y=>y.studentId===studentId?{...y,...snap}:y))}
- async function grantAttempt(s:StudentResult){
-  if(!resultsFor)return;
-  if(!(await confirm({message:"سيتم السماح للطالب بمحاولة إضافية دون حذف المحاولات السابقة.",title:"منح محاولة إضافية",confirmLabel:"منح المحاولة"})))return;
-  setBusy(true);setError("");
-  try{const r=await api<LifecycleSnap>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"allowRetry",assignmentId:resultsFor.assignmentId,studentId:s.studentId})});mergeSnap(s.studentId,r);setNotice("✓ تم منح محاولة إضافية للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر منح المحاولة.")}finally{setBusy(false)}
- }
- // Prefill only from an EXISTING per-student override; never from the original dueAt (that value equals
- // the global due and would fail the "must be after the original due" rule if submitted as-is). While the
- // assignment is still open reopenUntil is optional, so a blank default is safe.
- function openReopen(s:StudentResult){setError("");setExtendFor(null);setDeadlineFor(null);setReopenFor(s.studentId);setReopenValue(s.dueAtOverride?toLocalInput(s.dueAtOverride):"")}
- async function saveReopen(s:StudentResult){
-  if(!resultsFor)return;
-  if(!(await confirm({message:"إعادة فتح الواجب لهذا الطالب: تُتاح له محاولة واحدة إذا لزم دون حذف نتيجته السابقة، ولن تبدأ المحاولة تلقائيًا.",title:"إعادة فتح للطالب",confirmLabel:"إعادة الفتح"})))return;
-  setBusy(true);setError("");
-  try{const body:{action:string;assignmentId:string;studentId:string;reopenUntil?:string}={action:"reopenStudent",assignmentId:resultsFor.assignmentId,studentId:s.studentId};if(reopenValue)body.reopenUntil=new Date(reopenValue).toISOString();const r=await api<LifecycleSnap>("/api/assignment-results",{method:"POST",body:JSON.stringify(body)});mergeSnap(s.studentId,r);setReopenFor(null);setNotice("✓ تم إعادة فتح الواجب للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر إعادة فتح الواجب.")}finally{setBusy(false)}
- }
- function openExtend(s:StudentResult){setError("");setReopenFor(null);setDeadlineFor(null);setExtendFor(s.studentId);const cur=s.activeAttempt?.extendedEndsAt||s.attemptDurationEndsAt||s.activeAttempt?.endsAt||"";setExtendValue(cur?toLocalInput(cur):"")}
- async function saveExtend(s:StudentResult){
-  if(!resultsFor||!extendValue)return;
-  if(!(await confirm({message:"سيتم تمديد وقت هذه المحاولة النشطة فقط دون إعادة ضبط العدّاد أو تغيير بدايتها.",title:"تمديد وقت المحاولة",confirmLabel:"تمديد"})))return;
-  setBusy(true);setError("");
-  try{const r=await api<LifecycleSnap>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"extendActiveAttempt",assignmentId:resultsFor.assignmentId,studentId:s.studentId,newEndsAt:new Date(extendValue).toISOString()})});mergeSnap(s.studentId,r);setExtendFor(null);setNotice("✓ تم تمديد وقت المحاولة للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر تمديد وقت المحاولة.")}finally{setBusy(false)}
- }
- // Phase 7B — end the student's CURRENT attempt. Sends ONLY the identity of the attempt shown in this row (attemptNumber +
- // startedAt, + attemptEpoch for a model-3 attempt) and never any answers: the server grades its own saved draft. The
- // response is the authoritative row (lifecycle + results) and is merged in place; a 409 (the attempt changed meanwhile —
- // submitted, paused, resumed, or a newer attempt) only shows the error and leaves the local row untouched.
- async function endAttempt(s:StudentResult){
-  const act=s.activeAttempt;
-  if(!resultsFor||!act)return;
-  if(!(await confirm({message:"سيتم إنهاء المحاولة الحالية وتصحيح آخر إجابات محفوظة على الخادم. لن يستطيع الطالب متابعة هذه المحاولة بعد ذلك.",title:"إنهاء محاولة الطالب",confirmLabel:"إنهاء المحاولة",tone:"danger"})))return;
-  setBusy(true);setError("");
-  try{
-   const body={action:"endActiveAttempt",assignmentId:resultsFor.assignmentId,studentId:s.studentId,expectedAttemptNumber:act.attemptNumber,expectedStartedAt:act.startedAt,...(typeof act.attemptEpoch==="number"?{expectedAttemptEpoch:act.attemptEpoch}:{})};
-   const r=await api<LifecycleSnap>("/api/assignment-results",{method:"POST",body:JSON.stringify(body)});
-   mergeSnap(s.studentId,r);setExtendFor(x=>x===s.studentId?null:x);setNotice("✓ تم إنهاء محاولة الطالب "+s.studentName);
-  }catch(e){setError(e instanceof Error?e.message:"تعذر إنهاء المحاولة.")}finally{setBusy(false)}
- }
- function openDeadline(s:StudentResult){setError("");setReopenFor(null);setExtendFor(null);setDeadlineFor(s.studentId);setDeadlineValue(s.dueAtOverride?toLocalInput(s.dueAtOverride):"")}
- async function saveDeadline(s:StudentResult){if(!resultsFor||!deadlineValue)return;setBusy(true);setError("");try{const r=await api<LifecycleSnap&{dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:resultsFor.assignmentId,studentId:s.studentId,dueAtOverride:new Date(deadlineValue).toISOString()})});mergeSnap(s.studentId,r);setDeadlineFor(null);setNotice("✓ تم تمديد الموعد للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر حفظ التمديد.")}finally{setBusy(false)}}
- async function clearDeadline(s:StudentResult){if(!resultsFor)return;setBusy(true);setError("");try{const r=await api<LifecycleSnap&{dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:resultsFor.assignmentId,studentId:s.studentId,dueAtOverride:null})});mergeSnap(s.studentId,r);setDeadlineFor(null);setNotice("✓ تم إلغاء تمديد الطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر إلغاء التمديد.")}finally{setBusy(false)}}
- // Review opens above the NON-MODAL detail; row-editor dialogs and the pending confirm never stay open beneath it.
- function openReview(s:StudentResult){if(!s.latestResult)return;setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAttemptsFor(null);setPurgeFor(null);cancelPending();setReview({studentId:s.studentId,attemptNumber:s.latestResult.attemptNumber})}
-
- const masterScope:MasterScope={classId:effectiveFilter,showArchived,q:normalizeQuery(search)};
- useEffect(()=>{scopeRef.current=masterScope});
- const archivedCount=items.filter(x=>matchesMasterScope(x,{classId:effectiveFilter,showArchived:true,q:""})).length;
- const scoped=items.filter(x=>matchesMasterScope(x,{...masterScope,q:""}));
- const visible=items.filter(x=>matchesMasterScope(x,masterScope));
- const sourceCount=examQuestionCount(sourceExam);
- const sortedQuestions=useMemo(()=>{
-  if(!analysis)return [];
-  if(analysisSort==="number")return [...analysis.questions].sort((a,b)=>a.number-b.number);
-  const withData=analysis.questions.filter(q=>q.averagePercentage!==null),withoutData=analysis.questions.filter(q=>q.averagePercentage===null);
-  withData.sort((a,b)=>analysisSort==="hardest"?(a.averagePercentage as number)-(b.averagePercentage as number):(b.averagePercentage as number)-(a.averagePercentage as number));
-  return [...withData,...withoutData];
- },[analysis,analysisSort]);
- const analysisSummary=useMemo(()=>{
-  if(!analysis)return null;
-  const withPct=analysis.questions.filter(q=>q.averagePercentage!==null);
-  if(!withPct.length)return {overallAverage:null as number|null,hardest:null as QuestionStat|null,easiest:null as QuestionStat|null};
-  const overallAverage=Math.round(withPct.reduce((sum,q)=>sum+(q.averagePercentage as number),0)/withPct.length*10)/10;
-  const hardest=withPct.reduce((a,b)=>(a.averagePercentage as number)<=(b.averagePercentage as number)?a:b);
-  const easiest=withPct.reduce((a,b)=>(a.averagePercentage as number)>=(b.averagePercentage as number)?a:b);
-  return {overallAverage,hardest,easiest};
- },[analysis]);
- // Roadmap #13 — gradebook rows after client-side search (name/code) + filter (grading/active) + sort.
- const visibleResults=useMemo(()=>{
-  const q=gbSearch.trim().toLowerCase();
-  let rows=results.filter(s=>!q||String(s.studentName||"").toLowerCase().includes(q)||String(s.studentCode||"").toLowerCase().includes(q));
-  rows=rows.filter(s=>{
-   if(gbFilter==="all")return true;
-   if(gbFilter==="active")return !!s.activeAttempt;               // currently attempting (independent of grading)
-   return rowGrading(s)===gbFilter;                                // pendingReview | final | notSubmitted
-  });
-  const pct=(s:StudentResult)=>s.latestResult?Number(s.latestResult.percentage||0):null;
-  const byName=(a:StudentResult,b:StudentResult)=>String(a.studentName).localeCompare(String(b.studentName),"ar");
-  const sorted=[...rows];
-  if(gbSort==="name")sorted.sort(byName);
-  else if(gbSort==="pendingFirst")sorted.sort((a,b)=>{const ap=rowGrading(a)==="pendingReview"?0:1,bp=rowGrading(b)==="pendingReview"?0:1;return ap!==bp?ap-bp:byName(a,b)});
-  else sorted.sort((a,b)=>{const av=pct(a),bv=pct(b);if(av===null&&bv===null)return byName(a,b);if(av===null)return 1;if(bv===null)return -1;return gbSort==="highest"?bv-av:av-bv});
-  return sorted;
- },[results,gbSearch,gbFilter,gbSort]);
- const deadlineStudent=results.find(x=>x.studentId===deadlineFor)||null,reopenStudent=results.find(x=>x.studentId===reopenFor)||null,extendStudent=results.find(x=>x.studentId===extendFor)||null;
- const extendEffDue=extendStudent?(extendStudent.dueAtOverride||resultsFor?.dueAt||""):"";
- const willClip=!!(extendValue&&extendEffDue&&new Date(extendValue).getTime()>new Date(extendEffDue).getTime());
- const canCreate=!busy&&!examLoading&&!!classId&&!!title.trim()&&!!sourceExam&&sourceCount>0;
- const showDetailArea=mode==="composer"||resultsFor!==null;
+export default function AssignmentsPanel(props:Props){
+ const toolbarRef=useRef<HTMLDivElement|null>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null),detailHeadingRef=useRef<HTMLHeadingElement>(null);
+ const c=useAssignmentsController(props,{toolbarRef,composerHeadingRef,detailHeadingRef});
+ const {toolbar:t,list:l,composer:k,detail:d,gradebook:g,dialogs:x}=c;
+ const showDetailArea=c.mode==="composer"||d.item!==null;
 
  return <section className="assignments-panel eb-assignments">
+  {!t.showArchived&&<AssignmentsHomeKpis kpis={c.home.kpis}/>}
   <div className="eb-assign-toolbar" role="region" aria-label="أدوات الواجبات" ref={toolbarRef} tabIndex={-1}>
    <div className="eb-assign-filters">
-    <label className="eb-field-inline">الصف<select value={effectiveFilter} onChange={e=>changeScope({filterClassId:e.target.value})}><option value="">كل الصفوف</option>{active.map(c=><option value={c.classId} key={c.classId}>{c.name}{c.grade?" · "+c.grade:""}</option>)}</select></label>
+    <label className="eb-field-inline">الصف<select value={t.effectiveFilter} onChange={e=>t.changeScope({filterClassId:e.target.value})}><option value="">كل الصفوف</option>{t.active.map(cl=><option value={cl.classId} key={cl.classId}>{cl.name}{cl.grade?" · "+cl.grade:""}</option>)}</select></label>
     <div className="eb-segmented" role="group" aria-label="عرض الواجبات">
-     <button type="button" aria-pressed={!showArchived} onClick={()=>changeScope({showArchived:false})}>الواجبات الحالية</button>
-     <button type="button" aria-pressed={showArchived} onClick={()=>changeScope({showArchived:true})}>المؤرشفة{archivedCount?" ("+archivedCount+")":""}</button>
+     <button type="button" aria-pressed={!t.showArchived} onClick={()=>t.changeScope({showArchived:false})}>الواجبات الحالية</button>
+     <button type="button" aria-pressed={t.showArchived} onClick={()=>t.changeScope({showArchived:true})}>المؤرشفة{t.archivedCount?" ("+t.archivedCount+")":""}</button>
     </div>
-    <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={search} onChange={e=>changeScope({search:e.target.value})} placeholder="بحث بعنوان الواجب أو الصف"/></label>
+    <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={t.search} onChange={e=>t.changeScope({search:e.target.value})} placeholder="بحث بعنوان الواجب أو الصف"/></label>
+    {!t.showArchived&&<div className="eb-chip-group eb-assign-time-filters" role="group" aria-label="تصفية حسب الوقت">
+     {TIME_FILTERS.filter(f=>f.key==="all"||t.timeCounts[f.key]>0||t.timeFilter===f.key).map(f=><button key={f.key} type="button" className="eb-filter-chip" aria-pressed={t.timeFilter===f.key} onClick={()=>t.changeScope({timeFilter:f.key})}>{f.label} <span className="eb-filter-chip-n">{t.timeCounts[f.key]}</span></button>)}
+    </div>}
    </div>
    <div className="eb-assign-actions">
-    <button type="button" className="eb-button is-primary" onClick={openComposer} disabled={mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>
+    <button type="button" className="eb-button is-primary" onClick={t.openComposer} disabled={c.mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>
     <ActionMenu label="المزيد من إجراءات الواجبات">
-     <button type="button" className="eb-menu-item" onClick={()=>{void load();void loadSavedExams()}} disabled={loading||examLoading}><IconRefresh size={16}/>تحديث</button>
+     <button type="button" className="eb-menu-item" onClick={t.refresh} disabled={c.loading||k.source.examLoading}><IconRefresh size={16}/>تحديث</button>
     </ActionMenu>
    </div>
   </div>
-  {error&&<div className="platform-error assignment-inline-message" role="alert">{error}</div>}{notice&&<div className="platform-notice assignment-inline-message" role="status" aria-live="polite">{notice}</div>}
+  {c.error&&<div className="platform-error assignment-inline-message" role="alert">{c.error}</div>}{c.notice&&<div className="platform-notice assignment-inline-message" role="status" aria-live="polite">{c.notice}</div>}
 
   <div className={"eb-assign-layout"+(showDetailArea?" has-detail":"")}>
-   <AssignmentList items={visible} showArchived={showArchived} hasAnyInScope={scoped.length>0} selectedId={mode==="list"&&resultsFor?resultsFor.assignmentId:""} busy={busy} loading={loading}
-    onOpen={(item,trigger)=>void loadResults(item,trigger)} onPublish={item=>void action(item,{action:"setStatus",status:"published"})} onUnpublish={item=>void action(item,{action:"setStatus",status:"draft"})}
-    onEditAttempts={setAttemptsFor} onEditTiming={setTimingFor} onArchive={item=>void archiveItem(item)} onRestore={item=>void restoreItem(item)} onPurge={item=>void openPurge(item)} onCreate={openComposer} fmt={fmt}/>
-   {mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={closeComposer} busy={busy} examLoading={examLoading}
-    sourceMode={sourceMode} onSourceMode={m=>void switchSourceMode(m)} sourceExam={sourceExam} sourceCount={sourceCount} currentExam={current} hasCurrent={!!(current&&examHasQuestions(current))}
-    savedExams={savedExams} examSource={examSource} onChooseExam={v=>void chooseExam(v)}
-    libraryLoading={libraryLoading} libraryItems={libraryFiltered} libraryCategories={libraryCats} librarySearch={librarySearch} onLibrarySearch={setLibrarySearch} libraryCategory={libraryCategory} onLibraryCategory={setLibraryCategory}
-    librarySelectedId={librarySelectedId} onChooseLibraryItem={it=>void chooseLibraryItem(it)} onPreview={it=>void openPreview(it)} previewBusyId={previewBusyId} onCopyToBuilder={onCopyLibraryExamToBuilder?(it=>void copyLibraryItem(it)):undefined} copyBusyId={copyBusyId}
-    activeClasses={active} classId={classId} onClassId={setClassId} title={title} onTitle={setTitle} instructions={instructions} onInstructions={setInstructions} openAt={openAt} onOpenAt={setOpenAt} dueAt={dueAt} onDueAt={setDueAt}
-    maxAttempts={maxAttempts} onMaxAttempts={setMaxAttempts} durationMinutes={durationMinutes} onDurationMinutes={setDurationMinutes} attemptPolicy={attemptPolicy} onAttemptPolicy={setAttemptPolicy} publish={publish} onPublish={setPublish} canCreate={canCreate} onCreate={()=>void create()}/>}
-   {mode==="list"&&resultsFor&&<AssignmentDetail item={resultsFor} stats={stats} loading={busy} headingRef={detailHeadingRef} onClose={closeDetail}
-    analysis={analysis} analysisBusy={analysisBusy} analysisSort={analysisSort} onAnalysisSort={setAnalysisSort} onToggleAnalysis={()=>{if(analysis)setAnalysis(null);else void loadItemAnalysis()}} sortedQuestions={sortedQuestions} analysisSummary={analysisSummary} fmt={fmt}>
-    <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy} focusStudentId={drillFocus&&drillFocus.assignmentId===resultsFor.assignmentId?drillFocus.studentId:undefined}
-     search={gbSearch} onSearch={setGbSearch} filter={gbFilter} onFilter={setGbFilter} sort={gbSort} onSort={setGbSort}
-     onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} onEndAttempt={s=>void endAttempt(s)} fmt={fmt}
-     codingSummary={codingSummary} codingTotals={codingTotals} onBulkCodingRetry={()=>void bulkCodingRetry()}
-     onExportCsv={()=>downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",resultsFor.title),gradebookCsvRows(resultsFor,results,rowGrading))}/>
+   <AssignmentList items={l.visible} showArchived={t.showArchived} hasAnyInScope={l.hasAnyInScope} selectedId={l.selectedId} busy={c.busy} loading={c.loading}
+    onOpen={l.open} onPublish={l.publish} onUnpublish={l.unpublish}
+    onEditAttempts={l.editAttempts} onEditTiming={l.editTiming} onEditDetails={l.editDetails} onArchive={l.archive} onRestore={l.restore} onPurge={l.purge} onCreate={t.openComposer} fmt={fmt} progress={c.home.progress} now={c.home.now}/>
+   {c.mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={k.close} busy={c.busy} examLoading={k.source.examLoading}
+    sourceMode={k.source.sourceMode} onSourceMode={m=>void k.source.switchSourceMode(m)} sourceExam={k.source.sourceExam} sourceCount={k.source.sourceCount} currentExam={k.source.current} hasCurrent={k.source.hasCurrent}
+    savedExams={k.source.savedExams} examSource={k.source.examSource} onChooseExam={v=>void k.source.chooseExam(v)}
+    libraryLoading={k.library.libraryLoading} libraryItems={k.library.libraryFiltered} libraryCategories={k.library.libraryCats} librarySearch={k.library.librarySearch} onLibrarySearch={k.library.setLibrarySearch} libraryCategory={k.library.libraryCategory} onLibraryCategory={k.library.setLibraryCategory}
+    librarySelectedId={k.library.librarySelectedId} onChooseLibraryItem={it=>void k.library.chooseLibraryItem(it)} onPreview={it=>void k.library.openPreview(it)} previewBusyId={k.library.previewBusyId} onCopyToBuilder={k.library.copyLibraryItem?(it=>void k.library.copyLibraryItem?.(it)):undefined} copyBusyId={k.library.copyBusyId}
+    activeClasses={t.active} classId={k.fields.classId} onClassId={k.fields.setClassId} title={k.fields.title} onTitle={k.fields.setTitle} instructions={k.fields.instructions} onInstructions={k.fields.setInstructions} openAt={k.fields.openAt} onOpenAt={k.fields.setOpenAt} dueAt={k.fields.dueAt} onDueAt={k.fields.setDueAt}
+    maxAttempts={k.fields.maxAttempts} onMaxAttempts={k.fields.setMaxAttempts} durationMinutes={k.fields.durationMinutes} onDurationMinutes={k.fields.setDurationMinutes} attemptPolicy={k.fields.attemptPolicy} onAttemptPolicy={k.fields.setAttemptPolicy} publish={k.fields.publish} onPublish={k.fields.setPublish} windowIssues={k.windowIssues} canCreate={k.canCreate} onCreate={k.create}/>}
+   {c.mode==="list"&&d.item&&<AssignmentDetail item={d.item} stats={d.stats} loading={c.busy} headingRef={detailHeadingRef} onClose={d.close}
+    analysis={d.analysis} analysisBusy={d.analysisBusy} analysisSort={d.analysisSort} onAnalysisSort={d.setAnalysisSort} onToggleAnalysis={d.toggleAnalysis} sortedQuestions={d.sortedQuestions} analysisSummary={d.analysisSummary} fmt={fmt}>
+    <Gradebook assignment={d.item} rows={g.rows} totalRows={g.results.length} gradingOf={rowGrading} busy={c.busy} focusStudentId={g.focusStudentId}
+     search={g.search} onSearch={g.setSearch} filter={g.filter} onFilter={g.setFilter} sort={g.sort} onSort={g.setSort}
+     onReview={g.review} onGrant={g.grant} onReopen={g.reopen} onExtend={g.extend} onDeadline={g.deadline} onEndAttempt={g.endAttempt} fmt={fmt}
+     codingSummary={g.codingSummary} codingTotals={g.codingTotals} onBulkCodingRetry={g.bulkCodingRetry}
+     onExportCsv={()=>{if(d.item)downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",d.item.title),gradebookCsvRows(d.item,g.results,rowGrading))}}/>
    </AssignmentDetail>}
   </div>
 
-  <MaxAttemptsDialog item={attemptsFor} busy={busy} onSave={(item,value)=>void saveMaxAttempts(item,value)} onClose={()=>setAttemptsFor(null)}/>
-  <AssignmentTimingDialog item={timingFor} busy={busy} onSave={(item,dueAtIso,durationMinutes)=>void saveTiming(item,dueAtIso,durationMinutes)} onClose={()=>setTimingFor(null)} fmt={fmt}/>
-  <DeadlineDialog student={deadlineStudent} assignment={resultsFor} busy={busy} value={deadlineValue} onValue={setDeadlineValue} onClose={()=>setDeadlineFor(null)} onSave={s=>void saveDeadline(s)} onClear={s=>void clearDeadline(s)} fmt={fmt}/>
-  <ReopenDialog student={reopenStudent} assignment={resultsFor} busy={busy} value={reopenValue} onValue={setReopenValue} onClose={()=>setReopenFor(null)} onSave={s=>void saveReopen(s)} fmt={fmt}/>
-  <ExtendDialog student={extendStudent} assignment={resultsFor} busy={busy} value={extendValue} onValue={setExtendValue} onClose={()=>setExtendFor(null)} onSave={s=>void saveExtend(s)} willClip={willClip} fmt={fmt}/>
-  <PurgeDialog item={purgeFor} title={purgeTitle} onTitle={setPurgeTitle} busy={busy} onConfirm={()=>void confirmPurge()} onClose={()=>{if(!busy)setPurgeFor(null)}}/>
-  {confirmDialog}
-  {review&&resultsFor&&<AssignmentReview token={token} assignmentId={resultsFor.assignmentId} studentId={review.studentId} initialAttempt={review.attemptNumber} onClose={()=>setReview(null)} onSaved={()=>void loadResults(resultsFor)}/>}
-  {preview&&createPortal(<ExamPreview exam={preview.exam} onClose={()=>setPreview(null)}/>,document.body)}
+  <MaxAttemptsDialog item={x.attemptsFor} busy={c.busy} onSave={x.saveMaxAttempts} onClose={x.closeAttempts}/>
+  <AssignmentDetailsDialog item={x.detailsFor} busy={c.busy} onSave={x.saveDetails} onClose={x.closeDetails}/>
+  <AssignmentTimingDialog item={x.timingFor} busy={c.busy} onSave={x.saveTiming} onClose={x.closeTiming} fmt={fmt}/>
+  <DeadlineDialog student={x.deadlineStudent} assignment={d.item} busy={c.busy} value={x.deadlineValue} onValue={x.setDeadlineValue} onClose={x.closeDeadline} onSave={x.saveDeadline} onClear={x.clearDeadline} fmt={fmt}/>
+  <ReopenDialog student={x.reopenStudent} assignment={d.item} busy={c.busy} value={x.reopenValue} onValue={x.setReopenValue} onClose={x.closeReopen} onSave={x.saveReopen} fmt={fmt}/>
+  <ExtendDialog student={x.extendStudent} assignment={d.item} busy={c.busy} value={x.extendValue} onValue={x.setExtendValue} onClose={x.closeExtend} onSave={x.saveExtend} willClip={x.willClip} fmt={fmt}/>
+  <PurgeDialog item={x.purgeFor} title={x.purgeTitle} onTitle={x.setPurgeTitle} busy={c.busy} onConfirm={x.confirmPurge} onClose={x.closePurge}/>
+  {x.confirmDialog}
+  {c.review.target&&d.item&&<AssignmentReview token={c.token} assignmentId={d.item.assignmentId} studentId={c.review.target.studentId} initialAttempt={c.review.target.attemptNumber} onClose={c.review.close} onSaved={d.reload}/>}
+  {k.preview&&createPortal(<ExamPreview exam={k.preview.exam} onClose={k.closePreview}/>,document.body)}
  </section>;
 }

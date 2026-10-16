@@ -1,4 +1,5 @@
 const { listJson, listBlobNames, downloadManyJson, mapConcurrent, getReadConcurrency } = require("./platform-storage");
+const { canAccessDocument } = require("./teacher-tenancy");
 // Roadmap #23 — teacher analytics must interpret grading state through the ONE canonical R14 helper
 // (deriveGradingStatus), never a raw `finalized === false` check, so its pending-review counts agree with
 // the gradebook (assignment-results), assignment-review and the student dashboard. The canonical rule also
@@ -287,7 +288,7 @@ function buildInsights({ mode, className, performanceChange, trendCount, topicAn
 // run the exact same pipeline with the prefilter disabled (download every listed submission = the pre-R28 scan);
 // `scopedSubmissionReads: false` (Phase 8E-3) runs a CLASS / STUDENT scope through the GLOBAL read path (one
 // whole-prefix listing + candidate prefilter = the pre-8E-3 pipeline) so the scoped reads can be proven equivalent.
-async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0 } = {}, deps = {}) {
+async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0, tenant = null } = {}, deps = {}) {
   const selectNames = deps.selectSubmissionNames || selectSubmissionNames;
   // Phase 8A — ONE authoritative analytics scope per request (validated below, once the users are loaded).
   const mode = requestedStudentId ? "student" : requestedClassId ? "class" : "global";
@@ -320,8 +321,11 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
       : Promise.resolve(null)                                            // STUDENT: exact reads only after scope validation
   ]);
 
-  const classes = classesRaw
-    .filter(item => item?.classId)
+  // Phase 21G.0 — teacher tenancy: only the teacher's own classes exist for these analytics (another teacher's class answers
+  // like a missing one).
+  const ownClassesRaw = classesRaw.filter(item => item?.classId && canAccessDocument(item, tenant));
+  if (requestedClassId && !ownClassesRaw.some(item => String(item.classId) === requestedClassId)) throw new AnalyticsScopeError(404, "الصف غير موجود.");
+  const classes = ownClassesRaw
     .map(item => ({
       classId: String(item.classId),
       name: String(item.name || ""),

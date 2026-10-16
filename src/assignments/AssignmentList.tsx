@@ -5,7 +5,9 @@ import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import Dialog from "../ui/Dialog";
 import { IconUpload, IconEyeOff, IconEdit, IconArchive, IconRestore, IconTrash, IconHistory } from "../icons";
-import { STATUS_LABEL, type Item } from "./types";
+import ProgressBar from "../ui/ProgressBar";
+import { STATUS_LABEL, type AssignmentProgress, type Item } from "./types";
+import { timeLabel } from "./assignmentsHome";
 import { SAVE_LABELS } from "../teacher/saveLabels";
 
 // ISO → <input type="datetime-local"> value (local wall-clock). Empty/invalid → "" (no crash).
@@ -23,11 +25,16 @@ export type AssignmentListProps = {
   onUnpublish: (item: Item) => void;
   onEditAttempts: (item: Item) => void;
   onEditTiming: (item: Item) => void;
+  /** Phase 21G.0 — edit the title and instructions (absent → not offered). */
+  onEditDetails?: (item: Item) => void;
   onArchive: (item: Item) => void;
   onRestore: (item: Item) => void;
   onPurge: (item: Item) => void;
   onCreate: () => void;
   fmt: (value: string) => string;
+  /** Phase 21G.2 — the server progress per assignment (null = unavailable) and the clock the time chips are judged at. */
+  progress?: ReadonlyMap<string, AssignmentProgress> | null;
+  now?: number;
 };
 
 export default function AssignmentList(p: AssignmentListProps) {
@@ -51,6 +58,7 @@ export default function AssignmentList(p: AssignmentListProps) {
                 <div className="eb-assign-row-title"><strong>{item.title}</strong><StatusBadge tone={item.status === "published" ? "success" : item.status === "archived" ? "neutral" : "warn"} className={"assignment-status " + item.status}>{STATUS_LABEL[item.status]}</StatusBadge></div>
                 <span className="eb-assign-row-meta">{item.className}{item.className ? " · " : ""}{item.questionCount} سؤال · {item.totalMarks} علامة · {item.maxAttempts || 1} محاولة · {item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}{item.attemptPolicy && item.attemptPolicy !== "continuous" ? " · " + attemptPolicyLabel(item.attemptPolicy) : ""}</span>
                 <small className="eb-assign-row-due">التسليم: {p.fmt(item.dueAt)}{archived && item.archivedAt ? " · أُرشف: " + p.fmt(item.archivedAt) : ""}</small>
+                {p.now !== undefined && <RowProgress item={item} progress={p.progress?.get(item.assignmentId) || null} known={p.progress !== null && p.progress !== undefined} now={p.now} />}
               </div>
               <div className="eb-assign-row-actions">
                 <button type="button" className="eb-button is-small" aria-pressed={selected} onClick={e => p.onOpen(item, e.currentTarget)} disabled={p.busy}>فتح</button>
@@ -63,6 +71,7 @@ export default function AssignmentList(p: AssignmentListProps) {
                     {item.status !== "published"
                       ? <button type="button" className="eb-menu-item" onClick={() => p.onPublish(item)} disabled={p.busy}><IconUpload size={16} />نشر</button>
                       : <button type="button" className="eb-menu-item" onClick={() => p.onUnpublish(item)} disabled={p.busy}><IconEyeOff size={16} />إيقاف النشر</button>}
+                    {p.onEditDetails && <button type="button" className="eb-menu-item" onClick={() => p.onEditDetails?.(item)} disabled={p.busy}><IconEdit size={16} />تعديل العنوان والتعليمات</button>}
                     <button type="button" className="eb-menu-item" onClick={() => p.onEditAttempts(item)} disabled={p.busy}><IconEdit size={16} />تعديل عدد المحاولات</button>
                     <button type="button" className="eb-menu-item assignment-timing-button" onClick={() => p.onEditTiming(item)} disabled={p.busy}><IconHistory size={16} />تعديل الوقت والموعد</button>
                     <hr className="eb-menu-sep" />
@@ -76,6 +85,29 @@ export default function AssignmentList(p: AssignmentListProps) {
       </ul>
       {empty}
     </section>
+  );
+}
+
+/**
+ * Phase 21G.2 — a row's time status and progress: the time chip (published only; a draft / archived row's badge already says it),
+ * «بانتظار التصحيح» / «يحاولون الآن» counts when there are any, and the submission bar (submitted of the class's students). Every
+ * figure is the server's (GET /api/assignment-progress, the gradebook's own rules); when progress is unavailable nothing is guessed.
+ */
+function RowProgress({ item, progress: g, known, now }: { item: Item; progress: AssignmentProgress | null; known: boolean; now: number }) {
+  const t = timeLabel(item, now);
+  if (!t) return null;
+  return (
+    <div className="eb-assign-row-progress">
+      <div className="eb-assign-row-chips">
+        <span className={"eb-time-chip tone-" + t.tone} data-time={t.status}>{t.label}</span>
+        {g && g.pendingReview > 0 && <span className="eb-count-chip tone-attention">بانتظار التصحيح: {g.pendingReview}</span>}
+        {g && g.active > 0 && <span className="eb-count-chip tone-info">يحاولون الآن: {g.active}</span>}
+      </div>
+      {g ? (g.expected > 0
+        ? <ProgressBar value={g.submitted / g.expected * 100} label={"سلّم " + g.submitted + " من " + g.expected} size="sm" tone={g.submitted === g.expected ? "success" : "primary"} />
+        : <small className="eb-muted">لا يوجد طلاب في هذا الصف بعد.</small>)
+        : known ? null : <small className="eb-muted">تقدم التسليم غير متاح حاليًا.</small>}
+    </div>
   );
 }
 
@@ -139,6 +171,44 @@ function AssignmentTimingForm({ item, busy, onSave, onClose, fmt }: { item: Item
       <div className="eb-dialog-foot eb-dialog-foot-inline">
         <button type="button" className="eb-button" onClick={onClose}>إلغاء</button>
         <button type="button" className="eb-button is-primary assignment-timing-save" onClick={() => onSave(item, dueIso, duration)} disabled={busy || !inFuture}>{SAVE_LABELS.saveChanges}</button>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Phase 21G.0 — edit the title and instructions. Allowed at any time (also after students started): they are presentation only;
+ * the questions, marks, timing and attempts are not touched. cancel → no request; save → exactly one updateDetails request
+ * (owned by AssignmentsPanel). Keyed by assignment → fresh fields per item.
+ */
+export const MAX_ASSIGNMENT_TITLE = 200;
+export const MAX_ASSIGNMENT_INSTRUCTIONS = 5000;
+export function AssignmentDetailsDialog({ item, busy, onSave, onClose }: { item: Item | null; busy: boolean; onSave: (item: Item, title: string, instructions: string) => void; onClose: () => void }) {
+  return (
+    <Dialog open={item !== null} title="تعديل العنوان والتعليمات" onClose={onClose} size="sm" hideClose>
+      {item && <AssignmentDetailsForm key={item.assignmentId} item={item} busy={busy} onSave={onSave} onClose={onClose} />}
+    </Dialog>
+  );
+}
+function AssignmentDetailsForm({ item, busy, onSave, onClose }: { item: Item; busy: boolean; onSave: (item: Item, title: string, instructions: string) => void; onClose: () => void }) {
+  const [title, setTitle] = useState(item.title || "");
+  const [instructions, setInstructions] = useState(item.instructions || "");
+  const cleanTitle = title.trim(), cleanInstructions = instructions.trim();
+  const titleError = !cleanTitle ? "عنوان الواجب مطلوب." : cleanTitle.length > MAX_ASSIGNMENT_TITLE ? "عنوان الواجب أطول من " + MAX_ASSIGNMENT_TITLE + " حرفًا." : "";
+  const instructionsError = cleanInstructions.length > MAX_ASSIGNMENT_INSTRUCTIONS ? "التعليمات أطول من " + MAX_ASSIGNMENT_INSTRUCTIONS + " حرف." : "";
+  const unchanged = cleanTitle === (item.title || "").trim() && cleanInstructions === (item.instructions || "").trim();
+  return (
+    <>
+      <p className="eb-dialog-lead">يمكن تعديل العنوان والتعليمات في أي وقت؛ لا يتغير شيء في الأسئلة أو العلامات أو المحاولات.</p>
+      <div className="eb-form-grid">
+        <label>عنوان الواجب<input value={title} onChange={e => setTitle(e.target.value)} aria-invalid={titleError ? true : undefined} aria-describedby={titleError ? "eb-details-title-error" : undefined} /></label>
+        {titleError && <p id="eb-details-title-error" className="eb-field-error" role="alert">{titleError}</p>}
+        <label>التعليمات<textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={5} aria-invalid={instructionsError ? true : undefined} aria-describedby={instructionsError ? "eb-details-instructions-error" : undefined} /></label>
+        {instructionsError && <p id="eb-details-instructions-error" className="eb-field-error" role="alert">{instructionsError}</p>}
+      </div>
+      <div className="eb-dialog-foot eb-dialog-foot-inline">
+        <button type="button" className="eb-button" onClick={onClose}>إلغاء</button>
+        <button type="button" className="eb-button is-primary" onClick={() => onSave(item, cleanTitle, cleanInstructions)} disabled={busy || unchanged || !!titleError || !!instructionsError}>{SAVE_LABELS.saveChanges}</button>
       </div>
     </>
   );

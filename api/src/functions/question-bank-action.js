@@ -10,6 +10,8 @@ const crypto = require("crypto");
 const {
   requireBuilderAuth
 } = require("../lib/builder-auth");
+const { tenantOf } = require("../lib/teacher-tenancy");
+const { visibleBankEntries } = require("../lib/bank-tenancy");
 
 const BANK_CONTAINER = "bank";
 const INDEX_BLOB =
@@ -228,7 +230,8 @@ async function handler(request, deps = {}) {
     }
     const usedFamilies = new Set(Array.isArray(body?.usedFamilyKeys) ? body.usedFamilyKeys.map(String).filter(Boolean) : []);
 
-    const allQuestions = Array.isArray(index?.questions) ? index.questions : [];
+    // 21G.0 — only the official bank and this teacher's own questions are candidates.
+    const allQuestions = visibleBankEntries(Array.isArray(index?.questions) ? index.questions : [], tenantOf(auth.user));
     const candidates = allQuestions.filter(candidate => {
       if (!candidate?.id || !candidate?.sourceId) {
         return false;

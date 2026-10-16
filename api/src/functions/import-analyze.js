@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 const { chunkPages } = require("../lib/import-chunking");
 const {
   loadTopicCodes,
@@ -254,7 +255,8 @@ async function importAnalyzeInner(request, _ctx, obs) {
       const blobPrefix = `imports/${importJobId}/`;
 
       const manifest = await downloadJsonOrNull(container, blobPrefix + "manifest.json");
-      if (!manifest) {
+      // 21G.0 — another teacher's import job is reported exactly like a missing one.
+      if (!manifest || !canAccessDocument(manifest, tenantOf(auth.user))) {
         return { status: 404, jsonBody: { ok: false, error: "Import job not found. Please re-upload the file." } };
       }
 

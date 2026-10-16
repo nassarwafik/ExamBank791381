@@ -1,6 +1,7 @@
 // Shared TYPES for the Assignments & Gradebook workspace (UX-5). Presentation components receive these shapes
-// and callbacks from AssignmentsPanel, which remains the single owner of state, API handlers, mutations,
-// authoritative snapshots, grading resolution (rowGrading) and lifecycle semantics.
+// and callbacks from AssignmentsPanel. Since Phase 21G.1 the single owner of state, API handlers, mutations,
+// authoritative snapshots and lifecycle semantics is useAssignmentsController; grading resolution (rowGrading)
+// and the other pure view rules live in assignmentsView.ts.
 import type { GradingStatus } from "../gradingStatus";
 
 export type Classroom = { classId: string; name: string; grade: string; active: boolean; status?: string };
@@ -34,3 +35,5 @@ export type WorkspaceMode = "list" | "composer";
 // Phase 7B adds «أنهى المعلم المحاولة» (the teacher ended the student's current attempt from the gradebook).
 export const LIFECYCLE_LABEL: Record<string, string> = { notStarted: "لم يبدأ", started: "قيد المحاولة", draft: "مسودة", paused: "متوقفة مؤقتًا", submitted: "تم التسليم", timedOut: "انتهى الوقت", integrityExit: "غادر صفحة الامتحان", teacherEnded: "أنهى المعلم المحاولة" };
 export const STATUS_LABEL: Record<Item["status"], string> = { published: "منشور", draft: "مسودة", archived: "مؤرشف" };
+// Phase 21G.2 — the progress of a published assignment (GET /api/assignment-progress): the gradebook's own figures.
+export type AssignmentProgress = { assignmentId: string; classId: string; expected: number; submitted: number; notSubmitted: number; pendingReview: number; graded: number; active: number; average: number | null; lastSubmittedAt: string };

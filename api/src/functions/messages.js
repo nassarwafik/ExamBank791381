@@ -51,6 +51,9 @@ const MSG = {
   noClass: "الطالب غير مسجل في صف نشط."
 };
 
+// Phase 21G.0 — teacher tenancy: a teacher messages only their own students and classes.
+const { tenantOf, classAccessible, studentAccessible } = require("../lib/teacher-tenancy");
+
 async function loadStudent(container, studentId, dl) {
   if (!isSafeId(studentId)) return null;
   const doc = await dl(container, USER_PREFIX + studentId + ".json");
@@ -88,19 +91,27 @@ async function handler(request, deps = {}, obs = null) {
     const teacherId = String(auth.user && auth.user.sub || "");
     if (!teacherId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const container = deps.container || (deps.getContainer || getContainer)();
+    const tenant = tenantOf(auth.user);
+    const load = name => dl(container, name);
+    // Phase 21G.0 — the student / class a request names must be the teacher's own; another teacher's answers like a missing one.
+    const ownStudent = async id => (await studentAccessible(load, await loadStudent(container, id, dl), tenant));
+    const ownClass = id => classAccessible(load, id, tenant);
+    const canSee = tenant ? user => studentAccessible(load, user, tenant) : null;
 
     if (request.method === "GET") {
       const url = new URL(request.url);
       const studentId = String(url.searchParams.get("studentId") || "").trim();
       const classId = String(url.searchParams.get("classId") || "").trim();
       const kind = String(url.searchParams.get("kind") || "").trim();
+      if (tenant && studentId && !(await ownStudent(studentId))) return notFound(MSG.studentNotFound);
+      if (tenant && classId && !(await ownClass(classId))) return notFound(MSG.classNotFound);
       if (kind === "unread-summary") {
         if (classId) {
           const classroom = await loadClass(container, classId, dl);
           if (!classroom) return notFound(MSG.classNotFound);
-          return { status: 200, jsonBody: { ok: true, classId, ...(await teacherDirectUnread(container, teacherId, { classId }, deps)) } };
+          return { status: 200, jsonBody: { ok: true, classId, ...(await teacherDirectUnread(container, teacherId, { classId, canSee }, deps)) } };
         }
-        return { status: 200, jsonBody: { ok: true, ...(await teacherDirectUnread(container, teacherId, {}, deps)) } };
+        return { status: 200, jsonBody: { ok: true, ...(await teacherDirectUnread(container, teacherId, { canSee }, deps)) } };
       }
       if (studentId) {
         const student = await loadStudent(container, studentId, dl);
@@ -139,6 +150,10 @@ async function handler(request, deps = {}, obs = null) {
     let body = {};
     try { body = await request.json(); } catch { body = {}; }
     const action = String(body && body.action || "").trim();
+    if (tenant && body && typeof body === "object") {
+      if (body.studentId !== undefined && !(await ownStudent(String(body.studentId || "").trim()))) return notFound(MSG.studentNotFound);
+      if (body.classId !== undefined && !(await ownClass(String(body.classId || "").trim()))) return notFound(MSG.classNotFound);
+    }
 
     if (action === "sendDirect") {
       const studentId = String(body.studentId || "").trim();

@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer, downloadJsonOrNull, listBlobNames } = require("../lib/platform-storage");
 const { AUDIT_PREFIX } = require("../lib/audit-log");
 const { toPublicAuditEvent } = require("../lib/audit-redact");
@@ -74,6 +75,7 @@ async function handler(request, deps = {}, obs = null) {
     const auth = authFn(request);
     if (!auth.ok) return auth.response;               // 401, no student access
     const container = deps.container || getC();
+    const tenant = tenantOf(auth.user);
 
     const url = new URL(request.url);
     const limit = clampLimit(url.searchParams.get("limit"));
@@ -87,6 +89,8 @@ async function handler(request, deps = {}, obs = null) {
     for (const name of window) {
       const stored = await dl(container, name);
       if (!stored) continue;
+      // Phase 21G.0 — teacher tenancy: a teacher reads only the record of their own actions.
+      if (tenant && String(stored.actor || "") !== tenant) continue;
       const ev = toPublicAuditEvent(stored, eventIdFromName(name));
       if (matchesFilters(ev, filters)) events.push(ev);
       if (events.length >= limit) break;

@@ -90,7 +90,10 @@ async function createWithUniqueCode(container, buildDoc, up, gen = generateJoinC
   throw err;
 }
 
-async function handleCreate(request, teacherId, container, deps, now) {
+// Phase 21G.0 — teacher tenancy: a live game runs only in one of the teacher's own classes.
+const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
+
+async function handleCreate(request, teacherId, container, deps, now, tenant = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const up = deps.uploadJsonConditional || uploadJsonConditional;
   const body = await readBody(request);
@@ -108,7 +111,7 @@ async function handleCreate(request, teacherId, container, deps, now) {
 
   // 2) The class must exist and be active (not archived).
   const classroom = await dl(container, "platform/classes/" + classId + ".json");
-  if (!classroom || normalizeClassStatus(classroom) === "archived") {
+  if (!classroom || !canAccessDocument(classroom, tenant) || normalizeClassStatus(classroom) === "archived") {
     return { status: 400, jsonBody: { ok: false, error: "هذا الصف غير متاح." } };
   }
 
@@ -162,7 +165,7 @@ async function handler(request, deps = {}, obs = null) {
     const now = new Date().toISOString();
 
     if (method === "POST" && action === "create") {
-      return await handleCreate(request, teacherId, container, deps, now);
+      return await handleCreate(request, teacherId, container, deps, now, tenantOf(sess.user));
     }
 
     if (method === "POST" && action === "get") {

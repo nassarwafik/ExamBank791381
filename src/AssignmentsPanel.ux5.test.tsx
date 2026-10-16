@@ -62,6 +62,7 @@ function routed(input: RequestInfo | URL, init?: RequestInit) {
     if (a === "restore") return json({ ok: true, assignment: { ...base, status: "published" } });
     if (a === "setStatus") return json({ ok: true, assignment: { ...base, status: body.status } });
     if (a === "setMaxAttempts") return json({ ok: true, assignment: { ...base, maxAttempts: body.maxAttempts } });
+    if (a === "updateDetails") return json({ ok: true, assignment: { ...base, title: String(body.title), instructions: String(body.instructions) } });
     if (a === "create") return json({ ok: true, assignment: { ...A1, assignmentId: "a9", title: String(body.title), classId: String(body.classId), className: "الحادي عشر", status: body.publish ? "published" : "draft" } });
     return json({ ok: true, assignment: base });
   }
@@ -106,19 +107,19 @@ const gbNames = (detail: HTMLElement) => Array.from(detail.querySelectorAll("tbo
 const dialog = (name: string) => screen.findByRole("dialog", { name });
 
 describe("UX-5 workspace — toolbar, filter, search, archive switch, requests", () => {
-  it("boots with exactly GET assignments + GET saved-exams (no results for any row), shows the toolbar and no duplicate hero", async () => {
+  it("boots with exactly GET assignments + GET assignment-progress + GET saved-exams (no results for any row), shows the toolbar and no duplicate hero", async () => {
     await mount();
-    expect(calls.map(c => c.method + " " + c.url)).toEqual(["GET /api/assignments", "GET /api/saved-exams"]);
+    expect(calls.map(c => c.method + " " + c.url)).toEqual(["GET /api/assignments", "GET /api/assignment-progress", "GET /api/saved-exams"]);   // Phase 21G.2 — + the home's progress read
     expect(gets("/api/assignment-results")).toHaveLength(0);
     const toolbar = screen.getByRole("region", { name: "أدوات الواجبات" });
-    expect((within(toolbar).getByLabelText("الصف") as HTMLSelectElement).value).toBe("c1");               // scope defaults to the first active class
+    expect((within(toolbar).getByLabelText("الصف") as HTMLSelectElement).value).toBe("");                 // Phase 21G.2 — scope defaults to every class
     expect(within(toolbar).getByRole("button", { name: "الواجبات الحالية" }).getAttribute("aria-pressed")).toBe("true");
     expect(within(toolbar).getByLabelText("بحث")).toBeTruthy();
     expect(within(toolbar).getByRole("button", { name: "إنشاء واجب" })).toBeTruthy();
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(document.body.textContent).not.toMatch(/الواجبات، التصحيح وسجل العلامات|Phase 2\.0E|Assignments · /);
-    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر"]);
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default
     expect(within(rowOf("اختبار الكسور")).getByText("منشور")).toBeTruthy(); expect(within(rowOf("واجب الجبر")).getByText("مسودة")).toBeTruthy();
     expect(rowOf("اختبار الكسور").textContent).toContain("5 سؤال · 100 علامة · 3 محاولة · 90 دقيقة");
     fireEvent.click(within(toolbar).getByRole("button", { name: "المزيد من إجراءات الواجبات" }));
@@ -169,7 +170,7 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     const composer = await screen.findByRole("region", { name: "إنشاء واجب جديد" });
     expect(document.activeElement).toBe(within(composer).getByRole("heading", { level: 2, name: "إنشاء واجب جديد" }));
     expect(screen.queryByRole("dialog")).toBeNull();                                                  // NOT a dialog
-    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر"]);                                     // list still visible
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default                                     // list still visible
     expect(within(composer).getByRole("button", { name: "امتحاناتي" }).getAttribute("aria-pressed")).toBe("true");
     expect(Array.from((within(composer).getByLabelText("الصف") as HTMLSelectElement).options).map(o => o.value)).toEqual(["", "c1", "c2"]); // active classes only
     const createBtn = within(composer).getByRole("button", { name: "إنشاء الواجب" }) as HTMLButtonElement;
@@ -179,10 +180,17 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     expect(posts("/api/saved-exams")).toEqual([{ action: "load", blobName: "exams/e1.json" }]);
     expect((within(composer).getByLabelText("عنوان الواجب") as HTMLInputElement).value).toBe("امتحان محفوظ");
     fireEvent.change(within(composer).getByLabelText("يفتح في"), { target: { value: "2026-04-01T08:00" } });
+    // Phase 21G.0 — a deadline before the opening time is caught in place and blocks the create.
+    fireEvent.change(within(composer).getByLabelText("آخر موعد"), { target: { value: "2026-03-30T10:00" } });
+    expect(within(composer).getByRole("alert").textContent).toBe("آخر موعد يجب أن يكون بعد موعد الفتح.");
+    fireEvent.change(within(composer).getByLabelText("عدد المحاولات"), { target: { value: "2" } });
+    expect(createBtn.disabled).toBe(true);
     fireEvent.change(within(composer).getByLabelText("آخر موعد"), { target: { value: "2026-04-05T10:00" } });
+    expect(within(composer).queryByRole("alert")).toBeNull();
     fireEvent.change(within(composer).getByLabelText("عدد المحاولات"), { target: { value: "2" } });
     fireEvent.change(within(composer).getByLabelText("مدة المحاولة (بالدقائق)"), { target: { value: "45" } });
-    fireEvent.click(within(composer).getByLabelText("نشر مباشرة"));
+    // Phase 21G.0 — a new assignment starts as a DRAFT (students see nothing until the teacher publishes it).
+    expect((within(composer).getByLabelText("نشر مباشرة") as HTMLInputElement).checked).toBe(false);
     expect(createBtn.disabled).toBe(false);
     fireEvent.click(createBtn);
     await screen.findByText("✓ تم إنشاء الواجب من الامتحان المختار.");
@@ -274,7 +282,7 @@ describe("UX-5 list actions — exact bodies, explicit attempts save, confirm ga
     expect((await confirmEl()).textContent).toContain("يوجد 3 طلاب في محاولات نشطة. أرشفة الواجب ستمنعهم من المتابعة حتى تتم استعادته. لن تُحذف إجاباتهم أو محاولاتهم.");
     await confirmDialog();
     await waitFor(() => expect(posts("/api/assignments").at(-1)).toEqual({ action: "archive", assignmentId: "a1", confirmActiveAttempts: true }));
-    await waitFor(() => expect(rowTitles()).toEqual(["واجب الجبر"]));
+    await waitFor(() => expect(rowTitles()).toEqual(["واجب الجبر", "اختبار الهندسة"]));
     fireEvent.click(screen.getByRole("button", { name: /^المؤرشفة/ }));
     await assignmentAction("اختبار الكسور", "استعادة");
     await waitFor(() => expect(posts("/api/assignments").at(-1)).toEqual({ action: "restore", assignmentId: "a1" }));
@@ -479,9 +487,11 @@ describe("UX-5 item analysis — lazy, sortable, empty", () => {
 });
 
 describe("UX-5 accessibility source guards", () => {
-  const RAW = import.meta.glob("./{AssignmentsPanel,assignments/AssignmentList,assignments/AssignmentDetail,assignments/AssignmentComposer,assignments/Gradebook,assignments/GradebookRowEditors}.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+  // Phase 21G.1 — the workspace logic moved from AssignmentsPanel.tsx into its controller hook and pure view helpers; the guards
+  // follow the code to where it lives (the panel only renders).
+  const RAW = import.meta.glob(["./{AssignmentsPanel,assignments/AssignmentList,assignments/AssignmentDetail,assignments/AssignmentComposer,assignments/Gradebook,assignments/GradebookRowEditors}.tsx", "./assignments/{useAssignmentsController,useAssignmentComposer,assignmentsView}.ts"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
   it("no window.confirm, no tablist/menu roles, no <details>, no action-control emoji; grading only through the shared authority", () => {
-    expect(Object.keys(RAW)).toHaveLength(6);
+    expect(Object.keys(RAW)).toHaveLength(9);
     for (const [file, src] of Object.entries(RAW)) {
       expect(src, file).not.toMatch(/window\.confirm/);
       expect(src, file).not.toMatch(/role="(tablist|tab|menu|menuitem)"/);
@@ -489,18 +499,21 @@ describe("UX-5 accessibility source guards", () => {
       // 🧠 📚 👁 📝 📤 📊 ✏ ⏱ ⏰ ⏳ ↻ as control glyphs
       expect(src, file).not.toMatch(/[\u{1F9E0}\u{1F4DA}\u{1F441}\u{1F4DD}\u{1F4E4}\u{1F4CA}\u{270F}\u{23F1}\u{23F0}\u{23F3}\u{21BB}]/u);
     }
-    const panel = RAW["./AssignmentsPanel.tsx"];
-    expect(panel).toMatch(/const rowGrading=\(s:StudentResult\):GradingStatus=>s\.gradingStatus\?s\.gradingStatus:resolveGradingStatus\(s\.latestResult\);/);
-    expect(panel).toMatch(/useConfirm\(\)/);
+    const panel = RAW["./AssignmentsPanel.tsx"], controller = RAW["./assignments/useAssignmentsController.ts"], view = RAW["./assignments/assignmentsView.ts"];
+    expect(view).toMatch(/export const rowGrading = \(s: StudentResult\): GradingStatus => \(s\.gradingStatus \? s\.gradingStatus : resolveGradingStatus\(s\.latestResult\)\);/);
+    expect(panel).toMatch(/import \{rowGrading\} from "\.\/assignments\/assignmentsView";/);
+    for (const src of [panel, controller]) expect(src).not.toMatch(/resolveGradingStatus|manualReviewMarks|finalized\s*===/);
+    expect(controller).toMatch(/useConfirm\(\)/);
     for (const child of ["./assignments/Gradebook.tsx", "./assignments/AssignmentDetail.tsx", "./assignments/GradebookRowEditors.tsx", "./assignments/AssignmentList.tsx"]) {
       expect(RAW[child], child).not.toMatch(/resolveGradingStatus|manualReviewMarks\s*>\s*0\s*\?\s*"(pending|final)|finalized\s*\?(?!\?)|percentage\s*[><]=?\s*\d|score\s*[><]=?\s*\d/);
     }
     expect(RAW["./assignments/Gradebook.tsx"]).toMatch(/gradingLabel\(gs\)/);
     expect(RAW["./assignments/Gradebook.tsx"]).toMatch(/gradingClass\(gs\)/);
     // purge keeps the typed-title guard and the exact body; archive keeps impact-first gating
-    expect(panel).toMatch(/action:"purge",assignmentId:item\.assignmentId,confirmAssignmentId:item\.assignmentId,confirmTitle:purgeTitle/);
-    expect(panel).toMatch(/const impact=await fetchImpact\(item\);if\(!impact\)return;\n   let confirmActive=false;/);
-    expect(panel).toMatch(/if\(impact\.submissionDocuments>0\)\{setError\("لا يمكن الحذف النهائي/);
+    expect(controller).toMatch(/action: "purge", assignmentId: item\.assignmentId, confirmAssignmentId: item\.assignmentId, confirmTitle: purgeTitle/);
+    expect(controller).toMatch(/const impact = await fetchImpact\(item\); if \(!impact\) return;\n\s*let confirmActive = false;/);
+    expect(controller).toMatch(/if \(impact\.submissionDocuments > 0\) \{ setError\("لا يمكن الحذف النهائي/);
+    expect(panel).not.toMatch(/\/api\//);                                                           // the view sends no request itself
   });
 });
 
@@ -555,7 +568,7 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
     expect(document.activeElement).toBe(input);
     expect(input.value).toBe("الجبر");
     fireEvent.change(input, { target: { value: "" } });                                              // clearing never re-opens or re-fetches
-    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر"]);
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default
     detailGone();
     expect(document.activeElement).toBe(input);
     expect(gets("/api/assignment-results")).toHaveLength(1);
@@ -594,7 +607,7 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
     await waitFor(() => expect(posts("/api/assignments").filter(b => b.action === "archive")).toHaveLength(1));
     await waitFor(() => detailGone());
     noGradebook();
-    expect(rowTitles()).toEqual(["واجب الجبر"]);
+    expect(rowTitles()).toEqual(["واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default
     expect(within(toolbar()).getByRole("button", { name: /^المؤرشفة/ }).textContent).toBe("المؤرشفة (2)");
     const ae = document.activeElement as HTMLElement;
     expect(ae && ae !== document.body && ae.isConnected).toBe(true);                              // focus landed on a live workspace element
@@ -623,5 +636,30 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
     expect(document.activeElement).toBe(trigger);
     expect(trigger.isConnected).toBe(true);
     expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+});
+
+describe("21G.0 edit an assignment's title and instructions", () => {
+  it("cancel sends nothing; an empty title cannot be saved; save sends one exact request and the row shows the new title", async () => {
+    await mount();
+    await assignmentAction("اختبار الكسور", "تعديل العنوان والتعليمات");
+    let d = await dialog("تعديل العنوان والتعليمات");
+    const save = () => within(d).getByRole("button", { name: "حفظ التغييرات" }) as HTMLButtonElement;
+    expect(save().disabled).toBe(true);                                                              // unchanged → nothing to save
+    fireEvent.click(within(d).getByRole("button", { name: "إلغاء" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posts("/api/assignments").filter(b => b.action === "updateDetails")).toEqual([]);
+    await assignmentAction("اختبار الكسور", "تعديل العنوان والتعليمات");
+    d = await dialog("تعديل العنوان والتعليمات");
+    fireEvent.change(within(d).getByLabelText("عنوان الواجب"), { target: { value: "   " } });
+    expect(within(d).getByRole("alert").textContent).toBe("عنوان الواجب مطلوب.");
+    expect(save().disabled).toBe(true);
+    fireEvent.change(within(d).getByLabelText("عنوان الواجب"), { target: { value: " اختبار الكسور — مراجعة " } });
+    fireEvent.change(within(d).getByLabelText("التعليمات"), { target: { value: "اقرأ كل سؤال." } });
+    fireEvent.click(save());
+    await waitFor(() => expect(posts("/api/assignments").filter(b => b.action === "updateDetails")).toEqual([{ action: "updateDetails", assignmentId: "a1", title: "اختبار الكسور — مراجعة", instructions: "اقرأ كل سؤال." }]));
+    await screen.findByText("✓ تم تحديث عنوان الواجب وتعليماته.");
+    expect(rowTitles()).toContain("اختبار الكسور — مراجعة");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
