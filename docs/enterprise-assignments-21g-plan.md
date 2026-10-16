@@ -295,7 +295,7 @@ Fail-first applies to the two defects above only (the guards failed before their
 ### Defect found on the way (real browser only)
 
 The phone cards spilled past the page: `.students-table` sets `min-width: 620px`, which the card layout inherited. The card rule now
-sets `min-inline-size: 0` (`63c5f7cb`), pinned by the style test and by mutant G4-M16.
+sets `min-inline-size: 0` (`837b252e`), pinned by the style test and by mutant G4-M16.
 
 ### Evidence
 
@@ -306,7 +306,7 @@ sets `min-inline-size: 0` (`63c5f7cb`), pinned by the style test and by mutant G
 | `AssignmentsPanel.gradebook.21g4` | 9 / 9: one status, selection and its clearing, bulk grant (one failure named and kept ticked, snapshots merged), bulk deadline, the run stopping when the page is left (after a success and after a failure), no selection when archived, the grid, the styles |
 | `assignment-item-grid-21g4` (API) | 3 / 3: one row per submitted student (latest attempt), pending without a score (manual review and open coding execution), the per-question coding rule incl. a composite part |
 | Existing suites | `ux5` and `grading` (AL) changed only for the intended one-status row; the ux5 source guards follow the label code into `gradebookStatus.ts` (and forbid score-based rules there too); the 21G.3 style guard stops at the 21G.4 block, which restyles the gradebook on purpose |
-| Full root suite + build on `e8b841bf` | 1,055 files / 13,148 tests: 1 failure, unrelated (below); build passed, initial JS 114.1 KB gzip |
+| Full root suite + build on `0cc70c0c` (same tree as the validated pre-rebase `e8b841bf`) | 1,055 files / 13,148 tests: 1 failure, unrelated (below); build passed, initial JS 114.1 KB gzip |
 | tsc / lint | clean / 125 |
 | Mutation `node scripts/mutate-21g.mjs g4` | 16 mutants, **16 KILLED**. G4-M4 (the loop-top stop check removed) first SURVIVED: the check after a successful answer already ended the run; the new failed-request test kills it in the isolated re-run. `g3` re-run in full after G3-M2 / G3-M6 were re-pointed: 11 / 11 KILLED |
 | Real Chromium at 1440 / 390 px | no horizontal overflow on the gradebook, the selection, the analysis grid or the overview; phone cards 322 px inside a 322 px column |
