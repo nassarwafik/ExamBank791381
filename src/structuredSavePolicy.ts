@@ -19,12 +19,38 @@ export type StructuredSaveResult = { ok: true; payload: StructuredExam } | { ok:
 export async function runStructuredSave(args: {
   snapshot: StructuredExam; mode: StructuredSaveMode;
   request: (payload: StructuredExam) => Promise<unknown>;
-  commitSaved: (snapshot: StructuredExam, payload: StructuredExam) => void;
+  commitSaved: (snapshot: StructuredExam, payload: StructuredExam, serverEtag?: string | null) => void;
 }): Promise<StructuredSaveResult> {
   const verdict = decideStructuredSave(args.snapshot, args.mode);
   if (!verdict.allowed) return { ok: false, reason: verdict.reason, decision: verdict.decision };
   const payload = { ...toSavedStructuredExam(args.snapshot), status: args.mode } as StructuredExam;
-  await args.request(payload);
-  args.commitSaved(args.snapshot, payload);
+  const response = await args.request(payload);
+  // Phase 21F.0 — the version the server returned travels with the commit (only when there is one; the 13C-C contract is otherwise
+  // the unchanged two-argument commit).
+  const etag = savedEtagOf(response);
+  if (etag) args.commitSaved(args.snapshot, payload, etag); else args.commitSaved(args.snapshot, payload);
   return { ok: true, payload };
+}
+
+// ── Phase 21F.0 · conditional saves ──
+/** The version the server returned for a successful save (null when the response carries none). */
+export function savedEtagOf(response: unknown): string | null {
+  const etag = response && typeof response === "object" ? (response as { etag?: unknown }).etag : undefined;
+  return typeof etag === "string" && etag ? etag : null;
+}
+/** The request fields of a save from the base version the client holds (see ExamHistory.serverEtag): unknown → none (the
+ *  historical last-write-wins save), null → create-only, an ETag → only if the server still holds that version. */
+export function saveConditionFields(serverEtag: string | null | undefined): { conditional?: true; baseEtag?: string | null } {
+  if (serverEtag === undefined) return {};
+  return { conditional: true, baseEtag: serverEtag };
+}
+/** A refused conditional save (409 EXAM_CONFLICT): what the server holds now. */
+export type SaveConflict = { serverEtag: string | null; serverSavedAt: string | null; blobName: string | null };
+export function saveConflictOf(error: unknown): SaveConflict | null {
+  const e = error as { status?: unknown; payload?: unknown } | null;
+  if (!e || e.status !== 409 || !e.payload || typeof e.payload !== "object") return null;
+  const p = e.payload as { code?: unknown; serverEtag?: unknown; serverSavedAt?: unknown; blobName?: unknown };
+  if (p.code !== "EXAM_CONFLICT") return null;
+  const text = (v: unknown) => (typeof v === "string" && v ? v : null);
+  return { serverEtag: text(p.serverEtag), serverSavedAt: text(p.serverSavedAt), blobName: text(p.blobName) };
 }

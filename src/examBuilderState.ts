@@ -29,6 +29,10 @@ export function genId(prefix = "id"): string {
   return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
 }
 
+/** Phase 21F.0 — a new exam's storage identity. Random (never the clock): two teachers creating an exam in the same millisecond
+ *  can no longer get the same id (the saved-exam blob is keyed by it). Keeps the historical "EXAM-" prefix. */
+export function newExamId(): string { return genId("EXAM"); }
+
 const ARABIC_ORDINALS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن", "س", "ع", "ف", "ص", "ق", "ر", "ش", "ت", "ث", "خ", "ذ", "ض", "ظ", "غ"];
 export const ordinalLabel = (i: number): string => ARABIC_ORDINALS[i] || String(i + 1);
 
@@ -513,7 +517,7 @@ export function structuredExamCopy(exam: StructuredExam): StructuredExam {
   const clone = JSON.parse(JSON.stringify(exam)) as StructuredExam;
   return {
     ...clone,
-    examId: "EXAM-" + Date.now(),
+    examId: newExamId(),
     title: (exam.title || "امتحان") + " - نسخة",
     createdAt: now,
     updatedAt: now,

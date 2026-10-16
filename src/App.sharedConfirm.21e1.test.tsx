@@ -40,6 +40,8 @@ function installFetch() {
 }
 let nativeConfirm: ReturnType<typeof vi.fn>, nativePrompt: ReturnType<typeof vi.fn>;
 beforeEach(() => {
+  // Phase 21F.9 — the Studio is the default layout; this suite exercises the CLASSIC layout (the teacher's opt-out), so it chooses it.
+  try { localStorage.setItem("tadris.studio.layout", "classic"); } catch { /* ignore */ }
   try { sessionStorage.clear(); } catch { /* ignore */ }
   sessionStorage.setItem("examBankBuilderToken", "teacher-token");
   sessionStorage.setItem("examBankSessionRole", "teacher");

@@ -3297,5 +3297,7 @@ button {
    structured-builder.css which loads with the lazy builder; these two rules are here because the
    overlay shell and the convert button in the legacy builder render before that chunk loads. */
 .structured-builder-overlay{position:fixed;inset:0;z-index:var(--eb-z-overlay,60);background:var(--surface,#f5f7fa);overflow:auto;padding:16px}
+/* Phase 21F.3 — the Exam Studio fills the overlay and scrolls inside its own panes (the toast reserve lives on its canvas). */
+.structured-builder-overlay:has(> .st-studio),.structured-builder-overlay:has(> .st-studio):has(.eb-toast),.structured-builder-overlay:has(> .st-studio)[data-toast-reserve]{overflow:hidden;padding:0}
 .convert-structured-btn{margin-top:10px;width:100%;border:1px dashed #2563eb;background:#eff4ff;color:#1d4ed8;border-radius:10px;padding:9px 14px;font:inherit;font-weight:800;cursor:pointer}
 .convert-structured-btn:hover{background:#e0eaff}

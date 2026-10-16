@@ -20,7 +20,8 @@ import "./presetLibrary.css";
 type Props = {
   open: boolean;
   onClose: () => void;
-  exam: StructuredExam;
+  /** The exam whose design «حفظ التصميم الحالي» extracts. Phase 21F.7 — absent (opened from «امتحاناتي»): pick-only, no save action. */
+  exam?: StructuredExam;
   /** The latest COMMITTED exam (13A authority) — the design a preset is extracted from, never a stale render. */
   getLatestExam?: () => StructuredExam;
   service: AssessmentPresetService;
@@ -47,8 +48,9 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
   const alive = useRef(true);
   const loadSeq = useRef(0);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
-  const latest = useCallback(() => (getLatestExam ? getLatestExam() : exam), [getLatestExam, exam]);
-  const hasBlueprint = !!latest().blueprint;
+  const latest = useCallback((): StructuredExam | null => (getLatestExam ? getLatestExam() : exam ?? null), [getLatestExam, exam]);
+  const canSave = !!(getLatestExam || exam);
+  const hasBlueprint = !!latest()?.blueprint;
 
   const refresh = useCallback(async (q: string) => {
     const seq = ++loadSeq.current;
@@ -84,7 +86,8 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
   // fail-closed): a malformed imported / legacy design shows structured issues in «مشكلات التحقق», never a runtime message, and
   // no request is sent. A missing Blueprint stays the distinct factual case.
   const extractCurrent = (title: string, description: string): AssessmentPresetV1 | null => {
-    const result = extractAssessmentPresetFromExam(latest(), { title, description });
+    if (!latest()) return null;                                     // pick-only (no exam): nothing to extract
+    const result = extractAssessmentPresetFromExam(latest()!, { title, description });
     if (result.ok) return result.preset;
     if (result.reason === "no-blueprint") setError(NO_BLUEPRINT_MESSAGE);
     else { setError("لا يمكن حفظ تصميم غير صالح كقالب أكاديمي."); setIssues(result.issues); }
@@ -133,8 +136,8 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
         {issues.length > 0 && <ul className="ap-issues" aria-label="مشكلات التحقق">{issues.map((i, k) => <li key={k}>{i.message}{i.path ? <code> {i.path}</code> : null}</li>)}</ul>}
         {notice && !error && <div className="sb-banner sb-banner-ok" role="status">{notice}</div>}
         <div className="ap-toolbar">
-          <button type="button" className="sb-btn sb-btn-primary" onClick={() => { if (!hasBlueprint) { setError(NO_BLUEPRINT_MESSAGE); return; } setError(""); setSaveDialog({ mode: "create" }); }} disabled={busy} aria-describedby={hasBlueprint ? undefined : filterId + "-nobp"}>حفظ التصميم الحالي كقالب أكاديمي</button>
-          {!hasBlueprint && <span className="sb-hint" id={filterId + "-nobp"} role="note">{NO_BLUEPRINT_MESSAGE}</span>}
+          {canSave && <button type="button" className="sb-btn sb-btn-primary" onClick={() => { if (!hasBlueprint) { setError(NO_BLUEPRINT_MESSAGE); return; } setError(""); setSaveDialog({ mode: "create" }); }} disabled={busy} aria-describedby={hasBlueprint ? undefined : filterId + "-nobp"}>حفظ التصميم الحالي كقالب أكاديمي</button>}
+          {canSave && !hasBlueprint && <span className="sb-hint" id={filterId + "-nobp"} role="note">{NO_BLUEPRINT_MESSAGE}</span>}
           <label className="sb-field ap-filter" htmlFor={filterId}><span>تصفية (العنوان / المادة / المقرر)</span><input id={filterId} className="sb-input" type="search" value={query} onChange={e => { setLoading(true); setQuery(e.target.value); }} placeholder="ابحث في قوالبك…" /></label>
         </div>
         <div role="status" aria-live="polite" className="sb-hint ap-live">{busy ? "جارٍ التنفيذ…" : ""}</div>
@@ -163,7 +166,7 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
                 <div className="ap-actions" role="group" aria-label={"إجراءات القالب " + s.title}>
                   <button type="button" className="sb-btn sb-btn-primary" onClick={() => void createExam(s)} disabled={busy}>إنشاء امتحان جديد من هذا القالب</button>
                   <button type="button" className="sb-btn" onClick={() => void openPreview(s)} disabled={busy}>معاينة</button>
-                  <button type="button" className="sb-btn" onClick={() => void guard(async () => { if (!hasBlueprint) { setError(NO_BLUEPRINT_MESSAGE); return; } const rec = await service.load(s.presetId); if (alive.current) setSaveDialog({ mode: "update", record: rec }); })} disabled={busy}>تحديث القالب من التصميم الحالي</button>
+                  {canSave && <button type="button" className="sb-btn" onClick={() => void guard(async () => { if (!hasBlueprint) { setError(NO_BLUEPRINT_MESSAGE); return; } const rec = await service.load(s.presetId); if (alive.current) setSaveDialog({ mode: "update", record: rec }); })} disabled={busy}>تحديث القالب من التصميم الحالي</button>}
                   <button type="button" className="sb-btn sb-btn-danger" onClick={() => void remove(s)} disabled={busy}>حذف</button>
                 </div>
               </li>
@@ -173,7 +176,7 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
         {cursor != null && <button type="button" className="sb-btn sb-btn-sm" onClick={() => void more()} disabled={busy}>قوالب أقدم</button>}
       </div>
       {preview && <PresetPreview record={preview} busy={busy} onClose={() => setPreview(null)} onCreate={() => void createExam(preview)} />}
-      {saveDialog && <SaveDesignDialog mode={saveDialog.mode} initialTitle={saveDialog.mode === "update" ? saveDialog.record.preset.title : latest().title} initialDescription={saveDialog.mode === "update" ? saveDialog.record.preset.description ?? "" : ""} targetVersion={saveDialog.mode === "update" ? saveDialog.record.version : undefined} busy={busy} onCancel={() => setSaveDialog(null)} onConfirm={saveCurrent} />}
+      {saveDialog && <SaveDesignDialog mode={saveDialog.mode} initialTitle={saveDialog.mode === "update" ? saveDialog.record.preset.title : latest()?.title ?? ""} initialDescription={saveDialog.mode === "update" ? saveDialog.record.preset.description ?? "" : ""} targetVersion={saveDialog.mode === "update" ? saveDialog.record.version : undefined} busy={busy} onCancel={() => setSaveDialog(null)} onConfirm={saveCurrent} />}
       {confirmDialog}
     </Dialog>
   );

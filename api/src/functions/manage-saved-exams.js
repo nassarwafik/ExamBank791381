@@ -16,6 +16,24 @@ const {
   countExamQuestions,
   examOfficialStats
 } = require("../lib/exam-structure");
+// Phase 21F.0 — ownership (multi-user mode) and the ETag a conditional save starts from.
+const { examOwnerOf, canAccessSavedExam } = require("../lib/saved-exam-access");
+const { downloadJsonWithEtagOrNull, deleteBlobConditional, isConcurrencyConflict } = require("../lib/platform-storage");
+// Phase 21F.7 — «امتحاناتي» summary: the SERVER finalization authority (the same decision the builder and governance use).
+const { evaluateServerFinalization } = require("../lib/server-finalization");
+
+// Counts only (never an exam body, question text or answer key). A legacy flat exam has no finalization decision (null), and a
+// summary that cannot be computed is null too: the list never fails because of one exam.
+function readinessSummary(exam) {
+  if (!Array.isArray(exam.sections)) return null;
+  try {
+    const decision = evaluateServerFinalization(exam);
+    return { canFinalize: decision.canFinalize === true, blockers: decision.blockers.length, warnings: decision.warnings.length };
+  }
+  catch {
+    return null;
+  }
+}
 
 const BANK_CONTAINER =
   "bank";
@@ -128,7 +146,8 @@ function getContainer() {
 }
 
 async function listSavedExams(
-  container
+  container,
+  owner = null
 ) {
   const exams = [];
 
@@ -160,7 +179,11 @@ async function listSavedExams(
         document?.exam;
 
       if (
-        !exam
+        !exam ||
+        !canAccessSavedExam(
+          document,
+          owner
+        )
       ) {
         continue;
       }
@@ -201,7 +224,19 @@ async function listSavedExams(
         totalMarks:
           examOfficialStats(
             exam
-          ).totalMarks
+          ).totalMarks,
+
+        // Phase 21F.7 — additive fields (older clients ignore them).
+        kind:
+          Array.isArray(exam.sections) ? "structured" : "legacy",
+
+        status:
+          exam.status === "final" ? "final" : "draft",
+
+        readiness:
+          readinessSummary(
+            exam
+          )
       });
     }
     catch {
@@ -239,11 +274,16 @@ async function handler(request, deps = {}) {
     return auth.response;
   }
   const container = (deps.getContainer || getContainer)();
-  const download = deps.downloadJson || downloadJson;
+  // Phase 21F.0 — the stored document AND its ETag (null when a test injects a plain downloadJson).
+  const read = deps.downloadJson
+    ? async (c, name) => ({ value: await deps.downloadJson(c, name), etag: null })
+    : (c, name) => downloadJsonWithEtagOrNull(c, name);
+  const owner = examOwnerOf(auth.user);
+  const notFound = { status: 404, jsonBody: { ok: false, code: "EXAM_NOT_FOUND", error: "الامتحان غير موجود." } };
 
   try {
     if (request.method === "GET") {
-      const exams = await (deps.listSavedExams || listSavedExams)(container);
+      const exams = await (deps.listSavedExams || listSavedExams)(container, owner);
       return { status: 200, jsonBody: { ok: true, exams } };
     }
 
@@ -263,17 +303,28 @@ async function handler(request, deps = {}) {
     }
 
     if (action === "load") {
-      const document = await download(container, blobName);
-      if (!document?.exam) {
+      const { value: document, etag } = await read(container, blobName);
+      if (!document) return notFound;
+      if (!document.exam) {
         throw new Error("Saved exam document is invalid.");
       }
-      return { status: 200, jsonBody: { ok: true, exam: hydrateBankAssets(document.exam), savedAt: document.savedAt || null } };
+      // Another teacher's exam is reported exactly like a missing one (its existence is not disclosed).
+      if (!canAccessSavedExam(document, owner)) return notFound;
+      return { status: 200, jsonBody: { ok: true, exam: hydrateBankAssets(document.exam), savedAt: document.savedAt || null, blobName, etag: etag || null } };
     }
 
     if (action === "delete") {
-      const client = container.getBlockBlobClient(blobName);
-      const result = await client.deleteIfExists();
-      return { status: 200, jsonBody: { ok: true, deleted: result.succeeded === true } };
+      const { value: document, etag } = await read(container, blobName);
+      if (document && !canAccessSavedExam(document, owner)) return notFound;
+      try {
+        // Deleted only if nobody saved it since it was read for the ownership decision (If-Match).
+        const result = await deleteBlobConditional(container, blobName, etag || null);
+        return { status: 200, jsonBody: { ok: true, deleted: result.succeeded === true } };
+      }
+      catch (e) {
+        if (!isConcurrencyConflict(e)) throw e;
+        return { status: 409, jsonBody: { ok: false, code: "EXAM_CONFLICT", error: "تم تعديل هذا الامتحان للتو؛ أعد المحاولة." } };
+      }
     }
 
     return { status: 400, jsonBody: { ok: false, error: "Unsupported saved exam action." } };

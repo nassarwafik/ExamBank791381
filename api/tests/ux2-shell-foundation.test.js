@@ -462,7 +462,8 @@ describe("Final acceptance — class card hit area and ActionMenu ordering", () 
       "src/AssignmentsPanel.tsx", "src/assignments/AssignmentList.tsx", "src/assignments/Gradebook.tsx",
       "src/builder/BuilderToolbar.tsx",                          // Phase 21E.2 — the structured builder's two overflow menus
       "src/projects/ProjectStudentDetail.tsx", "src/projects/ProjectTracker.tsx",
-      "src/students/ActionMenu.tsx", "src/students/ClassesPane.tsx", "src/students/RosterPane.tsx"
+      "src/students/ActionMenu.tsx", "src/students/ClassesPane.tsx", "src/students/RosterPane.tsx",
+      "src/studio/StudioWorkspace.tsx"                           // Phase 21F.3 — the Exam Studio top bar's «إضافة» / «أدوات الامتحان» menus
     ]);
   });
 });

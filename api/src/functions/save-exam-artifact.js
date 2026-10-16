@@ -12,6 +12,8 @@ const { normalizeBankAssetsInQuestion } = require("../lib/bank-asset-hydrate");
 // Phase 14A — the ONE canonical exam content form (shared with the immutable governance revisions).
 const { canonicalizeExamContent } = require("../lib/exam-canonical");
 const { uploadJson } = require("../lib/platform-storage");
+// Phase 21F.0 — saved-exam ownership + conditional saves (never a silent overwrite of a newer version).
+const { examOwnerOf, writeSavedExam, SaveRefusal } = require("../lib/saved-exam-access");
 
 const BANK_CONTAINER =
   "bank";
@@ -207,24 +209,93 @@ async function handler(request, deps = {}) {
               ".json";
           }
           else {
-            document = {
-              kind:
-                "saved-exam",
-
-              savedAt,
-
-              exam:
-                cleanExam(
-                  exam
-                )
-            };
-
             blobName =
               "exams/" +
               safeSegment(
                 exam.examId
               ) +
               ".json";
+
+            // Phase 21F.0 — `conditional: true` + `baseEtag` (the ETag last read, or null to create) refuses to overwrite a
+            // newer version with 409 EXAM_CONFLICT; in multi-user mode an exam owned by another teacher is refused (403).
+            const cleaned =
+              cleanExam(
+                exam
+              );
+
+            try {
+              const written =
+                await writeSavedExam(
+                  container,
+                  blobName,
+                  {
+                    build: () => ({
+                      kind:
+                        "saved-exam",
+
+                      savedAt,
+
+                      exam:
+                        cleaned
+                    }),
+
+                    owner:
+                      examOwnerOf(
+                        auth.user
+                      ),
+
+                    conditional:
+                      body?.conditional === true,
+
+                    baseEtag:
+                      body?.baseEtag
+                  },
+                  deps
+                );
+
+              return {
+                status: 200,
+
+                jsonBody: {
+                  ok: true,
+
+                  kind,
+
+                  blobName,
+
+                  savedAt,
+
+                  etag:
+                    written.etag || null
+                }
+              };
+            }
+            catch (refusal) {
+              if (
+                !(refusal instanceof SaveRefusal)
+              ) {
+                throw refusal;
+              }
+
+              return {
+                status:
+                  refusal.status,
+
+                jsonBody: {
+                  ok: false,
+
+                  code:
+                    refusal.code,
+
+                  error:
+                    refusal.status === 409
+                      ? "تم حفظ نسخة أحدث من هذا الامتحان من مكان آخر."
+                      : "لا تملك صلاحية تعديل هذا الامتحان.",
+
+                  ...refusal.extra
+                }
+              };
+            }
           }
 
           await uploadJson(

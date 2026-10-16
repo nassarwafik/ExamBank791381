@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SECTION_PRESETS = exports.tableFieldAt = exports.updateField = exports.deleteField = exports.addField = exports.updatePart = exports.deletePart = exports.addPart = exports.updateQuestion = exports.deleteQuestion = exports.addQuestion = exports.updateSection = exports.deleteSection = exports.addSection = exports.ordinalLabel = void 0;
 exports.genId = genId;
+exports.newExamId = newExamId;
 exports.newField = newField;
 exports.newPart = newPart;
 exports.newQuestion = newQuestion;
@@ -57,6 +58,7 @@ function genId(prefix = "id") {
         return prefix + "-" + g.randomUUID();
     return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
 }
+function newExamId() { return genId("EXAM"); }
 const ARABIC_ORDINALS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن", "س", "ع", "ف", "ص", "ق", "ر", "ش", "ت", "ث", "خ", "ذ", "ض", "ظ", "غ"];
 const ordinalLabel = (i) => ARABIC_ORDINALS[i] || String(i + 1);
 exports.ordinalLabel = ordinalLabel;
@@ -463,7 +465,7 @@ function structuredExamCopy(exam) {
     const clone = JSON.parse(JSON.stringify(exam));
     return {
         ...clone,
-        examId: "EXAM-" + Date.now(),
+        examId: newExamId(),
         title: (exam.title || "امتحان") + " - نسخة",
         createdAt: now,
         updatedAt: now,
