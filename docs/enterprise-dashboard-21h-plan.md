@@ -1,6 +1,6 @@
 # Phase 21H — Enterprise teacher dashboard («لوحة المتابعة»)
 
-**Status:** 21H.0 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.1–21H.5 planned. Each phase: exact-head CI,
+**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.2–21H.5 planned. Each phase: exact-head CI,
 independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -37,7 +37,7 @@ Each decision is recorded here so the owner can reverse it at review.
 | Phase | Content | State |
 |---|---|---|
 | 21H.0 | True figures: active-now vs stale attempts; units with Arabic agreement; neutral zero; relative times | implemented |
-| 21H.1 | Project attention = submitted stages awaiting review (D2) | planned |
+| 21H.1 | Project attention = submitted stages awaiting review (D2) | implemented |
 | 21H.2 | One scope, KPI row, one task inbox (D3) | planned |
 | 21H.3 | Direct actions from the cards (start grading, remind, end an idle attempt); due today / results not released / opening today; «عرض الكل» | planned |
 | 21H.4 | Read cost of `teacher-today`: only the teacher's students, a short cache, measured before / after | planned |
@@ -70,3 +70,25 @@ Each decision is recorded here so the owner can reverse it at review.
 | `todayFormat.21h0`, `TeacherTodayHub.21h0` | 2 / 2, 5 / 5: Arabic agreement (1 / 2 / 3–10 / 11+), relative ages and skew, the two attempt cards, units, neutral zero, relative recent time with the exact title, older and malformed payloads |
 | Mutation `node scripts/mutate-21h.mjs h0` | 10 mutants, **10 KILLED**. H0-M5 (bad replacement: suite did not run) and H0-M8 (equivalent: a negative age already read «الآن») were corrected and KILLED in the isolated re-run |
 | tsc / lint | clean / 124 |
+
+## 5. Implementation record and evidence (21H.1)
+
+### What shipped
+
+- **Server** (`api/src/lib/project-tracker/evaluation-attention.js`): `GET /api/teacher-today`'s `projectEvaluation` gains the additive block `review`, with `studentsAwaitingReview`, `totalReadyStages`, `attentionTotal`, `capped` and `attention`.
+  - **What a row is:** one per current member of an active class with at least one active stage in `ready_for_review`, carrying `readyStages`. Rows are ordered by most submitted stages first, then by name.
+  - **Badge parity:** the rule is the same as `ready-count.js` behind the sidebar badge, through the same `buildProjectEvaluation` stage statuses. The 9C counters are unchanged.
+- **Hub** (`src/teacher/TeacherTodayHub.tsx`, `src/teacher/teacherTodayEvaluation.ts`): «مراحل مشاريع بانتظار مراجعتك».
+  - The count is stages (the badge's figure), and the line «80 مرحلة من 23 طالبًا» says how many students they come from.
+  - Each row reads «5 مراحل بانتظار المراجعة · 12/105 مراحل مقيّمة · الثاني عشر». Rows start the same 9F evaluation queue over the review rows, in the server's order.
+  - With nothing submitted the card is neutral: «لا توجد مراحل سلّمها الطلاب بانتظار مراجعتك.»
+  - An older payload (no `review`) or a malformed one keeps the 9C card. A row without a positive `readyStages` is skipped.
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `project-review-21h1` (API) | 3 / 3. Counted: submitted stages of current members on active stages only, so the untouched student, the archived student, the archived class and the unknown stage are left out. Order: most submitted first, not by name. **The total equals `projects-summary`'s `totalReadyForReview`.** The 9C counters are unchanged |
+| `TeacherTodayHub.21h1` | 4 / 4: stages and students wording, rows, «و20 أخرى», no untouched or zero rows, the queue over review rows, the neutral empty card, older and malformed payloads |
+| `teacher-project-evaluation-9c` H14 | the additivity pin lists `review`; the zero block includes an empty `review` |
+| Mutation `node scripts/mutate-21h.mjs h1` | 8 mutants, **8 KILLED**. H1-M4 (ordering) survived first, because the fixture's names sorted the same way as the counts; the fixture now orders against the names, and the mutant is KILLED |

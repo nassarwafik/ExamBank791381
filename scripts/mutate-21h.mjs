@@ -18,7 +18,27 @@ const sha = buf => createHash("sha256").update(buf).digest("hex");
 const TODAY = "api/src/functions/teacher-today.js", HUB = "src/teacher/TeacherTodayHub.tsx", FMT = "src/teacher/todayFormat.ts";
 const H0_API = ["api/tests/today-live-21h0.test.js", "api/tests/today-hub-9a.test.js"];
 const H0_UI = ["src/teacher/todayFormat.21h0.test.ts", "src/teacher/TeacherTodayHub.21h0.test.tsx"];
+const EVAL = "api/src/lib/project-tracker/evaluation-attention.js", EVAL_UI = "src/teacher/teacherTodayEvaluation.ts";
+const H1_API = ["api/tests/project-review-21h1.test.js", "api/tests/teacher-project-evaluation-9c.test.js"], H1_UI = ["src/teacher/TeacherTodayHub.21h1.test.tsx", "src/teacher/TeacherTodayHub.9f.test.tsx", "src/teacher/TeacherTodayHub.9c.test.tsx"];
 export const CAMPAIGNS = {
+  h1: [
+    { id: "H1-M1", what: "review counts every ungraded stage again", file: EVAL,
+      find: "const readyStages = e.stages.filter(st => st.status === READY).length;", replace: "const readyStages = e.ungradedStages;", tests: H1_API },
+    { id: "H1-M2", what: "review counts approved stages", file: EVAL,
+      find: "const READY = \"ready_for_review\";", replace: "const READY = \"approved\";", tests: H1_API },
+    { id: "H1-M3", what: "the review total counts students instead of stages", file: EVAL,
+      find: "totalReadyStages: reviewRows.reduce((n, r) => n + r.readyStages, 0),", replace: "totalReadyStages: reviewRows.length,", tests: H1_API },
+    { id: "H1-M4", what: "review rows are not ordered by submitted stages", file: EVAL,
+      find: "  return b.readyStages - a.readyStages\n    || collator", replace: "  return 0\n    || collator", tests: H1_API },
+    { id: "H1-M5", what: "the card keeps the 9C reading although review is present", file: HUB,
+      find: "  if (data && data.review) return <ProjectReviewCard", replace: "  if (false && data && data.review) return <ProjectReviewCard", tests: H1_UI },
+    { id: "H1-M6", what: "the evaluation queue is built from the 9C rows", file: HUB,
+      find: "const rows = projectEval ? (projectEval.review ? projectEval.review.attention : projectEval.attention) : [];", replace: "const rows = projectEval ? projectEval.attention : [];", tests: H1_UI },
+    { id: "H1-M7", what: "a row with no submitted stage is listed", file: EVAL_UI,
+      find: "if (base && isCount(ready) && ready > 0) attention.push", replace: "if (base && isCount(ready)) attention.push", tests: H1_UI },
+    { id: "H1-M8", what: "a malformed review block is trusted", file: EVAL_UI,
+      find: "if (!isCount(r.studentsAwaitingReview) || !isCount(r.totalReadyStages) || !Array.isArray(r.attention)) return undefined;", replace: "if (!Array.isArray(r.attention)) return undefined;", tests: H1_UI }
+  ],
   h0: [
     { id: "H0-M1", what: "every open attempt counts as active now (no activity window)", file: TODAY,
       find: "if(status!==\"paused\"&&lastActivityAt&&nowMs-lastActivityAt<=LIVE_WINDOW_MS)", replace: "if(status!==\"paused\")", tests: H0_API },

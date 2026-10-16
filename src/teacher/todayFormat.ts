@@ -8,6 +8,9 @@ export const IN_ASSIGNMENTS: ArabicCountForms = { zero: "", one: "في واجب 
 /** «طالب واحد يعمل الآن» — the verb agrees with the count too. */
 export const STUDENTS_WORKING: ArabicCountForms = { zero: "", one: "طالب واحد يعمل الآن", two: "طالبان يعملان الآن", few: "{n} طلاب يعملون الآن", many: "{n} طالبًا يعملون الآن", other: "{n} طالب يعملون الآن" };
 export const STUDENTS: ArabicCountForms = { zero: "لا طلاب", one: "طالب واحد", two: "طالبان", few: "{n} طلاب", many: "{n} طالبًا", other: "{n} طالب" };
+export const STAGES: ArabicCountForms = { zero: "لا مراحل", one: "مرحلة واحدة", two: "مرحلتان", few: "{n} مراحل", many: "{n} مرحلة", other: "{n} مرحلة" };
+/** «من 23 طالبًا» — who the figure comes from. */
+export const FROM_STUDENTS: ArabicCountForms = { zero: "", one: "من طالب واحد", two: "من طالبين", few: "من {n} طلاب", many: "من {n} طالبًا", other: "من {n} طالب" };
 const MINUTES: ArabicCountForms = { zero: "", one: "دقيقة", two: "دقيقتين", few: "{n} دقائق", many: "{n} دقيقة", other: "{n} دقيقة" };
 const HOURS: ArabicCountForms = { zero: "", one: "ساعة", two: "ساعتين", few: "{n} ساعات", many: "{n} ساعة", other: "{n} ساعة" };
 const DAYS: ArabicCountForms = { zero: "", one: "يوم", two: "يومين", few: "{n} أيام", many: "{n} يومًا", other: "{n} يوم" };
