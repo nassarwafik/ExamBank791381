@@ -36,7 +36,43 @@ const G5_API = ["api/tests/results-release-21g5.test.js"], G5_UI = ["src/assignm
 const REL = "api/src/lib/results-release.js", SUB = "api/src/functions/student-submission.js", DASH = "api/src/functions/student-dashboard.js", MANAGE = "api/src/functions/manage-assignments.js", REVIEW = "src/AssignmentReview.tsx";
 const G6_UNIT = ["src/assignments/assignmentWizard.21g6.test.ts"], G6_PANEL = ["src/AssignmentsPanel.wizard.21g6.test.tsx", "src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.lifecycle.test.tsx"];
 const WIZ = "src/assignments/assignmentWizard.ts", COMP = "src/assignments/AssignmentComposer.tsx", COMPOSER_HOOK = "src/assignments/useAssignmentComposer.ts";
+const G7_API = ["api/tests/assignment-reminders-21g7.test.js"], G7_UI = ["src/reports/xlsx.21g7.test.ts", "src/reports/printReport.21g7.test.ts", "src/AssignmentsPanel.reports.21g7.test.tsx", "src/assignments/a11yGate.21g7.test.tsx"];
+const RES = "api/src/functions/assignment-results.js", XLSX = "src/reports/xlsx.ts", PRINT = "src/reports/printReport.ts";
 export const CAMPAIGNS = {
+  g7: [
+    { id: "G7-M1", what: "a student who already submitted is reminded", file: RES,
+      find: "if(attempts.length>0||ts.isClosed||ts.availability===\"scheduled\"){notNeeded++;continue}", replace: "if(ts.isClosed||ts.availability===\"scheduled\"){notNeeded++;continue}", tests: G7_API },
+    { id: "G7-M2", what: "a closed assignment still reminds", file: RES,
+      find: "if(attempts.length>0||ts.isClosed||ts.availability===\"scheduled\")", replace: "if(attempts.length>0||ts.availability===\"scheduled\")", tests: G7_API },
+    { id: "G7-M3", what: "reminders repeat the same day (no date in the dedupe key)", file: RES,
+      find: "dedupeKey:\"reminder:\"+id+\":\"+u.userId+\":\"+day,", replace: "dedupeKey:\"reminder:\"+id+\":\"+u.userId+\":\"+Date.now(),", tests: G7_API },
+    { id: "G7-M4", what: "a draft assignment can remind", file: RES,
+      find: "if(normalizeAssignmentStatus(a)!==\"published\")return {status:409,jsonBody:{ok:false,error:\"لا يمكن تذكير", replace: "if(false)return {status:409,jsonBody:{ok:false,error:\"لا يمكن تذكير", tests: G7_API },
+    { id: "G7-M5", what: "studentIds is not validated", file: RES,
+      find: "if(b.studentIds!==undefined&&(!Array.isArray(b.studentIds)||b.studentIds.some(x=>!SAFE_ID.test(String(x)))))return", replace: "if(false)return", tests: G7_API },
+    { id: "G7-M6", what: "a ticked student of ANOTHER class is reminded", file: RES,
+      find: "filter(x=>isStudentClassMember(x,a.classId)&&(!wanted||wanted.has(String(x.userId))))", replace: "filter(x=>(wanted?wanted.has(String(x.userId)):isStudentClassMember(x,a.classId)))", tests: G7_API },
+    { id: "G7-M7", what: "an Excel text cell becomes a formula (formula injection)", file: XLSX,
+      find: "return text === \"\" ? \"\" : '<c r=\"' + ref + '\" t=\"inlineStr\"' + style + '><is><t xml:space=\"preserve\">' + xml(text) + \"</t></is></c>\";", replace: "return text === \"\" ? \"\" : text.startsWith(\"=\") ? '<c r=\"' + ref + '\"' + style + '><f>' + xml(text.slice(1)) + '</f></c>' : '<c r=\"' + ref + '\" t=\"inlineStr\"' + style + '><is><t xml:space=\"preserve\">' + xml(text) + \"</t></is></c>\";", tests: G7_UI },
+    { id: "G7-M8", what: "Excel cells are not XML-escaped", file: XLSX,
+      find: ".replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\").replace(/\"/g, \"&quot;\");\n\n/**", replace: ";\n\n/**", tests: G7_UI },
+    { id: "G7-M9", what: "a wrong CRC-32 is written (a corrupt file)", file: XLSX,
+      find: "return (c ^ 0xffffffff) >>> 0;", replace: "return c >>> 0;", tests: G7_UI },
+    { id: "G7-M10", what: "the sheet is left-to-right", file: XLSX,
+      find: "(o.rtl ? ' rightToLeft=\"1\"' : \"\")", replace: "\"\"", tests: G7_UI },
+    { id: "G7-M11", what: "the print report does not escape a cell (markup injection)", file: PRINT,
+      find: "return \"<td\" + (typeof v === \"number\" ? \" class=\\\"num\\\"\" : \"\") + \">\" + esc(v ?? \"\") + \"</td>\";", replace: "return \"<td\" + (typeof v === \"number\" ? \" class=\\\"num\\\"\" : \"\") + \">\" + String(v ?? \"\") + \"</td>\";", tests: G7_UI },
+    { id: "G7-M12", what: "the print frame is left behind after printing", file: PRINT,
+      find: "  win.addEventListener(\"afterprint\", cleanup, { once: true });\n", replace: "", tests: G7_UI },
+    { id: "G7-M13", what: "the scrolling analysis table is not keyboard-focusable (axe scrollable-region-focusable)", file: "src/assignments/AssignmentDetail.tsx",
+      find: "role=\"region\" aria-label=\"جدول تحليل الأسئلة\" tabIndex={0}", replace: "role=\"region\" aria-label=\"جدول تحليل الأسئلة\"", tests: G7_UI },
+    { id: "G7-M14", what: "the blocking reasons list carries role=status again (axe listitem)", file: "src/assignments/AssignmentComposer.tsx",
+      find: "<div role=\"status\" aria-label=\"ما يمنع المتابعة\"><ul className=\"eb-wizard-issues\">", replace: "<div><ul className=\"eb-wizard-issues\" role=\"status\" aria-label=\"ما يمنع المتابعة\">", tests: G7_UI },
+    { id: "G7-M15", what: "the Excel export carries only the searched / filtered rows", file: "src/AssignmentsPanel.tsx",
+      find: "\"\"),gradebookCsvRows(d.item,g.results,rowGrading),{sheetName:", replace: "\"\"),gradebookCsvRows(d.item,g.rows,rowGrading),{sheetName:", tests: G7_UI },
+    { id: "G7-M16", what: "the PDF report carries only the searched / filtered rows", file: "src/AssignmentsPanel.tsx",
+      find: "printReport(gradebookPrintReport(d.item,g.results,rowGrading,d.stats))", replace: "printReport(gradebookPrintReport(d.item,g.rows,rowGrading,d.stats))", tests: G7_UI }
+  ],
   g6: [
     { id: "G6-M1", what: "the content step lets the teacher go on without a title", file: WIZ,
       find: "    if (!w.title.trim()) out.push(\"عنوان الواجب مطلوب.\");\n", replace: "", tests: [...G6_UNIT, ...G6_PANEL] },
@@ -223,7 +259,7 @@ export const CAMPAIGNS = {
     { id: "G1-M11", what: "choosing a saved exam no longer pre-fills the title", file: COMPOSER,
       find: 'setTitle(String(r.exam?.title || meta?.title || ""));', replace: "", tests: G1_PANEL },
     { id: "G1-M12", what: "the gradebook export uses the searched / filtered subset", file: "src/AssignmentsPanel.tsx",
-      find: "gradebookCsvRows(d.item,g.results,rowGrading)", replace: "gradebookCsvRows(d.item,g.rows,rowGrading)", tests: G1_PANEL },
+      find: "d.item.title),gradebookCsvRows(d.item,g.results,rowGrading))}}", replace: "d.item.title),gradebookCsvRows(d.item,g.rows,rowGrading))}}", tests: G1_PANEL },
     { id: "G1-M13", what: "the create request is sent while the window is invalid", file: CTRL,
       find: " || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;", replace: ") return;", tests: [...G1_PANEL, "src/assignments/useAssignmentsController.21g1.test.tsx"] },
     { id: "G1-M14", what: "the create button is enabled while the window is invalid", file: CTRL,

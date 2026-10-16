@@ -74,12 +74,15 @@ describe("21G.7 reminders and exports", () => {
 
   it("exports the gradebook as an .xlsx workbook and as a print report of the same rows", async () => {
     const page = await openPage();
+    fireEvent.change(within(page).getByLabelText("بحث بالاسم أو الكود"), { target: { value: "سارة" } });   // a search narrows the screen…
     fireEvent.click(within(page).getByRole("button", { name: "تصدير سجل العلامات (Excel)" }));
     expect(downloads).toEqual(["TadrisPlus-سجل-العلامات-واجب-الكسور.xlsx"]);
     expect(blobs[0].type).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     const bytes = new Uint8Array(await blobs[0].arrayBuffer());
     expect([bytes[0], bytes[1], bytes[2], bytes[3]]).toEqual([0x50, 0x4b, 0x03, 0x04]);          // a zip
-    expect(new TextDecoder().decode(bytes)).toContain('rightToLeft="1"');
+    const text = new TextDecoder().decode(bytes);
+    expect(text).toContain('rightToLeft="1"');
+    for (const name of ["سارة", "باسل", "تالا"]) expect(text).toContain(">" + name + "<");          // …never the export: every student
     fireEvent.click(within(page).getByRole("button", { name: "طباعة سجل العلامات (PDF)" }));
     expect(printed).toHaveLength(1);
     expect(printed[0]).toMatchObject({ title: "سجل العلامات — واجب الكسور", rows: [["باسل", "•••••45s2", "لم يسلّم", "لم يبدأ", 0, 1, "", "", "", ""], ["تالا", "•••••45s3", "لم يسلّم", "لم يبدأ", 0, 1, "", "", "", ""], expect.arrayContaining(["سارة", "نهائي", 8, 10, 80])] });
