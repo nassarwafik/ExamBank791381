@@ -320,3 +320,5 @@
   .eb-dist-row { grid-template-columns: 72px minmax(0, 1fr) 28px; }
 }
 .eb-assign-settings { background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); padding: var(--eb-space-4); }
+/* The list waits hidden behind an open assignment page; its display:flex must never override the hidden attribute. */
+.eb-assign-list[hidden] { display: none; }
