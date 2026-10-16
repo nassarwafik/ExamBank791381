@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, within, fireEvent } from "@testing-library/react";
+import { render, cleanup, within, fireEvent, waitFor } from "@testing-library/react";
 import AssignmentsPanel from "./AssignmentsPanel";
 
 // Roadmap #34 — Analytics Lifecycle Authority (frontend). The assignment creation form offers a class as a target ONLY
@@ -27,14 +27,19 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("R34 — AssignmentsPanel offers only canonical-active classes as assignment targets", () => {
   it("the class select lists good + legacy-active only; the inconsistent and the canonical archived classes are absent", async () => {
-    const r = render(<AssignmentsPanel token="t" classes={[INCONSISTENT, GOOD, LEGACY_ACTIVE, CANONICAL_ARCHIVED] as never} currentExam={null} />);
+    const exam = { examId: "e1", title: "امتحان", questions: [{ examQuestionId: "q1", text: "س", marks: 1, presentationType: "open" }] };
+    const r = render(<AssignmentsPanel token="t" classes={[INCONSISTENT, GOOD, LEGACY_ACTIVE, CANONICAL_ARCHIVED] as never} currentExam={exam} />);
     fireEvent.click(await r.findByRole("button", { name: "إنشاء واجب" }));   // UX-5: the composer opens on demand
-    const select = (await r.findByText("اختر الصف")).closest("select") as HTMLSelectElement;
-    const values = Array.from(select.options).map(o => o.value).filter(Boolean);
-    expect(values).toEqual(["good", "leg"]);
-    expect(within(select).queryByText(/صف متناقض/)).toBeNull();
-    expect(within(select).queryByText(/صف مؤرشف/)).toBeNull();
+    expect((r.getByRole("button", { name: "التالي" }) as HTMLButtonElement).disabled).toBe(true);                     // no title yet
+    fireEvent.change(r.getByLabelText("عنوان الواجب"), { target: { value: "واجب" } });
+    await waitFor(() => expect((r.getByRole("button", { name: "التالي" }) as HTMLButtonElement).disabled).toBe(false));   // the open exam is the content
+    fireEvent.click(r.getByRole("button", { name: "التالي" }));              // 21G.6: the classes are a wizard step
+    const picker = r.getByRole("group", { name: /الصفوف المستهدفة/ });
+    const options = within(picker).getAllByRole("checkbox").filter(b => b.closest(".eb-class-option")) as HTMLInputElement[];
+    expect(options.map(o => o.closest("label")?.textContent)).toEqual(["صف جيد · 11", "صف قديم · 10"]);
+    expect(within(picker).queryByText(/صف متناقض/)).toBeNull();
+    expect(within(picker).queryByText(/صف مؤرشف/)).toBeNull();
     // the default target is the first canonical-active class, not the inconsistent one listed first
-    expect(select.value).toBe("good");
+    expect(options.map(o => o.checked)).toEqual([true, false]);
   });
 });

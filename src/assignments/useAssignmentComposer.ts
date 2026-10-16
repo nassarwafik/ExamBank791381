@@ -2,7 +2,7 @@
 // exam, a saved exam, the 791381 library), the library browser (search, category, preview, copy to the builder) and the form fields
 // (class, title, instructions, window, attempts, duration, policy, publish). The create request itself stays with the workspace
 // controller, which owns the list and the busy state.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AttemptPolicy } from "./attemptPolicy";
 import type { ResultsRelease } from "./resultsRelease";
 import { assignmentWindowIssues } from "./assignmentWindow";
@@ -23,7 +23,10 @@ type ComposerDeps = {
 };
 
 export function useAssignmentComposer({ api, current, active, onCopyLibraryExamToBuilder, setError, setNotice }: ComposerDeps) {
-  const [classId, setClassId] = useState(""), [title, setTitle] = useState(""), [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS);
+  // Phase 21G.6 — the target classes (one copy of the assignment per class, D4). The first active class is chosen once, when the
+  // classes arrive; after that only the teacher (or a finished create) changes the selection — it is never re-filled behind them.
+  const [classIds, setClassIds] = useState<string[]>([]), classDefaulted = useRef(false);
+  const [title, setTitle] = useState(""), [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS);
   const [openAt, setOpenAt] = useState(localDate(0)), [dueAt, setDueAt] = useState(localDate(72));
   const [maxAttempts, setMaxAttempts] = useState(1), [durationMinutes, setDurationMinutes] = useState(0), [attemptPolicy, setAttemptPolicy] = useState<AttemptPolicy>("continuous"), [resultsRelease, setResultsRelease] = useState<ResultsRelease>("immediate");
   const [publish, setPublish] = useState(false);
@@ -33,7 +36,9 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
   const [preview, setPreview] = useState<{ title: string; exam: Exam } | null>(null), [previewBusyId, setPreviewBusyId] = useState(""), [copyBusyId, setCopyBusyId] = useState("");
 
   const sourceExam = sourceMode === "library" ? libraryExam : (examSource === "current" ? current : savedExam);
-  useEffect(() => { if (!classId && active[0]) setClassId(active[0].classId); }, [active, classId]);
+  useEffect(() => { if (!classDefaulted.current && active[0]) { classDefaulted.current = true; setClassIds([active[0].classId]); } }, [active]);
+  const toggleClass = (id: string) => setClassIds(x => (x.includes(id) ? x.filter(y => y !== id) : [...x, id]));
+  const setAllClasses = (on: boolean) => setClassIds(on ? active.map(c => c.classId) : []);
   useEffect(() => { if (current && examSource === "" && examHasQuestions(current)) setExamSource("current"); }, [current, examSource]);
 
   async function loadSavedExams() {
@@ -96,10 +101,12 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
   const windowIssues = assignmentWindowIssues(openAt, dueAt);
 
   return {
-    fields: { classId, setClassId, title, setTitle, instructions, setInstructions, openAt, setOpenAt, dueAt, setDueAt, maxAttempts, setMaxAttempts, durationMinutes, setDurationMinutes, attemptPolicy, setAttemptPolicy, resultsRelease, setResultsRelease, publish, setPublish },
+    fields: { classIds, setClassIds, toggleClass, setAllClasses, title, setTitle, instructions, setInstructions, openAt, setOpenAt, dueAt, setDueAt, maxAttempts, setMaxAttempts, durationMinutes, setDurationMinutes, attemptPolicy, setAttemptPolicy, resultsRelease, setResultsRelease, publish, setPublish },
     source: { sourceMode, switchSourceMode, sourceExam, sourceCount, current, hasCurrent: !!(current && examHasQuestions(current)), savedExams, examSource, chooseExam, examLoading, loadSavedExams },
     library: { libraryLoading, libraryFiltered, libraryCats, librarySearch, setLibrarySearch, libraryCategory, setLibraryCategory, librarySelectedId, chooseLibraryItem, openPreview, previewBusyId, copyLibraryItem: onCopyLibraryExamToBuilder ? copyLibraryItem : undefined, copyBusyId },
     preview, closePreview: () => setPreview(null),
+    // The chosen content, previewed by the ONE faithful renderer (ExamPreview scrubs every grading secret).
+    previewSelected: () => { if (sourceExam) setPreview({ title: String(sourceExam.title || title), exam: sourceExam }); },
     windowIssues
   };
 }

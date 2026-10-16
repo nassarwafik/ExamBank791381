@@ -27,7 +27,7 @@ function mount() {
 describe("useAssignmentsController create guards", () => {
   it("never sends a create while the availability window is invalid, and sends exactly one once it is fixed", async () => {
     const { hook, creates } = mount();
-    await waitFor(() => expect(hook.result.current.composer.fields.classId).toBe("c1"));
+    await waitFor(() => expect(hook.result.current.composer.fields.classIds).toEqual(["c1"]));
     await waitFor(() => expect(hook.result.current.composer.source.sourceExam).not.toBeNull());
     act(() => { hook.result.current.composer.fields.setTitle("واجب"); hook.result.current.composer.fields.setOpenAt("2030-01-02T08:00"); hook.result.current.composer.fields.setDueAt("2030-01-01T08:00"); });
     expect(hook.result.current.composer.canCreate).toBe(false);

@@ -1,10 +1,11 @@
-import type { RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { ATTEMPT_POLICY_OPTIONS, type AttemptPolicy } from "./attemptPolicy";
 import { RESULTS_RELEASE_OPTIONS, type ResultsRelease } from "./resultsRelease";
 import type { WindowField, WindowIssue } from "./assignmentWindow";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
-import { IconClose, IconEye, IconBuilder, IconPlus } from "../icons";
+import { IconClose, IconEye, IconBuilder, IconPlus, IconChevronBack } from "../icons";
+import { WIZARD_STEPS, stepIssues, canReachStep, stepIndex, reviewRows, copiesCount, type WizardStep } from "./assignmentWizard";
 import { categoryLabel, type LibraryCatalogItem } from "../examLibrary";
 import type { Classroom, Exam, SavedExam, SourceMode } from "./types";
 
@@ -27,7 +28,12 @@ export type AssignmentComposerProps = {
   onCopyToBuilder?: (it: LibraryCatalogItem) => void; copyBusyId: string;
   // fields
   activeClasses: Classroom[];
-  classId: string; onClassId: (v: string) => void;
+  /** Phase 21G.6 — the chosen classes (one copy of the assignment per class, D4). */
+  classIds: readonly string[]; onToggleClass: (id: string) => void; onAllClasses: (on: boolean) => void;
+  /** Preview the chosen content (ExamPreview scrubs every grading secret). */
+  onPreviewContent?: () => void;
+  /** The step the wizard opens on (default: the first). */
+  initialStep?: WizardStep;
   title: string; onTitle: (v: string) => void;
   instructions: string; onInstructions: (v: string) => void;
   openAt: string; onOpenAt: (v: string) => void;
@@ -53,6 +59,15 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
     const issue = issueOf(field);
     return issue ? { "aria-invalid": issue.blocking || undefined, "aria-describedby": "eb-composer-" + field + "-issue" } : {};
   };
+  // Phase 21G.6 — the wizard: one step at a time; moving forward needs the step being left to be valid, moving back is always free.
+  const [step, setStep] = useState<WizardStep>(p.initialStep ?? "content"), [examQuery, setExamQuery] = useState("");
+  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null), stepMoved = useRef(false);
+  useEffect(() => { if (stepMoved.current) stepHeadingRef.current?.focus(); }, [step]);
+  const goTo = (to: WizardStep) => { if (!canReachStep(step, to, wizardInput)) return; stepMoved.current = true; setStep(to); };
+  const wizardInput = { hasContent: !!p.sourceExam && p.sourceCount > 0, contentLoading: p.examLoading, title: p.title, classIds: p.classIds, windowIssues: p.windowIssues || [] };
+  const blocking = stepIssues(step, wizardInput), at = stepIndex(step), last = at === WIZARD_STEPS.length - 1;
+  const needle = examQuery.trim().toLowerCase();
+  const shownExams = needle ? p.savedExams.filter(x => x.blobName === p.examSource || String(x.title || "").toLowerCase().includes(needle)) : p.savedExams;
   return (
     <section className="eb-assign-composer" aria-labelledby="eb-composer-title">
       <div className="eb-assign-detail-head">
@@ -60,21 +75,35 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
         <div className="eb-assign-detail-actions"><IconButton label="إغلاق الإنشاء" icon={<IconClose size={18} />} onClick={p.onClose} /></div>
       </div>
 
+      <ol className="eb-wizard-steps" aria-label="خطوات إنشاء الواجب">
+        {WIZARD_STEPS.map((st, i) => (
+          <li key={st.key}>
+            <button type="button" className={"eb-wizard-step" + (st.key === step ? " is-current" : i < at ? " is-done" : "")} aria-current={st.key === step ? "step" : undefined} onClick={() => goTo(st.key)} disabled={!canReachStep(step, st.key, wizardInput)}>
+              <span className="eb-wizard-step-no" aria-hidden="true">{i + 1}</span><span>{st.label}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <p className="eb-muted eb-wizard-hint">{WIZARD_STEPS[at].hint}</p>
+
+      {step === "content" && (<>
       <div className="eb-composer-section">
-        <h3 className="eb-subheading">مصدر الواجب</h3>
+        <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>مصدر الواجب</h3>
         <div className="eb-segmented" role="group" aria-label="مصدر محتوى الواجب">
           <button type="button" aria-pressed={p.sourceMode === "mine"} onClick={() => p.onSourceMode("mine")}>امتحاناتي</button>
           <button type="button" aria-pressed={p.sourceMode === "library"} onClick={() => p.onSourceMode("library")}>مكتبة 791381</button>
         </div>
         <div className="assignment-source-card eb-source-card">
           <div className="eb-source-card-text"><span>المحتوى المختار</span><strong>{p.sourceExam?.title || "لم يتم اختيار محتوى"}</strong><small>{p.sourceCount ? p.sourceCount + " سؤال" : "اختر محتوى الواجب"}{p.sourceExam?.totalMarks ? " · " + p.sourceExam.totalMarks + " علامة" : ""}</small></div>
-          {p.sourceMode === "mine" && (
+          {p.sourceMode === "mine" && (<>
+            {p.savedExams.length > 5 && <label className="eb-source-select eb-source-search">بحث في امتحاناتي<input type="search" value={examQuery} onChange={e => setExamQuery(e.target.value)} placeholder="عنوان الامتحان" /></label>}
             <label className="eb-source-select">اختيار الامتحان<select value={p.examSource} onChange={e => p.onChooseExam(e.target.value)} disabled={p.examLoading}>
               <option value="">اختر امتحانًا محفوظًا</option>
               {p.hasCurrent && <option value="current">الامتحان المفتوح حاليًا · {p.currentExam?.title || "بدون عنوان"}</option>}
-              {p.savedExams.map(x => <option key={x.blobName} value={x.blobName}>{x.title} · {x.questionCount} سؤال · {x.totalMarks} علامة</option>)}
+              {shownExams.map(x => <option key={x.blobName} value={x.blobName}>{x.title} · {x.questionCount} سؤال · {x.totalMarks} علامة</option>)}
             </select></label>
-          )}
+          </>)}
+          {p.onPreviewContent && p.sourceExam && !p.examLoading && <button type="button" className="eb-button is-small" onClick={p.onPreviewContent}><IconEye size={16} />معاينة المحتوى</button>}
           {p.examLoading && <span className="eb-muted" role="status">جارٍ فتح الامتحان...</span>}
         </div>
         {p.sourceMode === "library" && (
@@ -108,22 +137,47 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
           </div>
         )}
       </div>
-
       <div className="eb-composer-section">
-        <h3 className="eb-subheading">إعدادات الواجب</h3>
+        <h3 className="eb-subheading">عنوان الواجب وتعليماته</h3>
         <div className="assignment-create-grid eb-form-grid eb-form-grid-2">
-          <label>الصف<select value={p.classId} onChange={e => p.onClassId(e.target.value)}><option value="">اختر الصف</option>{p.activeClasses.map(c => <option value={c.classId} key={c.classId}>{c.name}{c.grade ? " · " + c.grade : ""}</option>)}</select></label>
           <label>عنوان الواجب<input value={p.title} onChange={e => p.onTitle(e.target.value)} /></label>
           <label className="assignment-wide-field eb-span-2">تعليمات<textarea value={p.instructions} onChange={e => p.onInstructions(e.target.value)} /></label>
-          <div className="eb-window-field"><label>يفتح في<input type="datetime-local" value={p.openAt} onChange={e => p.onOpenAt(e.target.value)} {...issueProps("openAt")} /></label>{fieldIssue("openAt")}</div>
-          <div className="eb-window-field"><label>آخر موعد<input type="datetime-local" value={p.dueAt} onChange={e => p.onDueAt(e.target.value)} {...issueProps("dueAt")} /></label>{fieldIssue("dueAt")}</div>
-          <label>عدد المحاولات<select value={p.maxAttempts} onChange={e => p.onMaxAttempts(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
-          <label>مدة المحاولة (بالدقائق)<select value={p.durationMinutes} onChange={e => p.onDurationMinutes(Number(e.target.value))}><option value={0}>بدون مؤقت</option>{[15, 30, 45, 60, 90, 120, 180].map(n => <option key={n} value={n}>{n} دقيقة</option>)}</select></label>
-          <div className="eb-publish-choice">
-            <label className="assignment-publish-toggle eb-check-inline"><input type="checkbox" checked={p.publish} onChange={e => p.onPublish(e.target.checked)} aria-describedby="eb-composer-publish-hint" /><span>نشر مباشرة</span></label>
-            <small id="eb-composer-publish-hint" className="eb-muted">{p.publish ? "يظهر الواجب للطلاب فور إنشائه." : "يبقى مسودة لا يراها الطلاب حتى تنشره."}</small>
+        </div>
+      </div>
+      </>)}
+
+      {step === "classes" && (
+        <div className="eb-composer-section">
+          <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>الصفوف</h3>
+          <fieldset className="eb-class-picker">
+            <legend className="eb-muted">الصفوف المستهدفة — تُنشأ نسخة مستقلة من الواجب لكل صف، ولكل صف نتائجه وطلابه.</legend>
+            {p.activeClasses.length > 1 && <label className="eb-check-inline eb-class-all"><input type="checkbox" checked={p.classIds.length === p.activeClasses.length} onChange={e => p.onAllClasses(e.target.checked)} /><span>كل الصفوف</span></label>}
+            <ul className="eb-class-options">
+              {p.activeClasses.map(c => (
+                <li key={c.classId}><label className={"eb-class-option" + (p.classIds.includes(c.classId) ? " is-selected" : "")}><input type="checkbox" checked={p.classIds.includes(c.classId)} onChange={() => p.onToggleClass(c.classId)} /><span>{c.name}{c.grade ? " · " + c.grade : ""}</span></label></li>
+              ))}
+            </ul>
+            {!p.activeClasses.length && <EmptyState compact title="لا توجد صفوف نشطة." description="أنشئ صفًا من «الصفوف والطلاب» أولًا." />}
+          </fieldset>
+          {p.classIds.length > 1 && <p className="eb-muted" role="status">سيُنشأ {copiesCount(p.classIds.length)} من الواجب.</p>}
+        </div>
+      )}
+
+      {step === "timing" && (
+        <div className="eb-composer-section">
+          <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>المواعيد والمحاولات</h3>
+          <div className="assignment-create-grid eb-form-grid eb-form-grid-2">
+            <div className="eb-window-field"><label>يفتح في<input type="datetime-local" value={p.openAt} onChange={e => p.onOpenAt(e.target.value)} {...issueProps("openAt")} /></label>{fieldIssue("openAt")}</div>
+            <div className="eb-window-field"><label>آخر موعد<input type="datetime-local" value={p.dueAt} onChange={e => p.onDueAt(e.target.value)} {...issueProps("dueAt")} /></label>{fieldIssue("dueAt")}</div>
+            <label>عدد المحاولات<select value={p.maxAttempts} onChange={e => p.onMaxAttempts(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
+            <label>مدة المحاولة (بالدقائق)<select value={p.durationMinutes} onChange={e => p.onDurationMinutes(Number(e.target.value))}><option value={0}>بدون مؤقت</option>{[15, 30, 45, 60, 90, 120, 180].map(n => <option key={n} value={n}>{n} دقيقة</option>)}</select></label>
           </div>
         </div>
+      )}
+
+      {step === "rules" && (
+        <div className="eb-composer-section">
+          <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>القواعد والنشر</h3>
         {/* Phase 7A — assignment-level attempt policy: chosen explicitly here, persisted on the assignment, never
             changed afterwards (the same exam can be homework, a controlled exam or save-&-resume work). */}
         <fieldset className="eb-policy-group">
@@ -155,11 +209,30 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
             ))}
           </div>
         </fieldset>}
-      </div>
+          <div className="eb-publish-choice">
+            <label className="assignment-publish-toggle eb-check-inline"><input type="checkbox" checked={p.publish} onChange={e => p.onPublish(e.target.checked)} aria-describedby="eb-composer-publish-hint" /><span>نشر مباشرة</span></label>
+            <small id="eb-composer-publish-hint" className="eb-muted">{p.publish ? "يظهر الواجب للطلاب فور إنشائه." : "يبقى مسودة لا يراها الطلاب حتى تنشره."}</small>
+          </div>
+        </div>
+      )}
 
+      {step === "review" && (
+        <div className="eb-composer-section">
+          <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>مراجعة قبل الإنشاء</h3>
+          <dl className="eb-dl eb-wizard-review">
+            {reviewRows({ ...wizardInput, contentTitle: p.sourceExam?.title || "", questionCount: p.sourceCount, classNames: p.activeClasses.filter(c => p.classIds.includes(c.classId)).map(c => c.name), openAt: p.openAt, dueAt: p.dueAt, maxAttempts: p.maxAttempts, durationMinutes: p.durationMinutes, attemptPolicy: p.attemptPolicy, resultsRelease: p.resultsRelease || "immediate", publish: p.publish, fmt: v => new Date(v).toLocaleString("ar") }).map(r => <div key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>)}
+          </dl>
+          {p.onPreviewContent && p.sourceExam && <button type="button" className="eb-button is-small" onClick={p.onPreviewContent}><IconEye size={16} />معاينة المحتوى</button>}
+          {stepIssues("review", wizardInput).length === 0 && !p.canCreate && <p className="eb-muted" role="status">لا يمكن الإنشاء الآن؛ راجع الخطوات السابقة.</p>}
+        </div>
+      )}
+
+      {blocking.length > 0 && <ul className="eb-wizard-issues" role="status" aria-label="ما يمنع المتابعة">{blocking.map(m => <li key={m}>{m}</li>)}</ul>}
       <div className="eb-composer-foot">
         <button type="button" className="eb-button" onClick={p.onClose}>إلغاء</button>
-        <button type="button" className="eb-button is-primary assignment-create-button" onClick={p.onCreate} disabled={!p.canCreate}><IconPlus size={16} />إنشاء الواجب</button>
+        {at > 0 && <button type="button" className="eb-button" onClick={() => goTo(WIZARD_STEPS[at - 1].key)}><IconChevronBack size={16} />السابق</button>}
+        {!last && <button type="button" className="eb-button is-primary eb-wizard-next" onClick={() => goTo(WIZARD_STEPS[at + 1].key)} disabled={blocking.length > 0}>التالي</button>}
+        {last && <button type="button" className="eb-button is-primary assignment-create-button" onClick={p.onCreate} disabled={!p.canCreate}><IconPlus size={16} />{p.classIds.length > 1 ? "إنشاء الواجب (" + copiesCount(p.classIds.length) + ")" : "إنشاء الواجب"}</button>}
       </div>
     </section>
   );

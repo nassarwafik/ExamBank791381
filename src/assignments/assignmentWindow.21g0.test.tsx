@@ -41,7 +41,7 @@ function composer(over: Partial<AssignmentComposerProps> = {}) {
     savedExams: [], examSource: "", onChooseExam: noop,
     libraryLoading: false, libraryItems: [], libraryCategories: [], librarySearch: "", onLibrarySearch: noop, libraryCategory: "", onLibraryCategory: noop,
     librarySelectedId: "", onChooseLibraryItem: noop, onPreview: noop, previewBusyId: "", copyBusyId: "",
-    activeClasses: [], classId: "", onClassId: noop, title: "", onTitle: noop, instructions: "", onInstructions: noop,
+    activeClasses: [], classIds: [], onToggleClass: noop, onAllClasses: noop, initialStep: "timing", title: "", onTitle: noop, instructions: "", onInstructions: noop,
     openAt: "2026-10-17T08:00", onOpenAt: noop, dueAt: "2026-10-16T08:00", onDueAt: noop,
     maxAttempts: 1, onMaxAttempts: noop, durationMinutes: 0, onDurationMinutes: noop, attemptPolicy: "continuous", onAttemptPolicy: noop,
     publish: false, onPublish: noop, canCreate: false, onCreate: noop, ...over
@@ -66,7 +66,7 @@ describe("the assignment composer", () => {
     expect((screen.getByLabelText("آخر موعد") as HTMLInputElement).hasAttribute("aria-invalid")).toBe(false);
   });
   it("says what the publish choice means for students", () => {
-    composer();
+    composer({ initialStep: "rules" });
     const box = screen.getByLabelText("نشر مباشرة") as HTMLInputElement;
     expect(box.checked).toBe(false);
     expect(document.getElementById(box.getAttribute("aria-describedby") || "")?.textContent).toBe("يبقى مسودة لا يراها الطلاب حتى تنشره.");
