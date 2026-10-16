@@ -286,4 +286,6 @@
 .eb-time-chip.tone-neutral { background: var(--eb-surface-2); color: var(--eb-muted); }
 @media (max-width: 767px) {
   .eb-assign-kpis .eb-stat-grid.is-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* The filters stack in a column here: a flex-basis would become a height (the search's 220px left an empty band). */
+  .eb-assign-filters > .eb-assign-search, .eb-assign-filters > .eb-assign-time-filters { flex: 0 0 auto; }
 }

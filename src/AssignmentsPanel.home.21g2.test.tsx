@@ -49,8 +49,8 @@ describe("21G.2 assignments home", () => {
     expect((within(screen.getByRole("region", { name: "أدوات الواجبات" })).getByLabelText("الصف") as HTMLSelectElement).value).toBe("");
     expect(rows()).toEqual(["واجب مفتوح", "واجب يُغلق قريبًا", "واجب مغلق", "واجب لم يُنشر"]);
     await waitFor(() => expect(kpi("بانتظار التصحيح").value).toBe("4"));
-    expect(kpi("مفتوحة الآن")).toEqual({ value: "2", hint: "1 منها تُغلق خلال 48 ساعة" });
-    expect(kpi("بانتظار التصحيح").hint).toBe("في 2 واجبات");
+    expect(kpi("مفتوحة الآن")).toEqual({ value: "2", hint: "واحد منها يُغلق خلال 48 ساعة" });
+    expect(kpi("بانتظار التصحيح").hint).toBe("في واجبين");
     expect(kpi("يحاولون الآن").value).toBe("2");
     expect(kpi("نسبة التسليم")).toEqual({ value: "50%", hint: "10 من 20 في الواجبات المفتوحة" });
     const open = rowOf("واجب مفتوح");
