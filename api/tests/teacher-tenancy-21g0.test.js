@@ -14,6 +14,14 @@ const review = require("../src/functions/assignment-review.js");
 const analysis = require("../src/functions/assignment-item-analysis.js");
 const coding = require("../src/functions/coding-grading.js");
 const codingRecovery = require("../src/functions/coding-grading-recovery.js");
+const reports = require("../src/functions/reports.js");
+const today = require("../src/functions/teacher-today.js");
+const feed = require("../src/functions/teacher-achievement-feed.js");
+const messages = require("../src/functions/messages.js");
+const projects = require("../src/functions/project-tracker.js");
+const analytics = require("../src/functions/teacher-analytics.js");
+const photo = require("../src/functions/student-profile-photo.js");
+const audit = require("../src/functions/audit-history.js");
 const { createMemoryContainer } = require("./fixtures/memory-container.js");
 
 const multi = sub => ({ ok: true, user: { ver: 2, role: "teacher", sub, am: "multi-user" } });
@@ -172,5 +180,75 @@ describe("21G.0 assignments, results and grading belong to the class's teacher",
     expect((await p.regrade(B, { action: "retry", assignmentId: id, studentId: sa, attemptNumber: 1, questionId: "q1" })).status).toBe(404);
     expect((await p.bulkRetry(B, { assignmentId: id })).status).toBe(404);
     expect((await p.resultsGet(multi("teacher-a"), id)).status).toBe(200);
+  });
+});
+
+describe("21G.0 everything derived from classes covers only the teacher's own", () => {
+  async function setup() {
+    const p = platform();
+    const a = await p.createClass(multi("teacher-a"), "صف أ");
+    const b = await p.createClass(multi("teacher-b"), "صف ب");
+    const sa = await p.addStudent(multi("teacher-a"), a, "سارة", "111111111");
+    const created = await p.createAssignment(multi("teacher-a"), a, "واجب أ");
+    const id = created.assignment?.assignmentId || created.assignmentId;
+    await p.assignmentPost(multi("teacher-a"), { action: "setStatus", assignmentId: id, status: "published" });
+    return { p, a, b, sa, id };
+  }
+  const get = (p, h, auth, url) => h.handler(req("GET", null, "http://x/api" + url), { requireBuilderAuth: () => auth, container: p.mem.container, getContainer: () => p.mem.container, recordAuditEvent: async () => {} });
+  const post = (p, h, auth, body) => h.handler(req("POST", body), { requireBuilderAuth: () => auth, container: p.mem.container, getContainer: () => p.mem.container, recordAuditEvent: async () => {} });
+  it("reports: another teacher's class or student report answers like a missing one; the filters list only own classes", async () => {
+    const { p, a, b, sa } = await setup();
+    const B = multi("teacher-b");
+    expect((await get(p, reports, B, "/reports?type=class&classId=" + a)).status).toBe(404);
+    expect((await get(p, reports, B, "/reports?type=student&studentId=" + sa)).status).toBe(404);
+    expect((await get(p, reports, B, "/reports?type=classStudents&classId=" + a)).status).toBe(404);
+    expect((await get(p, reports, B, "/reports?type=filters")).jsonBody.classes.map(c => c.classId)).toEqual([b]);
+    expect((await get(p, reports, multi("teacher-a"), "/reports?type=class&classId=" + a)).status).toBe(200);
+  });
+  it("the Today hub counts only the teacher's own classes, students and assignments", async () => {
+    const { p } = await setup();
+    const B = (await get(p, today, multi("teacher-b"), "/teacher-today")).jsonBody;
+    const A = (await get(p, today, multi("teacher-a"), "/teacher-today")).jsonBody;
+    expect(B.scope).toMatchObject({ activeClasses: 1, students: 0, publishedAssignments: 0 });
+    expect(A.scope).toMatchObject({ activeClasses: 1, students: 1, publishedAssignments: 1 });
+  });
+  it("the achievement feed and analytics refuse another teacher's class", async () => {
+    const { p, a } = await setup();
+    const B = multi("teacher-b");
+    expect((await get(p, feed, B, "/teacher-achievement-feed?classId=" + a)).status).toBe(404);
+    expect((await post(p, feed, B, { action: "react", classId: a, postId: "x", reaction: "👏" })).status).toBe(404);
+    expect((await get(p, analytics, B, "/teacher-analytics?classId=" + a)).status).toBe(404);
+    expect((await get(p, analytics, multi("teacher-a"), "/teacher-analytics?classId=" + a)).status).toBe(200);
+  });
+  it("messages: another teacher's student thread and class announcements answer like missing ones; nothing can be sent", async () => {
+    const { p, a, sa } = await setup();
+    const B = multi("teacher-b");
+    expect((await get(p, messages, B, "/messages?studentId=" + sa)).status).toBe(404);
+    expect((await get(p, messages, B, "/messages?classId=" + a + "&kind=announcements")).status).toBe(404);
+    expect((await post(p, messages, B, { action: "sendDirect", studentId: sa, body: "مرحبا" })).status).toBe(404);
+    expect((await post(p, messages, B, { action: "sendAnnouncement", classId: a, body: "مرحبا" })).status).toBe(404);
+    expect(p.mem.names("platform/messages/").length).toBe(0);
+  });
+  it("projects: another teacher's class is refused", async () => {
+    const { p, a } = await setup();
+    const res = await get(p, projects, multi("teacher-b"), "/project-tracker?projectCode=794589&classId=" + a);
+    expect([400, 404]).toContain(res.status);
+    expect(res.jsonBody.ok).toBe(false);
+  });
+  it("student photos: another teacher's student is invisible and cannot be changed", async () => {
+    const { p, sa } = await setup();
+    const B = multi("teacher-b");
+    const shown = await get(p, photo, B, "/student-profile-photo?studentId=" + sa);
+    expect(JSON.stringify(shown.jsonBody || {})).not.toMatch(/url|dataUrl/);
+    expect((await post(p, photo, B, { action: "remove", studentId: sa })).status).toBe(404);
+  });
+  it("the activity log shows a teacher only their own actions", async () => {
+    const p = platform({
+      "platform/audit/2026-10-16T10:00:00.000Z-a.json": { actor: "teacher-a", action: "class.create", targetType: "class", targetId: "c1", targetLabel: "صف أ", at: "2026-10-16T10:00:00.000Z" },
+      "platform/audit/2026-10-16T11:00:00.000Z-b.json": { actor: "teacher-b", action: "class.create", targetType: "class", targetId: "c2", targetLabel: "صف ب", at: "2026-10-16T11:00:00.000Z" }
+    });
+    const events = (await get(p, audit, multi("teacher-b"), "/audit-history")).jsonBody.events;
+    expect(events.map(e => e.targetLabel)).toEqual(["صف ب"]);
+    expect((await get(p, audit, legacy(), "/audit-history")).jsonBody.events).toHaveLength(2);
   });
 });

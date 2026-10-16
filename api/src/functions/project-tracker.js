@@ -10,6 +10,8 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+// Phase 21G.0 — teacher tenancy: project tracking covers only the teacher's own classes.
+const { tenantOf, canAccessDocument, accessibleClassIds, classIdAllowed } = require("../lib/teacher-tenancy");
 const { getContainer, downloadJsonOrNull, listJson, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -72,6 +74,8 @@ async function handler(request, deps = {}, obs = null) {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
+      const tenant = tenantOf(auth.user);
+      const ownClassroom = classroom => !!classroom && canAccessDocument(classroom, tenant);
       const now = new Date().toISOString();
 
       // ---- resolve projectCode (from query for GET, body for POST) ----
@@ -94,7 +98,7 @@ async function handler(request, deps = {}, obs = null) {
       // Uses the SAME exactness as the ready report: only current class members (non-archived) and
       // only stages that exist & are active in the class snapshot are counted.
       if (request.method === "GET" && String(new URL(request.url).searchParams.get("resource") || "") === "projects-summary") {
-        const classrooms = (await listJson(container, CLASS_PREFIX)).filter(Boolean);
+        const classrooms = (await listJson(container, CLASS_PREFIX)).filter(ownClassroom);
         const allUsers = await listJson(container, svc.USER_PREFIX);
         const usersById = new Map(allUsers.filter(u => u && u.role === "student").map(u => [String(u.userId), u]));
         const byProject = {};
@@ -126,13 +130,14 @@ async function handler(request, deps = {}, obs = null) {
 
         // Classes enrolled in THIS project (for the class selector). No classId needed.
         if (resource === "classes") {
-          const classes = await svc.listProjectClasses(container, projectCode);
+          const allowed = tenant ? accessibleClassIds(await listJson(container, CLASS_PREFIX), tenant) : null;
+          const classes = (await svc.listProjectClasses(container, projectCode)).filter(c => classIdAllowed(allowed, c && c.classId));
           return { status: 200, jsonBody: { ok: true, projectCode, title: definition.title, tracks: definition.tracks, classes } };
         }
 
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const classroom = await svc.loadClassroom(container, classId);
-        if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+        if (!ownClassroom(classroom)) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         if (!classHasProject(classroom, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
         const readOnly = normalizeClassStatus(classroom) === "archived";
         const config = await svc.ensureClassConfig(container, projectCode, classroom);
@@ -190,7 +195,7 @@ async function handler(request, deps = {}, obs = null) {
       const classId = String(body.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
       const classroom = await svc.loadClassroom(container, classId);
-      if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+      if (!ownClassroom(classroom)) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
       if (!classHasProject(classroom, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
 
       // Every write is blocked on an archived class (read-only history preserved).

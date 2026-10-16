@@ -1,6 +1,8 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+// Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
+const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer } = require("../lib/platform-storage");
 const { computeTeacherAnalytics, AnalyticsScopeError } = require("../lib/teacher-analytics-core");
 
@@ -104,7 +106,7 @@ async function handler(request, deps = {}, obs = null) {
       // Phase 8A: the server RECOMPUTES the requested scope with the same authority as the dashboard (a mismatched or
       // unknown student is rejected there) — the browser never sends analytics figures, only the scope selectors.
       const container = deps.container || (deps.getContainer || getContainer)();
-      const data = await computeTeacherAnalytics(container, { classId, studentId, fromMs, toMs });
+      const data = await computeTeacherAnalytics(container, { classId, studentId, fromMs, toMs, tenant: tenantOf(auth.user) });
       const mode = data.scope.mode;
       if (mode === "student" && !data.studentDetail) {
         return { status: 404, jsonBody: { ok: false, error: "لا توجد بيانات كافية لهذا الطالب ضمن هذا النطاق." } };

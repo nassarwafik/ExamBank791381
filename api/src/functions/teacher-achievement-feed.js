@@ -14,12 +14,16 @@ const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البي�
 const MAX_POSTS = 50;
 const MAX_NOTE_LENGTH = 200;
 
+// Phase 21G.0 — teacher tenancy: the feed covers only the teacher's own classes.
+const { tenantOf, canAccessDocument, classAccessible } = require("../lib/teacher-tenancy");
+
 const newestFirst = (a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
 
 /** Phase 8A — the GLOBAL scope is the dashboard's: every CURRENT (canonical-active) class. An archived class's posts
  *  stay readable when that class is requested explicitly (historical view), exactly like teacher analytics. */
-async function globalFeed(container) {
-  const [posts, classes] = await Promise.all([listJson(container, FEED_PREFIX), listJson(container, CLASS_PREFIX)]);
+async function globalFeed(container, tenant = null) {
+  const [posts, allClasses] = await Promise.all([listJson(container, FEED_PREFIX), listJson(container, CLASS_PREFIX)]);
+  const classes = allClasses.filter(c => c && canAccessDocument(c, tenant));
   const current = new Set(classes.filter(c => c?.classId && normalizeClassStatus(c) === "active").map(c => String(c.classId)));
   return [posts.filter(post => current.has(String(post?.classId || ""))), classes];
 }
@@ -30,7 +34,7 @@ async function globalFeed(container) {
  * Malformed ids → 400; a studentId without a classId → 400; an unknown class, or a student who is not currently a
  * member of that class → 404 (the same authority the dashboard's own student picker is built from).
  */
-async function readScope(request, container) {
+async function readScope(request, container, tenant = null) {
   let url;
   try { url = new URL(request.url); } catch { return { ok: true, classId: "", studentId: "" }; }
   const classId = String(url.searchParams.get("classId") || "").trim();
@@ -42,7 +46,7 @@ async function readScope(request, container) {
   if (!isSafeId(classId)) return bad("Invalid classId.");
   if (studentId && !isSafeId(studentId)) return bad("Invalid studentId.");
   const classroom = await downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
-  if (!classroom) return missing("الصف غير موجود.");
+  if (!classroom || !canAccessDocument(classroom, tenant)) return missing("الصف غير موجود.");
   if (studentId) {
     const student = await downloadJsonOrNull(container, "platform/users/" + studentId + ".json");
     if (!isStudentClassMember(student, classId)) return missing("الطالب غير موجود في هذا الصف.");
@@ -59,8 +63,9 @@ async function handler(request, deps = {}, obs = null) {
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
 
+      const tenant = tenantOf(auth.user);
       if (request.method === "GET") {
-        const scope = await readScope(request, container);
+        const scope = await readScope(request, container, tenant);
         if (!scope.ok) return scope.response;
         // Scoped: only that class's feed folder is read, and posts are kept by their STORED classId (+ studentId) —
         // filtered BEFORE the newest-first slice, so a class's older posts are never crowded out by other classes.
@@ -70,7 +75,7 @@ async function handler(request, deps = {}, obs = null) {
                 .filter(post => String(post?.classId || "") === scope.classId && (!scope.studentId || String(post?.studentId || "") === scope.studentId)),
               [{ ...scope.classroom, classId: scope.classId }]
             ]
-          : await globalFeed(container);
+          : await globalFeed(container, tenant);
         const classNameById = new Map(classes.map(c => [String(c.classId || ""), String(c.name || "")]));
         const sorted = posts
           .sort(newestFirst)
@@ -90,6 +95,7 @@ async function handler(request, deps = {}, obs = null) {
       const classId = String(body?.classId || "").trim();
       const postId = String(body?.postId || "").trim();
       if (!classId || !postId) return { status: 400, jsonBody: { ok: false, error: "classId and postId are required." } };
+      if (!(await classAccessible(name => downloadJsonOrNull(container, name), classId, tenant))) return { status: 404, jsonBody: { ok: false, error: "المنشور غير موجود." } };
 
       if (action === "react") {
         const reaction = String(body?.reaction || "").trim();

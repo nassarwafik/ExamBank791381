@@ -372,7 +372,7 @@ function groupDirectIds(names) {
  * names + one marker read per conversation + user reads only for conversations with candidates + candidate downloads;
  * the global summary stops once the display cap is exceeded.
  */
-async function teacherDirectUnread(container, teacherId, { classId = "" } = {}, deps = {}) {
+async function teacherDirectUnread(container, teacherId, { classId = "", canSee = null } = {}, deps = {}) {
   const list = deps.listBlobNames || listBlobNames;
   const many = deps.downloadManyJson || downloadManyJson;
   const conc = getReadConcurrency();
@@ -387,6 +387,8 @@ async function teacherDirectUnread(container, teacherId, { classId = "" } = {}, 
     const u = users[i];
     return !!u && u.role === "student" && String(u.userId || "") === r.sid && (!classId || String(u.classId || "") === classId);
   });
+  // Phase 21G.0 — teacher tenancy: only the teacher's own students count (canSee: an async per-student predicate).
+  if (canSee) rows = (await Promise.all(rows.map(async (r, i) => ((await canSee(users.find(u => u && String(u.userId || "") === r.sid))) ? r : null)))).filter(Boolean);
   const byStudent = {};
   const counts = [];
   for (const r of rows) {

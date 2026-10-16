@@ -73,4 +73,12 @@ async function classAccessible(load, classId, tenant, env = process.env) {
   return !!doc && canAccessDocument(doc, tenant, env);
 }
 
-module.exports = { classAccessible, tenantOf, legacyDataOwner, ownerOfDocument, canAccessDocument, ownerStamp, filterAccessible, accessibleClassIds, classIdAllowed };
+/** Whether `tenant` may act on this student document: through its own owner stamp, or (without one) through its class. */
+async function studentAccessible(load, student, tenant, env = process.env) {
+  if (!tenant) return true;
+  if (!student || student.role !== "student") return false;
+  if (typeof student.ownerId === "string" && student.ownerId) return canAccessDocument(student, tenant, env);
+  return classAccessible(load, student.classId, tenant, env);
+}
+
+module.exports = { classAccessible, studentAccessible, tenantOf, legacyDataOwner, ownerOfDocument, canAccessDocument, ownerStamp, filterAccessible, accessibleClassIds, classIdAllowed };
