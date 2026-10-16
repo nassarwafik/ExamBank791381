@@ -1,6 +1,6 @@
 # Phase 21H — Enterprise teacher dashboard («لوحة المتابعة»)
 
-**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1–21H.4 implemented on branch `claude/nifty-clarke-k0wlid`; 21H.5 planned. Each phase: exact-head CI,
+**Status:** 21H.0 in review as nassarwafik/ExamBank791381#333; 21H.1–21H.5 implemented on branch `claude/nifty-clarke-k0wlid` — the 21H plan is complete. Each phase: exact-head CI,
 independent review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -41,7 +41,7 @@ Each decision is recorded here so the owner can reverse it at review.
 | 21H.2 | One scope and one refresh for the page (D3, as revised in §6) | implemented |
 | 21H.3 | Next actions: closing within 48 h, results to publish, opening within 24 h; «تذكير» on a row; priority order; «عرض الكل» | implemented |
 | 21H.4 | Read cost of `teacher-today`: an ETag-verified document cache, measured before / after | implemented |
-| 21H.5 | Visual and accessibility gate on the dashboard (axe, overflow, touch targets at 390 / 834 / 1180 / 1440) | planned |
+| 21H.5 | Visual and accessibility gate on the dashboard (axe, overflow, touch targets at 390 / 834 / 1180 / 1440) | implemented |
 
 ## 4. Implementation record and evidence (21H.0)
 
@@ -190,3 +190,40 @@ The cold (first) request is unchanged. The full formula is in `docs/read-cost-ba
 | `etag-doc-cache-21h4` | 8 / 8: unchanged second load downloads nothing; changed / new / deleted documents are seen; no ETag → always downloaded; a downloaded or cached document mutated by a caller never changes the next result; entry and byte bounds; two containers never share; `null` → plain path; **teacher-today: a submission changed between two refreshes changes the figures on the second** |
 | `read-cost-teacher-today-12e` / `read-cost-observability-12e` | updated deliberately: warm and migrating second requests download 0 unchanged class / user / submission documents; exact warm numbers above; two added count-only fields |
 | Mutation `node scripts/mutate-21h.mjs h4` | 6 mutants, **6 KILLED** (ETag ignored, ETag-less served from cache, shared object on a hit, no entry bound, one cache for two containers, cache bypassed). H4-M3 survived first; the isolation test now also mutates a cache hit |
+
+## 9. Implementation record and evidence (21H.5)
+
+### Method
+
+- **Tools:**
+  - axe-core 4.10.2 (WCAG 2.1 A/AA), downloaded into a scratch directory as a measuring tool, not a project dependency;
+  - a horizontal-overflow check;
+  - a touch-target check on the touch sizes: 44 px for every control, 24 px for a selection box.
+- **What was checked:** the production build of the head, with every `/api/**` answered in the browser by a realistic school. The dashboard was checked with all classes and with one class, at 390 and 834 (touch) and at 1180 and 1440 px.
+
+### Found → fixed
+
+| Finding | Fix |
+|---|---|
+| `role-img-alt` ×4–5 on every screen: Chart.js marks each canvas `role="img"` with no name | every canvas is `aria-hidden`; the ChartCard figure (`role="img"`, named by the chart's summary) is unchanged |
+| 7–36 controls under 44 px on the touch sizes (toolbar 40, period 34, card buttons 34, table links 19, «عرض البيانات كجدول» 34) | `@media (pointer: coarse)` blocks in `dashboard-pro.css` and `teacher/teacherToday.css`: every dashboard and hub control is at least 44 px, and table links are 44 × 44 |
+| Ragged, narrow hub cards (five columns of about 210 px at 1440, gaps under short cards) | auto-fill columns of at least 260 px with equal heights per row; «تذكير» wraps under a narrow row |
+
+**After: 16 / 16 checks, 0 violations, no horizontal overflow, no target below its minimum.**
+
+A full-page screenshot in Playwright's mobile emulation drops the touch media emulation for the checks that follow it. The gate's numbers therefore come from a run without screenshots; the screenshots are only for looking.
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `dashboardGate.21h5` | 3 / 3: the five canvases are `aria-hidden` and the figure keeps its name; the coarse-pointer selectors and sizes; the grid rule |
+| Mutation `node scripts/mutate-21h.mjs h5` | 5 mutants, **5 KILLED** |
+| Gate | 16 / 16 clean (before: role-img-alt on 8 / 8 screens and undersized targets on 4 / 4 touch screens) |
+
+## 10. What the plan leaves to the owner
+
+- **Ending an idle attempt** stays in the gradebook, because ending grades the attempt.
+- **The six quick actions** stay as 9A / 21E.2 pinned them.
+- **UX-3's four categories** stay. 21H.2 only gives the page one scope.
+- **Automatic reminders** would need a scheduled job, which is a deployment change.
