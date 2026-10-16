@@ -49,7 +49,11 @@ export const CAMPAIGNS = {
     { id: "G3-M8", what: "closing the page loses focus (the opener is never refocused)", file: "src/assignments/useAssignmentsController.ts",
       find: "    if (el.isConnected) el.focus();\n  }, [resultsFor]);", replace: "  }, [resultsFor]);", tests: G3_PANEL },
     { id: "G3-M9", what: "the page header has no action menu (the hidden row's actions are unreachable)", file: "src/assignments/AssignmentDetail.tsx",
-      find: "        {p.actions && <div className=\"eb-assign-detail-actions\">{p.actions}</div>}\n", replace: "", tests: G3_PANEL }
+      find: "        {p.actions && <div className=\"eb-assign-detail-actions\">{p.actions}</div>}\n", replace: "", tests: G3_PANEL },
+    { id: "G3-M10", what: "the hidden list's display:flex overrides the hidden attribute (it stays visible in a browser)", file: "src/assignments-pro.css",
+      find: ".eb-assign-list[hidden] { display: none; }\n", replace: "", tests: ["src/designSystem/hiddenAttribute.guard.test.ts"] },
+    { id: "G3-M11", what: "the overview's status bar restyles the gradebook's .eb-status-stack badge column", file: "src/assignments-pro.css",
+      find: ".eb-status-bar { display: flex;", replace: ".eb-status-stack { display: flex;", tests: ["src/AssignmentsPanel.page.21g3.test.tsx"] }
   ],
   g2: [
     { id: "G2-M1", what: "a cached summary is served without checking its ETag", file: CACHE,

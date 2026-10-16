@@ -123,6 +123,20 @@ describe("21G.3 the full-width assignment page", () => {
     const next = await openPage("واجب الجبر");
     expect(pressed(next.page)).toEqual(["الطلاب"]);
   });
+
+  it("a drill that arrives while the page shows another section opens its assignment on the gradebook, with the drill's view", async () => {
+    const view = render(<AssignmentsPanel token="t" classes={CLASSES as never} currentExam={null} />);
+    await screen.findByText("واجب الكسور");
+    const { page } = await openPage();
+    fireEvent.click(within(sections(page)).getByRole("button", { name: "نظرة عامة" }));
+    expect(pressed(page)).toEqual(["نظرة عامة"]);
+    view.rerender(<AssignmentsPanel token="t" classes={CLASSES as never} currentExam={null} drill={{ seq: 1, assignmentId: "a2", mode: "pendingReview" }} onDrillConsumed={() => {}} />);
+    const next = await screen.findByRole("region", { name: "واجب الجبر" });
+    await within(next).findByText("باسل");
+    expect(pressed(next)).toEqual(["الطلاب"]);
+    expect(within(next).getByLabelText("بحث بالاسم أو الكود")).toBeTruthy();
+    expect(within(next).queryByText("سارة")).toBeNull();                                      // the drill's «بانتظار التصحيح» view
+  });
 });
 
 // The 21G.3 styles must never restyle an element the workspace already styles: an earlier «.eb-status-stack» rule here squashed the
