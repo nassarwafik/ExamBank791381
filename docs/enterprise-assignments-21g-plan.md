@@ -28,7 +28,7 @@ approved plan.
 | 21G.1 | Extract the assignments controller from `AssignmentsPanel.tsx` (no behaviour change) |
 | 21G.2 | Assignments home: KPIs, progress cards, time status, all classes, **light list** (moved here from 21G.0, see §5) |
 | 21G.3 | Full-width assignment page with tabs and distribution |
-| 21G.4 | Professional gradebook: one status per student, bulk actions, mobile cards |
+| 21G.4 | Professional gradebook: one status per student, bulk actions, mobile cards, per-question grid |
 | 21G.5 | Grading flow: next student, grade release setting (D2) |
 | 21G.6 | Creation wizard; one copy per class (D4) |
 | 21G.7 | Reports, reminders, visual and accessibility gate |
@@ -263,3 +263,57 @@ happy-dom applies no CSS, so neither defect could be seen by the panel tests.
 | Real Chromium at 1440 / 390 px | no horizontal overflow on the gradebook or the overview; the gradebook table is 1,110 px wide on desktop (611 px beside the list in 21G.2); five distribution rows on both widths |
 
 Fail-first applies to the two defects above only (the guards failed before their fixes). Deployment tier: 1 (local) only.
+
+## 11. Implementation record and evidence (21G.4)
+
+### What shipped
+
+- **One status per student** (`src/assignments/gradebookStatus.ts`). The row showed a lifecycle badge and a grading badge side by
+  side; it now shows one. Grading comes first, through the shared resolver: a final result stays «نهائي» while a newer attempt
+  runs. A student without a graded result is described by the live attempt in its own lifecycle words («قيد المحاولة»,
+  «مسودة», «متوقفة مؤقتًا»); otherwise «لم يسلّم». The lifecycle stays as a short note only when it adds something
+  («انتهى الوقت», «أنهى المعلم المحاولة», a live attempt beside a grade). The live-attempt detail lines are unchanged.
+- **Row selection and bulk actions.** A checkbox in the name cell, «تحديد كل الطلاب الظاهرين» (indeterminate when partial), and
+  a bulk bar with «منح محاولة إضافية» and «تمديد الموعد» (one deadline for every ticked student). A bulk action is the SAME
+  per-student request as the row action (`allowRetry`, `setDueAtOverride`), sent once per ticked visible row in the visible
+  order, each answer merged as that student's authoritative snapshot. Every student is reported: the ones that failed are named
+  with the server's reason and stay ticked for a retry. A search, a filter, another assignment or closing the page clears the
+  selection, so a bulk action never reaches a row the teacher cannot see ticked. Leaving the page stops a run and releases its
+  busy state. No selection on an archived assignment. No API change: the per-student routes keep every authority and audit check.
+- **Sticky header, phone cards.** The gradebook scrolls inside a bounded area (`min(72vh, 820px)`) with its header in view
+  (no `z-index`: the 21E stacking guard holds). On a phone each student is a card built from the same table (sorting, actions
+  and tests stay one path), with the sort buttons kept as chips.
+- **Per-question grid** in «تحليل الأسئلة» (`QuestionGrid.tsx`, model in `questionGrid.ts`).
+  `GET /api/assignment-item-analysis` also returns `students[]`: each member's latest attempt, one cell per question.
+  - **Grading safety:** a question waiting for the teacher (manual review, a technical hold) or for automatic coding execution
+    is `{state:"pending"}` with NO score, never the provisional mark. A missing grade is `{state:"none"}`.
+  - `questionAutoGradingPending(attempt, questionId)` in `official-grading.js` is the attempt-level `autoGradingPending` rule
+    for one question; a composite part counts for its question.
+  - The grid uses one hue deepening with the mark, at the distribution's band edges (`bandOf`, now shared). Every cell prints
+    its mark, so colour is never the only channel. «بانتظار» sits on a hatched cell, and the student column stays in view.
+
+### Defect found on the way (real browser only)
+
+The phone cards spilled past the page: `.students-table` sets `min-width: 620px`, which the card layout inherited. The card rule now
+sets `min-inline-size: 0` (`63c5f7cb`), pinned by the style test and by mutant G4-M16.
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `gradebookStatus.21g4` | 4 / 4: grading first, pending names its manual marks, live lifecycle words, notes only when they add something |
+| `questionGrid.21g4` | 2 / 2: band edges as a share of the question's marks, pending never banded, missing «—» |
+| `AssignmentsPanel.gradebook.21g4` | 9 / 9: one status, selection and its clearing, bulk grant (one failure named and kept ticked, snapshots merged), bulk deadline, the run stopping when the page is left (after a success and after a failure), no selection when archived, the grid, the styles |
+| `assignment-item-grid-21g4` (API) | 3 / 3: one row per submitted student (latest attempt), pending without a score (manual review and open coding execution), the per-question coding rule incl. a composite part |
+| Existing suites | `ux5` and `grading` (AL) changed only for the intended one-status row; the ux5 source guards follow the label code into `gradebookStatus.ts` (and forbid score-based rules there too); the 21G.3 style guard stops at the 21G.4 block, which restyles the gradebook on purpose |
+| Full root suite + build on `e8b841bf` | 1,055 files / 13,148 tests: 1 failure, unrelated (below); build passed, initial JS 114.1 KB gzip |
+| tsc / lint | clean / 125 |
+| Mutation `node scripts/mutate-21g.mjs g4` | 16 mutants, **16 KILLED**. G4-M4 (the loop-top stop check removed) first SURVIVED: the check after a successful answer already ended the run; the new failed-request test kills it in the isolated re-run. `g3` re-run in full after G3-M2 / G3-M6 were re-pointed: 11 / 11 KILLED |
+| Real Chromium at 1440 / 390 px | no horizontal overflow on the gradebook, the selection, the analysis grid or the overview; phone cards 322 px inside a 322 px column |
+
+**The unrelated failure.** `src/questionTypes/coding.17e-b.test.tsx` failed once in the full run and passes alone (28 / 28). Its
+secrecy pattern contains `9\.17` (a hidden weight canary), and the real-clock `expectedStartedAt` of that run was
+`…:10:59.173Z`, which contains «9.17». The failure depends on the clock, not on this phase. Proposed fix (not in this PR): pin
+the clock in that test, or make the weight canary a string no timestamp can contain.
+
+Fail-first applies to the phone-card defect only. Deployment tier: 1 (local) only.
