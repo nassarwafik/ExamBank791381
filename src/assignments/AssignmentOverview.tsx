@@ -50,7 +50,7 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
         table={{ columns: ["الحالة", "عدد الطلاب"], rows: parts.map(p => [p.label, p.count]) }}
         empty={total ? undefined : <p className="eb-muted">لا يوجد طلاب في هذا الصف بعد.</p>}
       >
-        <div className="eb-status-stack" aria-hidden="true">
+        <div className="eb-status-bar" aria-hidden="true">
           {parts.filter(p => p.count > 0).map(p => <span key={p.key} className={"eb-status-seg is-" + p.key} style={{ flexGrow: p.count }} />)}
         </div>
         <ul className="eb-status-legend">

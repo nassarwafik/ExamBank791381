@@ -6,6 +6,8 @@
 // distribution counts FINAL results only, and every section switch is client-side.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import AssignmentsPanel from "./AssignmentsPanel";
 
 const D = 24 * 3600 * 1000;
@@ -120,5 +122,26 @@ describe("21G.3 the full-width assignment page", () => {
     await waitFor(() => expect(list().hidden).toBe(false));
     const next = await openPage("واجب الجبر");
     expect(pressed(next.page)).toEqual(["الطلاب"]);
+  });
+});
+
+// The 21G.3 styles must never restyle an element the workspace already styles: an earlier «.eb-status-stack» rule here squashed the
+// gradebook's status badges into a 14px strip — invisible to happy-dom, seen only in a real browser. So the subject (last compound)
+// of every 21G.3 selector names at least one class new to the block (or, for a bare element, the selector does); a shared modifier like «is-active» is fine only beside one.
+describe("21G.3 page styles", () => {
+  it("only style elements through classes new in the 21G.3 block", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "assignments-pro.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const marker = css.indexOf(".eb-assign-layout.is-page {");
+    expect(marker).toBeGreaterThan(0);
+    const classesOf = (text: string) => Array.from(text.matchAll(/\.([a-zA-Z][\w-]*)/g), m => m[1]);
+    const before = new Set(classesOf(css.slice(0, marker)));
+    const selectors = Array.from(css.slice(marker).matchAll(/([^{}]+)\{/g), m => m[1].trim()).filter(sel => !sel.startsWith("@")).flatMap(sel => sel.split(",").map(x => x.trim()));
+    expect(selectors.length).toBeGreaterThan(20);
+    // The one deliberate exception: the hidden list (its display:flex must not override the hidden attribute).
+    const allowed = new Set([".eb-assign-list[hidden]"]);
+    // A subject without a class («.eb-status-legend li») is scoped by its ancestors instead, so the whole selector must name one.
+    const owned = (sel: string) => { const subject = classesOf(sel.split(/[\s>+~]+/).pop() || ""); return (subject.length ? subject : classesOf(sel)).some(c => !before.has(c)); };
+    const restyled = selectors.filter(sel => !allowed.has(sel) && !owned(sel));
+    expect(restyled).toEqual([]);
   });
 });

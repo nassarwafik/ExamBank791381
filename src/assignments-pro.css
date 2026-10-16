@@ -302,7 +302,8 @@
 .eb-dist-track { block-size: 14px; border-radius: 4px; background: var(--eb-surface-2); overflow: hidden; }
 .eb-dist-bar { display: block; block-size: 100%; border-radius: 4px; background: var(--eb-primary); min-inline-size: 0; }
 .eb-dist-count { font-weight: var(--eb-fw-semibold); text-align: end; }
-.eb-status-stack { display: flex; gap: 2px; block-size: 14px; border-radius: 4px; overflow: hidden; background: var(--eb-surface-2); }
+/* (named eb-status-bar: the gradebook already owns .eb-status-stack for its badge column) */
+.eb-status-bar { display: flex; gap: 2px; block-size: 14px; border-radius: 4px; overflow: hidden; background: var(--eb-surface-2); }
 .eb-status-seg { display: block; min-inline-size: 4px; }
 .eb-status-seg.is-final, .eb-status-dot.is-final { background: var(--eb-success); }
 .eb-status-seg.is-pendingReview, .eb-status-dot.is-pendingReview { background: var(--eb-warn); }
