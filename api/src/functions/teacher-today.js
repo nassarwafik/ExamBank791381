@@ -5,7 +5,10 @@
 // of an ACTIVE class, bounded concurrency) plus the Phase 5D unread-messages summary. Nothing here is persisted, no
 // second store is created, and no figure is invented: every count is a plain fact of those documents at request time.
 //
-//   attention.activeAttempts  — students with a LIVE attempt right now (started / draft / paused), newest first;
+//   attention.activeAttempts  — students working RIGHT NOW: a live attempt (started / draft) whose last activity (the
+//                               last autosave, else its start) is within LIVE_WINDOW_MS, newest first;
+//   attention.staleAttempts   — Phase 21H.0: live attempts with no activity for longer than that window, and attempts the
+//                               teacher paused — still open, but nobody is working on them «now»; most recent first;
 //   attention.notStarted      — OPEN assignments (per the same availability rule the student sees) with class members
 //                               who have neither an attempt nor a live attempt yet, nearest deadline first;
 //   attention.pendingReview   — assignments whose latest attempts still need manual review (the gradebook's rule);
@@ -34,6 +37,9 @@ const {tenantOf,filterAccessible}=require("../lib/teacher-tenancy");
 
 const CP="platform/classes/",UP="platform/users/",SP="platform/submissions/";
 const ITEM_CAP=8,RECENT_CAP=10;
+// Phase 21H.0 — an open attempt counts as «active now» only while the student is actually working: its last autosave (or
+// its start, before the first save) is at most this old. Older open attempts, and paused ones, are reported as stale.
+const LIVE_WINDOW_MS=15*60e3;
 const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
 
@@ -55,8 +61,8 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
  const membersByClass=new Map();
  for(const u of users){if(!u||u.role!=="student")continue;const cid=String(u.classId||"");if(!activeClasses.has(cid)||!isStudentClassMember(u,cid))continue;if(!membersByClass.has(cid))membersByClass.set(cid,[]);membersByClass.get(cid).push(u)}
  const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeClasses.has(String(a.classId||"")));
- const active=[],notStarted=[],pending=[],recent=[];
- let activeCount=0,notStartedCount=0,pendingCount=0;
+ const active=[],stale=[],notStarted=[],pending=[],recent=[];
+ let activeCount=0,staleCount=0,notStartedCount=0,pendingCount=0;
  for(const a of published){
   const aid=String(a.assignmentId),cid=String(a.classId||""),className=activeClasses.get(cid).name,title=String(a.title||"");
   const members=membersByClass.get(cid)||[],subs=submissionsByAssignment.get(aid)||new Map();
@@ -64,7 +70,12 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
   for(const u of members){
    const sid=String(u.userId),s=subs.get(sid)||null,st=attemptState(a,s,nowMs),live=activeAttemptOf(s);
    const attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
-   if(live){activeCount++;active.push({assignmentId:aid,title,className,studentId:sid,studentName:studentName(u),startedAt:String(live.startedAt||""),status:deriveAttemptStatus(s)});recent.push({kind:"started",at:String(live.startedAt||""),assignmentId:aid,title,className,studentId:sid,studentName:studentName(u)})}
+   if(live){
+    const status=deriveAttemptStatus(s),lastActivityAt=Math.max(ms(live.lastSavedAt),ms(live.startedAt));
+    const item={assignmentId:aid,title,className,studentId:sid,studentName:studentName(u),startedAt:String(live.startedAt||""),lastActivityAt:lastActivityAt?new Date(lastActivityAt).toISOString():"",status};
+    if(status!=="paused"&&lastActivityAt&&nowMs-lastActivityAt<=LIVE_WINDOW_MS){activeCount++;active.push(item)}else{staleCount++;stale.push(item)}
+    recent.push({kind:"started",at:String(live.startedAt||""),assignmentId:aid,title,className,studentId:sid,studentName:studentName(u)})
+   }
    if(st.availability==="open"&&!live&&attempts.length===0){ns++;const due=ms(st.effectiveDueAt||a.dueAt);if(due&&(!nearestDue||due<nearestDue))nearestDue=due}
    if(latest&&deriveGradingStatus(latest)==="pendingReview")pr++;
    for(const at of attempts){if(!at||!at.submittedAt)continue;const reason=normalizeEndReason(at);recent.push({kind:reason==="submitted"?"submitted":reason,at:String(at.submittedAt),assignmentId:aid,title,className,studentId:sid,studentName:studentName(u),percentage:Number.isFinite(Number(at.percentage))?Number(at.percentage):null})}
@@ -72,7 +83,8 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
   if(ns>0){notStartedCount+=ns;notStarted.push({assignmentId:aid,title,className,dueAt:nearestDue?new Date(nearestDue).toISOString():"",notStarted:ns,expected:members.length})}
   if(pr>0){pendingCount+=pr;pending.push({assignmentId:aid,title,className,pendingReview:pr})}
  }
- active.sort((x,y)=>ms(y.startedAt)-ms(x.startedAt));
+ active.sort((x,y)=>ms(y.lastActivityAt)-ms(x.lastActivityAt)||ms(y.startedAt)-ms(x.startedAt));
+ stale.sort((x,y)=>ms(y.lastActivityAt)-ms(x.lastActivityAt));
  notStarted.sort((x,y)=>(ms(x.dueAt)||Number.MAX_SAFE_INTEGER)-(ms(y.dueAt)||Number.MAX_SAFE_INTEGER)||y.notStarted-x.notStarted);
  pending.sort((x,y)=>y.pendingReview-x.pendingReview);
  recent.sort((x,y)=>ms(y.at)-ms(x.at));
@@ -80,6 +92,7 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
   scope:{activeClasses:activeClasses.size,students:[...membersByClass.values()].reduce((n,l)=>n+l.length,0),publishedAssignments:published.length},
   attention:{
    activeAttempts:{count:activeCount,items:active.slice(0,ITEM_CAP)},
+   staleAttempts:{count:staleCount,items:stale.slice(0,ITEM_CAP)},
    notStarted:{count:notStartedCount,assignments:notStarted.length,items:notStarted.slice(0,ITEM_CAP)},
    pendingReview:{count:pendingCount,assignments:pending.length,items:pending.slice(0,ITEM_CAP)}
   },
@@ -128,4 +141,4 @@ async function handler(request,deps={},obs=null){
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }
 app.http("teacherToday",{methods:["GET"],authLevel:"anonymous",route:"teacher-today",handler:withObservability("teacher-today",handler)});
-module.exports={handler,deriveTeacherToday};
+module.exports={handler,deriveTeacherToday,LIVE_WINDOW_MS};
