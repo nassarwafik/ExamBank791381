@@ -5,6 +5,7 @@ const {requireActiveStudentSession}=require("../lib/student-auth");
 const {downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
+const {resultsReleased,releaseInfo,withholdResult}=require("../lib/results-release");
 const {deriveGradingStatus}=require("../lib/grading-status");
 // Phase 17C — the student sees ONLY that automatic coding grading is still completing (a boolean; never tests / evidence).
 const {legacyAutoGradingWithhold,studentCodingGradingStatus}=require("../lib/coding/official-grading");
@@ -53,7 +54,10 @@ async function handler(request,deps={},obs=null){
   const idx=student.classId?await loadPublishedAssignmentsForClasses(c,[String(student.classId)],{...deps,downloadJsonOrNull:dl,listJson:ls,mapConcurrent,getReadConcurrency:readConcurrency},obs):null;
   const raw=idx?idx.byClass.get(String(student.classId))||[]:[],assignments=[],idxStats=idx?idx.stats:{authoritative:0,authorityChanges:0,indexReads:0,globalScans:0,bootstrapped:0,assignmentDocsLoaded:0};
   // Legacy stats (kept for backward compatibility) + Roadmap #12 additive authoritative stats.
-  let completed=0,sum=0;                                                     // legacy: any completed latest result
+  let completed=0,sum=0,sumCount=0;                                          // legacy: any completed latest result (sumCount: released ones)
+  // Phase 21G.5 (D2) — an assignment whose results are not released yet contributes NO mark anywhere here: not to its own
+  // latestResult / latestScore / latestPercentage, not to the averages, Strength or medals (the server withholds; never the UI).
+  const releaseNow=Date.now();
   let submitted=0,inProgress=0,pendingReview=0,finalized=0,scheduled=0,available=0,closedUnsubmitted=0,finalSum=0,finalCount=0;
   // Exam Strength is DERIVED from the CURRENT authoritative final percentages (gradingStatus==="final"), summed and
   // rounded per result — never a flat per-exam award and never a stored counter. Collected in the SAME loop below
@@ -70,7 +74,8 @@ async function handler(request,deps={},obs=null){
    const s=submissions[i],attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,st=attemptState(a,s),allowed=st.allowedAttempts,effectiveDueAt=st.effectiveDueAt,avail=st.availability,canAttempt=st.canAttempt;
    const gradingStatus=deriveGradingStatus(latest);                          // notSubmitted | pendingReview | final
    const dashboardState=deriveDashboardState(s,avail,gradingStatus);
-   if(latest){completed++;sum+=Number(latest.percentage||0)}
+   const released=resultsReleased(a,releaseNow);
+   if(latest){completed++;if(released){sum+=Number(latest.percentage||0);sumCount++}}
    if(latest)submitted++;
    if(dashboardState==="inProgress")inProgress++;
    else if(dashboardState==="awaitingReview")pendingReview++;
@@ -80,12 +85,13 @@ async function handler(request,deps={},obs=null){
    else if(dashboardState==="available")available++;
    // averageFinalized: latest percentage ONLY for assignments whose latest grading status is final
    // (never includes a provisional/pending grade).
-   if(gradingStatus==="final"&&latest){finalSum+=Number(latest.percentage||0);finalCount++;finalizedPercentages.push(Number(latest.percentage))}
+   if(gradingStatus==="final"&&latest&&released){finalSum+=Number(latest.percentage||0);finalCount++;finalizedPercentages.push(Number(latest.percentage))}
    // gradingStatus is the normalized authoritative field. `finalized` is echoed as the historical RAW value
    // and OMITTED entirely when the stored result never had it (legacy) — never fabricated to false, which
    // would contradict a legacy result whose gradingStatus normalizes to "final".
    const latestResult=latest?{attemptNumber:Number(latest.attemptNumber||0),score:Number(latest.score||0),totalMarks:Number(latest.totalMarks||0),percentage:Number(latest.percentage||0),submittedAt:String(latest.submittedAt||""),manualReviewMarks:Number(latest.manualReviewMarks||0),gradingStatus,teacherFeedback:String(latest.teacherFeedback||""),...(latest.finalized===undefined?{}:{finalized:latest.finalized}),...(legacyAutoGradingWithhold(latest)?{autoGradingPending:true}:{}),...(studentCodingGradingStatus(latest)?{autoGradingStatus:studentCodingGradingStatus(latest)}:{})}:null;
-   assignments.push({assignmentId:String(a.assignmentId||""),title:String(a.title||""),instructions:String(a.instructions||""),openAt:String(a.openAt||""),dueAt:String(a.dueAt||""),effectiveDueAt:String(effectiveDueAt||""),sourceExamTitle:String(a.sourceExamTitle||""),questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:attemptModelVersion(a),attemptStatus:deriveAttemptStatus(s),hasActiveAttempt:!!activeAttemptOf(s),availability:avail,dashboardState,gradingStatus,attemptsUsed:attempts.length,allowedAttempts:allowed,canAttempt,latestScore:latest?Number(latest.score||0):null,latestPercentage:latest?Number(latest.percentage||0):null,latestResult,createdAt:String(a.createdAt||"")})
+   const shownResult=latestResult?(released?{...latestResult,resultsVisible:true}:{...withholdResult(latestResult),...releaseInfo(a,releaseNow)}):null;
+   assignments.push({assignmentId:String(a.assignmentId||""),title:String(a.title||""),instructions:String(a.instructions||""),openAt:String(a.openAt||""),dueAt:String(a.dueAt||""),effectiveDueAt:String(effectiveDueAt||""),sourceExamTitle:String(a.sourceExamTitle||""),questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:attemptModelVersion(a),attemptStatus:deriveAttemptStatus(s),hasActiveAttempt:!!activeAttemptOf(s),availability:avail,dashboardState,gradingStatus,attemptsUsed:attempts.length,allowedAttempts:allowed,canAttempt,latestScore:latest&&released?Number(latest.score||0):null,latestPercentage:latest&&released?Number(latest.percentage||0):null,latestResult:shownResult,createdAt:String(a.createdAt||"")})
   }
   assignments.sort((a,b)=>(a.dueAt?new Date(a.dueAt).getTime():Number.MAX_SAFE_INTEGER)-(b.dueAt?new Date(b.dueAt).getTime():Number.MAX_SAFE_INTEGER));
   // Strength: ONE practice-summary read + the class's projects (one config + one progress read per project, bounded
@@ -109,7 +115,7 @@ async function handler(request,deps={},obs=null){
   const recMilestone=deps.recordGlobalRankMilestone||recordGlobalRankMilestone,recAgg=deps.aggregateRecognition||aggregateRecognition;
   await recMilestone(c,{student,classId:String(student.classId||""),strength,now},deps);
   const medals={total:0,gold:0,silver:0,bronze:0};
-  for(const a of assignments){if(a.gradingStatus!=="final"||!a.latestResult)continue;const t=medalTierFromPercentage(Number(a.latestResult.percentage));if(t){medals.total++;medals[t]++}}
+  for(const a of assignments){if(a.gradingStatus!=="final"||!a.latestResult||a.latestResult.resultsVisible===false)continue;const t=medalTierFromPercentage(Number(a.latestResult.percentage));if(t){medals.total++;medals[t]++}}
   let rec=emptyRecognition();
   try{rec=(await recAgg(c,[student.userId],deps)).get(student.userId)||rec}catch(e){obs?.logError("student.dashboard.recognition",e)}   // secondary: never fails the dashboard
   // Phase 4D: the SAME visible medal summary now = current exam-derived medals (above) + persisted GAME medals (only
@@ -125,7 +131,7 @@ async function handler(request,deps={},obs=null){
   const todayStudy={lastActivity:latestStudyActivity(studyDoc)};
   // Phase 12E-A — count-only read-cost telemetry (numbers the loop above already knows; never an id/title/mark).
   logReadCost(obs,"student.dashboard.read_cost",{assignmentDocsScanned:idxStats.assignmentDocsLoaded,publishedClassAssignments:selected.length,submissionReads:submissions.length,assignmentIndexReads:idxStats.indexReads,assignmentIndexesBootstrapped:idxStats.bootstrapped,globalAssignmentScans:idxStats.globalScans,assignmentIndexAuthoritative:idxStats.authoritative,assignmentIndexAuthorityChanges:idxStats.authorityChanges});
-  return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
+  return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:sumCount?Number((sum/sumCount).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
  }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
 }
 app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"student-dashboard",handler:withObservability("student-dashboard",handler)});

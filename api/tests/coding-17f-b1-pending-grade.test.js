@@ -14,7 +14,9 @@ const official = () => require_("../src/lib/coding/official-grading.js");
 
 const studentAuth = () => ({ ok: true, user: { sub: F.S1, sv: 1, role: "student" } });
 const quiet = { logInfo() {}, logWarn() {}, logError() {} };
-const PUBLIC_RESULT_KEYS = new Set(["attemptNumber", "submittedAt", "score", "totalMarks", "percentage", "manualReviewMarks", "finalized", "gradingStatus", "teacherFeedback", "timedOut", "startedAt", "endsAt", "extendedEndsAt", "endedAt", "endReason", "pauseCount", "autoGradingPending", "autoGradingStatus"]);
+const PUBLIC_RESULT_KEYS = new Set(["attemptNumber", "submittedAt", "score", "totalMarks", "percentage", "manualReviewMarks", "finalized", "gradingStatus", "teacherFeedback", "timedOut", "startedAt", "endsAt", "extendedEndsAt", "endedAt", "endReason", "pauseCount", "autoGradingPending", "autoGradingStatus",
+  // Phase 21G.5 — the results-release state (a boolean, a mode word, a due date): never a mark, an id or an internal.
+  "resultsVisible", "resultsVisibility", "resultsVisibleAt"]);
 const TEACHER_ONLY = /cg_[A-Za-z0-9_-]{8,}|"jobId"|targetRef|"revision"|technicalCode|gradingKey|answerHash|questionFingerprint|"cases"|passedCount|testCount|passedWeight|automaticScore|effectiveScore|compilePreview|"delivery"|lease|automaticAttempts|exhausted|"recovery"|"override"|callback|runner|HMAC|EXECUTION_|RUNNER_|stdout|stderr|expected/;
 const attemptWith = (targets, over = {}) => ({ codingGrading: { version: 1, targets }, ...over });
 const T = (state, over = {}) => ({ mode: "hiddenTests", state, revision: 1, jobId: "cg_ABCDEFGHIJKLMNOPQRST", gradingKey: "k".repeat(64), updatedAt: new Date().toISOString(), ...over });

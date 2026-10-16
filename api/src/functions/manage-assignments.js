@@ -18,6 +18,7 @@ const {recordEventSafely}=require("../lib/notification-events");
 const {ensurePublishedAssignmentIndexed,removePublishedAssignmentFromIndex}=require("../lib/class-assignment-index");
 // Phase 21G.0 — teacher tenancy: an assignment belongs to the teacher of its class (shared pre-tenancy classes stay shared).
 const {tenantOf,canAccessDocument,accessibleClassIds,classIdAllowed,classAccessible}=require("../lib/teacher-tenancy");
+const {releaseMode,normalizeReleaseMode}=require("../lib/results-release");
 // Bank image assets are persisted by durable identity only; the signed URL is minted when the student is served (student-assignment).
 const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
 // Phase 14A — GOVERNED exams: an assignment binds the exact immutable PUBLISHED revision the server owns (manifest →
@@ -29,7 +30,7 @@ const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const MAX_TITLE=200,MAX_INSTRUCTIONS=5000;
 // Phase 21G.2 — bump SUMMARY_VERSION whenever summary() changes shape: every cached summary is then recomputed once.
-const SUMMARY_VERSION=1;
+const SUMMARY_VERSION=2;   // 2: + resultsRelease / resultsReleasedAt (21G.5)
 const {loadAssignmentSummaries}=require("../lib/assignment-summary-cache");
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
 // stored submission blobs (authoritative for purge-blocking); the rest are derived from the parsed docs.
@@ -58,7 +59,7 @@ function parseDurationMinutes(v){
  if(n<1||n>1440)return {ok:false};
  return {ok:true,value:n};
 }
-function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),attemptPolicy:attemptPolicyOf(a),...(a.source&&typeof a.source==="object"?{source:a.source}:{}),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
+function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),attemptPolicy:attemptPolicyOf(a),resultsRelease:releaseMode(a),resultsReleasedAt:String(a.resultsReleasedAt||""),...(a.source&&typeof a.source==="object"?{source:a.source}:{}),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the
 // real implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
@@ -106,6 +107,10 @@ async function handler(request,deps={},obs=null){
    const policyRaw=b.attemptPolicy===undefined||b.attemptPolicy===null||b.attemptPolicy===""?"continuous":b.attemptPolicy;
    if(!ATTEMPT_POLICIES.includes(policyRaw))return {status:400,jsonBody:{ok:false,error:"طريقة المحاولة غير صالحة."}};
    const attemptPolicy=policyRaw;
+   // Phase 21G.5 (D2) — when students see the results. Omitted → "immediate" (today's behaviour); anything else that is not one
+   // of the three modes is REJECTED (never silently coerced).
+   const resultsRelease=normalizeReleaseMode(b.resultsRelease);
+   if(resultsRelease===null)return {status:400,jsonBody:{ok:false,error:"طريقة إظهار النتائج غير صالحة."}};
    const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||!canAccessDocument(classroom,tenant)||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
    const openAt=iso(b.openAt),dueAt=iso(b.dueAt);if(openAt&&dueAt&&new Date(dueAt)<new Date(openAt))return {status:400,jsonBody:{ok:false,error:"موعد التسليم يجب أن يكون بعد موعد الفتح."}};
    const now=new Date().toISOString(),assignmentId=crypto.randomUUID(),maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
@@ -116,7 +121,7 @@ async function handler(request,deps={},obs=null){
    // Phase 7A: strict / pausable attempts need the per-attempt epoch → attemptModelVersion 3. A continuous assignment
    // stays on model 2, i.e. EXACTLY the pre-7A lifecycle. The policy is persisted on the document and never changed
    // afterwards (there is no edit action — historical assignments keep theirs).
-   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,...(source?{source}:{}),createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
+   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,resultsRelease,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,...(source?{source}:{}),createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
    // Phase 12E-B — STRICT: the published pointer exists BEFORE the published document does. If the index cannot be
    // updated the assignment is NOT created (retryable); a later failure of the upload below only leaves a harmless
    // stale pointer (readers ignore a missing document). A draft is never indexed.
@@ -217,6 +222,38 @@ async function handler(request,deps={},obs=null){
     throw e;
    }
    await rec(c,{actor:auth.user?.sub,action:"assignment.updateDetails",targetType:"assignment",targetId:id,targetLabel:updated.title,details:{assignmentId:id,titleChanged:previous.title!==updated.title,instructionsChanged:previous.instructions!==String(updated.instructions||"")}});
+   return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
+  }
+  // Phase 21G.5 (D2) — the results release, editable at any time (it decides what students SEE, never a grade or an attempt):
+  //   setresultsrelease {resultsRelease}: the mode; changing it clears a manual publication (a later switch back to "manual"
+  //     starts unpublished — never a surprise release);
+  //   releaseresults {released}: in "manual" mode only, publish (now) or withdraw the results.
+  // An archived assignment is read-only, as for its other settings.
+  if(action==="setresultsrelease"||action==="releaseresults"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   const mode=action==="setresultsrelease"?normalizeReleaseMode(b.resultsRelease):null;
+   if(action==="setresultsrelease"&&(mode===null||b.resultsRelease===undefined))return {status:400,jsonBody:{ok:false,error:"طريقة إظهار النتائج غير صالحة."}};
+   if(action==="releaseresults"&&typeof b.released!=="boolean")return {status:400,jsonBody:{ok:false,error:"released must be true or false."}};
+   let previous=null,updated=null;
+   try{
+    updated=await mut(c,PREFIX+id+".json",current=>{
+     if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+     if(normalizeAssignmentStatus(current)==="archived"){const err=new Error("الواجب مؤرشف. استعده أولًا قبل تعديل إعداداته.");err.httpStatus=409;throw err}
+     previous={mode:releaseMode(current),releasedAt:String(current.resultsReleasedAt||"")};
+     if(action==="setresultsrelease"){if(mode!==previous.mode){current.resultsRelease=mode;delete current.resultsReleasedAt}}
+     else{
+      if(previous.mode!=="manual"){const err=new Error("نشر النتائج يدويًا متاح فقط عندما تكون طريقة الإظهار «يدويًا».");err.httpStatus=409;throw err}
+      if(b.released)current.resultsReleasedAt=previous.releasedAt||new Date().toISOString();else delete current.resultsReleasedAt;
+     }
+     current.updatedAt=new Date().toISOString();
+     return current;   // grades, attempts, submissions untouched
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+   await rec(c,{actor:auth.user?.sub,action:action==="setresultsrelease"?"assignment.setResultsRelease":"assignment.releaseResults",targetType:"assignment",targetId:id,targetLabel:String(updated.title||""),details:{assignmentId:id,from:previous.mode,to:releaseMode(updated),released:!!updated.resultsReleasedAt}});
    return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
   }
   if(action==="updatetiming"){

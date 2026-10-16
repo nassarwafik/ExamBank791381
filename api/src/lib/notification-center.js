@@ -23,6 +23,7 @@
 // safety bound is EVENT_SCAN_LIMIT classified docs per stream — + one assignment doc per DISTINCT assignment among the
 // classified candidates (cached per request). The preview (?view=notifications) scans newest first until CENTER_LIMIT
 // visible events per stream, same hard bound. No user/class/assignment scan.
+const { resultsReleased } = require("./results-release");
 const { downloadJsonOrNull } = require("./platform-storage");
 const { listStreamIds, combineCounts, UNREAD_DISPLAY_CAP } = require("./message-read-state");
 const { classCanSeeLearningModule } = require("./class-learning-materials");
@@ -100,7 +101,9 @@ async function projectEvent(container, ctx, stream, ev, unread, deps) {
   if (!a || a.status !== "published" || !ctx.classId || String(a.classId || "") !== ctx.classId) return null;
   const assignment = { assignmentId: ev.assignmentId, assignmentTitle: String(a.title || "") };
   switch (ev.type) {
-    case "assignment_reviewed": return { ...base, ...assignment, becameFinal: ev.becameFinal, scoreChanged: ev.scoreChanged, feedbackChanged: ev.feedbackChanged, finalized: ev.finalized, percentage: ev.percentage, score: typeof ev.score === "number" ? ev.score : null, totalMarks: typeof ev.totalMarks === "number" ? ev.totalMarks : null, ...(ev.automatic === true ? { automatic: true } : {}) };
+    // Phase 21G.5 (D2) — a review notification names the mark: shown only once the assignment's results are released (it then
+    // appears with its original time), never before.
+    case "assignment_reviewed": if (!resultsReleased(a, Date.now())) return null; return { ...base, ...assignment, becameFinal: ev.becameFinal, scoreChanged: ev.scoreChanged, feedbackChanged: ev.feedbackChanged, finalized: ev.finalized, percentage: ev.percentage, score: typeof ev.score === "number" ? ev.score : null, totalMarks: typeof ev.totalMarks === "number" ? ev.totalMarks : null, ...(ev.automatic === true ? { automatic: true } : {}) };
     case "assignment_deadline_extended":
     case "assignment_reopened": return { ...base, ...assignment, dueAt: ev.dueAt };
     case "attempt_time_extended": return { ...base, ...assignment, attemptNumber: ev.attemptNumber };
