@@ -46,7 +46,8 @@ describe("R13 gradebook search / filter / sort / badges", () => {
   it("AI: active filter", async () => { const r = await openGradebook(); fireEvent.click(r.getByText("قيد المحاولة", { selector: ".gradebook-chip" })); expect(names(r)).toEqual(["عمر"]); });
   it("AJ: pending review button is 'تصحيح الآن'", async () => { const r = await openGradebook(); expect(within(rowOf(r, "زيد")).getByText(/تصحيح الآن/)).toBeTruthy(); });
   it("AK: final result button is 'عرض التصحيح'", async () => { const r = await openGradebook(); expect(within(rowOf(r, "خالد")).getByText("عرض التصحيح")).toBeTruthy(); });
-  it("AL: lifecycle badge and grading badge coexist on a row", async () => { const r = await openGradebook(); const row = rowOf(r, "زيد"); expect(row.querySelector(".lifecycle-badge")).toBeTruthy(); expect(row.querySelector(".review-state.pending")).toBeTruthy(); });
+  // Phase 21G.4 — one status per row (it was a lifecycle badge beside a grading badge): grading comes first.
+  it("AL: one status per row; the grading status wins over the lifecycle", async () => { const r = await openGradebook(); const row = rowOf(r, "زيد"); expect(row.querySelectorAll(".eb-student-status")).toHaveLength(1); expect(row.querySelector(".review-state.pending")).toBeTruthy(); expect(row.querySelector(".lifecycle-badge")).toBeNull(); });
 });
 
 describe("R13 gradebook archived", () => {

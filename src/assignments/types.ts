@@ -26,7 +26,11 @@ export type Stats = { students: number; submitted: number; pendingReview: number
 export type GradebookFilter = "all" | "pendingReview" | "final" | "notSubmitted" | "active";
 export type GradebookSort = "name" | "pendingFirst" | "highest" | "lowest";
 export type QuestionStat = { questionId: string; number: number; text: string; type: string; maxMarks: number; studentsAnalyzed: number; correctCount: number; correctRate: number | null; averageScore: number | null; averagePercentage: number | null; manualReviewCount: number; difficulty: "easy" | "medium" | "hard" | null };
-export type ItemAnalysis = { assignmentId: string; title: string; studentsInClass: number; studentsSubmitted: number; attemptsAnalyzed: number; questions: QuestionStat[] };
+// Phase 21G.4 — one cell per question of a student's latest attempt: a pending cell (manual review, a technical hold, open coding
+// execution) carries no score by contract.
+export type QuestionCell = { state: "graded"; score: number } | { state: "pending" } | { state: "none" };
+export type StudentQuestionRow = { studentId: string; studentName: string; studentCode: string; attemptNumber: number | null; cells: QuestionCell[] };
+export type ItemAnalysis = { assignmentId: string; title: string; studentsInClass: number; studentsSubmitted: number; attemptsAnalyzed: number; questions: QuestionStat[]; students?: StudentQuestionRow[] };
 export type AnalysisSort = "number" | "hardest" | "easiest";
 export type SourceMode = "mine" | "library";
 export type WorkspaceMode = "list" | "composer";

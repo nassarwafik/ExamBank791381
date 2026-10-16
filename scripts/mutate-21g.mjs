@@ -30,12 +30,48 @@ const G2_CACHE = ["api/tests/assignment-summary-cache-21g2.test.js"], G2_PROG = 
 const G2_HOME = ["src/assignments/assignmentsHome.21g2.test.ts", "src/AssignmentsPanel.home.21g2.test.tsx"];
 const PAGE = "src/assignments/assignmentPage.ts";
 const G3_UNIT = ["src/assignments/assignmentPage.21g3.test.ts"], G3_PANEL = ["src/AssignmentsPanel.page.21g3.test.tsx", "src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.r7.test.tsx"];
+const G4_UNIT = ["src/assignments/gradebookStatus.21g4.test.ts", "src/assignments/questionGrid.21g4.test.ts"], G4_PANEL = ["src/AssignmentsPanel.gradebook.21g4.test.tsx", "src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.grading.test.tsx"], G4_API = ["api/tests/assignment-item-grid-21g4.test.js"];
+const GBS = "src/assignments/gradebookStatus.ts", ITEM = "api/src/functions/assignment-item-analysis.js";
 export const CAMPAIGNS = {
+  g4: [
+    { id: "G4-M1", what: "a final result gives way to a live attempt (grading no longer first)", file: GBS,
+      find: "  if (gs === \"final\") return", replace: "  if (gs === \"final\" && !s.activeAttempt) return", tests: [...G4_UNIT, ...G4_PANEL] },
+    { id: "G4-M2", what: "a pending review is shown as not submitted", file: GBS,
+      find: "  if (gs === \"pendingReview\") {", replace: "  if (false) {", tests: [...G4_UNIT, ...G4_PANEL] },
+    { id: "G4-M3", what: "a filter keeps the selection (a bulk action could reach rows ticked under another view)", file: CTRL,
+      find: "setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }", replace: "setFilter: (v: GradebookFilter) => { setGbFilter(v); }", tests: G4_PANEL },
+    { id: "G4-M4", what: "a bulk run continues after the teacher left the page", file: CTRL,
+      find: "        if (bulkRun.current !== run) return false;\n", replace: "", tests: G4_PANEL },
+    { id: "G4-M5", what: "leaving the page during a bulk run leaves the workspace busy", file: CTRL,
+      find: "if (bulkBusy.current) { bulkBusy.current = false; setBusy(false); }", replace: "", tests: G4_PANEL },
+    { id: "G4-M6", what: "the students a bulk action failed for are unticked (no retry path)", file: CTRL,
+      find: "setSelected(new Set(failed.map(f => f.s.studentId)));", replace: "setSelected(new Set());", tests: G4_PANEL },
+    { id: "G4-M7", what: "a bulk answer is not merged into the row", file: CTRL,
+      find: "if (bulkRun.current !== run) return false; mergeSnap(s.studentId, r); ok++;", replace: "if (bulkRun.current !== run) return false; ok++;", tests: G4_PANEL },
+    { id: "G4-M8", what: "an archived assignment offers selection", file: "src/assignments/Gradebook.tsx",
+      find: "const sel = archived ? undefined : p.selection;", replace: "const sel = p.selection;", tests: G4_PANEL },
+    { id: "G4-M9", what: "a question waiting for manual review is sent as a grade", file: ITEM,
+      find: "if(g.manualReview===true||questionAutoGradingPending(attempt,q.questionId))", replace: "if(questionAutoGradingPending(attempt,q.questionId))", tests: G4_API },
+    { id: "G4-M10", what: "a question whose coding execution is open is sent as a grade", file: ITEM,
+      find: "if(g.manualReview===true||questionAutoGradingPending(attempt,q.questionId))", replace: "if(g.manualReview===true)", tests: G4_API },
+    { id: "G4-M11", what: "a pending cell carries its provisional score", file: ITEM,
+      find: "return {state:\"pending\"};", replace: "return {state:\"pending\",score:round2(g.score)};", tests: G4_API },
+    { id: "G4-M12", what: "an open target of a composite part does not hold its question", file: "api/src/lib/coding/official-grading.js",
+      find: "return (c ? c.questionId : id) === q &&", replace: "return id === q &&", tests: G4_API },
+    { id: "G4-M13", what: "the grid draws a pending cell as a mark", file: "src/assignments/questionGrid.ts",
+      find: "        if (c?.state === \"pending\") return", replace: "        if (c?.state === \"pending\" && false) return", tests: [...G4_UNIT, ...G4_PANEL] },
+    { id: "G4-M14", what: "the grid's bands drift from the distribution's (a 90% lands in 80–89)", file: "src/assignments/questionGrid.ts",
+      find: "bandOf(c.score / q.maxMarks * 100).key", replace: "bandOf(c.score / q.maxMarks * 100 - 1).key", tests: [...G4_UNIT, ...G4_PANEL] },
+    { id: "G4-M15", what: "the header no longer stays in view", file: "src/assignments-pro.css",
+      find: ".eb-gradebook-table thead th { position: sticky; inset-block-start: 0;", replace: ".eb-gradebook-table thead th { inset-block-start: 0;", tests: G4_PANEL },
+    { id: "G4-M16", what: "phone cards keep the table's 620px minimum (they spill off the screen)", file: "src/assignments-pro.css",
+      find: "display: block; inline-size: 100%; min-inline-size: 0; }", replace: "display: block; inline-size: 100%; }", tests: G4_PANEL }
+  ],
   g3: [
     { id: "G3-M1", what: "a pending review is drawn as a score", file: PAGE,
       find: "    if (g === \"pendingReview\") { pendingReview++; continue; }\n", replace: "", tests: [...G3_UNIT, ...G3_PANEL] },
     { id: "G3-M2", what: "band edges move (a 50% lands below 50)", file: PAGE,
-      find: "const band = bands.find(b => pct >= b.min && pct < b.max)", replace: "const band = bands.find(b => pct > b.min && pct <= b.max)", tests: [...G3_UNIT, ...G3_PANEL] },
+      find: "return BANDS.find(b => pct >= b.min && pct < b.max)", replace: "return BANDS.find(b => pct > b.min && pct <= b.max)", tests: [...G3_UNIT, ...G3_PANEL] },
     { id: "G3-M3", what: "a student in an attempt counts as not submitted", file: PAGE,
       find: "    else if (s.activeAttempt) at(\"active\").count++;\n", replace: "", tests: [...G3_UNIT, ...G3_PANEL] },
     { id: "G3-M4", what: "the list stays visible beside the page", file: "src/AssignmentsPanel.tsx",
@@ -43,7 +79,7 @@ export const CAMPAIGNS = {
     { id: "G3-M5", what: "the KPI strip stays above an open page", file: "src/AssignmentsPanel.tsx",
       find: "{!t.showArchived&&!pageOpen&&<AssignmentsHomeKpis", replace: "{!t.showArchived&&<AssignmentsHomeKpis", tests: G3_PANEL },
     { id: "G3-M6", what: "a newly opened assignment keeps the previous section", file: "src/assignments/useAssignmentsController.ts",
-      find: "setMode(\"list\"); setPageTab(\"students\"); }", replace: "setMode(\"list\"); }", tests: G3_PANEL },
+      find: "setMode(\"list\"); setPageTab(\"students\"); stopBulk();", replace: "setMode(\"list\"); stopBulk();", tests: G3_PANEL },
     { id: "G3-M7", what: "the analysis is re-read on every visit", file: "src/assignments/useAssignmentsController.ts",
       find: "if (t === \"analysis\" && !analysis && !analysisBusy) void loadItemAnalysis();", replace: "if (t === \"analysis\") void loadItemAnalysis();", tests: G3_PANEL },
     { id: "G3-M8", what: "closing the page loses focus (the opener is never refocused)", file: "src/assignments/useAssignmentsController.ts",

@@ -6,6 +6,7 @@ const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency
 // Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
 const {isStudentClassMember}=require("../lib/class-membership");
+const {questionAutoGradingPending}=require("../lib/coding/official-grading");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 function qid(q,i){return String(q?.examQuestionId||q?.id||q?.number||i+1)}
 function round1(n){return Math.round(n*10)/10}
@@ -26,14 +27,15 @@ async function handler(request,deps={},obs=null){
   const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId));
   // Only the latest submitted attempt per student is analyzed — a student with several attempts
   // must not outweigh a student with a single attempt (see Phase 13 spec).
-  const latestAttempts=[];
+  const latestAttempts=[],latestByStudent=[];
   // Roadmap #27: member submissions are fetched with bounded concurrency (order preserved), then analyzed.
   const submissions=await mapConcurrent(users,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
-  for(const s of submissions){
+  submissions.forEach((s,i)=>{
    const attempts=Array.isArray(s?.attempts)?s.attempts:[];
-   if(!attempts.length)continue;
+   if(!attempts.length)return;
    latestAttempts.push(attempts[attempts.length-1]);
-  }
+   latestByStudent.push({student:users[i],attempt:attempts[attempts.length-1]});
+  });
   const questionStats=questions.map((q,i)=>{
    const questionId=qid(q,i);
    let maxMarks=Number(q?.marks??q?.points??0);if(!Number.isFinite(maxMarks)||maxMarks<0)maxMarks=0;
@@ -69,7 +71,21 @@ async function handler(request,deps={},obs=null){
     difficulty:difficultyFor(averagePercentage)
    };
   });
-  return {status:200,jsonBody:{ok:true,assignmentId:a.assignmentId,title:String(a.title||""),studentsInClass:users.length,studentsSubmitted:latestAttempts.length,attemptsAnalyzed:latestAttempts.length,questions:questionStats}};
+  // Phase 21G.4 — the per-student grid (latest attempt, one cell per question). Grading safety: a question still waiting for the
+  // teacher (manual review, a technical hold) or for automatic coding execution is "pending" and carries NO score — never the
+  // provisional mark; a question with no stored grade is "none". Only a settled question grade is "graded".
+  const students=latestByStudent.map(({student,attempt})=>{
+   const grades=Array.isArray(attempt?.questionGrades)?attempt.questionGrades:[];
+   const cells=questionStats.map(q=>{
+    const g=grades.find(x=>String(x?.questionId||"")===q.questionId);
+    if(!g)return {state:"none"};
+    if(g.manualReview===true||questionAutoGradingPending(attempt,q.questionId))return {state:"pending"};
+    if(typeof g.score!=="number"||!Number.isFinite(g.score))return {state:"none"};
+    return {state:"graded",score:round2(g.score)};
+   });
+   return {studentId:String(student.userId||""),studentName:String(student.displayName||student.code||""),studentCode:String(student.code||""),attemptNumber:Number(attempt?.attemptNumber)||null,cells};
+  });
+  return {status:200,jsonBody:{ok:true,assignmentId:a.assignmentId,title:String(a.title||""),studentsInClass:users.length,studentsSubmitted:latestAttempts.length,attemptsAnalyzed:latestAttempts.length,questions:questionStats,students}};
  }catch(e){obs?.logError("assignment.itemAnalysis.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحليل أسئلة الواجب حاليًا."}}}
 }
 app.http("assignmentItemAnalysis",{methods:["GET"],authLevel:"anonymous",route:"assignment-item-analysis",handler:withObservability("assignment-item-analysis",handler)});

@@ -5,6 +5,7 @@ import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import { IconChevronBack } from "../icons";
 import { PAGE_TABS, type PageTab } from "./assignmentPage";
+import QuestionGrid from "./QuestionGrid";
 import { STATUS_LABEL, type AnalysisSort, type Item, type ItemAnalysis, type QuestionStat, type Stats } from "./types";
 
 export type AssignmentDetailProps = {
@@ -98,6 +99,7 @@ export default function AssignmentDetail({ headingRef, ...p }: AssignmentDetailP
               <tbody>{p.sortedQuestions.map(q => <tr key={q.questionId}><td>{q.number}</td><td className="item-analysis-text">{q.text && q.text.length > 60 ? q.text.slice(0, 60) + "…" : q.text || "—"}</td><td>{q.studentsAnalyzed}</td><td>{q.correctRate === null ? "—" : q.correctRate + "%"}</td><td>{q.averageScore === null ? "—" : q.averageScore + "/" + q.maxMarks}</td><td>{q.averagePercentage === null ? "—" : q.averagePercentage + "%"}</td><td>{q.difficulty ? <StatusBadge tone={q.difficulty === "easy" ? "success" : q.difficulty === "medium" ? "warn" : "danger"} className={"difficulty-badge " + q.difficulty}>{q.difficulty === "easy" ? "سهل" : q.difficulty === "medium" ? "متوسط" : "صعب"}</StatusBadge> : "—"}</td><td>{q.manualReviewCount > 0 ? q.manualReviewCount : "—"}</td></tr>)}</tbody>
             </table></div>
           ) : <EmptyState compact title="لا توجد أسئلة لتحليلها." description="يظهر التحليل بعد وجود محاولات مسلّمة على أسئلة هذا الواجب." />}
+          <QuestionGrid questions={p.analysis.questions} students={p.analysis.students} />
         </section>
       )}
     </section>

@@ -323,3 +323,52 @@
 .eb-assign-settings { background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); padding: var(--eb-space-4); }
 /* The list waits hidden behind an open assignment page; its display:flex must never override the hidden attribute. */
 .eb-assign-list[hidden] { display: none; }
+
+/* Phase 21G.4 — the professional gradebook: one status per student, a header that stays in view inside a bounded scroll area, row
+   selection with a bulk bar, and one card per student on a phone (the same table, so sorting, actions and tests stay one path). */
+.eb-gradebook-table-wrap { max-block-size: min(72vh, 820px); }
+.eb-gradebook-table thead th { position: sticky; inset-block-start: 0; box-shadow: inset 0 -1px 0 var(--eb-line); }
+.eb-student-cell { display: flex; align-items: flex-start; gap: var(--eb-space-2); }
+.eb-select-box { flex: 0 0 auto; inline-size: 18px; block-size: 18px; margin: 2px 0 0; cursor: pointer; accent-color: var(--eb-primary); }
+.eb-gradebook-table tr.is-selected td { background: var(--eb-primary-050); }
+.eb-gradebook-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid var(--eb-primary); border-radius: var(--eb-r); background: var(--eb-primary-050); }
+.eb-gradebook-bulk-count { font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); margin-inline-end: auto; }
+@media (max-width: 767px) {
+  .eb-gradebook-table-wrap { max-block-size: none; overflow: visible; border: 0; border-radius: 0; background: transparent; }
+  .eb-gradebook-table, .eb-gradebook-table tbody { display: block; inline-size: 100%; min-inline-size: 0; }   /* .students-table sets min-width: 620px */
+  .eb-gradebook-table thead { display: block; }
+  .eb-gradebook-table thead tr { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); margin-block-end: var(--eb-space-2); }
+  .eb-gradebook-table thead th { display: none; position: static; box-shadow: none; padding: 0; background: transparent; }
+  .eb-gradebook-table thead th.is-sortable { display: block; }
+  .eb-gradebook-table thead th.is-sortable .eb-th-sort { min-block-size: 36px; padding: 0 var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-pill); background: var(--eb-surface); }
+  .eb-gradebook-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--eb-space-2) var(--eb-space-3); margin-block-end: var(--eb-space-3); padding: var(--eb-space-3); border: 1px solid var(--eb-line); border-radius: var(--eb-r); background: var(--eb-surface); }
+  .eb-gradebook-table tbody td { display: block; padding: 0; border: 0; background: transparent; }
+  .eb-gradebook-table tbody tr.is-selected, .eb-gradebook-table tbody tr.is-drill-focus { border-color: var(--eb-primary); background: var(--eb-primary-050); }
+  .eb-gradebook-table tbody tr.is-selected td, .eb-gradebook-table tbody tr.is-drill-focus td { background: transparent; box-shadow: none; }
+  .eb-gradebook-table tbody td[data-label="الطالب"], .eb-gradebook-table tbody td[data-label="الحالة"] { grid-column: 1 / -1; }
+  .eb-gradebook-table tbody td[data-label="المحاولات"]::before, .eb-gradebook-table tbody td[data-label="العلامة"]::before { content: attr(data-label); display: block; color: var(--eb-muted); font-size: var(--eb-fs-12); }
+  .eb-gradebook-table tbody td.eb-col-actions { grid-column: 1 / -1; inline-size: auto; }
+  .eb-gradebook-table tbody td.eb-col-actions .eb-row-actions { justify-content: flex-start; }
+}
+/* The per-question grid of «تحليل الأسئلة»: one hue deepening with the mark (the distribution's bands, every cell prints its mark),
+   a hatched «بانتظار» for a question still waiting for the teacher, and the student column kept in view while scrolling sideways. */
+.eb-qgrid { display: flex; flex-direction: column; gap: var(--eb-space-2); margin-block-start: var(--eb-space-4); }
+.eb-qgrid-lead { margin: 0; font-size: var(--eb-fs-13); }
+.eb-qgrid-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--eb-space-2) var(--eb-space-4); font-size: var(--eb-fs-12); color: var(--eb-muted); }
+.eb-qgrid-legend li { display: inline-flex; align-items: center; gap: var(--eb-space-1); }
+.eb-qgrid-swatch { inline-size: 14px; block-size: 14px; border-radius: 3px; border: 1px solid var(--eb-line); display: inline-block; }
+.eb-qgrid-wrap { overflow: auto; max-block-size: min(70vh, 720px); border: 1px solid var(--eb-line); border-radius: var(--eb-r); background: var(--eb-surface); }
+.eb-qgrid-wrap:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
+.eb-qgrid-table { border-collapse: separate; border-spacing: 2px; min-inline-size: 100%; font-size: var(--eb-fs-12); }
+.eb-qgrid-table thead th { position: sticky; inset-block-start: 0; background: var(--eb-surface-2); color: var(--eb-muted); font-weight: var(--eb-fw-semibold); padding: var(--eb-space-1) var(--eb-space-2); white-space: nowrap; }
+.eb-qgrid-table th[scope="row"], .eb-qgrid-table thead th:first-child { position: sticky; inset-inline-start: 0; background: var(--eb-surface); text-align: start; min-inline-size: 140px; padding: var(--eb-space-1) var(--eb-space-2); }
+.eb-qgrid-table th[scope="row"] strong { display: block; color: var(--eb-text-heading); font-size: var(--eb-fs-13); }
+.eb-qgrid-table th[scope="row"] small { color: var(--eb-muted); }
+.eb-qgrid-cell { min-inline-size: 52px; padding: var(--eb-space-1) var(--eb-space-2); border-radius: 4px; text-align: center; white-space: nowrap; color: var(--eb-text-heading); font-variant-numeric: tabular-nums; }
+.eb-qgrid-cell.is-b0, .eb-qgrid-swatch.is-b0 { background: color-mix(in srgb, var(--eb-primary) 8%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b50, .eb-qgrid-swatch.is-b50 { background: color-mix(in srgb, var(--eb-primary) 20%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b65, .eb-qgrid-swatch.is-b65 { background: color-mix(in srgb, var(--eb-primary) 34%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b80, .eb-qgrid-swatch.is-b80 { background: color-mix(in srgb, var(--eb-primary) 48%, var(--eb-surface)); }
+.eb-qgrid-cell.is-b90, .eb-qgrid-swatch.is-b90 { background: color-mix(in srgb, var(--eb-primary) 62%, var(--eb-surface)); }
+.eb-qgrid-cell.is-pending, .eb-qgrid-swatch.is-pending { background: repeating-linear-gradient(135deg, var(--eb-warn-bg) 0 5px, var(--eb-surface) 5px 10px); color: var(--eb-warn-tx); font-weight: var(--eb-fw-semibold); }
+.eb-qgrid-cell.is-none { color: var(--eb-muted); background: var(--eb-surface-2); }

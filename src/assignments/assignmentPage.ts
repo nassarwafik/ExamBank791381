@@ -20,6 +20,13 @@ const BANDS: Omit<ScoreBand, "count">[] = [
   { key: "b90", label: "90–100%", min: 90, max: Infinity }
 ];
 
+/** The band of a percentage (clamped to 0–100), shared by the distribution and the per-question grid so their edges never disagree. */
+export const bandOf = (percentage: number) => {
+  const pct = Math.max(0, Math.min(100, Number(percentage) || 0));
+  return BANDS.find(b => pct >= b.min && pct < b.max) || BANDS[BANDS.length - 1];
+};
+export const SCORE_BANDS: readonly Omit<ScoreBand, "count">[] = BANDS;
+
 export type ScoreDistribution = { bands: ScoreBand[]; graded: number; pendingReview: number; largest: number };
 /** The latest-attempt percentage of every student whose latest result is FINAL, in five bands; pending reviews are counted apart. */
 export function scoreDistribution(results: readonly StudentResult[]): ScoreDistribution {
@@ -29,9 +36,8 @@ export function scoreDistribution(results: readonly StudentResult[]): ScoreDistr
     const g = rowGrading(s);
     if (g === "pendingReview") { pendingReview++; continue; }
     if (g !== "final" || !s.latestResult) continue;
-    const pct = Math.max(0, Math.min(100, Number(s.latestResult.percentage) || 0));
-    const band = bands.find(b => pct >= b.min && pct < b.max) || bands[bands.length - 1];
-    band.count++; graded++;
+    const key = bandOf(s.latestResult.percentage).key;
+    (bands.find(b => b.key === key) as ScoreBand).count++; graded++;
   }
   return { bands, graded, pendingReview, largest: Math.max(0, ...bands.map(b => b.count)) };
 }

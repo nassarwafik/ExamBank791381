@@ -144,12 +144,13 @@ describe("21G.3 the full-width assignment page", () => {
 // of every 21G.3 selector names at least one class new to the block (or, for a bare element, the selector does); a shared modifier like «is-active» is fine only beside one.
 describe("21G.3 page styles", () => {
   it("only style elements through classes new in the 21G.3 block", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "assignments-pro.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    const marker = css.indexOf(".eb-assign-layout.is-page {");
-    expect(marker).toBeGreaterThan(0);
+    const raw = readFileSync(path.join(process.cwd(), "src", "assignments-pro.css"), "utf8");
+    const start = raw.indexOf("/* Phase 21G.3"), end = raw.indexOf("/* Phase 21G.4");   // 21G.4 restyles the gradebook on purpose
+    expect(start).toBeGreaterThan(0);
+    const strip = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "");
     const classesOf = (text: string) => Array.from(text.matchAll(/\.([a-zA-Z][\w-]*)/g), m => m[1]);
-    const before = new Set(classesOf(css.slice(0, marker)));
-    const selectors = Array.from(css.slice(marker).matchAll(/([^{}]+)\{/g), m => m[1].trim()).filter(sel => !sel.startsWith("@")).flatMap(sel => sel.split(",").map(x => x.trim()));
+    const before = new Set(classesOf(strip(raw.slice(0, start))));
+    const selectors = Array.from(strip(raw.slice(start, end < 0 ? undefined : end)).matchAll(/([^{}]+)\{/g), m => m[1].trim()).filter(sel => !sel.startsWith("@")).flatMap(sel => sel.split(",").map(x => x.trim()));
     expect(selectors.length).toBeGreaterThan(20);
     // The one deliberate exception: the hidden list (its display:flex must not override the hidden attribute).
     const allowed = new Set([".eb-assign-list[hidden]"]);

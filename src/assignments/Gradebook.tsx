@@ -1,12 +1,14 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { studentsCount } from "./assignmentPage";
 import { formatRemaining } from "./attemptPolicy";
 import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose, IconDownload } from "../icons";
-import { gradingClass, gradingLabel, type GradingStatus } from "../gradingStatus";
-import { LIFECYCLE_LABEL, type CodingEvidenceTotals, type CodingGradingStatus, type GradebookFilter, type GradebookSort, type Item, type StudentResult } from "./types";
+import type { GradingStatus } from "../gradingStatus";
+import { studentStatus } from "./gradebookStatus";
+import type { CodingEvidenceTotals, CodingGradingStatus, GradebookFilter, GradebookSort, Item, StudentResult } from "./types";
 import { codingStatusBadge, needsCodingRetry } from "./codingRecovery";
 import { codingSummaryBadge } from "../coding/codingTeacherEvidence";
 
@@ -36,6 +38,16 @@ export type GradebookProps = {
   codingTotals?: CodingEvidenceTotals | null;
   /** Phase 21E.2 — export the whole gradebook of this assignment as CSV (every student, not only the filtered rows). */
   onExportCsv?: () => void;
+  /** Phase 21G.4 — row selection for the bulk actions (absent = no selection, e.g. an archived assignment). The panel clears it
+   *  whenever the visible rows change meaning (search, filter, another assignment), so a bulk action never reaches an unseen row. */
+  selection?: {
+    selected: ReadonlySet<string>;
+    onToggle: (studentId: string) => void;
+    onToggleAll: (studentIds: string[], on: boolean) => void;
+    onClear: () => void;
+    onBulkGrant: () => void;
+    onBulkDeadline: () => void;
+  };
 };
 
 const FILTERS: Array<[GradebookFilter, string]> = [["all", "الكل"], ["pendingReview", "بانتظار التصحيح"], ["final", "نهائي"], ["notSubmitted", "لم يسلّم"], ["active", "قيد المحاولة"]];
@@ -50,11 +62,19 @@ export default function Gradebook(p: GradebookProps) {
   const focusRow = useRef<HTMLTableRowElement | null>(null);
   const focusVisible = !!p.focusStudentId && p.rows.some(s => s.studentId === p.focusStudentId);
   useEffect(() => { if (focusVisible) focusRow.current?.scrollIntoView?.({ block: "nearest" }); }, [p.focusStudentId, focusVisible]);
-  const sortTh = (key: GradebookSort, label: string, asc: boolean) => (
-    <th scope="col" aria-sort={p.sort === key ? (asc ? "ascending" : "descending") : undefined}>
-      <button type="button" className={"eb-th-sort" + (p.sort === key ? " is-active" : "")} onClick={() => p.onSort(key)}>{label}<IconSort size={14} aria-hidden="true" /></button>
+  const sortTh = (key: GradebookSort, label: string, asc: boolean, lead?: ReactNode) => (
+    <th scope="col" className="is-sortable" aria-sort={p.sort === key ? (asc ? "ascending" : "descending") : undefined}>
+      {lead ? <div className="eb-student-cell">{lead}{sortButton(key, label)}</div> : sortButton(key, label)}
     </th>
   );
+  const sortButton = (key: GradebookSort, label: string) => (
+      <button type="button" className={"eb-th-sort" + (p.sort === key ? " is-active" : "")} onClick={() => p.onSort(key)}>{label}<IconSort size={14} aria-hidden="true" /></button>
+  );
+  const sel = archived ? undefined : p.selection;
+  const visibleIds = p.rows.map(s => s.studentId);
+  const selectedVisible = sel ? visibleIds.filter(id => sel.selected.has(id)).length : 0;
+  const allBox = useRef<HTMLInputElement | null>(null);
+  useEffect(() => { if (allBox.current) allBox.current.indeterminate = selectedVisible > 0 && selectedVisible < visibleIds.length; });
   let empty: ReactNode = null;
   if (p.totalRows === 0) empty = <EmptyState compact title="لا يوجد طلاب في هذا الواجب بعد." description="ستظهر صفوف الطلاب هنا عند وجود طلاب في الصف." />;
   else if (p.rows.length === 0) empty = <EmptyState compact title="لا توجد نتائج مطابقة." description="جرّب كلمة بحث أخرى أو غيّر المرشح." />;
@@ -73,31 +93,40 @@ export default function Gradebook(p: GradebookProps) {
       {codingCard && <p className="eb-coding-summary" data-testid="coding-summary-card">
         <span>قيد التصحيح: {codingCard.pending}</span><span>بحاجة لإعادة محاولة: {codingCard.retry}</span><span>متأخر: {codingCard.delayed}</span>{codingCard.superseded > 0 && <span>علامة المعلم معتمدة: {codingCard.superseded}</span>}
       </p>}
+      {sel && selectedVisible > 0 && (
+        <div className="eb-gradebook-bulk" role="group" aria-label="إجراءات الطلاب المحددين">
+          <span className="eb-gradebook-bulk-count" role="status">تم تحديد {studentsCount(selectedVisible)}</span>
+          <button type="button" className="eb-button is-small" onClick={sel.onBulkGrant} disabled={p.busy}><IconPlus size={16} />منح محاولة إضافية</button>
+          <button type="button" className="eb-button is-small" onClick={sel.onBulkDeadline} disabled={p.busy}><IconEdit size={16} />تمديد الموعد</button>
+          <button type="button" className="eb-button is-small is-ghost" onClick={sel.onClear} disabled={p.busy}>إلغاء التحديد</button>
+        </div>
+      )}
       {p.rows.length > 0 && (
         <div className="students-table-wrap eb-gradebook-table-wrap"><table className="students-table eb-gradebook-table">
           <thead><tr>
-            {sortTh("name", "الطالب", true)}
+            {sortTh("name", "الطالب", true, sel && <input ref={allBox} type="checkbox" className="eb-select-box" aria-label="تحديد كل الطلاب الظاهرين" checked={visibleIds.length > 0 && selectedVisible === visibleIds.length} onChange={e => sel.onToggleAll(visibleIds, e.target.checked)} disabled={p.busy} />)}
             <th scope="col">الحالة</th>
             <th scope="col">المحاولات</th>
-            <th scope="col" aria-sort={p.sort === "highest" ? "descending" : p.sort === "lowest" ? "ascending" : undefined}>
+            <th scope="col" className="is-sortable" aria-sort={p.sort === "highest" ? "descending" : p.sort === "lowest" ? "ascending" : undefined}>
               <button type="button" className={"eb-th-sort" + (p.sort === "highest" || p.sort === "lowest" ? " is-active" : "")} onClick={() => p.onSort(p.sort === "highest" ? "lowest" : "highest")}>العلامة<IconSort size={14} aria-hidden="true" />{p.sort === "highest" && <VisuallyHidden>، الأعلى أولًا</VisuallyHidden>}{p.sort === "lowest" && <VisuallyHidden>، الأدنى أولًا</VisuallyHidden>}</button>
             </th>
             <th scope="col" className="eb-col-actions"><VisuallyHidden>الإجراء</VisuallyHidden></th>
           </tr></thead>
           <tbody>{p.rows.map(s => {
-            const gs = p.gradingOf(s);
+            const gs = p.gradingOf(s), st = studentStatus(s, gs);
             const pending = gs === "pendingReview";
             const focused = s.studentId === p.focusStudentId;
             const coding = s.latestResult?.codingEvidenceSummary ? codingSummaryBadge(s.latestResult.codingEvidenceSummary) : codingStatusBadge(s.latestResult?.codingGrading);
             return (
-              <tr key={s.studentId} className={focused ? "is-drill-focus" : undefined} aria-current={focused ? "true" : undefined} ref={focused ? focusRow : undefined}>
-                <td><strong>{s.studentName}</strong><small className="result-code">{s.studentCode}</small>{focused && <small className="eb-drill-focus-note">الطالب المطلوب</small>}</td>
-                <td>
+              <tr key={s.studentId} className={[focused ? "is-drill-focus" : "", sel?.selected.has(s.studentId) ? "is-selected" : ""].filter(Boolean).join(" ") || undefined} aria-current={focused ? "true" : undefined} ref={focused ? focusRow : undefined}>
+                <td data-label="الطالب"><div className="eb-student-cell">
+                  {sel && <input type="checkbox" className="eb-select-box" aria-label={"تحديد " + s.studentName} checked={sel.selected.has(s.studentId)} onChange={() => sel.onToggle(s.studentId)} disabled={p.busy} />}
+                  <div><strong>{s.studentName}</strong><small className="result-code">{s.studentCode}</small>{focused && <small className="eb-drill-focus-note">الطالب المطلوب</small>}</div>
+                </div></td>
+                <td data-label="الحالة">
                   <div className="eb-status-stack">
-                    {s.attemptStatus && <StatusBadge tone={s.attemptStatus === "started" ? "info" : s.attemptStatus === "paused" || s.attemptStatus === "integrityExit" || s.attemptStatus === "teacherEnded" ? "warn" : "neutral"} className={"lifecycle-badge lifecycle-" + s.attemptStatus}>{LIFECYCLE_LABEL[s.attemptStatus] || s.attemptStatus}</StatusBadge>}
-                    {gs === "notSubmitted"
-                      ? <StatusBadge tone="neutral" className="review-state none">{gradingLabel(gs)}</StatusBadge>
-                      : <StatusBadge tone={gs === "final" ? "success" : "warn"} className={"review-state " + gradingClass(gs)}>{gradingLabel(gs)}{pending && s.latestResult && s.latestResult.manualReviewMarks > 0 ? " (" + s.latestResult.manualReviewMarks + " ع.)" : ""}</StatusBadge>}
+                    <StatusBadge tone={st.tone} className={"eb-student-status is-" + st.key + " " + st.className}>{st.label}</StatusBadge>
+                    {st.note && <small className="eb-student-status-note">{st.note}</small>}
                     {coding && <StatusBadge tone={coding.tone} className="coding-grading-badge">{coding.label}</StatusBadge>}
                     {(s.latestResult?.technicalHolds || 0) > 0 && <StatusBadge tone="warn" className="technical-hold-badge">تعذّر عرض {s.latestResult!.technicalHolds === 1 ? "سؤال واحد" : s.latestResult!.technicalHolds + " أسئلة"} على جهاز الطالب — بانتظار قرارك</StatusBadge>}
                     {s.activeAttempt && <small className="lifecycle-attempt">المحاولة الحالية: {s.activeAttempt.attemptNumber}</small>}
@@ -109,8 +138,8 @@ export default function Gradebook(p: GradebookProps) {
                     {s.dueAtOverride && <small className="deadline-extended-badge">تمديد حتى: {p.fmt(s.dueAtOverride)}</small>}
                   </div>
                 </td>
-                <td>{s.attemptsUsed}/{s.allowedAttempts}</td>
-                <td>{s.latestResult ? s.latestResult.score + "/" + s.latestResult.totalMarks + " (" + s.latestResult.percentage + "%)" : "—"}</td>
+                <td data-label="المحاولات">{s.attemptsUsed}/{s.allowedAttempts}</td>
+                <td data-label="العلامة">{s.latestResult ? s.latestResult.score + "/" + s.latestResult.totalMarks + " (" + s.latestResult.percentage + "%)" : "—"}</td>
                 <td className="eb-col-actions"><div className="eb-row-actions">
                   {s.latestResult && <button type="button" className={"eb-button is-small review-button" + (pending ? " is-primary" : "")} onClick={() => p.onReview(s)}>{pending ? "تصحيح الآن" : "عرض التصحيح"}</button>}
                   {!archived && (
