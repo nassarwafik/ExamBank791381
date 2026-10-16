@@ -6,6 +6,7 @@ import { sectionMaxMarks } from "../examBuilderState";
 import { IconSearch, IconPlus, IconGrip } from "../icons";
 import { StatusDot, type IssueTone } from "./StudioPrimitives";
 import StudioTypeIcon from "./StudioTypeIcon";
+import type { QuestionReadiness } from "./studioReview";
 
 // Phase 21F.3 — the Studio outline («هيكل الامتحان»): every section and question with its marks and canonical issue state, at one
 // glance. An ARIA tree (one Tab stop; ↑ / ↓ move, Home / End, Enter / Space opens the item; typing a letter jumps to the next item
@@ -18,7 +19,7 @@ type Props = {
   activeSectionId: string | null;
   selectedIds: ReadonlySet<string>;
   issuesOf: ReadonlyMap<string, readonly StructuredIssue[]>;
-  readiness: { ok: number; warn: number; error: number; total: number; canFinalize: boolean };
+  readiness: QuestionReadiness;
   totalMarks: number;
   disabled: boolean;
   onOpenQuestion: (questionId: string) => void;
@@ -104,7 +105,7 @@ function StudioOutline({ sections, activeId, activeSectionId, selectedIds, issue
     e.preventDefault();
     list[next]?.focus();
   };
-  const readyShare = readiness.total ? Math.round(((readiness.ok + readiness.warn) / readiness.total) * 100) : 0;
+  const readyShare = readiness.share;
   return (
     <aside className="st-outline" aria-label="هيكل الامتحان">
       <div className="st-outline-head">

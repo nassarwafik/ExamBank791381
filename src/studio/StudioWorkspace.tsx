@@ -19,6 +19,7 @@ import StudioCommandPalette, { type StudioCommand } from "./StudioCommandPalette
 import { StudioStepper, StudioSaveStatus } from "./StudioPrimitives";
 import { STUDIO_STEPS, type StudioStepKey, type InspectorTab } from "./studioSteps";
 import StudioOutline from "./StudioOutline";
+import { questionReadiness } from "./studioReview";
 import StudioCanvas from "./StudioCanvas";
 import StudioInspector, { type InspectorTarget } from "./StudioInspector";
 import "./studio.css";
@@ -113,14 +114,7 @@ export default function StudioWorkspace(p: StudioWorkspaceProps) {
     return null;
   })();
 
-  const readiness = useMemo(() => {
-    let ok = 0, warn = 0, error = 0;
-    for (const s of sections) for (const q of s.questions) {
-      const list = issuesOfQuestion.get(q.examQuestionId);
-      if (!list?.length) ok += 1; else if (list.some(i => i.severity === "error")) error += 1; else warn += 1;
-    }
-    return { ok, warn, error, total: ok + warn + error, canFinalize };
-  }, [sections, issuesOfQuestion, canFinalize]);
+  const readiness = useMemo(() => questionReadiness(sections, issuesOfQuestion, canFinalize), [sections, issuesOfQuestion, canFinalize]);
 
   const openQuestion = (id: string) => { p.onOpenSection(null); p.onActivate(id); if (!roomy) setDrawer(null); };
 

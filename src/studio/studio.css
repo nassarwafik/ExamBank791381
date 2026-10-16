@@ -376,6 +376,24 @@
 .st-studio .st-tool-ic { inline-size: 36px; block-size: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--eb-primary-050); color: var(--eb-primary-strong); }
 .st-studio .st-tool b { display: block; color: var(--eb-navy); font-size: var(--eb-fs-14); }
 .st-studio .st-tool span { font-size: var(--eb-fs-12); color: var(--eb-muted); }
+/* Phase 21F.6 — the review step */
+.st-studio .st-row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-studio .st-ring-track { fill: none; stroke: var(--st-panel-2); stroke-width: 14; }
+.st-studio .st-ring-fill { fill: none; stroke: var(--eb-muted); stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset var(--eb-dur) ease; }
+.st-studio .st-ring.is-ready .st-ring-fill { stroke: var(--st-teal); }
+.st-studio .st-ring.is-review .st-ring-fill { stroke: var(--eb-primary); }
+.st-studio .st-ring.is-blocked .st-ring-fill { stroke: var(--eb-danger); }
+.st-studio .st-ready-state { margin: 0; display: grid; gap: 2px; text-align: center; }
+.st-studio .st-ready-state b { color: var(--eb-navy); font-size: var(--eb-fs-16); }
+.st-studio .st-ready-state.is-blocked b { color: var(--eb-danger-tx); }
+.st-studio .st-ready-state.is-ready b { color: var(--st-teal-tx); }
+.st-studio .st-ready-state span { color: var(--eb-muted); font-size: var(--eb-fs-13); }
+.st-studio .st-issue-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; max-block-size: 520px; overflow: auto; }
+.st-studio .st-review-empty { margin: 0; display: flex; align-items: center; gap: 8px; padding: 14px; border-radius: var(--eb-r); background: var(--st-teal-050); border: 1px solid var(--st-teal-line); color: var(--st-teal-tx); font-weight: var(--eb-fw-semibold); }
+.st-studio .st-review-side { display: grid; gap: 18px; align-content: start; min-inline-size: 0; }
+.st-studio .st-bar { position: relative; }
+.st-studio .st-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-studio .st-tool { grid-template-columns: 36px minmax(0, 1fr) auto; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1279px) {
@@ -402,8 +420,10 @@
   .st-studio .st-topbar-start { grid-area: start; }
   .st-studio .st-topbar .st-steps { grid-area: steps; grid-column: auto; grid-row: auto; justify-self: start; }
   .st-studio .st-topbar-tools { grid-area: tools; justify-content: flex-end; }
-  .st-studio .st-topbar .st-save-btn { grid-area: save; }
-  .st-studio .st-topbar .st-next-btn { grid-area: next; }
+  .st-studio .st-topbar .st-save-btn { grid-area: save; justify-self: end; }
+  .st-studio .st-topbar .st-next-btn { grid-area: next; justify-self: end; }
+  .st-studio .st-topbar .st-steps { min-inline-size: 0; max-inline-size: 100%; overflow-x: auto; scrollbar-width: none; }
+  .st-studio .st-topbar .st-palette-btn { display: none; }
   .st-studio .st-topbar .st-redo-btn, .st-studio .st-topbar .st-preview-btn { display: none; }
   .st-studio .st-crumb-name { display: none; }
   .st-studio .st-title-input { font-size: var(--eb-fs-14); }

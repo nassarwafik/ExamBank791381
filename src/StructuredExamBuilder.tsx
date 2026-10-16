@@ -54,6 +54,7 @@ import type { StudioStepKey, InspectorTab } from "./studio/studioSteps";
 import { insertQuestionAt, placeQuestion as placeQuestionAt } from "./studio/studioOps";
 // Phase 21F.3 — the Exam Studio layout is its own chunk inside the builder chunk (the classic layout never loads it).
 const StudioWorkspace = lazy(() => import("./studio/StudioWorkspace"));
+const StudioReview = lazy(() => import("./studio/StudioReview"));
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
 import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown, IconLayers } from "./icons";
@@ -1340,7 +1341,14 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
   );
 
   // Phase 21F.6 / 21F.7 — the Studio's setup, review and publish steps (filled by those phases; the content step is the workspace's).
-  const studioStepViews = (): Partial<Record<StudioStepKey, ReactNode>> => ({});
+  const studioStepViews = (): Partial<Record<StudioStepKey, ReactNode>> => ({
+    review: (
+      <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المراجعة…</p>}>
+        <StudioReview exam={exam} decision={decision} issuesOfQuestion={stableIssues.byQuestion} targets={summaryTargets} tools={toolMenuItems}
+          onOpenIssue={openIssue} onPreview={() => setPreview(exam)} onStep={step => setStudioUi(prev => ({ ...prev, step }))} />
+      </Suspense>
+    )
+  });
   if (studio) {
     const addSectionNow = () => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })));
     return (
