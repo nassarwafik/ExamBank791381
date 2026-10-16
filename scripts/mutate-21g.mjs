@@ -34,7 +34,31 @@ const G4_UNIT = ["src/assignments/gradebookStatus.21g4.test.ts", "src/assignment
 const GBS = "src/assignments/gradebookStatus.ts", ITEM = "api/src/functions/assignment-item-analysis.js";
 const G5_API = ["api/tests/results-release-21g5.test.js"], G5_UI = ["src/assignments/resultsRelease.21g5.test.tsx", "src/AssignmentsPanel.grading.21g5.test.tsx"], G5_NAV = ["src/assignments/reviewNav.21g5.test.ts", "src/AssignmentReview.nav.21g5.test.tsx", "src/AssignmentsPanel.grading.21g5.test.tsx"];
 const REL = "api/src/lib/results-release.js", SUB = "api/src/functions/student-submission.js", DASH = "api/src/functions/student-dashboard.js", MANAGE = "api/src/functions/manage-assignments.js", REVIEW = "src/AssignmentReview.tsx";
+const G6_UNIT = ["src/assignments/assignmentWizard.21g6.test.ts"], G6_PANEL = ["src/AssignmentsPanel.wizard.21g6.test.tsx", "src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.lifecycle.test.tsx"];
+const WIZ = "src/assignments/assignmentWizard.ts", COMP = "src/assignments/AssignmentComposer.tsx", COMPOSER_HOOK = "src/assignments/useAssignmentComposer.ts";
 export const CAMPAIGNS = {
+  g6: [
+    { id: "G6-M1", what: "the content step lets the teacher go on without a title", file: WIZ,
+      find: "    if (!w.title.trim()) out.push(\"عنوان الواجب مطلوب.\");\n", replace: "", tests: [...G6_UNIT, ...G6_PANEL] },
+    { id: "G6-M2", what: "the classes step lets the teacher go on with none", file: WIZ,
+      find: "    if (!w.classIds.length) out.push(", replace: "    if (false) out.push(", tests: [...G6_UNIT, ...G6_PANEL] },
+    { id: "G6-M3", what: "a past deadline (a warning) blocks the timing step", file: WIZ,
+      find: "for (const i of w.windowIssues) if (i.blocking) out.push(i.message);", replace: "for (const i of w.windowIssues) out.push(i.message);", tests: [...G6_UNIT, ...G6_PANEL] },
+    { id: "G6-M4", what: "jumping forward skips the steps in between", file: WIZ,
+      find: "for (let i = from; i < target; i++) if (stepIssues(ORDER[i], w).length) return false;", replace: "if (stepIssues(ORDER[from], w).length) return false;", tests: [...G6_UNIT, ...G6_PANEL] },
+    { id: "G6-M5", what: "«التالي» ignores the step's blocking reasons", file: COMP,
+      find: "onClick={() => goTo(WIZARD_STEPS[at + 1].key)} disabled={blocking.length > 0}>التالي", replace: "onClick={() => { stepMoved.current = true; setStep(WIZARD_STEPS[at + 1].key); }}>التالي", tests: G6_PANEL },
+    { id: "G6-M6", what: "only the first chosen class gets a copy", file: CTRL,
+      find: "sourceExam = composer.source.sourceExam, ids = [...f.classIds];", replace: "sourceExam = composer.source.sourceExam, ids = f.classIds.slice(0, 1);", tests: G6_PANEL },
+    { id: "G6-M7", what: "a class that succeeded stays chosen (a retry creates a second copy there)", file: CTRL,
+      find: "setItems(x => [r.assignment, ...x]); f.setClassIds(x => x.filter(y => y !== id)); }", replace: "setItems(x => [r.assignment, ...x]); }", tests: G6_PANEL },
+    { id: "G6-M8", what: "the wizard closes although a class failed", file: CTRL,
+      find: "    else closeComposer();\n  }", replace: "    closeComposer();\n  }", tests: G6_PANEL },
+    { id: "G6-M9", what: "the default class is re-filled behind the teacher after a create", file: COMPOSER_HOOK,
+      find: "if (!classDefaulted.current && active[0]) {", replace: "if (active[0] && !classIds.length) {", tests: G6_PANEL },
+    { id: "G6-M10", what: "the copy count reads «2 نسخ»", file: WIZ,
+      find: "n === 2 ? \"نسختان\" :", replace: "", tests: [...G6_UNIT, ...G6_PANEL] }
+  ],
   g5: [
     { id: "G5-M1", what: "«بعد الموعد النهائي» releases before the due date", file: REL,
       find: "return validIso(a.dueAt) && nowMs >= Date.parse(a.dueAt);", replace: "return validIso(a.dueAt);", tests: G5_API },
