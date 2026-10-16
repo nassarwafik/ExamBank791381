@@ -289,3 +289,37 @@
   /* The filters stack in a column here: a flex-basis would become a height (the search's 220px left an empty band). */
   .eb-assign-filters > .eb-assign-search, .eb-assign-filters > .eb-assign-time-filters { flex: 0 0 auto; }
 }
+
+/* Phase 21G.3 — the full-width assignment page: back link, section switch, overview (distribution, status, settings). */
+.eb-assign-layout.is-page { grid-template-columns: minmax(0, 1fr); }
+.eb-assign-back { align-self: flex-start; margin-bottom: var(--eb-space-2); }
+.eb-assign-sections { margin: var(--eb-space-4) 0; }
+.eb-assign-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--eb-space-4); align-items: start; }
+.eb-assign-overview > .eb-assign-settings { grid-column: 1 / -1; }
+.eb-dist-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-dist-row { display: grid; grid-template-columns: 88px minmax(0, 1fr) 32px; align-items: center; gap: var(--eb-space-2); font-size: var(--eb-fs-13); }
+.eb-dist-label { color: var(--eb-muted); }
+.eb-dist-track { block-size: 14px; border-radius: 4px; background: var(--eb-surface-2); overflow: hidden; }
+.eb-dist-bar { display: block; block-size: 100%; border-radius: 4px; background: var(--eb-primary); min-inline-size: 0; }
+.eb-dist-count { font-weight: var(--eb-fw-semibold); text-align: end; }
+/* (named eb-status-bar: the gradebook already owns .eb-status-stack for its badge column) */
+.eb-status-bar { display: flex; gap: 2px; block-size: 14px; border-radius: 4px; overflow: hidden; background: var(--eb-surface-2); }
+.eb-status-seg { display: block; min-inline-size: 4px; }
+.eb-status-seg.is-final, .eb-status-dot.is-final { background: var(--eb-success); }
+.eb-status-seg.is-pendingReview, .eb-status-dot.is-pendingReview { background: var(--eb-warn); }
+.eb-status-seg.is-active, .eb-status-dot.is-active { background: var(--eb-info); }
+.eb-status-seg.is-notSubmitted, .eb-status-dot.is-notSubmitted { background: var(--eb-muted); }
+.eb-status-legend { list-style: none; margin: var(--eb-space-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--eb-space-2) var(--eb-space-4); font-size: var(--eb-fs-13); }
+.eb-status-legend li { display: inline-flex; align-items: center; gap: var(--eb-space-1); }
+.eb-status-dot { inline-size: 10px; block-size: 10px; border-radius: 999px; display: inline-block; }
+.eb-assign-instructions { margin-top: var(--eb-space-3); }
+.eb-assign-instructions-title { margin: 0 0 var(--eb-space-1); font-size: var(--eb-fs-13); color: var(--eb-muted); }
+.eb-assign-instructions p { margin: 0; white-space: pre-wrap; line-height: var(--eb-lh-body); }
+.eb-assign-settings-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); margin-top: var(--eb-space-3); }
+@media (max-width: 767px) {
+  .eb-assign-overview { grid-template-columns: minmax(0, 1fr); }
+  .eb-dist-row { grid-template-columns: 72px minmax(0, 1fr) 28px; }
+}
+.eb-assign-settings { background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); padding: var(--eb-space-4); }
+/* The list waits hidden behind an open assignment page; its display:flex must never override the hidden attribute. */
+.eb-assign-list[hidden] { display: none; }

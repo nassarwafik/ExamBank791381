@@ -221,3 +221,45 @@ for a list read.
 
 Fail-first applies to the defects fixed on the way only: the token-only CSS guard failed on `5f1e885c` and passes on `ae3e0431`.
 Deployment tier: 1 (local) only.
+
+## 10. Implementation record and evidence (21G.3)
+
+### What shipped
+
+- **A full-width page.** «فتح» replaces the list and the KPI strip with the assignment's page (`AssignmentDetail.tsx`,
+  layout class `is-page`). The list stays mounted but `hidden`, so «العودة إلى الواجبات» returns focus to the opener once the list
+  is shown again. The page header carries the same action menu as the row (`AssignmentActionMenu`), since the row is hidden.
+- **Three sections**: «الطلاب» (the gradebook, the default), «نظرة عامة» and «تحليل الأسئلة». The UX-5 guard forbids
+  `role="tablist"`, so they are an `aria-pressed` button group named «أقسام الواجب». Switching is client-side. The item analysis
+  is read once, on its first visit. Every new opening, including a drill from Today, starts on the gradebook.
+- **Overview** (`AssignmentOverview.tsx`, model in `assignmentPage.ts`), built from the gradebook rows the page already holds,
+  with no extra request:
+  - score distribution in five bands. **Grading safety:** only FINAL latest results are counted; a result waiting for manual
+    review is provisional, counted apart («لا يشمل … بانتظار التصحيح») and never drawn as a score;
+  - where every student stands (graded / pending review / in an attempt now / not submitted), each student in exactly one part;
+  - the settings (window, attempts, duration, policy, questions, instructions) with their three editors, hidden for an archived
+    assignment.
+  The charts are plain HTML bars inside `ChartCard`, one hue, each with a named figure and a table view.
+
+### Defects found on the way (real browser and full suite only)
+
+| Defect | Found by | Fix |
+|---|---|---|
+| The hidden list stayed visible beside the page: `.eb-assign-list{display:flex}` overrode the `hidden` attribute | the `hiddenAttribute` guard, full root suite on `13b5a748` (1 failed / 13,128) | `.eb-assign-list[hidden]{display:none}` in `536b25ab` |
+| The gradebook's status badges were squashed into a 14 px strip: the new status bar reused `.eb-status-stack`, a class the gradebook already owns | the real-Chromium capture | renamed to `.eb-status-bar`, plus a stylesheet guard: the subject of every 21G.3 selector names a class new to the block. Restoring the old name fails the guard with `['.eb-status-stack']` (`3d03e22d`) |
+
+happy-dom applies no CSS, so neither defect could be seen by the panel tests.
+
+### Evidence
+
+| Check | Result |
+|---|---|
+| `assignmentPage.21g3` | 5 / 5: band edges (49.9 / 50 / 64 / 65 / 89.5 / 90 / 100 / 120), pending reviews kept out, the server's grading status preferred, one part per student |
+| `AssignmentsPanel.page.21g3` | 6 / 6: the page replaces the list and the KPIs, focus returns to «فتح», the overview needs no request, the header menu, the analysis read once, a drill onto an open page, the stylesheet guard |
+| Existing suites | ux5, r7 and drill-12b changed only for the intended layout: the menu is reached from the page header, the close button is now «العودة إلى الواجبات», analysis is a section, and the row's «فتح» is queried while hidden |
+| Full root suite + build on `f1ec1972` | 1,051 files / 13,130 tests, all passed; build passed, initial JS 114.1 KB gzip (budget 125 KB) |
+| tsc / lint | clean / 125 |
+| Mutation `node scripts/mutate-21g.mjs g3` | 11 mutants, **11 KILLED**. G3-M6 (a new opening keeps the previous section) first SURVIVED: the only tested path closed the page, which already resets the section. The drill-onto-an-open-page test kills it in the isolated re-run |
+| Real Chromium at 1440 / 390 px | no horizontal overflow on the gradebook or the overview; the gradebook table is 1,110 px wide on desktop (611 px beside the list in 21G.2); five distribution rows on both widths |
+
+Fail-first applies to the two defects above only (the guards failed before their fixes). Deployment tier: 1 (local) only.

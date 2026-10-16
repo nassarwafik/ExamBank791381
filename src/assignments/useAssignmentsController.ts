@@ -12,6 +12,7 @@ import { bulkRetryNotice } from "./codingRecovery";
 import { assignmentsApi, toLocalInput } from "./assignmentsApi";
 import { matchesMasterScope, normalizeQuery, gradebookRows, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
 import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
+import type { PageTab } from "./assignmentPage";
 import { useAssignmentComposer } from "./useAssignmentComposer";
 import type { AssignmentDrill } from "./drillTarget";
 import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
@@ -43,6 +44,9 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const [reopenFor, setReopenFor] = useState<string | null>(null), [reopenValue, setReopenValue] = useState("");
   const [extendFor, setExtendFor] = useState<string | null>(null), [extendValue, setExtendValue] = useState("");
   const [showArchived, setShowArchived] = useState(false), [purgeFor, setPurgeFor] = useState<Item | null>(null), [purgeTitle, setPurgeTitle] = useState("");
+  // Phase 21G.3 — the assignment page's section (the gradebook by default; every newly opened assignment starts there).
+  const [pageTab, setPageTabState] = useState<PageTab>("students"), pageTabRef = useRef<PageTab>("students");
+  const setPageTab = (t: PageTab) => { pageTabRef.current = t; setPageTabState(t); };
   const [analysis, setAnalysis] = useState<ItemAnalysis | null>(null), [analysisBusy, setAnalysisBusy] = useState(false), [analysisSort, setAnalysisSort] = useState<AnalysisSort>("number");
   const [codingSummary, setCodingSummary] = useState<CodingGradingStatus | null>(null), [codingTotals, setCodingTotals] = useState<CodingEvidenceTotals | null>(null);
   // Roadmap #13 — gradebook search / filter / sort (client-side over the already-loaded results; no request per keystroke).
@@ -53,6 +57,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all"), [progress, setProgress] = useState<Map<string, AssignmentProgress> | null>(null), [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(t); }, []);
   const [filterClassId, setFilterClassId] = useState(""), [search, setSearch] = useState(""), [mode, setMode] = useState<WorkspaceMode>("list"), [attemptsFor, setAttemptsFor] = useState<Item | null>(null), [timingFor, setTimingFor] = useState<Item | null>(null);
+  const openerFocusPending = useRef<HTMLElement | null>(null);
   const detailOpenerRef = useRef<HTMLElement | null>(null), composerOpenerRef = useRef<HTMLElement | null>(null), focusDetailPending = useRef(false), focusComposerOpenerPending = useRef(false), focusWorkspacePending = useRef(false);
   const scopeRef = useRef<MasterScope>({ classId: "", showArchived: false, q: "" });
   // Phase 12B — drill-in bookkeeping. listReady: the assignment list has been read successfully at least once (a drill is never judged
@@ -160,7 +165,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // selection). A drill applies its gradebook view to the SAME authoritative rows.
   async function loadResults(item = resultsFor, trigger?: HTMLElement | null, drillTarget?: AssignmentDrill) {
     if (!item) return;
-    if (trigger !== undefined) { detailOpenerRef.current = trigger; focusDetailPending.current = true; setMode("list"); }
+    if (trigger !== undefined) { detailOpenerRef.current = trigger; focusDetailPending.current = true; setMode("list"); setPageTab("students"); }
     if (trigger !== undefined && !drillTarget) setDrillFocus(null);                        // a manual open: the teacher leaves the drill focus
     const seq = ++resultsSeq.current;
     resultsBusy.current = true;
@@ -172,6 +177,8 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
       const students = r.students || [];
       setResultsFor(item); setResults(students); setStats(r.stats || null); setCodingSummary(r.codingSummary || null); setCodingTotals(r.codingEvidenceTotals || null);
       if (drillTarget) applyDrillView(drillTarget, item, students);
+      // A reload while the analysis section is shown refreshes it too (the reload cleared it above).
+      if (trigger === undefined && pageTabRef.current === "analysis") void loadItemAnalysis(item);
     } catch (e) { if (seq === resultsSeq.current) setError(e instanceof Error ? e.message : "تعذر تحميل النتائج."); } finally { if (seq === resultsSeq.current) { resultsBusy.current = false; setBusy(false); } }
   }
   // Review fix — the ONE place that retires the current results intent without starting a new read: every older in-flight read
@@ -219,10 +226,18 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // teacher operates a master control or after an authoritative mutation, so the control they are using keeps focus and no detached
   // opener is ever focused.
   function clearDetail({ restoreFocus }: { restoreFocus: boolean }) {
+    setPageTab("students");
     setResultsFor(null); setResults([]); setStats(null); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAnalysis(null); setGbSearch(""); setGbFilter("all"); setGbSort("name"); setDrillFocus(null);
     const el = detailOpenerRef.current; detailOpenerRef.current = null;
-    if (restoreFocus && el && el.isConnected) el.focus();
+    // Phase 21G.3 — the opener sits in the list, which is hidden while the page is open: focus it once the list is shown again.
+    if (restoreFocus && el) openerFocusPending.current = el;
   }
+  useEffect(() => {
+    const el = openerFocusPending.current;
+    if (!el || resultsFor) return;
+    openerFocusPending.current = null;
+    if (el.isConnected) el.focus();
+  }, [resultsFor]);
   function closeDetail() { clearDetail({ restoreFocus: true }); }
   // Master controls: apply the change, then enforce the invariant against the resulting scope. The composer is never closed here (its
   // target class is intentionally independent of the list filter).
@@ -251,7 +266,8 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     if (!el || el === document.body || !el.isConnected) toolbarRef.current?.focus();
   });
   async function loadItemAnalysis(item = resultsFor) { if (!item) return; setAnalysisBusy(true); setError(""); try { const r = await api<ItemAnalysis>("/api/assignment-item-analysis?assignmentId=" + encodeURIComponent(item.assignmentId)); setAnalysis(r); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل تحليل الأسئلة."); } finally { setAnalysisBusy(false); } }
-  function toggleAnalysis() { if (analysis) setAnalysis(null); else void loadItemAnalysis(); }
+  // The analysis loads the first time its section is chosen and is kept while the page stays open (one request, not one per visit).
+  function selectPageTab(t: PageTab) { setPageTab(t); if (t === "analysis" && !analysis && !analysisBusy) void loadItemAnalysis(); }
   // Phase 17D-A — ONE bulk retry of the assignment's open coding grading (same revision, server-selected targets), then an
   // authoritative reload of the gradebook. The request carries the assignment id only.
   async function bulkCodingRetry() {
@@ -334,7 +350,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     home: { kpis: homeKpis(scoped, progress, now), progress, now },
     list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item) },
     composer: { ...composer, close: closeComposer, create: () => void create(), canCreate },
-    detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, toggleAnalysis, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },
+    detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, tab: pageTab, selectTab: selectPageTab, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },
     gradebook: { rows: visibleResults, results, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: setGbSearch, filter: gbFilter, setFilter: setGbFilter, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s) },
     dialogs: {
       attemptsFor, closeAttempts: () => setAttemptsFor(null), saveMaxAttempts: (item: Item, value: number) => void saveMaxAttempts(item, value),

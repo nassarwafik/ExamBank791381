@@ -4,7 +4,7 @@ import AssignmentReview from "./AssignmentReview";
 import ExamPreview from "./ExamPreview";
 import {IconPlus,IconRefresh} from "./icons";
 import ActionMenu from "./ui/ActionMenu";
-import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetailsDialog} from "./assignments/AssignmentList";
+import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetailsDialog,AssignmentActionMenu} from "./assignments/AssignmentList";
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
@@ -13,6 +13,7 @@ import {useAssignmentsController,type AssignmentsControllerProps} from "./assign
 import {rowGrading} from "./assignments/assignmentsView";
 import {fmt} from "./assignments/assignmentsApi";
 import AssignmentsHomeKpis from "./assignments/AssignmentsHomeKpis";
+import AssignmentOverview from "./assignments/AssignmentOverview";
 import {TIME_FILTERS} from "./assignments/assignmentsHome";
 import {downloadCsv} from "./reports/csv";
 import {gradebookCsvRows,exportFilename} from "./teacher/teacherExports";
@@ -28,9 +29,11 @@ export default function AssignmentsPanel(props:Props){
  const c=useAssignmentsController(props,{toolbarRef,composerHeadingRef,detailHeadingRef});
  const {toolbar:t,list:l,composer:k,detail:d,gradebook:g,dialogs:x}=c;
  const showDetailArea=c.mode==="composer"||d.item!==null;
+ // Phase 21G.3 — an open assignment is a FULL-WIDTH page: the list (kept mounted, so focus returns to its «فتح») and the KPI strip wait.
+ const pageOpen=c.mode==="list"&&d.item!==null;
 
  return <section className="assignments-panel eb-assignments">
-  {!t.showArchived&&<AssignmentsHomeKpis kpis={c.home.kpis}/>}
+  {!t.showArchived&&!pageOpen&&<AssignmentsHomeKpis kpis={c.home.kpis}/>}
   <div className="eb-assign-toolbar" role="region" aria-label="أدوات الواجبات" ref={toolbarRef} tabIndex={-1}>
    <div className="eb-assign-filters">
     <label className="eb-field-inline">الصف<select value={t.effectiveFilter} onChange={e=>t.changeScope({filterClassId:e.target.value})}><option value="">كل الصفوف</option>{t.active.map(cl=><option value={cl.classId} key={cl.classId}>{cl.name}{cl.grade?" · "+cl.grade:""}</option>)}</select></label>
@@ -52,8 +55,8 @@ export default function AssignmentsPanel(props:Props){
   </div>
   {c.error&&<div className="platform-error assignment-inline-message" role="alert">{c.error}</div>}{c.notice&&<div className="platform-notice assignment-inline-message" role="status" aria-live="polite">{c.notice}</div>}
 
-  <div className={"eb-assign-layout"+(showDetailArea?" has-detail":"")}>
-   <AssignmentList items={l.visible} showArchived={t.showArchived} hasAnyInScope={l.hasAnyInScope} selectedId={l.selectedId} busy={c.busy} loading={c.loading}
+  <div className={"eb-assign-layout"+(pageOpen?" is-page":showDetailArea?" has-detail":"")}>
+   <AssignmentList hidden={pageOpen} items={l.visible} showArchived={t.showArchived} hasAnyInScope={l.hasAnyInScope} selectedId={l.selectedId} busy={c.busy} loading={c.loading}
     onOpen={l.open} onPublish={l.publish} onUnpublish={l.unpublish}
     onEditAttempts={l.editAttempts} onEditTiming={l.editTiming} onEditDetails={l.editDetails} onArchive={l.archive} onRestore={l.restore} onPurge={l.purge} onCreate={t.openComposer} fmt={fmt} progress={c.home.progress} now={c.home.now}/>
    {c.mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={k.close} busy={c.busy} examLoading={k.source.examLoading}
@@ -64,7 +67,7 @@ export default function AssignmentsPanel(props:Props){
     activeClasses={t.active} classId={k.fields.classId} onClassId={k.fields.setClassId} title={k.fields.title} onTitle={k.fields.setTitle} instructions={k.fields.instructions} onInstructions={k.fields.setInstructions} openAt={k.fields.openAt} onOpenAt={k.fields.setOpenAt} dueAt={k.fields.dueAt} onDueAt={k.fields.setDueAt}
     maxAttempts={k.fields.maxAttempts} onMaxAttempts={k.fields.setMaxAttempts} durationMinutes={k.fields.durationMinutes} onDurationMinutes={k.fields.setDurationMinutes} attemptPolicy={k.fields.attemptPolicy} onAttemptPolicy={k.fields.setAttemptPolicy} publish={k.fields.publish} onPublish={k.fields.setPublish} windowIssues={k.windowIssues} canCreate={k.canCreate} onCreate={k.create}/>}
    {c.mode==="list"&&d.item&&<AssignmentDetail item={d.item} stats={d.stats} loading={c.busy} headingRef={detailHeadingRef} onClose={d.close}
-    analysis={d.analysis} analysisBusy={d.analysisBusy} analysisSort={d.analysisSort} onAnalysisSort={d.setAnalysisSort} onToggleAnalysis={d.toggleAnalysis} sortedQuestions={d.sortedQuestions} analysisSummary={d.analysisSummary} fmt={fmt}>
+    analysis={d.analysis} analysisBusy={d.analysisBusy} analysisSort={d.analysisSort} onAnalysisSort={d.setAnalysisSort} tab={d.tab} onTab={d.selectTab} actions={<AssignmentActionMenu item={d.item} actions={{busy:c.busy,onPublish:l.publish,onUnpublish:l.unpublish,onEditAttempts:l.editAttempts,onEditTiming:l.editTiming,onEditDetails:l.editDetails,onArchive:l.archive,onRestore:l.restore,onPurge:l.purge}}/>} overview={<AssignmentOverview item={d.item} results={g.results} fmt={fmt} onEditDetails={l.editDetails} onEditTiming={l.editTiming} onEditAttempts={l.editAttempts}/>} sortedQuestions={d.sortedQuestions} analysisSummary={d.analysisSummary} fmt={fmt}>
     <Gradebook assignment={d.item} rows={g.rows} totalRows={g.results.length} gradingOf={rowGrading} busy={c.busy} focusStudentId={g.focusStudentId}
      search={g.search} onSearch={g.setSearch} filter={g.filter} onFilter={g.setFilter} sort={g.sort} onSort={g.setSort}
      onReview={g.review} onGrant={g.grant} onReopen={g.reopen} onExtend={g.extend} onDeadline={g.deadline} onEndAttempt={g.endAttempt} fmt={fmt}

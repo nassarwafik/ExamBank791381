@@ -4,7 +4,7 @@
 // that guard it, and is KILLED only if a test fails because of it. A timeout is reported as TIMEOUT (never as killed). Every mutated
 // file is restored byte-for-byte and hash-verified after each mutant — also when the run throws or the process is interrupted.
 //
-//   node scripts/mutate-21g.mjs <campaign> [ids]   campaigns: g0, g1, g2, … (see CAMPAIGNS below); ids = comma-separated mutant ids to
+//   node scripts/mutate-21g.mjs <campaign> [ids]   campaigns: g0, g1, g2, g3, … (see CAMPAIGNS below); ids = comma-separated mutant ids to
 //                                                  re-run in isolation (e.g. a TIMEOUT, or a survivor after its test was fixed)
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -28,7 +28,33 @@ const G1_PANEL = ["src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.dri
 const CACHE = "api/src/lib/assignment-summary-cache.js", PROG = "api/src/lib/assignment-progress.js", HOME = "src/assignments/assignmentsHome.ts";
 const G2_CACHE = ["api/tests/assignment-summary-cache-21g2.test.js"], G2_PROG = ["api/tests/assignment-progress-21g2.test.js"];
 const G2_HOME = ["src/assignments/assignmentsHome.21g2.test.ts", "src/AssignmentsPanel.home.21g2.test.tsx"];
+const PAGE = "src/assignments/assignmentPage.ts";
+const G3_UNIT = ["src/assignments/assignmentPage.21g3.test.ts"], G3_PANEL = ["src/AssignmentsPanel.page.21g3.test.tsx", "src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.r7.test.tsx"];
 export const CAMPAIGNS = {
+  g3: [
+    { id: "G3-M1", what: "a pending review is drawn as a score", file: PAGE,
+      find: "    if (g === \"pendingReview\") { pendingReview++; continue; }\n", replace: "", tests: [...G3_UNIT, ...G3_PANEL] },
+    { id: "G3-M2", what: "band edges move (a 50% lands below 50)", file: PAGE,
+      find: "const band = bands.find(b => pct >= b.min && pct < b.max)", replace: "const band = bands.find(b => pct > b.min && pct <= b.max)", tests: [...G3_UNIT, ...G3_PANEL] },
+    { id: "G3-M3", what: "a student in an attempt counts as not submitted", file: PAGE,
+      find: "    else if (s.activeAttempt) at(\"active\").count++;\n", replace: "", tests: [...G3_UNIT, ...G3_PANEL] },
+    { id: "G3-M4", what: "the list stays visible beside the page", file: "src/AssignmentsPanel.tsx",
+      find: "<AssignmentList hidden={pageOpen} ", replace: "<AssignmentList hidden={false} ", tests: G3_PANEL },
+    { id: "G3-M5", what: "the KPI strip stays above an open page", file: "src/AssignmentsPanel.tsx",
+      find: "{!t.showArchived&&!pageOpen&&<AssignmentsHomeKpis", replace: "{!t.showArchived&&<AssignmentsHomeKpis", tests: G3_PANEL },
+    { id: "G3-M6", what: "a newly opened assignment keeps the previous section", file: "src/assignments/useAssignmentsController.ts",
+      find: "setMode(\"list\"); setPageTab(\"students\"); }", replace: "setMode(\"list\"); }", tests: G3_PANEL },
+    { id: "G3-M7", what: "the analysis is re-read on every visit", file: "src/assignments/useAssignmentsController.ts",
+      find: "if (t === \"analysis\" && !analysis && !analysisBusy) void loadItemAnalysis();", replace: "if (t === \"analysis\") void loadItemAnalysis();", tests: G3_PANEL },
+    { id: "G3-M8", what: "closing the page loses focus (the opener is never refocused)", file: "src/assignments/useAssignmentsController.ts",
+      find: "    if (el.isConnected) el.focus();\n  }, [resultsFor]);", replace: "  }, [resultsFor]);", tests: G3_PANEL },
+    { id: "G3-M9", what: "the page header has no action menu (the hidden row's actions are unreachable)", file: "src/assignments/AssignmentDetail.tsx",
+      find: "        {p.actions && <div className=\"eb-assign-detail-actions\">{p.actions}</div>}\n", replace: "", tests: G3_PANEL },
+    { id: "G3-M10", what: "the hidden list's display:flex overrides the hidden attribute (it stays visible in a browser)", file: "src/assignments-pro.css",
+      find: ".eb-assign-list[hidden] { display: none; }\n", replace: "", tests: ["src/designSystem/hiddenAttribute.guard.test.ts"] },
+    { id: "G3-M11", what: "the overview's status bar restyles the gradebook's .eb-status-stack badge column", file: "src/assignments-pro.css",
+      find: ".eb-status-bar { display: flex;", replace: ".eb-status-stack { display: flex;", tests: ["src/AssignmentsPanel.page.21g3.test.tsx"] }
+  ],
   g2: [
     { id: "G2-M1", what: "a cached summary is served without checking its ETag", file: CACHE,
       find: "if (e.etag && hit && hit.etag === e.etag && hit.summary && typeof hit.summary === \"object\") next[id] = hit;", replace: "if (hit && hit.summary && typeof hit.summary === \"object\") next[id] = hit;", tests: G2_CACHE },
