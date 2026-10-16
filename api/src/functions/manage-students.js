@@ -21,6 +21,8 @@ const {
   getReadConcurrency
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
+// Phase 21G.0 — teacher tenancy: a student belongs to their class's teacher (and keeps that owner when they leave a class).
+const { tenantOf, canAccessDocument, accessibleClassIds, classIdAllowed } = require("../lib/teacher-tenancy");
 const { purgeProfilePhotos } = require("../lib/profile-photo-store");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
@@ -150,7 +152,7 @@ async function getClassroom(container, classId) {
   return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
 }
 
-async function listStudents(container, classId, includeArchived = false, obs = null) {
+async function listStudents(container, classId, includeArchived = false, obs = null, canSee = null) {
   const result = [];
   // Roadmap #25: this scan already yields the AUTHORITATIVE member set of the class, so the roster index is
   // reconciled here for free (zero extra list operations / downloads; at most one class write when drifted).
@@ -163,6 +165,7 @@ async function listStudents(container, classId, includeArchived = false, obs = n
     if (classId && isStudentClassMember(student, classId)) memberIds.push(String(student.userId || ""));
     if (classId && String(student.classId || "") !== classId) continue;
     if (!includeArchived && student.archived === true) continue;
+    if (canSee && !canSee(student)) continue;
     result.push(publicStudent(student));
   }
   result.sort((a, b) => {
@@ -291,6 +294,13 @@ async function createStudentRecord(container, classroom, input, options = {}) {
 
   const existing = await findStudentByIdentity(container, identityNumber);
   if (existing) {
+    // Phase 21G.0 — identity numbers are unique platform-wide, but another teacher's student is never named: only that the
+    // identity is taken.
+    if (options.visible && !(await options.visible(existing))) {
+      const taken = new StudentActionError(409, "رقم الهوية مستخدم مسبقًا لحساب طالب آخر.");
+      taken.code = "duplicate";
+      throw taken;
+    }
     const existingClass = await getClassroom(container, String(existing.classId || ""));
     // Roadmap #18: tag identity collisions as `duplicate` so the bulk-import loop can report an
     // accurate duplicate vs. hard-failure breakdown (aggregate audit + UI counts) without string-matching.
@@ -324,6 +334,8 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     familyName,
     displayName,
     classId: classroom.classId,
+    // Phase 21G.0 — the student inherits the owner of the class they are created in (none for a shared pre-tenancy class).
+    ...(typeof classroom.ownerId === "string" && classroom.ownerId ? { ownerId: classroom.ownerId } : {}),
     active: true,
     archived: false,
     // Server-authoritative student session version (Roadmap #8). Starts at 1 and is incremented on every
@@ -511,7 +523,7 @@ async function deleteStudent(container, student, obs = null) {
   return removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "delete" });
 }
 
-async function buildImportPreview(container, items) {
+async function buildImportPreview(container, items, visible = null) {
   const classCache = new Map();
   const seenInBatch = new Set();     // identity numbers already seen earlier in THIS upload
   const rows = [];
@@ -536,7 +548,10 @@ async function buildImportPreview(container, items) {
     } else {
       seenInBatch.add(item.identityNumber);
       const existing = await findStudentByIdentity(container, item.identityNumber);
-      if (existing) {
+      if (existing && visible && !(await visible(existing))) {
+        status = "duplicate";
+        error = "رقم الهوية مستخدم مسبقًا لحساب طالب آخر.";
+      } else if (existing) {
         status = "duplicate";
         let classroom = null;
         const classId = String(existing.classId || "");
@@ -734,12 +749,30 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
+      // Phase 21G.0 — tenancy: the classes this teacher may act on (null = every class: single mode), read once per request;
+      // a student is accessible through their own owner stamp or, without one, through their class.
+      const tenant = tenantOf(auth.user);
+      let allowedClasses;
+      const classOk = async classId => {
+        if (!tenant) return true;
+        if (allowedClasses === undefined) allowedClasses = accessibleClassIds(await listJson(container, CLASS_PREFIX), tenant);
+        return classIdAllowed(allowedClasses, classId);
+      };
+      const studentOk = async student => {
+        if (!tenant) return true;
+        if (student && typeof student.ownerId === "string" && student.ownerId) return canAccessDocument(student, tenant);
+        return classOk(student?.classId);
+      };
 
       if (request.method === "GET") {
         const url = new URL(request.url);
         const profileUserId = String(url.searchParams.get("profileUserId") || "").trim();
 
         if (profileUserId) {
+          if (tenant) {
+            const subject = await downloadJsonOrNull(container, USER_PREFIX + profileUserId + ".json");
+            if (!subject || subject.role !== "student" || !(await studentOk(subject))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+          }
           const profile = await buildStudentProfile(container, profileUserId);
           if (!profile) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           return { status: 200, jsonBody: { ok: true, profile } };
@@ -747,9 +780,12 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
         const classId = String(url.searchParams.get("classId") || "").trim();
         const includeArchived = url.searchParams.get("includeArchived") === "1";
+        if (classId && !(await classOk(classId))) return { status: 200, jsonBody: { ok: true, students: [] } };
+        if (tenant) await classOk("");                // load the allowed classes once before the synchronous filter below
+        const canSee = tenant ? student => (typeof student.ownerId === "string" && student.ownerId ? canAccessDocument(student, tenant) : classIdAllowed(allowedClasses, student.classId)) : null;
         return {
           status: 200,
-          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs) }
+          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs, canSee) }
         };
       }
 
@@ -759,12 +795,12 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       if (action === "create") {
         const classId = String(body?.classId || "").trim();
-        const classroom = await getClassroom(container, classId);
+        const classroom = await classOk(classId) ? await getClassroom(container, classId) : null;
         if (!classroom || normalizeClassStatus(classroom) === "archived") {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
 
-        const result = await createStudentRecord(container, classroom, body, { forceGeneratedPassword: false });
+        const result = await createStudentRecord(container, classroom, body, { forceGeneratedPassword: false, visible: tenant ? studentOk : null });
         // Roadmap #25: the student now EXISTS (authoritative user + auth documents). A roster-index conflict must
         // not turn that into a 500 (which made the teacher retry and hit "duplicate identity"); it is reported
         // as rosterSynced:false and self-heals on the next roster read.
@@ -789,7 +825,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (students.length > MAX_IMPORT_ROWS) {
           return { status: 400, jsonBody: { ok: false, error: "يمكن فحص " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة." } };
         }
-        const preview = await buildImportPreview(container, students);
+        const preview = await buildImportPreview(container, students, tenant ? studentOk : null);
         return {
           status: 200,
           jsonBody: {
@@ -804,7 +840,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       if (action === "bulkimport") {
         const classId = String(body?.classId || "").trim();
-        const classroom = await getClassroom(container, classId);
+        const classroom = await classOk(classId) ? await getClassroom(container, classId) : null;
         if (!classroom || normalizeClassStatus(classroom) === "archived") {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
@@ -830,7 +866,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         // classroom.studentIds list it also touches in-memory is a denormalized index we DO NOT persist here.
         for (const item of students) {
           try {
-            const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true });
+            const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true, visible: tenant ? studentOk : null });
             credentials.push({
               userId: result.student.userId,
               firstName: result.student.firstName,
@@ -897,7 +933,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const studentBlobName = USER_PREFIX + userId + ".json";
         const student = await downloadJsonOrNull(container, studentBlobName);
 
-        if (!student || student.role !== "student") {
+        if (!student || student.role !== "student" || !(await studentOk(student))) {
           return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         }
 
@@ -912,6 +948,9 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         );
         const newCode = identityNumber;
         const newClassId = String(body?.classId ?? student.classId ?? "").trim();
+        if (newClassId !== String(student.classId || "") && !(await classOk(newClassId))) {
+          return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
+        }
         const newPassword = String(body?.password || "");
 
         if (!firstName || !familyName) {
@@ -1061,7 +1100,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       if (["resetpassword", "toggleactive", "archive", "unarchive", "delete"].includes(action)) {
         const userId = String(body?.userId || "").trim();
         const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
-        if (!student || student.role !== "student") {
+        if (!student || student.role !== "student" || !(await studentOk(student))) {
           return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         }
 
@@ -1128,6 +1167,9 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (operation === "move" && !targetClassId) {
           return { status: 400, jsonBody: { ok: false, error: "اختر الصف الهدف." } };
         }
+        if (operation === "move" && !(await classOk(targetClassId))) {
+          return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
+        }
 
         const results = [];
         const errors = [];
@@ -1138,7 +1180,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         for (const userId of userIds) {
           try {
             const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
-            if (!student || student.role !== "student") throw new Error("الطالب غير موجود.");
+            if (!student || student.role !== "student" || !(await studentOk(student))) throw new Error("الطالب غير موجود.");
 
             if (operation === "activate") await changeStudentActive(container, student, true);
             else if (operation === "deactivate") await changeStudentActive(container, student, false);

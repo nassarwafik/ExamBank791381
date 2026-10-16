@@ -16,6 +16,8 @@ const {recordEventSafely}=require("../lib/notification-events");
 // setstatus / archive / restore / purge transitions all run under the per-assignment lifecycle lock, so a delayed
 // removal can never erase the pointer of a concurrent re-publish of the same assignment.
 const {ensurePublishedAssignmentIndexed,removePublishedAssignmentFromIndex}=require("../lib/class-assignment-index");
+// Phase 21G.0 — teacher tenancy: an assignment belongs to the teacher of its class (shared pre-tenancy classes stay shared).
+const {tenantOf,canAccessDocument,accessibleClassIds,classIdAllowed,classAccessible}=require("../lib/teacher-tenancy");
 // Bank image assets are persisted by durable identity only; the signed URL is minted when the student is served (student-assignment).
 const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
 // Phase 14A — GOVERNED exams: an assignment binds the exact immutable PUBLISHED revision the server owns (manifest →
@@ -60,9 +62,17 @@ async function handler(request,deps={},obs=null){
  const ensureIdx=deps.ensurePublishedAssignmentIndexed||ensurePublishedAssignmentIndexed,removeIdx=deps.removePublishedAssignmentFromIndex||removePublishedAssignmentFromIndex;
  try{
   const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
-  if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");let list=(await ls(c,PREFIX)).map(summary);if(classId)list=list.filter(x=>x.classId===classId);list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
+  const tenant=tenantOf(auth.user);
+  if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");let list=(await ls(c,PREFIX)).map(summary);if(classId)list=list.filter(x=>x.classId===classId);
+   if(tenant){const allowed=accessibleClassIds(await ls(c,CLASS_PREFIX),tenant);list=list.filter(x=>classIdAllowed(allowed,x.classId))}list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
   let b={};try{b=await request.json()}catch{}
   const action=String(b.action||"create").toLowerCase();
+  // Phase 21G.0 — an action on an existing assignment acts only on one of the teacher's own classes; another teacher's assignment
+  // is reported exactly like a missing one. (The class of an assignment never changes, so one check suffices.)
+  if(action!=="create"&&tenant&&b.assignmentId){
+   const target=await dl(c,PREFIX+String(b.assignmentId)+".json");
+   if(target&&!(await classAccessible(n=>dl(c,n),target.classId,tenant)))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+  }
   if(action==="create"){
    const classId=String(b.classId||"").trim(),title=String(b.title||"").trim(),instructions=String(b.instructions||"").trim();let exam=cleanExam(b.examSnapshot),source=null;
    if(!classId||!title)return {status:400,jsonBody:{ok:false,error:"الصف وعنوان الواجب مطلوبان."}};
@@ -91,7 +101,7 @@ async function handler(request,deps={},obs=null){
    const policyRaw=b.attemptPolicy===undefined||b.attemptPolicy===null||b.attemptPolicy===""?"continuous":b.attemptPolicy;
    if(!ATTEMPT_POLICIES.includes(policyRaw))return {status:400,jsonBody:{ok:false,error:"طريقة المحاولة غير صالحة."}};
    const attemptPolicy=policyRaw;
-   const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
+   const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||!canAccessDocument(classroom,tenant)||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
    const openAt=iso(b.openAt),dueAt=iso(b.dueAt);if(openAt&&dueAt&&new Date(dueAt)<new Date(openAt))return {status:400,jsonBody:{ok:false,error:"موعد التسليم يجب أن يكون بعد موعد الفتح."}};
    const now=new Date().toISOString(),assignmentId=crypto.randomUUID(),maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
    // attemptModelVersion:2 (B2A) marks this assignment as using the UNIFIED attempt lifecycle: even an

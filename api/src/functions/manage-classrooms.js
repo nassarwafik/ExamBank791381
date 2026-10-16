@@ -9,6 +9,8 @@ const { mutateJsonWithRetry, StorageConflictError, listJson } = require("../lib/
 const { canonicalMemberIds, reconcileRosterIndex } = require("../lib/class-roster-index");
 const { normalizeClassStatus, applyClassLifecycleAction } = require("../lib/class-lifecycle");
 const { recordAuditEvent } = require("../lib/audit-log");
+// Phase 21G.0 — teacher tenancy: a teacher sees and changes only their own classes (shared pre-tenancy classes stay visible).
+const { tenantOf, canAccessDocument, ownerStamp } = require("../lib/teacher-tenancy");
 const { isSupportedProject } = require("../lib/project-tracker/registry");
 const { getClassProgramCodes, validateProgramCodes } = require("../lib/project-tracker/class-programs");
 // Class Learning Materials — an INDEPENDENT domain from projects (programCodes): which book/course a class uses
@@ -63,12 +65,12 @@ async function uploadJson(container, blobName, document) {
   });
 }
 
-async function listClasses(container, dl) {
+async function listClasses(container, dl, tenant = null) {
   const classes = [];
   for await (const blob of container.listBlobsFlat({ prefix: CLASS_PREFIX })) {
     if (!blob.name.endsWith(".json")) continue;
     const document = await dl(container, blob.name);
-    if (!document) continue;
+    if (!document || !canAccessDocument(document, tenant)) continue;
     classes.push({
       classId: String(document.classId || ""),
       name: String(document.name || ""),
@@ -106,10 +108,11 @@ function learningMaterialsChangeAllowed(classroom) {
   return normalizeClassStatus(classroom) !== "archived";
 }
 
-function buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now) {
+function buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now, tenant = null) {
   const doc = {
     schemaVersion: 1,
     classId: crypto.randomUUID(),
+    ...ownerStamp(tenant),
     name, grade, schoolYear,
     active: true,
     studentIds: [],
@@ -141,14 +144,23 @@ async function handler(request, deps = {}, obs = null) {
     const auth = authFn(request);
     if (!auth.ok) return auth.response;
     const container = deps.container || getC();
+    const tenant = tenantOf(auth.user);
 
     if (request.method === "GET") {
-      return { status: 200, jsonBody: { ok: true, classes: await listClasses(container, dl) } };
+      return { status: 200, jsonBody: { ok: true, classes: await listClasses(container, dl, tenant) } };
     }
 
     let body = {};
     try { body = await request.json(); } catch { body = {}; }
     const action = String(body?.action || "create").trim().toLowerCase();
+
+    // Phase 21G.0 — every action on an existing class acts only on the teacher's own (or a shared pre-tenancy) class; another
+    // teacher's class is reported exactly like a missing one. ownerId never changes after creation, so one check suffices.
+    if (action !== "create" && tenant) {
+      const targetId = String(body?.classId || "").trim();
+      const target = targetId ? await dl(container, CLASS_PREFIX + targetId + ".json") : null;
+      if (targetId && (!target || !canAccessDocument(target, tenant))) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+    }
 
     if (action === "create") {
       const name = String(body?.name || "").trim();
@@ -159,7 +171,7 @@ async function handler(request, deps = {}, obs = null) {
       if (!programCodeAccepted(programCode)) return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
 
       const now = new Date().toISOString();
-      const classroom = buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now);
+      const classroom = buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now, tenant);
       const classId = classroom.classId;
       await up(container, CLASS_PREFIX + classId + ".json", classroom);
       // Roadmap #19: audit the class creation (high-value lifecycle mutation).

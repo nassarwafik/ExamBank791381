@@ -3,6 +3,8 @@ const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
+// Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
+const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
 const {isStudentClassMember}=require("../lib/class-membership");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 function qid(q,i){return String(q?.examQuestionId||q?.id||q?.number||i+1)}
@@ -17,7 +19,7 @@ async function handler(request,deps={},obs=null){
   const auth=authFn(request);if(!auth.ok)return auth.response;
   const c=getC(),u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");
   if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
-  const a=await dl(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+  const a=await dl(c,AP+id+".json");if(!a||!(await classAccessible(n=>dl(c,n),a.classId,tenantOf(auth.user))))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
   const questions=Array.isArray(a.examSnapshot?.questions)?a.examSnapshot.questions:[];
   // Roadmap #24: analyzed population is CLASS MEMBERSHIP (canonical predicate) — a login-disabled student's
   // historical submission stays part of the teacher's item analysis; archived students stay excluded.
