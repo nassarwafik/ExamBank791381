@@ -72,7 +72,7 @@ describe("12B AssignmentsPanel — a drill opens the exact assignment in the use
     expect(classSelect().value).toBe("c2");                                        // scope moved to the assignment's own class
     const row = screen.getByText("واجب العاشر", { selector: "strong" }).closest("li")!;
     expect(row.className).toContain("selected");
-    expect(within(row).getByRole("button", { name: "فتح" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(row).getByRole("button", { name: "فتح", hidden: true }).getAttribute("aria-pressed")).toBe("true");   // 21G.3: the row waits behind the page
     await waitFor(() => expect(pressedChip()).toEqual(["بانتظار التصحيح"]));
     expect(shownStudents()).toEqual(["زيد"]);
     expect(onDrillConsumed).toHaveBeenCalledTimes(1);

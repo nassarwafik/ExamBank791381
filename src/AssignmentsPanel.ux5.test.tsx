@@ -96,7 +96,8 @@ const list = () => document.querySelector(".eb-assign-rows") as HTMLElement;
 const rowTitles = () => Array.from(list().querySelectorAll(".eb-assign-row-title strong")).map(x => x.textContent);
 const rowOf = (title: string) => within(list()).getByText(title).closest(".assignment-row") as HTMLElement;
 const openBtn = (title: string) => within(rowOf(title)).getByRole("button", { name: "فتح" });
-async function assignmentMenu(title: string) { fireEvent.click(within(rowOf(title)).getByRole("button", { name: "إجراءات الواجب " + title })); return await screen.findByRole("group", { name: "إجراءات الواجب " + title }); }
+// Phase 21G.3: an open assignment page hides its row and offers the SAME menu in its header — the one visible button is used.
+async function assignmentMenu(title: string) { fireEvent.click(screen.getByRole("button", { name: "إجراءات الواجب " + title })); return await screen.findByRole("group", { name: "إجراءات الواجب " + title }); }
 async function assignmentAction(title: string, label: string) { fireEvent.click(within(await assignmentMenu(title)).getByRole("button", { name: label })); }
 const confirmEl = () => waitFor(() => { const el = document.querySelector('.eb-confirm[role="dialog"]') as HTMLElement | null; if (!el) throw new Error("no confirm yet"); return el; });
 async function confirmDialog(answer: "confirm" | "cancel" = "confirm") { const d = await confirmEl(); fireEvent.click(answer === "confirm" ? (d.querySelector(".eb-dialog-foot .is-primary, .eb-dialog-foot .is-danger") as HTMLElement) : within(d).getByRole("button", { name: "إلغاء" })); }
@@ -331,7 +332,7 @@ describe("UX-5 detail — one results GET, focus, four operational stats, no N+1
     fireEvent.change(within(detail).getByLabelText("بحث بالاسم أو الكود"), { target: { value: "زيد" } });
     fireEvent.click(within(detail).getByRole("button", { name: "نهائي" }));
     expect(calls.length).toBe(n);                                                                   // zero requests for search/filter/sort
-    fireEvent.click(within(detail).getByRole("button", { name: "إغلاق التفاصيل" }));
+    fireEvent.click(within(detail).getByRole("button", { name: "العودة إلى الواجبات" }));
     expect(screen.queryByRole("region", { name: "اختبار الكسور" })).toBeNull();
     expect(document.activeElement).toBe(trigger);
     await openDetail("واجب الجبر");
@@ -463,7 +464,7 @@ describe("UX-5 gradebook — filters, sorts, grading labels, review action, life
 });
 
 describe("UX-5 item analysis — lazy, sortable, empty", () => {
-  it("is not loaded with the detail; one GET on request; sort chips with aria-pressed; hidden again without a request", async () => {
+  it("is not loaded with the detail; one GET on request; sort chips with aria-pressed; leaving and returning to the section sends no new request", async () => {
     await mount();
     const { detail } = await openDetail();
     expect(gets("/api/assignment-item-analysis")).toHaveLength(0);
@@ -480,8 +481,12 @@ describe("UX-5 item analysis — lazy, sortable, empty", () => {
     expect(order()).toEqual(["2", "1", "3"]);
     fireEvent.click(within(sorts).getByRole("button", { name: "الأصعب أولًا" }));
     expect(order()).toEqual(["1", "2", "3"]);
-    fireEvent.click(within(detail).getByRole("button", { name: "تحليل الأسئلة" }));
+    // Phase 21G.3 — the analysis is a section of the page: leaving it shows the gradebook again; returning reuses the loaded analysis.
+    fireEvent.click(within(detail).getByRole("button", { name: "الطلاب" }));
     expect(within(detail).queryByRole("region", { name: "تحليل الأسئلة" })).toBeNull();
+    fireEvent.click(within(detail).getByRole("button", { name: "تحليل الأسئلة" }));
+    expect(within(detail).getByRole("button", { name: "تحليل الأسئلة" }).getAttribute("aria-pressed")).toBe("true");
+    expect(await within(detail).findByRole("region", { name: "تحليل الأسئلة" })).toBeTruthy();
     expect(gets("/api/assignment-item-analysis")).toHaveLength(1);
   });
 });
@@ -631,7 +636,7 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
   it("explicit close still returns focus to the original فتح opener (unchanged contract)", async () => {
     await mount();
     const { detail, trigger } = await openDetail();
-    fireEvent.click(within(detail).getByRole("button", { name: "إغلاق التفاصيل" }));
+    fireEvent.click(within(detail).getByRole("button", { name: "العودة إلى الواجبات" }));
     detailGone();
     expect(document.activeElement).toBe(trigger);
     expect(trigger.isConnected).toBe(true);

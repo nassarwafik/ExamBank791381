@@ -3,8 +3,8 @@ import { attemptPolicyLabel } from "./attemptPolicy";
 import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
-import IconButton from "../ui/IconButton";
-import { IconClose, IconReports } from "../icons";
+import { IconChevronBack } from "../icons";
+import { PAGE_TABS, type PageTab } from "./assignmentPage";
 import { STATUS_LABEL, type AnalysisSort, type Item, type ItemAnalysis, type QuestionStat, type Stats } from "./types";
 
 export type AssignmentDetailProps = {
@@ -18,7 +18,12 @@ export type AssignmentDetailProps = {
   analysisBusy: boolean;
   analysisSort: AnalysisSort;
   onAnalysisSort: (s: AnalysisSort) => void;
-  onToggleAnalysis: () => void;
+  /** Phase 21G.3 — the page's sections; «تحليل الأسئلة» loads lazily the first time it is chosen. */
+  tab: PageTab;
+  onTab: (t: PageTab) => void;
+  overview: ReactNode;
+  /** The assignment's action menu (the same one its hidden list row offers). */
+  actions?: ReactNode;
   sortedQuestions: QuestionStat[];
   analysisSummary: { overallAverage: number | null; hardest: QuestionStat | null; easiest: QuestionStat | null } | null;
   fmt: (value: string) => string;
@@ -27,12 +32,17 @@ export type AssignmentDetailProps = {
 
 const ANALYSIS_SORTS: Array<[AnalysisSort, string]> = [["number", "رقم السؤال"], ["hardest", "الأصعب أولًا"], ["easiest", "الأسهل أولًا"]];
 
-/** NON-MODAL assignment detail: header → four operational StatCards → Gradebook → lazy item analysis. */
+/**
+ * Phase 21G.3 — the FULL-WIDTH assignment page (non-modal; the list waits behind it): back to the list, the header, the four
+ * operational StatCards, then one of three sections: «الطلاب» (the gradebook, the default), «نظرة عامة» (distribution, status,
+ * settings) and «تحليل الأسئلة» (lazy). The section switch is a pressed-button group (no tab roles, as the UX-5 guard requires).
+ */
 export default function AssignmentDetail({ headingRef, ...p }: AssignmentDetailProps) {
   const { item, stats } = p;
   const pct = (v: number | null | undefined) => v === null || v === undefined ? "—" : v + "%";
   return (
-    <section className="eb-assign-detail" aria-labelledby="eb-assign-detail-title">
+    <section className="eb-assign-detail is-page" aria-labelledby="eb-assign-detail-title">
+      <button type="button" className="eb-button is-ghost is-small eb-assign-back" onClick={p.onClose}><IconChevronBack size={16} />العودة إلى الواجبات</button>
       <div className="eb-assign-detail-head">
         <div className="eb-assign-detail-text">
           <h2 id="eb-assign-detail-title" ref={headingRef} tabIndex={-1} className="eb-assign-detail-title">{item.title}</h2>
@@ -46,10 +56,7 @@ export default function AssignmentDetail({ headingRef, ...p }: AssignmentDetailP
             <span>طريقة المحاولة: {attemptPolicyLabel(item.attemptPolicy)}</span>
           </div>
         </div>
-        <div className="eb-assign-detail-actions">
-          <button type="button" className="eb-button is-small" aria-pressed={!!p.analysis} onClick={p.onToggleAnalysis} disabled={p.analysisBusy}><IconReports size={16} />تحليل الأسئلة</button>
-          <IconButton label="إغلاق التفاصيل" icon={<IconClose size={18} />} onClick={p.onClose} />
-        </div>
+        {p.actions && <div className="eb-assign-detail-actions">{p.actions}</div>}
       </div>
 
       {p.loading && !stats && <div className="platform-loading" role="status">جارٍ تحميل النتائج...</div>}
@@ -65,10 +72,15 @@ export default function AssignmentDetail({ headingRef, ...p }: AssignmentDetailP
         </div>
       )}
 
-      {p.children}
+      <div className="eb-segmented eb-assign-sections" role="group" aria-label="أقسام الواجب">
+        {PAGE_TABS.map(t => <button key={t.key} type="button" aria-pressed={p.tab === t.key} onClick={() => p.onTab(t.key)}>{t.label}</button>)}
+      </div>
 
-      {p.analysisBusy && <div className="platform-loading" role="status">جارٍ تحليل الأسئلة...</div>}
-      {p.analysis && (
+      {p.tab === "students" && p.children}
+      {p.tab === "overview" && p.overview}
+
+      {p.tab === "analysis" && p.analysisBusy && <div className="platform-loading" role="status">جارٍ تحليل الأسئلة...</div>}
+      {p.tab === "analysis" && p.analysis && (
         <section className="eb-item-analysis" aria-labelledby="eb-item-analysis-title">
           <h3 id="eb-item-analysis-title" className="eb-subheading">تحليل الأسئلة</h3>
           <div className="eb-stat-grid is-secondary gradebook-stats">

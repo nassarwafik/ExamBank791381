@@ -47,7 +47,9 @@ async function mount() {
 }
 const rowOf = (_r: ReturnType<typeof render>, name: string) => within(document.querySelector(".eb-assign-rows") as HTMLElement).getByText(name).closest(".assignment-row") as HTMLElement; // list-scoped: the detail heading repeats the title
 // UX-5: assignment actions live in the row's labelled disclosure; confirms are the shared ConfirmDialog; purge is the danger Dialog.
-async function assignmentMenu(r: ReturnType<typeof render>, name: string) { fireEvent.click(within(rowOf(r, name)).getByRole("button", { name: "إجراءات الواجب " + name })); return await r.findByRole("group", { name: "إجراءات الواجب " + name }); }
+// Phase 21G.3: while the assignment's full-width page is open its row waits hidden, and the page header offers the SAME menu —
+// so the one visible «إجراءات الواجب …» button is used (the row's on the list, the page's on the page).
+async function assignmentMenu(r: ReturnType<typeof render>, name: string) { fireEvent.click(r.getByRole("button", { name: "إجراءات الواجب " + name })); return await r.findByRole("group", { name: "إجراءات الواجب " + name }); }
 async function assignmentAction(r: ReturnType<typeof render>, name: string, label: string) { fireEvent.click(within(await assignmentMenu(r, name)).getByRole("button", { name: label })); }
 const confirmEl = () => waitFor(() => { const el = document.querySelector('.eb-confirm[role="dialog"]') as HTMLElement | null; if (!el) throw new Error("no confirm yet"); return el; });
 async function confirmDialog() { const d = await confirmEl(); fireEvent.click(d.querySelector(".eb-dialog-foot .is-primary, .eb-dialog-foot .is-danger") as HTMLElement); }
