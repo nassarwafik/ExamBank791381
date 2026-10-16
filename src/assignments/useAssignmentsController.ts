@@ -10,10 +10,11 @@ import { useConfirm } from "../ui/useConfirm";
 import { windowBlocks, assignmentWindowIssues } from "./assignmentWindow";
 import { bulkRetryNotice } from "./codingRecovery";
 import { assignmentsApi, toLocalInput } from "./assignmentsApi";
-import { matchesMasterScope, normalizeQuery, gradebookRows, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
+import { matchesMasterScope, normalizeQuery, gradebookRows, rowGrading, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
 import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
 import { studentsCount, type PageTab } from "./assignmentPage";
 import { useAssignmentComposer } from "./useAssignmentComposer";
+import { reviewNav, type ReviewTarget } from "./reviewNav";
 import type { AssignmentDrill } from "./drillTarget";
 import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
 
@@ -382,6 +383,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const sortedQuestions = useMemo(() => sortAnalysisQuestions(analysis, analysisSort), [analysis, analysisSort]);
   const analysisSummary = useMemo(() => summarizeAnalysis(analysis), [analysis]);
   const visibleResults = useMemo(() => gradebookRows(results, gbSearch, gbFilter, gbSort), [results, gbSearch, gbFilter, gbSort]);
+  const reviewNavigation = useMemo(() => (review ? reviewNav(gradebookRows(results, "", "all", gbSort), review.studentId, rowGrading) : null), [review, results, gbSort]);
   const deadlineStudent = results.find(x => x.studentId === deadlineFor) || null, reopenStudent = results.find(x => x.studentId === reopenFor) || null, extendStudent = results.find(x => x.studentId === extendFor) || null;
   const extendEffDue = extendStudent ? (extendStudent.dueAtOverride || resultsFor?.dueAt || "") : "";
   const willClip = !!(extendValue && extendEffDue && new Date(extendValue).getTime() > new Date(extendEffDue).getTime());
@@ -410,7 +412,9 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
       purgeFor, purgeTitle, setPurgeTitle, confirmPurge: () => void confirmPurge(), closePurge: () => { if (!busy) setPurgeFor(null); },
       confirmDialog
     },
-    review: { target: review, close: () => setReview(null) }
+    // Phase 21G.5 — the review moves between students in the gradebook's current sort order, over EVERY student (a search or a
+    // filter never strands it: a student who leaves the «بانتظار التصحيح» filter once graded is still the review's position).
+    review: { target: review, close: () => setReview(null), nav: reviewNavigation, go: (t: ReviewTarget) => setReview(t) }
   };
 }
 export type AssignmentsController = ReturnType<typeof useAssignmentsController>;

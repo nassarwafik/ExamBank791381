@@ -87,7 +87,7 @@ export default function AssignmentsPanel(props:Props){
   <ExtendDialog student={x.extendStudent} assignment={d.item} busy={c.busy} value={x.extendValue} onValue={x.setExtendValue} onClose={x.closeExtend} onSave={x.saveExtend} willClip={x.willClip} fmt={fmt}/>
   <PurgeDialog item={x.purgeFor} title={x.purgeTitle} onTitle={x.setPurgeTitle} busy={c.busy} onConfirm={x.confirmPurge} onClose={x.closePurge}/>
   {x.confirmDialog}
-  {c.review.target&&d.item&&<AssignmentReview token={c.token} assignmentId={d.item.assignmentId} studentId={c.review.target.studentId} initialAttempt={c.review.target.attemptNumber} onClose={c.review.close} onSaved={d.reload}/>}
+  {c.review.target&&d.item&&<AssignmentReview token={c.token} assignmentId={d.item.assignmentId} studentId={c.review.target.studentId} initialAttempt={c.review.target.attemptNumber} onClose={c.review.close} onSaved={d.reload} nav={c.review.nav} onGo={c.review.go}/>}
   {k.preview&&createPortal(<ExamPreview exam={k.preview.exam} onClose={k.closePreview}/>,document.body)}
  </section>;
 }
