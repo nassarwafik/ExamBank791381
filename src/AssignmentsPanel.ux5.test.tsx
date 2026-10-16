@@ -173,25 +173,38 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     expect(screen.queryByRole("dialog")).toBeNull();                                                  // NOT a dialog
     expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);   // 21G.2: every class by default                                     // list still visible
     expect(within(composer).getByRole("button", { name: "امتحاناتي" }).getAttribute("aria-pressed")).toBe("true");
-    expect(Array.from((within(composer).getByLabelText("الصف") as HTMLSelectElement).options).map(o => o.value)).toEqual(["", "c1", "c2"]); // active classes only
-    const createBtn = within(composer).getByRole("button", { name: "إنشاء الواجب" }) as HTMLButtonElement;
-    expect(createBtn.disabled).toBe(true);
+    // Phase 21G.6 — the wizard: «التالي» waits for the step's content; the stepper and its hint name where the teacher is.
+    expect(within(composer).getByRole("button", { name: /المحتوى/ }).getAttribute("aria-current")).toBe("step");
+    const next = () => within(composer).getByRole("button", { name: "التالي" }) as HTMLButtonElement;
+    expect(next().disabled).toBe(true);
     fireEvent.change(within(composer).getByLabelText("اختيار الامتحان"), { target: { value: "exams/e1.json" } });
     await within(composer).findByText("4 سؤال · 40 علامة");
     expect(posts("/api/saved-exams")).toEqual([{ action: "load", blobName: "exams/e1.json" }]);
     expect((within(composer).getByLabelText("عنوان الواجب") as HTMLInputElement).value).toBe("امتحان محفوظ");
+    fireEvent.click(next());                                                                          // → الصفوف
+    expect(document.activeElement).toBe(within(composer).getByRole("heading", { level: 3, name: "الصفوف" }));
+    expect(within(composer).getAllByRole("checkbox").map(b => b.getAttribute("aria-label") || b.parentElement?.textContent)).toEqual(["كل الصفوف", "الحادي عشر · 11", "العاشر · 10"]);   // active classes only
+    expect((within(composer).getByRole("checkbox", { name: /الحادي عشر/ }) as HTMLInputElement).checked).toBe(true);   // the first class is chosen by default
+    fireEvent.click(next());                                                                          // → المواعيد
     fireEvent.change(within(composer).getByLabelText("يفتح في"), { target: { value: "2026-04-01T08:00" } });
     // Phase 21G.0 — a deadline before the opening time is caught in place and blocks the create.
     fireEvent.change(within(composer).getByLabelText("آخر موعد"), { target: { value: "2026-03-30T10:00" } });
     expect(within(composer).getByRole("alert").textContent).toBe("آخر موعد يجب أن يكون بعد موعد الفتح.");
     fireEvent.change(within(composer).getByLabelText("عدد المحاولات"), { target: { value: "2" } });
-    expect(createBtn.disabled).toBe(true);
+    expect(next().disabled).toBe(true);                                                               // the blocking window holds the step
+    expect(within(composer).getByRole("status", { name: "ما يمنع المتابعة" }).textContent).toContain("آخر موعد يجب أن يكون بعد موعد الفتح.");
     fireEvent.change(within(composer).getByLabelText("آخر موعد"), { target: { value: "2026-04-05T10:00" } });
     expect(within(composer).queryByRole("alert")).toBeNull();
     fireEvent.change(within(composer).getByLabelText("عدد المحاولات"), { target: { value: "2" } });
     fireEvent.change(within(composer).getByLabelText("مدة المحاولة (بالدقائق)"), { target: { value: "45" } });
+    fireEvent.click(next());                                                                          // → القواعد
     // Phase 21G.0 — a new assignment starts as a DRAFT (students see nothing until the teacher publishes it).
     expect((within(composer).getByLabelText("نشر مباشرة") as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(next());                                                                          // → المراجعة
+    expect(within(composer).getByText("امتحان محفوظ · 4 سؤال")).toBeTruthy();
+    expect(within(composer).getByText("الحادي عشر (نسخة واحدة)")).toBeTruthy();
+    expect(within(composer).queryByRole("button", { name: "التالي" })).toBeNull();
+    const createBtn = within(composer).getByRole("button", { name: "إنشاء الواجب" }) as HTMLButtonElement;
     expect(createBtn.disabled).toBe(false);
     fireEvent.click(createBtn);
     await screen.findByText("✓ تم إنشاء الواجب من الامتحان المختار.");
@@ -245,7 +258,7 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     await waitFor(() => expect(document.querySelector(".sb-preview-overlay")).toBeNull());
     fireEvent.change(within(composer).getByLabelText("بحث"), { target: { value: "" } });
     expect(within(libList).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(composer).getByRole("button", { name: "إنشاء الواجب" }).hasAttribute("disabled")).toBe(false);
+    expect(within(composer).getByRole("button", { name: "التالي" }).hasAttribute("disabled")).toBe(false);   // content + title chosen → the wizard may go on
   });
 });
 
@@ -603,8 +616,13 @@ describe("UX-5 master-scope invariant — a visible AssignmentDetail always belo
     fireEvent.change(within(toolbar()).getByLabelText("الصف"), { target: { value: "c2" } });
     fireEvent.click(within(toolbar()).getByRole("button", { name: /^المؤرشفة/ }));
     fireEvent.change(within(toolbar()).getByLabelText("بحث"), { target: { value: "zzz" } });
-    expect(screen.getByRole("region", { name: "إنشاء واجب جديد" })).toBeTruthy();
-    expect((within(screen.getByRole("region", { name: "إنشاء واجب جديد" })).getByLabelText("الصف") as HTMLSelectElement).value).toBe("c1"); // composer target untouched
+    const composer = screen.getByRole("region", { name: "إنشاء واجب جديد" });
+    expect(composer).toBeTruthy();
+    fireEvent.change(within(composer).getByLabelText("اختيار الامتحان"), { target: { value: "exams/e1.json" } });
+    await within(composer).findByText("4 سؤال · 40 علامة");
+    fireEvent.click(within(composer).getByRole("button", { name: "التالي" }));
+    expect((within(composer).getByRole("checkbox", { name: /الحادي عشر/ }) as HTMLInputElement).checked).toBe(true);   // composer target untouched by the list's class filter (now c2)
+    expect((within(composer).getByRole("checkbox", { name: /العاشر/ }) as HTMLInputElement).checked).toBe(false);
   });
 
   it("authoritative mutation: archiving the selected current assignment removes its row AND its detail; no detached opener is focused; no results request", async () => {

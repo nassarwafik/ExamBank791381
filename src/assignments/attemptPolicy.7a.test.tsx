@@ -16,7 +16,7 @@ function composer(over: Partial<AssignmentComposerProps> = {}) {
     headingRef: { current: null }, onClose: vi.fn(), busy: false, examLoading: false, sourceMode: "mine", onSourceMode: vi.fn(), sourceExam: null, sourceCount: 0,
     currentExam: null, hasCurrent: false, savedExams: [], examSource: "", onChooseExam: vi.fn(), libraryLoading: false, libraryItems: [], libraryCategories: [],
     librarySearch: "", onLibrarySearch: vi.fn(), libraryCategory: "", onLibraryCategory: vi.fn(), librarySelectedId: "", onChooseLibraryItem: vi.fn(), onPreview: vi.fn(),
-    previewBusyId: "", copyBusyId: "", activeClasses: [], classId: "", onClassId: vi.fn(), title: "", onTitle: vi.fn(), instructions: "", onInstructions: vi.fn(),
+    previewBusyId: "", copyBusyId: "", activeClasses: [], classIds: [], onToggleClass: vi.fn(), onAllClasses: vi.fn(), initialStep: "rules", title: "", onTitle: vi.fn(), instructions: "", onInstructions: vi.fn(),
     openAt: "", onOpenAt: vi.fn(), dueAt: "", onDueAt: vi.fn(), maxAttempts: 1, onMaxAttempts: vi.fn(), durationMinutes: 0, onDurationMinutes: vi.fn(),
     attemptPolicy: "continuous", onAttemptPolicy: vi.fn(), publish: true, onPublish: vi.fn(), canCreate: false, onCreate: vi.fn(), ...over
   } as unknown as AssignmentComposerProps;

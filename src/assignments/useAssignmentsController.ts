@@ -13,6 +13,7 @@ import { assignmentsApi, toLocalInput } from "./assignmentsApi";
 import { matchesMasterScope, normalizeQuery, gradebookRows, rowGrading, sortAnalysisQuestions, summarizeAnalysis, drillViewFor, type MasterScope } from "./assignmentsView";
 import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
 import { studentsCount, type PageTab } from "./assignmentPage";
+import { copiesCount } from "./assignmentWizard";
 import { useAssignmentComposer } from "./useAssignmentComposer";
 import { reviewNav, type ReviewTarget } from "./reviewNav";
 import { normalizeResultsRelease, type ResultsRelease } from "./resultsRelease";
@@ -100,6 +101,9 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     const el = typeof document !== "undefined" ? document.activeElement : null;
     composerOpenerRef.current = el instanceof HTMLElement ? el : null;
     setError(""); setNotice(""); setMode("composer");
+    // 21G.6 — a wizard opened after every chosen class got its copy starts on the first class again (on opening, never behind the
+    // teacher's back while the wizard is open).
+    if (!composer.fields.classIds.length && active[0]) composer.fields.setClassIds([active[0].classId]);
   }
   function closeComposer() {
     // The opener is disabled while the composer is open, so focus is returned after the mode flips (effect below).
@@ -115,15 +119,31 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   }, [mode, composerHeadingRef]);
   useEffect(() => { if (mode === "list" && resultsFor && focusDetailPending.current) { focusDetailPending.current = false; detailHeadingRef.current?.focus(); } }, [mode, resultsFor, detailHeadingRef]);
 
+  // Phase 21G.6 (D4) — one copy of the assignment per chosen class: the SAME create request as before, once per class, one after the
+  // other. Every class is reported; a class that failed stays chosen (a class that succeeded is removed from the selection, so a
+  // retry can never create a second copy there) and the wizard stays open on its review step.
   async function create() {
-    const f = composer.fields, sourceExam = composer.source.sourceExam;
-    if (busy || !f.classId || !f.title.trim() || !sourceExam || !examHasQuestions(sourceExam) || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;
+    const f = composer.fields, sourceExam = composer.source.sourceExam, ids = [...f.classIds];
+    if (busy || !ids.length || !f.title.trim() || !sourceExam || !examHasQuestions(sourceExam) || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;
+    const nameOf = (id: string) => active.find(c => c.classId === id)?.name || id;
+    const body = (classId: string) => JSON.stringify({ action: "create", classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, resultsRelease: f.resultsRelease, publish: f.publish, examSnapshot: sourceExam });
     setBusy(true); setError(""); setNotice("");
+    const created: Item[] = [], failed: { id: string; error: string }[] = [];
     try {
-      const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ action: "create", classId: f.classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, resultsRelease: f.resultsRelease, publish: f.publish, examSnapshot: sourceExam }) });
-      setItems(x => [r.assignment, ...x]); void loadProgress(); setNotice(r.assignment?.source?.revisionNumber ? "✓ تم إنشاء الواجب من الإصدار المنشور رقم " + r.assignment.source.revisionNumber + " (إدارة النشر) — النسخة المنشورة مثبّتة لهذا الواجب." : "✓ تم إنشاء الواجب من الامتحان المختار.");
-      closeComposer();
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر إنشاء الواجب."); } finally { setBusy(false); }
+      for (const id of ids) {
+        try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: body(id) }); created.push(r.assignment); setItems(x => [r.assignment, ...x]); f.setClassIds(x => x.filter(y => y !== id)); }
+        catch (e) { failed.push({ id, error: e instanceof Error ? e.message : "تعذر إنشاء الواجب." }); }
+      }
+    } finally { setBusy(false); }
+    if (created.length) void loadProgress();
+    if (created.length) {
+      const one = created[0];
+      setNotice(ids.length === 1
+        ? (one?.source?.revisionNumber ? "✓ تم إنشاء الواجب من الإصدار المنشور رقم " + one.source.revisionNumber + " (إدارة النشر) — النسخة المنشورة مثبّتة لهذا الواجب." : "✓ تم إنشاء الواجب من الامتحان المختار.")
+        : "✓ تم إنشاء " + copiesCount(created.length) + " من الواجب: " + created.map(a => a.className || nameOf(a.classId)).join("، ") + ".");
+    }
+    if (failed.length) setError("تعذر إنشاء الواجب لـ " + failed.map(x => nameOf(x.id) + " (" + x.error + ")").join("، ") + (created.length ? ". الصفوف الأخرى أُنشئت؛ أعد المحاولة للصفوف المتبقية." : "."));
+    else closeComposer();
   }
   async function action(item: Item, body: Record<string, unknown>) { setBusy(true); try { const r = await api<{ assignment: Item }>("/api/assignments", { method: "POST", body: JSON.stringify({ assignmentId: item.assignmentId, ...body }) }); reconcileMutated(r.assignment); if (body.action === "setStatus") void loadProgress(); return true; } catch (e) { setError(e instanceof Error ? e.message : "تعذر تنفيذ العملية."); return false; } finally { setBusy(false); } }
   // Phase 21G.5 (D2) — the results release: the mode (any time), and in «يدويًا» mode publishing / withdrawing (confirmed: it
@@ -402,7 +422,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const extendEffDue = extendStudent ? (extendStudent.dueAtOverride || resultsFor?.dueAt || "") : "";
   const willClip = !!(extendValue && extendEffDue && new Date(extendValue).getTime() > new Date(extendEffDue).getTime());
   const f = composer.fields, src = composer.source;
-  const canCreate = !busy && !src.examLoading && !!f.classId && !!f.title.trim() && !!src.sourceExam && src.sourceCount > 0 && !windowBlocks(composer.windowIssues);
+  const canCreate = !busy && !src.examLoading && f.classIds.length > 0 && !!f.title.trim() && !!src.sourceExam && src.sourceCount > 0 && !windowBlocks(composer.windowIssues);
 
   return {
     token, busy, loading, error, notice, mode,

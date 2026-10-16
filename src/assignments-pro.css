@@ -381,3 +381,29 @@
 .eb-release-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--eb-space-2) var(--eb-space-3); margin-block-start: var(--eb-space-3); }
 .eb-release-mode { display: flex; flex-direction: column; gap: var(--eb-space-1); color: var(--eb-muted); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); }
 .eb-release-mode select { min-block-size: 40px; padding: 0 var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface); color: var(--eb-text); font: inherit; }
+
+/* Phase 21G.6 — the creation wizard: a stepper (a numbered, current / done button list — no tab roles), one step at a time, the
+   class picker (one copy per class) and the review. Phone: the steps wrap two per row and the footer buttons grow to full width. */
+.eb-wizard-steps { list-style: none; margin: var(--eb-space-3) 0 var(--eb-space-1); padding: 0; display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
+.eb-wizard-step { display: inline-flex; align-items: center; gap: var(--eb-space-2); min-block-size: 40px; padding: 0 var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-pill); background: var(--eb-surface); color: var(--eb-muted); font: inherit; font-weight: var(--eb-fw-semibold); cursor: pointer; }
+.eb-wizard-step:disabled { opacity: .5; cursor: default; }
+.eb-wizard-step:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-wizard-step.is-current { background: var(--eb-navy); border-color: var(--eb-navy); color: var(--eb-surface); }
+.eb-wizard-step.is-done { border-color: var(--eb-success); color: var(--eb-success-tx); }
+.eb-wizard-step-no { inline-size: 22px; block-size: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: var(--eb-fs-12); background: var(--eb-surface-2); color: var(--eb-text-heading); }
+.eb-wizard-step.is-current .eb-wizard-step-no { background: var(--eb-surface); }
+.eb-wizard-hint { margin: 0 0 var(--eb-space-3); }
+.eb-wizard-issues { margin: 0; padding: var(--eb-space-2) var(--eb-space-4); list-style: disc inside; border: 1px solid var(--eb-warn); border-radius: var(--eb-r); background: var(--eb-warn-bg); color: var(--eb-warn-tx); font-size: var(--eb-fs-13); }
+.eb-class-picker { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--eb-space-2); min-inline-size: 0; }
+.eb-class-picker legend { padding: 0; margin-block-end: var(--eb-space-2); font-size: var(--eb-fs-13); }
+.eb-class-options { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--eb-space-2); }
+.eb-class-option { display: flex; align-items: center; gap: var(--eb-space-2); min-block-size: 48px; padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r); background: var(--eb-surface); cursor: pointer; }
+.eb-class-option.is-selected { border-color: var(--eb-primary); background: var(--eb-primary-050); }
+.eb-class-option input { inline-size: 18px; block-size: 18px; margin: 0; accent-color: var(--eb-primary); }
+.eb-wizard-review > div { background: var(--eb-surface-2); }
+.eb-source-search input { min-block-size: 40px; padding: 0 var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface); color: var(--eb-text); font: inherit; font-weight: var(--eb-fw-regular); }
+@media (max-width: 767px) {
+  .eb-wizard-step { flex: 1 1 calc(50% - var(--eb-space-2)); justify-content: flex-start; }
+  .eb-assign-composer .eb-composer-foot { flex-wrap: wrap; }
+  .eb-assign-composer .eb-composer-foot .eb-button { flex: 1 1 auto; }
+}
