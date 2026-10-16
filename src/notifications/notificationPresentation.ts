@@ -40,6 +40,11 @@ export function presentNotification(item: NotificationItem): NotificationPresent
       return { title: "تمت إعادة فتح الواجب", preview: "أعاد المعلم فتح " + (quoted(item.assignmentTitle) || "الواجب") + " لك", icon: "assignment" };
     case "assignment_retry_granted":
       return { title: "محاولة إضافية", preview: "منحك المعلم محاولة إضافية في " + (quoted(item.assignmentTitle) || "الواجب"), icon: "assignment" };
+    case "assignment_reminder": {
+      // Phase 21G.7 — the teacher's reminder to a student who has not submitted yet.
+      const due = formatDue(item.dueAt);
+      return { title: "تذكير من المعلم", preview: "لم تسلّم " + (quoted(item.assignmentTitle) || "الواجب") + " بعد" + (due ? " · آخر موعد " + due : ""), icon: "deadline" };
+    }
     case "attempt_time_extended":
       return { title: "تم تمديد وقت محاولتك", preview: quoted(item.assignmentTitle), icon: "deadline" };
     case "learning_module_published":

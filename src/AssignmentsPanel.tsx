@@ -17,7 +17,9 @@ import AssignmentsHomeKpis from "./assignments/AssignmentsHomeKpis";
 import AssignmentOverview from "./assignments/AssignmentOverview";
 import {TIME_FILTERS} from "./assignments/assignmentsHome";
 import {downloadCsv} from "./reports/csv";
-import {gradebookCsvRows,exportFilename} from "./teacher/teacherExports";
+import {downloadXlsx} from "./reports/xlsx";
+import {printReport} from "./reports/printReport";
+import {gradebookCsvRows,gradebookPrintReport,exportFilename,GRADEBOOK_HEADER_ROW} from "./teacher/teacherExports";
 
 // Phase 21G.1 — the assignments workspace VIEW. Every piece of state, every request and every rule lives in
 // useAssignmentsController (and its composer hook / pure view helpers); this component only lays the areas out.
@@ -73,8 +75,10 @@ export default function AssignmentsPanel(props:Props){
      search={g.search} onSearch={g.setSearch} filter={g.filter} onFilter={g.setFilter} sort={g.sort} onSort={g.setSort}
      onReview={g.review} onGrant={g.grant} onReopen={g.reopen} onExtend={g.extend} onDeadline={g.deadline} onEndAttempt={g.endAttempt} fmt={fmt}
      codingSummary={g.codingSummary} codingTotals={g.codingTotals} onBulkCodingRetry={g.bulkCodingRetry}
-     selection={{selected:g.selected,onToggle:g.toggleSelected,onToggleAll:g.toggleAllSelected,onClear:g.clearSelection,onBulkGrant:g.bulkGrant,onBulkDeadline:g.openBulkDeadline}}
-     onExportCsv={()=>{if(d.item)downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",d.item.title),gradebookCsvRows(d.item,g.results,rowGrading))}}/>
+     selection={{selected:g.selected,onToggle:g.toggleSelected,onToggleAll:g.toggleAllSelected,onClear:g.clearSelection,onBulkGrant:g.bulkGrant,onBulkDeadline:g.openBulkDeadline,onRemind:g.remindSelected}} onRemindAll={g.remindAll}
+     onExportCsv={()=>{if(d.item)downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",d.item.title),gradebookCsvRows(d.item,g.results,rowGrading))}}
+     onExportXlsx={()=>{if(d.item)downloadXlsx(exportFilename("TadrisPlus-سجل-العلامات",d.item.title).replace(/\.csv$/,""),gradebookCsvRows(d.item,g.results,rowGrading),{sheetName:"سجل العلامات",rtl:true,boldRows:[GRADEBOOK_HEADER_ROW]})}}
+     onPrint={()=>{if(d.item&&!printReport(gradebookPrintReport(d.item,g.results,rowGrading,d.stats)))c.reportError("تعذر فتح نافذة الطباعة في هذا المتصفح.")}}/>
    </AssignmentDetail>}
   </div>
 

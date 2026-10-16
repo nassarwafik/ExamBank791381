@@ -106,6 +106,30 @@ async function handler(request,deps={},obs=null){
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
   {const tenant=tenantOf(auth.user);if(tenant){const target=await dl(c,AP+String(b.assignmentId||"")+".json");if(target&&!(await classAccessible(n=>dl(c,n),target.classId,tenant)))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}}}}
 
+  // ── Phase 21G.7 — remindStudents: a personal «تذكير» notification to every chosen class member (all of them when no studentIds
+  // are given) who has NOT submitted yet and can still submit (the assignment is published and open for them, by the same
+  // timerState as their own page). One reminder per student per assignment per day: the dedupe key carries the date, so a
+  // repeated click the same day records nothing new. Notifications are secondary — a failure is reported, never thrown. ──
+  if(resultAction==="remindStudents"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   const a=await dl(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+   if(normalizeAssignmentStatus(a)!=="published")return {status:409,jsonBody:{ok:false,error:"لا يمكن تذكير الطلاب إلا بواجب منشور."}};
+   if(b.studentIds!==undefined&&(!Array.isArray(b.studentIds)||b.studentIds.some(x=>!SAFE_ID.test(String(x)))))return {status:400,jsonBody:{ok:false,error:"studentIds غير صالحة."}};
+   const wanted=Array.isArray(b.studentIds)?new Set(b.studentIds.map(String)):null;
+   const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)&&(!wanted||wanted.has(String(x.userId))));
+   const subs=await mapConcurrent(users,getReadConcurrency(),u=>dl(c,SP+id+"/"+u.userId+".json"));
+   const nowMs=Date.now(),day=new Date(nowMs).toISOString().slice(0,10);
+   let reminded=0,alreadyToday=0,notNeeded=0,failed=0;
+   for(let i=0;i<users.length;i++){
+    const u=users[i],s=subs[i],attempts=Array.isArray(s?.attempts)?s.attempts:[];
+    const ts=timerState(a,s||defaultSub(id,u.userId,a,u),nowMs);
+    if(attempts.length>0||ts.isClosed||ts.availability==="scheduled"){notNeeded++;continue}
+    const r=await recordEventSafely(c,{scope:"student",studentId:u.userId,type:"assignment_reminder",dedupeKey:"reminder:"+id+":"+u.userId+":"+day,data:{assignmentId:id,assignmentTitle:a.title,dueAt:ts.effectiveDueAt||a.dueAt||""}},deps,obs);
+    if(r&&r.recorded)reminded++;else if(r&&r.duplicate)alreadyToday++;else failed++;
+   }
+   await rec(c,{actor:auth.user?.sub,action:"assignment.remindStudents",targetType:"assignment",targetId:id,targetLabel:String(a.title||""),details:{assignmentId:id,reminded,alreadyToday,notNeeded,failed}});
+   return {status:200,jsonBody:{ok:true,reminded,alreadyToday,notNeeded,failed}};
+  }
   // ── allowRetry — ensure the student has at least one unused NEXT attempt. Never deletes/resets a
   // completed attempt, never overwrites grades, never touches an active attempt (B2B #1/#2). ──
   if(resultAction==="allowRetry"){

@@ -10,7 +10,7 @@ export type BadgeCount = { total: number; capped: boolean };
 
 type Common = { id: string; createdAt: string; unread: boolean };
 export type MessageNotification = Common & { type: "direct" | "announcement"; senderDisplayName: string; preview: string };
-export type AssignmentEventType = "assignment_published" | "assignment_deadline_extended" | "assignment_reopened" | "assignment_retry_granted" | "attempt_time_extended";
+export type AssignmentEventType = "assignment_published" | "assignment_deadline_extended" | "assignment_reopened" | "assignment_retry_granted" | "attempt_time_extended" | "assignment_reminder";
 export type AssignmentNotification = Common & { type: AssignmentEventType; assignmentId: string; assignmentTitle: string; dueAt?: string; attemptNumber?: number };
 export type LearningMaterialNotification = Common & { type: "learning_module_published"; courseId: string; courseTitle: string; moduleId: string; moduleTitle: string };
 export type ReviewNotification = Common & { type: "assignment_reviewed"; assignmentId: string; assignmentTitle: string; becameFinal: boolean; scoreChanged: boolean; feedbackChanged: boolean; finalized: boolean; percentage: number | null; automatic?: boolean; /** FEATURE-004 — the updated grade (own student only); null for a feedback-only review or an old event. */ score?: number | null; totalMarks?: number | null };
@@ -32,7 +32,7 @@ export function isAssignmentRoute(item: NotificationItem): item is AssignmentNot
   return "assignmentId" in item;
 }
 
-const ASSIGNMENT_TYPES: ReadonlySet<string> = new Set(["assignment_published", "assignment_deadline_extended", "assignment_reopened", "assignment_retry_granted", "attempt_time_extended"]);
+const ASSIGNMENT_TYPES: ReadonlySet<string> = new Set(["assignment_published", "assignment_deadline_extended", "assignment_reopened", "assignment_retry_granted", "attempt_time_extended", "assignment_reminder"]);
 const REACTIONS: ReadonlySet<string> = new Set(["heart", "clap", "cheer", "fire"]);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
