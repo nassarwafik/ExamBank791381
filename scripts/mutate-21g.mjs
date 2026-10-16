@@ -4,7 +4,7 @@
 // that guard it, and is KILLED only if a test fails because of it. A timeout is reported as TIMEOUT (never as killed). Every mutated
 // file is restored byte-for-byte and hash-verified after each mutant — also when the run throws or the process is interrupted.
 //
-//   node scripts/mutate-21g.mjs <campaign> [ids]   campaigns: g0, g1, … (see CAMPAIGNS below); ids = comma-separated mutant ids to
+//   node scripts/mutate-21g.mjs <campaign> [ids]   campaigns: g0, g1, g2, … (see CAMPAIGNS below); ids = comma-separated mutant ids to
 //                                                  re-run in isolation (e.g. a TIMEOUT, or a survivor after its test was fixed)
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -25,7 +25,44 @@ const BQ = "api/src/functions/bank-questions.js";
 const VIEW = "src/assignments/assignmentsView.ts", CTRL = "src/assignments/useAssignmentsController.ts", COMPOSER = "src/assignments/useAssignmentComposer.ts";
 const G1_UNIT = ["src/assignments/assignmentsView.21g1.test.ts", "src/assignments/assignmentsApi.21g1.test.ts"];
 const G1_PANEL = ["src/AssignmentsPanel.ux5.test.tsx", "src/AssignmentsPanel.drill.12b.test.tsx", "src/AssignmentsPanel.lifecycle.test.tsx", "src/AssignmentsPanel.export.21e2.test.tsx", "src/AssignmentsPanel.timing5a.test.tsx"];
+const CACHE = "api/src/lib/assignment-summary-cache.js", PROG = "api/src/lib/assignment-progress.js", HOME = "src/assignments/assignmentsHome.ts";
+const G2_CACHE = ["api/tests/assignment-summary-cache-21g2.test.js"], G2_PROG = ["api/tests/assignment-progress-21g2.test.js"];
+const G2_HOME = ["src/assignments/assignmentsHome.21g2.test.ts", "src/AssignmentsPanel.home.21g2.test.tsx"];
 export const CAMPAIGNS = {
+  g2: [
+    { id: "G2-M1", what: "a cached summary is served without checking its ETag", file: CACHE,
+      find: "if (e.etag && hit && hit.etag === e.etag && hit.summary && typeof hit.summary === \"object\") next[id] = hit;", replace: "if (hit && hit.summary && typeof hit.summary === \"object\") next[id] = hit;", tests: G2_CACHE },
+    { id: "G2-M2", what: "a listing without ETags trusts the cache", file: CACHE,
+      find: "if (e.etag && hit && hit.etag === e.etag", replace: "if (hit && (!e.etag || hit.etag === e.etag)", tests: G2_CACHE },
+    { id: "G2-M3", what: "an older summary version is trusted", file: CACHE,
+      find: " && value.summaryVersion === summaryVersion", replace: "", tests: G2_CACHE },
+    { id: "G2-M4", what: "a cache write failure fails the list", file: CACHE,
+      find: "    catch (err) { if (typeof deps.onCacheError === \"function\") { try { deps.onCacheError(err); } catch { /* never fail a read */ } } }\n  }\n  return { summaries", replace: "    catch (err) { throw err; }\n  }\n  return { summaries", tests: G2_CACHE },
+    { id: "G2-M5", what: "the cache is never written (every list downloads everything)", file: CACHE,
+      find: "  if (stale.length || pruned || cached.outdated) {", replace: "  if (false) {", tests: G2_CACHE },
+    { id: "G2-M6", what: "pending review is counted as graded", file: PROG,
+      find: "if (g === \"pendingReview\") pendingReview++; else if (g === \"final\") graded++;", replace: "if (g === \"final\" || g === \"pendingReview\") graded++;", tests: G2_PROG },
+    { id: "G2-M7", what: "the average covers graded attempts only (differs from the gradebook)", file: PROG,
+      find: "submitted++; sum += Number(latest.percentage || 0);", replace: "submitted++; if (deriveGradingStatus(latest) === \"final\") sum += Number(latest.percentage || 0);", tests: G2_PROG },
+    { id: "G2-M8", what: "live attempts are counted only for students who never submitted", file: PROG,
+      find: "    if (activeAttemptOf(s)) active++;", replace: "    if (activeAttemptOf(s) && !latest) active++;", tests: G2_PROG },
+    { id: "G2-M9", what: "the progress read covers every teacher's classes", file: "api/src/functions/assignment-progress.js",
+      find: "const classes = filterAccessible(allClasses, tenantOf(auth.user));", replace: "const classes = allClasses;", tests: G2_PROG },
+    { id: "G2-M10", what: "closing soon starts at the deadline (never shown)", file: HOME,
+      find: "if (due !== null && due - now <= CLOSING_SOON_MS) return \"closingSoon\";", replace: "", tests: G2_HOME },
+    { id: "G2-M11", what: "«مفتوحة» leaves out the ones closing soon", file: HOME,
+      find: "return f === \"open\" ? s === \"open\" || s === \"closingSoon\" : s === f;", replace: "return s === f;", tests: G2_HOME },
+    { id: "G2-M12", what: "an unavailable progress read is shown as zero", file: HOME,
+      find: "progressKnown: progress !== null };", replace: "progressKnown: true };", tests: G2_HOME },
+    { id: "G2-M13", what: "the submission rate counts closed assignments too", file: HOME,
+      find: "if (s === \"open\" || s === \"closingSoon\") { open++; if (s === \"closingSoon\") closingSoon++; if (p) { submitted += p.submitted; expected += p.expected; } }", replace: "if (s === \"open\" || s === \"closingSoon\") { open++; if (s === \"closingSoon\") closingSoon++; } if (p) { submitted += p.submitted; expected += p.expected; }", tests: G2_HOME },
+    { id: "G2-M14", what: "the time filter is not part of the master scope (a hidden detail stays open)", file: "src/assignments/assignmentsView.ts",
+      find: "  if (!s.showArchived && s.time && s.time !== \"all\" && !matchesTimeFilter(x, s.time, s.now ?? 0)) return false;\n", replace: "", tests: G2_HOME },
+    { id: "G2-M15", what: "the list defaults to the first class again", file: "src/assignments/useAssignmentsController.ts",
+      find: "  const effectiveFilter = filterClassId;", replace: "  const effectiveFilter = filterClassId || (active[0]?.classId || \"\");", tests: G2_HOME },
+    { id: "G2-M16", what: "publishing does not re-read the progress", file: "src/assignments/useAssignmentsController.ts",
+      find: " if (body.action === \"setStatus\") void loadProgress();", replace: "", tests: G2_HOME }
+  ],
   g1: [
     { id: "G1-M1", what: "the archived view and the current view are swapped", file: VIEW,
       find: 'if (s.showArchived ? x.status !== "archived" : x.status === "archived") return false;', replace: 'if (s.showArchived ? x.status === "archived" : x.status !== "archived") return false;', tests: [...G1_UNIT, ...G1_PANEL] },

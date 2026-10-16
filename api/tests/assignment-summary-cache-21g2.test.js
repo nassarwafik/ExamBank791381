@@ -81,6 +81,18 @@ describe("21G.2 light assignment list", () => {
     }
   });
 
+  it("summaries cached by an older summary version are recomputed even when their ETags still match", async () => {
+    const s = await setup();
+    const id = await s.create("واجب 1");
+    await s.list();
+    const cache = s.mem.getJson(CACHE_NAME);
+    cache.summaryVersion = 0;
+    cache.entries[id] = { ...cache.entries[id], summary: { assignmentId: id, title: "شكل قديم" } };    // same ETag, old shape
+    s.mem.setJson(CACHE_NAME, cache);
+    const [row] = await s.list();
+    expect(row).toMatchObject({ assignmentId: id, title: "واجب 1", status: "draft", questionCount: 1 });
+  });
+
   it("a forged cache entry for an ETag the document does not have is never served", async () => {
     const s = await setup();
     const id = await s.create("واجب 1");
