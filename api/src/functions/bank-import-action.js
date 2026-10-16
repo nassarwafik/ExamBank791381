@@ -5,6 +5,8 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, listJson, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { computeDuplicateCandidates } = require("../lib/duplicate-detection");
 const { isValidBankSection } = require("../lib/section-resolver");
+const { tenantOf } = require("../lib/teacher-tenancy");
+const { bankEntryVisible, bankOwnerStamp } = require("../lib/bank-tenancy");
 // The canonical multiField builder (fields / wordBank / exactSequence answer) is the one the Exam Bank editor
 // writes with — reused here so an imported blank question is stored in exactly the shape a hand-edited one has.
 const { validateQuestionInput, normalizeInput } = require("./bank-questions");
@@ -32,12 +34,13 @@ function slugify(value) {
 // Loads every bank question's {sourceId, questionId, text} for duplicate scanning. The lightweight
 // index deliberately carries no question text, so this always reads the full sources/*.json
 // documents - acceptable given the bank's small size (~1930 questions across ~47 files).
-async function loadAllBankQuestionTexts(bankContainer) {
+// 21G.0 — duplicate candidates come only from the official bank and this teacher's own questions (another teacher's text never leaks).
+async function loadAllBankQuestionTexts(bankContainer, tenant = null) {
   const sourceDocuments = await listJson(bankContainer, "sources/");
   const flattened = [];
   for (const document of sourceDocuments) {
     for (const question of document.questions || []) {
-      if (question?.id && question?.text) {
+      if (question?.id && question?.text && bankEntryVisible(question, tenant)) {
         flattened.push({ sourceId: question.sourceId, questionId: question.id, text: question.text });
       }
     }
@@ -247,7 +250,8 @@ function toIndexEntry(bankQuestion, sourceId) {
     hasCLI: false,
     requiresCalculation: false,
     needsReview: bankQuestion.flags.requiresManualReview,
-    classificationConfidence: bankQuestion.classification.difficultyConfidence
+    classificationConfidence: bankQuestion.classification.difficultyConfidence,
+    ...(bankQuestion.ownerId ? { ownerId: bankQuestion.ownerId } : {})
   };
 }
 
@@ -278,7 +282,7 @@ app.http("bankImportAction", {
           return { status: 400, jsonBody: { ok: false, error: "questions[] is required for action=check." } };
         }
 
-        const bankQuestions = await loadAllBankQuestionTexts(bankContainer);
+        const bankQuestions = await loadAllBankQuestionTexts(bankContainer, tenantOf(auth.user));
         const results = questions.map(question => ({
           importedQuestionId: question.importedQuestionId,
           duplicates: computeDuplicateCandidates(question.text || "", bankQuestions)
@@ -317,10 +321,10 @@ app.http("bankImportAction", {
         const assetsContainer = getAssetsContainer();
         const bankQuestions = [];
         for (let index = 0; index < accepted.length; index += 1) {
-          bankQuestions.push(await toBankQuestion(accepted[index], sourceId, index + 1, assetsContainer));
+          bankQuestions.push({ ...(await toBankQuestion(accepted[index], sourceId, index + 1, assetsContainer)), ...bankOwnerStamp(tenantOf(auth.user)) });
         }
 
-        const sourceDocumentBody = JSON.stringify({ questions: bankQuestions, original: { importJobId, fileName } }, null, 2);
+        const sourceDocumentBody = JSON.stringify({ questions: bankQuestions, ...bankOwnerStamp(tenantOf(auth.user)), original: { importJobId, fileName } }, null, 2);
         await bankContainer.getBlockBlobClient(`sources/${sourceId}.json`).upload(
           sourceDocumentBody,
           Buffer.byteLength(sourceDocumentBody),
@@ -349,4 +353,4 @@ app.http("bankImportAction", {
 
 // Exported only for unit testing (the section-validation gate, the blank-structure derivation and the
 // pure question mapping); app.http's own route registration above is unaffected.
-module.exports = { partitionQuestionsBySectionValidity, countExplicitBlanks, deriveImportedBlankStructure, toBankQuestion };
+module.exports = { partitionQuestionsBySectionValidity, countExplicitBlanks, deriveImportedBlankStructure, toBankQuestion, toIndexEntry, loadAllBankQuestionTexts };

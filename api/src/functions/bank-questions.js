@@ -6,6 +6,8 @@ const { downloadJsonOrNull, listJson, mutateJsonWithRetry, isConcurrencyConflict
 const { recordAuditEvent } = require("../lib/audit-log");
 const { withObservability } = require("../lib/observability");
 const { presentationTypeFromFullQuestion } = require("../lib/bank-question-exam");
+const { tenantOf } = require("../lib/teacher-tenancy");
+const { bankEntryVisible, bankOwnerStamp } = require("../lib/bank-tenancy");
 
 /*
  * UX-6c — Question Bank management (list / create / update / delete) over the EXISTING bank store:
@@ -37,6 +39,8 @@ const { presentationTypeFromFullQuestion } = require("../lib/bank-question-exam"
  *   delete  — removes whichever half still exists (source and/or index); 404 only when neither has the question.
  * locate() also self-heals: an index entry whose source no longer holds the question is dropped from the index.
  * Concurrency: every write goes through mutateJsonWithRetry (ETag-conditional upload with retries).
+ * Tenancy (21G.0, ../lib/bank-tenancy.js): a question a teacher creates carries `ownerId` (question + index entry); another teacher's
+ * question is never listed and is answered exactly like a missing one (404, the index is NOT healed for it). Official stays shared.
  */
 const BANK_CONTAINER = "bank";
 const INDEX_BLOB = "index/questions-index.json";
@@ -220,11 +224,14 @@ function toIndexEntry(question, sourceId, previous) {
     topic: cls.topic || "UNKNOWN", difficulty: cls.difficulty ?? null, familyKey: cls.familyKey || "",
     hasImage: (question.assets || []).length > 0, assetCount: (question.assets || []).length, reviewStatus: question.reviewStatus,
     secondaryTopics: cls.secondaryTopics || [], difficultyLabel: cls.difficultyLabel || "", hasCLI: previous?.hasCLI === true, requiresCalculation: previous?.requiresCalculation === true,
-    needsReview: question.flags?.requiresManualReview === true, classificationConfidence: cls.difficultyConfidence ?? null
+    needsReview: question.flags?.requiresManualReview === true, classificationConfidence: cls.difficultyConfidence ?? null,
+    ...(typeof question.ownerId === "string" && question.ownerId ? { ownerId: question.ownerId } : {})
   };
 }
 const bad = (status, error, extra) => ({ status, jsonBody: { ok: false, error, ...(extra || {}) } });
 const SKIP = Symbol("skip-write");
+// The ownership view of a stored question: its own stamp, else its index entry's (an import may stamp only one of them).
+const ownershipOf = (question, entry, sourceId) => ({ sourceId, examCode: question?.examCode ?? entry?.examCode, ownerId: question?.ownerId || entry?.ownerId });
 
 async function handler(request, deps = {}, obs = null) {
   const authFn = deps.requireBuilderAuth || requireBuilderAuth;
@@ -242,6 +249,7 @@ async function handler(request, deps = {}, obs = null) {
     if (!auth.ok) return auth.response;
     const bank = getBank();
     const actor = String(auth.user?.sub || auth.user?.userCode || "teacher");
+    const tenant = tenantOf(auth.user);
     const readIndex = async () => { const index = await dl(bank, INDEX_BLOB); return Array.isArray(index?.questions) ? index.questions : []; };
     const sourceBlob = sourceId => SOURCES_PREFIX + sourceId + ".json";
     // A mutation whose function returns SKIP leaves the blob untouched (no upload) — the reconciliation steps use it
@@ -280,6 +288,7 @@ async function handler(request, deps = {}, obs = null) {
         for (const question of Array.isArray(document?.questions) ? document.questions : []) {
           if (!question?.id) continue;
           const sourceId = question.sourceId || byId.get(String(question.id))?.sourceId || "";
+          if (!bankEntryVisible(ownershipOf(question, byId.get(String(question.id)), sourceId), tenant)) continue;
           rows.push(toRow(question, byId.get(String(question.id)), sourceId));
         }
       }
@@ -308,7 +317,12 @@ async function handler(request, deps = {}, obs = null) {
           if (hit) { stored = hit; sourceId = String(hit.sourceId || document.sourceId || ""); break; }
         }
       }
-      if (!stored || !sourceId) return { error: null, missing: true, entry, sourceId: "" };
+      if (!stored || !sourceId) {
+        // A dangling index entry of another teacher is not this teacher's to heal: report it as missing, touch nothing.
+        if (entry && !bankEntryVisible(ownershipOf(null, entry, String(entry.sourceId || "")), tenant)) return { error: bad(404, "السؤال غير موجود في بنك الأسئلة.") };
+        return { error: null, missing: true, entry, sourceId: "" };
+      }
+      if (!bankEntryVisible(ownershipOf(stored, entry, sourceId), tenant)) return { error: bad(404, "السؤال غير موجود في بنك الأسئلة.") };
       if (isOfficialSource(sourceId)) return { error: bad(403, "أسئلة البنك الرسمي للقراءة فقط ولا يمكن تعديلها أو حذفها من هنا.") };
       return { sourceId, entry, stored };
     };
@@ -327,7 +341,7 @@ async function handler(request, deps = {}, obs = null) {
         section: n.section, type: n.type, text: n.text, textHtml: n.textHtml, options: n.options, fields: n.fields, wordBank: n.wordBank, parts: [], answer: n.answer, assets: [],
         flags: { hasImage: false, hasOptions: n.flags.hasOptions, isChild: false, requiresManualReview: n.flags.requiresManualReview },
         classification: { topic: n.topic, secondaryTopics: [], difficulty: n.difficulty, difficultyLabel: "", difficultyReason: "teacher-entered in Exam Bank management", difficultyConfidence: null, familyKey: null, status: "classified" },
-        reviewStatus: "classified", createdBy: actor, createdAt: stamp, updatedAt: stamp
+        reviewStatus: "classified", ...bankOwnerStamp(tenant), createdBy: actor, createdAt: stamp, updatedAt: stamp
       };
       let question = fresh, alreadyStored = false;
       phase = "source";
@@ -336,7 +350,7 @@ async function handler(request, deps = {}, obs = null) {
         const existing = questions.find(q => String(q?.id) === id);
         if (existing) {
           // Retry of a create whose index write failed: the identical question is already stored → reconcile only.
-          if (contentKey(existing) !== contentKey(fresh)) throw Object.assign(new Error("duplicate id"), { code: "DUPLICATE_ID" });
+          if (contentKey(existing) !== contentKey(fresh) || String(existing.ownerId || "") !== String(fresh.ownerId || "")) throw Object.assign(new Error("duplicate id"), { code: "DUPLICATE_ID" });
           question = existing; alreadyStored = true;
           return SKIP;
         }

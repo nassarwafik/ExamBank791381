@@ -7,6 +7,8 @@ const {
   requireBuilderAuth,
   createSignedAssetParams
 } = require("../lib/builder-auth");
+const { tenantOf } = require("../lib/teacher-tenancy");
+const { visibleBankEntries } = require("../lib/bank-tenancy");
 const {
   filterEligibleCandidates
 } = require("../lib/exam-question-selection");
@@ -561,9 +563,11 @@ app.http("generateExam", {
         INDEX_BLOB
       );
 
-      const indexQuestions = Array.isArray(index.questions)
-        ? index.questions
-        : [];
+      // 21G.0 — a generated exam draws only on the official bank and this teacher's own questions.
+      const indexQuestions = visibleBankEntries(
+        Array.isArray(index.questions) ? index.questions : [],
+        tenantOf(auth.user)
+      );
 
       const selection = selectQuestions(
         indexQuestions,

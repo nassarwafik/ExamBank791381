@@ -5,6 +5,8 @@ const {
 const {
   requireBuilderAuth
 } = require("../lib/builder-auth");
+const { tenantOf } = require("../lib/teacher-tenancy");
+const { visibleBankEntries } = require("../lib/bank-tenancy");
 
 
 const BANK_CONTAINER = "bank";
@@ -162,10 +164,14 @@ app.http("bankSummary", {
         );
 
 
+      // 21G.0 — the summary counts only the official bank and this teacher's own questions.
       const questions =
-        Array.isArray(index.questions)
-          ? index.questions
-          : [];
+        visibleBankEntries(
+          Array.isArray(index.questions)
+            ? index.questions
+            : [],
+          tenantOf(auth.user)
+        );
 
 
       // ----------------------------------------------------

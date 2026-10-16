@@ -4,6 +4,8 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { withObservability } = require("../lib/observability");
 const { buildExamQuestion } = require("../lib/bank-question-exam");
 const { isBlobNotFound } = require("./question-bank-action");
+const { tenantOf } = require("../lib/teacher-tenancy");
+const { bankEntryVisible } = require("../lib/bank-tenancy");
 
 /*
  * Phase 13B — EXACT bank question retrieval for the Structured Builder's "إضافة من بنك الأسئلة" picker.
@@ -90,7 +92,8 @@ async function handler(request, deps = {}, obs = null) {
         if (!allSources) allSources = await ls(bank, SOURCES_PREFIX);
         for (const document of allSources) { const hit = findIn(document, id); if (hit) { stored = hit; sourceId = String(hit.sourceId || document.sourceId || ""); recoveredByScan = true; break; } }
       }
-      if (!stored) { missing.push(id); continue; }
+      // Another teacher's question (21G.0) is reported exactly like a missing one.
+      if (!stored || !bankEntryVisible({ sourceId, examCode: stored.examCode ?? entry?.examCode, ownerId: stored.ownerId || entry?.ownerId }, tenantOf(auth.user))) { missing.push(id); continue; }
       if (isUnsupported(stored)) { unsupported.push(id); continue; }
       // Classification authority: the index entry ONLY when the question was found where the index says it lives (the bank
       // UI's projection). An entry whose own source no longer holds the id is stale; a question recovered from another source
