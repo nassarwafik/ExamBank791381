@@ -52,7 +52,7 @@ export const CAMPAIGNS = {
     { id: "G1-M12", what: "the gradebook export uses the searched / filtered subset", file: "src/AssignmentsPanel.tsx",
       find: "gradebookCsvRows(d.item,g.results,rowGrading)", replace: "gradebookCsvRows(d.item,g.rows,rowGrading)", tests: G1_PANEL },
     { id: "G1-M13", what: "the create request is sent while the window is invalid", file: CTRL,
-      find: " || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;", replace: ") return;", tests: G1_PANEL },
+      find: " || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;", replace: ") return;", tests: [...G1_PANEL, "src/assignments/useAssignmentsController.21g1.test.tsx"] },
     { id: "G1-M14", what: "the create button is enabled while the window is invalid", file: CTRL,
       find: " && !windowBlocks(composer.windowIssues);", replace: ";", tests: G1_PANEL }
   ],
