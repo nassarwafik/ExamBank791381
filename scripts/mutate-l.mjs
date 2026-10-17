@@ -47,7 +47,45 @@ const CHECK_LIB = "api/src/lib/learning-check.js", STUDY_FN = "api/src/functions
 const ELIG = "src/learning/study/eligibility.ts", BLOCK_VIEW = "src/learning/reader/PracticeBlockView.tsx", TABLE_VIEW = "src/learning/reader/PracticeTableView.tsx";
 const L6B_API = ["api/tests/learning-check-l6b.test.js"], L6B_VERDICT = ["src/learning/study/serverVerdict.l6b.test.ts"], STUDY_API = ["api/tests/learning-study.test.js"];
 const L6B_UNIT = ["src/learning/study/checkIndex.l6b.test.ts"], L6B_GUARD = ["src/learning/content/servedBodies.l6b.test.ts"], L6B_UI = ["src/learning/reader/serverCheck.l6b.test.tsx"];
+const LIB_STORE = "api/src/lib/exam-library-store.js", LIB_FN = "api/src/functions/exam-library.js", TRAINING_FN = "api/src/functions/learning-training.js";
+const L7_API = ["api/tests/exam-library-l7.test.js"], L7_GUARD = ["scripts/check-bundle-budget.l7.test.mjs"];
 export const CAMPAIGNS = {
+  l7: [
+    { id: "L7-M1", what: "the catalog is read from disk on every request", file: LIB_STORE,
+      find: "  if (CATALOG) return CATALOG;\n", replace: "", tests: L7_API },
+    { id: "L7-M2", what: "an item is read from disk on every request", file: LIB_STORE,
+      find: "  if (ITEMS.has(clean)) return ITEMS.get(clean);\n", replace: "", tests: L7_API },
+    { id: "L7-M3", what: "an unknown id reaches the disk", file: LIB_STORE,
+      find: "if (!clean || !VALID_ID.test(clean) || !itemIds().has(clean)) return null;", replace: "if (!clean || !VALID_ID.test(clean)) return null;", tests: L7_API },
+    { id: "L7-M4", what: "the shared cache is not frozen", file: LIB_STORE,
+      find: "    Object.freeze(value);\n", replace: "", tests: L7_API },
+    { id: "L7-M5", what: "a revalidation is answered before the builder check", file: LIB_FN,
+      find: "if (!auth.ok) return auth.response;", replace: "if (!auth.ok && !String(request.headers?.get?.(\"if-none-match\") || \"\")) return auth.response;", tests: L7_API },
+    { id: "L7-M6", what: "the library (with its answer keys) becomes cacheable by a shared cache", file: LIB_FN,
+      find: "\"Cache-Control\": \"private, no-cache\"", replace: "\"Cache-Control\": \"public, max-age=3600\"", tests: L7_API },
+    { id: "L7-M7", what: "any If-None-Match is taken as a match", file: LIB_FN,
+      find: "return !!ifNoneMatch && ifNoneMatch.split(\",\").map(t => t.trim()).includes(etag);", replace: "return !!ifNoneMatch;", tests: L7_API },
+    { id: "L7-M8", what: "the endpoint runs without the observability wrapper", file: LIB_FN,
+      find: "const observed = withObservability(\"exam-library\", handler);", replace: "const observed = handler;", tests: L7_API },
+    { id: "L7-M9", what: "a failure is not logged", file: LIB_FN,
+      find: "    obs?.logError?.(\"exam.library.error\", e);\n", replace: "", tests: L7_API },
+    { id: "L7-M10", what: "an exam with bank images is cached (its signed image URLs are never minted)", file: TRAINING_FN,
+      find: "  if (hydrated !== snapshot) return sanitizeExamForStudent(hydrated);\n", replace: "", tests: L7_API },
+    { id: "L7-M11", what: "the student form of a training is recomputed on every request", file: TRAINING_FN,
+      find: "if (!exam) { exam = deepFreeze(sanitizeExamForStudent(snapshot)); STUDENT_EXAMS.set(snapshot, exam); }", replace: "if (!exam) exam = deepFreeze(sanitizeExamForStudent(snapshot));", tests: L7_API },
+    { id: "L7-M12", what: "the Reader's first-load budget is not checked", file: GUARD,
+      find: "  if (m.readerFirstLoad > budgets.readerFirstLoad) out.push(", replace: "  if (false) out.push(", tests: L7_GUARD },
+    { id: "L7-M13", what: "the manifest budget is not checked", file: GUARD,
+      find: "for (const c of m.manifest) if (c.kb > budgets.manifest) out.push(", replace: "for (const c of m.manifest) if (false) out.push(", tests: L7_GUARD },
+    { id: "L7-M14", what: "a visual group chunk's budget is not checked", file: GUARD,
+      find: "for (const c of m.visuals) if (c.kb > budgets.visualGroup) out.push(", replace: "for (const c of m.visuals) if (false) out.push(", tests: L7_GUARD },
+    { id: "L7-M15", what: "the visuals' total budget is not checked", file: GUARD,
+      find: "  if (total > budgets.visualsTotal) out.push(", replace: "  if (false) out.push(", tests: L7_GUARD },
+    { id: "L7-M16", what: "a build with no manifest chunk passes unmeasured", file: GUARD,
+      find: "  if (!m.manifest.length) out.push(", replace: "  if (false) out.push(", tests: L7_GUARD },
+    { id: "L7-M17", what: "the manifest signature is narrowed to double quotes", file: GUARD,
+      find: "const MANIFEST_SIGNATURE = /[`\"']\\d{6}-m\\d\\d-l\\d\\d-p\\d\\d[`\"']/;", replace: "const MANIFEST_SIGNATURE = /\"\\d{6}-m\\d\\d-l\\d\\d-p\\d\\d\"/;", tests: L7_GUARD },
+  ],
   l6b: [
     { id: "L6B-M1", what: "a wrong answer is told the explanation", file: CHECK_LIB,
       find: "if (correct && text(fb.explanation)) feedback.explanation = fb.explanation;", replace: "if (text(fb.explanation)) feedback.explanation = fb.explanation;", tests: [...L6B_API, ...L6B_VERDICT] },

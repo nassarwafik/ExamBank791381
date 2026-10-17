@@ -2,8 +2,16 @@
 // scripts/build-791381-library.cjs). Shared by the teacher library endpoint and the student learning-training
 // endpoint so an item is always resolved the same way. Returns the RAW item (with answer keys) — callers that
 // serve students MUST sanitize (student-exam-sanitize) before sending anything to a browser.
+//
+// Phase L.7 — the library is part of the deployment and never changes while a process runs, so it is read from disk ONCE per
+// process: the catalog on first use, each item on its first request. Cached values are DEEP-FROZEN and shared by every
+// request, so no caller can alter what the next one reads (every caller copies before changing anything: hydrateBankAssets
+// path-copies, sanitizeExamForStudent clones). The item ids come from the directory listing taken once, so an unknown id never
+// touches the disk and the cache can never grow beyond the files the deployment ships. Each cached value carries a strong ETag
+// of its exact file bytes for the endpoint's revalidation.
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const DATA_CANDIDATES = [
   path.join(process.cwd(), "src", "data", "exam-library"),
@@ -11,23 +19,65 @@ const DATA_CANDIDATES = [
 ];
 const VALID_ID = /^[A-Za-z0-9_-]+$/;
 
+let DIR = null;
 function dataDir() {
-  for (const candidate of DATA_CANDIDATES) if (fs.existsSync(candidate)) return candidate;
+  if (DIR) return DIR;
+  for (const candidate of DATA_CANDIDATES) if (fs.existsSync(candidate)) return (DIR = candidate);
   return DATA_CANDIDATES[DATA_CANDIDATES.length - 1];
 }
 function readJsonOrNull(filePath) {
   try { return JSON.parse(fs.readFileSync(filePath, "utf8")); } catch { return null; }
 }
-/** The metadata-only catalog ([] when missing). */
-function readLibraryCatalog() {
-  const catalog = readJsonOrNull(path.join(dataDir(), "catalog.json"));
-  return Array.isArray(catalog) ? catalog : [];
+function deepFreeze(value) {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value)) deepFreeze(v);
+  }
+  return value;
 }
-/** One full library item (raw, WITH answer keys) or null for an invalid / unknown id. */
-function readLibraryItem(id) {
-  const clean = String(id || "").trim();
-  if (!clean || !VALID_ID.test(clean)) return null;
-  return readJsonOrNull(path.join(dataDir(), "items", clean + ".json"));
+const etagOf = text => '"' + crypto.createHash("sha256").update(text).digest("base64url").slice(0, 22) + '"';
+/** { value, etag } of one JSON file (value deep-frozen), or null when it is missing or not JSON. */
+function load(filePath) {
+  try {
+    const text = fs.readFileSync(filePath, "utf8");
+    return { value: deepFreeze(JSON.parse(text)), etag: etagOf(text) };
+  } catch { return null; }
 }
 
-module.exports = { VALID_ID, dataDir, readJsonOrNull, readLibraryCatalog, readLibraryItem };
+let CATALOG = null;                       // { value, etag } once read
+let ITEM_IDS = null;                      // Set of the item ids the deployment ships (one directory listing)
+const ITEMS = new Map();                  // id → { value, etag }
+
+/** The catalog as { value: [...] (frozen), etag } — `[]` when missing. */
+function libraryCatalogEntry() {
+  if (CATALOG) return CATALOG;
+  const entry = load(path.join(dataDir(), "catalog.json"));
+  CATALOG = entry && Array.isArray(entry.value) ? entry : { value: deepFreeze([]), etag: etagOf("[]") };
+  return CATALOG;
+}
+function itemIds() {
+  if (ITEM_IDS) return ITEM_IDS;
+  let files = [];
+  try { files = fs.readdirSync(path.join(dataDir(), "items")); } catch { files = []; }
+  ITEM_IDS = new Set(files.filter(f => f.endsWith(".json")).map(f => f.slice(0, -5)).filter(id => VALID_ID.test(id)));
+  return ITEM_IDS;
+}
+/** One item as { value (frozen, WITH answer keys), etag }, or null for an invalid / unknown id (never a disk read for those). */
+function libraryItemEntry(id) {
+  const clean = String(id || "").trim();
+  if (!clean || !VALID_ID.test(clean) || !itemIds().has(clean)) return null;
+  if (ITEMS.has(clean)) return ITEMS.get(clean);
+  const entry = load(path.join(dataDir(), "items", clean + ".json"));
+  if (entry) ITEMS.set(clean, entry);
+  return entry;
+}
+
+/** The metadata-only catalog ([] when missing). Frozen and shared: copy before changing. */
+function readLibraryCatalog() { return libraryCatalogEntry().value; }
+/** One full library item (raw, WITH answer keys) or null for an invalid / unknown id. Frozen and shared: copy before changing. */
+function readLibraryItem(id) { const entry = libraryItemEntry(id); return entry ? entry.value : null; }
+
+/** Tests only: forget everything read so far (the next call reads the disk again). */
+function resetLibraryCacheForTests() { DIR = null; CATALOG = null; ITEM_IDS = null; ITEMS.clear(); }
+
+module.exports = { VALID_ID, dataDir, readJsonOrNull, deepFreeze, readLibraryCatalog, readLibraryItem, libraryCatalogEntry, libraryItemEntry, resetLibraryCacheForTests };

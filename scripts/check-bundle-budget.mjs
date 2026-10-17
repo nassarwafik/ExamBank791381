@@ -41,6 +41,8 @@
 //      reaction engine; and the trusted chemistry core is emitted anywhere but the lazy `trustedSimPlugins` chunk (a separate chunk is
 //      listed in the entry's preload map — the initial graph grows — and fetched as an extra request with every SmartSim);
 //      (Phase 21D-D.3) the same for the virtual laboratory (benches / editor / review) and its lab models (solutions, pH, titration, rate);
+//  18. (Phase L.7) the learning CONTENT chunks exceed their gzip budgets (LEARNING_BUDGETS_KB): the Reader's first-load graph, the
+//      course manifest chunk(s) (the table of contents: course page ids), each learning visual group chunk and all visuals together;
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -166,6 +168,12 @@ const VISUAL_GROUP_MIN_CHUNKS = 10;
 // emitted chunk may carry the id of a block of a book page (`m01-l01-p01-def`, …). The manifest that does ship carries page ids
 // only (`791381-m01-l01-p01`, course-prefixed), never block ids.
 const MODULE_BODY_SIGNATURE = /[`"']m\d\d-l\d\d-p\d\d-[A-Za-z]/;
+// Phase L.7 — learning content budgets, gzip KB. Measured on the L.6b build (main 5d308329): Reader first-load graph 33.7, manifest
+// 12.2, largest visual group chunk 6.5, all 27 visual chunks 64.4 — each budget leaves room for normal growth, not for a design
+// change (a body bundled again, the visuals packed into one chunk, the table of contents carrying page bodies).
+export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 40, manifest: 15, visualGroup: 9, visualsTotal: 75 });
+// The manifest is the only chunk that carries the book's course-prefixed page ids (`"791381-m01-l01-p01"`).
+const MANIFEST_SIGNATURE = /[`"']\d{6}-m\d\d-l\d\d-p\d\d[`"']/;
 
 const dist = process.argv[2] || "dist";
 const assets = path.join(dist, "assets");
@@ -195,6 +203,27 @@ export function staticClosure(distDir, roots) {
 }
 
 // The chunks a file reaches through DYNAMIC `import()` edges (Vite emits them as import("./x.js") / import(`./x.js`)).
+/** Phase L.7 — the emitted JS chunks of `distDir` that carry a course manifest (the book's course-prefixed page ids). */
+export function findManifestChunks(distDir) {
+  const dir = path.join(distDir, "assets");
+  return fs.readdirSync(dir).filter(f => f.endsWith(".js") && MANIFEST_SIGNATURE.test(fs.readFileSync(path.join(dir, f), "utf8"))).sort();
+}
+
+/**
+ * Phase L.7 — the learning content budget failures (pure). `m` holds gzip KB: `readerFirstLoad`, `manifest` and `visuals` as
+ * [{ file, kb }]. A missing manifest chunk is a failure too (the guard would otherwise measure nothing).
+ */
+export function learningContentFailures(m, budgets = LEARNING_BUDGETS_KB) {
+  const out = [];
+  if (m.readerFirstLoad > budgets.readerFirstLoad) out.push(`the Learning Reader's first-load graph is ${m.readerFirstLoad.toFixed(1)} KB gzip — over its ${budgets.readerFirstLoad} KB budget`);
+  if (!m.manifest.length) out.push("no course manifest chunk was found (the table of contents must ship as its own lazy chunk)");
+  for (const c of m.manifest) if (c.kb > budgets.manifest) out.push(`the course manifest chunk ${c.file} is ${c.kb.toFixed(1)} KB gzip — over its ${budgets.manifest} KB budget`);
+  for (const c of m.visuals) if (c.kb > budgets.visualGroup) out.push(`the learning visual chunk ${c.file} is ${c.kb.toFixed(1)} KB gzip — over its ${budgets.visualGroup} KB budget`);
+  const total = m.visuals.reduce((n, c) => n + c.kb, 0);
+  if (total > budgets.visualsTotal) out.push(`the learning visuals are ${total.toFixed(1)} KB gzip together — over their ${budgets.visualsTotal} KB budget`);
+  return out;
+}
+
 /** Phase L.6a — the emitted JS chunks of `distDir` that carry a learning module body (a block id of a book page). */
 export function findModuleBodyChunks(distDir) {
   const dir = path.join(distDir, "assets");
@@ -536,6 +565,12 @@ function main() {
   const bodyChunks = findModuleBodyChunks(dist);
   if (bodyChunks.length) failures.push(`learning module bodies are shipped as public assets in: ${bodyChunks.join(", ")} — they must come from /api/learning-content only`);
   console.log(`Learning module bodies in emitted chunks: ${bodyChunks.length} (served by the API after the publication check)`);
+  // Phase L.7 — learning content budgets.
+  const gzKbOf = f => zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length / 1024;
+  const content = { readerFirstLoad: readerGz / 1024, manifest: findManifestChunks(dist).map(f => ({ file: f, kb: gzKbOf(f) })), visuals: visualChunks.map(f => ({ file: f, kb: gzKbOf(f) })) };
+  failures.push(...learningContentFailures(content));
+  const visualsKb = content.visuals.reduce((n, c) => n + c.kb, 0), largestVisualKb = Math.max(0, ...content.visuals.map(c => c.kb));
+  console.log(`Learning content (gzip): Reader first load ${content.readerFirstLoad.toFixed(1)} KB (budget ${LEARNING_BUDGETS_KB.readerFirstLoad}); manifest ${content.manifest.map(c => c.kb.toFixed(1)).join(" + ") || "—"} KB (budget ${LEARNING_BUDGETS_KB.manifest}); visuals ${visualsKb.toFixed(1)} KB in ${content.visuals.length} chunks (budget ${LEARNING_BUDGETS_KB.visualsTotal}), largest ${largestVisualKb.toFixed(1)} KB (budget ${LEARNING_BUDGETS_KB.visualGroup})`);
 
   // Phase 11C — student rank / stage image weight.
   const visuals = checkStudentVisualAssets({ root: path.join(path.dirname(fileURLToPath(import.meta.url)), ".."), dist });
