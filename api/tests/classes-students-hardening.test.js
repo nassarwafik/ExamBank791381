@@ -154,6 +154,21 @@ describe("M1 — orphan auth documents never block an identity forever", () => {
     expect(r.status).toBe(409);
     expect(ctx.getJson(authName("100000001")).userId).toBe("s1");
   });
+  it("a race winner's credential (its student exists) is never reclaimed, even when the pre-check missed it", async () => {
+    // The duplicate pre-check reads the auth path BEFORE a concurrent create committed it (first read → 404); the
+    // create-only write then conflicts and the reclaim must see that the credential has a real student.
+    const ctx = ctxOf();
+    const c = ctx.container, blob = c.getBlobClient.bind(c);
+    let first = true;
+    c.getBlobClient = name => {
+      const cl = blob(name);
+      if (name === authName("100000001") && first) { first = false; cl.download = async () => { const e = new Error("BlobNotFound"); e.statusCode = 404; e.code = "BlobNotFound"; throw e; }; }
+      return cl;
+    };
+    const r = await students(ctx, { action: "create", classId: "c2", firstName: "س", familyName: "ص", identityNumber: "100000001", password: "secret123" });
+    expect(r.status).toBe(409);
+    expect(ctx.getJson(authName("100000001")).userId).toBe("s1");
+  });
   it("a failed user-document write removes the auth document it just created (no new orphan)", async () => {
     const ctx = ctxOf();
     const c = ctx.container, block = c.getBlockBlobClient.bind(c);

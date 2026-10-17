@@ -231,6 +231,7 @@ describe("F. source / architecture guards", () => {
   });
   it("F4 no frontend change is needed: the teacher client already surfaces the server's error text", () => {
     const ui = readFileSync(path.join(HERE, "..", "..", "src", "TeacherPlatform.tsx"), "utf8");
-    expect(ui).toContain('if(!response.ok)throw new Error(result.error||"حدث خطأ.")');
+    // Classes & Students hardening: the body is parsed defensively (non-JSON gateway pages), the server text still wins.
+    expect(ui).toContain('if(!response.ok)throw new Error(result?.error||');
   });
 });
