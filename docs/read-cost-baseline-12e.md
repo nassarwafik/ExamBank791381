@@ -299,3 +299,33 @@ Unchanged. It never listed `platform/assignments/`, and its 12E-A guards pass un
 - **Teacher Today** still lists each published assignment's submission folder and downloads every submission in it.
 - `GET /api/assignments` (the teacher assignment list) still lists `platform/assignments/` globally.
 - Reports, analytics, results and review paths are untouched by this phase.
+
+# Phase 21H.4 AFTER — ETag-verified document cache for Teacher Today
+
+`GET /api/teacher-today` reads its class, user and submission documents through `api/src/lib/etag-doc-cache.js`. The cache holds
+the documents in memory, keyed by blob name and the ETag the listing reports.
+
+- **Same ETag:** a document whose ETag in the current listing equals the cached ETag is **not downloaded**.
+- **Anything else is downloaded:** a changed, new, deleted or ETag-less document goes to storage exactly as before.
+- **The listing still runs on every request,** because it is what proves the cached documents are current.
+
+The cache is per container, LRU-bounded (20,000 documents / 32 MB of text), and returns a freshly parsed object on every hit.
+It is never an authority: a cold or evicted cache only means more downloads. Guards:
+`read-cost-teacher-today-12e.test.js` (updated numbers) and `etag-doc-cache-21h4.test.js` (correctness of the cache).
+
+    first request (cold cache)    unchanged — the 12E-B numbers above
+    later request, nothing changed  downloads = 2X + C_active + P_active      (C, U and S_active removed)
+    later request, k documents changed  + k downloads
+
+| Fixture | WARM lists / downloads (12E-B) | WARM lists / downloads (21H.4, nothing changed) |
+|---|---|---|
+| T0 (empty) | 2 / 0 | 2 / 0 |
+| T1 | 3 / 10 | 3 / 4 |
+| T10 (10 × 3 submissions) | 12 / 47 | 12 / 13 |
+| T-MANY-ARCHIVED | 3 / 10 | 3 / 4 |
+| T-MANY-OTHER/INACTIVE | 3 / 14 | 3 / 4 |
+
+The read-cost event adds two count-only fields, `docCacheHits` and `docsDownloaded`.
+
+**What remains:** classes, users and submission folders are still **listed** on every request. Assignment documents are still
+downloaded (`P_active`), and the per-class index and control reads are unchanged.

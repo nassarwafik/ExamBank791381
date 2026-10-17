@@ -27,10 +27,10 @@ describe("12E-A read-cost observability — source guard", () => {
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 
-  it("teacher-today emits exactly one count-only event with the eleven documented fields", () => {
+  it("teacher-today emits exactly one count-only event with the eleven documented fields (+ the two 21H.4 document-cache counts)", () => {
     const calls = readCostCalls(src("functions/teacher-today.js"));
     expect(calls.map(c => c.event)).toEqual(["teacher.today.read_cost"]);
-    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative", "assignmentIndexAuthorityChanges"]);
+    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative", "assignmentIndexAuthorityChanges", "docCacheHits", "docsDownloaded"]);
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 
