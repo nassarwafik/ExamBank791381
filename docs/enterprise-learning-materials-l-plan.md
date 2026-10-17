@@ -1,6 +1,6 @@
 # Phase L — Enterprise learning materials («المواد التعليمية») and reader
 
-**Status:** L.0 in review as nassarwafik/ExamBank791381#339; L.1 implemented on branch `claude/nifty-clarke-k0wlid`; L.2–L.8 planned. Each phase: exact-head CI, independent
+**Status:** L.0 merged (nassarwafik/ExamBank791381#339); L.1 in review as nassarwafik/ExamBank791381#341; L.2 implemented on branch `claude/nifty-clarke-k0wlid`; L.3–L.8 planned. Each phase: exact-head CI, independent
 review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -61,7 +61,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 |---|---|---|
 | L.0 | Accuracy and trust: «المقدمة» = «قريبًا»; overview load status + error with retry; no stale release note; the book by its title in the reader; agreed Arabic counts in the publication panel; stale comments | implemented |
 | L.1 | Professional reader. Collapsible table of contents on every width (overlay under 1280 px, remembered choice). Focus mode that hides the app chrome. One compact 48 px toolbar with icon buttons + «المزيد». Progress line. Pager with lesson position and the next lesson's title. Internal metadata behind «معلومات». Designed unit openers. A cleaner two-level TOC with read ticks and a filter. Reading typography (60–75 characters, 17–18 px, 1.8 line height). Dark theme. Swipe on phones. **Target: the text gets ≥ 70 % of the screen at ≥ 1024 px in focus mode.** | implemented |
-| L.2 | Navigation: a URL for library / book / section / page, a working browser back button, reload keeps the place. Clickable module list for students. Teacher preview identical to the student view. | planned |
+| L.2 | Navigation: a URL for library / book / section / page, a working browser back button, reload keeps the place. Clickable module list for students. (Teacher preview parity moved to L.3, which brings the server-side progress it needs.) | implemented |
 | L.3 | Server-side reading progress and resume (cross-device); a real activity sink; localStorage stays the fallback | planned |
 | L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | planned |
 | L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | planned |
@@ -223,7 +223,60 @@ were found and fixed: an exercise's «تحقّق» and the drawer's «إغلاق
   - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
   - `npx tsc -b`, `npm run build` (bundle guard passed) and `git diff --check` are clean.
 
-## 6. What the plan leaves to the owner
+## 6. Implementation record and evidence (L.2)
+
+### Decisions taken inside L.2
+
+| # | Decision | Why |
+|---|---|---|
+| L2-a | The location is a **URL fragment** owned by Learning Materials: `#/learning`, `#/learning/<course>`, `#/learning/<course>/read[/<page>]`. | The app has no router, and the teacher shell keeps its navigation in state. A fragment needs no Static Web Apps rewrite and changes no other page. Ids are validated; anything malformed is "no route" and normalises to the library. |
+| L2-b | A view change is a history entry. A Reader page turn **replaces** the entry. | Back goes from the reader to the book and from the book to the library, as a reader expects, and 248 page turns never flood the history. |
+| L2-c | The fragment is removed when the teacher leaves Learning Materials. A link that brought the teacher to the sign-in page is honoured after it. | The sign-in used to reset every teacher to the builder, so a shared link was lost. That gap was found by the App-level test. |
+| L2-d | A student's unit link opens the Reader at that unit only after the **same open-time re-validation** as «فتح المادة». A unit hidden since the panel loaded says so and does not open. | Release authority is unchanged: the restricted manifest still decides, and a valid page id (e.g. after a training) still wins over the unit. |
+| L2-e | Teacher-preview parity with the student view (the study client) moves to **L.3**. | The parity needs the server-side progress L.3 introduces; a fake study state in the preview would mislead. |
+
+### What shipped
+
+- **`src/learning/learningRoute.ts` (new):** parse, format, write (push / replace) and clear the fragment; `isLearningLocation()`.
+- **`LearningMaterialsPage.tsx`:**
+  - the initial view comes from the URL;
+  - `setView` pushes an entry, `popstate` replays it, a Reader page change replaces it;
+  - leaving the page clears the fragment;
+  - an unknown or unavailable book resolves to the library.
+- **`App.tsx`:** a Learning Materials link opens the teacher app on that page, both on load and after sign-in.
+- **`LearningReader` / `LearningReaderWithTraining` / `StudentReader`:** `initialModuleId`, which opens at that module's first page in reading order. An unknown module opens the beginning, and a valid `initialPageId` wins.
+- **`StudentLearningMaterials.tsx` / `StudentPortal.tsx`:** each released unit is a 44 px link-like control that re-validates the release and then opens the Reader at the unit.
+
+### Evidence
+
+- **Fail-first on the L.1 head d87f71a8:**
+  - `LearningMaterialsPage.l2.test.tsx` cannot load (`learningRoute` does not exist).
+  - `StudentLearningMaterials.l2.test.tsx`: 3/3 fail.
+  - `App.learningRoute.l2.test.tsx`: the link case fails. The no-link case passes, because it pins the unchanged default start.
+  - All pass on the head. The new portal case in `StudentPortal.learningMaterials.test.tsx` also passes on the head.
+- **Mutation:** `node scripts/mutate-l.mjs l2` → **13/13 KILLED**, every file restored byte-for-byte, git status clean.
+  - **History** (L2-M1…M4):
+    - no push;
+    - a page turn pushes;
+    - popstate ignored;
+    - the fragment outlives the page.
+  - **Unknown book in a link** (L2-M5).
+  - **Parser leniency** (L2-M6…M8):
+    - trailing segments;
+    - any verb;
+    - a malformed page id.
+  - **Sign-in ignores the link** (L2-M9).
+  - **The Reader and the unit** (L2-M10, M11):
+    - the unit is ignored;
+    - the unit beats a valid page.
+  - **A hidden unit still opens** (L2-M12).
+  - **The portal drops the unit** (L2-M13).
+- **Full validation on the head:**
+  - `npm test`: 1085 files / 13285 tests passed.
+  - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed; the initial JS graph went from 114.1 to 114.5 KB gzip against the 125 KB budget) and `git diff --check` are clean.
+
+## 7. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count

@@ -12,6 +12,7 @@ import "./learning.css";
 import "./learning-library-premium.css";
 import { lazyWithRetry } from "../lazyWithRetry";
 import LibrarySearch from "./search/LibrarySearch";
+import { clearLearningRoute, parseLearningRoute, writeLearningRoute, type LearningRoute } from "./learningRoute";
 import "./search/learning-library-search.css";
 
 // The interactive reader (hosted by the shared Reader-plus-training wrapper) is code-split so it and the content
@@ -35,7 +36,21 @@ type View =
  * preview and solve T01–T04 regardless of class publication; without a token it stays fully local.
  */
 export default function LearningMaterialsPage({ token }: { token?: string } = {}) {
-  const [view, setView] = useState<View>({ kind: "library" });
+  // Phase L.2 — the view lives in the URL fragment (learningRoute.ts): every view change is a history entry, Back / Forward
+  // replay them, a page turn inside the Reader replaces the current entry, and a reload or a shared link opens the same
+  // place. The fragment is removed when the teacher leaves Learning Materials.
+  const [view, setViewState] = useState<View>(() => viewFromRoute(readRoute()));
+  const setView = useCallback((next: View) => {
+    setViewState(next);
+    writeLearningRoute(routeFromView(next), "push");
+  }, []);
+  useEffect(() => {
+    const onPop = () => setViewState(viewFromRoute(readRoute()));
+    window.addEventListener("popstate", onPop);
+    writeLearningRoute(routeFromView(viewFromRoute(readRoute())), "replace");     // normalise a malformed / unknown link
+    return () => { window.removeEventListener("popstate", onPop); clearLearningRoute(); };
+  }, []);
+  const onReaderPage = useCallback((courseId: string, pageId: string) => writeLearningRoute({ kind: "reader", courseId, pageId }, "replace"), []);
   const course = view.kind === "library" ? undefined : findLearningCourse(view.courseId);
   const client = useMemo(() => (token ? createTrainingClient(teacherTrainingHeaders(token)) : null), [token]);
   // Phase 21E L3-B — whole-course search ("all") is a TEACHER capability: this page is mounted only inside the
@@ -59,7 +74,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
     } catch {
       setView({ kind: "reader", courseId });
     }
-  }, []);
+  }, [setView]);
 
   if (course && view.kind === "reader") {
     const initialPageId = view.initialPageId;
@@ -76,6 +91,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
             exitLabel={view.fromSearch ? "العودة إلى نتائج البحث" : "العودة إلى نظرة الكتاب"}
             client={client}
             actor="teacher"
+            onPageChange={pageId => onReaderPage(course.id, pageId)}
             embedded
             searchScope={teacherSearch ? "all" : undefined}
           />
@@ -163,6 +179,25 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
       )}
     </section>
   );
+}
+
+function readRoute(): LearningRoute | null {
+  try { return typeof location !== "undefined" ? parseLearningRoute(location.hash) : null; } catch { return null; }
+}
+
+/** A route → the page's view. An unknown book is the library; the reader needs a book with content. */
+function viewFromRoute(route: LearningRoute | null): View {
+  if (!route || route.kind === "library") return { kind: "library" };
+  const course = findLearningCourse(route.courseId);
+  if (!course || course.status !== "available") return { kind: "library" };
+  if (route.kind === "course" || !hasCourseContent(course.id)) return { kind: "course", courseId: course.id };
+  return { kind: "reader", courseId: course.id, initialPageId: route.pageId };
+}
+
+function routeFromView(view: View): LearningRoute {
+  if (view.kind === "library") return { kind: "library" };
+  if (view.kind === "course") return { kind: "course", courseId: view.courseId };
+  return { kind: "reader", courseId: view.courseId, pageId: view.initialPageId };
 }
 
 /** A course's grade labels from the catalog's free-text field («الصف العاشر / الحادي عشر» → two grades). */
