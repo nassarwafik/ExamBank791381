@@ -68,6 +68,8 @@ export type StudentDialogProps = {
   onSaveDeadline: (item: SubmittedAssignment) => void;
   onClearDeadline: (item: SubmittedAssignment) => void;
   fmtDate: (value: string) => string;
+  /** A rejection of an action taken INSIDE this dialog (reset password, retry, extension) — shown here, not under the backdrop. */
+  error?: string;
 };
 
 /**
@@ -84,6 +86,7 @@ export default function StudentDialog(p: StudentDialogProps) {
   const jump = (id: string) => () => { const el = document.getElementById(id); if (el) { if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start" }); (el as HTMLElement).focus(); } };
   return (
     <Dialog open title={profile.student.displayName} onClose={p.onClose} size="lg" suspended={p.suspended} initialFocusRef={p.section === "history" ? historyRef : summaryRef} className="eb-student-dialog">
+      {p.error && <div className="platform-error eb-dialog-error" role="alert">{p.error}</div>}
       <p className="eb-dialog-lead">{profile.classroom?.name || "—"} · <span dir="ltr">{profile.student.identityNumber}</span> · <StatusBadge tone={profile.student.archived ? "neutral" : profile.student.active ? "success" : "warn"}>{profile.student.archived ? "مؤرشف" : profile.student.active ? "فعّال" : "معطّل"}</StatusBadge></p>
       <nav className="eb-dialog-nav" aria-label="أقسام ملف الطالب">
         <button type="button" onClick={jump("eb-student-summary")}>ملخص</button>
@@ -137,7 +140,7 @@ export default function StudentDialog(p: StudentDialogProps) {
           <thead><tr><th scope="col">الواجب</th><th scope="col">الحالة</th><th scope="col">المحاولات</th><th scope="col">العلامة</th><th scope="col">النسبة</th><th scope="col">آخر تسليم</th></tr></thead>
           <tbody>{profile.assignments.map(a => <tr key={a.assignmentId}>
             <td>{a.title}</td><td>{a.latestScore === null ? "لم يُحل" : resolveGradingStatus(a) === "final" ? "مصحح" : "بانتظار المراجعة"}</td><td>{a.attemptsUsed}</td>
-            <td>{a.latestScore === null ? "—" : a.latestScore + "/" + a.totalMarks}</td><td>{a.latestPercentage === null ? "—" : a.latestPercentage + "%"}</td><td>{a.submittedAt ? p.fmtDate(a.submittedAt) : "—"}</td>
+            <td>{a.latestScore === null ? "—" : a.latestScore + "/" + a.totalMarks}{a.latestScore !== null && resolveGradingStatus(a) !== "final" && <small className="eb-muted"> (مبدئية)</small>}</td><td>{a.latestPercentage === null ? "—" : a.latestPercentage + "%"}</td><td>{a.submittedAt ? p.fmtDate(a.submittedAt) : "—"}</td>
           </tr>)}{!profile.assignments.length && <tr><td colSpan={6}>لا توجد واجبات لهذا الصف.</td></tr>}</tbody>
         </table></div>
         <h4 className="eb-subheading">سجل الوظائف المسلّمة</h4>
@@ -147,9 +150,10 @@ export default function StudentDialog(p: StudentDialogProps) {
             <tr>
               <td>{item.title || "—"}</td>
               <td>{item.submittedAt ? p.fmtDate(item.submittedAt) : "—"}</td>
-              <td>{item.score + "/" + item.totalMarks + " - " + item.percentage + "%"}</td>
+              {/* A mark that is not final yet is labelled provisional — never presented as the student's result. */}
+              <td>{item.score + "/" + item.totalMarks + " - " + item.percentage + "%"}{resolveGradingStatus(item) !== "final" && <small className="eb-muted"> (مبدئية)</small>}</td>
               <td>{item.attemptsUsed > 1 ? "المحاولات: " + item.attemptsUsed : item.attemptsUsed}</td>
-              <td>{resolveGradingStatus(item) === "final" ? "تم التسليم" : "بانتظار المراجعة"}</td>
+              <td>{resolveGradingStatus(item) === "final" ? "مصحح نهائيًا" : "بانتظار المراجعة"}</td>
               <td><div className="eb-inline-actions">
                 <button type="button" className="eb-button is-small" onClick={() => p.onReview(item)}><IconEye size={14} />فحص الوظيفة</button>
                 {item.isCurrentClassAssignment ? <>

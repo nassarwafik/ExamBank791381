@@ -19,6 +19,24 @@ const { getClassProgramCodes, validateProgramCodes } = require("../lib/project-t
 const { getClassLearningMaterials, setClassLearningCourseModules, removeClassLearningCourse, getVisibleLearningModuleIds } = require("../lib/class-learning-materials");
 const { recordEventSafely } = require("../lib/notification-events");
 const { validateLearningModuleIds, findLearningCourse } = require("../lib/learning-materials-registry");
+// Classes & Students hardening — the classId is a blob-name segment: only the safe-id alphabet is accepted (a value such
+// as "../auth/<hash>" would otherwise be resolved by the storage SDK to a document outside platform/classes/).
+const { isSafeId, cleanText, LIMITS } = require("../lib/roster-input");
+
+/**
+ * Validates + normalizes the teacher-typed class labels (NFC, invisible/bidi characters removed, whitespace
+ * collapsed, bounded length). Returns { ok:true, value } or { ok:false, error } — pure, exported for unit tests.
+ */
+function normalizeClassFields(input) {
+  const name = cleanText(input?.name);
+  const grade = cleanText(input?.grade);
+  const schoolYear = cleanText(input?.schoolYear);
+  if (!name) return { ok: false, error: "اسم الصف مطلوب." };
+  if (name.length > LIMITS.className) return { ok: false, error: "اسم الصف أطول من " + LIMITS.className + " حرفًا." };
+  if (grade.length > LIMITS.grade) return { ok: false, error: "المرحلة أطول من " + LIMITS.grade + " حرفًا." };
+  if (schoolYear.length > LIMITS.schoolYear) return { ok: false, error: "السنة الدراسية أطول من " + LIMITS.schoolYear + " حرفًا." };
+  return { ok: true, value: { name, grade, schoolYear } };
+}
 
 // A class's programCode is valid only when it is empty (no project) or a project the registry knows.
 // Pure + exported so the rule is unit-tested and enforced server-side (never trusting the UI).
@@ -154,20 +172,24 @@ async function handler(request, deps = {}, obs = null) {
     try { body = await request.json(); } catch { body = {}; }
     const action = String(body?.action || "create").trim().toLowerCase();
 
+    // Every action on an existing class names it by a SAFE id (checked before any storage read).
+    if (action !== "create" && body?.classId !== undefined && body?.classId !== null && String(body.classId).trim() !== "" && !isSafeId(String(body.classId).trim())) {
+      return { status: 400, jsonBody: { ok: false, error: "معرّف الصف غير صالح." } };
+    }
+
     // Phase 21G.0 — every action on an existing class acts only on the teacher's own (or a shared pre-tenancy) class; another
     // teacher's class is reported exactly like a missing one. ownerId never changes after creation, so one check suffices.
     if (action !== "create" && tenant) {
       const targetId = String(body?.classId || "").trim();
       const target = targetId ? await dl(container, CLASS_PREFIX + targetId + ".json") : null;
-      if (targetId && (!target || !canAccessDocument(target, tenant))) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+      if (targetId && (!target || !canAccessDocument(target, tenant) || (target.classId !== undefined && String(target.classId) !== targetId))) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
     }
 
     if (action === "create") {
-      const name = String(body?.name || "").trim();
-      const grade = String(body?.grade || "").trim();
-      const schoolYear = String(body?.schoolYear || "").trim();
+      const fields = normalizeClassFields(body);
+      if (!fields.ok) return { status: 400, jsonBody: { ok: false, error: fields.error } };
+      const { name, grade, schoolYear } = fields.value;
       const programCode = String(body?.programCode || "").trim();
-      if (!name) return { status: 400, jsonBody: { ok: false, error: "اسم الصف مطلوب." } };
       if (!programCodeAccepted(programCode)) return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
 
       const now = new Date().toISOString();
@@ -182,6 +204,38 @@ async function handler(request, deps = {}, obs = null) {
         // programCodes is canonical; programCode is kept (first code or "") only for older clients of this response.
         jsonBody: { ok: true, classroom: { classId, name, grade, schoolYear, programCodes, programCode: programCodes[0] || "", active: true, studentCount: 0, createdAt: now } }
       };
+    }
+
+    // Class details edit (name / grade / school year). CAS-protected; touches ONLY these labels + updatedAt (roster,
+    // lifecycle, projects and learning materials untouched). An archived class is read-only (403), like every other
+    // class mutation except the lifecycle itself. Idempotent: unchanged values write and audit nothing.
+    if (action === "update") {
+      const classId = String(body?.classId || "").trim();
+      if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
+      const fields = normalizeClassFields(body);
+      if (!fields.ok) return { status: 400, jsonBody: { ok: false, error: fields.error } };
+      let before = null;
+      let updated = null;
+      try {
+        updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
+          if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
+          if (normalizeClassStatus(current) === "archived") { const blocked = new Error("الصف مؤرشف — فعّله أولًا لتعديل بياناته."); blocked.httpStatus = 403; throw blocked; }
+          before = { name: String(current.name || ""), grade: String(current.grade || ""), schoolYear: String(current.schoolYear || "") };
+          const next = fields.value;
+          if (before.name === next.name && before.grade === next.grade && before.schoolYear === next.schoolYear) throw new NoChange(current);
+          return { ...current, ...next, updatedAt: new Date().toISOString() };
+        });
+      } catch (mutateError) {
+        if (mutateError instanceof NoChange) updated = null;
+        else if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+        else if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+        else throw mutateError;
+      }
+      if (updated) {
+        const changed = ["name", "grade", "schoolYear"].filter(k => before[k] !== String(updated[k] || ""));
+        await rec(container, { actor: auth.user?.sub, action: "class.update", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""), details: { fields: changed, previousName: before.name } });
+      }
+      return { status: 200, jsonBody: { ok: true, classId, changed: Boolean(updated), ...fields.value } };
     }
 
     // Modern multi-project action, and the legacy single-project setProgram kept as a thin wrapper
@@ -364,4 +418,4 @@ async function handler(request, deps = {}, obs = null) {
 
 app.http("manageClassrooms", { methods: ["GET", "POST"], authLevel: "anonymous", route: "classrooms", handler: withObservability("classrooms", handler) });
 
-module.exports = { handler, buildNewClassroomDocument, programChangeAllowed, programCodeAccepted, learningMaterialsChangeAllowed };
+module.exports = { handler, buildNewClassroomDocument, programChangeAllowed, programCodeAccepted, learningMaterialsChangeAllowed, normalizeClassFields };

@@ -34,6 +34,56 @@
 .eb-classes-pane{ position:sticky; inset-block-start:var(--eb-space-4); }
 .eb-students-workspace .eb-section-header{ margin-bottom:0; }
 
+/* ---------- Classes & Students hardening: dismissible notice, in-dialog errors, class filter, password reveal ---------- */
+.eb-dismissible{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-3); }
+.eb-notice-close{ flex:0 0 auto; }
+.eb-dialog-error{ margin:0 0 var(--eb-space-3); }
+.eb-class-filter input{ width:100%; }
+.eb-password-field{ display:flex; align-items:flex-end; gap:var(--eb-space-2); }
+.eb-password-field > label{ flex:1 1 auto; min-width:0; }
+.eb-password-field > .eb-button{ flex:0 0 auto; min-height:38px; }
+
+/* ---------- Classes & Students visual pass ---------- */
+/* Class cards: the legacy .class-row (platform.css) stacks its children in a column, which put the "⋯" trigger on a row
+   of its own under every card; the card is a row again (trigger in the top corner), and an archived card stays fully
+   legible (its badge and tinted background mark it — the legacy 62% opacity failed text contrast). */
+.class-row.eb-class-row{ flex-direction:row; }
+.class-row.eb-class-row.archived{ opacity:1; }
+/* Summary strip: compact figures that double as the status filter. */
+.eb-roster-stat{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); min-height:44px; padding:var(--eb-space-2) var(--eb-space-3);
+  border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface);
+  color:var(--eb-text); font:inherit; text-align:start; cursor:pointer;
+  transition:border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease);
+}
+.eb-roster-stat:hover{ border-color:var(--eb-primary); }
+.eb-roster-stat[aria-pressed="true"]{ background:var(--eb-primary-050); border-color:var(--eb-primary); }
+.eb-roster-stat.tone-success{ border-inline-start-color:var(--eb-success); }
+.eb-roster-stat.tone-attention{ border-inline-start-color:var(--eb-warn); }
+.eb-roster-stat.tone-info{ border-inline-start-color:var(--eb-info); }
+.eb-roster-stat-label{ color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
+.eb-roster-stat-value{ color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-variant-numeric:tabular-nums; }
+/* Roster table: header stays visible while scrolling a long class; the row actions column is pinned to the inline end so
+   "⋯" is always reachable without horizontal scrolling; selected rows are tinted. */
+.eb-roster-table-wrap{ max-height:min(72vh, 760px); }
+.eb-roster-table thead th{ position:sticky; top:0; z-index:2; }
+.eb-roster-table .eb-col-actions{ position:sticky; inset-inline-end:0; z-index:1; background:var(--eb-surface); border-inline-start:1px solid var(--eb-line); }
+.eb-roster-table thead .eb-col-actions{ z-index:3; background:var(--eb-surface-2); }
+.eb-roster-table tbody tr.is-selected td{ background:var(--eb-primary-050); }
+.eb-roster-table tbody tr.student-row-archived > td{ background:var(--eb-surface-2); }
+.eb-name-cell{ display:inline-flex; align-items:center; gap:var(--eb-space-2); }
+.eb-row-avatar{ display:inline-flex; flex:0 0 auto; }
+.eb-col-identity{ font-variant-numeric:tabular-nums; }
+.eb-icon-action{ min-width:34px; padding-inline:var(--eb-space-2); justify-content:center; }
+/* Loading placeholder shaped like the roster (a pulsing skeleton, no layout jump when the rows arrive). */
+.eb-roster-skeleton{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-4); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface); }
+.eb-skeleton-row{ display:flex; align-items:center; gap:var(--eb-space-3); }
+.eb-skeleton-dot,.eb-skeleton-bar{ background:var(--eb-surface-2); animation:eb-skeleton-pulse 1.1s var(--eb-ease) infinite alternate; }
+.eb-skeleton-dot{ width:32px; height:32px; border-radius:50%; flex:0 0 auto; }
+.eb-skeleton-bar{ height:12px; flex:0 0 38%; border-radius:var(--eb-pill); }
+.eb-skeleton-bar.is-short{ flex-basis:18%; }
+@keyframes eb-skeleton-pulse{ from{ opacity:1; } to{ opacity:.45; } }
+
 /* ---------- Segmented view switch (buttons with aria-pressed) ---------- */
 .eb-segmented{ display:inline-flex; gap:2px; padding:3px; background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
 .eb-segmented > button{
@@ -160,7 +210,7 @@
 .eb-col-select{ width:36px; }
 .eb-col-actions{ width:1%; }
 .eb-row-actions{ display:flex; align-items:center; justify-content:flex-end; gap:var(--eb-space-1); }
-.student-likes-badge{ display:inline-flex; align-items:center; gap:2px; margin-inline-start:6px; padding:2px 7px; border-radius:var(--eb-pill); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.student-likes-badge{ display:inline-flex; align-items:center; gap:2px; margin-inline-start:2px; padding:1px 6px; border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-medium); } /* visual pass — a quiet count, not an alert colour */
 .student-row-archived td{ color:var(--eb-muted); } /* UX-8b — archived rows stay readable */
 .never-login{ color:var(--eb-muted); }
 
@@ -219,10 +269,35 @@
   .eb-bulk-group{ border-inline-end:0; padding-inline-end:0; width:100%; }
   .eb-profile-stats,.eb-dl{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .eb-class-select{ padding:var(--eb-space-2); }
+  /* Phone: each roster row is a card (labelled fields, actions in its corner) instead of a sideways-scrolling table. */
+  .eb-roster-table-wrap{ max-height:none; overflow:visible; border:0; background:transparent; }
+  .eb-roster-table,.eb-roster-table tbody{ display:block; inline-size:100%; min-inline-size:0; } /* .students-table sets min-width: 620px */
+  .eb-roster-table thead{ display:flex; align-items:center; gap:var(--eb-space-2); padding:0 var(--eb-space-2) var(--eb-space-2); }
+  .eb-roster-table thead tr{ display:contents; }
+  .eb-roster-table thead th{ position:static; background:transparent; padding:0; }
+  .eb-roster-table thead th.eb-col-actions,.eb-roster-table thead th:not(:has(button,input)){ display:none; }
+  .eb-roster-table tbody tr{ position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--eb-space-1) var(--eb-space-3); margin-bottom:var(--eb-space-2); padding:var(--eb-space-3); padding-inline-start:52px; border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
+  /* doubled class: outranks the desktop cell tints (selected / archived / pinned actions) — the CARD carries the state */
+  .eb-roster-table.eb-roster-table tbody tr > td{ padding:0; white-space:normal; background:transparent; border:0; }
+  /* the (tall, wrapped) bulk bar scrolls with the page on a phone instead of covering the cards */
+  .eb-bulk-bar.student-bulk-bar{ position:static; }
+  .eb-icon-action{ min-width:44px; }
+  .eb-roster-table tbody tr.is-selected{ background:var(--eb-primary-050); border-color:var(--eb-primary); }
+  .eb-roster-table tbody tr.student-row-archived{ background:var(--eb-surface-2); }
+  .eb-roster-table tbody td[data-label]::before{ content:attr(data-label); display:block; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+  .eb-roster-table tbody td.eb-col-name{ grid-column:1 / -1; }
+  .eb-roster-table tbody td.eb-col-name::before{ display:none; }
+  .eb-roster-table tbody td.eb-col-select{ position:absolute; inset-block-start:var(--eb-space-3); inset-inline-start:var(--eb-space-3); }
+  .eb-roster-table tbody td.eb-col-actions{ grid-column:1 / -1; position:static; border:0; }
+  .eb-roster-table tbody td.eb-col-actions .eb-row-actions{ justify-content:flex-start; }
+  /* Phone: the roster title + meta take the full width; its actions wrap below instead of squeezing the title. */
+  .eb-roster-pane > .eb-section-header{ flex-direction:column; align-items:stretch; }
+  .eb-roster-pane > .eb-section-header .eb-section-actions{ justify-content:flex-start; flex-wrap:wrap; }
 }
 /* UX-8b — reduced motion */
 @media (prefers-reduced-motion: reduce){
   .class-row,.eb-class-row,.eb-segmented > button,.eb-menu-trigger,.eb-search-field{ transition:none; }
+  .eb-roster-stat,.eb-skeleton-dot,.eb-skeleton-bar{ transition:none; animation:none; }
 }
 @media print{
   .eb-classes-pane,.eb-roster-toolbar,.eb-bulk-bar,.eb-menu-trigger,.eb-section-actions,.eb-credential-box{ display:none !important; }

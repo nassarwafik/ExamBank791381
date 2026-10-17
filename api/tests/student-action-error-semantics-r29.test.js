@@ -224,10 +224,14 @@ describe("F. source / architecture guards", () => {
   it("F3 the typed warning never logs the message, and bulk loops still catch per row", () => {
     const warn = src.match(/obs\?\.logWarn\("student\.manage\.rejected", \{([^}]*)\}\)/);
     expect(warn).not.toBeNull(); expect(warn[1]).not.toMatch(/message|e\.message/);
-    expect((src.match(/error: error instanceof Error \? error\.message : "تعذر (إنشاء الطالب|تنفيذ العملية)\."/g) || []).length).toBe(2);
+    // Classes & Students hardening: both bulk loops still catch PER ROW, but the row text now goes through
+    // rowErrorMessage, which exposes only teacher-facing (typed / lock-busy) messages — never raw storage errors.
+    expect((src.match(/error: rowErrorMessage\(error, "تعذر (إنشاء الطالب|تنفيذ العملية لهذا الطالب)\.", obs\)/g) || []).length).toBe(2);
+    expect(src).toMatch(/function rowErrorMessage\(error, fallback, obs\) \{\s*if \(error instanceof StudentActionError \|\| error instanceof CredentialLockBusyError\) return error\.message \|\| fallback;/);
   });
   it("F4 no frontend change is needed: the teacher client already surfaces the server's error text", () => {
     const ui = readFileSync(path.join(HERE, "..", "..", "src", "TeacherPlatform.tsx"), "utf8");
-    expect(ui).toContain('if(!response.ok)throw new Error(result.error||"حدث خطأ.")');
+    // Classes & Students hardening: the body is parsed defensively (non-JSON gateway pages), the server text still wins.
+    expect(ui).toContain('if(!response.ok)throw new Error(result?.error||');
   });
 });
