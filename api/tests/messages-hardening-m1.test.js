@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { handler as teacherMessages } from "../src/functions/messages.js";
 import { handler as studentMessages } from "../src/functions/student-messages.js";
 import { directPrefix, announcementPrefix, sequencedMessageId, normalizeMessageBody, MAX_BODY_LENGTH } from "../src/lib/message-store.js";
-import { teacherDirectStateName, studentDirectStateName, isReadBy, normalizeMarker } from "../src/lib/message-read-state.js";
+import { teacherDirectStateName, studentDirectStateName, isReadBy, normalizeMarker, absorbIrrelevantSequenced } from "../src/lib/message-read-state.js";
 import { evaluateSendBucket, SEND_LIMITS } from "../src/lib/message-rate-limit.js";
 import { sendKeyName } from "../src/lib/message-send-key.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
@@ -70,6 +70,24 @@ describe("H2 — the reader's own messages are not re-downloaded by every unread
     expect(dl.by(directPrefix(S1))).toBe(0);                      // …and absorbed: no more downloads
     const marker = normalizeMarker(ctx.getJson(teacherDirectStateName(T1, S1)));
     expect(isReadBy(marker, sequencedMessageId(directPrefix(S1), 12))).toBe(true);
+  });
+  it("absorption continues from the current boundary: later own messages are absorbed too (no growing re-download)", async () => {
+    const ctx = createMemoryContainer(seed());
+    for (let i = 0; i < 3; i++) await tPost(TEACHER(ctx, openLimits), { action: "sendDirect", studentId: S1, body: "أ" + i });
+    await tGet(TEACHER(ctx), "?kind=unread-summary&classId=" + C1);                                   // absorbs 1..3
+    for (let i = 0; i < 4; i++) await tPost(TEACHER(ctx, openLimits), { action: "sendDirect", studentId: S1, body: "ب" + i });
+    await tGet(TEACHER(ctx), "?kind=unread-summary&classId=" + C1);                                   // absorbs 4..7
+    const dl = countingDownloads(ctx);
+    await tGet(TEACHER(ctx), "?kind=unread-summary&classId=" + C1);
+    expect(dl.by(directPrefix(S1))).toBe(0);
+    expect(isReadBy(normalizeMarker(ctx.getJson(teacherDirectStateName(T1, S1))), sequencedMessageId(directPrefix(S1), 7))).toBe(true);
+  });
+  it("absorbIrrelevantSequenced never covers a position outside its run (e.g. the marker vanished meanwhile): no write", async () => {
+    const ctx = createMemoryContainer(seed());
+    for (let i = 0; i < 4; i++) await sPost(STUDENT(ctx, S1, openLimits), { action: "sendDirect", body: "ر" + i });
+    const run = [3, 4].map(p => sequencedMessageId(directPrefix(S1), p));                             // positions 1..2 not in the run
+    await absorbIrrelevantSequenced(ctx.container, { stateName: teacherDirectStateName(T1, S1), streamPrefix: directPrefix(S1), ids: run, meta: {} });
+    expect(ctx.has(teacherDirectStateName(T1, S1))).toBe(false);
   });
   it("absorption never covers an unread STUDENT message: it stops at the first one (the count is unchanged)", async () => {
     const ctx = createMemoryContainer(seed());
