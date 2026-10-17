@@ -42,11 +42,6 @@
 .eb-password-field{ display:flex; align-items:flex-end; gap:var(--eb-space-2); }
 .eb-password-field > label{ flex:1 1 auto; min-width:0; }
 .eb-password-field > .eb-button{ flex:0 0 auto; min-height:38px; }
-@media (max-width:767px){
-  /* Phone: the roster title + meta take the full width; its actions wrap below instead of squeezing the title. */
-  .eb-roster-pane > .eb-section-header{ flex-direction:column; align-items:stretch; }
-  .eb-roster-pane > .eb-section-header .eb-section-actions{ justify-content:flex-start; flex-wrap:wrap; }
-}
 
 /* ---------- Segmented view switch (buttons with aria-pressed) ---------- */
 .eb-segmented{ display:inline-flex; gap:2px; padding:3px; background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
@@ -233,6 +228,9 @@
   .eb-bulk-group{ border-inline-end:0; padding-inline-end:0; width:100%; }
   .eb-profile-stats,.eb-dl{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .eb-class-select{ padding:var(--eb-space-2); }
+  /* Phone: the roster title + meta take the full width; its actions wrap below instead of squeezing the title. */
+  .eb-roster-pane > .eb-section-header{ flex-direction:column; align-items:stretch; }
+  .eb-roster-pane > .eb-section-header .eb-section-actions{ justify-content:flex-start; flex-wrap:wrap; }
 }
 /* UX-8b — reduced motion */
 @media (prefers-reduced-motion: reduce){
