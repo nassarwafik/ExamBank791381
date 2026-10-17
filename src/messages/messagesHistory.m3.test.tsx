@@ -72,6 +72,10 @@ describe("teacher — older history", () => {
     fireEvent.click(within(screen.getByRole("list", { name: "طلاب الصف" })).getByRole("button", { name: /خالد/ }));
     await waitFor(() => expect(screen.queryByText("رسالة 1")).toBeNull());
     expect(screen.getByRole("button", { name: "عرض الرسائل الأقدم" })).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("list", { name: "طلاب الصف" })).getByRole("button", { name: /سارة/ }));   // and back
+    await screen.findByText("رسالة 6");
+    expect(screen.queryByText("رسالة 1")).toBeNull();                                // a fresh visit starts from the latest page
+    expect(screen.getByRole("button", { name: "عرض الرسائل الأقدم" })).toBeTruthy();
   });
 
   it("a failed older load shows its own error and keeps the button for a retry", async () => {

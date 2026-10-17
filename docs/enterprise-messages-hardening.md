@@ -1,4 +1,4 @@
-# Messages — enterprise hardening (M.1 server, M.2 presentation)
+# Messages — enterprise hardening (M.1 server, M.2 presentation, M.3 audit follow-ups)
 
 Design record for the «الرسائل» surfaces: the teacher page (`src/messages/TeacherMessagesPage.tsx`), the student
 view (`src/messages/StudentMessagesPage.tsx`) and their APIs (`/api/messages`, `/api/student-messages`). It builds on
@@ -86,6 +86,49 @@ Verified in Chromium at 1360 px and 390 px against a mocked client (teacher star
 roster and phone chat; student chat on desktop and phone): no horizontal overflow, no console errors from the page.
 These browser checks are not CI evidence; the CSS contract is pinned by source assertions.
 
+## 3b. M.3 — follow-ups of the independent audit of the M.1/M.2 head (`57b9b838`)
+
+The audit (read-only, against `57b9b838`) found no defect introduced by M.1. It found these remaining problems:
+
+| Audit # | Problem | Fix (commit) |
+|---|---|---|
+| 1, 2 | Every badge poll recomputed everything:<br>• the teacher badge downloaded one marker per conversation on the platform, the user document of every conversation the teacher had not marked (other tenants' students) and the unread candidates;<br>• the student badge re-downloaded up to ~100 unread messages. | **ETag-validated memo** (`message-unread-memo.js`, M.3b), described below. |
+| 3 | A sequenced acknowledgement through X covers every lower position, but a page showed only the newest `limit` messages. A reader with more unread replies than one page marked the older ones read without seeing them, and could never reach them (no pagination). | **Sequenced unread frontier and `before` pagination** (M.3a), described below. |
+| 4 | A create whose response was lost (the storage SDK retries and gets "already exists") was treated as a lost race, and the same body was published at the next position. An ambiguous failure released the idempotency claim, so a retry published again. | **Publication stamp** (M.3a), described below. |
+| 5 | A stale claim (finalize lost, or the request died after publishing) was taken over and published a second copy. | The takeover looks for the claim's stamp among the stream's newest 50 messages and **replays** that message. |
+| 6 | Exhausted compare-and-set retries (limiter bucket, marker, claim) answered 500. An unparsable bucket or claim blob meant a permanent 500 for that sender or key. | **503 BUSY** with `Retry-After`, like position contention. An unparsable bucket or claim is reset **once**. `409 SEND_IN_PROGRESS` now carries `Retry-After: 2`. |
+| 8 | Tag characters, soft hyphens, blank fillers (Hangul / Braille) and interlinear marks passed the text filter; a message made only of fillers was "non-empty". | Removed. U+2028 / U+2029 become new lines. |
+
+**Sequenced unread frontier and `before` pagination (#3):**
+- *Pages:* the legacy frontier rule (5D) now applies to the sequenced domain too. A page carries the reader's unread relevant sequenced messages oldest-first, up to the same bounds (100 relevant, 400 scanned). Unread relevant messages beyond that window are held back (`hasNewer`).
+- *Marks:* `markStreamRead` rejects (400, no write) a sequenced boundary that would newly cover an unread relevant position outside that window. The check runs inside every compare-and-set attempt, against the marker being updated.
+- *Clients:* the pages reload as soon as the shown messages are acknowledged, so held-back ones follow within one round trip.
+- *Own messages:* they never spend the bound, and a window of only the reader's own messages is absorbed (M.1).
+- *Older history:*
+  - teacher reads accept `?before=<messageId>`; the student read accepts `?stream=direct|announcements&before=<id>`;
+  - a malformed cursor is a 400;
+  - «عرض الرسائل الأقدم» loads these pages; the scroll position is kept when older messages are prepended;
+  - older pages are display-only and never feed an acknowledgement.
+
+**Publication stamp (#4, #5):**
+- Every new message stores `publishNonce`. It is storage-only and never part of a view.
+- With an idempotency key the stamp is the claim's digest; otherwise it is random.
+- On a create conflict, `createMessage` reads the position back. If it holds this request's stamp, it returns that message.
+- A non-conflict upload failure is marked `publishAmbiguous`, and `publishGuarded` then keeps the claim pending instead of releasing it.
+
+**ETag-validated memo (#1, #2):**
+- It is in-memory, per container, LRU-bounded and never an authority. It follows the same construction as the 21G.2 / 21H.4 caches.
+- A document is reused only while the ETag that the listing in this request reports equals the ETag it was downloaded with.
+- A stream count is reused only while the stream's listing signature (every name and ETag) and the reader's marker ETag (from a listing of the reader's markers) are unchanged.
+- Nothing is time-based. Any writer is seen by the next poll, including an old 5C instance, a direct storage write or a deletion.
+- The teacher summary decides membership (the current user document, the class filter, tenancy) **before** counting.
+- *Steady-state cost* of a poll in which nothing changed: listings only (direct namespace, the teacher's markers, users) and **zero downloads**.
+- *Not memoized:*
+  - the notification view, which counts from the markers it loaded for its items;
+  - callers that inject their own storage functions (instrumentation, tests).
+
+**Remaining structural item:** the teacher badge still *lists* the whole direct namespace (names only) on every poll. Removing that listing needs a durable per-conversation index, and a durable index cannot see messages written by code that does not maintain it (a rollback, an old 5C instance). The 5D tests pin that such messages are counted immediately. Relaxing that guarantee, for example to "within N minutes", is an owner decision and is **not** made here.
+
 ## 4. Evidence
 
 - `api/tests/messages-hardening-m1.test.js`, 23 cases: fail-first against `9aecbaf` (19 of the 21 initial cases
@@ -98,12 +141,24 @@ These browser checks are not CI evidence; the CSS contract is pinned by source a
     the class switch).
   - Files were hash-restored after every mutant.
 
+- M.3:
+  - `api/tests/messages-hardening-m3.test.js`, 20 cases: 19 failed on `57b9b838`; 1 is a pin.
+  - `api/tests/messages-unread-memo-m3.test.js`, 9 cases: the 3 cost cases failed on `57b9b838`; the 6 freshness and tenancy pins pass on both.
+  - `src/messages/messagesHistory.m3.test.tsx`, 8 cases: new UI pins.
+  - Two 5D tests pinned the #3 defect and were updated deliberately:
+    - late-legacy "page smaller than the history" now shows S1 to S4 (it used to acknowledge S4 without S1 and S2 ever being shown);
+    - the legacy-frontier long-stream setup now acknowledges its 101 unread messages page by page.
+  - Mutation: 16 mutants (Q01–Q16), all KILLED. Q16 survived the first run and was killed after the thread-switch test also switched back.
+
 ## 5. Known limitations / follow-ups
 
-- **Last-message preview and time in the roster** needs a per-teacher thread index (also the structural fix for H1:
-  the badge still lists the direct prefix, now without re-downloading answered history). Planned as a separate phase.
-- **History pagination** (a `before` cursor and «عرض الأقدم») is not done. Threads still load the recent window.
-- **Per-class unread in the class selector** would need one summary per class, so it waits for the thread index.
+- **Last-message preview and time in the roster**, **per-class unread in the class selector**, and dropping the
+  direct-namespace listing all need the durable per-conversation index described in §3b (an owner decision on how
+  quickly messages written by non-maintaining code must be counted).
+- **Direct threads are keyed per student**, not per (teacher, student): a teacher who can access a student sees every
+  teacher's messages with that student. This is a product decision (audit #8), unchanged.
+- An ambiguous publication failure keeps the idempotency claim pending for up to 30 s, so a retry in that window answers
+  `409 SEND_IN_PROGRESS` with `Retry-After` even when nothing was published.
 - **Messages of deleted students** need cleanup tied to the student-deletion path (owned by the Classes & Students
   work); deferred until that work is merged.
 - The rate limits are product numbers chosen for real conversation; the owner may tune them in
