@@ -17,7 +17,7 @@ async function openReader() {
 }
 
 describe("Learning Materials — teacher training host", () => {
-  it("with a token: ONE trainings-list read with x-builder-token; every training is available with its title; the exit label is the teacher's", async () => {
+  it("with a token: ONE trainings-list read (+ ONE study-state read, L.3) with x-builder-token; every training is available with its title; the exit label is the teacher's", async () => {
     const calls: { url: string; headers: Record<string, string> }[] = [];
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       calls.push({ url: String(input), headers: (init?.headers || {}) as Record<string, string> });
@@ -28,10 +28,13 @@ describe("Learning Materials — teacher training host", () => {
     }) as unknown as typeof fetch;
     render(<LearningMaterialsPage token="builder-secret" />);
     await openReader();
-    await waitFor(() => expect(calls.length).toBe(1));
-    expect(calls[0].url).toBe("/api/learning-training");
-    expect(calls[0].headers["x-builder-token"]).toBe("builder-secret");
-    expect(calls[0].headers.Authorization).toBe("Bearer builder-secret");
+    // Phase L.3 — teacher preview parity: the trainings list AND one study-state read, both teacher-authenticated
+    await waitFor(() => expect(calls.length).toBe(2));
+    expect(calls.map(c => c.url).sort()).toEqual(["/api/learning-study/791381", "/api/learning-training"]);
+    for (const c of calls) {
+      expect(c.headers["x-builder-token"]).toBe("builder-secret");
+      expect(c.headers.Authorization).toBe("Bearer builder-secret");
+    }
     const jump = screen.getByLabelText("انتقل إلى صفحة") as HTMLSelectElement;
     fireEvent.change(jump, { target: { value: P08 } });
     await screen.findByRole("heading", { level: 2, name: "تدريبات قصيرة" }, SLOW);
@@ -39,7 +42,7 @@ describe("Learning Materials — teacher training host", () => {
     expect(t3.textContent).toContain("عناوين IPv4 وصلاحية العنوان");
     expect((t3.querySelector("button") as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByRole("button", { name: "العودة إلى نظرة الكتاب" })).toBeTruthy();
-    expect(calls.length).toBe(1);
+    expect(calls.length).toBe(2);                                                     // a page change reads nothing more
   }, T);
 
   it("without a token: the Reader opens PDF 22 with generic cards and issues ZERO requests", async () => {

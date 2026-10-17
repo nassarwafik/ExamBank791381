@@ -115,6 +115,15 @@ describe("open flow — the same LearningReader, revalidated entitlement, back t
     expect(document.querySelector(".learning-reader")).toBeNull();
     expect(await screen.findByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
   }, T);
+  it("Phase L.2 — a released unit is a link: it re-reads the entitlement and opens the Reader at THAT unit", async () => {
+    const m = mount();
+    const s = await section();
+    await waitFor(() => expect(m.materialGets()).toBe(1));
+    fireEvent.click(await within(s).findByRole("button", { name: "الأعداد والموازين" }));
+    await waitFor(() => expect(document.querySelector(".learning-reader-crumb")?.textContent?.startsWith("الأعداد والموازين ›")).toBe(true), SLOW);
+    expect(m.materialGets()).toBe(2);                                                  // open-time revalidation
+  }, T);
+
   it("REGRESSION (landmarks): the student's full-screen Reader keeps its content column as the page's ONE <main> — normal and presentation mode", async () => {
     mount();
     const card = await within(await section()).findByRole("article", { name: "شبكات الاتصال" });

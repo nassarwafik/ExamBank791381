@@ -7,7 +7,8 @@ import { IconBook } from "../icons";
 export type StudentLearningCourse = { courseId: string; title: string; modules: { moduleId: string; title: string; order: number }[] };
 type Props = {
   token: string;
-  onOpen: (course: StudentLearningCourse) => void;
+  /** Open the Reader on a course — at a chosen unit (`moduleId`) or, without one, where the student left off. */
+  onOpen: (course: StudentLearningCourse, moduleId?: string) => void;
   /** Phase 9A — the courses this panel loaded (its ONE read), for the Today Hub; null = unavailable / not loaded. */
   onCoursesChange?: (courses: StudentLearningCourse[] | null) => void;
 };
@@ -52,16 +53,17 @@ export default function StudentLearningMaterials({ token, onOpen, onCoursesChang
   }, [token]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Open-time revalidation: the entitlement is read again so a chapter the teacher just hid never opens.
-  async function open(course: StudentLearningCourse) {
+  async function open(course: StudentLearningCourse, moduleId?: string) {
     if (opening) return;
-    setOpening(course.courseId); setError("");
+    setOpening(moduleId ? course.courseId + "/" + moduleId : course.courseId); setError("");
     const fresh = await fetchMaterials();
     setOpening("");
     if (fresh === null) { setError("تعذر التحقق من موادك التعليمية الآن. حاول مرة أخرى."); return; }
     setCourses(fresh); onCoursesChange?.(fresh);
     const current = fresh.find(c => c.courseId === course.courseId);
     if (!current) { setError("لم تعد هذه المادة متاحة لصفك حاليًا."); return; }
-    onOpen(current);
+    if (moduleId && !current.modules.some(m => m.moduleId === moduleId)) { setError("لم تعد هذه الوحدة متاحة لصفك حاليًا."); return; }
+    onOpen(current, moduleId);
   }
 
   return (
@@ -88,8 +90,16 @@ export default function StudentLearningMaterials({ token, onOpen, onCoursesChang
                     </div>
                   </div>
                   <p className="eb-sp-learning-count">الوحدات المتاحة الآن: <strong>{modules.length}</strong></p>
+                  {/* Phase L.2 — each released unit opens the Reader at that unit (re-validated like «فتح المادة»). */}
                   <ol className="eb-sp-learning-modules" aria-label={"وحدات " + course.title}>
-                    {modules.map(m => <li key={m.moduleId}>{m.title}</li>)}
+                    {modules.map(m => (
+                      <li key={m.moduleId}>
+                        <button type="button" className="eb-sp-learning-module" disabled={Boolean(opening)} onClick={() => void open(course, m.moduleId)}>
+                          <span>{m.title}</span>
+                          {opening === course.courseId + "/" + m.moduleId && <span className="eb-sp-learning-module-state">جارٍ الفتح...</span>}
+                        </button>
+                      </li>
+                    ))}
                   </ol>
                   <button type="button" className="eb-button is-primary eb-sp-learning-open" disabled={Boolean(opening)} onClick={() => void open(course)}>
                     {opening === course.courseId ? "جارٍ الفتح..." : "فتح المادة"}

@@ -8,10 +8,14 @@ import { batchFirstPageId, flattenPageRefs } from "./content/navigation";
 import type { LearningCourseManifest } from "./content/types";
 import { arabicCount, AVAILABLE_BOOKS, LESSONS } from "./arabicCount";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
+import { createStudyClient } from "./study/studyClient";
+import { createClassReadingClient, type ClassReadingClient } from "./classReading/classReadingClient";
+import ClassReadingPanel from "./classReading/ClassReadingPanel";
 import "./learning.css";
 import "./learning-library-premium.css";
 import { lazyWithRetry } from "../lazyWithRetry";
 import LibrarySearch from "./search/LibrarySearch";
+import { clearLearningRoute, parseLearningRoute, writeLearningRoute, type LearningRoute } from "./learningRoute";
 import "./search/learning-library-search.css";
 
 // The interactive reader (hosted by the shared Reader-plus-training wrapper) is code-split so it and the content
@@ -30,14 +34,34 @@ type View =
  * overview (eight high-level sections), and the interactive Reader. Opening the library/overview issues ZERO
  * backend requests; the overview of a readable course loads only the course's code-split MANIFEST chunk (the same one
  * the Reader needs) for the section lesson counts and page ranges — never a module body or the Reader chunk. The Reader
- * performs no backend request for CONTENT (only code-split content imports). With a
+ * performs no backend request for CONTENT (only code-split content imports). With a teacher token the overview also
+ * offers «قراءة صفوفي» (Phase L.4), which issues its class requests only once the teacher opens it. With a
  * teacher token the Reader additionally reads the trainings list once (Learning Practice) so the teacher can
  * preview and solve T01–T04 regardless of class publication; without a token it stays fully local.
  */
 export default function LearningMaterialsPage({ token }: { token?: string } = {}) {
-  const [view, setView] = useState<View>({ kind: "library" });
+  // Phase L.2 — the view lives in the URL fragment (learningRoute.ts): every view change is a history entry, Back / Forward
+  // replay them, a page turn inside the Reader replaces the current entry, and a reload or a shared link opens the same
+  // place. The fragment is removed when the teacher leaves Learning Materials.
+  const [view, setViewState] = useState<View>(() => viewFromRoute(readRoute()));
+  const setView = useCallback((next: View) => {
+    setViewState(next);
+    writeLearningRoute(routeFromView(next), "push");
+  }, []);
+  useEffect(() => {
+    const onPop = () => setViewState(viewFromRoute(readRoute()));
+    window.addEventListener("popstate", onPop);
+    writeLearningRoute(routeFromView(viewFromRoute(readRoute())), "replace");     // normalise a malformed / unknown link
+    return () => { window.removeEventListener("popstate", onPop); clearLearningRoute(); };
+  }, []);
+  const onReaderPage = useCallback((courseId: string, pageId: string) => writeLearningRoute({ kind: "reader", courseId, pageId }, "replace"), []);
   const course = view.kind === "library" ? undefined : findLearningCourse(view.courseId);
   const client = useMemo(() => (token ? createTrainingClient(teacherTrainingHeaders(token)) : null), [token]);
+  // Phase L.3 — the teacher preview reads the book exactly as a student does: in-page exercises are judged by the SAME
+  // server study authority (a teacher's answers are judged and never stored), so the page shows the student's study line.
+  const study = useMemo(() => (token ? createStudyClient(teacherTrainingHeaders(token)) : null), [token]);
+  // Phase L.4 — the book page's «قراءة صفوفي» panel (teacher only; it issues no request until the teacher opens it).
+  const classReading = useMemo(() => (token ? createClassReadingClient(teacherTrainingHeaders(token)) : null), [token]);
   // Phase 21E L3-B — whole-course search ("all") is a TEACHER capability: this page is mounted only inside the
   // authenticated teacher app, and it is enabled only with the teacher session token present. The student portal never
   // reaches this page; its Reader searches exactly its released modules.
@@ -59,7 +83,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
     } catch {
       setView({ kind: "reader", courseId });
     }
-  }, []);
+  }, [setView]);
 
   if (course && view.kind === "reader") {
     const initialPageId = view.initialPageId;
@@ -75,7 +99,9 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
             onExit={() => setView(view.fromSearch ? { kind: "library" } : { kind: "course", courseId: course.id })}
             exitLabel={view.fromSearch ? "العودة إلى نتائج البحث" : "العودة إلى نظرة الكتاب"}
             client={client}
+            study={study}
             actor="teacher"
+            onPageChange={pageId => onReaderPage(course.id, pageId)}
             embedded
             searchScope={teacherSearch ? "all" : undefined}
           />
@@ -93,6 +119,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
         onBack={() => setView({ kind: "library" })}
         onStartReading={() => setView({ kind: "reader", courseId: course.id })}
         onOpenSection={batchId => { void openSection(course.id, batchId); }}
+        classReading={classReading}
       />
     );
   }
@@ -165,6 +192,25 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   );
 }
 
+function readRoute(): LearningRoute | null {
+  try { return typeof location !== "undefined" ? parseLearningRoute(location.hash) : null; } catch { return null; }
+}
+
+/** A route → the page's view. An unknown book is the library; the reader needs a book with content. */
+function viewFromRoute(route: LearningRoute | null): View {
+  if (!route || route.kind === "library") return { kind: "library" };
+  const course = findLearningCourse(route.courseId);
+  if (!course || course.status !== "available") return { kind: "library" };
+  if (route.kind === "course" || !hasCourseContent(course.id)) return { kind: "course", courseId: course.id };
+  return { kind: "reader", courseId: course.id, initialPageId: route.pageId };
+}
+
+function routeFromView(view: View): LearningRoute {
+  if (view.kind === "library") return { kind: "library" };
+  if (view.kind === "course") return { kind: "course", courseId: view.courseId };
+  return { kind: "reader", courseId: view.courseId, pageId: view.initialPageId };
+}
+
 /** A course's grade labels from the catalog's free-text field («الصف العاشر / الحادي عشر» → two grades). */
 function courseGrades(course: LearningCourse): string[] {
   const parts = course.grades.split("/").map(g => g.trim()).filter(Boolean);
@@ -201,7 +247,7 @@ function CourseCard({ course, onOpen }: { course: LearningCourse; onOpen: () => 
 }
 
 /** Course overview: identity + a short intro + the eight high-level content sections, and the reader entry point. */
-function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void; onOpenSection: (batchId: string) => void }) {
+function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection, classReading = null }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void; onOpenSection: (batchId: string) => void; classReading?: ClassReadingClient | null }) {
   const [manifest, setManifest] = useState<LearningCourseManifest | null>(null);
   // Phase L.0 — the section details come from the manifest chunk; its load is visible (a status line) and a failure is
   // an alert with a retry instead of a silently detail-less list. The rows stay usable meanwhile: a section opened
@@ -301,6 +347,7 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
           ))}
         </ul>
       </div>
+      {canRead && classReading && <ClassReadingPanel courseId={course.id} client={classReading} />}
     </section>
   );
 }

@@ -1,0 +1,209 @@
+/* ============================================================
+   Phase L.1 — the professional Reader (normal reading only; presentation mode keeps its own layout).
+   Tokens and logical properties only. Loaded after every earlier reader sheet; its selectors carry the
+   `.learning-reader:not(.is-presentation)` prefix, so they win over reader.css / L2-* by specificity, never by !important.
+   Measured goal (docs/enterprise-learning-materials-l-plan.md): the text gets ≥ 70 % of the screen at ≥ 1024px in focus
+   mode — it got 38 % (1024×768) and 41 % (1440×900) before.
+   ============================================================ */
+
+/* ── 1. The index never takes the page's room unless the reader docks it ─────────────────────────────────────────
+   The Reader sets data-toc="docked" only from 1280px, outside focus mode and while the reader keeps it docked; every
+   other case is the overlay drawer, opened by «الفهرس» on every width. */
+.learning-reader:not(.is-presentation) .learning-reader-toc-toggle { display: inline-flex; }
+@media (min-width: 1024px) {
+  .learning-reader:not(.is-presentation)[data-toc="drawer"] .learning-reader-layout { display: block; }
+  .learning-reader:not(.is-presentation)[data-toc="drawer"] .learning-reader-sidebar { display: none; }
+  .learning-reader:not(.is-presentation)[data-toc="docked"] .learning-reader-layout { grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); gap: var(--eb-space-4); }
+  /* The docked index sits under the sticky toolbar and scrolls on its own. */
+  .learning-reader:not(.is-presentation)[data-toc="docked"] .learning-reader-sidebar {
+    inset-block-start: calc(var(--learning-reader-bar-h) + var(--eb-space-3));
+    max-block-size: calc(100vh - var(--learning-reader-bar-h) - var(--eb-space-6));
+  }
+}
+
+/* ── 2. One compact, sticky toolbar ──────────────────────────────────────────────────────────────────────────────
+   Icon buttons with their names kept in the DOM (visually hidden) and shown as a tooltip; the book title and the
+   reader's place («الوحدة › الدرس») take the rest of the row. */
+.learning-reader:not(.is-presentation) { --learning-reader-bar-h: 56px; }
+.learning-reader:not(.is-presentation) .learning-reader-topbar {
+  position: sticky; inset-block-start: 0; z-index: 6;
+  flex-wrap: nowrap; gap: var(--eb-space-1); min-block-size: var(--learning-reader-bar-h); box-sizing: border-box;
+}
+.learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button { padding-inline: 0; }
+.learning-reader:not(.is-presentation) .learning-reader-topbar .learning-reader-btn-label {
+  position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button[aria-pressed="true"],
+.learning-reader:not(.is-presentation)[data-toc="docked"] .learning-reader-toc-toggle {
+  color: var(--eb-primary-strong); background: var(--eb-primary-050);
+}
+.learning-reader-titleblock {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  padding-inline: var(--eb-space-1);
+}
+.learning-reader:not(.is-presentation) .learning-reader-titleblock .learning-reader-booktitle {
+  flex: 0 0 auto; font-size: var(--eb-fs-16); line-height: var(--eb-lh-tight);
+}
+.learning-reader-crumb {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--eb-text-secondary); font-size: var(--eb-fs-12); line-height: var(--eb-lh-tight);
+}
+@media (max-width: 479px) {
+  .learning-reader-crumb { display: none; }
+}
+/* «المزيد»: on wide screens its group is simply part of the row; on phones it is a small menu under the toolbar. */
+.learning-reader-more { display: contents; }
+.learning-reader-more-toggle { display: none; }
+@media (max-width: 599px) {
+  .learning-reader:not(.is-presentation) .learning-reader-topbar .learning-reader-more-toggle { display: inline-flex; }
+  .learning-reader:not(.is-presentation) .learning-reader-more {
+    display: none; position: absolute; inset-block-start: calc(100% + var(--eb-space-1)); inset-inline-end: 0; z-index: 7;
+    flex-direction: column; align-items: stretch; min-inline-size: 15rem; padding: var(--eb-space-1);
+    background: var(--eb-surface); border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-lg);
+  }
+  .learning-reader:not(.is-presentation) .learning-reader-more[data-open] { display: flex; }
+  .learning-reader:not(.is-presentation) .learning-reader-topbar .learning-reader-more .eb-button {
+    justify-content: flex-start; gap: var(--eb-space-2); padding-inline: var(--eb-space-3); inline-size: 100%;
+  }
+  .learning-reader:not(.is-presentation) .learning-reader-topbar .learning-reader-more .learning-reader-btn-label {
+    position: static; inline-size: auto; block-size: auto; margin: 0; overflow: visible; clip: auto; clip-path: none; white-space: nowrap;
+  }
+}
+
+/* ── 3. Focus mode: the host's chrome steps aside ────────────────────────────────────────────────────────────────
+   The Reader flags <html data-eb-reading-focus> while focus mode is on (and clears it on exit / unmount). The teacher
+   shell's navigation column and page header leave the layout; the Reader's own toolbar keeps «الخروج من وضع التركيز»,
+   and Escape leaves too. */
+html[data-eb-reading-focus] .eb-shell > .eb-sidebar,
+html[data-eb-reading-focus] .eb-shell > .eb-drawer-backdrop,
+html[data-eb-reading-focus] .eb-shell-main > .eb-page-header { display: none; }
+html[data-eb-reading-focus] .eb-lm-reader { padding: var(--eb-space-2) var(--eb-space-3) var(--eb-space-3); }
+/* Without the side index the canvas is centred and bounded, so a line never runs across a 1900px monitor. */
+.learning-reader:not(.is-presentation)[data-focus] .learning-reader-topbar,
+.learning-reader:not(.is-presentation)[data-focus] .learning-reader-layout,
+.learning-reader:not(.is-presentation)[data-focus] .learning-reader-nav {
+  inline-size: 100%; max-inline-size: 1240px; margin-inline: auto; box-sizing: border-box;
+}
+
+/* ── 4. The page head: the unit as kicker, the lesson as context, the source behind a disclosure ─────────────────── */
+.learning-reader-sourceinfo { color: var(--eb-muted); font-size: var(--eb-read-fs-tag); }
+.learning-reader-sourceinfo > summary {
+  display: inline-flex; align-items: center; gap: 4px; min-block-size: 32px; cursor: pointer;
+  color: var(--eb-text-secondary); font-weight: var(--eb-fw-semibold); list-style: none;
+}
+.learning-reader-sourceinfo > summary::-webkit-details-marker { display: none; }
+.learning-reader-sourceinfo > summary:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); border-radius: var(--eb-r-sm); }
+.learning-reader-sourceinfo > .learning-reader-source { margin-block-start: var(--eb-space-1); }
+@media (pointer: coarse) {
+  .learning-reader-sourceinfo > summary { min-block-size: 44px; }
+}
+
+/* ── 5. Unit opener: a designed starting point instead of a mostly empty slide ────────────────────────────────── */
+.learning-reader:not(.is-presentation) .learning-reader-page.is-opener { min-block-size: 0; }
+.learning-reader:not(.is-presentation) .learning-reader-opener { min-block-size: 0; }
+.learning-reader:not(.is-presentation) .learning-reader-opener-number { color: var(--eb-primary-100); }
+.learning-reader-unit-contents {
+  display: flex; flex-direction: column; gap: var(--eb-space-3); min-width: 0;
+  padding: var(--eb-space-4); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-xs);
+}
+.learning-reader-unit-contents-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-17); font-weight: var(--eb-fw-bold); }
+.learning-reader-unit-contents-list {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: var(--eb-space-2);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+.learning-reader-unit-lesson {
+  inline-size: 100%; min-block-size: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--eb-space-3);
+  padding: var(--eb-space-2) var(--eb-space-3); text-align: start; cursor: pointer; color: inherit; font: inherit;
+  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
+  transition: background-color var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease);
+}
+.learning-reader-unit-lesson:hover { background: var(--eb-primary-050); border-color: var(--eb-primary); }
+.learning-reader-unit-lesson:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.learning-reader-unit-lesson-index {
+  flex: 0 0 auto; display: inline-grid; place-items: center; inline-size: 28px; block-size: 28px; border-radius: var(--eb-pill);
+  background: var(--eb-primary-050); color: var(--eb-primary-strong); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-bold); font-variant-numeric: tabular-nums;
+}
+.learning-reader-unit-lesson-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.learning-reader-unit-lesson-title { color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); overflow-wrap: anywhere; }
+.learning-reader-unit-lesson-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); color: var(--eb-text-secondary); font-size: var(--eb-fs-13); }
+.learning-reader-unit-lesson-done { display: inline-flex; align-items: center; gap: 2px; color: var(--eb-success-tx); font-weight: var(--eb-fw-semibold); }
+.learning-reader-unit-lesson-go { flex: 0 0 auto; color: var(--eb-text-secondary); }
+
+/* ── 6. The page bar names where «التالي» leads ──────────────────────────────────────────────────────────────── */
+.learning-reader-navbtn-next { min-width: 0; max-inline-size: 55%; }
+.learning-reader-navbtn-text { display: inline-flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: var(--eb-lh-tight); }
+.learning-reader-navbtn-sub {
+  max-inline-size: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--eb-text-secondary); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-medium);
+}
+@media (max-width: 479px) {
+  .learning-reader-navbtn-sub { display: none; }
+}
+
+/* ── 7. A calmer two-level index: lesson labels, a guide line, compact rows for a mouse ─────────────────────────── */
+.learning-reader-toc-lessontitle { margin: var(--eb-space-3) 0 var(--eb-space-1); padding-inline: var(--eb-space-2); }
+.learning-reader-toc-lesson:first-child > .learning-reader-toc-lessontitle { margin-block-start: var(--eb-space-1); }
+.learning-reader-toc-pages { margin-inline-start: var(--eb-space-2); border-inline-start: 1px solid var(--eb-line); }
+.learning-reader-toc-page { padding-inline: var(--eb-space-3) var(--eb-space-2); }
+.learning-reader-toc-page.is-active { margin-inline-start: -1px; }
+@media (pointer: fine) {
+  .learning-reader-toc-page { min-block-size: 36px; }
+  .learning-reader-toc-modbtn { min-block-size: 40px; }
+}
+
+/* ── 8. «داكن» reading theme ────────────────────────────────────────────────────────────────────────────────────
+   Reader-scoped palette (like L2-C sepia). Contrast on the page surface #161b26: text 12.5:1, heading 15.6:1,
+   secondary 9.4:1, muted 7.0:1, accent text (primary-strong) 8.3:1, the four status texts ≥ 9:1 on their own tints;
+   white on the button blue 4.6:1, and that blue against the surface 3.7:1 (bars, borders). The whole Reader re-maps
+   (toolbar, index, page, page bar, drawers), so the custom properties the reader derives (--eb-read-accent …) follow.
+   Figures and interactive activities keep the LIGHT palette on their own plate: their drawings were authored on it. */
+.learning-reader {
+  --eb-read-dark-bg: #0f131b; --eb-read-dark-surface: #161b26; --eb-read-dark-surface-2: #1d2433;
+  --eb-read-dark-line: #2a3344; --eb-read-dark-line-2: #364156;
+  --eb-read-dark-text: #d6dce6; --eb-read-dark-heading: #f1f4f9; --eb-read-dark-secondary: #b6c0cf; --eb-read-dark-muted: #9aa6b8;
+  --eb-read-dark-primary: #3b6fe0; --eb-read-dark-primary-strong: #8fb3ff; --eb-read-dark-primary-050: #1b2740; --eb-read-dark-primary-100: #24345a;
+  --eb-read-dark-info: #38bdf8; --eb-read-dark-info-tx: #7dd3fc; --eb-read-dark-info-bg: #10283a;
+  --eb-read-dark-warn: #f59e0b; --eb-read-dark-warn-tx: #fbbf24; --eb-read-dark-warn-bg: #2d2010;
+  --eb-read-dark-success: #22c55e; --eb-read-dark-success-tx: #4ade80; --eb-read-dark-success-bg: #0f2a1a;
+  --eb-read-dark-danger: #f87171; --eb-read-dark-danger-tx: #fca5a5; --eb-read-dark-danger-bg: #2f1517;
+}
+.learning-reader:not(.is-presentation)[data-read-theme="dark"] {
+  --eb-bg: var(--eb-read-dark-bg); --eb-surface: var(--eb-read-dark-surface); --eb-surface-2: var(--eb-read-dark-surface-2);
+  --eb-line: var(--eb-read-dark-line); --eb-line-2: var(--eb-read-dark-line-2);
+  --eb-text: var(--eb-read-dark-text); --eb-text-heading: var(--eb-read-dark-heading); --eb-text-secondary: var(--eb-read-dark-secondary); --eb-muted: var(--eb-read-dark-muted);
+  --eb-primary: var(--eb-read-dark-primary); --eb-primary-strong: var(--eb-read-dark-primary-strong); --eb-primary-050: var(--eb-read-dark-primary-050); --eb-primary-100: var(--eb-read-dark-primary-100);
+  --eb-info: var(--eb-read-dark-info); --eb-info-tx: var(--eb-read-dark-info-tx); --eb-info-bg: var(--eb-read-dark-info-bg);
+  --eb-warn: var(--eb-read-dark-warn); --eb-warn-tx: var(--eb-read-dark-warn-tx); --eb-warn-bg: var(--eb-read-dark-warn-bg);
+  --eb-success: var(--eb-read-dark-success); --eb-success-tx: var(--eb-read-dark-success-tx); --eb-success-bg: var(--eb-read-dark-success-bg);
+  --eb-danger: var(--eb-read-dark-danger); --eb-danger-tx: var(--eb-read-dark-danger-tx); --eb-danger-bg: var(--eb-read-dark-danger-bg);
+  --eb-read-accent: var(--eb-primary); --eb-read-accent-strong: var(--eb-primary-strong); --eb-read-accent-bg: var(--eb-primary-050);
+  --eb-read-accent-2: var(--eb-info-tx); --eb-read-accent-2-bg: var(--eb-info-bg);
+  color-scheme: dark; color: var(--eb-text);
+  padding: var(--eb-space-2); background: var(--eb-bg); border-radius: var(--eb-r-lg);
+}
+.learning-reader:not(.is-presentation)[data-read-theme="dark"] :is(.learning-activity, .eb-visual-figure) {
+  --eb-bg: #f5f7fa; --eb-surface: #ffffff; --eb-surface-2: #f7f9fc; --eb-line: #e9edf4; --eb-line-2: #dce2ec;
+  --eb-text: #334155; --eb-text-heading: #0f172a; --eb-text-secondary: #334155; --eb-muted: #475569;
+  --eb-primary: #2563eb; --eb-primary-strong: #1d4ed8; --eb-primary-050: #eef4ff; --eb-primary-100: #e4edfc;
+  --eb-info: #0284c7; --eb-info-tx: #075985; --eb-info-bg: #e0f2fe;
+  --eb-warn: #d97706; --eb-warn-tx: #b45309; --eb-warn-bg: #fff7ed;
+  --eb-success: #16a34a; --eb-success-tx: #15803d; --eb-success-bg: #ecfdf3;
+  --eb-danger: #dc2626; --eb-danger-tx: #b42318; --eb-danger-bg: #fef2f2;
+  color-scheme: light; color: var(--eb-text);
+  background: var(--eb-surface); border-radius: var(--eb-r-lg);
+}
+.learning-reader-settings-swatch[data-theme="dark"] { background: var(--eb-read-dark-surface, #161b26); border-color: var(--eb-read-dark-line-2, #364156); }
+
+/* ── 9. Touch: every Reader control is at least 44px on a touch screen (tablets too, not only phones) ─────────────── */
+@media (pointer: coarse) {
+  .learning-reader :is(.learning-reader-drawer-head, .learning-reader-practice, .learning-reader-search-head) .eb-button { min-block-size: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learning-reader-unit-lesson { transition: none; }
+}
+@media (forced-colors: active) {
+  .learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button[aria-pressed="true"] { outline: 2px solid Highlight; }
+  .learning-reader-unit-lesson { border-color: CanvasText; }
+}

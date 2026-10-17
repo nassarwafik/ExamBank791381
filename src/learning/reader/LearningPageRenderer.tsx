@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { IconWarning, IconBook, IconSparkles, IconCheck } from "../../icons";
+import { IconWarning, IconBook, IconSparkles, IconCheck, IconInfo } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
 import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
 import type { LibraryTrainingHost } from "../training/types";
@@ -79,7 +79,7 @@ export default function LearningPageRenderer({ header, body, activity, training,
         {opener
           ? <UnitOpenerView block={opener} headed />
           : <h2 id="learning-reader-page-title" className="learning-reader-opener-title" tabIndex={-1}>{header.pageTitle}</h2>}
-        {header.source && <SourceLine source={header.source} />}
+        {header.source && <SourceInfo source={header.source} />}
         {body.page.blocks.filter(b => b.type !== "unit-opener").map(b => <BlockView key={b.id} block={b} ctx={ctx} />)}
       </article>
     );
@@ -88,20 +88,32 @@ export default function LearningPageRenderer({ header, body, activity, training,
   return (
     <article className="learning-reader-page" aria-labelledby="learning-reader-page-title">
       <header className="learning-reader-pagehead">
-        <p className="learning-reader-kicker">كتاب {header.courseId}</p>
+        {/* Phase L.1 — the kicker names the unit (the Reader's toolbar already names the book), the context line the lesson. */}
+        <p className="learning-reader-kicker">{header.moduleTitle}</p>
         <h2 id="learning-reader-page-title" className="learning-reader-page-title" tabIndex={-1}>{header.pageTitle}</h2>
-        <p className="learning-reader-context">{header.moduleTitle} · {header.lessonTitle}</p>
+        <p className="learning-reader-context">{header.lessonTitle}</p>
         <div className="learning-reader-metarow">
           {header.lesson && <span className="learning-reader-lessonpos">الدرس {header.lesson.index} من {header.lesson.total}</span>}
           <span className="learning-reader-position">صفحة {header.position.index} من {header.position.total}</span>
           <span className="learning-reader-frombook"><IconBook size={14} aria-hidden="true" />من الكتاب</span>
         </div>
-        {header.source && <SourceLine source={header.source} />}
+        {header.source && <SourceInfo source={header.source} />}
       </header>
       <div className="learning-reader-pagebody">
         <ReaderBody header={header} body={body} ctx={ctx} />
       </div>
     </article>
+  );
+}
+
+/** Phase L.1 — the source reference (PDF pages, printed page) is traceability, not reading: it stays one click away under
+ *  a quiet «مصدر الصفحة» disclosure instead of a line of internal numbers in every page head. */
+function SourceInfo({ source }: { source: ContentSource }) {
+  return (
+    <details className="learning-reader-sourceinfo">
+      <summary><IconInfo size={14} aria-hidden="true" />مصدر الصفحة</summary>
+      <SourceLine source={source} />
+    </details>
   );
 }
 

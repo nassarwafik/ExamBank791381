@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type MutableRefObject } from "react";
-import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconFilter, IconSearch } from "../../icons";
+import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconSliders, IconSearch, IconBook, IconSidebar, IconMore, IconFlag, IconEdit, IconPrint } from "../../icons";
+import { useMediaQuery } from "../../ui/useMediaQuery";
 import useFocusTrap from "../../ui/useFocusTrap";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import { setMotionOverride } from "../../ui/motionPreference";
@@ -18,10 +19,18 @@ import "./reader-enterprise-l2c.css";
 import ReadingSettingsDialog from "./ReadingSettingsDialog";
 import { loadReadingSettings, saveReadingSettings, type ReadingSettings } from "./readingSettings";
 import "./reader-enterprise-l3b.css";
+import "./reader-enterprise-l1.css";
+import { loadTocDocked, saveTocDocked } from "./readerLayout";
+import { useReaderSwipe } from "./useReaderSwipe";
+import UnitContents from "./UnitContents";
 import { lazyWithRetry } from "../../lazyWithRetry";
 import type { SearchScope } from "../content/searchProvider";
 import type { SearchHit, SearchProviderFactory, SearchSource } from "../search/searchModel";
 import type { LearningSearchPanelProps } from "../search/LearningSearchPanel";
+import type { AnnotationsClient } from "../annotations/annotationsClient";
+import { AnnotationsPanel, HighlightChip } from "../annotations/ReaderAnnotations";
+import { useHighlightPainter, useReaderAnnotations } from "../annotations/useReaderAnnotations";
+import "./reader-print-l5.css";
 
 // Phase 21E L3-B — the search panel is its own lazy chunk: the Reader pays for it only when search is opened, and it
 // indexes the manifest's titles + keywords only (opening it imports no module body).
@@ -52,8 +61,8 @@ type ManifestState =
  * authority and stays usable when the request is refused or unavailable. Nothing is persisted.
  */
 export default function LearningReader({
-  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, onPageChange,
-  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory,
+  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, initialModuleId, onPageChange,
+  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null,
 }: {
   courseId: string;
   onExit: () => void;
@@ -67,6 +76,9 @@ export default function LearningReader({
   /** The page to open first (validated against the manifest; unknown → first page). Lets a host that swaps the
    *  Reader out (e.g. for a training) remount it on the SAME page. Read once, at manifest load. */
   initialPageId?: string;
+  /** Phase L.2 — open at this module's first page (canonical reading order) when no valid `initialPageId` is given — a
+   *  student's «unit» link. Unknown / not in this reader's manifest → the usual beginning. Read once, at manifest load. */
+  initialModuleId?: string;
   /** Notified with every selected page id (including the initial one) so a host can remember where the reader is. */
   onPageChange?: (pageId: string) => void;
   /** Start in presentation mode (a host that swapped the Reader out for a training remounts it as it was). */
@@ -90,11 +102,24 @@ export default function LearningReader({
   onSearchOpen?: (hit: SearchHit) => Promise<boolean> | boolean;
   /** L3-7 — the search provider behind the index (default: the title/keyword provider). */
   searchProviderFactory?: SearchProviderFactory;
+  /** Phase L.5 — the student's PRIVATE annotations (bookmarks, notes, highlights). Absent / null (a teacher preview) → no
+   *  annotation control, no request. */
+  annotations?: AnnotationsClient | null;
 }) {
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [manifestNonce, setManifestNonce] = useState(0);
+  // Phase L.1 — the table of contents never takes the text's room by default. From 1280px it is a docked column the reader
+  // can fold away (remembered on this device); below 1280px, in focus mode and in presentation it is the overlay drawer.
+  // Focus mode («وضع التركيز») hides the app's own chrome (navigation, page title) around the Reader — local state only.
+  const wide = useMediaQuery("(min-width: 1280px)");
+  const [tocDocked, setTocDocked] = useState<boolean>(loadTocDocked);
+  const [focusMode, setFocusMode] = useState(false);
+  // Phones: the secondary actions (focus, motion, presentation) live behind «المزيد» so the book title keeps its room.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const moreToggleRef = useRef<HTMLButtonElement>(null);
   // Phase 21E L2-C — reading comfort (text size, line spacing, reading theme), remembered on this device. Applied to the
   // root as data attributes in NORMAL reading only, so presentation mode keeps its own established layout.
   const [readingSettings, setReadingSettings] = useState<ReadingSettings>(loadReadingSettings);
@@ -144,6 +169,7 @@ export default function LearningReader({
   const reducedMotion = usePrefersReducedMotion();
   // Host-remembered start page + change notifier, held in refs so neither re-arms the manifest load.
   const initialPageRef = useRef(initialPageId);
+  const initialModuleRef = useRef(initialModuleId);
   const onPageChangeRef = useRef(onPageChange);
   useEffect(() => { onPageChangeRef.current = onPageChange; }, [onPageChange]);
 
@@ -156,7 +182,8 @@ export default function LearningReader({
       const pages = flattenPageRefs(manifest);
       setManifestState({ status: "ready", manifest });
       const wanted = initialPageRef.current;
-      setSelectedPageId(wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : "");
+      const moduleStart = initialModuleRef.current ? pages.find(p => p.module.id === initialModuleRef.current)?.page.id : undefined;
+      setSelectedPageId(wanted && findPage(manifest, wanted) ? wanted : moduleStart ?? (pages.length > 0 ? pages[0].page.id : ""));
     }).catch(() => { if (alive) setManifestState({ status: "error" }); });
     return () => { alive = false; };
   }, [courseId, api, manifestNonce]);
@@ -168,6 +195,13 @@ export default function LearningReader({
   const pages = useMemo(() => (manifest ? flattenPageRefs(manifest) : []), [manifest]);
   const located = manifest && selectedPageId ? findPage(manifest, selectedPageId) : undefined;
   const activeModuleId = located?.module.id;
+  // Phase L.5 — the student's private annotations (normal reading only; presentation mode shows none).
+  const notes = useReaderAnnotations(annotations, courseId);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const notesToggleRef = useRef<HTMLButtonElement>(null);
+  const notesData = notes.state.status === "ready" ? notes.state.data : null;
+  const isBookmarked = !!notesData && notesData.bookmarks.some(b => b.pageId === selectedPageId);
+  const pageQuotes = useMemo(() => (notesData ? notesData.highlights.filter(h => h.pageId === selectedPageId).map(h => h.quote) : []), [notesData, selectedPageId]);
 
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
   useEffect(() => { if (selectedPageId) onPageChangeRef.current?.(selectedPageId); }, [selectedPageId]);
@@ -229,6 +263,43 @@ export default function LearningReader({
   }, [manifest]);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  // Focus returns to «ملاحظاتي»; on a phone that button sits in the closed «المزيد» menu, so focus returns to «المزيد».
+  const closeNotes = useCallback(() => {
+    setNotesOpen(false);
+    window.requestAnimationFrame(() => {
+      const toggle = notesToggleRef.current;
+      if (toggle && toggle.getClientRects().length > 0 && getComputedStyle(toggle).visibility !== "hidden") toggle.focus();
+      else moreToggleRef.current?.focus();
+    });
+  }, [setNotesOpen]);
+  const openNotedPage = useCallback((pageId: string) => { setNotesOpen(false); if (pageId === selectedPageId) contentRef.current?.querySelector<HTMLElement>(".learning-reader-page-title")?.focus(); else selectPage(pageId); }, [selectPage, selectedPageId, setNotesOpen]);
+  const titleOfPage = useCallback((pageId: string) => (manifest ? findPage(manifest, pageId)?.page.title ?? null : null), [manifest]);
+  // The index docks only where it leaves the page enough room (≥1280px) and only in normal, unfocused reading.
+  const dockable = wide && !focusMode && !presentation;
+  const sidebarDocked = dockable && tocDocked;
+  const toggleToc = useCallback(() => {
+    if (!dockable) { setDrawerOpen(true); return; }
+    setTocDocked(docked => { saveTocDocked(!docked); return !docked; });
+  }, [dockable]);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onPointer = (e: PointerEvent) => {
+      const t = e.target as Node | null;
+      if (t && !moreRef.current?.contains(t) && !moreToggleRef.current?.contains(t)) setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); setMoreOpen(false); moreToggleRef.current?.focus(); } };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey, true);
+    return () => { document.removeEventListener("pointerdown", onPointer); document.removeEventListener("keydown", onKey, true); };
+  }, [moreOpen]);
+  // Focus mode hides the host's chrome by a document-level flag the shells' stylesheets read (reader-enterprise-l1.css);
+  // it is cleared when focus mode ends, when presentation takes over, and when the Reader unmounts.
+  useEffect(() => {
+    if (!focusMode || presentation || typeof document === "undefined") return;
+    const html = document.documentElement;
+    html.setAttribute("data-eb-reading-focus", "");
+    return () => html.removeAttribute("data-eb-reading-focus");
+  }, [focusMode, presentation]);
   useFocusTrap(drawerRef, drawerOpen, closeDrawer);
   // Closing the search (Escape, «إغلاق», the backdrop) returns focus to the «بحث» control explicitly — a clicked button is
   // not focused in every browser, so the trap's own "restore the previous element" could fall back to <body>.
@@ -310,7 +381,10 @@ export default function LearningReader({
   useEffect(() => {
     if (presentation || !pendingToggleFocusRef.current) return;
     pendingToggleFocusRef.current = false;
-    presentToggleRef.current?.focus();
+    // On a phone the toggle sits in the closed «المزيد» menu (not rendered as a box): focus that menu's button instead.
+    const toggle = presentToggleRef.current;
+    if (toggle && toggle.getClientRects().length === 0 && moreToggleRef.current?.getClientRects().length) moreToggleRef.current.focus();
+    else toggle?.focus();
   }, [presentation]);
   // The browser left native fullscreen (its own Escape / UI) while this reader owned it → leave presentation too, so
   // one gesture never leaves a half state (overlay without fullscreen is still fine when native was never granted).
@@ -351,6 +425,7 @@ export default function LearningReader({
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       if (isEditableTarget(e.target) || nestedDialogOpen()) return;
       if (e.key === "f" || e.key === "F" || e.code === "KeyF") { e.preventDefault(); togglePresentation(); return; }
+      if (e.key === "Escape" && focusMode && !presentation) { e.preventDefault(); setFocusMode(false); return; }
       // Normal reading pages only while focus rests on the reading surface itself (the content root, which a click on
       // the text focuses, or the page title, which a page change focuses). Any focused control — a toolbar or TOC
       // button, a lesson activity, a training card, a scrollable region — keeps its own arrow keys.
@@ -360,7 +435,14 @@ export default function LearningReader({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [manifest, presentation, next, prev, selectPage, togglePresentation, nestedDialogOpen]);
+  }, [manifest, presentation, focusMode, next, prev, selectPage, togglePresentation, nestedDialogOpen]);
+
+  // Phase L.1 — touch screens turn pages with a horizontal swipe on the reading surface (see useReaderSwipe).
+  const goNext = useCallback(() => { if (next) selectPage(next.id); }, [next, selectPage]);
+  const goPrevious = useCallback(() => { if (prev) selectPage(prev.id); }, [prev, selectPage]);
+  const swipe = useReaderSwipe(contentRef, goNext, goPrevious);
+  const annotating = Boolean(annotations) && !presentation;
+  useHighlightPainter(contentRef, annotating ? pageQuotes : [], selectedPageId + ":" + body.kind);
 
   if (manifestState.status === "loading") {
     return <div className="learning-reader"><p className="learning-reader-status" role="status">جارٍ تحميل فهرس الكتاب...</p></div>;
@@ -411,6 +493,7 @@ export default function LearningReader({
       className={"eb-button is-small learning-reader-present-toggle" + (presentation ? "" : " is-quiet")}
       aria-pressed={presentation}
       onClick={togglePresentation}
+      title={presentation ? "خروج من وضع العرض" : "وضع العرض"}
     >
       {presentation ? <IconMinimize size={18} aria-hidden="true" /> : <IconMaximize size={18} aria-hidden="true" />}
       <span className="learning-reader-btn-label">{presentation ? "خروج من وضع العرض" : "وضع العرض"}</span>
@@ -428,6 +511,7 @@ export default function LearningReader({
       className="eb-button is-quiet is-small learning-reader-motion-toggle"
       aria-pressed={!reducedMotion}
       onClick={() => setMotionOverride(reducedMotion ? "on" : "off")}
+      title={reducedMotion ? "تشغيل حركة الرسوم" : "إيقاف حركة الرسوم"}
     >
       <IconSparkles size={18} aria-hidden="true" />
       <span className="learning-reader-btn-label">{reducedMotion ? "تشغيل حركة الرسوم" : "إيقاف حركة الرسوم"}</span>
@@ -443,40 +527,101 @@ export default function LearningReader({
       data-read-size={presentation ? undefined : readingSettings.size}
       data-read-spacing={presentation ? undefined : readingSettings.spacing}
       data-read-theme={presentation ? undefined : readingSettings.theme}
+      data-toc={presentation ? undefined : sidebarDocked ? "docked" : "drawer"}
+      data-focus={!presentation && focusMode ? "" : undefined}
       role={presentation ? "dialog" : undefined}
       aria-modal={presentation || undefined}
       aria-label={presentation ? "وضع العرض — " + bookTitle : undefined}
     >
       <div className="learning-reader-topbar">
         {!presentation && (
-          <button type="button" className="eb-button is-quiet is-small learning-reader-back" onClick={onExit}>
+          <button type="button" className="eb-button is-quiet is-small learning-reader-back" onClick={onExit} title={exitLabel}>
             <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" /><span className="learning-reader-btn-label">{exitLabel}</span>
           </button>
         )}
-        <span className="learning-reader-booktitle">{bookTitle}{presentation && located ? <span className="learning-reader-topbar-page"> · {located.page.title}</span> : null}</span>
-        <button type="button" className="eb-button is-quiet is-small learning-reader-toc-toggle" aria-expanded={drawerOpen} aria-controls="learning-reader-drawer" onClick={() => setDrawerOpen(true)}>
-          <IconMenu size={18} aria-hidden="true" /><span className="learning-reader-btn-label">الفهرس</span>
+        {presentation ? (
+          <span className="learning-reader-booktitle">{bookTitle}{located ? <span className="learning-reader-topbar-page"> · {located.page.title}</span> : null}</span>
+        ) : (
+          // Phase L.1 — the book and where the reader is in it («الوحدة › الدرس»), so the page itself needs no kicker.
+          <span className="learning-reader-titleblock">
+            <span className="learning-reader-booktitle">{bookTitle}</span>
+            {located && <span className="learning-reader-crumb">{located.module.title} › {located.lesson.title}</span>}
+          </span>
+        )}
+        <button
+          type="button"
+          className="eb-button is-quiet is-small learning-reader-toc-toggle"
+          aria-expanded={dockable ? sidebarDocked : drawerOpen}
+          aria-controls={dockable ? "learning-reader-sidebar" : "learning-reader-drawer"}
+          onClick={toggleToc}
+          title="الفهرس"
+        >
+          {dockable ? <IconSidebar size={18} aria-hidden="true" /> : <IconMenu size={18} aria-hidden="true" />}<span className="learning-reader-btn-label">الفهرس</span>
         </button>
         {presentation && <span className="learning-reader-keyhint" aria-hidden="true">← → للتنقل · Esc للخروج</span>}
         {!presentation && searchEnabled && (
-          <button type="button" ref={searchToggleRef} className="eb-button is-quiet is-small learning-reader-search-toggle" aria-haspopup="dialog" aria-expanded={searchOpen} onClick={openSearch}>
+          <button type="button" ref={searchToggleRef} className="eb-button is-quiet is-small learning-reader-search-toggle" aria-haspopup="dialog" aria-expanded={searchOpen} onClick={openSearch} title="بحث">
             <IconSearch size={18} aria-hidden="true" /><span className="learning-reader-btn-label">بحث</span>
           </button>
         )}
         {!presentation && (
-          <button type="button" className="eb-button is-quiet is-small learning-reader-settings-toggle" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>
-            <IconFilter size={18} aria-hidden="true" /><span className="learning-reader-btn-label">إعدادات القراءة</span>
+          <button type="button" className="eb-button is-quiet is-small learning-reader-settings-toggle" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)} title="إعدادات القراءة">
+            <IconSliders size={18} aria-hidden="true" /><span className="learning-reader-btn-label">إعدادات القراءة</span>
           </button>
         )}
-        {motionToggle}
-        {presentToggle}
+        {!presentation && (
+          <button
+            type="button"
+            ref={moreToggleRef}
+            className="eb-button is-quiet is-small learning-reader-more-toggle"
+            aria-expanded={moreOpen}
+            aria-controls="learning-reader-more"
+            onClick={() => setMoreOpen(v => !v)}
+            title="المزيد"
+          >
+            <IconMore size={18} aria-hidden="true" /><span className="learning-reader-btn-label">المزيد</span>
+          </button>
+        )}
+        {/* On wide screens this group is part of the row (display: contents); on phones it is the «المزيد» menu. Choosing an
+            action closes the menu. The buttons are the same elements on every width, so their names never change. */}
+        <div id="learning-reader-more" ref={moreRef} className="learning-reader-more" data-open={moreOpen || undefined} onClick={e => { if ((e.target as Element).closest("button")) setMoreOpen(false); }}>
+          {annotating && (
+            <button
+              type="button"
+              className="eb-button is-quiet is-small learning-reader-bookmark-toggle"
+              aria-pressed={isBookmarked}
+              disabled={notes.state.status !== "ready" || notes.busy || !selectedPageId}
+              onClick={() => { void notes.toggleBookmark(selectedPageId); }}
+              title={isBookmarked ? "إزالة العلامة المرجعية" : "علامة مرجعية"}
+            >
+              <IconFlag size={18} aria-hidden="true" /><span className="learning-reader-btn-label">{isBookmarked ? "إزالة العلامة المرجعية" : "علامة مرجعية"}</span>
+            </button>
+          )}
+          {annotating && (
+            <button type="button" ref={notesToggleRef} className="eb-button is-quiet is-small learning-reader-notes-toggle" aria-haspopup="dialog" aria-expanded={notesOpen} onClick={() => setNotesOpen(true)} title="ملاحظاتي">
+              <IconEdit size={18} aria-hidden="true" /><span className="learning-reader-btn-label">ملاحظاتي</span>
+            </button>
+          )}
+          {!presentation && (
+            <button type="button" className="eb-button is-quiet is-small learning-reader-focus-toggle" aria-pressed={focusMode} onClick={() => setFocusMode(v => !v)} title={focusMode ? "الخروج من وضع التركيز" : "وضع التركيز"}>
+              <IconBook size={18} aria-hidden="true" /><span className="learning-reader-btn-label">{focusMode ? "الخروج من وضع التركيز" : "وضع التركيز"}</span>
+            </button>
+          )}
+          {motionToggle}
+          {!presentation && (
+            <button type="button" className="eb-button is-quiet is-small learning-reader-print-toggle" onClick={() => window.print()} title="طباعة الصفحة" disabled={body.kind !== "ready"}>
+              <IconPrint size={18} aria-hidden="true" /><span className="learning-reader-btn-label">طباعة الصفحة</span>
+            </button>
+          )}
+          {presentToggle}
+        </div>
       </div>
       <ReadingSettingsDialog open={settingsOpen && !presentation} settings={readingSettings} onChange={changeReadingSettings} onClose={() => setSettingsOpen(false)} />
 
       <div className="learning-reader-layout">
-        <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
+        <aside id="learning-reader-sidebar" className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
 
-        <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1}>
+        <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1} {...swipe}>
           {/* Phase L.0 — no stale «gradual release» note: only the introduction is pending, and the overview marks it «قريبًا». */}
           {!presentation && searchEnabled && searchReturn && !searchOpen && (
             <div className="learning-reader-search-return">
@@ -486,6 +631,9 @@ export default function LearningReader({
             </div>
           )}
           {header ? <LearningPageRenderer header={header} body={body} training={training} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
+          {located && body.kind === "ready" && body.page.blocks.some(b => b.type === "unit-opener") && (
+            <UnitContents module={located.module} currentLessonId={located.lesson.id} onSelectPage={selectPage} visited={visitedScope ? visited : undefined} />
+          )}
         </ContentRoot>
       </div>
 
@@ -530,8 +678,21 @@ export default function LearningReader({
         ) : (
           <span className="learning-reader-navpos" aria-hidden="true">{position.index} / {position.total}</span>
         )}
-        <button type="button" className="eb-button learning-reader-navbtn" disabled={!next} onClick={() => next && selectPage(next.id)}>
-          التالي<IconChevronBack size={18} aria-hidden="true" />
+        {/* Phase L.1 — the next page's title rides under «التالي» (normal reading); the button's name stays «التالي» and the
+            title is its description, so the control reads the same to every user and every test. */}
+        <button
+          type="button"
+          className="eb-button learning-reader-navbtn learning-reader-navbtn-next"
+          disabled={!next}
+          onClick={() => next && selectPage(next.id)}
+          aria-label="التالي"
+          aria-describedby={next && !presentation ? "learning-reader-next-title" : undefined}
+        >
+          <span className="learning-reader-navbtn-text">
+            <span>التالي</span>
+            {next && !presentation && <small id="learning-reader-next-title" className="learning-reader-navbtn-sub">{next.title}</small>}
+          </span>
+          <IconChevronBack size={18} aria-hidden="true" />
         </button>
       </nav>
 
@@ -562,6 +723,15 @@ export default function LearningReader({
             </Suspense>
           </div>
         </div>
+      )}
+
+      {annotating && <HighlightChip contentRef={contentRef} pageId={selectedPageId} api={notes} />}
+      {annotating && notesOpen && (
+        <AnnotationsPanel api={notes} pageId={selectedPageId} pageTitle={located?.page.title ?? ""} titleOf={titleOfPage} onOpenPage={openNotedPage} onClose={closeNotes} />
+      )}
+      {/* Phase L.5 — a write's outcome is announced even with the panel closed (bookmark toggle, highlight). */}
+      {annotating && !notesOpen && (notes.notice || notes.error) && (
+        <p className={notes.error ? "learning-reader-notes-toast is-error" : "learning-reader-notes-toast"} role={notes.error ? "alert" : "status"}>{notes.error || notes.notice}</p>
       )}
 
       {drawerOpen && (

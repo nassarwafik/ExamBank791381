@@ -87,8 +87,10 @@ describe("Phase 3 — page renderer: non-content states", () => {
     render(<LearningPageRenderer header={header} body={{ kind: "unavailable" }} />);
     expect(screen.getByText("المحتوى التفاعلي لهذه الصفحة قيد الإعداد")).toBeTruthy();
     expect(screen.getByText(/يجري تحويل هذه المادة من الكتاب/)).toBeTruthy();
-    expect(screen.getByText("الوحدة الأولى")).toBeTruthy();
-    expect(screen.getByText("الدرس الأول")).toBeTruthy();
+    // the state names the page's unit and lesson (L.1: the page head names them too, as kicker and context)
+    const state = screen.getByText("المحتوى التفاعلي لهذه الصفحة قيد الإعداد").closest(".learning-reader-state") as HTMLElement;
+    expect(within(state).getByText("الوحدة الأولى")).toBeTruthy();
+    expect(within(state).getByText("الدرس الأول")).toBeTruthy();
   });
 
   it("renders a loading status and an error+retry state", () => {
