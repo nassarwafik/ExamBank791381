@@ -259,9 +259,21 @@ async function removeExpiredSubscriptions(container, studentId, entries, deps = 
   return removed;
 }
 
+/**
+ * Messages M.4 — the student was deleted: release every owner record that still names them (CAS, any claim — a device
+ * already re-registered by another student is never touched) and remove their subscription list. Idempotent.
+ */
+async function purgeStudentPush(container, studentId, deps = {}) {
+  if (!SAFE_ID.test(String(studentId || ""))) return 0;
+  const list = await listStudentSubscriptions(container, studentId, deps);
+  for (const s of list) await releaseOwner(container, s.id, studentId, ANY_CLAIM, deps);
+  await container.getBlobClient(studentDocName(studentId)).deleteIfExists();
+  return list.length;
+}
+
 module.exports = {
   MAX_SUBSCRIPTIONS_PER_STUDENT, PUSH_SERVICE_HOST_SUFFIXES,
   endpointId, isAllowedPushHost, canonicalEndpoint, normalizeSubscription,
   listStudentSubscriptions, ownerRecord, endpointOwner, upsertStudentSubscription, removeStudentSubscription,
-  removeExpiredSubscriptions, studentDocName, endpointDocName
+  removeExpiredSubscriptions, purgeStudentPush, studentDocName, endpointDocName
 };

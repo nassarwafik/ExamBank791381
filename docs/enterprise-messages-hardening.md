@@ -1,4 +1,4 @@
-# Messages — enterprise hardening (M.1 server, M.2 presentation, M.3 audit follow-ups)
+# Messages — enterprise hardening (M.1 server, M.2 presentation, M.3 audit follow-ups, M.4 deleted students)
 
 Design record for the «الرسائل» surfaces: the teacher page (`src/messages/TeacherMessagesPage.tsx`), the student
 view (`src/messages/StudentMessagesPage.tsx`) and their APIs (`/api/messages`, `/api/student-messages`). It builds on
@@ -129,6 +129,41 @@ The audit (read-only, against `57b9b838`) found no defect introduced by M.1. It 
 
 **Remaining structural item:** the teacher badge still *lists* the whole direct namespace (names only) on every poll. Removing that listing needs a durable per-conversation index, and a durable index cannot see messages written by code that does not maintain it (a rollback, an old 5C instance). The 5D tests pin that such messages are counted immediately. Relaxing that guarantee, for example to "within N minutes", is an owner decision and is **not** made here.
 
+## 3c. M.4 — messaging data of deleted students
+
+**Problem.** A hard delete (`manage-students.js` `deleteStudent`) removed the login, the user document and the photos.
+Everything the messaging features had stored for that student stayed. No route can name a deleted student, so the data
+was unreachable, yet it was kept forever:
+
+| Data | Location |
+|---|---|
+| the direct conversation (both sides) | `platform/messages/direct/<id>/` |
+| the student's read markers | `platform/messages/read-state/student/<id>/` |
+| every teacher's marker for that conversation | `platform/messages/read-state/teacher/<key>/direct/<id>.json` |
+| the send-rate bucket | `platform/throttle/messages-<sha256>.json` |
+| the student's notification events and their read state | `platform/notifications/student/<id>/`, `platform/notifications/read-state/<id>.json` |
+| the Web Push registrations | `platform/push/students/<id>.json` and the device owner records |
+
+The leftover conversations also kept costing the teacher badge a listing on every poll.
+
+**Fix** (`api/src/lib/student-messaging-purge.js`).
+- **Durable:** before the core delete, a purge record `platform/messages/purge/<id>.json` is written.
+- **Bounded:** after the delete, one step runs inline:
+  - it removes at most 100 blobs, 25 per student in a bulk delete;
+  - it removes them in this order: the conversation, the student's markers, every teacher's marker, the bucket, the notification events and their read state, then the push registrations;
+  - push owner records are released by compare-and-set, so a device that another student registered since is never touched.
+- **Never fails the delete:** the response reports `messagingPurged`, and the audit event carries it (counts and flags only, never content).
+- **Resumable:**
+  - whatever is left (a storage failure, or more data than one step) is finished by `drainStudentPurges`, one record and one step per teacher unread-summary poll;
+  - a record is cleared only when the purge is complete.
+- **Safe:** a record is acted on **only while the student's user document does not exist**. A record whose student still exists is an aborted delete: it is kept for 24 hours (the delete may still be running), then dropped, and it never removes anything.
+
+**Not touched:**
+- Class announcements and class notification events, which are class data.
+- Idempotency claims (`platform/messages/send-keys/`): they carry no student id in their name or body, so they cannot be attributed.
+
+**Not covered:** students deleted **before** this change have no purge record, so their data stays. Removing it needs a one-off backfill. Its selection rule would be "a direct stream whose user document is missing". That is a destructive data decision for the owner and is not run automatically here.
+
 ## 4. Evidence
 
 - `api/tests/messages-hardening-m1.test.js`, 23 cases: fail-first against `9aecbaf` (19 of the 21 initial cases
@@ -150,6 +185,10 @@ The audit (read-only, against `57b9b838`) found no defect introduced by M.1. It 
     - the legacy-frontier long-stream setup now acknowledges its 101 unread messages page by page.
   - Mutation: 16 mutants (Q01–Q16), all KILLED. Q16 survived the first run and was killed after the thread-switch test also switched back.
 
+- M.4: `api/tests/student-delete-messaging-m4.test.js`, 6 cases.
+  - All 6 failed on `1b8db6b3`. In case 4, the part asserting that an existing student's data is kept already passed there, which makes it a pin; that case failed on dropping the stale record.
+  - Mutation: 11 mutants (D01–D11), all KILLED. D06 (ignoring the step budget) survived the first run and was killed after the bounded-steps case asserted exactly one step's deletions.
+
 ## 5. Known limitations / follow-ups
 
 - **Last-message preview and time in the roster**, **per-class unread in the class selector**, and dropping the
@@ -159,7 +198,6 @@ The audit (read-only, against `57b9b838`) found no defect introduced by M.1. It 
   teacher's messages with that student. This is a product decision (audit #8), unchanged.
 - An ambiguous publication failure keeps the idempotency claim pending for up to 30 s, so a retry in that window answers
   `409 SEND_IN_PROGRESS` with `Retry-After` even when nothing was published.
-- **Messages of deleted students** need cleanup tied to the student-deletion path (owned by the Classes & Students
-  work); deferred until that work is merged.
+- **Students deleted before M.4** keep their messaging data until an owner-approved one-off backfill runs (§3c).
 - The rate limits are product numbers chosen for real conversation; the owner may tune them in
   `message-rate-limit.js`.
