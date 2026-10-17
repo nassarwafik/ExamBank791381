@@ -73,7 +73,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
             <li key={classroom.classId} className={"class-row eb-class-row" + (selected ? " selected" : "") + (active ? "" : " archived")}>
               <button type="button" className="eb-class-select" aria-pressed={selected} onClick={() => p.onSelect(classroom.classId)}>
                 <span className="eb-class-name">{classroom.name}</span>
-                <span className="eb-class-meta">{classroom.grade || "—"} · {classroom.studentCount} طالب{classroom.schoolYear ? " · " + classroom.schoolYear : ""}</span>
+                <span className="eb-class-meta">{classroom.grade || "—"} · {classroom.studentCount} طالب{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""}</span>
                 <span className="eb-class-chips">
                   {codes.length ? codes.map(code => <span key={code} className="eb-chip">{p.projectTitle(code)}</span>) : <span className="eb-chip is-muted">بدون مشروع</span>}
                 </span>

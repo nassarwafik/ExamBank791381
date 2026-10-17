@@ -70,7 +70,7 @@ export default function RosterPane(p: RosterPaneProps) {
         level={2}
         id="eb-roster-title"
         title={classroom.name}
-        description={<><span className="student-count-badge">{p.students.length}</span> طالب · {classroom.grade || "—"}{classroom.schoolYear ? " · " + classroom.schoolYear : ""} · <StatusBadge tone={p.classActive ? "success" : "neutral"}>{p.classActive ? "فعّال" : "مؤرشف"}</StatusBadge></>}
+        description={<><span className="student-count-badge">{p.students.length}</span> طالب · {classroom.grade || "—"}{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""} · <StatusBadge tone={p.classActive ? "success" : "neutral"}>{p.classActive ? "فعّال" : "مؤرشف"}</StatusBadge></>}
         actions={<>
           <button type="button" className="eb-button is-primary" onClick={p.onAddStudent} disabled={p.busy || !p.classActive}><IconPlus size={16} />إضافة طالب</button>
           <button type="button" className="eb-button" onClick={p.onImport} disabled={p.busy || !p.classActive}><IconUpload size={16} />استيراد</button>
