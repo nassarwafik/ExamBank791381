@@ -63,6 +63,8 @@ const { listBlobNames, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurren
 const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, scanLegacyFrontier, messagePosition, sequencedMessageId, downloadManyJsonTolerant } = require("./message-store");
 // Messages hardening (M.1): one unparsable message / marker / user blob reads as missing (see downloadManyJsonTolerant).
 const downloadManyJson = downloadManyJsonTolerant;
+// M.3 — the ETag-validated memo of the badges (message-unread-memo.js; never an authority).
+const { sharedMemo, listEntries, etagMap, listingSignature, cachedLoader, memoGet, memoSet } = require("./message-unread-memo");
 
 const READ_STATE_PREFIX = MESSAGE_PREFIX + "read-state/";
 const USER_PREFIX = "platform/users/";
@@ -443,7 +445,80 @@ function groupDirectIds(names) {
  * names + one marker read per conversation + user reads only for conversations with candidates + candidate downloads;
  * the global summary stops once the display cap is exceeded.
  */
-async function teacherDirectUnread(container, teacherId, { classId = "", canSee = null } = {}, deps = {}) {
+async function teacherDirectUnread(container, teacherId, options = {}, deps = {}) {
+  // M.3 — the memo path (below) unless the caller injected its own listing / download functions (instrumentation, tests):
+  // those must observe every read, and a memo can only be validated against the real listing's ETags.
+  const memo = deps.unreadMemo === null ? null : (deps.unreadMemo || sharedMemo);
+  if (memo && !deps.listBlobNames && !deps.downloadManyJson) return teacherDirectUnreadMemo(container, teacherId, options, deps, memo);
+  return teacherDirectUnreadPlain(container, teacherId, options, deps);
+}
+
+/** Direct-message LISTING ENTRIES ({ name, etag, id }) grouped by student, from ONE listing of the direct namespace. */
+function groupDirectEntries(entries) {
+  const out = new Map();
+  for (const e of entries) {
+    if (!e.name.startsWith(DIRECT_PREFIX)) continue;
+    const parts = e.name.slice(DIRECT_PREFIX.length).split("/");
+    if (parts.length !== 2 || !isSafeId(parts[0])) continue;
+    const id = blobMessageId(e.name, DIRECT_PREFIX + parts[0] + "/");
+    if (!id) continue;
+    if (!out.has(parts[0])) out.set(parts[0], []);
+    out.get(parts[0]).push({ ...e, id });
+  }
+  for (const list of out.values()) list.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return out;
+}
+
+/**
+ * M.3 — the same summary as teacherDirectUnreadPlain (same membership, tenancy, relevance, cap and absorption), with the
+ * work validated by ETags instead of repeated:
+ *   • listings: the direct namespace, THIS teacher's markers and the user documents (names + ETags, nothing downloaded);
+ *   • a user document is downloaded only when its listed ETag changed (cachedLoader);
+ *   • a conversation's count is recomputed only when its stream listing (names + ETags) or THIS teacher's marker ETag
+ *     changed — otherwise the memoized count is reused. A recount downloads only messages whose ETag is new.
+ * Membership is decided BEFORE counting (the current user document, the class filter, tenancy), so another tenant's
+ * conversations are never counted.
+ */
+async function teacherDirectUnreadMemo(container, teacherId, { classId = "", canSee = null } = {}, deps = {}, memo = sharedMemo) {
+  const list = deps.listEntries || listEntries;
+  const conc = getReadConcurrency();
+  const byStudentEntries = groupDirectEntries(await list(container, DIRECT_PREFIX));
+  const studentIds = Array.from(byStudentEntries.keys()).sort();
+  let rows = [];
+  if (studentIds.length) {
+    const markerEtags = etagMap(await list(container, teacherDirectStatePrefix(teacherId)));
+    const userEtags = etagMap(await list(container, USER_PREFIX));
+    const users = await cachedLoader(memo, container, userEtags, deps)(container, studentIds.map(sid => USER_PREFIX + sid + ".json"), conc);
+    rows = studentIds
+      .map((sid, i) => ({ sid, user: users[i], entries: byStudentEntries.get(sid), markerTag: markerEtags.has(teacherDirectStateName(teacherId, sid)) ? markerEtags.get(teacherDirectStateName(teacherId, sid)) : "none" }))
+      .filter(r => !!r.user && r.user.role === "student" && String(r.user.userId || "") === r.sid && (!classId || String(r.user.classId || "") === classId));
+    // Phase 21G.0 — teacher tenancy: only the teacher's own students count (canSee: an async per-student predicate).
+    if (canSee) rows = (await Promise.all(rows.map(async r => ((await canSee(r.user)) ? r : null)))).filter(Boolean);
+  }
+  const byStudent = {};
+  const counts = [];
+  for (const r of rows) {
+    if (!classId && combineCounts(...counts).capped) break;          // global badge already "99+"
+    const stateName = teacherDirectStateName(teacherId, r.sid);
+    const streamSig = listingSignature(r.entries);
+    const signature = streamSig && r.markerTag ? streamSig + "|" + r.markerTag : "";
+    const key = "teacher|" + teacherActorKey(teacherId) + "|" + r.sid;
+    let c = memoGet(memo, container, key, signature);
+    if (!c) {
+      const marker = await loadMarker(container, stateName, deps);
+      c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker, ids: r.entries.map(e => e.id), include: READER_RELEVANCE.teacherDirect,
+        absorb: { stateName, meta: { principalRole: "teacher", streamKind: "direct", streamId: r.sid, teacherId } } }, { ...deps, downloadManyJson: cachedLoader(memo, container, etagMap(r.entries), deps) });
+      memoSet(memo, container, key, signature, c);
+    }
+    counts.push(c);
+    if (c.unread > 0) byStudent[r.sid] = c;
+  }
+  const total = combineCounts(...counts);
+  return classId ? { totalUnread: total.unread, capped: total.capped, byStudent } : { totalUnread: total.unread, capped: total.capped };
+}
+
+/** The pre-M.3 computation (no memo): used when the caller injects its own storage functions. */
+async function teacherDirectUnreadPlain(container, teacherId, { classId = "", canSee = null } = {}, deps = {}) {
   const list = deps.listBlobNames || listBlobNames;
   const many = deps.downloadManyJson || downloadManyJson;
   const conc = getReadConcurrency();
@@ -478,5 +553,5 @@ module.exports = {
   absorbIrrelevantLegacy, absorbIrrelevantSequenced, irrelevantSequencedRun,
   teacherActorKey, teacherDirectStatePrefix, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName,
   messageIdMs, keyDomain, normalizeMarker, isReadBy, advanceBoundary, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
-  combineCounts, groupDirectIds, teacherDirectUnread
+  combineCounts, groupDirectIds, groupDirectEntries, teacherDirectUnread, teacherDirectUnreadPlain
 };
