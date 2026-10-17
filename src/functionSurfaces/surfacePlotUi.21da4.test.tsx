@@ -51,25 +51,48 @@ describe("21D-A.4 viewer — legend, toggles, rotate / zoom / reset", () => {
     expect(polys(container)).toBe(0);
     expect(screen.getByRole("status").textContent).toContain("كل الأسطح مخفية");
   });
-  it("rotates, zooms and resets with buttons and keys; the camera never reaches an answer", async () => {
+  // Every camera step re-draws the full mesh, so each test below takes at most two steps (a busy CI machine stays well
+  // inside the default per-test timeout).
+  const view = (c: HTMLElement) => [attr(c, "data-yaw"), attr(c, "data-pitch"), attr(c, "data-zoom")];
+  it("rotates with the buttons; the camera never reaches an answer", async () => {
     const { container } = render(<SurfacePlot3DView spec={plot()} />);
     await rest(container);
-    const yaw0 = attr(container, "data-yaw"), pitch0 = attr(container, "data-pitch");
-    expect([yaw0, pitch0, attr(container, "data-zoom")]).toEqual(["-0.6", "0.45", "1"]);
+    expect(view(container)).toEqual(["-0.6", "0.45", "1"]);
     fireEvent.click(screen.getByRole("button", { name: "تدوير لليمين" }));
     expect(attr(container, "data-yaw")).toBe("-0.4");
     fireEvent.click(screen.getByRole("button", { name: "رفع المنظور" }));
     expect(attr(container, "data-pitch")).toBe("0.6");
+  });
+  it("zooms in and out with the buttons", async () => {
+    const { container } = render(<SurfacePlot3DView spec={plot()} />);
+    await rest(container);
     fireEvent.click(screen.getByRole("button", { name: "تكبير" }));
     expect(attr(container, "data-zoom")).toBe("1.12");
+    fireEvent.click(screen.getByRole("button", { name: "تصغير" }));
+    expect(attr(container, "data-zoom")).toBe("1");
+  });
+  it("rotates and zooms with the keys", async () => {
+    const { container } = render(<SurfacePlot3DView spec={plot()} />);
+    await rest(container);
     fireEvent.keyDown(scene(container), { key: "ArrowLeft" });
     fireEvent.keyDown(scene(container), { key: "-" });
-    expect([attr(container, "data-yaw"), attr(container, "data-zoom")]).toEqual(["-0.6", "1"]);
-    fireEvent.click(screen.getByRole("button", { name: "إعادة العرض" }));
-    expect([attr(container, "data-yaw"), attr(container, "data-pitch"), attr(container, "data-zoom")]).toEqual(["-0.6", "0.45", "1"]);
+    expect(view(container)).toEqual(["-0.8", "0.45", "0.893"]);
+  });
+  it("Home returns to the authored view", async () => {
+    const { container } = render(<SurfacePlot3DView spec={plot()} />);
+    await rest(container);
     fireEvent.keyDown(scene(container), { key: "ArrowRight" });
+    expect(attr(container, "data-yaw")).toBe("-0.4");
     fireEvent.keyDown(scene(container), { key: "Home" });
-    expect(attr(container, "data-yaw")).toBe("-0.6");
+    expect(view(container)).toEqual(["-0.6", "0.45", "1"]);
+  });
+  it("«إعادة العرض» returns to the authored view", async () => {
+    const { container } = render(<SurfacePlot3DView spec={plot()} />);
+    await rest(container);
+    fireEvent.click(screen.getByRole("button", { name: "خفض المنظور" }));
+    expect(attr(container, "data-pitch")).toBe("0.3");
+    fireEvent.click(screen.getByRole("button", { name: "إعادة العرض" }));
+    expect(view(container)).toEqual(["-0.6", "0.45", "1"]);
   });
   it("a one-finger drag rotates the plot (light mesh while moving, full quality after)", async () => {
     const { container } = render(<SurfacePlot3DView spec={plot()} />);
@@ -150,13 +173,20 @@ describe("21D-A.4 editor and rich-content integration", () => {
     expect(last.controls.zoom).toBe(false);
     expect(validateSurfacePlotSpec(last).ok).toBe(true);
   });
-  it("the student renderer draws V2 plots with the new viewer and V1 surfaces with the unchanged 21B viewer", async () => {
-    const content: RichContentV1 = { schemaVersion: 1, blocks: [{ type: "functionSurface3D", surface: plot() }, { type: "functionSurface3D", surface: surfaceTemplate("saddle", "legacy") }] };
+  // One block per test: each lazy viewer mounts and draws on its own.
+  it("the student renderer draws a V2 plot with the new viewer", async () => {
+    const content: RichContentV1 = { schemaVersion: 1, blocks: [{ type: "functionSurface3D", surface: plot() }] };
     const { container } = render(<RichContentRenderer content={content} />);
     await waitFor(() => expect(container.querySelector("svg.sp3d-scene")).not.toBeNull());
-    await waitFor(() => expect(container.querySelector("svg.ex3d-scene")).not.toBeNull());
     expect(container.querySelectorAll("figure.sp3d").length).toBe(1);
+    expect(container.querySelectorAll("figure.ex3d").length).toBe(0);
+  });
+  it("the student renderer draws a V1 surface with the unchanged 21B viewer", async () => {
+    const content: RichContentV1 = { schemaVersion: 1, blocks: [{ type: "functionSurface3D", surface: surfaceTemplate("saddle", "legacy") }] };
+    const { container } = render(<RichContentRenderer content={content} />);
+    await waitFor(() => expect(container.querySelector("svg.ex3d-scene")).not.toBeNull());
     expect(container.querySelectorAll("figure.ex3d").length).toBe(1);
+    expect(container.querySelectorAll("figure.sp3d").length).toBe(0);
   });
   it("the block editor creates V2 plots and upgrades a stored V1 surface only when the teacher asks", async () => {
     let value: RichContentV1 = { schemaVersion: 1, blocks: [{ type: "functionSurface3D", surface: surfaceTemplate("paraboloid", "legacy") }] };
