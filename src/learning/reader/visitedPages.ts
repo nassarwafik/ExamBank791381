@@ -89,3 +89,16 @@ export function recordVisited(scope: string | undefined, courseId: string, pageI
   snapshots.set(keyFor(scope, courseId), { raw: rawFor(scope, courseId), ids: next });
   listeners.forEach(l => l());
 }
+
+/** Phase L.3 — merge the pages the SERVER knows this student has read (any device) into this device's marks, in one write.
+ *  Union only: a mark recorded here is never removed by a server read. No scope → no-op. */
+export function mergeVisited(scope: string | undefined, courseId: string, pageIds: readonly string[]): void {
+  if (!usable(scope, courseId)) return;
+  const current = visitedSnapshot(scope, courseId);
+  const fresh = pageIds.filter(id => typeof id === "string" && id.length > 0 && id.length <= MAX_ID_LENGTH && !current.has(id));
+  if (fresh.length === 0) return;
+  const next = new Set([...current, ...fresh]);
+  saveVisitedPages(scope, courseId, next);
+  snapshots.set(keyFor(scope, courseId), { raw: rawFor(scope, courseId), ids: next });
+  listeners.forEach(l => l());
+}
