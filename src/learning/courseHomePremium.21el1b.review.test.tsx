@@ -4,7 +4,8 @@
 //     plural («9 دروس») — the earlier «12 دروس» was ungrammatical on four of the seven populated sections.
 //   • Each section button keeps its short accessible name («فتح قسم …») and is DESCRIBED by its details, so a screen
 //     reader hears the lesson count and reading-page range the screen shows (an aria-label alone hid them).
-//   • The empty introductory section shows no details and no description (never a fabricated 0–0 range).
+//   • The empty introductory section shows no details and no description (never a fabricated 0–0 range); since L.0 it is a
+//     static «قريبًا» row, not a button.
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
 import LearningMaterialsPage from "./LearningMaterialsPage";
@@ -31,6 +32,12 @@ describe("21E L1-B review — section details", () => {
     fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
     await waitFor(() => expect(document.querySelectorAll(".eb-lm-batch-details")).toHaveLength(7));
     for (const [label, details] of EXPECTED) {
+      if (details === null) {
+        const row = screen.getByText(label).closest("li")!;
+        expect(row.querySelector("button")).toBeNull();
+        expect(row.querySelector(".eb-lm-batch-details")).toBeNull();
+        continue;
+      }
       const button = screen.getByRole("button", { name: "فتح قسم " + label });
       const shown = button.querySelector(".eb-lm-batch-details")?.textContent ?? null;
       expect(shown).toBe(details);

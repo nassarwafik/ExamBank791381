@@ -1,13 +1,9 @@
-// Learning Materials — Phase 2: content MANIFEST for book 791381 (شبكات الاتصال).
+// Learning Materials — content MANIFEST for book 791381 (شبكات الاتصال).
 //
-// SKELETON ONLY (§28). This is the lightweight table-of-contents: module / lesson / page IDENTITIES, titles and
-// source references — and NO block bodies. Nothing here is converted book content; the module/lesson/page titles
-// are derived from the actual source book (verified against the source PDF pages noted in each `source`), and the
-// full page bodies (blocks) are deferred to a later conversion phase, each loaded as its own module chunk.
-//
-// It is deliberately PARTIAL: it covers a representative set of the book's real units (basics, number systems,
-// switch CLI/VLAN, trunk / router-on-a-stick, the Cisco command reference, and ACLs) to prove the architecture
-// spans every content shape and every batch — it is NOT the complete 264-page contents.
+// The lightweight table of contents: module / lesson / page IDENTITIES, titles and source references — and NO block
+// bodies. Each module's page bodies live in its own code-split chunk (`modules/mNN.ts`). Every one of the 28 modules
+// is converted (Batches 1–10 and the final summary m28); the book's introduction (the «المقدمة» overview section) has
+// no module yet, so that section carries an empty `moduleIds` and the course overview shows it as «قريبًا».
 //
 // ID policy: `791381` · `791381-mNN` · `791381-mNN-lNN` · `791381-mNN-lNN-pNN` — stable, human-debuggable, and
 // independent of array position (never regenerated at runtime).
@@ -1162,9 +1158,8 @@ const manifest: LearningCourseManifest = {
   ],
   // The EIGHT Phase-3 overview "batches" are PRESENTATION groupings that each map to one OR MORE real modules (§29);
   // they are NOT themselves canonical modules. The order is the OWNER-approved visible order (intro … summary).
-  // A batch whose modules are not yet in this PARTIAL skeleton carries an empty `moduleIds` for now — this means
-  // "not yet represented in interactive content", NOT "empty in the book". Introduction and Summary are real book
-  // sections whose canonical modules are authored during conversion, so they are empty here for now.
+  // An empty `moduleIds` means "not yet represented in interactive content", NOT "empty in the book": today only the
+  // introduction, which the course overview therefore shows as «قريبًا» (Phase L.0).
   batches: [
     { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },

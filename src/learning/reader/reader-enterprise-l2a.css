@@ -32,21 +32,16 @@
 }
 /* Phones: the back, reading-settings (L2-C), motion and presentation controls become 44×44 icon buttons. Their text stays in the DOM (visually
    hidden), so each keeps exactly the same accessible name; «الفهرس» keeps its visible label. */
-/* Narrow phones keep the course identity whole: «الفهرس» also goes icon-only below 380px, and below 360px the word
-   «كتاب» is hidden visually (still read out), leaving the course number. Accessible names never change. */
+/* Narrow phones keep the book title readable: «الفهرس» also goes icon-only below 380px. Accessible names never change. */
 @media (max-width: 379px) {
   .learning-reader:not(.is-presentation) .learning-reader-toc-toggle { padding-inline: 0; }
-  .learning-reader:not(.is-presentation) .learning-reader-toc-toggle .learning-reader-btn-label,
-  .learning-reader:not(.is-presentation) .learning-reader-booktitle-word {
+  .learning-reader:not(.is-presentation) .learning-reader-toc-toggle .learning-reader-btn-label {
     position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; padding: 0; overflow: hidden;
     clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
   }
 }
-@media (min-width: 360px) and (max-width: 379px) {
-  .learning-reader:not(.is-presentation) .learning-reader-booktitle-word { position: static; inline-size: auto; block-size: auto; margin: 0; overflow: visible; clip: auto; clip-path: none; }
-}
 @media (max-width: 767px) {
-  /* five controls share the phone row: the book identity («كتاب 791381») steps down one size so it stays whole */
+  /* five controls share the phone row: the book title steps down one size so more of it stays visible */
   .learning-reader:not(.is-presentation) .learning-reader-booktitle { font-size: var(--eb-fs-14); }
   .learning-reader:not(.is-presentation) :is(.learning-reader-back, .learning-reader-settings-toggle, .learning-reader-motion-toggle, .learning-reader-present-toggle) {
     padding-inline: 0;
@@ -57,18 +52,6 @@
   }
 }
 
-/* ── One-time release note: a single compact line ──────────────────────────────────────────────────────────────── */
-.learning-reader:not(.is-presentation) .learning-reader-release-note {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2);
-  padding-block: 0; padding-inline: var(--eb-space-3) var(--eb-space-1);
-}
-.learning-reader:not(.is-presentation) .learning-reader-release-note > span { min-width: 0; padding-block: var(--eb-space-1); }
-.learning-reader:not(.is-presentation) .learning-reader-release-note button {
-  flex: 0 0 auto; min-block-size: 44px; min-inline-size: 44px;
-}
-.learning-reader:not(.is-presentation) .learning-reader-release-note button:focus-visible {
-  outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset);
-}
 
 /* ── Compact reading chrome: tighter gaps between toolbar, release note and page ───────────────────────────────── */
 .learning-reader:not(.is-presentation) { gap: var(--eb-space-2); }

@@ -45,7 +45,7 @@ describe("1–3 · enter, exit, Escape", () => {
     await waitFor(() => expect(root().classList.contains("is-presentation")).toBe(true));
     expect(root().getAttribute("role")).toBe("dialog");
     expect(root().getAttribute("aria-modal")).toBe("true");
-    expect(root().getAttribute("aria-label")).toBe("وضع العرض — كتاب 791381");
+    expect(root().getAttribute("aria-label")).toBe("وضع العرض — كتاب اختبار القارئ");             // L.0: the manifest title, never «كتاب <number>»
     expect(screen.queryByLabelText("انتقل إلى صفحة")).toBeNull();                       // replaced by the page-number field
     expect(screen.queryByText("يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.")).toBeNull();
     expect(screen.queryByRole("button", { name: "العودة إلى نظرة الكتاب" })).toBeNull(); // only the presentation exit stays

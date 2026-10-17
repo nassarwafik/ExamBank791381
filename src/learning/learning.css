@@ -58,6 +58,14 @@
 .eb-lm-batch-open:hover .eb-lm-batch-index{ background:var(--eb-surface); }
 .eb-lm-batch-label{ flex:1 1 auto; min-width:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); overflow-wrap:anywhere; }
 .eb-lm-batch-status{ flex:0 0 auto; }
+/* Phase L.0 — the section details' load state: a quiet status line while the manifest loads, an alert with a retry on failure. */
+.eb-lm-batches-status{ margin:0; font-size:var(--eb-fs-13); }
+.eb-lm-batches-error{
+  display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-3);
+  padding:var(--eb-space-3); color:var(--eb-danger-tx); background:var(--eb-danger-bg); border:1px solid currentColor; border-radius:var(--eb-r);
+  font-size:var(--eb-fs-13);
+}
+.eb-lm-batches-error span{ flex:1 1 16rem; min-width:0; }
 /* The "فتح القسم" affordance + a forward (reading-direction) chevron. Text-labelled, never color-only. */
 .eb-lm-batch-action{
   flex:0 0 auto; display:inline-flex; align-items:center; gap:var(--eb-space-1);
