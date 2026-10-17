@@ -1,0 +1,15 @@
+/* Phase L.5 — «طباعة الصفحة»: the printout is the page itself, in black on white, at full width. Everything around it (the app's
+   own header / navigation, the Reader's toolbar, index, page bar, dialogs, the highlight chip) stays off paper, and the scroll
+   containers let the page run across as many sheets as it needs. Highlights print as underlined, shaded text. */
+@media print {
+  html, body { height: auto; overflow: visible; background: #fff; }
+  body:has(.learning-reader) :is(header, nav, aside, footer):not(.learning-reader *) { display: none; }
+  .learning-reader :is(.learning-reader-topbar, .learning-reader-nav, .learning-reader-sidebar, .learning-reader-drawer-root,
+    .learning-reader-search-root, .learning-reader-search-return, .learning-reader-hl-chip, .learning-reader-notes-toast) { display: none; }
+  .learning-reader, .learning-reader-layout, .learning-reader-main { display: block; position: static; block-size: auto; max-block-size: none; overflow: visible; }
+  .learning-reader { --eb-reader-hl-bg: #fde68a; --eb-reader-hl-line: #000; color: #000; background: #fff; }
+  .learning-reader-main { padding: 0; inline-size: auto; max-inline-size: none; }
+  .learning-reader-page { max-inline-size: none; box-shadow: none; border: 0; }
+  .learning-reader-page :is(figure, table, pre, .learning-activity, .eb-visual-figure) { break-inside: avoid; }
+  .learning-reader-page :is(h2, h3, h4) { break-after: avoid; }
+}

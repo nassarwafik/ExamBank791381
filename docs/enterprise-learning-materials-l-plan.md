@@ -64,7 +64,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | L.2 | Navigation: a URL for library / book / section / page, a working browser back button, reload keeps the place. Clickable module list for students. (Teacher preview parity moved to L.3, which brings the server-side progress it needs.) | implemented |
 | L.3 | Server-side reading progress and resume (cross-device); localStorage stays the fallback; teacher preview parity (study client). The activity-event sink moves to L.4 with the analytics that will read it | implemented |
 | L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | implemented |
-| L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | planned |
+| L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | implemented |
 | L.6 | Restricted content and answer keys served by the API after the publication check (D2) | planned |
 | L.7 | Operations: `exam-library` observability + cache, in-memory `learning-training`, content-chunk bundle budget, measured before / after | planned |
 | L.8 | Gate: real-browser reader journey (open, navigate, resume, back), axe and 44 px touch targets at 390 / 834 / 1024 / 1440 | planned |
@@ -433,7 +433,102 @@ This is logged as `learning.class_progress.read_cost`. Nothing is written.
   - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
   - `npx tsc -b`, `npm run build` (bundle guard passed; initial JS graph 114.5 KB gzip against 125 KB) and `git diff --check` are clean.
 
-## 9. What the plan leaves to the owner
+## 9. Implementation record and evidence (L.5)
+
+### Decisions taken inside L.5
+
+| # | Decision | Why |
+|---|---|---|
+| L5-a | Bookmarks, notes and highlights are kept **on the server, one document per student**, read and written **only by that student's own session**. No teacher endpoint, report or export reads them. | D3: private to the student, and they follow the student across devices as reading progress does (L.3). The privacy is pinned by a test that scans every API module: only the annotations route and its library mention the store, and that route accepts only a student session. |
+| L5-b | **Bounded:** one note per page (≤ 1000 characters), ≤ 10 highlights per page and ≤ 200 per book, a highlight of 2–300 characters, and only pages of the generated page index. | The document can never grow without limit or hold an invented page. A bound is answered with 413 and a message the student can act on. |
+| L5-c | A highlight is stored as **its quoted text**, never as DOM offsets. It is painted with the **CSS Custom Highlight API**, so the page's DOM is never changed. | React keeps sole ownership of the page tree. A quote survives theme, size and layout changes. Where the API is missing, or the text is no longer on the page, nothing is painted, and «ملاحظاتي» still lists the highlight. |
+| L5-d | The annotation controls exist **only for a student session**. A teacher preview has none and makes no annotations request. «طباعة الصفحة» is available to everyone. | This matches L3-e (progress is student-only). Printing a page is not personal data. |
+| L5-e | A unit hidden after annotating **disappears from the view**; its annotations stay stored and come back when it is published again. | This matches L3-d: unpublishing is reversible. |
+| L5-f | Printing is the browser's own print of **the current page only**. The app's chrome, the Reader's toolbar, index, page bar, dialogs and the highlight chip are hidden; the scroll containers are released, so a long page runs across sheets. | No server-side PDF and no new dependency. |
+
+### What shipped
+
+- **API:**
+  - `api/src/lib/learning-annotations.js`: `normalizeAnnotationsDoc`, `applyAnnotation` (pure; it reports `changed` / `error: limit | invalid`) and `annotationsView` (reading order, visible units only).
+  - `api/src/functions/learning-annotations.js`:
+    - `GET /api/learning-annotations/{course}`;
+    - `POST …/{bookmark | note | highlight | unhighlight}`.
+  - Storage: `platform/learning-annotations/<studentId>.json`.
+  - Writes:
+    - a change that alters nothing writes nothing;
+    - writes go through CAS;
+    - a bound reached by another device between the check and the write keeps the document as it is (413);
+    - a persistent conflict returns a retryable 503.
+- **Client:** `src/learning/annotations/annotationsClient.ts`. A read failure resolves to null; a write failure rejects with the server's message.
+- **Reader:**
+  - `useReaderAnnotations.ts`: the state and the highlight painter.
+  - `ReaderAnnotations.tsx`:
+    - the «ملاحظاتي» panel: privacy line, this page's note and highlights, and every bookmark / note / highlight in the book, each opening its page;
+    - the «تظليل» chip under a selected passage.
+  - `highlightRanges.ts`: locating a quote across inline elements and block boundaries, and painting it.
+  - `annotations.css`.
+  - `reader-print-l5.css`.
+  - `LearningReader.tsx`: «علامة مرجعية», «ملاحظاتي» and «طباعة الصفحة» in the toolbar group, which sits in «المزيد» on phones; focus returns to the toggle, or to «المزيد» on a phone.
+  - `LearningReaderWithTraining.tsx`: forwards the client for students only.
+  - `StudentReader.tsx`: creates the student's client.
+
+### Read / write cost
+
+- Opening a book adds **one** annotations read: one class read plus one annotations-document read.
+- Each change is **one** write: one class read, one document read and one conditional write. A change that alters nothing is read-only.
+- A teacher preview makes no annotations request.
+
+### Evidence
+
+- **Fail-first on `main` 364e6102** (a new feature, so this is absence proof):
+  - **Cannot load:** the API suite and the two annotations suites, because their modules do not exist on that base.
+  - **Fails 1/1:** the StudentReader wiring test (no «ملاحظاتي»).
+  - **Fails:** the toolbar-names test (no «طباعة الصفحة»).
+- **Mutation:** `node scripts/mutate-l.mjs l5` → **23/23 KILLED**, every file restored byte-for-byte.
+  - **API gates** (L5-M1…M7):
+    - an invented page;
+    - an unpublished unit;
+    - an archived class;
+    - the token's class claim;
+    - a no-op write;
+    - a limit reported as invalid;
+    - a concurrent bound overwritten.
+  - **The document** (L5-M8…M14):
+    - the bookmark time moves;
+    - NOTE_MAX;
+    - the per-page and per-course highlight bounds;
+    - a duplicate quote;
+    - the visibility filter;
+    - normalisation of an oversize note.
+  - **The hosts** (L5-M15, M16):
+    - a teacher gets annotations;
+    - a student does not.
+  - **The UI** (L5-M17…M20):
+    - a selection outside the page;
+    - QUOTE_MAX;
+    - NOTE_MAX in the editor;
+    - a silent refused write.
+  - **Painting** (L5-M21…M23):
+    - never painted;
+    - block boundary;
+    - text inside controls.
+- **Real browser** (production build, Chromium, the student portal over a mocked API):
+  - bookmark → `aria-pressed=true`; a selected passage → «تظليل» → painted through `CSS.highlights`; a note saved;
+  - axe (WCAG 2.0/2.1/2.2 A + AA) on «ملاحظاتي»: **0 violations** at 390, 834, 1024 and 1440;
+  - no horizontal overflow;
+  - every panel control ≥ 44 px on coarse pointers;
+  - print emulation:
+    - the toolbar, page bar and index are not displayed;
+    - the content column is not clipped;
+    - a 1853 px page prints on 2 A4 sheets.
+  - A pre-existing axe colour-contrast finding on the unit opener's decorative, `aria-hidden` «01» numeral is present on `main` as well. It is left for the L.8 accessibility gate.
+- **One intended expectation change:** `LearningReader.l2a.21e.test.tsx` now counts 8 toolbar labels, because «طباعة الصفحة» was added.
+- **Full validation on the head:**
+  - `npm test`: 1096 files / 13351 tests passed.
+  - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed; initial JS graph 114.5 KB gzip against 125 KB; the Reader's first-load graph is 32.7 KB gzip) and `git diff --check` are clean.
+
+## 10. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count

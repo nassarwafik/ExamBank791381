@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type MutableRefObject } from "react";
-import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconSliders, IconSearch, IconBook, IconSidebar, IconMore } from "../../icons";
+import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles, IconSliders, IconSearch, IconBook, IconSidebar, IconMore, IconFlag, IconEdit, IconPrint } from "../../icons";
 import { useMediaQuery } from "../../ui/useMediaQuery";
 import useFocusTrap from "../../ui/useFocusTrap";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
@@ -27,6 +27,10 @@ import { lazyWithRetry } from "../../lazyWithRetry";
 import type { SearchScope } from "../content/searchProvider";
 import type { SearchHit, SearchProviderFactory, SearchSource } from "../search/searchModel";
 import type { LearningSearchPanelProps } from "../search/LearningSearchPanel";
+import type { AnnotationsClient } from "../annotations/annotationsClient";
+import { AnnotationsPanel, HighlightChip } from "../annotations/ReaderAnnotations";
+import { useHighlightPainter, useReaderAnnotations } from "../annotations/useReaderAnnotations";
+import "./reader-print-l5.css";
 
 // Phase 21E L3-B — the search panel is its own lazy chunk: the Reader pays for it only when search is opened, and it
 // indexes the manifest's titles + keywords only (opening it imports no module body).
@@ -58,7 +62,7 @@ type ManifestState =
  */
 export default function LearningReader({
   courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, initialModuleId, onPageChange,
-  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory,
+  initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null,
 }: {
   courseId: string;
   onExit: () => void;
@@ -98,6 +102,9 @@ export default function LearningReader({
   onSearchOpen?: (hit: SearchHit) => Promise<boolean> | boolean;
   /** L3-7 — the search provider behind the index (default: the title/keyword provider). */
   searchProviderFactory?: SearchProviderFactory;
+  /** Phase L.5 — the student's PRIVATE annotations (bookmarks, notes, highlights). Absent / null (a teacher preview) → no
+   *  annotation control, no request. */
+  annotations?: AnnotationsClient | null;
 }) {
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
@@ -188,6 +195,13 @@ export default function LearningReader({
   const pages = useMemo(() => (manifest ? flattenPageRefs(manifest) : []), [manifest]);
   const located = manifest && selectedPageId ? findPage(manifest, selectedPageId) : undefined;
   const activeModuleId = located?.module.id;
+  // Phase L.5 — the student's private annotations (normal reading only; presentation mode shows none).
+  const notes = useReaderAnnotations(annotations, courseId);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const notesToggleRef = useRef<HTMLButtonElement>(null);
+  const notesData = notes.state.status === "ready" ? notes.state.data : null;
+  const isBookmarked = !!notesData && notesData.bookmarks.some(b => b.pageId === selectedPageId);
+  const pageQuotes = useMemo(() => (notesData ? notesData.highlights.filter(h => h.pageId === selectedPageId).map(h => h.quote) : []), [notesData, selectedPageId]);
 
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
   useEffect(() => { if (selectedPageId) onPageChangeRef.current?.(selectedPageId); }, [selectedPageId]);
@@ -249,6 +263,17 @@ export default function LearningReader({
   }, [manifest]);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  // Focus returns to «ملاحظاتي»; on a phone that button sits in the closed «المزيد» menu, so focus returns to «المزيد».
+  const closeNotes = useCallback(() => {
+    setNotesOpen(false);
+    window.requestAnimationFrame(() => {
+      const toggle = notesToggleRef.current;
+      if (toggle && toggle.getClientRects().length > 0 && getComputedStyle(toggle).visibility !== "hidden") toggle.focus();
+      else moreToggleRef.current?.focus();
+    });
+  }, [setNotesOpen]);
+  const openNotedPage = useCallback((pageId: string) => { setNotesOpen(false); if (pageId === selectedPageId) contentRef.current?.querySelector<HTMLElement>(".learning-reader-page-title")?.focus(); else selectPage(pageId); }, [selectPage, selectedPageId, setNotesOpen]);
+  const titleOfPage = useCallback((pageId: string) => (manifest ? findPage(manifest, pageId)?.page.title ?? null : null), [manifest]);
   // The index docks only where it leaves the page enough room (≥1280px) and only in normal, unfocused reading.
   const dockable = wide && !focusMode && !presentation;
   const sidebarDocked = dockable && tocDocked;
@@ -416,6 +441,8 @@ export default function LearningReader({
   const goNext = useCallback(() => { if (next) selectPage(next.id); }, [next, selectPage]);
   const goPrevious = useCallback(() => { if (prev) selectPage(prev.id); }, [prev, selectPage]);
   const swipe = useReaderSwipe(contentRef, goNext, goPrevious);
+  const annotating = Boolean(annotations) && !presentation;
+  useHighlightPainter(contentRef, annotating ? pageQuotes : [], selectedPageId + ":" + body.kind);
 
   if (manifestState.status === "loading") {
     return <div className="learning-reader"><p className="learning-reader-status" role="status">جارٍ تحميل فهرس الكتاب...</p></div>;
@@ -558,12 +585,34 @@ export default function LearningReader({
         {/* On wide screens this group is part of the row (display: contents); on phones it is the «المزيد» menu. Choosing an
             action closes the menu. The buttons are the same elements on every width, so their names never change. */}
         <div id="learning-reader-more" ref={moreRef} className="learning-reader-more" data-open={moreOpen || undefined} onClick={e => { if ((e.target as Element).closest("button")) setMoreOpen(false); }}>
+          {annotating && (
+            <button
+              type="button"
+              className="eb-button is-quiet is-small learning-reader-bookmark-toggle"
+              aria-pressed={isBookmarked}
+              disabled={notes.state.status !== "ready" || notes.busy || !selectedPageId}
+              onClick={() => { void notes.toggleBookmark(selectedPageId); }}
+              title={isBookmarked ? "إزالة العلامة المرجعية" : "علامة مرجعية"}
+            >
+              <IconFlag size={18} aria-hidden="true" /><span className="learning-reader-btn-label">{isBookmarked ? "إزالة العلامة المرجعية" : "علامة مرجعية"}</span>
+            </button>
+          )}
+          {annotating && (
+            <button type="button" ref={notesToggleRef} className="eb-button is-quiet is-small learning-reader-notes-toggle" aria-haspopup="dialog" aria-expanded={notesOpen} onClick={() => setNotesOpen(true)} title="ملاحظاتي">
+              <IconEdit size={18} aria-hidden="true" /><span className="learning-reader-btn-label">ملاحظاتي</span>
+            </button>
+          )}
           {!presentation && (
             <button type="button" className="eb-button is-quiet is-small learning-reader-focus-toggle" aria-pressed={focusMode} onClick={() => setFocusMode(v => !v)} title={focusMode ? "الخروج من وضع التركيز" : "وضع التركيز"}>
               <IconBook size={18} aria-hidden="true" /><span className="learning-reader-btn-label">{focusMode ? "الخروج من وضع التركيز" : "وضع التركيز"}</span>
             </button>
           )}
           {motionToggle}
+          {!presentation && (
+            <button type="button" className="eb-button is-quiet is-small learning-reader-print-toggle" onClick={() => window.print()} title="طباعة الصفحة" disabled={body.kind !== "ready"}>
+              <IconPrint size={18} aria-hidden="true" /><span className="learning-reader-btn-label">طباعة الصفحة</span>
+            </button>
+          )}
           {presentToggle}
         </div>
       </div>
@@ -674,6 +723,15 @@ export default function LearningReader({
             </Suspense>
           </div>
         </div>
+      )}
+
+      {annotating && <HighlightChip contentRef={contentRef} pageId={selectedPageId} api={notes} />}
+      {annotating && notesOpen && (
+        <AnnotationsPanel api={notes} pageId={selectedPageId} pageTitle={located?.page.title ?? ""} titleOf={titleOfPage} onOpenPage={openNotedPage} onClose={closeNotes} />
+      )}
+      {/* Phase L.5 — a write's outcome is announced even with the panel closed (bookmark toggle, highlight). */}
+      {annotating && !notesOpen && (notes.notice || notes.error) && (
+        <p className={notes.error ? "learning-reader-notes-toast is-error" : "learning-reader-notes-toast"} role={notes.error ? "alert" : "status"}>{notes.error || notes.notice}</p>
       )}
 
       {drawerOpen && (

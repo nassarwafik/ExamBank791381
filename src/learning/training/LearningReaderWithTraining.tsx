@@ -6,6 +6,7 @@ import type { LibraryTrainingHost, TrainingClient, TrainingListEntry, TrainingSt
 import type { StudyAttemptResponse, StudyClient, StudyHost, StudyModuleState, StudyPageState, StudyPageStatus, StudyResponse } from "../study/types";
 import type { SearchScope } from "../content/searchProvider";
 import type { SearchHit, SearchProviderFactory } from "../search/searchModel";
+import type { AnnotationsClient } from "../annotations/annotationsClient";
 
 // The runner (and the exam question primitive it pulls) is code-split: reading never pays for practising.
 const LearningTrainingRunner = lazy(lazyWithRetry(() => import("./LearningTrainingRunner"), "learning-training-runner"));
@@ -23,7 +24,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -58,6 +59,9 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   searchScope?: SearchScope["allowedModuleIds"];
   /** Phase 21E L3-B — open-time entitlement re-check for a search result, forwarded to the Reader. */
   onSearchOpen?: (hit: SearchHit) => Promise<boolean> | boolean;
+  /** Phase L.5 — the student's private annotations, forwarded to the Reader for STUDENT sessions only (a teacher preview
+   *  never gets one, whatever a host passes). */
+  annotations?: AnnotationsClient | null;
   /** L3-7 — the search provider, forwarded to the Reader. */
   searchProviderFactory?: SearchProviderFactory;
 }) {
@@ -194,6 +198,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       searchScope={actor === "student" && searchScope === "all" ? undefined : searchScope}
       onSearchOpen={onSearchOpen}
       searchProviderFactory={searchProviderFactory}
+      annotations={actor === "student" ? annotations : null}
     />
   );
 }

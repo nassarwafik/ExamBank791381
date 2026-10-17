@@ -7,6 +7,7 @@ import type { SearchHit } from "../learning/search/searchModel";
 import { fetchReleasedModuleIds } from "./learningRelease";
 import { createProgressClient, type ProgressClient } from "../learning/progress/progressClient";
 import { mergeVisited } from "../learning/reader/visitedPages";
+import { createAnnotationsClient, type AnnotationsClient } from "../learning/annotations/annotationsClient";
 
 /** Phase L.3 — how long the Reader waits for the server's «last page» before opening at the beginning anyway. */
 export const RESUME_WAIT_MS = 2500;
@@ -20,7 +21,7 @@ export const READ_DWELL_MS = 1500;
  * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
  * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange, studentId, progressClient }: {
+export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange, studentId, progressClient, annotationsClient }: {
   courseId: string;
   allowedModuleIds: string[];
   token: string;
@@ -41,6 +42,8 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   studentId?: string;
   /** Phase L.3 — the reading-progress transport (tests inject one); default: the student's own API client. */
   progressClient?: ProgressClient;
+  /** Phase L.5 — the private-annotations transport (tests inject one); default: the student's own API client. */
+  annotationsClient?: AnnotationsClient;
 }) {
   const key = allowedModuleIds.join("|");
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -61,6 +64,8 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   // failure is quiet: the Reader opens at the beginning and keeps this device's own marks.
   const visitedScope = studentId && studentId.trim() ? "student:" + studentId.trim() : undefined;
   const progress = useMemo(() => progressClient ?? createProgressClient(studentTrainingHeaders(token)), [progressClient, token]);
+  // Phase L.5 — bookmarks, private notes and highlights, kept on the server for this student only (any device).
+  const annotations = useMemo(() => annotationsClient ?? createAnnotationsClient(studentTrainingHeaders(token)), [annotationsClient, token]);
   const explicitStart = Boolean(initialPageId || initialModuleId);
   const [resume, setResume] = useState<{ ready: boolean; pageId?: string }>(() => ({ ready: explicitStart }));
   useEffect(() => {
@@ -99,6 +104,7 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       visitedScope={visitedScope}
       searchScope={searchScope}
       onSearchOpen={onSearchOpen}
+      annotations={annotations}
     />
   );
 }

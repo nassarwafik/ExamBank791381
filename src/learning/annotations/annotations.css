@@ -1,0 +1,60 @@
+/* Phase L.5 — the student's private annotations in the Reader: the painted highlight, the «تظليل» chip, the «ملاحظاتي» panel
+   (it reuses the search dialog's frame) and the short write-outcome line. Tokens only; RTL-first logical properties. */
+
+/* The highlight is painted through the CSS Custom Highlight API (no DOM change). Colour plus an underline, so it never relies
+   on colour alone; the dark reading theme gets its own pair. */
+.learning-reader { --eb-reader-hl-bg: #fde68a; --eb-reader-hl-line: #b45309; }
+.learning-reader:not(.is-presentation)[data-read-theme="dark"] { --eb-reader-hl-bg: #6b5300; --eb-reader-hl-line: #fbbf24; }
+::highlight(eb-reader-highlight) { background-color: var(--eb-reader-hl-bg); color: inherit; text-decoration: underline 2px var(--eb-reader-hl-line); }
+
+.learning-reader-hl-chip {
+  position: fixed; z-index: 45; inset-block-start: var(--eb-hl-chip-top); inset-inline-start: var(--eb-hl-chip-left);
+  transform: translateX(50%); display: flex; align-items: center; gap: var(--eb-space-2);
+  padding: var(--eb-space-1); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
+  box-shadow: var(--eb-shadow-md, 0 4px 16px rgba(15, 23, 42, .16));
+}
+.learning-reader-hl-chip .eb-button { min-block-size: 44px; min-inline-size: 64px; }
+.learning-reader-hl-chip-note { padding: var(--eb-space-2); font-size: var(--eb-fs-13); color: var(--eb-text); }
+
+.learning-reader-notes { padding: var(--eb-space-4); }
+.learning-reader-notes-private { margin: 0; font-size: var(--eb-fs-13); color: var(--eb-muted); }
+.learning-reader-notes-notice { margin: 0; font-size: var(--eb-fs-13); color: var(--eb-success-tx); }
+.learning-reader-notes-error {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); margin: 0; padding: var(--eb-space-2) var(--eb-space-3);
+  color: var(--eb-danger-tx); background: var(--eb-danger-bg); border: 1px solid currentColor; border-radius: var(--eb-r); font-size: var(--eb-fs-13);
+}
+.learning-reader-notes-section { display: flex; flex-direction: column; gap: var(--eb-space-2); min-inline-size: 0; }
+.learning-reader-notes-section h3 { margin: 0; font-size: var(--eb-fs-14); color: var(--eb-text-heading); }
+.learning-reader-notes-section p { margin: 0; font-size: var(--eb-fs-13); }
+.learning-reader-note { display: flex; flex-direction: column; gap: var(--eb-space-1); }
+.learning-reader-note label { font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); color: var(--eb-text); }
+.learning-reader-note textarea {
+  inline-size: 100%; box-sizing: border-box; min-block-size: 6rem; resize: vertical; padding: var(--eb-space-2);
+  font: inherit; line-height: 1.7; color: var(--eb-text); background: var(--eb-surface); border: 1px solid var(--eb-line-2, var(--eb-line)); border-radius: var(--eb-r);
+}
+.learning-reader-note textarea:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 1px; }
+.learning-reader-note textarea[aria-invalid="true"] { border-color: var(--eb-danger); }
+.learning-reader-note-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--eb-space-2); }
+.learning-reader-note-count { margin-inline-end: auto; font-size: var(--eb-fs-12); color: var(--eb-muted); font-variant-numeric: tabular-nums; }
+.learning-reader-note-count.is-over { color: var(--eb-danger-tx); font-weight: var(--eb-fw-semibold); }
+.learning-reader-note .eb-button, .learning-reader-notes-list .eb-button { min-block-size: 44px; }
+.learning-reader-notes-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--eb-space-1); }
+.learning-reader-notes-list li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); min-inline-size: 0; }
+.learning-reader-notes-quote { flex: 1 1 14rem; min-inline-size: 0; font-size: var(--eb-fs-13); color: var(--eb-text); background: var(--eb-reader-hl-bg); padding: 2px var(--eb-space-1); border-radius: var(--eb-r-sm, 4px); }
+.learning-reader-notes-open {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; inline-size: 100%; min-block-size: 44px;
+  padding: var(--eb-space-2) var(--eb-space-3); text-align: start; font: inherit; color: var(--eb-text); cursor: pointer;
+  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
+}
+.learning-reader-notes-open:hover { border-color: var(--eb-primary); background: var(--eb-primary-050); }
+.learning-reader-notes-open:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: 2px; }
+.learning-reader-notes-page { font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); }
+.learning-reader-notes-detail { font-size: var(--eb-fs-13); color: var(--eb-text-secondary, var(--eb-text)); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: pre-line; }
+
+.learning-reader-notes-toast {
+  position: fixed; z-index: 45; inset-block-end: calc(var(--eb-space-4) + 64px); inset-inline-start: 50%; transform: translateX(50%);
+  max-inline-size: min(92vw, 28rem); margin: 0; padding: var(--eb-space-2) var(--eb-space-3); font-size: var(--eb-fs-13);
+  color: var(--eb-text); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
+  box-shadow: var(--eb-shadow-md, 0 4px 16px rgba(15, 23, 42, .16));
+}
+.learning-reader-notes-toast.is-error { color: var(--eb-danger-tx); background: var(--eb-danger-bg); border-color: currentColor; }
