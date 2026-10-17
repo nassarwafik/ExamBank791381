@@ -1,8 +1,9 @@
 // Learning Materials — Phase 2: registry / lazy-loader tests. No brittle hashed-chunk assertions — behavior only.
 import { describe, it, expect, afterEach, vi } from "vitest";
 import {
-  hasCourseContent, registeredCourseIds, loadCourseManifest, hasModuleContent, loadModuleContent, LearningContentError,
+  hasCourseContent, registeredCourseIds, loadCourseManifest, hasModuleContent, LearningContentError,
 } from "./registry";
+import { loadBundledModuleContent as loadModuleContent } from "./bundledModules";
 import { findLearningCourse } from "../catalog";
 
 afterEach(() => vi.restoreAllMocks());
