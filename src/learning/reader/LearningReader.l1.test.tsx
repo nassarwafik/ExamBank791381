@@ -177,7 +177,7 @@ describe("L.1 — swipe to turn the page (RTL)", () => {
     const text = () => surface().querySelector(".learning-reader-page-title") as HTMLElement;
     swipe(text(), 30);                                    // too short
     swipe(text(), 90, 120);                               // mostly vertical (a scroll)
-    swipe(surface().querySelector("input, select, button")!, 120);   // starts on a control
+    swipe(surface().querySelector(".learning-reader-sourceinfo > summary")!, 120);   // starts on a control (rendered with the head)
     await waitFor(() => {});
     expect(screen.getByRole("heading", { level: 2, name: "صفحة غنية" })).toBeTruthy();
     swipe(text(), 120);

@@ -8,7 +8,7 @@ import { useCallback, useRef, type TouchEvent } from "react";
 const MIN_DISTANCE = 64;            // px of horizontal travel
 const MAX_DURATION = 700;           // ms — a slow drag is reading / selecting, not a page turn
 const DOMINANCE = 2;                // the horizontal travel must be at least twice the vertical one
-const OWN_GESTURES = 'input, textarea, select, button, a[href], label, [contenteditable="true"], [role="slider"], [role="dialog"], [class*="learning-activity"], [class*="learning-cli"], [data-reader-noswipe]';
+const OWN_GESTURES = 'input, textarea, select, button, summary, a[href], label, [contenteditable="true"], [role="slider"], [role="dialog"], [class*="learning-activity"], [class*="learning-cli"], [data-reader-noswipe]';
 
 /** True when a touch on `target` must NOT turn the page (exported for tests). */
 export function swipeBlocked(target: EventTarget | null, root: HTMLElement | null): boolean {
