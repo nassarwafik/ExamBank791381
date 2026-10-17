@@ -30,7 +30,51 @@ const PROG_FN = "api/src/functions/learning-progress.js", PROG_LIB = "api/src/li
 const STUDENT_READER = "src/student/StudentReader.tsx";
 const L3_API = ["api/tests/learning-progress-l3.test.js"], L3_UI = ["src/student/StudentReader.progress.l3.test.tsx"];
 const L3_TEACHER = ["src/learning/LearningMaterialsPage.l3.test.tsx"], L3_SYNC = ["src/learning/progress/pageIndex.sync.test.ts"];
+const CLASSP_FN = "api/src/functions/learning-class-progress.js", CR_PANEL = "src/learning/classReading/ClassReadingPanel.tsx";
+const L4_API = ["api/tests/learning-class-progress-l4.test.js"], L4_UI = ["src/learning/classReading/ClassReadingPanel.l4.test.tsx"];
+const L4_PAGE = ["src/learning/LearningMaterialsPage.l4.test.tsx"];
 export const CAMPAIGNS = {
+  l4: [
+    { id: "L4-M1", what: "another teacher's class is reported (tenancy guard dropped)", file: CLASSP_FN,
+      find: "    if (!classroom || !canAccessDocument(classroom, tenantOf(auth.user))) return NOT_FOUND;\n", replace: "    if (!classroom) return NOT_FOUND;\n", tests: L4_API },
+    { id: "L4-M2", what: "a class without the book is reported", file: CLASSP_FN,
+      find: "    if (!classHasLearningCourse(classroom, courseId)) return NOT_FOUND;\n", replace: "", tests: L4_API },
+    { id: "L4-M3", what: "an unauthenticated caller is answered", file: CLASSP_FN,
+      find: "    if (!auth.ok) return auth.response;\n", replace: "", tests: L4_API },
+    { id: "L4-M4", what: "an inactive student is counted", file: CLASSP_FN,
+      find: "isStudentClassMember(u, classId) && u.active !== false", replace: "isStudentClassMember(u, classId)", tests: L4_API },
+    { id: "L4-M5", what: "a moved / archived student is counted (membership re-check dropped)", file: CLASSP_FN,
+      find: "isStudentClassMember(u, classId) && u.active !== false", replace: "u && u.active !== false", tests: L4_API },
+    { id: "L4-M6", what: "units hidden from the class are reported", file: CLASSP_FN,
+      find: "listLearningModules(courseId).filter(m => visibleIds.has(m.moduleId))", replace: "listLearningModules(courseId)", tests: L4_API },
+    { id: "L4-M7", what: "«completed» counts every student who started", file: PROG_LIB,
+      find: "reads.filter(n => n >= total).length", replace: "reads.filter(n => n > 0).length", tests: L4_API },
+    { id: "L4-M8", what: "the unit average ignores the class size", file: PROG_LIB,
+      find: "(rows.length * total)) * 100)", replace: "(total)) * 100)", tests: L4_API },
+    { id: "L4-M9", what: "an empty class divides by zero (NaN average)", file: PROG_LIB,
+      find: "rows.length ? Math.round(", replace: "true ? Math.round(", tests: L4_API },
+    { id: "L4-M10", what: "a last reading in a hidden unit still shows as the last reading", file: PROG_LIB,
+      find: "lastReadAt: read > 0 && c ? c.lastReadAt : null", replace: "lastReadAt: c ? c.lastReadAt : null", tests: L4_API },
+    { id: "L4-M11", what: "archived classes are offered", file: CR_PANEL,
+      find: "base.value.classes.filter(c => normalizeClassStatus(c) === \"active\")", replace: "base.value.classes.filter(() => true)", tests: L4_UI },
+    { id: "L4-M12", what: "hiding a unit is not confirmed", file: CR_PANEL,
+      find: "if (!show && !(await confirm(", replace: "if (false && !(await confirm(", tests: L4_UI },
+    { id: "L4-M13", what: "units are listed and sent in catalog order, not content order", file: CR_PANEL,
+      find: "?? []).slice().sort((a, b) => a.order - b.order);", replace: "?? []).slice();", tests: L4_UI },
+    { id: "L4-M14", what: "the published list is sent in click order", file: CR_PANEL,
+      find: "const next = units.map(u => u.moduleId).filter(id => wanted.has(id));", replace: "const next = [...wanted];", tests: L4_UI },
+    { id: "L4-M15", what: "a late answer for the class the teacher left is shown", file: CR_PANEL,
+      find: "      if (active) setReading({ state: \"ready\", value });\n", replace: "      setReading({ state: \"ready\", value });\n", tests: L4_UI },
+    { id: "L4-M16", what: "the panel requests classes before the teacher opens it", file: CR_PANEL,
+      find: "    if (!open) return;\n    let active = true;\n    Promise.all(", replace: "    let active = true;\n    Promise.all(", tests: L4_UI },
+    { id: "L4-M17", what: "a student exactly INACTIVE_DAYS idle is not listed as stopped", file: CR_PANEL,
+      find: ">= INACTIVE_DAYS * DAY_MS", replace: "> INACTIVE_DAYS * DAY_MS", tests: L4_UI },
+    { id: "L4-M18", what: "a failed publish still updates the class", file: CR_PANEL,
+      find: "      const materials = await client.publish(classroom.classId, courseId, next);\n      commit(classroom.classId, materials);\n",
+      replace: "      commit(classroom.classId, [{ courseId, visibleModuleIds: next }]);\n      const materials = await client.publish(classroom.classId, courseId, next);\n      commit(classroom.classId, materials);\n", tests: L4_UI },
+    { id: "L4-M19", what: "the class panel is offered without a teacher session", file: PAGE,
+      find: "(token ? createClassReadingClient(teacherTrainingHeaders(token)) : null)", replace: "createClassReadingClient(teacherTrainingHeaders(token ?? \"\"))", tests: L4_PAGE },
+  ],
   l3: [
     { id: "L3-M1", what: "a page the book does not have is accepted", file: PROG_FN,
       find: "      if (!moduleId) return BAD_REQUEST;                                  // not a page of this book\n", replace: "", tests: L3_API },
