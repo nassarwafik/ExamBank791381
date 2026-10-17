@@ -66,7 +66,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | implemented |
 | L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | implemented |
 | L.6a | Restricted content: module bodies served by the API after the publication check; none ships as a public asset (D2, part 1) | implemented |
-| L.6b | Answer keys, hints and explanations stay on the server; verdict and feedback come from the server for every answer (D2, part 2) | planned |
+| L.6b | Answer keys, hints and explanations stay on the server; verdict and feedback come from the server for every answer (D2, part 2) | implemented |
 | L.7 | Operations: `exam-library` observability + cache, in-memory `learning-training`, content-chunk bundle budget, measured before / after | planned |
 | L.8 | Gate: real-browser reader journey (open, navigate, resume, back), axe and 44 px touch targets at 390 / 834 / 1024 / 1440 | planned |
 
@@ -604,7 +604,55 @@ This is logged as `learning.class_progress.read_cost`. Nothing is written.
   - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
   - `npx tsc -b`, `npm run build` (bundle guard passed: 0 module bodies; initial JS graph 114.5 KB gzip against 125 KB; Reader first-load graph 32.7 KB) and `git diff --check` are clean.
 
-## 11. What the plan leaves to the owner
+## 11. Implementation record and evidence (L.6b)
+
+### Decisions taken inside L.6b
+
+| # | Decision | Why |
+|---|---|---|
+| L6-g | **The answer material of the checked exercises leaves the browser.** In every `practice` and `practice-table` block a served body carries:<br>• no option `correct` flag;<br>• no `answer` / `answers`;<br>• no `feedback` (hints, right / wrong messages, explanation);<br>• no select-cell `key`.<br>A block that can be checked carries `serverCheck: true` instead. | Before L.6b a student with developer tools could read every answer and explanation of an opened unit. These are the only blocks whose answers are judged and the only ones that earn Study Strength. |
+| L6-h | A new **check index** (`api/src/data/learning-check/<course>.json`) holds every checkable block's key and feedback: 479 blocks, `study: true` on 475 of them. It is written with the bodies by `npm run build:learning-content` and pinned by the sync test. The **study index stays the only authority for points**. A test pins its 475 activities, with their keys, to the check index's `study: true` set. | Strength, its index and its tests are unchanged. The 4 self-check tables (`studyEligible: false`), which the study index never listed, can now be judged by the server too. |
+| L6-i | **One endpoint answers every answer:** `POST /api/learning-study/{course}/attempt`, with the same gate as before. The reply carries the verdict and only what that answer earns:<br>• **right:** the right message and the explanation;<br>• **wrong:** the wrong message and the whole hint ladder (the Reader still reveals it one rung at a time);<br>• **a table:** a verdict per answered cell.<br>A self-check is judged and never recorded (`study: false`). | One request per answer. The hints were already one click away after a wrong answer; the explanation and the right message never reach a wrong answer. |
+| L6-j | **A transport failure is never a wrong answer.** While the reply is on its way the exercise says «جارٍ التحقق من إجابتك…». When the server cannot be reached it says so and offers «أعد المحاولة». | The grading-safety rule (AGENTS.md §10) applied to learning practice: an unknown state is never shown as a mistake. |
+| L6-k | Each distinct answer is asked **once per mount**, and the reply is reused when the same answer is picked again. A late reply to an older answer is kept for reuse but never shown for the answer on screen. | No duplicate requests, and no stale verdict. |
+| L6-l | **The mode follows the content.** A served block (`serverCheck`) is judged by the server. A block that still carries its key (the authored content read by the tests and the build scripts) keeps the local checker. A guard test fails if a served body ever carries a key again. | The production bodies never carry a key, so production always asks the server. 45+ suites keep reading the authored book without a server. |
+| L6-m | **Left in the browser, by design:** <br>• worked-example explanations (book text revealed on request);<br>• the CLI simulator's goals and hints (the simulator runs in the browser);<br>• the guided-activity explanation;<br>• the ipv6 / cable widgets' scenario answers.<br>Moving them would need a server simulation engine. | None of them is a judged answer and none earns a point. |
+
+### What shipped
+
+- **Generator and data:**
+  - `src/learning/study/checkIndex.ts`: `servedModuleBody`, `servedBlock`, `checkActivityOf`, `buildCheckIndex`.
+  - `scripts/build-learning-content.mjs` now writes stripped bodies (28 modules, 708 KB, down from 830 KB) and the check index (230 pages, 479 blocks, 173 KB).
+  - `contentData.sync.test.ts` pins both.
+- **API:**
+  - `api/src/lib/learning-check.js`: `loadCheckIndex`, `findCheckActivity`, `checkResponse`.
+  - `learning-study.js`: the attempt endpoint judges against the check index, records only study activities, and adds `study`, `feedback` and `cells` to the reply.
+- **App:**
+  - `PracticeBlockView` / `PracticeTableView` have a server mode (`serverCheck`): checking and unreachable states, a retry, per-answer reuse, and late replies dropped.
+  - `StudyOutcome` stays silent for a self-check.
+  - `studyActivityIds` names a page's study activities for authored and served bodies alike (the study bar).
+  - The host updates the study state only for study activities.
+  - The types allow a served select cell without a `key`.
+- **Docs:** `docs/learning-content-architecture.md` (Study Practice: answer material on the server).
+
+### Request and storage cost
+
+- **Per answer:** every answer is now one request (before L.6b only a right answer to a study activity was sent).
+- **Student:** each answer costs one class read and one study-document read. A write happens only on the first right answer to a study activity, as before.
+- **Teacher:** no storage read.
+
+### Evidence
+
+- **Fail-first on `main` 67f3e3ca** (detached worktree, the new tests copied in):
+  - `servedBodies.l6b.test.ts` fails: `expected 1111 to be +0`. 1111 answer-material fields were left in the served bodies, the first being `m01-l01-p01-q1.question.feedback` and `m01-l01-p01-q1.options[0].correct`.
+  - `serverVerdict.l6b.test.ts` fails: `m01-l01-p01-q1: expected undefined to deeply equal { … }`. The reply carried no feedback.
+  - A probe of the baseline handler answers the 4 self-check tables with **404**; the head answers them with 200 and `study: false`.
+  - Both tests pass on the head. The hidden-module refusal test passes on both: it is a **pin**.
+- **Mutation:** `node scripts/mutate-l.mjs l6b` → MUTATION_RESULT.
+- **Full validation on the head:** VALIDATION_RESULT
+- **Not run:** a real-browser pass. The end-to-end suite runs the Reader over the **real** content and study handlers in happy-dom: the served body holds none of the block's feedback, a wrong answer shows the server's message and hints, and a right one shows its message, its explanation and the recorded study point.
+
+## 12. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count

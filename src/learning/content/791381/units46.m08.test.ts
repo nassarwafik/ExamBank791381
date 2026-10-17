@@ -186,7 +186,7 @@ describe("m08 — key source facts, page by page", () => {
     for (const row of check.rows) {
       const [pc1, mask] = [row[0] as string, row[1] as string];
       const n = mask === "/8" ? 1 : mask === "/16" ? 2 : 3;
-      const key = sel(row[2]).key;
+      const key = sel(row[2]).key!;                                           // authored content always carries the key
       expect(sel(row[2]).options).toContain(key);
       expect(octets(key).slice(0, n)).toEqual(octets(pc1).slice(0, n));     // same network part
       expect(key).not.toBe(pc1);                                               // never PC1 itself

@@ -4,7 +4,7 @@ import RichTextRenderer from "./RichTextRenderer";
 import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
 import type { LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
-import { eligibleStudyActivities } from "../study/eligibility";
+import { studyActivityIds } from "../study/eligibility";
 import LearningActivityHost from "../activities/LearningActivityHost";
 import PracticeTableView from "./PracticeTableView";
 import PracticeBlockView from "./PracticeBlockView";
@@ -181,13 +181,13 @@ function ReaderBody({ header, body, ctx }: { header: ReaderPageHeader; body: Rea
  * Never an animation, never a modal.
  */
 function StudyPageBar({ page, host }: { page: ContentPage; host: StudyHost }) {
-  const eligibleHere = eligibleStudyActivities(page);
+  const eligibleHere = studyActivityIds(page);                    // authored and served bodies alike (L.6b)
   if (eligibleHere.length === 0) return null;
   const status = host.pageStatus(page.id);
   if (status.kind === "loading") return <p className="learning-reader-study is-loading" role="status">جارٍ تحميل نقاط الدراسة...</p>;
   if (status.kind === "error") return <p className="learning-reader-study is-error" role="status">تعذّر تحميل نقاط الدراسة لهذه الصفحة.</p>;
   const eligible = status.eligible || eligibleHere.length;
-  const done = eligibleHere.filter(a => status.completed.has(a.activityId)).length;
+  const done = eligibleHere.filter(id => status.completed.has(id)).length;
   const full = done >= eligible;
   return (
     <p className={"learning-reader-study" + (full ? " is-full" : "")} role="status">
@@ -353,7 +353,7 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
     case "unit-opener":
       return <UnitOpenerView block={block} />;
     case "practice":
-      return <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} />;
+      return <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} serverCheck={block.serverCheck === true} studyEligible={block.studyEligible !== false} />;
     case "practice-table":
       return <PracticeTableView block={block} pageId={ctx.pageId} study={ctx.study} />;
     case "visual":
