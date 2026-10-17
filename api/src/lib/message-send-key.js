@@ -40,15 +40,29 @@ async function claimSendKey(container, key, deps = {}) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try { return { status: "new", name, etag: await upload(container, name, pending, null) }; }
     catch (e) { if (!isConcurrencyConflict(e)) throw e; }
-    const { value, etag } = await read(container, name);
+    let current;
+    try { current = await read(container, name); }
+    catch (e) {
+      // M.3 — an unparsable claim (a storage fault) would refuse this key forever: it is removed and claimed again.
+      if (!(e instanceof SyntaxError)) throw e;
+      await (deps.deleteBlobConditional || deleteBlobConditional)(container, name, null);
+      continue;
+    }
+    const { value, etag } = current;
     if (!value) continue;                                                  // released meanwhile → claim again
     if (value.state === "sent" && MESSAGE_ID_RE.test(String(value.messageId || ""))) return { status: "replay", messageId: String(value.messageId) };
     const claimedMs = Date.parse(String(value.claimedAt || ""));
     if (Number.isFinite(claimedMs) && nowMs - claimedMs < PENDING_TTL_MS) return { status: "pending" };
-    try { return { status: "new", name, etag: await upload(container, name, pending, etag) }; }   // stale claim: take over
+    try { return { status: "new", name, etag: await upload(container, name, pending, etag), takeover: true }; }   // stale claim: take over
     catch (e) { if (isConcurrencyConflict(e)) return { status: "pending" }; throw e; }
   }
   return { status: "pending" };
+}
+
+/** M.3 — the publication stamp of a claim: its digest (the claim name's hash), so a later takeover of the same key can
+ *  recognise the message an earlier request published (message-store.js findPublishedByStamp). */
+function claimStamp(claim) {
+  return String(claim && claim.name || "").slice(SEND_KEY_PREFIX.length).replace(/\.json$/, "");
 }
 
 /** Records the published message on the claim (best-effort: a failure only weakens a later retry's replay). */
@@ -65,6 +79,6 @@ async function releaseSendKey(container, claim, deps = {}) {
   try { await del(container, claim.name, claim.etag); } catch { /* best-effort: it expires after PENDING_TTL_MS */ }
 }
 
-const SEND_IN_PROGRESS = { status: 409, jsonBody: { ok: false, code: "SEND_IN_PROGRESS", error: "الرسالة قيد الإرسال بالفعل. انتظر لحظة ثم حدّث المحادثة." } };
+const SEND_IN_PROGRESS = { status: 409, headers: { "Retry-After": "2" }, jsonBody: { ok: false, code: "SEND_IN_PROGRESS", error: "الرسالة قيد الإرسال بالفعل. انتظر لحظة ثم حدّث المحادثة." } };
 
-module.exports = { SEND_KEY_PREFIX, CLIENT_MESSAGE_ID_RE, PENDING_TTL_MS, parseClientMessageId, sendKeyName, claimSendKey, finalizeSendKey, releaseSendKey, SEND_IN_PROGRESS };
+module.exports = { SEND_KEY_PREFIX, CLIENT_MESSAGE_ID_RE, PENDING_TTL_MS, parseClientMessageId, sendKeyName, claimSendKey, claimStamp, finalizeSendKey, releaseSendKey, SEND_IN_PROGRESS };

@@ -5,7 +5,7 @@ import { IconChevronBack, IconMail, IconMegaphone, IconSearch, IconStudents } fr
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { normalizeClassStatus } from "../classLifecycle";
 import type { Classroom, Student } from "../students/types";
-import { MessageAvatar, MessageComposer, MessageThread, MessagesEmptyState } from "./MessageParts";
+import { MessageAvatar, MessageComposer, MessageThread, MessagesEmptyState, NewerMessagesNote, OlderMessagesBar } from "./MessageParts";
 import {
   MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
   type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount, type ReadAck
@@ -50,6 +50,11 @@ import "./messages.css";
  *    listed first. The filter changes what is DRAWN only: selection, thread and acknowledgements are untouched;
  *  - avatars, a quiet «نشط» (kept for assistive tech, drawn only for disabled / archived students), empty states, and
  *    a session-expired message for a 401 instead of the raw server text.
+ *
+ * Messages M.3 — older history and the unread frontier. «عرض الرسائل الأقدم» loads the page before the oldest message
+ * shown (`older`, per thread, cleared on a switch, guarded by `olderGen`); older pages are DISPLAY ONLY — they never
+ * feed an acknowledgement (the ack is still built from the GET snapshot alone). When the server held back unread
+ * replies beyond the frontier (`hasNewer`), a successful acknowledgement of the shown ones reloads the thread at once.
  */
 type Tab = "direct" | "announcements";
 const ARCHIVED_CLASS_TEXT = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
@@ -79,6 +84,8 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const drafts = useRef<Record<string, string>>({});                // M.2 — thread key → unsent text
+  const [older, setOlder] = useState<{ key: string; messages: MessageView[]; hasMore: boolean; loading: boolean; error: string } | null>(null);
+  const olderGen = useRef(0);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RosterFilter>("all");
   const rosterGen = useRef(0);
@@ -125,7 +132,8 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
       // Still the current thread (the gen check above) → acknowledge what THIS GET snapshot showed (student messages).
       if (key.startsWith("dm:")) {
         const ack = readAckFromSnapshot(data.messages, m => m.senderRole === "student");
-        if (ack) void markThreadRead(key, ack);
+        // M.3 — replies held back by the frontier follow as soon as the shown ones are acknowledged.
+        if (ack) void markThreadRead(key, ack).then(ok => { if (ok && data.hasNewer && activeKey.current === key) void loadThread(key, true); });
       }
     } catch (e) {
       if (gen !== threadGen.current) return;
@@ -133,24 +141,26 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
     }
   }
 
-  async function markThreadRead(key: string, ack: ReadAck) {
-    if (activeKey.current !== key) return;
-    if (!conversationShown.current) return;                         // narrow layout showing the roster → not visible
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+  /** Resolves true when THIS acknowledgement was applied (M.3: the caller may then load held-back replies). */
+  async function markThreadRead(key: string, ack: ReadAck): Promise<boolean> {
+    if (activeKey.current !== key) return false;
+    if (!conversationShown.current) return false;                   // narrow layout showing the roster → not visible
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return false;
     const throughMessageId = ackKey(ack);
-    if (marked.current[key] === throughMessageId || marking.current[key] === throughMessageId) return;
+    if (marked.current[key] === throughMessageId || marking.current[key] === throughMessageId) return false;
     marking.current[key] = throughMessageId;
     const seq = (markSeq.current[key] = (markSeq.current[key] || 0) + 1);
     const sid = key.slice(3);
     try {
       const remaining = await client.markDirectRead(sid, ack);
-      if (seq !== markSeq.current[key]) return;                      // a newer mark for this thread started → its count wins
+      if (seq !== markSeq.current[key]) return false;                // a newer mark for this thread started → its count wins
       marked.current[key] = throughMessageId;
       summaryGen.current += 1;                                        // an older in-flight class summary can't restore the old count
       setUnreadByStudent(prev => ({ ...prev, [sid]: remaining }));
       onUnreadChanged?.();
+      return true;
     } catch {
-      /* the unread indicator stays until a later successful mark */
+      return false;                                                   // the unread indicator stays until a later successful mark
     } finally {
       if (marking.current[key] === throughMessageId) delete marking.current[key];
     }
@@ -168,6 +178,8 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
 
   function switchThread(key: string) {
     threadGen.current += 1;
+    olderGen.current += 1;
+    setOlder(null);
     activeKey.current = key;
     confirmed.current = { key, messages: [] };
     setThread(null); setThreadError(""); setDraft(drafts.current[key] || ""); setSendError("");
@@ -183,6 +195,22 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
     } catch (e) {
       if (gen !== rosterGen.current) return;
       setStudents([]); setRosterError(errorText(e, "تعذر تحميل الطلاب."));
+    }
+  }
+
+  /** M.3 — load the page before the oldest message on screen (display only; never acknowledged). */
+  async function loadOlder(oldestId: string) {
+    const key = activeKey.current;
+    if (!key || !oldestId) return;
+    const gen = ++olderGen.current;
+    setOlder(prev => ({ key, messages: prev && prev.key === key ? prev.messages : [], hasMore: true, loading: true, error: "" }));
+    try {
+      const page = key.startsWith("ann:") ? await client.getAnnouncements(key.slice(4), oldestId) : await client.getDirect(key.slice(3), oldestId);
+      if (gen !== olderGen.current || activeKey.current !== key) return;
+      setOlder(prev => ({ key, messages: page.messages.reduce(mergeMessage, prev && prev.key === key ? prev.messages : []), hasMore: page.hasMore === true, loading: false, error: "" }));
+    } catch (e) {
+      if (gen !== olderGen.current || activeKey.current !== key) return;
+      setOlder(prev => ({ key, messages: prev && prev.key === key ? prev.messages : [], hasMore: true, loading: false, error: errorText(e, "تعذر تحميل الرسائل الأقدم.") }));
     }
   }
 
@@ -276,6 +304,17 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
   const selectedStudent = (students || []).find(s => s.userId === studentId) || null;
 
   const selectedState = selectedStudent ? studentStatus(selectedStudent) : null;
+  // M.3 — what the thread shows: the latest snapshot plus any older pages loaded for THIS thread.
+  const olderHere = shown && older && older.key === shown.key ? older : null;
+  const display = shown ? (olderHere ? olderHere.messages.reduce(mergeMessage, shown.messages) : shown.messages) : [];
+  const historyBar = shown && (
+    <OlderMessagesBar
+      hasMore={olderHere ? olderHere.hasMore : shown.hasMore === true}
+      loading={!!olderHere && olderHere.loading}
+      error={olderHere ? olderHere.error : ""}
+      onLoad={() => void loadOlder(display.length ? display[0].messageId : "")}
+    />
+  );
   const visibleStudents = students ? rosterView(students, unreadByStudent, query, filter) : null;
   const unreadStudents = students ? students.filter(s => (unreadByStudent[s.userId]?.unread || 0) > 0).length : 0;
   const activeClasses = (classes || []).filter(c => normalizeClassStatus(c) !== "archived");
@@ -410,9 +449,10 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                     <div className="eb-msg-convo-body">
                       {threadError && <p className="platform-error eb-msg-pane-note" role="alert">{threadError}</p>}
                       {!shown && !threadError && <p className="eb-muted eb-msg-pane-note" role="status">جارٍ تحميل المحادثة...</p>}
+                      {historyBar}
                       {shown && (
                         <MessageThread
-                          messages={shown.messages}
+                          messages={display}
                           ariaLabel="المحادثة"
                           emptyText="لا توجد رسائل بعد."
                           isMine={m => m.senderRole === "teacher"}
@@ -420,6 +460,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                           followKey={shown.key + "|" + pane}
                         />
                       )}
+                      {shown && shown.hasNewer && <NewerMessagesNote />}
                     </div>
                     {shown && (
                       <div className="eb-msg-convo-foot">
@@ -447,9 +488,10 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                 <div className="eb-msg-convo-body">
                   {threadError && <p className="platform-error eb-msg-pane-note" role="alert">{threadError}</p>}
                   {!shown && !threadError && <p className="eb-muted eb-msg-pane-note" role="status">جارٍ تحميل الإعلانات...</p>}
+                  {historyBar}
                   {shown && (
                     <MessageThread
-                      messages={shown.messages}
+                      messages={display}
                       ariaLabel="إعلانات الصف"
                       emptyText="لا توجد إعلانات بعد."
                       isMine={() => true}

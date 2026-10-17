@@ -40,6 +40,10 @@
 // attempt) — such an acknowledgement is rejected (400, no write) and the message stays unread. When a window holds only
 // the reader's own messages, a thread GET folds them into the legacy boundary (absorbIrrelevantLegacy): they are never
 // counted unread, so this changes no count, and it guarantees own messages can never permanently starve the frontier.
+// SEQUENCED FRONTIER (M.3). The same rule holds in the sequenced domain: a page carries the reader's unread relevant
+// sequenced messages oldest-first up to the same bound (message-store.js listRecentMessages) and a sequenced boundary may
+// never newly cover an unread relevant position outside that window (assertLegacyFrontier, run for both domains inside
+// every CAS attempt). Before M.3 a reader with more unread replies than one page acknowledged the older ones unseen.
 // Marking read is a SNAPSHOT ACKNOWLEDGEMENT: the client sends X (the latest unread-RELEVANT message it actually
 // displayed) and seenIdsAtBoundary — the relevant ids at X's millisecond that were in THAT applied snapshot. The boundary
 // ids are NEVER re-derived from a fresh listing: a message created in the same millisecond after the reader's GET (on
@@ -230,7 +234,11 @@ async function checkAcknowledgement(container, { streamPrefix, expected, include
     const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: seen[i] });
     if (!doc || !include(doc)) throw new MarkReadError();
   }
-  return { incoming: Object.fromEntries(parts.map(p => [p.domain, p.boundary])), legacyIds: ids.filter(id => keyDomain(messageIdMs(id)) === "legacy") };
+  return {
+    incoming: Object.fromEntries(parts.map(p => [p.domain, p.boundary])),
+    legacyIds: ids.filter(id => keyDomain(messageIdMs(id)) === "legacy"),
+    sequencedIds: ids.filter(id => keyDomain(messageIdMs(id)) === "sequenced")
+  };
 }
 
 /** The unread legacy ids (under `marker`) that a legacy `boundary` would newly cover, ascending. */
@@ -242,9 +250,10 @@ function newlyCoveredLegacy(marker, legacyIds, boundary) {
   });
 }
 
-/** Rejects (MarkReadError) a legacy boundary that would newly cover an unread legacy id outside the reader's frontier
- *  window (see LEGACY FRONTIER) — i.e. a relevant legacy message no page could have shown. Runs the SAME scan as the page
- *  (scanLegacyFrontier, same relevance), against `marker` — the version being updated. */
+/** Rejects (MarkReadError) a boundary that would newly cover an unread id of its domain outside the reader's frontier
+ *  window (see LEGACY FRONTIER; M.3: the same rule for the sequenced domain) — i.e. a relevant message no page could have
+ *  shown. Runs the SAME scan as the page (scanLegacyFrontier, same relevance), against `marker` — the version being
+ *  updated. `legacyIds` are the listed ids of the boundary's domain. */
 async function assertLegacyFrontier(marker, legacyIds, boundary, { expected, include, loadDocs }) {
   if (!boundary) return;
   const covered = newlyCoveredLegacy(marker, legacyIds, boundary);
@@ -278,7 +287,7 @@ function docLoader(container, streamPrefix, deps) {
  * taken after the write.
  */
 async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary, meta = {} }, deps = {}) {
-  const { incoming, legacyIds } = await checkAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
+  const { incoming, legacyIds, sequencedIds } = await checkAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
   const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   const loadDocs = docLoader(container, streamPrefix, deps);
   try {
@@ -286,6 +295,8 @@ async function markStreamRead(container, { stateName, streamPrefix, expected, in
       const marker = normalizeMarker(current);
       // every attempt: never cover an unread relevant legacy id no page could have shown
       await assertLegacyFrontier(marker, legacyIds, incoming.legacy, { expected, include, loadDocs });
+      // M.3 — the same for the sequenced domain: never cover an unread relevant message beyond the page's frontier.
+      await assertLegacyFrontier(marker, sequencedIds, incoming.sequenced, { expected, include, loadDocs });
       const r = advanceMarker(marker, incoming);
       if (!r.changed) throw new NoChange(r.marker);                 // no regression, no redundant write
       return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };

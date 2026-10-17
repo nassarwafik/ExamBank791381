@@ -308,4 +308,14 @@
 .eb-msg-class-pick:hover{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
 .eb-msg-class-pick:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 .eb-msg-convo-body > .eb-msg-empty{ color:var(--eb-muted); }
+/* M.3 — older history control (top of a thread) and the "newer messages follow" note (bottom). */
+.eb-msg-older{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-1); padding-block:var(--eb-space-2); padding-inline:var(--eb-space-4); }
+.eb-msg-older-btn{
+  min-height:36px; padding-inline:var(--eb-space-4); font:inherit; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold);
+  border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); cursor:pointer; box-shadow:var(--eb-sh-xs);
+}
+.eb-msg-older-btn:hover{ background:var(--eb-primary-050); border-color:var(--eb-primary); }
+.eb-msg-older-btn:disabled{ cursor:default; color:var(--eb-muted); background:var(--eb-surface-2); }
+.eb-msg-older-btn:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.eb-msg-newer{ flex:0 0 auto; margin:0; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-4); text-align:center; font-size:var(--eb-fs-12); color:var(--eb-info-tx); background:var(--eb-info-bg); }
 @media (prefers-reduced-motion: reduce){ .eb-msg-search,.eb-msg-class-pick,.eb-msg-roster-item{ transition:none; } }

@@ -1,5 +1,6 @@
 // Phase 5C — STUDENT messaging surface (hardened student session):
 //   GET  /api/student-messages                      → { direct, announcements, classroom, canSend, ... }
+//   GET  /api/student-messages?stream=direct|announcements&before=<messageId>  → M.3: that stream's older page
 //   POST /api/student-messages { action: "sendDirect", body }
 //   GET  /api/student-messages?view=unread          → Phase 5D: { directUnread, announcementUnread, totalUnread, ... }
 //   GET  /api/student-messages?view=notifications   → Phase 6C: { items[], ...the same unread summary } (READ-ONLY; see
@@ -19,16 +20,16 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
-const { downloadJsonOrNull } = require("../lib/platform-storage");
+const { downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const {
   isSafeId, directPrefix, normalizeMessageBody, listRecentMessages, messageView,
-  studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError
+  studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError, MESSAGE_ID_RE
 } = require("../lib/message-store");
 // Messages hardening (M.1): idempotent (clientMessageId) + rate-limited replies, private no-store responses.
 const { publishGuarded, noStore } = require("../lib/message-send");
 const {
-  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, absorbIrrelevantSequenced
 } = require("../lib/message-read-state");
 // Phase 6D: the stream/summary helpers moved (unchanged) into the shared lib so the unified notification center reuses
 // the SAME message unread authority instead of re-implementing it.
@@ -68,7 +69,8 @@ async function handle(request, deps = {}, obs = null) {
     const streams = studentStreams(studentId, classroom ? String(student.classId) : "");
 
     if (request.method === "GET") {
-      const view = new URL(request.url).searchParams.get("view");
+      const params = new URL(request.url).searchParams;
+      const view = params.get("view");
       if (view === "unread") {
         // The badge poll also folds the student's own leading replies into their boundary (M.1, changes no count).
         return { status: 200, jsonBody: { ok: true, ...(await unreadSummary(container, streams, deps, null, { absorb: true })) } };
@@ -79,23 +81,37 @@ async function handle(request, deps = {}, obs = null) {
         const items = await recentNotifications(container, streams, markers, deps);
         return { status: 200, jsonBody: { ok: true, items, ...(await unreadSummary(container, streams, deps, markers)) } };
       }
-      // THIS student's legacy read state + relevance shape each page's unread legacy frontier (see listRecentMessages);
-      // a frontier window of only the student's own legacy messages is folded into the boundary (never starves it).
-      const page = async (s, which, limit) => {
+      // THIS student's read state + relevance shape each page's unread frontiers (legacy and, M.3, sequenced — see
+      // listRecentMessages); a frontier window of only the student's own messages is folded into the boundary.
+      const page = async (s, which, limit, before = "") => {
         const marker = await loadMarker(container, s.stateName, deps);
-        const p = await listRecentMessages(container, s.streamPrefix, s.expected, limit, deps, { isLegacyRead: id => isReadBy(marker, id), include: s.include });
+        const p = await listRecentMessages(container, s.streamPrefix, s.expected, limit, deps, { isRead: id => isReadBy(marker, id), include: s.include, before });
+        const meta = { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(student.classId) };
         if (p.absorbable.length) {
-          await absorbIrrelevantLegacy(container, { stateName: s.stateName, legacyIds: p.legacyIds, ids: p.absorbable, meta: { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(student.classId) } }, deps).catch(() => {});
+          await absorbIrrelevantLegacy(container, { stateName: s.stateName, legacyIds: p.legacyIds, ids: p.absorbable, meta }, deps).catch(() => {});
+        }
+        if (p.sequencedAbsorbable.length) {
+          await absorbIrrelevantSequenced(container, { stateName: s.stateName, streamPrefix: s.streamPrefix, ids: p.sequencedAbsorbable, meta }, deps).catch(() => {});
         }
         return p;
       };
-      const direct = await page(streams.direct, "direct", DIRECT_HISTORY_LIMIT);
       const classId = classroom ? String(student.classId) : "";
-      const announcements = classId ? await page(streams.announcements, "announcements", ANNOUNCEMENT_HISTORY_LIMIT) : { messages: [], hasMore: false };
+      // M.3 — older history of ONE stream: ?stream=direct|announcements&before=<oldest shown id> → { messages, hasMore }.
+      if (params.has("stream") || params.has("before")) {
+        const which = params.get("stream") === "direct" ? "direct" : params.get("stream") === "announcements" && classId ? "announcements" : "";
+        const before = String(params.get("before") || "");
+        if (!which || !MESSAGE_ID_RE.test(before)) return { status: 400, jsonBody: { ok: false, error: "طلب الرسائل غير صالح." } };
+        const older = await page(streams[which], which, which === "direct" ? DIRECT_HISTORY_LIMIT : ANNOUNCEMENT_HISTORY_LIMIT, before);
+        return { status: 200, jsonBody: { ok: true, stream: which, messages: older.messages.map(m => messageView(m)), hasMore: older.hasMore } };
+      }
+      const direct = await page(streams.direct, "direct", DIRECT_HISTORY_LIMIT);
+      const announcements = classId ? await page(streams.announcements, "announcements", ANNOUNCEMENT_HISTORY_LIMIT) : { messages: [], hasMore: false, hasNewer: false };
       return { status: 200, jsonBody: {
         ok: true,
         direct: direct.messages.map(m => messageView(m)),
         announcements: announcements.messages.map(m => messageView(m)),
+        directHasMore: direct.hasMore, directHasNewer: direct.hasNewer,
+        announcementsHasMore: announcements.hasMore, announcementsHasNewer: announcements.hasNewer,
         classroom: classroom ? { classId, name: String(classroom.name || ""), archived: normalizeClassStatus(classroom) === "archived" } : null,
         canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error
       } };
@@ -141,7 +157,8 @@ async function handle(request, deps = {}, obs = null) {
     if (sent.response) return sent.response;
     return { status: 200, jsonBody: { ok: true, message: messageView(sent.doc), ...(sent.replay ? { replay: true } : {}) } };
   } catch (e) {
-    if (e instanceof MessageContentionError) { obs?.logWarn("student.messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }
+    // M.3 — exhausted compare-and-set retries (a hot marker, limiter bucket or claim) are the same transient conflict.
+    if (e instanceof MessageContentionError || e instanceof StorageConflictError || (e && e.name === "StorageConflictError")) { obs?.logWarn("student.messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }
     obs?.logError("student.messages.error", e);
     return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل الرسائل حاليًا." } };
   }

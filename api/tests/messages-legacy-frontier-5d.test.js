@@ -67,7 +67,8 @@ describe("two late legacy groups in a stream longer than its page: the older one
       const ctx = createMemoryContainer(seed());
       const s = STREAMS[which];
       await longStream(ctx, which);
-      expect((await open(ctx, s)).r.status).toBe(200);                                   // existing history acknowledged
+      // existing history acknowledged — page by page (M.3: a page shows at most 100 unread relevant messages)
+      for (let i = 0; i < 3 && (await s.unread(ctx)) > 0; i++) expect((await open(ctx, s)).r.status).toBe(200);
       expect(await s.unread(ctx)).toBe(0);
       const L1 = legacyId(1800000000001, "1"), L2 = legacyId(1800000000002, "2");         // T1 < T2, rollback writer
       writeLegacy(ctx, which, L1); writeLegacy(ctx, which, L2);

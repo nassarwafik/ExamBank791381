@@ -34,22 +34,30 @@ type ThreadProps = {
 export function MessageThread({ messages, labelFor, isMine, emptyText, ariaLabel, followKey, variant = "chat", nowMs }: ThreadProps) {
   const listRef = useRef<HTMLOListElement>(null);
   const nearBottom = useRef(true);                                   // "following" until the reader scrolls up
-  const last = useRef<{ key: string | undefined; newestId: string }>({ key: undefined, newestId: "" });
+  const last = useRef<{ key: string | undefined; newestId: string; oldestId: string; height: number }>({ key: undefined, newestId: "", oldestId: "", height: 0 });
   const newest = messages.length ? messages[messages.length - 1] : null;
   const today = useTodayStart();
   useLayoutEffect(() => {
     if (followKey === undefined) return;
     const threadChanged = last.current.key !== followKey;
     const newestId = newest ? newest.messageId : "";
+    const oldestId = messages.length ? messages[0].messageId : "";
     const newestChanged = newestId !== last.current.newestId;
-    last.current = { key: followKey, newestId };
+    const olderPrepended = !threadChanged && !newestChanged && !!last.current.oldestId && oldestId < last.current.oldestId;
+    const prevHeight = last.current.height;
     if (threadChanged) nearBottom.current = true;
     const el = listRef.current;
+    last.current = { key: followKey, newestId, oldestId, height: el ? el.scrollHeight : 0 };
     if (!el) return;
+    if (olderPrepended) {                                            // M.3 — older history loaded above: keep the reader's place
+      el.scrollTop += el.scrollHeight - prevHeight;
+      return;
+    }
     if (shouldScrollToNewest({ threadChanged, wasNearBottom: nearBottom.current, newestChanged, newestIsMine: !!newest && isMine(newest) })) {
       el.scrollTop = el.scrollHeight;
       nearBottom.current = true;
     }
+    last.current.height = el.scrollHeight;
   });
   if (!messages.length) return <p className="eb-msg-empty">{emptyText}</p>;
   const rows = layoutThread(messages, nowMs ?? today);
@@ -76,6 +84,22 @@ export function MessageThread({ messages, labelFor, isMine, emptyText, ariaLabel
       })}
     </ol>
   );
+}
+
+/** M.3 — the older-history control above a thread: a button while older messages exist, its own error line. */
+export function OlderMessagesBar({ hasMore, loading, error, onLoad }: { hasMore: boolean; loading: boolean; error: string; onLoad: () => void }) {
+  if (!hasMore && !error) return null;
+  return (
+    <div className="eb-msg-older">
+      {hasMore && <button type="button" className="eb-msg-older-btn" onClick={onLoad} disabled={loading}>{loading ? "جارٍ تحميل الرسائل الأقدم..." : "عرض الرسائل الأقدم"}</button>}
+      {error && <p className="eb-msg-error" role="alert">{error}</p>}
+    </div>
+  );
+}
+
+/** M.3 — shown while unread messages are held back until the ones on screen are read (they follow automatically). */
+export function NewerMessagesNote() {
+  return <p className="eb-msg-newer" role="status">توجد رسائل أحدث، تظهر تلقائيًا بعد قراءة الرسائل المعروضة.</p>;
 }
 
 /** M.2 — a decorative initials avatar (aria-hidden: the name next to it is the accessible text). */

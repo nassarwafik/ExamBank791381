@@ -86,15 +86,21 @@ function messagePosition(id, prefix) {
 // spoofing), zero-width space, word joiners / invisible operators (U+2060–2064) and the BOM. ZWNJ / ZWJ (legitimate in
 // Arabic-script orthography) and the LRM / RLM marks (punctuation placement, no reordering of other text) are kept.
 // Lone surrogates are dropped. A body made only of such characters is empty and rejected.
+// M.3 (audit) — also: the soft hyphen, the Mongolian vowel separator, interlinear annotation marks (U+FFF9–FFFB), Unicode
+// TAG characters (U+E0000–E007F, invisible "ASCII smuggling") and the blank FILLER letters (Hangul fillers U+115F /
+// U+1160 / U+3164 / U+FFA0, the blank Braille pattern U+2800) that render as nothing — a body made only of them was
+// accepted as a "non-empty" message. Line / paragraph separators (U+2028 / U+2029) become ordinary new lines.
 function isStrippedCodePoint(cp) {
   return (cp <= 0x08) || cp === 0x0B || cp === 0x0C || (cp >= 0x0E && cp <= 0x1F) || (cp >= 0x7F && cp <= 0x9F) ||
+    cp === 0x00AD || cp === 0x115F || cp === 0x1160 || cp === 0x180E ||
     cp === 0x200B || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2060 && cp <= 0x2064) || (cp >= 0x2066 && cp <= 0x2069) ||
-    cp === 0xFEFF || (cp >= 0xD800 && cp <= 0xDFFF);
+    cp === 0x2800 || cp === 0x3164 || cp === 0xFEFF || cp === 0xFFA0 || (cp >= 0xFFF9 && cp <= 0xFFFB) ||
+    (cp >= 0xD800 && cp <= 0xDFFF) || (cp >= 0xE0000 && cp <= 0xE007F);
 }
 // Anything this far above the limit is rejected before any per-character work (a multi-MB body is never scanned).
 const MAX_RAW_BODY_LENGTH = MAX_BODY_LENGTH * 4;
 
-/** Plain-text body contract: a string; CRLF → LF; Unicode NFC; invisible / control / bidi-override characters removed
+/** Plain-text body contract: a string; CRLF / CR / U+2028 / U+2029 → LF; Unicode NFC; invisible / control / bidi-override characters removed
  *  (see isStrippedCodePoint); outer whitespace trimmed; internal text and newlines preserved; 1..MAX_BODY_LENGTH
  *  characters (UTF-16 units, the same unit as the composer's maxLength). Never HTML/Markdown-interpreted. */
 function normalizeMessageBody(value) {
@@ -102,7 +108,7 @@ function normalizeMessageBody(value) {
   const tooLong = { ok: false, error: "الرسالة طويلة جدًا (الحد الأقصى " + MAX_BODY_LENGTH + " حرف)." };
   if (value.length > MAX_RAW_BODY_LENGTH) return tooLong;
   let kept = "";
-  for (const ch of value.replace(/\r\n?/g, "\n").normalize("NFC")) if (!isStrippedCodePoint(ch.codePointAt(0))) kept += ch;
+  for (const ch of value.replace(/\r\n?|[\u2028\u2029]/g, "\n").normalize("NFC")) if (!isStrippedCodePoint(ch.codePointAt(0))) kept += ch;
   const body = kept.trim();
   if (!body) return { ok: false, error: "نص الرسالة مطلوب." };
   if (body.length > MAX_BODY_LENGTH) return tooLong;
@@ -149,23 +155,57 @@ function maxListedPosition(names, prefix) {
  * `buildDoc(messageId, createdAt)` returns the full document. The position is the listed maximum + 1; a create
  * conflict means another writer published that position first, so the next position is tried — an existing message is
  * never overwritten and a message is never published below one that became visible before it. Returns the document.
+ *
+ * M.3 — PUBLICATION STAMP. Every document carries `publishNonce` (storage-only, never in a view): the caller's stamp
+ * (`options.publishNonce`, the idempotency claim's digest) or a fresh random one. A create conflict is not always
+ * another writer: when the commit succeeded but its response was lost, the storage client's own retry of the SAME
+ * create reports "already exists". The conflicting position is therefore read back first — if it holds THIS
+ * request's stamp, that is this request's message and it is returned (before M.3 the same body was published again
+ * at the next position). A failure that is not a conflict is AMBIGUOUS (the write may have committed): it is marked
+ * `publishAmbiguous` so the caller keeps the idempotency claim instead of releasing it (message-send.js).
  */
-async function createMessage(container, prefix, buildDoc, deps = {}) {
+async function createMessage(container, prefix, buildDoc, deps = {}, options = {}) {
   const upload = deps.uploadJsonConditional || uploadJsonConditional;
   const list = deps.listBlobNames || listBlobNames;
+  const read = deps.downloadJsonOrNull || downloadJsonOrNull;
   const now = deps.now || (() => Date.now());
+  const publishNonce = typeof options.publishNonce === "string" && options.publishNonce ? options.publishNonce : crypto.randomBytes(16).toString("hex");
   let position = maxListedPosition(await list(container, prefix), prefix) + 1;
   for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++, position++) {
     const messageId = sequencedMessageId(prefix, position);
-    const doc = buildDoc(messageId, new Date(now()).toISOString());   // createdAt = display time only
+    const name = prefix + messageId + ".json";
+    const doc = { ...buildDoc(messageId, new Date(now()).toISOString()), publishNonce };   // createdAt = display time only
     try {
-      await upload(container, prefix + messageId + ".json", doc, null);   // etag=null → create-only = the commit
+      await upload(container, name, doc, null);                           // etag=null → create-only = the commit
       return doc;
     } catch (e) {
-      if (!isConcurrencyConflict(e)) throw e;                             // only "position already published" retries
+      if (!isConcurrencyConflict(e)) { e.publishAmbiguous = true; throw e; }
+      let existing = null;
+      try { existing = await read(container, name); } catch { existing = null; }   // unreadable → not provably ours
+      if (existing && existing.publishNonce === publishNonce && existing.messageId === messageId) return existing;
     }
   }
   throw new MessageContentionError();
+}
+
+/** M.3 — how far back a taken-over idempotency claim looks for the message its earlier request may have published. */
+const STAMP_LOOKBACK = 50;
+
+/**
+ * The message published under `prefix` with `publishNonce` among the newest STAMP_LOOKBACK sequenced positions, or
+ * null. Used only when a stale idempotency claim is taken over (its request may have published, then died before
+ * recording it), so that the retry replays that message instead of publishing it again.
+ */
+async function findPublishedByStamp(container, prefix, expected, publishNonce, deps = {}) {
+  const list = deps.listBlobNames || listBlobNames;
+  const many = deps.downloadManyJson || downloadManyJsonTolerant;
+  const ids = (await list(container, prefix)).map(n => blobMessageId(n, prefix)).filter(id => id && messagePosition(id, prefix) > 0).sort().slice(-STAMP_LOOKBACK);
+  const docs = await many(container, ids.map(id => prefix + id + ".json"), getReadConcurrency());
+  for (let i = docs.length - 1; i >= 0; i--) {
+    const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: ids[i] });
+    if (doc && doc.publishNonce === publishNonce) return doc;
+  }
+  return null;
 }
 
 /** The message id of a stream blob name: a legacy id, or the CANONICAL id of a sequenced position; else "". */
@@ -236,8 +276,13 @@ async function scanLegacyFrontier(unreadIds, loadDocs, expected, include, { unti
  * legacy frontier and the newest legacy group (see below). Lists names only, sorts them, downloads just the bounded
  * page (and the bounded frontier window). `expected` pins kind + studentId/classId for validation. Reader options:
  * `isLegacyRead(id)` — the reader's legacy read state (its marker); `include(doc)` — the reader's sender-role rule.
- * Without them every legacy id counts as unread and relevant (fail-safe: nothing unread is ever skipped). Returns
- * { messages, hasMore, legacyIds, absorbable } (see scanLegacyFrontier for `absorbable`).
+ * Without them every legacy id counts as unread and relevant (fail-safe: nothing unread is ever skipped).
+ * M.3 options: `isRead(id)` — the reader's read state for BOTH domains; when given, the SEQUENCED UNREAD FRONTIER
+ * applies (below). `before` — a message id: an OLDER-HISTORY page (the `limit` visible messages before it).
+ * Returns { messages, hasMore, hasNewer, legacyIds, absorbable, sequencedAbsorbable }:
+ *   hasMore              a visible message older than the oldest one returned exists (older history to page back to);
+ *   hasNewer             an unread relevant sequenced message was held back by the frontier (shown once the page is read);
+ *   absorbable / sequencedAbsorbable   the reader's own leading unread runs (see scanLegacyFrontier).
  */
 async function listRecentMessages(container, prefix, expected, limit, deps = {}, options = {}) {
   const list = deps.listBlobNames || listBlobNames;
@@ -269,8 +314,16 @@ async function listRecentMessages(container, prefix, expected, limit, deps = {},
   //   • the reader's own messages keep the normal tail / newest-group display (they are never acknowledged, so showing
   //     them can never cover anything), and read ids are always safe (at or below the reader's boundary).
   // Display order (by id) and the sequenced tail are unchanged.
+  // SEQUENCED FRONTIER (M.3). The same rule in the sequenced domain: a sequenced acknowledgement through X covers every
+  // position below X, so a page showing only the newest `limit` messages let a reader with more unread replies than
+  // that mark the older ones read without ever seeing them. With `isRead`, the reader's unread RELEVANT sequenced
+  // messages ride along oldest-first (same bounds, same relevance), and an unread relevant one beyond that frontier is
+  // omitted (`hasNewer`) until the frontier has been acknowledged — message-read-state.js enforces it on every mark.
   const legacy = visible.filter(e => messagePosition(e.messageId, prefix) === 0);
-  const isLegacyRead = typeof options.isLegacyRead === "function" ? options.isLegacyRead : () => false;
+  const sequenced = visible.filter(e => messagePosition(e.messageId, prefix) > 0);
+  const isRead = typeof options.isRead === "function" ? options.isRead : null;
+  const isLegacyRead = isRead || (typeof options.isLegacyRead === "function" ? options.isLegacyRead : () => false);
+  const isSequencedRead = isRead || (() => true);                         // no `isRead` → no sequenced frontier (as before)
   const include = typeof options.include === "function" ? options.include : () => true;
   const cache = new Map();                                                // name → document (immutable blobs)
   const load = async names => {
@@ -281,24 +334,41 @@ async function listRecentMessages(container, prefix, expected, limit, deps = {},
     }
     return names.map(n => cache.get(n));
   };
+  const loadIds = ids => load(ids.map(id => prefix + id + ".json"));
   const unreadIds = legacy.filter(e => !isLegacyRead(e.messageId)).map(e => e.messageId);
-  const scan = await scanLegacyFrontier(unreadIds, ids => load(ids.map(id => prefix + id + ".json")), expected, include);
-  const chosen = new Set(visible.slice(-limit).map(e => e.messageId));
-  for (const id of scan.frontier) chosen.add(id);
-  const newestKey = legacy.length ? legacy[legacy.length - 1].messageId.slice(0, 13) : "";
-  for (const e of legacy.filter(x => x.messageId.slice(0, 13) === newestKey).slice(-MAX_HISTORY_LIMIT)) chosen.add(e.messageId);
+  const scan = await scanLegacyFrontier(unreadIds, loadIds, expected, include);
+  const unreadSequenced = sequenced.filter(e => !isSequencedRead(e.messageId)).map(e => e.messageId);
+  const seqScan = await scanLegacyFrontier(unreadSequenced, loadIds, expected, include);
+  const before = typeof options.before === "string" && options.before ? options.before : "";
+  let chosen;
+  if (before) {
+    chosen = new Set(visible.filter(e => e.messageId < before).slice(-limit).map(e => e.messageId));
+  } else {
+    chosen = new Set(visible.slice(-limit).map(e => e.messageId));
+    for (const id of scan.frontier) chosen.add(id);
+    for (const id of seqScan.frontier) chosen.add(id);
+    const newestKey = legacy.length ? legacy[legacy.length - 1].messageId.slice(0, 13) : "";
+    for (const e of legacy.filter(x => x.messageId.slice(0, 13) === newestKey).slice(-MAX_HISTORY_LIMIT)) chosen.add(e.messageId);
+  }
   const candidates = visible.filter(e => chosen.has(e.messageId));
   const docs = await load(candidates.map(e => e.name));
   const out = [];
+  let hasNewer = false;
   for (let i = 0; i < candidates.length; i++) {
     const id = candidates[i].messageId;
     const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: id });
     if (!doc) continue;
-    const unreadRelevant = messagePosition(id, prefix) === 0 && !isLegacyRead(id) && include(doc);
-    if (unreadRelevant && !scan.frontier.has(id)) continue;                 // outside the frontier: omitted, stays unread
+    const isLegacy = messagePosition(id, prefix) === 0;
+    const unreadRelevant = (isLegacy ? !isLegacyRead(id) : !isSequencedRead(id)) && include(doc);
+    if (unreadRelevant && !(isLegacy ? scan.frontier : seqScan.frontier).has(id)) {   // outside the frontier: omitted, stays unread
+      if (!isLegacy) hasNewer = true;
+      continue;
+    }
     out.push(doc);
   }
-  return { messages: out, hasMore: visible.length > out.length, legacyIds: legacy.map(e => e.messageId), absorbable: scan.absorbable };
+  const oldestShown = out.length ? out[0].messageId : "";
+  const hasMore = !!oldestShown && visible.some(e => e.messageId < oldestShown);
+  return { messages: out, hasMore, hasNewer, legacyIds: legacy.map(e => e.messageId), absorbable: before ? [] : scan.absorbable, sequencedAbsorbable: before ? [] : seqScan.absorbable };
 }
 
 /** The public view of a message. Never includes storage paths, sender ids or send-time class metadata unless the
@@ -328,7 +398,7 @@ module.exports = {
   MESSAGE_PREFIX, DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT,
   MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS, MessageContentionError, downloadManyJsonTolerant,
   isSafeId, directPrefix, announcementPrefix, sequencedMessageId, messagePosition, normalizeMessageBody, clampLimit,
-  createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,
+  createMessage, findPublishedByStamp, STAMP_LOOKBACK, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,
   // Phase 5D — reused by the read-state store (message ids / stream listing), never duplicated there.
   MESSAGE_ID_RE, SEQUENCE_KEY_BASE, blobMessageId, LEGACY_UNREAD_PAGE_LIMIT, LEGACY_FRONTIER_SCAN_LIMIT, isRelevantMessage,
   scanLegacyFrontier

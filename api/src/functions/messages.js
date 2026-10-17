@@ -2,6 +2,7 @@
 //   GET  /api/messages?studentId=<id>                     → that student's direct conversation (read-only allowed for
 //                                                           disabled/archived students and archived classes)
 //   GET  /api/messages?classId=<id>&kind=announcements    → that class's announcement history (active OR archived)
+//        both reads accept &before=<messageId> (M.3): the older page before that id ({ messages, hasMore })
 //   POST /api/messages { action: "sendDirect", studentId, body }
 //   POST /api/messages { action: "sendAnnouncement", classId, body }
 //   GET  /api/messages?kind=unread-summary[&classId=<id>]  → Phase 5D: THIS teacher's unread STUDENT replies (global
@@ -23,19 +24,19 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 const { notifyStudentOfNewMessage, notifyWithTimeout } = require("../lib/push-notify");
 const {
   isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, listRecentMessages,
-  messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError
+  messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError, MESSAGE_ID_RE
 } = require("../lib/message-store");
 // Messages hardening (M.1): idempotent (clientMessageId) + rate-limited publication, private no-store responses.
 const { publishGuarded, noStore } = require("../lib/message-send");
 const {
-  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, absorbIrrelevantSequenced, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
 } = require("../lib/message-read-state");
 
 const USER_PREFIX = "platform/users/";
@@ -113,6 +114,9 @@ async function handle(request, deps = {}, obs = null) {
       const studentId = String(url.searchParams.get("studentId") || "").trim();
       const classId = String(url.searchParams.get("classId") || "").trim();
       const kind = String(url.searchParams.get("kind") || "").trim();
+      // M.3 — older history: `before` is the oldest message id the client shows; anything else is refused.
+      const before = url.searchParams.has("before") ? String(url.searchParams.get("before") || "") : "";
+      if (url.searchParams.has("before") && !MESSAGE_ID_RE.test(before)) return bad("مؤشر الرسائل غير صالح.");
       if (tenant && studentId && !(await ownStudent(studentId))) return notFound(MSG.studentNotFound);
       if (tenant && classId && !(await ownClass(classId))) return notFound(MSG.classNotFound);
       if (kind === "unread-summary") {
@@ -130,16 +134,21 @@ async function handle(request, deps = {}, obs = null) {
         // THIS teacher's legacy read state + relevance shape the page's unread legacy frontier (see listRecentMessages).
         const stateName = teacherDirectStateName(teacherId, studentId);
         const marker = await loadMarker(container, stateName, deps);
-        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isLegacyRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect });
-        // A frontier window of only the teacher's own legacy messages is folded into the boundary (never starves it).
+        // M.3 — `isRead` covers both domains: the student's unread replies ride along oldest-first (sequenced frontier).
+        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect, before });
+        // A frontier window of only the teacher's own messages is folded into the boundary (never starves it).
+        const meta = { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId };
         if (page.absorbable.length) {
-          await absorbIrrelevantLegacy(container, { stateName, legacyIds: page.legacyIds, ids: page.absorbable, meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } }, deps).catch(() => {});
+          await absorbIrrelevantLegacy(container, { stateName, legacyIds: page.legacyIds, ids: page.absorbable, meta }, deps).catch(() => {});
+        }
+        if (page.sequencedAbsorbable.length) {
+          await absorbIrrelevantSequenced(container, { stateName, streamPrefix: directPrefix(studentId), ids: page.sequencedAbsorbable, meta }, deps).catch(() => {});
         }
         return { status: 200, jsonBody: {
           ok: true,
           student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
           canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error,
-          messages: page.messages.map(m => messageView(m, { includeStudentId: true })), hasMore: page.hasMore
+          messages: page.messages.map(m => messageView(m, { includeStudentId: true })), hasMore: page.hasMore, hasNewer: page.hasNewer
         } };
       }
       if (classId && kind === "announcements") {
@@ -147,7 +156,7 @@ async function handle(request, deps = {}, obs = null) {
         if (!classroom) return notFound(MSG.classNotFound);
         const archived = normalizeClassStatus(classroom) === "archived";
         // The teacher has no read state for announcements (never acknowledged) → no unread legacy frontier.
-        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps, { isLegacyRead: () => true });
+        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps, { isLegacyRead: () => true, before });
         return { status: 200, jsonBody: {
           ok: true, classroom: classSummary(classroom), canSend: !archived, readOnlyCode: archived ? "classArchived" : "", readOnlyReason: archived ? MSG.classArchived : "",
           messages: page.messages.map(m => messageView(m, { includeClassId: true })), hasMore: page.hasMore
@@ -243,7 +252,8 @@ async function handle(request, deps = {}, obs = null) {
     return bad("إجراء غير مدعوم.");
   } catch (e) {
     // Losing every stream-position race is a transient conflict: retryable, never a server fault (M.1).
-    if (e instanceof MessageContentionError) { obs?.logWarn("messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }
+    // M.3 — exhausted compare-and-set retries (a hot marker, limiter bucket or claim) are the same transient conflict.
+    if (e instanceof MessageContentionError || e instanceof StorageConflictError || (e && e.name === "StorageConflictError")) { obs?.logWarn("messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }
     obs?.logError("messages.error", e);
     return { status: 500, jsonBody: { ok: false, error: "تعذر معالجة الرسائل حاليًا." } };
   }

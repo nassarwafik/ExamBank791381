@@ -6,7 +6,7 @@
 // whole stream, so a flood degraded the teacher's surfaces for everyone.
 // The caller FAILS CLOSED on a storage error (no message is published): a send that cannot be accounted is refused.
 const crypto = require("crypto");
-const { mutateJsonWithRetry } = require("./platform-storage");
+const { mutateJsonWithRetry, deleteBlobConditional } = require("./platform-storage");
 
 // Generous for real conversation, far below scripted flooding. Teachers write to many students and classes.
 const SEND_LIMITS = Object.freeze({
@@ -42,12 +42,21 @@ async function reserveMessageSend(container, role, senderId, deps = {}) {
   if (!limits || !senderId) throw new Error("Unknown message sender.");
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   const nowMs = deps.now ? deps.now() : Date.now();
+  const name = bucketName(role, senderId);
   let decision = { allowed: false, retryAfterSeconds: limits.burstWindowSeconds, scope: "burst" };
-  await mut(container, bucketName(role, senderId), current => {
+  const reserve = () => mut(container, name, current => {
     const r = evaluateSendBucket(current, limits, nowMs);
     decision = { allowed: r.allowed, retryAfterSeconds: r.retryAfterSeconds, scope: r.scope };
     return r.next;
   });
+  try { await reserve(); }
+  catch (e) {
+    // M.3 — an unparsable bucket (it can only come from a storage fault, never from a request) used to refuse every send
+    // of that sender forever (permanent 500). It is removed and re-created full ONCE; any other failure still refuses.
+    if (!(e instanceof SyntaxError)) throw e;
+    await (deps.deleteBlobConditional || deleteBlobConditional)(container, name, null);
+    await reserve();
+  }
   return decision;
 }
 
