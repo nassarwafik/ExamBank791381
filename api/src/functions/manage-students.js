@@ -26,6 +26,8 @@ const { recordAuditEvent } = require("../lib/audit-log");
 // Phase 21G.0 — teacher tenancy: a student belongs to their class's teacher (and keeps that owner when they leave a class).
 const { tenantOf, canAccessDocument, accessibleClassIds, classIdAllowed } = require("../lib/teacher-tenancy");
 const { purgeProfilePhotos } = require("../lib/profile-photo-store");
+// Messages M.4 — a deleted student's messaging data (conversation, read markers, rate bucket, notifications, push).
+const { requestStudentPurge, purgeAfterDelete, PURGE_STEP_BUDGET } = require("../lib/student-messaging-purge");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
@@ -70,6 +72,7 @@ const BANK_CONTAINER = "bank";
 // architecture; generalized batching/pagination is explicitly out of scope for this package.
 const MAX_IMPORT_ROWS = 250;
 const USER_PREFIX = "platform/users/";
+const BULK_PURGE_STEP_BUDGET = 25;
 const AUTH_PREFIX = "platform/auth/";
 const CLASS_PREFIX = "platform/classes/";
 const ASSIGNMENT_PREFIX = "platform/assignments/";
@@ -552,8 +555,12 @@ async function moveStudent(container, student, targetClassId, obs = null) {
   return { synced: removed.synced && added.synced };
 }
 
-async function deleteStudent(container, student, obs = null) {
+async function deleteStudent(container, student, obs = null, { purgeBudget = PURGE_STEP_BUDGET } = {}) {
   // Roadmap #25 ordering: authoritative deletes first (auth, then user), index removal last and best-effort.
+  // M.4 — the durable purge record goes first, so the messaging purge is finished later even if this request dies
+  // after the user document is gone; a failure to write it never blocks the delete (the inline step still runs).
+  try { await requestStudentPurge(container, student.userId); }
+  catch (e) { obs?.logError?.("student.delete.purgeRecord", e); }
   const code = String(student.code || student.identityNumber || "");
   if (code) {
     await container.getBlobClient(AUTH_PREFIX + studentCodeHash(code) + ".json").deleteIfExists();
@@ -564,7 +571,10 @@ async function deleteStudent(container, student, obs = null) {
   try {
     await purgeProfilePhotos(container, "platform/student-profile-images/" + student.userId + "/", {}, obs);
   } catch (e) { obs?.logError("student.delete.photoCleanup", e); }
-  return removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "delete" });
+  // M.4 — one bounded messaging purge step (never fails the delete; the rest is finished from the purge record).
+  const messagingPurged = await purgeAfterDelete(container, student.userId, {}, obs, purgeBudget);
+  const roster = await removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "delete" });
+  return { ...roster, messagingPurged };
 }
 
 async function buildImportPreview(container, items, visible = null) {
@@ -1259,9 +1269,10 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           action: "student.delete",
           targetType: "student",
           targetId: student.userId,
-          targetLabel: student.displayName || student.code
+          targetLabel: student.displayName || student.code,
+          details: { messagingPurged: deleteSync.messagingPurged }
         });
-        return { status: 200, jsonBody: { ok: true, deleted: true, rosterSynced: deleteSync.synced } };
+        return { status: 200, jsonBody: { ok: true, deleted: true, rosterSynced: deleteSync.synced, messagingPurged: deleteSync.messagingPurged } };
       }
 
       if (action === "bulkaction") {
@@ -1337,14 +1348,16 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
                 details: { bulk: true }
               });
             } else if (operation === "delete") {
-              note(await deleteStudent(container, student, obs));
+              // M.4 — a smaller inline purge step per student in a batch (up to 250 students); the rest is drained.
+              const deleted = await deleteStudent(container, student, obs, { purgeBudget: BULK_PURGE_STEP_BUDGET });
+              note(deleted);
               await rec(container, {
                 actor: auth.user?.sub,
                 action: "student.delete",
                 targetType: "student",
                 targetId: userId,
                 targetLabel: student.displayName || student.code,
-                details: { bulk: true }
+                details: { bulk: true, messagingPurged: deleted.messagingPurged }
               });
             }
 
