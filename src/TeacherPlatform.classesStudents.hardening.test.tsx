@@ -5,6 +5,8 @@
 // (class edit, credential hand-outs, provisional marks, the never-logged filter, dismissible notices).
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import TeacherPlatform from "./TeacherPlatform";
 
 type Student = { userId: string; code: string; identityNumber: string; firstName: string; familyName: string; displayName: string; classId: string; active: boolean; archived: boolean; createdAt: string; updatedAt: string; lastLoginAt: string; submittedAssignmentsCount: number; likesCount: number };
@@ -301,5 +303,77 @@ describe("new: credential hand-outs, filters and notices", () => {
     fireEvent.change(filter, { target: { value: "اعدادي" } });
     await waitFor(() => expect(within(classList()).queryByText("صف 1")).toBeNull());
     expect(within(classList()).getByText("إعدادي أ")).toBeTruthy();
+  });
+});
+
+describe("visual pass: roster presentation", () => {
+  it("the summary strip filters the roster: «لم يدخلوا بعد» shows only those students and is pressed; pressing it again shows all", async () => {
+    await mount();
+    const strip = screen.getByRole("group", { name: /ملخص الصف/ });
+    const never = within(strip).getByRole("button", { name: /لم يدخلوا بعد/ });
+    fireEvent.click(never);
+    await waitFor(() => expect(screen.queryByText("علي")).toBeNull());
+    expect(screen.getByText("بسمة")).toBeTruthy();
+    expect(never.getAttribute("aria-pressed")).toBe("true");
+    expect((screen.getByLabelText("الحالة") as HTMLSelectElement).value).toBe("neverLogged");
+    fireEvent.click(never);
+    expect(await screen.findByText("علي")).toBeTruthy();
+    expect(within(strip).getByRole("button", { name: /إجمالي/ }).getAttribute("aria-pressed")).toBe("true");
+  });
+  it("last login is a relative label with the exact time as its tooltip; a never-logged student says so", async () => {
+    await mount();
+    const time = rowOf("علي").querySelector("time") as HTMLTimeElement;
+    expect(time.getAttribute("dateTime")).toBe("2026-02-01T00:00:00.000Z");
+    expect(time.getAttribute("title")).toMatch(/2026/);
+    expect(time.textContent).not.toMatch(/:\d\d:\d\d/);
+    expect(rowOf("بسمة").textContent).toContain("لم يدخل بعد");
+  });
+  it("row avatars: a photo is requested once (with its version) only for students who have one; the figure is decorative", async () => {
+    const saved = ROSTERS.c1;
+    ROSTERS.c1 = [{ ...S1, profilePhoto: { version: 3, updatedAt: "" } } as Student, S2];
+    try {
+      render(<TeacherPlatform token="t" currentExam={null} workspaceTab="students" />);
+      await screen.findByText("علي");
+      const photoCalls = () => calls.filter(c => c.url.includes("/api/student-profile-photo"));
+      await waitFor(() => expect(photoCalls().length).toBe(1));
+      expect(photoCalls()[0].url).toContain("studentId=s1");
+      expect(photoCalls()[0].url).toContain("v=3");
+      expect(rowOf("علي").querySelector(".eb-row-avatar")?.getAttribute("aria-hidden")).toBe("true");
+      expect(rowOf("بسمة").querySelector(".eb-row-avatar")).toBeTruthy();
+    } finally { ROSTERS.c1 = saved; }
+  });
+  it("selected rows are marked; the details action keeps its accessible name; each cell carries its phone label", async () => {
+    await mount();
+    fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
+    expect(rowOf("علي").className).toContain("is-selected");
+    expect(rowOf("بسمة").className).not.toContain("is-selected");
+    expect(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" })).toBeTruthy();
+    expect(Array.from(rowOf("علي").querySelectorAll("td[data-label]")).map(td => td.getAttribute("data-label"))).toEqual(["الاسم", "اسم العائلة", "رقم الهوية", "الحالة", "آخر دخول", "الوظائف"]);
+  });
+  it("while the roster loads, a skeleton with one status line is shown", async () => {
+    const roster = deferred<Response>();
+    override = (url, method) => method === "GET" && url.includes("/api/students?classId=c1") ? roster.promise : undefined;
+    render(<TeacherPlatform token="t" currentExam={null} workspaceTab="students" />);
+    const status = await screen.findByText("جارٍ تحميل الطلاب...");
+    expect(status.closest(".eb-roster-skeleton")?.getAttribute("role")).toBe("status");
+    await act(async () => { roster.resolve(json({ ok: true, students: ROSTERS.c1 })); await roster.promise; });
+    expect(await screen.findByText("علي")).toBeTruthy();
+    expect(document.querySelector(".eb-roster-skeleton")).toBeNull();
+  });
+});
+
+describe("visual pass: style contract (page-parts.css)", () => {
+  const css = readFileSync(path.join(process.cwd(), "src", "page-parts.css"), "utf8");
+  it("the row actions column is pinned, the header is sticky, and phone rows become cards without the legacy 620px minimum", () => {
+    expect(css).toMatch(/\.eb-roster-table \.eb-col-actions\{ position:sticky; inset-inline-end:0;/);
+    expect(css).toMatch(/\.eb-roster-table thead th\{ position:sticky; top:0;/);
+    const phone = css.slice(css.indexOf("@media (max-width:767px)"));
+    expect(phone).toContain(".eb-roster-table,.eb-roster-table tbody{ display:block; inline-size:100%; min-inline-size:0; }");
+    expect(phone).toContain("td[data-label]::before{ content:attr(data-label);");
+    expect(phone).toContain(".eb-bulk-bar.student-bulk-bar{ position:static; }");
+  });
+  it("class cards are rows again and archived cards keep full opacity", () => {
+    expect(css).toContain(".class-row.eb-class-row{ flex-direction:row; }");
+    expect(css).toContain(".class-row.eb-class-row.archived{ opacity:1; }");
   });
 });

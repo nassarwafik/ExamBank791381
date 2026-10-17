@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toAsciiDigits, identityDigits, foldArabic, matchesSearch, isTwelfthGrade, defaultSchoolYear, safeFileName } from "./rosterText";
+import { toAsciiDigits, identityDigits, foldArabic, matchesSearch, isTwelfthGrade, defaultSchoolYear, safeFileName, relativeTime } from "./rosterText";
 import { buildCredentialsCsv, buildCredentialCardsHtml } from "./credentialSheets";
 import { openCredentialBatch } from "../credentialBatch";
 import { parseBulkStudents, normalizeImportedIdentity, readImportFileText, IMPORT_TEMPLATE_CSV } from "../bulkStudentsParse";
@@ -32,6 +32,18 @@ describe("rosterText", () => {
     expect(defaultSchoolYear(new Date(2027, 6, 31))).toBe("2026-2027");
     expect(defaultSchoolYear(new Date(2027, 7, 1))).toBe("2027-2028");
     expect(defaultSchoolYear(new Date(2026, 9, 17))).toBe("2026-2027");
+  });
+  it("relativeTime: short Arabic labels with Latin digits for 30 days, then a date; full timestamp kept for the tooltip", () => {
+    const now = new Date("2026-10-17T12:00:00.000Z");
+    expect(relativeTime("", now)).toBeNull();
+    expect(relativeTime("not a date", now)).toBeNull();
+    expect(relativeTime("2026-10-17T11:59:40.000Z", now)?.label).toBe("الآن");
+    expect(relativeTime("2026-10-17T11:55:00.000Z", now)?.label).toBe("قبل 5 دقائق");
+    expect(relativeTime("2026-10-10T12:00:00.000Z", now)?.label).toBe("قبل 7 أيام");
+    const old = relativeTime("2026-08-01T12:00:00.000Z", now);
+    expect(old?.label).toMatch(/2026/);
+    expect(old?.label).not.toMatch(/[\u0660-\u0669]/);
+    expect(relativeTime("2026-10-10T12:00:00.000Z", now)?.full).toMatch(/2026/);
   });
   it("safeFileName: separators and reserved characters never reach the download name", () => {
     expect(safeFileName("الحادي عشر/3: أ", "x")).toBe("الحادي عشر 3 أ");

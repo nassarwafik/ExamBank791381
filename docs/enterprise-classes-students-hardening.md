@@ -88,6 +88,29 @@ with submissions). The guard is isolated in `api/src/lib/pending-grading.js` so 
   Windows-1256 decoding; password reveal toggle; dismissible notices; the bulk-delete confirmation names the students;
   provisional marks labelled «(مبدئية)».
 
+## Visual pass
+
+Checked in a real browser (Chromium, mocked API) at 1360px and 390px:
+
+- **Row actions always reachable.** At a typical desktop width the roster table was wider than its pane and the row
+  "⋯" menu (edit / archive / delete) sat off-screen behind a horizontal scroll. The actions column is now pinned to the
+  inline end, the details action is an icon button (same accessible name «التفاصيل», the student's name as tooltip) and
+  the last-login column is a short relative label, so the whole table fits.
+- **Row identity.** Each row shows the student's avatar: their photo (one authenticated read per photo version, only for
+  students who have one), else their preset avatar, else their initial. It is decorative (the name follows it).
+- **Last login** reads «قبل 7 أيام» / «أمس» / «الآن» for 30 days, then a date; the exact time is the tooltip.
+- **Quieter rows.** The reactions count is a neutral pill (it was an alert-red badge on every row); selected rows are
+  tinted; archived rows have a tinted background.
+- **Summary strip.** The five figures are a compact strip of buttons that filter the roster (pressed state =
+  the active status filter); the `<strong>` order is unchanged.
+- **Class cards.** The legacy `.class-row` column layout put "⋯" on its own line under every card; cards are rows again
+  with the trigger in the corner. Archived cards keep full opacity (the legacy 62% failed text contrast).
+- **Sticky header** for long classes (the table scrolls inside a bounded pane).
+- **Loading skeleton** shaped like the roster, with one visually hidden status line; it stops under reduced motion.
+- **Phone.** Rows become labelled cards (checkbox in the corner, fields in two columns, actions at the bottom) instead
+  of a sideways-scrolling table; the legacy 620px table minimum is lifted there; the wrapped bulk bar scrolls with the
+  page instead of staying sticky over the cards; the icon action keeps a 44px target.
+
 ## Validation
 
 Fail-first: 27 of 38 API cases and all 18 workspace cases failed on the baseline (the remainder are labelled pins).

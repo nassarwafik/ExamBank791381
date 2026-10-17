@@ -867,7 +867,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
     onToggleBatch={()=>setCredentialBatch(b=>b?toggleCredentialBatchCollapsed(b):b)} onDownloadBatch={downloadCredentials} onDiscardBatch={()=>void discardCredentialBatch()}
     onDownloadBatchCsv={downloadCredentialsCsv} onPrintBatch={printCredentialCards}
     onCopyCredential={c=>void copyText(credentialText(((c.firstName||"")+" "+(c.familyName||"")).trim(),c.identityNumber||c.code,c.password),"✓ تم نسخ بيانات دخول الطالب.")}
-    bulkErrors={bulkErrors} statusLabel={statusLabel} fmtDate={fmtDate} splitName={splitName}/>
+    bulkErrors={bulkErrors} statusLabel={statusLabel} fmtDate={fmtDate} splitName={splitName} token={token}/>
   </div>
 
   <ClassLearningMaterialsPanel

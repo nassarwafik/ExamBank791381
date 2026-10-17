@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import SectionHeader from "../ui/SectionHeader";
-import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import ActionMenu from "../ui/ActionMenu";
 import BulkActionBar from "./BulkActionBar";
+import StudentAvatar from "./StudentAvatar";
+import { relativeTime } from "./rosterText";
 import { IconSearch, IconDownload, IconUpload, IconPlus, IconRefresh, IconUser, IconEdit, IconCopy, IconTrash, IconArchive, IconRestore, IconHistory, IconHeart, IconSort, IconChevronDown, IconClose, IconChevronUp, IconPrint } from "../icons";
 import { type CredentialBatch } from "../credentialBatch";
 import type { BulkError, BulkOperation, Classroom, Credential, SortKey, StatusFilter, Student } from "./types";
@@ -36,7 +37,19 @@ export type RosterPaneProps = {
   statusLabel: (student: Student) => string;
   fmtDate: (value: string) => string;
   splitName: (value: unknown) => { firstName: string; familyName: string };
+  /** Session token for the row avatars' authenticated photo reads. Omitted → preset / letter avatars only. */
+  token?: string;
 };
+
+// The summary strip doubles as the status filter: each figure filters the roster to the students it counts.
+const STAT_FILTERS: Array<{ key: keyof RosterPaneProps["stats"]; filter: StatusFilter; label: string; tone: string }> = [
+  { key: "total", filter: "all", label: "إجمالي", tone: "neutral" },
+  { key: "active", filter: "active", label: "فعّال", tone: "success" },
+  { key: "disabled", filter: "disabled", label: "معطّل", tone: "attention" },
+  { key: "archived", filter: "archived", label: "مؤرشف", tone: "neutral" },
+  { key: "neverLogged", filter: "neverLogged", label: "لم يدخلوا بعد", tone: "info" }
+];
+const SKELETON_ROWS = 5;
 
 const SORT_COLUMNS: Array<{ key: SortKey; label: string }> = [
   { key: "firstName", label: "الاسم" }, { key: "familyName", label: "اسم العائلة" }, { key: "identityNumber", label: "رقم الهوية" }, { key: "status", label: "الحالة" }
@@ -60,7 +73,12 @@ export default function RosterPane(p: RosterPaneProps) {
   );
   const statusTone = (s: Student) => s.archived ? "neutral" : s.active ? "success" : "warn";
   let tableBody: ReactNode;
-  if (p.loading && p.students.length === 0) tableBody = <div className="platform-loading" role="status">جارٍ تحميل الطلاب...</div>;
+  if (p.loading && p.students.length === 0) tableBody = (
+    <div className="eb-roster-skeleton" role="status">
+      <VisuallyHidden>جارٍ تحميل الطلاب...</VisuallyHidden>
+      {Array.from({ length: SKELETON_ROWS }, (_, i) => <div key={i} className="eb-skeleton-row" aria-hidden="true"><span className="eb-skeleton-dot" /><span className="eb-skeleton-bar" /><span className="eb-skeleton-bar is-short" /></div>)}
+    </div>
+  );
   else if (!p.loading && p.students.length === 0) tableBody = <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طالبًا واحدًا أو استورد قائمة كاملة من ملف." action={p.classActive ? <button type="button" className="eb-button is-primary is-small" onClick={p.onAddStudent}><IconPlus size={16} />إضافة طالب</button> : undefined} />;
   else if (p.visibleStudents.length === 0) tableBody = <EmptyState compact title="لا توجد نتائج مطابقة." description="جرّب كلمة بحث أخرى أو غيّر مرشح الحالة." />;
 
@@ -95,12 +113,12 @@ export default function RosterPane(p: RosterPaneProps) {
         </section>
       )}
 
-      <div className="student-admin-stats eb-roster-stats">
-        <StatCard label="إجمالي" value={p.stats.total} />
-        <StatCard label="فعّال" value={p.stats.active} tone="success" />
-        <StatCard label="معطّل" value={p.stats.disabled} tone="attention" />
-        <StatCard label="مؤرشف" value={p.stats.archived} />
-        <StatCard label="لم يدخلوا بعد" value={p.stats.neverLogged} tone="info" />
+      <div className="student-admin-stats eb-roster-stats" role="group" aria-label="ملخص الصف — اختر رقمًا لعرض طلابه">
+        {STAT_FILTERS.map(f => (
+          <button key={f.key} type="button" className={"eb-roster-stat tone-" + f.tone} aria-pressed={p.statusFilter === f.filter} onClick={() => p.onStatusFilter(p.statusFilter === f.filter ? "all" : f.filter)}>
+            <span className="eb-roster-stat-label">{f.label}</span><strong className="eb-roster-stat-value">{p.stats[f.key]}</strong>
+          </button>
+        ))}
       </div>
 
       <div className="eb-roster-toolbar">
@@ -148,16 +166,20 @@ export default function RosterPane(p: RosterPaneProps) {
             {SORT_COLUMNS.map(c => sortTh(c.key, c.label))}
             <th scope="col">آخر دخول</th><th scope="col">الوظائف</th><th scope="col" className="eb-col-actions"><VisuallyHidden>الإجراءات</VisuallyHidden></th>
           </tr></thead>
-          <tbody>{p.visibleStudents.map(student => <tr key={student.userId} className={student.archived ? "student-row-archived" : ""}>
-            <td className="eb-col-select"><input type="checkbox" checked={p.selectedIds.includes(student.userId)} onChange={() => p.onToggleSelected(student.userId)} aria-label={"تحديد " + student.displayName} /></td>
-            <td><strong>{student.firstName || p.splitName(student.displayName).firstName}</strong>{student.likesCount > 0 && <span className="student-likes-badge" title={student.likesCount + " ردّ فعل على إنجازاته"}><IconHeart size={12} aria-hidden="true" /> {student.likesCount}<VisuallyHidden> ردود فعل على إنجازاته</VisuallyHidden></span>}</td>
-            <td>{student.familyName || p.splitName(student.displayName).familyName || "—"}</td>
-            <td dir="ltr">{student.identityNumber || student.code || "يحتاج تحديث"}</td>
-            <td><StatusBadge tone={statusTone(student)}>{p.statusLabel(student)}</StatusBadge></td>
-            <td>{student.lastLoginAt ? p.fmtDate(student.lastLoginAt) : <span className="never-login">لم يدخل بعد</span>}</td>
-            <td>{student.submittedAssignmentsCount > 0 ? <button type="button" className="eb-link-button" onClick={() => p.onOpenHistory(student)} disabled={p.busy}><IconHistory size={14} />الوظائف ({student.submittedAssignmentsCount})</button> : <span className="eb-muted">—</span>}</td>
+          <tbody>{p.visibleStudents.map(student => {
+            const selected = p.selectedIds.includes(student.userId);
+            const firstName = student.firstName || p.splitName(student.displayName).firstName;
+            const lastLogin = relativeTime(student.lastLoginAt);
+            return <tr key={student.userId} className={[student.archived ? "student-row-archived" : "", selected ? "is-selected" : ""].filter(Boolean).join(" ")}>
+            <td className="eb-col-select"><input type="checkbox" checked={selected} onChange={() => p.onToggleSelected(student.userId)} aria-label={"تحديد " + student.displayName} /></td>
+            <td className="eb-col-name" data-label="الاسم"><span className="eb-name-cell"><StudentAvatar token={p.token} studentId={student.userId} name={student.displayName} avatarId={student.avatarId} profilePhoto={student.profilePhoto} /><strong>{firstName}</strong>{student.likesCount > 0 && <span className="student-likes-badge" title={student.likesCount + " ردّ فعل على إنجازاته"}><IconHeart size={12} aria-hidden="true" /> {student.likesCount}<VisuallyHidden> ردود فعل على إنجازاته</VisuallyHidden></span>}</span></td>
+            <td data-label="اسم العائلة">{student.familyName || p.splitName(student.displayName).familyName || "—"}</td>
+            <td dir="ltr" data-label="رقم الهوية" className="eb-col-identity">{student.identityNumber || student.code || "يحتاج تحديث"}</td>
+            <td data-label="الحالة"><StatusBadge tone={statusTone(student)}>{p.statusLabel(student)}</StatusBadge></td>
+            <td data-label="آخر دخول">{lastLogin ? <time dateTime={student.lastLoginAt} title={lastLogin.full}>{lastLogin.label}</time> : <span className="never-login">لم يدخل بعد</span>}</td>
+            <td data-label="الوظائف">{student.submittedAssignmentsCount > 0 ? <button type="button" className="eb-link-button" onClick={() => p.onOpenHistory(student)} disabled={p.busy}><IconHistory size={14} />الوظائف ({student.submittedAssignmentsCount})</button> : <span className="eb-muted">—</span>}</td>
             <td className="eb-col-actions"><div className="eb-row-actions">
-              <button type="button" className="eb-button is-quiet is-small" onClick={() => p.onOpenProfile(student)} disabled={p.busy}><IconUser size={14} />التفاصيل</button>
+              <button type="button" className="eb-button is-quiet is-small eb-icon-action" title={"تفاصيل " + student.displayName} onClick={() => p.onOpenProfile(student)} disabled={p.busy}><IconUser size={16} aria-hidden="true" /><VisuallyHidden>التفاصيل</VisuallyHidden></button>
               <ActionMenu label={"إجراءات " + student.displayName}>
                 <button type="button" className="eb-menu-item" onClick={() => p.onEdit(student)} disabled={p.busy}><IconEdit size={16} />تعديل</button>
                 <button type="button" className="eb-menu-item" onClick={() => p.onCopyIdentity(student)}><IconCopy size={16} />نسخ رقم الهوية</button>
@@ -167,7 +189,8 @@ export default function RosterPane(p: RosterPaneProps) {
                 <button type="button" className="eb-menu-item is-danger" onClick={() => p.onDelete(student)} disabled={p.busy}><IconTrash size={16} />حذف نهائي</button>
               </ActionMenu>
             </div></td>
-          </tr>)}</tbody>
+          </tr>;
+          })}</tbody>
         </table></div>
       )}
       {tableBody}

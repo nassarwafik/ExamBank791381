@@ -63,3 +63,26 @@ export function safeFileName(value: string, fallback: string): string {
   const cleaned = printable.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
   return cleaned || fallback;
 }
+
+const LATIN_AR = "ar-u-nu-latn";
+/**
+ * A short, human last-activity label ("الآن", "قبل 5 دقائق", "أمس", "قبل 3 أيام") for the last 30 days, then a date
+ * ("10‏/10‏/2026"); `full` is the exact timestamp for a tooltip. Latin digits, like the rest of the workspace.
+ * An empty / invalid value yields null (the caller shows its own "never" text).
+ */
+export function relativeTime(value: string, now: Date = new Date()): { label: string; full: string } | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const full = date.toLocaleString(LATIN_AR, { dateStyle: "medium", timeStyle: "short" });
+  const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
+  const abs = Math.abs(seconds);
+  if (abs < 45) return { label: "الآن", full };
+  let rtf: Intl.RelativeTimeFormat | null = null;
+  try { rtf = new Intl.RelativeTimeFormat(LATIN_AR, { numeric: "auto" }); } catch { rtf = null; }
+  const steps: Array<[Intl.RelativeTimeFormatUnit, number, number]> = [["minute", 60, 3600], ["hour", 3600, 86400], ["day", 86400, 30 * 86400]];
+  for (const [unit, size, limit] of steps) {
+    if (abs < limit && rtf) return { label: rtf.format(Math.round(seconds / size), unit), full };
+  }
+  return { label: date.toLocaleDateString(LATIN_AR, { dateStyle: "medium" }), full };
+}
