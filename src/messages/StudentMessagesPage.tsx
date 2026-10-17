@@ -32,6 +32,8 @@ import "./messages.css";
  * Phase 6C — `initialTab` (default "direct") lets the notification center open «إعلانات الصف» directly. It only
  * chooses the VISIBLE tab the view opens on: the same rule then acknowledges that tab once its snapshot loaded (the
  * other stream stays untouched until it is actually selected). The ordinary «الرسائل» entry keeps the default.
+ * Messages M.2 — presentation only: the shared thread draws day separators and grouped bubbles, announcements are a
+ * feed of cards, and the composer sends on Ctrl+Enter. The load / acknowledgement / send logic above is unchanged.
  */
 export type StudentMessagesTab = "direct" | "announcements";
 type Tab = StudentMessagesTab;
@@ -200,7 +202,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
               </div>
               <div className="eb-msg-student-foot">
               {data.canSend
-                ? <MessageComposer label="رسالتك إلى المعلم" buttonLabel="إرسال" value={draft} onChange={setDraft} onSend={() => void send()} sending={sending} error={sendError} />
+                ? <MessageComposer label="رسالتك إلى المعلم" buttonLabel="إرسال" value={draft} onChange={setDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب رسالتك إلى المعلم..." />
                 : <p className="eb-msg-readonly" role="note">{data.readOnlyReason || "المحادثة متاحة للقراءة فقط."}</p>}
               </div>
             </div>
@@ -214,6 +216,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
                 emptyText="لا توجد إعلانات لصفك بعد."
                 isMine={() => false}
                 labelFor={m => m.senderDisplayName || "المعلم"}
+                variant="feed"
               />
               </div>
               <p className="eb-muted eb-msg-student-note">الإعلانات للقراءة فقط. للرد على المعلم استخدم «المحادثة مع المعلم».</p>

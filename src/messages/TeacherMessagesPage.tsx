@@ -1,16 +1,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import VisuallyHidden from "../ui/VisuallyHidden";
-import { IconChevronBack, IconMail } from "../icons";
+import { IconChevronBack, IconMail, IconMegaphone, IconSearch, IconStudents } from "../icons";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { normalizeClassStatus } from "../classLifecycle";
 import type { Classroom, Student } from "../students/types";
-import { MessageComposer, MessageThread } from "./MessageParts";
+import { MessageAvatar, MessageComposer, MessageThread, MessagesEmptyState } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
   type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount, type ReadAck
 } from "./messagesClient";
 import { isConversationVisible, messagesPane, useWideLayout, type NarrowPane } from "./messagesLayout";
+import { rosterView, type RosterFilter } from "./threadLayout";
 import "./messages.css";
 
 /**
@@ -41,10 +42,21 @@ import "./messages.css";
  * UI-only `narrowPane` choice, so resizing never changes the selection, thread or draft. «رجوع» keeps the selected
  * student and the draft; while the conversation is not on screen it is neither polled nor acknowledged
  * (`conversationVisible`), exactly like any other thread that is not visible.
+ *
+ * Messages M.2 — presentation and comfort (the state machine above is unchanged):
+ *  - the draft is kept PER THREAD (`drafts`): switching student / tab / class and coming back restores it; a draft is
+ *    dropped only when its message was confirmed by the server;
+ *  - the roster can be searched (Arabic-folded) and filtered to unread replies; students with unread replies are
+ *    listed first. The filter changes what is DRAWN only: selection, thread and acknowledgements are untouched;
+ *  - avatars, a quiet «نشط» (kept for assistive tech, drawn only for disabled / archived students), empty states, and
+ *    a session-expired message for a 401 instead of the raw server text.
  */
 type Tab = "direct" | "announcements";
 const ARCHIVED_CLASS_TEXT = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
 type Thread = ThreadState & { key: string };
+const SESSION_EXPIRED_TEXT = "انتهت صلاحية الجلسة. سجّل الدخول من جديد ثم أعد المحاولة.";
+const errorText = (e: unknown, fallback: string) =>
+  e instanceof MessagesHttpError && e.status === 401 ? SESSION_EXPIRED_TEXT : e instanceof Error && e.message ? e.message : fallback;
 
 function studentStatus(s: Student): { label: string; code: "active" | "disabled" | "archived" } {
   if (s.archived) return { label: "مؤرشف", code: "archived" };
@@ -66,6 +78,9 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
+  const drafts = useRef<Record<string, string>>({});                // M.2 — thread key → unsent text
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<RosterFilter>("all");
   const rosterGen = useRef(0);
   const sendKey = useRef<{ thread: string; body: string; id: string } | null>(null);   // M.1 idempotency key of the message being sent
   const threadGen = useRef(0);
@@ -93,7 +108,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
     let alive = true;
     client.listClasses()
       .then(list => { if (alive) setClasses(list); })
-      .catch(e => { if (alive) { setClasses([]); setClassesError(e instanceof Error ? e.message : "تعذر تحميل الصفوف."); } });
+      .catch(e => { if (alive) { setClasses([]); setClassesError(errorText(e, "تعذر تحميل الصفوف.")); } });
     return () => { alive = false; };
   }, [client]);
 
@@ -114,7 +129,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
       }
     } catch (e) {
       if (gen !== threadGen.current) return;
-      if (!silent) setThreadError(e instanceof Error ? e.message : "تعذر تحميل الرسائل.");   // a failed poll keeps the last-good thread
+      if (!silent) setThreadError(errorText(e, "تعذر تحميل الرسائل."));   // a failed poll keeps the last-good thread
     }
   }
 
@@ -155,7 +170,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
     threadGen.current += 1;
     activeKey.current = key;
     confirmed.current = { key, messages: [] };
-    setThread(null); setThreadError(""); setDraft(""); setSendError("");
+    setThread(null); setThreadError(""); setDraft(drafts.current[key] || ""); setSendError("");
     void loadThread(key, false);
   }
 
@@ -167,12 +182,18 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
       setStudents(list); setRosterError("");
     } catch (e) {
       if (gen !== rosterGen.current) return;
-      setStudents([]); setRosterError(e instanceof Error ? e.message : "تعذر تحميل الطلاب.");
+      setStudents([]); setRosterError(errorText(e, "تعذر تحميل الطلاب."));
     }
+  }
+
+  function updateDraft(value: string) {
+    setDraft(value);
+    if (activeKey.current) drafts.current[activeKey.current] = value;
   }
 
   function selectClass(nextClassId: string) {
     setNarrowPane("roster");
+    setQuery(""); setFilter("all");
     setClassId(nextClassId);
     setStudentId("");
     setStudents(null); setRosterError("");
@@ -216,6 +237,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
       const message: MessageView = key.startsWith("ann:") ? await client.sendAnnouncement(key.slice(4), body, clientMessageId) : await client.sendDirect(key.slice(3), body, clientMessageId);
       sendKey.current = null;
       threadGen.current += 1;
+      if (drafts.current[key] === body) delete drafts.current[key];   // that text is now a published message
       if (activeKey.current !== key) return;                         // the teacher moved on; nothing to show here
       confirmed.current = { key, messages: [...confirmed.current.messages, message] };
       setThread(prev => (prev && prev.key === key ? { ...prev, messages: mergeMessage(prev.messages, message) } : prev));
@@ -223,7 +245,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
       void loadThread(key, true);                                    // reconcile with the server
     } catch (e) {
       if (activeKey.current !== key) return;
-      setSendError(e instanceof Error ? e.message : "تعذر إرسال الرسالة.");   // the typed text is kept
+      setSendError(errorText(e, "تعذر إرسال الرسالة."));                      // the typed text is kept
       void loadThread(key, true);                                    // e.g. became read-only → refresh canSend
     } finally {
       setSending(false);
@@ -254,6 +276,9 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
   const selectedStudent = (students || []).find(s => s.userId === studentId) || null;
 
   const selectedState = selectedStudent ? studentStatus(selectedStudent) : null;
+  const visibleStudents = students ? rosterView(students, unreadByStudent, query, filter) : null;
+  const unreadStudents = students ? students.filter(s => (unreadByStudent[s.userId]?.unread || 0) > 0).length : 0;
+  const activeClasses = (classes || []).filter(c => normalizeClassStatus(c) !== "archived");
 
   const readOnlyNote = (text: string) => <p className="eb-msg-readonly" role="note">{text}</p>;
 
@@ -290,6 +315,24 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
         </div>
       )}
 
+      {classes !== null && !classId && !classesError && (
+        <div className="eb-msg-workspace is-start">
+          <MessagesEmptyState
+            icon={<IconStudents size={28} />}
+            title={classes.length ? "اختر صفًا لعرض محادثات طلابه وإعلاناته." : "لا توجد صفوف بعد."}
+            hint={classes.length ? undefined : "أنشئ صفًا من «الصفوف والطلاب» ثم عد إلى هنا لمراسلة طلابه."}
+          >
+            {activeClasses.length > 0 && (
+              <div className="eb-msg-class-picks" role="group" aria-label="صفوفك">
+                {activeClasses.slice(0, 8).map(c => (
+                  <button key={c.classId} type="button" className="eb-msg-class-pick" onClick={() => selectClass(c.classId)}>{c.name}</button>
+                ))}
+              </div>
+            )}
+          </MessagesEmptyState>
+        </div>
+      )}
+
       {classId && (
         <div id="eb-msg-panel" role="tabpanel" aria-labelledby={tab === "direct" ? "eb-msg-tab-direct" : "eb-msg-tab-ann"} className="eb-msg-panel">
           {tab === "direct" && (
@@ -301,21 +344,42 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                   <h3 className="eb-msg-subtitle">الطلاب</h3>
                   {students && students.length > 0 && <span className="eb-msg-pane-count">{students.length}</span>}
                 </div>
+                {students && students.length > 0 && (
+                  <div className="eb-msg-roster-tools">
+                    <label className="eb-msg-search">
+                      <IconSearch size={16} aria-hidden="true" />
+                      <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="ابحث عن طالب" aria-label="ابحث عن طالب" />
+                    </label>
+                    {unreadStudents > 0 && (
+                      <div className="eb-msg-filter" role="group" aria-label="عرض الطلاب">
+                        <button type="button" className="eb-msg-chip" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>الكل</button>
+                        <button type="button" className="eb-msg-chip" aria-pressed={filter === "unread"} onClick={() => setFilter("unread")}>غير المقروءة <span className="eb-msg-chip-count">{unreadStudents}</span></button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="eb-msg-roster-body">
                   {students === null && <p className="eb-muted eb-msg-pane-note" role="status">جارٍ تحميل الطلاب...</p>}
                   {rosterError && <p className="platform-error eb-msg-pane-note" role="alert">{rosterError}</p>}
                   {students && !students.length && !rosterError && <p className="eb-msg-empty eb-msg-pane-note">لا يوجد طلاب في هذا الصف.</p>}
-                  {students && students.length > 0 && (
+                  {visibleStudents && students && students.length > 0 && !visibleStudents.length && (
+                    <p className="eb-msg-empty eb-msg-pane-note" role="status">{filter === "unread" && !query.trim() ? "لا توجد ردود غير مقروءة." : "لا يوجد طالب بهذا الاسم."}</p>
+                  )}
+                  {visibleStudents && visibleStudents.length > 0 && (
                     <ul ref={rosterRef} className="eb-msg-roster-list" aria-label="طلاب الصف">
-                      {students.map(s => {
+                      {visibleStudents.map(s => {
                         const st = studentStatus(s);
                         const u = unreadByStudent[s.userId];
+                        const hasUnread = !!u && u.unread > 0;
                         return (
                           <li key={s.userId}>
-                            <button type="button" className={"eb-msg-roster-item is-" + st.code} aria-pressed={s.userId === studentId} onClick={() => selectStudent(s.userId)} disabled={sending}>
+                            <button type="button" className={"eb-msg-roster-item is-" + st.code + (hasUnread ? " has-unread" : "")} aria-pressed={s.userId === studentId} onClick={() => selectStudent(s.userId)} disabled={sending}>
+                              <MessageAvatar name={s.displayName} id={s.userId} />
                               <span className="eb-msg-roster-name">{s.displayName}</span>
-                              <span className="eb-msg-roster-status">{st.label}</span>
-                              {u && u.unread > 0 && <span className="eb-msg-unread">{formatUnread(u.unread, u.capped)} جديدة</span>}
+                              {st.code === "active"
+                                ? <VisuallyHidden><span className="eb-msg-roster-status">{st.label}</span></VisuallyHidden>
+                                : <span className="eb-msg-roster-status">{st.label}</span>}
+                              {hasUnread && <span className="eb-msg-unread">{formatUnread(u.unread, u.capped)} جديدة</span>}
                             </button>
                           </li>
                         );
@@ -327,10 +391,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
 
               <div className={"eb-msg-conversation" + (pane === "roster" ? " is-offscreen" : "")}>
                 {!studentId && (
-                  <div className="eb-msg-placeholder">
-                    <IconMail size={28} aria-hidden="true" />
-                    <p>اختر طالبًا لعرض المحادثة.</p>
-                  </div>
+                  <MessagesEmptyState icon={<IconMail size={28} />} title="اختر طالبًا لعرض المحادثة." hint="الطلاب الذين لديهم ردود جديدة يظهرون أولًا في القائمة." />
                 )}
                 {studentId && (
                   <>
@@ -340,6 +401,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                           <IconChevronBack size={20} className="eb-flip-rtl" aria-hidden="true" />
                         </button>
                       )}
+                      <MessageAvatar name={selectedStudent ? selectedStudent.displayName : "الطالب"} id={studentId} />
                       <div className="eb-msg-convo-id">
                         <h3 className="eb-msg-convo-name"><VisuallyHidden>المحادثة مع </VisuallyHidden>{selectedStudent ? selectedStudent.displayName : "الطالب"}</h3>
                         {selectedState && <span className={"eb-msg-convo-status is-" + selectedState.code}>{selectedState.label}</span>}
@@ -362,7 +424,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                     {shown && (
                       <div className="eb-msg-convo-foot">
                         {shown.canSend
-                          ? <MessageComposer label="رسالة إلى الطالب" buttonLabel="إرسال" value={draft} onChange={setDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب رسالة..." />
+                          ? <MessageComposer label="رسالة إلى الطالب" buttonLabel="إرسال" value={draft} onChange={updateDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب رسالة..." />
                           : readOnlyNote(shown.readOnlyReason || "المحادثة متاحة للقراءة فقط.")}
                       </div>
                     )}
@@ -376,6 +438,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
             <div className="eb-msg-workspace is-announcements">
               <div className="eb-msg-conversation eb-msg-announcements">
                 <div className="eb-msg-convo-head">
+                  <span className="eb-msg-head-icon" aria-hidden="true"><IconMegaphone size={20} /></span>
                   <div className="eb-msg-convo-id">
                     <h3 className="eb-msg-convo-name">إعلانات الصف</h3>
                     {selectedClass && <span className={"eb-msg-convo-status" + (classArchived ? " is-archived" : " is-active")}>{selectedClass.name}</span>}
@@ -392,13 +455,14 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                       isMine={() => true}
                       labelFor={m => m.senderDisplayName || "المعلم"}
                       followKey={shown.key}
+                      variant="feed"
                     />
                   )}
                 </div>
                 {shown && (
                   <div className="eb-msg-convo-foot">
                     {shown.canSend
-                      ? <MessageComposer label="إعلان جديد للصف" buttonLabel="إرسال إعلان للصف" value={draft} onChange={setDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب إعلانًا لكامل الصف..." />
+                      ? <MessageComposer label="إعلان جديد للصف" buttonLabel="إرسال إعلان للصف" value={draft} onChange={updateDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب إعلانًا لكامل الصف..." />
                       : readOnlyNote(shown.readOnlyReason || ARCHIVED_CLASS_TEXT)}
                   </div>
                 )}

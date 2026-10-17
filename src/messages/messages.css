@@ -12,12 +12,36 @@
 
 .eb-msg-conversation,.eb-msg-announcements{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
 .eb-msg-thread{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); max-height:60vh; overflow:auto; }
-.eb-msg{ max-width:min(640px, 92%); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface); }
-.eb-msg.is-mine{ align-self:flex-start; background:var(--eb-primary-050); }
-.eb-msg.is-theirs{ align-self:flex-end; }
+/* Messages M.2 — each <li> is a ROW (day separator + one bubble); the bubble carries the visuals. The viewer's own
+   messages sit on the inline-start side (RIGHT in RTL) in a solid primary bubble (white text ≥ 4.5:1), the other
+   party opposite in a white bubble; a group of consecutive messages draws its sender label once (kept for AT). */
+.eb-msg{ display:flex; flex-direction:column; min-width:0; }
+.eb-msg.is-mine{ align-items:flex-start; }
+.eb-msg.is-theirs{ align-items:flex-end; }
+.eb-msg.is-continued{ margin-block-start:calc(-1 * var(--eb-space-1)); }
+.eb-msg-bubble{ position:relative; box-sizing:border-box; min-width:0; max-width:min(640px, 92%); padding-block:var(--eb-space-2) 6px; padding-inline:var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-lg); background:var(--eb-surface); color:var(--eb-text); box-shadow:var(--eb-sh-xs); }
+.eb-msg.is-mine .eb-msg-bubble{ background:linear-gradient(160deg, var(--eb-primary), var(--eb-primary-strong)); border-color:transparent; color:var(--eb-surface); }
+.eb-msg.is-mine:not(.is-continued) .eb-msg-bubble{ border-start-start-radius:var(--eb-r-xs); }
+.eb-msg.is-theirs:not(.is-continued) .eb-msg-bubble{ border-start-end-radius:var(--eb-r-xs); }
 .eb-msg-meta{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); align-items:baseline; font-size:var(--eb-fs-12); color:var(--eb-muted); }
-.eb-msg-sender{ color:var(--eb-text-heading); }
-.eb-msg-body{ margin:var(--eb-space-1) 0 0; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; line-height:var(--eb-lh-body); color:var(--eb-text); }
+.eb-msg.is-continued .eb-msg-meta{ display:contents; }
+.eb-msg-sender{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.eb-msg.is-mine .eb-msg-sender{ color:var(--eb-primary-050); }
+.eb-msg-body{ margin:2px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; line-height:var(--eb-lh-body); color:inherit; }
+.eb-msg-time{ display:block; margin-block-start:2px; text-align:end; font-size:11px; line-height:1.4; color:var(--eb-muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.eb-msg.is-mine .eb-msg-time{ color:var(--eb-primary-050); }
+/* Day separator: a centred pill on a hairline, spanning the whole thread width. */
+.eb-msg-day{ align-self:stretch; display:flex; align-items:center; gap:var(--eb-space-3); margin-block:var(--eb-space-3) var(--eb-space-2); margin-inline:0; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); color:var(--eb-muted); }
+.eb-msg-day::before,.eb-msg-day::after{ content:""; flex:1 1 auto; border-block-start:1px solid var(--eb-line-2); }
+.eb-msg-day span{ padding-block:2px; padding-inline:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-pill); background:var(--eb-surface); white-space:nowrap; }
+.eb-msg:first-child .eb-msg-day{ margin-block-start:0; }
+/* Announcements (feed): full-width cards with an accent rule, never chat bubbles. */
+.eb-msg-thread.is-feed{ gap:var(--eb-space-3); }
+.eb-msg-thread.is-feed .eb-msg{ align-items:stretch; margin-block-start:0; }
+.eb-msg-thread.is-feed .eb-msg .eb-msg-bubble{ max-width:none; padding-block:var(--eb-space-3); padding-inline:var(--eb-space-4); background:var(--eb-surface); color:var(--eb-text); border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-primary); border-radius:var(--eb-r); }
+.eb-msg-thread.is-feed .eb-msg .eb-msg-meta{ display:flex; }
+.eb-msg-thread.is-feed .eb-msg .eb-msg-sender{ color:var(--eb-text-heading); }
+.eb-msg-thread.is-feed .eb-msg .eb-msg-time{ color:var(--eb-muted); }
 .eb-msg-empty{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
 .eb-msg-readonly{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-surface-2, #f1f5f9); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
 
@@ -25,8 +49,11 @@
 .eb-msg-composer-label{ font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
 .eb-msg-input{ font:inherit; width:100%; box-sizing:border-box; resize:vertical; min-height:72px; padding:var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); white-space:pre-wrap; }
 .eb-msg-input:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
-.eb-msg-composer-row{ display:flex; justify-content:space-between; align-items:center; gap:var(--eb-space-2); }
-.eb-msg-count{ font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.eb-msg-composer-row{ display:flex; justify-content:flex-start; align-items:center; gap:var(--eb-space-2); }
+.eb-msg-hint{ margin-inline-end:auto; font-size:11px; color:var(--eb-muted); }
+@media (hover: none){ .eb-msg-hint{ visibility:hidden; } }
+.eb-msg-count{ font-size:var(--eb-fs-12); color:var(--eb-muted); font-variant-numeric:tabular-nums; }
+.eb-msg-count.is-near{ color:var(--eb-warn-tx); font-weight:var(--eb-fw-semibold); }
 .eb-msg-error{ margin:0; color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
 
 /* ---------- Student dedicated view (full-view swap over the portal, like Educational Games) ---------- */
@@ -52,13 +79,11 @@
 .eb-msg-student-card .eb-msg-tab{ flex:0 0 auto; min-height:44px; }
 .eb-msg-student-card .eb-msg-panel{ display:flex; flex-direction:column; }
 .eb-msg-student-card .eb-msg-conversation,.eb-msg-student-card .eb-msg-announcements{ gap:0; }
-.eb-msg-student-thread{ padding-block:var(--eb-space-4); padding-inline:var(--eb-space-3); background:var(--eb-surface); }
+.eb-msg-student-thread{ padding-block:var(--eb-space-4); padding-inline:var(--eb-space-3); background:var(--eb-surface-2); }
 @media (min-width: 600px){ .eb-msg-student-thread{ padding-inline:var(--eb-space-5); } }
-.eb-msg-student-thread > .eb-msg-empty{ padding-block:var(--eb-space-5); text-align:center; }
-.eb-msg-student .eb-msg{ box-sizing:border-box; max-width:min(78%, 620px); padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
-.eb-msg-student .eb-msg.is-mine{ background:var(--eb-primary-050); border-color:var(--eb-primary-100); border-start-start-radius:var(--eb-r-xs); }
-.eb-msg-student .eb-msg.is-theirs{ background:var(--eb-surface-2); border-color:var(--eb-line-2); border-start-end-radius:var(--eb-r-xs); }
-.eb-msg-student .eb-msg-time{ font-variant-numeric:tabular-nums; }
+.eb-msg-student-thread > .eb-msg-empty{ padding-block:var(--eb-space-6); text-align:center; }
+.eb-msg-student .eb-msg-bubble{ max-width:min(78%, 620px); }
+.eb-msg-student .eb-msg-thread.is-feed .eb-msg-bubble{ max-width:none; }
 .eb-msg-student .eb-msg-body{ font-size:var(--eb-fs-14); }
 .eb-msg-student-foot{ box-sizing:border-box; padding-block:var(--eb-space-3); padding-inline:var(--eb-space-3); border-block-start:1px solid var(--eb-line); background:var(--eb-surface); }
 @media (min-width: 600px){ .eb-msg-student-foot{ padding-inline:var(--eb-space-5); } }
@@ -67,10 +92,11 @@
 .eb-msg-student-foot .eb-msg-composer-row .eb-button{ min-height:44px; padding-inline:var(--eb-space-4); }
 .eb-msg-student-note{ margin:0; padding-block:var(--eb-space-3); padding-inline:var(--eb-space-3); border-block-start:1px solid var(--eb-line); font-size:var(--eb-fs-13); }
 @media (min-width: 600px){ .eb-msg-student-note{ padding-inline:var(--eb-space-5); } }
-@media (max-width: 599.98px){ .eb-msg-student .eb-msg{ max-width:88%; } .eb-msg-student-card{ border-radius:var(--eb-r-lg); } }
+@media (max-width: 599.98px){ .eb-msg-student .eb-msg-bubble{ max-width:88%; } .eb-msg-student-card{ border-radius:var(--eb-r-lg); } }
 
 /* Phase 5D — unread indicators (always a TEXT count; colour is only an accent). */
-.eb-msg-unread,.eb-msg-tab-badge{ display:inline-flex; align-items:center; white-space:nowrap; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); border:1px solid var(--eb-primary); }
+.eb-msg-unread,.eb-msg-tab-badge{ display:inline-flex; align-items:center; white-space:nowrap; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); line-height:20px; padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); border:1px solid var(--eb-primary); }
+.eb-msg-roster-item .eb-msg-unread{ background:var(--eb-primary); color:var(--eb-surface); border-color:var(--eb-primary); }
 .eb-msg-tab-badge{ margin-inline-start:var(--eb-space-1); }
 /* The student top-bar reuses the shell's .eb-nav-badge look but never its compact-rail absolute positioning. */
 .student-topbar-link .eb-nav-badge{ position:static; min-width:22px; line-height:22px; font-size:var(--eb-fs-12); margin-inline-start:var(--eb-space-1); }
@@ -143,7 +169,7 @@
 .eb-msg-roster-list > li + li{ border-block-start:1px solid var(--eb-line); }
 .eb-msg-roster-item{
   position:relative; box-sizing:border-box; width:100%; min-height:56px;
-  display:grid; grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"name badge" "status badge"; align-items:center; column-gap:var(--eb-space-2); row-gap:2px;
+  display:grid; grid-template-columns:auto minmax(0, 1fr) auto; grid-template-areas:"avatar name badge" "avatar status badge"; align-items:center; column-gap:var(--eb-space-3); row-gap:2px;
   padding-block:var(--eb-space-2); padding-inline:var(--eb-space-4);
   font:inherit; text-align:start; border:0; border-radius:0; background:var(--eb-surface); color:var(--eb-text); cursor:pointer;
   transition:background var(--eb-dur, .15s) var(--eb-ease, ease);
@@ -154,6 +180,11 @@
 .eb-msg-roster-name{ grid-area:name; overflow-wrap:anywhere; font-size:var(--eb-fs-14); line-height:var(--eb-lh-tight); color:var(--eb-text-heading); }
 .eb-msg-roster-status{ grid-area:status; font-size:var(--eb-fs-12); color:var(--eb-muted); white-space:nowrap; }
 .eb-msg-roster-item .eb-msg-unread{ grid-area:badge; }
+.eb-msg-roster-item .eb-msg-avatar{ grid-area:avatar; }
+.eb-msg-roster-item.is-active{ grid-template-areas:"avatar name badge"; }
+.eb-msg-roster-item.has-unread .eb-msg-roster-name{ font-weight:var(--eb-fw-bold); }
+.eb-msg-roster-item.is-archived .eb-msg-avatar,.eb-msg-roster-item.is-disabled .eb-msg-avatar{ filter:grayscale(1); opacity:.7; }
+.eb-msg-roster-item.is-archived .eb-msg-roster-status,.eb-msg-roster-item.is-disabled .eb-msg-roster-status{ justify-self:start; padding-inline:var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); border:1px solid var(--eb-line); }
 .eb-msg-roster-item.is-archived .eb-msg-roster-name,.eb-msg-roster-item.is-disabled .eb-msg-roster-name{ color:var(--eb-muted); }
 /* Selected: tint + weight + an inline-start accent bar (never colour alone; aria-pressed carries the state). */
 .eb-msg-roster-item[aria-pressed="true"]{ background:var(--eb-primary-050); }
@@ -186,12 +217,10 @@
 
 /* Bubbles: the viewer's own messages on the inline-start side (RIGHT in RTL), the other party opposite. The sender
    label stays visible text; colours are soft accents only. */
-.eb-msg-workspace .eb-msg{ box-sizing:border-box; max-width:min(72%, 640px); padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
-.eb-msg-workspace .eb-msg.is-mine{ background:var(--eb-primary-050); border-color:var(--eb-primary-100); border-start-start-radius:var(--eb-r-xs); }
-.eb-msg-workspace .eb-msg.is-theirs{ background:var(--eb-surface); border-color:var(--eb-line-2); border-start-end-radius:var(--eb-r-xs); }
-.eb-msg-workspace .eb-msg-meta{ gap:var(--eb-space-2); font-size:var(--eb-fs-12); }
-.eb-msg-workspace .eb-msg-time{ font-size:11px; color:var(--eb-muted); font-variant-numeric:tabular-nums; }
+.eb-msg-workspace .eb-msg-bubble{ max-width:min(72%, 640px); }
+.eb-msg-workspace .eb-msg-thread.is-feed .eb-msg-bubble{ max-width:none; }
 .eb-msg-workspace .eb-msg-body{ font-size:var(--eb-fs-14); }
+.eb-msg-workspace .eb-msg-convo-body{ background:var(--eb-surface-2); }
 
 /* ---------- Footer: composer or the server's read-only explanation ---------- */
 .eb-msg-convo-foot{ flex:0 0 auto; box-sizing:border-box; padding-block:var(--eb-space-3); padding-inline:var(--eb-space-3); background:var(--eb-surface); border-block-start:1px solid var(--eb-line); }
@@ -200,7 +229,7 @@
 
 /* Compact chat composer (same markup as the shared MessageComposer): textarea grows, send button beside it. */
 .eb-msg-workspace .eb-msg-composer{
-  position:relative; display:grid; grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"label label" "input actions" "error error";
+  position:relative; display:grid; grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"label label" "input actions" "hint count" "error error";
   align-items:end; column-gap:var(--eb-space-2); row-gap:var(--eb-space-1);
 }
 .eb-msg-workspace .eb-msg-composer-label{
@@ -211,19 +240,72 @@
   padding-block:10px; padding-inline:var(--eb-space-3); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); border-color:var(--eb-line-2); line-height:1.5;
 }
 .eb-msg-workspace .eb-msg-input:focus-visible{ background:var(--eb-surface); }
-.eb-msg-workspace .eb-msg-composer-row{ grid-area:actions; flex-direction:column; align-items:stretch; justify-content:flex-end; gap:2px; }
-.eb-msg-workspace .eb-msg-composer-row .eb-button{ order:1; min-height:44px; border-radius:var(--eb-r-lg); padding-inline:var(--eb-space-4); white-space:nowrap; }
-.eb-msg-workspace .eb-msg-count{ order:2; font-size:11px; text-align:center; font-variant-numeric:tabular-nums; }
+.eb-msg-workspace .eb-msg-composer-row{ display:contents; }
+.eb-msg-workspace .eb-msg-composer-row .eb-button{ grid-area:actions; min-height:44px; border-radius:var(--eb-r-lg); padding-inline:var(--eb-space-4); white-space:nowrap; }
+.eb-msg-workspace .eb-msg-hint{ grid-area:hint; margin:0; }
+.eb-msg-workspace .eb-msg-count{ grid-area:count; font-size:11px; text-align:center; }
 .eb-msg-workspace .eb-msg-error{ grid-area:error; }
 
 /* ---------- Narrow screens ---------- */
 @media (max-width: 899.98px){
-  .eb-msg-workspace .eb-msg{ max-width:86%; }
+  .eb-msg-workspace .eb-msg-bubble{ max-width:86%; }
   .eb-msg-roster-item{ min-height:60px; padding-inline:var(--eb-space-4); }
   .eb-msg-roster-name{ font-size:var(--eb-fs-16); }
   .eb-msg-convo-head{ padding-inline:var(--eb-space-3); }
 }
 @media (max-width: 380px){
-  .eb-msg-workspace .eb-msg{ max-width:90%; }
+  .eb-msg-workspace .eb-msg-bubble{ max-width:90%; }
   .eb-msg-workspace .eb-msg-composer-row .eb-button{ padding-inline:var(--eb-space-3); }
 }
+
+/* =====================================================================================================================
+   Messages M.2 — avatars, roster search / filter, empty states, the class start state. Token colours only.
+   ===================================================================================================================== */
+.eb-msg-avatar{
+  flex:0 0 auto; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center;
+  inline-size:36px; block-size:36px; border-radius:50%; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); line-height:1; user-select:none;
+}
+.eb-msg-avatar.is-sm{ inline-size:28px; block-size:28px; font-size:var(--eb-fs-12); }
+.eb-msg-avatar.tone-0{ background:var(--eb-primary-100); color:var(--eb-primary-strong); }
+.eb-msg-avatar.tone-1{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.eb-msg-avatar.tone-2{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
+.eb-msg-avatar.tone-3{ background:var(--eb-info-bg); color:var(--eb-info-tx); }
+.eb-msg-avatar.tone-4{ background:var(--eb-surface-2); color:var(--eb-text-heading); border:1px solid var(--eb-line-2); }
+.eb-msg-convo-head .eb-msg-avatar{ inline-size:40px; block-size:40px; font-size:var(--eb-fs-14); }
+.eb-msg-head-icon{ flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; inline-size:40px; block-size:40px; border-radius:50%; background:var(--eb-primary-050); color:var(--eb-primary-strong); }
+
+.eb-msg-roster-tools{ flex:0 0 auto; display:flex; flex-direction:column; gap:var(--eb-space-2); padding-block:var(--eb-space-3); padding-inline:var(--eb-space-4); border-block-end:1px solid var(--eb-line); }
+.eb-msg-search{
+  display:flex; align-items:center; gap:var(--eb-space-2); min-height:40px; box-sizing:border-box; padding-inline:var(--eb-space-3);
+  border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-muted);
+  transition:border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease);
+}
+.eb-msg-search:focus-within{ border-color:var(--eb-primary); background:var(--eb-surface); box-shadow:var(--eb-focus); }
+.eb-msg-search input{ flex:1 1 auto; min-width:0; border:0; background:transparent; font:inherit; font-size:var(--eb-fs-14); color:var(--eb-text); outline:none; }
+.eb-msg-search input::placeholder{ color:var(--eb-placeholder); }
+.eb-msg-filter{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
+.eb-msg-chip{
+  display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:32px; padding-inline:var(--eb-space-3);
+  font:inherit; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); border:1px solid var(--eb-line-2); border-radius:var(--eb-pill);
+  background:var(--eb-surface); color:var(--eb-text-secondary); cursor:pointer;
+}
+.eb-msg-chip:hover{ background:var(--eb-surface-2); }
+.eb-msg-chip[aria-pressed="true"]{ background:var(--eb-navy); border-color:var(--eb-navy); color:var(--eb-surface); }
+.eb-msg-chip:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.eb-msg-chip-count{ min-width:18px; padding-inline:4px; border-radius:var(--eb-pill); background:var(--eb-primary); color:var(--eb-surface); font-size:11px; line-height:18px; text-align:center; font-variant-numeric:tabular-nums; }
+
+/* Empty / placeholder states: a soft icon disc, one line, an optional hint. */
+.eb-msg-placeholder-icon{ display:inline-flex; align-items:center; justify-content:center; inline-size:64px; block-size:64px; border-radius:50%; background:var(--eb-primary-050); color:var(--eb-primary); margin-block-end:var(--eb-space-1); }
+.eb-msg-placeholder .eb-msg-placeholder-title{ font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
+.eb-msg-placeholder .eb-msg-placeholder-hint{ max-width:36ch; font-size:var(--eb-fs-13); color:var(--eb-muted); }
+.eb-msg-workspace.is-start{ block-size:auto; min-block-size:320px; display:flex; }
+.eb-msg-class-picks{ display:flex; flex-wrap:wrap; justify-content:center; gap:var(--eb-space-2); margin-block-start:var(--eb-space-3); max-width:640px; }
+.eb-msg-class-pick{
+  min-height:40px; padding-inline:var(--eb-space-4); font:inherit; font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium);
+  border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-text-heading); cursor:pointer;
+  box-shadow:var(--eb-sh-xs); transition:border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease);
+}
+.eb-msg-class-pick:hover{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.eb-msg-class-pick:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.eb-msg-convo-body > .eb-msg-empty{ color:var(--eb-muted); }
+@media (prefers-reduced-motion: reduce){ .eb-msg-search,.eb-msg-class-pick,.eb-msg-roster-item{ transition:none; } }
