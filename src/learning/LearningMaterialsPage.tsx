@@ -50,9 +50,8 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
 
   // Open the Reader at a Course-Overview section's first canonical page. The section→pageId mapping lives in the
   // manifest (batches + reading order), which is the SAME code-split chunk the Reader is about to load — so this
-  // triggers no extra eager bundle. A batch with no dedicated page (e.g. المقدمة) resolves to `undefined`, and the
-  // Reader's existing controlled fallback opens the book's canonical beginning; a failed manifest load does the
-  // same, and the Reader then surfaces any genuine load error itself.
+  // triggers no extra eager bundle. A batch with no page is shown as «قريبًا» by the overview and is not openable; a
+  // failed manifest load opens the book's canonical beginning, and the Reader then surfaces any genuine load error itself.
   const openSection = useCallback(async (courseId: string, batchId: string) => {
     try {
       const manifest = await loadCourseManifest(courseId);
@@ -88,6 +87,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   if (course) {
     return (
       <CourseOverview
+        key={course.id}
         course={course}
         canRead={hasCourseContent(course.id)}
         onBack={() => setView({ kind: "library" })}
@@ -203,14 +203,19 @@ function CourseCard({ course, onOpen }: { course: LearningCourse; onOpen: () => 
 /** Course overview: identity + a short intro + the eight high-level content sections, and the reader entry point. */
 function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void; onOpenSection: (batchId: string) => void }) {
   const [manifest, setManifest] = useState<LearningCourseManifest | null>(null);
+  // Phase L.0 — the section details come from the manifest chunk; its load is visible (a status line) and a failure is
+  // an alert with a retry instead of a silently detail-less list. The rows stay usable meanwhile: a section opened
+  // before the manifest arrives (or after it failed) falls back to the Reader's canonical beginning, as before.
+  const [manifestState, setManifestState] = useState<"loading" | "ready" | "error">(canRead ? "loading" : "ready");
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!canRead) return;
     let active = true;
     loadCourseManifest(course.id).then(result => {
-      if (active) setManifest(result);
-    }).catch(() => { if (active) setManifest(null); });
+      if (active) { setManifest(result); setManifestState("ready"); }
+    }).catch(() => { if (active) { setManifest(null); setManifestState("error"); } });
     return () => { active = false; };
-  }, [course.id, canRead]);
+  }, [course.id, canRead, attempt]);
   const sectionStats = useMemo(() => {
     if (!manifest) return new Map<string, { lessons: number; first: number; last: number } | null>();
     const flat = flattenPageRefs(manifest);
@@ -224,6 +229,9 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
   // The details stay visible text inside the button; aria-describedby makes a screen reader announce them after the
   // short «فتح قسم …» name, which the aria-label would otherwise replace them with.
   const detailsIdPrefix = "eb-lm-batch-details-" + course.id + "-";
+  // A section whose modules carry no pages yet (المقدمة today) is shown as «قريبًا» once the manifest PROVES it empty —
+  // it never opens the Reader at another section's page. Until the manifest has loaded every row stays a live control.
+  const isComingSoon = (batchId: string) => manifestState === "ready" && manifest !== null && sectionStats.get(batchId) === null;
   return (
     <section className="eb-lm eb-lm-overview" aria-labelledby="eb-lm-course-title">
       <button type="button" className="eb-button is-quiet is-small eb-lm-back" onClick={onBack}>
@@ -257,10 +265,17 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
           description={canRead ? "اختر قسمًا للانتقال مباشرة إلى محتواه في القارئ التفاعلي." : "ستُتاح هذه الأقسام تفاعليًا في القارئ تدريجيًا."}
           count={course.overviewBatches.length}
         />
+        {manifestState === "loading" && <p className="eb-muted eb-lm-batches-status" role="status">جارٍ تحميل تفاصيل الأقسام…</p>}
+        {manifestState === "error" && (
+          <div className="eb-lm-batches-error" role="alert">
+            <span>تعذّر تحميل تفاصيل أقسام الكتاب. ما زال بإمكانك فتح القارئ.</span>
+            <button type="button" className="eb-button is-small" onClick={() => { setManifestState("loading"); setAttempt(n => n + 1); }}>إعادة المحاولة</button>
+          </div>
+        )}
         <ul className="eb-lm-batch-list" aria-label="أقسام محتوى الكتاب">
           {course.overviewBatches.map((b, i) => (
-            <li key={b.id} className={canRead ? "eb-lm-batch eb-lm-batch--interactive" : "eb-lm-batch"}>
-              {canRead ? (
+            <li key={b.id} className={canRead && !isComingSoon(b.id) ? "eb-lm-batch eb-lm-batch--interactive" : "eb-lm-batch"}>
+              {canRead && !isComingSoon(b.id) ? (
                 <button
                   type="button"
                   className="eb-lm-batch-open"
