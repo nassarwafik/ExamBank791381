@@ -38,7 +38,42 @@ const ANN_UI = "src/learning/annotations/ReaderAnnotations.tsx", ANN_HOOK = "src
 const RWT = "src/learning/training/LearningReaderWithTraining.tsx";
 const L5_API = ["api/tests/learning-annotations-l5.test.js"], L5_UI = ["src/learning/annotations/ReaderAnnotations.l5.test.tsx"];
 const L5_STUDENT = ["src/student/StudentReader.annotations.l5.test.tsx"];
+const LC_FN = "api/src/functions/learning-content.js", LC_SRC = "src/learning/content/moduleBodySource.server.ts", GUARD = "scripts/check-bundle-budget.mjs";
+const L6A_API = ["api/tests/learning-content-l6a.test.js"], L6A_SRC = ["src/learning/content/moduleBodySource.server.l6a.test.ts"];
+const L6A_HOSTS = ["src/learning/contentHosts.l6a.test.tsx"], L6A_E2E = ["src/learning/reader/serverContent.l6a.test.tsx"];
+const L6A_GUARD = ["scripts/check-bundle-budget.l6a.test.mjs"], L6A_SYNC = ["src/learning/content/contentData.sync.test.ts"];
+const CONTENT_DATA = "api/src/data/learning-content/791381/791381-m01.json";
 export const CAMPAIGNS = {
+  l6a: [
+    { id: "L6A-M1", what: "a student receives a module hidden from the class (or of a course not attached)", file: LC_FN,
+      find: "if (!classroom || !classCanSeeLearningModule(classroom, courseId, moduleId)) return UNAVAILABLE;", replace: "if (!classroom) return UNAVAILABLE;", tests: [...L6A_API, ...L6A_E2E] },
+    { id: "L6A-M2", what: "an archived class still reads", file: LC_FN,
+      find: "      if (classroom && normalizeClassStatus(classroom) === \"archived\") return ARCHIVED;\n", replace: "", tests: L6A_API },
+    { id: "L6A-M3", what: "an unauthenticated caller is not refused as such", file: LC_FN,
+      find: "      if (!sess.ok) return sess.response;\n", replace: "", tests: L6A_API },
+    { id: "L6A-M4", what: "the token's class claim decides instead of the persisted class", file: LC_FN,
+      find: "const classId = String(sess.student?.classId || \"\").trim();", replace: "const classId = String(sess.user?.classId || \"\").trim();", tests: L6A_API },
+    { id: "L6A-M5", what: "a 304 is answered before the gate", file: LC_FN,
+      find: "    const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);", replace: "    { const early = loadModuleBody(courseId, moduleId); if (early && String(request.headers?.get?.(\"if-none-match\") || \"\") === early.etag) return { status: 304, headers: { ETag: early.etag } }; }\n    const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);", tests: L6A_API },
+    { id: "L6A-M6", what: "the body is cacheable without revalidation", file: LC_FN,
+      find: "\"Cache-Control\": \"private, no-cache\"", replace: "\"Cache-Control\": \"public, max-age=3600\"", tests: L6A_API },
+    { id: "L6A-M7", what: "a teacher is treated as a student", file: LC_FN,
+      find: "    if (!builder.ok) {", replace: "    if (true) {", tests: L6A_API },
+    { id: "L6A-M8", what: "the student's Reader asks without the student's session", file: STUDENT_READER,
+      find: "createContentApi(studentTrainingHeaders(token))", replace: "createContentApi()", tests: L6A_HOSTS },
+    { id: "L6A-M9", what: "the teacher's book page asks without the teacher's session", file: PAGE,
+      find: "(token ? createContentApi(teacherTrainingHeaders(token)) : registryContentApi)", replace: "registryContentApi", tests: L6A_HOSTS },
+    { id: "L6A-M10", what: "the transport accepts a foreign or malformed body", file: LC_SRC,
+      find: "if (!r.ok || j?.ok !== true || !isModuleFor(j.module, moduleId))", replace: "if (!r.ok || j?.ok !== true)", tests: L6A_SRC },
+    { id: "L6A-M11", what: "the transport drops the session headers", file: LC_SRC,
+      find: "{ headers, cache: \"no-cache\" }", replace: "{ cache: \"no-cache\" }", tests: [...L6A_SRC, ...L6A_E2E] },
+    { id: "L6A-M12", what: "the transport reads from the HTTP cache without revalidating", file: LC_SRC,
+      find: "cache: \"no-cache\" }", replace: "cache: \"force-cache\" }", tests: L6A_SRC },
+    { id: "L6A-M13", what: "the build guard no longer recognises a module body", file: GUARD,
+      find: "const MODULE_BODY_SIGNATURE = /[`\"']m\\d\\d-l\\d\\d-p\\d\\d-[A-Za-z]/;", replace: "const MODULE_BODY_SIGNATURE = /\"m\\d\\d-l\\d\\d-p\\d\\d-[A-Za-z]/;", tests: L6A_GUARD },
+    { id: "L6A-M14", what: "the served data drifts from the authored content", file: CONTENT_DATA,
+      find: "{\"id\":\"791381-m01\",\"title\":\"", replace: "{\"id\":\"791381-m01\",\"title\":\"X", tests: L6A_SYNC },
+  ],
   l5: [
     { id: "L5-M1", what: "a page the book does not have is accepted", file: ANN_FN,
       find: "      if (!moduleId) return BAD_REQUEST;                                  // not a page of this book\n", replace: "", tests: L5_API },
