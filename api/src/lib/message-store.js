@@ -156,8 +156,10 @@ function maxListedPosition(names, prefix) {
  * conflict means another writer published that position first, so the next position is tried — an existing message is
  * never overwritten and a message is never published below one that became visible before it. Returns the document.
  *
- * M.3 — PUBLICATION STAMP. Every document carries `publishNonce` (storage-only, never in a view): the caller's stamp
- * (`options.publishNonce`, the idempotency claim's digest) or a fresh random one. A create conflict is not always
+ * M.3 — PUBLICATION STAMP (opt-in: `options.publishNonce`; the message send path always passes one — the idempotency
+ * claim's digest or a random value — while other users of this function, e.g. notification events whose stored key set
+ * is fixed, keep their documents unchanged). A stamped document carries `publishNonce` (storage-only, never in a
+ * view). A create conflict is not always
  * another writer: when the commit succeeded but its response was lost, the storage client's own retry of the SAME
  * create reports "already exists". The conflicting position is therefore read back first — if it holds THIS
  * request's stamp, that is this request's message and it is returned (before M.3 the same body was published again
@@ -169,17 +171,19 @@ async function createMessage(container, prefix, buildDoc, deps = {}, options = {
   const list = deps.listBlobNames || listBlobNames;
   const read = deps.downloadJsonOrNull || downloadJsonOrNull;
   const now = deps.now || (() => Date.now());
-  const publishNonce = typeof options.publishNonce === "string" && options.publishNonce ? options.publishNonce : crypto.randomBytes(16).toString("hex");
+  const publishNonce = typeof options.publishNonce === "string" && options.publishNonce ? options.publishNonce : "";
   let position = maxListedPosition(await list(container, prefix), prefix) + 1;
   for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++, position++) {
     const messageId = sequencedMessageId(prefix, position);
     const name = prefix + messageId + ".json";
-    const doc = { ...buildDoc(messageId, new Date(now()).toISOString()), publishNonce };   // createdAt = display time only
+    const built = buildDoc(messageId, new Date(now()).toISOString());          // createdAt = display time only
+    const doc = publishNonce ? { ...built, publishNonce } : built;
     try {
       await upload(container, name, doc, null);                           // etag=null → create-only = the commit
       return doc;
     } catch (e) {
       if (!isConcurrencyConflict(e)) { e.publishAmbiguous = true; throw e; }
+      if (!publishNonce) continue;                                         // unstamped: a conflict is another writer
       let existing = null;
       try { existing = await read(container, name); } catch { existing = null; }   // unreadable → not provably ours
       if (existing && existing.publishNonce === publishNonce && existing.messageId === messageId) return existing;

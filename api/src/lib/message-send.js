@@ -8,6 +8,7 @@
 // claim is then kept) and a stale claim taken over all resolve to the ONE message already published (createMessage /
 // findPublishedByStamp), never to a second copy.
 // Every authorization / send-state decision stays in the route BEFORE this call; this module never decides who may send.
+const crypto = require("crypto");
 const { downloadJsonOrNull } = require("./platform-storage");
 const { createMessage, findPublishedByStamp, normalizeStoredMessage } = require("./message-store");
 const { reserveMessageSend, rateLimitedResponse } = require("./message-rate-limit");
@@ -30,7 +31,7 @@ async function publishGuarded(container, { role, senderId, streamPrefix, expecte
     }
     claim = c;
   }
-  const publishNonce = claim ? claimStamp(claim) : undefined;
+  const publishNonce = claim ? claimStamp(claim) : crypto.randomBytes(16).toString("hex");   // keyless sends: stamped too (#4)
   try {
     // M.3 — a stale claim taken over: its request may have published and died before recording it (or its response was
     // lost). That message is replayed, never published a second time.
