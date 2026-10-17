@@ -1,9 +1,11 @@
+import { useState } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
 import ActionMenu from "../ui/ActionMenu";
-import { IconPlus, IconRefresh, IconArchive, IconRestore, IconGraduation } from "../icons";
+import { IconPlus, IconRefresh, IconArchive, IconRestore, IconGraduation, IconEdit, IconSearch } from "../icons";
+import { matchesSearch } from "./rosterText";
 import { normalizeClassStatus } from "../classLifecycle";
 import { getClassProgramCodes } from "../projects/classPrograms";
 import type { Classroom, ClassArchiveView, ProjectOption } from "./types";
@@ -23,14 +25,22 @@ export type ClassesPaneProps = {
   onToggleArchive: (classroom: Classroom) => void;
   onGraduate: (classroom: Classroom) => void;
   onCreate: () => void;
+  /** Edit the class details (name / grade / school year). Omitted → no edit item (older hosts). */
+  onEdit?: (classroom: Classroom) => void;
   onRefresh: () => void;
   loading: boolean;
   busy: boolean;
   fmtDate: (value: string) => string;
 };
 
+// The class filter appears only once the list is long enough to need it; it folds Arabic spelling variants.
+const CLASS_FILTER_THRESHOLD = 7;
+
 export default function ClassesPane(p: ClassesPaneProps) {
   const isActive = (c: Classroom) => normalizeClassStatus(c) === "active";
+  const [query, setQuery] = useState("");
+  const showFilter = p.activeCount + p.archivedCount >= CLASS_FILTER_THRESHOLD;
+  const rows = showFilter && query.trim() ? p.classes.filter(c => matchesSearch([c.name, c.grade, c.schoolYear], query)) : p.classes;
   return (
     <section className="eb-classes-pane" aria-labelledby="eb-classes-title">
       <SectionHeader
@@ -47,9 +57,15 @@ export default function ClassesPane(p: ClassesPaneProps) {
         <button type="button" aria-pressed={p.view === "active"} onClick={() => p.onViewChange("active")}>الصفوف النشطة<span className="eb-segmented-count">{p.activeCount}</span></button>
         <button type="button" aria-pressed={p.view === "archived"} onClick={() => p.onViewChange("archived")}>الأرشيف<span className="eb-segmented-count">{p.archivedCount}</span></button>
       </div>
+      {showFilter && (
+        <div className="student-search-field eb-search-field eb-class-filter">
+          <IconSearch size={16} aria-hidden="true" />
+          <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="تصفية الصفوف بالاسم أو المرحلة أو السنة" aria-label="تصفية الصفوف" />
+        </div>
+      )}
       {p.loading && p.classes.length === 0 && <div className="platform-loading" role="status">جارٍ التحميل...</div>}
       <ul className="class-list eb-class-list">
-        {p.classes.map(classroom => {
+        {rows.map(classroom => {
           const active = isActive(classroom);
           const codes = getClassProgramCodes(classroom);
           const selected = classroom.classId === p.selectedClassId;
@@ -73,6 +89,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
                     })}
                   </div>
                 )}
+                {active && p.onEdit && <button type="button" className="eb-menu-item" onClick={() => p.onEdit?.(classroom)} disabled={p.busy}><IconEdit size={16} />تعديل بيانات الصف</button>}
                 {active && p.isGraduationEligible(classroom) && <button type="button" className="eb-menu-item" onClick={() => p.onGraduate(classroom)} disabled={p.busy}><IconGraduation size={16} />تخريج وأرشفة الصف</button>}
                 <button type="button" className="eb-menu-item" onClick={() => p.onToggleArchive(classroom)} disabled={p.busy}>{active ? <><IconArchive size={16} />أرشفة الصف</> : <><IconRestore size={16} />تفعيل</>}</button>
               </ActionMenu>
@@ -80,6 +97,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
           );
         })}
       </ul>
+      {showFilter && query.trim() && p.classes.length > 0 && rows.length === 0 && <p className="eb-muted">لا توجد صفوف مطابقة للتصفية.</p>}
       {!p.loading && p.classes.length === 0 && (
         p.view === "active"
           ? <EmptyState compact title="لا توجد صفوف نشطة بعد." description="أنشئ أول صف لبدء إضافة الطلاب." action={<button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}><IconPlus size={16} />إنشاء صف</button>} />

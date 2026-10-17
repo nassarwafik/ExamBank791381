@@ -5838,6 +5838,7 @@ function App() {
             onOpenAssignmentTarget={openAssignmentTarget}
             assignmentDrill={assignmentDrill}
             onAssignmentDrillConsumed={consumeAssignmentDrill}
+            onSessionExpired={handleLogout}
           />
         </Suspense>
       )}

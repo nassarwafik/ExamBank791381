@@ -200,7 +200,8 @@ describe("UX-4 request parity — students", () => {
     expect(posts("/api/students").filter(b => b.action === "delete")).toEqual([]);
     await rowAction("علي", "حذف نهائي"); await confirmDialog();
     await screen.findByText("✓ تم حذف الطالب نهائيًا.");
-    expect(posts("/api/students")).toEqual([{ action: "toggleActive", userId: "s1" }, { action: "archive", userId: "s2" }, { action: "unarchive", userId: "s3" }, { action: "delete", userId: "s1" }]);
+    // Classes & Students hardening: toggleActive carries the explicit target state (idempotent on retry / double click).
+    expect(posts("/api/students")).toEqual([{ action: "toggleActive", userId: "s1", active: false }, { action: "archive", userId: "s2" }, { action: "unarchive", userId: "s3" }, { action: "delete", userId: "s1" }]);
   });
   it("REGRESSION nested confirm: StudentDialog → كلمة مرور جديدة → ConfirmDialog: only the confirm is exposed; cancel → no request, focus back on the trigger, StudentDialog active again; confirm → exact resetPassword request", async () => {
     await mount();

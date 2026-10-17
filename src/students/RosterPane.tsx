@@ -6,7 +6,7 @@ import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import ActionMenu from "../ui/ActionMenu";
 import BulkActionBar from "./BulkActionBar";
-import { IconSearch, IconDownload, IconUpload, IconPlus, IconRefresh, IconUser, IconEdit, IconCopy, IconTrash, IconArchive, IconRestore, IconHistory, IconHeart, IconSort, IconChevronDown, IconClose, IconChevronUp } from "../icons";
+import { IconSearch, IconDownload, IconUpload, IconPlus, IconRefresh, IconUser, IconEdit, IconCopy, IconTrash, IconArchive, IconRestore, IconHistory, IconHeart, IconSort, IconChevronDown, IconClose, IconChevronUp, IconPrint } from "../icons";
 import { type CredentialBatch } from "../credentialBatch";
 import type { BulkError, BulkOperation, Classroom, Credential, SortKey, StatusFilter, Student } from "./types";
 
@@ -30,6 +30,8 @@ export type RosterPaneProps = {
   onCopyCredentialBox: () => void; onHideCredentialBox: () => void;
   credentialBatch: CredentialBatch | null;   // already filtered to the selected class by TeacherPlatform
   onToggleBatch: () => void; onDownloadBatch: () => void; onDiscardBatch: () => void; onCopyCredential: (credential: Credential) => void;
+  /** Hand-out formats of the same in-memory batch (optional: older hosts show the JSON download only). */
+  onDownloadBatchCsv?: () => void; onPrintBatch?: () => void;
   bulkErrors: BulkError[];
   statusLabel: (student: Student) => string;
   fmtDate: (value: string) => string;
@@ -107,7 +109,7 @@ export default function RosterPane(p: RosterPaneProps) {
           <input value={p.searchText} onChange={e => p.onSearch(e.target.value)} placeholder="ابحث بالاسم، العائلة أو رقم الهوية" aria-label="ابحث بالاسم، العائلة أو رقم الهوية" />
         </div>
         <label className="eb-field-inline">الحالة<select className="student-status-select" value={p.statusFilter} onChange={e => p.onStatusFilter(e.target.value as StatusFilter)}>
-          <option value="all">كل الحالات</option><option value="active">فعّال</option><option value="disabled">معطّل</option><option value="archived">مؤرشف</option>
+          <option value="all">كل الحالات</option><option value="active">فعّال</option><option value="disabled">معطّل</option><option value="archived">مؤرشف</option><option value="neverLogged">لم يدخلوا بعد</option>
         </select></label>
       </div>
 
@@ -121,6 +123,8 @@ export default function RosterPane(p: RosterPaneProps) {
             <div><h3 className="eb-subheading">بيانات الدخول الجديدة</h3><p className="eb-muted">{p.credentialBatch.credentials.length} طالبًا · احفظ هذه البيانات الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح.</p></div>
             <div className="eb-inline-actions">
               <button type="button" className="eb-button is-small" onClick={p.onToggleBatch} aria-expanded={!p.credentialBatch.collapsed}>{p.credentialBatch.collapsed ? <><IconChevronDown size={14} />إظهار</> : <><IconChevronUp size={14} />طي</>}</button>
+              {p.onPrintBatch && <button type="button" className="eb-button is-small is-primary" onClick={p.onPrintBatch}><IconPrint size={14} />طباعة بطاقات الدخول</button>}
+              {p.onDownloadBatchCsv && <button type="button" className="eb-button is-small" onClick={p.onDownloadBatchCsv}><IconDownload size={14} />تنزيل CSV</button>}
               <button type="button" className="eb-button is-small" onClick={p.onDownloadBatch}><IconDownload size={14} />تنزيل JSON</button>
               <button type="button" className="eb-button is-small" onClick={p.onDiscardBatch}><IconClose size={14} />إغلاق</button>
             </div>

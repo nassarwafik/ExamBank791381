@@ -6,12 +6,18 @@
 // (manage-students.normalizeBulkStudents + createStudentRecord) — so this module only has to turn a file
 // into rows. No XLS/XLSX, no AI parser, no large dependency: a small deterministic CSV reader plus JSON.
 
+import { toAsciiDigits } from "./students/rosterText";
+
 export type ParsedBulkStudent = { firstName: string; familyName: string; identityNumber: string };
 
 // Digits only; a short id is left-padded to 9 (matches the server's normalizeIdentityNumber). A longer
 // run of digits is kept as-is so the server can reject it as invalid rather than silently truncating.
+// Arabic-Indic digits are digits (mapped first, like the server); a value with letters is kept as text so the preview
+// marks it invalid instead of silently stripping the letters into a different, zero-padded identity.
 export function normalizeImportedIdentity(value: unknown): string {
-  const digits = String(value ?? "").replace(/\D/g, "");
+  const text = toAsciiDigits(String(value ?? "")).trim();
+  if (/[^\d\s\-./]/.test(text)) return text.replace(/\s+/g, "");
+  const digits = text.replace(/\D/g, "");
   if (!digits) return "";
   return digits.length <= 9 ? digits.padStart(9, "0") : digits;
 }
@@ -48,9 +54,21 @@ const FULLNAME_HEADERS = new Set([
   "שםמלא"
 ].map(normalizeHeader));
 
-// Minimal RFC-4180-ish CSV row splitter: handles quoted fields, escaped "" quotes, and commas/newlines
+// Excel writes CSV with the list separator of the OS locale: "," in most locales, ";" in many Arabic/European ones,
+// and "Unicode text" exports are tab-separated. The delimiter is the candidate that occurs most often (outside quotes)
+// in the header line; "," wins ties so canonical files are read exactly as before.
+function detectDelimiter(text: string): string {
+  const header = text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0] || "";
+  const counts: Record<string, number> = { ",": 0, ";": 0, "\t": 0 };
+  let inQuotes = false;
+  for (const ch of header) { if (ch === '"') inQuotes = !inQuotes; else if (!inQuotes && ch in counts) counts[ch]++; }
+  return [";", "\t"].reduce((best, d) => counts[d] > counts[best] ? d : best, ",");
+}
+
+// Minimal RFC-4180-ish CSV row splitter: handles quoted fields, escaped "" quotes, and delimiters/newlines
 // inside quotes. Returns an array of rows, each an array of cell strings. Strips a leading BOM.
 function parseCsvRows(text: string): string[][] {
+  const delimiter = detectDelimiter(text);
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -66,7 +84,7 @@ function parseCsvRows(text: string): string[][] {
       continue;
     }
     if (ch === '"') { inQuotes = true; continue; }
-    if (ch === ",") { row.push(cell); cell = ""; continue; }
+    if (ch === delimiter) { row.push(cell); cell = ""; continue; }
     if (ch === "\r") continue;
     if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; continue; }
     cell += ch;
@@ -132,6 +150,26 @@ function looksLikeCsv(fileName: string, text: string): boolean {
   const trimmed = text.trim();
   return !(trimmed.startsWith("{") || trimmed.startsWith("["));
 }
+
+/**
+ * Reads a picked roster file as text. UTF-8 is tried first (strictly); a file that is not valid UTF-8 is decoded as
+ * Windows-1256 — what Excel's plain "CSV" export writes on an Arabic Windows — so names are not turned into "�".
+ */
+export async function readImportFileText(file: Blob): Promise<string> {
+  if (typeof file.arrayBuffer !== "function" || typeof TextDecoder === "undefined") return file.text();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+  catch {
+    try { return new TextDecoder("windows-1256").decode(bytes); }
+    catch { return new TextDecoder("utf-8").decode(bytes); }
+  }
+}
+
+/**
+ * The import template: the recognized Arabic headers only (no sample row that could be imported by mistake), UTF-8 with
+ * a BOM so Excel opens the Arabic headers correctly.
+ */
+export const IMPORT_TEMPLATE_CSV = "\uFEFF" + "الاسم,اسم العائلة,رقم الهوية\r\n";
 
 // Parse a picked file's text into normalized rows, dropping fully-empty rows. Throws a friendly (Arabic)
 // error for malformed input; the empty-result case is left to the caller to message.

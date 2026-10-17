@@ -34,6 +34,15 @@
 .eb-classes-pane{ position:sticky; inset-block-start:var(--eb-space-4); }
 .eb-students-workspace .eb-section-header{ margin-bottom:0; }
 
+/* ---------- Classes & Students hardening: dismissible notice, in-dialog errors, class filter, password reveal ---------- */
+.eb-dismissible{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-3); }
+.eb-notice-close{ flex:0 0 auto; }
+.eb-dialog-error{ margin:0 0 var(--eb-space-3); }
+.eb-class-filter input{ width:100%; }
+.eb-password-field{ display:flex; align-items:flex-end; gap:var(--eb-space-2); }
+.eb-password-field > label{ flex:1 1 auto; min-width:0; }
+.eb-password-field > .eb-button{ flex:0 0 auto; min-height:38px; }
+
 /* ---------- Segmented view switch (buttons with aria-pressed) ---------- */
 .eb-segmented{ display:inline-flex; gap:2px; padding:3px; background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
 .eb-segmented > button{

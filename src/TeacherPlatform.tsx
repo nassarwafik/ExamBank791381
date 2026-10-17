@@ -14,7 +14,7 @@ import { TodaySlot, type TodayScope } from "./teacher/todaySlot";
 import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "./projects/drillTarget";
 import type { AssignmentDrill, AssignmentDrillTarget } from "./assignments/drillTarget";
 import type {TeacherNavId} from "./shell/teacherNav";
-import {parseBulkStudents} from "./bulkStudentsParse";
+import {parseBulkStudents,readImportFileText,IMPORT_TEMPLATE_CSV} from "./bulkStudentsParse";
 import {normalizeClassStatus} from "./classLifecycle";
 import {getClassProgramCodes} from "./projects/classPrograms";
 import {useConfirm} from "./ui/useConfirm";
@@ -23,7 +23,9 @@ import RosterPane from "./students/RosterPane";
 import ClassLearningMaterialsPanel from "./students/ClassLearningMaterialsPanel";
 import {classLearningMaterials} from "./students/classLearningMaterials";
 import StudentDialog from "./students/StudentDialog";
-import {CreateClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialog} from "./students/StudentForms";
+import {CreateClassDialog,EditClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialog} from "./students/StudentForms";
+import {identityDigits,matchesSearch,isTwelfthGrade,defaultSchoolYear,safeFileName} from "./students/rosterText";
+import {buildCredentialsCsv,buildCredentialCardsHtml,printHtmlDocument} from "./students/credentialSheets";
 import type {ClassArchiveView,Classroom,ClassLearningMaterial,LearningCatalogCourse,ProjectOption,Student,Credential,BulkStudent,BulkError,ImportPreviewRow,SubmittedAssignment,StudentProfile,SortKey,StatusFilter,ProfileSection} from "./students/types";
 import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
 import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needsAuthoritativeReload} from "./rosterPatch";
@@ -48,12 +50,15 @@ type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:Wo
   * the assignments workspace and publishes the sequenced drill; AssignmentsPanel applies it once and reports it consumed. */
  onOpenAssignmentTarget?:(target:AssignmentDrillTarget)=>void;
  assignmentDrill?:AssignmentDrill|null;
- onAssignmentDrillConsumed?:(seq:number)=>void};
+ onAssignmentDrillConsumed?:(seq:number)=>void;
+ /** The shell's logout: an authoritative 401 from this workspace's API ends the teacher session (like App's apiRequest). */
+ onSessionExpired?:()=>void};
 type ApiError={ok?:boolean;error?:string};
-type WorkspaceDialog="none"|"createClass"|"addStudent"|"import";
+type WorkspaceDialog="none"|"createClass"|"addStudent"|"import"|"editClass";
 
-const onlyDigits=(value:string)=>value.replace(/\D/g,"").slice(0,9);
-const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar"):"—";
+// Arabic-Indic digits typed on an Arabic keyboard are digits too (the server maps them the same way).
+const onlyDigits=identityDigits;
+const fmtDate=(value:string)=>{if(!value)return "—";const d=new Date(value);return Number.isNaN(d.getTime())?"—":d.toLocaleString("ar")};
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 function splitName(value:unknown){
  const parts=String(value??"").trim().split(/\s+/).filter(Boolean);
@@ -97,7 +102,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
 
  const [newClassName,setNewClassName]=useState("");
  const [newClassGrade,setNewClassGrade]=useState("");
- const [newSchoolYear,setNewSchoolYear]=useState(String(new Date().getFullYear())+"-"+String(new Date().getFullYear()+1));
+ // From August a new school year starts (a class created in February belongs to the year that began last autumn).
+ const [newSchoolYear,setNewSchoolYear]=useState(()=>defaultSchoolYear());
+ const [editClass,setEditClass]=useState<{classId:string;name:string;grade:string;schoolYear:string;original:{name:string;grade:string;schoolYear:string}}|null>(null);
 
  const [newFirstName,setNewFirstName]=useState("");
  const [newFamilyName,setNewFamilyName]=useState("");
@@ -132,6 +139,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
  const [profileBusy,setProfileBusy]=useState(false);
  const [passwordReveal,setPasswordReveal]=useState<{password:string;secondsLeft:number}|null>(null);
  const passwordRevealTimer=useRef<number|null>(null);
+ // The profile request generation: a profile response is committed only if no newer profile request (another student,
+ // a class switch, a close) superseded it — a late response for student A never opens over student B or another class.
+ const profileSeq=useRef(0);
 
  const [profileSection,setProfileSection]=useState<ProfileSection>("summary");
  const [dialog,setDialog]=useState<WorkspaceDialog>("none");
@@ -145,10 +155,8 @@ function TeacherPlatform(props:TeacherPlatformProps){
  const activeClasses=useMemo(()=>classes.filter(c=>normalizeClassStatus(c)==="active"),[classes]);
  const archivedClasses=useMemo(()=>classes.filter(c=>normalizeClassStatus(c)==="archived"),[classes]);
  const visibleClasses=classArchiveView==="active"?activeClasses:archivedClasses;
- function isGraduationEligible(classroom:Classroom){
-  const grade=classroom.grade||"";
-  return grade.includes("12")||grade.includes("الثاني عشر");
- }
+ // "12", "١٢", "12-ب", "الثاني عشر", "ثاني عشر" (never "112"): see rosterText.isTwelfthGrade.
+ function isGraduationEligible(classroom:Classroom){return isTwelfthGrade(classroom.grade||"")}
 
  const stats=useMemo(()=>{
   const current=students.filter(s=>!s.archived);
@@ -162,14 +170,14 @@ function TeacherPlatform(props:TeacherPlatformProps){
  },[students]);
 
  const visibleStudents=useMemo(()=>{
-  const q=searchText.trim().toLocaleLowerCase("ar");
+  // Arabic-aware search: hamza / taa-marbuta / alef-maqsura variants, diacritics and Arabic digits fold together, and
+  // every typed word must match ("احمد علي" finds "أحمد العلي").
   const filtered=students.filter(student=>{
    if(statusFilter==="active"&&(student.archived||!student.active))return false;
    if(statusFilter==="disabled"&&(student.archived||student.active))return false;
    if(statusFilter==="archived"&&!student.archived)return false;
-   if(!q)return true;
-   const hay=[student.firstName,student.familyName,student.displayName,student.identityNumber,student.code].join(" ").toLocaleLowerCase("ar");
-   return hay.includes(q);
+   if(statusFilter==="neverLogged"&&(student.archived||student.lastLoginAt))return false;
+   return matchesSearch([student.firstName,student.familyName,student.displayName,student.identityNumber,student.code],searchText);
   });
 
   const factor=sortAsc?1:-1;
@@ -181,14 +189,24 @@ function TeacherPlatform(props:TeacherPlatformProps){
   });
  },[students,searchText,statusFilter,sortKey,sortAsc]);
 
+ // A bulk action applies only to students the teacher can SEE: rows hidden by the search / status filter are never part
+ // of the effective selection (a hidden selected row could otherwise be deleted without being visible).
+ const visibleSelectedIds=useMemo(()=>{const visible=new Set(visibleStudents.map(s=>s.userId));return selectedIds.filter(id=>visible.has(id))},[selectedIds,visibleStudents]);
+
  async function teacherApi<T>(url:string,options:RequestInit={}):Promise<T>{
   const headers=new Headers(options.headers||{});
   headers.set("Content-Type","application/json");
   headers.set("x-builder-token",token);
   headers.set("Authorization","Bearer "+token);
-  const response=await fetch(url,{...options,headers});
-  const result=await response.json() as T&ApiError;
-  if(!response.ok)throw new Error(result.error||"حدث خطأ.");
+  let response:Response;
+  try{response=await fetch(url,{...options,headers})}
+  catch{throw new Error("تعذر الاتصال بالخادم. تحقق من الاتصال وأعد المحاولة.")}
+  // A non-JSON body (gateway 502 page, cold-start HTML) is never surfaced as a parser error in English.
+  let result:(T&ApiError)|null=null;
+  try{result=await response.json() as T&ApiError}catch{result=null}
+  if(response.status===401){props.onSessionExpired?.();throw new Error(result?.error||"انتهت الجلسة. سجّل الدخول من جديد.")}
+  if(!response.ok)throw new Error(result?.error||(response.status>=500?"الخادم غير متاح حاليًا. أعد المحاولة بعد قليل.":"حدث خطأ."));
+  if(!result)throw new Error("استجابة غير متوقعة من الخادم. أعد المحاولة.");
   return result;
  }
 
@@ -255,6 +273,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
  useEffect(()=>{if(props.projects!==undefined)return;teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{
   selectedClassRef.current=selectedClassId;
+  profileSeq.current++;setProfileBusy(false);
+  // The move target never carries over to another class (it could equal the newly selected class).
+  setBulkTargetClassId("");
   setSelectedIds([]);setProfile(null);setEditingStudent(null);setReviewTarget(null);setHistoryDeadlineFor(null);setDialog("none");cancelPending();clearPasswordReveal();
   // Single-student credential box + bulk errors are cleared so a plaintext password / error never shows
   // under a different class. The bulk credentialBatch is NOT cleared here — it stays in memory and is
@@ -293,6 +314,23 @@ function TeacherPlatform(props:TeacherPlatformProps){
    setSelectedClassId(result.classroom.classId);
    setNotice("✓ تم إنشاء الصف.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الصف.")}
+  finally{setActionBusy(false)}
+ }
+
+ function openEditClass(classroom:Classroom){
+  setError("");setNotice("");
+  const original={name:classroom.name||"",grade:classroom.grade||"",schoolYear:classroom.schoolYear||""};
+  setEditClass({classId:classroom.classId,...original,original});setDialog("editClass");
+ }
+ async function saveClassEdit(){
+  if(!editClass||!editClass.name.trim()||actionBusy)return;
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   const result=await teacherApi<{ok:true;changed?:boolean}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"update",classId:editClass.classId,name:editClass.name.trim(),grade:editClass.grade.trim(),schoolYear:editClass.schoolYear.trim()})});
+   setDialog("none");setEditClass(null);
+   await loadClasses();
+   setNotice(result.changed===false?"لم تتغير بيانات الصف.":"✓ تم حفظ بيانات الصف.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ بيانات الصف.")}
   finally{setActionBusy(false)}
  }
 
@@ -443,7 +481,8 @@ function TeacherPlatform(props:TeacherPlatformProps){
   setActionBusy(true);setError("");setNotice("");
   try{
    const sourceClassId=selectedClassId;
-   const result=await teacherApi<{ok:true;active?:unknown}>("/api/students",{method:"POST",body:JSON.stringify({action:"toggleActive",userId:student.userId})});
+   // The explicit target state makes a retry / double click idempotent (the server never flips it back).
+   const result=await teacherApi<{ok:true;active?:unknown}>("/api/students",{method:"POST",body:JSON.stringify({action:"toggleActive",userId:student.userId,active:!student.active})});
    // Roadmap #32: login eligibility never touches the class count index — patch `active` only, no reloads.
    if(needsAuthoritativeReload("toggleActive",result))await reloadAuthoritative(sourceClassId);
    else if(stillSelected(sourceClassId))setStudents(prev=>mergeStudentRow(prev,{userId:student.userId,active:result.active===true}));
@@ -553,7 +592,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
   setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName(file?.name||"");setError("");setNotice("");
   if(!file)return;
   try{
-   const {students:normalized}=parseBulkStudents(await file.text(),file.name);
+   const {students:normalized}=parseBulkStudents(await readImportFileText(file),file.name);
    if(!normalized.length)throw new Error("لم أجد بيانات طلاب في الملف.");
    setBulkStudents(normalized);
    setPreviewBusy(true);
@@ -573,14 +612,16 @@ function TeacherPlatform(props:TeacherPlatformProps){
   if(!selectedClassId||!validRows.length||actionBusy)return;
   if(!(await confirmReplaceCredentialBatch()))return;
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
+  const sourceClassId=selectedClassId;
   try{
    const payload=validRows.map(x=>({firstName:x.firstName,familyName:x.familyName,identityNumber:x.identityNumber}));
    const result=await teacherApi<{ok:true;imported:number;failed:number;credentials:Credential[];errors:BulkError[];rosterSynced?:boolean}>("/api/students",{
-    method:"POST",body:JSON.stringify({action:"bulkImport",classId:selectedClassId,students:payload})
+    method:"POST",body:JSON.stringify({action:"bulkImport",classId:sourceClassId,students:payload})
    });
    if((result.credentials||[]).length)showCredentialBatch(result.credentials||[]);
    setBulkErrors(result.errors||[]);
-   await Promise.all([loadStudents(selectedClassId),loadClasses()]);
+   // Sequential, like reloadAuthoritative: the roster read repairs the class count index BEFORE the classes read.
+   await reloadAuthoritative(sourceClassId);
    setNotice(withRosterNote(result,"✓ تم استيراد "+result.imported+" طالبًا"+(result.failed?"، وتعذر استيراد "+result.failed+".":".")));
    setBulkStudents([]);setBulkFileName("");setImportPreview([]);setDialog("none");
   }catch(e){setError(e instanceof Error?e.message:"تعذر استيراد الطلاب.")}
@@ -611,9 +652,26 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
-  a.href=url;a.download=(credentialBatch.className||"class")+"-student-credentials.json";a.click();
+  a.href=url;a.download=safeFileName(credentialBatch.className,"class")+"-student-credentials.json";a.click();
   URL.revokeObjectURL(url);
  }
+
+ function downloadBlob(content:string,type:string,fileName:string){
+  const blob=new Blob([content],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=fileName;a.click();
+  URL.revokeObjectURL(url);
+ }
+ function downloadCredentialsCsv(){
+  if(!credentialBatch||!credentialBatch.credentials.length)return;
+  downloadBlob(buildCredentialsCsv(credentialBatch),"text/csv;charset=utf-8",safeFileName(credentialBatch.className,"class")+"-student-credentials.csv");
+ }
+ function printCredentialCards(){
+  if(!credentialBatch||!credentialBatch.credentials.length)return;
+  printHtmlDocument(buildCredentialCardsHtml(credentialBatch,"ادخل إلى المنصة برقم الهوية وكلمة المرور أعلاه."));
+ }
+ function downloadImportTemplate(){downloadBlob(IMPORT_TEMPLATE_CSV,"text/csv;charset=utf-8","students-import-template.csv")}
 
  function exportCsv(){
   const rows=[
@@ -624,19 +682,26 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
-  a.href=url;a.download=(selectedClass?.name||"students")+"-students.csv";a.click();
+  a.href=url;a.download=safeFileName(selectedClass?.name||"","students")+"-students.csv";a.click();
   URL.revokeObjectURL(url);
  }
 
- async function openProfile(student:Student){
-  clearPasswordReveal();setProfileSection("summary");setEditingStudent(null);setDialog("none");
+ // ONE profile loader for both entry points. Only the newest request may commit (profileSeq), and only while its class
+ // is still selected — a slow response can never open a profile over another student or another class.
+ async function loadProfile(userId:string,section:ProfileSection,failure:string){
+  const seq=++profileSeq.current;
+  const classAtStart=selectedClassRef.current;
+  clearPasswordReveal();setProfileSection(section);setEditingStudent(null);setDialog("none");
   setProfileBusy(true);setError("");
   try{
-   const result=await teacherApi<{ok:true;profile:StudentProfile}>("/api/students?profileUserId="+encodeURIComponent(student.userId));
+   const result=await teacherApi<{ok:true;profile:StudentProfile}>("/api/students?profileUserId="+encodeURIComponent(userId));
+   if(seq!==profileSeq.current||selectedClassRef.current!==classAtStart)return;
    setProfile(result.profile);
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل تفاصيل الطالب.")}
-  finally{setProfileBusy(false)}
+  }catch(e){if(seq===profileSeq.current)setError(e instanceof Error?e.message:failure)}
+  finally{if(seq===profileSeq.current)setProfileBusy(false)}
  }
+ function openProfile(student:Student){return loadProfile(student.userId,"summary","تعذر تحميل تفاصيل الطالب.")}
+ function closeProfile(){profileSeq.current++;setProfileBusy(false);clearPasswordReveal();setProfile(null);setHistoryDeadlineFor(null);setError("")}
 
  async function resetProfilePassword(){
   if(!profile||actionBusy)return;
@@ -649,22 +714,15 @@ function TeacherPlatform(props:TeacherPlatformProps){
   finally{setActionBusy(false)}
  }
 
- async function openHistory(userId:string){
-  clearPasswordReveal();setProfileSection("history");setEditingStudent(null);setDialog("none");
-  setProfileBusy(true);setError("");
-  try{
-   const result=await teacherApi<{ok:true;profile:StudentProfile}>("/api/students?profileUserId="+encodeURIComponent(userId));
-   setProfile(result.profile);
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل سجل الوظائف.")}
-  finally{setProfileBusy(false)}
- }
+ function openHistory(userId:string){return loadProfile(userId,"history","تعذر تحميل سجل الوظائف.")}
 
  async function historyAllowRetry(item:SubmittedAssignment){
   if(!profile||actionBusy)return;
   setActionBusy(true);setError("");
   try{
-   const result=await teacherApi<{ok:true;allowedAttempts:number}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"allowRetry",assignmentId:item.assignmentId,studentId:profile.student.userId})});
-   setProfile(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,allowedAttempts:result.allowedAttempts}:x)}:h);
+   const studentId=profile.student.userId;
+   const result=await teacherApi<{ok:true;allowedAttempts:number}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"allowRetry",assignmentId:item.assignmentId,studentId})});
+   setProfile(h=>h&&h.student.userId===studentId?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,allowedAttempts:result.allowedAttempts}:x)}:h);
    setNotice("✓ تم السماح بمحاولة إضافية.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر السماح بالمحاولة.")}
   finally{setActionBusy(false)}
@@ -678,8 +736,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
   if(!profile||!historyDeadlineValue||actionBusy)return;
   setActionBusy(true);setError("");
   try{
-   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:profile.student.userId,dueAtOverride:new Date(historyDeadlineValue).toISOString()})});
-   setProfile(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:result.dueAtOverride||x.dueAt}:x)}:h);
+   const studentId=profile.student.userId;
+   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId,dueAtOverride:new Date(historyDeadlineValue).toISOString()})});
+   setProfile(h=>h&&h.student.userId===studentId?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:result.dueAtOverride||x.dueAt}:x)}:h);
    setHistoryDeadlineFor(null);
    setNotice("✓ تم تمديد الموعد.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ التمديد.")}
@@ -690,8 +749,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
   if(!profile||actionBusy)return;
   setActionBusy(true);setError("");
   try{
-   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:profile.student.userId,dueAtOverride:null})});
-   setProfile(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:x.dueAt}:x)}:h);
+   const studentId=profile.student.userId;
+   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId,dueAtOverride:null})});
+   setProfile(h=>h&&h.student.userId===studentId?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:x.dueAt}:x)}:h);
    setHistoryDeadlineFor(null);
    setNotice("✓ تم إلغاء التمديد.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر إلغاء التمديد.")}
@@ -710,13 +770,17 @@ function TeacherPlatform(props:TeacherPlatformProps){
  }
 
  async function runBulkAction(operation:"activate"|"deactivate"|"archive"|"unarchive"|"move"|"resetpasswords"|"delete"){
-  if(!selectedIds.length||actionBusy)return;
+  const userIds=visibleSelectedIds;
+  if(!userIds.length||actionBusy)return;
 
-  const count=selectedIds.length;
+  const count=userIds.length;
   if(operation==="move"&&!bulkTargetClassId){setError("اختر الصف الهدف أولًا.");return}
 
+  // The destructive confirmation names who is affected (up to ten names, then a count).
+  const names=students.filter(s=>userIds.includes(s.userId)).map(s=>s.displayName);
+  const nameList=names.length?"\n\n"+names.slice(0,10).join("، ")+(names.length>10?" و"+(names.length-10)+" آخرين":""):"";
   let question="";
-  if(operation==="delete")question="⚠️ حذف نهائي لـ "+count+" طالب؟\n\nالأرشفة أكثر أمانًا إذا كنت تريد الاحتفاظ بالبيانات.";
+  if(operation==="delete")question="⚠️ حذف نهائي لـ "+count+" طالب؟"+nameList+"\n\nالأرشفة أكثر أمانًا إذا كنت تريد الاحتفاظ بالبيانات.";
   else if(operation==="archive")question="أرشفة "+count+" طالب مع منع تسجيل الدخول والاحتفاظ بالبيانات؟";
   else if(operation==="unarchive")question="استعادة "+count+" طالب من الأرشيف وتفعيل حساباتهم؟";
   else if(operation==="resetpasswords")question="إنشاء كلمات مرور جديدة لـ "+count+" طالب؟ ستظهر الكلمات الجديدة مرة واحدة بعد العملية.";
@@ -725,14 +789,17 @@ function TeacherPlatform(props:TeacherPlatformProps){
   if(operation==="resetpasswords"&&!(await confirmReplaceCredentialBatch()))return;
 
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
+  const sourceClassId=selectedClassId;
   try{
    const result=await teacherApi<{ok:true;processed:number;failed:number;credentials:Credential[];errors:BulkError[];rosterSynced?:boolean}>("/api/students",{
     method:"POST",
-    body:JSON.stringify({action:"bulkAction",operation,userIds:selectedIds,targetClassId:bulkTargetClassId})
+    body:JSON.stringify({action:"bulkAction",operation,userIds,targetClassId:bulkTargetClassId})
    });
    if(result.credentials?.length)showCredentialBatch(result.credentials);
-   if(result.errors?.length)setBulkErrors(result.errors);
-   await Promise.all([loadStudents(selectedClassId),loadClasses()]);
+   if(result.errors?.length)setBulkErrors(result.errors.map(x=>({...x,displayName:x.displayName||students.find(s=>s.userId===x.userId)?.displayName||x.userId})));
+   // Sequential reconcile (roster reads repair the count indexes BEFORE the classes read); a move repairs BOTH classes.
+   if(operation==="move")await reloadAuthoritativeMove(sourceClassId,bulkTargetClassId);
+   else await reloadAuthoritative(sourceClassId);
    setSelectedIds([]);
    setNotice(withRosterNote(result,"✓ نُفذت العملية على "+result.processed+" طالب"+(result.failed?"، وفشلت لدى "+result.failed+".":".")));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية الجماعية.")}
@@ -740,7 +807,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
  }
 
  function toggleSort(key:SortKey){if(sortKey===key)setSortAsc(x=>!x);else{setSortKey(key);setSortAsc(true)}}
- function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName("");setDialog("import")}
+ function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName("");setError("");setDialog("import")}
 
  // The Suspense boundary wraps ONLY the dashboard body: the teacher shell, sidebar and this workspace wrapper stay mounted
  // while the chunk loads, and the fallback is a local status line inside the same inner container (never a blank page).
@@ -759,10 +826,17 @@ function TeacherPlatform(props:TeacherPlatformProps){
  const canCreateStudent=Boolean(newFirstName.trim()&&newFamilyName.trim()&&validIdentity(newIdentityNumber));
  const canSaveEdit=Boolean(editFirstName.trim()&&editFamilyName.trim()&&validIdentity(editIdentityNumber)&&editClassId);
  const visibleBatch=credentialBatch&&credentialBatchVisible(credentialBatch,selectedClassId)?credentialBatch:null;
+ const canSaveClassEdit=Boolean(editClass&&editClass.name.trim()&&(editClass.name.trim()!==editClass.original.name||editClass.grade.trim()!==editClass.original.grade||editClass.schoolYear.trim()!==editClass.original.schoolYear));
+ // While one of this workspace's dialogs is open, its error is rendered INSIDE that dialog (the page banner would sit
+ // under the modal backdrop); closing the dialog clears it so a stale rejection never reappears on the page.
+ const dialogWithError=dialog!=="none"||editingStudent!==null||profile!==null;
+ const closeDialog=()=>{setDialog("none");setEditClass(null);setError("")};
+ const dialogError=dialogWithError?error:"";
 
  return <section className="teacher-platform eb-students-workspace" dir="rtl"><div className="teacher-platform-inner">
-  {error&&<div className="platform-error" role="alert">{error}</div>}
-  {notice&&<div className="platform-notice" role="status" aria-live="polite">{notice}</div>}
+  {error&&!dialogWithError&&<div className="platform-error" role="alert">{error}</div>}
+  {notice&&<div className="platform-notice eb-dismissible" role="status" aria-live="polite"><span>{notice}</span><button type="button" className="eb-link-button eb-notice-close" onClick={()=>setNotice("")} aria-label="إخفاء الرسالة">إخفاء</button></div>}
+  {profileBusy&&<div className="platform-loading" role="status">جارٍ تحميل ملف الطالب...</div>}
 
   <div className="eb-students-layout">
    <ClassesPane
@@ -772,7 +846,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
     projects={projects} projectTitle={projectTitle} isGraduationEligible={isGraduationEligible}
     onToggleProject={(classroom,code,enable)=>void toggleClassProject(classroom,code,enable)}
     onToggleArchive={classroom=>void toggleClassArchive(classroom)} onGraduate={classroom=>void graduateAndArchiveClass(classroom)}
-    onCreate={()=>setDialog("createClass")} onRefresh={()=>void reloadAuthoritative(selectedClassId)}
+    onCreate={()=>{setError("");setDialog("createClass")}} onEdit={openEditClass} onRefresh={()=>void reloadAuthoritative(selectedClassId)}
     loading={loading} busy={actionBusy} fmtDate={fmtDate}/>
 
    <RosterPane
@@ -780,8 +854,8 @@ function TeacherPlatform(props:TeacherPlatformProps){
     loading={loading} busy={actionBusy}
     searchText={searchText} onSearch={setSearchText} statusFilter={statusFilter} onStatusFilter={setStatusFilter}
     sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort}
-    selectedIds={selectedIds} onToggleSelected={toggleSelected} onToggleSelectVisible={toggleSelectVisible} onClearSelection={()=>setSelectedIds([])}
-    onAddStudent={()=>setDialog("addStudent")} onImport={openImportDialog} onRefresh={()=>void reloadAuthoritative(selectedClassId)} onExportCsv={exportCsv}
+    selectedIds={visibleSelectedIds} onToggleSelected={toggleSelected} onToggleSelectVisible={toggleSelectVisible} onClearSelection={()=>setSelectedIds([])}
+    onAddStudent={()=>{setError("");setDialog("addStudent")}} onImport={openImportDialog} onRefresh={()=>void reloadAuthoritative(selectedClassId)} onExportCsv={exportCsv}
     onOpenProfile={student=>void openProfile(student)} onOpenHistory={student=>void openHistory(student.userId)} onEdit={startEdit}
     onCopyIdentity={student=>void copyText(student.identityNumber||student.code,"✓ تم نسخ رقم الهوية.")}
     onToggleActive={student=>void toggleStudent(student)} onArchive={student=>void archiveStudent(student)} onDelete={student=>void deleteStudent(student)}
@@ -791,6 +865,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
     onHideCredentialBox={()=>setCredentialBox(null)}
     credentialBatch={visibleBatch}
     onToggleBatch={()=>setCredentialBatch(b=>b?toggleCredentialBatchCollapsed(b):b)} onDownloadBatch={downloadCredentials} onDiscardBatch={()=>void discardCredentialBatch()}
+    onDownloadBatchCsv={downloadCredentialsCsv} onPrintBatch={printCredentialCards}
     onCopyCredential={c=>void copyText(credentialText(((c.firstName||"")+" "+(c.familyName||"")).trim(),c.identityNumber||c.code,c.password),"✓ تم نسخ بيانات دخول الطالب.")}
     bulkErrors={bulkErrors} statusLabel={statusLabel} fmtDate={fmtDate} splitName={splitName}/>
   </div>
@@ -803,23 +878,26 @@ function TeacherPlatform(props:TeacherPlatformProps){
    onToggleModule={(classroom,courseId,moduleId,publish)=>void toggleLearningModule(classroom,courseId,moduleId,publish)}
    onRemoveCourse={(classroom,courseId)=>void removeLearningCourse(classroom,courseId)}/>
 
-  <CreateClassDialog open={dialog==="createClass"} onClose={()=>setDialog("none")} name={newClassName} grade={newClassGrade} schoolYear={newSchoolYear}
-   onName={setNewClassName} onGrade={setNewClassGrade} onSchoolYear={setNewSchoolYear} onSubmit={()=>void createClass()} busy={actionBusy}/>
-  <AddStudentDialog open={dialog==="addStudent"} onClose={()=>setDialog("none")} classroom={selectedClass} classActive={classActive}
+  <CreateClassDialog open={dialog==="createClass"} onClose={closeDialog} name={newClassName} grade={newClassGrade} schoolYear={newSchoolYear}
+   onName={setNewClassName} onGrade={setNewClassGrade} onSchoolYear={setNewSchoolYear} onSubmit={()=>void createClass()} busy={actionBusy} error={dialog==="createClass"?dialogError:""}/>
+  <EditClassDialog open={dialog==="editClass"&&editClass!==null} onClose={closeDialog} name={editClass?.name||""} grade={editClass?.grade||""} schoolYear={editClass?.schoolYear||""}
+   onName={v=>setEditClass(c=>c?{...c,name:v}:c)} onGrade={v=>setEditClass(c=>c?{...c,grade:v}:c)} onSchoolYear={v=>setEditClass(c=>c?{...c,schoolYear:v}:c)}
+   onSubmit={()=>void saveClassEdit()} busy={actionBusy} canSubmit={canSaveClassEdit} error={dialog==="editClass"?dialogError:""}/>
+  <AddStudentDialog open={dialog==="addStudent"} onClose={closeDialog} classroom={selectedClass} classActive={classActive} error={dialog==="addStudent"?dialogError:""}
    firstName={newFirstName} familyName={newFamilyName} identityNumber={newIdentityNumber} password={newStudentPassword}
    onFirstName={setNewFirstName} onFamilyName={setNewFamilyName} onIdentityNumber={v=>setNewIdentityNumber(onlyDigits(v))} onPassword={setNewStudentPassword}
    canSubmit={canCreateStudent} onSubmit={()=>void createStudent()} busy={actionBusy}/>
-  <ImportStudentsDialog open={dialog==="import"} onClose={()=>setDialog("none")} classroom={selectedClass} classActive={classActive}
-   fileName={bulkFileName} previewBusy={previewBusy} preview={importPreview} onFile={file=>void readBulkFile(file)} onImport={()=>void importBulkStudents()} busy={actionBusy}/>
-  <EditStudentDialog open={editingStudent!==null} onClose={()=>setEditingStudent(null)}
+  <ImportStudentsDialog open={dialog==="import"} onClose={closeDialog} classroom={selectedClass} classActive={classActive}
+   fileName={bulkFileName} previewBusy={previewBusy} preview={importPreview} onFile={file=>void readBulkFile(file)} onImport={()=>void importBulkStudents()} busy={actionBusy}
+   error={dialog==="import"?dialogError:""} onDownloadTemplate={downloadImportTemplate}/>
+  <EditStudentDialog open={editingStudent!==null} onClose={()=>{setEditingStudent(null);setError("")}} error={editingStudent!==null?dialogError:""}
    classes={classes.filter(c=>isActiveClass(c)||c.classId===(editingStudent?.classId||""))}
    firstName={editFirstName} familyName={editFamilyName} identityNumber={editIdentityNumber} classId={editClassId} password={editPassword}
    onFirstName={setEditFirstName} onFamilyName={setEditFamilyName} onIdentityNumber={v=>setEditIdentityNumber(onlyDigits(v))} onClassId={setEditClassId} onPassword={setEditPassword}
    canSubmit={canSaveEdit} onSubmit={()=>void saveStudentEdit()} busy={actionBusy}
    photo={editingStudent?{token,student:editingStudent,onChange:meta=>{const userId=editingStudent.userId;setEditingStudent(prev=>prev&&prev.userId===userId?{...prev,profilePhoto:meta}:prev);setStudents(prev=>mergeStudentRow(prev,{userId,profilePhoto:meta}));}}:undefined}/>
 
-  {profileBusy&&<div className="platform-loading" role="status">جارٍ تحميل ملف الطالب...</div>}
-  {profile&&<StudentDialog profile={profile} section={profileSection} onClose={()=>{clearPasswordReveal();setProfile(null);setHistoryDeadlineFor(null)}}
+  {profile&&<StudentDialog profile={profile} section={profileSection} onClose={closeProfile} error={editingStudent===null&&dialog==="none"?dialogError:""}
    busy={actionBusy} suspended={reviewTarget!==null}
    passwordReveal={passwordReveal} onResetPassword={()=>void resetProfilePassword()} onCopyPassword={password=>void copyText(password,"✓ تم نسخ كلمة المرور.")}
    onReview={item=>setReviewTarget({assignmentId:item.assignmentId,studentId:profile.student.userId,attemptNumber:item.latestAttemptNumber})}
