@@ -94,8 +94,6 @@ export default function LearningReader({
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Phase 21E L2-A — the release note is a one-time notice: once dismissed it stays hidden on this device for this course.
-  const [releaseNoteVisible, setReleaseNoteVisible] = useState(() => !releaseNoteDismissed(courseId));
   const [manifestNonce, setManifestNonce] = useState(0);
   // Phase 21E L2-C — reading comfort (text size, line spacing, reading theme), remembered on this device. Applied to the
   // root as data attributes in NORMAL reading only, so presentation mode keeps its own established layout.
@@ -164,6 +162,9 @@ export default function LearningReader({
   }, [courseId, api, manifestNonce]);
 
   const manifest = manifestState.status === "ready" ? manifestState.manifest : null;
+  // Phase L.0 — the reader names the book by its title («شبكات الاتصال»), never by its catalogue number alone; the number
+  // is only the stand-in while the manifest loads (or if it failed).
+  const bookTitle = manifest?.title || "كتاب " + courseId;
   const pages = useMemo(() => (manifest ? flattenPageRefs(manifest) : []), [manifest]);
   const located = manifest && selectedPageId ? findPage(manifest, selectedPageId) : undefined;
   const activeModuleId = located?.module.id;
@@ -228,12 +229,6 @@ export default function LearningReader({
   }, [manifest]);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
-  // Dismissing the note removes the focused button, so focus moves to the reading surface instead of falling to <body>.
-  const dismissReleaseNote = useCallback(() => {
-    rememberReleaseNoteDismissed(courseId);
-    setReleaseNoteVisible(false);
-    contentRef.current?.focus({ preventScroll: true });
-  }, [courseId]);
   useFocusTrap(drawerRef, drawerOpen, closeDrawer);
   // Closing the search (Escape, «إغلاق», the backdrop) returns focus to the «بحث» control explicitly — a clicked button is
   // not focused in every browser, so the trap's own "restore the previous element" could fall back to <body>.
@@ -258,8 +253,8 @@ export default function LearningReader({
   const searchEnabled = searchScope !== undefined;
   const searchScopeValid = searchScope === "all" || searchScope instanceof Set;
   const searchSources = useMemo<SearchSource[] | null>(
-    () => (manifest && searchScopeValid && searchScope !== undefined ? [{ courseId, courseTitle: "كتاب " + courseId, manifest, allowedModuleIds: searchScope }] : null),
-    [manifest, searchScopeValid, searchScope, courseId],
+    () => (manifest && searchScopeValid && searchScope !== undefined ? [{ courseId, courseTitle: bookTitle, manifest, allowedModuleIds: searchScope }] : null),
+    [manifest, searchScopeValid, searchScope, courseId, bookTitle],
   );
   const openSearch = useCallback(() => { setSearchError(""); setSavedSearchQuery(searchQueryRef.current); setSearchOpen(true); }, []);
   const clearSearchError = useCallback(() => setSearchError(""), []);
@@ -450,7 +445,7 @@ export default function LearningReader({
       data-read-theme={presentation ? undefined : readingSettings.theme}
       role={presentation ? "dialog" : undefined}
       aria-modal={presentation || undefined}
-      aria-label={presentation ? "وضع العرض — كتاب " + courseId : undefined}
+      aria-label={presentation ? "وضع العرض — " + bookTitle : undefined}
     >
       <div className="learning-reader-topbar">
         {!presentation && (
@@ -458,7 +453,7 @@ export default function LearningReader({
             <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" /><span className="learning-reader-btn-label">{exitLabel}</span>
           </button>
         )}
-        <span className="learning-reader-booktitle"><span className="learning-reader-booktitle-word">كتاب </span>{courseId}{presentation && located ? <span className="learning-reader-topbar-page"> · {located.page.title}</span> : null}</span>
+        <span className="learning-reader-booktitle">{bookTitle}{presentation && located ? <span className="learning-reader-topbar-page"> · {located.page.title}</span> : null}</span>
         <button type="button" className="eb-button is-quiet is-small learning-reader-toc-toggle" aria-expanded={drawerOpen} aria-controls="learning-reader-drawer" onClick={() => setDrawerOpen(true)}>
           <IconMenu size={18} aria-hidden="true" /><span className="learning-reader-btn-label">الفهرس</span>
         </button>
@@ -482,18 +477,12 @@ export default function LearningReader({
         <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
 
         <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1}>
-          {/* Phase 21E L2-A — the one-time release note above the page (the page jump moved into the index in L2-B). */}
+          {/* Phase L.0 — no stale «gradual release» note: only the introduction is pending, and the overview marks it «قريبًا». */}
           {!presentation && searchEnabled && searchReturn && !searchOpen && (
             <div className="learning-reader-search-return">
               <button type="button" className="eb-button is-small learning-reader-search-back" onClick={openSearch}>
                 <IconSearch size={16} aria-hidden="true" />العودة إلى نتائج البحث{savedSearchQuery ? <span className="learning-reader-search-back-query"> «{savedSearchQuery}»</span> : null}
               </button>
-            </div>
-          )}
-          {!presentation && releaseNoteVisible && (
-            <div className="learning-reader-partial learning-reader-release-note" role="note">
-              <span>يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</span>
-              <button type="button" className="eb-button is-quiet is-small" onClick={dismissReleaseNote} aria-label="إخفاء تنبيه محتوى الكتاب">إخفاء</button>
             </div>
           )}
           {header ? <LearningPageRenderer header={header} body={body} training={training} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
@@ -614,15 +603,6 @@ function ReaderSearchPanel({ initialQuery, queryRef, onEdited, ...panel }: Omit<
 function isReadingSurface(target: EventTarget | null, content: HTMLElement | null): boolean {
   if (!(target instanceof Element) || !content) return false;
   return target === content || (target.id === "learning-reader-page-title" && content.contains(target));
-}
-
-const RELEASE_NOTE_KEY = "eb.learning.releaseNoteDismissed.";
-/** Device-local, per course. Storage may be unavailable (private mode, blocked site data): the note then simply shows. */
-function releaseNoteDismissed(courseId: string): boolean {
-  try { return globalThis.localStorage?.getItem(RELEASE_NOTE_KEY + courseId) === "1"; } catch { return false; }
-}
-function rememberReleaseNoteDismissed(courseId: string): void {
-  try { globalThis.localStorage?.setItem(RELEASE_NOTE_KEY + courseId, "1"); } catch { /* the note stays hidden for this mount only */ }
 }
 
 /** "Lesson x of y" inside its module, by the canonical lesson order (null if the lesson is unknown). */

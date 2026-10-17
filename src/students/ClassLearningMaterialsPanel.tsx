@@ -6,6 +6,7 @@ import Dialog from "../ui/Dialog";
 import { IconBook, IconPlus } from "../icons";
 import { classLearningMaterials, classLearningReleaseSummary } from "./classLearningMaterials";
 import type { Classroom, ClassLearningMaterial, LearningCatalogCourse } from "./types";
+import { arabicCountParts, ADDED_MATERIALS, HIDDEN_MODULES, PUBLISHED_MODULES, type ArabicCountForms } from "../learning/arabicCount";
 
 /**
  * Class Learning Materials panel (المواد التعليمية لهذا الصف) — the teacher's PROGRESSIVE RELEASE control for the
@@ -62,11 +63,11 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
       />
       {classroom && materials.length > 0 && (
         <div className="eb-lm-class-overview" aria-label="ملخص المواد التعليمية للصف">
-          <p><strong>{materials.length}</strong> مواد تعليمية مضافة</p>
+          <p><CountPhrase n={materials.length} forms={ADDED_MATERIALS} /></p>
           {summary ? (
             <>
-              <p><strong>{summary.publishedModules}</strong> وحدات منشورة للطلاب</p>
-              <p><strong>{summary.hiddenModules}</strong> وحدات غير منشورة</p>
+              <p><CountPhrase n={summary.publishedModules} forms={PUBLISHED_MODULES} /></p>
+              <p><CountPhrase n={summary.hiddenModules} forms={HIDDEN_MODULES} /></p>
             </>
           ) : <p role="status">إحصاءات الوحدات متاحة بعد تحميل جميع مواد الصف.</p>}
           {!p.classActive && <p>الصف مؤرشف — عرض فقط</p>}
@@ -212,4 +213,10 @@ function AddCourseDialog({ open, classroom, courses, busy, onClose, onAdd }: {
       )}
     </Dialog>
   );
+}
+
+/** Phase L.0 — a count in grammatically agreed Arabic («وحدتان منشورتان», «12 وحدةً …»), its digits emphasised. */
+function CountPhrase({ n, forms }: { n: number; forms: ArabicCountForms }) {
+  const { before, number, after } = arabicCountParts(n, forms);
+  return <>{before}{number !== null && <strong>{number}</strong>}{after}</>;
 }

@@ -1,23 +1,19 @@
-// Learning Materials — Phase 1 catalog (المواد التعليمية).
+// Learning Materials catalog (المواد التعليمية) — library and course-overview METADATA.
 //
 // This is the ONE central place that owns course/book metadata for the Learning Materials product. The page and
 // its cards read every string from here — nothing course-specific is hardcoded in JSX, so adding a second book
 // later (e.g. 794589, 899373) is a data edit here, not a UI rewrite.
 //
-// Phase 1 scope: a minimal, forward-compatible schema — enough to render the library card and a Phase-1 course
-// overview (identity + high-level content batches marked "قريبًا"). It deliberately does NOT model the future
-// reading structure. Phase 2 is expected to introduce, separately:
-//
-//     Course → Module → Lesson → Page → Blocks
-//     (block families likely: text · image · callout · example · diagram · quiz · simulation · cli · table · flashcards)
-//
-// The fields below must not conflict with that direction: `overviewBatches` here are presentation labels for the
-// Phase-1 overview only, NOT the lesson/page/block schema, which belongs to Phase 2 after design review.
+// The reading structure (Course → Module → Lesson → Page → Blocks) lives in each course's content manifest
+// (`content/<courseId>/manifest.ts`), and the API's publishable list in `api/src/lib/learning-materials-registry.js`.
+// `overviewBatches` here are the course overview's presentation labels only; their module membership and page
+// ranges come from the manifest's `batches` (pinned equal by courseHomePremium.21el1b.test.ts), and a batch whose
+// modules have no pages yet is shown as «قريبًا» (Phase L.0).
 
-/** Whether a course can be opened (Phase 1 opens a foundation overview, not a reader) or is still upcoming. */
+/** Whether a course can be opened (its overview and, when it has content, the Reader) or is still upcoming. */
 export type LearningCourseStatus = "available" | "coming-soon";
 
-/** A single high-level content batch shown on the Phase-1 course overview (label + non-interactive status). */
+/** A single high-level content section shown on the course overview (its id matches a manifest batch). */
 export type LearningBatch = { id: string; label: string };
 
 /** Minimal, forward-compatible course/book identity for the Learning Materials library. */

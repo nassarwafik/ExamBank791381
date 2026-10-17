@@ -4,8 +4,7 @@
 //     (RTL), but only while focus rests on the reading surface (the content root a click focuses, or the page title a
 //     page change focuses). A focused control of any kind — toolbar / TOC button, select, a lesson widget, a scrollable
 //     region — keeps its own arrow keys, and so does the page outside the reader;
-//   • the one-time release note: dismissing it hides it, keeps keyboard focus inside the reader (on the reading surface,
-//     never <body>), and is remembered per course on this device; unavailable storage never hides the note or crashes;
+//   • (Phase L.0) the stale «gradual release» note is gone — the book is complete apart from its introduction;
 //   • the compact toolbar keeps every control's accessible name (the phone layout only hides the label visually).
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -59,35 +58,15 @@ describe("21E L2-A — keyboard paging in normal reading", () => {
   });
 });
 
-describe("21E L2-A — one-time release note", () => {
-  it("dismissal hides the note, moves focus to the reading surface, and is remembered for this course on this device", async () => {
-    const first = mount();
-    await heading("صفحة غنية");
-    expect(screen.getByText(NOTE)).toBeTruthy();
-    const dismiss = screen.getByRole("button", { name: "إخفاء تنبيه محتوى الكتاب" });
-    dismiss.focus();
-    fireEvent.click(dismiss);
-    expect(screen.queryByText(NOTE)).toBeNull();
-    expect(document.activeElement).toBe(surface());
-    first.unmount();
-
-    mount();                                                                            // same course, same device
-    await heading("صفحة غنية");
-    expect(screen.queryByText(NOTE)).toBeNull();
-    cleanup();
-
-    mount("794589");                                                                    // another course still shows it
-    await waitFor(() => expect(screen.getByText(NOTE)).toBeTruthy());
-  });
-
-  it("unavailable storage keeps the note visible and dismissal still works for this view", async () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
-    mount();
-    await heading("صفحة غنية");
-    expect(screen.getByText(NOTE)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "إخفاء تنبيه محتوى الكتاب" }));
-    expect(screen.queryByText(NOTE)).toBeNull();
+describe("L.0 — the stale release note is gone (it replaced the 21E L2-A one-time note)", () => {
+  it("normal reading shows no «gradual release» note and no control to dismiss one, for any course", async () => {
+    for (const courseId of ["791381", "794589"]) {
+      mount(courseId);
+      await heading("صفحة غنية");
+      expect(screen.queryByText(NOTE)).toBeNull();
+      expect(screen.queryByRole("button", { name: "إخفاء تنبيه محتوى الكتاب" })).toBeNull();
+      cleanup();
+    }
   });
 });
 
@@ -102,5 +81,15 @@ describe("21E L2-A — compact toolbar keeps accessible names", () => {
     const labels = [...document.querySelectorAll(".learning-reader-topbar .learning-reader-btn-label")].map(l => l.textContent);
     expect(labels).toHaveLength(5);
     expect(labels.every(Boolean)).toBe(true);
+  });
+});
+
+describe("L.0 — the reader names the book by its title", () => {
+  it("the toolbar shows the manifest title, not «كتاب <number>»", async () => {
+    mount();
+    await heading("صفحة غنية");
+    const title = document.querySelector(".learning-reader-topbar .learning-reader-booktitle")!;
+    expect(title.textContent).toBe("كتاب اختبار القارئ");                                // the fixture manifest's title
+    expect(title.textContent).not.toContain("791381");
   });
 });

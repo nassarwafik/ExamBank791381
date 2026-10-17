@@ -27,8 +27,8 @@
 .learning-reader:not(.is-presentation)[data-read-spacing="2"] { --eb-read-lh: 2.05; }
 .learning-reader:not(.is-presentation)[data-read-spacing="3"] { --eb-read-lh: 2.25; }
 
-/* ── Sepia reading surface: the page card (and the release note) re-map the colour tokens they read ─────────────── */
-.learning-reader:not(.is-presentation)[data-read-theme="sepia"] :is(.learning-reader-page, .learning-reader-release-note) {
+/* ── Sepia reading surface: the page card re-maps the colour tokens it reads ─────────────────────────────────────── */
+.learning-reader:not(.is-presentation)[data-read-theme="sepia"] .learning-reader-page {
   --eb-surface: var(--eb-read-sepia-surface); --eb-surface-2: var(--eb-read-sepia-surface-2);
   --eb-line: var(--eb-read-sepia-line); --eb-line-2: var(--eb-read-sepia-line-2);
   --eb-text: var(--eb-read-sepia-text); --eb-text-heading: var(--eb-read-sepia-heading);
