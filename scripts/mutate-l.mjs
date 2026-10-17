@@ -26,7 +26,41 @@ const L1 = ["src/learning/reader/LearningReader.l1.test.tsx", "src/learning/read
 const ROUTE = "src/learning/learningRoute.ts", APP = "src/App.tsx", STUDENT_LIST = "src/student/StudentLearningMaterials.tsx", PORTAL = "src/StudentPortal.tsx";
 const L2 = ["src/learning/LearningMaterialsPage.l2.test.tsx", "src/student/StudentLearningMaterials.l2.test.tsx"];
 const L2_APP = ["src/App.learningRoute.l2.test.tsx"], L2_PORTAL = ["src/StudentPortal.learningMaterials.test.tsx"];
+const PROG_FN = "api/src/functions/learning-progress.js", PROG_LIB = "api/src/lib/learning-progress.js", PAGE_INDEX = "api/src/data/learning-pages/791381.json";
+const STUDENT_READER = "src/student/StudentReader.tsx";
+const L3_API = ["api/tests/learning-progress-l3.test.js"], L3_UI = ["src/student/StudentReader.progress.l3.test.tsx"];
+const L3_TEACHER = ["src/learning/LearningMaterialsPage.l3.test.tsx"], L3_SYNC = ["src/learning/progress/pageIndex.sync.test.ts"];
 export const CAMPAIGNS = {
+  l3: [
+    { id: "L3-M1", what: "a page the book does not have is accepted", file: PROG_FN,
+      find: "      if (!moduleId) return BAD_REQUEST;                                  // not a page of this book\n", replace: "", tests: L3_API },
+    { id: "L3-M2", what: "a page of an unpublished unit is recorded", file: PROG_FN,
+      find: "      if (!canSee(moduleId)) return UNAVAILABLE;                           // its module is not published to the class\n", replace: "", tests: L3_API },
+    { id: "L3-M3", what: "an archived class still records progress", file: PROG_FN,
+      find: "    if (classroom && normalizeClassStatus(classroom) === \"archived\") return ARCHIVED;\n", replace: "", tests: L3_API },
+    { id: "L3-M4", what: "the token's class claim decides instead of the persisted class", file: PROG_FN,
+      find: "const classId = String(sess.student?.classId || \"\").trim();", replace: "const classId = String(sess.user?.classId || \"\").trim();", tests: L3_API },
+    { id: "L3-M5", what: "the view shows units the class can no longer see", file: PROG_LIB,
+      find: "    if (!canSee(moduleId)) continue;\n", replace: "", tests: L3_API },
+    { id: "L3-M6", what: "the last page of a hidden unit leaks into the view", file: PROG_LIB,
+      find: "const lastVisible = !!lastModule && canSee(lastModule);", replace: "const lastVisible = !!lastModule;", tests: L3_API },
+    { id: "L3-M7", what: "a page's first-read time moves on every visit", file: PROG_LIB,
+      find: "  if (!Object.prototype.hasOwnProperty.call(c.pages, pageId)) c.pages[pageId] = now;", replace: "  c.pages[pageId] = now;", tests: L3_API },
+    { id: "L3-M8", what: "a repeat of the current page writes again", file: PROG_LIB,
+      find: "  return !!c && c.lastPageId === pageId && Object.prototype.hasOwnProperty.call(c.pages, pageId);", replace: "  return false;", tests: L3_API },
+    { id: "L3-M9", what: "opening the book ignores the server's last page", file: STUDENT_READER,
+      find: "      initialPageId={initialPageId ?? resume.pageId}", replace: "      initialPageId={initialPageId}", tests: L3_UI },
+    { id: "L3-M10", what: "the server's read pages are not merged into the index marks", file: STUDENT_READER,
+      find: "      if (p) mergeVisited(visitedScope, courseId, p.visited);\n", replace: "", tests: L3_UI },
+    { id: "L3-M11", what: "a slow progress read blocks the book forever", file: STUDENT_READER,
+      find: "    const timer = window.setTimeout(() => { if (alive) setResume(r => (r.ready ? r : { ready: true })); }, RESUME_WAIT_MS);", replace: "    const timer = 0;", tests: L3_UI },
+    { id: "L3-M12", what: "every page passed through is reported (no dwell)", file: STUDENT_READER,
+      find: "    dwellRef.current = window.setTimeout(() => { void progress.visit(courseId, pageId); }, READ_DWELL_MS);", replace: "    void progress.visit(courseId, pageId);", tests: L3_UI },
+    { id: "L3-M13", what: "the teacher preview loses the study client", file: PAGE,
+      find: "            study={study}\n", replace: "", tests: L3_TEACHER },
+    { id: "L3-M14", what: "the committed page index drifts from the book", file: PAGE_INDEX,
+      find: "      \"791381-m02-l01-p02\",\n", replace: "", tests: L3_SYNC }
+  ],
   l2: [
     { id: "L2-M1", what: "a view change is not a history entry (Back leaves the page)", file: PAGE,
       find: "writeLearningRoute(routeFromView(next), \"push\");", replace: "writeLearningRoute(routeFromView(next), \"replace\");", tests: L2 },
