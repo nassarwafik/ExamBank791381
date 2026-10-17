@@ -291,3 +291,13 @@
 /* Phase 21H.0 — an attention card with nothing waiting carries no alarm colour: a neutral accent and count. */
 .eb-attention-card.tone-neutral{ --eb-attention-accent:var(--eb-line); }
 .tone-neutral .eb-attention-count{ background:var(--eb-surface-2); color:var(--eb-muted); }
+/* Phase 21H.5 — touch targets on a coarse pointer (phones, tablets): every dashboard control is at least 44 px tall
+   (the segmented period, the toolbar, selects, the class picker, table links, attention rows and card actions). */
+@media (pointer: coarse){
+  .eb-dash-toolbar :is(button, select), .eb-dash-field select, .analytics-segmented button,
+  .eb-chart-picker-item, .eb-attention-item, .eb-attention-card .eb-button,
+  .analytics-improvers button, .achievement-reaction, .achievement-note-row :is(input, button), .analytics-ai-button,
+  .eb-dash .eb-chart-card .eb-button{ min-height:44px; }
+  .analytics-link{ display:inline-flex; align-items:center; min-height:44px; min-width:44px; }
+  .analytics-attempt-buttons button{ min-height:44px; }
+}
