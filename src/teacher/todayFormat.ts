@@ -11,6 +11,7 @@ export const STUDENTS: ArabicCountForms = { zero: "لا طلاب", one: "طال�
 export const STAGES: ArabicCountForms = { zero: "لا مراحل", one: "مرحلة واحدة", two: "مرحلتان", few: "{n} مراحل", many: "{n} مرحلة", other: "{n} مرحلة" };
 /** «من 23 طالبًا» — who the figure comes from. */
 export const FROM_STUDENTS: ArabicCountForms = { zero: "", one: "من طالب واحد", two: "من طالبين", few: "من {n} طلاب", many: "من {n} طالبًا", other: "من {n} طالب" };
+export const MESSAGES: ArabicCountForms = { zero: "لا رسائل", one: "رسالة واحدة", two: "رسالتان", few: "{n} رسائل", many: "{n} رسالة", other: "{n} رسالة" };
 const MINUTES: ArabicCountForms = { zero: "", one: "دقيقة", two: "دقيقتين", few: "{n} دقائق", many: "{n} دقيقة", other: "{n} دقيقة" };
 const HOURS: ArabicCountForms = { zero: "", one: "ساعة", two: "ساعتين", few: "{n} ساعات", many: "{n} ساعة", other: "{n} ساعة" };
 const DAYS: ArabicCountForms = { zero: "", one: "يوم", two: "يومين", few: "{n} أيام", many: "{n} يومًا", other: "{n} يوم" };
@@ -38,4 +39,16 @@ export function sinceText(iso: string, nowIso: string): string {
   const h = Math.floor(min / 60);
   if (h < 24) return "منذ " + count(h, HOURS);
   return "منذ " + count(Math.floor(h / 24), DAYS);
+}
+
+/** «خلال 5 ساعات» / «خلال يومين» until `iso` from `nowIso`; «الآن» when it is (about) due; "" when unreadable. */
+export function untilText(iso: string, nowIso: string): string {
+  const t = Date.parse(iso), now = Date.parse(nowIso);
+  if (!Number.isFinite(t) || !Number.isFinite(now)) return "";
+  const min = Math.floor((t - now) / 60e3);
+  if (min < 1) return "الآن";
+  if (min < 60) return "خلال " + count(min, MINUTES);
+  const h = Math.floor(min / 60);
+  if (h < 24) return "خلال " + count(h, HOURS);
+  return "خلال " + count(Math.floor(h / 24), DAYS);
 }

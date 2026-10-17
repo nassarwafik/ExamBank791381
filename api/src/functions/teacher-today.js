@@ -13,6 +13,11 @@
 //                               who have neither an attempt nor a live attempt yet, nearest deadline first;
 //   attention.pendingReview   — assignments whose latest attempts still need manual review (the gradebook's rule);
 //   attention.unreadMessages  — the teacher's unread direct-message summary (the SAME helper as the sidebar badge);
+//   attention.dueSoon         — Phase 21H.3: open assignments whose deadline falls within 48 hours, with how many members
+//                               have not submitted yet; nearest deadline first;
+//   attention.resultsUnreleased — Phase 21H.3: «manual» results-release assignments (21G.5) with submissions whose results
+//                               are not published yet — the teacher's step, never taken here;
+//   attention.openingSoon     — Phase 21H.3: published assignments that open within the next 24 hours;
 //   recent                    — the latest submissions / attempt starts (canonical attempt timestamps), newest first.
 //
 // Partial failure is explicit: the messages summary is optional (`unreadMessages: null` + "messages" in `partial`) so
@@ -27,6 +32,8 @@ const {isStudentClassMember}=require("../lib/class-membership");
 const {attemptState,activeAttemptOf,deriveAttemptStatus,normalizeEndReason}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {teacherDirectUnread}=require("../lib/message-read-state");
+// Phase 21H.3 — the results-release authority (21G.5): «results waiting to be published» is ITS rule, never re-derived here.
+const {releaseMode,resultsReleased}=require("../lib/results-release");
 // Phase 9C — project evaluation attention (students with ungraded project stages), derived from the classes/users the
 // hub already loaded + one snapshot read and one progress-folder listing per active class × enrolled project.
 const {loadProjectEvaluationSources,deriveProjectEvaluationAttention}=require("../lib/project-tracker/evaluation-attention");
@@ -40,6 +47,9 @@ const ITEM_CAP=8,RECENT_CAP=10;
 // Phase 21H.0 — an open attempt counts as «active now» only while the student is actually working: its last autosave (or
 // its start, before the first save) is at most this old. Older open attempts, and paused ones, are reported as stale.
 const LIVE_WINDOW_MS=15*60e3;
+// Phase 21H.3 — time windows of the new categories: closing soon (the deadline within the next 48 hours, still open) and
+// opening soon (a published assignment whose openAt falls within the next 24 hours).
+const DUE_SOON_MS=48*3600e3,OPENING_MS=24*3600e3;
 const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
 
@@ -64,12 +74,12 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
  const membersByClass=new Map();
  for(const u of users){if(!u||u.role!=="student")continue;const cid=String(u.classId||"");if(!activeClasses.has(cid)||!isStudentClassMember(u,cid))continue;if(!membersByClass.has(cid))membersByClass.set(cid,[]);membersByClass.get(cid).push(u)}
  const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeClasses.has(String(a.classId||"")));
- const active=[],stale=[],notStarted=[],pending=[],recent=[];
+ const active=[],stale=[],notStarted=[],pending=[],recent=[],dueSoon=[],unreleased=[],opening=[];
  let activeCount=0,staleCount=0,notStartedCount=0,pendingCount=0;
  for(const a of published){
   const aid=String(a.assignmentId),cid=String(a.classId||""),className=activeClasses.get(cid).name,title=String(a.title||"");
   const members=membersByClass.get(cid)||[],subs=submissionsByAssignment.get(aid)||new Map();
-  let ns=0,pr=0,nearestDue=ms(a.dueAt);
+  let ns=0,pr=0,nearestDue=ms(a.dueAt),notSubmitted=0,submitted=0;
   for(const u of members){
    const sid=String(u.userId),s=subs.get(sid)||null,st=attemptState(a,s,nowMs),live=activeAttemptOf(s);
    const attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
@@ -81,13 +91,24 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
    }
    if(st.availability==="open"&&!live&&attempts.length===0){ns++;const due=ms(st.effectiveDueAt||a.dueAt);if(due&&(!nearestDue||due<nearestDue))nearestDue=due}
    if(latest&&deriveGradingStatus(latest)==="pendingReview")pr++;
+   if(attempts.length===0&&st.availability==="open")notSubmitted++;
+   if(attempts.length>0)submitted++;
    for(const at of attempts){if(!at||!at.submittedAt)continue;const reason=normalizeEndReason(at);recent.push({kind:reason==="submitted"?"submitted":reason,at:String(at.submittedAt),assignmentId:aid,title,className,studentId:sid,studentName:studentName(u),percentage:Number.isFinite(Number(at.percentage))?Number(at.percentage):null})}
   }
   if(ns>0){notStartedCount+=ns;notStarted.push({assignmentId:aid,title,className,dueAt:nearestDue?new Date(nearestDue).toISOString():"",notStarted:ns,expected:members.length})}
   if(pr>0){pendingCount+=pr;pending.push({assignmentId:aid,title,className,pendingReview:pr})}
+  // Phase 21H.3 — closing soon: the assignment's own deadline is within DUE_SOON_MS and members can still submit.
+  const due=ms(a.dueAt),open=ms(a.openAt);
+  if(due&&due>nowMs&&due-nowMs<=DUE_SOON_MS&&(!open||open<=nowMs))dueSoon.push({assignmentId:aid,title,className,dueAt:new Date(due).toISOString(),notSubmitted,expected:members.length});
+  // Results waiting for the teacher: manual release, not yet released, and at least one submission to release.
+  if(releaseMode(a)==="manual"&&!resultsReleased(a,nowMs)&&submitted>0)unreleased.push({assignmentId:aid,title,className,submitted,dueAt:due?new Date(due).toISOString():""});
+  if(open&&open>nowMs&&open-nowMs<=OPENING_MS)opening.push({assignmentId:aid,title,className,openAt:new Date(open).toISOString(),expected:members.length});
  }
  active.sort((x,y)=>ms(y.lastActivityAt)-ms(x.lastActivityAt)||ms(y.startedAt)-ms(x.startedAt));
  stale.sort((x,y)=>ms(y.lastActivityAt)-ms(x.lastActivityAt));
+ dueSoon.sort((x,y)=>ms(x.dueAt)-ms(y.dueAt)||y.notSubmitted-x.notSubmitted);
+ unreleased.sort((x,y)=>(ms(x.dueAt)||Number.MAX_SAFE_INTEGER)-(ms(y.dueAt)||Number.MAX_SAFE_INTEGER));
+ opening.sort((x,y)=>ms(x.openAt)-ms(y.openAt));
  notStarted.sort((x,y)=>(ms(x.dueAt)||Number.MAX_SAFE_INTEGER)-(ms(y.dueAt)||Number.MAX_SAFE_INTEGER)||y.notStarted-x.notStarted);
  pending.sort((x,y)=>y.pendingReview-x.pendingReview);
  recent.sort((x,y)=>ms(y.at)-ms(x.at));
@@ -97,7 +118,10 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
    activeAttempts:{count:activeCount,items:active.slice(0,ITEM_CAP)},
    staleAttempts:{count:staleCount,items:stale.slice(0,ITEM_CAP)},
    notStarted:{count:notStartedCount,assignments:notStarted.length,items:notStarted.slice(0,ITEM_CAP)},
-   pendingReview:{count:pendingCount,assignments:pending.length,items:pending.slice(0,ITEM_CAP)}
+   pendingReview:{count:pendingCount,assignments:pending.length,items:pending.slice(0,ITEM_CAP)},
+   dueSoon:{count:dueSoon.length,items:dueSoon.slice(0,ITEM_CAP)},
+   resultsUnreleased:{count:unreleased.length,items:unreleased.slice(0,ITEM_CAP)},
+   openingSoon:{count:opening.length,items:opening.slice(0,ITEM_CAP)}
   },
   recent:recent.slice(0,RECENT_CAP)
  };

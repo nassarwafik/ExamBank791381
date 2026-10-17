@@ -152,12 +152,13 @@ describe("12B Today Hub — attention rows are real buttons that emit a typed ta
     const labels = [...document.querySelectorAll(".eb-today-row-action, .eb-today-recent-action")].map(b => b.getAttribute("aria-label") || "");
     // exactly the visible title / name / state words — nothing else (no ids, keys or internal fields)
     expect(labels).toEqual([
-      "افتح واجب واجب P2 للطالب طالب s02 — محاولة جارية",
-      "افتح واجب واجب P1 للطالب طالب s03 — محاولة متوقفة مؤقتًا",
-      "افتح واجب واجب P2 — 4 طلاب لم يبدؤوا",
-      "افتح واجب واجب P1 — طالب واحد لم يبدأ",
+      // 21H.3 — cards in priority order: pending review, not started, … then the live attempts.
       "افتح واجب واجب P1 — 3 تسليمات بانتظار التصحيح",
       "افتح واجب واجب P3 — تسليمان بانتظار التصحيح",
+      "افتح واجب واجب P2 — 4 طلاب لم يبدؤوا",
+      "افتح واجب واجب P1 — طالب واحد لم يبدأ",
+      "افتح واجب واجب P2 للطالب طالب s02 — محاولة جارية",
+      "افتح واجب واجب P1 للطالب طالب s03 — محاولة متوقفة مؤقتًا",
       "افتح واجب واجب P1 — طالب s01 سلّم",
       "افتح واجب واجب P2 — طالب s02 بدأ محاولة",
       "افتح واجب واجب P2 — طالب s05 أنهى المعلم محاولته",
