@@ -1,6 +1,6 @@
 # Phase L — Enterprise learning materials («المواد التعليمية») and reader
 
-**Status:** L.0 implemented on branch `claude/nifty-clarke-k0wlid`; L.1–L.8 planned. Each phase: exact-head CI, independent
+**Status:** L.0 in review as nassarwafik/ExamBank791381#339; L.1 implemented on branch `claude/nifty-clarke-k0wlid`; L.2–L.8 planned. Each phase: exact-head CI, independent
 review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -18,8 +18,9 @@ measurements at 390, 834, 1024 and 1440 px.
 2. **The reader is not a professional reader.**
    - From 1024 px up the table of contents is a fixed 300 px column with no way to hide it: it takes 33 % of the reader
      at 1024 px.
-   - With the page title, the toolbar, the note and the page bar around it, the text gets about **38 % of a 1024×768
-     screen and 41 % of 1440×900**.
+   - With the page title, the toolbar, the note and the page bar around it, the text gets **41.7 % of a 1024×768
+     screen and 44.7 % of 1440×900** (measured on the L.0 build by the L.1 method, §5; the report's first estimate,
+     38 % / 41 %, was read off screenshots).
    - The page shows internal metadata («المصدر: كتاب 791381 · PDF صفحة 13»).
    - Unit-opener pages are mostly white.
    - There is no focus mode, no dark theme and no swipe navigation.
@@ -59,7 +60,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | Phase | Content | State |
 |---|---|---|
 | L.0 | Accuracy and trust: «المقدمة» = «قريبًا»; overview load status + error with retry; no stale release note; the book by its title in the reader; agreed Arabic counts in the publication panel; stale comments | implemented |
-| L.1 | Professional reader. Collapsible table of contents on every width (overlay under 1280 px, remembered choice). Focus mode that hides the app chrome. One compact 48 px toolbar with icon buttons + «المزيد». Progress line. Pager with lesson position and the next lesson's title. Internal metadata behind «معلومات». Designed unit openers. A cleaner two-level TOC with read ticks and a filter. Reading typography (60–75 characters, 17–18 px, 1.8 line height). Dark theme. Swipe on phones. **Target: the text gets ≥ 70 % of the screen at ≥ 1024 px in focus mode.** | planned |
+| L.1 | Professional reader. Collapsible table of contents on every width (overlay under 1280 px, remembered choice). Focus mode that hides the app chrome. One compact 48 px toolbar with icon buttons + «المزيد». Progress line. Pager with lesson position and the next lesson's title. Internal metadata behind «معلومات». Designed unit openers. A cleaner two-level TOC with read ticks and a filter. Reading typography (60–75 characters, 17–18 px, 1.8 line height). Dark theme. Swipe on phones. **Target: the text gets ≥ 70 % of the screen at ≥ 1024 px in focus mode.** | implemented |
 | L.2 | Navigation: a URL for library / book / section / page, a working browser back button, reload keeps the place. Clickable module list for students. Teacher preview identical to the student view. | planned |
 | L.3 | Server-side reading progress and resume (cross-device); a real activity sink; localStorage stays the fallback | planned |
 | L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | planned |
@@ -123,7 +124,106 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 - **Real browser** (production build, local mock API): the overview at 1440 px shows «المقدمة» as «قريبًا» and the
   seven sections with their details; the reader at 390–1440 px shows no note and the title «شبكات الاتصال».
 
-## 5. What the plan leaves to the owner
+## 5. Implementation record and evidence (L.1)
+
+### Decisions taken inside L.1
+
+| # | Decision | Why |
+|---|---|---|
+| L1-a | The index **docks only from 1280 px**. Below that, in focus mode and in presentation, it is the overlay drawer. | At 1024 px the docked index took 33 % of the reader. From 1280 px a 280 px column still leaves the page more than 860 px. |
+| L1-b | The docked / folded choice is **remembered on this device** (`eb.learning.reader.tocDocked.v1`). Focus mode is **not** remembered. | Same rule as the reading settings: the index is a reading-comfort preference. Focus mode changes the whole app, so it must never surprise the next session. |
+| L1-c | Focus mode hides the host's chrome through a **document flag** (`<html data-eb-reading-focus>`) that the Reader's stylesheet reads. It is not a modal overlay. | The shell stays a normal page: no second focus trap and no hidden-but-focusable navigation, because `display: none` removes it. Unmounting the Reader always clears the flag. The student portal already opens the Reader full-screen, so the flag hides nothing there. |
+| L1-d | Toolbar controls are icons with their names **kept in the DOM** (visually hidden) and shown as a tooltip. On phones, focus, motion and presentation sit behind «المزيد». | Accessible names stay exactly the same (every earlier test that finds a control by name still passes), and the book title keeps its room on a 390 px phone. |
+| L1-e | In the «داكن» theme, **figures and activities keep a light plate**. | Their drawings were authored on light tokens; white labels on the dark-theme blue would drop to 2.7:1. |
+
+### What shipped
+
+- **`LearningReader.tsx`:**
+  - `data-toc` set to `docked` or `drawer`, and `data-focus`;
+  - the «الفهرس» toggle docks or folds the index (≥ 1280 px) or opens the drawer;
+  - focus mode, with Escape to leave it;
+  - the compact toolbar with the title block («الكتاب» + «الوحدة › الدرس») and «المزيد»;
+  - «التالي» described by the next page's title;
+  - swipe handlers;
+  - unit contents on unit-opener pages.
+- **New modules:**
+  - `readerLayout.ts` (the docking preference);
+  - `useReaderSwipe.ts` (RTL swipe that never starts on a control, an activity, a horizontal scroller or a mostly vertical gesture);
+  - `UnitContents.tsx` (the unit's lessons with page counts and read marks).
+- **`LearningPageRenderer.tsx`:** the kicker names the unit and the context line the lesson. The PDF / printed-page source moves behind «مصدر الصفحة» (`<details>`).
+- **`readingSettings.ts` / `ReadingSettingsDialog.tsx`:** the «داكن» theme.
+- **`reader-enterprise-l1.css`:**
+  - index docking;
+  - sticky compact toolbar;
+  - focus-mode chrome rules;
+  - page head disclosure;
+  - unit contents;
+  - next-page title;
+  - a calmer two-level index;
+  - the contrast-checked dark palette with the light figure plate;
+  - 44 px controls on touch screens (tablets too).
+
+### Measured (production build, real Chromium, teacher route, page 7 of 248)
+
+| Viewport | Before (L.0 build) | L.1 normal | L.1 focus mode |
+|---|---|---|---|
+| 1024×768 | 41.7 % (text column 580 px; index 300 px) | 64.7 % (904 px, index as drawer) | **80.6 %** (1000 px) |
+| 1440×900 | 44.7 % (832 px; index 300 px) | 46.1 % docked (index 280 px), 62.0 % folded | **73.3 %** (1240 px, centred) |
+| 834×1112 | 82.0 % | 81.8 % | 85.4 % |
+| 390×844 | 77.3 % | 77.0 % | 78.9 % |
+
+"Text share" is the visible area of the reading column (`.learning-reader-main`) between the sticky toolbar and the
+page bar, divided by the viewport area. The 834 and 390 baselines already had no docked index, so they barely move.
+The gain there is the toolbar: at 390 px the title went from «ش…» to «شبكات الاتصال».
+
+**axe** (wcag2a/aa, 2.1, 2.2 aa) on the Reader at 390 / 834 / 1024 / 1440, in the normal, «المزيد» open, focus, dark and
+drawer states: **0 violations**.
+
+**Touch targets** (coarse pointer, 390 and 834): no Reader control under 44 px. Two existing 34 px controls on tablets
+were found and fixed: an exercise's «تحقّق» and the drawer's «إغلاق».
+
+### Evidence
+
+- **Fail-first on the L.0 head 6920be26:** `LearningReader.l1.test.tsx` fails 13/13 and `reader.l1.guards.test.ts`
+  fails to load (`useReaderSwipe` does not exist). All pass on the head.
+- **Changed expectations:**
+  - `LearningReader.l2a.21e.test.tsx`: seven toolbar labels, adding «وضع التركيز» and «المزيد».
+  - `LearningReader.l2c.21e.test.tsx`: nine radios. The malformed-theme case now stores «neon», because «dark» is valid.
+  - `LearningPageRenderer.test.tsx`: the unit and lesson names are looked up inside the «قيد الإعداد» state, since the
+    page head now names them too.
+- **Mutation:** `node scripts/mutate-l.mjs l1` → **16/16 KILLED**, each by the test that owns the invariant. Every file
+  was restored byte-for-byte and git status was clean.
+  - The first run reported two kills by the wrong test: the swipe test failed on its own when run alone (its control
+    was a lazily rendered exercise button).
+  - The test now starts its control gesture on the always-rendered «مصدر الصفحة» summary, which the swipe guard now
+    also leaves alone. The re-run attributes every kill correctly.
+
+  | Id | Planted defect | Killed by |
+  |---|---|---|
+  | L1-M1 | the index docks below 1280 px | l1 › below 1280px «الفهرس» opens the overlay drawer |
+  | L1-M2 | focus mode keeps the docked index | l1 › focus mode |
+  | L1-M3 | the docked / folded choice is not remembered | l1 › from 1280px … survives a remount |
+  | L1-M4 | the focus flag outlives focus mode and the Reader | l1 › focus mode |
+  | L1-M5 | Escape no longer leaves focus mode | l1 › focus mode |
+  | L1-M6 | «التالي» loses its description | l1 › «التالي» keeps its name … |
+  | L1-M7 | «المزيد» stays open after an action | l1 › «المزيد» |
+  | L1-M8 | the kicker names the book number | l1 › the page head names the unit and the lesson |
+  | L1-M9 | the source is a bare line again | l1 › the page head … |
+  | L1-M10 | the swipe direction is inverted | l1 › swipe |
+  | L1-M11 | a swipe from a control turns the page | l1 › swipe |
+  | L1-M12 | a vertical scroll counts as a swipe | l1 › swipe |
+  | L1-M13 | «داكن» is forgotten on reload | l1 › «داكن» reading theme |
+  | L1-M14 | the unit contents list the opener lesson | l1 › unit contents (real book content) |
+  | L1-M15 | focus mode hides the whole page column | guards › focus mode hides exactly … |
+  | L1-M16 | the folded index still shows its column | guards › docks the index only for data-toc=docked |
+
+- **Full validation on the head:**
+  - `npm test`: 1082 files / 13273 tests passed. The first run had three load-timing failures in unrelated files
+    (`App.saveConflict.21f0`, `visuals.guards`). Both pass alone (12/12), and the second full run was clean.
+  - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed) and `git diff --check` are clean.
+
+## 6. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count
