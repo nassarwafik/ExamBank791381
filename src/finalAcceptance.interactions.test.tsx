@@ -271,7 +271,7 @@ describe("Student roster ⋯ actions through the real TeacherPlatform (browser e
     browserClick(within(menu).getByRole("button", { name: "تعطيل الحساب" }));
     await waitFor(() => expect(posts().length).toBe(1));
     expect(posts()[0].url).toContain("/api/students");
-    expect(posts()[0].body).toEqual({ action: "toggleActive", userId: "s1" });                     // unchanged existing body
+    expect(posts()[0].body).toEqual({ action: "toggleActive", userId: "s1", active: false });      // + explicit target state (idempotent)
     await waitFor(() => expect(screen.queryByRole("group", { name: /^إجراءات / })).toBeNull());
   });
 

@@ -35,6 +35,6 @@ export type StudentProfile = {
   projectSummaries?: { projectCode: string; title: string; overallProgress: number; complete: boolean }[];
 };
 export type SortKey = "firstName" | "familyName" | "identityNumber" | "status";
-export type StatusFilter = "all" | "active" | "disabled" | "archived";
+export type StatusFilter = "all" | "active" | "disabled" | "archived" | "neverLogged";
 export type BulkOperation = "activate" | "deactivate" | "archive" | "unarchive" | "move" | "resetpasswords" | "delete";
 export type ProfileSection = "summary" | "history";

@@ -13,6 +13,8 @@ const {
   mutateJsonWithRetry,
   uploadJsonConditional,
   isConcurrencyConflict,
+  downloadJsonWithEtagOrNull,
+  deleteBlobConditional,
   // Roadmap #27 — shared bounded-concurrency reads (order-preserving; identical null/error semantics).
   listJson,
   listBlobNames,
@@ -38,6 +40,10 @@ const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-
 // index writes go through lib/class-roster-index (CAS + retry, idempotent, sync status instead of failure).
 const { addToRosterIndex, removeFromRosterIndex, reconcileRosterIndex } = require("../lib/class-roster-index");
 const { isStudentClassMember } = require("../lib/class-membership");
+// Classes & Students hardening — safe ids, Arabic-Indic identity digits, cleaned names, bounded lengths; and the
+// grading-safety guard that refuses a move/archive that would hide work still awaiting the teacher.
+const { isSafeId, normalizeIdentityNumber, cleanText, LIMITS } = require("../lib/roster-input");
+const { createPendingGradingReader, pendingGradingMessage } = require("../lib/pending-grading");
 
 // Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
 // missing, or already in the desired state) — caught at each call site and treated as a silent
@@ -98,12 +104,6 @@ async function uploadJson(container, blobName, document) {
     overwrite: true,
     blobHTTPHeaders: { blobContentType: "application/json; charset=utf-8" }
   });
-}
-
-function normalizeIdentityNumber(value) {
-  const digits = String(value ?? "").replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.length <= 9 ? digits.padStart(9, "0") : digits;
 }
 
 function isValidIdentityNumber(value) {
@@ -232,10 +232,37 @@ async function findStudentByIdentity(container, identityNumber) {
 }
 
 function namesFromInput(input) {
-  const directFirst = String(input?.firstName ?? input?.givenName ?? "").trim();
-  const directFamily = String(input?.familyName ?? input?.lastName ?? input?.surname ?? "").trim();
+  const directFirst = cleanText(input?.firstName ?? input?.givenName ?? "");
+  const directFamily = cleanText(input?.familyName ?? input?.lastName ?? input?.surname ?? "");
   if (directFirst || directFamily) return { firstName: directFirst, familyName: directFamily };
-  return splitLegacyName(input?.displayName ?? input?.name ?? input?.studentName ?? "");
+  return splitLegacyName(cleanText(input?.displayName ?? input?.name ?? input?.studentName ?? ""));
+}
+
+const NAME_TOO_LONG = "الاسم أو اسم العائلة أطول من " + LIMITS.personName + " حرفًا.";
+const namesTooLong = (firstName, familyName) => firstName.length > LIMITS.personName || familyName.length > LIMITS.personName;
+const PASSWORD_TOO_SHORT = "كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.";
+const PASSWORD_TOO_LONG = "كلمة المرور يجب ألا تتجاوز " + LIMITS.passwordMax + " محرفًا.";
+// Credential-bearing and PII responses are never cached by a proxy or the browser.
+const NO_STORE = { "Cache-Control": "no-store" };
+const CONCURRENT_MOVE = "تم نقل الطالب إلى صف آخر في عملية أخرى. حدّث البيانات وأعد المحاولة.";
+const DUPLICATE_RACE = "رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة.";
+// An auth document whose user document is missing is an ORPHAN left by an interrupted create (auth is written first).
+// It blocks the identity forever (preview says "valid", create says "duplicate"). It is reclaimed only once it is older
+// than this grace period, so a create that is still between its two writes is never disturbed.
+const ORPHAN_AUTH_GRACE_MS = 10 * 60 * 1000;
+
+async function reclaimOrphanAuth(container, authName, nowMs = Date.now()) {
+  const { value, etag } = await downloadJsonWithEtagOrNull(container, authName);
+  if (!value || !etag) return false;
+  const userId = String(value.userId || "");
+  if (userId && isSafeId(userId)) {
+    const owner = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
+    if (owner) return false;
+  }
+  const createdMs = Date.parse(String(value.createdAt || value.updatedAt || ""));
+  if (Number.isFinite(createdMs) && nowMs - createdMs < ORPHAN_AUTH_GRACE_MS) return false;
+  try { await deleteBlobConditional(container, authName, etag); return true; }
+  catch (e) { if (isConcurrencyConflict(e)) return false; throw e; }
 }
 
 function identityFromInput(input) {
@@ -290,6 +317,7 @@ async function createStudentRecord(container, classroom, input, options = {}) {
   const code = identityNumber;
 
   if (!firstName || !familyName) throw new StudentActionError(400, "يجب إدخال الاسم الشخصي واسم العائلة.");
+  if (namesTooLong(firstName, familyName)) throw new StudentActionError(400, NAME_TOO_LONG);
   if (!isValidIdentityNumber(identityNumber)) throw new StudentActionError(400, "رقم الهوية يجب أن يتكوّن من 9 أرقام.");
 
   const existing = await findStudentByIdentity(container, identityNumber);
@@ -317,7 +345,8 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     ? generateTemporaryPassword()
     : String(input?.password || "") || generateTemporaryPassword();
 
-  if (password.length < 6) throw new StudentActionError(400, "كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
+  if (password.length < LIMITS.passwordMin) throw new StudentActionError(400, PASSWORD_TOO_SHORT);
+  if (password.length > LIMITS.passwordMax) throw new StudentActionError(400, PASSWORD_TOO_LONG);
 
   const { salt, passwordHash } = hashPassword(password);
   const userId = crypto.randomUUID();
@@ -367,22 +396,37 @@ async function createStudentRecord(container, classroom, input, options = {}) {
   // write is the real guard: it turns a collision into an explicit error instead of one request
   // silently overwriting the other's auth record. Only once it succeeds do we create the student
   // document, so a collision here never leaves an orphaned student with no matching login.
+  const authName = AUTH_PREFIX + studentCodeHash(code) + ".json";
+  const duplicateRace = () => { const dup = new StudentActionError(409, DUPLICATE_RACE); dup.code = "duplicate"; return dup; };
+  let authEtag = null;
   try {
-    await uploadJsonConditional(container, AUTH_PREFIX + studentCodeHash(code) + ".json", authDocument, null);
+    authEtag = await uploadJsonConditional(container, authName, authDocument, null);
   } catch (e) {
     // The create-only conditional write is the real uniqueness guard: a lost race (another concurrent
     // create for the same identity won the write) becomes an explicit duplicate, never a silent overwrite.
-    if (isConcurrencyConflict(e)) { const dup = new StudentActionError(409, "رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة."); dup.code = "duplicate"; throw dup; }
+    if (!isConcurrencyConflict(e)) throw e;
+    // ...unless the existing auth document is an aged ORPHAN (no user document): it is removed conditionally on the
+    // ETag just read and the create-only write is attempted once more (still create-only, so a racer still wins).
+    if (!(await reclaimOrphanAuth(container, authName))) throw duplicateRace();
+    try { authEtag = await uploadJsonConditional(container, authName, authDocument, null); }
+    catch (e2) { if (isConcurrencyConflict(e2)) throw duplicateRace(); throw e2; }
+  }
+  try {
+    await uploadJson(container, USER_PREFIX + userId + ".json", student);
+  } catch (e) {
+    // Compensation: never leave the auth document just created without its student (it would block the identity).
+    // Conditional on our own ETag; a failure here is reclaimable later through reclaimOrphanAuth.
+    try { await deleteBlobConditional(container, authName, authEtag); } catch { /* reclaimable orphan */ }
     throw e;
   }
-  await uploadJson(container, USER_PREFIX + userId + ".json", student);
   // Roadmap #25: the roster index is updated by the caller AFTER this authoritative write (never here).
   return { student: publicStudent(student), temporaryPassword: password };
 }
 
 async function resetStudentPassword(container, student, requestedPassword = "") {
   const temporaryPassword = String(requestedPassword || "") || generateTemporaryPassword();
-  if (temporaryPassword.length < 6) throw new StudentActionError(400, "كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
+  if (temporaryPassword.length < LIMITS.passwordMin) throw new StudentActionError(400, PASSWORD_TOO_SHORT);
+  if (temporaryPassword.length > LIMITS.passwordMax) throw new StudentActionError(400, PASSWORD_TOO_LONG);
   const { salt, passwordHash } = hashPassword(temporaryPassword);
 
   // PR#67 final: run under the per-student credential lock so a reset can never race a rename that moves the
@@ -536,6 +580,9 @@ async function buildImportPreview(container, items, visible = null) {
     if (!item.firstName || !item.familyName) {
       status = "invalid";
       error = "الاسم واسم العائلة مطلوبان.";
+    } else if (namesTooLong(item.firstName, item.familyName)) {
+      status = "invalid";
+      error = NAME_TOO_LONG;
     } else if (!isValidIdentityNumber(item.identityNumber)) {
       status = "invalid";
       error = "رقم الهوية يجب أن يتكوّن من 9 أرقام.";
@@ -736,6 +783,23 @@ async function buildProfileStrength(container, student, classroom, history) {
   }
 }
 
+// A per-row failure in a bulk loop shows the teacher only messages written FOR the teacher (typed rejections and the
+// credential-lock busy message). Any other error (storage SDK text with request ids, internal conflict names) is logged
+// and replaced by a generic row message.
+function rowErrorMessage(error, fallback, obs) {
+  if (error instanceof StudentActionError || error instanceof CredentialLockBusyError) return error.message || fallback;
+  obs?.logError("student.manage.rowError", error);
+  return fallback;
+}
+
+// Refuses (409 PENDING_GRADING) a move/archive of a class member whose current class still has work awaiting the
+// teacher — see lib/pending-grading.js. Archived students are already outside the read population.
+async function assertNoPendingGrading(reader, student, operation) {
+  if (!reader || student.archived === true) return;
+  const pending = await reader.count(String(student.userId || ""), String(student.classId || ""));
+  if (pending > 0) throw new StudentActionError(409, pendingGradingMessage(operation, pending), "PENDING_GRADING");
+}
+
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real
 // implementations). It does not change runtime behavior.
 async function manageStudentsHandler(request, deps = {}, obs = null) {
@@ -769,22 +833,24 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const profileUserId = String(url.searchParams.get("profileUserId") || "").trim();
 
         if (profileUserId) {
+          if (!isSafeId(profileUserId)) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           if (tenant) {
             const subject = await downloadJsonOrNull(container, USER_PREFIX + profileUserId + ".json");
             if (!subject || subject.role !== "student" || !(await studentOk(subject))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           }
           const profile = await buildStudentProfile(container, profileUserId);
           if (!profile) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
-          return { status: 200, jsonBody: { ok: true, profile } };
+          return { status: 200, headers: NO_STORE, jsonBody: { ok: true, profile } };
         }
 
         const classId = String(url.searchParams.get("classId") || "").trim();
         const includeArchived = url.searchParams.get("includeArchived") === "1";
-        if (classId && !(await classOk(classId))) return { status: 200, jsonBody: { ok: true, students: [] } };
+        if (classId && (!isSafeId(classId) || !(await classOk(classId)))) return { status: 200, jsonBody: { ok: true, students: [] } };
         if (tenant) await classOk("");                // load the allowed classes once before the synchronous filter below
         const canSee = tenant ? student => (typeof student.ownerId === "string" && student.ownerId ? canAccessDocument(student, tenant) : classIdAllowed(allowedClasses, student.classId)) : null;
         return {
           status: 200,
+          headers: NO_STORE,
           jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs, canSee) }
         };
       }
@@ -795,7 +861,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       if (action === "create") {
         const classId = String(body?.classId || "").trim();
-        const classroom = await classOk(classId) ? await getClassroom(container, classId) : null;
+        const classroom = isSafeId(classId) && await classOk(classId) ? await getClassroom(container, classId) : null;
         if (!classroom || normalizeClassStatus(classroom) === "archived") {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
@@ -814,7 +880,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           targetLabel: result.student.displayName || result.student.code,
           details: { classId }
         });
-        return { status: 200, jsonBody: { ok: true, ...result, rosterSynced: sync.synced } };
+        return { status: 200, headers: NO_STORE, jsonBody: { ok: true, ...result, rosterSynced: sync.synced } };
       }
 
       if (action === "previewimport") {
@@ -840,7 +906,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       if (action === "bulkimport") {
         const classId = String(body?.classId || "").trim();
-        const classroom = await classOk(classId) ? await getClassroom(container, classId) : null;
+        const classroom = isSafeId(classId) && await classOk(classId) ? await getClassroom(container, classId) : null;
         if (!classroom || normalizeClassStatus(classroom) === "archived") {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
@@ -887,7 +953,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               displayName: [item.firstName, item.familyName].filter(Boolean).join(" "),
               code: item.identityNumber || "",
               duplicate: !!(error && error.code === "duplicate"),
-              error: error instanceof Error ? error.message : "تعذر إنشاء الطالب."
+              error: rowErrorMessage(error, "تعذر إنشاء الطالب.", obs)
             });
           }
         }
@@ -916,6 +982,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         });
         return {
           status: 200,
+          headers: NO_STORE,
           jsonBody: {
             ok: true,
             imported: credentials.length,
@@ -930,6 +997,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       if (action === "update") {
         const userId = String(body?.userId || "").trim();
+        if (!isSafeId(userId)) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         const studentBlobName = USER_PREFIX + userId + ".json";
         const student = await downloadJsonOrNull(container, studentBlobName);
 
@@ -938,8 +1006,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         }
 
         const currentNames = getStudentNames(student);
-        const firstName = String(body?.firstName ?? currentNames.firstName ?? "").trim();
-        const familyName = String(body?.familyName ?? currentNames.familyName ?? "").trim();
+        const firstName = cleanText(body?.firstName ?? currentNames.firstName ?? "");
+        const familyName = cleanText(body?.familyName ?? currentNames.familyName ?? "");
         const identityNumber = normalizeIdentityNumber(
           body?.identityNumber ??
           body?.code ??
@@ -948,7 +1016,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         );
         const newCode = identityNumber;
         const newClassId = String(body?.classId ?? student.classId ?? "").trim();
-        if (newClassId !== String(student.classId || "") && !(await classOk(newClassId))) {
+        if (newClassId !== String(student.classId || "") && (!isSafeId(newClassId) || !(await classOk(newClassId)))) {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
         const newPassword = String(body?.password || "");
@@ -956,13 +1024,15 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (!firstName || !familyName) {
           return { status: 400, jsonBody: { ok: false, error: "يجب إدخال الاسم الشخصي واسم العائلة." } };
         }
+        if (namesTooLong(firstName, familyName)) return { status: 400, jsonBody: { ok: false, error: NAME_TOO_LONG } };
         if (!isValidIdentityNumber(identityNumber)) {
           return { status: 400, jsonBody: { ok: false, error: "رقم الهوية يجب أن يتكوّن من 9 أرقام." } };
         }
         if (!newClassId) return { status: 400, jsonBody: { ok: false, error: "اختر الصف." } };
-        if (newPassword && newPassword.length < 6) {
+        if (newPassword && newPassword.length < LIMITS.passwordMin) {
           return { status: 400, jsonBody: { ok: false, error: "كلمة المرور الجديدة يجب أن تحتوي على 6 محارف على الأقل." } };
         }
+        if (newPassword.length > LIMITS.passwordMax) return { status: 400, jsonBody: { ok: false, error: PASSWORD_TOO_LONG } };
 
         const newClassroom = await getClassroom(container, newClassId);
         if (!newClassroom || normalizeClassStatus(newClassroom) === "archived") {
@@ -977,6 +1047,11 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           }
         }
         const oldClassId = String(student.classId || "");
+        // Grading safety: moving a class member out of their class hides that class's pending work (pending-grading.js).
+        if (oldClassId !== newClassId && student.archived !== true) {
+          const pending = await createPendingGradingReader(container).count(userId, oldClassId);
+          if (pending > 0) return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pending, error: pendingGradingMessage("move", pending) } };
+        }
         const newPwHash = newPassword ? hashPassword(newPassword) : null;
 
         // PR#67 final: the ENTIRE update mutation (student rewrite + auth-doc write, and especially the
@@ -1002,30 +1077,66 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           if (studentCodeHash(curCode) !== studentCodeHash(oldCode)) {
             return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "تم تعديل بيانات دخول الطالب في عملية أخرى. حدّث البيانات وأعد المحاولة." } };
           }
+          // A concurrent MOVE (the bulk move takes no credential lock) changed the class this request was validated
+          // against: refuse instead of silently writing the old class back over it.
+          if (String(cur.classId || "") !== oldClassId) return { status: 409, jsonBody: { ok: false, error: CONCURRENT_MOVE } };
           const curAuthName = AUTH_PREFIX + studentCodeHash(curCode) + ".json";
           const curAuth = await downloadJsonOrNull(container, curAuthName);
           if (!curAuth) return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
           const authActive = cur.active !== false && cur.archived !== true;
           const targetAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
+          const rename = targetAuthName !== curAuthName;
+          const expectedVersion = normalizeAuthVersion(cur.authVersion) + (newPassword ? 1 : 0);
 
-          await mutateJsonWithRetry(container, studentBlobName, c => {
-            if (!c || c.role !== "student") throw new Error("الطالب غير موجود.");
-            c.schemaVersion = 3;
-            c.firstName = firstName;
-            c.familyName = familyName;
-            c.displayName = firstName + " " + familyName;
-            c.identityNumber = identityNumber;
-            c.code = newCode;
-            c.classId = newClassId;
-            if (newPassword) c.authVersion = normalizeAuthVersion(c.authVersion) + 1;
-            updatedStudentVersion = normalizeAuthVersion(c.authVersion);
-            c.updatedAt = new Date().toISOString();
-            return c;
-          });
+          // RENAME ordering: the credential at the NEW path is created FIRST (create-only), so an identity that is
+          // already taken is a clean 409 with nothing changed. Only then is the student document rewritten; if that
+          // fails, the new credential is removed again (compensation), so the student document and its auth path can
+          // never disagree. Built from the CURRENT auth (re-read inside the lock: it carries any newer reset).
+          let createdAuthEtag = null;
+          let newAuthVersion = 0;
+          if (rename) {
+            newAuthVersion = Math.max(normalizeAuthVersion(curAuth.authVersion), expectedVersion);
+            const newAuthDoc = {
+              ...curAuth,
+              schemaVersion: 3,
+              codeHash: studentCodeHash(newCode),
+              active: authActive,
+              authVersion: newAuthVersion,
+              updatedAt: new Date().toISOString()
+            };
+            if (newPwHash) { newAuthDoc.salt = newPwHash.salt; newAuthDoc.passwordHash = newPwHash.passwordHash; }
+            try {
+              createdAuthEtag = await uploadJsonConditional(container, targetAuthName, newAuthDoc, null);
+            } catch (e) {
+              if (isConcurrencyConflict(e)) return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
+              throw e;
+            }
+          }
 
-          if (targetAuthName === curAuthName) {
+          try {
+            await mutateJsonWithRetry(container, studentBlobName, c => {
+              if (!c || c.role !== "student") throw new StudentActionError(404, "الطالب غير موجود.");
+              if (String(c.classId || "") !== oldClassId) throw new StudentActionError(409, CONCURRENT_MOVE);
+              c.schemaVersion = 3;
+              c.firstName = firstName;
+              c.familyName = familyName;
+              c.displayName = firstName + " " + familyName;
+              c.identityNumber = identityNumber;
+              c.code = newCode;
+              c.classId = newClassId;
+              if (newPassword) c.authVersion = normalizeAuthVersion(c.authVersion) + 1;
+              updatedStudentVersion = normalizeAuthVersion(c.authVersion);
+              c.updatedAt = new Date().toISOString();
+              return c;
+            });
+          } catch (e) {
+            if (rename) { try { await deleteBlobConditional(container, targetAuthName, createdAuthEtag); } catch { /* reclaimable orphan */ } }
+            throw e;
+          }
+
+          if (!rename) {
             await mutateJsonWithRetry(container, curAuthName, c => {
-              if (!c) throw new Error("ملف دخول الطالب غير موجود.");
+              if (!c) throw new StudentActionError(404, "ملف دخول الطالب غير موجود.");
               if (newPwHash) {
                 if (normalizeAuthVersion(c.authVersion) <= updatedStudentVersion) {
                   c.salt = newPwHash.salt; c.passwordHash = newPwHash.passwordHash; c.authVersion = updatedStudentVersion; credentialApplied = true;
@@ -1035,22 +1146,15 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               return c;
             });
           } else {
-            // RENAME: build the new auth doc from the CURRENT auth (re-read inside the lock, so it carries
-            // any newer reset's hash/version), create-only at the new path, then delete the old path.
-            const newAuthDoc = {
-              ...curAuth,
-              schemaVersion: 3,
-              codeHash: studentCodeHash(newCode),
-              active: authActive,
-              authVersion: Math.max(normalizeAuthVersion(curAuth.authVersion), normalizeAuthVersion(updatedStudentVersion)),
-              updatedAt: new Date().toISOString()
-            };
-            if (newPwHash) { newAuthDoc.salt = newPwHash.salt; newAuthDoc.passwordHash = newPwHash.passwordHash; }
-            try {
-              await uploadJsonConditional(container, targetAuthName, newAuthDoc, null);
-            } catch (e) {
-              if (isConcurrencyConflict(e)) return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
-              throw e;
+            // Login requires auth.authVersion === student.authVersion; under the lock they already agree, but a student
+            // version that advanced anyway is caught up on the new credential (never down).
+            if (normalizeAuthVersion(updatedStudentVersion) > newAuthVersion) {
+              await mutateJsonWithRetry(container, targetAuthName, c => {
+                if (!c) throw new StudentActionError(404, "ملف دخول الطالب غير موجود.");
+                c.authVersion = normalizeAuthVersion(updatedStudentVersion);
+                c.updatedAt = new Date().toISOString();
+                return c;
+              });
             }
             await container.getBlobClient(curAuthName).deleteIfExists();
             if (newPwHash) credentialApplied = true;
@@ -1081,6 +1185,15 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "تعذّر تغيير كلمة المرور بسبب تعارض مع عملية أحدث. أعد المحاولة." } };
         }
         const updatedStudent = await downloadJsonOrNull(container, studentBlobName);
+        // Profile edits are audited (names / identity), never with the identity number itself.
+        const changedFields = [
+          ...(firstName !== currentNames.firstName ? ["firstName"] : []),
+          ...(familyName !== currentNames.familyName ? ["familyName"] : []),
+          ...(studentCodeHash(newCode) !== studentCodeHash(oldCode) ? ["identityNumber"] : [])
+        ];
+        if (changedFields.length) {
+          await rec(container, { actor: auth.user?.sub, action: "student.update", targetType: "student", targetId: userId, targetLabel: (firstName + " " + familyName).trim(), details: { fields: changedFields } });
+        }
         if (newPassword) {
           await rec(container, {
             actor: auth.user?.sub,
@@ -1099,6 +1212,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       if (["resetpassword", "toggleactive", "archive", "unarchive", "delete"].includes(action)) {
         const userId = String(body?.userId || "").trim();
+        if (!isSafeId(userId)) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
         if (!student || student.role !== "student" || !(await studentOk(student))) {
           return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
@@ -1120,11 +1234,15 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           };
         }
         if (action === "toggleactive") {
-          const active = !(student.active !== false);
+          // An explicit target state makes the call idempotent (a retry / double click never flips it back); without
+          // one the established toggle of the current state is kept for older clients.
+          const active = typeof body?.active === "boolean" ? body.active : !(student.active !== false);
           await changeStudentActive(container, student, active);
+          await rec(container, { actor: auth.user?.sub, action: "student.setActive", targetType: "student", targetId: student.userId, targetLabel: student.displayName || student.code, details: { active } });
           return { status: 200, jsonBody: { ok: true, active } };
         }
         if (action === "archive") {
+          await assertNoPendingGrading(createPendingGradingReader(container), student, "archive");
           const sync = await archiveStudent(container, student, obs);
           await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: student.userId, targetLabel: student.displayName || student.code, details: { classId: String(student.classId || "") } });
           return { status: 200, jsonBody: { ok: true, archived: true, rosterSynced: sync.synced } };
@@ -1152,10 +1270,14 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           (Array.isArray(body?.userIds) ? body.userIds : [])
             .map(x => String(x || "").trim())
             .filter(Boolean)
-        )).slice(0, 250);
+        ));
 
         if (!userIds.length) {
           return { status: 400, jsonBody: { ok: false, error: "اختر طالبًا واحدًا على الأقل." } };
+        }
+        // Never a silent truncation (previously ids beyond the limit were dropped while the batch reported success).
+        if (userIds.length > MAX_IMPORT_ROWS) {
+          return { status: 400, jsonBody: { ok: false, error: "يمكن تنفيذ العملية الجماعية على " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في المرة الواحدة." } };
         }
 
         const supported = ["activate", "deactivate", "archive", "unarchive", "move", "resetpasswords", "delete"];
@@ -1167,7 +1289,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (operation === "move" && !targetClassId) {
           return { status: 400, jsonBody: { ok: false, error: "اختر الصف الهدف." } };
         }
-        if (operation === "move" && !(await classOk(targetClassId))) {
+        if (operation === "move" && (!isSafeId(targetClassId) || !(await classOk(targetClassId)))) {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
 
@@ -1176,17 +1298,24 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const credentials = [];
         let rosterSynced = true;                      // Roadmap #25: aggregate index sync status of the batch
         const note = sync => { if (sync && sync.synced === false) rosterSynced = false; };
+        const pendingReader = operation === "move" || operation === "archive" ? createPendingGradingReader(container) : null;
 
         for (const userId of userIds) {
           try {
-            const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
-            if (!student || student.role !== "student" || !(await studentOk(student))) throw new Error("الطالب غير موجود.");
+            const student = isSafeId(userId) ? await downloadJsonOrNull(container, USER_PREFIX + userId + ".json") : null;
+            if (!student || student.role !== "student" || !(await studentOk(student))) throw new StudentActionError(404, "الطالب غير موجود.");
 
-            if (operation === "activate") await changeStudentActive(container, student, true);
-            else if (operation === "deactivate") await changeStudentActive(container, student, false);
-            else if (operation === "archive") { note(await archiveStudent(container, student, obs)); await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
+            if (operation === "activate" || operation === "deactivate") {
+              const active = operation === "activate";
+              await changeStudentActive(container, student, active);
+              await rec(container, { actor: auth.user?.sub, action: "student.setActive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { active, bulk: true } });
+            }
+            else if (operation === "archive") {
+              await assertNoPendingGrading(pendingReader, student, "archive"); note(await archiveStudent(container, student, obs)); await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
             else if (operation === "unarchive") { note(await unarchiveStudent(container, student, obs)); await rec(container, { actor: auth.user?.sub, action: "student.unarchive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
-            else if (operation === "move") { note(await moveStudent(container, student, targetClassId, obs)); await rec(container, { actor: auth.user?.sub, action: "student.move", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, fromClassId: String(student.classId || ""), toClassId: targetClassId } }); }
+            else if (operation === "move") {
+              if (String(student.classId || "") !== targetClassId) await assertNoPendingGrading(pendingReader, student, "move");
+              note(await moveStudent(container, student, targetClassId, obs)); await rec(container, { actor: auth.user?.sub, action: "student.move", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, fromClassId: String(student.classId || ""), toClassId: targetClassId } }); }
             else if (operation === "resetpasswords") {
               const password = await resetStudentPassword(container, student);
               const publicValue = publicStudent(student);
@@ -1223,13 +1352,15 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           } catch (error) {
             errors.push({
               userId,
-              error: error instanceof Error ? error.message : "تعذر تنفيذ العملية."
+              ...(error && error.code === "PENDING_GRADING" ? { code: "PENDING_GRADING" } : {}),
+              error: rowErrorMessage(error, "تعذر تنفيذ العملية لهذا الطالب.", obs)
             });
           }
         }
 
         return {
           status: 200,
+          headers: NO_STORE,
           jsonBody: {
             ok: true,
             processed: results.length,
@@ -1256,7 +1387,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       // message, logged as a warning with SAFE metadata only (never the message: it can name a student).
       if (e instanceof StudentActionError) {
         obs?.logWarn("student.manage.rejected", { action, httpStatus: e.httpStatus, errorCode: e.code || "validation" });
-        return { status: e.httpStatus, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: e.message } };
+        return { status: e.httpStatus, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: e.message, ...(e.code === "PENDING_GRADING" ? { code: e.code } : {}) } };
       }
       obs?.logError("student.manage.error", e);
       return {
