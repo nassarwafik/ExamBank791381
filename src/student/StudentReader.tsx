@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LearningReaderWithTraining from "../learning/training/LearningReaderWithTraining";
 import { createRestrictedReaderContentApi } from "../learning/reader/restrictedContentApi";
+import { createContentApi } from "../learning/reader/readerContentApi";
 import { createTrainingClient, studentTrainingHeaders } from "../learning/training/trainingClient";
 import { createStudyClient } from "../learning/study/studyClient";
 import type { SearchHit } from "../learning/search/searchModel";
@@ -46,7 +47,9 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   annotationsClient?: AnnotationsClient;
 }) {
   const key = allowedModuleIds.join("|");
-  const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // Phase L.6a — module bodies come from the API with the student's session: the server serves a module only while it is published
+  // to the student's class; this adapter still keeps every unreleased module out of the Reader's manifest and loader.
+  const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds, createContentApi(studentTrainingHeaders(token))), [courseId, key, token]);   // eslint-disable-line react-hooks/exhaustive-deps
   const client = useMemo(() => createTrainingClient(studentTrainingHeaders(token)), [token]);
   const study = useMemo(() => createStudyClient(studentTrainingHeaders(token)), [token]);
   // Phase 21E L3-B — in-book search is scoped to EXACTLY the released module ids this Reader was opened with (from the

@@ -10,6 +10,7 @@ import { arabicCount, AVAILABLE_BOOKS, LESSONS } from "./arabicCount";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import { createStudyClient } from "./study/studyClient";
 import { createClassReadingClient, type ClassReadingClient } from "./classReading/classReadingClient";
+import { createContentApi, registryContentApi } from "./reader/readerContentApi";
 import ClassReadingPanel from "./classReading/ClassReadingPanel";
 import "./learning.css";
 import "./learning-library-premium.css";
@@ -62,6 +63,8 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   const study = useMemo(() => (token ? createStudyClient(teacherTrainingHeaders(token)) : null), [token]);
   // Phase L.4 — the book page's «قراءة صفوفي» panel (teacher only; it issues no request until the teacher opens it).
   const classReading = useMemo(() => (token ? createClassReadingClient(teacherTrainingHeaders(token)) : null), [token]);
+  // Phase L.6a — the Reader's module bodies come from the API with the teacher's session (any module of the book).
+  const contentApi = useMemo(() => (token ? createContentApi(teacherTrainingHeaders(token)) : registryContentApi), [token]);
   // Phase 21E L3-B — whole-course search ("all") is a TEACHER capability: this page is mounted only inside the
   // authenticated teacher app, and it is enabled only with the teacher session token present. The student portal never
   // reaches this page; its Reader searches exactly its released modules.
@@ -95,6 +98,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ فتح القارئ التفاعلي...</p>}>
           <LearningReaderWithTraining
             courseId={course.id}
+            api={contentApi}
             initialPageId={initialPageId}
             onExit={() => setView(view.fromSearch ? { kind: "library" } : { kind: "course", courseId: course.id })}
             exitLabel={view.fromSearch ? "العودة إلى نتائج البحث" : "العودة إلى نظرة الكتاب"}
