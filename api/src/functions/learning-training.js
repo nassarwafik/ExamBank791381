@@ -4,7 +4,7 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
-const { readLibraryItem } = require("../lib/exam-library-store");
+const { readLibraryItem, deepFreeze } = require("../lib/exam-library-store");
 const { sanitizeExamForStudent } = require("../lib/student-exam-sanitize");
 const { hydrateBankAssets } = require("../lib/bank-asset-hydrate");
 const { gradeExam } = require("../lib/assignment-grading");
@@ -40,6 +40,20 @@ async function resolveActor(request, deps) {
   const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
   if (!sess.ok) return { kind: "denied", response: sess.response };
   return { kind: "student", user: sess.user, student: sess.student, container: sess.container };
+}
+
+// Phase L.7 — the student form of an item is computed once per process. The library item is read once and shared (frozen, from
+// the store); hydrating its bank images returns the SAME snapshot when it has none (every Learning-Practice item today), and
+// then the sanitized exam depends on nothing but that snapshot: it is kept beside it (a WeakMap keyed by the snapshot itself,
+// frozen) instead of being cloned and sanitized on every request. A snapshot WITH bank images is hydrated and sanitized on every
+// request as before, because its image URLs are short-lived signed credentials minted at delivery time.
+const STUDENT_EXAMS = new WeakMap();
+function studentExam(snapshot) {
+  const hydrated = hydrateBankAssets(snapshot);
+  if (hydrated !== snapshot) return sanitizeExamForStudent(hydrated);
+  let exam = STUDENT_EXAMS.get(snapshot);
+  if (!exam) { exam = deepFreeze(sanitizeExamForStudent(snapshot)); STUDENT_EXAMS.set(snapshot, exam); }
+  return exam;
 }
 
 /** Public training metadata (never the exam). */
@@ -100,7 +114,7 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "GET" && !action) {
       const questionCount = Array.isArray(item.examSnapshot.questions) ? item.examSnapshot.questions.length : Number(item.questionCount || 0);
       const entry = actor.kind === "student" ? trainingEntry(practiceDoc, training.trainingId) : null;
-      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: trainingMaxStrengthPoints(training.trainingId) }), exam: sanitizeExamForStudent(hydrateBankAssets(item.examSnapshot)), ...bestIfAttempted(entry, training.trainingId) } };
+      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: trainingMaxStrengthPoints(training.trainingId) }), exam: studentExam(item.examSnapshot), ...bestIfAttempted(entry, training.trainingId) } };
     }
 
     // ── submit ──

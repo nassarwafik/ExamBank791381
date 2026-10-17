@@ -67,7 +67,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | implemented |
 | L.6a | Restricted content: module bodies served by the API after the publication check; none ships as a public asset (D2, part 1) | implemented |
 | L.6b | Answer keys, hints and explanations stay on the server; verdict and feedback come from the server for every answer (D2, part 2) | implemented |
-| L.7 | Operations: `exam-library` observability + cache, in-memory `learning-training`, content-chunk bundle budget, measured before / after | planned |
+| L.7 | Operations: `exam-library` observability + cache, in-memory `learning-training`, content-chunk bundle budget, measured before / after | implemented |
 | L.8 | Gate: real-browser reader journey (open, navigate, resume, back), axe and 44 px touch targets at 390 / 834 / 1024 / 1440 | planned |
 
 ## 4. Implementation record and evidence (L.0)
@@ -681,7 +681,83 @@ This is logged as `learning.class_progress.read_cost`. Nothing is written.
   - `npx tsc -b`, `npm run build` (bundle guard passed: 0 module bodies; initial JS graph 114.5 KB gzip against 125 KB; Reader first-load graph 33.7 KB) and `git diff --check` are clean.
 - **Not run:** a real-browser pass. The end-to-end suite runs the Reader over the **real** content and study handlers in happy-dom: the served body holds none of the block's feedback, a wrong answer shows the server's message and hints, and a right one shows its message, its explanation and the recorded study point.
 
-## 12. What the plan leaves to the owner
+## 12. Implementation record and evidence (L.7)
+
+### Decisions taken inside L.7
+
+| # | Decision | Why |
+|---|---|---|
+| L7-a | **The Exam Library is read from disk once per process.** The catalog is read on first use and each item on its first request. The item ids come from one directory listing, so an unknown id never touches the disk and the cache never holds more than the files the deployment ships. | The library is part of the deployment and never changes while a process runs. Before L.7 every request did a synchronous read and parse: about 0.14 ms for the catalog and 0.13 ms per item. |
+| L7-b | **Cached values are deep-frozen and shared.** | One request can never change what the next one reads. Every caller already copies before changing anything: `hydrateBankAssets` copies the path it changes and `sanitizeExamForStudent` clones. A run over all 36 items confirmed the grading, hydration and sanitization paths leave them untouched. |
+| L7-c | **`GET /api/exam-library` runs under the shared observability wrapper** (request id, duration, status, redacted error event). It answers with a **strong ETag, `private, no-cache` and `Vary`**, and a 304 is sent only after the builder check. | The endpoint had no observability at all. The library carries answer keys, so it must never be stored by a shared cache. A teacher's browser keeps it and revalidates instead of downloading the 31 KB catalog or a whole item again. |
+| L7-d | **Learning Practice computes the student form of a training once.** It is kept in a `WeakMap` keyed by the shared snapshot and frozen. A snapshot with bank images is still hydrated and sanitized on every request. | The sanitized exam depends only on the snapshot, unless it has bank images: their URLs are short-lived signed credentials minted at delivery. Today no Learning-Practice item has bank images. |
+| L7-e | **The build guard budgets the learning content** (gzip):<br>• the Reader's first-load graph: **40 KB** (measured 33.7);<br>• the course manifest chunk: **15 KB** (12.2);<br>• each visual group chunk: **9 KB** (6.5);<br>• all visuals together: **75 KB** (64.4).<br>A build with no manifest chunk fails. | Each budget leaves room for normal growth but not for a design change: a body bundled again, the visuals packed into one chunk, or the table of contents carrying page text. The manifest is found by the book's course-prefixed page ids, which only that chunk carries. |
+
+### What shipped
+
+- **`api/src/lib/exam-library-store.js`:**
+  - the per-process cache (`libraryCatalogEntry`, `libraryItemEntry`, each `{ value, etag }`);
+  - `deepFreeze`;
+  - `resetLibraryCacheForTests`.
+- **`api/src/functions/exam-library.js`:**
+  - an exported `handler` and an `observed` wrapped handler;
+  - ETag, `private, no-cache`, Vary and a 304 after the builder check;
+  - a `exam.library.error` event on failure.
+- **`api/src/functions/learning-training.js`:** `studentExam(snapshot)`, which caches the student form of each training once.
+- **`scripts/check-bundle-budget.mjs`:** `LEARNING_BUDGETS_KB`, `findManifestChunks`, `learningContentFailures`, and a «Learning content (gzip)» line in the build report.
+- **Tests:**
+  - `api/tests/exam-library-l7.test.js` (11);
+  - `scripts/check-bundle-budget.l7.test.mjs` (4).
+- **Mutation:** the `l7` campaign in `scripts/mutate-l.mjs`.
+
+### Measured before / after
+
+- **In process:** the same script ran on main 5d308329 and on the head (300 calls after 20 warm-up calls, 3 runs; the range is across runs).
+- **Network:** a revalidation answered with 304 carries no body.
+
+| Call | Before | After |
+|---|---|---|
+| `readLibraryCatalog()` | 0.13–0.16 ms | ≈ 0.000 ms |
+| `readLibraryItem()` (each of the 36) | 0.12–0.14 ms | 0.010 ms |
+| `GET /api/learning-training/{id}` (teacher, item) | 0.42–0.45 ms | 0.010 ms |
+| `GET /api/exam-library` revalidation | full 31 KB body | 304, no body |
+
+### Evidence
+
+- **Fail-first on `main` 5d308329** (detached worktree, the two new test files copied in): **13 of 15 fail**.
+  - **The store:**
+    - `expected [ Array(4) ] to have a length of 1 but got 4` (the catalog was re-read);
+    - `expected [ 'T99.json', 'nope.json' ] to deeply equal []` (unknown ids read the disk);
+    - `expected false to be true` (nothing was frozen).
+  - **The endpoint:** `handler is not a function` and `observed is not a function`. Its handler was an inline closure with no observability.
+  - **Learning Practice:** `expected {…} to be {…}`, because the exam was re-sanitized on every request.
+  - **The guard:** `learningContentFailures is not a function`, `findManifestChunks is not a function`, and `expected undefined to deeply equal { readerFirstLoad: 40, … }`.
+  - **Pins** (they pass on both): «the cached item is exactly the file» and «an item with a bank image is hydrated on every request».
+- **Mutation:** `node scripts/mutate-l.mjs l7` → **17/17 KILLED**, every file restored byte-for-byte.
+  - **Store:**
+    - the catalog not cached;
+    - an item not cached;
+    - an unknown id reaching the disk;
+    - the cache not frozen.
+  - **Endpoint:**
+    - a 304 before the builder check;
+    - public caching;
+    - any If-None-Match taken as a match;
+    - no observability wrapper;
+    - a failure not logged.
+  - **Learning Practice:**
+    - an exam with bank images cached;
+    - the student form recomputed.
+  - **Guard:**
+    - each of the four budgets unchecked;
+    - a missing manifest passing;
+    - the manifest signature narrowed.
+- **Full validation on the head:**
+  - `npm test`: 1118 files / 13572 tests passed, 0 failed.
+  - `npm run lint`: 0 errors, 123 warnings, the same set as `main`.
+  - `npx tsc -b`, `npm run build` and `git diff --check` are clean. The bundle guard passed, printing «Learning content (gzip): Reader first load 33.7 KB (budget 40); manifest 12.2 KB (budget 15); visuals 64.4 KB in 27 chunks (budget 75), largest 6.5 KB (budget 9)»; the initial JS graph is 114.5 KB against 125.
+
+## 13. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count
