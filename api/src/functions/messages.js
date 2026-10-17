@@ -2,6 +2,7 @@
 //   GET  /api/messages?studentId=<id>                     → that student's direct conversation (read-only allowed for
 //                                                           disabled/archived students and archived classes)
 //   GET  /api/messages?classId=<id>&kind=announcements    → that class's announcement history (active OR archived)
+//        both reads accept &before=<messageId> (M.3): the older page before that id ({ messages, hasMore })
 //   POST /api/messages { action: "sendDirect", studentId, body }
 //   POST /api/messages { action: "sendAnnouncement", classId, body }
 //   GET  /api/messages?kind=unread-summary[&classId=<id>]  → Phase 5D: THIS teacher's unread STUDENT replies (global
@@ -23,17 +24,19 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 const { notifyStudentOfNewMessage, notifyWithTimeout } = require("../lib/push-notify");
 const {
-  isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, createMessage, listRecentMessages,
-  messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
+  isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, listRecentMessages,
+  messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError, MESSAGE_ID_RE
 } = require("../lib/message-store");
+// Messages hardening (M.1): idempotent (clientMessageId) + rate-limited publication, private no-store responses.
+const { publishGuarded, noStore } = require("../lib/message-send");
 const {
-  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, absorbIrrelevantSequenced, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
 } = require("../lib/message-read-state");
 
 const USER_PREFIX = "platform/users/";
@@ -80,7 +83,15 @@ async function directSendState(container, student, dl) {
 const classSummary = classroom => classroom ? { classId: String(classroom.classId || ""), name: String(classroom.name || ""), status: normalizeClassStatus(classroom) } : null;
 
 async function handler(request, deps = {}, obs = null) {
-  const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  return noStore(await handle(request, deps, obs));
+}
+
+async function handle(request, deps = {}, obs = null) {
+  // One read per document per request: the tenancy checks, the send state and the unread summary's per-student class
+  // checks reuse it (M.1 — the summary used to reload the same class document once per student).
+  const rawDl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  const readCache = new Map();
+  const dl = (c, name) => { if (!readCache.has(name)) readCache.set(name, rawDl(c, name)); return readCache.get(name); };
   // Audit is secondary — a recorder failure must never fail the send; the body is never part of an audit event.
   const rawRec = deps.recordAuditEvent || recordAuditEvent;
   const rec = async (c, ev) => { try { await rawRec(c, ev); } catch { /* audit is secondary */ } };
@@ -103,6 +114,9 @@ async function handler(request, deps = {}, obs = null) {
       const studentId = String(url.searchParams.get("studentId") || "").trim();
       const classId = String(url.searchParams.get("classId") || "").trim();
       const kind = String(url.searchParams.get("kind") || "").trim();
+      // M.3 — older history: `before` is the oldest message id the client shows; anything else is refused.
+      const before = url.searchParams.has("before") ? String(url.searchParams.get("before") || "") : "";
+      if (url.searchParams.has("before") && !MESSAGE_ID_RE.test(before)) return bad("مؤشر الرسائل غير صالح.");
       if (tenant && studentId && !(await ownStudent(studentId))) return notFound(MSG.studentNotFound);
       if (tenant && classId && !(await ownClass(classId))) return notFound(MSG.classNotFound);
       if (kind === "unread-summary") {
@@ -120,16 +134,21 @@ async function handler(request, deps = {}, obs = null) {
         // THIS teacher's legacy read state + relevance shape the page's unread legacy frontier (see listRecentMessages).
         const stateName = teacherDirectStateName(teacherId, studentId);
         const marker = await loadMarker(container, stateName, deps);
-        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isLegacyRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect });
-        // A frontier window of only the teacher's own legacy messages is folded into the boundary (never starves it).
+        // M.3 — `isRead` covers both domains: the student's unread replies ride along oldest-first (sequenced frontier).
+        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect, before });
+        // A frontier window of only the teacher's own messages is folded into the boundary (never starves it).
+        const meta = { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId };
         if (page.absorbable.length) {
-          await absorbIrrelevantLegacy(container, { stateName, legacyIds: page.legacyIds, ids: page.absorbable, meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } }, deps).catch(() => {});
+          await absorbIrrelevantLegacy(container, { stateName, legacyIds: page.legacyIds, ids: page.absorbable, meta }, deps).catch(() => {});
+        }
+        if (page.sequencedAbsorbable.length) {
+          await absorbIrrelevantSequenced(container, { stateName, streamPrefix: directPrefix(studentId), ids: page.sequencedAbsorbable, meta }, deps).catch(() => {});
         }
         return { status: 200, jsonBody: {
           ok: true,
           student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
           canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error,
-          messages: page.messages.map(m => messageView(m, { includeStudentId: true })), hasMore: page.hasMore
+          messages: page.messages.map(m => messageView(m, { includeStudentId: true })), hasMore: page.hasMore, hasNewer: page.hasNewer
         } };
       }
       if (classId && kind === "announcements") {
@@ -137,7 +156,7 @@ async function handler(request, deps = {}, obs = null) {
         if (!classroom) return notFound(MSG.classNotFound);
         const archived = normalizeClassStatus(classroom) === "archived";
         // The teacher has no read state for announcements (never acknowledged) → no unread legacy frontier.
-        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps, { isLegacyRead: () => true });
+        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps, { isLegacyRead: () => true, before });
         return { status: 200, jsonBody: {
           ok: true, classroom: classSummary(classroom), canSend: !archived, readOnlyCode: archived ? "classArchived" : "", readOnlyReason: archived ? MSG.classArchived : "",
           messages: page.messages.map(m => messageView(m, { includeClassId: true })), hasMore: page.hasMore
@@ -165,16 +184,23 @@ async function handler(request, deps = {}, obs = null) {
       if (!state.canSend) return readOnly(state.error, state.code);
       const senderDisplayName = await teacherName(container, teacherId);
       const classIdAtSend = String(state.classroom.classId || student.classId || "");
-      const doc = await createMessage(container, directPrefix(studentId), (messageId, createdAt) => ({
-        schemaVersion: 1, messageId, kind: "direct", studentId,
-        senderRole: "teacher", senderId: teacherId, senderDisplayName,
-        body: text.body, createdAt, classIdAtSend
-      }), deps);
-      await rec(container, { actor: teacherId, action: "message.sendDirect", targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), details: { classId: classIdAtSend } });
-      // Push is secondary to the saved message: bounded in time and never able to fail the send.
-      try { await notifyWithTimeout((deps.notifyStudentOfNewMessage || notifyStudentOfNewMessage)(container, studentId, deps, obs)); }
-      catch { /* never reached: notify is total; kept as a last guard */ }
-      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeStudentId: true }) } };
+      const sent = await publishGuarded(container, {
+        role: "teacher", senderId: teacherId, streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, clientMessageId: body.clientMessageId,
+        buildDoc: (messageId, createdAt) => ({
+          schemaVersion: 1, messageId, kind: "direct", studentId,
+          senderRole: "teacher", senderId: teacherId, senderDisplayName,
+          body: text.body, createdAt, classIdAtSend
+        })
+      }, deps);
+      if (sent.response) return sent.response;
+      const doc = sent.doc;
+      if (!sent.replay) {                                                 // a replayed retry was already audited / pushed
+        await rec(container, { actor: teacherId, action: "message.sendDirect", targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), details: { classId: classIdAtSend, messageId: doc.messageId } });
+        // Push is secondary to the saved message: bounded in time and never able to fail the send.
+        try { await notifyWithTimeout((deps.notifyStudentOfNewMessage || notifyStudentOfNewMessage)(container, studentId, deps, obs)); }
+        catch { /* never reached: notify is total; kept as a last guard */ }
+      }
+      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeStudentId: true }), ...(sent.replay ? { replay: true } : {}) } };
     }
 
     if (action === "sendAnnouncement") {
@@ -185,13 +211,18 @@ async function handler(request, deps = {}, obs = null) {
       if (!classroom) return notFound(MSG.classNotFound);
       if (normalizeClassStatus(classroom) === "archived") return readOnly(MSG.classArchived, "classArchived");
       const senderDisplayName = await teacherName(container, teacherId);
-      const doc = await createMessage(container, announcementPrefix(classId), (messageId, createdAt) => ({
-        schemaVersion: 1, messageId, kind: "announcement", classId,
-        senderRole: "teacher", senderId: teacherId, senderDisplayName,
-        body: text.body, createdAt
-      }), deps);
-      await rec(container, { actor: teacherId, action: "message.sendAnnouncement", targetType: "class", targetId: classId, targetLabel: String(classroom.name || "") });
-      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true }) } };
+      const sent = await publishGuarded(container, {
+        role: "teacher", senderId: teacherId, streamPrefix: announcementPrefix(classId), expected: { kind: "announcement", classId }, clientMessageId: body.clientMessageId,
+        buildDoc: (messageId, createdAt) => ({
+          schemaVersion: 1, messageId, kind: "announcement", classId,
+          senderRole: "teacher", senderId: teacherId, senderDisplayName,
+          body: text.body, createdAt
+        })
+      }, deps);
+      if (sent.response) return sent.response;
+      const doc = sent.doc;
+      if (!sent.replay) await rec(container, { actor: teacherId, action: "message.sendAnnouncement", targetType: "class", targetId: classId, targetLabel: String(classroom.name || ""), details: { messageId: doc.messageId } });
+      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true }), ...(sent.replay ? { replay: true } : {}) } };
     }
 
     if (action === "markDirectRead") {
@@ -208,8 +239,9 @@ async function handler(request, deps = {}, obs = null) {
           legacyThroughMessageId: body.legacyThroughMessageId, legacySeenIdsAtBoundary: body.legacySeenIdsAtBoundary,
           meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
         }, deps);
-        // FRESH listing (no `ids`): a student message that arrived after validation is still counted.
-        const remaining = await countUnread(container, { ...stream, marker }, deps);
+        // FRESH listing (no `ids`): a student message that arrived after validation is still counted. The teacher's own
+        // leading messages are absorbed (M.1) so later badge counts stop re-downloading them.
+        const remaining = await countUnread(container, { ...stream, marker, absorb: { stateName: teacherDirectStateName(teacherId, studentId), meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } } }, deps);
         return { status: 200, jsonBody: { ok: true, studentId, ...remaining } };
       } catch (e) {
         if (e instanceof MarkReadError) return bad("الرسالة المحددة غير صالحة.");
@@ -219,6 +251,9 @@ async function handler(request, deps = {}, obs = null) {
 
     return bad("إجراء غير مدعوم.");
   } catch (e) {
+    // Losing every stream-position race is a transient conflict: retryable, never a server fault (M.1).
+    // M.3 — exhausted compare-and-set retries (a hot marker, limiter bucket or claim) are the same transient conflict.
+    if (e instanceof MessageContentionError || e instanceof StorageConflictError || (e && e.name === "StorageConflictError")) { obs?.logWarn("messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }
     obs?.logError("messages.error", e);
     return { status: 500, jsonBody: { ok: false, error: "تعذر معالجة الرسائل حاليًا." } };
   }

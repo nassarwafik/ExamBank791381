@@ -109,7 +109,7 @@ describe("direct conversation", () => {
     fireEvent.click(screen.getByRole("button", { name: "إرسال" }));
     await waitFor(() => expect(within(threadList()).getByText("واجب الغد")).toBeTruthy());
     expect((screen.getByRole("textbox", { name: "رسالة إلى الطالب" }) as HTMLTextAreaElement).value).toBe("");
-    expect(client.sendDirect).toHaveBeenLastCalledWith("s1", "واجب الغد");
+    expect(client.sendDirect).toHaveBeenLastCalledWith("s1", "واجب الغد", expect.stringMatching(/^[A-Za-z0-9_-]{8,64}$/));   // + the M.1 idempotency key
   });
 
   it("a read-only thread (archived/disabled student or archived class) shows history and no composer", async () => {
@@ -135,7 +135,7 @@ describe("class announcements", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "إعلان جديد للصف" }), { target: { value: "لا دوام غدًا" } });
     fireEvent.click(screen.getByRole("button", { name: "إرسال إعلان للصف" }));
     await waitFor(() => expect(within(threadList("إعلانات الصف")).getByText("لا دوام غدًا")).toBeTruthy());
-    expect(client.sendAnnouncement).toHaveBeenCalledWith("c1", "لا دوام غدًا");
+    expect(client.sendAnnouncement).toHaveBeenCalledWith("c1", "لا دوام غدًا", expect.any(String));
 
     pickClass("c2");
     expect(await screen.findByText("إعلان قديم")).toBeTruthy();

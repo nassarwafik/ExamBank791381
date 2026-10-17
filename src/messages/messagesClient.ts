@@ -4,6 +4,24 @@
 import type { Classroom, Student } from "../students/types";
 
 export const MAX_MESSAGE_LENGTH = 2000;
+
+/**
+ * Messages hardening (M.1) — an opaque idempotency key for ONE composed message. The page reuses it for every retry of
+ * the same text in the same thread, so a retried send (timeout, network error) can never publish a second copy: the
+ * server returns the already-published message instead. Matches the server rule /^[A-Za-z0-9_-]{8,64}$/.
+ */
+export function newClientMessageId(): string {
+  const c = (globalThis as { crypto?: Crypto }).crypto;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (c && typeof c.getRandomValues === "function") c.getRandomValues(bytes); else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** The key of the message being sent: the same key while the thread and the text are unchanged (a retry), else new. */
+export function sendKeyFor(current: { thread: string; body: string; id: string } | null, thread: string, body: string) {
+  return current && current.thread === thread && current.body === body ? current : { thread, body, id: newClientMessageId() };
+}
 export const MESSAGES_POLL_MS = 5000;
 /** Phase 5D — unread summaries (badges) refresh on a slower cadence than message bodies. */
 export const UNREAD_POLL_MS = 15000;
@@ -81,13 +99,21 @@ export type MessageView = {
   createdAt: string;
 };
 
-export type ThreadState = { messages: MessageView[]; canSend: boolean; readOnlyReason: string };
+/** M.3 — `hasMore`: older history exists (page back with `before`); `hasNewer`: unread messages were held back until the
+ *  shown ones are read (they arrive on the next read). Both optional: a missing value means false. */
+export type ThreadState = { messages: MessageView[]; canSend: boolean; readOnlyReason: string; hasMore?: boolean; hasNewer?: boolean };
+/** M.3 — one older-history page of a stream. */
+export type OlderPage = { messages: MessageView[]; hasMore: boolean };
 export type StudentMessagesData = {
   direct: MessageView[];
   announcements: MessageView[];
   classroom: { classId: string; name: string; archived: boolean } | null;
   canSend: boolean;
   readOnlyReason: string;
+  directHasMore?: boolean;
+  directHasNewer?: boolean;
+  announcementsHasMore?: boolean;
+  announcementsHasNewer?: boolean;
 };
 
 /** An HTTP failure carrying the status (so callers can tell a 401 from a transient error). */
@@ -103,15 +129,17 @@ function fail(j: Record<string, unknown>, status: number, fallback: string): nev
   throw new MessagesHttpError(typeof j.error === "string" && j.error ? j.error : fallback, status);
 }
 const asMessages = (v: unknown): MessageView[] => (Array.isArray(v) ? (v as MessageView[]) : []);
-const thread = (j: Record<string, unknown>): ThreadState => ({ messages: asMessages(j.messages), canSend: j.canSend === true, readOnlyReason: String(j.readOnlyReason || "") });
+const thread = (j: Record<string, unknown>): ThreadState => ({ messages: asMessages(j.messages), canSend: j.canSend === true, readOnlyReason: String(j.readOnlyReason || ""), hasMore: j.hasMore === true, hasNewer: j.hasNewer === true });
+const beforeParam = (before?: string) => (before ? "&before=" + encodeURIComponent(before) : "");
 
 export interface TeacherMessagesClient {
   listClasses(): Promise<Classroom[]>;
   listStudents(classId: string): Promise<Student[]>;
-  getDirect(studentId: string): Promise<ThreadState>;
-  getAnnouncements(classId: string): Promise<ThreadState>;
-  sendDirect(studentId: string, body: string): Promise<MessageView>;
-  sendAnnouncement(classId: string, body: string): Promise<MessageView>;
+  /** M.3 — with `before`: the older page before that message id (never acknowledged). */
+  getDirect(studentId: string, before?: string): Promise<ThreadState>;
+  getAnnouncements(classId: string, before?: string): Promise<ThreadState>;
+  sendDirect(studentId: string, body: string, clientMessageId?: string): Promise<MessageView>;
+  sendAnnouncement(classId: string, body: string, clientMessageId?: string): Promise<MessageView>;
   /** Phase 5D — unread STUDENT replies for one class (per student; membership decided by the server). */
   getClassUnread(classId: string): Promise<TeacherUnreadSummary>;
   /** Phase 5D — advance this teacher's read marker for one conversation; returns what is still unread there. */
@@ -136,10 +164,10 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
     // The EXISTING roster authorities — no second class/membership model.
     async listClasses() { const j = await get("/api/classrooms", "تعذر تحميل الصفوف."); return Array.isArray(j.classes) ? (j.classes as Classroom[]) : []; },
     async listStudents(classId) { const j = await get("/api/students?classId=" + encodeURIComponent(classId) + "&includeArchived=1", "تعذر تحميل الطلاب."); return Array.isArray(j.students) ? (j.students as Student[]) : []; },
-    async getDirect(studentId) { return thread(await get("/api/messages?studentId=" + encodeURIComponent(studentId), "تعذر تحميل المحادثة.")); },
-    async getAnnouncements(classId) { return thread(await get("/api/messages?classId=" + encodeURIComponent(classId) + "&kind=announcements", "تعذر تحميل الإعلانات.")); },
-    sendDirect: (studentId, body) => post({ action: "sendDirect", studentId, body }, "تعذر إرسال الرسالة."),
-    sendAnnouncement: (classId, body) => post({ action: "sendAnnouncement", classId, body }, "تعذر إرسال الإعلان."),
+    async getDirect(studentId, before) { return thread(await get("/api/messages?studentId=" + encodeURIComponent(studentId) + beforeParam(before), "تعذر تحميل المحادثة.")); },
+    async getAnnouncements(classId, before) { return thread(await get("/api/messages?classId=" + encodeURIComponent(classId) + "&kind=announcements" + beforeParam(before), "تعذر تحميل الإعلانات.")); },
+    sendDirect: (studentId, body, clientMessageId) => post({ action: "sendDirect", studentId, body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الرسالة."),
+    sendAnnouncement: (classId, body, clientMessageId) => post({ action: "sendAnnouncement", classId, body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الإعلان."),
     async getClassUnread(classId) {
       const j = await get("/api/messages?kind=unread-summary&classId=" + encodeURIComponent(classId), "تعذر تحميل الرسائل الجديدة.");
       const by: Record<string, UnreadCount> = {};
@@ -158,11 +186,13 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
 
 export interface StudentMessagesClient {
   load(): Promise<StudentMessagesData>;
-  sendDirect(body: string): Promise<MessageView>;
+  sendDirect(body: string, clientMessageId?: string): Promise<MessageView>;
   /** Phase 5D — this student's unread counts (own direct thread + CURRENT class announcements). */
   getUnread(): Promise<StudentUnread>;
   /** Phase 5D — mark one visible stream read through an id from its loaded snapshot; returns the fresh counts. */
   markRead(stream: "direct" | "announcements", ack: ReadAck): Promise<StudentUnread>;
+  /** M.3 — the older page of one stream before a message id (never acknowledged). Optional: without it no button. */
+  loadOlder?(stream: "direct" | "announcements", before: string): Promise<OlderPage>;
 }
 
 export function createStudentMessagesClient(token: string): StudentMessagesClient {
@@ -173,11 +203,21 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الرسائل.");
       const c = j.classroom as StudentMessagesData["classroom"];
-      return { direct: asMessages(j.direct), announcements: asMessages(j.announcements), classroom: c && typeof c === "object" ? c : null, canSend: j.canSend === true, readOnlyReason: String(j.readOnlyReason || "") };
+      return {
+        direct: asMessages(j.direct), announcements: asMessages(j.announcements), classroom: c && typeof c === "object" ? c : null, canSend: j.canSend === true, readOnlyReason: String(j.readOnlyReason || ""),
+        directHasMore: j.directHasMore === true, directHasNewer: j.directHasNewer === true, announcementsHasMore: j.announcementsHasMore === true, announcementsHasNewer: j.announcementsHasNewer === true
+      };
     },
-    async sendDirect(body) {
-      // The ONLY student action; no recipient / class / sender field exists in this request.
-      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "sendDirect", body }) });
+    async loadOlder(stream, before) {
+      const r = await fetch("/api/student-messages?stream=" + stream + "&before=" + encodeURIComponent(before), { headers });
+      const j = await readJson(r);
+      if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الرسائل الأقدم.");
+      return { messages: asMessages(j.messages), hasMore: j.hasMore === true };
+    },
+    async sendDirect(body, clientMessageId) {
+      // The ONLY student action; no recipient / class / sender field exists in this request (the optional key is an
+      // idempotency token for this one message, never an identity).
+      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "sendDirect", body, ...(clientMessageId ? { clientMessageId } : {}) }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok || !j.message) fail(j, r.status, "تعذر إرسال الرسالة.");
       return j.message as MessageView;

@@ -365,7 +365,7 @@ describe("8B-D student messages — new card layout, same behaviour", () => {
     render(<StudentMessagesPage token="t" onBack={() => {}} client={client} />);
     fireEvent.change(await screen.findByLabelText("رسالتك إلى المعلم"), { target: { value: "شكرًا" } });
     fireEvent.click(screen.getByRole("button", { name: "إرسال" }));
-    await waitFor(() => expect(client.sendDirect).toHaveBeenCalledWith("شكرًا"));
+    await waitFor(() => expect(client.sendDirect).toHaveBeenCalledWith("شكرًا", expect.any(String)));   // + the M.1 idempotency key
     expect(await screen.findByText("شكرًا")).toBeTruthy();
   });
   it("the card styles are scoped to the student view, logical properties only, token colours", () => {

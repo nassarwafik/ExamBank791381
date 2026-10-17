@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IconChevronBack } from "../icons";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
-import { MessageComposer, MessageThread } from "./MessageParts";
+import { MessageComposer, MessageThread, NewerMessagesNote, OlderMessagesBar } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
   type MessageView, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
 } from "./messagesClient";
 import "./messages.css";
@@ -32,6 +32,11 @@ import "./messages.css";
  * Phase 6C — `initialTab` (default "direct") lets the notification center open «إعلانات الصف» directly. It only
  * chooses the VISIBLE tab the view opens on: the same rule then acknowledges that tab once its snapshot loaded (the
  * other stream stays untouched until it is actually selected). The ordinary «الرسائل» entry keeps the default.
+ * Messages M.2 — presentation only: the shared thread draws day separators and grouped bubbles, announcements are a
+ * feed of cards, and the composer sends on Ctrl+Enter. The load / acknowledgement / send logic above is unchanged.
+ * Messages M.3 — «عرض الرسائل الأقدم» per tab (`older`, display only: never an acknowledgement source, which stays the
+ * GET snapshot). When the server held back unread messages beyond the frontier, a successful acknowledgement of the
+ * shown ones reloads at once so the rest follow.
  */
 export type StudentMessagesTab = "direct" | "announcements";
 type Tab = StudentMessagesTab;
@@ -45,6 +50,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const gen = useRef(0);
+  const sendKey = useRef<{ thread: string; body: string; id: string } | null>(null);
   // Server-CONFIRMED replies sent from this view; every applied read is unioned with them so a lagging read can never
   // drop a reply the server already accepted.
   const confirmed = useRef<MessageView[]>([]);
@@ -59,6 +65,9 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
   const markSeq = useRef(0);                                  // global start order of mark requests
   const latestMark = useRef<Record<Tab, number>>({ direct: 0, announcements: 0 });   // newest STARTED mark per stream
   const unreadRef = useRef<StudentUnread | null>(null);       // the last applied counts (for per-stream merging)
+  type Older = { messages: MessageView[]; hasMore: boolean; loading: boolean; error: string };
+  const [older, setOlder] = useState<Record<Tab, Older | null>>({ direct: null, announcements: null });
+  const olderGen = useRef<Record<Tab, number>>({ direct: 0, announcements: 0 });
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   function applyUnread(u: StudentUnread) {
@@ -104,6 +113,8 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
       marked.current[stream] = through;
       unreadGen.current += 1;
       if (alive.current) applyUnread(mergeMarkResponse(stream, seq, u));
+      // M.3 — messages held back by the frontier follow as soon as the shown ones are acknowledged.
+      if (alive.current && (stream === "direct" ? d.directHasNewer : d.announcementsHasNewer)) void load(true);
     } catch {
       /* the badge stays until a later successful mark */
     } finally {
@@ -134,6 +145,30 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
   useAutoRefresh(() => load(true), { intervalMs: MESSAGES_POLL_MS, enabled: !sending });
   useAutoRefresh(loadUnread, { intervalMs: UNREAD_POLL_MS });
 
+  /** M.3 — the page before the oldest message shown in one tab (display only). */
+  async function loadOlder(stream: Tab, oldestId: string) {
+    if (!client.loadOlder || !oldestId) return;
+    const gen = ++olderGen.current[stream];
+    setOlder(prev => ({ ...prev, [stream]: { messages: prev[stream]?.messages || [], hasMore: true, loading: true, error: "" } }));
+    try {
+      const page = await client.loadOlder(stream, oldestId);
+      if (gen !== olderGen.current[stream] || !alive.current) return;
+      setOlder(prev => ({ ...prev, [stream]: { messages: page.messages.reduce(mergeMessage, prev[stream]?.messages || []), hasMore: page.hasMore, loading: false, error: "" } }));
+    } catch (e) {
+      if (gen !== olderGen.current[stream] || !alive.current) return;
+      setOlder(prev => ({ ...prev, [stream]: { messages: prev[stream]?.messages || [], hasMore: true, loading: false, error: e instanceof Error ? e.message : "تعذر تحميل الرسائل الأقدم." } }));
+    }
+  }
+  const shownOf = (stream: Tab, latest: MessageView[]) => {
+    const o = older[stream];
+    return o ? o.messages.reduce(mergeMessage, latest) : latest;
+  };
+  const bar = (stream: Tab, list: MessageView[], hasMoreLatest: boolean | undefined) => {
+    const o = older[stream];
+    if (!client.loadOlder) return null;
+    return <OlderMessagesBar hasMore={o ? o.hasMore : hasMoreLatest === true} loading={!!o && o.loading} error={o ? o.error : ""} onLoad={() => void loadOlder(stream, list.length ? list[0].messageId : "")} />;
+  };
+
   function selectTab(next: Tab) {
     setTab(next);
     tabRef.current = next;
@@ -145,8 +180,11 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
     if (sending || !body.trim()) return;
     setSending(true); setSendError("");
     gen.current += 1;                                                 // invalidate any in-flight poll
+    // M.1 — one idempotency key per composed reply, reused while the text is unchanged (a retry never duplicates it).
+    sendKey.current = sendKeyFor(sendKey.current, "direct", body);
     try {
-      const message = await client.sendDirect(body);
+      const message = await client.sendDirect(body, sendKey.current.id);
+      sendKey.current = null;
       gen.current += 1;
       confirmed.current = [...confirmed.current, message];
       setData(prev => (prev ? { ...prev, direct: mergeMessage(prev.direct, message) } : prev));   // not an ack source
@@ -186,17 +224,19 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
           {data && tab === "direct" && (
             <div className="eb-msg-conversation">
               <div className="eb-msg-student-thread">
+              {bar("direct", shownOf("direct", data.direct), data.directHasMore)}
               <MessageThread
-                messages={data.direct}
+                messages={shownOf("direct", data.direct)}
                 ariaLabel="المحادثة مع المعلم"
                 emptyText="لا توجد رسائل بعد. يمكنك مراسلة معلمك من هنا."
                 isMine={m => m.senderRole === "student"}
                 labelFor={m => (m.senderRole === "student" ? "أنت" : "المعلم" + (m.senderDisplayName && m.senderDisplayName !== "المعلم" ? " — " + m.senderDisplayName : ""))}
               />
+              {data.directHasNewer && <NewerMessagesNote />}
               </div>
               <div className="eb-msg-student-foot">
               {data.canSend
-                ? <MessageComposer label="رسالتك إلى المعلم" buttonLabel="إرسال" value={draft} onChange={setDraft} onSend={() => void send()} sending={sending} error={sendError} />
+                ? <MessageComposer label="رسالتك إلى المعلم" buttonLabel="إرسال" value={draft} onChange={setDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب رسالتك إلى المعلم..." />
                 : <p className="eb-msg-readonly" role="note">{data.readOnlyReason || "المحادثة متاحة للقراءة فقط."}</p>}
               </div>
             </div>
@@ -204,13 +244,16 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
           {data && tab === "announcements" && (
             <div className="eb-msg-announcements">
               <div className="eb-msg-student-thread">
+              {bar("announcements", shownOf("announcements", data.announcements), data.announcementsHasMore)}
               <MessageThread
-                messages={data.announcements}
+                messages={shownOf("announcements", data.announcements)}
                 ariaLabel="إعلانات الصف"
                 emptyText="لا توجد إعلانات لصفك بعد."
                 isMine={() => false}
                 labelFor={m => m.senderDisplayName || "المعلم"}
+                variant="feed"
               />
+              {data.announcementsHasNewer && <NewerMessagesNote />}
               </div>
               <p className="eb-muted eb-msg-student-note">الإعلانات للقراءة فقط. للرد على المعلم استخدم «المحادثة مع المعلم».</p>
             </div>

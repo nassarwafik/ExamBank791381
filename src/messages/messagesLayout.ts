@@ -63,3 +63,17 @@ export function shouldScrollToNewest(input: { threadChanged: boolean; wasNearBot
   if (input.newestChanged && input.newestIsMine) return true;
   return input.wasNearBottom;
 }
+
+/** M.2 — the start of the local day (ms), re-read every minute, so «اليوم» / «أمس» roll over at midnight. */
+function startOfToday(): number {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+function subscribeMinute(onChange: () => void) {
+  const id = setInterval(onChange, 60 * 1000);
+  return () => clearInterval(id);
+}
+/** A stable snapshot (equal all day long), so React re-renders only when the calendar day changes. */
+export function useTodayStart(): number {
+  return useSyncExternalStore(subscribeMinute, startOfToday, startOfToday);
+}

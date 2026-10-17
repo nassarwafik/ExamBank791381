@@ -10,11 +10,15 @@
 // the bell (or the panel) can never mark anything read. Only the Student Messages page acknowledges (Phase 5D).
 // Work stays narrow: names are listed per stream (no download), then only the newest candidates are downloaded in
 // small batches until enough relevant messages were found or the scan bound is reached.
-const { downloadManyJson, getReadConcurrency } = require("./platform-storage");
-const { normalizeStoredMessage, directPrefix, announcementPrefix } = require("./message-store");
+const { getReadConcurrency } = require("./platform-storage");
+// Messages hardening (M.1): one unparsable blob reads as missing instead of failing the whole panel.
+const { downloadManyJsonTolerant: downloadManyJson } = require("./message-store");
+const { normalizeStoredMessage, directPrefix, announcementPrefix, blobMessageId } = require("./message-store");
 const {
-  listStreamIds, isReadBy, loadMarker, countUnread, combineCounts, READER_RELEVANCE, studentDirectStateName, studentAnnouncementStateName
+  listStreamIds, isReadBy, loadMarker, countUnread, combineCounts, READER_RELEVANCE, studentDirectStateName, studentAnnouncementStateName, READ_STATE_PREFIX
 } = require("./message-read-state");
+// M.3 — the ETag-validated memo of the badge counts (never an authority; see message-unread-memo.js).
+const { sharedMemo, listEntries, etagMap, listingSignature, cachedLoader, memoGet, memoSet } = require("./message-unread-memo");
 
 const NOTIFICATION_LIMIT = 15;
 // Upper bound on downloaded candidates per stream (a thread of mostly own replies can never make this unbounded).
@@ -78,16 +82,48 @@ async function loadStreamMarkers(container, streams, deps) {
   };
 }
 
-/** `markers` (optional) = markers already loaded in this request, so a notifications read counts from the SAME state. */
-async function unreadSummary(container, streams, deps, markers = null) {
+/** `markers` (optional) = markers already loaded in this request, so a notifications read counts from the SAME state.
+ *  `options.absorb` (M.1): fold the student's OWN leading direct replies into their direct boundary so later counts stop
+ *  re-downloading them (changes no count). Off by default — the notification view stays strictly read-only. */
+async function unreadSummary(container, streams, deps, markers = null, options = {}) {
+  const directAbsorb = options.absorb && streams.direct ? { stateName: streams.direct.stateName, meta: { principalRole: "student", streamKind: "direct", streamId: String(streams.direct.expected.studentId || "") } } : undefined;
+  // M.3 — the badge poll reuses a stream's count while its listing (names + ETags) and the marker's ETag are unchanged.
+  // Not when the caller passes `markers` (the notification view counts from the SAME markers as its items) nor when it
+  // injected its own storage functions (they must observe every read).
+  const memo = deps && deps.unreadMemo === null ? null : ((deps && deps.unreadMemo) || sharedMemo);
+  if (!markers && memo && !(deps && (deps.listBlobNames || deps.downloadManyJson))) return unreadSummaryMemo(container, streams, deps || {}, directAbsorb, memo);
   const m = markers || await loadStreamMarkers(container, streams, deps);
-  const count = async (s, marker) => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker }, deps) : { unread: 0, capped: false };
-  const directUnread = await count(streams.direct, m.direct);
+  const count = async (s, marker, absorb) => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker, absorb }, deps) : { unread: 0, capped: false };
+  const directUnread = await count(streams.direct, m.direct, directAbsorb);
   const announcementUnread = await count(streams.announcements, m.announcements);
   const total = combineCounts(directUnread, announcementUnread);
   return { directUnread, announcementUnread, totalUnread: total.unread, totalCapped: total.capped };
 }
 
+async function unreadSummaryMemo(container, streams, deps, directAbsorb, memo) {
+  const list = deps.listEntries || listEntries;
+  const studentId = String(streams.direct.expected.studentId || "");
+  const markerEtags = etagMap(await list(container, READ_STATE_PREFIX + "student/" + studentId + "/"));
+  const count = async (s, absorb) => {
+    if (!s) return { unread: 0, capped: false };
+    const entries = await list(container, s.streamPrefix);
+    const markerTag = markerEtags.has(s.stateName) ? markerEtags.get(s.stateName) : "none";
+    const streamSig = listingSignature(entries);
+    const signature = streamSig && markerTag ? streamSig + "|" + markerTag : "";
+    const key = "student|" + s.stateName;
+    const hit = memoGet(memo, container, key, signature);
+    if (hit) return hit;
+    const marker = await loadMarker(container, s.stateName, deps);
+    const ids = entries.map(e => blobMessageId(e.name, s.streamPrefix)).filter(Boolean).sort();     // as listStreamIds
+    const c = await countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker, absorb, ids }, { ...deps, downloadManyJson: cachedLoader(memo, container, etagMap(entries), deps) });
+    memoSet(memo, container, key, signature, c);
+    return c;
+  };
+  const directUnread = await count(streams.direct, directAbsorb);
+  const announcementUnread = await count(streams.announcements);
+  const total = combineCounts(directUnread, announcementUnread);
+  return { directUnread, announcementUnread, totalUnread: total.unread, totalCapped: total.capped };
+}
 
 const timeOf = item => { const t = Date.parse(item.createdAt); return Number.isFinite(t) ? t : 0; };
 

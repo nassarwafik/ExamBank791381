@@ -197,8 +197,10 @@ describe("MIXED history", () => {
     for (const [ms, h] of [[1700000000001, "1"], [1700000000002, "2"], [1700000000003, "3"]]) oldDirect(ctx, S1, legacyId(ms, h), "student", "L" + h);
     for (let i = 1; i <= 4; i++) await sPost(ST(ctx), { action: "sendDirect", body: "S" + i });
     const page = await tGet(T(ctx), "?studentId=" + S1 + "&limit=2");
-    expect(page.jsonBody.messages.map(m => m.body)).toEqual(["L1", "L2", "L3", "S3", "S4"]);   // all unread legacy shown
-    expect(page.jsonBody.hasMore).toBe(true);
+    // all unread legacy shown — and (M.3) every unread sequenced reply too: before M.3 this page showed only S3, S4 and its
+    // acknowledgement of S4 marked S1 and S2 read without them ever being displayed.
+    expect(page.jsonBody.messages.map(m => m.body)).toEqual(["L1", "L2", "L3", "S1", "S2", "S3", "S4"]);
+    expect(page.jsonBody.hasMore).toBe(false);                                                // nothing older than L1
     const ack = ackFrom(page.jsonBody.messages, m => m.senderRole === "student");
     expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S1, ...ack })).jsonBody.unread).toBe(0);
     oldDirect(ctx, S1, legacyId(1800000000000, "e"), "student", "LATE");                      // late legacy in a long stream

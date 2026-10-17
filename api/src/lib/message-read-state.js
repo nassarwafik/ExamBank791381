@@ -40,6 +40,10 @@
 // attempt) — such an acknowledgement is rejected (400, no write) and the message stays unread. When a window holds only
 // the reader's own messages, a thread GET folds them into the legacy boundary (absorbIrrelevantLegacy): they are never
 // counted unread, so this changes no count, and it guarantees own messages can never permanently starve the frontier.
+// SEQUENCED FRONTIER (M.3). The same rule holds in the sequenced domain: a page carries the reader's unread relevant
+// sequenced messages oldest-first up to the same bound (message-store.js listRecentMessages) and a sequenced boundary may
+// never newly cover an unread relevant position outside that window (assertLegacyFrontier, run for both domains inside
+// every CAS attempt). Before M.3 a reader with more unread replies than one page acknowledged the older ones unseen.
 // Marking read is a SNAPSHOT ACKNOWLEDGEMENT: the client sends X (the latest unread-RELEVANT message it actually
 // displayed) and seenIdsAtBoundary — the relevant ids at X's millisecond that were in THAT applied snapshot. The boundary
 // ids are NEVER re-derived from a fresh listing: a message created in the same millisecond after the reader's GET (on
@@ -55,8 +59,12 @@
 // the marker are dropped, and only the remaining CANDIDATES are downloaded (newest first, bounded concurrency) to check
 // sender role/kind/owner — stopping once the display cap (99 → "99+") is exceeded.
 const crypto = require("crypto");
-const { listBlobNames, downloadManyJson, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
-const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, scanLegacyFrontier } = require("./message-store");
+const { listBlobNames, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
+const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, scanLegacyFrontier, messagePosition, sequencedMessageId, downloadManyJsonTolerant } = require("./message-store");
+// Messages hardening (M.1): one unparsable message / marker / user blob reads as missing (see downloadManyJsonTolerant).
+const downloadManyJson = downloadManyJsonTolerant;
+// M.3 — the ETag-validated memo of the badges (message-unread-memo.js; never an authority).
+const { sharedMemo, listEntries, etagMap, listingSignature, cachedLoader, memoGet, memoSet } = require("./message-unread-memo");
 
 const READ_STATE_PREFIX = MESSAGE_PREFIX + "read-state/";
 const USER_PREFIX = "platform/users/";
@@ -181,7 +189,9 @@ async function listStreamIds(container, streamPrefix, deps = {}) {
 }
 
 async function loadMarker(container, stateName, deps = {}) {
-  return normalizeMarker(await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, stateName));
+  // An unparsable marker reads as "no progress" (everything unread — fails safe), never as a permanent 500.
+  try { return normalizeMarker(await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, stateName)); }
+  catch (e) { if (e instanceof SyntaxError) return null; throw e; }
 }
 
 /** One acknowledgement part's shape: X well-formed; 1..200 ids (duplicates deduplicated), all at X's key, X included. */
@@ -226,7 +236,11 @@ async function checkAcknowledgement(container, { streamPrefix, expected, include
     const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: seen[i] });
     if (!doc || !include(doc)) throw new MarkReadError();
   }
-  return { incoming: Object.fromEntries(parts.map(p => [p.domain, p.boundary])), legacyIds: ids.filter(id => keyDomain(messageIdMs(id)) === "legacy") };
+  return {
+    incoming: Object.fromEntries(parts.map(p => [p.domain, p.boundary])),
+    legacyIds: ids.filter(id => keyDomain(messageIdMs(id)) === "legacy"),
+    sequencedIds: ids.filter(id => keyDomain(messageIdMs(id)) === "sequenced")
+  };
 }
 
 /** The unread legacy ids (under `marker`) that a legacy `boundary` would newly cover, ascending. */
@@ -238,9 +252,10 @@ function newlyCoveredLegacy(marker, legacyIds, boundary) {
   });
 }
 
-/** Rejects (MarkReadError) a legacy boundary that would newly cover an unread legacy id outside the reader's frontier
- *  window (see LEGACY FRONTIER) — i.e. a relevant legacy message no page could have shown. Runs the SAME scan as the page
- *  (scanLegacyFrontier, same relevance), against `marker` — the version being updated. */
+/** Rejects (MarkReadError) a boundary that would newly cover an unread id of its domain outside the reader's frontier
+ *  window (see LEGACY FRONTIER; M.3: the same rule for the sequenced domain) — i.e. a relevant message no page could have
+ *  shown. Runs the SAME scan as the page (scanLegacyFrontier, same relevance), against `marker` — the version being
+ *  updated. `legacyIds` are the listed ids of the boundary's domain. */
 async function assertLegacyFrontier(marker, legacyIds, boundary, { expected, include, loadDocs }) {
   if (!boundary) return;
   const covered = newlyCoveredLegacy(marker, legacyIds, boundary);
@@ -274,7 +289,7 @@ function docLoader(container, streamPrefix, deps) {
  * taken after the write.
  */
 async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary, meta = {} }, deps = {}) {
-  const { incoming, legacyIds } = await checkAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
+  const { incoming, legacyIds, sequencedIds } = await checkAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
   const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   const loadDocs = docLoader(container, streamPrefix, deps);
   try {
@@ -282,6 +297,8 @@ async function markStreamRead(container, { stateName, streamPrefix, expected, in
       const marker = normalizeMarker(current);
       // every attempt: never cover an unread relevant legacy id no page could have shown
       await assertLegacyFrontier(marker, legacyIds, incoming.legacy, { expected, include, loadDocs });
+      // M.3 — the same for the sequenced domain: never cover an unread relevant message beyond the page's frontier.
+      await assertLegacyFrontier(marker, sequencedIds, incoming.sequenced, { expected, include, loadDocs });
       const r = advanceMarker(marker, incoming);
       if (!r.changed) throw new NoChange(r.marker);                 // no regression, no redundant write
       return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };
@@ -320,22 +337,78 @@ async function absorbIrrelevantLegacy(container, { stateName, legacyIds, ids, me
 }
 
 /**
+ * Messages hardening (M.1) — OWN-MESSAGE ABSORPTION in the sequenced domain. A reader's own messages (and invalid
+ * documents) are never unread, but until a marker covers them every unread count re-downloads them — forever when the
+ * other side never answers (no relevant message → the reader never acknowledges anything). `classified` (id → relevant?)
+ * comes from a count; the run absorbed is the CONTIGUOUS run of sequenced positions directly after the reader's current
+ * sequenced boundary whose every message was classified irrelevant — it stops at the first relevant, unclassified or
+ * MISSING position (a gap may be a message the listing has not shown yet). Re-checked against the marker version being
+ * updated inside the CAS: the new boundary may only newly cover positions of that run. Changes no unread count.
+ */
+function irrelevantSequencedRun(marker, streamPrefix, classified) {
+  const start = marker && marker.sequenced ? marker.sequenced.boundaryMs - SEQUENCE_KEY_BASE : 0;
+  const run = [];
+  for (let position = start + 1; ; position++) {
+    const id = sequencedMessageId(streamPrefix, position);
+    if (classified.get(id) !== false) break;                          // relevant, unclassified or not listed → stop
+    run.push(id);
+  }
+  return run;
+}
+
+async function absorbIrrelevantSequenced(container, { stateName, streamPrefix, ids, meta = {} }, deps = {}) {
+  if (!ids || !ids.length) return;
+  const run = new Set(ids);
+  const last = ids[ids.length - 1];
+  const lastPosition = messagePosition(last, streamPrefix);
+  if (lastPosition < 1) return;
+  const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+  try {
+    await mutate(container, stateName, current => {
+      const marker = normalizeMarker(current);
+      const from = marker && marker.sequenced ? marker.sequenced.boundaryMs - SEQUENCE_KEY_BASE : 0;
+      if (lastPosition <= from) throw new NoChange(marker);
+      for (let position = from + 1; position <= lastPosition; position++) {
+        if (!run.has(sequencedMessageId(streamPrefix, position))) throw new NoChange(marker);   // would cover a non-run position
+      }
+      const r = advanceMarker(marker, { sequenced: { boundaryMs: messageIdMs(last), seenIdsAtBoundary: [last] } });
+      if (!r.changed) throw new NoChange(r.marker);
+      return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };
+    });
+  } catch (e) {
+    if (!(e instanceof NoChange)) throw e;
+  }
+}
+
+/**
  * Unread messages of ONE stream for a reader: ids not covered by `marker`, validated against `expected`, and accepted
  * by `include(doc)` (the sender-role rule). Downloads only candidates, newest first, and stops once the count exceeds
  * the display cap. Returns { unread, capped } with unread ≤ 99.
+ * `absorb` ({ stateName, meta }, optional): fold the reader's own leading sequenced messages into its boundary
+ * afterwards (absorbIrrelevantSequenced) so later counts no longer download them. Best-effort: never fails the count.
  */
-async function countUnread(container, { streamPrefix, expected, marker, include, ids }, deps = {}) {
+async function countUnread(container, { streamPrefix, expected, marker, include, ids, absorb }, deps = {}) {
   const many = deps.downloadManyJson || downloadManyJson;
   const all = ids || await listStreamIds(container, streamPrefix, deps);
   const candidates = all.filter(id => !isReadBy(marker, id)).sort().reverse();
   const batch = Math.max(8, getReadConcurrency());
+  const classified = new Map();
   let count = 0;
   for (let i = 0; i < candidates.length && count <= UNREAD_DISPLAY_CAP; i += batch) {
     const slice = candidates.slice(i, i + batch);
     const docs = await many(container, slice.map(id => streamPrefix + id + ".json"), getReadConcurrency());
     for (let j = 0; j < slice.length; j++) {
       const doc = normalizeStoredMessage(docs[j], { ...expected, messageId: slice[j] });
-      if (doc && include(doc)) count++;
+      const relevant = !!doc && include(doc);
+      classified.set(slice[j], relevant);
+      if (relevant) count++;
+    }
+  }
+  if (absorb && absorb.stateName) {
+    const run = irrelevantSequencedRun(marker, streamPrefix, classified);
+    if (run.length) {
+      try { await absorbIrrelevantSequenced(container, { stateName: absorb.stateName, streamPrefix, ids: run, meta: absorb.meta }, deps); }
+      catch { /* best-effort: the count stands; a later count retries */ }
     }
   }
   return count > UNREAD_DISPLAY_CAP ? { unread: UNREAD_DISPLAY_CAP, capped: true } : { unread: count, capped: false };
@@ -372,7 +445,80 @@ function groupDirectIds(names) {
  * names + one marker read per conversation + user reads only for conversations with candidates + candidate downloads;
  * the global summary stops once the display cap is exceeded.
  */
-async function teacherDirectUnread(container, teacherId, { classId = "", canSee = null } = {}, deps = {}) {
+async function teacherDirectUnread(container, teacherId, options = {}, deps = {}) {
+  // M.3 — the memo path (below) unless the caller injected its own listing / download functions (instrumentation, tests):
+  // those must observe every read, and a memo can only be validated against the real listing's ETags.
+  const memo = deps.unreadMemo === null ? null : (deps.unreadMemo || sharedMemo);
+  if (memo && !deps.listBlobNames && !deps.downloadManyJson) return teacherDirectUnreadMemo(container, teacherId, options, deps, memo);
+  return teacherDirectUnreadPlain(container, teacherId, options, deps);
+}
+
+/** Direct-message LISTING ENTRIES ({ name, etag, id }) grouped by student, from ONE listing of the direct namespace. */
+function groupDirectEntries(entries) {
+  const out = new Map();
+  for (const e of entries) {
+    if (!e.name.startsWith(DIRECT_PREFIX)) continue;
+    const parts = e.name.slice(DIRECT_PREFIX.length).split("/");
+    if (parts.length !== 2 || !isSafeId(parts[0])) continue;
+    const id = blobMessageId(e.name, DIRECT_PREFIX + parts[0] + "/");
+    if (!id) continue;
+    if (!out.has(parts[0])) out.set(parts[0], []);
+    out.get(parts[0]).push({ ...e, id });
+  }
+  for (const list of out.values()) list.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return out;
+}
+
+/**
+ * M.3 — the same summary as teacherDirectUnreadPlain (same membership, tenancy, relevance, cap and absorption), with the
+ * work validated by ETags instead of repeated:
+ *   • listings: the direct namespace, THIS teacher's markers and the user documents (names + ETags, nothing downloaded);
+ *   • a user document is downloaded only when its listed ETag changed (cachedLoader);
+ *   • a conversation's count is recomputed only when its stream listing (names + ETags) or THIS teacher's marker ETag
+ *     changed — otherwise the memoized count is reused. A recount downloads only messages whose ETag is new.
+ * Membership is decided BEFORE counting (the current user document, the class filter, tenancy), so another tenant's
+ * conversations are never counted.
+ */
+async function teacherDirectUnreadMemo(container, teacherId, { classId = "", canSee = null } = {}, deps = {}, memo = sharedMemo) {
+  const list = deps.listEntries || listEntries;
+  const conc = getReadConcurrency();
+  const byStudentEntries = groupDirectEntries(await list(container, DIRECT_PREFIX));
+  const studentIds = Array.from(byStudentEntries.keys()).sort();
+  let rows = [];
+  if (studentIds.length) {
+    const markerEtags = etagMap(await list(container, teacherDirectStatePrefix(teacherId)));
+    const userEtags = etagMap(await list(container, USER_PREFIX));
+    const users = await cachedLoader(memo, container, userEtags, deps)(container, studentIds.map(sid => USER_PREFIX + sid + ".json"), conc);
+    rows = studentIds
+      .map((sid, i) => ({ sid, user: users[i], entries: byStudentEntries.get(sid), markerTag: markerEtags.has(teacherDirectStateName(teacherId, sid)) ? markerEtags.get(teacherDirectStateName(teacherId, sid)) : "none" }))
+      .filter(r => !!r.user && r.user.role === "student" && String(r.user.userId || "") === r.sid && (!classId || String(r.user.classId || "") === classId));
+    // Phase 21G.0 — teacher tenancy: only the teacher's own students count (canSee: an async per-student predicate).
+    if (canSee) rows = (await Promise.all(rows.map(async r => ((await canSee(r.user)) ? r : null)))).filter(Boolean);
+  }
+  const byStudent = {};
+  const counts = [];
+  for (const r of rows) {
+    if (!classId && combineCounts(...counts).capped) break;          // global badge already "99+"
+    const stateName = teacherDirectStateName(teacherId, r.sid);
+    const streamSig = listingSignature(r.entries);
+    const signature = streamSig && r.markerTag ? streamSig + "|" + r.markerTag : "";
+    const key = "teacher|" + teacherActorKey(teacherId) + "|" + r.sid;
+    let c = memoGet(memo, container, key, signature);
+    if (!c) {
+      const marker = await loadMarker(container, stateName, deps);
+      c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker, ids: r.entries.map(e => e.id), include: READER_RELEVANCE.teacherDirect,
+        absorb: { stateName, meta: { principalRole: "teacher", streamKind: "direct", streamId: r.sid, teacherId } } }, { ...deps, downloadManyJson: cachedLoader(memo, container, etagMap(r.entries), deps) });
+      memoSet(memo, container, key, signature, c);
+    }
+    counts.push(c);
+    if (c.unread > 0) byStudent[r.sid] = c;
+  }
+  const total = combineCounts(...counts);
+  return classId ? { totalUnread: total.unread, capped: total.capped, byStudent } : { totalUnread: total.unread, capped: total.capped };
+}
+
+/** The pre-M.3 computation (no memo): used when the caller injects its own storage functions. */
+async function teacherDirectUnreadPlain(container, teacherId, { classId = "", canSee = null } = {}, deps = {}) {
   const list = deps.listBlobNames || listBlobNames;
   const many = deps.downloadManyJson || downloadManyJson;
   const conc = getReadConcurrency();
@@ -393,7 +539,8 @@ async function teacherDirectUnread(container, teacherId, { classId = "", canSee 
   const counts = [];
   for (const r of rows) {
     if (!classId && combineCounts(...counts).capped) break;          // global badge already "99+"
-    const c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker: r.marker, ids: r.ids, include: READER_RELEVANCE.teacherDirect }, deps);
+    const c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker: r.marker, ids: r.ids, include: READER_RELEVANCE.teacherDirect,
+      absorb: { stateName: teacherDirectStateName(teacherId, r.sid), meta: { principalRole: "teacher", streamKind: "direct", streamId: r.sid, teacherId } } }, deps);
     counts.push(c);
     if (c.unread > 0) byStudent[r.sid] = c;
   }
@@ -403,8 +550,8 @@ async function teacherDirectUnread(container, teacherId, { classId = "", canSee 
 
 module.exports = {
   READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MAX_BOUNDARY_IDS, READER_RELEVANCE, MarkReadError, validateAcknowledgement,
-  absorbIrrelevantLegacy,
+  absorbIrrelevantLegacy, absorbIrrelevantSequenced, irrelevantSequencedRun,
   teacherActorKey, teacherDirectStatePrefix, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName,
   messageIdMs, keyDomain, normalizeMarker, isReadBy, advanceBoundary, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
-  combineCounts, groupDirectIds, teacherDirectUnread
+  combineCounts, groupDirectIds, groupDirectEntries, teacherDirectUnread, teacherDirectUnreadPlain
 };
