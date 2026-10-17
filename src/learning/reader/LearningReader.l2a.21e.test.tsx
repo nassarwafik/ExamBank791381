@@ -74,12 +74,12 @@ describe("21E L2-A — compact toolbar keeps accessible names", () => {
   it("back, TOC, reading-settings (L2-C), motion and presentation controls keep their full names; labels are wrapped, never removed", async () => {
     mount();
     await heading("صفحة غنية");
-    for (const name of ["العودة", "الفهرس", "إعدادات القراءة", "وضع العرض"]) {
+    for (const name of ["العودة", "الفهرس", "إعدادات القراءة", "وضع التركيز", "وضع العرض"]) {
       expect(screen.getByRole("button", { name: new RegExp("^" + name) })).toBeTruthy();
     }
     expect(screen.getByRole("button", { name: /حركة الرسوم$/ })).toBeTruthy();
     const labels = [...document.querySelectorAll(".learning-reader-topbar .learning-reader-btn-label")].map(l => l.textContent);
-    expect(labels).toHaveLength(5);
+    expect(labels).toHaveLength(7);                                           // L.1 adds «وضع التركيز» and «المزيد» (phones)
     expect(labels.every(Boolean)).toBe(true);
   });
 });

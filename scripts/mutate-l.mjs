@@ -20,7 +20,44 @@ const COUNT = "src/learning/arabicCount.ts", PANEL = "src/students/ClassLearning
 const L0_PAGE = ["src/learning/LearningMaterialsPage.l0.test.tsx", "src/learning/LearningMaterialsPage.test.tsx", "src/learning/courseHomePremium.21el1b.review.test.tsx"];
 const L0_READER = ["src/learning/reader/LearningReader.l2a.21e.test.tsx", "src/learning/reader/LearningReader.presentation.test.tsx"];
 const L0_COUNT = ["src/students/ClassLearningMaterialsPanel.counts.l0.test.tsx"];
+const RENDERER = "src/learning/reader/LearningPageRenderer.tsx", SWIPE = "src/learning/reader/useReaderSwipe.ts", SETTINGS = "src/learning/reader/readingSettings.ts";
+const UNIT = "src/learning/reader/UnitContents.tsx", L1CSS = "src/learning/reader/reader-enterprise-l1.css";
+const L1 = ["src/learning/reader/LearningReader.l1.test.tsx", "src/learning/reader/reader.l1.guards.test.ts"];
 export const CAMPAIGNS = {
+  l1: [
+    { id: "L1-M1", what: "the index docks below 1280px again", file: READER,
+      find: "const dockable = wide && !focusMode && !presentation;", replace: "const dockable = !focusMode && !presentation;", tests: L1 },
+    { id: "L1-M2", what: "focus mode keeps the docked index", file: READER,
+      find: "const dockable = wide && !focusMode && !presentation;", replace: "const dockable = wide && !presentation;", tests: L1 },
+    { id: "L1-M3", what: "the docked / folded choice is not remembered", file: READER,
+      find: "setTocDocked(docked => { saveTocDocked(!docked); return !docked; });", replace: "setTocDocked(docked => !docked);", tests: L1 },
+    { id: "L1-M4", what: "the focus flag outlives focus mode and the Reader", file: READER,
+      find: "    return () => html.removeAttribute(\"data-eb-reading-focus\");", replace: "    return () => {};", tests: L1 },
+    { id: "L1-M5", what: "Escape no longer leaves focus mode", file: READER,
+      find: "      if (e.key === \"Escape\" && focusMode && !presentation) { e.preventDefault(); setFocusMode(false); return; }\n", replace: "", tests: L1 },
+    { id: "L1-M6", what: "«التالي» loses the next page's title as its description", file: READER,
+      find: "aria-describedby={next && !presentation ? \"learning-reader-next-title\" : undefined}", replace: "aria-describedby={undefined}", tests: L1 },
+    { id: "L1-M7", what: "the «المزيد» menu stays open after an action", file: READER,
+      find: "onClick={e => { if ((e.target as Element).closest(\"button\")) setMoreOpen(false); }}", replace: "", tests: L1 },
+    { id: "L1-M8", what: "the page kicker names the book number again", file: RENDERER,
+      find: "<p className=\"learning-reader-kicker\">{header.moduleTitle}</p>", replace: "<p className=\"learning-reader-kicker\">كتاب {header.courseId}</p>", tests: L1 },
+    { id: "L1-M9", what: "the source line is a bare line of numbers again", file: RENDERER,
+      find: "        {header.source && <SourceInfo source={header.source} />}\n      </header>", replace: "        {header.source && <SourceLine source={header.source} />}\n      </header>", tests: L1 },
+    { id: "L1-M10", what: "the swipe direction is inverted (LTR habit)", file: SWIPE,
+      find: "if (dx > 0) onNext(); else onPrevious();", replace: "if (dx < 0) onNext(); else onPrevious();", tests: L1 },
+    { id: "L1-M11", what: "a swipe that starts on a control turns the page", file: SWIPE,
+      find: "  if (owner && root.contains(owner)) return true;", replace: "", tests: L1 },
+    { id: "L1-M12", what: "a vertical scroll counts as a swipe", file: SWIPE,
+      find: " || Math.abs(dx) < DOMINANCE * Math.abs(dy)", replace: "", tests: L1 },
+    { id: "L1-M13", what: "the «داكن» choice is forgotten on reload", file: SETTINGS,
+      find: "v.theme === \"sepia\" || v.theme === \"light\" || v.theme === \"dark\"", replace: "v.theme === \"sepia\" || v.theme === \"light\"", tests: L1 },
+    { id: "L1-M14", what: "the unit contents list the opener lesson itself", file: UNIT,
+      find: ".filter(l => l.id !== currentLessonId && l.pages.length > 0)", replace: ".filter(l => l.pages.length > 0)", tests: L1 },
+    { id: "L1-M15", what: "focus mode hides the whole page column, not only its header", file: L1CSS,
+      find: "html[data-eb-reading-focus] .eb-shell-main > .eb-page-header { display: none; }", replace: "html[data-eb-reading-focus] .eb-shell-main { display: none; }", tests: L1 },
+    { id: "L1-M16", what: "the folded index still shows its desktop column", file: L1CSS,
+      find: "  .learning-reader:not(.is-presentation)[data-toc=\"drawer\"] .learning-reader-sidebar { display: none; }", replace: "", tests: L1 }
+  ],
   l0: [
     { id: "L0-M1", what: "the page-less intro is a control again (opens another section's page)", file: PAGE,
       find: "manifestState === \"ready\" && manifest !== null && sectionStats.get(batchId) === null", replace: "false", tests: L0_PAGE },

@@ -22,6 +22,7 @@ export default function ReadingSettingsDialog({ open, settings, onChange, onClos
   const themes: { value: ReadingTheme; label: string; hint: string }[] = [
     { value: "light", label: "فاتح", hint: "خلفية بيضاء" },
     { value: "sepia", label: "ورقي", hint: "خلفية دافئة مريحة للعين" },
+    { value: "dark", label: "داكن", hint: "للقراءة في الإضاءة الخافتة" },
   ];
   const isDefault = settings.size === DEFAULT_READING_SETTINGS.size && settings.spacing === DEFAULT_READING_SETTINGS.spacing && settings.theme === DEFAULT_READING_SETTINGS.theme;
   return (

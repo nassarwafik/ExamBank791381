@@ -7,7 +7,7 @@
 
 export type ReadingTextSize = 1 | 2 | 3;
 export type ReadingSpacing = 1 | 2 | 3;
-export type ReadingTheme = "light" | "sepia";
+export type ReadingTheme = "light" | "sepia" | "dark";
 export type ReadingSettings = { size: ReadingTextSize; spacing: ReadingSpacing; theme: ReadingTheme };
 
 export const DEFAULT_READING_SETTINGS: ReadingSettings = { size: 2, spacing: 1, theme: "light" };
@@ -36,7 +36,7 @@ export function loadReadingSettings(): ReadingSettings {
     return {
       size: isStep(v.size) ? v.size : DEFAULT_READING_SETTINGS.size,
       spacing: isStep(v.spacing) ? v.spacing : DEFAULT_READING_SETTINGS.spacing,
-      theme: v.theme === "sepia" || v.theme === "light" ? v.theme : DEFAULT_READING_SETTINGS.theme,
+      theme: v.theme === "sepia" || v.theme === "light" || v.theme === "dark" ? v.theme : DEFAULT_READING_SETTINGS.theme,
     };
   } catch { return DEFAULT_READING_SETTINGS; }
 }
