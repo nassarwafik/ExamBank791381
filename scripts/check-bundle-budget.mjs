@@ -162,6 +162,10 @@ const VISUAL_IMPL_SIGNATURE = /preserveAspectRatio:/g;
 const REGISTERED_VISUALS_MIN = 122;            // registry.test.ts pins the exact count; the guard only refuses to ship fewer
 const VISUAL_GROUP_MAX_IMPLS = 40;             // a single chunk carrying (nearly) every visual would be the eager design again
 const VISUAL_GROUP_MIN_CHUNKS = 10;
+// Phase L.6a — learning module BODIES are served by the API after the publication check and must never ship as public assets: no
+// emitted chunk may carry the id of a block of a book page (`m01-l01-p01-def`, …). The manifest that does ship carries page ids
+// only (`791381-m01-l01-p01`, course-prefixed), never block ids.
+const MODULE_BODY_SIGNATURE = /[`"']m\d\d-l\d\d-p\d\d-[A-Za-z]/;
 
 const dist = process.argv[2] || "dist";
 const assets = path.join(dist, "assets");
@@ -191,6 +195,12 @@ export function staticClosure(distDir, roots) {
 }
 
 // The chunks a file reaches through DYNAMIC `import()` edges (Vite emits them as import("./x.js") / import(`./x.js`)).
+/** Phase L.6a — the emitted JS chunks of `distDir` that carry a learning module body (a block id of a book page). */
+export function findModuleBodyChunks(distDir) {
+  const dir = path.join(distDir, "assets");
+  return fs.readdirSync(dir).filter(f => f.endsWith(".js") && MODULE_BODY_SIGNATURE.test(fs.readFileSync(path.join(dir, f), "utf8"))).sort();
+}
+
 export function dynamicEdges(distDir, file) {
   const source = fs.readFileSync(path.join(distDir, "assets", file), "utf8");
   return [...new Set([...source.matchAll(/import\([`"']\.\/([^`"']+\.js)[`"']\)/g)].map(m => m[1]))];
@@ -523,6 +533,9 @@ function main() {
   const readerGz = readerClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0);
   console.log(`Learning Reader first-load graph (beyond the initial graph): ${readerClosure.filter(f => !initial.includes(f)).length} files, ${kb(readerGz)} KB gzip, 0 visual implementations required`);
   console.log(`Learning visuals: ${shipped} implementations in ${visualChunks.length} lazy group chunks (largest ${biggest}), all behind Reader dynamic edges`);
+  const bodyChunks = findModuleBodyChunks(dist);
+  if (bodyChunks.length) failures.push(`learning module bodies are shipped as public assets in: ${bodyChunks.join(", ")} — they must come from /api/learning-content only`);
+  console.log(`Learning module bodies in emitted chunks: ${bodyChunks.length} (served by the API after the publication check)`);
 
   // Phase 11C — student rank / stage image weight.
   const visuals = checkStudentVisualAssets({ root: path.join(path.dirname(fileURLToPath(import.meta.url)), ".."), dist });

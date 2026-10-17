@@ -10,11 +10,12 @@ const server = await createServer({ root: process.cwd(), server: { middlewareMod
 try {
   const registry = await server.ssrLoadModule("/src/learning/content/registry.ts");
   const { buildStudyIndex } = await server.ssrLoadModule("/src/learning/study/buildIndex.ts");
+  const { loadBundledModuleContent } = await server.ssrLoadModule("/src/learning/content/bundledModules.ts");
   const dir = resolve("api/src/data/learning-study");
   mkdirSync(dir, { recursive: true });
   for (const courseId of registry.registeredCourseIds()) {
     const manifest = await registry.loadCourseManifest(courseId);
-    const index = await buildStudyIndex(courseId, manifest, registry.loadModuleContent);
+    const index = await buildStudyIndex(courseId, manifest, loadBundledModuleContent);
     const file = resolve(dir, courseId + ".json");
     writeFileSync(file, JSON.stringify(index, null, 2) + "\n");
     const pages = Object.keys(index.pages).length;
