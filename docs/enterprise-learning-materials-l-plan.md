@@ -65,7 +65,8 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | L.3 | Server-side reading progress and resume (cross-device); localStorage stays the fallback; teacher preview parity (study client). The activity-event sink moves to L.4 with the analytics that will read it | implemented |
 | L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | implemented |
 | L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | implemented |
-| L.6 | Restricted content and answer keys served by the API after the publication check (D2) | planned |
+| L.6a | Restricted content: module bodies served by the API after the publication check; none ships as a public asset (D2, part 1) | implemented |
+| L.6b | Answer keys, hints and explanations stay on the server; verdict and feedback come from the server for every answer (D2, part 2) | planned |
 | L.7 | Operations: `exam-library` observability + cache, in-memory `learning-training`, content-chunk bundle budget, measured before / after | planned |
 | L.8 | Gate: real-browser reader journey (open, navigate, resume, back), axe and 44 px touch targets at 390 / 834 / 1024 / 1440 | planned |
 
@@ -528,7 +529,82 @@ This is logged as `learning.class_progress.read_cost`. Nothing is written.
   - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
   - `npx tsc -b`, `npm run build` (bundle guard passed; initial JS graph 114.5 KB gzip against 125 KB; the Reader's first-load graph is 32.7 KB gzip) and `git diff --check` are clean.
 
-## 10. What the plan leaves to the owner
+## 10. Implementation record and evidence (L.6a)
+
+### Decisions taken inside L.6a
+
+| # | Decision | Why |
+|---|---|---|
+| L6-a | **L.6 ships in two PRs.** L.6a moves the module bodies behind the API; L.6b removes the answer material from what the browser receives. | The browser still judges every answer from the key in the content: the server only confirms a right one, and hints / feedback / explanations exist only on the client. Stripping keys first would break every exercise. Each half is reviewable and safe on its own. |
+| L6-b | A module body is served by `GET /api/learning-content/{course}/{module}` only:<br>• to a **student** while it is published to the student's **persisted** class (an archived class, a course that is not attached or a hidden module is refused);<br>• to a **teacher**, any module.<br>The production bundle carries **no module body**, and the build guard enforces it. | Before L.6a every module was a public code-split asset that anyone could download, the unpublished ones included. The client-side restriction (L.2) stays as the default-deny layer on top. |
+| L6-c | The served bodies are generated data (`api/src/data/learning-content/<course>/<module>.json`, `npm run build:learning-content`), pinned to the authored content by a sync test. The authored TypeScript stays the single source; `bundledModules.ts` loads it for the build scripts and the tests. | The same pattern as the page index (L.3) and the study index. One source, and the server can never serve a stale page. |
+| L6-d | `private, no-cache` with a strong ETag. A browser may keep the body, but revalidates on every open, and a 304 is answered **only after the gate passed**. | No stale access after a teacher hides a unit, at the cost of one small request per open (no body re-download when unchanged). |
+| L6-e | Under Vitest only, `moduleBodySource.ts` resolves to the authored-content loader (`vite.config.ts`, `VITEST`). The API transport and the hosts' sessions have their own suites, plus an end-to-end suite over the **real** handler. | 45+ suites read the real book; they keep doing so without a server, and nothing in the production path is replaced. |
+| L6-f | The manifest (unit, lesson and page titles) still ships. | It holds the table of contents only, no body and no key, and the student's Reader already filters it to the released modules. |
+
+### What shipped
+
+- **Data and generator:**
+  - `scripts/build-learning-content.mjs` (`npm run build:learning-content`);
+  - `api/src/data/learning-content/791381/*.json` (28 modules, 830 KB);
+  - `contentData.sync.test.ts`.
+- **API:**
+  - `api/src/lib/learning-content.js`: per-process cache and strong ETag;
+  - `api/src/functions/learning-content.js`: the gate and 304;
+  - registered as shared-by-design in the 21G.0 tenancy registry.
+- **App:**
+  - `registry.ts` keeps the manifests and the list of modules that have a body (`COURSE_CONTENT_MODULE_IDS`).
+  - `bundledModules.ts` holds the authored loaders (tests and scripts only).
+  - `moduleBodySource.server.ts` is the transport; it raises typed `ModuleBodyError`s and never hands a foreign or malformed body to the Reader.
+  - `readerContentApi.createContentApi(headers)`.
+  - `StudentReader` uses the student's session; `LearningMaterialsPage` uses the teacher's.
+- **Guard:** `scripts/check-bundle-budget.mjs` has a new `findModuleBodyChunks` function and its own test, and fails a build that emits any block id of a book page.
+- **Scripts:** `build-learning-study-index.mjs` reads the authored source through `bundledModules.ts`. Its output is unchanged (pinned by `studyIndex.sync.test.ts`).
+
+### Read cost
+
+- **Student:** one class read per module opened. The body itself comes from the process cache, not storage.
+- **Teacher:** no storage read.
+- **Page turns:** within an open module they make no request.
+
+### Evidence
+
+- **Fail-first on `main` 9aecbafa** (a new feature, so this is absence proof):
+  - **Cannot load:** the API, transport, end-to-end and sync suites (their modules do not exist).
+  - **Fails:** the hosts suite (2/2: no session headers, because no module is requested through a session) and the tenancy registry (an unclassified endpoint).
+  - **Bundle guard:** on the L.5 build it lists all 28 module chunks as public assets; on this head it finds 0.
+- **Mutation:** `node scripts/mutate-l.mjs l6a` → **14/14 KILLED**, every file restored byte-for-byte.
+  - **Gate:**
+    - a hidden or unattached module;
+    - an archived class;
+    - an unauthenticated caller;
+    - the token's class claim;
+    - a 304 before the gate;
+    - public caching;
+    - a teacher treated as a student.
+  - **Hosts:** the student's / the teacher's session missing.
+  - **Transport:**
+    - a foreign body accepted;
+    - headers dropped;
+    - no revalidation.
+  - **Build guard:** the signature narrowed.
+  - **Data:** drift from the authored content.
+  - **Equivalent mutant:** a first campaign planted "the course-attached check removed". It survived because a module is visible only within an attached course, so the check was redundant. It was removed from the code, leaving one condition.
+- **Real browser** (production build, Chromium, the student portal over a mocked API serving the committed data):
+  - the book opens at its first page;
+  - the module is requested once, with the student's session;
+  - turning the page makes no new request;
+  - no module chunk is requested;
+  - no error.
+- **Pre-existing timing failure, not L.6a's:** `src/functionSurfaces/surfacePlotUi.21da4.test.tsx` («rotates, zooms and resets …») times out at the 5 s limit intermittently. It failed 3 of 5 runs alone on `main` 9aecbafa as well. It was not changed here, and its timeout was not widened.
+- **Full validation on the head:**
+  - `npm test`: 1103 files / 13369 tests in two full runs.
+    - **Run 1:** 3 failures, all load timeouts: `App.saveConflict.21f0` (2; passes 3/3 alone; one of the L.1 load-sensitive files) and `surfacePlotUi.21da4` (1).
+    - **Run 2:** 13368 passed and 1 failed, `surfacePlotUi.21da4` (the pre-existing failure above).
+  - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed: 0 module bodies; initial JS graph 114.5 KB gzip against 125 KB; Reader first-load graph 32.7 KB) and `git diff --check` are clean.
+
+## 11. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count

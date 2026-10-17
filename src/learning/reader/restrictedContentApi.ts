@@ -8,8 +8,9 @@
 //   loadModule   → rejects BEFORE the underlying loader is invoked (no accidental lazy chunk import of a hidden body)
 // The Reader itself is untouched — one Reader authority, no student fork.
 //
-// Honest boundary: module bodies are frontend code-split assets, so this enforces default-deny through every
-// SUPPORTED application path (UI, manifest, navigation, loader); it is not asset-level confidentiality.
+// Phase L.6a — the AUTHORITY is the server: a module body is served by the API only while it is published to the student's
+// persisted class (GET /api/learning-content/{course}/{module}); bodies are no longer public assets. This adapter is the
+// client-side default-deny on top of it (no hidden page in the manifest, no request for a hidden module).
 
 import { filterManifestByModuleIds } from "../content/filterManifest";
 import { registryContentApi, type ReaderContentApi } from "./readerContentApi";

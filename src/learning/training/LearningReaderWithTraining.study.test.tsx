@@ -72,7 +72,7 @@ function mount(study: StudyClient | null, onStudyPointsEarned = vi.fn()) {
 type McBlock = { id: string; prompt: string; correctText: string };
 let MC_BLOCKS: McBlock[] = [];
 async function loadMcBlocks() {
-  const { loadModuleContent } = await import("../content/registry");
+  const { loadBundledModuleContent: loadModuleContent } = await import("../content/bundledModules");
   const mod = await loadModuleContent("791381", M08);
   const page = mod.lessons.flatMap(l => l.pages).find(p => p.id === PAGE_ID)!;
   MC_BLOCKS = page.blocks.flatMap(b => (b.type === "practice" && b.question.kind === "multipleChoice" && b.question.options.some(o => o.correct === true))

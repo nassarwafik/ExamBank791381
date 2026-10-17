@@ -30,7 +30,7 @@ const REGISTRY = {
     "generate-exam.js": TENANT, "bank-summary.js": TENANT, "bank-import-action.js": TENANT, "exam-question-availability.js": TENANT,
     "import-upload.js": TENANT, "import-fetch-url.js": TENANT, "import-analyze.js": TENANT
   },
-  sharedByDesign: ["exam-library.js", "exam-governance.js", "governance-inbox.js", "learning-materials-catalog.js", "learning-study.js", "learning-training.js"],
+  sharedByDesign: ["exam-library.js", "exam-governance.js", "governance-inbox.js", "learning-content.js", "learning-materials-catalog.js", "learning-study.js", "learning-training.js"],
   operator: ["assignment-index-control.js", "build-bank-2025.js", "classify-bank-batch.js", "classify-question-preview.js", "import-html-exam.js", "inspect-html.js", "storage-status.js"],
   noData: ["ai-exam-composer.js", "ai-question-author.js", "ai-scenario-author.js", "analyze-global-exam-instruction.js", "exam-quality-fix.js",
     "game-number-conversion-preview.js", "generate-question-image.js", "interpret-exam-request.js", "question-ai-action.js",

@@ -6,7 +6,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
-import { loadCourseManifest, loadModuleContent } from "../content/registry";
+import { loadCourseManifest } from "../content/registry";
+import { loadBundledModuleContent as loadModuleContent } from "../content/bundledModules";
 import { buildStudyIndex } from "./buildIndex";
 import { eligibleStudyActivities, practiceQuestionKey, practiceTableKey, normalizeStudyText } from "./eligibility";
 import type { ContentPage, PracticeTableBlock } from "../content/types";
