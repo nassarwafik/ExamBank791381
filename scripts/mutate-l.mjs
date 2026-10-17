@@ -33,7 +33,60 @@ const L3_TEACHER = ["src/learning/LearningMaterialsPage.l3.test.tsx"], L3_SYNC =
 const CLASSP_FN = "api/src/functions/learning-class-progress.js", CR_PANEL = "src/learning/classReading/ClassReadingPanel.tsx";
 const L4_API = ["api/tests/learning-class-progress-l4.test.js"], L4_UI = ["src/learning/classReading/ClassReadingPanel.l4.test.tsx"];
 const L4_PAGE = ["src/learning/LearningMaterialsPage.l4.test.tsx"];
+const ANN_FN = "api/src/functions/learning-annotations.js", ANN_LIB = "api/src/lib/learning-annotations.js";
+const ANN_UI = "src/learning/annotations/ReaderAnnotations.tsx", ANN_HOOK = "src/learning/annotations/useReaderAnnotations.ts", ANN_RANGES = "src/learning/annotations/highlightRanges.ts";
+const RWT = "src/learning/training/LearningReaderWithTraining.tsx";
+const L5_API = ["api/tests/learning-annotations-l5.test.js"], L5_UI = ["src/learning/annotations/ReaderAnnotations.l5.test.tsx"];
+const L5_STUDENT = ["src/student/StudentReader.annotations.l5.test.tsx"];
 export const CAMPAIGNS = {
+  l5: [
+    { id: "L5-M1", what: "a page the book does not have is accepted", file: ANN_FN,
+      find: "      if (!moduleId) return BAD_REQUEST;                                  // not a page of this book\n", replace: "", tests: L5_API },
+    { id: "L5-M2", what: "a page of an unpublished unit is annotated", file: ANN_FN,
+      find: "      if (!canSee(moduleId)) return UNAVAILABLE;                           // its module is not published to the class\n", replace: "", tests: L5_API },
+    { id: "L5-M3", what: "an archived class still writes annotations", file: ANN_FN,
+      find: "    if (classroom && normalizeClassStatus(classroom) === \"archived\") return ARCHIVED;\n", replace: "", tests: L5_API },
+    { id: "L5-M4", what: "the token's class claim decides instead of the persisted class", file: ANN_FN,
+      find: "const classId = String(sess.student?.classId || \"\").trim();", replace: "const classId = String(sess.user?.classId || \"\").trim();", tests: L5_API },
+    { id: "L5-M5", what: "a change that alters nothing is written anyway", file: ANN_FN,
+      find: "      if (!probe.changed) {", replace: "      if (false) {", tests: L5_API },
+    { id: "L5-M6", what: "an over-limit change is not reported as a limit", file: ANN_FN,
+      find: "      if (probe.error === \"limit\") return TOO_LARGE;\n", replace: "", tests: L5_API },
+    { id: "L5-M7", what: "a bound reached by another device meanwhile is overwritten", file: ANN_FN,
+      find: "          if (r.error) { failure = r.error; return (finalDoc = normalizeAnnotationsDoc(fresh)); }", replace: "          if (false) { failure = r.error; return (finalDoc = normalizeAnnotationsDoc(fresh)); }", tests: L5_API },
+    { id: "L5-M8", what: "a repeated bookmark moves its time", file: ANN_LIB,
+      find: "    if (change.on === has(c.bookmarks, pageId)) return { doc, changed: false };\n", replace: "", tests: L5_API },
+    { id: "L5-M9", what: "a note over NOTE_MAX is stored", file: ANN_LIB,
+      find: "    if (text.length > LIMITS.NOTE_MAX) return { error: \"limit\" };\n", replace: "", tests: L5_API },
+    { id: "L5-M10", what: "the per-page highlight bound is dropped", file: ANN_LIB,
+      find: "if (list.length >= LIMITS.HIGHLIGHTS_PER_PAGE || highlightCount(c) >= LIMITS.HIGHLIGHTS_PER_COURSE)", replace: "if (highlightCount(c) >= LIMITS.HIGHLIGHTS_PER_COURSE)", tests: L5_API },
+    { id: "L5-M11", what: "the per-course highlight bound is dropped", file: ANN_LIB,
+      find: "if (list.length >= LIMITS.HIGHLIGHTS_PER_PAGE || highlightCount(c) >= LIMITS.HIGHLIGHTS_PER_COURSE)", replace: "if (list.length >= LIMITS.HIGHLIGHTS_PER_PAGE)", tests: L5_API },
+    { id: "L5-M12", what: "the same quote is highlighted twice", file: ANN_LIB,
+      find: "    if (list.some(h => h.quote === quote)) return { doc, changed: false };\n", replace: "", tests: L5_API },
+    { id: "L5-M13", what: "the view shows units the class can no longer see", file: ANN_LIB,
+      find: "    if (!canSee(moduleId)) continue;\n", replace: "", tests: L5_API },
+    { id: "L5-M14", what: "a stored oversize note survives normalisation", file: ANN_LIB,
+      find: "text && text.length <= LIMITS.NOTE_MAX && isIso(n.updatedAt)", replace: "text && isIso(n.updatedAt)", tests: L5_API },
+    { id: "L5-M15", what: "a teacher preview gets the annotations client", file: RWT,
+      find: "annotations={actor === \"student\" ? annotations : null}", replace: "annotations={annotations}", tests: L5_UI },
+    { id: "L5-M16", what: "the student's Reader is not given its annotations client", file: STUDENT_READER,
+      find: "      annotations={annotations}\n", replace: "", tests: L5_STUDENT },
+    { id: "L5-M17", what: "a selection outside the page offers «تظليل»", file: ANN_UI,
+      find: "if (!sel.anchorNode || !sel.focusNode || !article.contains(sel.anchorNode) || !article.contains(sel.focusNode)) return null;", replace: "if (!sel.anchorNode || !sel.focusNode) return null;", tests: L5_UI },
+    { id: "L5-M18", what: "a passage over QUOTE_MAX can be highlighted", file: ANN_UI,
+      find: "const tooLong = sel.quote.length > QUOTE_MAX", replace: "const tooLong = false", tests: L5_UI },
+    { id: "L5-M19", what: "a note over NOTE_MAX can be saved", file: ANN_UI,
+      find: "disabled={busy || over || !changed}", replace: "disabled={busy || !changed}", tests: L5_UI },
+    { id: "L5-M20", what: "a refused write is silent", file: ANN_HOOK,
+      find: "      setError(e instanceof Error && e.message ? e.message : \"تعذر حفظ التغيير الآن. حاول مرة أخرى.\");\n", replace: "", tests: L5_UI },
+    { id: "L5-M21", what: "the page's highlights are never painted", file: ANN_RANGES,
+      find: "if (ranges.length) registry.set(HIGHLIGHT_NAME, new HighlightCtor(...ranges)); else registry.delete(HIGHLIGHT_NAME);", replace: "registry.delete(HIGHLIGHT_NAME);", tests: L5_UI },
+    { id: "L5-M22", what: "a block boundary is not a space (a quote across paragraphs is lost)", file: ANN_RANGES,
+      find: "    if (lastBlock && block !== lastBlock && !space) { chars.push(\" \"); at.push([text, 0]); space = true; }\n", replace: "", tests: L5_UI },
+    { id: "L5-M23", what: "text inside controls is matched as page text", file: ANN_RANGES,
+      find: "    if (text.parentElement?.closest(SKIP)) continue;\n", replace: "", tests: L5_UI },
+  ],
   l4: [
     { id: "L4-M1", what: "another teacher's class is reported (tenancy guard dropped)", file: CLASSP_FN,
       find: "    if (!classroom || !canAccessDocument(classroom, tenantOf(auth.user))) return NOT_FOUND;\n", replace: "    if (!classroom) return NOT_FOUND;\n", tests: L4_API },
