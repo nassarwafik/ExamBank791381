@@ -5,6 +5,8 @@ import { localEvaluator, revealNextHint, INITIAL_FEEDBACK_STATE, type LearningFe
 import { practiceQuestionKey } from "../study/eligibility";
 import type { StudyAttemptResponse, StudyHost } from "../study/types";
 
+/** A server check of one answer (L.6b): in flight, answered, or not reachable (never shown as a wrong answer). */
+type ServerCheck = { stamp: string; kind: "pending" } | { stamp: string; kind: "done"; r: StudyAttemptResponse } | { stamp: string; kind: "error" };
 /**
  * Inline learning practice (جرّب بنفسك) — the immediate, LOCAL checker for a `practice` block.
  *
@@ -24,8 +26,20 @@ import type { StudyAttemptResponse, StudyHost } from "../study/types";
  * exercise is reported once to the server, which alone judges it and decides the points; the view then shows the
  * server's outcome — «+n نقطة قوة» when the module's Strength rose, a quiet «محسوبة سابقًا» for a repeat, «سُجّل
  * الدراسة لهذه الصفحة» once the page is full — and nothing on a transport failure. Without a host nothing is sent.
+ *
+ * SERVER CHECK (L.6b): a SERVED block carries no key, no feedback and no hint (`serverCheck` instead). Every answer is then sent
+ * to the host, and the verdict, the message, the hints and the explanation shown are the server's reply for that answer. While
+ * the reply is on its way the view says so; when the server cannot be reached it says that and offers a retry — a transport
+ * failure is never shown as a wrong answer. Each distinct answer is asked once per mount. Without a host a served block is
+ * shown statically. An authored block (the key in the content: tests and tools) keeps the local checker above.
  */
-export default function PracticeBlockView({ question, activityId, pageId, study }: { question: PracticeQuestion; activityId?: string; pageId?: string; study?: StudyHost }) {
+export default function PracticeBlockView({ question, activityId, pageId, study, serverCheck = false, studyEligible = true }: {
+  question: PracticeQuestion; activityId?: string; pageId?: string; study?: StudyHost;
+  /** The block arrived without its answer material (L.6b): the server judges every answer. */
+  serverCheck?: boolean;
+  /** False for a self-check block (`studyEligible: false`): judged, never recorded. */
+  studyEligible?: boolean;
+}) {
   const baseId = useId();
   const [response, setResponse] = useState<LearningResponse | null>(null);
   const [draft, setDraft] = useState("");
@@ -36,24 +50,55 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
   const latestStampRef = useRef<string | null>(null);     // the answer currently on screen (a late outcome for an old answer is dropped)
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
-  const eligible = !!study && !!activityId && !!pageId && practiceQuestionKey(question) !== null;
+  const [check, setCheck] = useState<ServerCheck | null>(null);
+  const checkedRef = useRef(new Map<string, StudyAttemptResponse>());   // server replies of this mount, by answer
+  const askingRef = useRef(new Set<string>());                          // answers whose server check is in flight
+  // SERVER mode: a served block of a kind with an answering surface, and a host to ask.
+  const server = serverCheck && hasInteractiveSurface(question);
+  const serverReady = server && !!study && !!activityId && !!pageId;
+  const eligible = studyEligible && !!study && !!activityId && !!pageId && (server || practiceQuestionKey(question) !== null);
   // Interactive ONLY for kinds that have a complete answering surface below (multipleChoice / trueFalse /
   // shortInput) AND an answer key. A keyed `fillBlank` (supported by the evaluator, no per-blank input here yet)
   // keeps the controlled static surface — never a prompt with a "answer to see the result" footer and no field.
-  const hasKey = hasInteractiveSurface(question) && localEvaluator.evaluate(question, probeResponse(question)).status !== "unknown";
-  const result = response ? localEvaluator.evaluate(question, response) : null;
-  const status = result?.status === "correct" ? "right" : result && result.status !== "unknown" ? "wrong" : "empty";
-  const ladder = hintLadder(question.feedback);
+  const hasKey = serverReady || (!server && hasInteractiveSurface(question) && localEvaluator.evaluate(question, probeResponse(question)).status !== "unknown");
+  const local = !server && response ? localEvaluator.evaluate(question, response) : null;
+  const reply = server && check?.kind === "done" ? check.r : null;
+  const status: "empty" | "right" | "wrong" | "checking" | "unreachable" = !response ? "empty"
+    : server ? (check?.kind === "pending" ? "checking" : check?.kind === "error" ? "unreachable" : reply ? (reply.correct ? "right" : "wrong") : "checking")
+    : local?.status === "correct" ? "right" : local && local.status !== "unknown" ? "wrong" : "empty";
+  const message = server ? reply?.feedback?.message : local?.message;
+  const explanation = server ? reply?.feedback?.explanation : question.feedback?.explanation;
+  const ladder = server ? (reply?.feedback?.hints ?? []) : hintLadder(question.feedback);
   const shownHints = ladder.slice(0, feedback.revealedHints);
   const feedbackId = baseId + "-fb";
 
-  const answer = (r: LearningResponse) => { setResponse(r); setOutcome(null); };
-  const clear = () => { setResponse(null); setDraft(""); setFeedback(INITIAL_FEEDBACK_STATE); setOutcome(null); };
+  // Ask the server about ONE answer (server mode): a reply already received is reused, an answer in flight is never asked
+  // twice, and only the reply for the answer on screen is shown (a late reply to an older answer is kept for reuse only).
+  const ask = (r: LearningResponse) => {
+    if (!serverReady || !study || !pageId || !activityId) return;
+    const stamp = JSON.stringify(r);
+    latestStampRef.current = stamp;
+    const known = checkedRef.current.get(stamp);
+    if (known) { setCheck({ stamp, kind: "done", r: known }); return; }
+    setCheck({ stamp, kind: "pending" });
+    if (askingRef.current.has(stamp)) return;
+    askingRef.current.add(stamp);
+    study.report(pageId, activityId, r as never)
+      .then(res => {
+        checkedRef.current.set(stamp, res);
+        if (mountedRef.current && latestStampRef.current === stamp) { setCheck({ stamp, kind: "done", r: res }); setOutcome(res); }
+      })
+      .catch(() => { if (mountedRef.current && latestStampRef.current === stamp) setCheck({ stamp, kind: "error" }); })
+      .finally(() => { askingRef.current.delete(stamp); });
+  };
+  const answer = (r: LearningResponse) => { setResponse(r); setOutcome(null); if (server) ask(r); };
+  const clear = () => { setResponse(null); setDraft(""); setFeedback(INITIAL_FEEDBACK_STATE); setOutcome(null); setCheck(null); if (server) latestStampRef.current = null; };
 
   // Report a right answer ONCE: a response the server accepted is never re-reported (re-picking it is deduplicated),
   // a response in flight is never duplicated by a re-render, and a TRANSPORT FAILURE releases the marker so the same
   // right answer can be reported again (the server stays authoritative and idempotent — a retry can never farm).
   useEffect(() => {
+    if (server) return;                                    // server mode: every answer was already asked (see `ask`)
     if (!eligible || !study || !activityId || !pageId || !response || status !== "right") { latestStampRef.current = null; return; }
     const stamp = JSON.stringify(response);
     latestStampRef.current = stamp;
@@ -63,9 +108,9 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
       .then(r => { reportedRef.current = stamp; if (mountedRef.current && latestStampRef.current === stamp) setOutcome(r); })
       .catch(() => { /* quiet: the local verdict stands; the marker is released so a later pick reports again */ })
       .finally(() => { if (inFlightRef.current === stamp) inFlightRef.current = null; });
-  }, [eligible, study, activityId, pageId, response, status]);
+  }, [server, eligible, study, activityId, pageId, response, status]);
 
-  if (!hasKey) return <StaticPractice question={question} />;
+  if (!hasKey) return <StaticPractice question={question} offline={server} />;
 
   return (
     <div className={"learning-reader-practice is-interactive" + (status === "empty" ? "" : " is-" + status)}>
@@ -118,21 +163,30 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
             aria-labelledby={baseId + "-q"}
             aria-describedby={status === "empty" ? undefined : feedbackId}
             value={draft}
-            onChange={e => { setDraft(e.target.value); if (response) setResponse(null); }}
+            onChange={e => { setDraft(e.target.value); if (response) { setResponse(null); setCheck(null); if (server) latestStampRef.current = null; } }}
           />
           <button type="submit" className="eb-button is-primary is-small" disabled={!draft.trim()}>تحقّق</button>
         </form>
       )}
 
-      {status !== "empty" && (
+      {(status === "checking" || status === "unreachable") && (
+        <div id={feedbackId} className={"learning-reader-practice-verdict is-" + status} role="status">
+          {status === "checking"
+            ? <p className="learning-reader-practice-feedback">جارٍ التحقق من إجابتك…</p>
+            : <p className="learning-reader-practice-feedback">تعذّر التحقق من إجابتك الآن. تحقق من الاتصال ثم أعد المحاولة.</p>}
+          {status === "unreachable" && response && <button type="button" className="eb-button is-small" onClick={() => ask(response)}>أعد المحاولة</button>}
+        </div>
+      )}
+
+      {(status === "right" || status === "wrong") && (
         <div id={feedbackId} className={"learning-reader-practice-verdict is-" + status} role="status">
           <p className="learning-reader-practice-feedback">
             {status === "right"
               ? <><IconCheck size={14} aria-hidden="true" />✓ صحيح</>
               : <><IconClose size={14} aria-hidden="true" />✕ غير صحيح — حاول مرة أخرى</>}
           </p>
-          {result?.message && <p className="learning-reader-practice-message">{result.message}</p>}
-          {status === "right" && question.feedback?.explanation && <p className="learning-reader-practice-explain">{question.feedback.explanation}</p>}
+          {message && <p className="learning-reader-practice-message">{message}</p>}
+          {status === "right" && explanation && <p className="learning-reader-practice-explain">{explanation}</p>}
           {status === "right" && outcome && <StudyOutcome outcome={outcome} />}
           {status === "wrong" && shownHints.length > 0 && (
             <ol className="learning-reader-practice-hints" aria-label="التلميحات">
@@ -146,7 +200,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
         <p className="learning-reader-practice-hint">{eligible ? "تمرين ذاتي: أجب لترى النتيجة فورًا. أول إجابة صحيحة تُسجَّل لك مرة واحدة وترفع نقاط قوة هذه الوحدة (حتى 20 نقطة للوحدة)." : "تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط."}</p>
         <div className="learning-reader-practice-actions">
           {status === "wrong" && feedback.revealedHints < ladder.length && (
-            <button type="button" className="eb-button is-quiet is-small" onClick={() => setFeedback(s => revealNextHint(question.feedback, s))}>
+            <button type="button" className="eb-button is-quiet is-small" onClick={() => setFeedback(s => (server ? { ...s, revealedHints: Math.min(s.revealedHints + 1, ladder.length) } : revealNextHint(question.feedback, s)))}>
               {feedback.revealedHints === 0 ? "ماذا أفحص؟ (تلميح)" : "تلميح آخر"}
             </button>
           )}
@@ -163,7 +217,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
  *  A) actual gain → «+n نقطة قوة» · B) repeat → «محسوبة سابقًا» · C) the module is complete → «أكملت … هذه الوحدة» ·
  *  D) recorded, but the module's rounded value did not move yet → «سُجّل … » with the module's progress. */
 export function StudyOutcome({ outcome }: { outcome: StudyAttemptResponse }) {
-  if (!outcome.correct || outcome.actor !== "student") return null;
+  if (!outcome.correct || outcome.actor !== "student" || outcome.study === false) return null;
   if (outcome.gained > 0) return <p className="learning-reader-study-outcome is-gained" role="status">+{outcome.gained} نقطة قوة — أحسنت، واصل الدراسة. <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span> من هذه الوحدة.</p>;
   if (outcome.alreadyCompleted) return <p className="learning-reader-study-outcome is-repeat" role="status">هذا التمرين محسوب سابقًا.</p>;
   if (outcome.module.points >= outcome.module.max) return <p className="learning-reader-study-outcome is-module-full" role="status">أكملت نقاط قوة هذه الوحدة: <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span></p>;
@@ -185,8 +239,9 @@ function probeResponse(question: PracticeQuestion): LearningResponse {
   }
 }
 
-/** The pre-existing STATIC shape for a question without an answer key: prompt + option texts / an input hint. */
-function StaticPractice({ question }: { question: PracticeQuestion }) {
+/** The pre-existing STATIC shape for a question without an answer key: prompt + option texts / an input hint. `offline`: a
+ *  served block (its key is on the server) shown where no server check is available. */
+function StaticPractice({ question, offline = false }: { question: PracticeQuestion; offline?: boolean }) {
   return (
     <div className="learning-reader-practice">
       <p className="learning-reader-practice-prompt">{question.prompt}</p>
@@ -204,7 +259,7 @@ function StaticPractice({ question }: { question: PracticeQuestion }) {
       {(question.kind === "shortInput" || question.kind === "fillBlank") && (
         <p className="learning-reader-practice-input" aria-hidden="true">✎ ________</p>
       )}
-      <p className="learning-reader-practice-hint">سيتوفر التحقق من الإجابة في مرحلة لاحقة.</p>
+      <p className="learning-reader-practice-hint">{offline ? "التحقق من هذه الإجابة يتم على المنصة، وهو غير متاح هنا." : "سيتوفر التحقق من الإجابة في مرحلة لاحقة."}</p>
     </div>
   );
 }

@@ -45,11 +45,16 @@ export function practiceQuestionKey(question: PracticeQuestion): StudyActivityKe
   }
 }
 
-/** The key of a `practice-table` (its select cells by "row:col"), or null when it has no select cell. Pure. */
+/** The key of a `practice-table` (its select cells by "row:col"), or null when it has no select cell or a cell carries no
+ *  key (a served body, L.6b: the server holds the key). Pure. */
 export function practiceTableKey(block: PracticeTableBlock): StudyActivityKey | null {
   const cells: Record<string, string> = {};
-  block.rows.forEach((row, r) => row.forEach((cell, c) => { if (typeof cell !== "string" && cell.kind === "select") cells[r + ":" + c] = cell.key; }));
-  return Object.keys(cells).length > 0 ? { kind: "practice-table", cells } : null;
+  let keyless = false;
+  block.rows.forEach((row, r) => row.forEach((cell, c) => {
+    if (typeof cell === "string" || cell.kind !== "select") return;
+    if (typeof cell.key === "string") cells[r + ":" + c] = cell.key; else keyless = true;
+  }));
+  return !keyless && Object.keys(cells).length > 0 ? { kind: "practice-table", cells } : null;
 }
 
 /** The eligible activity of one block, or null. Pure.
@@ -65,5 +70,19 @@ export function studyActivityOf(block: ContentBlock): StudyActivitySpec | null {
 export function eligibleStudyActivities(page: Pick<ContentPage, "blocks">): StudyActivitySpec[] {
   const out: StudyActivitySpec[] = [];
   for (const block of page.blocks) { const spec = studyActivityOf(block); if (spec) out.push(spec); }
+  return out;
+}
+
+/**
+ * The study activity ids of a page, for an AUTHORED body (judged by its key) and for a SERVED one alike (L.6b: the key stayed on
+ * the server and the block carries `serverCheck`). The two always name the same set: the served body keeps `serverCheck` exactly
+ * on the blocks that had a key, and the opt-out flag travels unchanged. Pure.
+ */
+export function studyActivityIds(page: Pick<ContentPage, "blocks">): string[] {
+  const out: string[] = [];
+  for (const block of page.blocks) {
+    if (block.type !== "practice" && block.type !== "practice-table") continue;
+    if (block.serverCheck === true ? block.studyEligible !== false : studyActivityOf(block) !== null) out.push(block.id);
+  }
   return out;
 }

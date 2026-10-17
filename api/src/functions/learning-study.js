@@ -6,16 +6,22 @@ const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictEr
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule } = require("../lib/class-learning-materials");
 const { STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT } = require("../lib/student-strength");
-const { studyDocName, loadStudyIndex, findStudyActivity, pageEligibleCount, evaluateStudyResponse, normalizeStudyDoc, applyStudyCompletion, studyStateOf } = require("../lib/learning-study");
+const { studyDocName, loadStudyIndex, findStudyActivity, pageEligibleCount, normalizeStudyDoc, applyStudyCompletion, studyStateOf } = require("../lib/learning-study");
+const { loadCheckIndex, findCheckActivity, checkResponse } = require("../lib/learning-check");
 
 // Study Practice Strength API — the SERVER AUTHORITY for in-page learning exercises. Routes (one function):
 //   GET  /api/learning-study/{courseId}          → the caller's study state for the course: per-page completed
 //                                                   activity ids + eligible count, per-module completed / eligible /
 //                                                   points (≤ 20), total, the policy
-//   POST /api/learning-study/{courseId}/attempt  → { pageId, activityId, response } — the server looks the activity
-//                                                   up in the generated key index, checks the class gate, JUDGES the
-//                                                   response itself and records the completion (idempotent); `gained`
-//                                                   is the ACTUAL Study Strength delta (module formula, all modules)
+//   POST /api/learning-study/{courseId}/attempt  → { pageId, activityId, response } — EVERY answer to an in-page exercise
+//                                                   (L.6b: the browser holds no key). The server looks the block up in
+//                                                   the generated CHECK INDEX, checks the class gate, JUDGES the response
+//                                                   and returns the verdict with the feedback it earns (right: message +
+//                                                   explanation; wrong: message + hints; a table: a verdict per answered
+//                                                   cell). A right answer to a STUDY activity (the study key index) is
+//                                                   recorded (idempotent); `gained` is the ACTUAL Study Strength delta
+//                                                   (module formula, all modules). `study: false` (a self-check block)
+//                                                   is judged and never recorded.
 // The browser sends only the learner's response: any client-supplied "correct", "points" or "gained" is ignored.
 // Teachers (builder token) may try any exercise: judged and answered, never persisted. Nothing here touches
 // assignments, the gradebook, class membership or publication.
@@ -47,6 +53,7 @@ async function handler(request, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   const loadIndex = deps.loadStudyIndex || loadStudyIndex;
+  const loadChecks = deps.loadCheckIndex || loadCheckIndex;
   try {
     const actor = await resolveActor(request, deps);
     if (actor.kind === "denied") return actor.response;
@@ -82,28 +89,33 @@ async function handler(request, deps = {}, obs = null) {
       const pageId = body.pageId.trim();
       const activityId = body.activityId.trim();
       if (!ID.test(pageId) || !ID.test(activityId)) return BAD_REQUEST;
-      const found = findStudyActivity(index, pageId, activityId);
-      if (!found) return NOT_FOUND;
+      const check = findCheckActivity(loadChecks(courseId), pageId, activityId);
+      if (!check) return NOT_FOUND;
       // The gate: the page's OWN module must be published to the student's class (the same authority as the Reader
       // and Learning Practice). Teachers preview freely.
-      if (actor.kind === "student" && !classCanSeeLearningModule(classroom, courseId, found.moduleId)) return UNAVAILABLE;
+      if (actor.kind === "student" && !classCanSeeLearningModule(classroom, courseId, check.moduleId)) return UNAVAILABLE;
       // ONLY the response is read; "correct", "points", "gained" or any other client claim is ignored.
-      const correct = evaluateStudyResponse(found.key, body.response);
-      const page = { pageId, moduleId: found.moduleId };
-      if (!correct) {
+      const verdict = checkResponse(check, body.response);
+      const correct = verdict.correct;
+      // Points come from the STUDY index alone (the check index only says what to answer): a block it does not list is judged and
+      // answered, never recorded.
+      const found = findStudyActivity(index, pageId, activityId);
+      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}) };
+      const page = { pageId, moduleId: check.moduleId };
+      if (!correct || !found) {
         const state = actor.kind === "student" ? studyStateOf(studyDoc, index) : studyStateOf(null, index);
         const view = state.pages[pageId] || { completed: [], eligible: pageEligibleCount(index, pageId) };
-        return { status: 200, jsonBody: { ok: true, actor: actor.kind, correct: false, persisted: false, alreadyCompleted: false, gained: 0, page: { ...page, completed: view.completed, eligible: view.eligible }, module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints } };
+        return { status: 200, jsonBody: { ok: true, actor: actor.kind, correct, persisted: false, alreadyCompleted: false, gained: 0, ...said, page: { ...page, completed: view.completed, eligible: view.eligible }, module: state.moduleViews[check.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints } };
       }
       if (actor.kind === "teacher") {
         const teacherState = studyStateOf(null, index);
-        return { status: 200, jsonBody: { ok: true, actor: "teacher", correct: true, persisted: false, alreadyCompleted: false, gained: 0, page: { ...page, completed: [], eligible: pageEligibleCount(index, pageId) }, module: teacherState.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: 0 } };
+        return { status: 200, jsonBody: { ok: true, actor: "teacher", correct: true, persisted: false, alreadyCompleted: false, gained: 0, ...said, page: { ...page, completed: [], eligible: pageEligibleCount(index, pageId) }, module: teacherState.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: 0 } };
       }
       // A repeat of an ALREADY completed exercise is read-only: no write, no CAS round, the original entry stands.
       if (studyDoc.pages[pageId] && Object.prototype.hasOwnProperty.call(studyDoc.pages[pageId].completed, activityId)) {
         const state = studyStateOf(studyDoc, index);
         const view = state.pages[pageId] || { completed: [], eligible: pageEligibleCount(index, pageId) };
-        return { status: 200, jsonBody: { ok: true, actor: "student", correct: true, persisted: false, alreadyCompleted: true, gained: 0, page: { ...page, completed: view.completed, eligible: view.eligible }, module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints } };
+        return { status: 200, jsonBody: { ok: true, actor: "student", correct: true, persisted: false, alreadyCompleted: true, gained: 0, ...said, page: { ...page, completed: view.completed, eligible: view.eligible }, module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints } };
       }
       const now = new Date().toISOString();
       let outcome = null, finalDoc = null;
@@ -124,6 +136,7 @@ async function handler(request, deps = {}, obs = null) {
       return { status: 200, jsonBody: {
         ok: true, actor: "student", correct: true, persisted: !outcome.alreadyCompleted, alreadyCompleted: outcome.alreadyCompleted,
         gained: outcome.gained,                                  // the ACTUAL Strength delta (module formula), from the CAS-fresh document
+        ...said,
         page: { ...page, completed: view.completed, eligible: view.eligible },
         module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints,
       } };

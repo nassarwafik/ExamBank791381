@@ -43,7 +43,57 @@ const L6A_API = ["api/tests/learning-content-l6a.test.js"], L6A_SRC = ["src/lear
 const L6A_HOSTS = ["src/learning/contentHosts.l6a.test.tsx"], L6A_E2E = ["src/learning/reader/serverContent.l6a.test.tsx"];
 const L6A_GUARD = ["scripts/check-bundle-budget.l6a.test.mjs"], L6A_SYNC = ["src/learning/content/contentData.sync.test.ts"];
 const CONTENT_DATA = "api/src/data/learning-content/791381/791381-m01.json";
+const CHECK_LIB = "api/src/lib/learning-check.js", STUDY_FN = "api/src/functions/learning-study.js", SERVED = "src/learning/study/checkIndex.ts";
+const ELIG = "src/learning/study/eligibility.ts", BLOCK_VIEW = "src/learning/reader/PracticeBlockView.tsx", TABLE_VIEW = "src/learning/reader/PracticeTableView.tsx";
+const L6B_API = ["api/tests/learning-check-l6b.test.js"], L6B_VERDICT = ["src/learning/study/serverVerdict.l6b.test.ts"], STUDY_API = ["api/tests/learning-study.test.js"];
+const L6B_UNIT = ["src/learning/study/checkIndex.l6b.test.ts"], L6B_GUARD = ["src/learning/content/servedBodies.l6b.test.ts"], L6B_UI = ["src/learning/reader/serverCheck.l6b.test.tsx"];
 export const CAMPAIGNS = {
+  l6b: [
+    { id: "L6B-M1", what: "a wrong answer is told the explanation", file: CHECK_LIB,
+      find: "if (correct && text(fb.explanation)) feedback.explanation = fb.explanation;", replace: "if (text(fb.explanation)) feedback.explanation = fb.explanation;", tests: [...L6B_API, ...L6B_VERDICT] },
+    { id: "L6B-M2", what: "a right answer is sent the hint ladder", file: CHECK_LIB,
+      find: "if (!correct && Array.isArray(fb.hints))", replace: "if (Array.isArray(fb.hints))", tests: [...L6B_API, ...L6B_VERDICT] },
+    { id: "L6B-M3", what: "a wrong answer is told the right message", file: CHECK_LIB,
+      find: "const message = text(correct ? fb.correct : fb.incorrect);", replace: "const message = text(fb.correct || fb.incorrect);", tests: [...L6B_API, ...L6B_VERDICT] },
+    { id: "L6B-M4", what: "a table reply speaks about cells the key does not have, or unanswered ones", file: CHECK_LIB,
+      find: "if (Object.prototype.hasOwnProperty.call(expected, cell) && typeof value === \"string\" && value !== \"\") cells[cell] = value === expected[cell];", replace: "cells[cell] = value === expected[cell];", tests: L6B_API },
+    { id: "L6B-M5", what: "the key travels in the reply", file: STUDY_FN,
+      find: "const said = { study: !!found, feedback: verdict.feedback,", replace: "const said = { key: check.key, study: !!found, feedback: verdict.feedback,", tests: L6B_API },
+    { id: "L6B-M6", what: "a self-check block is recorded as a study activity", file: STUDY_FN,
+      find: "const found = findStudyActivity(index, pageId, activityId);", replace: "const found = { moduleId: check.moduleId, key: check.key };", tests: [...L6B_API, ...L6B_VERDICT] },
+    { id: "L6B-M7", what: "a student's answer is judged for a module hidden from the class", file: STUDY_FN,
+      find: "      if (actor.kind === \"student\" && !classCanSeeLearningModule(classroom, courseId, check.moduleId)) return UNAVAILABLE;\n", replace: "", tests: [...L6B_API, ...L6B_VERDICT] },
+    { id: "L6B-M8", what: "the client's own verdict is trusted", file: STUDY_FN,
+      find: "const correct = verdict.correct;", replace: "const correct = verdict.correct || body.correct === true;", tests: STUDY_API },
+    { id: "L6B-M9", what: "a served option keeps its `correct` flag", file: SERVED,
+      find: "options: q.options.map(o => ({ id: o.id, text: o.text }))", replace: "options: q.options.map(o => ({ ...o }))", tests: [...L6B_UNIT, ...L6A_SYNC] },
+    { id: "L6B-M10", what: "a served table cell keeps its key", file: SERVED,
+      find: "{ kind: cell.kind, options: [...cell.options] }", replace: "{ ...cell }", tests: [...L6B_UNIT, ...L6A_SYNC] },
+    { id: "L6B-M11", what: "a served question keeps its answer and feedback", file: SERVED,
+      find: "default: return { kind: q.kind, prompt: q.prompt };", replace: "default: return { ...q };", tests: [...L6B_UNIT, ...L6A_SYNC] },
+    { id: "L6B-M12", what: "a served checkable question loses its `serverCheck` (the exercise goes static)", file: SERVED,
+      find: "return { ...rest, question: servedQuestion(question), ...(checkActivityOf(block) ? { serverCheck: true as const } : {}) };", replace: "return { ...rest, question: servedQuestion(question) };", tests: [...L6B_UNIT, ...L6A_SYNC] },
+    { id: "L6B-M13", what: "an authored `serverCheck` is trusted on a block without a key", file: SERVED,
+      find: "const { question, serverCheck: _authored, ...rest } = block;", replace: "const { question, ...rest } = block;", tests: L6B_UNIT },
+    { id: "L6B-M14", what: "a committed served body carries an answer again", file: CONTENT_DATA,
+      find: "{\"id\":\"m01-l01-p01-q1-a\",\"text\":", replace: "{\"id\":\"m01-l01-p01-q1-a\",\"correct\":true,\"text\":", tests: [...L6B_GUARD, ...L6A_SYNC] },
+    { id: "L6B-M15", what: "the study bar of a served page names no exercise", file: ELIG,
+      find: "if (block.serverCheck === true ? block.studyEligible !== false : studyActivityOf(block) !== null) out.push(block.id);", replace: "if (studyActivityOf(block) !== null) out.push(block.id);", tests: L6B_UNIT },
+    { id: "L6B-M16", what: "a served question is judged locally (it then has no key and goes static)", file: BLOCK_VIEW,
+      find: "const server = serverCheck && hasInteractiveSurface(question);", replace: "const server = false && serverCheck && hasInteractiveSurface(question);", tests: L6B_UI },
+    { id: "L6B-M17", what: "an unreachable server is shown as a wrong answer", file: BLOCK_VIEW,
+      find: "check?.kind === \"error\" ? \"unreachable\" : reply", replace: "check?.kind === \"error\" ? \"wrong\" : reply", tests: L6B_UI },
+    { id: "L6B-M18", what: "every pick asks the server again (a reply is never reused)", file: BLOCK_VIEW,
+      find: "    if (known) { setCheck({ stamp, kind: \"done\", r: known }); return; }\n    setCheck({ stamp, kind: \"pending\" });\n    if (askingRef.current.has(stamp)) return;\n    askingRef.current.add(stamp);\n    study.report(pageId, activityId, r as never)", replace: "    setCheck({ stamp, kind: \"pending\" });\n    study.report(pageId, activityId, r as never)", tests: L6B_UI },
+    { id: "L6B-M19", what: "a late reply to an older answer is shown for the answer on screen", file: BLOCK_VIEW,
+      find: "if (mountedRef.current && latestStampRef.current === stamp) { setCheck({ stamp, kind: \"done\", r: res }); setOutcome(res); }", replace: "if (mountedRef.current) { setCheck({ stamp, kind: \"done\", r: res }); setOutcome(res); }", tests: L6B_UI },
+    { id: "L6B-M20", what: "a self-check's right answer shows a study outcome", file: BLOCK_VIEW,
+      find: "if (!outcome.correct || outcome.actor !== \"student\" || outcome.study === false) return null;", replace: "if (!outcome.correct || outcome.actor !== \"student\") return null;", tests: L6B_UI },
+    { id: "L6B-M21", what: "an unreachable server marks a table cell wrong", file: TABLE_VIEW,
+      find: ": check?.kind === \"error\" ? \"unreachable\" : \"checking\";", replace: ": check?.kind === \"error\" ? \"wrong\" : \"checking\";", tests: L6B_UI },
+    { id: "L6B-M22", what: "a table cell takes the server's verdict as right whatever it said", file: TABLE_VIEW,
+      find: "n[cellChoice(cell, next[cell])] = ok === true;", replace: "n[cellChoice(cell, next[cell])] = true;", tests: L6B_UI },
+  ],
   l6a: [
     { id: "L6A-M1", what: "a student receives a module hidden from the class (or of a course not attached)", file: LC_FN,
       find: "if (!classroom || !classCanSeeLearningModule(classroom, courseId, moduleId)) return UNAVAILABLE;", replace: "if (!classroom) return UNAVAILABLE;", tests: [...L6A_API, ...L6A_E2E] },

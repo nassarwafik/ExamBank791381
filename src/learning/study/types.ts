@@ -28,7 +28,14 @@ export type StudyAttemptResponse = {
   gained: number;
   page: { pageId: string; moduleId: string; completed: string[]; eligible: number };
   module: StudyModuleState; totalPoints: number;
+  /** L.6b — false for a self-check block (judged and answered, never recorded). */
+  study?: boolean;
+  /** L.6b — only what THIS answer earns: right → the right message and the explanation; wrong → the wrong message and the hints. */
+  feedback?: StudyFeedback;
+  /** L.6b — a practice-table: for every answered cell ("row:col"), whether its choice is right. */
+  cells?: Record<string, boolean>;
 };
+export type StudyFeedback = { message?: string; explanation?: string; hints?: string[] };
 
 export interface StudyClient {
   state(courseId: string): Promise<StudyStateResponse>;
@@ -43,7 +50,8 @@ export type StudyPageStatus =
 export interface StudyHost {
   /** The current status of a page (the host reads the state once per mount and updates it from each attempt). */
   pageStatus(pageId: string): StudyPageStatus;
-  /** Report a locally-correct answer; resolves with the SERVER's verdict. Rejects on transport failure. */
+  /** Send an answer: EVERY answer of a served block (L.6b: no key in the browser), or a locally-right answer of an authored one.
+   *  Resolves with the SERVER's verdict and feedback. Rejects on transport failure. */
   report(pageId: string, activityId: string, response: StudyResponse): Promise<StudyAttemptResponse>;
 }
 export type { StudyActivityKey };

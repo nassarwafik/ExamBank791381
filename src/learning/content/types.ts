@@ -187,7 +187,15 @@ export interface StudyEligibilityOptOut {
   /** Set to `false` for a local-only self-check that must not count toward Study Strength. Omit to stay eligible. */
   studyEligible?: false;
 }
-export interface PracticeBlock extends BlockBase, StudyEligibilityOptOut { type: "practice"; question: PracticeQuestion; }
+/**
+ * Phase L.6b — set on a SERVED body (GET /api/learning-content) in place of the answer material: the block was checkable, its
+ * key, feedback, hints and explanation stayed on the server, and every answer is judged there (POST /api/learning-study/{course}/
+ * attempt). Never authored: the authored content carries the key itself and no marker.
+ */
+export interface ServerCheckMarker {
+  serverCheck?: true;
+}
+export interface PracticeBlock extends BlockBase, StudyEligibilityOptOut, ServerCheckMarker { type: "practice"; question: PracticeQuestion; }
 
 // ────────────────────────────────────────────────────────────────────────────
 // Interactive Learning Engine (Phase 3A) — activity descriptor contract.
@@ -399,8 +407,8 @@ export interface PracticeTableSelectCell {
   kind: "select";
   /** The dropdown choices, in authored order (≥ 2, unique, non-empty). */
   options: string[];
-  /** The expected choice — MUST be one of `options`. */
-  key: string;
+  /** The expected choice — MUST be one of `options`. Authored content always carries it; a served body never does (L.6b). */
+  key?: string;
 }
 export type PracticeTableCell = string | PracticeTableSelectCell;
 /**
@@ -409,7 +417,7 @@ export type PracticeTableCell = string | PracticeTableSelectCell;
  * any book's "fill the column" exercise is authored as data (the values, the choices and the expected choice), and
  * the Reader renders the checking UI. At least one cell must be a select cell (otherwise author a `table`).
  */
-export interface PracticeTableBlock extends BlockBase, StudyEligibilityOptOut {
+export interface PracticeTableBlock extends BlockBase, StudyEligibilityOptOut, ServerCheckMarker {
   type: "practice-table";
   caption?: string;
   headers: string[];
