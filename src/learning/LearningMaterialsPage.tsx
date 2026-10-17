@@ -8,6 +8,7 @@ import { batchFirstPageId, flattenPageRefs } from "./content/navigation";
 import type { LearningCourseManifest } from "./content/types";
 import { arabicCount, AVAILABLE_BOOKS, LESSONS } from "./arabicCount";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
+import { createStudyClient } from "./study/studyClient";
 import "./learning.css";
 import "./learning-library-premium.css";
 import { lazyWithRetry } from "../lazyWithRetry";
@@ -53,6 +54,9 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   const onReaderPage = useCallback((courseId: string, pageId: string) => writeLearningRoute({ kind: "reader", courseId, pageId }, "replace"), []);
   const course = view.kind === "library" ? undefined : findLearningCourse(view.courseId);
   const client = useMemo(() => (token ? createTrainingClient(teacherTrainingHeaders(token)) : null), [token]);
+  // Phase L.3 — the teacher preview reads the book exactly as a student does: in-page exercises are judged by the SAME
+  // server study authority (a teacher's answers are judged and never stored), so the page shows the student's study line.
+  const study = useMemo(() => (token ? createStudyClient(teacherTrainingHeaders(token)) : null), [token]);
   // Phase 21E L3-B — whole-course search ("all") is a TEACHER capability: this page is mounted only inside the
   // authenticated teacher app, and it is enabled only with the teacher session token present. The student portal never
   // reaches this page; its Reader searches exactly its released modules.
@@ -90,6 +94,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
             onExit={() => setView(view.fromSearch ? { kind: "library" } : { kind: "course", courseId: course.id })}
             exitLabel={view.fromSearch ? "العودة إلى نتائج البحث" : "العودة إلى نظرة الكتاب"}
             client={client}
+            study={study}
             actor="teacher"
             onPageChange={pageId => onReaderPage(course.id, pageId)}
             embedded

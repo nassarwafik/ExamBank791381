@@ -1,10 +1,17 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LearningReaderWithTraining from "../learning/training/LearningReaderWithTraining";
 import { createRestrictedReaderContentApi } from "../learning/reader/restrictedContentApi";
 import { createTrainingClient, studentTrainingHeaders } from "../learning/training/trainingClient";
 import { createStudyClient } from "../learning/study/studyClient";
 import type { SearchHit } from "../learning/search/searchModel";
 import { fetchReleasedModuleIds } from "./learningRelease";
+import { createProgressClient, type ProgressClient } from "../learning/progress/progressClient";
+import { mergeVisited } from "../learning/reader/visitedPages";
+
+/** Phase L.3 — how long the Reader waits for the server's «last page» before opening at the beginning anyway. */
+export const RESUME_WAIT_MS = 2500;
+/** Phase L.3 — a page counts as read (and becomes the resume point) after this long on it. */
+export const READ_DWELL_MS = 1500;
 
 /**
  * The student's Reader = the SAME LearningReader (one Reader authority, no student fork) fed by a content API that
@@ -13,7 +20,7 @@ import { fetchReleasedModuleIds } from "./learningRelease";
  * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
  * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange, studentId }: {
+export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange, studentId, progressClient }: {
   courseId: string;
   allowedModuleIds: string[];
   token: string;
@@ -32,6 +39,8 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   /** Phase 21E L2-B — the authenticated student's server-issued id: scopes the device-local "visited" marks in the
    *  index to this student and course. Absent / empty → no marks are read, written or shown. */
   studentId?: string;
+  /** Phase L.3 — the reading-progress transport (tests inject one); default: the student's own API client. */
+  progressClient?: ProgressClient;
 }) {
   const key = allowedModuleIds.join("|");
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -46,6 +55,33 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
     const fresh = await fetchReleasedModuleIds(token, courseId);
     return fresh !== null && fresh.has(hit.moduleId);
   }, [courseId, searchScope, token]);
+  // ── Phase L.3: reading progress on the server (any device) ──────────────────────────────────────────────────────
+  // Opening the book without a chosen page or unit resumes at the student's last page; the server's read marks join this
+  // device's; a page the student stays on for READ_DWELL_MS is recorded as read and as the new resume point. Every
+  // failure is quiet: the Reader opens at the beginning and keeps this device's own marks.
+  const visitedScope = studentId && studentId.trim() ? "student:" + studentId.trim() : undefined;
+  const progress = useMemo(() => progressClient ?? createProgressClient(studentTrainingHeaders(token)), [progressClient, token]);
+  const explicitStart = Boolean(initialPageId || initialModuleId);
+  const [resume, setResume] = useState<{ ready: boolean; pageId?: string }>(() => ({ ready: explicitStart }));
+  useEffect(() => {
+    let alive = true;
+    const timer = window.setTimeout(() => { if (alive) setResume(r => (r.ready ? r : { ready: true })); }, RESUME_WAIT_MS);
+    void progress.get(courseId).then(p => {
+      if (!alive) return;
+      if (p) mergeVisited(visitedScope, courseId, p.visited);
+      setResume(r => (r.ready ? r : { ready: true, pageId: p?.lastPageId ?? undefined }));
+    });
+    return () => { alive = false; window.clearTimeout(timer); };
+  }, [progress, courseId, visitedScope]);
+  const dwellRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(dwellRef.current), []);
+  const onPage = useCallback((pageId: string) => {
+    onPageChange?.(pageId);
+    window.clearTimeout(dwellRef.current);
+    dwellRef.current = window.setTimeout(() => { void progress.visit(courseId, pageId); }, READ_DWELL_MS);
+  }, [onPageChange, progress, courseId]);
+
+  if (!resume.ready) return <p className="eb-muted eb-sp-status" role="status">جارٍ فتح المادة التعليمية...</p>;
   return (
     <LearningReaderWithTraining
       courseId={courseId}
@@ -57,10 +93,10 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       onTrainingSubmitted={onTrainingSubmitted}
       study={study}
       onStudyPointsEarned={onStudyPointsEarned}
-      initialPageId={initialPageId}
+      initialPageId={initialPageId ?? resume.pageId}
       initialModuleId={initialModuleId}
-      onPageChange={onPageChange}
-      visitedScope={studentId && studentId.trim() ? "student:" + studentId.trim() : undefined}
+      onPageChange={onPage}
+      visitedScope={visitedScope}
       searchScope={searchScope}
       onSearchOpen={onSearchOpen}
     />

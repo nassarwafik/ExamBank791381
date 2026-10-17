@@ -1,6 +1,6 @@
 # Phase L — Enterprise learning materials («المواد التعليمية») and reader
 
-**Status:** L.0 merged (nassarwafik/ExamBank791381#339); L.1 in review as nassarwafik/ExamBank791381#341; L.2 implemented on branch `claude/nifty-clarke-k0wlid`; L.3–L.8 planned. Each phase: exact-head CI, independent
+**Status:** L.0 merged (nassarwafik/ExamBank791381#339); L.1 in review as nassarwafik/ExamBank791381#341; L.2 and L.3 implemented on branch `claude/nifty-clarke-k0wlid`; L.4–L.8 planned. Each phase: exact-head CI, independent
 review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -62,7 +62,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | L.0 | Accuracy and trust: «المقدمة» = «قريبًا»; overview load status + error with retry; no stale release note; the book by its title in the reader; agreed Arabic counts in the publication panel; stale comments | implemented |
 | L.1 | Professional reader. Collapsible table of contents on every width (overlay under 1280 px, remembered choice). Focus mode that hides the app chrome. One compact 48 px toolbar with icon buttons + «المزيد». Progress line. Pager with lesson position and the next lesson's title. Internal metadata behind «معلومات». Designed unit openers. A cleaner two-level TOC with read ticks and a filter. Reading typography (60–75 characters, 17–18 px, 1.8 line height). Dark theme. Swipe on phones. **Target: the text gets ≥ 70 % of the screen at ≥ 1024 px in focus mode.** | implemented |
 | L.2 | Navigation: a URL for library / book / section / page, a working browser back button, reload keeps the place. Clickable module list for students. (Teacher preview parity moved to L.3, which brings the server-side progress it needs.) | implemented |
-| L.3 | Server-side reading progress and resume (cross-device); a real activity sink; localStorage stays the fallback | planned |
+| L.3 | Server-side reading progress and resume (cross-device); localStorage stays the fallback; teacher preview parity (study client). The activity-event sink moves to L.4 with the analytics that will read it | implemented |
 | L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | planned |
 | L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | planned |
 | L.6 | Restricted content and answer keys served by the API after the publication check (D2) | planned |
@@ -276,7 +276,74 @@ were found and fixed: an exercise's «تحقّق» and the drawer's «إغلاق
   - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
   - `npx tsc -b`, `npm run build` (bundle guard passed; the initial JS graph went from 114.1 to 114.5 KB gzip against the 125 KB budget) and `git diff --check` are clean.
 
-## 7. What the plan leaves to the owner
+## 7. Implementation record and evidence (L.3)
+
+### Decisions taken inside L.3
+
+| # | Decision | Why |
+|---|---|---|
+| L3-a | Opening a book **without a chosen page or unit resumes at the student's last page** from any device. A chosen page (the Today hub's «أكمل من حيث توقفت», a search result) or unit still wins. | That is what readers expect, and the index is one tap away for the beginning. The wait for the server is bounded (`RESUME_WAIT_MS` = 2.5 s); after it, or on any failure, the book opens at its beginning. |
+| L3-b | A page counts as **read after 1.5 s on it** (`READ_DWELL_MS`). Pages skipped through faster are not recorded. | A record of reading, not of clicking; it also bounds the writes to one per page the student actually stayed on. |
+| L3-c | The server accepts a page **only from a generated page index** (`api/src/data/learning-pages/<course>.json`, pinned to the manifest), and only when the page's own module is published to the **persisted** class. | The document is bounded by the book's size and can never hold an invented id. Release authority stays where it is (the class record), never in the token or the body. |
+| L3-d | The view is filtered to the units visible **now**. Hiding a unit removes it from the view without deleting the stored pages, so re-publishing restores them. | Unpublishing a unit is reversible, so its stored reading must survive. |
+| L3-e | Progress is **student-only**: a teacher preview neither reads nor writes it. It is **never a grade**: no Strength, study, assignment or gradebook document is read or written. | Teacher reading analytics (L.4) will be a separate, class-scoped, tenancy-guarded endpoint. |
+| L3-f | The teacher preview gets the **same study client** as a student, authenticated as the teacher. The server judges the teacher's answers and stores nothing. | This is the preview parity moved from L.2. The page shows the student's study line instead of a different, local-only behaviour. |
+
+### What shipped
+
+- **Page index:**
+  - `src/learning/progress/buildPageIndex.ts`;
+  - `scripts/build-learning-page-index.mjs` (`npm run build:learning-page-index`);
+  - `api/src/data/learning-pages/791381.json` (28 modules, 248 pages);
+  - `pageIndex.sync.test.ts`, which pins it equal to the manifest, with every module publishable on the server.
+- **API:**
+  - `api/src/lib/learning-progress.js`: the document, `applyVisit`, `visitIsNoop` and `progressView`.
+  - `api/src/functions/learning-progress.js`:
+    - `GET /api/learning-progress/{course}`;
+    - `POST /api/learning-progress/{course}/visit`;
+    - storage at `platform/learning-progress/<studentId>.json`;
+    - CAS writes; a persistent conflict returns a retryable 503.
+- **Client:**
+  - `src/learning/progress/progressClient.ts`, whose failures resolve quietly.
+  - `StudentReader.tsx`: resume, the server's read pages merged into the device's marks (`visitedPages.mergeVisited`, union, one write), and the dwell report.
+- **Teacher:** `LearningMaterialsPage.tsx` passes a teacher-authenticated study client.
+
+### Read / write cost
+
+- Opening a book adds **one** progress read: one class read plus one progress-document read.
+- Each page a student stays on adds **one** write: one class read, one document read, and one conditional write. A repeat of the current page is read-only.
+- The teacher preview adds **one** study-state read per Reader mount, which the trainings test now pins.
+
+### Evidence
+
+- **Fail-first on the L.2 head 46cf108c:**
+  - the API suite and the page-index sync suite cannot load (the modules do not exist);
+  - the Reader-progress and teacher-parity suites fail 6/6.
+- **Mutation:** `node scripts/mutate-l.mjs l3` → **14/14 KILLED**, every file restored byte-for-byte, git status clean.
+  - **API gates** (L3-M1…M4):
+    - an invented page;
+    - an unpublished unit;
+    - an archived class;
+    - the token's class claim instead of the persisted class.
+  - **The view** (L3-M5, M6):
+    - shows hidden units;
+    - leaks the last page of a hidden unit.
+  - **The writes** (L3-M7, M8):
+    - the first-read time moves;
+    - a repeat writes again.
+  - **The Reader** (L3-M9…M12):
+    - no resume;
+    - no merge;
+    - a slow read blocks the book;
+    - no dwell.
+  - **Teacher parity lost** (L3-M13).
+  - **The committed index drifts** (L3-M14).
+- **Full validation on the head:**
+  - `npm test`: 1089 files / 13305 tests passed.
+  - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed; initial JS graph 114.4 KB gzip against 125 KB) and `git diff --check` are clean.
+
+## 8. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count
