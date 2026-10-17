@@ -648,8 +648,37 @@ This is logged as `learning.class_progress.read_cost`. Nothing is written.
   - `serverVerdict.l6b.test.ts` fails: `m01-l01-p01-q1: expected undefined to deeply equal { … }`. The reply carried no feedback.
   - A probe of the baseline handler answers the 4 self-check tables with **404**; the head answers them with 200 and `study: false`.
   - Both tests pass on the head. The hidden-module refusal test passes on both: it is a **pin**.
-- **Mutation:** `node scripts/mutate-l.mjs l6b` → MUTATION_RESULT.
-- **Full validation on the head:** VALIDATION_RESULT
+- **Mutation:** `node scripts/mutate-l.mjs l6b` → **22/22 KILLED**, every file restored byte-for-byte.
+  - **Server feedback:**
+    - an explanation told to a wrong answer;
+    - hints sent to a right answer;
+    - the right message given to a wrong answer;
+    - a table reply speaking about unknown or unanswered cells.
+  - **Server authority:**
+    - the key travelling in the reply;
+    - a self-check recorded as a study activity;
+    - a hidden module's block judged;
+    - the client's own verdict trusted.
+  - **Served bodies:**
+    - an option keeping `correct`;
+    - a cell keeping its key;
+    - a question keeping its answer and feedback;
+    - `serverCheck` lost;
+    - an authored `serverCheck` trusted;
+    - a committed body carrying an answer again.
+  - **Study bar:** a served page naming no exercise.
+  - **Reader:**
+    - a served question judged locally;
+    - an unreachable server shown as a wrong answer, for a question and for a table cell;
+    - a reply never reused;
+    - a late reply shown for the answer on screen;
+    - a self-check showing a study outcome;
+    - a cell taking any verdict as right.
+- **Baseline moved during the phase:** `main` 67f3e3ca → 7887285a (the #349 test hotfix and #340, neither touching learning code). The branch was fast-forwarded and full validation was re-run on the new base.
+- **Full validation on the head (base 7887285a):**
+  - `npm test`: 1111 files / 13482 tests passed, 0 failed.
+  - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed: 0 module bodies; initial JS graph 114.5 KB gzip against 125 KB; Reader first-load graph 33.7 KB) and `git diff --check` are clean.
 - **Not run:** a real-browser pass. The end-to-end suite runs the Reader over the **real** content and study handlers in happy-dom: the served body holds none of the block's feedback, a wrong answer shows the server's message and hints, and a right one shows its message, its explanation and the recorded study point.
 
 ## 12. What the plan leaves to the owner
