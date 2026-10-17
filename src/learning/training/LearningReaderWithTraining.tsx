@@ -113,7 +113,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       },
       async report(pageId: string, activityId: string, response: StudyResponse): Promise<StudyAttemptResponse> {
         const r = await study.attempt(courseId, pageId, activityId, response);
-        if (r.correct && r.actor === "student") {
+        if (r.correct && r.actor === "student" && r.study !== false) {
           // MONOTONIC within the mounted session: two right answers can be in flight at once and their responses can
           // arrive out of order; the client keeps the union of completed ids and the max of the module values it has
           // seen, so an older snapshot can never roll a module back (the server storage is right either way).

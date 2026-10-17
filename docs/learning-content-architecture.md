@@ -378,6 +378,13 @@ page or module, and never as much as the T-series trainings.
   `classCanSeeLearningModule`), then JUDGES the response itself (`evaluateStudyResponse`, the evaluator's own
   normalization) and records the completion. Client `correct` / `points` / `gained` fields are ignored. Teachers are
   judged, never persisted. Wrong answers write nothing.
+- **Answer material on the server (Phase L.6b, `docs/enterprise-learning-materials-l-plan.md` §11):** the served module bodies
+  carry no option `correct` flag, no `answer` / `answers`, no `feedback` and no select-cell `key`; a checkable block carries
+  `serverCheck: true` instead. The CHECK INDEX `api/src/data/learning-check/<courseId>.json` (every checkable block's key and
+  feedback, `study` true for the study activities) is written with the bodies by `npm run build:learning-content`. The attempt
+  endpoint judges EVERY answer against it and replies with the verdict and only the feedback that answer earns (right: message +
+  explanation; wrong: message + hints; a table: a verdict per answered cell); a self-check block (`studyEligible: false`) is
+  judged and never recorded. Points still come from the study index alone.
 - **Reader:** `LearningReaderWithTraining` takes an optional `study: StudyClient` (the student portal injects it;
   the teacher's Learning Materials passes none), reads the state ONCE per mount, builds a `StudyHost`
   (`pageStatus`, `report`) that the renderer passes to `PracticeBlockView` / `PracticeTableView`, and updates the
