@@ -68,3 +68,13 @@ export const HIDDEN_MODULES: ArabicCountForms = {
   many: "{n} وحدةً غيرَ منشورة",
   other: "{n} وحدة غير منشورة",
 };
+
+/** «صفحة» agreed with its count (the unit contents on a unit-opener page). Phase L.1. */
+export const PAGES: ArabicCountForms = {
+  zero: "لا صفحات",
+  one: "صفحة واحدة",
+  two: "صفحتان",
+  few: "{n} صفحات",
+  many: "{n} صفحةً",
+  other: "{n} صفحة",
+};

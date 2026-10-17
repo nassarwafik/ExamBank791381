@@ -35,7 +35,7 @@ describe("21E L2-C — reading settings dialog", () => {
     const dlg = openSettings();
     const groups = within(dlg).getAllByRole("group").map(g => g.querySelector("legend")!.textContent);
     expect(groups).toEqual(["حجم النص", "تباعد الأسطر", "لون صفحة القراءة"]);
-    expect(within(dlg).getAllByRole("radio")).toHaveLength(8);
+    expect(within(dlg).getAllByRole("radio")).toHaveLength(9);                           // L.1: a third theme, «داكن»
     expect((within(dlg).getByRole("radio", { name: /متوسط/ }) as HTMLInputElement).checked).toBe(true);
     expect((within(dlg).getByRole("radio", { name: /^عادية/ }) as HTMLInputElement).checked).toBe(true);
     expect((within(dlg).getByRole("radio", { name: /^فاتح/ }) as HTMLInputElement).checked).toBe(true);
@@ -107,7 +107,7 @@ describe("21E L2-C — presentation mode is untouched", () => {
 
 describe("21E L2-C — storage robustness", () => {
   it("malformed values fall back field by field; blocked storage keeps the defaults and the controls working", async () => {
-    localStorage.setItem(KEY, JSON.stringify({ size: 9, spacing: 2, theme: "dark" }));
+    localStorage.setItem(KEY, JSON.stringify({ size: 9, spacing: 2, theme: "neon" }));   // («dark» is a valid theme since L.1)
     const a = mount();
     await heading("صفحة غنية");
     expect(attrs()).toEqual(["2", "2", "light"]);
