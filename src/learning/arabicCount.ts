@@ -78,3 +78,13 @@ export const PAGES: ArabicCountForms = {
   many: "{n} صفحةً",
   other: "{n} صفحة",
 };
+
+/** «طالب» agreed with its count (the teacher's class-reading panel). Phase L.4. */
+export const STUDENTS: ArabicCountForms = {
+  zero: "لا طلاب",
+  one: "طالب واحد",
+  two: "طالبان",
+  few: "{n} طلاب",
+  many: "{n} طالبًا",
+  other: "{n} طالب",
+};

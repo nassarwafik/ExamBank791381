@@ -93,3 +93,33 @@ function progressView(doc, courseId, index, canSee) {
 }
 
 module.exports = { PROGRESS_PREFIX, progressDocName, loadPageIndex, moduleOfPage, normalizeProgressDoc, visitIsNoop, applyVisit, progressView };
+
+// ── Phase L.4: the CLASS reading summary a teacher sees ─────────────────────────────────────────────────────────────
+// Per published unit: how many of the class's students have started it, how many have read all of it, and the average share
+// read. Per student: pages read per published unit, the total, and the last reading time. Deliberately NOT per page: a
+// teacher sees how far each student got, never the exact pages (privacy by default; decision L4-a).
+
+/** The class summary for one course: { modules: [...], students: [...] } over the visible modules only. Pure. */
+function classProgressSummary(index, modules, students) {
+  const visible = modules.filter(m => Array.isArray(index.modules[m.moduleId]));
+  const rows = students.map(s => {
+    const view = progressView(s.doc, index.courseId, index, id => visible.some(m => m.moduleId === id));
+    const perModule = {};
+    let read = 0;
+    for (const m of visible) { const r = view.modules[m.moduleId] ? view.modules[m.moduleId].read : 0; perModule[m.moduleId] = r; read += r; }
+    const c = normalizeProgressDoc(s.doc).courses[index.courseId];
+    return { userId: s.userId, displayName: s.displayName, code: s.code, modules: perModule, readPages: read, lastReadAt: read > 0 && c ? c.lastReadAt : null };
+  });
+  const totalPages = visible.reduce((n, m) => n + index.modules[m.moduleId].length, 0);
+  const summary = visible.map(m => {
+    const total = index.modules[m.moduleId].length;
+    const reads = rows.map(r => r.modules[m.moduleId]);
+    const started = reads.filter(n => n > 0).length;
+    const completed = reads.filter(n => n >= total).length;
+    const averageRead = rows.length ? Math.round((reads.reduce((a, b) => a + b, 0) / (rows.length * total)) * 100) : 0;
+    return { moduleId: m.moduleId, title: m.title, order: m.order, total, started, completed, averageRead };
+  });
+  return { totalPages, modules: summary, students: rows.map(r => ({ ...r, totalPages })) };
+}
+
+module.exports.classProgressSummary = classProgressSummary;
