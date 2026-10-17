@@ -63,7 +63,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | L.1 | Professional reader. Collapsible table of contents on every width (overlay under 1280 px, remembered choice). Focus mode that hides the app chrome. One compact 48 px toolbar with icon buttons + «المزيد». Progress line. Pager with lesson position and the next lesson's title. Internal metadata behind «معلومات». Designed unit openers. A cleaner two-level TOC with read ticks and a filter. Reading typography (60–75 characters, 17–18 px, 1.8 line height). Dark theme. Swipe on phones. **Target: the text gets ≥ 70 % of the screen at ≥ 1024 px in focus mode.** | implemented |
 | L.2 | Navigation: a URL for library / book / section / page, a working browser back button, reload keeps the place. Clickable module list for students. (Teacher preview parity moved to L.3, which brings the server-side progress it needs.) | implemented |
 | L.3 | Server-side reading progress and resume (cross-device); localStorage stays the fallback; teacher preview parity (study client). The activity-event sink moves to L.4 with the analytics that will read it | implemented |
-| L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | planned |
+| L.4 | Teacher reading analytics per class (read %, stuck students, last activity); publication status and publishing from the book page | implemented |
 | L.5 | Reader features: bookmarks, private notes and highlights (D3), print styles | planned |
 | L.6 | Restricted content and answer keys served by the API after the publication check (D2) | planned |
 | L.7 | Operations: `exam-library` observability + cache, in-memory `learning-training`, content-chunk bundle budget, measured before / after | planned |
@@ -343,7 +343,97 @@ were found and fixed: an exercise's «تحقّق» and the drawer's «إغلاق
   - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
   - `npx tsc -b`, `npm run build` (bundle guard passed; initial JS graph 114.4 KB gzip against 125 KB) and `git diff --check` are clean.
 
-## 8. What the plan leaves to the owner
+## 8. Implementation record and evidence (L.4)
+
+### Decisions taken inside L.4
+
+| # | Decision | Why |
+|---|---|---|
+| L4-a | A teacher sees **per-unit counts and the last reading time**, never the exact pages a student read. | Enough to act on («who has not started», «who stopped»), and private by default. The response is pinned to contain no page id. |
+| L4-b | The panel issues **no request until the teacher opens it** («عرض قراءة الصفوف»). | The book page stays request-free for a teacher who only wants to read, and a class report costs one read per student. |
+| L4-c | Only units **published to the class now** are counted, as in L3-d. Hiding a unit removes it from the report without deleting what was read. | A teacher's report and a student's view agree on what the book is for that class. |
+| L4-d | «توقّف عن القراءة» means the last reading is at least `INACTIVE_DAYS` (7) days before the server's `generatedAt`. | Measured against the server's clock, so a teacher's device clock never changes the list. |
+| L4-e | Publishing and hiding from the book page reuse `POST /api/classrooms` `setLearningCourseModules`, with the same hide confirmation as the class panel. The list is sent in content order. Only **active** classes are offered. | One publication authority, one set of rules. No new write path was added. |
+| L4-f | The activity-event sink that L.3 moved here is **not built**. The progress document's `lastReadAt` and per-page first-read times already answer «last activity» and «how far». | A second store would add writes per page and a retention question without answering anything new. It can be added when an analytic needs events. |
+
+### What shipped
+
+- **API:**
+  - `api/src/lib/learning-progress.js` `classProgressSummary(index, modules, students)`:
+    - pure;
+    - per unit: total, started, completed and average share read;
+    - per student: pages per unit, total and last reading.
+  - `api/src/functions/learning-class-progress.js`, `GET /api/learning-class-progress/{classId}/{courseId}`:
+    - teacher only;
+    - tenancy-guarded (21G.0): another teacher's class answers exactly like a missing one, while a legacy unowned class stays shared;
+    - the course must be attached to the class;
+    - members come from the class's `studentIds` and are re-checked against their user documents (moved, archived and inactive students are not counted);
+    - read-only;
+    - `Cache-Control: no-store`.
+  - Registered in `api/tests/tenancy-registry-21g0.test.js` as class-scoped.
+- **Client:** `src/learning/classReading/classReadingClient.ts`.
+- **UI:** `ClassReadingPanel.tsx` + `class-reading.css`, on the book page (`LearningMaterialsPage.tsx`, teacher session only):
+  - the class picker;
+  - published units out of the book's total;
+  - «إدارة النشر» checkboxes;
+  - KPIs;
+  - the per-unit table with progress bars;
+  - «لم يبدأوا القراءة بعد» and «توقّفوا عن القراءة»;
+  - the per-student table;
+  - «إضافة الكتاب إلى صف آخر»;
+  - an alert with a retry on every failure;
+  - a stale answer for a class the teacher has left is dropped.
+- `arabicCount.ts` `STUDENTS`.
+
+### Read cost
+
+Opening the panel reads the class list and the catalog. The catalog comes from the registry, with no storage read.
+
+Each class report costs:
+- one class read;
+- one user read per `studentIds` entry;
+- one progress read per member.
+
+This is logged as `learning.class_progress.read_cost`. Nothing is written.
+
+### Evidence
+
+- **Fail-first on the L.3 head 432c72d8** (a new feature, so this is absence proof, not a defect reproduction):
+  - the API, panel and page suites cannot load (the modules do not exist);
+  - the tenancy registry fails 2/2 (an unclassified endpoint).
+- **Mutation:** `node scripts/mutate-l.mjs l4` → **19/19 KILLED**, every file restored byte-for-byte, git status unchanged.
+  - **API gates** (L4-M1…M6):
+    - tenancy;
+    - course attachment;
+    - authentication;
+    - inactive members;
+    - the membership re-check;
+    - hidden units.
+  - **The summary** (L4-M7…M10):
+    - completed;
+    - average denominator;
+    - empty class NaN;
+    - a hidden unit's last reading.
+  - **The panel** (L4-M11…M18):
+    - archived classes;
+    - the hide confirmation;
+    - content order (two mutants);
+    - the stale answer;
+    - eager loading;
+    - the inactivity boundary;
+    - an optimistic failed publish.
+  - **The page** (L4-M19): the panel without a session.
+- **Real browser** (production build, Chromium, mocked API, panel open with «إدارة النشر» open, 28 units, 6 students):
+  - axe (WCAG 2.0/2.1/2.2 A + AA): **0 violations** at 390, 834, 1024 and 1440;
+  - no horizontal page overflow at any width;
+  - every control ≥ 44 px on coarse pointers (390, 834);
+  - the tables scroll inside their own focusable region on phones.
+- **Full validation on the head:**
+  - `npm test`: 1092 files / 13323 tests passed.
+  - `npm run lint`: 0 errors, 124 warnings, the same count as `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed; initial JS graph 114.5 KB gzip against 125 KB) and `git diff --check` are clean.
+
+## 9. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count

@@ -9,6 +9,8 @@ import type { LearningCourseManifest } from "./content/types";
 import { arabicCount, AVAILABLE_BOOKS, LESSONS } from "./arabicCount";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import { createStudyClient } from "./study/studyClient";
+import { createClassReadingClient, type ClassReadingClient } from "./classReading/classReadingClient";
+import ClassReadingPanel from "./classReading/ClassReadingPanel";
 import "./learning.css";
 import "./learning-library-premium.css";
 import { lazyWithRetry } from "../lazyWithRetry";
@@ -32,7 +34,8 @@ type View =
  * overview (eight high-level sections), and the interactive Reader. Opening the library/overview issues ZERO
  * backend requests; the overview of a readable course loads only the course's code-split MANIFEST chunk (the same one
  * the Reader needs) for the section lesson counts and page ranges — never a module body or the Reader chunk. The Reader
- * performs no backend request for CONTENT (only code-split content imports). With a
+ * performs no backend request for CONTENT (only code-split content imports). With a teacher token the overview also
+ * offers «قراءة صفوفي» (Phase L.4), which issues its class requests only once the teacher opens it. With a
  * teacher token the Reader additionally reads the trainings list once (Learning Practice) so the teacher can
  * preview and solve T01–T04 regardless of class publication; without a token it stays fully local.
  */
@@ -57,6 +60,8 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   // Phase L.3 — the teacher preview reads the book exactly as a student does: in-page exercises are judged by the SAME
   // server study authority (a teacher's answers are judged and never stored), so the page shows the student's study line.
   const study = useMemo(() => (token ? createStudyClient(teacherTrainingHeaders(token)) : null), [token]);
+  // Phase L.4 — the book page's «قراءة صفوفي» panel (teacher only; it issues no request until the teacher opens it).
+  const classReading = useMemo(() => (token ? createClassReadingClient(teacherTrainingHeaders(token)) : null), [token]);
   // Phase 21E L3-B — whole-course search ("all") is a TEACHER capability: this page is mounted only inside the
   // authenticated teacher app, and it is enabled only with the teacher session token present. The student portal never
   // reaches this page; its Reader searches exactly its released modules.
@@ -114,6 +119,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
         onBack={() => setView({ kind: "library" })}
         onStartReading={() => setView({ kind: "reader", courseId: course.id })}
         onOpenSection={batchId => { void openSection(course.id, batchId); }}
+        classReading={classReading}
       />
     );
   }
@@ -241,7 +247,7 @@ function CourseCard({ course, onOpen }: { course: LearningCourse; onOpen: () => 
 }
 
 /** Course overview: identity + a short intro + the eight high-level content sections, and the reader entry point. */
-function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void; onOpenSection: (batchId: string) => void }) {
+function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection, classReading = null }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void; onOpenSection: (batchId: string) => void; classReading?: ClassReadingClient | null }) {
   const [manifest, setManifest] = useState<LearningCourseManifest | null>(null);
   // Phase L.0 — the section details come from the manifest chunk; its load is visible (a status line) and a failure is
   // an alert with a retry instead of a silently detail-less list. The rows stay usable meanwhile: a section opened
@@ -341,6 +347,7 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
           ))}
         </ul>
       </div>
+      {canRead && classReading && <ClassReadingPanel courseId={course.id} client={classReading} />}
     </section>
   );
 }
