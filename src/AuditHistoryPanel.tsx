@@ -65,18 +65,21 @@ function AuditHistoryPanel({ token }: Props) {
   // Phase 8B — the table shows the newest 30 matches (the loaded window stays the server's bounded 100 so search and
   // filters still reach within it; nothing is deleted or re-fetched).
   const visible = useMemo(() => newestAuditEvents(filtered, requested), [filtered, requested]);
-  // After «عرض المزيد», keyboard focus moves to the first newly revealed row (never lost on the removed button).
+  // After «عرض المزيد», keyboard focus moves to the first newly revealed row (never lost on the removed button). The request
+  // is served only by a render that shows that row: a click can arrive while the previous commit's effects are still
+  // pending, and React runs those first — they must leave the request for the render that reveals the rows.
   useEffect(() => {
     if (focusRow.current === null) return;
     const row = bodyRef.current?.children.item(focusRow.current) as HTMLElement | null | undefined;
+    if (!row) return;
     focusRow.current = null;
-    row?.focus();
+    row.focus();
   });
   function showMore() {
     focusRow.current = visible.length;
     setRequested(visible.length + AUDIT_VISIBLE_LIMIT);
   }
-  function resetWindow() { setRequested(AUDIT_VISIBLE_LIMIT); }
+  function resetWindow() { focusRow.current = null; setRequested(AUDIT_VISIBLE_LIMIT); }
 
   return (
     <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">
