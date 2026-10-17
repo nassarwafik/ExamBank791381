@@ -154,8 +154,9 @@ describe("read-state integrity", () => {
 
   it("F2 (real backend). an old unread message beyond the bounded preview scan: bell «1», panel says so — never «no notifications»", async () => {
     await teacherSend({ action: "sendDirect", studentId: S1, body: "رسالة قديمة غير مقروءة" });
+    // Fixture seeding (70 replies in one go): the M.1 send rate limit is not what this case tests, so it is opened here.
     for (let i = 1; i <= 70; i++) {
-      const r = await studentApi({ method: "POST", url: "https://x/api/student-messages", headers: { get: () => null }, json: async () => ({ action: "sendDirect", body: "رد " + i }) }, { container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: S1, sv: 1, role: "student" } }) });
+      const r = await studentApi({ method: "POST", url: "https://x/api/student-messages", headers: { get: () => null }, json: async () => ({ action: "sendDirect", body: "رد " + i }) }, { container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: S1, sv: 1, role: "student" } }), reserveMessageSend: async () => ({ allowed: true, retryAfterSeconds: 0, scope: "" }) });
       expect(r.status).toBe(200);
     }
     await mountPortal();

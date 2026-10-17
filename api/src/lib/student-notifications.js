@@ -10,7 +10,9 @@
 // the bell (or the panel) can never mark anything read. Only the Student Messages page acknowledges (Phase 5D).
 // Work stays narrow: names are listed per stream (no download), then only the newest candidates are downloaded in
 // small batches until enough relevant messages were found or the scan bound is reached.
-const { downloadManyJson, getReadConcurrency } = require("./platform-storage");
+const { getReadConcurrency } = require("./platform-storage");
+// Messages hardening (M.1): one unparsable blob reads as missing instead of failing the whole panel.
+const { downloadManyJsonTolerant: downloadManyJson } = require("./message-store");
 const { normalizeStoredMessage, directPrefix, announcementPrefix } = require("./message-store");
 const {
   listStreamIds, isReadBy, loadMarker, countUnread, combineCounts, READER_RELEVANCE, studentDirectStateName, studentAnnouncementStateName
@@ -78,11 +80,14 @@ async function loadStreamMarkers(container, streams, deps) {
   };
 }
 
-/** `markers` (optional) = markers already loaded in this request, so a notifications read counts from the SAME state. */
-async function unreadSummary(container, streams, deps, markers = null) {
+/** `markers` (optional) = markers already loaded in this request, so a notifications read counts from the SAME state.
+ *  `options.absorb` (M.1): fold the student's OWN leading direct replies into their direct boundary so later counts stop
+ *  re-downloading them (changes no count). Off by default — the notification view stays strictly read-only. */
+async function unreadSummary(container, streams, deps, markers = null, options = {}) {
   const m = markers || await loadStreamMarkers(container, streams, deps);
-  const count = async (s, marker) => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker }, deps) : { unread: 0, capped: false };
-  const directUnread = await count(streams.direct, m.direct);
+  const count = async (s, marker, absorb) => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker, absorb }, deps) : { unread: 0, capped: false };
+  const directAbsorb = options.absorb && streams.direct ? { stateName: streams.direct.stateName, meta: { principalRole: "student", streamKind: "direct", streamId: String(streams.direct.expected.studentId || "") } } : undefined;
+  const directUnread = await count(streams.direct, m.direct, directAbsorb);
   const announcementUnread = await count(streams.announcements, m.announcements);
   const total = combineCounts(directUnread, announcementUnread);
   return { directUnread, announcementUnread, totalUnread: total.unread, totalCapped: total.capped };

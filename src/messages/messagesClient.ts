@@ -4,6 +4,24 @@
 import type { Classroom, Student } from "../students/types";
 
 export const MAX_MESSAGE_LENGTH = 2000;
+
+/**
+ * Messages hardening (M.1) — an opaque idempotency key for ONE composed message. The page reuses it for every retry of
+ * the same text in the same thread, so a retried send (timeout, network error) can never publish a second copy: the
+ * server returns the already-published message instead. Matches the server rule /^[A-Za-z0-9_-]{8,64}$/.
+ */
+export function newClientMessageId(): string {
+  const c = (globalThis as { crypto?: Crypto }).crypto;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (c && typeof c.getRandomValues === "function") c.getRandomValues(bytes); else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** The key of the message being sent: the same key while the thread and the text are unchanged (a retry), else new. */
+export function sendKeyFor(current: { thread: string; body: string; id: string } | null, thread: string, body: string) {
+  return current && current.thread === thread && current.body === body ? current : { thread, body, id: newClientMessageId() };
+}
 export const MESSAGES_POLL_MS = 5000;
 /** Phase 5D — unread summaries (badges) refresh on a slower cadence than message bodies. */
 export const UNREAD_POLL_MS = 15000;
@@ -110,8 +128,8 @@ export interface TeacherMessagesClient {
   listStudents(classId: string): Promise<Student[]>;
   getDirect(studentId: string): Promise<ThreadState>;
   getAnnouncements(classId: string): Promise<ThreadState>;
-  sendDirect(studentId: string, body: string): Promise<MessageView>;
-  sendAnnouncement(classId: string, body: string): Promise<MessageView>;
+  sendDirect(studentId: string, body: string, clientMessageId?: string): Promise<MessageView>;
+  sendAnnouncement(classId: string, body: string, clientMessageId?: string): Promise<MessageView>;
   /** Phase 5D — unread STUDENT replies for one class (per student; membership decided by the server). */
   getClassUnread(classId: string): Promise<TeacherUnreadSummary>;
   /** Phase 5D — advance this teacher's read marker for one conversation; returns what is still unread there. */
@@ -138,8 +156,8 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
     async listStudents(classId) { const j = await get("/api/students?classId=" + encodeURIComponent(classId) + "&includeArchived=1", "تعذر تحميل الطلاب."); return Array.isArray(j.students) ? (j.students as Student[]) : []; },
     async getDirect(studentId) { return thread(await get("/api/messages?studentId=" + encodeURIComponent(studentId), "تعذر تحميل المحادثة.")); },
     async getAnnouncements(classId) { return thread(await get("/api/messages?classId=" + encodeURIComponent(classId) + "&kind=announcements", "تعذر تحميل الإعلانات.")); },
-    sendDirect: (studentId, body) => post({ action: "sendDirect", studentId, body }, "تعذر إرسال الرسالة."),
-    sendAnnouncement: (classId, body) => post({ action: "sendAnnouncement", classId, body }, "تعذر إرسال الإعلان."),
+    sendDirect: (studentId, body, clientMessageId) => post({ action: "sendDirect", studentId, body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الرسالة."),
+    sendAnnouncement: (classId, body, clientMessageId) => post({ action: "sendAnnouncement", classId, body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الإعلان."),
     async getClassUnread(classId) {
       const j = await get("/api/messages?kind=unread-summary&classId=" + encodeURIComponent(classId), "تعذر تحميل الرسائل الجديدة.");
       const by: Record<string, UnreadCount> = {};
@@ -158,7 +176,7 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
 
 export interface StudentMessagesClient {
   load(): Promise<StudentMessagesData>;
-  sendDirect(body: string): Promise<MessageView>;
+  sendDirect(body: string, clientMessageId?: string): Promise<MessageView>;
   /** Phase 5D — this student's unread counts (own direct thread + CURRENT class announcements). */
   getUnread(): Promise<StudentUnread>;
   /** Phase 5D — mark one visible stream read through an id from its loaded snapshot; returns the fresh counts. */
@@ -175,9 +193,10 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
       const c = j.classroom as StudentMessagesData["classroom"];
       return { direct: asMessages(j.direct), announcements: asMessages(j.announcements), classroom: c && typeof c === "object" ? c : null, canSend: j.canSend === true, readOnlyReason: String(j.readOnlyReason || "") };
     },
-    async sendDirect(body) {
-      // The ONLY student action; no recipient / class / sender field exists in this request.
-      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "sendDirect", body }) });
+    async sendDirect(body, clientMessageId) {
+      // The ONLY student action; no recipient / class / sender field exists in this request (the optional key is an
+      // idempotency token for this one message, never an identity).
+      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "sendDirect", body, ...(clientMessageId ? { clientMessageId } : {}) }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok || !j.message) fail(j, r.status, "تعذر إرسال الرسالة.");
       return j.message as MessageView;

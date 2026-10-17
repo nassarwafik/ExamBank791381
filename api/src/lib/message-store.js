@@ -27,7 +27,7 @@
 // Reads are always NARROW: one student's direct prefix or one class's announcement prefix — never a scan of all
 // messages. Names are listed (cheap, no download), sorted, and only the bounded most-recent page is downloaded.
 const crypto = require("crypto");
-const { listBlobNames, downloadManyJson, uploadJsonConditional, isConcurrencyConflict, getReadConcurrency } = require("./platform-storage");
+const { listBlobNames, downloadJsonOrNull, uploadJsonConditional, isConcurrencyConflict, getReadConcurrency, mapConcurrent } = require("./platform-storage");
 
 const MESSAGE_PREFIX = "platform/messages/";
 const DIRECT_PREFIX = MESSAGE_PREFIX + "direct/";
@@ -81,14 +81,50 @@ function messagePosition(id, prefix) {
   return sequencedMessageId(prefix, position) === id ? position : -1;
 }
 
-/** Plain-text body contract: a string; CRLF → LF; control characters (except newline/tab) removed; outer whitespace
- *  trimmed; internal text and newlines preserved; 1..MAX_BODY_LENGTH characters. Never HTML/Markdown-interpreted. */
+// Messages hardening (M.1) — characters that are never message text: C0/C1 controls (newline and tab are kept), bidi
+// embeddings / overrides / isolates (U+202A–202E, U+2066–2069: they can visually reorder a mixed Arabic/Latin line —
+// spoofing), zero-width space, word joiners / invisible operators (U+2060–2064) and the BOM. ZWNJ / ZWJ (legitimate in
+// Arabic-script orthography) and the LRM / RLM marks (punctuation placement, no reordering of other text) are kept.
+// Lone surrogates are dropped. A body made only of such characters is empty and rejected.
+function isStrippedCodePoint(cp) {
+  return (cp <= 0x08) || cp === 0x0B || cp === 0x0C || (cp >= 0x0E && cp <= 0x1F) || (cp >= 0x7F && cp <= 0x9F) ||
+    cp === 0x200B || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2060 && cp <= 0x2064) || (cp >= 0x2066 && cp <= 0x2069) ||
+    cp === 0xFEFF || (cp >= 0xD800 && cp <= 0xDFFF);
+}
+// Anything this far above the limit is rejected before any per-character work (a multi-MB body is never scanned).
+const MAX_RAW_BODY_LENGTH = MAX_BODY_LENGTH * 4;
+
+/** Plain-text body contract: a string; CRLF → LF; Unicode NFC; invisible / control / bidi-override characters removed
+ *  (see isStrippedCodePoint); outer whitespace trimmed; internal text and newlines preserved; 1..MAX_BODY_LENGTH
+ *  characters (UTF-16 units, the same unit as the composer's maxLength). Never HTML/Markdown-interpreted. */
 function normalizeMessageBody(value) {
   if (typeof value !== "string") return { ok: false, error: "نص الرسالة مطلوب." };
-  const body = value.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim();
+  const tooLong = { ok: false, error: "الرسالة طويلة جدًا (الحد الأقصى " + MAX_BODY_LENGTH + " حرف)." };
+  if (value.length > MAX_RAW_BODY_LENGTH) return tooLong;
+  let kept = "";
+  for (const ch of value.replace(/\r\n?/g, "\n").normalize("NFC")) if (!isStrippedCodePoint(ch.codePointAt(0))) kept += ch;
+  const body = kept.trim();
   if (!body) return { ok: false, error: "نص الرسالة مطلوب." };
-  if (body.length > MAX_BODY_LENGTH) return { ok: false, error: "الرسالة طويلة جدًا (الحد الأقصى " + MAX_BODY_LENGTH + " حرف)." };
+  if (body.length > MAX_BODY_LENGTH) return tooLong;
   return { ok: true, body };
+}
+
+/** Thrown when every publication attempt lost the stream-position race: a transient conflict (the caller answers 503,
+ *  retryable), never a server fault. */
+class MessageContentionError extends Error {
+  constructor() { super("Could not publish the message (stream position contention)."); this.name = "MessageContentionError"; this.retryable = true; }
+}
+
+/**
+ * Bounded-concurrency download of many message-domain JSON blobs, aligned with `names`, where ONE unparsable blob reads
+ * as null (skipped like any malformed document) instead of failing the whole batch: a single corrupt message, marker or
+ * user document can never turn a whole thread, badge or summary into a permanent 500. Storage errors still throw.
+ */
+async function downloadManyJsonTolerant(container, names, limit) {
+  return mapConcurrent(names, limit || getReadConcurrency(), async name => {
+    try { return await downloadJsonOrNull(container, name); }
+    catch (e) { if (e instanceof SyntaxError) return null; throw e; }
+  });
 }
 
 /** A bounded page size: a missing/invalid value → the default; anything larger → MAX_HISTORY_LIMIT. */
@@ -129,7 +165,7 @@ async function createMessage(container, prefix, buildDoc, deps = {}) {
       if (!isConcurrencyConflict(e)) throw e;                             // only "position already published" retries
     }
   }
-  throw new Error("Could not publish the message (stream position contention).");
+  throw new MessageContentionError();
 }
 
 /** The message id of a stream blob name: a legacy id, or the CANONICAL id of a sequenced position; else "". */
@@ -205,7 +241,7 @@ async function scanLegacyFrontier(unreadIds, loadDocs, expected, include, { unti
  */
 async function listRecentMessages(container, prefix, expected, limit, deps = {}, options = {}) {
   const list = deps.listBlobNames || listBlobNames;
-  const many = deps.downloadManyJson || downloadManyJson;
+  const many = deps.downloadManyJson || downloadManyJsonTolerant;
   const entries = [];
   for (const name of await list(container, prefix)) {
     const messageId = blobMessageId(name, prefix);
@@ -290,7 +326,7 @@ function studentDisplayName(student) {
 
 module.exports = {
   MESSAGE_PREFIX, DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT,
-  MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS,
+  MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS, MessageContentionError, downloadManyJsonTolerant,
   isSafeId, directPrefix, announcementPrefix, sequencedMessageId, messagePosition, normalizeMessageBody, clampLimit,
   createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,
   // Phase 5D — reused by the read-state store (message ids / stream listing), never duplicated there.

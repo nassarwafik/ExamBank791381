@@ -29,9 +29,11 @@ const { recordAuditEvent } = require("../lib/audit-log");
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 const { notifyStudentOfNewMessage, notifyWithTimeout } = require("../lib/push-notify");
 const {
-  isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, createMessage, listRecentMessages,
-  messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
+  isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, listRecentMessages,
+  messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError
 } = require("../lib/message-store");
+// Messages hardening (M.1): idempotent (clientMessageId) + rate-limited publication, private no-store responses.
+const { publishGuarded, noStore } = require("../lib/message-send");
 const {
   MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
 } = require("../lib/message-read-state");
@@ -80,7 +82,15 @@ async function directSendState(container, student, dl) {
 const classSummary = classroom => classroom ? { classId: String(classroom.classId || ""), name: String(classroom.name || ""), status: normalizeClassStatus(classroom) } : null;
 
 async function handler(request, deps = {}, obs = null) {
-  const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  return noStore(await handle(request, deps, obs));
+}
+
+async function handle(request, deps = {}, obs = null) {
+  // One read per document per request: the tenancy checks, the send state and the unread summary's per-student class
+  // checks reuse it (M.1 — the summary used to reload the same class document once per student).
+  const rawDl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  const readCache = new Map();
+  const dl = (c, name) => { if (!readCache.has(name)) readCache.set(name, rawDl(c, name)); return readCache.get(name); };
   // Audit is secondary — a recorder failure must never fail the send; the body is never part of an audit event.
   const rawRec = deps.recordAuditEvent || recordAuditEvent;
   const rec = async (c, ev) => { try { await rawRec(c, ev); } catch { /* audit is secondary */ } };
@@ -165,16 +175,23 @@ async function handler(request, deps = {}, obs = null) {
       if (!state.canSend) return readOnly(state.error, state.code);
       const senderDisplayName = await teacherName(container, teacherId);
       const classIdAtSend = String(state.classroom.classId || student.classId || "");
-      const doc = await createMessage(container, directPrefix(studentId), (messageId, createdAt) => ({
-        schemaVersion: 1, messageId, kind: "direct", studentId,
-        senderRole: "teacher", senderId: teacherId, senderDisplayName,
-        body: text.body, createdAt, classIdAtSend
-      }), deps);
-      await rec(container, { actor: teacherId, action: "message.sendDirect", targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), details: { classId: classIdAtSend } });
-      // Push is secondary to the saved message: bounded in time and never able to fail the send.
-      try { await notifyWithTimeout((deps.notifyStudentOfNewMessage || notifyStudentOfNewMessage)(container, studentId, deps, obs)); }
-      catch { /* never reached: notify is total; kept as a last guard */ }
-      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeStudentId: true }) } };
+      const sent = await publishGuarded(container, {
+        role: "teacher", senderId: teacherId, streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, clientMessageId: body.clientMessageId,
+        buildDoc: (messageId, createdAt) => ({
+          schemaVersion: 1, messageId, kind: "direct", studentId,
+          senderRole: "teacher", senderId: teacherId, senderDisplayName,
+          body: text.body, createdAt, classIdAtSend
+        })
+      }, deps);
+      if (sent.response) return sent.response;
+      const doc = sent.doc;
+      if (!sent.replay) {                                                 // a replayed retry was already audited / pushed
+        await rec(container, { actor: teacherId, action: "message.sendDirect", targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), details: { classId: classIdAtSend, messageId: doc.messageId } });
+        // Push is secondary to the saved message: bounded in time and never able to fail the send.
+        try { await notifyWithTimeout((deps.notifyStudentOfNewMessage || notifyStudentOfNewMessage)(container, studentId, deps, obs)); }
+        catch { /* never reached: notify is total; kept as a last guard */ }
+      }
+      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeStudentId: true }), ...(sent.replay ? { replay: true } : {}) } };
     }
 
     if (action === "sendAnnouncement") {
@@ -185,13 +202,18 @@ async function handler(request, deps = {}, obs = null) {
       if (!classroom) return notFound(MSG.classNotFound);
       if (normalizeClassStatus(classroom) === "archived") return readOnly(MSG.classArchived, "classArchived");
       const senderDisplayName = await teacherName(container, teacherId);
-      const doc = await createMessage(container, announcementPrefix(classId), (messageId, createdAt) => ({
-        schemaVersion: 1, messageId, kind: "announcement", classId,
-        senderRole: "teacher", senderId: teacherId, senderDisplayName,
-        body: text.body, createdAt
-      }), deps);
-      await rec(container, { actor: teacherId, action: "message.sendAnnouncement", targetType: "class", targetId: classId, targetLabel: String(classroom.name || "") });
-      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true }) } };
+      const sent = await publishGuarded(container, {
+        role: "teacher", senderId: teacherId, streamPrefix: announcementPrefix(classId), expected: { kind: "announcement", classId }, clientMessageId: body.clientMessageId,
+        buildDoc: (messageId, createdAt) => ({
+          schemaVersion: 1, messageId, kind: "announcement", classId,
+          senderRole: "teacher", senderId: teacherId, senderDisplayName,
+          body: text.body, createdAt
+        })
+      }, deps);
+      if (sent.response) return sent.response;
+      const doc = sent.doc;
+      if (!sent.replay) await rec(container, { actor: teacherId, action: "message.sendAnnouncement", targetType: "class", targetId: classId, targetLabel: String(classroom.name || ""), details: { messageId: doc.messageId } });
+      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true }), ...(sent.replay ? { replay: true } : {}) } };
     }
 
     if (action === "markDirectRead") {
@@ -208,8 +230,9 @@ async function handler(request, deps = {}, obs = null) {
           legacyThroughMessageId: body.legacyThroughMessageId, legacySeenIdsAtBoundary: body.legacySeenIdsAtBoundary,
           meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
         }, deps);
-        // FRESH listing (no `ids`): a student message that arrived after validation is still counted.
-        const remaining = await countUnread(container, { ...stream, marker }, deps);
+        // FRESH listing (no `ids`): a student message that arrived after validation is still counted. The teacher's own
+        // leading messages are absorbed (M.1) so later badge counts stop re-downloading them.
+        const remaining = await countUnread(container, { ...stream, marker, absorb: { stateName: teacherDirectStateName(teacherId, studentId), meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } } }, deps);
         return { status: 200, jsonBody: { ok: true, studentId, ...remaining } };
       } catch (e) {
         if (e instanceof MarkReadError) return bad("الرسالة المحددة غير صالحة.");
@@ -219,6 +242,8 @@ async function handler(request, deps = {}, obs = null) {
 
     return bad("إجراء غير مدعوم.");
   } catch (e) {
+    // Losing every stream-position race is a transient conflict: retryable, never a server fault (M.1).
+    if (e instanceof MessageContentionError) { obs?.logWarn("messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }
     obs?.logError("messages.error", e);
     return { status: 500, jsonBody: { ok: false, error: "تعذر معالجة الرسائل حاليًا." } };
   }

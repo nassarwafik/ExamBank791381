@@ -7,7 +7,7 @@ import { normalizeClassStatus } from "../classLifecycle";
 import type { Classroom, Student } from "../students/types";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
   type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount, type ReadAck
 } from "./messagesClient";
 import { isConversationVisible, messagesPane, useWideLayout, type NarrowPane } from "./messagesLayout";
@@ -67,6 +67,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const rosterGen = useRef(0);
+  const sendKey = useRef<{ thread: string; body: string; id: string } | null>(null);   // M.1 idempotency key of the message being sent
   const threadGen = useRef(0);
   const activeKey = useRef("");      // the thread currently on screen ("dm:<studentId>" | "ann:<classId>" | "")
   // Server-CONFIRMED messages sent from this page for the current thread. Every applied read is unioned with them, so
@@ -209,8 +210,11 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
     if (!key || sending || !body.trim()) return;
     setSending(true); setSendError("");
     threadGen.current += 1;                                          // an in-flight poll can no longer land
+    sendKey.current = sendKeyFor(sendKey.current, key, body);        // reused by a retry of the same text in this thread
+    const clientMessageId = sendKey.current.id;
     try {
-      const message: MessageView = key.startsWith("ann:") ? await client.sendAnnouncement(key.slice(4), body) : await client.sendDirect(key.slice(3), body);
+      const message: MessageView = key.startsWith("ann:") ? await client.sendAnnouncement(key.slice(4), body, clientMessageId) : await client.sendDirect(key.slice(3), body, clientMessageId);
+      sendKey.current = null;
       threadGen.current += 1;
       if (activeKey.current !== key) return;                         // the teacher moved on; nothing to show here
       confirmed.current = { key, messages: [...confirmed.current.messages, message] };

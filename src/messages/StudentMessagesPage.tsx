@@ -3,7 +3,7 @@ import { IconChevronBack } from "../icons";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
   type MessageView, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
 } from "./messagesClient";
 import "./messages.css";
@@ -45,6 +45,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const gen = useRef(0);
+  const sendKey = useRef<{ thread: string; body: string; id: string } | null>(null);
   // Server-CONFIRMED replies sent from this view; every applied read is unioned with them so a lagging read can never
   // drop a reply the server already accepted.
   const confirmed = useRef<MessageView[]>([]);
@@ -145,8 +146,11 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
     if (sending || !body.trim()) return;
     setSending(true); setSendError("");
     gen.current += 1;                                                 // invalidate any in-flight poll
+    // M.1 — one idempotency key per composed reply, reused while the text is unchanged (a retry never duplicates it).
+    sendKey.current = sendKeyFor(sendKey.current, "direct", body);
     try {
-      const message = await client.sendDirect(body);
+      const message = await client.sendDirect(body, sendKey.current.id);
+      sendKey.current = null;
       gen.current += 1;
       confirmed.current = [...confirmed.current, message];
       setData(prev => (prev ? { ...prev, direct: mergeMessage(prev.direct, message) } : prev));   // not an ack source

@@ -54,7 +54,10 @@ describe("StudentMessagesPage", () => {
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "إرسال" })); });
     await waitFor(() => expect(within(conv()).getByText("لم أفهم السؤال الثالث")).toBeTruthy());
     expect((screen.getByRole("textbox", { name: "رسالتك إلى المعلم" }) as HTMLTextAreaElement).value).toBe("");
-    expect(client.sendDirect).toHaveBeenLastCalledWith("لم أفهم السؤال الثالث");  // body only — no recipient
+    expect(client.sendDirect).toHaveBeenLastCalledWith("لم أفهم السؤال الثالث", expect.stringMatching(/^[A-Za-z0-9_-]{8,64}$/));  // body + the M.1 idempotency key only — no recipient
+    // The failed attempt and its retry carry the SAME key (the server can deduplicate a retry of one message).
+    const calls = vi.mocked(client.sendDirect).mock.calls;
+    expect(calls[0][1]).toBe(calls[calls.length - 1][1]);
   });
 
   it("an archived class: history readable, no composer, the read-only reason shown", async () => {

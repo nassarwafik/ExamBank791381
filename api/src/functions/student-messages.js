@@ -22,9 +22,11 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const {
-  isSafeId, directPrefix, normalizeMessageBody, createMessage, listRecentMessages, messageView,
-  studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
+  isSafeId, directPrefix, normalizeMessageBody, listRecentMessages, messageView,
+  studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError
 } = require("../lib/message-store");
+// Messages hardening (M.1): idempotent (clientMessageId) + rate-limited replies, private no-store responses.
+const { publishGuarded, noStore } = require("../lib/message-send");
 const {
   MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy
 } = require("../lib/message-read-state");
@@ -50,6 +52,10 @@ function sendState(classroom) {
 }
 
 async function handler(request, deps = {}, obs = null) {
+  return noStore(await handle(request, deps, obs));
+}
+
+async function handle(request, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   try {
     const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
@@ -64,7 +70,8 @@ async function handler(request, deps = {}, obs = null) {
     if (request.method === "GET") {
       const view = new URL(request.url).searchParams.get("view");
       if (view === "unread") {
-        return { status: 200, jsonBody: { ok: true, ...(await unreadSummary(container, streams, deps)) } };
+        // The badge poll also folds the student's own leading replies into their boundary (M.1, changes no count).
+        return { status: 200, jsonBody: { ok: true, ...(await unreadSummary(container, streams, deps, null, { absorb: true })) } };
       }
       if (view === "notifications") {
         // Phase 6C — items and counts from ONE set of loaded markers, so the panel and the badge agree.
@@ -123,13 +130,18 @@ async function handler(request, deps = {}, obs = null) {
     const text = normalizeMessageBody(body.body);
     if (!text.ok) return { status: 400, jsonBody: { ok: false, error: text.error } };
     if (!state.canSend) return { status: 403, jsonBody: { ok: false, error: state.error, code: state.code } };
-    const doc = await createMessage(container, directPrefix(studentId), (messageId, createdAt) => ({
-      schemaVersion: 1, messageId, kind: "direct", studentId,
-      senderRole: "student", senderId: studentId, senderDisplayName: studentDisplayName(student),
-      body: text.body, createdAt, classIdAtSend: String(student.classId || "")
-    }), deps);
-    return { status: 200, jsonBody: { ok: true, message: messageView(doc) } };
+    const sent = await publishGuarded(container, {
+      role: "student", senderId: studentId, streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, clientMessageId: body.clientMessageId,
+      buildDoc: (messageId, createdAt) => ({
+        schemaVersion: 1, messageId, kind: "direct", studentId,
+        senderRole: "student", senderId: studentId, senderDisplayName: studentDisplayName(student),
+        body: text.body, createdAt, classIdAtSend: String(student.classId || "")
+      })
+    }, deps);
+    if (sent.response) return sent.response;
+    return { status: 200, jsonBody: { ok: true, message: messageView(sent.doc), ...(sent.replay ? { replay: true } : {}) } };
   } catch (e) {
+    if (e instanceof MessageContentionError) { obs?.logWarn("student.messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }
     obs?.logError("student.messages.error", e);
     return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل الرسائل حاليًا." } };
   }

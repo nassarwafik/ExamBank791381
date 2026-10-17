@@ -55,8 +55,10 @@
 // the marker are dropped, and only the remaining CANDIDATES are downloaded (newest first, bounded concurrency) to check
 // sender role/kind/owner — stopping once the display cap (99 → "99+") is exceeded.
 const crypto = require("crypto");
-const { listBlobNames, downloadManyJson, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
-const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, scanLegacyFrontier } = require("./message-store");
+const { listBlobNames, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
+const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, scanLegacyFrontier, messagePosition, sequencedMessageId, downloadManyJsonTolerant } = require("./message-store");
+// Messages hardening (M.1): one unparsable message / marker / user blob reads as missing (see downloadManyJsonTolerant).
+const downloadManyJson = downloadManyJsonTolerant;
 
 const READ_STATE_PREFIX = MESSAGE_PREFIX + "read-state/";
 const USER_PREFIX = "platform/users/";
@@ -181,7 +183,9 @@ async function listStreamIds(container, streamPrefix, deps = {}) {
 }
 
 async function loadMarker(container, stateName, deps = {}) {
-  return normalizeMarker(await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, stateName));
+  // An unparsable marker reads as "no progress" (everything unread — fails safe), never as a permanent 500.
+  try { return normalizeMarker(await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, stateName)); }
+  catch (e) { if (e instanceof SyntaxError) return null; throw e; }
 }
 
 /** One acknowledgement part's shape: X well-formed; 1..200 ids (duplicates deduplicated), all at X's key, X included. */
@@ -320,22 +324,78 @@ async function absorbIrrelevantLegacy(container, { stateName, legacyIds, ids, me
 }
 
 /**
+ * Messages hardening (M.1) — OWN-MESSAGE ABSORPTION in the sequenced domain. A reader's own messages (and invalid
+ * documents) are never unread, but until a marker covers them every unread count re-downloads them — forever when the
+ * other side never answers (no relevant message → the reader never acknowledges anything). `classified` (id → relevant?)
+ * comes from a count; the run absorbed is the CONTIGUOUS run of sequenced positions directly after the reader's current
+ * sequenced boundary whose every message was classified irrelevant — it stops at the first relevant, unclassified or
+ * MISSING position (a gap may be a message the listing has not shown yet). Re-checked against the marker version being
+ * updated inside the CAS: the new boundary may only newly cover positions of that run. Changes no unread count.
+ */
+function irrelevantSequencedRun(marker, streamPrefix, classified) {
+  const start = marker && marker.sequenced ? marker.sequenced.boundaryMs - SEQUENCE_KEY_BASE : 0;
+  const run = [];
+  for (let position = start + 1; ; position++) {
+    const id = sequencedMessageId(streamPrefix, position);
+    if (classified.get(id) !== false) break;                          // relevant, unclassified or not listed → stop
+    run.push(id);
+  }
+  return run;
+}
+
+async function absorbIrrelevantSequenced(container, { stateName, streamPrefix, ids, meta = {} }, deps = {}) {
+  if (!ids || !ids.length) return;
+  const run = new Set(ids);
+  const last = ids[ids.length - 1];
+  const lastPosition = messagePosition(last, streamPrefix);
+  if (lastPosition < 1) return;
+  const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+  try {
+    await mutate(container, stateName, current => {
+      const marker = normalizeMarker(current);
+      const from = marker && marker.sequenced ? marker.sequenced.boundaryMs - SEQUENCE_KEY_BASE : 0;
+      if (lastPosition <= from) throw new NoChange(marker);
+      for (let position = from + 1; position <= lastPosition; position++) {
+        if (!run.has(sequencedMessageId(streamPrefix, position))) throw new NoChange(marker);   // would cover a non-run position
+      }
+      const r = advanceMarker(marker, { sequenced: { boundaryMs: messageIdMs(last), seenIdsAtBoundary: [last] } });
+      if (!r.changed) throw new NoChange(r.marker);
+      return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };
+    });
+  } catch (e) {
+    if (!(e instanceof NoChange)) throw e;
+  }
+}
+
+/**
  * Unread messages of ONE stream for a reader: ids not covered by `marker`, validated against `expected`, and accepted
  * by `include(doc)` (the sender-role rule). Downloads only candidates, newest first, and stops once the count exceeds
  * the display cap. Returns { unread, capped } with unread ≤ 99.
+ * `absorb` ({ stateName, meta }, optional): fold the reader's own leading sequenced messages into its boundary
+ * afterwards (absorbIrrelevantSequenced) so later counts no longer download them. Best-effort: never fails the count.
  */
-async function countUnread(container, { streamPrefix, expected, marker, include, ids }, deps = {}) {
+async function countUnread(container, { streamPrefix, expected, marker, include, ids, absorb }, deps = {}) {
   const many = deps.downloadManyJson || downloadManyJson;
   const all = ids || await listStreamIds(container, streamPrefix, deps);
   const candidates = all.filter(id => !isReadBy(marker, id)).sort().reverse();
   const batch = Math.max(8, getReadConcurrency());
+  const classified = new Map();
   let count = 0;
   for (let i = 0; i < candidates.length && count <= UNREAD_DISPLAY_CAP; i += batch) {
     const slice = candidates.slice(i, i + batch);
     const docs = await many(container, slice.map(id => streamPrefix + id + ".json"), getReadConcurrency());
     for (let j = 0; j < slice.length; j++) {
       const doc = normalizeStoredMessage(docs[j], { ...expected, messageId: slice[j] });
-      if (doc && include(doc)) count++;
+      const relevant = !!doc && include(doc);
+      classified.set(slice[j], relevant);
+      if (relevant) count++;
+    }
+  }
+  if (absorb && absorb.stateName) {
+    const run = irrelevantSequencedRun(marker, streamPrefix, classified);
+    if (run.length) {
+      try { await absorbIrrelevantSequenced(container, { stateName: absorb.stateName, streamPrefix, ids: run, meta: absorb.meta }, deps); }
+      catch { /* best-effort: the count stands; a later count retries */ }
     }
   }
   return count > UNREAD_DISPLAY_CAP ? { unread: UNREAD_DISPLAY_CAP, capped: true } : { unread: count, capped: false };
@@ -393,7 +453,8 @@ async function teacherDirectUnread(container, teacherId, { classId = "", canSee 
   const counts = [];
   for (const r of rows) {
     if (!classId && combineCounts(...counts).capped) break;          // global badge already "99+"
-    const c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker: r.marker, ids: r.ids, include: READER_RELEVANCE.teacherDirect }, deps);
+    const c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker: r.marker, ids: r.ids, include: READER_RELEVANCE.teacherDirect,
+      absorb: { stateName: teacherDirectStateName(teacherId, r.sid), meta: { principalRole: "teacher", streamKind: "direct", streamId: r.sid, teacherId } } }, deps);
     counts.push(c);
     if (c.unread > 0) byStudent[r.sid] = c;
   }
@@ -403,7 +464,7 @@ async function teacherDirectUnread(container, teacherId, { classId = "", canSee 
 
 module.exports = {
   READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MAX_BOUNDARY_IDS, READER_RELEVANCE, MarkReadError, validateAcknowledgement,
-  absorbIrrelevantLegacy,
+  absorbIrrelevantLegacy, absorbIrrelevantSequenced, irrelevantSequencedRun,
   teacherActorKey, teacherDirectStatePrefix, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName,
   messageIdMs, keyDomain, normalizeMarker, isReadBy, advanceBoundary, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
   combineCounts, groupDirectIds, teacherDirectUnread

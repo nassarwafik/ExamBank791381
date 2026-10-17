@@ -134,7 +134,7 @@ describe("desktop (≥900px): roster + conversation side by side", () => {
     expect(within(header()).getByRole("heading", { name: "إعلانات الصف" })).toBeTruthy();
     fireEvent.change(screen.getByRole("textbox", { name: "إعلان جديد للصف" }), { target: { value: "لا دوام" } });
     fireEvent.click(screen.getByRole("button", { name: "إرسال إعلان للصف" }));
-    await waitFor(() => expect(client.sendAnnouncement).toHaveBeenCalledWith("c1", "لا دوام"));
+    await waitFor(() => expect(client.sendAnnouncement).toHaveBeenCalledWith("c1", "لا دوام", expect.any(String)));
   });
 });
 
