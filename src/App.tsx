@@ -91,6 +91,7 @@ import "./assignments-pro.css";
 import "./studentportal-pro.css";
 import { teacherProfileApi, resolveTeacherDisplayName, type TeacherProfile } from "./teacher/teacherProfile";
 import "./login-pro.css";
+import { isLearningLocation } from "./learning/learningRoute";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
@@ -628,7 +629,8 @@ function App() {
       "messages" |
       "reviews"
     >(
-      "builder"
+      // Phase L.2 — a Learning Materials link (#/learning/…) opens that page; everything else starts where it always did.
+      () => (isLearningLocation() ? "learning" : "builder")
     );
 
   const [workspaceTab, setWorkspaceTab] = useState<"dashboard" | "students" | "assignments" | "audit">("dashboard");
@@ -1193,8 +1195,9 @@ function App() {
         ""
       );
 
+      // Phase L.2 — a Learning Materials link that brought the teacher to the sign-in page is honoured after it.
       setTeacherView(
-        "builder"
+        isLearningLocation() ? "learning" : "builder"
       );
 
       // A fresh login is itself an authoritative role establishment — mark the session validated so the role app

@@ -61,6 +61,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Phase 9A — «أكمل من حيث توقفت»: the page the Reader opens on (only when the hub continues a reading position;
   // every other open starts the book as before), and the released courses the materials panel reported (its one read).
   const [readerInitialPageId, setReaderInitialPageId] = useState<string | undefined>(undefined);
+  // Phase L.2 — a unit chosen in «موادي التعليمية»: the Reader opens at that unit (no page id → its first page).
+  const [readerInitialModuleId, setReaderInitialModuleId] = useState<string | undefined>(undefined);
   const [courses, setCourses] = useState<StudentLearningCourse[] | null>(null);
   // Phase 9B — the projects' evaluation brief for the Today Hub chip (from the project panel's own single read).
   const [projectEvaluation, setProjectEvaluation] = useState<ProjectEvaluationBrief[] | null>(null);
@@ -230,6 +232,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       if (!course) { setNotice("لم تعد هذه المادة متاحة."); return; }
       setCourses(j.materials || []);
       setReaderInitialPageId(pageId || undefined);
+      setReaderInitialModuleId(undefined);
       setReaderCourse(course);
       window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
     } catch { setNotice("تعذر فتح المادة التعليمية حاليًا."); }
@@ -369,12 +372,13 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
           token={token}
           initialPageId={readerInitialPageId}
+          initialModuleId={readerInitialModuleId}
           studentId={data.student.userId}
           onPageChange={pageId => saveReaderPosition(data.student.userId, { courseId: readerCourse.courseId, pageId })}
           onTrainingSubmitted={() => { strengthDirtyRef.current = true; }}
           onStudyPointsEarned={() => { strengthDirtyRef.current = true; }}
           onExit={() => {
-            setReaderCourse(null); setReaderInitialPageId(undefined);
+            setReaderCourse(null); setReaderInitialPageId(undefined); setReaderInitialModuleId(undefined);
             window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
             // A graded training (T/F — the SAME bucket as the Training Library) or a study point inside the Reader changes
             // the server's Strength → ONE silent authoritative dashboard reload on return (never per page, never a full
@@ -456,7 +460,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <InstallAppCard />
             <MessagePushCard token={token} />
-            <StudentLearningMaterials token={token} onCoursesChange={setCourses} onOpen={course => { setReaderInitialPageId(undefined); setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
+            <StudentLearningMaterials token={token} onCoursesChange={setCourses} onOpen={(course, moduleId) => { setReaderInitialPageId(undefined); setReaderInitialModuleId(moduleId); setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
             <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel eb-sp-tasks-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />

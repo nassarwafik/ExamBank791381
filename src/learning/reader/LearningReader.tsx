@@ -57,7 +57,7 @@ type ManifestState =
  * authority and stays usable when the request is refused or unavailable. Nothing is persisted.
  */
 export default function LearningReader({
-  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, onPageChange,
+  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, initialModuleId, onPageChange,
   initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory,
 }: {
   courseId: string;
@@ -72,6 +72,9 @@ export default function LearningReader({
   /** The page to open first (validated against the manifest; unknown → first page). Lets a host that swaps the
    *  Reader out (e.g. for a training) remount it on the SAME page. Read once, at manifest load. */
   initialPageId?: string;
+  /** Phase L.2 — open at this module's first page (canonical reading order) when no valid `initialPageId` is given — a
+   *  student's «unit» link. Unknown / not in this reader's manifest → the usual beginning. Read once, at manifest load. */
+  initialModuleId?: string;
   /** Notified with every selected page id (including the initial one) so a host can remember where the reader is. */
   onPageChange?: (pageId: string) => void;
   /** Start in presentation mode (a host that swapped the Reader out for a training remounts it as it was). */
@@ -159,6 +162,7 @@ export default function LearningReader({
   const reducedMotion = usePrefersReducedMotion();
   // Host-remembered start page + change notifier, held in refs so neither re-arms the manifest load.
   const initialPageRef = useRef(initialPageId);
+  const initialModuleRef = useRef(initialModuleId);
   const onPageChangeRef = useRef(onPageChange);
   useEffect(() => { onPageChangeRef.current = onPageChange; }, [onPageChange]);
 
@@ -171,7 +175,8 @@ export default function LearningReader({
       const pages = flattenPageRefs(manifest);
       setManifestState({ status: "ready", manifest });
       const wanted = initialPageRef.current;
-      setSelectedPageId(wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : "");
+      const moduleStart = initialModuleRef.current ? pages.find(p => p.module.id === initialModuleRef.current)?.page.id : undefined;
+      setSelectedPageId(wanted && findPage(manifest, wanted) ? wanted : moduleStart ?? (pages.length > 0 ? pages[0].page.id : ""));
     }).catch(() => { if (alive) setManifestState({ status: "error" }); });
     return () => { alive = false; };
   }, [courseId, api, manifestNonce]);

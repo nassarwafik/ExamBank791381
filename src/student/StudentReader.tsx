@@ -13,7 +13,7 @@ import { fetchReleasedModuleIds } from "./learningRelease";
  * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
  * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, onPageChange, studentId }: {
+export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange, studentId }: {
   courseId: string;
   allowedModuleIds: string[];
   token: string;
@@ -24,6 +24,9 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   /** Phase 9A — «أكمل من حيث توقفت»: the page to open on first mount (validated by the Reader against the restricted
    *  manifest; unknown / unreleased → the book's first page). Absent → the book's beginning, exactly as before. */
   initialPageId?: string;
+  /** Phase L.2 — a unit chosen in «موادي التعليمية»: the Reader opens at that unit's first page (validated against the
+   *  restricted manifest — an unpublished unit simply opens the book's beginning). */
+  initialModuleId?: string;
   /** Phase 9A — the Reader's page-change signal (the portal remembers this student's page on this device). */
   onPageChange?: (pageId: string) => void;
   /** Phase 21E L2-B — the authenticated student's server-issued id: scopes the device-local "visited" marks in the
@@ -55,6 +58,7 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       study={study}
       onStudyPointsEarned={onStudyPointsEarned}
       initialPageId={initialPageId}
+      initialModuleId={initialModuleId}
       onPageChange={onPageChange}
       visitedScope={studentId && studentId.trim() ? "student:" + studentId.trim() : undefined}
       searchScope={searchScope}

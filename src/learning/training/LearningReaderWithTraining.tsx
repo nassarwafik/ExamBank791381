@@ -23,7 +23,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -41,6 +41,9 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
    *  Reader's existing controlled fallback. A remount with no value opens the book from its canonical beginning
    *  (so «بدء القراءة» never inherits a section shortcut). Never re-read after mount. */
   initialPageId?: string;
+  /** Phase L.2 — open at this module's first page when no page is given (a student's unit link). Forwarded verbatim;
+   *  a remount after a training carries its page id, which wins. */
+  initialModuleId?: string;
   /** Phase 9A — the Reader's own page-change signal, forwarded to the host (the student portal remembers the page for
    *  «أكمل من حيث توقفت»). Read through a ref: a new callback identity never re-arms anything in the Reader. */
   onPageChange?: (pageId: string) => void;
@@ -182,6 +185,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       training={host}
       study={studyHost}
       initialPageId={view.kind === "reader" ? view.pageId : undefined}
+      initialModuleId={initialModuleId}
       onPageChange={onPageChange}
       initialPresentation={view.kind === "reader" ? view.presentation : undefined}
       onPresentationChange={onPresentationChange}

@@ -23,7 +23,38 @@ const L0_COUNT = ["src/students/ClassLearningMaterialsPanel.counts.l0.test.tsx"]
 const RENDERER = "src/learning/reader/LearningPageRenderer.tsx", SWIPE = "src/learning/reader/useReaderSwipe.ts", SETTINGS = "src/learning/reader/readingSettings.ts";
 const UNIT = "src/learning/reader/UnitContents.tsx", L1CSS = "src/learning/reader/reader-enterprise-l1.css";
 const L1 = ["src/learning/reader/LearningReader.l1.test.tsx", "src/learning/reader/reader.l1.guards.test.ts"];
+const ROUTE = "src/learning/learningRoute.ts", APP = "src/App.tsx", STUDENT_LIST = "src/student/StudentLearningMaterials.tsx", PORTAL = "src/StudentPortal.tsx";
+const L2 = ["src/learning/LearningMaterialsPage.l2.test.tsx", "src/student/StudentLearningMaterials.l2.test.tsx"];
+const L2_APP = ["src/App.learningRoute.l2.test.tsx"], L2_PORTAL = ["src/StudentPortal.learningMaterials.test.tsx"];
 export const CAMPAIGNS = {
+  l2: [
+    { id: "L2-M1", what: "a view change is not a history entry (Back leaves the page)", file: PAGE,
+      find: "writeLearningRoute(routeFromView(next), \"push\");", replace: "writeLearningRoute(routeFromView(next), \"replace\");", tests: L2 },
+    { id: "L2-M2", what: "every page turn floods the history", file: PAGE,
+      find: "writeLearningRoute({ kind: \"reader\", courseId, pageId }, \"replace\")", replace: "writeLearningRoute({ kind: \"reader\", courseId, pageId }, \"push\")", tests: L2 },
+    { id: "L2-M3", what: "Back / Forward are ignored", file: PAGE,
+      find: "    window.addEventListener(\"popstate\", onPop);\n", replace: "", tests: L2 },
+    { id: "L2-M4", what: "the fragment outlives the page", file: PAGE,
+      find: "return () => { window.removeEventListener(\"popstate\", onPop); clearLearningRoute(); };", replace: "return () => { window.removeEventListener(\"popstate\", onPop); };", tests: L2 },
+    { id: "L2-M5", what: "an unknown book in a link opens a broken overview", file: PAGE,
+      find: "  if (!course || course.status !== \"available\") return { kind: \"library\" };\n", replace: "  if (!course) return { kind: \"course\", courseId: route.courseId };\n", tests: L2 },
+    { id: "L2-M6", what: "the parser accepts trailing segments", file: ROUTE,
+      find: "if (!ID.test(courseId) || rest.length > 0) return null;", replace: "if (!ID.test(courseId)) return null;", tests: L2 },
+    { id: "L2-M7", what: "the parser accepts any verb as «read»", file: ROUTE,
+      find: "  if (verb !== \"read\") return null;\n", replace: "", tests: L2 },
+    { id: "L2-M8", what: "the parser accepts a malformed page id", file: ROUTE,
+      find: "return ID.test(pageId) ? { kind: \"reader\", courseId, pageId } : null;", replace: "return { kind: \"reader\", courseId, pageId };", tests: L2 },
+    { id: "L2-M9", what: "sign-in ignores the Learning Materials link", file: APP,
+      find: "        isLearningLocation() ? \"learning\" : \"builder\"\n", replace: "        \"builder\"\n", tests: L2_APP },
+    { id: "L2-M10", what: "the Reader ignores the chosen unit", file: READER,
+      find: "const moduleStart = initialModuleRef.current ? pages.find(p => p.module.id === initialModuleRef.current)?.page.id : undefined;", replace: "const moduleStart = undefined;", tests: L2 },
+    { id: "L2-M11", what: "the unit wins over a valid page (a training return jumps away)", file: READER,
+      find: "wanted && findPage(manifest, wanted) ? wanted : moduleStart ?? (pages.length > 0 ? pages[0].page.id : \"\")", replace: "moduleStart ?? (wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : \"\")", tests: L2 },
+    { id: "L2-M12", what: "a unit hidden since load still opens", file: STUDENT_LIST,
+      find: "    if (moduleId && !current.modules.some(m => m.moduleId === moduleId)) { setError(\"لم تعد هذه الوحدة متاحة لصفك حاليًا.\"); return; }\n", replace: "", tests: L2 },
+    { id: "L2-M13", what: "the portal drops the chosen unit", file: PORTAL,
+      find: "setReaderInitialModuleId(moduleId); setReaderCourse(course);", replace: "setReaderInitialModuleId(undefined); setReaderCourse(course);", tests: L2_PORTAL }
+  ],
   l1: [
     { id: "L1-M1", what: "the index docks below 1280px again", file: READER,
       find: "const dockable = wide && !focusMode && !presentation;", replace: "const dockable = !focusMode && !presentation;", tests: L1 },

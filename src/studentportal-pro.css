@@ -217,6 +217,16 @@
 .eb-sp-learning-meta{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
 .eb-sp-learning-count{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
 .eb-sp-learning-modules{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+/* Phase L.2 — each released unit is a link-like control that opens the Reader at that unit (44px touch target). */
+.eb-sp-learning-module{
+  display:inline-flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-2); min-block-size:44px; padding:0 var(--eb-space-1);
+  background:none; border:0; border-radius:var(--eb-r-sm); color:var(--eb-primary-strong); font:inherit; text-align:start; cursor:pointer;
+  text-decoration:underline; text-decoration-color:var(--eb-primary-100); text-underline-offset:4px;
+}
+.eb-sp-learning-module:hover{ text-decoration-color:currentColor; }
+.eb-sp-learning-module:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.eb-sp-learning-module:disabled{ cursor:default; opacity:.7; }
+.eb-sp-learning-module-state{ color:var(--eb-muted); font-size:var(--eb-fs-12); text-decoration:none; }
 .eb-sp-learning-open{ width:100%; min-height:44px; }
 .eb-sp-learning-error{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); }
 @media (min-width:768px){
