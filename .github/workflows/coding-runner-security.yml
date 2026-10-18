@@ -5,8 +5,14 @@ name: Coding Runner Security & Smoke Tests
 # Phase 17C — plus the OFFICIAL hidden-test grading path: raw-runtime authority, compile once / fresh runtime per case,
 # cross-case isolation, cleanup, and an end-to-end run through the REAL SmartAssess API handlers (dispatch → gateway → real
 # sandboxes → signed callback → server-side comparison + weighting), which needs the API's own dependencies.
-# This workflow uses no secrets and no cloud credentials (TEST keys are generated inside the tests); it never deploys anything.
+# This workflow uses no stored secrets (TEST keys are generated inside the tests); it never deploys anything.
 # A missing Docker daemon or worker image FAILS the run — nothing is skipped.
+# Base-image pulls: the pinned bases are mirrored on ECR Public, whose ANONYMOUS per-IP data quota is shared by all
+# GitHub-hosted runners ("429 Too Many Requests: Data limit exceeded"). Two mitigations, both outside the images themselves:
+#   - an OPTIONAL ECR Public login with a 15-minute OIDC credential (repository VARIABLE ECR_PUBLIC_ROLE_ARN, no stored
+#     secret; skipped with a warning when unset or on fork pull requests — then pulls stay anonymous, as before);
+#   - a bounded retry when pre-pulling the digest-pinned bases.
+# `id-token: write` exists ONLY so the job can request that OIDC token; it grants no repository write access.
 on:
   push:
     branches:
@@ -18,6 +24,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   runner:
@@ -38,6 +45,12 @@ jobs:
         run: |
           docker version --format 'client {{.Client.Version}} / server {{.Server.Version}}'
           docker info --format 'cgroup v{{.CgroupVersion}}; security: {{.SecurityOptions}}'
+      - name: Log in to ECR Public (optional, OIDC, no stored secret)
+        env:
+          ECR_PUBLIC_ROLE_ARN: ${{ vars.ECR_PUBLIC_ROLE_ARN }}
+        run: sh runner/scripts/ecr-public-login.sh
+      - name: Pre-pull the digest-pinned base images (bounded retry)
+        run: sh runner/scripts/pull-base-images.sh
       - name: Build worker images (python@1, java@1, csharp@1)
         run: npm --prefix runner run build:images
       - name: Docker functional, security and end-to-end smoke tests (practice path, Phase 17B)
