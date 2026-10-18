@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trackerGet } from "./api";
 import ProjectAnalyticsCharts from "./ProjectAnalyticsCharts";
 import type { ProjectAnalytics as AnalyticsData, ProjectGroup, TrackMeta } from "./types";
@@ -14,16 +14,21 @@ export default function ProjectAnalytics({ token, projectCode, classId, tracks }
   const [error, setError] = useState("");
   const [stageTrack, setStageTrack] = useState<string>(tracks[0]?.trackId || "");
 
+  // Phase P-1 — only the LATEST read may populate the charts: a slower response for a previously selected class is dropped.
+  const seq = useRef(0);
+
   async function load() {
+    const mine = ++seq.current;
     setLoading(true); setError("");
     try {
       const r = await trackerGet<{ analytics: AnalyticsData; groups: ProjectGroup[] }>(token, projectCode, "analytics", { classId });
+      if (mine !== seq.current) return;
       setData(r.analytics); setGroups(r.groups || []);
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الإحصائيات."); }
-    finally { setLoading(false); }
+    } catch (e) { if (mine === seq.current) setError(e instanceof Error ? e.message : "تعذر تحميل الإحصائيات."); }
+    finally { if (mine === seq.current) setLoading(false); }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, [classId, projectCode]);
+  useEffect(() => { setData(null); void load(); }, [classId, projectCode]);
 
   if (loading && !data) return <p className="eb-muted" role="status">جارٍ تحميل الإحصائيات...</p>;
   if (error) return <div className="platform-error assignment-inline-message" role="alert">{error} <button type="button" className="eb-button is-small" onClick={() => void load()}>إعادة المحاولة</button></div>;

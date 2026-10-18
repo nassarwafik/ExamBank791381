@@ -23,6 +23,7 @@ const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
 const { SCORE_ERROR, normalizeScore } = require("../lib/project-tracker/score");
 const { mapConcurrent } = require("../lib/platform-storage");
 const { isSelfReported } = require("../lib/project-tracker/self-report");
+const { validateTemplatePatch } = require("../lib/project-tracker/template-validation");
 const analytics = require("../lib/project-tracker/analytics");
 const { countReadyStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
@@ -410,7 +411,8 @@ async function handler(request, deps = {}, obs = null) {
       if (action === "template.update") {
         const patch = body.template && typeof body.template === "object" ? body.template : {};
         try {
-          const written = await svc.updateTemplate(container, projectCode, classId, patch, now);
+          // Phase P-1 — the patch is validated against the class's current snapshot inside the CAS round (400, nothing written).
+          const written = await svc.updateTemplate(container, projectCode, classId, patch, now, { validate: (current, p) => validateTemplatePatch(current, p, definition.tracks.map(t => t.trackId)) });
           await rec(container, {
             actor: auth.user?.sub, action: "project.template.update",
             targetType: "project-template", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "", details: { projectCode }
@@ -418,6 +420,7 @@ async function handler(request, deps = {}, obs = null) {
           return { status: 200, jsonBody: { ok: true, projectCode, template: written } };
         } catch (e) {
           if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+          if (e && e.httpStatus === 400) return { status: 400, jsonBody: { ok: false, error: e.message } };
           throw e;
         }
       }
