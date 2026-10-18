@@ -15,6 +15,7 @@ const { classHasProject } = require("./class-programs");
 const { normalizeClassStatus } = require("../class-lifecycle");
 const { classHasMeaningfulProgress } = require("../project-794589-migration");
 const { applyProgressUpdate } = require("../project-794589-progress");
+const { applySelfReport } = require("./self-report");
 const { recordAuditEvent } = require("../audit-log");
 const { isStudentClassMember } = require("../class-membership");
 
@@ -201,6 +202,28 @@ async function updateStudentProgress(container, projectCode, classroom, update, 
   return { ok: true, config, workDef: workingDefinition(projectCode, config), stage, student: membership.student, shareAchievements: membership.shareAchievements, written, previous, outcome };
 }
 
+// Phase P2 — the student's own self-report write: canonical membership → snapshot → only stages ACTIVE in the snapshot
+// → ONE CAS round applying the decision to every requested stage (self-report.applySelfReport). Inactive / unknown ids
+// are reported as stage_inactive and never written. NO_CHANGE (nothing changed) propagates with its per-stage results.
+async function selfReportStages(container, projectCode, classroom, { studentId, stageIds, mark, now }) {
+  const classId = classroom.classId;
+  const membership = await requireStudentInClass(container, studentId, classId);
+  if (!membership.ok) return { ok: false, reason: "not_member" };
+  const config = await ensureClassConfig(container, projectCode, classroom);
+  const active = new Set((config.stages || []).filter(s => s && s.active === true).map(s => s.stageId));
+  const writable = stageIds.filter(id => active.has(id));
+  const inactive = stageIds.filter(id => !active.has(id)).map(stageId => ({ stageId, ok: false, changed: false, error: "stage_inactive" }));
+  if (!writable.length) return { ok: true, config, workDef: workingDefinition(projectCode, config), student: membership.student, shareAchievements: membership.shareAchievements, written: null, previous: null, results: inactive, changed: 0 };
+  const ns = getStorageNamespace(projectCode);
+  let outcome = null, previous = null;
+  const written = await mutateJsonWithRetry(container, ns.progressName(classId, studentId), current => {
+    previous = current || null;
+    return (outcome = applySelfReport(current, { stageIds: writable, mark, studentId, now, programCode: projectCode, classId })).doc;
+  });
+  const byId = new Map([...outcome.results, ...inactive].map(r => [r.stageId, r]));
+  return { ok: true, config, workDef: workingDefinition(projectCode, config), student: membership.student, shareAchievements: membership.shareAchievements, written, previous, results: stageIds.map(id => byId.get(id)), changed: outcome.changed };
+}
+
 // Roadmap #33 — wipes ONLY this project's data for this class (every student progress blob under the project's
 // namespace, then the class snapshot). The classroom, the student accounts, assignments, exams and OTHER projects
 // are never touched (namespace isolation). Returns the count the handlers report and audit.
@@ -232,6 +255,6 @@ module.exports = {
   CLASS_PREFIX, USER_PREFIX,
   buildClassSnapshot, workingDefinition, loadClassroom, ensureClassConfig,
   listClassStudents, loadStudentUser, studentBelongsToClass, requireStudentInClass, loadProgressEntries, loadStudentProgress,
-  listProjectClasses, updateStudentProgress, resetProject, updateTemplate,
+  listProjectClasses, updateStudentProgress, selfReportStages, resetProject, updateTemplate,
   shouldUpgradeSnapshot
 };

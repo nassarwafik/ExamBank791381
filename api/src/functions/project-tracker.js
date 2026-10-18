@@ -22,6 +22,7 @@ const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
 const { SCORE_ERROR, normalizeScore } = require("../lib/project-tracker/score");
 const { mapConcurrent } = require("../lib/platform-storage");
+const { isSelfReported } = require("../lib/project-tracker/self-report");
 const analytics = require("../lib/project-tracker/analytics");
 const { countReadyStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
@@ -96,7 +97,8 @@ function bulkInput(body) {
 }
 
 // Phase P1 — the class board: every member × every ACTIVE stage of the class snapshot, carrying only the non-default cells
-// ({status, score}) so the payload stays small. Read-only projection of the same documents the other resources read.
+// ({status, score[, selfReported]}) so the payload stays small. `selfReported`: the student marked it done (Phase P2)
+// and the teacher has not confirmed it yet. Read-only projection of the same documents the other resources read.
 function boardBody(projectCode, config, readOnly, entries) {
   const stages = (config.stages || []).filter(s => s && s.active === true)
     .map(s => ({ stageId: s.stageId, track: s.track, groupId: s.groupId, title: s.title || "", order: Number(s.order) || 0, required: s.required !== false }));
@@ -106,7 +108,7 @@ function boardBody(projectCode, config, readOnly, entries) {
       const status = core.stageStatus(e.progress, s.stageId);
       const entry = e.progress && e.progress.stages ? e.progress.stages[s.stageId] : null;
       const score = normalizeScore(entry && entry.score);
-      if (status !== "not_started" || score !== null) cells[s.stageId] = { status, score };
+      if (status !== "not_started" || score !== null) cells[s.stageId] = isSelfReported(entry) ? { status, score, selfReported: true } : { status, score };
     }
     return { studentId: e.studentId, displayName: e.displayName, code: e.code, cells };
   });
@@ -287,12 +289,12 @@ async function handler(request, deps = {}, obs = null) {
           const summary = core.buildStudentSummary(workDef, written, now);
           // Project milestones (project rank-up / completion) from the SAME before/after docs of this write — best-effort.
           await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode: projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
-          if (outcome.statusChanged) {
+          if (outcome.statusChanged || outcome.verified) {
             await rec(container, {
               actor: auth.user?.sub,
               action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change",
               targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId,
-              targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus }
+              targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus, ...(outcome.verified ? { verifiedSelfReport: true } : {}) }
             });
           }
           if (outcome.noteChanged) {
@@ -383,9 +385,9 @@ async function handler(request, deps = {}, obs = null) {
               const { workDef, stage, written, previous, outcome } = result;
               await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
               const targetId = projectCode + "/" + classId + "/" + studentId + "/" + stageId;
-              if (outcome.statusChanged) {
-                readyChanged = true;
-                await rec(container, { actor: auth.user?.sub, action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change", targetType: "project-stage", targetId, targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus, via: "progress.bulk" } });
+              if (outcome.statusChanged) readyChanged = true;
+              if (outcome.statusChanged || outcome.verified) {
+                await rec(container, { actor: auth.user?.sub, action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change", targetType: "project-stage", targetId, targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus, via: "progress.bulk", ...(outcome.verified ? { verifiedSelfReport: true } : {}) } });
               }
               if (outcome.scoreChanged) {
                 await rec(container, { actor: auth.user?.sub, action: "project.stage.score", targetType: "project-stage", targetId, targetLabel: stage.title, details: { projectCode, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore, via: "progress.bulk" } });
