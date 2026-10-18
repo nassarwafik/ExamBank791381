@@ -248,11 +248,14 @@ async function resetProject(container, projectCode, classId) {
 
 // Roadmap #33 — CAS patch of the class snapshot (stages / groups / trackWeights / config merge). A missing snapshot
 // starts from the route's first-create factory (see snapshotFactory). StorageConflictError propagates.
+// Phase P-1 — `options.validate(current, patch)` (the generic route passes template-validation) runs against the snapshot
+// of THIS CAS round before anything changes; an error it throws propagates and nothing is written.
 async function updateTemplate(container, projectCode, classId, patch, now, options = {}) {
   const ns = getStorageNamespace(projectCode);
   const create = snapshotFactory(projectCode, options);
   return mutateJsonWithRetry(container, ns.configName(classId), current => {
     const config = current || create(classId, now);
+    if (typeof options.validate === "function") options.validate(config, patch);
     if (Array.isArray(patch.stages)) config.stages = patch.stages;
     if (Array.isArray(patch.groups)) config.groups = patch.groups;
     if (patch.trackWeights && typeof patch.trackWeights === "object") config.trackWeights = patch.trackWeights;

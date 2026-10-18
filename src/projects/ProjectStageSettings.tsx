@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { trackerGet, trackerPost } from "./api";
 import { stagesByGroup } from "./helpers";
 import { useConfirm } from "../ui/useConfirm";
@@ -14,6 +14,8 @@ type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[]; readOnly: boolean;
   /** Called after a successful template.update or project.reset (both can change which stages count as ready). */
   onReadyChanged?: () => void;
+  /** Phase P-1 — reports whether the editor holds unsaved changes (the workspace asks before leaving). */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 // Derives the stage-id prefix for a track from its existing stages (B/P/A/V…), falling back to the
@@ -31,8 +33,22 @@ const RESET_WARNING = "متأكد؟ سيُحذف كل التقدّم نهائي�
  * config}) and same `project.reset` body as before. The inline two-step reset became the shared danger
  * ConfirmDialog with the identical warning text; cancelling sends nothing. Archived classes are read-only.
  */
-export default function ProjectStageSettings({ token, projectCode, classId, tracks, readOnly, onReadyChanged }: Props) {
+/** Phase P-1 (B3) — the first stage whose weight would be stored as invalid (≤ 0 / not a number), unless it is the SAME
+ * value the class already had (legacy data never blocks an unrelated edit); the server applies the same rule. */
+function invalidWeightStage(stages: ProjectStage[], saved: Template | null): ProjectStage | null {
+  const before = new Map((saved?.stages || []).map(s => [s.stageId, s.weight]));
+  return stages.find(s => s.weight !== undefined && !(Number.isFinite(s.weight) && (s.weight as number) > 0) && !Object.is(before.get(s.stageId), s.weight)) || null;
+}
+
+export default function ProjectStageSettings({ token, projectCode, classId, tracks, readOnly, onReadyChanged, onDirtyChange }: Props) {
   const [tpl, setTpl] = useState<Template | null>(null);
+  // Phase P-1 (B1) — the (project, class) the editor's template was read for, and the template as stored for it. The editor
+  // renders and saves ONLY when `loadedFor` is the current selection, and a read for a previous selection is dropped, so
+  // one class's stages can never be shown under, or saved into, another class.
+  const [loadedFor, setLoadedFor] = useState("");
+  const [saved, setSaved] = useState<Template | null>(null);
+  const seq = useRef(0);
+  const selection = projectCode + "|" + classId;
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [groupFilter, setGroupFilter] = useState("");
   const [search, setSearch] = useState("");
@@ -43,15 +59,23 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
   const { confirm, confirmDialog } = useConfirm();
 
   async function load() {
+    const mine = ++seq.current, forSelection = selection;
     setLoading(true); setError("");
     try {
       const r = await trackerGet<{ template: Template }>(token, projectCode, "template", { classId });
-      setTpl(r.template);
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل المراحل."); }
-    finally { setLoading(false); }
+      if (mine !== seq.current) return;                                         // a newer read (another class) superseded this one
+      setTpl(r.template); setSaved(r.template); setLoadedFor(forSelection);
+    } catch (e) { if (mine === seq.current) setError(e instanceof Error ? e.message : "تعذر تحميل المراحل."); }
+    finally { if (mine === seq.current) setLoading(false); }
   }
+  // A new (project, class) starts with no editor: the previous class's stages are dropped before the new read.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, [classId, projectCode]);
+  useEffect(() => { setTpl(null); setSaved(null); setLoadedFor(""); setNotice(""); void load(); }, [classId, projectCode]);
+
+  const current = loadedFor === selection;
+  const dirty = !!tpl && !!saved && current && JSON.stringify(tpl) !== JSON.stringify(saved);
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);              // leaving the view clears the flag
 
   const groups = useMemo(() => tpl ? tpl.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [tpl, track]);
   const byGroup = useMemo(() => tpl ? stagesByGroup(tpl.stages, track) : new Map<string, ProjectStage[]>(), [tpl, track]);
@@ -73,7 +97,9 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
   }
 
   async function save() {
-    if (!tpl || readOnly || busy) return;
+    if (!tpl || readOnly || busy || !current) return;
+    const bad = invalidWeightStage(tpl.stages, saved);
+    if (bad) { setNotice(""); setError("وزن المرحلة " + bad.stageId + " يجب أن يكون رقمًا أكبر من 0."); return; }
     setBusy(true); setError(""); setNotice("");
     try {
       await trackerPost(token, projectCode, { action: "template.update", classId, template: { stages: tpl.stages, trackWeights: tpl.trackWeights, config: tpl.config } });
@@ -98,8 +124,8 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
     finally { setBusy(false); }
   }
 
-  if (loading && !tpl) return <p className="eb-muted" role="status">جارٍ تحميل المراحل...</p>;
-  if (!tpl) return <div className="platform-error assignment-inline-message" role="alert">{error || "تعذر التحميل."} <button type="button" className="eb-button is-small" onClick={() => void load()}>إعادة المحاولة</button></div>;
+  if (!current && (loading || !error)) return <p className="eb-muted" role="status">جارٍ تحميل المراحل...</p>;
+  if (!tpl || !current) return <div className="platform-error assignment-inline-message" role="alert">{error || "تعذر التحميل."} <button type="button" className="eb-button is-small" onClick={() => void load()}>إعادة المحاولة</button></div>;
 
   const visibleGroups = groups.filter(g => !groupFilter || g.groupId === groupFilter);
   const rowsFor = (groupId: string) => ((byGroup.get(groupId) || []) as ProjectStage[]).filter(st => !term || st.title.toLowerCase().includes(term) || st.stageId.toLowerCase().includes(term));
@@ -139,7 +165,7 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
                   <li key={stage.stageId} className={"eb-stage-form-row" + (stage.active === false ? " is-inactive" : "")}>
                     <span className="eb-stage-code">{stage.stageId}</span>
                     <label className="eb-stage-form-title"><VisuallyHidden>عنوان المرحلة {stage.stageId}</VisuallyHidden><input value={stage.title} disabled={readOnly} onChange={e => editStage(stage.stageId, { title: e.target.value })} /></label>
-                    <label className="eb-stage-form-num">الوزن<input type="number" min={0} step={0.5} value={stage.weight ?? 1} disabled={readOnly} onChange={e => editStage(stage.stageId, { weight: Number(e.target.value) })} /></label>
+                    <label className="eb-stage-form-num">الوزن<input type="number" min={0.5} step={0.5} value={stage.weight ?? 1} disabled={readOnly} onChange={e => editStage(stage.stageId, { weight: Number(e.target.value) })} /></label>
                     <label className="eb-stage-form-num">الترتيب<input type="number" value={stage.order} disabled={readOnly} onChange={e => editStage(stage.stageId, { order: Number(e.target.value) })} /></label>
                     <label className="eb-stage-form-check"><input type="checkbox" checked={stage.required !== false} disabled={readOnly} onChange={e => editStage(stage.stageId, { required: e.target.checked })} />إلزامية</label>
                     <label className="eb-stage-form-check"><input type="checkbox" checked={stage.active !== false} disabled={readOnly} onChange={e => editStage(stage.stageId, { active: e.target.checked })} />مفعّلة</label>
