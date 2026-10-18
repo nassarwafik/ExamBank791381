@@ -34,3 +34,22 @@ On the fix: **30 passed**.
 
 - `api/tests/project-template-validation-p1s.test.js` — 19 refusals (nothing written, no audit) + 3 valid edits.
 - `src/projects/ProjectSafety.p1s.test.tsx` — B1 ×2, B2 ×3, B3, B5 ×2 over the real handler.
+
+## Mutation proof
+
+Each mutant planted alone; both P-1 suites run; the file restored byte-for-byte (sha256-checked).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| S1 | dashboard request-sequence check removed | KILLED | B2 dashboard |
+| S2 | student-cards request-sequence check removed | KILLED | B2 student cards |
+| S3 | analytics request-sequence check removed | KILLED | B2 analytics |
+| S4 | stage-settings stale read not dropped | KILLED | B1 out-of-order read |
+| S5 | editor not bound to the class it was read for | KILLED (after strengthening; first campaign SURVIVED — the state reset hid it after one commit) | B1 in-flight, per-commit Profiler check |
+| S6 | client weight check removed | KILLED | B3 (no request may be sent) |
+| S7 | server weight rule removed | KILLED | weight 0 / negative → 400 |
+| S8 | server "no deleted stage" rule removed | KILLED | removed stage → 400 |
+| S9 | server group-in-track rule removed | KILLED | unknown group → 400 |
+| S10 | validation not called in updateTemplate | KILLED | malformed patches → 400 |
+| S11 | workspace never asks on unsaved edits | KILLED | B5 ×2 |
+| S12 | editor never reports unsaved edits | KILLED | B5 ×2 |

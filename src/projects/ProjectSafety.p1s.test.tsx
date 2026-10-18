@@ -6,6 +6,7 @@
 //   B3  a stage weight of 0 is never silently saved (the engine would count it as 1);
 //   B5  unsaved stage-settings edits are not lost silently when the class or the view changes.
 import { createRequire } from "node:module";
+import { Profiler } from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import ProjectStageSettings from "./ProjectStageSettings";
@@ -68,13 +69,21 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("B1 stage settings — class switch", () => {
-  it("while the new class loads, the previous class's stages are not shown and nothing can be saved", async () => {
+  it("while the new class loads, the previous class's stages are not shown (not even for one commit) and nothing can be saved", async () => {
     const s = server();
-    const view = render(<ProjectStageSettings token="t" projectCode={CODE} classId="c1" tracks={TRACKS} readOnly={false} />);
+    // Every commit is inspected (Profiler onRender runs after the DOM update, before effects): class 1's stage title must
+    // never be on screen while class 2 is the selected class.
+    let selected = "c1";
+    const leaks: string[] = [];
+    const onRender = () => { if (selected === "c2" && titleInput()?.value === C1_TITLE) leaks.push("c1 stages under c2"); };
+    const tree = (cid: string) => <Profiler id="settings" onRender={onRender}><ProjectStageSettings token="t" projectCode={CODE} classId={cid} tracks={TRACKS} readOnly={false} /></Profiler>;
+    const view = render(tree("c1"));
     await waitFor(() => expect(titleInput()?.value).toBe(C1_TITLE));
     s.hold("template", "c2");
-    view.rerender(<ProjectStageSettings token="t" projectCode={CODE} classId="c2" tracks={TRACKS} readOnly={false} />);
+    selected = "c2";
+    view.rerender(tree("c2"));
     await flush();
+    expect(leaks).toEqual([]);
     expect(titleInput()).toBeNull();                                            // c1's editor is gone while c2 loads
     expect(screen.queryByRole("button", { name: "حفظ التغييرات" })).toBeNull();
     expect(s.posts).toHaveLength(0);
@@ -142,7 +151,8 @@ describe("B3 stage weight 0", () => {
     const row = titleInput()!.closest("li") as HTMLElement;
     fireEvent.change(within(row).getByRole("spinbutton", { name: "الوزن" }), { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: "حفظ التغييرات" }));
-    await screen.findByRole("alert");
+    expect((await screen.findByRole("alert")).textContent).toBe("وزن المرحلة " + FIRST + " يجب أن يكون رقمًا أكبر من 0.");
+    expect(s.posts).toHaveLength(0);                                            // refused on screen, before any request
     expect(screen.queryByText("✓ تم حفظ إعداد المراحل.")).toBeNull();
     expect(s.stored("c1").stages.find((x: { stageId: string }) => x.stageId === FIRST).weight).toBe(1);
   });
