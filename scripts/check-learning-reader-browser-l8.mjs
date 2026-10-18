@@ -112,7 +112,7 @@ console.log("1. student journey");
   check("server progress", !!third, "the server stores the third page as the reading position (" + (third || "none") + ")");
   await page.getByRole("button", { name: "العودة إلى موادي التعليمية" }).click();
   await page.getByText("أكمل من حيث توقفت").first().waitFor({ timeout: 10000 });
-  await page.getByRole("button", { name: "تابع القراءة" }).first().click();
+  await page.getByRole("button", { name: "تابع القراءة" }).first().click({ timeout: 15000 });
   await readerReady(page);
   check("resume (same browser)", (await pageTitle(page)) === titles[2], "«أكمل من حيث توقفت» reopens «" + titles[2] + "» (got «" + (await pageTitle(page)) + "»)");
   await ctx.close();
@@ -120,10 +120,13 @@ console.log("1. student journey");
   const other = await session("student", { width: 1440, height: 900 });
   await other.page.goto(origin + "/");
   await other.page.getByText("أكمل من حيث توقفت").first().waitFor({ timeout: 15000 });
-  const cta = other.page.getByRole("button", { name: "تابع القراءة" });
-  if (!(await cta.count())) fail("resume (another device)", "the Today Hub offers no «تابع القراءة» on another device (it offers: " + (await other.page.locator(".eb-sp-today, [class*=today]").first().innerText().catch(() => "?")).replace(/\s+/g, " ").slice(0, 120) + ")");
-  else await cta.first().click();
-  if (!(await cta.count())) await other.page.getByRole("button", { name: "ابدأ القراءة" }).first().click();
+  // The Hub fills its card once the dashboard and the released courses have both arrived: wait for the continuation itself.
+  const cta = other.page.getByRole("button", { name: "تابع القراءة" }).first();
+  const offered = await cta.waitFor({ timeout: 15000 }).then(() => true, () => false);
+  if (!offered) {
+    fail("resume (another device)", "the Today Hub offers no «تابع القراءة» on another device (it offers: " + (await other.page.locator(".eb-sp-today, [class*=today]").first().innerText().catch(() => "?")).replace(/\s+/g, " ").slice(0, 120) + ")");
+    await other.page.locator(".eb-sp-learning-open").first().click();                // the book card's own «ابدأ القراءة» (it resumes from the server)
+  } else await cta.click();
   await readerReady(other.page);
   check("resume (another device)", (await pageTitle(other.page)) === titles[2], "a fresh browser profile resumes «" + titles[2] + "» from the server (got «" + (await pageTitle(other.page)) + "»)");
   // 2. a served in-page exercise is judged by the server
