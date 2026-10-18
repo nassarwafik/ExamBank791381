@@ -16,6 +16,7 @@ const {legacyAutoGradingWithhold,studentCodingGradingStatus}=require("../lib/cod
 // the browser never derives a stage. Project progress comes from the SAME loader as /api/student-project-tracker.
 const {buildStrengthSummary}=require("../lib/student-strength");
 const {studyDocName,studyModulesForStrength,latestStudyActivity}=require("../lib/learning-study");
+const {progressDocName,latestReadingPosition}=require("../lib/learning-progress");
 const {listLearningCourses}=require("../lib/learning-materials-registry");
 const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
 const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
@@ -126,9 +127,14 @@ async function handler(request,deps={},obs=null){
   medals.total+=g.total;medals.gold+=g.gold;medals.silver+=g.silver;medals.bronze+=g.bronze;
   const recognition={medals,reactionsReceived:{total:rec.receivedReactionCount,byType:rec.receivedReactionByType},achievements:{total:rec.achievementCount,byType:rec.achievementByType}};
   // Phase 9A — Today Hub: the most recent study completion (course / module / page) from the SAME study document read
-  // above (zero extra reads; purely additive). The portal only offers it as a "continue reading" point when the course
-  // and module are still among the class's released materials.
-  const todayStudy={lastActivity:latestStudyActivity(studyDoc)};
+  // above. The portal only offers it as a "continue reading" point when the course and module are still among the class's
+  // released materials. Phase L.8 — the server's READING position (L.3, one more read: the student's progress document) is a
+  // continuation too: the NEWER of the two is the one the Hub offers on any device («تابع القراءة» at the last page read, not
+  // the first unit). Same shape as before ({ courseId, moduleId, pageId, completedAt }).
+  const reading=latestReadingPosition(await dl(c,progressDocName(student.userId)));
+  const studied=latestStudyActivity(studyDoc);
+  const newer=(a,b)=>!a?b:!b?a:(Date.parse(b.completedAt)>Date.parse(a.completedAt)?b:a);
+  const todayStudy={lastActivity:newer(studied,reading)};
   // Phase 12E-A — count-only read-cost telemetry (numbers the loop above already knows; never an id/title/mark).
   logReadCost(obs,"student.dashboard.read_cost",{assignmentDocsScanned:idxStats.assignmentDocsLoaded,publishedClassAssignments:selected.length,submissionReads:submissions.length,assignmentIndexReads:idxStats.indexReads,assignmentIndexesBootstrapped:idxStats.bootstrapped,globalAssignmentScans:idxStats.globalScans,assignmentIndexAuthoritative:idxStats.authoritative,assignmentIndexAuthorityChanges:idxStats.authorityChanges});
   return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:sumCount?Number((sum/sumCount).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};

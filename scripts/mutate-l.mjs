@@ -49,7 +49,24 @@ const L6B_API = ["api/tests/learning-check-l6b.test.js"], L6B_VERDICT = ["src/le
 const L6B_UNIT = ["src/learning/study/checkIndex.l6b.test.ts"], L6B_GUARD = ["src/learning/content/servedBodies.l6b.test.ts"], L6B_UI = ["src/learning/reader/serverCheck.l6b.test.tsx"];
 const LIB_STORE = "api/src/lib/exam-library-store.js", LIB_FN = "api/src/functions/exam-library.js", TRAINING_FN = "api/src/functions/learning-training.js";
 const L7_API = ["api/tests/exam-library-l7.test.js"], L7_GUARD = ["scripts/check-bundle-budget.l7.test.mjs"];
+const DASH_FN = "api/src/functions/student-dashboard.js", PROG_LIB_L8 = "api/src/lib/learning-progress.js";
+const READER_CSS = "src/learning/reader/reader.css", PORTAL_CSS = "src/student/student-portal-v2.css";
+const L8_API = ["api/tests/student-dashboard-reading-l8.test.js"], L8_CSS = ["src/learning/reader/reader.l8.guards.test.ts"];
 export const CAMPAIGNS = {
+  l8: [
+    { id: "L8-M1", what: "the Today Hub's server continuation ignores the last page read", file: DASH_FN,
+      find: "const todayStudy={lastActivity:newer(studied,reading)};", replace: "const todayStudy={lastActivity:studied};", tests: L8_API },
+    { id: "L8-M2", what: "the OLDER of the two continuations wins", file: DASH_FN,
+      find: "(Date.parse(b.completedAt)>Date.parse(a.completedAt)?b:a)", replace: "(Date.parse(b.completedAt)<Date.parse(a.completedAt)?b:a)", tests: L8_API },
+    { id: "L8-M3", what: "a course without a last page or module is taken as the reading position", file: PROG_LIB_L8,
+      find: "if (!c.lastPageId || !c.lastModuleId || !Number.isFinite(ms) || ms <= bestMs) continue;", replace: "if (!Number.isFinite(ms) || ms <= bestMs) continue;", tests: L8_API },
+    { id: "L8-M4", what: "the unit opener's numeral is painted with the pale tint again (1.2:1)", file: READER_CSS,
+      find: "  color:var(--eb-primary); letter-spacing:-2px; }", replace: "  color:var(--eb-primary-100); letter-spacing:-2px; }", tests: L8_CSS },
+    { id: "L8-M5", what: "a touch tablet's filter chips stay 40 px", file: PORTAL_CSS,
+      find: "  .eb-sp-v2 .eb-sp-filters .eb-chip-button { min-height: 44px; }", replace: "  .eb-sp-v2 .eb-sp-filters .eb-chip-button { min-height: 40px; }", tests: L8_CSS },
+    { id: "L8-M6", what: "the 44 px rule applies by width again (a touch tablet misses it)", file: PORTAL_CSS,
+      find: "@media (pointer: coarse) {\n  .eb-student-shell .student-topbar-link,", replace: "@media (max-width: 767px) {\n  .eb-student-shell .student-topbar-link,", tests: L8_CSS },
+  ],
   l7: [
     { id: "L7-M1", what: "the catalog is read from disk on every request", file: LIB_STORE,
       find: "  if (CATALOG) return CATALOG;\n", replace: "", tests: L7_API },

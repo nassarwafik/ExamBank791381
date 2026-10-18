@@ -201,3 +201,14 @@
   .eb-sp-v2 .eb-sp-identity-text h2, .eb-sp-v2 .eb-sp-identity-text p, .eb-sp-v2 .eb-sp-identity .eb-sp-code strong { color: CanvasText; }
   .eb-sp-kpi, .eb-sp-v2 .eb-sp-task, .eb-sp-v2 .eb-sp-panel { border: 1px solid CanvasText; }
 }
+
+/* Phase L.8 — touch tablets. The phone rules above give 44 px targets below 720 / 767 px only; a tablet (834 px, a coarse pointer)
+   still got 34–42 px top-bar links, filter chips and card buttons. Any coarse pointer now gets the same 44 px, whatever the width;
+   a mouse keeps the desktop density. */
+@media (pointer: coarse) {
+  .eb-student-shell .student-topbar-link,
+  .eb-student-shell .student-logout,
+  .eb-student-shell .eb-button,
+  .eb-student-shell .eb-chip-button,
+  .eb-sp-v2 .eb-sp-filters .eb-chip-button { min-height: 44px; }
+}

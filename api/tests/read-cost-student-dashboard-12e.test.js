@@ -20,12 +20,14 @@ import { instrumentReadCost } from "./helpers/read-cost.js";
 //   AUTHORITATIVE, COLD       lists = 1 (legacy) downloads = K + 2 control + 1 index + A_total + 1 reconcile CAS read
 //     (first request per class                   + P_class;  uploads = 1 (the class index, ready:true, epoch)
 //      after activation)
-//   K = 5 fixed documents (user, class, practice, study, games) for a class without projects.
+//   K = 6 fixed documents (user, class, practice, study, reading progress, games) for a class without projects. Phase L.8 added the
+//   reading-progress document (one read): the Today Hub's continuation is the newer of the last study completion and the last page
+//   read, so «تابع القراءة» works on any device.
 
 const AP = "platform/assignments/", SP = "platform/submissions/", UP = "platform/users/", CP = "platform/classes/";
 const IX = "platform/assignment-index/classes/", CONTROL = "platform/assignment-index/control.json";
 const AUTHORITATIVE = { [CONTROL]: { schemaVersion: 1, state: "authoritative", epoch: "E1", updatedAt: "2026-01-01T00:00:00.000Z" } };
-const FIXED = ["platform/users/u1.json", "platform/classes/c1.json", "platform/learning-practice/u1.json", "platform/learning-study/u1.json", "platform/games/results/u1.json"];
+const FIXED = ["platform/users/u1.json", "platform/classes/c1.json", "platform/learning-practice/u1.json", "platform/learning-study/u1.json", "platform/learning-progress/u1.json", "platform/games/results/u1.json"];
 const K = FIXED.length;
 const req = () => ({ method: "GET", url: "http://x/api/student-dashboard", headers: { get: () => null } });
 const student = { userId: "u1", role: "student", classId: "c1", active: true, archived: false, authVersion: 1, code: "S1", displayName: "علي" };

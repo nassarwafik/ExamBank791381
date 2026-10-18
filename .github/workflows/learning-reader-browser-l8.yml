@@ -1,0 +1,52 @@
+name: Phase L.8 Learning Reader Real Chromium Gate
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/learning/**"
+      - "src/student/**"
+      - "src/StudentPortal.tsx"
+      - "src/ui/**"
+      - "src/design-tokens.css"
+      - "api/src/functions/learning-*.js"
+      - "api/src/functions/student-dashboard.js"
+      - "api/src/functions/student-learning-materials.js"
+      - "api/src/lib/learning-*.js"
+      - "api/src/data/learning-*/**"
+      - "browser-harness/learning-l8-api.cjs"
+      - "scripts/check-learning-reader-browser-l8.mjs"
+      - "docs/enterprise-learning-materials-l-plan.md"
+      - ".github/workflows/learning-reader-browser-l8.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    name: L.8 reader journey, axe and touch targets
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production assets, the API and the measuring tools
+        run: |
+          npm ci
+          npm ci --prefix api
+          npm run build
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0 axe-core@4.10.2
+          command -v google-chrome
+      - name: Certify the learning reader in real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          AXE_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-l8
+        run: node scripts/check-learning-reader-browser-l8.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: learning-reader-l8-browser
+          path: .harness-l8/
+          retention-days: 7
