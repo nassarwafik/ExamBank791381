@@ -198,6 +198,21 @@ describe("R7 — CI: a dedicated runner workflow with no secrets; the SWA gates 
     expect(y).toMatch(/permissions:\s*\n\s+contents:\s*read/);
     for (const step of ["npm --prefix runner test", "npm --prefix runner run build:images", "npm --prefix runner run test:docker"]) expect(y, step).toContain(step);
   });
+  it("ECR Public pulls: the ONLY extra permission is id-token: write (OIDC, no stored secret); the login is optional and fail-open; pinned bases are pre-pulled with a bounded retry before the build", () => {
+    const y = raw(wf);
+    const perms = y.match(/^permissions:\n((?:[ \t]+\S.*\n)+)/m);
+    expect(perms && perms[1].trim().split("\n").map(l => l.trim())).toEqual(["contents: read", "id-token: write"]);
+    expect(y).not.toMatch(/uses:\s*aws-actions|aws-access-key|AWS_SECRET|secrets\./);
+    expect(y).toContain("ECR_PUBLIC_ROLE_ARN: ${{ vars.ECR_PUBLIC_ROLE_ARN }}");
+    const at = s => y.indexOf(s);
+    expect(at("run: sh runner/scripts/ecr-public-login.sh")).toBeGreaterThan(-1);
+    expect(at("run: sh runner/scripts/ecr-public-login.sh")).toBeLessThan(at("run: sh runner/scripts/pull-base-images.sh"));
+    expect(at("run: sh runner/scripts/pull-base-images.sh")).toBeLessThan(at("npm --prefix runner run build:images"));
+    const login = raw("runner/scripts/ecr-public-login.sh");
+    expect(login).toContain("--password-stdin");
+    expect(login).toContain("--duration-seconds 900");
+    expect(login).not.toMatch(/set -e|exit [1-9]/);                                   // fail-open: never fails the job
+  });
   it("the SWA workflow still runs tests, build and lint before deploy (not weakened, nothing skipped)", () => {
     const y = raw(".github/workflows/azure-static-web-apps-white-grass-0ce642c10.yml");
     for (const s of ["run: npm test", "run: npm run build", "run: npm run lint", "needs: quality_gate"]) expect(y, s).toContain(s);
