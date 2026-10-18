@@ -20,7 +20,8 @@ const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
-const { SCORE_ERROR } = require("../lib/project-tracker/score");
+const { SCORE_ERROR, normalizeScore } = require("../lib/project-tracker/score");
+const { mapConcurrent } = require("../lib/platform-storage");
 const analytics = require("../lib/project-tracker/analytics");
 const { countReadyStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
@@ -64,6 +65,52 @@ function scoreActionInput(action, body) {
   if (SCORE_ACTIONS[action] === "clear") return { studentId, stageId, score: null };
   if (body.score === undefined || body.score === null || body.score === "") return { error: SCORE_ERROR };
   return { studentId, stageId, score: body.score };
+}
+
+// Phase P1 — bulk review. ONE decision (a status and/or a score) applied to many (student, stage) pairs of ONE class in
+// one request, so the teacher approves a whole stage for the class — or every stage waiting for review — at once instead
+// of student by student. Every pair runs through the SAME canonical pipeline as progress.update (membership → snapshot →
+// active stage → CAS merge of one stage entry); a pair that fails never blocks the others and is reported per item.
+const BULK_MAX_ITEMS = 300;
+function bulkInput(body) {
+  if (!Array.isArray(body.items) || !body.items.length) return { error: "حدّد طالبًا ومرحلة واحدة على الأقل." };
+  if (body.items.length > BULK_MAX_ITEMS) return { error: "عدد العناصر أكبر من الحد المسموح (" + BULK_MAX_ITEMS + ")." };
+  if (body.note !== undefined) return { error: "الإجراء الجماعي لا يقبل الملاحظات." };
+  const status = body.status === undefined || body.status === null || body.status === "" ? undefined : String(body.status);
+  if (status !== undefined && !core.STATUSES.includes(status)) return { error: "حالة المرحلة غير صحيحة." };
+  let score;
+  if (body.score === null) score = null;
+  else if (body.score !== undefined && body.score !== "") {
+    if (normalizeScore(body.score) === null) return { error: SCORE_ERROR };
+    score = normalizeScore(body.score);
+  }
+  if (status === undefined && score === undefined) return { error: "حدّد الحالة أو العلامة." };
+  const seen = new Set(), items = [];
+  for (const raw of body.items) {
+    const studentId = String((raw && raw.studentId) || "").trim(), stageId = String((raw && raw.stageId) || "").trim();
+    if (!studentId || !stageId) return { error: "studentId وstageId مطلوبان لكل عنصر." };
+    const key = studentId + "\u0000" + stageId;
+    if (!seen.has(key)) { seen.add(key); items.push({ studentId, stageId }); }
+  }
+  return { items, status, score };
+}
+
+// Phase P1 — the class board: every member × every ACTIVE stage of the class snapshot, carrying only the non-default cells
+// ({status, score}) so the payload stays small. Read-only projection of the same documents the other resources read.
+function boardBody(projectCode, config, readOnly, entries) {
+  const stages = (config.stages || []).filter(s => s && s.active === true)
+    .map(s => ({ stageId: s.stageId, track: s.track, groupId: s.groupId, title: s.title || "", order: Number(s.order) || 0, required: s.required !== false }));
+  const students = entries.map(e => {
+    const cells = {};
+    for (const s of stages) {
+      const status = core.stageStatus(e.progress, s.stageId);
+      const entry = e.progress && e.progress.stages ? e.progress.stages[s.stageId] : null;
+      const score = normalizeScore(entry && entry.score);
+      if (status !== "not_started" || score !== null) cells[s.stageId] = { status, score };
+    }
+    return { studentId: e.studentId, displayName: e.displayName, code: e.code, cells };
+  });
+  return { ok: true, projectCode, readOnly, stages, groups: config.groups || [], students };
 }
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
@@ -186,6 +233,10 @@ async function handler(request, deps = {}, obs = null) {
         if (resource === "analytics") {
           const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
           return { status: 200, jsonBody: { ok: true, projectCode, analytics: analytics.buildAnalytics(workDef, entries, now), tracks: definition.tracks, groups: config.groups, readOnly } };
+        }
+        if (resource === "board") {
+          const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
+          return { status: 200, jsonBody: boardBody(projectCode, config, readOnly, entries) };
         }
         return { status: 400, jsonBody: { ok: false, error: "resource غير معروف." } };
       }
@@ -312,6 +363,46 @@ async function handler(request, deps = {}, obs = null) {
           if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message } };
           throw e;
         }
+      }
+
+      if (action === "progress.bulk") {
+        const input = bulkInput(body);
+        if (input.error) return { status: 400, jsonBody: { ok: false, error: input.error } };
+        // Pairs of the SAME student share one progress blob: they run in order (one CAS writer per blob); different
+        // students run with bounded concurrency. Results keep the request order.
+        const byStudent = new Map();
+        input.items.forEach((item, index) => { if (!byStudent.has(item.studentId)) byStudent.set(item.studentId, []); byStudent.get(item.studentId).push({ ...item, index }); });
+        const results = new Array(input.items.length);
+        let readyChanged = false;
+        await mapConcurrent([...byStudent.values()], 4, async group => {
+          for (const { studentId, stageId, index } of group) {
+            const base = { studentId, stageId };
+            try {
+              const result = await svc.updateStudentProgress(container, projectCode, classroom, { studentId, stageId, status: input.status, score: input.score, actor: auth.user?.sub, now });
+              if (!result.ok) { results[index] = { ...base, ok: false, error: result.reason === "not_member" ? "not_member" : "stage_inactive" }; continue; }
+              const { workDef, stage, written, previous, outcome } = result;
+              await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
+              const targetId = projectCode + "/" + classId + "/" + studentId + "/" + stageId;
+              if (outcome.statusChanged) {
+                readyChanged = true;
+                await rec(container, { actor: auth.user?.sub, action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change", targetType: "project-stage", targetId, targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus, via: "progress.bulk" } });
+              }
+              if (outcome.scoreChanged) {
+                await rec(container, { actor: auth.user?.sub, action: "project.stage.score", targetType: "project-stage", targetId, targetLabel: stage.title, details: { projectCode, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore, via: "progress.bulk" } });
+              }
+              const entry = written.stages[stageId] || {};
+              results[index] = { ...base, ok: true, changed: true, status: entry.status, score: normalizeScore(entry.score) };
+            } catch (e) {
+              if (e && e.code === "NO_CHANGE") { results[index] = { ...base, ok: true, changed: false }; continue; }
+              if (e instanceof StorageConflictError) { results[index] = { ...base, ok: false, error: "conflict" }; continue; }
+              if (e && e.httpStatus) { results[index] = { ...base, ok: false, error: "invalid" }; continue; }
+              obs?.logError("project.tracker.bulk.item", e);
+              results[index] = { ...base, ok: false, error: "failed" };
+            }
+          }
+        });
+        const changed = results.filter(r => r.ok && r.changed).length, failed = results.filter(r => !r.ok).length;
+        return { status: 200, jsonBody: { ok: true, projectCode, readyChanged, results, totals: { requested: results.length, changed, unchanged: results.length - changed - failed, failed } } };
       }
 
       if (action === "template.update") {

@@ -5,15 +5,16 @@ import ProjectStudentCards from "./ProjectStudentCards";
 import ProjectStudentDetail from "./ProjectStudentDetail";
 import ProjectAnalytics from "./ProjectAnalytics";
 import ProjectStageSettings from "./ProjectStageSettings";
+import ProjectBulkReview from "./ProjectBulkReview";
 import ActionMenu from "../ui/ActionMenu";
 import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
-import { IconDashboard, IconStudents, IconReports, IconEdit, IconRefresh, IconLock } from "../icons";
+import { IconDashboard, IconStudents, IconReports, IconEdit, IconRefresh, IconLock, IconCheck } from "../icons";
 import type { ProjectClass, TrackMeta } from "./types";
 import type { ProjectDrillTarget, ProjectEvaluationQueueView, ProjectStudentRef } from "./drillTarget";
 import "../projects-pro.css";
 
-export type ProjectView = "dashboard" | "students" | "analytics" | "settings";
+export type ProjectView = "dashboard" | "students" | "bulk" | "analytics" | "settings";
 type Props = {
   token: string; projectCode: string;
   /** Called after a successful mutation that can change global ready-for-review counts (status change, template
@@ -38,6 +39,7 @@ type Props = {
 const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.ReactNode }[] = [
   { key: "dashboard", label: "لوحة المشروع", icon: s => <IconDashboard size={s} /> },
   { key: "students", label: "تقدّم الطلاب", icon: s => <IconStudents size={s} /> },
+  { key: "bulk", label: "التقييم الجماعي", icon: s => <IconCheck size={s} /> },
   { key: "analytics", label: "الإحصائيات", icon: s => <IconReports size={s} /> },
   { key: "settings", label: "إعداد المراحل", icon: s => <IconEdit size={s} /> }
 ];
@@ -196,6 +198,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
               )}
             </>
           )}
+          {view === "bulk" && <ProjectBulkReview token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} />}
           {view === "analytics" && <ProjectAnalytics token={token} projectCode={projectCode} classId={classId} tracks={tracks} />}
           {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} />}
         </div>

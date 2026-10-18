@@ -265,3 +265,20 @@
 @media (min-width: 768px){
   .eb-eval-finish-return{ min-height:38px; }
 }
+
+/* ---------- Phase P1: bulk review ---------- */
+.eb-bulk-review{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.eb-bulk-review > p{ margin:0; }
+.eb-bulk-modes{ align-self:flex-start; }
+.eb-bulk-stage-picker{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-3); }
+.eb-bulk-stage-picker select{ max-width:min(100%,520px); }
+.eb-bulk-review-bar{ position:sticky; top:var(--eb-space-2); z-index:2; }
+.eb-bulk-review-bar .eb-stage-row-error{ flex-basis:100%; border-radius:var(--eb-r-sm); }
+.eb-bulk-score input{ width:88px; min-height:34px; }
+.eb-bulk-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-bulk-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
+.eb-bulk-row.is-selected{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.eb-bulk-row-main{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); flex:1 1 280px; min-width:0; cursor:pointer; }
+.eb-bulk-row-main input[type="checkbox"]{ width:18px; height:18px; flex:0 0 auto; }
+.eb-bulk-cell{ display:inline-flex; align-items:center; gap:var(--eb-space-2); }
+.eb-bulk-row .eb-stage-row-error{ flex-basis:100%; border-radius:var(--eb-r-sm); }
