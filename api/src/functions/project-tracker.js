@@ -21,7 +21,8 @@ const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
 const { SCORE_ERROR, normalizeScore } = require("../lib/project-tracker/score");
-const { mapConcurrent } = require("../lib/platform-storage");
+const { mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
+const { listUsersForReadViews } = require("../lib/project-tracker/user-directory-cache");
 const { isSelfReported } = require("../lib/project-tracker/self-report");
 const { validateTemplatePatch } = require("../lib/project-tracker/template-validation");
 const analytics = require("../lib/project-tracker/analytics");
@@ -29,6 +30,7 @@ const { countReadyStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
 
 const CLASS_PREFIX = "platform/classes/";
+const STUDENT_HISTORY_LIMIT = 50;
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 
 function studentDetailBody(projectCode, workDef, config, readOnly, student, progress, now) {
@@ -48,7 +50,9 @@ function studentDetailBody(projectCode, workDef, config, readOnly, student, prog
     trackWeights: config.trackWeights,
     config: config.config,
     progress: progress ? progress.stages : {},
-    history: progress ? (progress.history || []) : [],
+    // Phase P-2 — the newest STUDENT_HISTORY_LIMIT events only (the profile shows 20; the full log stays in storage and
+    // every derived value — evaluation, performance — is computed server-side from the whole document).
+    history: progress ? (progress.history || []).slice(-STUDENT_HISTORY_LIMIT) : [],
     nextStages: core.getNextStages(workDef, progress),
     balance: core.getBalanceInsight(summary.trackProgress, workDef)
   };
@@ -148,24 +152,26 @@ async function handler(request, deps = {}, obs = null) {
       // Uses the SAME exactness as the ready report: only current class members (non-archived) and
       // only stages that exist & are active in the class snapshot are counted.
       if (request.method === "GET" && String(new URL(request.url).searchParams.get("resource") || "") === "projects-summary") {
-        const classrooms = (await listJson(container, CLASS_PREFIX)).filter(ownClassroom);
-        const allUsers = await listJson(container, svc.USER_PREFIX);
+        // Phase P-2 — the class list and the (cached, read-only) user directory are read together, and the active
+        // class × project pairs are counted with bounded concurrency instead of one after another. Same counting rule.
+        const [classroomDocs, allUsers] = await Promise.all([listJson(container, CLASS_PREFIX), listUsersForReadViews(container)]);
+        const classrooms = classroomDocs.filter(ownClassroom);
         const usersById = new Map(allUsers.filter(u => u && u.role === "student").map(u => [String(u.userId), u]));
+        const pairs = [];
+        for (const code of getSupportedProjects()) {
+          for (const c of classrooms) if (classHasProject(c, code) && normalizeClassStatus(c) === "active") pairs.push({ code, c });
+        }
+        const counts = await mapConcurrent(pairs, getReadConcurrency(), async ({ code, c }) => {
+          const ns = getStorageNamespace(code);
+          const [stored, docs] = await Promise.all([downloadJsonOrNull(container, ns.configName(c.classId)), listJson(container, ns.progressPrefix(c.classId))]);
+          const snapshot = stored || svc.buildClassSnapshot(getProjectDefinition(code), c.classId, now);
+          const activeStageIds = new Set((snapshot.stages || []).filter(s => s.active === true).map(s => s.stageId));
+          return countReadyStages(docs, activeStageIds, sid => svc.studentBelongsToClass(usersById.get(String(sid)), c.classId));
+        });
         const byProject = {};
         let total = 0;
-        for (const code of getSupportedProjects()) {
-          byProject[code] = 0;
-          const ns = getStorageNamespace(code);
-          const active = classrooms.filter(c => classHasProject(c, code) && normalizeClassStatus(c) === "active");
-          for (const c of active) {
-            const snapshot = (await downloadJsonOrNull(container, ns.configName(c.classId))) || svc.buildClassSnapshot(getProjectDefinition(code), c.classId, now);
-            const activeStageIds = new Set((snapshot.stages || []).filter(s => s.active === true).map(s => s.stageId));
-            const docs = await listJson(container, ns.progressPrefix(c.classId));
-            const n = countReadyStages(docs, activeStageIds, sid => svc.studentBelongsToClass(usersById.get(String(sid)), c.classId));
-            byProject[code] += n;
-            total += n;
-          }
-        }
+        for (const code of getSupportedProjects()) byProject[code] = 0;
+        pairs.forEach(({ code }, i) => { byProject[code] += counts[i]; total += counts[i]; });
         return { status: 200, jsonBody: { ok: true, totalReadyForReview: total, byProject } };
       }
 
@@ -217,7 +223,7 @@ async function handler(request, deps = {}, obs = null) {
           return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, student: membership.student, evaluation: buildProjectEvaluation(workDef, progress) } };
         }
 
-        const students = await svc.listClassStudents(container, classId);
+        const students = await svc.listClassStudentsForReadViews(container, classId);       // Phase P-2: shared ≤ 20 s scan
 
         if (resource === "summary") {
           const entries = await svc.loadProgressEntries(container, projectCode, classId, students);

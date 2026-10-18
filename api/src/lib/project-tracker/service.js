@@ -18,6 +18,7 @@ const { applyProgressUpdate } = require("../project-794589-progress");
 const { applySelfReport } = require("./self-report");
 const { recordAuditEvent } = require("../audit-log");
 const { isStudentClassMember } = require("../class-membership");
+const { listUsersForReadViews } = require("./user-directory-cache");
 
 // Pure decision: should an existing snapshot be auto-upgraded? Only an ACTIVE class on an older
 // template version with NO meaningful student progress. Exported for unit tests.
@@ -133,7 +134,17 @@ async function ensureClassConfig(container, projectCode, classroom, options = {}
 }
 
 async function listClassStudents(container, classId) {
-  const all = await listJson(container, USER_PREFIX);
+  return classStudentsFrom(await listJson(container, USER_PREFIX), classId);
+}
+
+// Phase P-2 — the SAME roster for the generic route's READ views (summary / students / board / analytics), built from the
+// short-lived user-directory cache (user-directory-cache.js): one scan shared across the workspace tabs for ≤ 20 s. The
+// membership rule is unchanged (user documents decide); write paths never use this.
+async function listClassStudentsForReadViews(container, classId) {
+  return classStudentsFrom(await listUsersForReadViews(container), classId);
+}
+
+function classStudentsFrom(all, classId) {
   return all
     .filter(u => studentBelongsToClass(u, classId)) // single source of the class-membership policy
     .map(u => ({ studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }))
@@ -257,7 +268,7 @@ async function updateTemplate(container, projectCode, classId, patch, now, optio
 module.exports = {
   CLASS_PREFIX, USER_PREFIX,
   buildClassSnapshot, workingDefinition, loadClassroom, ensureClassConfig,
-  listClassStudents, loadStudentUser, studentBelongsToClass, requireStudentInClass, loadProgressEntries, loadStudentProgress,
+  listClassStudents, listClassStudentsForReadViews, loadStudentUser, studentBelongsToClass, requireStudentInClass, loadProgressEntries, loadStudentProgress,
   listProjectClasses, updateStudentProgress, selfReportStages, resetProject, updateTemplate,
   shouldUpgradeSnapshot
 };
