@@ -92,7 +92,23 @@ function progressView(doc, courseId, index, canSee) {
   return { lastPageId: lastVisible ? c.lastPageId : null, lastReadAt: lastVisible ? c.lastReadAt : null, visited, modules };
 }
 
-module.exports = { PROGRESS_PREFIX, progressDocName, loadPageIndex, moduleOfPage, normalizeProgressDoc, visitIsNoop, applyVisit, progressView };
+/**
+ * Phase L.8 — the student's LATEST reading position across every course of the document, in the Today Hub's `lastActivity` shape:
+ * { courseId, moduleId, pageId, completedAt } (completedAt = the time the page was last read), or null. Pure. The portal offers it
+ * only while that module is still among the class's released materials.
+ */
+function latestReadingPosition(doc) {
+  let best = null, bestMs = -Infinity;
+  for (const [courseId, c] of Object.entries(normalizeProgressDoc(doc).courses)) {
+    const ms = Date.parse(String(c.lastReadAt || ""));
+    if (!c.lastPageId || !c.lastModuleId || !Number.isFinite(ms) || ms <= bestMs) continue;
+    bestMs = ms;
+    best = { courseId, moduleId: c.lastModuleId, pageId: c.lastPageId, completedAt: new Date(ms).toISOString() };
+  }
+  return best;
+}
+
+module.exports = { PROGRESS_PREFIX, progressDocName, loadPageIndex, moduleOfPage, normalizeProgressDoc, visitIsNoop, applyVisit, progressView, latestReadingPosition };
 
 // ── Phase L.4: the CLASS reading summary a teacher sees ─────────────────────────────────────────────────────────────
 // Per published unit: how many of the class's students have started it, how many have read all of it, and the average share

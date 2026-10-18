@@ -139,7 +139,7 @@ describe("9A teacher-today — scope, attention counts and recent activity", () 
   });
 });
 
-describe("9A student-dashboard — additive study.lastActivity (same study read, zero extra reads)", () => {
+describe("9A student-dashboard — additive study.lastActivity (the study read; since L.8 also the reading-progress read)", () => {
   const AP = "platform/assignments/", LP = "platform/learning-study/";
   const student = { userId: "u1", classId: "c1", code: "S1", displayName: "علي", active: true, shareAchievements: true };
   const deps = store => ({
