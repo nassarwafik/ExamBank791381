@@ -165,3 +165,30 @@ findings are planned below.
 
 Owner decisions requested for later phases: project display titles (the registry's titles are «مشروع <code>»), hard vs
 recoverable student delete, and whether graduation disables student logins.
+
+## Phase S.1 — grading safety of the roster on the server
+
+AGENTS.md §10 forbids a silent "no answer". Work still awaiting the teacher (a result that is not final, an open attempt)
+must never disappear behind a roster change. The guard of decision 5 (`PENDING_GRADING`) covered a single move, a single
+archive and the bulk move / archive rows; S.1 closes the paths the audit found open.
+
+- **A concurrent move is never written over (bulk move and archive).** The pending-grading check runs against the class
+  the request read. The user write now re-checks that class INSIDE the compare-and-set: if another request moved the
+  student meanwhile, the row is `409 CONCURRENT_MOVE` (the single-student edit already did this). Previously the bulk
+  move wrote the target class over the concurrent move — hiding the work of the class the student had been moved to —
+  and removed the student from the wrong class index; an archive archived the student in their new class unchecked.
+- **Delete honours `PENDING_GRADING`.** Single and bulk delete are refused for a member with pending work (the message
+  offers disabling the account instead, as for archive). An archived student is already outside the class's gradebook
+  and can still be deleted; final results never block. Just before deleting, the student is re-read: one moved
+  meanwhile is refused (`409 CONCURRENT_MOVE`).
+- **Class archive and graduation honour `PENDING_GRADING`.** An archived class refuses its students' submissions (an
+  open attempt can no longer be handed in) and leaves the day's follow-up, so archive and graduate-and-archive are
+  refused (`409`, with `pendingCount`) while a CURRENT member (canonical membership: same class, not archived) has such
+  work. Former members' work is already outside the class's gradebook and never blocks; unarchive is never blocked.
+
+Read cost: the class guard lists the users once (as `reconcileRoster` does) and reuses the pending-grading reader (one
+listing of assignments and of submission names, then each member's existing submissions in this class). Archive is a
+rare action; the scale work is S.2.
+
+Remaining window (unchanged in kind): the guards are check-then-act — an attempt started between the check and the
+write is not covered. The concurrent-move re-check narrows the roster side; a submission-side lock is out of scope.

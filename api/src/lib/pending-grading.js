@@ -60,10 +60,25 @@ function createPendingGradingReader(container) {
 }
 
 function pendingGradingMessage(operation, pending) {
-  const verb = operation === "archive" ? "أرشفة" : "نقل";
+  const verb = operation === "archive" ? "أرشفة" : operation === "delete" ? "حذف" : "نقل";
   return "لا يمكن " + verb + " الطالب الآن: لديه " + pending + (pending === 1 ? " عمل" : " أعمال") +
     " بانتظار التصحيح أو محاولة مفتوحة في صفه الحالي، وستختفي من دفتر علامات الصف. أكمل التصحيح أو أنهِ المحاولة أولًا" +
-    (operation === "archive" ? "، أو عطّل حساب الطالب بدل أرشفته." : ".");
+    (operation === "archive" ? "، أو عطّل حساب الطالب بدل أرشفته." : operation === "delete" ? "، أو عطّل حساب الطالب بدل حذفه." : ".");
 }
 
-module.exports = { submissionNeedsTeacher, createPendingGradingReader, pendingGradingMessage };
+/** Phase S.1 — work of the class's CURRENT members still awaiting the teacher (former members' work is already outside
+ *  the class's gradebook and never blocks): one shared reader, so the cost is the reader's listings plus each member's
+ *  existing submissions in this class. */
+async function pendingForClassMembers(reader, classId, memberIds) {
+  let total = 0;
+  for (const studentId of memberIds) total += await reader.count(String(studentId || ""), String(classId || ""));
+  return total;
+}
+
+function pendingClassMessage(operation, pending) {
+  const verb = operation === "graduateandarchive" ? "تخريج الصف وأرشفته" : "أرشفة الصف";
+  return "لا يمكن " + verb + " الآن: لدى طلابه " + pending + (pending === 1 ? " عمل" : " أعمال") +
+    " بانتظار التصحيح أو محاولات مفتوحة، وبعد الأرشفة لا يستطيع الطلاب تسليم محاولاتهم ولا تظهر في متابعة اليوم. أكمل التصحيح أو أنهِ المحاولات أولًا.";
+}
+
+module.exports = { submissionNeedsTeacher, createPendingGradingReader, pendingGradingMessage, pendingForClassMembers, pendingClassMessage };

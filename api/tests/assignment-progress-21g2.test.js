@@ -52,7 +52,11 @@ describe("21G.2 assignment progress", () => {
     const s = await setup();
     expect((await s.get(s.A)).progress.map(p => p.assignmentId)).toEqual([s.pub]);
     expect((await s.get(s.B)).progress.map(p => p.assignmentId)).toEqual([s.other]);
-    expect((await classrooms.handler(req("POST", { action: "archive", classId: s.a1 }), s.deps(s.A))).status).toBe(200);
+    // Phase S.1: the API refuses to archive a class whose members still have work awaiting the teacher (this fixture has a
+    // pending review and two open attempts) — so the class is archived in storage, exactly as an archived class is stored.
+    expect((await classrooms.handler(req("POST", { action: "archive", classId: s.a1 }), s.deps(s.A))).status).toBe(409);
+    const cls = s.mem.getJson("platform/classes/" + s.a1 + ".json");
+    s.mem.setJson("platform/classes/" + s.a1 + ".json", { ...cls, active: false, status: "archived", archivedAt: "2026-10-17T08:00:00.000Z" });
     expect((await s.get(s.A)).progress).toEqual([]);
   });
 

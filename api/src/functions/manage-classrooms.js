@@ -22,6 +22,7 @@ const { validateLearningModuleIds, findLearningCourse } = require("../lib/learni
 // Classes & Students hardening — the classId is a blob-name segment: only the safe-id alphabet is accepted (a value such
 // as "../auth/<hash>" would otherwise be resolved by the storage SDK to a document outside platform/classes/).
 const { isSafeId, cleanText, LIMITS } = require("../lib/roster-input");
+const { createPendingGradingReader, pendingForClassMembers, pendingClassMessage } = require("../lib/pending-grading");
 
 /**
  * Validates + normalizes the teacher-typed class labels (NFC, invisible/bidi characters removed, whitespace
@@ -374,6 +375,14 @@ async function handler(request, deps = {}, obs = null) {
       const classId = String(body?.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
       const blobName = CLASS_PREFIX + classId + ".json";
+
+      // Phase S.1 (AGENTS.md §10) — an archived class takes its members' open attempts out of reach (submissions are
+      // refused) and its pending results out of the day's follow-up: refused while a CURRENT member has such work.
+      if (action !== "unarchive" && isSafeId(classId)) {
+        const memberIds = canonicalMemberIds(await ls(container, USER_PREFIX), classId);
+        const pending = memberIds.length ? await pendingForClassMembers(createPendingGradingReader(container), classId, memberIds) : 0;
+        if (pending > 0) return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pending, error: pendingClassMessage(action, pending) } };
+      }
 
       let updatedClassroom = null;
       try {
