@@ -96,7 +96,7 @@ describe("R32 — create", () => {
   it("appends the server-returned student, increments the badge, no GET students, exactly one GET classes", async () => {
     postHandler = () => ({ ok: true, student: { userId: "s9", code: "999999999", identityNumber: "999999999", firstName: "جديد", familyName: "طالب", displayName: "جديد طالب", classId: "c1", active: true, archived: false, createdAt: "2026-03-01T00:00:00.000Z", updatedAt: "2026-03-01T00:00:00.000Z", lastLoginAt: "" }, temporaryPassword: "Pw-secret-1", rosterSynced: true });
     await mount();
-    expect(badge()).toBe("3");
+    expect(badge()).toBe("2");                                  // S.0: current members only (S3 is archived), like the class card
     fireEvent.click(screen.getByRole("button", { name: "إضافة طالب" }));
     fireEvent.change(await screen.findByPlaceholderText("الاسم الشخصي"), { target: { value: "جديد" } });
     fireEvent.change(screen.getByPlaceholderText("اسم العائلة"), { target: { value: "طالب" } });
@@ -104,7 +104,7 @@ describe("R32 — create", () => {
     fireEvent.click(screen.getByRole("button", { name: "إنشاء حساب طالب" }));
     await screen.findByText("✓ تم إنشاء حساب الطالب. سيستخدم رقم الهوية لتسجيل الدخول.");
     expect(screen.getByText("جديد")).toBeTruthy();
-    expect(badge()).toBe("4");
+    expect(badge()).toBe("3");
     expect(screen.getByText("Pw-secret-1")).toBeTruthy();       // credential box unchanged
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);
@@ -209,7 +209,7 @@ describe("R32 — delete", () => {
     await screen.findByText("✓ تم حذف الطالب نهائيًا.");
     expect(screen.queryByText("علي")).toBeNull();
     expect(screen.queryByText("1 طالب محدد")).toBeNull();     // selectedIds pruned → bulk bar gone
-    expect(badge()).toBe("2");
+    expect(badge()).toBe("1");
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);
   });
@@ -237,7 +237,7 @@ describe("R32 — edit", () => {
     expect(within(row).getByText("555555555")).toBeTruthy();
     expect(likes("عليّ")).toBe("2");
     expect(within(row).getByText("الوظائف (3)")).toBeTruthy();
-    expect(badge()).toBe("3");
+    expect(badge()).toBe("2");
     expectNoReloads();
   });
 
@@ -251,7 +251,7 @@ describe("R32 — edit", () => {
     await screen.findByText("✓ تم تعديل الطالب ونقله إلى الصف المختار.");
     expect(screen.queryByText("علي")).toBeNull();
     expect(screen.queryByText(/طالب محدد/)).toBeNull();
-    expect(badge()).toBe("2");
+    expect(badge()).toBe("1");
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);
   });

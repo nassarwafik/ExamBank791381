@@ -128,3 +128,40 @@ check (Chromium, mocked API) found the school-year bidi and phone-header defects
 - **Class create** has no idempotency key (a double submit within one render tick creates two classes).
 - **Password hashing** uses Node's default scrypt cost (N=16384); raising it needs a migration-free rehash-on-login plan.
 - **Shared legacy data:** production should set `LEGACY_DATA_OWNER` so pre-tenancy classes are not shared by every teacher.
+
+## Phase S.0 — display safety (the page shows only figures it has)
+
+An audit of the page (code, a real-browser run against the real API on in-memory storage, concurrency and read-cost
+probes) found that the workspace could show figures it did not have. S.0 fixes the teacher-facing part; the server
+findings are planned below.
+
+### Defects fixed
+
+- **Another class's rows under this class's name.** A class switch kept the previous class's rows (with their counts, row
+  actions, bulk move and CSV export) under the new class's header until the new roster arrived, and for good when that
+  read failed. The roster load state now names its class; rows, counts and actions are rendered only once the SELECTED
+  class's roster is loaded, and a switch drops the previous rows before the new read.
+- **A failed read looked like an empty class.** A failed roster read showed «لا يوجد طلاب في هذا الصف بعد» with an add
+  call to action and zero counts; a failed classes read showed «لا توجد صفوف نشطة بعد. أنشئ أول صف» (inviting duplicate
+  classes during an outage). Both are now an error with «إعادة المحاولة» in their pane. A failed REFRESH of data already
+  shown keeps it and reports the failure above the page, as before.
+- **One loading flag for two reads.** The classes read and the roster read shared one flag (the last to finish won), so
+  a superseded read could end the skeleton of the class still loading and show a false empty state. They now have
+  separate states, and a repair-only roster read of a class that is not selected never touches the visible roster.
+- **Zeros while loading.** The five count tiles and the header badge read 0 until the roster arrived; they read «—» until
+  it is loaded (and after a failed read).
+- **Header and class card disagreed.** The header counted archived students (the roster is read with
+  `includeArchived=1`) while the class card's `studentCount` does not; the header now counts the current members and
+  names the archived apart («· N مؤرشف»). The tiles still cover everyone.
+
+### Planned next phases (from the same audit)
+
+| Phase | Scope |
+|---|---|
+| S.1 | Grading safety on the server: a bulk move re-checks the student's class inside the write (409 `CONCURRENT_MOVE`); single and bulk delete, class archive and graduation honour `PENDING_GRADING`. |
+| S.2 | Read cost: a roster read lists the class's members (not every user and every submission name on the platform); a per-teacher class index; the profile and the pending-grading check use the class-assignment index. |
+| S.3 | Credentials and dangerous actions: warn before leaving with an unsaved credential batch, mask passwords by default, a stronger bulk-delete confirmation, an import that can be retried safely. |
+| S.4 | Polish: the class filter layout, phone cards, Arabic number agreement (one shared `arabicCount`), numeric name sort, terminology, accessibility details, dead code. |
+
+Owner decisions requested for later phases: project display titles (the registry's titles are «مشروع <code>»), hard vs
+recoverable student delete, and whether graduation disables student logins.
