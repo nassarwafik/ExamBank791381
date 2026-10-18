@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trackerGet } from "./api";
 import ProgressBar from "../ui/ProgressBar";
 import { toneForTrack } from "./teacherPresentation";
@@ -14,17 +14,21 @@ export default function ProjectDashboard({ token, projectCode, classId, tracks }
   const [summary, setSummary] = useState<ClassSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Phase P-1 — only the LATEST read may populate the view: a slower response for a previously selected class is dropped.
+  const seq = useRef(0);
 
   async function load() {
+    const mine = ++seq.current;
     setLoading(true); setError("");
     try {
       const r = await trackerGet<{ summary: ClassSummary }>(token, projectCode, "summary", { classId });
-      setSummary(r.summary);
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل لوحة المشروع."); }
-    finally { setLoading(false); }
+      if (mine === seq.current) setSummary(r.summary);
+    } catch (e) { if (mine === seq.current) setError(e instanceof Error ? e.message : "تعذر تحميل لوحة المشروع."); }
+    finally { if (mine === seq.current) setLoading(false); }
   }
+  // A new class / project never shows the previous one's numbers while it loads.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, [classId, projectCode]);
+  useEffect(() => { setSummary(null); void load(); }, [classId, projectCode]);
 
   if (loading && !summary) return <p className="eb-muted" role="status">جارٍ تحميل لوحة المشروع...</p>;
   if (error) return <div className="platform-error assignment-inline-message" role="alert">{error} <button type="button" className="eb-button is-small" onClick={() => void load()}>إعادة المحاولة</button></div>;
