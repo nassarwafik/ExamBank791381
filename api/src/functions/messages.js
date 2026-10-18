@@ -56,6 +56,8 @@ const MSG = {
 
 // Phase 21G.0 — teacher tenancy: a teacher messages only their own students and classes.
 const { tenantOf, classAccessible, studentAccessible } = require("../lib/teacher-tenancy");
+// Messages M.4 — finishes pending purges of deleted students' messaging data (one bounded step per poll).
+const { drainStudentPurges } = require("../lib/student-messaging-purge");
 
 async function loadStudent(container, studentId, dl) {
   if (!isSafeId(studentId)) return null;
@@ -120,6 +122,8 @@ async function handle(request, deps = {}, obs = null) {
       if (tenant && studentId && !(await ownStudent(studentId))) return notFound(MSG.studentNotFound);
       if (tenant && classId && !(await ownClass(classId))) return notFound(MSG.classNotFound);
       if (kind === "unread-summary") {
+        // Best-effort and bounded; never affects the summary (a failure leaves the purge pending for a later poll).
+        try { await (deps.drainStudentPurges || drainStudentPurges)(container, deps); } catch { /* stays pending */ }
         if (classId) {
           const classroom = await loadClass(container, classId, dl);
           if (!classroom) return notFound(MSG.classNotFound);
