@@ -192,3 +192,35 @@ rare action; the scale work is S.2.
 
 Remaining window (unchanged in kind): the guards are check-then-act — an attempt started between the check and the
 write is not covered. The concurrent-move re-check narrows the roster side; a submission-side lock is out of scope.
+
+## Phase U.1 — page structure (class bar, full-width roster, side sheet, compact phone cards)
+
+The owner chose the broader UX option. U.1 changes the structure of the page; U.2 takes the remaining details. Nothing
+in the data, the API or the grading path changes.
+
+| # | Decision | Why |
+|---|---|---|
+| U1-a | **One column at every width.** The classes become a bar of cards ABOVE the roster (a grid of cards at most about two rows tall, scrolling inside the bar). The roster takes the whole content width. The 260–300 px sticky side column is gone. | The roster is the work surface. The side column took 27–30 % of the width (the roster had 70 % at 1024 px and 73 % at 1440 px). Below 1024 px it already stacked, as an 690–890 px tall list before the roster. |
+| U1-b | **One toolbar row** for the view switch and the class filter. From 1024 px the heading, that toolbar and «إنشاء صف» / «تحديث» share one row: the header's box is dissolved into the pane's grid (`display:contents`); the markup is unchanged. | In the old column the filter's `flex:1 1 240px` was a HEIGHT: a 240 px tall search box. As a row item it is a width. |
+| U1-c | **The selected card is kept in view by scrolling the list only**, never the page. Sideways (the phone strip) the card's start edge is aligned with the strip's start, which is a snap position. | `scrollIntoView` would also scroll the page, and a teacher scrolled down the roster would jump. The nearest-edge alignment was measured in Chromium: the strip's `scroll-snap` pulled it straight back. |
+| U1-d | **Phone: the classes are one sideways strip** (`scroll-snap-type:x proximity`; each card is 78 % wide, so the next card shows). The roster search keeps a single line (`flex:0 0 auto` in the column toolbar). | Same 240 px basis defect as U1-b, on the roster search on a phone. |
+| U1-e | **Compact phone student card** (233 px → 113 px): the full name on the first line beside the actions (the family name comes from `data-family` on the name, so the DOM text and the desktop column are unchanged; the family cell is hidden on a phone). Then the details flow with inline labels; the status badge and the «الوظائف» link name themselves. The checkbox and the actions sit in the card's corners. | Six labelled lines per student made a 29-student class about 6 800 px long. |
+| U1-f | **`Dialog placement="end"`**: a full-height side sheet at the inline end (the left edge in RTL), 820 px for `size="lg"`; a bottom sheet on a phone. Same modal contract (focus trap, Escape, backdrop, focus return, stacking). The student dialog uses it. | The student's details open beside the roster instead of over it. Every other dialog keeps the centred default. |
+| U1-g | The student dialog's two history tables are named, focusable scroll regions (`role="region"`, `tabIndex=0`), the same as the item-analysis table. | axe `scrollable-region-focusable` (serious) at 390 px, present on the baseline. |
+| U1-h | The clipped «بدون مشروع» chips (390 and 834 px) came from the old column list: its cards were flex items of a 320 px scroll box and shrank, and the legacy `.class-row{overflow:hidden}` cut their last line. The grid cards do not shrink. | Measured in Chromium (chip rectangle against its card and its select button). |
+
+**Evidence.**
+- `scripts/check-classes-students-browser-u1.mjs` runs on the production build and the real API in process, at 390 and 834 px (touch) and at 1024 and 1440 px. It checks the field heights, the chips, the structure and width share, the phone strip and cards, the selected card scrolling into view without a page scroll, the student sheet's placement, Escape and focus return, axe (no serious or critical violation) and horizontal overflow.
+- Its own workflow, `.github/workflows/classes-students-browser-u1.yml`, adds a gate and weakens nothing.
+- Results: on the baseline `a1d8ba80` the gate fails 22 checks; on the head it fails none.
+- `src/students/classesStudents.u1.test.tsx` adds 13 tests. 12 fail on the baseline; the 13th pins the centred default.
+- The mutation campaign plants 13 mutants; all 13 are KILLED.
+
+**Not in U.1 (U.2):**
+- 44 px touch targets for the row checkboxes and the sort buttons on a phone;
+- Arabic number agreement and numeric name sort;
+- the archived-class card details;
+- the empty and loading states of the bar;
+- dead legacy `.class-row` styles.
+
+The class filter layout and the phone cards of the S.4 row above are delivered here.

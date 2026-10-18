@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
@@ -44,6 +44,20 @@ export default function ClassesPane(p: ClassesPaneProps) {
   const [query, setQuery] = useState("");
   const showFilter = p.activeCount + p.archivedCount >= CLASS_FILTER_THRESHOLD;
   const rows = showFilter && query.trim() ? p.classes.filter(c => matchesSearch([c.name, c.grade, c.schoolYear], query)) : p.classes;
+  // U.1 — the class bar scrolls on its own (two rows of cards on a wide screen, a sideways strip on a phone): the selected card is
+  // kept in view by scrolling the LIST only, never the page (a teacher scrolled down the roster stays where they are).
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    const card = list?.querySelector<HTMLElement>(".eb-class-row.selected");
+    if (!list || !card) return;
+    const l = list.getBoundingClientRect(), c = card.getBoundingClientRect();
+    if (c.top < l.top) list.scrollTop -= l.top - c.top; else if (c.bottom > l.bottom) list.scrollTop += c.bottom - l.bottom;
+    // sideways (the phone strip snaps each card's start edge): align the card's start with the strip's start — a snap position,
+    // so the snapping does not pull the strip back
+    const rtl = getComputedStyle(list).direction === "rtl";
+    if (c.left < l.left || c.right > l.right) list.scrollLeft += rtl ? c.right - l.right : c.left - l.left;
+  }, [p.selectedClassId, p.view, rows.length]);
   return (
     <section className="eb-classes-pane" aria-labelledby="eb-classes-title">
       <SectionHeader
@@ -56,18 +70,20 @@ export default function ClassesPane(p: ClassesPaneProps) {
           <IconButton label="تحديث" icon={<IconRefresh size={18} />} onClick={p.onRefresh} disabled={p.loading} />
         </>}
       />
-      <div className="eb-segmented" role="group" aria-label="عرض الصفوف">
-        <button type="button" aria-pressed={p.view === "active"} onClick={() => p.onViewChange("active")}>الصفوف النشطة<span className="eb-segmented-count">{p.activeCount}</span></button>
-        <button type="button" aria-pressed={p.view === "archived"} onClick={() => p.onViewChange("archived")}>الأرشيف<span className="eb-segmented-count">{p.archivedCount}</span></button>
-      </div>
-      {showFilter && (
-        <div className="student-search-field eb-search-field eb-class-filter">
-          <IconSearch size={16} aria-hidden="true" />
-          <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="تصفية الصفوف بالاسم أو المرحلة أو السنة" aria-label="تصفية الصفوف" />
+      <div className="eb-class-toolbar">
+        <div className="eb-segmented" role="group" aria-label="عرض الصفوف">
+          <button type="button" aria-pressed={p.view === "active"} onClick={() => p.onViewChange("active")}>الصفوف النشطة<span className="eb-segmented-count">{p.activeCount}</span></button>
+          <button type="button" aria-pressed={p.view === "archived"} onClick={() => p.onViewChange("archived")}>الأرشيف<span className="eb-segmented-count">{p.archivedCount}</span></button>
         </div>
-      )}
+        {showFilter && (
+          <div className="student-search-field eb-search-field eb-class-filter">
+            <IconSearch size={16} aria-hidden="true" />
+            <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="تصفية الصفوف بالاسم أو المرحلة أو السنة" aria-label="تصفية الصفوف" />
+          </div>
+        )}
+      </div>
       {p.loading && p.classes.length === 0 && <div className="platform-loading" role="status">جارٍ التحميل...</div>}
-      <ul className="class-list eb-class-list">
+      <ul ref={listRef} className="class-list eb-class-list">
         {rows.map(classroom => {
           const active = isActive(classroom);
           const codes = getClassProgramCodes(classroom);

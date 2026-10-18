@@ -93,3 +93,5 @@ artifacts/phase-21e3/
 artifacts/phase-21e2/
 # Phase L.8 — the learning reader real-Chromium gate's record and screenshots (evidence per run, never committed)
 .harness-l8/
+# Phase U.1 — Classes & Students real-Chromium gate records
+.harness-u1/

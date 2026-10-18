@@ -41,9 +41,12 @@ export type DialogProps = {
   describedBy?: string;
   /** Phase 14A — marks a read-only view (an immutable revision); exposed as data-readonly for styling / tests. */
   readOnly?: boolean;
+  /** U.1 — "end": a full-height side sheet at the inline end (the page stays visible beside it); a bottom sheet on a phone.
+   *  Same modal contract as the centred dialog: focus trap, Escape, backdrop, focus return, stacking. */
+  placement?: "center" | "end";
 };
 
-export default function Dialog({ open, title, onClose, children, footer, size = "md", tone = "default", className, initialFocusRef, suspended = false, hideClose = false, describedBy, readOnly = false }: DialogProps) {
+export default function Dialog({ open, title, onClose, children, footer, size = "md", tone = "default", className, initialFocusRef, suspended = false, hideClose = false, describedBy, readOnly = false, placement = "center" }: DialogProps) {
   const reactId = useId();
   const titleId = "eb-dialog-" + reactId.replace(/[^a-zA-Z0-9_-]/g, "") + "-title";
   const token = useRef<symbol | null>(null);
@@ -113,7 +116,7 @@ export default function Dialog({ open, title, onClose, children, footer, size = 
   const hidden = covered || suspended;
   const cls = ["eb-dialog", "size-" + size, "tone-" + tone, className || ""].filter(Boolean).join(" ");
   return createPortal(
-    <div className={"eb-dialog-root" + (suspended ? " is-suspended" : "") + (covered ? " is-covered" : "")} dir="rtl">
+    <div className={"eb-dialog-root" + (placement === "end" ? " is-sheet" : "") + (suspended ? " is-suspended" : "") + (covered ? " is-covered" : "")} dir="rtl">
       <div className="eb-dialog-backdrop" onClick={hidden ? undefined : onClose} aria-hidden="true" data-testid="eb-dialog-backdrop" />
       <div ref={panelRef} className={cls} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={describedBy} aria-hidden={hidden ? true : undefined} inert={hidden ? true : undefined} data-readonly={readOnly ? "true" : undefined}>
         <div className="eb-dialog-head">
