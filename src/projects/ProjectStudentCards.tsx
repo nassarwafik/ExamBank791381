@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { trackerGet } from "./api";
 import { filterStudentCards, fmtDate } from "./helpers";
 import { stageStatusLabel, toneForTrack } from "./teacherPresentation";
@@ -36,17 +36,24 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StudentFilter>("all");
+  // Phase P-1 — only the LATEST read may populate the cards: a slower response for a previously selected class is dropped.
+  const seq = useRef(0);
 
   async function load() {
+    const mine = ++seq.current;
     setLoading(true); setError("");
     try {
       // The students response carries the class config so the "late" threshold is never hard-coded.
       const r = await trackerGet<{ students: StudentCard[]; config?: { lateThreshold?: number } }>(token, projectCode, "students", { classId });
+      if (mine !== seq.current) return;
       setCards(r.students || []);
       if (r.config && Number.isFinite(Number(r.config.lateThreshold))) setLateThreshold(Number(r.config.lateThreshold));
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الطلاب."); }
-    finally { setLoading(false); }
+    } catch (e) { if (mine === seq.current) setError(e instanceof Error ? e.message : "تعذر تحميل الطلاب."); }
+    finally { if (mine === seq.current) setLoading(false); }
   }
+  // A new class / project starts with no cards (never the previous class's students); a reload keeps them until it lands.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setCards([]); }, [classId, projectCode]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [classId, projectCode, reloadNonce]);
 

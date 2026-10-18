@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackerGet } from "./api";
 import ProjectDashboard from "./ProjectDashboard";
 import ProjectStudentCards from "./ProjectStudentCards";
@@ -8,6 +8,7 @@ import ProjectStageSettings from "./ProjectStageSettings";
 import ProjectBulkReview from "./ProjectBulkReview";
 import ActionMenu from "../ui/ActionMenu";
 import EmptyState from "../ui/EmptyState";
+import { useConfirm } from "../ui/useConfirm";
 import StatusBadge from "../ui/StatusBadge";
 import { IconDashboard, IconStudents, IconReports, IconEdit, IconRefresh, IconLock, IconCheck } from "../icons";
 import type { ProjectClass, TrackMeta } from "./types";
@@ -76,6 +77,24 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
   const focusStudentsPending = useRef(false);
   const contextRef = useRef<HTMLDivElement | null>(null);
   const studentsHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  // Phase P-1 (B5) — unsaved «إعداد المراحل» edits: changing the class, the view or refreshing asks first instead of
+  // silently discarding them; closing / reloading the tab gets the browser's own warning.
+  const [settingsDirty, setSettingsDirty] = useState(false);
+  const onSettingsDirty = useCallback((d: boolean) => setSettingsDirty(d), []);
+  const { confirm, confirmDialog } = useConfirm();
+  // Runs `action` at once when nothing is unsaved (unchanged synchronous behaviour); otherwise only after the teacher
+  // chooses to discard the edits.
+  function afterSettingsGuard(action: () => void) {
+    if (!settingsDirty) { action(); return; }
+    void confirm({ title: "تعديلات غير محفوظة", message: "لديك تعديلات غير محفوظة في إعداد المراحل. هل تريد تجاهلها؟", confirmLabel: "تجاهل التعديلات", cancelLabel: "متابعة التعديل", tone: "danger" })
+      .then(ok => { if (ok) { setSettingsDirty(false); action(); } });
+  }
+  useEffect(() => {
+    if (!settingsDirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [settingsDirty]);
 
   async function loadClasses() {
     const seq = ++classesSeq.current, code = projectCode;
@@ -151,7 +170,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
         </div>
         <div className="eb-project-toolbar-controls">
           <label className="eb-field-inline eb-project-class-field">الصف
-            <select value={classId} onChange={e => changeClass(e.target.value)} disabled={!classes.length}>
+            <select value={classId} onChange={e => { const next = e.target.value; afterSettingsGuard(() => changeClass(next)); }} disabled={!classes.length}>
               {!classes.length && <option value="">—</option>}
               {activeClasses.length > 0 && (
                 <optgroup label="الصفوف النشطة">
@@ -168,11 +187,11 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
           {readOnly && <StatusBadge tone="warn" className="eb-project-readonly"><IconLock size={14} aria-hidden="true" />مؤرشف — للقراءة فقط</StatusBadge>}
           <div className="eb-segmented eb-project-views" role="group" aria-label="أقسام المشروع">
             {VIEWS.map(v => (
-              <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => changeView(v.key)} disabled={!classId}>{v.icon(16)}<span>{v.label}</span></button>
+              <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => afterSettingsGuard(() => changeView(v.key))} disabled={!classId}>{v.icon(16)}<span>{v.label}</span></button>
             ))}
           </div>
           <ActionMenu label="المزيد من إجراءات المشروع">
-            <button type="button" className="eb-menu-item" onClick={() => { void loadClasses(); setViewNonce(n => n + 1); }} disabled={loading}><IconRefresh size={16} />تحديث</button>
+            <button type="button" className="eb-menu-item" onClick={() => afterSettingsGuard(() => { void loadClasses(); setViewNonce(n => n + 1); })} disabled={loading}><IconRefresh size={16} />تحديث</button>
           </ActionMenu>
         </div>
       </div>
@@ -200,9 +219,10 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
           )}
           {view === "bulk" && <ProjectBulkReview token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} />}
           {view === "analytics" && <ProjectAnalytics token={token} projectCode={projectCode} classId={classId} tracks={tracks} />}
-          {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} />}
+          {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onSettingsDirty} />}
         </div>
       ) : null}
+      {confirmDialog}
     </section>
   );
 }
