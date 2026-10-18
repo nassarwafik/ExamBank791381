@@ -1,6 +1,6 @@
 # Phase L — Enterprise learning materials («المواد التعليمية») and reader
 
-**Status:** L.0 merged (nassarwafik/ExamBank791381#339); L.1 in review as nassarwafik/ExamBank791381#341; L.2 and L.3 implemented on branch `claude/nifty-clarke-k0wlid`; L.4–L.8 planned. Each phase: exact-head CI, independent
+**Status:** L.0–L.7 merged into `main`; L.8, the closing gate, implemented and in review. Each phase: exact-head CI, independent
 review and the owner's manual merge (`AGENTS.md` §3, §13).
 
 ## 1. Why
@@ -68,7 +68,7 @@ D1–D4 with recommendations). Each decision is recorded here so the owner can r
 | L.6a | Restricted content: module bodies served by the API after the publication check; none ships as a public asset (D2, part 1) | implemented |
 | L.6b | Answer keys, hints and explanations stay on the server; verdict and feedback come from the server for every answer (D2, part 2) | implemented |
 | L.7 | Operations: `exam-library` observability + cache, in-memory `learning-training`, content-chunk bundle budget, measured before / after | implemented |
-| L.8 | Gate: real-browser reader journey (open, navigate, resume, back), axe and 44 px touch targets at 390 / 834 / 1024 / 1440 | planned |
+| L.8 | Gate: real-browser reader journey (open, navigate, resume, back), axe and 44 px touch targets at 390 / 834 / 1024 / 1440 | implemented |
 
 ## 4. Implementation record and evidence (L.0)
 
@@ -757,7 +757,69 @@ This is logged as `learning.class_progress.read_cost`. Nothing is written.
   - `npm run lint`: 0 errors, 123 warnings, the same set as `main`.
   - `npx tsc -b`, `npm run build` and `git diff --check` are clean. The bundle guard passed, printing «Learning content (gzip): Reader first load 33.7 KB (budget 40); manifest 12.2 KB (budget 15); visuals 64.4 KB in 27 chunks (budget 75), largest 6.5 KB (budget 9)»; the initial JS graph is 114.5 KB against 125.
 
-## 13. What the plan leaves to the owner
+## 13. Implementation record and evidence (L.8)
+
+### Decisions taken inside L.8
+
+| # | Decision | Why |
+|---|---|---|
+| L8-a | **The gate runs the production build against the REAL API, in process** (`browser-harness/learning-l8-api.cjs`):<br>• every Azure Functions handler of `api/src/functions`;<br>• the in-memory storage of the API tests;<br>• real signed sessions, with random signing values per run that exist only in that process. | Resume and the server's verdict are server behaviour. A hand-written mock would only prove the mock. Nothing touches Azure, and no secret is involved. |
+| L8-b | **One script, its own workflow:** `scripts/check-learning-reader-browser-l8.mjs` and `.github/workflows/learning-reader-browser-l8.yml`, path-filtered to learning, portal, design-token and learning-API changes. `playwright-core` 1.55.0 and `axe-core` 4.10.2 are installed as measuring tools, not project dependencies. | The same pattern as the 21A–21D real-Chromium certifications. The workflow adds a gate; nothing existing is weakened. |
+| L8-c | **The gate checks:**<br>• **student journey:** open, three pages, the server reading position, resume in the same browser and on a fresh profile (another device);<br>• a served exercise judged by the server;<br>• **teacher journey:** the URL; Back to the book and then the library, because a page turn replaces the entry (L2-b); Forward; reload;<br>• **six screens at 390 and 834 px (touch) and at 1024 and 1440 px:** axe-core WCAG 2.1 A/AA with no serious or critical violation, no horizontal overflow, and on the touch sizes every visible control at least 44 × 44 px (inline links inside running text are exempt, WCAG 2.5.8). | The plan's L.8 row, measured where it matters: the release build in a real engine. |
+| L8-d | **The Today Hub's server continuation is the newer of the last study completion and the last page read.**<br>• The dashboard reads the student's reading-progress document as well (one more read, `K = 6` in the read-cost guard).<br>• The answer keeps its shape: `study.lastActivity = { courseId, moduleId, pageId, completedAt }`. | Found by the gate. On another device the Hub offered «ابدأ الآن» at the first unit, although the server had held the last page read since L.3; only the book card resumed. The portal needs no change. |
+| L8-e | **The unit opener's numeral is painted `--eb-primary`.** | Found by the gate: axe `color-contrast` at 390 and 1024 px. The numeral is decorative (`aria-hidden`) but visible text, and the pale tint measured 1.2:1. `--eb-primary` measures 5.2:1 on white, 4.6:1 on sepia and 3.7:1 on the dark surface, which meets the 3:1 for large text. |
+| L8-f | **A coarse pointer gets 44 px targets in the student portal, whatever the width.** | Found by the gate: 13 controls under 44 px at 834 px with touch (top-bar links 40 px, logout 42, card buttons 34, filter chips 40). The phone rules stop at 720 / 767 px. A mouse keeps the desktop density. |
+
+### What shipped
+
+- **Gate:**
+  - `scripts/check-learning-reader-browser-l8.mjs` (writes a record and screenshots to `HARNESS_OUT`, ignored by git);
+  - `browser-harness/learning-l8-api.cjs`;
+  - `.github/workflows/learning-reader-browser-l8.yml`.
+- **API:**
+  - `api/src/lib/learning-progress.js`: `latestReadingPosition`;
+  - `api/src/functions/student-dashboard.js`: the newer continuation.
+- **CSS:**
+  - `src/learning/reader/reader.css`: the numeral colour. Its pale override in `reader-enterprise-l1.css` is removed.
+  - `src/student/student-portal-v2.css`: the coarse-pointer block.
+- **Tests:**
+  - `api/tests/student-dashboard-reading-l8.test.js` (4);
+  - `src/learning/reader/reader.l8.guards.test.ts` (4);
+  - `read-cost-student-dashboard-12e.test.js`: `FIXED` gains the progress document, deliberately;
+  - `today-hub-9a.test.js`: one title no longer says «zero extra reads».
+- **Docs:** `docs/read-cost-baseline-12e.md` (`K = 6`).
+- **Mutation:** the `l8` campaign.
+
+### Evidence
+
+- **The gate on `main` c6b21e3b** (its own build and its own API, detached worktree): **4 failures.**
+  - **Resume on another device:** the Hub offered «ابدأ الآن · أساسيات الشبكات · أول وحدة متاحة» instead of «تابع القراءة».
+  - **Contrast:** axe `color-contrast` on `.learning-reader-opener-number` at 390 and at 1024 px.
+  - **Touch targets:** 13 controls under 44 px on the student portal at 834 px: الإشعارات 103×40, الرسائل 91×40, الألعاب التعليمية 143×40, تثبيت التطبيق 129×40, تسجيل الخروج 130×42, افتح رسائل المعلم 118×34, تقدمك 62×34, ليس الآن 72×34, and five filter chips at 40.
+- **The gate on the head: passed.**
+  - **Student journey:**
+    - the body comes from the API with the student's session;
+    - three distinct pages;
+    - the server holds `791381-m01-l01-p02`;
+    - resume works in the same browser and on a fresh profile;
+    - a served exercise has no key in its markup and is judged by the server in one request.
+  - **Teacher journey:** the URL, Back ×2, Forward ×2 and reload all pass.
+  - **Audits:** 24 (6 screens × 4 widths), with 0 axe violations of any impact, 0 controls under 44 px on the touch sizes and 0 horizontal overflow.
+- **Fail-first of the unit tests on c6b21e3b:** 6 of 8 fail.
+  - `expected null to deeply equal { courseId: '791381', … }`;
+  - `latestReadingPosition is not a function`;
+  - `expected [ 'var(--eb-surface-2)', … ] to deeply equal [ 'var(--eb-primary)' ]`;
+  - the coarse-pointer block is missing (`expected -1 to be greater than 0`).
+  - **Pins** (they pass on both): the tokens' contrast and «no document → null».
+- **Mutation:** `node scripts/mutate-l.mjs l8` → **6/6 KILLED**, every file restored byte-for-byte.
+  - **Dashboard:** the last page read ignored; the older continuation winning; a course without a page taken as the reading position.
+  - **CSS:** the pale numeral back; tablet chips at 40 px; the 44 px rule by width again.
+- **Full validation on the head:**
+  - `npm test`: 1121 files / 13586 tests passed, 0 failed.
+  - `npm run lint`: 0 errors, 123 warnings, the identical set to `main`.
+  - `npx tsc -b`, `npm run build` (bundle guard passed) and `git diff --check` are clean.
+
+## 14. What the plan leaves to the owner
 
 - **The introduction's content.** When it is authored as a module, adding its id to the manifest's `intro` batch and to
   the server registry turns the «قريبًا» row into a live section. The Strength study module count
