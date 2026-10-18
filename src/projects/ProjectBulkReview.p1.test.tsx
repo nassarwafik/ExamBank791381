@@ -7,7 +7,8 @@
 import { createRequire } from "node:module";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import ProjectBulkReview, { bulkNoticeText } from "./ProjectBulkReview";
+import ProjectBulkReview from "./ProjectBulkReview";
+import { bulkNoticeText } from "./bulkReview";
 import type { TrackMeta } from "./types";
 
 const nodeRequire = createRequire(import.meta.url);
@@ -38,6 +39,8 @@ function server(seed: Record<string, unknown> = {}) {
   });
   const deps = { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async () => {}, recordProjectMilestones: async () => {} };
   const posts: Body[] = [];
+  // Optional: the server "fails" this pair with a storage conflict (it is removed from the request before the real handler).
+  const control: { conflictOn: string } = { conflictOn: "" };
   const holds: Record<string, Promise<void> | undefined> = {};
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input), method = init?.method || "GET";
@@ -45,10 +48,18 @@ function server(seed: Record<string, unknown> = {}) {
     if (method === "POST") posts.push(body!);
     const cid = new URL(url, "https://x").searchParams.get("classId") || "";
     if (method === "GET" && holds[cid]) await holds[cid];
-    const r = await tracker({ method, url: "https://x" + url, json: async () => body ?? {} }, deps);
+    const key = (x: Body) => x.studentId + "|" + x.stageId;
+    const dropped = method === "POST" && control.conflictOn ? (body!.items as Body[]).filter(x => key(x) === control.conflictOn) : [];
+    const sent = dropped.length ? { ...body, items: (body!.items as Body[]).filter(x => key(x) !== control.conflictOn) } : body;
+    const r = await tracker({ method, url: "https://x" + url, json: async () => sent ?? {} }, deps);
+    if (dropped.length) {
+      const j = r.jsonBody as { results: Body[]; totals: Record<string, number> };
+      j.results.push({ studentId: dropped[0].studentId, stageId: dropped[0].stageId, ok: false, error: "conflict" });
+      j.totals = { ...j.totals, requested: j.totals.requested + 1, failed: j.totals.failed + 1 };
+    }
     return { ok: r.status < 400, status: r.status, json: async () => r.jsonBody } as Response;
   }) as unknown as typeof fetch;
-  return { ctx, posts, holds, doc: (sid: string, cid = "c1") => ctx.getJson(NS.progressName(cid, sid)) };
+  return { ctx, posts, holds, control, doc: (sid: string, cid = "c1") => ctx.getJson(NS.progressName(cid, sid)) };
 }
 const bar = () => screen.getByRole("region", { name: "إجراءات التقييم الجماعي" });
 const approveBtn = () => within(bar()).getByRole("button", { name: /اعتماد المحدد/ });
@@ -144,6 +155,24 @@ describe("P1 bulk review — by stage", () => {
     await screen.findByText("تم اعتماد 2 — تعذر 1.");
     expect(s.doc("s1").stages[B1].status).toBe("approved");
     expect(s.doc("s2").stages[B1].status).toBe("ready_for_review");
+  });
+});
+
+describe("P1 bulk review — failed pairs", () => {
+  it("keeps a pair the server could not save selected, with its reason, ready for a retry", async () => {
+    const s = server();
+    await mount();
+    s.control.conflictOn = "s2|" + B1;
+    fireEvent.click(within(bar()).getByRole("button", { name: "تحديد الكل" }));
+    fireEvent.click(approveBtn());
+    await screen.findByText("تم اعتماد 2 — تعذر 1.");
+    await screen.findByText("تعارض مؤقت");
+    expect(within(bar()).getByRole("status").textContent).toBe("1 محدد من 1");
+    expect((screen.getByRole("checkbox", { name: "بيان — " + B1 }) as HTMLInputElement).checked).toBe(true);
+    s.control.conflictOn = "";
+    fireEvent.click(approveBtn());
+    await screen.findByText("تم اعتماد 1.");
+    expect(s.doc("s2").stages[B1].status).toBe("approved");
   });
 });
 

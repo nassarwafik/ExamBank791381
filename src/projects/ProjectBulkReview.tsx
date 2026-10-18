@@ -6,6 +6,7 @@ import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import { useConfirm } from "../ui/useConfirm";
 import { IconCheck } from "../icons";
+import { bulkNoticeText, type BulkTotals } from "./bulkReview";
 import type { ProjectGroup, StageStatus, TrackMeta } from "./types";
 
 type Props = {
@@ -19,7 +20,7 @@ export type BoardCell = { status: StageStatus; score: number | null };
 export type BoardStudent = { studentId: string; displayName: string; code: string; cells: Record<string, BoardCell> };
 export type Board = { readOnly: boolean; stages: BoardStage[]; groups: ProjectGroup[]; students: BoardStudent[] };
 type BulkResult = { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string };
-type BulkResponse = { readyChanged: boolean; results: BulkResult[]; totals: { requested: number; changed: number; unchanged: number; failed: number } };
+type BulkResponse = { readyChanged: boolean; results: BulkResult[]; totals: BulkTotals };
 type Mode = "ready" | "stage";
 
 const EMPTY_CELL: BoardCell = { status: "not_started", score: null };
@@ -30,14 +31,6 @@ const cellOf = (s: BoardStudent, stageId: string): BoardCell => {
 const keyOf = (studentId: string, stageId: string) => studentId + "|" + stageId;
 const parseKey = (key: string) => { const i = key.indexOf("|"); return { studentId: key.slice(0, i), stageId: key.slice(i + 1) }; };
 const ERROR_TEXT: Record<string, string> = { not_member: "الطالب لم يعد في الصف", stage_inactive: "المرحلة غير مفعّلة", conflict: "تعارض مؤقت", invalid: "قيمة غير صحيحة", failed: "تعذر الحفظ" };
-
-/** «تم اعتماد 3 — لم يتغير 1 — تعذر 1» from the server's totals (presentation only). */
-export function bulkNoticeText(verb: string, totals: BulkResponse["totals"]): string {
-  const parts = [verb + " " + totals.changed];
-  if (totals.unchanged) parts.push("دون تغيير " + totals.unchanged);
-  if (totals.failed) parts.push("تعذر " + totals.failed);
-  return parts.join(" — ") + ".";
-}
 
 /**
  * Phase P1 — bulk review. The teacher's fastest path through a class: ONE `board` read (every member × every active

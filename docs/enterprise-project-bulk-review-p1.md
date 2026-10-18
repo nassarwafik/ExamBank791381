@@ -54,6 +54,22 @@ the single-stage path (`project.stage.approve` / `project.stage.status_change` /
 - `api/tests/project-bulk-review-p1.test.js` — board projection, bulk approve, same-student multi-stage, idempotency,
   score with status, per-item failures, duplicate collapse, seven validation rejections (nothing written), archived 403.
 - `src/projects/ProjectBulkReview.p1.test.tsx` — the view over the real handler: ready list, one request without a
-  score, optional score + range guard, by-stage approval, confirm-before-return, failed pair kept selected, stale class
+  score, optional score + range guard, by-stage approval, confirm-before-return, failed pair kept selected (departed student and storage conflict), stale class
   response dropped, archived read-only.
 - `src/projects/ProjectWorkspace.ux6.test.tsx` — the toolbar view list now includes «التقييم الجماعي».
+
+## Mutation proof
+
+Each mutant was planted alone, the two focused suites were run, and the file was restored byte-for-byte (sha256-checked).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | server accepts an unknown status | KILLED | rejects an unknown status with 400 |
+| M2 | duplicate pairs are not collapsed | KILLED | collapses duplicate pairs to one write |
+| M3 | server accepts a note | KILLED | rejects a note with 400 |
+| M4 | a no-op is reported as changed | KILLED | idempotent: changes nothing, no audit |
+| M5 | body with neither status nor score accepted | KILLED | rejects neither status nor score |
+| M6 | board request-sequence guard removed | KILLED | never shows a slower board of the previous class |
+| M7 | failed pairs are deselected | KILLED | keeps a pair the server could not save selected |
+| M8 | approval always sends a score | KILLED | approves in ONE request without a score |
+| M9 | «إرجاع» skips the confirmation | KILLED | asks before returning stages to in-progress |
