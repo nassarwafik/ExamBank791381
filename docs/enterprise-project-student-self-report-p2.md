@@ -74,3 +74,21 @@ Teacher side: the `board` cell carries `selfReported: true`; `progress.update` a
 - `src/projects/StudentSelfReport.p2.test.tsx` — the student flow and the teacher confirmation over the real handlers.
 - `src/StudentPortal.ux7a.test.tsx` — new source guard: the only student project write lives in
   `studentSelfReport.ts` and sends just `{ projectCode, stageIds, mark }`.
+
+## Mutation proof
+
+Each mutant planted alone; the P1 + P2 focused suites run; the file restored byte-for-byte (sha256-checked).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| N1 | student may undo a teacher-approved stage | KILLED | never changes or undoes a stage the teacher approved |
+| N2 | student mark overwrites an approved stage | KILLED | idempotent marking; teacher-approved untouched |
+| N3 | archived-class 403 removed | KILLED | archived 403 (API) + refusal shown (UI) |
+| N4 | body `studentId` honoured | KILLED | writes only the session student's own document |
+| N5 | project-runs-in-class check removed | KILLED | rejects a project the class does not run |
+| N6 | teacher re-approval not treated as confirmation | KILLED | re-approving confirms; bulk-confirm |
+| N7 | teacher status write keeps the self-report stamps | KILLED | confirmation clears stamps; bulk-cancel |
+| N8 | inactive / unknown stages written | KILLED | inactive stage reported, not written |
+| N9 | checkbox offered on an approved stage | KILLED | never offers a teacher-approved stage |
+| N10 | any approved stage shown as the student's own | KILLED | marking flow; undo flow |
+| N11 | non-boolean `mark` accepted | KILLED | rejects a non-boolean mark |
