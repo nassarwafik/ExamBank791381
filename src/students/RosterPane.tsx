@@ -17,7 +17,13 @@ export type RosterPaneProps = {
   students: Student[];
   visibleStudents: Student[];
   stats: { total: number; active: number; disabled: number; archived: number; neverLogged: number };
+  /** The selected class's roster is not loaded yet (or, with no class selected, the classes are still loading). */
   loading: boolean;
+  /** A read of the already loaded roster is in flight (the rows stay; only «تحديث» waits). */
+  refreshing?: boolean;
+  /** Phase S.0 — the roster read failed: shown as an error with «إعادة المحاولة», never as an empty class. */
+  loadError?: string;
+  onRetry?: () => void;
   busy: boolean;
   searchText: string; onSearch: (v: string) => void;
   statusFilter: StatusFilter; onStatusFilter: (v: StatusFilter) => void;
@@ -61,10 +67,15 @@ export default function RosterPane(p: RosterPaneProps) {
     return (
       <section className="eb-roster-pane" aria-labelledby="eb-roster-title">
         <SectionHeader level={2} id="eb-roster-title" title="الطلاب" />
-        <EmptyState title="اختر صفًا لإدارة طلابه" description="أنشئ صفًا أو اختر صفًا من القائمة لعرض قائمة الطلاب وإدارتها." />
+        {p.loading
+          ? <div className="platform-loading" role="status">جارٍ التحميل...</div>
+          : <EmptyState title="اختر صفًا لإدارة طلابه" description="أنشئ صفًا أو اختر صفًا من القائمة لعرض قائمة الطلاب وإدارتها." />}
       </section>
     );
   }
+  // Phase S.0 — figures are shown only for a loaded roster; until then (or after a failed read) they read «—», never 0.
+  const ready = !p.loading && !p.loadError;
+  const shown = (n: number) => (ready ? String(n) : "—");
   const allVisibleSelected = p.visibleStudents.length > 0 && p.visibleStudents.every(s => p.selectedIds.includes(s.userId));
   const sortTh = (key: SortKey, label: string) => (
     <th key={key} scope="col" aria-sort={p.sortKey === key ? (p.sortAsc ? "ascending" : "descending") : undefined}>
@@ -73,13 +84,18 @@ export default function RosterPane(p: RosterPaneProps) {
   );
   const statusTone = (s: Student) => s.archived ? "neutral" : s.active ? "success" : "warn";
   let tableBody: ReactNode;
-  if (p.loading && p.students.length === 0) tableBody = (
+  if (p.loadError) tableBody = (
+    <div className="eb-roster-load-error" role="alert">
+      <EmptyState title="تعذر تحميل طلاب هذا الصف." description={p.loadError} action={p.onRetry ? <button type="button" className="eb-button is-small" onClick={p.onRetry}><IconRefresh size={16} />إعادة المحاولة</button> : undefined} />
+    </div>
+  );
+  else if (p.loading) tableBody = (
     <div className="eb-roster-skeleton" role="status">
       <VisuallyHidden>جارٍ تحميل الطلاب...</VisuallyHidden>
       {Array.from({ length: SKELETON_ROWS }, (_, i) => <div key={i} className="eb-skeleton-row" aria-hidden="true"><span className="eb-skeleton-dot" /><span className="eb-skeleton-bar" /><span className="eb-skeleton-bar is-short" /></div>)}
     </div>
   );
-  else if (!p.loading && p.students.length === 0) tableBody = <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طالبًا واحدًا أو استورد قائمة كاملة من ملف." action={p.classActive ? <button type="button" className="eb-button is-primary is-small" onClick={p.onAddStudent}><IconPlus size={16} />إضافة طالب</button> : undefined} />;
+  else if (p.students.length === 0) tableBody = <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طالبًا واحدًا أو استورد قائمة كاملة من ملف." action={p.classActive ? <button type="button" className="eb-button is-primary is-small" onClick={p.onAddStudent}><IconPlus size={16} />إضافة طالب</button> : undefined} />;
   else if (p.visibleStudents.length === 0) tableBody = <EmptyState compact title="لا توجد نتائج مطابقة." description="جرّب كلمة بحث أخرى أو غيّر مرشح الحالة." />;
 
   return (
@@ -88,13 +104,13 @@ export default function RosterPane(p: RosterPaneProps) {
         level={2}
         id="eb-roster-title"
         title={classroom.name}
-        description={<><span className="student-count-badge">{p.students.length}</span> طالب · {classroom.grade || "—"}{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""} · <StatusBadge tone={p.classActive ? "success" : "neutral"}>{p.classActive ? "فعّال" : "مؤرشف"}</StatusBadge></>}
+        description={<><span className="student-count-badge">{shown(p.stats.total - p.stats.archived)}</span> طالب{ready && p.stats.archived > 0 ? <> · {p.stats.archived} مؤرشف</> : ""} · {classroom.grade || "—"}{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""} · <StatusBadge tone={p.classActive ? "success" : "neutral"}>{p.classActive ? "فعّال" : "مؤرشف"}</StatusBadge></>}
         actions={<>
           <button type="button" className="eb-button is-primary" onClick={p.onAddStudent} disabled={p.busy || !p.classActive}><IconPlus size={16} />إضافة طالب</button>
           <button type="button" className="eb-button" onClick={p.onImport} disabled={p.busy || !p.classActive}><IconUpload size={16} />استيراد</button>
           <ActionMenu label="المزيد من إجراءات الصف">
-            <button type="button" className="eb-menu-item" onClick={p.onRefresh} disabled={p.loading}><IconRefresh size={16} />تحديث</button>
-            <button type="button" className="eb-menu-item" onClick={p.onExportCsv}><IconDownload size={16} />تصدير CSV</button>
+            <button type="button" className="eb-menu-item" onClick={p.onRefresh} disabled={p.loading || p.refreshing}><IconRefresh size={16} />تحديث</button>
+            <button type="button" className="eb-menu-item" onClick={p.onExportCsv} disabled={!ready}><IconDownload size={16} />تصدير CSV</button>
           </ActionMenu>
         </>}
       />
@@ -113,10 +129,10 @@ export default function RosterPane(p: RosterPaneProps) {
         </section>
       )}
 
-      <div className="student-admin-stats eb-roster-stats" role="group" aria-label="ملخص الصف — اختر رقمًا لعرض طلابه">
+      <div className="student-admin-stats eb-roster-stats" role="group" aria-label="ملخص الصف — اختر رقمًا لعرض طلابه" aria-busy={!ready || undefined}>
         {STAT_FILTERS.map(f => (
           <button key={f.key} type="button" className={"eb-roster-stat tone-" + f.tone} aria-pressed={p.statusFilter === f.filter} onClick={() => p.onStatusFilter(p.statusFilter === f.filter ? "all" : f.filter)}>
-            <span className="eb-roster-stat-label">{f.label}</span><strong className="eb-roster-stat-value">{p.stats[f.key]}</strong>
+            <span className="eb-roster-stat-label">{f.label}</span><strong className="eb-roster-stat-value">{shown(p.stats[f.key])}</strong>
           </button>
         ))}
       </div>

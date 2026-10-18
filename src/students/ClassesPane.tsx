@@ -29,6 +29,9 @@ export type ClassesPaneProps = {
   onEdit?: (classroom: Classroom) => void;
   onRefresh: () => void;
   loading: boolean;
+  /** Phase S.0 — the classes read failed: an error with «إعادة المحاولة», never «no classes yet». */
+  loadError?: string;
+  onRetry?: () => void;
   busy: boolean;
   fmtDate: (value: string) => string;
 };
@@ -98,7 +101,12 @@ export default function ClassesPane(p: ClassesPaneProps) {
         })}
       </ul>
       {showFilter && query.trim() && p.classes.length > 0 && rows.length === 0 && <p className="eb-muted">لا توجد صفوف مطابقة للتصفية.</p>}
-      {!p.loading && p.classes.length === 0 && (
+      {p.loadError && p.classes.length === 0 && (
+        <div className="eb-classes-load-error" role="alert">
+          <EmptyState compact title="تعذر تحميل الصفوف." description={p.loadError} action={p.onRetry ? <button type="button" className="eb-button is-small" onClick={p.onRetry}><IconRefresh size={16} />إعادة المحاولة</button> : undefined} />
+        </div>
+      )}
+      {!p.loading && !p.loadError && p.classes.length === 0 && (
         p.view === "active"
           ? <EmptyState compact title="لا توجد صفوف نشطة بعد." description="أنشئ أول صف لبدء إضافة الطلاب." action={<button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}><IconPlus size={16} />إنشاء صف</button>} />
           : <EmptyState compact title="لا توجد صفوف مؤرشفة." description="الصفوف المؤرشفة أو المُخرَّجة تظهر هنا مع الاحتفاظ ببياناتها." />
