@@ -488,6 +488,9 @@ async function archiveStudent(container, student, obs = null) {
   try {
     await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
       if (!current || current.archived === true) throw new SkipMutation();
+      // Phase S.1 — the pending-grading check ran against the class read before this write; a move to another class
+      // in between is refused, never archived over (its work there could be hidden).
+      if (String(current.classId || "") !== String(student.classId || "")) throw new StudentActionError(409, CONCURRENT_MOVE);
       const now = new Date().toISOString();
       current.archived = true;
       current.active = false;
@@ -539,6 +542,9 @@ async function moveStudent(container, student, targetClassId, obs = null) {
   try {
     await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
       if (!current) throw new SkipMutation();
+      // Phase S.1 — a concurrent move (checked or not) is never written over: the pending-grading check and the
+      // old-class index removal below are only valid for the class this request read.
+      if (String(current.classId || "") !== oldClassId) throw new StudentActionError(409, CONCURRENT_MOVE);
       current.classId = targetClassId;
       current.updatedAt = new Date().toISOString();
       return current;
@@ -556,6 +562,9 @@ async function moveStudent(container, student, targetClassId, obs = null) {
 }
 
 async function deleteStudent(container, student, obs = null, { purgeBudget = PURGE_STEP_BUDGET } = {}) {
+  // Phase S.1 — the pending-grading check ran against the class read earlier; a student moved meanwhile is refused.
+  const fresh = await downloadJsonOrNull(container, USER_PREFIX + student.userId + ".json");
+  if (fresh && String(fresh.classId || "") !== String(student.classId || "")) throw new StudentActionError(409, CONCURRENT_MOVE);
   // Roadmap #25 ordering: authoritative deletes first (auth, then user), index removal last and best-effort.
   // M.4 — the durable purge record goes first, so the messaging purge is finished later even if this request dies
   // after the user document is gone; a failure to write it never blocks the delete (the inline step still runs).
@@ -802,7 +811,7 @@ function rowErrorMessage(error, fallback, obs) {
   return fallback;
 }
 
-// Refuses (409 PENDING_GRADING) a move/archive of a class member whose current class still has work awaiting the
+// Refuses (409 PENDING_GRADING) a move/archive/delete of a class member whose current class still has work awaiting the
 // teacher — see lib/pending-grading.js. Archived students are already outside the read population.
 async function assertNoPendingGrading(reader, student, operation) {
   if (!reader || student.archived === true) return;
@@ -1263,6 +1272,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           return { status: 200, jsonBody: { ok: true, archived: false, active: true, rosterSynced: sync.synced } };
         }
 
+        await assertNoPendingGrading(createPendingGradingReader(container), student, "delete");
         const deleteSync = await deleteStudent(container, student, obs);
         await rec(container, {
           actor: auth.user?.sub,
@@ -1309,7 +1319,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const credentials = [];
         let rosterSynced = true;                      // Roadmap #25: aggregate index sync status of the batch
         const note = sync => { if (sync && sync.synced === false) rosterSynced = false; };
-        const pendingReader = operation === "move" || operation === "archive" ? createPendingGradingReader(container) : null;
+        const pendingReader = operation === "move" || operation === "archive" || operation === "delete" ? createPendingGradingReader(container) : null;
 
         for (const userId of userIds) {
           try {
@@ -1349,6 +1359,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               });
             } else if (operation === "delete") {
               // M.4 — a smaller inline purge step per student in a batch (up to 250 students); the rest is drained.
+              await assertNoPendingGrading(pendingReader, student, "delete");
               const deleted = await deleteStudent(container, student, obs, { purgeBudget: BULK_PURGE_STEP_BUDGET });
               note(deleted);
               await rec(container, {
