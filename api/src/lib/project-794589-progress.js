@@ -19,7 +19,8 @@ function emptyProgress({ programCode, classId, studentId, now }) {
 }
 
 // update: { stageId, status?, note?, score?, actor, now, programCode, classId, studentId }
-// Returns { doc, statusChanged, noteChanged, scoreChanged, fromStatus, toStatus, fromScore, toScore }.
+// Returns { doc, statusChanged, verified, noteChanged, scoreChanged, fromStatus, toStatus, fromScore, toScore }
+// (`verified`: the teacher confirmed a stage the student had marked as done — Phase P2).
 // `score` (teacher-only quality mark 0–100, additive/optional) is validated server-side; `null` clears it. It is
 // independent of `status` (workflow) — the project grade counts it only while the stage is approved.
 function applyProgressUpdate(current, update) {
@@ -36,6 +37,7 @@ function applyProgressUpdate(current, update) {
   const next = { ...prev };
 
   let statusChanged = false;
+  let verified = false;
   let toStatus = fromStatus;
   if (update.status !== undefined) {
     if (!STATUSES.includes(update.status)) {
@@ -46,6 +48,13 @@ function applyProgressUpdate(current, update) {
     toStatus = update.status;
     if (toStatus !== fromStatus) statusChanged = true;
     next.status = toStatus;
+    // Phase P2 — a stage the STUDENT marked as done is approved but carries selfReported*. Every teacher status write
+    // ends the self-report: approving it again is the teacher's confirmation (a real change), any other status
+    // cancels it. Only the teacher routes call this function, so `actor` is always a teacher here.
+    if (prev.selfReportedAt && fromStatus === "approved" && toStatus === "approved") verified = true;
+    delete next.selfReportedAt;
+    delete next.selfReportedBy;
+    delete next.selfReportedFrom;
     if (toStatus === "approved") {
       next.approvedAt = now;
       next.approvedBy = actor || "";
@@ -74,7 +83,7 @@ function applyProgressUpdate(current, update) {
     if (toScore === null) delete next.score; else next.score = toScore;
   }
 
-  if (!statusChanged && !noteChanged && !scoreChanged) {
+  if (!statusChanged && !verified && !noteChanged && !scoreChanged) {
     // Nothing to do - signal a no-op so the caller can avoid a pointless write/audit.
     const err = new Error("لا يوجد تغيير.");
     err.code = "NO_CHANGE";
@@ -85,13 +94,14 @@ function applyProgressUpdate(current, update) {
   doc.stages[stageId] = next;
   doc.updatedAt = now;
 
-  if (statusChanged) {
+  if (statusChanged || verified) {
     doc.history.push({
       eventId: crypto.randomUUID(),
       stageId,
       type: "status",
       fromStatus,
       toStatus,
+      ...(verified ? { verified: true } : {}),
       actor: actor || "",
       createdAt: now
     });
@@ -118,7 +128,7 @@ function applyProgressUpdate(current, update) {
     });
   }
 
-  return { doc, statusChanged, noteChanged, scoreChanged, fromStatus, toStatus, fromScore, toScore };
+  return { doc, statusChanged, verified, noteChanged, scoreChanged, fromStatus, toStatus, fromScore, toScore };
 }
 
 module.exports = { emptyProgress, applyProgressUpdate };

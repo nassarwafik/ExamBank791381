@@ -366,6 +366,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                   {stages.map(stage => {
                     const entry = detail.progress[stage.stageId];
                     const status = normalizeStageStatus(entry?.status);
+                    const selfReported = status === "approved" && !!entry?.selfReportedAt;   // P2: marked by the student, not confirmed yet
                     const isOpen = openStageId === stage.stageId;
                     const stagePanelId = "eb-stage-" + stage.stageId;
                     const saved = canonicalScore(entry);
@@ -394,7 +395,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                             {entry?.note ? <small className="eb-stage-note-flag">ملاحظة</small> : null}
                             <small className="eb-muted eb-stage-date">{fmtDate(entry?.updatedAt || "")}</small>
                           </div>
-                          <div className="eb-stage-cell-status"><StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge></div>
+                          <div className="eb-stage-cell-status"><StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge>{selfReported && <StatusBadge tone="warn">حدّدها الطالب</StatusBadge>}</div>
                           <div className="eb-stage-cell-score">
                             {readOnly ? (
                               <span className="eb-stage-score-text" dir="ltr">{saved === "" ? "—" : fmtContribution(entry!.score as number)} / 100</span>
@@ -417,7 +418,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                           <div className="eb-stage-cell-actions">
                             {!readOnly && (
                               <>
-                                <button type="button" className="eb-button is-primary is-small" disabled={statusBusy || status === "approved"} onClick={() => updateStage(stage, { status: "approved" })} aria-label={"اعتماد المرحلة " + stage.stageId}><IconCheck size={16} />اعتماد</button>
+                                <button type="button" className="eb-button is-primary is-small" disabled={statusBusy || (status === "approved" && !selfReported)} onClick={() => updateStage(stage, { status: "approved" })} aria-label={(selfReported ? "تأكيد المرحلة " : "اعتماد المرحلة ") + stage.stageId}><IconCheck size={16} />{selfReported ? "تأكيد" : "اعتماد"}</button>
                                 <ActionMenu label={"تغيير حالة المرحلة " + stage.stageId} text="الحالة" disabled={statusBusy}>
                                   {STAGE_STATUS_ORDER.filter(st => st !== "approved").map(st => (
                                     <button key={st} type="button" className="eb-menu-item" disabled={statusBusy || status === st} onClick={() => updateStage(stage, { status: st })}>{stageStatusLabel(st)}</button>
@@ -478,7 +479,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
             {timeline.map(ev => (
               <li key={ev.eventId}>
                 <span className="eb-timeline-date">{fmtDate(ev.createdAt)}</span>
-                <span className="eb-timeline-text">{ev.type === "status" && ev.toStatus ? stageStatusLabel(ev.toStatus) + " — " + ev.stageId : ev.type === "score" ? (typeof ev.toScore === "number" ? "علامة " + fmtContribution(ev.toScore) + " / 100 — " + ev.stageId : "مسح العلامة — " + ev.stageId) : "ملاحظة — " + ev.stageId}</span>
+                <span className="eb-timeline-text">{ev.type === "status" && ev.toStatus ? (ev.source === "student" ? (ev.toStatus === "approved" ? "حدّدها الطالب كمنفّذة" : "تراجع الطالب عن التحديد") : ev.verified ? "تأكيد المعلم" : stageStatusLabel(ev.toStatus)) + " — " + ev.stageId : ev.type === "score" ? (typeof ev.toScore === "number" ? "علامة " + fmtContribution(ev.toScore) + " / 100 — " + ev.stageId : "مسح العلامة — " + ev.stageId) : "ملاحظة — " + ev.stageId}</span>
               </li>
             ))}
           </ol>

@@ -16,17 +16,19 @@ type Props = {
 };
 
 export type BoardStage = { stageId: string; track: string; groupId: string; title: string; order: number; required: boolean };
-export type BoardCell = { status: StageStatus; score: number | null };
+export type BoardCell = { status: StageStatus; score: number | null; selfReported?: boolean };
 export type BoardStudent = { studentId: string; displayName: string; code: string; cells: Record<string, BoardCell> };
 export type Board = { readOnly: boolean; stages: BoardStage[]; groups: ProjectGroup[]; students: BoardStudent[] };
 type BulkResult = { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string };
 type BulkResponse = { readyChanged: boolean; results: BulkResult[]; totals: BulkTotals };
-type Mode = "ready" | "stage";
+type Mode = "ready" | "self" | "stage";
 
 const EMPTY_CELL: BoardCell = { status: "not_started", score: null };
 const cellOf = (s: BoardStudent, stageId: string): BoardCell => {
   const c = s.cells[stageId];
-  return c ? { status: normalizeStageStatus(c.status), score: typeof c.score === "number" ? c.score : null } : EMPTY_CELL;
+  if (!c) return EMPTY_CELL;
+  const status = normalizeStageStatus(c.status);
+  return { status, score: typeof c.score === "number" ? c.score : null, selfReported: status === "approved" && c.selfReported === true };
 };
 const keyOf = (studentId: string, stageId: string) => studentId + "|" + stageId;
 const parseKey = (key: string) => { const i = key.indexOf("|"); return { studentId: key.slice(0, i), stageId: key.slice(i + 1) }; };
@@ -78,6 +80,13 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
     for (const student of board.students) for (const stage of stages) if (cellOf(student, stage.stageId).status === "ready_for_review") out.push({ student, stage });
     return out;
   }, [board, stages]);
+  // Phase P2 — stages the STUDENTS marked as done (already counted) that the teacher has not confirmed yet.
+  const selfPairs = useMemo(() => {
+    if (!board) return [];
+    const out: { student: BoardStudent; stage: BoardStage }[] = [];
+    for (const student of board.students) for (const stage of stages) if (cellOf(student, stage.stageId).selfReported) out.push({ student, stage });
+    return out;
+  }, [board, stages]);
   const readyByStage = useMemo(() => {
     const m: Record<string, number> = {};
     for (const p of readyPairs) m[p.stage.stageId] = (m[p.stage.stageId] || 0) + 1;
@@ -86,8 +95,9 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
   const trackStages = useMemo(() => stages.filter(s => s.track === track), [stages, track]);
   const groupTitle = useMemo(() => new Map((board?.groups || []).map(g => [g.groupId, g.title])), [board]);
 
-  // Until the teacher picks a mode: the ready list when something waits, else «حسب المرحلة» on the first stage with work.
-  const mode: Mode = chosenMode ?? (readyPairs.length ? "ready" : "stage");
+  // Until the teacher picks a mode: the ready list when something waits, then the students' own marks, else «حسب المرحلة».
+  const mode: Mode = chosenMode ?? (readyPairs.length ? "ready" : selfPairs.length ? "self" : "stage");
+  const pairs = mode === "ready" ? readyPairs : selfPairs;
   useEffect(() => {
     if (!board || (stageId && trackStages.some(s => s.stageId === stageId))) return;
     const first = trackStages.find(s => readyByStage[s.stageId]) || trackStages[0];
@@ -96,8 +106,8 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
 
   const locked = readOnly || !!board?.readOnly;
   const stage = stages.find(s => s.stageId === stageId) || null;
-  const visibleKeys = mode === "ready"
-    ? readyPairs.map(p => keyOf(p.student.studentId, p.stage.stageId))
+  const visibleKeys = mode !== "stage"
+    ? pairs.map(p => keyOf(p.student.studentId, p.stage.stageId))
     : stage && board ? board.students.map(s => keyOf(s.studentId, stage.stageId)) : [];
   const selectedVisible = visibleKeys.filter(k => selected.has(k));
   const allVisibleSelected = visibleKeys.length > 0 && selectedVisible.length === visibleKeys.length;
@@ -154,6 +164,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
   const cellBadge = (cell: BoardCell) => (
     <span className="eb-bulk-cell">
       <StatusBadge tone={STAGE_STATUS_TONE[cell.status]}>{stageStatusLabel(cell.status)}</StatusBadge>
+      {cell.selfReported && <StatusBadge tone="warn">حدّدها الطالب</StatusBadge>}
       {cell.score !== null && <span className="eb-muted" dir="ltr">{fmtContribution(cell.score)} / 100</span>}
     </span>
   );
@@ -168,6 +179,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
 
       <div className="eb-segmented eb-bulk-modes" role="group" aria-label="طريقة العرض">
         <button type="button" aria-pressed={mode === "ready"} onClick={() => changeMode("ready")}>بانتظار الاعتماد ({readyPairs.length})</button>
+        <button type="button" aria-pressed={mode === "self"} onClick={() => changeMode("self")}>حدّدها الطلاب ({selfPairs.length})</button>
         <button type="button" aria-pressed={mode === "stage"} onClick={() => changeMode("stage")}>حسب المرحلة</button>
       </div>
 
@@ -196,6 +208,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
                 <>
                   <button type="button" className="eb-button is-small" disabled={busy} onClick={() => selectOnly(board.students.filter(s => cellOf(s, stage.stageId).status === "ready_for_review").map(s => keyOf(s.studentId, stage.stageId)))}>تحديد الجاهزين</button>
                   <button type="button" className="eb-button is-small" disabled={busy} onClick={() => selectOnly(board.students.filter(s => cellOf(s, stage.stageId).status !== "approved").map(s => keyOf(s.studentId, stage.stageId)))}>تحديد غير المعتمدين</button>
+                  <button type="button" className="eb-button is-small" disabled={busy} onClick={() => selectOnly(board.students.filter(s => cellOf(s, stage.stageId).selfReported).map(s => keyOf(s.studentId, stage.stageId)))}>تحديد ما حدّده الطلاب</button>
                 </>
               )}
             </div>
@@ -203,8 +216,8 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
               <label className="eb-field-inline eb-bulk-score">علامة موحّدة (اختياري)
                 <input type="number" inputMode="decimal" min={0} max={100} step={0.5} dir="ltr" value={score} onChange={e => setScore(e.target.value)} placeholder="—" aria-invalid={scoreInvalid || undefined} disabled={busy} />
               </label>
-              <button type="button" className="eb-button is-primary is-small" disabled={busy || !selectedVisible.length || scoreInvalid} onClick={() => void apply("approved", "تم اعتماد")}>
-                <IconCheck size={16} />{busy ? "جارٍ الحفظ…" : "اعتماد المحدد"}
+              <button type="button" className="eb-button is-primary is-small" disabled={busy || !selectedVisible.length || scoreInvalid} onClick={() => void apply("approved", mode === "self" ? "تم تأكيد" : "تم اعتماد")}>
+                <IconCheck size={16} />{busy ? "جارٍ الحفظ…" : mode === "self" ? "تأكيد المحدد" : "اعتماد المحدد"}
               </button>
               <button type="button" className="eb-button is-small" disabled={busy || !selectedVisible.length} onClick={() => void apply("in_progress", "أُرجعت إلى قيد التنفيذ")}>إرجاع إلى قيد التنفيذ</button>
             </div>
@@ -213,10 +226,11 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
         </div>
       )}
 
-      {mode === "ready" && (
-        readyPairs.length ? (
-          <ul className="eb-bulk-list" aria-label="مراحل بانتظار الاعتماد">
-            {readyPairs.map(({ student, stage: st }) => {
+      {mode === "self" && <p className="eb-muted">مراحل حدّدها الطلاب كمنفّذة وتُحتسب في تقدّمهم الآن. «تأكيد المحدد» يعتمدها باسمك، و«إرجاع إلى قيد التنفيذ» يلغي تحديد الطالب.</p>}
+      {mode !== "stage" && (
+        pairs.length ? (
+          <ul className="eb-bulk-list" aria-label={mode === "ready" ? "مراحل بانتظار الاعتماد" : "مراحل حدّدها الطلاب"}>
+            {pairs.map(({ student, stage: st }) => {
               const key = keyOf(student.studentId, st.stageId);
               return (
                 <li key={key} className={"eb-bulk-row" + (selected.has(key) ? " is-selected" : "")}>
@@ -233,7 +247,9 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
               );
             })}
           </ul>
-        ) : <EmptyState compact title="لا توجد مراحل بانتظار الاعتماد." description="اختر «حسب المرحلة» لاعتماد مرحلة لعدة طلاب دفعة واحدة." />
+        ) : mode === "ready"
+          ? <EmptyState compact title="لا توجد مراحل بانتظار الاعتماد." description="اختر «حسب المرحلة» لاعتماد مرحلة لعدة طلاب دفعة واحدة." />
+          : <EmptyState compact title="لا توجد مراحل حدّدها الطلاب بانتظار تأكيدك." />
       )}
 
       {mode === "stage" && (

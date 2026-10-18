@@ -541,4 +541,13 @@ describe("UX-7a source guards", () => {
     expect(panel).not.toMatch(/Math\.(round|max|min)|\*\s*100|\/\s*100/);
     expect(panel).toContain("if (!data || !data.enrolled || !data.projects || !data.projects.length) return null;");
   });
+  it("Phase P2: the student's only project write lives in studentSelfReport.ts and sends just the project, the stage ids and mark", () => {
+    const panel = sources["./projects/StudentProjectPanel.tsx"];
+    expect(panel).toContain('import { postSelfReport } from "./studentSelfReport";');
+    const write = Object.values(import.meta.glob("./projects/studentSelfReport.ts", { query: "?raw", import: "default", eager: true }) as Record<string, string>)[0];
+    expect(write.match(/fetch\(/g)?.length).toBe(1);
+    expect(write).toContain('fetch("/api/student-project-tracker", { method: "POST"');
+    expect(write).toContain("body: JSON.stringify({ projectCode, stageIds, mark })");
+    expect(write).not.toMatch(/studentId|classId|score|note|status/);
+  });
 });
