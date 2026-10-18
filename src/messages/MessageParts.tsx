@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import VisuallyHidden from "../ui/VisuallyHidden";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 import { MAX_MESSAGE_LENGTH, canDeleteMessage, canEditMessage, deletedMessageText, formatMessageTime, type MessageView } from "./messagesClient";
 import { isNearBottom, shouldScrollToNewest, useActionClock, useTodayStart } from "./messagesLayout";
 import { avatarTone, initialsOf, layoutThread, messageClock } from "./threadLayout";
@@ -141,7 +142,7 @@ export function MessageThread({ messages, labelFor, isMine, emptyText, ariaLabel
                         }}
                       />
                       <div className="eb-msg-edit-row">
-                        <button type="submit" className="eb-button is-primary is-small" disabled={working || !editing.draft.trim()}>{working ? "جارٍ الحفظ..." : "حفظ"}</button>
+                        <button type="submit" className="eb-button is-primary is-small" disabled={working || !editing.draft.trim()}>{working ? SAVE_LABELS.saving : SAVE_LABELS.saveChanges}</button>
                         <button type="button" className="eb-button is-quiet is-small" disabled={working} onClick={() => { setEditing(null); setRowError(null); }}>إلغاء</button>
                       </div>
                     </form>

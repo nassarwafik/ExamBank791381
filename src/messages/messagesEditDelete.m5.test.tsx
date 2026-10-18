@@ -101,7 +101,7 @@ describe("M.5 — teacher", () => {
     const box = screen.getByRole("textbox", { name: "تعديل الرسالة" }) as HTMLTextAreaElement;
     expect(box.value).toBe("الاختبار الأحد");
     fireEvent.change(box, { target: { value: "الاختبار الاثنين" } });
-    fireEvent.click(screen.getByRole("button", { name: "حفظ" }));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ التغييرات" }));
     await screen.findByText("الاختبار الاثنين");
     expect(client.editMessage).toHaveBeenCalledWith({ studentId: "s1" }, id(2), "الاختبار الاثنين");
     expect(within(item("الاختبار الاثنين")).getByText("مُعدّلة")).toBeTruthy();
@@ -129,7 +129,7 @@ describe("M.5 — teacher", () => {
     await screen.findByText("رسالة 1");
     fireEvent.click(screen.getByRole("button", { name: "تعديل الرسالة" }));
     fireEvent.change(screen.getByRole("textbox", { name: "تعديل الرسالة" }), { target: { value: "نص جديد" } });
-    fireEvent.click(screen.getByRole("button", { name: "حفظ" }));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ التغييرات" }));
     expect((await screen.findByRole("alert")).textContent).toContain("انتهت مهلة تعديل الرسالة");
     expect(screen.getByRole("textbox", { name: "تعديل الرسالة" })).toBeTruthy();
   });
