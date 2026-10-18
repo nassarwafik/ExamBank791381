@@ -14,30 +14,40 @@ import { makeImmediateApi } from "./readerFixtures";
 const NOTE = "يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.";
 afterEach(() => { cleanup(); vi.restoreAllMocks(); try { localStorage.clear(); } catch { /* ignore */ } });
 
-function mount(courseId = "791381") {
-  return render(<LearningReader courseId={courseId} onExit={vi.fn()} api={makeImmediateApi()} />);
+function mount(courseId = "791381", onPageChange?: (pageId: string) => void) {
+  return render(<LearningReader courseId={courseId} onExit={vi.fn()} api={makeImmediateApi()} onPageChange={onPageChange} />);
 }
 const heading = (name: string) => screen.findByRole("heading", { level: 2, name });
 const surface = () => document.querySelector(".learning-reader-main") as HTMLElement;
 const key = (k: string, target: Element) => fireEvent.keyDown(target, { key: k });
 const stillOn = async (name: string) => { await waitFor(() => {}); expect(screen.getByRole("heading", { level: 2, name })).toBeTruthy(); };
+// The page title comes from the manifest in the same commit that selects the page, but the Reader wires that page's key
+// listener in the following effect pass — the same pass that reports the page through `onPageChange`. A key pressed in
+// between is lost (the CI flake of this file), so a key is pressed only once the page has been reported.
+const tracker = () => {
+  const reported = vi.fn<(pageId: string) => void>();
+  const on = async (name: string, pageId: string) => { await heading(name); await waitFor(() => expect(reported).toHaveBeenLastCalledWith(pageId)); };
+  return { reported, on };
+};
 
 describe("21E L2-A — keyboard paging in normal reading", () => {
   it("pages one step per key from the reading surface and the page title, in RTL direction", async () => {
-    mount();
-    await heading("صفحة غنية");
-    key("ArrowLeft", surface()); await heading("صفحة ٢");
-    key("PageDown", surface()); await heading("صفحة ٣");
+    const { reported, on } = tracker();
+    mount("791381", reported);
+    await on("صفحة غنية", "p1");
+    key("ArrowLeft", surface()); await on("صفحة ٢", "p2");
+    key("PageDown", surface()); await on("صفحة ٣", "p3");
     // a page change focuses the new page title — paging continues from there
     const title = document.getElementById("learning-reader-page-title")!;
-    key("ArrowRight", title); await heading("صفحة ٢");
-    key("PageUp", document.getElementById("learning-reader-page-title")!); await heading("صفحة غنية");
+    key("ArrowRight", title); await on("صفحة ٢", "p2");
+    key("PageUp", document.getElementById("learning-reader-page-title")!); await on("صفحة غنية", "p1");
     key("ArrowRight", surface()); await stillOn("صفحة غنية");                       // first page: previous is a no-op
   });
 
   it("never pages while focus is on a control: toolbar / TOC button, the jump select, a lesson widget, a focusable region, or outside the reader", async () => {
-    mount();
-    await heading("صفحة غنية");
+    const { reported, on } = tracker();
+    mount("791381", reported);
+    await on("صفحة غنية", "p1");                                                 // the listener is live, so a no-op proves the guard
     const targets: Element[] = [
       screen.getByRole("button", { name: "التالي" }),
       screen.getByRole("button", { name: "الفهرس" }),
