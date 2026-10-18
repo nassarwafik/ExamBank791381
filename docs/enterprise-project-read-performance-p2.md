@@ -58,3 +58,19 @@ parallel badge and the trimmed history kept.
 cached, TTL 0, no-URL containers, URL isolation, invalidate, env parsing) and a contract over the real handler (four tabs
 → one scan; a moved student: read view stale ≤ TTL, write refused at once, exact after the TTL; TTL 0 → a scan per
 request; history trimmed to 50 while evaluation still uses the whole history).
+
+## Mutation proof
+
+Each mutant planted alone; the P-2 suite plus the existing ready-summary suites (`project-review-21h1`, `phase8d-integration`,
+`multi-project-enrollment-hardening`, `project-evaluation-9b`) run; the file restored byte-for-byte (sha256-checked).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| P1 | cache entries never expire | KILLED | TTL reuse / expiry; env TTL |
+| P2 | a failed scan is cached | KILLED | never caches a failed scan |
+| P3 | entries never stored (no sharing) | KILLED | TTL reuse; shared in-flight scan |
+| P4 | URL-less (test) containers cached | KILLED | TTL 0 / no-URL containers |
+| P5 | read views bypass the cache | KILLED | four tabs → one scan |
+| P6 | **a write's membership gate reads the cached list** | KILLED | moved student: write refused at once |
+| P7 | profile history not trimmed | KILLED | newest 50 events |
+| P8 | badge counts mis-attributed after the parallel rewrite | KILLED | existing projects-summary suites |
