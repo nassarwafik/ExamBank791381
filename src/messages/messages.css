@@ -319,3 +319,38 @@
 .eb-msg-older-btn:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 .eb-msg-newer{ flex:0 0 auto; margin:0; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-4); text-align:center; font-size:var(--eb-fs-12); color:var(--eb-info-tx); background:var(--eb-info-bg); }
 @media (prefers-reduced-motion: reduce){ .eb-msg-search,.eb-msg-class-pick,.eb-msg-roster-item{ transition:none; } }
+/* M.5 — message actions, the inline editor / delete confirmation, deleted and edited messages. The actions row sits
+   with the time at the bubble's foot; on pointer devices it appears on hover / keyboard focus, on touch screens always. */
+.eb-msg-foot{ display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:2px var(--eb-space-2); margin-block-start:2px; }
+.eb-msg-foot .eb-msg-time{ margin-block-start:0; }
+.eb-msg-actions{ display:inline-flex; gap:2px; margin-inline-end:auto; opacity:0; transition:opacity var(--eb-dur) var(--eb-ease); }
+.eb-msg-bubble:hover .eb-msg-actions,.eb-msg-bubble:focus-within .eb-msg-actions{ opacity:1; }
+@media (hover: none){ .eb-msg-actions{ opacity:1; } }
+.eb-msg-action{
+  min-height:24px; padding-inline:var(--eb-space-2); font:inherit; font-size:11px; font-weight:var(--eb-fw-semibold); line-height:1;
+  border:0; border-radius:var(--eb-pill); background:transparent; color:var(--eb-text-secondary); cursor:pointer;
+}
+.eb-msg-action:hover{ background:var(--eb-surface-2); color:var(--eb-text-heading); }
+.eb-msg-action.is-danger:hover{ color:var(--eb-danger-tx); }
+.eb-msg-action:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
+.eb-msg-action:disabled{ cursor:default; opacity:.5; }
+.eb-msg.is-mine .eb-msg-action{ color:var(--eb-primary-050); }
+.eb-msg.is-mine .eb-msg-action:hover{ background:rgba(255, 255, 255, .16); color:var(--eb-surface); }
+.eb-msg.is-mine .eb-msg-action:focus-visible{ outline-color:var(--eb-surface); }
+.eb-msg-thread.is-feed .eb-msg .eb-msg-action{ color:var(--eb-text-secondary); }
+.eb-msg-thread.is-feed .eb-msg .eb-msg-action:hover{ background:var(--eb-surface-2); color:var(--eb-text-heading); }
+.eb-msg-edited{ font-size:11px; line-height:1.4; color:var(--eb-muted); font-style:italic; }
+.eb-msg.is-mine .eb-msg-edited{ color:var(--eb-primary-050); }
+.eb-msg-thread.is-feed .eb-msg .eb-msg-edited{ color:var(--eb-muted); }
+.eb-msg-edit{ display:flex; flex-direction:column; gap:var(--eb-space-1); margin-block-start:var(--eb-space-1); min-width:min(320px, 70vw); }
+.eb-msg-edit-input{ min-height:60px; color:var(--eb-text); background:var(--eb-surface); }
+.eb-msg-edit-row,.eb-msg-confirm-row{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.eb-msg-confirm{
+  display:flex; flex-direction:column; gap:var(--eb-space-2); margin-block-start:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3);
+  border:1px solid var(--eb-danger-bd, var(--eb-line-2)); border-radius:var(--eb-r-sm); background:var(--eb-danger-bg, var(--eb-surface)); color:var(--eb-danger-tx); font-size:var(--eb-fs-13);
+}
+.eb-msg-row-error{ margin-block-start:var(--eb-space-1); padding:var(--eb-space-1) var(--eb-space-2); border-radius:var(--eb-r-xs); background:var(--eb-surface); }
+.eb-msg.is-deleted .eb-msg-bubble,.eb-msg.is-mine.is-deleted .eb-msg-bubble{ background:var(--eb-surface-2); border:1px dashed var(--eb-line-2); color:var(--eb-muted); box-shadow:none; }
+.eb-msg.is-mine.is-deleted .eb-msg-sender,.eb-msg.is-mine.is-deleted .eb-msg-time{ color:var(--eb-muted); }
+.eb-msg-body.is-deleted{ font-style:italic; color:var(--eb-muted); }
+@media (prefers-reduced-motion: reduce){ .eb-msg-actions{ transition:none; } }

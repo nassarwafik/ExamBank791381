@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IconChevronBack } from "../icons";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
-import { MessageComposer, MessageThread, NewerMessagesNote, OlderMessagesBar } from "./MessageParts";
+import { MessageComposer, MessageThread, NewerMessagesNote, OlderMessagesBar, type MessageActions } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, replaceMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
   type MessageView, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
 } from "./messagesClient";
 import "./messages.css";
@@ -37,6 +37,9 @@ import "./messages.css";
  * Messages M.3 — «عرض الرسائل الأقدم» per tab (`older`, display only: never an acknowledgement source, which stays the
  * GET snapshot). When the server held back unread messages beyond the frontier, a successful acknowledgement of the
  * shown ones reloads at once so the rest follow.
+ * Messages M.5 — the student edits / deletes their OWN replies from the direct thread while the server allows it (15
+ * minutes after sending). The stored version replaces the message on screen (snapshot, older pages, confirmed replies);
+ * a read that started before the change is discarded (`gen`) and the view then reconciles with the server.
  */
 export type StudentMessagesTab = "direct" | "announcements";
 type Tab = StudentMessagesTab;
@@ -169,6 +172,27 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
     return <OlderMessagesBar hasMore={o ? o.hasMore : hasMoreLatest === true} loading={!!o && o.loading} error={o ? o.error : ""} onLoad={() => void loadOlder(stream, list.length ? list[0].messageId : "")} />;
   };
 
+  const sessionText = (e: unknown, fallback: string) => (e instanceof MessagesHttpError && e.status === 401 ? "تعذر التحقق من الجلسة. عد إلى لوحتك ثم حاول مرة أخرى." : e instanceof Error && e.message ? e.message : fallback);
+  function directActions(): MessageActions | undefined {
+    const edit = client.editMessage, remove = client.deleteMessage;
+    if (!edit || !remove) return undefined;
+    const apply = (message: MessageView) => {
+      gen.current += 1;
+      confirmed.current = replaceMessage(confirmed.current, message);
+      setData(prev => (prev ? { ...prev, direct: replaceMessage(prev.direct, message) } : prev));
+      setOlder(prev => (prev.direct ? { ...prev, direct: { ...prev.direct, messages: replaceMessage(prev.direct.messages, message) } } : prev));
+      void load(true);
+    };
+    const run = async (call: () => Promise<MessageView>, fallback: string) => {
+      try { apply(await call()); }
+      catch (e) { void load(true); throw new Error(sessionText(e, fallback)); }
+    };
+    return {
+      onEdit: (m, body) => run(() => edit(m.messageId, body), "تعذر تعديل الرسالة."),
+      onDelete: m => run(() => remove(m.messageId), "تعذر حذف الرسالة.")
+    };
+  }
+
   function selectTab(next: Tab) {
     setTab(next);
     tabRef.current = next;
@@ -231,6 +255,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
                 emptyText="لا توجد رسائل بعد. يمكنك مراسلة معلمك من هنا."
                 isMine={m => m.senderRole === "student"}
                 labelFor={m => (m.senderRole === "student" ? "أنت" : "المعلم" + (m.senderDisplayName && m.senderDisplayName !== "المعلم" ? " — " + m.senderDisplayName : ""))}
+                actions={directActions()}
               />
               {data.directHasNewer && <NewerMessagesNote />}
               </div>

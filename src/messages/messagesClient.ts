@@ -97,7 +97,28 @@ export type MessageView = {
   senderDisplayName: string;
   body: string;
   createdAt: string;
+  /** M.5 — set when the sender edited the text (ISO). */
+  editedAt?: string;
+  /** M.5 — a deleted message (its text is gone: body is ""), and who deleted it. */
+  deleted?: boolean;
+  deletedBy?: "teacher" | "student";
+  /** M.5 — THIS reader's permissions (server display hints; the server decides every edit / delete again). */
+  editableUntil?: string;
+  canDelete?: boolean;
+  deletableUntil?: string;
 };
+
+/** M.5 — whether the reader may still edit / delete `m` at `now` (ms), from the server's hints. */
+export function canEditMessage(m: MessageView, now: number): boolean {
+  return !m.deleted && !!m.editableUntil && now <= Date.parse(m.editableUntil);
+}
+export function canDeleteMessage(m: MessageView, now: number): boolean {
+  return !m.deleted && m.canDelete === true && (!m.deletableUntil || now <= Date.parse(m.deletableUntil));
+}
+/** M.5 — the placeholder of a deleted message (who deleted it, when it was not its own sender). */
+export function deletedMessageText(m: MessageView): string {
+  return m.deletedBy === "teacher" && m.senderRole === "student" ? "حذف المعلم هذه الرسالة." : "تم حذف هذه الرسالة.";
+}
 
 /** M.3 — `hasMore`: older history exists (page back with `before`); `hasNewer`: unread messages were held back until the
  *  shown ones are read (they arrive on the next read). Both optional: a missing value means false. */
@@ -144,7 +165,13 @@ export interface TeacherMessagesClient {
   getClassUnread(classId: string): Promise<TeacherUnreadSummary>;
   /** Phase 5D — advance this teacher's read marker for one conversation; returns what is still unread there. */
   markDirectRead(studentId: string, ack: ReadAck): Promise<UnreadCount>;
+  /** M.5 — edit this teacher's own message / announcement; delete it, or (moderation) a student's message. Optional:
+   *  without them the thread offers no message actions. Each resolves the stored version of the message. */
+  editMessage?(target: MessageTarget, messageId: string, body: string): Promise<MessageView>;
+  deleteMessage?(target: MessageTarget, messageId: string): Promise<MessageView>;
 }
+/** M.5 — the stream of a message action: one student's conversation or one class's announcements. */
+export type MessageTarget = { studentId: string } | { classId: string };
 
 export function createTeacherMessagesClient(token: string): TeacherMessagesClient {
   const headers = { "x-builder-token": token, Authorization: "Bearer " + token, "content-type": "application/json" };
@@ -180,7 +207,9 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
       return unreadOf(j);
-    }
+    },
+    editMessage: (target, messageId, body) => post({ action: "editMessage", ...target, messageId, body }, "تعذر تعديل الرسالة."),
+    deleteMessage: (target, messageId) => post({ action: "deleteMessage", ...target, messageId }, "تعذر حذف الرسالة.")
   };
 }
 
@@ -193,11 +222,22 @@ export interface StudentMessagesClient {
   markRead(stream: "direct" | "announcements", ack: ReadAck): Promise<StudentUnread>;
   /** M.3 — the older page of one stream before a message id (never acknowledged). Optional: without it no button. */
   loadOlder?(stream: "direct" | "announcements", before: string): Promise<OlderPage>;
+  /** M.5 — edit / delete the student's OWN reply (within the server's window). Optional: without them no actions. */
+  editMessage?(messageId: string, body: string): Promise<MessageView>;
+  deleteMessage?(messageId: string): Promise<MessageView>;
 }
 
 export function createStudentMessagesClient(token: string): StudentMessagesClient {
   const headers = { "x-student-token": token, Authorization: "Bearer " + token, "content-type": "application/json" };
+  const change = async (body: unknown, fallback: string) => {
+    const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify(body) });
+    const j = await readJson(r);
+    if (!r.ok || !j.ok || !j.message) fail(j, r.status, fallback);
+    return j.message as MessageView;
+  };
   return {
+    editMessage: (messageId, body) => change({ action: "editMessage", messageId, body }, "تعذر تعديل الرسالة."),
+    deleteMessage: messageId => change({ action: "deleteMessage", messageId }, "تعذر حذف الرسالة."),
     async load() {
       const r = await fetch("/api/student-messages", { headers });
       const j = await readJson(r);
@@ -285,6 +325,11 @@ export function formatNotificationTime(iso: string, now: Date = new Date()): str
 export function mergeMessage(list: MessageView[], message: MessageView): MessageView[] {
   if (list.some(m => m.messageId === message.messageId)) return list;
   return [...list, message].sort((a, b) => (a.messageId < b.messageId ? -1 : a.messageId > b.messageId ? 1 : 0));
+}
+
+/** M.5 — the server's new version of a message replaces the one with the same id (absent → the list is unchanged). */
+export function replaceMessage(list: MessageView[], message: MessageView): MessageView[] {
+  return list.some(m => m.messageId === message.messageId) ? list.map(m => (m.messageId === message.messageId ? message : m)) : list;
 }
 
 /** Human-readable Arabic date + time for a message timestamp. */

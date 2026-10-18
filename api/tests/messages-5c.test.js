@@ -172,6 +172,7 @@ describe("audit", () => {
   });
   it("unsupported action → 400", async () => {
     const ctx = createMemoryContainer(seed());
-    for (const action of ["deleteMessage", "editMessage", "sendToClass", ""]) expect((await post(TEACHER(ctx), { action, studentId: S1, body: "x" })).status).toBe(400);
+    // M.5 — editMessage / deleteMessage became real actions (api/tests/messages-edit-delete-m5.test.js).
+    for (const action of ["sendToClass", "unsend", "moderate", ""]) expect((await post(TEACHER(ctx), { action, studentId: S1, body: "x" })).status).toBe(400);
   });
 });
