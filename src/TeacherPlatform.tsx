@@ -68,6 +68,7 @@ function splitName(value:unknown){
 // (status "archived" OR active:false ⇒ archived). Never the raw `active` flag, which is a compatibility field of
 // /api/classrooms. Unrelated to Student.active (login eligibility).
 const isActiveClass=(c:Classroom)=>normalizeClassStatus(c)==="active";
+const NO_STUDENTS:Student[]=[];
 function statusLabel(student:Student){
  if(student.archived)return "مؤرشف";
  return student.active?"فعّال":"معطّل";
@@ -91,7 +92,14 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // class the teacher has since left is never committed into the visible roster (see loadStudents and the
  // single-row actions below).
  const selectedClassRef=useRef("");
- const [loading,setLoading]=useState(false);
+ // Phase S.0 — the classes read and the roster read have SEPARATE load states (one finishing never ends the other's
+ // skeleton). The roster state names the class it belongs to: rows, counts and row actions are shown only once the
+ // SELECTED class's roster is loaded, so another class's rows never appear under this class's name. A failed first read is
+ // an error with a retry (never «no students / no classes yet»); a failed refresh keeps the last rows and reports it above.
+ const [classesLoad,setClassesLoad]=useState<{status:"loading"|"ready"|"error";error:string;busy:boolean}>({status:"loading",error:"",busy:true});
+ const [rosterLoad,setRosterLoad]=useState<{classId:string;status:"loading"|"ready"|"error";error:string;busy:boolean}>({classId:"",status:"loading",error:"",busy:false});
+ const classesReadyRef=useRef(false);
+ const rosterReadyFor=useRef("");
  const [actionBusy,setActionBusy]=useState(false);
  // Class Learning Materials: the publishable catalog (GET /api/learning-materials-catalog) is read ONCE per students
  // workspace lifecycle — never per class card — and is metadata only (course/module ids, titles, order).
@@ -158,21 +166,25 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // "12", "١٢", "12-ب", "الثاني عشر", "ثاني عشر" (never "112"): see rosterText.isTwelfthGrade.
  function isGraduationEligible(classroom:Classroom){return isTwelfthGrade(classroom.grade||"")}
 
+ const rosterReady=rosterLoad.classId===selectedClassId&&rosterLoad.status==="ready";
+ const rosterError=rosterLoad.classId===selectedClassId&&rosterLoad.status==="error"?rosterLoad.error:"";
+ // Only the selected class's loaded roster is ever shown or acted on (see rosterLoad).
+ const rosterStudents=useMemo(()=>rosterReady?students:NO_STUDENTS,[rosterReady,students]);
  const stats=useMemo(()=>{
-  const current=students.filter(s=>!s.archived);
+  const current=rosterStudents.filter(s=>!s.archived);
   return {
-   total:students.length,
+   total:rosterStudents.length,
    active:current.filter(s=>s.active).length,
    disabled:current.filter(s=>!s.active).length,
-   archived:students.filter(s=>s.archived).length,
-   neverLogged:students.filter(s=>!s.archived&&!s.lastLoginAt).length
+   archived:rosterStudents.filter(s=>s.archived).length,
+   neverLogged:rosterStudents.filter(s=>!s.archived&&!s.lastLoginAt).length
   };
- },[students]);
+ },[rosterStudents]);
 
  const visibleStudents=useMemo(()=>{
   // Arabic-aware search: hamza / taa-marbuta / alef-maqsura variants, diacritics and Arabic digits fold together, and
   // every typed word must match ("احمد علي" finds "أحمد العلي").
-  const filtered=students.filter(student=>{
+  const filtered=rosterStudents.filter(student=>{
    if(statusFilter==="active"&&(student.archived||!student.active))return false;
    if(statusFilter==="disabled"&&(student.archived||student.active))return false;
    if(statusFilter==="archived"&&!student.archived)return false;
@@ -187,7 +199,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    else {av=String(a[sortKey]||"");bv=String(b[sortKey]||"")}
    return av.localeCompare(bv,"ar",{numeric:true})*factor;
   });
- },[students,searchText,statusFilter,sortKey,sortAsc]);
+ },[rosterStudents,searchText,statusFilter,sortKey,sortAsc]);
 
  // A bulk action applies only to students the teacher can SEE: rows hidden by the search / status filter are never part
  // of the effective selection (a hidden selected row could otherwise be deleted without being visible).
@@ -211,7 +223,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
  }
 
  async function loadClasses(preserveSelection=true){
-  setLoading(true);setError("");
+  setClassesLoad(prev=>({...prev,busy:true}));setError("");
   try{
    const result=await teacherApi<{ok:true;classes:Classroom[]}>("/api/classrooms");
    const loaded=result.classes||[];
@@ -220,8 +232,14 @@ function TeacherPlatform(props:TeacherPlatformProps){
     const first=loaded.find(isActiveClass)||loaded[0];
     setSelectedClassId(first?.classId||"");
    }
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الصفوف.")}
-  finally{setLoading(false)}
+   classesReadyRef.current=true;
+   setClassesLoad({status:"ready",error:"",busy:false});
+  }catch(e){
+   const message=e instanceof Error?e.message:"تعذر تحميل الصفوف.";
+   // A failed refresh keeps the listed classes (reported above); a failed first read is the pane's own error state.
+   if(classesReadyRef.current){setError(message);setClassesLoad(prev=>({...prev,busy:false}))}
+   else setClassesLoad({status:"error",error:message,busy:false});
+  }
  }
 
  // Authoritative roster read. GET /api/students is ALSO the server-side roster-index self-heal path, so it is
@@ -229,14 +247,25 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // result is committed to the visible roster ONLY while `classId` is still the selected class (Roadmap #32).
  async function loadStudents(classId:string){
   if(!classId){setStudents([]);return}
-  setLoading(true);setError("");
+  // A repair-only read (a class that is not selected) never touches the visible roster or its load state.
+  if(selectedClassRef.current===classId){
+   setError("");
+   setRosterLoad(prev=>prev.classId===classId&&prev.status==="ready"?{...prev,busy:true}:{classId,status:"loading",error:"",busy:true});
+  }
   try{
    const result=await teacherApi<{ok:true;students:Student[]}>("/api/students?classId="+encodeURIComponent(classId)+"&includeArchived=1");
    if(selectedClassRef.current!==classId)return;
    setStudents(result.students||[]);
    setSelectedIds(prev=>prev.filter(id=>(result.students||[]).some(s=>s.userId===id)));
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الطلاب.")}
-  finally{setLoading(false)}
+   rosterReadyFor.current=classId;
+   setRosterLoad({classId,status:"ready",error:"",busy:false});
+  }catch(e){
+   if(selectedClassRef.current!==classId)return;
+   const message=e instanceof Error?e.message:"تعذر تحميل الطلاب.";
+   // A failed refresh keeps the rows already shown (reported above); a failed first read is the roster's error state.
+   if(rosterReadyFor.current===classId){setError(message);setRosterLoad(prev=>({...prev,busy:false}))}
+   else setRosterLoad({classId,status:"error",error:message,busy:false});
+  }
  }
 
  // Roadmap #32: the authoritative fallback after a single-row mutation whose response cannot be patched locally
@@ -281,7 +310,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
   // under a different class. The bulk credentialBatch is NOT cleared here — it stays in memory and is
   // simply HIDDEN unless its owning class is selected again (avoids accidental loss on a stray click).
   setCredentialBox(null);setBulkErrors([]);
-  if(selectedClassId)void loadStudents(selectedClassId);else setStudents([]);
+  // Phase S.0: the previous class's rows are dropped before the new class's roster is read.
+  rosterReadyFor.current="";setStudents([]);
+  if(selectedClassId)void loadStudents(selectedClassId);
  },[selectedClassId]);
  useEffect(()=>()=>{if(passwordRevealTimer.current)window.clearInterval(passwordRevealTimer.current)},[]);
 
@@ -847,11 +878,14 @@ function TeacherPlatform(props:TeacherPlatformProps){
     onToggleProject={(classroom,code,enable)=>void toggleClassProject(classroom,code,enable)}
     onToggleArchive={classroom=>void toggleClassArchive(classroom)} onGraduate={classroom=>void graduateAndArchiveClass(classroom)}
     onCreate={()=>{setError("");setDialog("createClass")}} onEdit={openEditClass} onRefresh={()=>void reloadAuthoritative(selectedClassId)}
-    loading={loading} busy={actionBusy} fmtDate={fmtDate}/>
+    loading={classesLoad.busy} loadError={classesLoad.status==="error"&&!classesLoad.busy?classesLoad.error:""} onRetry={()=>void loadClasses(false)}
+    busy={actionBusy} fmtDate={fmtDate}/>
 
    <RosterPane
-    classroom={selectedClass} classActive={classActive} students={students} visibleStudents={visibleStudents} stats={stats}
-    loading={loading} busy={actionBusy}
+    classroom={selectedClass} classActive={classActive} students={rosterStudents} visibleStudents={visibleStudents} stats={stats}
+    loading={selectedClass?!rosterReady&&!rosterError:classesLoad.status==="loading"} refreshing={rosterLoad.busy}
+    loadError={selectedClass?rosterError:""} onRetry={()=>void loadStudents(selectedClassId)}
+    busy={actionBusy}
     searchText={searchText} onSearch={setSearchText} statusFilter={statusFilter} onStatusFilter={setStatusFilter}
     sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort}
     selectedIds={visibleSelectedIds} onToggleSelected={toggleSelected} onToggleSelectVisible={toggleSelectVisible} onClearSelection={()=>setSelectedIds([])}
