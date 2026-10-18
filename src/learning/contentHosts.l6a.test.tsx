@@ -26,6 +26,8 @@ describe("L.6a — module bodies are requested with the host's own session", () 
     const annotations = { get: vi.fn(async () => null) } as unknown as AnnotationsClient;
     render(<StudentReader courseId="791381" allowedModuleIds={["791381-m01"]} token="stu" onExit={vi.fn()} progressClient={progress} annotationsClient={annotations} />);
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
+    // the heading comes from the manifest, before the body is asked for: wait for the BODY (the unit opener) to be rendered
+    await waitFor(() => expect(document.querySelector(".learning-reader-page.is-opener")).not.toBeNull(), SLOW);
     expect(seen.calls).toEqual([{ courseId: "791381", moduleId: "791381-m01", headers: { "x-student-token": "stu", Authorization: "Bearer stu" } }]);
   }, 20000);
 
