@@ -23,7 +23,7 @@ expected to change them, so update them only together with that change.
 **Variables**
 - `A_total`: all stored assignment documents.
 - `P_class`: published assignments of this student's class.
-- `K`: fixed documents. `K = 5` for a class without projects: user, class, practice, study, games.
+- `K`: fixed documents. `K = 5` for a class without projects: user, class, practice, study, games. Since Phase L.8 `K = 6`: the student's reading-progress document is read too, so the Today Hub continues at the last page read on any device (`docs/enterprise-learning-materials-l-plan.md` §13).
 
 **Formula (measured)**
 

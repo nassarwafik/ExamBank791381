@@ -243,8 +243,10 @@
 .learning-reader-page.is-opener{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
 .learning-reader-opener{ display:flex; align-items:center; gap:var(--eb-space-4); flex-wrap:wrap;
   padding:var(--eb-space-4) 0; border-bottom:1px solid var(--eb-line); }
+/* L.8 — the numeral is decorative (aria-hidden) but it is visible text: it now meets the 3:1 of large text in every reading theme
+   (--eb-primary: 5.2:1 on white, 4.6:1 on sepia, 3.7:1 on the dark surface; the former pale tint was 1.2:1). */
 .learning-reader-opener-number{ font-size:clamp(64px, 18vw, 120px); line-height:1; font-weight:var(--eb-fw-bold);
-  color:var(--eb-surface-2); letter-spacing:-2px; }
+  color:var(--eb-primary); letter-spacing:-2px; }
 .learning-reader-opener-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:min(100%, 220px); flex:1 1 240px; }
 .learning-reader-opener-label{ margin:0; color:var(--eb-primary-strong); font-weight:var(--eb-fw-bold); font-size:var(--eb-fs-14); }
 .learning-reader-opener-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold);
