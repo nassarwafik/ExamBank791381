@@ -1,5 +1,7 @@
 // Phase 5D — Message read/unread state. Messages stay IMMUTABLE and append-only (message-store.js): read state is a
 // SEPARATE per-reader, per-stream marker document, never a field on a message and never a denormalized counter.
+// (M.5 — an edit / delete rewrites a message's text in place but never its id, stream, sender role or validity, so
+// everything here — counts, relevance, acknowledgement, frontiers — reads a changed message exactly as before.)
 //
 //   platform/messages/read-state/teacher/<sha256(teacher id)>/direct/<studentId>.json   the teacher's view of one student
 //   platform/messages/read-state/student/<studentId>/direct.json                        a student's direct conversation

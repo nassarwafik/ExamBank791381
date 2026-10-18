@@ -2,6 +2,10 @@
 //   GET  /api/student-messages                      → { direct, announcements, classroom, canSend, ... }
 //   GET  /api/student-messages?stream=direct|announcements&before=<messageId>  → M.3: that stream's older page
 //   POST /api/student-messages { action: "sendDirect", body }
+//   POST /api/student-messages { action: "editMessage", messageId, body }   → M.5: the student's OWN reply, within 15
+//        minutes of sending, while they may still send (lib/message-edit.js)
+//   POST /api/student-messages { action: "deleteMessage", messageId }       → M.5: the same rule; always the student's
+//        own direct stream (a teacher's message or an announcement can never be changed from here)
 //   GET  /api/student-messages?view=unread          → Phase 5D: { directUnread, announcementUnread, totalUnread, ... }
 //   GET  /api/student-messages?view=notifications   → Phase 6C: { items[], ...the same unread summary } (READ-ONLY; see
 //        lib/student-notifications.js — never marks anything read, never absorbs legacy ids)
@@ -28,6 +32,9 @@ const {
 } = require("../lib/message-store");
 // Messages hardening (M.1): idempotent (clientMessageId) + rate-limited replies, private no-store responses.
 const { publishGuarded, noStore } = require("../lib/message-send");
+// Messages M.5 — edit / delete of the student's own replies (one CAS on the message blob; the rules live in the lib).
+const { MessageChangeError, messageActions, editMessage, deleteMessage } = require("../lib/message-edit");
+const { reserveMessageSend, rateLimitedResponse } = require("../lib/message-rate-limit");
 const {
   MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, absorbIrrelevantSequenced
 } = require("../lib/message-read-state");
@@ -67,6 +74,9 @@ async function handle(request, deps = {}, obs = null) {
     const classroom = await currentClassroom(container, student, dl);
     const state = sendState(classroom);
     const streams = studentStreams(studentId, classroom ? String(student.classId) : "");
+    // M.5 — the student's permissions on each DIRECT message (display hints; announcements carry none).
+    const actor = { role: "student", id: studentId };
+    const directView = doc => messageView(doc, { actions: d => messageActions(d, actor, { canSend: state.canSend, now: deps.now ? deps.now() : Date.now() }) });
 
     if (request.method === "GET") {
       const params = new URL(request.url).searchParams;
@@ -102,13 +112,13 @@ async function handle(request, deps = {}, obs = null) {
         const before = String(params.get("before") || "");
         if (!which || !MESSAGE_ID_RE.test(before)) return { status: 400, jsonBody: { ok: false, error: "طلب الرسائل غير صالح." } };
         const older = await page(streams[which], which, which === "direct" ? DIRECT_HISTORY_LIMIT : ANNOUNCEMENT_HISTORY_LIMIT, before);
-        return { status: 200, jsonBody: { ok: true, stream: which, messages: older.messages.map(m => messageView(m)), hasMore: older.hasMore } };
+        return { status: 200, jsonBody: { ok: true, stream: which, messages: older.messages.map(m => (which === "direct" ? directView(m) : messageView(m))), hasMore: older.hasMore } };
       }
       const direct = await page(streams.direct, "direct", DIRECT_HISTORY_LIMIT);
       const announcements = classId ? await page(streams.announcements, "announcements", ANNOUNCEMENT_HISTORY_LIMIT) : { messages: [], hasMore: false, hasNewer: false };
       return { status: 200, jsonBody: {
         ok: true,
-        direct: direct.messages.map(m => messageView(m)),
+        direct: direct.messages.map(directView),
         announcements: announcements.messages.map(m => messageView(m)),
         directHasMore: direct.hasMore, directHasNewer: direct.hasNewer,
         announcementsHasMore: announcements.hasMore, announcementsHasNewer: announcements.hasNewer,
@@ -141,6 +151,20 @@ async function handle(request, deps = {}, obs = null) {
         throw e;
       }
     }
+    if (action === "editMessage" || action === "deleteMessage") {
+      // Only the student's own direct stream; a body studentId / classId / stream is never read.
+      const common = { streamPrefix: streams.direct.streamPrefix, expected: streams.direct.expected, messageId: String(body.messageId || ""), actor, canSend: state.canSend };
+      try {
+        const r = action === "editMessage"
+          ? await editMessage(container, { ...common, body: body.body, reserve: () => (deps.reserveMessageSend || reserveMessageSend)(container, "student", studentId, deps) }, deps)
+          : await deleteMessage(container, common, deps);
+        return { status: 200, jsonBody: { ok: true, message: directView(r.doc), ...(r.changed ? {} : { unchanged: true }) } };
+      } catch (e) {
+        if (!(e instanceof MessageChangeError)) throw e;
+        if (e.rateLimit) return rateLimitedResponse(e.rateLimit);
+        return { status: e.status, jsonBody: { ok: false, code: e.code, error: e.message } };
+      }
+    }
     // Sending: sendDirect is the ONLY send action. studentId / classId / recipient* / sender* in the body are never read.
     if (action !== "sendDirect") return { status: 400, jsonBody: { ok: false, error: "إجراء غير مدعوم." } };
     const text = normalizeMessageBody(body.body);
@@ -155,7 +179,7 @@ async function handle(request, deps = {}, obs = null) {
       })
     }, deps);
     if (sent.response) return sent.response;
-    return { status: 200, jsonBody: { ok: true, message: messageView(sent.doc), ...(sent.replay ? { replay: true } : {}) } };
+    return { status: 200, jsonBody: { ok: true, message: directView(sent.doc), ...(sent.replay ? { replay: true } : {}) } };
   } catch (e) {
     // M.3 — exhausted compare-and-set retries (a hot marker, limiter bucket or claim) are the same transient conflict.
     if (e instanceof MessageContentionError || e instanceof StorageConflictError || (e && e.name === "StorageConflictError")) { obs?.logWarn("student.messages.contention", { retryable: true }); return { status: 503, headers: { "Retry-After": "1" }, jsonBody: { ok: false, code: "BUSY", error: "الخادم مشغول بإرسال رسائل أخرى الآن. أعد المحاولة." } }; }

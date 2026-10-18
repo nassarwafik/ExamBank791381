@@ -77,3 +77,17 @@ function subscribeMinute(onChange: () => void) {
 export function useTodayStart(): number {
   return useSyncExternalStore(subscribeMinute, startOfToday, startOfToday);
 }
+
+/** M.5 — the current time (ms) at a 5-second resolution, so a message's edit / delete buttons disappear on their own
+ *  once the server's window has passed (the snapshot is stable between ticks; the server decides every change). */
+const ACTION_TICK_MS = 5000;
+function actionNow(): number {
+  return Math.floor(Date.now() / ACTION_TICK_MS) * ACTION_TICK_MS;
+}
+function subscribeActionTick(onChange: () => void) {
+  const id = setInterval(onChange, ACTION_TICK_MS);
+  return () => clearInterval(id);
+}
+export function useActionClock(): number {
+  return useSyncExternalStore(subscribeActionTick, actionNow, actionNow);
+}

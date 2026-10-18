@@ -160,7 +160,8 @@ describe("#4 / #5 — publication never duplicates a message whose commit succee
   it("the publication stamp is storage-only: never part of a message view", async () => {
     const ctx = createMemoryContainer(seed());
     const r = await sPost(STUDENT(ctx), { action: "sendDirect", body: "مرحبا", clientMessageId: "view-key-0001" });
-    expect(Object.keys(r.jsonBody.message).sort()).toEqual(["body", "createdAt", "kind", "messageId", "senderDisplayName", "senderRole"]);
+    // M.5 — plus the reader's display hints for its own fresh reply (canDelete / deletableUntil / editableUntil).
+    expect(Object.keys(r.jsonBody.message).sort()).toEqual(["body", "canDelete", "createdAt", "deletableUntil", "editableUntil", "kind", "messageId", "senderDisplayName", "senderRole"]);
     const t = await tGet(TEACHER(ctx), "?studentId=" + S1);
     expect(JSON.stringify(t.jsonBody)).not.toMatch(/publish|sendKey|nonce/i);
   });

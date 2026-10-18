@@ -5,9 +5,9 @@ import { IconChevronBack, IconMail, IconMegaphone, IconSearch, IconStudents } fr
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { normalizeClassStatus } from "../classLifecycle";
 import type { Classroom, Student } from "../students/types";
-import { MessageAvatar, MessageComposer, MessageThread, MessagesEmptyState, NewerMessagesNote, OlderMessagesBar } from "./MessageParts";
+import { MessageAvatar, MessageComposer, MessageThread, MessagesEmptyState, NewerMessagesNote, OlderMessagesBar, type MessageActions } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createTeacherMessagesClient, mergeMessage, replaceMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
   type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount, type ReadAck
 } from "./messagesClient";
 import { isConversationVisible, messagesPane, useWideLayout, type NarrowPane } from "./messagesLayout";
@@ -280,6 +280,36 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
     }
   }
 
+  /**
+   * M.5 — edit / delete from the thread: the server's stored version replaces the message in the snapshot, the older
+   * pages and the confirmed sends; any read that started before the change can no longer land (threadGen), and the
+   * thread is then reconciled with the server. A failure reloads the thread (e.g. the message was deleted meanwhile)
+   * and its error is shown on the message.
+   */
+  function actionsFor(key: string): MessageActions | undefined {
+    const edit = client.editMessage, remove = client.deleteMessage;
+    if (!key || !edit || !remove) return undefined;
+    const target = key.startsWith("ann:") ? { classId: key.slice(4) } : { studentId: key.slice(3) };
+    const apply = (message: MessageView) => {
+      threadGen.current += 1;
+      if (confirmed.current.key === key) confirmed.current = { key, messages: replaceMessage(confirmed.current.messages, message) };
+      setThread(prev => (prev && prev.key === key ? { ...prev, messages: replaceMessage(prev.messages, message) } : prev));
+      setOlder(prev => (prev && prev.key === key ? { ...prev, messages: replaceMessage(prev.messages, message) } : prev));
+      void loadThread(key, true);
+    };
+    const run = async (call: () => Promise<MessageView>, fallback: string) => {
+      try { apply(await call()); }
+      catch (e) { void loadThread(key, true); throw new Error(errorText(e, fallback)); }
+    };
+    return {
+      onEdit: (m, body) => run(() => edit(target, m.messageId, body), "تعذر تعديل الرسالة."),
+      onDelete: m => run(() => remove(target, m.messageId), "تعذر حذف الرسالة."),
+      deletePrompt: m => (m.senderRole === "student"
+        ? "حذف رسالة الطالب نهائيًا؟ سيرى الطالب أن المعلم حذفها، ولا يمكن التراجع عن ذلك."
+        : key.startsWith("ann:") ? "حذف هذا الإعلان نهائيًا من الصف؟ لا يمكن التراجع عن ذلك." : "حذف هذه الرسالة نهائيًا؟ لا يمكن التراجع عن ذلك.")
+    };
+  }
+
   const threadKey = !classId ? "" : tab === "announcements" ? "ann:" + classId : studentId ? "dm:" + studentId : "";
   const pane = messagesPane(wide, !!studentId, narrowPane);
   const threadVisible = tab === "announcements" || isConversationVisible(pane);
@@ -458,6 +488,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                           isMine={m => m.senderRole === "teacher"}
                           labelFor={m => (m.senderRole === "teacher" ? "أنت" : m.senderDisplayName || "الطالب")}
                           followKey={shown.key + "|" + pane}
+                          actions={actionsFor(shown.key)}
                         />
                       )}
                       {shown && shown.hasNewer && <NewerMessagesNote />}
@@ -498,6 +529,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                       labelFor={m => m.senderDisplayName || "المعلم"}
                       followKey={shown.key}
                       variant="feed"
+                      actions={actionsFor(shown.key)}
                     />
                   )}
                 </div>

@@ -6,6 +6,11 @@
 // Every send is an independent CREATE-ONLY write (If-None-Match:"*"), so a teacher and a student sending at the same
 // moment can never overwrite each other, there is no whole-thread CAS / lost update, history is immutable, and one
 // failed send cannot corrupt older history. There is no edit / delete / unsend in Phase 5C.
+// Messages M.5 — EDIT / DELETE (message-edit.js) rewrite ONE message blob IN PLACE (ETag compare-and-set): the blob is
+// never removed and never moves, so every stream position stays published (the contiguous prefix below is unaffected),
+// the order key and id never change, and the sender role never changes (read state / relevance are unchanged). A
+// deleted message is a TOMBSTONE: { …, body: "", deleted: true, deletedAt, deletedByRole } — its text is gone from
+// storage; it stays a valid message of its stream (counted and acknowledged exactly as before).
 //
 // PUBLICATION ORDER (Phase 5D third review). A message id is assigned BY ITS PUBLICATION, not by a clock: each stream
 // is a dense sequence of positions 1, 2, 3, … and a message is published by the create-only write (If-None-Match:"*")
@@ -226,6 +231,7 @@ function normalizeStoredMessage(doc, expected) {
   if (expected.kind === "direct" && doc.studentId !== expected.studentId) return null;
   if (expected.kind === "announcement" && (doc.classId !== expected.classId || doc.senderRole !== "teacher")) return null;
   if (!SENDER_ROLES.has(doc.senderRole)) return null;
+  if (doc.deleted === true) return doc;                                   // M.5 — a tombstone (its body is gone)
   if (typeof doc.body !== "string" || !doc.body) return null;
   return doc;
 }
@@ -375,19 +381,29 @@ async function listRecentMessages(container, prefix, expected, limit, deps = {},
   return { messages: out, hasMore, hasNewer, legacyIds: legacy.map(e => e.messageId), absorbable: before ? [] : scan.absorbable, sequencedAbsorbable: before ? [] : seqScan.absorbable };
 }
 
-/** The public view of a message. Never includes storage paths, sender ids or send-time class metadata unless the
- *  (teacher) caller explicitly asks for the conversation context. */
+/**
+ * The public view of a message. Never includes storage paths, sender ids or send-time class metadata unless the
+ * (teacher) caller explicitly asks for the conversation context.
+ * M.5 — a deleted message is { deleted: true, deletedBy: <role>, body: "" } (never its former text); an edited one
+ * carries `editedAt`. `options.actions` (the reader's permissions, message-edit.js messageActions) adds what THIS reader
+ * may do: `editableUntil` / `deletableUntil` (ISO deadlines) and `canDelete`. They are display hints only — every edit
+ * and delete is decided again by the server.
+ */
 function messageView(doc, options = {}) {
+  const deleted = doc.deleted === true;
   const view = {
     messageId: String(doc.messageId),
     kind: String(doc.kind),
     senderRole: String(doc.senderRole),
     senderDisplayName: String(doc.senderDisplayName || ""),
-    body: String(doc.body),
+    body: deleted ? "" : String(doc.body),
     createdAt: String(doc.createdAt || "")
   };
+  if (deleted) { view.deleted = true; view.deletedBy = doc.deletedByRole === "student" ? "student" : "teacher"; }
+  else if (typeof doc.editedAt === "string" && doc.editedAt) view.editedAt = doc.editedAt;
   if (options.includeStudentId && doc.kind === "direct") view.studentId = String(doc.studentId);
   if (options.includeClassId && doc.kind === "announcement") view.classId = String(doc.classId);
+  if (typeof options.actions === "function" && !deleted) Object.assign(view, options.actions(doc));
   return view;
 }
 

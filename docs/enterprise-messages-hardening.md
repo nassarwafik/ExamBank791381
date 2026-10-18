@@ -1,4 +1,4 @@
-# Messages — enterprise hardening (M.1 server, M.2 presentation, M.3 audit follow-ups, M.4 deleted students)
+# Messages — enterprise hardening (M.1 server, M.2 presentation, M.3 audit follow-ups, M.4 deleted students, M.5 edit / delete / moderation)
 
 Design record for the «الرسائل» surfaces: the teacher page (`src/messages/TeacherMessagesPage.tsx`), the student
 view (`src/messages/StudentMessagesPage.tsx`) and their APIs (`/api/messages`, `/api/student-messages`). It builds on
@@ -164,6 +164,52 @@ The leftover conversations also kept costing the teacher badge a listing on ever
 
 **Not covered:** students deleted **before** this change have no purge record, so their data stays. Removing it needs a one-off backfill. Its selection rule would be "a direct stream whose user document is missing". That is a destructive data decision for the owner and is not run automatically here.
 
+## 3d. M.5 — editing and deleting messages, and the teacher's moderation delete
+
+**Owner request.** A teacher must be able to delete a student's message (a student may send an abusive one). Editing
+and deleting one's own messages come with it. The owner chose the moderation rule; the other rules below are the
+defaults proposed with it (15-minute window, a placeholder for deleted messages, no automatic retention).
+
+**Rules** (`api/src/lib/message-edit.js`; the server is the only authority):
+
+| Who | Edit | Delete |
+|---|---|---|
+| Student, own reply | within 15 minutes of sending, while they may still send | the same |
+| Teacher, own message or announcement | within 15 minutes of sending, while the conversation / class may still receive messages | at any time |
+| Teacher, a **student's** message | never | **at any time**, whatever the student's or class's state (moderation) |
+| Teacher, **another teacher's** message | never | never |
+| Anyone, a teacher's message seen by a student, or an announcement seen by a student | never | never |
+
+- The 15 minutes run from `createdAt`, the time the server wrote at publication. The edge itself (exactly 15 minutes) is still open.
+- An edit's text passes the same contract as a send (`normalizeMessageBody`) and costs one token of the sender's rate limit. An identical text is a no-op: no write, no token, no audit.
+- Deleting a deleted message is an idempotent success. A deleted message can never be edited back (`409 MESSAGE_DELETED`).
+- Another tenant's teacher cannot reach the conversation at all (`404`, the existing tenancy check). An id that is not a canonical message id of **that** stream is `404`, and nothing is ever created.
+
+**Storage.** The one message blob is rewritten **in place** by ETag compare-and-set (`mutateJsonWithRetry`), and the decision is re-taken on the freshest version inside every attempt:
+- an edit racing a delete retries on the tombstone and is refused;
+- the blob is never removed, so the stream's published prefix (§3b) keeps every position;
+- the id, order key, kind, owner, sender and `createdAt` never change.
+
+A delete leaves a **tombstone** `{ …, body: "", deleted: true, deletedAt, deletedByRole }`: the former text (and any edit time) is gone from the stored document.
+
+**Unchanged by design.**
+- A tombstone stays a valid message of its stream with the same sender role. Unread counts, relevance, snapshot acknowledgements, both frontiers and own-message absorption treat it exactly as before. If deletes made a message irrelevant, an acknowledgement built just before a delete would be rejected.
+- The ETag-validated badge memo (§3b) recounts a changed stream by construction, because the blob's ETag changed.
+- Push notifications never carried text (Phase 6B). The notification centre's preview of a deleted message is «تم حذف هذه الرسالة».
+
+**Views and audit.**
+- A view of a deleted message is `{ deleted: true, deletedBy, body: "" }`; an edited one carries `editedAt`.
+- Each reader's view also carries display hints: `editableUntil`, `canDelete`, and `deletableUntil` (students only). The UI shows «تعديل» / «حذف» only while those hints allow it; the server decides again on every request.
+- Teacher edits and deletes are audited (`message.edit` / `message.delete`) with the message id, kind, sender role and a `moderation` flag (true when the teacher deleted a student's message). The audit never carries text. Student sends were never audited, and student edits and deletes are not either.
+
+**UI** (`MessageParts.tsx` `MessageThread` `actions`).
+- **Placement:** the actions sit at the bubble's foot next to the time. On pointer devices they appear on hover or keyboard focus; on touch screens they are always visible.
+- **Edit:** happens inline. Ctrl+Enter saves and Escape cancels.
+- **Delete:** always asks for an inline confirmation first. The wording names the consequence: the student sees that the teacher deleted it, or the announcement leaves the class.
+- **Deleted messages:** drawn as a muted, dashed placeholder: «تم حذف هذه الرسالة.», or «حذف المعلم هذه الرسالة.» on a student's message the teacher removed.
+- **On success:** the server's stored version replaces the message in the snapshot, the older pages and the confirmed sends. A poll that started before the change is discarded.
+- **On refusal:** the server's error is shown on the message and the thread reloads.
+
 ## 4. Evidence
 
 - `api/tests/messages-hardening-m1.test.js`, 23 cases: fail-first against `9aecbaf` (19 of the 21 initial cases
@@ -189,6 +235,20 @@ The leftover conversations also kept costing the teacher badge a listing on ever
   - All 6 failed on `1b8db6b3`. In case 4, the part asserting that an existing student's data is kept already passed there, which makes it a pin; that case failed on dropping the stale record.
   - Mutation: 11 mutants (D01–D11), all KILLED. D06 (ignoring the step budget) survived the first run and was killed after the bounded-steps case asserted exactly one step's deletions.
 
+- M.5:
+  - `api/tests/messages-edit-delete-m5.test.js`, 21 cases.
+  - `src/messages/messagesEditDelete.m5.test.tsx`, 10 cases.
+  - Run against `c6b21e3b`: 28 of the 31 failed. The 3 that passed there are pins, because the baseline already refused them for another reason:
+    - an invalid text was refused as an unsupported action;
+    - another tenant's teacher was refused by tenancy;
+    - a client without the actions offered none.
+  - Two older tests pinned the "no edit / delete" contract and were updated deliberately:
+    - `messages-5c` "unsupported action" no longer lists `editMessage` / `deleteMessage`;
+    - the M.3 "stamp is storage-only" view-key list now includes the reader's hints.
+  - Mutation: 16 mutants (E01–E06, E08, E10–E18), all KILLED on the first run.
+    - The mutants covered ownership, both windows, resurrection of a deleted message, another teacher's message, the tombstone keeping its text, the read-only rule, the rate limit, the preview, tombstone validity, the moderation audit flag, the moderation hint, delete without confirmation, the button deadline, applying the stored version on screen, and the identical-text no-op.
+    - An id-canonicality mutant was left out because it is equivalent: a non-canonical id resolves to a missing blob of the same stream and is still `404`.
+
 ## 5. Known limitations / follow-ups
 
 - **Last-message preview and time in the roster**, **per-class unread in the class selector**, and dropping the
@@ -201,3 +261,10 @@ The leftover conversations also kept costing the teacher badge a listing on ever
 - **Students deleted before M.4** keep their messaging data until an owner-approved one-off backfill runs (§3c).
 - The rate limits are product numbers chosen for real conversation; the owner may tune them in
   `message-rate-limit.js`.
+- **M.5 erasure scope:** a delete erases the text from the current blob version. If blob versioning or soft delete is
+  enabled on the storage account (an Azure setting, not changed here), earlier versions are kept by that setting.
+- **M.5 older pages:** an older page loaded with «عرض الرسائل الأقدم» is not refreshed by polls. The viewer's own
+  changes are applied to it at once; a change the other side makes to a message only on an older page shows after the
+  thread is reopened. Edits happen within 15 minutes, so in practice only a teacher's late moderation delete is affected.
+- **M.5 not built:** muting a student, report / flagging, edit history, and automatic retention (deleting messages
+  older than a period). Retention is destructive and needs an owner decision on the period and on who sets it.

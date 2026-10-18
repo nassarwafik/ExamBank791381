@@ -25,6 +25,8 @@ const NOTIFICATION_LIMIT = 15;
 const NOTIFICATION_SCAN_LIMIT = 60;
 const NOTIFICATION_BATCH = 10;
 const PREVIEW_LENGTH = 140;
+/** M.5 — the preview of a deleted message (its text no longer exists). */
+const DELETED_PREVIEW = "تم حذف هذه الرسالة";
 
 /** A short single-line preview of a message body (whitespace collapsed, trimmed to PREVIEW_LENGTH characters). */
 function previewOf(body) {
@@ -58,7 +60,7 @@ function notificationItem({ doc, unread }) {
     id: String(doc.messageId),
     type: doc.kind === "announcement" ? "announcement" : "direct",
     senderDisplayName: String(doc.senderDisplayName || ""),
-    preview: previewOf(doc.body),
+    preview: doc.deleted === true ? DELETED_PREVIEW : previewOf(doc.body),   // M.5 — a tombstone has no text
     createdAt: String(doc.createdAt || ""),
     unread
   };

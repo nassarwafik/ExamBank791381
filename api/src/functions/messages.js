@@ -16,7 +16,14 @@
 // teacher profile (resolveTeacherDisplayName). Body fields such as teacherId / senderId / senderName / messageId /
 // createdAt are ignored. A NEW message requires an active, non-archived student whose CURRENT class (from the
 // persisted student document — never a browser classId) is active; announcements require an active class. Archived
-// history stays readable. Messages are append-only (message-store), never edited or deleted.
+// history stays readable. Messages are append-only (message-store).
+//   POST /api/messages { action: "editMessage", studentId | classId, messageId, body }   → M.5: edit THIS teacher's own
+//        message / announcement within 15 minutes of sending (while the conversation / class may still receive messages)
+//   POST /api/messages { action: "deleteMessage", studentId | classId, messageId }       → M.5: delete this teacher's own
+//        message / announcement, or — MODERATION — any STUDENT message of a conversation this teacher may open, at any
+//        time (archived / disabled students included). Never another teacher's message. Rules: lib/message-edit.js.
+//        Both answer { message } (the stored version; a deleted one is a tombstone without its text) and are audited
+//        with ids only, never text. Every message view carries this teacher's display hints (editableUntil / canDelete).
 // Phase 6B — after a NEW teacher → student direct message is SAVED (createMessage committed), the student's opted-in
 // devices get a Web Push notification (no message content). It is a best-effort side effect with a time budget: a push
 // failure, timeout, missing VAPID configuration or no subscription never changes the send response. Nothing else here
@@ -35,6 +42,9 @@ const {
 } = require("../lib/message-store");
 // Messages hardening (M.1): idempotent (clientMessageId) + rate-limited publication, private no-store responses.
 const { publishGuarded, noStore } = require("../lib/message-send");
+// Messages M.5 — edit / delete / moderation (one CAS on the message blob; the rules live in the lib).
+const { MessageChangeError, messageActions, editMessage, deleteMessage, isOwn } = require("../lib/message-edit");
+const { reserveMessageSend, rateLimitedResponse } = require("../lib/message-rate-limit");
 const {
   MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, absorbIrrelevantSequenced, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
 } = require("../lib/message-read-state");
@@ -110,6 +120,9 @@ async function handle(request, deps = {}, obs = null) {
     const ownStudent = async id => (await studentAccessible(load, await loadStudent(container, id, dl), tenant));
     const ownClass = id => classAccessible(load, id, tenant);
     const canSee = tenant ? user => studentAccessible(load, user, tenant) : null;
+    // M.5 — THIS teacher's permissions on each message, as view hints (the actions decide again on their own).
+    const actor = { role: "teacher", id: teacherId };
+    const actionsFor = canSend => doc => messageActions(doc, actor, { canSend, now: deps.now ? deps.now() : Date.now() });
 
     if (request.method === "GET") {
       const url = new URL(request.url);
@@ -152,7 +165,7 @@ async function handle(request, deps = {}, obs = null) {
           ok: true,
           student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
           canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error,
-          messages: page.messages.map(m => messageView(m, { includeStudentId: true })), hasMore: page.hasMore, hasNewer: page.hasNewer
+          messages: page.messages.map(m => messageView(m, { includeStudentId: true, actions: actionsFor(state.canSend) })), hasMore: page.hasMore, hasNewer: page.hasNewer
         } };
       }
       if (classId && kind === "announcements") {
@@ -163,7 +176,7 @@ async function handle(request, deps = {}, obs = null) {
         const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps, { isLegacyRead: () => true, before });
         return { status: 200, jsonBody: {
           ok: true, classroom: classSummary(classroom), canSend: !archived, readOnlyCode: archived ? "classArchived" : "", readOnlyReason: archived ? MSG.classArchived : "",
-          messages: page.messages.map(m => messageView(m, { includeClassId: true })), hasMore: page.hasMore
+          messages: page.messages.map(m => messageView(m, { includeClassId: true, actions: actionsFor(!archived) })), hasMore: page.hasMore
         } };
       }
       return bad("حدّد الطالب أو الصف.");
@@ -204,7 +217,7 @@ async function handle(request, deps = {}, obs = null) {
         try { await notifyWithTimeout((deps.notifyStudentOfNewMessage || notifyStudentOfNewMessage)(container, studentId, deps, obs)); }
         catch { /* never reached: notify is total; kept as a last guard */ }
       }
-      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeStudentId: true }), ...(sent.replay ? { replay: true } : {}) } };
+      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeStudentId: true, actions: actionsFor(true) }), ...(sent.replay ? { replay: true } : {}) } };
     }
 
     if (action === "sendAnnouncement") {
@@ -226,7 +239,40 @@ async function handle(request, deps = {}, obs = null) {
       if (sent.response) return sent.response;
       const doc = sent.doc;
       if (!sent.replay) await rec(container, { actor: teacherId, action: "message.sendAnnouncement", targetType: "class", targetId: classId, targetLabel: String(classroom.name || ""), details: { messageId: doc.messageId } });
-      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true }), ...(sent.replay ? { replay: true } : {}) } };
+      return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true, actions: actionsFor(true) }), ...(sent.replay ? { replay: true } : {}) } };
+    }
+
+    if (action === "editMessage" || action === "deleteMessage") {
+      // The stream is the server-authorized conversation (studentId) or class feed (classId) — tenancy checked above.
+      const studentId = String(body.studentId || "").trim();
+      const classId = String(body.classId || "").trim();
+      let target = null;
+      if (studentId) {
+        const student = await loadStudent(container, studentId, dl);
+        if (!student) return notFound(MSG.studentNotFound);
+        const state = await directSendState(container, student, dl);
+        target = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, canSend: state.canSend, view: { includeStudentId: true }, targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student) };
+      } else if (classId) {
+        const classroom = await loadClass(container, classId, dl);
+        if (!classroom) return notFound(MSG.classNotFound);
+        target = { streamPrefix: announcementPrefix(classId), expected: { kind: "announcement", classId }, canSend: normalizeClassStatus(classroom) !== "archived", view: { includeClassId: true }, targetType: "class", targetId: classId, targetLabel: String(classroom.name || "") };
+      } else return bad("حدّد الطالب أو الصف.");
+      const messageId = String(body.messageId || "");
+      const common = { streamPrefix: target.streamPrefix, expected: target.expected, messageId, actor, canSend: target.canSend };
+      try {
+        const r = action === "editMessage"
+          ? await editMessage(container, { ...common, body: body.body, reserve: () => (deps.reserveMessageSend || reserveMessageSend)(container, "teacher", teacherId, deps) }, deps)
+          : await deleteMessage(container, common, deps);
+        if (r.changed) {
+          await rec(container, { actor: teacherId, action: action === "editMessage" ? "message.edit" : "message.delete", targetType: target.targetType, targetId: target.targetId, targetLabel: target.targetLabel,
+            details: { messageId, kind: target.expected.kind, senderRole: String(r.doc.senderRole), moderation: !isOwn(r.doc, actor) } });
+        }
+        return { status: 200, jsonBody: { ok: true, message: messageView(r.doc, { ...target.view, actions: actionsFor(target.canSend) }), ...(r.changed ? {} : { unchanged: true }) } };
+      } catch (e) {
+        if (!(e instanceof MessageChangeError)) throw e;
+        if (e.rateLimit) return rateLimitedResponse(e.rateLimit);
+        return { status: e.status, jsonBody: { ok: false, code: e.code, error: e.message } };
+      }
     }
 
     if (action === "markDirectRead") {
