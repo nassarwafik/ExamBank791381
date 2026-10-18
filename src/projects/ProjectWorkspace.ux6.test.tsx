@@ -165,7 +165,7 @@ describe("UX-6a workspace — toolbar, class selector, view switch, request mode
     const select = within(toolbar()).getByLabelText("الصف") as HTMLSelectElement;
     expect(select.value).toBe("c1");                                                                   // first ACTIVE class
     expect(Array.from(select.querySelectorAll("optgroup")).map(g => g.getAttribute("label"))).toEqual(["الصفوف النشطة", "السنوات السابقة / الصفوف المؤرشفة"]);
-    expect(within(views()).getAllByRole("button").map(b => b.textContent + "=" + b.getAttribute("aria-pressed"))).toEqual(["لوحة المشروع=true", "تقدّم الطلاب=false", "الإحصائيات=false", "إعداد المراحل=false"]);
+    expect(within(views()).getAllByRole("button").map(b => b.textContent + "=" + b.getAttribute("aria-pressed"))).toEqual(["لوحة المشروع=true", "تقدّم الطلاب=false", "التقييم الجماعي=false", "الإحصائيات=false", "إعداد المراحل=false"]);
     expect(within(toolbar()).queryByText(/للقراءة فقط/)).toBeNull();
     // dashboard = exactly one summary read; StatCards from the payload; semantic progress bars
     expect(gets("summary")).toHaveLength(1);

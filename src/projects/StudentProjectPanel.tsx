@@ -13,6 +13,7 @@ import type { ProjectStage, ProjectGroup, ProjectPerformance, ProjectEvaluation,
 import type { ProjectStrength } from "../student/types";
 import { visualImgProps } from "../studentVisualSizes";
 import type { StudentProjectDrill, StudentProjectDrillOutcome } from "./studentProjectDrill";
+import { postSelfReport } from "./studentSelfReport";
 
 type StudentProject = {
   projectCode: string;
@@ -57,10 +58,12 @@ function ProjectCard({ project, contribution, onOpen }: { project: StudentProjec
   );
 }
 
-// Read-only detail of ONE project (UX-7a presentation on the shared primitives + the Project Performance hero):
-// the values are the server's summary / performance / progress exactly as delivered — nothing is recomputed and
-// nothing is written from here. Stage scores are the teacher's marks, read-only for the student.
-function OneProject({ project, contribution, onBack }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null }) {
+// Detail of ONE project (UX-7a presentation on the shared primitives + the Project Performance hero): the values are the
+// server's summary / performance / progress exactly as delivered — nothing is recomputed. Stage scores are the teacher's
+// marks, read-only for the student. Phase P2 — the ONE write: the student marks the stages they completed (they count
+// immediately and show «بانتظار تأكيد المعلم» until the teacher confirms) and may undo their own unconfirmed marks.
+// Marking is an explicit mode («تحديد المراحل التي أنجزتها»), so the default view has no inputs and no accidental taps.
+function OneProject({ project, contribution, onBack, token, onChanged }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null; token: string; onChanged: () => void }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
@@ -69,6 +72,25 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
   const s = project.summary;
   const next = project.nextStages ? project.nextStages[track] : null;
   const trackMeta = project.tracks.find(t => t.trackId === track);
+  const [marking, setMarking] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const togglePick = (stageId: string) => setPicked(prev => { const next = new Set(prev); if (next.has(stageId)) next.delete(stageId); else next.add(stageId); return next; });
+  async function send(stageIds: string[], mark: boolean) {
+    if (busy || !stageIds.length) return;
+    setBusy(true); setMessage(null);
+    try {
+      const r = await postSelfReport(token, project.projectCode, stageIds, mark);
+      const refused = r.results.filter(x => !x.ok).length;
+      setMessage({ tone: refused ? "error" : "ok", text: mark
+        ? (r.changed ? "تم تحديد " + r.changed + " مرحلة كمنفّذة. تظهر الآن لمعلمك." : "لم يتغير شيء.") + (refused ? " تعذر تحديد " + refused + "." : "")
+        : r.changed ? "تم التراجع عن التحديد." : refused ? "اعتمد المعلم هذه المرحلة، لا يمكن التراجع عنها." : "لم يتغير شيء." });
+      if (mark) { setPicked(new Set()); setMarking(false); }
+      if (r.changed) onChanged();
+    } catch (e) { setMessage({ tone: "error", text: e instanceof Error ? e.message : "تعذر حفظ التغيير." }); }
+    finally { setBusy(false); }
+  }
 
   return (
     <div className="eb-sp-project" data-project-code={project.projectCode}>
@@ -90,6 +112,18 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
           {project.tracks.map(t => <button key={t.trackId} type="button" className="eb-chip-button" aria-pressed={track === t.trackId} onClick={() => setTrack(t.trackId)}>{t.title}</button>)}
         </div>
       )}
+      <div className="eb-sp-mark-bar" role="region" aria-label="تحديد المراحل المنفّذة">
+        {marking ? (
+          <>
+            <span role="status">{picked.size ? "اخترت " + picked.size + " مرحلة" : "اختر المراحل التي أنجزتها"}</span>
+            <button type="button" className="eb-button is-primary is-small" disabled={busy || !picked.size} onClick={() => void send([...picked], true)}>{busy ? "جارٍ الحفظ…" : "حفظ كمنفّذة"}</button>
+            <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={() => { setMarking(false); setPicked(new Set()); }}>إلغاء</button>
+          </>
+        ) : (
+          <button type="button" className="eb-button is-small" onClick={() => { setMarking(true); setMessage(null); }}>تحديد المراحل التي أنجزتها</button>
+        )}
+      </div>
+      {message && <p className={message.tone === "ok" ? "platform-notice assignment-inline-message" : "platform-error assignment-inline-message"} role={message.tone === "ok" ? "status" : "alert"}>{message.text}</p>}
       {groups.map(g => {
         const gid = "eb-sp-group-" + project.projectCode + "-" + g.groupId;
         return (
@@ -100,12 +134,18 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
                 const entry = project.progress ? project.progress[stage.stageId] : undefined;
                 const status = normalizeStageStatus(entry?.status);
                 const value = stageValueOf(perf, stage.stageId);
+                const selfReported = status === "approved" && !!entry?.selfReportedAt;
+                const label = stage.stageId + " — " + stage.title;
                 return (
-                  <li key={stage.stageId} className={"eb-sp-stage " + STAGE_STATUS_CLASS[status]}>
+                  <li key={stage.stageId} className={"eb-sp-stage " + STAGE_STATUS_CLASS[status] + (picked.has(stage.stageId) ? " is-picked" : "")}>
                     <div className="eb-sp-stage-main">
-                      <StatusBadge tone={STAGE_STATUS_TONE[status]}>{statusLabel(status)}</StatusBadge>
+                      {marking && status !== "approved" && <input type="checkbox" checked={picked.has(stage.stageId)} disabled={busy} onChange={() => togglePick(stage.stageId)} aria-label={"أنجزت " + label} />}
+                      {selfReported
+                        ? <StatusBadge tone="warn">منفّذة — بانتظار تأكيد المعلم</StatusBadge>
+                        : <StatusBadge tone={STAGE_STATUS_TONE[status]}>{statusLabel(status)}</StatusBadge>}
                       <span className="eb-sp-stage-code">{stage.stageId}</span>
                       <span className="eb-sp-stage-title">{stage.title}</span>
+                      {selfReported && <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={() => void send([stage.stageId], false)} aria-label={"تراجع عن تحديد " + label}>تراجع</button>}
                     </div>
                     {perf && (
                       <p className="eb-sp-stage-score">
@@ -135,6 +175,7 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
 type LoadResult = { token: string; status: "ready" | "failed"; data: ProjectData | null };
 export default function StudentProjectPanel({ token, contributions = [], onEvaluationChange, drill = null, onDrillConsumed }: { token: string; contributions?: ProjectStrength[]; onEvaluationChange?: (briefs: ProjectEvaluationBrief[]) => void; drill?: StudentProjectDrill | null; onDrillConsumed?: (seq: number, outcome: StudentProjectDrillOutcome) => void }) {
   const [load, setLoad] = useState<LoadResult | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);                            // P2: re-read after the student's own write
   const [openCode, setOpenCode] = useState<string>("");
   const [consumed, setConsumed] = useState<{ seq: number; outcome: StudentProjectDrillOutcome } | null>(null);
   // A drill that resolved as NOT available must not fall back to the legacy single-project auto-open (that would show
@@ -157,7 +198,7 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, reloadNonce]);
 
   // Only a result read for the CURRENT token is authoritative (a previous session's list never answers a drill).
   const current = load && load.token === token ? load : null;
@@ -184,9 +225,9 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
 
   return (
     <section className="eb-sp-panel eb-sp-projects" aria-labelledby="eb-sp-projects-title">
-      <SectionHeader level={2} id="eb-sp-projects-title" title="مشاريعي" count={projects.length > 1 ? projects.length : undefined} description="تقدّمك وعلاماتك في مشاريع صفك، كما سجّلها المعلم." />
+      <SectionHeader level={2} id="eb-sp-projects-title" title="مشاريعي" count={projects.length > 1 ? projects.length : undefined} description="تقدّمك وعلاماتك في مشاريع صفك. حدّد المراحل التي أنجزتها لتظهر لمعلمك." />
       {open ? (
-        <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} />
+        <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} token={token} onChanged={() => setReloadNonce(n => n + 1)} />
       ) : (
         <ul className="eb-sp-project-cards" aria-label="المشاريع">
           {projects.map(p => <li key={p.projectCode}><ProjectCard project={p} contribution={contributionOf(p.projectCode)} onOpen={() => { setListOnlyFor(null); setOpenCode(p.projectCode); }} /></li>)}

@@ -62,9 +62,11 @@ export type ClassSummary = {
 };
 
 /** `score` (teacher-only quality mark 0–100) is additive/optional; status (workflow) and score (quality) are separate. */
-export type StageProgressEntry = { status: StageStatus; note?: string; score?: number | null; updatedAt?: string; approvedAt?: string; approvedBy?: string };
+/** Phase P2 — `selfReportedAt` / `selfReportedBy`: the STUDENT marked the stage done (it counts as approved) and the
+ * teacher has not confirmed it yet; any teacher status write clears them. */
+export type StageProgressEntry = { status: StageStatus; note?: string; score?: number | null; updatedAt?: string; approvedAt?: string; approvedBy?: string; selfReportedAt?: string; selfReportedBy?: string };
 
-export type HistoryEvent = { eventId: string; stageId: string; type: "status" | "note" | "score"; fromStatus?: StageStatus; toStatus?: StageStatus; fromScore?: number | null; toScore?: number | null; actor: string; createdAt: string };
+export type HistoryEvent = { eventId: string; stageId: string; type: "status" | "note" | "score"; fromStatus?: StageStatus; toStatus?: StageStatus; fromScore?: number | null; toScore?: number | null; actor: string; createdAt: string; source?: "student"; verified?: boolean };
 
 /** One stage's project value as the server computed it (only stages that carry project value are listed). */
 export type StageValue = { stageId: string; track: string; status: StageStatus; score: number | null; maxContribution: number; contribution: number; counted: boolean };
