@@ -8,10 +8,14 @@ name: Coding Runner Security & Smoke Tests
 # This workflow uses no stored secrets (TEST keys are generated inside the tests); it never deploys anything.
 # A missing Docker daemon or worker image FAILS the run — nothing is skipped.
 # Base-image pulls: the pinned bases are mirrored on ECR Public, whose ANONYMOUS per-IP data quota is shared by all
-# GitHub-hosted runners ("429 Too Many Requests: Data limit exceeded"). Two mitigations, both outside the images themselves:
+# GitHub-hosted runners ("429 Too Many Requests: Data limit exceeded"). Three mitigations, all outside the images themselves:
 #   - an OPTIONAL ECR Public login with a 15-minute OIDC credential (repository VARIABLE ECR_PUBLIC_ROLE_ARN, no stored
 #     secret; skipped with a warning when unset or on fork pull requests — then pulls stay anonymous, as before);
-#   - a bounded retry when pre-pulling the digest-pinned bases.
+#   - a bounded retry when pre-pulling the digest-pinned bases;
+#   - a Docker Hub FALLBACK (owner-approved, 2026-10-19): on the ECR quota refusal a Docker Official Image base is pulled from
+#     docker.io/library with the SAME sha256 digest and passed to the build as a BuildKit named context (BASE_IMAGE_CONTEXTS,
+#     validated by build-images.sh); a ::warning names every substitution. No credential, no new permission, Dockerfiles
+#     and the gateway host's build unchanged. See docs/development/ci-ecr-public-login.md.
 # `id-token: write` exists ONLY so the job can request that OIDC token; it grants no repository write access.
 on:
   push:
@@ -49,7 +53,7 @@ jobs:
         env:
           ECR_PUBLIC_ROLE_ARN: ${{ vars.ECR_PUBLIC_ROLE_ARN }}
         run: sh runner/scripts/ecr-public-login.sh
-      - name: Pre-pull the digest-pinned base images (bounded retry)
+      - name: Pre-pull the digest-pinned base images (bounded retry, same-digest Docker Hub fallback)
         run: sh runner/scripts/pull-base-images.sh
       - name: Build worker images (python@1, java@1, csharp@1)
         run: npm --prefix runner run build:images
