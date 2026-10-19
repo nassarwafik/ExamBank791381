@@ -322,3 +322,33 @@ an optional `importId` on student documents created by a bulk import.
   - **Two first survived.**
     - **Y21** survived because the test's first attempt had already written the index. A test now covers an attempt that died before its index write, and kills it.
     - **Y11** (keep the old key) is **equivalent**. Picking a file resets the key before the preview, so the replacement always runs on an empty key. The combined mutant Y11b (no reset and no replacement) is killed by the test «another file picked in the SAME dialog gets a new key».
+
+## Phase S.4 — one term and accessible details
+
+S.4 closes the plan's last row. Its first five items (class filter layout, phone cards, the shared `arabicCount`, the numeric
+name sort, dead legacy styles) were delivered by U.1 and U.2. What remained was terminology and accessibility details. A real
+Chromium audit of the page (accessible names through Playwright's ARIA snapshot, and focus after each roster action) found
+the items below. Nothing in the data, the API or the grading path changes.
+
+| # | Decision | Why |
+|---|---|---|
+| S4-a | **One term for assignments: «الواجبات».** It is used for the roster column and its phone label, the row's history button («الواجبات (N)»), the student sheet section («الواجبات وسجل التسليم»), its history table («سجل الواجبات المسلّمة», column «الواجب»), the review action («فحص الواجب») and the load error. | The sidebar, the assignments workspace and the rest of the platform say «الواجبات». Only this workspace said «الوظائف», and the sheet mixed both in one heading («الواجبات وسجل الوظائف»). («وظائف» in the learning content means *functions* and is not touched.) |
+| S4-b | **An archived class is restored: «استعادة الصف»** (menu), «استعادة الصف <name> من الأرشيف؟» (confirmation), «استعادة» (button), «✓ تمت استعادة الصف.» (notice). «✓ تم أرشفة الصف» becomes «✓ تمت أرشفة الصف» (أرشفة is feminine; the student notice already said «تمت»). | The class menu said «تفعيل» next to «أرشفة الصف», while every student action says «استعادة». A teacher could not tell that «تفعيل» undoes the archive. |
+| S4-c | **Focus never falls to `<body>`.** After a roster or bulk action, if focus was lost, it moves to the roster heading (`#eb-roster-title`, `tabindex="-1"`). Focus is lost when the control it returns to was removed: a delete or a move removes the row and its menu, a filtered-out status change hides the row, and clearing the selection removes the bulk bar. Focus that is still on a control on the page is left there. | Measured in Chromium on the baseline: after a single delete, a bulk archive, and an archive under the «فعّال» filter, `document.activeElement` was `<body>`. A keyboard or screen-reader user then starts again from the top of the page («تجاوز إلى المحتوى»). |
+| S4-d | **Names that say which student and which class.** The roster table is named «طلاب <class>». Each row's details button is named «تفاصيل <student>» (it was «التفاصيل» on every row). The history button adds the student after its visible text («الواجبات (2) — <student>», so the visible label is still the start of the name). An empty assignments cell is read as «لا واجبات مسلّمة»; the visible «—» is hidden from assistive technology. | A screen-reader user moving by buttons heard «التفاصيل» thirty times with no student, and «—» read as «dash». |
+
+**Evidence.**
+- **Browser gate.** `scripts/check-classes-students-browser-u1.mjs` gains an S.4 section, run once at 1024 px after the four widths because it deletes and archives. It checks:
+  - **(11)** no «الوظائف» on the page or in the student sheet; the table name; a details button naming its student; the empty cell;
+  - **(12)** focus on the roster heading after a single delete and after a bulk archive.
+
+  Results: on the head, 85 / 85 pass. On the baseline `69a6705b` (measured with the details locator widened so that the earlier sections reach S.4), the 78 U.1 / U.2 checks pass and all **7** S.4 checks fail, with focus on `<body>` in both focus checks.
+- **Unit tests.** `src/students/classesStudents.s4.test.tsx` has 7 tests. On `69a6705b`, 6 fail. The 7th is a **pin**: an action that keeps its control (disabling a student) leaves focus on that row's menu trigger, never pulled to the heading.
+- **Mutation campaign.** 8 mutants.
+  - **Killed:** Z1 (no fallback after a delete), Z2 (none after a bulk action), Z3 (the fallback takes focus still on the page), Z5 (unnamed table), Z6 (empty cell read as «—»), Z7 (details button without the student), Z8 (class restore labelled «تفعيل» again).
+  - **Z4 was equivalent.** It dropped an extra `isConnected` check. Under the HTML focus fix-up rule, a removed focused element already hands focus to `<body>`, so the check was redundant and was removed from the code. Z3 was re-run on the simplified line and is KILLED.
+- **Existing tests.** Updated for the new wording:
+  - `ux4`, `lifecycle`, `hardening`, `rosterPatch`, `u1`, `s3`: «تفاصيل <student>», «الواجبات (N)», «الواجبات وسجل التسليم», «استعادة الصف», «تمت أرشفة الصف».
+  - The gate's details locator: `/^تفاصيل /`.
+
+**Not in S.4 (owner decisions).** The bulk-delete wording (locked by U2-d), hard vs recoverable delete, and whether graduation disables logins.

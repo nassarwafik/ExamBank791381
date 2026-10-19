@@ -113,7 +113,7 @@ describe("S.3 — passwords are masked until the teacher asks", () => {
   });
   it("a reset password in the student dialog: masked until asked; copy uses the real value", async () => {
     await mount();
-    fireEvent.click(within(screen.getByText("علي").closest("tr") as HTMLElement).getByRole("button", { name: "التفاصيل" }));
+    fireEvent.click(within(screen.getByText("علي").closest("tr") as HTMLElement).getByRole("button", { name: /^تفاصيل / }));
     const d = await screen.findByRole("dialog", { name: "علي حسن" });
     fireEvent.click(within(d).getByRole("button", { name: "كلمة مرور جديدة" }));
     await confirmYes();
