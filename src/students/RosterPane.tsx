@@ -185,15 +185,16 @@ export default function RosterPane(p: RosterPaneProps) {
           <tbody>{p.visibleStudents.map(student => {
             const selected = p.selectedIds.includes(student.userId);
             const firstName = student.firstName || p.splitName(student.displayName).firstName;
+            const familyName = student.familyName || p.splitName(student.displayName).familyName || "";
             const lastLogin = relativeTime(student.lastLoginAt);
             return <tr key={student.userId} className={[student.archived ? "student-row-archived" : "", selected ? "is-selected" : ""].filter(Boolean).join(" ")}>
             <td className="eb-col-select"><input type="checkbox" checked={selected} onChange={() => p.onToggleSelected(student.userId)} aria-label={"تحديد " + student.displayName} /></td>
-            <td className="eb-col-name" data-label="الاسم"><span className="eb-name-cell"><StudentAvatar token={p.token} studentId={student.userId} name={student.displayName} avatarId={student.avatarId} profilePhoto={student.profilePhoto} /><strong>{firstName}</strong>{student.likesCount > 0 && <span className="student-likes-badge" title={student.likesCount + " ردّ فعل على إنجازاته"}><IconHeart size={12} aria-hidden="true" /> {student.likesCount}<VisuallyHidden> ردود فعل على إنجازاته</VisuallyHidden></span>}</span></td>
-            <td data-label="اسم العائلة">{student.familyName || p.splitName(student.displayName).familyName || "—"}</td>
+            <td className="eb-col-name" data-label="الاسم"><span className="eb-name-cell"><StudentAvatar token={p.token} studentId={student.userId} name={student.displayName} avatarId={student.avatarId} profilePhoto={student.profilePhoto} /><strong data-family={familyName || undefined}>{firstName}</strong>{student.likesCount > 0 && <span className="student-likes-badge" title={student.likesCount + " ردّ فعل على إنجازاته"}><IconHeart size={12} aria-hidden="true" /> {student.likesCount}<VisuallyHidden> ردود فعل على إنجازاته</VisuallyHidden></span>}</span></td>
+            <td data-label="اسم العائلة" className="eb-col-family">{familyName || "—"}</td>
             <td dir="ltr" data-label="رقم الهوية" className="eb-col-identity">{student.identityNumber || student.code || "يحتاج تحديث"}</td>
-            <td data-label="الحالة"><StatusBadge tone={statusTone(student)}>{p.statusLabel(student)}</StatusBadge></td>
-            <td data-label="آخر دخول">{lastLogin ? <time dateTime={student.lastLoginAt} title={lastLogin.full}>{lastLogin.label}</time> : <span className="never-login">لم يدخل بعد</span>}</td>
-            <td data-label="الوظائف">{student.submittedAssignmentsCount > 0 ? <button type="button" className="eb-link-button" onClick={() => p.onOpenHistory(student)} disabled={p.busy}><IconHistory size={14} />الوظائف ({student.submittedAssignmentsCount})</button> : <span className="eb-muted">—</span>}</td>
+            <td data-label="الحالة" className="eb-col-status"><StatusBadge tone={statusTone(student)}>{p.statusLabel(student)}</StatusBadge></td>
+            <td data-label="آخر دخول" className="eb-col-login">{lastLogin ? <time dateTime={student.lastLoginAt} title={lastLogin.full}>{lastLogin.label}</time> : <span className="never-login">لم يدخل بعد</span>}</td>
+            <td data-label="الوظائف" className="eb-col-tasks">{student.submittedAssignmentsCount > 0 ? <button type="button" className="eb-link-button" onClick={() => p.onOpenHistory(student)} disabled={p.busy}><IconHistory size={14} />الوظائف ({student.submittedAssignmentsCount})</button> : <span className="eb-muted">—</span>}</td>
             <td className="eb-col-actions"><div className="eb-row-actions">
               <button type="button" className="eb-button is-quiet is-small eb-icon-action" title={"تفاصيل " + student.displayName} onClick={() => p.onOpenProfile(student)} disabled={p.busy}><IconUser size={16} aria-hidden="true" /><VisuallyHidden>التفاصيل</VisuallyHidden></button>
               <ActionMenu label={"إجراءات " + student.displayName}>

@@ -177,10 +177,19 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-dialog-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--eb-space-4) var(--eb-space-5); display: flex; flex-direction: column; gap: var(--eb-space-4); }
 .eb-dialog-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--eb-space-2); padding: 0 var(--eb-space-5) var(--eb-space-4); }
 .eb-dialog-root.is-suspended { visibility: hidden; }
+/* U.1 — placement="end": a full-height side sheet at the inline end (the left edge in RTL); the page stays visible beside it. */
+.eb-dialog-root.is-sheet { justify-content: flex-end; align-items: stretch; padding: 0; }
+.eb-dialog-root.is-sheet .eb-dialog { width: min(640px, 100%); max-height: none; border-block: 0; border-inline-end: 0; border-radius: 0; }
+.eb-dialog-root.is-sheet .eb-dialog.size-lg { width: min(820px, 100%); }
 .eb-confirm-message { margin: 0; white-space: pre-line; line-height: var(--eb-lh-body); color: var(--eb-text); }
 @media (max-width: 767px) {
   .eb-dialog-root { padding: var(--eb-space-2); align-items: flex-end; }
   .eb-dialog, .eb-dialog.size-sm, .eb-dialog.size-lg { width: 100%; max-height: 94vh; }
+}
+/* U.1 — on a phone the side sheet is the same bottom sheet as every other dialog. */
+@media (max-width: 767px) {
+  .eb-dialog-root.is-sheet { padding: var(--eb-space-2) 0 0; align-items: flex-end; }
+  .eb-dialog-root.is-sheet .eb-dialog, .eb-dialog-root.is-sheet .eb-dialog.size-lg { width: 100%; max-height: 94vh; border: 1px solid var(--eb-line); border-block-end: 0; border-radius: var(--eb-r-lg) var(--eb-r-lg) 0 0; }
 }
 /* UX-8b — field-specific validation message (described by the invalid control; never a page-level banner) */
 .eb-field-error { margin: var(--eb-space-1) 0 0; color: var(--eb-danger-tx); font-size: var(--eb-fs-12); line-height: var(--eb-lh-body); }
@@ -197,6 +206,7 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 @media (pointer: coarse) { .eb-dialog-foot .eb-button { min-height: 44px; } }
 @media (prefers-reduced-motion: no-preference) {
   .eb-dialog { animation: ebFadeIn var(--eb-dur) var(--eb-ease) both; }
+  .eb-dialog-root.is-sheet .eb-dialog { animation: ebSheetIn var(--eb-dur) var(--eb-ease) both; }
 }
 
 /* ---------- UX-4: StatusBadge ---------- */
@@ -321,3 +331,5 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 }
 /* Older platform cards inside the shell: the current card tokens (border, radius, soft shadow) — no new colours. */
 .eb-shell-content .platform-card{ border-color:var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
+@keyframes ebSheetIn { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@media (max-width: 767px) and (prefers-reduced-motion: no-preference) { .eb-dialog-root.is-sheet .eb-dialog { animation-name: ebFadeIn; } }

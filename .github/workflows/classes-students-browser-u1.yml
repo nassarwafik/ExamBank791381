@@ -1,0 +1,50 @@
+name: Phase U.1 Classes & Students Real Chromium Gate
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/students/**"
+      - "src/TeacherPlatform.tsx"
+      - "src/page-parts.css"
+      - "src/platform.css"
+      - "src/ui/**"
+      - "src/design-tokens.css"
+      - "api/src/functions/manage-classrooms.js"
+      - "api/src/functions/manage-students.js"
+      - "browser-harness/learning-l8-api.cjs"
+      - "scripts/check-classes-students-browser-u1.mjs"
+      - "docs/enterprise-classes-students-hardening.md"
+      - ".github/workflows/classes-students-browser-u1.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: U.1 class bar, roster, student sheet and axe
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production assets, the API and the measuring tools
+        run: |
+          npm ci
+          npm ci --prefix api
+          npm run build
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0 axe-core@4.10.2
+          command -v google-chrome
+      - name: Certify the Classes & Students page in real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          AXE_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-u1
+        run: node scripts/check-classes-students-browser-u1.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: classes-students-u1-browser
+          path: .harness-u1/
+          retention-days: 7

@@ -85,7 +85,7 @@ export default function StudentDialog(p: StudentDialogProps) {
   const medals = medalItemsFor(profile.assignments);
   const jump = (id: string) => () => { const el = document.getElementById(id); if (el) { if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start" }); (el as HTMLElement).focus(); } };
   return (
-    <Dialog open title={profile.student.displayName} onClose={p.onClose} size="lg" suspended={p.suspended} initialFocusRef={p.section === "history" ? historyRef : summaryRef} className="eb-student-dialog">
+    <Dialog open title={profile.student.displayName} onClose={p.onClose} size="lg" placement="end" suspended={p.suspended} initialFocusRef={p.section === "history" ? historyRef : summaryRef} className="eb-student-dialog">
       {p.error && <div className="platform-error eb-dialog-error" role="alert">{p.error}</div>}
       <p className="eb-dialog-lead">{profile.classroom?.name || "—"} · <span dir="ltr">{profile.student.identityNumber}</span> · <StatusBadge tone={profile.student.archived ? "neutral" : profile.student.active ? "success" : "warn"}>{profile.student.archived ? "مؤرشف" : profile.student.active ? "فعّال" : "معطّل"}</StatusBadge></p>
       <nav className="eb-dialog-nav" aria-label="أقسام ملف الطالب">
@@ -136,7 +136,7 @@ export default function StudentDialog(p: StudentDialogProps) {
       <section className="eb-dialog-section" aria-labelledby="eb-student-history">
         <h3 id="eb-student-history" ref={historyRef} tabIndex={-1}>الواجبات وسجل الوظائف</h3>
         <h4 className="eb-subheading">واجبات الصف الحالي</h4>
-        <div className="students-table-wrap"><table className="students-table">
+        <div className="students-table-wrap" role="region" aria-label="جدول واجبات الصف الحالي" tabIndex={0}><table className="students-table">
           <thead><tr><th scope="col">الواجب</th><th scope="col">الحالة</th><th scope="col">المحاولات</th><th scope="col">العلامة</th><th scope="col">النسبة</th><th scope="col">آخر تسليم</th></tr></thead>
           <tbody>{profile.assignments.map(a => <tr key={a.assignmentId}>
             <td>{a.title}</td><td>{a.latestScore === null ? "لم يُحل" : resolveGradingStatus(a) === "final" ? "مصحح" : "بانتظار المراجعة"}</td><td>{a.attemptsUsed}</td>
@@ -144,7 +144,7 @@ export default function StudentDialog(p: StudentDialogProps) {
           </tr>)}{!profile.assignments.length && <tr><td colSpan={6}>لا توجد واجبات لهذا الصف.</td></tr>}</tbody>
         </table></div>
         <h4 className="eb-subheading">سجل الوظائف المسلّمة</h4>
-        <div className="students-table-wrap"><table className="students-table">
+        <div className="students-table-wrap" role="region" aria-label="جدول سجل الوظائف المسلّمة" tabIndex={0}><table className="students-table">
           <thead><tr><th scope="col">اسم الوظيفة</th><th scope="col">تاريخ آخر تسليم</th><th scope="col">العلامة</th><th scope="col">عدد المحاولات</th><th scope="col">الحالة</th><th scope="col">إجراءات</th></tr></thead>
           <tbody>{profile.submittedAssignments.map(item => <Fragment key={item.assignmentId}>
             <tr>

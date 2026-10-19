@@ -28,10 +28,24 @@
    Breakpoints align with the shell: 768 / 1024 / 1280.
    ============================================================ */
 
-/* ---------- Layout: classes pane + roster pane ---------- */
-.eb-students-layout{ display:grid; grid-template-columns:300px minmax(0,1fr); gap:var(--eb-space-4); align-items:start; }
+/* ---------- Layout: the class bar above a full-width roster ---------- */
+/* U.1 — one column at every width: the classes are a bar of cards ABOVE the roster (no 260–300 px side column squeezing the
+   table), and the roster takes the whole content width. */
+.eb-students-layout{ display:grid; grid-template-columns:minmax(0,1fr); gap:var(--eb-space-4); align-items:start; }
 .eb-classes-pane,.eb-roster-pane{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
-.eb-classes-pane{ position:sticky; inset-block-start:var(--eb-space-4); }
+.eb-classes-pane{ padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface); }
+/* the view switch and the class filter share one row; the filter is a ROW item, so its flex basis is a width (in the old
+   column it became a 240 px tall box) */
+.eb-class-toolbar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2) var(--eb-space-3); }
+.eb-class-toolbar .eb-class-filter{ flex:1 1 220px; max-inline-size:360px; min-width:0; }
+/* from 1024 px the heading, the view switch + filter and the create / refresh actions share ONE row (the header's own box is
+   dissolved into the pane's grid); everything below spans the row */
+@media (min-width:1024px){
+  .eb-classes-pane{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:var(--eb-space-3) var(--eb-space-4); }
+  .eb-classes-pane > .eb-section-header{ display:contents; }
+  .eb-classes-pane > .eb-class-toolbar{ grid-row:1; grid-column:2; }
+  .eb-classes-pane > :not(.eb-section-header):not(.eb-class-toolbar){ grid-column:1 / -1; }
+}
 .eb-students-workspace .eb-section-header{ margin-bottom:0; }
 
 /* ---------- Classes & Students hardening: dismissible notice, in-dialog errors, class filter, password reveal ---------- */
@@ -96,7 +110,11 @@
 .eb-segmented-count{ display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
 
 /* ---------- Class rows ---------- */
-.eb-class-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+/* U.1 — a grid of cards, at most two rows tall; more classes scroll inside the bar (the selected card is kept in view). */
+.eb-class-list{
+  list-style:none; margin:0; padding:2px; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:var(--eb-space-2);
+  max-block-size:180px; overflow:auto; overscroll-behavior:contain;
+}
 .eb-class-row{
   position:relative; /* final-acceptance fix — containing block for the select button's stretched hit area */
   display:flex; align-items:flex-start; gap:var(--eb-space-1); min-width:0;
@@ -106,10 +124,12 @@
 .eb-class-row:hover{ border-color:var(--eb-primary); }
 .eb-class-row.selected{ border-color:var(--eb-primary); background:var(--eb-primary-050); box-shadow:var(--eb-sh-xs); }
 .eb-class-row.archived{ background:var(--eb-surface-2); }
+/* U.1 — a compact card: the name on its own line, then the meta and the project chips sharing one wrapping line */
 .eb-class-select{
-  flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:3px; text-align:start;
-  border:0; background:transparent; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); color:var(--eb-text); font:inherit; cursor:pointer;
+  flex:1 1 auto; min-width:0; display:flex; flex-wrap:wrap; align-items:center; gap:2px var(--eb-space-2); text-align:start;
+  border:0; background:transparent; padding:var(--eb-space-1) var(--eb-space-2); border-radius:var(--eb-r-sm); color:var(--eb-text); font:inherit; cursor:pointer;
 }
+.eb-class-select > .eb-class-name{ flex:1 1 100%; }
 /* Final-acceptance fix — the WHOLE visible card is the selection hit area (the row's padding, the gap and the
    column under the "⋯" trigger used to be dead): the native select button stretches an empty pseudo-element over
    the row, so every pointer hit on the card targets the same <button> (same onSelect, same aria-pressed, same
@@ -118,10 +138,10 @@
 .eb-class-menu{ position:relative; z-index:1; }
 .eb-class-name{ color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
 .eb-class-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-12); }
-.eb-class-chips{ display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+.eb-class-chips{ display:flex; flex-wrap:wrap; gap:4px; }
 .eb-chip{ display:inline-flex; align-items:center; min-height:20px; padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-info-bg); color:var(--eb-info-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-medium); }
 .eb-chip.is-muted{ background:var(--eb-surface-2); color:var(--eb-muted); } /* UX-8b — real text: muted, not faint */
-.eb-class-menu{ flex:0 0 auto; margin-top:var(--eb-space-1); }
+.eb-class-menu{ flex:0 0 auto; }
 
 /* ---------- Action menu (disclosure of plain controls) ---------- */
 .eb-menu-trigger{
@@ -247,13 +267,9 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width:1279px){
-  .eb-students-layout{ grid-template-columns:260px minmax(0,1fr); }
   .eb-roster-stats{ grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 @media (max-width:1023px){
-  .eb-students-layout{ grid-template-columns:minmax(0,1fr); }
-  .eb-classes-pane{ position:static; }
-  .eb-class-list{ max-height:320px; overflow:auto; padding:2px; }
   .eb-bulk-danger{ margin-inline-start:0; }
 }
 @media (max-width:767px){
@@ -269,6 +285,14 @@
   .eb-bulk-group{ border-inline-end:0; padding-inline-end:0; width:100%; }
   .eb-profile-stats,.eb-dl{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .eb-class-select{ padding:var(--eb-space-2); }
+  /* U.1 — phone class bar: one sideways strip of cards (snap), the filter on a full row of its own */
+  .eb-classes-pane{ padding:var(--eb-space-3); }
+  .eb-class-toolbar .eb-segmented{ inline-size:100%; }
+  .eb-class-toolbar .eb-class-filter{ flex-basis:100%; max-inline-size:none; }
+  .eb-class-list{ grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(200px,78%); max-block-size:none; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x proximity; }
+  .eb-class-row{ scroll-snap-align:start; }
+  /* the toolbar is a column on a phone: the search box keeps its own height (its 240 px row basis would become a height) */
+  .eb-roster-toolbar .eb-search-field{ flex:0 0 auto; min-width:0; }
   /* Phone: each roster row is a card (labelled fields, actions in its corner) instead of a sideways-scrolling table. */
   .eb-roster-table-wrap{ max-height:none; overflow:visible; border:0; background:transparent; }
   .eb-roster-table,.eb-roster-table tbody{ display:block; inline-size:100%; min-inline-size:0; } /* .students-table sets min-width: 620px */
@@ -276,7 +300,9 @@
   .eb-roster-table thead tr{ display:contents; }
   .eb-roster-table thead th{ position:static; background:transparent; padding:0; }
   .eb-roster-table thead th.eb-col-actions,.eb-roster-table thead th:not(:has(button,input)){ display:none; }
-  .eb-roster-table tbody tr{ position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--eb-space-1) var(--eb-space-3); margin-bottom:var(--eb-space-2); padding:var(--eb-space-3); padding-inline-start:52px; border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
+  /* U.1 — a compact card (~110 px): the full name on the first line beside the actions, then the details flowing on one or two
+     lines with inline labels (the status badge and the «الوظائف» link name themselves). */
+  .eb-roster-table tbody tr{ position:relative; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-3); margin-bottom:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); padding-inline-start:48px; border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
   /* doubled class: outranks the desktop cell tints (selected / archived / pinned actions) — the CARD carries the state */
   .eb-roster-table.eb-roster-table tbody tr > td{ padding:0; white-space:normal; background:transparent; border:0; }
   /* the (tall, wrapped) bulk bar scrolls with the page on a phone instead of covering the cards */
@@ -284,12 +310,17 @@
   .eb-icon-action{ min-width:44px; }
   .eb-roster-table tbody tr.is-selected{ background:var(--eb-primary-050); border-color:var(--eb-primary); }
   .eb-roster-table tbody tr.student-row-archived{ background:var(--eb-surface-2); }
-  .eb-roster-table tbody td[data-label]::before{ content:attr(data-label); display:block; color:var(--eb-muted); font-size:var(--eb-fs-12); }
-  .eb-roster-table tbody td.eb-col-name{ grid-column:1 / -1; }
-  .eb-roster-table tbody td.eb-col-name::before{ display:none; }
-  .eb-roster-table tbody td.eb-col-select{ position:absolute; inset-block-start:var(--eb-space-3); inset-inline-start:var(--eb-space-3); }
-  .eb-roster-table tbody td.eb-col-actions{ grid-column:1 / -1; position:static; border:0; }
-  .eb-roster-table tbody td.eb-col-actions .eb-row-actions{ justify-content:flex-start; }
+  .eb-roster-table tbody td[data-label]::before{ content:attr(data-label); display:inline; margin-inline-end:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-12); }
+  .eb-roster-table tbody td{ font-size:var(--eb-fs-13); }
+  .eb-roster-table tbody td.eb-col-name{ flex:1 1 100%; min-block-size:44px; display:flex; align-items:center; margin-inline-end:96px; font-size:var(--eb-fs-14); }
+  .eb-roster-table tbody td.eb-col-name::before,.eb-roster-table tbody td.eb-col-status::before,.eb-roster-table tbody td.eb-col-tasks::before{ display:none; }
+  .eb-roster-table tbody td.eb-col-name strong{ overflow-wrap:anywhere; }
+  .eb-roster-table tbody td.eb-col-name strong[data-family]::after{ content:" " attr(data-family); }
+  .eb-roster-table tbody td.eb-col-family{ display:none; }
+  .eb-roster-table tbody td.eb-col-identity{ direction:rtl; }
+  .eb-roster-table tbody td.eb-col-select{ position:absolute; inset-block-start:var(--eb-space-2); inset-inline-start:var(--eb-space-1); display:flex; align-items:center; justify-content:center; inline-size:40px; block-size:44px; }
+  .eb-roster-table tbody td.eb-col-actions{ position:absolute; inset-block-start:var(--eb-space-2); inset-inline-end:var(--eb-space-2); border:0; }
+  .eb-roster-table tbody td.eb-col-actions .eb-row-actions{ justify-content:flex-end; }
   /* Phone: the roster title + meta take the full width; its actions wrap below instead of squeezing the title. */
   .eb-roster-pane > .eb-section-header{ flex-direction:column; align-items:stretch; }
   .eb-roster-pane > .eb-section-header .eb-section-actions{ justify-content:flex-start; flex-wrap:wrap; }
