@@ -8,6 +8,7 @@ import ActionMenu from "../ui/ActionMenu";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import { IconChevronBack, IconChevronDown, IconCheck } from "../icons";
+import { useConfirm } from "../ui/useConfirm";
 import ProjectRankHero from "./ProjectRankHero";
 import ProjectEvaluationCard from "./ProjectEvaluationCard";
 import { fmtContribution, fmtStageScore, normalizeProjectPerformance, stageValueOf } from "./projectPerformance";
@@ -38,7 +39,11 @@ type Props = {
   /** 9G review — «العودة إلى آخر طالب في الجلسة»: shown only when this item is NOT the terminal one, the terminal item
    * is completed, and no next item is eligible (skip-completed left nothing after us). Never changes next/previous. */
   onEvaluationQueueReturnToTerminal?: () => void;
+  /** Phase P4 — outside Evaluation Focus Mode: this student's neighbours in the list the teacher opened them from. */
+  siblings?: { previous: SiblingRef | null; next: SiblingRef | null; position: number; total: number } | null;
+  onOpenSibling?: (studentId: string) => void;
 };
+type SiblingRef = { studentId: string; displayName: string };
 
 type UpdateResponse = {
   ok: true; noChange?: boolean;
@@ -90,7 +95,7 @@ const studentsWord = (n: number) => (n === 1 ? "طالب واحد" : n === 2 ? "
 const sessionDoneText = (completed: number, total: number) => "تم تقييم " + completed + " من " + total + " " + (total === 1 ? "طالب" : "طلاب") + " في هذه الجلسة.";
 const sessionRemainingText = (remaining: number) => (remaining === 0 ? "اكتمل تقييم جميع الطلاب في قائمة هذه الجلسة." : "بقي " + studentsWord(remaining) + " في القائمة لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة.");
 
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal }: Props) {
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal, siblings = null, onOpenSibling }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -248,6 +253,24 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     updateStage(stage, { score: draft.trim() }, opts);
   }
 
+  // Phase P4 — moving to another student drops this profile's drafts, so unsaved scores / notes are confirmed first.
+  const { confirm, confirmDialog } = useConfirm();
+  const unsavedDrafts = !!detail && (
+    Object.entries(scoreDrafts).some(([sid, v]) => v.trim() !== canonicalScore(detail.progress[sid])) ||
+    Object.entries(noteDrafts).some(([sid, v]) => v !== (detail.progress[sid]?.note || ""))
+  );
+  function goToSibling(target: SiblingRef) {
+    if (!unsavedDrafts) { onOpenSibling?.(target.studentId); return; }
+    void confirm({ title: "تغييرات غير محفوظة", message: "في ملف هذا الطالب علامات أو ملاحظات لم تُحفظ. هل تريد تجاهلها والانتقال إلى " + target.displayName + "؟", confirmLabel: "تجاهل والانتقال", cancelLabel: "البقاء هنا", tone: "danger" })
+      .then(ok => { if (ok) onOpenSibling?.(target.studentId); });
+  }
+  const siblingNav = siblings && onOpenSibling && (siblings.previous || siblings.next) ? (
+    <nav className="eb-student-sibling-nav" aria-label="التنقل بين الطلاب">
+      <button type="button" className="eb-button is-quiet is-small" disabled={!siblings.previous} onClick={() => siblings.previous && goToSibling(siblings.previous)} aria-label={siblings.previous ? "الطالب السابق: " + siblings.previous.displayName : "لا يوجد طالب سابق"}>الطالب السابق</button>
+      <span className="eb-muted">{siblings.position} من {siblings.total}</span>
+      <button type="button" className="eb-button is-small" disabled={!siblings.next} onClick={() => siblings.next && goToSibling(siblings.next)} aria-label={siblings.next ? "الطالب التالي: " + siblings.next.displayName : "لا يوجد طالب تالٍ"}>الطالب التالي</button>
+    </nav>
+  ) : null;
   const name = detail?.student.displayName || studentId;
   const backButton = <IconButton label="عودة إلى تقدّم الطلاب" icon={<IconChevronBack size={18} className="eb-flip-rtl" />} onClick={onBack} />;
   // ONE stable head (back + h2) across loading / error / loaded states so the focused heading never remounts.
@@ -259,6 +282,8 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
         {detail && <p className="eb-muted">{detail.student.code ? "الكود " + detail.student.code + " · " : ""}آخر تحديث: {fmtDate(detail.summary.updatedAt)}</p>}
       </div>
       {detail?.readOnly && <StatusBadge tone="warn">مؤرشف — للقراءة فقط</StatusBadge>}
+      {siblingNav}
+      {confirmDialog}
     </div>
   );
 

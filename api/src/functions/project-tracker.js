@@ -101,6 +101,39 @@ function bulkInput(body) {
   return { items, status, score };
 }
 
+// Phase P4 — the score grid (جدول العلامات). Many (student, stage) pairs of ONE class, each with ITS OWN score (or null =
+// clear), in one request. A score write never changes a status (the P1 rule: a score and an approval are separate
+// decisions). `expected` (optional, number | null) is the score the grid showed: when the stored score differs at write
+// time (another write since the grid was read), that pair is refused as `stale` and nothing is written for it — a paste
+// over an old grid can never overwrite a newer score silently. Every pair runs through the canonical pipeline.
+const SCORE_BULK_MAX_ITEMS = 300;
+function scoreBulkInput(body) {
+  if (!Array.isArray(body.items) || !body.items.length) return { error: "لا توجد علامات للحفظ." };
+  if (body.items.length > SCORE_BULK_MAX_ITEMS) return { error: "عدد العلامات أكبر من الحد المسموح (" + SCORE_BULK_MAX_ITEMS + ")." };
+  if (body.status !== undefined || body.note !== undefined || body.score !== undefined) return { error: "هذا الإجراء يقبل علامات المراحل فقط." };
+  const seen = new Set(), items = [];
+  for (const raw of body.items) {
+    const studentId = String((raw && raw.studentId) || "").trim(), stageId = String((raw && raw.stageId) || "").trim();
+    if (!studentId || !stageId) return { error: "studentId وstageId مطلوبان لكل علامة." };
+    const key = studentId + "\u0000" + stageId;
+    if (seen.has(key)) return { error: "تكرّرت علامة الطالب نفسه للمرحلة نفسها في الطلب." };
+    seen.add(key);
+    let score = null;
+    if (raw.score !== null && raw.score !== undefined && raw.score !== "") {
+      score = normalizeScore(raw.score);
+      if (score === null) return { error: SCORE_ERROR };
+    }
+    let expected;
+    if (raw.expected === null) expected = null;
+    else if (raw.expected !== undefined) {
+      expected = normalizeScore(raw.expected);
+      if (expected === null) return { error: SCORE_ERROR };
+    }
+    items.push({ studentId, stageId, score, expected });
+  }
+  return { items };
+}
+
 // Phase P1 — the class board: every member × every ACTIVE stage of the class snapshot, carrying only the non-default cells
 // ({status, score[, selfReported]}) so the payload stays small. `selfReported`: the student marked it done (Phase P2)
 // and the teacher has not confirmed it yet. Read-only projection of the same documents the other resources read.
@@ -412,6 +445,38 @@ async function handler(request, deps = {}, obs = null) {
         });
         const changed = results.filter(r => r.ok && r.changed).length, failed = results.filter(r => !r.ok).length;
         return { status: 200, jsonBody: { ok: true, projectCode, readyChanged, results, totals: { requested: results.length, changed, unchanged: results.length - changed - failed, failed } } };
+      }
+
+      if (action === "score.bulk") {
+        const input = scoreBulkInput(body);
+        if (input.error) return { status: 400, jsonBody: { ok: false, error: input.error } };
+        // Same execution model as progress.bulk: one CAS writer per student blob (in order), students concurrently.
+        const byStudent = new Map();
+        input.items.forEach((item, index) => { if (!byStudent.has(item.studentId)) byStudent.set(item.studentId, []); byStudent.get(item.studentId).push({ ...item, index }); });
+        const results = new Array(input.items.length);
+        await mapConcurrent([...byStudent.values()], 4, async group => {
+          for (const { studentId, stageId, score, expected, index } of group) {
+            const base = { studentId, stageId };
+            try {
+              const result = await svc.updateStudentProgress(container, projectCode, classroom, { studentId, stageId, score, expectedScore: expected, actor: auth.user?.sub, now });
+              if (!result.ok) { results[index] = { ...base, ok: false, error: result.reason === "not_member" ? "not_member" : "stage_inactive" }; continue; }
+              const { workDef, stage, written, previous, outcome } = result;
+              await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
+              await rec(container, { actor: auth.user?.sub, action: "project.stage.score", targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId, targetLabel: stage.title, details: { projectCode, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore, via: "score.bulk" } });
+              const entry = written.stages[stageId] || {};
+              results[index] = { ...base, ok: true, changed: true, status: entry.status, score: normalizeScore(entry.score) };
+            } catch (e) {
+              if (e && e.code === "NO_CHANGE") { results[index] = { ...base, ok: true, changed: false, score }; continue; }
+              if (e && e.code === "STALE_SCORE") { results[index] = { ...base, ok: false, error: "stale", score: e.currentScore }; continue; }
+              if (e instanceof StorageConflictError) { results[index] = { ...base, ok: false, error: "conflict" }; continue; }
+              if (e && e.httpStatus) { results[index] = { ...base, ok: false, error: "invalid" }; continue; }
+              obs?.logError("project.tracker.score-bulk.item", e);
+              results[index] = { ...base, ok: false, error: "failed" };
+            }
+          }
+        });
+        const changed = results.filter(r => r.ok && r.changed).length, failed = results.filter(r => !r.ok).length;
+        return { status: 200, jsonBody: { ok: true, projectCode, results, totals: { requested: results.length, changed, unchanged: results.length - changed - failed, failed } } };
       }
 
       if (action === "template.update") {

@@ -67,6 +67,9 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openStudentId, setOpenStudentId] = useState("");
+  // Phase P4 — the student list as the teacher sees it (order, filter, search), for the profile's «السابق / التالي».
+  const [listedStudents, setListedStudents] = useState<{ studentId: string; displayName: string }[]>([]);
+  const onListedStudents = useCallback((list: { studentId: string; displayName: string }[]) => setListedStudents(list), []);
   // Phase 9E — Evaluation Focus Mode: the drill `seq` that opened the current student (0 = the student was opened by
   // hand, or the focus was cleared by ordinary navigation: class / view / project change, manual open, back).
   const [evaluationFocusSeq, setEvaluationFocusSeq] = useState(0);
@@ -81,20 +84,25 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
   // silently discarding them; closing / reloading the tab gets the browser's own warning.
   const [settingsDirty, setSettingsDirty] = useState(false);
   const onSettingsDirty = useCallback((d: boolean) => setSettingsDirty(d), []);
+  // Phase P4 — unsaved scores in «جدول العلامات» are guarded the same way.
+  const [gridDirty, setGridDirty] = useState(false);
+  const onGridDirty = useCallback((d: boolean) => setGridDirty(d), []);
+  const unsaved = settingsDirty || gridDirty;
   const { confirm, confirmDialog } = useConfirm();
   // Runs `action` at once when nothing is unsaved (unchanged synchronous behaviour); otherwise only after the teacher
   // chooses to discard the edits.
   function afterSettingsGuard(action: () => void) {
-    if (!settingsDirty) { action(); return; }
-    void confirm({ title: "تعديلات غير محفوظة", message: "لديك تعديلات غير محفوظة في إعداد المراحل. هل تريد تجاهلها؟", confirmLabel: "تجاهل التعديلات", cancelLabel: "متابعة التعديل", tone: "danger" })
-      .then(ok => { if (ok) { setSettingsDirty(false); action(); } });
+    if (!unsaved) { action(); return; }
+    const message = settingsDirty ? "لديك تعديلات غير محفوظة في إعداد المراحل. هل تريد تجاهلها؟" : "في «جدول العلامات» علامات لم تُحفظ بعد. هل تريد تجاهلها؟";
+    void confirm({ title: "تعديلات غير محفوظة", message, confirmLabel: "تجاهل التعديلات", cancelLabel: "متابعة التعديل", tone: "danger" })
+      .then(ok => { if (ok) { setSettingsDirty(false); setGridDirty(false); action(); } });   // the grid reports again if it stays mounted
   }
   useEffect(() => {
-    if (!settingsDirty) return;
+    if (!unsaved) return;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [settingsDirty]);
+  }, [unsaved]);
 
   async function loadClasses() {
     const seq = ++classesSeq.current, code = projectCode;
@@ -141,6 +149,16 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
     setEvaluationFocusSeq(0);
     setOpenStudentId(studentId);
   }
+  // Phase P4 — «الطالب السابق / التالي» outside Evaluation Focus Mode: the next profile of the SAME list. A mutation made
+  // in the previous profile still re-reads the list on the way back (studentsDirty is kept); back focus lands on the
+  // list heading (the original opener belongs to another student).
+  function openSibling(studentId: string) {
+    studentOpener.current = null;
+    setEvaluationFocusSeq(0);
+    setOpenStudentId(studentId);
+  }
+  const siblingIndex = listedStudents.findIndex(s => s.studentId === openStudentId);
+  const siblings = siblingIndex < 0 ? null : { previous: listedStudents[siblingIndex - 1] || null, next: listedStudents[siblingIndex + 1] || null, position: siblingIndex + 1, total: listedStudents.length };
   function closeStudent() {
     setOpenStudentId(""); setEvaluationFocusSeq(0);
     focusStudentsPending.current = true;
@@ -187,7 +205,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
           {readOnly && <StatusBadge tone="warn" className="eb-project-readonly"><IconLock size={14} aria-hidden="true" />مؤرشف — للقراءة فقط</StatusBadge>}
           <div className="eb-segmented eb-project-views" role="group" aria-label="أقسام المشروع">
             {VIEWS.map(v => (
-              <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => afterSettingsGuard(() => changeView(v.key))} disabled={!classId}>{v.icon(16)}<span>{v.label}</span></button>
+              <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => { if (v.key !== view || v.key === "students") afterSettingsGuard(() => changeView(v.key)); }} disabled={!classId}>{v.icon(16)}<span>{v.label}</span></button>
             ))}
           </div>
           <ActionMenu label="المزيد من إجراءات المشروع">
@@ -207,17 +225,18 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
           {view === "students" && (
             <>
               <div hidden={!!openStudentId}>
-                <ProjectStudentCards token={token} projectCode={projectCode} classId={classId} tracks={tracks} reloadNonce={studentsNonce} headingRef={studentsHeadingRef} onOpenStudent={openStudent} />
+                <ProjectStudentCards token={token} projectCode={projectCode} classId={classId} tracks={tracks} reloadNonce={studentsNonce} headingRef={studentsHeadingRef} onOpenStudent={openStudent} onVisibleChange={onListedStudents} />
               </div>
               {openStudentId && (
                 <ProjectStudentDetail token={token} projectCode={projectCode} classId={classId} studentId={openStudentId} tracks={tracks}
                   onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} onReadyChanged={onReadyChanged} evaluationFocusSeq={evaluationFocusSeq}
+                  siblings={evaluationFocusSeq ? null : siblings} onOpenSibling={openSibling}
                   evaluationQueue={evaluationFocusSeq ? evaluationQueue : null} onEvaluationQueueMove={onEvaluationQueueMove} onEvaluationQueueFinish={onEvaluationQueueFinish} onEvaluationQueueReturnToTerminal={onEvaluationQueueReturnToTerminal}
                   onEvaluationComplete={onEvaluationQueueComplete ? () => onEvaluationQueueComplete({ projectCode, classId, studentId: openStudentId }) : undefined} />
               )}
             </>
           )}
-          {view === "bulk" && <ProjectBulkReview token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} />}
+          {view === "bulk" && <ProjectBulkReview token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onGridDirty} />}
           {view === "analytics" && <ProjectAnalytics token={token} projectCode={projectCode} classId={classId} tracks={tracks} />}
           {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onSettingsDirty} />}
         </div>

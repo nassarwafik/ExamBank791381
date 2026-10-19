@@ -14,6 +14,8 @@ type Props = {
   reloadNonce?: number;
   headingRef?: RefObject<HTMLHeadingElement | null>;
   onOpenStudent: (studentId: string, trigger: HTMLElement) => void;
+  /** Phase P4 — the students as currently shown (filter + search applied, in order): the profile's «السابق / التالي». */
+  onVisibleChange?: (students: { studentId: string; displayName: string }[]) => void;
 };
 
 const FILTERS: { key: StudentFilter; label: string }[] = [
@@ -29,7 +31,7 @@ const DEFAULT_LATE_THRESHOLD = 40;
 // The class's student cards for one project: ONE `students` read per class/project (and per explicit reload);
 // search and filters are client-side over the already-loaded cards (zero requests). Card values are the
 // exact API fields; nothing is recomputed here.
-export default function ProjectStudentCards({ token, projectCode, classId, tracks, reloadNonce = 0, headingRef, onOpenStudent }: Props) {
+export default function ProjectStudentCards({ token, projectCode, classId, tracks, reloadNonce = 0, headingRef, onOpenStudent, onVisibleChange }: Props) {
   const [cards, setCards] = useState<StudentCard[]>([]);
   const [lateThreshold, setLateThreshold] = useState(DEFAULT_LATE_THRESHOLD);
   const [loading, setLoading] = useState(false);
@@ -58,6 +60,7 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
   useEffect(() => { void load(); }, [classId, projectCode, reloadNonce]);
 
   const visible = useMemo(() => filterStudentCards(cards, filter, search, lateThreshold), [cards, filter, search, lateThreshold]);
+  useEffect(() => { onVisibleChange?.(visible.map(c => ({ studentId: c.studentId, displayName: c.displayName }))); }, [visible, onVisibleChange]);
 
   return (
     <section className="eb-project-students" aria-labelledby="eb-project-students-title">

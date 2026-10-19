@@ -16,6 +16,7 @@ const { normalizeClassStatus } = require("../class-lifecycle");
 const { classHasMeaningfulProgress } = require("../project-794589-migration");
 const { applyProgressUpdate } = require("../project-794589-progress");
 const { applySelfReport } = require("./self-report");
+const { normalizeScore } = require("./score");
 const { recordAuditEvent } = require("../audit-log");
 const { isStudentClassMember } = require("../class-membership");
 const { listUsersForReadViews } = require("./user-directory-cache");
@@ -198,7 +199,7 @@ async function loadStudentProgress(container, projectCode, classId, studentId) {
 // the stage title) — audit formatting is deliberately NOT centralized here.
 async function updateStudentProgress(container, projectCode, classroom, update, options = {}) {
   const classId = classroom.classId;
-  const { studentId, stageId, status, note, score, actor, now } = update;
+  const { studentId, stageId, status, note, score, actor, now, expectedScore } = update;
   const membership = await requireStudentInClass(container, studentId, classId);
   if (!membership.ok) return { ok: false, reason: "not_member" };
   const config = await ensureClassConfig(container, projectCode, classroom, options);
@@ -208,6 +209,12 @@ async function updateStudentProgress(container, projectCode, classroom, update, 
   let outcome = null, previous = null;
   const written = await mutateJsonWithRetry(container, ns.progressName(classId, studentId), current => {
     previous = current || null;   // the authoritative BEFORE state of the same CAS round (milestone comparison)
+    // Phase P4 — optional precondition (the score grid): the score the teacher's grid showed must still be the stored one
+    // in THIS CAS round, otherwise nothing is written (another write changed it since the grid was read).
+    if (expectedScore !== undefined) {
+      const stored = normalizeScore(current && current.stages && current.stages[stageId] ? current.stages[stageId].score : null);
+      if (stored !== expectedScore) { const e = new Error("stale score"); e.code = "STALE_SCORE"; e.currentScore = stored; throw e; }
+    }
     return (outcome = applyProgressUpdate(current, { stageId, status, note, score, actor, now, programCode: projectCode, classId, studentId })).doc;
   });
   return { ok: true, config, workDef: workingDefinition(projectCode, config), stage, student: membership.student, shareAchievements: membership.shareAchievements, written, previous, outcome };

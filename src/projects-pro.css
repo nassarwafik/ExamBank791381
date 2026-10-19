@@ -287,3 +287,34 @@
 .eb-sp-mark-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); position:sticky; top:var(--eb-space-2); z-index:2; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
 .eb-sp-stage-main input[type="checkbox"]{ width:20px; height:20px; flex:0 0 auto; }
 .eb-sp-stage.is-picked{ outline:2px solid var(--eb-primary); outline-offset:-2px; }
+/* Phase P4 — «جدول العلامات»: students × the stages of one group, a spreadsheet-like score grid. The first column (the
+   student) and the header row stay in view while the grid scrolls; each cell's stage status tints it, an unsaved change
+   and an invalid value are marked by their border (and named in the legend), never by colour alone in the text. */
+.eb-score-grid{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.eb-score-grid > p{ margin:0; }
+.eb-score-grid-scroll{ overflow:auto; max-height:min(70vh, 720px); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
+.eb-score-grid-scroll:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.eb-score-grid-table{ border-collapse:separate; border-spacing:0; min-width:100%; font-size:var(--eb-fs-13); }
+.eb-score-grid-table th,.eb-score-grid-table td{ padding:var(--eb-space-1) var(--eb-space-2); border-block-end:1px solid var(--eb-line-2); border-inline-end:1px solid var(--eb-line-2); text-align:center; vertical-align:middle; }
+.eb-score-grid-table thead th{ position:sticky; top:0; z-index:2; background:var(--eb-surface-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); min-width:5.5rem; max-width:9rem; }
+.eb-score-grid-table thead th .eb-stage-code{ display:block; }
+.eb-score-grid-stage-title{ display:block; font-weight:var(--eb-fw-regular, 400); color:var(--eb-text-secondary); font-size:11px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.eb-score-grid-table .eb-score-grid-student{ position:sticky; inset-inline-start:0; z-index:1; background:var(--eb-surface); text-align:start; white-space:nowrap; min-width:9rem; font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
+.eb-score-grid-table thead .eb-score-grid-student{ z-index:3; background:var(--eb-surface-2); }
+.eb-score-cell input{ box-sizing:border-box; width:4.75rem; min-height:36px; padding:0 var(--eb-space-1); font:inherit; font-variant-numeric:tabular-nums; text-align:center; border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); }
+.eb-score-cell input:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
+.eb-score-cell.is-approved{ background:var(--eb-success-bg); }
+.eb-score-cell.is-ready{ background:var(--eb-info-bg); }
+.eb-score-cell.is-changed input{ border:2px solid var(--eb-warn-tx); }
+.eb-score-cell.is-invalid input{ border:2px dashed var(--eb-danger-tx); background:var(--eb-danger-bg); }
+.eb-score-grid-failures ul{ margin:0; padding-inline-start:var(--eb-space-4); }
+.eb-score-grid-failures{ margin:0; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
+.eb-score-grid-legend{ display:flex; flex-wrap:wrap; gap:var(--eb-space-3); margin:0; font-size:var(--eb-fs-12); }
+.eb-score-legend::before{ content:""; display:inline-block; width:12px; height:12px; margin-inline-end:6px; vertical-align:-1px; border-radius:3px; border:1px solid var(--eb-line-2); }
+.eb-score-legend.is-approved::before{ background:var(--eb-success-bg); }
+.eb-score-legend.is-ready::before{ background:var(--eb-info-bg); }
+.eb-score-legend.is-changed::before{ border:2px solid var(--eb-warn-tx); }
+.eb-score-legend.is-invalid::before{ border:2px dashed var(--eb-danger-tx); background:var(--eb-danger-bg); }
+/* Phase P4 — «الطالب السابق / التالي» beside the profile heading (wraps under it on narrow screens). */
+.eb-student-sibling-nav{ display:flex; align-items:center; gap:var(--eb-space-2); flex:0 0 auto; }
+.eb-student-sibling-nav .eb-muted{ font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; white-space:nowrap; }
