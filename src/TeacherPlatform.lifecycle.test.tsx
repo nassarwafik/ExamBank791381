@@ -47,7 +47,7 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
     expect(tabBadge(/الأرشيف/)).toBe("1");
     expect(screen.queryByText("صف متناقض")).toBeNull();                        // not in the active list
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
-    expect(await screen.findByText("صف متناقض")).toBeTruthy();
+    expect(await within(document.querySelector(".class-list") as HTMLElement).findByText("صف متناقض")).toBeTruthy();
   });
 
   it("default selection skips the inconsistent class even though it is listed first", async () => {
@@ -60,7 +60,7 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
   it("archive tab: the inconsistent class renders with the archived row style and offers 'تفعيل', not 'أرشفة الصف'", async () => {
     await mount();
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
-    await screen.findByText("صف متناقض");
+    await within(document.querySelector(".class-list") as HTMLElement).findByText("صف متناقض");
     const row = classRow("صف متناقض");
     expect(row.className).toContain("archived");
     const menu = await classMenu(row);
@@ -78,7 +78,7 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
   it("selecting the inconsistent class disables create-student, import and shows the archived warning", async () => {
     await mount();
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
-    fireEvent.click(await screen.findByText("صف متناقض"));
+    fireEvent.click(await within(document.querySelector(".class-list") as HTMLElement).findByText("صف متناقض"));
     await screen.findByText(/الصف مؤرشف؛ فعّله قبل إضافة أو استعادة الطلاب/);
     expect((screen.getByRole("button", { name: "إضافة طالب" }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: "استيراد" }) as HTMLButtonElement).disabled).toBe(true);
@@ -87,7 +87,7 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
   it("the inconsistent class is never a move target (bulk move list) nor an edit/move option for a good-class student", async () => {
     await mount();
     fireEvent.click(screen.getByLabelText("تحديد طالب g1"));
-    await screen.findByText("1 طالب محدد");
+    await screen.findByText("طالب واحد محدد");
     const bulkSelect = screen.getByText("اختر صفًا للنقل").closest("select") as HTMLSelectElement;
     expect(Array.from(bulkSelect.options).map(o => o.value)).toEqual([""]);      // good is the current class; inconsistent excluded
     fireEvent.click(within(screen.getByText("طالب").closest("tr") as HTMLElement).getByRole("button", { name: /^إجراءات / }));

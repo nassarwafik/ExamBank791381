@@ -8,6 +8,7 @@ import { IconPlus, IconRefresh, IconArchive, IconRestore, IconGraduation, IconEd
 import { matchesSearch } from "./rosterText";
 import { normalizeClassStatus } from "../classLifecycle";
 import { getClassProgramCodes } from "../projects/classPrograms";
+import { arabicCount, STUDENTS } from "../learning/arabicCount";
 import type { Classroom, ClassArchiveView, ProjectOption } from "./types";
 
 export type ClassesPaneProps = {
@@ -33,6 +34,7 @@ export type ClassesPaneProps = {
   loadError?: string;
   onRetry?: () => void;
   busy: boolean;
+  /** The archive date of an archived card (a day, not a time). */
   fmtDate: (value: string) => string;
 };
 
@@ -76,10 +78,10 @@ export default function ClassesPane(p: ClassesPaneProps) {
           <button type="button" aria-pressed={p.view === "archived"} onClick={() => p.onViewChange("archived")}>الأرشيف<span className="eb-segmented-count">{p.archivedCount}</span></button>
         </div>
         {showFilter && (
-          <div className="student-search-field eb-search-field eb-class-filter">
+          <label className="student-search-field eb-search-field eb-class-filter">
             <IconSearch size={16} aria-hidden="true" />
             <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="تصفية الصفوف بالاسم أو المرحلة أو السنة" aria-label="تصفية الصفوف" />
-          </div>
+          </label>
         )}
       </div>
       {p.loading && p.classes.length === 0 && <div className="platform-loading" role="status">جارٍ التحميل...</div>}
@@ -92,11 +94,15 @@ export default function ClassesPane(p: ClassesPaneProps) {
             <li key={classroom.classId} className={"class-row eb-class-row" + (selected ? " selected" : "") + (active ? "" : " archived")}>
               <button type="button" className="eb-class-select" aria-pressed={selected} onClick={() => p.onSelect(classroom.classId)}>
                 <span className="eb-class-name">{classroom.name}</span>
-                <span className="eb-class-meta">{classroom.grade || "—"} · {classroom.studentCount} طالب{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""}</span>
+                <span className="eb-class-meta">{classroom.grade || "—"} · {arabicCount(classroom.studentCount, STUDENTS)}{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""}</span>
                 <span className="eb-class-chips">
                   {codes.length ? codes.map(code => <span key={code} className="eb-chip">{p.projectTitle(code)}</span>) : <span className="eb-chip is-muted">بدون مشروع</span>}
                 </span>
-                {!active && <span className="eb-class-meta"><StatusBadge tone="neutral">{classroom.archiveReason === "graduated" ? "مُخرَّج" : "مؤرشف"}</StatusBadge>{classroom.archivedAt ? " · " + p.fmtDate(classroom.archivedAt) : ""}{classroom.graduationYear ? " · دفعة " + classroom.graduationYear : ""}</span>}
+                {!active && (() => {
+                  // U.2 — the archive line: the badge, then the day it was archived and the graduation year (no leading «·»)
+                  const details = [classroom.archivedAt ? "في " + p.fmtDate(classroom.archivedAt) : "", classroom.graduationYear ? "دفعة " + classroom.graduationYear : ""].filter(Boolean).join(" · ");
+                  return <span className="eb-class-meta eb-class-archive-line"><StatusBadge tone="neutral">{classroom.archiveReason === "graduated" ? "مُخرَّج" : "مؤرشف"}</StatusBadge>{details && <span>{details}</span>}</span>;
+                })()}
               </button>
               <ActionMenu label={"إجراءات الصف " + classroom.name} className="eb-class-menu">
                 {active && p.projects.length > 0 && (

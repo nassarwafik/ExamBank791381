@@ -1,4 +1,4 @@
-// Arabic count phrases for Learning Materials labels. Arabic number agreement depends on the count (1 → singular,
+// Arabic count phrases, shared by the teacher and student screens. Arabic number agreement depends on the count (1 → singular,
 // 2 → dual, 3–10 → plural, 11–99 → singular accusative, 100… → singular), which `Intl.PluralRules("ar")` already
 // classifies; each caller supplies the phrase for every category, with `{n}` standing for the number.
 
@@ -84,6 +84,36 @@ export const STUDENTS: ArabicCountForms = {
   zero: "لا طلاب",
   one: "طالب واحد",
   two: "طالبان",
+  few: "{n} طلاب",
+  many: "{n} طالبًا",
+  other: "{n} طالب",
+};
+
+/** «طالب» after a preposition or as the object of an action («على طالبَين»، «نقل 3 طلاب»): the dual is genitive. Phase U.2. */
+export const STUDENTS_GENITIVE: ArabicCountForms = {
+  zero: "لا طلاب",
+  one: "طالب واحد",
+  two: "طالبين",
+  few: "{n} طلاب",
+  many: "{n} طالبًا",
+  other: "{n} طالب",
+};
+
+/** «طالب محدد» agreed with its count (the bulk-action bar). Phase U.2. */
+export const SELECTED_STUDENTS: ArabicCountForms = {
+  zero: "لا طلاب محددون",
+  one: "طالب واحد محدد",
+  two: "طالبان محددان",
+  few: "{n} طلاب محددون",
+  many: "{n} طالبًا محددًا",
+  other: "{n} طالب محدد",
+};
+
+/** «طالب» after a number that is always shown as digits (a count chip: «3 طلاب»، «24 طالبًا»; 1 and 2 keep the digit). Phase U.2. */
+export const STUDENTS_AFTER_DIGITS: ArabicCountForms = {
+  zero: "{n} طالب",
+  one: "{n} طالب",
+  two: "{n} طالب",
   few: "{n} طلاب",
   many: "{n} طالبًا",
   other: "{n} طالب",

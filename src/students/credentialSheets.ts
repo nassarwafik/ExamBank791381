@@ -4,6 +4,7 @@
 // is a local download, and the print document (every value HTML-escaped) lives in a hidden iframe removed after printing.
 import { buildCredentialsDownload, type CredentialBatch } from "../credentialBatch";
 import { csvCell } from "../reports/csv";
+import { arabicCount, STUDENTS } from "../learning/arabicCount";
 
 export function buildCredentialsCsv(batch: CredentialBatch): string {
   const { className, students } = buildCredentialsDownload(batch);
@@ -41,7 +42,7 @@ dl{margin:0;display:grid;gap:2mm}dl div{display:flex;justify-content:space-betwe
 dt{color:#444;font-size:10pt}dd{margin:0;font:600 13pt ui-monospace,Consolas,monospace;letter-spacing:.5px}
 .hint{margin:3mm 0 0;font-size:9pt;color:#444}
 </style></head><body>
-<header><h1>بطاقات الدخول · ${escapeHtml(className)}</h1><p>${escapeHtml(date)} · ${students.length} طالبًا · سرّي — يُسلَّم لكل طالب بطاقته فقط</p></header>
+<header><h1>بطاقات الدخول · ${escapeHtml(className)}</h1><p>${escapeHtml(date)} · ${arabicCount(students.length, STUDENTS)} · سرّي — يُسلَّم لكل طالب بطاقته فقط</p></header>
 <main class="grid">
 ${cards}
 </main></body></html>`;
