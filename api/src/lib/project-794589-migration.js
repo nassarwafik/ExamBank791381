@@ -8,6 +8,8 @@
 //     progress is carried over ONLY for stages whose (track + normalized title) matches EXACTLY and
 //     UNIQUELY on both sides — never by stageId, because old B05 / P20 may mean something different
 //     from the new B05 / P20. Ambiguous or unmatched stages are skipped, never guessed.
+//   * Phase P7b (owner decision): an ACTIVE class still on v1 WITH progress restarts from zero on the current set — an
+//     explicit, audited reset with the old work archived in each document (service.condenseClass, mode "reset").
 
 // Normalizes a stage title for safe comparison: Unicode NFKC, collapse internal whitespace, trim.
 function normalizeTitle(title) {

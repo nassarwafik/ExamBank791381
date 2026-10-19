@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
+import { createRequire } from "node:module";
 import { loadDefaultTemplate, buildClassSnapshotFromDefault, PROGRAM_CODE, TEMPLATE_VERSION } from "./project-794589-template.js";
 
-const t = loadDefaultTemplate();
+// Phase P7 — the approved V2 set (54 book / 51 PT) is no longer the default: it is the source the condensed V3 set
+// converts from, kept verbatim as a fixture. The V2 content checks below now guard that fixture (updated deliberately);
+// the V3 set itself is covered by api/tests/project-condense-p7.test.js.
+const t = createRequire(import.meta.url)("../../tests/fixtures/project-templates-pre-p7/794589.json");
 const book = t.stages.filter(s => s.track === "book");
 const pt = t.stages.filter(s => s.track === "packetTracer");
 
@@ -14,9 +18,10 @@ function expectContiguous(list, prefix, count) {
 }
 
 describe("default template V2", () => {
-  it("is templateVersion 2", () => {
+  it("is templateVersion 2 (the default is now the condensed V3)", () => {
     expect(t.templateVersion).toBe(2);
-    expect(TEMPLATE_VERSION).toBe(2);
+    expect(TEMPLATE_VERSION).toBe(3);
+    expect(loadDefaultTemplate().templateVersion).toBe(3);
   });
   it("has 54 book stages, 51 packet-tracer stages, 105 total", () => {
     expect(book).toHaveLength(54);
@@ -85,11 +90,11 @@ describe("class snapshot", () => {
     expect(fresh.stages[0].title).not.toBe("CHANGED");
     expect(fresh.trackWeights.book).toBe(50);
   });
-  it("carries programCode, classId, templateVersion 2 and the 105 stages", () => {
+  it("carries programCode, classId, templateVersion 3 and the 20 condensed stages (Phase P7)", () => {
     const snap = buildClassSnapshotFromDefault("c9", "2026-09-01T00:00:00.000Z");
     expect(snap.programCode).toBe(PROGRAM_CODE);
     expect(snap.classId).toBe("c9");
-    expect(snap.templateVersion).toBe(2);
-    expect(snap.stages).toHaveLength(105);
+    expect(snap.templateVersion).toBe(3);
+    expect(snap.stages).toHaveLength(20);
   });
 });

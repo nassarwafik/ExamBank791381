@@ -1,0 +1,661 @@
+{
+  "projectCode": "883589",
+  "templateVersion": 1,
+  "trackWeights": {
+    "book": 50,
+    "visualStudio": 50
+  },
+  "config": {
+    "staleDays": 7,
+    "lateThreshold": 40,
+    "balanceWarningThreshold": 25
+  },
+  "groups": [
+    {
+      "groupId": "book_g1",
+      "track": "book",
+      "title": "بداية الكتاب",
+      "order": 1
+    },
+    {
+      "groupId": "book_g2",
+      "track": "book",
+      "title": "الجداول",
+      "order": 2
+    },
+    {
+      "groupId": "book_g3",
+      "track": "book",
+      "title": "قاعدة البيانات",
+      "order": 3
+    },
+    {
+      "groupId": "book_g4",
+      "track": "book",
+      "title": "استعلامات SQL",
+      "order": 4
+    },
+    {
+      "groupId": "book_g5",
+      "track": "book",
+      "title": "البرمجة",
+      "order": 5
+    },
+    {
+      "groupId": "book_g6",
+      "track": "book",
+      "title": "Web Services",
+      "order": 6
+    },
+    {
+      "groupId": "book_g7",
+      "track": "book",
+      "title": "المخططات والتوثيق",
+      "order": 7
+    },
+    {
+      "groupId": "book_g8",
+      "track": "book",
+      "title": "الموقع",
+      "order": 8
+    },
+    {
+      "groupId": "book_g9",
+      "track": "book",
+      "title": "نهاية الكتاب",
+      "order": 9
+    },
+    {
+      "groupId": "visualStudio_g1",
+      "track": "visualStudio",
+      "title": "تهيئة المشروع",
+      "order": 1
+    },
+    {
+      "groupId": "visualStudio_g2",
+      "track": "visualStudio",
+      "title": "صفحات الموقع",
+      "order": 2
+    },
+    {
+      "groupId": "visualStudio_g3",
+      "track": "visualStudio",
+      "title": "المخرجات",
+      "order": 3
+    }
+  ],
+  "stages": [
+    {
+      "stageId": "B01",
+      "track": "book",
+      "groupId": "book_g1",
+      "title": "صفحة الغلاف",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B02",
+      "track": "book",
+      "groupId": "book_g1",
+      "title": "الفهرست",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B03",
+      "track": "book",
+      "groupId": "book_g1",
+      "title": "المقدمة",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B04",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الأول",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B05",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الثاني",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B06",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الثالث",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B07",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الرابع",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B08",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الخامس",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B09",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "معطيات في الجداول",
+      "description": "",
+      "order": 9,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B10",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "صور للجداول",
+      "description": "",
+      "order": 10,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B11",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "SQL Server Code",
+      "description": "",
+      "order": 11,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B12",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "العلاقات بين الجداول",
+      "description": "",
+      "order": 12,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B13",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام إضافة",
+      "description": "",
+      "order": 13,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B14",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام حذف",
+      "description": "",
+      "order": 14,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B15",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام تعديل",
+      "description": "",
+      "order": 15,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B16",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام بحث",
+      "description": "",
+      "order": 16,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B17",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام حسابي",
+      "description": "",
+      "order": 17,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B18",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام مع بارامتر",
+      "description": "",
+      "order": 18,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B19",
+      "track": "book",
+      "groupId": "book_g5",
+      "title": "لغات البرمجة المستعملة",
+      "description": "",
+      "order": 19,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B20",
+      "track": "book",
+      "groupId": "book_g5",
+      "title": "الفئات",
+      "description": "",
+      "order": 20,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B21",
+      "track": "book",
+      "groupId": "book_g6",
+      "title": "Add Method",
+      "description": "",
+      "order": 21,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B22",
+      "track": "book",
+      "groupId": "book_g6",
+      "title": "Update Method",
+      "description": "",
+      "order": 22,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B23",
+      "track": "book",
+      "groupId": "book_g6",
+      "title": "Delete Method",
+      "description": "",
+      "order": 23,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B24",
+      "track": "book",
+      "groupId": "book_g6",
+      "title": "Method with Parameter",
+      "description": "",
+      "order": 24,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B25",
+      "track": "book",
+      "groupId": "book_g7",
+      "title": "XML",
+      "description": "",
+      "order": 25,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B26",
+      "track": "book",
+      "groupId": "book_g7",
+      "title": "DFD",
+      "description": "",
+      "order": 26,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B27",
+      "track": "book",
+      "groupId": "book_g7",
+      "title": "DSD",
+      "description": "",
+      "order": 27,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B28",
+      "track": "book",
+      "groupId": "book_g7",
+      "title": "Sequence Diagram",
+      "description": "",
+      "order": 28,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B29",
+      "track": "book",
+      "groupId": "book_g7",
+      "title": "Activity Diagram",
+      "description": "",
+      "order": 29,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B30",
+      "track": "book",
+      "groupId": "book_g7",
+      "title": "ERD",
+      "description": "",
+      "order": 30,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B31",
+      "track": "book",
+      "groupId": "book_g7",
+      "title": "Use Case Diagram",
+      "description": "",
+      "order": 31,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B32",
+      "track": "book",
+      "groupId": "book_g8",
+      "title": "مبنى المشروع",
+      "description": "",
+      "order": 32,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B33",
+      "track": "book",
+      "groupId": "book_g8",
+      "title": "الصفحات بالموقع",
+      "description": "",
+      "order": 33,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B34",
+      "track": "book",
+      "groupId": "book_g9",
+      "title": "مردود",
+      "description": "",
+      "order": 34,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B35",
+      "track": "book",
+      "groupId": "book_g9",
+      "title": "مصادر",
+      "description": "",
+      "order": 35,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V01",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "تعريف المشروع بشكل صحيح",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V02",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "تعريف المجلدات اللازمة",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V03",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "تحميل الصور للمشروع",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V04",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "تعريف MDF",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V05",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "تعريف WCF",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V06",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "Web Service Methods",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V07",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "فحص خدمات الويب",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V08",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g1",
+      "title": "بناء الموقع",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V09",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g2",
+      "title": "الصفحة الرئيسية",
+      "description": "",
+      "order": 9,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V10",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g2",
+      "title": "من نحن",
+      "description": "",
+      "order": 10,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V11",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g2",
+      "title": "تواصل معنا",
+      "description": "",
+      "order": 11,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V12",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g2",
+      "title": "الدخول",
+      "description": "",
+      "order": 12,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V13",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g2",
+      "title": "صفحة المدير",
+      "description": "",
+      "order": 13,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V14",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g2",
+      "title": "صفحة الزبون",
+      "description": "",
+      "order": 14,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V15",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g2",
+      "title": "صفحة العامل",
+      "description": "",
+      "order": 15,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V16",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g3",
+      "title": "رسوم بيانية",
+      "description": "",
+      "order": 16,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "V17",
+      "track": "visualStudio",
+      "groupId": "visualStudio_g3",
+      "title": "تقارير",
+      "description": "",
+      "order": 17,
+      "weight": 1,
+      "required": true,
+      "active": true
+    }
+  ]
+}

@@ -105,7 +105,7 @@ describe("engine works generically for new projects", () => {
     const def = getProjectDefinition("883589");
     const bookIds = def.stages.filter(s => s.track === "book").map(s => s.stageId);
     const next = gen.getNextStages(def, approve(bookIds.slice(0, 3)));
-    expect(next.book.stageId).toBe("B04");
-    expect(next.visualStudio.stageId).toBe("V01");
+    expect(next.book.stageId).toBe("BK04");                                    // Phase P7: the condensed ids
+    expect(next.visualStudio.stageId).toBe("VS01");
   });
 });

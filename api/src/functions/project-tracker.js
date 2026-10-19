@@ -28,6 +28,7 @@ const { validateTemplatePatch } = require("../lib/project-tracker/template-valid
 const analytics = require("../lib/project-tracker/analytics");
 const { countReadyStages, countSelfReportedStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
+const { classHasMeaningfulProgress } = require("../lib/project-794589-migration");
 
 const CLASS_PREFIX = "platform/classes/";
 const STUDENT_HISTORY_LIMIT = 50;
@@ -196,8 +197,11 @@ async function handler(request, deps = {}, obs = null) {
         }
         const counts = await mapConcurrent(pairs, getReadConcurrency(), async ({ code, c }) => {
           const ns = getStorageNamespace(code);
-          const [stored, docs] = await Promise.all([downloadJsonOrNull(container, ns.configName(c.classId)), listJson(container, ns.progressPrefix(c.classId))]);
-          const snapshot = stored || svc.buildClassSnapshot(getProjectDefinition(code), c.classId, now);
+          const [stored, rawDocs] = await Promise.all([downloadJsonOrNull(container, ns.configName(c.classId)), listJson(container, ns.progressPrefix(c.classId))]);
+          // Phase P7 — the class as the next write will store it (a pending conversion / reset shown in memory).
+          const resolved = svc.resolveStoredClass(code, c, stored, now, classHasMeaningfulProgress(rawDocs));
+          const snapshot = resolved.snapshot;
+          const docs = resolved.view ? rawDocs.map(d => (d ? resolved.view(d) : d)) : rawDocs;
           const activeStageIds = new Set((snapshot.stages || []).filter(s => s.active === true).map(s => s.stageId));
           const isMember = sid => svc.studentBelongsToClass(usersById.get(String(sid)), c.classId);
           return { ready: countReadyStages(docs, activeStageIds, isMember), self: countSelfReportedStages(docs, activeStageIds, isMember) };
@@ -239,7 +243,8 @@ async function handler(request, deps = {}, obs = null) {
         if (!classHasProject(classroom, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
         const readOnly = normalizeClassStatus(classroom) === "archived";
         // Phase P-9 — a read never writes: the snapshot as the next write will see it (lazy create / upgrade in memory only).
-        const config = await svc.readClassConfig(container, projectCode, classroom);
+        // Phase P7 — `view`: each progress document as a pending conversion / reset will store it (in memory too).
+        const { config, view } = await svc.readClassView(container, projectCode, classroom);
         const workDef = svc.workingDefinition(projectCode, config);
 
         if (resource === "template") {
@@ -253,7 +258,7 @@ async function handler(request, deps = {}, obs = null) {
           // Membership check BEFORE reading any progress — no cross-class reads.
           const membership = await svc.requireStudentInClass(container, studentId, classId);
           if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
-          const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId);
+          const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId, view);
           return { status: 200, jsonBody: studentDetailBody(projectCode, workDef, config, readOnly, membership.student, progress, now) };
         }
         // Phase 9B — the evaluation of ONE student in ONE project (narrow read; same membership gate as `student`).
@@ -262,19 +267,19 @@ async function handler(request, deps = {}, obs = null) {
           if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
           const membership = await svc.requireStudentInClass(container, studentId, classId);
           if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
-          const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId);
+          const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId, view);
           return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, student: membership.student, evaluation: buildProjectEvaluation(workDef, progress) } };
         }
 
         const students = await svc.listClassStudentsForReadViews(container, classId);       // Phase P-2: shared ≤ 20 s scan
 
         if (resource === "summary") {
-          const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
+          const entries = await svc.loadProgressEntries(container, projectCode, classId, students, view);
           const summary = analytics.buildClassSummary(workDef, entries, now);
           return { status: 200, jsonBody: { ok: true, projectCode, summary, tracks: definition.tracks, readOnly, className: classroom.name, schoolYear: classroom.schoolYear } };
         }
         if (resource === "students") {
-          const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
+          const entries = await svc.loadProgressEntries(container, projectCode, classId, students, view);
           const cards = entries.map(e => {
             const summary = core.buildStudentSummary(workDef, e.progress, now);
             const perf = performance.buildProjectPerformanceSummary(workDef, e.progress, now, summary);
@@ -283,11 +288,11 @@ async function handler(request, deps = {}, obs = null) {
           return { status: 200, jsonBody: { ok: true, projectCode, students: cards, tracks: definition.tracks, config: config.config, readOnly } };
         }
         if (resource === "analytics") {
-          const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
+          const entries = await svc.loadProgressEntries(container, projectCode, classId, students, view);
           return { status: 200, jsonBody: { ok: true, projectCode, analytics: analytics.buildAnalytics(workDef, entries, now), tracks: definition.tracks, groups: config.groups, readOnly } };
         }
         if (resource === "board") {
-          const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
+          const entries = await svc.loadProgressEntries(container, projectCode, classId, students, view);
           return { status: 200, jsonBody: boardBody(projectCode, config, readOnly, entries) };
         }
         return { status: 400, jsonBody: { ok: false, error: "resource غير معروف." } };

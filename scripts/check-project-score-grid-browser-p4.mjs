@@ -54,8 +54,11 @@ const CODE = "899373";
 const { getStorageNamespace, getProjectDefinition } = require(path.join(root, "api/src/lib/project-tracker/registry.js"));
 const NS = getStorageNamespace(CODE);
 const DEF = getProjectDefinition(CODE);
-const firstGroup = DEF.groups.filter(g => g.track === DEF.tracks[0].trackId).sort((a, b) => a.order - b.order)[0];
-const G1 = DEF.stages.filter(s => s.groupId === firstGroup.groupId && s.active === true).sort((a, b) => a.order - b.order).map(s => s.stageId);
+// Phase P7: the condensed first group holds one stage, so the gate grades the first group of the first track with two
+// stages or more (chosen in the grid's group menu).
+const stagesOfGroup = g => DEF.stages.filter(s => s.groupId === g.groupId && s.active === true).sort((a, b) => a.order - b.order).map(s => s.stageId);
+const firstGroup = DEF.groups.filter(g => g.track === DEF.tracks[0].trackId).sort((a, b) => a.order - b.order).find(g => stagesOfGroup(g).length >= 2);
+const G1 = stagesOfGroup(firstGroup);
 const teacherToken = api.teacherToken();
 const call = async (method, url, body) => {
   const r = await api.handle(method, url, { authorization: "Bearer " + teacherToken, "x-builder-token": teacherToken }, body ? JSON.stringify(body) : "");
@@ -149,6 +152,8 @@ for (const vp of VIEWPORTS) {
   await page.getByRole("group", { name: "أقسام المشروع" }).getByRole("button", { name: /التقييم الجماعي/ }).click();
   await page.getByRole("button", { name: "جدول العلامات" }).click();
   await page.locator(cellSel(0, 0)).waitFor({ timeout: 20000 });
+  await page.getByRole("combobox", { name: /المجموعة/ }).selectOption(firstGroup.groupId);
+  await page.locator('.eb-score-grid-table input[aria-label*="— ' + G1[1] + ' "]').first().waitFor({ timeout: 20000 });
   await page.waitForTimeout(300);
   // 1–2. structure
   const m = await page.evaluate(() => {

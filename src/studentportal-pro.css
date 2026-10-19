@@ -179,6 +179,8 @@
 .eb-sp-stage-code{ color:var(--eb-muted); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
 .eb-sp-stage-title{ color:var(--eb-text-heading); font-weight:var(--eb-fw-medium); }
 .eb-sp-stage-note{ margin:0; color:var(--eb-info-tx); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+/* Phase P7 — a condensed stage lists the items it covers under its title. */
+.eb-sp-stage-items{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
 /* Phase P3 — one-tap marking: «أنجزتها» / «تراجع» at the end of each stage row (44 px touch targets), a next-step card with
    its own «أنجزتها», the stage filters, and groups that fold with their done / total count. */
 .eb-sp-stage-main .eb-sp-stage-title{ flex:1 1 12rem; min-width:0; }

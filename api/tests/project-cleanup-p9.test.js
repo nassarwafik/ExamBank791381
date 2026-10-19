@@ -82,7 +82,7 @@ describe("P-9 B — a teacher read never writes", () => {
     const t = school();
     const shown = (await t.get({ resource: "template", classId: "c2" })).jsonBody.template;
     expect(t.ctx.has(NS.configName("c2"))).toBe(false);
-    expect((await t.post({ action: "progress.update", classId: "c2", studentId: "s5", stageId: "B01", status: "in_progress" })).status).toBe(200);
+    expect((await t.post({ action: "progress.update", classId: "c2", studentId: "s5", stageId: "BK01", status: "in_progress" })).status).toBe(200);   // Phase P7: condensed ids
     expect(t.ctx.getJson(NS.configName("c2"))).toEqual(shown);
   });
   it("a V1 class that qualifies for the upgrade: the read shows the upgraded template without writing or auditing it", async () => {
@@ -98,10 +98,12 @@ describe("P-9 B — a teacher read never writes", () => {
     expect(t.ctx.getJson(NS.configName("c3"))).toEqual(r.jsonBody.template);
     expect(t.ctx.names(F.AUDIT).map(n => t.ctx.getJson(n).action)).toEqual(["project.template.upgrade"]);
   });
-  it("a V1 class WITH progress and an archived class are shown as stored (unchanged behaviour)", async () => {
+  // Phase P7b (owner decision): a V1 class WITH progress now restarts from zero on the condensed set — the read SHOWS it
+  // (in memory) and still writes nothing; an archived class is shown as stored.
+  it("a V1 class WITH progress is shown restarted from zero (P7b) and an archived class as stored; neither read writes", async () => {
     const t = school();
     const before = t.store();
-    expect((await t.get({ resource: "template", classId: "c4" })).jsonBody.template.templateVersion).toBe(1);
+    expect((await t.get({ resource: "template", classId: "c4" })).jsonBody.template).toMatchObject({ templateVersion: 3, resetFromVersion: 1 });
     expect((await t.get({ resource: "template", classId: "cA" })).jsonBody.template.templateVersion).toBe(1);
     expect(t.store()).toEqual(before);
   });
