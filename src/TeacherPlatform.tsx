@@ -353,6 +353,21 @@ function TeacherPlatform(props:TeacherPlatformProps){
   return ()=>{window.removeEventListener("beforeunload",warn);onCredentialsPendingChange?.(false)};
  },[credentialsPending,onCredentialsPendingChange]);
 
+ // Phase S.4 — a row or bulk action can remove the control focus returns to (the row and its menu after a delete, a move or a
+ // filtered-out status change; the bulk bar once the selection is cleared). Focus then lands on the roster heading instead of
+ // falling to <body>, where a keyboard or screen-reader user would start again from the top of the page. A teacher who has
+ // already moved focus to a control that is still on the page is left where they are.
+ function keepRosterFocus(){
+  window.setTimeout(()=>{
+   // A removed focused element hands focus to <body> (the HTML focus fix-up rule), so <body> is the "lost" signal.
+   const active=document.activeElement;
+   if(active&&active!==document.body)return;
+   const heading=document.getElementById("eb-roster-title");
+   if(!heading)return;
+   if(!heading.hasAttribute("tabindex"))heading.setAttribute("tabindex","-1");
+   heading.focus();
+  },0);
+ }
  function clearPasswordReveal(){
   if(passwordRevealTimer.current){window.clearInterval(passwordRevealTimer.current);passwordRevealTimer.current=null}
   setPasswordReveal(null);
@@ -483,14 +498,14 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const archiving=normalizeClassStatus(classroom)==="active";
   const message=archiving
    ?"أرشفة الصف "+classroom.name+"؟\n\nسيُنقل إلى الأرشيف مع الاحتفاظ بجميع الطلاب والواجبات والنتائج. لن يتم حذف أي بيانات."
-   :"إعادة تفعيل الصف "+classroom.name+"؟";
+   :"استعادة الصف "+classroom.name+" من الأرشيف؟";
   if(actionBusy)return;
-  if(!(await confirm({message,confirmLabel:archiving?"أرشفة":"تفعيل"})))return;
+  if(!(await confirm({message,confirmLabel:archiving?"أرشفة":"استعادة"})))return;
   setActionBusy(true);setError("");setNotice("");
   try{
    await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:archiving?"archive":"unarchive",classId:classroom.classId})});
    await loadClasses();
-   setNotice(archiving?"✓ تم أرشفة الصف.":"✓ تم تفعيل الصف.");
+   setNotice(archiving?"✓ تمت أرشفة الصف.":"✓ تمت استعادة الصف.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل الصف.")}
   finally{setActionBusy(false)}
  }
@@ -556,7 +571,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    else if(stillSelected(sourceClassId))setStudents(prev=>mergeStudentRow(prev,{userId:student.userId,active:result.active===true}));
    setNotice(student.active?"✓ تم تعطيل حساب الطالب.":"✓ تم تفعيل حساب الطالب.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل الحساب.")}
-  finally{setActionBusy(false)}
+  finally{setActionBusy(false);keepRosterFocus()}
  }
 
  async function archiveStudent(student:Student){
@@ -579,7 +594,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    }
    setNotice(withRosterNote(result,student.archived?"✓ تمت استعادة الطالب.":"✓ تمت أرشفة الطالب مع الاحتفاظ ببياناته."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تغيير حالة الأرشفة.")}
-  finally{setActionBusy(false)}
+  finally{setActionBusy(false);keepRosterFocus()}
  }
 
  async function deleteStudent(student:Student){
@@ -606,7 +621,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    }
    setNotice(withRosterNote(result,"✓ تم حذف الطالب نهائيًا."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر حذف الطالب.")}
-  finally{setActionBusy(false)}
+  finally{setActionBusy(false);keepRosterFocus()}
  }
 
  function startEdit(student:Student){
@@ -650,7 +665,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    }
    setNotice(withRosterNote(result,moved?"✓ تم تعديل الطالب ونقله إلى الصف المختار.":"✓ تم حفظ تعديلات الطالب."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ تعديلات الطالب.")}
-  finally{setActionBusy(false)}
+  finally{setActionBusy(false);keepRosterFocus()}
  }
 
  // Stage 1: parse + normalize the picked file LOCALLY (JSON or CSV) — no account is created here.
@@ -787,7 +802,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
   finally{setActionBusy(false)}
  }
 
- function openHistory(userId:string){return loadProfile(userId,"history","تعذر تحميل سجل الوظائف.")}
+ function openHistory(userId:string){return loadProfile(userId,"history","تعذر تحميل سجل الواجبات.")}
 
  async function historyAllowRetry(item:SubmittedAssignment){
   if(!profile||actionBusy)return;
@@ -879,7 +894,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    setSelectedIds([]);
    setNotice(withRosterNote(result,"✓ نُفذت العملية على "+arabicCount(result.processed,STUDENTS_GENITIVE)+(result.failed?"، وفشلت لدى "+result.failed+".":".")));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية الجماعية.")}
-  finally{setActionBusy(false)}
+  finally{setActionBusy(false);keepRosterFocus()}
  }
 
  // U.2 — switching between the active classes and the archive selects the view's first class when the selected one is not

@@ -13,8 +13,8 @@
 //      340 px tall, so the roster starts near the top of the page;
 //   4. at 390 px: the classes are one sideways strip (≤ 170 px tall); a card selected while half outside the strip is scrolled
 //      fully into view; each student card is ≤ 132 px tall and shows the full name (the family name follows the first name);
-//   5. «التفاصيل» opens the student dialog as a full-height side sheet at the inline end (the left edge in RTL) from 834 px and as a
-//      bottom sheet at 390 px; Escape closes it and focus returns to the «التفاصيل» button;
+//   5. «تفاصيل <student>» opens the student dialog as a full-height side sheet at the inline end (the left edge in RTL) from 834 px and
+//      as a bottom sheet at 390 px; Escape closes it and focus returns to that button;
 //   6. axe-core (WCAG 2.1 A/AA): no serious or critical violation; no horizontal overflow of the page.
 // U.2, at every width:
 //   7. Arabic number agreement on the class cards («5 طلاب»، «29 طالبًا»، «طالبان»), the roster header and the bulk bar
@@ -24,6 +24,10 @@
 //      «مؤرشف» + «في <day>» — no time, no leading «·»;
 //  10. at 390 and 834 px (touch): every visible control on the page, with the bulk bar open, in an open row menu and in the
 //      student sheet is at least 44 × 44 px (a checkbox counts with the label around it; WCAG 2.5.8 / the L.8 rule).
+// S.4, once at 1024 px after the widths above (it deletes and archives, so it runs last):
+//  11. one term for assignments («الواجبات», never «الوظائف») on the page and in the student sheet; the roster table is named
+//      «طلاب <class>»; each row's details button names its student; an empty assignments cell reads «لا واجبات مسلّمة»;
+//  12. focus never falls to <body>: after a single delete from a row menu and after a bulk archive, focus is on the roster heading.
 //
 // Tools are measuring instruments, not project dependencies: PLAYWRIGHT_CORE_DIR and AXE_CORE_DIR each name a directory whose
 // node_modules holds playwright-core / axe-core; CHROMIUM_PATH the browser. Output: HARNESS_OUT/<LABEL>/record.json (+ screenshots).
@@ -259,7 +263,7 @@ for (const vp of VIEWPORTS) {
   check("page " + at, m.overflow <= 0, m.overflow > 0 ? "horizontal overflow " + m.overflow + " px" : "no horizontal overflow");
   const violations = await axe(page, "page " + at);
   // 5. the student dialog
-  const details = page.getByRole("button", { name: "التفاصيل" }).first();
+  const details = page.getByRole("button", { name: /^تفاصيل / }).first();
   await details.click();
   const panel = page.locator(".eb-student-dialog");
   await panel.waitFor({ timeout: 10000 });
@@ -273,8 +277,44 @@ for (const vp of VIEWPORTS) {
   await page.keyboard.press("Escape");
   await panel.waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
   const focus = await page.evaluate(() => ({ open: !!document.querySelector(".eb-student-dialog"), label: document.activeElement?.getAttribute("title") || document.activeElement?.textContent || "" }));
-  check("student dialog " + at, !focus.open && /تفاصيل/.test(focus.label), "Escape closes it and focus returns to «التفاصيل» (" + (focus.open ? "still open" : focus.label.trim().slice(0, 30)) + ")");
+  check("student dialog " + at, !focus.open && /تفاصيل/.test(focus.label), "Escape closes it and focus returns to «تفاصيل <student>» (" + (focus.open ? "still open" : focus.label.trim().slice(0, 30)) + ")");
   record.screens.push({ width: vp.width, measures: m, dialog: d, violations });
+  await ctx.close();
+}
+
+// ── S.4: terms, names and focus (runs last: it deletes and archives students) ─────────────────────────────────────────────────
+{
+  const at = "@1024 (S.4)";
+  const { ctx, page } = await openStudents({ width: 1024, height: 800, touch: false });
+  await page.locator(".eb-class-row", { hasText: "العاشر 1" }).locator(".eb-class-select").click();
+  await page.waitForFunction(() => /العاشر 1/.test(document.querySelector(".eb-roster-pane h2")?.textContent || "") && document.querySelectorAll(".eb-roster-table tbody tr").length === 3, null, { timeout: 10000 }).catch(() => {});
+  const aria = await page.locator(".eb-roster-pane").ariaSnapshot();
+  check("terms " + at, !/الوظائف/.test(await page.locator(".eb-students-workspace").innerText()), "the page never says «الوظائف» (one term: «الواجبات»)");
+  check("names " + at, aria.includes('table "طلاب العاشر 1"'), "the roster table is named «طلاب العاشر 1»");
+  check("names " + at, /button "تفاصيل طالب1 العائلة\d+"/.test(aria), "each row's details button names its student («تفاصيل طالب1 …»)");
+  check("names " + at, aria.includes('cell "لا واجبات مسلّمة"'), "an empty assignments cell reads «لا واجبات مسلّمة» (not «—»)");
+  await page.getByRole("button", { name: /^تفاصيل / }).first().click();
+  await page.locator(".eb-student-dialog").waitFor({ timeout: 10000 });
+  check("terms " + at, !/الوظائف/.test(await page.locator(".eb-student-dialog").innerText()), "the student sheet never says «الوظائف»");
+  await page.keyboard.press("Escape");
+  await page.locator(".eb-student-dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  const focused = () => page.evaluate(() => { const a = document.activeElement; return a === document.body || !a ? "<body>" : (a.id || a.tagName) + " «" + (a.textContent || "").trim().slice(0, 30) + "»"; });
+  // 12. a single delete from the row menu removes the row and its menu (focus's return target)
+  await page.locator(".eb-roster-table tbody tr").first().getByRole("button", { name: /^إجراءات / }).click();
+  await page.locator(".eb-menu-panel").getByRole("button", { name: "حذف نهائي" }).click();
+  await page.locator('.eb-confirm[role="dialog"] .is-danger').click();
+  await page.waitForFunction(() => document.querySelectorAll(".eb-roster-table tbody tr").length === 2, null, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  const afterDelete = await focused();
+  check("focus " + at, afterDelete.startsWith("eb-roster-title"), "after a single delete focus is on the roster heading (" + afterDelete + ")");
+  // 12. a bulk archive clears the selection, which removes the bulk bar (focus's return target)
+  for (const i of [0, 1]) await page.locator(".eb-roster-table tbody tr").nth(i).locator("label.eb-check-hit").click();
+  await page.getByRole("region", { name: "إجراءات جماعية" }).getByRole("button", { name: "أرشفة" }).click();
+  await page.locator('.eb-confirm[role="dialog"] .is-primary').click();
+  await page.waitForFunction(() => !document.querySelector(".eb-bulk-bar"), null, { timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  const afterBulk = await focused();
+  check("focus " + at, afterBulk.startsWith("eb-roster-title"), "after a bulk archive focus is on the roster heading (" + afterBulk + ")");
   await ctx.close();
 }
 

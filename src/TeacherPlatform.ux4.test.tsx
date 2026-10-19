@@ -135,7 +135,7 @@ describe("UX-4 request parity — classrooms", () => {
     fireEvent.click(within(menu).getByRole("button", { name: "أرشفة الصف" }));
     expect((await confirmEl()).textContent).toContain("أرشفة الصف الحادي عشر 3؟");
     await confirmDialog();
-    await screen.findByText("✓ تم أرشفة الصف.");
+    await screen.findByText("✓ تمت أرشفة الصف.");
     menu = await classMenu("الثاني عشر 8");
     fireEvent.click(within(menu).getByRole("button", { name: "تخريج وأرشفة الصف" }));
     expect((await confirmEl()).textContent).toContain("سيتم نقل الصف إلى الأرشيف مع الاحتفاظ بجميع الطلاب والواجبات والنتائج.");
@@ -144,10 +144,10 @@ describe("UX-4 request parity — classrooms", () => {
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
     menu = await classMenu("دفعة 2025");
     expect(within(menu).queryByLabelText("مشروع الكتاب")).toBeNull();                  // no project toggles on archived classes
-    fireEvent.click(within(menu).getByRole("button", { name: "تفعيل" }));
-    expect((await confirmEl()).textContent).toContain("إعادة تفعيل الصف دفعة 2025؟");
+    fireEvent.click(within(menu).getByRole("button", { name: "استعادة الصف" }));
+    expect((await confirmEl()).textContent).toContain("استعادة الصف دفعة 2025 من الأرشيف؟");
     await confirmDialog();
-    await screen.findByText("✓ تم تفعيل الصف.");
+    await screen.findByText("✓ تمت استعادة الصف.");
     expect(posts("/api/classrooms")).toEqual([{ action: "archive", classId: "c1" }, { action: "graduateAndArchive", classId: "c2" }, { action: "unarchive", classId: "c3" }]);
   });
 });
@@ -209,7 +209,7 @@ describe("UX-4 request parity — students", () => {
   });
   it("REGRESSION nested confirm: StudentDialog → كلمة مرور جديدة → ConfirmDialog: only the confirm is exposed; cancel → no request, focus back on the trigger, StudentDialog active again; confirm → exact resetPassword request", async () => {
     await mount();
-    const opener = within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }); opener.focus();
+    const opener = within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }); opener.focus();
     fireEvent.click(opener);
     const d = await screen.findByRole("dialog", { name: "علي حسن" });
     const trigger = within(d).getByRole("button", { name: "كلمة مرور جديدة" }); trigger.focus();
@@ -301,7 +301,7 @@ describe("UX-4 request parity — students", () => {
 describe("UX-4 request parity — assignment history (inside the Student Dialog)", () => {
   it("allowRetry, setDueAtOverride (extend) and clear → exact bodies against /api/assignment-results", async () => {
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "الوظائف (2)" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^الواجبات \(2\)/ }));
     const d = await screen.findByRole("dialog", { name: "علي حسن" });
     const history = d.querySelectorAll("table")[1] as HTMLElement;
     const rowA1 = within(history).getByText("اختبار الكسور").closest("tr") as HTMLElement;
@@ -324,28 +324,28 @@ describe("UX-4 request parity — assignment history (inside the Student Dialog)
 });
 
 describe("UX-4 Student Dialog — two entry points, one payload", () => {
-  it("التفاصيل opens on the summary; الوظائف opens the SAME dialog on the history section; one profile GET each; no duplicate", async () => {
+  it("the details button opens on the summary; «الواجبات (N)» opens the SAME dialog on the history section; one profile GET each; no duplicate", async () => {
     await mount();
-    const trigger = within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }); trigger.focus();
+    const trigger = within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }); trigger.focus();
     fireEvent.click(trigger);
     const d = await screen.findByRole("dialog", { name: "علي حسن" });
     expect(calls.filter(c => c.url.includes("profileUserId=s1"))).toHaveLength(1);
     expect(document.activeElement).toBe(within(d).getByRole("heading", { level: 3, name: "ملخص" }));
-    expect(within(d).getByRole("heading", { level: 3, name: "الواجبات وسجل الوظائف" })).toBeTruthy();
+    expect(within(d).getByRole("heading", { level: 3, name: "الواجبات وسجل التسليم" })).toBeTruthy();
     expect(within(d).getByText("ميدالية ذهبية")).toBeTruthy();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(trigger);
     calls = [];
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "الوظائف (2)" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^الواجبات \(2\)/ }));
     const d2 = await screen.findByRole("dialog", { name: "علي حسن" });
     expect(calls.filter(c => c.url.includes("profileUserId=s1"))).toHaveLength(1);
-    expect(document.activeElement).toBe(within(d2).getByRole("heading", { level: 3, name: "الواجبات وسجل الوظائف" }));
+    expect(document.activeElement).toBe(within(d2).getByRole("heading", { level: 3, name: "الواجبات وسجل التسليم" }));
     expect(within(d2).getByText("واجب الجبر")).toBeTruthy();
   });
   it("only one TeacherPlatform overlay is active at a time (edit replaces profile; class change clears everything incl. a pending confirm)", async () => {
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }));
     await screen.findByRole("dialog", { name: "علي حسن" });
     fireEvent.keyDown(document, { key: "Escape" });
     await rowAction("علي", "تعديل");

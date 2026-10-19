@@ -54,7 +54,7 @@ describe("U.1 — Dialog placement", () => {
     render(<StudentDialog profile={profile as never} section="summary" onClose={noop} busy={false} suspended={false} passwordReveal={null} onResetPassword={noop} onCopyPassword={noop} onReview={noop} onAllowRetry={noop} deadlineFor={null} deadlineValue="" onDeadlineValue={noop} onOpenDeadline={noop} onCloseDeadline={noop} onSaveDeadline={noop} onClearDeadline={noop} fmtDate={v => v} />);
     const dialog = screen.getByRole("dialog", { name: "ليان خالد" });
     expect(dialog.closest(".eb-dialog-root")?.className).toContain("is-sheet");
-    for (const name of ["جدول واجبات الصف الحالي", "جدول سجل الوظائف المسلّمة"]) {
+    for (const name of ["جدول واجبات الصف الحالي", "جدول سجل الواجبات المسلّمة"]) {
       const region = screen.getByRole("region", { name });
       expect(region.className).toContain("students-table-wrap");
       expect(region.getAttribute("tabindex")).toBe("0");
@@ -146,7 +146,7 @@ describe("U.1 — the roster row carries the compact phone card", () => {
     expect(row.querySelector("td.eb-col-family")?.textContent).toBe("خالد");
     expect(row.querySelector("td.eb-col-status")?.textContent).toBe("فعّال");
     expect(row.querySelector("td.eb-col-login")?.textContent).toBe("لم يدخل بعد");
-    expect(row.querySelector("td.eb-col-tasks")?.textContent).toContain("الوظائف (2)");
+    expect(row.querySelector("td.eb-col-tasks")?.textContent).toContain("الواجبات (2)");
   });
 });
 
