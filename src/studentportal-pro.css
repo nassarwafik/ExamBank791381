@@ -179,6 +179,23 @@
 .eb-sp-stage-code{ color:var(--eb-muted); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
 .eb-sp-stage-title{ color:var(--eb-text-heading); font-weight:var(--eb-fw-medium); }
 .eb-sp-stage-note{ margin:0; color:var(--eb-info-tx); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+/* Phase P3 — one-tap marking: «أنجزتها» / «تراجع» at the end of each stage row (44 px touch targets), a next-step card with
+   its own «أنجزتها», the stage filters, and groups that fold with their done / total count. */
+.eb-sp-stage-main .eb-sp-stage-title{ flex:1 1 12rem; min-width:0; }
+.eb-sp-stage-action{ display:inline-flex; margin-inline-start:auto; }
+.eb-button.eb-sp-done-btn,.eb-button.eb-sp-undo-btn{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; min-width:44px; }
+.eb-sp-stage.is-self-reported{ background:var(--eb-warn-bg); }
+.eb-sp-next-card{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-primary); border-radius:var(--eb-r); background:var(--eb-primary-050); }
+.eb-sp-next-card p{ margin:0; }
+.eb-sp-stage-filters .eb-chip-button{ min-height:40px; }
+.eb-sp-stage-empty{ margin:0; }
+.eb-sp-group-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
+.eb-sp-group-toggle{ display:inline-flex; align-items:center; gap:var(--eb-space-2); min-height:44px; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:start; cursor:pointer; }
+.eb-sp-group-toggle .eb-subheading{ margin:0; }
+.eb-sp-group-toggle:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; border-radius:var(--eb-r-sm); }
+.eb-sp-group-count{ padding:1px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-sp-group-count.is-done{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.eb-button.eb-sp-group-mark{ min-height:44px; }
 
 /* ---------- Avatar picker (inside the shared Dialog) ---------- */
 .eb-sp-avatar-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--eb-space-2); }
@@ -197,6 +214,7 @@
   .eb-sp-task-action{ width:auto; min-height:38px; align-self:flex-start; }
   .eb-sp-reaction{ min-height:32px; }
   .eb-sp-project-tracks{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .eb-button.eb-sp-done-btn,.eb-button.eb-sp-undo-btn,.eb-button.eb-sp-group-mark,.eb-sp-group-toggle{ min-height:36px; }   /* P3 one-tap marking */
   .eb-sp-rankring{ inline-size:160px; block-size:160px; }
 }
 @media (min-width: 1024px){

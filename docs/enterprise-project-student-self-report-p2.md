@@ -51,6 +51,8 @@ Teacher side: the `board` cell carries `selfReported: true`; `progress.update` a
 
 - **Student** («مشاريعي» → project): «تحديد المراحل التي أنجزتها» opens a marking mode (checkboxes only on stages not yet
   approved), «حفظ كمنفّذة» saves them in one request. Marked stages show «منفّذة — بانتظار تأكيد المعلم» with «تراجع».
+  *Superseded by P3* (`docs/enterprise-project-student-one-tap-p3.md`): the marking mode became one tap per stage
+  («أنجزتها»); the request, the server rules and «تراجع» are unchanged.
   The default view has no inputs. The single write lives in `src/projects/studentSelfReport.ts`.
 - **Teacher**: «التقييم الجماعي» gains «حدّدها الطلاب (n)» (opens by default when nothing is waiting for review) with
   «تأكيد المحدد» / «إرجاع إلى قيد التنفيذ», plus «تحديد ما حدّده الطلاب» in «حسب المرحلة». The student profile shows a

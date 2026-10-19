@@ -236,6 +236,8 @@ describe("9B student block — read-only, isolated per project", () => {
     expect(region.getByRole("region", { name: "تقييم مشروعك" })).toBeTruthy();
     expect(fact("التقييم العام")).toBe("43 / 100"); expect(fact("المراحل المقيّمة")).toBe("2 / 3"); expect(fact("نسبة التقييم")).toBe("67%");
     expect(card().textContent).toContain("مراحل لم تُقيّم بعد: S03 — الفصل الثاني");
+    // P3 opens the stage list on «المتبقية»; «الكل» shows every stage row this case reads (updated deliberately).
+    fireEvent.click(region.getByRole("button", { name: /^الكل/ }));
     const rows = region.getAllByRole("listitem").filter(li => li.className.includes("eb-sp-stage"));
     expect(rows[1].textContent).toContain("العلامة: 0 / 100");
     expect(rows[2].textContent).toContain("العلامة: " + NOT_GRADED_LABEL);

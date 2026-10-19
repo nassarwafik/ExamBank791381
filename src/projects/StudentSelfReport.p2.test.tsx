@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
 /// <reference types="node" />
-// Phase P2 — student self-report end to end over the REAL handlers (in-memory container): the student opens an explicit
-// marking mode (no inputs by default), picks completed stages (never a teacher-approved one), saves them in ONE request
-// carrying only the project, the stage ids and mark; they show «منفّذة — بانتظار تأكيد المعلم» and count at once; the
-// student can undo. The teacher sees them in «حدّدها الطلاب» and on the profile («حدّدها الطالب» + «تأكيد») and confirms.
+// Phase P2 — student self-report end to end over the REAL handlers (in-memory container): the student marks completed
+// stages (never a teacher-approved one) in a request carrying only the project, the stage ids and mark; they show
+// «منفّذة — بانتظار تأكيد المعلم» and count at once; the student can undo. The teacher sees them in «حدّدها الطلاب» and on
+// the profile («حدّدها الطالب» + «تأكيد») and confirms.
+// Phase P3 — the P2 marking MODE (checkboxes + «حفظ كمنفّذة») became one-tap «أنجزتها» per stage; the student cases below
+// were updated deliberately to that interaction and keep pinning the P2 semantics (request body, never an approved
+// stage, undo, archived refusal). The P3 specifics are in StudentProjectOneTap.p3.test.tsx.
 import { createRequire } from "node:module";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
@@ -52,7 +55,8 @@ const label = (s: { stageId: string; title: string }) => s.stageId + " — " + s
 const rowOf = (s: { stageId: string }) => screen.getByText(s.stageId, { selector: ".eb-sp-stage-code" }).closest("li") as HTMLElement;
 async function mountStudent() {
   render(<StudentProjectPanel token="st" />);
-  await screen.findByRole("region", { name: "تحديد المراحل المنفّذة" });
+  await screen.findByRole("group", { name: "عرض المراحل" });
+  fireEvent.click(screen.getByRole("button", { name: /^الكل/ }));            // every stage, approved ones included
 }
 
 beforeEach(() => {
@@ -61,35 +65,28 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("P2 student — mark completed stages", () => {
-  it("opens an explicit marking mode, never offers a teacher-approved stage, and saves the picks in ONE minimal request", async () => {
+  it("marks a completed stage in ONE minimal request; a teacher-approved stage never offers the action", async () => {
     const s = server();
     await mountStudent();
-    expect(document.querySelectorAll("input").length).toBe(0);
-    fireEvent.click(screen.getByRole("button", { name: "تحديد المراحل التي أنجزتها" }));
-    expect(within(rowOf(B3)).queryByRole("checkbox")).toBeNull();
-    const save = screen.getByRole("button", { name: "حفظ كمنفّذة" }) as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox", { name: "أنجزت " + label(B1) }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "أنجزت " + label(B2) }));
-    expect(screen.getByText("اخترت 2 مرحلة")).toBeTruthy();
-    fireEvent.click(save);
-    await screen.findByText("تم تحديد 2 مرحلة كمنفّذة. تظهر الآن لمعلمك.");
-    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [B1.stageId, B2.stageId], mark: true }]);
+    expect(document.querySelectorAll("input").length).toBe(0);                // no form inputs at all
+    expect(within(rowOf(B3)).queryByRole("button", { name: /أنجزت/ })).toBeNull();
+    fireEvent.click(within(rowOf(B1)).getByRole("button", { name: "أنجزت " + label(B1) }));
+    await screen.findByText("تم تحديد " + B1.stageId + " كمنفّذة. تظهر الآن لمعلمك.");
+    fireEvent.click(within(rowOf(B2)).getByRole("button", { name: "أنجزت " + label(B2) }));
+    await screen.findByText("تم تحديد " + B2.stageId + " كمنفّذة. تظهر الآن لمعلمك.");
+    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [B1.stageId], mark: true }, { projectCode: CODE, stageIds: [B2.stageId], mark: true }]);
     expect(s.doc().stages[B1.stageId]).toMatchObject({ status: "approved", selfReportedBy: "s1" });
     await within(rowOf(B1)).findByText("منفّذة — بانتظار تأكيد المعلم");
     expect(within(rowOf(B3)).queryByText("منفّذة — بانتظار تأكيد المعلم")).toBeNull();
-    expect(document.querySelectorAll("input").length).toBe(0);                // the mode closes after a save
   });
 
   it("undoes the student's own unconfirmed mark", async () => {
     const s = server();
     await mountStudent();
-    fireEvent.click(screen.getByRole("button", { name: "تحديد المراحل التي أنجزتها" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "أنجزت " + label(B1) }));
-    fireEvent.click(screen.getByRole("button", { name: "حفظ كمنفّذة" }));
+    fireEvent.click(within(rowOf(B1)).getByRole("button", { name: "أنجزت " + label(B1) }));
     const undo = await screen.findByRole("button", { name: "تراجع عن تحديد " + label(B1) });
     fireEvent.click(undo);
-    await screen.findByText("تم التراجع عن التحديد.");
+    await screen.findByText("تم التراجع عن تحديد " + B1.stageId + ".");
     expect(s.posts.at(-1)).toEqual({ projectCode: CODE, stageIds: [B1.stageId], mark: false });
     expect(s.doc().stages[B1.stageId].status).toBe("not_started");
     expect(within(rowOf(B3)).queryByRole("button", { name: /تراجع/ })).toBeNull();
@@ -98,9 +95,7 @@ describe("P2 student — mark completed stages", () => {
   it("shows the server's refusal on an archived class and writes nothing", async () => {
     const s = server({ "platform/classes/c1.json": room("c1", { status: "archived", active: false }) });
     await mountStudent();
-    fireEvent.click(screen.getByRole("button", { name: "تحديد المراحل التي أنجزتها" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "أنجزت " + label(B1) }));
-    fireEvent.click(screen.getByRole("button", { name: "حفظ كمنفّذة" }));
+    fireEvent.click(within(rowOf(B1)).getByRole("button", { name: "أنجزت " + label(B1) }));
     expect((await screen.findByRole("alert")).textContent).toBe("الصف مؤرشف — لا يمكن تعديل المشروع.");
     expect(s.doc().stages[B1.stageId]).toBeUndefined();
   });

@@ -283,10 +283,7 @@
 .eb-bulk-cell{ display:inline-flex; align-items:center; gap:var(--eb-space-2); }
 .eb-bulk-row .eb-stage-row-error{ flex-basis:100%; border-radius:var(--eb-r-sm); }
 
-/* ---------- Phase P2: student self-report ---------- */
-.eb-sp-mark-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); position:sticky; top:var(--eb-space-2); z-index:2; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
-.eb-sp-stage-main input[type="checkbox"]{ width:20px; height:20px; flex:0 0 auto; }
-.eb-sp-stage.is-picked{ outline:2px solid var(--eb-primary); outline-offset:-2px; }
+/* Phase P2 student self-report marking mode: replaced by the one-tap actions of P3 (studentportal-pro.css). */
 /* Phase P4 — «جدول العلامات»: students × the stages of one group, a spreadsheet-like score grid. The first column (the
    student) and the header row stay in view while the grid scrolls; each cell's stage status tints it, an unsaved change
    and an invalid value are marked by their border (and named in the legend), never by colour alone in the text. */
