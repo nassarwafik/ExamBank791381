@@ -19,7 +19,35 @@ data quota with every other GitHub-hosted runner, and the job fails before any t
 2. **Pre-pull the pinned bases with a bounded retry** — `runner/scripts/pull-base-images.sh` (4 attempts, 20 s / 40 s /
    80 s backoff; only `@sha256:` references; the build then finds each base locally by digest).
 
-Until the steps below are done, only the retry is active.
+3. **Docker Hub fallback (no setup)** — owner-approved governance change of 2026-10-19 (see below). It is the only one of the three active without any AWS setup.
+
+Until the AWS steps below are done, the retry and the Docker Hub fallback are active.
+
+## Docker Hub fallback (same digest)
+
+From 2026-10-18 to 2026-10-19 the anonymous ECR Public quota failed the Runner job on almost every push and pull request:
+- PRs #356, #357, #358, #363, #364 and #366;
+- `main` after #360 and #365.
+
+Re-runs often failed again within the hour, because the quota is a data quota that does not clear within a job. The owner chose this fallback.
+
+- **When:** `runner/scripts/pull-base-images.sh` falls back:
+  - when ECR Public refuses a base with the quota message (`toomanyrequests: Data limit exceeded`) — at once, without spending the remaining retries;
+  - or after the bounded retries of any other refusal.
+- **Which bases, and from where:** only a base of the exact shape `public.ecr.aws/docker/library/<name>@sha256:<digest>` has a fallback. These are the Docker Official Images; ECR Public's `docker/library` is their mirror. The fallback pulls `docker.io/library/<name>@sha256:<the same digest>`.
+- **Why it is safe:** the digest is the content address. The same sha256 is byte-for-byte the same image, whichever registry serves it, and a registry without that digest simply fails the pull. Nothing is pulled by tag.
+- **How the build uses it:**
+  - The substitution reaches the build as a BuildKit named context, `BASE_IMAGE_CONTEXTS`, set through `$GITHUB_ENV`. It reads `--build-context public.ecr.aws/docker/library/<name>@sha256:<d>=docker-image://docker.io/library/<name>@sha256:<d>`.
+  - `runner/scripts/build-images.sh` accepts only that exact shape (same name, same digest, `docker.io/library`) and stops the build on anything else.
+  - The worker Dockerfiles keep their ECR references unchanged.
+- **Where it applies:**
+  - The gateway host never sets `BASE_IMAGE_CONTEXTS`, so its builds are byte-identical commands to before.
+  - Other registries (`mcr.microsoft.com/dotnet/sdk`) have no fallback.
+- **What you see in CI:** every substitution prints `::warning title=Base image served by Docker Hub::…`, so a run that used Docker Hub is visible in the job summary.
+- **Limits:**
+  - Docker Hub's own anonymous pull limit applies (per IP, per hour). Two bases are at most two pulls per job.
+  - If Docker Hub also refuses, the job fails, after its own bounded retries.
+- **Undo:** revert the PR that introduced the fallback. The AWS login below remains the stronger fix: authenticated ECR pulls are not subject to the anonymous quota at all.
 
 ## One-time AWS setup (owner, in your AWS account — free)
 
