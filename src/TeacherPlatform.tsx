@@ -31,6 +31,7 @@ import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,
 import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needsAuthoritativeReload} from "./rosterPatch";
 // Phase 11A — the ONE trusted CSV cell encoder (quotes + formula-injection guard), shared with the Reports Center.
 import {csvCell} from "./reports/csv";
+import {arabicCount,STUDENTS_GENITIVE} from "./learning/arabicCount";
 
 type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
@@ -59,6 +60,8 @@ type WorkspaceDialog="none"|"createClass"|"addStudent"|"import"|"editClass";
 // Arabic-Indic digits typed on an Arabic keyboard are digits too (the server maps them the same way).
 const onlyDigits=identityDigits;
 const fmtDate=(value:string)=>{if(!value)return "—";const d=new Date(value);return Number.isNaN(d.getTime())?"—":d.toLocaleString("ar")};
+// U.2 — a day without the time (the archived class card: «19 أكتوبر 2026»).
+const fmtDay=(value:string)=>{if(!value)return "—";const d=new Date(value);return Number.isNaN(d.getTime())?"—":d.toLocaleDateString("ar",{day:"numeric",month:"long",year:"numeric"})};
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 function splitName(value:unknown){
  const parts=String(value??"").trim().split(/\s+/).filter(Boolean);
@@ -182,6 +185,10 @@ function TeacherPlatform(props:TeacherPlatformProps){
  },[rosterStudents]);
 
  const visibleStudents=useMemo(()=>{
+  const tieBreak=(a:Student,b:Student)=>{
+   for(const key of ["firstName","displayName","identityNumber"] as const){const d=String(a[key]||"").localeCompare(String(b[key]||""),"ar",{numeric:true});if(d)return d}
+   return 0;
+  };
   // Arabic-aware search: hamza / taa-marbuta / alef-maqsura variants, diacritics and Arabic digits fold together, and
   // every typed word must match ("احمد علي" finds "أحمد العلي").
   const filtered=rosterStudents.filter(student=>{
@@ -197,7 +204,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
    let av="",bv="";
    if(sortKey==="status"){av=statusLabel(a);bv=statusLabel(b)}
    else {av=String(a[sortKey]||"");bv=String(b[sortKey]||"")}
-   return av.localeCompare(bv,"ar",{numeric:true})*factor;
+   // U.2 — equal keys (a family, a status) fall back to the first name, then the full name and the identity, all with
+   // numeric order («طالب2» before «طالب10»), so ties never keep the server's listing order.
+   return (av.localeCompare(bv,"ar",{numeric:true})||tieBreak(a,b))*factor;
   });
  },[rosterStudents,searchText,statusFilter,sortKey,sortAsc]);
 
@@ -653,7 +662,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    setBulkErrors(result.errors||[]);
    // Sequential, like reloadAuthoritative: the roster read repairs the class count index BEFORE the classes read.
    await reloadAuthoritative(sourceClassId);
-   setNotice(withRosterNote(result,"✓ تم استيراد "+result.imported+" طالبًا"+(result.failed?"، وتعذر استيراد "+result.failed+".":".")));
+   setNotice(withRosterNote(result,"✓ تم استيراد "+arabicCount(result.imported,STUDENTS_GENITIVE)+(result.failed?"، وتعذر استيراد "+result.failed+".":".")));
    setBulkStudents([]);setBulkFileName("");setImportPreview([]);setDialog("none");
   }catch(e){setError(e instanceof Error?e.message:"تعذر استيراد الطلاب.")}
   finally{setActionBusy(false)}
@@ -812,10 +821,10 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const nameList=names.length?"\n\n"+names.slice(0,10).join("، ")+(names.length>10?" و"+(names.length-10)+" آخرين":""):"";
   let question="";
   if(operation==="delete")question="⚠️ حذف نهائي لـ "+count+" طالب؟"+nameList+"\n\nالأرشفة أكثر أمانًا إذا كنت تريد الاحتفاظ بالبيانات.";
-  else if(operation==="archive")question="أرشفة "+count+" طالب مع منع تسجيل الدخول والاحتفاظ بالبيانات؟";
-  else if(operation==="unarchive")question="استعادة "+count+" طالب من الأرشيف وتفعيل حساباتهم؟";
-  else if(operation==="resetpasswords")question="إنشاء كلمات مرور جديدة لـ "+count+" طالب؟ ستظهر الكلمات الجديدة مرة واحدة بعد العملية.";
-  else if(operation==="move")question="نقل "+count+" طالب إلى الصف المختار؟";
+  else if(operation==="archive")question="أرشفة "+arabicCount(count,STUDENTS_GENITIVE)+" مع منع تسجيل الدخول والاحتفاظ بالبيانات؟";
+  else if(operation==="unarchive")question="استعادة "+arabicCount(count,STUDENTS_GENITIVE)+" من الأرشيف وتفعيل حساباتهم؟";
+  else if(operation==="resetpasswords")question="إنشاء كلمات مرور جديدة لـ "+arabicCount(count,STUDENTS_GENITIVE)+"؟ ستظهر الكلمات الجديدة مرة واحدة بعد العملية.";
+  else if(operation==="move")question="نقل "+arabicCount(count,STUDENTS_GENITIVE)+" إلى الصف المختار؟";
   if(question&&!(await confirm({message:question,tone:operation==="delete"?"danger":"default",confirmLabel:operation==="delete"?"حذف نهائي":"تأكيد"})))return;
   if(operation==="resetpasswords"&&!(await confirmReplaceCredentialBatch()))return;
 
@@ -832,11 +841,18 @@ function TeacherPlatform(props:TeacherPlatformProps){
    if(operation==="move")await reloadAuthoritativeMove(sourceClassId,bulkTargetClassId);
    else await reloadAuthoritative(sourceClassId);
    setSelectedIds([]);
-   setNotice(withRosterNote(result,"✓ نُفذت العملية على "+result.processed+" طالب"+(result.failed?"، وفشلت لدى "+result.failed+".":".")));
+   setNotice(withRosterNote(result,"✓ نُفذت العملية على "+arabicCount(result.processed,STUDENTS_GENITIVE)+(result.failed?"، وفشلت لدى "+result.failed+".":".")));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية الجماعية.")}
   finally{setActionBusy(false)}
  }
 
+ // U.2 — switching between the active classes and the archive selects the view's first class when the selected one is not
+ // in it (the roster never shows a class the bar does not list); an empty view keeps the current selection.
+ function switchClassView(view:ClassArchiveView){
+  setClassArchiveView(view);
+  const list=view==="active"?activeClasses:archivedClasses;
+  if(list.length&&!list.some(c=>c.classId===selectedClassId))setSelectedClassId(list[0].classId);
+ }
  function toggleSort(key:SortKey){if(sortKey===key)setSortAsc(x=>!x);else{setSortKey(key);setSortAsc(true)}}
  function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName("");setError("");setDialog("import")}
 
@@ -871,7 +887,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
 
   <div className="eb-students-layout">
    <ClassesPane
-    classes={visibleClasses} view={classArchiveView} onViewChange={setClassArchiveView}
+    classes={visibleClasses} view={classArchiveView} onViewChange={switchClassView}
     activeCount={activeClasses.length} archivedCount={archivedClasses.length}
     selectedClassId={selectedClassId} onSelect={setSelectedClassId}
     projects={projects} projectTitle={projectTitle} isGraduationEligible={isGraduationEligible}
@@ -879,7 +895,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
     onToggleArchive={classroom=>void toggleClassArchive(classroom)} onGraduate={classroom=>void graduateAndArchiveClass(classroom)}
     onCreate={()=>{setError("");setDialog("createClass")}} onEdit={openEditClass} onRefresh={()=>void reloadAuthoritative(selectedClassId)}
     loading={classesLoad.busy} loadError={classesLoad.status==="error"&&!classesLoad.busy?classesLoad.error:""} onRetry={()=>void loadClasses(false)}
-    busy={actionBusy} fmtDate={fmtDate}/>
+    busy={actionBusy} fmtDate={fmtDay}/>
 
    <RosterPane
     classroom={selectedClass} classActive={classActive} students={rosterStudents} visibleStudents={visibleStudents} stats={stats}

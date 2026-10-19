@@ -7,6 +7,7 @@ import ActionMenu from "../ui/ActionMenu";
 import BulkActionBar from "./BulkActionBar";
 import StudentAvatar from "./StudentAvatar";
 import { relativeTime } from "./rosterText";
+import { arabicCount, arabicCountParts, STUDENTS, STUDENTS_AFTER_DIGITS } from "../learning/arabicCount";
 import { IconSearch, IconDownload, IconUpload, IconPlus, IconRefresh, IconUser, IconEdit, IconCopy, IconTrash, IconArchive, IconRestore, IconHistory, IconHeart, IconSort, IconChevronDown, IconClose, IconChevronUp, IconPrint } from "../icons";
 import { type CredentialBatch } from "../credentialBatch";
 import type { BulkError, BulkOperation, Classroom, Credential, SortKey, StatusFilter, Student } from "./types";
@@ -104,7 +105,7 @@ export default function RosterPane(p: RosterPaneProps) {
         level={2}
         id="eb-roster-title"
         title={classroom.name}
-        description={<><span className="student-count-badge">{shown(p.stats.total - p.stats.archived)}</span> طالب{ready && p.stats.archived > 0 ? <> · {p.stats.archived} مؤرشف</> : ""} · {classroom.grade || "—"}{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""} · <StatusBadge tone={p.classActive ? "success" : "neutral"}>{p.classActive ? "فعّال" : "مؤرشف"}</StatusBadge></>}
+        description={<><span className="student-count-badge">{shown(p.stats.total - p.stats.archived)}</span>{ready ? arabicCountParts(p.stats.total - p.stats.archived, STUDENTS_AFTER_DIGITS).after : " طالب"}{ready && p.stats.archived > 0 ? <> · {p.stats.archived} مؤرشف</> : ""} · {classroom.grade || "—"}{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""} · <StatusBadge tone={p.classActive ? "success" : "neutral"}>{p.classActive ? "فعّال" : "مؤرشف"}</StatusBadge></>}
         actions={<>
           <button type="button" className="eb-button is-primary" onClick={p.onAddStudent} disabled={p.busy || !p.classActive}><IconPlus size={16} />إضافة طالب</button>
           <button type="button" className="eb-button" onClick={p.onImport} disabled={p.busy || !p.classActive}><IconUpload size={16} />استيراد</button>
@@ -138,10 +139,10 @@ export default function RosterPane(p: RosterPaneProps) {
       </div>
 
       <div className="eb-roster-toolbar">
-        <div className="student-search-field eb-search-field">
+        <label className="student-search-field eb-search-field">
           <IconSearch size={16} aria-hidden="true" />
           <input value={p.searchText} onChange={e => p.onSearch(e.target.value)} placeholder="ابحث بالاسم، العائلة أو رقم الهوية" aria-label="ابحث بالاسم، العائلة أو رقم الهوية" />
-        </div>
+        </label>
         <label className="eb-field-inline">الحالة<select className="student-status-select" value={p.statusFilter} onChange={e => p.onStatusFilter(e.target.value as StatusFilter)}>
           <option value="all">كل الحالات</option><option value="active">فعّال</option><option value="disabled">معطّل</option><option value="archived">مؤرشف</option><option value="neverLogged">لم يدخلوا بعد</option>
         </select></label>
@@ -154,7 +155,7 @@ export default function RosterPane(p: RosterPaneProps) {
       {p.credentialBatch && (
         <section className="credential-box eb-credential-box" aria-label="بيانات الدخول الجديدة">
           <div className="eb-credential-head">
-            <div><h3 className="eb-subheading">بيانات الدخول الجديدة</h3><p className="eb-muted">{p.credentialBatch.credentials.length} طالبًا · احفظ هذه البيانات الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح.</p></div>
+            <div><h3 className="eb-subheading">بيانات الدخول الجديدة</h3><p className="eb-muted">{arabicCount(p.credentialBatch.credentials.length, STUDENTS)} · احفظ هذه البيانات الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح.</p></div>
             <div className="eb-inline-actions">
               <button type="button" className="eb-button is-small" onClick={p.onToggleBatch} aria-expanded={!p.credentialBatch.collapsed}>{p.credentialBatch.collapsed ? <><IconChevronDown size={14} />إظهار</> : <><IconChevronUp size={14} />طي</>}</button>
               {p.onPrintBatch && <button type="button" className="eb-button is-small is-primary" onClick={p.onPrintBatch}><IconPrint size={14} />طباعة بطاقات الدخول</button>}
@@ -178,7 +179,7 @@ export default function RosterPane(p: RosterPaneProps) {
       {p.visibleStudents.length > 0 && (
         <div className="students-table-wrap eb-roster-table-wrap"><table className="students-table students-table-pro eb-roster-table">
           <thead><tr>
-            <th scope="col" className="eb-col-select"><input type="checkbox" checked={allVisibleSelected} onChange={p.onToggleSelectVisible} aria-label="تحديد الكل" /></th>
+            <th scope="col" className="eb-col-select"><label className="eb-check-hit"><input type="checkbox" checked={allVisibleSelected} onChange={p.onToggleSelectVisible} aria-label="تحديد الكل" /></label></th>
             {SORT_COLUMNS.map(c => sortTh(c.key, c.label))}
             <th scope="col">آخر دخول</th><th scope="col">الوظائف</th><th scope="col" className="eb-col-actions"><VisuallyHidden>الإجراءات</VisuallyHidden></th>
           </tr></thead>
@@ -188,7 +189,7 @@ export default function RosterPane(p: RosterPaneProps) {
             const familyName = student.familyName || p.splitName(student.displayName).familyName || "";
             const lastLogin = relativeTime(student.lastLoginAt);
             return <tr key={student.userId} className={[student.archived ? "student-row-archived" : "", selected ? "is-selected" : ""].filter(Boolean).join(" ")}>
-            <td className="eb-col-select"><input type="checkbox" checked={selected} onChange={() => p.onToggleSelected(student.userId)} aria-label={"تحديد " + student.displayName} /></td>
+            <td className="eb-col-select"><label className="eb-check-hit"><input type="checkbox" checked={selected} onChange={() => p.onToggleSelected(student.userId)} aria-label={"تحديد " + student.displayName} /></label></td>
             <td className="eb-col-name" data-label="الاسم"><span className="eb-name-cell"><StudentAvatar token={p.token} studentId={student.userId} name={student.displayName} avatarId={student.avatarId} profilePhoto={student.profilePhoto} /><strong data-family={familyName || undefined}>{firstName}</strong>{student.likesCount > 0 && <span className="student-likes-badge" title={student.likesCount + " ردّ فعل على إنجازاته"}><IconHeart size={12} aria-hidden="true" /> {student.likesCount}<VisuallyHidden> ردود فعل على إنجازاته</VisuallyHidden></span>}</span></td>
             <td data-label="اسم العائلة" className="eb-col-family">{familyName || "—"}</td>
             <td dir="ltr" data-label="رقم الهوية" className="eb-col-identity">{student.identityNumber || student.code || "يحتاج تحديث"}</td>

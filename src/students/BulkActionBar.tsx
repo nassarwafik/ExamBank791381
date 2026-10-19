@@ -1,5 +1,6 @@
 import { IconKey, IconTrash, IconArchive, IconRestore } from "../icons";
 import type { BulkOperation, Classroom } from "./types";
+import { arabicCount, SELECTED_STUDENTS } from "../learning/arabicCount";
 
 /**
  * BulkActionBar — shown only while students are selected. Groups the seven operations (status,
@@ -12,7 +13,7 @@ export default function BulkActionBar({ count, busy, targetClasses, targetClassI
 }) {
   return (
     <section className="student-bulk-bar eb-bulk-bar" aria-label="إجراءات جماعية">
-      <div className="eb-bulk-summary"><strong>{count} طالب محدد</strong><button type="button" className="eb-link-button" onClick={onClear}>إلغاء التحديد</button></div>
+      <div className="eb-bulk-summary"><strong>{arabicCount(count, SELECTED_STUDENTS)}</strong><button type="button" className="eb-link-button" onClick={onClear}>إلغاء التحديد</button></div>
       <div className="eb-bulk-groups">
         <div className="eb-bulk-group" role="group" aria-label="الحالة">
           <span className="eb-bulk-group-label">الحالة</span>

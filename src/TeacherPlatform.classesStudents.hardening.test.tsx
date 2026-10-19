@@ -109,11 +109,11 @@ describe("defect: bulk actions on rows the teacher cannot see", () => {
     await mount();
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
     fireEvent.click(screen.getByLabelText("تحديد بسمة أحمد"));
-    expect(bulkBar().textContent).toContain("2 طالب محدد");
+    expect(bulkBar().textContent).toContain("طالبان محددان");
     fireEvent.change(screen.getByLabelText("ابحث بالاسم، العائلة أو رقم الهوية"), { target: { value: "علي" } });
-    await waitFor(() => expect(bulkBar().textContent).toContain("1 طالب محدد"));
+    await waitFor(() => expect(bulkBar().textContent).toContain("طالب واحد محدد"));
     fireEvent.click(within(bulkBar()).getByRole("button", { name: "تعطيل" }));
-    await screen.findByText(/نُفذت العملية على 1 طالب/);
+    await screen.findByText(/نُفذت العملية على طالب واحد/);
     expect(posts("/api/students").find(b => b.action === "bulkAction")?.userIds).toEqual(["s1"]);
   });
   it("the move target chosen in class A is cleared when the teacher switches to that class", async () => {
@@ -145,7 +145,7 @@ describe("defect: authoritative reload ordering after bulk actions", () => {
     await new Promise(r => setTimeout(r, 0));
     expect(calls.some(c => c.method === "GET" && c.url.includes("/api/classrooms"))).toBe(false);
     await act(async () => { roster.resolve(json({ ok: true, students: ROSTERS.c1 })); await roster.promise; });
-    await screen.findByText(/نُفذت العملية على 1 طالب/);
+    await screen.findByText(/نُفذت العملية على طالب واحد/);
     const gets = calls.filter(c => c.method === "GET").map(c => c.url.replace(/^.*\/api\//, ""));
     const i1 = gets.findIndex(u => u.startsWith("students?classId=c1")), i2 = gets.findIndex(u => u.startsWith("students?classId=c2")), i3 = gets.findIndex(u => u.startsWith("classrooms"));
     expect(i1).toBeGreaterThanOrEqual(0); expect(i2).toBeGreaterThan(i1); expect(i3).toBeGreaterThan(i2);

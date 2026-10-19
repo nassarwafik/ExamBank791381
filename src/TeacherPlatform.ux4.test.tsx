@@ -262,12 +262,12 @@ describe("UX-4 request parity — students", () => {
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
     fireEvent.click(screen.getByLabelText("تحديد بسمة أحمد"));
     const bar = await screen.findByRole("region", { name: "إجراءات جماعية" });
-    expect(bar.textContent).toContain("2 طالب محدد");
+    expect(bar.textContent).toContain("طالبان محددان");
     expect((within(bar).getByRole("button", { name: "نقل" }) as HTMLButtonElement).disabled).toBe(true);
     const run = async (label: string, confirmNeeded: boolean) => {
       fireEvent.click(within(screen.getByRole("region", { name: "إجراءات جماعية" })).getByRole("button", { name: label }));
       if (confirmNeeded) await confirmDialog();
-      await screen.findByText(/نُفذت العملية على 1 طالب/);
+      await screen.findByText(/نُفذت العملية على طالب واحد/);
       fireEvent.click(screen.getByLabelText("تحديد علي حسن")); fireEvent.click(screen.getByLabelText("تحديد بسمة أحمد"));
       await screen.findByRole("region", { name: "إجراءات جماعية" });
     };
@@ -278,7 +278,7 @@ describe("UX-4 request parity — students", () => {
     expect((await confirmEl()).className).toContain("tone-danger");
     expect((await confirmEl()).textContent).toContain("⚠️ حذف نهائي لـ 2 طالب؟");
     await confirmDialog();
-    await screen.findByText(/نُفذت العملية على 1 طالب/);
+    await screen.findByText(/نُفذت العملية على طالب واحد/);
     const ops = posts("/api/students").filter(b => b.action === "bulkAction");
     expect(ops.map(b => b.operation)).toEqual(["activate", "deactivate", "archive", "unarchive", "resetpasswords", "move", "delete"]);
     for (const b of ops) { expect(b.userIds).toEqual(["s1", "s2"]); expect(b.targetClassId).toBe(b.operation === "move" || ops.indexOf(b) > 5 ? "c2" : ""); }
@@ -379,9 +379,9 @@ describe("UX-4 roster — search / filter / sort / selection / states", () => {
     await mount();
     expect(Array.from(document.querySelectorAll(".student-admin-stats strong")).map(x => x.textContent)).toEqual(["3", "1", "1", "1", "1"]); // [total, active, disabled, archived, neverLogged (non-archived only)]
     fireEvent.click(screen.getByLabelText("تحديد الكل"));
-    expect((await screen.findByRole("region", { name: "إجراءات جماعية" })).textContent).toContain("3 طالب محدد");
+    expect((await screen.findByRole("region", { name: "إجراءات جماعية" })).textContent).toContain("3 طلاب محددون");
     fireEvent.click(screen.getByLabelText("تحديد خالد زيد"));
-    expect(screen.getByRole("region", { name: "إجراءات جماعية" }).textContent).toContain("2 طالب محدد");
+    expect(screen.getByRole("region", { name: "إجراءات جماعية" }).textContent).toContain("طالبان محددان");
     fireEvent.click(screen.getByRole("button", { name: "إلغاء التحديد" }));
     expect(screen.queryByRole("region", { name: "إجراءات جماعية" })).toBeNull();
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));

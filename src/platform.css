@@ -107,36 +107,6 @@
   cursor: not-allowed;
 }
 
-.class-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 13px;
-}
-
-.class-row {
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-}
-
-.class-row.selected {
-  border-color: #2563eb;
-  box-shadow:
-    0 0 0 2px
-    rgba(37, 99, 235, 0.08);
-}
-
-.class-row.archived {
-  opacity: 0.62;
-}
-
-/* Actions sit in a horizontal wrapping row beneath the class info, so each button keeps its full
-   label on one line instead of being squeezed into a narrow vertical strip. */
-
 .student-count-badge,
 .phase-chip {
   display: inline-flex;

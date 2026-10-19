@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import TeacherPlatform from "./TeacherPlatform";
 
 // Roadmap #18 — teacher bulk-import UX (R–Y): selecting a file only PREVIEWS (never creates), preview shows
@@ -123,7 +123,7 @@ describe("R18 bulk-import UX", { timeout: 30000 }, () => {
     const { container } = await mountStudents();
     // Switch the class list to the archive view, then select the archived class.
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
-    fireEvent.click(await screen.findByText("صف مؤرشف"));
+    fireEvent.click(await within(document.querySelector(".class-list") as HTMLElement).findByText("صف مؤرشف"));
     await screen.findByText(/الصف مؤرشف/);                 // archived warning shown in the students panel
     expect(container).toBeTruthy();
     expect((screen.getByRole("button", { name: "استيراد" }) as HTMLButtonElement).disabled).toBe(true);
