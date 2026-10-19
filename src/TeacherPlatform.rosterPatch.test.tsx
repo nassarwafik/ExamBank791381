@@ -204,11 +204,11 @@ describe("R32 — delete", () => {
     postHandler = () => ({ ok: true, deleted: true, rosterSynced: true });
     await mount();
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
-    await screen.findByText("1 طالب محدد");
+    await screen.findByText("طالب واحد محدد");
     await rowAction("علي", "حذف نهائي"); await confirmDialog();
     await screen.findByText("✓ تم حذف الطالب نهائيًا.");
     expect(screen.queryByText("علي")).toBeNull();
-    expect(screen.queryByText("1 طالب محدد")).toBeNull();     // selectedIds pruned → bulk bar gone
+    expect(screen.queryByText("طالب واحد محدد")).toBeNull();     // selectedIds pruned → bulk bar gone
     expect(badge()).toBe("1");
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);
@@ -282,9 +282,9 @@ describe("R32 — bulk paths, class switch and manual refresh stay authoritative
     postHandler = () => ({ ok: true, processed: 1, failed: 0, results: ["s1"], errors: [], credentials: [], rosterSynced: true });
     await mount();
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
-    await screen.findByText("1 طالب محدد");
+    await screen.findByText("طالب واحد محدد");
     fireEvent.click(screen.getByRole("button", { name: "أرشفة" })); await confirmDialog();
-    await screen.findByText(/نُفذت العملية على 1 طالب/);
+    await screen.findByText(/نُفذت العملية على طالب واحد/);
     expect(calls.some(c => c.action === "bulkAction")).toBe(true);
     expect(studentsGets("c1")).toBe(1);
     expect(classesGets()).toBe(1);

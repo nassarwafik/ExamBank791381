@@ -224,3 +224,29 @@ in the data, the API or the grading path changes.
 - dead legacy `.class-row` styles.
 
 The class filter layout and the phone cards of the S.4 row above are delivered here.
+
+## Phase U.2 — details: touch targets, number agreement, name order, the archive view
+
+U.2 completes U.1's deferred list. Nothing in the data, the API or the grading path changes.
+
+| # | Decision | Why |
+|---|---|---|
+| U2-a | **44 × 44 px touch targets** on a phone and on any coarse pointer (`@media (max-width:767px), (pointer:coarse)`). Covered: the buttons, icon buttons, menu triggers, view switch, sort buttons, selects, the bulk bar's link, the student sheet's section chips, and the action-menu items (the panel is portalled to `<body>`, so it is matched by its own class). The rules are scoped to this workspace and its sheet; desktop mouse density is unchanged. | Measured in Chromium. At 390 px the checkboxes were 13 × 13 and the search inputs 26 px tall. At 834 px (a touch tablet, wider than the 767 px phone rules) 24 page controls were under 44 px, and the menu items were 35 px. |
+| U2-b | **The checkboxes and search fields are labels.** Each row checkbox and «تحديد الكل» sit in a `label.eb-check-hit` (44 × 44 on touch); the class filter and the roster search fields are `<label>` elements. The whole field, icon included, is the tap target. | A bare checkbox cannot grow its hit area. A field's border and icon were dead space. |
+| U2-c | **Arabic number agreement** through the shared `arabicCount` (`src/learning/arabicCount.ts`, now documented as shared):<br>• class cards: `STUDENTS` («طالب واحد»، «طالبان»، «3 طلاب»، «29 طالبًا»);<br>• the bulk bar: `SELECTED_STUDENTS` («طالب واحد محدد»);<br>• the bulk confirmations and the import / bulk notices: `STUDENTS_GENITIVE` («على طالبين»، «نقل 3 طلاب»);<br>• the credential batch and the printed cards: `STUDENTS`;<br>• the roster header chip: `STUDENTS_AFTER_DIGITS`. The chip always shows digits, so only the noun agrees («12 طالبًا»; 1 and 2 keep the digit). | «3 طالب» and «29 طالب» were wrong on every card. |
+| U2-d | **Not changed:** the bulk-delete confirmation keeps «⚠️ حذف نهائي لـ N طالب؟». | `TeacherPlatform.ux4.test.tsx` locks that message as the exact original text («the two locked delete confirmation MESSAGES»). Changing it is the owner's decision, not an agent's. |
+| U2-e | **Equal sort keys fall back** to the first name, then the full name and the identity, all compared numerically. | Twelve students sharing one family name were listed in the server's order (طالب1, طالب10, طالب11, طالب12, طالب2 …). |
+| U2-f | **Switching views selects that view's first class** when the selected class is not in it. An empty view keeps the selection. | After «الأرشيف» the roster kept showing an active class that the bar no longer listed. |
+| U2-g | **The archive line** reads: the badge, then «في <day>» (a day without a time: «في 19 أكتوبر 2026»), then «دفعة <year>». It no longer starts with «·». The badge gets an outline on the tinted card. | The line read «مؤرشف · 19‏/10‏/2026 3:55:40 ص»: a seconds-precision time, a leading separator, and an invisible badge (neutral on neutral). |
+| U2-h | **The legacy `.class-list` / `.class-row` rules are removed** (`platform.css`: a column with `overflow:hidden` and 62 % opacity when archived; `page-parts.css`: the border, hover and selected lines). The class names stay on the markup as test hooks. The two U.1-era guard lines, row direction and full opacity, are kept for the existing style contract. | Dead weight that every new class-card rule had to override. `overflow:hidden` was half of U.1's clipped-chip defect. |
+
+**Evidence.**
+- **Browser gate.** The gate script (`scripts/check-classes-students-browser-u1.mjs`, its U.2 section) adds a class of twelve students that share one family name and are created out of order. It checks, at 390 / 834 / 1024 / 1440 px:
+  - the agreement on the cards, the header and the bulk bar;
+  - the name order;
+  - the archive-view selection and the archive line;
+  - at the touch sizes, every control on the page, with the bulk bar open, in an open row menu and in the student sheet. A checkbox counts with its label.
+- **Gate results.** On the baseline `a4061e6f`, 31 of the 78 checks fail; all 31 are U.2 checks, and every U.1 check passes. On the head, 0 of 78 fail.
+- **Unit tests.** `src/students/classesStudents.u2.test.tsx`: 11 of 12 fail on the baseline; the 12th, an empty view keeping its selection, is a pin.
+- **Mutation campaign.** 14 mutants, all KILLED. V4 (no empty-view guard) first survived; the test now also asserts that the switch reports no error.
+- **Existing tests.** Expectations updated for the new wording: «طالب واحد محدد», «طالبان محددان», «3 طلاب محددون», «نُفذت العملية على طالب واحد». Clicks in the archive view are scoped to the class list, because the selected class's name now also heads the roster.

@@ -10,9 +10,6 @@
 .platform-card-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .platform-card-heading h3{margin:3px 0 0;color:var(--pp-navy)}
 .platform-card-heading button {border:1px solid var(--pp-line2);background:#fff;color:var(--pp-text);border-radius:9px;padding:7px 10px;font-weight:700;cursor:pointer}
-.class-row{border:1px solid var(--pp-line);border-radius:13px;background:#fff;transition:.16s var(--pp-ease)}
-.class-row:hover{border-color:#c7d7f5;box-shadow:0 10px 24px -20px rgba(15,23,42,.2)}
-.class-row.selected{border-color:#b9cef6;background:#f8fbff;box-shadow:0 0 0 3px rgba(37,99,235,.06)}
 .student-admin-stats,.student-profile-stats,.gradebook-stats{gap:8px}
 .student-admin-stats article,.student-profile-stats article{border:1px solid var(--pp-line);border-radius:13px;background:#fff;box-shadow:0 8px 20px -20px rgba(15,23,42,.15)}
 .students-table-wrap{border:1px solid var(--pp-line);border-radius:14px;overflow:auto;background:#fff}
@@ -58,9 +55,9 @@
 .eb-password-field > .eb-button{ flex:0 0 auto; min-height:38px; }
 
 /* ---------- Classes & Students visual pass ---------- */
-/* Class cards: the legacy .class-row (platform.css) stacks its children in a column, which put the "⋯" trigger on a row
-   of its own under every card; the card is a row again (trigger in the top corner), and an archived card stays fully
-   legible (its badge and tinted background mark it — the legacy 62% opacity failed text contrast). */
+/* Class cards: the legacy .class-row rules (platform.css: a column with overflow:hidden, 62 % opacity when archived) were
+   removed in U.2 — `class-row` / `class-list` stay on the markup only as hooks. These two lines keep the guarantees they
+   overrode: the card is a row (the "⋯" trigger in its top corner), and an archived card stays fully legible. */
 .class-row.eb-class-row{ flex-direction:row; }
 .class-row.eb-class-row.archived{ opacity:1; }
 /* Summary strip: compact figures that double as the status filter. */
@@ -124,6 +121,11 @@
 .eb-class-row:hover{ border-color:var(--eb-primary); }
 .eb-class-row.selected{ border-color:var(--eb-primary); background:var(--eb-primary-050); box-shadow:var(--eb-sh-xs); }
 .eb-class-row.archived{ background:var(--eb-surface-2); }
+/* U.2 — on the tinted archived card the neutral badge needs its own outline; the archive line reads «مؤرشف  في 19 أكتوبر 2026 · دفعة 2026» */
+.eb-class-row.archived .eb-badge{ background:var(--eb-surface); box-shadow:inset 0 0 0 1px var(--eb-line-2); }
+.eb-class-archive-line{ flex-basis:100%; }
+/* U.2 — the row checkboxes: the label around each box is its tap area (44 × 44 on touch, below) */
+.eb-check-hit{ display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
 /* U.1 — a compact card: the name on its own line, then the meta and the project chips sharing one wrapping line */
 .eb-class-select{
   flex:1 1 auto; min-width:0; display:flex; flex-wrap:wrap; align-items:center; gap:2px var(--eb-space-2); text-align:start;
@@ -190,7 +192,7 @@
 }
 .eb-search-field:focus-within{ border-color:var(--eb-primary); color:var(--eb-text-heading); }
 .eb-search-field svg{ flex:0 0 auto; }
-.eb-search-field input{ border:0; flex:1; min-width:0; font:inherit; color:var(--eb-text); background:transparent; }
+.eb-search-field input{ border:0; flex:1; min-width:0; align-self:stretch; font:inherit; color:var(--eb-text); background:transparent; } /* U.2 — the whole field is the tap target */
 .eb-field-inline{ display:inline-flex; align-items:center; gap:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
 .eb-field-inline select,.eb-field-inline input{ min-height:40px; padding:0 var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-weight:var(--eb-fw-regular); }
 
@@ -324,6 +326,18 @@
   /* Phone: the roster title + meta take the full width; its actions wrap below instead of squeezing the title. */
   .eb-roster-pane > .eb-section-header{ flex-direction:column; align-items:stretch; }
   .eb-roster-pane > .eb-section-header .eb-section-actions{ justify-content:flex-start; flex-wrap:wrap; }
+}
+/* U.2 — touch targets (≥ 44 px) on a phone AND on any coarse pointer: a touch tablet is wider than 767 px. Scoped to this
+   workspace, its student sheet and the action-menu panels (portalled to <body>); desktop mouse density is unchanged. */
+@media (max-width:767px), (pointer:coarse){
+  .eb-students-workspace .eb-button,.eb-student-dialog .eb-button,.eb-students-workspace .eb-link-button,.eb-students-workspace select{ min-height:44px; }
+  .eb-students-workspace .eb-icon-button,.eb-student-dialog .eb-icon-button,.eb-students-workspace .eb-menu-trigger{ min-width:44px; min-height:44px; }
+  .eb-students-workspace .eb-icon-action{ min-width:44px; }
+  .eb-students-workspace .eb-segmented > button,.eb-student-dialog .eb-dialog-nav button,.eb-menu-panel .eb-menu-item{ min-height:44px; }
+  .eb-students-workspace .eb-th-sort{ min-height:44px; padding-inline:var(--eb-space-1); }
+  .eb-students-workspace .eb-search-field{ min-height:44px; }
+  .eb-students-workspace .eb-check-hit{ min-width:44px; min-height:44px; margin:-8px; }
+  .eb-students-workspace .eb-check-hit input{ width:18px; height:18px; margin:0; }
 }
 /* UX-8b — reduced motion */
 @media (prefers-reduced-motion: reduce){
